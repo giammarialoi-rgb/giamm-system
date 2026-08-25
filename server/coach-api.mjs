@@ -10,6 +10,8 @@ const maxBytes = 16 * 1024 * 1024;
 const geminiClient = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 if (!apiKey && !mockGemini) throw new Error('GEMINI_API_KEY must be set on the server or enable MOCK_GEMINI=1 for local testing.');
+console.info(`GEMINI_API_KEY configured: ${Boolean(apiKey)}`);
+console.info(`MODEL = ${model}`);
 
 const exerciseSchema = { type: 'object', additionalProperties: false, required: ['name', 'order', 'sets', 'reps', 'load', 'load_unit', 'percentage_1rm', 'rpe', 'rir', 'rest_seconds', 'tempo', 'notes', 'progression_rule'], properties: {
   name: { type: 'string' }, order: { type: 'integer' }, sets: { type: 'integer' }, reps: { type: 'string' }, load: { type: ['number', 'null'] },
@@ -124,32 +126,31 @@ async function gemini(payload) {
           }]
         })
       : 'Risposta mock del coach.';
-    return { steps: [{ type: 'model_output', content: [{ type: 'text', text: mockOutput }] }] };
+    return { output_text: mockOutput };
   }
   try {
     console.info('Gemini request', { model, inputType: Array.isArray(payload.input) ? 'multimodal' : 'text' });
     return await geminiClient.interactions.create({ model, store: false, ...payload }, { timeout_ms: 90000 });
   } catch (error) {
+    const status = error?.status || error?.statusCode || error?.response?.status;
     console.error('Gemini error', {
-      status: error?.status || error?.statusCode || error?.response?.status,
+      name: error?.name,
+      status,
       message: error?.message,
+      response: error?.response,
       details: error?.details,
       stack: error?.stack
     });
-    throw new Error(`Gemini request failed: ${error?.message || 'unknown SDK error'}`);
+    const wrapped = new Error(`Gemini request failed: ${error?.message || 'unknown SDK error'}`);
+    wrapped.name = error?.name || 'GeminiError';
+    wrapped.status = status;
+    wrapped.details = error?.details;
+    wrapped.isGemini = true;
+    throw wrapped;
   }
 }
 function outputText(result) {
-  if (result?.output_text || result?.outputText) return result.output_text || result.outputText;
-  const steps = Array.isArray(result?.steps) ? result.steps : [];
-  const stepText = steps
-    .filter(step => step?.type === 'model_output')
-    .flatMap(step => Array.isArray(step.content) ? step.content : [])
-    .filter(block => block?.type === 'text' && typeof block.text === 'string')
-    .map(block => block.text)
-    .join('');
-  if (stepText) return stepText;
-  return result?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
+  return typeof result?.output_text === 'string' ? result.output_text : '';
 }
 function validateFile({ filename, mimeType, dataBase64 }) {
   if (!filename || !dataBase64) throw new Error('File missing');
@@ -232,6 +233,10 @@ http.createServer(async (req, res) => {
     console.error('Request error:', error && (error.stack || error.message || error));
     const message = error?.message || 'Unexpected error';
     const status = message === 'Payload too large' ? 413 : (/timed out/i.test(message) ? 504 : (/gemini|empty coach response|invalid analysis json/i.test(message) ? 500 : 400));
-    json(res, status, { error: message });
+    const response = { error: process.env.NODE_ENV === 'development' || !error?.isGemini ? message : 'Gemini request failed' };
+    if (process.env.NODE_ENV === 'development' && error?.isGemini) {
+      response.gemini = { name: error.name, message: error.message, status: error.status, details: error.details };
+    }
+    json(res, status, response);
   }
 }).listen(port, () => console.log(`Giammaria Gemini Coach API listening on :${port}`));
