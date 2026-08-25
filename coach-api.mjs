@@ -185,25 +185,22 @@ function extractExcelText(buffer) {
     throw invalid;
   }
 
+  if (!workbook.SheetNames.length) {
+    const invalid = new Error("Excel workbook contains no worksheets.");
+    invalid.statusCode = 400;
+    throw invalid;
+  }
+
   async function extractLegacyWordText(buffer) {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "giammaria-doc-"));
     const filename = path.join(dir, "document.doc");
     try {
       await fs.writeFile(filename, buffer);
       const document = await new WordExtractor().extract(filename);
-      return [
-        document.getBody(),
-        document.getHeaders(),
-        document.getFootnotes()
-      ].filter(Boolean).join("\n\n");
+      return [document.getBody(), document.getHeaders(), document.getFootnotes()].filter(Boolean).join("\n\n");
     } finally {
       await fs.rm(dir, { recursive: true, force: true });
     }
-  }
-  if (!workbook.SheetNames.length) {
-    const invalid = new Error("Excel workbook contains no worksheets.");
-    invalid.statusCode = 400;
-    throw invalid;
   }
   return workbook.SheetNames.map((sheetName, sheetIndex) => {
     const worksheet = workbook.Sheets[sheetName];
