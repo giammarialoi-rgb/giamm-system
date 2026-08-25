@@ -17,7 +17,7 @@ console.info(`MODEL = ${MODEL}`);
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: { apiVersion: "v1alpha" }
+  apiVersion: "v1alpha"
 });
 
 const allowedOrigins = (process.env.CORS_ORIGINS || "")
@@ -290,35 +290,18 @@ Non modificare arbitrariamente una programmazione: se proponi una modifica, spie
 Non dare diagnosi mediche.
 `;
 
-    const input = [
-      { type: "text", text: system },
-      {
-        type: "text",
-        text: `CONTESTO PROGRAMMA:\n${JSON.stringify(context)}`
-      }
-    ];
-
-    for (const item of history.slice(-12)) {
-      if (!item || typeof item.content !== "string") continue;
-      const role = item.role === "assistant" ? "assistant" : "user";
-      input.push({
-        type: "text",
-        text: `${role.toUpperCase()}: ${item.content}`
-      });
-    }
-
-    input.push({
-      type: "text",
-      text: `USER: ${message}`
-    });
-
+    const historyText = history.slice(-12)
+      .filter((item) => item && typeof item.content === "string")
+      .map((item) => `${item.role === "assistant" ? "ASSISTANT" : "USER"}: ${item.content}`)
+      .join("\n");
+    const input = `${system}\n\nCONTESTO PROGRAMMA:\n${JSON.stringify(context)}\n\nCRONOLOGIA:\n${historyText}\n\nUSER: ${message}`;
     const interaction = await ai.interactions.create({
       model: MODEL,
       input
     });
 
     return res.json({
-      reply: extractTextFromOutput(interaction),
+      reply: interaction.output_text,
       model: MODEL
     });
   } catch (error) {
