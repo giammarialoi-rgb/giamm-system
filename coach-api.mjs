@@ -12,6 +12,8 @@ const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
 if (!process.env.GEMINI_API_KEY) {
   console.warn("WARNING: GEMINI_API_KEY is not configured.");
 }
+console.info(`GEMINI_API_KEY configured: ${Boolean(process.env.GEMINI_API_KEY)}`);
+console.info(`MODEL = ${MODEL}`);
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
@@ -137,24 +139,9 @@ REGOLE FONDAMENTALI:
 `;
 
 function extractTextFromOutput(interaction) {
-  if (!interaction) return "";
-  if (typeof interaction.output_text === "string") return interaction.output_text;
-
-  // Defensive fallback for SDK response variations.
-  const outputs = interaction.outputs || interaction.output || [];
-  const parts = Array.isArray(outputs) ? outputs : [outputs];
-  return parts
-    .flatMap((item) => {
-      if (!item) return [];
-      if (typeof item.text === "string") return [item.text];
-      if (Array.isArray(item.content)) {
-        return item.content
-          .filter((p) => p && typeof p.text === "string")
-          .map((p) => p.text);
-      }
-      return [];
-    })
-    .join("");
+  return typeof interaction?.output_text === "string"
+    ? interaction.output_text
+    : "";
 }
 
 async function runStructuredInteraction(input) {
@@ -253,10 +240,24 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     const result = await runStructuredInteraction(input);
     return res.json(result);
   } catch (error) {
-    console.error("Analyze error:", error);
+    console.error("Analyze error:", {
+      name: error?.name,
+      message: error?.message,
+      status: error?.status || error?.statusCode || error?.response?.status,
+      response: error?.response,
+      details: error?.details,
+      stack: error?.stack
+    });
     return res.status(500).json({
       error: "Document analysis failed.",
-      details: process.env.NODE_ENV === "development" ? error.message : undefined
+      ...(process.env.NODE_ENV === "development" ? {
+        gemini: {
+          name: error?.name,
+          message: error?.message,
+          status: error?.status || error?.statusCode || error?.response?.status,
+          details: error?.details
+        }
+      } : {})
     });
   }
 });
@@ -320,10 +321,24 @@ Non dare diagnosi mediche.
       model: MODEL
     });
   } catch (error) {
-    console.error("Chat error:", error);
+    console.error("Chat error:", {
+      name: error?.name,
+      message: error?.message,
+      status: error?.status || error?.statusCode || error?.response?.status,
+      response: error?.response,
+      details: error?.details,
+      stack: error?.stack
+    });
     return res.status(500).json({
       error: "Coach request failed.",
-      details: process.env.NODE_ENV === "development" ? error.message : undefined
+      ...(process.env.NODE_ENV === "development" ? {
+        gemini: {
+          name: error?.name,
+          message: error?.message,
+          status: error?.status || error?.statusCode || error?.response?.status,
+          details: error?.details
+        }
+      } : {})
     });
   }
 });
