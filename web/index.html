@@ -347,6 +347,11 @@ select, input {
 
 <script>
 let DATA=null, currentView='home', currentWeek=1, currentDay=0;
+const EVIDENCE_SOURCES=[
+  {title:'ACSM Guidelines for Exercise Testing and Prescription',sourceType:'position_stand',url:'https://pubmed.ncbi.nlm.nih.gov/19204579/',relevance:'strength and conditioning',confidence:'high'},
+  {title:'The Effects of Periodization on Strength and Muscle Hypertrophy',sourceType:'systematic_review',url:'https://pubmed.ncbi.nlm.nih.gov/27219156/',relevance:'periodization',confidence:'moderate'},
+  {title:'Resistance Training Recommendations to Maximize Muscle Hypertrophy',sourceType:'review',url:'https://pubmed.ncbi.nlm.nih.gov/35068446/',relevance:'hypertrophy',confidence:'moderate'}
+];
 // The app only knows the HTTPS address of the backend. Gemini credentials stay
 // on that server and are never shipped to the phone.
 const COACH_API_URL = (window.NativeConfig && window.NativeConfig.getCoachApiUrl && window.NativeConfig.getCoachApiUrl()) || '';
@@ -524,8 +529,48 @@ function setDesiredDuration(value){
   const raw=value==='custom'?prompt('Inserisci la durata desiderata in settimane:',store.prefs.duration||4):value;
   const duration=parseInt(raw,10);
   if(!Number.isFinite(duration)||duration<1||duration>52){ alert('Inserisci una durata tra 1 e 52 settimane.'); return; }
-  if(DATA && Array.isArray(DATA.weeks) && DATA.weeks.length !== duration && !resizeActiveProgram(duration)) return;
+  if(DATA && Array.isArray(DATA.weeks) && DATA.weeks.length !== duration && !chooseProgramAdaptation('duration', duration)) return;
   store.prefs.duration=duration; store.prefs.durationUserSet=true; persist(); render();
+}
+function setDesiredFrequency(value){
+  const days=parseInt(value,10);
+  if(!Number.isFinite(days)||days<1||days>7)return;
+  if(DATA && (store.prefs.frequency||4)!==days) {
+    chooseProgramAdaptation('days',days);
+    return;
+  }
+  store.prefs.frequency=days; persist(); render();
+}
+function chooseProgramAdaptation(kind, desired){
+  const current=kind==='duration'?DATA.weeks.length:(store.prefs.frequency||4);
+  const label=kind==='duration'?'settimane':'giorni';
+  const overlay=document.createElement('div');
+  overlay.className='modal'; overlay.style.display='flex'; overlay.style.zIndex='20';
+  overlay.innerHTML=`<div class="modal-content"><h2 style="color:var(--gold);margin-top:0;">Come vuoi adattare la programmazione?</h2>
+    <p style="font-size:12px;color:#aaa;">Programma attuale: ${current} ${label}<br>Nuovo programma: ${desired} ${label}</p>
+    <button class="btn btn-outline" style="width:100%;margin:6px 0;text-align:left;" id="adapt-keep"><b>Tieni la progressione originale</b><br><small>Conserva il più possibile la logica e la progressione importate.</small></button>
+    <button class="btn btn-outline" style="width:100%;margin:6px 0;text-align:left;" id="adapt-ai"><b>Analizza e crea una nuova progressione</b><br><small>Il Coach AI adatterà il programma all'obiettivo scelto.</small></button>
+    <button class="btn btn-outline" style="width:100%;margin-top:12px;" id="adapt-cancel">ANNULLA</button></div>`;
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.querySelector('#adapt-cancel').onclick=close;
+  overlay.querySelector('#adapt-keep').onclick=()=>{close(); if(kind==='duration'){if(resizeActiveProgram(desired))render();} else {store.prefs.frequency=desired;persist();render();}};
+  overlay.querySelector('#adapt-ai').onclick=()=>{close(); openGoalDialog(kind,desired);};
+  return false;
+}
+function openGoalDialog(kind, desired){
+  const goals=[['IPERTROFIA / MASSA','Volume e crescita muscolare'],['FORZA','Prestazione sui fondamentali'],['POTENZA / ESPLOSIVITÀ','Velocità e qualità della forza'],['RESISTENZA MUSCOLARE','Capacità di sostenere serie e densità'],['METABOLICO / CONDITIONING','Capacità di lavoro e conditioning'],['RICOMPOSIZIONE / FITNESS GENERALE','Equilibrio tra forza, massa e fitness'],['PERSONALIZZATO','Obiettivo definito dall’utente']];
+  const overlay=document.createElement('div'); overlay.className='modal'; overlay.style.display='flex'; overlay.style.zIndex='21';
+  overlay.innerHTML=`<div class="modal-content"><h2 style="color:var(--gold);margin-top:0;">Qual è l'obiettivo principale?</h2><select id="goal-primary" style="margin-bottom:8px;">${goals.map(g=>`<option value="${esc(g[0])}">${esc(g[0])} — ${esc(g[1])}</option>`).join('')}</select><select id="goal-secondary"><option value="">Nessun obiettivo secondario</option>${goals.map(g=>`<option value="${esc(g[0])}">${esc(g[0])}</option>`).join('')}</select><input id="goal-constraints" placeholder="Vincoli opzionali (attrezzatura, giorni, infortuni)" style="margin-top:8px;"><div style="display:flex;gap:8px;margin-top:16px;"><button class="btn btn-outline" id="goal-cancel" style="flex:1;">ANNULLA</button><button class="btn btn-primary" id="goal-confirm" style="flex:1;">ANALIZZA</button></div><div id="goal-status" style="font-size:11px;color:#aaa;margin-top:10px;"></div></div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#goal-cancel').onclick=()=>overlay.remove();
+  overlay.querySelector('#goal-confirm').onclick=async()=>{const status=overlay.querySelector('#goal-status');status.textContent='Il Coach sta analizzando il programma…';overlay.querySelector('#goal-confirm').disabled=true;try{await requestProgramReprogram(kind,desired,overlay.querySelector('#goal-primary').value,overlay.querySelector('#goal-secondary').value,overlay.querySelector('#goal-constraints').value);overlay.remove();}catch(err){status.textContent=err.message;overlay.querySelector('#goal-confirm').disabled=false;}};
+}
+async function requestProgramReprogram(kind, desired, goal, secondary, constraints){
+  const response=await apiFetch(coachEndpoint('/api/chat'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:`Riprogramma il programma JSON seguente. Modalità ai_reprogram. Obiettivo principale: ${goal}. Obiettivo secondario: ${secondary||'nessuno'}. ${kind==='duration'?'Durata desiderata: '+desired+' settimane.':'Giorni desiderati: '+desired+'.'} Vincoli: ${constraints||'nessuno'}. Restituisci SOLO JSON con adaptation_mode, goal, secondary_goal, rationale, evidence_sources, original_program_summary, changes, weeks, warnings, assumptions. Mantieni weeks[].sessions[].exercises[] e non inventare dati non supportati. Programma: ${JSON.stringify(DATA)}`,conversation_id:store.chatSessionId,context:{program:DATA,requested_change:{kind,desired},evidence_sources:EVIDENCE_SOURCES},history:[]})});
+  const payload=await readApiJson(response); let raw=String(payload.reply||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,''); let adapted; try{adapted=normalizeProgram(JSON.parse(raw));}catch(_){throw new Error('Il Coach non ha restituito una programmazione JSON valida.');}
+  adapted.adaptation_mode='ai_reprogram'; adapted.goal=goal; adapted.secondary_goal=secondary||null; adapted.evidence_sources=Array.isArray(adapted.evidence_sources)?adapted.evidence_sources:EVIDENCE_SOURCES;
+  DATA=adapted; store.activeProgram=DATA; store.prefs.duration=DATA.weeks.length; store.prefs.durationUserSet=true; if(kind==='days') store.prefs.frequency=desired; persist(); render();
 }
 function resizeActiveProgram(desired){
   const current=DATA.weeks.length;
@@ -736,7 +781,7 @@ function renderHome(c){
         </div>
         <div>
           <label style="font-size:10px; color:#666; font-weight:800;">FREQUENZA (GIORNI/W)</label>
-          <select onchange="store.prefs.frequency=parseInt(this.value);persist();render()" style="margin-top:5px;">
+          <select onchange="setDesiredFrequency(this.value)" style="margin-top:5px;">
             ${[2,3,4,5,6].map(d=>`<option value="${d}" ${d===frequency?'selected':''}>${d} Allenamenti</option>`).join('')}
           </select>
         </div>
@@ -1197,12 +1242,6 @@ async function askAI(){
 async function handleFileUpload(e) {
   const file=e.target.files[0]; if(!file)return;
   if(!/\.(pdf|doc|docx|txt|xlsx|xls)$/i.test(file.name)) { alert('Seleziona PDF, DOC, DOCX, TXT, XLSX o XLS.'); return; }
-  if(/\.doc$/i.test(file.name)) {
-    console.debug('[Coach AI] unsupported .doc selected', {name:file.name,extension:'doc',mimeType:'application/msword',size:file.size,endpoint:coachEndpoint('/api/analyze')});
-    alert('Formato .doc non ancora supportato dal server. Usa .docx, PDF, TXT, XLSX o XLS.');
-    e.target.value='';
-    return;
-  }
   if(file.size>MAX_DOCUMENT_BYTES) { alert('Il documento supera il limite di 12 MB.'); return; }
   console.debug('[Coach AI] file selected', {name:file.name,extension:file.name.split('.').pop().toLowerCase(),mimeType:file.type||documentMime(file.name,''),size:file.size});
   const doc={id:crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random(),name:file.name,size:(file.size/1024).toFixed(1)+' KB',date:Date.now(),type:file.type};
@@ -1220,7 +1259,6 @@ async function analyzeDoc(idx) {
   const doc=store.docs[idx]; navigate('ai');
   const h=$('analysis-results'); h.innerHTML=`<div class="msg ai">Analisi avviata per ${esc(doc.name)}. Sto leggendo esercizi, serie e giorni…</div>`;
   try {
-    if(/\.doc$/i.test(doc.name)) throw new Error('Formato .doc non ancora supportato dal server. Usa .docx, PDF, TXT, XLSX o XLS.');
     const file=await getDocumentFile(doc.id);
     if(!file) throw new Error('Il file originale non è disponibile. Caricalo di nuovo per analizzarlo.');
     // Do not set Content-Type: the browser adds the multipart boundary.
