@@ -8,6 +8,7 @@ import { GoogleGenAI } from "@google/genai";
 const app = express();
 const PORT = Number(process.env.PORT || 10000);
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
+const nullable = (type) => ({ anyOf: [{ type }, { type: "null" }] });
 
 if (!process.env.GEMINI_API_KEY) {
   console.warn("WARNING: GEMINI_API_KEY is not configured.");
@@ -72,17 +73,17 @@ const workoutSchema = {
                     properties: {
                       name: { type: "string" },
                       order: { type: "integer" },
-                      sets: { type: ["integer", "null"] },
-                      reps: { type: ["string", "null"] },
-                      load: { type: ["number", "null"] },
-                      load_unit: { type: ["string", "null"] },
-                      percentage_1rm: { type: ["number", "null"] },
-                      rpe: { type: ["number", "null"] },
-                      rir: { type: ["number", "null"] },
-                      rest_seconds: { type: ["integer", "null"] },
-                      tempo: { type: ["string", "null"] },
-                      notes: { type: ["string", "null"] },
-                      progression_rule: { type: ["string", "null"] }
+                      sets: nullable("integer"),
+                      reps: nullable("string"),
+                      load: nullable("number"),
+                      load_unit: nullable("string"),
+                      percentage_1rm: nullable("number"),
+                      rpe: nullable("number"),
+                      rir: nullable("number"),
+                      rest_seconds: nullable("integer"),
+                      tempo: nullable("string"),
+                      notes: nullable("string"),
+                      progression_rule: nullable("string")
                     },
                     required: [
                       "name",
@@ -225,9 +226,10 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     ];
 
     if (req.file) {
+      const filename = req.file.originalname.toLowerCase();
       const mime = req.file.mimetype || "application/octet-stream";
 
-      if (mime === "application/pdf") {
+      if (mime === "application/pdf" || filename.endsWith(".pdf")) {
         input.push({
           type: "document",
           data: req.file.buffer.toString("base64"),
@@ -235,7 +237,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
         });
       } else if (
         mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-        req.file.originalname.toLowerCase().endsWith(".docx")
+        filename.endsWith(".docx")
       ) {
         const result = await mammoth.extractRawText({ buffer: req.file.buffer });
         input.push({
@@ -244,7 +246,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
         });
       } else if (
         mime.startsWith("text/") ||
-        req.file.originalname.toLowerCase().endsWith(".txt")
+        filename.endsWith(".txt")
       ) {
         input.push({
           type: "text",
