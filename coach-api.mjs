@@ -146,10 +146,11 @@ function extractTextFromOutput(interaction) {
     : "";
 }
 
-async function runStructuredInteraction(input) {
+async function runStructuredInteraction(input, system_instruction) {
   const interaction = await ai.interactions.create({
     model: MODEL,
     input,
+    ...(system_instruction ? { system_instruction } : {}),
     response_format: {
       type: "text",
       mime_type: "application/json",
@@ -218,54 +219,42 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
       });
     }
 
-    const input = {
-      type: "user_input",
-      content: [{
-        type: "text",
-        text: `${workoutInstruction}\n\nAnalizza il materiale seguente e crea la programmazione.`
-      }]
-    };
+    const prompt = `${workoutInstruction}\n\nAnalizza il materiale seguente e crea la programmazione.`;
+    let input;
+    let systemInstruction;
 
     if (req.file) {
       const filename = req.file.originalname.toLowerCase();
       const mime = req.file.mimetype || "application/octet-stream";
 
       if (mime === "application/pdf" || filename.endsWith(".pdf")) {
-        input.content.push({
+        input = {
           type: "document",
           data: req.file.buffer.toString("base64"),
           mime_type: "application/pdf"
-        });
+        };
+        systemInstruction = prompt;
       } else if (
         mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
         filename.endsWith(".docx")
       ) {
         const result = await mammoth.extractRawText({ buffer: req.file.buffer });
-        input.content.push({
-          type: "text",
-          text: `DOCUMENTO WORD (${req.file.originalname}):\n${result.value}`
-        });
+        input = `${prompt}\n\nDOCUMENTO WORD (${req.file.originalname}):\n${result.value}`;
       } else if (
         mime.startsWith("text/") ||
         filename.endsWith(".txt")
       ) {
-        input.content.push({
-          type: "text",
-          text: `DOCUMENTO TESTUALE (${req.file.originalname}):\n${req.file.buffer.toString("utf8")}`
-        });
+        input = `${prompt}\n\nDOCUMENTO TESTUALE (${req.file.originalname}):\n${req.file.buffer.toString("utf8")}`;
       } else {
         return res.status(415).json({
           error: "Unsupported file type. Use PDF, DOCX or TXT."
         });
       }
     } else {
-      input.content.push({
-        type: "text",
-        text: `TESTO FORNITO DALL'UTENTE:\n${text}`
-      });
+      input = `${prompt}\n\nTESTO FORNITO DALL'UTENTE:\n${text}`;
     }
 
-    const result = await runStructuredInteraction(input);
+    const result = await runStructuredInteraction(input, systemInstruction);
     return res.json(result);
   } catch (error) {
     console.error("Analyze error:", {
@@ -278,12 +267,14 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     });
     return res.status(500).json({
       error: "Document analysis failed.",
-      gemini: {
-        name: error?.name,
-        message: error?.message,
-        status: error?.status || error?.statusCode || error?.response?.status,
-        details: error?.details
-      }
+      ...(process.env.NODE_ENV === "development" ? {
+        gemini: {
+          name: error?.name,
+          message: error?.message,
+          status: error?.status || error?.statusCode || error?.response?.status,
+          details: error?.details
+        }
+      } : {})
     });
   }
 });
