@@ -277,14 +277,12 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     });
     return res.status(500).json({
       error: "Document analysis failed.",
-      ...(process.env.NODE_ENV === "development" ? {
-        gemini: {
-          name: error?.name,
-          message: error?.message,
-          status: error?.status || error?.statusCode || error?.response?.status,
-          details: error?.details
-        }
-      } : {})
+      gemini: {
+        name: error?.name,
+        message: error?.message,
+        status: error?.status || error?.statusCode || error?.response?.status,
+        details: error?.details
+      }
     });
   }
 });
