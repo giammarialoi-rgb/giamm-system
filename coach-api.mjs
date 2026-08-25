@@ -17,7 +17,7 @@ console.info(`MODEL = ${MODEL}`);
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
-  apiVersion: "v1alpha"
+  httpOptions: { apiVersion: "v1" }
 });
 
 const allowedOrigins = (process.env.CORS_ORIGINS || "")
@@ -175,6 +175,30 @@ app.get("/health", (_req, res) => {
     model: MODEL,
     apiKeyConfigured: Boolean(process.env.GEMINI_API_KEY)
   });
+});
+
+app.get("/api/gemini-test", async (_req, res) => {
+  try {
+    const interaction = await ai.interactions.create({
+      model: "gemini-3.1-flash-lite",
+      input: "Rispondi semplicemente CIAO"
+    });
+    return res.json({ ok: true, reply: interaction.output_text });
+  } catch (error) {
+    console.error("Gemini test error:", {
+      name: error?.name,
+      message: error?.message,
+      status: error?.status || error?.statusCode || error?.response?.status,
+      details: error?.details,
+      stack: error?.stack
+    });
+    return res.status(500).json({
+      ok: false,
+      name: error?.name,
+      message: error?.message,
+      status: error?.status || error?.statusCode || error?.response?.status
+    });
+  }
 });
 
 app.post("/api/analyze", upload.single("file"), async (req, res) => {
