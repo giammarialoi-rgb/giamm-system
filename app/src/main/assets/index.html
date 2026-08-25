@@ -342,6 +342,7 @@ if(!store.skips) store.skips = {};
 if(!store.bonus) store.bonus = {};
 if(!store.docs) store.docs = [];
 if(!store.models) store.models = [];
+if(!store.activeProgramId) store.activeProgramId = null;
 if(!store.exIntensity) store.exIntensity = {};
 if(!store.chatHistory) store.chatHistory = [];
 if(!store.chatSessionId) store.chatSessionId = `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -450,6 +451,14 @@ async function buildAnalyzeForm(file, doc) {
   if(blob.size === 0) throw new Error('Il documento è vuoto.');
   form.append('file', blob, filename);
   return form;
+}
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>{const value=String(reader.result||'');const comma=value.indexOf(',');resolve(comma>=0?value.slice(comma+1):value);};
+    reader.onerror=()=>reject(reader.error||new Error('Impossibile leggere il file.'));
+    reader.readAsDataURL(file);
+  });
 }
 function coachEndpoint(path) {
   if (!COACH_API_URL || !/^https:\/\//i.test(COACH_API_URL)) throw new Error('Endpoint Coach AI non configurato correttamente.');
@@ -652,9 +661,10 @@ function programFingerprint(program) {
 }
 function importProgramJson(program, documentName) {
   const fingerprint=programFingerprint(program);
-  const model={name:'Originale: '+documentName.substring(0,24),sourceDocument:documentName,sourceFingerprint:fingerprint,date:Date.now(),data:program};
+  const model={id:`program-${Date.now()}-${Math.random().toString(36).slice(2)}`,name:'Originale: '+documentName.substring(0,24),sourceDocument:documentName,sourceFingerprint:fingerprint,date:Date.now(),data:program};
   const existing=store.models.findIndex(item=>item.sourceDocument===documentName&&item.sourceFingerprint===fingerprint);
-  if(existing>=0) store.models[existing]=model; else store.models.push(model);
+  if(existing>=0) { model.id=store.models[existing].id||model.id; store.models[existing]=model; } else store.models.push(model);
+  store.activeProgramId=model.id;
   store.activeProgram=program;
   DATA=program;
   currentWeek=1;
@@ -819,14 +829,19 @@ function renderHome(c){
 }
 
 function applyModel(idx) {
-    const model = JSON.parse(JSON.stringify(store.models[idx])); // Clone profondo
+    const source=store.models[idx];
+    console.debug('SAVED_PROGRAM_ACTIVATE_CLICK',{programId:source&&source.id,programName:source&&source.name});
+    if(!source||!source.data){alert('Programma salvato non disponibile.');return;}
+    const model = JSON.parse(JSON.stringify(source));
     DATA = model.data;
     store.activeProgram = DATA;
+    store.activeProgramId = source.id;
     currentWeek = 1;
     currentDay = 0;
     store.prefs.duration = DATA.weeks.length;
     persist();
     render();
+    alert('Programma attivato');
 }
 function deleteModel(idx) {
   if(confirm("Eliminare definitivamente questo modello?")) {
@@ -1267,11 +1282,11 @@ async function analyzeDoc(idx) {
   try {
     const file=await getDocumentFile(doc.id);
     if(!file) throw new Error('Il file originale non è disponibile. Caricalo di nuovo per analizzarlo.');
-    // Do not set Content-Type: the browser adds the multipart boundary.
-    const form=await buildAnalyzeForm(file, doc);
+    const base64=await fileToBase64(file);
     console.debug('[Coach AI] analyze upload', {name:doc.name,extension:doc.name.split('.').pop().toLowerCase(),mimeType:documentMime(doc.name,doc.type),size:file.size,endpoint:coachEndpoint('/api/analyze')});
-    if(/\.(xlsx|xls)$/i.test(doc.name)) console.debug('EXCEL_UPLOAD:', {multipartName:'file',mime:documentMime(doc.name,doc.type),size:file.size,endpoint:coachEndpoint('/api/analyze')});
-    const response=await apiFetch(coachEndpoint('/api/analyze'), {method:'POST',body:form});
+    if(/\.(xlsx|xls)$/i.test(doc.name)) console.debug('EXCEL_UPLOAD:', {filename:doc.name,mime:documentMime(doc.name,doc.type),size:file.size,base64Length:base64.length,endpoint:coachEndpoint('/api/analyze-file')});
+    console.debug('FILE_SEND', {filename:doc.name,mime:documentMime(doc.name,doc.type),base64Length:base64.length,endpoint:coachEndpoint('/api/analyze-file')});
+    const response=await apiFetch(coachEndpoint('/api/analyze-file'), {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:doc.name,mime_type:documentMime(doc.name,doc.type),data_base64:base64})});
     const result=await readApiJson(response);
     if(/\.(xlsx|xls)$/i.test(doc.name)) console.debug('EXCEL_RESPONSE:', {status:response.status,bodyPreview:JSON.stringify(result).slice(0,500)});
     const program=normalizeProgram(result);
