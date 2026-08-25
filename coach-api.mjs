@@ -218,19 +218,20 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
       });
     }
 
-    const input = [
-      {
+    const input = {
+      type: "user_input",
+      content: [{
         type: "text",
         text: `${workoutInstruction}\n\nAnalizza il materiale seguente e crea la programmazione.`
-      }
-    ];
+      }]
+    };
 
     if (req.file) {
       const filename = req.file.originalname.toLowerCase();
       const mime = req.file.mimetype || "application/octet-stream";
 
       if (mime === "application/pdf" || filename.endsWith(".pdf")) {
-        input.push({
+        input.content.push({
           type: "document",
           data: req.file.buffer.toString("base64"),
           mime_type: "application/pdf"
@@ -240,7 +241,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
         filename.endsWith(".docx")
       ) {
         const result = await mammoth.extractRawText({ buffer: req.file.buffer });
-        input.push({
+        input.content.push({
           type: "text",
           text: `DOCUMENTO WORD (${req.file.originalname}):\n${result.value}`
         });
@@ -248,7 +249,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
         mime.startsWith("text/") ||
         filename.endsWith(".txt")
       ) {
-        input.push({
+        input.content.push({
           type: "text",
           text: `DOCUMENTO TESTUALE (${req.file.originalname}):\n${req.file.buffer.toString("utf8")}`
         });
@@ -258,7 +259,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
         });
       }
     } else {
-      input.push({
+      input.content.push({
         type: "text",
         text: `TESTO FORNITO DALL'UTENTE:\n${text}`
       });
