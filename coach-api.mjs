@@ -16,7 +16,8 @@ console.info(`GEMINI_API_KEY configured: ${Boolean(process.env.GEMINI_API_KEY)}`
 console.info(`MODEL = ${MODEL}`);
 
 const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: { apiVersion: "v1alpha" }
 });
 
 const allowedOrigins = (process.env.CORS_ORIGINS || "")
