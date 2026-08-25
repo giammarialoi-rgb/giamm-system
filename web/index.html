@@ -19,6 +19,7 @@
   --success: #4caf50;
   --header-height: 60px;
 }
+
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
 
 body {
@@ -29,7 +30,6 @@ body {
   font-family: 'Inter', -apple-system, sans-serif;
   overflow-x: hidden;
 }
-
 #splash {
   position: fixed;
   top: 0; left: 0; width: 100%; height: 100%;
@@ -347,6 +347,12 @@ if(!store.exIntensity) store.exIntensity = {};
 if(!store.chatHistory) store.chatHistory = [];
 if(!store.chatSessionId) store.chatSessionId = `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const $=id=>document.getElementById(id), esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function getLoadSuggestion(exerciseIndex,row){if(currentWeek<=1)return null;const loads=[];for(let week=currentWeek-1;week>=1;week--){for(let set=1;set<=5;set++){const value=parseFloat(store.data[`w${week}_d${currentDay}_e${exerciseIndex}_s${set}_load`]);if(Number.isFinite(value)&&value>0)loads.push(value);}if(loads.length)break;}if(!loads.length)return null;const average=loads.reduce((sum,value)=>sum+value,0)/loads.length;const rir=Number(row.rirTarget);return Math.round(average*(Number.isFinite(rir)&&rir<=1?1.025:1)*2)/2;}
+let voiceRecognition=null,voiceOutputEnabled=true;
+function startVoiceInput(){const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;const status=$('voice-status');if(!Recognition){if(status)status.textContent='Voce non disponibile in questo WebView.';return;}stopVoiceInput();voiceRecognition=new Recognition();voiceRecognition.lang='it-IT';voiceRecognition.interimResults=false;voiceRecognition.continuous=false;voiceRecognition.onstart=()=>{if(status)status.textContent='Ascolto…';};voiceRecognition.onerror=event=>{if(status)status.textContent='Errore voce: '+event.error;};voiceRecognition.onend=()=>{if(status&&status.textContent==='Ascolto…')status.textContent='';};voiceRecognition.onresult=event=>{const input=$('ai-input');if(input)input.value=event.results[0][0].transcript;};voiceRecognition.start();}
+function stopVoiceInput(){if(voiceRecognition){voiceRecognition.stop();voiceRecognition=null;}const status=$('voice-status');if(status)status.textContent='';}
+function toggleVoiceOutput(){voiceOutputEnabled=!voiceOutputEnabled;const status=$('voice-status');if(status)status.textContent=voiceOutputEnabled?'Lettura attiva':'Lettura disattivata';}
+function speakCoachReply(text){if(!voiceOutputEnabled||!window.speechSynthesis)return;window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.lang='it-IT';window.speechSynthesis.speak(utterance);}
 function clearCoachSession(){
   console.debug('COACH_SESSION_CLEAR');
   store.chatHistory=[];
@@ -900,6 +906,7 @@ function renderTraining(c){
         </div>
       </div>
       <div style="font-size:17px;font-weight:900;margin-bottom:10px;">${esc(curEx)}</div>
+      ${getLoadSuggestion(fIdx,row)!=null?`<div style="font-size:10px;color:var(--gold);margin-bottom:8px;">Suggerimento settimana precedente: ${getLoadSuggestion(fIdx,row)} kg · conferma sempre in base a tecnica e RPE/RIR.</div>`:''}
       ${skipReason ? `<div class="skip-reason">Causa: ${skipReason}</div>` : ''}
 
       <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
@@ -1089,6 +1096,7 @@ function finalizeWorkout() {
   });
 
   summary += `\nVolume Totale: ${$('d-vol').innerText} kg\nSerie totali: ${$('d-sets').innerText}`;
+  summary += `\nDati storici per suggerimenti futuri:\n${JSON.stringify(store.data).slice(0,50000)}`;
 
   if(confirm("Allenamento completato! Inviare i dati al Coach AI?")) {
     navigate('ai');
@@ -1157,7 +1165,7 @@ function renderAI(c){
   c.innerHTML=`<h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">COACH AI</h1>
     <div style="font-size:10px; color:#777; margin-bottom:15px; font-weight:700; letter-spacing:1px;">COACH PERSONALE • ANALISI DATI REALI</div>
     <div style="display:flex;gap:8px;margin-bottom:10px;"><button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="checkBackendHealth()">VERIFICA SERVER AI</button><span id="ai-status" style="font-size:10px;color:#777;align-self:center;"></span></div>
-    <div class="card"><div class="card-header"><h2>Coach AI</h2><div style="display:flex;gap:6px;"><button class="btn btn-outline" style="font-size:9px;padding:6px 9px;" onclick="newCoachQuestion()">NUOVA DOMANDA</button><button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="openResetSession()">AZZERA</button></div></div><div style="padding:12px;"><div id="chat-history">${history||'<div class="msg ai">Ciao. Posso leggere il programma attivo e i tuoi dati di allenamento per darti indicazioni pratiche.</div>'}</div><div style="display:flex;gap:10px;background:var(--surface-light);padding:10px;border-radius:12px;"><input type="text" id="ai-input" placeholder="Es. come regolo i carichi nella prossima seduta?" style="flex:1;border:none;background:transparent;"><button class="btn btn-primary" onclick="askAI()" style="padding:10px 15px;">INV</button></div></div></div>
+    <div class="card"><div class="card-header"><h2>Coach AI</h2><div style="display:flex;gap:6px;"><button class="btn btn-outline" style="font-size:9px;padding:6px 9px;" onclick="newCoachQuestion()">NUOVA DOMANDA</button><button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="openResetSession()">AZZERA</button></div></div><div style="padding:12px;"><div id="chat-history">${history||'<div class="msg ai">Ciao. Posso leggere il programma attivo e i tuoi dati di allenamento per darti indicazioni pratiche.</div>'}</div><div style="display:flex;gap:10px;background:var(--surface-light);padding:10px;border-radius:12px;"><input type="text" id="ai-input" placeholder="Es. come regolo i carichi nella prossima seduta?" style="flex:1;border:none;background:transparent;"><button class="btn btn-outline" onclick="startVoiceInput()" style="padding:10px 12px;">🎙</button><button class="btn btn-primary" onclick="askAI()" style="padding:10px 15px;">INV</button></div><div style="display:flex;gap:8px;margin-top:8px;"><button class="btn btn-outline" onclick="stopVoiceInput()" style="font-size:9px;padding:6px 9px;">STOP VOCE</button><button class="btn btn-outline" onclick="toggleVoiceOutput()" style="font-size:9px;padding:6px 9px;">LEGGI RISPOSTA</button><span id="voice-status" style="font-size:10px;color:#777;align-self:center;"></span></div></div></div>
     <div class="card" style="margin-top:15px;"><div class="card-header"><h2>Analisi programmazione</h2></div><div id="analysis-results" style="padding:12px;"><div class="msg ai">Nessuna analisi selezionata.</div></div></div>`;
 }
 async function checkBackendHealth(){
@@ -1249,6 +1257,7 @@ async function askAI(){
     const reply=String(payload.reply||payload.message||payload.response||'').trim();
     if(!reply) throw new Error('Risposta vuota del server');
     pending.innerHTML=markdownToHtml(reply);
+    speakCoachReply(reply);
     store.chatHistory.push({role:'assistant',text:reply}); persist();
   } catch(err) {
     if(requestToken!==coachRequestToken)return;
