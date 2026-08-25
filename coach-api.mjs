@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import multer from "multer";
 import mammoth from "mammoth";
+import XLSX from "xlsx";
 import { GoogleGenAI } from "@google/genai";
 
 const app = express();
@@ -170,6 +171,36 @@ async function runStructuredInteraction(input, system_instruction) {
   }
 }
 
+function extractExcelText(buffer) {
+  let workbook;
+  try {
+    workbook = XLSX.read(buffer, { type: "buffer", cellDates: true, cellNF: true, cellFormula: true });
+  } catch (error) {
+    const invalid = new Error(`Unable to read Excel file: ${error?.message || "invalid workbook"}`);
+    invalid.statusCode = 400;
+    throw invalid;
+  }
+  if (!workbook.SheetNames.length) {
+    const invalid = new Error("Excel workbook contains no worksheets.");
+    invalid.statusCode = 400;
+    throw invalid;
+  }
+  return workbook.SheetNames.map((sheetName, sheetIndex) => {
+    const worksheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(worksheet, {
+      header: 1,
+      raw: false,
+      defval: "",
+      blankrows: true
+    });
+    const lines = rows.map((row, rowIndex) => {
+      const values = Array.isArray(row) ? row.map((value) => value == null ? "" : String(value)) : [];
+      return `RIGA ${rowIndex + 1}: ${values.join(" | ")}`;
+    });
+    return [`FOGLIO ${sheetIndex + 1}: ${sheetName}`, ...lines].join("\n");
+  }).join(`\n\n`);
+}
+
 app.get("/health", (_req, res) => {
   res.json({
     ok: true,
@@ -245,9 +276,16 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
         filename.endsWith(".txt")
       ) {
         input = `${prompt}\n\nDOCUMENTO TESTUALE (${req.file.originalname}):\n${req.file.buffer.toString("utf8")}`;
+      } else if (
+        mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        mime === "application/vnd.ms-excel" ||
+        filename.endsWith(".xlsx") ||
+        filename.endsWith(".xls")
+      ) {
+        input = `${prompt}\n\nFOGLI EXCEL (${req.file.originalname}):\n${extractExcelText(req.file.buffer, req.file.originalname)}`;
       } else {
         return res.status(415).json({
-          error: "Unsupported file type. Use PDF, DOCX or TXT."
+          error: "Unsupported file type. Use PDF, DOCX, TXT, XLSX or XLS."
         });
       }
     } else {
@@ -265,7 +303,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
       details: error?.details,
       stack: error?.stack
     });
-    return res.status(500).json({
+    return res.status(error?.statusCode || 500).json({
       error: "Document analysis failed.",
       ...(process.env.NODE_ENV === "development" ? {
         gemini: {
