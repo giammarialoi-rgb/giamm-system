@@ -40,7 +40,7 @@ app.use(cors({
   }
 }));
 
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "70mb" }));
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -248,6 +248,56 @@ app.get("/api/gemini-test", async (_req, res) => {
       message: error?.message,
       status: error?.status || error?.statusCode || error?.response?.status
     });
+  }
+});
+
+async function analyzeUploadedBuffer(originalname, mimetype, buffer) {
+  const filename = String(originalname || "").toLowerCase();
+  const mime = String(mimetype || "application/octet-stream").toLowerCase();
+  if (!filename || !buffer?.length) {
+    const error = new Error("filename, mime_type and non-empty data_base64 are required.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const prompt = `${workoutInstruction}\n\nAnalizza il materiale seguente e crea la programmazione.`;
+  let input;
+  let systemInstruction;
+  if (mime === "application/pdf" || filename.endsWith(".pdf")) {
+    input = { type: "document", data: buffer.toString("base64"), mime_type: "application/pdf" };
+    systemInstruction = prompt;
+  } else if (mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || filename.endsWith(".docx")) {
+    const result = await mammoth.extractRawText({ buffer });
+    input = `${prompt}\n\nDOCUMENTO WORD (${originalname}):\n${result.value}`;
+  } else if (mime === "application/msword" || filename.endsWith(".doc")) {
+    const extracted = await extractLegacyWordText(buffer);
+    if (!extracted.trim()) throw Object.assign(new Error("Legacy DOC contains no readable text."), { statusCode: 400 });
+    input = `${prompt}\n\nDOCUMENTO WORD LEGACY (${originalname}):\n${extracted}`;
+  } else if (mime.startsWith("text/") || filename.endsWith(".txt")) {
+    input = `${prompt}\n\nDOCUMENTO TESTUALE (${originalname}):\n${buffer.toString("utf8")}`;
+  } else if (mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || mime === "application/vnd.ms-excel" || filename.endsWith(".xlsx") || filename.endsWith(".xls")) {
+    input = `${prompt}\n\nFOGLI EXCEL (${originalname}):\n${extractExcelText(buffer, originalname)}`;
+  } else {
+    const error = new Error("Unsupported file type. Use PDF, DOC, DOCX, TXT, XLSX or XLS.");
+    error.statusCode = 415;
+    throw error;
+  }
+  return runStructuredInteraction(input, systemInstruction);
+}
+
+app.post("/api/analyze-file", async (req, res) => {
+  try {
+    if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: "GEMINI_API_KEY is not configured on the server." });
+    const { filename, mime_type: mimeType, data_base64: dataBase64 } = req.body || {};
+    if (typeof filename !== "string" || typeof mimeType !== "string" || typeof dataBase64 !== "string" || !dataBase64.trim()) {
+      return res.status(400).json({ error: "filename, mime_type and data_base64 are required." });
+    }
+    const buffer = Buffer.from(dataBase64, "base64");
+    if (!buffer.length || buffer.length > 50 * 1024 * 1024) return res.status(400).json({ error: "Invalid or oversized file data." });
+    console.info("Analyze-file input", { filename, mimeType, bytes: buffer.length });
+    return res.json(await analyzeUploadedBuffer(filename, mimeType, buffer));
+  } catch (error) {
+    console.error("Analyze-file error:", { name: error?.name, message: error?.message, status: error?.status || error?.statusCode, stack: error?.stack });
+    return res.status(error?.statusCode || 500).json({ error: error?.statusCode === 415 ? error.message : "Document analysis failed." });
   }
 });
 
