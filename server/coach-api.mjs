@@ -7,7 +7,7 @@ const apiKey = process.env.GEMINI_API_KEY;
 const mockGemini = Boolean(process.env.MOCK_GEMINI && process.env.MOCK_GEMINI !== '0');
 const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
 const maxBytes = 16 * 1024 * 1024;
-const geminiClient = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const geminiClient = apiKey ? new GoogleGenAI({ apiKey, httpOptions: { apiVersion: 'v1alpha' } }) : null;
 
 if (!apiKey && !mockGemini) throw new Error('GEMINI_API_KEY must be set on the server or enable MOCK_GEMINI=1 for local testing.');
 console.info(`GEMINI_API_KEY configured: ${Boolean(apiKey)}`);
