@@ -1,6 +1,11 @@
 import http from 'node:http';
 import { GoogleGenAI } from '@google/genai';
 import mammoth from 'mammoth';
+import WordExtractor from 'word-extractor';
+import XLSX from 'xlsx';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 
 const port = Number(process.env.PORT || 8787);
 const apiKey = process.env.GEMINI_API_KEY;
@@ -152,9 +157,28 @@ async function gemini(payload) {
 function outputText(result) {
   return typeof result?.output_text === 'string' ? result.output_text : '';
 }
+async function extractLegacyWordText(buffer) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'giammaria-doc-'));
+  const filename = path.join(dir, 'document.doc');
+  try {
+    await fs.writeFile(filename, buffer);
+    const document = await new WordExtractor().extract(filename);
+    return [document.getBody(), document.getHeaders(), document.getFootnotes()].filter(Boolean).join('\n\n');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+}
+function extractExcelText(buffer) {
+  const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true, cellNF: true, cellFormula: true });
+  if (!workbook.SheetNames.length) throw new Error('Excel workbook contains no worksheets');
+  return workbook.SheetNames.map((name, index) => {
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, raw: false, defval: '', blankrows: true });
+    return [`FOGLIO ${index + 1}: ${name}`, ...rows.map((row, rowIndex) => `RIGA ${rowIndex + 1}: ${row.map(value => value == null ? '' : String(value)).join(' | ')}`)].join('\n');
+  }).join('\n\n');
+}
 function validateFile({ filename, mimeType, dataBase64 }) {
   if (!filename || !dataBase64) throw new Error('File missing');
-  if (!/\.(pdf|doc|docx|txt)$/i.test(filename)) throw new Error('Only PDF, DOC, DOCX and TXT files are supported');
+  if (!/\.(pdf|doc|docx|txt|xlsx|xls)$/i.test(filename)) throw new Error('Only PDF, DOC, DOCX, TXT, XLSX and XLS files are supported');
   const bytes = Buffer.from(dataBase64, 'base64');
   if (!bytes.length || bytes.length > 12 * 1024 * 1024) throw new Error('File must be between 1 byte and 12 MB');
   const extension = filename.toLowerCase().split('.').pop();
@@ -178,6 +202,12 @@ async function analyze(body) {
     } else if (document.extension === 'docx') {
       const extracted = await mammoth.extractRawText({ buffer: document.bytes });
       input = [{ type: 'text', text: `${prompt}\n\nDocument text:\n${extracted.value}` }];
+    } else if (document.extension === 'doc') {
+      const extracted = await extractLegacyWordText(document.bytes);
+      if (!extracted.trim()) throw new Error('Legacy DOC contains no readable text');
+      input = [{ type: 'text', text: `${prompt}\n\nLegacy Word document text:\n${extracted}` }];
+    } else if (document.extension === 'xlsx' || document.extension === 'xls') {
+      input = [{ type: 'text', text: `${prompt}\n\nExcel workbook:\n${extractExcelText(document.bytes)}` }];
     } else if (document.extension === 'txt') {
       input = [{ type: 'text', text: `${prompt}\n\nDocument text:\n${document.bytes.toString('utf8')}` }];
     } else {

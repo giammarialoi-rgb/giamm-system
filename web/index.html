@@ -1,0 +1,1264 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>GIAMMARIA SYSTEM | ELITE TRAINING</title>
+<style>
+:root {
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface-light: #151515;
+  --gold: #d4af37;
+  --gold-glow: #f9d976;
+  --gold-dark: #aa8a2e;
+  --text-primary: #ffffff;
+  --text-secondary: #888888;
+  --border: #222222;
+  --accent-red: #ff4d4d;
+  --success: #4caf50;
+  --header-height: 60px;
+}
+let coachRequestToken=0;
+function clearCoachSession(){
+  store.chatHistory=[];
+  window.pendingProgramImport=null;
+  const input=$('ai-input'); if(input) input.value='';
+  const history=$('chat-history'); if(history) history.innerHTML='<div class="msg ai">Schermata pronta per una nuova domanda.</div>';
+  const analysis=$('analysis-results'); if(analysis) analysis.innerHTML='<div class="msg ai">Nessuna analisi selezionata.</div>';
+  persist();
+}
+function newCoachQuestion(){
+  console.debug('[Coach AI] newCoachQuestion');
+  coachRequestToken++;
+  clearCoachSession();
+  store.chatSessionId=`chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  render();
+  setTimeout(()=>{const input=$('ai-input'); if(input) input.focus();},0);
+}
+function openResetSession(){
+  $('reset-session-modal').style.display='flex';
+}
+function closeResetSession(){
+  $('reset-session-modal').style.display='none';
+}
+function confirmResetSession(){
+  console.debug('[Coach AI] confirmResetSession');
+  coachRequestToken++;
+  clearCoachSession();
+  store.chatSessionId=null;
+  closeResetSession();
+  render();
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+#splash {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  transition: opacity 0.8s ease-out;
+}
+
+#splash img {
+  width: 140px;
+  filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4));
+  margin-bottom: 20px;
+}
+
+header {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: var(--header-height);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+header .logo-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+header .logo-container img { height: 32px; }
+header .logo-container span { font-size: 18px; font-weight: 900; color: var(--gold); letter-spacing: 2px; }
+
+main {
+  margin-top: var(--header-height);
+  margin-bottom: 160px;
+  padding: 15px;
+  min-height: calc(100vh - var(--header-height) - 160px);
+}
+
+nav.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  height: 130px;
+  background: #000;
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding-bottom: 55px;
+  z-index: 1000;
+  box-shadow: 0 -15px 50px rgba(0,0,0,1);
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 4px;
+}
+
+.nav-item.active { color: var(--gold); }
+.nav-item svg { width: 42px; height: 42px; fill: #555; transition: all 0.2s; }
+.nav-item.active svg { fill: var(--gold); transform: translateY(-5px) scale(1.1); }
+
+.card {
+  background: var(--surface);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 12px 15px;
+  background: var(--surface-light);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-header h2 { margin: 0; font-size: 13px; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
+
+.btn {
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.btn-primary { background: var(--gold); color: #000; }
+.btn-outline { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
+
+select, input {
+  width: 100%;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.perf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  color: #ccc;
+}
+
+.perf-table th, .perf-table td {
+  border: 1px solid #222;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.perf-table th { background: #151515; color: var(--gold); }
+.delta-pos { color: var(--success); }
+.delta-neg { color: var(--accent-red); }
+
+.chart-container { height: 260px; margin-bottom: 10px; }
+
+.fab-save {
+  position: fixed; right: 20px; bottom: 150px;
+  width: 60px; height: 60px; border-radius: 30px;
+  background: var(--gold); color: #000;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 999;
+  border: none;
+}
+
+.fab-save svg { width: 30px; height: 30px; fill: currentColor; }
+
+/* Nuovi stili per funzioni allenamento */
+#timer-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.9); display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  z-index: 3000;
+}
+#timer-display { font-size: 80px; font-weight: 900; color: var(--gold); margin-bottom: 20px; }
+.timer-btn { padding: 15px 40px; border-radius: 30px; font-weight: 800; border: none; font-size: 18px; }
+
+.load-toggle {
+  background: #111; border: 1px solid #333; color: #777;
+  padding: 4px 8px; border-radius: 6px; font-size: 9px; font-weight: 800;
+  cursor: pointer; text-transform: uppercase;
+}
+.load-toggle.active { color: var(--gold); border-color: var(--gold); }
+
+.prev-load-popup {
+  position: absolute; background: var(--gold); color: #000;
+  padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 900;
+  pointer-events: none; transform: translateY(-100%); margin-top: -5px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 500;
+  display: none;
+}
+
+.skip-btn { color: var(--accent-red); font-size: 10px; font-weight: 800; cursor: pointer; }
+.exercise-skipped { opacity: 0.3; pointer-events: none; }
+.skip-reason { font-size: 10px; font-style: italic; color: var(--accent-red); margin-top: 4px; }
+
+.modal {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8); z-index: 2500;
+  display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-content {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 20px; width: 100%; max-width: 400px;
+}
+.markdown p { margin: 0 0 10px; line-height: 1.55; }
+.markdown h2, .markdown h3, .markdown h4 { color: var(--gold); margin: 14px 0 8px; }
+.markdown ul, .markdown ol { margin: 6px 0 12px 20px; padding: 0; line-height: 1.55; }
+.markdown-gap { height: 5px; }
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <img src="gs_logo.png" alt="GS Logo">
+  <span style="color:var(--gold); font-weight:900; letter-spacing:4px; font-size:20px;">GIAMMARIA SYSTEM</span>
+  <div style="margin-top:10px; font-size:10px; color:#555; font-weight:800; letter-spacing:2px;">POWERED BY GEMINI</div>
+  <div style="margin-top:20px; color:#888;">Performance & Evidence Based Training</div>
+</div>
+
+<header>
+  <div class="logo-container"><img src="gs_logo.png" alt="GS Logo"><span>GIAMMARIA SYSTEM</span></div>
+</header>
+
+<main id="view-container"></main>
+
+<!-- Timer Overlay -->
+<div id="timer-overlay">
+  <div id="timer-display">00:00</div>
+  <button class="timer-btn btn-primary" onclick="stopTimer()">CHIUDI</button>
+</div>
+
+<!-- Modal Salto Esercizio -->
+<div id="skip-modal" class="modal">
+  <div class="modal-content">
+    <h2 style="color:var(--gold); margin-top:0;">SALTA ESERCIZIO</h2>
+    <p style="font-size:12px; color:#aaa;">Indica la causa del salto:</p>
+    <select id="skip-reason-select">
+      <option value="Dolore/Infortunio">Dolore / Infortunio</option>
+      <option value="Mancanza di tempo">Mancanza di tempo</option>
+      <option value="Attrezzatura occupata">Attrezzatura occupata</option>
+      <option value="Altro">Altro</option>
+    </select>
+    <div style="display:flex; gap:10px; margin-top:20px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="$('skip-modal').style.display='none'">ANNULLA</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="confirmSkip()">CONFERMA</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal Sostituzione Esercizio -->
+<div id="replace-modal" class="modal">
+  <div class="modal-content" style="max-height:85vh;overflow:auto;">
+    <h2 style="color:var(--gold);margin-top:0;">SOSTITUISCI ESERCIZIO</h2>
+    <div id="replace-current" style="font-size:12px;color:#aaa;margin-bottom:12px;"></div>
+    <input id="replace-search" type="search" placeholder="Cerca alternativa..." oninput="renderReplacementOptions(this.value)">
+    <div id="replace-options" style="margin-top:12px;"></div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="$('replace-modal').style.display='none';replacementDraft=null">ANNULLA</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="confirmReplacement()">CONFERMA</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Reset Sessione Coach -->
+<div id="reset-session-modal" class="modal">
+  <div class="modal-content">
+    <h2 style="color:var(--gold);margin-top:0;">Azzerare il Coach AI?</h2>
+    <p style="font-size:12px;color:#aaa;">Verranno rimossi domanda, risposta, cronologia e analisi non importate. Programmi, progressi e impostazioni resteranno intatti.</p>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeResetSession()">Annulla</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="confirmResetSession()">Azzerà</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip Carico Precedente -->
+<div id="prev-load-tooltip" class="prev-load-popup">PREV: 00kg</div>
+
+<button class="fab-save" onclick="saveAll()">
+  <svg viewBox="0 0 24 24"><path d="M17,3H5C3.89,3 3,3.9 3,5V19C3,20.1 3.89,21 5,21H19C20.1,21 21,20.1 21,19V7L17,3M12,19C10.34,19 9,17.66 9,16C9,14.34 10.34,13 12,13C13.66,13 15,14.34 15,16C15,17.66 13.66,19 12,19M15,9H5V5H15V9Z"/></svg>
+</button>
+
+<nav class="bottom-nav">
+  <a href="#" class="nav-item active" id="nav-home" onclick="navigate('home', event)">
+    <svg viewBox="0 0 24 24"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg><span>HOME</span>
+  </a>
+  <a href="#" class="nav-item" id="nav-training" onclick="navigate('training', event)">
+    <svg viewBox="0 0 24 24"><path d="M20.57,14.86L22,13.43L20.57,12L17,15.57L8.43,7L12,3.43L10.57,2L9.14,3.43L7.71,2L5.57,4.14L4.14,2.71L2.71,4.14L4.14,5.57L2,7.71L3.43,9.14L2,10.57L3.43,12L7,8.43L15.57,17L12,20.57L13.43,22L14.86,20.57L16.29,22L18.43,19.86L19.86,21.29L21.29,19.86L19.86,18.43L22,16.29L20.57,14.86Z"/></svg><span>WORKOUT</span>
+  </a>
+  <a href="#" class="nav-item" id="nav-stats" onclick="navigate('stats', event)">
+    <svg viewBox="0 0 24 24"><path d="M16,11.78L20.24,4.45L21.97,5.45L16.74,13.03L13,10.32L9,16.88L9,17H21V19H3V5H5V16.5L9.17,10L13.06,12.7L16,11.78Z"/></svg><span>PERF</span>
+  </a>
+  <a href="#" class="nav-item" id="nav-ai" onclick="navigate('ai', event)">
+    <svg viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z"/></svg><span>COACH AI</span>
+  </a>
+  <a href="#" class="nav-item" id="nav-db" onclick="navigate('db', event)">
+    <svg viewBox="0 0 24 24"><path d="M15.5,14L20.35,18.85L18.85,20.35L14,15.5V14.71L13.73,14.43C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.43,13.73L14.71,14H15.5M9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14Z"/></svg><span>DB</span>
+  </a>
+</nav>
+
+<script>
+let DATA=null, currentView='home', currentWeek=1, currentDay=0;
+// The app only knows the HTTPS address of the backend. Gemini credentials stay
+// on that server and are never shipped to the phone.
+const COACH_API_URL = (window.NativeConfig && window.NativeConfig.getCoachApiUrl && window.NativeConfig.getCoachApiUrl()) || '';
+const MAX_DOCUMENT_BYTES = 12 * 1024 * 1024;
+const DEFAULT_STORE = {data:{},subs:{},bw:{},prefs:{intensityType:'RIR',duration:16,frequency:4},loadTypes:{},tempos:{},skips:{},bonus:{},docs:[],models:[],activeProgram:null,exIntensity:{}};
+function loadStore(){
+  try { return JSON.parse(localStorage.getItem('GS_STORE') || JSON.stringify(DEFAULT_STORE)); }
+  catch(err) { console.error('Invalid saved app data', err); return JSON.parse(JSON.stringify(DEFAULT_STORE)); }
+}
+let store=loadStore();
+// Migrazione per vecchi store
+if(!store.prefs) store.prefs = {"intensityType":"RIR","duration":16,"frequency":4};
+if(!store.prefs.duration) store.prefs.duration = 16;
+if(typeof store.prefs.durationUserSet!=='boolean') store.prefs.durationUserSet=false;
+if(!store.prefs.frequency) store.prefs.frequency = 4;
+if(!store.loadTypes) store.loadTypes = {};
+if(!store.tempos) store.tempos = {};
+if(!store.skips) store.skips = {};
+if(!store.bonus) store.bonus = {};
+if(!store.docs) store.docs = [];
+if(!store.models) store.models = [];
+if(!store.exIntensity) store.exIntensity = {};
+if(!store.chatHistory) store.chatHistory = [];
+if(!store.chatSessionId) store.chatSessionId = `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const $=id=>document.getElementById(id), esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function markdownToHtml(value){
+  let text=esc(value).replace(/\r\n/g,'\n');
+  text=text.replace(/^### (.+)$/gm,'<h4>$1</h4>').replace(/^## (.+)$/gm,'<h3>$1</h3>').replace(/^# (.+)$/gm,'<h2>$1</h2>');
+  text=text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/__(.+?)__/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>');
+  const lines=text.split('\n'), out=[]; let list=null;
+  lines.forEach(line=>{
+    const bullet=line.match(/^\s*[-•]\s+(.+)$/), numbered=line.match(/^\s*\d+[.)]\s+(.+)$/);
+    if(bullet||numbered){const type=numbered?'ol':'ul';if(list!==type){if(list)out.push(`</${list}>`);out.push(`<${type}>`);list=type}out.push(`<li>${(bullet||numbered)[1]}</li>`);return}
+    if(list){out.push(`</${list}>`);list=null}
+    if(line.trim()) out.push(`<p>${line}</p>`); else if(out.length) out.push('<div class="markdown-gap"></div>');
+  });
+  if(list)out.push(`</${list}>`);
+  return out.join('');
+}
+
+// File bytes are stored in IndexedDB, not localStorage: documents and spreadsheets
+// remain available for a later analysis without risking localStorage quotas.
+function fileDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('GS_DOCUMENTS', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('files');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+async function saveDocumentFile(id, file) {
+  const db = await fileDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('files', 'readwrite');
+    tx.objectStore('files').put(file, id);
+    tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+  });
+}
+async function getDocumentFile(id) {
+  const db = await fileDb();
+  return new Promise((resolve, reject) => {
+    const request = db.transaction('files').objectStore('files').get(id);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
+}
+async function removeDocumentFile(id) {
+  const db = await fileDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').delete(id);
+    tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+  });
+}
+function documentMime(filename, fallback) {
+  const name=String(filename||'').toLowerCase();
+  if(name.endsWith('.pdf')) return 'application/pdf';
+  if(name.endsWith('.txt')) return 'text/plain';
+  if(name.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  if(name.endsWith('.doc')) return 'application/msword';
+  if(name.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  if(name.endsWith('.xls')) return 'application/vnd.ms-excel';
+  return fallback || 'application/octet-stream';
+}
+function asDocumentBlob(file, filename, mime) {
+  if(file instanceof Blob) return file.type ? file : new Blob([file], {type: mime});
+  return new Blob([file], {type: mime});
+}
+async function buildAnalyzeForm(file, doc) {
+  // The backend accepts the original document as multipart `file`.
+  const filename=String((file && file.name) || (doc && doc.name) || 'document.txt');
+  const mime=documentMime(filename, (file && file.type) || (doc && doc.type) || '');
+  const blob=asDocumentBlob(file, filename, mime);
+  const form=new FormData();
+  if(blob.size === 0) throw new Error('Il documento è vuoto.');
+  form.append('file', blob, filename);
+  return form;
+}
+function coachEndpoint(path) {
+  if (!COACH_API_URL || !/^https:\/\//i.test(COACH_API_URL)) throw new Error('Endpoint Coach AI non configurato correttamente.');
+  return COACH_API_URL.replace(/\/$/, '') + path;
+}
+async function apiFetch(url, options, timeoutMs=90000) {
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  console.debug('[Coach AI] request', url);
+  try {
+    const response=await fetch(url,{...options,signal:controller.signal});
+    console.debug('[Coach AI] response', response.status, url);
+    return response;
+  }
+  catch(err) { console.error('[Coach AI] network error', err); if(err.name==='AbortError') throw new Error('Timeout della richiesta AI.'); throw err; }
+  finally { clearTimeout(timer); }
+}
+async function readApiJson(response) {
+  const contentType=response.headers.get('content-type')||'';
+  const raw=await response.text();
+  let payload={};
+  try { payload=raw ? JSON.parse(raw) : {}; } catch(err) { console.error('[Coach AI] invalid JSON', response.status, raw); }
+  if(!response.ok) {
+    const message=payload.error||payload.message||raw||'Risposta vuota del server';
+    console.error('[Coach AI] server error', response.status, message);
+    throw new Error(`HTTP ${response.status}: ${message}`);
+  }
+  if(!raw) throw new Error(`HTTP ${response.status}: risposta vuota del server`);
+  return payload;
+}
+function setCount(value) {
+  if(typeof value==='number' && Number.isFinite(value)) return Math.max(1,Math.round(value));
+  const match=String(value??'').match(/\d+/);
+  return match ? Math.max(1,parseInt(match[0],10)) : 1;
+}
+function normalizeProgram(payload) {
+  const candidate=payload.program||payload.data?.program||payload.data||payload;
+  if(!candidate || !Array.isArray(candidate.weeks) || !candidate.weeks.length) throw new Error('Il server non ha restituito una programmazione JSON valida.');
+  const program=JSON.parse(JSON.stringify({
+    ...candidate,
+    title:payload.title??candidate.title??'',
+    source_summary:payload.source_summary??candidate.source_summary??'',
+    assumptions:payload.assumptions??candidate.assumptions??[],
+    global_rules:payload.global_rules??candidate.global_rules??[],
+    warnings:payload.warnings??candidate.warnings??[]
+  }));
+  program.weeks=program.weeks.map((week,wi)=>({
+    ...week,
+    week:week.week??wi+1,
+    title:week.title||`SETTIMANA ${String(week.week??wi+1).padStart(2,'0')}`,
+    days:(week.sessions||week.days||[]).map((session,si)=>({
+      ...session,
+      title:session.title||session.name||`SESSIONE ${si+1}`,
+      rows:(session.exercises||session.rows||[]).map((exercise,ei)=>{
+        const sets=setCount(exercise.sets);
+        const rest=exercise.rest_seconds!=null ? `${exercise.rest_seconds} s` : (exercise.rest||'');
+        return {
+          ...exercise,
+          movement:exercise.movement||exercise.muscle_group||'ALTRO',
+          exercise:exercise.name||exercise.exercise||`Esercizio ${ei+1}`,
+          sets:1,
+          repsTarget:exercise.reps??exercise.repsTarget??'',
+          rpeTarget:exercise.rpe??exercise.rpeTarget??null,
+          rirTarget:exercise.rir??exercise.rirTarget??null,
+          rest,
+          plannedLoad:exercise.load??exercise.plannedLoad??null,
+          setRows:Array.from({length:Math.max(0,sets-1)},(_,i)=>i+2)
+        };
+      })
+    }))
+  }));
+  if(!program.weeks.some(week=>week.days.length && week.days.some(day=>day.rows.length))) throw new Error('La programmazione non contiene esercizi importabili.');
+  program.exerciseDb=DATA.exerciseDb||{};
+  program.source='Gemini Coach API';
+  adaptProgramDuration(program);
+  return program;
+}
+function setDesiredDuration(value){
+  const raw=value==='custom'?prompt('Inserisci la durata desiderata in settimane:',store.prefs.duration||4):value;
+  const duration=parseInt(raw,10);
+  if(!Number.isFinite(duration)||duration<1||duration>52){ alert('Inserisci una durata tra 1 e 52 settimane.'); return; }
+  if(DATA && Array.isArray(DATA.weeks) && DATA.weeks.length !== duration && !resizeActiveProgram(duration)) return;
+  store.prefs.duration=duration; store.prefs.durationUserSet=true; persist(); render();
+}
+function resizeActiveProgram(desired){
+  const current=DATA.weeks.length;
+  if(desired===current) return true;
+  if(desired<current && !confirm(`Ridurre il programma da ${current} a ${desired} settimane? Le settimane rimosse non saranno più disponibili.`)) return false;
+  if(desired>current && !confirm(`Estendere il programma da ${current} a ${desired} settimane replicando la struttura dell'ultima settimana senza inventare progressioni?`)) return false;
+  if(desired<current) DATA.weeks=DATA.weeks.slice(0,desired);
+  else {
+    const template=DATA.weeks[current-1];
+    while(DATA.weeks.length<desired) {
+      const copy=JSON.parse(JSON.stringify(template));
+      copy.week=DATA.weeks.length+1;
+      copy.label=`${template.label||'Settimana'} (ripetizione)`;
+      DATA.weeks.push(copy);
+    }
+  }
+  store.activeProgram=DATA;
+  const active=store.models.find(model=>model.sourceDocument===DATA.sourceDocument);
+  if(active) { active.data=DATA; active.date=Date.now(); active.sourceFingerprint=programFingerprint(DATA); }
+  persist();
+  if(currentWeek>desired) { currentWeek=desired; currentDay=0; }
+  return true;
+}
+function adaptProgramDuration(program){
+  if(!store.prefs.durationUserSet){ store.prefs.duration=program.weeks.length; persist(); return; }
+  const desired=Math.max(1,parseInt(store.prefs.duration,10)||program.weeks.length);
+  if(program.weeks.length>desired){
+    if(confirm(`Il documento contiene ${program.weeks.length} settimane, ma hai impostato ${desired}. Ridurre la programmazione?`)){
+      program.weeks=program.weeks.slice(0,desired);
+    } else {
+      store.prefs.duration=program.weeks.length;
+    }
+  } else if(program.weeks.length<desired){
+    const template=program.weeks[program.weeks.length-1];
+    while(program.weeks.length<desired){
+      const copy=JSON.parse(JSON.stringify(template));
+      copy.week=program.weeks.length+1;
+      copy.label=`${template.label||'Settimana'} (ripetizione)`;
+      program.weeks.push(copy);
+    }
+  }
+  store.prefs.duration=program.weeks.length; persist();
+}
+function renderProgramPreview(program) {
+  const warnings=Array.isArray(program.warnings)?program.warnings:[];
+  const assumptions=Array.isArray(program.assumptions)?program.assumptions:[];
+  const sessions=program.weeks.reduce((n,w)=>n+(w.days||[]).length,0);
+  const exercises=program.weeks.reduce((n,w)=>n+(w.days||[]).reduce((m,d)=>m+(d.rows||[]).length,0),0);
+  let html=`<div class="card" style="margin-top:12px;"><div class="card-header"><h2>Anteprima programmazione</h2></div><div style="padding:15px;">`;
+  html+=`<div style="font-size:18px;font-weight:900;color:var(--gold);">${esc(program.title||'Programmazione importata')}</div>`;
+  html+=`<div style="font-size:12px;color:#aaa;margin:8px 0 14px;">${program.weeks.length} settimane • ${sessions} sessioni • ${exercises} esercizi</div>`;
+  if(program.source_summary) html+=`<div style="font-size:12px;color:#ccc;margin-bottom:12px;">${esc(program.source_summary)}</div>`;
+  program.weeks.forEach((week,wi)=>{
+    html+=`<div style="border-top:1px solid #333;padding-top:10px;margin-top:10px;"><b style="color:var(--gold);">Settimana ${esc(week.week??wi+1)}${week.label?' • '+esc(week.label):''}</b></div>`;
+    (week.days||[]).forEach((day,di)=>{
+      html+=`<div style="margin:10px 0 6px;color:#fff;font-weight:800;">${esc(day.day||'')} ${esc(day.title||`Sessione ${di+1}`)}</div>`;
+      (day.rows||[]).forEach((row,ri)=>{
+        const details=[`Serie: ${esc(row.sets??'—')}`,`Ripetizioni: ${esc(row.repsTarget??'—')}`];
+        if(row.rpeTarget!=null) details.push(`RPE: ${esc(row.rpeTarget)}`);
+        if(row.rirTarget!=null) details.push(`RIR: ${esc(row.rirTarget)}`);
+        if(row.rest) details.push(`Recupero: ${esc(row.rest)}`);
+        if(row.plannedLoad!=null) details.push(`Carico: ${esc(row.plannedLoad)}${row.load_unit?' '+esc(row.load_unit):''}`);
+        if(row.percentage_1rm!=null) details.push(`1RM: ${esc(row.percentage_1rm)}%`);
+        if(row.progression_rule) details.push(`Progressione: ${esc(row.progression_rule)}`);
+        html+=`<div style="background:#111;border:1px solid #292929;border-radius:8px;padding:9px;margin:5px 0;font-size:11px;"><b>${esc(row.exercise||`Esercizio ${ri+1}`)}</b><br><span style="color:#aaa;">${details.join(' • ')}</span>${row.notes?`<br><span style="color:#888;">${esc(row.notes)}</span>`:''}</div>`;
+      });
+    });
+  });
+  if(assumptions.length) html+=`<div style="margin-top:14px;color:#ffd166;font-size:11px;"><b>Assunzioni</b><br>${assumptions.map(x=>`• ${esc(x)}`).join('<br>')}</div>`;
+  if(warnings.length) html+=`<div style="margin-top:10px;color:var(--accent-red);font-size:11px;"><b>Avvisi</b><br>${warnings.map(x=>`• ${esc(x)}`).join('<br>')}</div>`;
+  return html+`</div></div>`;
+}
+function programFingerprint(program) {
+  return JSON.stringify(program.weeks);
+}
+function importProgramJson(program, documentName) {
+  const fingerprint=programFingerprint(program);
+  const model={name:'Originale: '+documentName.substring(0,24),sourceDocument:documentName,sourceFingerprint:fingerprint,date:Date.now(),data:program};
+  const existing=store.models.findIndex(item=>item.sourceDocument===documentName&&item.sourceFingerprint===fingerprint);
+  if(existing>=0) store.models[existing]=model; else store.models.push(model);
+  store.activeProgram=program;
+  DATA=program;
+  currentWeek=1;
+  currentDay=0;
+  if(!store.prefs.durationUserSet) store.prefs.duration=program.weeks.length;
+  persist();
+  return program;
+}
+
+// Timer Logic
+let timerInterval = null;
+function startTimer(secondsText) {
+  const text = String(secondsText || '').toLowerCase().replace('–', '-');
+  const parts = text.match(/\d+(?:\.\d+)?/g) || [];
+  let sec = 0;
+  if(text.includes('min')) sec = parseFloat(parts[parts.length - 1] || 0) * 60;
+  else if(text.includes('s')) sec = parseFloat(parts[parts.length - 1] || 0);
+  if(isNaN(sec) || sec <= 0) sec = 90;
+
+  $('timer-overlay').style.display = 'flex';
+  const display = $('timer-display');
+  const update = () => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    display.innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    if(sec <= 0) {
+      clearInterval(timerInterval);
+      display.style.color = 'var(--accent-red)';
+    }
+    sec--;
+  };
+  update();
+  timerInterval = setInterval(update, 1000);
+}
+function stopTimer() {
+  clearInterval(timerInterval);
+  $('timer-overlay').style.display = 'none';
+  $('timer-display').style.color = 'var(--gold)';
+}
+
+// Skip Logic
+let activeSkipIdx = null;
+function openSkipModal(idx) {
+  activeSkipIdx = idx;
+  $('skip-modal').style.display = 'flex';
+}
+function confirmSkip() {
+  const reason = $('skip-reason-select').value;
+  store.skips[`w${currentWeek}_d${currentDay}_e${activeSkipIdx}`] = reason;
+  persist();
+  $('skip-modal').style.display = 'none';
+  render();
+}
+
+// Intensity Type Logic
+function toggleIntensityType() {
+  store.prefs.intensityType = store.prefs.intensityType === 'RIR' ? 'RPE' : 'RIR';
+  persist();
+  render();
+}
+
+// Previous Load Logic
+function showPrevLoad(e, key) {
+  if(currentWeek <= 1) return;
+  const prevKey = key.replace(`w${currentWeek}`, `w${currentWeek-1}`);
+  const prevVal = store.data[prevKey];
+  if(prevVal) {
+    const tt = $('prev-load-tooltip');
+    tt.innerText = `LASC. SETT: ${prevVal}kg`;
+    tt.style.display = 'block';
+    const rect = e.target.getBoundingClientRect();
+    tt.style.left = `${rect.left}px`;
+    tt.style.top = `${rect.top + window.scrollY - 30}px`;
+  }
+}
+function hidePrevLoad() {
+  $('prev-load-tooltip').style.display = 'none';
+}
+
+const MUSCLE_GROUPS = {
+  "PETTO": ["Panca orizzontale", "Spinta inclinata", "Pec fly"],
+  "DORSO": ["Lat verticale", "Row orizzontale"],
+  "GAMBE": ["Quad squat", "Pressa", "Estensione ginocchio", "Flessione ginocchio", "Adduttori", "Abduttori", "Polpaccio", "Hip hinge"],
+  "SPALLE": ["Spinta spalle", "Rear delt", "Laterale"],
+  "BRACCIA": ["Bicipite", "Tricipite"],
+  "ADDOME": ["Addome"]
+};
+
+function init(){
+  if(store.activeProgram) {
+    DATA = store.activeProgram;
+    finishInit();
+  } else {
+    let xhr=new XMLHttpRequest(); xhr.open('GET','data.json',true);
+    xhr.onreadystatechange=function(){ if(xhr.readyState===4){ DATA=JSON.parse(xhr.responseText); finishInit(); }}; xhr.send();
+  }
+}
+function finishInit() {
+  setTimeout(()=>{ $('splash').style.opacity='0'; setTimeout(()=>{$('splash').style.display='none';render()},800); },1200);
+}
+function persist(){localStorage.setItem('GS_STORE',JSON.stringify(store))}
+function navigate(v,e){ if(e)e.preventDefault(); currentView=v; document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active')); const a=$(`nav-${v}`); if(a)a.classList.add('active'); render(); }
+function render(){
+  const c=$('view-container'); if(!DATA){c.innerHTML='...';return} c.innerHTML='';
+  if(currentView==='home') renderHome(c); else if(currentView==='training') renderTraining(c); else if(currentView==='stats') renderStats(c); else if(currentView==='ai') renderAI(c); else if(currentView==='db') renderDb(c);
+}
+
+function renderHome(c){
+  const bw=store.bw[currentWeek]||'--';
+  const duration = store.prefs.duration || 16;
+  const frequency = store.prefs.frequency || 4;
+
+  c.innerHTML=`
+    <div style="text-align:center;padding:20px 0;"><img src="gs_logo.png" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">SYSTEM DASHBOARD</h1></div>
+
+    <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>Sessione Attiva</h2></div><div style="padding:20px;"><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${DATA.weeks[currentWeek-1].days[currentDay].title}</div><button class="btn btn-primary" style="width:100%;margin-top:20px;font-size:16px;height:55px;" onclick="navigate('training')">INIZIA WORKOUT</button></div></div>
+
+    <div class="card">
+      <div class="card-header"><h2>Struttura Programmazione</h2></div>
+      <div style="padding:15px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div>
+          <label style="font-size:10px; color:#666; font-weight:800;">DURATA (SETTIMANE)</label>
+          <select onchange="setDesiredDuration(this.value)" style="margin-top:5px;">
+            ${[4,6,8,12].map(w=>`<option value="${w}" ${w===duration?'selected':''}>${w} Settimane</option>`).join('')}
+            ${![4,6,8,12].includes(duration)?`<option value="${duration}" selected>${duration} Settimane</option>`:''}
+            <option value="custom">Personalizzata...</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:10px; color:#666; font-weight:800;">FREQUENZA (GIORNI/W)</label>
+          <select onchange="store.prefs.frequency=parseInt(this.value);persist();render()" style="margin-top:5px;">
+            ${[2,3,4,5,6].map(d=>`<option value="${d}" ${d===frequency?'selected':''}>${d} Allenamenti</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+       <div class="card-header"><h2>Programmi Salvati</h2></div>
+       <div style="padding:15px;" id="saved-models-list">
+          ${store.models.length ? store.models.map((m,i)=>`
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #222;">
+              <div>
+                <b style="color:var(--gold); font-size:13px;">${esc(m.name)}</b>
+                <div style="font-size:9px; color:#666;">Creato il ${new Date(m.date).toLocaleDateString()}</div>
+              </div>
+              <div style="display:flex; gap:5px;">
+                <button class="btn btn-outline" style="font-size:9px; padding:4px 8px;" onclick="applyModel(${i})">ATTIVA</button>
+                <button class="btn btn-outline" style="font-size:9px; padding:4px 8px; border-color:var(--accent-red); color:var(--accent-red);" onclick="deleteModel(${i})">X</button>
+              </div>
+            </div>
+          `).join('') : '<div style="font-size:11px; color:#555; text-align:center;">Nessun modello salvato. Carica documenti nel DB per generarne uno.</div>'}
+       </div>
+    </div>
+
+    <div class="card"><div class="card-header"><h2>Razionale & Regole Operative</h2></div><div style="padding:15px;font-size:11px;line-height:1.5;color:#ccc;"><div style="margin-bottom:12px;"><b style="color:var(--gold);">TOP SET + BACK-OFF:</b> Un set principale controllato seguito da back-off (-10%). Il back-off segue il carico REALE del top set.</div><div style="margin-bottom:12px;"><b style="color:var(--gold);">RIR (Prossimità al cedimento):</b> W1-2: 2 RIR costanti; W3: 1 RIR; W4: Deload. La meta-regressione 2024 indica che l'ipertrofia aumenta terminando le serie vicini al cedimento.</div><div><b style="color:var(--gold);">RECUPERO:</b> Compound 3-4min, Isolation 60-90s (Singer et al. 2024). Mantieni recuperi completi per massimizzare il volume tecnico.</div></div></div>
+
+    <div class="card"><div class="card-header"><h2>Gestione Dati</h2></div><div style="padding:15px;display:flex;flex-direction:column;gap:10px;"><button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="resetWorkoutData()">RIPRISTINA CARICHI (AZZERA)</button><button class="btn btn-outline" style="width:100%;border-color:var(--accent-red);color:var(--accent-red);font-size:10px;" onclick="resetAllData()">HARD RESET APP</button></div></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div class="card" style="padding:15px;text-align:center;"><span style="font-size:11px;color:var(--text-secondary);font-weight:800;">BODYWEIGHT</span><div style="font-size:22px;font-weight:900;color:var(--gold);">${bw} kg</div></div><div class="card" style="padding:15px;text-align:center;"><span style="font-size:11px;color:var(--text-secondary);font-weight:800;">PROGRESSO</span><div style="font-size:22px;font-weight:900;color:var(--gold);">${Math.round((currentWeek/duration)*100)}%</div></div></div>
+  `;
+}
+
+function applyModel(idx) {
+    const model = JSON.parse(JSON.stringify(store.models[idx])); // Clone profondo
+    DATA = model.data;
+    store.activeProgram = DATA;
+    currentWeek = 1;
+    currentDay = 0;
+    store.prefs.duration = DATA.weeks.length;
+    persist();
+    render();
+}
+function deleteModel(idx) {
+  if(confirm("Eliminare definitivamente questo modello?")) {
+    store.models.splice(idx, 1);
+    persist();
+    render();
+  }
+}
+
+function renderTraining(c){
+  const intensType = store.prefs.intensityType || 'RIR';
+  const duration = store.prefs.duration || 16;
+  const frequency = store.prefs.frequency || 4;
+
+  // Filtraggio settimane e giorni
+  const filteredWeeks = DATA.weeks.slice(0, duration);
+  if(currentWeek > duration) currentWeek = duration;
+
+  const w = filteredWeeks[currentWeek-1];
+  const filteredDays = w.days.slice(0, frequency);
+  if(currentDay >= frequency) currentDay = 0;
+
+  const d = filteredDays[currentDay];
+
+  let h=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;"><select onchange="currentWeek=parseInt(this.value);currentDay=0;render()">${filteredWeeks.map(ww=>`<option value="${ww.week}" ${ww.week===currentWeek?'selected':''}>Settimana ${ww.week}</option>`).join('')}</select><select onchange="currentDay=parseInt(this.value);render()">${filteredDays.map((dd,i)=>`<option value="${i}" ${i===currentDay?'selected':''}>Giorno ${i+1}</option>`).join('')}</select></div>`;
+
+  h += `<div style="display:flex; justify-content:center; margin-bottom:15px;"><button class="btn btn-outline" style="font-size:10px; padding:6px 12px;" onclick="toggleIntensityType()">SCALA ATTIVA: ${intensType}</button></div>`;
+
+  h += `<div class="card"><div class="card-header"><h2>${esc(w.title)}</h2></div><div style="padding:15px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"><span style="font-size:11px;font-weight:700;color:var(--text-secondary);">BODYWEIGHT (KG)</span><input type="number" step="0.1" value="${store.bw[currentWeek]||''}" onchange="store.bw[currentWeek]=this.value;persist()" style="width:80px;padding:6px;text-align:center;"></div><div style="padding:12px;font-size:13px;color:var(--gold-glow);font-weight:800;text-align:center;background:rgba(212,175,55,0.05);border-bottom:1px solid var(--border);">${esc(d.title)}</div><div id="exercises-list">`;
+
+  let rows = [...d.rows];
+  // Aggiunta esercizi bonus
+  if(store.bonus[`w${currentWeek}_d${currentDay}`]) {
+    store.bonus[`w${currentWeek}_d${currentDay}`].forEach(bEx => {
+      rows.push({ exercise: bEx.exercise, movement: bEx.movement, repsTarget: "8-12", rirTarget: 1, rest: "60-90s", isBonus: true });
+    });
+  }
+
+  let groups=[]; rows.forEach((r,ri)=>{ if(ri>0 && r.exercise===rows[ri-1].exercise && r.movement===rows[ri-1].movement){groups[groups.length-1].rows.push({...r,originalIndex:ri})}else{groups.push({exercise:r.exercise,movement:r.movement,rows:[{...r,originalIndex:ri}]})} });
+
+  groups.forEach(g=>{
+    const fIdx=g.rows[0].originalIndex;
+    const skipReason = store.skips[`w${currentWeek}_d${currentDay}_e${fIdx}`];
+    const curEx=store.subs[`w${currentWeek}_d${currentDay}_e${fIdx}`]||g.exercise;
+    const isTotal = store.loadTypes[`w${currentWeek}_d${currentDay}_e${fIdx}`] !== 'part';
+    const tempo = store.tempos[`w${currentWeek}_d${currentDay}_e${fIdx}`] || '';
+    const exIntens = store.exIntensity[`w${currentWeek}_d${currentDay}_e${fIdx}`] || intensType;
+
+    h+=`<div class="exercise-item ${skipReason?'exercise-skipped':''}" style="padding:15px;border-bottom:1px solid var(--border); position:relative;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div style="font-size:10px;color:var(--gold);font-weight:800;opacity:0.6;text-transform:uppercase;">${esc(g.movement)}</div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <span class="load-toggle ${exIntens==='RIR'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RIR')">RIR</span>
+          <span class="load-toggle ${exIntens==='RPE'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RPE')">RPE</span>
+          ${!skipReason ? `<span class="skip-btn" onclick="openSkipModal(${fIdx})">SALTA</span>` : `<span style="color:var(--gold); font-size:9px; font-weight:800;">SALTATO</span>`}
+        </div>
+      </div>
+      <div style="font-size:17px;font-weight:900;margin-bottom:10px;">${esc(curEx)}</div>
+      ${skipReason ? `<div class="skip-reason">Causa: ${skipReason}</div>` : ''}
+
+      <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+        <button class="load-toggle ${isTotal?'active':''}" onclick="toggleLoadType(${fIdx}, 'total')">Totale</button>
+        <button class="load-toggle ${!isTotal?'active':''}" onclick="toggleLoadType(${fIdx}, 'part')">Per parte</button>
+        <input type="text" placeholder="Tempo (es. 3-0-1)" value="${esc(tempo)}" onchange="updateTempo(${fIdx}, this.value)" style="flex:1; font-size:10px; padding:4px; height:24px;">
+      </div>`;
+
+    if(!skipReason) {
+      let gsC=1; g.rows.forEach(row=>{
+        const sC=Math.max(1,(row.setRows?row.setRows.length:0)+1);
+        h+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;background:#151515;padding:8px;border-radius:8px;border:1px solid #222;">
+          <div style="font-size:10px;color:#aaa;">T: <b style="color:#fff;">${esc(row.repsTarget)}</b></div>
+          <div style="font-size:10px;color:#aaa;">${exIntens}: <b style="color:#fff;">${esc(row.rirTarget)}</b></div>
+          <div style="font-size:10px;color:#aaa; cursor:pointer;" onclick="startTimer('${esc(row.rest)}')">Rest: <b style="color:var(--gold); text-decoration:underline;">${esc(row.rest)}</b></div>
+        </div>
+        <div style="display:grid;grid-template-columns:30px 1fr 1fr 1fr;gap:8px;align-items:center;margin-bottom:15px;">
+          <div style="font-size:10px;color:#555;text-align:center;">#</div>
+          <div style="font-size:10px;color:#555;text-align:center;">KG</div>
+          <div style="font-size:10px;color:#555;text-align:center;">REPS</div>
+          <div style="font-size:10px;color:#555;text-align:center;">${exIntens}</div>`;
+
+        for(let s=1;s<=sC;s++){
+          const k=`w${currentWeek}_d${currentDay}_e${row.originalIndex}_s${s}`;
+          let sugg=row.plannedLoad||'';
+          if(!sugg && gsC>1){
+            const topV=parseFloat(store.data[`w${currentWeek}_d${currentDay}_e${fIdx}_s1_load`]);
+            if(topV) sugg=(Math.round(topV*0.9*2)/2).toFixed(1);
+          }
+          h+=`<div style="font-size:14px;font-weight:bold;color:var(--gold);text-align:center;">${gsC}</div>
+          <input type="number" id="${k}_load" step="0.5" data-group="w${currentWeek}_d${currentDay}_e${fIdx}" placeholder="${sugg||''}" value="${store.data[k+'_load']||''}" oninput="updateData('${k}_load',this.value)" onfocus="showPrevLoad(event, '${k}_load')" onblur="hidePrevLoad()" style="padding:12px;font-size:16px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
+          <select onchange="updateData('${k}_reps',this.value)" style="padding:12px;font-size:16px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${store.data[k+'_reps']==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
+          <select onchange="updateData('${k}_rir',this.value)" style="padding:12px;font-size:16px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${store.data[k+'_rir']==i?'selected':''}>${i}</option>`).join('')}</select>`;
+          gsC++;
+        } h+=`</div>`;
+      });
+      const db=DATA.exerciseDb[g.movement]||[g.exercise];
+      h+=`<div style="margin-top:10px;border-top:1px solid #222;padding-top:10px;"><button class="btn btn-outline" style="width:100%;font-size:10px;padding:8px;" onclick="openReplacementModal(${fIdx},'${encodeURIComponent(curEx)}')">SOSTITUISCI ESERCIZIO</button></div>`;
+    }
+    h+=`</div>`;
+  });
+
+  h+=`<div style="padding:15px; text-align:center;"><button class="btn btn-outline" style="width:100%; font-size:12px;" onclick="addBonusExercise()">+ AGGIUNGI ESERCIZIO BONUS</button></div>`;
+  h+=`</div></div>
+    <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;background:rgba(255,255,255,0.02);border-radius:12px;">
+      <div style="text-align:center;"><b id="d-vol" style="color:var(--gold);font-size:18px;">0</b><br><span style="font-size:9px;color:#666;">VOLUME</span></div>
+      <div style="text-align:center;"><b id="d-rir" style="color:var(--accent-red);font-size:18px;">0</b><br><span style="font-size:9px;color:#666;">INTENSITÀ</span></div>
+      <div style="text-align:center;"><b id="d-sets" style="color:#fff;font-size:18px;">0</b><br><span style="font-size:9px;color:#666;">SERIE</span></div>
+    </div>
+    <div style="padding:20px;"><button class="btn btn-primary" style="width:100%; height:60px; font-size:18px; box-shadow: 0 0 20px rgba(212,175,55,0.3);" onclick="finalizeWorkout()">FINALIZZA ALLENAMENTO</button></div>
+    <div style="height:160px;"></div>`;
+  c.innerHTML=h; calcStats();
+}
+
+function toggleLoadType(idx, type) {
+  store.loadTypes[`w${currentWeek}_d${currentDay}_e${idx}`] = type;
+  persist();
+  render();
+}
+function setExIntensity(idx, type) {
+  store.exIntensity[`w${currentWeek}_d${currentDay}_e${idx}`] = type;
+  persist();
+  render();
+}
+function updateTempo(idx, val) {
+  store.tempos[`w${currentWeek}_d${currentDay}_e${idx}`] = val;
+  persist();
+}
+function addBonusExercise() {
+  const ex = prompt("Inserisci il nome dell'esercizio bonus:");
+  if(ex) {
+    if(!store.bonus[`w${currentWeek}_d${currentDay}`]) store.bonus[`w${currentWeek}_d${currentDay}`] = [];
+    store.bonus[`w${currentWeek}_d${currentDay}`].push({ exercise: ex, movement: 'BONUS' });
+    persist();
+    render();
+  }
+}
+
+function updateData(key,val){
+  store.data[key]=val; persist(); calcStats();
+  if(key.includes('_s1_load')){
+     const p=key.split('_'), id=`${p[0]}_${p[1]}_${p[2]}`, tV=parseFloat(val);
+     if(tV){ const s=(Math.round(tV*0.9*2)/2).toFixed(1); document.querySelectorAll(`input[data-group="${id}"]`).forEach(el=>{if(el.id!==key)el.placeholder=s}); }
+  }
+}
+function substituteEx(idx,val){
+  if(!val)return;
+  console.debug('[Workout] substituteEx', {week:currentWeek,session:currentDay,exercise:idx,operation:'replace',replacement:val});
+  // Propagation to future weeks
+  for(let w=currentWeek; w<=DATA.weeks.length; w++) {
+    store.subs[`w${w}_d${currentDay}_e${idx}`] = val;
+  }
+  persist(); render();
+}
+let replacementDraft=null;
+function openReplacementModal(idx, encodedCurrent){
+  const current=decodeURIComponent(encodedCurrent||'');
+  console.debug('[Workout] openReplacementModal', {week:currentWeek,session:currentDay,exercise:idx,operation:'open',current});
+  replacementDraft={idx,current,selected:''};
+  $('replace-current').innerHTML=`Esercizio attuale: <b style="color:var(--gold);">${esc(current)}</b><br><span style="font-size:10px;color:#777;">Serie, intensità, recupero, tempo, carico e note saranno mantenuti.</span>`;
+  $('replace-search').value='';
+  renderReplacementOptions('');
+  $('replace-modal').style.display='flex';
+}
+function renderReplacementOptions(query){
+  if(!replacementDraft)return;
+  const q=String(query||'').toLowerCase();
+  const groups=Object.entries(DATA.exerciseDb||{}).map(([group,items])=>[group,(items||[]).filter(name=>name!==replacementDraft.current&&String(name).toLowerCase().includes(q))]).filter(([,items])=>items.length);
+  $('replace-options').innerHTML=groups.length?groups.map(([group,items])=>`<div style="margin-bottom:10px;"><b style="font-size:10px;color:var(--gold);">${esc(group)}</b>${items.map(name=>`<button class="btn btn-outline" style="display:block;width:100%;margin-top:5px;text-align:left;font-size:11px;padding:8px;${replacementDraft.selected===name?'border-color:var(--success);color:var(--success);':''}" onclick="selectReplacement('${encodeURIComponent(name)}')">${esc(name)}</button>`).join('')}</div>`).join(''):'<div style="font-size:11px;color:#777;">Nessuna alternativa trovata.</div>';
+}
+function selectReplacement(encodedName){
+  if(!replacementDraft)return;
+  replacementDraft.selected=decodeURIComponent(encodedName);
+  console.debug('[Workout] selectReplacement', {week:currentWeek,session:currentDay,exercise:replacementDraft.idx,operation:'select',replacement:replacementDraft.selected});
+  renderReplacementOptions($('replace-search').value);
+}
+function confirmReplacement(){
+  if(!replacementDraft||!replacementDraft.selected){ alert('Seleziona prima un esercizio alternativo.'); return; }
+  if(!confirm(`Sostituire "${replacementDraft.current}" con "${replacementDraft.selected}"? I parametri disponibili saranno mantenuti.`))return;
+  console.debug('[Workout] confirmReplacement', {week:currentWeek,session:currentDay,exercise:replacementDraft.idx,operation:'confirm',replacement:replacementDraft.selected});
+  substituteEx(replacementDraft.idx,replacementDraft.selected);
+  replacementDraft=null;
+  $('replace-modal').style.display='none';
+}
+function calcStats(){
+  let v=0, r=0, s=0; Object.keys(store.data).forEach(k=>{
+    if(k.startsWith(`w${currentWeek}_d${currentDay}_`)&&k.endsWith('_load')){
+       const p=k.split('_'), eK=`${p[0]}_${p[1]}_${p[2]}`;
+       if(store.skips[eK]) return;
+
+       const isPart = store.loadTypes[eK] === 'part';
+       const multiplier = isPart ? 2 : 1;
+
+       const b=k.replace('_load',''), l=parseFloat(store.data[k]||0)*multiplier, rp=parseInt(store.data[b+'_reps']||0);
+       if(l>0&&rp>0){
+         v+=l*rp;
+         // Per l'intensità totale: se RIR usiamo rp+rir, se RPE simuliamo uno sforzo simile
+         const intensVal = parseInt(store.data[b+'_rir']||0);
+         const exIntens = store.exIntensity[eK] || store.prefs.intensityType || 'RIR';
+         if(exIntens === 'RIR') {
+           r+=l*(rp+intensVal);
+         } else {
+           // Se RPE10 = RIR0, RPE9 = RIR1, etc.
+           r+=l*(rp + (10 - intensVal));
+         }
+         s++;
+       }
+    }
+  });
+  if($('d-vol')) $('d-vol').innerText=Math.round(v).toLocaleString();
+  if($('d-rir')) $('d-rir').innerText=Math.round(r).toLocaleString();
+  if($('d-sets')) $('d-sets').innerText=s;
+}
+
+function finalizeWorkout() {
+  const w=DATA.weeks[currentWeek-1], d=w.days[currentDay];
+  let summary = `RIEPILOGO ALLENAMENTO - SETTIMANA ${currentWeek} GIORNO ${currentDay+1}\n`;
+  summary += `${d.title}\n\n`;
+
+  let rows = [...d.rows];
+  if(store.bonus[`w${currentWeek}_d${currentDay}`]) {
+    store.bonus[`w${currentWeek}_d${currentDay}`].forEach(bEx => {
+      rows.push({ exercise: bEx.exercise, movement: 'BONUS', originalIndex: 999 });
+    });
+  }
+
+  rows.forEach((row, ri) => {
+    const fIdx = row.originalIndex !== undefined ? row.originalIndex : ri;
+    const curEx = store.subs[`w${currentWeek}_d${currentDay}_e${fIdx}`] || row.exercise;
+    const skip = store.skips[`w${currentWeek}_d${currentDay}_e${fIdx}`];
+
+    if(skip) {
+      summary += `[SALTATO] ${curEx} - Causa: ${skip}\n`;
+    } else {
+      let setLogs = [];
+      const exIntens = store.exIntensity[`w${currentWeek}_d${currentDay}_e${fIdx}`] || store.prefs.intensityType || 'RIR';
+      for(let s=1; s<=5; s++) {
+        const k = `w${currentWeek}_d${currentDay}_e${fIdx}_s${s}`;
+        const l = store.data[k+'_load'], r = store.data[k+'_reps'], ri = store.data[k+'_rir'];
+        if(l && r) {
+          const isPart = store.loadTypes[`w${currentWeek}_d${currentDay}_e${fIdx}`] === 'part';
+          setLogs.push(`${l}kg${isPart?'(pp)':''} x ${r} @${exIntens}${ri}`);
+        }
+      }
+      if(setLogs.length) summary += `${curEx}: ${setLogs.join(' | ')}\n`;
+    }
+  });
+
+  summary += `\nVolume Totale: ${$('d-vol').innerText} kg\nSerie totali: ${$('d-sets').innerText}`;
+
+  if(confirm("Allenamento completato! Inviare i dati al Coach AI?")) {
+    navigate('ai');
+    setTimeout(() => {
+      $('ai-input').value = summary;
+      askAI();
+    }, 500);
+  }
+}
+
+function getMuscleGroup(movement) {
+  for (let group in MUSCLE_GROUPS) {
+    if (MUSCLE_GROUPS[group].includes(movement)) return group;
+  }
+  return "ALTRO";
+}
+
+function renderSimpleChart(id, values, color, type) {
+  const host = $(id);
+  if(!host) return;
+  const finite = values.map(v => Number.isFinite(v) ? v : 0);
+  const max = Math.max(...finite, 1);
+  const width = 600, height = 220, pad = 18;
+  let content = `<line x1="${pad}" y1="${height-pad}" x2="${width-pad}" y2="${height-pad}" stroke="#333" />`;
+  if(type === 'bar') {
+    const slot = (width - pad * 2) / Math.max(finite.length, 1);
+    const barWidth = Math.max(2, slot * 0.65);
+    content += finite.map((v, i) => {
+      const barHeight = (v / max) * (height - pad * 2);
+      const x = pad + i * slot + (slot - barWidth) / 2;
+      return `<rect x="${x.toFixed(1)}" y="${(height-pad-barHeight).toFixed(1)}" width="${barWidth.toFixed(1)}" height="${barHeight.toFixed(1)}" rx="2" fill="${color}" />`;
+    }).join('');
+  } else {
+    const points = finite.map((v, i) => {
+      const x = finite.length === 1 ? width / 2 : pad + i * (width - pad * 2) / (finite.length - 1);
+      const y = height - pad - (v / max) * (height - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    content += `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />`;
+  }
+  host.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Grafico dati" style="width:100%;height:100%;display:block">${content}</svg>`;
+}
+
+function renderStats(c){
+  c.innerHTML=`<h1 class="text-gold" style="font-size:24px;font-weight:900;letter-spacing:2px;margin-bottom:20px;">PERFORMANCE CENTER</h1><div style="margin-bottom:20px;"><select id="stats-filter" onchange="renderStats(c)" style="background:#151515;border:1px solid var(--gold);color:#fff;"><option value="TOTAL">Totale Body</option>${Object.keys(MUSCLE_GROUPS).map(g=>`<option value="${g}" ${window.lastF===g?'selected':''}>${g}</option>`).join('')}</select></div><div class="card" style="padding:10px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>W</th><th>Serie</th><th>Vol. kg</th><th>Δ Vol.</th><th>Int.</th><th>Δ Int.</th><th>Peso</th><th>Perf.</th></tr></thead><tbody id="summary-body"></tbody></table></div><div class="card" style="padding:15px;"><div id="v-t" style="font-size:12px;color:var(--gold);font-weight:800;margin-bottom:10px;">VOLUME REALE / SETTIMANA</div><div class="chart-container"><canvas id="volChart"></canvas></div></div><div class="card" style="padding:15px;"><div id="r-t" style="font-size:12px;color:var(--accent-red);font-weight:800;margin-bottom:10px;">INTENSITÀ MEDIA / SETTIMANA</div><div class="chart-container"><canvas id="rirChart"></canvas></div></div><div class="card" style="padding:15px;"><div style="font-size:12px;color:#54a0ff;font-weight:800;margin-bottom:10px;">PESO CORPOREO</div><div class="chart-container"><canvas id="bwChart"></canvas></div></div><div style="height:160px;"></div>`;
+  const f=$('stats-filter')?$('stats-filter').value:'TOTAL'; window.lastF=f; if(f!=='TOTAL'){$('v-t').innerText=`VOLUME: ${f}`;$('r-t').innerText=`INTENSITÀ: ${f}`}
+  const wks=DATA.weeks.map(w=>w.week); let vD=[], rD=[], bwD=[], sD=[], pD=[];
+  const rM={}; DATA.weeks.forEach(w=>w.days.forEach(d=>d.rows.forEach((r,ri)=>rM[`w${w.week}_d${w.days.indexOf(d)}_e${ri}`]=getMuscleGroup(r.movement))));
+  wks.forEach(w=>{
+    let v=0, rs=0, st=0; Object.keys(store.data).forEach(k=>{
+      if(k.startsWith(`w${w}_`)&&k.endsWith('_load')){
+        const p=k.split('_'), mK=`${p[0]}_${p[1]}_${p[2]}`;
+        if(f==='TOTAL'||rM[mK]===f){ const b=k.replace('_load',''), l=parseFloat(store.data[k]||0), r=parseInt(store.data[b+'_reps']||0); if(l>0&&r>0){ v+=l*r; rs+=l*(r+parseInt(store.data[b+'_rir']||0)); st++; } }
+      }
+    }); vD.push(v); rD.push(st>0?rs/st:0); pD.push(rs); sD.push(st); bwD.push(parseFloat(store.bw[w]||0));
+  });
+  let tH=''; wks.forEach((w,i)=>{ const dV=i>0?vD[i]-vD[i-1]:0, dI=i>0?pD[i]-pD[i-1]:0; tH+=`<tr><td>${w}</td><td>${sD[i]}</td><td>${Math.round(vD[i])}</td><td class="${dV>=0?'delta-pos':'delta-neg'}">${dV>=0?'+':''}${Math.round(dV)}</td><td>${Math.round(pD[i])}</td><td class="${dI>=0?'delta-pos':'delta-neg'}">${dI>=0?'+':''}${Math.round(dI)}</td><td>${bwD[i]||'--'}</td><td><b>${Math.round(pD[i])}</b></td></tr>`; });
+  $('summary-body').innerHTML=tH;
+  renderSimpleChart('volChart', vD, '#d4af37', 'line');
+  renderSimpleChart('rirChart', rD, '#ff4d4d', 'line');
+  renderSimpleChart('bwChart', bwD, '#54a0ff', 'bar');
+}
+
+function renderAI(c){
+  const history=store.chatHistory.map(item=>`<div class="msg ${item.role==='user'?'user':'ai'} ${item.role==='assistant'?'markdown':''}">${item.role==='assistant'?markdownToHtml(item.text):esc(item.text)}</div>`).join('');
+  c.innerHTML=`<h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">COACH AI</h1>
+    <div style="font-size:10px; color:#777; margin-bottom:15px; font-weight:700; letter-spacing:1px;">COACH PERSONALE • ANALISI DATI REALI</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;"><button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="checkBackendHealth()">VERIFICA SERVER AI</button><span id="ai-status" style="font-size:10px;color:#777;align-self:center;"></span></div>
+    <div class="card"><div class="card-header"><h2>Coach AI</h2><div style="display:flex;gap:6px;"><button class="btn btn-outline" style="font-size:9px;padding:6px 9px;" onclick="newCoachQuestion()">NUOVA DOMANDA</button><button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="openResetSession()">AZZERA</button></div></div><div style="padding:12px;"><div id="chat-history">${history||'<div class="msg ai">Ciao. Posso leggere il programma attivo e i tuoi dati di allenamento per darti indicazioni pratiche.</div>'}</div><div style="display:flex;gap:10px;background:var(--surface-light);padding:10px;border-radius:12px;"><input type="text" id="ai-input" placeholder="Es. come regolo i carichi nella prossima seduta?" style="flex:1;border:none;background:transparent;"><button class="btn btn-primary" onclick="askAI()" style="padding:10px 15px;">INV</button></div></div></div>
+    <div class="card" style="margin-top:15px;"><div class="card-header"><h2>Analisi programmazione</h2></div><div id="analysis-results" style="padding:12px;"><div class="msg ai">Nessuna analisi selezionata.</div></div></div>`;
+}
+async function checkBackendHealth(){
+  const status=$('ai-status');
+  if(status) status.textContent='Verifica in corso…';
+  try {
+    const response=await apiFetch(coachEndpoint('/health'),{method:'GET'},20000);
+    const payload=await readApiJson(response);
+    if(payload.ok!==true) throw new Error('Il server non ha confermato lo stato OK');
+    if(status) { status.textContent=`Online (${payload.model||'backend'})`; status.style.color='var(--success)'; }
+  } catch(err) {
+    if(status) { status.textContent=err.message; status.style.color='var(--accent-red)'; }
+  }
+}
+function renderDb(c){
+  c.innerHTML=`
+    <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:20px;">DATABASE & ASSETS</h1>
+
+    <div class="card" style="padding:15px;">
+      <h3 style="color:var(--gold); margin-top:0; font-size:14px;">CARICA NUOVO MATERIALE</h3>
+      <p style="font-size:10px; color:#666; margin-bottom:10px;">Carica documenti o fogli Excel per l'analisi AI.</p>
+      <input type="file" id="db-file-input" accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none;" onchange="handleFileUpload(event)">
+      <button class="btn btn-primary" style="width:100%; font-size:12px;" onclick="$('db-file-input').click()">+ SELEZIONA FILE</button>
+    </div>
+
+    <div class="card" style="padding:15px;">
+      <h3 style="color:var(--gold); margin-top:0; font-size:14px;">DOCUMENTI CARICATI</h3>
+      <div id="docs-list" style="margin-top:10px;">
+        ${store.docs.length ? store.docs.map((d,i)=>`
+          <div style="background:#111; padding:12px; border-radius:10px; border:1px solid #222; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="flex:1;">
+              <div style="font-size:13px; font-weight:700;">${esc(d.name)}</div>
+              <div style="font-size:9px; color:#555;">${d.size} • ${new Date(d.date).toLocaleDateString()}</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-outline" style="font-size:9px; padding:5px 10px;" onclick="analyzeDoc(${i})">ANALIZZA AI</button>
+              <button class="btn btn-outline" style="font-size:9px; padding:5px 10px; border-color:var(--accent-red); color:var(--accent-red);" onclick="deleteDoc(${i})">X</button>
+            </div>
+          </div>
+        `).join('') : '<div style="font-size:11px; color:#555; text-align:center; padding:20px;">Nessun documento presente.</div>'}
+      </div>
+    </div>
+
+    <div class="card" style="padding:15px;">
+      <h3 style="color:var(--gold); margin-top:0; font-size:14px;">ESERCIZI DI SISTEMA</h3>
+      <input type="text" placeholder="Cerca esercizio..." oninput="searchDb(this.value)" style="margin-bottom:15px;background:#000;">
+      <div id="db-results"></div>
+    </div>
+    <div style="height:160px;"></div>
+  `;
+  searchDb('');
+}
+
+function legacyHandleFileUpload(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  const newDoc = {
+    name: file.name,
+    size: (file.size / 1024).toFixed(1) + ' KB',
+    date: Date.now(),
+    type: file.type
+  };
+  store.docs.push(newDoc);
+  persist();
+  render();
+  alert("Documento '" + file.name + "' caricato con successo nel Database.");
+}
+
+function legacyDeleteDoc(idx) {
+  if(confirm("Rimuovere questo documento dal Database?")) {
+    store.docs.splice(idx, 1);
+    persist();
+    render();
+  }
+}
+
+// Production implementations.  These declarations intentionally replace the
+// legacy handlers above while preserving compatibility with existing screens.
+async function askAI(){
+  const q=$('ai-input').value.trim(); if(!q)return;
+  const requestToken=++coachRequestToken;
+  const h=$('chat-history'); const history=[...store.chatHistory]; store.chatHistory.push({role:'user',text:q}); h.innerHTML+=`<div class="msg user">${esc(q)}</div>`; $('ai-input').value=''; persist();
+  const pending=document.createElement('div'); pending.className='msg ai markdown'; pending.innerHTML='<p>Il coach sta analizzando i dati…</p>'; h.appendChild(pending);
+  try {
+    const response=await apiFetch(coachEndpoint('/api/chat'), {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,conversation_id:store.chatSessionId,context:{program:DATA,trainingData:store.data,bodyweight:store.bw},history})});
+    const payload=await readApiJson(response);
+    if(requestToken!==coachRequestToken)return;
+    const reply=String(payload.reply||payload.message||payload.response||'').trim();
+    if(!reply) throw new Error('Risposta vuota del server');
+    pending.innerHTML=markdownToHtml(reply);
+    store.chatHistory.push({role:'assistant',text:reply}); persist();
+  } catch(err) {
+    if(requestToken!==coachRequestToken)return;
+    pending.textContent='Coach non disponibile: '+err.message;
+    pending.style.color='var(--accent-red)';
+    store.chatHistory.push({role:'assistant',text:'Errore: '+err.message}); persist();
+  }
+  h.scrollTop=h.scrollHeight;
+}
+
+async function handleFileUpload(e) {
+  const file=e.target.files[0]; if(!file)return;
+  if(!/\.(pdf|doc|docx|txt|xlsx|xls)$/i.test(file.name)) { alert('Seleziona PDF, DOC, DOCX, TXT, XLSX o XLS.'); return; }
+  if(/\.doc$/i.test(file.name)) {
+    console.debug('[Coach AI] unsupported .doc selected', {name:file.name,extension:'doc',mimeType:'application/msword',size:file.size,endpoint:coachEndpoint('/api/analyze')});
+    alert('Formato .doc non ancora supportato dal server. Usa .docx, PDF, TXT, XLSX o XLS.');
+    e.target.value='';
+    return;
+  }
+  if(file.size>MAX_DOCUMENT_BYTES) { alert('Il documento supera il limite di 12 MB.'); return; }
+  console.debug('[Coach AI] file selected', {name:file.name,extension:file.name.split('.').pop().toLowerCase(),mimeType:file.type||documentMime(file.name,''),size:file.size});
+  const doc={id:crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random(),name:file.name,size:(file.size/1024).toFixed(1)+' KB',date:Date.now(),type:file.type};
+  try { await saveDocumentFile(doc.id,file); store.docs.push(doc); persist(); render(); alert("Documento '"+file.name+"' caricato nel Database."); }
+  catch(err) { alert('Impossibile salvare il documento: '+err.message); }
+}
+
+async function deleteDoc(idx) {
+  if(!confirm('Rimuovere questo documento dal Database?'))return;
+  try { await removeDocumentFile(store.docs[idx].id); } catch(_) { /* old metadata-only entries have no blob */ }
+  store.docs.splice(idx,1); persist(); render();
+}
+
+async function analyzeDoc(idx) {
+  const doc=store.docs[idx]; navigate('ai');
+  const h=$('analysis-results'); h.innerHTML=`<div class="msg ai">Analisi avviata per ${esc(doc.name)}. Sto leggendo esercizi, serie e giorni…</div>`;
+  try {
+    if(/\.doc$/i.test(doc.name)) throw new Error('Formato .doc non ancora supportato dal server. Usa .docx, PDF, TXT, XLSX o XLS.');
+    const file=await getDocumentFile(doc.id);
+    if(!file) throw new Error('Il file originale non è disponibile. Caricalo di nuovo per analizzarlo.');
+    // Do not set Content-Type: the browser adds the multipart boundary.
+    const form=await buildAnalyzeForm(file, doc);
+    console.debug('[Coach AI] analyze upload', {name:doc.name,extension:doc.name.split('.').pop().toLowerCase(),mimeType:documentMime(doc.name,doc.type),size:file.size,endpoint:coachEndpoint('/api/analyze')});
+    const response=await apiFetch(coachEndpoint('/api/analyze'), {method:'POST',body:form});
+    const result=await readApiJson(response);
+    const program=normalizeProgram(result);
+    window.pendingProgramImport={program,documentName:doc.name};
+    doc.analysis={date:Date.now(),validation:result.validation||null,sourceSummary:result.source_summary||''}; persist();
+    h.innerHTML=renderProgramPreview(program);
+    h.innerHTML+=`<div class="msg ai"><button class="btn btn-primary" style="margin-top:10px;" onclick="confirmProgramImport()">CONFERMA IMPORTAZIONE</button></div>`;
+  } catch(err) { h.innerHTML+=`<div class="msg ai" style="color:red;">Errore durante l'analisi: ${esc(err.message)}</div>`; }
+  h.scrollTop=h.scrollHeight;
+}
+
+function confirmProgramImport(){
+  const pending=window.pendingProgramImport;
+  if(!pending) return;
+  importProgramJson(pending.program,pending.documentName);
+  window.pendingProgramImport=null;
+  store.chatHistory.push({role:'assistant',text:'Programmazione importata e attivata correttamente.'});
+  persist();
+  alert('Programmazione importata e attivata.');
+  navigate('home');
+}
+
+function searchDb(q){
+  let h=''; q=q.toLowerCase(); Object.keys(DATA.exerciseDb).forEach(m=>{
+    const f=DATA.exerciseDb[m].filter(ex=>ex.toLowerCase().includes(q)||m.toLowerCase().includes(q));
+    if(f.length) h+=`<div style="margin-bottom:12px"><b style="color:var(--gold);font-size:11px;text-transform:uppercase;">${m}</b><div style="font-size:13px;color:#888;margin-top:4px;padding-left:10px;border-left:1px solid #333;">${f.join(' • ')}</div></div>`;
+  }); $('db-results').innerHTML=h;
+}
+
+function saveAll(){persist();alert("Salvataggio completato.")}
+function resetWorkoutData(){if(confirm("Azzerare tutti i carichi registrati?")){store.data={};persist();render()}}
+function resetAllData(){if(confirm("HARD RESET: cancella ogni dato?")){localStorage.clear();location.reload()}}
+init();
+</script>
+</body>
+</html>

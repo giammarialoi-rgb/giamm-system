@@ -3,6 +3,10 @@ import express from "express";
 import cors from "cors";
 import multer from "multer";
 import mammoth from "mammoth";
+import WordExtractor from "word-extractor";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import XLSX from "xlsx";
 import { GoogleGenAI } from "@google/genai";
 
@@ -180,6 +184,22 @@ function extractExcelText(buffer) {
     invalid.statusCode = 400;
     throw invalid;
   }
+
+  async function extractLegacyWordText(buffer) {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "giammaria-doc-"));
+    const filename = path.join(dir, "document.doc");
+    try {
+      await fs.writeFile(filename, buffer);
+      const document = await new WordExtractor().extract(filename);
+      return [
+        document.getBody(),
+        document.getHeaders(),
+        document.getFootnotes()
+      ].filter(Boolean).join("\n\n");
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+  }
   if (!workbook.SheetNames.length) {
     const invalid = new Error("Excel workbook contains no worksheets.");
     invalid.statusCode = 400;
@@ -271,6 +291,10 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
       ) {
         const result = await mammoth.extractRawText({ buffer: req.file.buffer });
         input = `${prompt}\n\nDOCUMENTO WORD (${req.file.originalname}):\n${result.value}`;
+      } else if (mime === "application/msword" || filename.endsWith(".doc")) {
+        const extracted = await extractLegacyWordText(req.file.buffer);
+        if (!extracted.trim()) throw Object.assign(new Error("Legacy DOC contains no readable text."), { statusCode: 400 });
+        input = `${prompt}\n\nDOCUMENTO WORD LEGACY (${req.file.originalname}):\n${extracted}`;
       } else if (
         mime.startsWith("text/") ||
         filename.endsWith(".txt")
@@ -285,7 +309,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
         input = `${prompt}\n\nFOGLI EXCEL (${req.file.originalname}):\n${extractExcelText(req.file.buffer, req.file.originalname)}`;
       } else {
         return res.status(415).json({
-          error: "Unsupported file type. Use PDF, DOCX, TXT, XLSX or XLS."
+          error: "Unsupported file type. Use PDF, DOC, DOCX, TXT, XLSX or XLS."
         });
       }
     } else {
