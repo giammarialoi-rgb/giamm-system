@@ -18,6 +18,18 @@ services:
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: APPLE_TEAM_ID
+        sync: false
+      - key: APPLE_KEY_ID
+        sync: false
+      - key: APPLE_CLIENT_ID
+        sync: false
+      - key: APPLE_REDIRECT_URI
+        sync: false
+      - key: APPLE_PRIVATE_KEY
+        sync: false
 databases:
   - name: coach-db
     databaseName: coach

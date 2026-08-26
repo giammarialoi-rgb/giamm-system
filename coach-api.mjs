@@ -12,11 +12,23 @@ import { GoogleGenAI } from "@google/genai";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import pg from "pg";
+import { OAuth2Client } from "google-auth-library";
+import { createRemoteJWKSet, importPKCS8, jwtVerify, SignJWT } from "jose";
 
 const app = express();
 const PORT = Number(process.env.PORT || 10000);
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
 const JWT_SECRET = process.env.JWT_SECRET || "";
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+const APPLE_CLIENT_ID = process.env.APPLE_CLIENT_ID || "";
+const APPLE_TEAM_ID = process.env.APPLE_TEAM_ID || "";
+const APPLE_KEY_ID = process.env.APPLE_KEY_ID || "";
+const APPLE_REDIRECT_URI = process.env.APPLE_REDIRECT_URI || "";
+const APPLE_PRIVATE_KEY = process.env.APPLE_PRIVATE_KEY || "";
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
+const appleJwks = createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
+const appleStates = new Map();
+const appleExchangeCodes = new Map();
 const pool = process.env.DATABASE_URL
   ? new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.DATABASE_URL.includes("localhost") ? false : { rejectUnauthorized: false } })
   : null;
@@ -55,7 +67,11 @@ const accountSchemaReady = pool ? pool.query(`
     id BIGSERIAL PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
-    password_hash TEXT NOT NULL,
+    password_hash TEXT,
+    provider TEXT NOT NULL DEFAULT 'password',
+    provider_user_id TEXT,
+    display_name TEXT,
+    avatar_url TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
   CREATE TABLE IF NOT EXISTS app_account_data (
@@ -63,6 +79,25 @@ const accountSchemaReady = pool ? pool.query(`
     data JSONB NOT NULL DEFAULT '{}'::jsonb,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
+  CREATE TABLE IF NOT EXISTS app_user_providers (
+    user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+    provider TEXT NOT NULL,
+    provider_user_id TEXT NOT NULL,
+    email TEXT NOT NULL,
+    display_name TEXT,
+    avatar_url TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (provider, provider_user_id),
+    UNIQUE (user_id, provider)
+  );
+  ALTER TABLE app_users ALTER COLUMN password_hash DROP NOT NULL;
+  ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'password';
+  ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider_user_id TEXT;
+  ALTER TABLE app_users ADD COLUMN IF NOT EXISTS display_name TEXT;
+  ALTER TABLE app_users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+  CREATE UNIQUE INDEX IF NOT EXISTS app_users_provider_identity
+    ON app_users(provider, provider_user_id)
+    WHERE provider_user_id IS NOT NULL;
 `) : Promise.resolve();
 
 function accountUnavailable(res) {
@@ -111,6 +146,82 @@ async function requireAccount(req, res, next) {
     console.error("ACCOUNT_AUTH_ERROR", { name: error?.name, message: error?.message });
     return res.status(401).json({ error: "Invalid or expired authentication token." });
   }
+}
+
+function configuredApple() {
+  return Boolean(APPLE_CLIENT_ID && APPLE_TEAM_ID && APPLE_KEY_ID && APPLE_REDIRECT_URI && APPLE_PRIVATE_KEY);
+}
+
+async function accountFromBearer(header) {
+  if (!String(header || "").startsWith("Bearer ")) return null;
+  try {
+    const claims = jwt.verify(String(header).slice(7), JWT_SECRET);
+    const result = await pool.query("SELECT id,email,name FROM app_users WHERE id=$1", [claims.sub]);
+    return result.rows[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveOAuthUser({ provider, providerUserId, email, displayName, avatarUrl, linkingUser }) {
+  const identity = await pool.query(
+    `SELECT id,email,name,provider,provider_user_id,display_name,avatar_url FROM app_users WHERE provider=$1 AND provider_user_id=$2
+     UNION ALL
+     SELECT u.id,u.email,u.name,p.provider,p.provider_user_id,p.display_name,p.avatar_url
+     FROM app_user_providers p JOIN app_users u ON u.id=p.user_id
+     WHERE p.provider=$1 AND p.provider_user_id=$2`,
+    [provider, providerUserId]
+  );
+  if (identity.rowCount) {
+    if (linkingUser && String(identity.rows[0].id) !== String(linkingUser.id)) {
+      const error = new Error("This provider account is linked to another account.");
+      error.code = "OAUTH_IDENTITY_CONFLICT";
+      throw error;
+    }
+    return identity.rows[0];
+  }
+
+  const byEmail = await pool.query("SELECT id,email,name,provider,provider_user_id,display_name,avatar_url FROM app_users WHERE email=$1", [email]);
+  if (byEmail.rowCount) {
+    if (!linkingUser) {
+      const error = new Error("An account with this email already exists. Sign in with email/password first, then link this provider.");
+      error.code = "OAUTH_LINK_REQUIRED";
+      throw error;
+    }
+    if (String(byEmail.rows[0].id) !== String(linkingUser.id)) {
+      const error = new Error("Verified email belongs to another account.");
+      error.code = "OAUTH_EMAIL_CONFLICT";
+      throw error;
+    }
+  }
+
+  const user = linkingUser || byEmail.rows[0];
+  if (user) {
+    if (user.provider === "password" && !user.provider_user_id) {
+      const result = await pool.query(
+        "UPDATE app_users SET provider=$1,provider_user_id=$2,display_name=COALESCE($3,display_name),avatar_url=COALESCE($4,avatar_url) WHERE id=$5 RETURNING id,email,name,provider,provider_user_id,display_name,avatar_url",
+        [provider, providerUserId, displayName || null, avatarUrl || null, user.id]
+      );
+      return result.rows[0];
+    }
+    await pool.query(
+      "INSERT INTO app_user_providers(user_id,provider,provider_user_id,email,display_name,avatar_url) VALUES($1,$2,$3,$4,$5,$6)",
+      [user.id, provider, providerUserId, email, displayName || null, avatarUrl || null]
+    );
+    return user;
+  }
+
+  const result = await pool.query(
+    "INSERT INTO app_users(email,name,password_hash,provider,provider_user_id,display_name,avatar_url) VALUES($1,$2,NULL,$3,$4,$5,$6) RETURNING id,email,name,provider,provider_user_id,display_name,avatar_url",
+    [email, displayName || email, provider, providerUserId, displayName || null, avatarUrl || null]
+  );
+  await pool.query("INSERT INTO app_account_data(user_id,data) VALUES($1,'{}'::jsonb)", [result.rows[0].id]);
+  return result.rows[0];
+}
+
+async function issueOAuthResponse(req, res, identity) {
+  const user = await resolveOAuthUser({ ...identity, linkingUser: await accountFromBearer(req.headers.authorization) });
+  return res.json({ token: issueAccountToken(user), user: { id: user.id, email: user.email, name: user.name, provider: user.provider, avatarUrl: user.avatar_url || null } });
 }
 
 const upload = multer({
@@ -350,7 +461,134 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+app.post("/api/auth/google", async (req, res) => {
+  if (accountUnavailable(res)) return;
+  if (!googleClient) return res.status(503).json({ error: "Google authentication is not configured." });
+  try {
+    await accountSchemaReady;
+    const credential = String(req.body?.credential || "");
+    if (!credential) return res.status(400).json({ error: "Google credential is required." });
+    const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload();
+    if (!payload?.sub || !payload.email || payload.email_verified !== true) {
+      return res.status(401).json({ error: "Google account email is not verified." });
+    }
+    return await issueOAuthResponse(req, res, {
+      provider: "google",
+      providerUserId: payload.sub,
+      email: normalizeEmail(payload.email),
+      displayName: payload.name || payload.email,
+      avatarUrl: payload.picture || null
+    });
+  } catch (error) {
+    console.error("GOOGLE_AUTH_ERROR", { name: error?.name, message: error?.message });
+    if (error?.code === "OAUTH_LINK_REQUIRED" || error?.code === "OAUTH_IDENTITY_CONFLICT" || error?.code === "OAUTH_EMAIL_CONFLICT") {
+      return res.status(409).json({ error: error.message });
+    }
+    return res.status(401).json({ error: "Google authentication failed." });
+  }
+});
+
+app.get("/api/auth/apple/start", async (req, res) => {
+  if (accountUnavailable(res)) return;
+  if (!configuredApple()) return res.status(503).json({ error: "Apple authentication is not configured." });
+  const state = crypto.randomBytes(32).toString("hex");
+  const linkingUser = await accountFromBearer(req.headers.authorization);
+  appleStates.set(state, { createdAt: Date.now(), userId: linkingUser?.id || null });
+  const params = new URLSearchParams({
+    response_type: "code",
+    response_mode: "query",
+    client_id: APPLE_CLIENT_ID,
+    redirect_uri: APPLE_REDIRECT_URI,
+    scope: "name email",
+    state
+  });
+  return res.redirect(`https://appleid.apple.com/auth/authorize?${params}`);
+});
+
+async function appleClientSecret() {
+  const key = await importPKCS8(APPLE_PRIVATE_KEY.replace(/\\n/g, "\n"), "ES256");
+  return new SignJWT({ iss: APPLE_TEAM_ID, iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 300, aud: "https://appleid.apple.com", sub: APPLE_CLIENT_ID })
+    .setProtectedHeader({ alg: "ES256", kid: APPLE_KEY_ID })
+    .sign(key);
+}
+
+app.get("/api/auth/apple/callback", async (req, res) => {
+  if (accountUnavailable(res)) return;
+  if (!configuredApple()) return res.status(503).send("Apple authentication is not configured.");
+  const state = String(req.query?.state || "");
+  const pending = appleStates.get(state);
+  appleStates.delete(state);
+  if (!pending || Date.now() - pending.createdAt > 10 * 60 * 1000) return res.status(401).send("Invalid or expired Apple authentication state.");
+  if (req.query?.error) return res.status(401).send("Apple authentication was cancelled.");
+  try {
+    const code = String(req.query?.code || "");
+    if (!code) return res.status(400).send("Apple authorization code is required.");
+    const tokenResponse = await fetch("https://appleid.apple.com/auth/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: APPLE_CLIENT_ID,
+        client_secret: await appleClientSecret(),
+        code,
+        grant_type: "authorization_code",
+        redirect_uri: APPLE_REDIRECT_URI
+      })
+    });
+    if (!tokenResponse.ok) throw new Error(`Apple token exchange failed with HTTP ${tokenResponse.status}`);
+    const tokenPayload = await tokenResponse.json();
+    const verified = await jwtVerify(tokenPayload.id_token, appleJwks, { issuer: "https://appleid.apple.com", audience: APPLE_CLIENT_ID });
+    const claims = verified.payload;
+    let email = normalizeEmail(claims.email);
+    if (!email) {
+      const existing = await pool.query(
+        `SELECT email FROM app_users WHERE provider='apple' AND provider_user_id=$1
+         UNION ALL SELECT email FROM app_user_providers WHERE provider='apple' AND provider_user_id=$1`,
+        [claims.sub]
+      );
+      email = normalizeEmail(existing.rows[0]?.email);
+    }
+    if (!claims.sub || !email || claims.email_verified === false) throw new Error("Apple identity has no verified email.");
+    let displayName = "";
+    if (req.query?.user) {
+      try {
+        const appleUser = JSON.parse(String(req.query.user));
+        displayName = [appleUser.name?.firstName, appleUser.name?.lastName].filter(Boolean).join(" ");
+      } catch {
+        displayName = "";
+      }
+    }
+    const user = await resolveOAuthUser({
+      provider: "apple",
+      providerUserId: claims.sub,
+      email,
+      displayName: displayName || email,
+      avatarUrl: null,
+      linkingUser: pending.userId ? (await pool.query("SELECT id,email,name,provider,provider_user_id,display_name,avatar_url FROM app_users WHERE id=$1", [pending.userId])).rows[0] : null
+    });
+    const exchangeCode = crypto.randomBytes(32).toString("hex");
+    appleExchangeCodes.set(exchangeCode, { createdAt: Date.now(), user });
+    return res.redirect(`giammaria://oauth/apple?code=${encodeURIComponent(exchangeCode)}`);
+  } catch (error) {
+    console.error("APPLE_AUTH_ERROR", { name: error?.name, message: error?.message });
+    return res.status(401).send("Apple authentication failed.");
+  }
+});
+
+app.post("/api/auth/apple/exchange", async (req, res) => {
+  if (accountUnavailable(res)) return;
+  const code = String(req.body?.code || "");
+  const pending = appleExchangeCodes.get(code);
+  appleExchangeCodes.delete(code);
+  if (!pending || Date.now() - pending.createdAt > 60 * 1000) return res.status(401).json({ error: "Invalid or expired Apple exchange code." });
+  return res.json({ token: issueAccountToken(pending.user), user: { id: pending.user.id, email: pending.user.email, name: pending.user.name, provider: pending.user.provider } });
+});
+
 app.get("/api/auth/me", requireAccount, async (req, res) => {
+  return res.json({ user: req.account });
+});
+
+app.get("/api/account/me", requireAccount, async (req, res) => {
   return res.json({ user: req.account });
 });
 
