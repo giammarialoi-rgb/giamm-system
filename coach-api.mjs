@@ -9,10 +9,17 @@ import os from "node:os";
 import path from "node:path";
 import XLSX from "xlsx";
 import { GoogleGenAI } from "@google/genai";
+import crypto from "node:crypto";
+import jwt from "jsonwebtoken";
+import pg from "pg";
 
 const app = express();
 const PORT = Number(process.env.PORT || 10000);
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
+const JWT_SECRET = process.env.JWT_SECRET || "";
+const pool = process.env.DATABASE_URL
+  ? new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.DATABASE_URL.includes("localhost") ? false : { rejectUnauthorized: false } })
+  : null;
 const nullable = (type) => ({ anyOf: [{ type }, { type: "null" }] });
 
 if (!process.env.GEMINI_API_KEY) {
@@ -20,6 +27,7 @@ if (!process.env.GEMINI_API_KEY) {
 }
 console.info(`GEMINI_API_KEY configured: ${Boolean(process.env.GEMINI_API_KEY)}`);
 console.info(`MODEL = ${MODEL}`);
+console.info(`ACCOUNT_STORAGE configured: ${Boolean(pool && JWT_SECRET)}`);
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -41,6 +49,69 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: "70mb" }));
+
+const accountSchemaReady = pool ? pool.query(`
+  CREATE TABLE IF NOT EXISTS app_users (
+    id BIGSERIAL PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  CREATE TABLE IF NOT EXISTS app_account_data (
+    user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+`) : Promise.resolve();
+
+function accountUnavailable(res) {
+  if (!pool || !JWT_SECRET) {
+    res.status(503).json({ error: "Account storage is not configured. Set DATABASE_URL and JWT_SECRET." });
+    return true;
+  }
+  return false;
+}
+
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
+  return new Promise((resolve, reject) => crypto.scrypt(password, salt, 64, (error, derived) => {
+    if (error) reject(error);
+    else resolve(`${salt}:${derived.toString("hex")}`);
+  }));
+}
+
+async function verifyPassword(password, encoded) {
+  const [salt, expected] = String(encoded || "").split(":");
+  if (!salt || !expected) return false;
+  const actual = await hashPassword(password, salt);
+  const actualBytes = Buffer.from(actual.split(":")[1], "hex");
+  const expectedBytes = Buffer.from(expected, "hex");
+  return actualBytes.length === expectedBytes.length && crypto.timingSafeEqual(actualBytes, expectedBytes);
+}
+
+function issueAccountToken(user) {
+  return jwt.sign({ sub: String(user.id), email: user.email, name: user.name }, JWT_SECRET, { expiresIn: "30d" });
+}
+
+async function requireAccount(req, res, next) {
+  if (accountUnavailable(res)) return;
+  try {
+    const header = String(req.headers.authorization || "");
+    if (!header.startsWith("Bearer ")) return res.status(401).json({ error: "Authentication required." });
+    const claims = jwt.verify(header.slice(7), JWT_SECRET);
+    const result = await pool.query("SELECT id,email,name FROM app_users WHERE id=$1", [claims.sub]);
+    if (!result.rowCount) return res.status(401).json({ error: "Account not found." });
+    req.account = result.rows[0];
+    return next();
+  } catch (error) {
+    console.error("ACCOUNT_AUTH_ERROR", { name: error?.name, message: error?.message });
+    return res.status(401).json({ error: "Invalid or expired authentication token." });
+  }
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -233,8 +304,81 @@ app.get("/health", (_req, res) => {
     ok: true,
     service: "coach-api-gemini",
     model: MODEL,
-    apiKeyConfigured: Boolean(process.env.GEMINI_API_KEY)
+    apiKeyConfigured: Boolean(process.env.GEMINI_API_KEY),
+    accountStorageConfigured: Boolean(pool && JWT_SECRET)
   });
+});
+
+app.post("/api/auth/register", async (req, res) => {
+  if (accountUnavailable(res)) return;
+  try {
+    await accountSchemaReady;
+    const email = normalizeEmail(req.body?.email);
+    const name = String(req.body?.name || "").trim();
+    const password = String(req.body?.password || "");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || name.length < 2 || password.length < 8) {
+      return res.status(400).json({ error: "Name, valid email and password of at least 8 characters are required." });
+    }
+    const passwordHash = await hashPassword(password);
+    const result = await pool.query(
+      "INSERT INTO app_users(email,name,password_hash) VALUES($1,$2,$3) RETURNING id,email,name",
+      [email, name, passwordHash]
+    );
+    const user = result.rows[0];
+    await pool.query("INSERT INTO app_account_data(user_id,data) VALUES($1,'{}'::jsonb)", [user.id]);
+    return res.status(201).json({ token: issueAccountToken(user), user });
+  } catch (error) {
+    if (error?.code === "23505") return res.status(409).json({ error: "An account with this email already exists." });
+    console.error("ACCOUNT_REGISTER_ERROR", { name: error?.name, message: error?.message, stack: error?.stack });
+    return res.status(500).json({ error: "Account registration failed." });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  if (accountUnavailable(res)) return;
+  try {
+    await accountSchemaReady;
+    const email = normalizeEmail(req.body?.email);
+    const password = String(req.body?.password || "");
+    const result = await pool.query("SELECT id,email,name,password_hash FROM app_users WHERE email=$1", [email]);
+    const user = result.rows[0];
+    if (!user || !(await verifyPassword(password, user.password_hash))) return res.status(401).json({ error: "Email or password not valid." });
+    return res.json({ token: issueAccountToken(user), user: { id: user.id, email: user.email, name: user.name } });
+  } catch (error) {
+    console.error("ACCOUNT_LOGIN_ERROR", { name: error?.name, message: error?.message, stack: error?.stack });
+    return res.status(500).json({ error: "Account login failed." });
+  }
+});
+
+app.get("/api/auth/me", requireAccount, async (req, res) => {
+  return res.json({ user: req.account });
+});
+
+app.get("/api/account/data", requireAccount, async (req, res) => {
+  try {
+    await accountSchemaReady;
+    const result = await pool.query("SELECT data,updated_at FROM app_account_data WHERE user_id=$1", [req.account.id]);
+    return res.json({ data: result.rows[0]?.data || {}, updatedAt: result.rows[0]?.updated_at || null });
+  } catch (error) {
+    console.error("ACCOUNT_READ_ERROR", { name: error?.name, message: error?.message, stack: error?.stack });
+    return res.status(500).json({ error: "Account data could not be loaded." });
+  }
+});
+
+app.put("/api/account/data", requireAccount, async (req, res) => {
+  try {
+    await accountSchemaReady;
+    const data = req.body?.data;
+    if (!data || typeof data !== "object" || Array.isArray(data)) return res.status(400).json({ error: "Account data must be a JSON object." });
+    const result = await pool.query(
+      "INSERT INTO app_account_data(user_id,data,updated_at) VALUES($1,$2::jsonb,NOW()) ON CONFLICT(user_id) DO UPDATE SET data=EXCLUDED.data,updated_at=NOW() RETURNING updated_at",
+      [req.account.id, JSON.stringify(data)]
+    );
+    return res.json({ ok: true, updatedAt: result.rows[0].updated_at });
+  } catch (error) {
+    console.error("ACCOUNT_WRITE_ERROR", { name: error?.name, message: error?.message, stack: error?.stack });
+    return res.status(500).json({ error: "Account data could not be saved." });
+  }
 });
 
 app.get("/api/gemini-test", async (_req, res) => {
