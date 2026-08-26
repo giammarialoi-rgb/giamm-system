@@ -553,7 +553,7 @@ app.post("/api/auth/register", async (req, res) => {
     }
     const passwordHash = await hashPassword(password);
     const result = await pool.query(
-      "INSERT INTO app_users(id,email,name,password_hash) VALUES($1,$2,$3) RETURNING id,email,name",
+      "INSERT INTO app_users(id,email,name,password_hash) VALUES($1,$2,$3,$4) RETURNING id,email,name",
       [crypto.randomUUID(), email, name, passwordHash]
     );
     const user = result.rows[0];
