@@ -846,11 +846,11 @@ function fileDb() {
     request.onerror = () => reject(request.error);
   });
 }
-async function saveDocumentFile(id, file) {
+async function saveDocumentFile(id, data) {
   const db = await fileDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction('files', 'readwrite');
-    tx.objectStore('files').put(file, id);
+    tx.objectStore('files').put(data, id);
     tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
   });
 }
@@ -881,12 +881,43 @@ function documentMime(filename, fallback) {
 }
 function fileToBase64(file){
   return new Promise((resolve,reject)=>{
+    if (typeof file === 'string') return resolve(file);
     const reader = new FileReader();
     reader.onload = () => { const value = String(reader.result || ''); const comma = value.indexOf(','); resolve(comma >= 0 ? value.slice(comma + 1) : value); };
     reader.onerror = () => reject(reader.error || new Error('Impossibile leggere il file.'));
     reader.readAsDataURL(file);
   });
 }
+function triggerFileSelect() {
+  if (window.NativeConfig && typeof window.NativeConfig.pickDocument === 'function') {
+    window.NativeConfig.pickDocument();
+  } else if ($('db-file-input')) {
+    $('db-file-input').click();
+  }
+}
+window.nativeDocumentReceived = async function(docData) {
+  if (!docData || !docData.base64) return;
+  const doc = {
+    id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9),
+    name: docData.name || 'documento.xlsx',
+    size: docData.sizeText || ((docData.sizeBytes / 1024).toFixed(1) + ' KB'),
+    date: Date.now(),
+    type: docData.mime || documentMime(docData.name, 'application/octet-stream'),
+    base64: docData.base64
+  };
+  try {
+    await saveDocumentFile(doc.id, docData.base64);
+    if (!store.docs) store.docs = [];
+    store.docs.push(doc);
+    persist();
+    render();
+    const logMsg = 'DOC_SAVED: name=' + doc.name + ' size=' + doc.size + ' totalDocs=' + store.docs.length;
+    console.info(logMsg);
+    if (window.NativeConfig && typeof window.NativeConfig.logDiagnostic === 'function') window.NativeConfig.logDiagnostic('GiammariaExcel', logMsg);
+  } catch(err) {
+    alert('Impossibile salvare il documento: ' + err.message);
+  }
+};
 function coachEndpoint(path) {
   if (!COACH_API_URL || !/^https?:\/\//i.test(COACH_API_URL)) throw new Error('Endpoint Coach AI non configurato.');
   return COACH_API_URL.replace(/\/$/, '') + path;
@@ -2734,7 +2765,7 @@ function renderDb(c){
       <h3 style="color:var(--gold); margin-top:0; font-size:14px;">CARICA NUOVO MATERIALE</h3>
       <p style="font-size:10px; color:#666; margin-bottom:10px;">Carica documenti PDF, DOC, DOCX o fogli Excel per l'analisi AI.</p>
       <input type="file" id="db-file-input" accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none;" onchange="handleFileUpload(event)">
-      <button class="btn btn-primary" style="width:100%; font-size:12px;" onclick="$('db-file-input').click()">+ SELEZIONA FILE</button>
+      <button class="btn btn-primary" style="width:100%; font-size:12px;" onclick="triggerFileSelect()">+ SELEZIONA FILE</button>
     </div>
 
     <div class="card" style="padding:15px;">
@@ -2769,16 +2800,17 @@ async function handleFileUpload(e) {
   const file = e.target.files[0]; if(!file) return;
   if(!/\.(pdf|doc|docx|txt|xlsx|xls)$/i.test(file.name)) { alert('Seleziona PDF, DOC, DOCX, TXT, XLSX o XLS.'); return; }
   if(file.size > MAX_DOCUMENT_BYTES) { alert('Il documento supera il limite di 12 MB.'); return; }
-  console.debug('[Coach AI] file selected', { name: file.name, extension: file.name.split('.').pop().toLowerCase(), mimeType: file.type || documentMime(file.name, ''), size: file.size });
-  const doc = {
-    id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random(),
-    name: file.name,
-    size: (file.size / 1024).toFixed(1) + ' KB',
-    date: Date.now(),
-    type: file.type
-  };
   try {
-    await saveDocumentFile(doc.id, file);
+    const base64 = await fileToBase64(file);
+    const doc = {
+      id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9),
+      name: file.name,
+      size: (file.size / 1024).toFixed(1) + ' KB',
+      date: Date.now(),
+      type: file.type || documentMime(file.name, 'application/octet-stream'),
+      base64: base64
+    };
+    await saveDocumentFile(doc.id, base64);
     store.docs.push(doc);
     persist();
     render();
@@ -2796,46 +2828,110 @@ async function deleteDoc(idx) {
   render();
 }
 
+let isAnalyzingDocument = false;
+
 async function analyzeDoc(idx) {
+  if (isAnalyzingDocument) {
+    console.warn('[Coach AI] Analysis already in progress. Ignoring duplicate click.');
+    return;
+  }
+  isAnalyzingDocument = true;
+
   const doc = store.docs[idx];
+  if (!doc) {
+    isAnalyzingDocument = false;
+    return;
+  }
+
   navigate('ai');
   const h = $('analysis-results');
   h.innerHTML = `<div class="msg ai">Analisi avviata per <b>${esc(doc.name)}</b>. Sto estraendo tutte le sessioni ed esercizi…</div>`;
+
   try {
-    const file = await getDocumentFile(doc.id);
-    if(!file) throw new Error('Il file originale non è disponibile. Caricalo di nuovo.');
-    const base64 = await fileToBase64(file);
-    console.info('DOC_ANALYZE_SOURCE_EXERCISES_START', { filename: doc.name });
-    
-    const response = await apiFetch(coachEndpoint('/api/analyze-file'), {
+    let base64 = doc.base64;
+    if (!base64) {
+      const stored = await getDocumentFile(doc.id);
+      if (typeof stored === 'string') {
+        base64 = stored;
+      } else if (stored) {
+        base64 = await fileToBase64(stored);
+      }
+    }
+    if (!base64) throw new Error('Il file originale non è disponibile. Caricalo di nuovo.');
+
+    const endpoint = coachEndpoint('/api/analyze-file');
+    const mime = documentMime(doc.name, doc.type);
+    const byteCount = Math.round((base64.length * 3) / 4);
+    const requestId = 'req_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+
+    const sendMsg = `EXCEL_SEND: endpoint=${endpoint} filename=${doc.name} mime=${mime} bytes=${byteCount} base64Length=${base64.length}`;
+    console.info(sendMsg);
+    if (window.NativeConfig && typeof window.NativeConfig.logDiagnostic === 'function') {
+      window.NativeConfig.logDiagnostic('GiammariaExcel', sendMsg);
+    }
+
+    const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Request-ID': requestId
+      },
       body: JSON.stringify({
         filename: doc.name,
-        mime_type: documentMime(doc.name, doc.type),
+        mime_type: mime,
         data_base64: base64
       })
     });
-    const result = await readApiJson(response);
-    
-    let totalApiExercises = 0;
-    if(Array.isArray(result.weeks)) {
-      result.weeks.forEach(w => (w.sessions || w.days || []).forEach(s => {
-        totalApiExercises += (s.exercises || s.rows || []).length;
-      }));
+
+    const status = response.status;
+    const rawText = await response.text();
+    const bodyPreview = rawText.substring(0, 120).replace(/\s+/g, ' ');
+
+    const respMsg = `EXCEL_RESPONSE: status=${status} bodyPreview=${bodyPreview}`;
+    console.info(respMsg);
+    if (window.NativeConfig && typeof window.NativeConfig.logDiagnostic === 'function') {
+      window.NativeConfig.logDiagnostic('GiammariaExcel', respMsg);
     }
+
+    if (status === 429) {
+      throw new Error('Il servizio AI ha raggiunto il limite temporaneo di richieste (HTTP 429). Attendi 30 secondi e riprova.');
+    }
+
+    let result;
+    try {
+      result = rawText ? JSON.parse(rawText) : {};
+    } catch(err) {
+      throw new Error(`Risposta non valida dal server (HTTP ${status})`);
+    }
+
+    if (!response.ok) {
+      const msg = result.error || result.message || `Errore server HTTP ${status}`;
+      throw new Error(msg);
+    }
+
+    if (!Array.isArray(result.weeks) || !result.weeks.length) {
+      throw new Error('Nessuna settimana trovata nel documento estratto.');
+    }
+
+    let totalApiExercises = 0;
+    result.weeks.forEach(w => (w.sessions || w.days || []).forEach(s => {
+      totalApiExercises += (s.exercises || s.rows || []).length;
+    }));
     console.info(`DOC_API_EXERCISES=${totalApiExercises}`);
 
     const program = normalizeProgram(result);
     window.pendingProgramImport = { program, documentName: doc.name };
     doc.analysis = { date: Date.now(), sourceSummary: result.source_summary || '' };
     persist();
+
     h.innerHTML = renderProgramPreview(program);
     h.innerHTML += `<div class="msg ai"><button class="btn btn-primary" style="margin-top:10px;width:100%;height:45px;" onclick="confirmProgramImport()">CONFERMA IMPORTAZIONE PROGRAMMA</button></div>`;
   } catch(err) {
     h.innerHTML += `<div class="msg ai" style="color:red;">Errore durante l'analisi: ${esc(err.message)}</div>`;
+  } finally {
+    isAnalyzingDocument = false;
+    h.scrollTop = h.scrollHeight;
   }
-  h.scrollTop = h.scrollHeight;
 }
 
 function confirmProgramImport(){

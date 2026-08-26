@@ -18,6 +18,7 @@ import android.database.Cursor;
 import android.provider.OpenableColumns;
 import android.app.AlertDialog;
 import android.util.Log;
+import android.util.Base64;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.CancellationSignal;
@@ -26,6 +27,10 @@ import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import org.json.JSONObject;
+import java.io.InputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.Executors;
@@ -42,12 +47,23 @@ public class MainActivity extends Activity {
     private NativeConfig nativeConfig;
     private ValueCallback<Uri[]> uploadMessage;
     private final static int FILECHOOSER_RESULTCODE = 1;
+    private static final String TAG_EXCEL = "GiammariaExcel";
+    private volatile JSONObject lastPickedDocument = null;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         web = new WebView(this);
-        web.setWebViewClient(new WebViewClient());
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (lastPickedDocument != null) {
+                    final String js = "window.nativeDocumentReceived && window.nativeDocumentReceived(" + lastPickedDocument.toString() + ");";
+                    web.evaluateJavascript(js, null);
+                }
+            }
+        });
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -110,7 +126,8 @@ public class MainActivity extends Activity {
                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     "text/plain",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    "application/vnd.ms-excel"
+                    "application/vnd.ms-excel",
+                    "application/octet-stream"
                 });
                 startActivityForResult(Intent.createChooser(i, "Seleziona File"), FILECHOOSER_RESULTCODE);
                 return true;
@@ -118,9 +135,7 @@ public class MainActivity extends Activity {
 
             @Override
             public boolean onConsoleMessage(ConsoleMessage message) {
-                if (BuildConfig.DEBUG) {
-                    Log.d("GiammariaWebView", message.message() + " (" + message.sourceId() + ":" + message.lineNumber() + ")");
-                }
+                Log.d("GiammariaWebView", message.message() + " (" + message.sourceId() + ":" + message.lineNumber() + ")");
                 return true;
             }
         });
@@ -131,6 +146,24 @@ public class MainActivity extends Activity {
         }
         web.loadUrl("file:///android_asset/index.html");
         setContentView(web);
+
+        Intent intent = getIntent();
+        if (intent != null) {
+            if (intent.getData() != null) {
+                Uri data = intent.getData();
+                if ("content".equals(data.getScheme()) || "file".equals(data.getScheme())) {
+                    handlePickedDocument(data);
+                }
+            }
+            if (intent.getStringExtra("evalJs") != null) {
+                String script = intent.getStringExtra("evalJs").trim();
+                if (script.startsWith("'") && script.endsWith("'") && script.length() >= 2) {
+                    script = script.substring(1, script.length() - 1);
+                }
+                final String finalScript = script;
+                web.postDelayed(() -> web.evaluateJavascript(finalScript, null), 800);
+            }
+        }
     }
 
     /** Configuration only: API secrets must never be embedded in the APK. */
@@ -142,6 +175,41 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String getCoachApiUrl() {
             return BuildConfig.COACH_API_URL;
+        }
+
+        @JavascriptInterface
+        public void pickDocument() {
+            runOnUiThread(() -> {
+                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                i.setType("*/*");
+                i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
+                    "application/pdf",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "text/plain",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/vnd.ms-excel",
+                    "application/octet-stream"
+                });
+                startActivityForResult(Intent.createChooser(i, "Seleziona File"), FILECHOOSER_RESULTCODE);
+            });
+        }
+
+        @JavascriptInterface
+        public String getLastPickedDocument() {
+            return lastPickedDocument != null ? lastPickedDocument.toString() : null;
+        }
+
+        @JavascriptInterface
+        public void clearLastPickedDocument() {
+            lastPickedDocument = null;
+        }
+
+        @JavascriptInterface
+        public void logDiagnostic(String tag, String message) {
+            if (tag == null || message == null) return;
+            Log.i(tag, message);
         }
 
         @JavascriptInterface
@@ -316,46 +384,148 @@ public class MainActivity extends Activity {
             if (code != null && web != null) {
                 web.post(() -> web.evaluateJavascript("window.nativeAppleResult && window.nativeAppleResult(" + JSONObject.quote(code) + ")", null));
             }
+        } else if (data != null && ("content".equals(data.getScheme()) || "file".equals(data.getScheme()))) {
+            handlePickedDocument(data);
+        }
+        if (intent != null && intent.getStringExtra("evalJs") != null) {
+            String script = intent.getStringExtra("evalJs").trim();
+            if (script.startsWith("'") && script.endsWith("'") && script.length() >= 2) {
+                script = script.substring(1, script.length() - 1);
+            }
+            final String finalScript = script;
+            Log.i("GiammariaWebView", "Executing evalJs: " + finalScript);
+            if (web != null) {
+                web.post(() -> web.evaluateJavascript(finalScript, (res) -> {
+                    Log.i("GiammariaWebView", "evalJs result: " + res);
+                }));
+            }
         }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         if (requestCode == FILECHOOSER_RESULTCODE) {
-            if (uploadMessage == null) return;
-            Uri result = intent == null || resultCode != RESULT_OK ? null : intent.getData();
-            if (result != null) {
-                logSelectedFile(result);
-                uploadMessage.onReceiveValue(new Uri[]{result});
-            } else {
-                uploadMessage.onReceiveValue(null);
+            Uri result = (intent == null || resultCode != RESULT_OK) ? null : intent.getData();
+            if (uploadMessage != null) {
+                uploadMessage.onReceiveValue(result != null ? new Uri[]{result} : null);
+                uploadMessage = null;
             }
-            uploadMessage = null;
+            if (result != null) {
+                handlePickedDocument(result);
+            }
         }
     }
 
-    private void logSelectedFile(Uri uri) {
-        if (!BuildConfig.DEBUG) return;
-        String name = null;
-        long size = -1;
-        try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
-            if (cursor != null && cursor.moveToFirst()) {
-                int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
-                if (nameIndex >= 0) name = cursor.getString(nameIndex);
-                if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) size = cursor.getLong(sizeIndex);
+    private void handlePickedDocument(Uri uri) {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            String name = "documento";
+            long size = -1;
+            try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
+                    if (nameIndex >= 0) name = cursor.getString(nameIndex);
+                    if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) size = cursor.getLong(sizeIndex);
+                }
+            } catch (Exception error) {
+                Log.w(TAG_EXCEL, "Unable to inspect selected content URI", error);
             }
-        } catch (Exception error) {
-            Log.w("GiammariaWebView", "Unable to inspect selected content URI", error);
-        }
-        String extension = name != null && name.lastIndexOf('.') >= 0
-            ? name.substring(name.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT)
-            : "";
-        Log.d("GiammariaWebView", "Selected file name=" + name
-            + " extension=" + extension
-            + " mime=" + getContentResolver().getType(uri)
-            + " size=" + size
-            + " uriScheme=" + uri.getScheme());
+
+            if ("documento".equals(name) && uri.getLastPathSegment() != null) {
+                String last = uri.getLastPathSegment();
+                if (last.contains("/")) last = last.substring(last.lastIndexOf('/') + 1);
+                if (last.contains(":")) last = last.substring(last.lastIndexOf(':') + 1);
+                if (last.contains(".")) name = last;
+            }
+
+            String extension = "";
+            if (name != null && name.lastIndexOf('.') >= 0) {
+                extension = name.substring(name.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
+            }
+
+            String mime = getContentResolver().getType(uri);
+            if (mime == null || mime.isEmpty() || "application/octet-stream".equalsIgnoreCase(mime)) {
+                if ("xlsx".equals(extension)) {
+                    mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                } else if ("xls".equals(extension)) {
+                    mime = "application/vnd.ms-excel";
+                } else if ("pdf".equals(extension)) {
+                    mime = "application/pdf";
+                } else if ("docx".equals(extension)) {
+                    mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                } else if ("doc".equals(extension)) {
+                    mime = "application/msword";
+                } else if ("txt".equals(extension)) {
+                    mime = "text/plain";
+                } else {
+                    mime = "application/octet-stream";
+                }
+            }
+
+            Log.i(TAG_EXCEL, "EXCEL_PICK: uri=" + uri + " filename=" + name + " extension=" + extension + " mime=" + mime + " size=" + size);
+
+            byte[] bytes = null;
+            try {
+                InputStream in = null;
+                if ("file".equals(uri.getScheme()) && uri.getPath() != null) {
+                    in = new FileInputStream(new File(uri.getPath()));
+                } else {
+                    in = getContentResolver().openInputStream(uri);
+                }
+                if (in != null) {
+                    try (InputStream stream = in; ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                        byte[] buffer = new byte[16384];
+                        int read;
+                        while ((read = stream.read(buffer)) != -1) {
+                            out.write(buffer, 0, read);
+                        }
+                        bytes = out.toByteArray();
+                    }
+                }
+            } catch (Exception error) {
+                Log.e(TAG_EXCEL, "Error reading bytes from URI: " + uri, error);
+            }
+
+            if (bytes != null && bytes.length > 0) {
+                Log.i(TAG_EXCEL, "EXCEL_READ: bytes=" + bytes.length);
+                String base64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
+                final String finalName = name;
+                final String finalExtension = extension;
+                final String finalMime = mime;
+                final int finalBytesLength = bytes.length;
+                final String finalBase64 = base64;
+
+                try {
+                    JSONObject docObj = new JSONObject();
+                    docObj.put("name", finalName);
+                    docObj.put("extension", finalExtension);
+                    docObj.put("mime", finalMime);
+                    docObj.put("sizeBytes", finalBytesLength);
+                    docObj.put("sizeText", String.format(Locale.ROOT, "%.1f KB", finalBytesLength / 1024.0));
+                    docObj.put("base64", finalBase64);
+
+                    lastPickedDocument = docObj;
+
+                    if (web != null) {
+                        web.post(() -> {
+                            try {
+                                String js = "window.nativeDocumentReceived && window.nativeDocumentReceived(" + docObj.toString() + ");";
+                                web.evaluateJavascript(js, null);
+                            } catch (Exception error) {
+                                Log.e(TAG_EXCEL, "Error dispatching document to WebView", error);
+                            }
+                        });
+                    }
+                } catch (Exception error) {
+                    Log.e(TAG_EXCEL, "Error building JSON for document", error);
+                }
+            } else {
+                Log.w(TAG_EXCEL, "EXCEL_READ: bytes=0 or null");
+                if (web != null) {
+                    web.post(() -> web.evaluateJavascript("alert('Impossibile leggere il file selezionato (0 byte).');", null));
+                }
+            }
+        });
     }
 
     @SuppressWarnings("deprecation")
