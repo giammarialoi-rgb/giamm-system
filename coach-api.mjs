@@ -1,4 +1,5 @@
 import express from "express";
+import bcrypt from "bcryptjs";
 import cors from "cors";
 import dotenv from "dotenv";
 import multer from "multer";
@@ -39,9 +40,34 @@ async function initDb() {
     try {
       await client.query("BEGIN");
       await client.query(`
-        CREATE TABLE IF NOT EXISTS app_users (\n          id BIGSERIAL PRIMARY KEY,\n          email TEXT UNIQUE NOT NULL,\n          name TEXT,\n          provider TEXT NOT NULL,\n          provider_id TEXT NOT NULL,\n          avatar_url TEXT,\n          created_at TIMESTAMPTZ DEFAULT NOW(),\n          updated_at TIMESTAMPTZ DEFAULT NOW()\n        )\n      `);
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS app_account_data (\n          user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,\n          data JSONB NOT NULL DEFAULT '{}'::jsonb,\n          updated_at TIMESTAMPTZ DEFAULT NOW()\n        )\n      `);
+        CREATE TABLE IF NOT EXISTS app_users (
+          id BIGSERIAL PRIMARY KEY,
+          email TEXT UNIQUE NOT NULL,
+          name TEXT,
+          password_hash TEXT,
+          provider TEXT NOT NULL DEFAULT 'email',
+          provider_id TEXT,
+          avatar_url TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS app_account_data (
+          user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
+          data JSONB NOT NULL DEFAULT '{}'::jsonb,
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider TEXT DEFAULT 'email';
+        ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider_id TEXT;
+        ALTER TABLE app_users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+        ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+        ALTER TABLE app_users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE app_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+        UPDATE app_users SET provider = 'email' WHERE provider IS NULL;
+        ALTER TABLE app_account_data ADD COLUMN IF NOT EXISTS data JSONB NOT NULL DEFAULT '{}'::jsonb;
+        ALTER TABLE app_account_data ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+        CREATE INDEX IF NOT EXISTS idx_app_users_provider ON app_users(provider, provider_id);
+        CREATE INDEX IF NOT EXISTS idx_app_users_email ON app_users(email);
+      `);
       await client.query("COMMIT");
       dbInitialized = true;
       console.log("Database tables verified successfully.");
@@ -57,6 +83,19 @@ async function initDb() {
 }
 
 initDb();
+
+async function hashPassword(password) {
+  return bcrypt.hash(password, 10);
+}
+
+async function verifyPassword(password, hash) {
+  if (!hash || !password) return false;
+  return bcrypt.compare(password, hash);
+}
+
+function normalizeEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
 
 const JWT_SECRET = process.env.JWT_SECRET || "gs-coach-secret-key-production-change-me";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
@@ -93,12 +132,15 @@ async function accountFromBearer(authHeader) {
 }
 
 async function resolveOAuthUser({ email, name, provider, providerId, avatarUrl, linkingUser }) {
-  const normalized = (email || "").trim().toLowerCase();
+  const normalized = normalizeEmail(email);
   if (!normalized) throw Object.assign(new Error("Missing user email from identity provider."), { statusCode: 400 });
 
   if (linkingUser && linkingUser.id) {
     const updated = await pool.query(
-      `UPDATE app_users\n       SET email = $1, name = COALESCE($2, name), provider = $3, provider_id = $4, avatar_url = COALESCE($5, avatar_url), updated_at = NOW()\n       WHERE id = $6\n       RETURNING id, email, name, provider, avatar_url`,
+      `UPDATE app_users
+       SET email = $1, name = COALESCE($2, name), provider = $3, provider_id = $4, avatar_url = COALESCE($5, avatar_url), updated_at = NOW()
+       WHERE id = $6
+       RETURNING id, email, name, provider, avatar_url`,
       [normalized, name, provider, providerId, avatarUrl || null, linkingUser.id]
     );
     if (updated.rows.length) return updated.rows[0];
@@ -110,7 +152,10 @@ async function resolveOAuthUser({ email, name, provider, providerId, avatarUrl, 
   );
   if (existing.rows.length) {
     const updated = await pool.query(
-      `UPDATE app_users\n       SET name = COALESCE($1, name), provider = $2, provider_id = $3, avatar_url = COALESCE($4, avatar_url), updated_at = NOW()\n       WHERE id = $5\n       RETURNING id, email, name, provider, avatar_url`,
+      `UPDATE app_users
+       SET name = COALESCE($1, name), provider = $2, provider_id = $3, avatar_url = COALESCE($4, avatar_url), updated_at = NOW()
+       WHERE id = $5
+       RETURNING id, email, name, provider, avatar_url`,
       [name, provider, providerId, avatarUrl || null, existing.rows[0].id]
     );
     return updated.rows[0];
@@ -120,11 +165,13 @@ async function resolveOAuthUser({ email, name, provider, providerId, avatarUrl, 
   try {
     await client.query("BEGIN");
     const created = await client.query(
-      `INSERT INTO app_users(email, name, provider, provider_id, avatar_url)\n       VALUES($1, $2, $3, $4, $5)\n       RETURNING id, email, name, provider, avatar_url`,
+      `INSERT INTO app_users(email, name, provider, provider_id, avatar_url)
+       VALUES($1, $2, $3, $4, $5)
+       RETURNING id, email, name, provider, avatar_url`,
       [normalized, name || normalized.split("@")[0], provider, providerId, avatarUrl || null]
     );
     const user = created.rows[0];
-    await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb)", [user.id]);
+    await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb) ON CONFLICT (user_id) DO NOTHING", [user.id]);
     await client.query("COMMIT");
     return user;
   } catch (error) {
@@ -843,6 +890,7 @@ Preserva fedelmente ogni dato (serie, ripetizioni, carichi, recuperi, intensità
 }
 
 // Routes
+// Routes
 app.get("/health", (req, res) => {
   res.json({
     ok: true,
@@ -851,6 +899,116 @@ app.get("/health", (req, res) => {
     apiKeyConfigured: Boolean(process.env.GEMINI_API_KEY),
     accountStorageConfigured: Boolean(process.env.DATABASE_URL)
   });
+});
+
+app.post("/api/auth/register", async (req, res) => {
+  if (!process.env.DATABASE_URL) {
+    return res.status(503).json({ error: "Database not configured." });
+  }
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const name = String(req.body?.name || "").trim();
+    const password = String(req.body?.password || "");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || name.length < 2 || password.length < 8) {
+      return res.status(400).json({ error: "Name, valid email and password of at least 8 characters are required." });
+    }
+    const passwordHash = await hashPassword(password);
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await client.query(
+        "INSERT INTO app_users(email, name, password_hash, provider) VALUES($1, $2, $3, 'email') RETURNING id, email, name, provider, avatar_url",
+        [email, name, passwordHash]
+      );
+      const user = result.rows[0];
+      await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb) ON CONFLICT (user_id) DO NOTHING", [user.id]);
+      await client.query("COMMIT");
+      client.release();
+      return res.status(201).json({
+        token: issueAccountToken(user),
+        user: { id: user.id, email: user.email, name: user.name, provider: user.provider || "email", avatarUrl: user.avatar_url || null }
+      });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch (_) {}
+      client.release();
+      if (error?.code === "23505") return res.status(409).json({ error: "An account with this email already exists." });
+      console.error("ACCOUNT_REGISTER_ERROR", error);
+      return res.status(500).json({ error: "Account registration failed." });
+    }
+  } catch (error) {
+    console.error("ACCOUNT_REGISTER_OUTER_ERROR", error);
+    return res.status(500).json({ error: "Account registration failed." });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  if (!process.env.DATABASE_URL) {
+    return res.status(503).json({ error: "Database not configured." });
+  }
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const password = String(req.body?.password || "");
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
+    const result = await pool.query(
+      "SELECT id, email, name, password_hash, provider, avatar_url FROM app_users WHERE email = $1",
+      [email]
+    );
+    const user = result.rows[0];
+    if (!user || !user.password_hash || !(await verifyPassword(password, user.password_hash))) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+    return res.status(200).json({
+      token: issueAccountToken(user),
+      user: { id: user.id, email: user.email, name: user.name, provider: user.provider || "email", avatarUrl: user.avatar_url || null }
+    });
+  } catch (error) {
+    console.error("ACCOUNT_LOGIN_ERROR", error);
+    return res.status(500).json({ error: "Account login failed." });
+  }
+});
+
+app.get("/api/account/me", async (req, res) => {
+  const auth = await accountFromBearer(req.headers.authorization);
+  if (!auth) return res.status(401).json({ error: "Unauthorized." });
+  try {
+    const userRes = await pool.query(
+      "SELECT id, email, name, provider, avatar_url FROM app_users WHERE id = $1",
+      [auth.id]
+    );
+    const user = userRes.rows[0];
+    if (!user) return res.status(401).json({ error: "User not found." });
+    const dataRes = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
+    return res.json({
+      user: { id: user.id, email: user.email, name: user.name, provider: user.provider || "email", avatarUrl: user.avatar_url || null },
+      data: dataRes.rows[0]?.data || {}
+    });
+  } catch (error) {
+    console.error("ACCOUNT_ME_ERROR", error);
+    return res.status(500).json({ error: "Failed to fetch account profile." });
+  }
+});
+
+app.post("/api/account/sync", async (req, res) => {
+  const auth = await accountFromBearer(req.headers.authorization);
+  if (!auth) return res.status(401).json({ error: "Unauthorized." });
+  try {
+    const clientData = req.body?.data || req.body || {};
+    const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
+    const current = existing.rows[0]?.data || {};
+    const merged = { ...current, ...clientData, lastSyncedAt: new Date().toISOString() };
+    await pool.query(
+      `INSERT INTO app_account_data(user_id, data, updated_at)
+       VALUES($1, $2, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+      [auth.id, JSON.stringify(merged)]
+    );
+    return res.json({ ok: true, data: merged });
+  } catch (error) {
+    console.error("ACCOUNT_SYNC_ERROR", error);
+    return res.status(500).json({ error: "Failed to sync account data." });
+  }
 });
 
 app.post("/api/auth/google", async (req, res) => {
