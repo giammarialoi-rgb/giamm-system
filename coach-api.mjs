@@ -7,6 +7,12 @@ import pg from "pg";
 import jwt from "jsonwebtoken";
 import ExcelJS from "exceljs";
 import crypto from "crypto";
+import mammoth from "mammoth";
+import WordExtractor from "word-extractor";
+import * as XLSX from "xlsx";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
 dotenv.config();
 
@@ -33,24 +39,9 @@ async function initDb() {
     try {
       await client.query("BEGIN");
       await client.query(`
-        CREATE TABLE IF NOT EXISTS app_users (
-          id BIGSERIAL PRIMARY KEY,
-          email TEXT UNIQUE NOT NULL,
-          name TEXT,
-          provider TEXT NOT NULL,
-          provider_id TEXT NOT NULL,
-          avatar_url TEXT,
-          created_at TIMESTAMPTZ DEFAULT NOW(),
-          updated_at TIMESTAMPTZ DEFAULT NOW()
-        )
-      `);
+        CREATE TABLE IF NOT EXISTS app_users (\n          id BIGSERIAL PRIMARY KEY,\n          email TEXT UNIQUE NOT NULL,\n          name TEXT,\n          provider TEXT NOT NULL,\n          provider_id TEXT NOT NULL,\n          avatar_url TEXT,\n          created_at TIMESTAMPTZ DEFAULT NOW(),\n          updated_at TIMESTAMPTZ DEFAULT NOW()\n        )\n      `);
       await client.query(`
-        CREATE TABLE IF NOT EXISTS app_account_data (
-          user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
-          data JSONB NOT NULL DEFAULT '{}'::jsonb,
-          updated_at TIMESTAMPTZ DEFAULT NOW()
-        )
-      `);
+        CREATE TABLE IF NOT EXISTS app_account_data (\n          user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,\n          data JSONB NOT NULL DEFAULT '{}'::jsonb,\n          updated_at TIMESTAMPTZ DEFAULT NOW()\n        )\n      `);
       await client.query("COMMIT");
       dbInitialized = true;
       console.log("Database tables verified successfully.");
@@ -107,10 +98,7 @@ async function resolveOAuthUser({ email, name, provider, providerId, avatarUrl, 
 
   if (linkingUser && linkingUser.id) {
     const updated = await pool.query(
-      `UPDATE app_users
-       SET email = $1, name = COALESCE($2, name), provider = $3, provider_id = $4, avatar_url = COALESCE($5, avatar_url), updated_at = NOW()
-       WHERE id = $6
-       RETURNING id, email, name, provider, avatar_url`,
+      `UPDATE app_users\n       SET email = $1, name = COALESCE($2, name), provider = $3, provider_id = $4, avatar_url = COALESCE($5, avatar_url), updated_at = NOW()\n       WHERE id = $6\n       RETURNING id, email, name, provider, avatar_url`,
       [normalized, name, provider, providerId, avatarUrl || null, linkingUser.id]
     );
     if (updated.rows.length) return updated.rows[0];
@@ -122,10 +110,7 @@ async function resolveOAuthUser({ email, name, provider, providerId, avatarUrl, 
   );
   if (existing.rows.length) {
     const updated = await pool.query(
-      `UPDATE app_users
-       SET name = COALESCE($1, name), provider = $2, provider_id = $3, avatar_url = COALESCE($4, avatar_url), updated_at = NOW()
-       WHERE id = $5
-       RETURNING id, email, name, provider, avatar_url`,
+      `UPDATE app_users\n       SET name = COALESCE($1, name), provider = $2, provider_id = $3, avatar_url = COALESCE($4, avatar_url), updated_at = NOW()\n       WHERE id = $5\n       RETURNING id, email, name, provider, avatar_url`,
       [name, provider, providerId, avatarUrl || null, existing.rows[0].id]
     );
     return updated.rows[0];
@@ -135,9 +120,7 @@ async function resolveOAuthUser({ email, name, provider, providerId, avatarUrl, 
   try {
     await client.query("BEGIN");
     const created = await client.query(
-      `INSERT INTO app_users(email, name, provider, provider_id, avatar_url)
-       VALUES($1, $2, $3, $4, $5)
-       RETURNING id, email, name, provider, avatar_url`,
+      `INSERT INTO app_users(email, name, provider, provider_id, avatar_url)\n       VALUES($1, $2, $3, $4, $5)\n       RETURNING id, email, name, provider, avatar_url`,
       [normalized, name || normalized.split("@")[0], provider, providerId, avatarUrl || null]
     );
     const user = created.rows[0];
@@ -339,9 +322,9 @@ function cloneWeekWithUniqueIds(templateWeek, newWeekNum) {
         e.superset_id = `ss_w${newWeekNum}_${baseSs}`;
       }
       if (Array.isArray(e.sets)) {
-        e.sets.forEach((set, setIdx) => {
-          set.id = `${e.id}_s${setIdx + 1}`;
-          set.done = false;
+        e.sets.forEach((st, stIdx) => {
+          st.id = `${e.id}_s${stIdx + 1}`;
+          st.order = stIdx + 1;
         });
       }
     });
@@ -448,47 +431,49 @@ function applyOperationsToProgram(program, operations) {
       continue;
     }
 
-    if (type === "modify_week") {
-      weeksToModify.forEach(w => {
-        if (changes.label) w.label = changes.label;
-        if (changes.title) w.title = changes.title;
-        if (changes.notes) w.notes = changes.notes;
-        appliedCount++;
-      });
-      continue;
-    }
-
     weeksToModify.forEach(w => {
       const sessions = w.sessions || w.days || [];
-      const sessionsToModify = targetSessionSpec === "all" || targetSessionSpec == null
-        ? sessions
-        : sessions.filter((s, idx) => {
-            const sNum = parseInt(targetSessionSpec, 10);
-            if (Number.isFinite(sNum)) return idx === sNum - 1 || idx === sNum;
-            return s.id === targetSessionSpec || (s.title && s.title.toLowerCase().includes(String(targetSessionSpec).toLowerCase()));
-          });
+      let sessionsToModify = [];
+
+      if (targetSessionSpec === "all" || targetSessionSpec == null) {
+        sessionsToModify = sessions;
+      } else if (typeof targetSessionSpec === "number") {
+        const s = sessions[targetSessionSpec - 1];
+        if (s) sessionsToModify.push(s);
+      } else {
+        const specStr = String(targetSessionSpec).toLowerCase();
+        sessionsToModify = sessions.filter((s, idx) => {
+          const dayMatch = String(s.day || "").toLowerCase().includes(specStr);
+          const titleMatch = String(s.title || "").toLowerCase().includes(specStr);
+          const numMatch = specStr.includes(String(idx + 1));
+          return dayMatch || titleMatch || numMatch;
+        });
+        if (!sessionsToModify.length && sessions.length) {
+          sessionsToModify.push(sessions[0]);
+        }
+      }
+
+      if (!sessionsToModify.length) return;
 
       if (type === "add_session") {
-        const newSessionId = `${w.id || 'w'+(w.weekNumber||w.week)}_s${sessions.length + 1}`;
-        const newSession = {
-          id: newSessionId,
-          title: changes.title || `SESSIONE ${sessions.length + 1}`,
-          day: changes.day || `Giorno ${sessions.length + 1}`,
+        const newOrder = sessions.length + 1;
+        const newS = {
+          id: `${w.id || "w1"}_s${newOrder}`,
+          day: changes.day || `Giorno ${newOrder}`,
+          title: changes.title || `SESSIONE ${newOrder}`,
           is_bonus: Boolean(changes.is_bonus),
           exercises: []
         };
-        sessions.push(newSession);
-        w.sessions = sessions;
-        w.days = sessions;
+        sessions.push(newS);
         appliedCount++;
         return;
       }
 
       if (type === "remove_session") {
         const sIndex = sessions.findIndex((s, idx) => {
-          const sNum = parseInt(targetSessionSpec, 10);
-          if (Number.isFinite(sNum)) return idx === sNum - 1 || idx === sNum;
-          return s.id === targetSessionSpec || (s.title && s.title.toLowerCase().includes(String(targetSessionSpec).toLowerCase()));
+          if (typeof targetSessionSpec === "number") return idx === targetSessionSpec - 1;
+          const specStr = String(targetSessionSpec).toLowerCase();
+          return String(s.day || "").toLowerCase().includes(specStr) || String(s.title || "").toLowerCase().includes(specStr);
         });
         if (sIndex >= 0) {
           sessions.splice(sIndex, 1);
@@ -497,214 +482,367 @@ function applyOperationsToProgram(program, operations) {
         return;
       }
 
+      if (type === "modify_session") {
+        sessionsToModify.forEach(s => {
+          if (changes.title) s.title = changes.title;
+          if (changes.day) s.day = changes.day;
+          if (changes.is_bonus !== undefined) s.is_bonus = Boolean(changes.is_bonus);
+          appliedCount++;
+        });
+        return;
+      }
+
       sessionsToModify.forEach(s => {
         const exercises = s.exercises || s.rows || [];
 
         if (type === "add_exercise") {
-          const newExName = op.target_exercise || op.exercise;
-          if (!newExName) return;
-          const newExId = `${s.id || 's'}_e${exercises.length + 1}`;
-          const initialSets = [];
-          const setsCount = Number(changes.sets) || 3;
-          for (let st = 1; st <= setsCount; st++) {
-            initialSets.push({
-              id: `${newExId}_s${st}`,
-              order: st,
-              reps: changes.reps || "8-10",
-              load: typeof changes.load === "number" ? changes.load : null,
-              load_unit: changes.load_unit || "kg",
-              percentage_1rm: changes.percentage_1rm || null,
-              rpe: changes.rpe || null,
-              rir: changes.rir !== undefined ? changes.rir : 2,
-              rest_seconds: changes.rest_seconds || (changes.rest ? parseInt(changes.rest, 10) : 90),
-              tempo: changes.tempo || "",
-              done: false
-            });
-          }
+          const exName = op.target_exercise || op.exercise || changes.name || "Nuovo Esercizio";
+          const setsCount = Number(changes.sets || 3);
+          const setsList = Array.from({ length: setsCount }, (_, i) => ({
+            id: `${s.id || "s"}_e${exercises.length + 1}_s${i + 1}`,
+            order: i + 1,
+            reps: changes.reps || "8-10",
+            load: changes.load != null ? Number(changes.load) : null,
+            load_unit: changes.load_unit || "kg",
+            percentage_1rm: changes.percentage_1rm != null ? Number(changes.percentage_1rm) : null,
+            rpe: changes.rpe != null ? Number(changes.rpe) : null,
+            rir: changes.rir != null ? Number(changes.rir) : 1,
+            rest_seconds: changes.rest_seconds || 90,
+            tempo: changes.tempo || "",
+            done: false
+          }));
 
-          const newExercise = {
-            id: newExId,
-            name: newExName,
-            exercise: newExName,
+          exercises.push({
+            id: `${s.id || "s"}_e${exercises.length + 1}`,
+            name: exName,
+            exercise: exName,
             order: exercises.length + 1,
-            movement: changes.movement || "",
-            muscle_groups: changes.muscle_groups || [],
-            muscleGroups: changes.muscle_groups || [],
+            movement: changes.movement || "ALTRO",
+            muscle_groups: Array.isArray(changes.muscle_groups) ? changes.muscle_groups : (changes.muscle_group ? [changes.muscle_group] : []),
             muscle_group: changes.muscle_group || null,
             superset_id: changes.superset_id || null,
             notes: changes.notes || "",
             progression_rule: changes.progression_rule || "",
-            is_bonus: Boolean(changes.is_bonus),
-            isBonus: Boolean(changes.is_bonus),
-            sets: initialSets,
+            is_bonus: Boolean(changes.is_bonus || s.is_bonus),
+            sets: setsList,
             repsTarget: changes.reps || "8-10",
-            rpeTarget: changes.rpe || null,
-            rirTarget: changes.rir !== undefined ? changes.rir : 2,
+            rirTarget: changes.rir != null ? Number(changes.rir) : 1,
+            rpeTarget: changes.rpe != null ? Number(changes.rpe) : null,
             rest: changes.rest || "90s",
-            rest_seconds: changes.rest_seconds || 90,
-            plannedLoad: changes.load || null,
-            tempo: changes.tempo || "",
-            setRows: Array.from({ length: Math.max(0, setsCount - 1) }, (_, i) => i + 2)
-          };
-          exercises.push(newExercise);
+            plannedLoad: changes.load != null ? Number(changes.load) : null,
+            tempo: changes.tempo || ""
+          });
           s.exercises = exercises;
           s.rows = exercises;
           appliedCount++;
           return;
         }
 
-        const exercisesToModify = exercises.filter(e => {
-          if (targetExId && e.id === targetExId) return true;
-          if (targetExName) {
-            const eName = String(e.name || e.exercise || "").toLowerCase();
-            return eName.includes(targetExName) || targetExName.includes(eName);
-          }
-          return false;
-        });
+        if (type === "remove_exercise") {
+          const initialLen = exercises.length;
+          const filtered = exercises.filter(ex => {
+            const matchName = targetExName && String(ex.name || ex.exercise || "").toLowerCase().includes(targetExName);
+            const matchId = targetExId && ex.id === targetExId;
+            return !(matchName || matchId);
+          });
+          s.exercises = filtered;
+          s.rows = filtered;
+          appliedCount += (initialLen - filtered.length);
+          return;
+        }
 
-        exercisesToModify.forEach(e => {
-          if (type === "replace_exercise") {
-            const replName = op.target_exercise;
-            if (replName) {
-              e.name = replName;
-              e.exercise = replName;
-              if (changes.movement) e.movement = changes.movement;
-              if (changes.muscle_groups) {
-                e.muscle_groups = changes.muscle_groups;
-                e.muscleGroups = changes.muscle_groups;
-              }
-              if (changes.notes) e.notes = changes.notes;
+        if (type === "replace_exercise") {
+          exercises.forEach(ex => {
+            const matchName = targetExName && String(ex.name || ex.exercise || "").toLowerCase().includes(targetExName);
+            const matchId = targetExId && ex.id === targetExId;
+            if (matchName || matchId) {
+              const newName = op.target_exercise || changes.name || "Esercizio Sostitutivo";
+              ex.name = newName;
+              ex.exercise = newName;
+              if (changes.movement) ex.movement = changes.movement;
+              if (changes.muscle_groups) ex.muscle_groups = changes.muscle_groups;
+              if (changes.notes) ex.notes = changes.notes;
               appliedCount++;
             }
-            return;
-          }
+          });
+          return;
+        }
 
-          if (type === "remove_exercise") {
-            const exIdx = exercises.indexOf(e);
-            if (exIdx >= 0) {
-              exercises.splice(exIdx, 1);
+        if (type === "create_superset") {
+          const ssId = changes.superset_id || `ss_${Date.now().toString(36)}`;
+          const names = [targetExName, String(op.target_exercise || "").toLowerCase()].filter(Boolean);
+          exercises.forEach(ex => {
+            const currentName = String(ex.name || ex.exercise || "").toLowerCase();
+            if (names.some(n => currentName.includes(n)) || (targetExId && ex.id === targetExId)) {
+              ex.superset_id = ssId;
               appliedCount++;
             }
-            return;
-          }
+          });
+          return;
+        }
 
-          if (type === "create_superset") {
-            const ssId = changes.superset_id || `ss_${w.id || 'w'}_${s.id || 's'}_${Date.now()}`;
-            e.superset_id = ssId;
-            const targetEx = op.target_exercise ? exercises.find(t => {
-              const tName = String(t.name || t.exercise || "").toLowerCase();
-              const reqTarget = String(op.target_exercise).toLowerCase();
-              return tName.includes(reqTarget) || reqTarget.includes(tName);
-            }) : null;
-            if (targetEx) {
-              targetEx.superset_id = ssId;
+        if (type === "remove_superset") {
+          exercises.forEach(ex => {
+            const matchName = targetExName && String(ex.name || ex.exercise || "").toLowerCase().includes(targetExName);
+            const matchId = targetExId && ex.id === targetExId;
+            const matchSS = changes.superset_id && ex.superset_id === changes.superset_id;
+            if (matchName || matchId || matchSS) {
+              ex.superset_id = null;
+              appliedCount++;
             }
-            appliedCount++;
-            return;
-          }
+          });
+          return;
+        }
 
-          if (type === "remove_superset") {
-            e.superset_id = null;
-            appliedCount++;
-            return;
-          }
+        exercises.forEach(ex => {
+          const matchName = targetExName && String(ex.name || ex.exercise || "").toLowerCase().includes(targetExName);
+          const matchId = targetExId && ex.id === targetExId;
+          if (!matchName && !matchId && targetExName) return;
 
-          let sets = Array.isArray(e.sets) ? e.sets : [];
-          if (!sets.length && typeof e.sets === "number") {
-            for (let i = 1; i <= e.sets; i++) {
-              sets.push({
-                id: `${e.id}_s${i}`,
-                order: i,
-                reps: e.reps || "8-10",
-                load: e.plannedLoad || e.load || null,
-                load_unit: "kg",
-                percentage_1rm: null,
-                rpe: e.rpeTarget || null,
-                rir: e.rirTarget || null,
-                rest_seconds: e.rest_seconds || 90,
-                tempo: e.tempo || "",
-                done: false
-              });
-            }
+          if (!Array.isArray(ex.sets)) {
+            const n = typeof ex.sets === "number" ? ex.sets : 3;
+            ex.sets = Array.from({ length: n }, (_, i) => ({
+              id: `${ex.id}_s${i + 1}`,
+              order: i + 1,
+              reps: ex.repsTarget || ex.reps || "8-10",
+              load: ex.plannedLoad || ex.load || null,
+              load_unit: ex.load_unit || "kg",
+              percentage_1rm: ex.percentage_1rm || null,
+              rpe: ex.rpeTarget || ex.rpe || null,
+              rir: ex.rirTarget || ex.rir || 1,
+              rest_seconds: ex.rest_seconds || 90,
+              tempo: ex.tempo || "",
+              done: false
+            }));
           }
 
           if (type === "add_set") {
-            const newOrder = sets.length + 1;
-            const prevSet = sets[sets.length - 1] || {};
-            sets.push({
-              id: `${e.id}_s${newOrder}`,
+            const newOrder = ex.sets.length + 1;
+            ex.sets.push({
+              id: `${ex.id}_s${newOrder}`,
               order: newOrder,
-              reps: changes.reps || prevSet.reps || "8-10",
-              load: typeof changes.load === "number" ? changes.load : prevSet.load || null,
-              load_unit: changes.load_unit || prevSet.load_unit || "kg",
-              percentage_1rm: changes.percentage_1rm || prevSet.percentage_1rm || null,
-              rpe: changes.rpe || prevSet.rpe || null,
-              rir: changes.rir !== undefined ? changes.rir : (prevSet.rir !== undefined ? prevSet.rir : 1),
-              rest_seconds: changes.rest_seconds || prevSet.rest_seconds || 90,
-              tempo: changes.tempo || prevSet.tempo || "",
+              reps: changes.reps || ex.sets[ex.sets.length - 1]?.reps || "8-10",
+              load: changes.load != null ? Number(changes.load) : (ex.sets[ex.sets.length - 1]?.load || null),
+              load_unit: changes.load_unit || "kg",
+              percentage_1rm: changes.percentage_1rm != null ? Number(changes.percentage_1rm) : null,
+              rpe: changes.rpe != null ? Number(changes.rpe) : null,
+              rir: changes.rir != null ? Number(changes.rir) : 1,
+              rest_seconds: changes.rest_seconds || 90,
+              tempo: changes.tempo || ex.tempo || "",
               done: false
             });
-            e.sets = sets;
-            e.setRows = Array.from({ length: Math.max(0, sets.length - 1) }, (_, i) => i + 2);
             appliedCount++;
             return;
           }
 
           if (type === "remove_set") {
-            if (targetSetIndex && targetSetIndex <= sets.length) {
-              sets.splice(targetSetIndex - 1, 1);
-            } else if (sets.length > 0) {
-              sets.pop();
+            if (ex.sets.length > 1) {
+              const setIdx = targetSetIndex != null ? targetSetIndex - 1 : ex.sets.length - 1;
+              if (setIdx >= 0 && setIdx < ex.sets.length) {
+                ex.sets.splice(setIdx, 1);
+                ex.sets.forEach((s, idx) => { s.order = idx + 1; });
+                appliedCount++;
+              }
             }
-            sets.forEach((st, idx) => { st.order = idx + 1; });
-            e.sets = sets;
-            e.setRows = Array.from({ length: Math.max(0, sets.length - 1) }, (_, i) => i + 2);
+            return;
+          }
+
+          if (type === "modify_set") {
+            const setIdx = targetSetIndex != null ? targetSetIndex - 1 : 0;
+            const targetSet = ex.sets[setIdx];
+            if (targetSet) {
+              if (changes.load !== undefined) targetSet.load = changes.load != null ? Number(changes.load) : null;
+              if (changes.reps !== undefined) targetSet.reps = changes.reps;
+              if (changes.rpe !== undefined) targetSet.rpe = changes.rpe != null ? Number(changes.rpe) : null;
+              if (changes.rir !== undefined) targetSet.rir = changes.rir != null ? Number(changes.rir) : null;
+              if (changes.rest_seconds !== undefined) targetSet.rest_seconds = changes.rest_seconds;
+              if (changes.tempo !== undefined) targetSet.tempo = changes.tempo;
+              if (changes.done !== undefined) targetSet.done = Boolean(changes.done);
+              appliedCount++;
+            }
+            return;
+          }
+
+          if (type === "modify_load") {
+            const targetLoad = Number(changes.load);
+            if (targetSetIndex != null) {
+              const set = ex.sets[targetSetIndex - 1];
+              if (set) { set.load = targetLoad; appliedCount++; }
+            } else {
+              ex.sets.forEach(s => { s.load = targetLoad; });
+              ex.plannedLoad = targetLoad;
+              appliedCount++;
+            }
+            return;
+          }
+
+          if (type === "modify_reps") {
+            if (targetSetIndex != null) {
+              const set = ex.sets[targetSetIndex - 1];
+              if (set) { set.reps = changes.reps; appliedCount++; }
+            } else {
+              ex.sets.forEach(s => { s.reps = changes.reps; });
+              ex.repsTarget = changes.reps;
+              appliedCount++;
+            }
+            return;
+          }
+
+          if (type === "modify_rpe" || type === "modify_rir") {
+            const val = changes.rpe !== undefined ? Number(changes.rpe) : Number(changes.rir);
+            const field = type === "modify_rpe" ? "rpe" : "rir";
+            if (targetSetIndex != null) {
+              const set = ex.sets[targetSetIndex - 1];
+              if (set) { set[field] = val; appliedCount++; }
+            } else {
+              ex.sets.forEach(s => { s[field] = val; });
+              if (type === "modify_rpe") ex.rpeTarget = val; else ex.rirTarget = val;
+              appliedCount++;
+            }
+            return;
+          }
+
+          if (type === "modify_rest") {
+            const restVal = changes.rest || `${changes.rest_seconds}s`;
+            ex.rest = restVal;
+            ex.rest_seconds = changes.rest_seconds || parseInt(restVal, 10);
+            ex.sets.forEach(s => { s.rest_seconds = ex.rest_seconds; });
             appliedCount++;
             return;
           }
 
-          const setsToModify = targetSetIndex
-            ? sets.filter(st => st.order === Number(targetSetIndex))
-            : sets;
-
-          setsToModify.forEach(st => {
-            if (type === "modify_load" || changes.load !== undefined) {
-              if (typeof changes.load === "number") st.load = changes.load;
-              else if (typeof op.load === "number") st.load = op.load;
-            }
-            if (type === "modify_reps" || changes.reps !== undefined) {
-              st.reps = String(changes.reps || op.reps || st.reps);
-            }
-            if (type === "modify_rpe" || changes.rpe !== undefined) {
-              st.rpe = changes.rpe ?? op.rpe;
-            }
-            if (type === "modify_rir" || changes.rir !== undefined) {
-              st.rir = changes.rir ?? op.rir;
-            }
-            if (type === "modify_rest" || changes.rest_seconds !== undefined || changes.rest !== undefined) {
-              st.rest_seconds = changes.rest_seconds || (changes.rest ? parseInt(changes.rest, 10) : st.rest_seconds);
-            }
-            if (type === "modify_tempo" || changes.tempo !== undefined) {
-              st.tempo = changes.tempo || op.tempo || st.tempo;
-            }
+          if (type === "modify_tempo") {
+            ex.tempo = changes.tempo;
+            ex.sets.forEach(s => { s.tempo = changes.tempo; });
             appliedCount++;
-          });
+            return;
+          }
 
-          if (changes.notes) e.notes = changes.notes;
-          if (changes.progression_rule) e.progression_rule = changes.progression_rule;
+          if (type === "modify_exercise") {
+            if (changes.name) { ex.name = changes.name; ex.exercise = changes.name; }
+            if (changes.movement) ex.movement = changes.movement;
+            if (changes.notes) ex.notes = changes.notes;
+            if (changes.reps) ex.repsTarget = changes.reps;
+            if (changes.load != null) ex.plannedLoad = Number(changes.load);
+            if (changes.rest) ex.rest = changes.rest;
+            appliedCount++;
+            return;
+          }
         });
       });
     });
   }
 
-  cloned.weeks.forEach((w, idx) => {
-    w.weekNumber = idx + 1;
-    w.week = idx + 1;
-  });
-
   return { ok: true, program: cloned, appliedCount };
 }
 
+// Extractors for documents
+async function extractLegacyWordText(buffer) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "giammaria-doc-"));
+  const filename = path.join(dir, "document.doc");
+  try {
+    await fs.writeFile(filename, buffer);
+    const extractor = new WordExtractor();
+    const document = await extractor.extract(filename);
+    return [document.getBody(), document.getHeaders(), document.getFootnotes()].filter(Boolean).join("\n\n");
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+function extractExcelText(buffer) {
+  const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true, cellNF: true, cellFormula: true });
+  if (!workbook.SheetNames || !workbook.SheetNames.length) throw new Error("Excel workbook contains no worksheets");
+  return workbook.SheetNames.map((name, index) => {
+    const sheet = workbook.Sheets[name];
+    if (!sheet) return "";
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: "", blankrows: false });
+    if (!rows.length) return "";
+    const rowLines = rows
+      .map((row, rowIndex) => {
+        const nonEmpty = row.map(v => v == null ? "" : String(v).trim()).filter(Boolean);
+        if (!nonEmpty.length) return "";
+        return `RIGA ${rowIndex + 1}: ${row.map(value => value == null ? "" : String(value).trim()).join(" | ")}`;
+      })
+      .filter(Boolean);
+    if (!rowLines.length) return "";
+    return [`FOGLIO ${index + 1}: ${name}`, ...rowLines].join("\n");
+  }).filter(Boolean).join("\n\n");
+}
+
+async function processDocumentAnalysis({ filename, mimeType, buffer }) {
+  const ext = (filename || "").toLowerCase().split(".").pop();
+  let parser = "unknown";
+  const promptText = `Analizza questo file di allenamento ed estrai fedelmente l'intera programmazione nel formato JSON richiesto.
+REGOLE FONDAMENTALI:
+1. Non inventare esercizi, serie, ripetizioni, carichi, RPE, RIR, recuperi o progressioni.
+2. ESTRAZIONE COMPLETA: Estrai TUTTE le settimane, TUTTE le sessioni e TUTTI gli esercizi presenti nel documento. Non troncare, non riassumere.
+3. SESSIONI/ESERCIZI BONUS: Se nel documento sono presenti sessioni o esercizi contrassegnati come BONUS, richiamo o opzionali, impostali con is_bonus: true.
+4. GRUPPI MUSCOLARI: Valorizza muscle_group e muscle_groups per ogni esercizio.
+Preserva fedelmente ogni dato (serie, ripetizioni, carichi, recuperi, intensità).`;
+
+  let parts = [];
+
+  if (ext === "pdf" || mimeType === "application/pdf") {
+    parser = "gemini_pdf_inline";
+    console.log(`[FILE_ANALYZE_START] filename="${filename}" mime="${mimeType || 'application/pdf'}" byteLength=${buffer.length} parser="${parser}"`);
+    parts = [
+      {
+        inlineData: {
+          data: buffer.toString("base64"),
+          mimeType: "application/pdf"
+        }
+      },
+      { text: promptText }
+    ];
+  } else if (ext === "docx" || mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+    parser = "mammoth_docx";
+    console.log(`[FILE_ANALYZE_START] filename="${filename}" mime="${mimeType || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}" byteLength=${buffer.length} parser="${parser}"`);
+    const extracted = await mammoth.extractRawText({ buffer });
+    const textContent = extracted.value || "";
+    parts = [{ text: `${promptText}\n\nDOCUMENT CONTENT (DOCX):\n${textContent}` }];
+  } else if (ext === "doc" || mimeType === "application/msword") {
+    parser = "word_extractor_doc";
+    console.log(`[FILE_ANALYZE_START] filename="${filename}" mime="${mimeType || 'application/msword'}" byteLength=${buffer.length} parser="${parser}"`);
+    const textContent = await extractLegacyWordText(buffer);
+    if (!textContent.trim()) throw new Error("Legacy DOC contains no readable text");
+    parts = [{ text: `${promptText}\n\nDOCUMENT CONTENT (DOC):\n${textContent}` }];
+  } else if (ext === "xlsx" || ext === "xls" || mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || mimeType === "application/vnd.ms-excel") {
+    parser = "xlsx_sheet_parser";
+    console.log(`[FILE_ANALYZE_START] filename="${filename}" mime="${mimeType || 'application/vnd.ms-excel'}" byteLength=${buffer.length} parser="${parser}"`);
+    const textContent = extractExcelText(buffer);
+    parts = [{ text: `${promptText}\n\nDOCUMENT CONTENT (EXCEL):\n${textContent}` }];
+  } else if (ext === "txt" || ext === "csv" || mimeType === "text/plain" || mimeType === "text/csv") {
+    parser = "utf8_text";
+    console.log(`[FILE_ANALYZE_START] filename="${filename}" mime="${mimeType || 'text/plain'}" byteLength=${buffer.length} parser="${parser}"`);
+    const textContent = buffer.toString("utf-8");
+    parts = [{ text: `${promptText}\n\nDOCUMENT CONTENT (TXT):\n${textContent}` }];
+  } else {
+    parser = "fallback_text";
+    console.log(`[FILE_ANALYZE_START] filename="${filename}" mime="${mimeType || 'application/octet-stream'}" byteLength=${buffer.length} parser="${parser}"`);
+    const textContent = buffer.toString("utf-8");
+    parts = [{ text: `${promptText}\n\nDOCUMENT CONTENT:\n${textContent}` }];
+  }
+
+  const ai = getClient();
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: [{ role: "user", parts }],
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: workoutSchema
+    }
+  });
+
+  const replyText = (response.text || "").trim();
+  if (!replyText) throw new Error("Gemini returned an empty document analysis response.");
+
+  const structuredWorkout = JSON.parse(replyText);
+  console.log(`[FILE_ANALYZE_END] filename="${filename}" parser="${parser}"`);
+  return { structuredWorkout, parser };
+}
+
+// Routes
 app.get("/health", (req, res) => {
   res.json({
     ok: true,
@@ -717,23 +855,19 @@ app.get("/health", (req, res) => {
 
 app.post("/api/auth/google", async (req, res) => {
   try {
-    const { id_token } = req.body || {};
-    const identity = await verifyGoogleCredential(id_token);
+    const identity = await verifyGoogleCredential(req.body?.credential);
     return await issueOAuthResponse(req, res, identity);
-  } catch (error) {
-    console.error("Auth Google Error:", error);
-    return res.status(error.statusCode || 401).json({ error: error.message || "Autenticazione Google fallita." });
+  } catch (err) {
+    return res.status(err.statusCode || 401).json({ error: err.message });
   }
 });
 
 app.post("/api/auth/apple", async (req, res) => {
   try {
-    const { id_token, user } = req.body || {};
-    const identity = await verifyAppleCredential(id_token, user);
+    const identity = await verifyAppleCredential(req.body?.code || req.body?.id_token || req.body?.identityToken, req.body?.user);
     return await issueOAuthResponse(req, res, identity);
-  } catch (error) {
-    console.error("Auth Apple Error:", error);
-    return res.status(error.statusCode || 401).json({ error: error.message || "Autenticazione Apple fallita." });
+  } catch (err) {
+    return res.status(err.statusCode || 401).json({ error: err.message });
   }
 });
 
@@ -741,10 +875,11 @@ app.get("/api/account/data", async (req, res) => {
   const auth = await accountFromBearer(req.headers.authorization);
   if (!auth) return res.status(401).json({ error: "Sessione scaduta o non autorizzata." });
   try {
-    const result = await pool.query("SELECT data, updated_at FROM app_account_data WHERE user_id = $1", [auth.id]);
-    return res.json({ ok: true, data: result.rows[0]?.data || {}, updated_at: result.rows[0]?.updated_at });
+    const dataRes = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
+    const currentData = dataRes.rows[0]?.data || {};
+    return res.json({ ok: true, data: currentData });
   } catch (err) {
-    return res.status(500).json({ error: "Impossibile recuperare i dati dell'account." });
+    return res.status(500).json({ error: "Impossibile recuperare i dati dal cloud." });
   }
 });
 
@@ -763,6 +898,18 @@ app.post("/api/account/data", async (req, res) => {
     return res.json({ ok: true, saved_at: new Date().toISOString() });
   } catch (err) {
     return res.status(500).json({ error: "Impossibile salvare i dati sul cloud." });
+  }
+});
+
+app.get("/api/program/active", async (req, res) => {
+  try {
+    const auth = await accountFromBearer(req.headers.authorization);
+    if (!auth) return res.json({ ok: true, program: null });
+    const dataRes = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
+    const currentData = dataRes.rows[0]?.data || {};
+    return res.json({ ok: true, program: currentData.activeProgram || null });
+  } catch (err) {
+    return res.json({ ok: true, program: null });
   }
 });
 
@@ -811,57 +958,71 @@ app.post("/api/program/modify", async (req, res) => {
   }
 });
 
-app.post("/api/ingest/document", upload.single("file"), async (req, res) => {
+app.post(["/api/analyze-file", "/api/analyze", "/analyze"], async (req, res) => {
+  let filename = "unknown";
+  let mimeType = "";
+  let parser = "none";
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({
-        error: "GEMINI_API_KEY is not configured on the server."
-      });
+    const body = req.body || {};
+    filename = body.filename || "document.bin";
+    mimeType = body.mime_type || body.mimeType || "";
+    const rawBase64 = body.data_base64 || body.dataBase64 || body.base64;
+
+    if (!rawBase64 || typeof rawBase64 !== "string" || !rawBase64.trim()) {
+      return res.status(400).json({ error: "Campo data_base64 mancante o non valido." });
     }
 
+    const cleanBase64 = rawBase64.replace(/^data:[^;]+;base64,/, "").trim();
+    const buffer = Buffer.from(cleanBase64, "base64");
+
+    if (!buffer || buffer.length === 0) {
+      return res.status(400).json({ error: "Buffer decodificato vuoto." });
+    }
+
+    if (buffer.length > 50 * 1024 * 1024) {
+      return res.status(413).json({ error: "Il file supera la dimensione massima consentita (50 MB)." });
+    }
+
+    const { structuredWorkout, parser: usedParser } = await processDocumentAnalysis({
+      filename,
+      mimeType,
+      buffer
+    });
+    parser = usedParser;
+
+    return res.json(structuredWorkout);
+  } catch (error) {
+    console.error(`[FILE_ANALYZE_ERROR] filename="${filename}" parser="${parser}" error_name="${error?.name}" error_message="${error?.message}"`);
+    const status = error?.statusCode || (/Payload too large/i.test(error?.message) ? 413 : 500);
+    return res.status(status).json({
+      error: "Document analysis failed.",
+      details: error.message
+    });
+  }
+});
+
+app.post("/api/ingest/document", upload.single("file"), async (req, res) => {
+  let filename = "unknown";
+  let mimeType = "";
+  let parser = "none";
+  try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded." });
     }
+    filename = req.file.originalname || "document.bin";
+    mimeType = req.file.mimetype || "";
+    const buffer = req.file.buffer;
 
-    const ai = getClient();
-    const prompt = `Analizza questo file di allenamento e convertilo in una struttura JSON valida secondo lo schema specificato.`;
+    const { structuredWorkout, parser: usedParser } = await processDocumentAnalysis({
+      filename,
+      mimeType,
+      buffer
+    });
+    parser = usedParser;
 
-    let response;
-    if (req.file.mimetype === "text/plain" || req.file.mimetype === "text/csv") {
-      const textContent = req.file.buffer.toString("utf-8");
-      response = await ai.models.generateContent({
-        model: MODEL,
-        contents: [
-          { role: "user", parts: [{ text: `${prompt}\n\nDOCUMENT CONTENT:\n${textContent}` }] }
-        ],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: workoutSchema
-        }
-      });
-    } else {
-      const fileData = {
-        inlineData: {
-          data: req.file.buffer.toString("base64"),
-          mimeType: req.file.mimetype
-        }
-      };
-      response = await ai.models.generateContent({
-        model: MODEL,
-        contents: [
-          { role: "user", parts: [fileData, { text: prompt }] }
-        ],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: workoutSchema
-        }
-      });
-    }
-
-    const structuredWorkout = JSON.parse(response.text.trim());
     return res.json(structuredWorkout);
   } catch (error) {
-    console.error("Ingest error:", error);
+    console.error(`[FILE_ANALYZE_ERROR] filename="${filename}" parser="${parser}" error_name="${error?.name}" error_message="${error?.message}"`);
     return res.status(500).json({
       error: "Document ingestion failed.",
       details: error.message
