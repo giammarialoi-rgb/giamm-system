@@ -1,202 +1,132 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { GoogleGenAI } from "@google/genai";
-import mammoth from "mammoth";
-import WordExtractor from "word-extractor";
-import * as XLSX from "xlsx";
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import multer from "multer";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
+import { GoogleGenAI } from "@google/genai";
 import pg from "pg";
+import jwt from "jsonwebtoken";
+import ExcelJS from "exceljs";
+import crypto from "crypto";
 
 dotenv.config();
 
-const { Pool } = pg;
 const app = express();
-const PORT = Number(process.env.PORT || 10000);
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "giammaria-dev-secret-change-in-prod";
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_WEB_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "";
-const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || process.env.APPLE_CLIENT_ID || "";
-const DATABASE_URL = process.env.DATABASE_URL || "";
+const port = process.env.PORT || 3000;
 
-const pool = DATABASE_URL ? new Pool({
-  connectionString: DATABASE_URL,
-  ssl: DATABASE_URL.includes("localhost") ? false : { rejectUnauthorized: false }
-}) : null;
-
-// Initialize and migrate database schema idempotently for OAuth and email auth
-const accountSchemaReady = (async () => {
-  if (!pool) return null;
-  const client = await pool.connect();
-  try {
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS app_users (
-        id BIGSERIAL PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
-        name TEXT NOT NULL,
-        password_hash TEXT,
-        provider TEXT DEFAULT 'email',
-        provider_id TEXT,
-        avatar_url TEXT,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS app_account_data (
-        user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
-        data JSONB NOT NULL DEFAULT '{}'::jsonb,
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider TEXT DEFAULT 'email';
-      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider_id TEXT;
-      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
-      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_hash TEXT;
-      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
-      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
-
-      UPDATE app_users SET provider = 'email' WHERE provider IS NULL;
-
-      ALTER TABLE app_account_data ADD COLUMN IF NOT EXISTS data JSONB NOT NULL DEFAULT '{}'::jsonb;
-      ALTER TABLE app_account_data ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
-
-      CREATE INDEX IF NOT EXISTS idx_app_users_provider ON app_users(provider, provider_id);
-      CREATE INDEX IF NOT EXISTS idx_app_users_email ON app_users(email);
-    `);
-    return true;
-  } finally {
-    client.release();
-  }
-})().catch((error) => {
-  console.error("ACCOUNT_SCHEMA_INIT_ERROR", {
-    name: error?.name,
-    message: error?.message,
-    stack: error?.stack
-  });
-  return false;
-});
-
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (!allowedOrigins.length) return callback(null, true);
-    const isAllowed = allowedOrigins.some((allowed) => {
-      if (allowed === origin) return true;
-      if (allowed.startsWith("*.")) {
-        const domain = allowed.slice(2);
-        return origin.endsWith(domain) || origin.endsWith("." + domain);
-      }
-      return false;
-    });
-    if (isAllowed) return callback(null, true);
-    return callback(new Error("CORS origin not allowed"));
-  },
-  credentials: true,
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
-
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("localhost")
+    ? { rejectUnauthorized: false }
+    : false
 });
 
-function nullable(type) {
-  return {
-    type: [type, "null"]
-  };
+let dbInitialized = false;
+
+async function initDb() {
+  if (dbInitialized || !process.env.DATABASE_URL) return;
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS app_users (
+          id BIGSERIAL PRIMARY KEY,
+          email TEXT UNIQUE NOT NULL,
+          name TEXT,
+          provider TEXT NOT NULL,
+          provider_id TEXT NOT NULL,
+          avatar_url TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS app_account_data (
+          user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
+          data JSONB NOT NULL DEFAULT '{}'::jsonb,
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await client.query("COMMIT");
+      dbInitialized = true;
+      console.log("Database tables verified successfully.");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.error("DB Init Error:", err);
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error("DB Connection Error during init:", err);
+  }
 }
 
-function normalizeEmail(email) {
-  return String(email || "").trim().toLowerCase();
-}
+initDb();
+
+const JWT_SECRET = process.env.JWT_SECRET || "gs-coach-secret-key-production-change-me";
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || "com.giammaria.system";
 
 function issueAccountToken(user) {
-  return jwt.sign({
-    sub: user.id,
-    email: user.email,
-    name: user.name,
-    provider: user.provider || "email"
-  }, JWT_SECRET, { expiresIn: "30d" });
-}
-
-async function hashPassword(password) {
-  return bcrypt.hash(password, 10);
-}
-
-async function verifyPassword(password, hash) {
-  if (!hash) return false;
-  return bcrypt.compare(password, hash);
+  return jwt.sign(
+    {
+      sub: String(user.id),
+      email: user.email,
+      name: user.name,
+      provider: user.provider
+    },
+    JWT_SECRET,
+    { expiresIn: "90d" }
+  );
 }
 
 async function accountFromBearer(authHeader) {
-  const token = String(authHeader || "").replace(/^Bearer\s+/i, "").trim();
-  if (!token) return null;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+  const token = authHeader.slice(7).trim();
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    if (!payload?.sub) return null;
-    const result = await pool.query(
-      "SELECT id, email, name, provider, avatar_url FROM app_users WHERE id = $1",
-      [payload.sub]
-    );
-    return result.rows[0] || null;
-  } catch {
+    if (!payload || !payload.sub) return null;
+    return {
+      id: payload.sub,
+      email: payload.email,
+      name: payload.name,
+      provider: payload.provider
+    };
+  } catch (_) {
     return null;
   }
 }
 
-function accountUnavailable(res) {
-  if (!pool) {
-    res.status(503).json({ error: "Account storage is not configured on the server." });
-    return true;
-  }
-  return false;
-}
-
 async function resolveOAuthUser({ email, name, provider, providerId, avatarUrl, linkingUser }) {
-  const normalized = normalizeEmail(email);
-  if (!normalized) {
-    throw Object.assign(new Error("OAuth identity did not contain a valid email address."), { statusCode: 400 });
-  }
+  const normalized = (email || "").trim().toLowerCase();
+  if (!normalized) throw Object.assign(new Error("Missing user email from identity provider."), { statusCode: 400 });
 
-  if (linkingUser?.id) {
+  if (linkingUser && linkingUser.id) {
     const updated = await pool.query(
       `UPDATE app_users
-       SET provider = $1, provider_id = $2, avatar_url = COALESCE($3, avatar_url), updated_at = NOW()
-       WHERE id = $4
+       SET email = $1, name = COALESCE($2, name), provider = $3, provider_id = $4, avatar_url = COALESCE($5, avatar_url), updated_at = NOW()
+       WHERE id = $6
        RETURNING id, email, name, provider, avatar_url`,
-      [provider, providerId, avatarUrl || null, linkingUser.id]
+      [normalized, name, provider, providerId, avatarUrl || null, linkingUser.id]
     );
-    return updated.rows[0];
+    if (updated.rows.length) return updated.rows[0];
   }
 
-  const existingByProvider = await pool.query(
-    "SELECT id, email, name, provider, avatar_url FROM app_users WHERE provider = $1 AND provider_id = $2",
-    [provider, providerId]
-  );
-  if (existingByProvider.rows.length) return existingByProvider.rows[0];
-
-  const existingByEmail = await pool.query(
+  const existing = await pool.query(
     "SELECT id, email, name, provider, avatar_url FROM app_users WHERE email = $1",
     [normalized]
   );
-  if (existingByEmail.rows.length) {
+  if (existing.rows.length) {
     const updated = await pool.query(
       `UPDATE app_users
-       SET provider = $1, provider_id = $2, avatar_url = COALESCE($3, avatar_url), updated_at = NOW()
-       WHERE id = $4
+       SET name = COALESCE($1, name), provider = $2, provider_id = $3, avatar_url = COALESCE($4, avatar_url), updated_at = NOW()
+       WHERE id = $5
        RETURNING id, email, name, provider, avatar_url`,
-      [provider, providerId, avatarUrl || null, existingByEmail.rows[0].id]
+      [name, provider, providerId, avatarUrl || null, existing.rows[0].id]
     );
     return updated.rows[0];
   }
@@ -278,6 +208,12 @@ const upload = multer({
   }
 });
 
+function nullable(type) {
+  return {
+    type: [type, "null"]
+  };
+}
+
 const setSchema = {
   type: "object",
   properties: {
@@ -352,332 +288,70 @@ const workoutSchema = {
                   }
                 }
               },
-              required: ["day", "title", "exercises"]
+              required: [
+                "day",
+                "exercises"
+              ]
             }
           }
         },
-        required: ["week", "label", "sessions"]
+        required: [
+          "week",
+          "sessions"
+        ]
       }
     }
   },
   required: [
     "title",
-    "source_summary",
-    "assumptions",
-    "global_rules",
-    "warnings",
     "weeks"
   ]
 };
 
-const workoutInstruction = `
-Sei il motore di importazione e analisi di una app professionale per programmazione dell'allenamento di bodybuilding e powerbuilding (Giammaria System).
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
 
-Il tuo compito è leggere una scheda, un PDF, un documento Word o testo contenente un allenamento o indicazioni per costruirlo e trasformarlo in una struttura JSON canonica e precisa.
-
-REGOLE FONDAMENTALI:
-1. Non inventare esercizi, serie, ripetizioni, carichi, RPE, RIR, recuperi o progressioni che non siano supportati dal documento.
-2. Conserva fedelmente l'intento e la periodizzazione del programma originale.
-3. Se un dato manca, usa null.
-4. Se un'informazione è ambigua, inseriscila in warnings o assumptions invece di indovinare.
-5. Interpreta abbreviazioni comuni solo quando il significato è chiaro dal contesto.
-6. Mantieni l'ordine esatto degli esercizi.
-7. Se il documento contiene settimane, giorni o sessioni, mantieni la gerarchia completa: Programma -> Settimane -> Sessioni -> Esercizi -> Serie.
-8. Le regole di progressione devono essere riportate come progression_rule, senza trasformarle arbitrariamente in numeri.
-9. I recuperi vanno convertiti in secondi quando possibile.
-10. Rispondi esclusivamente con JSON conforme allo schema.
-11. ESTRAZIONE COMPLETA ED ESAUSTIVA (FONDAMENTALE):
-    Se una sessione contiene 9 esercizi (o qualsiasi numero di esercizi nel documento sorgente), DEVI estrarre TUTTI i 9 esercizi nell'array \`exercises\`. Non troncare, non campionare, non riassumere e non omettere nessun esercizio (inclusi complementari, isolamento, braccia, addominali, riscaldamento). Ogni riga di esercizio nel documento deve generare un elemento distinto in \`exercises\`.
-12. GESTIONE GIORNI ED ESERCIZI BONUS:
-    Se nel documento sono presenti giorni o esercizi contrassegnati come "BONUS", "RICHIAMO", "OPZIONALE" o "EXTRA", mantienili come entità distinte con is_bonus: true. Non rimuoverli o fonderli con altri giorni.
-13. GRUPPI MUSCOLARI:
-    Valorizza \`muscle_group\` e \`muscle_groups\` per ogni esercizio (es. Petto, Schiena/Dorso, Spalle, Bicipiti, Tricipiti, Quadricipiti, Femorali, Glutei, Polpacci, Addome).
-14. SERIE INDIVIDUALI:
-    Se disponibili serie multiple con carichi/reps/rpe diversi, popola \`sets_data\` con ogni singola serie.
-`;
-
-function extractTextFromOutput(interaction) {
-  return typeof interaction?.output_text === "string"
-    ? interaction.output_text
-    : "";
+function getClient() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw Object.assign(new Error("GEMINI_API_KEY is not configured on the server."), {
+      statusCode: 500
+    });
+  }
+  return new GoogleGenAI({ apiKey });
 }
 
-function parseDocStructureIntermediate(rawText) {
-  if (typeof rawText !== "string" || !rawText.trim()) {
-    return { sessions: [], sourceSessionCount: 0, sourceExerciseCount: 0 };
-  }
-  const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
-  const sessions = [];
-  let currentSession = null;
-  let totalExercises = 0;
+function cloneWeekWithUniqueIds(templateWeek, newWeekNum) {
+  const copy = JSON.parse(JSON.stringify(templateWeek));
+  copy.id = `w${newWeekNum}`;
+  copy.week = newWeekNum;
+  copy.weekNumber = newWeekNum;
+  copy.label = `Settimana ${newWeekNum}`;
 
-  const sessionHeaderRegex = /^(?:SESSIONE|GIORNO|DAY|ALLENAMENTO|FOGLIO|WORKOUT)\s*([0-9A-Za-z\s\-\.\–\—\:]+)/i;
-  const bonusRegex = /(?:bonus|richiamo|extra|opzional)/i;
-
-  for (const line of lines) {
-    if (sessionHeaderRegex.test(line) || /^(?:UPPER|LOWER|FULL\s*BODY|PUSH|PULL|LEGS)/i.test(line)) {
-      const isBonus = bonusRegex.test(line);
-      currentSession = {
-        title: line,
-        is_bonus: isBonus,
-        exercises: []
-      };
-      sessions.push(currentSession);
-      continue;
-    }
-
-    if (!currentSession) {
-      currentSession = {
-        title: "SESSIONE 1",
-        is_bonus: false,
-        exercises: []
-      };
-      sessions.push(currentSession);
-    }
-
-    if (/(?:x|\d+\s*(?:serie|sets|reps|rip|kg|rpe|rir))/i.test(line) ||
-        /^(?:[0-9]+[\.\)\-]?|\*|\-|\•)\s+[A-Za-z]/i.test(line) ||
-        /riga\s+\d+:/i.test(line)) {
-      currentSession.exercises.push(line);
-      totalExercises++;
-    }
-  }
-
-  const finalSessions = sessions.filter(s => s.exercises.length > 0);
-  const sessionCount = Math.max(1, finalSessions.length);
-  const exerciseCount = Math.max(sessionCount, totalExercises);
-
-  console.info(`DOC_STRUCT_SOURCE_SESSIONS=${sessionCount}`);
-  console.info(`DOC_STRUCT_SOURCE_EXERCISES=${exerciseCount}`);
-
-  return {
-    sessions: finalSessions,
-    sourceSessionCount: sessionCount,
-    sourceExerciseCount: exerciseCount
-  };
-}
-
-async function runStructuredInteraction(input, system_instruction) {
-  const interaction = await ai.interactions.create({
-    model: MODEL,
-    input,
-    ...(system_instruction ? { system_instruction } : {}),
-    response_format: {
-      type: "text",
-      mime_type: "application/json",
-      schema: workoutSchema
-    }
-  });
-
-  const text = extractTextFromOutput(interaction);
-  if (!text) {
-    throw new Error("Gemini returned an empty response.");
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error("Gemini returned invalid JSON.");
-  }
-
-  let totalGeminiSessions = 0;
-  let totalGeminiExercises = 0;
-  if (Array.isArray(parsed?.weeks)) {
-    parsed.weeks.forEach(w => {
-      if (Array.isArray(w?.sessions)) {
-        totalGeminiSessions += w.sessions.length;
-        w.sessions.forEach(s => {
-          const count = Array.isArray(s?.exercises) ? s.exercises.length : 0;
-          totalGeminiExercises += count;
-          console.info(`DOC_SESSION: week=${w.week} session=${s.title || s.day} is_bonus=${Boolean(s.is_bonus)} exerciseCount=${count}`);
+  const sessions = copy.sessions || copy.days || [];
+  sessions.forEach((s, sIdx) => {
+    s.id = `${copy.id}_s${sIdx + 1}`;
+    s.day = s.day || `Giorno ${sIdx + 1}`;
+    const exercises = s.exercises || s.rows || [];
+    exercises.forEach((e, eIdx) => {
+      e.id = `${s.id}_e${eIdx + 1}`;
+      if (e.superset_id) {
+        const baseSs = String(e.superset_id).replace(/^ss_w\d+_/, "");
+        e.superset_id = `ss_w${newWeekNum}_${baseSs}`;
+      }
+      if (Array.isArray(e.sets)) {
+        e.sets.forEach((set, setIdx) => {
+          set.id = `${e.id}_s${setIdx + 1}`;
+          set.done = false;
         });
       }
     });
-  }
-  console.info(`DOC_GEMINI_SESSIONS=${totalGeminiSessions}`);
-  console.info(`DOC_GEMINI_EXERCISES=${totalGeminiExercises}`);
-
-  return parsed;
-}
-
-function extractExcelText(buffer) {
-  let workbook;
-  try {
-    workbook = XLSX.read(buffer, { type: "buffer", cellDates: true, cellNF: true, cellFormula: true });
-  } catch (error) {
-    const invalid = new Error(`Unable to read Excel file: ${error?.message || "invalid workbook"}`);
-    invalid.statusCode = 400;
-    throw invalid;
-  }
-
-  if (!workbook.SheetNames.length) {
-    const invalid = new Error("Excel workbook contains no worksheets.");
-    invalid.statusCode = 400;
-    throw invalid;
-  }
-
-  return workbook.SheetNames.map((sheetName, sheetIndex) => {
-    const worksheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(worksheet, {
-      header: 1,
-      raw: false,
-      defval: "",
-      blankrows: true
-    });
-    const lines = rows.map((row, rowIndex) => {
-      const values = Array.isArray(row) ? row.map((value) => value == null ? "" : String(value)) : [];
-      return `RIGA ${rowIndex + 1}: ${values.join(" | ")}`;
-    });
-    return [`FOGLIO ${sheetIndex + 1}: ${sheetName}`, ...lines].join("\n");
-  }).join(`\n\n`);
-}
-
-async function extractLegacyWordText(buffer) {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "giammaria-doc-"));
-  const filename = path.join(dir, "document.doc");
-  try {
-    await fs.writeFile(filename, buffer);
-    const document = await new WordExtractor().extract(filename);
-    return [document.getBody(), document.getHeaders(), document.getFootnotes()].filter(Boolean).join("\n\n");
-  } finally {
-    await fs.rm(dir, { recursive: true, force: true });
-  }
-}
-
-function selectFileParser(filename, mime) {
-  if (mime === "application/pdf" || filename.endsWith(".pdf")) return "gemini-document-base64";
-  if (mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || filename.endsWith(".docx")) return "mammoth-buffer";
-  if (mime === "application/msword" || filename.endsWith(".doc")) return "word-extractor-buffer-via-tempfile";
-  if (mime.startsWith("text/") || filename.endsWith(".txt")) return "utf8-buffer";
-  if (mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || mime === "application/vnd.ms-excel" || filename.endsWith(".xlsx") || filename.endsWith(".xls")) return "xlsx-buffer";
-  return "unsupported";
-}
-
-app.get("/health", (_req, res) => {
-  res.json({
-    ok: true,
-    service: "coach-api-gemini",
-    model: MODEL,
-    apiKeyConfigured: Boolean(process.env.GEMINI_API_KEY),
-    accountStorageConfigured: Boolean(pool && JWT_SECRET)
+    s.exercises = exercises;
+    s.rows = exercises;
   });
-});
-
-app.post("/api/auth/register", async (req, res) => {
-  if (accountUnavailable(res)) return;
-  const client = await pool.connect();
-  try {
-    await accountSchemaReady;
-    const email = normalizeEmail(req.body?.email);
-    const name = String(req.body?.name || "").trim();
-    const password = String(req.body?.password || "");
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || name.length < 2 || password.length < 8) {
-      client.release();
-      return res.status(400).json({ error: "Name, valid email and password of at least 8 characters are required." });
-    }
-    const passwordHash = await hashPassword(password);
-    await client.query("BEGIN");
-    const result = await client.query(
-      "INSERT INTO app_users(email, name, password_hash) VALUES($1, $2, $3) RETURNING id, email, name",
-      [email, name, passwordHash]
-    );
-    const user = result.rows[0];
-    await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb)", [user.id]);
-    await client.query("COMMIT");
-    client.release();
-    return res.status(201).json({ token: issueAccountToken(user), user });
-  } catch (error) {
-    try { await client.query("ROLLBACK"); } catch (_) {}
-    client.release();
-    if (error?.code === "23505") return res.status(409).json({ error: "An account with this email already exists." });
-    console.error("ACCOUNT_REGISTER_ERROR", { name: error?.name, message: error?.message, stack: error?.stack });
-    return res.status(500).json({ error: "Account registration failed." });
-  }
-});
-
-app.post("/api/auth/login", async (req, res) => {
-  if (accountUnavailable(res)) return;
-  try {
-    await accountSchemaReady;
-    const email = normalizeEmail(req.body?.email);
-    const password = String(req.body?.password || "");
-    const result = await pool.query(
-      "SELECT id, email, name, password_hash, provider, avatar_url FROM app_users WHERE email = $1",
-      [email]
-    );
-    const user = result.rows[0];
-    if (!user || !(await verifyPassword(password, user.password_hash))) {
-      return res.status(401).json({ error: "Invalid email or password." });
-    }
-    return res.json({
-      token: issueAccountToken(user),
-      user: { id: user.id, email: user.email, name: user.name, provider: user.provider, avatarUrl: user.avatar_url || null }
-    });
-  } catch (error) {
-    console.error("ACCOUNT_LOGIN_ERROR", { name: error?.name, message: error?.message, stack: error?.stack });
-    return res.status(500).json({ error: "Account login failed." });
-  }
-});
-
-app.post("/api/auth/google", async (req, res) => {
-  if (accountUnavailable(res)) return;
-  try {
-    await accountSchemaReady;
-    const identity = await verifyGoogleCredential(req.body?.id_token || req.body?.idToken || req.body?.token);
-    return issueOAuthResponse(req, res, identity);
-  } catch (error) {
-    console.error("GOOGLE_AUTH_ERROR", { name: error?.name, message: error?.message, stack: error?.stack });
-    return res.status(error?.statusCode || 500).json({ error: error?.message || "Google authentication failed." });
-  }
-});
-
-app.post("/api/auth/apple", async (req, res) => {
-  if (accountUnavailable(res)) return;
-  try {
-    await accountSchemaReady;
-    const identity = await verifyAppleCredential(req.body?.id_token || req.body?.idToken || req.body?.token, req.body?.user);
-    return issueOAuthResponse(req, res, identity);
-  } catch (error) {
-    console.error("APPLE_AUTH_ERROR", { name: error?.name, message: error?.message, stack: error?.stack });
-    return res.status(error?.statusCode || 500).json({ error: error?.message || "Apple authentication failed." });
-  }
-});
-
-app.get("/api/account/me", async (req, res) => {
-  if (accountUnavailable(res)) return;
-  try {
-    const user = await accountFromBearer(req.headers.authorization);
-    if (!user) return res.status(401).json({ error: "Unauthorized." });
-    const dataRes = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [user.id]);
-    return res.json({ user, data: dataRes.rows[0]?.data || {} });
-  } catch (error) {
-    console.error("ACCOUNT_ME_ERROR", { name: error?.name, message: error?.message, stack: error?.stack });
-    return res.status(500).json({ error: "Failed to fetch account profile." });
-  }
-});
-
-app.post("/api/account/sync", async (req, res) => {
-  if (accountUnavailable(res)) return;
-  try {
-    const user = await accountFromBearer(req.headers.authorization);
-    if (!user) return res.status(401).json({ error: "Unauthorized." });
-    const clientData = req.body?.data || req.body || {};
-    const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [user.id]);
-    const current = existing.rows[0]?.data || {};
-    const merged = { ...current, ...clientData, lastSyncedAt: new Date().toISOString() };
-    await pool.query(
-      `INSERT INTO app_account_data(user_id, data, updated_at)
-       VALUES($1, $2, NOW())
-       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-      [user.id, JSON.stringify(merged)]
-    );
-    return res.json({ ok: true, data: merged });
-  } catch (error) {
-    console.error("ACCOUNT_SYNC_ERROR", { name: error?.name, message: error?.message, stack: error?.stack });
-    return res.status(500).json({ error: "Failed to sync account data." });
-  }
-});
+  copy.sessions = sessions;
+  copy.days = sessions;
+  return copy;
+}
 
 // Canonical Program Modifier Engine
 function applyOperationsToProgram(program, operations) {
@@ -697,6 +371,8 @@ function applyOperationsToProgram(program, operations) {
 
   for (let opIdx = 0; opIdx < operations.length; opIdx++) {
     const op = operations[opIdx];
+    if (!op || typeof op !== "object") continue;
+
     const type = op.type;
     const targetWeekNum = op.week;
     const targetSessionSpec = op.session;
@@ -705,33 +381,70 @@ function applyOperationsToProgram(program, operations) {
     const targetSetIndex = op.set_index;
     const changes = op.changes || {};
 
-    const weeksToModify = targetWeekNum === "all" || targetWeekNum == null
-      ? cloned.weeks
-      : cloned.weeks.filter(w => (w.weekNumber ?? w.week) === Number(targetWeekNum) || w.id === targetWeekNum);
-
-    if (!weeksToModify.length && targetWeekNum !== "all") {
-      throw new Error(`Settimana target non trovata: ${targetWeekNum} (operazione #${opIdx + 1}: ${type})`);
+    if (type === "add_week") {
+      const targetNum = Number(targetWeekNum) || (cloned.weeks.length + 1);
+      while (cloned.weeks.length < targetNum) {
+        const nextNum = cloned.weeks.length + 1;
+        const sourceWeek = (changes.source_week && cloned.weeks[changes.source_week - 1]) || cloned.weeks[cloned.weeks.length - 1];
+        const newWeek = cloneWeekWithUniqueIds(sourceWeek, nextNum);
+        if (nextNum === targetNum) {
+          if (changes.label) newWeek.label = changes.label;
+          if (changes.notes) newWeek.notes = changes.notes;
+          if (changes.title) newWeek.title = changes.title;
+        }
+        cloned.weeks.push(newWeek);
+        appliedCount++;
+      }
+      if (targetNum <= cloned.weeks.length) {
+        const existingWeek = cloned.weeks[targetNum - 1];
+        if (existingWeek) {
+          if (changes.label) existingWeek.label = changes.label;
+          if (changes.notes) existingWeek.notes = changes.notes;
+          if (changes.title) existingWeek.title = changes.title;
+          appliedCount++;
+        }
+      }
+      continue;
     }
 
-    if (type === "add_week") {
-      const newWeekNum = cloned.weeks.length + 1;
-      const template = cloned.weeks[cloned.weeks.length - 1];
-      const newWeek = JSON.parse(JSON.stringify(template));
-      newWeek.id = `w${newWeekNum}`;
-      newWeek.weekNumber = newWeekNum;
-      newWeek.week = newWeekNum;
-      newWeek.label = changes.label || `Settimana ${newWeekNum}`;
-      cloned.weeks.push(newWeek);
-      appliedCount++;
+    if (type === "extend_weeks" || type === "set_program_duration") {
+      const desired = Number(changes.duration || op.weeks || targetWeekNum || 12);
+      if (desired > cloned.weeks.length) {
+        while (cloned.weeks.length < desired) {
+          const nextNum = cloned.weeks.length + 1;
+          const template = cloned.weeks[cloned.weeks.length - 1];
+          const newWeek = cloneWeekWithUniqueIds(template, nextNum);
+          cloned.weeks.push(newWeek);
+          appliedCount++;
+        }
+      } else if (desired < cloned.weeks.length && desired >= 1) {
+        cloned.weeks = cloned.weeks.slice(0, desired);
+        appliedCount++;
+      }
       continue;
     }
 
     if (type === "remove_week") {
-      const weekIndex = cloned.weeks.findIndex(w => (w.weekNumber ?? w.week) === Number(targetWeekNum) || w.id === targetWeekNum);
+      const weekIndex = cloned.weeks.findIndex(w => (w.weekNumber ?? w.week) === Number(targetWeekNum) || w.id === targetWeekNum || w.id === `w${targetWeekNum}`);
       if (weekIndex >= 0) {
         cloned.weeks.splice(weekIndex, 1);
+        cloned.weeks.forEach((w, idx) => {
+          w.week = idx + 1;
+          w.weekNumber = idx + 1;
+        });
         appliedCount++;
       }
+      continue;
+    }
+
+    let weeksToModify = [];
+    if (targetWeekNum === "all" || targetWeekNum == null) {
+      weeksToModify = cloned.weeks;
+    } else {
+      weeksToModify = cloned.weeks.filter(w => (w.weekNumber ?? w.week) === Number(targetWeekNum) || w.id === targetWeekNum || w.id === `w${targetWeekNum}`);
+    }
+
+    if (!weeksToModify.length) {
       continue;
     }
 
@@ -739,6 +452,7 @@ function applyOperationsToProgram(program, operations) {
       weeksToModify.forEach(w => {
         if (changes.label) w.label = changes.label;
         if (changes.title) w.title = changes.title;
+        if (changes.notes) w.notes = changes.notes;
         appliedCount++;
       });
       continue;
@@ -783,414 +497,321 @@ function applyOperationsToProgram(program, operations) {
         return;
       }
 
-      if (type === "modify_session") {
-        sessionsToModify.forEach(s => {
-          if (changes.title) s.title = changes.title;
-          if (changes.day) s.day = changes.day;
-          if (changes.is_bonus !== undefined) s.is_bonus = Boolean(changes.is_bonus);
-          appliedCount++;
-        });
-        return;
-      }
-
       sessionsToModify.forEach(s => {
         const exercises = s.exercises || s.rows || [];
 
         if (type === "add_exercise") {
-          const exName = op.target_exercise || op.exercise || changes.name || "Nuovo Esercizio";
-          const setsCount = Number(changes.sets || 3);
-          const setsList = Array.from({ length: setsCount }, (_, i) => ({
-            id: `${s.id || 's'}_e${exercises.length + 1}_s${i + 1}`,
-            order: i + 1,
-            reps: changes.reps || "8-10",
-            load: changes.load != null ? Number(changes.load) : null,
-            load_unit: changes.load_unit || "kg",
-            percentage_1rm: changes.percentage_1rm != null ? Number(changes.percentage_1rm) : null,
-            rpe: changes.rpe != null ? Number(changes.rpe) : null,
-            rir: changes.rir != null ? Number(changes.rir) : 1,
-            rest_seconds: changes.rest_seconds || 90,
-            tempo: changes.tempo || "",
-            done: false
-          }));
+          const newExName = op.target_exercise || op.exercise;
+          if (!newExName) return;
+          const newExId = `${s.id || 's'}_e${exercises.length + 1}`;
+          const initialSets = [];
+          const setsCount = Number(changes.sets) || 3;
+          for (let st = 1; st <= setsCount; st++) {
+            initialSets.push({
+              id: `${newExId}_s${st}`,
+              order: st,
+              reps: changes.reps || "8-10",
+              load: typeof changes.load === "number" ? changes.load : null,
+              load_unit: changes.load_unit || "kg",
+              percentage_1rm: changes.percentage_1rm || null,
+              rpe: changes.rpe || null,
+              rir: changes.rir !== undefined ? changes.rir : 2,
+              rest_seconds: changes.rest_seconds || (changes.rest ? parseInt(changes.rest, 10) : 90),
+              tempo: changes.tempo || "",
+              done: false
+            });
+          }
 
-          exercises.push({
-            id: `${s.id || 's'}_e${exercises.length + 1}`,
-            name: exName,
-            exercise: exName,
+          const newExercise = {
+            id: newExId,
+            name: newExName,
+            exercise: newExName,
             order: exercises.length + 1,
-            movement: changes.movement || "ALTRO",
-            muscle_groups: Array.isArray(changes.muscle_groups) ? changes.muscle_groups : (changes.muscle_group ? [changes.muscle_group] : []),
+            movement: changes.movement || "",
+            muscle_groups: changes.muscle_groups || [],
+            muscleGroups: changes.muscle_groups || [],
             muscle_group: changes.muscle_group || null,
             superset_id: changes.superset_id || null,
             notes: changes.notes || "",
             progression_rule: changes.progression_rule || "",
-            is_bonus: Boolean(changes.is_bonus || s.is_bonus),
-            sets: setsList,
+            is_bonus: Boolean(changes.is_bonus),
+            isBonus: Boolean(changes.is_bonus),
+            sets: initialSets,
             repsTarget: changes.reps || "8-10",
-            rirTarget: changes.rir != null ? Number(changes.rir) : 1,
-            rpeTarget: changes.rpe != null ? Number(changes.rpe) : null,
+            rpeTarget: changes.rpe || null,
+            rirTarget: changes.rir !== undefined ? changes.rir : 2,
             rest: changes.rest || "90s",
-            plannedLoad: changes.load != null ? Number(changes.load) : null,
-            tempo: changes.tempo || ""
-          });
+            rest_seconds: changes.rest_seconds || 90,
+            plannedLoad: changes.load || null,
+            tempo: changes.tempo || "",
+            setRows: Array.from({ length: Math.max(0, setsCount - 1) }, (_, i) => i + 2)
+          };
+          exercises.push(newExercise);
           s.exercises = exercises;
           s.rows = exercises;
           appliedCount++;
           return;
         }
 
-        if (type === "remove_exercise") {
-          const initialLen = exercises.length;
-          const filtered = exercises.filter(ex => {
-            const matchName = targetExName && String(ex.name || ex.exercise || "").toLowerCase().includes(targetExName);
-            const matchId = targetExId && ex.id === targetExId;
-            return !(matchName || matchId);
-          });
-          s.exercises = filtered;
-          s.rows = filtered;
-          appliedCount += (initialLen - filtered.length);
-          return;
-        }
+        const exercisesToModify = exercises.filter(e => {
+          if (targetExId && e.id === targetExId) return true;
+          if (targetExName) {
+            const eName = String(e.name || e.exercise || "").toLowerCase();
+            return eName.includes(targetExName) || targetExName.includes(eName);
+          }
+          return false;
+        });
 
-        if (type === "replace_exercise") {
-          exercises.forEach(ex => {
-            const matchName = targetExName && String(ex.name || ex.exercise || "").toLowerCase().includes(targetExName);
-            const matchId = targetExId && ex.id === targetExId;
-            if (matchName || matchId) {
-              const newName = op.target_exercise || changes.name || "Esercizio Sostitutivo";
-              ex.name = newName;
-              ex.exercise = newName;
-              if (changes.movement) ex.movement = changes.movement;
-              if (changes.muscle_groups) ex.muscle_groups = changes.muscle_groups;
-              if (changes.notes) ex.notes = changes.notes;
+        exercisesToModify.forEach(e => {
+          if (type === "replace_exercise") {
+            const replName = op.target_exercise;
+            if (replName) {
+              e.name = replName;
+              e.exercise = replName;
+              if (changes.movement) e.movement = changes.movement;
+              if (changes.muscle_groups) {
+                e.muscle_groups = changes.muscle_groups;
+                e.muscleGroups = changes.muscle_groups;
+              }
+              if (changes.notes) e.notes = changes.notes;
               appliedCount++;
             }
-          });
-          return;
-        }
+            return;
+          }
 
-        if (type === "create_superset") {
-          const ssId = changes.superset_id || `ss_${Date.now().toString(36)}`;
-          const names = [targetExName, String(op.target_exercise || "").toLowerCase()].filter(Boolean);
-          exercises.forEach(ex => {
-            const currentName = String(ex.name || ex.exercise || "").toLowerCase();
-            if (names.some(n => currentName.includes(n)) || (targetExId && ex.id === targetExId)) {
-              ex.superset_id = ssId;
+          if (type === "remove_exercise") {
+            const exIdx = exercises.indexOf(e);
+            if (exIdx >= 0) {
+              exercises.splice(exIdx, 1);
               appliedCount++;
             }
-          });
-          return;
-        }
+            return;
+          }
 
-        if (type === "remove_superset") {
-          exercises.forEach(ex => {
-            const matchName = targetExName && String(ex.name || ex.exercise || "").toLowerCase().includes(targetExName);
-            const matchId = targetExId && ex.id === targetExId;
-            const matchSS = changes.superset_id && ex.superset_id === changes.superset_id;
-            if (matchName || matchId || matchSS) {
-              ex.superset_id = null;
-              appliedCount++;
+          if (type === "create_superset") {
+            const ssId = changes.superset_id || `ss_${w.id || 'w'}_${s.id || 's'}_${Date.now()}`;
+            e.superset_id = ssId;
+            const targetEx = op.target_exercise ? exercises.find(t => {
+              const tName = String(t.name || t.exercise || "").toLowerCase();
+              const reqTarget = String(op.target_exercise).toLowerCase();
+              return tName.includes(reqTarget) || reqTarget.includes(tName);
+            }) : null;
+            if (targetEx) {
+              targetEx.superset_id = ssId;
             }
-          });
-          return;
-        }
+            appliedCount++;
+            return;
+          }
 
-        exercises.forEach(ex => {
-          const matchName = targetExName && String(ex.name || ex.exercise || "").toLowerCase().includes(targetExName);
-          const matchId = targetExId && ex.id === targetExId;
-          if (!matchName && !matchId && targetExName) return;
+          if (type === "remove_superset") {
+            e.superset_id = null;
+            appliedCount++;
+            return;
+          }
 
-          if (!Array.isArray(ex.sets)) {
-            const n = typeof ex.sets === "number" ? ex.sets : 3;
-            ex.sets = Array.from({ length: n }, (_, i) => ({
-              id: `${ex.id}_s${i + 1}`,
-              order: i + 1,
-              reps: ex.repsTarget || ex.reps || "8-10",
-              load: ex.plannedLoad || ex.load || null,
-              load_unit: ex.load_unit || "kg",
-              percentage_1rm: ex.percentage_1rm || null,
-              rpe: ex.rpeTarget || ex.rpe || null,
-              rir: ex.rirTarget || ex.rir || 1,
-              rest_seconds: ex.rest_seconds || 90,
-              tempo: ex.tempo || "",
-              done: false
-            }));
+          let sets = Array.isArray(e.sets) ? e.sets : [];
+          if (!sets.length && typeof e.sets === "number") {
+            for (let i = 1; i <= e.sets; i++) {
+              sets.push({
+                id: `${e.id}_s${i}`,
+                order: i,
+                reps: e.reps || "8-10",
+                load: e.plannedLoad || e.load || null,
+                load_unit: "kg",
+                percentage_1rm: null,
+                rpe: e.rpeTarget || null,
+                rir: e.rirTarget || null,
+                rest_seconds: e.rest_seconds || 90,
+                tempo: e.tempo || "",
+                done: false
+              });
+            }
           }
 
           if (type === "add_set") {
-            const newOrder = ex.sets.length + 1;
-            ex.sets.push({
-              id: `${ex.id}_s${newOrder}`,
+            const newOrder = sets.length + 1;
+            const prevSet = sets[sets.length - 1] || {};
+            sets.push({
+              id: `${e.id}_s${newOrder}`,
               order: newOrder,
-              reps: changes.reps || ex.sets[ex.sets.length - 1]?.reps || "8-10",
-              load: changes.load != null ? Number(changes.load) : (ex.sets[ex.sets.length - 1]?.load || null),
-              load_unit: changes.load_unit || "kg",
-              percentage_1rm: changes.percentage_1rm != null ? Number(changes.percentage_1rm) : null,
-              rpe: changes.rpe != null ? Number(changes.rpe) : null,
-              rir: changes.rir != null ? Number(changes.rir) : 1,
-              rest_seconds: changes.rest_seconds || 90,
-              tempo: changes.tempo || ex.tempo || "",
+              reps: changes.reps || prevSet.reps || "8-10",
+              load: typeof changes.load === "number" ? changes.load : prevSet.load || null,
+              load_unit: changes.load_unit || prevSet.load_unit || "kg",
+              percentage_1rm: changes.percentage_1rm || prevSet.percentage_1rm || null,
+              rpe: changes.rpe || prevSet.rpe || null,
+              rir: changes.rir !== undefined ? changes.rir : (prevSet.rir !== undefined ? prevSet.rir : 1),
+              rest_seconds: changes.rest_seconds || prevSet.rest_seconds || 90,
+              tempo: changes.tempo || prevSet.tempo || "",
               done: false
             });
+            e.sets = sets;
+            e.setRows = Array.from({ length: Math.max(0, sets.length - 1) }, (_, i) => i + 2);
             appliedCount++;
             return;
           }
 
           if (type === "remove_set") {
-            if (ex.sets.length > 1) {
-              const setIdx = targetSetIndex != null ? targetSetIndex - 1 : ex.sets.length - 1;
-              if (setIdx >= 0 && setIdx < ex.sets.length) {
-                ex.sets.splice(setIdx, 1);
-                ex.sets.forEach((s, idx) => { s.order = idx + 1; });
-                appliedCount++;
-              }
+            if (targetSetIndex && targetSetIndex <= sets.length) {
+              sets.splice(targetSetIndex - 1, 1);
+            } else if (sets.length > 0) {
+              sets.pop();
             }
-            return;
-          }
-
-          if (type === "modify_set") {
-            const setIdx = targetSetIndex != null ? targetSetIndex - 1 : 0;
-            const targetSet = ex.sets[setIdx];
-            if (targetSet) {
-              if (changes.load !== undefined) targetSet.load = changes.load != null ? Number(changes.load) : null;
-              if (changes.reps !== undefined) targetSet.reps = changes.reps;
-              if (changes.rpe !== undefined) targetSet.rpe = changes.rpe != null ? Number(changes.rpe) : null;
-              if (changes.rir !== undefined) targetSet.rir = changes.rir != null ? Number(changes.rir) : null;
-              if (changes.rest_seconds !== undefined) targetSet.rest_seconds = changes.rest_seconds;
-              if (changes.tempo !== undefined) targetSet.tempo = changes.tempo;
-              if (changes.done !== undefined) targetSet.done = Boolean(changes.done);
-              appliedCount++;
-            }
-            return;
-          }
-
-          if (type === "modify_load") {
-            const targetLoad = Number(changes.load);
-            if (targetSetIndex != null) {
-              const set = ex.sets[targetSetIndex - 1];
-              if (set) { set.load = targetLoad; appliedCount++; }
-            } else {
-              ex.sets.forEach(s => { s.load = targetLoad; });
-              ex.plannedLoad = targetLoad;
-              appliedCount++;
-            }
-            return;
-          }
-
-          if (type === "modify_reps") {
-            if (targetSetIndex != null) {
-              const set = ex.sets[targetSetIndex - 1];
-              if (set) { set.reps = changes.reps; appliedCount++; }
-            } else {
-              ex.sets.forEach(s => { s.reps = changes.reps; });
-              ex.repsTarget = changes.reps;
-              appliedCount++;
-            }
-            return;
-          }
-
-          if (type === "modify_rpe" || type === "modify_rir") {
-            const val = changes.rpe !== undefined ? Number(changes.rpe) : Number(changes.rir);
-            const field = type === "modify_rpe" ? "rpe" : "rir";
-            if (targetSetIndex != null) {
-              const set = ex.sets[targetSetIndex - 1];
-              if (set) { set[field] = val; appliedCount++; }
-            } else {
-              ex.sets.forEach(s => { s[field] = val; });
-              if (type === "modify_rpe") ex.rpeTarget = val; else ex.rirTarget = val;
-              appliedCount++;
-            }
-            return;
-          }
-
-          if (type === "modify_rest") {
-            const restVal = changes.rest || `${changes.rest_seconds}s`;
-            ex.rest = restVal;
-            ex.rest_seconds = changes.rest_seconds || parseInt(restVal, 10);
-            ex.sets.forEach(s => { s.rest_seconds = ex.rest_seconds; });
+            sets.forEach((st, idx) => { st.order = idx + 1; });
+            e.sets = sets;
+            e.setRows = Array.from({ length: Math.max(0, sets.length - 1) }, (_, i) => i + 2);
             appliedCount++;
             return;
           }
 
-          if (type === "modify_tempo") {
-            ex.tempo = changes.tempo;
-            ex.sets.forEach(s => { s.tempo = changes.tempo; });
-            appliedCount++;
-            return;
-          }
+          const setsToModify = targetSetIndex
+            ? sets.filter(st => st.order === Number(targetSetIndex))
+            : sets;
 
-          if (type === "modify_exercise") {
-            if (changes.name) { ex.name = changes.name; ex.exercise = changes.name; }
-            if (changes.movement) ex.movement = changes.movement;
-            if (changes.notes) ex.notes = changes.notes;
-            if (changes.reps) ex.repsTarget = changes.reps;
-            if (changes.load != null) ex.plannedLoad = Number(changes.load);
-            if (changes.rest) ex.rest = changes.rest;
+          setsToModify.forEach(st => {
+            if (type === "modify_load" || changes.load !== undefined) {
+              if (typeof changes.load === "number") st.load = changes.load;
+              else if (typeof op.load === "number") st.load = op.load;
+            }
+            if (type === "modify_reps" || changes.reps !== undefined) {
+              st.reps = String(changes.reps || op.reps || st.reps);
+            }
+            if (type === "modify_rpe" || changes.rpe !== undefined) {
+              st.rpe = changes.rpe ?? op.rpe;
+            }
+            if (type === "modify_rir" || changes.rir !== undefined) {
+              st.rir = changes.rir ?? op.rir;
+            }
+            if (type === "modify_rest" || changes.rest_seconds !== undefined || changes.rest !== undefined) {
+              st.rest_seconds = changes.rest_seconds || (changes.rest ? parseInt(changes.rest, 10) : st.rest_seconds);
+            }
+            if (type === "modify_tempo" || changes.tempo !== undefined) {
+              st.tempo = changes.tempo || op.tempo || st.tempo;
+            }
             appliedCount++;
-            return;
-          }
+          });
+
+          if (changes.notes) e.notes = changes.notes;
+          if (changes.progression_rule) e.progression_rule = changes.progression_rule;
         });
       });
     });
   }
 
+  cloned.weeks.forEach((w, idx) => {
+    w.weekNumber = idx + 1;
+    w.week = idx + 1;
+  });
+
   return { ok: true, program: cloned, appliedCount };
 }
 
-// Tool Endpoints: Get Active Program & Transactional Modify
-app.get("/api/program/active", async (req, res) => {
-  if (accountUnavailable(res)) return;
+app.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    status: "healthy",
+    model: MODEL,
+    apiKeyConfigured: Boolean(process.env.GEMINI_API_KEY),
+    accountStorageConfigured: Boolean(process.env.DATABASE_URL)
+  });
+});
+
+app.post("/api/auth/google", async (req, res) => {
   try {
-    const user = await accountFromBearer(req.headers.authorization);
-    if (!user) return res.status(401).json({ error: "Unauthorized." });
-    const dataRes = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [user.id]);
-    const accountData = dataRes.rows[0]?.data || {};
-    const program = accountData.activeProgram || accountData.program || null;
-    return res.json({ ok: true, program });
+    const { id_token } = req.body || {};
+    const identity = await verifyGoogleCredential(id_token);
+    return await issueOAuthResponse(req, res, identity);
   } catch (error) {
-    console.error("GET_ACTIVE_PROGRAM_ERROR", error);
-    return res.status(500).json({ error: "Failed to fetch active program." });
+    console.error("Auth Google Error:", error);
+    return res.status(error.statusCode || 401).json({ error: error.message || "Autenticazione Google fallita." });
+  }
+});
+
+app.post("/api/auth/apple", async (req, res) => {
+  try {
+    const { id_token, user } = req.body || {};
+    const identity = await verifyAppleCredential(id_token, user);
+    return await issueOAuthResponse(req, res, identity);
+  } catch (error) {
+    console.error("Auth Apple Error:", error);
+    return res.status(error.statusCode || 401).json({ error: error.message || "Autenticazione Apple fallita." });
+  }
+});
+
+app.get("/api/account/data", async (req, res) => {
+  const auth = await accountFromBearer(req.headers.authorization);
+  if (!auth) return res.status(401).json({ error: "Sessione scaduta o non autorizzata." });
+  try {
+    const result = await pool.query("SELECT data, updated_at FROM app_account_data WHERE user_id = $1", [auth.id]);
+    return res.json({ ok: true, data: result.rows[0]?.data || {}, updated_at: result.rows[0]?.updated_at });
+  } catch (err) {
+    return res.status(500).json({ error: "Impossibile recuperare i dati dell'account." });
+  }
+});
+
+app.post("/api/account/data", async (req, res) => {
+  const auth = await accountFromBearer(req.headers.authorization);
+  if (!auth) return res.status(401).json({ error: "Sessione scaduta o non autorizzata." });
+  try {
+    const dataPayload = req.body?.data || {};
+    await pool.query(
+      `INSERT INTO app_account_data (user_id, data, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id)
+       DO UPDATE SET data = $2, updated_at = NOW()`,
+      [auth.id, JSON.stringify(dataPayload)]
+    );
+    return res.json({ ok: true, saved_at: new Date().toISOString() });
+  } catch (err) {
+    return res.status(500).json({ error: "Impossibile salvare i dati sul cloud." });
   }
 });
 
 app.post("/api/program/modify", async (req, res) => {
-  if (accountUnavailable(res)) return;
-  const client = await pool.connect();
   try {
-    const user = await accountFromBearer(req.headers.authorization);
-    if (!user) {
-      client.release();
-      return res.status(401).json({ error: "Unauthorized." });
-    }
-
     const { operations } = req.body || {};
     if (!Array.isArray(operations) || !operations.length) {
-      client.release();
-      return res.status(400).json({ error: "operations array is required." });
+      return res.status(400).json({ error: "operations array is required" });
     }
 
-    await client.query("BEGIN");
-    const dataRes = await client.query(
-      "SELECT data FROM app_account_data WHERE user_id = $1 FOR UPDATE",
-      [user.id]
-    );
-
-    const accountData = dataRes.rows[0]?.data || {};
-    const currentProgram = accountData.activeProgram || accountData.program;
-    if (!currentProgram) {
-      await client.query("ROLLBACK");
-      client.release();
-      return res.status(404).json({ error: "Nessun programma attivo trovato per questo utente." });
+    const auth = await accountFromBearer(req.headers.authorization);
+    let activeProg = null;
+    if (auth) {
+      const dataRes = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
+      const currentData = dataRes.rows[0]?.data || {};
+      activeProg = currentData.activeProgram;
     }
 
-    const modResult = applyOperationsToProgram(currentProgram, operations);
-    accountData.activeProgram = modResult.program;
-    accountData.program = modResult.program;
-    accountData.lastModifiedAt = new Date().toISOString();
+    if (!activeProg && req.body.program) {
+      activeProg = req.body.program;
+    }
 
-    await client.query(
-      "UPDATE app_account_data SET data = $1, updated_at = NOW() WHERE user_id = $2",
-      [JSON.stringify(accountData), user.id]
-    );
+    if (!activeProg) {
+      return res.status(400).json({ error: "No active program found to modify" });
+    }
 
-    await client.query("COMMIT");
-    client.release();
+    const modResult = applyOperationsToProgram(activeProg, operations);
+
+    if (auth && modResult.ok) {
+      await pool.query(
+        `UPDATE app_account_data
+         SET data = jsonb_set(data, '{activeProgram}', $1::jsonb), updated_at = NOW()
+         WHERE user_id = $2`,
+        [JSON.stringify(modResult.program), auth.id]
+      );
+    }
 
     return res.json({
       ok: true,
       program: modResult.program,
       appliedCount: modResult.appliedCount
     });
-  } catch (error) {
-    await client.query("ROLLBACK");
-    client.release();
-    console.error("MODIFY_PROGRAM_TRANSACTION_ERROR", error);
-    return res.status(400).json({ error: error.message || "Impossibile applicare le modifiche al programma." });
+  } catch (err) {
+    console.error("Program modify error:", err);
+    return res.status(400).json({ error: err.message });
   }
 });
 
-async function analyzeUploadedBuffer(originalname, mimeType, buffer) {
-  const filename = originalname.toLowerCase();
-  const mime = (mimeType || "").toLowerCase();
-  if (!filename || !buffer || !buffer.length) {
-    const error = new Error("filename, mime_type and non-empty data_base64 are required.");
-    error.statusCode = 400;
-    throw error;
-  }
-  const prompt = `${workoutInstruction}\n\nAnalizza il materiale seguente e crea la programmazione canonica.`;
-  let input;
-  let systemInstruction;
-  let parser = "unknown";
-  let extractedRawText = "";
-  if (mime === "application/pdf" || filename.endsWith(".pdf")) {
-    parser = "gemini-document-base64";
-    input = { type: "document", data: buffer.toString("base64"), mime_type: "application/pdf" };
-    systemInstruction = prompt;
-  } else if (mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || filename.endsWith(".docx")) {
-    parser = "mammoth-buffer";
-    const result = await mammoth.extractRawText({ buffer });
-    extractedRawText = result.value || "";
-    input = `${prompt}\n\nDOCUMENTO WORD (${originalname}):\n${extractedRawText}`;
-  } else if (mime === "application/msword" || filename.endsWith(".doc")) {
-    parser = "word-extractor-buffer-via-tempfile";
-    extractedRawText = await extractLegacyWordText(buffer);
-    if (!extractedRawText.trim()) throw Object.assign(new Error("Legacy DOC contains no readable text."), { statusCode: 400 });
-    input = `${prompt}\n\nDOCUMENTO WORD LEGACY (${originalname}):\n${extractedRawText}`;
-  } else if (mime.startsWith("text/") || filename.endsWith(".txt")) {
-    parser = "utf8-buffer";
-    extractedRawText = buffer.toString("utf8");
-    input = `${prompt}\n\nDOCUMENTO TESTUALE (${originalname}):\n${extractedRawText}`;
-  } else if (mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || mime === "application/vnd.ms-excel" || filename.endsWith(".xlsx") || filename.endsWith(".xls")) {
-    parser = "xlsx-buffer";
-    extractedRawText = extractExcelText(buffer);
-    input = `${prompt}\n\nFOGLI EXCEL (${originalname}):\n${extractedRawText}`;
-  } else {
-    const error = new Error("Unsupported file type. Use PDF, DOC, DOCX, TXT, XLSX or XLS.");
-    error.statusCode = 415;
-    throw error;
-  }
-
-  parseDocStructureIntermediate(extractedRawText);
-
-  return { result: await runStructuredInteraction(input, systemInstruction), parser };
-}
-
-app.post("/api/analyze-file", async (req, res) => {
-  try {
-    if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: "GEMINI_API_KEY is not configured on the server." });
-    const { filename, mime_type: mimeType, data_base64: dataBase64 } = req.body || {};
-    if (typeof filename !== "string" || typeof mimeType !== "string" || typeof dataBase64 !== "string" || !dataBase64.trim()) {
-      return res.status(400).json({ error: "filename, mime_type and data_base64 are required." });
-    }
-    const normalizedBase64 = dataBase64.replace(/^data:[^,]+,/, "").replace(/\s/g, "");
-    if (!normalizedBase64 || !/^[A-Za-z0-9+/]*={0,2}$/.test(normalizedBase64) || normalizedBase64.length % 4 === 1) {
-      return res.status(400).json({ error: "Invalid base64 file data." });
-    }
-    const buffer = Buffer.from(normalizedBase64, "base64");
-    if (!buffer.length || buffer.length > 50 * 1024 * 1024) return res.status(400).json({ error: "Invalid or oversized file data." });
-    const normalizedFilename = filename.toLowerCase();
-    const parser = selectFileParser(normalizedFilename, mimeType.toLowerCase());
-    console.info("FILE_ANALYZE_START", { filename, mime: mimeType, byteLength: buffer.length, parser });
-    try {
-      const analyzed = await analyzeUploadedBuffer(filename, mimeType, buffer);
-      console.info("FILE_ANALYZE_END", { filename, parser: analyzed.parser });
-      return res.json(analyzed.result);
-    } catch (error) {
-      console.error("FILE_ANALYZE_ERROR", {
-        filename,
-        mime: mimeType,
-        byteLength: buffer.length,
-        error: { name: error?.name, message: error?.message, stack: error?.stack }
-      });
-      throw error;
-    }
-  } catch (error) {
-    console.error("Analyze-file error:", { name: error?.name, message: error?.message, status: error?.status || error?.statusCode, stack: error?.stack });
-    return res.status(error?.statusCode || 500).json({ error: error?.statusCode === 415 ? error.message : "Document analysis failed." });
-  }
-});
-
-app.post("/api/analyze", upload.single("file"), async (req, res) => {
+app.post("/api/ingest/document", upload.single("file"), async (req, res) => {
   try {
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({
@@ -1198,88 +819,52 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
       });
     }
 
-    const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded." });
+    }
 
-    if (!req.file && !text) {
-      return res.status(400).json({
-        error: "Provide a file field named 'file' or a non-empty 'text' field."
+    const ai = getClient();
+    const prompt = `Analizza questo file di allenamento e convertilo in una struttura JSON valida secondo lo schema specificato.`;
+
+    let response;
+    if (req.file.mimetype === "text/plain" || req.file.mimetype === "text/csv") {
+      const textContent = req.file.buffer.toString("utf-8");
+      response = await ai.models.generateContent({
+        model: MODEL,
+        contents: [
+          { role: "user", parts: [{ text: `${prompt}\n\nDOCUMENT CONTENT:\n${textContent}` }] }
+        ],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: workoutSchema
+        }
+      });
+    } else {
+      const fileData = {
+        inlineData: {
+          data: req.file.buffer.toString("base64"),
+          mimeType: req.file.mimetype
+        }
+      };
+      response = await ai.models.generateContent({
+        model: MODEL,
+        contents: [
+          { role: "user", parts: [fileData, { text: prompt }] }
+        ],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: workoutSchema
+        }
       });
     }
 
-    const prompt = `${workoutInstruction}\n\nAnalizza il materiale seguente e crea la programmazione canonica.`;
-    let input;
-    let systemInstruction;
-
-    if (req.file) {
-      const filename = req.file.originalname.toLowerCase();
-      const mime = req.file.mimetype || "application/octet-stream";
-
-      if (mime === "application/pdf" || filename.endsWith(".pdf")) {
-        input = {
-          type: "document",
-          data: req.file.buffer.toString("base64"),
-          mime_type: "application/pdf"
-        };
-        systemInstruction = prompt;
-      } else if (
-        mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-        filename.endsWith(".docx")
-      ) {
-        const result = await mammoth.extractRawText({ buffer: req.file.buffer });
-        parseDocStructureIntermediate(result.value);
-        input = `${prompt}\n\nDOCUMENTO WORD (${req.file.originalname}):\n${result.value}`;
-      } else if (mime === "application/msword" || filename.endsWith(".doc")) {
-        const extracted = await extractLegacyWordText(req.file.buffer);
-        if (!extracted.trim()) throw Object.assign(new Error("Legacy DOC contains no readable text."), { statusCode: 400 });
-        parseDocStructureIntermediate(extracted);
-        input = `${prompt}\n\nDOCUMENTO WORD LEGACY (${req.file.originalname}):\n${extracted}`;
-      } else if (
-        mime.startsWith("text/") ||
-        filename.endsWith(".txt")
-      ) {
-        const raw = req.file.buffer.toString("utf8");
-        parseDocStructureIntermediate(raw);
-        input = `${prompt}\n\nDOCUMENTO TESTUALE (${req.file.originalname}):\n${raw}`;
-      } else if (
-        mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-        mime === "application/vnd.ms-excel" ||
-        filename.endsWith(".xlsx") ||
-        filename.endsWith(".xls")
-      ) {
-        const raw = extractExcelText(req.file.buffer);
-        parseDocStructureIntermediate(raw);
-        input = `${prompt}\n\nFOGLI EXCEL (${req.file.originalname}):\n${raw}`;
-      } else {
-        return res.status(415).json({
-          error: "Unsupported file type. Use PDF, DOC, DOCX, TXT, XLSX or XLS."
-        });
-      }
-    } else {
-      parseDocStructureIntermediate(text);
-      input = `${prompt}\n\nTESTO FORNITO DALL'UTENTE:\n${text}`;
-    }
-
-    const result = await runStructuredInteraction(input, systemInstruction);
-    return res.json(result);
+    const structuredWorkout = JSON.parse(response.text.trim());
+    return res.json(structuredWorkout);
   } catch (error) {
-    console.error("Analyze error:", {
-      name: error?.name,
-      message: error?.message,
-      status: error?.status || error?.statusCode || error?.response?.status,
-      response: error?.response,
-      details: error?.details,
-      stack: error?.stack
-    });
-    return res.status(error?.statusCode || 500).json({
-      error: "Document analysis failed.",
-      ...(process.env.NODE_ENV === "development" ? {
-        gemini: {
-          name: error?.name,
-          message: error?.message,
-          status: error?.status || error?.statusCode || error?.response?.status,
-          details: error?.details
-        }
-      } : {})
+    console.error("Ingest error:", error);
+    return res.status(500).json({
+      error: "Document ingestion failed.",
+      details: error.message
     });
   }
 });
@@ -1303,7 +888,6 @@ app.post("/api/chat", async (req, res) => {
     let context = req.body?.context ?? {};
     const history = Array.isArray(req.body?.history) ? req.body.history : [];
 
-    // Check if user is authenticated and read their active program if not provided in context
     const authUser = await accountFromBearer(req.headers.authorization);
     if (authUser && !context.program) {
       try {
@@ -1314,33 +898,81 @@ app.post("/api/chat", async (req, res) => {
       } catch (_) {}
     }
 
+    const currentW = Number(context.currentWeek) || 1;
+    const currentD = Number(context.currentDay) >= 0 ? Number(context.currentDay) + 1 : 1;
+
     const system = `
 Sei Coach AI, l'assistente scientifico di allenamento di élite all'interno dell'applicazione Giammaria System.
-Rispondi sempre in italiano in modo chiaro, competente, motivante e basato sull'evidence-based training.
+Rispondi sempre in italiano in modo chiaro, autorevole, motivante e rigorosamente evidence-based.
 
 ACCESSO AL PROGRAMMA ATTIVO:
 Hai PIENO ACCESSO di lettura e modifica al programma attivo dell'atleta attraverso le API e i tool del sistema.
 NON DIRE MAI: "Non ho accesso al database" o "Non posso modificare il file interno". Tu puoi analizzare la programmazione attiva e proporre modifiche strutturate istantanee!
 
-QUANDO L'UTENTE FA DOMANDE SUL PROGRAMMA:
-- Ispeziona dettagliatamente il CONTESTO PROGRAMMA fornito (settimane, sessioni, esercizi, serie, carichi, reps, RIR, recuperi, note).
-- Rispondi con conteggi e dettagli precisi (es. quanti esercizi ci sono, come sono strutturate le sessioni, carichi e progressioni).
+STATO ATTUALE SELEZIONATO DALL'ATLETA:
+- Settimana attualmente visualizzata: Settimana ${currentW} (context.currentWeek)
+- Sessione / Giorno attualmente visualizzato: Giorno ${currentD} (context.currentDay)
+
+REGOLE RIGIDE DI HARDENING E PRECISIONE SEMANTICA:
+
+1. AMBITO TEMPORALE (SCOPE):
+- Se l'atleta chiede una modifica come "porta la terza serie a 105 kg" o "aggiungi una serie alla panca del giorno 1":
+  * NON assumere automaticamente week: "all"!
+  * Usa SEMPRE la settimana attualmente selezionata: "week": ${currentW} (oppure la settimana esplicitamente menzionata dall'utente).
+  * Solo ed esclusivamente se l'atleta usa formule esplicite come "in tutte le settimane", "tutte le settimane" o "in tutto il programma", devi impostare "week": "all".
+
+2. SOSTITUZIONE ESERCIZI:
+- Se l'utente dice "sostituisci X con Y":
+  * Controlla accuratamente se X è presente nella sessione/settimana target del context.program.
+  * SE X ESISTE: genera l'operazione {"type": "replace_exercise", "week": ..., "session": ..., "exercise": "X", "target_exercise": "Y"}.
+  * SE X NON ESISTE: NON generare silenziosamente una add_exercise o una sostituzione fittizia!
+    Invece scrivi chiaramente nella risposta:
+    "X non è presente nella sessione selezionata. Vuoi aggiungere Y?"
+    e nella proposta JSON includi l'operazione con summary che chiarisce la richiesta di conferma ("Proposta di aggiunta di Y in quanto X non presente").
+
+3. CALCOLI E MODIFICHE DI VOLUME:
+- Se l'utente chiede variazioni percentuali di volume (es. "riduci il volume del petto del 15%"):
+  * Conta e analizza il volume del gruppo muscolare prima della modifica (es. serie totali nella settimana).
+  * Calcola il target volume teorico (es. serie prima * 0.85).
+  * Calcola il volume dopo in base alle serie discrete rimosse.
+  * Calcola la variazione percentuale effettiva.
+  * Riporta SEMPRE esplicitamente nella risposta testuale il riepilogo nel seguente formato:
+    Volume [gruppo muscolare]:
+    - prima = [N] serie
+    - target = [N_target] serie (-15%)
+    - dopo = [N_dopo] serie
+    - variazione = -[X]% circa
+  * Se non è possibile ottenere esattamente il -15% a causa dei limiti discreti delle serie, indicalo chiaramente (es. "Non è possibile ottenere esattamente -15% perché le serie sono discrete. Propongo una riduzione di 1 serie su 4 (-25%) o su 6 (-16,7%).").
+
+4. AGGIUNTA SERIE:
+- Se l'utente dice "aggiungi una serie alla panca del giorno 1":
+  * Modifica SOLO l'esercizio target.
+  * Mantieni il contesto della settimana/sessione corrente ("week": ${currentW}, "session": 1).
+  * Non toccare tutte le settimane salvo richiesta esplicita.
+
+5. SUPERSET:
+- Se l'atleta chiede di creare un superset (es. "Crea un superset tra Hack Squat e Leg Extension") e uno degli esercizi non è presente nella sessione:
+  * Dichiara esplicitamente: "[Nome Esercizio] non esiste in questa sessione. Posso aggiungerla e creare il superset."
+  * Quindi genera le operazioni atomiche di add_exercise + create_superset.
+
+6. CONFERMA E AMBIGUITÀ:
+- Se una richiesta è ambiguamente interpretabile, NON applicare modifiche arbitrarie. Chiedi conferma chiarificatrice all'atleta.
 
 QUANDO L'UTENTE RICHIEDE MODIFICHE:
-Quando l'atleta chiede di modificare, aggiungere, eliminare o sostituire esercizi, serie, carichi, ripetizioni, RPE, RIR, recuperi, sessioni o settimane, oppure creare superset, DEVI includere nella risposta un blocco JSON con action "modify_program" contenente l'elenco delle operazioni atomiche da eseguire:
+Includi sempre nella risposta un blocco JSON con action "modify_program":
 
 \`\`\`json
 {
   "action": "modify_program",
-  "summary": "Descrizione sintetica delle modifiche proposte per l'atleta",
+  "summary": "Descrizione sintetica delle modifiche proposte",
   "operations": [
     {
       "type": "add_set" | "remove_set" | "modify_set" | "modify_load" | "modify_reps" | "modify_rpe" | "modify_rir" | "modify_rest" | "modify_tempo" | "replace_exercise" | "add_exercise" | "remove_exercise" | "create_superset" | "remove_superset" | "modify_session" | "add_session" | "remove_session" | "modify_week" | "add_week" | "remove_week",
-      "week": 1, // numero 1-based o "all"
-      "session": 1, // numero 1-based o "all" o nome sessione
-      "exercise": "Panca piana", // nome dell'esercizio da cercare
-      "target_exercise": "Hack Squat", // per replace_exercise o add_exercise
-      "set_index": 3, // opzionale 1-based
+      "week": ${currentW}, // numero 1-based (o "all" SOLO se esplicitamente richiesto "in tutte le settimane")
+      "session": 1, // numero 1-based o nome sessione
+      "exercise": "Panca piana bilanciere",
+      "target_exercise": "Hack Squat",
+      "set_index": 3,
       "changes": {
         "sets": 4,
         "load": 105,
@@ -1367,12 +999,14 @@ Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico
       .map((item) => `${item.role === "assistant" ? "ASSISTANT" : "USER"}: ${item.content || item.text}`)
       .join("\n");
     const input = `${system}\n\nCONTESTO PROGRAMMA:\n${JSON.stringify(context)}\n\nCRONOLOGIA:\n${historyText}\n\nUSER: ${message}`;
-    const interaction = await ai.interactions.create({
+    
+    const ai = getClient();
+    const response = await ai.models.generateContent({
       model: MODEL,
-      input
+      contents: [{ role: "user", parts: [{ text: input }] }]
     });
 
-    const replyText = interaction.output_text || "";
+    const replyText = response.text || "";
     let proposedAction = null;
     const jsonMatch = replyText.match(/```(?:json)?\s*({[\s\S]*?"action"\s*:\s*"modify_program"[\s\S]*?\})\s*```/i);
     if (jsonMatch) {
@@ -1397,20 +1031,11 @@ Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico
     });
     return res.status(error?.statusCode || 500).json({
       error: "Coach interaction failed.",
-      ...(process.env.NODE_ENV === "development" ? {
-        gemini: {
-          name: error?.name,
-          message: error?.message,
-          status: error?.status || error?.statusCode || error?.response?.status,
-          details: error?.details
-        }
-      } : {})
+      details: error?.message
     });
   }
 });
 
-const server = app.listen(PORT, () => {
-  console.info(`Coach API listening on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`Coach API server listening at http://localhost:${port}`);
 });
-
-export { app, server, applyOperationsToProgram, parseDocStructureIntermediate };
