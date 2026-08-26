@@ -191,17 +191,6 @@ function extractExcelText(buffer) {
     throw invalid;
   }
 
-  async function extractLegacyWordText(buffer) {
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "giammaria-doc-"));
-    const filename = path.join(dir, "document.doc");
-    try {
-      await fs.writeFile(filename, buffer);
-      const document = await new WordExtractor().extract(filename);
-      return [document.getBody(), document.getHeaders(), document.getFootnotes()].filter(Boolean).join("\n\n");
-    } finally {
-      await fs.rm(dir, { recursive: true, force: true });
-    }
-  }
   return workbook.SheetNames.map((sheetName, sheetIndex) => {
     const worksheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(worksheet, {
@@ -216,6 +205,27 @@ function extractExcelText(buffer) {
     });
     return [`FOGLIO ${sheetIndex + 1}: ${sheetName}`, ...lines].join("\n");
   }).join(`\n\n`);
+}
+
+async function extractLegacyWordText(buffer) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "giammaria-doc-"));
+  const filename = path.join(dir, "document.doc");
+  try {
+    await fs.writeFile(filename, buffer);
+    const document = await new WordExtractor().extract(filename);
+    return [document.getBody(), document.getHeaders(), document.getFootnotes()].filter(Boolean).join("\n\n");
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+}
+
+function selectFileParser(filename, mime) {
+  if (mime === "application/pdf" || filename.endsWith(".pdf")) return "gemini-document-base64";
+  if (mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || filename.endsWith(".docx")) return "mammoth-buffer";
+  if (mime === "application/msword" || filename.endsWith(".doc")) return "word-extractor-buffer-via-tempfile";
+  if (mime.startsWith("text/") || filename.endsWith(".txt")) return "utf8-buffer";
+  if (mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || mime === "application/vnd.ms-excel" || filename.endsWith(".xlsx") || filename.endsWith(".xls")) return "xlsx-buffer";
+  return "unsupported";
 }
 
 app.get("/health", (_req, res) => {
@@ -262,26 +272,32 @@ async function analyzeUploadedBuffer(originalname, mimetype, buffer) {
   const prompt = `${workoutInstruction}\n\nAnalizza il materiale seguente e crea la programmazione.`;
   let input;
   let systemInstruction;
+  let parser = "unknown";
   if (mime === "application/pdf" || filename.endsWith(".pdf")) {
+    parser = "gemini-document-base64";
     input = { type: "document", data: buffer.toString("base64"), mime_type: "application/pdf" };
     systemInstruction = prompt;
   } else if (mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || filename.endsWith(".docx")) {
+    parser = "mammoth-buffer";
     const result = await mammoth.extractRawText({ buffer });
     input = `${prompt}\n\nDOCUMENTO WORD (${originalname}):\n${result.value}`;
   } else if (mime === "application/msword" || filename.endsWith(".doc")) {
+    parser = "word-extractor-buffer-via-tempfile";
     const extracted = await extractLegacyWordText(buffer);
     if (!extracted.trim()) throw Object.assign(new Error("Legacy DOC contains no readable text."), { statusCode: 400 });
     input = `${prompt}\n\nDOCUMENTO WORD LEGACY (${originalname}):\n${extracted}`;
   } else if (mime.startsWith("text/") || filename.endsWith(".txt")) {
+    parser = "utf8-buffer";
     input = `${prompt}\n\nDOCUMENTO TESTUALE (${originalname}):\n${buffer.toString("utf8")}`;
   } else if (mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || mime === "application/vnd.ms-excel" || filename.endsWith(".xlsx") || filename.endsWith(".xls")) {
-    input = `${prompt}\n\nFOGLI EXCEL (${originalname}):\n${extractExcelText(buffer, originalname)}`;
+    parser = "xlsx-buffer";
+    input = `${prompt}\n\nFOGLI EXCEL (${originalname}):\n${extractExcelText(buffer)}`;
   } else {
     const error = new Error("Unsupported file type. Use PDF, DOC, DOCX, TXT, XLSX or XLS.");
     error.statusCode = 415;
     throw error;
   }
-  return runStructuredInteraction(input, systemInstruction);
+  return { result: await runStructuredInteraction(input, systemInstruction), parser };
 }
 
 app.post("/api/analyze-file", async (req, res) => {
@@ -291,10 +307,28 @@ app.post("/api/analyze-file", async (req, res) => {
     if (typeof filename !== "string" || typeof mimeType !== "string" || typeof dataBase64 !== "string" || !dataBase64.trim()) {
       return res.status(400).json({ error: "filename, mime_type and data_base64 are required." });
     }
-    const buffer = Buffer.from(dataBase64, "base64");
+    const normalizedBase64 = dataBase64.replace(/^data:[^,]+,/, "").replace(/\s/g, "");
+    if (!normalizedBase64 || !/^[A-Za-z0-9+/]*={0,2}$/.test(normalizedBase64) || normalizedBase64.length % 4 === 1) {
+      return res.status(400).json({ error: "Invalid base64 file data." });
+    }
+    const buffer = Buffer.from(normalizedBase64, "base64");
     if (!buffer.length || buffer.length > 50 * 1024 * 1024) return res.status(400).json({ error: "Invalid or oversized file data." });
-    console.info("Analyze-file input", { filename, mimeType, bytes: buffer.length });
-    return res.json(await analyzeUploadedBuffer(filename, mimeType, buffer));
+    const normalizedFilename = filename.toLowerCase();
+    const parser = selectFileParser(normalizedFilename, mimeType.toLowerCase());
+    console.info("FILE_ANALYZE_START", { filename, mime: mimeType, byteLength: buffer.length, parser });
+    try {
+      const analyzed = await analyzeUploadedBuffer(filename, mimeType, buffer);
+      console.info("FILE_ANALYZE_END", { filename, parser: analyzed.parser });
+      return res.json(analyzed.result);
+    } catch (error) {
+      console.error("FILE_ANALYZE_ERROR", {
+        filename,
+        mime: mimeType,
+        byteLength: buffer.length,
+        error: { name: error?.name, message: error?.message, stack: error?.stack }
+      });
+      throw error;
+    }
   } catch (error) {
     console.error("Analyze-file error:", { name: error?.name, message: error?.message, status: error?.status || error?.statusCode, stack: error?.stack });
     return res.status(error?.statusCode || 500).json({ error: error?.statusCode === 415 ? error.message : "Document analysis failed." });
