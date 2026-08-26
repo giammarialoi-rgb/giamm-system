@@ -9,7 +9,6 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import multer from "multer";
-import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import pg from "pg";
@@ -37,7 +36,7 @@ const accountSchemaReady = (async () => {
   try {
     await client.query(`
       CREATE TABLE IF NOT EXISTS app_users (
-        id TEXT PRIMARY KEY,
+        id BIGSERIAL PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
         name TEXT NOT NULL,
         password_hash TEXT,
@@ -48,7 +47,7 @@ const accountSchemaReady = (async () => {
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
       CREATE TABLE IF NOT EXISTS app_account_data (
-        user_id TEXT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
+        user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
         data JSONB NOT NULL DEFAULT '{}'::jsonb,
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
@@ -202,15 +201,25 @@ async function resolveOAuthUser({ email, name, provider, providerId, avatarUrl, 
     return updated.rows[0];
   }
 
-  const id = crypto.randomUUID();
-  const created = await pool.query(
-    `INSERT INTO app_users(id, email, name, provider, provider_id, avatar_url)
-     VALUES($1, $2, $3, $4, $5, $6)
-     RETURNING id, email, name, provider, avatar_url`,
-    [id, normalized, name || normalized.split("@")[0], provider, providerId, avatarUrl || null]
-  );
-  await pool.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb)", [id]);
-  return created.rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const created = await client.query(
+      `INSERT INTO app_users(email, name, provider, provider_id, avatar_url)
+       VALUES($1, $2, $3, $4, $5)
+       RETURNING id, email, name, provider, avatar_url`,
+      [normalized, name || normalized.split("@")[0], provider, providerId, avatarUrl || null]
+    );
+    const user = created.rows[0];
+    await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb)", [user.id]);
+    await client.query("COMMIT");
+    return user;
+  } catch (error) {
+    try { await client.query("ROLLBACK"); } catch (_) {}
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function verifyGoogleCredential(idToken) {
@@ -557,23 +566,30 @@ app.get("/health", (_req, res) => {
 
 app.post("/api/auth/register", async (req, res) => {
   if (accountUnavailable(res)) return;
+  const client = await pool.connect();
   try {
     await accountSchemaReady;
     const email = normalizeEmail(req.body?.email);
     const name = String(req.body?.name || "").trim();
     const password = String(req.body?.password || "");
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || name.length < 2 || password.length < 8) {
+      client.release();
       return res.status(400).json({ error: "Name, valid email and password of at least 8 characters are required." });
     }
     const passwordHash = await hashPassword(password);
-    const result = await pool.query(
-      "INSERT INTO app_users(id,email,name,password_hash) VALUES($1,$2,$3,$4) RETURNING id,email,name",
-      [crypto.randomUUID(), email, name, passwordHash]
+    await client.query("BEGIN");
+    const result = await client.query(
+      "INSERT INTO app_users(email, name, password_hash) VALUES($1, $2, $3) RETURNING id, email, name",
+      [email, name, passwordHash]
     );
     const user = result.rows[0];
-    await pool.query("INSERT INTO app_account_data(user_id,data) VALUES($1,'{}'::jsonb)", [user.id]);
+    await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb)", [user.id]);
+    await client.query("COMMIT");
+    client.release();
     return res.status(201).json({ token: issueAccountToken(user), user });
   } catch (error) {
+    try { await client.query("ROLLBACK"); } catch (_) {}
+    client.release();
     if (error?.code === "23505") return res.status(409).json({ error: "An account with this email already exists." });
     console.error("ACCOUNT_REGISTER_ERROR", { name: error?.name, message: error?.message, stack: error?.stack });
     return res.status(500).json({ error: "Account registration failed." });
@@ -651,7 +667,9 @@ app.post("/api/account/sync", async (req, res) => {
     const current = existing.rows[0]?.data || {};
     const merged = { ...current, ...clientData, lastSyncedAt: new Date().toISOString() };
     await pool.query(
-      `INSERT INTO app_account_data(user_id, data, updated_at)\n       VALUES($1, $2, NOW())\n       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+      `INSERT INTO app_account_data(user_id, data, updated_at)
+       VALUES($1, $2, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
       [user.id, JSON.stringify(merged)]
     );
     return res.json({ ok: true, data: merged });
@@ -1356,7 +1374,7 @@ Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico
 
     const replyText = interaction.output_text || "";
     let proposedAction = null;
-    const jsonMatch = replyText.match(/```(?:json)?\s*(\{[\s\S]*?"action"\s*:\s*"modify_program"[\s\S]*?\})\s*```/i);
+    const jsonMatch = replyText.match(/```(?:json)?\s*({[\s\S]*?"action"\s*:\s*"modify_program"[\s\S]*?\})\s*```/i);
     if (jsonMatch) {
       try {
         proposedAction = JSON.parse(jsonMatch[1]);
