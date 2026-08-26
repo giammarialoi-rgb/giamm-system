@@ -2,6 +2,7 @@ services:
   - type: web
     name: coach-api-gemini
     runtime: node
+    region: oregon
     buildCommand: npm install
     startCommand: npm start
     envVars:
@@ -12,6 +13,14 @@ services:
       - key: CORS_ORIGINS
         sync: false
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: coach-db
+          property: connectionString
       - key: JWT_SECRET
-        sync: false
+        generateValue: true
+databases:
+  - name: coach-db
+    databaseName: coach
+    user: coach
+    region: oregon
+    plan: free
