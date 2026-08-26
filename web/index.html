@@ -1,4 +1,2581 @@
-﻿    const response = await apiFetch(coachEndpoint('/health'), { method: 'GET' }, 20000);
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>GIAMMARIA SYSTEM | ELITE TRAINING</title>
+<style>
+:root {
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface-light: #151515;
+  --gold: #d4af37;
+  --gold-glow: #f9d976;
+  --gold-dark: #aa8a2e;
+  --text-primary: #ffffff;
+  --text-secondary: #888888;
+  --border: #222222;
+  --accent-red: #ff4d4d;
+  --success: #4caf50;
+  --header-height: 60px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+#splash {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  transition: opacity 0.8s ease-out;
+}
+
+#splash img {
+  width: 140px;
+  filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4));
+  margin-bottom: 20px;
+}
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+header .logo-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+header .logo-container img { height: 32px; flex-shrink: 0; }
+header .logo-container span {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#account-button {
+  flex-shrink: 0;
+  margin-left: 10px;
+  font-size: 10px;
+  padding: 7px 12px;
+  font-weight: 800;
+  border-radius: 8px;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+main {
+  margin-top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  margin-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+  padding: 15px;
+  min-height: calc(100vh - var(--header-height) - 160px);
+  box-sizing: border-box;
+}
+
+nav.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: calc(110px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 15px);
+  background: #000;
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 1000;
+  box-shadow: 0 -15px 50px rgba(0,0,0,1);
+  box-sizing: border-box;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 4px;
+}
+
+.nav-item.active { color: var(--gold); }
+.nav-item svg { width: 38px; height: 38px; fill: #555; transition: all 0.2s; }
+.nav-item.active svg { fill: var(--gold); transform: translateY(-3px) scale(1.08); }
+
+.card {
+  background: var(--surface);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 12px 15px;
+  background: var(--surface-light);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-header h2 { margin: 0; font-size: 13px; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
+
+.btn {
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.btn-primary { background: var(--gold); color: #000; }
+.btn-outline { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
+
+select, input {
+  width: 100%;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.perf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  color: #ccc;
+}
+
+.perf-table th, .perf-table td {
+  border: 1px solid #222;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.perf-table th { background: #151515; color: var(--gold); }
+.delta-pos { color: var(--success); }
+.delta-neg { color: var(--accent-red); }
+
+.chart-container { height: 260px; margin-bottom: 10px; }
+
+.fab-save {
+  position: fixed; right: 20px; bottom: 130px;
+  width: 56px; height: 56px; border-radius: 28px;
+  background: var(--gold); color: #000;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.6); z-index: 999;
+  border: none;
+  cursor: pointer;
+}
+
+.fab-save svg { width: 28px; height: 28px; fill: currentColor; }
+
+#timer-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.92); display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  z-index: 3500;
+}
+#timer-display { font-size: 80px; font-weight: 900; color: var(--gold); margin-bottom: 20px; }
+.timer-btn { padding: 15px 40px; border-radius: 30px; font-weight: 800; border: none; font-size: 18px; }
+
+.load-toggle {
+  background: #111; border: 1px solid #333; color: #777;
+  padding: 4px 8px; border-radius: 6px; font-size: 9px; font-weight: 800;
+  cursor: pointer; text-transform: uppercase;
+}
+.load-toggle.active { color: var(--gold); border-color: var(--gold); }
+
+.prev-load-popup {
+  position: absolute; background: var(--gold); color: #000;
+  padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 900;
+  pointer-events: none; transform: translateY(-100%); margin-top: -5px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 500;
+  display: none;
+}
+
+.skip-btn { color: var(--accent-red); font-size: 10px; font-weight: 800; cursor: pointer; }
+.exercise-skipped { opacity: 0.35; pointer-events: none; }
+.skip-reason { font-size: 10px; font-style: italic; color: var(--accent-red); margin-top: 4px; }
+
+/* Fully responsive centered modals */
+.modal, .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 2500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top, 16px)) max(16px, env(safe-area-inset-right, 16px)) max(16px, env(safe-area-inset-bottom, 16px)) max(16px, env(safe-area-inset-left, 16px));
+  box-sizing: border-box;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-content, .modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100dvh - 32px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  margin: auto;
+  box-shadow: 0 10px 35px rgba(0,0,0,0.85);
+  position: relative;
+}
+
+.set-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 1fr 1fr 34px 26px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.set-done-btn {
+  height: 38px;
+  border-radius: 6px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #666;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.set-done-btn.active {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: var(--success);
+  color: var(--success);
+  font-weight: 900;
+}
+
+.set-del-btn {
+  height: 38px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid #333;
+  color: #777;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.set-del-btn:hover {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+.msg {
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.msg.user {
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+  color: #fff;
+  align-self: flex-end;
+}
+.msg.ai {
+  background: #111;
+  border: 1px solid var(--border);
+  color: #ddd;
+}
+
+.markdown p { margin: 0 0 10px; line-height: 1.55; }
+.markdown h2, .markdown h3, .markdown h4 { color: var(--gold); margin: 14px 0 8px; }
+.markdown ul, .markdown ol { margin: 6px 0 12px 20px; padding: 0; line-height: 1.55; }
+.markdown-gap { height: 5px; }
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <img src="gs_logo.png" alt="GS Logo">
+  <span style="color:var(--gold); font-weight:900; letter-spacing:4px; font-size:20px;">GIAMMARIA SYSTEM</span>
+  <div style="margin-top:10px; font-size:10px; color:#555; font-weight:800; letter-spacing:2px;">POWERED BY GEMINI</div>
+  <div style="margin-top:20px; color:#888;">Performance & Evidence Based Training</div>
+</div>
+
+<header>
+  <div class="logo-container"><img src="gs_logo.png" alt="GS Logo"><span>GIAMMARIA SYSTEM</span></div>
+  <button class="btn btn-outline" id="account-button" onclick="openAccount()">ACCEDI</button>
+</header>
+
+<main id="view-container"></main>
+
+<!-- Account Modal -->
+<div id="account-modal" class="modal">
+  <div class="modal-card">
+    <div class="card-header"><h2>Account</h2><button class="btn btn-outline" onclick="closeAccount()">CHIUDI</button></div>
+    <div id="account-welcome" class="msg ai" style="display:none;margin-top:10px;"></div>
+    <form id="account-form" onsubmit="submitAccount(event)" style="margin-top:10px;">
+      <input id="account-name" type="text" placeholder="Nome e cognome" autocomplete="name" style="margin-bottom:8px;">
+      <input id="account-email" type="email" placeholder="Email" autocomplete="email" required style="margin-bottom:8px;">
+      <input id="account-password" type="password" placeholder="Password (minimo 8 caratteri)" autocomplete="current-password" minlength="8" required style="margin-bottom:8px;">
+      <button class="btn btn-primary" type="submit" id="account-submit" style="width:100%;">ACCEDI</button>
+    </form>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="startGoogleAuth()" id="google-auth">CONTINUA CON GOOGLE</button>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="startAppleAuth()" id="apple-auth">CONTINUA CON APPLE</button>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="toggleAccountMode()" id="account-mode">CREA UN ACCOUNT</button>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="logoutAccount()" id="account-logout">ESCI</button>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px;display:none;" onclick="syncAccountData()" id="account-sync">SINCRONIZZA DATI</button>
+    <div id="account-status" class="msg ai" style="margin-top:10px;"></div>
+  </div>
+</div>
+
+<!-- Timer Overlay -->
+<div id="timer-overlay">
+  <div id="timer-display">00:00</div>
+  <button class="timer-btn btn-primary" onclick="stopTimer()">CHIUDI</button>
+</div>
+
+<!-- Modal Salto Esercizio -->
+<div id="skip-modal" class="modal">
+  <div class="modal-content">
+    <h2 style="color:var(--gold); margin-top:0;">SALTA ESERCIZIO</h2>
+    <p style="font-size:12px; color:#aaa;">Indica la causa del salto:</p>
+    <select id="skip-reason-select" style="margin-bottom:15px;">
+      <option value="Dolore/Infortunio">Dolore / Infortunio</option>
+      <option value="Mancanza di tempo">Mancanza di tempo</option>
+      <option value="Attrezzatura occupata">Attrezzatura occupata</option>
+      <option value="Altro">Altro</option>
+    </select>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="$('skip-modal').style.display='none'">ANNULLA</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="confirmSkip()">CONFERMA</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Sostituzione Esercizio -->
+<div id="replace-modal" class="modal">
+  <div class="modal-content">
+    <h2 style="color:var(--gold);margin-top:0;">SOSTITUISCI ESERCIZIO</h2>
+    <div id="replace-current" style="font-size:12px;color:#aaa;margin-bottom:12px;"></div>
+    <input id="replace-search" type="search" placeholder="Cerca alternativa..." oninput="renderReplacementOptions(this.value)">
+    <div id="replace-options" style="margin-top:12px;"></div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="$('replace-modal').style.display='none';replacementDraft=null">ANNULLA</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="confirmReplacement()">CONFERMA</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Reset Sessione Coach -->
+<div id="reset-session-modal" class="modal">
+  <div class="modal-content">
+    <h2 style="color:var(--gold);margin-top:0;">Azzerare il Coach AI?</h2>
+    <p style="font-size:12px;color:#aaa;">Verranno rimossi domanda, risposta, cronologia e analisi non importate. Programmi, progressi e impostazioni resteranno intatti.</p>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeResetSession()">Annulla</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="confirmResetSession()">Azzera</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Aggiunta Esercizio Bonus Configurato -->
+<div id="bonus-modal" class="modal">
+  <div class="modal-content">
+    <h2 style="color:var(--gold);margin-top:0;">AGGIUNGI ESERCIZIO BONUS</h2>
+    <p style="font-size:11px;color:#aaa;margin-bottom:12px;">Configura i parametri dell'esercizio bonus prima di inserirlo.</p>
+    
+    <label style="font-size:10px;color:var(--gold);font-weight:800;">NOME ESERCIZIO *</label>
+    <input id="bonus-name" type="text" placeholder="Es. Alzate Laterali ai Cavi" style="margin-bottom:8px;" required>
+    
+    <label style="font-size:10px;color:var(--gold);font-weight:800;">GRUPPO MUSCOLARE</label>
+    <select id="bonus-group" style="margin-bottom:8px;">
+      <option value="SPALLE">Spalle</option>
+      <option value="PETTO">Petto</option>
+      <option value="SCHIENA">Schiena / Dorso</option>
+      <option value="BICIPITI">Bicipiti</option>
+      <option value="TRICIPITI">Tricipiti</option>
+      <option value="QUADRICIPITI">Quadricipiti</option>
+      <option value="FEMORALI">Femorali</option>
+      <option value="GLUTEI">Glutei</option>
+      <option value="POLPACCI">Polpacci</option>
+      <option value="ADDOME">Addome</option>
+      <option value="ALTRO">Altro</option>
+    </select>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div>
+        <label style="font-size:10px;color:var(--gold);font-weight:800;">SERIE</label>
+        <input id="bonus-sets" type="number" min="1" max="10" value="3" style="text-align:center;">
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--gold);font-weight:800;">REPS TARGET</label>
+        <input id="bonus-reps" type="text" value="8-12" style="text-align:center;">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div>
+        <label style="font-size:10px;color:var(--gold);font-weight:800;">INTENSITÀ (RIR/RPE)</label>
+        <input id="bonus-intensity" type="text" value="1 RIR" style="text-align:center;">
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--gold);font-weight:800;">RECUPERO</label>
+        <input id="bonus-rest" type="text" value="60-90s" style="text-align:center;">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div>
+        <label style="font-size:10px;color:var(--gold);font-weight:800;">CARICO (KG)</label>
+        <input id="bonus-load" type="number" step="0.5" placeholder="Opzionale" style="text-align:center;">
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--gold);font-weight:800;">TEMPO</label>
+        <input id="bonus-tempo" type="text" placeholder="es. 3-0-1" style="text-align:center;">
+      </div>
+    </div>
+
+    <label style="font-size:10px;color:var(--gold);font-weight:800;">NOTE</label>
+    <input id="bonus-notes" type="text" placeholder="Note tecniche" style="margin-bottom:15px;">
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeBonusModal()">ANNULLA</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="saveBonusExercise()">AGGIUNGI</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip Carico Precedente -->
+<div id="prev-load-tooltip" class="prev-load-popup">PREV: 00kg</div>
+
+<button class="fab-save" onclick="saveAll()">
+  <svg viewBox="0 0 24 24"><path d="M17,3H5C3.89,3 3,3.9 3,5V19C3,20.1 3.89,21 5,21H19C20.1,21 21,20.1 21,19V7L17,3M12,19C10.34,19 9,17.66 9,16C9,14.34 10.34,13 12,13C13.66,13 15,14.34 15,16C15,17.66 13.66,19 12,19M15,9H5V5H15V9Z"/></svg>
+</button>
+
+<nav class="bottom-nav">
+  <a href="#" class="nav-item active" id="nav-home" onclick="navigate('home', event)">
+    <svg viewBox="0 0 24 24"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg><span>HOME</span>
+  </a>
+  <a href="#" class="nav-item" id="nav-training" onclick="navigate('training', event)">
+    <svg viewBox="0 0 24 24"><path d="M20.57,14.86L22,13.43L20.57,12L17,15.57L8.43,7L12,3.43L10.57,2L9.14,3.43L7.71,2L5.57,4.14L4.14,2.71L2.71,4.14L4.14,5.57L2,7.71L3.43,9.14L2,10.57L3.43,12L7,8.43L15.57,17L12,20.57L13.43,22L14.86,20.57L16.29,22L18.43,19.86L19.86,21.29L21.29,19.86L19.86,18.43L22,16.29L20.57,14.86Z"/></svg><span>WORKOUT</span>
+  </a>
+  <a href="#" class="nav-item" id="nav-stats" onclick="navigate('stats', event)">
+    <svg viewBox="0 0 24 24"><path d="M16,11.78L20.24,4.45L21.97,5.45L16.74,13.03L13,10.32L9,16.88L9,17H21V19H3V5H5V16.5L9.17,10L13.06,12.7L16,11.78Z"/></svg><span>PERF</span>
+  </a>
+  <a href="#" class="nav-item" id="nav-ai" onclick="navigate('ai', event)">
+    <svg viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z"/></svg><span>COACH AI</span>
+  </a>
+  <a href="#" class="nav-item" id="nav-db" onclick="navigate('db', event)">
+    <svg viewBox="0 0 24 24"><path d="M15.5,14L20.35,18.85L18.85,20.35L14,15.5V14.71L13.73,14.43C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.43,13.73L14.71,14H15.5M9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14Z"/></svg><span>DB</span>
+  </a>
+</nav>
+
+<script>
+let DATA=null, currentView='home', currentWeek=1, currentDay=0, accountRegisterMode=false, accountSyncTimer=null;
+window.activeCoachProposals = {};
+
+const EVIDENCE_SOURCES=[
+  {title:'ACSM Guidelines for Exercise Testing and Prescription',sourceType:'position_stand',url:'https://pubmed.ncbi.nlm.nih.gov/19204579/',relevance:'strength and conditioning',confidence:'high'},
+  {title:'The Effects of Periodization on Strength and Muscle Hypertrophy',sourceType:'systematic_review',url:'https://pubmed.ncbi.nlm.nih.gov/27219156/',relevance:'periodization',confidence:'moderate'},
+  {title:'Resistance Training Recommendations to Maximize Muscle Hypertrophy',sourceType:'review',url:'https://pubmed.ncbi.nlm.nih.gov/35068446/',relevance:'hypertrophy',confidence:'moderate'}
+];
+
+const COACH_API_URL = (window.NativeConfig && window.NativeConfig.getCoachApiUrl && window.NativeConfig.getCoachApiUrl()) || '';
+const MAX_DOCUMENT_BYTES = 12 * 1024 * 1024;
+let coachRequestToken=0;
+
+const DEFAULT_STORE = {
+  data: {},
+  subs: {},
+  bw: {},
+  prefs: { intensityType: 'RIR', duration: 16, frequency: 4 },
+  loadTypes: {},
+  tempos: {},
+  skips: {},
+  bonus: {},
+  customSets: {},
+  docs: [],
+  models: [],
+  activeProgram: null,
+  exIntensity: {},
+  accountToken: null,
+  accountUser: null,
+  chatHistory: [],
+  chatSessionId: null
+};
+
+function loadStore(){
+  try {
+    const raw = localStorage.getItem('GS_STORE');
+    if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STORE));
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULT_STORE, ...parsed };
+  } catch(err) {
+    console.error('Invalid saved app data', err);
+    return JSON.parse(JSON.stringify(DEFAULT_STORE));
+  }
+}
+let store = loadStore();
+if(!store.prefs) store.prefs = { intensityType: 'RIR', duration: 16, frequency: 4 };
+if(!store.prefs.duration) store.prefs.duration = 16;
+if(typeof store.prefs.durationUserSet!=='boolean') store.prefs.durationUserSet = false;
+if(!store.prefs.frequency) store.prefs.frequency = 4;
+if(!store.loadTypes) store.loadTypes = {};
+if(!store.tempos) store.tempos = {};
+if(!store.skips) store.skips = {};
+if(!store.bonus) store.bonus = {};
+if(!store.customSets) store.customSets = {};
+if(!store.docs) store.docs = [];
+if(!store.models) store.models = [];
+if(!store.activeProgramId) store.activeProgramId = null;
+if(!store.exIntensity) store.exIntensity = {};
+if(!Object.prototype.hasOwnProperty.call(store,'accountToken')) store.accountToken = null;
+if(!Object.prototype.hasOwnProperty.call(store,'accountUser')) store.accountUser = null;
+if(!store.chatHistory) store.chatHistory = [];
+if(!store.chatSessionId) store.chatSessionId = `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+const $ = id => document.getElementById(id);
+const esc = x => String(x??'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+window.addEventListener('error', event => console.error('WEBVIEW_UNCAUGHT_ERROR', { message: event.message, source: event.filename, line: event.lineno, column: event.colno }));
+window.addEventListener('unhandledrejection', event => console.error('WEBVIEW_UNHANDLED_REJECTION', event.reason));
+
+function getLoadSuggestion(exerciseIndex, row){
+  if(currentWeek <= 1) return null;
+  const loads = [];
+  for(let week = currentWeek - 1; week >= 1; week--){
+    for(let set = 1; set <= 8; set++){
+      const value = parseFloat(store.data[`w${week}_d${currentDay}_e${exerciseIndex}_s${set}_load`]);
+      if(Number.isFinite(value) && value > 0) loads.push(value);
+    }
+    if(loads.length) break;
+  }
+  if(!loads.length) return null;
+  const average = loads.reduce((sum, value) => sum + value, 0) / loads.length;
+  const rir = Number(row.rirTarget);
+  return Math.round(average * (Number.isFinite(rir) && rir <= 1 ? 1.025 : 1) * 2) / 2;
+}
+
+let voiceRecognition = null, voiceOutputEnabled = true, lastCoachReply = '';
+window.nativeVoiceStatus = function(state, message){
+  const status = $('voice-status'); if(status) status.textContent = message || '';
+};
+window.nativeVoiceResult = function(text){
+  const input = $('ai-input'); if(input) input.value = text || '';
+};
+function startVoiceInput(){
+  const status = $('voice-status');
+  if(window.NativeConfig && NativeConfig.startVoiceInput){ NativeConfig.startVoiceInput(); return; }
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!Recognition){ if(status) status.textContent = 'Voce non disponibile in questo WebView.'; return; }
+  stopVoiceInput();
+  voiceRecognition = new Recognition();
+  voiceRecognition.lang = 'it-IT';
+  voiceRecognition.interimResults = false;
+  voiceRecognition.continuous = false;
+  voiceRecognition.onstart = () => { if(status) status.textContent = 'Ascolto…'; };
+  voiceRecognition.onerror = event => { if(status) status.textContent = 'Errore voce: ' + event.error; };
+  voiceRecognition.onend = () => { if(status && status.textContent === 'Ascolto…') status.textContent = ''; };
+  voiceRecognition.onresult = event => { const input = $('ai-input'); if(input) input.value = event.results[0][0].transcript; };
+  try { voiceRecognition.start(); } catch(error){ console.error('VOICE_START_ERROR', error); if(status) status.textContent = 'Voce non disponibile'; }
+}
+function stopVoiceInput(){
+  if(window.NativeConfig && NativeConfig.stopVoiceInput) NativeConfig.stopVoiceInput();
+  if(window.NativeConfig && NativeConfig.stopSpeech) NativeConfig.stopSpeech();
+  if(voiceRecognition){ voiceRecognition.stop(); voiceRecognition = null; }
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  const status = $('voice-status'); if(status) status.textContent = '';
+}
+function toggleVoiceOutput(){
+  voiceOutputEnabled = !voiceOutputEnabled;
+  const status = $('voice-status');
+  if(voiceOutputEnabled){
+    if(status) status.textContent = 'Lettura attiva';
+    if(lastCoachReply) speakCoachReply(lastCoachReply);
+  } else {
+    if(window.NativeConfig && NativeConfig.stopSpeech) NativeConfig.stopSpeech();
+    if(window.speechSynthesis) window.speechSynthesis.cancel();
+    if(status) status.textContent = 'Lettura disattivata';
+  }
+}
+function speakCoachReply(text){
+  if(!voiceOutputEnabled) return;
+  if(window.NativeConfig && NativeConfig.speak){ NativeConfig.speak(String(text || '')); return; }
+  if(!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'it-IT';
+  window.speechSynthesis.speak(utterance);
+}
+function clearCoachSession(){
+  console.debug('COACH_SESSION_CLEAR');
+  store.chatHistory = [];
+  window.pendingProgramImport = null;
+  window.activeCoachProposals = {};
+  const input = $('ai-input'); if(input) { input.value = ''; input.disabled = false; }
+  const history = $('chat-history'); if(history) history.innerHTML = '<div class="msg ai">Schermata pronta per una nuova domanda.</div>';
+  const analysis = $('analysis-results'); if(analysis) analysis.innerHTML = '<div class="msg ai">Nessuna analisi selezionata.</div>';
+  persist();
+}
+function updateAccountButton(){
+  const button = $('account-button');
+  if(button) button.textContent = store.accountUser?.name ? store.accountUser.name.split(' ')[0].toUpperCase() : 'ACCEDI';
+}
+function accountRequest(path, options={}){
+  if(!store.accountToken) throw new Error('Accedi per sincronizzare i dati.');
+  return apiFetch(coachEndpoint(path),{...options, headers:{'Content-Type':'application/json', Authorization:`Bearer ${store.accountToken}`, ...(options.headers||{})}});
+}
+function openAccount(){
+  updateAccountButton();
+  const modal = $('account-modal'); if(!modal) return;
+  modal.style.display = 'flex';
+  const logged = !!store.accountToken && !!store.accountUser;
+  $('account-form').style.display = logged ? 'none' : 'block';
+  $('account-mode').style.display = logged ? 'none' : 'block';
+  $('account-logout').style.display = logged ? 'block' : 'none';
+  $('account-sync').style.display = logged ? 'block' : 'none';
+  $('account-welcome').style.display = logged ? 'block' : 'none';
+  if(logged) $('account-welcome').textContent = `Benvenuto, ${store.accountUser.name}`;
+  $('account-status').textContent = logged ? 'Dati account pronti.' : 'Accedi o crea un account per sincronizzare i tuoi dati.';
+}
+function closeAccount(){ const modal = $('account-modal'); if(modal) modal.style.display = 'none'; }
+function logoutAccount(){
+  clearTimeout(accountSyncTimer);
+  store.accountToken = null; store.accountUser = null; persist(); updateAccountButton(); openAccount();
+}
+function toggleAccountMode(){
+  accountRegisterMode = !accountRegisterMode;
+  $('account-name').style.display = accountRegisterMode ? 'block' : 'none';
+  $('account-name').required = accountRegisterMode;
+  $('account-password').autocomplete = accountRegisterMode ? 'new-password' : 'current-password';
+  $('account-submit').textContent = accountRegisterMode ? 'REGISTRATI' : 'ACCEDI';
+  $('account-mode').textContent = accountRegisterMode ? 'HO GIÀ UN ACCOUNT' : 'CREA UN ACCOUNT';
+}
+async function submitAccount(event){
+  event.preventDefault();
+  const status = $('account-status'), button = $('account-submit'); button.disabled = true;
+  try {
+    const path = accountRegisterMode ? '/api/auth/register' : '/api/auth/login';
+    const body = { email: $('account-email').value.trim(), password: $('account-password').value };
+    if(accountRegisterMode) body.name = $('account-name').value.trim();
+    const response = await apiFetch(coachEndpoint(path), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const payload = await readApiJson(response);
+    store.accountToken = payload.token; store.accountUser = payload.user; persist();
+    if(!accountRegisterMode) await syncAccountData(true); else await syncAccountData(false);
+    updateAccountButton(); openAccount(); status.textContent = `Benvenuto, ${store.accountUser.name}`;
+  } catch(error) {
+    console.error('ACCOUNT_UI_ERROR', error);
+    status.textContent = error.message || 'Operazione account non riuscita.';
+  } finally {
+    button.disabled = false;
+  }
+}
+async function finishOAuthLogin(payload){
+  if(!payload?.token || !payload?.user) throw new Error('Risposta provider non valida.');
+  store.accountToken = payload.token; store.accountUser = payload.user; persist();
+  await syncAccountData(true);
+  updateAccountButton(); openAccount();
+  $('account-status').textContent = `Benvenuto, ${store.accountUser.name}`;
+}
+function startGoogleAuth(){
+  $('account-status').textContent = 'Apertura account Google…';
+  if(window.NativeConfig?.startGoogleSignIn){ NativeConfig.startGoogleSignIn(); return; }
+  $('account-status').textContent = 'Google Login richiede l’app Android configurata.';
+}
+function startAppleAuth(){
+  $('account-status').textContent = 'Apertura account Apple…';
+  if(window.NativeConfig?.startAppleAuth){ NativeConfig.startAppleAuth(); return; }
+  $('account-status').textContent = 'Apple Login richiede l’app Android configurata.';
+}
+async function nativeGoogleResult(credential){
+  try {
+    const response = await apiFetch(coachEndpoint('/api/auth/google'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential }) });
+    await finishOAuthLogin(await readApiJson(response));
+  } catch(error){ console.error('GOOGLE_AUTH_UI_ERROR', error); $('account-status').textContent = error.message || 'Accesso Google non riuscito.'; }
+}
+async function nativeAppleResult(code){
+  try {
+    const response = await apiFetch(coachEndpoint('/api/auth/apple'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+    await finishOAuthLogin(await readApiJson(response));
+  } catch(error){ console.error('APPLE_AUTH_UI_ERROR', error); $('account-status').textContent = error.message || 'Accesso Apple non riuscito.'; }
+}
+function nativeAuthError(message){
+  $('account-status').textContent = String(message || 'Autenticazione non riuscita.');
+}
+function accountPayload(){
+  const payload = JSON.parse(JSON.stringify(store));
+  delete payload.accountToken; delete payload.accountUser;
+  return payload;
+}
+async function syncAccountData(download=false){
+  const status = $('account-status'); if(status) status.textContent = 'Sincronizzazione…';
+  try {
+    if(download){
+      const response = await accountRequest('/api/account/me', { method: 'GET' });
+      const payload = await readApiJson(response);
+      if(payload.data && Object.keys(payload.data).length){
+        const token = store.accountToken, user = store.accountUser;
+        store = { ...store, ...payload.data, accountToken: token, accountUser: user };
+        persist(); render();
+      }
+    } else {
+      const response = await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload() }) });
+      await readApiJson(response);
+    }
+    if(status) status.textContent = 'Dati sincronizzati correttamente.';
+  } catch(error){
+    console.error('ACCOUNT_SYNC_ERROR', error);
+    if(status) status.textContent = error.message || 'Sincronizzazione non riuscita.';
+    throw error;
+  }
+}
+function scheduleAccountSync(){
+  if(!store.accountToken) return;
+  clearTimeout(accountSyncTimer);
+  accountSyncTimer = setTimeout(() => syncAccountData(false).catch(() => {}), 1200);
+}
+
+function newCoachQuestion(){
+  console.debug('NEW_CHAT_CLICK');
+  coachRequestToken++;
+  clearCoachSession();
+  store.chatSessionId = `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  render();
+  setTimeout(() => { const input = $('ai-input'); if(input) input.focus(); }, 0);
+}
+function openResetSession(){
+  console.debug('RESET_CHAT_CLICK');
+  const modal = $('reset-session-modal'); if(modal) modal.style.display = 'flex';
+}
+function closeResetSession(){
+  console.debug('OVERLAY_CLOSE:reset-session-modal');
+  const modal = $('reset-session-modal'); if(modal) modal.style.display = 'none';
+}
+function confirmResetSession(){
+  console.debug('RESET_CHAT_CONFIRM');
+  coachRequestToken++;
+  clearCoachSession();
+  store.chatSessionId = null;
+  closeResetSession();
+  render();
+}
+function markdownToHtml(value){
+  let text = esc(value).replace(/\r\n/g, '\n');
+  text = text.replace(/^### (.+)$/gm, '<h4>$1</h4>').replace(/^## (.+)$/gm, '<h3>$1</h3>').replace(/^# (.+)$/gm, '<h2>$1</h2>');
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/__(.+?)__/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>');
+  const lines = text.split('\n'), out = []; let list = null;
+  lines.forEach(line => {
+    const bullet = line.match(/^\s*[-\u2022]\s+(.+)$/), numbered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+    if(bullet || numbered){
+      const type = numbered ? 'ol' : 'ul';
+      if(list !== type){ if(list) out.push(`</${list}>`); out.push(`<${type}>`); list = type; }
+      out.push(`<li>${(bullet || numbered)[1]}</li>`);
+      return;
+    }
+    if(list){ out.push(`</${list}>`); list = null; }
+    if(line.trim()) out.push(`<p>${line}</p>`); else if(out.length) out.push('<div class="markdown-gap"></div>');
+  });
+  if(list) out.push(`</${list}>`);
+  return out.join('');
+}
+
+function fileDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('GS_DOCUMENTS', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('files');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+async function saveDocumentFile(id, data) {
+  const db = await fileDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('files', 'readwrite');
+    tx.objectStore('files').put(data, id);
+    tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+  });
+}
+async function getDocumentFile(id) {
+  const db = await fileDb();
+  return new Promise((resolve, reject) => {
+    const request = db.transaction('files').objectStore('files').get(id);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
+}
+async function removeDocumentFile(id) {
+  const db = await fileDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').delete(id);
+    tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+  });
+}
+function documentMime(filename, fallback) {
+  const name = String(filename || '').toLowerCase();
+  if(name.endsWith('.pdf')) return 'application/pdf';
+  if(name.endsWith('.txt')) return 'text/plain';
+  if(name.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  if(name.endsWith('.doc')) return 'application/msword';
+  if(name.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  if(name.endsWith('.xls')) return 'application/vnd.ms-excel';
+  return fallback || 'application/octet-stream';
+}
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    if (typeof file === 'string') return resolve(file);
+    const reader = new FileReader();
+    reader.onload = () => { const value = String(reader.result || ''); const comma = value.indexOf(','); resolve(comma >= 0 ? value.slice(comma + 1) : value); };
+    reader.onerror = () => reject(reader.error || new Error('Impossibile leggere il file.'));
+    reader.readAsDataURL(file);
+  });
+}
+function triggerFileSelect() {
+  if (window.NativeConfig && typeof window.NativeConfig.pickDocument === 'function') {
+    window.NativeConfig.pickDocument();
+  } else if ($('db-file-input')) {
+    $('db-file-input').click();
+  }
+}
+window.nativeDocumentReceived = async function(docData) {
+  if (!docData || !docData.base64) return;
+  const doc = {
+    id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9),
+    name: docData.name || 'documento.xlsx',
+    size: docData.sizeText || ((docData.sizeBytes / 1024).toFixed(1) + ' KB'),
+    date: Date.now(),
+    type: docData.mime || documentMime(docData.name, 'application/octet-stream'),
+    base64: docData.base64
+  };
+  try {
+    await saveDocumentFile(doc.id, docData.base64);
+    if (!store.docs) store.docs = [];
+    store.docs.push(doc);
+    persist();
+    render();
+    const logMsg = 'DOC_SAVED: name=' + doc.name + ' size=' + doc.size + ' totalDocs=' + store.docs.length;
+    console.info(logMsg);
+    if (window.NativeConfig && typeof window.NativeConfig.logDiagnostic === 'function') window.NativeConfig.logDiagnostic('GiammariaExcel', logMsg);
+  } catch(err) {
+    alert('Impossibile salvare il documento: ' + err.message);
+  }
+};
+function coachEndpoint(path) {
+  if (!COACH_API_URL || !/^https?:\/\//i.test(COACH_API_URL)) throw new Error('Endpoint Coach AI non configurato.');
+  return COACH_API_URL.replace(/\/$/, '') + path;
+}
+async function apiFetch(url, options, timeoutMs=90000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  console.debug('[Coach AI] request', url);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    console.debug('[Coach AI] response', response.status, url);
+    return response;
+  } catch(err) {
+    console.error('[Coach AI] network error', err);
+    if(err.name === 'AbortError') throw new Error('Timeout della richiesta AI.');
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+async function readApiJson(response) {
+  const raw = await response.text();
+  let payload = {};
+  try { payload = raw ? JSON.parse(raw) : {}; } catch(err) { console.error('[Coach AI] invalid JSON', response.status, raw); }
+  if(!response.ok) {
+    const message = payload.error || payload.message || raw || 'Risposta vuota del server';
+    console.error('[Coach AI] server error', response.status, message);
+    throw new Error(`HTTP ${response.status}: ${message}`);
+  }
+  if(!raw) throw new Error(`HTTP ${response.status}: risposta vuota del server`);
+  return payload;
+}
+function setCount(value) {
+  if(typeof value === 'number' && Number.isFinite(value)) return Math.max(1, Math.round(value));
+  const match = String(value ?? '').match(/\d+/);
+  return match ? Math.max(1, parseInt(match[0], 10)) : 3;
+}
+
+/**
+ * CANONICAL DATA MODEL NORMALIZER
+ * Hierarchy: Program -> Week -> Session -> Exercise -> Set
+ */
+function normalizeProgram(payload) {
+  const candidate = payload.program || payload.data?.program || payload.data || payload;
+  if(!candidate || !Array.isArray(candidate.weeks) || !candidate.weeks.length) {
+    throw new Error('Il server non ha restituito una programmazione JSON valida.');
+  }
+  const program = JSON.parse(JSON.stringify({
+    ...candidate,
+    id: candidate.id || `prog_${Date.now()}`,
+    title: payload.title ?? candidate.title ?? 'Programma Personalizzato',
+    source_summary: payload.source_summary ?? candidate.source_summary ?? '',
+    assumptions: payload.assumptions ?? candidate.assumptions ?? [],
+    global_rules: payload.global_rules ?? candidate.global_rules ?? [],
+    warnings: payload.warnings ?? candidate.warnings ?? []
+  }));
+
+  let totalImportSessions = 0;
+  let totalImportExercises = 0;
+
+  program.weeks = program.weeks.map((week, wi) => {
+    const wNum = week.weekNumber ?? week.week ?? wi + 1;
+    const rawSessions = week.sessions || week.days || [];
+    totalImportSessions += rawSessions.length;
+
+    const normalizedSessions = rawSessions.map((session, si) => {
+      const isBonusSession = Boolean(session.is_bonus || session.isBonus || /(?:bonus|richiamo|extra|opzional)/i.test(session.title || session.name || ''));
+      const rawExercises = session.exercises || session.rows || [];
+
+      const exercises = rawExercises.map((exercise, ei) => {
+        const setsCount = setCount(exercise.sets);
+        const rest = exercise.rest_seconds != null ? `${exercise.rest_seconds} s` : (exercise.rest || '90s');
+        const isBonusEx = Boolean(exercise.is_bonus || exercise.isBonus || isBonusSession);
+        const exId = exercise.id || `w${wNum}_s${si + 1}_e${ei + 1}`;
+        const exName = exercise.name || exercise.exercise || `Esercizio ${ei + 1}`;
+        const repsTarget = exercise.reps ?? exercise.repsTarget ?? '8-10';
+        const plannedLoad = exercise.load != null ? Number(exercise.load) : (exercise.plannedLoad != null ? Number(exercise.plannedLoad) : null);
+        const rirTarget = exercise.rir != null ? Number(exercise.rir) : (exercise.rirTarget != null ? Number(exercise.rirTarget) : 1);
+        const rpeTarget = exercise.rpe != null ? Number(exercise.rpe) : (exercise.rpeTarget != null ? Number(exercise.rpeTarget) : null);
+        const tempo = exercise.tempo || '';
+
+        // Build canonical sets[] array
+        let canonicalSets = [];
+        if (Array.isArray(exercise.sets_data) && exercise.sets_data.length) {
+          canonicalSets = exercise.sets_data.map((s, sIdx) => ({
+            id: s.id || `${exId}_s${sIdx + 1}`,
+            order: s.order || sIdx + 1,
+            reps: s.reps ?? repsTarget,
+            load: s.load != null ? Number(s.load) : plannedLoad,
+            load_unit: s.load_unit || 'kg',
+            percentage_1rm: s.percentage_1rm != null ? Number(s.percentage_1rm) : null,
+            rpe: s.rpe != null ? Number(s.rpe) : rpeTarget,
+            rir: s.rir != null ? Number(s.rir) : rirTarget,
+            rest_seconds: s.rest_seconds || parseInt(rest, 10) || 90,
+            tempo: s.tempo || tempo,
+            done: Boolean(s.done)
+          }));
+        } else if (Array.isArray(exercise.sets) && exercise.sets.length && typeof exercise.sets[0] === 'object') {
+          canonicalSets = exercise.sets.map((s, sIdx) => ({
+            id: s.id || `${exId}_s${sIdx + 1}`,
+            order: s.order || sIdx + 1,
+            reps: s.reps ?? repsTarget,
+            load: s.load != null ? Number(s.load) : plannedLoad,
+            load_unit: s.load_unit || 'kg',
+            percentage_1rm: s.percentage_1rm != null ? Number(s.percentage_1rm) : null,
+            rpe: s.rpe != null ? Number(s.rpe) : rpeTarget,
+            rir: s.rir != null ? Number(s.rir) : rirTarget,
+            rest_seconds: s.rest_seconds || parseInt(rest, 10) || 90,
+            tempo: s.tempo || tempo,
+            done: Boolean(s.done)
+          }));
+        } else {
+          canonicalSets = Array.from({ length: setsCount }, (_, sIdx) => ({
+            id: `${exId}_s${sIdx + 1}`,
+            order: sIdx + 1,
+            reps: repsTarget,
+            load: plannedLoad,
+            load_unit: 'kg',
+            percentage_1rm: null,
+            rpe: rpeTarget,
+            rir: rirTarget,
+            rest_seconds: parseInt(rest, 10) || 90,
+            tempo: tempo,
+            done: false
+          }));
+        }
+
+        return {
+          id: exId,
+          name: exName,
+          exercise: exName,
+          order: exercise.order || ei + 1,
+          movement: exercise.movement || exercise.muscle_group || 'ALTRO',
+          muscle_groups: Array.isArray(exercise.muscle_groups) ? exercise.muscle_groups : (exercise.muscle_group ? [exercise.muscle_group] : []),
+          muscleGroups: Array.isArray(exercise.muscle_groups) ? exercise.muscle_groups : (exercise.muscle_group ? [exercise.muscle_group] : []),
+          muscle_group: exercise.muscle_group || null,
+          superset_id: exercise.superset_id || null,
+          notes: exercise.notes || '',
+          progression_rule: exercise.progression_rule || '',
+          is_bonus: isBonusEx,
+          isBonus: isBonusEx,
+          sets: canonicalSets,
+          repsTarget: repsTarget,
+          rpeTarget: rpeTarget,
+          rirTarget: rirTarget,
+          rest: rest,
+          rest_seconds: exercise.rest_seconds != null ? exercise.rest_seconds : (parseInt(rest, 10) || null),
+          plannedLoad: plannedLoad,
+          tempo: tempo,
+          setRows: Array.from({ length: Math.max(0, canonicalSets.length - 1) }, (_, i) => i + 2)
+        };
+      });
+
+      totalImportExercises += exercises.length;
+      const sTitle = session.title || session.name || `SESSIONE ${si + 1}`;
+      console.info(`DOC_SESSION: week=${wNum} session=${si + 1} title=${sTitle} is_bonus=${isBonusSession} exerciseCount=${exercises.length}`);
+
+      return {
+        id: session.id || `w${wNum}_s${si + 1}`,
+        day: session.day || `Giorno ${si + 1}`,
+        title: sTitle,
+        is_bonus: isBonusSession,
+        isBonus: isBonusSession,
+        exercises: exercises,
+        rows: exercises
+      };
+    });
+
+    return {
+      id: week.id || `w${wNum}`,
+      weekNumber: wNum,
+      week: wNum,
+      title: week.title || `SETTIMANA ${String(wNum).padStart(2, '0')}`,
+      label: week.label || '',
+      sessions: normalizedSessions,
+      days: normalizedSessions
+    };
+  });
+
+  console.info(`DOC_IMPORT_SESSIONS=${totalImportSessions}`);
+  console.info(`DOC_IMPORT_EXERCISES=${totalImportExercises}`);
+
+  if(!program.weeks.some(week => (week.sessions || week.days || []).some(session => (session.exercises || session.rows || []).length))) {
+    throw new Error('La programmazione non contiene esercizi importabili.');
+  }
+  program.exerciseDb = (DATA && DATA.exerciseDb) || candidate.exerciseDb || {};
+  program.source = 'Gemini Coach API';
+  adaptProgramDuration(program);
+  return program;
+}
+
+/**
+ * CLIENT-SIDE CANONICAL PROGRAM MUTATOR (20 Operations)
+ */
+function applyOperationsToProgram(program, operations) {
+  if (!program || typeof program !== "object") throw new Error("Programma non valido.");
+  if (!Array.isArray(operations) || !operations.length) return { ok: true, program, appliedCount: 0 };
+
+  const cloned = JSON.parse(JSON.stringify(program));
+  if (!Array.isArray(cloned.weeks) || !cloned.weeks.length) throw new Error("Il programma non contiene settimane valide.");
+
+  let appliedCount = 0;
+
+  for (let opIdx = 0; opIdx < operations.length; opIdx++) {
+    const op = operations[opIdx];
+    const type = op.type;
+    const targetWeekNum = op.week;
+    const targetSessionSpec = op.session;
+    const targetExName = String(op.exercise || "").toLowerCase();
+    const targetExId = op.exercise_id;
+    const targetSetIndex = op.set_index;
+    const changes = op.changes || {};
+
+    const weeksToModify = targetWeekNum === "all" || targetWeekNum == null
+      ? cloned.weeks
+      : cloned.weeks.filter(w => (w.weekNumber ?? w.week) === Number(targetWeekNum) || w.id === targetWeekNum);
+
+    if (!weeksToModify.length && targetWeekNum !== "all") {
+      throw new Error(`Settimana target non trovata: ${targetWeekNum}`);
+    }
+
+    if (type === "add_week") {
+      const newWeekNum = cloned.weeks.length + 1;
+      const template = cloned.weeks[cloned.weeks.length - 1];
+      const newWeek = JSON.parse(JSON.stringify(template));
+      newWeek.id = `w${newWeekNum}`;
+      newWeek.weekNumber = newWeekNum;
+      newWeek.week = newWeekNum;
+      newWeek.label = changes.label || `Settimana ${newWeekNum}`;
+      cloned.weeks.push(newWeek);
+      appliedCount++;
+      continue;
+    }
+
+    if (type === "remove_week") {
+      const weekIndex = cloned.weeks.findIndex(w => (w.weekNumber ?? w.week) === Number(targetWeekNum) || w.id === targetWeekNum);
+      if (weekIndex >= 0) {
+        cloned.weeks.splice(weekIndex, 1);
+        appliedCount++;
+      }
+      continue;
+    }
+
+    if (type === "modify_week") {
+      weeksToModify.forEach(w => {
+        if (changes.label) w.label = changes.label;
+        if (changes.title) w.title = changes.title;
+        appliedCount++;
+      });
+      continue;
+    }
+
+    weeksToModify.forEach(w => {
+      const sessions = w.sessions || w.days || [];
+      const sessionsToModify = targetSessionSpec === "all" || targetSessionSpec == null
+        ? sessions
+        : sessions.filter((s, idx) => {
+            const sNum = parseInt(targetSessionSpec, 10);
+            if (Number.isFinite(sNum)) return idx === sNum - 1 || idx === sNum;
+            return s.id === targetSessionSpec || (s.title && s.title.toLowerCase().includes(String(targetSessionSpec).toLowerCase()));
+          });
+
+      if (type === "add_session") {
+        const newSessionId = `${w.id || 'w'+(w.weekNumber||w.week)}_s${sessions.length + 1}`;
+        const newSession = {
+          id: newSessionId,
+          title: changes.title || `SESSIONE ${sessions.length + 1}`,
+          day: changes.day || `Giorno ${sessions.length + 1}`,
+          is_bonus: Boolean(changes.is_bonus),
+          exercises: [],
+          rows: []
+        };
+        sessions.push(newSession);
+        w.sessions = sessions;
+        w.days = sessions;
+        appliedCount++;
+        return;
+      }
+
+      if (type === "remove_session") {
+        const sIndex = sessions.findIndex((s, idx) => {
+          const sNum = parseInt(targetSessionSpec, 10);
+          if (Number.isFinite(sNum)) return idx === sNum - 1 || idx === sNum;
+          return s.id === targetSessionSpec || (s.title && s.title.toLowerCase().includes(String(targetSessionSpec).toLowerCase()));
+        });
+        if (sIndex >= 0) {
+          sessions.splice(sIndex, 1);
+          appliedCount++;
+        }
+        return;
+      }
+
+      if (type === "modify_session") {
+        sessionsToModify.forEach(s => {
+          if (changes.title) s.title = changes.title;
+          if (changes.day) s.day = changes.day;
+          if (changes.is_bonus !== undefined) { s.is_bonus = Boolean(changes.is_bonus); s.isBonus = Boolean(changes.is_bonus); }
+          appliedCount++;
+        });
+        return;
+      }
+
+      sessionsToModify.forEach(s => {
+        const exercises = s.exercises || s.rows || [];
+
+        if (type === "add_exercise") {
+          const exName = op.target_exercise || op.exercise || changes.name || "Nuovo Esercizio";
+          const setsCount = Number(changes.sets || 3);
+          const setsList = Array.from({ length: setsCount }, (_, i) => ({
+            id: `${s.id || 's'}_e${exercises.length + 1}_s${i + 1}`,
+            order: i + 1,
+            reps: changes.reps || "8-10",
+            load: changes.load != null ? Number(changes.load) : null,
+            load_unit: changes.load_unit || "kg",
+            percentage_1rm: changes.percentage_1rm != null ? Number(changes.percentage_1rm) : null,
+            rpe: changes.rpe != null ? Number(changes.rpe) : null,
+            rir: changes.rir != null ? Number(changes.rir) : 1,
+            rest_seconds: changes.rest_seconds || 90,
+            tempo: changes.tempo || "",
+            done: false
+          }));
+
+          exercises.push({
+            id: `${s.id || 's'}_e${exercises.length + 1}`,
+            name: exName,
+            exercise: exName,
+            order: exercises.length + 1,
+            movement: changes.movement || "ALTRO",
+            muscle_groups: Array.isArray(changes.muscle_groups) ? changes.muscle_groups : (changes.muscle_group ? [changes.muscle_group] : []),
+            muscleGroups: Array.isArray(changes.muscle_groups) ? changes.muscle_groups : (changes.muscle_group ? [changes.muscle_group] : []),
+            muscle_group: changes.muscle_group || null,
+            superset_id: changes.superset_id || null,
+            notes: changes.notes || "",
+            progression_rule: changes.progression_rule || "",
+            is_bonus: Boolean(changes.is_bonus || s.is_bonus),
+            isBonus: Boolean(changes.is_bonus || s.is_bonus),
+            sets: setsList,
+            repsTarget: changes.reps || "8-10",
+            rirTarget: changes.rir != null ? Number(changes.rir) : 1,
+            rpeTarget: changes.rpe != null ? Number(changes.rpe) : null,
+            rest: changes.rest || "90s",
+            plannedLoad: changes.load != null ? Number(changes.load) : null,
+            tempo: changes.tempo || "",
+            setRows: Array.from({ length: Math.max(0, setsCount - 1) }, (_, i) => i + 2)
+          });
+          s.exercises = exercises;
+          s.rows = exercises;
+          appliedCount++;
+          return;
+        }
+
+        if (type === "remove_exercise") {
+          const initialLen = exercises.length;
+          const filtered = exercises.filter(ex => {
+            const matchName = targetExName && String(ex.name || ex.exercise || "").toLowerCase().includes(targetExName);
+            const matchId = targetExId && ex.id === targetExId;
+            return !(matchName || matchId);
+          });
+          s.exercises = filtered;
+          s.rows = filtered;
+          appliedCount += (initialLen - filtered.length);
+          return;
+        }
+
+        if (type === "replace_exercise") {
+          exercises.forEach(ex => {
+            const matchName = targetExName && String(ex.name || ex.exercise || "").toLowerCase().includes(targetExName);
+            const matchId = targetExId && ex.id === targetExId;
+            if (matchName || matchId) {
+              const newName = op.target_exercise || changes.name || "Esercizio Sostitutivo";
+              ex.name = newName;
+              ex.exercise = newName;
+              if (changes.movement) ex.movement = changes.movement;
+              if (changes.muscle_groups) { ex.muscle_groups = changes.muscle_groups; ex.muscleGroups = changes.muscle_groups; }
+              if (changes.notes) ex.notes = changes.notes;
+              appliedCount++;
+            }
+          });
+          return;
+        }
+
+        if (type === "create_superset") {
+          const ssId = changes.superset_id || `ss_${Date.now().toString(36)}`;
+          const names = [targetExName, String(op.target_exercise || "").toLowerCase()].filter(Boolean);
+          exercises.forEach(ex => {
+            const currentName = String(ex.name || ex.exercise || "").toLowerCase();
+            if (names.some(n => currentName.includes(n)) || (targetExId && ex.id === targetExId)) {
+              ex.superset_id = ssId;
+              appliedCount++;
+            }
+          });
+          return;
+        }
+
+        if (type === "remove_superset") {
+          exercises.forEach(ex => {
+            const matchName = targetExName && String(ex.name || ex.exercise || "").toLowerCase().includes(targetExName);
+            const matchId = targetExId && ex.id === targetExId;
+            const matchSS = changes.superset_id && ex.superset_id === changes.superset_id;
+            if (matchName || matchId || matchSS) {
+              ex.superset_id = null;
+              appliedCount++;
+            }
+          });
+          return;
+        }
+
+        exercises.forEach(ex => {
+          const matchName = targetExName && String(ex.name || ex.exercise || "").toLowerCase().includes(targetExName);
+          const matchId = targetExId && ex.id === targetExId;
+          if (!matchName && !matchId && targetExName) return;
+
+          if (!Array.isArray(ex.sets)) {
+            const n = typeof ex.sets === "number" ? ex.sets : 3;
+            ex.sets = Array.from({ length: n }, (_, i) => ({
+              id: `${ex.id}_s${i + 1}`,
+              order: i + 1,
+              reps: ex.repsTarget || ex.reps || "8-10",
+              load: ex.plannedLoad || ex.load || null,
+              load_unit: ex.load_unit || "kg",
+              percentage_1rm: ex.percentage_1rm || null,
+              rpe: ex.rpeTarget || ex.rpe || null,
+              rir: ex.rirTarget || ex.rir || 1,
+              rest_seconds: ex.rest_seconds || 90,
+              tempo: ex.tempo || "",
+              done: false
+            }));
+          }
+
+          if (type === "add_set") {
+            const newOrder = ex.sets.length + 1;
+            ex.sets.push({
+              id: `${ex.id}_s${newOrder}`,
+              order: newOrder,
+              reps: changes.reps || ex.sets[ex.sets.length - 1]?.reps || "8-10",
+              load: changes.load != null ? Number(changes.load) : (ex.sets[ex.sets.length - 1]?.load || null),
+              load_unit: changes.load_unit || "kg",
+              percentage_1rm: changes.percentage_1rm != null ? Number(changes.percentage_1rm) : null,
+              rpe: changes.rpe != null ? Number(changes.rpe) : null,
+              rir: changes.rir != null ? Number(changes.rir) : 1,
+              rest_seconds: changes.rest_seconds || 90,
+              tempo: changes.tempo || ex.tempo || "",
+              done: false
+            });
+            ex.setRows = Array.from({ length: Math.max(0, ex.sets.length - 1) }, (_, i) => i + 2);
+            appliedCount++;
+            return;
+          }
+
+          if (type === "remove_set") {
+            if (ex.sets.length > 1) {
+              const setIdx = targetSetIndex != null ? targetSetIndex - 1 : ex.sets.length - 1;
+              if (setIdx >= 0 && setIdx < ex.sets.length) {
+                ex.sets.splice(setIdx, 1);
+                ex.sets.forEach((s, idx) => { s.order = idx + 1; });
+                ex.setRows = Array.from({ length: Math.max(0, ex.sets.length - 1) }, (_, i) => i + 2);
+                appliedCount++;
+              }
+            }
+            return;
+          }
+
+          if (type === "modify_set") {
+            const setIdx = targetSetIndex != null ? targetSetIndex - 1 : 0;
+            const targetSet = ex.sets[setIdx];
+            if (targetSet) {
+              if (changes.load !== undefined) targetSet.load = changes.load != null ? Number(changes.load) : null;
+              if (changes.reps !== undefined) targetSet.reps = changes.reps;
+              if (changes.rpe !== undefined) targetSet.rpe = changes.rpe != null ? Number(changes.rpe) : null;
+              if (changes.rir !== undefined) targetSet.rir = changes.rir != null ? Number(changes.rir) : null;
+              if (changes.rest_seconds !== undefined) targetSet.rest_seconds = changes.rest_seconds;
+              if (changes.tempo !== undefined) targetSet.tempo = changes.tempo;
+              if (changes.done !== undefined) targetSet.done = Boolean(changes.done);
+              appliedCount++;
+            }
+            return;
+          }
+
+          if (type === "modify_load") {
+            const targetLoad = Number(changes.load);
+            if (targetSetIndex != null) {
+              const set = ex.sets[targetSetIndex - 1];
+              if (set) { set.load = targetLoad; appliedCount++; }
+            } else {
+              ex.sets.forEach(s => { s.load = targetLoad; });
+              ex.plannedLoad = targetLoad;
+              appliedCount++;
+            }
+            return;
+          }
+
+          if (type === "modify_reps") {
+            if (targetSetIndex != null) {
+              const set = ex.sets[targetSetIndex - 1];
+              if (set) { set.reps = changes.reps; appliedCount++; }
+            } else {
+              ex.sets.forEach(s => { s.reps = changes.reps; });
+              ex.repsTarget = changes.reps;
+              appliedCount++;
+            }
+            return;
+          }
+
+          if (type === "modify_rpe" || type === "modify_rir") {
+            const val = changes.rpe !== undefined ? Number(changes.rpe) : Number(changes.rir);
+            const field = type === "modify_rpe" ? "rpe" : "rir";
+            if (targetSetIndex != null) {
+              const set = ex.sets[targetSetIndex - 1];
+              if (set) { set[field] = val; appliedCount++; }
+            } else {
+              ex.sets.forEach(s => { s[field] = val; });
+              if (type === "modify_rpe") ex.rpeTarget = val; else ex.rirTarget = val;
+              appliedCount++;
+            }
+            return;
+          }
+
+          if (type === "modify_rest") {
+            const restVal = changes.rest || `${changes.rest_seconds}s`;
+            ex.rest = restVal;
+            ex.rest_seconds = changes.rest_seconds || parseInt(restVal, 10);
+            ex.sets.forEach(s => { s.rest_seconds = ex.rest_seconds; });
+            appliedCount++;
+            return;
+          }
+
+          if (type === "modify_tempo") {
+            ex.tempo = changes.tempo;
+            ex.sets.forEach(s => { s.tempo = changes.tempo; });
+            appliedCount++;
+            return;
+          }
+
+          if (type === "modify_exercise") {
+            if (changes.name) { ex.name = changes.name; ex.exercise = changes.name; }
+            if (changes.movement) ex.movement = changes.movement;
+            if (changes.notes) ex.notes = changes.notes;
+            if (changes.reps) ex.repsTarget = changes.reps;
+            if (changes.load != null) ex.plannedLoad = Number(changes.load);
+            if (changes.rest) ex.rest = changes.rest;
+            appliedCount++;
+            return;
+          }
+        });
+      });
+    });
+  }
+
+  return { ok: true, program: cloned, appliedCount };
+}
+
+function setDesiredDuration(value){
+  const raw = value === 'custom' ? prompt('Inserisci la durata desiderata in settimane:', store.prefs.duration || 4) : value;
+  const duration = parseInt(raw, 10);
+  if(!Number.isFinite(duration) || duration < 1 || duration > 52){ alert('Inserisci una durata tra 1 e 52 settimane.'); return; }
+  if(DATA && Array.isArray(DATA.weeks) && DATA.weeks.length !== duration && !chooseProgramAdaptation('duration', duration)) return;
+  store.prefs.duration = duration; store.prefs.durationUserSet = true; persist(); render();
+}
+function setDesiredFrequency(value){
+  const days = parseInt(value, 10);
+  if(!Number.isFinite(days) || days < 1 || days > 7) return;
+  if(DATA && (store.prefs.frequency || 4) !== days) {
+    chooseProgramAdaptation('days', days);
+    return;
+  }
+  store.prefs.frequency = days; persist(); render();
+}
+function chooseProgramAdaptation(kind, desired){
+  const current = kind === 'duration' ? DATA.weeks.length : (store.prefs.frequency || 4);
+  const label = kind === 'duration' ? 'settimane' : 'giorni';
+  const overlay = document.createElement('div');
+  console.debug('ADAPTATION_DIALOG_OPEN', { kind, desired });
+  overlay.className = 'modal'; overlay.style.display = 'flex'; overlay.style.zIndex = '2600';
+  overlay.innerHTML = `<div class="modal-content"><h2 style="color:var(--gold);margin-top:0;">Come vuoi adattare la programmazione?</h2>
+    <p style="font-size:12px;color:#aaa;">Programma attuale: ${current} ${label}<br>Nuovo programma: ${desired} ${label}</p>
+    <button class="btn btn-outline" style="width:100%;margin:6px 0;text-align:left;" id="adapt-keep"><b>Tieni la progressione originale</b><br><small>Conserva il più possibile la struttura importata.</small></button>
+    <button class="btn btn-outline" style="width:100%;margin:6px 0;text-align:left;" id="adapt-ai"><b>Analizza e crea una nuova progressione</b><br><small>Il Coach AI adatterà il programma all'obiettivo scelto.</small></button>
+    <button class="btn btn-outline" style="width:100%;margin-top:12px;" id="adapt-cancel">ANNULLA</button></div>`;
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.querySelector('#adapt-cancel').onclick = close;
+  overlay.querySelector('#adapt-keep').onclick = () => {
+    console.debug('ADAPT_KEEP_ORIGINAL', { kind, desired });
+    close();
+    if(kind === 'duration'){ if(resizeActiveProgram(desired)) render(); }
+    else { store.prefs.frequency = desired; persist(); render(); }
+  };
+  overlay.querySelector('#adapt-ai').onclick = () => { close(); openGoalDialog(kind, desired); };
+  return false;
+}
+function openGoalDialog(kind, desired){
+  const goals = [['IPERTROFIA / MASSA','Volume e crescita muscolare'],['FORZA','Prestazione sui fondamentali'],['POTENZA / ESPLOSIVITÀ','Velocità e qualità della forza'],['RESISTENZA MUSCOLARE','Capacità di sostenere serie e densità'],['METABOLICO / CONDITIONING','Capacità di lavoro e conditioning'],['RICOMPOSIZIONE / FITNESS GENERALE','Equilibrio tra forza, massa e fitness'],['PERSONALIZZATO','Obiettivo definito dall’utente']];
+  const overlay = document.createElement('div'); overlay.className = 'modal'; overlay.style.display = 'flex'; overlay.style.zIndex = '2650';
+  overlay.innerHTML = `<div class="modal-content"><h2 style="color:var(--gold);margin-top:0;">Qual è l'obiettivo principale?</h2><select id="goal-primary" style="margin-bottom:8px;">${goals.map(g=>`<option value="${esc(g[0])}">${esc(g[0])} — ${esc(g[1])}</option>`).join('')}</select><select id="goal-secondary"><option value="">Nessun obiettivo secondario</option>${goals.map(g=>`<option value="${esc(g[0])}">${esc(g[0])}</option>`).join('')}</select><input id="goal-constraints" placeholder="Vincoli opzionali (attrezzatura, giorni, infortuni)" style="margin-top:8px;"><div style="display:flex;gap:8px;margin-top:16px;"><button class="btn btn-outline" id="goal-cancel" style="flex:1;">ANNULLA</button><button class="btn btn-primary" id="goal-confirm" style="flex:1;">ANALIZZA</button></div><div id="goal-status" style="font-size:11px;color:#aaa;margin-top:10px;"></div></div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#goal-cancel').onclick = () => overlay.remove();
+  overlay.querySelector('#goal-confirm').onclick = async () => {
+    const status = overlay.querySelector('#goal-status');
+    status.textContent = 'Il Coach sta analizzando il programma…';
+    overlay.querySelector('#goal-confirm').disabled = true;
+    try {
+      await requestProgramReprogram(kind, desired, overlay.querySelector('#goal-primary').value, overlay.querySelector('#goal-secondary').value, overlay.querySelector('#goal-constraints').value);
+      overlay.remove();
+    } catch(err) {
+      console.error('ADAPT_AI_ERROR', err);
+      overlay.remove();
+      alert('Adattamento AI non riuscito: ' + err.message);
+    }
+  };
+}
+async function requestProgramReprogram(kind, desired, goal, secondary, constraints){
+  console.debug('ADAPT_AI_START', { kind, desired, goal, secondary });
+  const response = await apiFetch(coachEndpoint('/api/chat'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: `Riprogramma il programma JSON seguente. Modalità ai_reprogram. Obiettivo: ${goal}. ${secondary ? 'Obiettivo secondario: '+secondary+'.' : ''} ${kind==='duration'?'Durata: '+desired+' settimane.':'Giorni: '+desired+'.'} ${constraints ? 'Vincoli: '+constraints+'.' : ''} Restituisci SOLO JSON conforme allo schema con weeks[].sessions[].exercises[]. Programma: ${JSON.stringify(DATA)}`,
+      conversation_id: store.chatSessionId,
+      context: { program: DATA, requested_change: { kind, desired }, evidence_sources: EVIDENCE_SOURCES },
+      history: []
+    })
+  });
+  const payload = await readApiJson(response);
+  let raw = String(payload.reply || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  let adapted;
+  try { adapted = normalizeProgram(JSON.parse(raw)); }
+  catch(_) { throw new Error('Il Coach non ha restituito una programmazione JSON valida.'); }
+  DATA = adapted; store.activeProgram = DATA;
+  store.prefs.duration = DATA.weeks.length; store.prefs.durationUserSet = true;
+  if(kind === 'days') store.prefs.frequency = desired;
+  persist();
+  render();
+}
+
+function resizeActiveProgram(desired){
+  const current = DATA.weeks.length;
+  if(desired === current) return true;
+  if(desired < current && !confirm(`Ridurre il programma da ${current} a ${desired} settimane? Le settimane rimosse non saranno più disponibili.`)) return false;
+  if(desired > current && !confirm(`Estendere il programma da ${current} a ${desired} settimane replicando la struttura dell'ultima settimana?`)) return false;
+  if(desired < current) DATA.weeks = DATA.weeks.slice(0, desired);
+  else {
+    const template = DATA.weeks[current - 1];
+    while(DATA.weeks.length < desired) {
+      const copy = JSON.parse(JSON.stringify(template));
+      copy.week = DATA.weeks.length + 1;
+      copy.weekNumber = DATA.weeks.length + 1;
+      copy.label = `${template.label || 'Settimana'} (estesa)`;
+      DATA.weeks.push(copy);
+    }
+  }
+  store.activeProgram = DATA;
+  persist();
+  if(currentWeek > desired) { currentWeek = desired; currentDay = 0; }
+  return true;
+}
+
+function adaptProgramDuration(program){
+  if(!store.prefs.durationUserSet){ store.prefs.duration = program.weeks.length; persist(); return; }
+  const desired = Math.max(1, parseInt(store.prefs.duration, 10) || program.weeks.length);
+  if(program.weeks.length > desired){
+    if(confirm(`Il documento contiene ${program.weeks.length} settimane, ma hai impostato ${desired}. Ridurre la programmazione?`)){
+      program.weeks = program.weeks.slice(0, desired);
+    } else {
+      store.prefs.duration = program.weeks.length;
+    }
+  } else if(program.weeks.length < desired){
+    const template = program.weeks[program.weeks.length - 1];
+    while(program.weeks.length < desired){
+      const copy = JSON.parse(JSON.stringify(template));
+      copy.week = program.weeks.length + 1;
+      copy.weekNumber = program.weeks.length + 1;
+      copy.label = `${template.label || 'Settimana'} (estesa)`;
+      program.weeks.push(copy);
+    }
+  }
+  store.prefs.duration = program.weeks.length; persist();
+}
+
+function renderProgramPreview(program) {
+  const warnings = Array.isArray(program.warnings) ? program.warnings : [];
+  const assumptions = Array.isArray(program.assumptions) ? program.assumptions : [];
+  const sessions = program.weeks.reduce((n, w) => n + (w.sessions || w.days || []).length, 0);
+  const exercises = program.weeks.reduce((n, w) => n + (w.sessions || w.days || []).reduce((m, d) => m + (d.exercises || d.rows || []).length, 0), 0);
+  let html = `<div class="card" style="margin-top:12px;"><div class="card-header"><h2>Anteprima programmazione</h2></div><div style="padding:15px;">`;
+  html += `<div style="font-size:18px;font-weight:900;color:var(--gold);">${esc(program.title || 'Programmazione importata')}</div>`;
+  html += `<div style="font-size:12px;color:#aaa;margin:8px 0 14px;">${program.weeks.length} settimane • ${sessions} sessioni • ${exercises} esercizi</div>`;
+  if(program.source_summary) html += `<div style="font-size:12px;color:#ccc;margin-bottom:12px;">${esc(program.source_summary)}</div>`;
+  program.weeks.forEach((week, wi) => {
+    html += `<div style="border-top:1px solid #333;padding-top:10px;margin-top:10px;"><b style="color:var(--gold);">Settimana ${esc(week.weekNumber ?? week.week ?? wi + 1)}${week.label ? ' • ' + esc(week.label) : ''}</b></div>`;
+    (week.sessions || week.days || []).forEach((day, di) => {
+      html += `<div style="margin:10px 0 6px;color:#fff;font-weight:800;">${esc(day.day || '')} ${esc(day.title || `Sessione ${di + 1}`)}${day.isBonus ? ' <span style="color:var(--gold);font-size:10px;">[BONUS]</span>' : ''}</div>`;
+      (day.exercises || day.rows || []).forEach((row, ri) => {
+        const setCountVal = Array.isArray(row.sets) ? row.sets.length : (row.sets || '—');
+        const details = [`Serie: ${esc(setCountVal)}`, `Ripetizioni: ${esc(row.repsTarget || '—')}`];
+        if(row.rpeTarget != null) details.push(`RPE: ${esc(row.rpeTarget)}`);
+        if(row.rirTarget != null) details.push(`RIR: ${esc(row.rirTarget)}`);
+        if(row.rest) details.push(`Recupero: ${esc(row.rest)}`);
+        if(row.plannedLoad != null) details.push(`Carico: ${esc(row.plannedLoad)}${row.load_unit ? ' ' + esc(row.load_unit) : ''}`);
+        if(row.percentage_1rm != null) details.push(`1RM: ${esc(row.percentage_1rm)}%`);
+        if(row.tempo) details.push(`Tempo: ${esc(row.tempo)}`);
+        html += `<div style="background:#111;border:1px solid #292929;border-radius:8px;padding:9px;margin:5px 0;font-size:11px;"><b>${esc(row.exercise || row.name || `Esercizio ${ri + 1}`)}</b>${row.isBonus ? ' <span style="color:var(--gold);font-size:9px;">(BONUS)</span>' : ''}${row.superset_id ? ` <span style="color:var(--gold);font-size:9px;">[SUPERSET ${esc(row.superset_id)}]</span>` : ''}<br><span style="color:#aaa;">${details.join(' • ')}</span>${row.notes ? `<br><span style="color:#888;">${esc(row.notes)}</span>` : ''}</div>`;
+      });
+    });
+  });
+  if(assumptions.length) html += `<div style="margin-top:14px;color:#ffd166;font-size:11px;"><b>Assunzioni</b><br>${assumptions.map(x => `• ${esc(x)}`).join('<br>')}</div>`;
+  if(warnings.length) html += `<div style="margin-top:10px;color:var(--accent-red);font-size:11px;"><b>Avvisi</b><br>${warnings.map(x => `• ${esc(x)}`).join('<br>')}</div>`;
+  return html + `</div></div>`;
+}
+
+function importProgramJson(program, documentName) {
+  const model = {
+    id: `program-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    name: 'Originale: ' + documentName.substring(0, 24),
+    sourceDocument: documentName,
+    date: Date.now(),
+    data: program
+  };
+  store.models.push(model);
+  store.activeProgramId = model.id;
+  store.activeProgram = program;
+  DATA = program;
+  currentWeek = 1;
+  currentDay = 0;
+  if(!store.prefs.durationUserSet) store.prefs.duration = program.weeks.length;
+  persist();
+  return program;
+}
+
+// Timer Logic
+let timerInterval = null;
+function startTimer(secondsText) {
+  const text = String(secondsText || '').toLowerCase().replace('–', '-');
+  const parts = text.match(/\d+(?:\.\d+)?/g) || [];
+  let sec = 0;
+  if(text.includes('min')) sec = parseFloat(parts[parts.length - 1] || 0) * 60;
+  else if(text.includes('s')) sec = parseFloat(parts[parts.length - 1] || 0);
+  if(isNaN(sec) || sec <= 0) sec = 90;
+
+  $('timer-overlay').style.display = 'flex';
+  const display = $('timer-display');
+  const update = () => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    display.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    if(sec <= 0) {
+      clearInterval(timerInterval);
+      display.style.color = 'var(--accent-red)';
+    }
+    sec--;
+  };
+  update();
+  timerInterval = setInterval(update, 1000);
+}
+function stopTimer() {
+  clearInterval(timerInterval);
+  $('timer-overlay').style.display = 'none';
+  $('timer-display').style.color = 'var(--gold)';
+}
+
+// Skip Modal Logic
+let activeSkipIdx = null;
+function openSkipModal(idx) {
+  activeSkipIdx = idx;
+  $('skip-modal').style.display = 'flex';
+}
+function confirmSkip() {
+  const reason = $('skip-reason-select').value;
+  store.skips[`w${currentWeek}_d${currentDay}_e${activeSkipIdx}`] = reason;
+  persist();
+  $('skip-modal').style.display = 'none';
+  render();
+}
+
+// Intensity Toggle
+function toggleIntensityType() {
+  store.prefs.intensityType = store.prefs.intensityType === 'RIR' ? 'RPE' : 'RIR';
+  persist();
+  render();
+}
+
+// Previous Load Tooltip
+function showPrevLoad(e, key) {
+  if(currentWeek <= 1) return;
+  const prevKey = key.replace(`w${currentWeek}`, `w${currentWeek - 1}`);
+  const prevVal = store.data[prevKey];
+  if(prevVal) {
+    const tt = $('prev-load-tooltip');
+    tt.innerText = `SETT. PREC: ${prevVal}kg`;
+    tt.style.display = 'block';
+    const rect = e.target.getBoundingClientRect();
+    tt.style.left = `${rect.left}px`;
+    tt.style.top = `${rect.top + window.scrollY - 30}px`;
+  }
+}
+function hidePrevLoad() {
+  $('prev-load-tooltip').style.display = 'none';
+}
+
+// Dynamic Sets per Exercise (+ Serie & Delete Set)
+function addSetToExercise(exerciseIndex) {
+  const key = `w${currentWeek}_d${currentDay}_e${exerciseIndex}`;
+  const currentSets = getExerciseSetCount(exerciseIndex);
+  store.customSets[key] = currentSets + 1;
+  persist();
+  render();
+}
+
+function removeSetFromExercise(exerciseIndex, setNumber) {
+  const key = `w${currentWeek}_d${currentDay}_e${exerciseIndex}`;
+  const currentSets = getExerciseSetCount(exerciseIndex);
+  if(currentSets <= 1) {
+    alert('Ogni esercizio deve avere almeno 1 serie.');
+    return;
+  }
+  for(let s = setNumber; s < currentSets; s++) {
+    const nextS = s + 1;
+    store.data[`${key}_s${s}_load`] = store.data[`${key}_s${nextS}_load`] || '';
+    store.data[`${key}_s${s}_reps`] = store.data[`${key}_s${nextS}_reps`] || '';
+    store.data[`${key}_s${s}_rir`] = store.data[`${key}_s${nextS}_rir`] || '';
+    store.data[`${key}_s${s}_done`] = store.data[`${key}_s${nextS}_done`] || false;
+  }
+  delete store.data[`${key}_s${currentSets}_load`];
+  delete store.data[`${key}_s${currentSets}_reps`];
+  delete store.data[`${key}_s${currentSets}_rir`];
+  delete store.data[`${key}_s${currentSets}_done`];
+
+  store.customSets[key] = currentSets - 1;
+  persist();
+  render();
+}
+
+function toggleSetDone(key) {
+  store.data[key] = !store.data[key];
+  persist();
+  render();
+}
+
+function getExerciseSetCount(exerciseIndex) {
+  const custom = store.customSets[`w${currentWeek}_d${currentDay}_e${exerciseIndex}`];
+  if(typeof custom === 'number' && Number.isFinite(custom) && custom > 0) return custom;
+  const w = DATA?.weeks?.[currentWeek - 1];
+  const d = (w?.sessions || w?.days)?.[currentDay];
+  if(!d) return 3;
+  if(exerciseIndex >= 900) {
+    const bonusIdx = exerciseIndex - 900;
+    const bonusList = store.bonus[`w${currentWeek}_d${currentDay}`] || [];
+    return bonusList[bonusIdx]?.sets || 3;
+  }
+  const row = (d.exercises || d.rows)?.[exerciseIndex];
+  if(!row) return 3;
+  if(Array.isArray(row.sets) && row.sets.length) return row.sets.length;
+  if(typeof row.sets === 'number') return row.sets;
+  return Math.max(1, (row.setRows ? row.setRows.length : 0) + 1);
+}
+
+// Bonus Exercise Modal Logic
+function openBonusModal() {
+  $('bonus-name').value = '';
+  $('bonus-sets').value = 3;
+  $('bonus-reps').value = '8-12';
+  $('bonus-intensity').value = '1 RIR';
+  $('bonus-rest').value = '60-90s';
+  $('bonus-load').value = '';
+  $('bonus-tempo').value = '';
+  $('bonus-notes').value = '';
+  $('bonus-modal').style.display = 'flex';
+}
+function closeBonusModal() {
+  $('bonus-modal').style.display = 'none';
+}
+function saveBonusExercise() {
+  const name = $('bonus-name').value.trim();
+  if(!name) { alert('Inserisci il nome dell’esercizio bonus.'); return; }
+  const group = $('bonus-group').value;
+  const sets = parseInt($('bonus-sets').value, 10) || 3;
+  const reps = $('bonus-reps').value.trim() || '8-12';
+  const intensity = $('bonus-intensity').value.trim() || '1 RIR';
+  const rest = $('bonus-rest').value.trim() || '60-90s';
+  const load = $('bonus-load').value ? parseFloat($('bonus-load').value) : null;
+  const tempo = $('bonus-tempo').value.trim();
+  const notes = $('bonus-notes').value.trim();
+
+  const key = `w${currentWeek}_d${currentDay}`;
+  if(!store.bonus[key]) store.bonus[key] = [];
+  store.bonus[key].push({
+    exercise: name,
+    name: name,
+    movement: group,
+    muscle_group: group,
+    muscle_groups: [group],
+    sets: sets,
+    repsTarget: reps,
+    rirTarget: intensity.includes('RIR') ? parseInt(intensity, 10) || 1 : null,
+    rpeTarget: intensity.includes('RPE') ? parseInt(intensity, 10) || 9 : null,
+    rest: rest,
+    plannedLoad: load,
+    tempo: tempo,
+    notes: notes,
+    isBonus: true,
+    is_bonus: true
+  });
+  persist();
+  closeBonusModal();
+  render();
+}
+function deleteBonusExercise(index) {
+  if(!confirm('Rimuovere questo esercizio bonus?')) return;
+  const key = `w${currentWeek}_d${currentDay}`;
+  if(store.bonus[key]) {
+    store.bonus[key].splice(index, 1);
+    persist();
+    render();
+  }
+}
+
+// Muscle Group Classification System
+const MUSCLE_TAXONOMY = {
+  "PETTO": ["panca", "chest", "spinta inclinata", "croci", "pec", "dip", "push up", "flessioni", "petto", "distensioni"],
+  "SCHIENA": ["trazioni", "pull up", "chin up", "lat machine", "lat", "pulldown", "rematore", "row", "pulley", "vertical traction", "stacco", "deadlift", "dorso", "schiena", "seal row"],
+  "SPALLE": ["spinta spalle", "shoulder", "lento", "military", "overhead press", "alzate laterali", "alzate posteriori", "rear delt", "face pull", "deltoid", "spalle"],
+  "BICIPITI": ["curl", "bicipit", "bicep", "hammer", "preacher", "spider"],
+  "TRICIPITI": ["french press", "pushdown", "tricipit", "tricep", "skull crusher", "dip", "estensioni tricipiti", "panca stretta"],
+  "QUADRICIPITI": ["squat", "front squat", "leg press", "pressa", "leg extension", "hack", "affondi", "lunge", "bulgar", "quad"],
+  "FEMORALI": ["stacco rumeno", "rdl", "romanian", "leg curl", "femorali", "hamstring", "good morning"],
+  "GLUTEI": ["hip thrust", "glute", "bridge", "abductor", "kickback"],
+  "POLPACCI": ["calf", "polpacc"],
+  "ADDOME": ["crunch", "plank", "leg raise", "addom", "sit up", "core", "hollow"]
+};
+
+function getExerciseMuscleGroups(exerciseName, movement, explicitGroups) {
+  const result = new Set();
+  if(Array.isArray(explicitGroups) && explicitGroups.length) {
+    explicitGroups.forEach(g => { if(g) result.add(String(g).toUpperCase()); });
+  }
+  const text = `${exerciseName || ''} ${movement || ''}`.toLowerCase();
+  for(const [group, keywords] of Object.entries(MUSCLE_TAXONOMY)) {
+    if(keywords.some(k => text.includes(k))) {
+      result.add(group);
+    }
+  }
+  if(!result.size) {
+    const movUpper = String(movement || '').toUpperCase();
+    if(movUpper.includes('DORSO') || movUpper.includes('SCHIENA')) result.add('SCHIENA');
+    else if(movUpper.includes('PETTO')) result.add('PETTO');
+    else if(movUpper.includes('SPALLE')) result.add('SPALLE');
+    else if(movUpper.includes('BRACCIA')) { result.add('BICIPITI'); result.add('TRICIPITI'); }
+    else if(movUpper.includes('GAMBE')) { result.add('QUADRICIPITI'); result.add('FEMORALI'); result.add('GLUTEI'); }
+    else result.add('ALTRO');
+  }
+  return Array.from(result);
+}
+
+function exerciseMatchesMuscleGroup(exerciseName, movement, explicitGroups, selectedGroup) {
+  if(!selectedGroup || selectedGroup === 'TOTAL') return true;
+  const groups = getExerciseMuscleGroups(exerciseName, movement, explicitGroups);
+  if(selectedGroup === 'SCHIENA' && groups.includes('DORSO')) return true;
+  if(selectedGroup === 'DORSO' && groups.includes('SCHIENA')) return true;
+  return groups.includes(selectedGroup);
+}
+
+function init(){
+  if(store.activeProgram) {
+    DATA = normalizeProgram(store.activeProgram);
+    finishInit();
+  } else {
+    let xhr = new XMLHttpRequest(); xhr.open('GET', 'data.json', true);
+    xhr.onreadystatechange = function(){
+      if(xhr.readyState === 4){
+        try {
+          if(xhr.status < 200 || xhr.status >= 300) throw new Error('Impossibile caricare data.json (' + xhr.status + ').');
+          DATA = normalizeProgram(JSON.parse(xhr.responseText));
+          finishInit();
+        } catch(error) {
+          console.error('DATA_LOAD_ERROR', error);
+          $('splash').style.display = 'none';
+          $('view-container').innerHTML = '<div class="card"><div class="msg ai" style="color:var(--accent-red);">Impossibile caricare la programmazione: ' + esc(error.message) + '</div></div>';
+        }
+      }
+    };
+    xhr.onerror = function(){
+      console.error('DATA_LOAD_NETWORK_ERROR');
+      $('splash').style.display = 'none';
+      $('view-container').innerHTML = '<div class="card"><div class="msg ai" style="color:var(--accent-red);">Impossibile caricare la programmazione.</div></div>';
+    };
+    xhr.send();
+  }
+}
+function finishInit() {
+  updateAccountButton();
+  setTimeout(() => {
+    $('splash').style.opacity = '0';
+    setTimeout(() => { $('splash').style.display = 'none'; render(); }, 800);
+  }, 1200);
+}
+function persist(){
+  localStorage.setItem('GS_STORE', JSON.stringify(store));
+  scheduleAccountSync();
+  updateAccountButton();
+}
+function navigate(v, e){
+  if(e) e.preventDefault();
+  console.debug(v === 'home' ? 'HOME_CLICK' : 'NAVIGATION', { view: v });
+  currentView = v;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const a = $(`nav-${v}`); if(a) a.classList.add('active');
+  render();
+}
+
+function render(){
+  const c = $('view-container'); if(!c) return;
+  if(!DATA){
+    c.innerHTML = '<div class="card"><div class="msg ai" style="color:var(--accent-red);">Caricamento programmazione in corso…</div></div>';
+    return;
+  }
+  c.innerHTML = '';
+  if(currentView === 'home') renderHome(c);
+  else if(currentView === 'training') renderTraining(c);
+  else if(currentView === 'stats') renderStats(c);
+  else if(currentView === 'ai') renderAI(c);
+  else if(currentView === 'db') renderDb(c);
+}
+
+function renderHome(c){
+  if(!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length){
+    c.innerHTML = '<div class="card"><div class="msg ai" style="color:var(--accent-red);">Programmazione non disponibile.</div></div>';
+    return;
+  }
+  currentWeek = Math.min(Math.max(1, currentWeek), DATA.weeks.length);
+  const homeWeek = DATA.weeks[currentWeek - 1];
+  const sessions = homeWeek.sessions || homeWeek.days || [];
+  if(!sessions.length){
+    c.innerHTML = '<div class="card"><div class="msg ai" style="color:var(--accent-red);">La settimana attiva non contiene sessioni.</div></div>';
+    return;
+  }
+  currentDay = Math.min(Math.max(0, currentDay), sessions.length - 1);
+  const bw = store.bw[currentWeek] || '--';
+  const duration = store.prefs.duration || DATA.weeks.length;
+  const frequency = store.prefs.frequency || sessions.length;
+
+  c.innerHTML = `
+    <div style="text-align:center;padding:20px 0;"><img src="gs_logo.png" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">SYSTEM DASHBOARD</h1></div>
+
+    <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>Sessione Attiva</h2></div><div style="padding:20px;"><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><button class="btn btn-primary" style="width:100%;margin-top:20px;font-size:16px;height:55px;" onclick="navigate('training')">INIZIA WORKOUT</button></div></div>
+
+    <div class="card">
+      <div class="card-header"><h2>Struttura Programmazione</h2></div>
+      <div style="padding:15px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div>
+          <label style="font-size:10px; color:#666; font-weight:800;">DURATA (SETTIMANE)</label>
+          <select onchange="setDesiredDuration(this.value)" style="margin-top:5px;">
+            ${[4,6,8,12,16].map(w=>`<option value="${w}" ${w===duration?'selected':''}>${w} Settimane</option>`).join('')}
+            ${![4,6,8,12,16].includes(duration)?`<option value="${duration}" selected>${duration} Settimane</option>`:''}
+            <option value="custom">Personalizzata...</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:10px; color:#666; font-weight:800;">FREQUENZA (GIORNI/W)</label>
+          <select onchange="setDesiredFrequency(this.value)" style="margin-top:5px;">
+            ${[2,3,4,5,6,7].map(d=>`<option value="${d}" ${d===frequency?'selected':''}>${d} Allenamenti</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+       <div class="card-header"><h2>Programmi Salvati</h2></div>
+       <div style="padding:15px;" id="saved-models-list">
+          ${store.models.length ? store.models.map((m,i)=>`
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #222;">
+              <div>
+                <b style="color:var(--gold); font-size:13px;">${esc(m.name)}</b>
+                <div style="font-size:9px; color:#666;">Creato il ${new Date(m.date).toLocaleDateString()}</div>
+              </div>
+              <div style="display:flex; gap:5px;">
+                <button class="btn btn-outline" style="font-size:9px; padding:4px 8px;" onclick="applyModel(${i})">ATTIVA</button>
+                <button class="btn btn-outline" style="font-size:9px; padding:4px 8px; border-color:var(--accent-red); color:var(--accent-red);" onclick="deleteModel(${i})">X</button>
+              </div>
+            </div>
+          `).join('') : '<div style="font-size:11px; color:#555; text-align:center;">Nessun modello salvato. Carica documenti nel DB per generarne uno.</div>'}
+       </div>
+    </div>
+
+    <div class="card"><div class="card-header"><h2>Razionale & Regole Operative</h2></div><div style="padding:15px;font-size:11px;line-height:1.5;color:#ccc;"><div style="margin-bottom:12px;"><b style="color:var(--gold);">TOP SET + BACK-OFF:</b> Un set principale controllato seguito da back-off (-10%). Il back-off segue il carico REALE del top set.</div><div style="margin-bottom:12px;"><b style="color:var(--gold);">RIR (Prossimità al cedimento):</b> W1-2: 2 RIR costanti; W3: 1 RIR; W4: Deload. La meta-regressione 2024 indica che l\'ipertrofia aumenta terminando le serie vicini al cedimento.</div><div><b style="color:var(--gold);">RECUPERO:</b> Compound 3-4min, Isolation 60-90s (Singer et al. 2024). Mantieni recuperi completi per massimizzare il volume tecnico.</div></div></div>
+
+    <div class="card"><div class="card-header"><h2>Gestione Dati</h2></div><div style="padding:15px;display:flex;flex-direction:column;gap:10px;"><button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="resetWorkoutData()">RIPRISTINA CARICHI (AZZERA)</button><button class="btn btn-outline" style="width:100%;border-color:var(--accent-red);color:var(--accent-red);font-size:10px;" onclick="resetAllData()">HARD RESET APP</button></div></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div class="card" style="padding:15px;text-align:center;"><span style="font-size:11px;color:var(--text-secondary);font-weight:800;">BODYWEIGHT</span><div style="font-size:22px;font-weight:900;color:var(--gold);">${bw} kg</div></div><div class="card" style="padding:15px;text-align:center;"><span style="font-size:11px;color:var(--text-secondary);font-weight:800;">PROGRESSO</span><div style="font-size:22px;font-weight:900;color:var(--gold);">${Math.round((currentWeek/duration)*100)}%</div></div></div>
+  `;
+}
+
+function applyModel(idx) {
+  const source = store.models[idx];
+  if(!source || !source.data){ alert('Programma salvato non disponibile.'); return; }
+  DATA = normalizeProgram(source.data);
+  store.activeProgram = DATA;
+  store.activeProgramId = source.id;
+  currentWeek = 1;
+  currentDay = 0;
+  store.prefs.duration = DATA.weeks.length;
+  persist();
+  render();
+  alert('Programma attivato con successo.');
+}
+function deleteModel(idx) {
+  if(confirm("Eliminare definitivamente questo modello?")) {
+    store.models.splice(idx, 1);
+    persist();
+    render();
+  }
+}
+
+function renderTraining(c){
+  console.debug('WORKOUT_OPEN', { week: currentWeek, session: currentDay });
+  try {
+    const intensType = store.prefs.intensityType || 'RIR';
+    const weeksList = DATA.weeks;
+    if(!weeksList.length) throw new Error('Nessuna settimana disponibile');
+    if(currentWeek > weeksList.length) currentWeek = weeksList.length;
+
+    const w = weeksList[currentWeek - 1];
+    const allDays = w.sessions || w.days || [];
+    if(!w || !allDays.length) throw new Error('Nessuna sessione disponibile nella settimana selezionata');
+    
+    // Ensure ALL sessions from the document are accessible
+    if(currentDay >= allDays.length) currentDay = 0;
+    const d = allDays[currentDay];
+    const exerciseList = d.exercises || d.rows || [];
+
+    let h = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">
+      <select onchange="currentWeek=parseInt(this.value);currentDay=0;render()">${weeksList.map(ww=>`<option value="${ww.weekNumber || ww.week}" ${(ww.weekNumber || ww.week)===currentWeek?'selected':''}>Settimana ${ww.weekNumber || ww.week}</option>`).join('')}</select>
+      <select onchange="currentDay=parseInt(this.value);render()">${allDays.map((dd,i)=>`<option value="${i}" ${i===currentDay?'selected':''}>${esc(dd.title||dd.day||'Giorno '+(i+1))}${dd.is_bonus || dd.isBonus?' [BONUS]':''}</option>`).join('')}</select>
+    </div>`;
+
+    h += `<div style="display:flex; justify-content:center; margin-bottom:15px;"><button class="btn btn-outline" style="font-size:10px; padding:6px 12px;" onclick="toggleIntensityType()">SCALA ATTIVA: ${intensType}</button></div>`;
+
+    h += `<div class="card"><div class="card-header"><h2>${esc(w.title)}</h2></div><div style="padding:15px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"><span style="font-size:11px;font-weight:700;color:var(--text-secondary);">${esc(d.title || d.day || 'Sessione')}${d.is_bonus || d.isBonus?' (BONUS)':''}</span><input type="number" step="0.1" placeholder="BW kg" value="${store.bw[currentWeek]||''}" onchange="store.bw[currentWeek]=this.value;persist()" style="width:90px;padding:6px;text-align:center;"></div><div id="exercises-list">`;
+
+    // Render ALL exercises in this session
+    let renderedCount = 0;
+    exerciseList.forEach((row, ri) => {
+      renderedCount++;
+      const fIdx = ri;
+      const skipReason = store.skips[`w${currentWeek}_d${currentDay}_e${fIdx}`];
+      const curEx = store.subs[`w${currentWeek}_d${currentDay}_e${fIdx}`] || row.name || row.exercise;
+      const isTotal = store.loadTypes[`w${currentWeek}_d${currentDay}_e${fIdx}`] !== 'part';
+      const tempo = store.tempos[`w${currentWeek}_d${currentDay}_e${fIdx}`] || row.tempo || '';
+      const exIntens = store.exIntensity[`w${currentWeek}_d${currentDay}_e${fIdx}`] || intensType;
+      const totalSets = getExerciseSetCount(fIdx);
+      const supersetTag = row.superset_id ? `<span class="tag-pill" style="border:1px solid var(--gold);color:var(--gold);font-size:8px;padding:2px 6px;border-radius:4px;margin-left:6px;letter-spacing:0.5px;">SUPERSET [${esc(row.superset_id)}]</span>` : '';
+
+      h += `<div class="exercise-item ${skipReason?'exercise-skipped':''}" style="padding:15px;border-bottom:1px solid var(--border); position:relative; ${row.superset_id ? 'border-left:3px solid var(--gold);' : ''}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div style="font-size:10px;color:var(--gold);font-weight:800;opacity:0.8;text-transform:uppercase;">${esc(row.movement || 'ESERCIZIO')} ${row.is_bonus || row.isBonus ? '<span style="color:var(--gold-glow)">[BONUS]</span>' : ''} ${supersetTag}</div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="load-toggle ${exIntens==='RIR'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RIR')">RIR</span>
+            <span class="load-toggle ${exIntens==='RPE'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RPE')">RPE</span>
+            ${!skipReason ? `<span class="skip-btn" onclick="openSkipModal(${fIdx})">SALTA</span>` : `<span style="color:var(--gold); font-size:9px; font-weight:800;">SALTATO</span>`}
+          </div>
+        </div>
+        <div style="font-size:16px;font-weight:900;margin:6px 0 8px;">${esc(curEx)}</div>
+        ${getLoadSuggestion(fIdx, row) != null ? `<div style="font-size:10px;color:var(--gold);margin-bottom:8px;">Suggerimento: ${getLoadSuggestion(fIdx, row)} kg</div>` : ''}
+        ${skipReason ? `<div class="skip-reason">Causa: ${skipReason}</div>` : ''}
+
+        <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+          <button class="load-toggle ${isTotal?'active':''}" onclick="toggleLoadType(${fIdx}, 'total')">Totale</button>
+          <button class="load-toggle ${!isTotal?'active':''}" onclick="toggleLoadType(${fIdx}, 'part')">Per parte</button>
+          <input type="text" placeholder="Tempo (es. 3-0-1)" value="${esc(tempo)}" onchange="updateTempo(${fIdx}, this.value)" style="flex:1; font-size:10px; padding:4px 8px; height:26px;">
+        </div>`;
+
+      if(!skipReason) {
+        h += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;background:#151515;padding:8px;border-radius:8px;border:1px solid #222;">
+          <div style="font-size:10px;color:#aaa;">Target: <b style="color:#fff;">${esc(row.repsTarget || '8-10')}</b></div>
+          <div style="font-size:10px;color:#aaa;">${exIntens}: <b style="color:#fff;">${esc(row.rirTarget ?? row.rpeTarget ?? 2)}</b></div>
+          <div style="font-size:10px;color:#aaa; cursor:pointer;" onclick="startTimer('${esc(row.rest || '90s')}');">Rest: <b style="color:var(--gold); text-decoration:underline;">${esc(row.rest || '90s')}</b></div>
+        </div>
+        <div style="display:grid;grid-template-columns:28px 1fr 1fr 1fr 34px 26px;gap:6px;align-items:center;margin-bottom:6px;font-size:9px;color:#666;text-align:center;font-weight:800;">
+          <div>#</div><div>KG</div><div>REPS</div><div>${exIntens}</div><div>OK</div><div>✕</div>
+        </div>`;
+
+        for(let s = 1; s <= totalSets; s++) {
+          const k = `w${currentWeek}_d${currentDay}_e${fIdx}_s${s}`;
+          let sugg = row.plannedLoad || '';
+          if(!sugg && s > 1) {
+            const topV = parseFloat(store.data[`w${currentWeek}_d${currentDay}_e${fIdx}_s1_load`]);
+            if(topV) sugg = (Math.round(topV * 0.9 * 2) / 2).toFixed(1);
+          }
+          const isDone = Boolean(store.data[k + '_done']);
+
+          h += `<div class="set-row">
+            <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
+            <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || ''}" value="${store.data[k+'_load']||''}" oninput="updateData('${k}_load',this.value)" onfocus="showPrevLoad(event, '${k}_load')" onblur="hidePrevLoad()" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
+            <select onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${store.data[k+'_reps']==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
+            <select onchange="updateData('${k}_rir',this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${store.data[k+'_rir']==i?'selected':''}>${i}</option>`).join('')}</select>
+            <button class="set-done-btn ${isDone?'active':''}" onclick="toggleSetDone('${k}_done')">${isDone?'✓':'○'}</button>
+            <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
+          </div>`;
+        }
+
+        h += `<div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid #222;padding-top:10px;">
+          <button class="btn btn-outline" style="flex:1;font-size:10px;padding:6px 8px;" onclick="addSetToExercise(${fIdx})">+ SERIE</button>
+          <button class="btn btn-outline" style="flex:2;font-size:10px;padding:6px 8px;" onclick="openReplacementModal(${fIdx},'${encodeURIComponent(curEx)}')">SOSTITUISCI</button>
+        </div>`;
+      }
+      h += `</div>`;
+    });
+
+    // Render BONUS Exercises for this session
+    const bonusList = store.bonus[`w${currentWeek}_d${currentDay}`] || [];
+    bonusList.forEach((bEx, bIdx) => {
+      renderedCount++;
+      const fIdx = 900 + bIdx;
+      const curEx = bEx.exercise || bEx.name;
+      const isTotal = store.loadTypes[`w${currentWeek}_d${currentDay}_e${fIdx}`] !== 'part';
+      const tempo = store.tempos[`w${currentWeek}_d${currentDay}_e${fIdx}`] || bEx.tempo || '';
+      const exIntens = store.exIntensity[`w${currentWeek}_d${currentDay}_e${fIdx}`] || intensType;
+      const totalSets = getExerciseSetCount(fIdx);
+
+      h += `<div class="exercise-item" style="padding:15px;border-bottom:1px solid var(--border); position:relative;background:rgba(212,175,55,0.02);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div style="font-size:10px;color:var(--gold);font-weight:800;text-transform:uppercase;">${esc(bEx.movement || 'BONUS')} <span style="color:var(--gold-glow)">[BONUS]</span></div>
+          <button class="btn btn-outline" style="border-color:var(--accent-red);color:var(--accent-red);font-size:9px;padding:3px 6px;" onclick="deleteBonusExercise(${bIdx})">RIMUOVI</button>
+        </div>
+        <div style="font-size:16px;font-weight:900;margin:6px 0 8px;">${esc(curEx)}</div>
+
+        <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+          <button class="load-toggle ${isTotal?'active':''}" onclick="toggleLoadType(${fIdx}, 'total')">Totale</button>
+          <button class="load-toggle ${!isTotal?'active':''}" onclick="toggleLoadType(${fIdx}, 'part')">Per parte</button>
+          <input type="text" placeholder="Tempo" value="${esc(tempo)}" onchange="updateTempo(${fIdx}, this.value)" style="flex:1; font-size:10px; padding:4px 8px; height:26px;">
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;background:#151515;padding:8px;border-radius:8px;border:1px solid #222;">
+          <div style="font-size:10px;color:#aaa;">Target: <b style="color:#fff;">${esc(bEx.repsTarget || '8-12')}</b></div>
+          <div style="font-size:10px;color:#aaa;">${exIntens}: <b style="color:#fff;">${esc(bEx.rirTarget ?? 1)}</b></div>
+          <div style="font-size:10px;color:#aaa; cursor:pointer;" onclick="startTimer('${esc(bEx.rest || '60-90s')}');">Rest: <b style="color:var(--gold); text-decoration:underline;">${esc(bEx.rest || '60-90s')}</b></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:28px 1fr 1fr 1fr 34px 26px;gap:6px;align-items:center;margin-bottom:6px;font-size:9px;color:#666;text-align:center;font-weight:800;">
+          <div>#</div><div>KG</div><div>REPS</div><div>${exIntens}</div><div>OK</div><div>✕</div>
+        </div>`;
+
+      for(let s = 1; s <= totalSets; s++) {
+        const k = `w${currentWeek}_d${currentDay}_e${fIdx}_s${s}`;
+        const isDone = Boolean(store.data[k + '_done']);
+        h += `<div class="set-row">
+          <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
+          <input type="number" id="${k}_load" step="0.5" placeholder="${bEx.plannedLoad || ''}" value="${store.data[k+'_load']||''}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
+          <select onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${store.data[k+'_reps']==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
+          <select onchange="updateData('${k}_rir',this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${store.data[k+'_rir']==i?'selected':''}>${i}</option>`).join('')}</select>
+          <button class="set-done-btn ${isDone?'active':''}" onclick="toggleSetDone('${k}_done')">${isDone?'✓':'○'}</button>
+          <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
+        </div>`;
+      }
+
+      h += `<div style="margin-top:10px;border-top:1px solid #222;padding-top:10px;">
+        <button class="btn btn-outline" style="width:100%;font-size:10px;padding:6px 8px;" onclick="addSetToExercise(${fIdx})">+ SERIE</button>
+      </div>`;
+      h += `</div>`;
+    });
+
+    console.info(`DOC_RENDER_SESSIONS=${allDays.length}`);
+    console.info(`DOC_RENDER_EXERCISES=${renderedCount}`);
+    console.info(`DOC_WORKOUT_RENDERED_EXERCISES=${renderedCount}`);
+
+    h += `<div style="padding:15px; text-align:center;"><button class="btn btn-outline" style="width:100%; font-size:12px;" onclick="openBonusModal()">+ AGGIUNGI ESERCIZIO BONUS</button></div>`;
+    h += `</div></div>
+      <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;background:rgba(255,255,255,0.02);border-radius:12px;">
+        <div style="text-align:center;"><b id="d-vol" style="color:var(--gold);font-size:18px;">0</b><br><span style="font-size:9px;color:#666;">VOLUME</span></div>
+        <div style="text-align:center;"><b id="d-rir" style="color:var(--accent-red);font-size:18px;">0</b><br><span style="font-size:9px;color:#666;">INTENSITÀ</span></div>
+        <div style="text-align:center;"><b id="d-sets" style="color:#fff;font-size:18px;">0</b><br><span style="font-size:9px;color:#666;">SERIE</span></div>
+      </div>
+      <div style="padding:20px;"><button class="btn btn-primary" style="width:100%; height:55px; font-size:16px; box-shadow: 0 0 20px rgba(212,175,55,0.3);" onclick="finalizeWorkout()">FINALIZZA ALLENAMENTO</button></div>
+      <div style="height:120px;"></div>`;
+    c.innerHTML = h;
+    calcStats();
+  } catch(error) {
+    console.error('WORKOUT_RENDER_ERROR', error);
+    c.innerHTML = `<div class="card"><div class="msg ai" style="color:var(--accent-red);">Impossibile visualizzare il workout: ${esc(error.message)}</div><button class="btn btn-outline" onclick="navigate('home')">TORNA ALLA HOME</button></div>`;
+  }
+}
+
+function toggleLoadType(idx, type) {
+  store.loadTypes[`w${currentWeek}_d${currentDay}_e${idx}`] = type;
+  persist();
+  render();
+}
+function setExIntensity(idx, type) {
+  store.exIntensity[`w${currentWeek}_d${currentDay}_e${idx}`] = type;
+  persist();
+  render();
+}
+function updateTempo(idx, val) {
+  store.tempos[`w${currentWeek}_d${currentDay}_e${idx}`] = val;
+  persist();
+}
+
+function updateData(key, val){
+  store.data[key] = val;
+  persist();
+  calcStats();
+}
+function substituteEx(idx, val){
+  if(!val) return;
+  for(let w = currentWeek; w <= DATA.weeks.length; w++) {
+    store.subs[`w${w}_d${currentDay}_e${idx}`] = val;
+  }
+  persist();
+  render();
+}
+let replacementDraft = null;
+function openReplacementModal(idx, encodedCurrent){
+  const current = decodeURIComponent(encodedCurrent || '');
+  replacementDraft = { idx, current, selected: '' };
+  $('replace-current').innerHTML = `Esercizio attuale: <b style="color:var(--gold);">${esc(current)}</b><br><span style="font-size:10px;color:#777;">Serie e parametri verranno mantenuti.</span>`;
+  $('replace-search').value = '';
+  renderReplacementOptions('');
+  $('replace-modal').style.display = 'flex';
+}
+function renderReplacementOptions(query){
+  if(!replacementDraft) return;
+  const q = String(query || '').toLowerCase();
+  const groups = Object.entries(DATA.exerciseDb || {}).map(([group, items]) => [
+    group,
+    (items || []).filter(name => name !== replacementDraft.current && String(name).toLowerCase().includes(q))
+  ]).filter(([, items]) => items.length);
+
+  $('replace-options').innerHTML = groups.length ? groups.map(([group, items]) => `
+    <div style="margin-bottom:10px;"><b style="font-size:10px;color:var(--gold);">${esc(group)}</b>
+      ${items.map(name => `<button class="btn btn-outline" style="display:block;width:100%;margin-top:5px;text-align:left;font-size:11px;padding:8px;${replacementDraft.selected===name?'border-color:var(--success);color:var(--success);':''}" onclick="selectReplacement('${encodeURIComponent(name)}')">${esc(name)}</button>`).join('')}
+    </div>
+  `).join('') : '<div style="font-size:11px;color:#777;">Nessuna alternativa trovata.</div>';
+}
+function selectReplacement(encodedName){
+  if(!replacementDraft) return;
+  replacementDraft.selected = decodeURIComponent(encodedName);
+  renderReplacementOptions($('replace-search').value);
+}
+function confirmReplacement(){
+  if(!replacementDraft || !replacementDraft.selected){ alert('Seleziona prima un esercizio alternativo.'); return; }
+  substituteEx(replacementDraft.idx, replacementDraft.selected);
+  replacementDraft = null;
+  $('replace-modal').style.display = 'none';
+}
+
+function calcStats(){
+  let v = 0, r = 0, s = 0;
+  Object.keys(store.data).forEach(k => {
+    if(k.startsWith(`w${currentWeek}_d${currentDay}_`) && k.endsWith('_load')){
+      const p = k.split('_');
+      const eK = `${p[0]}_${p[1]}_${p[2]}`;
+      if(store.skips[eK]) return;
+      const isPart = store.loadTypes[eK] === 'part';
+      const multiplier = isPart ? 2 : 1;
+      const b = k.replace('_load', '');
+      const l = parseFloat(store.data[k] || 0) * multiplier;
+      const rp = parseInt(store.data[b + '_reps'] || 0, 10);
+      if(l > 0 && rp > 0){
+        v += l * rp;
+        const intensVal = parseInt(store.data[b + '_rir'] || 0, 10);
+        const exIntens = store.exIntensity[eK] || store.prefs.intensityType || 'RIR';
+        if(exIntens === 'RIR') {
+          r += l * (rp + intensVal);
+        } else {
+          const approxRir = Math.max(0, 10 - intensVal);
+          r += l * (rp + approxRir);
+        }
+        s++;
+      }
+    }
+  });
+  if($('d-vol')) $('d-vol').innerText = `${Math.round(v)} kg`;
+  if($('d-rir')) $('d-rir').innerText = `${Math.round(r)} pts`;
+  if($('d-sets')) $('d-sets').innerText = s;
+}
+
+function finalizeWorkout(){
+  alert("Allenamento finalizzato con successo.");
+  navigate('stats');
+}
+
+function renderStats(c){
+  c.innerHTML = `
+    <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">PERFORMANCE LAB</h1>
+    <div style="font-size:10px; color:#777; margin-bottom:15px; font-weight:700; letter-spacing:1px;">ANALISI AVANZATA DELLA PERIODIZZAZIONE</div>
+
+    <div class="card">
+      <div class="card-header"><h2>Filtro Gruppo Muscolare</h2></div>
+      <div style="padding:15px;">
+        <select id="stats-muscle-group" onchange="renderStatsData()" style="margin-bottom:10px;">
+          <option value="TOTAL">Tutti i Gruppi (Volume Totale)</option>
+          <option value="PETTO">Petto (Pettorali)</option>
+          <option value="SCHIENA">Schiena / Dorso</option>
+          <option value="SPALLE">Spalle / Deltoidi</option>
+          <option value="BICIPITI">Bicipiti</option>
+          <option value="TRICIPITI">Tricipiti</option>
+          <option value="QUADRICIPITI">Quadricipiti</option>
+          <option value="FEMORALI">Femorali / Hamstrings</option>
+          <option value="GLUTEI">Glutei</option>
+          <option value="POLPACCI">Polpacci</option>
+          <option value="ADDOME">Addome / Core</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card"><div class="card-header"><h2>Riepilogo Settimanale</h2></div><div style="padding:15px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>SETT</th><th>VOL (KG)</th><th>DELTA</th><th>INT (PTS)</th><th>DELTA</th><th>BW (KG)</th><th>PTS</th></tr></thead><tbody id="summary-body"></tbody></table></div></div>
+    <div class="card"><div class="card-header"><h2>Progressione Volume (kg)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="volChart"></canvas></div></div></div>
+    <div class="card"><div class="card-header"><h2>Volume Efficace (pts)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="rirChart"></canvas></div></div></div>
+    <div class="card"><div class="card-header"><h2>Andamento Peso Corporeo (kg)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="bwChart"></canvas></div></div></div>
+    <div style="height:120px;"></div>
+  `;
+  setTimeout(() => renderStatsData(), 50);
+}
+
+function renderSimpleChart(canvasId, data, color, type='line') {
+  const canvas = $(canvasId);
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = (rect.height || 260) * dpr;
+  ctx.scale(dpr, dpr);
+
+  const w = rect.width;
+  const h = rect.height || 260;
+  ctx.clearRect(0, 0, w, h);
+
+  const padding = { top: 30, right: 20, bottom: 40, left: 50 };
+  const chartW = w - padding.left - padding.right;
+  const chartH = h - padding.top - padding.bottom;
+
+  const validVals = data.filter(v => typeof v === 'number' && !isNaN(v) && v > 0);
+  const maxVal = validVals.length ? Math.max(...validVals) * 1.15 : 100;
+  const minVal = validVals.length ? Math.min(0, Math.min(...validVals) * 0.9) : 0;
+  const valRange = (maxVal - minVal) || 1;
+
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 1;
+  for(let i = 0; i <= 4; i++) {
+    const y = padding.top + (chartH / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(w - padding.right, y);
+    ctx.stroke();
+
+    const val = maxVal - (valRange / 4) * i;
+    ctx.fillStyle = '#666';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(val), padding.left - 8, y + 3);
+  }
+
+  const n = data.length;
+  if(n === 0) return;
+  const stepX = chartW / (n > 1 ? n - 1 : 1);
+
+  ctx.fillStyle = '#666';
+  ctx.font = '10px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  for(let i = 0; i < n; i++) {
+    const x = n === 1 ? padding.left + chartW / 2 : padding.left + stepX * i;
+    ctx.fillText(`W${i + 1}`, x, h - padding.bottom + 20);
+  }
+
+  if(type === 'bar') {
+    const barW = Math.max(12, Math.min(30, chartW / n - 8));
+    data.forEach((val, i) => {
+      if(val == null || isNaN(val) || val <= 0) return;
+      const x = (n === 1 ? padding.left + chartW / 2 : padding.left + stepX * i) - barW / 2;
+      const barH = ((val - minVal) / valRange) * chartH;
+      const y = padding.top + chartH - barH;
+
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, barW, barH);
+
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 9px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(Math.round(val), x + barW / 2, y - 5);
+    });
+  } else {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    let started = false;
+
+    data.forEach((val, i) => {
+      if(val == null || isNaN(val) || val <= 0) return;
+      const x = n === 1 ? padding.left + chartW / 2 : padding.left + stepX * i;
+      const y = padding.top + chartH - ((val - minVal) / valRange) * chartH;
+      if(!started) { ctx.moveTo(x, y); started = true; }
+      else { ctx.lineTo(x, y); }
+    });
+    ctx.stroke();
+
+    data.forEach((val, i) => {
+      if(val == null || isNaN(val) || val <= 0) return;
+      const x = n === 1 ? padding.left + chartW / 2 : padding.left + stepX * i;
+      const y = padding.top + chartH - ((val - minVal) / valRange) * chartH;
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 9px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(Math.round(val), x, y - 8);
+    });
+  }
+}
+
+function renderStatsData(){
+  const selectedGroup = $('stats-muscle-group') ? $('stats-muscle-group').value : 'TOTAL';
+  const weeksCount = DATA.weeks.length;
+  let vD = [], rD = [], bwD = [], pD = [];
+
+  for(let w = 1; w <= weeksCount; w++){
+    let wV = 0, wR = 0;
+    const weekObj = DATA.weeks[w - 1];
+    const sessions = weekObj?.sessions || weekObj?.days || [];
+
+    sessions.forEach((dayObj, dIdx) => {
+      const exerciseList = dayObj.exercises || dayObj.rows || [];
+      exerciseList.forEach((row, eIdx) => {
+        const curEx = store.subs[`w${w}_d${dIdx}_e${eIdx}`] || row.name || row.exercise;
+        if(!exerciseMatchesMuscleGroup(curEx, row.movement, row.muscle_groups || row.muscleGroups, selectedGroup)) return;
+
+        const eK = `w${w}_d${dIdx}_e${eIdx}`;
+        if(store.skips[eK]) return;
+        const isPart = store.loadTypes[eK] === 'part';
+        const multiplier = isPart ? 2 : 1;
+        const exIntens = store.exIntensity[eK] || store.prefs.intensityType || 'RIR';
+
+        for(let s = 1; s <= 20; s++){
+          const k = `${eK}_s${s}`;
+          const l = parseFloat(store.data[`${k}_load`] || 0) * multiplier;
+          const rp = parseInt(store.data[`${k}_reps`] || 0, 10);
+          if(l > 0 && rp > 0){
+            wV += l * rp;
+            const intensVal = parseInt(store.data[`${k}_rir`] || 0, 10);
+            if(exIntens === 'RIR') {
+              wR += l * (rp + intensVal);
+            } else {
+              const approxRir = Math.max(0, 10 - intensVal);
+              wR += l * (rp + approxRir);
+            }
+          }
+        }
+      });
+
+      const bonusList = store.bonus[`w${w}_d${dIdx}`] || [];
+      bonusList.forEach((bEx, bIdx) => {
+        const fIdx = 900 + bIdx;
+        const curEx = bEx.exercise || bEx.name;
+        if(!exerciseMatchesMuscleGroup(curEx, bEx.movement, bEx.muscle_groups, selectedGroup)) return;
+
+        const eK = `w${w}_d${dIdx}_e${fIdx}`;
+        if(store.skips[eK]) return;
+        const isPart = store.loadTypes[eK] === 'part';
+        const multiplier = isPart ? 2 : 1;
+        const exIntens = store.exIntensity[eK] || store.prefs.intensityType || 'RIR';
+
+        for(let s = 1; s <= 20; s++){
+          const k = `${eK}_s${s}`;
+          const l = parseFloat(store.data[`${k}_load`] || 0) * multiplier;
+          const rp = parseInt(store.data[`${k}_reps`] || 0, 10);
+          if(l > 0 && rp > 0){
+            wV += l * rp;
+            const intensVal = parseInt(store.data[`${k}_rir`] || 0, 10);
+            if(exIntens === 'RIR') {
+              wR += l * (rp + intensVal);
+            } else {
+              const approxRir = Math.max(0, 10 - intensVal);
+              wR += l * (rp + approxRir);
+            }
+          }
+        }
+      });
+    });
+
+    const bw = parseFloat(store.bw[w]) || null;
+    vD.push(wV);
+    rD.push(wR);
+    bwD.push(bw);
+    pD.push(wV > 0 && bw ? (wV / bw) : 0);
+  }
+
+  let tH = '';
+  vD.forEach((v, i) => {
+    const dV = i > 0 ? (v - vD[i-1]) : 0;
+    const dI = i > 0 ? (rD[i] - rD[i-1]) : 0;
+    tH += `<tr>
+      <td><b>W${i+1}</b></td>
+      <td>${Math.round(v)}</td>
+      <td class="${dV>=0?'delta-pos':'delta-neg'}">${dV>=0?'+':''}${Math.round(dV)}</td>
+      <td>${Math.round(rD[i])}</td>
+      <td class="${dI>=0?'delta-pos':'delta-neg'}">${dI>=0?'+':''}${Math.round(dI)}</td>
+      <td>${bwD[i] || '--'}</td>
+      <td><b>${Math.round(pD[i])}</b></td>
+    </tr>`;
+  });
+  if($('summary-body')) $('summary-body').innerHTML = tH;
+
+  renderSimpleChart('volChart', vD, '#d4af37', 'line');
+  renderSimpleChart('rirChart', rD, '#ff4d4d', 'line');
+  renderSimpleChart('bwChart', bwD, '#54a0ff', 'bar');
+}
+
+function renderAI(c){
+  const history = store.chatHistory.map(item => `
+    <div class="msg ${item.role==='user'?'user':'ai'} ${item.role==='assistant'?'markdown':''}">
+      ${item.role==='assistant'?markdownToHtml(item.text):esc(item.text)}
+    </div>
+  `).join('');
+
+  c.innerHTML = `
+    <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">COACH AI</h1>
+    <div style="font-size:10px; color:#777; margin-bottom:15px; font-weight:700; letter-spacing:1px;">COACH PERSONALE • CONTROLLO PROGRAMMA ATTIVO</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="checkBackendHealth()">VERIFICA SERVER AI</button>
+      <span id="ai-status" style="font-size:10px;color:#777;align-self:center;"></span>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h2>Coach AI</h2>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;" onclick="newCoachQuestion()">NUOVA DOMANDA</button>
+          <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="openResetSession()">AZZERA</button>
+        </div>
+      </div>
+      <div style="padding:12px;">
+        <div id="chat-history">${history || '<div class="msg ai">Ciao. Sono il tuo Coach AI. Ho pieno accesso al tuo programma attivo: posso analizzarlo, calcolare progressioni ed eseguire modifiche dirette e atomiche.</div>'}</div>
+        <div style="display:flex;gap:10px;background:var(--surface-light);padding:10px;border-radius:12px;margin-top:10px;">
+          <input type="text" id="ai-input" placeholder="Es. Aggiungi 1 serie alla panca nella settimana 2" style="flex:1;border:none;background:transparent;">
+          <button class="btn btn-outline" onclick="startVoiceInput()" style="padding:10px 12px;">🎙</button>
+          <button class="btn btn-primary" onclick="askAI()" style="padding:10px 15px;">INV</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn btn-outline" onclick="stopVoiceInput()" style="font-size:9px;padding:6px 9px;">STOP VOCE</button>
+          <button class="btn btn-outline" onclick="toggleVoiceOutput()" style="font-size:9px;padding:6px 9px;">LEGGI RISPOSTA</button>
+          <span id="voice-status" style="font-size:10px;color:#777;align-self:center;"></span>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:15px;">
+      <div class="card-header"><h2>Analisi programmazione</h2></div>
+      <div id="analysis-results" style="padding:12px;"><div class="msg ai">Nessuna analisi selezionata.</div></div>
+    </div>
+    <div style="height:120px;"></div>
+  `;
+}
+
+async function checkBackendHealth(){
+  const status = $('ai-status');
+  if(status) status.textContent = 'Verifica in corso…';
+  try {
+    const response = await apiFetch(coachEndpoint('/health'), { method: 'GET' }, 20000);
     const payload = await readApiJson(response);
     if(payload.ok !== true) throw new Error('Il server non ha confermato lo stato OK');
     if(status) { status.textContent = `Online (${payload.model || 'backend'})`; status.style.color = 'var(--success)'; }
@@ -10,104 +2587,21 @@
 function formatOperationDescription(op) {
   const type = op.type || 'modify';
   const ex = op.exercise || op.target_exercise || 'Esercizio';
-  const isAllWeeks = op.week === 'all' || op.week == null;
-  const targetWeekNum = isAllWeeks ? (currentWeek || 1) : Number(op.week);
-  const wLabel = isAllWeeks ? 'Tutte le settimane' : `Settimana ${op.week}`;
-  const sLabel = op.session === 'all' ? 'Tutte le sessioni' : (typeof op.session === 'number' ? `Sessione ${op.session}` : (op.session || `Sessione ${currentDay + 1}`));
-  const scopeEffect = isAllWeeks ? `⚠️ Effetto su tutte le ${DATA?.weeks?.length || 1} settimane` : `Solo ${wLabel}, ${sLabel}`;
-
-  const weekObj = DATA?.weeks?.[targetWeekNum - 1] || DATA?.weeks?.[0];
-  const sessIdx = typeof op.session === 'number' ? op.session - 1 : currentDay;
-  const sessObj = weekObj?.sessions?.[sessIdx] || weekObj?.sessions?.[0];
-  const existingEx = sessObj?.exercises?.find(e => {
-    const eName = String(e.name || e.exercise || '').toLowerCase();
-    const reqName = String(op.exercise || '').toLowerCase();
-    return eName.includes(reqName) || reqName.includes(eName);
-  });
-
-  let beforeStr = '--';
-  let afterStr = '--';
-  let diffStr = '';
-
-  if(type === 'add_set') {
-    const curSets = existingEx?.sets ? (Array.isArray(existingEx.sets) ? existingEx.sets.length : existingEx.sets) : 0;
-    beforeStr = `${curSets} serie`;
-    afterStr = `${curSets + 1} serie`;
-    diffStr = '+1 serie';
-    return `<div style="margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="font-weight:700;">Aggiungi serie a <span style="color:var(--gold);">${esc(ex)}</span></div>
-      <div style="color:#aaa;font-size:10px;">📅 Scope: <b>${esc(wLabel)}</b> • <b>${esc(sLabel)}</b> (${esc(scopeEffect)})</div>
-      <div style="font-size:10px;color:#bbb;">Prima: <b>${esc(beforeStr)}</b> ➔ Dopo: <b style="color:var(--gold);">${esc(afterStr)}</b> (<span style="color:var(--gold);">${esc(diffStr)}</span>)</div>
-    </div>`;
-  }
-
-  if(type === 'remove_set') {
-    const curSets = existingEx?.sets ? (Array.isArray(existingEx.sets) ? existingEx.sets.length : existingEx.sets) : 1;
-    beforeStr = `${curSets} serie`;
-    afterStr = `${Math.max(0, curSets - 1)} serie`;
-    diffStr = '-1 serie';
-    return `<div style="margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="font-weight:700;">Rimuovi serie da <span style="color:var(--gold);">${esc(ex)}</span> ${op.set_index ? `(serie ${op.set_index})` : ''}</div>
-      <div style="color:#aaa;font-size:10px;">📅 Scope: <b>${esc(wLabel)}</b> • <b>${esc(sLabel)}</b> (${esc(scopeEffect)})</div>
-      <div style="font-size:10px;color:#bbb;">Prima: <b>${esc(beforeStr)}</b> ➔ Dopo: <b style="color:var(--gold);">${esc(afterStr)}</b> (<span style="color:#f87171;">${esc(diffStr)}</span>)</div>
-    </div>`;
-  }
-
-  if(type === 'modify_load') {
-    const setIdx = (op.set_index || 1) - 1;
-    const curLoad = (existingEx?.sets && existingEx.sets[setIdx] && existingEx.sets[setIdx].load !== undefined) ? existingEx.sets[setIdx].load : (existingEx?.plannedLoad || '--');
-    const newLoad = op.changes?.load ?? op.load;
-    beforeStr = `${curLoad} kg`;
-    afterStr = `${newLoad} kg`;
-    diffStr = (typeof newLoad === 'number' && typeof curLoad === 'number') ? `${newLoad >= curLoad ? '+' : ''}${newLoad - curLoad} kg` : `imposta ${newLoad} kg`;
-    return `<div style="margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="font-weight:700;">Modifica carico per <span style="color:var(--gold);">${esc(ex)}</span> ${op.set_index ? `(serie ${op.set_index})` : ''}</div>
-      <div style="color:#aaa;font-size:10px;">📅 Scope: <b>${esc(wLabel)}</b> • <b>${esc(sLabel)}</b> (${esc(scopeEffect)})</div>
-      <div style="font-size:10px;color:#bbb;">Prima: <b>${esc(beforeStr)}</b> ➔ Dopo: <b style="color:var(--gold);">${esc(afterStr)}</b> (<span style="color:var(--gold);">${esc(diffStr)}</span>)</div>
-    </div>`;
-  }
-
-  if(type === 'replace_exercise') {
-    beforeStr = ex;
-    afterStr = op.target_exercise || 'Nuovo esercizio';
-    diffStr = 'Sostituzione integrale';
-    return `<div style="margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="font-weight:700;">Sostituisci esercizio: <span style="color:#f87171;">${esc(beforeStr)}</span> ➔ <span style="color:var(--gold);">${esc(afterStr)}</span></div>
-      <div style="color:#aaa;font-size:10px;">📅 Scope: <b>${esc(wLabel)}</b> • <b>${esc(sLabel)}</b> (${esc(scopeEffect)})</div>
-      <div style="font-size:10px;color:#bbb;">Azione: <b>${esc(diffStr)}</b></div>
-    </div>`;
-  }
-
-  if(type === 'add_exercise') {
-    beforeStr = 'Non presente';
-    afterStr = op.target_exercise || ex;
-    const setsC = op.changes?.sets || 3;
-    const repsC = op.changes?.reps || '8-10';
-    diffStr = `Nuovo esercizio (${setsC} serie x ${repsC})`;
-    return `<div style="margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="font-weight:700;">Aggiungi nuovo esercizio: <span style="color:var(--gold);">${esc(afterStr)}</span></div>
-      <div style="color:#aaa;font-size:10px;">📅 Scope: <b>${esc(wLabel)}</b> • <b>${esc(sLabel)}</b> (${esc(scopeEffect)})</div>
-      <div style="font-size:10px;color:#bbb;">Prima: <b>${esc(beforeStr)}</b> ➔ Dopo: <b style="color:var(--gold);">${esc(diffStr)}</b></div>
-    </div>`;
-  }
-
-  if(type === 'create_superset') {
-    beforeStr = 'Esercizi separati';
-    afterStr = `Superset [${esc(ex)} + ${esc(op.target_exercise || '')}]`;
-    diffStr = `ID: ${op.changes?.superset_id || 'ss_auto'}`;
-    return `<div style="margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="font-weight:700;">Crea Superset: <span style="color:var(--gold);">${esc(ex)}</span> + <span style="color:var(--gold);">${esc(op.target_exercise || '')}</span></div>
-      <div style="color:#aaa;font-size:10px;">📅 Scope: <b>${esc(wLabel)}</b> • <b>${esc(sLabel)}</b> (${esc(scopeEffect)})</div>
-      <div style="font-size:10px;color:#bbb;">Prima: <b>${esc(beforeStr)}</b> ➔ Dopo: <b style="color:var(--gold);">${esc(afterStr)}</b></div>
-    </div>`;
-  }
-
+  const w = op.week ? `W${op.week}` : 'Tutte le sett.';
+  const s = op.session ? `Sessione ${op.session}` : '';
   const changes = op.changes ? JSON.stringify(op.changes) : '';
-  return `<div style="margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);">
-    <div style="font-weight:700;"><b>${type.toUpperCase()}</b>: <span style="color:var(--gold);">${esc(ex)}</span></div>
-    <div style="color:#aaa;font-size:10px;">📅 Scope: <b>${esc(wLabel)}</b> • <b>${esc(sLabel)}</b> (${esc(scopeEffect)})</div>
-    <div style="font-size:10px;color:#bbb;">Dettagli: ${esc(changes)}</div>
-  </div>`;
+  
+  if(type === 'add_set') return `Aggiungi serie a <b>${esc(ex)}</b> (${w} ${s})`;
+  if(type === 'remove_set') return `Rimuovi serie da <b>${esc(ex)}</b> (${w} ${s})`;
+  if(type === 'replace_exercise') return `Sostituisci <b>${esc(ex)}</b> con <b>${esc(op.target_exercise)}</b> (${w} ${s})`;
+  if(type === 'add_exercise') return `Aggiungi nuovo esercizio: <b>${esc(op.target_exercise || ex)}</b> (${w} ${s})`;
+  if(type === 'remove_exercise') return `Rimuovi <b>${esc(ex)}</b> (${w} ${s})`;
+  if(type === 'modify_load') return `Modifica carico per <b>${esc(ex)}</b>: ${esc(op.changes?.load || '')} kg`;
+  if(type === 'modify_reps') return `Modifica ripetizioni per <b>${esc(ex)}</b>: ${esc(op.changes?.reps || '')}`;
+  if(type === 'modify_rpe' || type === 'modify_rir') return `Modifica intensità per <b>${esc(ex)}</b>: ${esc(op.changes?.rpe || op.changes?.rir || '')}`;
+  if(type === 'modify_rest') return `Modifica recupero per <b>${esc(ex)}</b>: ${esc(op.changes?.rest || '')}`;
+  if(type === 'create_superset') return `Crea superset tra <b>${esc(ex)}</b> e <b>${esc(op.target_exercise || '')}</b> (${w} ${s})`;
+  return `${type.toUpperCase()}: <b>${esc(ex)}</b> ${changes}`;
 }
 
 async function applyCoachProposal(proposalId) {
@@ -120,28 +2614,6 @@ async function applyCoachProposal(proposalId) {
   if(actionsDiv) actionsDiv.innerHTML = `<span style="font-size:11px;color:var(--gold);">Applicazione modifiche atomiche in corso…</span>`;
 
   try {
-    // 1. Capture BEFORE snapshot for audit log
-    const beforeAudit = proposal.operations.map(op => {
-      const isAll = op.week === 'all' || op.week == null;
-      const wNum = isAll ? (currentWeek || 1) : Number(op.week);
-      const w = DATA?.weeks?.[wNum - 1];
-      const sNum = typeof op.session === 'number' ? op.session - 1 : currentDay;
-      const s = w?.sessions?.[sNum] || w?.sessions?.[0];
-      const ex = s?.exercises?.find(e => {
-        const eName = String(e.name || e.exercise || '').toLowerCase();
-        const reqName = String(op.exercise || '').toLowerCase();
-        return eName.includes(reqName) || reqName.includes(eName);
-      });
-      return {
-        week: op.week || currentWeek || 1,
-        session: op.session || (currentDay + 1),
-        exercise: op.exercise || null,
-        setsCount: ex?.sets ? (Array.isArray(ex.sets) ? ex.sets.length : ex.sets) : 0,
-        sets: ex?.sets ? (Array.isArray(ex.sets) ? ex.sets.map(st => ({ order: st.order, reps: st.reps, load: st.load, rir: st.rir })) : ex.sets) : null,
-        superset_id: ex?.superset_id || null
-      };
-    });
-
     let modResult = null;
     if(store.accountToken) {
       try {
@@ -166,46 +2638,8 @@ async function applyCoachProposal(proposalId) {
       modResult = applyOperationsToProgram(DATA, proposal.operations);
     }
 
-    DATA = normalizeProgram(modResult.program || DATA, { skipAdaptDuration: true });
+    DATA = normalizeProgram(modResult.program || DATA);
     store.activeProgram = DATA;
-    store.prefs.duration = DATA.weeks.length;
-    store.prefs.durationUserSet = true;
-
-    // 2. Capture AFTER snapshot for audit log
-    const afterAudit = proposal.operations.map(op => {
-      const isAll = op.week === 'all' || op.week == null;
-      const wNum = isAll ? (currentWeek || 1) : Number(op.week);
-      const w = DATA?.weeks?.[wNum - 1];
-      const sNum = typeof op.session === 'number' ? op.session - 1 : currentDay;
-      const s = w?.sessions?.[sNum] || w?.sessions?.[0];
-      const targetName = op.target_exercise || op.exercise;
-      const ex = s?.exercises?.find(e => {
-        const eName = String(e.name || e.exercise || '').toLowerCase();
-        const reqName = String(targetName || '').toLowerCase();
-        return eName.includes(reqName) || reqName.includes(eName);
-      });
-      return {
-        week: op.week || currentWeek || 1,
-        session: op.session || (currentDay + 1),
-        exercise: ex?.name || ex?.exercise || targetName,
-        setsCount: ex?.sets ? (Array.isArray(ex.sets) ? ex.sets.length : ex.sets) : 0,
-        sets: ex?.sets ? (Array.isArray(ex.sets) ? ex.sets.map(st => ({ order: st.order, reps: st.reps, load: st.load, rir: st.rir })) : ex.sets) : null,
-        superset_id: ex?.superset_id || null
-      };
-    });
-
-    // 3. Register Audit Log entry (Rule 8)
-    store.auditLog = store.auditLog || [];
-    store.auditLog.push({
-      timestamp: new Date().toISOString(),
-      intent: proposal.summary || 'modify_program',
-      scope: proposal.operations.some(o => o.week === 'all') ? 'all_weeks' : `week_${proposal.operations[0]?.week || currentWeek}`,
-      target: proposal.operations.map(o => o.exercise || o.target_exercise).filter(Boolean).join(', ') || 'program',
-      operations: proposal.operations,
-      before: beforeAudit,
-      after: afterAudit
-    });
-
     persist();
 
     if(actionsDiv) {
@@ -240,7 +2674,7 @@ async function askAI(){
   const requestToken = ++coachRequestToken;
   const h = $('chat-history');
   store.chatHistory.push({ role: 'user', text: q });
-  h.innerHTML += `<div class=\"msg user\">${esc(q)}</div>`;
+  h.innerHTML += `<div class="msg user">${esc(q)}</div>`;
   $('ai-input').value = '';
   persist();
 
@@ -261,15 +2695,7 @@ async function askAI(){
       body: JSON.stringify({
         message: q,
         conversation_id: store.chatSessionId,
-        context: {
-          program: DATA,
-          trainingData: store.data,
-          bodyweight: store.bw,
-          user: store.accountUser,
-          currentWeek: currentWeek,
-          currentDay: currentDay,
-          currentSession: DATA?.weeks?.[currentWeek - 1]?.sessions?.[currentDay] || null
-        },
+        context: { program: DATA, trainingData: store.data, bodyweight: store.bw, user: store.accountUser },
         history: store.chatHistory.slice(-12)
       })
     });
@@ -281,12 +2707,12 @@ async function askAI(){
     let cleanReply = reply;
     let proposedAction = payload.proposed_action || null;
     if(!proposedAction) {
-      const match = reply.match(/```(?:json)?\s*(\\{[^]*?\"action\"\\s*:\\s*\"modify_program\"[^]*?\\})\\s*```/i);
+      const match = reply.match(/```(?:json)?\s*(\{[^]*?"action"\s*:\s*"modify_program"[^]*?\})\s*```/i);
       if(match) {
         try { proposedAction = JSON.parse(match[1]); } catch(_) {}
       }
     }
-    cleanReply = cleanReply.replace(/```(?:json)?\\s*\\{[^]*?\"action\"\\s*:\\s*\"modify_program\"[^]*?\\}\\s*```/ig, '').trim();
+    cleanReply = cleanReply.replace(/```(?:json)?\s*\{[^]*?"action"\s*:\s*"modify_program"[^]*?\}\s*```/ig, '').trim();
 
     pending.innerHTML = markdownToHtml(cleanReply);
     lastCoachReply = cleanReply;
@@ -295,8 +2721,6 @@ async function askAI(){
     if(proposedAction && Array.isArray(proposedAction.operations) && proposedAction.operations.length) {
       const propId = 'prop_' + Date.now();
       window.activeCoachProposals[propId] = proposedAction;
-      const isAddPrompt = proposedAction.operations.some(op => op.type === 'add_exercise' && !op.exercise);
-      const applyLabel = isAddPrompt ? `AGGIUNGI ${esc(proposedAction.operations[0].target_exercise || 'ESERCIZIO')}` : 'APPLICA MODIFICHE';
       const card = document.createElement('div');
       card.className = 'card';
       card.id = `card-${propId}`;
@@ -305,16 +2729,16 @@ async function askAI(){
       card.style.background = '#111';
       card.innerHTML = `
         <div class="card-header" style="background:rgba(212,175,55,0.1);">
-          <h2 style="font-size:11px;">🤖 ANTEPRIMA MODIFICHE PROPOSTE DAL COACH</h2>
+          <h2 style="font-size:11px;">🤖 IL COACH PROPONE UNA MODIFICA AL PROGRAMMA</h2>
         </div>
         <div style="padding:12px;font-size:11px;">
           <b style="color:var(--gold);">${esc(proposedAction.summary || 'Modifiche proposte')}</b>
-          <div style="margin:10px 0;padding:8px;background:rgba(255,255,255,0.03);border-radius:4px;">
-            ${proposedAction.operations.map(op => formatOperationDescription(op)).join('')}
-          </div>
+          <ul style="margin:8px 0;padding-left:18px;color:#ccc;">
+            ${proposedAction.operations.map(op => `<li>${formatOperationDescription(op)}</li>`).join('')}
+          </ul>
           <div style="display:flex;gap:8px;margin-top:12px;" id="actions-${propId}">
             <button class="btn btn-outline" style="flex:1;font-size:10px;padding:8px;" onclick="cancelCoachProposal('${propId}')">ANNULLA</button>
-            <button class="btn btn-primary" style="flex:1;font-size:10px;padding:8px;" onclick="applyCoachProposal('${propId}')">${applyLabel}</button>
+            <button class="btn btn-primary" style="flex:1;font-size:10px;padding:8px;" onclick="applyCoachProposal('${propId}')">APPLICA MODIFICHE</button>
           </div>
         </div>
       `;
@@ -332,3 +2756,211 @@ async function askAI(){
   }
   h.scrollTop = h.scrollHeight;
 }
+
+function renderDb(c){
+  c.innerHTML = `
+    <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:20px;">DATABASE & ASSETS</h1>
+
+    <div class="card" style="padding:15px;">
+      <h3 style="color:var(--gold); margin-top:0; font-size:14px;">CARICA NUOVO MATERIALE</h3>
+      <p style="font-size:10px; color:#666; margin-bottom:10px;">Carica documenti PDF, DOC, DOCX o fogli Excel per l'analisi AI.</p>
+      <input type="file" id="db-file-input" accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none;" onchange="handleFileUpload(event)">
+      <button class="btn btn-primary" style="width:100%; font-size:12px;" onclick="triggerFileSelect()">+ SELEZIONA FILE</button>
+    </div>
+
+    <div class="card" style="padding:15px;">
+      <h3 style="color:var(--gold); margin-top:0; font-size:14px;">DOCUMENTI CARICATI</h3>
+      <div id="docs-list" style="margin-top:10px;">
+        ${store.docs.length ? store.docs.map((d,i)=>`
+          <div style="background:#111; padding:12px; border-radius:10px; border:1px solid #222; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="flex:1;">
+              <div style="font-size:13px; font-weight:700;">${esc(d.name)}</div>
+              <div style="font-size:9px; color:#555;">${d.size} • ${new Date(d.date).toLocaleDateString()}</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-outline" style="font-size:9px; padding:5px 10px;" onclick="analyzeDoc(${i})">ANALIZZA AI</button>
+              <button class="btn btn-outline" style="font-size:9px; padding:5px 10px; border-color:var(--accent-red); color:var(--accent-red);" onclick="deleteDoc(${i})">X</button>
+            </div>
+          </div>
+        `).join('') : '<div style="font-size:11px; color:#555; text-align:center; padding:20px;">Nessun documento presente.</div>'}
+      </div>
+    </div>
+
+    <div class="card" style="padding:15px;">
+      <h3 style="color:var(--gold); margin-top:0; font-size:14px;">ESERCIZI DI SISTEMA</h3>
+      <input type="text" placeholder="Cerca esercizio..." oninput="searchDb(this.value)" style="margin-bottom:15px;background:#000;">
+      <div id="db-results"></div>
+    </div>
+    <div style="height:120px;"></div>
+  `;
+  searchDb('');
+}
+
+async function handleFileUpload(e) {
+  const file = e.target.files[0]; if(!file) return;
+  if(!/\.(pdf|doc|docx|txt|xlsx|xls)$/i.test(file.name)) { alert('Seleziona PDF, DOC, DOCX, TXT, XLSX o XLS.'); return; }
+  if(file.size > MAX_DOCUMENT_BYTES) { alert('Il documento supera il limite di 12 MB.'); return; }
+  try {
+    const base64 = await fileToBase64(file);
+    const doc = {
+      id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9),
+      name: file.name,
+      size: (file.size / 1024).toFixed(1) + ' KB',
+      date: Date.now(),
+      type: file.type || documentMime(file.name, 'application/octet-stream'),
+      base64: base64
+    };
+    await saveDocumentFile(doc.id, base64);
+    store.docs.push(doc);
+    persist();
+    render();
+    alert("Documento '" + file.name + "' caricato nel Database.");
+  } catch(err) {
+    alert('Impossibile salvare il documento: ' + err.message);
+  }
+}
+
+async function deleteDoc(idx) {
+  if(!confirm('Rimuovere questo documento dal Database?')) return;
+  try { await removeDocumentFile(store.docs[idx].id); } catch(_) {}
+  store.docs.splice(idx, 1);
+  persist();
+  render();
+}
+
+let isAnalyzingDocument = false;
+
+async function analyzeDoc(idx) {
+  if (isAnalyzingDocument) {
+    console.warn('[Coach AI] Analysis already in progress. Ignoring duplicate click.');
+    return;
+  }
+  isAnalyzingDocument = true;
+
+  const doc = store.docs[idx];
+  if (!doc) {
+    isAnalyzingDocument = false;
+    return;
+  }
+
+  navigate('ai');
+  const h = $('analysis-results');
+  h.innerHTML = `<div class="msg ai">Analisi avviata per <b>${esc(doc.name)}</b>. Sto estraendo tutte le sessioni ed esercizi…</div>`;
+
+  try {
+    let base64 = doc.base64;
+    if (!base64) {
+      const stored = await getDocumentFile(doc.id);
+      if (typeof stored === 'string') {
+        base64 = stored;
+      } else if (stored) {
+        base64 = await fileToBase64(stored);
+      }
+    }
+    if (!base64) throw new Error('Il file originale non è disponibile. Caricalo di nuovo.');
+
+    const endpoint = coachEndpoint('/api/analyze-file');
+    const mime = documentMime(doc.name, doc.type);
+    const byteCount = Math.round((base64.length * 3) / 4);
+    const requestId = 'req_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+
+    const sendMsg = `EXCEL_SEND: endpoint=${endpoint} filename=${doc.name} mime=${mime} bytes=${byteCount} base64Length=${base64.length}`;
+    console.info(sendMsg);
+    if (window.NativeConfig && typeof window.NativeConfig.logDiagnostic === 'function') {
+      window.NativeConfig.logDiagnostic('GiammariaExcel', sendMsg);
+    }
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Request-ID': requestId
+      },
+      body: JSON.stringify({
+        filename: doc.name,
+        mime_type: mime,
+        data_base64: base64
+      })
+    });
+
+    const status = response.status;
+    const rawText = await response.text();
+    const bodyPreview = rawText.substring(0, 120).replace(/\s+/g, ' ');
+
+    const respMsg = `EXCEL_RESPONSE: status=${status} bodyPreview=${bodyPreview}`;
+    console.info(respMsg);
+    if (window.NativeConfig && typeof window.NativeConfig.logDiagnostic === 'function') {
+      window.NativeConfig.logDiagnostic('GiammariaExcel', respMsg);
+    }
+
+    if (status === 429) {
+      throw new Error('Il servizio AI ha raggiunto il limite temporaneo di richieste (HTTP 429). Attendi 30 secondi e riprova.');
+    }
+
+    let result;
+    try {
+      result = rawText ? JSON.parse(rawText) : {};
+    } catch(err) {
+      throw new Error(`Risposta non valida dal server (HTTP ${status})`);
+    }
+
+    if (!response.ok) {
+      const msg = result.error || result.message || `Errore server HTTP ${status}`;
+      throw new Error(msg);
+    }
+
+    if (!Array.isArray(result.weeks) || !result.weeks.length) {
+      throw new Error('Nessuna settimana trovata nel documento estratto.');
+    }
+
+    let totalApiExercises = 0;
+    result.weeks.forEach(w => (w.sessions || w.days || []).forEach(s => {
+      totalApiExercises += (s.exercises || s.rows || []).length;
+    }));
+    console.info(`DOC_API_EXERCISES=${totalApiExercises}`);
+
+    const program = normalizeProgram(result);
+    window.pendingProgramImport = { program, documentName: doc.name };
+    doc.analysis = { date: Date.now(), sourceSummary: result.source_summary || '' };
+    persist();
+
+    h.innerHTML = renderProgramPreview(program);
+    h.innerHTML += `<div class="msg ai"><button class="btn btn-primary" style="margin-top:10px;width:100%;height:45px;" onclick="confirmProgramImport()">CONFERMA IMPORTAZIONE PROGRAMMA</button></div>`;
+  } catch(err) {
+    h.innerHTML += `<div class="msg ai" style="color:red;">Errore durante l'analisi: ${esc(err.message)}</div>`;
+  } finally {
+    isAnalyzingDocument = false;
+    h.scrollTop = h.scrollHeight;
+  }
+}
+
+function confirmProgramImport(){
+  const pending = window.pendingProgramImport;
+  if(!pending) return;
+  importProgramJson(pending.program, pending.documentName);
+  window.pendingProgramImport = null;
+  store.chatHistory.push({ role: 'assistant', text: '✅ Programmazione importata e attivata correttamente.' });
+  persist();
+  alert('Programmazione importata e attivata con successo.');
+  navigate('home');
+}
+
+function searchDb(q){
+  let h = ''; q = q.toLowerCase();
+  Object.keys(DATA.exerciseDb || {}).forEach(m => {
+    const f = (DATA.exerciseDb[m] || []).filter(ex => ex.toLowerCase().includes(q) || m.toLowerCase().includes(q));
+    if(f.length) {
+      h += `<div style="margin-bottom:12px"><b style="color:var(--gold);font-size:11px;text-transform:uppercase;">${m}</b><div style="font-size:13px;color:#888;margin-top:4px;padding-left:10px;border-left:1px solid #333;">${f.join(' • ')}</div></div>`;
+    }
+  });
+  if($('db-results')) $('db-results').innerHTML = h;
+}
+
+function saveAll(){ persist(); alert("Salvataggio completato."); }
+function resetWorkoutData(){ if(confirm("Azzerare tutti i carichi registrati?")){ store.data = {}; store.customSets = {}; persist(); render(); } }
+function resetAllData(){ if(confirm("HARD RESET: cancella ogni dato e programma salvato?")){ localStorage.clear(); location.reload(); } }
+
+init();
+</script>
+</body>
+</html>
