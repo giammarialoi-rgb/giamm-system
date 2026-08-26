@@ -30,6 +30,7 @@ const pool = DATABASE_URL ? new Pool({
   ssl: DATABASE_URL.includes("localhost") ? false : { rejectUnauthorized: false }
 }) : null;
 
+// Initialize and migrate database schema idempotently for OAuth and email auth
 const accountSchemaReady = (async () => {
   if (!pool) return null;
   const client = await pool.connect();
