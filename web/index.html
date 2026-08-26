@@ -248,11 +248,13 @@ select, input {
       <input id="account-password" type="password" placeholder="Password (minimo 8 caratteri)" autocomplete="current-password" minlength="8" required>
       <button class="btn btn-primary" type="submit" id="account-submit">ACCEDI</button>
     </form>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="startGoogleAuth()" id="google-auth">CONTINUA CON GOOGLE</button>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="startAppleAuth()" id="apple-auth">CONTINUA CON APPLE</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="toggleAccountMode()" id="account-mode">CREA UN ACCOUNT</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="logoutAccount()" id="account-logout">ESCI</button>
     <button class="btn btn-primary" style="width:100%;margin-top:8px;display:none;" onclick="syncAccountData()" id="account-sync">SINCRONIZZA DATI</button>
     <div id="account-status" class="msg ai" style="margin-top:10px;"></div>
-    <div style="font-size:10px;color:#777;margin-top:10px;">Google e Apple richiedono la configurazione OAuth del progetto backend.</div>
+    <div style="font-size:10px;color:#777;margin-top:10px;">I provider richiedono configurazione OAuth server-side.</div>
   </div>
 </div>
 
@@ -434,6 +436,38 @@ async function submitAccount(event){
     updateAccountButton(); openAccount(); status.textContent=`Benvenuto, ${store.accountUser.name}`;
   }catch(error){console.error('ACCOUNT_UI_ERROR',error);status.textContent=error.message||'Operazione account non riuscita.';}
   finally{button.disabled=false;}
+}
+async function finishOAuthLogin(payload){
+  if(!payload?.token||!payload?.user)throw new Error('Risposta provider non valida.');
+  store.accountToken=payload.token; store.accountUser=payload.user; persist();
+  await syncAccountData(true);
+  updateAccountButton(); openAccount();
+  $('account-status').textContent=`Benvenuto, ${store.accountUser.name}`;
+}
+function startGoogleAuth(){
+  $('account-status').textContent='Apertura account Google…';
+  if(window.NativeConfig?.startGoogleSignIn){NativeConfig.startGoogleSignIn();return;}
+  $('account-status').textContent='Google Login richiede l’app Android aggiornata.';
+}
+function startAppleAuth(){
+  $('account-status').textContent='Apertura account Apple…';
+  if(window.NativeConfig?.startAppleAuth){NativeConfig.startAppleAuth();return;}
+  $('account-status').textContent='Apple Login richiede l’app Android aggiornata.';
+}
+async function nativeGoogleResult(credential){
+  try{
+    const response=await apiFetch(coachEndpoint('/api/auth/google'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential})});
+    await finishOAuthLogin(await readApiJson(response));
+  }catch(error){console.error('GOOGLE_AUTH_UI_ERROR',error);$('account-status').textContent=error.message||'Accesso Google non riuscito.';}
+}
+async function nativeAppleResult(code){
+  try{
+    const response=await apiFetch(coachEndpoint('/api/auth/apple/exchange'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+    await finishOAuthLogin(await readApiJson(response));
+  }catch(error){console.error('APPLE_AUTH_UI_ERROR',error);$('account-status').textContent=error.message||'Accesso Apple non riuscito.';}
+}
+function nativeAuthError(message){
+  $('account-status').textContent=String(message||'Autenticazione non riuscita.');
 }
 function accountPayload(){
   const payload=JSON.parse(JSON.stringify(store));
