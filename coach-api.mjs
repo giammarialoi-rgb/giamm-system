@@ -51,7 +51,20 @@ const accountSchemaReady = (async () => {
         data JSONB NOT NULL DEFAULT '{}'::jsonb,
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider TEXT DEFAULT 'email';
+      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider_id TEXT;
+      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+      UPDATE app_users SET provider = 'email' WHERE provider IS NULL;
+
+      ALTER TABLE app_account_data ADD COLUMN IF NOT EXISTS data JSONB NOT NULL DEFAULT '{}'::jsonb;
+      ALTER TABLE app_account_data ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
       CREATE INDEX IF NOT EXISTS idx_app_users_provider ON app_users(provider, provider_id);
+      CREATE INDEX IF NOT EXISTS idx_app_users_email ON app_users(email);
     `);
     return true;
   } finally {
