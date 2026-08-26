@@ -233,9 +233,28 @@ select, input {
 
 <header>
   <div class="logo-container"><img src="gs_logo.png" alt="GS Logo"><span>GIAMMARIA SYSTEM</span></div>
+  <button class="btn btn-outline" style="font-size:10px;padding:7px 10px;" onclick="openAccount()" id="account-button">ACCEDI</button>
 </header>
 
 <main id="view-container"></main>
+
+<div id="account-modal" class="modal-backdrop" style="display:none;">
+  <div class="modal-card">
+    <div class="card-header"><h2>Account</h2><button class="btn btn-outline" onclick="closeAccount()">CHIUDI</button></div>
+    <div id="account-welcome" class="msg ai" style="display:none;"></div>
+    <form id="account-form" onsubmit="submitAccount(event)">
+      <input id="account-name" type="text" placeholder="Nome e cognome" autocomplete="name">
+      <input id="account-email" type="email" placeholder="Email" autocomplete="email" required>
+      <input id="account-password" type="password" placeholder="Password (minimo 8 caratteri)" autocomplete="current-password" minlength="8" required>
+      <button class="btn btn-primary" type="submit" id="account-submit">ACCEDI</button>
+    </form>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="toggleAccountMode()" id="account-mode">CREA UN ACCOUNT</button>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="logoutAccount()" id="account-logout">ESCI</button>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px;display:none;" onclick="syncAccountData()" id="account-sync">SINCRONIZZA DATI</button>
+    <div id="account-status" class="msg ai" style="margin-top:10px;"></div>
+    <div style="font-size:10px;color:#777;margin-top:10px;">Google e Apple richiedono la configurazione OAuth del progetto backend.</div>
+  </div>
+</div>
 
 <!-- Timer Overlay -->
 <div id="timer-overlay">
@@ -314,7 +333,7 @@ select, input {
 </nav>
 
 <script>
-let DATA=null, currentView='home', currentWeek=1, currentDay=0;
+let DATA=null, currentView='home', currentWeek=1, currentDay=0, accountRegisterMode=false, accountSyncTimer=null;
 const EVIDENCE_SOURCES=[
   {title:'ACSM Guidelines for Exercise Testing and Prescription',sourceType:'position_stand',url:'https://pubmed.ncbi.nlm.nih.gov/19204579/',relevance:'strength and conditioning',confidence:'high'},
   {title:'The Effects of Periodization on Strength and Muscle Hypertrophy',sourceType:'systematic_review',url:'https://pubmed.ncbi.nlm.nih.gov/27219156/',relevance:'periodization',confidence:'moderate'},
@@ -325,7 +344,7 @@ const EVIDENCE_SOURCES=[
 const COACH_API_URL = (window.NativeConfig && window.NativeConfig.getCoachApiUrl && window.NativeConfig.getCoachApiUrl()) || '';
 const MAX_DOCUMENT_BYTES = 12 * 1024 * 1024;
 let coachRequestToken=0;
-const DEFAULT_STORE = {data:{},subs:{},bw:{},prefs:{intensityType:'RIR',duration:16,frequency:4},loadTypes:{},tempos:{},skips:{},bonus:{},docs:[],models:[],activeProgram:null,exIntensity:{}};
+const DEFAULT_STORE = {data:{},subs:{},bw:{},prefs:{intensityType:'RIR',duration:16,frequency:4},loadTypes:{},tempos:{},skips:{},bonus:{},docs:[],models:[],activeProgram:null,exIntensity:{},accountToken:null,accountUser:null};
 function loadStore(){
   try { return JSON.parse(localStorage.getItem('GS_STORE') || JSON.stringify(DEFAULT_STORE)); }
   catch(err) { console.error('Invalid saved app data', err); return JSON.parse(JSON.stringify(DEFAULT_STORE)); }
@@ -344,15 +363,21 @@ if(!store.docs) store.docs = [];
 if(!store.models) store.models = [];
 if(!store.activeProgramId) store.activeProgramId = null;
 if(!store.exIntensity) store.exIntensity = {};
+if(!Object.prototype.hasOwnProperty.call(store,'accountToken')) store.accountToken = null;
+if(!Object.prototype.hasOwnProperty.call(store,'accountUser')) store.accountUser = null;
 if(!store.chatHistory) store.chatHistory = [];
 if(!store.chatSessionId) store.chatSessionId = `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const $=id=>document.getElementById(id), esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+window.addEventListener('error',event=>console.error('WEBVIEW_UNCAUGHT_ERROR',{message:event.message,source:event.filename,line:event.lineno,column:event.colno}));
+window.addEventListener('unhandledrejection',event=>console.error('WEBVIEW_UNHANDLED_REJECTION',event.reason));
 function getLoadSuggestion(exerciseIndex,row){if(currentWeek<=1)return null;const loads=[];for(let week=currentWeek-1;week>=1;week--){for(let set=1;set<=5;set++){const value=parseFloat(store.data[`w${week}_d${currentDay}_e${exerciseIndex}_s${set}_load`]);if(Number.isFinite(value)&&value>0)loads.push(value);}if(loads.length)break;}if(!loads.length)return null;const average=loads.reduce((sum,value)=>sum+value,0)/loads.length;const rir=Number(row.rirTarget);return Math.round(average*(Number.isFinite(rir)&&rir<=1?1.025:1)*2)/2;}
-let voiceRecognition=null,voiceOutputEnabled=true;
-function startVoiceInput(){const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;const status=$('voice-status');if(!Recognition){if(status)status.textContent='Voce non disponibile in questo WebView.';return;}stopVoiceInput();voiceRecognition=new Recognition();voiceRecognition.lang='it-IT';voiceRecognition.interimResults=false;voiceRecognition.continuous=false;voiceRecognition.onstart=()=>{if(status)status.textContent='Ascolto…';};voiceRecognition.onerror=event=>{if(status)status.textContent='Errore voce: '+event.error;};voiceRecognition.onend=()=>{if(status&&status.textContent==='Ascolto…')status.textContent='';};voiceRecognition.onresult=event=>{const input=$('ai-input');if(input)input.value=event.results[0][0].transcript;};voiceRecognition.start();}
-function stopVoiceInput(){if(voiceRecognition){voiceRecognition.stop();voiceRecognition=null;}const status=$('voice-status');if(status)status.textContent='';}
-function toggleVoiceOutput(){voiceOutputEnabled=!voiceOutputEnabled;const status=$('voice-status');if(status)status.textContent=voiceOutputEnabled?'Lettura attiva':'Lettura disattivata';}
-function speakCoachReply(text){if(!voiceOutputEnabled||!window.speechSynthesis)return;window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.lang='it-IT';window.speechSynthesis.speak(utterance);}
+let voiceRecognition=null,voiceOutputEnabled=true,lastCoachReply='';
+window.nativeVoiceStatus=function(state,message){const status=$('voice-status');if(status)status.textContent=message||'';};
+window.nativeVoiceResult=function(text){const input=$('ai-input');if(input)input.value=text||'';};
+function startVoiceInput(){const status=$('voice-status');if(window.NativeConfig&&NativeConfig.startVoiceInput){NativeConfig.startVoiceInput();return;}const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Recognition){if(status)status.textContent='Voce non disponibile in questo WebView.';return;}stopVoiceInput();voiceRecognition=new Recognition();voiceRecognition.lang='it-IT';voiceRecognition.interimResults=false;voiceRecognition.continuous=false;voiceRecognition.onstart=()=>{if(status)status.textContent='Ascolto…';};voiceRecognition.onerror=event=>{if(status)status.textContent='Errore voce: '+event.error;};voiceRecognition.onend=()=>{if(status&&status.textContent==='Ascolto…')status.textContent='';};voiceRecognition.onresult=event=>{const input=$('ai-input');if(input)input.value=event.results[0][0].transcript;};try{voiceRecognition.start();}catch(error){console.error('VOICE_START_ERROR',error);if(status)status.textContent='Voce non disponibile';}}
+function stopVoiceInput(){if(window.NativeConfig&&NativeConfig.stopVoiceInput)NativeConfig.stopVoiceInput();if(window.NativeConfig&&NativeConfig.stopSpeech)NativeConfig.stopSpeech();if(voiceRecognition){voiceRecognition.stop();voiceRecognition=null;}if(window.speechSynthesis)window.speechSynthesis.cancel();const status=$('voice-status');if(status)status.textContent='';}
+function toggleVoiceOutput(){voiceOutputEnabled=!voiceOutputEnabled;const status=$('voice-status');if(voiceOutputEnabled){if(status)status.textContent='Lettura attiva';if(lastCoachReply)speakCoachReply(lastCoachReply);}else{if(window.NativeConfig&&NativeConfig.stopSpeech)NativeConfig.stopSpeech();if(window.speechSynthesis)window.speechSynthesis.cancel();if(status)status.textContent='Lettura disattivata';}}
+function speakCoachReply(text){if(!voiceOutputEnabled)return;if(window.NativeConfig&&NativeConfig.speak){NativeConfig.speak(String(text||''));return;}if(!window.speechSynthesis)return;window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.lang='it-IT';window.speechSynthesis.speak(utterance);}
 function clearCoachSession(){
   console.debug('COACH_SESSION_CLEAR');
   store.chatHistory=[];
@@ -361,6 +386,82 @@ function clearCoachSession(){
   const history=$('chat-history'); if(history) history.innerHTML='<div class="msg ai">Schermata pronta per una nuova domanda.</div>';
   const analysis=$('analysis-results'); if(analysis) analysis.innerHTML='<div class="msg ai">Nessuna analisi selezionata.</div>';
   persist();
+}
+function updateAccountButton(){
+  const button=$('account-button'); if(button) button.textContent=store.accountUser?.name ? store.accountUser.name : 'ACCEDI';
+}
+function accountRequest(path, options={}){
+  if(!store.accountToken) throw new Error('Accedi per sincronizzare i dati.');
+  return apiFetch(coachEndpoint(path),{...options,headers:{'Content-Type':'application/json',Authorization:`Bearer ${store.accountToken}`,...(options.headers||{})}});
+}
+function openAccount(){
+  updateAccountButton();
+  const modal=$('account-modal'); if(!modal)return;
+  modal.style.display='flex';
+  const logged=!!store.accountToken&&!!store.accountUser;
+  $('account-form').style.display=logged?'none':'block';
+  $('account-mode').style.display=logged?'none':'block';
+  $('account-logout').style.display=logged?'block':'none';
+  $('account-sync').style.display=logged?'block':'none';
+  $('account-welcome').style.display=logged?'block':'none';
+  if(logged)$('account-welcome').textContent=`Benvenuto, ${store.accountUser.name}`;
+  $('account-status').textContent=logged?'Dati account pronti.':'Accedi o crea un account per sincronizzare i tuoi dati.';
+}
+function closeAccount(){const modal=$('account-modal');if(modal)modal.style.display='none';}
+function logoutAccount(){
+  clearTimeout(accountSyncTimer);
+  store.accountToken=null; store.accountUser=null; persist(); updateAccountButton(); openAccount();
+}
+function toggleAccountMode(){
+  accountRegisterMode=!accountRegisterMode;
+  $('account-name').style.display=accountRegisterMode?'block':'none';
+  $('account-name').required=accountRegisterMode;
+  $('account-password').autocomplete=accountRegisterMode?'new-password':'current-password';
+  $('account-submit').textContent=accountRegisterMode?'REGISTRATI':'ACCEDI';
+  $('account-mode').textContent=accountRegisterMode?'HO GIÀ UN ACCOUNT':'CREA UN ACCOUNT';
+}
+async function submitAccount(event){
+  event.preventDefault();
+  const status=$('account-status'),button=$('account-submit'); button.disabled=true;
+  try{
+    const path=accountRegisterMode?'/api/auth/register':'/api/auth/login';
+    const body={email:$('account-email').value.trim(),password:$('account-password').value};
+    if(accountRegisterMode)body.name=$('account-name').value.trim();
+    const response=await apiFetch(coachEndpoint(path),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const payload=await readApiJson(response);
+    store.accountToken=payload.token; store.accountUser=payload.user; persist();
+    if(!accountRegisterMode)await syncAccountData(true); else await syncAccountData(false);
+    updateAccountButton(); openAccount(); status.textContent=`Benvenuto, ${store.accountUser.name}`;
+  }catch(error){console.error('ACCOUNT_UI_ERROR',error);status.textContent=error.message||'Operazione account non riuscita.';}
+  finally{button.disabled=false;}
+}
+function accountPayload(){
+  const payload=JSON.parse(JSON.stringify(store));
+  delete payload.accountToken; delete payload.accountUser;
+  return payload;
+}
+async function syncAccountData(download=false){
+  const status=$('account-status'); if(status)status.textContent='Sincronizzazione…';
+  try{
+    if(download){
+      const response=await accountRequest('/api/account/data',{method:'GET'});
+      const payload=await readApiJson(response);
+      if(payload.data&&Object.keys(payload.data).length){
+        const token=store.accountToken,user=store.accountUser;
+        store={...store,...payload.data,accountToken:token,accountUser:user};
+        persist(); render();
+      }
+    }else{
+      const response=await accountRequest('/api/account/data',{method:'PUT',body:JSON.stringify({data:accountPayload()})});
+      await readApiJson(response);
+    }
+    if(status)status.textContent='Dati sincronizzati correttamente.';
+  }catch(error){console.error('ACCOUNT_SYNC_ERROR',error);if(status)status.textContent=error.message||'Sincronizzazione non riuscita.';throw error;}
+}
+function scheduleAccountSync(){
+  if(!store.accountToken)return;
+  clearTimeout(accountSyncTimer);
+  accountSyncTimer=setTimeout(()=>syncAccountData(false).catch(()=>{}),1200);
 }
 function newCoachQuestion(){
   console.debug('NEW_CHAT_CLICK');
@@ -537,7 +638,7 @@ function normalizeProgram(payload) {
     }))
   }));
   if(!program.weeks.some(week=>week.days.length && week.days.some(day=>day.rows.length))) throw new Error('La programmazione non contiene esercizi importabili.');
-  program.exerciseDb=DATA.exerciseDb||{};
+  program.exerciseDb=(DATA&&DATA.exerciseDb)||candidate.exerciseDb||{};
   program.source='Gemini Coach API';
   adaptProgramDuration(program);
   return program;
@@ -765,20 +866,24 @@ function init(){
     finishInit();
   } else {
     let xhr=new XMLHttpRequest(); xhr.open('GET','data.json',true);
-    xhr.onreadystatechange=function(){ if(xhr.readyState===4){ DATA=JSON.parse(xhr.responseText); finishInit(); }}; xhr.send();
+    xhr.onreadystatechange=function(){ if(xhr.readyState===4){ try { if(xhr.status<200||xhr.status>=300) throw new Error('Impossibile caricare la programmazione ('+xhr.status+').'); DATA=normalizeProgram(JSON.parse(xhr.responseText)); finishInit(); } catch(error) { console.error('DATA_LOAD_ERROR',error); $('splash').style.display='none'; $('view-container').innerHTML='<div class="card"><div class="msg ai" style="color:var(--accent-red);">Impossibile caricare la programmazione: '+esc(error.message)+'</div></div>'; } }}; xhr.onerror=function(){ console.error('DATA_LOAD_NETWORK_ERROR'); $('splash').style.display='none'; $('view-container').innerHTML='<div class="card"><div class="msg ai" style="color:var(--accent-red);">Impossibile caricare la programmazione.</div></div>'; }; xhr.send();
   }
 }
 function finishInit() {
   setTimeout(()=>{ $('splash').style.opacity='0'; setTimeout(()=>{$('splash').style.display='none';render()},800); },1200);
 }
-function persist(){localStorage.setItem('GS_STORE',JSON.stringify(store))}
+function persist(){localStorage.setItem('GS_STORE',JSON.stringify(store));scheduleAccountSync();updateAccountButton()}
 function navigate(v,e){ if(e)e.preventDefault(); console.debug(v==='home'?'HOME_CLICK':'NAVIGATION', {view:v}); currentView=v; document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active')); const a=$(`nav-${v}`); if(a)a.classList.add('active'); render(); }
 function render(){
-  const c=$('view-container'); if(!DATA){c.innerHTML='...';return} c.innerHTML='';
+  const c=$('view-container'); if(!c)return; if(!DATA){c.innerHTML='<div class="card"><div class="msg ai" style="color:var(--accent-red);">Caricamento programmazione in corso…</div></div>';return} c.innerHTML='';
   if(currentView==='home') renderHome(c); else if(currentView==='training') renderTraining(c); else if(currentView==='stats') renderStats(c); else if(currentView==='ai') renderAI(c); else if(currentView==='db') renderDb(c);
 }
 
 function renderHome(c){
+  if(!DATA||!Array.isArray(DATA.weeks)||!DATA.weeks.length){ c.innerHTML='<div class="card"><div class="msg ai" style="color:var(--accent-red);">Programmazione non disponibile.</div></div>'; return; }
+  currentWeek=Math.min(Math.max(1,currentWeek),DATA.weeks.length);
+  const homeWeek=DATA.weeks[currentWeek-1]; if(!homeWeek.days||!homeWeek.days.length){ c.innerHTML='<div class="card"><div class="msg ai" style="color:var(--accent-red);">La settimana attiva non contiene sessioni.</div></div>'; return; }
+  currentDay=Math.min(Math.max(0,currentDay),homeWeek.days.length-1);
   const bw=store.bw[currentWeek]||'--';
   const duration = store.prefs.duration || 16;
   const frequency = store.prefs.frequency || 4;
@@ -786,7 +891,7 @@ function renderHome(c){
   c.innerHTML=`
     <div style="text-align:center;padding:20px 0;"><img src="gs_logo.png" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">SYSTEM DASHBOARD</h1></div>
 
-    <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>Sessione Attiva</h2></div><div style="padding:20px;"><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${DATA.weeks[currentWeek-1].days[currentDay].title}</div><button class="btn btn-primary" style="width:100%;margin-top:20px;font-size:16px;height:55px;" onclick="navigate('training')">INIZIA WORKOUT</button></div></div>
+    <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>Sessione Attiva</h2></div><div style="padding:20px;"><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(homeWeek.days[currentDay].title||homeWeek.days[currentDay].day||'Sessione')}</div><button class="btn btn-primary" style="width:100%;margin-top:20px;font-size:16px;height:55px;" onclick="navigate('training')">INIZIA WORKOUT</button></div></div>
 
     <div class="card">
       <div class="card-header"><h2>Struttura Programmazione</h2></div>
@@ -858,17 +963,21 @@ function deleteModel(idx) {
 }
 
 function renderTraining(c){
+  console.debug('WORKOUT_OPEN',{week:currentWeek,session:currentDay});
+  try {
   const intensType = store.prefs.intensityType || 'RIR';
   const duration = store.prefs.duration || 16;
   const frequency = store.prefs.frequency || 4;
 
   // Filtraggio settimane e giorni
-  const filteredWeeks = DATA.weeks.slice(0, duration);
-  if(currentWeek > duration) currentWeek = duration;
+  const filteredWeeks = DATA.weeks.slice(0, Math.min(duration,DATA.weeks.length));
+  if(!filteredWeeks.length) throw new Error('Nessuna settimana disponibile');
+  if(currentWeek > filteredWeeks.length) currentWeek = filteredWeeks.length;
 
   const w = filteredWeeks[currentWeek-1];
+  if(!w||!Array.isArray(w.days)||!w.days.length) throw new Error('Nessuna sessione disponibile nella settimana selezionata');
   const filteredDays = w.days.slice(0, frequency);
-  if(currentDay >= frequency) currentDay = 0;
+  if(currentDay >= filteredDays.length) currentDay = 0;
 
   const d = filteredDays[currentDay];
 
@@ -906,7 +1015,7 @@ function renderTraining(c){
         </div>
       </div>
       <div style="font-size:17px;font-weight:900;margin-bottom:10px;">${esc(curEx)}</div>
-      ${getLoadSuggestion(fIdx,row)!=null?`<div style="font-size:10px;color:var(--gold);margin-bottom:8px;">Suggerimento settimana precedente: ${getLoadSuggestion(fIdx,row)} kg · conferma sempre in base a tecnica e RPE/RIR.</div>`:''}
+      ${getLoadSuggestion(fIdx,g.rows[0])!=null?`<div style="font-size:10px;color:var(--gold);margin-bottom:8px;">Suggerimento settimana precedente: ${getLoadSuggestion(fIdx,g.rows[0])} kg · conferma sempre in base a tecnica e RPE/RIR.</div>`:''}
       ${skipReason ? `<div class="skip-reason">Causa: ${skipReason}</div>` : ''}
 
       <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
@@ -959,6 +1068,11 @@ function renderTraining(c){
     <div style="padding:20px;"><button class="btn btn-primary" style="width:100%; height:60px; font-size:18px; box-shadow: 0 0 20px rgba(212,175,55,0.3);" onclick="finalizeWorkout()">FINALIZZA ALLENAMENTO</button></div>
     <div style="height:160px;"></div>`;
   c.innerHTML=h; calcStats();
+  console.debug('WORKOUT_RENDER_END',{week:currentWeek,session:currentDay});
+  } catch(error) {
+    console.error('WORKOUT_RENDER_ERROR',error);
+    c.innerHTML=`<div class="card"><div class="msg ai" style="color:var(--accent-red);">Impossibile visualizzare il workout: ${esc(error.message)}</div><button class="btn btn-outline" onclick="navigate('home')">TORNA ALLA HOME</button></div>`;
+  }
 }
 
 function toggleLoadType(idx, type) {
@@ -1256,7 +1370,7 @@ async function askAI(){
     if(requestToken!==coachRequestToken)return;
     const reply=String(payload.reply||payload.message||payload.response||'').trim();
     if(!reply) throw new Error('Risposta vuota del server');
-    pending.innerHTML=markdownToHtml(reply);
+    pending.innerHTML=markdownToHtml(reply); lastCoachReply=reply;
     speakCoachReply(reply);
     store.chatHistory.push({role:'assistant',text:reply}); persist();
   } catch(err) {
