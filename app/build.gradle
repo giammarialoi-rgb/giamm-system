@@ -14,6 +14,7 @@ android {
         targetSdk 35
         versionCode 1
         versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // The production endpoint is public; it can be replaced at build time
         // with -PcoachApiUrl=https://another-host.example.
         def coachApiUrl = (project.findProperty("coachApiUrl") ?: "https://coach-api-gemini.onrender.com").replace('"', '\\"')
@@ -26,6 +27,11 @@ android {
         implementation "androidx.credentials:credentials:1.5.0"
         implementation "androidx.credentials:credentials-play-services-auth:1.5.0"
         implementation "com.google.android.libraries.identity.googleid:googleid:1.1.1"
+
+        androidTestImplementation "androidx.test.ext:junit:1.1.5"
+        androidTestImplementation "androidx.test:runner:1.5.2"
+        androidTestImplementation "androidx.test:rules:1.5.0"
+        androidTestImplementation "androidx.test.espresso:espresso-core:3.5.1"
     }
 
     buildFeatures {
