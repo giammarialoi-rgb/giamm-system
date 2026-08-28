@@ -1,0 +1,21 @@
+{
+  "name": "Giammaria Coach API",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
+  "terminals": [
+    {
+      "name": "coach-api",
+      "description": "Coach API backend (Express). Health: http://localhost:10000/health",
+      "command": "DATABASE_URL=postgresql://coach:coach@localhost:5432/coach JWT_SECRET=local-dev-jwt-secret PORT=10000 GEMINI_MODEL=gemini-3.1-flash-lite npm start"
+    },
+    {
+      "name": "web-ui",
+      "description": "Static dev server for the web/ UI, pointed at the local Coach API. http://localhost:8080",
+      "command": "WEB_PORT=8080 WEB_COACH_API_URL=http://localhost:10000 node scripts/dev-web.mjs"
+    }
+  ],
+  "ports": [
+    { "name": "coach-api", "port": 10000 },
+    { "name": "web-ui", "port": 8080 }
+  ]
+}
