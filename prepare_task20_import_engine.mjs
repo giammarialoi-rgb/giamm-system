@@ -1,3 +1,9 @@
+function getExtName(filename) {
+  if (!filename) return "";
+  const idx = filename.lastIndexOf(".");
+  return idx !== -1 ? filename.slice(idx).toLowerCase() : "";
+}
+
 /**
  * GIAMMARIA SYSTEM - UNIVERSAL IMPORT ENGINE 2.1 (Master Task 15)
  * 2D Semantic Extraction Matrix, Domain Extractors for Training, Nutrition,
@@ -1125,7 +1131,7 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
     normalized_title: "GS Imported Program",
     description: "Programmazione acquisita da Universal Import Engine 2.1.",
     author: "Imported User",
-    source: { type: path.extname(filename).toLowerCase().replace(".", "") || "text", filename },
+    source: { type: getExtName(filename).replace(".", "") || "text", filename },
     goal: { primary: "Ipertrofia", secondary: ["Forza"], confidence: "high" },
     difficulty: "Intermedio",
     experience_level: "Intermedio",
@@ -1428,7 +1434,7 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
 // ====================================================
 
 async function extractDocumentContent({ filename, mimeType, buffer }) {
-  const ext = path.extname(filename || "").toLowerCase();
+  const ext = getExtName(filename || "");
 
   if (ext === ".xlsx" || ext === ".xls" || (mimeType && mimeType.includes("spreadsheet"))) {
     const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true, cellNF: true, cellFormula: true });
