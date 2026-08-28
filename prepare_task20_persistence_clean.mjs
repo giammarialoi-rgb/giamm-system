@@ -409,6 +409,11 @@ class GiammariaPersistenceEngine {
     return this.loadActiveProgram();
   }
 
+  async getAllPrograms() {
+    const all = await this.dbGetAll(STORES.PROGRAMS);
+    return all.map(e => e.canonicalModel || e);
+  }
+
   async listPrograms() {
     const all = await this.dbGetAll(STORES.PROGRAMS);
     return all.map(e => ({

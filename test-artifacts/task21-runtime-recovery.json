@@ -1,0 +1,187 @@
+{
+  "timestamp": "2026-08-28T06:30:25.761Z",
+  "task": "MASTER TASK 21: FULL RUNTIME RECOVERY",
+  "summary": {
+    "total": 35,
+    "passed": 35,
+    "failed": 0,
+    "successRate": "100%"
+  },
+  "checks": [
+    {
+      "id": 1,
+      "description": "Asset Parity: web/index.html and app/src/main/assets/index.html are byte-identical",
+      "status": "PASS"
+    },
+    {
+      "id": 2,
+      "description": "HTML <head> contains <script src=\"xlsx.full.min.js\"></script>",
+      "status": "PASS"
+    },
+    {
+      "id": 3,
+      "description": "Universal Import Engine uses browser-safe string operations (zero path.extname)",
+      "status": "PASS"
+    },
+    {
+      "id": 4,
+      "description": "5-Layer Enterprise Architecture: window.GS and domain services exported",
+      "status": "PASS"
+    },
+    {
+      "id": 5,
+      "description": "Persistence Core 2.0 has getAllPrograms and listPrograms aliases",
+      "status": "PASS"
+    },
+    {
+      "id": 6,
+      "description": "App Bootstrap with empty storage initializes cleanly without infinite loading",
+      "status": "PASS"
+    },
+    {
+      "id": 7,
+      "description": "Home View in Empty State renders \"NESSUN PROGRAMMA ATTIVO\" and \"IMPORTA SCHEDA\" CTA",
+      "status": "PASS"
+    },
+    {
+      "id": 8,
+      "description": "Universal Import Engine 2.1 parses GIAMMARIA_SYSTEM_V29_MASTER.xlsx completely",
+      "status": "PASS"
+    },
+    {
+      "id": 9,
+      "description": "Import Review Screen allows inspecting Training, Nutrition, Supplements, Therapy/Exams",
+      "status": "PASS"
+    },
+    {
+      "id": 10,
+      "description": "Import Review Confirmation activates program in IndexedDB and syncs DATA",
+      "status": "PASS"
+    },
+    {
+      "id": 11,
+      "description": "Home View with active program displays Sessione Attiva, Progress and Start CTA",
+      "status": "PASS"
+    },
+    {
+      "id": 12,
+      "description": "Workout Logger renders exercises, target reps, load inputs and set rows",
+      "status": "PASS"
+    },
+    {
+      "id": 13,
+      "description": "Workout Logger + SERIE increases exercise set count without desync",
+      "status": "PASS"
+    },
+    {
+      "id": 14,
+      "description": "Workout Logger ⧉ DUPLICA clones target load and reps to new set",
+      "status": "PASS"
+    },
+    {
+      "id": 15,
+      "description": "Workout Logger ✕ removes set and decrements set count correctly",
+      "status": "PASS"
+    },
+    {
+      "id": 16,
+      "description": "Workout Logger Set Done toggle updates volume calculations accurately",
+      "status": "PASS"
+    },
+    {
+      "id": 17,
+      "description": "RIR / RPE live conversion engine converts values symmetrically",
+      "status": "PASS"
+    },
+    {
+      "id": 18,
+      "description": "Rest Timer engine starts countdown and stops without throwing",
+      "status": "PASS"
+    },
+    {
+      "id": 19,
+      "description": "Nutrition Domain: hierarchical meals, foods addition and accurate macro math",
+      "status": "PASS"
+    },
+    {
+      "id": 20,
+      "description": "Food Database Service returns matching foods from catalog",
+      "status": "PASS"
+    },
+    {
+      "id": 21,
+      "description": "Supplement Domain: items addition, timing, frequency and daily schedule filter",
+      "status": "PASS"
+    },
+    {
+      "id": 22,
+      "description": "Supplement Database Service searches catalog and supports Examine evidence",
+      "status": "PASS"
+    },
+    {
+      "id": 23,
+      "description": "Medical Therapy Domain: manages medications with day grouping and notes",
+      "status": "PASS"
+    },
+    {
+      "id": 24,
+      "description": "Clinical Lab Exams: logs biomarker records and computes parameter history",
+      "status": "PASS"
+    },
+    {
+      "id": 25,
+      "description": "Unified Calendar: aggregates training, nutrition, supplements and therapy events",
+      "status": "PASS"
+    },
+    {
+      "id": 26,
+      "description": "Coach AI: ConfigService retrieves URL and askAI handles offline state safely",
+      "status": "PASS"
+    },
+    {
+      "id": 27,
+      "description": "Coach AI: proposal validation prevents hallucinations and applies exercise change",
+      "status": "PASS"
+    },
+    {
+      "id": 28,
+      "description": "Program Library: saves version snapshot and restores program state atomically",
+      "status": "PASS"
+    },
+    {
+      "id": 29,
+      "description": "i18n Engine: supports it, en, es, fr, de without missing keys",
+      "status": "PASS"
+    },
+    {
+      "id": 30,
+      "description": "Monetization Entitlements: Workout Logger and Medical Therapy are 100% ad-free",
+      "status": "PASS"
+    },
+    {
+      "id": 31,
+      "description": "Storage Guard: localStorage payload is strictly sanitized to < 5 KB",
+      "status": "PASS"
+    },
+    {
+      "id": 32,
+      "description": "Splash screen safety timer guarantees dismissal within 2.5 seconds",
+      "status": "PASS"
+    },
+    {
+      "id": 33,
+      "description": "View Navigation Router: smoothly routes to all 14 views without crashing",
+      "status": "PASS"
+    },
+    {
+      "id": 34,
+      "description": "NativeConfig & Auth Bridge: provides fallbacks when native bridge is unavailable",
+      "status": "PASS"
+    },
+    {
+      "id": 35,
+      "description": "E2E Reboot Persistence: simulates app restart and recovers active program",
+      "status": "PASS"
+    }
+  ]
+}

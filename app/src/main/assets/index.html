@@ -522,6 +522,7 @@ select, input {
 }
 
 </style>
+  <script src="xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -965,6 +966,14 @@ select, input {
 </nav>
 
 <script>
+
+function getExtName(filename) {
+  if (!filename) return "";
+  const idx = filename.lastIndexOf(".");
+  return idx !== -1 ? filename.slice(idx).toLowerCase() : "";
+}
+
+
 
 // ====================================================
 // GIAMMARIA SYSTEM — ARCHITECTURE BASELINE (Master Task 20)
@@ -1411,6 +1420,11 @@ class GiammariaPersistenceEngine {
 
   async getActiveProgram() {
     return this.loadActiveProgram();
+  }
+
+  async getAllPrograms() {
+    const all = await this.dbGetAll(STORES.PROGRAMS);
+    return all.map(e => e.canonicalModel || e);
   }
 
   async listPrograms() {
@@ -2777,7 +2791,7 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
     normalized_title: "GS Imported Program",
     description: "Programmazione acquisita da Universal Import Engine 2.1.",
     author: "Imported User",
-    source: { type: path.extname(filename).toLowerCase().replace(".", "") || "text", filename },
+    source: { type: getExtName(filename).replace(".", "") || "text", filename },
     goal: { primary: "Ipertrofia", secondary: ["Forza"], confidence: "high" },
     difficulty: "Intermedio",
     experience_level: "Intermedio",
@@ -3080,7 +3094,7 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
 // ====================================================
 
 async function extractDocumentContent({ filename, mimeType, buffer }) {
-  const ext = path.extname(filename || "").toLowerCase();
+  const ext = getExtName(filename || "");
 
   if (ext === ".xlsx" || ext === ".xls" || (mimeType && mimeType.includes("spreadsheet"))) {
     const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true, cellNF: true, cellFormula: true });
@@ -4197,7 +4211,24 @@ function loadStore(){
     return JSON.parse(JSON.stringify(DEFAULT_STORE));
   }
 }
+function ensureStoreIntegrity() {
+  if (!store || typeof store !== 'object') store = { ...DEFAULT_STORE };
+  if (!store.data) store.data = {};
+  if (!store.subs) store.subs = {};
+  if (!store.bw) store.bw = {};
+  if (!store.prefs) store.prefs = { intensityType: 'RIR', duration: 16, frequency: 4 };
+  if (!store.loadTypes) store.loadTypes = {};
+  if (!store.tempos) store.tempos = {};
+  if (!store.skips) store.skips = {};
+  if (!store.bonus) store.bonus = {};
+  if (!store.customSets) store.customSets = {};
+  if (!store.docs) store.docs = [];
+  if (!store.models) store.models = [];
+  if (!store.exIntensity) store.exIntensity = {};
+  if (!store.chatHistory) store.chatHistory = [];
+}
 var store = loadStore();
+ensureStoreIntegrity();
 if(!store.prefs) store.prefs = { intensityType: 'RIR', duration: 16, frequency: 4 };
 if(!store.prefs.duration) store.prefs.duration = 16;
 if(typeof store.prefs.durationUserSet!=='boolean') store.prefs.durationUserSet = false;
@@ -5501,34 +5532,119 @@ function exerciseMatchesMuscleGroup(exerciseName, movement, explicitGroups, sele
   return groups.includes(selectedGroup);
 }
 
-function init(){
-  if(store.activeProgram) {
-    DATA = normalizeProgram(store.activeProgram);
+async function init() {
+  console.log('[INIT] Starting GIAMMARIA SYSTEM Master Recovery bootstrap...');
+  
+  // 1. Safety Timeout: Splash screen ALWAYS dismisses within 2.5 seconds
+  const splashTimer = setTimeout(() => {
+    console.warn('[INIT] Splash safety timer triggered (2.5s fallback)');
     finishInit();
-  } else {
-    if (typeof XMLHttpRequest === 'undefined') {
+  }, 2500);
+
+  try {
+    // 2. Initialize Persistence Core 2.0 (IndexedDB)
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.init) {
+      await GiammariaPersistence.init().catch(err => console.warn('[INIT IDB Warning]', err));
+    }
+
+    // 3. Try loading active program from IndexedDB
+    let activeProg = null;
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadActiveProgram) {
+      try {
+        activeProg = await GiammariaPersistence.loadActiveProgram();
+      } catch (idbErr) {
+        console.warn('[INIT] Could not load active program from IDB:', idbErr);
+      }
+    }
+
+    if (activeProg && Array.isArray(activeProg.weeks) && activeProg.weeks.length > 0) {
+      console.log('[INIT] Successfully loaded active program from IndexedDB:', activeProg.title);
+      DATA = normalizeProgram(activeProg);
+      clearTimeout(splashTimer);
+      finishInit();
       return;
     }
-    let xhr = new XMLHttpRequest(); xhr.open('GET', 'data.json', true);
-    xhr.onreadystatechange = function(){
-      if(xhr.readyState === 4){
-        try {
-          if(xhr.status < 200 || xhr.status >= 300) throw new Error('Impossibile caricare data.json (' + xhr.status + ').');
-          DATA = normalizeProgram(JSON.parse(xhr.responseText));
-          finishInit();
-        } catch(error) {
-          console.error('DATA_LOAD_ERROR', error);
-          if ($('splash')) $('splash').style.display = 'none';
-          if ($('view-container')) $('view-container').innerHTML = '<div class="card"><div class="msg ai" style="color:var(--accent-red);">Impossibile caricare la programmazione: ' + esc(error.message) + '</div></div>';
+
+    // 4. Fallback to localStorage activeProgram (legacy migration)
+    if (store && store.activeProgram && Array.isArray(store.activeProgram.weeks) && store.activeProgram.weeks.length > 0) {
+      console.log('[INIT] Loaded active program from legacy store');
+      DATA = normalizeProgram(store.activeProgram);
+      if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
+        GiammariaPersistence.saveProgram(DATA, true).catch(console.warn);
+      }
+      clearTimeout(splashTimer);
+      finishInit();
+      return;
+    }
+
+    // 5. Fallback to bundled data.json (supports HTTP 200 and file:/// status 0)
+    let loadedFromDataJson = false;
+    try {
+      if (typeof fetch !== 'undefined') {
+        const resp = await fetch('data.json');
+        if (resp.ok || resp.status === 0) {
+          const json = await resp.json();
+          if (json && Array.isArray(json.weeks) && json.weeks.length > 0) {
+            DATA = normalizeProgram(json);
+            loadedFromDataJson = true;
+          }
         }
       }
-    };
-    xhr.onerror = function(){
-      console.error('DATA_LOAD_NETWORK_ERROR');
-      if ($('splash')) $('splash').style.display = 'none';
-      if ($('view-container')) $('view-container').innerHTML = '<div class="card"><div class="msg ai" style="color:var(--accent-red);">Impossibile caricare la programmazione.</div></div>';
-    };
-    xhr.send();
+    } catch (fetchErr) {
+      console.warn('[INIT] fetch(data.json) error, trying XHR:', fetchErr);
+    }
+
+    if (!loadedFromDataJson && typeof XMLHttpRequest !== 'undefined') {
+      await new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', 'data.json', true);
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState === 4) {
+            try {
+              if (xhr.status === 200 || xhr.status === 0) {
+                if (xhr.responseText && xhr.responseText.trim().startsWith('{')) {
+                  const json = JSON.parse(xhr.responseText);
+                  if (json && Array.isArray(json.weeks) && json.weeks.length > 0) {
+                    DATA = normalizeProgram(json);
+                    loadedFromDataJson = true;
+                  }
+                }
+              }
+            } catch (xhrErr) {
+              console.warn('[INIT] XHR data.json parse error:', xhrErr);
+            }
+            resolve();
+          }
+        };
+        xhr.onerror = function () { resolve(); };
+        xhr.ontimeout = function () { resolve(); };
+        xhr.timeout = 1500;
+        xhr.send();
+      });
+    }
+
+    if (loadedFromDataJson && DATA) {
+      console.log('[INIT] Loaded default program from data.json');
+      clearTimeout(splashTimer);
+      finishInit();
+      return;
+    }
+
+    // 6. Safe Empty Fallback Shell
+    if (!DATA) {
+      console.log('[INIT] No active program found, initializing empty program shell');
+      DATA = { title: "Nessun Programma Attivo", weeks: [] };
+    }
+
+    clearTimeout(splashTimer);
+    finishInit();
+  } catch (globalErr) {
+    console.error('[INIT_FATAL_RECOVERY]', globalErr);
+    if (!DATA) {
+      DATA = { title: "Nessun Programma Attivo", weeks: [] };
+    }
+    clearTimeout(splashTimer);
+    finishInit();
   }
 }
 function finishInit() {
@@ -5538,9 +5654,22 @@ function finishInit() {
     setTimeout(() => { if ($('splash')) $('splash').style.display = 'none'; render(); }, 800);
   }, 1200);
 }
-function persist(){
-  const sanitized = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.sanitizeStoreForLocalStorage) ? GiammariaPersistence.sanitizeStoreForLocalStorage(store) : store;
-  localStorage.setItem('GS_STORE', JSON.stringify(sanitized));
+function persist() {
+  ensureStoreIntegrity();
+  try {
+    const sanitized = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.sanitizeStoreForLocalStorage) 
+      ? GiammariaPersistence.sanitizeStoreForLocalStorage(store) 
+      : store;
+    localStorage.setItem('GS_STORE', JSON.stringify(sanitized));
+  } catch (quotaErr) {
+    console.warn('[PERSIST_WARNING] localStorage quota exceeded, performing deep sanitize:', quotaErr);
+    try {
+      const sanitizedStore = { prefs: store.prefs || {}, bw: store.bw || {}, customSets: store.customSets || {}, data: store.data || {} };
+      localStorage.setItem('GS_STORE', JSON.stringify(sanitizedStore));
+    } catch (criticalErr) {
+      console.error('[PERSIST_CRITICAL] Failed to persist even minimal store:', criticalErr);
+    }
+  }
   scheduleAccountSync();
   updateAccountButton();
 }
@@ -5554,27 +5683,37 @@ function navigate(v, e){
 }
 
 
-function render(){
-  const c = $('view-container'); if(!c) return;
-  if(!DATA){
-    c.innerHTML = '<div class="card"><div class="msg ai" style="color:var(--accent-red);">Caricamento programmazione in corso…</div></div>';
+function render() {
+  ensureStoreIntegrity();
+  const c = $('view-container');
+  if (!c) return;
+
+  if (!DATA) {
+    c.innerHTML = `
+      <div class="card" style="padding:20px;text-align:center;">
+        <div style="font-size:16px;font-weight:900;color:var(--gold);margin-bottom:8px;">Caricamento Iniziale</div>
+        <p style="font-size:12px;color:#aaa;margin-bottom:15px;">Inizializzazione dei moduli di sistema in corso...</p>
+        <button class="btn btn-outline" onclick="init()">RIPROVA CARICAMENTO</button>
+      </div>
+    `;
     return;
   }
+
   c.innerHTML = '';
-  if(currentView === 'home') renderHome(c);
-  else if(currentView === 'training') renderTraining(c);
-  else if(currentView === 'stats') renderStats(c);
-  else if(currentView === 'ai') renderAI(c);
-  else if(currentView === 'db') renderDb(c);
-  else if(currentView === 'import') renderImport(c);
-  else if(currentView === 'programs') renderPrograms(c);
-  else if(currentView === 'nutrition') renderNutrition(c);
-  else if(currentView === 'supplements') renderSupplements(c);
-  else if(currentView === 'therapy') renderTherapy(c);
-  else if(currentView === 'exams') renderExams(c);
-  else if(currentView === 'calendar') renderCalendar(c);
-  else if(currentView === 'settings') renderSettings(c);
-  else if(currentView === 'pricing') renderPricing(c);
+  if (currentView === 'home') renderHome(c);
+  else if (currentView === 'training') renderTraining(c);
+  else if (currentView === 'stats') renderStats(c);
+  else if (currentView === 'ai') renderAI(c);
+  else if (currentView === 'db') renderDb(c);
+  else if (currentView === 'import') renderImport(c);
+  else if (currentView === 'programs') renderPrograms(c);
+  else if (currentView === 'nutrition') renderNutrition(c);
+  else if (currentView === 'supplements') renderSupplements(c);
+  else if (currentView === 'therapy') renderTherapy(c);
+  else if (currentView === 'exams') renderExams(c);
+  else if (currentView === 'calendar') renderCalendar(c);
+  else if (currentView === 'settings') renderSettings(c);
+  else if (currentView === 'pricing') renderPricing(c);
   else renderHome(c);
 }
 
@@ -7035,16 +7174,85 @@ function formatFileSize(bytes) {
 
 
 
-function renderHome(c){
-  if(!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length){
-    c.innerHTML = '<div class="card"><div class="msg ai" style="color:var(--accent-red);">Programmazione non disponibile.</div></div>';
+function renderHome(c) {
+  if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
+    c.innerHTML = `
+      <div style="text-align:center;padding:20px 0;">
+        <img src="gs_logo.png" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));">
+        <h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">SYSTEM DASHBOARD</h1>
+      </div>
+
+      <div class="card" style="border:2px solid var(--gold);padding:24px;text-align:center;">
+        <div style="font-size:18px;font-weight:900;color:var(--gold);margin-bottom:8px;">NESSUN PROGRAMMA ATTIVO</div>
+        <p style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:20px;">
+          Carica la tua scheda di allenamento (Excel XLSX, PDF, Word DOCX o Testo) oppure seleziona un programma dalla libreria.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:10px;max-width:320px;margin:0 auto;">
+          <button class="btn btn-primary" style="height:50px;font-size:14px;font-weight:900;" onclick="navigate('import')">
+            📥 IMPORTA SCHEDA DI ALLENAMENTO
+          </button>
+          <button class="btn btn-outline" style="height:44px;font-size:12px;font-weight:800;border-color:var(--gold);color:var(--gold);" onclick="navigate('programs')">
+            📚 LIBRERIA PROGRAMMI
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2>MODULI DEL SISTEMA</h2></div>
+        <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:10px;">
+          <button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('nutrition')">
+            <span style="font-size:18px;">🥗</span>
+            <span style="font-size:11px;font-weight:800;">Alimentazione</span>
+          </button>
+          <button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('supplements')">
+            <span style="font-size:18px;">💊</span>
+            <span style="font-size:11px;font-weight:800;">Integrazione</span>
+          </button>
+          <button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('therapy')">
+            <span style="font-size:18px;">🩺</span>
+            <span style="font-size:11px;font-weight:800;">Terapia</span>
+          </button>
+          <button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('exams')">
+            <span style="font-size:18px;">🧪</span>
+            <span style="font-size:11px;font-weight:800;">Esami Lab</span>
+          </button>
+          <button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('calendar')">
+            <span style="font-size:18px;">📅</span>
+            <span style="font-size:11px;font-weight:800;">Calendario</span>
+          </button>
+          <button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('ai')">
+            <span style="font-size:18px;">🤖</span>
+            <span style="font-size:11px;font-weight:800;">Coach AI</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2>GESTIONE & MANUTENZIONE</h2></div>
+        <div style="padding:15px;display:flex;flex-direction:column;gap:10px;">
+          <button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="init()">
+            🔄 RICARICA PROGRAMMA PREDEFINITO
+          </button>
+          <button class="btn btn-outline" style="width:100%;border-color:var(--accent-red);color:var(--accent-red);font-size:10px;" onclick="resetAllData()">
+            HARD RESET DATI LOCALI
+          </button>
+        </div>
+      </div>
+    `;
     return;
   }
+
   currentWeek = Math.min(Math.max(1, currentWeek), DATA.weeks.length);
   const homeWeek = DATA.weeks[currentWeek - 1];
-  const sessions = homeWeek.sessions || homeWeek.days || [];
-  if(!sessions.length){
-    c.innerHTML = '<div class="card"><div class="msg ai" style="color:var(--accent-red);">La settimana attiva non contiene sessioni.</div></div>';
+  const sessions = homeWeek?.sessions || homeWeek?.days || [];
+  if (!sessions.length) {
+    c.innerHTML = `
+      <div class="card"><div class="card-header"><h2>Settimana ${currentWeek}</h2></div>
+      <div style="padding:20px;text-align:center;">
+        <p style="color:#aaa;margin-bottom:15px;">Nessuna sessione trovata in questa settimana.</p>
+        <button class="btn btn-outline" onclick="navigate('import')">IMPORTA SCHEDA</button>
+      </div></div>
+    `;
     return;
   }
   currentDay = Math.min(Math.max(0, currentDay), sessions.length - 1);
@@ -7057,7 +7265,7 @@ function renderHome(c){
 
     <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>Sessione Attiva</h2></div><div style="padding:20px;"><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><div style="display:flex;gap:10px;margin-top:20px;">
         <button class="btn btn-primary" style="flex:2;font-size:16px;height:55px;" onclick="navigate('training')">INIZIA WORKOUT</button>
-        <button class="btn btn-outline" style="flex:1;font-size:12px;height:55px;border-color:var(--gold);color:var(--gold);font-weight:800;" onclick="navigate('import')">📥 IMPORTA</button>
+        <button class="btn btn-outline" style="flex:1;font-size:12px;height:55px;border-color:var(--gold);color:var(--gold);" onclick="navigate('import')">📥 IMPORTA</button>
       </div></div></div>
 
     <div class="card">
@@ -7083,7 +7291,7 @@ function renderHome(c){
     <div class="card">
        <div class="card-header"><h2>Programmi Salvati</h2></div>
        <div style="padding:15px;" id="saved-models-list">
-          ${store.models.length ? store.models.map((m,i)=>`
+          ${store.models && store.models.length ? store.models.map((m,i)=>`
             <div style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #222;">
               <div>
                 <b style="color:var(--gold); font-size:13px;">${esc(m.name)}</b>
@@ -7626,7 +7834,7 @@ function renderStatsData(){
 }
 
 function renderAI(c){
-  const history = store.chatHistory.map(item => `
+  const history = (store.chatHistory || []).map(item => `
     <div class="msg ${item.role==='user'?'user':'ai'} ${item.role==='assistant'?'markdown':''}">
       ${item.role==='assistant'?markdownToHtml(item.text):esc(item.text)}
     </div>
