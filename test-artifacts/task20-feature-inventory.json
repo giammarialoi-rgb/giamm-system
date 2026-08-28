@@ -1,0 +1,642 @@
+[
+  {
+    "feature": "Configurazione Centralizzata API",
+    "categoria": "ACCOUNT",
+    "funzione_js": "ConfigService.getCoachApiUrl / coachEndpoint",
+    "id_dom": "account-status",
+    "vista": "account-modal",
+    "dipendenze": [
+      "CONFIG",
+      "localStorage"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Autenticazione Google Sign-In",
+    "categoria": "ACCOUNT",
+    "funzione_js": "startGoogleAuth / nativeGoogleResult",
+    "id_dom": "account-modal",
+    "vista": "account-modal",
+    "dipendenze": [
+      "GoogleService",
+      "coach-api"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 14/20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Autenticazione Apple Sign-In (Bridge)",
+    "categoria": "ACCOUNT",
+    "funzione_js": "startAppleAuth / nativeAppleResult",
+    "id_dom": "account-modal",
+    "vista": "account-modal",
+    "dipendenze": [
+      "AppleService",
+      "coach-api"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 14/20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Gestione Sessione Utente e Logout",
+    "categoria": "ACCOUNT",
+    "funzione_js": "openAccount / logoutAccount",
+    "id_dom": "account-modal",
+    "vista": "account-modal",
+    "dipendenze": [
+      "store.accountToken",
+      "GiammariaPersistence"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 14",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Dashboard di Sistema & Control Center",
+    "categoria": "HOME",
+    "funzione_js": "renderHome",
+    "id_dom": "view-container",
+    "vista": "home",
+    "dipendenze": [
+      "DATA",
+      "store"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 1",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Accesso Rapido Sessione Attiva",
+    "categoria": "HOME",
+    "funzione_js": "renderHome",
+    "id_dom": "view-container",
+    "vista": "home",
+    "dipendenze": [
+      "currentWeek",
+      "currentDay"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 1",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Pulsante Diretto Importa Scheda",
+    "categoria": "HOME",
+    "funzione_js": "navigate('import')",
+    "id_dom": "view-container",
+    "vista": "home",
+    "dipendenze": [
+      "navigate"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 18",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Bodyweight & Progressione Percentuale",
+    "categoria": "HOME",
+    "funzione_js": "renderHome",
+    "id_dom": "view-container",
+    "vista": "home",
+    "dipendenze": [
+      "store.bw",
+      "currentWeek"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 1",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Libreria Programmi",
+    "categoria": "PROGRAMMI",
+    "funzione_js": "renderPrograms",
+    "id_dom": "view-container",
+    "vista": "programs",
+    "dipendenze": [
+      "DATA",
+      "store.models"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 19",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Attivazione e Switch Modello Programma",
+    "categoria": "PROGRAMMI",
+    "funzione_js": "applyModel",
+    "id_dom": "saved-models-list-programs",
+    "vista": "programs",
+    "dipendenze": [
+      "GiammariaPersistence",
+      "DATA"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 19",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Esportazione Programma JSON",
+    "categoria": "PROGRAMMI",
+    "funzione_js": "exportActiveProgram",
+    "id_dom": "view-container",
+    "vista": "programs",
+    "dipendenze": [
+      "DATA"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 19",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Versioning Programmi e Confronto Diff",
+    "categoria": "PROGRAMMI",
+    "funzione_js": "ProgramService.saveVersion / ProgramService.getVersions",
+    "id_dom": "view-container",
+    "vista": "programs",
+    "dipendenze": [
+      "GiammariaPersistence",
+      "DATA"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Workout Logging & Session Renderer",
+    "categoria": "TRAINING",
+    "funzione_js": "renderTraining",
+    "id_dom": "view-container",
+    "vista": "training",
+    "dipendenze": [
+      "DATA",
+      "store.data",
+      "currentWeek",
+      "currentDay"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 1",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Aggiunta Dinamica Serie (+ SERIE)",
+    "categoria": "TRAINING",
+    "funzione_js": "addSetToExercise",
+    "id_dom": "view-container",
+    "vista": "training",
+    "dipendenze": [
+      "store.customSets",
+      "persist"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 19",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Rimozione Serie da Esercizio",
+    "categoria": "TRAINING",
+    "funzione_js": "removeSetFromExercise",
+    "id_dom": "view-container",
+    "vista": "training",
+    "dipendenze": [
+      "store.customSets",
+      "store.data"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 19",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Duplicazione Serie",
+    "categoria": "TRAINING",
+    "funzione_js": "duplicateSet",
+    "id_dom": "view-container",
+    "vista": "training",
+    "dipendenze": [
+      "store.customSets",
+      "store.data"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Tipologia Serie (Working, Warmup, Backoff, Drop, AMRAP)",
+    "categoria": "TRAINING",
+    "funzione_js": "updateSetType",
+    "id_dom": "view-container",
+    "vista": "training",
+    "dipendenze": [
+      "store.data"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Separazione Target vs Real Log",
+    "categoria": "TRAINING",
+    "funzione_js": "renderTraining / compareTargetVsActual",
+    "id_dom": "view-container",
+    "vista": "training",
+    "dipendenze": [
+      "DATA",
+      "store.data"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Inserimento Esercizio Bonus Configurato",
+    "categoria": "TRAINING",
+    "funzione_js": "openBonusModal / saveBonusExercise / deleteBonusExercise",
+    "id_dom": "bonus-modal",
+    "vista": "training",
+    "dipendenze": [
+      "store.bonus",
+      "persist"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 15",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Sostituzione Esercizio con Ricerca Intelligente",
+    "categoria": "TRAINING",
+    "funzione_js": "openReplacementModal / confirmReplacement",
+    "id_dom": "replace-modal",
+    "vista": "training",
+    "dipendenze": [
+      "ExerciseDatabaseService",
+      "store.replacements"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 15",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Salto Esercizio Motivato",
+    "categoria": "TRAINING",
+    "funzione_js": "openSkipModal / confirmSkip",
+    "id_dom": "skip-modal",
+    "vista": "training",
+    "dipendenze": [
+      "store.skipped"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 15",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Conversione Bidirezionale RIR <-> RPE",
+    "categoria": "RIR_RPE",
+    "funzione_js": "rirToRpe / rpeToRir / toggleIntensityType",
+    "id_dom": "view-container",
+    "vista": "training",
+    "dipendenze": [
+      "store.prefs.intensityType"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 3/20",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Rest Timer con Overlay & Alert",
+    "categoria": "TIMER",
+    "funzione_js": "startTimer / stopTimer",
+    "id_dom": "timer-overlay",
+    "vista": "global-overlay",
+    "dipendenze": [
+      "timerInterval"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 1",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Calcolo Volume per Gruppo Muscolare & Tonnellaggio",
+    "categoria": "VOLUME_TONNELLAGGIO",
+    "funzione_js": "calcStats / calculateSetVolume / calculateEffectiveIntensityVolume",
+    "id_dom": "d-vol",
+    "vista": "training",
+    "dipendenze": [
+      "store.data",
+      "DATA"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 4/20",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Performance Lab & Grafici Dinamici",
+    "categoria": "PROGRESSI",
+    "funzione_js": "renderStats / renderStatsData / renderSimpleChart",
+    "id_dom": "view-container",
+    "vista": "stats",
+    "dipendenze": [
+      "store.data",
+      "DATA",
+      "statsFilter"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 5",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Interfaccia Chat Coach AI",
+    "categoria": "COACH_AI",
+    "funzione_js": "renderAI / askAI",
+    "id_dom": "view-container",
+    "vista": "ai",
+    "dipendenze": [
+      "AIService",
+      "store.chatHistory",
+      "coachEndpoint"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 6/20",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Proposte Strutturate di Modifica Programma AI",
+    "categoria": "COACH_AI",
+    "funzione_js": "applyCoachProposal / cancelCoachProposal",
+    "id_dom": "chat-history",
+    "vista": "ai",
+    "dipendenze": [
+      "window.activeCoachProposals",
+      "applyOperationsToProgram"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 17/20",
+    "test_associato": "test_master_task19_recovery.mjs"
+  },
+  {
+    "feature": "Reset Sessione Chat Coach",
+    "categoria": "COACH_AI",
+    "funzione_js": "openResetSession / confirmResetSession / clearCoachSession",
+    "id_dom": "reset-session-modal",
+    "vista": "ai",
+    "dipendenze": [
+      "store.chatHistory",
+      "store.chatSessionId"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 15",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Gestione Documenti & Materiali per Analisi",
+    "categoria": "DATABASE_DOCUMENTI",
+    "funzione_js": "renderDb / handleFileUpload / deleteDoc",
+    "id_dom": "view-container",
+    "vista": "db",
+    "dipendenze": [
+      "store.docs",
+      "coachEndpoint"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 7",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Universal Import Parser (XLSX, XLS, CSV, TXT, PDF)",
+    "categoria": "IMPORT",
+    "funzione_js": "parseStructuredWorkbook / parseUniversalDocument",
+    "id_dom": "universal-import-file",
+    "vista": "import",
+    "dipendenze": [
+      "XLSX",
+      "UniversalImportEngine"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 13/18/20",
+    "test_associato": "test_master_task18_suite.mjs"
+  },
+  {
+    "feature": "Schermata Import Review con Modifica Campi & Tabs",
+    "categoria": "IMPORT",
+    "funzione_js": "renderImport / confirmAndActivateProgram",
+    "id_dom": "view-container",
+    "vista": "import",
+    "dipendenze": [
+      "window.programImportState",
+      "GiammariaPersistence"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 18",
+    "test_associato": "test_master_task18_suite.mjs"
+  },
+  {
+    "feature": "Visualizzazione & Gestione Alimentazione Multi-Day",
+    "categoria": "ALIMENTAZIONE",
+    "funzione_js": "NutritionService.getDays / renderNutritionView",
+    "id_dom": "view-container",
+    "vista": "nutrition",
+    "dipendenze": [
+      "DATA.nutrition",
+      "FoodDatabaseService"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 18/20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Inserimento Manuale Piani Alimentari & Alimenti",
+    "categoria": "ALIMENTAZIONE",
+    "funzione_js": "NutritionService.addFoodItem / NutritionService.calculateDayTotals",
+    "id_dom": "view-container",
+    "vista": "nutrition",
+    "dipendenze": [
+      "DATA.nutrition",
+      "GiammariaPersistence"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Database Locale Alimenti & Autocomplete",
+    "categoria": "DATABASE_ALIMENTI",
+    "funzione_js": "FoodDatabaseService.searchFoods",
+    "id_dom": "view-container",
+    "vista": "nutrition",
+    "dipendenze": [
+      "FoodDatabaseService"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Visualizzazione & Gestione Integrazione",
+    "categoria": "INTEGRAZIONE",
+    "funzione_js": "SupplementService.getItems / SupplementService.addItem",
+    "id_dom": "view-container",
+    "vista": "supplements",
+    "dipendenze": [
+      "DATA.supplementation",
+      "SupplementDatabaseService"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 18/20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Database Locale Integratori & Adapter Examine",
+    "categoria": "DATABASE_INTEGRATORI",
+    "funzione_js": "SupplementDatabaseService.searchSupplements / ExamineService.getEvidence",
+    "id_dom": "view-container",
+    "vista": "supplements",
+    "dipendenze": [
+      "SupplementDatabaseService",
+      "ExamineService"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Terapia Mobile-First Card Compatta & Raggruppamento",
+    "categoria": "TERAPIA",
+    "funzione_js": "TherapyService.getMedications / TherapyService.addMedication",
+    "id_dom": "view-container",
+    "vista": "therapy",
+    "dipendenze": [
+      "DATA.therapy",
+      "MedicationDatabaseService"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 18/20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Gestione Esami di Laboratorio & Trend Storici",
+    "categoria": "ESAMI",
+    "funzione_js": "ExamService.getRecords / ExamService.addRecord",
+    "id_dom": "view-container",
+    "vista": "exams",
+    "dipendenze": [
+      "DATA.exams",
+      "GiammariaPersistence"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 18/20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Calendario Unificato (Training, Nutrition, Supps, Therapy, Exams)",
+    "categoria": "CALENDARIO",
+    "funzione_js": "CalendarService.getEventsForDate / renderCalendarView",
+    "id_dom": "view-container",
+    "vista": "calendar",
+    "dipendenze": [
+      "CalendarService",
+      "DATA"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Sistema Notifiche & Reminder Schedulati",
+    "categoria": "NOTIFICHE",
+    "funzione_js": "NotificationService.scheduleReminder / NotificationService.getReminders",
+    "id_dom": "view-container",
+    "vista": "notifications",
+    "dipendenze": [
+      "NotificationService",
+      "NativeConfig"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Motore i18n Centralizzato (IT, EN, ES, FR, DE)",
+    "categoria": "MULTILINGUA",
+    "funzione_js": "I18nService.t / I18nService.setLanguage",
+    "id_dom": "settings-language-select",
+    "vista": "settings",
+    "dipendenze": [
+      "I18nService",
+      "store.prefs.language"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Feature Entitlement Engine (hasFeature)",
+    "categoria": "MONETIZZAZIONE",
+    "funzione_js": "EntitlementService.hasFeature / EntitlementService.getPlan",
+    "id_dom": "view-container",
+    "vista": "pricing",
+    "dipendenze": [
+      "EntitlementService",
+      "store.accountPlan"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Pricing Screen Configurabile & Gestione Piani",
+    "categoria": "MONETIZZAZIONE",
+    "funzione_js": "PricingService.getPricingConfig / renderPricingScreen",
+    "id_dom": "view-container",
+    "vista": "pricing",
+    "dipendenze": [
+      "pricingConfig",
+      "EntitlementService"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "Architettura Ads Non Invasiva",
+    "categoria": "ADS",
+    "funzione_js": "AdsService.shouldShowAd / AdsService.renderBanner",
+    "id_dom": "ad-banner-container",
+    "vista": "global",
+    "dipendenze": [
+      "AdsService",
+      "EntitlementService"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  },
+  {
+    "feature": "IndexedDB Atomic Persistence Core 2.0 & Storage Guard",
+    "categoria": "PERSISTENZA",
+    "funzione_js": "GiammariaPersistence.saveActiveProgram / GiammariaPersistence.loadActiveProgram",
+    "id_dom": "splash",
+    "vista": "global",
+    "dipendenze": [
+      "indexedDB",
+      "crypto/SHA-256"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 17/18/20",
+    "test_associato": "test_master_task17_persistence.mjs"
+  },
+  {
+    "feature": "Architettura Google Cloud & HealthDataProvider",
+    "categoria": "HEALTH_CLOUD",
+    "funzione_js": "HealthDataProvider.fetchMetrics / HealthDataProvider.syncMetrics",
+    "id_dom": "view-container",
+    "vista": "stats",
+    "dipendenze": [
+      "HealthDataProvider"
+    ],
+    "stato": "ACTIVE",
+    "origine_versione": "Task 20",
+    "test_associato": "test_master_task20_architecture.mjs"
+  }
+]

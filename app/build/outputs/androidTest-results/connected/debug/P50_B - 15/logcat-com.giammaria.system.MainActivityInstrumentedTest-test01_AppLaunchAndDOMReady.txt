@@ -1,0 +1,944 @@
+08-27 22:48:00.768 22219 22236 I TestRunner: started: test01_AppLaunchAndDOMReady(com.giammaria.system.MainActivityInstrumentedTest)
+08-27 22:48:00.770 20247 20247 I TopTaskTracker: onTaskRemoved: taskId=866
+08-27 22:48:00.771 20247 20247 I TopTaskTracker: onTaskRemoved: taskId=866
+08-27 22:48:00.779 22219 22236 W Settings: Setting always_finish_activities has moved from android.provider.Settings.System to android.provider.Settings.Global, returning read-only value.
+08-27 22:48:00.780  1054 11701 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:00.780   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:00.781   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:00.781   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f93250
+08-27 22:48:00.781   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 1341, mUid: 10182
+08-27 22:48:00.781   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=600
+08-27 22:48:00.781   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f93250 return ok!
+08-27 22:48:00.788  1054  1383 V GrammaticalInflectionUtils: AttributionSource: android.content.AttributionSource@4717a885 does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+08-27 22:48:00.794   617   776 D mali_gralloc: register: id=2680000bdb3, handle=0xb40000793d62c070, importpid=617
+08-27 22:48:00.795   637   637 D PowerHAL: enter power::setMode
+08-27 22:48:00.795   637   637 D PowerHAL: PowerSessionManager::updateHintMode: mode: LAUNCH, enabled: 1
+08-27 22:48:00.795   637   637 D PowerHAL: PowerSessionManager::updateHintMode resValue = 0
+08-27 22:48:00.795   637   637 D PowerHAL: ###Enter launch scene bgn###
+08-27 22:48:00.795   637   637 D PowerHAL: Enter common_set: enable:1, duration: 0, /sys/devices/system/cpu/cpufreq/policy0/scaling_min_freq: max
+08-27 22:48:00.795   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:00.795   637   637 D PowerHAL: Enter common_set: enable:1, duration: 0, /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq: max
+08-27 22:48:00.795   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:00.795   637   637 D PowerHAL: Enter common_set: enable:1, duration: 0, /sys/devices/system/cpu/cpufreq/policy6/scaling_min_freq: max
+08-27 22:48:00.795   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:00.795   637   637 D PowerHAL: Enter common_set: enable:1, duration: 0, /sys/devices/system/cpu/cpufreq/policy6/scaling_max_freq: max
+08-27 22:48:00.795   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:00.795   637   637 D PowerHAL: Enter devfreq_ddr_set: enable:1, duration: 0, /sys/class/devfreq/scene-frequency/sprd-governor/scene_boost_dfs: max
+08-27 22:48:00.797   637   637 D PowerHAL: ###Enter launch scene end###
+08-27 22:48:00.801 20247 20247 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=com.android.launcher3.uioverrides.QuickstepLauncher$2@93b7188
+08-27 22:48:00.802 20247 20247 W SplitSelectStateCtor: Missing session instanceIds
+08-27 22:48:00.802 20247 20247 D StatsLog: LAUNCHER_SPLIT_SELECTION_EXIT_INTERRUPTED
+08-27 22:48:00.806   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24317}Task=868#24317 isVisible=1 {hidden by parent or layer flag} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.806   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24318}ActivityRecord{a9480b0 u0 com.giammaria.system/.MainActivity#24318 isVisible=1 {hidden by parent or layer flag} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.806   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24317}Task=868#24317 isVisible=0 {hidden by parent or layer flag} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.806   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24318}ActivityRecord{a9480b0 u0 com.giammaria.system/.MainActivity#24318 isVisible=0 {hidden by parent or layer flag} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.807  1341  1445 D mali_gralloc: unregister: id=2680000bda5, handle=0xb4000074c49cb4f0, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:00.807  1054 11701 D InputDispatcher: setFocusedApplication displayId=0 ActivityRecord{a9480b0 u0 com.giammaria.system/.MainActivity t868 d0}
+08-27 22:48:00.807   664   716 D mali_gralloc: unregister: id=2680000bd94, handle=0xb400007058ef5070, base=0x0, importpid=664, clone_count=0
+08-27 22:48:00.812 20247 20247 I TopTaskTracker: onTaskMovedToFront: (moved taskInfo to front) taskId=868, baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10008000 cmp=com.giammaria.system/.MainActivity }
+08-27 22:48:00.813  1341  1436 D mali_gralloc: unregister: id=2680000bda4, handle=0xb4000074c4994f50, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:00.814 21950 21958 I eufe    : (REDACTED) HDM. appOpsListener %s %s
+08-27 22:48:00.814 21950 21958 I eufe    : (REDACTED) HDM. Ignoring irrelevant audio permission changes for package %s
+08-27 22:48:00.816  1054  1369 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:00.816   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:00.816   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:00.816   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f988f0
+08-27 22:48:00.816   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 20247, mUid: 10185
+08-27 22:48:00.816   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:00.816   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f988f0 return ok!
+08-27 22:48:00.819  1341  1384 D mali_gralloc: unregister: id=2680000bda6, handle=0xb4000074c4a0d310, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:00.819  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.819  1341  1384 D mali_gralloc: unregister: id=2680000bda7, handle=0xb4000074c49ec490, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:00.820  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.820  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.820  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.820 22219 22219 D LifecycleMonitor: Lifecycle status change: com.giammaria.system.MainActivity@68313c8 in: PRE_ON_CREATE
+08-27 22:48:00.821 22219 22219 V ActivityScenario: Activity lifecycle changed event received but ignored because the reported transition was not ON_CREATE while the last known transition was PRE_ON_CREATE
+08-27 22:48:00.821  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.821   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20247,level=1,buf=20247 1
+08-27 22:48:00.821   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20283,level=1,buf=20283 1
+08-27 22:48:00.821  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.821   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=0,buf=1341 0
+08-27 22:48:00.821   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=0,buf=1445 0
+08-27 22:48:00.821   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20247,level=1,buf=20247 1
+08-27 22:48:00.821   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20283,level=1,buf=20283 1
+08-27 22:48:00.822   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24319}Surface(name=70b6689 Splash Screen com.giammaria.system.test#24293)/@0x7e98eaf - animation-leash of window_animation#24319 isVisible=1 {nothing to draw} changes=Created | Geometry | Input | Metadata | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=0,ty=89.4442}}
+08-27 22:48:00.822   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24319}Surface(name=70b6689 Splash Screen com.giammaria.system.test#24293)/@0x7e98eaf - animation-leash of window_animation#24319 isVisible=0 {nothing to draw} changes=Created | Geometry | Input | Metadata | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=0,ty=89.4442}}
+08-27 22:48:00.823   664   664 D mali_gralloc: unregister: id=2680000bda5, handle=0xb400007058ee6f70, base=0x0, importpid=664, clone_count=0
+08-27 22:48:00.824   664   664 D mali_gralloc: unregister: id=2680000bda4, handle=0xb400007058ef3330, base=0x0, importpid=664, clone_count=0
+08-27 22:48:00.824   617   776 D mali_gralloc: register: id=2680000bda6, handle=0xb40000793d627bd0, importpid=617
+08-27 22:48:00.824   617   776 D mali_gralloc: unregister: id=2680000bda6, handle=0xb40000793d625a10, base=0x0, importpid=617, clone_count=1
+08-27 22:48:00.832  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.833   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=1,buf=1341 1
+08-27 22:48:00.833  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.833   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=1,buf=1445 1
+08-27 22:48:00.833  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.833   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20247,level=1,buf=20247 1
+08-27 22:48:00.833  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.834   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20283,level=1,buf=20283 1
+08-27 22:48:00.834  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.834   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=1,buf=1341 1
+08-27 22:48:00.834  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.834   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=1,buf=1445 1
+08-27 22:48:00.834  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.834   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=1,buf=1341 1
+08-27 22:48:00.834  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.834   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=1,buf=1445 1
+08-27 22:48:00.834  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.834   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20247,level=1,buf=20247 1
+08-27 22:48:00.835  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.835   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20283,level=1,buf=20283 1
+08-27 22:48:00.835  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.835   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=1,buf=1341 1
+08-27 22:48:00.835  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:00.835   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=1,buf=1445 1
+08-27 22:48:00.838   637   637 D PowerHAL: enter Power::createHintSession
+08-27 22:48:00.838   637   637 D PowerHAL: enter PowerHintSession
+08-27 22:48:00.839   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 1341, mUid: 10182
+08-27 22:48:00.839   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:00.839   637   637 D PowerHAL: createHintSession return hintSession:0xb400007cc2f950b0
+08-27 22:48:00.841   664   664 I BpBinder: onLastStrongRef automatically unlinking death recipients:
+08-27 22:48:00.841  1054 11701 D PowerHALManager: powerhalmanager createHintSession!!!
+08-27 22:48:00.841   637   637 D PowerHAL: enter Power::createHintSession
+08-27 22:48:00.841   637   637 D PowerHAL: enter PowerHintSession
+08-27 22:48:00.842   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 1341, mUid: 10182
+08-27 22:48:00.842   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:00.842   637   637 D PowerHAL: createHintSession return hintSession:0xb400007cc2f950b0
+08-27 22:48:00.845  1341  1384 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=android.view.ViewRootImpl$$ExternalSyntheticLambda11@75eb1e7
+08-27 22:48:00.848  1054 11701 W InputManager-JNI: Input channel object '70b6689 Splash Screen com.giammaria.system.test (client)' was disposed without first being removed with the input manager!
+08-27 22:48:00.851  1054  1369 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:00.851  1054 11701 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:00.851   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:00.851   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:00.851   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f96b20
+08-27 22:48:00.851   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 1341, mUid: 10182
+08-27 22:48:00.851   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:00.851   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f96b20 return ok!
+08-27 22:48:00.851   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:00.851   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:00.851   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f983e0
+08-27 22:48:00.852   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 20247, mUid: 10185
+08-27 22:48:00.852   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:00.852   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f983e0 return ok!
+08-27 22:48:00.856   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24320}b4a6674 Splash Screen com.giammaria.system#24320 isVisible=1 {hidden by parent or layer flag} changes=Created | Hierarchy | Z | Metadata | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.856   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24321}Splash Screen com.giammaria.system#24321 isVisible=1 {hidden by parent or layer flag} changes=Created | Hierarchy | Metadata | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.856 22219 22219 D LifecycleMonitor: Lifecycle status change: com.giammaria.system.MainActivity@68313c8 in: CREATED
+08-27 22:48:00.856 22219 22219 V ActivityScenario: Update currentActivityStage to CREATED, currentActivity=com.giammaria.system.MainActivity@68313c8
+08-27 22:48:00.856   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24320}b4a6674 Splash Screen com.giammaria.system#24320 isVisible=0 {hidden by parent or layer flag} changes=Created | Hierarchy | Z | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.856   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24321}Splash Screen com.giammaria.system#24321 isVisible=0 {hidden by parent or layer flag} changes=Created | Hierarchy | Metadata | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.857 22219 22219 D LifecycleMonitor: Lifecycle status change: com.giammaria.system.MainActivity@68313c8 in: STARTED
+08-27 22:48:00.857 22219 22219 V ActivityScenario: Update currentActivityStage to STARTED, currentActivity=com.giammaria.system.MainActivity@68313c8
+08-27 22:48:00.859 22219 22219 I ContentCaptureHelper: Setting logging level to OFF
+08-27 22:48:00.859  1054 12363 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:00.860   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:00.860   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:00.860   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f96b20
+08-27 22:48:00.860   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 1341, mUid: 10182
+08-27 22:48:00.860   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:00.860   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f96b20 return ok!
+08-27 22:48:00.861 22219 22219 D LifecycleMonitor: Lifecycle status change: com.giammaria.system.MainActivity@68313c8 in: RESUMED
+08-27 22:48:00.861   616   616 I mali_gralloc: allocate: id=2680000bdb6, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[system]#734(BLAST Consumer)734, costTime=0ms613us039
+08-27 22:48:00.862 22219 22219 V ActivityScenario: Update currentActivityStage to RESUMED, currentActivity=com.giammaria.system.MainActivity@68313c8
+08-27 22:48:00.863  1341 22585 D mali_gralloc: register: id=2680000bdb6, handle=0xb4000074c49ec490, importpid=1341
+08-27 22:48:00.865   616   616 I mali_gralloc: allocate: id=2680000bdb7, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[system]#734(BLAST Consumer)734, costTime=0ms684us077
+08-27 22:48:00.865   664  1781 D mali_gralloc: register: id=2680000bdb6, handle=0xb400007058ef1050, importpid=664
+08-27 22:48:00.865   664   716 D mali_gralloc: unregister: id=2680000bda7, handle=0xb400007058ef5cd0, base=0x0, importpid=664, clone_count=0
+08-27 22:48:00.866  1341 22585 D mali_gralloc: register: id=2680000bdb7, handle=0xb4000074c4a12e30, importpid=1341
+08-27 22:48:00.867   616  1903 I mali_gralloc: allocate: id=2680000bdb8, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[system]#734(BLAST Consumer)734, costTime=0ms548us384
+08-27 22:48:00.868  1341 22585 D mali_gralloc: register: id=2680000bdb8, handle=0xb4000074c49513f0, importpid=1341
+08-27 22:48:00.869   616  1903 I mali_gralloc: allocate: id=2680000bdb9, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[system]#734(BLAST Consumer)734, costTime=0ms560us154
+08-27 22:48:00.869   637   637 D PowerHAL: enter Power::createHintSession
+08-27 22:48:00.869   637   637 D PowerHAL: enter PowerHintSession
+08-27 22:48:00.870   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 22219, mUid: 10310
+08-27 22:48:00.870   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:00.870   637   637 D PowerHAL: createHintSession return hintSession:0xb400007cc2f950b0
+08-27 22:48:00.870  1341 22585 D mali_gralloc: register: id=2680000bdb9, handle=0xb4000074c4a08690, importpid=1341
+08-27 22:48:00.871  1054 11701 D PowerHALManager: powerhalmanager createHintSession!!!
+08-27 22:48:00.871   637   637 D PowerHAL: Enter getSceneIdByName: sceneName:com.giammaria.system
+08-27 22:48:00.871   637   637 D PowerHAL: enter Power::createHintSession
+08-27 22:48:00.871   637   637 D PowerHAL: enter PowerHintSession
+08-27 22:48:00.871   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 22219, mUid: 10310
+08-27 22:48:00.871   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:00.871   637   637 D PowerHAL: createHintSession return hintSession:0xb400007cc2f950b0
+08-27 22:48:00.872   637   637 D PowerHAL: Enter getSceneIdByName: sceneName:PACKAGE
+08-27 22:48:00.872   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24299}com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity#24299 isVisible=1 {alpha = 0 and no blur} changes=Hierarchy | Geometry | Input | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=0,ty=112.248}} input{(NO_INPUT_CHANNEL | NOT_FOCUSABLE | NOT_TOUCHABLE | PREVENT_SPLITTING) touchableRegion={0,0,0,0}}
+08-27 22:48:00.873   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24294}Splash Screen com.giammaria.system.test#24294 isVisible=1 {alpha = 0 and no blur} changes=Hierarchy | Geometry | Input | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=0,ty=112.248}} input{(NO_INPUT_CHANNEL | NOT_FOCUSABLE | NOT_TOUCHABLE | PREVENT_SPLITTING) touchableRegion={0,0,0,0}}
+08-27 22:48:00.873   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24322}Transition Root: Task=868#24322 isVisible=1 {hidden by parent or layer flag} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.873   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24322}Transition Root: Task=868#24322 isVisible=0 {hidden by parent or layer flag} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.875   617   776 D mali_gralloc: unregister: id=2680000bda4, handle=0xb40000793d627e10, base=0x0, importpid=617, clone_count=0
+08-27 22:48:00.877   617   776 D mali_gralloc: unregister: id=2680000bda7, handle=0xb40000793d62a9f0, base=0x0, importpid=617, clone_count=0
+08-27 22:48:00.878   617   776 D mali_gralloc: unregister: id=2680000bda6, handle=0xb40000793d627bd0, base=0x0, importpid=617, clone_count=0
+08-27 22:48:00.878   617   776 D mali_gralloc: unregister: id=2680000bda5, handle=0xb40000793d628a70, base=0x0, importpid=617, clone_count=0
+08-27 22:48:00.879   617   776 D mali_gralloc: unregister: id=2680000bda9, handle=0xb40000793d6271b0, base=0x0, importpid=617, clone_count=0
+08-27 22:48:00.883 22421 22421 D VRI[InstrumentationActivityInvoker$EmptyActivity]: visibilityChanged oldVisibility=true newVisibility=false
+08-27 22:48:00.889   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24324}8b295c5 com.giammaria.system/com.giammaria.system.MainActivity#24324 isVisible=1 {hidden by parent or layer flag} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.890   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24297}e0790db ActivityRecordInputSink com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity#24297 isVisible=0 {hidden by parent or layer flag} changes=Hierarchy | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=0,ty=112.248}} input{(NO_INPUT_CHANNEL | NOT_FOCUSABLE | NOT_TOUCHABLE) replaceTouchableRegionWithCrop touchableRegion={0,0,0,0}}
+08-27 22:48:00.890   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24324}8b295c5 com.giammaria.system/com.giammaria.system.MainActivity#24324 isVisible=0 {hidden by parent or layer flag} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.891 22421 22444 D mali_gralloc: unregister: id=2680000bdac, handle=0xb4000074c494fa10, base=0x0, importpid=22421, clone_count=0
+08-27 22:48:00.892 22421 22444 D mali_gralloc: unregister: id=2680000bdab, handle=0xb4000074c494e030, base=0x0, importpid=22421, clone_count=0
+08-27 22:48:00.894 22421 22444 D mali_gralloc: unregister: id=2680000bdaa, handle=0xb4000074c4958fb0, base=0x0, importpid=22421, clone_count=0
+08-27 22:48:00.896  1054  1383 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:00.897   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:00.897   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:00.897   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f9c400
+08-27 22:48:00.897   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 22219, mUid: 10310
+08-27 22:48:00.897   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:00.897   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f9c400 return ok!
+08-27 22:48:00.903 20893 20893 I cesb    : onPause
+08-27 22:48:00.904 22421 22421 D mali_gralloc: unregister: id=2680000bda9, handle=0xb4000074c4952950, base=0x0, importpid=22421, clone_count=0
+08-27 22:48:00.904 20893 20893 I cejn    : onPause
+08-27 22:48:00.904 20893 20893 W dwmg    : measuring already stopped.
+08-27 22:48:00.907   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24323}a5ffbf3 ActivityRecordInputSink com.giammaria.system/.MainActivity#24323 isVisible=0 {alpha = 0 and no blur} changes=Hierarchy | Geometry | Input | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-18560,-11600,11257.1,18011.4} geomLayerTransform={tx=192,ty=120}} input{(NO_INPUT_CHANNEL | NOT_FOCUSABLE | NOT_TOUCHABLE) replaceTouchableRegionWithCrop touchableRegion={0,0,0,0}}
+08-27 22:48:00.907   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24327}com.giammaria.system/com.giammaria.system.MainActivity#24327 isVisible=1 {hidden by parent or layer flag} changes=Created | Hierarchy | Geometry | Input | Metadata | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-18560,-11600,11257.1,18011.4} geomLayerTransform={tx=192,ty=120}}
+08-27 22:48:00.907   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24325}Surface(name=216ebac StatusBar#74)/@0x3e0380a - animation-leash of insets_animation#24325 isVisible=1 {nothing to draw} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.907   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24326}Surface(name=b70a830 Taskbar#17148)/@0xd70175c - animation-leash of insets_animation#24326 isVisible=1 {nothing to draw} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.908   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24327}com.giammaria.system/com.giammaria.system.MainActivity#24327 isVisible=0 {hidden by parent or layer flag} changes=Created | Hierarchy | Geometry | Input | Metadata | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-18560,-11600,11257.1,18011.4} geomLayerTransform={tx=192,ty=120}}
+08-27 22:48:00.908   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24325}Surface(name=216ebac StatusBar#74)/@0x3e0380a - animation-leash of insets_animation#24325 isVisible=0 {nothing to draw} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.908   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24326}Surface(name=b70a830 Taskbar#17148)/@0xd70175c - animation-leash of insets_animation#24326 isVisible=0 {nothing to draw} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.911  1054  1383 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:00.912   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:00.912   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:00.912   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f93250
+08-27 22:48:00.912   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 1341, mUid: 10182
+08-27 22:48:00.912   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=600
+08-27 22:48:00.912   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f93250 return ok!
+08-27 22:48:00.915  1054  1369 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:00.915   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:00.915   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:00.915   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f9c400
+08-27 22:48:00.915   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 22219, mUid: 10310
+08-27 22:48:00.915   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:00.916   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f9c400 return ok!
+08-27 22:48:00.916   616  1903 I mali_gralloc: allocate: id=2680000bdba, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[MainActivity]#4(BLAST Consumer)4, costTime=0ms598us269
+08-27 22:48:00.917 22219 22586 D mali_gralloc: register: id=2680000bdba, handle=0xb4000074c4972390, importpid=22219
+08-27 22:48:00.918   616  1903 I mali_gralloc: allocate: id=2680000bdbb, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[MainActivity]#4(BLAST Consumer)4, costTime=0ms600us538
+08-27 22:48:00.918 22219 22586 D mali_gralloc: register: id=2680000bdbb, handle=0xb4000074c4980b50, importpid=22219
+08-27 22:48:00.919   616  1903 I mali_gralloc: allocate: id=2680000bdbc, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[MainActivity]#4(BLAST Consumer)4, costTime=0ms536us539
+08-27 22:48:00.919 22219 22586 D mali_gralloc: register: id=2680000bdbc, handle=0xb4000074c497bff0, importpid=22219
+08-27 22:48:00.920  1054 12363 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:00.920   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:00.920   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:00.920   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f988f0
+08-27 22:48:00.920   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 20247, mUid: 10185
+08-27 22:48:00.920   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:00.920   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f988f0 return ok!
+08-27 22:48:00.922   616   616 I mali_gralloc: allocate: id=2680000bdbd, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[MainActivity]#4(BLAST Consumer)4, costTime=1ms273us000
+08-27 22:48:00.923   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24328}Surface(name=216ebac StatusBar#74)/@0x3e0380a - animation-leash of insets_animation#24328 isVisible=1 {nothing to draw} changes=Created | Hierarchy | Geometry | Z | Metadata | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.923   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24329}Surface(name=b70a830 Taskbar#17148)/@0xd70175c - animation-leash of insets_animation#24329 isVisible=1 {nothing to draw} changes=Created | Hierarchy | Geometry | Z | Metadata | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8683,7317,12800} geomLayerTransform={tx=0,ty=683}}
+08-27 22:48:00.923   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24328}Surface(name=216ebac StatusBar#74)/@0x3e0380a - animation-leash of insets_animation#24328 isVisible=0 {nothing to draw} changes=Created | Hierarchy | Geometry | Z | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:00.923   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24329}Surface(name=b70a830 Taskbar#17148)/@0xd70175c - animation-leash of insets_animation#24329 isVisible=0 {nothing to draw} changes=Created | Hierarchy | Geometry | Z | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8683,7317,12800} geomLayerTransform={tx=0,ty=683}}
+08-27 22:48:00.925 22219 22586 D mali_gralloc: register: id=2680000bdbd, handle=0xb4000074c4971730, importpid=22219
+08-27 22:48:00.932   626   626 D vendor.sprd.hardware.memtrack-service: get_ion_memtrack_memory:start!
+08-27 22:48:00.940   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24321}Splash Screen com.giammaria.system#24321 isVisible=0 { buffer=5759551154872 frame=1 color{< 0, 0, 0, 0.257568 >}} changes=Geometry | Input | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=123.718,ty=77.3235}} input{(NOT_FOCUSABLE | NOT_TOUCHABLE | PREVENT_SPLITTING) touchCropId=24317 touchableRegion={0,0,800,1280}}
+08-27 22:48:00.944   617   776 D SPRDHWComposer: HWC Range:1, HWC_Transfer:4
+08-27 22:48:00.944   617   776 D mali_gralloc: register: id=2680000bdb6, handle=0xb40000793d6271b0, importpid=617
+08-27 22:48:00.944 20247 27678 D mali_gralloc: register: id=2680000bdb5, handle=0xb4000074c49e9d30, importpid=20247
+08-27 22:48:00.947  1054  1250 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+08-27 22:48:00.950  1054  1250 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+08-27 22:48:00.950  1054  1250 D InetDiagMessage: Destroyed live tcp sockets for uids={10134} in 5ms
+08-27 22:48:00.961   664  1781 D mali_gralloc: register: id=2680000bdbc, handle=0xb400007058ef1710, importpid=664
+08-27 22:48:00.964  1054 12363 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:00.964   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:00.964   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:00.964   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f983e0
+08-27 22:48:00.964   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 20247, mUid: 10185
+08-27 22:48:00.964   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:00.964   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f983e0 return ok!
+08-27 22:48:00.969  1054  1383 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:00.970   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:00.970   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:00.970   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f96b20
+08-27 22:48:00.970   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 1341, mUid: 10182
+08-27 22:48:00.970   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:00.970   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f96b20 return ok!
+08-27 22:48:00.970 22219 22219 W Choreographer: Already have a pending vsync event.  There should only be one at a time.
+08-27 22:48:00.973   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24330}Surface(name=8b295c5 com.giammaria.system/com.giammaria.system.MainActivity#24324)/@0x3de064b - animation-leash of starting_reveal#24330 isVisible=1 {nothing to draw} changes=Created | Geometry | Input | Metadata | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-14043.5,-8777.19,8703.17,13925.1} geomLayerTransform={tx=54.1998,ty=33.8749}}
+08-27 22:48:00.974   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24330}Surface(name=8b295c5 com.giammaria.system/com.giammaria.system.MainActivity#24324)/@0x3de064b - animation-leash of starting_reveal#24330 isVisible=0 {nothing to draw} changes=Created | Geometry | Input | Metadata | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-14043.5,-8777.19,8703.17,13925.1} geomLayerTransform={tx=54.1998,ty=33.8749}}
+08-27 22:48:00.978  1054  1085 I ActivityTaskManager: Displayed com.giammaria.system/.MainActivity for user 0: +181ms
+08-27 22:48:00.978  1054  1383 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:00.978   664  1781 D mali_gralloc: register: id=2680000bdbd, handle=0xb400007058eccf30, importpid=664
+08-27 22:48:00.978   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:00.978   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:00.978   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f96b20
+08-27 22:48:00.978   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 1341, mUid: 10182
+08-27 22:48:00.978   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:00.978   664   716 D mali_gralloc: unregister: id=2680000bda6, handle=0xb400007058ef5df0, base=0x0, importpid=664, clone_count=0
+08-27 22:48:00.979   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f96b20 return ok!
+08-27 22:48:00.979   664  1781 D mali_gralloc: register: id=2680000bdb9, handle=0xb400007058ef0750, importpid=664
+08-27 22:48:00.985   637   637 D PowerHAL: enter power::setMode
+08-27 22:48:00.985   637   637 D PowerHAL: PowerSessionManager::updateHintMode: mode: LAUNCH, enabled: 0
+08-27 22:48:00.985   637   637 D PowerHAL: PowerSessionManager::updateHintMode resValue = 0
+08-27 22:48:00.985   637   637 D PowerHAL: ###Exit launch scene bgn###
+08-27 22:48:00.986   637   637 D PowerHAL: Enter common_set: enable:0, duration: 0, /sys/devices/system/cpu/cpufreq/policy0/scaling_min_freq: max
+08-27 22:48:00.986   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:00.986   637   637 D PowerHAL: Enter common_clear:
+08-27 22:48:00.986   637   637 D PowerHAL: Enter common_set: enable:0, duration: 0, /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq: max
+08-27 22:48:00.986   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:00.986   637   637 D PowerHAL: Enter common_clear:
+08-27 22:48:00.986   637   637 D PowerHAL: Enter common_set: enable:0, duration: 0, /sys/devices/system/cpu/cpufreq/policy6/scaling_min_freq: max
+08-27 22:48:00.986   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:00.986   637   637 D PowerHAL: Enter common_clear:
+08-27 22:48:00.986   637   637 D PowerHAL: Enter common_set: enable:0, duration: 0, /sys/devices/system/cpu/cpufreq/policy6/scaling_max_freq: max
+08-27 22:48:00.986   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:00.986   637   637 D PowerHAL: Enter common_clear:
+08-27 22:48:00.986   637   637 D PowerHAL: Enter devfreq_ddr_set: enable:0, duration: 0, /sys/class/devfreq/scene-frequency/sprd-governor/scene_boost_dfs: max
+08-27 22:48:00.989   637   637 D PowerHAL: ###Exit launch scene end###
+08-27 22:48:00.989   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24327}com.giammaria.system/com.giammaria.system.MainActivity#24327 isVisible=0 { buffer=95429878349884 frame=2 color{< 0, 0, 0, 1 >}} changes=Hierarchy | Geometry | Content | Input | Visibility | AffectsChildren | FrameRate | VisibleRegion | Buffer layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=32.6967,ty=39.4137}} input{(0x0) touchCropId=24317 touchableRegion={0,0,800,1280}}
+08-27 22:48:00.992   617   776 D SPRDHWComposer: HWC Range:1, HWC_Transfer:4
+08-27 22:48:00.992   617   776 D mali_gralloc: register: id=2680000bdbd, handle=0xb40000793d628a70, importpid=617
+08-27 22:48:00.992   617   776 D mali_gralloc: register: id=2680000bdb9, handle=0xb40000793d627bd0, importpid=617
+08-27 22:48:00.992 22421 22421 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=android.view.ViewRootImpl$$ExternalSyntheticLambda11@cb67cd8
+08-27 22:48:00.993   664  1850 D mali_gralloc: register: id=2680000bdb8, handle=0xb400007058ef0090, importpid=664
+08-27 22:48:00.998  1054 11701 W InputManager-JNI: Input channel object '8c5376d com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity (client)' was disposed without first being removed with the input manager!
+08-27 22:48:01.006   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24331}Task=867#24331 isVisible=1 {hidden by parent or layer flag} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-50000,-50000,50000,50000} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.006   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24331}Task=867#24331 isVisible=0 {hidden by parent or layer flag} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-50000,-50000,50000,50000} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.008   617   776 D mali_gralloc: register: id=2680000bdb8, handle=0xb40000793d62a9f0, importpid=617
+08-27 22:48:01.011   664   704 D mali_gralloc: register: id=2680000bdb7, handle=0xb400007058edf290, importpid=664
+08-27 22:48:01.016  1054  1383 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.016  1054  1204 I ImeTracker: com.giammaria.system:6fdda224: onRequestHide at ORIGIN_SERVER reason HIDE_UNSPECIFIED_WINDOW fromUser false
+08-27 22:48:01.016   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.016  1054  1204 I ImeTracker: com.giammaria.system:6fdda224: onCancelled at PHASE_SERVER_SHOULD_HIDE
+08-27 22:48:01.016   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.016   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f93250
+08-27 22:48:01.016   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 1341, mUid: 10182
+08-27 22:48:01.016   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=600
+08-27 22:48:01.016   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f93250 return ok!
+08-27 22:48:01.017  5836  5836 I SubtypeOperator: SubtypeOperator$1.onUnbindInput():43
+08-27 22:48:01.020  1054  1383 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.020   664   704 D mali_gralloc: register: id=2680000bdbb, handle=0xb400007058edd670, importpid=664
+08-27 22:48:01.021   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.021   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.021   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f9c400
+08-27 22:48:01.021   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 22219, mUid: 10310
+08-27 22:48:01.021   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:01.021   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f9c400 return ok!
+08-27 22:48:01.021  5836  5836 I SubtypeOperator: SubtypeOperator$1.onBindInput():33
+08-27 22:48:01.022  5836  5836 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2361
+08-27 22:48:01.023 20247 20247 I TopTaskTracker: onTaskRemoved: taskId=867
+08-27 22:48:01.023 20247 20247 I TopTaskTracker: onTaskRemoved: taskId=867
+08-27 22:48:01.025   617   776 D mali_gralloc: register: id=2680000bdbb, handle=0xb40000793d627e10, importpid=617
+08-27 22:48:01.025   617   776 D mali_gralloc: register: id=2680000bdb7, handle=0xb40000793d625a10, importpid=617
+08-27 22:48:01.025  1054  1383 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.025   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.025   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.025   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f988f0
+08-27 22:48:01.025   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 20247, mUid: 10185
+08-27 22:48:01.025   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:01.025   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f988f0 return ok!
+08-27 22:48:01.026  5836  5836 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1532 onStartInput(EditorInfo{EditorInfo{packageName=com.giammaria.system, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=0, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+08-27 22:48:01.026  5836  5836 I LatinIMEBase: LatinIMEBase.updateInputViewCoverNavigation():316 Update input view padding, isNavbarOverInputWindow=false, bottom inset=48
+08-27 22:48:01.027  5836 22391 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():119 repeatCheckTimes = 0, locked = false
+08-27 22:48:01.029  5836 22391 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():119 repeatCheckTimes = 1, locked = false
+08-27 22:48:01.029   828   841 E SLOGCP  : data_rate_stat: agdsp rate: total size(MB)=0.000000; per second(bytes)=0.000000, drop_cnt_=0, drop_data_size_=0, pollin event times=0.
+08-27 22:48:01.040   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24332}Surface(name=ab77753 InputMethod#4808)/@0xf69f589 - animation-leash of insets_animation#24332 isVisible=1 {hidden by parent or layer flag} changes=Created | Hierarchy | Geometry | Content | Input | Z | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12847.8,-8053.9,8003.05,12843.3} geomLayerTransform={tx=2.27002,ty=25.3337}}
+08-27 22:48:01.041   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24332}Surface(name=ab77753 InputMethod#4808)/@0xf69f589 - animation-leash of insets_animation#24332 isVisible=0 {hidden by parent or layer flag} changes=Created | Hierarchy | Geometry | Content | Input | Z | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12847.8,-8053.9,8003.05,12843.3} geomLayerTransform={tx=2.27002,ty=25.3337}}
+08-27 22:48:01.045   664   716 D mali_gralloc: unregister: id=2680000bda9, handle=0xb400007058ee5a10, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.064  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.064 20247 20247 D VRI[SearchLauncher]: visibilityChanged oldVisibility=true newVisibility=false
+08-27 22:48:01.064   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20247,level=0,buf=20247 0
+08-27 22:48:01.064  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.064   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20283,level=0,buf=20283 0
+08-27 22:48:01.066 20893 20893 D VRI[GoogleDiscoverWindow]: visibilityChanged oldVisibility=true newVisibility=false
+08-27 22:48:01.067  1054  1383 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.068   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.068   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.068   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f95380
+08-27 22:48:01.068   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 20893, mUid: 10146
+08-27 22:48:01.068   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:01.068   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f95380 return ok!
+08-27 22:48:01.073   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 138}389ad3e ActivityRecordInputSink com.android.launcher3/com.android.searchlauncher.SearchLauncher#138 isVisible=0 {hidden by parent or layer flag} changes=Hierarchy | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}} input{(NO_INPUT_CHANNEL | NOT_FOCUSABLE | NOT_TOUCHABLE) replaceTouchableRegionWithCrop touchableRegion={0,0,0,0}}
+08-27 22:48:01.073   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24307}com.android.launcher3/com.android.searchlauncher.SearchLauncher#24307 isVisible=1 {hidden by parent or layer flag} changes=Hierarchy | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=0,ty=0}} input{(NO_INPUT_CHANNEL | NOT_FOCUSABLE | NOT_TOUCHABLE | PREVENT_SPLITTING | DUPLICATE_TOUCH_TO_WALLPAPER | PAUSE_DISPATCHING) touchableRegion={0,0,0,0}}
+08-27 22:48:01.076 20893 27446 D mali_gralloc: unregister: id=2680000bdb0, handle=0xb4000074c49431d0, base=0x0, importpid=20893, clone_count=0
+08-27 22:48:01.076 20893 27446 D mali_gralloc: unregister: id=2680000bdaf, handle=0xb4000074c4990bd0, base=0x0, importpid=20893, clone_count=0
+08-27 22:48:01.077 22219 22236 W SurfaceComposerClient: Sync transaction timed out waiting for commit callback.
+08-27 22:48:01.077 20893 27446 D mali_gralloc: unregister: id=2680000bdae, handle=0xb4000074c49c0330, base=0x0, importpid=20893, clone_count=0
+08-27 22:48:01.078   617   776 D mali_gralloc: unregister: id=2680000bdb2, handle=0xb40000793d626310, base=0x0, importpid=617, clone_count=0
+08-27 22:48:01.078   617   776 D mali_gralloc: unregister: id=2680000bdb1, handle=0xb40000793d625fb0, base=0x0, importpid=617, clone_count=0
+08-27 22:48:01.078   617   776 D mali_gralloc: unregister: id=2680000bdb4, handle=0xb40000793d627630, base=0x0, importpid=617, clone_count=0
+08-27 22:48:01.078   617   776 D mali_gralloc: unregister: id=2680000bdb3, handle=0xb40000793d62c070, base=0x0, importpid=617, clone_count=0
+08-27 22:48:01.079   617   776 D mali_gralloc: unregister: id=2680000000d, handle=0xb40000793d628830, base=0x0, importpid=617, clone_count=0
+08-27 22:48:01.079  1341  1445 D mali_gralloc: unregister: id=2680000bdb7, handle=0xb4000074c4a12e30, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:01.082  1341  1812 D mali_gralloc: unregister: id=2680000bdb6, handle=0xb4000074c49ec490, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:01.083  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.083   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=0,buf=1341 0
+08-27 22:48:01.083  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.083   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=0,buf=1445 0
+08-27 22:48:01.085 20247 20283 D mali_gralloc: unregister: id=2680000bdb1, handle=0xb4000074c49c7050, base=0x0, importpid=20247, clone_count=0
+08-27 22:48:01.085 20247 20283 D mali_gralloc: unregister: id=2680000bdb2, handle=0xb4000074c49e47b0, base=0x0, importpid=20247, clone_count=0
+08-27 22:48:01.086   664   716 D mali_gralloc: unregister: id=2680000bdb1, handle=0xb400007058eebd10, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.090 20893 20893 D mali_gralloc: unregister: id=2680000bdad, handle=0xb4000074c494ffb0, base=0x0, importpid=20893, clone_count=0
+08-27 22:48:01.093   664   664 D mali_gralloc: unregister: id=2680000bdb7, handle=0xb400007058edf290, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.093   664   664 D mali_gralloc: unregister: id=2680000bdb6, handle=0xb400007058ef1050, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.096   616   616 I mali_gralloc: allocate: id=2680000bdbe, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW, size=672x256(699392), stride=672, name=AHardwareBuffer pid [22219], costTime=0ms274us923
+08-27 22:48:01.096  1341  1384 D mali_gralloc: unregister: id=2680000bdb8, handle=0xb4000074c49513f0, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:01.097  1341  1384 D mali_gralloc: unregister: id=2680000bdb9, handle=0xb4000074c4a08690, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:01.097 22219 22312 D mali_gralloc: register: id=2680000bdbe, handle=0xb4000074c497a970, importpid=22219
+08-27 22:48:01.097   664   716 D mali_gralloc: unregister: id=2680000bdb2, handle=0xb400007058eed4b0, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.099  1341  1384 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=android.view.ViewRootImpl$$ExternalSyntheticLambda11@617be4a
+08-27 22:48:01.101 20247 20247 D mali_gralloc: unregister: id=2680000bdb3, handle=0xb4000074c49b9850, base=0x0, importpid=20247, clone_count=0
+08-27 22:48:01.101 20247 20247 D mali_gralloc: unregister: id=2680000bdb4, handle=0xb4000074c495ef50, base=0x0, importpid=20247, clone_count=0
+08-27 22:48:01.102  1054 12570 W InputManager-JNI: Input channel object 'b4a6674 Splash Screen com.giammaria.system (client)' was disposed without first being removed with the input manager!
+08-27 22:48:01.106   616   616 I mali_gralloc: allocate: id=2680000bdbf, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW, size=672x256(699392), stride=672, name=AHardwareBuffer pid [22219], costTime=0ms432us270
+08-27 22:48:01.106   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24333}Surface(name=b4a6674 Splash Screen com.giammaria.system#24320)/@0x469e412 - animation-leash of window_animation#24333 isVisible=1 {nothing to draw} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.107   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24333}Surface(name=b4a6674 Splash Screen com.giammaria.system#24320)/@0x469e412 - animation-leash of window_animation#24333 isVisible=0 {nothing to draw} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.107 22219 22312 D mali_gralloc: register: id=2680000bdbf, handle=0xb4000074c497a4f0, importpid=22219
+08-27 22:48:01.108   664   664 D mali_gralloc: unregister: id=2680000bdb9, handle=0xb400007058ef0750, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.108   617   776 D mali_gralloc: register: id=2680000bdb8, handle=0xb40000793d628830, importpid=617
+08-27 22:48:01.108   617   776 D mali_gralloc: unregister: id=2680000bdb8, handle=0xb40000793d62a9f0, base=0x0, importpid=617, clone_count=1
+08-27 22:48:01.110 20247 20247 D BaseDepthController: setSurface:
+08-27 22:48:01.110 20247 20247 D BaseDepthController: 	mWaitingOnSurfaceValidity: false
+08-27 22:48:01.110 20247 20247 D BaseDepthController: 	mSurface: null
+08-27 22:48:01.111 20247 20247 D UNISOC-LAUNCHER3: StateManager goToState from_state = Normal, to_state =Normal, animated? false, listener=null, callers = com.android.launcher3.statemanager.StateManager.goToState:176 com.android.launcher3.statemanager.StateManager.moveToRestState:458 com.android.launcher3.statemanager.StateManager.moveToRestState:449 com.android.launcher3.statemanager.StatefulActivity.onStop:119 com.android.launcher3.Launcher.onStop:1104 android.app.Instrumentation.callActivityOnStop:1742
+08-27 22:48:01.112 20247 20247 D StateManager: goToState - fromState: Normal, toState: Normal, partial trace:
+08-27 22:48:01.112 20247 20247 D StateManager: 	at com.android.launcher3.statemanager.StateManager.moveToRestState(StateManager.java:458)
+08-27 22:48:01.112 20247 20247 D StateManager: 	at com.android.launcher3.statemanager.StateManager.moveToRestState(StateManager.java:449)
+08-27 22:48:01.112 20247 20247 D StateManager: 	at com.android.launcher3.statemanager.StatefulActivity.onStop(StatefulActivity.java:119)
+08-27 22:48:01.115 20247 20247 D StatsLog: LAUNCHER_ONSTOP
+08-27 22:48:01.115   616   616 I mali_gralloc: allocate: id=2680000bdc0, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW, size=672x256(699392), stride=672, name=AHardwareBuffer pid [22219], costTime=0ms237us615
+08-27 22:48:01.116 20893 20893 I cesb    : onStop
+08-27 22:48:01.117 22219 22312 D mali_gralloc: register: id=2680000bdc0, handle=0xb4000074c4957270, importpid=22219
+08-27 22:48:01.122 22219 22219 D GiammariaWebView: DOC_SESSION: week=1 session=1 title=Sessione 1 is_bonus=false exerciseCount=5 (file:///android_asset/index.html:1908)
+08-27 22:48:01.122 22219 22219 D GiammariaWebView: DOC_SESSION: week=2 session=1 title=Sessione 1 is_bonus=false exerciseCount=20 (file:///android_asset/index.html:1908)
+08-27 22:48:01.123 22219 22219 D GiammariaWebView: DOC_SESSION: week=3 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.123   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 62}com.android.systemui.wallpapers.ImageWallpaper#62 isVisible=0 {hidden by parent or layer flag} changes=Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-18090.9,-10931.8,11795.5,18272.7} geomLayerTransform={tx=-64,ty=-304}} input{(NOT_FOCUSABLE | NOT_TOUCHABLE | PREVENT_SPLITTING | IS_WALLPAPER) touchableRegion={0,0,1280,1280}}
+08-27 22:48:01.123 22219 22219 D GiammariaWebView: DOC_SESSION: week=3 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=7 (file:///android_asset/index.html:1908)
+08-27 22:48:01.123   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 63}Wallpaper BBQ wrapper#63 isVisible=0 {hidden by parent or layer flag} changes=Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,2000,2000} geomLayerTransform={tx=-64,ty=-304}} input{(NO_INPUT_CHANNEL) touchableRegion={1104,-63,-63,1104}}
+08-27 22:48:01.124 22219 22219 D GiammariaWebView: DOC_SESSION: week=3 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.124 22219 22219 D GiammariaWebView: DOC_SESSION: week=3 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.124 22219 22219 D GiammariaWebView: DOC_SESSION: week=4 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.125 22219 22219 D GiammariaWebView: DOC_SESSION: week=4 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=7 (file:///android_asset/index.html:1908)
+08-27 22:48:01.125 22219 22219 D GiammariaWebView: DOC_SESSION: week=4 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.126 22219 22219 D GiammariaWebView: DOC_SESSION: week=4 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.126 22219 22219 D GiammariaWebView: DOC_SESSION: week=5 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.126 22219 22219 D GiammariaWebView: DOC_SESSION: week=5 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=7 (file:///android_asset/index.html:1908)
+08-27 22:48:01.127 22219 22219 D GiammariaWebView: DOC_SESSION: week=5 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.127 22219 22219 D GiammariaWebView: DOC_SESSION: week=5 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.127 22219 22219 D GiammariaWebView: DOC_SESSION: week=6 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.127   616   616 I mali_gralloc: allocate: id=2680000bdc1, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW, size=672x256(699392), stride=672, name=AHardwareBuffer pid [22219], costTime=0ms238us692
+08-27 22:48:01.128 22219 22219 D GiammariaWebView: DOC_SESSION: week=6 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=5 (file:///android_asset/index.html:1908)
+08-27 22:48:01.128 22219 22312 D mali_gralloc: register: id=2680000bdc1, handle=0xb4000074c497d790, importpid=22219
+08-27 22:48:01.128 22219 22219 D GiammariaWebView: DOC_SESSION: week=6 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.128 22219 22219 D GiammariaWebView: DOC_SESSION: week=6 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.128 22219 22219 D GiammariaWebView: DOC_SESSION: week=7 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.129 22219 22219 D GiammariaWebView: DOC_SESSION: week=7 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=7 (file:///android_asset/index.html:1908)
+08-27 22:48:01.129 22219 22219 D GiammariaWebView: DOC_SESSION: week=7 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.130 22219 22219 D GiammariaWebView: DOC_SESSION: week=7 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.130 22219 22219 D GiammariaWebView: DOC_SESSION: week=8 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.130 22219 22219 D GiammariaWebView: DOC_SESSION: week=8 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=7 (file:///android_asset/index.html:1908)
+08-27 22:48:01.130 22219 22219 D GiammariaWebView: DOC_SESSION: week=8 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.130 22219 22219 D GiammariaWebView: DOC_SESSION: week=8 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.130 22219 22219 D GiammariaWebView: DOC_SESSION: week=9 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.130   616   616 I mali_gralloc: allocate: id=2680000bdc2, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW, size=672x256(699392), stride=672, name=AHardwareBuffer pid [22219], costTime=0ms268us308
+08-27 22:48:01.131 22219 22219 D GiammariaWebView: DOC_SESSION: week=9 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=7 (file:///android_asset/index.html:1908)
+08-27 22:48:01.131 22219 22219 D GiammariaWebView: DOC_SESSION: week=9 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.131 22219 22219 D GiammariaWebView: DOC_SESSION: week=9 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.131 22219 22219 D GiammariaWebView: DOC_SESSION: week=10 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.131 22219 22312 D mali_gralloc: register: id=2680000bdc2, handle=0xb4000074c497a190, importpid=22219
+08-27 22:48:01.131 22219 22219 D GiammariaWebView: DOC_SESSION: week=10 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=5 (file:///android_asset/index.html:1908)
+08-27 22:48:01.131 22219 22219 D GiammariaWebView: DOC_SESSION: week=10 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.131 22219 22219 D GiammariaWebView: DOC_SESSION: week=10 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.131 22219 22219 D GiammariaWebView: DOC_SESSION: week=11 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.131 22219 22219 D GiammariaWebView: DOC_SESSION: week=11 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=7 (file:///android_asset/index.html:1908)
+08-27 22:48:01.131 22219 22219 D GiammariaWebView: DOC_SESSION: week=11 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.132 22219 22219 D GiammariaWebView: DOC_SESSION: week=11 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.132 22219 22219 D GiammariaWebView: DOC_SESSION: week=12 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.132 22219 22219 D GiammariaWebView: DOC_SESSION: week=12 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=7 (file:///android_asset/index.html:1908)
+08-27 22:48:01.132 22219 22219 D GiammariaWebView: DOC_SESSION: week=12 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.132 22219 22219 D GiammariaWebView: DOC_SESSION: week=12 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.132 22219 22219 D GiammariaWebView: DOC_SESSION: week=13 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.132 22219 22219 D GiammariaWebView: DOC_SESSION: week=13 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=7 (file:///android_asset/index.html:1908)
+08-27 22:48:01.132 22219 22219 D GiammariaWebView: DOC_SESSION: week=13 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.132 22219 22219 D GiammariaWebView: DOC_SESSION: week=13 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.133 22219 22219 D GiammariaWebView: DOC_SESSION: week=14 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.133 22219 22219 D GiammariaWebView: DOC_SESSION: week=14 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=5 (file:///android_asset/index.html:1908)
+08-27 22:48:01.133 22219 22219 D GiammariaWebView: DOC_SESSION: week=14 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.133 22219 22219 D GiammariaWebView: DOC_SESSION: week=14 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.133 22219 22219 D GiammariaWebView: DOC_SESSION: week=15 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.133   626   626 D vendor.sprd.hardware.memtrack-service: get_ion_memtrack_memory:start!
+08-27 22:48:01.133 22219 22219 D GiammariaWebView: DOC_SESSION: week=15 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=7 (file:///android_asset/index.html:1908)
+08-27 22:48:01.133 22219 22219 D GiammariaWebView: DOC_SESSION: week=15 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.133 22219 22219 D GiammariaWebView: DOC_SESSION: week=15 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.133 22219 22219 D GiammariaWebView: DOC_SESSION: week=16 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.133 22219 22219 D GiammariaWebView: DOC_SESSION: week=16 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=7 (file:///android_asset/index.html:1908)
+08-27 22:48:01.134 22219 22219 D GiammariaWebView: DOC_SESSION: week=16 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.134  1054  1369 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.134 22219 22219 D GiammariaWebView: DOC_SESSION: week=16 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.134 22219 22219 D GiammariaWebView: DOC_SESSION: week=17 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.134   616   616 I mali_gralloc: allocate: id=2680000bdc3, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW, size=672x256(699392), stride=672, name=AHardwareBuffer pid [22219], costTime=0ms581us346
+08-27 22:48:01.134 22219 22219 D GiammariaWebView: DOC_SESSION: week=17 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=7 (file:///android_asset/index.html:1908)
+08-27 22:48:01.134 22219 22219 D GiammariaWebView: DOC_SESSION: week=17 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.134 22219 22219 D GiammariaWebView: DOC_SESSION: week=17 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.134   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.134   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.134   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f988f0
+08-27 22:48:01.134   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 20247, mUid: 10185
+08-27 22:48:01.134   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:01.134 22219 22312 D mali_gralloc: register: id=2680000bdc3, handle=0xb4000074c4950e50, importpid=22219
+08-27 22:48:01.134 22219 22219 D GiammariaWebView: DOC_SESSION: week=18 session=1 title=GIORNO 1  •  UPPER A — PETTO + DORSO is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.134   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f988f0 return ok!
+08-27 22:48:01.134 22219 22219 D GiammariaWebView: DOC_SESSION: week=18 session=2 title=GIORNO 2  •  LOWER A — QUAD DOMINANT is_bonus=false exerciseCount=5 (file:///android_asset/index.html:1908)
+08-27 22:48:01.134 22219 22219 D GiammariaWebView: DOC_SESSION: week=18 session=3 title=GIORNO 3  •  UPPER B — DORSO + SPALLE + BRACCIA is_bonus=false exerciseCount=10 (file:///android_asset/index.html:1908)
+08-27 22:48:01.135 22219 22219 D GiammariaWebView: DOC_SESSION: week=18 session=4 title=GIORNO 4  •  LOWER B — POSTERIOR CHAIN + QUAD is_bonus=false exerciseCount=8 (file:///android_asset/index.html:1908)
+08-27 22:48:01.135 20893 20893 I cejn    : onStop
+08-27 22:48:01.135 22219 22219 D GiammariaWebView: DOC_SESSION: week=19 session=1 title=Sessione 1 is_bonus=false exerciseCount=243 (file:///android_asset/index.html:1908)
+08-27 22:48:01.135 22219 22219 D GiammariaWebView: DOC_SESSION: week=20 session=1 title=Sessione 1 is_bonus=false exerciseCount=82 (file:///android_asset/index.html:1908)
+08-27 22:48:01.135 22219 22219 D GiammariaWebView: DOC_IMPORT_SESSIONS=68 (file:///android_asset/index.html:1932)
+08-27 22:48:01.135 22219 22219 D GiammariaWebView: DOC_IMPORT_EXERCISES=870 (file:///android_asset/index.html:1933)
+08-27 22:48:01.135 22219 22219 D INSTRUMENTED_TEST: evaluateJsSync: true
+08-27 22:48:01.141 22219 22219 D INSTRUMENTED_TEST: evaluateJsSync: {"domLoaded":true,"hasPersistence":true,"hasUniversalImport":true,"hasRirRpeEngine":true,"storeInitialized":true}
+08-27 22:48:01.141   664   716 D mali_gralloc: unregister: id=2680000bdb4, handle=0xb400007058eedc90, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.142   616   616 I mali_gralloc: allocate: id=2680000bdc4, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW, size=1280x256(1331200), stride=1280, name=AHardwareBuffer pid [22219], costTime=5ms707us154
+08-27 22:48:01.143 22219 22312 D mali_gralloc: register: id=2680000bdc4, handle=0xb4000074c49741f0, importpid=22219
+08-27 22:48:01.149  1054 12363 V GrammaticalInflectionUtils: AttributionSource: android.content.AttributionSource@48cc8124 does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+08-27 22:48:01.151   616   616 I mali_gralloc: allocate: id=2680000bdc5, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW, size=1280x256(1331200), stride=1280, name=AHardwareBuffer pid [22219], costTime=0ms597us615
+08-27 22:48:01.151 22219 22312 D mali_gralloc: register: id=2680000bdc5, handle=0xb4000074c497a850, importpid=22219
+08-27 22:48:01.156   637   637 D PowerHAL: enter power::setMode
+08-27 22:48:01.156   637   637 D PowerHAL: PowerSessionManager::updateHintMode: mode: LAUNCH, enabled: 1
+08-27 22:48:01.156   637   637 D PowerHAL: PowerSessionManager::updateHintMode resValue = 0
+08-27 22:48:01.156   637   637 D PowerHAL: ###Enter launch scene bgn###
+08-27 22:48:01.156   637   637 D PowerHAL: Enter common_set: enable:1, duration: 0, /sys/devices/system/cpu/cpufreq/policy0/scaling_min_freq: max
+08-27 22:48:01.156   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:01.156   637   637 D PowerHAL: Enter common_set: enable:1, duration: 0, /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq: max
+08-27 22:48:01.156   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:01.156   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24334}Task=869#24334 isVisible=1 {hidden by parent or layer flag} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.156   637   637 D PowerHAL: Enter common_set: enable:1, duration: 0, /sys/devices/system/cpu/cpufreq/policy6/scaling_min_freq: max
+08-27 22:48:01.157   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:01.157   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24335}ActivityRecord{57b4564 u0 com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity#24335 isVisible=1 {hidden by parent or layer flag} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.157   637   637 D PowerHAL: Enter common_set: enable:1, duration: 0, /sys/devices/system/cpu/cpufreq/policy6/scaling_max_freq: max
+08-27 22:48:01.157   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:01.157   637   637 D PowerHAL: Enter devfreq_ddr_set: enable:1, duration: 0, /sys/class/devfreq/scene-frequency/sprd-governor/scene_boost_dfs: max
+08-27 22:48:01.158   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24334}Task=869#24334 isVisible=0 {hidden by parent or layer flag} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.158   637   637 D PowerHAL: ###Enter launch scene end###
+08-27 22:48:01.158   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24335}ActivityRecord{57b4564 u0 com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity#24335 isVisible=0 {hidden by parent or layer flag} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.160   664   716 D mali_gralloc: unregister: id=2680000bdad, handle=0xb400007058ecd4d0, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.161 20247 20247 I TopTaskTracker: onTaskMovedToFront: (moved taskInfo to front) taskId=869, baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity }
+08-27 22:48:01.164 22219 22219 D LifecycleMonitor: Lifecycle status change: com.giammaria.system.MainActivity@68313c8 in: PAUSED
+08-27 22:48:01.164 22219 22219 V ActivityScenario: Update currentActivityStage to PAUSED, currentActivity=com.giammaria.system.MainActivity@68313c8
+08-27 22:48:01.168  1054 12363 D InputDispatcher: setFocusedApplication displayId=0 ActivityRecord{57b4564 u0 com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity t869 d0}
+08-27 22:48:01.169  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.169   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=1,buf=1341 1
+08-27 22:48:01.169  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.169  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.169   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=1,buf=1445 1
+08-27 22:48:01.169  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.169   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=1,buf=1341 1
+08-27 22:48:01.170   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=1,buf=1445 1
+08-27 22:48:01.170  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.170   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=1,buf=1341 1
+08-27 22:48:01.170  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.170   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=1,buf=1445 1
+08-27 22:48:01.170  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.170   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=1,buf=1341 1
+08-27 22:48:01.170  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.170   637   637 D PowerHAL: enter Power::createHintSession
+08-27 22:48:01.170   637   637 D PowerHAL: enter PowerHintSession
+08-27 22:48:01.170   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 1341, mUid: 10182
+08-27 22:48:01.170   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:01.170   637   637 D PowerHAL: createHintSession return hintSession:0xb400007cc2f950b0
+08-27 22:48:01.171   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=1,buf=1445 1
+08-27 22:48:01.174  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.174  1054 12570 D PowerHALManager: powerhalmanager createHintSession!!!
+08-27 22:48:01.174   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=1,buf=1341 1
+08-27 22:48:01.174  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.174   637   637 D PowerHAL: enter Power::createHintSession
+08-27 22:48:01.174   637   637 D PowerHAL: enter PowerHintSession
+08-27 22:48:01.174   664   664 I BpBinder: onLastStrongRef automatically unlinking death recipients:
+08-27 22:48:01.174   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 1341, mUid: 10182
+08-27 22:48:01.174  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.174   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:01.174   637   637 D PowerHAL: createHintSession return hintSession:0xb400007cc2f950b0
+08-27 22:48:01.175  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.175   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=1,buf=1445 1
+08-27 22:48:01.175   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=1,buf=1341 1
+08-27 22:48:01.175   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=1,buf=1445 1
+08-27 22:48:01.172 22421 22421 W RenderThread: type=1400 audit(0.0:166527): avc:  denied  { read } for  name="large_page_conf" dev="sysfs" ino=55250 scontext=u:r:untrusted_app:s0:c55,c257,c512,c768 tcontext=u:object_r:sysfs:s0 tclass=file permissive=0 app=com.giammaria.system.test
+08-27 22:48:01.186  1054 12363 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.186   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.186   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.186   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f95d10
+08-27 22:48:01.186   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 1341, mUid: 10182
+08-27 22:48:01.186   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:01.186   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f95d10 return ok!
+08-27 22:48:01.186   664  1781 D mali_gralloc: register: id=2680000bdba, handle=0xb400007058eebf50, importpid=664
+08-27 22:48:01.187   664   716 D mali_gralloc: unregister: id=2680000bdb3, handle=0xb400007058ee7bd0, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.188   616   616 I mali_gralloc: allocate: id=2680000bdc6, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[test]#735(BLAST Consumer)735, costTime=0ms936us538
+08-27 22:48:01.188  1054 11701 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.188  1341 22593 D mali_gralloc: register: id=2680000bdc6, handle=0xb4000074c4a1b9b0, importpid=1341
+08-27 22:48:01.188   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.188   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.188   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f9c400
+08-27 22:48:01.188   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 22219, mUid: 10310
+08-27 22:48:01.188   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:01.188   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f9c400 return ok!
+08-27 22:48:01.190   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24336}63d51da Splash Screen com.giammaria.system.test#24336 isVisible=1 {hidden by parent or layer flag} changes=Created | Hierarchy | Z | Metadata | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.190   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24337}Splash Screen com.giammaria.system.test#24337 isVisible=1 {hidden by parent or layer flag} changes=Created | Hierarchy | Geometry | Metadata | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.190   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24336}63d51da Splash Screen com.giammaria.system.test#24336 isVisible=0 {hidden by parent or layer flag} changes=Created | Hierarchy | Z | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.190   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24337}Splash Screen com.giammaria.system.test#24337 isVisible=0 {hidden by parent or layer flag} changes=Created | Hierarchy | Geometry | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.190   616   616 I mali_gralloc: allocate: id=2680000bdc7, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[test]#735(BLAST Consumer)735, costTime=1ms775us039
+08-27 22:48:01.191  1341 22593 D mali_gralloc: register: id=2680000bdc7, handle=0xb4000074c49751b0, importpid=1341
+08-27 22:48:01.192   616   616 I mali_gralloc: allocate: id=2680000bdc8, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[test]#735(BLAST Consumer)735, costTime=0ms534us961
+08-27 22:48:01.192  1341 22593 D mali_gralloc: register: id=2680000bdc8, handle=0xb4000074c4a1a690, importpid=1341
+08-27 22:48:01.194   616   616 I mali_gralloc: allocate: id=2680000bdc9, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[test]#735(BLAST Consumer)735, costTime=0ms961us154
+08-27 22:48:01.194   664   704 D mali_gralloc: register: id=2680000bdc6, handle=0xb400007058ee7bd0, importpid=664
+08-27 22:48:01.195   626   626 D vendor.sprd.hardware.memtrack-service: get_ion_memtrack_memory:start!
+08-27 22:48:01.195  1341 22593 D mali_gralloc: register: id=2680000bdc9, handle=0xb4000074c4a0a4f0, importpid=1341
+08-27 22:48:01.201  1054 12363 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.202   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.202   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.202   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f93250
+08-27 22:48:01.202   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 1341, mUid: 10182
+08-27 22:48:01.202   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=600
+08-27 22:48:01.202   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f93250 return ok!
+08-27 22:48:01.204   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 77}StatusBar#77 isVisible=0 {layer not reachable from root} changes=Visibility layerStack=0 geomLayerBounds={0,0,24,1280} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.204   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 17149}Taskbar#17149 isVisible=0 {layer not reachable from root} changes=Visibility layerStack=0 geomLayerBounds={0,0,117,1280} geomLayerTransform={tx=0,ty=683}}
+08-27 22:48:01.204   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 122}IME Handwriting Surface#122 isVisible=0 {layer not reachable from root} changes=0x0 layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.205   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 77}StatusBar#77 isVisible=0 { buffer=5759551153391 frame=89205 color{< 0, 0, 0, 1 >}} changes=Hierarchy | Geometry | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,24,1280} geomLayerTransform={tx=0,ty=0}} input{(NOT_FOCUSABLE) touchableRegion={0,0,24,1280}}
+08-27 22:48:01.206   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 17149}Taskbar#17149 isVisible=0 { buffer=86960202842351 frame=10144 color{< 0, 0, 0, 1 >}} changes=Hierarchy | Geometry | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,117,1280} geomLayerTransform={tx=0,ty=683}} input{(NOT_FOCUSABLE | SLIPPERY) touchableRegion={0,61,117,1280}}
+08-27 22:48:01.206   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 122}IME Handwriting Surface#122 isVisible=0 {nothing to draw} changes=Hierarchy | Geometry | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}} input{(NOT_FOCUSABLE | NOT_TOUCHABLE | SPY | INTERCEPTS_STYLUS) replaceTouchableRegionWithCrop touchableRegion={0,0,0,0}}
+08-27 22:48:01.207   616   616 I mali_gralloc: allocate: id=2680000bdca, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=false, usage=CPU_RW|GPU_RW|HWC, size=1280x800(4096000), stride=1280, name=screenshot, costTime=0ms164us616
+08-27 22:48:01.207   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24338}Transition Root: Task=869#24338 isVisible=1 {hidden by parent or layer flag} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.207   664   705 D mali_gralloc: register: id=2680000bdca, handle=0xb400007058eeda50, importpid=664
+08-27 22:48:01.208   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24321}Splash Screen com.giammaria.system#24321 isVisible=0 {layer not reachable from root} changes=Hierarchy | Parent | RelativeParent | Visibility | AffectsChildren | VisibleRegion layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.208   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24338}Transition Root: Task=869#24338 isVisible=0 {hidden by parent or layer flag} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.210  1054  1369 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.210   617   776 D mali_gralloc: unregister: id=2680000bdb6, handle=0xb40000793d6271b0, base=0x0, importpid=617, clone_count=0
+08-27 22:48:01.210   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.210   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.210   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f93250
+08-27 22:48:01.210   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 1341, mUid: 10182
+08-27 22:48:01.210   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=600
+08-27 22:48:01.210   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f93250 return ok!
+08-27 22:48:01.211   617   776 D mali_gralloc: unregister: id=2680000bdb9, handle=0xb40000793d627bd0, base=0x0, importpid=617, clone_count=0
+08-27 22:48:01.212   617   776 D mali_gralloc: unregister: id=2680000bdb8, handle=0xb40000793d628830, base=0x0, importpid=617, clone_count=0
+08-27 22:48:01.212   617   776 D mali_gralloc: unregister: id=2680000bdb7, handle=0xb40000793d625a10, base=0x0, importpid=617, clone_count=0
+08-27 22:48:01.215   617   776 D mali_gralloc: register: id=2680000bdba, handle=0xb40000793d625a10, importpid=617
+08-27 22:48:01.215  1054  1089 D mali_gralloc: register: id=2680000bdca, handle=0xb4000074c4acd370, importpid=1054
+08-27 22:48:01.219  1341  2434 D mali_gralloc: register: id=2680000bdca, handle=0xb4000074c49e7390, importpid=1341
+08-27 22:48:01.219  1341  3312 D mali_gralloc: register: id=2680000bdca, handle=0xb4000074c49e9790, importpid=1341
+08-27 22:48:01.219  1341  2434 D mali_gralloc: unregister: id=2680000bdca, handle=0xb4000074c49e7390, base=0x0, importpid=1341, clone_count=1
+08-27 22:48:01.219 20247 20267 D mali_gralloc: register: id=2680000bdca, handle=0xb4000074c4964b90, importpid=20247
+08-27 22:48:01.219  1341  1436 D mali_gralloc: register: id=2680000bdca, handle=0xb4000074c4975cf0, importpid=1341
+08-27 22:48:01.220  1341  1368 D TaskStackListenerImpl: onTaskSnapshotChanged close hardwarebuffer, snapshot = TaskSnapshot{ mId=1787863681202 mCaptureTime=2533649191190478 mTopActivityComponent=com.giammaria.system/.MainActivity mSnapshot=android.hardware.HardwareBuffer@a565f6b (1280x800) mColorSpace=sRGB IEC61966-2.1 (id=0, model=RGB) mOrientation=2 mRotation=1 mTaskSize=Point(1280, 800) mContentInsets=[0,24][0,56] mLetterboxInsets=[0,0][0,0] mIsLowResolution=false mIsRealSnapshot=true mWindowingMode=1 mAppearance=0 mIsTranslucent=false mHasImeSurface=false mInternalReferences=0
+08-27 22:48:01.220  1341  1368 D mali_gralloc: unregister: id=2680000bdca, handle=0xb4000074c4975cf0, base=0x0, importpid=1341, clone_count=1
+08-27 22:48:01.223   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24339}animation-background#24339 isVisible=1 { color{< 0.847168, 0.851074, 0.894043, 1 >}} changes=Created | Hierarchy | Content | Z | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.223   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24340}c10d2f7 ActivityRecordInputSink com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity#24340 isVisible=1 {nothing to draw} changes=Created | Hierarchy | Geometry | Input | Z | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-15786.6,-8933.33,8844.45,12657.8} geomLayerTransform={tx=1407.98,ty=40}} input{(NO_INPUT_CHANNEL | NOT_FOCUSABLE | NOT_TOUCHABLE) replaceTouchableRegionWithCrop touchableRegion={0,0,0,0}}
+08-27 22:48:01.224   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24337}Splash Screen com.giammaria.system.test#24337 isVisible=0 { buffer=5759551154876 frame=1 color{< 0, 0, 0, 1 >}} changes=Hierarchy | Geometry | Input | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=1407.98,ty=40}} input{(NOT_FOCUSABLE | NOT_TOUCHABLE | PREVENT_SPLITTING) touchCropId=24334 touchableRegion={0,0,800,1280}}
+08-27 22:48:01.225  1341  1341 D mali_gralloc: unregister: id=2680000bdca, handle=0xb4000074c49e9790, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:01.227   617   776 D mali_gralloc: register: id=2680000bdbc, handle=0xb40000793d628830, importpid=617
+08-27 22:48:01.233  1054  1369 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.233   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.233   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.233   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f988f0
+08-27 22:48:01.233   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 20247, mUid: 10185
+08-27 22:48:01.233   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:01.233   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f988f0 return ok!
+08-27 22:48:01.237   637   637 D PowerHAL: enter Power::createHintSession
+08-27 22:48:01.237   637   637 D PowerHAL: enter PowerHintSession
+08-27 22:48:01.237   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 22421, mUid: 10311
+08-27 22:48:01.237   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:01.237   637   637 D PowerHAL: createHintSession return hintSession:0xb400007cc2f950b0
+08-27 22:48:01.238  1054  1369 D PowerHALManager: powerhalmanager createHintSession!!!
+08-27 22:48:01.239   637   637 D PowerHAL: enter Power::createHintSession
+08-27 22:48:01.239   637   637 D PowerHAL: enter PowerHintSession
+08-27 22:48:01.240   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24341}Surface(name=216ebac StatusBar#74)/@0x3e0380a - animation-leash of insets_animation#24341 isVisible=1 {nothing to draw} changes=Created | Hierarchy | Geometry | Z | Metadata | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.240   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24342}Surface(name=b70a830 Taskbar#17148)/@0xd70175c - animation-leash of insets_animation#24342 isVisible=1 {nothing to draw} changes=Created | Hierarchy | Geometry | Z | Metadata | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8683,7317,12800} geomLayerTransform={tx=0,ty=683}}
+08-27 22:48:01.240   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 22421, mUid: 10311
+08-27 22:48:01.241   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:01.241   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24341}Surface(name=216ebac StatusBar#74)/@0x3e0380a - animation-leash of insets_animation#24341 isVisible=0 {nothing to draw} changes=Created | Hierarchy | Geometry | Z | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.241   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24342}Surface(name=b70a830 Taskbar#17148)/@0xd70175c - animation-leash of insets_animation#24342 isVisible=0 {nothing to draw} changes=Created | Hierarchy | Geometry | Z | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8683,7317,12800} geomLayerTransform={tx=0,ty=683}}
+08-27 22:48:01.241   637   637 D PowerHAL: createHintSession return hintSession:0xb400007cc2f950b0
+08-27 22:48:01.242   637   637 D PowerHAL: Enter getSceneIdByName: sceneName:com.giammaria.system.test
+08-27 22:48:01.242   637   637 D PowerHAL: Enter getSceneIdByName: sceneName:PACKAGE
+08-27 22:48:01.242   664   716 D mali_gralloc: unregister: id=2680000bdca, handle=0xb400007058eeda50, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.246 21950 21958 I eufe    : (REDACTED) HDM. appOpsListener %s %s
+08-27 22:48:01.247 21950 21958 I eufe    : (REDACTED) HDM. Ignoring irrelevant audio permission changes for package %s
+08-27 22:48:01.257   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24343}34fa7f4 com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity#24343 isVisible=1 {nothing to draw} changes=Created | Geometry | Input | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-15329.2,-8706.58,8639.29,12424.2} geomLayerTransform={tx=1339.82,ty=31.0361}}
+08-27 22:48:01.257   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24344}com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity#24344 isVisible=1 {hidden by parent or layer flag} changes=Created | Geometry | Input | Metadata | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-15329.2,-8706.58,8639.29,12424.2} geomLayerTransform={tx=1339.82,ty=31.0361}}
+08-27 22:48:01.257   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24345}Surface(name=216ebac StatusBar#74)/@0x3e0380a - animation-leash of insets_animation#24345 isVisible=1 {nothing to draw} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.257   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24346}Surface(name=b70a830 Taskbar#17148)/@0xd70175c - animation-leash of insets_animation#24346 isVisible=1 {nothing to draw} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.258   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24343}34fa7f4 com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity#24343 isVisible=0 {nothing to draw} changes=Created | Geometry | Input | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-15329.2,-8706.58,8639.29,12424.2} geomLayerTransform={tx=1339.82,ty=31.0361}}
+08-27 22:48:01.258   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24344}com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity#24344 isVisible=0 {hidden by parent or layer flag} changes=Created | Geometry | Input | Metadata | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-15329.2,-8706.58,8639.29,12424.2} geomLayerTransform={tx=1339.82,ty=31.0361}}
+08-27 22:48:01.258   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24345}Surface(name=216ebac StatusBar#74)/@0x3e0380a - animation-leash of insets_animation#24345 isVisible=0 {nothing to draw} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.258   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24346}Surface(name=b70a830 Taskbar#17148)/@0xd70175c - animation-leash of insets_animation#24346 isVisible=0 {nothing to draw} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.260   617   776 D SPRDHWComposer: HWC Range:1, HWC_Transfer:4
+08-27 22:48:01.262  1054 12570 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.262   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.262   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.262   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f97420
+08-27 22:48:01.262   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 22421, mUid: 10311
+08-27 22:48:01.262   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:01.262   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f97420 return ok!
+08-27 22:48:01.263   616   616 I mali_gralloc: allocate: id=2680000bdcb, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[InstrumentationActivityInvoker$EmptyActivity]#4(BLAST Consumer)4, costTime=0ms818us116
+08-27 22:48:01.263 22421 22600 D mali_gralloc: register: id=2680000bdcb, handle=0xb4000074c494eb70, importpid=22421
+08-27 22:48:01.264   616   616 I mali_gralloc: allocate: id=2680000bdcc, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[InstrumentationActivityInvoker$EmptyActivity]#4(BLAST Consumer)4, costTime=0ms539us693
+08-27 22:48:01.264 22421 22600 D mali_gralloc: register: id=2680000bdcc, handle=0xb4000074c494fa10, importpid=22421
+08-27 22:48:01.265   616   616 I mali_gralloc: allocate: id=2680000bdcd, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[InstrumentationActivityInvoker$EmptyActivity]#4(BLAST Consumer)4, costTime=0ms651us385
+08-27 22:48:01.266 22421 22600 D mali_gralloc: register: id=2680000bdcd, handle=0xb4000074c49598b0, importpid=22421
+08-27 22:48:01.266   664  1781 D mali_gralloc: register: id=2680000bdcb, handle=0xb400007058ef5df0, importpid=664
+08-27 22:48:01.266   664   716 D mali_gralloc: unregister: id=2680000bdb8, handle=0xb400007058ef0090, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.267   616   616 I mali_gralloc: allocate: id=2680000bdce, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[InstrumentationActivityInvoker$EmptyActivity]#4(BLAST Consumer)4, costTime=0ms951us308
+08-27 22:48:01.267 22421 22600 D mali_gralloc: register: id=2680000bdce, handle=0xb4000074c4941d90, importpid=22421
+08-27 22:48:01.273   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24347}Surface(name=34fa7f4 com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity#24343)/@0xab94f60 - animation-leash of starting_reveal#24347 isVisible=1 {nothing to draw} changes=Created | Geometry | Metadata | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-14826.5,-8554.52,8501.71,12463.4} geomLayerTransform={tx=1108.39,ty=24.7705}}
+08-27 22:48:01.274   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24347}Surface(name=34fa7f4 com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity#24343)/@0xab94f60 - animation-leash of starting_reveal#24347 isVisible=0 {nothing to draw} changes=Created | Geometry | Metadata | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-14826.5,-8554.52,8501.71,12463.4} geomLayerTransform={tx=1108.39,ty=24.7705}}
+08-27 22:48:01.276  1054  1085 I ActivityTaskManager: Displayed com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity for user 0: +122ms
+08-27 22:48:01.277   617   776 D SPRDHWComposer: HWC Range:1, HWC_Transfer:4
+08-27 22:48:01.277   617   776 D mali_gralloc: register: id=2680000bdc6, handle=0xb40000793d627bd0, importpid=617
+08-27 22:48:01.277   664   705 D mali_gralloc: register: id=2680000bdc9, handle=0xb400007058ef4410, importpid=664
+08-27 22:48:01.281 20247 20247 I TopTaskTracker: onTaskMovedToFront: (moved taskInfo to front) taskId=527, baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.HOME] flg=0x10000100 cmp=com.android.launcher3/com.android.searchlauncher.SearchLauncher }
+08-27 22:48:01.286 20893 20893 D VRI[GoogleDiscoverWindow]: visibilityChanged oldVisibility=false newVisibility=true
+08-27 22:48:01.286  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.286  1054 12570 D InputDispatcher: setFocusedApplication displayId=0 ActivityRecord{6c770ec u0 com.android.launcher3/com.android.searchlauncher.SearchLauncher t527 d0}
+08-27 22:48:01.286  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.286   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20247,level=1,buf=20247 1
+08-27 22:48:01.286  1054 11701 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.286   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20283,level=1,buf=20283 1
+08-27 22:48:01.286   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.286   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.286   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f95380
+08-27 22:48:01.286   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 20893, mUid: 10146
+08-27 22:48:01.286   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:01.287   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f95380 return ok!
+08-27 22:48:01.290   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24348}Surface(name=216ebac StatusBar#74)/@0x3e0380a - animation-leash of insets_animation#24348 isVisible=1 {nothing to draw} changes=Created | Metadata | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.290   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24349}Surface(name=b70a830 Taskbar#17148)/@0xd70175c - animation-leash of insets_animation#24349 isVisible=1 {nothing to draw} changes=Created | Metadata | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.291   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24348}Surface(name=216ebac StatusBar#74)/@0x3e0380a - animation-leash of insets_animation#24348 isVisible=0 {nothing to draw} changes=Created | Metadata | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.291   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24349}Surface(name=b70a830 Taskbar#17148)/@0xd70175c - animation-leash of insets_animation#24349 isVisible=0 {nothing to draw} changes=Created | Metadata | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.293  1054  1369 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.293   617   776 D mali_gralloc: register: id=2680000bdc9, handle=0xb40000793d6271b0, importpid=617
+08-27 22:48:01.294   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.294   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.294   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f95d10
+08-27 22:48:01.294   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 1341, mUid: 10182
+08-27 22:48:01.294   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:01.294   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f95d10 return ok!
+08-27 22:48:01.294   664   705 D mali_gralloc: register: id=2680000bdc8, handle=0xb400007058ef0090, importpid=664
+08-27 22:48:01.298  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.298   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20247,level=1,buf=20247 1
+08-27 22:48:01.298  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.298   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20283,level=1,buf=20283 1
+08-27 22:48:01.298  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.298   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20247,level=1,buf=20247 1
+08-27 22:48:01.298  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.298   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20283,level=1,buf=20283 1
+08-27 22:48:01.298  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.298   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=1,buf=1341 1
+08-27 22:48:01.298  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.298   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=1,buf=1445 1
+08-27 22:48:01.300  1054  1369 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.300   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.300   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.300   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f983e0
+08-27 22:48:01.300   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 20247, mUid: 10185
+08-27 22:48:01.300   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:01.300   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f983e0 return ok!
+08-27 22:48:01.302  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.302  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.302   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20247,level=1,buf=20247 1
+08-27 22:48:01.302   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20283,level=1,buf=20283 1
+08-27 22:48:01.302  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.303   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20247,level=1,buf=20247 1
+08-27 22:48:01.303  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.303   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=20283,level=1,buf=20283 1
+08-27 22:48:01.303  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.303   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=1,buf=1341 1
+08-27 22:48:01.303  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.303   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=1,buf=1445 1
+08-27 22:48:01.304   637   637 D PowerHAL: PowerHintSession hintSession pause tid: 22421, uid: 10311
+08-27 22:48:01.304   637   637 D PowerHAL: PowerHintSession hintSession pause tid: 22421, uid: 10311
+08-27 22:48:01.306   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24350}GoogleDiscoverWindow#24350 isVisible=1 {hidden by parent or layer flag} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.307   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24350}GoogleDiscoverWindow#24350 isVisible=0 {hidden by parent or layer flag} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.307   664   664 I BpBinder: onLastStrongRef automatically unlinking death recipients:
+08-27 22:48:01.308   617   776 D mali_gralloc: register: id=2680000bdc8, handle=0xb40000793d62a9f0, importpid=617
+08-27 22:48:01.312   664   705 D mali_gralloc: register: id=2680000bdc7, handle=0xb400007058ec2f70, importpid=664
+08-27 22:48:01.316  1054 12570 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.316   637   637 D PowerHAL: Enter getSceneIdByName: sceneName:com.android.launcher3
+08-27 22:48:01.316  1054 11701 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.316   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.316   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.316   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f95380
+08-27 22:48:01.316   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 20893, mUid: 10146
+08-27 22:48:01.316   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:01.316   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f95380 return ok!
+08-27 22:48:01.316   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.316   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.316   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f93250
+08-27 22:48:01.316   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 1341, mUid: 10182
+08-27 22:48:01.316   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=600
+08-27 22:48:01.317   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f93250 return ok!
+08-27 22:48:01.317   637   637 D PowerHAL: Enter getSceneIdByName: sceneName:PACKAGE
+08-27 22:48:01.317   616   616 I mali_gralloc: allocate: id=2680000bdcf, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[GoogleDiscoverWindow]#133(BLAST Consumer)133, costTime=0ms526us039
+08-27 22:48:01.317 20893 22601 D mali_gralloc: register: id=2680000bdcf, handle=0xb4000074c49c46b0, importpid=20893
+08-27 22:48:01.318   616   616 I mali_gralloc: allocate: id=2680000bdd0, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[GoogleDiscoverWindow]#133(BLAST Consumer)133, costTime=0ms510us270
+08-27 22:48:01.319 20893 22601 D mali_gralloc: register: id=2680000bdd0, handle=0xb4000074c49c1650, importpid=20893
+08-27 22:48:01.319   616   616 I mali_gralloc: allocate: id=2680000bdd1, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[GoogleDiscoverWindow]#133(BLAST Consumer)133, costTime=0ms559us846
+08-27 22:48:01.320   664  1124 D mali_gralloc: register: id=2680000bdcf, handle=0xb400007058eeda50, importpid=664
+08-27 22:48:01.320  1054 11701 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.320   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.320   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.320   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f983e0
+08-27 22:48:01.320   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 20247, mUid: 10185
+08-27 22:48:01.320   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:01.320 20247 20247 D BaseDepthController: setSurface:
+08-27 22:48:01.320 20247 20247 D BaseDepthController: 	mWaitingOnSurfaceValidity: false
+08-27 22:48:01.320 20247 20247 D BaseDepthController: 	mSurface: Surface(name=com.android.launcher3/com.android.searchlauncher.SearchLauncher#17152)/@0x4db91f6
+08-27 22:48:01.320   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f983e0 return ok!
+08-27 22:48:01.320 20893 20893 I cesb    : onStart
+08-27 22:48:01.321 20893 22601 D mali_gralloc: register: id=2680000bdd1, handle=0xb4000074c49c2970, importpid=20893
+08-27 22:48:01.321 20893 20893 I cejn    : onStart
+08-27 22:48:01.321   616   616 I mali_gralloc: allocate: id=2680000bdd2, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[SearchLauncher]#134(BLAST Consumer)134, costTime=0ms531us577
+08-27 22:48:01.322 20247 22602 D mali_gralloc: register: id=2680000bdd2, handle=0xb4000074c49f6210, importpid=20247
+08-27 22:48:01.323   616   616 I mali_gralloc: allocate: id=2680000bdd3, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[SearchLauncher]#134(BLAST Consumer)134, costTime=0ms561us154
+08-27 22:48:01.323 20893 20893 I cchd    : (REDACTED) [%s] onStart()
+08-27 22:48:01.323 20893 20893 I ccjr    : Reloading theme data
+08-27 22:48:01.323   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24351}com.android.launcher3/com.android.searchlauncher.SearchLauncher#24351 isVisible=1 {hidden by parent or layer flag} changes=Created | Geometry | Metadata | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.323 20247 22602 D mali_gralloc: register: id=2680000bdd3, handle=0xb4000074c4983cd0, importpid=20247
+08-27 22:48:01.323   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24352}Surface(name=216ebac StatusBar#74)/@0x3e0380a - animation-leash of insets_animation#24352 isVisible=1 {nothing to draw} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.324   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24353}Surface(name=b70a830 Taskbar#17148)/@0xd70175c - animation-leash of insets_animation#24353 isVisible=1 {nothing to draw} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.324   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24351}com.android.launcher3/com.android.searchlauncher.SearchLauncher#24351 isVisible=0 {hidden by parent or layer flag} changes=Created | Geometry | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.324   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24352}Surface(name=216ebac StatusBar#74)/@0x3e0380a - animation-leash of insets_animation#24352 isVisible=0 {nothing to draw} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.324   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24353}Surface(name=b70a830 Taskbar#17148)/@0xd70175c - animation-leash of insets_animation#24353 isVisible=0 {nothing to draw} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.324 20893 20893 E NetworkErrorMessage: (REDACTED) Invalid connectivity state: %s
+08-27 22:48:01.325 20893 20893 I cesb    : onResume
+08-27 22:48:01.325 20893 20893 W dwmg    : missing event name
+08-27 22:48:01.326 20893 20893 I cejn    : onResume
+08-27 22:48:01.326   616  1903 I mali_gralloc: allocate: id=2680000bdd4, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[GoogleDiscoverWindow]#133(BLAST Consumer)133, costTime=0ms600us884
+08-27 22:48:01.326   616   616 I mali_gralloc: allocate: id=2680000bdd5, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[SearchLauncher]#134(BLAST Consumer)134, costTime=0ms568us077
+08-27 22:48:01.327 20893 22601 D mali_gralloc: register: id=2680000bdd4, handle=0xb4000074c49b0df0, importpid=20893
+08-27 22:48:01.327   617   776 D mali_gralloc: register: id=2680000bdc7, handle=0xb40000793d62c070, importpid=617
+08-27 22:48:01.327 20247 22602 D mali_gralloc: register: id=2680000bdd5, handle=0xb4000074c4981c30, importpid=20247
+08-27 22:48:01.328   616   616 I mali_gralloc: allocate: id=2680000bdd6, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=SPLIT, usage=GPU_RW|HWC, size=800x1280(4160512), stride=800, name=VRI[SearchLauncher]#134(BLAST Consumer)134, costTime=0ms618us692
+08-27 22:48:01.330   664   704 D mali_gralloc: register: id=2680000bdd3, handle=0xb400007058ef03f0, importpid=664
+08-27 22:48:01.331 20247 22602 D mali_gralloc: register: id=2680000bdd6, handle=0xb4000074c49edd50, importpid=20247
+08-27 22:48:01.333 20247 20247 W Choreographer: Already have a pending vsync event.  There should only be one at a time.
+08-27 22:48:01.335  1054 12363 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.336   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.336   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.336   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f988f0
+08-27 22:48:01.336   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=0: mTgid: 20247, mUid: 10185
+08-27 22:48:01.336   637   637 D PowerHAL: enter case CPU_LOAD_UP, and uclampMin_High=650
+08-27 22:48:01.336   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f988f0 return ok!
+08-27 22:48:01.336 20247 20247 D StatsLog: LAUNCHER_ONRESUME
+08-27 22:48:01.341   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24339}animation-background#24339 isVisible=0 {layer not reachable from root} changes=Visibility layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.341   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24323}a5ffbf3 ActivityRecordInputSink com.giammaria.system/.MainActivity#24323 isVisible=0 {layer not reachable from root} changes=0x0 layerStack=0 geomLayerBounds={-12800,-8801.71,8725.36,15243.3} geomLayerTransform={tx=-1115.2,ty=34.8506}}
+08-27 22:48:01.341   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24327}com.giammaria.system/com.giammaria.system.MainActivity#24327 isVisible=0 {layer not reachable from root} changes=Visibility layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=-1115.2,ty=34.8506}}
+08-27 22:48:01.341   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 77}StatusBar#77 isVisible=0 {layer not reachable from root} changes=Visibility layerStack=0 geomLayerBounds={0,0,24,1280} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.341   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 17149}Taskbar#17149 isVisible=0 {layer not reachable from root} changes=Visibility layerStack=0 geomLayerBounds={0,0,117,1280} geomLayerTransform={tx=0,ty=683}}
+08-27 22:48:01.341   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 122}IME Handwriting Surface#122 isVisible=0 {layer not reachable from root} changes=0x0 layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.343   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24323}a5ffbf3 ActivityRecordInputSink com.giammaria.system/.MainActivity#24323 isVisible=0 {nothing to draw} changes=Hierarchy | Geometry | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-12800,-8801.71,8725.36,15243.3} geomLayerTransform={tx=-1115.2,ty=34.8506}} input{(NO_INPUT_CHANNEL | NOT_FOCUSABLE | NOT_TOUCHABLE) replaceTouchableRegionWithCrop touchableRegion={0,0,0,0}}
+08-27 22:48:01.343   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24327}com.giammaria.system/com.giammaria.system.MainActivity#24327 isVisible=0 { buffer=95429878349883 frame=5 color{< 0, 0, 0, 1 >}} changes=Hierarchy | Geometry | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=-1115.2,ty=34.8506}} input{(NO_INPUT_CHANNEL | NOT_FOCUSABLE | NOT_TOUCHABLE | PREVENT_SPLITTING | PAUSE_DISPATCHING) touchableRegion={0,0,0,0}}
+08-27 22:48:01.343   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 77}StatusBar#77 isVisible=0 { buffer=5759551153387 frame=89212 color{< 0, 0, 0, 1 >}} changes=Hierarchy | Geometry | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,24,1280} geomLayerTransform={tx=0,ty=0}} input{(NOT_FOCUSABLE) touchableRegion={0,0,24,1280}}
+08-27 22:48:01.344   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 17149}Taskbar#17149 isVisible=0 { buffer=86960202842351 frame=10152 color{< 0, 0, 0, 1 >}} changes=Hierarchy | Geometry | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,117,1280} geomLayerTransform={tx=0,ty=683}} input{(NOT_FOCUSABLE | SLIPPERY) touchableRegion={0,61,117,1280}}
+08-27 22:48:01.344   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 122}IME Handwriting Surface#122 isVisible=0 {nothing to draw} changes=Hierarchy | Geometry | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}} input{(NOT_FOCUSABLE | NOT_TOUCHABLE | SPY | INTERCEPTS_STYLUS) replaceTouchableRegionWithCrop touchableRegion={0,0,0,0}}
+08-27 22:48:01.344   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24339}animation-background#24339 isVisible=1 { color{< 0.847168, 0.851074, 0.894043, 1 >}} changes=Hierarchy | Geometry | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}} input{(NO_INPUT_CHANNEL | NOT_VISIBLE) touchableRegion={800,0,0,800}}
+08-27 22:48:01.345   616   616 I mali_gralloc: allocate: id=2680000bdd7, halFormat=RGBA8888, maliFormat=RGBA8888, afbc=false, usage=CPU_RW|GPU_RW|HWC, size=1280x800(4096000), stride=1280, name=screenshot, costTime=0ms183us230
+08-27 22:48:01.346   664   704 D mali_gralloc: register: id=2680000bdd7, handle=0xb400007058ef3330, importpid=664
+08-27 22:48:01.346   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24354}Transition Root: Task=1#24354 isVisible=1 {hidden by parent or layer flag} changes=Created | Metadata | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.346   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24354}Transition Root: Task=1#24354 isVisible=0 {hidden by parent or layer flag} changes=Created | Metadata | Visibility | FrameRate layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.349   617   776 D mali_gralloc: unregister: id=2680000bdbd, handle=0xb40000793d628a70, base=0x0, importpid=617, clone_count=0
+08-27 22:48:01.349   617   776 D mali_gralloc: unregister: id=2680000bdbb, handle=0xb40000793d627e10, base=0x0, importpid=617, clone_count=0
+08-27 22:48:01.349   617   776 D mali_gralloc: unregister: id=2680000bdba, handle=0xb40000793d625a10, base=0x0, importpid=617, clone_count=0
+08-27 22:48:01.349   617   776 D mali_gralloc: unregister: id=2680000bdbc, handle=0xb40000793d628830, base=0x0, importpid=617, clone_count=0
+08-27 22:48:01.350 20247 20276 D QuickstepModelDelegate: notifyAppTargetEvent action=1 launchLocation=workspace/1/[-1,-1]/[1,1]
+08-27 22:48:01.351  1054  1089 D mali_gralloc: register: id=2680000bdd7, handle=0xb4000074c4acf770, importpid=1054
+08-27 22:48:01.356 22219 22219 D VRI[MainActivity]: visibilityChanged oldVisibility=true newVisibility=false
+08-27 22:48:01.356   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24323}a5ffbf3 ActivityRecordInputSink com.giammaria.system/.MainActivity#24323 isVisible=0 {hidden by parent or layer flag} changes=Hierarchy | Geometry | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={-12800,-8842.35,8762.13,15367.2} geomLayerTransform={tx=-1166.59,ty=36.4562}} input{(NO_INPUT_CHANNEL | NOT_FOCUSABLE | NOT_TOUCHABLE) replaceTouchableRegionWithCrop touchableRegion={0,0,0,0}}
+08-27 22:48:01.357   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24327}com.giammaria.system/com.giammaria.system.MainActivity#24327 isVisible=1 {hidden by parent or layer flag} changes=Hierarchy | Geometry | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=-1166.59,ty=36.4562}} input{(NO_INPUT_CHANNEL | NOT_FOCUSABLE | NOT_TOUCHABLE | PREVENT_SPLITTING | PAUSE_DISPATCHING) touchableRegion={0,0,0,0}}
+08-27 22:48:01.357   637   637 D PowerHAL: enter power::setMode
+08-27 22:48:01.357   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24339}animation-background#24339 isVisible=0 {layer not reachable from root} changes=Hierarchy | Parent | RelativeParent | Visibility | AffectsChildren | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.357   637   637 D PowerHAL: PowerSessionManager::updateHintMode: mode: LAUNCH, enabled: 0
+08-27 22:48:01.357   637   637 D PowerHAL: PowerSessionManager::updateHintMode resValue = 0
+08-27 22:48:01.357   637   637 D PowerHAL: ###Exit launch scene bgn###
+08-27 22:48:01.357   637   637 D PowerHAL: Enter common_set: enable:0, duration: 0, /sys/devices/system/cpu/cpufreq/policy0/scaling_min_freq: max
+08-27 22:48:01.357   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:01.357   637   637 D PowerHAL: Enter common_clear:
+08-27 22:48:01.357  1341 25924 D mali_gralloc: register: id=2680000bdd7, handle=0xb4000074c49bcd30, importpid=1341
+08-27 22:48:01.357  1341  3312 D mali_gralloc: register: id=2680000bdd7, handle=0xb4000074c49dbf90, importpid=1341
+08-27 22:48:01.357 20247 20256 D mali_gralloc: register: id=2680000bdd7, handle=0xb4000074c49d1130, importpid=20247
+08-27 22:48:01.357   637   637 D PowerHAL: Enter common_set: enable:0, duration: 0, /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq: max
+08-27 22:48:01.357   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:01.357   637   637 D PowerHAL: Enter common_clear:
+08-27 22:48:01.357   637   637 D PowerHAL: Enter common_set: enable:0, duration: 0, /sys/devices/system/cpu/cpufreq/policy6/scaling_min_freq: max
+08-27 22:48:01.357   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:01.358   637   637 D PowerHAL: Enter common_clear:
+08-27 22:48:01.358   637   637 D PowerHAL: Enter common_set: enable:0, duration: 0, /sys/devices/system/cpu/cpufreq/policy6/scaling_max_freq: max
+08-27 22:48:01.358   637   637 D PowerHAL: Enter set_cluster_freqs_max_min:
+08-27 22:48:01.358   637   637 D PowerHAL: Enter common_clear:
+08-27 22:48:01.358   637   637 D PowerHAL: Enter devfreq_ddr_set: enable:0, duration: 0, /sys/class/devfreq/scene-frequency/sprd-governor/scene_boost_dfs: max
+08-27 22:48:01.358  1341  2434 D mali_gralloc: register: id=2680000bdd7, handle=0xb4000074c4946230, importpid=1341
+08-27 22:48:01.358  1341  2434 D mali_gralloc: unregister: id=2680000bdd7, handle=0xb4000074c4946230, base=0x0, importpid=1341, clone_count=2
+08-27 22:48:01.358  1054  1383 D PowerHALManager: powerhalmanager sendHint!!!
+08-27 22:48:01.359   637   637 D PowerHAL: ###Exit launch scene end###
+08-27 22:48:01.359   637   637 D PowerHAL: enter VendorPower::sendHint
+08-27 22:48:01.359   637   637 D PowerHAL: sendHint enter sendHint if():
+08-27 22:48:01.359   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f9c400
+08-27 22:48:01.359   637   637 D PowerHAL: PowerHintSession sendHint hintSession and hint=2: mTgid: 22219, mUid: 10310
+08-27 22:48:01.359   637   637 D PowerHAL: enter case CPU_LOAD_RESET, and uclampMin_High=650
+08-27 22:48:01.359   637   637 D PowerHAL: sendHint got hintSession:0xb400007cc2f9c400 return ok!
+08-27 22:48:01.363  1341  1368 D TaskStackListenerImpl: onTaskSnapshotChanged close hardwarebuffer, snapshot = TaskSnapshot{ mId=1787863681338 mCaptureTime=2533649329301132 mTopActivityComponent=com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity mSnapshot=android.hardware.HardwareBuffer@1a96072 (1280x800) mColorSpace=sRGB IEC61966-2.1 (id=0, model=RGB) mOrientation=2 mRotation=1 mTaskSize=Point(1280, 800) mContentInsets=[0,24][0,56] mLetterboxInsets=[0,0][0,0] mIsLowResolution=false mIsRealSnapshot=true mWindowingMode=1 mAppearance=24 mIsTranslucent=true mHasImeSurface=false mInternalReferences=0
+08-27 22:48:01.363  1341  1368 D mali_gralloc: unregister: id=2680000bdd7, handle=0xb4000074c49bcd30, base=0x0, importpid=1341, clone_count=1
+08-27 22:48:01.364  1341  1341 D mali_gralloc: unregister: id=2680000bdd7, handle=0xb4000074c49dbf90, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:01.372 20247 20247 D StateManager: createAtomicAnimation - fromState: Background, toState: Normal, partial trace:
+08-27 22:48:01.372 20247 20247 D StateManager: 	at com.android.quickstep.util.WorkspaceRevealAnim.prepareToAnimate(WorkspaceRevealAnim.java:131)
+08-27 22:48:01.372 20247 20247 D StateManager: 	at com.android.quickstep.util.WorkspaceRevealAnim.<init>(WorkspaceRevealAnim.java:67)
+08-27 22:48:01.372 20247 20247 D StateManager: 	at com.android.launcher3.QuickstepTransitionManager.createWallpaperOpenAnimations(QuickstepTransitionManager.java:1739)
+08-27 22:48:01.374   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24357}Surface(name=WallpaperWindowToken{96d6dbc token=android.os.Binder@db179b6}#60)/@0x371faf8_transition-leash#24357 isVisible=1 {nothing to draw} changes=Created | Hierarchy | Z | Parent | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.374   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24355}Surface(name=Task=1#47)/@0xb8de13f_transition-leash#24355 isVisible=1 {nothing to draw} changes=Created | Hierarchy | Z | Parent | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.374   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 138}389ad3e ActivityRecordInputSink com.android.launcher3/com.android.searchlauncher.SearchLauncher#138 isVisible=0 {nothing to draw} changes=Hierarchy | Geometry | Metadata | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=0,ty=0}} input{(NO_INPUT_CHANNEL | NOT_FOCUSABLE | NOT_TOUCHABLE) replaceTouchableRegionWithCrop touchableRegion={0,0,0,0}}
+08-27 22:48:01.374   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24351}com.android.launcher3/com.android.searchlauncher.SearchLauncher#24351 isVisible=0 { buffer=86960202843068 frame=1 color{< 0, 0, 0, 1 >}} changes=Hierarchy | Geometry | Input | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=0,ty=0}} input{(DUPLICATE_TOUCH_TO_WALLPAPER) touchableRegion={0,0,800,1280}}
+08-27 22:48:01.374   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24356}Surface(name=Task=869#24334)/@0xf81ad6a_transition-leash#24356 isVisible=1 {nothing to draw} changes=Created | Hierarchy | Z | Parent | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.374   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24344}com.giammaria.system.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity#24344 isVisible=0 { buffer=96297461743632 frame=1 color{< 0, 0, 0, 1 >}} changes=Hierarchy | Geometry | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=0,ty=0.193144}} input{(NO_INPUT_CHANNEL | NOT_FOCUSABLE | NOT_TOUCHABLE | PREVENT_SPLITTING) touchableRegion={0,0,0,0}}
+08-27 22:48:01.375   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24357}Surface(name=WallpaperWindowToken{96d6dbc token=android.os.Binder@db179b6}#60)/@0x371faf8_transition-leash#24357 isVisible=0 {nothing to draw} changes=Created | Hierarchy | Z | Parent | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.375   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24355}Surface(name=Task=1#47)/@0xb8de13f_transition-leash#24355 isVisible=0 {nothing to draw} changes=Created | Hierarchy | Z | Parent | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.375   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24356}Surface(name=Task=869#24334)/@0xf81ad6a_transition-leash#24356 isVisible=0 {nothing to draw} changes=Created | Hierarchy | Z | Parent | Metadata | Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-12800,-8000,8000,12800} geomLayerTransform={tx=0,ty=0}}
+08-27 22:48:01.375  1341  1445 D mali_gralloc: unregister: id=2680000bdc7, handle=0xb4000074c49751b0, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:01.376   664   716 D mali_gralloc: unregister: id=2680000bdd7, handle=0xb400007058ef3330, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.379   617   776 D SPRDHWComposer: HWC Range:1, HWC_Transfer:4
+08-27 22:48:01.379   617   776 D mali_gralloc: register: id=2680000bdcb, handle=0xb40000793d628830, importpid=617
+08-27 22:48:01.379 22219 22239 D mali_gralloc: unregister: id=2680000bdbb, handle=0xb4000074c4980b50, base=0x0, importpid=22219, clone_count=0
+08-27 22:48:01.379 22219 22239 D mali_gralloc: unregister: id=2680000bdbd, handle=0xb4000074c4971730, base=0x0, importpid=22219, clone_count=0
+08-27 22:48:01.380   664   716 D mali_gralloc: unregister: id=2680000bdbb, handle=0xb400007058edd670, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.382   664   704 D mali_gralloc: register: id=2680000bdd6, handle=0xb400007058edc6b0, importpid=664
+08-27 22:48:01.382  1341  3312 D mali_gralloc: unregister: id=2680000bdc6, handle=0xb4000074c4a1b9b0, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:01.382   664   716 D mali_gralloc: unregister: id=2680000bdbd, handle=0xb400007058eccf30, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.385  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.385   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1341,level=0,buf=1341 0
+08-27 22:48:01.385  1054  1105 D PowerHALManager: powerhalmanager setviptaskbypid!!!
+08-27 22:48:01.386   637   637 D PowerHAL: set_viptask:tag=UFwAppResCtl,type=ui,pid=1445,level=0,buf=1445 0
+08-27 22:48:01.387  1341  1384 D mali_gralloc: unregister: id=2680000bdc8, handle=0xb4000074c4a1a690, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:01.387  1341  1384 D mali_gralloc: unregister: id=2680000bdc9, handle=0xb4000074c4a0a4f0, base=0x0, importpid=1341, clone_count=0
+08-27 22:48:01.388  1341  1384 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=android.view.ViewRootImpl$$ExternalSyntheticLambda11@f1c2926
+08-27 22:48:01.389  1054 12965 W InputManager-JNI: Input channel object '63d51da Splash Screen com.giammaria.system.test (client)' was disposed without first being removed with the input manager!
+08-27 22:48:01.390   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 62}com.android.systemui.wallpapers.ImageWallpaper#62 isVisible=0 {nothing to draw} changes=Visibility | AffectsChildren | FrameRate | VisibleRegion layerStack=0 geomLayerBounds={-18090.9,-10931.8,11795.5,18272.7} geomLayerTransform={tx=-64,ty=-304}} input{(NOT_FOCUSABLE | NOT_TOUCHABLE | PREVENT_SPLITTING | IS_WALLPAPER) touchableRegion={0,0,1280,1280}}
+08-27 22:48:01.390   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 24358}Surface(name=63d51da Splash Screen com.giammaria.system.test#24336)/@0x633cce8 - animation-leash of window_animation#24358 isVisible=1 {nothing to draw} changes=Created | Geometry | Metadata | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=0,ty=28.7833}}
+08-27 22:48:01.391 22219 22219 D mali_gralloc: unregister: id=2680000bdbc, handle=0xb4000074c497bff0, base=0x0, importpid=22219, clone_count=0
+08-27 22:48:01.391   664   664 I SurfaceFlinger: updating visibility visibleForInput:1, Snapshot{TraversalPath{.id = 63}Wallpaper BBQ wrapper#63 isVisible=1 { buffer=5759551143936 frame=1 color{< 0, 0, 0, 1 >}} changes=Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,2000,2000} geomLayerTransform={tx=-64,ty=-304}} input{(NO_INPUT_CHANNEL | NOT_VISIBLE) touchableRegion={1104,-63,-63,1104}}
+08-27 22:48:01.391 22219 22219 D mali_gralloc: unregister: id=2680000bdba, handle=0xb4000074c4972390, base=0x0, importpid=22219, clone_count=0
+08-27 22:48:01.391   664   664 I SurfaceFlinger: updating visibility visibleForInput:0, Snapshot{TraversalPath{.id = 24358}Surface(name=63d51da Splash Screen com.giammaria.system.test#24336)/@0x633cce8 - animation-leash of window_animation#24358 isVisible=0 {nothing to draw} changes=Created | Geometry | Metadata | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,800,1280} geomLayerTransform={tx=0,ty=28.7833}}
+08-27 22:48:01.394   664   664 D mali_gralloc: unregister: id=2680000bdc7, handle=0xb400007058ec2f70, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.394   664   664 D mali_gralloc: unregister: id=2680000bdc6, handle=0xb400007058ee7bd0, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.395   664   664 D mali_gralloc: unregister: id=2680000bdc9, handle=0xb400007058ef4410, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.395   617   776 D SPRDHWComposer: HWC Range:1, HWC_Transfer:4
+08-27 22:48:01.395   617   776 D mali_gralloc: register: id=2680000000d, handle=0xb40000793d625a10, importpid=617
+08-27 22:48:01.395   617   776 D SPRDHWComposer: HWC Range:1, HWC_Transfer:4
+08-27 22:48:01.395   617   776 D mali_gralloc: register: id=2680000bdd6, handle=0xb40000793d627e10, importpid=617
+08-27 22:48:01.395   617   776 D mali_gralloc: register: id=2680000bdc8, handle=0xb40000793d628a70, importpid=617
+08-27 22:48:01.395   617   776 D mali_gralloc: unregister: id=2680000bdc8, handle=0xb40000793d62a9f0, base=0x0, importpid=617, clone_count=1
+08-27 22:48:01.397 22219 22312 D mali_gralloc: unregister: id=2680000bdbe, handle=0xb4000074c497a970, base=0x0, importpid=22219, clone_count=0
+08-27 22:48:01.398 22219 22312 D mali_gralloc: unregister: id=2680000bdbf, handle=0xb4000074c497a4f0, base=0x0, importpid=22219, clone_count=0
+08-27 22:48:01.398 22219 22312 D mali_gralloc: unregister: id=2680000bdc0, handle=0xb4000074c4957270, base=0x0, importpid=22219, clone_count=0
+08-27 22:48:01.399 22219 22312 D mali_gralloc: unregister: id=2680000bdc1, handle=0xb4000074c497d790, base=0x0, importpid=22219, clone_count=0
+08-27 22:48:01.399 22219 22219 D LifecycleMonitor: Lifecycle status change: com.giammaria.system.MainActivity@68313c8 in: STOPPED
+08-27 22:48:01.400 22219 22219 V ActivityScenario: Update currentActivityStage to STOPPED, currentActivity=com.giammaria.system.MainActivity@68313c8
+08-27 22:48:01.400 22219 22312 D mali_gralloc: unregister: id=2680000bdc2, handle=0xb4000074c497a190, base=0x0, importpid=22219, clone_count=0
+08-27 22:48:01.400 22219 22312 D mali_gralloc: unregister: id=2680000bdc3, handle=0xb4000074c4950e50, base=0x0, importpid=22219, clone_count=0
+08-27 22:48:01.401   664   704 D mali_gralloc: register: id=2680000bdd5, handle=0xb400007058ecd4d0, importpid=664
+08-27 22:48:01.402   664   716 D mali_gralloc: unregister: id=2680000bdba, handle=0xb400007058eebf50, base=0x0, importpid=664, clone_count=0
+08-27 22:48:01.404  1054  1204 I ImeTracker: com.android.launcher3:ed5af3af: onRequestHide at ORIGIN_SERVER reason HIDE_UNSPECIFIED_WINDOW fromUser false
+08-27 22:48:01.405  1054  1204 I ImeTracker: com.android.launcher3:ed5af3af: onCancelled at PHASE_SERVER_SHOULD_HIDE
+08-27 22:48:01.405  5836  5836 I SubtypeOperator: SubtypeOperator$1.onUnbindInput():43
+08-27 22:48:01.407  5836  5836 I SubtypeOperator: SubtypeOperator$1.onBindInput():33
+08-27 22:48:01.408 22219 22219 W cr_AwContents: WebView.destroy() called while WebView is still attached to window.
+08-27 22:48:01.410   617   776 D mali_gralloc: register: id=2680000bdd5, handle=0xb40000793d62a9f0, importpid=617
+08-27 22:48:01.411 22219 22219 D LifecycleMonitor: Lifecycle status change: com.giammaria.system.MainActivity@68313c8 in: DESTROYED
+08-27 22:48:01.411 22219 22219 V ActivityScenario: Update currentActivityStage to DESTROYED, currentActivity=null
+08-27 22:48:01.412 22219 22219 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=android.view.ViewRootImpl$$ExternalSyntheticLambda11@c79ec2f
+08-27 22:48:01.412 22219 22236 I TestRunner: finished: test01_AppLaunchAndDOMReady(com.giammaria.system.MainActivityInstrumentedTest)

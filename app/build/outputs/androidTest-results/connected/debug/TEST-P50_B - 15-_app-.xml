@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="9" failures="0" errors="0" skipped="0" time="15.71" timestamp="2026-08-27T20:48:02" hostname="localhost">
+  <testsuite name="com.giammaria.system.MainActivityGoldenImportInstrumentedTest" tests="4" failures="0" errors="0" skipped="0" time="10.133" timestamp="2026-08-27T20:48:02" hostname="localhost">
+    <properties>
+      <property name="device" value="P50_B - 15" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="test01_DeviceEnvironmentVerification" classname="com.giammaria.system.MainActivityGoldenImportInstrumentedTest" time="2.023" />
+    <testcase name="test02_GoldenFileParseAndIntegrityOnRealDevice" classname="com.giammaria.system.MainActivityGoldenImportInstrumentedTest" time="3.55" />
+    <testcase name="test03_ComplexMultiDomainParseOnRealDevice" classname="com.giammaria.system.MainActivityGoldenImportInstrumentedTest" time="0.619" />
+    <testcase name="test04_GoldenActivationAndIdbPersistOnRealDevice" classname="com.giammaria.system.MainActivityGoldenImportInstrumentedTest" time="3.941" />
+  </testsuite>
+  <testsuite name="com.giammaria.system.MainActivityInstrumentedTest" tests="5" failures="0" errors="0" skipped="0" time="3.773" timestamp="2026-08-27T20:48:02" hostname="localhost">
+    <properties>
+      <property name="device" value="P50_B - 15" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="test01_AppLaunchAndDOMReady" classname="com.giammaria.system.MainActivityInstrumentedTest" time="0.645" />
+    <testcase name="test02_NavigationRouting" classname="com.giammaria.system.MainActivityInstrumentedTest" time="0.949" />
+    <testcase name="test03_ReviewModificationsAndAtomicActivation" classname="com.giammaria.system.MainActivityInstrumentedTest" time="0.951" />
+    <testcase name="test04_RirRpeEngineLiveConversion" classname="com.giammaria.system.MainActivityInstrumentedTest" time="0.616" />
+    <testcase name="test05_StorageQuotaSanityCheck" classname="com.giammaria.system.MainActivityInstrumentedTest" time="0.612" />
+  </testsuite>
+</testsuites>

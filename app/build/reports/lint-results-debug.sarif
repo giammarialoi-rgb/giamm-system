@@ -1,0 +1,290 @@
+{
+    "$schema" : "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+    "version" : "2.1.0",
+    "runs" : [
+        {
+            "tool": {
+                "driver": {
+                    "name": "Android Lint",
+                    "fullName": "Android Lint (in gradle)",
+                    "version": "9.3.2",
+                    "semanticVersion": "9.3.2",
+                    "organization": "Google",
+                    "informationUri": "https://developer.android.com/studio/write/lint",
+                    "fullDescription": {
+                        "text": "Static analysis originally for Android source code but now performing general analysis"
+                    },
+                    "language": "en-US",
+                    "rules": [
+                        {
+                            "id": "AndroidGradlePluginVersion",
+                            "shortDescription": {
+                                "text": "Obsolete Android Gradle Plugin Version"
+                            },
+                            "fullDescription": {
+                                "text": "This detector looks for usage of the Android Gradle Plugin where the version you are using is not the current stable release. Using older versions is fine, and there are cases where you deliberately want to stick with an older version. However, you may simply not be aware that a more recent version is available, and that is what this lint check helps find."
+                            },
+                            "defaultConfiguration": {
+                                "level": "warning",
+                                "rank": 70
+                            },
+                            "properties": {
+                                "tags": [
+                                    "Correctness"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "IconLocation",
+                            "shortDescription": {
+                                "text": "Image defined in density-independent drawable folder"
+                            },
+                            "fullDescription": {
+                                "text": "The res/drawable folder is intended for density-independent graphics such as shapes defined in XML. For bitmaps, move it to drawable-mdpi and consider providing higher and lower resolution versions in drawable-ldpi, drawable-hdpi and drawable-xhdpi. If the icon really is density independent (for example a solid color) you can place it in drawable-nodpi.",
+                                "markdown": "The res/drawable folder is intended for density-independent graphics such as shapes defined in XML. For bitmaps, move it to `drawable-mdpi` and consider providing higher and lower resolution versions in `drawable-ldpi`, `drawable-hdpi` and `drawable-xhdpi`. If the icon **really** is density independent (for example a solid color) you can place it in `drawable-nodpi`."
+                            },
+                            "defaultConfiguration": {
+                                "level": "warning",
+                                "rank": 60
+                            },
+                            "properties": {
+                                "tags": [
+                                    "Icons",
+                                    "Usability"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "ObsoleteSdkInt",
+                            "shortDescription": {
+                                "text": "Obsolete SDK_INT Version Check"
+                            },
+                            "fullDescription": {
+                                "text": "This check flags version checks that are not necessary, because the minSdkVersion (or surrounding known API level) is already at least as high as the version checked for.\n\nSimilarly, it also looks for resources in -vNN folders, such as values-v14 where the version qualifier is less than or equal to the minSdkVersion, where the contents should be merged into the best folder.",
+                                "markdown": "This check flags version checks that are not necessary, because the `minSdkVersion` (or surrounding known API level) is already at least as high as the version checked for.\n\nSimilarly, it also looks for resources in `-vNN` folders, such as `values-v14` where the version qualifier is less than or equal to the `minSdkVersion`, where the contents should be merged into the best folder."
+                            },
+                            "defaultConfiguration": {
+                                "level": "warning",
+                                "rank": 50
+                            },
+                            "properties": {
+                                "tags": [
+                                    "Performance"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "OldTargetApi",
+                            "shortDescription": {
+                                "text": "Target SDK attribute is not targeting latest version"
+                            },
+                            "fullDescription": {
+                                "text": "When your application or sdk runs on a version of Android that is more recent than your targetSdk specifies that it has been tested with, various compatibility modes kick in. This ensures that your application continues to work, but it may look out of place. For example, if the targetSdk is less than 14, your app may get an option button in the UI.\n\nTo fix this issue, set the targetSdk to the highest available value. Then test your app to make sure everything works correctly. You may want to consult the compatibility notes to see what changes apply to each version you are adding support for: https://developer.android.com/reference/android/os/Build.VERSION_CODES.html as well as follow this guide:\nhttps://developer.android.com/distribute/best-practices/develop/target-sdk.html",
+                                "markdown": "When your application or sdk runs on a version of Android that is more recent than your `targetSdk` specifies that it has been tested with, various compatibility modes kick in. This ensures that your application continues to work, but it may look out of place. For example, if the `targetSdk` is less than 14, your app may get an option button in the UI.\n\nTo fix this issue, set the `targetSdk` to the highest available value. Then test your app to make sure everything works correctly. You may want to consult the compatibility notes to see what changes apply to each version you are adding support for: https://developer.android.com/reference/android/os/Build.VERSION_CODES.html as well as follow this guide:\nhttps://developer.android.com/distribute/best-practices/develop/target-sdk.html"
+                            },
+                            "defaultConfiguration": {
+                                "level": "warning",
+                                "rank": 50
+                            },
+                            "properties": {
+                                "tags": [
+                                    "Correctness"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            "originalUriBaseIds": {
+                "%SRCROOT%": {
+                    "uri": "file:///C:/Users/giamm/Desktop/GiammariaSystemApp/"
+                }
+            },
+            "results": [
+                {
+                    "ruleId": "OldTargetApi",
+                    "ruleIndex": 3,
+                    "message": {
+                        "text": "Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the android.os.Build.VERSION_CODES javadoc for details.",
+                        "markdown": "Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uriBaseId": "%SRCROOT%",
+                                    "uri": "app/build.gradle"
+                                },
+                                "region": {
+                                    "startLine": 14,
+                                    "startColumn": 9,
+                                    "endLine": 14,
+                                    "endColumn": 21,
+                                    "charOffset": 284,
+                                    "charLength": 12,
+                                    "snippet": {
+                                        "text": "targetSdk 35"
+                                    }
+                                },
+                                "contextRegion": {
+                                    "startLine": 12,
+                                    "endLine": 17,
+                                    "snippet": {
+                                        "text": "        applicationId \"com.giammaria.system\"\n        minSdk 26\n        targetSdk 35\n        versionCode 1\n        versionName \"1.0\"\n"
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    "fixes": [
+                        {
+                            "description": {
+                                "text": "Update targetSdkVersion to 37"
+                            },
+                            "artifactChanges": [
+                                {
+                                    "artifactLocation": {
+                                        "uriBaseId": "%SRCROOT%",
+                                        "uri": "app/build.gradle"
+                                    },
+                                    "replacements": [
+                                        {
+                                            "deletedRegion": {
+                                                "startLine": 14,
+                                                "startColumn": 19,
+                                                "charOffset": 294,
+                                                "endLine": 14,
+                                                "endColumn": 21,
+                                                "charLength": 2
+                                            },
+                                            "insertedContent": {
+                                                "text": "37\n"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "partialFingerprints": {
+                        "sourceContext/v1": "703d8c8edd52f12b"
+                    }
+                },
+                {
+                    "ruleId": "AndroidGradlePluginVersion",
+                    "ruleIndex": 0,
+                    "message": {
+                        "text": "A newer version of Gradle than 9.7.0 is available: 9.7.1"
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uriBaseId": "%SRCROOT%",
+                                    "uri": "gradle/wrapper/gradle-wrapper.properties"
+                                },
+                                "region": {
+                                    "startLine": 3,
+                                    "startColumn": 17,
+                                    "endLine": 3,
+                                    "endColumn": 80,
+                                    "charOffset": 81,
+                                    "charLength": 63,
+                                    "snippet": {
+                                        "text": "https\\://services.gradle.org/distributions/gradle-9.7.0-bin.zip"
+                                    }
+                                },
+                                "contextRegion": {
+                                    "startLine": 1,
+                                    "endLine": 6,
+                                    "snippet": {
+                                        "text": "distributionBase=GRADLE_USER_HOME\ndistributionPath=wrapper/dists\ndistributionUrl=https\\://services.gradle.org/distributions/gradle-9.7.0-bin.zip\nnetworkTimeout=10000\nvalidateDistributionUrl=true\n"
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    "fixes": [
+                        {
+                            "description": {
+                                "text": "Update to 9.7.1"
+                            },
+                            "artifactChanges": [
+                                {
+                                    "artifactLocation": {
+                                        "uriBaseId": "%SRCROOT%",
+                                        "uri": "gradle/wrapper/gradle-wrapper.properties"
+                                    },
+                                    "replacements": [
+                                        {
+                                            "deletedRegion": {
+                                                "startLine": 3,
+                                                "startColumn": 67,
+                                                "charOffset": 131,
+                                                "endLine": 3,
+                                                "endColumn": 72,
+                                                "charLength": 5
+                                            },
+                                            "insertedContent": {
+                                                "text": "9.7.1\n"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "partialFingerprints": {
+                        "sourceContext/v1": "c44cb6def1d3971a"
+                    }
+                },
+                {
+                    "ruleId": "ObsoleteSdkInt",
+                    "ruleIndex": 2,
+                    "message": {
+                        "text": "This folder configuration (v26) is unnecessary; minSdkVersion is 26. Merge all the resources in this folder into mipmap-anydpi.",
+                        "markdown": "This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 26. Merge all the resources in this folder into `mipmap-anydpi`."
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uriBaseId": "%SRCROOT%",
+                                    "uri": "app/src/main/res/mipmap-anydpi-v26"
+                                },
+                                "region": {
+                                    "startLine": 1
+                                }                            }
+                        }
+                    ],
+                    "fixes": [
+                    ],
+                    "partialFingerprints": {
+                    }
+                },
+                {
+                    "ruleId": "IconLocation",
+                    "ruleIndex": 1,
+                    "message": {
+                        "text": "Found bitmap drawable res/drawable/logo.png in densityless folder",
+                        "markdown": "Found bitmap drawable `res/drawable/logo.png` in densityless folder"
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uriBaseId": "%SRCROOT%",
+                                    "uri": "app/src/main/res/drawable/logo.png"
+                                },
+                                "region": {
+                                    "byteOffset": 0
+                                }                            }
+                        }
+                    ],
+                    "partialFingerprints": {
+                    }
+                }
+            ]
+        }
+    ]
+}

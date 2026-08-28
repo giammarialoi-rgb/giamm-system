@@ -53,6 +53,7 @@ public class MainActivity extends Activity {
     @SuppressLint("SetJavaScriptEnabled")
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        WebView.setWebContentsDebuggingEnabled(true);
         web = new WebView(this);
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -104,7 +105,7 @@ public class MainActivity extends Activity {
                 new AlertDialog.Builder(view.getContext())
                     .setTitle("GIAMMARIA SYSTEM")
                     .setMessage(message)
-                    .setPositiveButton("SÌ", (dialog, which) -> result.confirm())
+                    .setPositiveButton("S\u00cc", (dialog, which) -> result.confirm())
                     .setNegativeButton("NO", (dialog, which) -> result.cancel())
                     .setCancelable(false)
                     .show();
@@ -282,7 +283,7 @@ public class MainActivity extends Activity {
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "it-IT");
                 intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
-                notifyVoiceStatus("listening", "Ascolto…");
+                notifyVoiceStatus("listening", "Ascolto\u2026");
                 recognizer.startListening(intent);
             });
         }
@@ -347,11 +348,11 @@ public class MainActivity extends Activity {
             web.post(() -> web.evaluateJavascript(js, null));
         }
 
-        @Override public void onReadyForSpeech(Bundle params) { notifyVoiceStatus("listening", "Ascolto…"); }
+        @Override public void onReadyForSpeech(Bundle params) { notifyVoiceStatus("listening", "Ascolto\u2026"); }
         @Override public void onBeginningOfSpeech() { }
         @Override public void onRmsChanged(float rmsdB) { }
         @Override public void onBufferReceived(byte[] buffer) { }
-        @Override public void onEndOfSpeech() { notifyVoiceStatus("processing", "Elaborazione…"); }
+        @Override public void onEndOfSpeech() { notifyVoiceStatus("processing", "Elaborazione\u2026"); }
         @Override public void onPartialResults(Bundle partialResults) { }
         @Override public void onEvent(int eventType, Bundle params) { }
         @Override public void onError(int error) {
@@ -368,6 +369,7 @@ public class MainActivity extends Activity {
             notifyVoiceStatus("idle", "");
             if (recognizer != null) { recognizer.destroy(); recognizer = null; }
         }
+
         @Override public void onInit(int status) {
             if (status == TextToSpeech.SUCCESS && textToSpeech != null) textToSpeech.setLanguage(Locale.ITALIAN);
         }

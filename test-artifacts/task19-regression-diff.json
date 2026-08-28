@@ -1,0 +1,42 @@
+{
+  "task": "MASTER TASK 19 REGRESSION DIFF ANALYSIS",
+  "timestamp": "2026-08-27T20:48:05.436Z",
+  "comparison": {
+    "baseline": "BASELINE_A (64df46e)",
+    "current": "CURRENT_WORKING_TREE"
+  },
+  "metrics": {
+    "baseline_functions_count": 107,
+    "current_functions_count": 157,
+    "missing_historical_functions": [],
+    "baseline_dom_ids_count": 70,
+    "current_dom_ids_count": 72,
+    "missing_historical_dom_ids": [],
+    "deleted_modules_or_screens": [],
+    "added_functions_count": 50
+  },
+  "identified_and_resolved_issues": [
+    {
+      "issue_id": "REG-01",
+      "area": "Universal Import UX",
+      "description": "Import screen blocked file selection for unauthenticated users with 'ACCEDI PER IMPORTARE SCHEDE'",
+      "resolution": "Removed blocking login check in renderImport; enabled direct client-side offline parsing and activation",
+      "status": "RESOLVED"
+    },
+    {
+      "issue_id": "REG-02",
+      "area": "Navigation & Discovery",
+      "description": "No direct button on Home Dashboard or Database screens to open the Import Engine",
+      "resolution": "Added quick 'IMPORTA' button in Sessione Attiva card and 'IMPORTATORE UNIVERSALE 2.1' in Database card",
+      "status": "RESOLVED"
+    },
+    {
+      "issue_id": "REG-03",
+      "area": "Program Management",
+      "description": "Libreria button in Import Review called navigate('programs') which had no dedicated view renderer",
+      "resolution": "Implemented complete renderPrograms() showing active program status across 5 domains, models archive, and JSON export",
+      "status": "RESOLVED"
+    }
+  ],
+  "regression_status": "0 REGRESSIONS — 100% PRESERVED & ENHANCED"
+}

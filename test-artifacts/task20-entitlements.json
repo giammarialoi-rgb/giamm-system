@@ -1,0 +1,141 @@
+{
+  "timestamp": "2026-08-27T23:08:00.465Z",
+  "masterTask": 20,
+  "pricingConfig": {
+    "currency": "EUR",
+    "symbol": "€",
+    "plans": {
+      "free": {
+        "price": 0,
+        "interval": "free",
+        "name": "Free"
+      },
+      "bronze": {
+        "price": 4.99,
+        "interval": "month",
+        "name": "Bronze"
+      },
+      "silver": {
+        "price": 9.99,
+        "interval": "month",
+        "name": "Silver"
+      },
+      "gold_lifetime": {
+        "price": 199,
+        "interval": "one-time",
+        "name": "Gold Lifetime"
+      }
+    },
+    "trial": {
+      "durationDays": 14,
+      "grantPlan": "silver"
+    }
+  },
+  "featureEntitlementMatrix": {
+    "basic_training": [
+      "free",
+      "bronze",
+      "silver",
+      "gold_lifetime"
+    ],
+    "workout_logger": [
+      "free",
+      "bronze",
+      "silver",
+      "gold_lifetime"
+    ],
+    "ads_free": [
+      "bronze",
+      "silver",
+      "gold_lifetime"
+    ],
+    "calendar": [
+      "bronze",
+      "silver",
+      "gold_lifetime"
+    ],
+    "multi_programs": [
+      "bronze",
+      "silver",
+      "gold_lifetime"
+    ],
+    "universal_import_full": [
+      "silver",
+      "gold_lifetime"
+    ],
+    "advanced_ai": [
+      "silver",
+      "gold_lifetime"
+    ],
+    "food_db": [
+      "silver",
+      "gold_lifetime"
+    ],
+    "supplement_db": [
+      "silver",
+      "gold_lifetime"
+    ],
+    "examine_evidence": [
+      "silver",
+      "gold_lifetime"
+    ],
+    "clinical_exams": [
+      "silver",
+      "gold_lifetime"
+    ],
+    "therapy_manager": [
+      "silver",
+      "gold_lifetime"
+    ],
+    "unlimited_cloud_backup": [
+      "silver",
+      "gold_lifetime"
+    ],
+    "lifetime_updates": [
+      "gold_lifetime"
+    ],
+    "priority_support": [
+      "gold_lifetime"
+    ],
+    "vip_coaching_access": [
+      "gold_lifetime"
+    ]
+  },
+  "adPlacementRules": {
+    "dashboard": {
+      "showAdIf": [
+        "free"
+      ]
+    },
+    "stats": {
+      "showAdIf": [
+        "free"
+      ]
+    },
+    "settings": {
+      "showAdIf": [
+        "free"
+      ]
+    },
+    "workout_screen": {
+      "showAdIf": []
+    },
+    "rest_timer": {
+      "showAdIf": []
+    },
+    "therapy": {
+      "showAdIf": []
+    },
+    "import_wizard": {
+      "showAdIf": []
+    }
+  },
+  "verificationChecks": {
+    "freeHasBasicTraining": true,
+    "freeLacksUniversalImport": true,
+    "bronzeIsAdFree": true,
+    "silverHasAiAndFoodDb": true,
+    "goldLifetimeHasPrioritySupport": true,
+    "trialGrantsSilver": true
+  }
+}

@@ -1,0 +1,525 @@
+# proto-message: google.testing.platform.proto.api.core.TestSuiteResult
+# 2026-08-27T20:48:02.466938100Z:
+test_suite_meta_data {
+  scheduled_test_case_count: 9
+  device {
+    id: "adb-8756XFCFCE00006750-6ql11W._adb-tls-connect._tcp"
+    friendly_name: "primary"
+  }
+}
+test_status: PASSED
+test_result {
+  test_case {
+    test_class: "MainActivityGoldenImportInstrumentedTest"
+    test_package: "com.giammaria.system"
+    test_method: "test01_DeviceEnvironmentVerification"
+    start_time {
+      seconds: 1787863666
+      nanos: 727000000
+    }
+    end_time {
+      seconds: 1787863668
+      nanos: 764000000
+    }
+    device {
+      id: "adb-8756XFCFCE00006750-6ql11W._adb-tls-connect._tcp"
+      friendly_name: "primary"
+    }
+  }
+  test_status: PASSED
+  output_artifact {
+    label {
+      label: "logcat"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\logcat-com.giammaria.system.MainActivityGoldenImportInstrumentedTest-test01_DeviceEnvironmentVerification.txt"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\device-info.pb"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.meminfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\meminfo"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.cpuinfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\cpuinfo"
+    }
+  }
+}
+test_result {
+  test_case {
+    test_class: "MainActivityGoldenImportInstrumentedTest"
+    test_package: "com.giammaria.system"
+    test_method: "test02_GoldenFileParseAndIntegrityOnRealDevice"
+    start_time {
+      seconds: 1787863668
+      nanos: 832000000
+    }
+    end_time {
+      seconds: 1787863672
+      nanos: 383000000
+    }
+    device {
+      id: "adb-8756XFCFCE00006750-6ql11W._adb-tls-connect._tcp"
+      friendly_name: "primary"
+    }
+  }
+  test_status: PASSED
+  output_artifact {
+    label {
+      label: "logcat"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\logcat-com.giammaria.system.MainActivityGoldenImportInstrumentedTest-test02_GoldenFileParseAndIntegrityOnRealDevice.txt"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\device-info.pb"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.meminfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\meminfo"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.cpuinfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\cpuinfo"
+    }
+  }
+}
+test_result {
+  test_case {
+    test_class: "MainActivityGoldenImportInstrumentedTest"
+    test_package: "com.giammaria.system"
+    test_method: "test03_ComplexMultiDomainParseOnRealDevice"
+    start_time {
+      seconds: 1787863672
+      nanos: 437000000
+    }
+    end_time {
+      seconds: 1787863673
+      nanos: 57000000
+    }
+    device {
+      id: "adb-8756XFCFCE00006750-6ql11W._adb-tls-connect._tcp"
+      friendly_name: "primary"
+    }
+  }
+  test_status: PASSED
+  output_artifact {
+    label {
+      label: "logcat"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\logcat-com.giammaria.system.MainActivityGoldenImportInstrumentedTest-test03_ComplexMultiDomainParseOnRealDevice.txt"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\device-info.pb"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.meminfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\meminfo"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.cpuinfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\cpuinfo"
+    }
+  }
+}
+test_result {
+  test_case {
+    test_class: "MainActivityGoldenImportInstrumentedTest"
+    test_package: "com.giammaria.system"
+    test_method: "test04_GoldenActivationAndIdbPersistOnRealDevice"
+    start_time {
+      seconds: 1787863673
+      nanos: 111000000
+    }
+    end_time {
+      seconds: 1787863677
+      nanos: 53000000
+    }
+    device {
+      id: "adb-8756XFCFCE00006750-6ql11W._adb-tls-connect._tcp"
+      friendly_name: "primary"
+    }
+  }
+  test_status: PASSED
+  output_artifact {
+    label {
+      label: "logcat"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\logcat-com.giammaria.system.MainActivityGoldenImportInstrumentedTest-test04_GoldenActivationAndIdbPersistOnRealDevice.txt"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\device-info.pb"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.meminfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\meminfo"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.cpuinfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\cpuinfo"
+    }
+  }
+}
+test_result {
+  test_case {
+    test_class: "MainActivityInstrumentedTest"
+    test_package: "com.giammaria.system"
+    test_method: "test01_AppLaunchAndDOMReady"
+    start_time {
+      seconds: 1787863677
+      nanos: 106000000
+    }
+    end_time {
+      seconds: 1787863677
+      nanos: 752000000
+    }
+    device {
+      id: "adb-8756XFCFCE00006750-6ql11W._adb-tls-connect._tcp"
+      friendly_name: "primary"
+    }
+  }
+  test_status: PASSED
+  output_artifact {
+    label {
+      label: "logcat"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\logcat-com.giammaria.system.MainActivityInstrumentedTest-test01_AppLaunchAndDOMReady.txt"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\device-info.pb"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.meminfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\meminfo"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.cpuinfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\cpuinfo"
+    }
+  }
+}
+test_result {
+  test_case {
+    test_class: "MainActivityInstrumentedTest"
+    test_package: "com.giammaria.system"
+    test_method: "test02_NavigationRouting"
+    start_time {
+      seconds: 1787863677
+      nanos: 780000000
+    }
+    end_time {
+      seconds: 1787863678
+      nanos: 731000000
+    }
+    device {
+      id: "adb-8756XFCFCE00006750-6ql11W._adb-tls-connect._tcp"
+      friendly_name: "primary"
+    }
+  }
+  test_status: PASSED
+  output_artifact {
+    label {
+      label: "logcat"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\logcat-com.giammaria.system.MainActivityInstrumentedTest-test02_NavigationRouting.txt"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\device-info.pb"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.meminfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\meminfo"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.cpuinfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\cpuinfo"
+    }
+  }
+}
+test_result {
+  test_case {
+    test_class: "MainActivityInstrumentedTest"
+    test_package: "com.giammaria.system"
+    test_method: "test03_ReviewModificationsAndAtomicActivation"
+    start_time {
+      seconds: 1787863678
+      nanos: 758000000
+    }
+    end_time {
+      seconds: 1787863679
+      nanos: 711000000
+    }
+    device {
+      id: "adb-8756XFCFCE00006750-6ql11W._adb-tls-connect._tcp"
+      friendly_name: "primary"
+    }
+  }
+  test_status: PASSED
+  output_artifact {
+    label {
+      label: "logcat"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\logcat-com.giammaria.system.MainActivityInstrumentedTest-test03_ReviewModificationsAndAtomicActivation.txt"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\device-info.pb"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.meminfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\meminfo"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.cpuinfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\cpuinfo"
+    }
+  }
+}
+test_result {
+  test_case {
+    test_class: "MainActivityInstrumentedTest"
+    test_package: "com.giammaria.system"
+    test_method: "test04_RirRpeEngineLiveConversion"
+    start_time {
+      seconds: 1787863679
+      nanos: 764000000
+    }
+    end_time {
+      seconds: 1787863680
+      nanos: 382000000
+    }
+    device {
+      id: "adb-8756XFCFCE00006750-6ql11W._adb-tls-connect._tcp"
+      friendly_name: "primary"
+    }
+  }
+  test_status: PASSED
+  output_artifact {
+    label {
+      label: "logcat"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\logcat-com.giammaria.system.MainActivityInstrumentedTest-test04_RirRpeEngineLiveConversion.txt"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\device-info.pb"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.meminfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\meminfo"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.cpuinfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\cpuinfo"
+    }
+  }
+}
+test_result {
+  test_case {
+    test_class: "MainActivityInstrumentedTest"
+    test_package: "com.giammaria.system"
+    test_method: "test05_StorageQuotaSanityCheck"
+    start_time {
+      seconds: 1787863680
+      nanos: 410000000
+    }
+    end_time {
+      seconds: 1787863681
+      nanos: 22000000
+    }
+    device {
+      id: "adb-8756XFCFCE00006750-6ql11W._adb-tls-connect._tcp"
+      friendly_name: "primary"
+    }
+  }
+  test_status: PASSED
+  output_artifact {
+    label {
+      label: "logcat"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\logcat-com.giammaria.system.MainActivityInstrumentedTest-test05_StorageQuotaSanityCheck.txt"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\device-info.pb"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.meminfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\meminfo"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.cpuinfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\cpuinfo"
+    }
+  }
+}
+output_artifact {
+  label {
+    label: "test-results.log"
+    namespace: "com.google.testing.platform.runtime.android.driver.AndroidInstrumentationDriver"
+  }
+  source_path {
+    path: "C:\\Users\\giamm\\Desktop\\GiammariaSystemApp\\app\\build\\outputs\\androidTest-results\\connected\\debug\\P50_B - 15\\testlog\\test-results.log"
+  }
+  type: TEST_DATA
+  mime_type: "text/plain"
+}

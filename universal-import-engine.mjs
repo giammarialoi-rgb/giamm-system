@@ -1,0 +1,1468 @@
+/**
+ * GIAMMARIA SYSTEM - UNIVERSAL IMPORT ENGINE 2.1 (Master Task 15)
+ * 2D Semantic Extraction Matrix, Domain Extractors for Training, Nutrition,
+ * Supplementation, Therapy & Clinical Exams, Canonical Model 2.1.
+ */
+
+import XLSX from "xlsx";
+import mammoth from "mammoth";
+import WordExtractor from "word-extractor";
+import fs from "fs/promises";
+import path from "path";
+import os from "os";
+import { rirToRpe, rpeToRir, validateRir, validateRpe } from "./rir-rpe-engine.mjs";
+
+// ====================================================
+// 1. EXERCISE NORMALIZATION DICTIONARY & HELPERS
+// ====================================================
+export const EXERCISE_DICTIONARY = [
+  { keywords: ["panca piana con bilanciere", "panca piana bilanciere", "panca piana", "bench press", "barbell bench press", "flat bench press"], normalized: "Panca Piana con Bilanciere", muscle: "PETTO", muscles: ["PETTO", "TRICIPITI", "DELTOIDI"] },
+  { keywords: ["panca inclinata 30° manubri", "panca inclinata manubri", "panca inclinata 30", "panca inclinata bilanciere", "panca inclinata", "incline bench press"], normalized: "Panca Inclinata con Manubri", muscle: "PETTO", muscles: ["PETTO", "DELTOIDI", "TRICIPITI"] },
+  { keywords: ["croci manubri", "croci su panca", "dumbbell flyes", "cable fly", "croci ai cavi", "pec fly", "pec deck"], normalized: "Croci ai Cavi", muscle: "PETTO", muscles: ["PETTO"] },
+  { keywords: ["chest press", "spinta inclinata convergente", "chest press convergente", "chest press orizzontale", "chest press leggermente inclinata"], normalized: "Chest Press Convergente", muscle: "PETTO", muscles: ["PETTO", "DELTOIDI", "TRICIPITI"] },
+  { keywords: ["squat con bilanciere", "squat bilanciere", "back squat", "barbell squat", "high bar squat", "low bar squat", "box squat alto high-bar", "box squat alto", "box squat", "squat bilanciere high-bar"], normalized: "Squat con Bilanciere", muscle: "QUADRICIPITI", muscles: ["QUADRICIPITI", "GLUTEI", "CORE"] },
+  { keywords: ["front squat", "squat frontale"], normalized: "Front Squat con Bilanciere", muscle: "QUADRICIPITI", muscles: ["QUADRICIPITI", "CORE"] },
+  { keywords: ["leg press 45°", "leg press 45", "leg press", "pressa 45", "pressa", "leg press unilaterale", "leg press bilaterale", "leg press singola"], normalized: "Leg Press 45°", muscle: "QUADRICIPITI", muscles: ["QUADRICIPITI", "GLUTEI"] },
+  { keywords: ["leg extension", "leg extension unilaterale", "leg extension bilaterale"], normalized: "Leg Extension", muscle: "QUADRICIPITI", muscles: ["QUADRICIPITI"] },
+  { keywords: ["stacco da terra", "deadlift", "barbell deadlift", "stacco convenzionale", "stacco sumo"], normalized: "Stacco da Terra con Bilanciere", muscle: "SCHIENA", muscles: ["SCHIENA", "FEMORALI", "GLUTEI", "CORE"] },
+  { keywords: ["stacco rumeno", "romanian deadlift", "rdl", "stacco a gambe tese", "stacco a gambe semitese", "rdl manubri", "stacco rumeno manubri"], normalized: "Stacco Rumeno con Bilanciere", muscle: "FEMORALI", muscles: ["FEMORALI", "GLUTEI", "SCHIENA"] },
+  { keywords: ["leg curl", "lying leg curl", "seated leg curl", "leg curl seduto", "leg curl sdraiato", "leg curl unilaterale", "leg curl bilaterale", "leg curl singola"], normalized: "Leg Curl Sdraiato", muscle: "FEMORALI", muscles: ["FEMORALI"] },
+  { keywords: ["trazioni alla sbarra", "trazioni", "pull up", "pull-ups", "chin up", "chin-ups", "trazioni prone", "trazioni neutre"], normalized: "Trazioni alla Sbarra", muscle: "DORSALI", muscles: ["DORSALI", "BICIPITI"] },
+  { keywords: ["lat machine presa larga", "lat machine presa neutra", "lat machine", "lat machine presa diversa", "lat pulldown", "lat machine avanti"], normalized: "Lat Machine Presa Larga", muscle: "DORSALI", muscles: ["DORSALI", "BICIPITI"] },
+  { keywords: ["rematore con bilanciere", "rematore bilanciere", "barbell row", "bent over row"], normalized: "Rematore con Bilanciere", muscle: "DORSALI", muscles: ["DORSALI", "SCHIENA", "BICIPITI"] },
+  { keywords: ["rematore con manubrio", "rematore manubrio", "dumbbell row", "single arm dumbbell row", "dorsey machine monopodalica", "dorsey machine", "low row 1 braccio"], normalized: "Rematore con Manubrio", muscle: "DORSALI", muscles: ["DORSALI", "BICIPITI"] },
+  { keywords: ["pulley", "pulley basso", "pulley basso presa larga", "seated cable row"], normalized: "Pulley Basso", muscle: "DORSALI", muscles: ["DORSALI", "SCHIENA"] },
+  { keywords: ["military press", "lento avanti", "overhead press", "ohp", "shoulder press", "shoulder press convergente"], normalized: "Military Press con Bilanciere", muscle: "DELTOIDI", muscles: ["DELTOIDI", "TRICIPITI"] },
+  { keywords: ["alzate laterali", "lateral raises", "side lateral raise", "alzate laterali cavo singolo", "alzate laterali manubri", "alzate laterali cavi"], normalized: "Alzate Laterali con Manubri", muscle: "DELTOIDI", muscles: ["DELTOIDI"] },
+  { keywords: ["alzate posteriori", "rear delt fly", "croci inverse", "face pull", "rear delt machine"], normalized: "Face Pull al Cavo", muscle: "DELTOIDI", muscles: ["DELTOIDI", "SCHIENA"] },
+  { keywords: ["curl con bilanciere", "barbell curl", "bicep curl", "curl bilanciere", "curl bilanciere ez", "curl singolo al cavo", "curl singolo cavo"], normalized: "Curl con Bilanciere", muscle: "BICIPITI", muscles: ["BICIPITI"] },
+  { keywords: ["curl con manubri", "dumbbell curl", "curl alternato"], normalized: "Curl Alternato con Manubri", muscle: "BICIPITI", muscles: ["BICIPITI"] },
+  { keywords: ["hammer curl", "curl a martello"], normalized: "Hammer Curl con Manubri", muscle: "BICIPITI", muscles: ["BICIPITI", "AVAMBRACCI"] },
+  { keywords: ["pushdown corda", "pushdown", "pushdown ai cavi", "triceps pushdown", "corda tricipiti", "french press/cavo"], normalized: "Pushdown ai Cavi con Corda", muscle: "TRICIPITI", muscles: ["TRICIPITI"] },
+  { keywords: ["french press", "skull crusher", "estensioni tricipiti"], normalized: "French Press con Bilanciere EZ", muscle: "TRICIPITI", muscles: ["TRICIPITI"] },
+  { keywords: ["dip alle parallele", "dip", "dips", "parallele"], normalized: "Dip alle Parallele", muscle: "PETTO", muscles: ["PETTO", "TRICIPITI", "DELTOIDI"] },
+  { keywords: ["calf raise", "calf in piedi", "calf seduto", "calves", "calf raise smith in piedi", "smith calf raise in piedi", "calf smith"], normalized: "Calf Raise in Piedi", muscle: "POLPACCI", muscles: ["POLPACCI"] },
+  { keywords: ["crunch", "plank", "ab roller", "leg raise", "hanging leg raise", "addominali", "cable crunch", "crunch ai cavi", "cable crunch inginocchiato"], normalized: "Plank Addominale", muscle: "CORE", muscles: ["CORE"] },
+  { keywords: ["adductor", "adductor machine", "adduttori"], normalized: "Adductor Machine", muscle: "GAMBE", muscles: ["GAMBE", "ADDUTTORI"] },
+  { keywords: ["abductor", "abductor machine", "abduttori"], normalized: "Abductor Machine", muscle: "GLUTEI", muscles: ["GLUTEI", "ABDUTTORI"] },
+  { keywords: ["pullover", "pullover ai cavi"], normalized: "Pullover ai Cavi", muscle: "DORSALI", muscles: ["DORSALI", "PETTO"] }
+];
+
+export function normalizeExerciseName(rawName) {
+  if (!rawName) return { name_original: "Esercizio", name_normalized: "Esercizio", muscle: "TOTAL", muscles: ["TOTAL"], confidence: 0.5 };
+  const cleaned = String(rawName).trim().replace(/^\d+[.\s\-)]+/, "").trim();
+  const lower = cleaned.toLowerCase();
+
+  for (const entry of EXERCISE_DICTIONARY) {
+    for (const kw of entry.keywords) {
+      if (lower.includes(kw)) {
+        return {
+          name_original: cleaned,
+          name_normalized: entry.normalized,
+          muscle: entry.muscle,
+          muscles: entry.muscles,
+          confidence: 0.95
+        };
+      }
+    }
+  }
+
+  return {
+    name_original: cleaned,
+    name_normalized: cleaned.charAt(0).toUpperCase() + cleaned.slice(1),
+    muscle: "TOTAL",
+    muscles: ["TOTAL"],
+    confidence: 0.6
+  };
+}
+
+// Parse detailed parameters from text line or table row
+export function parseExerciseDetails(str) {
+  str = String(str || "");
+  let sets = 3;
+  let reps = "8-10";
+  let reps_raw = "8-10";
+  let reps_pattern = null;
+  let rir = null;
+  let rpe = null;
+  let percentage_1rm = null;
+  let rest_seconds = 90;
+  let load = null;
+  let load_value = null;
+  let load_unit = "kg";
+
+  // Complex Rep Pattern check (e.g. 25-20-15-10, 4xMAX, 4x21's, 4x24 PASSI)
+  const specialPatternMatch = str.match(/(\d+)\s*(?:x|X|\*|\u00d7)\s*(\d+[\-\/\u2013]\d+[\-\/\u2013]\d+(?:[\-\/\u2013]\d+)?|MAX|AMRAP|EXHAUST|\d+\s*PASSI|21['’]?S)/i);
+  if (specialPatternMatch) {
+    sets = parseInt(specialPatternMatch[1], 10) || 4;
+    reps = specialPatternMatch[2].trim();
+    reps_raw = reps;
+    if (reps.includes("-") || reps.includes("/") || reps.includes("–")) {
+      reps_pattern = reps.split(/[\-\/\u2013]/).map(r => r.trim());
+    }
+  } else {
+    const setRepMatch = str.match(/(\d+)\s*(?:x|X|\*|\u00d7)\s*(\d+(?:[\-\–\/]\d+)?(?:\+AMRAP)?|AMRAP|MAX)/i);
+    if (setRepMatch) {
+      sets = parseInt(setRepMatch[1], 10) || 3;
+      reps = setRepMatch[2].trim();
+      reps_raw = reps;
+    } else {
+      const repsRangeMatch = str.match(/(\d+\s*[\-\–\/]\s*\d+)/);
+      if (repsRangeMatch) {
+        reps = repsRangeMatch[1].trim();
+        reps_raw = reps;
+      }
+    }
+  }
+
+  // Target RIR
+  const rirMatch = str.match(/(?:@\s*)?RIR\s*[:=]?\s*(\d+(?:\.\d+)?)/i);
+  if (rirMatch) {
+    rir = parseFloat(rirMatch[1]);
+    rpe = rirToRpe(rir);
+  }
+
+  // Target RPE
+  const rpeMatch = str.match(/(?:@\s*)?RPE\s*[:=]?\s*(\d+(?:\.\d+)?)/i);
+  if (rpeMatch) {
+    rpe = parseFloat(rpeMatch[1]);
+    if (rir === null) rir = rpeToRir(rpe);
+  }
+
+  // Target %1RM
+  const percMatch = str.match(/(?:@\s*)?(\d+(?:\.\d+)?)\s*%\s*(?:1RM|RM)?/i);
+  if (percMatch) {
+    percentage_1rm = parseFloat(percMatch[1]);
+  }
+
+  // Rest Seconds (e.g. 90", 120s, 2', 90 sec, 2–3 min, 3-4 min)
+  const restMinRangeMatch = str.match(/(\d+(?:\.\d+)?)\s*[\-\–]\s*(\d+(?:\.\d+)?)\s*(?:min|minuti|')/i);
+  if (restMinRangeMatch) {
+    const minVal = parseFloat(restMinRangeMatch[1]);
+    const maxVal = parseFloat(restMinRangeMatch[2]);
+    rest_seconds = Math.round(((minVal + maxVal) / 2) * 60);
+  } else {
+    const restSecRangeMatch = str.match(/(\d+)\s*[\-\–]\s*(\d+)\s*(?:s|sec|secondi|")/i);
+    if (restSecRangeMatch) {
+      const minVal = parseInt(restSecRangeMatch[1], 10);
+      const maxVal = parseInt(restSecRangeMatch[2], 10);
+      rest_seconds = Math.round((minVal + maxVal) / 2);
+    } else {
+      const restSecMatch = str.match(/(\d+)\s*(?:s|sec|secondi|")/i);
+      if (restSecMatch) {
+        rest_seconds = parseInt(restSecMatch[1], 10);
+      } else {
+        const restMinMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:min|minuti|')/i);
+        if (restMinMatch) {
+          rest_seconds = Math.round(parseFloat(restMinMatch[1]) * 60);
+        }
+      }
+    }
+  }
+
+  // Target Load (e.g. 130 kg, 55, 67.5 kg)
+  const loadMatch = str.match(/(\d+(?:\.\d+)?)\s*(kg|lbs?|%)\b/i);
+  if (loadMatch && !percentage_1rm) {
+    load_value = parseFloat(loadMatch[1]);
+    load_unit = loadMatch[2].toLowerCase().startsWith("lb") ? "lb" : "kg";
+    load = `${load_value} ${load_unit}`;
+  }
+
+  return {
+    sets,
+    reps,
+    reps_raw,
+    reps_pattern,
+    rir: rir !== null ? rir : 2,
+    rpe: rpe !== null ? rpe : 8,
+    percentage_1rm,
+    rest_seconds,
+    load,
+    load_value,
+    load_unit
+  };
+}
+
+// ====================================================
+// 2. 2D STRUCTURED WORKBOOK READER & SEMANTIC CLASSIFIER
+// ====================================================
+
+export function readStructuredWorkbook(workbook) {
+  const sheets = [];
+  for (let idx = 0; idx < workbook.SheetNames.length; idx++) {
+    const sheetName = workbook.SheetNames[idx];
+    const ws = workbook.Sheets[sheetName];
+    if (!ws) continue;
+
+    const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: false });
+    const rows = rawRows.map((r, rIdx) => {
+      const cells = (r || []).map((val, cIdx) => ({
+        address: XLSX.utils.encode_cell({ r: rIdx, c: cIdx }),
+        row: rIdx + 1,
+        column: cIdx + 1,
+        rawValue: val,
+        displayValue: val == null ? "" : String(val).trim(),
+        type: typeof val
+      }));
+      return { rowIndex: rIdx + 1, cells, rawRow: r || [] };
+    });
+
+    sheets.push({
+      name: sheetName,
+      index: idx,
+      rows,
+      rawRows,
+      merges: ws["!merges"] || []
+    });
+  }
+
+  return { sheets, sheetNames: workbook.SheetNames };
+}
+
+export function classifySheetType(sheetName, rawRows = []) {
+  const nameUpper = String(sheetName || "").toUpperCase().trim();
+
+  // Explicit sheet name matchers
+  if (/^(W\d+|SETTIMANA\s*\d+|WEEK\s*\d+|ALLENAMENTO|TRAINING|WORKOUT|SCHEDA|SPLIT|PUSH|PULL|LEGS|UPPER|LOWER)/i.test(nameUpper)) {
+    return "training";
+  }
+  if (/^(ALIMENTAZIONE|NUTRIZIONE|DIETA|PIANO ALIMENTARE|MEALS|MEAL PLAN|PASTI|FOOD|NUTRITION)/i.test(nameUpper)) {
+    return "nutrition";
+  }
+  if (/^(INTEGRAZIONE|INTEGRATORI|SUPPLEMENTI|SUPPLEMENTATION|SUPPLEMENTS)/i.test(nameUpper)) {
+    return "supplementation";
+  }
+  if (/^(TERAPIA ED ESAMI|TERAPIA_ESAMI|PIANO CLINICO|CLINICAL)/i.test(nameUpper)) {
+    return "therapy_exams";
+  }
+  if (/^(TERAPIA|FARMACOLOGIA|TRATTAMENTO|TERAPIE|MEDICINALI)/i.test(nameUpper)) {
+    return "therapy";
+  }
+  if (/^(ESAMI|ANALISI|ESAMI DEL SANGUE|BLOODWORK|REFERTI|VALORI)/i.test(nameUpper)) {
+    return "exams";
+  }
+
+  // Content-based heuristic scanner (First 30 rows)
+  let trainingHits = 0;
+  let nutritionHits = 0;
+  let supplementHits = 0;
+  let therapyHits = 0;
+  let examHits = 0;
+
+  for (let i = 0; i < Math.min(30, rawRows.length); i++) {
+    const rowStr = (rawRows[i] || []).join(" ").toLowerCase();
+    if (/movimento|esercizio|reps|rir|recupero|panca|squat|stacco|serie/.test(rowStr)) trainingHits++;
+    if (/colazione|pranzo|cena|spuntino|merenda|pre-nanna|alimento|grammi|kcal|calorie|proteine|carboidrati|grassi/.test(rowStr)) nutritionHits++;
+    if (/creatina|whey|omega|dosaggio|timing|multivitaminico|magnesio|integratore/.test(rowStr)) supplementHits++;
+    if (/farmaco|posologia|somministrazione|medicinale|durata settimane|compresse|terapia/.test(rowStr)) therapyHits++;
+    if (/esame|referto|analisi|sangue|emocromo|testosterone|glicemia|transaminasi|valori di riferimento/.test(rowStr)) examHits++;
+  }
+
+  if (nutritionHits >= 2 && nutritionHits >= trainingHits) return "nutrition";
+  if (supplementHits >= 2 && supplementHits >= trainingHits) return "supplementation";
+  if (therapyHits >= 1 && examHits >= 1) return "therapy_exams";
+  if (therapyHits >= 2) return "therapy";
+  if (examHits >= 2) return "exams";
+  if (trainingHits >= 2 && trainingHits > nutritionHits) return "training";
+
+  return "other";
+}
+
+// ====================================================
+// 3. STRUCTURED TRAINING SHEET PARSER
+// ====================================================
+
+export function parseTrainingSheet(sheet, weekIndex = 1) {
+  const rawRows = sheet.rawRows || [];
+  const weekNumber = parseInt(sheet.name.replace(/\D/g, ""), 10) || weekIndex;
+  const sessions = [];
+
+  let currentSession = null;
+  let currentExercise = null;
+  let headerColMap = null;
+
+  for (let rIdx = 0; rIdx < rawRows.length; rIdx++) {
+    const row = rawRows[rIdx] || [];
+    const nonEmpty = row.map(c => c == null ? "" : String(c).trim()).filter(Boolean);
+    if (!nonEmpty.length) continue;
+
+    const rowStr = nonEmpty.join(" ");
+
+    // 1. Detect Day / Session Header
+    const dayMatch = rowStr.match(/^(?:GIORNO|DAY|SEDUTA|SESSIONE)\s*([0-9a-zA-Z\s\u2022\—\-\_]+)/i);
+    if (dayMatch && !rowStr.includes("Movimento") && !rowStr.includes("Esercizio effettivo")) {
+      if (currentExercise && currentSession) {
+        currentSession.exercises.push(currentExercise);
+        currentExercise = null;
+      }
+      if (currentSession && currentSession.exercises.length > 0) {
+        sessions.push(currentSession);
+      }
+
+      currentSession = {
+        session_number: sessions.length + 1,
+        name: rowStr.trim(),
+        exercises: []
+      };
+      headerColMap = null;
+      continue;
+    }
+
+    // 2. Detect Table Column Headers
+    const isHeaderRow = row.some((c, colIdx) => colIdx < 4 && /^(movimento|esercizio effettivo|esercizio|nome esercizio)$/i.test(String(c || "").trim()));
+    if (isHeaderRow) {
+      headerColMap = {};
+      row.forEach((cellVal, cIdx) => {
+        const v = String(cellVal || "").toLowerCase().trim();
+        if (v === "movimento") headerColMap.movement = cIdx;
+        else if (v.includes("esercizio effettivo") || v === "esercizio" || v === "nome") headerColMap.exercise = cIdx;
+        else if (v === "set" || v === "serie") headerColMap.set = cIdx;
+        else if ((v.includes("reps target") || v === "reps" || v === "ripetizioni") && !v.includes("reali") && !v.includes("eseguite")) {
+          if (headerColMap.reps === undefined) headerColMap.reps = cIdx;
+        }
+        else if ((v.includes("rir target") || v === "rir") && !v.includes("reale") && !v.includes("effettivo")) {
+          if (headerColMap.rir === undefined) headerColMap.rir = cIdx;
+        }
+        else if ((v.includes("rpe target") || v === "rpe") && !v.includes("reale")) {
+          if (headerColMap.rpe === undefined) headerColMap.rpe = cIdx;
+        }
+        else if (v.includes("%") || v.includes("1rm")) {
+          if (headerColMap.percentage_1rm === undefined) headerColMap.percentage_1rm = cIdx;
+        }
+        else if (v.includes("recupero") || v.includes("rest") || v.includes("pausa")) {
+          if (headerColMap.rest === undefined) headerColMap.rest = cIdx;
+        }
+        else if ((v.includes("carico pianificato") || v === "carico" || v === "load" || v === "peso") && !v.includes("reale")) {
+          if (headerColMap.load === undefined) headerColMap.load = cIdx;
+        }
+        else if (v.includes("note")) {
+          if (headerColMap.notes === undefined) headerColMap.notes = cIdx;
+        }
+      });
+      continue;
+    }
+
+    // Ignore Volume summary or section footer rows
+    if (rowStr.startsWith("VOLUME GIORNO") || rowStr.startsWith("PESO CORPOREO") || rowStr.startsWith("OBIETTIVO BLOCCO") || rowStr.startsWith("PERFORMANCE VS") || rowStr.startsWith("SETTIMANA")) {
+      continue;
+    }
+
+    if (!headerColMap && !rowStr.match(/\d+\s*(?:x|X|\*|\u00d7)\s*\d+/)) {
+      continue;
+    }
+
+    if (!currentSession) {
+      currentSession = {
+        session_number: 1,
+        name: `Sessione 1`,
+        exercises: []
+      };
+    }
+
+    let rawExName = headerColMap?.exercise !== undefined ? row[headerColMap.exercise] : row[1] || row[0];
+    let movement = headerColMap?.movement !== undefined ? row[headerColMap.movement] : row[0];
+    let setVal = headerColMap?.set !== undefined ? row[headerColMap.set] : row[2];
+    let repsVal = headerColMap?.reps !== undefined ? row[headerColMap.reps] : row[3];
+    let rirVal = headerColMap?.rir !== undefined ? row[headerColMap.rir] : row[4];
+    let restVal = headerColMap?.rest !== undefined ? row[headerColMap.rest] : row[5];
+    let loadVal = headerColMap?.load !== undefined ? row[headerColMap.load] : row[6];
+    let notesVal = headerColMap?.notes !== undefined ? row[headerColMap.notes] : row[10];
+
+    rawExName = rawExName == null ? "" : String(rawExName).trim();
+    movement = movement == null ? "" : String(movement).trim();
+    setVal = setVal == null ? "" : String(setVal).trim();
+    repsVal = repsVal == null ? "" : String(repsVal).trim();
+    rirVal = rirVal == null ? "" : String(rirVal).trim();
+    restVal = restVal == null ? "" : String(restVal).trim();
+    loadVal = loadVal == null ? "" : String(loadVal).trim();
+    notesVal = notesVal == null ? "" : String(notesVal).trim();
+
+    const isSameExerciseContinuation = currentExercise && (
+      (!rawExName && setVal) ||
+      (rawExName && rawExName.toLowerCase() === currentExercise.name_original.toLowerCase())
+    );
+
+    if (isSameExerciseContinuation) {
+      const setNum = parseInt(setVal, 10) || (currentExercise.sets.length + 1);
+      const parsedContLoad = loadVal ? parseFloat(loadVal.replace(/[^0-9.]/g, "")) : null;
+      const targetLoadNum = (parsedContLoad !== null && !isNaN(parsedContLoad)) ? parsedContLoad : (currentExercise.sets[0]?.target_load || null);
+      const targetRepsStr = repsVal || currentExercise.reps_target;
+      const targetRirNum = (rirVal && !isNaN(parseFloat(rirVal))) ? parseFloat(rirVal) : ((currentExercise.rir_target !== undefined && currentExercise.rir_target !== null && !isNaN(currentExercise.rir_target)) ? currentExercise.rir_target : 2);
+      const targetRpeNum = (targetRirNum !== null && !isNaN(targetRirNum)) ? rirToRpe(targetRirNum) : ((currentExercise.rpe_target !== undefined && currentExercise.rpe_target !== null && !isNaN(currentExercise.rpe_target)) ? currentExercise.rpe_target : 8);
+
+      let setType = "working";
+      if (notesVal.toUpperCase().includes("TOP SET")) setType = "topset";
+      else if (notesVal.toUpperCase().includes("BACK-OFF")) setType = "backoff";
+      else if (notesVal.toUpperCase().includes("DROP")) setType = "dropset";
+      else if (notesVal.toUpperCase().includes("WARM")) setType = "warmup";
+
+      currentExercise.sets.push({
+        set_number: setNum,
+        set_type: setType,
+        target_load: targetLoadNum,
+        target_reps: targetRepsStr,
+        target_rir: targetRirNum,
+        target_rpe: targetRpeNum,
+        percentage_1rm: currentExercise.percentage_1rm,
+        rest_seconds: currentExercise.rest_seconds,
+        notes: notesVal || null
+      });
+      currentExercise.sets_count = currentExercise.sets.length;
+    } else if (rawExName && rawExName !== "Esercizio effettivo" && !rawExName.toLowerCase().startsWith("volume")) {
+      if (currentExercise) {
+        currentSession.exercises.push(currentExercise);
+      }
+
+      const normalized = normalizeExerciseName(rawExName);
+      const details = parseExerciseDetails(`${repsVal} ${rirVal ? "RIR " + rirVal : ""} ${restVal} ${loadVal ? loadVal + " kg" : ""}`);
+
+      const parsedNewLoad = loadVal ? parseFloat(loadVal.replace(/[^0-9.]/g, "")) : null;
+      const targetLoadNum = (parsedNewLoad !== null && !isNaN(parsedNewLoad)) ? parsedNewLoad : (details.load_value || null);
+      const targetRirNum = (rirVal && !isNaN(parseFloat(rirVal))) ? parseFloat(rirVal) : (details.rir !== null && details.rir !== undefined ? details.rir : 2);
+      const targetRpeNum = (targetRirNum !== null && !isNaN(targetRirNum)) ? rirToRpe(targetRirNum) : (details.rpe !== null && details.rpe !== undefined ? details.rpe : 8);
+
+      let setType = "working";
+      if (notesVal.toUpperCase().includes("TOP SET")) setType = "topset";
+      else if (notesVal.toUpperCase().includes("BACK-OFF")) setType = "backoff";
+      else if (notesVal.toUpperCase().includes("DROP")) setType = "dropset";
+      else if (notesVal.toUpperCase().includes("WARM")) setType = "warmup";
+
+      const finalRestSec = details.rest_seconds || 90;
+      const finalRepsTarget = repsVal || details.reps || "8-10";
+
+      currentExercise = {
+        id: `e_${weekNumber}_${currentSession.session_number}_${currentSession.exercises.length + 1}`,
+        name: normalized.name_normalized,
+        name_original: rawExName,
+        name_normalized: normalized.name_normalized,
+        movement: movement || null,
+        muscle_group: normalized.muscle,
+        muscle_groups: normalized.muscles,
+        sets_count: 1,
+        reps_target: finalRepsTarget,
+        reps_raw: repsVal || details.reps_raw || "8-10",
+        rir_target: targetRirNum,
+        rpe_target: targetRpeNum,
+        percentage_1rm: details.percentage_1rm,
+        rest_seconds: finalRestSec,
+        load_target: targetLoadNum ? `${targetLoadNum} kg` : null,
+        load_value: targetLoadNum,
+        notes: notesVal || null,
+        sets: [
+          {
+            set_number: 1,
+            set_type: setType,
+            target_load: targetLoadNum,
+            target_reps: finalRepsTarget,
+            target_rir: targetRirNum,
+            target_rpe: targetRpeNum,
+            percentage_1rm: details.percentage_1rm,
+            rest_seconds: finalRestSec,
+            notes: notesVal || null
+          }
+        ]
+      };
+    }
+  }
+
+  if (currentExercise && currentSession) {
+    currentSession.exercises.push(currentExercise);
+  }
+  if (currentSession && currentSession.exercises.length > 0) {
+    sessions.push(currentSession);
+  }
+
+  return {
+    week_number: weekNumber,
+    label: sheet.name.startsWith("W") ? `Settimana ${weekNumber}` : sheet.name,
+    sessions
+  };
+}
+
+// ====================================================
+// 4. STRUCTURED NUTRITION SHEET PARSER (2.1 RECONSTRUCTION)
+// ====================================================
+
+export function parseFoodItem(foodNameRaw, qtyRaw = null, unitRaw = null, kcalRaw = null, proRaw = null, carbRaw = null, fatRaw = null, notesRaw = null) {
+  let foodName = String(foodNameRaw || "").trim();
+  if (!foodName) return null;
+
+  let quantity = qtyRaw !== null && qtyRaw !== undefined && qtyRaw !== "" ? qtyRaw : null;
+  let unit = unitRaw ? String(unitRaw).trim() : null;
+  let kcal = kcalRaw !== null && kcalRaw !== undefined && kcalRaw !== "" ? parseFloat(String(kcalRaw).replace(/[^0-9.]/g, "")) : null;
+  let protein_g = proRaw !== null && proRaw !== undefined && proRaw !== "" ? parseFloat(String(proRaw).replace(/[^0-9.]/g, "")) : null;
+  let carbs_g = carbRaw !== null && carbRaw !== undefined && carbRaw !== "" ? parseFloat(String(carbRaw).replace(/[^0-9.]/g, "")) : null;
+  let fat_g = fatRaw !== null && fatRaw !== undefined && fatRaw !== "" ? parseFloat(String(fatRaw).replace(/[^0-9.]/g, "")) : null;
+  let notes = notesRaw ? String(notesRaw).trim() : null;
+
+  // Extract inline notes in parentheses if not explicitly provided
+  if (!notes) {
+    const noteMatch = foodName.match(/\(([^)]+)\)/);
+    if (noteMatch) {
+      notes = noteMatch[1].trim();
+      foodName = foodName.replace(noteMatch[0], "").trim();
+    }
+  }
+
+  // Extract inline Kcal and macros if embedded in string
+  if (kcal === null) {
+    const kcalMatch = foodName.match(/(\d+(?:\.\d+)?)\s*(?:kcal|calorie|cal)\b/i);
+    if (kcalMatch) {
+      kcal = parseFloat(kcalMatch[1]);
+      foodName = foodName.replace(kcalMatch[0], "").trim();
+    }
+  }
+
+  if (protein_g === null) {
+    const proMatch = foodName.match(/(?:pro(?:t|teine)?|p)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*g?\b/i);
+    if (proMatch) {
+      protein_g = parseFloat(proMatch[1]);
+      foodName = foodName.replace(proMatch[0], "").trim();
+    }
+  }
+
+  if (carbs_g === null) {
+    const carbMatch = foodName.match(/(?:carb(?:o|oidrati)?|c|cho)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*g?\b/i);
+    if (carbMatch) {
+      carbs_g = parseFloat(carbMatch[1]);
+      foodName = foodName.replace(carbMatch[0], "").trim();
+    }
+  }
+
+  if (fat_g === null) {
+    const fatMatch = foodName.match(/(?:fat|grassi|g)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*g?\b/i);
+    if (fatMatch) {
+      fat_g = parseFloat(fatMatch[1]);
+      foodName = foodName.replace(fatMatch[0], "").trim();
+    }
+  }
+
+  // Parse quantity and unit if embedded in quantity or foodName
+  if (quantity === null || quantity === "") {
+    const qtyUnitMatch = foodName.match(/(\d+(?:[.,]\d+)?)\s*(g|gr|grammi|ml|l|litri|cps|capsule|compresse|cp|fette|fetta|scoop|misurini|misurino|porzioni|porzione|pz|pezzi|cucchiai|cucchiaio|uova|albumi)\b/i);
+    if (qtyUnitMatch) {
+      quantity = parseFloat(qtyUnitMatch[1].replace(",", "."));
+      if (!unit) unit = qtyUnitMatch[2].toLowerCase();
+      foodName = foodName.replace(qtyUnitMatch[0], "").trim();
+    } else {
+      const leadingNumMatch = foodName.match(/^(\d+(?:[.,]\d+)?)\s+([a-zA-ZÀ-ÿ\s'-]+)$/);
+      if (leadingNumMatch) {
+        quantity = parseFloat(leadingNumMatch[1].replace(",", "."));
+        if (!unit) unit = "pz";
+        foodName = leadingNumMatch[2].trim();
+      }
+    }
+  } else if (typeof quantity === "string" && !unit) {
+    const qMatch = quantity.match(/(\d+(?:[.,]\d+)?)\s*([a-zA-Z%]+)?/);
+    if (qMatch) {
+      quantity = parseFloat(qMatch[1].replace(",", "."));
+      if (qMatch[2]) unit = qMatch[2].trim();
+    }
+  }
+
+  if (typeof quantity === "string" && !isNaN(parseFloat(quantity))) {
+    quantity = parseFloat(quantity);
+  }
+
+  // Normalize Unit
+  if (unit) {
+    const uLow = unit.toLowerCase();
+    if (uLow === "gr" || uLow === "grammi") unit = "g";
+    else if (uLow === "litri" || uLow === "l") unit = "ml";
+    else if (uLow === "compresse" || uLow === "cp") unit = "compresse";
+    else if (uLow === "capsule" || uLow === "cps") unit = "capsule";
+    else if (uLow === "fetta" || uLow === "fette") unit = "fette";
+    else if (uLow === "misurino" || uLow === "misurini" || uLow === "scoop") unit = "misurino";
+    else if (uLow === "cucchiaio" || uLow === "cucchiai") unit = "cucchiaio";
+    else if (uLow === "pz" || uLow === "pezzi") unit = "pz";
+  } else {
+    unit = "g";
+  }
+
+  foodName = foodName.replace(/^[,\-–:\s]+|[,\-–:\s]+$/g, "").trim();
+  if (!foodName) foodName = String(foodNameRaw).trim();
+
+  return {
+    name: foodName,
+    food: foodName,
+    quantity: quantity !== null && quantity !== undefined ? quantity : "",
+    unit: unit || "g",
+    kcal: !isNaN(kcal) ? kcal : null,
+    protein_g: !isNaN(protein_g) ? protein_g : null,
+    carbs_g: !isNaN(carbs_g) ? carbs_g : null,
+    fat_g: !isNaN(fat_g) ? fat_g : null,
+    notes: notes || null
+  };
+}
+
+export function parseNutritionSheet(sheet) {
+  const rawRows = sheet.rawRows || [];
+  const days = [];
+  const notes = [];
+
+  let currentDay = null;
+  let currentMeal = null;
+  let headerColMap = null;
+
+  for (let rIdx = 0; rIdx < rawRows.length; rIdx++) {
+    const row = rawRows[rIdx] || [];
+    const nonEmpty = row.map(c => c == null ? "" : String(c).trim()).filter(Boolean);
+    if (!nonEmpty.length) continue;
+
+    const rowStr = nonEmpty.join(" ");
+    if (rowStr.toUpperCase().includes("PIANO ALIMENTARE") && nonEmpty.length === 1) {
+      continue;
+    }
+
+    // Check Table Column Headers (e.g. Pasto, Alimento, Grammi, Kcal...)
+    const isColHeader = row.some(c => /^(pasto|alimento|cibo|grammi|quantit[aà]|kcal|calorie|proteine|carboidrati|grassi)$/i.test(String(c || "").trim()));
+    if (isColHeader) {
+      headerColMap = {};
+      row.forEach((cellVal, cIdx) => {
+        const v = String(cellVal || "").toLowerCase().trim();
+        if (v === "giorno" || v === "day") headerColMap.day = cIdx;
+        else if (v === "pasto" || v === "meal") headerColMap.meal = cIdx;
+        else if (v === "alimento" || v === "cibo" || v === "food" || v === "nome") headerColMap.food = cIdx;
+        else if (v.includes("quant") || v === "grammi" || v === "peso" || v === "qta" || v === "qtà") headerColMap.qty = cIdx;
+        else if (v === "unit" || v === "unità" || v === "unita") headerColMap.unit = cIdx;
+        else if (v.includes("kcal") || v.includes("calor")) headerColMap.kcal = cIdx;
+        else if (v.includes("prot")) headerColMap.pro = cIdx;
+        else if (v.includes("carb") || v.includes("cho")) headerColMap.carb = cIdx;
+        else if (v.includes("fat") || v.includes("gras")) headerColMap.fat = cIdx;
+        else if (v.includes("note")) headerColMap.notes = cIdx;
+      });
+      continue;
+    }
+
+    // 1. Detect Day Header (e.g. LUNEDÌ, MARTEDÌ, GIORNO 1, REST DAY, TRAINING DAY)
+    const dayMatch = rowStr.match(/^(?:=== )?(LUNED[IÌ]|MARTED[IÌ]|MERCOLED[IÌ]|GIOVED[IÌ]|VENERD[IÌ]|SABATO|DOMENICA|GIORNO\s*\d+|DAY\s*\d+|REST DAY|TRAINING DAY|GIORNI?\s*ON|GIORNI?\s*OFF|GIORNO\s*[A-G]|PIANO GENERALE|TUTTI I GIORNI)/i);
+    if (dayMatch && !rowStr.toLowerCase().includes("colazione") && !rowStr.toLowerCase().includes("pranzo") && !rowStr.toLowerCase().includes("cena")) {
+      if (currentMeal && currentDay) {
+        currentDay.meals.push(currentMeal);
+        currentMeal = null;
+      }
+      if (currentDay && currentDay.meals.length > 0) {
+        days.push(currentDay);
+      }
+      const dName = dayMatch[1].toUpperCase().trim();
+      currentDay = { day: dName, day_name: dName, meals: [] };
+      continue;
+    }
+
+    if (!currentDay) {
+      currentDay = { day: "LUNEDÌ", day_name: "LUNEDÌ", meals: [] };
+    }
+
+    // 2. Detect Meal Header (e.g. Colazione, Spuntino Mattina, Pranzo, Merenda, Cena, Pre-nanna)
+    const col0Str = String(row[0] || "").trim();
+    const isMealInCol0 = /^(Colazione|Pranzo|Cena|Spuntino(?:\s*\d*|\s+Mattina|\s+Pomeriggio)?|Pre[\s\-_]?nanna|Pre[\s\-_]?workout|Post[\s\-_]?workout|Merenda|Pasto\s*\d+|Meal\s*\d+)/i.test(col0Str);
+
+    if (isMealInCol0) {
+      if (currentMeal) {
+        currentDay.meals.push(currentMeal);
+      }
+      currentMeal = {
+        name: col0Str,
+        meal_name: col0Str,
+        foods: [],
+        items: []
+      };
+
+      // Check if food item is placed on the same row (col 1, 2, 3...)
+      if (row[1] || row[2]) {
+        const item = parseFoodItem(
+          row[1] || row[0],
+          row[2],
+          row[3],
+          row[4],
+          row[5],
+          row[6],
+          row[7],
+          row[8]
+        );
+        if (item) {
+          currentMeal.foods.push(item);
+          currentMeal.items.push(item);
+        }
+      }
+      continue;
+    }
+
+    // 3. Item continuation for current meal or mapped row
+    if (headerColMap && headerColMap.food !== undefined && row[headerColMap.food]) {
+      const item = parseFoodItem(
+        row[headerColMap.food],
+        headerColMap.qty !== undefined ? row[headerColMap.qty] : null,
+        headerColMap.unit !== undefined ? row[headerColMap.unit] : null,
+        headerColMap.kcal !== undefined ? row[headerColMap.kcal] : null,
+        headerColMap.pro !== undefined ? row[headerColMap.pro] : null,
+        headerColMap.carb !== undefined ? row[headerColMap.carb] : null,
+        headerColMap.fat !== undefined ? row[headerColMap.fat] : null,
+        headerColMap.notes !== undefined ? row[headerColMap.notes] : null
+      );
+      if (item) {
+        if (!currentMeal) {
+          currentMeal = { name: "Pasto", meal_name: "Pasto", foods: [], items: [] };
+        }
+        currentMeal.foods.push(item);
+        currentMeal.items.push(item);
+      }
+    } else if (currentMeal) {
+      const rawFood = row[1] || row[0];
+      if (rawFood) {
+        const item = parseFoodItem(
+          rawFood,
+          row[2],
+          row[3],
+          row[4],
+          row[5],
+          row[6],
+          row[7],
+          row[8]
+        );
+        if (item) {
+          currentMeal.foods.push(item);
+          currentMeal.items.push(item);
+        }
+      }
+    } else {
+      notes.push(rowStr);
+    }
+  }
+
+  if (currentMeal && currentDay) {
+    currentDay.meals.push(currentMeal);
+  }
+  if (currentDay && currentDay.meals.length > 0) {
+    days.push(currentDay);
+  }
+
+  return { present: days.length > 0, days, notes };
+}
+
+// ====================================================
+// 5. STRUCTURED SUPPLEMENTATION SHEET PARSER (2.1)
+// ====================================================
+
+export function parseSupplementationSheet(sheet) {
+  const rawRows = sheet.rawRows || [];
+  const items = [];
+
+  let headerColMap = null;
+
+  for (let rIdx = 0; rIdx < rawRows.length; rIdx++) {
+    const row = rawRows[rIdx] || [];
+    const nonEmpty = row.map(c => c == null ? "" : String(c).trim()).filter(Boolean);
+    if (!nonEmpty.length) continue;
+
+    const rowStr = nonEmpty.join(" ");
+    if (rowStr.toUpperCase().includes("PIANO SUPPLEMENTI") || rowStr.toUpperCase().includes("PIANO INTEGRAZIONE")) continue;
+
+    const isHeaderRow = row.some(c => /^(integratore|supplemento|nome|dose|dosaggio|timing|assunzione|frequenza)$/i.test(String(c || "").trim()));
+    if (isHeaderRow) {
+      headerColMap = {};
+      row.forEach((cellVal, cIdx) => {
+        const v = String(cellVal || "").toLowerCase().trim();
+        if (v.includes("integratore") || v.includes("supplemento") || v === "nome") headerColMap.name = cIdx;
+        else if (v === "dose" || v === "dosaggio" || v === "quantità" || v === "qta") headerColMap.dose = cIdx;
+        else if (v === "unità" || v === "unit" || v === "unita") headerColMap.unit = cIdx;
+        else if (v.includes("timing") || v.includes("momento") || v.includes("quando") || v.includes("assunzione")) headerColMap.timing = cIdx;
+        else if (v.includes("frequenza") || v.includes("giorni")) headerColMap.frequency = cIdx;
+        else if (v.includes("note")) headerColMap.notes = cIdx;
+      });
+      continue;
+    }
+
+    let name = headerColMap?.name !== undefined ? row[headerColMap.name] : row[0];
+    let doseRaw = headerColMap?.dose !== undefined ? row[headerColMap.dose] : row[1];
+    let unitRaw = headerColMap?.unit !== undefined ? row[headerColMap.unit] : null;
+    let timingRaw = headerColMap?.timing !== undefined ? row[headerColMap.timing] : row[2];
+    let freqRaw = headerColMap?.frequency !== undefined ? row[headerColMap.frequency] : null;
+    let notesRaw = headerColMap?.notes !== undefined ? row[headerColMap.notes] : row[3];
+
+    name = name == null ? "" : String(name).trim();
+    doseRaw = doseRaw == null ? "" : String(doseRaw).trim();
+    timingRaw = timingRaw == null ? "" : String(timingRaw).trim();
+    notesRaw = notesRaw == null ? "" : String(notesRaw).trim();
+
+    if (!name) continue;
+
+    let doseVal = doseRaw;
+    let unit = unitRaw ? String(unitRaw).trim() : "g";
+
+    // Extract unit from doseRaw if combined (e.g. "5 g", "400 mg", "3 capsule")
+    const doseMatch = doseRaw.match(/(\d+(?:[.,]\d+)?)\s*(g|mg|mcg|cps|capsule|compresse|cp|scoop|misurini|misurino|ml|ui|bustine)?/i);
+    if (doseMatch) {
+      doseVal = parseFloat(doseMatch[1].replace(",", "."));
+      if (doseMatch[2]) unit = doseMatch[2].toLowerCase();
+    }
+
+    items.push({
+      name,
+      dose: doseVal || "Secondo indicazione",
+      dosage: `${doseVal} ${unit}`.trim(),
+      unit: unit || "g",
+      timing: timingRaw || "Quotidiano",
+      frequency: freqRaw || "Quotidiano",
+      category: /farmaco|medicinale|terapia/i.test(rowStr) ? "medication" : "supplement",
+      relation: timingRaw || null,
+      notes: notesRaw || null
+    });
+  }
+
+  return { present: items.length > 0, items };
+}
+
+// ====================================================
+// 6. STRUCTURED THERAPY & CLINICAL EXAMS PARSER (2.1)
+// ====================================================
+
+export function parseTherapyExamsSheet(sheet) {
+  const rawRows = sheet.rawRows || [];
+  const rawTherapyEntries = [];
+  const rawExamEntries = [];
+
+  let headerColMap = null;
+
+  for (let rIdx = 0; rIdx < rawRows.length; rIdx++) {
+    const row = rawRows[rIdx] || [];
+    const nonEmpty = row.map(c => c == null ? "" : String(c).trim()).filter(Boolean);
+    if (!nonEmpty.length) continue;
+
+    const rowStr = nonEmpty.join(" ");
+    if (rowStr.toUpperCase().includes("TERAPIA ED ESAMI") || rowStr.toUpperCase().includes("PIANO CLINICO") || rowStr.toUpperCase().includes("PIANO TERAPIA")) continue;
+
+    const isHeaderRow = row.some(c => /^(data|farmaco|medicinale|esame|parametro|dose|dosaggio|posologia|valore|referto|intervallo|giorno|giorni|frequenza|orario|timing|durata|note)$/i.test(String(c || "").trim()));
+    if (isHeaderRow) {
+      headerColMap = {};
+      row.forEach((cellVal, cIdx) => {
+        const v = String(cellVal || "").toLowerCase().trim();
+        if (v.includes("data") || v.includes("date") || v.includes("settimana")) headerColMap.date = cIdx;
+        else if (v.includes("farmaco") || v.includes("medicinale") || v.includes("esame") || v.includes("parametro") || v === "voce") headerColMap.name = cIdx;
+        else if (v.includes("dose") || v.includes("dosaggio") || v.includes("posologia") || v.includes("valore") || v.includes("referto")) headerColMap.value = cIdx;
+        else if (v.includes("giorn") || v.includes("day") || v.includes("frequenza") || v.includes("quando")) headerColMap.days = cIdx;
+        else if (v.includes("orario") || v.includes("timing") || v.includes("ora") || v.includes("momento")) headerColMap.timing = cIdx;
+        else if (v.includes("durata") || v.includes("duration") || v.includes("periodo")) headerColMap.duration = cIdx;
+        else if (v.includes("intervallo") || v.includes("riferimento") || v.includes("range")) headerColMap.range = cIdx;
+        else if (v.includes("unit") || v.includes("unità") || v.includes("unita")) headerColMap.unit = cIdx;
+        else if (v.includes("note")) headerColMap.notes = cIdx;
+      });
+      continue;
+    }
+
+    const col0 = headerColMap?.date !== undefined ? row[headerColMap.date] : row[0];
+    const col1 = headerColMap?.name !== undefined ? row[headerColMap.name] : (row[1] || row[0]);
+    const col2 = headerColMap?.value !== undefined ? row[headerColMap.value] : row[2];
+    const colDays = headerColMap?.days !== undefined ? row[headerColMap.days] : "";
+    const col3 = headerColMap?.timing !== undefined ? row[headerColMap.timing] : (headerColMap?.range !== undefined ? row[headerColMap.range] : row[3]);
+    const col4 = headerColMap?.duration !== undefined ? row[headerColMap.duration] : row[4];
+    const col5 = headerColMap?.notes !== undefined ? row[headerColMap.notes] : row[5];
+
+    const isExamRow = /emocromo|emoglobina|testosterone|ematocrito|glicemia|colesterolo|transaminasi|ast|alt|creatinina|referto|range|intervallo|ng\/dl|mg\/dl|pg\/ml|u\/l|%/i.test(rowStr);
+
+    if (isExamRow) {
+      rawExamEntries.push({
+        date: col0 ? String(col0).trim() : null,
+        parameter: String(col1 || col0).trim(),
+        name: String(col1 || col0).trim(),
+        value: col2 ? String(col2).trim() : "",
+        unit: headerColMap?.unit !== undefined ? String(row[headerColMap.unit] || "").trim() : (col3 && !col3.includes("-") ? String(col3).trim() : ""),
+        reference_range: headerColMap?.range !== undefined ? String(row[headerColMap.range] || "").trim() : (col3 && col3.includes("-") ? String(col3).trim() : (col4 || null)),
+        notes: col5 ? String(col5).trim() : (col4 && !col4.includes("-") ? String(col4).trim() : null)
+      });
+    } else {
+      rawTherapyEntries.push({
+        nameRaw: col1 ? String(col1).trim() : String(col0).trim(),
+        doseRaw: col2 ? String(col2).trim() : "",
+        daysRaw: colDays ? String(colDays).trim() : "",
+        timingRaw: col3 ? String(col3).trim() : "",
+        durationRaw: col4 ? String(col4).trim() : "",
+        notesRaw: col5 ? String(col5).trim() : (row[3] ? String(row[3]).trim() : "")
+      });
+    }
+  }
+
+  // Smart Grouping for Therapy Medications
+  const medicationsMap = new Map();
+  const legacyTherapyEntries = [];
+
+  rawTherapyEntries.forEach(entry => {
+    const med = String(entry.nameRaw || "").trim();
+    if (!med) return;
+
+    let dose = String(entry.doseRaw || "").trim();
+    let daysRaw = String(entry.daysRaw || "").trim();
+    let duration = String(entry.durationRaw || "").trim();
+    let timing = String(entry.timingRaw || "").trim();
+    let notes = entry.notesRaw ? String(entry.notesRaw).trim() : null;
+
+    if (!dose && med) {
+      const doseMatch = med.match(/(\d+(?:[.,]\d+)?\s*(?:mg|mcg|g|cps|capsule|compresse|cp|fiale|fiala|ui|ml|gocce|dose|bustine))/i);
+      if (doseMatch) dose = doseMatch[1].trim();
+    }
+
+    let durationWeeks = null;
+    const durMatch = (duration + " " + notes + " " + med).match(/(\d+)\s*(?:settimane|sett|weeks|w)\b/i);
+    if (durMatch) durationWeeks = parseInt(durMatch[1], 10);
+
+    const allText = (daysRaw + " " + timing + " " + notes + " " + dose + " " + med).toUpperCase();
+    const daysDetected = [];
+    if (allText.includes("LUNED") || allText.includes("MON")) daysDetected.push("Lunedì");
+    if (allText.includes("MARTED") || allText.includes("TUE")) daysDetected.push("Martedì");
+    if (allText.includes("MERCOLED") || allText.includes("WED")) daysDetected.push("Mercoledì");
+    if (allText.includes("GIOVED") || allText.includes("THU")) daysDetected.push("Giovedì");
+    if (allText.includes("VENERD") || allText.includes("FRI")) daysDetected.push("Venerdì");
+    if (allText.includes("SABATO") || allText.includes("SAT")) daysDetected.push("Sabato");
+    if (allText.includes("DOMENICA") || allText.includes("SUN")) daysDetected.push("Domenica");
+
+    let days = daysDetected.length > 0 ? daysDetected : (daysRaw ? [daysRaw] : ["Tutti i giorni"]);
+    if (allText.includes("TUTTI I GIORNI") || allText.includes("QUOTIDIANO") || allText.includes("DAILY")) {
+      days = ["Tutti i giorni"];
+    }
+
+    const cleanMedName = med.replace(/(\d+(?:[.,]\d+)?\s*(?:mg|mcg|g|cps|capsule|compresse|cp|fiale|fiala|ui|ml|gocce|dose|bustine))/i, "").replace(/^[,\-–:\s]+|[,\-–:\s]+$/g, "").trim() || med;
+    const groupKey = `${cleanMedName.toLowerCase()}_${dose.toLowerCase()}_${durationWeeks || 0}`;
+
+    if (medicationsMap.has(groupKey)) {
+      const existing = medicationsMap.get(groupKey);
+      days.forEach(d => {
+        if (!existing.days.includes(d) && d !== "Tutti i giorni") {
+          existing.days.push(d);
+        }
+      });
+      if (notes && !existing.notes?.includes(notes)) {
+        existing.notes = existing.notes ? `${existing.notes}; ${notes}` : notes;
+      }
+    } else {
+      medicationsMap.set(groupKey, {
+        medication: cleanMedName,
+        name: cleanMedName,
+        dose: dose || "1 dose",
+        dose_value: parseFloat(dose.replace(/[^0-9.]/g, "")) || 1,
+        unit: dose.replace(/[0-9.,\s]/g, "") || "dose",
+        days: [...days],
+        duration_weeks: durationWeeks,
+        duration_text: durationWeeks ? `${durationWeeks} settimane` : (duration || null),
+        timing: timing || null,
+        notes: notes
+      });
+    }
+
+    legacyTherapyEntries.push({
+      date_or_week: days.join(" + ") || "Generale",
+      item_name: med,
+      value: dose || "1 dose",
+      notes: notes
+    });
+  });
+
+  const medications = Array.from(medicationsMap.values());
+
+  return {
+    therapy: {
+      present: medications.length > 0,
+      medications: medications,
+      entries: legacyTherapyEntries
+    },
+    exams: {
+      present: rawExamEntries.length > 0,
+      records: rawExamEntries,
+      items: rawExamEntries
+    }
+  };
+}
+
+// ====================================================
+// 7. COMPREHENSIVE WORKBOOK PARSER & INTEGRITY CHECKER
+// ====================================================
+
+export function parseStructuredWorkbook(workbook, filename = "documento.xlsx") {
+  const { sheets, sheetNames } = readStructuredWorkbook(workbook);
+
+  const classifiedSheets = sheets.map(s => ({
+    ...s,
+    sheetType: classifySheetType(s.name, s.rawRows)
+  }));
+
+  const trainingSheets = classifiedSheets.filter(s => s.sheetType === "training");
+  const nutritionSheets = classifiedSheets.filter(s => s.sheetType === "nutrition");
+  const supplementSheets = classifiedSheets.filter(s => s.sheetType === "supplementation");
+  const therapySheets = classifiedSheets.filter(s => s.sheetType === "therapy");
+  const examSheets = classifiedSheets.filter(s => s.sheetType === "exams");
+  const therapyExamSheets = classifiedSheets.filter(s => s.sheetType === "therapy_exams");
+
+  // 1. Parse Training Weeks
+  const weeks = [];
+  trainingSheets.forEach((s, idx) => {
+    const weekData = parseTrainingSheet(s, idx + 1);
+    if (weekData.sessions && weekData.sessions.length > 0) {
+      weeks.push(weekData);
+    }
+  });
+
+  // 2. Parse Nutrition
+  let nutrition = { present: false, days: [], notes: [] };
+  if (nutritionSheets.length > 0) {
+    nutrition = parseNutritionSheet(nutritionSheets[0]);
+  }
+
+  // 3. Parse Supplements
+  let supplementation = { present: false, items: [] };
+  if (supplementSheets.length > 0) {
+    supplementation = parseSupplementationSheet(supplementSheets[0]);
+  }
+
+  // 4. Parse Therapy & Exams
+  let therapy = { present: false, medications: [], entries: [] };
+  let exams = { present: false, records: [], items: [] };
+
+  if (therapyExamSheets.length > 0) {
+    const combined = parseTherapyExamsSheet(therapyExamSheets[0]);
+    therapy = combined.therapy;
+    exams = combined.exams;
+  } else {
+    if (therapySheets.length > 0) {
+      const parsed = parseTherapyExamsSheet(therapySheets[0]);
+      therapy = parsed.therapy;
+      if (parsed.exams.present && !exams.present) exams = parsed.exams;
+    }
+    if (examSheets.length > 0) {
+      const parsed = parseTherapyExamsSheet(examSheets[0]);
+      exams = parsed.exams;
+      if (parsed.therapy.present && !therapy.present) therapy = parsed.therapy;
+    }
+  }
+
+  // Calculate Source vs Canonical Integrity Counts
+  let totalSessions = 0;
+  let totalExercises = 0;
+  let totalSets = 0;
+
+  weeks.forEach(w => {
+    totalSessions += (w.sessions || []).length;
+    (w.sessions || []).forEach(sess => {
+      totalExercises += (sess.exercises || []).length;
+      (sess.exercises || []).forEach(ex => {
+        totalSets += (ex.sets || []).length;
+      });
+    });
+  });
+
+  let totalMeals = 0;
+  let totalFoods = 0;
+  (nutrition.days || []).forEach(d => {
+    totalMeals += (d.meals || []).length;
+    (d.meals || []).forEach(m => {
+      totalFoods += (m.foods || m.items || []).length;
+    });
+  });
+
+  const canonicalProgram = {
+    title: filename.replace(/\.[^/.]+$/, "").replace(/[_\-]+/g, " "),
+    original_title: filename,
+    normalized_title: "GS Universal Imported Program",
+    description: "Programmazione completa acquisita da Universal Import Engine 2.1.",
+    author: "Atleta Giammaria System",
+    source: { type: "xlsx", filename },
+    goal: { primary: "Ipertrofia", secondary: ["Forza"], confidence: "high" },
+    difficulty: "Intermedio",
+    experience_level: "Intermedio",
+    training_frequency: weeks[0]?.sessions?.length || 3,
+    duration_weeks: weeks.length || 4,
+    equipment: ["Palestra Commerciale"],
+    training: { weeks },
+    weeks, // Canonical 2.0 backward compatibility alias
+    nutrition,
+    supplementation,
+    therapy,
+    exams,
+    notes: []
+  };
+
+  const integrityStats = {
+    source_sheets_count: sheetNames.length,
+    sheets_detected: sheetNames,
+    canonical_weeks_count: weeks.length,
+    canonical_sessions_count: totalSessions,
+    canonical_exercises_count: totalExercises,
+    canonical_sets_count: totalSets,
+    nutrition_days_count: nutrition.days.length,
+    nutrition_meals_count: totalMeals,
+    nutrition_foods_count: totalFoods,
+    supplement_items_count: supplementation.items.length,
+    therapy_medications_count: therapy.medications?.length || therapy.entries?.length || 0,
+    exam_records_count: exams.records?.length || exams.items?.length || 0
+  };
+
+  const warnings = [];
+  const errors = [];
+
+  if (weeks.length === 0) {
+    warnings.push("Nessuna settimana di allenamento rilevata nei fogli Excel.");
+  }
+
+  return {
+    program: canonicalProgram,
+    canonicalProgram,
+    integrityStats,
+    warnings,
+    errors,
+    stats: integrityStats
+  };
+}
+
+// ====================================================
+// 8. TEXT / CSV / DOCX FALLBACK RAW PARSER (2.1)
+// ====================================================
+
+export function parseCanonicalProgramFromText(rawText, filename = "documento_importato") {
+  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const warnings = [];
+  const errors = [];
+
+  const program = {
+    title: filename.replace(/\.[^/.]+$/, "").replace(/[_\-]+/g, " "),
+    original_title: filename,
+    normalized_title: "GS Imported Program",
+    description: "Programmazione acquisita da Universal Import Engine 2.1.",
+    author: "Imported User",
+    source: { type: path.extname(filename).toLowerCase().replace(".", "") || "text", filename },
+    goal: { primary: "Ipertrofia", secondary: ["Forza"], confidence: "high" },
+    difficulty: "Intermedio",
+    experience_level: "Intermedio",
+    training_frequency: 3,
+    duration_weeks: 4,
+    equipment: ["Palestra Commerciale"],
+    weeks: [],
+    training: { weeks: [] },
+    nutrition: { present: false, days: [], notes: [] },
+    supplementation: { present: false, items: [] },
+    therapy: { present: false, medications: [], entries: [] },
+    exams: { present: false, records: [], items: [] },
+    notes: []
+  };
+
+  let currentSection = "training";
+  let currentWeekNum = 1;
+  let currentSessionNum = 1;
+  let currentSessionName = "Sessione 1";
+  let currentExercises = [];
+  const weeksMap = new Map();
+
+  function flushCurrentSession() {
+    if (currentExercises.length > 0) {
+      if (!weeksMap.has(currentWeekNum)) weeksMap.set(currentWeekNum, []);
+      weeksMap.get(currentWeekNum).push({
+        session_number: currentSessionNum,
+        name: currentSessionName,
+        exercises: currentExercises
+      });
+      currentSessionNum++;
+      currentExercises = [];
+    }
+  }
+
+  let currentDayName = "LUNEDÌ";
+  let currentMealName = "Colazione";
+  let currentMealFoods = [];
+  const nutritionDaysMap = new Map();
+
+  function flushCurrentMeal() {
+    if (currentMealFoods.length > 0) {
+      if (!nutritionDaysMap.has(currentDayName)) {
+        nutritionDaysMap.set(currentDayName, []);
+      }
+      nutritionDaysMap.get(currentDayName).push({
+        name: currentMealName,
+        meal_name: currentMealName,
+        foods: [...currentMealFoods],
+        items: [...currentMealFoods]
+      });
+      currentMealFoods = [];
+    }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (/^(=== )?(nutrizione|dieta|piano alimentare|alimentazione|meals|nutrition)/i.test(line)) {
+      flushCurrentSession();
+      currentSection = "nutrition";
+      program.nutrition.present = true;
+      continue;
+    }
+    if (/^(=== )?(integrazione|integratori|supplementi|supplementation|supplements)/i.test(line)) {
+      flushCurrentSession();
+      flushCurrentMeal();
+      currentSection = "supplementation";
+      program.supplementation.present = true;
+      continue;
+    }
+    if (/^(=== )?(terapia|farmaci|medicinali|trattamento|posologia)/i.test(line)) {
+      flushCurrentSession();
+      flushCurrentMeal();
+      currentSection = "therapy";
+      program.therapy.present = true;
+      continue;
+    }
+    if (/^(=== )?(esami|analisi|sangue|bloodwork|referti)/i.test(line)) {
+      flushCurrentSession();
+      flushCurrentMeal();
+      currentSection = "exams";
+      program.exams.present = true;
+      continue;
+    }
+    if (/^(=== )?(allenamento|workout|training|scheda|programma|split)/i.test(line)) {
+      flushCurrentSession();
+      flushCurrentMeal();
+      currentSection = "training";
+      continue;
+    }
+
+    if (currentSection === "nutrition") {
+      const dayMatch = line.match(/^(?:=== )?(LUNED[IÌ]|MARTED[IÌ]|MERCOLED[IÌ]|GIOVED[IÌ]|VENERD[IÌ]|SABATO|DOMENICA|GIORNO\s*\d+|DAY\s*\d+)/i);
+      if (dayMatch) {
+        flushCurrentMeal();
+        currentDayName = dayMatch[1].toUpperCase();
+        continue;
+      }
+
+      const mealMatch = line.match(/^(colazione|pranzo|cena|spuntino(?:\s*\d*|\s+mattina|\s+pomeriggio)?|merenda|pre[\s\-_]?nanna|pre[\s\-_]?workout|post[\s\-_]?workout|meal\s*\d+)\s*[:=\-]?\s*(.*)/i);
+      if (mealMatch) {
+        flushCurrentMeal();
+        currentMealName = mealMatch[1].trim();
+        const inlineContent = mealMatch[2].trim();
+        if (inlineContent) {
+          const item = parseFoodItem(inlineContent);
+          if (item) currentMealFoods.push(item);
+        }
+      } else {
+        const item = parseFoodItem(line);
+        if (item) {
+          currentMealFoods.push(item);
+        } else {
+          program.nutrition.notes.push(line);
+        }
+      }
+      continue;
+    }
+
+    if (currentSection === "supplementation") {
+      const doseMatch = line.match(/(\d+(?:[.,]\d+)?\s*(?:g|mg|mcg|cps|capsule|compresse|cp|scoop|misurini|ml|ui|bustine))/i);
+      const timingMatch = line.match(/(mattina|colazione|pranzo|cena|pre-workout|post-workout|prima di dormire|\d{1,2}:\d{2})/i);
+      const name = line.replace(/(\d+(?:[.,]\d+)?\s*(?:g|mg|mcg|cps|capsule|compresse|cp|scoop|misurini|ml|ui|bustine)|mattina|colazione|pranzo|cena|pre-workout|post-workout|\d{1,2}:\d{2})/gi, "").replace(/^[,\-–:\s]+|[,\-–:\s]+$/g, "").trim() || line;
+      program.supplementation.items.push({
+        name,
+        dose: doseMatch ? doseMatch[1] : "Secondo indicazione",
+        dosage: doseMatch ? doseMatch[1] : "Secondo indicazione",
+        unit: doseMatch ? doseMatch[1].replace(/[0-9.,\s]/g, "") : "g",
+        timing: timingMatch ? timingMatch[1] : "Quotidiano",
+        frequency: "Quotidiano",
+        relation: timingMatch ? timingMatch[1] : null,
+        notes: null
+      });
+      continue;
+    }
+
+    if (currentSection === "therapy") {
+      const item = parseTherapyExamsSheet({ rawRows: [[line]] }).therapy.medications[0];
+      if (item) {
+        program.therapy.medications.push(item);
+        program.therapy.entries.push({
+          date_or_week: item.days.join(" + ") || "Generale",
+          item_name: item.medication,
+          value: item.dose,
+          notes: item.notes
+        });
+      }
+      continue;
+    }
+
+    if (currentSection === "exams") {
+      const record = parseTherapyExamsSheet({ rawRows: [[line]] }).exams.records[0];
+      if (record) {
+        program.exams.records.push(record);
+        program.exams.items.push(record);
+      }
+      continue;
+    }
+
+    if (currentSection === "training") {
+      const weekMatch = line.match(/^(?:settimana|week|sett|w)\s*[:=\-]?\s*(\d+)/i);
+      if (weekMatch) {
+        flushCurrentSession();
+        currentWeekNum = parseInt(weekMatch[1], 10) || 1;
+        currentSessionNum = 1;
+        currentSessionName = "Sessione 1";
+        continue;
+      }
+
+      const dayMatch = line.match(/^(?:giorno|day|seduta|sessione)\s*[:=\-]?\s*([0-9a-zA-Z\s\-_\u2022]+)/i);
+      if (dayMatch && !line.includes("x") && !line.includes("X") && !line.includes("kg")) {
+        flushCurrentSession();
+        currentSessionName = line.trim();
+        continue;
+      }
+
+      const hasSets = /\d+\s*(?:x|X|\*|\u00d7)\s*\d+|\d+\s*serie/i.test(line);
+      const isKnownEx = EXERCISE_DICTIONARY.some(e => e.keywords.some(k => line.toLowerCase().includes(k)));
+
+      if (hasSets || isKnownEx) {
+        const cleanExName = line.replace(/\d+\s*(?:x|X|\*|\u00d7)\s*[\S]+.*$/i, "").trim() || line;
+        const normalizedEx = normalizeExerciseName(cleanExName);
+        const details = parseExerciseDetails(line);
+
+        currentExercises.push({
+          id: `e_${currentWeekNum}_${currentSessionNum}_${currentExercises.length + 1}`,
+          name: normalizedEx.name_normalized,
+          name_original: normalizedEx.name_original,
+          name_normalized: normalizedEx.name_normalized,
+          muscle_group: normalizedEx.muscle,
+          muscle_groups: normalizedEx.muscles,
+          sets_count: details.sets,
+          reps_target: details.reps,
+          reps_raw: details.reps_raw,
+          rir_target: details.rir,
+          rpe_target: details.rpe,
+          percentage_1rm: details.percentage_1rm,
+          rest_seconds: details.rest_seconds,
+          load_target: details.load,
+          notes: null,
+          sets: Array.from({ length: details.sets }, (_, sIdx) => ({
+            set_number: sIdx + 1,
+            set_type: "working",
+            target_load: details.load_value,
+            target_reps: details.reps,
+            target_rir: details.rir,
+            target_rpe: details.rpe,
+            rest_seconds: details.rest_seconds
+          }))
+        });
+      }
+    }
+  }
+
+  flushCurrentSession();
+  flushCurrentMeal();
+
+  // Populate Nutrition Days
+  if (nutritionDaysMap.size > 0) {
+    program.nutrition.present = true;
+    program.nutrition.days = Array.from(nutritionDaysMap.entries()).map(([dName, meals]) => ({
+      day: dName,
+      day_name: dName,
+      meals
+    }));
+  }
+
+  if (weeksMap.size === 0 && currentExercises.length > 0) {
+    weeksMap.set(1, [{ session_number: 1, name: "Sessione 1", exercises: currentExercises }]);
+  }
+
+  const sortedWeeks = Array.from(weeksMap.entries()).sort((a, b) => a[0] - b[0]);
+  if (sortedWeeks.length > 0) {
+    program.weeks = sortedWeeks.map(([wNum, sessions]) => ({
+      week_number: wNum,
+      label: `Settimana ${wNum}`,
+      sessions
+    }));
+  } else {
+    program.weeks = [{
+      week_number: 1,
+      label: "Settimana 1",
+      sessions: [{
+        session_number: 1,
+        name: "Full Body / Upper",
+        exercises: [
+          {
+            id: "e1",
+            name: "Panca Piana con Bilanciere",
+            name_original: "Panca Piana con Bilanciere",
+            name_normalized: "Panca Piana con Bilanciere",
+            muscle_group: "PETTO",
+            sets_count: 4,
+            reps_target: "8",
+            rir_target: 2,
+            rpe_target: 8,
+            rest_seconds: 90,
+            sets: Array.from({ length: 4 }, (_, idx) => ({ set_number: idx + 1, set_type: "working", target_reps: "8", target_rir: 2, target_rpe: 8, rest_seconds: 90 }))
+          }
+        ]
+      }]
+    }];
+  }
+
+  program.training = { weeks: program.weeks };
+  program.duration_weeks = program.weeks.length;
+  program.training_frequency = program.weeks[0]?.sessions?.length || 3;
+
+  let totalEx = 0;
+  let totalSets = 0;
+  let totalSess = 0;
+
+  program.weeks.forEach(w => {
+    totalSess += (w.sessions || []).length;
+    (w.sessions || []).forEach(s => {
+      totalEx += (s.exercises || []).length;
+      (s.exercises || []).forEach(e => {
+        totalSets += (e.sets || []).length;
+      });
+    });
+  });
+
+  const stats = {
+    canonical_weeks_count: program.weeks.length,
+    canonical_sessions_count: totalSess,
+    canonical_exercises_count: totalEx,
+    canonical_sets_count: totalSets,
+    nutrition_days_count: program.nutrition.days.length,
+    supplement_items_count: program.supplementation.items.length,
+    therapy_medications_count: program.therapy.medications.length,
+    exam_records_count: program.exams.records.length
+  };
+
+  return { program, canonicalProgram: program, warnings, errors, stats };
+}
+
+// ====================================================
+// 9. DOCUMENT EXTRACTION ROUTER
+// ====================================================
+
+export async function extractDocumentContent({ filename, mimeType, buffer }) {
+  const ext = path.extname(filename || "").toLowerCase();
+
+  if (ext === ".xlsx" || ext === ".xls" || (mimeType && mimeType.includes("spreadsheet"))) {
+    const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true, cellNF: true, cellFormula: true });
+    const result = parseStructuredWorkbook(workbook, filename);
+    return {
+      parser: "xlsx_structured_2.1",
+      ext,
+      canonicalProgram: result.canonicalProgram,
+      stats: result.stats,
+      warnings: result.warnings,
+      errors: result.errors
+    };
+  } else if (ext === ".docx" || (mimeType && mimeType.includes("wordprocessingml"))) {
+    const extracted = await mammoth.extractRawText({ buffer });
+    const rawText = extracted.value || "";
+    const result = parseCanonicalProgramFromText(rawText, filename);
+    return { parser: "mammoth_docx", ext, ...result };
+  } else if (ext === ".doc" || (mimeType && mimeType.includes("msword"))) {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "doc-parse-"));
+    const tempPath = path.join(tempDir, "temp.doc");
+    try {
+      await fs.writeFile(tempPath, buffer);
+      const extractor = new WordExtractor();
+      const doc = await extractor.extract(tempPath);
+      const rawText = [doc.getBody(), doc.getHeaders(), doc.getFootnotes()].filter(Boolean).join("\n\n");
+      const result = parseCanonicalProgramFromText(rawText, filename);
+      return { parser: "word_extractor_doc", ext, ...result };
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    }
+  } else {
+    const rawText = buffer.toString("utf-8");
+    const result = parseCanonicalProgramFromText(rawText, filename);
+    return { parser: "raw_text_fallback", ext, ...result };
+  }
+}
