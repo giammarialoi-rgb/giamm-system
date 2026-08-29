@@ -1,5 +1,5 @@
-﻿// ====================================================
-// GIAMMARIA SYSTEM â€” ARCHITECTURE BASELINE (Master Task 22)
+// ====================================================
+// GIAMMARIA SYSTEM — ARCHITECTURE BASELINE (Master Task 22)
 // PRODUCT DOMAIN SERVICES & CATALOG IMPLEMENTATIONS
 // ====================================================
 
@@ -11,7 +11,7 @@ export const JS_PRODUCT_SERVICES = `
 
 const pricingConfig = {
   currency: "EUR",
-  symbol: "â‚¬",
+  symbol: "€",
   plans: {
     FREE: {
       id: "free",
@@ -26,7 +26,7 @@ const pricingConfig = {
       price: 4.99,
       period: "/mese",
       lifetimePrice: 49.99,
-      features: ["Nessuna pubblicitÃ ", "Calendario e timeline giornaliera", "Rest timer avanzato"]
+      features: ["Nessuna pubblicità", "Calendario e timeline giornaliera", "Rest timer avanzato"]
     },
     SILVER: {
       id: "silver",
@@ -41,7 +41,7 @@ const pricingConfig = {
       name: "Gold Lifetime Master",
       price: 199.99,
       period: "Una tantum per sempre",
-      features: ["Accesso a vita a tutte le funzionalitÃ  Pro", "Aggiornamenti a vita inclusi", "Supporto prioritario e accesso anticipato alle novitÃ "]
+      features: ["Accesso a vita a tutte le funzionalità Pro", "Aggiornamenti a vita inclusi", "Supporto prioritario e accesso anticipato alle novità"]
     }
   }
 };
@@ -49,16 +49,16 @@ const pricingConfig = {
 const I18nService = {
   currentLang: "it",
   LANG_META: {
-    it: { code: "it", name: "Italiano", flag: "ðŸ‡®ðŸ‡¹" },
-    en: { code: "en", name: "English", flag: "ðŸ‡¬ðŸ‡§" },
-    es: { code: "es", name: "EspaÃ±ol", flag: "ðŸ‡ªðŸ‡¸" },
-    fr: { code: "fr", name: "FranÃ§ais", flag: "ðŸ‡«ðŸ‡·" },
-    de: { code: "de", name: "Deutsch", flag: "ðŸ‡©ðŸ‡ª" },
-    pt: { code: "pt", name: "PortuguÃªs", flag: "ðŸ‡§ðŸ‡·" },
-    ru: { code: "ru", name: "Ð ÑƒÑÑÐºÐ¸Ð¹", flag: "ðŸ‡·ðŸ‡º" },
-    zh: { code: "zh", name: "ä¸­æ–‡", flag: "ðŸ‡¨ðŸ‡³" },
-    ar: { code: "ar", name: "Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©", flag: "ðŸ‡¸ðŸ‡¦" },
-    hi: { code: "hi", name: "à¤¹à¤¿à¤¨à¥à¤¦à¥€", flag: "ðŸ‡®ðŸ‡³" }
+    it: { code: "it", name: "Italiano", flag: "🇮🇹" },
+    en: { code: "en", name: "English", flag: "🇬🇧" },
+    es: { code: "es", name: "Español", flag: "🇪🇸" },
+    fr: { code: "fr", name: "Français", flag: "🇫🇷" },
+    de: { code: "de", name: "Deutsch", flag: "🇩🇪" },
+    pt: { code: "pt", name: "Português", flag: "🇧🇷" },
+    ru: { code: "ru", name: "Русский", flag: "🇷🇺" },
+    zh: { code: "zh", name: "中文", flag: "🇨🇳" },
+    ar: { code: "ar", name: "العربية", flag: "🇸🇦" },
+    hi: { code: "hi", name: "हिन्दी", flag: "🇮🇳" }
   },
   get supportedLangs() {
     return Object.keys(this.LANG_META);
@@ -205,39 +205,39 @@ const I18nService = {
       appTitle: "GIAMMARIA SYSTEM",
       dashboard: "PANEL PRINCIPAL",
       home: "PANEL PRINCIPAL",
-      activeSession: "SesiÃ³n Activa",
+      activeSession: "Sesión Activa",
       startWorkout: "INICIAR ENTRENAMIENTO",
       importProgram: "IMPORTAR RUTINA",
       programsLibrary: "BIBLIOTECA DE RUTINAS",
       activeProgram: "Rutina Activa",
       training: "ENTRENAMIENTO",
-      nutrition: "NUTRICIÃ“N",
-      supplementation: "SUPLEMENTACIÃ“N",
-      supplements: "SUPLEMENTACIÃ“N",
-      therapy: "TERAPIA MÃ‰DICA",
-      clinicalExams: "ANÃLISIS CLÃNICOS",
-      exams: "ANÃLISIS CLÃNICOS",
+      nutrition: "NUTRICIÓN",
+      supplementation: "SUPLEMENTACIÓN",
+      supplements: "SUPLEMENTACIÓN",
+      therapy: "TERAPIA MÉDICA",
+      clinicalExams: "ANÁLISIS CLÍNICOS",
+      exams: "ANÁLISIS CLÍNICOS",
       calendar: "CALENDARIO",
       performance: "LABORATORIO DE RENDIMIENTO",
       coachIA: "COACH IA",
       database: "BASE DE DATOS & RECURSOS",
       settings: "AJUSTES",
-      pricing: "SUSCRIPCIÃ“N Y PLANES",
+      pricing: "SUSCRIPCIÓN Y PLANES",
       set: "Serie",
       load: "Carga",
       reps: "Reps",
       rest: "Descanso",
-      addSet: "+ AÃ‘ADIR SERIE",
+      addSet: "+ AÑADIR SERIE",
       duplicateSet: "DUPLICAR SERIE",
       deleteSet: "ELIMINAR SERIE",
       substitute: "SUSTITUIR",
       skip: "SALTAR",
       bonusExercise: "+ EJERCICIO EXTRA",
-      finalizeWorkout: "FINALIZAR SESIÃ“N",
+      finalizeWorkout: "FINALIZAR SESIÓN",
       chatPlaceholder: "Pregunta al Coach IA o escribe un cambio...",
       send: "ENVIAR",
       clearChat: "BORRAR CHAT",
-      offlineCoach: "Coach IA fuera de lÃ­nea.",
+      offlineCoach: "Coach IA fuera de línea.",
       save: "GUARDAR",
       cancel: "CANCELAR",
       confirm: "CONFIRMAR",
@@ -252,18 +252,18 @@ const I18nService = {
       bronze: "Bronce",
       silver: "Plata",
       gold: "Oro De Por Lite",
-      trial: "Prueba 14 DÃ­as",
+      trial: "Prueba 14 Días",
       today: "Hoy",
       meals: "Comidas",
       foods: "Alimentos",
-      calories: "CalorÃ­as",
-      protein: "ProteÃ­na",
+      calories: "Calorías",
+      protein: "Proteína",
       carbs: "Carbohidratos",
       fats: "Grasas",
       timing: "Momento",
       dose: "Dosis",
       drug: "Medicamento",
-      parameter: "ParÃ¡metro",
+      parameter: "Parámetro",
       value: "Valor",
       range: "Rango de Referencia",
       date: "Fecha"
@@ -273,35 +273,35 @@ const I18nService = {
       appTitle: "GIAMMARIA SYSTEM",
       dashboard: "TABLEAU DE BORD",
       home: "TABLEAU DE BORD",
-      activeSession: "SÃ©ance Active",
-      startWorkout: "DÃ‰MARRER LA SÃ‰ANCE",
+      activeSession: "Séance Active",
+      startWorkout: "DÉMARRER LA SÉANCE",
       importProgram: "IMPORTER PROGRAMME",
-      programsLibrary: "BIBLIOTHÃˆQUE DE PROGRAMMES",
+      programsLibrary: "BIBLIOTHÈQUE DE PROGRAMMES",
       activeProgram: "Programme Actif",
-      training: "ENTRAÃŽNEMENT",
+      training: "ENTRAÎNEMENT",
       nutrition: "NUTRITION",
-      supplementation: "COMPLÃ‰MENTS",
-      supplements: "COMPLÃ‰MENTS",
-      therapy: "THÃ‰RAPIE MÃ‰DICALE",
+      supplementation: "COMPLÉMENTS",
+      supplements: "COMPLÉMENTS",
+      therapy: "THÉRAPIE MÉDICALE",
       clinicalExams: "ANALYSES LABO",
       exams: "ANALYSES LABO",
       calendar: "CALENDRIER",
       performance: "LABO PERFORMANCE",
       coachAI: "COACH IA",
-      database: "BASE DE DONNÃ‰ES",
-      settings: "PARAMÃˆTRES",
+      database: "BASE DE DONNÉES",
+      settings: "PARAMÈTRES",
       pricing: "ABONNEMENTS & TARIFS",
-      set: "SÃ©rie",
+      set: "Série",
       load: "Charge",
       reps: "Reps",
       rest: "Repos",
-      addSet: "+ AJOUTER SÃ‰RIE",
-      duplicateSet: "DUPLIQUER SÃ‰RIE",
-      deleteSet: "SUPPRIMER SÃ‰RIE",
+      addSet: "+ AJOUTER SÉRIE",
+      duplicateSet: "DUPLIQUER SÉRIE",
+      deleteSet: "SUPPRIMER SÉRIE",
       substitute: "REMPLACER",
       skip: "PASSER",
       bonusExercise: "+ EXERCICE BONUS",
-      finalizeWorkout: "TERMINER LA SÃ‰ANCE",
+      finalizeWorkout: "TERMINER LA SÉANCE",
       chatPlaceholder: "Posez une question au Coach IA...",
       send: "ENVOYER",
       clearChat: "EFFACER CHAT",
@@ -319,35 +319,35 @@ const I18nService = {
       free: "Gratuit",
       bronze: "Bronze",
       silver: "Argent",
-      gold: "Or Ã€ Vie",
+      gold: "Or À Vie",
       trial: "Essai 14 Jours",
       today: "Aujourd'hui",
       meals: "Repas",
       foods: "Aliments",
       calories: "Calories",
-      protein: "ProtÃ©ines",
+      protein: "Protéines",
       carbs: "Glucides",
       fats: "Lipides",
       timing: "Timing",
       dose: "Dose",
-      drug: "MÃ©dicament",
-      parameter: "ParamÃ¨tre",
+      drug: "Médicament",
+      parameter: "Paramètre",
       value: "Valeur",
-      range: "Valeurs de RÃ©fÃ©rence",
+      range: "Valeurs de Référence",
       date: "Date"
     },
     de: {
       appName: "GIAMMARIA SYSTEM",
       appTitle: "GIAMMARIA SYSTEM",
-      dashboard: "ÃœBERSICHT",
-      home: "ÃœBERSICHT",
+      dashboard: "ÜBERSICHT",
+      home: "ÜBERSICHT",
       activeSession: "Aktive Einheit",
       startWorkout: "TRAINING STARTEN",
       importProgram: "TRAININGSPLAN IMPORTIEREN",
       programsLibrary: "TRAININGSPLAN-BIBLIOTHEK",
       activeProgram: "Aktiver Trainingsplan",
       training: "TRAINING",
-      nutrition: "ERNÃ„HRUNG",
+      nutrition: "ERNÄHRUNG",
       supplementation: "SUPPLEMENTE",
       supplements: "SUPPLEMENTE",
       therapy: "MEDIKATION",
@@ -358,30 +358,30 @@ const I18nService = {
       coachAI: "COACH KI",
       database: "DATENBANK & ASSETS",
       settings: "EINSTELLUNGEN",
-      pricing: "ABONNEMENT & PLÃ„NE",
+      pricing: "ABONNEMENT & PLÄNE",
       set: "Satz",
       load: "Gewicht",
       reps: "Wdh",
       rest: "Pause",
-      addSet: "+ SATZ HINZUFÃœGEN",
+      addSet: "+ SATZ HINZUFÜGEN",
       duplicateSet: "SATZ DUPLIZIEREN",
       deleteSet: "SATZ ENTFERNEN",
       substitute: "AUSTAUSCHEN",
-      skip: "ÃœBERSPRINGEN",
-      bonusExercise: "+ ZUSATZÃœBUNG",
+      skip: "ÜBERSPRINGEN",
+      bonusExercise: "+ ZUSATZÜBUNG",
       finalizeWorkout: "TRAINING ABSCHLIESSEN",
       chatPlaceholder: "Frag Coach KI oder passe den Plan an...",
       send: "SENDEN",
-      clearChat: "CHAT LÃ–SCHEN",
+      clearChat: "CHAT LÖSCHEN",
       offlineCoach: "Coach KI offline.",
       save: "SPEICHERN",
       cancel: "ABBRECHEN",
-      confirm: "BESTÃ„TIGEN",
+      confirm: "BESTÄTIGEN",
       apply: "AKTIVIEREN",
-      delete: "LÃ–SCHEN",
+      delete: "LÖSCHEN",
       exportJson: "JSON EXPORTIEREN",
       importBackup: "BACKUP IMPORTIEREN",
-      exportBackup: "VOLLSTÃ„NDIGES BACKUP EXPORTIEREN",
+      exportBackup: "VOLLSTÄNDIGES BACKUP EXPORTIEREN",
       language: "SPRACHE",
       plan: "AKTIVER PLAN",
       free: "Kostenlos",
@@ -406,28 +406,28 @@ const I18nService = {
     },
     pt: {
       appName: "GIAMMARIA SYSTEM", dashboard: "PAINEL DO SISTEMA", home: "PAINEL DO SISTEMA",
-      training: "TREINO", nutrition: "NUTRIÃ‡ÃƒO", supplementation: "SUPLEMENTOS", therapy: "TERAPIA",
-      coachAI: "COACH IA", database: "BANCO DE DADOS", settings: "CONFIGURAÃ‡Ã•ES", importProgram: "IMPORTAR PROGRAMA"
+      training: "TREINO", nutrition: "NUTRIÇÃO", supplementation: "SUPLEMENTOS", therapy: "TERAPIA",
+      coachAI: "COACH IA", database: "BANCO DE DADOS", settings: "CONFIGURAÇÕES", importProgram: "IMPORTAR PROGRAMA"
     },
     ru: {
-      appName: "GIAMMARIA SYSTEM", dashboard: "ÐŸÐÐÐ•Ð›Ð¬ Ð¡Ð˜Ð¡Ð¢Ð•ÐœÐ«", home: "ÐŸÐÐÐ•Ð›Ð¬ Ð¡Ð˜Ð¡Ð¢Ð•ÐœÐ«",
-      training: "Ð¢Ð Ð•ÐÐ˜Ð ÐžÐ’ÐšÐ", nutrition: "ÐŸÐ˜Ð¢ÐÐÐ˜Ð•", supplementation: "Ð”ÐžÐ‘ÐÐ’ÐšÐ˜", therapy: "Ð¢Ð•Ð ÐÐŸÐ˜Ð¯",
-      coachAI: "COACH AI", database: "Ð‘ÐÐ—Ð Ð”ÐÐÐÐ«Ð¥", settings: "ÐÐÐ¡Ð¢Ð ÐžÐ™ÐšÐ˜", importProgram: "Ð˜ÐœÐŸÐžÐ Ð¢ ÐŸÐ ÐžÐ“Ð ÐÐœÐœÐ«"
+      appName: "GIAMMARIA SYSTEM", dashboard: "ПАНЕЛЬ СИСТЕМЫ", home: "ПАНЕЛЬ СИСТЕМЫ",
+      training: "ТРЕНИРОВКА", nutrition: "ПИТАНИЕ", supplementation: "ДОБАВКИ", therapy: "ТЕРАПИЯ",
+      coachAI: "COACH AI", database: "БАЗА ДАННЫХ", settings: "НАСТРОЙКИ", importProgram: "ИМПОРТ ПРОГРАММЫ"
     },
     zh: {
-      appName: "GIAMMARIA SYSTEM", dashboard: "ç³»ç»Ÿé¢æ¿", home: "ç³»ç»Ÿé¢æ¿",
-      training: "è®­ç»ƒ", nutrition: "è¥å…»", supplementation: "è¡¥å‰‚", therapy: "æ²»ç–—",
-      coachAI: "AI æ•™ç»ƒ", database: "æ•°æ®åº“", settings: "è®¾ç½®", importProgram: "å¯¼å…¥è®¡åˆ’"
+      appName: "GIAMMARIA SYSTEM", dashboard: "系统面板", home: "系统面板",
+      training: "训练", nutrition: "营养", supplementation: "补剂", therapy: "治疗",
+      coachAI: "AI 教练", database: "数据库", settings: "设置", importProgram: "导入计划"
     },
     ar: {
-      appName: "GIAMMARIA SYSTEM", dashboard: "Ù„ÙˆØ­Ø© Ø§Ù„Ù†Ø¸Ø§Ù…", home: "Ù„ÙˆØ­Ø© Ø§Ù„Ù†Ø¸Ø§Ù…",
-      training: "Ø§Ù„ØªØ¯Ø±ÙŠØ¨", nutrition: "Ø§Ù„ØªØºØ°ÙŠØ©", supplementation: "Ø§Ù„Ù…ÙƒÙ…Ù„Ø§Øª", therapy: "Ø§Ù„Ø¹Ù„Ø§Ø¬",
-      coachAI: "Ù…Ø¯Ø±Ø¨ AI", database: "Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª", settings: "Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª", importProgram: "Ø§Ø³ØªÙŠØ±Ø§Ø¯ Ø§Ù„Ø¨Ø±Ù†Ø§Ù…Ø¬"
+      appName: "GIAMMARIA SYSTEM", dashboard: "لوحة النظام", home: "لوحة النظام",
+      training: "التدريب", nutrition: "التغذية", supplementation: "المكملات", therapy: "العلاج",
+      coachAI: "مدرب AI", database: "قاعدة البيانات", settings: "الإعدادات", importProgram: "استيراد البرنامج"
     },
     hi: {
-      appName: "GIAMMARIA SYSTEM", dashboard: "à¤¸à¤¿à¤¸à¥à¤Ÿà¤® à¤¡à¥ˆà¤¶à¤¬à¥‹à¤°à¥à¤¡", home: "à¤¸à¤¿à¤¸à¥à¤Ÿà¤® à¤¡à¥ˆà¤¶à¤¬à¥‹à¤°à¥à¤¡",
-      training: "à¤ªà¥à¤°à¤¶à¤¿à¤•à¥à¤·à¤£", nutrition: "à¤ªà¥‹à¤·à¤£", supplementation: "à¤¸à¤ªà¥à¤²à¥€à¤®à¥‡à¤‚à¤Ÿ", therapy: "à¤¥à¥‡à¤°à¥‡à¤ªà¥€",
-      coachAI: "à¤•à¥‹à¤š AI", database: "à¤¡à¥‡à¤Ÿà¤¾à¤¬à¥‡à¤¸", settings: "à¤¸à¥‡à¤Ÿà¤¿à¤‚à¤—à¥à¤¸", importProgram: "à¤ªà¥à¤°à¥‹à¤—à¥à¤°à¤¾à¤® à¤†à¤¯à¤¾à¤¤"
+      appName: "GIAMMARIA SYSTEM", dashboard: "सिस्टम डैशबोर्ड", home: "सिस्टम डैशबोर्ड",
+      training: "प्रशिक्षण", nutrition: "पोषण", supplementation: "सप्लीमेंट", therapy: "थेरेपी",
+      coachAI: "कोच AI", database: "डेटाबेस", settings: "सेटिंग्स", importProgram: "प्रोग्राम आयात"
     }
   },
 
@@ -468,7 +468,7 @@ const I18nService = {
   },
 
   getAvailableLanguages() {
-    return this.supportedLangs.map(code => this.LANG_META[code] || { code, name: code.toUpperCase(), flag: 'ðŸŒ' });
+    return this.supportedLangs.map(code => this.LANG_META[code] || { code, name: code.toUpperCase(), flag: '🌐' });
   },
 
   init() {
@@ -534,7 +534,7 @@ const SupplementDatabaseService = {
       examineEvidence: {
         grade: "A (Evidenza Forte)",
         primaryOutcomes: ["Massimizzazione MPS (Sintesi Proteica Muscolare)", "Leucina biodisponibile rapida"],
-        secondaryOutcomes: ["Supporto recupero muscolare", "SazietÃ  controllata"],
+        secondaryOutcomes: ["Supporto recupero muscolare", "Sazietà controllata"],
         recommendedDosing: "20-40g per porzione (contenente almeno 2.5-3g di leucina)",
         safetyNotes: "Altamente tollerabile; scegliere isolate per ridotto contenuto di lattosio."
       }
@@ -561,8 +561,8 @@ const SupplementDatabaseService = {
         grade: "A (Evidenza Forte)",
         primaryOutcomes: ["Aumento focus, prontezza e RPE ridotto", "Aumento forza isometrica e resistenza"],
         secondaryOutcomes: ["Mobilizzazione acidi grassi liberi"],
-        recommendedDosing: "3-6 mg/kg peso corporeo 45-60 min prima dell'attivitÃ ",
-        safetyNotes: "Evitare entro 6 ore dal sonno per preservare la qualitÃ  del sonno profondo."
+        recommendedDosing: "3-6 mg/kg peso corporeo 45-60 min prima dell'attività",
+        safetyNotes: "Evitare entro 6 ore dal sonno per preservare la qualità del sonno profondo."
       }
     },
     {
@@ -616,7 +616,7 @@ const DrugDatabaseService = {
   disclaimer: "DISCLAIMER MEDICO: Questa sezione ha scopo puramente di tracciamento personale. L'assunzione di qualsiasi farmaco o terapia deve avvenire sotto stretta supervisione del medico curante.",
   catalog: [
     { name: "Cardiaspirina", class: "Antiaggregante piastrinico", defaultDose: "100mg", timing: "Dopo pranzo", indications: "Prevenzione cardiovascolare" },
-    { name: "Metformina", class: "Biguanide / Antidiabetico", defaultDose: "500-1000mg", timing: "Ai pasti principali", indications: "SensibilitÃ  insulinica, controllo glicemico" },
+    { name: "Metformina", class: "Biguanide / Antidiabetico", defaultDose: "500-1000mg", timing: "Ai pasti principali", indications: "Sensibilità insulinica, controllo glicemico" },
     { name: "Eutirox (Levotiroxina)", class: "Ormone tiroideo T4", defaultDose: "25-100mcg", timing: "Mattina a digiuno (20-30 min prima di colazione)", indications: "Ipotiroidismo" },
     { name: "Telmisartan", class: "Sartano / Antiipertensivo (ARB)", defaultDose: "20-40mg", timing: "Mattina", indications: "Controllo pressione arteriosa, protezione renale" },
     { name: "Nebivololo", class: "Beta-bloccante selettivo (b1)", defaultDose: "2.5-5mg", timing: "Mattina", indications: "Frequenza cardiaca a riposo, controllo pressorio" },
@@ -717,7 +717,7 @@ const CoachAIService = {
 
     // Offline smart fallback engine
     const lower = queryText.toLowerCase();
-    let replyText = "Nota: Coach AI opera in modalitÃ  offline/non configurata. ";
+    let replyText = "Nota: Coach AI opera in modalità offline/non configurata. ";
     if (lower.includes("sostituisci") || lower.includes("cambia") || lower.includes("modifica") || lower.includes("panca")) {
       const proposal = {
         id: "prop_" + Date.now(),
@@ -735,7 +735,7 @@ const CoachAIService = {
       replyText += "Ti propongo di sostituire l'esercizio con Manubri Inclinata. Puoi confermare la modifica con 1 clic.";
       return { ok: true, reply: replyText, text: replyText, proposal };
     }
-    replyText += "Ho ricevuto la tua richiesta. Quando la connessione sarÃ  attiva, potrÃ² formulare proposte di periodizzazione avanzate su tutto il mesociclo.";
+    replyText += "Ho ricevuto la tua richiesta. Quando la connessione sarà attiva, potrò formulare proposte di periodizzazione avanzate su tutto il mesociclo.";
     return { ok: true, reply: replyText, text: replyText, proposal: null };
   },
 

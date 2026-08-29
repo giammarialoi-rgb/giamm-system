@@ -103,8 +103,9 @@ function updateReviewExerciseField(weekIdx, sessionIdx, exerciseIdx, field, valu
         ex.sets.forEach(s => s.target_reps = value);
       }
     } else if (field === 'rir') {
-      ex.rir_target = value;
-      ex.rpe_target = typeof rirToRpe === "function" ? rirToRpe(value) : (10 - value);
+      const num = parseFloat(value);
+      ex.rir_target = isNaN(num) ? value : num;
+      ex.rpe_target = typeof rirToRpe === "function" ? rirToRpe(ex.rir_target) : (10 - Number(ex.rir_target || 0));
       if (Array.isArray(ex.sets)) {
         ex.sets.forEach(s => {
           s.target_rir = value;

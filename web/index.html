@@ -236,12 +236,22 @@ select, input {
 
 #timer-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.92); display: none;
-  flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.35); display: none;
+  flex-direction: column; align-items: center; justify-content: flex-start;
+  padding-top: 12vh;
   z-index: 3500;
+  pointer-events: none;
+}
+#timer-overlay .timer-panel {
+  pointer-events: auto;
+  background: rgba(0,0,0,0.92);
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 24px 32px;
+  text-align: center;
 }
 #timer-display { font-size: 80px; font-weight: 900; color: var(--gold); margin-bottom: 20px; }
-.timer-btn { padding: 15px 40px; border-radius: 30px; font-weight: 800; border: none; font-size: 18px; }
+.timer-btn { padding: 15px 40px; border-radius: 30px; font-weight: 800; border: none; font-size: 18px; cursor: pointer; }
 
 .load-toggle {
   background: #111; border: 1px solid #333; color: #777;
@@ -849,8 +859,10 @@ select, input {
 
 <!-- Timer Overlay -->
 <div id="timer-overlay">
-  <div id="timer-display">00:00</div>
-  <button class="timer-btn btn-primary" onclick="stopTimer()">CHIUDI</button>
+  <div class="timer-panel">
+    <div id="timer-display">00:00</div>
+    <button class="timer-btn btn-primary" onclick="stopTimer()">CHIUDI</button>
+  </div>
 </div>
 
 <!-- Modal Salto Esercizio -->
@@ -1009,7 +1021,7 @@ select, input {
       // ====================================================
       const CONFIG = {
         appVersion: "2.5.0",
-        build: "MASTER-TASK-32",
+        build: "MASTER-TASK-33",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "mock-client-id.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -1101,15 +1113,18 @@ var STORES = {
 /**
  * Deterministic JSON Serializer (Key sorting + deterministic whitespace)
  */
-function deterministicSerialize(obj) {
+function deterministicSerialize(obj, seen) {
   if (obj === null || typeof obj !== 'object') {
     return JSON.stringify(obj);
   }
+  const seenSet = seen || new WeakSet();
+  if (seenSet.has(obj)) return '"[Circular]"';
+  seenSet.add(obj);
   if (Array.isArray(obj)) {
-    return '[' + obj.map(item => deterministicSerialize(item)).join(',') + ']';
+    return '[' + obj.map(item => deterministicSerialize(item, seenSet)).join(',') + ']';
   }
   const keys = Object.keys(obj).sort();
-  return '{' + keys.map(k => JSON.stringify(k) + ':' + deterministicSerialize(obj[k])).join(',') + '}';
+  return '{' + keys.map(k => JSON.stringify(k) + ':' + deterministicSerialize(obj[k], seenSet)).join(',') + '}';
 }
 
 /**
@@ -1126,7 +1141,16 @@ function deepEqual(a, b) {
  */
 function getDeterministicFingerprint(obj) {
   if (obj === undefined || obj === null) return '0000000000000000';
-  const str = typeof obj === 'string' ? obj : deterministicSerialize(obj);
+  let str;
+  if (typeof obj === 'string') {
+    str = obj;
+  } else {
+    try {
+      str = deterministicSerialize(JSON.parse(JSON.stringify(obj)));
+    } catch (_) {
+      str = deterministicSerialize(obj);
+    }
+  }
   let h1 = 0xdeadbeef;
   let h2 = 0x41c6ce57;
   for (let i = 0; i < str.length; i++) {
@@ -3441,7 +3465,10 @@ function parseStructuredWorkbook(workbook, filename = "documento.xlsx") {
 // ====================================================
 
 function parseCanonicalProgramFromText(rawText, filename = "documento_importato") {
-  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const normalizedText = String(rawText || "")
+    .replace(/\s+(?=(?:settimana|week)\s*\d+)/gi, "\n")
+    .replace(/\s+(?=(?:sessione|seduta|giorno|day)\s*\d+)/gi, "\n");
+  const lines = normalizedText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const warnings = [];
   const errors = [];
 
@@ -3541,7 +3568,8 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
       flushCurrentSession();
       flushCurrentMeal();
       currentSection = "training";
-      continue;
+      const hasInlineWork = /\d+\s*(?:x|X|\*|\u00d7)\s*\d+/.test(line) || /\b(sessione|seduta|giorno|settimana|week)\b/i.test(line);
+      if (!hasInlineWork) continue;
     }
 
     if (currentSection === "nutrition") {
@@ -3622,21 +3650,14 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
         continue;
       }
 
-      const dayMatch = line.match(/^(?:giorno|day|seduta|sessione)\s*[:=\-]?\s*([0-9a-zA-Z\s\-_]+)/i);
-      if (dayMatch && !line.includes("x") && !line.includes("X") && !line.includes("kg")) {
-        flushCurrentSession();
-        currentSessionName = line.trim();
-        continue;
-      }
-
-      const hasSets = /\d+\s*(?:x|X|\*|\u00d7)\s*\d+|\d+\s*serie/i.test(line);
-      const isKnownEx = EXERCISE_DICTIONARY.some(e => e.keywords.some(k => line.toLowerCase().includes(k)));
-
-      if (hasSets || isKnownEx) {
-        const cleanExName = line.replace(/\d+\s*(?:x|X|\*|\u00d7)\s*[\S]+.*$/i, "").trim() || line;
+      function pushTrainingExercise(exLine) {
+        const stripped = String(exLine || "")
+          .replace(/^(?:giorno|day|seduta|sessione)\s*[:=\-]?\s*\d+\s*[-–:]\s*/i, "")
+          .trim();
+        const src = stripped || exLine;
+        const cleanExName = src.replace(/\d+\s*(?:x|X|\*|\u00d7)\s*[\S]+.*$/i, "").trim() || src;
         const normalizedEx = normalizeExerciseName(cleanExName);
-        const details = parseExerciseDetails(line);
-
+        const details = parseExerciseDetails(src);
         currentExercises.push({
           id: `e_${currentWeekNum}_${currentSessionNum}_${currentExercises.length + 1}`,
           name: normalizedEx.name_normalized,
@@ -3663,6 +3684,37 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
             rest_seconds: details.rest_seconds
           }))
         });
+      }
+
+      function isExerciseLike(part) {
+        return /\d+\s*(?:x|X|\*|\u00d7)\s*\d+|\d+\s*serie/i.test(part)
+          || EXERCISE_DICTIONARY.some(e => e.keywords.some(k => part.toLowerCase().includes(k)));
+      }
+
+      const sessionLead = line.match(/^(?:giorno|day|seduta|sessione)\s*[:=\-]?\s*[0-9a-zA-Z\s]*?(?:\s*[-–:]\s+|\s+)(?=[A-Za-zÀ-ÿ])/i);
+      let workLine = line;
+      if (sessionLead && isExerciseLike(line)) {
+        flushCurrentSession();
+        currentSessionName = sessionLead[0].replace(/[-–:\s]+$/, "").trim() || line.trim();
+        workLine = line.slice(sessionLead[0].length).trim();
+      }
+
+      const chunks = workLine.split(/\s*[,;]\s+(?=[A-Za-zÀ-ÿ])/).map(s => s.trim()).filter(Boolean);
+      const exerciseChunks = chunks.filter(isExerciseLike);
+      if (exerciseChunks.length >= 1 && (exerciseChunks.length > 1 || sessionLead)) {
+        exerciseChunks.forEach(pushTrainingExercise);
+        continue;
+      }
+
+      const dayMatch = line.match(/^(?:giorno|day|seduta|sessione)\s*[:=\-]?\s*([0-9a-zA-Z\s\-_]+)/i);
+      if (dayMatch && !line.includes("x") && !line.includes("X") && !line.includes("kg")) {
+        flushCurrentSession();
+        currentSessionName = line.trim();
+        continue;
+      }
+
+      if (isExerciseLike(line)) {
+        pushTrainingExercise(line);
       }
     }
   }
@@ -3857,13 +3909,155 @@ function validateCanonicalProgram(candidate) {
 }
 
 // ====================================================
-// 10. DOCUMENT EXTRACTION ROUTER
+// 10. DOCUMENT EXTRACTION ROUTER (PDF / DOCX / DOC / text)
+// Browser-safe extractors — no Node fs/mammoth required at call time.
 // ====================================================
+
+function toU8(buffer) {
+  if (!buffer) return new Uint8Array();
+  if (buffer instanceof Uint8Array) return buffer;
+  if (typeof Buffer !== "undefined" && Buffer.isBuffer && Buffer.isBuffer(buffer)) {
+    return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  }
+  if (buffer instanceof ArrayBuffer) return new Uint8Array(buffer);
+  if (ArrayBuffer.isView(buffer)) return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  return new Uint8Array(buffer);
+}
+
+function latin1FromBytes(u8) {
+  let s = "";
+  const step = 0x8000;
+  for (let i = 0; i < u8.length; i += step) {
+    const end = Math.min(i + step, u8.length);
+    s += String.fromCharCode.apply(null, u8.subarray(i, end));
+  }
+  return s;
+}
+
+function unescapePdfLiteral(s) {
+  return String(s || "")
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\\(/g, "(")
+    .replace(/\\\)/g, ")")
+    .replace(/\\\\/g, "\\")
+    .replace(/\\([0-7]{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)));
+}
+
+function extractPdfPlainText(buffer) {
+  const u8 = toU8(buffer);
+  const raw = latin1FromBytes(u8);
+  const parts = [];
+  const tjRe = /\(((?:\\.|[^\\)])*)\)\s*Tj/g;
+  let m;
+  while ((m = tjRe.exec(raw))) parts.push(unescapePdfLiteral(m[1]));
+  const tjArrayRe = /\[([\s\S]*?)\]\s*TJ/g;
+  while ((m = tjArrayRe.exec(raw))) {
+    const inner = m[1];
+    const strRe = /\(((?:\\.|[^\\)])*)\)/g;
+    let sm;
+    while ((sm = strRe.exec(inner))) parts.push(unescapePdfLiteral(sm[1]));
+  }
+  let text = parts.join(" ").replace(/[ \t]+/g, " ").replace(/\s+\n/g, "\n").trim();
+  if (text.length < 24) {
+    const runs = raw.match(/[\x20-\x7E\u00A0-\u00FF]{8,}/g) || [];
+    text = runs
+      .filter((r) => /[A-Za-zÀ-ÿ]{4,}/.test(r) && !/^%PDF/.test(r) && !/\/(Type|Font|Length|Filter|Root|Pages|Resources)\b/.test(r) && !/\b(endobj|endstream|xref|startxref)\b/.test(r))
+      .join("\n")
+      .replace(/[ \t]+/g, " ")
+      .trim();
+  }
+  return text;
+}
+
+function zipReadU16(u8, off) {
+  return u8[off] | (u8[off + 1] << 8);
+}
+function zipReadU32(u8, off) {
+  return (u8[off] | (u8[off + 1] << 8) | (u8[off + 2] << 16) | (u8[off + 3] << 24)) >>> 0;
+}
+
+async function inflateRawBytes(u8) {
+  if (typeof DecompressionStream !== "undefined") {
+    const ds = new DecompressionStream("deflate-raw");
+    const ab = await new Response(new Blob([u8]).stream().pipeThrough(ds)).arrayBuffer();
+    return new Uint8Array(ab);
+  }
+  const zlibMod = await import("node:zlib");
+  const inflated = zlibMod.inflateRawSync(typeof Buffer !== "undefined" ? Buffer.from(u8) : u8);
+  return new Uint8Array(inflated.buffer, inflated.byteOffset, inflated.byteLength);
+}
+
+function xmlToPlainText(xmlStr) {
+  return String(xmlStr || "")
+    .replace(/<\/w:p>/g, "\n")
+    .replace(/<w:br\b[^>]*\/?>/g, "\n")
+    .replace(/<w:tab\b[^>]*\/?>/g, "\t")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+async function extractDocxPlainText(buffer) {
+  const u8 = toU8(buffer);
+  for (let i = 0; i < u8.length - 30; i++) {
+    if (u8[i] !== 0x50 || u8[i + 1] !== 0x4b || u8[i + 2] !== 0x03 || u8[i + 3] !== 0x04) continue;
+    const flags = zipReadU16(u8, i + 6);
+    const method = zipReadU16(u8, i + 8);
+    let compSize = zipReadU32(u8, i + 18);
+    const nameLen = zipReadU16(u8, i + 26);
+    const extraLen = zipReadU16(u8, i + 28);
+    const nameStart = i + 30;
+    if (nameStart + nameLen > u8.length) continue;
+    const name = latin1FromBytes(u8.subarray(nameStart, nameStart + nameLen)).replace(/\\/g, "/");
+    const dataStart = nameStart + nameLen + extraLen;
+    if (!/word\/document\.xml$/i.test(name)) continue;
+    if ((flags & 8) && !compSize) continue;
+    if (dataStart + compSize > u8.length) continue;
+    const payload = u8.subarray(dataStart, dataStart + compSize);
+    let xmlBytes = payload;
+    if (method === 8) xmlBytes = await inflateRawBytes(payload);
+    else if (method !== 0) continue;
+    const xmlStr = new TextDecoder("utf-8").decode(xmlBytes);
+    return xmlToPlainText(xmlStr);
+  }
+  return "";
+}
+
+function extractDocBinaryText(buffer) {
+  const u8 = toU8(buffer);
+  const lines = [];
+  let cur = "";
+  const push = () => {
+    const t = cur.replace(/\s+/g, " ").trim();
+    if (t.length > 2 && /[A-Za-zÀ-ÿ]/.test(t)) lines.push(t);
+    cur = "";
+  };
+  for (let i = 0; i + 1 < u8.length; i += 2) {
+    const c = u8[i] | (u8[i + 1] << 8);
+    if (c === 13 || c === 10) push();
+    else if (c >= 32 && c < 127) cur += String.fromCharCode(c);
+    else if (c >= 0x00a0 && c <= 0x017f) cur += String.fromCharCode(c);
+    else if (cur) push();
+  }
+  push();
+  if (lines.length >= 2) return lines.join("\n");
+  // ASCII fallback for non UTF-16 DOC-like buffers
+  const ascii = latin1FromBytes(u8);
+  const runs = ascii.match(/[\x20-\x7E]{6,}/g) || [];
+  return runs.filter((r) => /[A-Za-zÀ-ÿ]{4,}/.test(r)).join("\n");
+}
 
 async function extractDocumentContent({ filename, mimeType, buffer }) {
   const ext = getExtName(filename || "");
+  const mime = String(mimeType || "");
 
-  if (ext === ".xlsx" || ext === ".xls" || (mimeType && mimeType.includes("spreadsheet"))) {
+  if (ext === ".xlsx" || ext === ".xls" || mime.includes("spreadsheet") || mime.includes("excel")) {
     const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true, cellNF: true, cellFormula: true });
     const result = parseStructuredWorkbook(workbook, filename);
     return {
@@ -3874,29 +4068,61 @@ async function extractDocumentContent({ filename, mimeType, buffer }) {
       warnings: result.warnings,
       errors: result.errors
     };
-  } else if (ext === ".docx" || (mimeType && mimeType.includes("wordprocessingml"))) {
-    const extracted = await mammoth.extractRawText({ buffer });
-    const rawText = extracted.value || "";
-    const result = parseCanonicalProgramFromText(rawText, filename);
-    return { parser: "mammoth_docx", ext, ...result };
-  } else if (ext === ".doc" || (mimeType && mimeType.includes("msword"))) {
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "doc-parse-"));
-    const tempPath = path.join(tempDir, "temp.doc");
-    try {
-      await fs.writeFile(tempPath, buffer);
-      const extractor = new WordExtractor();
-      const doc = await extractor.extract(tempPath);
-      const rawText = [doc.getBody(), doc.getHeaders(), doc.getFootnotes()].filter(Boolean).join("\n\n");
-      const result = parseCanonicalProgramFromText(rawText, filename);
-      return { parser: "word_extractor_doc", ext, ...result };
-    } finally {
-      await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
-    }
-  } else {
-    const rawText = buffer.toString("utf-8");
-    const result = parseCanonicalProgramFromText(rawText, filename);
-    return { parser: "raw_text_fallback", ext, ...result };
   }
+
+  if (ext === ".pdf" || mime.includes("pdf")) {
+    const rawText = extractPdfPlainText(buffer);
+    const result = parseCanonicalProgramFromText(rawText, filename);
+    return { parser: "pdf_text", ext, rawText, ...result };
+  }
+
+  if (ext === ".docx" || mime.includes("wordprocessingml")) {
+    let rawText = "";
+    let parser = "docx_zip_xml";
+    try {
+      if (typeof mammoth !== "undefined" && mammoth && typeof mammoth.extractRawText === "function") {
+        const extracted = await mammoth.extractRawText({ buffer });
+        rawText = extracted.value || "";
+        parser = "mammoth_docx";
+      }
+    } catch (_) {}
+    if (!rawText || rawText.trim().length < 8) {
+      rawText = await extractDocxPlainText(buffer);
+      parser = "docx_zip_xml";
+    }
+    const result = parseCanonicalProgramFromText(rawText, filename);
+    return { parser, ext, rawText, ...result };
+  }
+
+  if (ext === ".doc" || (mime.includes("msword") && !mime.includes("wordprocessingml"))) {
+    let rawText = "";
+    let parser = "doc_binary_text";
+    try {
+      if (typeof fs !== "undefined" && fs && typeof WordExtractor === "function") {
+        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "doc-parse-"));
+        const tempPath = path.join(tempDir, "temp.doc");
+        try {
+          await fs.writeFile(tempPath, buffer);
+          const extractor = new WordExtractor();
+          const doc = await extractor.extract(tempPath);
+          rawText = [doc.getBody(), doc.getHeaders(), doc.getFootnotes()].filter(Boolean).join("\n\n");
+          parser = "word_extractor_doc";
+        } finally {
+          await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+        }
+      }
+    } catch (_) {}
+    if (!rawText || rawText.trim().length < 8) {
+      rawText = extractDocBinaryText(buffer);
+      parser = "doc_binary_text";
+    }
+    const result = parseCanonicalProgramFromText(rawText, filename);
+    return { parser, ext, rawText, ...result };
+  }
+
+  const rawText = typeof buffer?.toString === "function" ? buffer.toString("utf-8") : new TextDecoder("utf-8").decode(toU8(buffer));
+  const result = parseCanonicalProgramFromText(rawText, filename);
+  return { parser: "raw_text_fallback", ext, rawText, ...result };
 }
 
 function parseUniversalFile(buffer, filename) {
@@ -3905,7 +4131,14 @@ function parseUniversalFile(buffer, filename) {
     const wb = XLSX.read(buffer, { type: "buffer" });
     return parseStructuredWorkbook(wb, filename);
   }
-  return parseCanonicalProgramFromText(buffer.toString("utf-8"), filename);
+  if (ext === ".pdf") {
+    return parseCanonicalProgramFromText(extractPdfPlainText(buffer), filename);
+  }
+  if (ext === ".doc") {
+    return parseCanonicalProgramFromText(extractDocBinaryText(buffer), filename);
+  }
+  const raw = typeof buffer?.toString === "function" ? buffer.toString("utf-8") : new TextDecoder("utf-8").decode(toU8(buffer));
+  return parseCanonicalProgramFromText(raw, filename);
 }
 
 function buildCanonicalProgram(parsed) { if (!parsed) return null; return parsed.canonicalProgram || parsed.program || parsed; }
@@ -3927,7 +4160,10 @@ function buildCanonicalProgram(parsed) { if (!parsed) return null; return parsed
   parseCanonicalProgramFromText,
   validateCanonicalProgram,
   extractDocumentContent,
-  parseUniversalFile
+  parseUniversalFile,
+  extractPdfPlainText,
+  extractDocxPlainText,
+  extractDocBinaryText
 };
 
 
@@ -4001,8 +4237,9 @@ function updateReviewExerciseField(weekIdx, sessionIdx, exerciseIdx, field, valu
         ex.sets.forEach(s => s.target_reps = value);
       }
     } else if (field === 'rir') {
-      ex.rir_target = value;
-      ex.rpe_target = typeof rirToRpe === "function" ? rirToRpe(value) : (10 - value);
+      const num = parseFloat(value);
+      ex.rir_target = isNaN(num) ? value : num;
+      ex.rpe_target = typeof rirToRpe === "function" ? rirToRpe(ex.rir_target) : (10 - Number(ex.rir_target || 0));
       if (Array.isArray(ex.sets)) {
         ex.sets.forEach(s => {
           s.target_rir = value;
@@ -5018,7 +5255,7 @@ const CoachAIService = {
 
   async sendChatMessage(queryText, currentProgram = null) {
     if (!queryText || !queryText.trim()) return { ok: true, reply: "Domanda vuota.", text: "Domanda vuota.", proposal: null };
-    
+
     // Offline smart fallback engine
     const lower = queryText.toLowerCase();
     let replyText = "Nota: Coach AI opera in modalità offline/non configurata. ";
@@ -5945,6 +6182,9 @@ async function processUniversalFile(source, actionIntent = 'IMPORT') {
 
     const isExcel = /\.(xlsx|xls)$/i.test(name) || (mime && (mime.includes('spreadsheet') || mime.includes('excel')));
     const isJson = /\.json$/i.test(name) || (mime && mime.includes('json'));
+    const isPdf = /\.pdf$/i.test(name) || (mime && mime.includes('pdf'));
+    const isDocx = /\.docx$/i.test(name) || (mime && mime.includes('wordprocessingml'));
+    const isDoc = (/\.doc$/i.test(name) && !/\.docx$/i.test(name)) || (mime && mime.includes('msword') && !mime.includes('wordprocessingml'));
 
     let parsed = null;
     if (isExcel) {
@@ -5963,8 +6203,19 @@ async function processUniversalFile(source, actionIntent = 'IMPORT') {
       } catch (e) {
         parsed = parseCanonicalProgramFromText(text, name);
       }
+    } else if (isPdf) {
+      const pdfText = (typeof extractPdfPlainText === 'function') ? extractPdfPlainText(bytes) : text;
+      parsed = parseCanonicalProgramFromText(pdfText || text, name);
+    } else if (isDocx) {
+      let docxText = '';
+      if (typeof extractDocxPlainText === 'function') {
+        docxText = await extractDocxPlainText(bytes);
+      }
+      parsed = parseCanonicalProgramFromText(docxText || text, name);
+    } else if (isDoc) {
+      const docText = (typeof extractDocBinaryText === 'function') ? extractDocBinaryText(bytes) : text;
+      parsed = parseCanonicalProgramFromText(docText || text, name);
     } else {
-      // CSV, TXT, PDF text, DOC text
       parsed = parseCanonicalProgramFromText(text, name);
     }
 
@@ -6733,11 +6984,35 @@ async function requestProgramReprogram(kind, desired, goal, secondary, constrain
   render();
 }
 
+function persistActiveProgramStructure() {
+  try {
+    if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks)) return;
+    if (store.activeProgramId && !DATA.id) DATA.id = store.activeProgramId;
+    if (DATA.id && !store.activeProgramId) store.activeProgramId = DATA.id;
+    DATA.duration_weeks = DATA.weeks.length;
+    store.activeProgram = DATA;
+    persist();
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
+      GiammariaPersistence.saveProgram(DATA, true).catch(function (err) {
+        console.warn('[PERSIST PROGRAM]', err);
+      });
+    }
+  } catch (e) {
+    console.warn('[PERSIST PROGRAM]', e);
+  }
+}
+
 function resizeActiveProgram(desired){
+  if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return false;
   const current = DATA.weeks.length;
-  if(desired === current) return true;
+  if(desired === current) {
+    DATA.duration_weeks = desired;
+    persistActiveProgramStructure();
+    return true;
+  }
   if(desired < current && !confirm(`Ridurre il programma da ${current} a ${desired} settimane? Le settimane rimosse non saranno più disponibili.`)) return false;
   if(desired > current && !confirm(`Estendere il programma da ${current} a ${desired} settimane replicando la struttura dell'ultima settimana?`)) return false;
+  const sessionCountBefore = DATA.weeks.reduce((n, w) => n + ((w.sessions || w.days || []).length), 0);
   if(desired < current) DATA.weeks = DATA.weeks.slice(0, desired);
   else {
     const template = DATA.weeks[current - 1];
@@ -6745,13 +7020,21 @@ function resizeActiveProgram(desired){
       const copy = JSON.parse(JSON.stringify(template));
       copy.week = DATA.weeks.length + 1;
       copy.weekNumber = DATA.weeks.length + 1;
+      copy.week_number = DATA.weeks.length + 1;
       copy.label = `${template.label || 'Settimana'} (estesa)`;
       DATA.weeks.push(copy);
     }
   }
+  DATA.duration_weeks = desired;
+  store.prefs.duration = desired;
+  store.prefs.durationUserSet = true;
   store.activeProgram = DATA;
-  persist();
+  persistActiveProgramStructure();
   if(currentWeek > desired) { currentWeek = desired; currentDay = 0; }
+  const sessionCountAfter = DATA.weeks.reduce((n, w) => n + ((w.sessions || w.days || []).length), 0);
+  if (desired >= current && sessionCountAfter < sessionCountBefore) {
+    console.warn('[RESIZE] session count dropped unexpectedly', sessionCountBefore, sessionCountAfter);
+  }
   return true;
 }
 
@@ -6830,22 +7113,35 @@ function importProgramJson(program, documentName) {
 // Timer Logic
 let timerInterval = null;
 function startTimer(secondsText) {
+  const overlay = $('timer-overlay');
+  const display = $('timer-display');
+  if (!overlay || !display) {
+    console.warn('[TIMER] overlay missing — UI not blocked');
+    return;
+  }
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
   const text = String(secondsText || '').toLowerCase().replace('–', '-');
   const parts = text.match(/\d+(?:\.\d+)?/g) || [];
   let sec = 0;
   if(text.includes('min')) sec = parseFloat(parts[parts.length - 1] || 0) * 60;
   else if(text.includes('s')) sec = parseFloat(parts[parts.length - 1] || 0);
+  else if(parts.length) sec = parseFloat(parts[parts.length - 1] || 0);
   if(isNaN(sec) || sec <= 0) sec = 90;
 
-  $('timer-overlay').style.display = 'flex';
-  const display = $('timer-display');
+  display.style.color = 'var(--gold)';
+  overlay.style.display = 'flex';
   const update = () => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
+    const m = Math.floor(Math.max(0, sec) / 60);
+    const s = Math.max(0, sec) % 60;
     display.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     if(sec <= 0) {
       clearInterval(timerInterval);
+      timerInterval = null;
       display.style.color = 'var(--accent-red)';
+      return;
     }
     sec--;
   };
@@ -6853,9 +7149,14 @@ function startTimer(secondsText) {
   timerInterval = setInterval(update, 1000);
 }
 function stopTimer() {
-  clearInterval(timerInterval);
-  $('timer-overlay').style.display = 'none';
-  $('timer-display').style.color = 'var(--gold)';
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  const overlay = $('timer-overlay');
+  const display = $('timer-display');
+  if (overlay) overlay.style.display = 'none';
+  if (display) display.style.color = 'var(--gold)';
 }
 
 // Skip Modal Logic
@@ -8999,7 +9300,7 @@ async function confirmImportAndActivate() {
 
   if (pState.isConfirming) return;
   pState.isConfirming = true;
-  if (typeof render === 'function') render();
+  if (currentView === 'import' && typeof render === 'function') render();
 
   const prog = JSON.parse(JSON.stringify(pState.canonicalProgram));
   try {
@@ -11229,6 +11530,10 @@ window.safeDisplayValue = safeDisplayValue;
 // Parser and Persistence Function Bindings
 window.parseStructuredWorkbook = typeof parseStructuredWorkbook !== 'undefined' ? parseStructuredWorkbook : null;
 window.buildCanonicalProgram = typeof buildCanonicalProgram !== 'undefined' ? buildCanonicalProgram : null;
+window.extractPdfPlainText = typeof extractPdfPlainText !== 'undefined' ? extractPdfPlainText : null;
+window.extractDocxPlainText = typeof extractDocxPlainText !== 'undefined' ? extractDocxPlainText : null;
+window.extractDocBinaryText = typeof extractDocBinaryText !== 'undefined' ? extractDocBinaryText : null;
+window.persistActiveProgramStructure = typeof persistActiveProgramStructure !== 'undefined' ? persistActiveProgramStructure : (() => {});
 window.normalizeProgram = typeof normalizeProgram !== 'undefined' ? normalizeProgram : null;
 window.validateCanonicalProgram = typeof validateCanonicalProgram !== 'undefined' ? validateCanonicalProgram : null;
 window.programImportState = typeof programImportState !== 'undefined' ? programImportState : { canonicalProgram: null, currentImportId: null, activeReviewTab: 'training' };

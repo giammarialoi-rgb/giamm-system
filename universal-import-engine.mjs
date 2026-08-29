@@ -1608,7 +1608,10 @@ export function parseStructuredWorkbook(workbook, filename = "documento.xlsx") {
 // ====================================================
 
 export function parseCanonicalProgramFromText(rawText, filename = "documento_importato") {
-  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const normalizedText = String(rawText || "")
+    .replace(/\s+(?=(?:settimana|week)\s*\d+)/gi, "\n")
+    .replace(/\s+(?=(?:sessione|seduta|giorno|day)\s*\d+)/gi, "\n");
+  const lines = normalizedText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const warnings = [];
   const errors = [];
 
@@ -1708,7 +1711,8 @@ export function parseCanonicalProgramFromText(rawText, filename = "documento_imp
       flushCurrentSession();
       flushCurrentMeal();
       currentSection = "training";
-      continue;
+      const hasInlineWork = /\d+\s*(?:x|X|\*|\u00d7)\s*\d+/.test(line) || /\b(sessione|seduta|giorno|settimana|week)\b/i.test(line);
+      if (!hasInlineWork) continue;
     }
 
     if (currentSection === "nutrition") {
@@ -1789,21 +1793,14 @@ export function parseCanonicalProgramFromText(rawText, filename = "documento_imp
         continue;
       }
 
-      const dayMatch = line.match(/^(?:giorno|day|seduta|sessione)\s*[:=\-]?\s*([0-9a-zA-Z\s\-_]+)/i);
-      if (dayMatch && !line.includes("x") && !line.includes("X") && !line.includes("kg")) {
-        flushCurrentSession();
-        currentSessionName = line.trim();
-        continue;
-      }
-
-      const hasSets = /\d+\s*(?:x|X|\*|\u00d7)\s*\d+|\d+\s*serie/i.test(line);
-      const isKnownEx = EXERCISE_DICTIONARY.some(e => e.keywords.some(k => line.toLowerCase().includes(k)));
-
-      if (hasSets || isKnownEx) {
-        const cleanExName = line.replace(/\d+\s*(?:x|X|\*|\u00d7)\s*[\S]+.*$/i, "").trim() || line;
+      function pushTrainingExercise(exLine) {
+        const stripped = String(exLine || "")
+          .replace(/^(?:giorno|day|seduta|sessione)\s*[:=\-]?\s*\d+\s*[-–:]\s*/i, "")
+          .trim();
+        const src = stripped || exLine;
+        const cleanExName = src.replace(/\d+\s*(?:x|X|\*|\u00d7)\s*[\S]+.*$/i, "").trim() || src;
         const normalizedEx = normalizeExerciseName(cleanExName);
-        const details = parseExerciseDetails(line);
-
+        const details = parseExerciseDetails(src);
         currentExercises.push({
           id: `e_${currentWeekNum}_${currentSessionNum}_${currentExercises.length + 1}`,
           name: normalizedEx.name_normalized,
@@ -1830,6 +1827,37 @@ export function parseCanonicalProgramFromText(rawText, filename = "documento_imp
             rest_seconds: details.rest_seconds
           }))
         });
+      }
+
+      function isExerciseLike(part) {
+        return /\d+\s*(?:x|X|\*|\u00d7)\s*\d+|\d+\s*serie/i.test(part)
+          || EXERCISE_DICTIONARY.some(e => e.keywords.some(k => part.toLowerCase().includes(k)));
+      }
+
+      const sessionLead = line.match(/^(?:giorno|day|seduta|sessione)\s*[:=\-]?\s*[0-9a-zA-Z\s]*?(?:\s*[-–:]\s+|\s+)(?=[A-Za-zÀ-ÿ])/i);
+      let workLine = line;
+      if (sessionLead && isExerciseLike(line)) {
+        flushCurrentSession();
+        currentSessionName = sessionLead[0].replace(/[-–:\s]+$/, "").trim() || line.trim();
+        workLine = line.slice(sessionLead[0].length).trim();
+      }
+
+      const chunks = workLine.split(/\s*[,;]\s+(?=[A-Za-zÀ-ÿ])/).map(s => s.trim()).filter(Boolean);
+      const exerciseChunks = chunks.filter(isExerciseLike);
+      if (exerciseChunks.length >= 1 && (exerciseChunks.length > 1 || sessionLead)) {
+        exerciseChunks.forEach(pushTrainingExercise);
+        continue;
+      }
+
+      const dayMatch = line.match(/^(?:giorno|day|seduta|sessione)\s*[:=\-]?\s*([0-9a-zA-Z\s\-_]+)/i);
+      if (dayMatch && !line.includes("x") && !line.includes("X") && !line.includes("kg")) {
+        flushCurrentSession();
+        currentSessionName = line.trim();
+        continue;
+      }
+
+      if (isExerciseLike(line)) {
+        pushTrainingExercise(line);
       }
     }
   }
@@ -2024,13 +2052,155 @@ export function validateCanonicalProgram(candidate) {
 }
 
 // ====================================================
-// 10. DOCUMENT EXTRACTION ROUTER
+// 10. DOCUMENT EXTRACTION ROUTER (PDF / DOCX / DOC / text)
+// Browser-safe extractors — no Node fs/mammoth required at call time.
 // ====================================================
+
+function toU8(buffer) {
+  if (!buffer) return new Uint8Array();
+  if (buffer instanceof Uint8Array) return buffer;
+  if (typeof Buffer !== "undefined" && Buffer.isBuffer && Buffer.isBuffer(buffer)) {
+    return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  }
+  if (buffer instanceof ArrayBuffer) return new Uint8Array(buffer);
+  if (ArrayBuffer.isView(buffer)) return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  return new Uint8Array(buffer);
+}
+
+function latin1FromBytes(u8) {
+  let s = "";
+  const step = 0x8000;
+  for (let i = 0; i < u8.length; i += step) {
+    const end = Math.min(i + step, u8.length);
+    s += String.fromCharCode.apply(null, u8.subarray(i, end));
+  }
+  return s;
+}
+
+function unescapePdfLiteral(s) {
+  return String(s || "")
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\\(/g, "(")
+    .replace(/\\\)/g, ")")
+    .replace(/\\\\/g, "\\")
+    .replace(/\\([0-7]{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)));
+}
+
+export function extractPdfPlainText(buffer) {
+  const u8 = toU8(buffer);
+  const raw = latin1FromBytes(u8);
+  const parts = [];
+  const tjRe = /\(((?:\\.|[^\\)])*)\)\s*Tj/g;
+  let m;
+  while ((m = tjRe.exec(raw))) parts.push(unescapePdfLiteral(m[1]));
+  const tjArrayRe = /\[([\s\S]*?)\]\s*TJ/g;
+  while ((m = tjArrayRe.exec(raw))) {
+    const inner = m[1];
+    const strRe = /\(((?:\\.|[^\\)])*)\)/g;
+    let sm;
+    while ((sm = strRe.exec(inner))) parts.push(unescapePdfLiteral(sm[1]));
+  }
+  let text = parts.join(" ").replace(/[ \t]+/g, " ").replace(/\s+\n/g, "\n").trim();
+  if (text.length < 24) {
+    const runs = raw.match(/[\x20-\x7E\u00A0-\u00FF]{8,}/g) || [];
+    text = runs
+      .filter((r) => /[A-Za-zÀ-ÿ]{4,}/.test(r) && !/^%PDF/.test(r) && !/\/(Type|Font|Length|Filter|Root|Pages|Resources)\b/.test(r) && !/\b(endobj|endstream|xref|startxref)\b/.test(r))
+      .join("\n")
+      .replace(/[ \t]+/g, " ")
+      .trim();
+  }
+  return text;
+}
+
+function zipReadU16(u8, off) {
+  return u8[off] | (u8[off + 1] << 8);
+}
+function zipReadU32(u8, off) {
+  return (u8[off] | (u8[off + 1] << 8) | (u8[off + 2] << 16) | (u8[off + 3] << 24)) >>> 0;
+}
+
+async function inflateRawBytes(u8) {
+  if (typeof DecompressionStream !== "undefined") {
+    const ds = new DecompressionStream("deflate-raw");
+    const ab = await new Response(new Blob([u8]).stream().pipeThrough(ds)).arrayBuffer();
+    return new Uint8Array(ab);
+  }
+  const zlibMod = await import("node:zlib");
+  const inflated = zlibMod.inflateRawSync(typeof Buffer !== "undefined" ? Buffer.from(u8) : u8);
+  return new Uint8Array(inflated.buffer, inflated.byteOffset, inflated.byteLength);
+}
+
+function xmlToPlainText(xmlStr) {
+  return String(xmlStr || "")
+    .replace(/<\/w:p>/g, "\n")
+    .replace(/<w:br\b[^>]*\/?>/g, "\n")
+    .replace(/<w:tab\b[^>]*\/?>/g, "\t")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export async function extractDocxPlainText(buffer) {
+  const u8 = toU8(buffer);
+  for (let i = 0; i < u8.length - 30; i++) {
+    if (u8[i] !== 0x50 || u8[i + 1] !== 0x4b || u8[i + 2] !== 0x03 || u8[i + 3] !== 0x04) continue;
+    const flags = zipReadU16(u8, i + 6);
+    const method = zipReadU16(u8, i + 8);
+    let compSize = zipReadU32(u8, i + 18);
+    const nameLen = zipReadU16(u8, i + 26);
+    const extraLen = zipReadU16(u8, i + 28);
+    const nameStart = i + 30;
+    if (nameStart + nameLen > u8.length) continue;
+    const name = latin1FromBytes(u8.subarray(nameStart, nameStart + nameLen)).replace(/\\/g, "/");
+    const dataStart = nameStart + nameLen + extraLen;
+    if (!/word\/document\.xml$/i.test(name)) continue;
+    if ((flags & 8) && !compSize) continue;
+    if (dataStart + compSize > u8.length) continue;
+    const payload = u8.subarray(dataStart, dataStart + compSize);
+    let xmlBytes = payload;
+    if (method === 8) xmlBytes = await inflateRawBytes(payload);
+    else if (method !== 0) continue;
+    const xmlStr = new TextDecoder("utf-8").decode(xmlBytes);
+    return xmlToPlainText(xmlStr);
+  }
+  return "";
+}
+
+export function extractDocBinaryText(buffer) {
+  const u8 = toU8(buffer);
+  const lines = [];
+  let cur = "";
+  const push = () => {
+    const t = cur.replace(/\s+/g, " ").trim();
+    if (t.length > 2 && /[A-Za-zÀ-ÿ]/.test(t)) lines.push(t);
+    cur = "";
+  };
+  for (let i = 0; i + 1 < u8.length; i += 2) {
+    const c = u8[i] | (u8[i + 1] << 8);
+    if (c === 13 || c === 10) push();
+    else if (c >= 32 && c < 127) cur += String.fromCharCode(c);
+    else if (c >= 0x00a0 && c <= 0x017f) cur += String.fromCharCode(c);
+    else if (cur) push();
+  }
+  push();
+  if (lines.length >= 2) return lines.join("\n");
+  // ASCII fallback for non UTF-16 DOC-like buffers
+  const ascii = latin1FromBytes(u8);
+  const runs = ascii.match(/[\x20-\x7E]{6,}/g) || [];
+  return runs.filter((r) => /[A-Za-zÀ-ÿ]{4,}/.test(r)).join("\n");
+}
 
 export async function extractDocumentContent({ filename, mimeType, buffer }) {
   const ext = getExtName(filename || "");
+  const mime = String(mimeType || "");
 
-  if (ext === ".xlsx" || ext === ".xls" || (mimeType && mimeType.includes("spreadsheet"))) {
+  if (ext === ".xlsx" || ext === ".xls" || mime.includes("spreadsheet") || mime.includes("excel")) {
     const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true, cellNF: true, cellFormula: true });
     const result = parseStructuredWorkbook(workbook, filename);
     return {
@@ -2041,29 +2211,61 @@ export async function extractDocumentContent({ filename, mimeType, buffer }) {
       warnings: result.warnings,
       errors: result.errors
     };
-  } else if (ext === ".docx" || (mimeType && mimeType.includes("wordprocessingml"))) {
-    const extracted = await mammoth.extractRawText({ buffer });
-    const rawText = extracted.value || "";
-    const result = parseCanonicalProgramFromText(rawText, filename);
-    return { parser: "mammoth_docx", ext, ...result };
-  } else if (ext === ".doc" || (mimeType && mimeType.includes("msword"))) {
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "doc-parse-"));
-    const tempPath = path.join(tempDir, "temp.doc");
-    try {
-      await fs.writeFile(tempPath, buffer);
-      const extractor = new WordExtractor();
-      const doc = await extractor.extract(tempPath);
-      const rawText = [doc.getBody(), doc.getHeaders(), doc.getFootnotes()].filter(Boolean).join("\n\n");
-      const result = parseCanonicalProgramFromText(rawText, filename);
-      return { parser: "word_extractor_doc", ext, ...result };
-    } finally {
-      await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
-    }
-  } else {
-    const rawText = buffer.toString("utf-8");
-    const result = parseCanonicalProgramFromText(rawText, filename);
-    return { parser: "raw_text_fallback", ext, ...result };
   }
+
+  if (ext === ".pdf" || mime.includes("pdf")) {
+    const rawText = extractPdfPlainText(buffer);
+    const result = parseCanonicalProgramFromText(rawText, filename);
+    return { parser: "pdf_text", ext, rawText, ...result };
+  }
+
+  if (ext === ".docx" || mime.includes("wordprocessingml")) {
+    let rawText = "";
+    let parser = "docx_zip_xml";
+    try {
+      if (typeof mammoth !== "undefined" && mammoth && typeof mammoth.extractRawText === "function") {
+        const extracted = await mammoth.extractRawText({ buffer });
+        rawText = extracted.value || "";
+        parser = "mammoth_docx";
+      }
+    } catch (_) {}
+    if (!rawText || rawText.trim().length < 8) {
+      rawText = await extractDocxPlainText(buffer);
+      parser = "docx_zip_xml";
+    }
+    const result = parseCanonicalProgramFromText(rawText, filename);
+    return { parser, ext, rawText, ...result };
+  }
+
+  if (ext === ".doc" || (mime.includes("msword") && !mime.includes("wordprocessingml"))) {
+    let rawText = "";
+    let parser = "doc_binary_text";
+    try {
+      if (typeof fs !== "undefined" && fs && typeof WordExtractor === "function") {
+        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "doc-parse-"));
+        const tempPath = path.join(tempDir, "temp.doc");
+        try {
+          await fs.writeFile(tempPath, buffer);
+          const extractor = new WordExtractor();
+          const doc = await extractor.extract(tempPath);
+          rawText = [doc.getBody(), doc.getHeaders(), doc.getFootnotes()].filter(Boolean).join("\n\n");
+          parser = "word_extractor_doc";
+        } finally {
+          await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+        }
+      }
+    } catch (_) {}
+    if (!rawText || rawText.trim().length < 8) {
+      rawText = extractDocBinaryText(buffer);
+      parser = "doc_binary_text";
+    }
+    const result = parseCanonicalProgramFromText(rawText, filename);
+    return { parser, ext, rawText, ...result };
+  }
+
+  const rawText = typeof buffer?.toString === "function" ? buffer.toString("utf-8") : new TextDecoder("utf-8").decode(toU8(buffer));
+  const result = parseCanonicalProgramFromText(rawText, filename);
+  return { parser: "raw_text_fallback", ext, rawText, ...result };
 }
 
 export function parseUniversalFile(buffer, filename) {
@@ -2072,7 +2274,14 @@ export function parseUniversalFile(buffer, filename) {
     const wb = XLSX.read(buffer, { type: "buffer" });
     return parseStructuredWorkbook(wb, filename);
   }
-  return parseCanonicalProgramFromText(buffer.toString("utf-8"), filename);
+  if (ext === ".pdf") {
+    return parseCanonicalProgramFromText(extractPdfPlainText(buffer), filename);
+  }
+  if (ext === ".doc") {
+    return parseCanonicalProgramFromText(extractDocBinaryText(buffer), filename);
+  }
+  const raw = typeof buffer?.toString === "function" ? buffer.toString("utf-8") : new TextDecoder("utf-8").decode(toU8(buffer));
+  return parseCanonicalProgramFromText(raw, filename);
 }
 
 export function buildCanonicalProgram(parsed) { if (!parsed) return null; return parsed.canonicalProgram || parsed.program || parsed; }
@@ -2094,5 +2303,8 @@ export default {
   parseCanonicalProgramFromText,
   validateCanonicalProgram,
   extractDocumentContent,
-  parseUniversalFile
+  parseUniversalFile,
+  extractPdfPlainText,
+  extractDocxPlainText,
+  extractDocBinaryText
 };

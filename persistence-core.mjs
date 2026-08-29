@@ -24,15 +24,18 @@ export const STORES = {
 /**
  * Deterministic JSON Serializer (Key sorting + deterministic whitespace)
  */
-export function deterministicSerialize(obj) {
+export function deterministicSerialize(obj, seen) {
   if (obj === null || typeof obj !== 'object') {
     return JSON.stringify(obj);
   }
+  const seenSet = seen || new WeakSet();
+  if (seenSet.has(obj)) return '"[Circular]"';
+  seenSet.add(obj);
   if (Array.isArray(obj)) {
-    return '[' + obj.map(item => deterministicSerialize(item)).join(',') + ']';
+    return '[' + obj.map(item => deterministicSerialize(item, seenSet)).join(',') + ']';
   }
   const keys = Object.keys(obj).sort();
-  return '{' + keys.map(k => JSON.stringify(k) + ':' + deterministicSerialize(obj[k])).join(',') + '}';
+  return '{' + keys.map(k => JSON.stringify(k) + ':' + deterministicSerialize(obj[k], seenSet)).join(',') + '}';
 }
 
 /**
@@ -49,7 +52,16 @@ export function deepEqual(a, b) {
  */
 export function getDeterministicFingerprint(obj) {
   if (obj === undefined || obj === null) return '0000000000000000';
-  const str = typeof obj === 'string' ? obj : deterministicSerialize(obj);
+  let str;
+  if (typeof obj === 'string') {
+    str = obj;
+  } else {
+    try {
+      str = deterministicSerialize(JSON.parse(JSON.stringify(obj)));
+    } catch (_) {
+      str = deterministicSerialize(obj);
+    }
+  }
   let h1 = 0xdeadbeef;
   let h2 = 0x41c6ce57;
   for (let i = 0; i < str.length; i++) {
