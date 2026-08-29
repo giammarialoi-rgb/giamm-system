@@ -217,7 +217,7 @@ async function main() {
   assert(fs.existsSync(WEB), 'web/index.html built');
   assert(fs.existsSync(ASSETS), 'assets/index.html exists');
   const built = fs.readFileSync(WEB, 'utf8');
-  assert(built.includes('MASTER-TASK-32') || built.includes('MASTER-TASK-31'), 'Build tag MASTER-TASK-32/31 (rebuild if missing)');
+  assert(built.includes('MASTER-TASK-33') || built.includes('MASTER-TASK-32') || built.includes('MASTER-TASK-31'), 'Build tag MASTER-TASK-33/32/31 (rebuild if missing)');
   if (fs.existsSync(WEB) && fs.existsSync(ASSETS)) {
     assert(md5(WEB) === md5(ASSETS), 'web/index.html MD5 == assets/index.html');
   }
