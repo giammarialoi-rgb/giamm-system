@@ -48,8 +48,10 @@ var programImportState = {
   errors: [],
   stats: {},
   activeReviewTab: 'training',
+  importDomain: 'all',
   isAnalyzing: false,
-  isConfirming: false
+  isConfirming: false,
+  filename: null
 };
 if (typeof window !== 'undefined') {
   if (!window.programImportState) window.programImportState = programImportState;
@@ -384,97 +386,6 @@ function cancelCurrentImportReview() {
   if (typeof currentView !== 'undefined' && currentView === 'import' && typeof render === 'function') render();
 }
 
-async function confirmImportAndActivate() {
-  const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : programImportState;
-  if (!pState || !pState.canonicalProgram) return;
-
-  if (pState.isConfirming) return;
-  pState.isConfirming = true;
-  if (typeof currentView !== 'undefined' && currentView === 'import' && typeof render === 'function') render();
-
-  const prog = JSON.parse(JSON.stringify(pState.canonicalProgram));
-  try {
-    // 1. Ensure unique programId
-    if (!prog.id) {
-      prog.id = 'prog_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-    }
-
-    // 2. Validate Program before activation
-    if (typeof validateCanonicalProgram === 'function') {
-      const val = validateCanonicalProgram(prog);
-      if (!val.valid) {
-        throw new Error('Dati corrotti rilevati: ' + val.errors.join(', '));
-      }
-    }
-
-    // 3. Normalize training program for runtime DATA locally (no server required)
-    const trainingPayload = prog.training || prog;
-    if (typeof normalizeProgram === 'function') {
-      DATA = normalizeProgram(trainingPayload);
-    } else {
-      DATA = trainingPayload;
-    }
-    if (!DATA.id) DATA.id = prog.id;
-    if (!DATA.title && prog.title) DATA.title = prog.title;
-
-    // 4. Save program to IndexedDB
-    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveActiveProgram) {
-      const res = await GiammariaPersistence.saveActiveProgram(prog);
-      console.log('[PERSISTENCE] Program saved to IndexedDB. ID: ' + res.id);
-      if (typeof store !== 'undefined') store.activeProgramId = res.id;
-    } else if (typeof store !== 'undefined') {
-      store.activeProgramId = prog.id;
-    }
-
-    // 5. Store multi-domain data in app store & DATA
-    if (prog.nutrition) {
-      if (typeof store !== 'undefined') store.nutrition = prog.nutrition;
-      DATA.nutrition = prog.nutrition;
-    }
-    if (prog.supplementation) {
-      if (typeof store !== 'undefined') store.supplementation = prog.supplementation;
-      DATA.supplementation = prog.supplementation;
-    }
-    if (prog.therapy) {
-      if (typeof store !== 'undefined') store.therapy = prog.therapy;
-      DATA.therapy = prog.therapy;
-    }
-    if (prog.exams) {
-      if (typeof store !== 'undefined') store.exams = prog.exams;
-      DATA.exams = prog.exams;
-    }
-
-    if (prog.duration_weeks || DATA.duration_weeks) {
-      if (typeof store !== 'undefined' && store.prefs) store.prefs.duration = prog.duration_weeks || DATA.duration_weeks;
-    }
-
-    if (typeof currentWeek !== 'undefined') currentWeek = 1;
-    if (typeof currentDay !== 'undefined') currentDay = 0;
-    if (typeof store !== 'undefined') store.activeAthleteProgram = null;
-    if (typeof persist === 'function') persist();
-
-    pState.currentImportId = null;
-    pState.canonicalProgram = null;
-
-    if (typeof showToast === 'function') {
-      showToast('✓ Scheda importata e attivata con successo!', 'success');
-    } else {
-      alert('🎉 Scheda importata con successo! Nuova scheda impostata sulla tua Dashboard.');
-    }
-    if (typeof navigate === 'function') navigate('home');
-  } catch (err) {
-    console.error('[CONFIRM IMPORT ERROR]', err);
-    if (typeof showToast === 'function') {
-      showToast("Errore durante l'attivazione: " + err.message, "danger");
-    } else {
-      alert('Errore attivazione: ' + err.message);
-    }
-  } finally {
-    pState.isConfirming = false;
-    if (typeof currentView !== 'undefined' && currentView === 'import' && typeof render === 'function') render();
-  }
-}
-
 if (typeof window !== 'undefined') {
   window.updateReviewTitle = updateReviewTitle;
   window.updateReviewExerciseField = updateReviewExerciseField;
@@ -491,7 +402,6 @@ if (typeof window !== 'undefined') {
   window.addReviewExamRecord = addReviewExamRecord;
   window.removeReviewExamRecord = removeReviewExamRecord;
   window.cancelCurrentImportReview = cancelCurrentImportReview;
-  window.confirmImportAndActivate = confirmImportAndActivate;
   window.buildCanonicalProgram = buildCanonicalProgram;
   window.validateCanonicalProgram = validateCanonicalProgram;
 }

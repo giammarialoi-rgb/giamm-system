@@ -61,9 +61,15 @@ async function runSuite() {
   assert(therapy.medications && therapy.medications.length === 6, `Therapy medications count is 6 (got ${therapy.medications?.length})`);
   assert(therapy.protocols && therapy.protocols.length === 2, `Therapy multi-week protocol blocks count is 2 (got ${therapy.protocols?.length})`);
 
-  // Check specific day frequency preservation
-  const telmBlock1 = therapy.medications.find(m => /telmisartan/i.test(m.name) && /1\s*-\s*4/.test(m.weekRange));
-  assert(telmBlock1 && Array.isArray(telmBlock1.dayOfWeek) && telmBlock1.dayOfWeek.includes('Lunedì'), 'Telmisartan Block 1 mapped to specific days (Lunedì)');
+  // Check specific day frequency preservation — Telmisartan Block 1 notes say "Monitorare"
+  // which must NOT be misread as Monday (MON). Source has no weekday → default all 7 days.
+  const telmBlock1 = therapy.medications.find(m => /telmisartan/i.test(m.name || m.medication) && /1\s*-\s*4/.test(m.weekRange));
+  assert(telmBlock1 && Array.isArray(telmBlock1.dayOfWeek) && telmBlock1.dayOfWeek.length === 7, 'Telmisartan Block 1 defaults to all 7 days (no weekday in source; Monitorare must not match MON)');
+  assert(telmBlock1.frequency === 'Tutti i giorni', 'Telmisartan Block 1 frequency is Tutti i giorni');
+  assert(!telmBlock1.daysSource || telmBlock1.daysSource === 'default_daily', 'Telmisartan Block 1 daysSource is default_daily');
+
+  // Negative: "Monitorare" must never invent Lunedì-only
+  assert(!(telmBlock1.dayOfWeek.length === 1 && telmBlock1.dayOfWeek[0] === 'Lunedì'), 'Telmisartan Block 1 must NOT be falsely mapped to Lunedì-only via Monitorare');
 
   // TEST 2: Validation Gate
   console.log('\n--- TEST 2: Import Validation Gate ---');

@@ -1942,15 +1942,25 @@ Preserva fedelmente ogni dato (serie, ripetizioni, carichi, recuperi, intensità
 }
 
 // Routes
-// Routes
-app.get("/health", (req, res) => {
-  res.json({
+function buildHealthPayload() {
+  const aiConfigured = Boolean(process.env.GEMINI_API_KEY);
+  return {
     ok: true,
     status: "healthy",
     model: MODEL,
-    apiKeyConfigured: Boolean(process.env.GEMINI_API_KEY),
-    accountStorageConfigured: Boolean(process.env.DATABASE_URL)
-  });
+    aiConfigured,
+    apiKeyConfigured: aiConfigured,
+    accountStorageConfigured: Boolean(process.env.DATABASE_URL),
+    googleOAuthConfigured: Boolean(process.env.GOOGLE_CLIENT_ID)
+  };
+}
+
+app.get("/health", (req, res) => {
+  res.json(buildHealthPayload());
+});
+
+app.get("/api/health", (req, res) => {
+  res.json(buildHealthPayload());
 });
 
 app.post("/api/auth/register", async (req, res) => {
@@ -3061,8 +3071,9 @@ app.post("/api/ingest/document", upload.single("file"), async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({
-        error: "GEMINI_API_KEY is not configured on the server."
+      return res.status(503).json({
+        error: "Coach AI non configurato: configurare GEMINI_API_KEY sul server.",
+        aiConfigured: false
       });
     }
 
@@ -4497,5 +4508,13 @@ app.post("/api/me/workouts/sync", async (req, res) => {
 
 
 app.listen(port, () => {
+  const aiConfigured = Boolean(process.env.GEMINI_API_KEY);
   console.log(`Coach API server listening at http://localhost:${port}`);
+  console.log(`  MODEL=${MODEL}`);
+  console.log(`  GEMINI_API_KEY configured: ${aiConfigured}`);
+  console.log(`  DATABASE_URL configured: ${Boolean(process.env.DATABASE_URL)}`);
+  console.log(`  GOOGLE_CLIENT_ID configured: ${Boolean(process.env.GOOGLE_CLIENT_ID)}`);
+  if (!aiConfigured) {
+    console.warn("  WARNING: GEMINI_API_KEY missing — /api/chat will return 500 until configured.");
+  }
 });
