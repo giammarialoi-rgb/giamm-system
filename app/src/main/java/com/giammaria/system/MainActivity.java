@@ -60,8 +60,17 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 if (lastPickedDocument != null) {
-                    final String js = "window.nativeDocumentReceived && window.nativeDocumentReceived(" + lastPickedDocument.toString() + ");";
-                    web.evaluateJavascript(js, null);
+                    final JSONObject docCopy = lastPickedDocument;
+                    web.post(() -> {
+                        try {
+                            String js = "window.nativeDocumentReceived && window.nativeDocumentReceived(" + docCopy.toString() + ");";
+                            web.evaluateJavascript(js, null);
+                        } catch (Exception error) {
+                            Log.e(TAG_EXCEL, "Error dispatching document to WebView", error);
+                        } finally {
+                            lastPickedDocument = null;
+                        }
+                    });
                 }
             }
         });
@@ -176,6 +185,11 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String getCoachApiUrl() {
             return BuildConfig.COACH_API_URL;
+        }
+
+        @JavascriptInterface
+        public String getGoogleClientId() {
+            return BuildConfig.GOOGLE_WEB_CLIENT_ID;
         }
 
         @JavascriptInterface
@@ -515,6 +529,8 @@ public class MainActivity extends Activity {
                                 web.evaluateJavascript(js, null);
                             } catch (Exception error) {
                                 Log.e(TAG_EXCEL, "Error dispatching document to WebView", error);
+                            } finally {
+                                lastPickedDocument = null;
                             }
                         });
                     }

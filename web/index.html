@@ -263,6 +263,10 @@ select, input {
 .skip-reason { font-size: 10px; font-style: italic; color: var(--accent-red); margin-top: 4px; }
 
 /* Fully responsive centered modals */
+#account-modal {
+  z-index: 4000;
+}
+
 .modal, .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1005,7 +1009,7 @@ select, input {
       // ====================================================
       const CONFIG = {
         appVersion: "2.5.0",
-        build: "MASTER-TASK-30",
+        build: "MASTER-TASK-32",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "mock-client-id.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -5490,6 +5494,12 @@ function accountRequest(path, options={}){
 }
 function openAccount(){
   updateAccountButton();
+  const splash = $('splash');
+  if (splash) {
+    splash.style.display = 'none';
+    splash.style.pointerEvents = 'none';
+    splash.style.opacity = '0';
+  }
   const modal = $('account-modal'); if(!modal) return;
   modal.style.display = 'flex';
   const logged = !!store.accountToken && !!store.accountUser;
@@ -5770,8 +5780,34 @@ function fileToBase64(file){
 // ====================================================
 window._activeFileAction = null;
 
+function setFilePickIntent(intent) {
+  window._activeFileAction = intent;
+  try { sessionStorage.setItem('pendingFileIntent', intent); } catch (_) {}
+}
+
+function resolveFilePickIntent() {
+  let intent = window._activeFileAction;
+  if (!intent) {
+    try { intent = sessionStorage.getItem('pendingFileIntent'); } catch (_) {}
+  }
+  if (!intent) {
+    if (currentView === 'import') intent = 'IMPORT';
+    else if (currentView === 'db') intent = 'DATABASE_DOC';
+    else if (currentView === 'ai') intent = 'COACH_AI';
+    else intent = 'IMPORT';
+  }
+  window._activeFileAction = null;
+  try { sessionStorage.removeItem('pendingFileIntent'); } catch (_) {}
+  return intent;
+}
+
+function clearFilePickIntent() {
+  window._activeFileAction = null;
+  try { sessionStorage.removeItem('pendingFileIntent'); } catch (_) {}
+}
+
 function triggerImportFileSelect() {
-  window._activeFileAction = 'IMPORT';
+  setFilePickIntent('IMPORT');
   if (window.NativeConfig && typeof window.NativeConfig.pickDocument === 'function') {
     try {
       window.NativeConfig.pickDocument();
@@ -5788,7 +5824,7 @@ function triggerImportFileSelect() {
 }
 
 function triggerCoachFileSelect() {
-  window._activeFileAction = 'COACH_AI';
+  setFilePickIntent('COACH_AI');
   if (window.NativeConfig && typeof window.NativeConfig.pickDocument === 'function') {
     try {
       window.NativeConfig.pickDocument();
@@ -5805,7 +5841,7 @@ function triggerCoachFileSelect() {
 }
 
 function triggerDbFileSelect() {
-  window._activeFileAction = 'DATABASE_DOC';
+  setFilePickIntent('DATABASE_DOC');
   if (window.NativeConfig && typeof window.NativeConfig.pickDocument === 'function') {
     try {
       window.NativeConfig.pickDocument();
@@ -5825,30 +5861,38 @@ function triggerFileSelect() {
   triggerDbFileSelect();
 }
 
-function handleImportFileSelected(event) {
+function handleUniversalFileSelected(event) {
   const file = event.target?.files?.[0];
   if (!file) return;
-  processUniversalFile(file, 'IMPORT');
+  const intent = resolveFilePickIntent();
+  processUniversalFile(file, intent);
+  if (event.target) event.target.value = '';
+}
+
+function handleImportFileSelected(event) {
+  setFilePickIntent('IMPORT');
+  handleUniversalFileSelected(event);
 }
 
 function handleCoachFileInput(event) {
-  const file = event.target?.files?.[0];
-  if (!file) return;
-  processUniversalFile(file, 'COACH_AI');
+  setFilePickIntent('COACH_AI');
+  handleUniversalFileSelected(event);
 }
 
 function handleFileUpload(event) {
   const file = event.target?.files?.[0];
   if (!file) return;
-  const intent = window._activeFileAction || 'DATABASE_DOC';
-  processUniversalFile(file, intent);
+  if (!window._activeFileAction) setFilePickIntent('DATABASE_DOC');
+  handleUniversalFileSelected(event);
 }
 
 window.nativeDocumentReceived = async function(docData) {
   if (!docData || !docData.base64) return;
-  const intent = window._activeFileAction || (currentView === 'ai' ? 'COACH_AI' : (currentView === 'import' ? 'IMPORT' : (currentView === 'db' ? 'DATABASE_DOC' : 'IMPORT')));
-  window._activeFileAction = null;
+  const intent = resolveFilePickIntent();
   await processUniversalFile(docData, intent);
+  if (window.NativeConfig && typeof window.NativeConfig.clearLastPickedDocument === 'function') {
+    try { window.NativeConfig.clearLastPickedDocument(); } catch (_) {}
+  }
 };
 
 async function processUniversalFile(source, actionIntent = 'IMPORT') {
@@ -5946,21 +5990,8 @@ async function processUniversalFile(source, actionIntent = 'IMPORT') {
       console.warn('Could not save document metadata:', saveErr);
     }
 
-    if (actionIntent === 'COACH_AI') {
-      navigate('ai');
-      await executeCoachAiFileAnalysis({
-        name,
-        sizeText,
-        canonicalProgram,
-        rawText: text,
-        bytesLength: bytes ? bytes.length : 0
-      });
-    } else if (actionIntent === 'DATABASE_DOC') {
-      navigate('db');
-      if (typeof render === 'function') render();
-      if (typeof showToast === 'function') showToast(`✓ File salvato nel Database: ${name}`, 'success');
-    } else {
-      // Standard IMPORT flow
+    if (actionIntent === 'IMPORT') {
+      // Standard IMPORT flow — never invoke Coach AI file analysis
       if (pState) {
         pState.canonicalProgram = canonicalProgram;
         pState.currentImportId = 'imp_' + Date.now();
@@ -5973,6 +6004,19 @@ async function processUniversalFile(source, actionIntent = 'IMPORT') {
       navigate('import');
       if (typeof render === 'function') render();
       if (typeof showToast === 'function') showToast(`✓ File analizzato con successo: ${name}`, 'success');
+    } else if (actionIntent === 'COACH_AI') {
+      navigate('ai');
+      await executeCoachAiFileAnalysis({
+        name,
+        sizeText,
+        canonicalProgram,
+        rawText: text,
+        bytesLength: bytes ? bytes.length : 0
+      });
+    } else if (actionIntent === 'DATABASE_DOC') {
+      navigate('db');
+      if (typeof render === 'function') render();
+      if (typeof showToast === 'function') showToast(`✓ File salvato nel Database: ${name}`, 'success');
     }
   } catch (err) {
     console.error('UNIVERSAL_FILE_PROCESS_ERROR', err);
@@ -8654,7 +8698,7 @@ function renderReviewTraining(prog) {
     <div class="card" style="margin-bottom:12px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <label style="font-size:11px; font-weight:800; color:var(--gold);">TITOLO SCHEDA:</label>
-        <input type="text" class="input" style="flex:1; margin-left:10px; font-size:12px; padding:4px 8px;" value="${esc(prog.title || 'Programma Importato')}" onchange="updateReviewTitle(this.value)">
+        <input type="text" class="input" style="flex:1; margin-left:10px; font-size:12px; padding:4px 8px;" value="${esc(prog.title || 'Programma Importato')}" oninput="updateReviewTitle(this.value)" onchange="updateReviewTitle(this.value)">
       </div>
     </div>
     ${weeks.map((w, wIdx) => `
@@ -8687,9 +8731,9 @@ function renderReviewNutrition(nutr) {
           <div style="font-size:11px; font-weight:800; color:#4caf50; margin-bottom:6px;">${esc(m.name || m.meal_name || 'Pasto')}</div>
           ${(m.foods || m.items || []).map((f, fIdx) => `
             <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px; font-size:11px;">
-              <input type="text" class="input" style="flex:3; font-size:11px; padding:4px;" value="${esc(f.name || f.food || '')}" onchange="updateReviewMealItem(${dIdx}, ${mIdx}, ${fIdx}, 'name', this.value)">
-              <input type="text" class="input" style="flex:1; font-size:11px; padding:4px; text-align:center;" value="${esc(f.quantity || '')}" placeholder="Qta" onchange="updateReviewMealItem(${dIdx}, ${mIdx}, ${fIdx}, 'quantity', this.value)">
-              <input type="text" class="input" style="width:40px; font-size:11px; padding:4px; text-align:center;" value="${esc(f.unit || 'g')}" placeholder="Unit" onchange="updateReviewMealItem(${dIdx}, ${mIdx}, ${fIdx}, 'unit', this.value)">
+              <input type="text" class="input" style="flex:3; font-size:11px; padding:4px;" value="${esc(f.name || f.food || '')}" oninput="updateReviewMealItem(${dIdx}, ${mIdx}, ${fIdx}, 'name', this.value)" onchange="updateReviewMealItem(${dIdx}, ${mIdx}, ${fIdx}, 'name', this.value)">
+              <input type="text" class="input" style="flex:1; font-size:11px; padding:4px; text-align:center;" value="${esc(f.quantity || '')}" placeholder="Qta" oninput="updateReviewMealItem(${dIdx}, ${mIdx}, ${fIdx}, 'quantity', this.value)" onchange="updateReviewMealItem(${dIdx}, ${mIdx}, ${fIdx}, 'quantity', this.value)">
+              <input type="text" class="input" style="width:40px; font-size:11px; padding:4px; text-align:center;" value="${esc(f.unit || 'g')}" placeholder="Unit" oninput="updateReviewMealItem(${dIdx}, ${mIdx}, ${fIdx}, 'unit', this.value)" onchange="updateReviewMealItem(${dIdx}, ${mIdx}, ${fIdx}, 'unit', this.value)">
               <button class="btn btn-outline" style="color:var(--accent-red); padding:4px 6px; font-size:10px;" onclick="removeReviewMealItem(${dIdx}, ${mIdx}, ${fIdx})">✕</button>
             </div>
           `).join('')}
@@ -8706,9 +8750,9 @@ function renderReviewSupplements(supp) {
       <h3 style="font-size:13px; color:var(--gold); font-weight:800; margin-bottom:10px;">INTEGRAZIONE RILEVATA</h3>
       ${supp.items.map((item, idx) => `
         <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px; font-size:11px;">
-          <input type="text" class="input" style="flex:3; font-size:11px; padding:4px;" value="${esc(item.name || '')}" onchange="updateReviewSupplementItem(${idx}, 'name', this.value)">
-          <input type="text" class="input" style="flex:1; font-size:11px; padding:4px; text-align:center;" value="${esc(item.dose || item.dosage || '')}" placeholder="Dose" onchange="updateReviewSupplementItem(${idx}, 'dose', this.value)">
-          <input type="text" class="input" style="flex:1.5; font-size:11px; padding:4px; text-align:center;" value="${esc(item.timing || 'Mattina')}" placeholder="Timing" onchange="updateReviewSupplementItem(${idx}, 'timing', this.value)">
+          <input type="text" class="input" style="flex:3; font-size:11px; padding:4px;" value="${esc(item.name || '')}" oninput="updateReviewSupplementItem(${idx}, 'name', this.value)" onchange="updateReviewSupplementItem(${idx}, 'name', this.value)">
+          <input type="text" class="input" style="flex:1; font-size:11px; padding:4px; text-align:center;" value="${esc(item.dose || item.dosage || '')}" placeholder="Dose" oninput="updateReviewSupplementItem(${idx}, 'dose', this.value)" onchange="updateReviewSupplementItem(${idx}, 'dose', this.value)">
+          <input type="text" class="input" style="flex:1.5; font-size:11px; padding:4px; text-align:center;" value="${esc(item.timing || 'Mattina')}" placeholder="Timing" oninput="updateReviewSupplementItem(${idx}, 'timing', this.value)" onchange="updateReviewSupplementItem(${idx}, 'timing', this.value)">
           <button class="btn btn-outline" style="color:var(--accent-red); padding:4px 6px; font-size:10px;" onclick="removeReviewSupplementItem(${idx})">✕</button>
         </div>
       `).join('')}
@@ -8735,9 +8779,9 @@ function renderReviewTherapy(therapy) {
           return `
             <div style="background:rgba(255,255,255,0.02); border:1px solid #222; border-radius:6px; padding:8px; margin-bottom:8px;">
               <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px; font-size:11px;">
-                <input type="text" class="input" style="flex:2.5; font-size:11px; padding:4px;" value="${esc(med.medication || med.name || '')}" placeholder="Farmaco" onchange="updateReviewTherapyMedication(${actualIdx}, 'medication', this.value)">
-                <input type="text" class="input" style="flex:1.2; font-size:11px; padding:4px; text-align:center;" value="${esc(med.dose || '')}" placeholder="Dose" onchange="updateReviewTherapyMedication(${actualIdx}, 'dose', this.value)">
-                <input type="text" class="input" style="flex:1.8; font-size:11px; padding:4px; text-align:center;" value="${esc(Array.isArray(med.days) ? (med.days.length === 7 ? 'Tutti i giorni' : med.days.join(', ')) : (med.days || 'Tutti i giorni'))}" placeholder="Giorni" onchange="updateReviewTherapyMedication(${actualIdx}, 'days', this.value)">
+                <input type="text" class="input" style="flex:2.5; font-size:11px; padding:4px;" value="${esc(med.medication || med.name || '')}" placeholder="Farmaco" oninput="updateReviewTherapyMedication(${actualIdx}, 'medication', this.value)" onchange="updateReviewTherapyMedication(${actualIdx}, 'medication', this.value)">
+                <input type="text" class="input" style="flex:1.2; font-size:11px; padding:4px; text-align:center;" value="${esc(med.dose || '')}" placeholder="Dose" oninput="updateReviewTherapyMedication(${actualIdx}, 'dose', this.value)" onchange="updateReviewTherapyMedication(${actualIdx}, 'dose', this.value)">
+                <input type="text" class="input" style="flex:1.8; font-size:11px; padding:4px; text-align:center;" value="${esc(Array.isArray(med.days) ? (med.days.length === 7 ? 'Tutti i giorni' : med.days.join(', ')) : (med.days || 'Tutti i giorni'))}" placeholder="Giorni" oninput="updateReviewTherapyMedication(${actualIdx}, 'days', this.value)" onchange="updateReviewTherapyMedication(${actualIdx}, 'days', this.value)">
                 <button class="btn btn-outline" style="color:var(--accent-red); padding:4px 6px; font-size:10px;" onclick="removeReviewTherapyMedication(${actualIdx})">✕</button>
               </div>
               <div style="display:flex; gap:6px; font-size:10px; color:#888;">
@@ -8760,9 +8804,9 @@ function renderReviewTherapy(therapy) {
       <h3 style="font-size:13px; color:var(--gold); font-weight:800; margin-bottom:10px;">TERAPIA RILEVATA</h3>
       ${meds.map((med, idx) => `
         <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px; font-size:11px;">
-          <input type="text" class="input" style="flex:3; font-size:11px; padding:4px;" value="${esc(med.medication || med.name || '')}" placeholder="Farmaco" onchange="updateReviewTherapyMedication(${idx}, 'medication', this.value)">
-          <input type="text" class="input" style="flex:1; font-size:11px; padding:4px; text-align:center;" value="${esc(med.dose || '')}" placeholder="Dose" onchange="updateReviewTherapyMedication(${idx}, 'dose', this.value)">
-          <input type="text" class="input" style="flex:2; font-size:11px; padding:4px; text-align:center;" value="${esc(Array.isArray(med.days) ? (med.days.length === 7 ? 'Tutti i giorni' : med.days.join(', ')) : (med.days || 'Tutti i giorni'))}" placeholder="Giorni" onchange="updateReviewTherapyMedication(${idx}, 'days', this.value)">
+          <input type="text" class="input" style="flex:3; font-size:11px; padding:4px;" value="${esc(med.medication || med.name || '')}" placeholder="Farmaco" oninput="updateReviewTherapyMedication(${idx}, 'medication', this.value)" onchange="updateReviewTherapyMedication(${idx}, 'medication', this.value)">
+          <input type="text" class="input" style="flex:1; font-size:11px; padding:4px; text-align:center;" value="${esc(med.dose || '')}" placeholder="Dose" oninput="updateReviewTherapyMedication(${idx}, 'dose', this.value)" onchange="updateReviewTherapyMedication(${idx}, 'dose', this.value)">
+          <input type="text" class="input" style="flex:2; font-size:11px; padding:4px; text-align:center;" value="${esc(Array.isArray(med.days) ? (med.days.length === 7 ? 'Tutti i giorni' : med.days.join(', ')) : (med.days || 'Tutti i giorni'))}" placeholder="Giorni" oninput="updateReviewTherapyMedication(${idx}, 'days', this.value)" onchange="updateReviewTherapyMedication(${idx}, 'days', this.value)">
           <button class="btn btn-outline" style="color:var(--accent-red); padding:4px 6px; font-size:10px;" onclick="removeReviewTherapyMedication(${idx})">✕</button>
         </div>
       `).join('')}
@@ -8779,10 +8823,10 @@ function renderReviewExams(exams) {
       <h3 style="font-size:13px; color:var(--gold); font-weight:800; margin-bottom:10px;">REFERTI & ESAMI RILEVATI</h3>
       ${records.map((rec, idx) => `
         <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px; font-size:11px;">
-          <input type="text" class="input" style="flex:2.5; font-size:11px; padding:4px;" value="${esc(rec.parameter || rec.name || '')}" onchange="updateReviewExamRecord(${idx}, 'parameter', this.value)">
-          <input type="text" class="input" style="flex:1; font-size:11px; padding:4px; text-align:center;" value="${esc(rec.value || '')}" placeholder="Valore" onchange="updateReviewExamRecord(${idx}, 'value', this.value)">
-          <input type="text" class="input" style="width:45px; font-size:11px; padding:4px; text-align:center;" value="${esc(rec.unit || '')}" placeholder="Unità" onchange="updateReviewExamRecord(${idx}, 'unit', this.value)">
-          <input type="text" class="input" style="flex:1.5; font-size:11px; padding:4px; text-align:center;" value="${esc(rec.reference_range || '')}" placeholder="Rif." onchange="updateReviewExamRecord(${idx}, 'reference_range', this.value)">
+          <input type="text" class="input" style="flex:2.5; font-size:11px; padding:4px;" value="${esc(rec.parameter || rec.name || '')}" oninput="updateReviewExamRecord(${idx}, 'parameter', this.value)" onchange="updateReviewExamRecord(${idx}, 'parameter', this.value)">
+          <input type="text" class="input" style="flex:1; font-size:11px; padding:4px; text-align:center;" value="${esc(rec.value || '')}" placeholder="Valore" oninput="updateReviewExamRecord(${idx}, 'value', this.value)" onchange="updateReviewExamRecord(${idx}, 'value', this.value)">
+          <input type="text" class="input" style="width:45px; font-size:11px; padding:4px; text-align:center;" value="${esc(rec.unit || '')}" placeholder="Unità" oninput="updateReviewExamRecord(${idx}, 'unit', this.value)" onchange="updateReviewExamRecord(${idx}, 'unit', this.value)">
+          <input type="text" class="input" style="flex:1.5; font-size:11px; padding:4px; text-align:center;" value="${esc(rec.reference_range || '')}" placeholder="Rif." oninput="updateReviewExamRecord(${idx}, 'reference_range', this.value)" onchange="updateReviewExamRecord(${idx}, 'reference_range', this.value)">
           <button class="btn btn-outline" style="color:var(--accent-red); padding:4px 6px; font-size:10px;" onclick="removeReviewExamRecord(${idx})">✕</button>
         </div>
       `).join('')}
@@ -10496,6 +10540,7 @@ async function resetAllData(){
     try {
       if(typeof localStorage !== 'undefined') localStorage.clear();
       if(typeof sessionStorage !== 'undefined') sessionStorage.clear();
+      clearFilePickIntent();
     } catch(e){}
     try {
       if(typeof window !== 'undefined') {

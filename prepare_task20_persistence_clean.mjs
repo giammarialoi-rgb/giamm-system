@@ -299,6 +299,108 @@ class GiammariaPersistenceEngine {
     });
   }
 
+  async dbClear(storeName) {
+    await this.dbOpen();
+    if (this._memStore) return this._memStore.clear(storeName);
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = this._db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        const req = store.clear();
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  async wipeDatabase() {
+    await this.dbOpen();
+    for (const storeName of Object.values(STORES)) {
+      try {
+        await this.dbClear(storeName);
+      } catch (e) {
+        console.warn(`[PERSISTENCE] Error clearing store ${storeName}:`, e);
+      }
+    }
+    if (this._memStore) {
+      this._memStore.stores = {};
+      Object.values(STORES).forEach(s => { this._memStore.stores[s] = new Map(); });
+    }
+    return { success: true, ok: true };
+  }
+
+  async clearWorkoutLogs() {
+    // Workout actual loads/logs live in localStorage GS_STORE (store.data / customSets),
+    // not in dedicated IDB stores. Preserve programs, nutrition, therapy, supplements.
+    // No-op on IDB domain stores — callers must clear in-memory store.data themselves.
+    await this.dbOpen();
+    return {
+      success: true,
+      ok: true,
+      note: 'Workout logs are LocalStorage-keyed (store.data). Callers clear store.data/customSets; IDB domain stores preserved.'
+    };
+  }
+
+  /**
+   * Atomically persist full multi-domain canonical program + read-back verify.
+   */
+  async activateCanonicalProgram(prog) {
+    if (!prog || typeof prog !== 'object') {
+      throw new Error('Activation Error: canonical program required');
+    }
+    const training = prog.training || prog;
+    if (!Array.isArray(training.weeks) && !Array.isArray(prog.weeks)) {
+      throw new Error('Activation Error: program must contain weeks');
+    }
+
+    const saveRes = await this.saveActiveProgram(prog);
+    const domainResults = {};
+
+    if (prog.nutrition) {
+      domainResults.nutrition = await this.saveNutrition(prog.nutrition);
+      const rb = await this.getNutrition();
+      if (!rb || getDeterministicFingerprint(rb) !== getDeterministicFingerprint(prog.nutrition)) {
+        throw new Error('Atomic Verification Failed: nutrition read-back mismatch');
+      }
+    }
+    if (prog.supplementation) {
+      domainResults.supplements = await this.saveSupplements(prog.supplementation);
+      const rb = await this.getSupplements();
+      if (!rb || getDeterministicFingerprint(rb) !== getDeterministicFingerprint(prog.supplementation)) {
+        throw new Error('Atomic Verification Failed: supplements read-back mismatch');
+      }
+    }
+    if (prog.therapy) {
+      domainResults.therapy = await this.saveTherapy(prog.therapy);
+      const rb = await this.getTherapy();
+      if (!rb || getDeterministicFingerprint(rb) !== getDeterministicFingerprint(prog.therapy)) {
+        throw new Error('Atomic Verification Failed: therapy read-back mismatch');
+      }
+    }
+    if (prog.exams) {
+      domainResults.exams = await this.saveExams(prog.exams);
+      const rb = await this.getExams();
+      if (!rb || getDeterministicFingerprint(rb) !== getDeterministicFingerprint(prog.exams)) {
+        throw new Error('Atomic Verification Failed: exams read-back mismatch');
+      }
+    }
+
+    const loaded = await this.loadActiveProgram();
+    if (!loaded) {
+      throw new Error('Atomic Verification Failed: active program missing after save');
+    }
+
+    return {
+      success: true,
+      ok: true,
+      id: saveRes.id,
+      fingerprint: saveRes.fingerprint,
+      domains: domainResults
+    };
+  }
+
   /**
    * Validates canonical program structure before write
    */
