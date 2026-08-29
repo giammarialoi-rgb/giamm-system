@@ -45,7 +45,7 @@ const CONFIG_HEADER = `<script>
       // ====================================================
       const CONFIG = {
         appVersion: "2.5.0",
-        build: "MASTER-TASK-32",
+        build: "MASTER-TASK-33",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "mock-client-id.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -783,6 +783,10 @@ window.safeDisplayValue = safeDisplayValue;
 // Parser and Persistence Function Bindings
 window.parseStructuredWorkbook = typeof parseStructuredWorkbook !== 'undefined' ? parseStructuredWorkbook : null;
 window.buildCanonicalProgram = typeof buildCanonicalProgram !== 'undefined' ? buildCanonicalProgram : null;
+window.extractPdfPlainText = typeof extractPdfPlainText !== 'undefined' ? extractPdfPlainText : null;
+window.extractDocxPlainText = typeof extractDocxPlainText !== 'undefined' ? extractDocxPlainText : null;
+window.extractDocBinaryText = typeof extractDocBinaryText !== 'undefined' ? extractDocBinaryText : null;
+window.persistActiveProgramStructure = typeof persistActiveProgramStructure !== 'undefined' ? persistActiveProgramStructure : (() => {});
 window.normalizeProgram = typeof normalizeProgram !== 'undefined' ? normalizeProgram : null;
 window.validateCanonicalProgram = typeof validateCanonicalProgram !== 'undefined' ? validateCanonicalProgram : null;
 window.programImportState = typeof programImportState !== 'undefined' ? programImportState : { canonicalProgram: null, currentImportId: null, activeReviewTab: 'training' };

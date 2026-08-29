@@ -236,12 +236,22 @@ select, input {
 
 #timer-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.92); display: none;
-  flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.35); display: none;
+  flex-direction: column; align-items: center; justify-content: flex-start;
+  padding-top: 12vh;
   z-index: 3500;
+  pointer-events: none;
+}
+#timer-overlay .timer-panel {
+  pointer-events: auto;
+  background: rgba(0,0,0,0.92);
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 24px 32px;
+  text-align: center;
 }
 #timer-display { font-size: 80px; font-weight: 900; color: var(--gold); margin-bottom: 20px; }
-.timer-btn { padding: 15px 40px; border-radius: 30px; font-weight: 800; border: none; font-size: 18px; }
+.timer-btn { padding: 15px 40px; border-radius: 30px; font-weight: 800; border: none; font-size: 18px; cursor: pointer; }
 
 .load-toggle {
   background: #111; border: 1px solid #333; color: #777;
@@ -849,8 +859,10 @@ select, input {
 
 <!-- Timer Overlay -->
 <div id="timer-overlay">
-  <div id="timer-display">00:00</div>
-  <button class="timer-btn btn-primary" onclick="stopTimer()">CHIUDI</button>
+  <div class="timer-panel">
+    <div id="timer-display">00:00</div>
+    <button class="timer-btn btn-primary" onclick="stopTimer()">CHIUDI</button>
+  </div>
 </div>
 
 <!-- Modal Salto Esercizio -->
@@ -1621,6 +1633,9 @@ async function processUniversalFile(source, actionIntent = 'IMPORT') {
 
     const isExcel = /\.(xlsx|xls)$/i.test(name) || (mime && (mime.includes('spreadsheet') || mime.includes('excel')));
     const isJson = /\.json$/i.test(name) || (mime && mime.includes('json'));
+    const isPdf = /\.pdf$/i.test(name) || (mime && mime.includes('pdf'));
+    const isDocx = /\.docx$/i.test(name) || (mime && mime.includes('wordprocessingml'));
+    const isDoc = (/\.doc$/i.test(name) && !/\.docx$/i.test(name)) || (mime && mime.includes('msword') && !mime.includes('wordprocessingml'));
 
     let parsed = null;
     if (isExcel) {
@@ -1639,8 +1654,19 @@ async function processUniversalFile(source, actionIntent = 'IMPORT') {
       } catch (e) {
         parsed = parseCanonicalProgramFromText(text, name);
       }
+    } else if (isPdf) {
+      const pdfText = (typeof extractPdfPlainText === 'function') ? extractPdfPlainText(bytes) : text;
+      parsed = parseCanonicalProgramFromText(pdfText || text, name);
+    } else if (isDocx) {
+      let docxText = '';
+      if (typeof extractDocxPlainText === 'function') {
+        docxText = await extractDocxPlainText(bytes);
+      }
+      parsed = parseCanonicalProgramFromText(docxText || text, name);
+    } else if (isDoc) {
+      const docText = (typeof extractDocBinaryText === 'function') ? extractDocBinaryText(bytes) : text;
+      parsed = parseCanonicalProgramFromText(docText || text, name);
     } else {
-      // CSV, TXT, PDF text, DOC text
       parsed = parseCanonicalProgramFromText(text, name);
     }
 
@@ -2409,11 +2435,35 @@ async function requestProgramReprogram(kind, desired, goal, secondary, constrain
   render();
 }
 
+function persistActiveProgramStructure() {
+  try {
+    if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks)) return;
+    if (store.activeProgramId && !DATA.id) DATA.id = store.activeProgramId;
+    if (DATA.id && !store.activeProgramId) store.activeProgramId = DATA.id;
+    DATA.duration_weeks = DATA.weeks.length;
+    store.activeProgram = DATA;
+    persist();
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
+      GiammariaPersistence.saveProgram(DATA, true).catch(function (err) {
+        console.warn('[PERSIST PROGRAM]', err);
+      });
+    }
+  } catch (e) {
+    console.warn('[PERSIST PROGRAM]', e);
+  }
+}
+
 function resizeActiveProgram(desired){
+  if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return false;
   const current = DATA.weeks.length;
-  if(desired === current) return true;
+  if(desired === current) {
+    DATA.duration_weeks = desired;
+    persistActiveProgramStructure();
+    return true;
+  }
   if(desired < current && !confirm(`Ridurre il programma da ${current} a ${desired} settimane? Le settimane rimosse non saranno più disponibili.`)) return false;
   if(desired > current && !confirm(`Estendere il programma da ${current} a ${desired} settimane replicando la struttura dell'ultima settimana?`)) return false;
+  const sessionCountBefore = DATA.weeks.reduce((n, w) => n + ((w.sessions || w.days || []).length), 0);
   if(desired < current) DATA.weeks = DATA.weeks.slice(0, desired);
   else {
     const template = DATA.weeks[current - 1];
@@ -2421,13 +2471,21 @@ function resizeActiveProgram(desired){
       const copy = JSON.parse(JSON.stringify(template));
       copy.week = DATA.weeks.length + 1;
       copy.weekNumber = DATA.weeks.length + 1;
+      copy.week_number = DATA.weeks.length + 1;
       copy.label = `${template.label || 'Settimana'} (estesa)`;
       DATA.weeks.push(copy);
     }
   }
+  DATA.duration_weeks = desired;
+  store.prefs.duration = desired;
+  store.prefs.durationUserSet = true;
   store.activeProgram = DATA;
-  persist();
+  persistActiveProgramStructure();
   if(currentWeek > desired) { currentWeek = desired; currentDay = 0; }
+  const sessionCountAfter = DATA.weeks.reduce((n, w) => n + ((w.sessions || w.days || []).length), 0);
+  if (desired >= current && sessionCountAfter < sessionCountBefore) {
+    console.warn('[RESIZE] session count dropped unexpectedly', sessionCountBefore, sessionCountAfter);
+  }
   return true;
 }
 
@@ -2506,22 +2564,35 @@ function importProgramJson(program, documentName) {
 // Timer Logic
 let timerInterval = null;
 function startTimer(secondsText) {
+  const overlay = $('timer-overlay');
+  const display = $('timer-display');
+  if (!overlay || !display) {
+    console.warn('[TIMER] overlay missing — UI not blocked');
+    return;
+  }
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
   const text = String(secondsText || '').toLowerCase().replace('–', '-');
   const parts = text.match(/\d+(?:\.\d+)?/g) || [];
   let sec = 0;
   if(text.includes('min')) sec = parseFloat(parts[parts.length - 1] || 0) * 60;
   else if(text.includes('s')) sec = parseFloat(parts[parts.length - 1] || 0);
+  else if(parts.length) sec = parseFloat(parts[parts.length - 1] || 0);
   if(isNaN(sec) || sec <= 0) sec = 90;
 
-  $('timer-overlay').style.display = 'flex';
-  const display = $('timer-display');
+  display.style.color = 'var(--gold)';
+  overlay.style.display = 'flex';
   const update = () => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
+    const m = Math.floor(Math.max(0, sec) / 60);
+    const s = Math.max(0, sec) % 60;
     display.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     if(sec <= 0) {
       clearInterval(timerInterval);
+      timerInterval = null;
       display.style.color = 'var(--accent-red)';
+      return;
     }
     sec--;
   };
@@ -2529,9 +2600,14 @@ function startTimer(secondsText) {
   timerInterval = setInterval(update, 1000);
 }
 function stopTimer() {
-  clearInterval(timerInterval);
-  $('timer-overlay').style.display = 'none';
-  $('timer-display').style.color = 'var(--gold)';
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  const overlay = $('timer-overlay');
+  const display = $('timer-display');
+  if (overlay) overlay.style.display = 'none';
+  if (display) display.style.color = 'var(--gold)';
 }
 
 // Skip Modal Logic
@@ -4675,7 +4751,7 @@ async function confirmImportAndActivate() {
 
   if (pState.isConfirming) return;
   pState.isConfirming = true;
-  if (typeof render === 'function') render();
+  if (currentView === 'import' && typeof render === 'function') render();
 
   const prog = JSON.parse(JSON.stringify(pState.canonicalProgram));
   try {
