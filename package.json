@@ -5,7 +5,19 @@
   "type": "module",
   "scripts": {
     "start": "node coach-api.mjs",
-    "dev": "node --watch coach-api.mjs"
+    "dev": "node --watch coach-api.mjs",
+    "generate": "node generate_bundles.mjs",
+    "build:web": "node build_master25.mjs",
+    "test": "node test_master_task26_stabilization.mjs",
+    "test:25": "node test_master_task25_e2e_fidelity.mjs",
+    "test:26": "node test_master_task26_stabilization.mjs",
+    "test:27": "node test_master_task27_recovery.mjs",
+    "test:28": "node test_master_task28_coach_ai.mjs",
+    "test:29": "node test_master_task29_full_recovery.mjs",
+    "test:30": "node test_master_task30_functional_e2e.mjs",
+    "test:31": "node test_master_task31_recovery.mjs",
+    "test:32": "node test_master_task32_recovery.mjs",
+    "test:regression": "node test_master_task32_recovery.mjs && node test_master_task31_recovery.mjs && node test_master_task30_functional_e2e.mjs && node test_master_task29_full_recovery.mjs && node test_master_task28_coach_ai.mjs && node test_master_task27_recovery.mjs && node test_master_task26_stabilization.mjs && node test_master_task25_e2e_fidelity.mjs && node test_master_task20_architecture.mjs"
   },
   "engines": {
     "node": ">=20"

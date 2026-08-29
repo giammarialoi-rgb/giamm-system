@@ -45,7 +45,7 @@ const CONFIG_HEADER = `<script>
       // ====================================================
       const CONFIG = {
         appVersion: "2.5.0",
-        build: "MASTER-TASK-30",
+        build: "MASTER-TASK-32",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "mock-client-id.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
