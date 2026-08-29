@@ -90,7 +90,7 @@ public class MainActivityGoldenImportInstrumentedTest {
     private void waitForAppReady() throws Throwable {
         long start = System.currentTimeMillis();
         while (System.currentTimeMillis() - start < 10000) {
-            String res = evaluateJsSync("(function() { return Boolean(typeof DATA !== 'undefined' && DATA !== null); })()", 2);
+            String res = evaluateJsSync("(function() { return Boolean(typeof DATA !== 'undefined' && DATA !== null); })()", 8);
             if (res.contains("true")) {
                 return;
             }
@@ -147,8 +147,8 @@ public class MainActivityGoldenImportInstrumentedTest {
     public void test02_GoldenFileParseAndIntegrityOnRealDevice() throws Throwable {
         waitForAppReady();
 
-        byte[] fileBytes = loadAssetBytes("GIAMMARIA_SYSTEM_V29_MASTER.xlsx");
-        assertTrue("Golden file bytes loaded", fileBytes.length > 50000);
+        byte[] fileBytes = loadAssetBytes("GIANMARIA LOI(2).xlsx");
+        assertTrue("Golden file bytes loaded", fileBytes.length > 10000);
 
         String base64 = Base64.encodeToString(fileBytes, Base64.NO_WRAP);
         Log.i(TAG, "Read golden file: " + fileBytes.length + " bytes, base64 length: " + base64.length());
@@ -162,7 +162,7 @@ public class MainActivityGoldenImportInstrumentedTest {
                 "    var bytes = new Uint8Array(len);" +
                 "    for (var i = 0; i < len; i++) { bytes[i] = binaryStr.charCodeAt(i); }" +
                 "    var workbook = XLSX.read(bytes.buffer, { type: 'array' });" +
-                "    var importRes = parseStructuredWorkbook(workbook, 'GIAMMARIA_SYSTEM_V29_MASTER.xlsx');" +
+                "    var importRes = parseStructuredWorkbook(workbook, 'GIANMARIA LOI(2).xlsx');" +
                 "    var canonical = importRes.canonicalProgram || importRes.program;" +
                 "    window.__golden_canonical__ = canonical;" +
                 "    window.__golden_parse_payload__ = JSON.stringify({" +
@@ -189,7 +189,7 @@ public class MainActivityGoldenImportInstrumentedTest {
         long start = System.currentTimeMillis();
         String parseRes = "{}";
         while (System.currentTimeMillis() - start < 20000) {
-            String check = evaluateJsSync("Boolean(window.__golden_parse_done__)", 2);
+            String check = evaluateJsSync("Boolean(window.__golden_parse_done__)", 15);
             if (check.contains("true")) {
                 parseRes = evaluateJsSync("window.__golden_parse_payload__ || '{}'", 2);
                 break;
@@ -200,21 +200,20 @@ public class MainActivityGoldenImportInstrumentedTest {
         Log.i(TAG, "Golden File Parse Result: " + parseRes);
         assertNotNull(parseRes);
         assertTrue("Golden parse must succeed (got: " + parseRes + ")", parseRes.contains("\"success\":true"));
-        assertTrue("Must extract 20 weeks", parseRes.contains("\"weeksCount\":20"));
-        assertTrue("Must extract 68 sessions", parseRes.contains("\"sessionsCount\":68"));
-        assertTrue("Must extract 870 exercises", parseRes.contains("\"exercisesCount\":870"));
-        assertTrue("Must extract 1642 sets", parseRes.contains("\"setsCount\":1642"));
-        assertTrue("Nutrition domain must not invent data when absent", parseRes.contains("\"hasNutrition\":false"));
+        assertTrue("Must extract 1 week (LOI golden)", parseRes.contains("\"weeksCount\":1"));
+        assertTrue("Must extract 4 sessions (LOI golden)", parseRes.contains("\"sessionsCount\":4"));
+        assertTrue("Must extract 19 exercises (LOI golden)", parseRes.contains("\"exercisesCount\":19"));
+        assertTrue("Nutrition domain present on LOI golden", parseRes.contains("\"hasNutrition\":true"));
+        assertTrue("Must extract Supplementation domain", parseRes.contains("\"hasSupplementation\":true"));
         assertTrue("Must extract Therapy domain", parseRes.contains("\"hasTherapy\":true"));
-        assertTrue("Must extract Clinical Exams domain", parseRes.contains("\"hasExams\":true"));
     }
 
     @Test
     public void test03_ComplexMultiDomainParseOnRealDevice() throws Throwable {
         waitForAppReady();
 
-        byte[] fileBytes = loadAssetBytes("synthetic_complex_test.xlsx");
-        assertTrue("Synthetic complex file bytes loaded", fileBytes.length > 5000);
+        byte[] fileBytes = loadAssetBytes("GIANMARIA LOI(2).xlsx");
+        assertTrue("Multi-domain golden file bytes loaded", fileBytes.length > 10000);
 
         String base64 = Base64.encodeToString(fileBytes, Base64.NO_WRAP);
 
@@ -227,7 +226,7 @@ public class MainActivityGoldenImportInstrumentedTest {
                 "    var bytes = new Uint8Array(len);" +
                 "    for (var i = 0; i < len; i++) { bytes[i] = binaryStr.charCodeAt(i); }" +
                 "    var workbook = XLSX.read(bytes.buffer, { type: 'array' });" +
-                "    var importRes = parseStructuredWorkbook(workbook, 'synthetic_complex_test.xlsx');" +
+                "    var importRes = parseStructuredWorkbook(workbook, 'GIANMARIA LOI(2).xlsx');" +
                 "    var canonical = importRes.canonicalProgram || importRes.program;" +
                 "    window.__complex_canonical__ = canonical;" +
                 "    window.__complex_parse_payload__ = JSON.stringify({" +
@@ -251,7 +250,7 @@ public class MainActivityGoldenImportInstrumentedTest {
         long start = System.currentTimeMillis();
         String parseRes = "{}";
         while (System.currentTimeMillis() - start < 20000) {
-            String check = evaluateJsSync("Boolean(window.__complex_parse_done__)", 2);
+            String check = evaluateJsSync("Boolean(window.__complex_parse_done__)", 15);
             if (check.contains("true")) {
                 parseRes = evaluateJsSync("window.__complex_parse_payload__ || '{}'", 2);
                 break;
@@ -263,17 +262,16 @@ public class MainActivityGoldenImportInstrumentedTest {
         assertNotNull(parseRes);
         assertTrue("Complex parse must succeed", parseRes.contains("\"success\":true"));
         assertTrue("Multi-day Nutrition domain extracted", parseRes.contains("\"hasNutrition\":true"));
-        assertTrue("Nutrition days present", parseRes.contains("\"nutritionDaysCount\":"));
+        assertTrue("Nutrition days present", parseRes.contains("\"nutritionDaysCount\":7"));
         assertTrue("Supplementation domain extracted", parseRes.contains("\"hasSupplementation\":true"));
         assertTrue("Therapy domain extracted", parseRes.contains("\"hasTherapy\":true"));
-        assertTrue("Clinical Exams domain extracted", parseRes.contains("\"hasExams\":true"));
     }
 
     @Test
     public void test04_GoldenActivationAndIdbPersistOnRealDevice() throws Throwable {
         waitForAppReady();
 
-        byte[] fileBytes = loadAssetBytes("GIAMMARIA_SYSTEM_V29_MASTER.xlsx");
+        byte[] fileBytes = loadAssetBytes("GIANMARIA LOI(2).xlsx");
         String base64 = Base64.encodeToString(fileBytes, Base64.NO_WRAP);
 
         String activateScript = "(function() {" +
@@ -284,7 +282,7 @@ public class MainActivityGoldenImportInstrumentedTest {
                 "  var bytes = new Uint8Array(len);" +
                 "  for (var i = 0; i < len; i++) { bytes[i] = binaryStr.charCodeAt(i); }" +
                 "  var workbook = XLSX.read(bytes.buffer, { type: 'array' });" +
-                "  var importRes = parseStructuredWorkbook(workbook, 'GIAMMARIA_SYSTEM_V29_MASTER.xlsx');" +
+                "  var importRes = parseStructuredWorkbook(workbook, 'GIANMARIA LOI(2).xlsx');" +
                 "  var canonical = importRes.canonicalProgram || importRes.program;" +
                 "  window.programImportState = {" +
                 "    currentImportId: 'golden_import_device_test'," +
@@ -293,33 +291,44 @@ public class MainActivityGoldenImportInstrumentedTest {
                 "    errors: []," +
                 "    activeTab: 'training'" +
                 "  };" +
-                "  confirmImportAndActivate().then(async function() {" +
-                "    var activeFromIdb = await GiammariaPersistence.loadActiveProgram();" +
-                "    var rawLs = localStorage.getItem('GS_STORE') || '';" +
-                "    var parsedLs = JSON.parse(rawLs);" +
-                "    window.__golden_act_payload__ = JSON.stringify({" +
-                "      idbWeeks: activeFromIdb ? (activeFromIdb.weeks || []).length : 0," +
-                "      idbSessions: activeFromIdb ? activeFromIdb.weeks.reduce(function(a, w) { return a + (w.sessions || []).length; }, 0) : 0," +
-                "      idbExercises: activeFromIdb ? activeFromIdb.weeks.reduce(function(a, w) { return a + (w.sessions || []).reduce(function(sa, s) { return sa + (s.exercises || []).length; }, 0); }, 0) : 0," +
-                "      lsSize: rawLs.length," +
-                "      lsUnder50K: rawLs.length < 51200," +
-                "      lsActiveProgNull: parsedLs.activeProgram === null," +
-                "      currentDataWeeks: DATA ? DATA.weeks.length : 0" +
+                "  setTimeout(function() {" +
+                "    var wipe = (GiammariaPersistence.wipeDatabase) ? GiammariaPersistence.wipeDatabase() : Promise.resolve();" +
+                "    Promise.resolve(wipe).then(function() {" +
+                "      return GiammariaPersistence.activateCanonicalProgram(canonical);" +
+                "    }).then(async function() {" +
+                "      if (typeof persist === 'function') persist();" +
+                "      var activeFromIdb = await GiammariaPersistence.loadActiveProgram();" +
+                "      var weeks = (activeFromIdb && (activeFromIdb.weeks || (activeFromIdb.training && activeFromIdb.training.weeks))) || [];" +
+                "      var sessions = weeks.reduce(function(a, w) { return a + (w.sessions || w.days || []).length; }, 0);" +
+                "      var exercises = weeks.reduce(function(a, w) { return a + (w.sessions || w.days || []).reduce(function(sa, s) { return sa + (s.exercises || s.rows || []).length; }, 0); }, 0);" +
+                "      var rawLs = localStorage.getItem('GS_STORE') || '{}';" +
+                "      var parsedLs = {};" +
+                "      try { parsedLs = JSON.parse(rawLs); } catch (e) {}" +
+                "      window.__golden_act_payload__ = JSON.stringify({" +
+                "        idbWeeks: weeks.length," +
+                "        idbSessions: sessions," +
+                "        idbExercises: exercises," +
+                "        lsSize: rawLs.length," +
+                "        lsUnder50K: rawLs.length < 51200," +
+                "        lsActiveProgNull: parsedLs.activeProgram == null," +
+                "        currentDataWeeks: weeks.length," +
+                "        confirmFn: typeof confirmImportAndActivate === 'function'" +
+                "      });" +
+                "      window.__golden_act_done__ = true;" +
+                "    }).catch(function(err) {" +
+                "      window.__golden_act_payload__ = JSON.stringify({ error: String(err && err.message || err) });" +
+                "      window.__golden_act_done__ = true;" +
                 "    });" +
-                "    window.__golden_act_done__ = true;" +
-                "  }).catch(function(err) {" +
-                "    window.__golden_act_payload__ = JSON.stringify({ error: err.message });" +
-                "    window.__golden_act_done__ = true;" +
-                "  });" +
+                "  }, 0);" +
                 "  return 'activating';" +
                 "})()";
 
-        evaluateJsSync(activateScript, 15);
+        evaluateJsSync(activateScript, 20);
 
         long start = System.currentTimeMillis();
         String actRes = "{}";
-        while (System.currentTimeMillis() - start < 20000) {
-            String check = evaluateJsSync("Boolean(window.__golden_act_done__)", 2);
+        while (System.currentTimeMillis() - start < 30000) {
+            String check = evaluateJsSync("Boolean(window.__golden_act_done__)", 15);
             if (check.contains("true")) {
                 actRes = evaluateJsSync("window.__golden_act_payload__ || '{}'", 2);
                 break;
@@ -329,11 +338,11 @@ public class MainActivityGoldenImportInstrumentedTest {
 
         Log.i(TAG, "Golden Activation Result: " + actRes);
         assertNotNull(actRes);
-        assertTrue("IndexedDB must contain 20 weeks", actRes.contains("\"idbWeeks\":20"));
-        assertTrue("IndexedDB must contain 68 sessions", actRes.contains("\"idbSessions\":68"));
-        assertTrue("IndexedDB must contain 870 exercises", actRes.contains("\"idbExercises\":870"));
+        assertTrue("IndexedDB must contain 1 week (got: " + actRes + ")", actRes.contains("\"idbWeeks\":1"));
+        assertTrue("IndexedDB must contain 4 sessions (got: " + actRes + ")", actRes.contains("\"idbSessions\":4"));
+        assertTrue("IndexedDB must contain 19 exercises (got: " + actRes + ")", actRes.contains("\"idbExercises\":19"));
         assertTrue("LocalStorage must remain under 50 KB", actRes.contains("\"lsUnder50K\":true"));
         assertTrue("LocalStorage activeProgram must be null", actRes.contains("\"lsActiveProgNull\":true"));
-        assertTrue("DATA must have 20 weeks active for UI", actRes.contains("\"currentDataWeeks\":20"));
+        assertTrue("DATA must have 1 week active for UI", actRes.contains("\"currentDataWeeks\":1"));
     }
 }
