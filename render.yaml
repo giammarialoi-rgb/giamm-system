@@ -3,7 +3,7 @@ services:
     name: coach-api-gemini
     runtime: node
     region: oregon
-    buildCommand: npm install && node generate_science_programs_10k.mjs && node generate_bundles.mjs && node build_master25.mjs
+    buildCommand: npm install && node build_master25.mjs
     startCommand: npm start
     plan: free
     healthCheckPath: /health
