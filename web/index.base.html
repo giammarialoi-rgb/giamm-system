@@ -1669,6 +1669,7 @@ const DEFAULT_STORE = {
   models: [],
   activeProgram: null,
   exIntensity: {},
+  maxTests: {},
   accountToken: null,
   accountUser: null,
   chatHistory: [],
@@ -1705,6 +1706,7 @@ function ensureStoreIntegrity() {
   if (!store.docs) store.docs = [];
   if (!store.models) store.models = [];
   if (!store.exIntensity) store.exIntensity = {};
+  if (!store.maxTests) store.maxTests = {};
   if (!store.chatHistory) store.chatHistory = [];
   if (!store.rewards) {
     store.rewards = (window.NurvanRewards && NurvanRewards.defaultRewardsState)
@@ -1850,8 +1852,34 @@ function getLoadSuggestion(exerciseIndex, row){
   }
   if(!loads.length) return null;
   const average = loads.reduce((sum, value) => sum + value, 0) / loads.length;
-  const rir = Number(row.rirTarget);
+  const rir = Number(row.rirTarget ?? row.rir_target ?? row.rir);
   return Math.round(average * (Number.isFinite(rir) && rir <= 1 ? 1.025 : 1) * 2) / 2;
+}
+
+function formatPrevWeekLoadAdvice(exIdx, row) {
+  if (currentWeek <= 1) return '';
+  const prevParts = [];
+  let bestPrev = null;
+  for (let s = 1; s <= 8; s++) {
+    const load = store.data[`w${currentWeek - 1}_d${currentDay}_e${exIdx}_s${s}_load`];
+    const reps = store.data[`w${currentWeek - 1}_d${currentDay}_e${exIdx}_s${s}_reps`];
+    const rir = store.data[`w${currentWeek - 1}_d${currentDay}_e${exIdx}_s${s}_rir`];
+    if ((load !== undefined && load !== '' && load != null) || (reps !== undefined && reps !== '' && reps != null)) {
+      prevParts.push(`${load != null && load !== '' ? load : '?'}×${reps != null && reps !== '' ? reps : '?'}${rir != null && rir !== '' ? (' @' + rir) : ''}`);
+      const lv = parseFloat(load);
+      if (Number.isFinite(lv) && lv > 0 && (bestPrev == null || lv > bestPrev)) bestPrev = lv;
+    }
+  }
+  if (!prevParts.length) return '';
+  const sugg = getLoadSuggestion(exIdx, row || {});
+  let advice = 'Mantieni o + piccoli kg se RIR ≥ 2.';
+  if (sugg != null && bestPrev != null) {
+    if (sugg > bestPrev) advice = 'Puoi aumentare: target ~' + sugg + ' kg.';
+    else if (sugg < bestPrev) advice = 'Meglio non aumentare (o deload leggero).';
+    else advice = 'Carico stabile: ripeti ~' + sugg + ' kg.';
+  }
+  return `<div style="font-size:11px;color:var(--gold);font-weight:700;margin:0 0 6px;">Sett. scorsa: ${esc(prevParts.join(' · '))}</div>
+    <div style="font-size:10px;color:#aaa;margin:0 0 8px;">${esc(advice)}</div>`;
 }
 
 let voiceRecognition = null, voiceOutputEnabled = false, lastCoachReply = '';
@@ -2234,7 +2262,6 @@ function startGoogleAuth(){
   const clientId = (nativeId && !/mock-client-id/i.test(nativeId)) ? nativeId : cfgId;
   if (native && typeof native.startGoogleSignIn === 'function') {
     try {
-      // Yield to paint loading UI before native credential sheet
       setTimeout(function () {
         try { native.startGoogleSignIn(); }
         catch (err) {
@@ -2249,12 +2276,79 @@ function startGoogleAuth(){
       return;
     }
   }
-  setGoogleAuthLoading(false);
+  // Web: Google Identity Services
+  startGoogleAuthWeb(clientId).catch(function (err) {
+    setGoogleAuthLoading(false);
+    if (status) status.textContent = (err && err.message) ? err.message : 'Accesso Google non disponibile sul web.';
+  });
+}
+
+function loadGoogleIdentityScript() {
+  return new Promise(function (resolve, reject) {
+    if (window.google && window.google.accounts && window.google.accounts.id) return resolve();
+    const existing = document.querySelector('script[data-gis="1"]');
+    if (existing) {
+      existing.addEventListener('load', function () { resolve(); });
+      existing.addEventListener('error', function () { reject(new Error('Script Google non caricabile.')); });
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true;
+    s.defer = true;
+    s.dataset.gis = '1';
+    s.onload = function () { resolve(); };
+    s.onerror = function () { reject(new Error('Script Google non caricabile.')); };
+    document.head.appendChild(s);
+  });
+}
+
+async function startGoogleAuthWeb(preferredClientId) {
+  let clientId = String(preferredClientId || '').trim();
   if (!clientId || /mock-client-id/i.test(clientId)) {
-    if (status) status.textContent = 'Google Login non configurato su questa build. Puoi registrarti con email, oppure ricompilare l\'APK con googleWebClientId.';
-    return;
+    const response = await apiFetch(coachEndpoint('/api/auth/public-config'), { method: 'GET' });
+    const cfg = await readApiJson(response);
+    clientId = String((cfg && cfg.googleClientId) || '').trim();
   }
-  if (status) status.textContent = 'Google Login richiede l\'app Android configurata.';
+  if (!clientId || /mock-client-id/i.test(clientId)) {
+    throw new Error('Google Login non configurato sul server (GOOGLE_CLIENT_ID). Usa email/password.');
+  }
+  await loadGoogleIdentityScript();
+  if (!window.google || !google.accounts || !google.accounts.id) {
+    throw new Error('Google Identity Services non disponibile.');
+  }
+  google.accounts.id.initialize({
+    client_id: clientId,
+    callback: function (resp) {
+      if (!resp || !resp.credential) {
+        setGoogleAuthLoading(false);
+        const status = $('account-status');
+        if (status) status.textContent = 'Accesso Google annullato.';
+        return;
+      }
+      nativeGoogleResult(resp.credential);
+    },
+    auto_select: false,
+    cancel_on_tap_outside: true
+  });
+  google.accounts.id.prompt(function (notification) {
+    if (notification && typeof notification.isNotDisplayed === 'function' && notification.isNotDisplayed()) {
+      // Fallback: render a one-tap button into a temporary host
+      let host = $('google-gis-btn-host');
+      if (!host) {
+        host = document.createElement('div');
+        host.id = 'google-gis-btn-host';
+        host.style.cssText = 'margin-top:10px;display:flex;justify-content:center;';
+        const form = $('account-form');
+        if (form && form.parentNode) form.parentNode.insertBefore(host, form.nextSibling);
+      }
+      host.innerHTML = '';
+      google.accounts.id.renderButton(host, { theme: 'outline', size: 'large', width: 320, text: 'continue_with', shape: 'rectangular' });
+      setGoogleAuthLoading(false);
+      const status = $('account-status');
+      if (status) status.textContent = 'Tocca il pulsante Google qui sotto per continuare.';
+    }
+  });
 }
 function startAppleAuth(){
   $('account-status').textContent = 'Apertura account Apple…';
@@ -3008,8 +3102,9 @@ async function readApiJson(response) {
   try { payload = raw ? JSON.parse(raw) : {}; } catch(err) { console.error('[Coach AI] invalid JSON', response.status, raw); }
   if(!response.ok) {
     const message = payload.error || payload.message || raw || 'Risposta vuota del server';
-    console.error('[Coach AI] server error', response.status, message);
-    throw new Error(`HTTP ${response.status}: ${message}`);
+    const detail = payload.detail ? (' — ' + payload.detail) : '';
+    console.error('[Coach AI] server error', response.status, message, payload.detail || '');
+    throw new Error(`HTTP ${response.status}: ${message}${detail}`);
   }
   if(!raw) throw new Error(`HTTP ${response.status}: risposta vuota del server`);
   return payload;
@@ -4493,7 +4588,21 @@ function showPrevLoad(e, key) {
   const prevVal = store.data[prevKey];
   if(prevVal) {
     const tt = $('prev-load-tooltip');
-    tt.innerText = `SETT. PREC: ${prevVal}kg`;
+    if (!tt) return;
+    let tip = `SETT. PREC: ${prevVal}kg`;
+    try {
+      const m = String(key).match(/_e(\d+)_/);
+      const exIdx = m ? parseInt(m[1], 10) : null;
+      if (exIdx != null) {
+        const sugg = getLoadSuggestion(exIdx, {});
+        if (sugg != null) {
+          const prevN = parseFloat(prevVal);
+          if (Number.isFinite(prevN) && sugg > prevN) tip += ` → prova ~${sugg}kg`;
+          else if (Number.isFinite(prevN) && sugg <= prevN) tip += ' → mantieni / +piccoli kg';
+        }
+      }
+    } catch (_) {}
+    tt.innerText = tip;
     tt.style.display = 'block';
     const rect = e.target.getBoundingClientRect();
     tt.style.left = `${rect.left}px`;
@@ -4515,7 +4624,11 @@ function getPrevSessionSetValues(exIdx, setNum) {
   };
 }
 
-function formatLastSessionChip(exIdx) {
+function formatLastSessionChip(exIdx, row) {
+  if (typeof formatPrevWeekLoadAdvice === 'function') {
+    const advice = formatPrevWeekLoadAdvice(exIdx, row || {});
+    if (advice) return advice;
+  }
   if (currentWeek <= 1) return '';
   const parts = [];
   for (let s = 1; s <= 8; s++) {
@@ -9483,9 +9596,13 @@ function renderTraining(c){
       <select onchange="currentWeek=parseInt(this.value);currentDay=0;render()">${weeksList.map(ww=>`<option value="${ww.weekNumber || ww.week}" ${(ww.weekNumber || ww.week)===currentWeek?'selected':''}>Settimana ${ww.weekNumber || ww.week}</option>`).join('')}</select>
       <select onchange="currentDay=parseInt(this.value);render()">${allDays.map((dd,i)=>`<option value="${i}" ${i===currentDay?'selected':''}>${esc(dd.name||dd.title||dd.day||'Giorno '+(i+1))}${dd.is_bonus || dd.isBonus?' [BONUS]':''}</option>`).join('')}</select>
     </div>`;
-    h += `<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;">
+    h += `<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
       <button class="btn btn-outline" type="button" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="undoWorkoutModification()" ${workoutUndoCount()?'':'disabled'}>ANNULLA ULTIMA MODIFICA${workoutUndoCount()?(' · '+workoutUndoCount()):''}</button>
       <button class="btn btn-outline" style="font-size:10px; padding:6px 12px;" onclick="toggleIntensityType()">${t('activeScale')}: ${intensType}</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      <button class="btn btn-outline" type="button" style="font-size:10px;padding:8px 10px;border-color:var(--gold);color:var(--gold);" onclick="openWorkoutPdfExportModal()">ESPORTA PDF</button>
+      <button class="btn btn-outline" type="button" style="font-size:10px;padding:8px 10px;" onclick="openMaxTestPlannerModal()">MASSIMALE</button>
     </div>`;
 
     h += `<div class="card"><div class="card-header"><h2>${esc(w.title)}</h2></div><div style="padding:15px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"><span style="font-size:11px;font-weight:700;color:var(--text-secondary);">${esc(d.title || d.day || 'Sessione')}${d.is_bonus || d.isBonus?' (BONUS)':''}</span><input type="number" step="0.1" placeholder="BW kg" value="${store.bw[currentWeek]||''}" onchange="store.bw[currentWeek]=this.value;persist()" style="width:90px;padding:6px;text-align:center;"></div><div id="exercises-list">`;
@@ -9517,14 +9634,15 @@ function renderTraining(c){
         </div>
         <div style="font-size:16px;font-weight:900;margin:6px 0 2px;">${esc(curEx)}</div>
         <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px;">${esc(schemeInfo.scheme)} <span style="font-size:10px;font-weight:600;color:#aaa;">${schemeInfo.setCount} serie · ${esc(schemeInfo.reps)} rip</span></div>
-        ${formatLastSessionChip(fIdx)}
-        ${getLoadSuggestion(fIdx, row) != null ? `<div style="font-size:10px;color:var(--gold);margin-bottom:8px;">Suggerimento: ${getLoadSuggestion(fIdx, row)} kg</div>` : ''}
+        ${formatLastSessionChip(fIdx, row)}
+        ${formatMaxTestChip(fIdx, curEx)}
         ${skipReason ? `<div class="skip-reason">Causa: ${skipReason}</div>` : ''}
 
         <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
           <button class="load-toggle ${isTotal?'active':''}" onclick="toggleLoadType(${fIdx}, 'total')">Totale</button>
           <button class="load-toggle ${!isTotal?'active':''}" onclick="toggleLoadType(${fIdx}, 'part')">Per parte</button>
           <input type="text" placeholder="Tempo (es. 3-0-1)" value="${esc(tempo)}" onchange="updateTempo(${fIdx}, this.value)" style="flex:1; font-size:10px; padding:4px 8px; height:26px;">
+          <button class="btn btn-outline" type="button" title="Pianifica test massimale" style="font-size:9px;padding:4px 6px;height:26px;" onclick="openMaxTestPlannerModal(${fIdx})">1RM</button>
         </div>`;
 
       if(!skipReason) {
@@ -9571,12 +9689,12 @@ function renderTraining(c){
             <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
             <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" onfocus="showPrevLoad(event, '${k}_load')" onblur="hidePrevLoad()" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
             <select onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${shownReps==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
-            <select onchange="updateData('${k}_rir',this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${shownRir==i?'selected':''}>${i}</option>`).join('')}</select>
+            <select onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${shownRir==i?'selected':''}>${i}</option>`).join('')}</select>
             <button class="set-done-btn ${isDone?'active':''}" title="1 tap: conferma kg/reps e avvia riposo" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
             <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
           </div>
           <div style="margin:-2px 0 8px 34px;">
-            <select onchange="updateData('${k}_tech',this.value)" style="width:100%;font-size:10px;padding:4px 6px;background:#151515;border:1px solid #333;color:#ccc;border-radius:6px;" title="Tecnica di intensità">
+            <select onchange="updateSetTechnique(${fIdx},${s},this.value)" style="width:100%;font-size:10px;padding:4px 6px;background:#151515;border:1px solid #333;color:#ccc;border-radius:6px;" title="Tecnica di intensità">
               <option value="">Tecnica: normale</option>
               ${techOpts}
             </select>
@@ -9610,7 +9728,8 @@ function renderTraining(c){
         </div>
         <div style="font-size:16px;font-weight:900;margin:6px 0 2px;">${esc(curEx)}</div>
         <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px;">${esc(bonusScheme.scheme)} <span style="font-size:10px;font-weight:600;color:#aaa;">${bonusScheme.setCount} serie · ${esc(bonusScheme.reps)} rip</span></div>
-        ${formatLastSessionChip(fIdx)}
+        ${formatLastSessionChip(fIdx, bEx)}
+        ${formatMaxTestChip(fIdx, curEx)}
 
         <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
           <button class="load-toggle ${isTotal?'active':''}" onclick="toggleLoadType(${fIdx}, 'total')">Totale</button>
@@ -9636,7 +9755,7 @@ function renderTraining(c){
           <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
           <input type="number" id="${k}_load" step="0.5" placeholder="${bEx.plannedLoad || ''}" value="${store.data[k+'_load']||''}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
           <select onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${store.data[k+'_reps']==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
-          <select onchange="updateData('${k}_rir',this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${store.data[k+'_rir']==i?'selected':''}>${i}</option>`).join('')}</select>
+          <select onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${store.data[k+'_rir']==i?'selected':''}>${i}</option>`).join('')}</select>
           <button class="set-done-btn ${isDone?'active':''}" onclick="completeSetQuick(${fIdx}, ${s}, '${restBonus}')">${isDone?'✓':'○'}</button>
           <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
         </div>`;
@@ -9686,9 +9805,399 @@ function toggleLoadType(idx, type) {
   render();
 }
 function setExIntensity(idx, type) {
+  pushWorkoutUndoSnapshot('intensità ' + type);
   store.exIntensity[`w${currentWeek}_d${currentDay}_e${idx}`] = type;
+  const total = getExerciseSetCount(idx);
+  if (total > 1 && confirm('Applicare la scala ' + type + ' a questo esercizio?\n\nVuoi anche copiare l’ultimo valore ' + type + ' inserito sulle serie ancora vuote?')) {
+    let lastVal = '';
+    for (let s = 1; s <= total; s++) {
+      const v = store.data[`w${currentWeek}_d${currentDay}_e${idx}_s${s}_rir`];
+      if (v !== undefined && v !== '' && v != null) lastVal = v;
+    }
+    if (lastVal !== '') {
+      for (let s = 1; s <= total; s++) {
+        const k = `w${currentWeek}_d${currentDay}_e${idx}_s${s}_rir`;
+        if (store.data[k] === undefined || store.data[k] === '' || store.data[k] == null) store.data[k] = lastVal;
+      }
+    }
+  }
   persist();
   render();
+}
+
+function updateSetIntensityValue(exIdx, setNum, val) {
+  const k = `w${currentWeek}_d${currentDay}_e${exIdx}_s${setNum}_rir`;
+  store.data[k] = val;
+  persist();
+  calcStats();
+  const total = getExerciseSetCount(exIdx);
+  if (setNum < total && String(val).trim() !== '') {
+    const apply = confirm('Assegnare questo valore di intensità anche alle serie successive di questo esercizio?');
+    if (apply) {
+      pushWorkoutUndoSnapshot('intensità serie successive');
+      for (let s = setNum + 1; s <= total; s++) {
+        store.data[`w${currentWeek}_d${currentDay}_e${exIdx}_s${s}_rir`] = val;
+      }
+      persist();
+      render();
+    }
+  }
+}
+
+function updateSetTechnique(exIdx, setNum, val) {
+  const k = `w${currentWeek}_d${currentDay}_e${exIdx}_s${setNum}_tech`;
+  store.data[k] = val;
+  persist();
+  const total = getExerciseSetCount(exIdx);
+  if (setNum < total) {
+    const label = val
+      ? ((typeof getIntensityTechniqueOptions === 'function' ? getIntensityTechniqueOptions() : []).find(function (t) { return t.id === val; }) || { label: val }).label
+      : 'normale';
+    const apply = confirm('Assegnare la tecnica "' + label + '" anche alle serie successive di questo esercizio?');
+    if (apply) {
+      pushWorkoutUndoSnapshot('tecnica serie successive');
+      for (let s = setNum + 1; s <= total; s++) {
+        store.data[`w${currentWeek}_d${currentDay}_e${exIdx}_s${s}_tech`] = val;
+      }
+      persist();
+      render();
+    }
+  }
+}
+
+function maxTestKey(exName) {
+  return String(exName || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function formatMaxTestChip(exIdx, exName) {
+  if (!store.maxTests) return '';
+  const key = maxTestKey(exName);
+  const plan = store.maxTests[key];
+  if (!plan || !plan.targetWeek) return '';
+  const weeksLeft = Number(plan.targetWeek) - Number(currentWeek);
+  let tone = '#aaa';
+  let msg = 'Test 1RM previsto sett. ' + plan.targetWeek;
+  if (weeksLeft < 0) { msg = 'Test 1RM scaduto (sett. ' + plan.targetWeek + ') — ripianifica'; tone = '#ef5350'; }
+  else if (weeksLeft === 0) { msg = 'Questa settimana: TEST MASSIMALE'; tone = 'var(--gold)'; }
+  else if (weeksLeft === 1) { msg = 'Prossima sett.: test 1RM — taper'; tone = '#ffb74d'; }
+  else if (weeksLeft < 3) { msg = 'Test 1RM tra ' + weeksLeft + ' sett. (presto)'; tone = '#ffb74d'; }
+  else { msg = 'Test 1RM tra ' + weeksLeft + ' settimane'; }
+  return `<div style="font-size:10px;color:${tone};font-weight:700;margin:0 0 8px;">${esc(msg)}${plan.estimated1rm ? (' · stimato ~' + esc(String(plan.estimated1rm)) + ' kg') : ''}</div>`;
+}
+
+function openMaxTestPlannerModal(preselectExIdx) {
+  if (!DATA || !DATA.weeks || !DATA.weeks.length) {
+    alert('Carica un programma prima di pianificare un massimale.');
+    return;
+  }
+  if (!store.maxTests) store.maxTests = {};
+  let modal = $('max-test-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'max-test-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `<div class="modal-card" style="max-width:440px;">
+      <div class="card-header"><h2>TEST MASSIMALE</h2><button class="btn btn-outline" onclick="closeMaxTestPlannerModal()">CHIUDI</button></div>
+      <div class="modal-body-scroll" style="padding:12px;">
+        <label style="font-size:10px;color:#888;">Esercizio</label>
+        <select id="max-test-ex" style="width:100%;margin:4px 0 12px;padding:10px;"></select>
+        <label style="font-size:10px;color:#888;">Tra quante settimane</label>
+        <select id="max-test-weeks" style="width:100%;margin:4px 0 12px;padding:10px;">
+          <option value="1">1 settimana (sconsigliato)</option>
+          <option value="2">2 settimane</option>
+          <option value="3" selected>3 settimane</option>
+          <option value="4">4 settimane</option>
+          <option value="5">5 settimane</option>
+          <option value="6">6 settimane</option>
+          <option value="8">8 settimane</option>
+        </select>
+        <label style="font-size:10px;color:#888;">1RM stimato attuale (kg, opzionale)</label>
+        <input id="max-test-1rm" type="number" step="0.5" placeholder="es. 100" style="width:100%;margin:4px 0 12px;padding:10px;">
+        <div id="max-test-warn" style="font-size:11px;color:#ffb74d;margin-bottom:10px;"></div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;">
+          <input type="checkbox" id="max-test-adapt" checked> Adatta programmazione di questo esercizio fino al test
+        </label>
+      </div>
+      <div class="modal-sticky-footer">
+        <button class="btn btn-outline" style="flex:1;" onclick="closeMaxTestPlannerModal()">ANNULLA</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="confirmMaxTestPlan()">SALVA PIANO</button>
+      </div>
+    </div>`;
+    document.body.appendChild(modal);
+  }
+  const weeksList = DATA.weeks || [];
+  const w = weeksList[currentWeek - 1] || weeksList[0];
+  const allDays = (w && (w.sessions || w.days)) || [];
+  const d = allDays[currentDay] || allDays[0] || {};
+  const exerciseList = d.exercises || d.rows || [];
+  const sel = $('max-test-ex');
+  sel.innerHTML = exerciseList.map(function (row, i) {
+    const name = store.subs[`w${currentWeek}_d${currentDay}_e${i}`] || row.name || row.exercise || ('Esercizio ' + (i + 1));
+    return '<option value="' + i + '">' + esc(name) + '</option>';
+  }).join('');
+  if (preselectExIdx != null && sel.querySelector('option[value="' + preselectExIdx + '"]')) sel.value = String(preselectExIdx);
+  const weekSel = $('max-test-weeks');
+  const updateWarn = function () {
+    const n = parseInt(weekSel.value, 10) || 0;
+    const el = $('max-test-warn');
+    if (!el) return;
+    if (n <= 1) el.textContent = 'Sconsigliato: troppo presto per un test massimale serio. Preferisci almeno 3–4 settimane di preparazione.';
+    else if (n === 2) el.textContent = 'Attenzione: 2 settimane sono al limite. Meglio 3+ se possibile.';
+    else el.textContent = 'Ok: prepareremo taper e intensità verso il test.';
+  };
+  weekSel.onchange = updateWarn;
+  updateWarn();
+  modal.style.display = 'flex';
+}
+
+function closeMaxTestPlannerModal() {
+  const modal = $('max-test-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function confirmMaxTestPlan() {
+  const exIdx = parseInt(($('max-test-ex') || {}).value, 10);
+  const inWeeks = parseInt(($('max-test-weeks') || {}).value, 10) || 3;
+  const est = parseFloat(($('max-test-1rm') || {}).value);
+  const adapt = !!($('max-test-adapt') || {}).checked;
+  if (!Number.isFinite(exIdx)) { alert('Seleziona un esercizio.'); return; }
+  if (inWeeks <= 1 && !confirm('1 settimana è sconsigliata per un test massimale. Continuare comunque?')) return;
+  if (inWeeks === 2 && !confirm('2 settimane sono al limite. Continuare?')) return;
+  const weeksList = DATA.weeks || [];
+  const w = weeksList[currentWeek - 1];
+  const allDays = (w && (w.sessions || w.days)) || [];
+  const d = allDays[currentDay] || {};
+  const exerciseList = d.exercises || d.rows || [];
+  const row = exerciseList[exIdx] || {};
+  const name = store.subs[`w${currentWeek}_d${currentDay}_e${exIdx}`] || row.name || row.exercise || '';
+  const key = maxTestKey(name);
+  const targetWeek = Math.min(weeksList.length, currentWeek + inWeeks);
+  if (!store.maxTests) store.maxTests = {};
+  store.maxTests[key] = {
+    exercise: name,
+    exIdx: exIdx,
+    dayIdx: currentDay,
+    fromWeek: currentWeek,
+    targetWeek: targetWeek,
+    estimated1rm: Number.isFinite(est) && est > 0 ? est : null,
+    adapted: adapt,
+    createdAt: Date.now()
+  };
+  if (adapt) applyMaxTestAdaptation(key, store.maxTests[key]);
+  persist();
+  closeMaxTestPlannerModal();
+  if (typeof showToast === 'function') showToast('Test massimale pianificato a sett. ' + targetWeek, 'success');
+  render();
+}
+
+function applyMaxTestAdaptation(key, plan) {
+  if (!plan || !DATA || !DATA.weeks) return;
+  const nameLc = maxTestKey(plan.exercise || key);
+  DATA.weeks.forEach(function (week, wi) {
+    const weekNum = week.weekNumber || week.week || (wi + 1);
+    const days = week.sessions || week.days || [];
+    days.forEach(function (day) {
+      const list = day.exercises || day.rows || [];
+      list.forEach(function (ex) {
+        const exName = maxTestKey(ex.name || ex.exercise || '');
+        if (exName !== nameLc) return;
+        const weeksToTest = plan.targetWeek - weekNum;
+        if (weeksToTest < 0) return;
+        if (weeksToTest === 0) {
+          ex.notes = [ex.notes || '', 'TEST 1RM: warm-up progressivo + singole tecniche. Non cercare volume.'].filter(Boolean).join(' | ');
+          ex.rirTarget = 0;
+          ex.rpeTarget = 10;
+          if (Array.isArray(ex.sets) && ex.sets.length) {
+            ex.sets = ex.sets.slice(0, Math.min(ex.sets.length, 5)).map(function (s, i) {
+              const copy = Object.assign({}, s);
+              if (i >= ex.sets.length - 2) { copy.reps = 1; copy.target_reps = 1; copy.rir = 0; }
+              return copy;
+            });
+          }
+        } else if (weeksToTest === 1) {
+          ex.notes = [ex.notes || '', 'Pre-test: volume ridotto, intensità alta, RIR 1–2.'].filter(Boolean).join(' | ');
+          if (ex.rirTarget != null) ex.rirTarget = Math.max(1, Number(ex.rirTarget) - 1);
+        } else if (weeksToTest <= 3) {
+          ex.notes = [ex.notes || '', 'Avvicinamento 1RM: tecnica pulita, RIR 2–3.'].filter(Boolean).join(' | ');
+        }
+      });
+    });
+  });
+}
+
+function openWorkoutPdfExportModal() {
+  if (!DATA || !DATA.weeks || !DATA.weeks.length) {
+    alert('Nessun allenamento da esportare.');
+    return;
+  }
+  let modal = $('workout-pdf-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'workout-pdf-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `<div class="modal-card" style="max-width:460px;">
+      <div class="card-header"><h2>ESPORTA PDF</h2><button class="btn btn-outline" onclick="closeWorkoutPdfExportModal()">CHIUDI</button></div>
+      <div class="modal-body-scroll" style="padding:12px;">
+        <label style="font-size:10px;color:#888;">Ambito</label>
+        <select id="pdf-scope" style="width:100%;margin:4px 0 12px;padding:10px;">
+          <option value="day">Solo questo giorno</option>
+          <option value="week" selected>Questa settimana</option>
+          <option value="2weeks">Due settimane</option>
+          <option value="4weeks">Quattro settimane</option>
+          <option value="all">Tutto l'allenamento</option>
+        </select>
+        <div style="font-size:11px;color:#aaa;margin-bottom:10px;">Includi sezioni extra (se presenti nel programma):</div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;"><input type="checkbox" id="pdf-inc-nutrition"> Alimentazione</label>
+        <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;"><input type="checkbox" id="pdf-inc-supp"> Integrazione</label>
+        <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;"><input type="checkbox" id="pdf-inc-therapy"> Terapia</label>
+        <div style="font-size:10px;color:#666;margin-top:8px;">Il PDF include logo NURVAN, schema, carichi scritti, reps e intensità.</div>
+      </div>
+      <div class="modal-sticky-footer">
+        <button class="btn btn-outline" style="flex:1;" onclick="closeWorkoutPdfExportModal()">ANNULLA</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="exportWorkoutPdf()">GENERA PDF</button>
+      </div>
+    </div>`;
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+}
+
+function closeWorkoutPdfExportModal() {
+  const modal = $('workout-pdf-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function buildWorkoutPdfHtml(opts) {
+  opts = opts || {};
+  const weeksList = DATA.weeks || [];
+  let startW = 1;
+  let endW = weeksList.length;
+  const scope = opts.scope || 'week';
+  if (scope === 'day' || scope === 'week') { startW = currentWeek; endW = currentWeek; }
+  else if (scope === '2weeks') { startW = currentWeek; endW = Math.min(weeksList.length, currentWeek + 1); }
+  else if (scope === '4weeks') { startW = currentWeek; endW = Math.min(weeksList.length, currentWeek + 3); }
+  else { startW = 1; endW = weeksList.length; }
+
+  const athlete = (store.account && store.account.name) || (store.profile && (store.profile.first_name || store.profile.name)) || '';
+  let body = '';
+  for (let wi = startW; wi <= endW; wi++) {
+    const week = weeksList[wi - 1];
+    if (!week) continue;
+    const days = week.sessions || week.days || [];
+    body += '<h2 style="color:#c9a227;margin:22px 0 8px;font-size:16px;border-bottom:1px solid #333;padding-bottom:6px;">Settimana ' + (week.weekNumber || week.week || wi) + (week.title ? (' — ' + esc(week.title)) : '') + '</h2>';
+    days.forEach(function (day, di) {
+      if (scope === 'day' && (wi !== currentWeek || di !== currentDay)) return;
+      const dayTitle = day.name || day.title || day.day || ('Giorno ' + (di + 1));
+      body += '<h3 style="margin:14px 0 8px;font-size:14px;color:#fff;">' + esc(dayTitle) + '</h3>';
+      const list = day.exercises || day.rows || [];
+      body += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px;">';
+      body += '<thead><tr style="background:#1a1a1a;color:#c9a227;text-align:left;"><th style="padding:6px;border:1px solid #333;">Esercizio</th><th style="padding:6px;border:1px solid #333;">Schema</th><th style="padding:6px;border:1px solid #333;">Serie / carichi</th><th style="padding:6px;border:1px solid #333;">Rest</th></tr></thead><tbody>';
+      list.forEach(function (row, ei) {
+        const name = store.subs[`w${wi}_d${di}_e${ei}`] || row.name || row.exercise || '—';
+        const scheme = (typeof formatSetRepScheme === 'function' ? formatSetRepScheme(row) : { scheme: row.scheme || '', setCount: (row.sets && row.sets.length) || 3 });
+        const setCount = (typeof getExerciseSetCount === 'function')
+          ? (function () { const prevW = currentWeek, prevD = currentDay; currentWeek = wi; currentDay = di; const n = getExerciseSetCount(ei); currentWeek = prevW; currentDay = prevD; return n; })()
+          : (scheme.setCount || 3);
+        const setLines = [];
+        for (let s = 1; s <= setCount; s++) {
+          const base = `w${wi}_d${di}_e${ei}_s${s}`;
+          const load = store.data[base + '_load'];
+          const reps = store.data[base + '_reps'];
+          const rir = store.data[base + '_rir'];
+          const tech = store.data[base + '_tech'];
+          const done = store.data[base + '_done'] ? '✓' : '';
+          const planned = (Array.isArray(row.sets) && row.sets[s - 1])
+            ? (row.sets[s - 1].load || row.sets[s - 1].target_load || '')
+            : (row.plannedLoad || '');
+          const loadShow = (load !== undefined && load !== '' && load != null) ? load : (planned !== '' && planned != null ? ('~' + planned) : '—');
+          const repsShow = (reps !== undefined && reps !== '' && reps != null) ? reps : (row.repsTarget || '—');
+          setLines.push('S' + s + ': ' + loadShow + ' kg × ' + repsShow + (rir !== undefined && rir !== '' && rir != null ? (' @' + rir) : '') + (tech ? (' [' + tech + ']') : '') + (done ? ' ' + done : ''));
+        }
+        body += '<tr><td style="padding:6px;border:1px solid #333;vertical-align:top;font-weight:700;">' + esc(name) + '</td>'
+          + '<td style="padding:6px;border:1px solid #333;vertical-align:top;">' + esc(scheme.scheme || '') + '</td>'
+          + '<td style="padding:6px;border:1px solid #333;vertical-align:top;white-space:pre-line;">' + esc(setLines.join('\n')) + '</td>'
+          + '<td style="padding:6px;border:1px solid #333;vertical-align:top;">' + esc(row.rest || '') + '</td></tr>';
+      });
+      body += '</tbody></table>';
+    });
+  }
+
+  if (opts.nutrition && DATA.nutrition && Array.isArray(DATA.nutrition.days) && DATA.nutrition.days.length) {
+    body += '<h2 style="color:#c9a227;margin:24px 0 8px;font-size:16px;">Alimentazione</h2>';
+    DATA.nutrition.days.forEach(function (nd) {
+      body += '<h3 style="font-size:13px;margin:10px 0 4px;">' + esc(nd.day || 'Giorno') + '</h3>';
+      (nd.meals || []).forEach(function (meal) {
+        body += '<div style="font-size:11px;margin:4px 0;"><b>' + esc(meal.name || 'Pasto') + '</b>: '
+          + esc((meal.foods || []).map(function (f) { return (f.name || f.food || '') + (f.qty || f.amount ? (' ' + (f.qty || f.amount)) : ''); }).join(', '))
+          + '</div>';
+      });
+    });
+  }
+  if (opts.supp && DATA.supplementation) {
+    body += '<h2 style="color:#c9a227;margin:24px 0 8px;font-size:16px;">Integrazione</h2>';
+    const items = DATA.supplementation.items || DATA.supplementation.supplements || (Array.isArray(DATA.supplementation) ? DATA.supplementation : []);
+    if (Array.isArray(items) && items.length) {
+      body += '<ul style="font-size:11px;">' + items.map(function (it) {
+        return '<li>' + esc(it.name || it.supplement || '—') + (it.dose || it.dosage ? (' — ' + esc(it.dose || it.dosage)) : '') + (it.timing ? (' (' + esc(it.timing) + ')') : '') + '</li>';
+      }).join('') + '</ul>';
+    } else {
+      body += '<pre style="font-size:11px;white-space:pre-wrap;">' + esc(JSON.stringify(DATA.supplementation, null, 2).slice(0, 4000)) + '</pre>';
+    }
+  }
+  if (opts.therapy && (DATA.therapy || store.therapy)) {
+    const ther = DATA.therapy || store.therapy;
+    body += '<h2 style="color:#c9a227;margin:24px 0 8px;font-size:16px;">Terapia</h2>';
+    const items = ther.items || ther.drugs || (Array.isArray(ther) ? ther : []);
+    if (Array.isArray(items) && items.length) {
+      body += '<ul style="font-size:11px;">' + items.map(function (it) {
+        return '<li>' + esc(it.name || it.drug || '—') + (it.dose || it.dosage ? (' — ' + esc(it.dose || it.dosage)) : '') + '</li>';
+      }).join('') + '</ul>';
+    } else {
+      body += '<div style="font-size:11px;">Nessun dettaglio terapia strutturato.</div>';
+    }
+  }
+
+  const logoUrl = (location.origin || '') + '/nurvan_logo.png';
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>NURVAN — Allenamento</title>
+    <style>
+      @page { margin: 16mm; }
+      body { font-family: Arial, Helvetica, sans-serif; background:#0d0d0d; color:#eee; margin:0; padding:24px; }
+      .head { display:flex; align-items:center; gap:14px; border-bottom:2px solid #c9a227; padding-bottom:12px; margin-bottom:16px; }
+      .head img { width:64px; height:64px; object-fit:contain; }
+      .meta { font-size:11px; color:#aaa; }
+      @media print { body { background:#fff; color:#111; } h2,h3,.head span { color:#111 !important; } table th { color:#8a6d1a !important; } }
+    </style></head><body>
+    <div class="head">
+      <img src="${logoUrl}" alt="Nurvan" onerror="this.style.display='none'">
+      <div>
+        <div style="font-size:22px;font-weight:900;letter-spacing:2px;color:#c9a227;">NURVAN</div>
+        <div class="meta">Programma allenamento · ${esc(new Date().toLocaleDateString('it-IT'))}${athlete ? (' · ' + esc(athlete)) : ''}</div>
+        <div class="meta">Ambito: ${esc(scope)} · settimane ${startW}–${endW}</div>
+      </div>
+    </div>
+    ${body}
+    <div style="margin-top:28px;font-size:10px;color:#666;border-top:1px solid #333;padding-top:8px;">Generato con NURVAN · coach-api-gemini.onrender.com</div>
+    <script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>
+  </body></html>`;
+}
+
+function exportWorkoutPdf() {
+  const scope = (($('pdf-scope') || {}).value) || 'week';
+  const html = buildWorkoutPdfHtml({
+    scope: scope,
+    nutrition: !!($('pdf-inc-nutrition') || {}).checked,
+    supp: !!($('pdf-inc-supp') || {}).checked,
+    therapy: !!($('pdf-inc-therapy') || {}).checked
+  });
+  closeWorkoutPdfExportModal();
+  const w = window.open('', '_blank');
+  if (!w) {
+    alert('Consenti i popup per generare il PDF, oppure usa Stampa del browser.');
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
 }
 function updateTempo(idx, val) {
   store.tempos[`w${currentWeek}_d${currentDay}_e${idx}`] = val;
@@ -12689,6 +13198,15 @@ if (typeof window !== 'undefined') {
   window.$ = $;
   window.toggleIntensityType = toggleIntensityType;
   window.setExIntensity = setExIntensity;
+  window.updateSetIntensityValue = updateSetIntensityValue;
+  window.updateSetTechnique = updateSetTechnique;
+  window.openWorkoutPdfExportModal = openWorkoutPdfExportModal;
+  window.closeWorkoutPdfExportModal = closeWorkoutPdfExportModal;
+  window.exportWorkoutPdf = exportWorkoutPdf;
+  window.openMaxTestPlannerModal = openMaxTestPlannerModal;
+  window.closeMaxTestPlannerModal = closeMaxTestPlannerModal;
+  window.confirmMaxTestPlan = confirmMaxTestPlan;
+  window.formatMaxTestChip = formatMaxTestChip;
   window.openMenuHub = openMenuHub;
   window.closeMenuHub = closeMenuHub;
   window.navigate = navigate;
