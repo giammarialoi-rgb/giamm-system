@@ -24061,10 +24061,34 @@ function hasExamTableHeaders(rawRows = []) {
   return false;
 }
 
+function isTherapyNamedSheet(sheetName) {
+  const n = String(sheetName || "").toUpperCase().trim();
+  return /^(?:TERAPIA(?:[\s_]+ED[\s_]*ESAMI)?|TERAPIA_ESAMI|FARMACOLOGIA|TRATTAMENTO|TERAPIE|MEDICINALI|FARMACI|PIANO[\s_]*CLINICO|CLINICAL|THERAPY|MEDICATIONS?)\b/i.test(n);
+}
+
+function looksLikeTherapyWeekGrid(rawRows = []) {
+  let weekHits = 0;
+  let dayHits = 0;
+  for (let i = 0; i < Math.min(40, (rawRows || []).length); i++) {
+    const rowStr = (rawRows[i] || []).join(" ");
+    if (/(?:SETTIMANA|WEEK)\s*\d+/i.test(rowStr)) weekHits++;
+    if (/luned|marted|mercoled|gioved|venerd|sabato|domenica|monday|tuesday|wednesday|thursday|friday|saturday|sunday/i.test(rowStr)) dayHits++;
+  }
+  return weekHits >= 1 && dayHits >= 1;
+}
+
+function looksLikeTherapyContent(rawRows = []) {
+  return hasTherapyTableHeaders(rawRows) || looksLikeTherapyWeekGrid(rawRows);
+}
+
 function classifySheetType(sheetName, rawRows = []) {
   const nameUpper = String(sheetName || "").toUpperCase().trim();
 
   if (looksLikeSsttProgramGrid(rawRows)) return "training";
+  if (isTherapyNamedSheet(sheetName) && /ED[\s_]*ESAMI|TERAPIA_ESAMI|PIANO[\s_]*CLINICO|CLINICAL/i.test(nameUpper)) {
+    return "therapy_exams";
+  }
+  if (isTherapyNamedSheet(sheetName)) return "therapy";
   if (looksLikeScienceOrEvidenceSheet(sheetName, rawRows)) return "other";
   if (looksLikeCatalogOrLookupSheet(sheetName, rawRows)) return "other";
   if (isMetaOrAdminSheetName(sheetName) && !looksLikeTrainingProgramSheet(rawRows) && !isWeekNamedSheet(sheetName)) {
@@ -24086,13 +24110,13 @@ function classifySheetType(sheetName, rawRows = []) {
   if (/^(?:INTEGRAZIONE|INTEGRATORI|SUPPLEMENTI|SUPPLEMENTATION|SUPPLEMENTS)/i.test(nameUpper)) {
     return "supplementation";
   }
-  if (/^(?:TERAPIA\s*ED\s*ESAMI|TERAPIA_ESAMI|PIANO\s*CLINICO|CLINICAL)/i.test(nameUpper) && (hasTherapyTableHeaders(rawRows) || hasExamTableHeaders(rawRows))) {
+  if (/^(?:TERAPIA\s*ED\s*ESAMI|TERAPIA_ESAMI|PIANO\s*CLINICO|CLINICAL)/i.test(nameUpper)) {
     return "therapy_exams";
   }
-  if (/^(?:TERAPIA|FARMACOLOGIA|TRATTAMENTO|TERAPIE|MEDICINALI|FARMACI)/i.test(nameUpper) && hasTherapyTableHeaders(rawRows)) {
+  if (/^(?:TERAPIA|FARMACOLOGIA|TRATTAMENTO|TERAPIE|MEDICINALI|FARMACI)/i.test(nameUpper)) {
     return "therapy";
   }
-  if (/^(?:ESAMI|ANALISI|ESAMI\s*DEL\s*SANGUE|BLOODWORK|REFERTI|VALORI)/i.test(nameUpper) && hasExamTableHeaders(rawRows)) {
+  if (/^(?:ESAMI|ANALISI|ESAMI\s*DEL\s*SANGUE|BLOODWORK|REFERTI|VALORI)/i.test(nameUpper)) {
     return "exams";
   }
 
@@ -24114,10 +24138,11 @@ function classifySheetType(sheetName, rawRows = []) {
   }
 
   if (nutritionHits >= 2 && nutritionHits >= trainingHits) return "nutrition";
-  if (supplementHits >= 2 && supplementHits >= trainingHits) return "supplementation";
-  if (therapyHits >= 1 && examHits >= 1 && (hasTherapyTableHeaders(rawRows) || hasExamTableHeaders(rawRows))) return "therapy_exams";
-  if (therapyHits >= 2 && hasTherapyTableHeaders(rawRows)) return "therapy";
-  if (examHits >= 2 && hasExamTableHeaders(rawRows)) return "exams";
+  if (supplementHits >= 2 && supplementHits >= trainingHits && therapyHits < 2 && !looksLikeTherapyContent(rawRows)) return "supplementation";
+  if (therapyHits >= 1 && examHits >= 1) return "therapy_exams";
+  if (therapyHits >= 1 && looksLikeTherapyContent(rawRows)) return "therapy";
+  if (therapyHits >= 2) return "therapy";
+  if (examHits >= 2) return "exams";
   if (looksLikeTrainingProgramSheet(rawRows)) return "training";
   if (trainingHits >= 3 && looksLikeTrainingProgramSheet(rawRows)) return "training";
 
@@ -26015,8 +26040,18 @@ function parseStructuredWorkbook(workbook, filename = "documento.xlsx") {
     if (examSheets.length > 0) {
       const parsed = parseTherapyExamsSheet(examSheets[0]);
       exams = parsed.exams;
-      if (parsed.therapy.present && !therapy.present && hasTherapyTableHeaders(examSheets[0].rawRows)) therapy = parsed.therapy;
+      if (parsed.therapy.present && !therapy.present) therapy = parsed.therapy;
     }
+  }
+  if (!(therapy.medications && therapy.medications.length)) {
+    classifiedSheets.forEach((s) => {
+      if (s.sheetType === "training" || s.sheetType === "nutrition" || s.sheetType === "supplementation") return;
+      if (!isTherapyNamedSheet(s.name) && !looksLikeTherapyContent(s.rawRows)) return;
+      const parsed = parseTherapyExamsSheet(s);
+      if (parsed.therapy && parsed.therapy.medications && parsed.therapy.medications.length) {
+        therapy = parsed.therapy;
+      }
+    });
   }
 
   // Calculate Source vs Canonical Integrity Counts

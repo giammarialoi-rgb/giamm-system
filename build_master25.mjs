@@ -1,7 +1,7 @@
 import fs from 'fs';
-import path from 'path';
 import { execSync } from 'child_process';
 import { JS_PRODUCT_SERVICES } from './prepare_task20_js_services.mjs';
+import { syncWebAssetsToAndroid } from './sync_web_assets.mjs';
 
 console.log('=== MASTER BUILD 25: DATA FIDELITY & E2E RECOVERY ===');
 
@@ -1034,40 +1034,8 @@ window.exportImportProvenance = typeof exportImportProvenance !== 'undefined' ? 
 const fullHtml = `${headerHtml}${CONFIG_HEADER}\n${middleCore}\n${exportCode}`;
 
 fs.writeFileSync('web/index.html', fullHtml, 'utf8');
-fs.writeFileSync('app/src/main/assets/index.html', fullHtml, 'utf8');
-
-const STATIC_ASSETS = [
-  'gs_logo.png',
-  'nurvan_logo.png',
-  'nurvan_app_icon.png',
-  'xlsx.full.min.js',
-  'data.json',
-  'program-catalog-index.json',
-  'program-catalog-body.json',
-  'manifest.webmanifest',
-  'sw.js',
-  'apple-touch-icon.png',
-  'icon-180.png',
-  'icon-192.png',
-  'icon-512.png',
-  'icon-512-maskable.png',
-  'favicon.png',
-  'muscle-male-front.png',
-  'muscle-male-back.png',
-  'muscle-female-front.png',
-  'muscle-female-back.png'
-];
-for (const file of STATIC_ASSETS) {
-  const src = path.join('web', file);
-  const dest = path.join('app/src/main/assets', file);
-  if (fs.existsSync(src)) {
-    fs.copyFileSync(src, dest);
-    console.log('  ✓ Synced asset:', file);
-  } else {
-    console.warn('  ⚠ Missing web asset (not synced to APK):', file);
-  }
-}
+syncWebAssetsToAndroid();
 
 console.log('✅ Build Master 25 completed successfully!');
 console.log('Output size web/index.html:', (fullHtml.length / 1024).toFixed(2), 'KB');
-console.log('Output size app/src/main/assets/index.html:', (fullHtml.length / 1024).toFixed(2), 'KB');
+console.log('Output size app/src/main/assets/index.html:', (fs.statSync('app/src/main/assets/index.html').size / 1024).toFixed(2), 'KB');

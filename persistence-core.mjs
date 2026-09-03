@@ -900,6 +900,18 @@ export class GiammariaPersistenceEngine {
       if (Array.isArray(r.ledger) && r.ledger.length > 80) r.ledger = r.ledger.slice(-80);
       if (Array.isArray(r.pendingSync) && r.pendingSync.length > 40) r.pendingSync = r.pendingSync.slice(-40);
     }
+    if (Array.isArray(sanitized.bodyChecks)) {
+      sanitized.bodyChecks = sanitized.bodyChecks.slice(-16).map((c) => ({
+        id: c && c.id,
+        at: c && c.at,
+        weight: c && c.weight,
+        period: c && c.period,
+        notes: c && c.notes ? String(c.notes).slice(0, 240) : '',
+        hasFront: !!(c && c.hasFront),
+        hasBack: !!(c && c.hasBack),
+        analysis: c && c.analysis ? String(c.analysis).slice(0, 800) : ''
+      }));
+    }
     if (sanitized.docs && Array.isArray(sanitized.docs)) {
       sanitized.docs = sanitized.docs.slice(0, 5).map(d => {
         const docCopy = { ...d };
