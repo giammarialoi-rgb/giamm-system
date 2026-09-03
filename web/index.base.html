@@ -10550,11 +10550,11 @@ function openWorkoutPdfExportModal() {
         <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;"><input type="checkbox" id="pdf-inc-nutrition"> Alimentazione</label>
         <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;"><input type="checkbox" id="pdf-inc-supp"> Integrazione</label>
         <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;"><input type="checkbox" id="pdf-inc-therapy"> Terapia</label>
-        <div style="font-size:10px;color:#666;margin-top:8px;">Il PDF include logo NURVAN, schema, carichi scritti, reps e intensità.</div>
+        <div style="font-size:10px;color:#666;margin-top:8px;">Crea un file PDF da salvare sul telefono o inoltrare (WhatsApp, Drive, mail).</div>
       </div>
       <div class="modal-sticky-footer">
         <button class="btn btn-outline" style="flex:1;" onclick="closeWorkoutPdfExportModal()">ANNULLA</button>
-        <button class="btn btn-primary" style="flex:1;" onclick="exportWorkoutPdf()">GENERA PDF</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="exportWorkoutPdf()">SALVA / INOLTRA PDF</button>
       </div>
     </div>`;
     document.body.appendChild(modal);
@@ -10681,23 +10681,227 @@ function buildWorkoutPdfHtml(opts) {
   </body></html>`;
 }
 
+function pdfWinAnsi(s) {
+  return String(s == null ? '' : s).replace(/[^\x00-\xFF]/g, function (ch) {
+    const map = { '—': '-', '–': '-', '’': "'", '‘': "'", '“': '"', '”': '"', '×': 'x', '·': ' - ', '✓': '*', 'à': '\xE0', 'è': '\xE8', 'é': '\xE9', 'ì': '\xEC', 'ò': '\xF2', 'ù': '\xF9' };
+    return map[ch] != null ? map[ch] : '?';
+  });
+}
+function pdfEsc(s) {
+  return pdfWinAnsi(s).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+function collectWorkoutPdfLines(opts) {
+  opts = opts || {};
+  const weeksList = DATA.weeks || [];
+  let startW = 1;
+  let endW = weeksList.length;
+  const scope = opts.scope || 'week';
+  if (scope === 'day' || scope === 'week') { startW = currentWeek; endW = currentWeek; }
+  else if (scope === '2weeks') { startW = currentWeek; endW = Math.min(weeksList.length, currentWeek + 1); }
+  else if (scope === '4weeks') { startW = currentWeek; endW = Math.min(weeksList.length, currentWeek + 3); }
+  const athlete = (store.account && store.account.name) || (store.profile && (store.profile.first_name || store.profile.name)) || '';
+  const lines = [];
+  lines.push({ kind: 'title', text: 'NURVAN' });
+  lines.push({ kind: 'meta', text: 'Programma allenamento · ' + new Date().toLocaleDateString('it-IT') + (athlete ? (' · ' + athlete) : '') });
+  lines.push({ kind: 'meta', text: 'Ambito: ' + scope + ' · settimane ' + startW + '-' + endW + (DATA.title ? (' · ' + DATA.title) : '') });
+  for (let wi = startW; wi <= endW; wi++) {
+    const week = weeksList[wi - 1];
+    if (!week) continue;
+    const days = week.sessions || week.days || [];
+    lines.push({ kind: 'h1', text: 'Settimana ' + (week.weekNumber || week.week || wi) + (week.title ? (' — ' + week.title) : '') });
+    days.forEach(function (day, di) {
+      if (scope === 'day' && (wi !== currentWeek || di !== currentDay)) return;
+      const dayTitle = day.name || day.title || day.day || ('Giorno ' + (di + 1));
+      lines.push({ kind: 'h2', text: dayTitle });
+      const list = day.exercises || day.rows || [];
+      list.forEach(function (row, ei) {
+        const name = (store.subs && store.subs['w' + wi + '_d' + di + '_e' + ei]) || row.name || row.exercise || '—';
+        const scheme = (typeof formatSetRepScheme === 'function' ? formatSetRepScheme(row) : { scheme: row.scheme || '', setCount: (row.sets && row.sets.length) || 3 });
+        const setCount = (typeof getExerciseSetCount === 'function')
+          ? (function () { const prevW = currentWeek, prevD = currentDay; currentWeek = wi; currentDay = di; const n = getExerciseSetCount(ei); currentWeek = prevW; currentDay = prevD; return n; })()
+          : (scheme.setCount || 3);
+        const setLines = [];
+        for (let s = 1; s <= setCount; s++) {
+          const base = 'w' + wi + '_d' + di + '_e' + ei + '_s' + s;
+          const load = store.data[base + '_load'];
+          const reps = store.data[base + '_reps'];
+          const rir = store.data[base + '_rir'];
+          const tech = store.data[base + '_tech'];
+          const planned = (Array.isArray(row.sets) && row.sets[s - 1])
+            ? (row.sets[s - 1].load || row.sets[s - 1].target_load || '')
+            : (row.plannedLoad || '');
+          const loadShow = (load !== undefined && load !== '' && load != null) ? load : (planned !== '' && planned != null ? ('~' + planned) : '-');
+          const repsShow = (reps !== undefined && reps !== '' && reps != null) ? reps : (row.repsTarget || '-');
+          setLines.push('S' + s + ': ' + loadShow + ' kg x ' + repsShow + (rir !== undefined && rir !== '' && rir != null ? (' @' + rir) : '') + (tech ? (' [' + tech + ']') : ''));
+        }
+        lines.push({ kind: 'ex', text: name + (scheme.scheme ? ('  [' + scheme.scheme + ']') : '') + (row.rest ? ('  rest ' + row.rest) : '') });
+        lines.push({ kind: 'sets', text: setLines.join('   ') });
+      });
+    });
+  }
+  if (opts.nutrition && DATA.nutrition && Array.isArray(DATA.nutrition.days) && DATA.nutrition.days.length) {
+    lines.push({ kind: 'h1', text: 'Alimentazione' });
+    DATA.nutrition.days.forEach(function (nd) {
+      lines.push({ kind: 'h2', text: nd.day || 'Giorno' });
+      (nd.meals || []).forEach(function (meal) {
+        const foods = (meal.foods || []).map(function (f) {
+          return (f.name || f.food || '') + (f.quantity || f.qty || f.amount ? (' ' + (f.quantity || f.qty || f.amount) + (f.unit ? f.unit : '')) : '');
+        }).join(', ');
+        lines.push({ kind: 'text', text: (meal.name || 'Pasto') + ': ' + foods });
+      });
+    });
+  }
+  if (opts.supp && DATA.supplementation) {
+    lines.push({ kind: 'h1', text: 'Integrazione' });
+    const items = DATA.supplementation.items || DATA.supplementation.supplements || (Array.isArray(DATA.supplementation) ? DATA.supplementation : []);
+    (items || []).forEach(function (it) {
+      lines.push({ kind: 'text', text: (it.name || it.supplement || '-') + (it.dose || it.dosage ? (' — ' + (it.dose || it.dosage) + (it.unit ? (' ' + it.unit) : '')) : '') + (it.timing ? (' (' + it.timing + ')') : '') });
+    });
+  }
+  if (opts.therapy && (DATA.therapy || store.therapy)) {
+    const ther = DATA.therapy || store.therapy;
+    lines.push({ kind: 'h1', text: 'Terapia' });
+    const items = ther.medications || ther.items || ther.drugs || (Array.isArray(ther) ? ther : []);
+    (items || []).forEach(function (it) {
+      lines.push({ kind: 'text', text: (it.name || it.medication || it.drug || '-') + (it.active_ingredient ? (' (' + it.active_ingredient + ')') : '') + (it.dose || it.dosage ? (' — ' + (it.dose || it.dosage)) : '') + (it.category ? (' · ' + it.category) : '') });
+    });
+  }
+  lines.push({ kind: 'meta', text: 'Generato con NURVAN · file PDF per salvare o inoltrare' });
+  return lines;
+}
+function wrapPdfText(text, maxChars) {
+  const raw = String(text || '');
+  if (raw.length <= maxChars) return [raw];
+  const out = [];
+  let rest = raw;
+  while (rest.length > maxChars) {
+    let cut = rest.lastIndexOf(' ', maxChars);
+    if (cut < Math.floor(maxChars * 0.55)) cut = maxChars;
+    out.push(rest.slice(0, cut));
+    rest = rest.slice(cut).replace(/^\s+/, '');
+  }
+  if (rest) out.push(rest);
+  return out;
+}
+function buildWorkoutPdfBytes(opts) {
+  const lines = collectWorkoutPdfLines(opts);
+  const pages = [];
+  let cmds = [];
+  let y = 790;
+  function flushPage() {
+    pages.push(cmds.join('\n'));
+    cmds = [];
+    y = 790;
+  }
+  function draw(size, x, yy, text, gold) {
+    const color = gold ? '0.79 0.64 0.15 rg' : '0.12 0.12 0.12 rg';
+    cmds.push('BT /F1 ' + size + ' Tf ' + color + ' 1 0 0 1 ' + x + ' ' + yy + ' Tm (' + pdfEsc(text) + ') Tj ET');
+  }
+  function addLine(kind, text) {
+    const sizes = { title: 20, h1: 13, h2: 11, ex: 10, sets: 9, text: 9, meta: 8 };
+    const gaps = { title: 26, h1: 22, h2: 18, ex: 14, sets: 12, text: 12, meta: 11 };
+    const gold = kind === 'title' || kind === 'h1' || kind === 'h2';
+    const maxc = kind === 'sets' ? 98 : 86;
+    const wrapped = wrapPdfText(text, maxc);
+    wrapped.forEach(function (w, i) {
+      const h = gaps[kind] || 12;
+      if (y < 50) flushPage();
+      draw(sizes[kind] || 10, 40, y, w, gold && i === 0);
+      y -= h;
+    });
+    if (kind === 'h1') {
+      cmds.push('0.79 0.64 0.15 RG 0.6 w 40 ' + (y + 8) + ' m 555 ' + (y + 8) + ' l S');
+      y -= 6;
+    }
+  }
+  lines.forEach(function (ln) { addLine(ln.kind, ln.text); });
+  if (cmds.length) flushPage();
+  if (!pages.length) pages.push('BT /F1 12 Tf 0.12 0.12 0.12 rg 1 0 0 1 40 800 Tm (NURVAN) Tj ET');
+
+  const objs = [];
+  function addObj(body) {
+    objs.push(body);
+    return objs.length;
+  }
+  const fontId = addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  const pageIds = [];
+  const contentIds = [];
+  pages.forEach(function (stream) {
+    const cid = addObj('<< /Length ' + stream.length + ' >>\nstream\n' + stream + '\nendstream');
+    contentIds.push(cid);
+  });
+  pages.forEach(function (_, i) {
+    pageIds.push(0);
+  });
+  const pagesId = addObj('');
+  pages.forEach(function (_, i) {
+    pageIds[i] = addObj('<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 595 842] /Contents ' + contentIds[i] + ' 0 R /Resources << /Font << /F1 ' + fontId + ' 0 R >> >> >>');
+  });
+  objs[pagesId - 1] = '<< /Type /Pages /Kids [' + pageIds.map(function (id) { return id + ' 0 R'; }).join(' ') + '] /Count ' + pageIds.length + ' >>';
+  const catalogId = addObj('<< /Type /Catalog /Pages ' + pagesId + ' 0 R >>');
+
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  objs.forEach(function (body, i) {
+    offsets.push(pdf.length);
+    pdf += (i + 1) + ' 0 obj\n' + body + '\nendobj\n';
+  });
+  const xrefAt = pdf.length;
+  pdf += 'xref\n0 ' + (objs.length + 1) + '\n';
+  pdf += '0000000000 65535 f \n';
+  offsets.slice(1).forEach(function (off) {
+    pdf += ('0000000000' + off).slice(-10) + ' 00000 n \n';
+  });
+  pdf += 'trailer << /Size ' + (objs.length + 1) + ' /Root ' + catalogId + ' 0 R >>\nstartxref\n' + xrefAt + '\n%%EOF';
+  const bytes = new Uint8Array(pdf.length);
+  for (let i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 0xFF;
+  return bytes;
+}
+function shareOrSavePdfBlob(blob, filename) {
+  const nc = (typeof window !== 'undefined' && window.NativeConfig) ? window.NativeConfig
+    : (typeof NativeConfig !== 'undefined' ? NativeConfig : null);
+  const reader = new FileReader();
+  reader.onloadend = function () {
+    const dataUrl = String(reader.result || '');
+    const b64 = dataUrl.indexOf(',') >= 0 ? dataUrl.split(',')[1] : dataUrl;
+    try {
+      if (nc && typeof nc.shareFile === 'function') {
+        nc.shareFile(b64, 'application/pdf', filename, 'Programma allenamento NURVAN');
+        if (typeof showToast === 'function') showToast('PDF pronto: scegli dove salvarlo o a chi inoltrarlo', 'success');
+        return;
+      }
+      if (nc && typeof nc.downloadFile === 'function') {
+        nc.downloadFile(b64, filename, 'application/pdf');
+        if (typeof showToast === 'function') showToast('PDF salvato in Download', 'success');
+        return;
+      }
+    } catch (e) {
+      console.warn('[PDF native share]', e);
+    }
+    downloadBlobHelper(blob, filename);
+    if (typeof showToast === 'function') showToast('PDF scaricato: ' + filename, 'success');
+  };
+  reader.readAsDataURL(blob);
+}
 function exportWorkoutPdf() {
   const scope = (($('pdf-scope') || {}).value) || 'week';
-  const html = buildWorkoutPdfHtml({
+  const opts = {
     scope: scope,
     nutrition: !!($('pdf-inc-nutrition') || {}).checked,
     supp: !!($('pdf-inc-supp') || {}).checked,
     therapy: !!($('pdf-inc-therapy') || {}).checked
-  });
+  };
   closeWorkoutPdfExportModal();
-  const w = window.open('', '_blank');
-  if (!w) {
-    alert('Consenti i popup per generare il PDF, oppure usa Stampa del browser.');
-    return;
+  try {
+    const bytes = buildWorkoutPdfBytes(opts);
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const stamp = new Date().toISOString().slice(0, 10);
+    const filename = 'Nurvan_Allenamento_' + stamp + '.pdf';
+    shareOrSavePdfBlob(blob, filename);
+  } catch (err) {
+    console.error('[exportWorkoutPdf]', err);
+    alert('Impossibile creare il PDF: ' + (err && err.message ? err.message : err));
   }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
 }
 function updateTempo(idx, val) {
   store.tempos[`w${currentWeek}_d${currentDay}_e${idx}`] = val;
