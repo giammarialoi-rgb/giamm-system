@@ -5181,6 +5181,10 @@ if (fsSync.existsSync(WEB_ROOT)) {
   app.use((req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") return next();
     if (req.path.startsWith("/api") || req.path === "/health") return next();
+    // Never SPA-fallback binary/json/assets: return real 404 if missing.
+    if (/\.[a-z0-9]+$/i.test(req.path) && !/\.html?$/i.test(req.path)) {
+      return res.status(404).type("text/plain").send("Not found");
+    }
     const indexPath = path.join(WEB_ROOT, "index.html");
     if (!fsSync.existsSync(indexPath)) return next();
     res.sendFile(indexPath);
