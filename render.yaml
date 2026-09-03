@@ -3,9 +3,13 @@ services:
     name: coach-api-gemini
     runtime: node
     region: oregon
-    buildCommand: npm install
+    buildCommand: npm install && node generate_science_programs_10k.mjs && node generate_bundles.mjs && node build_master25.mjs
     startCommand: npm start
+    plan: free
+    healthCheckPath: /health
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL

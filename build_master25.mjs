@@ -30,6 +30,22 @@ if (fs.existsSync('prepare_task20_import_engine.mjs')) {
   importCode = fs.readFileSync('prepare_task20_import_engine.mjs', 'utf8');
 }
 
+// Load action catalog (AI OS foundation)
+let actionCatalogCode = '';
+if (fs.existsSync('prepare_task20_action_catalog.mjs')) {
+  actionCatalogCode = fs.readFileSync('prepare_task20_action_catalog.mjs', 'utf8');
+}
+
+let rewardsEngineCode = '';
+if (fs.existsSync('prepare_task20_rewards_engine.mjs')) {
+  rewardsEngineCode = fs.readFileSync('prepare_task20_rewards_engine.mjs', 'utf8');
+}
+
+let trendEngineCode = '';
+if (fs.existsSync('prepare_task20_trend_engine.mjs')) {
+  trendEngineCode = fs.readFileSync('prepare_task20_trend_engine.mjs', 'utf8');
+}
+
 const CONFIG_HEADER = `<script>
     (function () {
       'use strict';
@@ -45,7 +61,7 @@ const CONFIG_HEADER = `<script>
       // ====================================================
       const CONFIG = {
         appVersion: "2.5.0",
-        build: "MASTER-TASK-33",
+        build: "MASTER-TASK-35-AI-OS",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "mock-client-id.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -117,6 +133,17 @@ const CONFIG_HEADER = `<script>
       // UNIVERSAL IMPORT ENGINE 2.1 (Browser Compatible)
       // ====================================================
       ${importCode}
+
+      // ====================================================
+      // AI OPERATING SYSTEM — ACTION CATALOG + DISPATCHER
+      // ====================================================
+      ${actionCatalogCode}
+
+      // ====================================================
+      // NURVAN REWARDS ENGINE + ADAPTIVE TREND ENGINE
+      // ====================================================
+      ${rewardsEngineCode}
+      ${trendEngineCode}
 
       // ====================================================
       // LAYER 3 & 4: PRODUCT & DOMAIN SERVICES
@@ -503,15 +530,17 @@ const ExamService = {
   }
 };
 
-const NotificationService = {
-  scheduleReminder(title, body, time) { return true; },
-  getReminders() { return []; },
-  toggleReminder(id) { return true; },
-  deleteReminder(id) { return true; },
-  toast(msg, type) { if(typeof showToast==='function') showToast(msg, type); },
-  alert(msg) { if(typeof alert==='function') alert(msg); },
-  confirm(msg) { return typeof confirm==='function' ? confirm(msg) : true; }
-};
+// NotificationService is defined once in JS_PRODUCT_SERVICES.
+// Only attach toast helpers — never redeclare (var/const) in this bundle.
+(function () {
+  try {
+    if (typeof NotificationService !== 'undefined' && NotificationService) {
+      if (!NotificationService.toast) NotificationService.toast = function (msg, type) { if (typeof showToast === 'function') showToast(msg, type); };
+      if (!NotificationService.alert) NotificationService.alert = function (msg) { if (typeof alert === 'function') alert(msg); };
+      if (!NotificationService.confirm) NotificationService.confirm = function (msg) { return typeof confirm === 'function' ? confirm(msg) : true; };
+    }
+  } catch (_) {}
+})();
 
 const AIService = {
   async sendChatMessage(msg, prog = DATA) {
@@ -752,6 +781,15 @@ window.ImportService = ImportService;
 window.AIService = AIService;
 window.NotificationService = NotificationService;
 window.CalendarService = CalendarService;
+window.ReadinessService = typeof ReadinessService !== 'undefined' ? ReadinessService : { assess: () => ({ level: 'unknown', label: 'N/D' }) };
+window.HealthSyncService = typeof HealthSyncService !== 'undefined' ? HealthSyncService : { syncFromNative: async () => ({}) };
+window.ProgramGeneratorService = typeof ProgramGeneratorService !== 'undefined' ? ProgramGeneratorService : { generate: async () => ({ program: null }) };
+window.CoachAnalyticsService = typeof CoachAnalyticsService !== 'undefined' && CoachAnalyticsService
+  ? CoachAnalyticsService
+  : {
+      homeInsight: function () { return ''; },
+      buildPerformanceSummary: function () { return { hasData: false, completedSets: 0, source: 'user_workout_logs' }; }
+    };
 window.I18nService = I18nService;
 window.EntitlementService = EntitlementService;
 window.PricingService = PricingService;
@@ -782,6 +820,8 @@ window.safeDisplayValue = safeDisplayValue;
 
 // Parser and Persistence Function Bindings
 window.parseStructuredWorkbook = typeof parseStructuredWorkbook !== 'undefined' ? parseStructuredWorkbook : null;
+window.evaluateSimpleExcelFormula = typeof evaluateSimpleExcelFormula !== 'undefined' ? evaluateSimpleExcelFormula : null;
+window.recalcTrainingLoadsFromCells = typeof recalcTrainingLoadsFromCells !== 'undefined' ? recalcTrainingLoadsFromCells : null;
 window.buildCanonicalProgram = typeof buildCanonicalProgram !== 'undefined' ? buildCanonicalProgram : null;
 window.extractPdfPlainText = typeof extractPdfPlainText !== 'undefined' ? extractPdfPlainText : null;
 window.extractDocxPlainText = typeof extractDocxPlainText !== 'undefined' ? extractDocxPlainText : null;
@@ -845,6 +885,8 @@ window.renderSettings = typeof renderSettings !== 'undefined' ? renderSettings :
 window.renderPricing = typeof renderPricing !== 'undefined' ? renderPricing : (() => {});
 
 // Modals & User Actions
+window.toggleIntensityType = typeof toggleIntensityType !== 'undefined' ? toggleIntensityType : window.toggleIntensityType;
+window.setExIntensity = typeof setExIntensity !== 'undefined' ? setExIntensity : window.setExIntensity;
 window.openMenuHub = typeof openMenuHub !== 'undefined' ? openMenuHub : (() => {});
 window.closeMenuHub = typeof closeMenuHub !== 'undefined' ? closeMenuHub : (() => {});
 window.startTimer = typeof startTimer !== 'undefined' ? startTimer : ((s) => WorkoutService.startRestTimer(s));
@@ -855,8 +897,13 @@ window.deleteBonusExercise = typeof deleteBonusExercise !== 'undefined' ? delete
 window.openSkipModal = typeof openSkipModal !== 'undefined' ? openSkipModal : (() => {});
 window.confirmSkip = typeof confirmSkip !== 'undefined' ? confirmSkip : (() => {});
 window.openReplacementModal = typeof openReplacementModal !== 'undefined' ? openReplacementModal : (() => {});
+window.selectReplacement = typeof selectReplacement !== 'undefined' ? selectReplacement : (() => {});
+window.renderReplacementOptions = typeof renderReplacementOptions !== 'undefined' ? renderReplacementOptions : (() => {});
 window.confirmReplacement = typeof confirmReplacement !== 'undefined' ? confirmReplacement : (() => {});
 window.askAI = typeof askAI !== 'undefined' ? askAI : (async (q) => AIService.sendChatMessage(q));
+window.startVoiceInput = typeof startVoiceInput !== 'undefined' ? startVoiceInput : window.startVoiceInput;
+window.stopVoiceInput = typeof stopVoiceInput !== 'undefined' ? stopVoiceInput : window.stopVoiceInput;
+window.toggleVoiceOutput = typeof toggleVoiceOutput !== 'undefined' ? toggleVoiceOutput : window.toggleVoiceOutput;
 window.applyCoachProposal = typeof applyCoachProposal !== 'undefined' ? applyCoachProposal : (p => AIService.applyProposal(p));
 window.cancelCoachProposal = typeof cancelCoachProposal !== 'undefined' ? cancelCoachProposal : (id => AIService.cancelProposal(id));
 window.saveFoodItem = typeof saveFoodItem !== 'undefined' ? saveFoodItem : (() => {});
@@ -869,8 +916,103 @@ window.saveExamRecord = typeof saveExamRecord !== 'undefined' ? saveExamRecord :
 window.deleteExamRecord = typeof deleteExamRecord !== 'undefined' ? deleteExamRecord : (() => {});
 window.exportFullDatabaseBackup = () => BackupService.createFullBackupJson();
 window.importFullDatabaseBackup = (json) => BackupService.restoreFullBackup(json);
-window.changeAppLanguage = (lang) => I18nService.setLanguage(lang);
+window.changeAppLanguage = typeof changeAppLanguage !== 'undefined' ? changeAppLanguage : ((lang) => I18nService.setLanguage(lang));
+window.nativeGoogleResult = typeof nativeGoogleResult !== 'undefined' ? nativeGoogleResult : window.nativeGoogleResult;
+window.nativeAppleResult = typeof nativeAppleResult !== 'undefined' ? nativeAppleResult : window.nativeAppleResult;
+window.nativeAuthError = typeof nativeAuthError !== 'undefined' ? nativeAuthError : window.nativeAuthError;
 window.switchPlan = (planId) => EntitlementService.setPlan(planId);
+window.openAccount = typeof openAccount !== 'undefined' ? openAccount : window.openAccount;
+window.closeAccount = typeof closeAccount !== 'undefined' ? closeAccount : window.closeAccount;
+window.submitAccount = typeof submitAccount !== 'undefined' ? submitAccount : window.submitAccount;
+window.toggleAccountMode = typeof toggleAccountMode !== 'undefined' ? toggleAccountMode : window.toggleAccountMode;
+window.logoutAccount = typeof logoutAccount !== 'undefined' ? logoutAccount : window.logoutAccount;
+window.startGoogleAuth = typeof startGoogleAuth !== 'undefined' ? startGoogleAuth : window.startGoogleAuth;
+window.startAppleAuth = typeof startAppleAuth !== 'undefined' ? startAppleAuth : window.startAppleAuth;
+window.syncAccountData = typeof syncAccountData !== 'undefined' ? syncAccountData : window.syncAccountData;
+window.openAthleteProfile = typeof openAthleteProfile !== 'undefined' ? openAthleteProfile : window.openAthleteProfile;
+window.saveAthleteProfile = typeof saveAthleteProfile !== 'undefined' ? saveAthleteProfile : window.saveAthleteProfile;
+window.loadProgramCatalogIndex = typeof loadProgramCatalogIndex !== 'undefined' ? loadProgramCatalogIndex : (() => Promise.resolve([]));
+window.activateCatalogProgram = typeof activateCatalogProgram !== 'undefined' ? activateCatalogProgram : (() => {});
+window.updateCatalogFiltersFromUi = typeof updateCatalogFiltersFromUi !== 'undefined' ? updateCatalogFiltersFromUi : (() => {});
+window.filterProgramCatalog = typeof filterProgramCatalog !== 'undefined' ? filterProgramCatalog : (() => {});
+window.suggestProgramsForProfile = typeof suggestProgramsForProfile !== 'undefined' ? suggestProgramsForProfile : (() => []);
+window.ensureFactoryCleanBoot = typeof ensureFactoryCleanBoot !== 'undefined' ? ensureFactoryCleanBoot : (() => Promise.resolve(false));
+window.speakCoachReply = typeof speakCoachReply !== 'undefined' ? speakCoachReply : (() => {});
+window.applyOperationsToProgram = typeof applyOperationsToProgram !== 'undefined' ? applyOperationsToProgram : (() => ({ ok: false }));
+window.dispatchActions = typeof dispatchActions !== 'undefined' ? dispatchActions : window.dispatchActions;
+window.undoLastAction = typeof undoLastAction !== 'undefined' ? undoLastAction : window.undoLastAction;
+window.ActionDispatcher = typeof ActionDispatcher !== 'undefined' ? ActionDispatcher : window.ActionDispatcher;
+window.setAiControlMode = typeof setAiControlMode !== 'undefined' ? setAiControlMode : window.setAiControlMode;
+window.recordManualAction = typeof recordManualAction !== 'undefined' ? recordManualAction : window.recordManualAction;
+window.APP_CLEAN_BOOT_TOKEN = typeof APP_CLEAN_BOOT_TOKEN !== 'undefined' ? APP_CLEAN_BOOT_TOKEN : '';
+window.closeAddFoodModal = typeof closeAddFoodModal !== 'undefined' ? closeAddFoodModal : window.closeAddFoodModal;
+window.openAddFoodModal = typeof openAddFoodModal !== 'undefined' ? openAddFoodModal : window.openAddFoodModal;
+window.closeAddSupplementModal = typeof closeAddSupplementModal !== 'undefined' ? closeAddSupplementModal : window.closeAddSupplementModal;
+window.openAddSupplementModal = typeof openAddSupplementModal !== 'undefined' ? openAddSupplementModal : window.openAddSupplementModal;
+window.closeExamineModal = typeof closeExamineEvidenceModal !== 'undefined' ? closeExamineEvidenceModal : window.closeExamineModal;
+window.closeExamineEvidenceModal = typeof closeExamineEvidenceModal !== 'undefined' ? closeExamineEvidenceModal : window.closeExamineEvidenceModal;
+window.openExamineEvidenceModal = typeof openExamineEvidenceModal !== 'undefined' ? openExamineEvidenceModal : window.openExamineEvidenceModal;
+window.closeAddTherapyModal = typeof closeAddTherapyModal !== 'undefined' ? closeAddTherapyModal : window.closeAddTherapyModal;
+window.openAddTherapyModal = typeof openAddTherapyModal !== 'undefined' ? openAddTherapyModal : window.openAddTherapyModal;
+window.closeAddExamModal = typeof closeAddExamModal !== 'undefined' ? closeAddExamModal : window.closeAddExamModal;
+window.openAddExamModal = typeof openAddExamModal !== 'undefined' ? openAddExamModal : window.openAddExamModal;
+window.$ = typeof $ !== 'undefined' ? $ : window.$;
+window.closeSkipModal = typeof closeSkipModal !== 'undefined' ? closeSkipModal : window.closeSkipModal;
+window.closeReplaceModal = typeof closeReplaceModal !== 'undefined' ? closeReplaceModal : window.closeReplaceModal;
+window.openResetSession = typeof openResetSession !== 'undefined' ? openResetSession : window.openResetSession;
+window.setDesiredDuration = typeof setDesiredDuration !== 'undefined' ? setDesiredDuration : window.setDesiredDuration;
+window.setDesiredFrequency = typeof setDesiredFrequency !== 'undefined' ? setDesiredFrequency : window.setDesiredFrequency;
+window.closeResetSession = typeof closeResetSession !== 'undefined' ? closeResetSession : window.closeResetSession;
+window.confirmResetSession = typeof confirmResetSession !== 'undefined' ? confirmResetSession : window.confirmResetSession;
+window.closeBonusModal = typeof closeBonusModal !== 'undefined' ? closeBonusModal : window.closeBonusModal;
+window.saveAll = typeof saveAll !== 'undefined' ? saveAll : window.saveAll;
+window.addNutritionDay = typeof addNutritionDay !== 'undefined' ? addNutritionDay : window.addNutritionDay;
+window.addNutritionMeal = typeof addNutritionMeal !== 'undefined' ? addNutritionMeal : window.addNutritionMeal;
+window.duplicateSupplementItem = typeof duplicateSupplementItem !== 'undefined' ? duplicateSupplementItem : window.duplicateSupplementItem;
+window.askAiAboutSupplement = typeof askAiAboutSupplement !== 'undefined' ? askAiAboutSupplement : window.askAiAboutSupplement;
+window.explainExamParameterAI = typeof explainExamParameterAI !== 'undefined' ? explainExamParameterAI : window.explainExamParameterAI;
+window.changeCalendarMonth = typeof changeCalendarMonth !== 'undefined' ? changeCalendarMonth : window.changeCalendarMonth;
+window.selectCalendarDate = typeof selectCalendarDate !== 'undefined' ? selectCalendarDate : window.selectCalendarDate;
+window.triggerImportBackupFile = typeof triggerImportBackupFile !== 'undefined' ? triggerImportBackupFile : window.triggerImportBackupFile;
+window.exportActiveProgram = typeof exportActiveProgram !== 'undefined' ? exportActiveProgram : window.exportActiveProgram;
+window.loadModelAsActive = typeof loadModelAsActive !== 'undefined' ? loadModelAsActive : window.loadModelAsActive;
+window.handleImportTextSubmit = typeof handleImportTextSubmit !== 'undefined' ? handleImportTextSubmit : window.handleImportTextSubmit;
+window.switchImportInputMode = typeof switchImportInputMode !== 'undefined' ? switchImportInputMode : window.switchImportInputMode;
+window.toggleLoadType = typeof toggleLoadType !== 'undefined' ? toggleLoadType : (() => {});
+window.updateTempo = typeof updateTempo !== 'undefined' ? updateTempo : (() => {});
+window.activateSavedProgram = typeof activateSavedProgram !== 'undefined' ? activateSavedProgram : (() => {});
+window.deleteSavedProgram = typeof deleteSavedProgram !== 'undefined' ? deleteSavedProgram : (() => {});
+window.finalizeWorkout = typeof finalizeWorkout !== 'undefined' ? finalizeWorkout : (() => {});
+window.checkBackendHealth = typeof checkBackendHealth !== 'undefined' ? checkBackendHealth : (() => {});
+window.newCoachQuestion = typeof newCoachQuestion !== 'undefined' ? newCoachQuestion : (() => {});
+window.deleteDoc = typeof deleteDoc !== 'undefined' ? deleteDoc : (() => {});
+window.openHealthConnect = typeof openHealthConnect !== 'undefined' ? openHealthConnect : (() => {});
+window.chooseCoachReadMode = typeof chooseCoachReadMode !== 'undefined' ? chooseCoachReadMode : (() => {});
+window.selectNutritionDay = typeof selectNutritionDay !== 'undefined' ? selectNutritionDay : (() => {});
+window.shareAthleteCard = typeof shareAthleteCard !== 'undefined' ? shareAthleteCard : (() => {});
+window.applySsttStartInputs = typeof applySsttStartInputs !== 'undefined' ? applySsttStartInputs : (() => {});
+window.exportStatsCsv = typeof exportStatsCsv !== 'undefined' ? exportStatsCsv : (() => {});
+window.renderStatsData = typeof renderStatsData !== 'undefined' ? renderStatsData : (() => {});
+window.filterFoodDb = typeof filterFoodDb !== 'undefined' ? filterFoodDb : (() => {});
+window.filterSupplementDb = typeof filterSupplementDb !== 'undefined' ? filterSupplementDb : (() => {});
+window.searchDb = typeof searchDb !== 'undefined' ? searchDb : (() => {});
+window.runWeeklyCheckIn = typeof runWeeklyCheckIn !== 'undefined' ? runWeeklyCheckIn : (() => {});
+window.syncWorkoutSessionToCloud = typeof syncWorkoutSessionToCloud !== 'undefined' ? syncWorkoutSessionToCloud : (async () => ({}));
+window.sendCoachQuickPrompt = typeof sendCoachQuickPrompt !== 'undefined' ? sendCoachQuickPrompt : (() => {});
+window.addCalendarEventFromForm = typeof addCalendarEventFromForm !== 'undefined' ? addCalendarEventFromForm : (() => {});
+window.removeCalendarEvent = typeof removeCalendarEvent !== 'undefined' ? removeCalendarEvent : (() => {});
+window.generateAndActivateProgram = typeof generateAndActivateProgram !== 'undefined' ? generateAndActivateProgram : (() => {});
+window.syncHealthSamplesAndRefresh = typeof syncHealthSamplesAndRefresh !== 'undefined' ? syncHealthSamplesAndRefresh : (async () => ({}));
+window.sanitizeCoachDisplayText = typeof sanitizeCoachDisplayText !== 'undefined' ? sanitizeCoachDisplayText : ((t) => String(t || ''));
+window.setImportReviewMode = typeof setImportReviewMode !== 'undefined' ? setImportReviewMode : (() => {});
+window.forceConfirmImportOverride = typeof forceConfirmImportOverride !== 'undefined' ? forceConfirmImportOverride : (() => {});
+window.renderReviewUnmapped = typeof renderReviewUnmapped !== 'undefined' ? renderReviewUnmapped : (() => '');
+window.detectFormat = typeof detectFormat !== 'undefined' ? detectFormat : null;
+window.renderTableHtml = typeof renderTableHtml !== 'undefined' ? renderTableHtml : null;
+window.buildImportSummary = typeof buildImportSummary !== 'undefined' ? buildImportSummary : null;
+window.searchDocumentIR = typeof searchDocumentIR !== 'undefined' ? searchDocumentIR : null;
+window.diffCanonicalPrograms = typeof diffCanonicalPrograms !== 'undefined' ? diffCanonicalPrograms : null;
+window.exportImportProvenance = typeof exportImportProvenance !== 'undefined' ? exportImportProvenance : (() => {});
 
 })();
 </script>
@@ -884,7 +1026,23 @@ const fullHtml = `${headerHtml}${CONFIG_HEADER}\n${middleCore}\n${exportCode}`;
 fs.writeFileSync('web/index.html', fullHtml, 'utf8');
 fs.writeFileSync('app/src/main/assets/index.html', fullHtml, 'utf8');
 
-const STATIC_ASSETS = ['gs_logo.png', 'xlsx.full.min.js', 'data.json'];
+const STATIC_ASSETS = [
+  'gs_logo.png',
+  'nurvan_logo.png',
+  'nurvan_app_icon.png',
+  'xlsx.full.min.js',
+  'data.json',
+  'program-catalog-index.json',
+  'program-catalog-body.json',
+  'manifest.webmanifest',
+  'sw.js',
+  'apple-touch-icon.png',
+  'icon-180.png',
+  'icon-192.png',
+  'icon-512.png',
+  'icon-512-maskable.png',
+  'favicon.png'
+];
 for (const file of STATIC_ASSETS) {
   const src = path.join('web', file);
   const dest = path.join('app/src/main/assets', file);
