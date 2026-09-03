@@ -118,21 +118,32 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_WEB_CLIENT_ID_FALLBACK = "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com";
 const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || "com.giammaria.system";
 
+function sanitizeGoogleClientId(raw) {
+  const stripped = String(raw || "")
+    .trim()
+    .replace(/^GOOGLE_CLIENT_IDS?\s*=\s*/i, "")
+    .replace(/^["']|["']$/g, "")
+    .trim();
+  const match = stripped.match(/[a-z0-9-]+\.apps\.googleusercontent\.com/i);
+  return match ? match[0] : "";
+}
+
 function allowedGoogleAudiences() {
   const ids = new Set();
-  if (GOOGLE_CLIENT_ID) ids.add(GOOGLE_CLIENT_ID.trim());
+  const envId = sanitizeGoogleClientId(GOOGLE_CLIENT_ID);
+  if (envId) ids.add(envId);
   String(process.env.GOOGLE_CLIENT_IDS || "")
     .split(",")
-    .map((s) => s.trim())
+    .map((s) => sanitizeGoogleClientId(s))
     .filter(Boolean)
     .forEach((id) => ids.add(id));
-  if (GOOGLE_WEB_CLIENT_ID_FALLBACK) ids.add(GOOGLE_WEB_CLIENT_ID_FALLBACK);
-  return [...ids].filter((id) => id && !/mock-client-id/i.test(id));
+  const fallback = sanitizeGoogleClientId(GOOGLE_WEB_CLIENT_ID_FALLBACK);
+  if (fallback) ids.add(fallback);
+  return [...ids];
 }
 
 function publicGoogleClientId() {
-  if (GOOGLE_CLIENT_ID && !/mock-client-id/i.test(GOOGLE_CLIENT_ID)) return GOOGLE_CLIENT_ID.trim();
-  return GOOGLE_WEB_CLIENT_ID_FALLBACK;
+  return sanitizeGoogleClientId(GOOGLE_CLIENT_ID) || sanitizeGoogleClientId(GOOGLE_WEB_CLIENT_ID_FALLBACK);
 }
 
 async function sendPasswordResetEmail(email, code) {
