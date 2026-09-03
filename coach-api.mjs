@@ -1039,12 +1039,15 @@ async function getOrInitAthleteProfile(dbClientOrPool, userId, defaults = {}) {
   return ins.rows[0];
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === "production" ? "" : "gs-coach-dev-only-not-for-production");
+const JWT_SECRET = process.env.JWT_SECRET
+  || (process.env.NODE_ENV === "production"
+    ? crypto.createHash("sha256").update(`nurvan|${process.env.DATABASE_URL || "no-db"}`).digest("hex")
+    : "gs-coach-dev-only-not-for-production");
 if (!process.env.JWT_SECRET) {
-  console.warn("[SECURITY] JWT_SECRET is not set. Using ephemeral/dev fallback — set JWT_SECRET in production.");
+  console.warn("[SECURITY] JWT_SECRET is not set. Using derived fallback — set JWT_SECRET in production.");
 }
 if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
-  console.error("[SECURITY] FATAL: JWT_SECRET required in production");
+  console.warn("[SECURITY] JWT_SECRET missing in production — derived secret in use so auth stays available.");
 }
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || "com.giammaria.system";
@@ -2209,14 +2212,14 @@ app.get("/api/ai/metrics", async (req, res) => {
 
 app.post("/api/auth/register", async (req, res) => {
   if (!process.env.DATABASE_URL) {
-    return res.status(503).json({ error: "Database not configured." });
+    return res.status(503).json({ error: "Database non configurato." });
   }
   try {
     const email = normalizeEmail(req.body?.email);
     const name = String(req.body?.name || "").trim();
     const password = String(req.body?.password || "");
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || name.length < 2 || password.length < 8) {
-      return res.status(400).json({ error: "Name, valid email and password of at least 8 characters are required." });
+      return res.status(400).json({ error: "Nome, email valida e password di almeno 8 caratteri sono obbligatori." });
     }
     const { firstName, lastName } = splitFullName(name);
     const passwordHash = await hashPassword(password);
@@ -2239,26 +2242,32 @@ app.post("/api/auth/register", async (req, res) => {
       });
     } catch (error) {
       try { await client.query("ROLLBACK"); } catch (_) {}
-      client.release();
-      if (error?.code === "23505") return res.status(409).json({ error: "An account with this email already exists." });
+      try { client.release(); } catch (_) {}
+      if (error?.code === "23505") return res.status(409).json({ error: "Esiste già un account con questa email." });
       console.error("ACCOUNT_REGISTER_ERROR", error);
-      return res.status(500).json({ error: "Account registration failed." });
+      return res.status(500).json({
+        error: "Registrazione non riuscita.",
+        detail: String(error?.message || error).slice(0, 240)
+      });
     }
   } catch (error) {
     console.error("ACCOUNT_REGISTER_OUTER_ERROR", error);
-    return res.status(500).json({ error: "Account registration failed." });
+    return res.status(500).json({
+      error: "Registrazione non riuscita.",
+      detail: String(error?.message || error).slice(0, 240)
+    });
   }
 });
 
 app.post("/api/auth/login", async (req, res) => {
   if (!process.env.DATABASE_URL) {
-    return res.status(503).json({ error: "Database not configured." });
+    return res.status(503).json({ error: "Database non configurato." });
   }
   try {
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || "");
     if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required." });
+      return res.status(400).json({ error: "Email e password sono obbligatori." });
     }
     const result = await pool.query(
       "SELECT id, email, name, first_name, last_name, password_hash, provider, avatar_url, status, role, created_at, last_login_at FROM app_users WHERE email = $1",
@@ -2266,7 +2275,7 @@ app.post("/api/auth/login", async (req, res) => {
     );
     const user = result.rows[0];
     if (!user || !user.password_hash || !(await verifyPassword(password, user.password_hash))) {
-      return res.status(401).json({ error: "Invalid email or password." });
+      return res.status(401).json({ error: "Email o password non corretti." });
     }
     await pool.query("UPDATE app_users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1", [user.id]);
     const profile = await getOrInitAthleteProfile(pool, user.id, { firstName: user.first_name, lastName: user.last_name });
@@ -2277,8 +2286,21 @@ app.post("/api/auth/login", async (req, res) => {
     });
   } catch (error) {
     console.error("ACCOUNT_LOGIN_ERROR", error);
-    return res.status(500).json({ error: "Account login failed." });
+    return res.status(500).json({
+      error: "Accesso non riuscito.",
+      detail: String(error?.message || error).slice(0, 240)
+    });
   }
+});
+
+app.get("/api/auth/public-config", (req, res) => {
+  res.json({
+    ok: true,
+    googleClientId: GOOGLE_CLIENT_ID || "",
+    googleEnabled: Boolean(GOOGLE_CLIENT_ID),
+    appleEnabled: Boolean(process.env.APPLE_CLIENT_ID || process.env.APPLE_BUNDLE_ID),
+    passwordResetEnabled: true
+  });
 });
 
 app.post("/api/auth/forgot-password", async (req, res) => {
