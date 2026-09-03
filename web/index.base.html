@@ -2737,6 +2737,14 @@ function normalizeCoachProposedAction(raw, replyText) {
         return { type: 'set_supplementation', changes: { supplementation: supp } };
       }
     }
+    if (type === 'set_therapy' || type === 'upsert_therapy' || type === 'replace_therapy') {
+      let therapy = changes.therapy || changes.plan || changes.data || op.therapy;
+      if (!therapy && Array.isArray(changes.medications)) therapy = { medications: changes.medications, present: true };
+      if (therapy && typeof therapy === 'object') {
+        if (!therapy.present) therapy.present = true;
+        return { type: 'set_therapy', changes: { therapy: therapy } };
+      }
+    }
     return Object.assign({}, op, { type: type || op.type, changes: changes });
   }).filter(Boolean);
 
@@ -2747,29 +2755,29 @@ function normalizeCoachProposedAction(raw, replyText) {
 }
 
 function askCoachAiForDomain(domain) {
-  if (domain === 'therapy') {
-    if (typeof showToast === 'function') showToast('Terapia: solo lettura. Importa la prescrizione medica.', 'info');
-    startDomainImport('therapy');
-    return;
-  }
   const map = {
     nutrition: 'Crea un piano alimentare settimanale completo (Lunedì–Domenica) basato sul mio profilo. Se non specifico diversamente, usa 4 giorni ON e 3 OFF con pasti, alimenti e macro già compilati. Confermo l’inserimento in Alimentazione.',
     supplements: 'Crea e importa un protocollo di integrazione basato sul mio profilo e obiettivi (evidence-informed, non consulenza medica). Confermo l’inserimento in Integrazione.',
-    therapy: 'In base al mio profilo generale, aiutami a organizzare la sezione Terapia: NON inventare farmaci. Se non ho indicato molecole, proponi solo la struttura da compilare e ricordami di usare solo quanto prescritto dal medico.',
-    training: 'In base al mio profilo e obiettivi, proponi o completa l’allenamento da inserire nel programma attivo.',
-    all: 'In base al mio profilo generale e obiettivi, proponi alimentazione e integrazione da salvare (non inventare terapia farmacologica).'
+    therapy: 'Organizza la sezione Terapia in base a quanto ho già indicato nel profilo o nei documenti. Puoi aggiungere o aggiornare le molecole che chiedo esplicitamente, con categoria e breve nota. Confermo l’inserimento in Terapia.',
+    training: 'In base al mio profilo e obiettivi, proponi o completa l’allenamento da inserire nel programma attivo. Confermo.',
+    all: 'In base al mio profilo generale e obiettivi, proponi alimentazione, integrazione e se richiesto terapia/allenamento. Hai libertà di agire su ogni sezione. Confermo.'
   };
   const msg = map[domain] || map.nutrition;
   navigate('ai');
-  setTimeout(function () {
+  let tries = 0;
+  function kick() {
+    tries++;
     const input = $('ai-input');
+    const hist = $('chat-history');
     if (input) input.value = msg;
-    if (typeof askAIInner === 'function') {
+    if (hist && typeof askAIInner === 'function') {
       withBusy(function () { return askAIInner(msg); }, 'Nurvan AI sta pensando…', { immediate: true });
-    } else if (typeof askAI === 'function') {
-      askAI();
+      return;
     }
-  }, 180);
+    if (tries < 15) setTimeout(kick, 120);
+    else if (typeof askAI === 'function') askAI();
+  }
+  setTimeout(kick, 80);
 }
 window.askCoachAiForDomain = askCoachAiForDomain;
 
@@ -3846,8 +3854,23 @@ function applyOperationsToProgram(program, operations) {
         if (!Array.isArray(supp.items) && Array.isArray(changes.items)) supp.items = changes.items;
         DATA.supplementation = supp;
         store.supplementation = supp;
+        cloned.supplementation = supp;
         appliedCount++;
         metaNotes.push('supplementation');
+      }
+      continue;
+    }
+    if (type === 'set_therapy' || type === 'upsert_therapy' || type === 'replace_therapy') {
+      let therapy = changes.therapy || changes.plan || changes.data || op.therapy;
+      if (!therapy && Array.isArray(changes.medications)) therapy = { medications: changes.medications, present: true };
+      if (therapy && typeof therapy === 'object') {
+        if (!therapy.present) therapy.present = true;
+        if (!Array.isArray(therapy.medications) && Array.isArray(changes.medications)) therapy.medications = changes.medications;
+        DATA.therapy = therapy;
+        store.therapy = therapy;
+        cloned.therapy = therapy;
+        appliedCount++;
+        metaNotes.push('therapy');
       }
       continue;
     }
@@ -3870,8 +3893,8 @@ function applyOperationsToProgram(program, operations) {
     const targetExName = targetExNameRaw.toLowerCase();
     const matchAllExercises = !targetExName || targetExName === 'all' || targetExName === '*' || targetExName === 'tutti';
     const targetExId = op.exercise_id;
-    const targetSetIndex = op.set_index;
     const changes = op.changes || {};
+    const targetSetIndex = op.set_index || changes.set_index || changes.set || op.set;
 
     const weeksToModify = targetWeekNum === "all" || targetWeekNum == null
       ? cloned.weeks
@@ -4164,8 +4187,10 @@ function applyOperationsToProgram(program, operations) {
             if (targetSetIndex != null) {
               const set = ex.sets[targetSetIndex - 1];
               if (set) { set.load = targetLoad; appliedCount++; }
+              if (Number(targetSetIndex) === 1) ex.plannedLoad = targetLoad;
             } else {
-              ex.sets.forEach(s => { s.load = targetLoad; });
+              if (!ex.sets.length) ex.sets.push({ order: 1, load: targetLoad, reps: ex.repsTarget || '8-10' });
+              else ex.sets.forEach(s => { s.load = targetLoad; });
               ex.plannedLoad = targetLoad;
               appliedCount++;
             }
@@ -6517,8 +6542,9 @@ function applySupplementationFromProfile() {
   DATA.supplementation = buildDefaultSupplementationFromProfile();
   store.supplementation = DATA.supplementation;
   persist();
-  if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveSupplementation) {
-    GiammariaPersistence.saveSupplementation(DATA.supplementation).catch(function () {});
+  if (typeof GiammariaPersistence !== 'undefined') {
+    const saveSupp = GiammariaPersistence.saveSupplements || GiammariaPersistence.saveSupplementation;
+    if (saveSupp) saveSupp.call(GiammariaPersistence, DATA.supplementation).catch(function () {});
   }
   render();
   if (typeof showToast === 'function') showToast('Integrazione generata dal profilo', 'success');
@@ -6902,13 +6928,15 @@ function renderTherapy(c) {
         <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${t('therapy')}</h1>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain('therapy')">CHIEDI A COACH AI</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="startDomainImport('therapy')">${t('importTherapy')}</button>
+        <button class="btn btn-primary" style="font-size:10px;padding:6px 12px;" onclick="openAddTherapyModal()">+ AGGIUNGI FARMACO</button>
       </div>
     </div>
 
     <!-- Medical disclaimer badge -->
     <div style="background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.3);padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:10px;color:#ff8888;line-height:1.4;">
-      ⚠️ <strong>Sola lettura:</strong> sezione di consultazione e promemoria. I farmaci vanno inseriti solo tramite import da prescrizione medica. Non sostituisce il parere del medico curante.
+      ⚠️ <strong>Promemoria personale:</strong> cerca per nome o principio attivo, scegli la categoria e salva solo quanto prescritto. Non sostituisce il parere del medico.
     </div>
   `;
 
@@ -6922,15 +6950,23 @@ function renderTherapy(c) {
           </div>
           <div style="display:flex;flex-direction:column;gap:10px;">
             ${(proto.medications || []).map((m, idx) => {
+              const globalIdx = medsRaw.indexOf(m);
+              const delIdx = globalIdx >= 0 ? globalIdx : idx;
               const blurb = getMoleculeBlurb(m);
               return `
                 <div class="card-compact" style="border:1px solid var(--border);background:var(--surface);">
-                  <div style="margin-bottom:6px;">
-                    <span style="font-size:15px;font-weight:900;color:#fff;">${safeDisplayValue(m.name || m.medication, 'Farmaco')}</span>
-                    ${m.category ? `<span style="font-size:10px;color:var(--gold);margin-left:6px;">${safeDisplayValue(m.category, '')}</span>` : ''}
-                    ${m.active_ingredient ? `<span style="font-size:11px;color:#888;margin-left:6px;">(${safeDisplayValue(m.active_ingredient, '')})</span>` : ''}
-                    <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:6px;">
-                      ${therapyScheduleChips(m)}
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+                    <div>
+                      <span style="font-size:15px;font-weight:900;color:#fff;">${safeDisplayValue(m.name || m.medication, 'Farmaco')}</span>
+                      ${m.category ? `<span style="font-size:10px;color:var(--gold);margin-left:6px;">${safeDisplayValue(m.category, '')}</span>` : ''}
+                      ${m.active_ingredient ? `<span style="font-size:11px;color:#888;margin-left:6px;">(${safeDisplayValue(m.active_ingredient, '')})</span>` : ''}
+                      <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:6px;">
+                        ${therapyScheduleChips(m)}
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:4px;">
+                      <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;" onclick="editTherapyItem(${delIdx})">EDIT</button>
+                      <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;color:var(--accent-red);" onclick="deleteTherapyItem(${delIdx})">✕</button>
                     </div>
                   </div>
                   <div style="font-size:11px;color:#aaa;line-height:1.45;margin-top:6px;padding:8px;background:#111;border-radius:6px;border-left:3px solid var(--gold);">${esc(blurb)}</div>
@@ -6949,12 +6985,18 @@ function renderTherapy(c) {
           const blurb = getMoleculeBlurb(m);
           return `
             <div class="card-compact" style="border:1px solid var(--border);background:var(--surface);">
-              <div style="margin-bottom:6px;">
-                <span style="font-size:15px;font-weight:900;color:#fff;">${safeDisplayValue(m.name || m.medication, 'Farmaco')}</span>
-                ${m.category ? `<span style="font-size:10px;color:var(--gold);margin-left:6px;">${safeDisplayValue(m.category, '')}</span>` : ''}
-                ${m.active_ingredient ? `<span style="font-size:11px;color:#888;margin-left:6px;">(${safeDisplayValue(m.active_ingredient, '')})</span>` : ''}
-                <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:6px;">
-                  ${therapyScheduleChips(m)}
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+                <div>
+                  <span style="font-size:15px;font-weight:900;color:#fff;">${safeDisplayValue(m.name || m.medication, 'Farmaco')}</span>
+                  ${m.category ? `<span style="font-size:10px;color:var(--gold);margin-left:6px;">${safeDisplayValue(m.category, '')}</span>` : ''}
+                  ${m.active_ingredient ? `<span style="font-size:11px;color:#888;margin-left:6px;">(${safeDisplayValue(m.active_ingredient, '')})</span>` : ''}
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:6px;">
+                    ${therapyScheduleChips(m)}
+                  </div>
+                </div>
+                <div style="display:flex;gap:4px;">
+                  <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;" onclick="editTherapyItem(${originalIdx})">EDIT</button>
+                  <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;color:var(--accent-red);" onclick="deleteTherapyItem(${originalIdx})">✕</button>
                 </div>
               </div>
               <div style="font-size:11px;color:#aaa;line-height:1.45;margin-top:6px;padding:8px;background:#111;border-radius:6px;border-left:3px solid var(--gold);">${esc(blurb)}</div>
@@ -6968,9 +7010,12 @@ function renderTherapy(c) {
     html += `
       <div class="card" style="text-align:center;padding:30px 15px;color:#888;">
         <div style="font-size:24px;margin-bottom:8px;">🩺</div>
-        <p style="margin:0;font-size:12px;">Nessuna prescrizione importata.</p>
-        <p style="margin:8px 0 0;font-size:11px;color:#666;">Importa una scheda terapia dal medico per visualizzare farmaci e note sulle molecole.</p>
-        <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;margin-top:14px;" onclick="startDomainImport('therapy')">${t('importTherapy')}</button>
+        <p style="margin:0;font-size:12px;">Nessuna prescrizione registrata.</p>
+        <p style="margin:8px 0 0;font-size:11px;color:#666;">Aggiungi a mano (cerca principio attivo e categoria), importa una scheda, o chiedi a Coach AI.</p>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
+          <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="openAddTherapyModal()">+ AGGIUNGI FARMACO</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="startDomainImport('therapy')">${t('importTherapy')}</button>
+        </div>
       </div>
     `;
   }
@@ -9391,10 +9436,33 @@ function openImportActivationChoices(prog) {
   });
 }
 
-async function confirmImportAndActivate() {
-  return withBusy(function () { return confirmImportAndActivateInner(); }, 'Attivazione scheda…', { immediate: true });
+function isDomainOnlyImport(pState, prog) {
+  const domain = (pState && pState.importDomain) || 'all';
+  if (domain === 'therapy' || domain === 'nutrition' || domain === 'supplements' || domain === 'exams') return true;
+  const hasTraining = (prog && prog.weeks || []).some(function (w) {
+    return ((w.sessions || w.days || []).length > 0);
+  });
+  return !hasTraining && !!(prog && (prog.therapy || prog.nutrition || prog.supplementation || prog.exams));
 }
-async function confirmImportAndActivateInner() {
+
+async function confirmImportAndActivate() {
+  const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : (typeof programImportState !== 'undefined' ? programImportState : null);
+  if (!pState || !pState.canonicalProgram) return;
+  if (pState.isConfirming) return;
+  const peek = pState.canonicalProgram;
+  const domainOnly = isDomainOnlyImport(pState, peek);
+  const hasTraining = !domainOnly && (peek.weeks || []).some(function (w) {
+    return ((w.sessions || w.days || []).length > 0);
+  });
+  let choices = { weeksMode: 'keep', daysMode: 'keep', progression: 'keep', weeks: (peek.weeks || []).length, days: 4, goal: 'IPERTROFIA / MASSA' };
+  if (hasTraining) {
+    hideBusyOverlay();
+    choices = await openImportActivationChoices(peek);
+    if (!choices) return;
+  }
+  return withBusy(function () { return confirmImportAndActivateInner(choices, domainOnly); }, domainOnly ? 'Salvataggio…' : 'Attivazione scheda…', { immediate: true });
+}
+async function confirmImportAndActivateInner(choices, domainOnly) {
   const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : (typeof programImportState !== 'undefined' ? programImportState : null);
   if (!pState || !pState.canonicalProgram) return;
 
@@ -9408,7 +9476,7 @@ async function confirmImportAndActivateInner() {
       prog.id = 'prog_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
     }
 
-    if (typeof validateCanonicalProgram === 'function') {
+    if (!domainOnly && typeof validateCanonicalProgram === 'function') {
       const val = validateCanonicalProgram(prog);
       if (!val.valid && !pState.forceConfirmOverride) {
         throw new Error('Validazione fallita: ' + val.errors.join(', '));
@@ -9420,16 +9488,49 @@ async function confirmImportAndActivateInner() {
     if (!prog.training) prog.training = { weeks: prog.weeks };
     else if (!Array.isArray(prog.training.weeks)) prog.training.weeks = prog.weeks;
 
-    const hasTraining = (prog.weeks || []).some((w) => ((w.sessions || w.days || []).length > 0));
-    let choices = { weeksMode: 'keep', daysMode: 'keep', progression: 'keep', weeks: (prog.weeks || []).length, days: 4, goal: 'IPERTROFIA / MASSA' };
-    if (hasTraining) {
-      pState.isConfirming = false;
-      if (currentView === 'import' && typeof render === 'function') render();
-      choices = await openImportActivationChoices(prog);
-      if (!choices) return;
-      pState.isConfirming = true;
-      if (currentView === 'import' && typeof render === 'function') render();
+    if (domainOnly) {
+      if (!DATA || typeof DATA !== 'object') {
+        DATA = { title: 'Nurvan', weeks: [], nutrition: null, supplementation: null, therapy: null, exams: null };
+      }
+      if (prog.nutrition) {
+        DATA.nutrition = (typeof enrichImportedFoods === 'function') ? enrichImportedFoods(prog.nutrition) : prog.nutrition;
+        store.nutrition = DATA.nutrition;
+        if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveNutrition) {
+          await GiammariaPersistence.saveNutrition(DATA.nutrition);
+        }
+      }
+      if (prog.supplementation) {
+        DATA.supplementation = prog.supplementation;
+        store.supplementation = prog.supplementation;
+        if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveSupplements) {
+          await GiammariaPersistence.saveSupplements(DATA.supplementation);
+        }
+      }
+      if (prog.therapy) {
+        DATA.therapy = (typeof enrichTherapyMedications === 'function') ? enrichTherapyMedications(prog.therapy) : prog.therapy;
+        store.therapy = DATA.therapy;
+        if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveTherapy) {
+          await GiammariaPersistence.saveTherapy(DATA.therapy);
+        }
+      }
+      if (prog.exams) {
+        DATA.exams = prog.exams;
+        store.exams = prog.exams;
+        if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveExams) {
+          await GiammariaPersistence.saveExams(DATA.exams);
+        }
+      }
+      persist();
+      pState.currentImportId = null;
+      pState.canonicalProgram = null;
+      const go = prog.therapy ? 'therapy' : (prog.nutrition ? 'nutrition' : (prog.supplementation ? 'supplements' : (prog.exams ? 'exams' : 'home')));
+      if (typeof showToast === 'function') showToast('Import salvato', 'success');
+      navigate(go);
+      return;
     }
+
+    const hasTraining = (prog.weeks || []).some((w) => ((w.sessions || w.days || []).length > 0));
+    choices = choices || { weeksMode: 'keep', daysMode: 'keep', progression: 'keep', weeks: (prog.weeks || []).length, days: 4, goal: 'IPERTROFIA / MASSA' };
 
     let trainingPayload = prog.training || prog;
     // Re-lock every NxM from raw / scheme / notes before normalize (kills lingering 3× defaults)
@@ -12291,6 +12392,10 @@ function formatOperationDescription(op) {
     const items = (op.changes?.supplementation && op.changes.supplementation.items) || op.changes?.items || [];
     return `Salva integrazione (${Array.isArray(items) ? items.length : '?'} voci)`;
   }
+  if(type === 'set_therapy' || type === 'upsert_therapy' || type === 'replace_therapy') {
+    const meds = (op.changes?.therapy && op.changes.therapy.medications) || op.changes?.medications || [];
+    return `Salva terapia (${Array.isArray(meds) ? meds.length : '?'} voci)`;
+  }
   if(type === 'navigate' || type === 'set_view') return `Apri schermata <b>${esc(op.changes?.view || op.view || '')}</b>`;
   return `${type.toUpperCase()}: <b>${esc(ex)}</b> ${changes}`;
 }
@@ -12361,6 +12466,7 @@ async function applyCoachProposal(proposalId) {
         const t = op && op.type;
         return t === 'set_nutrition' || t === 'upsert_nutrition' || t === 'replace_nutrition' ||
           t === 'set_supplementation' || t === 'upsert_supplementation' || t === 'replace_supplementation' ||
+          t === 'set_therapy' || t === 'upsert_therapy' || t === 'replace_therapy' ||
           t === 'navigate' || t === 'set_view' || t === 'set_pref' || t === 'set_profile';
       });
       const programOps = proposal.operations.filter(function (op) {
@@ -12373,6 +12479,7 @@ async function applyCoachProposal(proposalId) {
         if (metaRes && metaRes.program) {
           if (metaRes.program.nutrition) DATA.nutrition = metaRes.program.nutrition;
           if (metaRes.program.supplementation) DATA.supplementation = metaRes.program.supplementation;
+          if (metaRes.program.therapy) DATA.therapy = metaRes.program.therapy;
         }
       }
       if (programOps.length) {
@@ -12404,6 +12511,7 @@ async function applyCoachProposal(proposalId) {
         const t = op && op.type;
         return t === 'set_nutrition' || t === 'upsert_nutrition' || t === 'replace_nutrition' ||
           t === 'set_supplementation' || t === 'upsert_supplementation' || t === 'replace_supplementation' ||
+          t === 'set_therapy' || t === 'upsert_therapy' || t === 'replace_therapy' ||
           t === 'navigate' || t === 'set_view' || t === 'set_pref' || t === 'set_profile';
       });
       if (metaOps.length) {
@@ -12411,8 +12519,9 @@ async function applyCoachProposal(proposalId) {
           const metaRes = applyOperationsToProgram(modResult.program || DATA, metaOps);
           if (metaRes && metaRes.program) {
             modResult.program = Object.assign({}, modResult.program || DATA, {
-              nutrition: metaRes.program.nutrition || store.nutrition || (modResult.program && modResult.program.nutrition),
-              supplementation: metaRes.program.supplementation || store.supplementation || (modResult.program && modResult.program.supplementation)
+              nutrition: metaRes.program.nutrition || (modResult.program && modResult.program.nutrition) || store.nutrition,
+              supplementation: metaRes.program.supplementation || (modResult.program && modResult.program.supplementation) || store.supplementation,
+              therapy: metaRes.program.therapy || (modResult.program && modResult.program.therapy) || store.therapy
             });
           }
         } catch (metaErr) {
@@ -12421,23 +12530,25 @@ async function applyCoachProposal(proposalId) {
       }
     }
 
-    // Capture nutrition/supp BEFORE normalize can drop them
-    const savedNutrition = store.nutrition || (modResult.program && modResult.program.nutrition) || DATA.nutrition || null;
-    const savedSupp = store.supplementation || (modResult.program && modResult.program.supplementation) || DATA.supplementation || null;
+    // Capture domain payloads BEFORE normalize can drop them (prefer just-applied over empty store)
+    function preferFilled(a, b, c) {
+      const list = [a, b, c].filter(function (x) { return x && typeof x === 'object'; });
+      return list.find(function (x) {
+        if (Array.isArray(x.days) && x.days.length) return true;
+        if (Array.isArray(x.items) && x.items.length) return true;
+        if (Array.isArray(x.medications) && x.medications.length) return true;
+        if (x.present === true) return true;
+        return false;
+      }) || list[0] || null;
+    }
+    const savedNutrition = preferFilled(modResult.program && modResult.program.nutrition, DATA.nutrition, store.nutrition);
+    const savedSupp = preferFilled(modResult.program && modResult.program.supplementation, DATA.supplementation, store.supplementation);
+    const savedTherapy = preferFilled(modResult.program && modResult.program.therapy, DATA.therapy, store.therapy);
 
     DATA = normalizeProgram(modResult.program || DATA);
-    if (savedNutrition && typeof savedNutrition === 'object') {
-      DATA.nutrition = savedNutrition;
-      store.nutrition = savedNutrition;
-    } else if (store.nutrition) {
-      DATA.nutrition = store.nutrition;
-    }
-    if (savedSupp && typeof savedSupp === 'object') {
-      DATA.supplementation = savedSupp;
-      store.supplementation = savedSupp;
-    } else if (store.supplementation) {
-      DATA.supplementation = store.supplementation;
-    }
+    if (savedNutrition) { DATA.nutrition = savedNutrition; store.nutrition = savedNutrition; }
+    if (savedSupp) { DATA.supplementation = savedSupp; store.supplementation = savedSupp; }
+    if (savedTherapy) { DATA.therapy = savedTherapy; store.therapy = savedTherapy; }
     store.activeProgram = DATA;
     try {
       if (typeof GiammariaPersistence !== 'undefined') {
@@ -12447,6 +12558,9 @@ async function applyCoachProposal(proposalId) {
         if (DATA.supplementation && typeof GiammariaPersistence.saveSupplements === 'function') {
           await GiammariaPersistence.saveSupplements(DATA.supplementation);
         }
+        if (DATA.therapy && typeof GiammariaPersistence.saveTherapy === 'function') {
+          await GiammariaPersistence.saveTherapy(DATA.therapy);
+        }
         if (typeof GiammariaPersistence.saveProgram === 'function' && Array.isArray(DATA.weeks) && DATA.weeks.length) {
           await GiammariaPersistence.saveProgram(DATA, true);
         }
@@ -12454,11 +12568,18 @@ async function applyCoachProposal(proposalId) {
     } catch (persistErr) {
       console.warn('Nutrition/program persist warning:', persistErr);
     }
+    try {
+      const loadOps = proposal.operations.filter(function (op) { return op && op.type === 'modify_load'; });
+      if (loadOps.length) applyOperationsToProgram(DATA, loadOps);
+      seedProgramLoadsIntoStore(DATA);
+    } catch (_) {}
     persist();
 
     if(actionsDiv) {
       const nutrOk = !!(DATA.nutrition && ((DATA.nutrition.days && DATA.nutrition.days.length) || DATA.nutrition.daily_protein_target));
-      actionsDiv.innerHTML = `<div style="color:var(--success);font-weight:900;font-size:12px;padding:6px 0;">✅ MODIFICHE APPLICATE${nutrOk ? ' — apri Alimentazione per vedere il piano' : ''}</div>`;
+      const suppOk = !!(DATA.supplementation && Array.isArray(DATA.supplementation.items) && DATA.supplementation.items.length);
+      const hint = nutrOk ? ' — apri Alimentazione' : (suppOk ? ' — apri Integrazione' : '');
+      actionsDiv.innerHTML = `<div style="color:var(--success);font-weight:900;font-size:12px;padding:6px 0;">✅ MODIFICHE APPLICATE${hint}</div>`;
     }
     store.chatHistory.push({
       role: 'assistant',
@@ -12478,10 +12599,14 @@ async function applyCoachProposal(proposalId) {
       });
       persist();
     }
-    // Prefer showing nutrition if we just saved it
-    if (DATA.nutrition && ((DATA.nutrition.days && DATA.nutrition.days.length) || DATA.nutrition.present)) {
-      currentView = 'nutrition';
-    }
+    const justNutr = proposal.operations.some(function (op) { return op && /nutrition/.test(op.type || ''); });
+    const justSupp = proposal.operations.some(function (op) { return op && /supplement/.test(op.type || ''); });
+    const justTher = proposal.operations.some(function (op) { return op && /therapy/.test(op.type || ''); });
+    const justLoad = proposal.operations.some(function (op) { return op && op.type === 'modify_load'; });
+    if (justTher) currentView = 'therapy';
+    else if (justSupp && !justNutr) currentView = 'supplements';
+    else if (justNutr) currentView = 'nutrition';
+    else if (justLoad) currentView = 'training';
     render();
   } catch(error) {
     console.error('APPLY_PROPOSAL_ERROR', error);
@@ -12628,29 +12753,67 @@ function estimateLoadForExerciseName(name, row) {
   return load > 0 ? load : null;
 }
 
+function seedProgramLoadsIntoStore(program) {
+  const prog = program || DATA;
+  if (!prog || !store) return 0;
+  if (!store.data) store.data = {};
+  let n = 0;
+  (prog.weeks || []).forEach(function (w, wi) {
+    const wNum = w.weekNumber || w.week || w.week_number || (wi + 1);
+    (w.sessions || w.days || []).forEach(function (sess, di) {
+      (sess.exercises || sess.rows || []).forEach(function (ex, ei) {
+        const planned = ex.plannedLoad != null ? Number(ex.plannedLoad) : (ex.load != null ? Number(ex.load) : null);
+        const sets = Array.isArray(ex.sets) && ex.sets.length ? ex.sets : [{ load: planned }];
+        sets.forEach(function (st, si) {
+          const val = st && (st.load != null ? st.load : (st.target_load != null ? st.target_load : planned));
+          if (val == null || val === '' || !Number.isFinite(Number(val))) return;
+          const k = 'w' + wNum + '_d' + di + '_e' + ei + '_s' + (si + 1) + '_load';
+          store.data[k] = Number(val);
+          n++;
+        });
+        if (planned != null && Number.isFinite(Number(planned))) ex.plannedLoad = Number(planned);
+      });
+    });
+  });
+  return n;
+}
+
 function tryLocalWeekLoadCoach(q) {
   const text = String(q || '');
-  if (!/\b(caric|load|kg|pes[oi]|stimat)\w*/i.test(text)) return null;
-  if (!/\b(prima\s+settimana|settimana\s*1|week\s*1|sett\.?\s*1|intera\s+prima|tutta\s+la\s+prima|tutti\s+gli\s+esercizi|every\s+exercise)\b/i.test(text)
-      && !/\b(inserisci|metti|assegna|compila).{0,40}(caric|load)/i.test(text)) return null;
+  if (!/\b(caric|load|kg|pes[oi]|stimat|sugger)\w*/i.test(text)) return null;
+  const wants = /\b(ogni|tutti|tutta|intera|settiman|session|eserciz|allenament|preimposta|inserisci|metti|assegna|compila|suggerisci|proponi)\b/i.test(text);
+  if (!wants) return null;
   if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
-    return { reply: 'Nessun programma attivo: attiva una scheda, poi chiedi di inserire i carichi stimati per la settimana 1.', proposed_action: null };
+    return { reply: 'Nessun programma attivo: attiva una scheda, poi chiedi di inserire i carichi stimati per ogni sessione.', proposed_action: null };
   }
-  const week1 = DATA.weeks[0];
-  const sessions = week1.sessions || week1.days || [];
+  let weekIndexes = [];
+  if (/tutt[ae]\s+le\s+settiman/i.test(text)) {
+    weekIndexes = DATA.weeks.map(function (_, i) { return i; });
+  } else {
+    const weekM = text.match(/settiman[ae]?\s*(\d+)/i);
+    if (weekM) weekIndexes = [Math.max(0, parseInt(weekM[1], 10) - 1)];
+    else if (/prim[aoe]\s+sett/i.test(text)) weekIndexes = [0];
+    else weekIndexes = [Math.max(0, (typeof currentWeek === 'number' ? currentWeek : 1) - 1)];
+  }
+  weekIndexes = weekIndexes.filter(function (i) { return i >= 0 && i < DATA.weeks.length; });
+  if (!weekIndexes.length) weekIndexes = [0];
   const ops = [];
-  sessions.forEach(function (s, si) {
-    (s.exercises || s.rows || []).forEach(function (ex) {
-      const name = ex.name || ex.exercise;
-      if (!name) return;
-      const load = estimateLoadForExerciseName(name, ex);
-      if (load == null) return;
-      ops.push({
-        type: 'modify_load',
-        week: 1,
-        session: si + 1,
-        exercise: name,
-        changes: { load: load }
+  weekIndexes.forEach(function (wi) {
+    const weekObj = DATA.weeks[wi];
+    const sessions = weekObj.sessions || weekObj.days || [];
+    sessions.forEach(function (s, si) {
+      (s.exercises || s.rows || []).forEach(function (ex) {
+        const name = ex.name || ex.exercise;
+        if (!name) return;
+        const load = estimateLoadForExerciseName(name, ex);
+        if (load == null) return;
+        ops.push({
+          type: 'modify_load',
+          week: wi + 1,
+          session: si + 1,
+          exercise: name,
+          changes: { load: load, set: 1 }
+        });
       });
     });
   });
@@ -12661,13 +12824,63 @@ function tryLocalWeekLoadCoach(q) {
     };
   }
   return {
-    reply: 'Propongo carichi stimati per **tutti** gli esercizi della settimana 1 (' + ops.length + ' operazioni in un colpo solo). Basati su profilo/massimali e pattern comuni — sono stime organizzative, non un test 1RM. Conferma APPLICA MODIFICHE.',
+    reply: 'Ho calcolato i carichi per ogni esercizio di ogni sessione della settimana (' + ops.length + ' serie 1 preimpostate). Stime da profilo/massimali, non un test 1RM.',
     proposed_action: {
       action: 'modify_program',
-      summary: 'Carichi stimati settimana 1 (tutti gli esercizi)',
+      summary: 'Carichi preimpostati sulla prima serie · ' + ops.length + ' esercizi',
       operations: ops
     },
-    local: true
+    local: true,
+    autoApply: true
+  };
+}
+
+function tryLocalTherapyCoach(q) {
+  const text = String(q || '');
+  if (!/\b(terapia|farmac[oi]|molecol|prescriz|principio\s+attiv)\b/i.test(text)) return null;
+  const action = /\b(crea|genera|imposta|organizza|aggiungi|inserisci|confermo|salva|compila|proponi|aggiorna)\b/i.test(text);
+  if (!action) return null;
+  const existing = (DATA && DATA.therapy) || store.therapy || { medications: [], present: true };
+  const meds = Array.isArray(existing.medications) ? existing.medications.slice() : [];
+  const catalog = (typeof DRUG_CATALOG !== 'undefined' && Array.isArray(DRUG_CATALOG)) ? DRUG_CATALOG : [];
+  const tokens = text.split(/[,;.\n]/).map(function (s) { return s.trim(); }).filter(Boolean);
+  tokens.forEach(function (tok) {
+    const hits = (typeof searchDrugCatalogLocal === 'function') ? searchDrugCatalogLocal(tok) : [];
+    const hit = hits[0] || catalog.find(function (r) {
+      return String(r.brand || '').toLowerCase() === tok.toLowerCase() || String(r.ingredient || '').toLowerCase() === tok.toLowerCase();
+    });
+    if (!hit) return;
+    const already = meds.some(function (m) {
+      return String(m.name || '').toLowerCase() === String(hit.brand || '').toLowerCase();
+    });
+    if (already) return;
+    meds.push({
+      name: hit.brand,
+      medication: hit.brand,
+      active_ingredient: hit.ingredient,
+      category: hit.category || 'Altro',
+      dose: hit.defaultDose || '',
+      timing: 'Come da prescrizione',
+      days: ['Tutti i giorni'],
+      notes: (typeof getMoleculeBlurb === 'function') ? getMoleculeBlurb({ name: hit.brand, active_ingredient: hit.ingredient }) : ''
+    });
+  });
+  const therapy = {
+    present: true,
+    protocol_name: existing.protocol_name || 'Terapia personale',
+    medications: meds
+  };
+  return {
+    reply: meds.length
+      ? ('Ho preparato/aggiornato la terapia (' + meds.length + ' voci). Conferma APPLICA E SALVA: solo tracciamento, non prescrizione medica.')
+      : 'Nessuna nuova molecola riconosciuta. Aggiungi a mano con ricerca nome/principio attivo e categoria, oppure indica i nomi nella chat.',
+    proposed_action: meds.length ? {
+      action: 'modify_program',
+      summary: 'Salva terapia (' + meds.length + ' voci)',
+      operations: [{ type: 'set_therapy', changes: { therapy: therapy } }, { type: 'navigate', changes: { view: 'therapy' } }]
+    } : null,
+    local: true,
+    autoApply: /\bconfermo\b/i.test(text) && meds.length > 0
   };
 }
 
@@ -12707,7 +12920,8 @@ function tryLocalNutritionPlanCoach(q) {
       summary: 'Salva ' + (wantsNutr ? 'nutrizione' : '') + (wantsNutr && (wantsSupp || wantsNutr) ? ' + ' : '') + ((wantsSupp || wantsNutr) ? 'integrazione' : '') + ' (da profilo)',
       operations: ops
     },
-    local: true
+    local: true,
+    autoApply: /\bconfermo\b/i.test(text)
   };
 }
 
@@ -12787,6 +13001,10 @@ async function askAIInner(q0){
   console.debug('COACH_SEND_CLICK');
   const requestToken = ++coachRequestToken;
   const h = $('chat-history');
+  if (!h) {
+    if (typeof showToast === 'function') showToast('Coach AI non pronto: apri di nuovo la chat', 'warning');
+    return;
+  }
   store.chatHistory.push({ role: 'user', text: q });
   h.innerHTML += `<div class="msg user">${esc(q)}</div>`;
   $('ai-input').value = '';
@@ -12892,6 +13110,36 @@ async function askAIInner(q0){
         h.appendChild(card);
         store.chatHistory.push({ role: 'ai', text: localLoad.proposed_action.summary || 'Proposta', proposalId: propId, proposedAction: localLoad.proposed_action });
         scrollCoachToLatest(h, card);
+        if (localLoad.autoApply) {
+          await applyCoachProposal(propId);
+        }
+      }
+      persist();
+      return;
+    }
+
+    const localTherapy = tryLocalTherapyCoach(q);
+    if (localTherapy) {
+      const cleanReply = sanitizeCoachDisplayText(localTherapy.reply);
+      pending.innerHTML = markdownToHtml(cleanReply);
+      lastCoachReply = cleanReply;
+      offerSpeakCoachReply(cleanReply);
+      scrollCoachToLatest(h, pending);
+      store.chatHistory.push({ role: 'ai', text: cleanReply });
+      if (localTherapy.proposed_action && Array.isArray(localTherapy.proposed_action.operations) && localTherapy.proposed_action.operations.length) {
+        const propId = 'prop_' + Date.now();
+        window.activeCoachProposals[propId] = localTherapy.proposed_action;
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.id = 'card-' + propId;
+        card.style.border = '1px solid var(--gold)';
+        card.style.marginTop = '10px';
+        card.style.background = '#111';
+        card.innerHTML = '<div class="card-header" style="background:rgba(212,175,55,0.1);"><h2 style="font-size:11px;">IL COACH PROPONE TERAPIA</h2></div><div style="padding:12px;font-size:11px;"><b style="color:var(--gold);">' + esc(localTherapy.proposed_action.summary || 'Terapia') + '</b><ul style="margin:8px 0;padding-left:18px;color:#ccc;">' + localTherapy.proposed_action.operations.map(function (op) { return '<li>' + formatOperationDescription(op) + '</li>'; }).join('') + '</ul><div style="display:flex;gap:8px;margin-top:12px;" id="actions-' + propId + '"><button class="btn btn-outline" style="flex:1;font-size:10px;padding:8px;" onclick="cancelCoachProposal(\'' + propId + '\')">ANNULLA</button><button class="btn btn-primary" style="flex:1;font-size:10px;padding:8px;" onclick="applyCoachProposal(\'' + propId + '\')">APPLICA E SALVA</button></div></div>';
+        h.appendChild(card);
+        store.chatHistory.push({ role: 'ai', text: localTherapy.proposed_action.summary || 'Proposta', proposalId: propId, proposedAction: localTherapy.proposed_action });
+        scrollCoachToLatest(h, card);
+        if (localTherapy.autoApply) await applyCoachProposal(propId);
       }
       persist();
       return;
@@ -12918,6 +13166,7 @@ async function askAIInner(q0){
         h.appendChild(card);
         store.chatHistory.push({ role: 'ai', text: localNutr.proposed_action.summary || 'Proposta', proposalId: propId, proposedAction: localNutr.proposed_action });
         scrollCoachToLatest(h, card);
+        if (localNutr.autoApply) await applyCoachProposal(propId);
       }
       persist();
       return;
