@@ -656,66 +656,74 @@ async function initDb() {
 }
 
 /** Lightweight auth-column migration — safe to call before register/login. */
+/** Lightweight auth-column migration — one statement at a time (safe on Render PG). */
 async function ensureAuthSchema() {
   if (!process.env.DATABASE_URL || !pool) return;
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS app_users (
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS app_users (
       id BIGSERIAL PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
       name TEXT,
-      first_name TEXT,
-      last_name TEXT,
       password_hash TEXT,
       provider TEXT NOT NULL DEFAULT 'email',
       provider_id TEXT,
       avatar_url TEXT,
-      status TEXT NOT NULL DEFAULT 'active',
-      role TEXT NOT NULL DEFAULT 'athlete',
-      last_login_at TIMESTAMPTZ DEFAULT NOW(),
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    CREATE TABLE IF NOT EXISTS app_account_data (
+    )`,
+    `CREATE TABLE IF NOT EXISTS app_account_data (
       user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
       data JSONB NOT NULL DEFAULT '{}'::jsonb,
       updated_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS first_name TEXT;
-    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS last_name TEXT;
-    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider TEXT DEFAULT 'email';
-    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider_id TEXT;
-    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
-    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_hash TEXT;
-    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
-    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'athlete';
-    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ DEFAULT NOW();
-    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
-    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
-    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_reset_hash TEXT;
-    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ;
-    CREATE TABLE IF NOT EXISTS app_athlete_profiles (
+    )`,
+    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS first_name TEXT`,
+    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS last_name TEXT`,
+    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider TEXT DEFAULT 'email'`,
+    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider_id TEXT`,
+    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS avatar_url TEXT`,
+    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_hash TEXT`,
+    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`,
+    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'athlete'`,
+    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ DEFAULT NOW()`,
+    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`,
+    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`,
+    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_reset_hash TEXT`,
+    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ`,
+    `CREATE TABLE IF NOT EXISTS app_athlete_profiles (
       id BIGSERIAL PRIMARY KEY,
       user_id BIGINT UNIQUE NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
       first_name TEXT,
       last_name TEXT,
-      birth_date DATE,
-      gender TEXT,
       country TEXT DEFAULT 'IT',
       language TEXT DEFAULT 'it',
-      height_cm NUMERIC(5,2),
-      weight_kg NUMERIC(5,2),
-      primary_goal TEXT,
-      secondary_goals JSONB DEFAULT '[]'::jsonb,
-      experience_level TEXT,
       training_frequency INTEGER DEFAULT 4,
       intensity_type TEXT DEFAULT 'RIR',
-      notes TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS first_name TEXT;
-    ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS last_name TEXT;
-  `);
+    )`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS first_name TEXT`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS last_name TEXT`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS birth_date DATE`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS gender TEXT`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS country TEXT DEFAULT 'IT'`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS language TEXT DEFAULT 'it'`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS height_cm NUMERIC(5,2)`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS weight_kg NUMERIC(5,2)`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS primary_goal TEXT`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS secondary_goals JSONB DEFAULT '[]'::jsonb`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS experience_level TEXT`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS training_frequency INTEGER DEFAULT 4`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS intensity_type TEXT DEFAULT 'RIR'`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS notes TEXT`,
+    `ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`
+  ];
+  for (const sql of statements) {
+    try {
+      await pool.query(sql);
+    } catch (err) {
+      console.error("ensureAuthSchema step failed:", String(err?.message || err).slice(0, 180));
+    }
+  }
 }
 
 
@@ -1099,21 +1107,26 @@ function formatUserPayload(user, profile = null) {
 }
 
 async function getOrInitAthleteProfile(dbClientOrPool, userId, defaults = {}) {
-  const res = await dbClientOrPool.query(
-    "SELECT id, user_id, first_name, last_name, TO_CHAR(birth_date, 'YYYY-MM-DD') AS birth_date, gender, country, language, height_cm, weight_kg, primary_goal, secondary_goals, experience_level, training_frequency, intensity_type, notes, created_at, updated_at FROM app_athlete_profiles WHERE user_id = $1",
-    [userId]
-  );
-  if (res.rows.length) return res.rows[0];
-  const fName = defaults.firstName || defaults.first_name || "";
-  const lName = defaults.lastName || defaults.last_name || "";
-  const ins = await dbClientOrPool.query(
-    `INSERT INTO app_athlete_profiles (user_id, first_name, last_name, country, language, training_frequency, intensity_type)
-     VALUES ($1, $2, $3, 'IT', 'it', 4, 'RIR')
-     ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
-     RETURNING id, user_id, first_name, last_name, TO_CHAR(birth_date, 'YYYY-MM-DD') AS birth_date, gender, country, language, height_cm, weight_kg, primary_goal, secondary_goals, experience_level, training_frequency, intensity_type, notes, created_at, updated_at`,
-    [userId, fName || null, lName || null]
-  );
-  return ins.rows[0];
+  try {
+    const res = await dbClientOrPool.query(
+      "SELECT id, user_id, first_name, last_name, TO_CHAR(birth_date, 'YYYY-MM-DD') AS birth_date, gender, country, language, height_cm, weight_kg, primary_goal, secondary_goals, experience_level, training_frequency, intensity_type, notes, created_at, updated_at FROM app_athlete_profiles WHERE user_id = $1",
+      [userId]
+    );
+    if (res.rows.length) return res.rows[0];
+    const fName = defaults.firstName || defaults.first_name || "";
+    const lName = defaults.lastName || defaults.last_name || "";
+    const ins = await dbClientOrPool.query(
+      `INSERT INTO app_athlete_profiles (user_id, first_name, last_name, country, language, training_frequency, intensity_type)
+       VALUES ($1, $2, $3, 'IT', 'it', 4, 'RIR')
+       ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
+       RETURNING id, user_id, first_name, last_name, TO_CHAR(birth_date, 'YYYY-MM-DD') AS birth_date, gender, country, language, height_cm, weight_kg, primary_goal, secondary_goals, experience_level, training_frequency, intensity_type, notes, created_at, updated_at`,
+      [userId, fName || null, lName || null]
+    );
+    return ins.rows[0];
+  } catch (err) {
+    console.error("getOrInitAthleteProfile soft-fail:", String(err?.message || err).slice(0, 180));
+    return null;
+  }
 }
 
 const JWT_SECRET = process.env.JWT_SECRET
@@ -1167,64 +1180,95 @@ async function resolveOAuthUser({ email, name, provider, providerId, avatarUrl, 
   const normalized = normalizeEmail(email);
   if (!normalized) throw Object.assign(new Error("Missing user email from identity provider."), { statusCode: 400 });
   const { firstName, lastName } = splitFullName(name);
+  await ensureAuthSchema();
+
+  const selectUser = async (whereSql, params) => {
+    try {
+      return await pool.query(
+        `SELECT id, email, name, first_name, last_name, provider, provider_id, avatar_url, status, role, created_at, last_login_at FROM app_users WHERE ${whereSql}`,
+        params
+      );
+    } catch (colErr) {
+      if (!/first_name|last_name|last_login_at|status|role|provider_id/i.test(String(colErr?.message || ""))) throw colErr;
+      return await pool.query(
+        `SELECT id, email, name, provider, avatar_url FROM app_users WHERE ${whereSql}`,
+        params
+      );
+    }
+  };
 
   if (linkingUser && linkingUser.id) {
-    const updated = await pool.query(
-      `UPDATE app_users
-       SET email = $1,
-           name = COALESCE($2, name),
-           first_name = COALESCE(first_name, $3),
-           last_name = COALESCE(last_name, $4),
-           provider = $5,
-           provider_id = $6,
-           avatar_url = COALESCE($7, avatar_url),
-           last_login_at = NOW(),
-           updated_at = NOW()
-       WHERE id = $8
-       RETURNING id, email, name, first_name, last_name, provider, provider_id, avatar_url, status, role, created_at, last_login_at`,
-      [normalized, name, firstName || null, lastName || null, provider, providerId, avatarUrl || null, linkingUser.id]
-    );
-    if (updated.rows.length) {
-      await getOrInitAthleteProfile(pool, updated.rows[0].id, { firstName, lastName });
-      return updated.rows[0];
+    try {
+      const updated = await pool.query(
+        `UPDATE app_users
+         SET email = $1, name = COALESCE($2, name), first_name = COALESCE(first_name, $3), last_name = COALESCE(last_name, $4),
+             provider = $5, provider_id = $6, avatar_url = COALESCE($7, avatar_url), last_login_at = NOW(), updated_at = NOW()
+         WHERE id = $8
+         RETURNING id, email, name, first_name, last_name, provider, provider_id, avatar_url, status, role, created_at, last_login_at`,
+        [normalized, name, firstName || null, lastName || null, provider, providerId, avatarUrl || null, linkingUser.id]
+      );
+      if (updated.rows.length) {
+        await getOrInitAthleteProfile(pool, updated.rows[0].id, { firstName, lastName });
+        return updated.rows[0];
+      }
+    } catch (_) {
+      const updated = await pool.query(
+        `UPDATE app_users SET email = $1, name = COALESCE($2, name), provider = $3, avatar_url = COALESCE($4, avatar_url) WHERE id = $5
+         RETURNING id, email, name, provider, avatar_url`,
+        [normalized, name, provider, avatarUrl || null, linkingUser.id]
+      );
+      if (updated.rows.length) return updated.rows[0];
     }
   }
 
-  const existing = await pool.query(
-    "SELECT id, email, name, first_name, last_name, provider, provider_id, avatar_url, status, role, created_at, last_login_at FROM app_users WHERE email = $1",
-    [normalized]
-  );
+  const existing = await selectUser("email = $1", [normalized]);
   if (existing.rows.length) {
-    const updated = await pool.query(
-      `UPDATE app_users
-       SET name = COALESCE($1, name),
-           first_name = COALESCE(first_name, $2),
-           last_name = COALESCE(last_name, $3),
-           provider = $4,
-           provider_id = $5,
-           avatar_url = COALESCE($6, avatar_url),
-           last_login_at = NOW(),
-           updated_at = NOW()
-       WHERE id = $7
-       RETURNING id, email, name, first_name, last_name, provider, provider_id, avatar_url, status, role, created_at, last_login_at`,
-      [name, firstName || null, lastName || null, provider, providerId, avatarUrl || null, existing.rows[0].id]
-    );
-    const user = updated.rows[0];
-    await getOrInitAthleteProfile(pool, user.id, { firstName, lastName });
-    return user;
+    try {
+      const updated = await pool.query(
+        `UPDATE app_users
+         SET name = COALESCE($1, name), first_name = COALESCE(first_name, $2), last_name = COALESCE(last_name, $3),
+             provider = $4, provider_id = $5, avatar_url = COALESCE($6, avatar_url), last_login_at = NOW(), updated_at = NOW()
+         WHERE id = $7
+         RETURNING id, email, name, first_name, last_name, provider, provider_id, avatar_url, status, role, created_at, last_login_at`,
+        [name, firstName || null, lastName || null, provider, providerId, avatarUrl || null, existing.rows[0].id]
+      );
+      const user = updated.rows[0];
+      await getOrInitAthleteProfile(pool, user.id, { firstName, lastName });
+      return user;
+    } catch (_) {
+      const updated = await pool.query(
+        `UPDATE app_users SET name = COALESCE($1, name), provider = $2, avatar_url = COALESCE($3, avatar_url) WHERE id = $4
+         RETURNING id, email, name, provider, avatar_url`,
+        [name, provider, avatarUrl || null, existing.rows[0].id]
+      );
+      return updated.rows[0];
+    }
   }
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const created = await client.query(
-      `INSERT INTO app_users(email, name, first_name, last_name, provider, provider_id, avatar_url, last_login_at)
-       VALUES($1, $2, $3, $4, $5, $6, $7, NOW())
-       RETURNING id, email, name, first_name, last_name, provider, provider_id, avatar_url, status, role, created_at, last_login_at`,
-      [normalized, name || normalized.split("@")[0], firstName || null, lastName || null, provider, providerId, avatarUrl || null]
-    );
-    const user = created.rows[0];
-    await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb) ON CONFLICT (user_id) DO NOTHING", [user.id]);
+    let user;
+    try {
+      const created = await client.query(
+        `INSERT INTO app_users(email, name, first_name, last_name, provider, provider_id, avatar_url, last_login_at)
+         VALUES($1, $2, $3, $4, $5, $6, $7, NOW())
+         RETURNING id, email, name, first_name, last_name, provider, provider_id, avatar_url, status, role, created_at, last_login_at`,
+        [normalized, name || normalized.split("@")[0], firstName || null, lastName || null, provider, providerId, avatarUrl || null]
+      );
+      user = created.rows[0];
+    } catch (colErr) {
+      if (!/first_name|last_name|last_login_at|provider_id|status|role/i.test(String(colErr?.message || ""))) throw colErr;
+      const created = await client.query(
+        `INSERT INTO app_users(email, name, provider, avatar_url) VALUES($1, $2, $3, $4)
+         RETURNING id, email, name, provider, avatar_url`,
+        [normalized, name || normalized.split("@")[0], provider, avatarUrl || null]
+      );
+      user = created.rows[0];
+    }
+    try {
+      await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb) ON CONFLICT (user_id) DO NOTHING", [user.id]);
+    } catch (_) {}
     await getOrInitAthleteProfile(client, user.id, { firstName, lastName });
     await client.query("COMMIT");
     return user;
@@ -2304,12 +2348,23 @@ app.post("/api/auth/register", async (req, res) => {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const result = await client.query(
-        "INSERT INTO app_users(email, name, first_name, last_name, password_hash, provider, last_login_at) VALUES($1, $2, $3, $4, $5, 'email', NOW()) RETURNING id, email, name, first_name, last_name, provider, avatar_url, status, role, created_at, last_login_at",
-        [email, name, firstName || null, lastName || null, passwordHash]
-      );
+      let result;
+      try {
+        result = await client.query(
+          "INSERT INTO app_users(email, name, first_name, last_name, password_hash, provider, last_login_at) VALUES($1, $2, $3, $4, $5, 'email', NOW()) RETURNING id, email, name, first_name, last_name, provider, avatar_url, status, role, created_at, last_login_at",
+          [email, name, firstName || null, lastName || null, passwordHash]
+        );
+      } catch (colErr) {
+        if (!/first_name|last_name|last_login_at|status|role/i.test(String(colErr?.message || ""))) throw colErr;
+        result = await client.query(
+          "INSERT INTO app_users(email, name, password_hash, provider) VALUES($1, $2, $3, 'email') RETURNING id, email, name, provider, avatar_url",
+          [email, name, passwordHash]
+        );
+      }
       const user = result.rows[0];
-      await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb) ON CONFLICT (user_id) DO NOTHING", [user.id]);
+      try {
+        await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb) ON CONFLICT (user_id) DO NOTHING", [user.id]);
+      } catch (_) {}
       const profile = await getOrInitAthleteProfile(client, user.id, { firstName, lastName });
       await client.query("COMMIT");
       client.release();
@@ -2348,15 +2403,28 @@ app.post("/api/auth/login", async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: "Email e password sono obbligatori." });
     }
-    const result = await pool.query(
-      "SELECT id, email, name, first_name, last_name, password_hash, provider, avatar_url, status, role, created_at, last_login_at FROM app_users WHERE email = $1",
-      [email]
-    );
+    let result;
+    try {
+      result = await pool.query(
+        "SELECT id, email, name, first_name, last_name, password_hash, provider, avatar_url, status, role, created_at, last_login_at FROM app_users WHERE email = $1",
+        [email]
+      );
+    } catch (colErr) {
+      if (!/first_name|last_name|last_login_at|status|role/i.test(String(colErr?.message || ""))) throw colErr;
+      result = await pool.query(
+        "SELECT id, email, name, password_hash, provider, avatar_url FROM app_users WHERE email = $1",
+        [email]
+      );
+    }
     const user = result.rows[0];
     if (!user || !user.password_hash || !(await verifyPassword(password, user.password_hash))) {
       return res.status(401).json({ error: "Email o password non corretti." });
     }
-    await pool.query("UPDATE app_users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1", [user.id]);
+    try {
+      await pool.query("UPDATE app_users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1", [user.id]);
+    } catch (_) {
+      try { await pool.query("UPDATE app_users SET updated_at = NOW() WHERE id = $1", [user.id]); } catch (__) {}
+    }
     const profile = await getOrInitAthleteProfile(pool, user.id, { firstName: user.first_name, lastName: user.last_name });
     return res.status(200).json({
       token: issueAccountToken(user),
@@ -2375,6 +2443,7 @@ app.post("/api/auth/login", async (req, res) => {
 app.get("/api/auth/public-config", (req, res) => {
   res.json({
     ok: true,
+    authBuild: "2026-09-03-schema-compat",
     googleClientId: GOOGLE_CLIENT_ID || "",
     googleEnabled: Boolean(GOOGLE_CLIENT_ID),
     appleEnabled: Boolean(process.env.APPLE_CLIENT_ID || process.env.APPLE_BUNDLE_ID),
