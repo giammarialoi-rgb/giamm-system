@@ -5298,6 +5298,25 @@ async function init() {
       } catch (domErr) {
         console.warn('[INIT] Domain restore warning:', domErr);
       }
+      // Coach-applied nutrition may live in dedicated IDB store
+      try {
+        if ((!DATA.nutrition || !(DATA.nutrition.days && DATA.nutrition.days.length)) && GiammariaPersistence.getNutrition) {
+          const orphanNutr = await GiammariaPersistence.getNutrition();
+          if (orphanNutr && (orphanNutr.present || (orphanNutr.days && orphanNutr.days.length))) {
+            DATA.nutrition = (typeof enrichImportedFoods === 'function') ? enrichImportedFoods(orphanNutr) : orphanNutr;
+            store.nutrition = DATA.nutrition;
+          }
+        }
+        if ((!DATA.supplementation || !(DATA.supplementation.items && DATA.supplementation.items.length)) && GiammariaPersistence.getSupplements) {
+          const orphanSupp = await GiammariaPersistence.getSupplements();
+          if (orphanSupp && (orphanSupp.present || (orphanSupp.items && orphanSupp.items.length))) {
+            DATA.supplementation = orphanSupp;
+            store.supplementation = orphanSupp;
+          }
+        }
+      } catch (orphanErr) {
+        console.warn('[INIT] Orphan domain restore:', orphanErr);
+      }
       store.activeProgram = DATA;
       store.activeProgramId = activeProg.id || store.activeProgramId;
       seedExerciseDatabase();
@@ -5905,14 +5924,16 @@ function renderNutrition(c) {
       days: []
     };
   }
-  // Remove legacy seeded demo Monday if still present and never customized
+  // Remove ONLY the old hardcoded demo Monday — never wipe Coach/profile-generated plans
   if (Array.isArray(DATA.nutrition.days) && DATA.nutrition.days.length === 1) {
     const d0 = DATA.nutrition.days[0];
     const blob = JSON.stringify(d0 || {});
-    const looksSeed = /Luned[iì].*\(ON\)|Albume d'uovo|Frutti di bosco/i.test(blob) && /Petto di Pollo|Riso Basmati/i.test(blob);
+    const isCoachOrProfilePlan = /da profilo|Nurvan|Coach|evidence-informed/i.test(String(DATA.nutrition.plan_name || DATA.nutrition.notes || ''));
+    const looksLegacyDemo = /Luned[iì].*\(ON\)/i.test(blob) && /Albume d'uovo/i.test(blob) && /Petto di Pollo/i.test(blob);
     const looksEmptyMondayOnly = /^luned[iì]/i.test(String(d0.day || '')) && !(d0.meals || []).some((m) => (m.foods || m.items || []).length);
-    if (looksSeed || (looksEmptyMondayOnly && DATA.nutrition.plan_name === 'Piano Nutrizionale Personalizzato')) {
+    if (!isCoachOrProfilePlan && (looksLegacyDemo || (looksEmptyMondayOnly && DATA.nutrition.plan_name === 'Piano Nutrizionale Personalizzato'))) {
       DATA.nutrition = { plan_name: '', present: false, days: [], daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
+      store.nutrition = DATA.nutrition;
       persist();
     }
   }
@@ -12125,15 +12146,50 @@ async function applyCoachProposal(proposalId) {
     }
 
     if (!modResult) {
-      if (typeof dispatchActions === 'function') {
-        modResult = await dispatchActions(canonicalActions, {
-          source: 'AI',
-          reason: proposal.summary || 'coach proposal',
-          confirmed: true,
-          skipConfirm: true
-        });
-      } else {
-        modResult = applyOperationsToProgram(DATA, proposal.operations);
+      if (!DATA || typeof DATA !== 'object') {
+        DATA = { title: 'Nurvan', weeks: [], nutrition: null, supplementation: null, therapy: null, exams: null };
+      }
+      // Always apply nutrition/supplement ops directly (ActionDispatcher may ignore domain payloads)
+      const directMeta = proposal.operations.filter(function (op) {
+        const t = op && op.type;
+        return t === 'set_nutrition' || t === 'upsert_nutrition' || t === 'replace_nutrition' ||
+          t === 'set_supplementation' || t === 'upsert_supplementation' || t === 'replace_supplementation' ||
+          t === 'navigate' || t === 'set_view' || t === 'set_pref' || t === 'set_profile';
+      });
+      const programOps = proposal.operations.filter(function (op) {
+        return directMeta.indexOf(op) < 0;
+      });
+      let applied = 0;
+      if (directMeta.length) {
+        const metaRes = applyOperationsToProgram(DATA, directMeta);
+        applied += (metaRes && metaRes.appliedCount) || 0;
+        if (metaRes && metaRes.program) {
+          if (metaRes.program.nutrition) DATA.nutrition = metaRes.program.nutrition;
+          if (metaRes.program.supplementation) DATA.supplementation = metaRes.program.supplementation;
+        }
+      }
+      if (programOps.length) {
+        if (typeof dispatchActions === 'function') {
+          try {
+            modResult = await dispatchActions(
+              (typeof operationsToActions === 'function')
+                ? operationsToActions(programOps, { source: 'AI', reason: proposal.summary || 'coach proposal' })
+                : programOps.map(function (op) { return Object.assign({}, op, { source: 'AI' }); }),
+              { source: 'AI', reason: proposal.summary || 'coach proposal', confirmed: true, skipConfirm: true }
+            );
+          } catch (dispErr) {
+            console.warn('dispatchActions fallback:', dispErr);
+            modResult = applyOperationsToProgram(DATA, programOps);
+          }
+        } else {
+          modResult = applyOperationsToProgram(DATA, programOps);
+        }
+        applied += (modResult && modResult.appliedCount) || 0;
+      }
+      if (!modResult) modResult = { ok: true, program: DATA, appliedCount: applied };
+      else {
+        modResult.appliedCount = (modResult.appliedCount || 0) + (directMeta.length ? applied : 0);
+        modResult.program = modResult.program || DATA;
       }
     } else {
       // Server may not know nutrition/supplement ops — always apply meta domains locally
@@ -12144,25 +12200,65 @@ async function applyCoachProposal(proposalId) {
           t === 'navigate' || t === 'set_view' || t === 'set_pref' || t === 'set_profile';
       });
       if (metaOps.length) {
-        try { applyOperationsToProgram(modResult.program || DATA, metaOps); } catch (_) {}
+        try {
+          const metaRes = applyOperationsToProgram(modResult.program || DATA, metaOps);
+          if (metaRes && metaRes.program) {
+            modResult.program = Object.assign({}, modResult.program || DATA, {
+              nutrition: metaRes.program.nutrition || store.nutrition || (modResult.program && modResult.program.nutrition),
+              supplementation: metaRes.program.supplementation || store.supplementation || (modResult.program && modResult.program.supplementation)
+            });
+          }
+        } catch (metaErr) {
+          console.warn('metaOps apply failed', metaErr);
+        }
       }
     }
 
+    // Capture nutrition/supp BEFORE normalize can drop them
+    const savedNutrition = store.nutrition || (modResult.program && modResult.program.nutrition) || DATA.nutrition || null;
+    const savedSupp = store.supplementation || (modResult.program && modResult.program.supplementation) || DATA.supplementation || null;
+
     DATA = normalizeProgram(modResult.program || DATA);
-    if (store.nutrition) DATA.nutrition = store.nutrition;
-    if (store.supplementation) DATA.supplementation = store.supplementation;
+    if (savedNutrition && typeof savedNutrition === 'object') {
+      DATA.nutrition = savedNutrition;
+      store.nutrition = savedNutrition;
+    } else if (store.nutrition) {
+      DATA.nutrition = store.nutrition;
+    }
+    if (savedSupp && typeof savedSupp === 'object') {
+      DATA.supplementation = savedSupp;
+      store.supplementation = savedSupp;
+    } else if (store.supplementation) {
+      DATA.supplementation = store.supplementation;
+    }
     store.activeProgram = DATA;
-    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
-      GiammariaPersistence.saveProgram(DATA, true).catch(function (err) { console.warn(err); });
+    try {
+      if (typeof GiammariaPersistence !== 'undefined') {
+        if (DATA.nutrition && typeof GiammariaPersistence.saveNutrition === 'function') {
+          await GiammariaPersistence.saveNutrition(DATA.nutrition);
+        }
+        if (DATA.supplementation && typeof GiammariaPersistence.saveSupplements === 'function') {
+          await GiammariaPersistence.saveSupplements(DATA.supplementation);
+        }
+        if (typeof GiammariaPersistence.saveProgram === 'function' && Array.isArray(DATA.weeks) && DATA.weeks.length) {
+          await GiammariaPersistence.saveProgram(DATA, true);
+        }
+      }
+    } catch (persistErr) {
+      console.warn('Nutrition/program persist warning:', persistErr);
     }
     persist();
 
     if(actionsDiv) {
-      actionsDiv.innerHTML = `<div style="color:var(--success);font-weight:900;font-size:12px;padding:6px 0;">✅ MODIFICHE APPLICATE CON SUCCESSO AL PROGRAMMA</div>`;
+      const nutrOk = !!(DATA.nutrition && ((DATA.nutrition.days && DATA.nutrition.days.length) || DATA.nutrition.daily_protein_target));
+      actionsDiv.innerHTML = `<div style="color:var(--success);font-weight:900;font-size:12px;padding:6px 0;">✅ MODIFICHE APPLICATE${nutrOk ? ' — apri Alimentazione per vedere il piano' : ''}</div>`;
     }
     store.chatHistory.push({
       role: 'assistant',
-      text: `✅ Ho applicato le modifiche richieste al programma attivo (${modResult.appliedCount || proposal.operations.length} azioni).`
+      text: `✅ Ho applicato le modifiche richieste (${modResult.appliedCount || proposal.operations.length} azioni).` +
+        (DATA.nutrition && DATA.nutrition.days && DATA.nutrition.days.length
+          ? ' Piano alimentare salvato: apri Alimentazione.'
+          : '')
     });
     persist();
     delete window.activeCoachProposals[proposalId];
@@ -12174,6 +12270,10 @@ async function applyCoachProposal(proposalId) {
         }
       });
       persist();
+    }
+    // Prefer showing nutrition if we just saved it
+    if (DATA.nutrition && ((DATA.nutrition.days && DATA.nutrition.days.length) || DATA.nutrition.present)) {
+      currentView = 'nutrition';
     }
     render();
   } catch(error) {
