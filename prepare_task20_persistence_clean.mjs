@@ -377,6 +377,8 @@ class GiammariaPersistenceEngine {
       data: snapshot.data || {},
       customSets: snapshot.customSets || {},
       bw: snapshot.bw || {},
+      logs: Array.isArray(snapshot.logs) ? snapshot.logs.slice(-80) : [],
+      health: snapshot.health || null,
       updatedAt: snapshot.updatedAt || new Date().toISOString()
     };
     await this.dbPut(STORES.WORKOUT_LOGS, payload);
