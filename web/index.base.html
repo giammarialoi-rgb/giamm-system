@@ -472,8 +472,20 @@ select, input {
 #import-progress-bar-track { height: 8px; background: #222; border-radius: 8px; overflow: hidden; }
 #import-progress-bar-fill { height: 100%; width: 6%; background: var(--gold); transition: width 0.2s linear; }
 
-.muscle-map { display:flex; gap:12px; justify-content:center; align-items:flex-start; }
+.muscle-map { display:flex; gap:12px; justify-content:center; align-items:flex-start; flex-wrap:wrap; }
 .muscle-map svg { width: 120px; height: 220px; }
+.stats-body-wrap { display:flex; gap:10px; justify-content:center; align-items:flex-start; flex-wrap:wrap; }
+.stats-body-card { flex:1 1 220px; max-width:340px; }
+.stats-body-frame { position:relative; border-radius:14px; overflow:hidden; background:#05070f; border:1px solid #222; }
+.stats-body-frame img { display:block; width:100%; height:auto; }
+.stats-hotspot {
+  position:absolute; border:0; padding:0; background:transparent; cursor:pointer; border-radius:10px;
+}
+.stats-hotspot:hover, .stats-hotspot.is-on { box-shadow:inset 0 0 0 2px var(--gold); background:rgba(212,175,55,0.16); }
+.stats-hotspot.is-fat { background:rgba(255,77,77,0.22); }
+.stats-hotspot.is-work { background:rgba(212,175,55,0.18); }
+.stats-body-toggle { display:flex; gap:6px; margin:8px 0; }
+.stats-body-toggle .btn { flex:1; font-size:10px; padding:6px 8px; }
 .m-fat { fill: #ff4d4d; } .m-weak { fill: #7cb87c; } .m-rec { fill: #d4af37; } .m-ok { fill: #4a7cff; } .m-off { fill: #2a2a2a; }
 
 .load-toggle {
@@ -1719,7 +1731,7 @@ COACH_API_URL = (typeof ConfigService !== 'undefined' && ConfigService.getCoachA
   : ((typeof COACH_API_URL === 'string' && /^https?:\/\//i.test(COACH_API_URL)) ? COACH_API_URL : '');
 const MAX_DOCUMENT_BYTES = 12 * 1024 * 1024;
 let coachRequestToken=0;
-const APP_CLEAN_BOOT_TOKEN = 'MT34-CLEAN-20260829c';
+const APP_CLEAN_BOOT_TOKEN = 'MT35-SAFE-20260903';
 
 const DEFAULT_STORE = {
   data: {},
@@ -1742,6 +1754,7 @@ const DEFAULT_STORE = {
   chatHistory: [],
   chatSessionId: null,
   actionHistory: [],
+  logs: [],
   rewards: null,
   bodyComposition: null,
   nutritionLoop: null,
@@ -1776,6 +1789,8 @@ function ensureStoreIntegrity() {
   if (!store.exIntensity) store.exIntensity = {};
   if (!store.maxTests) store.maxTests = {};
   if (!store.chatHistory) store.chatHistory = [];
+  if (!Array.isArray(store.logs)) store.logs = [];
+  if (!store.profile) store.profile = {};
   if (!store.rewards) {
     store.rewards = (window.NurvanRewards && NurvanRewards.defaultRewardsState)
       ? NurvanRewards.defaultRewardsState()
@@ -1799,7 +1814,28 @@ if (typeof ensureAiControlPrefs === 'function') {
 
 async function ensureFactoryCleanBoot() {
   if (store && store.prefs && store.prefs.lastCleanBoot === APP_CLEAN_BOOT_TOKEN) return false;
-  console.warn('[INIT] Factory clean boot for new user / new build');
+  const hasLocal = !!(
+    (store && store.accountToken) ||
+    (store && store.activeProgramId) ||
+    (store && Array.isArray(store.logs) && store.logs.length) ||
+    (store && store.data && Object.keys(store.data).length) ||
+    (store && store.customSets && Object.keys(store.customSets).length) ||
+    (store && store.profile && (store.profile.name || store.profile.sex))
+  );
+  let hasIdb = false;
+  try {
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadActiveProgram) {
+      const p = await GiammariaPersistence.loadActiveProgram();
+      hasIdb = !!(p && Array.isArray(p.weeks) && p.weeks.length);
+    }
+  } catch (_) {}
+  if (hasLocal || hasIdb) {
+    if (!store.prefs) store.prefs = { intensityType: 'RIR', duration: 16, frequency: 4 };
+    store.prefs.lastCleanBoot = APP_CLEAN_BOOT_TOKEN;
+    try { persist(); } catch (_) {}
+    return false;
+  }
+  console.warn('[INIT] Factory clean boot for empty first launch');
   try {
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.wipeDatabase) {
       await GiammariaPersistence.wipeDatabase();
@@ -2530,14 +2566,85 @@ function nativeAuthError(message){
   setGoogleAuthLoading(false);
   $('account-status').textContent = String(message || 'Autenticazione non riuscita.');
 }
-function accountPayload(){
-  const payload = JSON.parse(JSON.stringify(store));
-  delete payload.accountToken;
-  delete payload.accountUser;
-  if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.sanitizeStoreForLocalStorage) {
-    return GiammariaPersistence.sanitizeStoreForLocalStorage(payload);
+function accountPayload(opts){
+  opts = opts || {};
+  const includeProgram = opts.includeProgram !== false;
+  const payload = {
+    prefs: store.prefs || {},
+    profile: store.profile || {},
+    logs: Array.isArray(store.logs) ? store.logs.slice(-80) : [],
+    data: store.data || {},
+    customSets: store.customSets || {},
+    bw: store.bw || {},
+    skips: store.skips || {},
+    subs: store.subs || {},
+    loadTypes: store.loadTypes || {},
+    tempos: store.tempos || {},
+    exIntensity: store.exIntensity || {},
+    maxTests: store.maxTests || {},
+    bonus: store.bonus || {},
+    exMuscle: store.exMuscle || {},
+    health: store.health || null,
+    activeProgramId: store.activeProgramId || (DATA && DATA.id) || null,
+    rewards: store.rewards || null,
+    lastLocalSavedAt: new Date().toISOString()
+  };
+  if (includeProgram && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length) {
+    payload.activeProgram = DATA;
   }
   return payload;
+}
+function accountDataScore(src, prog) {
+  let n = 0;
+  const p = prog || (src && src.activeProgram) || null;
+  if (p && Array.isArray(p.weeks)) n += p.weeks.length * 80;
+  if (src && src.data && typeof src.data === 'object') n += Object.keys(src.data).length;
+  if (src && Array.isArray(src.logs)) n += src.logs.length * 8;
+  if (src && src.customSets) n += Object.keys(src.customSets).length;
+  return n;
+}
+function applyRemoteAccountData(remote, preferLocal) {
+  if (!remote || typeof remote !== 'object') return;
+  const token = store.accountToken, user = store.accountUser;
+  if (!preferLocal) {
+    store.data = Object.assign({}, remote.data || {}, store.data || {});
+    store.customSets = Object.assign({}, remote.customSets || {}, store.customSets || {});
+    store.bw = Object.assign({}, remote.bw || {}, store.bw || {});
+    store.skips = Object.assign({}, remote.skips || {}, store.skips || {});
+    store.subs = Object.assign({}, remote.subs || {}, store.subs || {});
+    store.loadTypes = Object.assign({}, remote.loadTypes || {}, store.loadTypes || {});
+    store.tempos = Object.assign({}, remote.tempos || {}, store.tempos || {});
+    store.exIntensity = Object.assign({}, remote.exIntensity || {}, store.exIntensity || {});
+    store.bonus = Object.assign({}, remote.bonus || {}, store.bonus || {});
+    store.exMuscle = Object.assign({}, remote.exMuscle || {}, store.exMuscle || {});
+    store.prefs = Object.assign({}, remote.prefs || {}, store.prefs || {});
+    store.profile = Object.assign({}, remote.profile || {}, store.profile || {});
+    if (Array.isArray(remote.logs) && remote.logs.length) {
+      const byId = {};
+      (store.logs || []).concat(remote.logs).forEach(function (row) {
+        if (!row) return;
+        byId[row.id || row.at] = row;
+      });
+      store.logs = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
+        return String(a.at || '').localeCompare(String(b.at || ''));
+      }).slice(-80);
+    }
+    if (remote.health) store.health = Object.assign({}, store.health || {}, remote.health);
+    if (remote.activeProgramId) store.activeProgramId = store.activeProgramId || remote.activeProgramId;
+  }
+  const localWeeks = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
+  const remoteProg = remote.activeProgram;
+  if ((!localWeeks || localWeeks < 1) && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length) {
+    try {
+      DATA = typeof normalizeProgram === 'function' ? normalizeProgram(remoteProg) : remoteProg;
+      store.activeProgramId = DATA.id || remote.activeProgramId || store.activeProgramId;
+      persistActiveProgramStructure();
+    } catch (e) {
+      console.warn('[ACCOUNT_RESTORE_PROGRAM]', e);
+    }
+  }
+  store.accountToken = token;
+  store.accountUser = user;
 }
 async function syncAccountData(download=false){
   const status = $('account-status'); if(status) status.textContent = 'Sincronizzazione…';
@@ -2545,13 +2652,18 @@ async function syncAccountData(download=false){
     if(download){
       const response = await accountRequest('/api/account/me', { method: 'GET' });
       const payload = await readApiJson(response);
-      if(payload.data && Object.keys(payload.data).length){
-        const token = store.accountToken, user = store.accountUser;
-        store = { ...store, ...payload.data, accountToken: token, accountUser: user };
-        persist(); render();
+      const remote = payload.data || {};
+      const localScore = accountDataScore(store, DATA);
+      const remoteScore = accountDataScore(remote, remote.activeProgram);
+      applyRemoteAccountData(remote, localScore > remoteScore);
+      if (localScore > 0) {
+        try {
+          await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload({ includeProgram: true }) }) });
+        } catch (_) {}
       }
+      persist(); render();
     } else {
-      const response = await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload() }) });
+      const response = await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload({ includeProgram: true }) }) });
       await readApiJson(response);
     }
     if(status) status.textContent = 'Dati sincronizzati correttamente.';
@@ -2564,7 +2676,12 @@ async function syncAccountData(download=false){
 function scheduleAccountSync(){
   if(!store.accountToken) return;
   clearTimeout(accountSyncTimer);
-  accountSyncTimer = setTimeout(() => syncAccountData(false).catch(() => {}), 1200);
+  accountSyncTimer = setTimeout(function () {
+    accountRequest('/api/account/sync', {
+      method: 'POST',
+      body: JSON.stringify({ data: accountPayload({ includeProgram: false }) })
+    }).then(function (response) { return readApiJson(response); }).catch(function () {});
+  }, 1500);
 }
 
 function newCoachQuestion(){
@@ -4776,6 +4893,12 @@ function persistActiveProgramStructure() {
         console.warn('[PERSIST PROGRAM]', err);
       });
     }
+    if (store.accountToken) {
+      accountRequest('/api/account/sync', {
+        method: 'POST',
+        body: JSON.stringify({ data: accountPayload({ includeProgram: true }) })
+      }).then(function (response) { return readApiJson(response); }).catch(function () {});
+    }
   } catch (e) {
     console.warn('[PERSIST PROGRAM]', e);
   }
@@ -5573,14 +5696,20 @@ async function init() {
           store.data = logSnap.data;
           store.customSets = logSnap.customSets || store.customSets || {};
           store.bw = Object.assign({}, store.bw || {}, logSnap.bw || {});
+          if (Array.isArray(logSnap.logs) && logSnap.logs.length && !(store.logs && store.logs.length)) store.logs = logSnap.logs;
+          if (logSnap.health) store.health = Object.assign({}, store.health || {}, logSnap.health);
           console.log('[INIT] Restored workout logs from IndexedDB');
         } else if (localKeys > 0 && GiammariaPersistence.saveWorkoutLogsSnapshot) {
           GiammariaPersistence.saveWorkoutLogsSnapshot({
             data: store.data,
             customSets: store.customSets,
             bw: store.bw,
+            logs: store.logs || [],
+            health: store.health || null,
             updatedAt: new Date().toISOString()
           }).catch(function () {});
+        } else if (logSnap && Array.isArray(logSnap.logs) && logSnap.logs.length && !(store.logs && store.logs.length)) {
+          store.logs = logSnap.logs;
         }
       } catch (logErr) {
         console.warn('[INIT] Workout log IDB restore skipped:', logErr);
@@ -5799,7 +5928,18 @@ function persist() {
       showToast('Memoria locale piena: i programmi restano in IndexedDB. Esegui pulizia documenti o Hard Reset se necessario.', 'danger');
     }
     try {
-      const sanitizedStore = { prefs: store.prefs || {}, bw: store.bw || {}, customSets: store.customSets || {}, data: store.data || {} };
+      const sanitizedStore = {
+        prefs: store.prefs || {},
+        bw: store.bw || {},
+        customSets: store.customSets || {},
+        data: store.data || {},
+        logs: Array.isArray(store.logs) ? store.logs.slice(-40) : [],
+        accountToken: store.accountToken || null,
+        accountUser: store.accountUser || null,
+        activeProgramId: store.activeProgramId || null,
+        profile: store.profile || {},
+        health: store.health || null
+      };
       localStorage.setItem('GS_STORE', JSON.stringify(sanitizedStore));
     } catch (criticalErr) {
       console.error('[PERSIST_CRITICAL] Failed to persist even minimal store:', criticalErr);
@@ -5820,6 +5960,8 @@ function scheduleWorkoutLogsIdbSync() {
       data: store.data || {},
       customSets: store.customSets || {},
       bw: store.bw || {},
+      logs: Array.isArray(store.logs) ? store.logs : [],
+      health: store.health || null,
       updatedAt: new Date().toISOString()
     }).catch(function (err) { console.warn('[WORKOUT_IDB_SYNC]', err); });
   }, 600);
@@ -7759,6 +7901,13 @@ function renderSettings(c) {
           <input id="profile-name" type="text" value="${esc((store.profile||(DATA&&DATA.profile)||{}).name||'')}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
         </div>
         <div>
+          <label style="font-size:10px;color:#666;font-weight:800;">Sesso</label>
+          <select id="profile-sex" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
+            <option value="m" ${(String((store.profile||{}).sex||'m').toLowerCase().indexOf('f')===0)?'':'selected'}>Maschio</option>
+            <option value="f" ${(String((store.profile||{}).sex||'').toLowerCase().indexOf('f')===0)?'selected':''}>Femmina</option>
+          </select>
+        </div>
+        <div>
           <label style="font-size:10px;color:#666;font-weight:800;">${t('labelAge')}</label>
           <input id="profile-age" type="number" value="${esc(String((store.profile||(DATA&&DATA.profile)||{}).age||''))}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
         </div>
@@ -7908,6 +8057,7 @@ function saveAthleteProfile() {
   const profile = {
     name: ($('profile-name')?.value || '').trim(),
     age: parseInt($('profile-age')?.value, 10) || null,
+    sex: ($('profile-sex') && $('profile-sex').value) || prev.sex || 'm',
     weight: parseFloat($('profile-weight')?.value) || null,
     height: parseInt($('profile-height')?.value, 10) || null,
     squatMax: hasSquat ? (parseFloat($('profile-squat')?.value) || null) : (prev.squatMax || null),
@@ -11311,36 +11461,89 @@ function finalizeWorkout(){
   if (store.logs.length > 60) store.logs = store.logs.slice(-60);
   store.sessionStartedAt = null;
   persist();
-  syncWorkoutSessionToCloud().catch(function (err) { console.warn('[WORKOUT_CLOUD_SYNC]', err); });
-  try {
-    if (typeof NativeConfig !== 'undefined' && NativeConfig.writeHealthSession) {
-      NativeConfig.writeHealthSession(JSON.stringify({ kcal: snap.kcal, durationSec: snap.durationSec, sets: snap.sets, title: 'Allenamento Nurvan' }));
-    }
-  } catch (_) {}
-
-  let awarded = null;
-  try {
-    ensureRewardsReady();
-    if (isRewardsMode() && window.NurvanRewards && typeof NurvanRewards.onWorkoutCompleted === 'function') {
-      const result = NurvanRewards.onWorkoutCompleted(store.rewards, logEntry, { prCount: prCount, hasGold: hasGold });
-      if (result && result.state) store.rewards = result.state;
-      awarded = result && result.awarded ? result.awarded : null;
-      persist();
-    }
-  } catch (rewErr) {
-    console.warn('[REWARDS]', rewErr);
-  }
-
-  if (typeof showToast === 'function') showToast('Allenamento salvato. Calorie e stats aggiornate.', 'success');
-  else alert("Allenamento finalizzato con successo.");
-
+  persistActiveProgramStructure();
   window.__pendingCoachAnalyze = {
     snap: snap,
     logEntry: logEntry,
     intensityPts: intensityPts,
     tonnage: tonnage
   };
-  showWorkoutCompleteOverlay(logEntry, awarded);
+
+  withBusy(async function () {
+    try {
+      if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveWorkoutLogsSnapshot) {
+        await GiammariaPersistence.saveWorkoutLogsSnapshot({
+          data: store.data || {},
+          customSets: store.customSets || {},
+          bw: store.bw || {},
+          logs: store.logs || [],
+          health: store.health || null,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    } catch (err) { console.warn('[WORKOUT_IDB_FLUSH]', err); }
+    if (store.accountToken) {
+      try {
+        await Promise.race([
+          syncAccountData(false),
+          new Promise(function (_, rej) { setTimeout(function () { rej(new Error('sync_timeout')); }, 8000); })
+        ]);
+      } catch (err) { console.warn('[WORKOUT_CLOUD_FLUSH]', err); }
+    }
+    syncWorkoutSessionToCloud().catch(function (err) { console.warn('[WORKOUT_CLOUD_SYNC]', err); });
+  }, 'Salvataggio sessione…', { immediate: true }).then(function () {
+    try {
+      if (typeof NativeConfig !== 'undefined' && NativeConfig.writeHealthSession) {
+        NativeConfig.writeHealthSession(JSON.stringify({ kcal: snap.kcal, durationSec: snap.durationSec, sets: snap.sets, title: 'Allenamento Nurvan' }));
+      }
+    } catch (_) {}
+
+    let awarded = null;
+    try {
+      ensureRewardsReady();
+      if (isRewardsMode() && window.NurvanRewards && typeof NurvanRewards.onWorkoutCompleted === 'function') {
+        const result = NurvanRewards.onWorkoutCompleted(store.rewards, logEntry, { prCount: prCount, hasGold: hasGold });
+        if (result && result.state) store.rewards = result.state;
+        awarded = result && result.awarded ? result.awarded : null;
+        persist();
+      }
+    } catch (rewErr) {
+      console.warn('[REWARDS]', rewErr);
+    }
+
+    if (typeof showToast === 'function') showToast('Allenamento salvato. Calorie e stats aggiornate.', 'success');
+    else alert("Allenamento finalizzato con successo.");
+    showWorkoutCompleteOverlay(logEntry, awarded);
+  }).catch(function (err) {
+    console.warn('[FINALIZE]', err);
+    if (typeof showToast === 'function') showToast('Allenamento salvato in locale.', 'warning');
+    showWorkoutCompleteOverlay(logEntry, null);
+  });
+}
+
+function buildLocalSessionCoachReply(logEntry, snap) {
+  const le = logEntry || {};
+  const muscles = le.muscles || (snap && snap.muscles) || {};
+  const muscleLines = Object.keys(muscles).filter(function (k) { return muscles[k] > 0; }).map(function (k) {
+    const lab = (MACRO_MUSCLE_GROUPS.find(function (x) { return x.id === k; }) || {}).label || k;
+    return '- ' + lab + ': ' + muscles[k] + ' serie';
+  });
+  const mins = Math.max(1, Math.floor((le.durationSec || 0) / 60));
+  const sets = le.sets || 0;
+  const tonnage = le.tonnage || 0;
+  let verdict = 'Sessione solida: hai chiuso il lavoro e i carichi sono stati salvati.';
+  if (sets < 6) verdict = 'Volume basso: la prossima volta punta a completare più serie principali prima di chiudere.';
+  else if (sets > 25) verdict = 'Volume alto: monitora il recupero (sonno e RIR). Se domani sei piatto, togli 1-2 serie di isolamento.';
+  if (tonnage > 0 && sets > 0 && (tonnage / sets) < 20) {
+    verdict += ' I carichi medi sono leggeri rispetto alle serie: se era un giorno di tecnica va bene, altrimenti alza il peso restando a 1-3 RIR.';
+  }
+  return '## Analisi sessione W' + (le.week || 1) + ' · seduta ' + ((le.day || 0) + 1) + '\n\n' +
+    '- Durata: **' + mins + ' min**\n' +
+    '- Serie completate: **' + sets + '** su **' + (le.exercises || 0) + '** esercizi\n' +
+    '- Tonnellaggio: **' + tonnage + ' kg** · intensità **' + (le.intensity || 0) + ' pts** · **' + (le.kcal || 0) + ' kcal** stimate\n' +
+    (muscleLines.length ? ('\n**Distribuzione muscolare**\n' + muscleLines.join('\n') + '\n') : '\n') +
+    '\n' + verdict + '\n\n' +
+    'Prossimo allenamento: ripeti gli stessi esercizi e cerca +1 ripetizione o +1,25/2,5 kg dove hai chiuso tutte le serie con RIR ≥ 2. Non è una diagnosi medica.';
 }
 
 function maybeAskCoachAfterComplete() {
@@ -11361,12 +11564,17 @@ function maybeAskCoachAfterComplete() {
       '. Durata ' + Math.floor((logEntry.durationSec || 0) / 60) + ' min, ' +
       logEntry.kcal + ' kcal stimate, tonnellaggio ' + logEntry.tonnage + ' kg, intensità ' + logEntry.intensity +
       ' pts, ' + logEntry.sets + ' serie su ' + logEntry.exercises + ' esercizi. Dammi feedback operativo su volume, intensità e prossimi aggiustamenti. Non fare diagnosi mediche.';
+    window.__sessionCoachFallback = { logEntry: logEntry, snap: snap };
     navigate('ai');
     setTimeout(function () {
       const input = $('ai-input');
       if (input) input.value = prompt;
-      if (typeof askAI === 'function') askAI();
-    }, 200);
+      if (typeof askAI === 'function') {
+        Promise.resolve(askAI()).catch(function (err) {
+          console.warn('[SESSION_COACH]', err);
+        });
+      }
+    }, 250);
   }, 200);
 }
 
@@ -11733,6 +11941,10 @@ function renderAthleteProfile(container) {
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
     '<div><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelName') + '</label>' +
     '<input id="profile-name" type="text" value="' + esc(profile.name || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">Sesso</label>' +
+    '<select id="profile-sex" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">' +
+    '<option value="m"' + (String(profile.sex||'m').toLowerCase().indexOf('f')===0?'':' selected') + '>Maschio</option>' +
+    '<option value="f"' + (String(profile.sex||'').toLowerCase().indexOf('f')===0?' selected':'') + '>Femmina</option></select></div>' +
     '<div><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelAge') + '</label>' +
     '<input id="profile-age" type="number" value="' + esc(String(profile.age || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelWeight') + '</label>' +
@@ -12301,60 +12513,119 @@ function muscleFatigueClass(name, muscles) {
   if (n >= 1) return 'm-rec';
   return 'm-ok';
 }
-function renderMuscleMap(muscles) {
-  const c = (n) => muscleFatigueClass(n, muscles);
-  return `<div class="card" style="margin-bottom:12px;">
-    <div class="card-header"><h2>Fatica muscolare</h2></div>
-    <div style="padding:12px;">
-      <div style="font-size:11px;color:#888;margin-bottom:8px;">Controlla i livelli di affaticamento dalle serie completate</div>
-      <div class="muscle-map">
-        <svg viewBox="0 0 80 160" aria-label="fronte">
-          <rect class="${c('PETTO')}" x="22" y="28" width="36" height="22" rx="4"/>
-          <rect class="${c('DELTOIDI')}" x="8" y="26" width="14" height="16" rx="4"/>
-          <rect class="${c('DELTOIDI')}" x="58" y="26" width="14" height="16" rx="4"/>
-          <rect class="${c('BICIPITI')}" x="6" y="44" width="12" height="22" rx="4"/>
-          <rect class="${c('BICIPITI')}" x="62" y="44" width="12" height="22" rx="4"/>
-          <rect class="${c('CORE')}" x="26" y="52" width="28" height="20" rx="3"/>
-          <rect class="${c('QUADRICIPITI')}" x="22" y="78" width="16" height="36" rx="4"/>
-          <rect class="${c('QUADRICIPITI')}" x="42" y="78" width="16" height="36" rx="4"/>
-          <rect class="${c('POLPACCI')}" x="24" y="116" width="12" height="22" rx="4"/>
-          <rect class="${c('POLPACCI')}" x="44" y="116" width="12" height="22" rx="4"/>
-          <circle cx="40" cy="14" r="10" fill="#333"/>
-        </svg>
-        <svg viewBox="0 0 80 160" aria-label="retro">
-          <rect class="${c('DORSALI')}" x="20" y="26" width="40" height="28" rx="4"/>
-          <rect class="${c('SCHIENA')}" x="26" y="54" width="28" height="16" rx="3"/>
-          <rect class="${c('GLUTEI')}" x="24" y="72" width="32" height="16" rx="4"/>
-          <rect class="${c('FEMORALI')}" x="22" y="90" width="16" height="28" rx="4"/>
-          <rect class="${c('FEMORALI')}" x="42" y="90" width="16" height="28" rx="4"/>
-          <rect class="${c('TRICIPITI')}" x="6" y="40" width="12" height="22" rx="4"/>
-          <rect class="${c('TRICIPITI')}" x="62" y="40" width="12" height="22" rx="4"/>
-          <circle cx="40" cy="14" r="10" fill="#333"/>
-        </svg>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:10px;color:#aaa;">
-        <span><i class="m-weak" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7cb87c;"></i> Indebolito</span>
-        <span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#d4af37;"></i> In recupero</span>
-        <span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#4a7cff;"></i> Recuperato</span>
-        <span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff4d4d;"></i> Affaticato</span>
-      </div>
-    </div>
-  </div>`;
+function athleteSexCode() {
+  const raw = String((store.profile && store.profile.sex) || (DATA && DATA.profile && DATA.profile.sex) || '').toLowerCase();
+  if (/^(f|fem|female|donna|woman)/.test(raw)) return 'f';
+  return 'm';
 }
+function statsMuscleVolume(muscles, groupId) {
+  const m = muscles || {};
+  if (groupId === 'SPALLE') return (m.SPALLE || 0) + (m.DELTOIDI || 0) + (m.BICIPITI || 0) + (m.TRICIPITI || 0);
+  if (groupId === 'SCHIENA') return (m.SCHIENA || 0) + (m.DORSALI || 0) + (m.TRAPEZIO || 0);
+  if (groupId === 'ADDOME') return (m.ADDOME || 0) + (m.CORE || 0);
+  if (groupId === 'GAMBE_POLPACCI') return (m.GAMBE_POLPACCI || 0) + (m.QUADRICIPITI || 0) + (m.FEMORALI || 0) + (m.POLPACCI || 0);
+  return m[groupId] || 0;
+}
+function statsBodySrc(view) {
+  const sex = athleteSexCode();
+  if (view === 'back') return sex === 'f' ? 'muscle-female-back.png' : 'muscle-male-back.png';
+  return sex === 'f' ? 'muscle-female-front.png' : 'muscle-male-front.png';
+}
+function statsHotspots(view) {
+  if (view === 'back') {
+    return [
+      { id: 'SCHIENA', top: '15%', left: '36%', width: '28%', height: '9%' },
+      { id: 'SPALLE', top: '17%', left: '22%', width: '14%', height: '8%' },
+      { id: 'SPALLE', top: '17%', left: '64%', width: '14%', height: '8%' },
+      { id: 'SCHIENA', top: '24%', left: '28%', width: '44%', height: '12%' },
+      { id: 'SPALLE', top: '26%', left: '18%', width: '12%', height: '10%' },
+      { id: 'SPALLE', top: '26%', left: '70%', width: '12%', height: '10%' },
+      { id: 'SCHIENA', top: '34%', left: '42%', width: '16%', height: '8%' },
+      { id: 'GLUTEI', top: '41%', left: '34%', width: '32%', height: '10%' },
+      { id: 'GAMBE_POLPACCI', top: '50%', left: '32%', width: '36%', height: '11%' },
+      { id: 'GAMBE_POLPACCI', top: '61%', left: '34%', width: '32%', height: '8%' }
+    ];
+  }
+  return [
+    { id: 'PETTO', top: '20%', left: '36%', width: '28%', height: '9%' },
+    { id: 'SPALLE', top: '18%', left: '23%', width: '14%', height: '7%' },
+    { id: 'SPALLE', top: '18%', left: '63%', width: '14%', height: '7%' },
+    { id: 'SPALLE', top: '26%', left: '21%', width: '12%', height: '8%' },
+    { id: 'SPALLE', top: '26%', left: '67%', width: '12%', height: '8%' },
+    { id: 'ADDOME', top: '30%', left: '40%', width: '20%', height: '9%' },
+    { id: 'ADDOME', top: '30%', left: '31%', width: '9%', height: '9%' },
+    { id: 'ADDOME', top: '30%', left: '60%', width: '9%', height: '9%' },
+    { id: 'GAMBE_POLPACCI', top: '42%', left: '33%', width: '15%', height: '14%' },
+    { id: 'GAMBE_POLPACCI', top: '42%', left: '52%', width: '15%', height: '14%' },
+    { id: 'GAMBE_POLPACCI', top: '56%', left: '36%', width: '12%', height: '10%' },
+    { id: 'GAMBE_POLPACCI', top: '56%', left: '52%', width: '12%', height: '10%' }
+  ];
+}
+function hotspotClass(groupId, muscles) {
+  const n = statsMuscleVolume(muscles, groupId);
+  if (n >= 8) return 'stats-hotspot is-fat';
+  if (n >= 1) return 'stats-hotspot is-work';
+  if (store.prefs && store.prefs.statsMuscle === groupId) return 'stats-hotspot is-on';
+  return 'stats-hotspot';
+}
+function renderMuscleMap(muscles) {
+  window.__statsBodyView = window.__statsBodyView || 'front';
+  const view = window.__statsBodyView;
+  const src = statsBodySrc(view);
+  const spots = statsHotspots(view).map(function (h) {
+    return '<button type="button" class="' + hotspotClass(h.id, muscles) + '" style="top:' + h.top + ';left:' + h.left + ';width:' + h.width + ';height:' + h.height + ';" onclick="selectStatsMuscle(\'' + h.id + '\')" aria-label="' + h.id + '"></button>';
+  }).join('');
+  const sexLabel = athleteSexCode() === 'f' ? 'Femmina' : 'Maschio';
+  return '<div class="card" style="margin-bottom:12px;">' +
+    '<div class="card-header"><h2>Mappa muscolare · ' + sexLabel + '</h2></div>' +
+    '<div style="padding:12px;">' +
+    '<div class="stats-body-toggle">' +
+    '<button class="btn ' + (view === 'front' ? 'btn-primary' : 'btn-outline') + '" onclick="setStatsBodyView(\'front\')">FRONTE</button>' +
+    '<button class="btn ' + (view === 'back' ? 'btn-primary' : 'btn-outline') + '" onclick="setStatsBodyView(\'back\')">RETRO</button>' +
+    '</div>' +
+    '<div class="stats-body-frame">' +
+    '<img src="' + src + '" alt="Mappa muscolare ' + sexLabel + ' ' + view + '">' +
+    spots +
+    '</div>' +
+    '<div style="font-size:10px;color:#888;margin-top:8px;">Tocca una zona colorata per filtrare volume, serie e progressi di quel macrogruppo.</div>' +
+    '</div></div>';
+}
+function setStatsBodyView(view) {
+  window.__statsBodyView = view === 'back' ? 'back' : 'front';
+  if (typeof render === 'function') render();
+}
+function selectStatsMuscle(groupId) {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.statsMuscle = groupId;
+  const sel = $('stats-muscle-group');
+  if (sel) sel.value = groupId;
+  drillStatsMuscle(groupId);
+  document.querySelectorAll('.stats-hotspot').forEach(function (el) {
+    el.classList.toggle('is-on', el.getAttribute('aria-label') === groupId);
+  });
+}
+window.setStatsBodyView = setStatsBodyView;
+window.selectStatsMuscle = selectStatsMuscle;
 
 function renderStats(c){
   const last = (Array.isArray(store.logs) && store.logs.length) ? store.logs[store.logs.length - 1] : null;
+  const live = collectSessionStats();
   const snap = last ? {
-    durationSec: last.durationSec || 0,
-    kcal: last.kcal || 0,
-    exercises: last.exercises || 0,
-    sets: last.sets || 0,
-    weight: last.tonnage || 0,
-    intensity: last.intensity || 0,
-    muscles: last.muscles || {}
-  } : collectSessionStats();
+    durationSec: last.durationSec || live.durationSec || 0,
+    kcal: last.kcal || live.kcal || 0,
+    exercises: last.exercises || live.exercises || 0,
+    sets: last.sets || live.sets || 0,
+    weight: last.tonnage || live.weight || 0,
+    intensity: last.intensity || live.intensity || 0,
+    muscles: Object.assign({}, live.muscles || {}, last.muscles || {})
+  } : live;
   const durM = Math.floor(snap.durationSec / 60);
   const durS = snap.durationSec % 60;
+  const hist = (store.logs || []).slice().reverse().slice(0, 12).map(function (row) {
+    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #222;font-size:11px;">' +
+      '<span>W' + (row.week || '?') + ' · S' + ((row.day || 0) + 1) + ' · ' + esc(String(row.at || '').replace('T', ' ').slice(0, 16)) + '</span>' +
+      '<span style="color:var(--gold);font-weight:800;">' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg</span></div>';
+  }).join('');
   c.innerHTML = `
     <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">PERFORMANCE LAB</h1>
     <div style="font-size:10px; color:#777; margin-bottom:15px; font-weight:700; letter-spacing:1px;">ATTIVITÀ · CRONOLOGIA · FATICA</div>
@@ -12368,12 +12639,13 @@ function renderStats(c){
       <div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:8px;">DRILL-DOWN MUSCOLI</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;" id="stats-muscle-chips">
         ${MACRO_MUSCLE_GROUPS.map(function (g) {
-          const n = snap.muscles[g.id] || 0;
-          return '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="drillStatsMuscle(\'' + g.id + '\')">' + g.label + (n ? ' · ' + n : '') + '</button>';
+          const n = statsMuscleVolume(snap.muscles, g.id);
+          return '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="selectStatsMuscle(\'' + g.id + '\')">' + g.label + (n ? ' · ' + n : '') + '</button>';
         }).join('')}
       </div>
       <div id="stats-drill-detail" style="margin-top:10px;font-size:11px;color:#888;"></div>
     </div>
+    ${hist ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:8px;">CRONOLOGIA SESSIONI</div>' + hist + '</div>' : ''}
     <div class="card" style="margin-bottom:12px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;"><h2>Statistiche</h2><button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="exportStatsCsv()">Esporta</button></div>
       <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -12541,11 +12813,18 @@ function renderSimpleChart(canvasId, data, color, type='line') {
 }
 
 function renderStatsData(){
-  if (!DATA || !DATA.weeks) return;
   const selectedGroup = $('stats-muscle-group') ? $('stats-muscle-group').value : 'TOTAL';
-  const weeksCount = DATA.weeks.length;
+  const weeksCount = (DATA && Array.isArray(DATA.weeks) && DATA.weeks.length) ? DATA.weeks.length : Math.max(1, (store.logs || []).reduce(function (m, row) { return Math.max(m, Number(row.week) || 0); }, 0) || 1);
   let vD = [], rD = [], bwD = [], pD = [];
 
+  if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
+    for (let w = 1; w <= weeksCount; w++) {
+      const rows = (store.logs || []).filter(function (row) { return Number(row.week) === w; });
+      const wV = rows.reduce(function (s, row) { return s + (Number(row.tonnage) || 0); }, 0);
+      const wR = rows.reduce(function (s, row) { return s + (Number(row.intensity) || 0); }, 0);
+      vD.push(wV); rD.push(wR); bwD.push(parseFloat(store.bw[w]) || null); pD.push(wV > 0 && store.bw[w] ? wV / store.bw[w] : 0);
+    }
+  } else {
   for(let w = 1; w <= weeksCount; w++){
     let wV = 0, wR = 0;
     const weekObj = DATA.weeks[w - 1];
@@ -12615,6 +12894,7 @@ function renderStatsData(){
     rD.push(wR);
     bwD.push(bw);
     pD.push(wV > 0 && bw ? (wV / bw) : 0);
+  }
   }
 
   let tH = '';
@@ -13602,7 +13882,10 @@ async function askAIInner(q0){
     }
 
     if (!store.accountToken) {
-      const authMsg = 'Accedi al tuo account per usare Coach AI sul server. Le funzioni locali (allenamento, import, profilo) restano disponibili.';
+      const fb = window.__sessionCoachFallback;
+      const authMsg = (fb && /Analizza la sessione appena finalizzata/i.test(q))
+        ? buildLocalSessionCoachReply(fb.logEntry, fb.snap)
+        : 'Accedi al tuo account per usare Coach AI sul server. Le funzioni locali (allenamento, import, profilo) restano disponibili.';
       pending.innerHTML = markdownToHtml(authMsg);
       lastCoachReply = authMsg;
       store.chatHistory.push({ role: 'ai', text: authMsg });
@@ -13610,6 +13893,7 @@ async function askAIInner(q0){
       return;
     }
 
+    const isSessionReview = /Analizza la sessione appena finalizzata/i.test(q);
     const summary = programSummaryForCoach(DATA);
     const performanceSummary = buildPerformanceSummaryForCoach();
     const langCode = (typeof I18nService !== 'undefined' && I18nService.getLanguage) ? I18nService.getLanguage() : 'it';
@@ -13620,34 +13904,56 @@ async function askAIInner(q0){
       }
     } catch (_) {}
 
-    const response = await apiFetch(coachEndpoint('/api/chat'), {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify({
-        message: q,
-        conversation_id: store.chatSessionId,
-        context: {
-          programSummary: summary,
-          currentWeek: typeof currentWeek !== 'undefined' ? currentWeek : 1,
-          currentDay: typeof currentDay !== 'undefined' ? currentDay : 0,
-          intensityType: store.prefs && store.prefs.intensityType,
-          weekIntensity: store.prefs && store.prefs.weekIntensity,
-          prefs: store.prefs || {},
-          profile: store.profile || {},
-          language: langCode,
-          athleteGoals: (store.profile && (store.profile.goal || store.profile.primary_goal)) || null,
-          nutrition: DATA && DATA.nutrition ? DATA.nutrition : (store.nutrition || null),
-          supplementation: DATA && DATA.supplementation ? DATA.supplementation : null,
-          therapy: (store.prefs && store.prefs.shareMedicalWithCoach) ? (DATA && DATA.therapy ? DATA.therapy : null) : null,
-          exams: (store.prefs && store.prefs.shareMedicalWithCoach) ? (DATA && DATA.exams ? DATA.exams : null) : null,
-          health: (store.prefs && store.prefs.shareMedicalWithCoach) ? healthCtx : {},
-          performanceSummary: performanceSummary
-        },
-        history: store.chatHistory.slice(-6).map(function (item) {
-          return { role: item.role === 'ai' ? 'assistant' : item.role, text: sanitizeCoachDisplayText(item.text || item.content || '').slice(0, 500) };
-        })
+    const chatBody = {
+      message: q,
+      conversation_id: store.chatSessionId,
+      context: {
+        programSummary: summary,
+        sessionReview: isSessionReview,
+        currentWeek: typeof currentWeek !== 'undefined' ? currentWeek : 1,
+        currentDay: typeof currentDay !== 'undefined' ? currentDay : 0,
+        intensityType: store.prefs && store.prefs.intensityType,
+        weekIntensity: store.prefs && store.prefs.weekIntensity,
+        prefs: { intensityType: store.prefs && store.prefs.intensityType },
+        profile: store.profile || {},
+        language: langCode,
+        athleteGoals: (store.profile && (store.profile.goal || store.profile.primary_goal)) || null,
+        performanceSummary: isSessionReview ? (window.__sessionCoachFallback && window.__sessionCoachFallback.logEntry) : performanceSummary,
+        health: (store.prefs && store.prefs.shareMedicalWithCoach) ? healthCtx : {}
+      },
+      history: store.chatHistory.slice(-4).map(function (item) {
+        return { role: item.role === 'ai' ? 'assistant' : item.role, text: sanitizeCoachDisplayText(item.text || item.content || '').slice(0, 400) };
       })
-    });
+    };
+    if (!isSessionReview) {
+      chatBody.context.nutrition = DATA && DATA.nutrition && DATA.nutrition.days ? { days: DATA.nutrition.days.length } : null;
+      chatBody.context.supplementation = DATA && DATA.supplementation && DATA.supplementation.items ? { items: DATA.supplementation.items.length } : null;
+      if (store.prefs && store.prefs.shareMedicalWithCoach) {
+        chatBody.context.therapy = DATA && DATA.therapy ? DATA.therapy : null;
+        chatBody.context.exams = DATA && DATA.exams ? DATA.exams : null;
+      }
+    }
+
+    let response;
+    try {
+      response = await apiFetch(coachEndpoint('/api/chat'), {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(chatBody)
+      }, isSessionReview ? 25000 : 45000);
+    } catch (netErr) {
+      if (isSessionReview) {
+        const fb = window.__sessionCoachFallback || {};
+        const local = buildLocalSessionCoachReply(fb.logEntry, fb.snap);
+        pending.innerHTML = markdownToHtml(local);
+        lastCoachReply = local;
+        offerSpeakCoachReply(local);
+        store.chatHistory.push({ role: 'ai', text: local });
+        persist();
+        return;
+      }
+      throw netErr;
+    }
     const payload = await readApiJson(response);
     if(requestToken !== coachRequestToken) return;
     if (!response.ok || payload.ok === false) {
@@ -13717,6 +14023,15 @@ async function askAIInner(q0){
     persist();
   } catch(err) {
     if(requestToken !== coachRequestToken) return;
+    if (/Analizza la sessione appena finalizzata/i.test(q) && window.__sessionCoachFallback) {
+      const local = buildLocalSessionCoachReply(window.__sessionCoachFallback.logEntry, window.__sessionCoachFallback.snap);
+      pending.innerHTML = markdownToHtml(local);
+      pending.style.color = '';
+      lastCoachReply = local;
+      store.chatHistory.push({ role: 'assistant', text: local });
+      persist();
+      return;
+    }
     const friendly = formatCoachError(err);
     pending.textContent = 'Coach non disponibile: ' + friendly;
     pending.style.color = 'var(--accent-red)';
@@ -14241,6 +14556,8 @@ if (typeof window !== 'undefined') {
   window.changeAppLanguage = changeAppLanguage;
   window.applyChromeI18n = applyChromeI18n;
   window.togglePasswordVisibility = togglePasswordVisibility;
+  window.setStatsBodyView = setStatsBodyView;
+  window.selectStatsMuscle = selectStatsMuscle;
   window.startGoogleAuth = startGoogleAuth;
   window.startAppleAuth = startAppleAuth;
   window.startVoiceInput = startVoiceInput;

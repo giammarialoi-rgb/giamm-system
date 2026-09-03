@@ -1,5 +1,5 @@
 /* Nurvan shell SW — cache UI only, never the 10k catalog. */
-const CACHE = 'nurvan-shell-v2-auth';
+const CACHE = 'nurvan-shell-v3-stats';
 const PRECACHE = [
   './',
   './index.html',
@@ -8,7 +8,11 @@ const PRECACHE = [
   './icon-192.png',
   './icon-512.png',
   './favicon.png',
-  './nurvan_logo.png'
+  './nurvan_logo.png',
+  './muscle-male-front.png',
+  './muscle-male-back.png',
+  './muscle-female-front.png',
+  './muscle-female-back.png'
 ];
 
 self.addEventListener('install', (event) => {

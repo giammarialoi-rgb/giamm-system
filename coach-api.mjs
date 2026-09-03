@@ -1185,9 +1185,11 @@ app.post("/api/account/sync", async (req, res) => {
   if (!auth) return res.status(401).json({ error: "Unauthorized." });
   try {
     const clientData = req.body?.data || req.body || {};
+    if (clientData && clientData.activeProgram == null) delete clientData.activeProgram;
     const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
     const current = existing.rows[0]?.data || {};
     const merged = { ...current, ...clientData, lastSyncedAt: new Date().toISOString() };
+    if (!merged.activeProgram && current.activeProgram) merged.activeProgram = current.activeProgram;
     await pool.query(
       `INSERT INTO app_account_data(user_id, data, updated_at)
        VALUES($1, $2, NOW())
@@ -1413,12 +1415,24 @@ app.post("/api/chat", async (req, res) => {
     const history = Array.isArray(req.body?.history) ? req.body.history : [];
 
     const authUser = await accountFromBearer(req.headers.authorization);
-    if (authUser && !context.program) {
+    if (authUser && !context.programSummary && !context.sessionReview) {
       try {
         const dataRes = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [authUser.id]);
         const dbData = dataRes.rows[0]?.data || {};
-        if (dbData.activeProgram) context.program = dbData.activeProgram;
-        if (dbData.data) context.trainingData = dbData.data;
+        const prog = dbData.activeProgram;
+        if (prog && Array.isArray(prog.weeks) && prog.weeks.length) {
+          const w = Math.max(1, Math.min(prog.weeks.length, Number(context.currentWeek) || 1));
+          const week = prog.weeks[w - 1] || {};
+          const sessions = week.sessions || week.days || [];
+          const dIdx = Math.max(0, Number(context.currentDay) || 0);
+          const sess = sessions[dIdx] || sessions[0] || {};
+          context.program = {
+            title: prog.title || "",
+            week: w,
+            sessionName: sess.name || sess.title || sess.day || "",
+            exercises: (sess.exercises || sess.rows || []).slice(0, 24).map((e) => e && (e.name || e.exercise || e.name_original)).filter(Boolean)
+          };
+        }
       } catch (_) {}
     }
 

@@ -991,6 +991,8 @@ window.updateTempo = typeof updateTempo !== 'undefined' ? updateTempo : (() => {
 window.activateSavedProgram = typeof activateSavedProgram !== 'undefined' ? activateSavedProgram : (() => {});
 window.deleteSavedProgram = typeof deleteSavedProgram !== 'undefined' ? deleteSavedProgram : (() => {});
 window.finalizeWorkout = typeof finalizeWorkout !== 'undefined' ? finalizeWorkout : (() => {});
+window.setStatsBodyView = typeof setStatsBodyView !== 'undefined' ? setStatsBodyView : (() => {});
+window.selectStatsMuscle = typeof selectStatsMuscle !== 'undefined' ? selectStatsMuscle : (() => {});
 window.checkBackendHealth = typeof checkBackendHealth !== 'undefined' ? checkBackendHealth : (() => {});
 window.newCoachQuestion = typeof newCoachQuestion !== 'undefined' ? newCoachQuestion : (() => {});
 window.deleteDoc = typeof deleteDoc !== 'undefined' ? deleteDoc : (() => {});
@@ -1049,7 +1051,11 @@ const STATIC_ASSETS = [
   'icon-192.png',
   'icon-512.png',
   'icon-512-maskable.png',
-  'favicon.png'
+  'favicon.png',
+  'muscle-male-front.png',
+  'muscle-male-back.png',
+  'muscle-female-front.png',
+  'muscle-female-back.png'
 ];
 for (const file of STATIC_ASSETS) {
   const src = path.join('web', file);
