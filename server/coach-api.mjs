@@ -759,14 +759,19 @@ export function applyOperationsToProgram(program, operations) {
   return { ok: true, program: cloned, appliedCount };
 }
 
-async function coach({ message, context, history, program, trainingData, bodyweight }) {
+async function coach({ message, context, history, program, trainingData, bodyweight, images }) {
   if (typeof message !== 'string' || !message.trim()) throw new Error('Message is required');
   const trainingContext = JSON.stringify(context || { program, trainingData, bodyweight }).slice(0, 180000);
-  const previous = Array.isArray(history) ? history.slice(-20).map(item => `${item.role || 'user'}: ${item.content || item.message || item.text || ''}`).join('\n') : '';
+  const previous = '';
+  let extra = '';
+  if (context && context.checkFisico) {
+    extra = '\nISTRUZIONE CHECK FISICO: stai analizzando foto corporee (non un check-in settimanale). Commenta struttura muscolare (simmetrie, distretti, proporzioni) e definizione. Niente diagnosi mediche. Non modificare il programma se non richiesto.\n';
+  }
   const coachPrompt = `Sei Coach AI, l'assistente scientifico di allenamento all'interno dell'app Giammaria System.
 Rispondi in italiano in modo chiaro, evidence-based e rigoroso.
 Hai PIENO ACCESSO in tempo reale alla programmazione attiva dell'utente. NON dire MAI che non hai accesso al database o al file di programmazione.
-
+Non tenere memoria di conversazioni precedenti: ogni domanda è autonoma.
+${extra}
 TOOL OPERATION SUPPORT (MODIFICA PROGRAMMA):
 Quando l'atleta chiede di modificare, aggiungere, eliminare o sostituire serie, carichi, ripetizioni, RPE, RIR, recuperi, esercizi, creare superset o gestire sessioni/settimane, genera un blocco JSON con action "modify_program" contenente l'elenco atomico di operazioni:
 
@@ -804,7 +809,23 @@ Athlete question: ${message}
 
 Training context: ${trainingContext}`;
 
-  const result = await gemini({ input: coachPrompt });
+  const imageParts = Array.isArray(images) ? images.filter((img) => img && (img.dataUrl || img.data || img.url)).slice(0, 4) : [];
+  let result;
+  if (imageParts.length) {
+    try {
+      result = await gemini({
+        input: [{ type: 'text', text: coachPrompt }].concat(imageParts.map((img) => ({
+          type: 'image',
+          data: img.dataUrl || img.data || img.url
+        })))
+      });
+    } catch (err) {
+      console.warn('Gemini multimodal failed, retrying text-only', err && err.message);
+      result = await gemini({ input: coachPrompt });
+    }
+  } else {
+    result = await gemini({ input: coachPrompt });
+  }
   const reply = outputText(result).trim();
   if (!reply) throw new Error('Gemini returned an empty coach response');
 
@@ -822,7 +843,7 @@ Training context: ${trainingContext}`;
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return json(res, 204, {});
   const path = new URL(req.url, `http://${req.headers.host || 'localhost'}`).pathname;
-  if (req.method === 'GET' && (path === '/' || path === '/health')) return json(res, 200, { ok: true, service: 'giammaria-coach-api', model, mock: mockGemini });
+  if (req.method === 'GET' && (path === '/' || path === '/health')) return json(res, 200, { ok: true, service: 'giammaria-coach-api', model, mock: mockGemini, chatVision: true, chatStateless: true, coachChatVersion: 'vision-stateless-v1' });
   const analyzePath = path === '/analyze' || path === '/api/analyze' || path === '/api/analyze-file';
   const coachPath = path === '/coach' || path === '/api/chat' || path === '/api/coach';
   const modifyPath = path === '/api/program/modify';

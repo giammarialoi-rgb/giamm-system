@@ -284,12 +284,7 @@ export async function createAiGateway(deps = {}) {
       }
 
       const history = Array.isArray(req.body?.history) ? req.body.history : [];
-      const historyText = history
-        .slice(-config.maxHistoryMessages)
-        .filter((item) => item && typeof (item.content || item.text) === 'string')
-        .map((item) => `${item.role === 'assistant' || item.role === 'ai' ? 'ASSISTANT' : 'USER'}: ${item.content || item.text}`)
-        .join('\n')
-        .slice(0, 8000);
+      void history;
 
       const evidenceBlock = evidenceResults.length
         ? `\nEVIDENCE_RESULTS (PubMed — citare PMID se usi questi studi):\n${JSON.stringify(evidenceResults)}\n\n`
@@ -300,7 +295,7 @@ export async function createAiGateway(deps = {}) {
       const prompt =
         `ATHLETE_DATA:\n${JSON.stringify(built.context)}\n\n` +
         evidenceBlock +
-        `CRONOLOGIA:\n${historyText || '(vuota)'}\n\n` +
+        `CRONOLOGIA:\n(vuota — ogni domanda è autonoma)\n\n` +
         `USER_QUERY:\n${message}`;
 
       const estIn = Math.ceil((COACH_SYSTEM.length + prompt.length) / 4);

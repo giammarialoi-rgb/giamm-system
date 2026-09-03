@@ -498,6 +498,19 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void requestNotifications() {
+            runOnUiThread(() -> {
+                ReminderReceiver.ensureChannel(MainActivity.this);
+                if (Build.VERSION.SDK_INT >= 33) {
+                    if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 77);
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
         public void scheduleReminder(String json) {
             try {
                 JSONObject o = new JSONObject(json != null ? json : "{}");
@@ -505,23 +518,8 @@ public class MainActivity extends Activity {
                 String title = o.optString("title", "Promemoria Nurvan");
                 String body = o.optString("body", o.optString("message", "Hai un promemoria"));
                 long when = o.optLong("at", System.currentTimeMillis() + 60_000L);
-                android.app.AlarmManager am = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
-                Intent i = new Intent(MainActivity.this, MainActivity.class);
-                i.putExtra("reminder_title", title);
-                i.putExtra("reminder_body", body);
-                i.putExtra("reminder_id", id);
-                int req = Math.abs(id.hashCode());
-                android.app.PendingIntent pi = android.app.PendingIntent.getActivity(
-                    MainActivity.this, req, i,
-                    android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE
-                );
-                if (am != null) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        am.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, when, pi);
-                    } else {
-                        am.set(android.app.AlarmManager.RTC_WAKEUP, when, pi);
-                    }
-                }
+                long repeat = o.optLong("repeatEveryMs", o.optLong("repeat_every_ms", 0L));
+                ReminderReceiver.schedule(MainActivity.this, id, title, body, when, repeat);
                 Log.i("GiammariaReminder", "scheduled id=" + id + " at=" + when);
             } catch (Exception error) {
                 Log.w("GiammariaReminder", "schedule failed", error);
@@ -531,14 +529,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void cancelReminder(String id) {
             try {
-                android.app.AlarmManager am = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
-                Intent i = new Intent(MainActivity.this, MainActivity.class);
-                int req = Math.abs(String.valueOf(id).hashCode());
-                android.app.PendingIntent pi = android.app.PendingIntent.getActivity(
-                    MainActivity.this, req, i,
-                    android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE
-                );
-                if (am != null) am.cancel(pi);
+                ReminderReceiver.cancel(MainActivity.this, String.valueOf(id));
             } catch (Exception error) {
                 Log.w("GiammariaReminder", "cancel failed", error);
             }

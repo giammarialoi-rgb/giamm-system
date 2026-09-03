@@ -981,6 +981,42 @@ Preserva fedelmente ogni dato (serie, ripetizioni, carichi, recuperi, intensità
 
 // Routes
 // Routes
+function imagePartsFromRequest(images) {
+  if (!Array.isArray(images)) return [];
+  const parts = [];
+  for (const img of images.slice(0, 4)) {
+    if (!img) continue;
+    const raw = typeof img.dataUrl === "string" ? img.dataUrl
+      : typeof img.data === "string" ? img.data
+      : typeof img.url === "string" ? img.url
+      : "";
+    if (!raw) continue;
+    const labeled = typeof img.label === "string" && img.label.trim() ? img.label.trim() : "";
+    const match = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/);
+    if (match) {
+      parts.push({
+        inlineData: {
+          mimeType: match[1],
+          data: match[2].replace(/\s/g, "")
+        }
+      });
+      if (labeled) parts.push({ text: `Etichetta foto: ${labeled}` });
+      continue;
+    }
+    const mime = typeof img.mime === "string" && img.mime.startsWith("image/") ? img.mime : "image/jpeg";
+    if (/^[A-Za-z0-9+/=\s]+$/.test(raw) && raw.replace(/\s/g, "").length > 80) {
+      parts.push({
+        inlineData: {
+          mimeType: mime,
+          data: raw.replace(/\s/g, "")
+        }
+      });
+      if (labeled) parts.push({ text: `Etichetta foto: ${labeled}` });
+    }
+  }
+  return parts;
+}
+
 app.get("/health", (req, res) => {
   res.json({
     ok: true,
@@ -988,7 +1024,10 @@ app.get("/health", (req, res) => {
     model: MODEL,
     apiKeyConfigured: Boolean(process.env.GEMINI_API_KEY),
     accountStorageConfigured: Boolean(process.env.DATABASE_URL),
-    googleOAuthConfigured: allowedGoogleAudiences().length > 0
+    googleOAuthConfigured: allowedGoogleAudiences().length > 0,
+    chatVision: true,
+    chatStateless: true,
+    coachChatVersion: "vision-stateless-v1"
   });
 });
 
@@ -1395,7 +1434,7 @@ app.post("/api/ingest/document", upload.single("file"), async (req, res) => {
   }
 });
 
-app.post("/api/chat", async (req, res) => {
+app.post(["/api/chat", "/coach", "/api/coach"], async (req, res) => {
   try {
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({
@@ -1412,7 +1451,7 @@ app.post("/api/chat", async (req, res) => {
     }
 
     let context = req.body?.context ?? {};
-    const history = Array.isArray(req.body?.history) ? req.body.history : [];
+    const imageParts = imagePartsFromRequest(req.body?.images);
 
     const authUser = await accountFromBearer(req.headers.authorization);
     if (authUser && !context.programSummary && !context.sessionReview) {
@@ -1442,6 +1481,13 @@ app.post("/api/chat", async (req, res) => {
     const system = `
 Sei Coach AI, l'assistente scientifico di allenamento di élite all'interno dell'applicazione Giammaria System.
 Rispondi sempre in italiano in modo chiaro, autorevole, motivante e rigorosamente evidence-based.
+Non tenere memoria di conversazioni precedenti: ogni domanda è autonoma. Ignora qualsiasi cronologia chat.
+
+${context && context.checkFisico ? `ISTRUZIONE CHECK FISICO (non è un check-in settimanale):
+Analizza le foto corporee allegate. Commenta struttura muscolare (simmetrie, distretti, proporzioni) e definizione.
+Niente diagnosi mediche. Non modificare il programma se non richiesto esplicitamente.
+${context.photosOnly ? "Analizza SOLO le foto, senza contestualizzare allenamento/integrazione/terapia." : "Se nel contesto ci sono allenamento, integrazione o terapia, usali per contestualizzare il commento."}
+` : ""}
 
 ACCESSO AL PROGRAMMA ATTIVO:
 Hai PIENO ACCESSO di lettura e modifica al programma attivo dell'atleta attraverso le API e i tool del sistema.
@@ -1532,17 +1578,24 @@ Accompagna SEMPRE il blocco JSON con una spiegazione chiara e motivata dal punto
 Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico specialista.
 `;
 
-    const historyText = history.slice(-12)
-      .filter((item) => item && typeof (item.content || item.text) === "string")
-      .map((item) => `${item.role === "assistant" ? "ASSISTANT" : "USER"}: ${item.content || item.text}`)
-      .join("\n");
-    const input = `${system}\n\nCONTESTO PROGRAMMA:\n${JSON.stringify(context)}\n\nCRONOLOGIA:\n${historyText}\n\nUSER: ${message}`;
-    
+    const input = `${system}\n\nCONTESTO PROGRAMMA:\n${JSON.stringify(context)}\n\nCRONOLOGIA:\n(vuota — ogni domanda è autonoma)\n\nUSER: ${message}`;
+
     const ai = getClient();
-    const response = await ai.models.generateContent({
-      model: MODEL,
-      contents: [{ role: "user", parts: [{ text: input }] }]
-    });
+    const textPart = { text: input };
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: MODEL,
+        contents: [{ role: "user", parts: imageParts.length ? [textPart, ...imageParts] : [textPart] }]
+      });
+    } catch (visionErr) {
+      if (!imageParts.length) throw visionErr;
+      console.warn("Gemini multimodal chat failed, retrying text-only", visionErr?.message);
+      response = await ai.models.generateContent({
+        model: MODEL,
+        contents: [{ role: "user", parts: [textPart] }]
+      });
+    }
 
     const replyText = response.text || "";
     let proposedAction = null;
