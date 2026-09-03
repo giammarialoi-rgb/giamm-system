@@ -938,14 +938,109 @@ if (typeof window !== 'undefined') {
 }
 
 const CalendarService = {
+  _customCache: null,
+  loadCustomEvents() {
+    if (this._customCache) return Promise.resolve(this._customCache);
+    let list = [];
+    try {
+      if (typeof store !== 'undefined' && Array.isArray(store.calendarEvents)) list = store.calendarEvents.slice();
+      else {
+        const raw = (typeof localStorage !== 'undefined') ? localStorage.getItem('GS_CAL_EVENTS') : null;
+        if (raw) list = JSON.parse(raw) || [];
+      }
+    } catch (_) { list = []; }
+    this._customCache = list;
+    return Promise.resolve(list);
+  },
+  _saveCustom() {
+    const list = this._customCache || [];
+    try {
+      if (typeof store !== 'undefined') {
+        store.calendarEvents = list;
+        if (typeof persist === 'function') persist();
+      }
+      if (typeof localStorage !== 'undefined') localStorage.setItem('GS_CAL_EVENTS', JSON.stringify(list));
+    } catch (_) {}
+  },
+  async addEvent(ev) {
+    await this.loadCustomEvents();
+    const item = Object.assign({
+      id: 'cal_' + Date.now(),
+      persistent: true
+    }, ev || {});
+    this._customCache.push(item);
+    this._saveCustom();
+    return item;
+  },
+  async removeEvent(id) {
+    await this.loadCustomEvents();
+    this._customCache = (this._customCache || []).filter(function (e) { return e.id !== id; });
+    this._saveCustom();
+  },
+  _weekdayIt(date) {
+    return ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][date.getDay()];
+  },
+  _fold(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  },
+  _matchesWeekday(days, weekdayIt) {
+    if (days == null || days === '') return true;
+    let list = days;
+    if (typeof days === 'string') {
+      if (/tutti/i.test(days)) return true;
+      list = days.split(/[,;]+/);
+    }
+    if (!Array.isArray(list) || !list.length) return true;
+    const w = this._fold(weekdayIt).slice(0, 3);
+    return list.some((d) => {
+      const x = this._fold(d);
+      return /tutti/.test(x) || x.slice(0, 3) === w || x.indexOf(w) >= 0;
+    });
+  },
+  _programWeekNumber(dateStr, s, d) {
+    const origin = (s && s.prefs && s.prefs.programStartDate) || (d && (d.startDate || d.programStartDate));
+    if (!origin) return null;
+    const a = new Date(String(origin).slice(0, 10) + 'T12:00:00');
+    const b = new Date(dateStr + 'T12:00:00');
+    const diff = Math.floor((b.getTime() - a.getTime()) / 86400000);
+    if (diff < 0) return 0;
+    return Math.floor(diff / 7) + 1;
+  },
+  _itemInWeek(item, weekNum) {
+    if (!item) return true;
+    if (!Number.isFinite(weekNum) || weekNum <= 0) return true;
+    if (Array.isArray(item.weeks) && item.weeks.length) {
+      return item.weeks.map(Number).indexOf(weekNum) >= 0;
+    }
+    const start = Number(item.start_week || item.weekStart || item.week_start);
+    const end = Number(item.end_week || item.weekEnd || item.week_end || start);
+    if (!Number.isFinite(start) || start <= 0) return true;
+    const e = Number.isFinite(end) && end > 0 ? end : start;
+    return weekNum >= start && weekNum <= e;
+  },
+  _hhmm(raw) {
+    const s = String(raw || '');
+    const m = s.match(/(\d{1,2})[:\.](\d{2})/);
+    if (m) return ('0' + m[1]).slice(-2) + ':' + m[2];
+    if (/mattina|colazione|digiuno|morning/i.test(s)) return '08:00';
+    if (/pranzo|lunch/i.test(s)) return '13:00';
+    if (/pomerig/i.test(s)) return '16:30';
+    if (/sera|cena|evening|notte/i.test(s)) return '21:00';
+    if (/pre.?work|pre allen/i.test(s)) return '17:30';
+    if (/post.?work|dopo allen/i.test(s)) return '19:30';
+    return s.length >= 4 && s.indexOf(':') > 0 ? s.slice(0, 5) : '08:00';
+  },
+
   getDailySchedule(dateStr = null) {
-    const date = dateStr ? new Date(dateStr) : new Date();
+    const date = dateStr ? new Date(dateStr + (String(dateStr).length <= 10 ? 'T12:00:00' : '')) : new Date();
     const dayOfWeek = date.getDay();
     const dayNames = ["DOMENICA", "LUNEDI", "MARTEDI", "MERCOLEDI", "GIOVEDI", "VENERDI", "SABATO"];
     const currentDayName = dayNames[dayOfWeek];
+    const weekdayIt = this._weekdayIt(date);
+    const iso = dateStr || date.toISOString().split('T')[0];
 
     const schedule = {
-      date: date.toISOString().split('T')[0],
+      date: iso,
       dayName: currentDayName,
       workout: null,
       nutrition: null,
@@ -954,19 +1049,25 @@ const CalendarService = {
       reminders: []
     };
 
-    if (typeof DATA !== 'undefined' && DATA) {
-      if (DATA.training?.weeks?.[0]?.sessions) {
-        const sessIdx = (dayOfWeek - 1 + 7) % 7;
-        schedule.workout = DATA.training.weeks[0].sessions[sessIdx] || DATA.training.weeks[0].sessions[0] || null;
+    const data = (typeof DATA !== 'undefined' && DATA) ? DATA : null;
+    const st = (typeof store !== 'undefined') ? store : null;
+    const weekNum = this._programWeekNumber(iso, st, data);
+
+    if (data) {
+      const weeks = data.weeks || data.training?.weeks || [];
+      const wIdx = (weekNum && weekNum > 0) ? Math.min(weeks.length, weekNum) - 1 : 0;
+      const week = weeks[wIdx];
+      const sessions = (week && (week.sessions || week.days)) || [];
+      schedule.workout = sessions.find((sess) => this._matchesWeekday([sess.day || sess.day_name || sess.name || sess.title], weekdayIt) && /lun|mar|mer|gio|ven|sab|dom/i.test(String(sess.day || sess.name || '')))
+        || sessions[(dayOfWeek + 6) % 7] || sessions[0] || null;
+      if (data.nutrition?.days) {
+        schedule.nutrition = data.nutrition.days.find(d => d.day && this._matchesWeekday([d.day], weekdayIt)) || null;
       }
-      if (DATA.nutrition?.days) {
-        schedule.nutrition = DATA.nutrition.days.find(d => d.day && d.day.toUpperCase().includes(currentDayName)) || DATA.nutrition.days[0] || null;
+      if (data.supplementation?.items) {
+        schedule.supplements = data.supplementation.items.filter((item) => this._matchesWeekday(item.days || item.frequency || item.dayOfWeek, weekdayIt) && this._itemInWeek(item, weekNum));
       }
-      if (DATA.supplementation?.items) {
-        schedule.supplements = DATA.supplementation.items;
-      }
-      if (DATA.therapy?.medications) {
-        schedule.therapy = DATA.therapy.medications.filter(m => (m.days || []).includes("Tutti i giorni") || (m.days || []).some(d => d.toUpperCase().includes(currentDayName)));
+      if (data.therapy?.medications) {
+        schedule.therapy = data.therapy.medications.filter((m) => this._matchesWeekday(m.days || m.dayOfWeek || m.daysOfWeek || m.frequency, weekdayIt) && this._itemInWeek(m, weekNum));
       }
     }
 
@@ -974,21 +1075,72 @@ const CalendarService = {
   },
 
   getEventsForDate(dateStr = null, d = (typeof DATA !== 'undefined' ? DATA : null), s = (typeof store !== 'undefined' ? store : null)) {
-    const date = dateStr ? new Date(dateStr) : new Date();
+    const iso = dateStr ? String(dateStr).slice(0, 10) : new Date().toISOString().slice(0, 10);
+    const date = new Date(iso + 'T12:00:00');
+    const weekdayIt = this._weekdayIt(date);
+    const weekNum = this._programWeekNumber(iso, s, d);
     const events = [];
-    if (d?.weeks?.length) {
-      const sess = d.weeks[0]?.sessions?.[0];
-      if (sess) events.push({ type: 'workout', title: sess.title || 'Allenamento', time: '18:00' });
+
+    const weeks = (d && (d.weeks || (d.training && d.training.weeks))) || [];
+    if (weeks.length) {
+      const wIdx = (weekNum && weekNum > 0) ? Math.min(weeks.length, weekNum) - 1 : 0;
+      const week = weeks[wIdx];
+      const sessions = (week && (week.sessions || week.days)) || [];
+      const named = sessions.some((sess) => /lun|mar|mer|gio|ven|sab|dom/i.test(String(sess.day || sess.day_name || sess.name || '')));
+      sessions.forEach((sess, idx) => {
+        const label = String(sess.day || sess.day_name || sess.name || sess.title || '');
+        const matchName = named && this._matchesWeekday([label], weekdayIt);
+        const matchIdx = !named && idx === ((date.getDay() + 6) % 7);
+        if (matchName || matchIdx) {
+          events.push({
+            type: 'workout',
+            title: sess.name || sess.title || sess.day || 'Allenamento',
+            time: sess.time || '18:00',
+            detail: weekNum ? ('Settimana ' + weekNum) : '',
+            action: "navigate('training')"
+          });
+        }
+      });
     }
-    if (d?.nutrition?.days?.length) {
-      events.push({ type: 'nutrition', title: 'Piano Nutrizionale', time: 'Tutto il giorno' });
-    }
-    (d?.supplementation?.items || []).forEach(item => {
-      events.push({ type: 'supplement', title: item.name, time: item.timing || '08:00' });
+
+    ((d && d.nutrition && d.nutrition.days) || []).forEach((nd) => {
+      if (this._matchesWeekday([nd.day], weekdayIt)) {
+        events.push({ type: 'nutrition', title: 'Alimentazione: ' + (nd.day || 'Piano'), time: 'Tutto il giorno', action: "navigate('nutrition')" });
+      }
     });
-    (d?.therapy?.medications || []).forEach(med => {
-      events.push({ type: 'therapy', title: med.name || med.medication, time: med.timing || '08:00' });
+
+    ((d && d.supplementation && d.supplementation.items) || []).forEach((item) => {
+      if (!this._matchesWeekday(item.days || item.frequency || item.dayOfWeek, weekdayIt)) return;
+      if (!this._itemInWeek(item, weekNum)) return;
+      events.push({
+        type: 'supplement',
+        title: item.name || 'Integratore',
+        time: this._hhmm(item.alertTime || item.timing),
+        detail: [item.dose, item.unit, item.timing].filter(Boolean).join(' '),
+        action: "navigate('supplements')"
+      });
     });
+
+    ((d && d.therapy && d.therapy.medications) || []).forEach((med) => {
+      if (!this._matchesWeekday(med.days || med.dayOfWeek || med.daysOfWeek || med.frequency, weekdayIt)) return;
+      if (!this._itemInWeek(med, weekNum)) return;
+      events.push({
+        type: 'therapy',
+        title: med.name || med.medication || 'Terapia',
+        time: this._hhmm(med.alertTime || med.timing || med.time),
+        detail: [med.dose, med.weekRange || med.duration].filter(Boolean).join(' · '),
+        action: "navigate('therapy')"
+      });
+    });
+
+    const custom = (this._customCache || (s && s.calendarEvents) || []);
+    custom.forEach((ev) => {
+      if (ev && String(ev.date || '').slice(0, 10) === iso) {
+        events.push(Object.assign({ persistent: true }, ev));
+      }
+    });
+
+    events.sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
     return events;
   }
 };
@@ -1594,6 +1746,15 @@ const NotificationService = {
     try {
       if (typeof NativeConfig !== 'undefined' && NativeConfig.scheduleReminder) {
         NativeConfig.scheduleReminder(JSON.stringify(opts || {}));
+        return true;
+      }
+    } catch (_) {}
+    try {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && opts) {
+        const delay = Math.max(0, (opts.at || 0) - Date.now());
+        setTimeout(function () {
+          new Notification(opts.title || 'Nurvan', { body: opts.body || '' });
+        }, Math.min(delay, 2147483647));
         return true;
       }
     } catch (_) {}

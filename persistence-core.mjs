@@ -912,6 +912,27 @@ export class GiammariaPersistenceEngine {
         analysis: c && c.analysis ? String(c.analysis).slice(0, 800) : ''
       }));
     }
+    sanitized.chatHistory = [];
+    if (Array.isArray(sanitized.coachArchives)) {
+      sanitized.coachArchives = sanitized.coachArchives.slice(0, 24).map((a) => ({
+        id: a && a.id,
+        at: a && a.at,
+        preview: a && a.preview ? String(a.preview).slice(0, 80) : '',
+        messages: Array.isArray(a.messages) ? a.messages.slice(-16).map((m) => ({
+          role: m && m.role,
+          text: m && m.text ? String(m.text).slice(0, 1800) : ''
+        })) : []
+      }));
+    }
+    if (sanitized.nutritionDaily && typeof sanitized.nutritionDaily === 'object') {
+      const keys = Object.keys(sanitized.nutritionDaily).sort().slice(-21);
+      const keep = {};
+      keys.forEach((k) => { keep[k] = sanitized.nutritionDaily[k]; });
+      sanitized.nutritionDaily = keep;
+    }
+    if (Array.isArray(sanitized.calendarEvents) && sanitized.calendarEvents.length > 80) {
+      sanitized.calendarEvents = sanitized.calendarEvents.slice(-80);
+    }
     if (sanitized.docs && Array.isArray(sanitized.docs)) {
       sanitized.docs = sanitized.docs.slice(0, 5).map(d => {
         const docCopy = { ...d };

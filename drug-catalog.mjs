@@ -1676,7 +1676,19 @@ export function enrichTherapyMedications(therapy) {
       m.mappingSource = 'drug_catalog';
     }
   });
-  therapy.medications = meds;
+  therapy.medications = meds.slice().sort(function (a, b) {
+    const wa = Number(a && (a.start_week || a.weekStart || a.week_start)) || 999;
+    const wb = Number(b && (b.start_week || b.weekStart || b.week_start)) || 999;
+    if (wa !== wb) return wa - wb;
+    return String(a.name || a.medication || '').localeCompare(String(b.name || b.medication || ''), 'it');
+  });
+  if (Array.isArray(therapy.protocols)) {
+    therapy.protocols.sort(function (a, b) {
+      const wa = Number(a && (a.start_week || a.weekStart)) || 999;
+      const wb = Number(b && (b.start_week || b.weekStart)) || 999;
+      return wa - wb;
+    });
+  }
   if (meds.length) therapy.present = true;
   return therapy;
 }
