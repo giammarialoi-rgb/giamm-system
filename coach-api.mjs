@@ -1,5 +1,8 @@
 import express from "express";
 import { normalizeExerciseName, parseExerciseDetails, extractDocumentContent, parseCanonicalProgramFromText } from "./universal-import-engine.mjs";
+import { extractExcelStructuredForApi, detectFormat, DI_MAX_BYTES } from "./document-intelligence-core.mjs";
+import { resolveTargetSetCount, detectTechniquesFromText, reconcileSetRows } from "./import-fidelity.mjs";
+import { applyPrescriptionsToProgram, enforceAllPrescriptions, enforceExercisePrescription } from "./prescription-engine.mjs";
 import { rirToRpe, rpeToRir, validateRir, validateRpe, normalizeRir, normalizeRpe, getIntensityLabel, compareTargetVsActual, calculateDeviation } from "./rir-rpe-engine.mjs";
 import { calculateCompletedSets, calculateMissedSets, calculateTotalReps, calculateTotalTonnage, calculateVolumeLoad, calculateAverageLoad, calculateAverageRIR, calculateAverageRPE, calculateEstimated1RM, calculateExercisePerformance, calculateWorkoutPerformance, calculateTrend, detectPersonalRecords, aggregateMuscleGroupVolume } from "./performance-engine.mjs";
 import bcrypt from "bcryptjs";
@@ -18,15 +21,35 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createAiGateway } from "./server/ai/index.mjs";
+import { mountFoodRoutes } from "./server/food/index.mjs";
+import { mountEvidenceRoutes } from "./server/evidence/index.mjs";
+import { mountProgramGenerateRoutes } from "./server/program/generator.mjs";
+import { actionsToOperations, operationsToActions } from "./action-catalog.mjs";
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+const corsOrigins = String(process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+app.use(cors({
+  origin: corsOrigins.length ? corsOrigins : true,
+  credentials: true
+}));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "12mb" }));
+app.use(express.urlencoded({ extended: true, limit: process.env.JSON_BODY_LIMIT || "12mb" }));
+
+// Request id for observability (AI and general)
+app.use((req, res, next) => {
+  req.requestId = req.headers["x-request-id"] || crypto.randomUUID();
+  res.setHeader("X-Request-Id", req.requestId);
+  next();
+});
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -282,7 +305,7 @@ function adaptProgramCustomization(originalProgram, { frequency, duration, equip
 function buildCanonicalProgramFromTemplate(template) {
   const weeksCount = Number(template.duration_weeks || template.structure?.weeksCount || 12);
   const templateSessions = template.structure?.sessions || [];
-  const title = template.title || 'Programma Giammaria System';
+  const title = template.title || 'Programma Nurvan';
 
   const weeks = [];
   for (let w = 1; w <= weeksCount; w++) {
@@ -570,6 +593,8 @@ async function initDb() {
         ALTER TABLE app_users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ DEFAULT NOW();
         ALTER TABLE app_users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
         ALTER TABLE app_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_reset_hash TEXT;
+        ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ;
         UPDATE app_users SET provider = 'email' WHERE provider IS NULL;
         ALTER TABLE app_account_data ADD COLUMN IF NOT EXISTS data JSONB NOT NULL DEFAULT '{}'::jsonb;
         ALTER TABLE app_account_data ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
@@ -1014,11 +1039,20 @@ async function getOrInitAthleteProfile(dbClientOrPool, userId, defaults = {}) {
   return ins.rows[0];
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || "gs-coach-secret-key-production-change-me";
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === "production" ? "" : "gs-coach-dev-only-not-for-production");
+if (!process.env.JWT_SECRET) {
+  console.warn("[SECURITY] JWT_SECRET is not set. Using ephemeral/dev fallback — set JWT_SECRET in production.");
+}
+if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+  console.error("[SECURITY] FATAL: JWT_SECRET required in production");
+}
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || "com.giammaria.system";
 
 function issueAccountToken(user) {
+  if (!JWT_SECRET) {
+    throw Object.assign(new Error("JWT_SECRET non configurato sul server."), { statusCode: 503 });
+  }
   return jwt.sign(
     {
       sub: String(user.id),
@@ -1032,6 +1066,7 @@ function issueAccountToken(user) {
 }
 
 async function accountFromBearer(authHeader) {
+  if (!JWT_SECRET) return null;
   if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7).trim();
   try {
@@ -1308,6 +1343,8 @@ const setSchema = {
     rir: nullable("number"),
     rest_seconds: nullable("integer"),
     tempo: nullable("string"),
+    set_type: nullable("string"),
+    technique: nullable("string"),
     done: nullable("boolean")
   }
 };
@@ -1869,20 +1906,113 @@ function extractExcelText(buffer) {
   }).filter(Boolean).join("\n\n");
 }
 
+function extractExcelStructuredPayload(buffer) {
+  const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true, cellNF: true, cellFormula: true });
+  if (!workbook.SheetNames || !workbook.SheetNames.length) throw new Error("Excel workbook contains no worksheets");
+  try {
+    return extractExcelStructuredForApi(workbook, XLSX);
+  } catch (_) {
+    return null;
+  }
+}
+
+function reconcileGeminiWorkout(structuredWorkout, rawTextHint) {
+  if (!structuredWorkout || !Array.isArray(structuredWorkout.weeks)) return structuredWorkout;
+  // First: classic row pad/trim
+  for (const week of structuredWorkout.weeks) {
+    for (const session of (week.sessions || [])) {
+      for (const ex of (session.exercises || [])) {
+        const info = resolveTargetSetCount(ex);
+        const techs = detectTechniquesFromText(ex.name, ex.notes, ex.reps, ex.progression_rule);
+        if (techs[0] && !ex.notes) ex.notes = techs[0].id.replace(/_/g, " ");
+        const { sets } = reconcileSetRows(ex, (src, i, total, meta) => {
+          const isLast = i === total - 1;
+          const drop = meta.techniques?.[0]?.id === "drop_set" && isLast;
+          return {
+            order: i + 1,
+            reps: src.reps != null ? String(src.reps) : (ex.reps != null ? String(ex.reps) : null),
+            load: src.load != null ? Number(src.load) : (ex.load != null ? Number(ex.load) : null),
+            load_unit: src.load_unit || ex.load_unit || "kg",
+            percentage_1rm: src.percentage_1rm != null ? Number(src.percentage_1rm) : (ex.percentage_1rm != null ? Number(ex.percentage_1rm) : null),
+            rpe: src.rpe != null ? Number(src.rpe) : (ex.rpe != null ? Number(ex.rpe) : null),
+            rir: src.rir != null ? Number(src.rir) : (ex.rir != null ? Number(ex.rir) : null),
+            rest_seconds: src.rest_seconds != null ? Number(src.rest_seconds) : (ex.rest_seconds != null ? Number(ex.rest_seconds) : null),
+            tempo: src.tempo || ex.tempo || null,
+            set_type: drop ? "dropset" : (src.set_type || "working"),
+            technique: drop ? "drop_set" : (src.technique || null),
+            done: Boolean(src.done)
+          };
+        });
+        ex.sets = info.target || sets.length;
+        ex.sets_count = sets.length;
+        ex.sets_data = sets;
+        if (info.mismatched) {
+          structuredWorkout.warnings = structuredWorkout.warnings || [];
+          structuredWorkout.warnings.push(
+            `FIDELITY: "${ex.name}" sets dichiarate=${info.declared || info.fromText} vs model rows=${info.dataLen} → allineato a ${sets.length}`
+          );
+        }
+      }
+    }
+  }
+  // Then: literal prescription lock from raw document text (beats Gemini 3-row habit)
+  try {
+    if (rawTextHint) applyPrescriptionsToProgram(structuredWorkout, rawTextHint);
+    enforceAllPrescriptions(structuredWorkout);
+  } catch (err) {
+    console.warn("[PRESCRIPTION_ENFORCE]", err?.message || err);
+  }
+  return structuredWorkout;
+}
+
 async function processDocumentAnalysis({ filename, mimeType, buffer }) {
   const ext = (filename || "").toLowerCase().split(".").pop();
   let parser = "unknown";
-  const promptText = `Analizza questo file di allenamento ed estrai fedelmente l'intera programmazione nel formato JSON richiesto.
-REGOLE FONDAMENTALI:
+  const promptText = `Analizza questo documento (scheda allenamento / nutrizione / integrazione / terapia) ed estrai fedelmente TUTTO nel JSON richiesto.
+
+REGOLE DI FEDELTÀ (NON NEGOZIABILI):
 1. Non inventare esercizi, serie, ripetizioni, carichi, RPE, RIR, recuperi o progressioni.
-2. ESTRAZIONE COMPLETA: Estrai TUTTE le settimane, TUTTE le sessioni e TUTTI gli esercizi presenti nel documento. Non troncare, non riassumere.
-3. SESSIONI/ESERCIZI BONUS: Se nel documento sono presenti sessioni o esercizi contrassegnati come BONUS, richiamo o opzionali, impostali con is_bonus: true.
-4. GRUPPI MUSCOLARI: Valorizza muscle_group e muscle_groups per ogni esercizio.
-Preserva fedelmente ogni dato (serie, ripetizioni, carichi, recuperi, intensità).`;
+2. Se un valore manca usa null — NON indovinare e NON usare default tipo 3 serie.
+3. PATTERN NxM: "4x12", "4×12", "4*12", "4 serie x 12", "4 serie da 12" ⇒ sets=4 E sets_data DEVE avere ESATTAMENTE 4 elementi con reps="12".
+4. sets (integer) DEVE essere uguale a sets_data.length. Mai meno. Se leggi 4 serie, emetti 4 oggetti in sets_data.
+5. TECNICHE: se accanto all'esercizio c'è dropset / drop set / stripping ⇒ notes include "drop set", ultima serie set_type="dropset", technique="drop_set".
+6. Altre tecniche (rest-pause, myo-reps, cluster, pause reps) ⇒ valorizza technique sulla serie interessata.
+7. ESTRAZIONE COMPLETA: tutte le settimane, sessioni, esercizi. Non troncare.
+8. BONUS/richiamo/opzionali ⇒ is_bonus: true.
+9. GRUPPI MUSCOLARI: muscle_group / muscle_groups.
+10. Per FOTO/SCANSIONI: leggi ogni riga della scheda come testo stampato; non omettere esercizi poco leggibili — segnalali in warnings.
+11. Nutrizione/integrazione/terapia se presenti: mantieni struttura fedele senza diagnosi mediche.
+
+Preserva ogni dato (serie, ripetizioni, carichi, recuperi, intensità, tecniche).`;
 
   let parts = [];
+  let rawTextHint = "";
 
-  if (ext === "pdf" || mimeType === "application/pdf") {
+  // Prefer deterministic local Universal Import for Excel (no LLM cell invention)
+  if (ext === "xlsx" || ext === "xls" || mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || mimeType === "application/vnd.ms-excel") {
+    try {
+      const local = await extractDocumentContent({ filename, mimeType, buffer });
+      if (local?.canonicalProgram?.weeks?.length) {
+        console.log(`[FILE_ANALYZE_LOCAL] filename="${filename}" parser="${local.parser}" weeks=${local.canonicalProgram.weeks.length}`);
+        return {
+          structuredWorkout: reconcileGeminiWorkout(local.canonicalProgram, local.rawText || ""),
+          parser: local.parser || "xlsx_local_di",
+          documentIR: local.documentIR || null
+        };
+      }
+    } catch (localErr) {
+      console.warn("[FILE_ANALYZE_LOCAL_FALLBACK]", localErr?.message || localErr);
+    }
+    parser = "xlsx_structured_di";
+    console.log(`[FILE_ANALYZE_START] filename="${filename}" mime="${mimeType || 'application/vnd.ms-excel'}" byteLength=${buffer.length} parser="${parser}"`);
+    const structured = extractExcelStructuredPayload(buffer);
+    const textContent = extractExcelText(buffer);
+    rawTextHint = textContent || "";
+    const payload = structured
+      ? `STRUCTURED_EXCEL_JSON (source of truth — do not invent cells):\n${JSON.stringify(structured).slice(0, 180000)}\n\nFLAT_PREVIEW:\n${textContent.slice(0, 40000)}`
+      : textContent;
+    parts = [{ text: `${promptText}\n\nDOCUMENT CONTENT (EXCEL):\n${payload}` }];
+  } else if (ext === "pdf" || mimeType === "application/pdf") {
     parser = "gemini_pdf_inline";
     console.log(`[FILE_ANALYZE_START] filename="${filename}" mime="${mimeType || 'application/pdf'}" byteLength=${buffer.length} parser="${parser}"`);
     parts = [
@@ -1894,9 +2024,52 @@ Preserva fedelmente ogni dato (serie, ripetizioni, carichi, recuperi, intensità
       },
       { text: promptText }
     ];
+  } else if (
+    ["png", "jpg", "jpeg", "webp", "heic", "gif"].includes(ext) ||
+    String(mimeType || "").startsWith("image/")
+  ) {
+    parser = "gemini_image_vision";
+    const mime = mimeType && String(mimeType).startsWith("image/")
+      ? mimeType
+      : (ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg");
+    console.log(`[FILE_ANALYZE_START] filename="${filename}" mime="${mime}" byteLength=${buffer.length} parser="${parser}"`);
+    // Local OCR first (if available), then Vision with image bytes — never UTF-8-decode images
+    let ocrHint = "";
+    try {
+      const local = await extractDocumentContent({ filename, mimeType: mime, buffer });
+      if (local?.rawText && String(local.rawText).trim().length > 20) {
+        ocrHint = `\n\nOCR_LOCAL_HINT (usa solo se coerente con l'immagine):\n${String(local.rawText).slice(0, 20000)}`;
+      }
+      // If local parse already found exercises with correct NxM, prefer it
+      const weeks = local?.canonicalProgram?.weeks || [];
+      const exCount = weeks.reduce((n, w) => n + (w.sessions || []).reduce((m, s) => m + ((s.exercises || []).length), 0), 0);
+      if (exCount > 0 && local.parser !== "image_ocr_fallback") {
+        console.log(`[FILE_ANALYZE_LOCAL_IMAGE] exercises=${exCount} parser=${local.parser}`);
+        return {
+          structuredWorkout: reconcileGeminiWorkout(local.canonicalProgram),
+          parser: local.parser || "image_local_ocr",
+          documentIR: local.documentIR || null
+        };
+      }
+    } catch (imgLocalErr) {
+      console.warn("[FILE_ANALYZE_IMAGE_LOCAL]", imgLocalErr?.message || imgLocalErr);
+    }
+    parts = [
+      { inlineData: { data: buffer.toString("base64"), mimeType: mime } },
+      { text: `${promptText}\n\nQuesta è una FOTO/SCANSIONE di una scheda. Estrai ogni esercizio leggibile.${ocrHint}` }
+    ];
   } else if (ext === "docx" || mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
     parser = "mammoth_docx";
     console.log(`[FILE_ANALYZE_START] filename="${filename}" mime="${mimeType || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}" byteLength=${buffer.length} parser="${parser}"`);
+    try {
+      const local = await extractDocumentContent({ filename, mimeType, buffer });
+      if (local?.canonicalProgram?.weeks?.length) {
+        const exCount = local.canonicalProgram.weeks.reduce((n, w) => n + (w.sessions || []).reduce((m, s) => m + ((s.exercises || []).length), 0), 0);
+        if (exCount > 0) {
+          return { structuredWorkout: reconcileGeminiWorkout(local.canonicalProgram), parser: local.parser || "docx_local_di", documentIR: local.documentIR || null };
+        }
+      }
+    } catch (_) {}
     const extracted = await mammoth.extractRawText({ buffer });
     const textContent = extracted.value || "";
     parts = [{ text: `${promptText}\n\nDOCUMENT CONTENT (DOCX):\n${textContent}` }];
@@ -1905,16 +2078,35 @@ Preserva fedelmente ogni dato (serie, ripetizioni, carichi, recuperi, intensità
     console.log(`[FILE_ANALYZE_START] filename="${filename}" mime="${mimeType || 'application/msword'}" byteLength=${buffer.length} parser="${parser}"`);
     const textContent = await extractLegacyWordText(buffer);
     if (!textContent.trim()) throw new Error("Legacy DOC contains no readable text");
+    try {
+      const localProg = parseCanonicalProgramFromText(textContent, filename);
+      if (localProg?.canonicalProgram?.weeks?.length) {
+        const exCount = localProg.canonicalProgram.weeks.reduce((n, w) => n + (w.sessions || []).reduce((m, s) => m + ((s.exercises || []).length), 0), 0);
+        if (exCount > 0) {
+          return { structuredWorkout: reconcileGeminiWorkout(localProg.canonicalProgram, textContent), parser: "doc_local_text" };
+        }
+      }
+    } catch (_) {}
     parts = [{ text: `${promptText}\n\nDOCUMENT CONTENT (DOC):\n${textContent}` }];
-  } else if (ext === "xlsx" || ext === "xls" || mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || mimeType === "application/vnd.ms-excel") {
-    parser = "xlsx_sheet_parser";
-    console.log(`[FILE_ANALYZE_START] filename="${filename}" mime="${mimeType || 'application/vnd.ms-excel'}" byteLength=${buffer.length} parser="${parser}"`);
-    const textContent = extractExcelText(buffer);
-    parts = [{ text: `${promptText}\n\nDOCUMENT CONTENT (EXCEL):\n${textContent}` }];
   } else if (ext === "txt" || ext === "csv" || mimeType === "text/plain" || mimeType === "text/csv") {
-    parser = "utf8_text";
+    parser = "utf8_text_local_first";
     console.log(`[FILE_ANALYZE_START] filename="${filename}" mime="${mimeType || 'text/plain'}" byteLength=${buffer.length} parser="${parser}"`);
     const textContent = buffer.toString("utf-8");
+    rawTextHint = textContent;
+    try {
+      const localProg = parseCanonicalProgramFromText(textContent, filename);
+      const weeks = localProg?.canonicalProgram?.weeks || localProg?.program?.weeks || [];
+      const exCount = weeks.reduce((n, w) => n + (w.sessions || []).reduce((m, s) => m + ((s.exercises || []).length), 0), 0);
+      if (exCount > 0) {
+        console.log(`[FILE_ANALYZE_LOCAL_TEXT] exercises=${exCount}`);
+        return {
+          structuredWorkout: reconcileGeminiWorkout(localProg.canonicalProgram || localProg.program, textContent),
+          parser: "txt_local_parse"
+        };
+      }
+    } catch (txtErr) {
+      console.warn("[FILE_ANALYZE_TEXT_LOCAL]", txtErr?.message || txtErr);
+    }
     parts = [{ text: `${promptText}\n\nDOCUMENT CONTENT (TXT):\n${textContent}` }];
   } else {
     parser = "fallback_text";
@@ -1936,23 +2128,50 @@ Preserva fedelmente ogni dato (serie, ripetizioni, carichi, recuperi, intensità
   const replyText = (response.text || "").trim();
   if (!replyText) throw new Error("Gemini returned an empty document analysis response.");
 
-  const structuredWorkout = JSON.parse(replyText);
+  let structuredWorkout = JSON.parse(replyText);
+  structuredWorkout = reconcileGeminiWorkout(structuredWorkout, rawTextHint);
   console.log(`[FILE_ANALYZE_END] filename="${filename}" parser="${parser}"`);
   return { structuredWorkout, parser };
 }
 
 // Routes
+let aiGateway = null;
+
+async function initAiGateway() {
+  if (aiGateway) return aiGateway;
+  aiGateway = await createAiGateway({
+    resolveAuthUser: async (req) => accountFromBearer(req.headers.authorization),
+    loadAccountData: async (userId) => {
+      if (!process.env.DATABASE_URL || !pool) return null;
+      try {
+        const dataRes = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [userId]);
+        return dataRes.rows[0]?.data || null;
+      } catch (_) {
+        return null;
+      }
+    }
+  });
+  return aiGateway;
+}
+
+// Eager init (non-blocking for boot)
+initAiGateway().catch((err) => console.error("[AI_GATEWAY_INIT]", err?.message || err));
+
 function buildHealthPayload() {
-  const aiConfigured = Boolean(process.env.GEMINI_API_KEY);
-  return {
+  const aiConfigured = Boolean(process.env.GEMINI_API_KEY) || process.env.MOCK_GEMINI === "1" || process.env.AI_PROVIDER === "mock";
+  const payload = {
     ok: true,
     status: "healthy",
     model: MODEL,
     aiConfigured,
-    apiKeyConfigured: aiConfigured,
+    apiKeyConfigured: Boolean(process.env.GEMINI_API_KEY),
     accountStorageConfigured: Boolean(process.env.DATABASE_URL),
     googleOAuthConfigured: Boolean(process.env.GOOGLE_CLIENT_ID)
   };
+  if (aiGateway) {
+    Object.assign(payload, aiGateway.healthExtras());
+  }
+  return payload;
 }
 
 app.get("/health", (req, res) => {
@@ -1961,6 +2180,31 @@ app.get("/health", (req, res) => {
 
 app.get("/api/health", (req, res) => {
   res.json(buildHealthPayload());
+});
+
+app.get("/api/health/ready", async (req, res) => {
+  const gw = await initAiGateway();
+  const ready = {
+    ok: true,
+    status: "ready",
+    aiConfigured: gw.provider.isConfigured() || gw.config.provider === "mock",
+    databaseConfigured: Boolean(process.env.DATABASE_URL),
+    googleOAuthConfigured: Boolean(process.env.GOOGLE_CLIENT_ID),
+    model: gw.config.model,
+    circuit: gw.circuit.state()
+  };
+  // Never include secrets
+  res.json(ready);
+});
+
+app.get("/api/ai/metrics", async (req, res) => {
+  // Internal metrics — no secrets. Protect with optional admin token.
+  const admin = process.env.AI_METRICS_TOKEN;
+  if (admin && req.headers["x-ai-metrics-token"] !== admin) {
+    return res.status(401).json({ ok: false, error: "Unauthorized." });
+  }
+  const gw = await initAiGateway();
+  res.json({ ok: true, metrics: gw.telemetry.snapshot() });
 });
 
 app.post("/api/auth/register", async (req, res) => {
@@ -2034,6 +2278,91 @@ app.post("/api/auth/login", async (req, res) => {
   } catch (error) {
     console.error("ACCOUNT_LOGIN_ERROR", error);
     return res.status(500).json({ error: "Account login failed." });
+  }
+});
+
+app.post("/api/auth/forgot-password", async (req, res) => {
+  if (!process.env.DATABASE_URL) {
+    return res.status(503).json({ error: "Database non configurato." });
+  }
+  try {
+    const email = normalizeEmail(req.body?.email);
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      return res.status(400).json({ error: "Inserisci un'email valida." });
+    }
+    const result = await pool.query(
+      "SELECT id, email, password_hash, provider FROM app_users WHERE email = $1",
+      [email]
+    );
+    const user = result.rows[0];
+    const generic = {
+      ok: true,
+      message: "Se l'account esiste, puoi usare il codice di recupero per impostare una nuova password."
+    };
+    if (!user || !user.password_hash || (user.provider && user.provider !== "email")) {
+      return res.status(200).json(generic);
+    }
+    const code = String(crypto.randomInt(100000, 999999));
+    const passwordResetHash = await hashPassword(code);
+    const expires = new Date(Date.now() + 60 * 60 * 1000);
+    await pool.query(
+      "UPDATE app_users SET password_reset_hash = $1, password_reset_expires = $2, updated_at = NOW() WHERE id = $3",
+      [passwordResetHash, expires.toISOString(), user.id]
+    );
+    // No SMTP yet: expose one-time code so web/PWA recovery works.
+    return res.status(200).json({
+      ...generic,
+      resetAvailable: true,
+      code,
+      expiresInMinutes: 60
+    });
+  } catch (error) {
+    console.error("ACCOUNT_FORGOT_PASSWORD_ERROR", error);
+    return res.status(500).json({ error: "Recupero password non riuscito." });
+  }
+});
+
+app.post("/api/auth/reset-password", async (req, res) => {
+  if (!process.env.DATABASE_URL) {
+    return res.status(503).json({ error: "Database non configurato." });
+  }
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const code = String(req.body?.code || req.body?.token || "").trim();
+    const password = String(req.body?.password || req.body?.newPassword || "");
+    if (!email || !code || password.length < 8) {
+      return res.status(400).json({ error: "Email, codice e nuova password (min. 8 caratteri) sono obbligatori." });
+    }
+    const result = await pool.query(
+      "SELECT id, email, name, first_name, last_name, password_reset_hash, password_reset_expires, provider, avatar_url, status, role, created_at, last_login_at FROM app_users WHERE email = $1",
+      [email]
+    );
+    const user = result.rows[0];
+    if (!user || !user.password_reset_hash || !user.password_reset_expires) {
+      return res.status(400).json({ error: "Codice non valido o scaduto." });
+    }
+    if (new Date(user.password_reset_expires).getTime() < Date.now()) {
+      return res.status(400).json({ error: "Codice scaduto. Richiedine uno nuovo." });
+    }
+    if (!(await verifyPassword(code, user.password_reset_hash))) {
+      return res.status(400).json({ error: "Codice non valido o scaduto." });
+    }
+    const passwordHash = await hashPassword(password);
+    await pool.query(
+      "UPDATE app_users SET password_hash = $1, password_reset_hash = NULL, password_reset_expires = NULL, last_login_at = NOW(), updated_at = NOW() WHERE id = $2",
+      [passwordHash, user.id]
+    );
+    const profile = await getOrInitAthleteProfile(pool, user.id, { firstName: user.first_name, lastName: user.last_name });
+    return res.status(200).json({
+      ok: true,
+      message: "Password aggiornata.",
+      token: issueAccountToken(user),
+      user: formatUserPayload(user, profile),
+      profile
+    });
+  } catch (error) {
+    console.error("ACCOUNT_RESET_PASSWORD_ERROR", error);
+    return res.status(500).json({ error: "Reset password non riuscito." });
   }
 });
 
@@ -2264,9 +2593,47 @@ app.post("/api/auth/apple", async (req, res) => {
     const identity = await verifyAppleCredential(req.body?.code || req.body?.id_token || req.body?.identityToken, req.body?.user);
     return await issueOAuthResponse(req, res, identity);
   } catch (err) {
-    return res.status(err.statusCode || 401).json({ error: err.message });
+    return res.status(401).json({ error: err.message });
   }
 });
+
+app.get("/api/auth/apple/start", (req, res) => {
+  const redirectUri = process.env.APPLE_REDIRECT_URI || `${req.protocol}://${req.get("host")}/api/auth/apple/callback`;
+  const clientId = process.env.APPLE_CLIENT_ID || APPLE_BUNDLE_ID;
+  const state = crypto.randomBytes(16).toString("hex");
+  const scope = encodeURIComponent("name email");
+  const url =
+    `https://appleid.apple.com/auth/authorize?response_type=code%20id_token&response_mode=form_post` +
+    `&client_id=${encodeURIComponent(clientId)}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&scope=${scope}&state=${state}`;
+  // Deep-link friendly HTML for Android WebView / browser
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  return res.status(200).send(`<!doctype html><html><head><meta charset="utf-8"><title>Apple Sign-In</title>
+<meta http-equiv="refresh" content="0;url=${url}">
+</head><body style="font-family:sans-serif;background:#111;color:#eee;padding:24px;">
+<p>Reindirizzamento ad Apple Sign-In…</p>
+<p><a href="${url}" style="color:#d4af37;">Continua con Apple</a></p>
+<p style="font-size:12px;color:#888;">Se Apple non è configurato (APPLE_CLIENT_ID / APPLE_REDIRECT_URI), completa le variabili d'ambiente sul server.</p>
+<script>location.href=${JSON.stringify(url)};</script>
+</body></html>`);
+});
+
+app.post("/api/auth/apple/callback", async (req, res) => {
+  try {
+    const identity = await verifyAppleCredential(req.body?.code || req.body?.id_token, req.body?.user);
+    const issued = await issueOAuthResponse(req, res, identity);
+    return issued;
+  } catch (err) {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.status(401).send(`<html><body style="font-family:sans-serif;padding:24px;">Accesso Apple non riuscito: ${String(err.message || err)}</body></html>`);
+  }
+});
+
+// Food / Evidence / Program generate proxies
+mountFoodRoutes(app, {});
+mountEvidenceRoutes(app, { requireAuth: async (req) => accountFromBearer(req.headers.authorization) });
+mountProgramGenerateRoutes(app, { requireAuth: async (req) => accountFromBearer(req.headers.authorization) });
 
 app.get("/api/account/data", async (req, res) => {
   const auth = await accountFromBearer(req.headers.authorization);
@@ -2296,6 +2663,168 @@ app.post("/api/account/data", async (req, res) => {
   } catch (err) {
     return res.status(500).json({ error: "Impossibile salvare i dati sul cloud." });
   }
+});
+
+// ============================================================
+// NURVAN REWARDS API (Wave 1–4) — authoritative when authenticated
+// Medical / therapy / exams must never enter rewards payloads.
+// ============================================================
+function sanitizeRewardsPayload(raw) {
+  if (!raw || typeof raw !== "object") return {};
+  const clean = JSON.parse(JSON.stringify(raw));
+  delete clean.therapy;
+  delete clean.exams;
+  delete clean.healthSamples;
+  delete clean.medications;
+  delete clean.bodyWeight;
+  if (Array.isArray(clean.ledger) && clean.ledger.length > 200) clean.ledger = clean.ledger.slice(-200);
+  return clean;
+}
+
+app.get("/api/rewards/profile", async (req, res) => {
+  const auth = await accountFromBearer(req.headers.authorization);
+  if (!auth) return res.status(401).json({ ok: false, error: "Unauthorized" });
+  try {
+    const dataRes = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
+    const data = dataRes.rows[0]?.data || {};
+    return res.json({ ok: true, profile: sanitizeRewardsPayload(data.rewards || {}) });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: "rewards_profile_failed" });
+  }
+});
+
+app.put("/api/rewards/profile", async (req, res) => {
+  const auth = await accountFromBearer(req.headers.authorization);
+  if (!auth) return res.status(401).json({ ok: false, error: "Unauthorized" });
+  try {
+    const profile = sanitizeRewardsPayload(req.body?.profile || req.body || {});
+    const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
+    const data = existing.rows[0]?.data || {};
+    data.rewards = profile;
+    await pool.query(
+      `INSERT INTO app_account_data (user_id, data, updated_at)
+       VALUES ($1, $2::jsonb, NOW())
+       ON CONFLICT (user_id)
+       DO UPDATE SET data = $2::jsonb, updated_at = NOW()`,
+      [auth.id, JSON.stringify(data)]
+    );
+    return res.json({ ok: true, profile, saved_at: new Date().toISOString() });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: "rewards_save_failed" });
+  }
+});
+
+app.post("/api/rewards/xp", async (req, res) => {
+  const auth = await accountFromBearer(req.headers.authorization);
+  if (!auth) return res.status(401).json({ ok: false, error: "Unauthorized" });
+  try {
+    const event = req.body?.event || req.body || {};
+    if (!event.sourceId || !event.eventType) {
+      return res.status(400).json({ ok: false, error: "sourceId_and_eventType_required" });
+    }
+    // Client cannot invent XP amounts for competitive events — server recomputes when possible
+    if (event.eventType === "WORKOUT_COMPLETED" && typeof event.xpAmount === "number" && event.xpAmount > 300) {
+      return res.status(400).json({ ok: false, error: "xp_out_of_range" });
+    }
+    const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
+    const data = existing.rows[0]?.data || {};
+    const rewards = sanitizeRewardsPayload(data.rewards || { mode: "rewards", xp: 0, ledger: [], level: 1, tier: "bronze" });
+    if (rewards.mode !== "rewards") {
+      return res.json({ ok: true, rejected: true, reason: "focus_mode", profile: rewards });
+    }
+    rewards.ledger = Array.isArray(rewards.ledger) ? rewards.ledger : [];
+    if (rewards.ledger.some((e) => e.sourceId === event.sourceId && e.eventType === event.eventType)) {
+      return res.json({ ok: true, rejected: true, reason: "duplicate", profile: rewards });
+    }
+    const row = {
+      id: event.id || ("xp_srv_" + Date.now()),
+      eventType: event.eventType,
+      sourceId: String(event.sourceId),
+      xpAmount: Math.max(0, Math.min(300, Number(event.xpAmount) || 0)),
+      timestamp: event.timestamp || new Date().toISOString(),
+      metadata: event.metadata || {},
+      validationStatus: "validated"
+    };
+    delete row.metadata.therapy;
+    delete row.metadata.exams;
+    rewards.ledger.push(row);
+    rewards.xp = (Number(rewards.xp) || 0) + row.xpAmount;
+    data.rewards = rewards;
+    await pool.query(
+      `INSERT INTO app_account_data (user_id, data, updated_at)
+       VALUES ($1, $2::jsonb, NOW())
+       ON CONFLICT (user_id)
+       DO UPDATE SET data = $2::jsonb, updated_at = NOW()`,
+      [auth.id, JSON.stringify(data)]
+    );
+    return res.json({ ok: true, event: row, profile: rewards });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: "xp_append_failed" });
+  }
+});
+
+app.get("/api/rewards/leaderboard", async (req, res) => {
+  const auth = await accountFromBearer(req.headers.authorization);
+  if (!auth) return res.status(401).json({ ok: false, error: "Unauthorized" });
+  const scope = String(req.query.scope || "GLOBAL").toUpperCase();
+  const seasonId = String(req.query.seasonId || "lifetime");
+  try {
+    // Aggregation from account_data.rewards (opt-in Rewards mode only)
+    const rows = await pool.query(
+      `SELECT u.id, u.name, d.data->'rewards' AS rewards
+       FROM app_account_data d
+       JOIN app_users u ON u.id = d.user_id
+       WHERE (d.data->'rewards'->>'mode') = 'rewards'
+         AND COALESCE((d.data->'rewards'->'community'->>'showOnLeaderboard')::text, 'false') = 'true'
+       ORDER BY COALESCE((d.data->'rewards'->>'consistencyScore')::numeric, 0) DESC
+       LIMIT 100`
+    );
+    const entries = rows.rows.map((r, idx) => {
+      const rew = r.rewards || {};
+      return {
+        rank: idx + 1,
+        userIdHash: "u" + String(r.id),
+        displayName: rew.community?.displayName || (r.name ? String(r.name).split(" ")[0] : "Athlete"),
+        tier: rew.tier || "bronze",
+        level: Number(rew.level) || 1,
+        consistencyScore: Number(rew.consistencyScore) || 0
+      };
+    });
+    return res.json({
+      ok: true,
+      board: { scope, seasonId, updatedAt: new Date().toISOString(), entries },
+      note: entries.length ? null : "Leaderboard empty until users opt into ranking (Wave 4)."
+    });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: "leaderboard_failed" });
+  }
+});
+
+app.get("/api/rewards/season", async (req, res) => {
+  const now = new Date();
+  const q = Math.floor(now.getMonth() / 3) + 1;
+  return res.json({
+    ok: true,
+    season: {
+      id: now.getFullYear() + "-Q" + q,
+      label: "Season " + now.getFullYear() + " Q" + q,
+      type: "seasonal"
+    },
+    partnerSchema: { version: 1, partners: [], rules: { noPayToWin: true, goldNeverBoostsRank: true } }
+  });
+});
+
+app.get("/api/rewards/tools", async (_req, res) => {
+  return res.json({
+    ok: true,
+    tools: [
+      { name: "propose_program_ops", domain: "programming", requiresConfirm: true },
+      { name: "propose_deload", domain: "autoregulation", requiresConfirm: true },
+      { name: "propose_nutrition_adjust", domain: "nutrition", requiresConfirm: true },
+      { name: "summarize_week", domain: "analytics", requiresConfirm: false },
+      { name: "unlock_achievement_notify", domain: "analytics", requiresConfirm: false, systemOnly: true }
+    ]
+  });
 });
 
 
@@ -2953,7 +3482,11 @@ app.get("/api/program/active", async (req, res) => {
 
 app.post("/api/program/modify", async (req, res) => {
   try {
-    const { operations } = req.body || {};
+    let operations = (req.body || {}).operations;
+    const actionsIn = (req.body || {}).actions;
+    if ((!Array.isArray(operations) || !operations.length) && Array.isArray(actionsIn) && actionsIn.length) {
+      operations = actionsToOperations(actionsIn);
+    }
     if (!Array.isArray(operations) || !operations.length) {
       return res.status(400).json({ error: "operations array is required" });
     }
@@ -2975,6 +3508,10 @@ app.post("/api/program/modify", async (req, res) => {
     }
 
     const modResult = applyOperationsToProgram(activeProg, operations);
+    const canonicalActions = operationsToActions(operations, {
+      source: req.body.source || 'AI',
+      reason: req.body.reason || ''
+    });
 
     if (auth && modResult.ok) {
       await pool.query(
@@ -2988,10 +3525,61 @@ app.post("/api/program/modify", async (req, res) => {
     return res.json({
       ok: true,
       program: modResult.program,
-      appliedCount: modResult.appliedCount
+      appliedCount: modResult.appliedCount,
+      actions: canonicalActions
     });
   } catch (err) {
     console.error("Program modify error:", err);
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+app.post("/api/document/semantic", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const chunks = Array.isArray(body.chunks) ? body.chunks.slice(0, 12) : [];
+    const classificationHint = body.classification || "UNKNOWN";
+    if (!chunks.length) {
+      return res.status(400).json({ ok: false, error: "chunks required (max 12)" });
+    }
+    const totalChars = chunks.reduce((n, c) => n + String(c?.text || "").length, 0);
+    if (totalChars > 40000) {
+      return res.status(413).json({ ok: false, error: "chunks troppo grandi — riduci il payload" });
+    }
+    const prompt = `Sei un motore di interpretazione semantica fitness. Ricevi SOLO chunk testuali già estratti da un parser.
+NON inventare esercizi, serie, reps, carichi, alimenti o dosi assenti nei chunk.
+Se ambiguo, metti confidence bassa e flag FLAG_FOR_REVIEW.
+classificazione_suggerita=${classificationHint}
+Restituisci JSON: { "entities": [ { "type":"exercise|food|supplement|note", "value":"...", "originalText":"...", "confidence":0-1, "sourceChunk":0 } ], "warnings":[] }`;
+    const ai = getClient();
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: [{ role: "user", parts: [{ text: prompt + "\n\nCHUNKS:\n" + JSON.stringify(chunks) }] }],
+      config: { responseMimeType: "application/json" }
+    });
+    const text = (response.text || "").trim();
+    let parsed = { entities: [], warnings: ["empty_ai"] };
+    try { parsed = JSON.parse(text); } catch (_) {
+      return res.json({ ok: true, fallback: true, entities: [], warnings: ["ai_parse_failed"], raw: text.slice(0, 2000) });
+    }
+    return res.json({ ok: true, fallback: false, ...parsed });
+  } catch (err) {
+    console.error("[DOCUMENT_SEMANTIC]", err);
+    return res.status(200).json({ ok: true, fallback: true, entities: [], warnings: [err.message || "semantic_unavailable"] });
+  }
+});
+
+app.post("/api/document/detect", async (req, res) => {
+  try {
+    const rawBase64 = req.body?.data_base64 || req.body?.dataBase64;
+    if (!rawBase64) return res.status(400).json({ error: "data_base64 required" });
+    const buffer = Buffer.from(String(rawBase64).replace(/^data:[^;]+;base64,/, ""), "base64");
+    if (buffer.length > (DI_MAX_BYTES || 12 * 1024 * 1024)) {
+      return res.status(413).json({ error: "file too large" });
+    }
+    const detect = detectFormat(buffer, req.body?.filename || "", req.body?.mime_type || "");
+    return res.json({ ok: true, detect });
+  } catch (err) {
     return res.status(400).json({ error: err.message });
   }
 });
@@ -3021,13 +3609,16 @@ app.post(["/api/analyze-file", "/api/analyze", "/analyze"], async (req, res) => 
       return res.status(413).json({ error: "Il file supera la dimensione massima consentita (50 MB)." });
     }
 
-    const { structuredWorkout, parser: usedParser } = await processDocumentAnalysis({
+    const { structuredWorkout, parser: usedParser, documentIR } = await processDocumentAnalysis({
       filename,
       mimeType,
       buffer
     });
     parser = usedParser;
 
+    if (documentIR) {
+      return res.json({ ...structuredWorkout, _documentIR: documentIR, _parser: parser });
+    }
     return res.json(structuredWorkout);
   } catch (error) {
     console.error(`[FILE_ANALYZE_ERROR] filename="${filename}" parser="${parser}" error_name="${error?.name}" error_message="${error?.message}"`);
@@ -3068,171 +3659,122 @@ app.post("/api/ingest/document", upload.single("file"), async (req, res) => {
   }
 });
 
-app.post("/api/chat", async (req, res) => {
+app.post("/api/program/reprogram", async (req, res) => {
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(503).json({
-        error: "Coach AI non configurato: configurare GEMINI_API_KEY sul server.",
-        aiConfigured: false
-      });
+    const body = req.body || {};
+    const kind = body.kind === "days" ? "days" : "duration";
+    const desired = Math.max(1, Math.min(52, parseInt(body.desired, 10) || 4));
+    const goal = String(body.goal || "IPERTROFIA / MASSA");
+    const secondary = String(body.secondary || "");
+    const constraints = String(body.constraints || "");
+    const program = body.program || null;
+    const summary = body.programSummary || null;
+    if (!program && !summary) {
+      return res.status(400).json({ ok: false, error: "program or programSummary required" });
     }
 
-    const message = typeof req.body?.message === "string"
-      ? req.body.message.trim()
-      : "";
+    const compact = summary || {
+      title: program?.title,
+      weeks: (program?.weeks || []).slice(0, 4).map((w, wi) => ({
+        week: wi + 1,
+        sessions: (w.sessions || w.days || []).map((s) => ({
+          name: s.name || s.title,
+          exercises: (s.exercises || []).slice(0, 12).map((e) => ({
+            name: e.name || e.exercise,
+            sets: e.sets_count || e.prescription?.sets || (Array.isArray(e.sets) ? e.sets.length : 3),
+            reps: e.reps_target || e.repsTarget || e.prescription?.reps || "8-10",
+            rir: e.rir_target ?? e.rirTarget ?? 2
+          }))
+        }))
+      }))
+    };
 
-    if (!message) {
-      return res.status(400).json({ error: "message is required." });
-    }
+    const prompt = `Sei un coach di programmazione. Adatta il programma all'obiettivo.
+Obiettivo primario: ${goal}
+${secondary ? `Obiettivo secondario: ${secondary}` : ""}
+${kind === "duration" ? `Durata target: ${desired} settimane` : `Frequenza target: ${desired} giorni/settimana`}
+${constraints ? `Vincoli: ${constraints}` : ""}
 
-    let context = req.body?.context ?? {};
-    const history = Array.isArray(req.body?.history) ? req.body.history : [];
+REGOLE:
+- Restituisci SOLO JSON valido (nessun markdown).
+- Schema: {"title":"...","weeks":[{"week_number":1,"label":"Settimana 1","sessions":[{"name":"Giorno 1","exercises":[{"name":"...","sets_count":4,"reps_target":"10","rir_target":2,"rest_seconds":90,"notes":""}]}]}]}
+- Mantieni gli esercizi riconoscibili dal programma base.
+- Numero settimane = ${kind === "duration" ? desired : "come nel base, progressione sull'intensità"}.
+- Non inventare alimentazione/terapia.
 
-    const authUser = await accountFromBearer(req.headers.authorization);
-    if (authUser && !context.program) {
-      try {
-        const dataRes = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [authUser.id]);
-        const dbData = dataRes.rows[0]?.data || {};
-        if (dbData.activeProgram) context.program = dbData.activeProgram;
-        if (dbData.data) context.trainingData = dbData.data;
-      } catch (_) {}
-    }
+PROGRAMMA BASE:
+${JSON.stringify(compact).slice(0, 28000)}`;
 
-    const currentW = Number(context.currentWeek) || 1;
-    const currentD = Number(context.currentDay) >= 0 ? Number(context.currentDay) + 1 : 1;
-
-    const system = `
-Sei Coach AI, l'assistente scientifico di allenamento di élite all'interno dell'applicazione Giammaria System.
-Rispondi sempre in italiano in modo chiaro, autorevole, motivante e rigorosamente evidence-based.
-
-ACCESSO AL PROGRAMMA ATTIVO:
-Hai PIENO ACCESSO di lettura e modifica al programma attivo dell'atleta attraverso le API e i tool del sistema.
-NON DIRE MAI: "Non ho accesso al database" o "Non posso modificare il file interno". Tu puoi analizzare la programmazione attiva e proporre modifiche strutturate istantanee!
-
-STATO ATTUALE SELEZIONATO DALL'ATLETA:
-- Settimana attualmente visualizzata: Settimana ${currentW} (context.currentWeek)
-- Sessione / Giorno attualmente visualizzato: Giorno ${currentD} (context.currentDay)
-
-REGOLE RIGIDE DI HARDENING E PRECISIONE SEMANTICA:
-
-1. AMBITO TEMPORALE (SCOPE):
-- Se l'atleta chiede una modifica come "porta la terza serie a 105 kg" o "aggiungi una serie alla panca del giorno 1":
-  * NON assumere automaticamente week: "all"!
-  * Usa SEMPRE la settimana attualmente selezionata: "week": ${currentW} (oppure la settimana esplicitamente menzionata dall'utente).
-  * Solo ed esclusivamente se l'atleta usa formule esplicite come "in tutte le settimane", "tutte le settimane" o "in tutto il programma", devi impostare "week": "all".
-
-2. SOSTITUZIONE ESERCIZI:
-- Se l'utente dice "sostituisci X con Y":
-  * Controlla accuratamente se X è presente nella sessione/settimana target del context.program.
-  * SE X ESISTE: genera l'operazione {"type": "replace_exercise", "week": ..., "session": ..., "exercise": "X", "target_exercise": "Y"}.
-  * SE X NON ESISTE: NON generare silenziosamente una add_exercise o una sostituzione fittizia!
-    Invece scrivi chiaramente nella risposta:
-    "X non è presente nella sessione selezionata. Vuoi aggiungere Y?"
-    e nella proposta JSON includi l'operazione con summary che chiarisce la richiesta di conferma ("Proposta di aggiunta di Y in quanto X non presente").
-
-3. CALCOLI E MODIFICHE DI VOLUME:
-- Se l'utente chiede variazioni percentuali di volume (es. "riduci il volume del petto del 15%"):
-  * Conta e analizza il volume del gruppo muscolare prima della modifica (es. serie totali nella settimana).
-  * Calcola il target volume teorico (es. serie prima * 0.85).
-  * Calcola il volume dopo in base alle serie discrete rimosse.
-  * Calcola la variazione percentuale effettiva.
-  * Riporta SEMPRE esplicitamente nella risposta testuale il riepilogo nel seguente formato:
-    Volume [gruppo muscolare]:
-    - prima = [N] serie
-    - target = [N_target] serie (-15%)
-    - dopo = [N_dopo] serie
-    - variazione = -[X]% circa
-  * Se non è possibile ottenere esattamente il -15% a causa dei limiti discreti delle serie, indicalo chiaramente (es. "Non è possibile ottenere esattamente -15% perché le serie sono discrete. Propongo una riduzione di 1 serie su 4 (-25%) o su 6 (-16,7%).").
-
-4. AGGIUNTA SERIE:
-- Se l'utente dice "aggiungi una serie alla panca del giorno 1":
-  * Modifica SOLO l'esercizio target.
-  * Mantieni il contesto della settimana/sessione corrente ("week": ${currentW}, "session": 1).
-  * Non toccare tutte le settimane salvo richiesta esplicita.
-
-5. SUPERSET:
-- Se l'atleta chiede di creare un superset (es. "Crea un superset tra Hack Squat e Leg Extension") e uno degli esercizi non è presente nella sessione:
-  * Dichiara esplicitamente: "[Nome Esercizio] non esiste in questa sessione. Posso aggiungerla e creare il superset."
-  * Quindi genera le operazioni atomiche di add_exercise + create_superset.
-
-6. CONFERMA E AMBIGUITÀ:
-- Se una richiesta è ambiguamente interpretabile, NON applicare modifiche arbitrarie. Chiedi conferma chiarificatrice all'atleta.
-
-QUANDO L'UTENTE RICHIEDE MODIFICHE:
-Includi sempre nella risposta un blocco JSON con action "modify_program":
-
-\`\`\`json
-{
-  "action": "modify_program",
-  "summary": "Descrizione sintetica delle modifiche proposte",
-  "operations": [
-    {
-      "type": "add_set" | "remove_set" | "modify_set" | "modify_load" | "modify_reps" | "modify_rpe" | "modify_rir" | "modify_rest" | "modify_tempo" | "replace_exercise" | "add_exercise" | "remove_exercise" | "create_superset" | "remove_superset" | "modify_session" | "add_session" | "remove_session" | "modify_week" | "add_week" | "remove_week",
-      "week": ${currentW}, // numero 1-based (o "all" SOLO se esplicitamente richiesto "in tutte le settimane")
-      "session": 1, // numero 1-based o nome sessione
-      "exercise": "Panca piana bilanciere",
-      "target_exercise": "Hack Squat",
-      "set_index": 3,
-      "changes": {
-        "sets": 4,
-        "load": 105,
-        "reps": "6-8",
-        "rpe": 8,
-        "rir": 2,
-        "rest": "120s",
-        "tempo": "3-0-1",
-        "notes": "...",
-        "movement": "Quad squat",
-        "superset_id": "ss_1"
-      }
-    }
-  ]
-}
-\`\`\`
-
-Accompagna SEMPRE il blocco JSON con una spiegazione chiara e motivata dal punto di vista tecnico.
-Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico specialista.
-`;
-
-    const historyText = history.slice(-12)
-      .filter((item) => item && typeof (item.content || item.text) === "string")
-      .map((item) => `${item.role === "assistant" ? "ASSISTANT" : "USER"}: ${item.content || item.text}`)
-      .join("\n");
-    const input = `${system}\n\nCONTESTO PROGRAMMA:\n${JSON.stringify(context)}\n\nCRONOLOGIA:\n${historyText}\n\nUSER: ${message}`;
-    
     const ai = getClient();
     const response = await ai.models.generateContent({
       model: MODEL,
-      contents: [{ role: "user", parts: [{ text: input }] }]
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: { responseMimeType: "application/json" }
     });
-
-    const replyText = response.text || "";
-    let proposedAction = null;
-    const jsonMatch = replyText.match(/```(?:json)?\s*({[\s\S]*?"action"\s*:\s*"modify_program"[\s\S]*?\})\s*```/i);
-    if (jsonMatch) {
-      try {
-        proposedAction = JSON.parse(jsonMatch[1]);
-      } catch (_) {}
+    const text = (response.text || "").trim();
+    let parsed = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch (_) {
+      const start = text.indexOf("{");
+      const end = text.lastIndexOf("}");
+      if (start >= 0 && end > start) {
+        try { parsed = JSON.parse(text.slice(start, end + 1)); } catch (__) {}
+      }
     }
-
-    return res.json({
-      reply: replyText,
-      proposed_action: proposedAction,
-      model: MODEL
+    if (!parsed || !(parsed.weeks || parsed.program?.weeks || parsed.training?.weeks)) {
+      return res.status(200).json({
+        ok: false,
+        fallback: true,
+        error: "invalid_ai_json",
+        raw: text.slice(0, 2000)
+      });
+    }
+    const prog = parsed.program || parsed.training || parsed;
+    return res.json({ ok: true, fallback: false, program: prog });
+  } catch (err) {
+    console.error("[PROGRAM_REPROGRAM]", err);
+    return res.status(200).json({
+      ok: false,
+      fallback: true,
+      error: err.message || "reprogram_failed"
     });
+  }
+});
+
+app.post("/api/chat", async (req, res) => {
+  try {
+    const gw = await initAiGateway();
+    const result = await gw.handleChat(req);
+    if (result.body?.extras?.retryAfterSec || result.body?.retryAfterSec) {
+      res.setHeader("Retry-After", String(result.body.retryAfterSec || result.body.extras?.retryAfterSec));
+    }
+    return res.status(result.statusCode).json(result.body);
   } catch (error) {
     console.error("Chat error:", {
+      requestId: req.requestId,
       name: error?.name,
       message: error?.message,
-      status: error?.status || error?.statusCode || error?.response?.status,
-      response: error?.response,
-      details: error?.details,
-      stack: error?.stack
+      status: error?.status || error?.statusCode
     });
-    return res.status(error?.statusCode || 500).json({
+    return res.status(500).json({
+      ok: false,
       error: "Coach interaction failed.",
-      details: error?.message
+      code: "AI_PROVIDER_ERROR",
+      requestId: req.requestId
     });
+  }
+});
+
+
+app.post("/api/coach/check-in", async (req, res) => {
+  try {
+    const gw = await initAiGateway();
+    const result = await gw.handleCheckIn(req);
+    return res.status(result.statusCode).json(result.body);
+  } catch (error) {
+    console.error("CHECK_IN_ERROR", error);
+    return res.status(500).json({ ok: false, error: "Check-in failed.", code: "AI_PROVIDER_ERROR" });
   }
 });
 
@@ -4462,6 +5004,121 @@ app.get("/api/me/exercises/:id/history", async (req, res) => {
   }
 });
 
+// 12b. Log completed session from WebView local logs (offline-first sync)
+app.post("/api/me/workouts/log-completed", async (req, res) => {
+  try {
+    const authUser = await accountFromBearer(req.headers.authorization);
+    if (!authUser) return res.status(401).json({ error: "Autenticazione richiesta." });
+    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Database non configurato." });
+
+    const {
+      week_number = 1,
+      session_number = 1,
+      session_name = "Sessione",
+      duration_seconds = 0,
+      athlete_program_id = null,
+      exercises = [],
+      client_ref = null
+    } = req.body || {};
+
+    if (!Array.isArray(exercises) || !exercises.length) {
+      return res.status(400).json({ error: "Nessun esercizio nella sessione." });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      if (client_ref) {
+        const dup = await client.query(
+          `SELECT id FROM app_workout_sessions WHERE user_id = $1 AND session_snapshot->>'client_ref' = $2 LIMIT 1`,
+          [authUser.id, String(client_ref)]
+        );
+        if (dup.rows.length) {
+          await client.query("COMMIT");
+          return res.json({ ok: true, duplicate: true, sessionId: dup.rows[0].id });
+        }
+      }
+
+      const sessionRes = await client.query(
+        `INSERT INTO app_workout_sessions (
+          user_id, athlete_program_id, week_number, session_number, session_name,
+          scheduled_at, started_at, completed_at, status, notes, duration_seconds, session_snapshot, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), NOW(), 'completed', '', $6, $7, NOW(), NOW())
+        RETURNING id`,
+        [
+          authUser.id,
+          athlete_program_id,
+          week_number,
+          session_number,
+          session_name,
+          duration_seconds,
+          JSON.stringify({ client_ref: client_ref || null, source: 'webview_log' })
+        ]
+      );
+      const sessionId = sessionRes.rows[0].id;
+      let setsLogged = 0;
+
+      for (let i = 0; i < exercises.length; i++) {
+        const ex = exercises[i];
+        const norm = normalizeExerciseName(ex.name || ex.exercise || 'Esercizio');
+        const exRes = await client.query(
+          `INSERT INTO app_workout_exercises (
+            workout_session_id, exercise_id, canonical_exercise_id, name, name_original,
+            muscle_group, order_index, prescribed_sets, prescribed_reps, notes, created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, '', NOW()) RETURNING id`,
+          [
+            sessionId,
+            ex.id || `ex_${i + 1}`,
+            norm.name_normalized.toLowerCase().replace(/\s+/g, '_'),
+            norm.name_normalized,
+            ex.name_original || ex.name,
+            norm.muscle || ex.muscle_group || 'TOTAL',
+            i,
+            (ex.sets || []).length || 1,
+            '8-10'
+          ]
+        );
+        const exId = exRes.rows[0].id;
+        const sets = Array.isArray(ex.sets) ? ex.sets : [];
+        for (const st of sets) {
+          if (!st.completed) continue;
+          await client.query(
+            `INSERT INTO app_workout_sets (
+              workout_exercise_id, set_number, set_type, target_reps, actual_reps,
+              target_load, actual_load, load_unit, target_rir, actual_rir,
+              target_rpe, actual_rpe, rest_seconds, completed, created_at, updated_at
+            ) VALUES ($1, $2, 'working', $3, $4, $5, $6, 'kg', $7, $8, NULL, $9, 90, true, NOW(), NOW())`,
+            [
+              exId,
+              st.set_number || 1,
+              String(st.actual_reps || st.reps || ''),
+              parseInt(st.actual_reps || st.reps, 10) || null,
+              st.actual_load != null ? String(st.actual_load) : '',
+              st.actual_load != null ? Number(st.actual_load) : null,
+              st.actual_rir != null ? Number(st.actual_rir) : null,
+              st.actual_rir != null ? Number(st.actual_rir) : null,
+              st.actual_rpe != null ? Number(st.actual_rpe) : null
+            ]
+          );
+          setsLogged++;
+        }
+      }
+
+      await client.query("COMMIT");
+      return res.status(201).json({ ok: true, sessionId, setsLogged, message: 'Sessione sincronizzata nel cloud.' });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("LOG_COMPLETED_ERROR", error);
+    return res.status(500).json({ error: "Errore sync sessione: " + error.message });
+  }
+});
+
 // 13. Batch Sync for Offline Logs
 app.post("/api/me/workouts/sync", async (req, res) => {
   try {
@@ -4507,6 +5164,29 @@ app.post("/api/me/workouts/sync", async (req, res) => {
 });
 
 
+const WEB_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "web");
+if (fsSync.existsSync(WEB_ROOT)) {
+  app.use(
+    express.static(WEB_ROOT, {
+      fallthrough: true,
+      index: false,
+      maxAge: process.env.NODE_ENV === "production" ? "1h" : 0,
+      setHeaders(res, filePath) {
+        if (/sw\.js$|manifest\.webmanifest$/i.test(filePath)) {
+          res.setHeader("Cache-Control", "no-cache");
+        }
+      }
+    })
+  );
+  app.use((req, res, next) => {
+    if (req.method !== "GET" && req.method !== "HEAD") return next();
+    if (req.path.startsWith("/api") || req.path === "/health") return next();
+    const indexPath = path.join(WEB_ROOT, "index.html");
+    if (!fsSync.existsSync(indexPath)) return next();
+    res.sendFile(indexPath);
+  });
+}
+
 app.listen(port, () => {
   const aiConfigured = Boolean(process.env.GEMINI_API_KEY);
   console.log(`Coach API server listening at http://localhost:${port}`);
@@ -4514,6 +5194,7 @@ app.listen(port, () => {
   console.log(`  GEMINI_API_KEY configured: ${aiConfigured}`);
   console.log(`  DATABASE_URL configured: ${Boolean(process.env.DATABASE_URL)}`);
   console.log(`  GOOGLE_CLIENT_ID configured: ${Boolean(process.env.GOOGLE_CLIENT_ID)}`);
+  console.log(`  SPA web root: ${fsSync.existsSync(WEB_ROOT) ? WEB_ROOT : "missing"}`);
   if (!aiConfigured) {
     console.warn("  WARNING: GEMINI_API_KEY missing — /api/chat will return 500 until configured.");
   }
