@@ -384,8 +384,9 @@ function buildCanonicalProgramFromTemplate(template) {
 
 async function initDb() {
   if (dbInitialized || !process.env.DATABASE_URL) return;
+  let client;
   try {
-    const client = await pool.connect();
+    client = await pool.connect();
     try {
       await client.query("BEGIN");
       await client.query(`
@@ -626,19 +627,95 @@ async function initDb() {
         ALTER TABLE app_athlete_programs ADD COLUMN IF NOT EXISTS customization_history JSONB DEFAULT '[]'::jsonb;
         CREATE INDEX IF NOT EXISTS idx_app_athlete_programs_template ON app_athlete_programs(template_id);
       `);
+      await client.query("COMMIT");
+      console.log("Database schema verified successfully.");
+    } catch (err) {
+      try { await client.query("ROLLBACK"); } catch (_) {}
+      console.error("DB Schema Init Error:", err);
+      throw err;
+    }
+
+    try {
+      await client.query("BEGIN");
       await seedProgramTemplates(client);
       await client.query("COMMIT");
-      dbInitialized = true;
-      console.log("Database tables verified & seeded successfully.");
-    } catch (err) {
-      await client.query("ROLLBACK");
-      console.error("DB Init Error:", err);
-    } finally {
-      client.release();
+      console.log("Database templates seeded successfully.");
+    } catch (seedErr) {
+      try { await client.query("ROLLBACK"); } catch (_) {}
+      console.error("DB Seed Error (schema already applied):", seedErr);
     }
+
+    dbInitialized = true;
   } catch (err) {
-    console.error("DB Connection Error during init:", err);
+    console.error("DB Connection/Init Error:", err);
+  } finally {
+    if (client) {
+      try { client.release(); } catch (_) {}
+    }
   }
+}
+
+/** Lightweight auth-column migration — safe to call before register/login. */
+async function ensureAuthSchema() {
+  if (!process.env.DATABASE_URL || !pool) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_users (
+      id BIGSERIAL PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      name TEXT,
+      first_name TEXT,
+      last_name TEXT,
+      password_hash TEXT,
+      provider TEXT NOT NULL DEFAULT 'email',
+      provider_id TEXT,
+      avatar_url TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      role TEXT NOT NULL DEFAULT 'athlete',
+      last_login_at TIMESTAMPTZ DEFAULT NOW(),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS app_account_data (
+      user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS first_name TEXT;
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS last_name TEXT;
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider TEXT DEFAULT 'email';
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider_id TEXT;
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'athlete';
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ DEFAULT NOW();
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_reset_hash TEXT;
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ;
+    CREATE TABLE IF NOT EXISTS app_athlete_profiles (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT UNIQUE NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+      first_name TEXT,
+      last_name TEXT,
+      birth_date DATE,
+      gender TEXT,
+      country TEXT DEFAULT 'IT',
+      language TEXT DEFAULT 'it',
+      height_cm NUMERIC(5,2),
+      weight_kg NUMERIC(5,2),
+      primary_goal TEXT,
+      secondary_goals JSONB DEFAULT '[]'::jsonb,
+      experience_level TEXT,
+      training_frequency INTEGER DEFAULT 4,
+      intensity_type TEXT DEFAULT 'RIR',
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS first_name TEXT;
+    ALTER TABLE app_athlete_profiles ADD COLUMN IF NOT EXISTS last_name TEXT;
+  `);
 }
 
 
@@ -2215,6 +2292,7 @@ app.post("/api/auth/register", async (req, res) => {
     return res.status(503).json({ error: "Database non configurato." });
   }
   try {
+    await ensureAuthSchema();
     const email = normalizeEmail(req.body?.email);
     const name = String(req.body?.name || "").trim();
     const password = String(req.body?.password || "");
@@ -2264,6 +2342,7 @@ app.post("/api/auth/login", async (req, res) => {
     return res.status(503).json({ error: "Database non configurato." });
   }
   try {
+    await ensureAuthSchema();
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || "");
     if (!email || !password) {
@@ -2308,6 +2387,7 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     return res.status(503).json({ error: "Database non configurato." });
   }
   try {
+    await ensureAuthSchema();
     const email = normalizeEmail(req.body?.email);
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
       return res.status(400).json({ error: "Inserisci un'email valida." });
@@ -2603,6 +2683,7 @@ app.post("/api/account/sync", async (req, res) => {
 
 app.post("/api/auth/google", async (req, res) => {
   try {
+    await ensureAuthSchema();
     const identity = await verifyGoogleCredential(req.body?.credential);
     return await issueOAuthResponse(req, res, identity);
   } catch (err) {
