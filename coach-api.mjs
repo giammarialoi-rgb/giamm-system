@@ -22,13 +22,16 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors({ origin: true, credentials: true }));
+app.use((req, res, next) => {
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  next();
+});
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-app.use(express.static(path.join(__dirname, "web")));
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -73,6 +76,13 @@ async function initDb() {
         ALTER TABLE app_account_data ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
         CREATE INDEX IF NOT EXISTS idx_app_users_provider ON app_users(provider, provider_id);
         CREATE INDEX IF NOT EXISTS idx_app_users_email ON app_users(email);
+        CREATE TABLE IF NOT EXISTS app_password_resets (
+          email TEXT PRIMARY KEY,
+          code_hash TEXT NOT NULL,
+          expires_at TIMESTAMPTZ NOT NULL,
+          attempts INT NOT NULL DEFAULT 0,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
       `);
       await client.query("COMMIT");
       dbInitialized = true;
@@ -105,7 +115,55 @@ function normalizeEmail(email) {
 
 const JWT_SECRET = process.env.JWT_SECRET || "gs-coach-secret-key-production-change-me";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+const GOOGLE_WEB_CLIENT_ID_FALLBACK = "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com";
 const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || "com.giammaria.system";
+
+function allowedGoogleAudiences() {
+  const ids = new Set();
+  if (GOOGLE_CLIENT_ID) ids.add(GOOGLE_CLIENT_ID.trim());
+  String(process.env.GOOGLE_CLIENT_IDS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .forEach((id) => ids.add(id));
+  if (GOOGLE_WEB_CLIENT_ID_FALLBACK) ids.add(GOOGLE_WEB_CLIENT_ID_FALLBACK);
+  return [...ids].filter((id) => id && !/mock-client-id/i.test(id));
+}
+
+function publicGoogleClientId() {
+  if (GOOGLE_CLIENT_ID && !/mock-client-id/i.test(GOOGLE_CLIENT_ID)) return GOOGLE_CLIENT_ID.trim();
+  return GOOGLE_WEB_CLIENT_ID_FALLBACK;
+}
+
+async function sendPasswordResetEmail(email, code) {
+  const from = process.env.MAIL_FROM || process.env.RESEND_FROM || "";
+  const key = process.env.RESEND_API_KEY || "";
+  if (!key || !from) return { sent: false, reason: "mail_not_configured" };
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from,
+        to: email,
+        subject: "NURVAN — codice di recupero password",
+        text: `Il tuo codice di recupero NURVAN è: ${code}\n\nScade tra 60 minuti. Se non hai richiesto il reset, ignora questa email.`
+      })
+    });
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      console.warn("PASSWORD_RESET_MAIL_FAIL", res.status, t.slice(0, 200));
+      return { sent: false, reason: "mail_failed" };
+    }
+    return { sent: true };
+  } catch (err) {
+    console.warn("PASSWORD_RESET_MAIL_ERROR", err?.message || err);
+    return { sent: false, reason: "mail_failed" };
+  }
+}
 
 function issueAccountToken(user) {
   return jwt.sign(
@@ -195,8 +253,16 @@ async function verifyGoogleCredential(idToken) {
     throw Object.assign(new Error("Failed to verify Google ID token with Google servers."), { statusCode: 401 });
   }
   const payload = await response.json();
-  if (GOOGLE_CLIENT_ID && payload.aud !== GOOGLE_CLIENT_ID) {
+  const allowed = allowedGoogleAudiences();
+  if (allowed.length && !allowed.includes(String(payload.aud || ""))) {
     throw Object.assign(new Error("Google token client ID does not match the configured web client ID."), { statusCode: 401 });
+  }
+  if (!payload.email) {
+    throw Object.assign(new Error("Google non ha fornito un’email. Consenti la condivisione email e riprova."), { statusCode: 401 });
+  }
+  const verified = payload.email_verified === true || payload.email_verified === "true";
+  if (!verified) {
+    throw Object.assign(new Error("Email Google non verificata."), { statusCode: 401 });
   }
   return {
     email: payload.email,
@@ -910,8 +976,108 @@ app.get("/health", (req, res) => {
     status: "healthy",
     model: MODEL,
     apiKeyConfigured: Boolean(process.env.GEMINI_API_KEY),
-    accountStorageConfigured: Boolean(process.env.DATABASE_URL)
+    accountStorageConfigured: Boolean(process.env.DATABASE_URL),
+    googleOAuthConfigured: allowedGoogleAudiences().length > 0
   });
+});
+
+app.get("/api/auth/public-config", (req, res) => {
+  const googleClientId = publicGoogleClientId();
+  res.json({
+    googleClientId: googleClientId || "",
+    googleEnabled: Boolean(googleClientId),
+    passwordResetEmail: Boolean(process.env.RESEND_API_KEY && (process.env.MAIL_FROM || process.env.RESEND_FROM))
+  });
+});
+
+app.post("/api/auth/forgot-password", async (req, res) => {
+  if (!process.env.DATABASE_URL) {
+    return res.status(503).json({ error: "Database not configured." });
+  }
+  try {
+    await initDb();
+    const email = normalizeEmail(req.body?.email);
+    const generic = { ok: true, message: "Se l’account esiste, usa il codice per impostare una nuova password. Valido 60 minuti." };
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      return res.status(400).json({ error: "Inserisci un’email valida." });
+    }
+    const userRes = await pool.query("SELECT id, email, password_hash, provider FROM app_users WHERE email = $1", [email]);
+    if (!userRes.rows.length) {
+      return res.json(generic);
+    }
+    const code = String(crypto.randomInt(100000, 1000000));
+    const codeHash = await hashPassword(code);
+    const expires = new Date(Date.now() + 60 * 60 * 1000);
+    await pool.query(
+      `INSERT INTO app_password_resets(email, code_hash, expires_at, attempts, created_at)
+       VALUES($1, $2, $3, 0, NOW())
+       ON CONFLICT (email) DO UPDATE SET code_hash = $2, expires_at = $3, attempts = 0, created_at = NOW()`,
+      [email, codeHash, expires.toISOString()]
+    );
+    const mailed = await sendPasswordResetEmail(email, code);
+    if (mailed.sent) {
+      return res.json({ ...generic, delivery: "email", message: "Ti abbiamo inviato un codice a 6 cifre via email. Scade tra 60 minuti." });
+    }
+    return res.json({
+      ...generic,
+      delivery: "inline",
+      code,
+      message: "Codice di recupero generato (valido 60 min). Inseriscilo sotto con la nuova password."
+    });
+  } catch (error) {
+    console.error("FORGOT_PASSWORD_ERROR", error);
+    return res.status(500).json({ error: "Recupero password non riuscito." });
+  }
+});
+
+app.post("/api/auth/reset-password", async (req, res) => {
+  if (!process.env.DATABASE_URL) {
+    return res.status(503).json({ error: "Database not configured." });
+  }
+  try {
+    await initDb();
+    const email = normalizeEmail(req.body?.email);
+    const code = String(req.body?.code || "").trim();
+    const password = String(req.body?.password || "");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || !/^\d{6}$/.test(code) || password.length < 8) {
+      return res.status(400).json({ error: "Email, codice a 6 cifre e nuova password (min. 8) sono obbligatori." });
+    }
+    const resetRes = await pool.query(
+      "SELECT email, code_hash, expires_at, attempts FROM app_password_resets WHERE email = $1",
+      [email]
+    );
+    const row = resetRes.rows[0];
+    if (!row) return res.status(400).json({ error: "Codice non valido o scaduto. Richiedine uno nuovo." });
+    if (new Date(row.expires_at).getTime() < Date.now()) {
+      await pool.query("DELETE FROM app_password_resets WHERE email = $1", [email]);
+      return res.status(400).json({ error: "Codice scaduto. Richiedine uno nuovo." });
+    }
+    if (Number(row.attempts) >= 8) {
+      await pool.query("DELETE FROM app_password_resets WHERE email = $1", [email]);
+      return res.status(429).json({ error: "Troppi tentativi. Richiedi un nuovo codice." });
+    }
+    const ok = await verifyPassword(code, row.code_hash);
+    if (!ok) {
+      await pool.query("UPDATE app_password_resets SET attempts = attempts + 1 WHERE email = $1", [email]);
+      return res.status(400).json({ error: "Codice non valido." });
+    }
+    const passwordHash = await hashPassword(password);
+    const updated = await pool.query(
+      `UPDATE app_users SET password_hash = $1, updated_at = NOW() WHERE email = $2
+       RETURNING id, email, name, provider, avatar_url`,
+      [passwordHash, email]
+    );
+    if (!updated.rows.length) return res.status(400).json({ error: "Account non trovato." });
+    await pool.query("DELETE FROM app_password_resets WHERE email = $1", [email]);
+    const user = updated.rows[0];
+    return res.json({
+      token: issueAccountToken(user),
+      user: { id: user.id, email: user.email, name: user.name, provider: user.provider || "email", avatarUrl: user.avatar_url || null }
+    });
+  } catch (error) {
+    console.error("RESET_PASSWORD_ERROR", error);
+    return res.status(500).json({ error: "Reset password non riuscito." });
+  }
 });
 
 app.post("/api/auth/register", async (req, res) => {
@@ -1382,6 +1548,8 @@ Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico
     });
   }
 });
+
+app.use(express.static(path.join(__dirname, "web")));
 
 app.listen(port, () => {
   console.log(`Coach API server listening at http://localhost:${port}`);

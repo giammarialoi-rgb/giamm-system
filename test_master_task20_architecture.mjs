@@ -337,7 +337,7 @@ async function runTestSuite() {
   const ConfigService = ctx.ConfigService;
   assert(Boolean(ConfigService), 'ConfigService is defined');
   assertEquals(ConfigService.getCoachApiUrl(), 'https://coach-api-gemini.onrender.com', 'Centralized coachApiUrl matches production endpoint');
-  assertEquals(ConfigService.getGoogleClientId(), 'mock-client-id.apps.googleusercontent.com', 'Centralized googleClientId is reachable');
+  assert(String(ConfigService.getGoogleClientId() || '').includes('.apps.googleusercontent.com'), 'Centralized googleClientId is reachable');
 
   // ---------------------------------------------------------
   // 4 & 5 & 6. UNIVERSAL IMPORT ENGINE 2.1 & REVIEW UX

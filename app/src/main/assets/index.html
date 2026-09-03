@@ -357,7 +357,7 @@ nav.bottom-nav {
 .btn-primary { background: var(--gold); color: #000; }
 .btn-outline { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
 
-.btn:active, .nav-item:active, button:active,
+.btn:active, .nav-item:active, button:active:not(.pw-toggle),
 .btn.is-pressed, .nav-item.is-pressed, button.is-pressed {
   transform: scale(0.96);
   opacity: 0.85;
@@ -374,6 +374,42 @@ select, input {
   font-size: 14px;
   box-sizing: border-box;
 }
+.pw-field {
+  position: relative;
+  margin-bottom: 8px;
+}
+.pw-field input {
+  margin-bottom: 0 !important;
+  padding-right: 46px;
+}
+.pw-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 8px;
+}
+.pw-toggle:hover, .pw-toggle:focus { color: var(--gold); outline: none; }
+.pw-toggle:active { transform: translateY(-50%); opacity: 0.85; }
+.pw-toggle svg { width: 20px; height: 20px; fill: currentColor; }
+#google-gis-btn-host {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  min-height: 0;
+  width: 100%;
+}
+#google-gis-btn-host iframe { max-width: 100%; }
 
 .perf-table {
   width: 100%;
@@ -1303,14 +1339,25 @@ body.focus-mode [data-rewards-only] {
     <form id="account-form" onsubmit="submitAccount(event)" style="margin-top:10px;">
       <input id="account-name" type="text" placeholder="Nome e cognome" autocomplete="name" style="margin-bottom:8px;display:none;">
       <input id="account-email" type="email" placeholder="Email" autocomplete="email" required style="margin-bottom:8px;">
-      <input id="account-password" type="password" placeholder="Password (minimo 8 caratteri)" autocomplete="current-password" minlength="8" required style="margin-bottom:8px;">
+      <div id="account-password-wrap" class="pw-field">
+        <input id="account-password" type="password" placeholder="Password (minimo 8 caratteri)" autocomplete="current-password" minlength="8" required>
+        <button type="button" class="pw-toggle" onclick="togglePasswordVisibility('account-password', this)" aria-label="Mostra password" title="Mostra / nascondi password">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
+        </button>
+      </div>
       <div id="account-reset-fields" style="display:none;margin-bottom:8px;">
         <input id="account-reset-code" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Codice a 6 cifre" maxlength="6" style="margin-bottom:8px;width:100%;">
-        <input id="account-reset-password" type="password" autocomplete="new-password" placeholder="Nuova password (min. 8)" minlength="8" style="width:100%;">
+        <div class="pw-field">
+          <input id="account-reset-password" type="password" autocomplete="new-password" placeholder="Nuova password (min. 8)" minlength="8">
+          <button type="button" class="pw-toggle" onclick="togglePasswordVisibility('account-reset-password', this)" aria-label="Mostra password" title="Mostra / nascondi password">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
+          </button>
+        </div>
       </div>
       <button class="btn btn-primary" type="submit" id="account-submit" style="width:100%;" data-i18n="accedi">ACCEDI</button>
     </form>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="startGoogleAuth()" id="google-auth" data-i18n="googleContinue">CONTINUA CON GOOGLE</button>
+    <div id="google-gis-btn-host"></div>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="startAppleAuth()" id="apple-auth" data-i18n="appleContinue">CONTINUA CON APPLE</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="toggleAccountMode()" id="account-mode" data-i18n="createAccount">CREA UN ACCOUNT</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="togglePasswordRecovery()" id="account-forgot">PASSWORD DIMENTICATA</button>
@@ -1577,7 +1624,7 @@ body.focus-mode [data-rewards-only] {
         appVersion: "2.5.0",
         build: "MASTER-TASK-35-AI-OS",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
-        googleClientId: "mock-client-id.apps.googleusercontent.com",
+        googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
         freeTrialDays: 14,
         features: {
@@ -1616,7 +1663,12 @@ body.focus-mode [data-rewards-only] {
             }
           } catch (_) {}
           if (native && !/mock-client-id/i.test(native)) return native;
-          return CONFIG.googleClientId || "";
+          if (typeof window !== "undefined" && window.__googleClientId && !/mock-client-id/i.test(window.__googleClientId)) {
+            return String(window.__googleClientId).trim();
+          }
+          const cfgId = String(CONFIG.googleClientId || "").trim();
+          if (cfgId && !/mock-client-id/i.test(cfgId)) return cfgId;
+          return "";
         },
         getConfig() { return { ...CONFIG }; },
         isConfigured() {
@@ -33820,7 +33872,7 @@ function openAccount(){
   $('account-form').style.display = logged ? 'none' : 'block';
   $('account-mode').style.display = logged ? 'none' : 'block';
   if ($('account-forgot')) $('account-forgot').style.display = logged ? 'none' : 'block';
-  if ($('google-auth')) $('google-auth').style.display = logged ? 'none' : 'block';
+  syncGoogleAuthButtons(logged);
   if ($('apple-auth')) $('apple-auth').style.display = logged ? 'none' : 'block';
   $('account-logout').style.display = logged ? 'block' : 'none';
   $('account-sync').style.display = logged ? 'block' : 'none';
@@ -33829,6 +33881,12 @@ function openAccount(){
   if (!logged) {
     accountRecoveryMode = false;
     syncAccountFormMode();
+    hydrateGoogleClientId().then(function (id) {
+      if (!id || store.accountToken) return;
+      loadGoogleIdentityScript().then(function () {
+        if (!store.accountToken) renderGoogleSignInButton(id);
+      }).catch(function () {});
+    }).catch(function () {});
   }
   $('account-status').textContent = logged ? 'Dati account pronti.' : 'Accedi o crea un account per sincronizzare i tuoi dati sul web e sull’app.';
 }
@@ -33840,21 +33898,30 @@ function logoutAccount(){
 function syncAccountFormMode(){
   const nameEl = $('account-name');
   const passEl = $('account-password');
+  const passWrap = $('account-password-wrap');
   const resetBox = $('account-reset-fields');
   const submit = $('account-submit');
   const modeBtn = $('account-mode');
   const forgotBtn = $('account-forgot');
+  const gisHost = $('google-gis-btn-host');
   if (accountRecoveryMode) {
     if (nameEl) { nameEl.style.display = 'none'; nameEl.required = false; }
-    if (passEl) { passEl.style.display = 'none'; passEl.required = false; }
+    if (passWrap) passWrap.style.display = 'none';
+    if (passEl) { passEl.required = false; }
     if (resetBox) resetBox.style.display = 'block';
     if (submit) submit.textContent = 'IMPOSTA NUOVA PASSWORD';
     if (modeBtn) modeBtn.textContent = 'TORNA AL LOGIN';
     if (forgotBtn) forgotBtn.textContent = 'INVIA CODICE DI RECUPERO';
+    if (gisHost) gisHost.style.display = 'none';
+    if ($('google-auth')) $('google-auth').style.display = 'none';
+    if ($('apple-auth')) $('apple-auth').style.display = 'none';
     return;
   }
   if (resetBox) resetBox.style.display = 'none';
+  if (passWrap) passWrap.style.display = 'block';
   if (passEl) { passEl.style.display = 'block'; passEl.required = true; passEl.autocomplete = accountRegisterMode ? 'new-password' : 'current-password'; }
+  if ($('apple-auth')) $('apple-auth').style.display = 'block';
+  syncGoogleAuthButtons(false);
   if (nameEl) {
     nameEl.style.display = accountRegisterMode ? 'block' : 'none';
     nameEl.required = !!accountRegisterMode;
@@ -33902,9 +33969,11 @@ async function requestPasswordResetCode(){
       body: JSON.stringify({ email })
     });
     const payload = await readApiJson(response);
-    if (payload && payload.code) {
+    if (payload && payload.delivery === 'email') {
+      if (status) status.textContent = payload.message || 'Ti abbiamo inviato un codice a 6 cifre via email. Scade tra 60 minuti.';
+    } else if (payload && payload.code) {
       if ($('account-reset-code')) $('account-reset-code').value = String(payload.code);
-      if (status) status.textContent = 'Codice generato: ' + payload.code + ' (valido 60 min). Inserisci la nuova password e conferma.';
+      if (status) status.textContent = payload.message || ('Codice: ' + payload.code + ' (valido 60 min). Inserisci la nuova password e conferma.');
     } else if (status) {
       status.textContent = payload.message || 'Se l’account esiste, usa il codice ricevuto per resettare la password.';
     }
@@ -33972,6 +34041,72 @@ async function finishOAuthLogin(payload){
     console.warn('ACCOUNT_SYNC_BG', err);
   });
 }
+function togglePasswordVisibility(inputId, btn) {
+  const el = $(inputId);
+  if (!el) return;
+  const show = el.type === 'password';
+  el.type = show ? 'text' : 'password';
+  if (btn) {
+    btn.setAttribute('aria-label', show ? 'Nascondi password' : 'Mostra password');
+    btn.innerHTML = show
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>'
+      : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>';
+  }
+}
+function isAndroidWebViewNative() {
+  const ua = String(navigator.userAgent || '');
+  return /; wv\)/i.test(ua) || /WebView/i.test(ua);
+}
+function syncGoogleAuthButtons(logged) {
+  const custom = $('google-auth');
+  const host = $('google-gis-btn-host');
+  if (logged) {
+    if (custom) custom.style.display = 'none';
+    if (host) host.style.display = 'none';
+    return;
+  }
+  if (isAndroidWebViewNative()) {
+    if (custom) custom.style.display = 'block';
+    if (host) { host.style.display = 'none'; host.innerHTML = ''; }
+    return;
+  }
+  const gisReady = !!(host && host.childElementCount);
+  if (custom) custom.style.display = gisReady ? 'none' : 'block';
+  if (host) host.style.display = 'flex';
+}
+async function hydrateGoogleClientId() {
+  const existing = resolvedGoogleClientId();
+  if (existing) {
+    window.__googleClientId = existing;
+    return existing;
+  }
+  try {
+    const response = await fetch(coachEndpoint('/api/auth/public-config'), { method: 'GET' });
+    if (!response.ok) return window.__googleClientId || '';
+    const cfg = await response.json();
+    const id = String((cfg && cfg.googleClientId) || '').trim();
+    if (id && !/mock-client-id/i.test(id)) {
+      window.__googleClientId = id;
+      if (typeof CONFIG !== 'undefined' && CONFIG) CONFIG.googleClientId = id;
+    }
+    return window.__googleClientId || id || '';
+  } catch (_) {
+    return window.__googleClientId || '';
+  }
+}
+function resolvedGoogleClientId(preferred) {
+  const candidates = [
+    preferred,
+    window.__googleClientId,
+    (typeof ConfigService !== 'undefined' && ConfigService.getGoogleClientId) ? ConfigService.getGoogleClientId() : '',
+    (typeof CONFIG !== 'undefined' && CONFIG.googleClientId) ? CONFIG.googleClientId : ''
+  ];
+  for (let i = 0; i < candidates.length; i++) {
+    const id = String(candidates[i] || '').trim();
+    if (id && !/mock-client-id/i.test(id)) return id;
+  }
+  return '';
+}
 function setGoogleAuthLoading(on, msg) {
   const el = $('google-auth-loading');
   const m = $('google-auth-loading-msg');
@@ -34005,16 +34140,10 @@ function setGoogleAuthLoading(on, msg) {
 function startGoogleAuth(){
   const status = $('account-status');
   if (status) status.textContent = 'Apertura account Google…';
-  setGoogleAuthLoading(true, 'Apertura account Google…');
   const native = nativeBridge();
-  const nativeId = (native && typeof native.getGoogleClientId === 'function')
-    ? String(native.getGoogleClientId() || '').trim()
-    : '';
-  const cfgId = (typeof ConfigService !== 'undefined' && ConfigService.getGoogleClientId)
-    ? String(ConfigService.getGoogleClientId() || '').trim()
-    : '';
-  const clientId = (nativeId && !/mock-client-id/i.test(nativeId)) ? nativeId : cfgId;
-  if (native && typeof native.startGoogleSignIn === 'function') {
+  const canNative = native && typeof native.startGoogleSignIn === 'function';
+  if (canNative && isAndroidWebViewNative()) {
+    setGoogleAuthLoading(true, 'Apertura account Google…');
     try {
       setTimeout(function () {
         try { native.startGoogleSignIn(); }
@@ -34030,8 +34159,7 @@ function startGoogleAuth(){
       return;
     }
   }
-  // Web: Google Identity Services
-  startGoogleAuthWeb(clientId).catch(function (err) {
+  startGoogleAuthWeb().catch(function (err) {
     setGoogleAuthLoading(false);
     if (status) status.textContent = (err && err.message) ? err.message : 'Accesso Google non disponibile sul web.';
   });
@@ -34057,20 +34185,11 @@ function loadGoogleIdentityScript() {
   });
 }
 
-async function startGoogleAuthWeb(preferredClientId) {
-  let clientId = String(preferredClientId || '').trim();
-  if (!clientId || /mock-client-id/i.test(clientId)) {
-    const response = await apiFetch(coachEndpoint('/api/auth/public-config'), { method: 'GET' });
-    const cfg = await readApiJson(response);
-    clientId = String((cfg && cfg.googleClientId) || '').trim();
-  }
-  if (!clientId || /mock-client-id/i.test(clientId)) {
-    throw new Error('Google Login non configurato sul server (GOOGLE_CLIENT_ID). Usa email/password.');
-  }
-  await loadGoogleIdentityScript();
-  if (!window.google || !google.accounts || !google.accounts.id) {
-    throw new Error('Google Identity Services non disponibile.');
-  }
+function renderGoogleSignInButton(clientId) {
+  const host = $('google-gis-btn-host');
+  if (!host || !window.google || !google.accounts || !google.accounts.id) return;
+  host.style.display = 'flex';
+  host.innerHTML = '';
   google.accounts.id.initialize({
     client_id: clientId,
     callback: function (resp) {
@@ -34083,26 +34202,44 @@ async function startGoogleAuthWeb(preferredClientId) {
       nativeGoogleResult(resp.credential);
     },
     auto_select: false,
-    cancel_on_tap_outside: true
+    cancel_on_tap_outside: true,
+    ux_mode: 'popup',
+    use_fedcm_for_prompt: true
   });
-  google.accounts.id.prompt(function (notification) {
-    if (notification && typeof notification.isNotDisplayed === 'function' && notification.isNotDisplayed()) {
-      // Fallback: render a one-tap button into a temporary host
-      let host = $('google-gis-btn-host');
-      if (!host) {
-        host = document.createElement('div');
-        host.id = 'google-gis-btn-host';
-        host.style.cssText = 'margin-top:10px;display:flex;justify-content:center;';
-        const form = $('account-form');
-        if (form && form.parentNode) form.parentNode.insertBefore(host, form.nextSibling);
+  const width = Math.max(240, Math.min(400, Math.floor(host.getBoundingClientRect().width || 320)));
+  google.accounts.id.renderButton(host, {
+    theme: 'filled_black',
+    size: 'large',
+    width: width,
+    text: 'continue_with',
+    shape: 'rectangular',
+    locale: 'it'
+  });
+  syncGoogleAuthButtons(!!store.accountToken);
+}
+
+async function startGoogleAuthWeb(preferredClientId) {
+  let clientId = resolvedGoogleClientId(preferredClientId);
+  if (!clientId) clientId = await hydrateGoogleClientId();
+  clientId = resolvedGoogleClientId(clientId);
+  if (!clientId) {
+    throw new Error('Google Login non configurato. Imposta GOOGLE_CLIENT_ID sul server oppure usa email/password.');
+  }
+  await loadGoogleIdentityScript();
+  if (!window.google || !google.accounts || !google.accounts.id) {
+    throw new Error('Google Identity Services non disponibile.');
+  }
+  setGoogleAuthLoading(false);
+  renderGoogleSignInButton(clientId);
+  const status = $('account-status');
+  if (status) status.textContent = 'Tocca il pulsante Google per continuare.';
+  try {
+    google.accounts.id.prompt(function (notification) {
+      if (notification && typeof notification.isNotDisplayed === 'function' && notification.isNotDisplayed()) {
+        if (status) status.textContent = 'Tocca il pulsante Google per continuare.';
       }
-      host.innerHTML = '';
-      google.accounts.id.renderButton(host, { theme: 'outline', size: 'large', width: 320, text: 'continue_with', shape: 'rectangular' });
-      setGoogleAuthLoading(false);
-      const status = $('account-status');
-      if (status) status.textContent = 'Tocca il pulsante Google qui sotto per continuare.';
-    }
-  });
+    });
+  } catch (_) {}
 }
 function startAppleAuth(){
   $('account-status').textContent = 'Apertura account Apple…';
@@ -37364,6 +37501,7 @@ function finishInit() {
   setSplashProgress(85, 'Avvio interfaccia…');
   seedExerciseDatabase();
   updateAccountButton();
+  try { hydrateGoogleClientId(); } catch (_) {}
   try { loadProgramCatalogIndex(); } catch (_) {}
   const splash = $('splash');
   if (splash) splash.style.pointerEvents = 'none';
@@ -45840,6 +45978,7 @@ if (typeof window !== 'undefined') {
   window.nativeAuthError = nativeAuthError;
   window.changeAppLanguage = changeAppLanguage;
   window.applyChromeI18n = applyChromeI18n;
+  window.togglePasswordVisibility = togglePasswordVisibility;
   window.startGoogleAuth = startGoogleAuth;
   window.startAppleAuth = startAppleAuth;
   window.startVoiceInput = startVoiceInput;
@@ -46762,6 +46901,9 @@ window.openAccount = typeof openAccount !== 'undefined' ? openAccount : window.o
 window.closeAccount = typeof closeAccount !== 'undefined' ? closeAccount : window.closeAccount;
 window.submitAccount = typeof submitAccount !== 'undefined' ? submitAccount : window.submitAccount;
 window.toggleAccountMode = typeof toggleAccountMode !== 'undefined' ? toggleAccountMode : window.toggleAccountMode;
+window.togglePasswordVisibility = typeof togglePasswordVisibility !== 'undefined' ? togglePasswordVisibility : window.togglePasswordVisibility;
+window.togglePasswordRecovery = typeof togglePasswordRecovery !== 'undefined' ? togglePasswordRecovery : window.togglePasswordRecovery;
+window.requestPasswordResetCode = typeof requestPasswordResetCode !== 'undefined' ? requestPasswordResetCode : window.requestPasswordResetCode;
 window.logoutAccount = typeof logoutAccount !== 'undefined' ? logoutAccount : window.logoutAccount;
 window.startGoogleAuth = typeof startGoogleAuth !== 'undefined' ? startGoogleAuth : window.startGoogleAuth;
 window.startAppleAuth = typeof startAppleAuth !== 'undefined' ? startAppleAuth : window.startAppleAuth;

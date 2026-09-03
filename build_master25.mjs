@@ -63,7 +63,7 @@ const CONFIG_HEADER = `<script>
         appVersion: "2.5.0",
         build: "MASTER-TASK-35-AI-OS",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
-        googleClientId: "mock-client-id.apps.googleusercontent.com",
+        googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
         freeTrialDays: 14,
         features: {
@@ -102,7 +102,12 @@ const CONFIG_HEADER = `<script>
             }
           } catch (_) {}
           if (native && !/mock-client-id/i.test(native)) return native;
-          return CONFIG.googleClientId || "";
+          if (typeof window !== "undefined" && window.__googleClientId && !/mock-client-id/i.test(window.__googleClientId)) {
+            return String(window.__googleClientId).trim();
+          }
+          const cfgId = String(CONFIG.googleClientId || "").trim();
+          if (cfgId && !/mock-client-id/i.test(cfgId)) return cfgId;
+          return "";
         },
         getConfig() { return { ...CONFIG }; },
         isConfigured() {
@@ -925,6 +930,9 @@ window.openAccount = typeof openAccount !== 'undefined' ? openAccount : window.o
 window.closeAccount = typeof closeAccount !== 'undefined' ? closeAccount : window.closeAccount;
 window.submitAccount = typeof submitAccount !== 'undefined' ? submitAccount : window.submitAccount;
 window.toggleAccountMode = typeof toggleAccountMode !== 'undefined' ? toggleAccountMode : window.toggleAccountMode;
+window.togglePasswordVisibility = typeof togglePasswordVisibility !== 'undefined' ? togglePasswordVisibility : window.togglePasswordVisibility;
+window.togglePasswordRecovery = typeof togglePasswordRecovery !== 'undefined' ? togglePasswordRecovery : window.togglePasswordRecovery;
+window.requestPasswordResetCode = typeof requestPasswordResetCode !== 'undefined' ? requestPasswordResetCode : window.requestPasswordResetCode;
 window.logoutAccount = typeof logoutAccount !== 'undefined' ? logoutAccount : window.logoutAccount;
 window.startGoogleAuth = typeof startGoogleAuth !== 'undefined' ? startGoogleAuth : window.startGoogleAuth;
 window.startAppleAuth = typeof startAppleAuth !== 'undefined' ? startAppleAuth : window.startAppleAuth;
