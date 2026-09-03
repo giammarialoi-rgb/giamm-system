@@ -2440,9 +2440,11 @@ function confirmResetSession(){
 }
 function sanitizeCoachDisplayText(raw) {
   let text = String(raw || '');
-  // Remove modify_program JSON blocks from visible reply
-  text = text.replace(/```(?:json)?\s*\{[\s\S]*?"action"\s*:\s*"modify_program"[\s\S]*?\}\s*```/gi, '');
-  text = text.replace(/\{[\s\S]*?"action"\s*:\s*"modify_program"[\s\S]*?\}/gi, '');
+  // Remove any coach action JSON (modify_program, set_nutrition, …) from visible reply
+  text = text.replace(/```(?:json)?\s*\{[\s\S]*?"(?:action|operations)"\s*:[\s\S]*?\}\s*```/gi, '');
+  text = text.replace(/\{[^{}]*"action"\s*:\s*"(?:modify_program|set_nutrition|set_supplementation|set_therapy|upsert_nutrition|replace_nutrition)"[\s\S]*?\}\s*(?=\n|$)/gi, '');
+  // Nested / multi-line action payloads
+  text = text.replace(/\{\s*"action"\s*:\s*"[^"]+"\s*,\s*"summary"\s*:[\s\S]*?"operations"\s*:\s*\[[\s\S]*?\]\s*\}/gi, '');
   // Strip markdown markers that look like "random characters" when spoken/shown badly
   text = text
     .replace(/```[\s\S]*?```/g, ' ')
@@ -2458,6 +2460,168 @@ function sanitizeCoachDisplayText(raw) {
     .trim();
   return text;
 }
+
+function buildNutritionPlanFromProfile(overrides) {
+  overrides = overrides || {};
+  const prof = store.profile || {};
+  const weight = parseFloat(overrides.weight != null ? overrides.weight : prof.weight) || 75;
+  const height = parseFloat(overrides.height != null ? overrides.height : prof.height) || 175;
+  const age = parseInt(overrides.age != null ? overrides.age : prof.age, 10) || 30;
+  const sex = String(overrides.sex != null ? overrides.sex : (prof.sex || 'm')).toLowerCase();
+  const goal = String(overrides.goal != null ? overrides.goal : (prof.goal || prof.primary_goal || '')).toLowerCase();
+  let bmr = (10 * weight) + (6.25 * height) - (5 * age) + (sex.indexOf('f') === 0 ? -161 : 5);
+  let tdee = Math.round(bmr * 1.55);
+  if (/dimagr|cut|defin/.test(goal)) tdee = Math.round(tdee * 0.85);
+  else if (/massa|ipertrof|bulk/.test(goal)) tdee = Math.round(tdee * 1.1);
+  let protein = Math.round(weight * (/forza|massa|ipertrof/.test(goal) ? 2.0 : 1.8));
+  let fat = Math.round(weight * 0.8);
+  let carbs = Math.max(80, Math.round((tdee - protein * 4 - fat * 9) / 4));
+  if (Number.isFinite(Number(overrides.protein)) && Number(overrides.protein) > 0) protein = Math.round(Number(overrides.protein));
+  if (Number.isFinite(Number(overrides.carbs)) && Number(overrides.carbs) > 0) carbs = Math.round(Number(overrides.carbs));
+  if (Number.isFinite(Number(overrides.fat)) && Number(overrides.fat) > 0) fat = Math.round(Number(overrides.fat));
+  if (Number.isFinite(Number(overrides.kcal)) && Number(overrides.kcal) > 0) tdee = Math.round(Number(overrides.kcal));
+  else tdee = Math.round(protein * 4 + carbs * 4 + fat * 9);
+  return {
+    present: true,
+    plan_name: 'Piano da profilo · Nurvan',
+    daily_calories_target: tdee,
+    daily_protein_target: protein,
+    daily_carbs_target: carbs,
+    daily_fats_target: fat,
+    notes: 'Piano organizzativo evidence-informed (proteine ~1.6–2.2 g/kg; non è diagnosi o terapia).',
+    days: [
+      {
+        day: 'Giorno tipo',
+        meals: [
+          { name: 'Colazione', foods: [
+            { name: 'Avena', quantity: 60, unit: 'g', kcal: 230, protein: 8, carbs: 40, fat: 4 },
+            { name: 'Yogurt greco 0%', quantity: 150, unit: 'g', kcal: 90, protein: 15, carbs: 6, fat: 0 },
+            { name: 'Frutti di bosco', quantity: 100, unit: 'g', kcal: 50, protein: 1, carbs: 12, fat: 0 }
+          ]},
+          { name: 'Pranzo', foods: [
+            { name: 'Petto di pollo', quantity: 150, unit: 'g', kcal: 248, protein: 46, carbs: 0, fat: 5 },
+            { name: 'Riso basmati', quantity: 80, unit: 'g', kcal: 280, protein: 6, carbs: 62, fat: 1 },
+            { name: 'Insalata mista', quantity: 150, unit: 'g', kcal: 30, protein: 2, carbs: 5, fat: 0 },
+            { name: 'Olio EVO', quantity: 10, unit: 'g', kcal: 90, protein: 0, carbs: 0, fat: 10 }
+          ]},
+          { name: 'Cena', foods: [
+            { name: 'Salmone', quantity: 150, unit: 'g', kcal: 300, protein: 30, carbs: 0, fat: 20 },
+            { name: 'Patate', quantity: 200, unit: 'g', kcal: 160, protein: 4, carbs: 36, fat: 0 },
+            { name: 'Verdure al vapore', quantity: 200, unit: 'g', kcal: 50, protein: 3, carbs: 8, fat: 0 }
+          ]},
+          { name: 'Snack', foods: [
+            { name: 'Whey protein', quantity: 30, unit: 'g', kcal: 120, protein: 24, carbs: 2, fat: 1 },
+            { name: 'Banana', quantity: 1, unit: 'porzioni', kcal: 90, protein: 1, carbs: 23, fat: 0 }
+          ]}
+        ]
+      }
+    ]
+  };
+}
+
+function buildDefaultSupplementationFromProfile() {
+  return {
+    present: true,
+    protocol_name: 'Integrazione da profilo · Nurvan',
+    items: [
+      { name: 'Creatina monoidrato', dose: '5', unit: 'g', timing: 'Qualsiasi momento', frequency: 'Quotidiano', notes: 'Evidenza solida su forza/massa; non è farmaco.' },
+      { name: 'Vitamina D3', dose: '2000', unit: 'UI', timing: 'Con un pasto', frequency: 'Quotidiano', notes: 'Utile se esposizione solare scarsa — conferma con esami/medico.' },
+      { name: 'Omega-3 (EPA+DHA)', dose: '1–2', unit: 'g', timing: 'Con pasto', frequency: 'Quotidiano', notes: 'Supporto generale; non sostituisce terapia.' },
+      { name: 'Proteine whey (opz.)', dose: '20–40', unit: 'g', timing: 'Post-allenamento o snack', frequency: 'Se serve a target proteico', notes: 'Convenienza, non obbligatoria.' }
+    ]
+  };
+}
+
+function normalizeNutritionFromChanges(changes, op) {
+  const c = changes || {};
+  let nutr = c.nutrition || c.plan || c.data || (op && op.nutrition);
+  if (nutr && typeof nutr === 'object') {
+    if (!nutr.present) nutr.present = true;
+    return nutr;
+  }
+  const protein = Number(c.proteins_g ?? c.protein_g ?? c.protein ?? c.daily_protein_target);
+  const carbs = Number(c.carbs_g ?? c.carbohydrates_g ?? c.carbs ?? c.daily_carbs_target);
+  const fat = Number(c.fats_g ?? c.fat_g ?? c.fat ?? c.fats ?? c.daily_fats_target);
+  const kcal = Number(c.calories ?? c.kcal ?? c.daily_calories_target ?? c.calories_kcal);
+  if ([protein, carbs, fat, kcal].some(function (n) { return Number.isFinite(n) && n > 0; })) {
+    return buildNutritionPlanFromProfile({
+      protein: Number.isFinite(protein) && protein > 0 ? protein : undefined,
+      carbs: Number.isFinite(carbs) && carbs > 0 ? carbs : undefined,
+      fat: Number.isFinite(fat) && fat > 0 ? fat : undefined,
+      kcal: Number.isFinite(kcal) && kcal > 0 ? kcal : undefined
+    });
+  }
+  return null;
+}
+
+function normalizeCoachProposedAction(raw, replyText) {
+  let action = raw && typeof raw === 'object' ? raw : null;
+  if (!action && replyText) {
+    const fromFence = String(replyText).match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/i);
+    if (fromFence) {
+      try { action = JSON.parse(fromFence[1]); } catch (_) {}
+    }
+    if (!action) action = extractJsonObject(replyText);
+  }
+  if (!action || typeof action !== 'object') return null;
+
+  // Flat macro payload → wrap as set_nutrition operation
+  if (!Array.isArray(action.operations) && (action.proteins_g != null || action.carbs_g != null || action.fats_g != null || action.type === 'set_nutrition')) {
+    action = {
+      action: 'set_nutrition',
+      summary: action.summary || 'Impostazione target macronutrienti',
+      operations: [{ type: 'set_nutrition', changes: action.changes || action }]
+    };
+  }
+
+  if (!Array.isArray(action.operations) || !action.operations.length) return null;
+
+  action.operations = action.operations.map(function (op) {
+    if (!op || typeof op !== 'object') return op;
+    const type = op.type || action.action;
+    const changes = Object.assign({}, op.changes || {});
+    if (type === 'set_nutrition' || type === 'upsert_nutrition' || type === 'replace_nutrition') {
+      const nutr = normalizeNutritionFromChanges(changes, op);
+      if (nutr) return { type: 'set_nutrition', changes: { nutrition: nutr } };
+    }
+    if (type === 'set_supplementation' || type === 'upsert_supplementation' || type === 'replace_supplementation') {
+      let supp = changes.supplementation || changes.plan || changes.data || op.supplementation;
+      if (!supp && Array.isArray(changes.items)) supp = { items: changes.items, present: true };
+      if (supp && typeof supp === 'object') {
+        if (!supp.present) supp.present = true;
+        return { type: 'set_supplementation', changes: { supplementation: supp } };
+      }
+    }
+    return Object.assign({}, op, { type: type || op.type, changes: changes });
+  }).filter(Boolean);
+
+  if (!action.operations.length) return null;
+  if (!action.summary) action.summary = 'Proposta Coach AI';
+  if (!action.action) action.action = 'modify_program';
+  return action;
+}
+
+function askCoachAiForDomain(domain) {
+  const map = {
+    nutrition: 'Crea e importa un piano alimentare completo basato sul mio profilo generale, peso, obiettivi e programma di allenamento. Imposta i target macro e un giorno tipo con pasti. Confermo l’inserimento in Alimentazione.',
+    supplements: 'Crea e importa un protocollo di integrazione basato sul mio profilo e obiettivi (evidence-informed, non consulenza medica). Confermo l’inserimento in Integrazione.',
+    therapy: 'In base al mio profilo generale, aiutami a organizzare la sezione Terapia: NON inventare farmaci. Se non ho indicato molecole, proponi solo la struttura da compilare e ricordami di usare solo quanto prescritto dal medico.',
+    training: 'In base al mio profilo e obiettivi, proponi o completa l’allenamento da inserire nel programma attivo.',
+    all: 'In base al mio profilo generale e obiettivi, proponi alimentazione e integrazione da salvare (non inventare terapia farmacologica).'
+  };
+  const msg = map[domain] || map.nutrition;
+  navigate('ai');
+  setTimeout(function () {
+    const input = $('ai-input');
+    if (input) input.value = msg;
+    if (typeof askAIInner === 'function') {
+      withBusy(function () { return askAIInner(msg); }, 'Nurvan AI sta pensando…', { immediate: true });
+    } else if (typeof askAI === 'function') {
+      askAI();
+    }
+  }, 180);
+}
+window.askCoachAiForDomain = askCoachAiForDomain;
 
 function markdownToHtml(value){
   let text = esc(sanitizeCoachDisplayText(value)).replace(/\r\n/g, '\n');
@@ -3510,11 +3674,15 @@ function applyOperationsToProgram(program, operations) {
       continue;
     }
     if (type === 'set_nutrition' || type === 'upsert_nutrition' || type === 'replace_nutrition') {
-      const nutr = changes.nutrition || changes.plan || changes.data || op.nutrition;
+      const nutr = normalizeNutritionFromChanges(changes, op);
       if (nutr && typeof nutr === 'object') {
         if (!nutr.present) nutr.present = true;
+        if (!DATA || typeof DATA !== 'object') {
+          DATA = { title: 'Nurvan', weeks: [], nutrition: null, supplementation: null, therapy: null, exams: null };
+        }
         DATA.nutrition = nutr;
         store.nutrition = nutr;
+        cloned.nutrition = nutr;
         appliedCount++;
         metaNotes.push('nutrition');
       }
@@ -5777,6 +5945,7 @@ function renderNutrition(c) {
         <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${t('nutrition')}</h1>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain('nutrition')">CHIEDI A COACH AI</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="startDomainImport('nutrition')">${t('importNutrition')}</button>
         <button class="btn btn-primary" style="font-size:10px;padding:6px 12px;" onclick="addNutritionDay()">${t('addDay')}</button>
       </div>
@@ -5800,7 +5969,8 @@ function renderNutrition(c) {
         <p style="margin:0;font-size:13px;color:#ccc;">${t('emptyNutrition')}</p>
         <p style="margin:10px 0 0;font-size:11px;color:#666;">Puoi importare un file, aggiungere un giorno della settimana, oppure compilare il profilo e generare un piano suggerito.</p>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
-          <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="addNutritionDay()">${t('addDay')}</button>
+          <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="askCoachAiForDomain('nutrition')">CHIEDI A COACH AI (DA PROFILO)</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="addNutritionDay()">${t('addDay')}</button>
           <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="startDomainImport('nutrition')">${t('importNutrition')}</button>
         </div>
       </div>
@@ -6218,6 +6388,7 @@ function renderSupplements(c) {
         <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${t('supplementation')}</h1>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain('supplements')">CHIEDI A COACH AI</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="startDomainImport('supplements')">${t('importSupplements')}</button>
         <button class="btn btn-primary" style="font-size:10px;padding:6px 12px;" onclick="openAddSupplementModal()">${t('addItem')}</button>
       </div>
@@ -6239,7 +6410,11 @@ function renderSupplements(c) {
       <div class="card" style="text-align:center;padding:30px 15px;color:#888;">
         <div style="font-size:24px;margin-bottom:8px;">🧴</div>
         <p style="margin:0;font-size:12px;">Nessun integratore importato o aggiunto.</p>
-        <p style="margin:8px 0 0;font-size:11px;color:#666;">Importa una scheda con sezione Integrazione oppure aggiungi dal catalogo.</p>
+        <p style="margin:8px 0 0;font-size:11px;color:#666;">Importa una scheda con sezione Integrazione, chiedi a Coach AI in base al profilo, oppure aggiungi dal catalogo.</p>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
+          <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="askCoachAiForDomain('supplements')">CHIEDI A COACH AI (DA PROFILO)</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="startDomainImport('supplements')">${t('importSupplements')}</button>
+        </div>
       </div>
     `;
     c.innerHTML = html;
@@ -6499,8 +6674,11 @@ function renderTherapy(c) {
         <span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">MEDICAL THERAPY TRACKER</span>
         <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${t('therapy')}</h1>
       </div>
-      <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="startDomainImport('therapy')">${t('importTherapy')}</button>
-      <button class="btn btn-primary" style="font-size:10px;padding:6px 12px;" onclick="openAddTherapyModal()">+ AGGIUNGI FARMACO</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain('therapy')">CHIEDI A COACH AI</button>
+        <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="startDomainImport('therapy')">${t('importTherapy')}</button>
+        <button class="btn btn-primary" style="font-size:10px;padding:6px 12px;" onclick="openAddTherapyModal()">+ AGGIUNGI FARMACO</button>
+      </div>
     </div>
 
     <!-- Medical disclaimer badge -->
@@ -8343,7 +8521,11 @@ function renderImport(c){
       <h3 style="font-size:15px; color:#fff; font-weight:900; margin-bottom:6px;">Carica PDF / Excel / Word / Foto scheda</h3>
       <p style="font-size:11px; color:#888; max-width:400px; margin:0 auto 16px;">Formati: XLSX, XLS, CSV, TXT, PDF, DOC, DOCX, PNG, JPG, WEBP, JSON — oppure fotografa la scheda. Fedeltà: 4x12 = 4 serie; dropset viene preimpostato.</p>
       <button class="btn btn-primary" id="btn-import-file" style="font-size:13px; font-weight:800; padding:12px 24px; min-height:46px; width:100%; max-width:280px; margin:0 auto 10px;" onclick="triggerImportFileSelect()">IMPORTA FILE SCHEDA</button>
-      <button class="btn btn-outline" id="btn-import-camera" style="font-size:12px; font-weight:800; padding:10px 20px; min-height:44px; width:100%; max-width:280px; margin:0 auto; border-color:var(--gold); color:var(--gold);" onclick="triggerImportCamera()">FOTOGRAFA SCHEDA</button>
+      <button class="btn btn-outline" id="btn-import-camera" style="font-size:12px; font-weight:800; padding:10px 20px; min-height:44px; width:100%; max-width:280px; margin:0 auto 10px; border-color:var(--gold); color:var(--gold);" onclick="triggerImportCamera()">FOTOGRAFA SCHEDA</button>
+      ${(importDomain === 'nutrition' || importDomain === 'supplements' || importDomain === 'therapy' || importDomain === 'all') ? `
+      <button class="btn btn-outline" style="font-size:11px;font-weight:800;padding:10px 16px;min-height:44px;width:100%;max-width:320px;margin:10px auto 0;border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain('${importDomain === 'all' ? 'all' : importDomain}')">CHIEDI A COACH AI DI INSERIRLA IN BASE AL MIO PROFILO</button>
+      <div style="font-size:10px;color:#666;margin-top:8px;max-width:320px;margin-left:auto;margin-right:auto;">Usa profilo, obiettivi e programma attivi. Per la terapia non inventa farmaci.</div>
+      ` : ''}
     </div>
 
     <div class="card">
@@ -11869,8 +12051,13 @@ function formatOperationDescription(op) {
     return `Aggiorna profilo <b>${esc(k)}</b>`;
   }
   if(type === 'set_nutrition' || type === 'upsert_nutrition' || type === 'replace_nutrition') {
-    const n = op.changes?.nutrition || {};
-    return `Salva piano nutrizionale (~${esc(String(n.daily_calories_target || '?'))} kcal)`;
+    const n = (op.changes && (op.changes.nutrition || op.changes)) || {};
+    const kcal = n.daily_calories_target || n.calories || '?';
+    const p = n.daily_protein_target || n.proteins_g || n.protein;
+    const c = n.daily_carbs_target || n.carbs_g || n.carbs;
+    const f = n.daily_fats_target || n.fats_g || n.fat;
+    const macros = [p != null ? ('P ' + p) : '', c != null ? ('C ' + c) : '', f != null ? ('F ' + f) : ''].filter(Boolean).join(' / ');
+    return `Salva piano nutrizionale (~${esc(String(kcal))} kcal${macros ? '; ' + esc(macros) + ' g' : ''})`;
   }
   if(type === 'set_supplementation' || type === 'upsert_supplementation' || type === 'replace_supplementation') {
     const items = (op.changes?.supplementation && op.changes.supplementation.items) || op.changes?.items || [];
@@ -11881,11 +12068,13 @@ function formatOperationDescription(op) {
 }
 
 async function applyCoachProposal(proposalId) {
-  const proposal = window.activeCoachProposals[proposalId];
+  let proposal = window.activeCoachProposals[proposalId];
+  proposal = normalizeCoachProposedAction(proposal, null) || proposal;
   if(!proposal || !Array.isArray(proposal.operations)) {
     alert('Proposta non valida o già applicata.');
     return;
   }
+  window.activeCoachProposals[proposalId] = proposal;
   const actionsDiv = $(`actions-${proposalId}`);
   if(actionsDiv) actionsDiv.innerHTML = `<span style="font-size:11px;color:var(--gold);">Applicazione modifiche atomiche in corso…</span>`;
 
@@ -12177,76 +12366,37 @@ function tryLocalWeekLoadCoach(q) {
 
 function tryLocalNutritionPlanCoach(q) {
   const text = String(q || '');
-  if (!/\b(nutriz|aliment|dieta|meal\s*plan|piano\s+aliment|integraz|supplement)/i.test(text)) return null;
-  if (!/\b(crea|genera|imposta|costruisci|prepara|fammi|voglio)\b/i.test(text) && !/\bbasat[oa].{0,30}(profilo|allenament|training)/i.test(text)) return null;
-  const prof = store.profile || {};
-  const weight = parseFloat(prof.weight) || 75;
-  const height = parseFloat(prof.height) || 175;
-  const age = parseInt(prof.age, 10) || 30;
-  const sex = String(prof.sex || 'm').toLowerCase();
-  const goal = String(prof.goal || prof.primary_goal || '').toLowerCase();
-  // Mifflin-St Jeor style estimate — organizational framing only
-  let bmr = (10 * weight) + (6.25 * height) - (5 * age) + (sex.indexOf('f') === 0 ? -161 : 5);
-  let tdee = Math.round(bmr * 1.55);
-  if (/dimagr|cut|defin/.test(goal)) tdee = Math.round(tdee * 0.85);
-  else if (/massa|ipertrof|bulk/.test(goal)) tdee = Math.round(tdee * 1.1);
-  const protein = Math.round(weight * (/forza|massa|ipertrof/.test(goal) ? 2.0 : 1.8));
-  const fat = Math.round(weight * 0.8);
-  const carbs = Math.max(80, Math.round((tdee - protein * 4 - fat * 9) / 4));
-  const nutrition = {
-    present: true,
-    daily_calories_target: tdee,
-    daily_protein_target: protein,
-    daily_carbs_target: carbs,
-    daily_fats_target: fat,
-    notes: 'Piano organizzativo evidence-informed (proteine ~1.6–2.2 g/kg; non è diagnosi o terapia).',
-    days: [
-      {
-        day: 'Giorno tipo',
-        meals: [
-          { name: 'Colazione', foods: [
-            { name: 'Avena', quantity: 60, unit: 'g', kcal: 230, protein: 8, carbs: 40, fat: 4 },
-            { name: 'Yogurt greco 0%', quantity: 150, unit: 'g', kcal: 90, protein: 15, carbs: 6, fat: 0 },
-            { name: 'Frutti di bosco', quantity: 100, unit: 'g', kcal: 50, protein: 1, carbs: 12, fat: 0 }
-          ]},
-          { name: 'Pranzo', foods: [
-            { name: 'Petto di pollo', quantity: 150, unit: 'g', kcal: 248, protein: 46, carbs: 0, fat: 5 },
-            { name: 'Riso basmati', quantity: 80, unit: 'g', kcal: 280, protein: 6, carbs: 62, fat: 1 },
-            { name: 'Insalata mista', quantity: 150, unit: 'g', kcal: 30, protein: 2, carbs: 5, fat: 0 },
-            { name: 'Olio EVO', quantity: 10, unit: 'g', kcal: 90, protein: 0, carbs: 0, fat: 10 }
-          ]},
-          { name: 'Cena', foods: [
-            { name: 'Salmone', quantity: 150, unit: 'g', kcal: 300, protein: 30, carbs: 0, fat: 20 },
-            { name: 'Patate', quantity: 200, unit: 'g', kcal: 160, protein: 4, carbs: 36, fat: 0 },
-            { name: 'Verdure al vapore', quantity: 200, unit: 'g', kcal: 50, protein: 3, carbs: 8, fat: 0 }
-          ]},
-          { name: 'Snack', foods: [
-            { name: 'Whey protein', quantity: 30, unit: 'g', kcal: 120, protein: 24, carbs: 2, fat: 1 },
-            { name: 'Banana', quantity: 1, unit: 'porzioni', kcal: 90, protein: 1, carbs: 23, fat: 0 }
-          ]}
-        ]
-      }
-    ]
-  };
-  const supplementation = {
-    present: true,
-    items: [
-      { name: 'Creatina monoidrato', dose: '5', unit: 'g', timing: 'Qualsiasi momento', frequency: 'Quotidiano', notes: 'Evidenza solida su forza/massa; non è farmaco.' },
-      { name: 'Vitamina D3', dose: '2000', unit: 'UI', timing: 'Con un pasto', frequency: 'Quotidiano', notes: 'Utile se esposizione solare scarsa — conferma con esami/medico.' },
-      { name: 'Omega-3 (EPA+DHA)', dose: '1–2', unit: 'g', timing: 'Con pasto', frequency: 'Quotidiano', notes: 'Supporto generale; non sostituisce terapia.' },
-      { name: 'Proteine whey (opz.)', dose: '20–40', unit: 'g', timing: 'Post-allenamento o snack', frequency: 'Se serve a target proteico', notes: 'Convenienza, non obbligatoria.' }
-    ]
-  };
+  const wantsNutr = /\b(nutriz|aliment|dieta|meal\s*plan|piano\s+aliment|macro|calorie|proteine|pasto)\b/i.test(text);
+  const wantsSupp = /\b(integraz|supplement|creatina|whey|omega)\b/i.test(text);
+  if (!wantsNutr && !wantsSupp) return null;
+  const action = /\b(crea|genera|imposta|costruisci|prepara|fammi|voglio|importa|aggiungi|confermo|salva|inserisci|compila|attiva)\b/i.test(text)
+    || /\bbasat[oa].{0,40}(profilo|allenament|training|obiettiv)/i.test(text)
+    || /\bin\s+base\s+a\s+(il\s+mio\s+|mio\s+)?profilo/i.test(text)
+    || /\bprofilo\s+generale\b/i.test(text);
+  if (!action) return null;
+
+  const nutrition = buildNutritionPlanFromProfile();
+  const supplementation = buildDefaultSupplementationFromProfile();
+  const ops = [];
+  if (wantsNutr) ops.push({ type: 'set_nutrition', changes: { nutrition: nutrition } });
+  if (wantsSupp || wantsNutr) ops.push({ type: 'set_supplementation', changes: { supplementation: supplementation } });
+  if (wantsNutr) ops.push({ type: 'navigate', changes: { view: 'nutrition' } });
+  else ops.push({ type: 'navigate', changes: { view: 'supplements' } });
+
+  const tdee = nutrition.daily_calories_target;
+  const protein = nutrition.daily_protein_target;
+  const carbs = nutrition.daily_carbs_target;
+  const fat = nutrition.daily_fats_target;
+  const parts = [];
+  if (wantsNutr) parts.push('nutrizionale');
+  if (wantsSupp || wantsNutr) parts.push('di integrazione');
   return {
-    reply: 'Ho preparato un piano nutrizionale e di integrazione basato su profilo e obiettivo (stimati ~' + tdee + ' kcal, P ' + protein + ' / C ' + carbs + ' / F ' + fat + ' g). È un quadro organizzativo evidence-informed, non consulenza medica. Conferma APPLICA E SALVA per scriverlo nelle sezioni Alimentazione e Integrazione.',
+    reply: 'Ho preparato un piano ' + parts.join(' e ') +
+      ' basato su profilo e obiettivo (stimati ~' + tdee + ' kcal, P ' + protein + ' / C ' + carbs + ' / F ' + fat + ' g). È un quadro organizzativo evidence-informed, non consulenza medica. Conferma APPLICA E SALVA per scriverlo nelle sezioni dedicate.',
     proposed_action: {
       action: 'modify_program',
-      summary: 'Salva nutrizione + integrazione (evidence-informed)',
-      operations: [
-        { type: 'set_nutrition', changes: { nutrition: nutrition } },
-        { type: 'set_supplementation', changes: { supplementation: supplementation } },
-        { type: 'navigate', changes: { view: 'nutrition' } }
-      ]
+      summary: 'Salva ' + (wantsNutr ? 'nutrizione' : '') + (wantsNutr && (wantsSupp || wantsNutr) ? ' + ' : '') + ((wantsSupp || wantsNutr) ? 'integrazione' : '') + ' (da profilo)',
+      operations: ops
     },
     local: true
   };
@@ -12521,15 +12671,13 @@ async function askAIInner(q0){
     const reply = String(payload.reply || payload.message || payload.response || '').trim();
     if(!reply) throw new Error('Risposta vuota del server');
 
-    let proposedAction = payload.proposed_action || null;
-    if(!proposedAction) {
-      const match = reply.match(/```(?:json)?\s*(\{[^]*?"action"\s*:\s*"modify_program"[^]*?\})\s*```/i);
-      if(match) {
-        try { proposedAction = JSON.parse(match[1]); } catch(_) {}
-      }
+    let proposedAction = normalizeCoachProposedAction(payload.proposed_action || null, reply);
+    if (!proposedAction) {
+      proposedAction = normalizeCoachProposedAction(null, reply);
     }
     const cleanReply = sanitizeCoachDisplayText(reply);
-    if (!cleanReply) throw new Error('Risposta Coach non leggibile. Riprova con una domanda più semplice.');
+    const displayReply = cleanReply || (proposedAction && (proposedAction.summary || 'Ho preparato una proposta da applicare.')) || '';
+    if (!displayReply) throw new Error('Risposta Coach non leggibile. Riprova con una domanda più semplice.');
 
     const claims = Array.isArray(payload.claims) ? payload.claims : [];
     const claimsHtml = claims.length
@@ -12542,9 +12690,9 @@ async function askAIInner(q0){
         }).join('') + '</div>'
       : '';
 
-    pending.innerHTML = markdownToHtml(cleanReply) + claimsHtml;
-    lastCoachReply = cleanReply;
-    offerSpeakCoachReply(cleanReply);
+    pending.innerHTML = markdownToHtml(displayReply) + claimsHtml;
+    lastCoachReply = displayReply;
+    offerSpeakCoachReply(displayReply);
     scrollCoachToLatest(h, pending);
 
     if(proposedAction && Array.isArray(proposedAction.operations) && proposedAction.operations.length) {
@@ -12556,9 +12704,12 @@ async function askAIInner(q0){
       card.style.border = '1px solid var(--gold)';
       card.style.marginTop = '10px';
       card.style.background = '#111';
+      const applyLabel = proposedAction.operations.some(function (op) {
+        return op && (op.type === 'set_nutrition' || op.type === 'set_supplementation');
+      }) ? 'APPLICA E SALVA' : 'APPLICA MODIFICHE';
       card.innerHTML = `
         <div class="card-header" style="background:rgba(212,175,55,0.1);">
-          <h2 style="font-size:11px;">🤖 IL COACH PROPONE UNA MODIFICA AL PROGRAMMA</h2>
+          <h2 style="font-size:11px;">IL COACH PROPONE UNA MODIFICA</h2>
         </div>
         <div style="padding:12px;font-size:11px;">
           <b style="color:var(--gold);">${esc(proposedAction.summary || 'Modifiche proposte')}</b>
@@ -12567,14 +12718,14 @@ async function askAIInner(q0){
           </ul>
           <div style="display:flex;gap:8px;margin-top:12px;" id="actions-${propId}">
             <button class="btn btn-outline" style="flex:1;font-size:10px;padding:8px;" onclick="cancelCoachProposal('${propId}')">ANNULLA</button>
-            <button class="btn btn-primary" style="flex:1;font-size:10px;padding:8px;" onclick="applyCoachProposal('${propId}')">APPLICA MODIFICHE</button>
+            <button class="btn btn-primary" style="flex:1;font-size:10px;padding:8px;" onclick="applyCoachProposal('${propId}')">${applyLabel}</button>
           </div>
         </div>
       `;
       h.appendChild(card);
-      store.chatHistory.push({ role: 'assistant', text: cleanReply, proposalId: propId, proposedAction: proposedAction });
+      store.chatHistory.push({ role: 'assistant', text: displayReply, proposalId: propId, proposedAction: proposedAction });
     } else {
-      store.chatHistory.push({ role: 'assistant', text: cleanReply });
+      store.chatHistory.push({ role: 'assistant', text: displayReply });
     }
     persist();
   } catch(err) {
