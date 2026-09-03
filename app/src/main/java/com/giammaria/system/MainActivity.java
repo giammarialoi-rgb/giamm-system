@@ -14,7 +14,10 @@ import android.webkit.ValueCallback;
 import android.webkit.PermissionRequest;
 import android.net.Uri;
 import android.content.Intent;
+import android.content.ContentValues;
 import android.database.Cursor;
+import android.provider.MediaStore;
+import android.widget.Toast;
 import android.provider.OpenableColumns;
 import android.app.AlertDialog;
 import android.util.Log;
@@ -31,6 +34,7 @@ import android.speech.tts.TextToSpeech;
 import androidx.core.content.FileProvider;
 import org.json.JSONObject;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -795,6 +799,94 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void stopSpeech() {
             runOnUiThread(() -> { if (textToSpeech != null) textToSpeech.stop(); });
+        }
+
+        private File writeShareCache(byte[] bytes, String filename) throws Exception {
+            File dir = new File(getCacheDir(), "share");
+            if (!dir.exists() && !dir.mkdirs()) {
+                Log.w("GiammariaWebView", "share cache mkdir failed");
+            }
+            String safe = (filename == null || filename.trim().isEmpty())
+                    ? ("nurvan-" + System.currentTimeMillis())
+                    : filename.replaceAll("[^a-zA-Z0-9._\\-àèéìòùÀÈÉÌÒÙ ]", "_");
+            if (safe.length() > 80) safe = safe.substring(0, 80);
+            File out = new File(dir, safe);
+            try (FileOutputStream fos = new FileOutputStream(out)) {
+                fos.write(bytes);
+            }
+            return out;
+        }
+
+        private boolean saveToDownloads(byte[] bytes, String filename, String mime) {
+            try {
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Downloads.DISPLAY_NAME, filename);
+                values.put(MediaStore.Downloads.MIME_TYPE, mime != null ? mime : "application/pdf");
+                if (Build.VERSION.SDK_INT >= 29) {
+                    values.put(MediaStore.Downloads.IS_PENDING, 1);
+                    Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                    if (uri == null) return false;
+                    try (OutputStream os = getContentResolver().openOutputStream(uri)) {
+                        if (os == null) return false;
+                        os.write(bytes);
+                    }
+                    values.clear();
+                    values.put(MediaStore.Downloads.IS_PENDING, 0);
+                    getContentResolver().update(uri, values, null, null);
+                    return true;
+                }
+            } catch (Exception e) {
+                Log.e("GiammariaWebView", "saveToDownloads failed", e);
+            }
+            return false;
+        }
+
+        /** Save any file (PDF, etc.) into Downloads. */
+        @JavascriptInterface
+        public void downloadFile(String base64, String filename, String mime) {
+            runOnUiThread(() -> {
+                try {
+                    if (base64 == null || base64.isEmpty()) return;
+                    byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+                    String name = (filename == null || filename.isEmpty()) ? "Nurvan.pdf" : filename;
+                    String type = (mime == null || mime.isEmpty()) ? "application/pdf" : mime;
+                    boolean ok = saveToDownloads(bytes, name, type);
+                    Toast.makeText(MainActivity.this, ok ? ("PDF salvato in Download: " + name) : "Impossibile salvare il PDF", Toast.LENGTH_LONG).show();
+                } catch (Exception e) {
+                    Log.e("GiammariaWebView", "downloadFile failed", e);
+                    Toast.makeText(MainActivity.this, "Errore salvataggio PDF", Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+
+        /** Share any file (PDF) via Android ACTION_SEND — WhatsApp, Drive, Mail, Salva. */
+        @JavascriptInterface
+        public void shareFile(String base64, String mime, String filename, String text) {
+            runOnUiThread(() -> {
+                try {
+                    if (base64 == null || base64.isEmpty()) return;
+                    byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+                    String name = (filename == null || filename.isEmpty()) ? ("nurvan-" + System.currentTimeMillis() + ".pdf") : filename;
+                    String type = (mime == null || mime.isEmpty()) ? "application/pdf" : mime;
+                    saveToDownloads(bytes, name, type);
+                    File out = writeShareCache(bytes, name);
+                    Uri uri = FileProvider.getUriForFile(
+                            MainActivity.this,
+                            getPackageName() + ".fileprovider",
+                            out
+                    );
+                    Intent send = new Intent(Intent.ACTION_SEND);
+                    send.setType(type);
+                    send.putExtra(Intent.EXTRA_STREAM, uri);
+                    send.putExtra(Intent.EXTRA_SUBJECT, name);
+                    if (text != null && !text.isEmpty()) send.putExtra(Intent.EXTRA_TEXT, text);
+                    send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(send, "Salva o inoltra PDF"));
+                } catch (Exception e) {
+                    Log.e("GiammariaWebView", "shareFile failed", e);
+                    Toast.makeText(MainActivity.this, "Errore condivisione PDF", Toast.LENGTH_LONG).show();
+                }
+            });
         }
 
         /** Share PNG (base64) via Android ACTION_SEND — used by NURVAN social workout card. */
