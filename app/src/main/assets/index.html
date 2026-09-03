@@ -520,6 +520,19 @@ select, input {
 .stats-chip.is-on { background:var(--gold); border-color:var(--gold); color:#000; }
 .stats-chip-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 .stats-anatomy-detail { padding:0 14px 12px; font-size:11px; color:#888; min-height:18px; }
+.stats-check-photos { display:flex; gap:10px; justify-content:center; }
+.stats-check-slot {
+  flex:1; max-width:156px; min-height:168px; border:1px dashed #333; border-radius:14px;
+  background:#0c0c0c; overflow:hidden; position:relative; cursor:pointer;
+}
+.stats-check-slot img { display:block; width:100%; height:176px; object-fit:cover; }
+.stats-check-slot .ph {
+  position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  color:#666; font-size:10px; font-weight:800; letter-spacing:0.6px; text-transform:uppercase; gap:6px;
+}
+.stats-check-slot.has-pic .ph { display:none; }
+.stats-period { display:flex; flex-wrap:wrap; gap:6px; }
+.stats-period button { font-size:10px; padding:6px 10px; border-radius:999px; }
 .m-fat { fill: #ff4d4d; } .m-weak { fill: #7cb87c; } .m-rec { fill: #d4af37; } .m-ok { fill: #4a7cff; } .m-off { fill: #2a2a2a; }
 
 .load-toggle {
@@ -2640,6 +2653,18 @@ class GiammariaPersistenceEngine {
       delete r.healthSamples;
       if (Array.isArray(r.ledger) && r.ledger.length > 80) r.ledger = r.ledger.slice(-80);
       if (Array.isArray(r.pendingSync) && r.pendingSync.length > 40) r.pendingSync = r.pendingSync.slice(-40);
+    }
+    if (Array.isArray(sanitized.bodyChecks)) {
+      sanitized.bodyChecks = sanitized.bodyChecks.slice(-16).map((c) => ({
+        id: c && c.id,
+        at: c && c.at,
+        weight: c && c.weight,
+        period: c && c.period,
+        notes: c && c.notes ? String(c.notes).slice(0, 240) : '',
+        hasFront: !!(c && c.hasFront),
+        hasBack: !!(c && c.hasBack),
+        analysis: c && c.analysis ? String(c.analysis).slice(0, 800) : ''
+      }));
     }
     if (sanitized.docs && Array.isArray(sanitized.docs)) {
       sanitized.docs = sanitized.docs.slice(0, 5).map(d => {
@@ -26799,10 +26824,34 @@ function hasExamTableHeaders(rawRows = []) {
   return false;
 }
 
+function isTherapyNamedSheet(sheetName) {
+  const n = String(sheetName || "").toUpperCase().trim();
+  return /^(?:TERAPIA(?:[\s_]+ED[\s_]*ESAMI)?|TERAPIA_ESAMI|FARMACOLOGIA|TRATTAMENTO|TERAPIE|MEDICINALI|FARMACI|PIANO[\s_]*CLINICO|CLINICAL|THERAPY|MEDICATIONS?)\b/i.test(n);
+}
+
+function looksLikeTherapyWeekGrid(rawRows = []) {
+  let weekHits = 0;
+  let dayHits = 0;
+  for (let i = 0; i < Math.min(40, (rawRows || []).length); i++) {
+    const rowStr = (rawRows[i] || []).join(" ");
+    if (/(?:SETTIMANA|WEEK)\s*\d+/i.test(rowStr)) weekHits++;
+    if (/luned|marted|mercoled|gioved|venerd|sabato|domenica|monday|tuesday|wednesday|thursday|friday|saturday|sunday/i.test(rowStr)) dayHits++;
+  }
+  return weekHits >= 1 && dayHits >= 1;
+}
+
+function looksLikeTherapyContent(rawRows = []) {
+  return hasTherapyTableHeaders(rawRows) || looksLikeTherapyWeekGrid(rawRows);
+}
+
 function classifySheetType(sheetName, rawRows = []) {
   const nameUpper = String(sheetName || "").toUpperCase().trim();
 
   if (looksLikeSsttProgramGrid(rawRows)) return "training";
+  if (isTherapyNamedSheet(sheetName) && /ED[\s_]*ESAMI|TERAPIA_ESAMI|PIANO[\s_]*CLINICO|CLINICAL/i.test(nameUpper)) {
+    return "therapy_exams";
+  }
+  if (isTherapyNamedSheet(sheetName)) return "therapy";
   if (looksLikeScienceOrEvidenceSheet(sheetName, rawRows)) return "other";
   if (looksLikeCatalogOrLookupSheet(sheetName, rawRows)) return "other";
   if (isMetaOrAdminSheetName(sheetName) && !looksLikeTrainingProgramSheet(rawRows) && !isWeekNamedSheet(sheetName)) {
@@ -26824,13 +26873,13 @@ function classifySheetType(sheetName, rawRows = []) {
   if (/^(?:INTEGRAZIONE|INTEGRATORI|SUPPLEMENTI|SUPPLEMENTATION|SUPPLEMENTS)/i.test(nameUpper)) {
     return "supplementation";
   }
-  if (/^(?:TERAPIA\s*ED\s*ESAMI|TERAPIA_ESAMI|PIANO\s*CLINICO|CLINICAL)/i.test(nameUpper) && (hasTherapyTableHeaders(rawRows) || hasExamTableHeaders(rawRows))) {
+  if (/^(?:TERAPIA\s*ED\s*ESAMI|TERAPIA_ESAMI|PIANO\s*CLINICO|CLINICAL)/i.test(nameUpper)) {
     return "therapy_exams";
   }
-  if (/^(?:TERAPIA|FARMACOLOGIA|TRATTAMENTO|TERAPIE|MEDICINALI|FARMACI)/i.test(nameUpper) && hasTherapyTableHeaders(rawRows)) {
+  if (/^(?:TERAPIA|FARMACOLOGIA|TRATTAMENTO|TERAPIE|MEDICINALI|FARMACI)/i.test(nameUpper)) {
     return "therapy";
   }
-  if (/^(?:ESAMI|ANALISI|ESAMI\s*DEL\s*SANGUE|BLOODWORK|REFERTI|VALORI)/i.test(nameUpper) && hasExamTableHeaders(rawRows)) {
+  if (/^(?:ESAMI|ANALISI|ESAMI\s*DEL\s*SANGUE|BLOODWORK|REFERTI|VALORI)/i.test(nameUpper)) {
     return "exams";
   }
 
@@ -26852,10 +26901,11 @@ function classifySheetType(sheetName, rawRows = []) {
   }
 
   if (nutritionHits >= 2 && nutritionHits >= trainingHits) return "nutrition";
-  if (supplementHits >= 2 && supplementHits >= trainingHits) return "supplementation";
-  if (therapyHits >= 1 && examHits >= 1 && (hasTherapyTableHeaders(rawRows) || hasExamTableHeaders(rawRows))) return "therapy_exams";
-  if (therapyHits >= 2 && hasTherapyTableHeaders(rawRows)) return "therapy";
-  if (examHits >= 2 && hasExamTableHeaders(rawRows)) return "exams";
+  if (supplementHits >= 2 && supplementHits >= trainingHits && therapyHits < 2 && !looksLikeTherapyContent(rawRows)) return "supplementation";
+  if (therapyHits >= 1 && examHits >= 1) return "therapy_exams";
+  if (therapyHits >= 1 && looksLikeTherapyContent(rawRows)) return "therapy";
+  if (therapyHits >= 2) return "therapy";
+  if (examHits >= 2) return "exams";
   if (looksLikeTrainingProgramSheet(rawRows)) return "training";
   if (trainingHits >= 3 && looksLikeTrainingProgramSheet(rawRows)) return "training";
 
@@ -28753,8 +28803,18 @@ function parseStructuredWorkbook(workbook, filename = "documento.xlsx") {
     if (examSheets.length > 0) {
       const parsed = parseTherapyExamsSheet(examSheets[0]);
       exams = parsed.exams;
-      if (parsed.therapy.present && !therapy.present && hasTherapyTableHeaders(examSheets[0].rawRows)) therapy = parsed.therapy;
+      if (parsed.therapy.present && !therapy.present) therapy = parsed.therapy;
     }
+  }
+  if (!(therapy.medications && therapy.medications.length)) {
+    classifiedSheets.forEach((s) => {
+      if (s.sheetType === "training" || s.sheetType === "nutrition" || s.sheetType === "supplementation") return;
+      if (!isTherapyNamedSheet(s.name) && !looksLikeTherapyContent(s.rawRows)) return;
+      const parsed = parseTherapyExamsSheet(s);
+      if (parsed.therapy && parsed.therapy.medications && parsed.therapy.medications.length) {
+        therapy = parsed.therapy;
+      }
+    });
   }
 
   // Calculate Source vs Canonical Integrity Counts
@@ -33570,6 +33630,7 @@ function ensureStoreIntegrity() {
       ? NurvanRewards.defaultRewardsState()
       : { mode: null, onboardingDone: false, xp: 0, level: 1, tier: 'bronze', streakDays: 0, ledger: [], achievements: [], avatar: { frame: 'frame_standard', outfit: 'outfit_charcoal', unlocked: ['frame_standard', 'outfit_charcoal'] }, prefs: {}, shareDefaults: {} };
   }
+  if (!Array.isArray(store.bodyChecks)) store.bodyChecks = [];
   if (store.bodyComposition === undefined) store.bodyComposition = null;
   if (store.nutritionLoop === undefined) store.nutritionLoop = null;
   if (store.seasonBoard === undefined) store.seasonBoard = null;
@@ -34361,7 +34422,14 @@ function accountPayload(opts){
     health: store.health || null,
     activeProgramId: store.activeProgramId || (DATA && DATA.id) || null,
     rewards: store.rewards || null,
-    lastLocalSavedAt: new Date().toISOString()
+    lastLocalSavedAt: new Date().toISOString(),
+    bodyChecks: Array.isArray(store.bodyChecks) ? store.bodyChecks.slice(-16).map(function (c) {
+      return {
+        id: c && c.id, at: c && c.at, weight: c && c.weight, period: c && c.period,
+        notes: c && c.notes, hasFront: !!(c && c.hasFront), hasBack: !!(c && c.hasBack),
+        analysis: c && c.analysis ? String(c.analysis).slice(0, 800) : ''
+      };
+    }) : []
   };
   if (includeProgram && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length) {
     payload.activeProgram = DATA;
@@ -34402,6 +34470,15 @@ function applyRemoteAccountData(remote, preferLocal) {
       store.logs = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
         return String(a.at || '').localeCompare(String(b.at || ''));
       }).slice(-80);
+    }
+    if (Array.isArray(remote.bodyChecks) && remote.bodyChecks.length) {
+      const byId = {};
+      (store.bodyChecks || []).concat(remote.bodyChecks).forEach(function (row) {
+        if (row && row.id) byId[row.id] = Object.assign({}, byId[row.id] || {}, row);
+      });
+      store.bodyChecks = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
+        return String(a.at || '').localeCompare(String(b.at || ''));
+      }).slice(-16);
     }
     if (remote.health) store.health = Object.assign({}, store.health || {}, remote.health);
     if (remote.activeProgramId) store.activeProgramId = store.activeProgramId || remote.activeProgramId;
@@ -37372,8 +37449,10 @@ function getExerciseMuscleGroups(exerciseName, movement, explicitGroups) {
   return Array.from(result);
 }
 
+const STATS_MUSCLE_CHIPS = [{ id: 'GENERALE', label: 'Generale' }].concat(MACRO_MUSCLE_GROUPS);
+
 function exerciseMatchesMuscleGroup(exerciseName, movement, explicitGroups, selectedGroup, subsKey) {
-  if (!selectedGroup || selectedGroup === 'TOTAL') return true;
+  if (!selectedGroup || selectedGroup === 'TOTAL' || selectedGroup === 'GENERALE') return true;
   const groups = resolveExerciseMacroGroups(exerciseName, movement, explicitGroups, subsKey);
   const sel = normalizeMacroMuscleGroup(selectedGroup);
   return groups.includes(sel);
@@ -37712,7 +37791,8 @@ function persist() {
         accountUser: store.accountUser || null,
         activeProgramId: store.activeProgramId || null,
         profile: store.profile || {},
-        health: store.health || null
+        health: store.health || null,
+        bodyChecks: Array.isArray(store.bodyChecks) ? store.bodyChecks.slice(-12) : []
       };
       localStorage.setItem('GS_STORE', JSON.stringify(sanitizedStore));
     } catch (criticalErr) {
@@ -43006,7 +43086,7 @@ function buildWorkoutPdfBytes(opts) {
   for (var i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 0xFF;
   return bytes;
 }
-function shareOrSavePdfBlob(blob, filename) {
+function shareOrSavePdfBlob(blob, filename, shareText) {
   const nc = (typeof window !== 'undefined' && window.NativeConfig) ? window.NativeConfig
     : (typeof NativeConfig !== 'undefined' ? NativeConfig : null);
   const reader = new FileReader();
@@ -43015,7 +43095,7 @@ function shareOrSavePdfBlob(blob, filename) {
     const b64 = dataUrl.indexOf(',') >= 0 ? dataUrl.split(',')[1] : dataUrl;
     try {
       if (nc && typeof nc.shareFile === 'function') {
-        nc.shareFile(b64, 'application/pdf', filename, 'Programma allenamento NURVAN');
+        nc.shareFile(b64, 'application/pdf', filename, shareText || 'Documento NURVAN');
         if (typeof showToast === 'function') showToast('PDF pronto: scegli dove salvarlo o a chi inoltrarlo', 'success');
         return;
       }
@@ -44294,6 +44374,9 @@ function athleteSexCode() {
 }
 function statsMuscleVolume(muscles, groupId) {
   const m = muscles || {};
+  if (groupId === 'GENERALE' || groupId === 'TOTAL') {
+    return MACRO_MUSCLE_GROUPS.reduce(function (sum, g) { return sum + statsMuscleVolume(m, g.id); }, 0);
+  }
   if (groupId === 'SPALLE') return (m.SPALLE || 0) + (m.DELTOIDI || 0) + (m.BICIPITI || 0) + (m.TRICIPITI || 0);
   if (groupId === 'SCHIENA') return (m.SCHIENA || 0) + (m.DORSALI || 0) + (m.TRAPEZIO || 0);
   if (groupId === 'ADDOME') return (m.ADDOME || 0) + (m.CORE || 0);
@@ -44336,6 +44419,7 @@ function statsHotspots(view) {
   ];
 }
 function statsMuscleChipColor(id) {
+  if (id === 'GENERALE') return '#d4af37';
   if (id === 'PETTO') return '#e53935';
   if (id === 'SPALLE') return '#ff9800';
   if (id === 'ADDOME') return '#66bb6a';
@@ -44345,7 +44429,7 @@ function statsMuscleChipColor(id) {
 }
 function hotspotClass(groupId, muscles) {
   const n = statsMuscleVolume(muscles, groupId);
-  const on = store.prefs && store.prefs.statsMuscle === groupId;
+  const on = store.prefs && store.prefs.statsMuscle === groupId && groupId !== 'GENERALE';
   let cls = 'stats-hotspot';
   if (n >= 8) cls += ' is-fat';
   else if (n >= 1) cls += ' is-work';
@@ -44366,9 +44450,9 @@ function renderMuscleFigure(view, muscles) {
     '</div>';
 }
 function renderMuscleMap(muscles) {
-  const selected = (store.prefs && store.prefs.statsMuscle) || '';
-  const selectedLabel = (MACRO_MUSCLE_GROUPS.find(function (g) { return g.id === selected; }) || {}).label || 'Tocca un distretto';
-  const chips = MACRO_MUSCLE_GROUPS.map(function (g) {
+  const selected = (store.prefs && store.prefs.statsMuscle) || 'GENERALE';
+  const selectedLabel = (STATS_MUSCLE_CHIPS.find(function (g) { return g.id === selected; }) || {}).label || 'Generale';
+  const chips = STATS_MUSCLE_CHIPS.map(function (g) {
     const n = statsMuscleVolume(muscles, g.id);
     const on = selected === g.id ? ' is-on' : '';
     return '<button type="button" class="stats-chip' + on + '" data-group="' + g.id + '" onclick="selectStatsMuscle(\'' + g.id + '\')">' +
@@ -44389,10 +44473,10 @@ function setStatsBodyView(view) {
 }
 function selectStatsMuscle(groupId) {
   if (!store.prefs) store.prefs = {};
-  store.prefs.statsMuscle = groupId;
+  store.prefs.statsMuscle = groupId || 'GENERALE';
   const sel = $('stats-muscle-group');
-  if (sel) sel.value = groupId;
-  const lab = (MACRO_MUSCLE_GROUPS.find(function (g) { return g.id === groupId; }) || {}).label || groupId;
+  if (sel) sel.value = (groupId === 'GENERALE') ? 'TOTAL' : groupId;
+  const lab = (STATS_MUSCLE_CHIPS.find(function (g) { return g.id === groupId; }) || {}).label || groupId;
   const hint = $('stats-selected-muscle');
   if (hint) hint.textContent = lab;
   document.querySelectorAll('.stats-hotspot').forEach(function (el) {
@@ -44434,6 +44518,7 @@ function renderStats(c){
       <div style="font-size:11px;color:#aaa;">W${last.week} · Seduta ${(last.day||0)+1} · ${esc(String(last.at||'').replace('T',' ').slice(0,16))}</div>
     </div>` : ''}
     ${renderMuscleMap(snap.muscles)}
+    ${renderCheckFisicoCardHtml()}
     ${hist ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:8px;">CRONOLOGIA SESSIONI</div>' + hist + '</div>' : ''}
     <div class="card" style="margin-bottom:12px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;"><h2>Statistiche</h2><button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="exportStatsCsv()">Esporta</button></div>
@@ -44450,7 +44535,7 @@ function renderStats(c){
       <div class="card-header"><h2>Filtro Gruppo Muscolare</h2></div>
       <div style="padding:15px;">
         <select id="stats-muscle-group" onchange="renderStatsData()" style="margin-bottom:10px;">
-          <option value="TOTAL">Tutti i macrogruppi (volume totale)</option>
+          <option value="TOTAL">Generale · tutti i muscoli</option>
           ${MACRO_MUSCLE_GROUPS.map(function (g) { return '<option value="' + g.id + '">' + g.label + '</option>'; }).join('')}
         </select>
       </div>
@@ -44464,7 +44549,8 @@ function renderStats(c){
   `;
   setTimeout(function () {
     renderStatsData();
-    if (store.prefs && store.prefs.statsMuscle) drillStatsMuscle(store.prefs.statsMuscle);
+    drillStatsMuscle((store.prefs && store.prefs.statsMuscle) || 'GENERALE');
+    refreshCheckFisicoThumbs();
   }, 50);
 }
 
@@ -44472,8 +44558,10 @@ function drillStatsMuscle(group) {
   const box = $('stats-drill-detail');
   if (!box) return;
   const sel = document.getElementById('stats-muscle-group');
-  if (sel) { sel.value = group; renderStatsData(); }
+  if (sel) { sel.value = (group === 'GENERALE') ? 'TOTAL' : group; renderStatsData(); }
   const subgroups = {
+    GENERALE: MACRO_MUSCLE_GROUPS.map(function (g) { return g.label; }),
+    TOTAL: MACRO_MUSCLE_GROUPS.map(function (g) { return g.label; }),
     PETTO: ['Alto', 'Medio', 'Basso'],
     SCHIENA: ['Dorsali', 'Trapezio', 'Lombari'],
     SPALLE: ['Deltoide anteriore', 'Laterale', 'Posteriore', 'Bicipiti', 'Tricipiti'],
@@ -44496,13 +44584,407 @@ function drillStatsMuscle(group) {
       });
     });
   }
-  const label = (MACRO_MUSCLE_GROUPS.find(function (x) { return x.id === group; }) || {}).label || group;
+  const label = (STATS_MUSCLE_CHIPS.find(function (x) { return x.id === group; }) || {}).label || (group === 'TOTAL' ? 'Generale' : group);
   const uniq = Array.from(new Set(exercises)).slice(0, 12);
   box.innerHTML = '<div style="color:#fff;font-weight:800;margin-bottom:4px;">' + esc(label) + '</div>' +
     '<div style="margin-bottom:6px;">Distretti: ' + list.map(function (x) { return esc(x); }).join(' · ') + '</div>' +
     (uniq.length ? '<div>Esercizi: ' + uniq.map(esc).join(', ') + '</div>' : '<div>Nessun esercizio mappato nel programma attivo.</div>');
 }
 window.drillStatsMuscle = drillStatsMuscle;
+
+const CHECK_FISICO_PERIODS = [
+  { id: 'settimanale', label: 'Settimanale', days: 7 },
+  { id: 'bisettimanale', label: 'Bisettimanale', days: 14 },
+  { id: 'trisettimanale', label: 'Trisettimanale', days: 21 },
+  { id: 'mensile', label: 'Mensile', days: 30 }
+];
+function checkFisicoPeriodMeta(id) {
+  return CHECK_FISICO_PERIODS.find(function (p) { return p.id === id; }) || CHECK_FISICO_PERIODS[1];
+}
+function checkFisicoDraft() {
+  if (!window.__checkFisicoDraft) {
+    const last = (store.bodyChecks || [])[store.bodyChecks.length - 1] || {};
+    window.__checkFisicoDraft = {
+      period: last.period || 'bisettimanale',
+      weight: last.weight || (store.profile && store.profile.weight) || '',
+      front: null,
+      back: null,
+      notes: ''
+    };
+  }
+  return window.__checkFisicoDraft;
+}
+function logsInCheckPeriod(period) {
+  const days = checkFisicoPeriodMeta(period).days;
+  const since = Date.now() - days * 86400000;
+  return (store.logs || []).filter(function (row) {
+    const t = Date.parse(row.at || '');
+    return t && t >= since;
+  });
+}
+function summarizeCheckLogs(period) {
+  const rows = logsInCheckPeriod(period);
+  const muscles = {};
+  let sets = 0, tonnage = 0, kcal = 0, intensity = 0;
+  rows.forEach(function (row) {
+    sets += Number(row.sets) || 0;
+    tonnage += Number(row.tonnage) || 0;
+    kcal += Number(row.kcal) || 0;
+    intensity += Number(row.intensity) || 0;
+    Object.keys(row.muscles || {}).forEach(function (k) {
+      muscles[k] = (muscles[k] || 0) + (Number(row.muscles[k]) || 0);
+    });
+  });
+  return { rows: rows, sessions: rows.length, sets: sets, tonnage: Math.round(tonnage), kcal: Math.round(kcal), intensity: Math.round(intensity), muscles: muscles };
+}
+function renderCheckFisicoCardHtml() {
+  const draft = checkFisicoDraft();
+  const hist = (store.bodyChecks || []).slice().reverse().slice(0, 5);
+  const periodBtns = CHECK_FISICO_PERIODS.map(function (p) {
+    const on = draft.period === p.id;
+    return '<button type="button" class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" onclick="setCheckFisicoPeriod(\'' + p.id + '\')">' + p.label + '</button>';
+  }).join('');
+  const histHtml = hist.length ? hist.map(function (c) {
+    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #1c1c1c;font-size:11px;">' +
+      '<span>' + esc(String(c.at || '').replace('T', ' ').slice(0, 16)) + ' · ' + esc(checkFisicoPeriodMeta(c.period).label) + '</span>' +
+      '<span style="color:var(--gold);font-weight:800;">' + (c.weight != null && c.weight !== '' ? (c.weight + ' kg') : '—') + '</span></div>';
+  }).join('') : '<div style="font-size:11px;color:#666;">Nessun check salvato.</div>';
+  return '<div class="card stats-anatomy" style="margin-bottom:12px;">' +
+    '<div class="stats-anatomy-head"><h2>Check fisici</h2><div class="stats-anatomy-hint">Foto · peso · resoconto</div></div>' +
+    '<div style="padding:12px 14px 14px;">' +
+    '<div class="stats-check-photos">' +
+    '<div class="stats-check-slot' + (draft.front ? ' has-pic' : '') + '" id="check-slot-front" onclick="pickCheckPhoto(\'front\')">' +
+    '<div class="ph">Fronte<br><span style="font-size:18px;">＋</span></div>' +
+    '<img id="check-photo-front" alt="Fronte" style="' + (draft.front ? '' : 'display:none;') + '"' + (draft.front ? ' src="' + draft.front + '"' : '') + '>' +
+    '</div>' +
+    '<div class="stats-check-slot' + (draft.back ? ' has-pic' : '') + '" id="check-slot-back" onclick="pickCheckPhoto(\'back\')">' +
+    '<div class="ph">Retro<br><span style="font-size:18px;">＋</span></div>' +
+    '<img id="check-photo-back" alt="Retro" style="' + (draft.back ? '' : 'display:none;') + '"' + (draft.back ? ' src="' + draft.back + '"' : '') + '>' +
+    '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;margin-top:8px;">' +
+    '<button type="button" class="btn btn-outline" style="flex:1;font-size:10px;" onclick="pickCheckPhoto(\'front\', true)">Scatta fronte</button>' +
+    '<button type="button" class="btn btn-outline" style="flex:1;font-size:10px;" onclick="pickCheckPhoto(\'back\', true)">Scatta retro</button>' +
+    '</div>' +
+    '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">PESO CORPOREO (kg)</div>' +
+    '<input id="check-weight-input" type="number" step="0.1" inputmode="decimal" value="' + esc(String(draft.weight || '')) + '" oninput="onCheckFisicoWeight(this.value)" style="width:100%;padding:10px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:16px;font-weight:800;"></div>' +
+    '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">RESOCONTO ALLENAMENTI</div>' +
+    '<div class="stats-period">' + periodBtns + '</div></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">' +
+    '<button type="button" class="btn btn-primary" style="flex:1;min-width:140px;font-size:11px;" onclick="saveCheckFisico()">Salva check</button>' +
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:11px;border-color:var(--gold);color:var(--gold);" onclick="analyzeCheckFisicoWithCoach()">Analizza con Coach AI</button>' +
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:11px;" onclick="sendCheckFisicoToCoach()">Invia al coach</button>' +
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:11px;" onclick="exportCheckFisicoPdf()">Esporta PDF</button>' +
+    '</div>' +
+    '<div style="margin-top:14px;font-size:10px;font-weight:800;color:#777;letter-spacing:0.6px;">ULTIMI CHECK</div>' +
+    histHtml +
+    '</div></div>';
+}
+function onCheckFisicoWeight(v) {
+  checkFisicoDraft().weight = v;
+}
+function setCheckFisicoPeriod(id) {
+  checkFisicoDraft().period = id;
+  if (typeof render === 'function' && currentView === 'stats') render();
+}
+function compressPhotoFile(file, maxW, quality) {
+  return new Promise(function (resolve, reject) {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = function () {
+      try {
+        const scale = Math.min(1, (maxW || 900) / Math.max(img.width, 1));
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.width * scale));
+        c.height = Math.max(1, Math.round(img.height * scale));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', quality || 0.74));
+      } catch (err) { reject(err); }
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Foto non leggibile')); };
+    img.src = url;
+  });
+}
+function pickCheckPhoto(side, camera) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  if (camera) input.setAttribute('capture', 'environment');
+  input.onchange = function () {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    withBusy(function () {
+      return compressPhotoFile(file, 900, 0.74).then(function (dataUrl) {
+        const draft = checkFisicoDraft();
+        draft[side] = dataUrl;
+        const img = $('check-photo-' + (side === 'front' ? 'front' : 'back'));
+        const slot = $('check-slot-' + (side === 'front' ? 'front' : 'back'));
+        if (img) { img.src = dataUrl; img.style.display = 'block'; }
+        if (slot) slot.classList.add('has-pic');
+        if (typeof showToast === 'function') showToast((side === 'front' ? 'Foto fronte' : 'Foto retro') + ' caricata', 'success');
+      });
+    }, 'Ottimizzazione foto…', { immediate: true });
+  };
+  input.click();
+}
+async function refreshCheckFisicoThumbs() {
+  const last = (store.bodyChecks || [])[store.bodyChecks.length - 1];
+  const draft = checkFisicoDraft();
+  if (draft.front || draft.back || !last) return;
+  try {
+    if (last.hasFront) {
+      const f = await getDocumentFile('bodycheck_front_' + last.id);
+      if (f) { draft.front = f; const img = $('check-photo-front'); const slot = $('check-slot-front'); if (img) { img.src = f; img.style.display = 'block'; } if (slot) slot.classList.add('has-pic'); }
+    }
+    if (last.hasBack) {
+      const b = await getDocumentFile('bodycheck_back_' + last.id);
+      if (b) { draft.back = b; const img = $('check-photo-back'); const slot = $('check-slot-back'); if (img) { img.src = b; img.style.display = 'block'; } if (slot) slot.classList.add('has-pic'); }
+    }
+  } catch (_) {}
+}
+async function saveCheckFisico() {
+  const draft = checkFisicoDraft();
+  const weight = parseFloat(String(draft.weight || '').replace(',', '.'));
+  if (!(weight > 0)) {
+    if (typeof showToast === 'function') showToast('Inserisci il peso corporeo', 'danger');
+    return null;
+  }
+  const id = 'chk_' + Date.now();
+  const entry = {
+    id: id,
+    at: new Date().toISOString(),
+    weight: Math.round(weight * 10) / 10,
+    period: draft.period || 'bisettimanale',
+    notes: draft.notes || '',
+    hasFront: !!draft.front,
+    hasBack: !!draft.back,
+    analysis: ''
+  };
+  if (draft.front) await saveDocumentFile('bodycheck_front_' + id, draft.front);
+  if (draft.back) await saveDocumentFile('bodycheck_back_' + id, draft.back);
+  if (!Array.isArray(store.bodyChecks)) store.bodyChecks = [];
+  store.bodyChecks.push(entry);
+  if (store.bodyChecks.length > 16) store.bodyChecks = store.bodyChecks.slice(-16);
+  if (!store.profile) store.profile = {};
+  store.profile.weight = entry.weight;
+  if (!store.bw) store.bw = {};
+  store.bw[currentWeek || 1] = entry.weight;
+  persist();
+  if (typeof showToast === 'function') showToast('Check fisico salvato', 'success');
+  if (typeof render === 'function' && currentView === 'stats') render();
+  return entry;
+}
+function buildCheckFisicoTextReport(entry) {
+  const period = (entry && entry.period) || checkFisicoDraft().period;
+  const meta = checkFisicoPeriodMeta(period);
+  const sum = summarizeCheckLogs(period);
+  const weight = (entry && entry.weight) || checkFisicoDraft().weight;
+  const name = (store.profile && store.profile.name) || (store.account && store.account.name) || 'Atleta';
+  const muscleLine = MACRO_MUSCLE_GROUPS.map(function (g) {
+    const n = statsMuscleVolume(sum.muscles, g.id);
+    return n ? (g.label + ' ' + n) : null;
+  }).filter(Boolean).join(', ');
+  const sessions = sum.rows.map(function (row) {
+    return '- ' + String(row.at || '').replace('T', ' ').slice(0, 16) + ' · W' + (row.week || '?') + ' S' + ((row.day || 0) + 1) + ' · ' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg';
+  }).join('\n');
+  return 'CHECK FISICO NURVAN\nAtleta: ' + name + '\nPeso: ' + (weight || '—') + ' kg\nPeriodo: ' + meta.label + ' (' + meta.days + ' giorni)\nSessioni: ' + sum.sessions + ' · Serie: ' + sum.sets + ' · Tonnellaggio: ' + sum.tonnage + ' kg · kcal: ' + sum.kcal + '\nMuscoli: ' + (muscleLine || 'n/d') + '\nFoto fronte: ' + ((entry && entry.hasFront) || checkFisicoDraft().front ? 'sì' : 'no') + '\nFoto retro: ' + ((entry && entry.hasBack) || checkFisicoDraft().back ? 'sì' : 'no') + '\n\nSessioni:\n' + (sessions || '- nessuna sessione nel periodo');
+}
+async function analyzeCheckFisicoWithCoach() {
+  const entry = await saveCheckFisico();
+  if (!entry) return;
+  const report = buildCheckFisicoTextReport(entry);
+  const msg = 'Analizza questo check fisico. Commenta composizione visiva solo in modo generale (non diagnosi), confronta peso e volume del periodo, e dimmi cosa sistemare in allenamento o alimentazione.\n\n' + report;
+  navigate('ai');
+  let tries = 0;
+  function kick() {
+    tries++;
+    const input = $('ai-input');
+    const hist = $('chat-history');
+    if (input) input.value = msg;
+    if (hist && typeof askAIInner === 'function') {
+      withBusy(function () { return askAIInner(msg); }, 'Coach AI sta analizzando il check…', { immediate: true });
+      return;
+    }
+    if (tries < 15) setTimeout(kick, 120);
+  }
+  setTimeout(kick, 80);
+}
+async function exportCheckFisicoPdf() {
+  let entry = (store.bodyChecks || [])[store.bodyChecks.length - 1];
+  if (!checkFisicoDraft().weight && !(entry && entry.weight)) {
+    if (typeof showToast === 'function') showToast('Inserisci il peso prima di esportare', 'danger');
+    return;
+  }
+  if (!entry || String(checkFisicoDraft().weight) !== String(entry.weight) || checkFisicoDraft().front || checkFisicoDraft().back) {
+    entry = await saveCheckFisico();
+    if (!entry) return;
+  }
+  const front = checkFisicoDraft().front || await getDocumentFile('bodycheck_front_' + entry.id);
+  const back = checkFisicoDraft().back || await getDocumentFile('bodycheck_back_' + entry.id);
+  const bytes = buildCheckFisicoPdfBytes(entry, front, back);
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  const filename = 'nurvan-check-fisico-' + String(entry.at || '').slice(0, 10) + '.pdf';
+  shareOrSavePdfBlob(blob, filename, 'Check fisico NURVAN — peso, foto e resoconto allenamenti');
+}
+async function sendCheckFisicoToCoach() {
+  await exportCheckFisicoPdf();
+  if (typeof showToast === 'function') showToast('PDF pronto: invialo al coach da WhatsApp, mail o Drive', 'success');
+}
+function dataUrlToJpegBytes(dataUrl) {
+  if (!dataUrl || dataUrl.indexOf('base64,') < 0) return null;
+  const b64 = dataUrl.split('base64,')[1];
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+function jpegSizeFromBytes(bytes) {
+  if (!bytes || bytes.length < 10) return { w: 400, h: 600 };
+  let i = 2;
+  while (i < bytes.length - 8) {
+    if (bytes[i] !== 0xFF) { i++; continue; }
+    const marker = bytes[i + 1];
+    if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2) {
+      return { h: (bytes[i + 5] << 8) | bytes[i + 6], w: (bytes[i + 7] << 8) | bytes[i + 8] };
+    }
+    const len = (bytes[i + 2] << 8) | bytes[i + 3];
+    i += 2 + len;
+  }
+  return { w: 400, h: 600 };
+}
+function pdfLatin1(s) {
+  const str = String(s == null ? '' : s);
+  const u = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) u[i] = str.charCodeAt(i) & 0xFF;
+  return u;
+}
+function pdfConcat(parts) {
+  let n = 0;
+  parts.forEach(function (p) { n += p.length; });
+  const out = new Uint8Array(n);
+  let o = 0;
+  parts.forEach(function (p) { out.set(p, o); o += p.length; });
+  return out;
+}
+function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl) {
+  const W = 595, H = 842, ML = 40, MR = 40;
+  const GOLD = '0.78 0.63 0.14';
+  const DARK = '0.12 0.12 0.12';
+  const GRAY = '0.4 0.4 0.4';
+  const period = checkFisicoPeriodMeta(entry.period);
+  const sum = summarizeCheckLogs(entry.period);
+  const athlete = (store.profile && store.profile.name) || (store.account && store.account.name) || 'Atleta';
+  const dateStr = new Date(entry.at || Date.now()).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
+  const cmds = [];
+  function txt(font, size, color, x, y, s) {
+    cmds.push('BT /' + font + ' ' + size + ' Tf ' + color + ' rg 1 0 0 1 ' + x + ' ' + y + ' Tm (' + pdfEsc(s) + ') Tj ET');
+  }
+  function rct(x, y, w, h, fill) { cmds.push(fill + ' rg ' + x + ' ' + y + ' ' + w + ' ' + h + ' re f'); }
+  rct(0, H - 62, W, 62, '0.05 0.05 0.05');
+  rct(0, H - 64, W, 2, GOLD);
+  txt('F1', 22, GOLD, ML, H - 42, 'NURVAN');
+  txt('F2', 9, '0.75 0.75 0.75', ML + 108, H - 36, 'CHECK FISICO');
+  txt('F2', 8, '0.7 0.7 0.7', ML + 108, H - 50, athlete + '  |  ' + dateStr);
+  let y = H - 86;
+  txt('F1', 12, DARK, ML, y, 'Peso ' + entry.weight + ' kg   ·   ' + period.label + ' (' + period.days + ' giorni)');
+  y -= 18;
+  txt('F2', 9, GRAY, ML, y, 'Sessioni ' + sum.sessions + '   Serie ' + sum.sets + '   Tonnellaggio ' + sum.tonnage + ' kg   kcal ' + sum.kcal);
+  y -= 16;
+  const muscleLine = MACRO_MUSCLE_GROUPS.map(function (g) {
+    const n = statsMuscleVolume(sum.muscles, g.id);
+    return n ? (g.label + ' ' + n) : null;
+  }).filter(Boolean).join('  ·  ');
+  if (muscleLine) { txt('F2', 8, GRAY, ML, y, muscleLine); y -= 18; }
+  const frontBytes = dataUrlToJpegBytes(frontUrl);
+  const backBytes = dataUrlToJpegBytes(backUrl);
+  const imgH = 250;
+  const imgW = 240;
+  if (frontBytes) {
+    cmds.push('q ' + imgW + ' 0 0 ' + imgH + ' ' + ML + ' ' + (y - imgH) + ' cm /ImF Do Q');
+    txt('F2', 7, GRAY, ML, y - imgH - 12, 'Fronte');
+  } else {
+    rct(ML, y - imgH, imgW, imgH, '0.93 0.93 0.93');
+    txt('F2', 8, GRAY, ML + 80, y - imgH / 2, 'Nessuna foto fronte');
+  }
+  if (backBytes) {
+    cmds.push('q ' + imgW + ' 0 0 ' + imgH + ' ' + (ML + imgW + 20) + ' ' + (y - imgH) + ' cm /ImB Do Q');
+    txt('F2', 7, GRAY, ML + imgW + 20, y - imgH - 12, 'Retro');
+  } else {
+    rct(ML + imgW + 20, y - imgH, imgW, imgH, '0.93 0.93 0.93');
+    txt('F2', 8, GRAY, ML + imgW + 90, y - imgH / 2, 'Nessuna foto retro');
+  }
+  y -= imgH + 28;
+  txt('F1', 11, GOLD, ML, y, 'RESOCONTO ALLENAMENTI');
+  y -= 16;
+  if (!sum.rows.length) {
+    txt('F2', 8, GRAY, ML, y, 'Nessuna sessione finalizzata nel periodo.');
+    y -= 14;
+  } else {
+    sum.rows.slice().reverse().forEach(function (row) {
+      if (y < 70) return;
+      const line = String(row.at || '').replace('T', ' ').slice(0, 16) + '   W' + (row.week || '?') + ' S' + ((row.day || 0) + 1) + '   ' + (row.sets || 0) + ' serie   ' + (row.tonnage || 0) + ' kg';
+      txt('F2', 8, DARK, ML, y, line);
+      y -= 13;
+    });
+  }
+  y -= 10;
+  txt('F2', 6, GRAY, ML, 40, 'Documento generato da NURVAN. Non sostituisce il parere medico o del coach.');
+  const stream = cmds.join('\n');
+  const objs = [];
+  function addObj(body) { objs.push(typeof body === 'string' ? pdfLatin1(body) : body); return objs.length; }
+  function addStreamObj(dict, bytes) {
+    const head = pdfLatin1(dict + '\nstream\n');
+    const tail = pdfLatin1('\nendstream');
+    objs.push(pdfConcat([head, bytes, tail]));
+    return objs.length;
+  }
+  const f1 = addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const f2 = addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  let imF = 0, imB = 0;
+  if (frontBytes) {
+    const sz = jpegSizeFromBytes(frontBytes);
+    imF = addStreamObj('<< /Type /XObject /Subtype /Image /Width ' + sz.w + ' /Height ' + sz.h + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + frontBytes.length + ' >>', frontBytes);
+  }
+  if (backBytes) {
+    const sz = jpegSizeFromBytes(backBytes);
+    imB = addStreamObj('<< /Type /XObject /Subtype /Image /Width ' + sz.w + ' /Height ' + sz.h + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + backBytes.length + ' >>', backBytes);
+  }
+  const contentId = addStreamObj('<< /Length ' + stream.length + ' >>', pdfLatin1(stream));
+  const xos = [];
+  if (imF) xos.push('/ImF ' + imF + ' 0 R');
+  if (imB) xos.push('/ImB ' + imB + ' 0 R');
+  const pagesId = addObj('placeholder');
+  const pageId = addObj('<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Contents ' + contentId + ' 0 R /Resources << /Font << /F1 ' + f1 + ' 0 R /F2 ' + f2 + ' 0 R >> /XObject << ' + xos.join(' ') + ' >> >> >>');
+  objs[pagesId - 1] = pdfLatin1('<< /Type /Pages /Kids [' + pageId + ' 0 R] /Count 1 >>');
+  const catalogId = addObj('<< /Type /Catalog /Pages ' + pagesId + ' 0 R >>');
+  const parts = [pdfLatin1('%PDF-1.4\n')];
+  const offsets = [0];
+  let pos = 9;
+  objs.forEach(function (body, i) {
+    offsets.push(pos);
+    const head = pdfLatin1((i + 1) + ' 0 obj\n');
+    const tail = pdfLatin1('\nendobj\n');
+    parts.push(head, body, tail);
+    pos += head.length + body.length + tail.length;
+  });
+  const xrefAt = pos;
+  let xref = 'xref\n0 ' + (objs.length + 1) + '\n0000000000 65535 f \n';
+  offsets.slice(1).forEach(function (off) {
+    xref += ('0000000000' + off).slice(-10) + ' 00000 n \n';
+  });
+  xref += 'trailer << /Size ' + (objs.length + 1) + ' /Root ' + catalogId + ' 0 R >>\nstartxref\n' + xrefAt + '\n%%EOF';
+  parts.push(pdfLatin1(xref));
+  return pdfConcat(parts);
+}
+window.renderCheckFisicoCardHtml = renderCheckFisicoCardHtml;
+window.pickCheckPhoto = pickCheckPhoto;
+window.setCheckFisicoPeriod = setCheckFisicoPeriod;
+window.onCheckFisicoWeight = onCheckFisicoWeight;
+window.saveCheckFisico = saveCheckFisico;
+window.analyzeCheckFisicoWithCoach = analyzeCheckFisicoWithCoach;
+window.sendCheckFisicoToCoach = sendCheckFisicoToCoach;
+window.exportCheckFisicoPdf = exportCheckFisicoPdf;
 
 function renderSimpleChart(canvasId, data, color, type='line') {
   const canvas = $(canvasId);
