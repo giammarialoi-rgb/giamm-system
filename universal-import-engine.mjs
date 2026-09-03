@@ -950,8 +950,122 @@ export function recalcTrainingLoadsFromCells(weeks, cells, prevCells) {
   return updated;
 }
 
+function sheetNameBare(sheetName) {
+  return String(sheetName || "")
+    .replace(/^[\s_\-~]+/, "")
+    .replace(/^\d{1,2}[\s._-]*/, "")
+    .trim();
+}
+
+function isWeekNamedSheet(sheetName) {
+  const n = String(sheetName || "").trim();
+  return /^(?:w|wk|week|sett\.?|settimana)\s*\.?\s*\d+$/i.test(n)
+    || /^(?:w|wk)\d+$/i.test(n);
+}
+
+function isMetaOrAdminSheetName(sheetName) {
+  const n = String(sheetName || "").trim();
+  if (/^[_~]/.test(n)) return true;
+  const bare = sheetNameBare(n);
+  return /^(?:cover|copertina|dashboard|home|welcome|start|faq|faqs|setup|istruzioni|instructions|how\s*to|baseline|riferimenti|progresso|progress|performance|audit|volume|evidence|evidenza|razionale|sostituzioni|substitutions|alternative|swap|liste|lists|elenco|catalogo|catalog|index|indice|legend|leggenda|glossary|glossario|notes|note|readme|changelog|profile|rpe|graphs?|info|about|sub[_\s-]?db|db)\b/i.test(bare);
+}
+
+function rowLooksLikeSessionHeader(row) {
+  const cells = (row || []).map((c) => String(c == null ? "" : c).trim()).filter(Boolean);
+  if (!cells.length) return false;
+  const a = cells[0];
+  if (/^(?:GIORNO|DAY|SEDUTA|SESSIONE|WORKOUT|ALLENAMENTO)\s*[0-9A-G]\b/i.test(a)) return true;
+  if (/^(?:UPPER|LOWER|PUSH|PULL|LEGS|FULL\s*BODY)\s*[A-C]?\b/i.test(a) && cells.length <= 4) return true;
+  return false;
+}
+
+function rowLooksLikeExerciseTableHeader(row) {
+  const vals = (row || []).map((c) => String(c == null ? "" : c).toLowerCase().trim());
+  if (!vals.length) return false;
+  const hasEx = vals.some((v) =>
+    /^(movimento|esercizio(\s+effettivo)?|exercise|nome(\s+esercizio)?)$/i.test(v)
+    || v.includes("esercizio effettivo")
+  );
+  const hasSet = vals.some((v) => /^(set|serie|sets)$/i.test(v));
+  const hasReps = vals.some((v) => /^(reps|ripetizioni)$/i.test(v) || v.includes("reps target"));
+  const hasPattern = vals.some((v) => /^(pattern|schema|scheme)$/i.test(v));
+  return hasEx && (hasSet || hasReps || hasPattern);
+}
+
+function countSchemePatternCells(rawRows, maxRows = 80) {
+  let n = 0;
+  const limit = Math.min(maxRows, (rawRows || []).length);
+  for (let i = 0; i < limit; i++) {
+    const row = rawRows[i] || [];
+    for (let c = 0; c < row.length; c++) {
+      if (/\d+\s*[*xX\u00d7]\s*\S+/.test(String(row[c] || ""))) n++;
+    }
+  }
+  return n;
+}
+
+export function looksLikeTrainingProgramSheet(rawRows = []) {
+  if (looksLikeSsttProgramGrid(rawRows)) return true;
+  let sessions = 0;
+  let headers = 0;
+  for (let i = 0; i < (rawRows || []).length; i++) {
+    if (rowLooksLikeSessionHeader(rawRows[i])) sessions++;
+    if (rowLooksLikeExerciseTableHeader(rawRows[i])) headers++;
+  }
+  const patterns = countSchemePatternCells(rawRows);
+  return (sessions >= 1 && headers >= 1)
+    || (sessions >= 2 && patterns >= 3)
+    || (headers >= 1 && patterns >= 4);
+}
+
+function looksLikeCatalogOrLookupSheet(sheetName, rawRows = []) {
+  const n = String(sheetName || "");
+  if (looksLikeTrainingProgramSheet(rawRows)) return false;
+  if (/list|liste|catalog|elenco|dizionario|dictionary|sub[_\s-]?db|(?:^|_)db$/i.test(n)) return true;
+  if (/^[_~]/.test(n) && !isWeekNamedSheet(n)) return true;
+  return false;
+}
+
+function looksLikeScienceOrEvidenceSheet(sheetName, rawRows = []) {
+  const n = sheetNameBare(sheetName);
+  if (/^(?:evidence|evidenza|razionale|research|letteratura|fonti|references|bibliografia)\b/i.test(n)) return true;
+  let hits = 0;
+  for (let i = 0; i < Math.min(12, (rawRows || []).length); i++) {
+    const rowStr = (rawRows[i] || []).join(" ").toLowerCase();
+    if (/\b(fonte|evidenza|meta-analisi|meta analisi|pubmed|doi|razionale|letteratura)\b/.test(rowStr)) hits++;
+  }
+  return hits >= 2 && !looksLikeTrainingProgramSheet(rawRows);
+}
+
+function hasTherapyTableHeaders(rawRows = []) {
+  for (let i = 0; i < Math.min(20, (rawRows || []).length); i++) {
+    const vals = (rawRows[i] || []).map((c) => String(c == null ? "" : c).toLowerCase().trim());
+    const hasDrug = vals.some((v) => /farmaco|principio|medicinale|sostanza/.test(v));
+    const hasDose = vals.some((v) => /dose|dosaggio|posologia/.test(v));
+    if (hasDrug && hasDose) return true;
+  }
+  return false;
+}
+
+function hasExamTableHeaders(rawRows = []) {
+  for (let i = 0; i < Math.min(20, (rawRows || []).length); i++) {
+    const vals = (rawRows[i] || []).map((c) => String(c == null ? "" : c).toLowerCase().trim());
+    const hasParam = vals.some((v) => /parametro|esame|biomarcatore|analita/.test(v));
+    const hasVal = vals.some((v) => /valore|referto|risultato/.test(v));
+    if (hasParam && hasVal) return true;
+  }
+  return false;
+}
+
 export function classifySheetType(sheetName, rawRows = []) {
   const nameUpper = String(sheetName || "").toUpperCase().trim();
+
+  if (looksLikeSsttProgramGrid(rawRows)) return "training";
+  if (looksLikeScienceOrEvidenceSheet(sheetName, rawRows)) return "other";
+  if (looksLikeCatalogOrLookupSheet(sheetName, rawRows)) return "other";
+  if (isMetaOrAdminSheetName(sheetName) && !looksLikeTrainingProgramSheet(rawRows) && !isWeekNamedSheet(sheetName)) {
+    return "other";
+  }
 
   if (/^(START|WELCOME|FAQS?|GRAPHS?|PROFILE|RPE)\b/i.test(nameUpper) && !looksLikeSsttProgramGrid(rawRows)) {
     return "other";
@@ -961,19 +1075,20 @@ export function classifySheetType(sheetName, rawRows = []) {
   if (/^(?:ALLENAMENTO|TRAINING|WORKOUT|SCHEDA|SPLIT|W\d+|SETTIMANA\s*\d*|WEEK\s*\d+|ALL\.?|PUSH|PULL|LEGS|UPPER|LOWER|MESOCICLO|MICROCICLO|BLOCCO|FASE|TABELLA|PROGRAMMA|GYM|ROUTINE|SESSIONI|PESI|BODYBUILDING|FITNESS)$/i.test(nameUpper)) {
     return "training";
   }
+  if (isWeekNamedSheet(sheetName) && looksLikeTrainingProgramSheet(rawRows)) return "training";
   if (/^(?:ALIMENTAZIONE|NUTRIZIONE|DIETA|PIANO\s*ALIMENTARE|MEALS|MEAL\s*PLAN|PASTI|FOOD|NUTRITION|NUTRICI[OÓ]N|NUTRI[CÇ][AÃ]O|ERN[AÄ]HRUNG|ALIMENTATION|ПИТАНИЕ|营养|التغذية|पोषण)/i.test(nameUpper)) {
     return "nutrition";
   }
   if (/^(?:INTEGRAZIONE|INTEGRATORI|SUPPLEMENTI|SUPPLEMENTATION|SUPPLEMENTS)/i.test(nameUpper)) {
     return "supplementation";
   }
-  if (/^(?:TERAPIA\s*ED\s*ESAMI|TERAPIA_ESAMI|PIANO\s*CLINICO|CLINICAL)/i.test(nameUpper)) {
+  if (/^(?:TERAPIA\s*ED\s*ESAMI|TERAPIA_ESAMI|PIANO\s*CLINICO|CLINICAL)/i.test(nameUpper) && (hasTherapyTableHeaders(rawRows) || hasExamTableHeaders(rawRows))) {
     return "therapy_exams";
   }
-  if (/^(?:TERAPIA|FARMACOLOGIA|TRATTAMENTO|TERAPIE|MEDICINALI|FARMACI)/i.test(nameUpper)) {
+  if (/^(?:TERAPIA|FARMACOLOGIA|TRATTAMENTO|TERAPIE|MEDICINALI|FARMACI)/i.test(nameUpper) && hasTherapyTableHeaders(rawRows)) {
     return "therapy";
   }
-  if (/^(?:ESAMI|ANALISI|ESAMI\s*DEL\s*SANGUE|BLOODWORK|REFERTI|VALORI)/i.test(nameUpper)) {
+  if (/^(?:ESAMI|ANALISI|ESAMI\s*DEL\s*SANGUE|BLOODWORK|REFERTI|VALORI)/i.test(nameUpper) && hasExamTableHeaders(rawRows)) {
     return "exams";
   }
 
@@ -989,16 +1104,18 @@ export function classifySheetType(sheetName, rawRows = []) {
     if (/movimento|esercizio|reps|rir|rpe|recupero|rest|panca|squat|stacco|serie|set|pattern|lat machine|pulley|pulldown|croci|alzate|trazioni|curl|french|press|affondi|calf|plank|crunch/.test(rowStr)) trainingHits++;
     if (/colazione|pranzo|cena|spuntino|merenda|pre-nanna|alimento|grammi|kcal|calorie|proteine|carboidrati|grassi|avena|albumi|riso|pollo/.test(rowStr)) nutritionHits++;
     if (/creatina|whey|omega|dosaggio|timing|multivitaminico|magnesio|integratore|eaa|capsule|posologia/.test(rowStr)) supplementHits++;
-    if (/farmaco|principio attivo|somministrazione|medicinale|durata settimane|compresse|terapia|metformina|cardiaspirina|telmisartan/.test(rowStr)) therapyHits++;
-    if (/esame|referto|analisi|sangue|emocromo|testosterone|glicemia|transaminasi|valori di riferimento/.test(rowStr)) examHits++;
+    if (/\bfarmaco\b|principio attivo|somministrazione|medicinale|durata settimane|\bcompresse\b|\bterapia\b|metformina|cardiaspirina|telmisartan/.test(rowStr)) therapyHits++;
+    if (/\besame\b|\breferto\b|\bsangue\b|emocromo|testosterone|glicemia|transaminasi|valori di riferimento/.test(rowStr)
+      || (/\banalisi\b/.test(rowStr) && !/meta[-\s]?analisi/.test(rowStr))) examHits++;
   }
 
   if (nutritionHits >= 2 && nutritionHits >= trainingHits) return "nutrition";
   if (supplementHits >= 2 && supplementHits >= trainingHits) return "supplementation";
-  if (therapyHits >= 1 && examHits >= 1) return "therapy_exams";
-  if (therapyHits >= 2) return "therapy";
-  if (examHits >= 2) return "exams";
-  if (trainingHits >= 1) return "training";
+  if (therapyHits >= 1 && examHits >= 1 && (hasTherapyTableHeaders(rawRows) || hasExamTableHeaders(rawRows))) return "therapy_exams";
+  if (therapyHits >= 2 && hasTherapyTableHeaders(rawRows)) return "therapy";
+  if (examHits >= 2 && hasExamTableHeaders(rawRows)) return "exams";
+  if (looksLikeTrainingProgramSheet(rawRows)) return "training";
+  if (trainingHits >= 3 && looksLikeTrainingProgramSheet(rawRows)) return "training";
 
   return "other";
 }
@@ -2776,12 +2893,19 @@ export function parseStructuredWorkbook(workbook, filename = "documento.xlsx") {
     }
   });
 
-  // 1. Parse Training Weeks — also scan every sheet and keep the richest training parse
+  // 1. Parse Training Weeks — keep every real program sheet (one week per sheet, stacked weeks, etc.)
   const weeks = [];
   const countExercises = (weekData) => {
     let n = 0;
     (weekData.sessions || weekData.days || []).forEach(sess => { n += (sess.exercises || []).length; });
     return n;
+  };
+  const isUsableTrainingSheet = (s) => {
+    if (!s) return false;
+    if (looksLikeCatalogOrLookupSheet(s.name, s.rawRows)) return false;
+    if (looksLikeScienceOrEvidenceSheet(s.name, s.rawRows)) return false;
+    if (isMetaOrAdminSheetName(s.name) && !looksLikeTrainingProgramSheet(s.rawRows) && !isWeekNamedSheet(s.name)) return false;
+    return looksLikeTrainingProgramSheet(s.rawRows) || s.sheetType === "training";
   };
   let ssttHit = false;
   classifiedSheets.forEach((s) => {
@@ -2794,42 +2918,47 @@ export function parseStructuredWorkbook(workbook, filename = "documento.xlsx") {
     }
     ssttWeeks.forEach((w) => weeks.push(w));
   });
-  if (!ssttHit) trainingSheets.forEach((s, idx) => {
-    const weekData = parseTrainingSheet(s, idx + 1);
-    if (weekData.sessions && weekData.sessions.length > 0) {
-      weeks.push(weekData);
-    }
-  });
+  const weekNamedProgramSheets = classifiedSheets.filter((s) => isWeekNamedSheet(s.name) && looksLikeTrainingProgramSheet(s.rawRows));
   if (!ssttHit) {
-  let bestTraining = null;
-  let bestEx = weeks.reduce((n, w) => n + countExercises(w), 0);
-  classifiedSheets.forEach((s) => {
-    const blob = (s.rawRows || []).slice(0, 16).map(r => (r || []).join(" ")).join(" ");
-    if (!/GIORNO\s*\d+/i.test(blob) || !/\d+\s*[\*xX\u00d7]/.test(blob)) return;
-    const weekData = parseTrainingSheet(s, 1);
-    const ex = countExercises(weekData);
-    if (ex > bestEx) {
-      bestEx = ex;
-      bestTraining = weekData;
-    }
-  });
-  if (bestTraining && bestEx > 0) {
-    weeks.length = 0;
-    weeks.push(bestTraining);
-  }
-  }
-
-  // If no training sheets produced weeks, scan unclassified 'other' sheets
-  if (weeks.length === 0) {
-    const otherSheets = classifiedSheets.filter(s => s.sheetType === "other");
-    otherSheets.forEach((s, idx) => {
-      if (/^(START|WELCOME|FAQS?|GRAPHS?|PROFILE|RPE)\b/i.test(String(s.name || ""))) return;
+    const sourceSheets = weekNamedProgramSheets.length >= 2
+      ? weekNamedProgramSheets
+      : classifiedSheets.filter(isUsableTrainingSheet);
+    sourceSheets.forEach((s, idx) => {
       const weekData = parseTrainingSheet(s, idx + 1);
       if (weekData.sessions && weekData.sessions.length > 0 && countExercises(weekData) > 0) {
         weeks.push(weekData);
       }
     });
   }
+  // Fallback: a single compact GIORNO + pattern sheet, only if nothing was collected
+  if (!ssttHit && weeks.length === 0) {
+    let bestTraining = null;
+    let bestEx = 0;
+    classifiedSheets.forEach((s) => {
+      if (!isUsableTrainingSheet(s)) return;
+      const blob = (s.rawRows || []).slice(0, 16).map(r => (r || []).join(" ")).join(" ");
+      if (!/GIORNO\s*\d+/i.test(blob) || !/\d+\s*[\*xX\u00d7]/.test(blob)) return;
+      const weekData = parseTrainingSheet(s, 1);
+      const ex = countExercises(weekData);
+      if (ex > bestEx) {
+        bestEx = ex;
+        bestTraining = weekData;
+      }
+    });
+    if (bestTraining && bestEx > 0) weeks.push(bestTraining);
+  }
+
+  // If no training sheets produced weeks, scan unclassified 'other' sheets that still look like a program
+  if (weeks.length === 0) {
+    classifiedSheets.filter((s) => s.sheetType === "other" && looksLikeTrainingProgramSheet(s.rawRows)).forEach((s, idx) => {
+      const weekData = parseTrainingSheet(s, idx + 1);
+      if (weekData.sessions && weekData.sessions.length > 0 && countExercises(weekData) > 0) {
+        weeks.push(weekData);
+      }
+    });
+  }
+
+  weeks.sort((a, b) => (Number(a.week_number || a.weekNumber || 0) - Number(b.week_number || b.weekNumber || 0)));
 
   // If still 0 weeks (e.g. nutrition/therapy-only workbook), keep empty weeks —
   // do NOT invent a fake empty session shell (anti-hallucination). Flag instead.
@@ -2882,7 +3011,7 @@ export function parseStructuredWorkbook(workbook, filename = "documento.xlsx") {
     if (examSheets.length > 0) {
       const parsed = parseTherapyExamsSheet(examSheets[0]);
       exams = parsed.exams;
-      if (parsed.therapy.present && !therapy.present) therapy = parsed.therapy;
+      if (parsed.therapy.present && !therapy.present && hasTherapyTableHeaders(examSheets[0].rawRows)) therapy = parsed.therapy;
     }
   }
 

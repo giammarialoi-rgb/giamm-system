@@ -6,7 +6,7 @@
  */
 
 var DB_NAME = 'GIAMMARIA_SYSTEM_DB';
-var DB_VERSION = 2;
+var DB_VERSION = 7;
 
 var STORES = {
   PROGRAMS: 'programs',             // Canonical programs (active + versions)
@@ -16,9 +16,23 @@ var STORES = {
   EXAMS: 'exams',                   // Clinical lab exams & bloodwork history
   CALENDAR: 'calendar',             // Unified calendar events & reminders
   REMINDERS: 'reminders',           // Notification schedules & alerts
-  FOOD_DB: 'food_db',               // Local offline food macro database
+  FOOD_DB: 'food_db',               // Local offline food macro database (CC0/generic)
+  FOOD_DB_OFF: 'food_db_off',       // Open Food Facts cache (ODbL — separate store)
   SUPPLEMENT_DB: 'supplement_db',   // Local offline supplement database
-  DRUG_DB: 'drug_db'                // Local offline medication database
+  DRUG_DB: 'drug_db',               // Local offline medication database
+  HEALTH_SAMPLES: 'health_samples', // Health Connect / wearable samples
+  EVIDENCE_CACHE: 'evidence_cache', // PubMed / evidence cache
+  WORKOUT_LOGS: 'workout_logs',     // Completed set logs (mirror of GS_STORE.data)
+  COACH_PROFILE: 'coach_profile',   // Longitudinal coach preferences / decisions
+  CHECK_INS: 'check_ins',           // Weekly AI check-in archives
+  DOCUMENT_INTELLIGENCE: 'document_intelligence', // DocumentIR + import sessions
+  REWARDS_PROFILE: 'rewards_profile',
+  XP_LEDGER: 'xp_ledger',
+  ACHIEVEMENTS: 'achievements',
+  REWARDS_WALLET: 'rewards_wallet',
+  AVATAR_STATE: 'avatar_state',
+  ACTION_HISTORY: 'action_history',
+  SEASON_STATS: 'season_stats'
 };
 
 /**
@@ -194,6 +208,19 @@ class GiammariaPersistenceEngine {
                   s.createIndex('time', 'time', { unique: false });
                   s.createIndex('enabled', 'enabled', { unique: false });
                 }
+              } else if (storeName === STORES.XP_LEDGER) {
+                s = db.createObjectStore(storeName, { keyPath: 'id' });
+                if (s && typeof s.createIndex === 'function') {
+                  s.createIndex('sourceId', 'sourceId', { unique: false });
+                  s.createIndex('timestamp', 'timestamp', { unique: false });
+                  s.createIndex('eventType', 'eventType', { unique: false });
+                }
+              } else if (storeName === STORES.ACTION_HISTORY) {
+                s = db.createObjectStore(storeName, { keyPath: 'id' });
+                if (s && typeof s.createIndex === 'function') {
+                  s.createIndex('at', 'at', { unique: false });
+                  s.createIndex('action_type', 'action_type', { unique: false });
+                }
               } else {
                 s = db.createObjectStore(storeName, { keyPath: 'id' });
               }
@@ -343,16 +370,160 @@ class GiammariaPersistenceEngine {
     return { success: true, ok: true };
   }
 
-  async clearWorkoutLogs() {
-    // Workout actual loads/logs live in localStorage GS_STORE (store.data / customSets),
-    // not in dedicated IDB stores. Preserve programs, nutrition, therapy, supplements.
-    // No-op on IDB domain stores — callers must clear in-memory store.data themselves.
+  async saveWorkoutLogsSnapshot(snapshot = {}) {
     await this.dbOpen();
+    const payload = {
+      id: 'active_logs',
+      data: snapshot.data || {},
+      customSets: snapshot.customSets || {},
+      bw: snapshot.bw || {},
+      updatedAt: snapshot.updatedAt || new Date().toISOString()
+    };
+    await this.dbPut(STORES.WORKOUT_LOGS, payload);
+    return payload;
+  }
+
+  async loadWorkoutLogsSnapshot() {
+    await this.dbOpen();
+    try {
+      return await this.dbGet(STORES.WORKOUT_LOGS, 'active_logs');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async clearWorkoutLogs() {
+    await this.dbOpen();
+    try {
+      await this.dbDelete(STORES.WORKOUT_LOGS, 'active_logs');
+    } catch (_) {}
     return {
       success: true,
       ok: true,
-      note: 'Workout logs are LocalStorage-keyed (store.data). Callers clear store.data/customSets; IDB domain stores preserved.'
+      note: 'Workout logs cleared from IDB workout_logs; callers must clear store.data/customSets in memory.'
     };
+  }
+
+  /** NURVAN Rewards — dual-write profile + truncated ledger (never therapy/exams). */
+  async saveRewardsSnapshot(rewards = {}) {
+    await this.dbOpen();
+    const clean = JSON.parse(JSON.stringify(rewards || {}));
+    delete clean.therapy;
+    delete clean.exams;
+    delete clean.healthSamples;
+    const ledger = Array.isArray(clean.ledger) ? clean.ledger.slice(-200) : [];
+    const profile = Object.assign({}, clean, { ledger: undefined });
+    delete profile.ledger;
+    await this.dbPut(STORES.REWARDS_PROFILE, Object.assign({ id: 'active' }, profile, { updatedAt: new Date().toISOString() }));
+    await this.dbPut(STORES.AVATAR_STATE, Object.assign({ id: 'active' }, clean.avatar || {}, { updatedAt: new Date().toISOString() }));
+    await this.dbPut(STORES.ACHIEVEMENTS, { id: 'active', items: clean.achievements || [], updatedAt: new Date().toISOString() });
+    await this.dbPut(STORES.REWARDS_WALLET, { id: 'active', items: clean.wallet || [], updatedAt: new Date().toISOString() });
+    // Append latest ledger events (idempotent put by id)
+    for (const ev of ledger.slice(-40)) {
+      if (!ev || !ev.id) continue;
+      await this.dbPut(STORES.XP_LEDGER, ev);
+    }
+    return { ok: true };
+  }
+
+  async loadRewardsSnapshot() {
+    await this.dbOpen();
+    try {
+      return await this.dbGet(STORES.REWARDS_PROFILE, 'active');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async saveActionHistorySnapshot(entries = []) {
+    await this.dbOpen();
+    const list = Array.isArray(entries) ? entries.slice(-80) : [];
+    for (const e of list) {
+      if (!e || !e.id) continue;
+      await this.dbPut(STORES.ACTION_HISTORY, e);
+    }
+    return { ok: true, count: list.length };
+  }
+
+  async saveCheckIn(entry) {
+    await this.dbOpen();
+    const payload = {
+      id: entry.id || entry.weekKey || `checkin_${Date.now()}`,
+      weekKey: entry.weekKey || entry.id,
+      createdAt: entry.createdAt || new Date().toISOString(),
+      reply: entry.reply || '',
+      sections: entry.sections || {},
+      proposed_action: entry.proposed_action || null,
+      status: entry.status || 'completed'
+    };
+    await this.dbPut(STORES.CHECK_INS, payload);
+    return payload;
+  }
+
+  async listCheckIns(limit = 12) {
+    await this.dbOpen();
+    try {
+      const all = await this.dbGetAll(STORES.CHECK_INS);
+      return (all || [])
+        .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+        .slice(0, limit);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async getLatestCheckIn() {
+    const list = await this.listCheckIns(1);
+    return list[0] || null;
+  }
+
+  /**
+   * Save Document Intelligence IR / import session (resume after crash).
+   */
+  async saveDocumentIntelligence(record) {
+    if (!record || typeof record !== 'object') throw new Error('DocumentIntelligence record required');
+    await this.dbOpen();
+    const id = record.id || (`di_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`);
+    const envelope = {
+      ...record,
+      id,
+      updatedAt: new Date().toISOString(),
+      createdAt: record.createdAt || new Date().toISOString()
+    };
+    await this.dbPut(STORES.DOCUMENT_INTELLIGENCE, envelope);
+    return { ok: true, id, fingerprint: getDeterministicFingerprint(envelope) };
+  }
+
+  async getDocumentIntelligence(id) {
+    await this.dbOpen();
+    return this.dbGet(STORES.DOCUMENT_INTELLIGENCE, id);
+  }
+
+  async listDocumentIntelligence(limit = 20) {
+    await this.dbOpen();
+    try {
+      const all = await this.dbGetAll(STORES.DOCUMENT_INTELLIGENCE);
+      return (all || [])
+        .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')))
+        .slice(0, limit);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async deleteDocumentIntelligence(id) {
+    await this.dbOpen();
+    if (this._memStore) return this._memStore.delete(STORES.DOCUMENT_INTELLIGENCE, id);
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = this._db.transaction(STORES.DOCUMENT_INTELLIGENCE, 'readwrite');
+        tx.objectStore(STORES.DOCUMENT_INTELLIGENCE).delete(id);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 
   /**
@@ -613,12 +784,58 @@ class GiammariaPersistenceEngine {
 
   // --- LOCAL CATALOGS ---
   async saveFoodDatabase(items) {
-    await this.dbPut(STORES.FOOD_DB, { id: 'food_catalog', items, updatedAt: new Date().toISOString() });
-    return { success: true, ok: true, count: items.length };
+    const normalized = (items || []).map(function (it) {
+      if (!it || typeof it !== 'object') return it;
+      const kcalPer100 = it.kcalPer100 != null ? it.kcalPer100 : it.kcal;
+      const proPer100 = it.proPer100 != null ? it.proPer100 : it.pro;
+      const carbPer100 = it.carbPer100 != null ? it.carbPer100 : it.carb;
+      const fatPer100 = it.fatPer100 != null ? it.fatPer100 : it.fat;
+      return Object.assign({}, it, { kcalPer100, proPer100, carbPer100, fatPer100, kcal: kcalPer100, pro: proPer100, carb: carbPer100, fat: fatPer100 });
+    });
+    await this.dbPut(STORES.FOOD_DB, { id: 'food_catalog', items: normalized, updatedAt: new Date().toISOString(), schema: 2 });
+    return { success: true, ok: true, count: normalized.length };
   }
   async getFoodDatabase() {
     const res = await this.dbGet(STORES.FOOD_DB, 'food_catalog');
-    return res ? res.items : [];
+    const items = res ? res.items : [];
+    return (items || []).map(function (it) {
+      if (!it || typeof it !== 'object') return it;
+      if (it.kcalPer100 != null) return it;
+      return Object.assign({}, it, {
+        kcalPer100: it.kcal, proPer100: it.pro, carbPer100: it.carb, fatPer100: it.fat
+      });
+    });
+  }
+
+  async saveOffFoodCache(items) {
+    await this.dbPut(STORES.FOOD_DB_OFF, {
+      id: 'off_cache',
+      items: items || [],
+      license: 'ODbL',
+      attribution: 'Open Food Facts contributors — https://openfoodfacts.org',
+      updatedAt: new Date().toISOString()
+    });
+    return { success: true, ok: true };
+  }
+  async getOffFoodCache() {
+    const res = await this.dbGet(STORES.FOOD_DB_OFF, 'off_cache');
+    return res || { items: [], license: 'ODbL', attribution: 'Open Food Facts' };
+  }
+
+  async saveHealthSamples(payload) {
+    await this.dbPut(STORES.HEALTH_SAMPLES, Object.assign({ id: 'latest' }, payload || {}, { updatedAt: new Date().toISOString() }));
+    return { success: true, ok: true };
+  }
+  async getHealthSamples() {
+    return (await this.dbGet(STORES.HEALTH_SAMPLES, 'latest')) || null;
+  }
+
+  async saveEvidenceCache(pmid, data) {
+    await this.dbPut(STORES.EVIDENCE_CACHE, Object.assign({ id: String(pmid) }, data || {}, { fetchedAt: new Date().toISOString() }));
+    return { success: true, ok: true };
+  }
+  async getEvidenceCache(pmid) {
+    return this.dbGet(STORES.EVIDENCE_CACHE, String(pmid));
   }
 
   async saveSupplementDatabase(items) {
@@ -672,6 +889,15 @@ class GiammariaPersistenceEngine {
     if (sanitized.supplementation && sanitized.supplementation.items) delete sanitized.supplementation;
     if (sanitized.therapy && sanitized.therapy.medications) delete sanitized.therapy;
     if (sanitized.exams && sanitized.exams.records) delete sanitized.exams;
+    // Privacy: never keep medical payloads in LS cache; strip from rewards mirror too
+    if (sanitized.rewards) {
+      const r = sanitized.rewards;
+      delete r.therapy;
+      delete r.exams;
+      delete r.healthSamples;
+      if (Array.isArray(r.ledger) && r.ledger.length > 80) r.ledger = r.ledger.slice(-80);
+      if (Array.isArray(r.pendingSync) && r.pendingSync.length > 40) r.pendingSync = r.pendingSync.slice(-40);
+    }
     if (sanitized.docs && Array.isArray(sanitized.docs)) {
       sanitized.docs = sanitized.docs.slice(0, 5).map(d => {
         const docCopy = { ...d };
