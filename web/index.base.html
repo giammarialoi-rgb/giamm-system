@@ -1422,8 +1422,27 @@ body.focus-mode [data-rewards-only] {
   <div class="modal-content">
     <h2 style="color:var(--gold);margin-top:0;">SOSTITUISCI ESERCIZIO</h2>
     <div id="replace-current" style="font-size:12px;color:#aaa;margin-bottom:12px;"></div>
-    <input id="replace-search" type="search" placeholder="Cerca alternativa..." oninput="window.renderReplacementOptions && window.renderReplacementOptions(this.value)">
-    <div id="replace-options" style="margin-top:12px;"></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:#ccc;margin-bottom:10px;cursor:pointer;">
+      <input id="replace-manual-toggle" type="checkbox" onchange="toggleReplaceManual(this.checked)" style="width:16px;height:16px;">
+      Inserimento manuale
+    </label>
+    <div id="replace-manual-fields" style="display:none;margin-bottom:12px;padding:10px;border:1px solid #333;border-radius:8px;background:#111;">
+      <label style="font-size:10px;color:var(--gold);font-weight:800;">NOME ESERCIZIO</label>
+      <input id="replace-manual-name" type="text" placeholder="Es. Curl manubri inclinato" style="width:100%;margin:4px 0 10px;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;">
+      <label style="font-size:10px;color:var(--gold);font-weight:800;">MACROGRUPPO MUSCOLARE (statistiche)</label>
+      <select id="replace-manual-muscle" style="width:100%;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;">
+        <option value="SCHIENA">Schiena</option>
+        <option value="SPALLE">Spalle</option>
+        <option value="PETTO">Petto</option>
+        <option value="ADDOME">Addome</option>
+        <option value="GLUTEI">Glutei</option>
+        <option value="GAMBE_POLPACCI">Gambe &amp; Polpacci</option>
+      </select>
+    </div>
+    <div id="replace-library-block">
+      <input id="replace-search" type="search" placeholder="Cerca alternativa..." oninput="window.renderReplacementOptions && window.renderReplacementOptions(this.value)">
+      <div id="replace-options" style="margin-top:12px;"></div>
+    </div>
     <div style="display:flex;gap:10px;margin-top:20px;">
       <button class="btn btn-outline" style="flex:1;" onclick="closeReplaceModal()">ANNULLA</button>
       <button class="btn btn-primary" style="flex:1;" onclick="confirmReplacement()">CONFERMA</button>
@@ -1658,6 +1677,7 @@ const APP_CLEAN_BOOT_TOKEN = 'MT34-CLEAN-20260829c';
 const DEFAULT_STORE = {
   data: {},
   subs: {},
+  exMuscle: {},
   bw: {},
   prefs: { intensityType: 'RIR', duration: 16, frequency: 4, aiControl: null },
   loadTypes: {},
@@ -1696,6 +1716,7 @@ function ensureStoreIntegrity() {
   if (!store || typeof store !== 'object') store = { ...DEFAULT_STORE };
   if (!store.data) store.data = {};
   if (!store.subs) store.subs = {};
+  if (!store.exMuscle) store.exMuscle = {};
   if (!store.bw) store.bw = {};
   if (!store.prefs) store.prefs = { intensityType: 'RIR', duration: 16, frequency: 4 };
   if (!store.loadTypes) store.loadTypes = {};
@@ -2461,7 +2482,9 @@ function sanitizeCoachDisplayText(raw) {
   return text;
 }
 
-function buildNutritionPlanFromProfile(overrides) {
+const WEEKDAY_IT = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+
+function computeNutritionTargetsFromProfile(overrides) {
   overrides = overrides || {};
   const prof = store.profile || {};
   const weight = parseFloat(overrides.weight != null ? overrides.weight : prof.weight) || 75;
@@ -2481,42 +2504,164 @@ function buildNutritionPlanFromProfile(overrides) {
   if (Number.isFinite(Number(overrides.fat)) && Number(overrides.fat) > 0) fat = Math.round(Number(overrides.fat));
   if (Number.isFinite(Number(overrides.kcal)) && Number(overrides.kcal) > 0) tdee = Math.round(Number(overrides.kcal));
   else tdee = Math.round(protein * 4 + carbs * 4 + fat * 9);
+  return { tdee: tdee, protein: protein, carbs: carbs, fat: fat };
+}
+
+function parseNutritionWeekRequest(text) {
+  const t = String(text || '');
+  let onCount = 4;
+  let offCount = 3;
+  const both = t.match(/(\d+)\s*(?:giorni?\s*)?on.*?(\d+)\s*(?:giorni?\s*)?off/i);
+  if (both) {
+    onCount = parseInt(both[1], 10);
+    offCount = parseInt(both[2], 10);
+  } else {
+    const onM = t.match(/(\d+)\s*(?:giorni?\s*)?(?:on|ON|carb|carbo|allenamento)/i);
+    const offM = t.match(/(\d+)\s*(?:giorni?\s*)?(?:off|OFF|rest|riposo)/i);
+    if (onM) onCount = parseInt(onM[1], 10);
+    if (offM) offCount = parseInt(offM[1], 10);
+  }
+  const totalM = t.match(/(\d+)\s*giorni?\s*(?:di\s*)?aliment/i) || t.match(/(\d+)\s*giorni?\s*aliment/i);
+  if (totalM && !both) {
+    const total = parseInt(totalM[1], 10);
+    if (total === 7) { onCount = onCount || 4; offCount = offCount || 3; }
+    else if (total > 0 && onCount + offCount !== total) offCount = Math.max(0, total - onCount);
+  }
+  onCount = Math.min(7, Math.max(0, onCount || 4));
+  offCount = Math.min(7 - onCount, Math.max(0, offCount || (7 - onCount)));
+  const wantsWeek = /settiman|7\s*giorn|lunedi|lunedì|domenica|\d+\s*on|\d+\s*off|on\s+e\s*\d+/i.test(t) || (onCount + offCount) >= 5;
+  return { onCount: onCount, offCount: offCount, wantsWeek: wantsWeek };
+}
+
+function buildOnOffPattern(onCount, offCount) {
+  const pattern = [];
+  let on = onCount;
+  let off = offCount;
+  while (pattern.length < 7) {
+    if (on > 0) { pattern.push(true); on--; }
+    else if (off > 0) { pattern.push(false); off--; }
+    else pattern.push(pattern.length % 2 === 0);
+  }
+  return pattern.slice(0, 7);
+}
+
+function scaleFoodRow(food, factor) {
+  const f = Object.assign({}, food);
+  const qty = Math.max(1, Math.round((Number(f.quantity) || 100) * factor));
+  f.quantity = qty;
+  f.kcal = Math.round((Number(f.kcal) || 0) * factor);
+  f.protein = Math.round((Number(f.protein) || 0) * factor);
+  f.carbs = Math.round((Number(f.carbs) || 0) * factor);
+  f.fat = Math.round((Number(f.fat) || 0) * factor);
+  return f;
+}
+
+const NUTRITION_MEAL_TEMPLATES_ON = {
+  Colazione: [
+    { name: 'Avena', quantity: 60, unit: 'g', kcal: 230, protein: 8, carbs: 40, fat: 4 },
+    { name: 'Yogurt greco 0%', quantity: 150, unit: 'g', kcal: 90, protein: 15, carbs: 6, fat: 0 },
+    { name: 'Frutti di bosco', quantity: 100, unit: 'g', kcal: 50, protein: 1, carbs: 12, fat: 0 }
+  ],
+  Pranzo: [
+    { name: 'Petto di pollo', quantity: 150, unit: 'g', kcal: 248, protein: 46, carbs: 0, fat: 5 },
+    { name: 'Riso basmati', quantity: 90, unit: 'g', kcal: 315, protein: 7, carbs: 70, fat: 1 },
+    { name: 'Insalata mista', quantity: 150, unit: 'g', kcal: 30, protein: 2, carbs: 5, fat: 0 },
+    { name: 'Olio EVO', quantity: 10, unit: 'g', kcal: 90, protein: 0, carbs: 0, fat: 10 }
+  ],
+  Spuntino: [
+    { name: 'Banana', quantity: 1, unit: 'pz', kcal: 90, protein: 1, carbs: 23, fat: 0 },
+    { name: 'Mandorle', quantity: 20, unit: 'g', kcal: 120, protein: 4, carbs: 4, fat: 10 }
+  ],
+  'Spuntino mattina': [
+    { name: 'Whey protein', quantity: 25, unit: 'g', kcal: 100, protein: 20, carbs: 2, fat: 1 },
+    { name: 'Mela', quantity: 1, unit: 'pz', kcal: 80, protein: 0, carbs: 20, fat: 0 }
+  ],
+  Cena: [
+    { name: 'Salmone', quantity: 150, unit: 'g', kcal: 300, protein: 30, carbs: 0, fat: 20 },
+    { name: 'Patate', quantity: 200, unit: 'g', kcal: 160, protein: 4, carbs: 36, fat: 0 },
+    { name: 'Verdure al vapore', quantity: 200, unit: 'g', kcal: 50, protein: 3, carbs: 8, fat: 0 }
+  ]
+};
+
+const NUTRITION_MEAL_TEMPLATES_OFF = {
+  Colazione: [
+    { name: 'Uova', quantity: 2, unit: 'pz', kcal: 140, protein: 12, carbs: 1, fat: 10 },
+    { name: 'Pane integrale', quantity: 50, unit: 'g', kcal: 120, protein: 5, carbs: 22, fat: 2 },
+    { name: 'Avocado', quantity: 50, unit: 'g', kcal: 80, protein: 1, carbs: 4, fat: 7 }
+  ],
+  Pranzo: [
+    { name: 'Tonno al naturale', quantity: 120, unit: 'g', kcal: 130, protein: 28, carbs: 0, fat: 2 },
+    { name: 'Quinoa', quantity: 70, unit: 'g', kcal: 250, protein: 9, carbs: 45, fat: 4 },
+    { name: 'Verdure grigliate', quantity: 200, unit: 'g', kcal: 60, protein: 3, carbs: 10, fat: 2 }
+  ],
+  Spuntino: [
+    { name: 'Yogurt greco 0%', quantity: 125, unit: 'g', kcal: 75, protein: 13, carbs: 5, fat: 0 },
+    { name: 'Noci', quantity: 15, unit: 'g', kcal: 100, protein: 2, carbs: 2, fat: 10 }
+  ],
+  'Spuntino mattina': [
+    { name: 'Proteine caseine', quantity: 25, unit: 'g', kcal: 95, protein: 20, carbs: 2, fat: 1 }
+  ],
+  Cena: [
+    { name: 'Petto di tacchino', quantity: 150, unit: 'g', kcal: 165, protein: 35, carbs: 0, fat: 2 },
+    { name: 'Verdure miste', quantity: 250, unit: 'g', kcal: 55, protein: 4, carbs: 10, fat: 0 },
+    { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+  ]
+};
+
+function fillNutritionDayWithMeals(dayLabel, targets, opts) {
+  opts = opts || {};
+  const isOn = opts.trainingDay !== false;
+  const mealCount = opts.mealCount || 4;
+  const templates = isOn ? NUTRITION_MEAL_TEMPLATES_ON : NUTRITION_MEAL_TEMPLATES_OFF;
+  const kcalTarget = isOn ? targets.tdee : Math.round(targets.tdee * 0.88);
+  const mealNames = mealCount === 2 ? ['Colazione', 'Cena']
+    : mealCount === 3 ? ['Colazione', 'Pranzo', 'Cena']
+    : mealCount === 5 ? ['Colazione', 'Spuntino mattina', 'Pranzo', 'Spuntino', 'Cena']
+    : ['Colazione', 'Pranzo', 'Spuntino', 'Cena'];
+  const shares = mealCount === 2 ? [0.35, 0.65]
+    : mealCount === 3 ? [0.25, 0.4, 0.35]
+    : mealCount === 5 ? [0.2, 0.1, 0.35, 0.1, 0.25]
+    : [0.22, 0.35, 0.12, 0.31];
+  const meals = mealNames.map(function (name, i) {
+    const tpl = templates[name] || templates.Pranzo || [];
+    const baseKcal = tpl.reduce(function (s, f) { return s + (Number(f.kcal) || 0); }, 0) || 400;
+    const factor = Math.max(0.6, Math.min(1.6, (kcalTarget * (shares[i] || 0.25)) / baseKcal));
+    return {
+      name: name,
+      foods: tpl.map(function (f) { return scaleFoodRow(f, factor); })
+    };
+  });
+  return {
+    day: dayLabel + (isOn ? ' · ON' : ' · OFF'),
+    training_day: isOn,
+    meals: meals
+  };
+}
+
+function buildWeeklyNutritionPlan(overrides, weekOpts) {
+  weekOpts = weekOpts || {};
+  const targets = computeNutritionTargetsFromProfile(overrides);
+  const onCount = weekOpts.onCount != null ? weekOpts.onCount : 4;
+  const offCount = weekOpts.offCount != null ? weekOpts.offCount : (7 - onCount);
+  const pattern = buildOnOffPattern(onCount, offCount);
+  const mealCount = weekOpts.mealCount || 4;
+  const days = WEEKDAY_IT.map(function (label, i) {
+    return fillNutritionDayWithMeals(label, targets, { trainingDay: pattern[i], mealCount: mealCount });
+  });
   return {
     present: true,
-    plan_name: 'Piano da profilo · Nurvan',
-    daily_calories_target: tdee,
-    daily_protein_target: protein,
-    daily_carbs_target: carbs,
-    daily_fats_target: fat,
+    plan_name: weekOpts.planName || ('Piano settimanale · ' + onCount + ' ON / ' + offCount + ' OFF'),
+    daily_calories_target: targets.tdee,
+    daily_protein_target: targets.protein,
+    daily_carbs_target: targets.carbs,
+    daily_fats_target: targets.fat,
     notes: 'Piano organizzativo evidence-informed (proteine ~1.6–2.2 g/kg; non è diagnosi o terapia).',
-    days: [
-      {
-        day: 'Giorno tipo',
-        meals: [
-          { name: 'Colazione', foods: [
-            { name: 'Avena', quantity: 60, unit: 'g', kcal: 230, protein: 8, carbs: 40, fat: 4 },
-            { name: 'Yogurt greco 0%', quantity: 150, unit: 'g', kcal: 90, protein: 15, carbs: 6, fat: 0 },
-            { name: 'Frutti di bosco', quantity: 100, unit: 'g', kcal: 50, protein: 1, carbs: 12, fat: 0 }
-          ]},
-          { name: 'Pranzo', foods: [
-            { name: 'Petto di pollo', quantity: 150, unit: 'g', kcal: 248, protein: 46, carbs: 0, fat: 5 },
-            { name: 'Riso basmati', quantity: 80, unit: 'g', kcal: 280, protein: 6, carbs: 62, fat: 1 },
-            { name: 'Insalata mista', quantity: 150, unit: 'g', kcal: 30, protein: 2, carbs: 5, fat: 0 },
-            { name: 'Olio EVO', quantity: 10, unit: 'g', kcal: 90, protein: 0, carbs: 0, fat: 10 }
-          ]},
-          { name: 'Cena', foods: [
-            { name: 'Salmone', quantity: 150, unit: 'g', kcal: 300, protein: 30, carbs: 0, fat: 20 },
-            { name: 'Patate', quantity: 200, unit: 'g', kcal: 160, protein: 4, carbs: 36, fat: 0 },
-            { name: 'Verdure al vapore', quantity: 200, unit: 'g', kcal: 50, protein: 3, carbs: 8, fat: 0 }
-          ]},
-          { name: 'Snack', foods: [
-            { name: 'Whey protein', quantity: 30, unit: 'g', kcal: 120, protein: 24, carbs: 2, fat: 1 },
-            { name: 'Banana', quantity: 1, unit: 'porzioni', kcal: 90, protein: 1, carbs: 23, fat: 0 }
-          ]}
-        ]
-      }
-    ]
+    days: days
   };
+}
+
+function buildNutritionPlanFromProfile(overrides, weekOpts) {
+  return buildWeeklyNutritionPlan(overrides, Object.assign({ onCount: 4, offCount: 3 }, weekOpts || {}));
 }
 
 function buildDefaultSupplementationFromProfile() {
@@ -2544,12 +2689,12 @@ function normalizeNutritionFromChanges(changes, op) {
   const fat = Number(c.fats_g ?? c.fat_g ?? c.fat ?? c.fats ?? c.daily_fats_target);
   const kcal = Number(c.calories ?? c.kcal ?? c.daily_calories_target ?? c.calories_kcal);
   if ([protein, carbs, fat, kcal].some(function (n) { return Number.isFinite(n) && n > 0; })) {
-    return buildNutritionPlanFromProfile({
+    return buildWeeklyNutritionPlan({
       protein: Number.isFinite(protein) && protein > 0 ? protein : undefined,
       carbs: Number.isFinite(carbs) && carbs > 0 ? carbs : undefined,
       fat: Number.isFinite(fat) && fat > 0 ? fat : undefined,
       kcal: Number.isFinite(kcal) && kcal > 0 ? kcal : undefined
-    });
+    }, { onCount: 4, offCount: 3, wantsWeek: true });
   }
   return null;
 }
@@ -2602,8 +2747,13 @@ function normalizeCoachProposedAction(raw, replyText) {
 }
 
 function askCoachAiForDomain(domain) {
+  if (domain === 'therapy') {
+    if (typeof showToast === 'function') showToast('Terapia: solo lettura. Importa la prescrizione medica.', 'info');
+    startDomainImport('therapy');
+    return;
+  }
   const map = {
-    nutrition: 'Crea e importa un piano alimentare completo basato sul mio profilo generale, peso, obiettivi e programma di allenamento. Imposta i target macro e un giorno tipo con pasti. Confermo l’inserimento in Alimentazione.',
+    nutrition: 'Crea un piano alimentare settimanale completo (Lunedì–Domenica) basato sul mio profilo. Se non specifico diversamente, usa 4 giorni ON e 3 OFF con pasti, alimenti e macro già compilati. Confermo l’inserimento in Alimentazione.',
     supplements: 'Crea e importa un protocollo di integrazione basato sul mio profilo e obiettivi (evidence-informed, non consulenza medica). Confermo l’inserimento in Integrazione.',
     therapy: 'In base al mio profilo generale, aiutami a organizzare la sezione Terapia: NON inventare farmaci. Se non ho indicato molecole, proponi solo la struttura da compilare e ricordami di usare solo quanto prescritto dal medico.',
     training: 'In base al mio profilo e obiettivi, proponi o completa l’allenamento da inserire nel programma attivo.',
@@ -5113,6 +5263,38 @@ const MUSCLE_TAXONOMY = {
   "ADDOME": ["crunch", "plank", "leg raise", "addom", "sit up", "core", "hollow"]
 };
 
+const MACRO_MUSCLE_GROUPS = [
+  { id: 'SCHIENA', label: 'Schiena' },
+  { id: 'SPALLE', label: 'Spalle' },
+  { id: 'PETTO', label: 'Petto' },
+  { id: 'ADDOME', label: 'Addome' },
+  { id: 'GLUTEI', label: 'Glutei' },
+  { id: 'GAMBE_POLPACCI', label: 'Gambe & Polpacci' }
+];
+
+function normalizeMacroMuscleGroup(raw) {
+  const g = String(raw || '').toUpperCase().replace(/&/g, '_').replace(/\s+/g, '_');
+  if (['SCHIENA', 'DORSO', 'DORSALI', 'BACK', 'LAT', 'LATS', 'TRAP'].includes(g)) return 'SCHIENA';
+  if (['SPALLE', 'DELTOIDI', 'SHOULDERS', 'DELTS', 'BICIPITI', 'TRICIPITI', 'BRACCIA', 'ARMS'].includes(g)) return 'SPALLE';
+  if (['PETTO', 'CHEST', 'PECS'].includes(g)) return 'PETTO';
+  if (['ADDOME', 'CORE', 'ABS', 'ABDOMINAL'].includes(g)) return 'ADDOME';
+  if (['GLUTEI', 'GLUTES', 'GLUTE'].includes(g)) return 'GLUTEI';
+  if (['GAMBE_POLPACCI', 'GAMBE', 'LEGS', 'QUADRICIPITI', 'QUADS', 'FEMORALI', 'HAMSTRINGS', 'POLPACCI', 'CALVES', 'QUAD', 'HAM'].includes(g)) return 'GAMBE_POLPACCI';
+  return g;
+}
+
+function resolveExerciseMacroGroups(exerciseName, movement, explicitGroups, subsKey) {
+  if (subsKey && store.exMuscle && store.exMuscle[subsKey]) {
+    return [store.exMuscle[subsKey]];
+  }
+  const macros = new Set();
+  getExerciseMuscleGroups(exerciseName, movement, explicitGroups).forEach(function (g) {
+    const m = normalizeMacroMuscleGroup(g);
+    if (MACRO_MUSCLE_GROUPS.some(function (x) { return x.id === m; })) macros.add(m);
+  });
+  return Array.from(macros);
+}
+
 function getExerciseMuscleGroups(exerciseName, movement, explicitGroups) {
   const result = new Set();
   if(Array.isArray(explicitGroups) && explicitGroups.length) {
@@ -5136,15 +5318,10 @@ function getExerciseMuscleGroups(exerciseName, movement, explicitGroups) {
   return Array.from(result);
 }
 
-function exerciseMatchesMuscleGroup(exerciseName, movement, explicitGroups, selectedGroup) {
-  if(!selectedGroup || selectedGroup === 'TOTAL') return true;
-  const groups = getExerciseMuscleGroups(exerciseName, movement, explicitGroups).map(function (g) {
-    return (typeof normalizeMuscleLabel === 'function') ? normalizeMuscleLabel(g) : g;
-  });
-  const sel = (typeof normalizeMuscleLabel === 'function') ? normalizeMuscleLabel(selectedGroup) : selectedGroup;
-  if (sel === 'SCHIENA' && (groups.includes('DORSO') || groups.includes('DORSALI') || groups.includes('SCHIENA'))) return true;
-  if (sel === 'SPALLE' && (groups.includes('DELTOIDI') || groups.includes('SPALLE'))) return true;
-  if (sel === 'ADDOME' && (groups.includes('CORE') || groups.includes('ADDOME'))) return true;
+function exerciseMatchesMuscleGroup(exerciseName, movement, explicitGroups, selectedGroup, subsKey) {
+  if (!selectedGroup || selectedGroup === 'TOTAL') return true;
+  const groups = resolveExerciseMacroGroups(exerciseName, movement, explicitGroups, subsKey);
+  const sel = normalizeMacroMuscleGroup(selectedGroup);
   return groups.includes(sel);
 }
 
@@ -5924,14 +6101,19 @@ function renderNutrition(c) {
       days: []
     };
   }
-  // Remove ONLY the old hardcoded demo Monday — never wipe Coach/profile-generated plans
+  // Remove legacy single "Giorno tipo" placeholder — user must create or import explicitly
   if (Array.isArray(DATA.nutrition.days) && DATA.nutrition.days.length === 1) {
     const d0 = DATA.nutrition.days[0];
     const blob = JSON.stringify(d0 || {});
-    const isCoachOrProfilePlan = /da profilo|Nurvan|Coach|evidence-informed/i.test(String(DATA.nutrition.plan_name || DATA.nutrition.notes || ''));
+    const isLegacyTipo = /^giorno\s*tipo$/i.test(String(d0.day || '').replace(/\s*·.*$/, '').trim());
+    const isCoachOrProfilePlan = /settiman|ON\s*\/\s*OFF|da profilo|Nurvan|Coach|evidence-informed/i.test(String(DATA.nutrition.plan_name || DATA.nutrition.notes || ''));
     const looksLegacyDemo = /Luned[iì].*\(ON\)/i.test(blob) && /Albume d'uovo/i.test(blob) && /Petto di Pollo/i.test(blob);
     const looksEmptyMondayOnly = /^luned[iì]/i.test(String(d0.day || '')) && !(d0.meals || []).some((m) => (m.foods || m.items || []).length);
-    if (!isCoachOrProfilePlan && (looksLegacyDemo || (looksEmptyMondayOnly && DATA.nutrition.plan_name === 'Piano Nutrizionale Personalizzato'))) {
+    if (isLegacyTipo && !isCoachOrProfilePlan) {
+      DATA.nutrition = { plan_name: '', present: false, days: [], daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
+      store.nutrition = DATA.nutrition;
+      persist();
+    } else if (!isCoachOrProfilePlan && (looksLegacyDemo || (looksEmptyMondayOnly && DATA.nutrition.plan_name === 'Piano Nutrizionale Personalizzato'))) {
       DATA.nutrition = { plan_name: '', present: false, days: [], daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
       store.nutrition = DATA.nutrition;
       persist();
@@ -6303,29 +6485,43 @@ function nutritionWizardFinish(manualOnly) {
         ? ['Colazione', 'Spuntino mattina', 'Pranzo', 'Spuntino', 'Cena']
         : ['Colazione', 'Pranzo', 'Cena'];
   const kcalEl = document.getElementById('nutrition-wizard-kcal');
-  const kcal = kcalEl ? parseInt(kcalEl.value, 10) : NaN;
+  const kcalInput = kcalEl ? parseInt(kcalEl.value, 10) : NaN;
+  const targets = computeNutritionTargetsFromProfile(Number.isFinite(kcalInput) && kcalInput > 0 ? { kcal: kcalInput } : {});
   if (!DATA.nutrition) DATA.nutrition = { days: [], present: true };
   if (!DATA.nutrition.days) DATA.nutrition.days = [];
   DATA.nutrition.present = true;
-  if (Number.isFinite(kcal) && kcal > 0) {
-    DATA.nutrition.daily_calories_target = kcal;
-    const wkg = (store.profile && store.profile.weight) || 75;
-    DATA.nutrition.daily_protein_target = Math.round(wkg * 1.8);
-    DATA.nutrition.daily_carbs_target = Math.round((kcal * 0.4) / 4);
-    DATA.nutrition.daily_fats_target = Math.round((kcal * 0.25) / 9);
+  DATA.nutrition.daily_calories_target = targets.tdee;
+  DATA.nutrition.daily_protein_target = targets.protein;
+  DATA.nutrition.daily_carbs_target = targets.carbs;
+  DATA.nutrition.daily_fats_target = targets.fat;
+  const weekdayIdx = WEEKDAY_IT.indexOf(day);
+  const isOn = weekdayIdx >= 0 ? buildOnOffPattern(4, 3)[weekdayIdx] : true;
+  let dayObj;
+  if (manualOnly) {
+    dayObj = { day: day, meals: mealNames.map((name) => ({ name, foods: [] })) };
+  } else {
+    dayObj = fillNutritionDayWithMeals(day, targets, { trainingDay: isOn, mealCount: mealCount });
   }
-  DATA.nutrition.days.push({
-    day,
-    meals: mealNames.map((name) => ({ name, foods: [] }))
-  });
+  DATA.nutrition.days.push(dayObj);
   currentNutritionDayIndex = DATA.nutrition.days.length - 1;
   persist();
   const modal = document.getElementById('add-nutrition-day-modal');
   if (modal) modal.remove();
   render();
   if (typeof showToast === 'function') {
-    showToast(manualOnly ? (day + ' creato — compila i pasti') : (day + ' aggiunto'), 'success');
+    showToast(manualOnly ? (day + ' creato — compila i pasti') : (day + ' creato con pasti e macro'), 'success');
   }
+}
+
+function applySupplementationFromProfile() {
+  DATA.supplementation = buildDefaultSupplementationFromProfile();
+  store.supplementation = DATA.supplementation;
+  persist();
+  if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveSupplementation) {
+    GiammariaPersistence.saveSupplementation(DATA.supplementation).catch(function () {});
+  }
+  render();
+  if (typeof showToast === 'function') showToast('Integrazione generata dal profilo', 'success');
 }
 
 function startDomainImport(domain) {
@@ -6339,31 +6535,7 @@ function startDomainImport(domain) {
 }
 
 function buildSuggestedNutritionFromProfile() {
-  const profile = store.profile || {};
-  const weight = Number(profile.weight) || 75;
-  const goal = String(profile.goal || '').toLowerCase();
-  let kcal = Math.round(weight * 33);
-  if (/cut|dimagr|deficit|definiz/.test(goal)) kcal = Math.round(weight * 28);
-  if (/bulk|massa|ipertrof|surplus/.test(goal)) kcal = Math.round(weight * 38);
-  const pro = Math.round(weight * 1.8);
-  const fat = Math.round((kcal * 0.25) / 9);
-  const carb = Math.round((kcal - pro * 4 - fat * 9) / 4);
-  const weekdays = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
-  const templateMeals = [
-    { name: 'Colazione', foods: [] },
-    { name: 'Pranzo', foods: [] },
-    { name: 'Cena', foods: [] }
-  ];
-  return {
-    plan_name: 'Piano da profilo',
-    present: true,
-    daily_calories_target: kcal,
-    daily_protein_target: pro,
-    daily_carbs_target: carb,
-    daily_fats_target: fat,
-    days: weekdays.map((day) => ({ day, meals: JSON.parse(JSON.stringify(templateMeals)) })),
-    notes: ['Struttura vuota con target da profilo — compila gli alimenti o importa una scheda.']
-  };
+  return buildWeeklyNutritionPlan({}, { onCount: 4, offCount: 3, planName: 'Piano da profilo' });
 }
 
 function maybeOfferNutritionFromProfile() {
@@ -6433,7 +6605,8 @@ function renderSupplements(c) {
         <p style="margin:0;font-size:12px;">Nessun integratore importato o aggiunto.</p>
         <p style="margin:8px 0 0;font-size:11px;color:#666;">Importa una scheda con sezione Integrazione, chiedi a Coach AI in base al profilo, oppure aggiungi dal catalogo.</p>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
-          <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="askCoachAiForDomain('supplements')">CHIEDI A COACH AI (DA PROFILO)</button>
+          <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="applySupplementationFromProfile()">GENERA DA PROFILO</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="askCoachAiForDomain('supplements')">CHIEDI A COACH AI</button>
           <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="startDomainImport('supplements')">${t('importSupplements')}</button>
         </div>
       </div>
@@ -6672,6 +6845,39 @@ function therapyScheduleChips(m) {
   `;
 }
 
+const MOLECULE_INFO = {
+  oxymetholone: 'Androgeno anabolico orale. Usato clinicamente in anemia; in ambito sportivo aumenta massa e forza con elevato rischio epatico ed estrogenico.',
+  oxandrolone: 'Androgeno anabolico orale a bassa aromatizzazione. Spesso usato in fasi di definizione; profilo epatico da monitorare.',
+  anastrozolo: 'Inibitore dell\'aromatasi (AI). Riduce conversione testosterone→estrogeni; usato in terapia oncologica e off-label in endocrinologia.',
+  testosterone: 'Ormone androgeno endogeno. Base di molte terapie sostitutive; effetti su massa muscolare, libido, umore e ematocrito.',
+  nandrolone: 'Androgeno anabolico 19-nor. Proprietà anaboliche marcate; possibile impatto su prolattina e lipid profile.',
+  trenbolone: 'Androgeno anabolico 19-nor molto potente. Non approvato per uso umano; profilo androgenico ed epatico significativo.',
+  clomifene: 'SERM. Stimola asse HPG bloccando recettori estrogenici ipofisari; usato in infertilità e ripristino endogeno.',
+  tamoxifene: 'SERM. Antagonista recettoriale selettivo; usato in carcinoma mammario e controllo estrogeni.',
+  hcg: 'Gonadotropina corionica. Mima LH; stimola testicoli a produrre testosterone ed spermatogenesi.',
+  metformina: 'Biguanide antidiabetico. Migliora sensibilità insulinica; uso off-label in PCOS e controllo glicemia.',
+  levothyroxine: 'Ormone tiroideo T4. Terapia sostitutiva in ipotiroidismo; regola metabolismo basale.',
+  finasteride: 'Inibitore 5-alfa reduttasi. Riduce DHT; usato in ipertrofia prostatica e alopecia androgenetica.'
+};
+
+function getMoleculeBlurb(med) {
+  const ing = String((med && (med.active_ingredient || med.ingredient)) || '').toLowerCase();
+  const name = String((med && (med.name || med.medication)) || '').toLowerCase();
+  const fold = function (s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); };
+  for (const key of Object.keys(MOLECULE_INFO)) {
+    if (fold(ing).includes(key) || fold(name).includes(key)) return MOLECULE_INFO[key];
+  }
+  const hits = searchDrugCatalogLocal(ing || name);
+  if (hits.length && hits[0].ingredient) {
+    const ingKey = fold(String(hits[0].ingredient)).split(/\s+/)[0];
+    for (const key of Object.keys(MOLECULE_INFO)) {
+      if (ingKey.includes(key)) return MOLECULE_INFO[key];
+    }
+    return 'Principio attivo: ' + hits[0].ingredient + (hits[0].category ? ' · ' + hits[0].category : '') + '. Solo tracciamento personale — segui sempre la prescrizione medica.';
+  }
+  return 'Tracciamento personale della prescrizione. Consulta il foglietto illustrativo e il medico curante per meccanismo d\'azione e controindicazioni.';
+}
+
 function renderTherapy(c) {
   if (!DATA.therapy && (!store.therapy || (!store.therapy.medications && !store.therapy.protocols))) {
     DATA.therapy = {
@@ -6696,15 +6902,13 @@ function renderTherapy(c) {
         <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${t('therapy')}</h1>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain('therapy')">CHIEDI A COACH AI</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="startDomainImport('therapy')">${t('importTherapy')}</button>
-        <button class="btn btn-primary" style="font-size:10px;padding:6px 12px;" onclick="openAddTherapyModal()">+ AGGIUNGI FARMACO</button>
       </div>
     </div>
 
     <!-- Medical disclaimer badge -->
     <div style="background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.3);padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:10px;color:#ff8888;line-height:1.4;">
-      ⚠️ <strong>AVVERTENZA MEDICA:</strong> Questa sezione ha esclusivamente scopo di tracciamento e promemoria personale. Non sostituisce il parere o la prescrizione del medico curante.
+      ⚠️ <strong>Sola lettura:</strong> sezione di consultazione e promemoria. I farmaci vanno inseriti solo tramite import da prescrizione medica. Non sostituisce il parere del medico curante.
     </div>
   `;
 
@@ -6718,24 +6922,18 @@ function renderTherapy(c) {
           </div>
           <div style="display:flex;flex-direction:column;gap:10px;">
             ${(proto.medications || []).map((m, idx) => {
-              const globalIdx = medsRaw.indexOf(m);
-              const delIdx = globalIdx >= 0 ? globalIdx : idx;
+              const blurb = getMoleculeBlurb(m);
               return `
                 <div class="card-compact" style="border:1px solid var(--border);background:var(--surface);">
-                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
-                    <div>
-                      <span style="font-size:15px;font-weight:900;color:#fff;">${safeDisplayValue(m.name || m.medication, 'Farmaco')}</span>
-                      ${m.category ? `<span style="font-size:10px;color:var(--gold);margin-left:6px;">${safeDisplayValue(m.category, '')}</span>` : ''}
-                      ${m.active_ingredient ? `<span style="font-size:11px;color:#888;margin-left:6px;">(${safeDisplayValue(m.active_ingredient, '')})</span>` : ''}
-                      <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:6px;">
-                        ${therapyScheduleChips(m)}
-                      </div>
-                    </div>
-                    <div style="display:flex;gap:4px;">
-                      <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;" onclick="editTherapyItem(${delIdx})">EDIT</button>
-                      <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;color:var(--accent-red);" onclick="deleteTherapyItem(${delIdx})">✕</button>
+                  <div style="margin-bottom:6px;">
+                    <span style="font-size:15px;font-weight:900;color:#fff;">${safeDisplayValue(m.name || m.medication, 'Farmaco')}</span>
+                    ${m.category ? `<span style="font-size:10px;color:var(--gold);margin-left:6px;">${safeDisplayValue(m.category, '')}</span>` : ''}
+                    ${m.active_ingredient ? `<span style="font-size:11px;color:#888;margin-left:6px;">(${safeDisplayValue(m.active_ingredient, '')})</span>` : ''}
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:6px;">
+                      ${therapyScheduleChips(m)}
                     </div>
                   </div>
+                  <div style="font-size:11px;color:#aaa;line-height:1.45;margin-top:6px;padding:8px;background:#111;border-radius:6px;border-left:3px solid var(--gold);">${esc(blurb)}</div>
                   ${m.notes ? `<div style="font-size:11px;color:#888;margin-top:6px;border-top:1px dashed #222;padding-top:4px;">📝 ${safeDisplayValue(m.notes, '')}</div>` : ''}
                 </div>
               `;
@@ -6748,22 +6946,18 @@ function renderTherapy(c) {
     html += `
       <div style="display:flex;flex-direction:column;gap:10px;">
         ${meds.map(({ m, originalIdx }) => {
+          const blurb = getMoleculeBlurb(m);
           return `
             <div class="card-compact" style="border:1px solid var(--border);background:var(--surface);">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
-                <div>
-                  <span style="font-size:15px;font-weight:900;color:#fff;">${safeDisplayValue(m.name || m.medication, 'Farmaco')}</span>
-                  ${m.category ? `<span style="font-size:10px;color:var(--gold);margin-left:6px;">${safeDisplayValue(m.category, '')}</span>` : ''}
-                  ${m.active_ingredient ? `<span style="font-size:11px;color:#888;margin-left:6px;">(${safeDisplayValue(m.active_ingredient, '')})</span>` : ''}
-                  <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:6px;">
-                    ${therapyScheduleChips(m)}
-                  </div>
-                </div>
-                <div style="display:flex;gap:4px;">
-                  <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;" onclick="editTherapyItem(${originalIdx})">EDIT</button>
-                  <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;color:var(--accent-red);" onclick="deleteTherapyItem(${originalIdx})">✕</button>
+              <div style="margin-bottom:6px;">
+                <span style="font-size:15px;font-weight:900;color:#fff;">${safeDisplayValue(m.name || m.medication, 'Farmaco')}</span>
+                ${m.category ? `<span style="font-size:10px;color:var(--gold);margin-left:6px;">${safeDisplayValue(m.category, '')}</span>` : ''}
+                ${m.active_ingredient ? `<span style="font-size:11px;color:#888;margin-left:6px;">(${safeDisplayValue(m.active_ingredient, '')})</span>` : ''}
+                <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:6px;">
+                  ${therapyScheduleChips(m)}
                 </div>
               </div>
+              <div style="font-size:11px;color:#aaa;line-height:1.45;margin-top:6px;padding:8px;background:#111;border-radius:6px;border-left:3px solid var(--gold);">${esc(blurb)}</div>
               ${m.notes ? `<div style="font-size:11px;color:#888;margin-top:6px;border-top:1px dashed #222;padding-top:4px;">📝 ${safeDisplayValue(m.notes, '')}</div>` : ''}
             </div>
           `;
@@ -6774,7 +6968,9 @@ function renderTherapy(c) {
     html += `
       <div class="card" style="text-align:center;padding:30px 15px;color:#888;">
         <div style="font-size:24px;margin-bottom:8px;">🩺</div>
-        <p style="margin:0;font-size:12px;">Nessuna prescrizione o protocollo registrato.</p>
+        <p style="margin:0;font-size:12px;">Nessuna prescrizione importata.</p>
+        <p style="margin:8px 0 0;font-size:11px;color:#666;">Importa una scheda terapia dal medico per visualizzare farmaci e note sulle molecole.</p>
+        <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;margin-top:14px;" onclick="startDomainImport('therapy')">${t('importTherapy')}</button>
       </div>
     `;
   }
@@ -10412,14 +10608,25 @@ function updateData(key, val){
   persist();
   calcStats();
 }
-function substituteEx(idx, val){
+function substituteEx(idx, val, muscleGroup){
   if(!val) return;
   pushWorkoutUndoSnapshot('sostituzione esercizio');
   for(let w = currentWeek; w <= DATA.weeks.length; w++) {
-    store.subs[`w${w}_d${currentDay}_e${idx}`] = val;
+    const key = `w${w}_d${currentDay}_e${idx}`;
+    store.subs[key] = val;
+    if (!store.exMuscle) store.exMuscle = {};
+    if (muscleGroup) store.exMuscle[key] = muscleGroup;
+    else if (store.exMuscle[key]) delete store.exMuscle[key];
   }
   persist();
   render();
+}
+function toggleReplaceManual(checked) {
+  const manual = $('replace-manual-fields');
+  const library = $('replace-library-block');
+  if (manual) manual.style.display = checked ? 'block' : 'none';
+  if (library) library.style.display = checked ? 'none' : 'block';
+  if (replacementDraft) replacementDraft.manual = !!checked;
 }
 let replacementDraft = null;
 function openReplacementModal(idx, encodedCurrent){
@@ -10427,9 +10634,13 @@ function openReplacementModal(idx, encodedCurrent){
     seedExerciseDatabase();
     if (DATA && (!DATA.exerciseDb || !Object.keys(DATA.exerciseDb).length)) DATA.exerciseDb = buildExerciseDbFromDictionary();
     const current = decodeURIComponent(encodedCurrent || '');
-    replacementDraft = { idx, current, selected: '' };
+    replacementDraft = { idx, current, selected: '', manual: false };
     const curEl = $('replace-current');
     if (curEl) curEl.innerHTML = `Esercizio attuale: <b style="color:var(--gold);">${esc(current)}</b><br><span style="font-size:10px;color:#777;">Serie e parametri verranno mantenuti.</span>`;
+    const manualToggle = $('replace-manual-toggle');
+    if (manualToggle) manualToggle.checked = false;
+    toggleReplaceManual(false);
+    if ($('replace-manual-name')) $('replace-manual-name').value = '';
     if ($('replace-search')) $('replace-search').value = '';
     renderReplacementOptions('');
     const m = $('replace-modal');
@@ -10472,7 +10683,19 @@ function selectReplacement(nameOrEncoded){
   renderReplacementOptions(($('replace-search') && $('replace-search').value) || '');
 }
 function confirmReplacement(){
-  if(!replacementDraft || !replacementDraft.selected){ alert('Seleziona prima un esercizio alternativo.'); return; }
+  if(!replacementDraft){ alert('Sessione sostituzione non valida.'); return; }
+  if (replacementDraft.manual) {
+    const name = ($('replace-manual-name') && $('replace-manual-name').value || '').trim();
+    const muscle = ($('replace-manual-muscle') && $('replace-manual-muscle').value) || 'PETTO';
+    if (!name) { alert('Inserisci il nome dell\'esercizio.'); return; }
+    substituteEx(replacementDraft.idx, name, muscle);
+    replacementDraft = null;
+    const m = $('replace-modal');
+    if (m) m.style.display = 'none';
+    if (typeof showToast === 'function') showToast('Esercizio manuale inserito · ' + muscle.replace('_', ' '), 'success');
+    return;
+  }
+  if(!replacementDraft.selected){ alert('Seleziona prima un esercizio alternativo.'); return; }
   substituteEx(replacementDraft.idx, replacementDraft.selected);
   replacementDraft = null;
   const m = $('replace-modal');
@@ -11515,11 +11738,9 @@ function collectSessionStats(opts) {
         }
         if (doneSets) {
           out.exercises++;
-          const groups = row.muscle_groups || row.muscleGroups || (row.muscle_group ? [row.muscle_group] : []);
-          groups.forEach((g) => {
-            const key = String(g || '').toUpperCase();
-            if (!key) return;
-            out.muscles[key] = (out.muscles[key] || 0) + doneSets;
+          const exName = (store.subs && store.subs[eK]) || row.name || row.exercise || '';
+          resolveExerciseMacroGroups(exName, row.movement, row.muscle_groups || row.muscleGroups, eK).forEach(function (g) {
+            out.muscles[g] = (out.muscles[g] || 0) + doneSets;
           });
         }
       });
@@ -11616,12 +11837,9 @@ function renderStats(c){
     <div class="card" style="margin-bottom:12px;padding:12px;">
       <div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:8px;">DRILL-DOWN MUSCOLI</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;" id="stats-muscle-chips">
-        ${['PETTO','SCHIENA','SPALLE','BICIPITI','TRICIPITI','QUADRICIPITI','FEMORALI','GLUTEI','POLPACCI','ADDOME'].map(function (g) {
-          const n = Object.keys(snap.muscles || {}).reduce(function (acc, k) {
-            const nk = (typeof normalizeMuscleLabel === 'function') ? normalizeMuscleLabel(k) : String(k).toUpperCase();
-            return acc + (nk === g ? (snap.muscles[k] || 0) : 0);
-          }, 0);
-          return '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="drillStatsMuscle(\'' + g + '\')">' + g + (n ? ' · ' + n : '') + '</button>';
+        ${MACRO_MUSCLE_GROUPS.map(function (g) {
+          const n = snap.muscles[g.id] || 0;
+          return '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="drillStatsMuscle(\'' + g.id + '\')">' + g.label + (n ? ' · ' + n : '') + '</button>';
         }).join('')}
       </div>
       <div id="stats-drill-detail" style="margin-top:10px;font-size:11px;color:#888;"></div>
@@ -11641,17 +11859,8 @@ function renderStats(c){
       <div class="card-header"><h2>Filtro Gruppo Muscolare</h2></div>
       <div style="padding:15px;">
         <select id="stats-muscle-group" onchange="renderStatsData()" style="margin-bottom:10px;">
-          <option value="TOTAL">Tutti i Gruppi (Volume Totale)</option>
-          <option value="PETTO">Petto (Pettorali)</option>
-          <option value="SCHIENA">Schiena / Dorso</option>
-          <option value="SPALLE">Spalle / Deltoidi</option>
-          <option value="BICIPITI">Bicipiti</option>
-          <option value="TRICIPITI">Tricipiti</option>
-          <option value="QUADRICIPITI">Quadricipiti</option>
-          <option value="FEMORALI">Femorali / Hamstrings</option>
-          <option value="GLUTEI">Glutei</option>
-          <option value="POLPACCI">Polpacci</option>
-          <option value="ADDOME">Addome / Core</option>
+          <option value="TOTAL">Tutti i macrogruppi (volume totale)</option>
+          ${MACRO_MUSCLE_GROUPS.map(function (g) { return '<option value="' + g.id + '">' + g.label + '</option>'; }).join('')}
         </select>
       </div>
     </div>
@@ -11672,32 +11881,30 @@ function drillStatsMuscle(group) {
   if (sel) { sel.value = group; renderStatsData(); }
   const subgroups = {
     PETTO: ['Alto', 'Medio', 'Basso'],
-    SCHIENA: ['Dorsali', 'Trapezio', 'Lombar'],
-    SPALLE: ['Deltoide anteriore', 'Laterale', 'Posteriore'],
-    QUADRICIPITI: ['Quadricipiti'],
-    FEMORALI: ['Femorali'],
+    SCHIENA: ['Dorsali', 'Trapezio', 'Lombari'],
+    SPALLE: ['Deltoide anteriore', 'Laterale', 'Posteriore', 'Bicipiti', 'Tricipiti'],
     GLUTEI: ['Glutei'],
-    POLPACCI: ['Polpacci'],
-    BICIPITI: ['Bicipiti'],
-    TRICIPITI: ['Tricipiti'],
-    ADDOME: ['Addome / Core']
+    ADDOME: ['Addome / Core'],
+    GAMBE_POLPACCI: ['Quadricipiti', 'Femorali', 'Polpacci']
   };
   const list = subgroups[group] || [group];
   const exercises = [];
   if (DATA && DATA.weeks) {
-    DATA.weeks.forEach(function (w) {
-      (w.sessions || w.days || []).forEach(function (s) {
-        (s.exercises || s.rows || []).forEach(function (e) {
-          const name = e.name || e.name_original || '';
-          if (exerciseMatchesMuscleGroup(name, e.movement, e.muscle_groups || e.muscleGroups, group)) {
+    DATA.weeks.forEach(function (w, wi) {
+      (w.sessions || w.days || []).forEach(function (s, dIdx) {
+        (s.exercises || s.rows || []).forEach(function (e, eIdx) {
+          const name = store.subs['w' + (wi + 1) + '_d' + dIdx + '_e' + eIdx] || e.name || e.name_original || '';
+          const eK = 'w' + (wi + 1) + '_d' + dIdx + '_e' + eIdx;
+          if (exerciseMatchesMuscleGroup(name, e.movement, e.muscle_groups || e.muscleGroups, group, eK)) {
             exercises.push(name);
           }
         });
       });
     });
   }
+  const label = (MACRO_MUSCLE_GROUPS.find(function (x) { return x.id === group; }) || {}).label || group;
   const uniq = Array.from(new Set(exercises)).slice(0, 12);
-  box.innerHTML = '<div style="color:#fff;font-weight:800;margin-bottom:4px;">' + esc(group) + '</div>' +
+  box.innerHTML = '<div style="color:#fff;font-weight:800;margin-bottom:4px;">' + esc(label) + '</div>' +
     '<div style="margin-bottom:6px;">Distretti: ' + list.map(function (x) { return esc(x); }).join(' · ') + '</div>' +
     (uniq.length ? '<div>Esercizi: ' + uniq.map(esc).join(', ') + '</div>' : '<div>Nessun esercizio mappato nel programma attivo.</div>');
 }
@@ -11817,10 +12024,10 @@ function renderStatsData(){
     sessions.forEach((dayObj, dIdx) => {
       const exerciseList = dayObj.exercises || dayObj.rows || [];
       exerciseList.forEach((row, eIdx) => {
-        const curEx = store.subs[`w${w}_d${dIdx}_e${eIdx}`] || row.name || row.exercise;
-        if(!exerciseMatchesMuscleGroup(curEx, row.movement, row.muscle_groups || row.muscleGroups, selectedGroup)) return;
-
         const eK = `w${w}_d${dIdx}_e${eIdx}`;
+        const curEx = store.subs[eK] || row.name || row.exercise;
+        if(!exerciseMatchesMuscleGroup(curEx, row.movement, row.muscle_groups || row.muscleGroups, selectedGroup, eK)) return;
+
         if(store.skips[eK]) return;
         const isPart = store.loadTypes[eK] === 'part';
         const multiplier = isPart ? 2 : 1;
@@ -11846,10 +12053,10 @@ function renderStatsData(){
       const bonusList = store.bonus[`w${w}_d${dIdx}`] || [];
       bonusList.forEach((bEx, bIdx) => {
         const fIdx = 900 + bIdx;
-        const curEx = bEx.exercise || bEx.name;
-        if(!exerciseMatchesMuscleGroup(curEx, bEx.movement, bEx.muscle_groups, selectedGroup)) return;
-
         const eK = `w${w}_d${dIdx}_e${fIdx}`;
+        const curEx = bEx.exercise || bEx.name;
+        if(!exerciseMatchesMuscleGroup(curEx, bEx.movement, bEx.muscle_groups, selectedGroup, eK)) return;
+
         if(store.skips[eK]) return;
         const isPart = store.loadTypes[eK] === 'part';
         const multiplier = isPart ? 2 : 1;
@@ -12475,7 +12682,7 @@ function tryLocalNutritionPlanCoach(q) {
     || /\bprofilo\s+generale\b/i.test(text);
   if (!action) return null;
 
-  const nutrition = buildNutritionPlanFromProfile();
+  const nutrition = buildNutritionPlanFromProfile({}, parseNutritionWeekRequest(text));
   const supplementation = buildDefaultSupplementationFromProfile();
   const ops = [];
   if (wantsNutr) ops.push({ type: 'set_nutrition', changes: { nutrition: nutrition } });
@@ -12487,12 +12694,14 @@ function tryLocalNutritionPlanCoach(q) {
   const protein = nutrition.daily_protein_target;
   const carbs = nutrition.daily_carbs_target;
   const fat = nutrition.daily_fats_target;
+  const weekReq = parseNutritionWeekRequest(text);
   const parts = [];
   if (wantsNutr) parts.push('nutrizionale');
   if (wantsSupp || wantsNutr) parts.push('di integrazione');
   return {
     reply: 'Ho preparato un piano ' + parts.join(' e ') +
-      ' basato su profilo e obiettivo (stimati ~' + tdee + ' kcal, P ' + protein + ' / C ' + carbs + ' / F ' + fat + ' g). È un quadro organizzativo evidence-informed, non consulenza medica. Conferma APPLICA E SALVA per scriverlo nelle sezioni dedicate.',
+      ' settimanale (Lunedì–Domenica: ' + weekReq.onCount + ' ON / ' + weekReq.offCount + ' OFF, pasti e alimenti compilati) basato su profilo (~' +
+      tdee + ' kcal, P ' + protein + ' / C ' + carbs + ' / F ' + fat + ' g). Conferma APPLICA E SALVA.',
     proposed_action: {
       action: 'modify_program',
       summary: 'Salva ' + (wantsNutr ? 'nutrizione' : '') + (wantsNutr && (wantsSupp || wantsNutr) ? ' + ' : '') + ((wantsSupp || wantsNutr) ? 'integrazione' : '') + ' (da profilo)',
@@ -13464,6 +13673,8 @@ if (typeof window !== 'undefined') {
   window.openResetSession = openResetSession;
   window.closeSkipModal = closeSkipModal;
   window.closeReplaceModal = closeReplaceModal;
+  window.toggleReplaceManual = toggleReplaceManual;
+  window.applySupplementationFromProfile = applySupplementationFromProfile;
   window.setDesiredDuration = setDesiredDuration;
   window.setDesiredFrequency = setDesiredFrequency;
   window.closeResetSession = closeResetSession;
