@@ -26592,8 +26592,122 @@ function recalcTrainingLoadsFromCells(weeks, cells, prevCells) {
   return updated;
 }
 
+function sheetNameBare(sheetName) {
+  return String(sheetName || "")
+    .replace(/^[\s_\-~]+/, "")
+    .replace(/^\d{1,2}[\s._-]*/, "")
+    .trim();
+}
+
+function isWeekNamedSheet(sheetName) {
+  const n = String(sheetName || "").trim();
+  return /^(?:w|wk|week|sett\.?|settimana)\s*\.?\s*\d+$/i.test(n)
+    || /^(?:w|wk)\d+$/i.test(n);
+}
+
+function isMetaOrAdminSheetName(sheetName) {
+  const n = String(sheetName || "").trim();
+  if (/^[_~]/.test(n)) return true;
+  const bare = sheetNameBare(n);
+  return /^(?:cover|copertina|dashboard|home|welcome|start|faq|faqs|setup|istruzioni|instructions|how\s*to|baseline|riferimenti|progresso|progress|performance|audit|volume|evidence|evidenza|razionale|sostituzioni|substitutions|alternative|swap|liste|lists|elenco|catalogo|catalog|index|indice|legend|leggenda|glossary|glossario|notes|note|readme|changelog|profile|rpe|graphs?|info|about|sub[_\s-]?db|db)\b/i.test(bare);
+}
+
+function rowLooksLikeSessionHeader(row) {
+  const cells = (row || []).map((c) => String(c == null ? "" : c).trim()).filter(Boolean);
+  if (!cells.length) return false;
+  const a = cells[0];
+  if (/^(?:GIORNO|DAY|SEDUTA|SESSIONE|WORKOUT|ALLENAMENTO)\s*[0-9A-G]\b/i.test(a)) return true;
+  if (/^(?:UPPER|LOWER|PUSH|PULL|LEGS|FULL\s*BODY)\s*[A-C]?\b/i.test(a) && cells.length <= 4) return true;
+  return false;
+}
+
+function rowLooksLikeExerciseTableHeader(row) {
+  const vals = (row || []).map((c) => String(c == null ? "" : c).toLowerCase().trim());
+  if (!vals.length) return false;
+  const hasEx = vals.some((v) =>
+    /^(movimento|esercizio(\s+effettivo)?|exercise|nome(\s+esercizio)?)$/i.test(v)
+    || v.includes("esercizio effettivo")
+  );
+  const hasSet = vals.some((v) => /^(set|serie|sets)$/i.test(v));
+  const hasReps = vals.some((v) => /^(reps|ripetizioni)$/i.test(v) || v.includes("reps target"));
+  const hasPattern = vals.some((v) => /^(pattern|schema|scheme)$/i.test(v));
+  return hasEx && (hasSet || hasReps || hasPattern);
+}
+
+function countSchemePatternCells(rawRows, maxRows = 80) {
+  let n = 0;
+  const limit = Math.min(maxRows, (rawRows || []).length);
+  for (let i = 0; i < limit; i++) {
+    const row = rawRows[i] || [];
+    for (let c = 0; c < row.length; c++) {
+      if (/\d+\s*[*xX\u00d7]\s*\S+/.test(String(row[c] || ""))) n++;
+    }
+  }
+  return n;
+}
+
+function looksLikeTrainingProgramSheet(rawRows = []) {
+  if (looksLikeSsttProgramGrid(rawRows)) return true;
+  let sessions = 0;
+  let headers = 0;
+  for (let i = 0; i < (rawRows || []).length; i++) {
+    if (rowLooksLikeSessionHeader(rawRows[i])) sessions++;
+    if (rowLooksLikeExerciseTableHeader(rawRows[i])) headers++;
+  }
+  const patterns = countSchemePatternCells(rawRows);
+  return (sessions >= 1 && headers >= 1)
+    || (sessions >= 2 && patterns >= 3)
+    || (headers >= 1 && patterns >= 4);
+}
+
+function looksLikeCatalogOrLookupSheet(sheetName, rawRows = []) {
+  const n = String(sheetName || "");
+  if (looksLikeTrainingProgramSheet(rawRows)) return false;
+  if (/list|liste|catalog|elenco|dizionario|dictionary|sub[_\s-]?db|(?:^|_)db$/i.test(n)) return true;
+  if (/^[_~]/.test(n) && !isWeekNamedSheet(n)) return true;
+  return false;
+}
+
+function looksLikeScienceOrEvidenceSheet(sheetName, rawRows = []) {
+  const n = sheetNameBare(sheetName);
+  if (/^(?:evidence|evidenza|razionale|research|letteratura|fonti|references|bibliografia)\b/i.test(n)) return true;
+  let hits = 0;
+  for (let i = 0; i < Math.min(12, (rawRows || []).length); i++) {
+    const rowStr = (rawRows[i] || []).join(" ").toLowerCase();
+    if (/\b(fonte|evidenza|meta-analisi|meta analisi|pubmed|doi|razionale|letteratura)\b/.test(rowStr)) hits++;
+  }
+  return hits >= 2 && !looksLikeTrainingProgramSheet(rawRows);
+}
+
+function hasTherapyTableHeaders(rawRows = []) {
+  for (let i = 0; i < Math.min(20, (rawRows || []).length); i++) {
+    const vals = (rawRows[i] || []).map((c) => String(c == null ? "" : c).toLowerCase().trim());
+    const hasDrug = vals.some((v) => /farmaco|principio|medicinale|sostanza/.test(v));
+    const hasDose = vals.some((v) => /dose|dosaggio|posologia/.test(v));
+    if (hasDrug && hasDose) return true;
+  }
+  return false;
+}
+
+function hasExamTableHeaders(rawRows = []) {
+  for (let i = 0; i < Math.min(20, (rawRows || []).length); i++) {
+    const vals = (rawRows[i] || []).map((c) => String(c == null ? "" : c).toLowerCase().trim());
+    const hasParam = vals.some((v) => /parametro|esame|biomarcatore|analita/.test(v));
+    const hasVal = vals.some((v) => /valore|referto|risultato/.test(v));
+    if (hasParam && hasVal) return true;
+  }
+  return false;
+}
+
 function classifySheetType(sheetName, rawRows = []) {
   const nameUpper = String(sheetName || "").toUpperCase().trim();
+
+  if (looksLikeSsttProgramGrid(rawRows)) return "training";
+  if (looksLikeScienceOrEvidenceSheet(sheetName, rawRows)) return "other";
+  if (looksLikeCatalogOrLookupSheet(sheetName, rawRows)) return "other";
+  if (isMetaOrAdminSheetName(sheetName) && !looksLikeTrainingProgramSheet(rawRows) && !isWeekNamedSheet(sheetName)) {
+    return "other";
+  }
 
   if (/^(START|WELCOME|FAQS?|GRAPHS?|PROFILE|RPE)\b/i.test(nameUpper) && !looksLikeSsttProgramGrid(rawRows)) {
     return "other";
@@ -26603,19 +26717,20 @@ function classifySheetType(sheetName, rawRows = []) {
   if (/^(?:ALLENAMENTO|TRAINING|WORKOUT|SCHEDA|SPLIT|W\d+|SETTIMANA\s*\d*|WEEK\s*\d+|ALL\.?|PUSH|PULL|LEGS|UPPER|LOWER|MESOCICLO|MICROCICLO|BLOCCO|FASE|TABELLA|PROGRAMMA|GYM|ROUTINE|SESSIONI|PESI|BODYBUILDING|FITNESS)$/i.test(nameUpper)) {
     return "training";
   }
+  if (isWeekNamedSheet(sheetName) && looksLikeTrainingProgramSheet(rawRows)) return "training";
   if (/^(?:ALIMENTAZIONE|NUTRIZIONE|DIETA|PIANO\s*ALIMENTARE|MEALS|MEAL\s*PLAN|PASTI|FOOD|NUTRITION|NUTRICI[OÓ]N|NUTRI[CÇ][AÃ]O|ERN[AÄ]HRUNG|ALIMENTATION|ПИТАНИЕ|营养|التغذية|पोषण)/i.test(nameUpper)) {
     return "nutrition";
   }
   if (/^(?:INTEGRAZIONE|INTEGRATORI|SUPPLEMENTI|SUPPLEMENTATION|SUPPLEMENTS)/i.test(nameUpper)) {
     return "supplementation";
   }
-  if (/^(?:TERAPIA\s*ED\s*ESAMI|TERAPIA_ESAMI|PIANO\s*CLINICO|CLINICAL)/i.test(nameUpper)) {
+  if (/^(?:TERAPIA\s*ED\s*ESAMI|TERAPIA_ESAMI|PIANO\s*CLINICO|CLINICAL)/i.test(nameUpper) && (hasTherapyTableHeaders(rawRows) || hasExamTableHeaders(rawRows))) {
     return "therapy_exams";
   }
-  if (/^(?:TERAPIA|FARMACOLOGIA|TRATTAMENTO|TERAPIE|MEDICINALI|FARMACI)/i.test(nameUpper)) {
+  if (/^(?:TERAPIA|FARMACOLOGIA|TRATTAMENTO|TERAPIE|MEDICINALI|FARMACI)/i.test(nameUpper) && hasTherapyTableHeaders(rawRows)) {
     return "therapy";
   }
-  if (/^(?:ESAMI|ANALISI|ESAMI\s*DEL\s*SANGUE|BLOODWORK|REFERTI|VALORI)/i.test(nameUpper)) {
+  if (/^(?:ESAMI|ANALISI|ESAMI\s*DEL\s*SANGUE|BLOODWORK|REFERTI|VALORI)/i.test(nameUpper) && hasExamTableHeaders(rawRows)) {
     return "exams";
   }
 
@@ -26631,16 +26746,18 @@ function classifySheetType(sheetName, rawRows = []) {
     if (/movimento|esercizio|reps|rir|rpe|recupero|rest|panca|squat|stacco|serie|set|pattern|lat machine|pulley|pulldown|croci|alzate|trazioni|curl|french|press|affondi|calf|plank|crunch/.test(rowStr)) trainingHits++;
     if (/colazione|pranzo|cena|spuntino|merenda|pre-nanna|alimento|grammi|kcal|calorie|proteine|carboidrati|grassi|avena|albumi|riso|pollo/.test(rowStr)) nutritionHits++;
     if (/creatina|whey|omega|dosaggio|timing|multivitaminico|magnesio|integratore|eaa|capsule|posologia/.test(rowStr)) supplementHits++;
-    if (/farmaco|principio attivo|somministrazione|medicinale|durata settimane|compresse|terapia|metformina|cardiaspirina|telmisartan/.test(rowStr)) therapyHits++;
-    if (/esame|referto|analisi|sangue|emocromo|testosterone|glicemia|transaminasi|valori di riferimento/.test(rowStr)) examHits++;
+    if (/\bfarmaco\b|principio attivo|somministrazione|medicinale|durata settimane|\bcompresse\b|\bterapia\b|metformina|cardiaspirina|telmisartan/.test(rowStr)) therapyHits++;
+    if (/\besame\b|\breferto\b|\bsangue\b|emocromo|testosterone|glicemia|transaminasi|valori di riferimento/.test(rowStr)
+      || (/\banalisi\b/.test(rowStr) && !/meta[-\s]?analisi/.test(rowStr))) examHits++;
   }
 
   if (nutritionHits >= 2 && nutritionHits >= trainingHits) return "nutrition";
   if (supplementHits >= 2 && supplementHits >= trainingHits) return "supplementation";
-  if (therapyHits >= 1 && examHits >= 1) return "therapy_exams";
-  if (therapyHits >= 2) return "therapy";
-  if (examHits >= 2) return "exams";
-  if (trainingHits >= 1) return "training";
+  if (therapyHits >= 1 && examHits >= 1 && (hasTherapyTableHeaders(rawRows) || hasExamTableHeaders(rawRows))) return "therapy_exams";
+  if (therapyHits >= 2 && hasTherapyTableHeaders(rawRows)) return "therapy";
+  if (examHits >= 2 && hasExamTableHeaders(rawRows)) return "exams";
+  if (looksLikeTrainingProgramSheet(rawRows)) return "training";
+  if (trainingHits >= 3 && looksLikeTrainingProgramSheet(rawRows)) return "training";
 
   return "other";
 }
@@ -28418,12 +28535,19 @@ function parseStructuredWorkbook(workbook, filename = "documento.xlsx") {
     }
   });
 
-  // 1. Parse Training Weeks — also scan every sheet and keep the richest training parse
+  // 1. Parse Training Weeks — keep every real program sheet (one week per sheet, stacked weeks, etc.)
   const weeks = [];
   const countExercises = (weekData) => {
     let n = 0;
     (weekData.sessions || weekData.days || []).forEach(sess => { n += (sess.exercises || []).length; });
     return n;
+  };
+  const isUsableTrainingSheet = (s) => {
+    if (!s) return false;
+    if (looksLikeCatalogOrLookupSheet(s.name, s.rawRows)) return false;
+    if (looksLikeScienceOrEvidenceSheet(s.name, s.rawRows)) return false;
+    if (isMetaOrAdminSheetName(s.name) && !looksLikeTrainingProgramSheet(s.rawRows) && !isWeekNamedSheet(s.name)) return false;
+    return looksLikeTrainingProgramSheet(s.rawRows) || s.sheetType === "training";
   };
   let ssttHit = false;
   classifiedSheets.forEach((s) => {
@@ -28436,42 +28560,47 @@ function parseStructuredWorkbook(workbook, filename = "documento.xlsx") {
     }
     ssttWeeks.forEach((w) => weeks.push(w));
   });
-  if (!ssttHit) trainingSheets.forEach((s, idx) => {
-    const weekData = parseTrainingSheet(s, idx + 1);
-    if (weekData.sessions && weekData.sessions.length > 0) {
-      weeks.push(weekData);
-    }
-  });
+  const weekNamedProgramSheets = classifiedSheets.filter((s) => isWeekNamedSheet(s.name) && looksLikeTrainingProgramSheet(s.rawRows));
   if (!ssttHit) {
-  let bestTraining = null;
-  let bestEx = weeks.reduce((n, w) => n + countExercises(w), 0);
-  classifiedSheets.forEach((s) => {
-    const blob = (s.rawRows || []).slice(0, 16).map(r => (r || []).join(" ")).join(" ");
-    if (!/GIORNO\s*\d+/i.test(blob) || !/\d+\s*[\*xX\u00d7]/.test(blob)) return;
-    const weekData = parseTrainingSheet(s, 1);
-    const ex = countExercises(weekData);
-    if (ex > bestEx) {
-      bestEx = ex;
-      bestTraining = weekData;
-    }
-  });
-  if (bestTraining && bestEx > 0) {
-    weeks.length = 0;
-    weeks.push(bestTraining);
-  }
-  }
-
-  // If no training sheets produced weeks, scan unclassified 'other' sheets
-  if (weeks.length === 0) {
-    const otherSheets = classifiedSheets.filter(s => s.sheetType === "other");
-    otherSheets.forEach((s, idx) => {
-      if (/^(START|WELCOME|FAQS?|GRAPHS?|PROFILE|RPE)\b/i.test(String(s.name || ""))) return;
+    const sourceSheets = weekNamedProgramSheets.length >= 2
+      ? weekNamedProgramSheets
+      : classifiedSheets.filter(isUsableTrainingSheet);
+    sourceSheets.forEach((s, idx) => {
       const weekData = parseTrainingSheet(s, idx + 1);
       if (weekData.sessions && weekData.sessions.length > 0 && countExercises(weekData) > 0) {
         weeks.push(weekData);
       }
     });
   }
+  // Fallback: a single compact GIORNO + pattern sheet, only if nothing was collected
+  if (!ssttHit && weeks.length === 0) {
+    let bestTraining = null;
+    let bestEx = 0;
+    classifiedSheets.forEach((s) => {
+      if (!isUsableTrainingSheet(s)) return;
+      const blob = (s.rawRows || []).slice(0, 16).map(r => (r || []).join(" ")).join(" ");
+      if (!/GIORNO\s*\d+/i.test(blob) || !/\d+\s*[\*xX\u00d7]/.test(blob)) return;
+      const weekData = parseTrainingSheet(s, 1);
+      const ex = countExercises(weekData);
+      if (ex > bestEx) {
+        bestEx = ex;
+        bestTraining = weekData;
+      }
+    });
+    if (bestTraining && bestEx > 0) weeks.push(bestTraining);
+  }
+
+  // If no training sheets produced weeks, scan unclassified 'other' sheets that still look like a program
+  if (weeks.length === 0) {
+    classifiedSheets.filter((s) => s.sheetType === "other" && looksLikeTrainingProgramSheet(s.rawRows)).forEach((s, idx) => {
+      const weekData = parseTrainingSheet(s, idx + 1);
+      if (weekData.sessions && weekData.sessions.length > 0 && countExercises(weekData) > 0) {
+        weeks.push(weekData);
+      }
+    });
+  }
+
+  weeks.sort((a, b) => (Number(a.week_number || a.weekNumber || 0) - Number(b.week_number || b.weekNumber || 0)));
 
   // If still 0 weeks (e.g. nutrition/therapy-only workbook), keep empty weeks —
   // do NOT invent a fake empty session shell (anti-hallucination). Flag instead.
@@ -28524,7 +28653,7 @@ function parseStructuredWorkbook(workbook, filename = "documento.xlsx") {
     if (examSheets.length > 0) {
       const parsed = parseTherapyExamsSheet(examSheets[0]);
       exams = parsed.exams;
-      if (parsed.therapy.present && !therapy.present) therapy = parsed.therapy;
+      if (parsed.therapy.present && !therapy.present && hasTherapyTableHeaders(examSheets[0].rawRows)) therapy = parsed.therapy;
     }
   }
 
@@ -32165,8 +32294,8 @@ const FoodDatabaseService = {
       }));
     }
     return [
-    { name: "Petto di Pollo crudo", category: "Proteine", kcal: 110, pro: 23.0, carb: 0.0, fat: 1.2, serving: "100g" },
-    { name: "Avena in fiocchi", category: "Carboidrati", kcal: 389, pro: 16.9, carb: 66.3, fat: 6.9, serving: "100g" },
+      { name: "Petto di Pollo crudo", category: "Proteine", kcal: 110, pro: 23.0, carb: 0.0, fat: 1.2, serving: "100g" },
+      { name: "Avena in fiocchi", category: "Carboidrati", kcal: 389, pro: 16.9, carb: 66.3, fat: 6.9, serving: "100g" },
       { name: "Riso Basmati", category: "Carboidrati", kcal: 360, pro: 7.0, carb: 79.0, fat: 0.6, serving: "100g" },
       { name: "Olio EVO", category: "Grassi", kcal: 884, pro: 0.0, carb: 0.0, fat: 100.0, serving: "100g" }
     ];
@@ -32792,7 +32921,7 @@ const HealthDataProvider = {
         const restingHeartRate = Number(raw.restingHeartRate || raw.restingHr || raw.rhr);
         const hrvMs = Number(raw.hrvMs || raw.hrv);
         if ([steps, sleepHours, restingHeartRate, hrvMs].some((n) => Number.isFinite(n) && n > 0)) {
-    return {
+          return {
             steps: Number.isFinite(steps) ? steps : null,
             sleepHours: Number.isFinite(sleepHours) ? sleepHours : null,
             restingHeartRate: Number.isFinite(restingHeartRate) ? restingHeartRate : null,
@@ -42285,180 +42414,272 @@ function buildWorkoutPdfHtml(opts) {
   </body></html>`;
 }
 
+/* ========== PROFESSIONAL PDF GENERATOR ========== */
 function pdfWinAnsi(s) {
   return String(s == null ? '' : s).replace(/[^\x00-\xFF]/g, function (ch) {
-    const map = { '—': '-', '–': '-', '’': "'", '‘': "'", '“': '"', '”': '"', '×': 'x', '·': ' - ', '✓': '*', 'à': '\xE0', 'è': '\xE8', 'é': '\xE9', 'ì': '\xEC', 'ò': '\xF2', 'ù': '\xF9' };
-    return map[ch] != null ? map[ch] : '?';
+    var map = { '\u2014': '-', '\u2013': '-', '\u2018': "'", '\u2019': "'", '\u201C': '"', '\u201D': '"', '\u00D7': 'x', '\u00B7': '-', '\u2713': '*', '\u00E0': '\xE0', '\u00E8': '\xE8', '\u00E9': '\xE9', '\u00EC': '\xEC', '\u00F2': '\xF2', '\u00F9': '\xF9', '\u00C0': '\xC0', '\u00C8': '\xC8', '\u00C9': '\xC9', '\u00CC': '\xCC', '\u00D2': '\xD2', '\u00D9': '\xD9' };
+    return map[ch] != null ? map[ch] : '';
   });
 }
 function pdfEsc(s) {
   return pdfWinAnsi(s).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 }
-function collectWorkoutPdfLines(opts) {
+
+function buildWorkoutPdfBytes(opts) {
   opts = opts || {};
-  const weeksList = DATA.weeks || [];
-  let startW = 1;
-  let endW = weeksList.length;
-  const scope = opts.scope || 'week';
+  var W = 595, H = 842;
+  var ML = 40, MR = 40, MT = 40, MB = 50;
+  var CW = W - ML - MR;
+  var GOLD = '0.78 0.63 0.14';
+  var BLACK = '0 0 0';
+  var DARK = '0.15 0.15 0.15';
+  var GRAY = '0.45 0.45 0.45';
+  var LGRAY = '0.92 0.92 0.92';
+
+  var weeksList = DATA.weeks || [];
+  var startW = 1, endW = weeksList.length;
+  var scope = opts.scope || 'week';
   if (scope === 'day' || scope === 'week') { startW = currentWeek; endW = currentWeek; }
   else if (scope === '2weeks') { startW = currentWeek; endW = Math.min(weeksList.length, currentWeek + 1); }
   else if (scope === '4weeks') { startW = currentWeek; endW = Math.min(weeksList.length, currentWeek + 3); }
-  const athlete = (store.account && store.account.name) || (store.profile && (store.profile.first_name || store.profile.name)) || '';
-  const lines = [];
-  lines.push({ kind: 'title', text: 'NURVAN' });
-  lines.push({ kind: 'meta', text: 'Programma allenamento · ' + new Date().toLocaleDateString('it-IT') + (athlete ? (' · ' + athlete) : '') });
-  lines.push({ kind: 'meta', text: 'Ambito: ' + scope + ' · settimane ' + startW + '-' + endW + (DATA.title ? (' · ' + DATA.title) : '') });
-  for (let wi = startW; wi <= endW; wi++) {
-    const week = weeksList[wi - 1];
-    if (!week) continue;
-    const days = week.sessions || week.days || [];
-    lines.push({ kind: 'h1', text: 'Settimana ' + (week.weekNumber || week.week || wi) + (week.title ? (' — ' + week.title) : '') });
-    days.forEach(function (day, di) {
-      if (scope === 'day' && (wi !== currentWeek || di !== currentDay)) return;
-      const dayTitle = day.name || day.title || day.day || ('Giorno ' + (di + 1));
-      lines.push({ kind: 'h2', text: dayTitle });
-      const list = day.exercises || day.rows || [];
-      list.forEach(function (row, ei) {
-        const name = (store.subs && store.subs['w' + wi + '_d' + di + '_e' + ei]) || row.name || row.exercise || '—';
-        const scheme = (typeof formatSetRepScheme === 'function' ? formatSetRepScheme(row) : { scheme: row.scheme || '', setCount: (row.sets && row.sets.length) || 3 });
-        const setCount = (typeof getExerciseSetCount === 'function')
-          ? (function () { const prevW = currentWeek, prevD = currentDay; currentWeek = wi; currentDay = di; const n = getExerciseSetCount(ei); currentWeek = prevW; currentDay = prevD; return n; })()
-          : (scheme.setCount || 3);
-        const setLines = [];
-        for (let s = 1; s <= setCount; s++) {
-          const base = 'w' + wi + '_d' + di + '_e' + ei + '_s' + s;
-          const load = store.data[base + '_load'];
-          const reps = store.data[base + '_reps'];
-          const rir = store.data[base + '_rir'];
-          const tech = store.data[base + '_tech'];
-          const planned = (Array.isArray(row.sets) && row.sets[s - 1])
-            ? (row.sets[s - 1].load || row.sets[s - 1].target_load || '')
-            : (row.plannedLoad || '');
-          const loadShow = (load !== undefined && load !== '' && load != null) ? load : (planned !== '' && planned != null ? ('~' + planned) : '-');
-          const repsShow = (reps !== undefined && reps !== '' && reps != null) ? reps : (row.repsTarget || '-');
-          setLines.push('S' + s + ': ' + loadShow + ' kg x ' + repsShow + (rir !== undefined && rir !== '' && rir != null ? (' @' + rir) : '') + (tech ? (' [' + tech + ']') : ''));
-        }
-        lines.push({ kind: 'ex', text: name + (scheme.scheme ? ('  [' + scheme.scheme + ']') : '') + (row.rest ? ('  rest ' + row.rest) : '') });
-        lines.push({ kind: 'sets', text: setLines.join('   ') });
-      });
-    });
+  var athlete = (store.account && store.account.name) || (store.profile && (store.profile.first_name || store.profile.name)) || '';
+
+  var pages = [];
+  var cmds = [];
+  var y = H - MT;
+  var pageNum = 0;
+
+  function txt(font, size, color, x, yy, s) {
+    cmds.push('BT /' + font + ' ' + size + ' Tf ' + color + ' rg 1 0 0 1 ' + x + ' ' + yy + ' Tm (' + pdfEsc(s) + ') Tj ET');
   }
-  if (opts.nutrition && DATA.nutrition && Array.isArray(DATA.nutrition.days) && DATA.nutrition.days.length) {
-    lines.push({ kind: 'h1', text: 'Alimentazione' });
-    DATA.nutrition.days.forEach(function (nd) {
-      lines.push({ kind: 'h2', text: nd.day || 'Giorno' });
-      (nd.meals || []).forEach(function (meal) {
-        const foods = (meal.foods || []).map(function (f) {
-          return (f.name || f.food || '') + (f.quantity || f.qty || f.amount ? (' ' + (f.quantity || f.qty || f.amount) + (f.unit ? f.unit : '')) : '');
-        }).join(', ');
-        lines.push({ kind: 'text', text: (meal.name || 'Pasto') + ': ' + foods });
-      });
-    });
+  function rct(x, yy, w, h, fill) {
+    cmds.push(fill + ' rg ' + x + ' ' + yy + ' ' + w + ' ' + h + ' re f');
   }
-  if (opts.supp && DATA.supplementation) {
-    lines.push({ kind: 'h1', text: 'Integrazione' });
-    const items = DATA.supplementation.items || DATA.supplementation.supplements || (Array.isArray(DATA.supplementation) ? DATA.supplementation : []);
-    (items || []).forEach(function (it) {
-      lines.push({ kind: 'text', text: (it.name || it.supplement || '-') + (it.dose || it.dosage ? (' — ' + (it.dose || it.dosage) + (it.unit ? (' ' + it.unit) : '')) : '') + (it.timing ? (' (' + it.timing + ')') : '') });
-    });
+  function ln(x1, y1, x2, y2, color, w) {
+    cmds.push(color + ' RG ' + (w || 0.5) + ' w ' + x1 + ' ' + y1 + ' m ' + x2 + ' ' + y2 + ' l S');
   }
-  if (opts.therapy && (DATA.therapy || store.therapy)) {
-    const ther = DATA.therapy || store.therapy;
-    lines.push({ kind: 'h1', text: 'Terapia' });
-    const items = ther.medications || ther.items || ther.drugs || (Array.isArray(ther) ? ther : []);
-    (items || []).forEach(function (it) {
-      lines.push({ kind: 'text', text: (it.name || it.medication || it.drug || '-') + (it.active_ingredient ? (' (' + it.active_ingredient + ')') : '') + (it.dose || it.dosage ? (' — ' + (it.dose || it.dosage)) : '') + (it.category ? (' · ' + it.category) : '') });
-    });
-  }
-  lines.push({ kind: 'meta', text: 'Generato con NURVAN · file PDF per salvare o inoltrare' });
-  return lines;
-}
-function wrapPdfText(text, maxChars) {
-  const raw = String(text || '');
-  if (raw.length <= maxChars) return [raw];
-  const out = [];
-  let rest = raw;
-  while (rest.length > maxChars) {
-    let cut = rest.lastIndexOf(' ', maxChars);
-    if (cut < Math.floor(maxChars * 0.55)) cut = maxChars;
-    out.push(rest.slice(0, cut));
-    rest = rest.slice(cut).replace(/^\s+/, '');
-  }
-  if (rest) out.push(rest);
-  return out;
-}
-function buildWorkoutPdfBytes(opts) {
-  const lines = collectWorkoutPdfLines(opts);
-  const pages = [];
-  let cmds = [];
-  let y = 790;
+  function needSpace(h) { if (y - h < MB) { flushPage(); drawHeader(); } }
   function flushPage() {
+    pageNum++;
+    txt('F2', 7, GRAY, W - MR - 30, MB - 20, 'Pag. ' + pageNum);
     pages.push(cmds.join('\n'));
     cmds = [];
-    y = 790;
+    y = H - MT;
   }
-  function draw(size, x, yy, text, gold) {
-    const color = gold ? '0.79 0.64 0.15 rg' : '0.12 0.12 0.12 rg';
-    cmds.push('BT /F1 ' + size + ' Tf ' + color + ' 1 0 0 1 ' + x + ' ' + yy + ' Tm (' + pdfEsc(text) + ') Tj ET');
+  function drawHeader() {
+    rct(0, H - 60, W, 60, '0.05 0.05 0.05');
+    rct(0, H - 62, W, 2, GOLD);
+    txt('F1', 22, GOLD, ML, H - 45, 'NURVAN');
+    txt('F2', 8, '0.7 0.7 0.7', ML + 110, H - 38, 'TRAINING PROGRAM');
+    if (athlete) txt('F2', 8, '0.7 0.7 0.7', ML + 110, H - 50, 'Atleta: ' + athlete);
+    var dateStr = new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
+    txt('F2', 7, '0.55 0.55 0.55', W - MR - 140, H - 45, dateStr + (DATA.title ? ('  |  ' + DATA.title) : ''));
+    y = H - 80;
   }
-  function addLine(kind, text) {
-    const sizes = { title: 20, h1: 13, h2: 11, ex: 10, sets: 9, text: 9, meta: 8 };
-    const gaps = { title: 26, h1: 22, h2: 18, ex: 14, sets: 12, text: 12, meta: 11 };
-    const gold = kind === 'title' || kind === 'h1' || kind === 'h2';
-    const maxc = kind === 'sets' ? 98 : 86;
-    const wrapped = wrapPdfText(text, maxc);
-    wrapped.forEach(function (w, i) {
-      const h = gaps[kind] || 12;
-      if (y < 50) flushPage();
-      draw(sizes[kind] || 10, 40, y, w, gold && i === 0);
-      y -= h;
+  function sectionTitle(label) {
+    needSpace(30);
+    rct(ML, y - 2, CW, 20, '0.08 0.08 0.08');
+    rct(ML, y - 2, 4, 20, GOLD);
+    txt('F1', 11, GOLD, ML + 12, y + 4, label.toUpperCase());
+    y -= 28;
+  }
+  function dayTitle(label) {
+    needSpace(22);
+    ln(ML, y + 6, ML + CW, y + 6, LGRAY, 0.5);
+    txt('F1', 10, DARK, ML, y - 6, label);
+    y -= 22;
+  }
+
+  drawHeader();
+
+  for (var wi = startW; wi <= endW; wi++) {
+    var week = weeksList[wi - 1];
+    if (!week) continue;
+    var days = week.sessions || week.days || [];
+    sectionTitle('Settimana ' + (week.weekNumber || week.week || wi) + (week.title ? ('  -  ' + week.title) : ''));
+
+    days.forEach(function (day, di) {
+      if (scope === 'day' && (wi !== currentWeek || di !== currentDay)) return;
+      var dayLabel = day.name || day.title || day.day || ('Giorno ' + (di + 1));
+      dayTitle(dayLabel);
+
+      var list = day.exercises || day.rows || [];
+      list.forEach(function (row, ei) {
+        var name = (store.subs && store.subs['w' + wi + '_d' + di + '_e' + ei]) || row.name || row.exercise || '-';
+        var scheme = (typeof formatSetRepScheme === 'function' ? formatSetRepScheme(row) : { scheme: row.scheme || '', setCount: (row.sets && row.sets.length) || 3 });
+        var setCount = (typeof getExerciseSetCount === 'function')
+          ? (function () { var pW = currentWeek, pD = currentDay; currentWeek = wi; currentDay = di; var n = getExerciseSetCount(ei); currentWeek = pW; currentDay = pD; return n; })()
+          : (scheme.setCount || 3);
+        var rowH = 14;
+        var tableH = 16 + setCount * rowH + 6;
+        needSpace(tableH + 24);
+
+        txt('F1', 9, DARK, ML, y, name);
+        if (scheme.scheme) txt('F2', 7, GRAY, ML + 250, y, scheme.scheme);
+        if (row.rest) txt('F2', 7, GRAY, ML + 380, y, 'Rest: ' + row.rest);
+        var tempo = (store.tempos && store.tempos['w' + wi + '_d' + di + '_e' + ei]) || row.tempo || '';
+        if (tempo) txt('F2', 7, GRAY, ML + 450, y, 'Tempo: ' + tempo);
+        y -= 14;
+
+        var cols = [
+          { label: 'SERIE', x: ML, w: 50 },
+          { label: 'CARICO (kg)', x: ML + 50, w: 100 },
+          { label: 'REPS', x: ML + 150, w: 70 },
+          { label: 'INTENSITA', x: ML + 220, w: 80 },
+          { label: 'TECNICA', x: ML + 300, w: 100 },
+          { label: 'NOTE', x: ML + 400, w: CW - 400 }
+        ];
+
+        rct(ML, y - 12, CW, 16, '0.12 0.12 0.12');
+        cols.forEach(function (c) {
+          txt('F1', 6.5, GOLD, c.x + 4, y - 8, c.label);
+        });
+        y -= 16;
+
+        for (var s = 1; s <= setCount; s++) {
+          var base = 'w' + wi + '_d' + di + '_e' + ei + '_s' + s;
+          var load = store.data[base + '_load'];
+          var reps = store.data[base + '_reps'];
+          var rir = store.data[base + '_rir'];
+          var tech = store.data[base + '_tech'];
+          var done = store.data[base + '_done'];
+          var planned = (Array.isArray(row.sets) && row.sets[s - 1])
+            ? (row.sets[s - 1].load || row.sets[s - 1].target_load || '')
+            : (row.plannedLoad || '');
+          var loadShow = (load !== undefined && load !== '' && load != null) ? String(load) : (planned !== '' && planned != null ? ('~' + planned) : '-');
+          var repsShow = (reps !== undefined && reps !== '' && reps != null) ? String(reps) : (row.repsTarget || '-');
+          var rirShow = (rir !== undefined && rir !== '' && rir != null) ? ('@' + rir) : '-';
+          var techShow = tech ? String(tech) : '';
+          var noteShow = done ? 'Completata' : '';
+
+          if (s % 2 === 0) rct(ML, y - rowH + 4, CW, rowH, '0.96 0.96 0.96');
+          ln(ML, y - rowH + 4, ML + CW, y - rowH + 4, '0.88 0.88 0.88', 0.3);
+
+          txt('F1', 8, DARK, cols[0].x + 4, y - 8, 'S' + s);
+          txt('F2', 8, BLACK, cols[1].x + 4, y - 8, loadShow);
+          txt('F2', 8, BLACK, cols[2].x + 4, y - 8, repsShow);
+          txt('F2', 8, DARK, cols[3].x + 4, y - 8, rirShow);
+          txt('F2', 7, GRAY, cols[4].x + 4, y - 8, techShow);
+          if (noteShow) txt('F2', 7, '0.3 0.65 0.3', cols[5].x + 4, y - 8, noteShow);
+
+          y -= rowH;
+        }
+        ln(ML, y + 4, ML + CW, y + 4, LGRAY, 0.3);
+        y -= 10;
+      });
     });
-    if (kind === 'h1') {
-      cmds.push('0.79 0.64 0.15 RG 0.6 w 40 ' + (y + 8) + ' m 555 ' + (y + 8) + ' l S');
-      y -= 6;
+  }
+
+  if (opts.nutrition && DATA.nutrition && Array.isArray(DATA.nutrition.days) && DATA.nutrition.days.length) {
+    sectionTitle('PIANO ALIMENTARE');
+    var targets = DATA.nutrition;
+    if (targets.daily_calories_target) {
+      needSpace(16);
+      txt('F2', 8, DARK, ML, y, 'Target: ' + (targets.daily_calories_target || '-') + ' kcal  |  P ' + (targets.daily_protein_target || '-') + 'g  |  C ' + (targets.daily_carbs_target || '-') + 'g  |  F ' + (targets.daily_fats_target || '-') + 'g');
+      y -= 16;
+    }
+    DATA.nutrition.days.forEach(function (nd) {
+      dayTitle(nd.day || 'Giorno');
+      (nd.meals || []).forEach(function (meal) {
+        needSpace(14);
+        txt('F1', 8, DARK, ML + 4, y, meal.name || 'Pasto');
+        var foods = (meal.foods || []).map(function (f) {
+          var qty = (f.quantity || f.qty || f.amount);
+          return (f.name || f.food || '') + (qty ? (' ' + qty + (f.unit || 'g')) : '') + (f.kcal ? (' ' + f.kcal + 'kcal') : '');
+        }).join(',  ');
+        txt('F2', 7, GRAY, ML + 80, y, foods.length > 100 ? foods.slice(0, 97) + '...' : foods);
+        y -= 13;
+      });
+    });
+  }
+
+  if (opts.supp && DATA.supplementation) {
+    sectionTitle('INTEGRAZIONE');
+    var suppItems = DATA.supplementation.items || DATA.supplementation.supplements || [];
+    if (suppItems.length) {
+      needSpace(16 + suppItems.length * 13);
+      rct(ML, y - 10, CW, 14, '0.12 0.12 0.12');
+      txt('F1', 6.5, GOLD, ML + 4, y - 7, 'INTEGRATORE');
+      txt('F1', 6.5, GOLD, ML + 180, y - 7, 'DOSE');
+      txt('F1', 6.5, GOLD, ML + 280, y - 7, 'TIMING');
+      txt('F1', 6.5, GOLD, ML + 400, y - 7, 'FREQUENZA');
+      y -= 16;
+      suppItems.forEach(function (it, i) {
+        needSpace(14);
+        if (i % 2 === 1) rct(ML, y - 9, CW, 13, '0.96 0.96 0.96');
+        txt('F2', 8, DARK, ML + 4, y - 6, it.name || it.supplement || '-');
+        txt('F2', 7, GRAY, ML + 180, y - 6, (it.dose || '') + (it.unit ? (' ' + it.unit) : ''));
+        txt('F2', 7, GRAY, ML + 280, y - 6, it.timing || '');
+        txt('F2', 7, GRAY, ML + 400, y - 6, it.frequency || '');
+        y -= 13;
+      });
     }
   }
-  lines.forEach(function (ln) { addLine(ln.kind, ln.text); });
-  if (cmds.length) flushPage();
-  if (!pages.length) pages.push('BT /F1 12 Tf 0.12 0.12 0.12 rg 1 0 0 1 40 800 Tm (NURVAN) Tj ET');
 
-  const objs = [];
-  function addObj(body) {
-    objs.push(body);
-    return objs.length;
+  if (opts.therapy && (DATA.therapy || store.therapy)) {
+    var ther = DATA.therapy || store.therapy;
+    sectionTitle('TERAPIA');
+    var meds = ther.medications || ther.items || [];
+    if (meds.length) {
+      needSpace(16 + meds.length * 13);
+      rct(ML, y - 10, CW, 14, '0.12 0.12 0.12');
+      txt('F1', 6.5, GOLD, ML + 4, y - 7, 'FARMACO');
+      txt('F1', 6.5, GOLD, ML + 160, y - 7, 'PRINCIPIO ATTIVO');
+      txt('F1', 6.5, GOLD, ML + 300, y - 7, 'DOSE');
+      txt('F1', 6.5, GOLD, ML + 400, y - 7, 'CATEGORIA');
+      y -= 16;
+      meds.forEach(function (m, i) {
+        needSpace(14);
+        if (i % 2 === 1) rct(ML, y - 9, CW, 13, '0.96 0.96 0.96');
+        txt('F2', 8, DARK, ML + 4, y - 6, m.name || m.medication || '-');
+        txt('F2', 7, GRAY, ML + 160, y - 6, m.active_ingredient || '');
+        txt('F2', 7, GRAY, ML + 300, y - 6, m.dose || '');
+        txt('F2', 7, GRAY, ML + 400, y - 6, m.category || '');
+        y -= 13;
+      });
+    }
   }
-  const fontId = addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
-  const pageIds = [];
-  const contentIds = [];
-  pages.forEach(function (stream) {
-    const cid = addObj('<< /Length ' + stream.length + ' >>\nstream\n' + stream + '\nendstream');
-    contentIds.push(cid);
-  });
-  pages.forEach(function (_, i) {
-    pageIds.push(0);
-  });
-  const pagesId = addObj('');
-  pages.forEach(function (_, i) {
-    pageIds[i] = addObj('<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 595 842] /Contents ' + contentIds[i] + ' 0 R /Resources << /Font << /F1 ' + fontId + ' 0 R >> >> >>');
-  });
-  objs[pagesId - 1] = '<< /Type /Pages /Kids [' + pageIds.map(function (id) { return id + ' 0 R'; }).join(' ') + '] /Count ' + pageIds.length + ' >>';
-  const catalogId = addObj('<< /Type /Catalog /Pages ' + pagesId + ' 0 R >>');
 
-  let pdf = '%PDF-1.4\n';
-  const offsets = [0];
+  needSpace(40);
+  ln(ML, y + 6, ML + CW, y + 6, LGRAY, 0.5);
+  y -= 12;
+  txt('F2', 6, GRAY, ML, y, 'Documento generato automaticamente da NURVAN  |  Non sostituisce il parere medico');
+  y -= 10;
+  txt('F2', 6, GRAY, ML, y, 'Settimane ' + startW + '-' + endW + '  |  ' + new Date().toLocaleDateString('it-IT') + (athlete ? ('  |  ' + athlete) : ''));
+
+  if (cmds.length) flushPage();
+  if (!pages.length) pages.push('BT /F1 16 Tf ' + GOLD + ' rg 1 0 0 1 40 800 Tm (NURVAN) Tj ET');
+
+  var objs = [];
+  function addObj(body) { objs.push(body); return objs.length; }
+  var f1 = addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  var f2 = addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  var contentIds = [];
+  pages.forEach(function (stream) {
+    contentIds.push(addObj('<< /Length ' + stream.length + ' >>\nstream\n' + stream + '\nendstream'));
+  });
+  var pageObjIds = [];
+  var pagesId = addObj('');
+  pages.forEach(function (_, i) {
+    pageObjIds.push(addObj('<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Contents ' + contentIds[i] + ' 0 R /Resources << /Font << /F1 ' + f1 + ' 0 R /F2 ' + f2 + ' 0 R >> >> >>'));
+  });
+  objs[pagesId - 1] = '<< /Type /Pages /Kids [' + pageObjIds.map(function (id) { return id + ' 0 R'; }).join(' ') + '] /Count ' + pageObjIds.length + ' >>';
+  var catalogId = addObj('<< /Type /Catalog /Pages ' + pagesId + ' 0 R >>');
+
+  var pdf = '%PDF-1.4\n';
+  var offsets = [0];
   objs.forEach(function (body, i) {
     offsets.push(pdf.length);
     pdf += (i + 1) + ' 0 obj\n' + body + '\nendobj\n';
   });
-  const xrefAt = pdf.length;
-  pdf += 'xref\n0 ' + (objs.length + 1) + '\n';
-  pdf += '0000000000 65535 f \n';
+  var xrefAt = pdf.length;
+  pdf += 'xref\n0 ' + (objs.length + 1) + '\n0000000000 65535 f \n';
   offsets.slice(1).forEach(function (off) {
     pdf += ('0000000000' + off).slice(-10) + ' 00000 n \n';
   });
   pdf += 'trailer << /Size ' + (objs.length + 1) + ' /Root ' + catalogId + ' 0 R >>\nstartxref\n' + xrefAt + '\n%%EOF';
-  const bytes = new Uint8Array(pdf.length);
-  for (let i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 0xFF;
+  var bytes = new Uint8Array(pdf.length);
+  for (var i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 0xFF;
   return bytes;
 }
 function shareOrSavePdfBlob(blob, filename) {
