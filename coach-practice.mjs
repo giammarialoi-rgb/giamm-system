@@ -205,9 +205,21 @@ export async function ensureCoachPracticeTables(client) {
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS next_check_at TIMESTAMPTZ;
     ALTER TABLE coach_licenses ADD COLUMN IF NOT EXISTS hide_presence BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE coach_licenses ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+    ALTER TABLE coach_licenses ADD COLUMN IF NOT EXISTS allow_videocall BOOLEAN NOT NULL DEFAULT TRUE;
     ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS attachment JSONB;
     ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS thread_id INT NOT NULL DEFAULT 1;
     ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS hidden_for TEXT[] NOT NULL DEFAULT '{}';
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS e2e_pubkey_coach TEXT;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS e2e_pubkey_athlete TEXT;
+    CREATE TABLE IF NOT EXISTS coach_call_signals (
+      id BIGSERIAL PRIMARY KEY,
+      client_id BIGINT NOT NULL REFERENCES coach_clients(id) ON DELETE CASCADE,
+      from_role TEXT NOT NULL,
+      signal JSONB NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_coach_call_signals_client
+      ON coach_call_signals (client_id, id DESC);
   `);
 }
 
@@ -274,6 +286,10 @@ export function mountCoachPractice(app, deps) {
     if (!kind) return null;
     const name = String(raw.name || "allegato").slice(0, 80);
     const mime = String(raw.mime || "").slice(0, 80);
+    const e2eData = raw.e2eData ? String(raw.e2eData).slice(0, 600000) : null;
+    if (e2eData && e2eData.indexOf("E2E1:") === 0) {
+      return { kind, name, mime, e2eData };
+    }
     const data = String(raw.data || "");
     if (!/^data:[a-z0-9.+\/\-]+;base64,/i.test(data)) return null;
     if (data.length > 450000) return null;
@@ -287,7 +303,7 @@ export function mountCoachPractice(app, deps) {
 
   async function insertMessage(clientId, fromRole, body, attachment) {
     const att = sanitizeAttachment(attachment);
-    const text = String(body || "").trim().slice(0, 2000);
+    const text = String(body || "").trim().slice(0, 12000);
     if (!text && !att) return null;
     const thread = await currentThread(clientId);
     const ins = await pool.query(
@@ -517,7 +533,12 @@ export function mountCoachPractice(app, deps) {
        WHERE client_id = $1 AND thread_id = $2 AND from_role = 'coach' AND read_at IS NULL`,
       [ctx.client.id, thread]
     );
-    return res.json({ ok: true, messages, threadId: thread });
+    return res.json({
+      ok: true,
+      messages,
+      threadId: thread,
+      e2e: { coach: ctx.client.e2e_pubkey_coach || null, athlete: ctx.client.e2e_pubkey_athlete || null }
+    });
   });
 
   app.post("/api/client/messages", async (req, res) => {
@@ -766,14 +787,15 @@ export function mountCoachPractice(app, deps) {
     if (!auth) return res.status(401).json({ error: "Unauthorized." });
     if (auth.role === "athlete") return res.json({ ok: true, unlocked: false, role: "athlete" });
     await initDb();
-    const lic = await pool.query("SELECT source, status, unlocked_at, hide_presence, last_seen_at FROM coach_licenses WHERE user_id = $1", [auth.id]);
+    const lic = await pool.query("SELECT source, status, unlocked_at, hide_presence, last_seen_at, allow_videocall FROM coach_licenses WHERE user_id = $1", [auth.id]);
     const unlocked = !!(lic.rows[0] && lic.rows[0].status === "active");
     return res.json({
       ok: true,
       unlocked,
       role: "coach",
       license: lic.rows[0] || null,
-      hidePresence: !!(lic.rows[0] && lic.rows[0].hide_presence)
+      hidePresence: !!(lic.rows[0] && lic.rows[0].hide_presence),
+      allowVideocall: lic.rows[0] ? lic.rows[0].allow_videocall !== false : true
     });
   });
 
@@ -1219,7 +1241,12 @@ export function mountCoachPractice(app, deps) {
       [row.id, thread]
     );
     await pool.query("UPDATE coach_clients SET unread_count = 0 WHERE id = $1", [row.id]);
-    return res.json({ ok: true, messages, threadId: thread });
+    return res.json({
+      ok: true,
+      messages,
+      threadId: thread,
+      e2e: { coach: row.e2e_pubkey_coach || null, athlete: row.e2e_pubkey_athlete || null }
+    });
   });
 
   app.post("/api/coach/clients/:id/messages", async (req, res) => {
@@ -1259,11 +1286,131 @@ export function mountCoachPractice(app, deps) {
     if (!coach) return;
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
+    const examsRaw = Array.isArray(req.body?.exams) ? req.body.exams : [];
+    const exams = examsRaw.slice(0, 80).map((e) => ({
+      id: String(e?.id || "").slice(0, 60),
+      name: String(e?.name || e?.id || "").slice(0, 120)
+    })).filter((e) => e.id || e.name);
+    const dueAt = req.body?.dueAt ? String(req.body.dueAt).slice(0, 10) : null;
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'exams_request',$2)",
-      [row.id, JSON.stringify({ note: String(req.body?.note || "").slice(0, 400) })]
+      [row.id, JSON.stringify({
+        note: String(req.body?.note || "").slice(0, 400),
+        dueAt,
+        exams
+      })]
     );
+    return res.json({ ok: true, count: exams.length });
+  });
+
+  app.post("/api/coach/videocall", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const allow = !!req.body?.allow;
+    await pool.query("UPDATE coach_licenses SET allow_videocall = $2 WHERE user_id = $1", [coach.id, allow]);
+    return res.json({ ok: true, allowVideocall: allow });
+  });
+
+  app.post("/api/coach/clients/:id/e2e-key", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const publicKey = String(req.body?.publicKey || "").slice(0, 4000);
+    if (!publicKey) return res.status(400).json({ error: "Chiave mancante." });
+    await pool.query("UPDATE coach_clients SET e2e_pubkey_coach = $2 WHERE id = $1", [row.id, publicKey]);
     return res.json({ ok: true });
+  });
+
+  app.get("/api/coach/clients/:id/e2e-keys", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    return res.json({ ok: true, e2e: { coach: row.e2e_pubkey_coach || null, athlete: row.e2e_pubkey_athlete || null } });
+  });
+
+  app.post("/api/client/e2e-key", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const publicKey = String(req.body?.publicKey || "").slice(0, 4000);
+    if (!publicKey) return res.status(400).json({ error: "Chiave mancante." });
+    await pool.query("UPDATE coach_clients SET e2e_pubkey_athlete = $2 WHERE id = $1", [ctx.client.id, publicKey]);
+    return res.json({ ok: true });
+  });
+
+  app.get("/api/client/e2e-keys", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    return res.json({
+      ok: true,
+      e2e: { coach: ctx.client.e2e_pubkey_coach || null, athlete: ctx.client.e2e_pubkey_athlete || null },
+      allowVideocall: true
+    });
+  });
+
+  async function insertCallSignal(clientId, fromRole, signal) {
+    if (!signal || typeof signal !== "object") return null;
+    const ins = await pool.query(
+      `INSERT INTO coach_call_signals(client_id, from_role, signal)
+       VALUES($1,$2,$3::jsonb) RETURNING id, from_role, signal, created_at`,
+      [clientId, fromRole, JSON.stringify(signal)]
+    );
+    return ins.rows[0];
+  }
+
+  async function listCallSignals(clientId, afterId) {
+    const rows = await pool.query(
+      `SELECT id, from_role, signal, created_at FROM coach_call_signals
+       WHERE client_id = $1 AND id > $2 ORDER BY id ASC LIMIT 40`,
+      [clientId, Number(afterId) || 0]
+    );
+    return rows.rows;
+  }
+
+  app.post("/api/coach/clients/:id/call/signal", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const lic = await pool.query("SELECT allow_videocall FROM coach_licenses WHERE user_id = $1", [coach.id]);
+    if (lic.rows[0] && lic.rows[0].allow_videocall === false) {
+      return res.status(403).json({ error: "Videocall disabilitate." });
+    }
+    const sig = await insertCallSignal(row.id, "coach", req.body?.signal);
+    if (!sig) return res.status(400).json({ error: "Signal non valido." });
+    return res.json({ ok: true, id: sig.id });
+  });
+
+  app.get("/api/coach/clients/:id/call/signals", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const signals = await listCallSignals(row.id, req.query.after);
+    return res.json({ ok: true, signals });
+  });
+
+  app.post("/api/client/call/signal", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const lic = await pool.query(
+      "SELECT allow_videocall FROM coach_licenses WHERE user_id = $1",
+      [ctx.client.coach_user_id]
+    );
+    if (lic.rows[0] && lic.rows[0].allow_videocall === false) {
+      return res.status(403).json({ error: "Il coach ha disabilitato le videocall." });
+    }
+    const sig = await insertCallSignal(ctx.client.id, "athlete", req.body?.signal);
+    if (!sig) return res.status(400).json({ error: "Signal non valido." });
+    return res.json({ ok: true, id: sig.id });
+  });
+
+  app.get("/api/client/call/signals", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const signals = await listCallSignals(ctx.client.id, req.query.after);
+    return res.json({ ok: true, signals });
   });
 
   app.post("/api/coach/clients/:id/reset-password", async (req, res) => {

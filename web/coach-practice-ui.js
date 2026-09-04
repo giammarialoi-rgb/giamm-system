@@ -221,19 +221,26 @@ function ensureClientViewBanner() {
   if (!bar) {
     bar = document.createElement('div');
     bar.id = 'cp-client-view-bar';
-    bar.style.cssText = 'display:none;position:fixed;left:8px;right:8px;bottom:118px;z-index:10075;background:#111;border:1px solid var(--gold);border-radius:12px;padding:10px;';
+    // Top bar so it never covers chat composer
+    bar.style.cssText = 'display:none;position:fixed;left:8px;right:8px;top:8px;z-index:10075;background:#111;border:1px solid var(--gold);border-radius:12px;padding:10px;max-height:42vh;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.45);';
     document.body.appendChild(bar);
   }
   if (!(store && store.coachViewingClient && store.coachWorkspace && store.coachWorkspace.clientId)) {
     bar.style.display = 'none';
+    document.body.classList.remove('cp-has-client-bar');
     return;
   }
-  if (store.coachAssigning) { bar.style.display = 'none'; return; }
+  if (store.coachAssigning || currentView === 'coachChat') {
+    bar.style.display = 'none';
+    document.body.classList.remove('cp-has-client-bar');
+    return;
+  }
   const name = (store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente';
   const live = store.coachWorkspace.client && store.coachWorkspace.client.workoutLive;
   bar.style.display = 'block';
-  bar.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;">DATI DI ' + esc(name) + (live ? ' · IN WORKOUT' : '') + '</div>' +
-    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Solo lettura attività + puoi modificare il piano e salvare.</div>' +
+  document.body.classList.add('cp-has-client-bar');
+  bar.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;">MASTER · DATI DI ' + esc(name) + (live ? ' · IN WORKOUT' : '') + '</div>' +
+    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Controlli e verifichi · alcuni campi solo lettura + commento.</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'training\')">ALLENAMENTO</button>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'nutrition\')">ALIMENTAZIONE</button>' +
@@ -269,7 +276,17 @@ function ensurePracticeStyle() {
     '.cp-chat-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}',
     '.cp-assign-bar{position:fixed;left:8px;right:8px;bottom:72px;z-index:10080;background:#111;border:1px solid var(--gold);border-radius:12px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.45);}',
     '.cp-pw-row{display:flex;gap:6px;align-items:center;}',
-    '.cp-pw-row input{flex:1;}'
+    '.cp-pw-row input{flex:1;}',
+    'body.cp-has-client-bar #app,body.cp-has-client-bar .main,body.cp-has-client-bar #content{padding-top:118px !important;}',
+    '.cp-cal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}',
+    '.cp-cal-grid select{width:100%;padding:12px 8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:14px;font-weight:700;}',
+    '.cp-exam-cat{margin:10px 0;border:1px solid #222;border-radius:10px;padding:8px;}',
+    '.cp-exam-cat h4{margin:0 0 6px;font-size:11px;color:var(--gold);}',
+    '.cp-exam-item{display:flex;gap:8px;align-items:center;font-size:12px;color:#ddd;padding:4px 0;}',
+    '#cp-call-overlay{position:fixed;inset:0;z-index:10120;background:#050505;display:none;flex-direction:column;}',
+    '#cp-call-overlay.active{display:flex;}',
+    '#cp-call-overlay video{width:100%;background:#000;object-fit:cover;}',
+    '#cp-call-local{position:absolute;right:12px;top:72px;width:112px;height:150px;border-radius:10px;border:1px solid var(--gold);z-index:2;}'
   ].join('');
   document.head.appendChild(s);
 }
@@ -846,8 +863,10 @@ function renderCoachHub(c) {
     '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">I tuoi clienti</h1></div>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="exitCoachSession()">ESCI DALL’HUB</button></div>' +
     '<div class="card" style="padding:12px;margin-bottom:12px;">' +
-    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#ccc;margin-bottom:10px;">' +
+    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#ccc;margin-bottom:8px;">' +
     '<input type="checkbox" ' + (hide ? 'checked' : '') + ' onchange="toggleCoachHidePresence(this.checked)"> Nascondi che sei online agli atleti</label>' +
+    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#ccc;margin-bottom:10px;">' +
+    '<input type="checkbox" ' + ((store.coachAllowVideocall !== false) ? 'checked' : '') + ' onchange="toggleCoachVideocall(this.checked)"> Consenti videocall interne con i clienti</label>' +
     '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()">' +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button></div>' +
     '<div id="cp-client-list"><div class="cp-help">Caricamento…</div></div>';
@@ -1057,7 +1076,9 @@ function renderMessageHtml(m, mine) {
   const ticks = mine
     ? (m.read_at ? ' <span style="color:#4fc3f7;">✓✓</span>' : ' <span style="color:#888;">✓</span>')
     : '';
-  return '<div class="cp-msg ' + (mine ? 'me' : 'them') + '">' + esc(m.body || '') + extra +
+  const lock = (m.e2e || (typeof m.body === 'string' && m.body.indexOf('E2E1:') === 0)) ? ' 🔒' : '';
+  const text = m._plain != null ? m._plain : (m.body || '');
+  return '<div class="cp-msg ' + (mine ? 'me' : 'them') + '">' + esc(text) + lock + extra +
     '<div style="font-size:9px;color:#666;margin-top:4px;">' + esc(String(m.created_at || '').replace('T', ' ').slice(0, 16)) + ticks + '</div></div>';
 }
 
@@ -1434,19 +1455,102 @@ async function assignActiveToClient(id) {
   openAssignChooser(id, (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) || '');
 }
 
+function euDateParts(iso) {
+  const s = iso ? String(iso).slice(0, 10) : '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) {
+    const d = new Date();
+    return { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() };
+  }
+  return { y: +m[1], m: +m[2], d: +m[3] };
+}
+
+function buildEuDateSelects(prefix, initialIso) {
+  const p = euDateParts(initialIso);
+  const years = [];
+  const nowY = new Date().getFullYear();
+  for (let y = nowY - 1; y <= nowY + 5; y++) years.push(y);
+  const months = [
+    [1, 'gennaio'], [2, 'febbraio'], [3, 'marzo'], [4, 'aprile'], [5, 'maggio'], [6, 'giugno'],
+    [7, 'luglio'], [8, 'agosto'], [9, 'settembre'], [10, 'ottobre'], [11, 'novembre'], [12, 'dicembre']
+  ];
+  const days = [];
+  for (let d = 1; d <= 31; d++) days.push(d);
+  return '<div class="cp-cal-grid">' +
+    '<div><label style="font-size:9px;color:#888;font-weight:800;">GIORNO</label><select id="' + prefix + '-d">' +
+    days.map(function (d) { return '<option value="' + d + '"' + (d === p.d ? ' selected' : '') + '>' + String(d).padStart(2, '0') + '</option>'; }).join('') +
+    '</select></div>' +
+    '<div><label style="font-size:9px;color:#888;font-weight:800;">MESE</label><select id="' + prefix + '-m">' +
+    months.map(function (mo) { return '<option value="' + mo[0] + '"' + (mo[0] === p.m ? ' selected' : '') + '>' + mo[1] + '</option>'; }).join('') +
+    '</select></div>' +
+    '<div><label style="font-size:9px;color:#888;font-weight:800;">ANNO</label><select id="' + prefix + '-y">' +
+    years.map(function (y) { return '<option value="' + y + '"' + (y === p.y ? ' selected' : '') + '>' + y + '</option>'; }).join('') +
+    '</select></div></div>';
+}
+
+function readEuDateSelects(prefix) {
+  const d = +((document.getElementById(prefix + '-d') || {}).value || 0);
+  const m = +((document.getElementById(prefix + '-m') || {}).value || 0);
+  const y = +((document.getElementById(prefix + '-y') || {}).value || 0);
+  if (!d || !m || !y) return null;
+  const dt = new Date(y, m - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return null;
+  return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
+
+function ensureCpModal() {
+  let ov = document.getElementById('cp-modal');
+  if (ov) return ov;
+  ov = document.createElement('div');
+  ov.id = 'cp-modal';
+  ov.className = 'cp-overlay';
+  ov.style.display = 'none';
+  ov.innerHTML = '<div class="cp-panel" id="cp-modal-panel"></div>';
+  document.body.appendChild(ov);
+  return ov;
+}
+
+function openCpModal(html) {
+  ensurePracticeStyle();
+  const ov = ensureCpModal();
+  const panel = document.getElementById('cp-modal-panel');
+  if (panel) panel.innerHTML = html;
+  ov.style.display = 'flex';
+}
+
+function closeCpModal() {
+  const ov = document.getElementById('cp-modal');
+  if (ov) ov.style.display = 'none';
+}
+window.closeCpModal = closeCpModal;
+
 async function requestCheckFromClient(id) {
   const def = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-  const when = prompt('Quando vuoi ricevere il check? (AAAA-MM-GG)', def);
-  if (when === null) return;
+  openCpModal(
+    '<h2>Richiedi check fisico</h2>' +
+    '<p class="cp-help">Scegli la data in cui vuoi ricevere il check (formato europeo).</p>' +
+    buildEuDateSelects('cp-chk', def) +
+    '<textarea id="cp-chk-note" rows="2" placeholder="Nota opzionale per il cliente…" style="width:100%;margin-top:12px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></textarea>' +
+    '<button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="confirmRequestCheck(\'' + esc(id) + '\')">INVIA RICHIESTA</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="closeCpModal()">ANNULLA</button>'
+  );
+}
+
+async function confirmRequestCheck(id) {
+  const when = readEuDateSelects('cp-chk');
+  if (!when) { practiceToast('Data non valida', 'warning'); return; }
+  const note = ((document.getElementById('cp-chk-note') || {}).value || '').trim();
   try {
     await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/check-request', {
       method: 'POST', headers: practiceHeaders(true),
-      body: JSON.stringify({ note: '', nextCheckAt: when || null })
+      body: JSON.stringify({ note: note, nextCheckAt: when })
     }, 15000);
+    closeCpModal();
     practiceToast('Check richiesto al cliente', 'success');
     if (currentView === 'coachClient') openCoachClient(id);
   } catch (err) { practiceToast((err && err.message) || 'Richiesta check fallita', 'danger'); }
 }
+window.confirmRequestCheck = confirmRequestCheck;
 
 async function sendCheckToClient(id) {
   return requestCheckFromClient(id);
@@ -1454,22 +1558,33 @@ async function sendCheckToClient(id) {
 
 async function editClientSchedule(id) {
   const cl = store.coachWorkspace && store.coachWorkspace.client;
-  const exp = prompt('Scadenza programma (AAAA-MM-GG, vuoto = lascia)', cl && cl.programExpiresAt ? String(cl.programExpiresAt).slice(0, 10) : '');
-  if (exp === null) return;
-  const chk = prompt('Prossimo check (AAAA-MM-GG, vuoto = lascia)', cl && cl.nextCheckAt ? String(cl.nextCheckAt).slice(0, 10) : '');
-  if (chk === null) return;
+  const exp0 = cl && cl.programExpiresAt ? String(cl.programExpiresAt).slice(0, 10) : new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  const chk0 = cl && cl.nextCheckAt ? String(cl.nextCheckAt).slice(0, 10) : new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  openCpModal(
+    '<h2>Scadenza e check</h2>' +
+    '<p class="cp-help">Seleziona le date dal calendario (giorno / mese / anno).</p>' +
+    '<div class="cp-field"><label>SCADENZA PROGRAMMA</label>' + buildEuDateSelects('cp-exp', exp0) + '</div>' +
+    '<div class="cp-field" style="margin-top:14px;"><label>PROSSIMO CHECK</label>' + buildEuDateSelects('cp-nx', chk0) + '</div>' +
+    '<button class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="confirmClientSchedule(\'' + esc(id) + '\')">SALVA DATE</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="closeCpModal()">ANNULLA</button>'
+  );
+}
+
+async function confirmClientSchedule(id) {
+  const exp = readEuDateSelects('cp-exp');
+  const chk = readEuDateSelects('cp-nx');
+  if (!exp || !chk) { practiceToast('Date non valide', 'warning'); return; }
   try {
     await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/schedule', {
       method: 'POST', headers: practiceHeaders(true),
-      body: JSON.stringify({
-        programExpiresAt: exp || null,
-        nextCheckAt: chk || null
-      })
+      body: JSON.stringify({ programExpiresAt: exp, nextCheckAt: chk })
     }, 15000);
+    closeCpModal();
     practiceToast('Date aggiornate', 'success');
     openCoachClient(id);
   } catch (err) { practiceToast((err && err.message) || 'Aggiornamento date fallito', 'danger'); }
 }
+window.confirmClientSchedule = confirmClientSchedule;
 
 async function toggleCoachHidePresence(hide) {
   try {
@@ -1484,14 +1599,76 @@ async function toggleCoachHidePresence(hide) {
   }
 }
 
+async function toggleCoachVideocall(allow) {
+  try {
+    await practiceFetch('/api/coach/videocall', {
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ allow: !!allow })
+    }, 12000);
+    store.coachAllowVideocall = !!allow;
+    if (typeof persist === 'function') persist();
+    practiceToast(allow ? 'Videocall abilitate' : 'Videocall disabilitate', 'success');
+  } catch (err) {
+    practiceToast((err && err.message) || 'Impostazione videocall fallita', 'danger');
+  }
+}
+window.toggleCoachVideocall = toggleCoachVideocall;
+
+var __examCatalogCache = null;
+async function loadExamCatalog() {
+  if (__examCatalogCache) return __examCatalogCache;
+  try {
+    const res = await fetch((typeof COACH_API_ORIGIN === 'string' ? COACH_API_ORIGIN : '') + '/exam-request-catalog.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('catalog');
+    __examCatalogCache = await res.json();
+  } catch (_) {
+    try {
+      const res2 = await fetch('exam-request-catalog.json', { cache: 'no-store' });
+      __examCatalogCache = await res2.json();
+    } catch (e2) {
+      __examCatalogCache = { categories: [] };
+    }
+  }
+  return __examCatalogCache;
+}
+
 async function requestExamsFromClient(id) {
+  const cat = await loadExamCatalog();
+  const def = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+  const catsHtml = (cat.categories || []).map(function (c) {
+    const items = (c.exams || []).map(function (ex) {
+      return '<label class="cp-exam-item"><input type="checkbox" class="cp-exam-cb" value="' + esc(ex.id) + '" data-name="' + esc(ex.name) + '"> ' + esc(ex.name) + '</label>';
+    }).join('');
+    return '<div class="cp-exam-cat"><h4>' + esc(c.label) + '</h4>' + items + '</div>';
+  }).join('');
+  openCpModal(
+    '<h2>Richiedi esami</h2>' +
+    '<p class="cp-help">Seleziona gli esami dal database e la data entro cui caricarli.</p>' +
+    '<div class="cp-field"><label>SCADENZA CARICAMENTO</label>' + buildEuDateSelects('cp-examdue', def) + '</div>' +
+    '<div style="max-height:42vh;overflow:auto;margin-top:10px;">' + (catsHtml || '<div class="cp-help">Catalogo non disponibile.</div>') + '</div>' +
+    '<textarea id="cp-exam-note" rows="2" placeholder="Nota opzionale…" style="width:100%;margin-top:10px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></textarea>' +
+    '<button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="confirmRequestExams(\'' + esc(id) + '\')">INVIA RICHIESTA</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="closeCpModal()">ANNULLA</button>'
+  );
+}
+
+async function confirmRequestExams(id) {
+  const due = readEuDateSelects('cp-examdue');
+  if (!due) { practiceToast('Data non valida', 'warning'); return; }
+  const exams = Array.prototype.slice.call(document.querySelectorAll('.cp-exam-cb:checked')).map(function (el) {
+    return { id: el.value, name: el.getAttribute('data-name') || el.value };
+  });
+  if (!exams.length) { practiceToast('Seleziona almeno un esame', 'warning'); return; }
+  const note = ((document.getElementById('cp-exam-note') || {}).value || '').trim();
   try {
     await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/request-exams', {
-      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ note: '' })
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ note: note, dueAt: due, exams: exams })
     }, 15000);
-    practiceToast('Richiesta esami inviata', 'success');
+    closeCpModal();
+    practiceToast('Richiesta esami inviata (' + exams.length + ')', 'success');
   } catch (err) { practiceToast((err && err.message) || 'Richiesta esami fallita', 'danger'); }
 }
+window.confirmRequestExams = confirmRequestExams;
 
 async function resetClientPassword(id) {
   const password = prompt('Nuova password per il cliente (min. 4):');
@@ -1556,12 +1733,13 @@ async function rejectClientChange(id) {
 }
 
 function renderClientChat(c) {
-  c.innerHTML = '<div style="margin-bottom:12px;"><span style="font-size:10px;color:var(--gold);font-weight:800;">COACH</span>' +
+  c.innerHTML = '<div style="margin-bottom:12px;"><span style="font-size:10px;color:var(--gold);font-weight:800;">COACH · E2E 🔒</span>' +
     '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">Chat con il coach</h1></div>' +
     '<div class="card" style="padding:12px;"><div id="cp-client-chat" style="max-height:52vh;overflow:auto;"></div>' +
     chatToolsHtml('cp-client-msg', 'sendAthleteHumanMessage()', 'clearChatForMe(null,\'athlete\')', 'newChatThread(null,\'athlete\')') +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="startInternalVideocall(null,\'athlete\')">📹 VIDEOCALL INTERNA</button>' +
     '</div>';
-  startChatPoll(null, 'cp-client-chat', 'athlete');
+  ensureE2EReady('athlete', null).then(function () { startChatPoll(null, 'cp-client-chat', 'athlete'); });
 }
 
 var __cpChatPoll = null;
@@ -1583,10 +1761,23 @@ async function loadHumanMessages(clientId, boxId, role, silent) {
   try {
     const path = role === 'athlete' ? '/api/client/messages' : '/api/coach/clients/' + encodeURIComponent(clientId) + '/messages';
     const payload = await practiceFetch(path, { method: 'GET', headers: practiceHeaders(false) }, 20000);
+    if (payload.e2e) store.__cpE2EPeer = payload.e2e;
     const msgs = payload.messages || [];
     const nearBottom = (box.scrollHeight - box.scrollTop - box.clientHeight) < 80;
-    if (!msgs.length) { box.innerHTML = '<div class="cp-help">Nessun messaggio.</div>'; return; }
-    box.innerHTML = msgs.map(function (m) {
+    if (!msgs.length) { box.innerHTML = '<div class="cp-help">Nessun messaggio. Chat cifrata end-to-end.</div>'; return; }
+    const decrypted = [];
+    for (let i = 0; i < msgs.length; i++) {
+      const m = Object.assign({}, msgs[i]);
+      m._plain = await decryptChatBody(m.body, role, clientId);
+      if (m.attachment && m.attachment.e2eData) {
+        try {
+          const plainAtt = await decryptChatBody(m.attachment.e2eData, role, clientId);
+          m.attachment = Object.assign({}, m.attachment, { data: plainAtt, e2eData: undefined });
+        } catch (_) {}
+      }
+      decrypted.push(m);
+    }
+    box.innerHTML = decrypted.map(function (m) {
       const mine = (role === 'athlete' && m.from_role === 'athlete') || (role === 'coach' && m.from_role === 'coach');
       return renderMessageHtml(m, mine);
     }).join('');
@@ -1707,11 +1898,19 @@ function compressChatImage(file) {
 async function sendCoachHumanMessage(id) {
   const input = document.getElementById(window.__cpChatInputId || 'cp-ws-msg') || document.getElementById('cp-ws-msg') || document.getElementById('cp-chat-input');
   const body = input && input.value.trim();
-  const attachment = window.__cpPendingAttach || null;
+  let attachment = window.__cpPendingAttach || null;
   if (!body && !attachment) return;
   try {
+    await ensureE2EReady('coach', id);
+    const encBody = body ? await encryptChatBody(body, 'coach', id) : '';
+    if (attachment && attachment.data) {
+      attachment = Object.assign({}, attachment, {
+        e2eData: await encryptChatBody(attachment.data, 'coach', id),
+        data: null
+      });
+    }
     await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/messages', {
-      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: body || '', attachment: attachment })
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: encBody || '', attachment: attachment, e2e: true })
     }, 20000);
     if (input) input.value = '';
     window.__cpPendingAttach = null;
@@ -1724,11 +1923,19 @@ async function sendCoachHumanMessage(id) {
 async function sendAthleteHumanMessage() {
   const input = document.getElementById('cp-client-msg');
   const body = input && input.value.trim();
-  const attachment = window.__cpPendingAttach || null;
+  let attachment = window.__cpPendingAttach || null;
   if (!body && !attachment) return;
   try {
+    await ensureE2EReady('athlete', null);
+    const encBody = body ? await encryptChatBody(body, 'athlete', null) : '';
+    if (attachment && attachment.data) {
+      attachment = Object.assign({}, attachment, {
+        e2eData: await encryptChatBody(attachment.data, 'athlete', null),
+        data: null
+      });
+    }
     await practiceFetch('/api/client/messages', {
-      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: body || '', attachment: attachment })
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: encBody || '', attachment: attachment, e2e: true })
     }, 20000);
     if (input) input.value = '';
     window.__cpPendingAttach = null;
@@ -1972,11 +2179,13 @@ function renderCoachChatPage(c) {
     c.innerHTML = '<div class="cp-help">Seleziona un cliente.</div>';
     return;
   }
+  ensureClientViewBanner();
   const name = (store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'Cliente';
-  c.innerHTML = '<div style="display:flex;flex-direction:column;height:calc(100dvh - 200px);min-height:420px;">' +
+  const videoOk = store.coachAllowVideocall !== false;
+  c.innerHTML = '<div style="display:flex;flex-direction:column;height:calc(100dvh - 140px);min-height:420px;padding-bottom:8px;">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachClient\')">← SCHEDA</button>' +
-    '<div style="text-align:center;flex:1;"><div style="font-size:10px;color:var(--gold);font-weight:800;">CHAT</div>' +
+    '<div style="text-align:center;flex:1;"><div style="font-size:10px;color:var(--gold);font-weight:800;">CHAT E2E 🔒</div>' +
     '<div style="font-size:16px;font-weight:900;color:#fff;">' + esc(name) + '</div></div>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">HUB</button></div>' +
     '<div id="cp-wa-chat" style="flex:1;overflow:auto;background:#0a0a0a;border:1px solid #222;border-radius:12px;padding:10px;margin-bottom:10px;"></div>' +
@@ -1984,14 +2193,14 @@ function renderCoachChatPage(c) {
     '<div style="display:flex;gap:8px;align-items:center;">' +
     '<button class="btn btn-outline" style="font-size:12px;padding:10px;" onclick="pickChatAttachment()">📎</button>' +
     '<button class="btn btn-outline" style="font-size:12px;padding:10px;" onclick="startChatDictation(\'cp-chat-input\')">🎙</button>' +
-    '<input id="cp-chat-input" type="text" placeholder="Messaggio…" style="flex:1;padding:12px;border-radius:20px;border:1px solid #333;background:#151515;color:#fff;">' +
+    (videoOk ? '<button class="btn btn-outline" style="font-size:12px;padding:10px;" title="Videocall" onclick="startInternalVideocall(\'' + esc(id) + '\',\'coach\')">📹</button>' : '') +
+    '<input id="cp-chat-input" type="text" placeholder="Messaggio cifrato…" style="flex:1;padding:12px;border-radius:20px;border:1px solid #333;background:#151515;color:#fff;">' +
     '<button class="btn btn-primary" style="border-radius:20px;padding:10px 14px;" onclick="sendCoachHumanMessage(\'' + esc(id) + '\')">➤</button></div>' +
     '<div class="cp-chat-tools" style="margin-top:8px;">' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="clearChatForMe(\'' + esc(id) + '\',\'coach\')">AZZERA (PER ME)</button>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="newChatThread(\'' + esc(id) + '\',\'coach\')">NUOVA CHAT</button></div></div>';
-  // Wire send to use cp-chat-input
   window.__cpChatInputId = 'cp-chat-input';
-  startChatPoll(id, 'cp-wa-chat', 'coach');
+  ensureE2EReady('coach', id).then(function () { startChatPoll(id, 'cp-wa-chat', 'coach'); });
 }
 
 async function refreshAthleteMe() {
@@ -2015,6 +2224,7 @@ async function refreshCoachStatus() {
     const s = await practiceFetch('/api/coach/status', { method: 'GET', headers: practiceHeaders(false) }, 12000);
     store.coachUnlocked = !!(s && s.unlocked);
     store.coachHidePresence = !!(s && s.hidePresence);
+    store.coachAllowVideocall = s && s.allowVideocall !== false;
     if (typeof persist === 'function') persist();
   } catch (_) {}
 }
@@ -2376,6 +2586,236 @@ window.drawClientTutorial = drawClientTutorial;
 window.closeClientTutorial = closeClientTutorial;
 window.showDemoUnlock = showDemoUnlock;
 window.openCoachOrUnlock = openCoachOrUnlock;
+/* ——— E2E chat crypto (ECDH P-256 + AES-GCM) ——— */
+function b64FromBuf(buf) {
+  const bytes = new Uint8Array(buf);
+  let s = '';
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
+function bufFromB64(b64) {
+  const s = atob(b64);
+  const out = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out.buffer;
+}
+
+async function getOrCreateE2EKeyPair() {
+  const raw = localStorage.getItem('NURVAN_E2E_KEYPAIR');
+  if (raw) {
+    try {
+      const j = JSON.parse(raw);
+      const privateKey = await crypto.subtle.importKey('jwk', j.privateKey, { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+      const publicKey = await crypto.subtle.importKey('jwk', j.publicKey, { name: 'ECDH', namedCurve: 'P-256' }, true, []);
+      return { privateKey, publicKey, publicJwk: j.publicKey };
+    } catch (_) {}
+  }
+  const pair = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const publicJwk = await crypto.subtle.exportKey('jwk', pair.publicKey);
+  const privateJwk = await crypto.subtle.exportKey('jwk', pair.privateKey);
+  localStorage.setItem('NURVAN_E2E_KEYPAIR', JSON.stringify({ publicKey: publicJwk, privateKey: privateJwk }));
+  return { privateKey: pair.privateKey, publicKey: pair.publicKey, publicJwk: publicJwk };
+}
+
+async function ensureE2EReady(role, clientId) {
+  if (!window.crypto || !crypto.subtle) return null;
+  const kp = await getOrCreateE2EKeyPair();
+  const pub = JSON.stringify(kp.publicJwk);
+  try {
+    if (role === 'athlete') {
+      await practiceFetch('/api/client/e2e-key', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ publicKey: pub }) }, 12000);
+    } else if (clientId) {
+      await practiceFetch('/api/coach/clients/' + encodeURIComponent(clientId) + '/e2e-key', {
+        method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ publicKey: pub })
+      }, 12000);
+    }
+  } catch (_) {}
+  return kp;
+}
+
+async function resolvePeerPublicKey(role, clientId) {
+  let peer = store.__cpE2EPeer || {};
+  if (role === 'coach') {
+    if (!peer.athlete && clientId) {
+      try {
+        const r = await practiceFetch('/api/coach/clients/' + encodeURIComponent(clientId) + '/e2e-keys', { method: 'GET', headers: practiceHeaders(false) }, 10000);
+        peer = r.e2e || peer;
+        store.__cpE2EPeer = peer;
+      } catch (_) {}
+    }
+    return peer.athlete || null;
+  }
+  if (!peer.coach) {
+    try {
+      const r = await practiceFetch('/api/client/e2e-keys', { method: 'GET', headers: practiceHeaders(false) }, 10000);
+      peer = r.e2e || peer;
+      store.__cpE2EPeer = peer;
+    } catch (_) {}
+  }
+  return peer.coach || null;
+}
+
+async function deriveSharedAes(role, clientId) {
+  const kp = await getOrCreateE2EKeyPair();
+  const peerJwkStr = await resolvePeerPublicKey(role, clientId);
+  if (!peerJwkStr) return null;
+  let peerJwk;
+  try { peerJwk = typeof peerJwkStr === 'string' ? JSON.parse(peerJwkStr) : peerJwkStr; } catch (_) { return null; }
+  const peerKey = await crypto.subtle.importKey('jwk', peerJwk, { name: 'ECDH', namedCurve: 'P-256' }, true, []);
+  const bits = await crypto.subtle.deriveBits({ name: 'ECDH', public: peerKey }, kp.privateKey, 256);
+  return crypto.subtle.importKey('raw', bits, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+
+async function encryptChatBody(plain, role, clientId) {
+  if (!plain) return '';
+  try {
+    const key = await deriveSharedAes(role, clientId);
+    if (!key) return plain; // peer key not ready yet — send plaintext until both published
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, new TextEncoder().encode(plain));
+    const packed = new Uint8Array(iv.length + ct.byteLength);
+    packed.set(iv, 0);
+    packed.set(new Uint8Array(ct), iv.length);
+    return 'E2E1:' + b64FromBuf(packed.buffer);
+  } catch (_) {
+    return plain;
+  }
+}
+
+async function decryptChatBody(body, role, clientId) {
+  const text = String(body || '');
+  if (text.indexOf('E2E1:') !== 0) return text;
+  try {
+    const key = await deriveSharedAes(role, clientId);
+    if (!key) return '[Messaggio cifrato — in attesa chiavi]';
+    const packed = new Uint8Array(bufFromB64(text.slice(5)));
+    const iv = packed.slice(0, 12);
+    const ct = packed.slice(12);
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, ct);
+    return new TextDecoder().decode(pt);
+  } catch (_) {
+    return '[Messaggio cifrato]';
+  }
+}
+
+/* ——— Internal WebRTC videocall ——— */
+var __cpCall = { pc: null, local: null, remote: null, role: null, clientId: null, poll: null, lastId: 0 };
+
+function ensureCallOverlay() {
+  let ov = document.getElementById('cp-call-overlay');
+  if (ov) return ov;
+  ov = document.createElement('div');
+  ov.id = 'cp-call-overlay';
+  ov.innerHTML = '<div style="padding:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:#111;border-bottom:1px solid #333;">' +
+    '<div style="color:var(--gold);font-weight:800;font-size:12px;">VIDEOCALL INTERNA</div>' +
+    '<button class="btn btn-outline" style="font-size:11px;" onclick="hangupInternalVideocall()">CHIUDI</button></div>' +
+    '<div style="position:relative;flex:1;background:#000;">' +
+    '<video id="cp-call-remote" autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>' +
+    '<video id="cp-call-local" autoplay playsinline muted></video></div>';
+  document.body.appendChild(ov);
+  return ov;
+}
+
+async function postCallSignal(role, clientId, signal) {
+  const path = role === 'athlete'
+    ? '/api/client/call/signal'
+    : '/api/coach/clients/' + encodeURIComponent(clientId) + '/call/signal';
+  await practiceFetch(path, { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ signal: signal }) }, 15000);
+}
+
+async function pollCallSignals() {
+  if (!__cpCall.pc) return;
+  const role = __cpCall.role;
+  const clientId = __cpCall.clientId;
+  const path = role === 'athlete'
+    ? '/api/client/call/signals?after=' + (__cpCall.lastId || 0)
+    : '/api/coach/clients/' + encodeURIComponent(clientId) + '/call/signals?after=' + (__cpCall.lastId || 0);
+  try {
+    const res = await practiceFetch(path, { method: 'GET', headers: practiceHeaders(false) }, 12000);
+    const list = res.signals || [];
+    for (let i = 0; i < list.length; i++) {
+      const row = list[i];
+      __cpCall.lastId = Math.max(__cpCall.lastId, row.id || 0);
+      if (row.from_role === role) continue;
+      await handleRemoteSignal(row.signal);
+    }
+  } catch (_) {}
+}
+
+async function handleRemoteSignal(sig) {
+  const pc = __cpCall.pc;
+  if (!pc || !sig) return;
+  if (sig.type === 'offer') {
+    await pc.setRemoteDescription(sig);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await postCallSignal(__cpCall.role, __cpCall.clientId, pc.localDescription);
+  } else if (sig.type === 'answer') {
+    await pc.setRemoteDescription(sig);
+  } else if (sig.candidate) {
+    try { await pc.addIceCandidate(sig); } catch (_) {}
+  } else if (sig.type === 'hangup') {
+    hangupInternalVideocall(true);
+  }
+}
+
+async function startInternalVideocall(clientId, role) {
+  if (role === 'coach' && store.coachAllowVideocall === false) {
+    practiceToast('Hai disabilitato le videocall dall’hub', 'warning');
+    return;
+  }
+  if (__cpCall.pc) { practiceToast('Chiamata già attiva', 'info'); return; }
+  ensureCallOverlay().classList.add('active');
+  __cpCall.role = role;
+  __cpCall.clientId = clientId;
+  __cpCall.lastId = 0;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    __cpCall.local = stream;
+    document.getElementById('cp-call-local').srcObject = stream;
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    __cpCall.pc = pc;
+    stream.getTracks().forEach(function (t) { pc.addTrack(t, stream); });
+    pc.ontrack = function (ev) {
+      const remote = document.getElementById('cp-call-remote');
+      if (remote) remote.srcObject = ev.streams[0];
+    };
+    pc.onicecandidate = function (ev) {
+      if (ev.candidate) postCallSignal(role, clientId, ev.candidate.toJSON()).catch(function () {});
+    };
+    // Either side can start: create offer if we don't have remote yet
+    if (!pc.currentRemoteDescription) {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await postCallSignal(role, clientId, pc.localDescription);
+    }
+    __cpCall.poll = setInterval(pollCallSignals, 1500);
+    pollCallSignals();
+    practiceToast('Videocall avviata', 'success');
+  } catch (err) {
+    hangupInternalVideocall(true);
+    practiceToast((err && err.message) || 'Camera/microfono non disponibili', 'danger');
+  }
+}
+
+function hangupInternalVideocall(silent) {
+  try {
+    if (__cpCall.pc && !silent) postCallSignal(__cpCall.role, __cpCall.clientId, { type: 'hangup' }).catch(function () {});
+  } catch (_) {}
+  if (__cpCall.poll) { clearInterval(__cpCall.poll); __cpCall.poll = null; }
+  if (__cpCall.local) { __cpCall.local.getTracks().forEach(function (t) { t.stop(); }); }
+  if (__cpCall.pc) { try { __cpCall.pc.close(); } catch (_) {} }
+  __cpCall = { pc: null, local: null, remote: null, role: null, clientId: null, poll: null, lastId: 0 };
+  const ov = document.getElementById('cp-call-overlay');
+  if (ov) ov.classList.remove('active');
+  const loc = document.getElementById('cp-call-local');
+  const rem = document.getElementById('cp-call-remote');
+  if (loc) loc.srcObject = null;
+  if (rem) rem.srcObject = null;
+}
+
+window.startInternalVideocall = startInternalVideocall;
+window.hangupInternalVideocall = hangupInternalVideocall;
 window.confirmDemoUnlock = confirmDemoUnlock;
 window.openAddClientWizard = openAddClientWizard;
 window.setAddClientMode = setAddClientMode;
