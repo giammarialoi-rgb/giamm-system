@@ -67,7 +67,11 @@ const ui = fs.readFileSync(path.join(__dirname, "web/coach-practice-ui.js"), "ut
 ["bootCoachPractice", "openAddClientWizard", "setAddClientMode", "submitAddClient", "showClientIntake", "submitClientIntake", "showClientTutorial", "showDemoUnlock", "renderCoachHub", "renderClientChat"].forEach((name) => {
   assert(ui.includes(name), "UI defines " + name);
 });
-assert(ui.includes("ASSEGNA SCHEDA") && ui.includes("Consenti massima libertà"), "assign + max freedom");
+assert(ui.includes("ASSEGNA SCHEDA") && (ui.includes("Consenti massima libertà") || ui.includes("Consenti massima liberta")), "assign + max freedom");
+assert(ui.includes("Scadenza automatica") && ui.includes("confirmAssignSandboxSend"), "auto expiry on assign");
+assert(ui.includes("fetchWebRtcIceServers") && ui.includes("/api/webrtc/ice"), "videocall ICE fetch");
+assert(ui.includes("cp-modal-open") && ui.includes("clearChatAttachPreview"), "modal z-index + attach clear");
+assert(ui.includes("chatFileIconKind") && ui.includes("cp-file-chip"), "chat file icons");
 assert((ui.includes("AZZERA (PER ME)") || ui.includes("AZZERA CHAT (PER ME)")) && ui.includes("NUOVA CHAT") && ui.includes("openChatAttachSheet"), "chat thread tools");
 assert(ui.includes("Resta connesso") && ui.includes("RICHIEDI RECUPERO PASSWORD"), "login stay + recovery");
 assert(ui.includes("CHIEDI AL COACH") || ui.includes("askRealCoachForDomain"), "real coach ask");
@@ -93,6 +97,9 @@ assert(base.includes("bootCoachPractice"), "finishInit boots practice");
 assert(base.includes("athleteInfoOnly"), "athlete chat flag");
 assert(base.includes("massima libertà") || base.includes("allowMaxFreedom"), "athlete edit gate / max freedom");
 assert(base.includes("afterProgramActivatedNavigate"), "assign preview after import");
+assert(base.includes("openImportDomainPicker") && base.includes("detectProgramDomains"), "import domain picker");
+assert(base.includes("isCoachClientSandbox"), "coach sandbox import gate");
+assert(base.includes("setDictateButtonState"), "dictate button state reset");
 
 const api = fs.readFileSync(path.join(__dirname, "coach-api.mjs"), "utf8");
 assert(api.includes("mountCoachPractice"), "API mounts practice");
@@ -101,7 +108,7 @@ assert(api.includes("coachPracticeVersion"), "health version");
 assert(api.includes("role"), "JWT has role");
 
 const practice = fs.readFileSync(path.join(__dirname, "coach-practice.mjs"), "utf8");
-["/api/coach/unlock/demo", "/api/coach/clients", "/api/client/login", "/api/client/intake", "/c/:token", "intake_mode", "/api/client/ask-coach", "/api/client/change-request", "allow_max_freedom"].forEach((s) => {
+["/api/coach/unlock/demo", "/api/coach/clients", "/api/client/login", "/api/client/intake", "/c/:token", "intake_mode", "/api/client/ask-coach", "/api/client/change-request", "allow_max_freedom", "/api/webrtc/ice", "TURN_URLS", "anchorExpiryOnFirstWorkout"].forEach((s) => {
   assert(practice.includes(s), "server has " + s);
 });
 
