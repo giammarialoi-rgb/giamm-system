@@ -1157,6 +1157,35 @@ export function mountCoachPractice(app, deps) {
     return res.json({ ok: true, kinds: unique });
   });
 
+  app.post("/api/coach/clients/:id/patch-data", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const patch = req.body?.data && typeof req.body.data === "object" ? req.body.data : {};
+    const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
+    const current = existing.rows[0]?.data || {};
+    const merged = {
+      ...current,
+      ...patch,
+      coachPatchedAt: new Date().toISOString(),
+      assignedByCoach: true
+    };
+    await pool.query(
+      `INSERT INTO app_account_data(user_id, data, updated_at)
+       VALUES($1,$2,NOW())
+       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+      [row.athlete_user_id, JSON.stringify(merged)]
+    );
+    if (req.body?.notify !== false) {
+      await pool.query(
+        "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'coach_modified',$2)",
+        [row.id, JSON.stringify({ at: merged.coachPatchedAt, summary: String(req.body?.summary || "Il coach ha aggiornato il tuo piano").slice(0, 200) })]
+      );
+    }
+    return res.json({ ok: true });
+  });
+
   app.get("/api/coach/clients/:id/snapshot", async (req, res) => {
     const coach = await requireCoach(req, res);
     if (!coach) return;

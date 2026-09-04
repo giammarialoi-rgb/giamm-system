@@ -102,9 +102,10 @@ body {
   filter: drop-shadow(0 0 18px rgba(212, 175, 55, 0.28));
 }
 .logo-blend {
-  mix-blend-mode: screen;
-  -webkit-mask-image: radial-gradient(circle at center, #000 48%, rgba(0,0,0,0.75) 68%, transparent 86%);
-  mask-image: radial-gradient(circle at center, #000 48%, rgba(0,0,0,0.75) 68%, transparent 86%);
+  /* Keep logos visible on dark UI (screen blend hid them on black) */
+  mix-blend-mode: normal;
+  opacity: 0.98;
+  filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.35));
 }
 #nurvan-busy-overlay {
   position: fixed;
@@ -285,11 +286,18 @@ header .btn {
   touch-action: manipulation;
 }
 
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
 main {
   margin-top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
-  margin-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+  margin-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
   padding: 15px;
-  min-height: calc(100vh - var(--header-height) - 160px);
+  height: calc(100dvh - var(--header-height) - 110px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   box-sizing: border-box;
 }
 
@@ -307,6 +315,7 @@ nav.bottom-nav {
   z-index: 1000;
   box-shadow: 0 -15px 50px rgba(0,0,0,1);
   box-sizing: border-box;
+  transform: translateZ(0);
 }
 
 .nav-item {
@@ -3643,11 +3652,49 @@ function handleFileUpload(event) {
 window.nativeDocumentReceived = async function(docData) {
   if (!docData || !docData.base64) return;
   const intent = resolveFilePickIntent(docData && docData.name);
+  if (intent === 'CHAT_ATTACH' || (store && store.__cpChatAttachIntent)) {
+    store.__cpChatAttachIntent = false;
+    clearFilePickIntent();
+    try {
+      if (typeof withBusy === 'function') {
+        await withBusy(async function () {
+          await attachNativeDocToChat(docData);
+        }, 'Caricamento allegato…', { immediate: true });
+      } else {
+        await attachNativeDocToChat(docData);
+      }
+    } catch (err) {
+      if (typeof showToast === 'function') showToast((err && err.message) || 'Allegato non caricato', 'danger');
+    }
+    if (window.NativeConfig && typeof window.NativeConfig.clearLastPickedDocument === 'function') {
+      try { window.NativeConfig.clearLastPickedDocument(); } catch (_) {}
+    }
+    return;
+  }
   await processUniversalFile(docData, intent);
   if (window.NativeConfig && typeof window.NativeConfig.clearLastPickedDocument === 'function') {
     try { window.NativeConfig.clearLastPickedDocument(); } catch (_) {}
   }
 };
+
+async function attachNativeDocToChat(docData) {
+  const mime = String(docData.mime || 'application/octet-stream');
+  const name = String(docData.name || 'allegato');
+  const dataUrl = 'data:' + mime + ';base64,' + String(docData.base64 || '');
+  if (/^image\//i.test(mime)) {
+    const blob = await (await fetch(dataUrl)).blob();
+    const file = new File([blob], name, { type: mime });
+    const att = await compressChatImage(file);
+    if (typeof setPendingAttachment === 'function') setPendingAttachment(att);
+    else window.__cpPendingAttach = att;
+    return;
+  }
+  if (dataUrl.length > 450000) throw new Error('File troppo grande per la chat');
+  const att = { kind: 'file', name: name, mime: mime, data: dataUrl };
+  if (typeof setPendingAttachment === 'function') setPendingAttachment(att);
+  else window.__cpPendingAttach = att;
+}
+window.attachNativeDocToChat = attachNativeDocToChat;
 
 function yieldImportPaint() {
   return new Promise((res) => {
@@ -6832,6 +6879,17 @@ function plannedFoodsFromDay(day) {
   return out;
 }
 function nutritionConfirmCardHtml() {
+  if (store && store.coachViewingClient) {
+    const st = nutritionConfirmStatus();
+    const day = nutritionPlanForToday();
+    if (!st) {
+      return '<div class="card" style="padding:12px;border-color:#444;"><div style="font-size:12px;font-weight:800;color:var(--gold);">Aderenza pasti (cliente)</div>' +
+        '<div style="font-size:11px;color:#aaa;margin-top:6px;">Il cliente non ha ancora confermato i pasti di oggi' + (day && day.day ? ' (' + esc(day.day) + ')' : '') + '.</div></div>';
+    }
+    return '<div class="card" style="padding:12px;border-color:' + (st.confirmed ? '#4caf50' : '#c66') + ';"><div style="font-size:12px;font-weight:800;color:' + (st.confirmed ? '#4caf50' : '#c66') + ';">' +
+      (st.confirmed ? 'Cliente ha confermato i pasti' : 'Cliente ha segnalato pasti diversi') + '</div>' +
+      '<div style="font-size:10px;color:#888;margin-top:4px;">' + esc(String(st.at || '').replace('T', ' ').slice(0, 16)) + '</div></div>';
+  }
   const day = nutritionPlanForToday();
   if (!day || !plannedFoodsFromDay(day).length) return '';
   const hour = new Date().getHours();
@@ -6856,11 +6914,20 @@ function nutritionConfirmCardHtml() {
     '</div></div>';
 }
 function confirmNutritionDay(ok) {
+  if (store && store.coachViewingClient) return;
   if (!store.nutritionDaily) store.nutritionDaily = {};
   const key = nutritionTodayKey();
   if (ok) {
     store.nutritionDaily[key] = { confirmed: true, at: new Date().toISOString(), foods: plannedFoodsFromDay(nutritionPlanForToday()) };
     persist();
+    try {
+      if (store.accountToken) {
+        accountRequest('/api/account/sync', {
+          method: 'POST',
+          body: JSON.stringify({ data: accountPayload({ includeProgram: true }) })
+        }).then(function (response) { return readApiJson(response); }).catch(function () {});
+      }
+    } catch (_) {}
     if (typeof showToast === 'function') showToast('Pasti confermati', 'success');
     render();
     return;
@@ -6872,6 +6939,14 @@ function confirmNutritionDay(ok) {
   const foods = String(actual).split('\n').map(function (line) { return { name: line.trim() }; }).filter(function (f) { return f.name; });
   store.nutritionDaily[key] = { confirmed: false, at: new Date().toISOString(), foods: foods };
   persist();
+  try {
+    if (store.accountToken) {
+      accountRequest('/api/account/sync', {
+        method: 'POST',
+        body: JSON.stringify({ data: accountPayload({ includeProgram: true }) })
+      }).then(function (response) { return readApiJson(response); }).catch(function () {});
+    }
+  } catch (_) {}
   if (typeof showToast === 'function') showToast('Alimenti effettivi salvati', 'success');
   render();
 }
@@ -6912,6 +6987,14 @@ function renderNutrition(c) {
 
   const days = DATA.nutrition.days || [];
   enrichImportedFoods(DATA.nutrition);
+  // Open on today's weekday when possible
+  try {
+    const todayPlan = nutritionPlanForToday();
+    if (todayPlan && days.length) {
+      const idx = days.indexOf(todayPlan);
+      if (idx >= 0) currentNutritionDayIndex = idx;
+    }
+  } catch (_) {}
   if (currentNutritionDayIndex >= days.length) currentNutritionDayIndex = Math.max(0, days.length - 1);
   const activeDay = days[currentNutritionDayIndex] || { day: '', meals: [] };
 
@@ -11159,9 +11242,10 @@ function renderTraining(c){
           </div>`;
         }
 
-        h += `<div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid #222;padding-top:10px;">
+        h += `<div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid #222;padding-top:10px;flex-wrap:wrap;">
           <button class="btn btn-outline" style="flex:1;font-size:10px;padding:6px 8px;" onclick="addSetToExercise(${fIdx})">+ SERIE</button>
           <button class="btn btn-outline" style="flex:2;font-size:10px;padding:6px 8px;" data-ex="${encodeURIComponent(curEx)}" onclick="window.openReplacementModal(${fIdx}, this.getAttribute('data-ex'))">SOSTITUISCI</button>
+          <button class="btn btn-outline" style="flex:2;font-size:10px;padding:6px 8px;border-color:var(--gold);color:var(--gold);" data-ex="${encodeURIComponent(curEx)}" onclick="askExerciseInfoToCoach(${fIdx}, decodeURIComponent(this.getAttribute('data-ex')))">CHIEDI INFO</button>
         </div>`;
       }
       h += `</div>`;
@@ -11986,6 +12070,11 @@ function toggleReplaceManual(checked) {
 let replacementDraft = null;
 function openReplacementModal(idx, encodedCurrent){
   try {
+    if (typeof isAthleteRole === 'function' && isAthleteRole() && !(store.clientProfile && store.clientProfile.allowMaxFreedom)) {
+      if (typeof showToast === 'function') showToast('Senza massima libertà non puoi sostituire: chiedi info al coach o aspetta l’approvazione.', 'warning');
+      if (typeof askExerciseInfoToCoach === 'function') askExerciseInfoToCoach(idx, decodeURIComponent(encodedCurrent || ''));
+      return;
+    }
     seedExerciseDatabase();
     if (DATA && (!DATA.exerciseDb || !Object.keys(DATA.exerciseDb).length)) DATA.exerciseDb = buildExerciseDbFromDictionary();
     const current = decodeURIComponent(encodedCurrent || '');
@@ -12135,6 +12224,18 @@ function finalizeWorkout(){
   store.logs.push(logEntry);
   if (store.logs.length > 60) store.logs = store.logs.slice(-60);
   store.sessionStartedAt = null;
+  // Advance to next training day for next session
+  try {
+    const weekObj = DATA && DATA.weeks && DATA.weeks[(currentWeek || 1) - 1];
+    const sessions = weekObj && (weekObj.sessions || weekObj.days) || [];
+    if (sessions.length) {
+      if ((currentDay || 0) + 1 < sessions.length) currentDay = (currentDay || 0) + 1;
+      else if ((currentWeek || 1) < (DATA.weeks.length || 1)) {
+        currentWeek = (currentWeek || 1) + 1;
+        currentDay = 0;
+      }
+    }
+  } catch (_) {}
   persist();
   persistActiveProgramStructure();
   window.__pendingCoachAnalyze = {
@@ -12230,6 +12331,25 @@ function maybeAskCoachAfterComplete() {
   const intensityPts = pending.intensityPts || logEntry.intensity || 0;
   const tonnage = pending.tonnage || logEntry.tonnage || 0;
   setTimeout(function () {
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+      const send = confirm('Vuoi inviare questa sessione al tuo coach reale per un feedback?\n\n' +
+        'Durata ' + Math.floor((snap.durationSec || logEntry.durationSec || 0) / 60) + 'm · ' + (snap.kcal || logEntry.kcal || 0) + ' kcal · ' +
+        tonnage + ' kg');
+      if (!send) return;
+      if (typeof askRealCoachForDomain === 'function') {
+        askRealCoachForDomain('training');
+        setTimeout(function () {
+          const input = document.getElementById('cp-ath-msg') || document.querySelector('#cp-ws-msg, #cp-chat-input');
+          if (input) {
+            input.value = 'Coach, ho finalizzato allenamento settimana ' + (logEntry.week) +
+              ' giorno ' + ((logEntry.day || 0) + 1) +
+              '. Durata ' + Math.floor((logEntry.durationSec || 0) / 60) + ' min, tonnellaggio ' + logEntry.tonnage +
+              ' kg, intensità ' + logEntry.intensity + '. Puoi darmi un feedback?';
+          }
+        }, 400);
+      }
+      return;
+    }
     const analyze = confirm('Vuoi che Nurvan AI analizzi questa sessione?\n\n' +
       'Durata ' + Math.floor((snap.durationSec || logEntry.durationSec || 0) / 60) + 'm · ' + (snap.kcal || logEntry.kcal || 0) + ' kcal · ' +
       tonnage + ' kg tonnellaggio · intensità ' + intensityPts + ' pts');
@@ -12982,7 +13102,11 @@ function applyBarcodeProduct(p) {
 }
 
 function markSessionClockIfNeeded() {
-  if (!store.sessionStartedAt) store.sessionStartedAt = Date.now();
+  if (!store.sessionStartedAt) {
+    store.sessionStartedAt = Date.now();
+    store.sessionStartedDate = new Date().toISOString().slice(0, 10);
+    try { persist(); } catch (_) {}
+  }
 }
 
 function buildSessionPayloadForSync() {
@@ -13195,7 +13319,17 @@ function muscleFatigueClass(name, muscles) {
   return 'm-ok';
 }
 function athleteSexCode() {
-  const raw = String((store.profile && store.profile.sex) || (DATA && DATA.profile && DATA.profile.sex) || '').toLowerCase();
+  // When coach views a client, use that client's sex; else athlete/profile.
+  let raw = '';
+  try {
+    if (store && store.coachViewingClient && store.coachWorkspace) {
+      const cl = store.coachWorkspace.client || {};
+      const intake = store.coachWorkspace.intake || cl.intake || {};
+      raw = String(intake.sex || cl.sex || (store.coachWorkspace.data && store.coachWorkspace.data.profile && store.coachWorkspace.data.profile.sex) || '');
+    }
+  } catch (_) {}
+  if (!raw) raw = String((store.profile && store.profile.sex) || (DATA && DATA.profile && DATA.profile.sex) || '');
+  raw = raw.toLowerCase();
   if (/^(f|fem|female|donna|woman)/.test(raw)) return 'f';
   return 'm';
 }

@@ -118,11 +118,10 @@ function gatePracticeView(v) {
     return v;
   }
   if (store && store.coachSessionActive && !store.coachAssigning) {
-    const coachCore = { coachHub: 1, coachClient: 1 };
+    const coachCore = { coachHub: 1, coachClient: 1, coachChat: 1 };
     const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1 };
     if (coachCore[v]) return v;
     if (store.coachViewingClient && clientDomains[v]) return v;
-    // leaving coach session handled in navigate wrap
   }
   return v;
 }
@@ -222,7 +221,7 @@ function ensureClientViewBanner() {
   if (!bar) {
     bar = document.createElement('div');
     bar.id = 'cp-client-view-bar';
-    bar.style.cssText = 'display:none;position:fixed;left:8px;right:8px;bottom:72px;z-index:10075;background:#111;border:1px solid var(--gold);border-radius:12px;padding:10px;';
+    bar.style.cssText = 'display:none;position:fixed;left:8px;right:8px;bottom:118px;z-index:10075;background:#111;border:1px solid var(--gold);border-radius:12px;padding:10px;';
     document.body.appendChild(bar);
   }
   if (!(store && store.coachViewingClient && store.coachWorkspace && store.coachWorkspace.clientId)) {
@@ -231,9 +230,10 @@ function ensureClientViewBanner() {
   }
   if (store.coachAssigning) { bar.style.display = 'none'; return; }
   const name = (store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente';
+  const live = store.coachWorkspace.client && store.coachWorkspace.client.workoutLive;
   bar.style.display = 'block';
-  bar.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;">DATI DI ' + esc(name) + '</div>' +
-    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Stai guardando la scheda del cliente, non la tua.</div>' +
+  bar.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;">DATI DI ' + esc(name) + (live ? ' · IN WORKOUT' : '') + '</div>' +
+    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Solo lettura attività + puoi modificare il piano e salvare.</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'training\')">ALLENAMENTO</button>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'nutrition\')">ALIMENTAZIONE</button>' +
@@ -241,7 +241,9 @@ function ensureClientViewBanner() {
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'therapy\')">TERAPIA</button>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'exams\')">ESAMI</button>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'stats\')">STATS</button>' +
-    '<button class="btn btn-primary" style="font-size:10px;" onclick="leaveCoachClientView()">TORNA ALLA SCHEDA</button></div>';
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="openCoachClientChat(\'' + esc(store.coachWorkspace.clientId) + '\')">CHAT</button>' +
+    '<button class="btn btn-primary" style="font-size:10px;" onclick="pushCoachClientEdits()">SALVA MODIFICHE</button>' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="leaveCoachClientView()">TORNA ALLA SCHEDA</button></div>';
 }
 
 function ensurePracticeStyle() {
@@ -364,7 +366,7 @@ async function flushClientOutbox() {
     const it = store.clientOutbox[i];
     try {
       if (it.type === 'workout-ping') await practiceFetch('/api/client/workout-ping', { method: 'POST', headers: practiceHeaders(true), body: '{}' });
-      else if (it.type === 'message') await practiceFetch('/api/client/messages', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: it.body }) });
+      else if (it.type === 'message') await practiceFetch('/api/client/messages', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: it.body, attachment: it.attachment || null }) });
       else if (it.type === 'request-program') await practiceFetch('/api/client/request-program', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ note: it.note || '' }) });
       else if (it.type === 'ask-coach') await practiceFetch('/api/client/ask-coach', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ domain: it.domain || 'general', note: it.note || '' }) });
       else if (it.type === 'change-request') await practiceFetch('/api/client/change-request', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ summary: it.summary || '', data: it.data || {} }) });
@@ -582,37 +584,105 @@ function applyClientPayloadToLocal(payload) {
   store.supplementation = payload.supplementation || (DATA && DATA.supplementation) || null;
   store.therapy = payload.therapy || (DATA && DATA.therapy) || null;
   store.exams = payload.exams || (DATA && DATA.exams) || null;
+  store.data = payload.data && typeof payload.data === 'object' ? JSON.parse(JSON.stringify(payload.data)) : {};
+  store.customSets = payload.customSets && typeof payload.customSets === 'object' ? JSON.parse(JSON.stringify(payload.customSets)) : {};
+  store.subs = payload.subs && typeof payload.subs === 'object' ? JSON.parse(JSON.stringify(payload.subs)) : {};
+  store.skips = payload.skips && typeof payload.skips === 'object' ? JSON.parse(JSON.stringify(payload.skips)) : {};
+  store.logs = Array.isArray(payload.logs) ? JSON.parse(JSON.stringify(payload.logs)) : [];
+  store.nutritionDaily = payload.nutritionDaily && typeof payload.nutritionDaily === 'object' ? JSON.parse(JSON.stringify(payload.nutritionDaily)) : {};
+  store.bw = payload.bw && typeof payload.bw === 'object' ? JSON.parse(JSON.stringify(payload.bw)) : {};
+  store.exMuscle = payload.exMuscle && typeof payload.exMuscle === 'object' ? JSON.parse(JSON.stringify(payload.exMuscle)) : {};
+  store.loadTypes = payload.loadTypes && typeof payload.loadTypes === 'object' ? JSON.parse(JSON.stringify(payload.loadTypes)) : {};
+  store.tempos = payload.tempos && typeof payload.tempos === 'object' ? JSON.parse(JSON.stringify(payload.tempos)) : {};
+  store.bonus = payload.bonus && typeof payload.bonus === 'object' ? JSON.parse(JSON.stringify(payload.bonus)) : {};
+  if (payload.profile && typeof payload.profile === 'object') {
+    store.profile = Object.assign({}, store.profile || {}, payload.profile);
+  }
   if (DATA) {
     DATA.nutrition = store.nutrition;
     DATA.supplementation = store.supplementation;
     DATA.therapy = store.therapy;
     DATA.exams = store.exams;
+    if (payload.profile) DATA.profile = payload.profile;
   }
-  if (typeof currentWeek !== 'undefined') currentWeek = 1;
-  if (typeof currentDay !== 'undefined') currentDay = 0;
+  try {
+    const last = (store.logs || []).slice().reverse().find(function (l) { return l && (l.week || l.day != null); });
+    if (last) {
+      currentWeek = Number(last.week) || 1;
+      currentDay = Number(last.day) || 0;
+    } else {
+      currentWeek = 1;
+      currentDay = 0;
+    }
+  } catch (_) {
+    currentWeek = 1;
+    currentDay = 0;
+  }
 }
 
 async function enterCoachClientView(domain) {
   const id = store.coachWorkspace && store.coachWorkspace.clientId;
   if (!id) return;
-  if (!window.__cpCoachViewBackup) window.__cpCoachViewBackup = snapshotCoachMaster();
-  let data = store.coachWorkspace.data;
-  try {
-    const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 25000);
-    data = snap.data || data || {};
-    store.coachWorkspace.data = data;
-    store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
-  } catch (_) {}
-  applyClientPayloadToLocal(data);
+  if (typeof withBusy === 'function') {
+    await withBusy(async function () {
+      if (!window.__cpCoachViewBackup) window.__cpCoachViewBackup = snapshotCoachMaster();
+      let data = store.coachWorkspace.data;
+      const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 25000);
+      data = snap.data || data || {};
+      store.coachWorkspace.data = data;
+      store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
+      store.coachWorkspace.intake = snap.intake || store.coachWorkspace.intake;
+      applyClientPayloadToLocal(data);
+    }, 'Carico dati cliente…', { immediate: true });
+  } else {
+    if (!window.__cpCoachViewBackup) window.__cpCoachViewBackup = snapshotCoachMaster();
+    try {
+      const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 25000);
+      store.coachWorkspace.data = snap.data || {};
+      store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
+      applyClientPayloadToLocal(snap.data || {});
+    } catch (_) { applyClientPayloadToLocal(store.coachWorkspace.data || {}); }
+  }
   store.coachViewingClient = true;
   store.coachSessionActive = true;
   if (typeof persist === 'function') persist();
   ensureClientViewBanner();
+  startClientLivePoll();
   navigate(domain || 'training');
   practiceToast('Stai vedendo i dati del cliente', 'success');
 }
 
+function startClientLivePoll() {
+  stopClientLivePoll();
+  window.__cpClientLiveTimer = setInterval(async function () {
+    if (!(store && store.coachViewingClient && store.coachWorkspace && store.coachWorkspace.clientId)) return;
+    try {
+      const id = store.coachWorkspace.clientId;
+      const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 12000);
+      const data = snap.data || {};
+      store.coachWorkspace.data = data;
+      store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
+      // Refresh live maps without resetting week/day unless workout finished
+      if (data.data) store.data = JSON.parse(JSON.stringify(data.data));
+      if (Array.isArray(data.logs)) store.logs = JSON.parse(JSON.stringify(data.logs));
+      if (data.nutritionDaily) store.nutritionDaily = JSON.parse(JSON.stringify(data.nutritionDaily));
+      if (data.subs) store.subs = JSON.parse(JSON.stringify(data.subs));
+      if (snap.client && snap.client.workoutLive && typeof render === 'function' && (currentView === 'training' || currentView === 'stats')) {
+        render();
+      }
+    } catch (_) {}
+  }, 4000);
+}
+
+function stopClientLivePoll() {
+  if (window.__cpClientLiveTimer) {
+    clearInterval(window.__cpClientLiveTimer);
+    window.__cpClientLiveTimer = null;
+  }
+}
+
 async function leaveCoachClientView(silent) {
+  stopClientLivePoll();
   if (window.__cpCoachViewBackup) {
     await restoreCoachMaster(window.__cpCoachViewBackup);
     window.__cpCoachViewBackup = null;
@@ -964,13 +1034,7 @@ async function openCoachClient(id) {
 function openCoachClientChat(id) {
   store.coachSessionActive = true;
   store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: id, chat: true });
-  navigate('coachClient');
-  setTimeout(function () {
-    const el = document.getElementById('cp-ws-chat-card');
-    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    const input = document.getElementById('cp-ws-msg');
-    if (input) input.focus();
-  }, 400);
+  navigate('coachChat');
 }
 
 function chatToolsHtml(inputId, sendCall, clearCall, newCall) {
@@ -990,8 +1054,63 @@ function renderMessageHtml(m, mine) {
   let extra = '';
   if (att.kind === 'image' && att.data) extra = '<img src="' + att.data + '" alt="' + esc(att.name || 'foto') + '">';
   else if (att.kind === 'file' && att.data) extra = '<a href="' + att.data + '" download="' + esc(att.name || 'documento') + '" style="color:var(--gold);font-size:11px;">📄 ' + esc(att.name || 'documento') + '</a>';
+  const ticks = mine
+    ? (m.read_at ? ' <span style="color:#4fc3f7;">✓✓</span>' : ' <span style="color:#888;">✓</span>')
+    : '';
   return '<div class="cp-msg ' + (mine ? 'me' : 'them') + '">' + esc(m.body || '') + extra +
-    '<div style="font-size:9px;color:#666;margin-top:4px;">' + esc(String(m.created_at || '').replace('T', ' ').slice(0, 16)) + '</div></div>';
+    '<div style="font-size:9px;color:#666;margin-top:4px;">' + esc(String(m.created_at || '').replace('T', ' ').slice(0, 16)) + ticks + '</div></div>';
+}
+
+async function pushCoachClientEdits() {
+  const id = store.coachWorkspace && store.coachWorkspace.clientId;
+  if (!id || !store.coachViewingClient) return;
+  const payload = {
+    activeProgram: typeof DATA !== 'undefined' ? DATA : null,
+    nutrition: store.nutrition || (DATA && DATA.nutrition) || null,
+    supplementation: store.supplementation || (DATA && DATA.supplementation) || null,
+    therapy: store.therapy || (DATA && DATA.therapy) || null,
+    exams: store.exams || (DATA && DATA.exams) || null,
+    data: store.data || {},
+    subs: store.subs || {},
+    customSets: store.customSets || {},
+    logs: store.logs || []
+  };
+  try {
+    await withBusy(async function () {
+      await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/patch-data', {
+        method: 'POST', headers: practiceHeaders(true),
+        body: JSON.stringify({ data: payload, notify: true })
+      }, 45000);
+    }, 'Salvo modifiche al cliente…', { immediate: true });
+    practiceToast('Modifiche inviate al cliente', 'success');
+  } catch (err) {
+    practiceToast((err && err.message) || 'Salvataggio fallito', 'danger');
+  }
+}
+
+async function askExerciseInfoToCoach(idx, exerciseName) {
+  const name = exerciseName || 'esercizio';
+  const week = (typeof currentWeek !== 'undefined' ? currentWeek : 1);
+  const day = (typeof currentDay !== 'undefined' ? currentDay : 0) + 1;
+  const msg = 'Coach chiedo info su allenamento ' + day + ' settimana ' + week + ' esercizio "' + name + '"';
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+    let online = !!store.coachOnline;
+    try {
+      const me = await practiceFetch('/api/client/me', { method: 'GET', headers: practiceHeaders(false) }, 10000);
+      online = !!me.coachOnline;
+      store.coachOnline = online;
+    } catch (_) {}
+    if (!online) {
+      if (!confirm('Il coach non è online. Chiedere comunque?')) return;
+    }
+    navigate('clientChat');
+    setTimeout(function () {
+      const input = document.getElementById('cp-ath-msg');
+      if (input) { input.value = msg; input.focus(); }
+    }, 350);
+    return;
+  }
+  practiceToast(msg, 'info');
 }
 
 async function renderCoachWorkspace(c) {
@@ -1087,7 +1206,19 @@ function snapshotCoachMaster() {
     activeProgramId: store.activeProgramId || null,
     activeProgram: store.activeProgram ? JSON.parse(JSON.stringify(store.activeProgram)) : null,
     currentWeek: typeof currentWeek !== 'undefined' ? currentWeek : 1,
-    currentDay: typeof currentDay !== 'undefined' ? currentDay : 0
+    currentDay: typeof currentDay !== 'undefined' ? currentDay : 0,
+    data: store.data ? JSON.parse(JSON.stringify(store.data)) : {},
+    customSets: store.customSets ? JSON.parse(JSON.stringify(store.customSets)) : {},
+    subs: store.subs ? JSON.parse(JSON.stringify(store.subs)) : {},
+    skips: store.skips ? JSON.parse(JSON.stringify(store.skips)) : {},
+    logs: Array.isArray(store.logs) ? JSON.parse(JSON.stringify(store.logs)) : [],
+    nutritionDaily: store.nutritionDaily ? JSON.parse(JSON.stringify(store.nutritionDaily)) : {},
+    profile: store.profile ? JSON.parse(JSON.stringify(store.profile)) : {},
+    bw: store.bw ? JSON.parse(JSON.stringify(store.bw)) : {},
+    exMuscle: store.exMuscle ? JSON.parse(JSON.stringify(store.exMuscle)) : {},
+    loadTypes: store.loadTypes ? JSON.parse(JSON.stringify(store.loadTypes)) : {},
+    tempos: store.tempos ? JSON.parse(JSON.stringify(store.tempos)) : {},
+    bonus: store.bonus ? JSON.parse(JSON.stringify(store.bonus)) : {}
   };
 }
 
@@ -1113,6 +1244,18 @@ async function restoreCoachMaster(backup) {
   store.exams = backup.exams;
   store.activeProgramId = backup.activeProgramId;
   store.activeProgram = backup.activeProgram;
+  store.data = backup.data || {};
+  store.customSets = backup.customSets || {};
+  store.subs = backup.subs || {};
+  store.skips = backup.skips || {};
+  store.logs = backup.logs || [];
+  store.nutritionDaily = backup.nutritionDaily || {};
+  store.profile = backup.profile || store.profile || {};
+  store.bw = backup.bw || {};
+  store.exMuscle = backup.exMuscle || {};
+  store.loadTypes = backup.loadTypes || {};
+  store.tempos = backup.tempos || {};
+  store.bonus = backup.bonus || {};
   if (typeof currentWeek !== 'undefined') currentWeek = backup.currentWeek || 1;
   if (typeof currentDay !== 'undefined') currentDay = backup.currentDay || 0;
   if (typeof persist === 'function') persist();
@@ -1461,25 +1604,77 @@ function startChatDictation(inputId) {
 }
 
 function pickChatAttachment() {
+  store.__cpChatAttachIntent = true;
+  if (typeof setFilePickIntent === 'function') setFilePickIntent('CHAT_ATTACH');
+  const native = typeof nativeBridge === 'function' ? nativeBridge() : (typeof NativeConfig !== 'undefined' ? NativeConfig : null);
+  const choice = confirm('OK = scatta/scegli foto\nAnnulla = scegli file documento');
+  if (choice) {
+    if (native && typeof native.pickCamera === 'function') {
+      try { native.pickCamera(); return; } catch (_) {}
+    }
+  } else if (native && typeof native.pickDocument === 'function') {
+    try { native.pickDocument(); return; } catch (_) {}
+  }
   const inp = document.createElement('input');
   inp.type = 'file';
-  inp.accept = 'image/*,.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp';
+  inp.accept = choice ? 'image/*' : 'image/*,.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp';
+  if (choice) inp.capture = 'environment';
   inp.onchange = function () {
     const file = inp.files && inp.files[0];
     if (!file) return;
-    if (file.size > 900000) { practiceToast('File troppo grande (max circa 700 KB)', 'warning'); return; }
-    if (/^image\//i.test(file.type)) compressChatImage(file).then(setPendingAttachment);
-    else {
+    showAttachProgress(5, file.name);
+    if (/^image\//i.test(file.type)) {
+      compressChatImage(file).then(function (att) {
+        showAttachProgress(100, file.name);
+        setPendingAttachment(att);
+        hideAttachProgress();
+      });
+    } else {
+      if (file.size > 900000) { practiceToast('File troppo grande (max circa 700 KB)', 'warning'); hideAttachProgress(); return; }
       const reader = new FileReader();
+      reader.onprogress = function (ev) {
+        if (ev.lengthComputable) showAttachProgress(Math.round((ev.loaded / ev.total) * 100), file.name);
+      };
       reader.onload = function () {
         const data = String(reader.result || '');
-        if (data.length > 450000) { practiceToast('Documento troppo grande', 'warning'); return; }
+        if (data.length > 450000) { practiceToast('Documento troppo grande', 'warning'); hideAttachProgress(); return; }
         setPendingAttachment({ kind: 'file', name: file.name, mime: file.type || 'application/octet-stream', data: data });
+        hideAttachProgress();
       };
       reader.readAsDataURL(file);
     }
   };
   inp.click();
+}
+
+function showAttachProgress(pct, name) {
+  let el = document.getElementById('cp-attach-progress');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'cp-attach-progress';
+    el.style.cssText = 'position:fixed;left:50%;bottom:140px;transform:translateX(-50%);z-index:10090;background:#111;border:1px solid var(--gold);border-radius:10px;padding:10px 14px;min-width:200px;font-size:11px;color:#ccc;';
+    document.body.appendChild(el);
+  }
+  el.style.display = 'block';
+  el.innerHTML = 'Caricamento ' + esc(name || 'file') + '… <b style="color:var(--gold);">' + Math.round(pct) + '%</b>';
+}
+
+function hideAttachProgress() {
+  const el = document.getElementById('cp-attach-progress');
+  if (el) el.style.display = 'none';
+}
+
+function setPendingAttachment(att) {
+  window.__cpPendingAttach = att;
+  const prev = document.getElementById('cp-attach-preview') || document.getElementById('cp-chat-attach-preview');
+  if (prev) {
+    if (att && att.kind === 'image' && att.data) {
+      prev.innerHTML = '<img src="' + att.data + '" style="max-width:120px;border-radius:8px;display:block;margin-top:6px;"> ' + esc(att.name || 'foto');
+    } else {
+      prev.textContent = 'Allegato: ' + (att && att.name ? att.name : 'pronto');
+    }
+  }
+  practiceToast('Allegato pronto', 'success');
 }
 
 function compressChatImage(file) {
@@ -1509,15 +1704,8 @@ function compressChatImage(file) {
   });
 }
 
-function setPendingAttachment(att) {
-  window.__cpPendingAttach = att;
-  const prev = document.getElementById('cp-attach-preview');
-  if (prev) prev.textContent = 'Allegato: ' + (att && att.name ? att.name : 'pronto');
-  practiceToast('Allegato pronto', 'success');
-}
-
 async function sendCoachHumanMessage(id) {
-  const input = document.getElementById('cp-ws-msg');
+  const input = document.getElementById(window.__cpChatInputId || 'cp-ws-msg') || document.getElementById('cp-ws-msg') || document.getElementById('cp-chat-input');
   const body = input && input.value.trim();
   const attachment = window.__cpPendingAttach || null;
   if (!body && !attachment) return;
@@ -1527,9 +1715,9 @@ async function sendCoachHumanMessage(id) {
     }, 20000);
     if (input) input.value = '';
     window.__cpPendingAttach = null;
-    const prev = document.getElementById('cp-attach-preview');
-    if (prev) prev.textContent = '';
-    loadHumanMessages(id, 'cp-ws-chat', 'coach');
+    const prev = document.getElementById('cp-attach-preview') || document.getElementById('cp-chat-attach-preview');
+    if (prev) prev.innerHTML = '';
+    loadHumanMessages(id, document.getElementById('cp-wa-chat') ? 'cp-wa-chat' : 'cp-ws-chat', 'coach');
   } catch (err) { practiceToast((err && err.message) || 'Messaggio non inviato', 'danger'); }
 }
 
@@ -1548,8 +1736,9 @@ async function sendAthleteHumanMessage() {
     if (prev) prev.textContent = '';
     loadHumanMessages(null, 'cp-client-chat', 'athlete');
   } catch (_) {
-    enqueueClientOutbox({ type: 'message', body: body || '[allegato]' });
+    enqueueClientOutbox({ type: 'message', body: body || '[allegato]', attachment: attachment });
     if (input) input.value = '';
+    window.__cpPendingAttach = null;
     practiceToast('Messaggio in coda offline', 'warning');
   }
 }
@@ -1670,6 +1859,10 @@ function handleNotifyRoute(route) {
   if (clientId) {
     store.coachSessionActive = true;
     if (view === 'chat' || view === 'message' || view === 'ask_coach') return openCoachClientChat(clientId);
+    if (view === 'training' || view === 'workout_started' || view === 'workout_done') {
+      store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: clientId });
+      return enterCoachClientView('training');
+    }
     return openCoachClient(clientId);
   }
   if (view === 'coachHub') return enterCoachSession();
@@ -1690,6 +1883,7 @@ function eventNotifyCopy(kind) {
     change_approved: ['Modifica approvata', 'Il coach ha approvato la tua modifica', { view: 'training' }],
     change_rejected: ['Modifica rifiutata', 'Il coach ha rifiutato la modifica', { view: 'clientChat' }],
     max_freedom: ['Libertà aggiornata', 'Il coach ha cambiato il consenso di modifica', { view: 'home' }],
+    coach_modified: ['Piano aggiornato', 'Il coach ha modificato qualcosa per te', { view: 'home' }],
     workout_started: ['Cliente in allenamento', 'Un atleta ha iniziato il workout', { view: 'coachClient' }],
     workout_done: ['Workout completato', 'Un atleta ha finalizzato l’allenamento', { view: 'coachClient' }]
   };
@@ -1715,7 +1909,7 @@ async function pollPracticeInbox() {
         if (id > seen && e.kind !== 'message') {
           const copy = eventNotifyCopy(e.kind);
           if (copy) notifyUser(copy[0], copy[1], copy[2] || { view: 'home' });
-          if ((e.kind === 'program_assigned' || e.kind === 'nutrition_assigned' || e.kind === 'supplements_assigned' || e.kind === 'therapy_assigned' || e.kind === 'exams_assigned' || e.kind === 'change_approved') && typeof syncAccountData === 'function') {
+          if ((e.kind === 'program_assigned' || e.kind === 'nutrition_assigned' || e.kind === 'supplements_assigned' || e.kind === 'therapy_assigned' || e.kind === 'exams_assigned' || e.kind === 'change_approved' || e.kind === 'coach_modified') && typeof syncAccountData === 'function') {
             syncAccountData(true).then(function () {
               if (e.kind === 'change_approved') rememberApprovedProgram();
               if (typeof render === 'function') render();
@@ -1767,8 +1961,37 @@ function renderPracticeView() {
   if (currentView === 'coachHub') { ensurePracticeStyle(); c.innerHTML = ''; renderCoachHub(c); applyClientChrome(); return true; }
   if (currentView === 'clientChat') { ensurePracticeStyle(); c.innerHTML = ''; renderClientChat(c); applyClientChrome(); return true; }
   if (currentView === 'coachClient') { ensurePracticeStyle(); c.innerHTML = ''; renderCoachWorkspace(c); applyClientChrome(); return true; }
+  if (currentView === 'coachChat') { ensurePracticeStyle(); c.innerHTML = ''; renderCoachChatPage(c); applyClientChrome(); return true; }
   stopChatPoll();
   return false;
+}
+
+function renderCoachChatPage(c) {
+  const id = store.coachWorkspace && store.coachWorkspace.clientId;
+  if (!id) {
+    c.innerHTML = '<div class="cp-help">Seleziona un cliente.</div>';
+    return;
+  }
+  const name = (store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'Cliente';
+  c.innerHTML = '<div style="display:flex;flex-direction:column;height:calc(100dvh - 200px);min-height:420px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachClient\')">← SCHEDA</button>' +
+    '<div style="text-align:center;flex:1;"><div style="font-size:10px;color:var(--gold);font-weight:800;">CHAT</div>' +
+    '<div style="font-size:16px;font-weight:900;color:#fff;">' + esc(name) + '</div></div>' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">HUB</button></div>' +
+    '<div id="cp-wa-chat" style="flex:1;overflow:auto;background:#0a0a0a;border:1px solid #222;border-radius:12px;padding:10px;margin-bottom:10px;"></div>' +
+    '<div id="cp-chat-attach-preview" class="cp-help"></div>' +
+    '<div style="display:flex;gap:8px;align-items:center;">' +
+    '<button class="btn btn-outline" style="font-size:12px;padding:10px;" onclick="pickChatAttachment()">📎</button>' +
+    '<button class="btn btn-outline" style="font-size:12px;padding:10px;" onclick="startChatDictation(\'cp-chat-input\')">🎙</button>' +
+    '<input id="cp-chat-input" type="text" placeholder="Messaggio…" style="flex:1;padding:12px;border-radius:20px;border:1px solid #333;background:#151515;color:#fff;">' +
+    '<button class="btn btn-primary" style="border-radius:20px;padding:10px 14px;" onclick="sendCoachHumanMessage(\'' + esc(id) + '\')">➤</button></div>' +
+    '<div class="cp-chat-tools" style="margin-top:8px;">' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="clearChatForMe(\'' + esc(id) + '\',\'coach\')">AZZERA (PER ME)</button>' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="newChatThread(\'' + esc(id) + '\',\'coach\')">NUOVA CHAT</button></div></div>';
+  // Wire send to use cp-chat-input
+  window.__cpChatInputId = 'cp-chat-input';
+  startChatPoll(id, 'cp-wa-chat', 'coach');
 }
 
 async function refreshAthleteMe() {
@@ -1948,7 +2171,7 @@ function wrapPracticeHooks() {
     navigate = function (v, e) {
       const raw = v;
       if (store && store.coachSessionActive && !store.coachAssigning && !(typeof isAthleteRole === 'function' && isAthleteRole())) {
-        const coachCore = { coachHub: 1, coachClient: 1 };
+        const coachCore = { coachHub: 1, coachClient: 1, coachChat: 1 };
         const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1 };
         const ok = coachCore[raw] || (store.coachViewingClient && clientDomains[raw]);
         if (!ok) {
@@ -1961,9 +2184,9 @@ function wrapPracticeHooks() {
         }
       }
       v = gatePracticeView(v);
-      if (v === 'coachHub' || v === 'clientChat' || v === 'coachClient') {
+      if (v === 'coachHub' || v === 'clientChat' || v === 'coachClient' || v === 'coachChat') {
         if (e && e.preventDefault) e.preventDefault();
-        if (v === 'coachHub' || v === 'coachClient') store.coachSessionActive = true;
+        if (v === 'coachHub' || v === 'coachClient' || v === 'coachChat') store.coachSessionActive = true;
         currentView = v;
         document.querySelectorAll('.nav-item').forEach(function (el) { el.classList.remove('active'); });
         if (v === 'clientChat') {
@@ -2179,6 +2402,9 @@ window.editClientSchedule = editClientSchedule;
 window.toggleCoachHidePresence = toggleCoachHidePresence;
 window.handleNotifyRoute = handleNotifyRoute;
 window.sendCheckToClient = sendCheckToClient;
+window.pushCoachClientEdits = pushCoachClientEdits;
+window.askExerciseInfoToCoach = askExerciseInfoToCoach;
+window.renderCoachChatPage = renderCoachChatPage;
 window.requestExamsFromClient = requestExamsFromClient;
 window.resetClientPassword = resetClientPassword;
 window.confirmLeaveClient = confirmLeaveClient;
