@@ -3010,7 +3010,7 @@ async function syncAccountData(download=false){
 }
 function scheduleAccountSync(){
   if(!store.accountToken) return;
-  if (store.coachAssigning) return;
+  if (store.coachAssigning || store.coachViewingClient) return;
   clearTimeout(accountSyncTimer);
   accountSyncTimer = setTimeout(function () {
     accountRequest('/api/account/sync', {
@@ -6291,17 +6291,21 @@ function persist() {
     let sanitized = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.sanitizeStoreForLocalStorage) 
       ? GiammariaPersistence.sanitizeStoreForLocalStorage(store) 
       : store;
-    if (store.coachAssigning && window.__cpAssignBackup && sanitized && typeof sanitized === 'object') {
-      const bak = window.__cpAssignBackup;
-      sanitized = Object.assign({}, sanitized, {
-        activeProgramId: bak.activeProgramId,
-        activeProgram: bak.activeProgram,
-        nutrition: bak.nutrition,
-        supplementation: bak.supplementation,
-        therapy: bak.therapy,
-        exams: bak.exams,
-        coachAssigning: store.coachAssigning
-      });
+    if ((store.coachAssigning || store.coachViewingClient) && sanitized && typeof sanitized === 'object') {
+      const bak = window.__cpAssignBackup || window.__cpCoachViewBackup;
+      if (bak) {
+        sanitized = Object.assign({}, sanitized, {
+          activeProgramId: bak.activeProgramId,
+          activeProgram: bak.activeProgram,
+          nutrition: bak.nutrition,
+          supplementation: bak.supplementation,
+          therapy: bak.therapy,
+          exams: bak.exams,
+          coachAssigning: store.coachAssigning || null,
+          coachViewingClient: !!store.coachViewingClient,
+          coachSessionActive: !!store.coachSessionActive
+        });
+      }
     }
     if (store.stayLoggedIn === false && sanitized && typeof sanitized === 'object') {
       sanitized.accountToken = null;
@@ -6493,12 +6497,19 @@ function buildLocalCoachInsightAnswer(promptText) {
   return insight ? ('## Stato atleta\n\n' + insight) : null;
 }
 function afterProgramActivatedNavigate() {
-    if (store && store.coachAssigning) {
-      if (typeof showToast === 'function') showToast('Rivedi e modifica se serve, poi INVIA AL CLIENTE.', 'success');
+  if (store && store.coachAssigning) {
+    ensureAssignBanner();
+    const modify = confirm('Scheda pronta per il cliente.\n\nOK = modifica prima di inviare\nAnnulla = invia subito al cliente');
+    if (modify) {
+      if (typeof showToast === 'function') showToast('Modifica la bozza cliente, poi INVIA AL CLIENTE.', 'success');
       navigate('training');
-      if (typeof ensureAssignBanner === 'function') ensureAssignBanner();
-      return;
+    } else if (typeof confirmAssignSandbox === 'function') {
+      confirmAssignSandbox();
+    } else {
+      navigate('training');
     }
+    return;
+  }
   navigate('home');
 }
 function navigate(v, e){
@@ -10377,7 +10388,7 @@ async function confirmImportAndActivate() {
   return withBusy(function () { return confirmImportAndActivateInner(choices, domainOnly); }, domainOnly ? 'Salvataggio…' : 'Attivazione scheda…', { immediate: true });
 }
 function isCoachClientSandbox() {
-  return !!(typeof store !== 'undefined' && store && store.coachAssigning);
+  return !!(typeof store !== 'undefined' && store && (store.coachAssigning || store.coachViewingClient));
 }
 
 async function confirmImportAndActivateInner(choices, domainOnly) {

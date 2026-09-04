@@ -71,7 +71,10 @@ assert(ui.includes("ASSEGNA SCHEDA") && ui.includes("Consenti massima libertà")
 assert(ui.includes("AZZERA CHAT (PER ME)") && ui.includes("NUOVA CHAT"), "chat thread tools");
 assert(ui.includes("Resta connesso") && ui.includes("RICHIEDI RECUPERO PASSWORD"), "login stay + recovery");
 assert(ui.includes("CHIEDI AL COACH") || ui.includes("askRealCoachForDomain"), "real coach ask");
-assert(ui.includes("INVIA CHECK"), "coach send check");
+assert(ui.includes("RICHIEDI CHECK") || ui.includes("requestCheckFromClient"), "coach request check");
+assert(ui.includes("exitCoachSession") && ui.includes("enterCoachClientView"), "coach session + client view");
+assert(ui.includes("GS_CLIENT_SHELL") || ui.includes("clientShell"), "client shell lock");
+assert(ui.includes("Notification") && ui.includes("onclick"), "web notification click");
 assert(!ui.includes("127.0.0.1:7810"), "debug ingest removed");
 assert(ui.includes("Anzianità di allenamento") && ui.includes("Problema fisico principale") && ui.includes("Tempo a sessione"), "UI intake has requested fields");
 INTAKE_REQUIRED.forEach((k) => {

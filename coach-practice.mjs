@@ -71,6 +71,25 @@ function clientNeedsIntake(row) {
   return (row.intake_mode || "new") === "new" && !row.intake_completed_at;
 }
 
+function isOnlineAt(ts, windowMs = 120000) {
+  if (!ts) return false;
+  const t = new Date(ts).getTime();
+  if (!Number.isFinite(t)) return false;
+  return Date.now() - t <= windowMs;
+}
+
+function isWorkoutLive(r) {
+  if (!r || !r.workout_started_at) return false;
+  const started = new Date(r.workout_started_at).getTime();
+  if (!Number.isFinite(started)) return false;
+  if (Date.now() - started > 4 * 60 * 60 * 1000) return false;
+  if (r.last_workout_at) {
+    const done = new Date(r.last_workout_at).getTime();
+    if (Number.isFinite(done) && done >= started) return false;
+  }
+  return true;
+}
+
 function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
   if (!r) return null;
   const row = {
@@ -83,6 +102,12 @@ function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
     nextDueAt: r.next_due_at,
     allowProgramDb: !!r.allow_program_db,
     lastWorkoutAt: r.last_workout_at,
+    lastSeenAt: r.last_seen_at || null,
+    online: isOnlineAt(r.last_seen_at),
+    workoutLive: isWorkoutLive(r),
+    workoutStartedAt: r.workout_started_at || null,
+    programExpiresAt: r.program_expires_at || null,
+    nextCheckAt: r.next_check_at || null,
     unreadCount: Number(r.unread_count || 0),
     inviteToken: r.invite_token,
     createdAt: r.created_at,
@@ -111,6 +136,8 @@ export const CoachPracticeLib = {
   clientNeedsIntake,
   clientRow,
   bandMid,
+  isOnlineAt,
+  isWorkoutLive,
   INTAKE_KEYS,
   INTAKE_REQUIRED
 };
@@ -172,6 +199,12 @@ export async function ensureCoachPracticeTables(client) {
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS leave_requested_at TIMESTAMPTZ;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS allow_max_freedom BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS pending_change JSONB;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS workout_started_at TIMESTAMPTZ;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS program_expires_at TIMESTAMPTZ;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS next_check_at TIMESTAMPTZ;
+    ALTER TABLE coach_licenses ADD COLUMN IF NOT EXISTS hide_presence BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE coach_licenses ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
     ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS attachment JSONB;
     ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS thread_id INT NOT NULL DEFAULT 1;
     ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS hidden_for TEXT[] NOT NULL DEFAULT '{}';
@@ -415,6 +448,12 @@ export function mountCoachPractice(app, deps) {
     if (!ctx) return;
     try {
       const coach = await pool.query("SELECT name FROM app_users WHERE id = $1", [ctx.client.coach_user_id]);
+      const lic = await pool.query(
+        "SELECT hide_presence, last_seen_at FROM coach_licenses WHERE user_id = $1",
+        [ctx.client.coach_user_id]
+      );
+      const hide = !!(lic.rows[0] && lic.rows[0].hide_presence);
+      const coachLastSeen = hide ? null : (lic.rows[0]?.last_seen_at || null);
       const events = await pool.query(
         "SELECT id, kind, payload, created_at, read_at FROM coach_events WHERE client_id = $1 ORDER BY created_at DESC LIMIT 20",
         [ctx.client.id]
@@ -423,11 +462,49 @@ export function mountCoachPractice(app, deps) {
         ok: true,
         client: clientRow(ctx.client, { includeIntake: true }),
         coachName: coach.rows[0]?.name || "Coach",
+        coachOnline: !hide && isOnlineAt(coachLastSeen),
+        coachLastSeen,
+        coachHidePresence: hide,
         events: events.rows
       });
     } catch (err) {
       return res.status(500).json({ error: "Profilo client non disponibile." });
     }
+  });
+
+  app.post("/api/presence/ping", async (req, res) => {
+    const auth = await requireUser(req);
+    if (!auth) return res.status(401).json({ error: "Unauthorized." });
+    await initDb();
+    if (auth.role === "athlete") {
+      await pool.query(
+        "UPDATE coach_clients SET last_seen_at = NOW() WHERE athlete_user_id = $1 AND status = 'active'",
+        [auth.id]
+      );
+      return res.json({ ok: true, role: "athlete" });
+    }
+    const lic = await pool.query("SELECT hide_presence FROM coach_licenses WHERE user_id = $1 AND status = 'active'", [auth.id]);
+    if (!lic.rows.length) return res.json({ ok: true, role: "coach", unlocked: false });
+    if (typeof req.body?.hide === "boolean") {
+      await pool.query("UPDATE coach_licenses SET hide_presence = $2 WHERE user_id = $1", [auth.id, !!req.body.hide]);
+    }
+    const fresh = await pool.query("SELECT hide_presence FROM coach_licenses WHERE user_id = $1", [auth.id]);
+    const hidden = !!(fresh.rows[0] && fresh.rows[0].hide_presence);
+    if (!hidden) {
+      await pool.query("UPDATE coach_licenses SET last_seen_at = NOW() WHERE user_id = $1", [auth.id]);
+    }
+    return res.json({ ok: true, role: "coach", hidePresence: hidden });
+  });
+
+  app.post("/api/coach/presence/hide", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const hide = !!req.body?.hide;
+    await pool.query(
+      `UPDATE coach_licenses SET hide_presence = $2 WHERE user_id = $1`,
+      [coach.id, hide]
+    );
+    return res.json({ ok: true, hidePresence: hide });
   });
 
   app.get("/api/client/messages", async (req, res) => {
@@ -659,7 +736,28 @@ export function mountCoachPractice(app, deps) {
   app.post("/api/client/workout-ping", async (req, res) => {
     const ctx = await requireAthlete(req, res);
     if (!ctx) return;
-    await pool.query("UPDATE coach_clients SET last_workout_at = NOW() WHERE id = $1", [ctx.client.id]);
+    await pool.query(
+      "UPDATE coach_clients SET last_workout_at = NOW(), last_seen_at = NOW(), workout_started_at = NULL WHERE id = $1",
+      [ctx.client.id]
+    );
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'workout_done',$2)",
+      [ctx.client.id, JSON.stringify({ at: new Date().toISOString() })]
+    );
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/client/workout-start", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    await pool.query(
+      "UPDATE coach_clients SET workout_started_at = NOW(), last_seen_at = NOW() WHERE id = $1",
+      [ctx.client.id]
+    );
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'workout_started',$2)",
+      [ctx.client.id, JSON.stringify({ at: new Date().toISOString() })]
+    );
     return res.json({ ok: true });
   });
 
@@ -668,9 +766,15 @@ export function mountCoachPractice(app, deps) {
     if (!auth) return res.status(401).json({ error: "Unauthorized." });
     if (auth.role === "athlete") return res.json({ ok: true, unlocked: false, role: "athlete" });
     await initDb();
-    const lic = await pool.query("SELECT source, status, unlocked_at FROM coach_licenses WHERE user_id = $1", [auth.id]);
+    const lic = await pool.query("SELECT source, status, unlocked_at, hide_presence, last_seen_at FROM coach_licenses WHERE user_id = $1", [auth.id]);
     const unlocked = !!(lic.rows[0] && lic.rows[0].status === "active");
-    return res.json({ ok: true, unlocked, role: "coach", license: lic.rows[0] || null });
+    return res.json({
+      ok: true,
+      unlocked,
+      role: "coach",
+      license: lic.rows[0] || null,
+      hidePresence: !!(lic.rows[0] && lic.rows[0].hide_presence)
+    });
   });
 
   app.post("/api/coach/unlock/demo", async (req, res) => {
@@ -701,7 +805,8 @@ export function mountCoachPractice(app, deps) {
     }
     const rows = await pool.query(
       `SELECT id, display_name, username, status, paid, billing_cycle, next_due_at, allow_program_db,
-              last_workout_at, unread_count, invite_token, created_at, intake_mode, intake_completed_at,
+              last_workout_at, last_seen_at, workout_started_at, program_expires_at, next_check_at,
+              unread_count, invite_token, created_at, intake_mode, intake_completed_at,
               leave_requested_at, chat_thread, allow_max_freedom, pending_change
        FROM coach_clients WHERE ${where}
        ORDER BY display_name ASC
@@ -800,7 +905,7 @@ export function mountCoachPractice(app, deps) {
       });
     } catch (err) {
       await db.query("ROLLBACK");
-      console.error("CREATE_CLIENT", err);
+      console.error("CREATE_CLIENT", err && err.message ? err.message : err);
       return res.status(500).json({ error: "Cliente non creato." });
     } finally {
       db.release();
@@ -971,11 +1076,38 @@ export function mountCoachPractice(app, deps) {
     if (!coach) return;
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
+    const note = String(req.body?.note || "").slice(0, 400);
+    let nextCheckAt = req.body?.nextCheckAt ? new Date(req.body.nextCheckAt) : null;
+    if (nextCheckAt && Number.isNaN(nextCheckAt.getTime())) nextCheckAt = null;
+    if (nextCheckAt) {
+      await pool.query("UPDATE coach_clients SET next_check_at = $2 WHERE id = $1", [row.id, nextCheckAt.toISOString()]);
+    }
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'check_request',$2)",
-      [row.id, JSON.stringify({ note: String(req.body?.note || "").slice(0, 400) })]
+      [row.id, JSON.stringify({ note, nextCheckAt: nextCheckAt ? nextCheckAt.toISOString() : null })]
     );
-    return res.json({ ok: true });
+    return res.json({ ok: true, nextCheckAt: nextCheckAt ? nextCheckAt.toISOString() : row.next_check_at });
+  });
+
+  app.post("/api/coach/clients/:id/schedule", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const patches = [];
+    const vals = [row.id];
+    if (req.body?.programExpiresAt !== undefined) {
+      vals.push(req.body.programExpiresAt ? new Date(req.body.programExpiresAt).toISOString() : null);
+      patches.push(`program_expires_at = $${vals.length}`);
+    }
+    if (req.body?.nextCheckAt !== undefined) {
+      vals.push(req.body.nextCheckAt ? new Date(req.body.nextCheckAt).toISOString() : null);
+      patches.push(`next_check_at = $${vals.length}`);
+    }
+    if (!patches.length) return res.status(400).json({ error: "Nessuna data da aggiornare." });
+    await pool.query(`UPDATE coach_clients SET ${patches.join(", ")} WHERE id = $1`, vals);
+    const fresh = await pool.query("SELECT * FROM coach_clients WHERE id = $1", [row.id]);
+    return res.json({ ok: true, client: clientRow(fresh.rows[0]) });
   });
 
   app.post("/api/coach/clients/:id/assign", async (req, res) => {
@@ -998,6 +1130,19 @@ export function mountCoachPractice(app, deps) {
        ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
       [row.athlete_user_id, JSON.stringify(merged)]
     );
+    const scheduleBits = [];
+    const scheduleVals = [row.id];
+    if (req.body?.programExpiresAt) {
+      scheduleVals.push(new Date(req.body.programExpiresAt).toISOString());
+      scheduleBits.push(`program_expires_at = $${scheduleVals.length}`);
+    }
+    if (req.body?.nextCheckAt) {
+      scheduleVals.push(new Date(req.body.nextCheckAt).toISOString());
+      scheduleBits.push(`next_check_at = $${scheduleVals.length}`);
+    }
+    if (scheduleBits.length) {
+      await pool.query(`UPDATE coach_clients SET ${scheduleBits.join(", ")} WHERE id = $1`, scheduleVals);
+    }
     const kinds = Array.isArray(req.body?.kinds) && req.body.kinds.length
       ? req.body.kinds.map((k) => String(k)).filter((k) => KIND_EVENTS[k] || k === "exams_request")
       : detectAssignKinds(patch);
