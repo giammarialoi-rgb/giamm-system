@@ -1098,6 +1098,7 @@ body.focus-mode [data-rewards-only] {
   <div class="header-actions">
   <button class="btn btn-outline" id="account-button" onclick="openAccount()">ACCEDI</button>
   <button class="btn btn-outline" id="profile-button" style="margin-left:6px;" onclick="openAthleteProfile()">PROFILO</button>
+  <button class="btn btn-primary" id="coach-unlock-button" style="margin-left:6px;" onclick="openCoachOrUnlock()">COACH</button>
   <button class="btn btn-outline" id="menu-hub-button" style="margin-left:6px;" onclick="openMenuHub()">MENU</button>
   </div>
 </header>
@@ -1173,9 +1174,9 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">💎</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="pricing">Piani & Pro</span>
       </button>
-      <button class="btn btn-outline" id="hub-tile-coach" data-hub="coach" style="display:none;height:70px;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('coachHub')">
+      <button class="btn btn-outline" id="hub-tile-coach" data-hub="coach" style="display:none;height:70px;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openCoachOrUnlock()">
         <span style="font-size:20px;">👔</span>
-        <span style="font-size:11px;font-weight:800;">Coach</span>
+        <span style="font-size:11px;font-weight:800;" id="hub-tile-coach-label">Sblocca Coach</span>
       </button>
       <button class="btn btn-outline" id="hub-tile-guide" data-hub="athlete" style="display:none;height:70px;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();showClientTutorial(true)">
         <span style="font-size:20px;">🧭</span>

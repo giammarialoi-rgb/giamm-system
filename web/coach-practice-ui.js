@@ -106,8 +106,13 @@ function applyClientChrome() {
       el.style.display = athlete ? 'none' : '';
     });
     document.querySelectorAll('[data-hub="coach"]').forEach(function (el) {
-      el.style.display = unlocked && !athlete ? 'flex' : 'none';
+      el.style.display = athlete ? 'none' : 'flex';
     });
+    const coachBtn = document.getElementById('coach-unlock-button');
+    if (coachBtn) {
+      coachBtn.style.display = athlete ? 'none' : '';
+      coachBtn.textContent = unlocked ? 'HUB COACH' : 'SBLOCCA COACH';
+    }
     document.querySelectorAll('[data-hub="athlete"]').forEach(function (el) {
       el.style.display = athlete ? 'flex' : 'none';
     });
@@ -380,7 +385,10 @@ function closeClientTutorial() {
   showOverlay('cp-tutorial', false);
 }
 
-function showDemoUnlock() {
+function openCoachOrUnlock() {
+  if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) navigate('coachHub');
+  else showDemoUnlock();
+}
   if (!store.accountToken) {
     practiceToast('Accedi al tuo account Nurvan per sbloccare Coach.', 'warning');
     if (typeof openAccount === 'function') openAccount();
@@ -395,17 +403,20 @@ function showDemoUnlock() {
   const p = document.getElementById('cp-demo-panel');
   p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">SBLOCCO DEMO</div>' +
     '<h2>Modalità Coach</h2>' +
-    '<p class="cp-help">Checkout di prova: nessuna carta vera. In seguito useremo lo stesso sblocco con il pagamento reale.</p>' +
+    '<p class="cp-help">Per provare l’hub Coach completa il checkout demo (carta finta, addebito 0,00 €). Lo stesso tasto servirà dopo per il pagamento vero.</p>' +
     '<div class="cp-field"><label>Intestatario</label><input value="Giammaria Loi" readonly></div>' +
     '<div class="cp-field"><label>Carta</label><input value="4242 4242 4242 4242" readonly></div>' +
     '<div style="display:flex;gap:8px;"><div class="cp-field" style="flex:1;"><label>Scadenza</label><input value="12/29" readonly></div>' +
     '<div class="cp-field" style="flex:1;"><label>CVC</label><input value="123" readonly></div></div>' +
-    '<button class="btn btn-primary" style="width:100%;" onclick="confirmDemoUnlock()">PAGA E SBLOCCA</button>' +
+    '<button class="btn btn-primary" style="width:100%;" onclick="confirmDemoUnlock()">PAGA 0,00 € E SBLOCCA</button>' +
+    '<div id="cp-demo-status" class="cp-help" style="margin-top:8px;"></div>' +
     '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="showOverlay(\'cp-demo\', false)">ANNULLA</button>';
   showOverlay('cp-demo', true);
 }
 
 async function confirmDemoUnlock() {
+  const status = document.getElementById('cp-demo-status');
+  if (status) status.textContent = 'Pagamento in corso…';
   try {
     const payload = await practiceFetch('/api/coach/unlock/demo', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 20000);
     if (!payload || !payload.ok) throw new Error((payload && payload.error) || 'Sblocco non riuscito.');
@@ -413,10 +424,15 @@ async function confirmDemoUnlock() {
     if (typeof persist === 'function') persist();
     showOverlay('cp-demo', false);
     applyClientChrome();
-    practiceToast('Modalità Coach sbloccata', 'success');
+    practiceToast('Pagamento ricevuto. Modalità Coach sbloccata.', 'success');
     navigate('coachHub');
   } catch (err) {
-    practiceToast((err && err.message) || 'Sblocco non riuscito.', 'danger');
+    const raw = String((err && err.message) || '');
+    const msg = /404|not found|failed/i.test(raw)
+      ? 'Il server sta ancora aggiornando lo sblocco. Riprova tra un minuto.'
+      : (raw || 'Sblocco non riuscito.');
+    if (status) status.textContent = msg;
+    practiceToast(msg, 'danger');
   }
 }
 
@@ -849,7 +865,7 @@ function wrapPracticeHooks() {
         if (c && currentView === 'home' && typeof isAthleteRole === 'function' && isAthleteRole() && (!DATA || !DATA.weeks || !DATA.weeks.length)) {
           c.innerHTML = athleteWaitingHomeHtml();
         }
-        if (c && (currentView === 'athlete' || currentView === 'settings')) injectCoachUnlockInto(c);
+        if (c && (currentView === 'athlete' || currentView === 'settings' || currentView === 'home' || currentView === 'pricing')) injectCoachUnlockInto(c);
       } catch (_) {}
       applyClientChrome();
     };
@@ -914,6 +930,7 @@ window.showClientTutorial = showClientTutorial;
 window.drawClientTutorial = drawClientTutorial;
 window.closeClientTutorial = closeClientTutorial;
 window.showDemoUnlock = showDemoUnlock;
+window.openCoachOrUnlock = openCoachOrUnlock;
 window.confirmDemoUnlock = confirmDemoUnlock;
 window.openAddClientWizard = openAddClientWizard;
 window.setAddClientMode = setAddClientMode;
