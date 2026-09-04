@@ -296,14 +296,17 @@ html, body {
   overflow: hidden;
 }
 main {
-  margin-top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  margin-top: calc(var(--header-height) + env(safe-area-inset-top, 0px) + var(--cp-session-bar, 0px));
   margin-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
   padding: 15px;
-  height: calc(100dvh - var(--header-height) - 110px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  height: calc(100dvh - var(--header-height) - 110px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--cp-session-bar, 0px));
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   box-sizing: border-box;
+}
+body.coach-viewing-client main {
+  padding-top: 8px;
 }
 
 nav.bottom-nav {
@@ -2976,7 +2979,10 @@ function applyRemoteAccountData(remote, preferLocal) {
   const localAssigned = String(store.clientAssignedAt || '');
   let takeRemote = (!localWeeks || localWeeks < 1) && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length;
   if (athlete && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length) {
-    if (!localWeeks || (remoteAssigned && remoteAssigned > localAssigned) || remote.assignedByCoach && remoteAssigned !== localAssigned) {
+    const force = !!window.__cpForceRemoteProgram;
+    const newerAssign = !!(remoteAssigned && (!localAssigned || remoteAssigned > localAssigned));
+    const coachFlag = !!(remote.assignedByCoach && (force || newerAssign || !localWeeks));
+    if (force || !localWeeks || newerAssign || coachFlag) {
       takeRemote = true;
     }
   }
@@ -2984,8 +2990,19 @@ function applyRemoteAccountData(remote, preferLocal) {
     try {
       window.__cpProgramLock = true;
       DATA = typeof normalizeProgram === 'function' ? normalizeProgram(remoteProg) : remoteProg;
+      store.activeProgram = DATA;
       store.activeProgramId = DATA.id || remote.activeProgramId || store.activeProgramId;
       if (athlete) store.clientAssignedAt = remoteAssigned || new Date().toISOString();
+      if (remote.nutrition) store.nutrition = remote.nutrition;
+      if (remote.supplementation) store.supplementation = remote.supplementation;
+      if (remote.therapy) store.therapy = remote.therapy;
+      if (remote.exams) store.exams = remote.exams;
+      if (DATA) {
+        if (store.nutrition) DATA.nutrition = store.nutrition;
+        if (store.supplementation) DATA.supplementation = store.supplementation;
+        if (store.therapy) DATA.therapy = store.therapy;
+        if (store.exams) DATA.exams = store.exams;
+      }
       persistActiveProgramStructure();
     } catch (e) {
       console.warn('[ACCOUNT_RESTORE_PROGRAM]', e);
@@ -3005,10 +3022,13 @@ async function syncAccountData(download=false){
       const remote = payload.data || {};
       const localScore = accountDataScore(store, DATA);
       const remoteScore = accountDataScore(remote, remote.activeProgram);
-      applyRemoteAccountData(remote, localScore > remoteScore);
+      applyRemoteAccountData(remote, localScore > remoteScore && !window.__cpForceRemoteProgram);
+      // Athlete must not overwrite a just-assigned coach program with empty/local draft
+      const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+      const skipProgUpload = athlete && !!(remote.assignedByCoach || window.__cpForceRemoteProgram);
       if (localScore > 0) {
         try {
-          await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload({ includeProgram: true }) }) });
+          await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload({ includeProgram: !skipProgUpload }) }) });
         } catch (_) {}
       }
       persist(); render();
@@ -9178,10 +9198,26 @@ function catalogSplitLabel(s) {
 
 function filterProgramCatalog(list) {
   const f = window.__catalogFilters || {};
+  let ranked = [];
   if (typeof rankCatalogPrograms === 'function') {
-    return rankCatalogPrograms(list, f);
+    ranked = rankCatalogPrograms(list, f);
+  } else {
+    ranked = (list || []).filter(Boolean);
   }
-  return (list || []).filter(Boolean);
+  // If anagrafica filters are too strict, relax step-by-step so coach always sees options
+  if (window.__cpCatalogFromIntake && (!ranked || !ranked.length) && typeof rankCatalogPrograms === 'function') {
+    const soft = Object.assign({}, f, { split: '', progression: '', duration: '', q: f.q || '' });
+    ranked = rankCatalogPrograms(list, soft);
+    if (!ranked.length) {
+      const softer = Object.assign({}, soft, { equipment: '', experience: '' });
+      ranked = rankCatalogPrograms(list, softer);
+    }
+    if (!ranked.length) {
+      const softest = { q: '', days: f.days || '', goal: f.goal || '', audience: f.audience || '', split: '', equipment: '', experience: '', duration: '', progression: '' };
+      ranked = rankCatalogPrograms(list, softest);
+    }
+  }
+  return ranked || [];
 }
 
 function suggestProgramsForProfile(profile) {
@@ -9511,6 +9547,18 @@ function renderPrograms(c){
         <button class="btn btn-primary" style="font-size:11px; padding:6px 12px;" onclick="exportActiveProgram()">ESPORTA JSON</button>
       </div>
     </div>
+
+    ${window.__cpCatalogFromIntake ? `<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid rgba(212,175,55,.45);">
+      <div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:4px;">FILTRO ANAGRAFICA CLIENTE</div>
+      <div style="font-size:12px;color:#eee;line-height:1.4;">${esc(window.__cpCatalogFromIntake.summary || '')}</div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn btn-outline" style="font-size:10px;" onclick="window.__cpCatalogFromIntake=null;window.__catalogFilters={q:'',days:'',split:'',goal:'',equipment:'',experience:'',duration:'',progression:'',audience:''};if(typeof render==='function')render();">TOGLI FILTRO ANAGRAFICA</button>
+        ${store.coachAssigning ? '<button class="btn btn-outline" style="font-size:10px;" onclick="promptCatalogFromIntakeThenOpen(\'' + esc(store.coachAssigning.clientId) + '\',\'' + esc(store.coachAssigning.name || '') + '\')">RIA APPLICA ANAGRAFICA</button>' : ''}
+      </div>
+    </div>` : (store.coachAssigning ? `<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid #333;">
+      <div style="font-size:11px;color:#ccc;">Stai scegliendo una scheda per <b style="color:#fff;">${esc(store.coachAssigning.name || 'cliente')}</b>.</div>
+      <button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="promptCatalogFromIntakeThenOpen('${esc(store.coachAssigning.clientId)}','${esc(store.coachAssigning.name || '')}')">FILTRA CON ANAGRAFICA CLIENTE</button>
+    </div>` : '')}
 
     <div class="card" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
       <div class="card-header"><h3 style="font-size:13px;color:var(--gold);font-weight:800;margin:0;">GENERA PROGRAMMA (rules-based)</h3></div>
@@ -12463,6 +12511,11 @@ function registerNurvanServiceWorker() {
 
 function maybeShowRewardsOnboarding() {
   ensureRewardsReady();
+  try {
+    if (localStorage.getItem('NURVAN_REWARDS_ONBOARD_DONE') === '1') {
+      store.rewards.onboardingDone = true;
+    }
+  } catch (_) {}
   if (store.rewards.onboardingDone) {
     applyFocusUi();
     return;
@@ -12488,6 +12541,7 @@ function _applyRewardsModeLocal(mode) {
     store.rewards.onboardingDone = true;
     if (mode === 'rewards' && !store.rewards.joinedAt) store.rewards.joinedAt = new Date().toISOString();
   }
+  try { localStorage.setItem('NURVAN_REWARDS_ONBOARD_DONE', '1'); } catch (_) {}
   persist();
   try {
     if (typeof ActionDispatcher !== 'undefined' && ActionDispatcher && typeof ActionDispatcher.dispatch === 'function') {

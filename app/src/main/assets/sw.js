@@ -1,5 +1,5 @@
 /* Nurvan shell SW — cache UI only, never the 10k catalog. */
-const CACHE = 'nurvan-shell-v13-coach';
+const CACHE = 'nurvan-shell-v14-coach';
 const PRECACHE = [
   './',
   './index.html',
