@@ -12942,6 +12942,10 @@ function dismissIosInstallHint() {
 function maybeShowIosInstallHint() {
   if (typeof window !== 'undefined' && window.NativeConfig) return;
   if (isStandalonePwa()) return;
+  try {
+    if (/^\/c\//i.test(location.pathname || '')) return;
+    if (typeof detectInviteToken === 'function' && detectInviteToken()) return;
+  } catch (_) {}
   try { if (localStorage.getItem('NURVAN_IOS_INSTALL_DISMISSED') === '1') return; } catch (_) {}
   if (!isIosDevice()) return;
   const rewards = document.getElementById('rewards-onboarding-modal');
