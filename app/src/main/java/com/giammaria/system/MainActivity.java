@@ -69,6 +69,8 @@ public class MainActivity extends Activity {
     private Uri cameraCaptureUri = null;
     private volatile JSONObject lastPickedDocument = null;
     private volatile String lastHealthTotals = "{\"kcal\":0}";
+    private PermissionRequest pendingWebPermissionRequest = null;
+    private static final int WEB_MEDIA_PERMISSION_REQ = 22;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override public void onCreate(Bundle state) {
@@ -107,6 +109,7 @@ public class MainActivity extends Activity {
                 if (BuildConfig.DEBUG) Log.d("GiammariaWebView", "Web permission request: " + java.util.Arrays.toString(request.getResources()));
                 runOnUiThread(() -> {
                     java.util.ArrayList<String> granted = new java.util.ArrayList<>();
+                    java.util.ArrayList<String> needOs = new java.util.ArrayList<>();
                     boolean needCamera = false;
                     boolean needAudio = false;
                     for (String res : request.getResources()) {
@@ -115,20 +118,22 @@ public class MainActivity extends Activity {
                     }
                     if (needCamera) {
                         if (checkSelfPermission(android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                            requestPermissions(new String[]{android.Manifest.permission.CAMERA}, 21);
-                            // Grant after user responds — still try grant for WebView session if already OK next time
-                        }
-                        if (checkSelfPermission(android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                            needOs.add(android.Manifest.permission.CAMERA);
+                        } else {
                             granted.add(PermissionRequest.RESOURCE_VIDEO_CAPTURE);
                         }
                     }
                     if (needAudio) {
                         if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                            requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 20);
-                        }
-                        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                            needOs.add(android.Manifest.permission.RECORD_AUDIO);
+                        } else {
                             granted.add(PermissionRequest.RESOURCE_AUDIO_CAPTURE);
                         }
+                    }
+                    if (!needOs.isEmpty()) {
+                        pendingWebPermissionRequest = request;
+                        requestPermissions(needOs.toArray(new String[0]), WEB_MEDIA_PERMISSION_REQ);
+                        return;
                     }
                     if (!granted.isEmpty()) {
                         request.grant(granted.toArray(new String[0]));
@@ -1142,6 +1147,30 @@ public class MainActivity extends Activity {
             Log.e(TAG_HC, "HC request failed", error);
             debugJs("H3", "MainActivity:requestHealthConnectAccess", "hc error", "{\"err\":\"" + String.valueOf(error.getMessage()).replace("\"", "'") + "\"}");
             openHealthConnectSettings();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != WEB_MEDIA_PERMISSION_REQ || pendingWebPermissionRequest == null) return;
+        PermissionRequest req = pendingWebPermissionRequest;
+        pendingWebPermissionRequest = null;
+        java.util.ArrayList<String> granted = new java.util.ArrayList<>();
+        for (String res : req.getResources()) {
+            if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res)
+                && checkSelfPermission(android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                granted.add(PermissionRequest.RESOURCE_VIDEO_CAPTURE);
+            }
+            if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res)
+                && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                granted.add(PermissionRequest.RESOURCE_AUDIO_CAPTURE);
+            }
+        }
+        if (!granted.isEmpty()) {
+            req.grant(granted.toArray(new String[0]));
+        } else {
+            req.deny();
         }
     }
 

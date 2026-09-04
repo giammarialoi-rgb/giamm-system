@@ -80,8 +80,9 @@ const ui = fs.readFileSync(path.join(__dirname, "web/coach-practice-ui.js"), "ut
 });
 assert(ui.includes("ASSEGNA SCHEDA") && (ui.includes("Consenti massima libertà") || ui.includes("Consenti massima liberta")), "assign + max freedom");
 assert(ui.includes("Scadenza automatica") && ui.includes("confirmAssignSandboxSend"), "auto expiry on assign");
-assert(ui.includes("fetchWebRtcIceServers") && ui.includes("/api/webrtc/ice"), "videocall ICE fetch");
-assert(ui.includes("toggleCallMute") && ui.includes("cp-call-controls") && ui.includes("safe-area-inset"), "videocall mobile controls + safe area");
+assert(ui.includes("openCoachDrawer") && ui.includes("cp-client-switcher") && ui.includes("rotateClientInvite"), "coach drawer + switcher + rotate invite");
+assert(ui.includes("attachRemoteStream") && ui.includes("Permessi camera"), "videocall status + remote play");
+assert(!ui.includes("MASTER · DATI DI") || ui.includes("MENU COACH"), "legacy floating master bar replaced by drawer");
 assert(ui.includes("cp-modal-open") && ui.includes("clearChatAttachPreview"), "modal z-index + attach clear");
 assert(ui.includes("chatFileIconKind") && ui.includes("cp-file-chip"), "chat file icons");
 assert((ui.includes("AZZERA (PER ME)") || ui.includes("AZZERA CHAT (PER ME)")) && ui.includes("NUOVA CHAT") && ui.includes("openChatAttachSheet"), "chat thread tools");
@@ -120,9 +121,10 @@ assert(api.includes("coachPracticeVersion"), "health version");
 assert(api.includes("role"), "JWT has role");
 
 const practice = fs.readFileSync(path.join(__dirname, "coach-practice.mjs"), "utf8");
-["/api/coach/unlock/demo", "/api/coach/clients", "/api/client/login", "/api/client/intake", "/c/:token", "intake_mode", "/api/client/ask-coach", "/api/client/change-request", "allow_max_freedom", "/api/webrtc/ice", "TURN_URLS", "anchorExpiryOnFirstWorkout"].forEach((s) => {
+["/api/coach/unlock/demo", "/api/coach/clients", "/api/client/login", "/api/client/intake", "/c/:token", "intake_mode", "/api/client/ask-coach", "/api/client/change-request", "allow_max_freedom", "/api/webrtc/ice", "TURN_URLS", "anchorExpiryOnFirstWorkout", "/api/coach/inbox/ack", "rotate-invite"].forEach((s) => {
   assert(practice.includes(s), "server has " + s);
 });
+assert(practice.includes("e.payload") || practice.includes("e.payload,"), "coach inbox returns payload");
 
 const build = fs.readFileSync(path.join(__dirname, "build_master25.mjs"), "utf8");
 assert(build.includes("coach-practice-ui.js"), "build injects UI");

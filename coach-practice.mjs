@@ -1327,11 +1327,19 @@ export function mountCoachPractice(app, deps) {
     const data = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
     const origin = publicOrigin(req);
     const inviteUrl = `${origin}/c/${row.invite_token}`;
+    const inviteCode = String(row.invite_token || "").slice(-6).toUpperCase();
     return res.json({
       ok: true,
       client: clientRow(row, { includeIntake: true, includeSecrets: true }),
       inviteUrl,
-      inviteText: `Link: ${inviteUrl}\nUtente: ${row.username}\nPassword: ${row.invite_password || "(reimposta dal coach)"}`,
+      inviteCode,
+      inviteText: [
+        `Cliente: ${row.display_name}`,
+        `Codice invito: ${inviteCode}`,
+        `Link (univoco): ${inviteUrl}`,
+        `Utente: ${row.username}`,
+        `Password: ${row.invite_password || "(reimposta dal coach)"}`
+      ].join("\n"),
       credentials: { username: row.username, password: row.invite_password || "" },
       intake: row.intake || {},
       data: data.rows[0]?.data || {},
@@ -1543,6 +1551,46 @@ export function mountCoachPractice(app, deps) {
     return res.json({ ok: true, credentials: { username: row.username, password } });
   });
 
+  app.post("/api/coach/clients/:id/rotate-invite", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const inviteToken = crypto.randomBytes(12).toString("base64url");
+    const email = `c.${inviteToken}@client.nurvan.internal`;
+    const db = await pool.connect();
+    try {
+      await db.query("BEGIN");
+      await db.query("UPDATE coach_clients SET invite_token = $2 WHERE id = $1", [row.id, inviteToken]);
+      if (row.athlete_user_id) {
+        await db.query("UPDATE app_users SET email = $2, updated_at = NOW() WHERE id = $1", [row.athlete_user_id, email]);
+      }
+      await db.query("COMMIT");
+    } catch (err) {
+      try { await db.query("ROLLBACK"); } catch (_) {}
+      return res.status(500).json({ error: "Impossibile rigenerare il link." });
+    } finally {
+      db.release();
+    }
+    const origin = publicOrigin(req);
+    const inviteUrl = `${origin}/c/${inviteToken}`;
+    const code = String(inviteToken).slice(-6).toUpperCase();
+    return res.json({
+      ok: true,
+      inviteToken,
+      inviteUrl,
+      inviteCode: code,
+      inviteText: [
+        `Cliente: ${row.display_name}`,
+        `Codice invito: ${code}`,
+        `Link (univoco): ${inviteUrl}`,
+        `Utente: ${row.username}`,
+        `Password: ${row.invite_password || "(reimposta dal coach)"}`
+      ].join("\n"),
+      credentials: { username: row.username, password: row.invite_password || "" }
+    });
+  });
+
   app.post("/api/coach/clients/:id/leave-confirm", async (req, res) => {
     const coach = await requireCoach(req, res);
     if (!coach) return;
@@ -1570,7 +1618,7 @@ export function mountCoachPractice(app, deps) {
       [coach.id]
     );
     const events = await pool.query(
-      `SELECT e.id, e.kind, e.client_id, e.created_at, c.display_name
+      `SELECT e.id, e.kind, e.client_id, e.created_at, e.payload, c.display_name
        FROM coach_events e
        JOIN coach_clients c ON c.id = e.client_id
        WHERE c.coach_user_id = $1 AND e.read_at IS NULL
@@ -1586,8 +1634,36 @@ export function mountCoachPractice(app, deps) {
         leaveRequested: !!r.leave_requested_at,
         hasPendingChange: !!r.pending_change
       })),
-      events: events.rows
+      events: events.rows.map((r) => {
+        let payload = r.payload;
+        if (typeof payload === "string") {
+          try { payload = JSON.parse(payload); } catch (_) { payload = {}; }
+        }
+        return {
+          id: r.id,
+          kind: r.kind,
+          client_id: r.client_id,
+          created_at: r.created_at,
+          display_name: r.display_name,
+          payload: payload && typeof payload === "object" ? payload : {}
+        };
+      })
     });
+  });
+
+  app.post("/api/coach/inbox/ack", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((n) => Number(n)).filter((n) => n > 0) : [];
+    if (!ids.length) return res.json({ ok: true, updated: 0 });
+    const result = await pool.query(
+      `UPDATE coach_events e
+       SET read_at = NOW()
+       FROM coach_clients c
+       WHERE e.client_id = c.id AND c.coach_user_id = $1 AND e.id = ANY($2::bigint[]) AND e.read_at IS NULL`,
+      [coach.id, ids]
+    );
+    return res.json({ ok: true, updated: result.rowCount || 0 });
   });
 
   app.get("/api/coach/clients/:id/events", async (req, res) => {
