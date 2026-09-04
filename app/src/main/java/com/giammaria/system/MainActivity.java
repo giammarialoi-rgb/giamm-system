@@ -1137,11 +1137,13 @@ public class MainActivity extends Activity {
         }
         if (requestCode == CAMERA_CAPTURE_RESULTCODE) {
             if (resultCode == RESULT_OK && cameraCaptureUri != null) {
-                if (uploadMessage != null) {
+                boolean toWebView = uploadMessage != null;
+                if (toWebView) {
                     uploadMessage.onReceiveValue(new Uri[]{cameraCaptureUri});
                     uploadMessage = null;
+                } else {
+                    handlePickedDocument(cameraCaptureUri);
                 }
-                handlePickedDocument(cameraCaptureUri);
             } else if (uploadMessage != null) {
                 uploadMessage.onReceiveValue(null);
                 uploadMessage = null;
@@ -1151,11 +1153,11 @@ public class MainActivity extends Activity {
         }
         if (requestCode == FILECHOOSER_RESULTCODE) {
             Uri result = (intent == null || resultCode != RESULT_OK) ? null : intent.getData();
-            if (uploadMessage != null) {
+            boolean toWebView = uploadMessage != null;
+            if (toWebView) {
                 uploadMessage.onReceiveValue(result != null ? new Uri[]{result} : null);
                 uploadMessage = null;
-            }
-            if (result != null) {
+            } else if (result != null) {
                 handlePickedDocument(result);
             }
         }

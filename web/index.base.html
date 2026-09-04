@@ -1121,7 +1121,7 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">🏋️</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="training">Allenamento</span>
       </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('programs')">
+      <button class="btn btn-outline" data-hub="programs" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('programs')">
         <span style="font-size:20px;">📚</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="programsLibrary">Programmi</span>
       </button>
@@ -1149,7 +1149,7 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">🤖</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="coachAI">Coach AI</span>
       </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('import')">
+      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('import')">
         <span style="font-size:20px;">📥</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="importProgram">Importa Scheda</span>
       </button>
@@ -1157,11 +1157,11 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">📊</span>
         <span style="font-size:11px;font-weight:800;">Statistiche</span>
       </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openHealthConnect()">
+      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openHealthConnect()">
         <span style="font-size:20px;">❤️</span>
         <span style="font-size:11px;font-weight:800;">Salute</span>
       </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('community')">
+      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('community')">
         <span style="font-size:20px;">👥</span>
         <span style="font-size:11px;font-weight:800;">Community</span>
       </button>
@@ -1169,9 +1169,17 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">🏅</span>
         <span style="font-size:11px;font-weight:800;">Profilo Atleta</span>
       </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('pricing')">
+      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('pricing')">
         <span style="font-size:20px;">💎</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="pricing">Piani & Pro</span>
+      </button>
+      <button class="btn btn-outline" id="hub-tile-coach" data-hub="coach" style="display:none;height:70px;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('coachHub')">
+        <span style="font-size:20px;">👔</span>
+        <span style="font-size:11px;font-weight:800;">Coach</span>
+      </button>
+      <button class="btn btn-outline" id="hub-tile-guide" data-hub="athlete" style="display:none;height:70px;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();showClientTutorial(true)">
+        <span style="font-size:20px;">🧭</span>
+        <span style="font-size:11px;font-weight:800;">Guida</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('settings')">
         <span style="font-size:20px;">⚙️</span>
@@ -1684,6 +1692,30 @@ body.focus-mode [data-rewards-only] {
   </a>
 </nav>
 
+<input type="file" id="check-photo-input" style="display:none;" accept="image/*" onchange="onCheckPhotoInput(event)">
+<div id="check-fisico-pdf-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:10050;align-items:center;justify-content:center;padding:16px;">
+  <div class="card" style="max-width:460px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--gold);background:#111;">
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="font-size:14px;color:var(--gold);font-weight:800;">PDF PER IL COACH</h3>
+      <button class="btn btn-outline" style="font-size:10px;padding:2px 6px;" onclick="closeCheckFisicoPdfModal()">✕</button>
+    </div>
+    <div style="padding:12px 4px 4px;font-size:12px;color:#eee;">
+      <div style="font-size:10px;color:#888;font-weight:800;margin-bottom:8px;">OLTRE A FOTO E PESO, COSA INSERIRE</div>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;"><input type="radio" name="cf-pdf-train" value="detailed" onchange="setCheckFisicoPdfOpt('pdfTraining','detailed')"><span>Allenamento dettagliato (serie, ripetizioni, RIR/RPE)</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px;"><input type="radio" name="cf-pdf-train" value="summary" onchange="setCheckFisicoPdfOpt('pdfTraining','summary')"><span>Solo foto + tonnellaggio e intensità settimanale</span></label>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input type="checkbox" id="cf-pdf-nutr" onchange="setCheckFisicoPdfOpt('pdfNutrition', this.checked)"> Aderenza alimentazione</label>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;"><input type="checkbox" id="cf-pdf-macro" onchange="setCheckFisicoPdfOpt('pdfMacros', this.checked)"><span>Modifiche registrate con macros allegati</span></label>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input type="checkbox" id="cf-pdf-supp" onchange="setCheckFisicoPdfOpt('pdfSupp', this.checked)"> Aderenza integrazione</label>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:12px;"><input type="checkbox" id="cf-pdf-ther" onchange="setCheckFisicoPdfOpt('pdfTherapy', this.checked)"> Aderenza terapia</label>
+      <div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">NOTE PER IL COACH</div>
+      <textarea id="cf-pdf-notes" rows="3" placeholder="Es. ho avuto la febbre 3 giorni, ho dormito poco…" oninput="onCheckFisicoNotes(this.value)" style="width:100%;padding:10px;background:#0a0a0a;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+    </div>
+    <div class="modal-sticky-footer" style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeCheckFisicoPdfModal()">ANNULLA</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="confirmCheckFisicoPdfExport()">GENERA PDF</button>
+    </div>
+  </div>
+</div>
 <!-- Static System File Inputs (Reliable cross-platform file picking for Browser & WebView) -->
 <input type="file" id="universal-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleImportFileSelected(event)">
 <input type="file" id="camera-import-input" style="display:none;" accept="image/*" capture="environment" onchange="handleImportFileSelected(event)">
@@ -1832,7 +1864,14 @@ const DEFAULT_STORE = {
   rewards: null,
   bodyComposition: null,
   nutritionLoop: null,
-  seasonBoard: null
+  seasonBoard: null,
+  role: null,
+  coachUnlocked: false,
+  clientTutorialDone: false,
+  coachWorkspace: null,
+  clientOutbox: [],
+  inviteToken: '',
+  clientProfile: null
 };
 
 function loadStore(){
@@ -1877,6 +1916,20 @@ function ensureStoreIntegrity() {
   if (store.bodyComposition === undefined) store.bodyComposition = null;
   if (store.nutritionLoop === undefined) store.nutritionLoop = null;
   if (store.seasonBoard === undefined) store.seasonBoard = null;
+  if (store.role === undefined) store.role = null;
+  if (typeof store.coachUnlocked !== 'boolean') store.coachUnlocked = false;
+  if (typeof store.clientTutorialDone !== 'boolean') store.clientTutorialDone = false;
+  if (store.coachWorkspace === undefined) store.coachWorkspace = null;
+  if (!Array.isArray(store.clientOutbox)) store.clientOutbox = [];
+  if (typeof store.inviteToken !== 'string') store.inviteToken = store.inviteToken || '';
+  if (store.clientProfile === undefined) store.clientProfile = null;
+}
+function isAthleteRole() {
+  const u = store && store.accountUser;
+  return !!(store && (store.role === 'athlete' || (u && (u.role === 'athlete' || u.provider === 'coach_client'))));
+}
+function isCoachUnlocked() {
+  return !!(store && store.coachUnlocked && !isAthleteRole());
 }
 var store = loadStore();
 ensureStoreIntegrity();
@@ -2068,23 +2121,20 @@ function collectPrevWeekSetLogs(exIdx, row) {
   const prevName = normalizeExerciseKey(exerciseNameAt(currentWeek - 1, currentDay, prevIdx));
   const thisName = normalizeExerciseKey(name);
   if (thisName && prevName && thisName !== prevName) return [];
-  const prevRow = exerciseRowAt(currentWeek - 1, currentDay, prevIdx) || row || {};
   const out = [];
   for (let s = 1; s <= 10; s++) {
     const load = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_load'];
-    let reps = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_reps'];
-    let rir = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_rir'];
-    const planned = plannedRepsRirFromRow(prevRow, s);
-    if (reps === undefined || reps === '' || reps == null) reps = planned.reps;
-    if (rir === undefined || rir === '' || rir == null) rir = planned.rir;
+    const reps = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_reps'];
+    const rir = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_rir'];
     const hasLoad = load !== undefined && load !== '' && load != null;
     const hasReps = reps !== undefined && reps !== '' && reps != null;
+    const hasRir = rir !== undefined && rir !== '' && rir != null;
     if (!hasLoad && !hasReps) continue;
     out.push({
       set: s,
       load: hasLoad ? load : '',
       reps: hasReps ? reps : '',
-      rir: (rir !== undefined && rir !== '' && rir != null) ? rir : '',
+      rir: hasRir ? rir : '',
       prevIdx: prevIdx
     });
   }
@@ -3410,6 +3460,12 @@ function setFilePickIntent(intent) {
 }
 
 function resolveFilePickIntent(fileName) {
+  const checkPhotoRecent = window.__checkFisicoLastSide && (Date.now() - (window.__checkFisicoPickAt || 0) < 120000);
+  if (window.__checkFisicoPickSide || (currentView === 'stats' && checkPhotoRecent)) {
+    window._activeFileAction = null;
+    try { sessionStorage.removeItem('pendingFileIntent'); } catch (_) {}
+    return 'CHECK_FISICO_PHOTO';
+  }
   if (currentView === 'import') {
     window._activeFileAction = null;
     try { sessionStorage.removeItem('pendingFileIntent'); } catch (_) {}
@@ -3420,7 +3476,8 @@ function resolveFilePickIntent(fileName) {
     try { intent = sessionStorage.getItem('pendingFileIntent'); } catch (_) {}
   }
   if (!intent) {
-    if (currentView === 'db') intent = 'DATABASE_DOC';
+    if (currentView === 'stats' && fileName && /\.(png|jpe?g|webp|heic)$/i.test(fileName)) intent = 'CHECK_FISICO_PHOTO';
+    else if (currentView === 'db') intent = 'DATABASE_DOC';
     else if (currentView === 'ai') intent = 'COACH_AI';
     else intent = 'IMPORT';
   }
@@ -3574,6 +3631,11 @@ async function processUniversalFile(source, actionIntent = 'IMPORT') {
   }, actionIntent === 'IMPORT' ? 'Analisi scheda…' : 'Caricamento…', { immediate: true });
 }
 async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
+  if (actionIntent === 'CHECK_FISICO_PHOTO') {
+    hideImportProgress();
+    await applyCheckFisicoPickedSource(source);
+    return;
+  }
   let name = 'documento.xlsx';
   let bytes = null;
   let text = '';
@@ -5524,7 +5586,8 @@ function completeSetQuick(exIdx, setNum, restText) {
   if (load === undefined || load === '' || load == null) {
     const fromInput = loadEl && loadEl.value !== '' && loadEl.value != null ? loadEl.value : '';
     const fromPh = loadEl && loadEl.placeholder ? loadEl.placeholder : '';
-    load = fromInput || fromPh || prev.load || prevSet.load || '';
+    const coachKg = (typeof getLoadSuggestion === 'function') ? getLoadSuggestion(exIdx, exerciseRowAt(currentWeek, currentDay, exIdx) || {}) : null;
+    load = fromInput || fromPh || (Number(coachKg) > 0 ? coachKg : '') || prev.load || prevSet.load || '';
     store.data[k + '_load'] = load;
     if (loadEl) loadEl.value = load;
   }
@@ -6164,6 +6227,7 @@ function finishInit() {
       try { maybeShowIosInstallHint(); } catch (_) {}
       try { scheduleAllItemAlerts(); } catch (_) {}
       try { registerNurvanServiceWorker(); } catch (_) {}
+      try { if (typeof bootCoachPractice === 'function') bootCoachPractice(); } catch (_) {}
     }, 400);
   }, 280);
 }
@@ -10906,15 +10970,13 @@ function renderTraining(c){
         for(let s = 1; s <= totalSets; s++) {
           const k = `w${currentWeek}_d${currentDay}_e${fIdx}_s${s}`;
           const setObj = Array.isArray(row.sets) ? row.sets[s - 1] : null;
-          const firstKg = (Array.isArray(row.sets) ? row.sets : []).map(function (st) {
-            return Number(st && (st.load != null && st.load !== '' ? st.load : st.target_load));
-          }).find(function (n) { return Number.isFinite(n) && n > 0; });
-          let sugg = (setObj && (setObj.load != null && setObj.load !== '' ? setObj.load : setObj.target_load)) || '';
-          if (s === 1 && !(Number(sugg) > 0) && firstKg) sugg = firstKg;
-          if (!(Number(sugg) > 0)) sugg = row.plannedLoad || '';
-          if (!(Number(sugg) > 0) && s > 1) {
-            const topV = parseFloat(store.data[`w${currentWeek}_d${currentDay}_e${fIdx}_s1_load`]) || firstKg;
-            if (topV) sugg = (Math.round(topV * 0.9 * 2) / 2);
+          let sugg = '';
+          const coachKg = (typeof getLoadSuggestion === 'function') ? getLoadSuggestion(fIdx, row) : null;
+          if (Number(coachKg) > 0) sugg = coachKg;
+          else {
+            const prevSets = (typeof collectPrevWeekSetLogs === 'function') ? collectPrevWeekSetLogs(fIdx, row) : [];
+            const prevSame = prevSets.find(function (ps) { return ps.set === s; }) || prevSets[0];
+            if (prevSame && Number(prevSame.load) > 0) sugg = prevSame.load;
           }
           const isDone = Boolean(store.data[k + '_done']);
           const shownLoad = (store.data[k + '_load'] !== undefined && store.data[k + '_load'] !== '' && store.data[k + '_load'] != null)
@@ -13224,7 +13286,12 @@ function checkFisicoDraft() {
       photosOnly: false,
       ctxTraining: true,
       ctxSupp: false,
-      ctxTherapy: false
+      ctxTherapy: false,
+      pdfTraining: 'summary',
+      pdfNutrition: true,
+      pdfMacros: true,
+      pdfSupp: true,
+      pdfTherapy: true
     };
   }
   return window.__checkFisicoDraft;
@@ -13285,6 +13352,8 @@ function renderCheckFisicoCardHtml() {
     '<input id="check-weight-input" type="number" step="0.1" inputmode="decimal" value="' + esc(String(draft.weight || '')) + '" oninput="onCheckFisicoWeight(this.value)" style="width:100%;padding:10px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:16px;font-weight:800;"></div>' +
     '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">RESOCONTO ALLENAMENTI</div>' +
     '<div class="stats-period">' + periodBtns + '</div></div>' +
+    '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">NOTE PER IL COACH</div>' +
+    '<textarea id="check-notes-input" rows="2" placeholder="Es. ho avuto la febbre 3 giorni…" oninput="onCheckFisicoNotes(this.value)" style="width:100%;padding:10px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:13px;resize:vertical;">' + esc(String(draft.notes || '')) + '</textarea></div>' +
     '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">ANALISI COACH AI</div>' +
     '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#eee;margin-bottom:6px;"><input type="checkbox" ' + (draft.photosOnly ? 'checked' : '') + ' onchange="setCheckFisicoAiOpt(\'photosOnly\', this.checked)"> Analizza solo foto</label>' +
     '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#eee;margin-bottom:6px;"><input type="checkbox" ' + (draft.ctxTraining ? 'checked' : '') + ' ' + (draft.photosOnly ? 'disabled' : '') + ' onchange="setCheckFisicoAiOpt(\'ctxTraining\', this.checked)"> Contestualizza con allenamento</label>' +
@@ -13303,6 +13372,9 @@ function renderCheckFisicoCardHtml() {
 }
 function onCheckFisicoWeight(v) {
   checkFisicoDraft().weight = v;
+}
+function onCheckFisicoNotes(v) {
+  checkFisicoDraft().notes = v;
 }
 function setCheckFisicoPeriod(id) {
   checkFisicoDraft().period = id;
@@ -13338,26 +13410,60 @@ function compressPhotoFile(file, maxW, quality) {
     img.src = url;
   });
 }
+function applyCheckFisicoDataUrl(side, dataUrl) {
+  const draft = checkFisicoDraft();
+  draft[side === 'back' ? 'back' : 'front'] = dataUrl;
+  const key = side === 'back' ? 'back' : 'front';
+  const img = $('check-photo-' + key);
+  const slot = $('check-slot-' + key);
+  if (img) { img.src = dataUrl; img.style.display = 'block'; }
+  if (slot) slot.classList.add('has-pic');
+  if (typeof showToast === 'function') showToast((key === 'front' ? 'Foto fronte' : 'Foto retro') + ' caricata', 'success');
+}
+async function applyCheckFisicoPickedSource(source) {
+  const side = window.__checkFisicoPickSide || window.__checkFisicoLastSide || 'front';
+  window.__checkFisicoPickSide = null;
+  clearFilePickIntent();
+  let file = null;
+  if (source instanceof File || (typeof Blob !== 'undefined' && source instanceof Blob)) {
+    file = source;
+  } else if (source && source.base64) {
+    const raw = atob(source.base64);
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    file = new Blob([bytes], { type: source.mime || 'image/jpeg' });
+  }
+  if (!file) return;
+  const dataUrl = await compressPhotoFile(file, 900, 0.74);
+  applyCheckFisicoDataUrl(side, dataUrl);
+}
+function onCheckPhotoInput(event) {
+  const file = event && event.target && event.target.files && event.target.files[0];
+  const side = window.__checkFisicoPickSide || window.__checkFisicoLastSide || 'front';
+  if (event && event.target) event.target.value = '';
+  if (!file) {
+    window.__checkFisicoPickSide = null;
+    clearFilePickIntent();
+    return;
+  }
+  withBusy(function () {
+    return compressPhotoFile(file, 900, 0.74).then(function (dataUrl) {
+      window.__checkFisicoPickSide = null;
+      clearFilePickIntent();
+      applyCheckFisicoDataUrl(side, dataUrl);
+    });
+  }, 'Ottimizzazione foto…', { immediate: true });
+}
 function pickCheckPhoto(side, camera) {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
+  window.__checkFisicoPickSide = side === 'back' ? 'back' : 'front';
+  window.__checkFisicoLastSide = window.__checkFisicoPickSide;
+  window.__checkFisicoPickAt = Date.now();
+  setFilePickIntent('CHECK_FISICO_PHOTO');
+  const input = $('check-photo-input');
+  if (!input) return;
   if (camera) input.setAttribute('capture', 'environment');
-  input.onchange = function () {
-    const file = input.files && input.files[0];
-    if (!file) return;
-    withBusy(function () {
-      return compressPhotoFile(file, 900, 0.74).then(function (dataUrl) {
-        const draft = checkFisicoDraft();
-        draft[side] = dataUrl;
-        const img = $('check-photo-' + (side === 'front' ? 'front' : 'back'));
-        const slot = $('check-slot-' + (side === 'front' ? 'front' : 'back'));
-        if (img) { img.src = dataUrl; img.style.display = 'block'; }
-        if (slot) slot.classList.add('has-pic');
-        if (typeof showToast === 'function') showToast((side === 'front' ? 'Foto fronte' : 'Foto retro') + ' caricata', 'success');
-      });
-    }, 'Ottimizzazione foto…', { immediate: true });
-  };
+  else input.removeAttribute('capture');
+  input.value = '';
   input.click();
 }
 async function refreshCheckFisicoThumbs() {
@@ -13433,7 +13539,7 @@ function shrinkDataUrlForAi(dataUrl, maxW) {
         c.width = Math.max(1, Math.round(img.width * scale));
         c.height = Math.max(1, Math.round(img.height * scale));
         c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        resolve(c.toDataURL('image/jpeg', 0.62));
+        resolve(c.toDataURL('image/jpeg', 0.5));
       } catch (_) { resolve(dataUrl); }
     };
     img.onerror = function () { resolve(dataUrl); };
@@ -13454,6 +13560,7 @@ function buildCheckFisicoCoachPrompt(entry, report) {
   }
   if (!photosOnly) msg += '\n' + report;
   else msg += '\nAtleta: ' + ((store.profile && store.profile.name) || (store.account && store.account.name) || 'Atleta') + '\nPeso: ' + ((entry && entry.weight) || d.weight || '—') + ' kg';
+  if (d.notes) msg += '\n\nNOTE ATLETA: ' + d.notes;
   return msg;
 }
 async function analyzeCheckFisicoWithCoach() {
@@ -13470,11 +13577,11 @@ async function analyzeCheckFisicoWithCoach() {
   const msg = buildCheckFisicoCoachPrompt(entry, report);
   const images = [];
   if (front) {
-    const f = await shrinkDataUrlForAi(front, 640);
+    const f = await shrinkDataUrlForAi(front, 480);
     if (f) images.push({ mime: 'image/jpeg', dataUrl: f, label: 'fronte' });
   }
   if (back) {
-    const b = await shrinkDataUrlForAi(back, 640);
+    const b = await shrinkDataUrlForAi(back, 480);
     if (b) images.push({ mime: 'image/jpeg', dataUrl: b, label: 'retro' });
   }
   navigate('ai');
@@ -13492,7 +13599,8 @@ async function analyzeCheckFisicoWithCoach() {
           photosOnly: !!d.photosOnly,
           ctxTraining: !d.photosOnly && !!d.ctxTraining,
           ctxSupp: !d.photosOnly && !!d.ctxSupp,
-          ctxTherapy: !d.photosOnly && !!d.ctxTherapy
+          ctxTherapy: !d.photosOnly && !!d.ctxTherapy,
+          timeoutMs: 120000
         });
       }, 'Coach AI sta analizzando il check fisico…', { immediate: true });
       return;
@@ -13501,26 +13609,64 @@ async function analyzeCheckFisicoWithCoach() {
   }
   setTimeout(kick, 80);
 }
-async function exportCheckFisicoPdf() {
+function setCheckFisicoPdfOpt(key, val) {
+  checkFisicoDraft()[key] = val;
+}
+function closeCheckFisicoPdfModal() {
+  const m = $('check-fisico-pdf-modal');
+  if (m) m.style.display = 'none';
+}
+function openCheckFisicoPdfModal(mode) {
+  const d = checkFisicoDraft();
+  window.__checkFisicoPdfMode = mode === 'send' ? 'send' : 'export';
+  const m = $('check-fisico-pdf-modal');
+  if (!m) return;
+  const radios = m.querySelectorAll('input[name="cf-pdf-train"]');
+  radios.forEach(function (r) { r.checked = r.value === (d.pdfTraining || 'summary'); });
+  const nutr = $('cf-pdf-nutr'); if (nutr) nutr.checked = d.pdfNutrition !== false;
+  const macros = $('cf-pdf-macro'); if (macros) macros.checked = d.pdfMacros !== false;
+  const supp = $('cf-pdf-supp'); if (supp) supp.checked = d.pdfSupp !== false;
+  const ther = $('cf-pdf-ther'); if (ther) ther.checked = d.pdfTherapy !== false;
+  const notes = $('cf-pdf-notes'); if (notes) notes.value = d.notes || '';
+  m.style.display = 'flex';
+}
+function exportCheckFisicoPdf() {
+  openCheckFisicoPdfModal('export');
+}
+function sendCheckFisicoToCoach() {
+  openCheckFisicoPdfModal('send');
+}
+async function confirmCheckFisicoPdfExport() {
+  const d = checkFisicoDraft();
+  const notesEl = $('cf-pdf-notes');
+  if (notesEl) d.notes = notesEl.value || '';
+  closeCheckFisicoPdfModal();
   let entry = (store.bodyChecks || [])[store.bodyChecks.length - 1];
-  if (!checkFisicoDraft().weight && !(entry && entry.weight)) {
+  if (!d.weight && !(entry && entry.weight)) {
     if (typeof showToast === 'function') showToast('Inserisci il peso prima di esportare', 'danger');
     return;
   }
-  if (!entry || String(checkFisicoDraft().weight) !== String(entry.weight) || checkFisicoDraft().front || checkFisicoDraft().back) {
+  if (!entry || String(d.weight) !== String(entry.weight) || d.front || d.back || d.notes) {
     entry = await saveCheckFisico();
     if (!entry) return;
   }
-  const front = checkFisicoDraft().front || await getDocumentFile('bodycheck_front_' + entry.id);
-  const back = checkFisicoDraft().back || await getDocumentFile('bodycheck_back_' + entry.id);
-  const bytes = buildCheckFisicoPdfBytes(entry, front, back);
+  const pack = {
+    trainingMode: d.pdfTraining === 'detailed' ? 'detailed' : 'summary',
+    includeNutrition: d.pdfNutrition !== false,
+    includeMacros: d.pdfMacros !== false,
+    includeSupp: d.pdfSupp !== false,
+    includeTherapy: d.pdfTherapy !== false,
+    notes: d.notes || ''
+  };
+  const front = d.front || await getDocumentFile('bodycheck_front_' + entry.id);
+  const back = d.back || await getDocumentFile('bodycheck_back_' + entry.id);
+  const bytes = buildCheckFisicoPdfBytes(entry, front, back, pack);
   const blob = new Blob([bytes], { type: 'application/pdf' });
   const filename = 'nurvan-check-fisico-' + String(entry.at || '').slice(0, 10) + '.pdf';
-  shareOrSavePdfBlob(blob, filename, 'Check fisico NURVAN — peso, foto e resoconto allenamenti');
-}
-async function sendCheckFisicoToCoach() {
-  await exportCheckFisicoPdf();
-  if (typeof showToast === 'function') showToast('PDF pronto: invialo al coach da WhatsApp, mail o Drive', 'success');
+  shareOrSavePdfBlob(blob, filename, 'Check fisico NURVAN — quadro per il coach');
+  if (window.__checkFisicoPdfMode === 'send' && typeof showToast === 'function') {
+    showToast('PDF pronto: invialo al coach da WhatsApp, mail o Drive', 'success');
+  }
 }
 function dataUrlToJpegBytes(dataUrl) {
   if (!dataUrl || dataUrl.indexOf('base64,') < 0) return null;
@@ -13558,7 +13704,139 @@ function pdfConcat(parts) {
   parts.forEach(function (p) { out.set(p, o); o += p.length; });
   return out;
 }
-function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl) {
+function wrapCoachPdfLines(text, max) {
+  max = max || 90;
+  const out = [];
+  String(text || '').replace(/\r/g, '').split('\n').forEach(function (line) {
+    let s = line;
+    if (!s) { out.push(''); return; }
+    while (s.length > max) {
+      let cut = s.lastIndexOf(' ', max);
+      if (cut < 32) cut = max;
+      out.push(s.slice(0, cut));
+      s = s.slice(cut).replace(/^\s+/, '');
+    }
+    if (s) out.push(s);
+  });
+  return out;
+}
+function collectLoggedSessionDetailLines(week, day) {
+  const w = DATA && DATA.weeks && DATA.weeks[week - 1];
+  const sess = w && (w.sessions || w.days) && (w.sessions || w.days)[day];
+  const list = (sess && (sess.exercises || sess.rows)) || [];
+  const lines = [];
+  list.forEach(function (ex, ei) {
+    const name = (ex && (ex.name || ex.exercise)) || ('Esercizio ' + (ei + 1));
+    const sets = [];
+    for (let s = 1; s <= 12; s++) {
+      const load = store.data['w' + week + '_d' + day + '_e' + ei + '_s' + s + '_load'];
+      const reps = store.data['w' + week + '_d' + day + '_e' + ei + '_s' + s + '_reps'];
+      const rir = store.data['w' + week + '_d' + day + '_e' + ei + '_s' + s + '_rir'];
+      const hasLoad = load !== undefined && load !== '' && load != null;
+      const hasReps = reps !== undefined && reps !== '' && reps != null;
+      if (!hasLoad && !hasReps) continue;
+      sets.push('s' + s + ' ' + (hasLoad ? (load + 'kg') : '') + (hasReps ? (' x' + reps) : '') + (rir !== undefined && rir !== '' && rir != null ? (' @' + rir) : ''));
+    }
+    if (sets.length) lines.push(name + ': ' + sets.join(' · '));
+  });
+  return lines;
+}
+function collectCheckFisicoPdfExtraLines(entry, pack) {
+  pack = pack || {};
+  const period = (entry && entry.period) || checkFisicoDraft().period;
+  const days = checkFisicoPeriodMeta(period).days;
+  const since = Date.now() - days * 86400000;
+  const lines = [];
+  function addBlock(title, bodyLines) {
+    lines.push(title);
+    (bodyLines || []).forEach(function (l) { wrapCoachPdfLines(l, 90).forEach(function (x) { lines.push(x); }); });
+    lines.push('');
+  }
+  if (pack.notes) addBlock('NOTE ATLETA', [pack.notes]);
+  if (pack.trainingMode === 'detailed') {
+    const body = [];
+    const logs = logsInCheckPeriod(period);
+    if (!logs.length) body.push('Nessuna sessione finalizzata nel periodo.');
+    logs.slice().reverse().forEach(function (row) {
+      body.push(String(row.at || '').replace('T', ' ').slice(0, 16) + '  W' + (row.week || '?') + ' S' + ((row.day || 0) + 1) + '  ' + (row.tonnage || 0) + ' kg  int ' + (row.intensity || 0));
+      collectLoggedSessionDetailLines(Number(row.week) || 1, Number(row.day) || 0).forEach(function (l) { body.push('  ' + l); });
+    });
+    addBlock('ALLENAMENTO DETTAGLIATO (serie / reps / RIR-RPE)', body);
+  }
+  if (pack.includeNutrition) {
+    const daily = store.nutritionDaily || {};
+    const keys = Object.keys(daily).filter(function (k) {
+      const t = Date.parse(k);
+      return t && t >= since - 86400000;
+    }).sort();
+    const body = [];
+    if (!keys.length) body.push('Nessuna conferma pasti nel periodo.');
+    keys.forEach(function (k) {
+      const st = daily[k] || {};
+      body.push(k + '  ' + (st.confirmed ? 'confermato piano' : 'inseriti alimenti reali'));
+      (st.foods || []).slice(0, 18).forEach(function (f) {
+        body.push('  - ' + (f.meal ? (f.meal + ': ') : '') + (f.name || '') + (f.qty ? (' ' + f.qty + (f.unit || '')) : ''));
+      });
+    });
+    addBlock('ADERENZA ALIMENTAZIONE', body);
+  }
+  if (pack.includeMacros) {
+    const body = [];
+    const hist = (store.actionHistory || []).filter(function (h) {
+      const t = Date.parse(h.timestamp || '');
+      return t && t >= since;
+    });
+    if (!hist.length) body.push('Nessuna modifica registrata nel periodo.');
+    hist.slice(-24).forEach(function (h) {
+      const a = (h.actions && h.actions[0]) || {};
+      body.push(String(h.timestamp || '').replace('T', ' ').slice(0, 16) + '  ' + (a.action_type || a.type || 'azione') + '  ' + (a.exercise || '') + (h.reason ? ('  (' + h.reason + ')') : ''));
+    });
+    const nutr = DATA && DATA.nutrition;
+    if (nutr) {
+      const kcal = nutr.daily_calories_target || (nutr.targets && nutr.targets.kcal);
+      const p = nutr.daily_protein_target || (nutr.targets && nutr.targets.protein);
+      const c = nutr.daily_carbs_target || (nutr.targets && nutr.targets.carbs);
+      const f = nutr.daily_fats_target || (nutr.targets && nutr.targets.fat);
+      if (kcal || p || c || f) body.push('Target macros: ' + (kcal || '—') + ' kcal  P ' + (p || '—') + '  C ' + (c || '—') + '  F ' + (f || '—'));
+    }
+    const day = (typeof nutritionPlanForToday === 'function') ? nutritionPlanForToday() : null;
+    if (day) {
+      let kcal = 0, p = 0, c = 0, fat = 0;
+      (day.meals || []).forEach(function (m) {
+        (m.foods || []).forEach(function (food) {
+          kcal += Number(foodMacroVal(food, 'kcal')) || 0;
+          p += Number(foodMacroVal(food, 'pro')) || 0;
+          c += Number(foodMacroVal(food, 'carb')) || 0;
+          fat += Number(foodMacroVal(food, 'fat')) || 0;
+        });
+      });
+      if (kcal || p) body.push('Piano odierno macros: ' + Math.round(kcal) + ' kcal  P ' + Math.round(p) + '  C ' + Math.round(c) + '  F ' + Math.round(fat));
+    }
+    addBlock('MODIFICHE REGISTRATE E MACROS', body);
+  }
+  if (pack.includeSupp) {
+    const items = (DATA && DATA.supplementation && DATA.supplementation.items) || [];
+    const body = items.length
+      ? items.map(function (it) {
+        return '- ' + (it.name || '') + (it.dose ? ('  ' + it.dose + (it.unit || '')) : '') + (it.timing ? ('  ' + it.timing) : '') + (it.frequency ? ('  ' + it.frequency) : '');
+      })
+      : ['Nessun integratore in piano.'];
+    addBlock('ADERENZA INTEGRAZIONE', body);
+  }
+  if (pack.includeTherapy) {
+    const meds = (DATA && DATA.therapy && DATA.therapy.medications) || [];
+    const body = meds.length
+      ? meds.map(function (m) {
+        const wk = m.start_week || m.weekStart || m.week_start || '';
+        return '- ' + (m.name || m.drug || '') + (m.dose ? ('  ' + m.dose) : '') + (wk ? ('  sett. ' + wk) : '') + (m.timing ? ('  ' + m.timing) : '');
+      })
+      : ['Nessuna terapia in piano.'];
+    addBlock('ADERENZA TERAPIA', body);
+  }
+  while (lines.length && lines[lines.length - 1] === '') lines.pop();
+  return lines;
+}
+function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl, pack) {
   const W = 595, H = 842, ML = 40, MR = 40;
   const GOLD = '0.78 0.63 0.14';
   const DARK = '0.12 0.12 0.12';
@@ -13628,6 +13906,12 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl) {
   }
   y -= 10;
   txt('F2', 6, GRAY, ML, 40, 'Documento generato da NURVAN. Non sostituisce il parere medico o del coach.');
+  const extraLines = collectCheckFisicoPdfExtraLines(entry, pack || {});
+  const extraPages = [];
+  const perPage = 42;
+  for (let i = 0; i < extraLines.length; i += perPage) {
+    extraPages.push(extraLines.slice(i, i + perPage));
+  }
   const stream = cmds.join('\n');
   const objs = [];
   function addObj(body) { objs.push(typeof body === 'string' ? pdfLatin1(body) : body); return objs.length; }
@@ -13648,13 +13932,25 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl) {
     const sz = jpegSizeFromBytes(backBytes);
     imB = addStreamObj('<< /Type /XObject /Subtype /Image /Width ' + sz.w + ' /Height ' + sz.h + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + backBytes.length + ' >>', backBytes);
   }
-  const contentId = addStreamObj('<< /Length ' + stream.length + ' >>', pdfLatin1(stream));
+  const contentIds = [addStreamObj('<< /Length ' + stream.length + ' >>', pdfLatin1(stream))];
+  extraPages.forEach(function (pageLines, pi) {
+    const extraCmds = [];
+    extraCmds.push('BT /F1 12 Tf ' + GOLD + ' rg 1 0 0 1 ' + ML + ' ' + (H - 50) + ' Tm (' + pdfEsc('QUADRO PER IL COACH  ·  p. ' + (pi + 2)) + ') Tj ET');
+    pageLines.forEach(function (line, li) {
+      extraCmds.push('BT /F2 8 Tf ' + DARK + ' rg 1 0 0 1 ' + ML + ' ' + (H - 74 - li * 16) + ' Tm (' + pdfEsc(line) + ') Tj ET');
+    });
+    const extraStream = extraCmds.join('\n');
+    contentIds.push(addStreamObj('<< /Length ' + extraStream.length + ' >>', pdfLatin1(extraStream)));
+  });
   const xos = [];
   if (imF) xos.push('/ImF ' + imF + ' 0 R');
   if (imB) xos.push('/ImB ' + imB + ' 0 R');
   const pagesId = addObj('placeholder');
-  const pageId = addObj('<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Contents ' + contentId + ' 0 R /Resources << /Font << /F1 ' + f1 + ' 0 R /F2 ' + f2 + ' 0 R >> /XObject << ' + xos.join(' ') + ' >> >> >>');
-  objs[pagesId - 1] = pdfLatin1('<< /Type /Pages /Kids [' + pageId + ' 0 R] /Count 1 >>');
+  const pageIds = contentIds.map(function (cid, idx) {
+    const xo = idx === 0 ? (' /XObject << ' + xos.join(' ') + ' >>') : '';
+    return addObj('<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Contents ' + cid + ' 0 R /Resources << /Font << /F1 ' + f1 + ' 0 R /F2 ' + f2 + ' 0 R >>' + xo + ' >> >>');
+  });
+  objs[pagesId - 1] = pdfLatin1('<< /Type /Pages /Kids [' + pageIds.map(function (id) { return id + ' 0 R'; }).join(' ') + '] /Count ' + pageIds.length + ' >>');
   const catalogId = addObj('<< /Type /Catalog /Pages ' + pagesId + ' 0 R >>');
   const parts = [pdfLatin1('%PDF-1.4\n')];
   const offsets = [0];
@@ -13677,8 +13973,13 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl) {
 }
 window.renderCheckFisicoCardHtml = renderCheckFisicoCardHtml;
 window.pickCheckPhoto = pickCheckPhoto;
+window.onCheckPhotoInput = onCheckPhotoInput;
 window.setCheckFisicoPeriod = setCheckFisicoPeriod;
 window.onCheckFisicoWeight = onCheckFisicoWeight;
+window.onCheckFisicoNotes = onCheckFisicoNotes;
+window.setCheckFisicoPdfOpt = setCheckFisicoPdfOpt;
+window.closeCheckFisicoPdfModal = closeCheckFisicoPdfModal;
+window.confirmCheckFisicoPdfExport = confirmCheckFisicoPdfExport;
 window.saveCheckFisico = saveCheckFisico;
 window.analyzeCheckFisicoWithCoach = analyzeCheckFisicoWithCoach;
 window.sendCheckFisicoToCoach = sendCheckFisicoToCoach;
@@ -14093,6 +14394,10 @@ function formatOperationDescription(op) {
 }
 
 async function applyCoachProposal(proposalId) {
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+    if (typeof showToast === 'function') showToast('Solo il tuo coach può modificare la scheda.', 'warning');
+    return;
+  }
   let proposal = window.activeCoachProposals[proposalId];
   proposal = normalizeCoachProposedAction(proposal, null) || proposal;
   if(!proposal || !Array.isArray(proposal.operations)) {
@@ -14705,7 +15010,9 @@ async function askAIInner(q0, opts){
 
   const pending = document.createElement('div');
   pending.className = 'msg ai markdown';
-  pending.innerHTML = '<p>Nurvan AI sta analizzando la programmazione attiva…</p>';
+  pending.innerHTML = opts.checkFisico
+    ? '<p>Nurvan AI sta analizzando il check fisico…</p>'
+    : '<p>Nurvan AI sta analizzando la programmazione attiva…</p>';
   h.appendChild(pending);
 
   try {
@@ -14912,6 +15219,7 @@ async function askAIInner(q0, opts){
         return { mime: img.mime || 'image/jpeg', dataUrl: img.dataUrl, label: img.label || '' };
       })
     };
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) chatBody.context.athleteInfoOnly = true;
     if (!isSessionReview) {
       chatBody.context.nutrition = DATA && DATA.nutrition && DATA.nutrition.days ? { days: DATA.nutrition.days.length } : null;
       chatBody.context.supplementation = DATA && DATA.supplementation && DATA.supplementation.items ? { items: DATA.supplementation.items.length } : null;
@@ -14937,7 +15245,7 @@ async function askAIInner(q0, opts){
         method: 'POST',
         headers: headers,
         body: JSON.stringify(chatBody)
-      }, isSessionReview ? 25000 : 45000);
+      }, opts.timeoutMs || (opts.checkFisico ? 120000 : (isSessionReview ? 25000 : 90000)));
     } catch (netErr) {
       if (isSessionReview) {
         const fb = window.__sessionCoachFallback || {};
@@ -14965,6 +15273,7 @@ async function askAIInner(q0, opts){
     if (!proposedAction) {
       proposedAction = normalizeCoachProposedAction(null, reply);
     }
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) proposedAction = null;
     const cleanReply = sanitizeCoachDisplayText(reply);
     const displayReply = cleanReply || (proposedAction && (proposedAction.summary || 'Ho preparato una proposta da applicare.')) || '';
     if (!displayReply) throw new Error('Risposta Coach non leggibile. Riprova con una domanda più semplice.');
@@ -15713,6 +16022,8 @@ if (typeof window !== 'undefined') {
   window.generateAndActivateProgram = generateAndActivateProgram;
   window.syncHealthSamplesAndRefresh = syncHealthSamplesAndRefresh;
   window.confirmExerciseMapping = confirmExerciseMapping;
+  window.isAthleteRole = isAthleteRole;
+  window.isCoachUnlocked = isCoachUnlocked;
 }
 
 init();

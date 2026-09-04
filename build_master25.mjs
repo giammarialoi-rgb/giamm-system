@@ -1031,7 +1031,16 @@ window.exportImportProvenance = typeof exportImportProvenance !== 'undefined' ? 
 `;
 
 // Assemble the final file
-const fullHtml = `${headerHtml}${CONFIG_HEADER}\n${middleCore}\n${exportCode}`;
+let coachPracticeUi = '';
+try {
+  if (fs.existsSync('web/coach-practice-ui.js')) {
+    coachPracticeUi = fs.readFileSync('web/coach-practice-ui.js', 'utf8');
+  }
+} catch (err) {
+  console.warn('coach-practice-ui.js not injected', err && err.message);
+}
+
+const fullHtml = `${headerHtml}${CONFIG_HEADER}\n${middleCore}\n${coachPracticeUi}\n${exportCode}`;
 
 fs.writeFileSync('web/index.html', fullHtml, 'utf8');
 syncWebAssetsToAndroid();

@@ -1121,7 +1121,7 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">🏋️</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="training">Allenamento</span>
       </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('programs')">
+      <button class="btn btn-outline" data-hub="programs" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('programs')">
         <span style="font-size:20px;">📚</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="programsLibrary">Programmi</span>
       </button>
@@ -1149,7 +1149,7 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">🤖</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="coachAI">Coach AI</span>
       </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('import')">
+      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('import')">
         <span style="font-size:20px;">📥</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="importProgram">Importa Scheda</span>
       </button>
@@ -1157,11 +1157,11 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">📊</span>
         <span style="font-size:11px;font-weight:800;">Statistiche</span>
       </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openHealthConnect()">
+      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openHealthConnect()">
         <span style="font-size:20px;">❤️</span>
         <span style="font-size:11px;font-weight:800;">Salute</span>
       </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('community')">
+      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('community')">
         <span style="font-size:20px;">👥</span>
         <span style="font-size:11px;font-weight:800;">Community</span>
       </button>
@@ -1169,9 +1169,17 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">🏅</span>
         <span style="font-size:11px;font-weight:800;">Profilo Atleta</span>
       </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('pricing')">
+      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('pricing')">
         <span style="font-size:20px;">💎</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="pricing">Piani & Pro</span>
+      </button>
+      <button class="btn btn-outline" id="hub-tile-coach" data-hub="coach" style="display:none;height:70px;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('coachHub')">
+        <span style="font-size:20px;">👔</span>
+        <span style="font-size:11px;font-weight:800;">Coach</span>
+      </button>
+      <button class="btn btn-outline" id="hub-tile-guide" data-hub="athlete" style="display:none;height:70px;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();showClientTutorial(true)">
+        <span style="font-size:20px;">🧭</span>
+        <span style="font-size:11px;font-weight:800;">Guida</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('settings')">
         <span style="font-size:20px;">⚙️</span>
@@ -1684,6 +1692,30 @@ body.focus-mode [data-rewards-only] {
   </a>
 </nav>
 
+<input type="file" id="check-photo-input" style="display:none;" accept="image/*" onchange="onCheckPhotoInput(event)">
+<div id="check-fisico-pdf-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:10050;align-items:center;justify-content:center;padding:16px;">
+  <div class="card" style="max-width:460px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--gold);background:#111;">
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="font-size:14px;color:var(--gold);font-weight:800;">PDF PER IL COACH</h3>
+      <button class="btn btn-outline" style="font-size:10px;padding:2px 6px;" onclick="closeCheckFisicoPdfModal()">✕</button>
+    </div>
+    <div style="padding:12px 4px 4px;font-size:12px;color:#eee;">
+      <div style="font-size:10px;color:#888;font-weight:800;margin-bottom:8px;">OLTRE A FOTO E PESO, COSA INSERIRE</div>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;"><input type="radio" name="cf-pdf-train" value="detailed" onchange="setCheckFisicoPdfOpt('pdfTraining','detailed')"><span>Allenamento dettagliato (serie, ripetizioni, RIR/RPE)</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px;"><input type="radio" name="cf-pdf-train" value="summary" onchange="setCheckFisicoPdfOpt('pdfTraining','summary')"><span>Solo foto + tonnellaggio e intensità settimanale</span></label>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input type="checkbox" id="cf-pdf-nutr" onchange="setCheckFisicoPdfOpt('pdfNutrition', this.checked)"> Aderenza alimentazione</label>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;"><input type="checkbox" id="cf-pdf-macro" onchange="setCheckFisicoPdfOpt('pdfMacros', this.checked)"><span>Modifiche registrate con macros allegati</span></label>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input type="checkbox" id="cf-pdf-supp" onchange="setCheckFisicoPdfOpt('pdfSupp', this.checked)"> Aderenza integrazione</label>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:12px;"><input type="checkbox" id="cf-pdf-ther" onchange="setCheckFisicoPdfOpt('pdfTherapy', this.checked)"> Aderenza terapia</label>
+      <div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">NOTE PER IL COACH</div>
+      <textarea id="cf-pdf-notes" rows="3" placeholder="Es. ho avuto la febbre 3 giorni, ho dormito poco…" oninput="onCheckFisicoNotes(this.value)" style="width:100%;padding:10px;background:#0a0a0a;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+    </div>
+    <div class="modal-sticky-footer" style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeCheckFisicoPdfModal()">ANNULLA</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="confirmCheckFisicoPdfExport()">GENERA PDF</button>
+    </div>
+  </div>
+</div>
 <!-- Static System File Inputs (Reliable cross-platform file picking for Browser & WebView) -->
 <input type="file" id="universal-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleImportFileSelected(event)">
 <input type="file" id="camera-import-input" style="display:none;" accept="image/*" capture="environment" onchange="handleImportFileSelected(event)">
@@ -33813,7 +33845,14 @@ const DEFAULT_STORE = {
   rewards: null,
   bodyComposition: null,
   nutritionLoop: null,
-  seasonBoard: null
+  seasonBoard: null,
+  role: null,
+  coachUnlocked: false,
+  clientTutorialDone: false,
+  coachWorkspace: null,
+  clientOutbox: [],
+  inviteToken: '',
+  clientProfile: null
 };
 
 function loadStore(){
@@ -33858,6 +33897,20 @@ function ensureStoreIntegrity() {
   if (store.bodyComposition === undefined) store.bodyComposition = null;
   if (store.nutritionLoop === undefined) store.nutritionLoop = null;
   if (store.seasonBoard === undefined) store.seasonBoard = null;
+  if (store.role === undefined) store.role = null;
+  if (typeof store.coachUnlocked !== 'boolean') store.coachUnlocked = false;
+  if (typeof store.clientTutorialDone !== 'boolean') store.clientTutorialDone = false;
+  if (store.coachWorkspace === undefined) store.coachWorkspace = null;
+  if (!Array.isArray(store.clientOutbox)) store.clientOutbox = [];
+  if (typeof store.inviteToken !== 'string') store.inviteToken = store.inviteToken || '';
+  if (store.clientProfile === undefined) store.clientProfile = null;
+}
+function isAthleteRole() {
+  const u = store && store.accountUser;
+  return !!(store && (store.role === 'athlete' || (u && (u.role === 'athlete' || u.provider === 'coach_client'))));
+}
+function isCoachUnlocked() {
+  return !!(store && store.coachUnlocked && !isAthleteRole());
 }
 var store = loadStore();
 ensureStoreIntegrity();
@@ -34049,23 +34102,20 @@ function collectPrevWeekSetLogs(exIdx, row) {
   const prevName = normalizeExerciseKey(exerciseNameAt(currentWeek - 1, currentDay, prevIdx));
   const thisName = normalizeExerciseKey(name);
   if (thisName && prevName && thisName !== prevName) return [];
-  const prevRow = exerciseRowAt(currentWeek - 1, currentDay, prevIdx) || row || {};
   const out = [];
   for (let s = 1; s <= 10; s++) {
     const load = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_load'];
-    let reps = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_reps'];
-    let rir = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_rir'];
-    const planned = plannedRepsRirFromRow(prevRow, s);
-    if (reps === undefined || reps === '' || reps == null) reps = planned.reps;
-    if (rir === undefined || rir === '' || rir == null) rir = planned.rir;
+    const reps = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_reps'];
+    const rir = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_rir'];
     const hasLoad = load !== undefined && load !== '' && load != null;
     const hasReps = reps !== undefined && reps !== '' && reps != null;
+    const hasRir = rir !== undefined && rir !== '' && rir != null;
     if (!hasLoad && !hasReps) continue;
     out.push({
       set: s,
       load: hasLoad ? load : '',
       reps: hasReps ? reps : '',
-      rir: (rir !== undefined && rir !== '' && rir != null) ? rir : '',
+      rir: hasRir ? rir : '',
       prevIdx: prevIdx
     });
   }
@@ -35391,6 +35441,12 @@ function setFilePickIntent(intent) {
 }
 
 function resolveFilePickIntent(fileName) {
+  const checkPhotoRecent = window.__checkFisicoLastSide && (Date.now() - (window.__checkFisicoPickAt || 0) < 120000);
+  if (window.__checkFisicoPickSide || (currentView === 'stats' && checkPhotoRecent)) {
+    window._activeFileAction = null;
+    try { sessionStorage.removeItem('pendingFileIntent'); } catch (_) {}
+    return 'CHECK_FISICO_PHOTO';
+  }
   if (currentView === 'import') {
     window._activeFileAction = null;
     try { sessionStorage.removeItem('pendingFileIntent'); } catch (_) {}
@@ -35401,7 +35457,8 @@ function resolveFilePickIntent(fileName) {
     try { intent = sessionStorage.getItem('pendingFileIntent'); } catch (_) {}
   }
   if (!intent) {
-    if (currentView === 'db') intent = 'DATABASE_DOC';
+    if (currentView === 'stats' && fileName && /\.(png|jpe?g|webp|heic)$/i.test(fileName)) intent = 'CHECK_FISICO_PHOTO';
+    else if (currentView === 'db') intent = 'DATABASE_DOC';
     else if (currentView === 'ai') intent = 'COACH_AI';
     else intent = 'IMPORT';
   }
@@ -35555,6 +35612,11 @@ async function processUniversalFile(source, actionIntent = 'IMPORT') {
   }, actionIntent === 'IMPORT' ? 'Analisi scheda…' : 'Caricamento…', { immediate: true });
 }
 async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
+  if (actionIntent === 'CHECK_FISICO_PHOTO') {
+    hideImportProgress();
+    await applyCheckFisicoPickedSource(source);
+    return;
+  }
   let name = 'documento.xlsx';
   let bytes = null;
   let text = '';
@@ -37505,7 +37567,8 @@ function completeSetQuick(exIdx, setNum, restText) {
   if (load === undefined || load === '' || load == null) {
     const fromInput = loadEl && loadEl.value !== '' && loadEl.value != null ? loadEl.value : '';
     const fromPh = loadEl && loadEl.placeholder ? loadEl.placeholder : '';
-    load = fromInput || fromPh || prev.load || prevSet.load || '';
+    const coachKg = (typeof getLoadSuggestion === 'function') ? getLoadSuggestion(exIdx, exerciseRowAt(currentWeek, currentDay, exIdx) || {}) : null;
+    load = fromInput || fromPh || (Number(coachKg) > 0 ? coachKg : '') || prev.load || prevSet.load || '';
     store.data[k + '_load'] = load;
     if (loadEl) loadEl.value = load;
   }
@@ -38145,6 +38208,7 @@ function finishInit() {
       try { maybeShowIosInstallHint(); } catch (_) {}
       try { scheduleAllItemAlerts(); } catch (_) {}
       try { registerNurvanServiceWorker(); } catch (_) {}
+      try { if (typeof bootCoachPractice === 'function') bootCoachPractice(); } catch (_) {}
     }, 400);
   }, 280);
 }
@@ -42887,15 +42951,13 @@ function renderTraining(c){
         for(let s = 1; s <= totalSets; s++) {
           const k = `w${currentWeek}_d${currentDay}_e${fIdx}_s${s}`;
           const setObj = Array.isArray(row.sets) ? row.sets[s - 1] : null;
-          const firstKg = (Array.isArray(row.sets) ? row.sets : []).map(function (st) {
-            return Number(st && (st.load != null && st.load !== '' ? st.load : st.target_load));
-          }).find(function (n) { return Number.isFinite(n) && n > 0; });
-          let sugg = (setObj && (setObj.load != null && setObj.load !== '' ? setObj.load : setObj.target_load)) || '';
-          if (s === 1 && !(Number(sugg) > 0) && firstKg) sugg = firstKg;
-          if (!(Number(sugg) > 0)) sugg = row.plannedLoad || '';
-          if (!(Number(sugg) > 0) && s > 1) {
-            const topV = parseFloat(store.data[`w${currentWeek}_d${currentDay}_e${fIdx}_s1_load`]) || firstKg;
-            if (topV) sugg = (Math.round(topV * 0.9 * 2) / 2);
+          let sugg = '';
+          const coachKg = (typeof getLoadSuggestion === 'function') ? getLoadSuggestion(fIdx, row) : null;
+          if (Number(coachKg) > 0) sugg = coachKg;
+          else {
+            const prevSets = (typeof collectPrevWeekSetLogs === 'function') ? collectPrevWeekSetLogs(fIdx, row) : [];
+            const prevSame = prevSets.find(function (ps) { return ps.set === s; }) || prevSets[0];
+            if (prevSame && Number(prevSame.load) > 0) sugg = prevSame.load;
           }
           const isDone = Boolean(store.data[k + '_done']);
           const shownLoad = (store.data[k + '_load'] !== undefined && store.data[k + '_load'] !== '' && store.data[k + '_load'] != null)
@@ -45205,7 +45267,12 @@ function checkFisicoDraft() {
       photosOnly: false,
       ctxTraining: true,
       ctxSupp: false,
-      ctxTherapy: false
+      ctxTherapy: false,
+      pdfTraining: 'summary',
+      pdfNutrition: true,
+      pdfMacros: true,
+      pdfSupp: true,
+      pdfTherapy: true
     };
   }
   return window.__checkFisicoDraft;
@@ -45266,6 +45333,8 @@ function renderCheckFisicoCardHtml() {
     '<input id="check-weight-input" type="number" step="0.1" inputmode="decimal" value="' + esc(String(draft.weight || '')) + '" oninput="onCheckFisicoWeight(this.value)" style="width:100%;padding:10px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:16px;font-weight:800;"></div>' +
     '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">RESOCONTO ALLENAMENTI</div>' +
     '<div class="stats-period">' + periodBtns + '</div></div>' +
+    '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">NOTE PER IL COACH</div>' +
+    '<textarea id="check-notes-input" rows="2" placeholder="Es. ho avuto la febbre 3 giorni…" oninput="onCheckFisicoNotes(this.value)" style="width:100%;padding:10px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:13px;resize:vertical;">' + esc(String(draft.notes || '')) + '</textarea></div>' +
     '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">ANALISI COACH AI</div>' +
     '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#eee;margin-bottom:6px;"><input type="checkbox" ' + (draft.photosOnly ? 'checked' : '') + ' onchange="setCheckFisicoAiOpt(\'photosOnly\', this.checked)"> Analizza solo foto</label>' +
     '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#eee;margin-bottom:6px;"><input type="checkbox" ' + (draft.ctxTraining ? 'checked' : '') + ' ' + (draft.photosOnly ? 'disabled' : '') + ' onchange="setCheckFisicoAiOpt(\'ctxTraining\', this.checked)"> Contestualizza con allenamento</label>' +
@@ -45284,6 +45353,9 @@ function renderCheckFisicoCardHtml() {
 }
 function onCheckFisicoWeight(v) {
   checkFisicoDraft().weight = v;
+}
+function onCheckFisicoNotes(v) {
+  checkFisicoDraft().notes = v;
 }
 function setCheckFisicoPeriod(id) {
   checkFisicoDraft().period = id;
@@ -45319,26 +45391,60 @@ function compressPhotoFile(file, maxW, quality) {
     img.src = url;
   });
 }
+function applyCheckFisicoDataUrl(side, dataUrl) {
+  const draft = checkFisicoDraft();
+  draft[side === 'back' ? 'back' : 'front'] = dataUrl;
+  const key = side === 'back' ? 'back' : 'front';
+  const img = $('check-photo-' + key);
+  const slot = $('check-slot-' + key);
+  if (img) { img.src = dataUrl; img.style.display = 'block'; }
+  if (slot) slot.classList.add('has-pic');
+  if (typeof showToast === 'function') showToast((key === 'front' ? 'Foto fronte' : 'Foto retro') + ' caricata', 'success');
+}
+async function applyCheckFisicoPickedSource(source) {
+  const side = window.__checkFisicoPickSide || window.__checkFisicoLastSide || 'front';
+  window.__checkFisicoPickSide = null;
+  clearFilePickIntent();
+  let file = null;
+  if (source instanceof File || (typeof Blob !== 'undefined' && source instanceof Blob)) {
+    file = source;
+  } else if (source && source.base64) {
+    const raw = atob(source.base64);
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    file = new Blob([bytes], { type: source.mime || 'image/jpeg' });
+  }
+  if (!file) return;
+  const dataUrl = await compressPhotoFile(file, 900, 0.74);
+  applyCheckFisicoDataUrl(side, dataUrl);
+}
+function onCheckPhotoInput(event) {
+  const file = event && event.target && event.target.files && event.target.files[0];
+  const side = window.__checkFisicoPickSide || window.__checkFisicoLastSide || 'front';
+  if (event && event.target) event.target.value = '';
+  if (!file) {
+    window.__checkFisicoPickSide = null;
+    clearFilePickIntent();
+    return;
+  }
+  withBusy(function () {
+    return compressPhotoFile(file, 900, 0.74).then(function (dataUrl) {
+      window.__checkFisicoPickSide = null;
+      clearFilePickIntent();
+      applyCheckFisicoDataUrl(side, dataUrl);
+    });
+  }, 'Ottimizzazione foto…', { immediate: true });
+}
 function pickCheckPhoto(side, camera) {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
+  window.__checkFisicoPickSide = side === 'back' ? 'back' : 'front';
+  window.__checkFisicoLastSide = window.__checkFisicoPickSide;
+  window.__checkFisicoPickAt = Date.now();
+  setFilePickIntent('CHECK_FISICO_PHOTO');
+  const input = $('check-photo-input');
+  if (!input) return;
   if (camera) input.setAttribute('capture', 'environment');
-  input.onchange = function () {
-    const file = input.files && input.files[0];
-    if (!file) return;
-    withBusy(function () {
-      return compressPhotoFile(file, 900, 0.74).then(function (dataUrl) {
-        const draft = checkFisicoDraft();
-        draft[side] = dataUrl;
-        const img = $('check-photo-' + (side === 'front' ? 'front' : 'back'));
-        const slot = $('check-slot-' + (side === 'front' ? 'front' : 'back'));
-        if (img) { img.src = dataUrl; img.style.display = 'block'; }
-        if (slot) slot.classList.add('has-pic');
-        if (typeof showToast === 'function') showToast((side === 'front' ? 'Foto fronte' : 'Foto retro') + ' caricata', 'success');
-      });
-    }, 'Ottimizzazione foto…', { immediate: true });
-  };
+  else input.removeAttribute('capture');
+  input.value = '';
   input.click();
 }
 async function refreshCheckFisicoThumbs() {
@@ -45414,7 +45520,7 @@ function shrinkDataUrlForAi(dataUrl, maxW) {
         c.width = Math.max(1, Math.round(img.width * scale));
         c.height = Math.max(1, Math.round(img.height * scale));
         c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        resolve(c.toDataURL('image/jpeg', 0.62));
+        resolve(c.toDataURL('image/jpeg', 0.5));
       } catch (_) { resolve(dataUrl); }
     };
     img.onerror = function () { resolve(dataUrl); };
@@ -45435,6 +45541,7 @@ function buildCheckFisicoCoachPrompt(entry, report) {
   }
   if (!photosOnly) msg += '\n' + report;
   else msg += '\nAtleta: ' + ((store.profile && store.profile.name) || (store.account && store.account.name) || 'Atleta') + '\nPeso: ' + ((entry && entry.weight) || d.weight || '—') + ' kg';
+  if (d.notes) msg += '\n\nNOTE ATLETA: ' + d.notes;
   return msg;
 }
 async function analyzeCheckFisicoWithCoach() {
@@ -45451,11 +45558,11 @@ async function analyzeCheckFisicoWithCoach() {
   const msg = buildCheckFisicoCoachPrompt(entry, report);
   const images = [];
   if (front) {
-    const f = await shrinkDataUrlForAi(front, 640);
+    const f = await shrinkDataUrlForAi(front, 480);
     if (f) images.push({ mime: 'image/jpeg', dataUrl: f, label: 'fronte' });
   }
   if (back) {
-    const b = await shrinkDataUrlForAi(back, 640);
+    const b = await shrinkDataUrlForAi(back, 480);
     if (b) images.push({ mime: 'image/jpeg', dataUrl: b, label: 'retro' });
   }
   navigate('ai');
@@ -45473,7 +45580,8 @@ async function analyzeCheckFisicoWithCoach() {
           photosOnly: !!d.photosOnly,
           ctxTraining: !d.photosOnly && !!d.ctxTraining,
           ctxSupp: !d.photosOnly && !!d.ctxSupp,
-          ctxTherapy: !d.photosOnly && !!d.ctxTherapy
+          ctxTherapy: !d.photosOnly && !!d.ctxTherapy,
+          timeoutMs: 120000
         });
       }, 'Coach AI sta analizzando il check fisico…', { immediate: true });
       return;
@@ -45482,26 +45590,64 @@ async function analyzeCheckFisicoWithCoach() {
   }
   setTimeout(kick, 80);
 }
-async function exportCheckFisicoPdf() {
+function setCheckFisicoPdfOpt(key, val) {
+  checkFisicoDraft()[key] = val;
+}
+function closeCheckFisicoPdfModal() {
+  const m = $('check-fisico-pdf-modal');
+  if (m) m.style.display = 'none';
+}
+function openCheckFisicoPdfModal(mode) {
+  const d = checkFisicoDraft();
+  window.__checkFisicoPdfMode = mode === 'send' ? 'send' : 'export';
+  const m = $('check-fisico-pdf-modal');
+  if (!m) return;
+  const radios = m.querySelectorAll('input[name="cf-pdf-train"]');
+  radios.forEach(function (r) { r.checked = r.value === (d.pdfTraining || 'summary'); });
+  const nutr = $('cf-pdf-nutr'); if (nutr) nutr.checked = d.pdfNutrition !== false;
+  const macros = $('cf-pdf-macro'); if (macros) macros.checked = d.pdfMacros !== false;
+  const supp = $('cf-pdf-supp'); if (supp) supp.checked = d.pdfSupp !== false;
+  const ther = $('cf-pdf-ther'); if (ther) ther.checked = d.pdfTherapy !== false;
+  const notes = $('cf-pdf-notes'); if (notes) notes.value = d.notes || '';
+  m.style.display = 'flex';
+}
+function exportCheckFisicoPdf() {
+  openCheckFisicoPdfModal('export');
+}
+function sendCheckFisicoToCoach() {
+  openCheckFisicoPdfModal('send');
+}
+async function confirmCheckFisicoPdfExport() {
+  const d = checkFisicoDraft();
+  const notesEl = $('cf-pdf-notes');
+  if (notesEl) d.notes = notesEl.value || '';
+  closeCheckFisicoPdfModal();
   let entry = (store.bodyChecks || [])[store.bodyChecks.length - 1];
-  if (!checkFisicoDraft().weight && !(entry && entry.weight)) {
+  if (!d.weight && !(entry && entry.weight)) {
     if (typeof showToast === 'function') showToast('Inserisci il peso prima di esportare', 'danger');
     return;
   }
-  if (!entry || String(checkFisicoDraft().weight) !== String(entry.weight) || checkFisicoDraft().front || checkFisicoDraft().back) {
+  if (!entry || String(d.weight) !== String(entry.weight) || d.front || d.back || d.notes) {
     entry = await saveCheckFisico();
     if (!entry) return;
   }
-  const front = checkFisicoDraft().front || await getDocumentFile('bodycheck_front_' + entry.id);
-  const back = checkFisicoDraft().back || await getDocumentFile('bodycheck_back_' + entry.id);
-  const bytes = buildCheckFisicoPdfBytes(entry, front, back);
+  const pack = {
+    trainingMode: d.pdfTraining === 'detailed' ? 'detailed' : 'summary',
+    includeNutrition: d.pdfNutrition !== false,
+    includeMacros: d.pdfMacros !== false,
+    includeSupp: d.pdfSupp !== false,
+    includeTherapy: d.pdfTherapy !== false,
+    notes: d.notes || ''
+  };
+  const front = d.front || await getDocumentFile('bodycheck_front_' + entry.id);
+  const back = d.back || await getDocumentFile('bodycheck_back_' + entry.id);
+  const bytes = buildCheckFisicoPdfBytes(entry, front, back, pack);
   const blob = new Blob([bytes], { type: 'application/pdf' });
   const filename = 'nurvan-check-fisico-' + String(entry.at || '').slice(0, 10) + '.pdf';
-  shareOrSavePdfBlob(blob, filename, 'Check fisico NURVAN — peso, foto e resoconto allenamenti');
-}
-async function sendCheckFisicoToCoach() {
-  await exportCheckFisicoPdf();
-  if (typeof showToast === 'function') showToast('PDF pronto: invialo al coach da WhatsApp, mail o Drive', 'success');
+  shareOrSavePdfBlob(blob, filename, 'Check fisico NURVAN — quadro per il coach');
+  if (window.__checkFisicoPdfMode === 'send' && typeof showToast === 'function') {
+    showToast('PDF pronto: invialo al coach da WhatsApp, mail o Drive', 'success');
+  }
 }
 function dataUrlToJpegBytes(dataUrl) {
   if (!dataUrl || dataUrl.indexOf('base64,') < 0) return null;
@@ -45539,7 +45685,139 @@ function pdfConcat(parts) {
   parts.forEach(function (p) { out.set(p, o); o += p.length; });
   return out;
 }
-function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl) {
+function wrapCoachPdfLines(text, max) {
+  max = max || 90;
+  const out = [];
+  String(text || '').replace(/\r/g, '').split('\n').forEach(function (line) {
+    let s = line;
+    if (!s) { out.push(''); return; }
+    while (s.length > max) {
+      let cut = s.lastIndexOf(' ', max);
+      if (cut < 32) cut = max;
+      out.push(s.slice(0, cut));
+      s = s.slice(cut).replace(/^\s+/, '');
+    }
+    if (s) out.push(s);
+  });
+  return out;
+}
+function collectLoggedSessionDetailLines(week, day) {
+  const w = DATA && DATA.weeks && DATA.weeks[week - 1];
+  const sess = w && (w.sessions || w.days) && (w.sessions || w.days)[day];
+  const list = (sess && (sess.exercises || sess.rows)) || [];
+  const lines = [];
+  list.forEach(function (ex, ei) {
+    const name = (ex && (ex.name || ex.exercise)) || ('Esercizio ' + (ei + 1));
+    const sets = [];
+    for (let s = 1; s <= 12; s++) {
+      const load = store.data['w' + week + '_d' + day + '_e' + ei + '_s' + s + '_load'];
+      const reps = store.data['w' + week + '_d' + day + '_e' + ei + '_s' + s + '_reps'];
+      const rir = store.data['w' + week + '_d' + day + '_e' + ei + '_s' + s + '_rir'];
+      const hasLoad = load !== undefined && load !== '' && load != null;
+      const hasReps = reps !== undefined && reps !== '' && reps != null;
+      if (!hasLoad && !hasReps) continue;
+      sets.push('s' + s + ' ' + (hasLoad ? (load + 'kg') : '') + (hasReps ? (' x' + reps) : '') + (rir !== undefined && rir !== '' && rir != null ? (' @' + rir) : ''));
+    }
+    if (sets.length) lines.push(name + ': ' + sets.join(' · '));
+  });
+  return lines;
+}
+function collectCheckFisicoPdfExtraLines(entry, pack) {
+  pack = pack || {};
+  const period = (entry && entry.period) || checkFisicoDraft().period;
+  const days = checkFisicoPeriodMeta(period).days;
+  const since = Date.now() - days * 86400000;
+  const lines = [];
+  function addBlock(title, bodyLines) {
+    lines.push(title);
+    (bodyLines || []).forEach(function (l) { wrapCoachPdfLines(l, 90).forEach(function (x) { lines.push(x); }); });
+    lines.push('');
+  }
+  if (pack.notes) addBlock('NOTE ATLETA', [pack.notes]);
+  if (pack.trainingMode === 'detailed') {
+    const body = [];
+    const logs = logsInCheckPeriod(period);
+    if (!logs.length) body.push('Nessuna sessione finalizzata nel periodo.');
+    logs.slice().reverse().forEach(function (row) {
+      body.push(String(row.at || '').replace('T', ' ').slice(0, 16) + '  W' + (row.week || '?') + ' S' + ((row.day || 0) + 1) + '  ' + (row.tonnage || 0) + ' kg  int ' + (row.intensity || 0));
+      collectLoggedSessionDetailLines(Number(row.week) || 1, Number(row.day) || 0).forEach(function (l) { body.push('  ' + l); });
+    });
+    addBlock('ALLENAMENTO DETTAGLIATO (serie / reps / RIR-RPE)', body);
+  }
+  if (pack.includeNutrition) {
+    const daily = store.nutritionDaily || {};
+    const keys = Object.keys(daily).filter(function (k) {
+      const t = Date.parse(k);
+      return t && t >= since - 86400000;
+    }).sort();
+    const body = [];
+    if (!keys.length) body.push('Nessuna conferma pasti nel periodo.');
+    keys.forEach(function (k) {
+      const st = daily[k] || {};
+      body.push(k + '  ' + (st.confirmed ? 'confermato piano' : 'inseriti alimenti reali'));
+      (st.foods || []).slice(0, 18).forEach(function (f) {
+        body.push('  - ' + (f.meal ? (f.meal + ': ') : '') + (f.name || '') + (f.qty ? (' ' + f.qty + (f.unit || '')) : ''));
+      });
+    });
+    addBlock('ADERENZA ALIMENTAZIONE', body);
+  }
+  if (pack.includeMacros) {
+    const body = [];
+    const hist = (store.actionHistory || []).filter(function (h) {
+      const t = Date.parse(h.timestamp || '');
+      return t && t >= since;
+    });
+    if (!hist.length) body.push('Nessuna modifica registrata nel periodo.');
+    hist.slice(-24).forEach(function (h) {
+      const a = (h.actions && h.actions[0]) || {};
+      body.push(String(h.timestamp || '').replace('T', ' ').slice(0, 16) + '  ' + (a.action_type || a.type || 'azione') + '  ' + (a.exercise || '') + (h.reason ? ('  (' + h.reason + ')') : ''));
+    });
+    const nutr = DATA && DATA.nutrition;
+    if (nutr) {
+      const kcal = nutr.daily_calories_target || (nutr.targets && nutr.targets.kcal);
+      const p = nutr.daily_protein_target || (nutr.targets && nutr.targets.protein);
+      const c = nutr.daily_carbs_target || (nutr.targets && nutr.targets.carbs);
+      const f = nutr.daily_fats_target || (nutr.targets && nutr.targets.fat);
+      if (kcal || p || c || f) body.push('Target macros: ' + (kcal || '—') + ' kcal  P ' + (p || '—') + '  C ' + (c || '—') + '  F ' + (f || '—'));
+    }
+    const day = (typeof nutritionPlanForToday === 'function') ? nutritionPlanForToday() : null;
+    if (day) {
+      let kcal = 0, p = 0, c = 0, fat = 0;
+      (day.meals || []).forEach(function (m) {
+        (m.foods || []).forEach(function (food) {
+          kcal += Number(foodMacroVal(food, 'kcal')) || 0;
+          p += Number(foodMacroVal(food, 'pro')) || 0;
+          c += Number(foodMacroVal(food, 'carb')) || 0;
+          fat += Number(foodMacroVal(food, 'fat')) || 0;
+        });
+      });
+      if (kcal || p) body.push('Piano odierno macros: ' + Math.round(kcal) + ' kcal  P ' + Math.round(p) + '  C ' + Math.round(c) + '  F ' + Math.round(fat));
+    }
+    addBlock('MODIFICHE REGISTRATE E MACROS', body);
+  }
+  if (pack.includeSupp) {
+    const items = (DATA && DATA.supplementation && DATA.supplementation.items) || [];
+    const body = items.length
+      ? items.map(function (it) {
+        return '- ' + (it.name || '') + (it.dose ? ('  ' + it.dose + (it.unit || '')) : '') + (it.timing ? ('  ' + it.timing) : '') + (it.frequency ? ('  ' + it.frequency) : '');
+      })
+      : ['Nessun integratore in piano.'];
+    addBlock('ADERENZA INTEGRAZIONE', body);
+  }
+  if (pack.includeTherapy) {
+    const meds = (DATA && DATA.therapy && DATA.therapy.medications) || [];
+    const body = meds.length
+      ? meds.map(function (m) {
+        const wk = m.start_week || m.weekStart || m.week_start || '';
+        return '- ' + (m.name || m.drug || '') + (m.dose ? ('  ' + m.dose) : '') + (wk ? ('  sett. ' + wk) : '') + (m.timing ? ('  ' + m.timing) : '');
+      })
+      : ['Nessuna terapia in piano.'];
+    addBlock('ADERENZA TERAPIA', body);
+  }
+  while (lines.length && lines[lines.length - 1] === '') lines.pop();
+  return lines;
+}
+function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl, pack) {
   const W = 595, H = 842, ML = 40, MR = 40;
   const GOLD = '0.78 0.63 0.14';
   const DARK = '0.12 0.12 0.12';
@@ -45609,6 +45887,12 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl) {
   }
   y -= 10;
   txt('F2', 6, GRAY, ML, 40, 'Documento generato da NURVAN. Non sostituisce il parere medico o del coach.');
+  const extraLines = collectCheckFisicoPdfExtraLines(entry, pack || {});
+  const extraPages = [];
+  const perPage = 42;
+  for (let i = 0; i < extraLines.length; i += perPage) {
+    extraPages.push(extraLines.slice(i, i + perPage));
+  }
   const stream = cmds.join('\n');
   const objs = [];
   function addObj(body) { objs.push(typeof body === 'string' ? pdfLatin1(body) : body); return objs.length; }
@@ -45629,13 +45913,25 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl) {
     const sz = jpegSizeFromBytes(backBytes);
     imB = addStreamObj('<< /Type /XObject /Subtype /Image /Width ' + sz.w + ' /Height ' + sz.h + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + backBytes.length + ' >>', backBytes);
   }
-  const contentId = addStreamObj('<< /Length ' + stream.length + ' >>', pdfLatin1(stream));
+  const contentIds = [addStreamObj('<< /Length ' + stream.length + ' >>', pdfLatin1(stream))];
+  extraPages.forEach(function (pageLines, pi) {
+    const extraCmds = [];
+    extraCmds.push('BT /F1 12 Tf ' + GOLD + ' rg 1 0 0 1 ' + ML + ' ' + (H - 50) + ' Tm (' + pdfEsc('QUADRO PER IL COACH  ·  p. ' + (pi + 2)) + ') Tj ET');
+    pageLines.forEach(function (line, li) {
+      extraCmds.push('BT /F2 8 Tf ' + DARK + ' rg 1 0 0 1 ' + ML + ' ' + (H - 74 - li * 16) + ' Tm (' + pdfEsc(line) + ') Tj ET');
+    });
+    const extraStream = extraCmds.join('\n');
+    contentIds.push(addStreamObj('<< /Length ' + extraStream.length + ' >>', pdfLatin1(extraStream)));
+  });
   const xos = [];
   if (imF) xos.push('/ImF ' + imF + ' 0 R');
   if (imB) xos.push('/ImB ' + imB + ' 0 R');
   const pagesId = addObj('placeholder');
-  const pageId = addObj('<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Contents ' + contentId + ' 0 R /Resources << /Font << /F1 ' + f1 + ' 0 R /F2 ' + f2 + ' 0 R >> /XObject << ' + xos.join(' ') + ' >> >> >>');
-  objs[pagesId - 1] = pdfLatin1('<< /Type /Pages /Kids [' + pageId + ' 0 R] /Count 1 >>');
+  const pageIds = contentIds.map(function (cid, idx) {
+    const xo = idx === 0 ? (' /XObject << ' + xos.join(' ') + ' >>') : '';
+    return addObj('<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Contents ' + cid + ' 0 R /Resources << /Font << /F1 ' + f1 + ' 0 R /F2 ' + f2 + ' 0 R >>' + xo + ' >> >>');
+  });
+  objs[pagesId - 1] = pdfLatin1('<< /Type /Pages /Kids [' + pageIds.map(function (id) { return id + ' 0 R'; }).join(' ') + '] /Count ' + pageIds.length + ' >>');
   const catalogId = addObj('<< /Type /Catalog /Pages ' + pagesId + ' 0 R >>');
   const parts = [pdfLatin1('%PDF-1.4\n')];
   const offsets = [0];
@@ -45658,8 +45954,13 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl) {
 }
 window.renderCheckFisicoCardHtml = renderCheckFisicoCardHtml;
 window.pickCheckPhoto = pickCheckPhoto;
+window.onCheckPhotoInput = onCheckPhotoInput;
 window.setCheckFisicoPeriod = setCheckFisicoPeriod;
 window.onCheckFisicoWeight = onCheckFisicoWeight;
+window.onCheckFisicoNotes = onCheckFisicoNotes;
+window.setCheckFisicoPdfOpt = setCheckFisicoPdfOpt;
+window.closeCheckFisicoPdfModal = closeCheckFisicoPdfModal;
+window.confirmCheckFisicoPdfExport = confirmCheckFisicoPdfExport;
 window.saveCheckFisico = saveCheckFisico;
 window.analyzeCheckFisicoWithCoach = analyzeCheckFisicoWithCoach;
 window.sendCheckFisicoToCoach = sendCheckFisicoToCoach;
@@ -46074,6 +46375,10 @@ function formatOperationDescription(op) {
 }
 
 async function applyCoachProposal(proposalId) {
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+    if (typeof showToast === 'function') showToast('Solo il tuo coach può modificare la scheda.', 'warning');
+    return;
+  }
   let proposal = window.activeCoachProposals[proposalId];
   proposal = normalizeCoachProposedAction(proposal, null) || proposal;
   if(!proposal || !Array.isArray(proposal.operations)) {
@@ -46686,7 +46991,9 @@ async function askAIInner(q0, opts){
 
   const pending = document.createElement('div');
   pending.className = 'msg ai markdown';
-  pending.innerHTML = '<p>Nurvan AI sta analizzando la programmazione attiva…</p>';
+  pending.innerHTML = opts.checkFisico
+    ? '<p>Nurvan AI sta analizzando il check fisico…</p>'
+    : '<p>Nurvan AI sta analizzando la programmazione attiva…</p>';
   h.appendChild(pending);
 
   try {
@@ -46893,6 +47200,7 @@ async function askAIInner(q0, opts){
         return { mime: img.mime || 'image/jpeg', dataUrl: img.dataUrl, label: img.label || '' };
       })
     };
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) chatBody.context.athleteInfoOnly = true;
     if (!isSessionReview) {
       chatBody.context.nutrition = DATA && DATA.nutrition && DATA.nutrition.days ? { days: DATA.nutrition.days.length } : null;
       chatBody.context.supplementation = DATA && DATA.supplementation && DATA.supplementation.items ? { items: DATA.supplementation.items.length } : null;
@@ -46918,7 +47226,7 @@ async function askAIInner(q0, opts){
         method: 'POST',
         headers: headers,
         body: JSON.stringify(chatBody)
-      }, isSessionReview ? 25000 : 45000);
+      }, opts.timeoutMs || (opts.checkFisico ? 120000 : (isSessionReview ? 25000 : 90000)));
     } catch (netErr) {
       if (isSessionReview) {
         const fb = window.__sessionCoachFallback || {};
@@ -46946,6 +47254,7 @@ async function askAIInner(q0, opts){
     if (!proposedAction) {
       proposedAction = normalizeCoachProposedAction(null, reply);
     }
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) proposedAction = null;
     const cleanReply = sanitizeCoachDisplayText(reply);
     const displayReply = cleanReply || (proposedAction && (proposedAction.summary || 'Ho preparato una proposta da applicare.')) || '';
     if (!displayReply) throw new Error('Risposta Coach non leggibile. Riprova con una domanda più semplice.');
@@ -47694,6 +48003,8 @@ if (typeof window !== 'undefined') {
   window.generateAndActivateProgram = generateAndActivateProgram;
   window.syncHealthSamplesAndRefresh = syncHealthSamplesAndRefresh;
   window.confirmExerciseMapping = confirmExerciseMapping;
+  window.isAthleteRole = isAthleteRole;
+  window.isCoachUnlocked = isCoachUnlocked;
 }
 
 init();
@@ -47702,6 +48013,945 @@ init();
 
 
 
+
+// ====================================================
+// COACH PRACTICE UI — hub, invite, intake, client shell
+// Injected after middleCore by build_master25.mjs
+// ====================================================
+
+var CLIENT_INTAKE_FIELDS = [
+  { key: 'firstName', label: 'Nome', type: 'text', required: true },
+  { key: 'lastName', label: 'Cognome', type: 'text', required: true },
+  { key: 'sex', label: 'Sesso', type: 'select', required: true, options: ['Maschio', 'Femmina', 'Altro'] },
+  { key: 'ageBand', label: 'Età', type: 'select', required: true, options: ['16-17', '18-24', '25-29', '30-34', '35-39', '40-44', '45-49', '50-54', '55-59', '60+'] },
+  { key: 'heightBand', label: 'Altezza', type: 'select', required: true, options: ['150-154 cm', '155-159 cm', '160-164 cm', '165-169 cm', '170-174 cm', '175-179 cm', '180-184 cm', '185-189 cm', '190-194 cm', '195-199 cm', '200+ cm'] },
+  { key: 'weightBand', label: 'Peso', type: 'select', required: true, options: ['45-49 kg', '50-54 kg', '55-59 kg', '60-64 kg', '65-69 kg', '70-74 kg', '75-79 kg', '80-84 kg', '85-89 kg', '90-94 kg', '95-99 kg', '100-109 kg', '110-119 kg', '120-129 kg', '130-139 kg', '140+ kg'] },
+  { key: 'trainingAge', label: 'Anzianità di allenamento', type: 'select', required: true, options: ['Mai allenato', 'Meno di 6 mesi', '6-12 mesi', '1-2 anni', '2-5 anni', 'Più di 5 anni'] },
+  { key: 'level', label: 'Livello', type: 'select', required: true, options: ['Principiante', 'Intermedio', 'Avanzato', 'Agonista'] },
+  { key: 'goal', label: 'Obiettivo', type: 'select', required: true, options: ['Ipertrofia', 'Forza', 'Dimagrimento', 'Ricomposizione', 'Performance sportiva', 'Salute e postura', 'Preparazione gara'] },
+  { key: 'sessionsPerWeek', label: 'Sessioni a settimana', type: 'select', required: true, options: ['2', '3', '4', '5', '6 o più'] },
+  { key: 'sessionMinutes', label: 'Tempo a sessione', type: 'select', required: true, options: ['30 minuti', '45 minuti', '60 minuti', '75 minuti', '90 minuti o più'] },
+  { key: 'equipment', label: 'Attrezzatura', type: 'select', required: true, options: ['Palestra completa', 'Pesi liberi + panca', 'Solo macchine', 'Casa (manubri/bande)', 'Corpo libero'] },
+  { key: 'splitPref', label: 'Split preferito', type: 'select', required: false, options: ['Lo decide il coach', 'Full body', 'Upper / Lower', 'Push Pull Legs', 'Distretto per giorno'] },
+  { key: 'injuryPrimary', label: 'Problema fisico principale', type: 'select', required: true, options: ['Nessuno', 'Lombare', 'Cervicale', 'Ginocchia', 'Spalle', 'Gomiti', 'Polsi', 'Anche', 'Caviglie', 'Altro'] },
+  { key: 'injurySecondary', label: 'Secondo distretto', type: 'select', required: false, options: ['Nessuno', 'Lombare', 'Cervicale', 'Ginocchia', 'Spalle', 'Gomiti', 'Polsi', 'Anche', 'Caviglie', 'Altro'] },
+  { key: 'medicalLimit', label: 'Limiti medici', type: 'select', required: false, options: ['Nessuno', 'Infortunio in corso', 'Dolore ricorrente', 'Indicazione medica da rispettare'] },
+  { key: 'jobType', label: 'Tipo di lavoro / giornata', type: 'select', required: true, options: ['Sedentario', 'In piedi', 'Lavoro fisico', 'Turni'] },
+  { key: 'sleepHours', label: 'Sonno', type: 'select', required: true, options: ['Meno di 6 ore', '6-7 ore', '7-8 ore', 'Più di 8 ore'] },
+  { key: 'stress', label: 'Stress', type: 'select', required: true, options: ['Basso', 'Medio', 'Alto'] }
+];
+
+var CLIENT_TUTORIAL_STEPS = [
+  { t: 'La scheda arriva dal coach', d: 'Non importi PDF da solo: il tuo coach ti assegna il programma. Se non vedi nulla, chiedila dalla Home.' },
+  { t: 'Allena e finalizza', d: 'Apri Allenati, registra le serie e tocca Finalizza. Così il coach vede che hai lavorato.' },
+  { t: 'Chat umana', d: 'Dal tab Coach parli con la persona che ti segue, non con l’AI.' },
+  { t: 'AI solo spiegazioni', d: 'Coach AI può spiegare un esercizio, un cibo o un integratore. Non può cambiare la scheda.' },
+  { t: 'Check e pagamenti', d: 'Dal Menu fai il check fisico quando te lo chiede. Se un pagamento è in sospeso, lo vedi in Home.' }
+];
+
+function practiceApi(path) {
+  try {
+    if (typeof coachEndpoint === 'function') return coachEndpoint(path);
+  } catch (_) {}
+  return path;
+}
+
+function practiceHeaders(json) {
+  const h = {};
+  if (json) h['Content-Type'] = 'application/json';
+  if (store && store.accountToken) h.Authorization = 'Bearer ' + store.accountToken;
+  return h;
+}
+
+async function practiceFetch(path, options, timeoutMs) {
+  const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+  const res = await fetchFn(practiceApi(path), options || {}, timeoutMs || 20000);
+  if (typeof readApiJson === 'function') return readApiJson(res);
+  return res.json();
+}
+
+function practiceToast(msg, kind) {
+  if (typeof showToast === 'function') showToast(msg, kind || 'success');
+  else try { console.log('[PRACTICE]', msg); } catch (_) {}
+}
+
+function detectInviteToken() {
+  try {
+    const path = String(location.pathname || '').replace(/\/+$/, '');
+    const m = path.match(/\/c\/([^/?#]+)/);
+    if (m && m[1]) return decodeURIComponent(m[1]);
+    const q = new URLSearchParams(location.search || '');
+    return q.get('c') || '';
+  } catch (_) { return ''; }
+}
+
+function isInAppBrowser() {
+  const ua = String(navigator.userAgent || '');
+  return /WhatsApp|FBAN|FBAV|Instagram|Line\/|Telegram/i.test(ua);
+}
+
+function gatePracticeView(v) {
+  if (typeof isAthleteRole !== 'function' || !isAthleteRole()) return v;
+  const blocked = { community: 1, pricing: 1, coachHub: 1, coachClient: 1, import: 1 };
+  if (blocked[v]) return 'home';
+  if ((v === 'programs' || v === 'db') && !(store.clientProfile && store.clientProfile.allowProgramDb)) return 'home';
+  return v;
+}
+
+function applyClientChrome() {
+  try {
+    const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+    const unlocked = typeof isCoachUnlocked === 'function' && isCoachUnlocked();
+    if (document.body) {
+      document.body.classList.toggle('role-athlete', !!athlete);
+      document.body.classList.toggle('coach-unlocked', !!unlocked);
+    }
+    const stats = typeof $ === 'function' ? $('nav-stats') : document.getElementById('nav-stats');
+    const ai = typeof $ === 'function' ? $('nav-ai') : document.getElementById('nav-ai');
+    if (stats) {
+      const span = stats.querySelector('span');
+      if (athlete) {
+        if (span) span.textContent = 'COACH';
+        stats.onclick = function (event) { navigate('clientChat', event); };
+      } else {
+        stats.onclick = function (event) { navigate('stats', event); };
+      }
+    }
+    if (ai) ai.style.display = athlete ? 'none' : '';
+    document.querySelectorAll('[data-hub="full"]').forEach(function (el) {
+      el.style.display = athlete ? 'none' : '';
+    });
+    document.querySelectorAll('[data-hub="coach"]').forEach(function (el) {
+      el.style.display = unlocked && !athlete ? 'flex' : 'none';
+    });
+    document.querySelectorAll('[data-hub="athlete"]').forEach(function (el) {
+      el.style.display = athlete ? 'flex' : 'none';
+    });
+    document.querySelectorAll('[data-hub="programs"]').forEach(function (el) {
+      const allow = !athlete || (store.clientProfile && store.clientProfile.allowProgramDb);
+      el.style.display = allow ? '' : 'none';
+    });
+  } catch (err) {
+    console.warn('[CLIENT_CHROME]', err);
+  }
+}
+
+function ensurePracticeStyle() {
+  if (document.getElementById('coach-practice-style')) return;
+  const s = document.createElement('style');
+  s.id = 'coach-practice-style';
+  s.textContent = [
+    '.cp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10070;display:none;align-items:center;justify-content:center;padding:16px;}',
+    '.cp-panel{background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:16px;}',
+    '.cp-panel h2{color:var(--gold);font-size:16px;margin:0 0 8px;}',
+    '.cp-help{font-size:12px;color:#aaa;line-height:1.45;margin:0 0 12px;}',
+    '.cp-field{margin-bottom:10px;}',
+    '.cp-field label{display:block;font-size:10px;color:#888;font-weight:800;margin-bottom:4px;}',
+    '.cp-field input,.cp-field select{width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;}',
+    '.cp-mode{display:flex;gap:8px;margin-bottom:12px;}',
+    '.cp-mode button{flex:1;font-size:11px;padding:10px 8px;line-height:1.3;}',
+    '.cp-badge{font-size:9px;padding:3px 6px;border-radius:4px;border:1px solid #444;color:#ccc;margin-left:6px;}',
+    '.cp-row{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #222;}',
+    '.cp-msg{padding:8px 10px;border-radius:8px;margin:6px 0;font-size:12px;line-height:1.4;}',
+    '.cp-msg.me{background:#1a1608;border:1px solid rgba(212,175,55,.35);}',
+    '.cp-msg.them{background:#151515;border:1px solid #333;}'
+  ].join('');
+  document.head.appendChild(s);
+}
+
+function ensurePracticeOverlays() {
+  if (document.getElementById('cp-invite')) return;
+  const wrap = document.createElement('div');
+  wrap.id = 'coach-practice-overlays';
+  wrap.innerHTML = [
+    '<div id="cp-invite" class="cp-overlay"><div class="cp-panel" id="cp-invite-panel"></div></div>',
+    '<div id="cp-intake" class="cp-overlay"><div class="cp-panel" id="cp-intake-panel"></div></div>',
+    '<div id="cp-tutorial" class="cp-overlay"><div class="cp-panel" id="cp-tutorial-panel"></div></div>',
+    '<div id="cp-demo" class="cp-overlay"><div class="cp-panel" id="cp-demo-panel"></div></div>',
+    '<div id="cp-add" class="cp-overlay"><div class="cp-panel" id="cp-add-panel"></div></div>'
+  ].join('');
+  document.body.appendChild(wrap);
+}
+
+function showOverlay(id, on) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = on ? 'flex' : 'none';
+  if (typeof pushUiOverlay === 'function' && on) pushUiOverlay(id);
+  if (typeof popUiOverlay === 'function' && !on) popUiOverlay(id);
+}
+
+function intakeFormHtml(prefix, values, opts) {
+  opts = opts || {};
+  values = values || {};
+  const skipName = !!opts.skipName;
+  return CLIENT_INTAKE_FIELDS.filter(function (f) {
+    return !(skipName && (f.key === 'firstName' || f.key === 'lastName'));
+  }).map(function (f) {
+    const id = prefix + '-' + f.key;
+    const val = values[f.key] || '';
+    const req = f.required ? ' *' : '';
+    if (f.type === 'text') {
+      return '<div class="cp-field"><label for="' + id + '">' + f.label + req + '</label>' +
+        '<input id="' + id + '" type="text" value="' + esc(val) + '" autocomplete="name"></div>';
+    }
+    const optsHtml = '<option value="">Seleziona…</option>' + f.options.map(function (o) {
+      return '<option value="' + esc(o) + '"' + (val === o ? ' selected' : '') + '>' + esc(o) + '</option>';
+    }).join('');
+    return '<div class="cp-field"><label for="' + id + '">' + f.label + req + '</label>' +
+      '<select id="' + id + '">' + optsHtml + '</select></div>';
+  }).join('');
+}
+
+function readIntakeForm(prefix) {
+  const out = {};
+  CLIENT_INTAKE_FIELDS.forEach(function (f) {
+    const el = document.getElementById(prefix + '-' + f.key);
+    if (el) out[f.key] = String(el.value || '').trim();
+  });
+  return out;
+}
+
+function intakeFormMissing(data) {
+  return CLIENT_INTAKE_FIELDS.filter(function (f) {
+    return f.required && !data[f.key];
+  }).map(function (f) { return f.label; });
+}
+
+async function copyOrShare(text, label) {
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: label || 'Nurvan', text: text, url: text });
+      return;
+    }
+  } catch (_) {}
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      practiceToast('Link copiato', 'success');
+      return;
+    }
+  } catch (_) {}
+  try { prompt(label || 'Copia', text); } catch (_) {}
+}
+
+function enqueueClientOutbox(item) {
+  if (!store.clientOutbox) store.clientOutbox = [];
+  store.clientOutbox.push(Object.assign({ id: 'ob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), at: Date.now() }, item));
+  if (typeof persist === 'function') persist();
+}
+
+async function flushClientOutbox() {
+  if (!store || !store.accountToken || !Array.isArray(store.clientOutbox) || !store.clientOutbox.length) return;
+  const left = [];
+  for (let i = 0; i < store.clientOutbox.length; i++) {
+    const it = store.clientOutbox[i];
+    try {
+      if (it.type === 'workout-ping') await practiceFetch('/api/client/workout-ping', { method: 'POST', headers: practiceHeaders(true), body: '{}' });
+      else if (it.type === 'message') await practiceFetch('/api/client/messages', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: it.body }) });
+      else if (it.type === 'request-program') await practiceFetch('/api/client/request-program', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ note: it.note || '' }) });
+    } catch (_) { left.push(it); }
+  }
+  store.clientOutbox = left;
+  if (typeof persist === 'function') persist();
+}
+
+function renderInvitePanel(info) {
+  const p = document.getElementById('cp-invite-panel');
+  if (!p) return;
+  const inApp = isInAppBrowser();
+  p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">INVITO COACH</div>' +
+    '<h2>Ciao' + (info && info.displayName ? ', ' + esc(info.displayName) : '') + '</h2>' +
+    '<p class="cp-help">Ti segue <b style="color:#fff;">' + esc((info && info.coachName) || 'il tuo coach') + '</b>. Accedi con nome utente e password che ti ha dato. Un solo link, su qualsiasi telefono.</p>' +
+    (info && info.intakeMode === 'new' ? '<p class="cp-help">Al primo accesso compilerai un questionario di acquisizione (menu a tendina).</p>' : '<p class="cp-help">Il coach ha già le tue informazioni: entri subito in app.</p>') +
+    (inApp ? '<p class="cp-help">Puoi già accedere da qui. Per installare Nurvan sulla Home, apri il link in Safari o Chrome.</p>' : '') +
+    '<div class="cp-field"><label>Nome utente</label><input id="cp-login-user" type="text" autocomplete="username" value="' + esc((info && info.username) || '') + '"></div>' +
+    '<div class="cp-field"><label>Password</label><input id="cp-login-pass" type="password" autocomplete="current-password"></div>' +
+    '<div id="cp-invite-status" class="cp-help"></div>' +
+    '<button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="submitClientInviteLogin()">ACCEDI</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="showOverlay(\'cp-invite\', false)">CHIUDI</button>';
+}
+
+async function showClientInvite(token) {
+  ensurePracticeStyle();
+  ensurePracticeOverlays();
+  const t = token || store.inviteToken || detectInviteToken();
+  if (!t) return;
+  store.inviteToken = t;
+  let info = { username: '', displayName: '', coachName: 'Coach', intakeMode: 'new' };
+  try {
+    info = await practiceFetch('/api/client/invite/' + encodeURIComponent(t), { method: 'GET' }, 15000);
+  } catch (err) {
+    info.error = err && err.message;
+  }
+  renderInvitePanel(info);
+  showOverlay('cp-invite', true);
+}
+
+async function submitClientInviteLogin() {
+  const status = document.getElementById('cp-invite-status');
+  const username = (document.getElementById('cp-login-user') && document.getElementById('cp-login-user').value || '').trim();
+  const password = (document.getElementById('cp-login-pass') && document.getElementById('cp-login-pass').value) || '';
+  if (!username || password.length < 4) {
+    if (status) status.textContent = 'Inserisci nome utente e password.';
+    return;
+  }
+  if (status) status.textContent = 'Accesso…';
+  try {
+    const payload = await practiceFetch('/api/client/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: store.inviteToken, username: username, password: password })
+    }, 20000);
+    if (!payload || !payload.token) throw new Error((payload && payload.error) || 'Accesso non riuscito.');
+    store.accountToken = payload.token;
+    store.accountUser = payload.user;
+    store.role = 'athlete';
+    store.clientProfile = payload.client || null;
+    if (typeof persist === 'function') persist();
+    showOverlay('cp-invite', false);
+    try { await syncAccountData(true); } catch (_) {}
+    applyClientChrome();
+    if (payload.client && payload.client.needIntake) showClientIntake(payload.client.intake || { firstName: '', lastName: '' });
+    else showClientTutorial(false);
+    if (typeof render === 'function') render();
+    practiceToast('Bentornato, ' + (payload.user && payload.user.name || username), 'success');
+  } catch (err) {
+    if (status) status.textContent = (err && err.message) || 'Accesso non riuscito.';
+  }
+}
+
+function showClientIntake(prefill) {
+  ensurePracticeStyle();
+  ensurePracticeOverlays();
+  const p = document.getElementById('cp-intake-panel');
+  if (!p) return;
+  const data = prefill || (store.clientProfile && store.clientProfile.intake) || {};
+  p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">ACQUISIZIONE</div>' +
+    '<h2>Questionario iniziale</h2>' +
+    '<p class="cp-help">Compila tutti i campi. Nome e cognome a mano; il resto è a tendina. Serve al coach per impostare la scheda.</p>' +
+    '<div id="cp-intake-fields">' + intakeFormHtml('cpi', data) + '</div>' +
+    '<div id="cp-intake-status" class="cp-help"></div>' +
+    '<button class="btn btn-primary" style="width:100%;" onclick="submitClientIntake()">INVIA AL COACH</button>';
+  showOverlay('cp-intake', true);
+}
+
+async function submitClientIntake() {
+  const status = document.getElementById('cp-intake-status');
+  const intake = readIntakeForm('cpi');
+  const missing = intakeFormMissing(intake);
+  if (missing.length) {
+    if (status) status.textContent = 'Manca: ' + missing.join(', ');
+    return;
+  }
+  if (status) status.textContent = 'Invio…';
+  try {
+    const payload = await practiceFetch('/api/client/intake', {
+      method: 'POST',
+      headers: practiceHeaders(true),
+      body: JSON.stringify({ intake: intake })
+    }, 20000);
+    store.clientProfile = payload.client || store.clientProfile;
+    if (payload.profile) store.profile = Object.assign({}, store.profile || {}, payload.profile);
+    if (typeof persist === 'function') persist();
+    showOverlay('cp-intake', false);
+    showClientTutorial(false);
+    practiceToast('Questionario inviato', 'success');
+    if (typeof render === 'function') render();
+  } catch (err) {
+    if (status) status.textContent = (err && err.message) || 'Invio non riuscito.';
+  }
+}
+
+function showClientTutorial(force) {
+  if (!force && store.clientTutorialDone) return;
+  ensurePracticeStyle();
+  ensurePracticeOverlays();
+  const p = document.getElementById('cp-tutorial-panel');
+  if (!p) return;
+  window.__cpTutStep = 0;
+  drawClientTutorial();
+  showOverlay('cp-tutorial', true);
+}
+
+function drawClientTutorial() {
+  const p = document.getElementById('cp-tutorial-panel');
+  if (!p) return;
+  const i = window.__cpTutStep || 0;
+  const step = CLIENT_TUTORIAL_STEPS[i] || CLIENT_TUTORIAL_STEPS[0];
+  p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">GUIDA ' + (i + 1) + '/5</div>' +
+    '<h2>' + esc(step.t) + '</h2>' +
+    '<p class="cp-help">' + esc(step.d) + '</p>' +
+    '<div style="display:flex;gap:8px;">' +
+    (i > 0 ? '<button class="btn btn-outline" style="flex:1;" onclick="window.__cpTutStep--;drawClientTutorial()">INDIETRO</button>' : '') +
+    (i < CLIENT_TUTORIAL_STEPS.length - 1
+      ? '<button class="btn btn-primary" style="flex:1;" onclick="window.__cpTutStep++;drawClientTutorial()">AVANTI</button>'
+      : '<button class="btn btn-primary" style="flex:1;" onclick="closeClientTutorial()">HO CAPITO</button>') +
+    '</div>';
+}
+
+function closeClientTutorial() {
+  store.clientTutorialDone = true;
+  if (typeof persist === 'function') persist();
+  showOverlay('cp-tutorial', false);
+}
+
+function showDemoUnlock() {
+  if (!store.accountToken) {
+    practiceToast('Accedi al tuo account Nurvan per sbloccare Coach.', 'warning');
+    if (typeof openAccount === 'function') openAccount();
+    return;
+  }
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+    practiceToast('Un account atleta non può sbloccare Coach.', 'warning');
+    return;
+  }
+  ensurePracticeStyle();
+  ensurePracticeOverlays();
+  const p = document.getElementById('cp-demo-panel');
+  p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">SBLOCCO DEMO</div>' +
+    '<h2>Modalità Coach</h2>' +
+    '<p class="cp-help">Checkout di prova: nessuna carta vera. In seguito useremo lo stesso sblocco con il pagamento reale.</p>' +
+    '<div class="cp-field"><label>Intestatario</label><input value="Giammaria Loi" readonly></div>' +
+    '<div class="cp-field"><label>Carta</label><input value="4242 4242 4242 4242" readonly></div>' +
+    '<div style="display:flex;gap:8px;"><div class="cp-field" style="flex:1;"><label>Scadenza</label><input value="12/29" readonly></div>' +
+    '<div class="cp-field" style="flex:1;"><label>CVC</label><input value="123" readonly></div></div>' +
+    '<button class="btn btn-primary" style="width:100%;" onclick="confirmDemoUnlock()">PAGA E SBLOCCA</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="showOverlay(\'cp-demo\', false)">ANNULLA</button>';
+  showOverlay('cp-demo', true);
+}
+
+async function confirmDemoUnlock() {
+  try {
+    const payload = await practiceFetch('/api/coach/unlock/demo', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 20000);
+    if (!payload || !payload.ok) throw new Error((payload && payload.error) || 'Sblocco non riuscito.');
+    store.coachUnlocked = true;
+    if (typeof persist === 'function') persist();
+    showOverlay('cp-demo', false);
+    applyClientChrome();
+    practiceToast('Modalità Coach sbloccata', 'success');
+    navigate('coachHub');
+  } catch (err) {
+    practiceToast((err && err.message) || 'Sblocco non riuscito.', 'danger');
+  }
+}
+
+function renderCoachUnlockCardHtml() {
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) return '';
+  if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) {
+    return '<div class="card" style="border:1px solid var(--gold);margin-bottom:14px;padding:12px;">' +
+      '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Modalità Coach</div>' +
+      '<p style="font-size:11px;color:#aaa;margin:0 0 10px;">Hub clienti, inviti e chat umana.</p>' +
+      '<button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="navigate(\'coachHub\')">APRI HUB COACH</button></div>';
+  }
+  return '<div class="card" style="border:1px solid var(--gold);margin-bottom:14px;padding:12px;">' +
+    '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Diventa Coach</div>' +
+    '<p style="font-size:11px;color:#aaa;margin:0 0 10px;">Sblocca l’hub per seguire i clienti. Per ora il pagamento è demo.</p>' +
+    '<button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="showDemoUnlock()">SBLOCCA MODALITÀ COACH</button></div>';
+}
+
+function injectCoachUnlockInto(container) {
+  if (!container || container.querySelector('[data-cp-unlock]')) return;
+  const html = renderCoachUnlockCardHtml();
+  if (!html) return;
+  const hold = document.createElement('div');
+  hold.setAttribute('data-cp-unlock', '1');
+  hold.innerHTML = html;
+  const cards = container.querySelectorAll('.card');
+  if (cards.length >= 2) cards[1].insertAdjacentElement('afterend', hold);
+  else container.insertBefore(hold, container.firstChild);
+}
+
+function athleteWaitingHomeHtml() {
+  const due = (store.clientEvents || []).some(function (e) { return e && e.kind === 'payment_due' && !e.read_at; });
+  const check = (store.clientEvents || []).some(function (e) { return e && e.kind === 'check_request' && !e.read_at; });
+  return '<div class="card" style="border:2px solid var(--gold);padding:22px;text-align:center;">' +
+    '<div style="font-size:18px;font-weight:900;color:var(--gold);margin-bottom:8px;">In attesa della scheda</div>' +
+    '<p style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:16px;">Il tuo coach ti assegna il programma. Se tarda, chiedila da qui.</p>' +
+    (due ? '<p style="font-size:12px;color:#f6c;margin-bottom:10px;">Pagamento in sospeso: scrivi al coach.</p>' : '') +
+    (check ? '<p style="font-size:12px;color:var(--gold);margin-bottom:10px;">Il coach ha chiesto un check fisico.</p>' : '') +
+    '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="requestProgramFromCoach()">CHIEDI LA SCHEDA</button>' +
+    '<button class="btn btn-outline" style="width:100%;" onclick="navigate(\'clientChat\')">SCRIVI AL COACH</button></div>';
+}
+
+async function requestProgramFromCoach() {
+  try {
+    enqueueClientOutbox({ type: 'request-program' });
+    await flushClientOutbox();
+    practiceToast('Richiesta inviata al coach', 'success');
+  } catch (_) {
+    practiceToast('Richiesta salvata: partirà quando sei online.', 'warning');
+  }
+}
+
+function renderCoachHub(c) {
+  if (typeof isCoachUnlocked === 'function' && !isCoachUnlocked()) {
+    c.innerHTML = renderCoachUnlockCardHtml();
+    return;
+  }
+  const q = esc(window.__cpClientQ || '');
+  c.innerHTML = '<div style="margin-bottom:12px;"><span style="font-size:10px;color:var(--gold);font-weight:800;">HUB COACH</span>' +
+    '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">I tuoi clienti</h1></div>' +
+    '<div class="card" style="padding:12px;margin-bottom:12px;">' +
+    '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()">' +
+    '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button></div>' +
+    '<div id="cp-client-list"><div class="cp-help">Caricamento…</div></div>';
+  loadCoachClientList();
+}
+
+var __cpListTimer = 0;
+function debounceCoachClientList() {
+  clearTimeout(__cpListTimer);
+  __cpListTimer = setTimeout(loadCoachClientList, 280);
+}
+
+async function loadCoachClientList() {
+  const box = document.getElementById('cp-client-list');
+  if (!box) return;
+  try {
+    const q = window.__cpClientQ || '';
+    const payload = await practiceFetch('/api/coach/clients?limit=30&offset=0&q=' + encodeURIComponent(q), { method: 'GET', headers: practiceHeaders(false) }, 20000);
+    store.__cpOrigin = payload.origin || '';
+    const rows = payload.clients || [];
+    if (!rows.length) {
+      box.innerHTML = '<div class="cp-help">Nessun cliente. Aggiungine uno: nuovo (compilerà il questionario) o transizione (compili tu le info).</div>';
+      return;
+    }
+    box.innerHTML = rows.map(function (cl) {
+      const badge = cl.intakeMode === 'transition' ? 'Transizione' : (cl.intakeDone ? 'Questionario ok' : 'Nuovo · questionario');
+      const paid = cl.paid ? 'Pagato' : 'Non pagato';
+      return '<div class="card" style="padding:12px;margin-bottom:10px;">' +
+        '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">' +
+        '<div><div style="font-size:15px;font-weight:900;color:#fff;">' + esc(cl.displayName) + '</div>' +
+        '<div style="font-size:11px;color:#888;">@' + esc(cl.username) + ' · ' + esc(badge) + ' · ' + esc(paid) +
+        (cl.unreadCount ? ' · ' + cl.unreadCount + ' nuovi' : '') + '</div></div></div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">' +
+        '<button class="btn btn-primary" style="font-size:10px;padding:8px 10px;" onclick="openCoachClient(\'' + esc(cl.id) + '\')">APRI</button>' +
+        '<button class="btn btn-outline" style="font-size:10px;padding:8px 10px;" onclick="openCoachClientChat(\'' + esc(cl.id) + '\')">CHAT</button>' +
+        '<button class="btn btn-outline" style="font-size:10px;padding:8px 10px;" onclick="copyClientInvite(\'' + esc(cl.id) + '\',\'' + esc(cl.inviteToken || '') + '\')">LINK</button>' +
+        '<button class="btn btn-outline" style="font-size:10px;padding:8px 10px;" onclick="toggleClientPaid(\'' + esc(cl.id) + '\',' + (cl.paid ? 'false' : 'true') + ')">' + (cl.paid ? 'SEGNA NON PAGATO' : 'SEGNA PAGATO') + '</button>' +
+        '<button class="btn btn-outline" style="font-size:10px;padding:8px 10px;" onclick="revokeCoachClient(\'' + esc(cl.id) + '\')">REVOCA</button>' +
+        '<button class="btn btn-outline" style="font-size:10px;padding:8px 10px;color:#c66;border-color:#c66;" onclick="removeCoachClient(\'' + esc(cl.id) + '\')">RIMUOVI</button>' +
+        '</div></div>';
+    }).join('');
+  } catch (err) {
+    box.innerHTML = '<div class="cp-help">' + esc((err && err.message) || 'Lista non disponibile.') + '</div>';
+  }
+}
+
+function openAddClientWizard() {
+  ensurePracticeStyle();
+  ensurePracticeOverlays();
+  window.__cpAddMode = window.__cpAddMode || 'new';
+  drawAddClientWizard();
+  showOverlay('cp-add', true);
+}
+
+function setAddClientMode(mode) {
+  window.__cpAddMode = mode === 'transition' ? 'transition' : 'new';
+  drawAddClientWizard();
+}
+
+function drawAddClientWizard() {
+  const p = document.getElementById('cp-add-panel');
+  if (!p) return;
+  const mode = window.__cpAddMode || 'new';
+  const isNew = mode === 'new';
+  p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">NUOVO CLIENTE</div>' +
+    '<h2>Aggiungi un atleta</h2>' +
+    '<div class="cp-mode">' +
+    '<button class="btn ' + (isNew ? 'btn-primary' : 'btn-outline') + '" onclick="setAddClientMode(\'new\')">NUOVO CLIENTE</button>' +
+    '<button class="btn ' + (!isNew ? 'btn-primary' : 'btn-outline') + '" onclick="setAddClientMode(\'transition\')">TRANSIZIONE VERSO APP</button>' +
+    '</div>' +
+    (isNew
+      ? '<p class="cp-help"><b style="color:#fff;">Nuovo:</b> al primo login si apre il questionario di acquisizione (nome/cognome + menu a tendina: anzianità, obiettivo, problemi fisici, tempo a disposizione).</p>'
+      : '<p class="cp-help"><b style="color:#fff;">Transizione:</b> lo conosci già. Compili tu il questionario ora: al login entra in app senza form.</p>') +
+    '<div class="cp-field"><label>Nome *</label><input id="cp-add-first" type="text"></div>' +
+    '<div class="cp-field"><label>Cognome *</label><input id="cp-add-last" type="text"></div>' +
+    '<div class="cp-field"><label>Password di accesso (min. 4) *</label><input id="cp-add-pass" type="text" autocomplete="off"></div>' +
+    (isNew ? '' : '<div id="cp-add-intake">' + intakeFormHtml('cpa', {}, { skipName: true }) + '</div>') +
+    '<div id="cp-add-status" class="cp-help"></div>' +
+    '<button class="btn btn-primary" style="width:100%;" onclick="submitAddClient()">CREA E GENERA LINK</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="showOverlay(\'cp-add\', false)">ANNULLA</button>';
+}
+
+async function submitAddClient() {
+  const status = document.getElementById('cp-add-status');
+  const firstName = (document.getElementById('cp-add-first') && document.getElementById('cp-add-first').value || '').trim();
+  const lastName = (document.getElementById('cp-add-last') && document.getElementById('cp-add-last').value || '').trim();
+  const password = (document.getElementById('cp-add-pass') && document.getElementById('cp-add-pass').value) || '';
+  const intakeMode = window.__cpAddMode === 'transition' ? 'transition' : 'new';
+  const intake = intakeMode === 'transition' ? Object.assign(readIntakeForm('cpa'), { firstName: firstName, lastName: lastName }) : { firstName: firstName, lastName: lastName };
+  if (firstName.length < 2 || lastName.length < 2 || password.length < 4) {
+    if (status) status.textContent = 'Nome, cognome e password sono obbligatori.';
+    return;
+  }
+  if (intakeMode === 'transition') {
+    const missing = intakeFormMissing(intake);
+    if (missing.length) {
+      if (status) status.textContent = 'In transizione compili tu il form. Manca: ' + missing.join(', ');
+      return;
+    }
+  }
+  if (status) status.textContent = 'Creazione…';
+  try {
+    const payload = await practiceFetch('/api/coach/clients', {
+      method: 'POST',
+      headers: practiceHeaders(true),
+      body: JSON.stringify({ firstName: firstName, lastName: lastName, password: password, intakeMode: intakeMode, intake: intake })
+    }, 25000);
+    if (!payload || !payload.ok) throw new Error((payload && payload.error) || 'Cliente non creato.');
+    showOverlay('cp-add', false);
+    const url = payload.inviteUrl || '';
+    const user = payload.credentials && payload.credentials.username;
+    const msg = 'Link: ' + url + '\nUtente: ' + user + '\nPassword: ' + password;
+    await copyOrShare(url, 'Invito Nurvan');
+    practiceToast('Creato ' + firstName + '. Utente ' + user, 'success');
+    try { alert('Invito pronto.\n\n' + msg + (intakeMode === 'new' ? '\n\nAl primo accesso compilerà il questionario.' : '\n\nTransizione: entra senza questionario.')); } catch (_) {}
+    if (currentView === 'coachHub') loadCoachClientList();
+    else navigate('coachHub');
+  } catch (err) {
+    if (status) status.textContent = (err && err.message) || 'Creazione non riuscita.';
+  }
+}
+
+async function copyClientInvite(id, token) {
+  let url = '';
+  if (store.__cpOrigin && token) url = store.__cpOrigin + '/c/' + token;
+  if (!url) {
+    try {
+      const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 20000);
+      url = snap.inviteUrl || url;
+    } catch (_) {}
+  }
+  if (!url) { practiceToast('Link non disponibile', 'warning'); return; }
+  copyOrShare(url, 'Invito Nurvan');
+}
+
+async function toggleClientPaid(id, paid) {
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/paid', {
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ paid: !!paid })
+    }, 15000);
+    loadCoachClientList();
+  } catch (err) { practiceToast((err && err.message) || 'Aggiornamento pagamento fallito', 'danger'); }
+}
+
+async function revokeCoachClient(id) {
+  if (!confirm('Revocare l’accesso a questo cliente?')) return;
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/revoke', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 15000);
+    loadCoachClientList();
+  } catch (err) { practiceToast((err && err.message) || 'Revoca fallita', 'danger'); }
+}
+
+async function removeCoachClient(id) {
+  if (!confirm('Rimuovere il cliente dalla lista?')) return;
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/remove', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 15000);
+    loadCoachClientList();
+  } catch (err) { practiceToast((err && err.message) || 'Rimozione fallita', 'danger'); }
+}
+
+async function openCoachClient(id) {
+  store.coachWorkspace = { clientId: id };
+  if (typeof persist === 'function') persist();
+  navigate('coachClient');
+}
+
+function openCoachClientChat(id) {
+  store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: id, chat: true });
+  navigate('coachClient');
+}
+
+async function renderCoachWorkspace(c) {
+  const id = store.coachWorkspace && store.coachWorkspace.clientId;
+  if (!id) { c.innerHTML = '<div class="cp-help">Nessun cliente selezionato.</div>'; return; }
+  c.innerHTML = '<div class="cp-help">Caricamento scheda cliente…</div>';
+  try {
+    const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 25000);
+    store.coachWorkspace = {
+      clientId: id,
+      client: snap.client,
+      data: snap.data || {},
+      intake: snap.intake || (snap.client && snap.client.intake) || {},
+      inviteUrl: snap.inviteUrl,
+      loadedAt: Date.now()
+    };
+    const cl = snap.client || {};
+    const prog = (snap.data && snap.data.activeProgram) || {};
+    const weeks = (prog.weeks && prog.weeks.length) || 0;
+    const intake = store.coachWorkspace.intake || {};
+    const intakeRows = CLIENT_INTAKE_FIELDS.filter(function (f) { return intake[f.key]; }).map(function (f) {
+      return '<div class="cp-row"><span style="color:#888;font-size:11px;">' + esc(f.label) + '</span><span style="font-size:12px;color:#fff;">' + esc(intake[f.key]) + '</span></div>';
+    }).join('');
+    c.innerHTML = '<button class="btn btn-outline" style="font-size:10px;margin-bottom:10px;" onclick="navigate(\'coachHub\')">← LISTA</button>' +
+      '<h1 style="color:#fff;font-size:22px;margin:0 0 4px;">' + esc(cl.displayName || 'Cliente') + '</h1>' +
+      '<div style="font-size:11px;color:#888;margin-bottom:12px;">@' + esc(cl.username || '') + ' · ' +
+      (cl.intakeMode === 'transition' ? 'Transizione' : 'Nuovo') + (cl.intakeDone ? ' · questionario ok' : ' · questionario in attesa') + '</div>' +
+      '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;">Programma</div>' +
+      '<div style="font-size:12px;color:#ccc;">' + esc(prog.title || 'Nessuna scheda assegnata') + (weeks ? ' · ' + weeks + ' settimane' : '') + '</div>' +
+      '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="assignActiveToClient(\'' + esc(id) + '\')">ASSEGNA SCHEDA ATTIVA</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="copyOrShare(\'' + esc(snap.inviteUrl || '') + '\',\'Invito\')">COPIA LINK UNICO</button></div>' +
+      '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;">Anagrafica acquisizione</div>' +
+      (intakeRows || '<div class="cp-help">Questionario non ancora compilato.</div>') + '</div>' +
+      '<div class="card" style="padding:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:8px;">Chat</div>' +
+      '<div id="cp-ws-chat" style="min-height:80px;"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:8px;"><input id="cp-ws-msg" type="text" placeholder="Messaggio al cliente…">' +
+      '<button class="btn btn-primary" onclick="sendCoachHumanMessage(\'' + esc(id) + '\')">INVIA</button></div></div>';
+    loadHumanMessages(id, 'cp-ws-chat', 'coach');
+  } catch (err) {
+    c.innerHTML = '<div class="cp-help">' + esc((err && err.message) || 'Snapshot non disponibile.') + '</div>';
+  }
+}
+
+async function assignActiveToClient(id) {
+  if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
+    practiceToast('Apri prima una scheda attiva da assegnare.', 'warning');
+    return;
+  }
+  try {
+    const payload = { activeProgram: DATA };
+    if (DATA.nutrition) payload.nutrition = DATA.nutrition;
+    if (DATA.supplementation) payload.supplementation = DATA.supplementation;
+    if (DATA.therapy) payload.therapy = DATA.therapy;
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/assign', {
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ data: payload })
+    }, 25000);
+    practiceToast('Scheda assegnata', 'success');
+    renderCoachWorkspace(document.getElementById('view-container'));
+  } catch (err) {
+    practiceToast((err && err.message) || 'Assegnazione fallita', 'danger');
+  }
+}
+
+function renderClientChat(c) {
+  c.innerHTML = '<div style="margin-bottom:12px;"><span style="font-size:10px;color:var(--gold);font-weight:800;">COACH</span>' +
+    '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">Chat con il coach</h1></div>' +
+    '<div class="card" style="padding:12px;"><div id="cp-client-chat"></div>' +
+    '<div style="display:flex;gap:8px;margin-top:10px;"><input id="cp-client-msg" type="text" placeholder="Scrivi al coach…">' +
+    '<button class="btn btn-primary" onclick="sendAthleteHumanMessage()">INVIA</button></div></div>';
+  loadHumanMessages(null, 'cp-client-chat', 'athlete');
+}
+
+async function loadHumanMessages(clientId, boxId, role) {
+  const box = document.getElementById(boxId);
+  if (!box) return;
+  try {
+    const path = role === 'athlete' ? '/api/client/messages' : '/api/coach/clients/' + encodeURIComponent(clientId) + '/messages';
+    const payload = await practiceFetch(path, { method: 'GET', headers: practiceHeaders(false) }, 20000);
+    const msgs = payload.messages || [];
+    if (!msgs.length) { box.innerHTML = '<div class="cp-help">Nessun messaggio.</div>'; return; }
+    box.innerHTML = msgs.map(function (m) {
+      const mine = (role === 'athlete' && m.from_role === 'athlete') || (role === 'coach' && m.from_role === 'coach');
+      return '<div class="cp-msg ' + (mine ? 'me' : 'them') + '">' + esc(m.body) +
+        '<div style="font-size:9px;color:#666;margin-top:4px;">' + esc(String(m.created_at || '').replace('T', ' ').slice(0, 16)) + '</div></div>';
+    }).join('');
+    box.scrollTop = box.scrollHeight;
+  } catch (err) {
+    box.innerHTML = '<div class="cp-help">' + esc((err && err.message) || 'Chat non disponibile.') + '</div>';
+  }
+}
+
+async function sendCoachHumanMessage(id) {
+  const input = document.getElementById('cp-ws-msg');
+  const body = input && input.value.trim();
+  if (!body) return;
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/messages', {
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: body })
+    }, 15000);
+    input.value = '';
+    loadHumanMessages(id, 'cp-ws-chat', 'coach');
+  } catch (err) { practiceToast((err && err.message) || 'Messaggio non inviato', 'danger'); }
+}
+
+async function sendAthleteHumanMessage() {
+  const input = document.getElementById('cp-client-msg');
+  const body = input && input.value.trim();
+  if (!body) return;
+  try {
+    await practiceFetch('/api/client/messages', {
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: body })
+    }, 15000);
+    input.value = '';
+    loadHumanMessages(null, 'cp-client-chat', 'athlete');
+  } catch (_) {
+    enqueueClientOutbox({ type: 'message', body: body });
+    input.value = '';
+    practiceToast('Messaggio in coda offline', 'warning');
+  }
+}
+
+function renderPracticeView() {
+  const c = typeof $ === 'function' ? $('view-container') : document.getElementById('view-container');
+  if (!c) return false;
+  if (currentView === 'coachHub') { ensurePracticeStyle(); c.innerHTML = ''; renderCoachHub(c); applyClientChrome(); return true; }
+  if (currentView === 'clientChat') { ensurePracticeStyle(); c.innerHTML = ''; renderClientChat(c); applyClientChrome(); return true; }
+  if (currentView === 'coachClient') { ensurePracticeStyle(); c.innerHTML = ''; renderCoachWorkspace(c); applyClientChrome(); return true; }
+  return false;
+}
+
+async function refreshCoachStatus() {
+  if (!store.accountToken || (typeof isAthleteRole === 'function' && isAthleteRole())) return;
+  try {
+    const s = await practiceFetch('/api/coach/status', { method: 'GET', headers: practiceHeaders(false) }, 12000);
+    store.coachUnlocked = !!(s && s.unlocked);
+    if (typeof persist === 'function') persist();
+  } catch (_) {}
+}
+
+async function refreshAthleteMe() {
+  if (!store.accountToken || typeof isAthleteRole !== 'function' || !isAthleteRole()) return;
+  try {
+    const me = await practiceFetch('/api/client/me', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+    store.clientProfile = me.client || store.clientProfile;
+    store.clientEvents = me.events || [];
+    store.role = 'athlete';
+    if (typeof persist === 'function') persist();
+    if (me.client && me.client.needIntake) showClientIntake(me.client.intake || {});
+  } catch (_) {}
+}
+
+async function bootCoachPractice() {
+  ensurePracticeStyle();
+  ensurePracticeOverlays();
+  const token = detectInviteToken() || store.inviteToken;
+  if (token) store.inviteToken = token;
+  applyClientChrome();
+  if (token && !(typeof isAthleteRole === 'function' && isAthleteRole() && store.accountToken)) {
+    showClientInvite(token);
+    return;
+  }
+  if (typeof isAthleteRole === 'function' && isAthleteRole() && store.accountToken) {
+    await refreshAthleteMe();
+    if (store.clientProfile && store.clientProfile.needIntake) showClientIntake(store.clientProfile.intake || {});
+    else if (!store.clientTutorialDone) showClientTutorial(false);
+    flushClientOutbox();
+  } else {
+    await refreshCoachStatus();
+    applyClientChrome();
+  }
+}
+
+function wrapPracticeHooks() {
+  if (typeof navigate === 'function' && !navigate.__cpWrapped) {
+    const _nav = navigate;
+    navigate = function (v, e) {
+      v = gatePracticeView(v);
+      if (v === 'coachHub' || v === 'clientChat' || v === 'coachClient') {
+        if (e && e.preventDefault) e.preventDefault();
+        currentView = v;
+        document.querySelectorAll('.nav-item').forEach(function (el) { el.classList.remove('active'); });
+        if (v === 'clientChat') {
+          const a = document.getElementById('nav-stats');
+          if (a) a.classList.add('active');
+        }
+        renderPracticeView();
+        return;
+      }
+      _nav(v, e);
+      applyClientChrome();
+    };
+    navigate.__cpWrapped = true;
+  }
+  if (typeof render === 'function' && !render.__cpWrapped) {
+    const _render = render;
+    render = function () {
+      if (renderPracticeView()) return;
+      _render();
+      try {
+        const c = document.getElementById('view-container');
+        if (c && currentView === 'home' && typeof isAthleteRole === 'function' && isAthleteRole() && (!DATA || !DATA.weeks || !DATA.weeks.length)) {
+          c.innerHTML = athleteWaitingHomeHtml();
+        }
+        if (c && (currentView === 'athlete' || currentView === 'settings')) injectCoachUnlockInto(c);
+      } catch (_) {}
+      applyClientChrome();
+    };
+    render.__cpWrapped = true;
+  }
+  if (typeof applyChromeI18n === 'function' && !applyChromeI18n.__cpWrapped) {
+    const _chrome = applyChromeI18n;
+    applyChromeI18n = function () { _chrome(); applyClientChrome(); };
+    applyChromeI18n.__cpWrapped = true;
+  }
+  if (typeof logoutAccount === 'function' && !logoutAccount.__cpWrapped) {
+    const _lo = logoutAccount;
+    logoutAccount = function () {
+      const token = store.inviteToken;
+      const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+      _lo();
+      store.role = null;
+      store.clientProfile = null;
+      store.coachWorkspace = null;
+      if (athlete && token) {
+        store.inviteToken = token;
+        if (typeof persist === 'function') persist();
+        showClientInvite(token);
+      }
+      applyClientChrome();
+    };
+    logoutAccount.__cpWrapped = true;
+  }
+  if (typeof maybeShowRewardsOnboarding === 'function' && !maybeShowRewardsOnboarding.__cpWrapped) {
+    const _rw = maybeShowRewardsOnboarding;
+    maybeShowRewardsOnboarding = function () {
+      if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+        if (typeof applyFocusUi === 'function') applyFocusUi();
+        return;
+      }
+      _rw();
+    };
+    maybeShowRewardsOnboarding.__cpWrapped = true;
+  }
+  if (typeof finalizeWorkout === 'function' && !finalizeWorkout.__cpWrapped) {
+    const _fw = finalizeWorkout;
+    finalizeWorkout = function () {
+      const ret = _fw.apply(this, arguments);
+      if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+        enqueueClientOutbox({ type: 'workout-ping' });
+        flushClientOutbox();
+      }
+      return ret;
+    };
+    finalizeWorkout.__cpWrapped = true;
+  }
+}
+
+wrapPracticeHooks();
+
+window.bootCoachPractice = bootCoachPractice;
+window.showClientInvite = showClientInvite;
+window.submitClientInviteLogin = submitClientInviteLogin;
+window.showClientIntake = showClientIntake;
+window.submitClientIntake = submitClientIntake;
+window.showClientTutorial = showClientTutorial;
+window.drawClientTutorial = drawClientTutorial;
+window.closeClientTutorial = closeClientTutorial;
+window.showDemoUnlock = showDemoUnlock;
+window.confirmDemoUnlock = confirmDemoUnlock;
+window.openAddClientWizard = openAddClientWizard;
+window.setAddClientMode = setAddClientMode;
+window.submitAddClient = submitAddClient;
+window.loadCoachClientList = loadCoachClientList;
+window.debounceCoachClientList = debounceCoachClientList;
+window.copyClientInvite = copyClientInvite;
+window.toggleClientPaid = toggleClientPaid;
+window.revokeCoachClient = revokeCoachClient;
+window.removeCoachClient = removeCoachClient;
+window.openCoachClient = openCoachClient;
+window.openCoachClientChat = openCoachClientChat;
+window.assignActiveToClient = assignActiveToClient;
+window.sendCoachHumanMessage = sendCoachHumanMessage;
+window.sendAthleteHumanMessage = sendAthleteHumanMessage;
+window.requestProgramFromCoach = requestProgramFromCoach;
+window.copyOrShare = copyOrShare;
+window.showOverlay = showOverlay;
+window.applyClientChrome = applyClientChrome;
+window.CLIENT_INTAKE_FIELDS = CLIENT_INTAKE_FIELDS;
+window.isAthleteRole = isAthleteRole;
+window.isCoachUnlocked = isCoachUnlocked;
 
 
 // ====================================================
