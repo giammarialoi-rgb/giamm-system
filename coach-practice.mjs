@@ -71,7 +71,7 @@ function clientNeedsIntake(row) {
   return (row.intake_mode || "new") === "new" && !row.intake_completed_at;
 }
 
-function clientRow(r, { includeIntake = false } = {}) {
+function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
   if (!r) return null;
   const row = {
     id: String(r.id),
@@ -87,11 +87,18 @@ function clientRow(r, { includeIntake = false } = {}) {
     inviteToken: r.invite_token,
     createdAt: r.created_at,
     intakeMode: r.intake_mode || "new",
-    intakeDone: !!r.intake_completed_at
+    intakeDone: !!r.intake_completed_at,
+    leaveRequested: !!r.leave_requested_at,
+    chatThread: Number(r.chat_thread || 1),
+    allowMaxFreedom: !!r.allow_max_freedom,
+    hasPendingChange: !!(r.pending_change && (r.pending_change.summary || r.pending_change.data))
   };
   if (includeIntake) {
     row.intake = r.intake || {};
     row.needIntake = clientNeedsIntake(r);
+  }
+  if (includeSecrets) {
+    row.invitePassword = r.invite_password || "";
   }
   return row;
 }
@@ -160,6 +167,14 @@ export async function ensureCoachPracticeTables(client) {
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS intake_mode TEXT NOT NULL DEFAULT 'new';
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS intake JSONB NOT NULL DEFAULT '{}'::jsonb;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS intake_completed_at TIMESTAMPTZ;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS chat_thread INT NOT NULL DEFAULT 1;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS invite_password TEXT;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS leave_requested_at TIMESTAMPTZ;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS allow_max_freedom BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS pending_change JSONB;
+    ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS attachment JSONB;
+    ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS thread_id INT NOT NULL DEFAULT 1;
+    ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS hidden_for TEXT[] NOT NULL DEFAULT '{}';
   `);
 }
 
@@ -219,6 +234,95 @@ export function mountCoachPractice(app, deps) {
     }
     return { auth, client: row.rows[0] };
   }
+
+  function sanitizeAttachment(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const kind = raw.kind === "image" || raw.kind === "file" ? raw.kind : null;
+    if (!kind) return null;
+    const name = String(raw.name || "allegato").slice(0, 80);
+    const mime = String(raw.mime || "").slice(0, 80);
+    const data = String(raw.data || "");
+    if (!/^data:[a-z0-9.+\/\-]+;base64,/i.test(data)) return null;
+    if (data.length > 450000) return null;
+    return { kind, name, mime, data };
+  }
+
+  async function currentThread(clientId) {
+    const q = await pool.query("SELECT COALESCE(chat_thread, 1) AS t FROM coach_clients WHERE id = $1", [clientId]);
+    return Number(q.rows[0]?.t || 1);
+  }
+
+  async function insertMessage(clientId, fromRole, body, attachment) {
+    const att = sanitizeAttachment(attachment);
+    const text = String(body || "").trim().slice(0, 2000);
+    if (!text && !att) return null;
+    const thread = await currentThread(clientId);
+    const ins = await pool.query(
+      `INSERT INTO coach_messages(client_id, from_role, body, attachment, thread_id)
+       VALUES($1,$2,$3,$4::jsonb,$5)
+       RETURNING id, from_role, body, attachment, thread_id, created_at, read_at`,
+      [clientId, fromRole, text || "[allegato]", att ? JSON.stringify(att) : null, thread]
+    );
+    return ins.rows[0];
+  }
+
+  async function listMessages(clientId, hiddenRole) {
+    const rows = await pool.query(
+      `SELECT id, from_role, body, attachment, thread_id, created_at, read_at
+       FROM coach_messages
+       WHERE client_id = $1
+         AND thread_id = (SELECT COALESCE(chat_thread, 1) FROM coach_clients WHERE id = $1)
+         AND NOT ($2 = ANY(COALESCE(hidden_for, '{}')))
+       ORDER BY created_at DESC LIMIT 120`,
+      [clientId, hiddenRole]
+    );
+    return rows.rows.reverse();
+  }
+
+  async function hideThreadFor(clientId, role) {
+    const thread = await currentThread(clientId);
+    await pool.query(
+      `UPDATE coach_messages
+       SET hidden_for = CASE
+         WHEN $2 = ANY(COALESCE(hidden_for, '{}')) THEN hidden_for
+         ELSE array_append(COALESCE(hidden_for, '{}'), $2)
+       END
+       WHERE client_id = $1 AND thread_id = $3`,
+      [clientId, role, thread]
+    );
+    return thread;
+  }
+
+  async function bumpThread(clientId) {
+    const q = await pool.query(
+      "UPDATE coach_clients SET chat_thread = COALESCE(chat_thread, 1) + 1 WHERE id = $1 RETURNING chat_thread",
+      [clientId]
+    );
+    return Number(q.rows[0]?.chat_thread || 1);
+  }
+
+  function detectAssignKinds(patch) {
+    const kinds = [];
+    const prog = patch && (patch.activeProgram || patch);
+    if (prog && Array.isArray(prog.weeks) && prog.weeks.length) kinds.push("training");
+    const nutr = patch.nutrition || (prog && prog.nutrition);
+    if (nutr && Array.isArray(nutr.days) && nutr.days.length) kinds.push("nutrition");
+    const supp = patch.supplementation || (prog && prog.supplementation);
+    if (supp && Array.isArray(supp.items) && supp.items.length) kinds.push("supplements");
+    const th = patch.therapy || (prog && prog.therapy);
+    if (th && Array.isArray(th.medications) && th.medications.length) kinds.push("therapy");
+    const ex = patch.exams || (prog && prog.exams);
+    if (ex && Array.isArray(ex.records) && ex.records.length) kinds.push("exams");
+    return kinds;
+  }
+
+  const KIND_EVENTS = {
+    training: "program_assigned",
+    nutrition: "nutrition_assigned",
+    supplements: "supplements_assigned",
+    therapy: "therapy_assigned",
+    exams: "exams_assigned"
+  };
 
   const indexHtml = path.join(webDir, "index.html");
   app.get("/c/:token", (req, res) => {
@@ -329,29 +433,182 @@ export function mountCoachPractice(app, deps) {
   app.get("/api/client/messages", async (req, res) => {
     const ctx = await requireAthlete(req, res);
     if (!ctx) return;
-    const rows = await pool.query(
-      "SELECT id, from_role, body, created_at, read_at FROM coach_messages WHERE client_id = $1 ORDER BY created_at DESC LIMIT 80",
-      [ctx.client.id]
-    );
+    const messages = await listMessages(ctx.client.id, "athlete");
+    const thread = await currentThread(ctx.client.id);
     await pool.query(
-      "UPDATE coach_messages SET read_at = NOW() WHERE client_id = $1 AND from_role = 'coach' AND read_at IS NULL",
-      [ctx.client.id]
+      `UPDATE coach_messages SET read_at = NOW()
+       WHERE client_id = $1 AND thread_id = $2 AND from_role = 'coach' AND read_at IS NULL`,
+      [ctx.client.id, thread]
     );
-    await pool.query("UPDATE coach_clients SET unread_count = 0 WHERE id = $1", [ctx.client.id]);
-    return res.json({ ok: true, messages: rows.rows.reverse() });
+    return res.json({ ok: true, messages, threadId: thread });
   });
 
   app.post("/api/client/messages", async (req, res) => {
     const ctx = await requireAthlete(req, res);
     if (!ctx) return;
-    const body = String(req.body?.body || "").trim().slice(0, 2000);
-    if (!body) return res.status(400).json({ error: "Messaggio vuoto." });
-    const ins = await pool.query(
-      "INSERT INTO coach_messages(client_id, from_role, body) VALUES($1,'athlete',$2) RETURNING id, from_role, body, created_at, read_at",
-      [ctx.client.id, body]
+    const message = await insertMessage(ctx.client.id, "athlete", req.body?.body, req.body?.attachment);
+    if (!message) return res.status(400).json({ error: "Messaggio vuoto." });
+    await pool.query("UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1", [ctx.client.id]);
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'message',$2)",
+      [ctx.client.id, JSON.stringify({ from: "athlete", preview: String(message.body || "").slice(0, 80) })]
+    );
+    return res.json({ ok: true, message });
+  });
+
+  app.post("/api/client/messages/clear", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    await hideThreadFor(ctx.client.id, "athlete");
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/client/messages/new-thread", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const threadId = await bumpThread(ctx.client.id);
+    return res.json({ ok: true, threadId });
+  });
+
+  app.post("/api/client/ask-coach", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const domain = String(req.body?.domain || "general").slice(0, 40);
+    const note = String(req.body?.note || "").slice(0, 800);
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'ask_coach',$2)",
+      [ctx.client.id, JSON.stringify({ domain, note })]
     );
     await pool.query("UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1", [ctx.client.id]);
-    return res.json({ ok: true, message: ins.rows[0] });
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/client/change-request", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const summary = String(req.body?.summary || "modifica programma").slice(0, 200);
+    const data = req.body?.data && typeof req.body.data === "object" ? req.body.data : {};
+    await pool.query(
+      "UPDATE coach_clients SET pending_change = $2, unread_count = unread_count + 1 WHERE id = $1",
+      [ctx.client.id, JSON.stringify({ summary, data, at: new Date().toISOString() })]
+    );
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'change_request',$2)",
+      [ctx.client.id, JSON.stringify({ summary, name: ctx.client.display_name })]
+    );
+    return res.json({ ok: true, pending: true });
+  });
+
+  app.post("/api/client/change-notice", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    if (!ctx.client.allow_max_freedom) {
+      return res.status(403).json({ error: "Il coach non ha concesso la massima libertà." });
+    }
+    const summary = String(req.body?.summary || "modifica programma").slice(0, 200);
+    const data = req.body?.data && typeof req.body.data === "object" ? req.body.data : null;
+    if (data && ctx.client.athlete_user_id) {
+      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [ctx.client.athlete_user_id]);
+      const current = existing.rows[0]?.data || {};
+      const merged = {
+        ...current,
+        nutrition: data.nutrition || current.nutrition,
+        supplementation: data.supplementation || current.supplementation,
+        therapy: data.therapy || current.therapy,
+        exams: data.exams || current.exams,
+        lastAthleteEditAt: new Date().toISOString()
+      };
+      if (Array.isArray(data.weeks)) {
+        const prev = current.activeProgram && typeof current.activeProgram === "object" ? current.activeProgram : {};
+        merged.activeProgram = {
+          ...prev,
+          weeks: data.weeks,
+          nutrition: data.nutrition,
+          supplementation: data.supplementation,
+          therapy: data.therapy,
+          exams: data.exams
+        };
+      }
+      await pool.query(
+        `INSERT INTO app_account_data(user_id, data, updated_at)
+         VALUES($1,$2,NOW())
+         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        [ctx.client.athlete_user_id, JSON.stringify(merged)]
+      );
+    }
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'change_notice',$2)",
+      [ctx.client.id, JSON.stringify({ summary, name: ctx.client.display_name, freedom: true })]
+    );
+    await pool.query("UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1", [ctx.client.id]);
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/client/leave-request", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    if (!ctx.client.paid) {
+      return res.status(409).json({ error: "Ci sono pagamenti in sospeso. Regola prima la situazione con il coach." });
+    }
+    if (ctx.client.leave_requested_at) return res.json({ ok: true, pending: true });
+    await pool.query("UPDATE coach_clients SET leave_requested_at = NOW() WHERE id = $1", [ctx.client.id]);
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'leave_request',$2)",
+      [ctx.client.id, JSON.stringify({ name: ctx.client.display_name })]
+    );
+    await pool.query("UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1", [ctx.client.id]);
+    return res.json({ ok: true, pending: true });
+  });
+
+  app.get("/api/client/inbox", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const events = await pool.query(
+      "SELECT id, kind, payload, created_at, read_at FROM coach_events WHERE client_id = $1 ORDER BY id DESC LIMIT 30",
+      [ctx.client.id]
+    );
+    const unread = await pool.query(
+      `SELECT COUNT(*)::int AS n, COALESCE(MAX(id),0)::int AS last_id
+       FROM coach_messages
+       WHERE client_id = $1
+         AND thread_id = (SELECT COALESCE(chat_thread, 1) FROM coach_clients WHERE id = $1)
+         AND from_role = 'coach'
+         AND read_at IS NULL
+         AND NOT ('athlete' = ANY(COALESCE(hidden_for, '{}')))`,
+      [ctx.client.id]
+    );
+    return res.json({
+      ok: true,
+      events: events.rows,
+      unreadMessages: unread.rows[0]?.n || 0,
+      lastMessageId: unread.rows[0]?.last_id || 0,
+      paid: !!ctx.client.paid,
+      leaveRequested: !!ctx.client.leave_requested_at
+    });
+  });
+
+  app.post("/api/client/password-help", async (req, res) => {
+    try {
+      await initDb();
+      const token = String(req.body?.token || "").trim();
+      const username = slugName(req.body?.username || req.body?.name);
+      if (!token || !username) return res.status(400).json({ error: "Inserisci nome utente." });
+      const q = await pool.query(
+        "SELECT * FROM coach_clients WHERE invite_token = $1 AND username = $2 AND status = 'active'",
+        [token, username]
+      );
+      const client = q.rows[0];
+      if (!client) return res.status(404).json({ error: "Dati non trovati. Controlla il link e il nome utente." });
+      await pool.query(
+        "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'password_help',$2)",
+        [client.id, JSON.stringify({ username })]
+      );
+      await pool.query("UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1", [client.id]);
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error("PASSWORD_HELP", err && err.message);
+      return res.status(500).json({ error: "Richiesta non inviata." });
+    }
   });
 
   app.post("/api/client/request-program", async (req, res) => {
@@ -444,7 +701,8 @@ export function mountCoachPractice(app, deps) {
     }
     const rows = await pool.query(
       `SELECT id, display_name, username, status, paid, billing_cycle, next_due_at, allow_program_db,
-              last_workout_at, unread_count, invite_token, created_at, intake_mode, intake_completed_at
+              last_workout_at, unread_count, invite_token, created_at, intake_mode, intake_completed_at,
+              leave_requested_at, chat_thread, allow_max_freedom, pending_change
        FROM coach_clients WHERE ${where}
        ORDER BY display_name ASC
        LIMIT $2 OFFSET $3`,
@@ -515,10 +773,10 @@ export function mountCoachPractice(app, deps) {
       const cli = await db.query(
         `INSERT INTO coach_clients(
            coach_user_id, athlete_user_id, display_name, username, status, paid, next_due_at, invite_token,
-           intake_mode, intake, intake_completed_at
-         ) VALUES($1,$2,$3,$4,'active',TRUE,$5,$6,$7,$8,$9)
+           intake_mode, intake, intake_completed_at, invite_password
+         ) VALUES($1,$2,$3,$4,'active',TRUE,$5,$6,$7,$8,$9,$10)
          RETURNING *`,
-        [coach.id, athlete.id, displayName, username, due, inviteToken, intakeMode, JSON.stringify(intake), completedAt]
+        [coach.id, athlete.id, displayName, username, due, inviteToken, intakeMode, JSON.stringify(intake), completedAt, password]
       );
       if (intakeMode === "transition") {
         const profile = profileFromIntake(intake);
@@ -532,11 +790,13 @@ export function mountCoachPractice(app, deps) {
       await db.query("COMMIT");
       const row = cli.rows[0];
       const origin = publicOrigin(req);
+      const inviteUrl = `${origin}/c/${inviteToken}`;
       return res.json({
         ok: true,
-        client: clientRow(row, { includeIntake: true }),
-        inviteUrl: `${origin}/c/${inviteToken}`,
-        credentials: { username, displayName }
+        client: clientRow(row, { includeIntake: true, includeSecrets: true }),
+        inviteUrl,
+        inviteText: `Link: ${inviteUrl}\nUtente: ${username}\nPassword: ${password}`,
+        credentials: { username, displayName, password }
       });
     } catch (err) {
       await db.query("ROLLBACK");
@@ -604,6 +864,79 @@ export function mountCoachPractice(app, deps) {
     return res.json({ ok: true, allowProgramDb: on });
   });
 
+  app.post("/api/coach/clients/:id/max-freedom", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const on = !!req.body?.allow;
+    await pool.query("UPDATE coach_clients SET allow_max_freedom = $2 WHERE id = $1", [row.id, on]);
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'max_freedom',$2)",
+      [row.id, JSON.stringify({ allow: on })]
+    );
+    return res.json({ ok: true, allowMaxFreedom: on });
+  });
+
+  app.post("/api/coach/clients/:id/change-approve", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const pending = row.pending_change || {};
+    const data = pending.data && typeof pending.data === "object" ? pending.data : null;
+    if (!data) return res.status(400).json({ error: "Nessuna modifica in attesa." });
+    if (row.athlete_user_id) {
+      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
+      const current = existing.rows[0]?.data || {};
+      const prev = current.activeProgram && typeof current.activeProgram === "object" ? current.activeProgram : {};
+      const merged = {
+        ...current,
+        nutrition: data.nutrition || current.nutrition,
+        supplementation: data.supplementation || current.supplementation,
+        therapy: data.therapy || current.therapy,
+        exams: data.exams || current.exams,
+        assignedAt: new Date().toISOString(),
+        assignedByCoach: true
+      };
+      if (Array.isArray(data.weeks)) {
+        merged.activeProgram = {
+          ...prev,
+          weeks: data.weeks,
+          nutrition: data.nutrition,
+          supplementation: data.supplementation,
+          therapy: data.therapy,
+          exams: data.exams
+        };
+      }
+      await pool.query(
+        `INSERT INTO app_account_data(user_id, data, updated_at)
+         VALUES($1,$2,NOW())
+         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        [row.athlete_user_id, JSON.stringify(merged)]
+      );
+    }
+    await pool.query("UPDATE coach_clients SET pending_change = NULL WHERE id = $1", [row.id]);
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'change_approved',$2)",
+      [row.id, JSON.stringify({ summary: pending.summary || "modifica" })]
+    );
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/coach/clients/:id/change-reject", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    await pool.query("UPDATE coach_clients SET pending_change = NULL WHERE id = $1", [row.id]);
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'change_rejected',$2)",
+      [row.id, JSON.stringify({ note: String(req.body?.note || "").slice(0, 300) })]
+    );
+    return res.json({ ok: true });
+  });
+
   app.post("/api/coach/clients/:id/intake", async (req, res) => {
     const coach = await requireCoach(req, res);
     if (!coach) return;
@@ -665,11 +998,18 @@ export function mountCoachPractice(app, deps) {
        ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
       [row.athlete_user_id, JSON.stringify(merged)]
     );
-    await pool.query(
-      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'program_assigned',$2)",
-      [row.id, JSON.stringify({ at: merged.assignedAt })]
-    );
-    return res.json({ ok: true });
+    const kinds = Array.isArray(req.body?.kinds) && req.body.kinds.length
+      ? req.body.kinds.map((k) => String(k)).filter((k) => KIND_EVENTS[k] || k === "exams_request")
+      : detectAssignKinds(patch);
+    const unique = [...new Set(kinds.length ? kinds : ["training"])];
+    for (const kind of unique) {
+      const eventKind = KIND_EVENTS[kind] || (kind === "exams_request" ? "exams_request" : "program_assigned");
+      await pool.query(
+        "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,$2,$3)",
+        [row.id, eventKind, JSON.stringify({ at: merged.assignedAt, kind })]
+      );
+    }
+    return res.json({ ok: true, kinds: unique });
   });
 
   app.get("/api/coach/clients/:id/snapshot", async (req, res) => {
@@ -679,12 +1019,16 @@ export function mountCoachPractice(app, deps) {
     if (!row) return;
     const data = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
     const origin = publicOrigin(req);
+    const inviteUrl = `${origin}/c/${row.invite_token}`;
     return res.json({
       ok: true,
-      client: clientRow(row, { includeIntake: true }),
-      inviteUrl: `${origin}/c/${row.invite_token}`,
+      client: clientRow(row, { includeIntake: true, includeSecrets: true }),
+      inviteUrl,
+      inviteText: `Link: ${inviteUrl}\nUtente: ${row.username}\nPassword: ${row.invite_password || "(reimposta dal coach)"}`,
+      credentials: { username: row.username, password: row.invite_password || "" },
       intake: row.intake || {},
-      data: data.rows[0]?.data || {}
+      data: data.rows[0]?.data || {},
+      pendingChange: row.pending_change ? { summary: row.pending_change.summary || "modifica", at: row.pending_change.at } : null
     });
   });
 
@@ -693,16 +1037,15 @@ export function mountCoachPractice(app, deps) {
     if (!coach) return;
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
-    const msgs = await pool.query(
-      "SELECT id, from_role, body, created_at, read_at FROM coach_messages WHERE client_id = $1 ORDER BY created_at DESC LIMIT 80",
-      [row.id]
-    );
+    const messages = await listMessages(row.id, "coach");
+    const thread = await currentThread(row.id);
     await pool.query(
-      "UPDATE coach_messages SET read_at = NOW() WHERE client_id = $1 AND from_role = 'athlete' AND read_at IS NULL",
-      [row.id]
+      `UPDATE coach_messages SET read_at = NOW()
+       WHERE client_id = $1 AND thread_id = $2 AND from_role = 'athlete' AND read_at IS NULL`,
+      [row.id, thread]
     );
     await pool.query("UPDATE coach_clients SET unread_count = 0 WHERE id = $1", [row.id]);
-    return res.json({ ok: true, messages: msgs.rows.reverse() });
+    return res.json({ ok: true, messages, threadId: thread });
   });
 
   app.post("/api/coach/clients/:id/messages", async (req, res) => {
@@ -710,13 +1053,109 @@ export function mountCoachPractice(app, deps) {
     if (!coach) return;
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
-    const body = String(req.body?.body || "").trim().slice(0, 2000);
-    if (!body) return res.status(400).json({ error: "Messaggio vuoto." });
-    const ins = await pool.query(
-      "INSERT INTO coach_messages(client_id, from_role, body) VALUES($1,'coach',$2) RETURNING id, from_role, body, created_at, read_at",
-      [row.id, body]
+    const message = await insertMessage(row.id, "coach", req.body?.body, req.body?.attachment);
+    if (!message) return res.status(400).json({ error: "Messaggio vuoto." });
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'message',$2)",
+      [row.id, JSON.stringify({ from: "coach", preview: String(message.body || "").slice(0, 80) })]
     );
-    return res.json({ ok: true, message: ins.rows[0] });
+    return res.json({ ok: true, message });
+  });
+
+  app.post("/api/coach/clients/:id/messages/clear", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    await hideThreadFor(row.id, "coach");
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/coach/clients/:id/messages/new-thread", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const threadId = await bumpThread(row.id);
+    return res.json({ ok: true, threadId });
+  });
+
+  app.post("/api/coach/clients/:id/request-exams", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'exams_request',$2)",
+      [row.id, JSON.stringify({ note: String(req.body?.note || "").slice(0, 400) })]
+    );
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/coach/clients/:id/reset-password", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const password = String(req.body?.password || "");
+    if (password.length < 4) return res.status(400).json({ error: "Password minimo 4 caratteri." });
+    const hash = await hashPassword(password);
+    if (row.athlete_user_id) {
+      await pool.query("UPDATE app_users SET password_hash = $2, updated_at = NOW() WHERE id = $1", [row.athlete_user_id, hash]);
+    }
+    await pool.query("UPDATE coach_clients SET invite_password = $2 WHERE id = $1", [row.id, password]);
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'password_reset',$2)",
+      [row.id, JSON.stringify({ username: row.username })]
+    );
+    return res.json({ ok: true, credentials: { username: row.username, password } });
+  });
+
+  app.post("/api/coach/clients/:id/leave-confirm", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    if (!row.leave_requested_at) return res.status(400).json({ error: "Nessuna richiesta di fine collaborazione." });
+    await pool.query("UPDATE coach_clients SET status = 'revoked', leave_requested_at = NULL WHERE id = $1", [row.id]);
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'leave_confirmed',$2)",
+      [row.id, JSON.stringify({ name: row.display_name })]
+    );
+    return res.json({ ok: true });
+  });
+
+  app.get("/api/coach/inbox", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const clients = await pool.query(
+      `SELECT id, display_name, unread_count, leave_requested_at, pending_change
+       FROM coach_clients
+       WHERE coach_user_id = $1 AND status = 'active'
+         AND (unread_count > 0 OR leave_requested_at IS NOT NULL OR pending_change IS NOT NULL)
+       ORDER BY unread_count DESC, display_name ASC
+       LIMIT 40`,
+      [coach.id]
+    );
+    const events = await pool.query(
+      `SELECT e.id, e.kind, e.client_id, e.created_at, c.display_name
+       FROM coach_events e
+       JOIN coach_clients c ON c.id = e.client_id
+       WHERE c.coach_user_id = $1 AND e.read_at IS NULL
+       ORDER BY e.id DESC LIMIT 20`,
+      [coach.id]
+    );
+    return res.json({
+      ok: true,
+      clients: clients.rows.map((r) => ({
+        id: String(r.id),
+        displayName: r.display_name,
+        unreadCount: Number(r.unread_count || 0),
+        leaveRequested: !!r.leave_requested_at,
+        hasPendingChange: !!r.pending_change
+      })),
+      events: events.rows
+    });
   });
 
   app.get("/api/coach/clients/:id/events", async (req, res) => {

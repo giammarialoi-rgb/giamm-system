@@ -1872,7 +1872,8 @@ const DEFAULT_STORE = {
   coachWorkspace: null,
   clientOutbox: [],
   inviteToken: '',
-  clientProfile: null
+  clientProfile: null,
+  stayLoggedIn: true
 };
 
 function loadStore(){
@@ -1880,7 +1881,21 @@ function loadStore(){
     const raw = localStorage.getItem('GS_STORE');
     if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STORE));
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_STORE, ...parsed };
+    const merged = { ...DEFAULT_STORE, ...parsed };
+    if (typeof merged.stayLoggedIn !== 'boolean') merged.stayLoggedIn = true;
+    if (merged.stayLoggedIn === false) {
+      merged.accountToken = null;
+      try {
+        const sess = JSON.parse(sessionStorage.getItem('GS_SESSION_AUTH') || 'null');
+        if (sess && sess.token) {
+          merged.accountToken = sess.token;
+          merged.accountUser = sess.user || merged.accountUser;
+          merged.role = sess.role || merged.role;
+          if (sess.inviteToken) merged.inviteToken = sess.inviteToken;
+        }
+      } catch (_) {}
+    }
+    return merged;
   } catch(err) {
     console.error('Invalid saved app data', err);
     return JSON.parse(JSON.stringify(DEFAULT_STORE));
@@ -1924,6 +1939,7 @@ function ensureStoreIntegrity() {
   if (!Array.isArray(store.clientOutbox)) store.clientOutbox = [];
   if (typeof store.inviteToken !== 'string') store.inviteToken = store.inviteToken || '';
   if (store.clientProfile === undefined) store.clientProfile = null;
+  if (typeof store.stayLoggedIn !== 'boolean') store.stayLoggedIn = true;
 }
 function isAthleteRole() {
   const u = store && store.accountUser;
@@ -2219,8 +2235,26 @@ window.nativeVoiceStatus = function(state, message){
   const status = $('voice-status'); if(status) status.textContent = message || '';
 };
 window.nativeVoiceResult = function(text){
-  const input = $('ai-input'); if(input) input.value = text || '';
+  applyNativeVoiceResult(text);
 };
+function applyNativeVoiceResult(text) {
+  const targetId = window.__cpVoiceTarget;
+  window.__cpVoiceTarget = null;
+  if (targetId) {
+    const el = document.getElementById(targetId);
+    if (el) {
+      const cur = String(el.value || '').replace(/\s+$/, '');
+      el.value = (cur ? cur + ' ' : '') + (text || '');
+      try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+    }
+    return;
+  }
+  const input = $('ai-input'); if(input) input.value = text || '';
+}
+function startVoiceInputFor(inputId) {
+  window.__cpVoiceTarget = inputId || null;
+  startVoiceInput();
+}
 function startVoiceInput(){
   const status = $('voice-status');
   const lang = coachSpeechLang();
@@ -2237,7 +2271,7 @@ function startVoiceInput(){
   voiceRecognition.onstart = () => { if(status) status.textContent = t('listening'); };
   voiceRecognition.onerror = event => { if(status) status.textContent = 'Errore voce: ' + event.error; };
   voiceRecognition.onend = () => { if(status && status.textContent === t('listening')) status.textContent = ''; };
-  voiceRecognition.onresult = event => { const input = $('ai-input'); if(input) input.value = event.results[0][0].transcript; };
+  voiceRecognition.onresult = event => { applyNativeVoiceResult(event.results[0][0].transcript); };
   try { voiceRecognition.start(); } catch(error){ console.error('VOICE_START_ERROR', error); if(status) status.textContent = t('voiceUnavailable'); }
 }
 function stopVoiceInput(){
@@ -2922,13 +2956,26 @@ function applyRemoteAccountData(remote, preferLocal) {
   }
   const localWeeks = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
   const remoteProg = remote.activeProgram;
-  if ((!localWeeks || localWeeks < 1) && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length) {
+  const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+  const remoteAssigned = String(remote.assignedAt || '');
+  const localAssigned = String(store.clientAssignedAt || '');
+  let takeRemote = (!localWeeks || localWeeks < 1) && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length;
+  if (athlete && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length) {
+    if (!localWeeks || (remoteAssigned && remoteAssigned > localAssigned) || remote.assignedByCoach && remoteAssigned !== localAssigned) {
+      takeRemote = true;
+    }
+  }
+  if (takeRemote) {
     try {
+      window.__cpProgramLock = true;
       DATA = typeof normalizeProgram === 'function' ? normalizeProgram(remoteProg) : remoteProg;
       store.activeProgramId = DATA.id || remote.activeProgramId || store.activeProgramId;
+      if (athlete) store.clientAssignedAt = remoteAssigned || new Date().toISOString();
       persistActiveProgramStructure();
     } catch (e) {
       console.warn('[ACCOUNT_RESTORE_PROGRAM]', e);
+    } finally {
+      window.__cpProgramLock = false;
     }
   }
   store.accountToken = token;
@@ -6239,6 +6286,10 @@ function persist() {
     const sanitized = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.sanitizeStoreForLocalStorage) 
       ? GiammariaPersistence.sanitizeStoreForLocalStorage(store) 
       : store;
+    if (store.stayLoggedIn === false && sanitized && typeof sanitized === 'object') {
+      sanitized.accountToken = null;
+      sanitized.stayLoggedIn = false;
+    }
     localStorage.setItem('GS_STORE', JSON.stringify(sanitized));
   } catch (quotaErr) {
     console.warn('[PERSIST_WARNING] localStorage quota exceeded, performing deep sanitize:', quotaErr);
@@ -6253,12 +6304,17 @@ function persist() {
         customSets: store.customSets || {},
         data: store.data || {},
         logs: Array.isArray(store.logs) ? store.logs.slice(-40) : [],
-        accountToken: store.accountToken || null,
+        accountToken: store.stayLoggedIn === false ? null : (store.accountToken || null),
         accountUser: store.accountUser || null,
         activeProgramId: store.activeProgramId || null,
         profile: store.profile || {},
         health: store.health || null,
-        bodyChecks: Array.isArray(store.bodyChecks) ? store.bodyChecks.slice(-12) : []
+        bodyChecks: Array.isArray(store.bodyChecks) ? store.bodyChecks.slice(-12) : [],
+        role: store.role || null,
+        inviteToken: store.inviteToken || '',
+        stayLoggedIn: typeof store.stayLoggedIn === 'boolean' ? store.stayLoggedIn : true,
+        coachUnlocked: !!store.coachUnlocked,
+        clientProfile: store.clientProfile || null
       };
       localStorage.setItem('GS_STORE', JSON.stringify(sanitizedStore));
     } catch (criticalErr) {
@@ -6418,6 +6474,15 @@ function buildLocalCoachInsightAnswer(promptText) {
       (insight || '');
   }
   return insight ? ('## Stato atleta\n\n' + insight) : null;
+}
+function afterProgramActivatedNavigate() {
+  if (store && store.coachAssigning) {
+    if (typeof showToast === 'function') showToast('Rivedi e modifica se serve, poi CONFERMA ASSEGNAZIONE.', 'success');
+    navigate('training');
+    if (typeof ensureAssignBanner === 'function') ensureAssignBanner();
+    return;
+  }
+  navigate('home');
 }
 function navigate(v, e){
   if(e) e.preventDefault();
@@ -8044,7 +8109,7 @@ function renderExams(c) {
               <span style="font-size:14px;font-weight:900;color:#fff;">${safeDisplayValue(r.parameter, 'Parametro')}</span>
               <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
                 <span style="background:rgba(212,175,55,0.15);color:var(--gold);font-size:13px;font-weight:900;padding:2px 8px;border-radius:4px;">${safeDisplayValue(r.value, '')} ${safeDisplayValue(r.unit, '')}</span>
-                <span style="font-size:10px;color:#888;">Ref: ${safeDisplayValue(r.range, 'N/D')}</span>
+                <span style="font-size:10px;color:#888;">Ref: ${safeDisplayValue(r.range || r.reference_range, 'N/D')}</span>
                 <span style="font-size:10px;color:#666;">• ${safeDisplayValue(r.date, '')}</span>
               </div>
             </div>
@@ -9054,7 +9119,7 @@ async function generateAndActivateProgram() {
     if (DATA.weeks && DATA.weeks.length) store.prefs.duration = DATA.weeks.length;
     persist();
     if (typeof showToast === 'function') showToast('Programma attivato: ' + (prog.title || ''), 'success');
-    navigate('home');
+    afterProgramActivatedNavigate();
     render();
   } catch (e) {
     console.error('[PROGRAM GENERATE]', e);
@@ -9138,7 +9203,7 @@ async function activateCatalogProgramInner(programId) {
     } catch (_) {}
     await syncProgramLibraryFromIdb();
     if (typeof showToast === 'function') showToast('Scheda attivata: ' + (prog.title || ''), 'success');
-    navigate('home');
+    afterProgramActivatedNavigate();
     render();
   } catch (e) {
     console.error('[CATALOG ACTIVATE]', e);
@@ -10490,7 +10555,7 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
     } else {
       alert("🎉 Scheda importata con successo! Nuova scheda impostata sulla tua Dashboard.");
     }
-    navigate('home');
+    afterProgramActivatedNavigate();
   } catch (err) {
     console.error("[CONFIRM IMPORT ERROR]", err);
     const msg = err.message || String(err);
@@ -10565,6 +10630,7 @@ function formatFileSize(bytes) {
 
 
 function homeDomainModulesHtml() {
+  const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
   return `
       <div class="card">
         <div class="card-header"><h2>${t('systemModules')}</h2></div>
@@ -10589,10 +10655,10 @@ function homeDomainModulesHtml() {
             <span style="font-size:18px;">📅</span>
             <span style="font-size:11px;font-weight:800;">${t('calendar')}</span>
           </button>
-          <button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('import')">
+          ${athlete ? '' : `<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('import')">
             <span style="font-size:18px;">📥</span>
             <span style="font-size:11px;font-weight:800;">${t('importProgram')}</span>
-          </button>
+          </button>`}
         </div>
       </div>`;
 }
@@ -12509,6 +12575,12 @@ function renderAthleteProfile(container) {
   }
   html += renderAdaptiveDeloadCardHtml();
   html += '<p style="font-size:10px;color:#555;line-height:1.4;">Privacy: terapia ed esami non entrano mai in ranking, XP o share card.</p>';
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+    html += '<div id="cp-leave-box" class="card" style="border:1px solid #533;margin-top:12px;padding:12px;">' +
+      '<div style="font-size:13px;font-weight:900;color:#c66;margin-bottom:6px;">Collaborazione</div>' +
+      '<p style="font-size:11px;color:#aaa;margin-bottom:8px;">Puoi chiedere di chiudere la collaborazione solo se non ci sono pagamenti in sospeso. Il coach deve confermare.</p>' +
+      '<button class="btn btn-outline" style="width:100%;font-size:11px;color:#c66;border-color:#c66;" onclick="requestLeaveCoach()">CHIUDI COLLABORAZIONE CON IL COACH</button></div>';
+  }
   html += '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="navigate(\'settings\')">Altre impostazioni</button>';
   container.innerHTML = html;
 }
@@ -14396,8 +14468,16 @@ function formatOperationDescription(op) {
 
 async function applyCoachProposal(proposalId) {
   if (typeof isAthleteRole === 'function' && isAthleteRole()) {
-    if (typeof showToast === 'function') showToast('Solo il tuo coach può modificare la scheda.', 'warning');
-    return;
+    if (!(store.clientProfile && store.clientProfile.allowMaxFreedom)) {
+      const proposal = window.activeCoachProposals && window.activeCoachProposals[proposalId];
+      if (typeof showToast === 'function') showToast('Senza massima libertà: richiesta inviata al coach per approvazione.', 'warning');
+      if (typeof queueAthleteProgramChange === 'function') {
+        try {
+          queueAthleteProgramChange('request', (proposal && proposal.summary) || 'proposta di modifica', typeof clientProgramSlice === 'function' ? clientProgramSlice() : null);
+        } catch (_) {}
+      }
+      return;
+    }
   }
   let proposal = window.activeCoachProposals[proposalId];
   proposal = normalizeCoachProposedAction(proposal, null) || proposal;
@@ -15868,6 +15948,8 @@ if (typeof window !== 'undefined') {
   window.startGoogleAuth = startGoogleAuth;
   window.startAppleAuth = startAppleAuth;
   window.startVoiceInput = startVoiceInput;
+  window.startVoiceInputFor = startVoiceInputFor;
+  window.applyNativeVoiceResult = applyNativeVoiceResult;
   window.stopVoiceInput = stopVoiceInput;
   window.toggleVoiceOutput = toggleVoiceOutput;
   window.speakCoachReply = speakCoachReply;

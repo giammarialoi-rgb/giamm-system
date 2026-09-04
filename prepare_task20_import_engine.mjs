@@ -25555,82 +25555,147 @@ function tryParseTherapyWeekDayGrid(rawRows) {
   return { medications, protocols: [], legacy: medications.map(m => ({ date_or_week: m.weekRange, item_name: m.name, value: m.dose, notes: m.frequency })) };
 }
 
-/** Parse a lab exam line into { parameter, value, unit, reference_range }. */
+/** Parse a lab exam line into { parameter, value, unit, reference_range, range }. */
 function parseExamLineRecord(rawLine) {
-  let line = String(rawLine || "").trim();
+  let line = String(rawLine || "").replace(/\u00a0/g, " ").trim();
   if (!line) return null;
+  function pack(parameter, value, unit, range) {
+    const p = String(parameter || "").replace(/[:：]+\s*$/, "").trim();
+    const v = String(value || "").trim();
+    if (!p || p.length < 2 || !v || !/\d/.test(v)) return null;
+    const rng = range ? String(range).trim() : null;
+    return {
+      date: null,
+      parameter: p,
+      name: p,
+      value: v,
+      unit: String(unit || "").trim(),
+      reference_range: rng,
+      range: rng,
+      notes: null
+    };
+  }
   // markdown table row
   if (line.includes("|")) {
     const cells = line.split("|").map((c) => c.trim()).filter(Boolean);
     if (cells.length >= 2 && !/^[-:]+$/.test(cells[0])) {
-      const parameter = cells[0];
-      const value = String(cells[1] || "").replace(/[^\d.,\-]/g, "").trim() || String(cells[1] || "").trim();
-      const unit = cells[2] || "";
-      const reference_range = cells[3] || null;
-      if (parameter && value && /\d/.test(value)) {
-        return { date: null, parameter, name: parameter, value, unit, reference_range, notes: null };
-      }
+      const rec = pack(cells[0], String(cells[1] || "").replace(/[^\d.,\-<>]/g, "").trim() || cells[1], cells[2], cells[3]);
+      if (rec) return rec;
     }
   }
-  // csv / simple comma
-  if (/,/.test(line) && !line.includes("(")) {
+  // tab or 2+ spaces columns: Name  value  unit  range
+  if (/\t| {2,}/.test(line)) {
+    const cells = line.split(/\t+| {2,}/).map((c) => c.trim()).filter(Boolean);
+    if (cells.length >= 2 && !/^(parameter|parametro|esame|valore|value|unit|unità|range|intervallo)\b/i.test(cells[0])) {
+      let value = cells[1];
+      let unit = cells[2] || "";
+      let range = cells[3] || "";
+      const vu = String(value).match(/^([<>]=?\s*)?(\d+(?:[.,]\d+)?)\s*(.*)$/);
+      if (vu) {
+        value = (vu[1] || "") + vu[2];
+        if (!unit && vu[3]) unit = vu[3].replace(/[\(\[].*$/, "").trim();
+      }
+      if (!range && cells.length >= 3) {
+        const last = cells[cells.length - 1];
+        if (/\d+\s*[-–]\s*\d+/.test(last) && last !== unit) range = last;
+      }
+      if (!range && unit) {
+        const ur = unit.match(/^(\S+)\s+(\d.*[-–].*)$/);
+        if (ur) { unit = ur[1]; range = ur[2]; }
+      }
+      const rec = pack(cells[0], value, unit, range);
+      if (rec) return rec;
+    }
+  }
+  // csv / simple comma (avoid decimal commas in the name/value split by requiring 3+ fields or no range hyphen)
+  // csv: only if it is not European decimals like 15,2
+  if (/,/.test(line) && !line.includes("(") && !/\d,\d/.test(line) && line.split(",").length >= 3) {
     const cells = line.split(",").map((c) => c.trim());
     if (cells.length >= 2 && !/^(parameter|parametro|esame)/i.test(cells[0])) {
-      const parameter = cells[0];
-      const value = String(cells[1] || "").trim();
-      if (parameter && value && /\d/.test(value)) {
-        return {
-          date: null,
-          parameter,
-          name: parameter,
-          value: value.replace(/[^\d.,\-]/g, "") || value,
-          unit: cells[2] || "",
-          reference_range: cells[3] || null,
-          notes: null
-        };
-      }
+      const rec = pack(cells[0], cells[1], cells[2], cells[3]);
+      if (rec) return rec;
     }
   }
-  // tab-separated
-  if (/\t/.test(line)) {
-    const cells = line.split("\t").map((c) => c.trim());
-    if (cells.length >= 2) {
-      const parameter = cells[0];
-      let value = cells[1] || "";
-      let unit = cells[2] || "";
-      // "95 mg/dL" in value cell
-      const vu = value.match(/^(\d+(?:[.,]\d+)?)\s*(.*)$/);
-      if (vu) {
-        value = vu[1];
-        if (!unit && vu[2]) unit = vu[2].replace(/[\(\[].*$/, "").trim();
-      }
-      if (parameter && value && /\d/.test(value)) {
-        return {
-          date: null,
-          parameter,
-          name: parameter,
-          value,
-          unit,
-          reference_range: cells[3] || null,
-          notes: null
-        };
+  // plain: "Glicemia 95 mg/dL (70-100)" / "TSH: 1.8" / "Emoglobina 15,2 g/dL 13,5 - 17,5"
+  const plain = line.match(/^(.+?)(?:\s+|:\s*|=\s*)((?:[<>]=?\s*)?\d+(?:[.,]\d+)?)(?:\s+(.+))?$/);
+  if (plain) {
+    const parameter = String(plain[1] || "").replace(/[:：\-–—]+\s*$/, "").trim();
+    const value = plain[2];
+    let rest = String(plain[3] || "").trim();
+    let unit = "";
+    let range = null;
+    const paren = rest.match(/^(\S+)?\s*[\(\[]([^)\]]+)[\)\]]\s*$/);
+    if (paren) {
+      unit = String(paren[1] || "").trim();
+      range = String(paren[2] || "").trim();
+    } else {
+      const spaced = rest.match(/^(\S+)\s+(\d+(?:[.,]\d+)?\s*[-–]\s*\d+(?:[.,]\d+)?)\s*$/);
+      if (spaced) {
+        unit = spaced[1];
+        range = spaced[2];
+      } else if (/^\d+(?:[.,]\d+)?\s*[-–]\s*\d+(?:[.,]\d+)?$/.test(rest)) {
+        range = rest;
+      } else if (rest) {
+        unit = rest.split(/\s+/)[0];
       }
     }
-  }
-  // plain: "Glicemia 95 mg/dL (70-100)" / "TSH: 1.8 mIU/L"
-  const m = line.match(
-    /^(.+?)\s*[:=\-]?\s+(\d+(?:[.,]\d+)?)\s*([A-Za-zµμ/%°][A-Za-z0-9µμ/%°.\-_]*)?\s*(?:[\(\[]([^)\]]+)[\)\]])?\s*$/
-  );
-  if (m) {
-    const parameter = String(m[1] || "").replace(/[:\-–—]+\s*$/, "").trim();
-    const value = String(m[2] || "").trim();
-    const unit = String(m[3] || "").trim();
-    const reference_range = m[4] ? String(m[4]).trim() : null;
-    if (parameter.length >= 2 && value) {
-      return { date: null, parameter, name: parameter, value, unit, reference_range, notes: null };
-    }
+    if (parameter.length < 2) return null;
+    if (/^(x|×|\*|sets?|serie|rir|rpe)$/i.test(unit)) return null;
+    const rec = pack(parameter, value, unit.replace(/[()\[\]]/g, ""), range);
+    if (rec) return rec;
   }
   return null;
+}
+
+function isJunkExamRecord(rec, raw) {
+  const p = String(rec && rec.parameter || "").toLowerCase();
+  const line = String(raw || "").toLowerCase();
+  if (!p || /^\d+$/.test(p)) return true;
+  if (/^(pagina|page|referto|laboratorio|paziente|data\s*prelievo|sesso|et[aà]|nascita|codice|dottore|medico|note|metodo)\b/.test(p)) return true;
+  if (/\d+\s*(?:x|×|\*)\s*(?:\d+|amrap)/i.test(line)) return true;
+  if (/\b(?:rir|rpe|ripetizioni|serie da)\b/i.test(line)
+    && !/\b(?:glicemia|colesterolo|emoglobina|tsh|ferritina|testosterone|creatinina|hdl|ldl|triglicerid|insulina|cortisolo|vitamina)\b/i.test(line)) {
+    return true;
+  }
+  if (p.length > 80) return true;
+  if (!/\d/.test(String(rec && rec.value || ""))) return true;
+  return false;
+}
+
+const LAB_ANALYTE_HINT = /\b(g\/dl|mg\/dl|mmol|uiu|µ?iu|ng\/ml|pg\/ml|u\/l|iu\/l|µ?g\/l|mcg|mm\/h|meq|nmol|pmol|10\s*\^\s*\d|glicemia|colesterolo|emoglobina|ematocrito|triglicerid|tsh|t3|t4|ft3|ft4|creatinina|got|gpt|alt|ast|bilirubina|leucocit|piastrin|testosterone|estradiolo|cortisolo|insulina|vitamina|psa|ves|pcr|omocisteina|acido urico|sodio|potassio|calcio|ferritina|transferrina|hba1c|glicata|urea|azotemia|gamma[\s-]?gt|fosfatasi|albumina|proteine totali|globuli|mchc|mch\b|mcv\b|rdw|neutrofil|linfocit|monocit|eosinofil|basofil)\b/i;
+
+function harvestLabExamRecords(text) {
+  const lines = String(text || "").replace(/\u00a0/g, " ").split(/\r?\n/);
+  const out = [];
+  const seen = new Set();
+  for (const raw of lines) {
+    const rec = parseExamLineRecord(raw);
+    if (!rec || isJunkExamRecord(rec, raw)) continue;
+    const line = String(raw || "");
+    const hasRange = !!(rec.range || rec.reference_range);
+    if (!hasRange && !LAB_ANALYTE_HINT.test(line) && !LAB_ANALYTE_HINT.test(rec.parameter + " " + rec.unit)) continue;
+    const key = (rec.parameter + "|" + rec.value).toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(rec);
+  }
+  return out;
+}
+
+function mergeHarvestedExams(program, harvested) {
+  if (!program.exams) program.exams = { present: false, records: [], items: [] };
+  const existing = Array.isArray(program.exams.records) ? program.exams.records : [];
+  existing.forEach((r) => {
+    if (!r) return;
+    r.range = r.range || r.reference_range || null;
+    r.reference_range = r.reference_range || r.range;
+  });
+  if (!harvested.length) return;
+  if (harvested.length > existing.length) {
+    program.exams.records = harvested;
+    program.exams.items = harvested;
+    program.exams.present = true;
+  }
 }
 
 function parseTherapyExamsSheet(sheet) {
@@ -26671,6 +26736,7 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
   }
 
   applyStructuredTextSections(program, normalizedText);
+  mergeHarvestedExams(program, harvestLabExamRecords(normalizedText));
   program.therapy.medications = (program.therapy.medications || []).filter((m) => !isJunkTherapyName(m.name || m.medication));
   if (program.therapy.medications.length) program.therapy.present = true;
   enrichTherapyMedications(program.therapy);

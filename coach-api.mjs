@@ -34,22 +34,106 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("localhost")
-    ? { rejectUnauthorized: false }
-    : false
+function renderPostgresRegions() {
+  const preferred = process.env.RENDER_POSTGRES_REGION || process.env.DATABASE_REGION || "";
+  return [...new Set([preferred, "oregon", "frankfurt", "ohio", "virginia", "singapore"].filter(Boolean))];
+}
+
+function rewriteRenderInternalHost(urlStr, region) {
+  try {
+    const u = new URL(urlStr);
+    if (u.hostname.includes(".")) return urlStr;
+    if (!/^dpg-[a-z0-9-]+$/i.test(u.hostname) || !region) return urlStr;
+    u.hostname = `${u.hostname}.${region}-postgres.render.com`;
+    return u.toString();
+  } catch {
+    return urlStr;
+  }
+}
+
+function databaseUrlCandidates() {
+  const raw = [
+    process.env.DATABASE_PUBLIC_URL,
+    process.env.DATABASE_EXTERNAL_URL,
+    process.env.DATABASE_URL
+  ].filter(Boolean);
+  const out = [];
+  const seen = new Set();
+  function add(u) {
+    if (!u || seen.has(u)) return;
+    seen.add(u);
+    out.push(u);
+  }
+  raw.forEach(add);
+  raw.forEach((u) => renderPostgresRegions().forEach((region) => add(rewriteRenderInternalHost(u, region))));
+  return out;
+}
+
+function sslForDatabaseUrl(urlStr) {
+  return urlStr && !/localhost|127\.0\.0\.1/i.test(urlStr) ? { rejectUnauthorized: false } : false;
+}
+
+function createPgPool(connectionString) {
+  return new pg.Pool({
+    connectionString,
+    ssl: sslForDatabaseUrl(connectionString),
+    max: 10,
+    idleTimeoutMillis: 20000,
+    connectionTimeoutMillis: 12000
+  });
+}
+
+function summarizeDbError(err) {
+  if (!err) return { message: "unknown" };
+  return {
+    message: err.message,
+    code: err.code,
+    hostname: err.hostname || undefined
+  };
+}
+
+function hostnameOf(urlStr) {
+  try { return new URL(urlStr).hostname; } catch { return ""; }
+}
+
+const poolHolder = {
+  current: createPgPool(databaseUrlCandidates()[0] || process.env.DATABASE_URL || "postgres://127.0.0.1/nurvan")
+};
+const pool = new Proxy({}, {
+  get(_target, prop) {
+    const current = poolHolder.current;
+    const val = current[prop];
+    return typeof val === "function" ? val.bind(current) : val;
+  }
 });
 
 let dbInitialized = false;
+let dbInitError = null;
+let dbHost = "";
+let lastDbLogKey = "";
+
+function logDbIssue(label, extra) {
+  const key = label + JSON.stringify(extra || {});
+  if (key === lastDbLogKey) return;
+  lastDbLogKey = key;
+  console.error(label, extra || "");
+}
 
 async function initDb() {
-  if (dbInitialized || !process.env.DATABASE_URL) return;
-  try {
-    const client = await pool.connect();
+  if (dbInitialized) return;
+  const urls = databaseUrlCandidates();
+  if (!urls.length) {
+    dbInitError = { message: "DATABASE_URL missing" };
+    return;
+  }
+  for (const url of urls) {
+    const host = hostnameOf(url);
+    const next = createPgPool(url);
     try {
-      await client.query("BEGIN");
-      await client.query(`
+      const client = await next.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query(`
         CREATE TABLE IF NOT EXISTS app_users (
           id BIGSERIAL PRIMARY KEY,
           email TEXT UNIQUE NOT NULL,
@@ -85,26 +169,39 @@ async function initDb() {
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
       `);
-      await client.query("COMMIT");
-      try {
-        await ensureCoachPracticeTables(client);
-      } catch (practiceErr) {
-        console.error("Coach practice tables error:", practiceErr);
+        await client.query("COMMIT");
+        try {
+          await ensureCoachPracticeTables(client);
+        } catch (practiceErr) {
+          console.error("Coach practice tables error:", practiceErr && practiceErr.message ? practiceErr.message : practiceErr);
+        }
+        dbInitialized = true;
+        dbInitError = null;
+        dbHost = host;
+        const previous = poolHolder.current;
+        poolHolder.current = next;
+        if (previous && previous !== next) previous.end().catch(() => {});
+        console.log("Database tables verified successfully. host=" + host);
+        return;
+      } catch (err) {
+        await client.query("ROLLBACK").catch(() => {});
+        dbInitError = summarizeDbError(err);
+        logDbIssue("DB Init Error:", dbInitError);
+      } finally {
+        client.release();
       }
-      dbInitialized = true;
-      console.log("Database tables verified successfully.");
     } catch (err) {
-      await client.query("ROLLBACK");
-      console.error("DB Init Error:", err);
-    } finally {
-      client.release();
+      dbInitError = Object.assign(summarizeDbError(err), { hostname: host || err.hostname });
+      logDbIssue("DB Connection Error during init:", dbInitError);
+      await next.end().catch(() => {});
     }
-  } catch (err) {
-    console.error("DB Connection Error during init:", err);
   }
 }
 
 initDb();
+setInterval(() => {
+  if (!dbInitialized) initDb().catch(() => {});
+}, 25000);
 
 async function hashPassword(password) {
   return bcrypt.hash(password, 10);
@@ -1041,7 +1138,10 @@ app.get("/health", (req, res) => {
     chatVision: true,
     chatStateless: true,
     coachChatVersion: "vision-stateless-v1",
-    coachPracticeVersion: "coach-client-v1"
+    coachPracticeVersion: "coach-client-v2",
+    dbReady: dbInitialized,
+    dbHost: dbHost || null,
+    dbError: dbInitError
   });
 });
 
