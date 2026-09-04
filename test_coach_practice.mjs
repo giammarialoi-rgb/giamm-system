@@ -86,7 +86,8 @@ const base = fs.readFileSync(path.join(__dirname, "web/index.base.html"), "utf8"
 ["function navigate(", "function render(", "function finalizeWorkout(", "function askAIInner(", "function renderAthleteProfile(", "function renderHome(", "function applyCoachProposal("].forEach((fn) => {
   assert(base.includes(fn), "existing " + fn + " still present");
 });
-assert(base.includes("Analizza check fisico") || base.includes("analyzeCheckFisicoWithCoach"), "check fisico kept");
+assert(base.includes("Invia al coach") && base.includes("sendCheckFisicoToCoach"), "check fisico send-to-coach kept");
+assert(!base.includes("ANALISI COACH AI") && !base.includes("Analizza check fisico"), "client AI check analysis removed");
 assert(base.includes("NURVAN HUB"), "menu hub kept");
 assert(base.includes("bootCoachPractice"), "finishInit boots practice");
 assert(base.includes("athleteInfoOnly"), "athlete chat flag");
@@ -117,7 +118,8 @@ if (fs.existsSync(webIndex) && fs.existsSync(apkIndex)) {
   assert(a === b, "web and APK index.html hashes match");
   const built = fs.readFileSync(webIndex, "utf8");
   assert(built.includes("bootCoachPractice") && built.includes("TRANSIZIONE VERSO APP"), "built index includes coach UI");
-  assert(built.includes("function navigate(") && built.includes("analyzeCheckFisicoWithCoach"), "built index keeps previous features");
+  assert(built.includes("function navigate(") && built.includes("sendCheckFisicoToCoach"), "built index keeps previous features");
+  assert(!built.includes("Analizza check fisico"), "built index has no client AI check CTA");
   const s0 = built.indexOf("<script>");
   const s1 = built.lastIndexOf("</script>");
   if (s0 >= 0 && s1 > s0) {
