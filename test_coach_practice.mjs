@@ -140,6 +140,13 @@ assert(base.includes("/peerjs.min.js"), "index loads PeerJS from root");
 assert(ui.includes("seedAssignSandboxFromClient") && ui.includes("closeClientInviteOverlay"), "assign merge seed + close invite");
 assert(ui.includes("input[type=\"checkbox\"]") && practice.includes("Link vecchio") || practice.includes("username = $1 AND status = 'active'"), "checkbox CSS + login username fallback");
 assert(base.includes("Quelle non scelte restano") || base.includes("non vengono cancellate"), "import domain picker merge copy");
+assert(ui.includes("maybeOfferClientHomeInstall") && ui.includes("__nurvanDeferredInstall") && ui.includes("beforeinstallprompt"), "A2HS invite sheet");
+assert(ui.includes("maybeSubscribeWebPush") && ui.includes("pushManager.subscribe") && ui.includes("/api/push/subscribe"), "web push client subscribe");
+assert(ui.includes("toggleCoachWsSection") && ui.includes("__cpWsCollapse") && !ui.includes("cp-ws-chat-card"), "coach ws collapse + no inline chat");
+assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY") && practice.includes("/api/push/vapid-public-key"), "web push server");
+assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
+const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v22-coach"), "SW push + cache v22");
 
 const build = fs.readFileSync(path.join(__dirname, "build_master25.mjs"), "utf8");
 assert(build.includes("coach-practice-ui.js"), "build injects UI");

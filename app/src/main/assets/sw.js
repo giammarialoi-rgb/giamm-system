@@ -1,5 +1,5 @@
 /* Nurvan shell SW — cache UI only, never the 10k catalog. */
-const CACHE = 'nurvan-shell-v21-coach';
+const CACHE = 'nurvan-shell-v22-coach';
 const PRECACHE = [
   './',
   './index.html',
@@ -46,5 +46,48 @@ self.addEventListener('fetch', (event) => {
         return res;
       })
       .catch(() => caches.match(req).then((hit) => hit || caches.match('./index.html')))
+  );
+});
+
+self.addEventListener('push', (event) => {
+  let payload = { title: 'Nurvan', body: '', data: {} };
+  try {
+    if (event.data) payload = Object.assign(payload, event.data.json());
+  } catch (_) {
+    try {
+      if (event.data) payload.body = event.data.text();
+    } catch (__) {}
+  }
+  const title = payload.title || 'Nurvan';
+  const options = {
+    body: payload.body || '',
+    data: payload.data || {},
+    icon: './icon-192.png',
+    badge: './icon-192.png'
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const data = event.notification.data || {};
+  const route = data.route || data;
+  let openPath = data.path || '/';
+  if (data.inviteToken && String(openPath).indexOf('/c/') !== 0) {
+    openPath = '/c/' + encodeURIComponent(data.inviteToken);
+  }
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (let i = 0; i < list.length; i++) {
+        const client = list[i];
+        if (client.url && client.url.indexOf(self.location.origin) === 0 && 'focus' in client) {
+          try { client.postMessage({ type: 'NURVAN_NOTIFY_ROUTE', route: route }); } catch (_) {}
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(openPath);
+      }
+    })
   );
 });

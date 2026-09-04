@@ -692,6 +692,7 @@ async function showClientInvite(token) {
   const t = token || store.inviteToken || detectInviteToken();
   if (!t) return;
   store.inviteToken = t;
+  applyInviteManifestStartUrl(t);
   let info = { username: '', displayName: '', coachName: 'Coach', intakeMode: 'new' };
   try {
     info = await practiceFetch('/api/client/invite/' + encodeURIComponent(t), { method: 'GET' }, 15000);
@@ -700,6 +701,7 @@ async function showClientInvite(token) {
   }
   renderInvitePanel(info);
   showOverlay('cp-invite', true);
+  setTimeout(function () { maybeOfferClientHomeInstall(t); }, 600);
 }
 
 async function submitClientInviteLogin() {
@@ -753,6 +755,10 @@ async function submitClientInviteLogin() {
     if (typeof render === 'function') render();
     practiceToast('Bentornato, ' + (payload.user && payload.user.name || username), 'success');
     startPresenceHeartbeat();
+    setTimeout(function () {
+      maybeOfferClientHomeInstall(store.inviteToken);
+      maybeSubscribeWebPush();
+    }, 900);
   } catch (err) {
     const msg = (err && err.message) || 'Accesso non riuscito.';
     if (status) status.innerHTML = '<span style="color:#f88;">' + esc(msg.replace(/^HTTP\s*\d+:\s*/i, '')) + '</span>';
@@ -1615,6 +1621,10 @@ async function renderCoachWorkspace(c) {
         return '<div class="cp-help" style="margin:0 0 4px;">' + esc(e.kind) + ' · ' + esc(String(e.created_at || '').replace('T', ' ').slice(0, 16)) + '</div>';
       }).join('');
     } catch (_) {}
+    if (!store.__cpWsCollapse || typeof store.__cpWsCollapse !== 'object') {
+      store.__cpWsCollapse = { intake: true, events: true };
+    }
+    const collapsed = store.__cpWsCollapse;
     c.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">' +
       '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">← LISTA</button>' +
       '<button class="btn btn-primary" style="font-size:10px;" onclick="openCoachClientChat(\'' + esc(id) + '\')">CHAT</button>' +
@@ -1670,24 +1680,34 @@ async function renderCoachWorkspace(c) {
       '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'therapy\')">TERAPIA</button>' +
       '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'exams\')">ESAMI</button>' +
       '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'athlete\')">PROFILO</button></div></div>' +
-      '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;">Anagrafica acquisizione</div>' +
-      (intakeRows || '<div class="cp-help">Questionario non ancora compilato.</div>') + '</div>' +
-      '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;">Attività / richieste</div>' +
-      (eventsHtml || '<div class="cp-help">Nessuna richiesta recente.</div>') + '</div>' +
-      '<div class="card" id="cp-ws-chat-card" style="padding:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:8px;">Chat con ' + esc(cl.displayName || 'cliente') + '</div>' +
-      '<div id="cp-ws-chat" style="min-height:80px;max-height:46vh;overflow:auto;"></div>' +
-      chatToolsHtml('cp-ws-msg', 'sendCoachHumanMessage(\'' + esc(id) + '\')', 'clearChatForMe(\'' + esc(id) + '\',\'coach\')', 'newChatThread(\'' + esc(id) + '\',\'coach\')') +
-      '</div>';
-    startChatPoll(id, 'cp-ws-chat', 'coach');
-    if (store.coachWorkspace && store.coachWorkspace.chat) {
-      setTimeout(function () {
-        const el = document.getElementById('cp-ws-chat-card');
-        if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 200);
-    }
+      '<div class="card" style="padding:12px;margin-bottom:12px;">' +
+      '<button type="button" class="cp-ws-collapse-h" onclick="toggleCoachWsSection(\'intake\')" style="display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;background:transparent;border:0;padding:0;cursor:pointer;text-align:left;">' +
+      '<span style="font-weight:900;color:var(--gold);">Anagrafica acquisizione</span>' +
+      '<span id="cp-ws-arrow-intake" style="color:var(--gold);font-size:14px;">' + (collapsed.intake ? '▸' : '▾') + '</span></button>' +
+      '<div id="cp-intake-body" style="margin-top:8px;' + (collapsed.intake ? 'display:none;' : '') + '">' +
+      (intakeRows || '<div class="cp-help">Questionario non ancora compilato.</div>') + '</div></div>' +
+      '<div class="card" style="padding:12px;margin-bottom:12px;">' +
+      '<button type="button" class="cp-ws-collapse-h" onclick="toggleCoachWsSection(\'events\')" style="display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;background:transparent;border:0;padding:0;cursor:pointer;text-align:left;">' +
+      '<span style="font-weight:900;color:var(--gold);">Attività / richieste</span>' +
+      '<span id="cp-ws-arrow-events" style="color:var(--gold);font-size:14px;">' + (collapsed.events ? '▸' : '▾') + '</span></button>' +
+      '<div id="cp-events-body" style="margin-top:8px;' + (collapsed.events ? 'display:none;' : '') + '">' +
+      (eventsHtml || '<div class="cp-help">Nessuna richiesta recente.</div>') + '</div></div>';
+    // Chat solo in navigate('coachChat') — niente composer inline qui
   } catch (err) {
     c.innerHTML = '<div class="cp-help">' + esc((err && err.message) || 'Snapshot non disponibile.') + '</div>';
   }
+}
+
+function toggleCoachWsSection(key) {
+  if (!store.__cpWsCollapse || typeof store.__cpWsCollapse !== 'object') {
+    store.__cpWsCollapse = { intake: true, events: true };
+  }
+  store.__cpWsCollapse[key] = !store.__cpWsCollapse[key];
+  const body = document.getElementById(key === 'intake' ? 'cp-intake-body' : 'cp-events-body');
+  const arrow = document.getElementById(key === 'intake' ? 'cp-ws-arrow-intake' : 'cp-ws-arrow-events');
+  const on = !!store.__cpWsCollapse[key];
+  if (body) body.style.display = on ? 'none' : '';
+  if (arrow) arrow.textContent = on ? '▸' : '▾';
 }
 
 function snapshotCoachMaster() {
@@ -1774,6 +1794,210 @@ function requestNotifyPermission() {
       Notification.requestPermission();
     }
   } catch (_) {}
+}
+
+/* ——— Add to Home (A2HS) + Web Push ——— */
+function captureInstallPromptEarly() {
+  if (window.__nurvanInstallCaptureBound) return;
+  window.__nurvanInstallCaptureBound = true;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    try { e.preventDefault(); } catch (_) {}
+    window.__nurvanDeferredInstall = e;
+  });
+  window.addEventListener('appinstalled', function () {
+    window.__nurvanDeferredInstall = null;
+    try { localStorage.setItem('NURVAN_A2HS_INSTALLED', '1'); } catch (_) {}
+  });
+}
+
+function isStandalonePwaLocal() {
+  try {
+    if (typeof isStandalonePwa === 'function') return isStandalonePwa();
+    if (window.navigator && window.navigator.standalone === true) return true;
+    return !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  } catch (_) { return false; }
+}
+
+function applyInviteManifestStartUrl(token) {
+  if (!token) return;
+  try {
+    const existing = document.querySelector('link[rel="manifest"]');
+    const href = existing ? existing.getAttribute('href') : 'manifest.webmanifest';
+    fetch(href, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (man) {
+      const start = '/c/' + encodeURIComponent(token);
+      const next = Object.assign({}, man, { start_url: start, scope: '/', id: start });
+      const blob = new Blob([JSON.stringify(next)], { type: 'application/manifest+json' });
+      const url = URL.createObjectURL(blob);
+      if (existing) {
+        if (existing.__cpBlob) try { URL.revokeObjectURL(existing.__cpBlob); } catch (_) {}
+        existing.__cpBlob = url;
+        existing.setAttribute('href', url);
+      } else {
+        const link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = url;
+        link.__cpBlob = url;
+        document.head.appendChild(link);
+      }
+    }).catch(function () {});
+  } catch (_) {}
+}
+
+function a2hsDismissKey(token) {
+  return 'NURVAN_A2HS_DISMISS_' + String(token || 'x').slice(0, 48);
+}
+
+function ensureA2hsSheet() {
+  let sheet = document.getElementById('cp-a2hs-sheet');
+  if (sheet) return sheet;
+  sheet = document.createElement('div');
+  sheet.id = 'cp-a2hs-sheet';
+  sheet.setAttribute('role', 'dialog');
+  sheet.setAttribute('aria-modal', 'true');
+  sheet.style.cssText = 'display:none;position:fixed;inset:0;z-index:10140;background:rgba(0,0,0,.88);align-items:flex-end;justify-content:center;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));box-sizing:border-box;';
+  sheet.innerHTML = '<div style="width:100%;max-width:440px;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px 16px 12px 12px;padding:16px;color:#eee;box-sizing:border-box;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">NURVAN</div>' +
+    '<h2 style="color:var(--gold);font-size:18px;margin:6px 0 8px;">Aggiungi Nurvan alla Home</h2>' +
+    '<p id="cp-a2hs-copy" style="font-size:12px;color:#bbb;line-height:1.45;margin:0 0 12px;">Si apre come app, senza barra del browser. Ideale per il link del coach.</p>' +
+    '<ol id="cp-a2hs-steps" style="display:none;font-size:12px;color:#ccc;line-height:1.5;margin:0 0 12px;padding-left:18px;"></ol>' +
+    '<button type="button" class="btn btn-primary" id="cp-a2hs-primary" style="width:100%;margin-bottom:8px;font-weight:900;">AGGIUNGI ALLA HOME</button>' +
+    '<button type="button" class="btn btn-outline" id="cp-a2hs-push" style="width:100%;margin-bottom:8px;display:none;">ATTIVA NOTIFICHE (ANCHE A SCHERMO SPENTO)</button>' +
+    '<button type="button" class="btn btn-outline" id="cp-a2hs-later" style="width:100%;">PIÙ TARDI</button></div>';
+  document.body.appendChild(sheet);
+  return sheet;
+}
+
+function hideA2hsSheet() {
+  const sheet = document.getElementById('cp-a2hs-sheet');
+  if (sheet) sheet.style.display = 'none';
+}
+
+function maybeOfferClientHomeInstall(token) {
+  captureInstallPromptEarly();
+  if (typeof window !== 'undefined' && window.NativeConfig) return;
+  if (isStandalonePwaLocal()) {
+    maybeSubscribeWebPush();
+    return;
+  }
+  const t = token || store.inviteToken || '';
+  try {
+    if (t && localStorage.getItem(a2hsDismissKey(t)) === '1') return;
+    if (localStorage.getItem('NURVAN_A2HS_INSTALLED') === '1' && isStandalonePwaLocal()) return;
+  } catch (_) {}
+  if (t) applyInviteManifestStartUrl(t);
+  const sheet = ensureA2hsSheet();
+  const copy = document.getElementById('cp-a2hs-copy');
+  const steps = document.getElementById('cp-a2hs-steps');
+  const primary = document.getElementById('cp-a2hs-primary');
+  const later = document.getElementById('cp-a2hs-later');
+  const pushBtn = document.getElementById('cp-a2hs-push');
+  const deferred = window.__nurvanDeferredInstall;
+  const ios = (function () {
+    try { return typeof isIosDevice === 'function' ? isIosDevice() : /iPhone|iPad|iPod/i.test(navigator.userAgent || ''); } catch (_) { return false; }
+  })();
+  if (steps) {
+    steps.style.display = 'none';
+    steps.innerHTML = '';
+  }
+  if (deferred) {
+    if (copy) copy.textContent = 'Tocca AGGIUNGI ALLA HOME: Nurvan diventa un’icona e riapre il tuo spazio coach.';
+    if (primary) primary.textContent = 'AGGIUNGI ALLA HOME';
+  } else if (ios) {
+    if (copy) copy.textContent = 'Su iPhone apri questo link in Safari, poi Condividi → Aggiungi a Home.';
+    if (steps) {
+      steps.style.display = 'block';
+      steps.innerHTML = '<li>Tocca Condividi</li><li>Scorri e tocca <b style="color:#fff;">Aggiungi a Home</b></li><li>Conferma: icona Nurvan sulla Home</li>';
+    }
+    if (primary) primary.textContent = 'HO CAPITO';
+  } else {
+    if (copy) copy.textContent = 'Su Chrome: menu ⋮ → Installa app / Aggiungi a schermata Home. Poi riapri dall’icona.';
+    if (primary) primary.textContent = 'HO CAPITO';
+  }
+  if (pushBtn) {
+    pushBtn.style.display = (store && store.accountToken) ? 'block' : 'none';
+    pushBtn.onclick = function () { enableWebPushFromUi(); };
+  }
+  if (primary) {
+    primary.onclick = function () {
+      if (deferred && typeof deferred.prompt === 'function') {
+        deferred.prompt();
+        Promise.resolve(deferred.userChoice).then(function () {
+          window.__nurvanDeferredInstall = null;
+          hideA2hsSheet();
+          maybeSubscribeWebPush();
+        }).catch(function () { hideA2hsSheet(); });
+        return;
+      }
+      hideA2hsSheet();
+    };
+  }
+  if (later) {
+    later.onclick = function () {
+      try { if (t) localStorage.setItem(a2hsDismissKey(t), '1'); } catch (_) {}
+      hideA2hsSheet();
+    };
+  }
+  sheet.style.display = 'flex';
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+async function enableWebPushFromUi() {
+  try {
+    await maybeSubscribeWebPush(true);
+    practiceToast('Notifiche attivate (se il browser le consente)', 'success');
+  } catch (err) {
+    practiceToast((err && err.message) || 'Notifiche non disponibili', 'warning');
+  }
+}
+
+async function maybeSubscribeWebPush(force) {
+  if (typeof window !== 'undefined' && window.NativeConfig) return;
+  if (!store || !store.accountToken) return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    if (!force) {
+      try { if (localStorage.getItem('NURVAN_PUSH_DENIED') === '1') return; } catch (_) {}
+    }
+    if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+      try { localStorage.setItem('NURVAN_PUSH_DENIED', '1'); } catch (_) {}
+      return;
+    }
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      const p = await Notification.requestPermission();
+      if (p !== 'granted') {
+        try { localStorage.setItem('NURVAN_PUSH_DENIED', '1'); } catch (_) {}
+        return;
+      }
+    }
+    const vapidRes = await practiceFetch('/api/push/vapid-public-key', { method: 'GET' }, 10000);
+    const key = vapidRes && vapidRes.publicKey;
+    if (!key) return;
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(key)
+      });
+    }
+    await practiceFetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: practiceHeaders(true),
+      body: JSON.stringify({ subscription: sub.toJSON() })
+    }, 15000);
+    try { localStorage.removeItem('NURVAN_PUSH_DENIED'); } catch (_) {}
+  } catch (err) {
+    console.warn('[WEB_PUSH_SUBSCRIBE]', err);
+    if (force) throw err;
+  }
 }
 
 function ensureAssignBanner() {
@@ -3307,10 +3531,20 @@ function startPresenceHeartbeat() {
 }
 
 async function bootCoachPractice() {
+  captureInstallPromptEarly();
   ensurePracticeStyle();
   ensurePracticeOverlays();
   ensureAssignBanner();
   requestNotifyPermission();
+  try {
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('message', function (ev) {
+        if (ev && ev.data && ev.data.type === 'NURVAN_NOTIFY_ROUTE') {
+          try { handleNotifyRoute(ev.data.route && (ev.data.route.route || ev.data.route)); } catch (_) {}
+        }
+      });
+    }
+  } catch (_) {}
   const urlToken = detectInviteToken();
   try {
     const shell = JSON.parse(localStorage.getItem('GS_CLIENT_SHELL') || 'null');
@@ -3370,10 +3604,15 @@ async function bootCoachPractice() {
     if (store.clientProfile && store.clientProfile.needIntake) showClientIntake(store.clientProfile.intake || {});
     else if (!isClientTutorialDone()) showClientTutorial(false);
     flushClientOutbox();
+    setTimeout(function () {
+      maybeOfferClientHomeInstall(store.inviteToken || urlToken);
+      maybeSubscribeWebPush();
+    }, 1200);
   } else {
     await refreshCoachStatus();
     if (store.coachUnlocked) startPresenceHeartbeat();
     applyClientChrome();
+    if (store.accountToken) setTimeout(function () { maybeSubscribeWebPush(); }, 1500);
   }
   if (!window.__cpInboxTimer) {
     window.__cpInboxTimer = setInterval(pollPracticeInbox, 8000);
@@ -3711,7 +3950,13 @@ function wrapPracticeHooks() {
 
 wrapPracticeHooks();
 
+try { captureInstallPromptEarly(); } catch (_) {}
+
 window.bootCoachPractice = bootCoachPractice;
+window.toggleCoachWsSection = toggleCoachWsSection;
+window.maybeOfferClientHomeInstall = maybeOfferClientHomeInstall;
+window.maybeSubscribeWebPush = maybeSubscribeWebPush;
+window.enableWebPushFromUi = enableWebPushFromUi;
 window.showClientInvite = showClientInvite;
 window.closeClientInviteOverlay = closeClientInviteOverlay;
 window.submitClientInviteLogin = submitClientInviteLogin;

@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import fs from "node:fs";
+import webpush from "web-push";
 
 function slugName(name) {
   const s = String(name || "atleta")
@@ -242,6 +243,8 @@ export async function ensureCoachPracticeTables(client) {
     ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS hidden_for TEXT[] NOT NULL DEFAULT '{}';
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS e2e_pubkey_coach TEXT;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS e2e_pubkey_athlete TEXT;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS push_subscription JSONB;
+    ALTER TABLE coach_licenses ADD COLUMN IF NOT EXISTS push_subscription JSONB;
     CREATE TABLE IF NOT EXISTS coach_call_signals (
       id BIGSERIAL PRIMARY KEY,
       client_id BIGINT NOT NULL REFERENCES coach_clients(id) ON DELETE CASCADE,
@@ -264,6 +267,88 @@ export function mountCoachPractice(app, deps) {
     accountFromBearer,
     webDir
   } = deps;
+
+  let vapidReady = false;
+  function ensureVapid() {
+    if (vapidReady) return true;
+    const pub = process.env.VAPID_PUBLIC_KEY;
+    const priv = process.env.VAPID_PRIVATE_KEY;
+    const subject = process.env.VAPID_SUBJECT || "mailto:noreply@nurvan.app";
+    if (!pub || !priv) return false;
+    try {
+      webpush.setVapidDetails(subject, pub, priv);
+      vapidReady = true;
+      return true;
+    } catch (err) {
+      console.warn("[WEB_PUSH_VAPID]", err && err.message);
+      return false;
+    }
+  }
+
+  async function sendWebPush(subscription, payload) {
+    if (!subscription || !ensureVapid()) return null;
+    const sub = typeof subscription === "string" ? JSON.parse(subscription) : subscription;
+    if (!sub || !sub.endpoint) return null;
+    try {
+      await webpush.sendNotification(sub, JSON.stringify(payload));
+      return "ok";
+    } catch (err) {
+      const code = err && err.statusCode;
+      if (code === 404 || code === 410) return "gone";
+      console.warn("[WEB_PUSH]", code || (err && err.message));
+      return "error";
+    }
+  }
+
+  async function clearAthletePush(clientId) {
+    try {
+      await pool.query("UPDATE coach_clients SET push_subscription = NULL WHERE id = $1", [clientId]);
+    } catch (_) {}
+  }
+
+  async function clearCoachPush(userId) {
+    try {
+      await pool.query("UPDATE coach_licenses SET push_subscription = NULL WHERE user_id = $1", [userId]);
+    } catch (_) {}
+  }
+
+  async function notifyAthletePush(clientRow, title, body, route) {
+    if (!clientRow || !clientRow.push_subscription) return;
+    const inviteToken = clientRow.invite_token || "";
+    const result = await sendWebPush(clientRow.push_subscription, {
+      title: title || "Nurvan",
+      body: body || "",
+      data: {
+        path: inviteToken ? `/c/${inviteToken}` : "/",
+        inviteToken: inviteToken || undefined,
+        route: route || { view: "home" }
+      }
+    });
+    if (result === "gone") await clearAthletePush(clientRow.id);
+  }
+
+  async function notifyCoachPush(coachUserId, title, body, route) {
+    if (!coachUserId) return;
+    try {
+      const q = await pool.query(
+        "SELECT push_subscription FROM coach_licenses WHERE user_id = $1 AND status = 'active'",
+        [coachUserId]
+      );
+      const sub = q.rows[0] && q.rows[0].push_subscription;
+      if (!sub) return;
+      const result = await sendWebPush(sub, {
+        title: title || "Nurvan",
+        body: body || "",
+        data: {
+          path: "/",
+          route: route || { view: "coachHub" }
+        }
+      });
+      if (result === "gone") await clearCoachPush(coachUserId);
+    } catch (err) {
+      console.warn("[WEB_PUSH_COACH]", err && err.message);
+    }
+  }
 
   async function requireUser(req) {
     const auth = await accountFromBearer(req.headers.authorization);
@@ -411,6 +496,37 @@ export function mountCoachPractice(app, deps) {
     if (!fs.existsSync(indexHtml)) return res.status(404).send("App non disponibile");
     res.setHeader("Cache-Control", "no-store");
     res.sendFile(indexHtml);
+  });
+
+  app.get("/api/push/vapid-public-key", (req, res) => {
+    const publicKey = process.env.VAPID_PUBLIC_KEY || "";
+    if (!publicKey) return res.status(503).json({ error: "Web Push non configurato.", configured: false });
+    return res.json({ ok: true, publicKey, configured: true });
+  });
+
+  app.post("/api/push/subscribe", async (req, res) => {
+    const auth = await requireUser(req);
+    if (!auth) return res.status(401).json({ error: "Accedi per attivare le notifiche." });
+    const subscription = req.body?.subscription;
+    if (!subscription || !subscription.endpoint) {
+      return res.status(400).json({ error: "Subscription mancante." });
+    }
+    await initDb();
+    const payload = JSON.stringify(subscription);
+    if (auth.role === "athlete") {
+      await pool.query(
+        `UPDATE coach_clients SET push_subscription = $2::jsonb
+         WHERE athlete_user_id = $1 AND status = 'active'`,
+        [auth.id, payload]
+      );
+    } else {
+      await pool.query(
+        `UPDATE coach_licenses SET push_subscription = $2::jsonb
+         WHERE user_id = $1 AND status = 'active'`,
+        [auth.id, payload]
+      );
+    }
+    return res.json({ ok: true });
   });
 
   app.get("/api/client/invite/:token", async (req, res) => {
@@ -621,6 +737,12 @@ export function mountCoachPractice(app, deps) {
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'message',$2)",
       [ctx.client.id, JSON.stringify({ from: "athlete", preview: String(message.body || "").slice(0, 80) })]
     );
+    notifyCoachPush(
+      ctx.client.coach_user_id,
+      "Messaggio da " + (ctx.client.display_name || "atleta"),
+      String(message.body || "Nuovo messaggio").slice(0, 120),
+      { view: "message", clientId: String(ctx.client.id) }
+    ).catch(() => {});
     return res.json({ ok: true, message });
   });
 
@@ -782,6 +904,12 @@ export function mountCoachPractice(app, deps) {
         [client.id, JSON.stringify({ username })]
       );
       await pool.query("UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1", [client.id]);
+      notifyCoachPush(
+        client.coach_user_id,
+        "Recupero password",
+        (client.display_name || username) + " chiede aiuto con la password",
+        { view: "message", clientId: String(client.id) }
+      ).catch(() => {});
       return res.json({ ok: true });
     } catch (err) {
       console.error("PASSWORD_HELP", err && err.message);
@@ -1270,6 +1398,12 @@ export function mountCoachPractice(app, deps) {
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'check_request',$2)",
       [row.id, JSON.stringify({ note, nextCheckAt: nextCheckAt ? nextCheckAt.toISOString() : null })]
     );
+    notifyAthletePush(
+      row,
+      "Check richiesto",
+      note || "Il coach ha chiesto un check fisico",
+      { view: "check_request" }
+    ).catch(() => {});
     return res.json({ ok: true, nextCheckAt: nextCheckAt ? nextCheckAt.toISOString() : row.next_check_at });
   });
 
@@ -1368,6 +1502,17 @@ export function mountCoachPractice(app, deps) {
         [row.id, eventKind, JSON.stringify({ at: merged.assignedAt, kind })]
       );
     }
+    const assignLabel = unique.includes("training")
+      ? "Scheda assegnata"
+      : unique.includes("nutrition")
+        ? "Alimentazione assegnata"
+        : "Aggiornamento dal coach";
+    notifyAthletePush(
+      row,
+      assignLabel,
+      "Il coach ti ha inviato un aggiornamento",
+      { view: unique.includes("training") ? "program_assigned" : (unique[0] || "home") }
+    ).catch(() => {});
     return res.json({ ok: true, kinds: unique });
   });
 
@@ -1469,6 +1614,12 @@ export function mountCoachPractice(app, deps) {
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'message',$2)",
       [row.id, JSON.stringify({ from: "coach", preview: String(message.body || "").slice(0, 80) })]
     );
+    notifyAthletePush(
+      row,
+      "Messaggio dal coach",
+      String(message.body || "Nuovo messaggio").slice(0, 120),
+      { view: "clientChat" }
+    ).catch(() => {});
     return res.json({ ok: true, message });
   });
 

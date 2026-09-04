@@ -41,6 +41,13 @@ services:
         sync: false
       - key: TURN_CREDENTIAL
         sync: false
+      # Web Push (PWA). Generate VAPID keys locally; set in Render dashboard.
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        value: mailto:noreply@nurvan.app
 databases:
   - name: coach-db
     databaseName: coach
