@@ -312,22 +312,24 @@ export function mountCoachPractice(app, deps) {
     } catch (_) {}
   }
 
-  async function notifyAthletePush(clientRow, title, body, route) {
+  async function notifyAthletePush(clientRow, title, body, route, badge) {
     if (!clientRow || !clientRow.push_subscription) return;
     const inviteToken = clientRow.invite_token || "";
     const result = await sendWebPush(clientRow.push_subscription, {
       title: title || "Nurvan",
       body: body || "",
+      badge: typeof badge === "number" ? badge : undefined,
       data: {
         path: inviteToken ? `/c/${inviteToken}` : "/",
         inviteToken: inviteToken || undefined,
-        route: route || { view: "home" }
+        route: route || { view: "home" },
+        badge: typeof badge === "number" ? badge : undefined
       }
     });
     if (result === "gone") await clearAthletePush(clientRow.id);
   }
 
-  async function notifyCoachPush(coachUserId, title, body, route) {
+  async function notifyCoachPush(coachUserId, title, body, route, badge) {
     if (!coachUserId) return;
     try {
       const q = await pool.query(
@@ -336,12 +338,25 @@ export function mountCoachPractice(app, deps) {
       );
       const sub = q.rows[0] && q.rows[0].push_subscription;
       if (!sub) return;
+      let badgeCount = badge;
+      if (typeof badgeCount !== "number") {
+        try {
+          const uq = await pool.query(
+            `SELECT COALESCE(SUM(unread_count),0)::int AS n FROM coach_clients
+             WHERE coach_user_id = $1 AND status = 'active'`,
+            [coachUserId]
+          );
+          badgeCount = Number(uq.rows[0]?.n || 0);
+        } catch (_) { badgeCount = undefined; }
+      }
       const result = await sendWebPush(sub, {
         title: title || "Nurvan",
         body: body || "",
+        badge: typeof badgeCount === "number" ? badgeCount : undefined,
         data: {
           path: "/",
-          route: route || { view: "coachHub" }
+          route: route || { view: "coachHub" },
+          badge: typeof badgeCount === "number" ? badgeCount : undefined
         }
       });
       if (result === "gone") await clearCoachPush(coachUserId);
@@ -1047,6 +1062,34 @@ export function mountCoachPractice(app, deps) {
     return res.json({ ok: true });
   });
 
+  app.post("/api/client/workout-live-sync", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const patch = req.body?.data && typeof req.body.data === "object" ? req.body.data : {};
+    await pool.query(
+      "UPDATE coach_clients SET last_seen_at = NOW() WHERE id = $1",
+      [ctx.client.id]
+    );
+    if (ctx.client.athlete_user_id) {
+      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [ctx.client.athlete_user_id]);
+      const current = existing.rows[0]?.data || {};
+      const merged = { ...current };
+      Object.keys(patch).forEach((k) => {
+        if (patch[k] === undefined) return;
+        if (k === "logs") return; // live sync must not finalize/replace logs mid-workout
+        merged[k] = patch[k];
+      });
+      merged.liveWorkoutSyncedAt = new Date().toISOString();
+      await pool.query(
+        `INSERT INTO app_account_data(user_id, data, updated_at)
+         VALUES($1,$2,NOW())
+         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        [ctx.client.athlete_user_id, JSON.stringify(merged)]
+      );
+    }
+    return res.json({ ok: true, workoutLive: true });
+  });
+
   app.get("/api/coach/status", async (req, res) => {
     const auth = await requireUser(req);
     if (!auth) return res.status(401).json({ error: "Unauthorized." });
@@ -1652,15 +1695,44 @@ export function mountCoachPractice(app, deps) {
       name: String(e?.name || e?.id || "").slice(0, 120)
     })).filter((e) => e.id || e.name);
     const dueAt = req.body?.dueAt ? String(req.body.dueAt).slice(0, 10) : null;
+    const note = String(req.body?.note || "").slice(0, 400);
+    const requestPayload = {
+      id: "exreq_" + Date.now(),
+      at: new Date().toISOString(),
+      note,
+      dueAt,
+      exams
+    };
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'exams_request',$2)",
-      [row.id, JSON.stringify({
-        note: String(req.body?.note || "").slice(0, 400),
-        dueAt,
-        exams
-      })]
+      [row.id, JSON.stringify(requestPayload)]
     );
-    return res.json({ ok: true, count: exams.length });
+    if (row.athlete_user_id) {
+      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
+      const current = existing.rows[0]?.data || {};
+      const examsBlock = current.exams && typeof current.exams === "object" ? { ...current.exams } : { records: [], present: false, reminders: [] };
+      if (!Array.isArray(examsBlock.records)) examsBlock.records = [];
+      if (!Array.isArray(examsBlock.reminders)) examsBlock.reminders = [];
+      const hist = Array.isArray(examsBlock.coachRequests) ? examsBlock.coachRequests.slice(0, 9) : [];
+      hist.unshift(requestPayload);
+      examsBlock.coachRequest = requestPayload;
+      examsBlock.coachRequests = hist;
+      examsBlock.present = true;
+      const merged = { ...current, exams: examsBlock };
+      await pool.query(
+        `INSERT INTO app_account_data(user_id, data, updated_at)
+         VALUES($1,$2,NOW())
+         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        [row.athlete_user_id, JSON.stringify(merged)]
+      );
+    }
+    notifyAthletePush(
+      row,
+      "Richiesta esami",
+      (exams.length ? exams.length + " esami" : "Nuova richiesta") + (dueAt ? " · entro " + dueAt : ""),
+      { view: "exams_request" }
+    ).catch(() => {});
+    return res.json({ ok: true, count: exams.length, request: requestPayload });
   });
 
   app.post("/api/coach/videocall", async (req, res) => {

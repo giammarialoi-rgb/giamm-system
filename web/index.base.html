@@ -1828,10 +1828,16 @@ function showBusyOverlay(label) {
 function hideBusyOverlay() {
   var el = document.getElementById('nurvan-busy-overlay');
   if (el) el.classList.remove('visible');
+  try { document.body.classList.remove('cp-busy'); } catch (_) {}
+  if (window.__nurvanBusySafetyTimer) {
+    clearTimeout(window.__nurvanBusySafetyTimer);
+    window.__nurvanBusySafetyTimer = null;
+  }
 }
 async function withBusy(fn, label, opts) {
   opts = opts || {};
   var delay = (opts.immediate === true || opts.delay === 0) ? 0 : (typeof opts.delay === 'number' ? opts.delay : 1000);
+  var maxMs = typeof opts.maxMs === 'number' ? opts.maxMs : 90000;
   var shown = false;
   var timer = null;
   function showNow() {
@@ -1842,6 +1848,10 @@ async function withBusy(fn, label, opts) {
   else {
     timer = setTimeout(showNow, delay);
   }
+  if (window.__nurvanBusySafetyTimer) clearTimeout(window.__nurvanBusySafetyTimer);
+  window.__nurvanBusySafetyTimer = setTimeout(function () {
+    try { hideBusyOverlay(); } catch (_) {}
+  }, maxMs);
   try {
     return await Promise.resolve().then(fn);
   } finally {
@@ -3987,6 +3997,34 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       throw new Error('Formato sorgente file non riconosciuto.');
     }
 
+    if (actionIntent === 'EXAM_FILE_ONLY') {
+      let base64String = source.base64;
+      if (!base64String && bytes) {
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+        base64String = btoa(binary);
+      }
+      const docId = base64String ? await persistDocumentMetadata(name, sizeText, mime, base64String) : null;
+      if (!DATA.exams) DATA.exams = { patient_name: '', records: [], present: false, reminders: [] };
+      if (!Array.isArray(DATA.exams.attachments)) DATA.exams.attachments = [];
+      DATA.exams.attachments.unshift({
+        id: docId || ('att_' + Date.now()),
+        name: name,
+        mime: mime,
+        size: sizeText,
+        date: new Date().toISOString().slice(0, 10)
+      });
+      DATA.exams.present = true;
+      persist();
+      if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveExams) {
+        try { await GiammariaPersistence.saveExams(DATA.exams); } catch (_) {}
+      }
+      navigate('exams');
+      if (typeof render === 'function') render();
+      if (typeof showToast === 'function') showToast('Referto allegato come file (senza trascrizione)', 'success');
+      return;
+    }
+
     stage('detect', 'Detecting format');
     await yieldImportPaint();
     const detect = (typeof detectFormat === 'function') ? detectFormat(bytes, name, mime) : { route: null, warnings: [] };
@@ -4185,7 +4223,19 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       stage('ready', 'Ready for review');
       await yieldImportPaint();
       const st = summary?.status || 'IMPORT_COMPLETED';
-      if (typeof showToast === 'function') showToast(`✓ ${st}: ${name}`, st.includes('WARN') ? 'warning' : 'success');
+      const examRecs = (canonicalProgram && canonicalProgram.exams && (canonicalProgram.exams.records || canonicalProgram.exams.items)) || [];
+      if (pState && pState.importDomain === 'exams' && (!examRecs || !examRecs.length)) {
+        if (typeof showToast === 'function') {
+          showToast('Nessun esame letto dal file. Puoi tenarlo allegato con «Aggiungi solo file».', 'warning');
+        }
+        setTimeout(function () {
+          if (confirm('Trascrizione vuota. Vuoi allegare comunque solo il file referto?')) {
+            beginExamImportMode('file');
+          }
+        }, 400);
+      } else if (typeof showToast === 'function') {
+        showToast(`✓ ${st}: ${name}`, st.includes('WARN') ? 'warning' : 'success');
+      }
     } else if (actionIntent === 'COACH_AI') {
       navigate('ai');
       await executeCoachAiFileAnalysis({
@@ -6529,6 +6579,7 @@ function finishInit() {
       try { maybeShowIosInstallHint(); } catch (_) {}
       try { scheduleAllItemAlerts(); } catch (_) {}
       try { registerNurvanServiceWorker(); } catch (_) {}
+      try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
       try { if (typeof bootCoachPractice === 'function') bootCoachPractice(); } catch (_) {}
     }, 400);
   }, 280);
@@ -7635,6 +7686,10 @@ function startDomainImport(domain) {
       dom = 'nutrition';
     }
   }
+  if (dom === 'exams') {
+    openExamImportChooser();
+    return;
+  }
   const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : null;
   if (pState) pState.importDomain = dom;
   navigate('import');
@@ -7643,6 +7698,57 @@ function startDomainImport(domain) {
     if (typeof triggerImportFileSelect === 'function') triggerImportFileSelect();
   }, 200);
 }
+
+function openExamImportChooser() {
+  let sheet = document.getElementById('cp-exam-import-sheet');
+  if (!sheet) {
+    sheet = document.createElement('div');
+    sheet.id = 'cp-exam-import-sheet';
+    sheet.style.cssText = 'display:none;position:fixed;inset:0;z-index:10150;background:rgba(0,0,0,.88);align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;';
+    sheet.innerHTML = '<div style="width:100%;max-width:440px;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px;padding:16px;color:#eee;">' +
+      '<div style="font-size:10px;color:var(--gold);font-weight:800;">ESAMI</div>' +
+      '<h2 style="color:var(--gold);font-size:18px;margin:6px 0 8px;">Importa referto</h2>' +
+      '<p style="font-size:12px;color:#bbb;line-height:1.45;margin:0 0 12px;">Scegli se allegare solo il file oppure tentare la lettura esame per esame.</p>' +
+      '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="closeExamImportChooser();beginExamImportMode(\'file\')">AGGIUNGI SOLO FILE</button>' +
+      '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="closeExamImportChooser();beginExamImportMode(\'transcribe\')">LEGGI E TRASCRIVI ESAME PER ESAME</button>' +
+      '<button type="button" class="btn btn-outline" style="width:100%;" onclick="closeExamImportChooser()">ANNULLA</button></div>';
+    document.body.appendChild(sheet);
+  }
+  sheet.style.display = 'flex';
+}
+
+function closeExamImportChooser() {
+  const sheet = document.getElementById('cp-exam-import-sheet');
+  if (sheet) sheet.style.display = 'none';
+}
+
+function beginExamImportMode(mode) {
+  const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : null;
+  if (pState) pState.importDomain = 'exams';
+  if (mode === 'file') {
+    setFilePickIntent('EXAM_FILE_ONLY');
+    navigate('exams');
+  } else {
+    setFilePickIntent('IMPORT');
+    navigate('import');
+    if (typeof switchImportInputMode === 'function') switchImportInputMode('exams');
+  }
+  setTimeout(function () {
+    if (mode === 'file') {
+      if (window.NativeConfig && typeof window.NativeConfig.pickDocument === 'function') {
+        try { window.NativeConfig.pickDocument(); return; } catch (_) {}
+      }
+      const el = $('universal-file-input');
+      if (el) { el.value = ''; el.click(); }
+    } else if (typeof triggerImportFileSelect === 'function') {
+      triggerImportFileSelect();
+    }
+  }, 180);
+}
+
+window.openExamImportChooser = openExamImportChooser;
+window.closeExamImportChooser = closeExamImportChooser;
+window.beginExamImportMode = beginExamImportMode;
 
 function buildSuggestedNutritionFromProfile() {
   return buildWeeklyNutritionPlan({}, { onCount: 4, offCount: 3, planName: 'Piano da profilo' });
@@ -8432,6 +8538,14 @@ function renderExams(c) {
   const examData = DATA.exams || DATA.clinical_exams || { records: [] };
   const records = examData.records || examData.items || [];
   const reminders = DATA.exams.reminders || [];
+  let coachReq = DATA.exams.coachRequest || null;
+  if (!coachReq && typeof store !== 'undefined' && store && Array.isArray(store.clientEvents)) {
+    const ev = store.clientEvents.find(function (e) { return e && e.kind === 'exams_request'; });
+    if (ev && ev.payload) {
+      coachReq = typeof ev.payload === 'string' ? (function () { try { return JSON.parse(ev.payload); } catch (_) { return null; } })() : ev.payload;
+    }
+  }
+  const attachments = Array.isArray(DATA.exams.attachments) ? DATA.exams.attachments : [];
 
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
@@ -8441,18 +8555,44 @@ function renderExams(c) {
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="openExamReminderModal()">📅 PROMEMORIA</button>
+        <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="openExamImportChooser()">IMPORTA REFERTO</button>
         <button class="btn btn-primary" style="font-size:10px;padding:6px 12px;" onclick="openAddExamModal()">+ AGGIUNGI REFERTO</button>
       </div>
     </div>
   `;
 
+  if (coachReq && Array.isArray(coachReq.exams) && coachReq.exams.length) {
+    html += '<div class="card" style="padding:14px;margin-bottom:12px;border-color:rgba(212,175,55,.55);">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;">' +
+      '<div><div style="font-size:11px;color:var(--gold);font-weight:800;">RICHIESTA DEL COACH</div>' +
+      '<div style="font-size:12px;color:#ccc;margin-top:4px;">' +
+      (coachReq.dueAt ? ('Entro: <b style="color:#fff;">' + esc(String(coachReq.dueAt)) + '</b>') : 'Senza scadenza') +
+      (coachReq.at ? (' · inviata ' + esc(String(coachReq.at).replace('T', ' ').slice(0, 16))) : '') +
+      '</div></div>' +
+      '<button type="button" class="btn btn-primary" style="font-size:10px;padding:8px 12px;" onclick="exportExamRequestPdf()">ESPORTA PDF</button></div>' +
+      (coachReq.note ? ('<p class="cp-help" style="margin:8px 0 0;">' + esc(coachReq.note) + '</p>') : '') +
+      '<ul style="margin:10px 0 0;padding-left:18px;color:#eee;font-size:13px;line-height:1.45;">' +
+      coachReq.exams.map(function (ex) {
+        return '<li>' + esc((ex && (ex.name || ex.id)) || 'Esame') + '</li>';
+      }).join('') +
+      '</ul></div>';
+  }
+
+  if (attachments.length) {
+    html += '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:8px;">FILE ALLEGATI</div>' +
+      attachments.slice(0, 12).map(function (a) {
+        return '<div style="font-size:12px;color:#ddd;padding:4px 0;border-bottom:1px solid #222;">' + esc(a.name || 'referto') +
+          (a.date ? (' <span style="color:#888;font-size:10px;">· ' + esc(a.date) + '</span>') : '') + '</div>';
+      }).join('') + '</div>';
+  }
+
   if (!records.length) {
     html += `
       <div class="card" style="text-align:center;padding:30px 15px;color:#888;">
-        <p style="margin:0;font-size:13px;color:#ccc;">Nessun referto. Aggiungi un esame o importa un file.</p>
+        <p style="margin:0;font-size:13px;color:#ccc;">Nessun referto trascritto. Aggiungi un esame o importa un file.</p>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
           <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="openAddExamModal()">+ AGGIUNGI REFERTO</button>
-          <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="startDomainImport('exams')">Importa referto</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="openExamImportChooser()">Importa referto</button>
         </div>
       </div>
     `;
@@ -8495,6 +8635,83 @@ function renderExams(c) {
   c.innerHTML = html;
   maybeNotifyExamReminders();
 }
+
+function exportExamRequestPdf() {
+  const req = (DATA.exams && DATA.exams.coachRequest) || null;
+  if (!req || !Array.isArray(req.exams) || !req.exams.length) {
+    if (typeof showToast === 'function') showToast('Nessuna richiesta esami da esportare', 'warning');
+    return;
+  }
+  try {
+    const bytes = buildExamRequestPdfBytes(req);
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const stamp = new Date().toISOString().slice(0, 10);
+    shareOrSavePdfBlob(blob, 'Nurvan_Richiesta_Esami_' + stamp + '.pdf', 'Richiesta esami NURVAN');
+  } catch (err) {
+    alert('Impossibile creare il PDF: ' + (err && err.message ? err.message : err));
+  }
+}
+
+function buildExamRequestPdfBytes(req) {
+  var W = 595, H = 842;
+  var ML = 48, MR = 48, MT = 48, MB = 48;
+  var GOLD = '0.78 0.63 0.14';
+  var DARK = '0.15 0.15 0.15';
+  var GRAY = '0.45 0.45 0.45';
+  var cmds = [];
+  var y = H - MT;
+  function txt(font, size, color, x, yy, s) {
+    cmds.push('BT /' + font + ' ' + size + ' Tf ' + color + ' rg 1 0 0 1 ' + x + ' ' + yy + ' Tm (' + pdfEsc(s) + ') Tj ET');
+  }
+  function rct(x, yy, w, h, fill) {
+    cmds.push(fill + ' rg ' + x + ' ' + yy + ' ' + w + ' ' + h + ' re f');
+  }
+  rct(0, H - 56, W, 56, '0.05 0.05 0.05');
+  rct(0, H - 58, W, 2, GOLD);
+  txt('F1', 20, GOLD, ML, H - 38, 'NURVAN');
+  txt('F2', 9, '0.7 0.7 0.7', ML + 100, H - 36, 'RICHIESTA ESAMI DEL COACH');
+  y = H - 90;
+  var athlete = (store && store.profile && (store.profile.name || store.profile.first_name)) ||
+    (store && store.accountUser && store.accountUser.name) || '';
+  if (athlete) { txt('F2', 10, DARK, ML, y, 'Atleta: ' + athlete); y -= 18; }
+  if (req.dueAt) { txt('F2', 10, DARK, ML, y, 'Entro: ' + String(req.dueAt)); y -= 18; }
+  if (req.at) { txt('F2', 9, GRAY, ML, y, 'Inviata: ' + String(req.at).replace('T', ' ').slice(0, 16)); y -= 18; }
+  if (req.note) { txt('F2', 10, DARK, ML, y, 'Nota: ' + String(req.note).slice(0, 90)); y -= 22; }
+  txt('F1', 12, GOLD, ML, y, 'ESAMI RICHIESTI');
+  y -= 20;
+  (req.exams || []).forEach(function (ex, i) {
+    if (y < MB + 24) return;
+    txt('F2', 11, DARK, ML, y, (i + 1) + '. ' + String((ex && (ex.name || ex.id)) || 'Esame').slice(0, 70));
+    y -= 16;
+  });
+  txt('F2', 8, GRAY, ML, MB, 'Mostra questo elenco in laboratorio / al medico.');
+  var content = cmds.join('\n');
+  var objects = [];
+  objects.push('1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n');
+  objects.push('2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n');
+  objects.push('3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>endobj\n');
+  objects.push('4 0 obj<< /Length ' + content.length + ' >>stream\n' + content + '\nendstream\nendobj\n');
+  objects.push('5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>endobj\n');
+  objects.push('6 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n');
+  var pdf = '%PDF-1.4\n';
+  var offsets = [0];
+  objects.forEach(function (o) {
+    offsets.push(pdf.length);
+    pdf += o;
+  });
+  var xrefPos = pdf.length;
+  pdf += 'xref\n0 ' + (objects.length + 1) + '\n';
+  pdf += '0000000000 65535 f \n';
+  for (var i = 1; i < offsets.length; i++) {
+    pdf += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+  }
+  pdf += 'trailer<< /Size ' + (objects.length + 1) + ' /Root 1 0 R >>\nstartxref\n' + xrefPos + '\n%%EOF';
+  var out = new Uint8Array(pdf.length);
+  for (var j = 0; j < pdf.length; j++) out[j] = pdf.charCodeAt(j) & 0xff;
+  return out;
+}
+
+window.exportExamRequestPdf = exportExamRequestPdf;
 
 let __examEditIndex = null;
 
@@ -11718,7 +11935,7 @@ function renderTraining(c){
         h += `<div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid #222;padding-top:10px;flex-wrap:wrap;">
           <button class="btn btn-outline" style="flex:1;font-size:10px;padding:6px 8px;" onclick="addSetToExercise(${fIdx})">+ SERIE</button>
           <button class="btn btn-outline" style="flex:2;font-size:10px;padding:6px 8px;" data-ex="${encodeURIComponent(curEx)}" onclick="window.openReplacementModal(${fIdx}, this.getAttribute('data-ex'))">SOSTITUISCI</button>
-          <button class="btn btn-outline" style="flex:2;font-size:10px;padding:6px 8px;border-color:var(--gold);color:var(--gold);" data-ex="${encodeURIComponent(curEx)}" onclick="askExerciseInfoToCoach(${fIdx}, decodeURIComponent(this.getAttribute('data-ex')))">CHIEDI INFO</button>
+          <button class="btn btn-outline" style="flex:2;font-size:10px;padding:6px 8px;border-color:var(--gold);color:var(--gold);" data-ex="${encodeURIComponent(curEx)}" onclick="event.stopPropagation();askExerciseInfoToCoach(${fIdx}, decodeURIComponent(this.getAttribute('data-ex')||''))">CHIEDI INFO</button>
         </div>`;
       }
       h += `</div>`;
@@ -12523,6 +12740,7 @@ function updateData(key, val){
   store.data[key] = val;
   persist();
   calcStats();
+  try { if (typeof scheduleAthleteLiveWorkoutSync === 'function') scheduleAthleteLiveWorkoutSync(); } catch (_) {}
 }
 function substituteEx(idx, val, muscleGroup){
   if(!val) return;
