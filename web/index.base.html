@@ -1126,7 +1126,7 @@ body.focus-mode [data-rewards-only] {
 
 </style>
   <script src="xlsx.full.min.js"></script>
-  <script src="peerjs.min.js"></script>
+  <script src="/peerjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" onerror="console.warn('tesseract.js CDN unavailable — OCR fallback active')"></script>
 </head>
 <body>
@@ -3027,6 +3027,16 @@ function accountPayload(opts){
         notes: c && c.notes, hasFront: !!(c && c.hasFront), hasBack: !!(c && c.hasBack),
         analysis: c && c.analysis ? String(c.analysis).slice(0, 800) : ''
       };
+    }) : [],
+    coachProgramLibrary: Array.isArray(store.coachProgramLibrary) ? store.coachProgramLibrary.slice(0, 40).map(function (e) {
+      return {
+        id: e && e.id,
+        title: e && e.title,
+        meta: e && e.meta,
+        source: e && e.source,
+        savedAt: e && e.savedAt,
+        payload: e && e.payload
+      };
     }) : []
   };
   if (includeProgram && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length) {
@@ -3090,6 +3100,13 @@ function applyRemoteAccountData(remote, preferLocal) {
     }
     if (Array.isArray(remote.coachArchives) && remote.coachArchives.length && !(store.coachArchives || []).length) {
       store.coachArchives = remote.coachArchives.slice(0, 24);
+    }
+    if (Array.isArray(remote.coachProgramLibrary) && remote.coachProgramLibrary.length) {
+      const byId = {};
+      (store.coachProgramLibrary || []).concat(remote.coachProgramLibrary).forEach(function (row) {
+        if (row && row.id) byId[row.id] = row;
+      });
+      store.coachProgramLibrary = Object.keys(byId).map(function (k) { return byId[k]; }).slice(0, 40);
     }
   }
   const localWeeks = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
@@ -3496,6 +3513,14 @@ function normalizeCoachProposedAction(raw, replyText) {
 }
 
 function askCoachAiForDomain(domain) {
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+    if (!(store.clientProfile && store.clientProfile.allowNurvanAi)) {
+      if (typeof askRealCoachForDomain === 'function') return askRealCoachForDomain(domain);
+      if (typeof showToast === 'function') showToast('Nurvan AI non abilitata dal tuo coach', 'warning');
+      navigate('clientChat');
+      return;
+    }
+  }
   const map = {
     nutrition: 'Crea un piano alimentare settimanale completo (Lunedì–Domenica) basato sul mio profilo. Se non specifico diversamente, usa 4 giorni ON e 3 OFF con pasti, alimenti e macro già compilati. Confermo l’inserimento in Alimentazione.',
     supplements: 'Crea e importa un protocollo di integrazione basato sul mio profilo e obiettivi (evidence-informed, non consulenza medica). Confermo l’inserimento in Integrazione.',
@@ -7014,8 +7039,26 @@ function selectNutritionDay(idx) {
   render();
 }
 
+function deviceTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch (_) {
+    return 'UTC';
+  }
+}
 function nutritionTodayKey() {
-  return new Date().toISOString().slice(0, 10);
+  try {
+    if (store && store.prefs) store.prefs.timeZone = deviceTimeZone();
+  } catch (_) {}
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: deviceTimeZone(), year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  } catch (_) {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
 }
 function nutritionPlanForToday() {
   const days = (DATA && DATA.nutrition && DATA.nutrition.days) || [];
@@ -7573,10 +7616,18 @@ function startDomainImport(domain) {
       beginAssignSandbox(id, name, 'import');
     }
   }
+  let dom = domain || 'all';
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+    const allowed = { nutrition: 1, supplements: 1, therapy: 1, exams: 1 };
+    if (!allowed[dom]) {
+      if (typeof showToast === 'function') showToast('Puoi importare solo alimentazione, integrazione, terapia o esami', 'warning');
+      dom = 'nutrition';
+    }
+  }
   const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : null;
-  if (pState) pState.importDomain = domain || 'all';
+  if (pState) pState.importDomain = dom;
   navigate('import');
-  if (typeof switchImportInputMode === 'function') switchImportInputMode(domain || 'all');
+  if (typeof switchImportInputMode === 'function') switchImportInputMode(dom);
   setTimeout(function () {
     if (typeof triggerImportFileSelect === 'function') triggerImportFileSelect();
   }, 200);
@@ -7946,10 +7997,17 @@ window.toggleItemAlert = toggleItemAlert;
 window.setItemAlertTime = setItemAlertTime;
 function nextAlertEpoch(hhmm) {
   const parts = String(hhmm || '08:00').split(':');
+  const hh = parseInt(parts[0], 10) || 8;
+  const mm = parseInt(parts[1], 10) || 0;
+  // Device-local calendar day (not UTC ISO), so alerts follow the phone timezone.
   const d = new Date();
   d.setSeconds(0, 0);
-  d.setHours(parseInt(parts[0], 10) || 8, parseInt(parts[1], 10) || 0, 0, 0);
+  d.setMilliseconds(0);
+  d.setHours(hh, mm, 0, 0);
   if (d.getTime() <= Date.now() + 15000) d.setDate(d.getDate() + 1);
+  try {
+    if (store && store.prefs) store.prefs.timeZone = deviceTimeZone();
+  } catch (_) {}
   return d.getTime();
 }
 function requestAppNotificationPermission() {
@@ -8847,10 +8905,13 @@ function renderSettings(c) {
         <button class="btn ${(store.rewards&&store.rewards.mode==='rewards')?'btn-primary':'btn-outline'}" style="flex:1;font-size:11px;" onclick="setRewardsModeFromSettings('rewards')">Rewards</button>
       </div>
       <button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="openAthleteProfile()">Profilo Atleta</button>
+      ${(typeof isAthleteRole === 'function' && isAthleteRole()) ? '' : `
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin:10px 0 6px;gap:10px;">Condividi terapia/esami con Coach AI <input type="checkbox" ${store.prefs.shareMedicalWithCoach?'checked':''} onchange="store.prefs.shareMedicalWithCoach=this.checked;persist()"></label>
       <div style="font-size:10px;color:#666;line-height:1.4;">Privacy: terapia ed esami non entrano mai in ranking, XP o share card. Al Coach solo con opt-in esplicito.</div>
+      `}
     </div>
 
+    ${(typeof isAthleteRole === 'function' && isAthleteRole()) ? '' : `
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div style="font-size:13px;font-weight:900;color:var(--gold);">AI Control Center</div>
@@ -8860,6 +8921,7 @@ function renderSettings(c) {
       ${renderAiControlCenterHtml()}
       <div style="font-size:10px;color:#666;margin-top:8px;">Storico azioni: ${(store.actionHistory&&store.actionHistory.length)||0} · ultima: ${esc((store.actionHistory&&store.actionHistory.length&&store.actionHistory[store.actionHistory.length-1].actions&&store.actionHistory[store.actionHistory.length-1].actions[0]&&store.actionHistory[store.actionHistory.length-1].actions[0].action_type)||'—')}</div>
     </div>
+    `}
 
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
       <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">Connessione Salute</div>
@@ -8879,6 +8941,7 @@ function renderSettings(c) {
       </div>
     </div>
 
+    ${(typeof isAthleteRole === 'function' && isAthleteRole()) ? '' : `
     <!-- Active Plan & Upgrade Card -->
     <div class="card" style="border:1px solid var(--border);background:linear-gradient(135deg, #18150c 0%, #0d0d0d 100%);margin-bottom:14px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -8892,6 +8955,7 @@ function renderSettings(c) {
         ${esc(planDesc)}
       </div>
     </div>
+    `}
 
     <!-- Full Database JSON Backup & Restore -->
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
@@ -9974,18 +10038,26 @@ function renderImport(c){
   }
 
   // Initial Import Dropzone — Phase 1: training-first wedge (PDF/Excel → train)
-  if (pState && !pState.importDomain) pState.importDomain = 'training';
-  const importDomain = pState?.importDomain || 'training';
+  const athleteImp = (typeof isAthleteRole === 'function' && isAthleteRole());
+  if (pState && !pState.importDomain) pState.importDomain = athleteImp ? 'nutrition' : 'training';
+  let importDomain = pState?.importDomain || (athleteImp ? 'nutrition' : 'training');
+  if (athleteImp && (importDomain === 'training' || importDomain === 'all')) {
+    importDomain = 'nutrition';
+    if (pState) pState.importDomain = 'nutrition';
+  }
+  const aiAllowed = !athleteImp || !!(store.clientProfile && store.clientProfile.allowNurvanAi);
   c.innerHTML = `
     <div style="margin-bottom:16px;">
-      <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">DAL FILE ALL'ALLENAMENTO</span>
-      <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">Importa la scheda del coach</h2>
-      <p style="font-size:12px;color:#888;margin:8px 0 0;line-height:1.45;max-width:420px;">Excel, PDF o Word → revisione → attiva e logga. Non ricostruire a mano. (Altri domini restano opzionali.)</p>
+      <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">${athleteImp ? 'IMPORTA DOCUMENTI' : 'DAL FILE ALL\'ALLENAMENTO'}</span>
+      <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">${athleteImp ? 'Alimentazione, integrazione, terapia, esami' : 'Importa la scheda del coach'}</h2>
+      <p style="font-size:12px;color:#888;margin:8px 0 0;line-height:1.45;max-width:420px;">${athleteImp
+        ? 'Scegli un file (PDF, Excel, Word, immagine). La scheda di allenamento arriva solo dal tuo coach.'
+        : 'Excel, PDF o Word → revisione → attiva e logga. Non ricostruire a mano. (Altri domini restano opzionali.)'}</p>
     </div>
 
     <div class="pill-tabs" style="margin-bottom:14px; flex-wrap:wrap;">
-      <button class="pill-tab ${importDomain === 'training' ? 'active' : ''}" onclick="switchImportInputMode('training')">Allenamento</button>
-      <button class="pill-tab ${importDomain === 'all' ? 'active' : ''}" onclick="switchImportInputMode('all')">Documento completo</button>
+      ${athleteImp ? '' : `<button class="pill-tab ${importDomain === 'training' ? 'active' : ''}" onclick="switchImportInputMode('training')">Allenamento</button>
+      <button class="pill-tab ${importDomain === 'all' ? 'active' : ''}" onclick="switchImportInputMode('all')">Documento completo</button>`}
       <button class="pill-tab ${importDomain === 'nutrition' ? 'active' : ''}" onclick="switchImportInputMode('nutrition')">Alimentazione</button>
       <button class="pill-tab ${importDomain === 'supplements' ? 'active' : ''}" onclick="switchImportInputMode('supplements')">Integrazione</button>
       <button class="pill-tab ${importDomain === 'therapy' ? 'active' : ''}" onclick="switchImportInputMode('therapy')">Terapia</button>
@@ -9993,11 +10065,11 @@ function renderImport(c){
     </div>
 
     <div class="card" style="margin-bottom:14px; text-align:center; padding:24px 16px; border:2px dashed var(--gold);">
-      <h3 style="font-size:15px; color:#fff; font-weight:900; margin-bottom:6px;">Carica PDF / Excel / Word / Foto scheda</h3>
-      <p style="font-size:11px; color:#888; max-width:400px; margin:0 auto 16px;">Formati: XLSX, XLS, CSV, TXT, PDF, DOC, DOCX, PNG, JPG, WEBP, JSON — oppure fotografa la scheda. Fedeltà: 4x12 = 4 serie; dropset viene preimpostato.</p>
-      <button class="btn btn-primary" id="btn-import-file" style="font-size:13px; font-weight:800; padding:12px 24px; min-height:46px; width:100%; max-width:280px; margin:0 auto 10px;" onclick="triggerImportFileSelect()">IMPORTA FILE SCHEDA</button>
-      <button class="btn btn-outline" id="btn-import-camera" style="font-size:12px; font-weight:800; padding:10px 20px; min-height:44px; width:100%; max-width:280px; margin:0 auto 10px; border-color:var(--gold); color:var(--gold);" onclick="triggerImportCamera()">FOTOGRAFA SCHEDA</button>
-      ${(importDomain === 'nutrition' || importDomain === 'supplements' || importDomain === 'therapy' || importDomain === 'all') ? `
+      <h3 style="font-size:15px; color:#fff; font-weight:900; margin-bottom:6px;">${athleteImp ? 'Scegli un file dal dispositivo' : 'Carica PDF / Excel / Word / Foto scheda'}</h3>
+      <p style="font-size:11px; color:#888; max-width:400px; margin:0 auto 16px;">Formati: XLSX, XLS, CSV, TXT, PDF, DOC, DOCX, PNG, JPG, WEBP, JSON${athleteImp ? '.' : ' — oppure fotografa la scheda. Fedeltà: 4x12 = 4 serie; dropset viene preimpostato.'}</p>
+      <button class="btn btn-primary" id="btn-import-file" style="font-size:13px; font-weight:800; padding:12px 24px; min-height:46px; width:100%; max-width:280px; margin:0 auto 10px;" onclick="triggerImportFileSelect()">${athleteImp ? 'SCEGLI FILE' : 'IMPORTA FILE SCHEDA'}</button>
+      <button class="btn btn-outline" id="btn-import-camera" style="font-size:12px; font-weight:800; padding:10px 20px; min-height:44px; width:100%; max-width:280px; margin:0 auto 10px; border-color:var(--gold); color:var(--gold);" onclick="triggerImportCamera()">${athleteImp ? 'FOTO / CAMERA' : 'FOTOGRAFA SCHEDA'}</button>
+      ${(aiAllowed && (importDomain === 'nutrition' || importDomain === 'supplements' || importDomain === 'therapy' || importDomain === 'all')) ? `
       <button class="btn btn-outline" style="font-size:11px;font-weight:800;padding:10px 16px;min-height:44px;width:100%;max-width:320px;margin:10px auto 0;border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain('${importDomain === 'all' ? 'all' : importDomain}')">CHIEDI A COACH AI DI INSERIRLA IN BASE AL MIO PROFILO</button>
       <div style="font-size:10px;color:#666;margin-top:8px;max-width:320px;margin-left:auto;margin-right:auto;">Usa profilo, obiettivi e programma attivi. Per la terapia non inventa farmaci.</div>
       ` : ''}
@@ -10715,6 +10787,9 @@ async function confirmImportAndActivate() {
   const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : (typeof programImportState !== 'undefined' ? programImportState : null);
   if (!pState || !pState.canonicalProgram) return;
   if (pState.isConfirming) return;
+  if (store && store.__cpCoachLibraryImport && typeof saveCanonicalToCoachLibrary === 'function') {
+    return withBusy(function () { return saveCanonicalToCoachLibrary(pState.canonicalProgram, pState.filename || ''); }, 'Salvo nel mio database…', { immediate: true });
+  }
   const peek = pState.canonicalProgram;
   const available = detectProgramDomains(peek);
   const forced = (pState.importDomain && pState.importDomain !== 'all') ? [pState.importDomain === 'supplements' ? 'supplements' : pState.importDomain] : null;
@@ -11015,8 +11090,16 @@ function switchReviewTab(tabName) {
 }
 
 function switchImportInputMode(mode) {
+  let m = mode || 'all';
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+    const allowed = { nutrition: 1, supplements: 1, therapy: 1, exams: 1 };
+    if (!allowed[m]) {
+      if (typeof showToast === 'function') showToast('Puoi importare solo alimentazione, integrazione, terapia o esami', 'warning');
+      m = 'nutrition';
+    }
+  }
   const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : (typeof programImportState !== 'undefined' ? programImportState : null);
-  if (pState) pState.importDomain = mode || 'all';
+  if (pState) pState.importDomain = m;
   if (typeof currentView !== 'undefined' && currentView === 'import' && typeof render === 'function') render();
 }
 
@@ -11086,13 +11169,86 @@ function homeDomainModulesHtml() {
             <span style="font-size:18px;">📅</span>
             <span style="font-size:11px;font-weight:800;">${t('calendar')}</span>
           </button>
-          ${athlete ? '' : `<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('import')">
+          ${athlete ? `<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="startDomainImport('nutrition')">
+            <span style="font-size:18px;">📥</span>
+            <span style="font-size:11px;font-weight:800;">Importa file</span>
+          </button>` : `<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('import')">
             <span style="font-size:18px;">📥</span>
             <span style="font-size:11px;font-weight:800;">${t('importProgram')}</span>
           </button>`}
         </div>
       </div>`;
 }
+
+function buildOperationalRulesHtml(prog) {
+  const p = prog || (typeof DATA !== 'undefined' ? DATA : null) || {};
+  const bits = [];
+  const blob = [];
+  try {
+    if (Array.isArray(p.notes)) blob.push(p.notes.join(' '));
+    if (p.rationale) blob.push(String(p.rationale));
+    if (p.meta && p.meta.notes) blob.push(String(p.meta.notes));
+    if (p.goal) blob.push(String(p.goal));
+    if (p.title) blob.push(String(p.title));
+    (p.weeks || []).forEach(function (w) {
+      if (w && w.label) blob.push(String(w.label));
+      if (w && w.notes) blob.push(String(w.notes));
+      ((w && (w.sessions || w.days)) || []).forEach(function (s) {
+        if (s && s.notes) blob.push(String(s.notes));
+        ((s && (s.exercises || s.rows)) || []).forEach(function (ex) {
+          if (!ex) return;
+          if (ex.scheme) blob.push(String(ex.scheme));
+          if (ex.reps_raw) blob.push(String(ex.reps_raw));
+          if (ex.notes) blob.push(String(ex.notes));
+          if (ex.rir != null) blob.push('RIR ' + ex.rir);
+          if (ex.percent || ex.pct) blob.push('%1RM');
+          if (ex.technique) blob.push(String(ex.technique));
+        });
+      });
+    });
+  } catch (_) {}
+  const text = blob.join(' ').toLowerCase();
+  const weekN = Array.isArray(p.weeks) ? p.weeks.length : 0;
+  let sessPerWeek = 0;
+  try {
+    const w0 = (p.weeks && p.weeks[0]) || null;
+    sessPerWeek = ((w0 && (w0.sessions || w0.days)) || []).length;
+  } catch (_) {}
+
+  if (/top\s*set|backoff|back-off|back off/.test(text)) {
+    bits.push('<div style="margin-bottom:10px;"><b style="color:var(--gold);">TOP SET + BACK-OFF:</b> Segui il top set della scheda; i back-off restano ancorati al carico reale del top, non a una stima.</div>');
+  }
+  if (/\brir\b|ri\.?r\.?|cedimento|rpe/.test(text)) {
+    bits.push('<div style="margin-bottom:10px;"><b style="color:var(--gold);">RIR / INTENSITÀ:</b> Rispetta i RIR (o RPE) scritti sulle serie. Se manca il valore, resta a 1–2 RIR sulle compound.</div>');
+  }
+  if (/%\s*1\s*rm|%1rm|percentuale|%\s*\d{2}/.test(text)) {
+    bits.push('<div style="margin-bottom:10px;"><b style="color:var(--gold);">%1RM:</b> Usa le percentuali della scheda. Se non hai un 1RM aggiornato, stima conservativa e non forzare.</div>');
+  }
+  if (/\bdup\b|daily undulating|ondulant/.test(text)) {
+    bits.push('<div style="margin-bottom:10px;"><b style="color:var(--gold);">DUP:</b> Alterna intensità/volume tra le sedute come da programmazione — non livellare tutto allo stesso stimolo.</div>');
+  }
+  if (/deload|scarico|scaric/.test(text)) {
+    bits.push('<div style="margin-bottom:10px;"><b style="color:var(--gold);">DELOAD:</b> Nelle settimane di scarico riduci volume/intensità come indicato; non “recuperare” con set extra.</div>');
+  }
+  if (sessPerWeek >= 2) {
+    bits.push('<div style="margin-bottom:10px;"><b style="color:var(--gold);">FREQUENZA:</b> Circa ' + sessPerWeek + ' sedute/settimana' + (weekN ? (' · ' + weekN + ' settimane') : '') + '. Non saltare la progressione tra una seduta e la successiva.</div>');
+  }
+  if (/ipertrof|massa|hypertroph/.test(text)) {
+    bits.push('<div style="margin-bottom:10px;"><b style="color:var(--gold);">OBIETTIVO:</b> Ipertrofia — priorità al volume tecnico e al recupero tra le serie pesanti.</div>');
+  } else if (/forza|strength|power/.test(text)) {
+    bits.push('<div style="margin-bottom:10px;"><b style="color:var(--gold);">OBIETTIVO:</b> Forza — recuperi lunghi sulle compound e carica solo se la tecnica è solida.</div>');
+  } else if (/dimagr|cut|deficit|recomp/.test(text)) {
+    bits.push('<div style="margin-bottom:10px;"><b style="color:var(--gold);">OBIETTIVO:</b> Ricomposizione/cut — mantieni densità di lavoro ma non inseguire PR a ogni sessione.</div>');
+  }
+
+  if (!bits.length) {
+    bits.push('<div style="margin-bottom:10px;"><b style="color:var(--gold);">ESECUZIONE:</b> Segui serie×reps e recuperi della scheda attiva. Non inventare progressioni fuori programma.</div>');
+    bits.push('<div style="margin-bottom:10px;"><b style="color:var(--gold);">CARICHI:</b> Aumenta solo quando chiudi tutte le serie tecniche con margine. Se fallisci, ripeti la settimana.</div>');
+    bits.push('<div><b style="color:var(--gold);">RECUPERO:</b> Compound 2–4 min, isolation 60–90 s, salvo indicazioni diverse sulla scheda.</div>');
+  }
+  return bits.slice(0, 6).join('');
+}
+window.buildOperationalRulesHtml = buildOperationalRulesHtml;
 
 function renderHome(c) {
   if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
@@ -11157,7 +11313,7 @@ function renderHome(c) {
 
     <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>${t('activeSession')}</h2></div><div style="padding:20px;"><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].name||sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><div style="display:flex;gap:10px;margin-top:20px;">
         <button class="btn btn-primary" style="flex:2;font-size:16px;height:55px;" onclick="navigate('training')">${t('startWorkout')}</button>
-        <button class="btn btn-outline" style="flex:1;font-size:12px;height:55px;border-color:var(--gold);color:var(--gold);" onclick="navigate('programs')">PROGRAMMI</button>
+        <button class="btn btn-outline" style="flex:1;font-size:12px;height:55px;border-color:var(--gold);color:var(--gold);" onclick="navigate('${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'clientChat' : 'programs'}')">${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'CHAT COACH' : 'PROGRAMMI'}</button>
       </div></div></div>
 
     ${computeHomeReadinessHtml()}
@@ -11166,7 +11322,11 @@ function renderHome(c) {
     <div class="card" style="border:1px solid rgba(212,175,55,0.35);margin-bottom:12px;">
       <div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Coach · Oggi</div>
       <p style="font-size:12px;color:#ccc;line-height:1.45;margin:0 0 10px;">${esc(coachHomeInsightText())}</p>
-      <button class="btn btn-outline" style="width:100%;font-size:11px;padding:8px;border-color:var(--gold);color:var(--gold);" onclick="navigate('ai')">APRI COACH AI</button>
+      ${(typeof isAthleteRole === 'function' && isAthleteRole())
+        ? ((store.clientProfile && store.clientProfile.allowNurvanAi)
+          ? '<button class="btn btn-outline" style="width:100%;font-size:11px;padding:8px;border-color:var(--gold);color:var(--gold);" onclick="navigate(\'ai\')">APRI COACH AI</button>'
+          : '<button class="btn btn-outline" style="width:100%;font-size:11px;padding:8px;border-color:var(--gold);color:var(--gold);" onclick="navigate(\'clientChat\')">SCRIVI AL COACH</button>')
+        : '<button class="btn btn-outline" style="width:100%;font-size:11px;padding:8px;border-color:var(--gold);color:var(--gold);" onclick="navigate(\'ai\')">APRI COACH AI</button>'}
     </div>
 
     ${homeDomainModulesHtml()}
@@ -11209,7 +11369,7 @@ function renderHome(c) {
        </div>
     </div>
 
-    <div class="card"><div class="card-header"><h2>Razionale & Regole Operative</h2></div><div style="padding:15px;font-size:11px;line-height:1.5;color:#ccc;"><div style="margin-bottom:12px;"><b style="color:var(--gold);">TOP SET + BACK-OFF:</b> Un set principale controllato seguito da back-off (-10%). Il back-off segue il carico REALE del top set.</div><div style="margin-bottom:12px;"><b style="color:var(--gold);">RIR (Prossimità al cedimento):</b> W1-2: 2 RIR costanti; W3: 1 RIR; W4: Deload. La meta-regressione 2024 indica che l\'ipertrofia aumenta terminando le serie vicini al cedimento.</div><div><b style="color:var(--gold);">RECUPERO:</b> Compound 3-4min, Isolation 60-90s (Singer et al. 2024). Mantieni recuperi completi per massimizzare il volume tecnico.</div></div></div>
+    <div class="card"><div class="card-header"><h2>Razionale & Regole Operative</h2></div><div style="padding:15px;font-size:11px;line-height:1.5;color:#ccc;">${buildOperationalRulesHtml(DATA)}</div></div>
 
     <div class="card"><div class="card-header"><h2>${t('architectureStatus')}</h2></div><div style="padding:15px;display:flex;flex-direction:column;gap:10px;"><button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="resetWorkoutData()">${t('restoreLoads')}</button><button class="btn btn-outline" style="width:100%;border-color:var(--accent-red);color:var(--accent-red);font-size:10px;" onclick="resetAllData()">${t('hardResetApp')}</button></div></div>
 
@@ -11609,12 +11769,16 @@ function renderTraining(c){
       <div class="card" style="text-align:center;padding:28px 16px;">
         <div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:6px;">ALLENAMENTO</div>
         <h2 style="color:#fff;font-size:18px;margin:0 0 8px;">Nessun programma caricato</h2>
-        <p style="color:#888;font-size:12px;margin:0 0 16px;">Importa una scheda, scegli dal database interno oppure completa il profilo per i consigli.</p>
+        <p style="color:#888;font-size:12px;margin:0 0 16px;">${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'Aspetta la scheda del coach o scrivigli in chat.' : 'Importa una scheda, scegli dal database interno oppure completa il profilo per i consigli.'}</p>
         <div style="display:flex;flex-direction:column;gap:8px;">
-          <button class="btn btn-primary" style="width:100%;" onclick="navigate('import')">IMPORTA PROGRAMMA</button>
+          ${(typeof isAthleteRole === 'function' && isAthleteRole())
+            ? `<button class="btn btn-primary" style="width:100%;" onclick="navigate('clientChat')">CHAT COACH</button>
+          <button class="btn btn-outline" style="width:100%;" onclick="requestProgramFromCoach()">CHIEDI LA SCHEDA</button>
+          <button class="btn btn-outline" style="width:100%;" onclick="navigate('home')">TORNA ALLA HOME</button>`
+            : `<button class="btn btn-primary" style="width:100%;" onclick="navigate('import')">IMPORTA PROGRAMMA</button>
           <button class="btn btn-outline" style="width:100%;" onclick="navigate('programs')">DATABASE PROGRAMMI</button>
           <button class="btn btn-outline" style="width:100%;" onclick="navigate('profile')">COMPLETA PROFILO</button>
-          <button class="btn btn-outline" style="width:100%;" onclick="navigate('home')">TORNA ALLA HOME</button>
+          <button class="btn btn-outline" style="width:100%;" onclick="navigate('home')">TORNA ALLA HOME</button>`}
         </div>
       </div>`;
   }
@@ -15590,6 +15754,11 @@ async function runEvidenceSearch() {
 window.runEvidenceSearch = runEvidenceSearch;
 
 async function askAI(){
+  if (typeof isAthleteRole === 'function' && isAthleteRole() && !(store.clientProfile && store.clientProfile.allowNurvanAi)) {
+    if (typeof showToast === 'function') showToast('Nurvan AI non abilitata dal tuo coach', 'warning');
+    navigate('clientChat');
+    return;
+  }
   const q0 = $('ai-input').value.trim(); if(!q0) return;
   return withBusy(function () { return askAIInner(q0); }, 'Nurvan AI sta pensando…', { immediate: true });
 }

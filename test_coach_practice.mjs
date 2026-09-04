@@ -81,7 +81,7 @@ const ui = fs.readFileSync(path.join(__dirname, "web/coach-practice-ui.js"), "ut
 assert(ui.includes("ASSEGNA SCHEDA") && (ui.includes("Consenti massima libertà") || ui.includes("Consenti massima liberta")), "assign + max freedom");
 assert(ui.includes("Scadenza automatica") && ui.includes("confirmAssignSandboxSend"), "auto expiry on assign");
 assert(ui.includes("openCoachDrawer") && ui.includes("cp-client-switcher") && ui.includes("rotateClientInvite"), "coach drawer + switcher + rotate invite");
-assert(ui.includes("attachRemoteStream") && ui.includes("Permessi camera"), "videocall status + remote play");
+assert(ui.includes("attachRemoteStream") && (ui.includes("Permessi camera") || ui.includes("permessi camera")), "videocall status + remote play");
 assert(!ui.includes("MASTER · DATI DI") || ui.includes("MENU COACH"), "legacy floating master bar replaced by drawer");
 assert(ui.includes("cp-modal-open") && ui.includes("clearChatAttachPreview"), "modal z-index + attach clear");
 assert(ui.includes("chatFileIconKind") && ui.includes("cp-file-chip"), "chat file icons");
@@ -97,6 +97,9 @@ assert(ui.includes("Anzianità di allenamento") && ui.includes("Problema fisico 
 INTAKE_REQUIRED.forEach((k) => {
   assert(ui.includes("key: '" + k + "'") || ui.includes('key: "' + k + '"'), "UI field " + k + " matches server");
 });
+assert(INTAKE_KEYS.includes("rmSquat") && INTAKE_KEYS.includes("rmBench") && INTAKE_KEYS.includes("rmDeadlift") && INTAKE_KEYS.includes("rmMilitary"), "intake has estimated 1RM keys");
+const withRm = sanitizeIntake({ firstName: "A", lastName: "B", rmSquat: "100 kg", rmBench: "Non so / Mai fatti" });
+assert(withRm.rmSquat === "100 kg" && withRm.rmBench === "Non so / Mai fatti", "sanitize keeps 1RM intake");
 assert(INTAKE_KEYS.length >= INTAKE_REQUIRED.length, "keys cover required");
 
 const base = fs.readFileSync(path.join(__dirname, "web/index.base.html"), "utf8");
@@ -125,6 +128,15 @@ const practice = fs.readFileSync(path.join(__dirname, "coach-practice.mjs"), "ut
   assert(practice.includes(s), "server has " + s);
 });
 assert(practice.includes("e.payload") || practice.includes("e.payload,"), "coach inbox returns payload");
+assert(practice.includes("allow_nurvan_ai") && practice.includes("/nurvan-ai"), "server has allow_nurvan_ai");
+
+assert(ui.includes("toggleAssignBannerExpand") && ui.includes("cp-assign-collapsed"), "assign bar collapsible");
+assert(ui.includes("location.origin") && ui.includes("/peerjs.min.js"), "PeerJS absolute origin URL");
+assert(ui.includes("coachProgramLibrary") && ui.includes("saveCanonicalToCoachLibrary"), "coach personal program library");
+assert(ui.includes("__cpSending") && ui.includes("cp-chat-send-progress"), "chat send UX");
+assert(base.includes("buildOperationalRulesHtml") && base.includes("deviceTimeZone"), "ops rules + device timezone");
+assert(base.includes("CHAT COACH") || ui.includes("clientChat"), "athlete home chat coach");
+assert(base.includes("/peerjs.min.js"), "index loads PeerJS from root");
 
 const build = fs.readFileSync(path.join(__dirname, "build_master25.mjs"), "utf8");
 assert(build.includes("coach-practice-ui.js"), "build injects UI");
