@@ -354,7 +354,7 @@ export function mountCoachPractice(app, deps) {
         intakeMode: row.intake_mode || "new"
       });
     } catch (err) {
-      console.error("INVITE_LOOKUP", err);
+      console.error("INVITE_LOOKUP", err && err.message ? err.message : err);
       return res.status(500).json({ error: "Invito non disponibile." });
     }
   });
@@ -405,7 +405,7 @@ export function mountCoachPractice(app, deps) {
         client: clientRow(client, { includeIntake: true })
       });
     } catch (err) {
-      console.error("CLIENT_LOGIN", err);
+      console.error("CLIENT_LOGIN", err && err.message ? err.message : err);
       return res.status(500).json({ error: "Accesso non riuscito." });
     }
   });
