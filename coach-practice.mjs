@@ -286,7 +286,7 @@ export function mountCoachPractice(app, deps) {
     if (!kind) return null;
     const name = String(raw.name || "allegato").slice(0, 80);
     const mime = String(raw.mime || "").slice(0, 80);
-    const e2eData = raw.e2eData ? String(raw.e2eData).slice(0, 600000) : null;
+    const e2eData = raw.e2eData ? String(raw.e2eData).slice(0, 1200000) : null;
     if (e2eData && e2eData.indexOf("E2E1:") === 0) {
       return { kind, name, mime, e2eData };
     }
@@ -294,7 +294,7 @@ export function mountCoachPractice(app, deps) {
       (raw.data != null && raw.data !== "" ? String(raw.data) : "") ||
       (e2eData && /^data:/i.test(e2eData) ? e2eData : "");
     if (!/^data:[a-z0-9.+\/\-]+;base64,/i.test(dataCandidate)) return null;
-    if (dataCandidate.length > 450000) return null;
+    if (dataCandidate.length > 900000) return null;
     return { kind, name, mime, data: dataCandidate };
   }
 
@@ -763,8 +763,36 @@ export function mountCoachPractice(app, deps) {
       "UPDATE coach_clients SET last_workout_at = NOW(), last_seen_at = NOW(), workout_started_at = NULL WHERE id = $1",
       [ctx.client.id]
     );
-    // Push workout snapshot so coach sees finalized session immediately
+    // Anchor program expiry on first finalized workout
     const patch = req.body?.data && typeof req.body.data === "object" ? req.body.data : null;
+    const logsCount = Array.isArray(patch?.logs) ? patch.logs.length : 0;
+    const weeksPlanned = Number(patch?.programWeeksPlanned || patch?.activeProgram?.programWeeksPlanned || 0);
+    const anchor = patch?.programExpiryAnchor || patch?.activeProgram?.programExpiryAnchor;
+    if ((logsCount === 1 || patch?.anchorExpiryOnFirstWorkout) && anchor !== "first_workout") {
+      const weeks = weeksPlanned > 0 ? weeksPlanned : 8;
+      const exp = new Date();
+      exp.setHours(12, 0, 0, 0);
+      exp.setDate(exp.getDate() + weeks * 7);
+      await pool.query(
+        "UPDATE coach_clients SET program_expires_at = $2 WHERE id = $1 AND (program_expires_at IS NULL OR program_expires_at > NOW() - INTERVAL '1 day')",
+        [ctx.client.id, exp.toISOString()]
+      );
+      // Mark anchor in athlete data so we only do this once
+      if (ctx.client.athlete_user_id) {
+        const existingA = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [ctx.client.athlete_user_id]);
+        const curA = existingA.rows[0]?.data || {};
+        const ap = curA.activeProgram && typeof curA.activeProgram === "object" ? { ...curA.activeProgram } : {};
+        ap.programExpiryAnchor = "first_workout";
+        ap.programWeeksPlanned = weeks;
+        await pool.query(
+          `INSERT INTO app_account_data(user_id, data, updated_at)
+           VALUES($1,$2,NOW())
+           ON CONFLICT (user_id) DO UPDATE SET data = app_account_data.data || EXCLUDED.data, updated_at = NOW()`,
+          [ctx.client.athlete_user_id, JSON.stringify({ activeProgram: ap, programExpiryAnchor: "first_workout" })]
+        );
+      }
+    }
+    // Push workout snapshot so coach sees finalized session immediately
     if (patch && ctx.client.athlete_user_id) {
       const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [ctx.client.athlete_user_id]);
       const current = existing.rows[0]?.data || {};
@@ -828,6 +856,27 @@ export function mountCoachPractice(app, deps) {
       hidePresence: !!(lic.rows[0] && lic.rows[0].hide_presence),
       allowVideocall: lic.rows[0] ? lic.rows[0].allow_videocall !== false : true
     });
+  });
+
+  app.get("/api/webrtc/ice", async (_req, res) => {
+    const iceServers = [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" }
+    ];
+    const turnUrls = String(process.env.TURN_URLS || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const turnUser = String(process.env.TURN_USERNAME || "").trim();
+    const turnCred = String(process.env.TURN_CREDENTIAL || "").trim();
+    if (turnUrls.length && turnUser && turnCred) {
+      iceServers.push({
+        urls: turnUrls.length === 1 ? turnUrls[0] : turnUrls,
+        username: turnUser,
+        credential: turnCred
+      });
+    }
+    return res.json({ ok: true, iceServers });
   });
 
   app.post("/api/coach/unlock/demo", async (req, res) => {

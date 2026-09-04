@@ -2331,33 +2331,93 @@ function startVoiceInput(){
   const status = $('voice-status');
   const lang = coachSpeechLang();
   const native = nativeBridge();
-  if (native && typeof native.startVoiceInputWithLang === 'function') { native.startVoiceInputWithLang(lang); return; }
-  if (native && typeof native.startVoiceInput === 'function') { native.startVoiceInput(); return; }
+  if (native && typeof native.startVoiceInputWithLang === 'function') {
+    window.__cpDictating = true;
+    if (typeof setDictateButtonState === 'function') setDictateButtonState(true);
+    native.startVoiceInputWithLang(lang);
+    return;
+  }
+  if (native && typeof native.startVoiceInput === 'function') {
+    window.__cpDictating = true;
+    if (typeof setDictateButtonState === 'function') setDictateButtonState(true);
+    native.startVoiceInput();
+    return;
+  }
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!Recognition){ if(status) status.textContent = t('voiceUnavailable'); return; }
-  stopVoiceInput();
+  if (!Recognition) {
+    window.__cpDictating = false;
+    if (typeof setDictateButtonState === 'function') setDictateButtonState(false);
+    if (status) status.textContent = t('voiceUnavailable');
+    if (typeof showToast === 'function') showToast('Dettatura non disponibile su questo browser', 'warning');
+    return;
+  }
+  if (voiceRecognition) {
+    try { voiceRecognition.onend = null; voiceRecognition.stop(); } catch (_) {}
+    voiceRecognition = null;
+  }
   voiceRecognition = new Recognition();
   voiceRecognition.lang = lang;
-  voiceRecognition.interimResults = false;
-  voiceRecognition.continuous = false;
-  voiceRecognition.onstart = () => { if(status) status.textContent = t('listening'); };
-  voiceRecognition.onerror = event => { if(status) status.textContent = 'Errore voce: ' + event.error; };
-  voiceRecognition.onend = () => { if(status && status.textContent === t('listening')) status.textContent = ''; };
-  voiceRecognition.onresult = event => { applyNativeVoiceResult(event.results[0][0].transcript); };
-  try { voiceRecognition.start(); } catch(error){ console.error('VOICE_START_ERROR', error); if(status) status.textContent = t('voiceUnavailable'); }
+  voiceRecognition.interimResults = true;
+  voiceRecognition.continuous = true;
+  voiceRecognition.onstart = function () {
+    window.__cpDictating = true;
+    if (typeof setDictateButtonState === 'function') setDictateButtonState(true);
+    if (status) status.textContent = t('listening');
+  };
+  voiceRecognition.onerror = function (event) {
+    if (status) status.textContent = 'Errore voce: ' + (event && event.error ? event.error : '');
+    window.__cpDictating = false;
+    if (typeof setDictateButtonState === 'function') setDictateButtonState(false);
+  };
+  voiceRecognition.onend = function () {
+    if (status && status.textContent === t('listening')) status.textContent = '';
+    // If user still wants dictation (continuous), restart; else go red
+    if (window.__cpDictating) {
+      try { voiceRecognition.start(); } catch (_) {
+        window.__cpDictating = false;
+        if (typeof setDictateButtonState === 'function') setDictateButtonState(false);
+      }
+    } else if (typeof setDictateButtonState === 'function') {
+      setDictateButtonState(false);
+    }
+  };
+  voiceRecognition.onresult = function (event) {
+    let finalText = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) finalText += event.results[i][0].transcript;
+    }
+    if (finalText) applyNativeVoiceResult(finalText);
+  };
+  try {
+    window.__cpDictating = true;
+    if (typeof setDictateButtonState === 'function') setDictateButtonState(true);
+    voiceRecognition.start();
+  } catch (error) {
+    console.error('VOICE_START_ERROR', error);
+    window.__cpDictating = false;
+    if (typeof setDictateButtonState === 'function') setDictateButtonState(false);
+    if (status) status.textContent = t('voiceUnavailable');
+    if (typeof showToast === 'function') showToast('Impossibile avviare la dettatura', 'warning');
+  }
 }
 function stopVoiceInput(){
+  window.__cpDictating = false;
   const native = nativeBridge();
   if (native && typeof native.stopVoiceInput === 'function') native.stopVoiceInput();
   if (native && typeof native.stopSpeech === 'function') native.stopSpeech();
-  if(voiceRecognition){ voiceRecognition.stop(); voiceRecognition = null; }
-  if(window.speechSynthesis) window.speechSynthesis.cancel();
-  const status = $('voice-status'); if(status) status.textContent = '';
-  window.__cpDictating = false;
-  const btn = document.getElementById('cp-dictate-btn');
-  if (btn) {
-    btn.classList.remove('cp-dictate-on');
-    btn.classList.add('cp-dictate-off');
+  if (voiceRecognition) {
+    try { voiceRecognition.onend = null; voiceRecognition.stop(); } catch (_) {}
+    voiceRecognition = null;
+  }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  const status = $('voice-status'); if (status) status.textContent = '';
+  if (typeof setDictateButtonState === 'function') setDictateButtonState(false);
+  else {
+    const btn = document.getElementById('cp-dictate-btn');
+    if (btn) {
+      btn.classList.remove('cp-dictate-on');
+      btn.classList.add('cp-dictate-off');
+    }
   }
 }
 function toggleVoiceOutput(){
@@ -3795,7 +3855,7 @@ async function attachNativeDocToChat(docData) {
     else window.__cpPendingAttach = att;
     return;
   }
-  if (dataUrl.length > 450000) throw new Error('File troppo grande per la chat');
+  if (dataUrl.length > 900000) throw new Error('File troppo grande per la chat (max ~650 KB)');
   const att = { kind: 'file', name: name, mime: mime, data: dataUrl };
   if (typeof setPendingAttachment === 'function') setPendingAttachment(att);
   else window.__cpPendingAttach = att;
@@ -7505,6 +7565,14 @@ function applySupplementationFromProfile() {
 }
 
 function startDomainImport(domain) {
+  // From coach client view: route into assign sandbox so imports never hit master profile
+  if (typeof store !== 'undefined' && store && store.coachViewingClient && !store.coachAssigning) {
+    const id = store.coachWorkspace && store.coachWorkspace.clientId;
+    const name = (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente';
+    if (id && typeof beginAssignSandbox === 'function') {
+      beginAssignSandbox(id, name, 'import');
+    }
+  }
   const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : null;
   if (pState) pState.importDomain = domain || 'all';
   navigate('import');
@@ -10587,15 +10655,75 @@ function isDomainOnlyImport(pState, prog) {
   return !hasTraining && !!(prog && (prog.therapy || prog.nutrition || prog.supplementation || prog.exams));
 }
 
+function isCoachClientSandbox() {
+  return !!(typeof store !== 'undefined' && store && (store.coachAssigning || store.coachViewingClient));
+}
+
+function detectProgramDomains(prog) {
+  const domains = [];
+  if (!prog) return domains;
+  const hasTraining = (prog.weeks || []).some(function (w) {
+    return ((w.sessions || w.days || []).length > 0);
+  });
+  if (hasTraining) domains.push('training');
+  if (prog.nutrition && ((prog.nutrition.days && prog.nutrition.days.length) || prog.nutrition.meals)) domains.push('nutrition');
+  if (prog.supplementation && prog.supplementation.items && prog.supplementation.items.length) domains.push('supplements');
+  if (prog.therapy && ((prog.therapy.medications && prog.therapy.medications.length) || prog.therapy.items)) domains.push('therapy');
+  if (prog.exams && ((prog.exams.records && prog.exams.records.length) || prog.exams.items)) domains.push('exams');
+  return domains;
+}
+
+function openImportDomainPicker(available) {
+  return new Promise(function (resolve) {
+    if (!available || available.length <= 1) {
+      resolve(available && available.length ? available.slice() : ['training']);
+      return;
+    }
+    const labels = {
+      training: 'Allenamento',
+      nutrition: 'Alimentazione',
+      supplements: 'Integrazione',
+      therapy: 'Terapia',
+      exams: 'Esami'
+    };
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10130;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.innerHTML = '<div class="card" style="max-width:420px;width:100%;padding:16px;background:#111;border:1px solid var(--gold);color:#eee;">' +
+      '<h3 style="color:var(--gold);margin:0 0 8px;font-size:15px;">Cosa vuoi importare?</h3>' +
+      '<p style="font-size:12px;color:#bbb;margin:0 0 12px;">Il file contiene piu categorie. Seleziona cosa assegnare' +
+      (typeof store !== 'undefined' && store && store.coachAssigning ? ' al cliente' : '') + '.</p>' +
+      available.map(function (d) {
+        return '<label style="display:flex;gap:10px;align-items:center;margin:8px 0;font-size:13px;color:#eee !important;-webkit-text-fill-color:#eee !important;">' +
+          '<input type="checkbox" class="imp-dom-cb" value="' + d + '" checked> ' + (labels[d] || d) + '</label>';
+      }).join('') +
+      '<button class="btn btn-primary" id="imp-dom-ok" style="width:100%;margin-top:12px;">CONTINUA</button>' +
+      '<button class="btn btn-outline" id="imp-dom-cancel" style="width:100%;margin-top:8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;">ANNULLA</button></div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('#imp-dom-cancel').onclick = function () { overlay.remove(); resolve(null); };
+    overlay.querySelector('#imp-dom-ok').onclick = function () {
+      const picked = Array.prototype.slice.call(overlay.querySelectorAll('.imp-dom-cb:checked')).map(function (el) { return el.value; });
+      overlay.remove();
+      resolve(picked.length ? picked : null);
+    };
+  });
+}
+
 async function confirmImportAndActivate() {
   const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : (typeof programImportState !== 'undefined' ? programImportState : null);
   if (!pState || !pState.canonicalProgram) return;
   if (pState.isConfirming) return;
   const peek = pState.canonicalProgram;
-  const domainOnly = isDomainOnlyImport(pState, peek);
-  const hasTraining = !domainOnly && (peek.weeks || []).some(function (w) {
-    return ((w.sessions || w.days || []).length > 0);
-  });
+  const available = detectProgramDomains(peek);
+  const forced = (pState.importDomain && pState.importDomain !== 'all') ? [pState.importDomain === 'supplements' ? 'supplements' : pState.importDomain] : null;
+  let selectedDomains = forced;
+  if (!selectedDomains) {
+    hideBusyOverlay();
+    selectedDomains = await openImportDomainPicker(available.length ? available : ['training']);
+    if (!selectedDomains) return;
+  }
+  pState.selectedDomains = selectedDomains;
+  const domainOnly = selectedDomains.indexOf('training') < 0;
+  const hasTraining = selectedDomains.indexOf('training') >= 0;
   let choices = { weeksMode: 'keep', daysMode: 'keep', progression: 'keep', weeks: (peek.weeks || []).length, days: 4, goal: 'IPERTROFIA / MASSA' };
   if (hasTraining) {
     hideBusyOverlay();
@@ -10603,9 +10731,6 @@ async function confirmImportAndActivate() {
     if (!choices) return;
   }
   return withBusy(function () { return confirmImportAndActivateInner(choices, domainOnly); }, domainOnly ? 'Salvataggio…' : 'Attivazione scheda…', { immediate: true });
-}
-function isCoachClientSandbox() {
-  return !!(typeof store !== 'undefined' && store && (store.coachAssigning || store.coachViewingClient));
 }
 
 async function confirmImportAndActivateInner(choices, domainOnly) {
@@ -10638,38 +10763,47 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
       if (!DATA || typeof DATA !== 'object') {
         DATA = { title: 'Nurvan', weeks: [], nutrition: null, supplementation: null, therapy: null, exams: null };
       }
-      if (prog.nutrition) {
+      const selected = (pState.selectedDomains || []).slice();
+      const allow = function (d) { return !selected.length || selected.indexOf(d) >= 0; };
+      const sandbox = isCoachClientSandbox();
+      if (prog.nutrition && allow('nutrition')) {
         DATA.nutrition = (typeof enrichImportedFoods === 'function') ? enrichImportedFoods(prog.nutrition) : prog.nutrition;
         store.nutrition = DATA.nutrition;
-        if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveNutrition) {
+        if (!sandbox && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveNutrition) {
           await GiammariaPersistence.saveNutrition(DATA.nutrition);
         }
       }
-      if (prog.supplementation) {
+      if (prog.supplementation && allow('supplements')) {
         DATA.supplementation = prog.supplementation;
         store.supplementation = prog.supplementation;
-        if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveSupplements) {
+        if (!sandbox && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveSupplements) {
           await GiammariaPersistence.saveSupplements(DATA.supplementation);
         }
       }
-      if (prog.therapy) {
+      if (prog.therapy && allow('therapy')) {
         DATA.therapy = (typeof enrichTherapyMedications === 'function') ? enrichTherapyMedications(prog.therapy) : prog.therapy;
         store.therapy = DATA.therapy;
-        if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveTherapy) {
+        if (!sandbox && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveTherapy) {
           await GiammariaPersistence.saveTherapy(DATA.therapy);
         }
       }
-      if (prog.exams) {
+      if (prog.exams && allow('exams')) {
         DATA.exams = prog.exams;
         store.exams = prog.exams;
-        if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveExams) {
+        if (!sandbox && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveExams) {
           await GiammariaPersistence.saveExams(DATA.exams);
         }
       }
-      persist();
+      if (!sandbox) persist();
       pState.currentImportId = null;
       pState.canonicalProgram = null;
-      const go = prog.therapy ? 'therapy' : (prog.nutrition ? 'nutrition' : (prog.supplementation ? 'supplements' : (prog.exams ? 'exams' : 'home')));
+      pState.selectedDomains = null;
+      if (sandbox) {
+        if (typeof showToast === 'function') showToast(store.coachAssigning ? 'Import nella bozza cliente' : 'Import sui dati cliente (in memoria)', 'success');
+        afterProgramActivatedNavigate();
+        return;
+      }
+      const go = prog.therapy && allow('therapy') ? 'therapy' : (prog.nutrition && allow('nutrition') ? 'nutrition' : (prog.supplementation && allow('supplements') ? 'supplements' : (prog.exams && allow('exams') ? 'exams' : 'home')));
       if (typeof showToast === 'function') showToast('Import salvato', 'success');
       navigate(go);
       return;
@@ -10747,15 +10881,19 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
       prog.duration_weeks = DATA.weeks.length;
     }
 
-    // Attach multi-domain payload onto DATA before persist
-    if (prog.nutrition) { DATA.nutrition = enrichImportedFoods(prog.nutrition); store.nutrition = DATA.nutrition; }
-    if (prog.supplementation) DATA.supplementation = prog.supplementation;
-    if (prog.therapy) {
+    // Attach multi-domain payload onto DATA before persist (respect domain picker)
+    const selDom = (pState.selectedDomains || []).slice();
+    const allowDom = function (d) { return !selDom.length || selDom.indexOf(d) >= 0; };
+    if (prog.nutrition && allowDom('nutrition')) { DATA.nutrition = enrichImportedFoods(prog.nutrition); store.nutrition = DATA.nutrition; }
+    else if (selDom.length && selDom.indexOf('nutrition') < 0) { /* skip */ }
+    if (prog.supplementation && allowDom('supplements')) { DATA.supplementation = prog.supplementation; store.supplementation = prog.supplementation; }
+    if (prog.therapy && allowDom('therapy')) {
       DATA.therapy = (typeof enrichTherapyMedications === 'function')
         ? enrichTherapyMedications(prog.therapy)
         : prog.therapy;
+      store.therapy = DATA.therapy;
     }
-    if (prog.exams) DATA.exams = prog.exams;
+    if (prog.exams && allowDom('exams')) { DATA.exams = prog.exams; store.exams = prog.exams; }
     if (prog.spreadsheet) DATA.spreadsheet = prog.spreadsheet;
 
     // Atomic IDB persist + domain read-back verify (offline, no AI)
@@ -10778,10 +10916,10 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
       store.activeProgramId = prog.id;
     }
 
-    if (prog.nutrition) store.nutrition = prog.nutrition;
-    if (prog.supplementation) store.supplementation = prog.supplementation;
-    if (prog.therapy) store.therapy = prog.therapy;
-    if (prog.exams) store.exams = prog.exams;
+    if (prog.nutrition && allowDom('nutrition')) store.nutrition = prog.nutrition;
+    if (prog.supplementation && allowDom('supplements')) store.supplementation = prog.supplementation;
+    if (prog.therapy && allowDom('therapy')) store.therapy = prog.therapy;
+    if (prog.exams && allowDom('exams')) store.exams = prog.exams;
 
     if (prog.duration_weeks || DATA.duration_weeks) {
       store.prefs.duration = prog.duration_weeks || DATA.duration_weeks;
@@ -10816,6 +10954,9 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
       currentWeek = 1;
       currentDay = 0;
       try { seedImportedTechniquesIntoStore(DATA); } catch (seedErr) { console.warn('[IMPORT_TECH_SEED]', seedErr); }
+      pState.currentImportId = null;
+      pState.canonicalProgram = null;
+      pState.selectedDomains = null;
       if (typeof showToast === 'function') {
         showToast("✓ Bozza cliente pronta (" + (DATA.weeks || []).length + " sett.) — non tocca il tuo allenamento", "success");
       }

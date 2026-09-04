@@ -264,7 +264,8 @@ function ensurePracticeStyle() {
     document.head.appendChild(s);
   }
   s.textContent = [
-    '.cp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10070;display:none;align-items:center;justify-content:center;padding:16px;}',
+    '.cp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10110;display:none;align-items:center;justify-content:center;padding:16px;}',
+    '#cp-modal.cp-overlay{z-index:10120;}',
     '.cp-panel{background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:16px;color:#eee !important;-webkit-text-fill-color:#eee;}',
     '.cp-panel h2{color:var(--gold);font-size:16px;margin:0 0 8px;}',
     '.cp-help{font-size:12px;color:#bbb !important;-webkit-text-fill-color:#bbb;line-height:1.45;margin:0 0 12px;}',
@@ -295,7 +296,11 @@ function ensurePracticeStyle() {
     '.cp-chat-thread{flex:1;min-height:0;overflow:auto;background:#0a0a0a;border:1px solid #222;border-radius:12px;padding:8px;}',
     '.cp-chat-composer{display:flex;gap:6px;align-items:center;margin-top:6px;flex-shrink:0;}',
     '.cp-icon-btn{width:40px;height:40px;min-width:40px;padding:0 !important;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;}',
-    '.cp-icon-btn svg{width:18px;height:18px;fill:currentColor;stroke:currentColor;}',
+    '.cp-icon-btn svg{width:18px;height:18px;fill:currentColor;stroke:currentColor;display:block;}',
+    '.cp-file-chip{display:inline-flex;align-items:center;gap:8px;margin-top:6px;padding:8px 10px;border:1px solid #333;border-radius:10px;background:#141414;color:var(--gold);text-decoration:none;font-size:11px;max-width:100%;}',
+    '.cp-file-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#eee !important;-webkit-text-fill-color:#eee !important;}',
+    '.cp-file-ico{width:28px;height:28px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;color:var(--gold);}',
+    '.cp-file-ico svg{width:24px;height:24px;display:block;}',
     '.cp-icon-btn.cp-dictate-on{border-color:#2ecc71 !important;color:#2ecc71 !important;-webkit-text-fill-color:#2ecc71 !important;background:rgba(46,204,113,.12);}',
     '.cp-icon-btn.cp-dictate-off{border-color:#e74c3c !important;color:#e74c3c !important;-webkit-text-fill-color:#e74c3c !important;}',
     '.cp-chat-input{flex:1;min-width:0;padding:10px 12px !important;border-radius:20px !important;border:1px solid #333 !important;background:#151515 !important;color:#fff !important;-webkit-text-fill-color:#fff !important;width:auto !important;}',
@@ -307,6 +312,7 @@ function ensurePracticeStyle() {
     '.cp-inapp-notify b{color:var(--gold);display:block;font-size:12px;margin-bottom:2px;}',
     '.cp-inapp-notify span{font-size:11px;color:#ccc;}',
     '.cp-assign-bar{position:fixed;left:8px;right:8px;bottom:72px;z-index:10080;background:#111;border:1px solid var(--gold);border-radius:12px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.45);}',
+    'body.cp-modal-open .cp-assign-bar{visibility:hidden !important;pointer-events:none !important;}',
     '.cp-pw-row{display:flex;gap:6px;align-items:center;}',
     '.cp-pw-row input{flex:1;}',
     'body.cp-has-client-bar main{padding-top:12px !important;}',
@@ -317,8 +323,10 @@ function ensurePracticeStyle() {
     '.cp-exam-item{display:flex;gap:8px;align-items:center;font-size:12px;color:#ddd;padding:4px 0;}',
     '#cp-call-overlay{position:fixed;inset:0;z-index:10120;background:#050505;display:none;flex-direction:column;}',
     '#cp-call-overlay.active{display:flex;}',
-    '#cp-call-overlay video{width:100%;background:#000;object-fit:cover;}',
-    '#cp-call-local{position:absolute;right:12px;top:72px;width:112px;height:150px;border-radius:10px;border:1px solid var(--gold);z-index:2;}'
+    '#cp-call-stage{position:relative;flex:1;min-height:0;background:#000;overflow:hidden;}',
+    '#cp-call-remote{position:absolute;inset:0;width:100% !important;height:100% !important;object-fit:cover;background:#000;z-index:1;}',
+    '#cp-call-local{position:absolute;right:12px;bottom:24px;width:112px !important;height:150px !important;border-radius:10px;border:1px solid var(--gold);z-index:2;object-fit:cover;background:#111;}',
+    '#cp-call-overlay .cp-call-bar{padding:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:#111;border-bottom:1px solid #333;flex-shrink:0;z-index:3;}'
   ].join('');
 }
 
@@ -1124,7 +1132,29 @@ function cpSvg(name) {
   if (name === 'mic') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3z" fill="currentColor"/><path d="M5 11a7 7 0 0014 0M12 18v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
   if (name === 'video') return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 10l6-3v10l-6-3z" fill="currentColor"/></svg>';
   if (name === 'send') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2-6-8-2z" fill="currentColor"/></svg>';
+  if (name === 'pdf') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M14 2v6h6" fill="none" stroke="currentColor" stroke-width="1.8"/><text x="7" y="17" font-size="6" font-weight="800" fill="currentColor">PDF</text></svg>';
+  if (name === 'doc') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M14 2v6h6M8 13h8M8 17h6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+  if (name === 'xls') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M14 2v6h6M8 14l3 3 5-5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+  if (name === 'file') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M14 2v6h6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
   return '';
+}
+
+function chatFileIconKind(att) {
+  const name = String((att && att.name) || '').toLowerCase();
+  const mime = String((att && att.mime) || '').toLowerCase();
+  if (mime.indexOf('pdf') >= 0 || /\.pdf$/.test(name)) return 'pdf';
+  if (mime.indexOf('sheet') >= 0 || mime.indexOf('excel') >= 0 || /\.(xlsx?|csv)$/.test(name)) return 'xls';
+  if (mime.indexOf('word') >= 0 || mime.indexOf('msword') >= 0 || /\.(docx?|rtf|txt)$/.test(name)) return 'doc';
+  if (mime.indexOf('image') >= 0 || /\.(png|jpe?g|webp|gif)$/.test(name)) return 'img';
+  return 'file';
+}
+
+function clearChatAttachPreview() {
+  window.__cpPendingAttach = null;
+  ['cp-attach-preview', 'cp-chat-attach-preview'].forEach(function (id) {
+    const prev = document.getElementById(id);
+    if (prev) prev.innerHTML = '';
+  });
 }
 
 function chatToolsHtml(inputId, sendCall, clearCall, newCall, opts) {
@@ -1154,14 +1184,18 @@ function renderMessageHtml(m, mine) {
     extra = '<img class="cp-msg-img" src="' + src + '" alt="' + esc(att.name || 'foto') + '" onclick="openChatLightbox(this.src)">' +
       '<div style="font-size:10px;color:#888;margin-top:4px;">Tocca per ingrandire</div>';
   } else if (att.kind === 'file' && att.data) {
-    extra = '<a href="' + att.data + '" download="' + esc(att.name || 'documento') + '" style="color:var(--gold);font-size:11px;">📄 ' + esc(att.name || 'documento') + '</a>';
+    const ik = chatFileIconKind(att);
+    const icon = ik === 'img' ? cpSvg('file') : cpSvg(ik);
+    extra = '<a class="cp-file-chip" href="' + att.data + '" download="' + esc(att.name || 'documento') + '">' +
+      '<span class="cp-file-ico">' + icon + '</span><span>' + esc(att.name || 'documento') + '</span></a>';
   } else if (att.kind) {
-    extra = '<div style="font-size:11px;color:var(--gold);margin-top:4px;">📎 ' + esc(att.name || 'allegato') + '</div>';
+    const ik = chatFileIconKind(att);
+    extra = '<div class="cp-file-chip" style="margin-top:4px;"><span class="cp-file-ico">' + cpSvg(ik === 'img' ? 'file' : ik) + '</span><span>' + esc(att.name || 'allegato') + '</span></div>';
   }
   const ticks = mine
     ? (m.read_at ? ' <span style="color:#4fc3f7;">✓✓</span>' : ' <span style="color:#888;">✓</span>')
     : '';
-  const lock = (m.e2e || (typeof m.body === 'string' && m.body.indexOf('E2E1:') === 0)) ? ' 🔒' : '';
+  const lock = (m.e2e || (typeof m.body === 'string' && m.body.indexOf('E2E1:') === 0)) ? ' · e2e' : '';
   const text = m._plain != null ? m._plain : (m.body || '');
   const showText = text && text !== '[allegato]';
   return '<div class="cp-msg ' + (mine ? 'me' : 'them') + '">' + (showText ? esc(text) + lock : '') + extra +
@@ -1314,8 +1348,12 @@ async function renderCoachWorkspace(c) {
       '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;">Programma cliente</div>' +
       '<div style="font-size:12px;color:#ccc;">' + esc(prog.title || 'Nessuna scheda assegnata') + (weeks ? ' · ' + weeks + ' settimane' : '') + '</div>' +
       '<div style="font-size:11px;color:#aaa;margin-top:8px;">Scade: <b style="color:#fff;">' + esc(fmtDay(cl.programExpiresAt)) + '</b> · Prossimo check: <b style="color:#fff;">' + esc(fmtDay(cl.nextCheckAt)) + '</b></div>' +
-      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="editClientSchedule(\'' + esc(id) + '\')">IMPOSTA SCADENZA / CHECK</button>' +
-      '<label style="display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee;line-height:1.4;"><input id="cp-max-freedom" type="checkbox"' + (cl.allowMaxFreedom ? ' checked' : '') + ' onchange="toggleMaxFreedom(\'' + esc(id) + '\', this.checked)" style="margin-top:2px;flex-shrink:0;"> <span style="color:#eee !important;-webkit-text-fill-color:#eee;"><b style="color:#fff !important;">Consenti massima libertà</b> — l\'atleta può modificare da solo. Ti arriva comunque un avviso. Senza spunta, ogni modifica è una richiesta che tu approvi.</span></label>' +
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="editClientSchedule(\'' + esc(id) + '\')">IMPOSTA SCADENZA / CHECK</button>' +
+      '<div style="margin-top:10px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
+      '<label style="display:flex;gap:10px;align-items:flex-start;margin:0;padding:0;background:transparent;border:0;font-size:12px;line-height:1.4;color:#eee !important;-webkit-text-fill-color:#eee !important;">' +
+      '<input id="cp-max-freedom" type="checkbox"' + (cl.allowMaxFreedom ? ' checked' : '') + ' onchange="toggleMaxFreedom(\'' + esc(id) + '\', this.checked)" style="margin-top:3px;flex-shrink:0;width:18px;height:18px;">' +
+      '<span style="display:block;color:#eee !important;-webkit-text-fill-color:#eee !important;"><b style="color:#fff !important;-webkit-text-fill-color:#fff !important;">Consenti massima libertà</b><br>' +
+      '<span style="color:#bbb !important;-webkit-text-fill-color:#bbb !important;font-size:11px;">L\'atleta puo modificare da solo. Ti arriva comunque un avviso. Senza spunta, ogni modifica richiede la tua approvazione.</span></span></label></div>' +
       '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="openAssignChooser(\'' + esc(id) + '\',\'' + esc(cl.displayName || '') + '\')">ASSEGNA SCHEDA</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestCheckFromClient(\'' + esc(id) + '\')">RICHIEDI CHECK</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestExamsFromClient(\'' + esc(id) + '\')">RICHIEDI ESAMI</button>' +
@@ -1649,15 +1687,22 @@ async function confirmAssignSandbox() {
     practiceToast('Nessun contenuto da assegnare: importa o scegli una scheda prima.', 'warning');
     return;
   }
-  const defExp = new Date(Date.now() + 56 * 86400000).toISOString().slice(0, 10);
-  const defChk = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+  const weeks = (typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
+  const expDays = weeks > 0 ? weeks * 7 : 56;
+  const dExp = new Date(); dExp.setHours(12, 0, 0, 0); dExp.setDate(dExp.getDate() + expDays);
+  const dChk = new Date(); dChk.setHours(12, 0, 0, 0); dChk.setDate(dChk.getDate() + Math.min(14, Math.max(7, Math.round(expDays / 2))));
+  const defExp = dExp.getFullYear() + '-' + String(dExp.getMonth() + 1).padStart(2, '0') + '-' + String(dExp.getDate()).padStart(2, '0');
+  const defChk = dChk.getFullYear() + '-' + String(dChk.getMonth() + 1).padStart(2, '0') + '-' + String(dChk.getDate()).padStart(2, '0');
   openCpModal(
     '<h2>Invia scheda al cliente</h2>' +
-    '<p class="cp-help">Contenuti: ' + esc(kinds.join(', ')) + '. Imposta scadenza e check (niente testo libero).</p>' +
-    '<div class="cp-field"><label>SCADENZA PROGRAMMA</label>' + buildEuDateSelects('cp-asg-exp', defExp) + '</div>' +
-    '<div class="cp-field" style="margin-top:12px;"><label>PROSSIMO CHECK</label>' + buildEuDateSelects('cp-asg-chk', defChk) + '</div>' +
+    '<p class="cp-help">Contenuti: ' + esc(kinds.join(', ')) + '.</p>' +
+    (weeks
+      ? '<div style="padding:10px;background:#141414;border:1px solid #333;border-radius:10px;margin-bottom:12px;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee;">Scadenza automatica: <b style="color:#fff;">' + weeks + ' settimane</b> (~ <b style="color:var(--gold);">' + esc(fmtDay(defExp)) + '</b>). Si ricalcola al primo allenamento finalizzato.</div>'
+      : '<div style="padding:10px;background:#141414;border:1px solid #333;border-radius:10px;margin-bottom:12px;font-size:12px;color:#eee !important;">Nessun allenamento: scadenza default 8 settimane.</div>') +
+    '<input type="hidden" id="cp-asg-exp-auto" value="' + esc(defExp) + '">' +
+    '<div class="cp-field"><label>PROSSIMO CHECK (modificabile)</label>' + buildEuDateSelects('cp-asg-chk', defChk) + '</div>' +
     '<button class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="confirmAssignSandboxSend()">CONFERMA INVIO</button>' +
-    '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="closeCpModal()">ANNULLA</button>'
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="closeCpModal()">ANNULLA</button>'
   );
 }
 
@@ -1665,8 +1710,14 @@ async function confirmAssignSandboxSend() {
   const job = store.coachAssigning;
   if (!job || !job.clientId) { closeCpModal(); return; }
   const kinds = detectSandboxKinds();
-  const programExpiresAt = readEuDateSelects('cp-asg-exp');
-  const nextCheckAt = readEuDateSelects('cp-asg-chk');
+  const autoEl = document.getElementById('cp-asg-exp-auto');
+  let programExpiresAt = autoEl && autoEl.value;
+  if (!programExpiresAt) {
+    const w = (typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
+    const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + ((w || 8) * 7));
+    programExpiresAt = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  const nextCheckAt = readEuDateSelects('cp-asg-chk') || programExpiresAt;
   if (!programExpiresAt || !nextCheckAt) {
     practiceToast('Date non valide', 'warning');
     return;
@@ -1684,7 +1735,13 @@ async function confirmAssignSandboxSend() {
     if (DATA && DATA.exams) payload.exams = JSON.parse(JSON.stringify(DATA.exams));
     else if (store.exams) payload.exams = JSON.parse(JSON.stringify(store.exams));
     if (!payload.activeProgram || !Array.isArray(payload.activeProgram.weeks) || !payload.activeProgram.weeks.length) {
-      throw new Error('Scheda allenamento vuota: importa prima di inviare.');
+      if (!kinds.filter(function (k) { return k !== 'training'; }).length) {
+        throw new Error('Nessun contenuto da inviare.');
+      }
+      payload.activeProgram = payload.activeProgram || { title: 'Piano cliente', weeks: [] };
+    } else {
+      payload.activeProgram.programExpiryAnchor = 'assign';
+      payload.activeProgram.programWeeksPlanned = payload.activeProgram.weeks.length;
     }
     await practiceFetch('/api/coach/clients/' + encodeURIComponent(job.clientId) + '/assign', {
       method: 'POST', headers: practiceHeaders(true),
@@ -1795,11 +1852,20 @@ function openCpModal(html) {
   const panel = document.getElementById('cp-modal-panel');
   if (panel) panel.innerHTML = html;
   ov.style.display = 'flex';
+  if (document.body) document.body.classList.add('cp-modal-open');
+  const bar = document.getElementById('cp-assign-bar');
+  if (bar) bar.style.visibility = 'hidden';
 }
 
 function closeCpModal() {
   const ov = document.getElementById('cp-modal');
   if (ov) ov.style.display = 'none';
+  if (document.body) document.body.classList.remove('cp-modal-open');
+  const bar = document.getElementById('cp-assign-bar');
+  if (bar && store.coachAssigning) {
+    bar.style.visibility = 'visible';
+    bar.style.display = 'block';
+  }
 }
 window.closeCpModal = closeCpModal;
 
@@ -2097,15 +2163,18 @@ function toggleChatDictation(inputId) {
     practiceToast('Dettatura terminata', 'info');
     return;
   }
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const native = typeof nativeBridge === 'function' ? nativeBridge() : (typeof NativeConfig !== 'undefined' ? NativeConfig : null);
+  const hasNative = !!(native && (typeof native.startVoiceInputWithLang === 'function' || typeof native.startVoiceInput === 'function'));
+  if (!hasNative && !Recognition) {
+    setDictateButtonState(false);
+    practiceToast('Dettatura non disponibile su questo browser. Usa Chrome/Edge o l’app.', 'warning');
+    return;
+  }
   window.__cpDictating = true;
   setDictateButtonState(true);
   if (typeof startVoiceInputFor === 'function') startVoiceInputFor(inputId);
   else if (typeof startVoiceInput === 'function') startVoiceInput();
-  else {
-    window.__cpDictating = false;
-    setDictateButtonState(false);
-    practiceToast('Dettatura non disponibile su questo dispositivo', 'warning');
-  }
 }
 
 function openChatAttachSheet() {
@@ -2243,9 +2312,7 @@ async function sendCoachHumanMessage(id) {
       method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: encBody || (attachment ? '[allegato]' : ''), attachment: attachment, e2e: true })
     }, 20000);
     if (input) input.value = '';
-    window.__cpPendingAttach = null;
-    const prev = document.getElementById('cp-attach-preview') || document.getElementById('cp-chat-attach-preview');
-    if (prev) prev.innerHTML = '';
+    clearChatAttachPreview();
     loadHumanMessages(id, document.getElementById('cp-wa-chat') ? 'cp-wa-chat' : 'cp-ws-chat', 'coach');
   } catch (err) { practiceToast((err && err.message) || 'Messaggio non inviato', 'danger'); }
 }
@@ -2267,14 +2334,12 @@ async function sendAthleteHumanMessage() {
       method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: encBody || (attachment ? '[allegato]' : ''), attachment: attachment, e2e: true })
     }, 20000);
     if (input) input.value = '';
-    window.__cpPendingAttach = null;
-    const prev = document.getElementById('cp-attach-preview');
-    if (prev) prev.textContent = '';
+    clearChatAttachPreview();
     loadHumanMessages(null, 'cp-client-chat', 'athlete');
   } catch (_) {
     enqueueClientOutbox({ type: 'message', body: body || '[allegato]', attachment: pending });
     if (input) input.value = '';
-    window.__cpPendingAttach = null;
+    clearChatAttachPreview();
     practiceToast('Messaggio in coda offline', 'warning');
   }
 }
@@ -2780,8 +2845,8 @@ function wrapPracticeHooks() {
       const raw = v;
       if (store && store.coachSessionActive && !store.coachAssigning && !(typeof isAthleteRole === 'function' && isAthleteRole())) {
         const coachCore = { coachHub: 1, coachClient: 1, coachChat: 1 };
-        const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1 };
-        const ok = coachCore[raw] || (store.coachViewingClient && clientDomains[raw]);
+        const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, import: 1, programs: 1 };
+        const ok = coachCore[raw] || (store.coachViewingClient && clientDomains[raw]) || (store.coachAssigning && (clientDomains[raw] || raw === 'import' || raw === 'programs'));
         if (!ok) {
           if (!confirm('Stai uscendo dall’hub Coach per tornare all’app personale. Continuare?')) return;
           store.coachSessionActive = false;
@@ -2789,6 +2854,12 @@ function wrapPracticeHooks() {
             leaveCoachClientView(true);
           }
           if (typeof persist === 'function') persist();
+        }
+        // Viewing client + open import → start assign sandbox for that client
+        if (raw === 'import' && store.coachViewingClient && !store.coachAssigning) {
+          const id = store.coachWorkspace && store.coachWorkspace.clientId;
+          const name = (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente';
+          if (id && typeof beginAssignSandbox === 'function') beginAssignSandbox(id, name, 'import');
         }
       }
       v = gatePracticeView(v);
@@ -2951,10 +3022,17 @@ function wrapPracticeHooks() {
       const ret = _fw.apply(this, arguments);
       if (typeof isAthleteRole === 'function' && isAthleteRole()) {
         const last = Array.isArray(store.logs) && store.logs.length ? store.logs[store.logs.length - 1] : null;
+        const weeksPlanned = (DATA && Array.isArray(DATA.weeks) && DATA.weeks.length)
+          ? DATA.weeks.length
+          : (DATA && DATA.programWeeksPlanned) || 0;
+        const alreadyAnchored = !!(DATA && DATA.programExpiryAnchor === 'first_workout');
         const data = {
           logs: Array.isArray(store.logs) ? store.logs : [],
           data: store.data || {},
-          lastLog: last ? { week: last.week, day: last.day, at: last.at || last.ts || null } : null
+          lastLog: last ? { week: last.week, day: last.day, at: last.at || last.ts || null } : null,
+          programWeeksPlanned: weeksPlanned,
+          programExpiryAnchor: alreadyAnchored ? 'first_workout' : (DATA && DATA.programExpiryAnchor) || 'assign',
+          anchorExpiryOnFirstWorkout: !alreadyAnchored && Array.isArray(store.logs) && store.logs.length === 1
         };
         // Sync account then push workout snapshot for coach visibility
         Promise.resolve(typeof syncAccountData === 'function' ? syncAccountData(false) : null)
@@ -3143,15 +3221,27 @@ function ensureCallOverlay() {
   if (ov) return ov;
   ov = document.createElement('div');
   ov.id = 'cp-call-overlay';
-  ov.innerHTML = '<div style="padding:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:#111;border-bottom:1px solid #333;">' +
-    '<div style="color:var(--gold);font-weight:800;font-size:12px;">VIDEOCALL · PeerJS</div>' +
+  ov.innerHTML = '<div class="cp-call-bar">' +
+    '<div style="color:var(--gold);font-weight:800;font-size:12px;">VIDEOCALL</div>' +
     '<div id="cp-call-status" style="font-size:11px;color:#aaa;flex:1;text-align:center;">Connessione…</div>' +
-    '<button class="btn btn-outline" style="font-size:11px;" onclick="hangupInternalVideocall()">CHIUDI</button></div>' +
-    '<div style="position:relative;flex:1;background:#000;min-height:0;">' +
-    '<video id="cp-call-remote" autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>' +
+    '<button class="btn btn-outline" style="font-size:11px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="hangupInternalVideocall()">CHIUDI</button></div>' +
+    '<div id="cp-call-stage">' +
+    '<video id="cp-call-remote" autoplay playsinline></video>' +
     '<video id="cp-call-local" autoplay playsinline muted></video></div>';
   document.body.appendChild(ov);
   return ov;
+}
+
+async function fetchWebRtcIceServers() {
+  const fallback = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ];
+  try {
+    const res = await practiceFetch('/api/webrtc/ice', { method: 'GET', headers: practiceHeaders(false) }, 8000);
+    if (res && Array.isArray(res.iceServers) && res.iceServers.length) return res.iceServers;
+  } catch (_) {}
+  return fallback;
 }
 
 function setCallStatus(t) {
@@ -3221,18 +3311,14 @@ async function startInternalVideocall(clientId, role) {
     const loc = document.getElementById('cp-call-local');
     if (loc) loc.srcObject = stream;
 
+    const iceServers = await fetchWebRtcIceServers();
     const peer = new PeerCtor(undefined, {
       host: '0.peerjs.com',
       port: 443,
       path: '/',
       secure: true,
       debug: 1,
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      }
+      config: { iceServers: iceServers }
     });
     __cpCall.peer = peer;
 
