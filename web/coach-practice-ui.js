@@ -126,6 +126,29 @@ function gatePracticeView(v) {
   return v;
 }
 
+function clearClientShellLock() {
+  try { localStorage.removeItem('GS_CLIENT_SHELL'); } catch (_) {}
+  if (store) {
+    store.clientShell = false;
+  }
+}
+
+function inviteShortCode(token) {
+  return String(token || '').slice(-6).toUpperCase();
+}
+
+function formatInviteShareText(opts) {
+  opts = opts || {};
+  const code = opts.inviteCode || inviteShortCode(opts.token || opts.inviteUrl);
+  return [
+    'Cliente: ' + (opts.name || '—'),
+    'Codice invito: ' + (code || '—'),
+    'Link (univoco): ' + (opts.inviteUrl || ''),
+    'Utente: ' + (opts.username || ''),
+    'Password: ' + (opts.password || '')
+  ].join('\n');
+}
+
 function applyClientChrome() {
   try {
     const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
@@ -136,23 +159,80 @@ function applyClientChrome() {
       document.body.classList.toggle('coach-unlocked', !!unlocked);
       document.body.classList.toggle('coach-session', !!coachSession);
       document.body.classList.toggle('coach-viewing-client', !!(store && store.coachViewingClient));
+      document.body.classList.remove('cp-has-client-bar');
     }
-    const stats = typeof $ === 'function' ? $('nav-stats') : document.getElementById('nav-stats');
-    const ai = typeof $ === 'function' ? $('nav-ai') : document.getElementById('nav-ai');
-    if (stats) {
-      const span = stats.querySelector('span');
-      if (athlete) {
-        if (span) span.textContent = 'COACH';
-        stats.onclick = function (event) { navigate('clientChat', event); };
-      } else if (coachSession) {
-        if (span) span.textContent = 'HUB';
-        stats.onclick = function (event) { navigate('coachHub', event); };
-      } else {
-        if (span) span.textContent = 'STATS';
-        stats.onclick = function (event) { navigate('stats', event); };
+    const home = document.getElementById('nav-home');
+    const train = document.getElementById('nav-training');
+    const stats = document.getElementById('nav-stats');
+    const ai = document.getElementById('nav-ai');
+    const menu = document.getElementById('nav-db');
+    if (coachSession) {
+      if (home) {
+        const sp = home.querySelector('span');
+        if (sp) sp.textContent = 'HUB';
+        home.onclick = function (event) { navigate('coachHub', event); };
       }
+      if (train) {
+        const sp = train.querySelector('span');
+        if (sp) sp.textContent = 'CLIENTE';
+        train.onclick = function (event) {
+          const id = store.coachWorkspace && store.coachWorkspace.clientId;
+          if (!id) { practiceToast('Seleziona un cliente dalla lista', 'info'); navigate('coachHub', event); return; }
+          navigate('coachClient', event);
+        };
+      }
+      if (stats) {
+        const sp = stats.querySelector('span');
+        if (sp) sp.textContent = 'CHAT';
+        stats.onclick = function (event) {
+          const id = store.coachWorkspace && store.coachWorkspace.clientId;
+          if (!id) { practiceToast('Seleziona un cliente dalla lista', 'info'); navigate('coachHub', event); return; }
+          openCoachClientChat(id);
+          if (event && event.preventDefault) event.preventDefault();
+        };
+      }
+      if (menu) {
+        const sp = menu.querySelector('span');
+        if (sp) sp.textContent = 'MENU';
+        menu.onclick = function (event) {
+          if (event && event.preventDefault) event.preventDefault();
+          openCoachDrawer();
+          return false;
+        };
+      }
+      if (ai) ai.style.display = 'none';
+    } else {
+      if (home) {
+        const sp = home.querySelector('span');
+        if (sp) sp.textContent = 'HOME';
+        home.onclick = function (event) { navigate('home', event); };
+      }
+      if (train) {
+        const sp = train.querySelector('span');
+        if (sp) sp.textContent = 'WORKOUT';
+        train.onclick = function (event) { navigate('training', event); };
+      }
+      if (stats) {
+        const span = stats.querySelector('span');
+        if (athlete) {
+          if (span) span.textContent = 'COACH';
+          stats.onclick = function (event) { navigate('clientChat', event); };
+        } else {
+          if (span) span.textContent = 'STATS';
+          stats.onclick = function (event) { navigate('stats', event); };
+        }
+      }
+      if (menu) {
+        const sp = menu.querySelector('span');
+        if (sp) sp.textContent = 'MENU';
+        menu.onclick = function (event) {
+          openMenuHub();
+          if (event) event.preventDefault();
+          return false;
+        };
+      }
+      if (ai) ai.style.display = athlete ? 'none' : '';
     }
-    if (ai) ai.style.display = (athlete || coachSession) ? 'none' : '';
     document.querySelectorAll('[data-hub="full"]').forEach(function (el) {
       el.style.display = (athlete || coachSession) ? 'none' : '';
     });
@@ -169,12 +249,12 @@ function applyClientChrome() {
         else openCoachOrUnlock();
       };
     }
+    ensureCoachHeaderControls(coachSession);
     if (athlete) {
       document.querySelectorAll('button').forEach(function (btn) {
         const tx = String(btn.textContent || '');
         if (/CHIEDI A COACH AI/i.test(tx)) btn.textContent = tx.replace(/CHIEDI A COACH AI(?:\s*\([^)]+\))?/i, 'CHIEDI AL COACH');
       });
-      // Block free-account entry points
       const acc = document.getElementById('account-button');
       if (acc) {
         acc.textContent = 'ESCI CLIENT';
@@ -189,10 +269,53 @@ function applyClientChrome() {
       el.style.display = (allow && !coachSession) ? '' : 'none';
     });
     ensureCoachSessionBanner();
-    ensureClientViewBanner();
+    hideLegacyClientViewBanner();
+    ensureCoachDrawer();
   } catch (err) {
     console.warn('[CLIENT_CHROME]', err);
   }
+}
+
+function ensureCoachHeaderControls(coachSession) {
+  let wrap = document.getElementById('cp-coach-header-controls');
+  if (!coachSession) {
+    if (wrap) wrap.style.display = 'none';
+    return;
+  }
+  const coachBtn = document.getElementById('coach-unlock-button');
+  const headerActions = coachBtn && coachBtn.parentElement;
+  if (!headerActions) return;
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'cp-coach-header-controls';
+    wrap.style.cssText = 'display:flex;align-items:center;gap:6px;flex-wrap:wrap;max-width:min(52vw,280px);';
+    headerActions.insertBefore(wrap, coachBtn);
+  }
+  wrap.style.display = 'flex';
+  const clients = (store.__cpClientList || []).slice();
+  const curId = store.coachWorkspace && store.coachWorkspace.clientId ? String(store.coachWorkspace.clientId) : '';
+  const opts = ['<option value="">Cliente…</option>'].concat(clients.map(function (cl) {
+    return '<option value="' + esc(String(cl.id)) + '"' + (String(cl.id) === curId ? ' selected' : '') + '>' + esc(cl.displayName || cl.username || ('#' + cl.id)) + '</option>';
+  }));
+  wrap.innerHTML =
+    '<select id="cp-client-switcher" class="cp-client-switcher" title="Cambia cliente" onchange="switchCoachClientFromHeader(this.value)">' + opts.join('') + '</select>' +
+    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachHub\')">LISTA</button>' +
+    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="openCoachDrawer()">MENU</button>';
+}
+
+function switchCoachClientFromHeader(id) {
+  if (!id) return;
+  if (store.coachViewingClient) leaveCoachClientView(true);
+  openCoachClient(id);
+}
+
+function hideLegacyClientViewBanner() {
+  const bar = document.getElementById('cp-client-view-bar');
+  if (bar) {
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+  }
+  if (document.body) document.body.classList.remove('cp-has-client-bar');
 }
 
 function ensureCoachSessionBanner() {
@@ -200,7 +323,7 @@ function ensureCoachSessionBanner() {
   if (!bar) {
     bar = document.createElement('div');
     bar.id = 'cp-coach-session-bar';
-    bar.style.cssText = 'display:none;position:fixed;left:0;right:0;z-index:1005;background:#111;border-bottom:1px solid var(--gold);padding:6px 12px;font-size:11px;';
+    bar.style.cssText = 'display:none;position:fixed;left:0;right:0;z-index:1005;background:#111;border-bottom:1px solid var(--gold);padding:6px 12px;font-size:11px;box-sizing:border-box;';
     document.body.appendChild(bar);
   }
   if (!(store && store.coachSessionActive) || (typeof isAthleteRole === 'function' && isAthleteRole())) {
@@ -208,52 +331,82 @@ function ensureCoachSessionBanner() {
     document.documentElement.style.removeProperty('--cp-session-bar');
     return;
   }
-  // Sit under the app header so it does not cover GIAMMARIA / MENU
   const headerH = (document.querySelector('header') && document.querySelector('header').offsetHeight) || 60;
-  bar.style.top = 'calc(' + headerH + 'px + env(safe-area-inset-top, 0px))';
+  bar.style.top = headerH + 'px';
   bar.style.display = 'block';
-  document.documentElement.style.setProperty('--cp-session-bar', '36px');
+  const name = (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName)
+    || (store.coachAssigning && store.coachWorkspace && store.coachWorkspace.assignName)
+    || '';
+  const viewing = !!(store.coachViewingClient || store.coachAssigning);
+  let mid = 'Hub clienti · mondo separato';
+  if (viewing && name) mid = 'Cliente: <b style="color:#fff;">' + esc(name) + '</b>';
+  else if (store.coachWorkspace && store.coachWorkspace.clientId && name) mid = 'Scheda: <b style="color:#fff;">' + esc(name) + '</b>';
   bar.innerHTML = '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">' +
     '<span style="color:var(--gold);font-weight:800;">SESSIONE COACH</span>' +
-    '<span style="color:#bbb;flex:1;font-size:10px;">Hub clienti · mondo separato</span>' +
-    '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="exitCoachSession()">ESCI</button></div>';
+    '<span style="color:#bbb;flex:1;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + mid + '</span>' +
+    (viewing
+      ? '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachHub\')">LISTA</button>'
+      : '') +
+    '</div>';
+  const h = Math.max(32, bar.offsetHeight || 36);
+  document.documentElement.style.setProperty('--cp-session-bar', h + 'px');
 }
 
 function ensureClientViewBanner() {
-  let bar = document.getElementById('cp-client-view-bar');
-  if (!bar) {
-    bar = document.createElement('div');
-    bar.id = 'cp-client-view-bar';
-    // Top bar so it never covers chat composer
-    bar.style.cssText = 'display:none;position:fixed;left:8px;right:8px;top:8px;z-index:10075;background:#111;border:1px solid var(--gold);border-radius:12px;padding:10px;max-height:42vh;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.45);';
-    document.body.appendChild(bar);
+  // Legacy overlay removed — domains live in coach drawer / session chrome
+  hideLegacyClientViewBanner();
+  ensureCoachSessionBanner();
+  ensureCoachDrawer();
+}
+
+function ensureCoachDrawer() {
+  let drawer = document.getElementById('cp-coach-drawer');
+  if (!drawer) {
+    drawer = document.createElement('div');
+    drawer.id = 'cp-coach-drawer';
+    drawer.innerHTML = '<div class="cp-drawer-backdrop" onclick="closeCoachDrawer()"></div><div class="cp-drawer-panel" id="cp-coach-drawer-panel"></div>';
+    document.body.appendChild(drawer);
   }
-  if (!(store && store.coachViewingClient && store.coachWorkspace && store.coachWorkspace.clientId)) {
-    bar.style.display = 'none';
-    document.body.classList.remove('cp-has-client-bar');
-    return;
-  }
-  if (store.coachAssigning || currentView === 'coachChat') {
-    bar.style.display = 'none';
-    document.body.classList.remove('cp-has-client-bar');
-    return;
-  }
-  const name = (store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente';
-  const live = store.coachWorkspace.client && store.coachWorkspace.client.workoutLive;
-  bar.style.display = 'block';
-  document.body.classList.add('cp-has-client-bar');
-  bar.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;">MASTER · DATI DI ' + esc(name) + (live ? ' · IN WORKOUT' : '') + '</div>' +
-    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Controlli e verifichi · alcuni campi solo lettura + commento.</div>' +
-    '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'training\')">ALLENAMENTO</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'nutrition\')">ALIMENTAZIONE</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'supplements\')">INTEGRAZIONE</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'therapy\')">TERAPIA</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'exams\')">ESAMI</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'stats\')">STATS</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="openCoachClientChat(\'' + esc(store.coachWorkspace.clientId) + '\')">CHAT</button>' +
-    '<button class="btn btn-primary" style="font-size:10px;" onclick="pushCoachClientEdits()">SALVA MODIFICHE</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="leaveCoachClientView()">TORNA ALLA SCHEDA</button></div>';
+  const panel = document.getElementById('cp-coach-drawer-panel');
+  if (!panel) return;
+  const hasClient = !!(store && store.coachWorkspace && store.coachWorkspace.clientId);
+  const viewing = !!(store && store.coachViewingClient);
+  const id = hasClient ? String(store.coachWorkspace.clientId) : '';
+  const name = (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente';
+  panel.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+    '<div style="color:var(--gold);font-weight:800;font-size:13px;">MENU COACH</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="closeCoachDrawer()">CHIUDI</button></div>' +
+    (hasClient ? ('<div class="cp-help" style="margin-bottom:10px;">Cliente: <b style="color:#fff;">' + esc(name) + '</b></div>') : '<div class="cp-help">Nessun cliente aperto. Apri dalla lista.</div>') +
+    '<div class="cp-drawer-grid">' +
+    '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachHub\')">LISTA CLIENTI</button>' +
+    (hasClient ? (
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();openCoachClient(\'' + esc(id) + '\')">SCHEDA CLIENTE</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();openCoachClientChat(\'' + esc(id) + '\')">CHAT</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'training\')">ALLENAMENTO</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'nutrition\')">ALIMENTAZIONE</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'supplements\')">INTEGRAZIONE</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'therapy\')">TERAPIA</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'exams\')">ESAMI</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'stats\')">STATS</button>'
+    ) : '') +
+    '</div>' +
+    (viewing
+      ? ('<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="closeCoachDrawer();pushCoachClientEdits()">SALVA MODIFICHE</button>' +
+        '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="closeCoachDrawer();leaveCoachClientView()">TORNA ALLA SCHEDA</button>')
+      : '') +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:16px;color:#c66 !important;-webkit-text-fill-color:#c66 !important;" onclick="closeCoachDrawer();exitCoachSession()">ESCI COACH</button>';
+}
+
+function openCoachDrawer() {
+  ensureCoachDrawer();
+  const d = document.getElementById('cp-coach-drawer');
+  if (d) d.classList.add('active');
+}
+
+function closeCoachDrawer() {
+  const d = document.getElementById('cp-coach-drawer');
+  if (d) d.classList.remove('active');
 }
 
 function ensurePracticeStyle() {
@@ -295,15 +448,27 @@ function ensurePracticeStyle() {
     '.cp-chat-shell{display:flex;flex-direction:column;flex:1;min-height:0;height:100%;}',
     '.cp-chat-thread{flex:1;min-height:0;overflow:auto;background:#0a0a0a;border:1px solid #222;border-radius:12px;padding:8px;}',
     '.cp-chat-composer{display:flex;gap:6px;align-items:center;margin-top:6px;flex-shrink:0;}',
-    '.cp-icon-btn{width:40px;height:40px;min-width:40px;padding:0 !important;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;}',
-    '.cp-icon-btn svg{width:18px;height:18px;fill:currentColor;stroke:currentColor;display:block;}',
+    '.cp-icon-btn{width:44px;height:44px;min-width:44px;min-height:44px;padding:0 !important;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;flex-shrink:0;overflow:visible;line-height:1;}',
+    '.cp-icon-btn svg{width:20px !important;height:20px !important;min-width:20px;min-height:20px;fill:currentColor;stroke:currentColor;display:block;flex-shrink:0;overflow:visible;}',
     '.cp-file-chip{display:inline-flex;align-items:center;gap:8px;margin-top:6px;padding:8px 10px;border:1px solid #333;border-radius:10px;background:#141414;color:var(--gold);text-decoration:none;font-size:11px;max-width:100%;}',
     '.cp-file-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#eee !important;-webkit-text-fill-color:#eee !important;}',
     '.cp-file-ico{width:28px;height:28px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;color:var(--gold);}',
-    '.cp-file-ico svg{width:24px;height:24px;display:block;}',
+    '.cp-file-ico svg{width:24px !important;height:24px !important;display:block;}',
     '.cp-icon-btn.cp-dictate-on{border-color:#2ecc71 !important;color:#2ecc71 !important;-webkit-text-fill-color:#2ecc71 !important;background:rgba(46,204,113,.12);}',
     '.cp-icon-btn.cp-dictate-off{border-color:#e74c3c !important;color:#e74c3c !important;-webkit-text-fill-color:#e74c3c !important;}',
     '.cp-chat-input{flex:1;min-width:0;padding:10px 12px !important;border-radius:20px !important;border:1px solid #333 !important;background:#151515 !important;color:#fff !important;-webkit-text-fill-color:#fff !important;width:auto !important;}',
+    '.cp-client-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}',
+    '.cp-client-actions .btn{font-size:10px;padding:8px 10px;flex:0 0 auto;}',
+    '@media (min-width:768px){.cp-icon-btn{width:48px;height:48px;min-width:48px;}.cp-icon-btn svg{width:22px !important;height:22px !important;}.cp-client-actions{gap:10px;}.cp-client-actions .btn{font-size:11px;padding:10px 12px;}}',
+    '.cp-client-switcher{max-width:120px;min-width:72px;padding:6px 4px;background:#111;border:1px solid #444;color:#eee;border-radius:8px;font-size:10px;}',
+    '#cp-coach-drawer{position:fixed;inset:0;z-index:10130;display:none;}',
+    '#cp-coach-drawer.active{display:block;}',
+    '#cp-coach-drawer .cp-drawer-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.65);}',
+    '#cp-coach-drawer .cp-drawer-panel{position:absolute;top:0;right:0;bottom:0;width:min(320px,92vw);background:#0d0d0d;border-left:1px solid var(--gold);padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));overflow:auto;box-sizing:border-box;color:#eee;}',
+    '.cp-drawer-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}',
+    '.cp-drawer-grid .btn{font-size:10px;padding:10px 8px;width:100%;}',
+    'body.coach-session .bottom-nav .nav-item svg{width:22px;height:22px;flex-shrink:0;}',
+    'body.coach-session .bottom-nav .nav-item span{font-size:9px;}',
     '.cp-attach-sheet{position:fixed;inset:0;z-index:10140;background:rgba(0,0,0,.72);display:none;align-items:flex-end;justify-content:center;padding:16px;}',
     '.cp-attach-sheet.active{display:flex;}',
     '.cp-attach-sheet .cp-sheet{width:100%;max-width:420px;background:#121212;border:1px solid #333;border-radius:16px 16px 12px 12px;padding:14px;color:#eee;}',
@@ -315,7 +480,6 @@ function ensurePracticeStyle() {
     'body.cp-modal-open .cp-assign-bar{visibility:hidden !important;pointer-events:none !important;}',
     '.cp-pw-row{display:flex;gap:6px;align-items:center;}',
     '.cp-pw-row input{flex:1;}',
-    'body.cp-has-client-bar main{padding-top:12px !important;}',
     '.cp-cal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}',
     '.cp-cal-grid select{width:100%;padding:12px 8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:14px;font-weight:700;}',
     '.cp-exam-cat{margin:10px 0;border:1px solid #222;border-radius:10px;padding:8px;}',
@@ -497,6 +661,7 @@ async function submitClientInviteLogin() {
     store.role = 'athlete';
     store.clientShell = true;
     store.clientProfile = payload.client || null;
+    store.inviteTokenBound = store.inviteToken || '';
     try {
       localStorage.setItem('GS_CLIENT_SHELL', JSON.stringify({
         inviteToken: store.inviteToken,
@@ -638,6 +803,8 @@ function exitCoachSession(force) {
   if (store.coachViewingClient) leaveCoachClientView(true);
   store.coachSessionActive = false;
   store.coachWorkspace = null;
+  clearClientShellLock();
+  closeCoachDrawer();
   if (typeof persist === 'function') persist();
   applyClientChrome();
   navigate('home');
@@ -965,6 +1132,8 @@ async function loadCoachClientList() {
     const payload = await practiceFetch('/api/coach/clients?limit=30&offset=0&q=' + encodeURIComponent(q), { method: 'GET', headers: practiceHeaders(false) }, 20000);
     store.__cpOrigin = payload.origin || '';
     const rows = payload.clients || [];
+    store.__cpClientList = rows;
+    ensureCoachHeaderControls(!!(store && store.coachSessionActive));
     if (!rows.length) {
       box.innerHTML = '<div class="cp-help">Nessun cliente. Aggiungine uno: nuovo (compilerà il questionario) o transizione (compili tu le info).</div>';
       return;
@@ -974,6 +1143,7 @@ async function loadCoachClientList() {
       const paid = cl.paid ? 'Pagato' : 'Non pagato';
       const presence = presenceLabel(cl.online, cl.lastSeenAt, cl.workoutLive);
       const presenceColor = cl.workoutLive ? '#6c6' : (cl.online ? '#6c6' : '#888');
+      const code = inviteShortCode(cl.inviteToken);
       return '<div class="card" style="padding:12px;margin-bottom:10px;">' +
         '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">' +
         '<div><div style="font-size:15px;font-weight:900;color:#fff;">' + esc(cl.displayName) +
@@ -984,14 +1154,15 @@ async function loadCoachClientList() {
         (cl.hasPendingChange ? ' · modifica da approvare' : '') + '</div>' +
         '<div style="font-size:11px;color:' + presenceColor + ';margin-top:4px;">● ' + esc(presence) + '</div>' +
         '<div style="font-size:10px;color:#777;margin-top:4px;">Scheda scade: ' + esc(fmtDay(cl.programExpiresAt)) +
-        ' · Prossimo check: ' + esc(fmtDay(cl.nextCheckAt)) + '</div></div></div>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">' +
-        '<button class="btn btn-primary" style="font-size:10px;padding:8px 10px;" onclick="openCoachClient(\'' + esc(cl.id) + '\')">APRI</button>' +
-        '<button class="btn btn-outline" style="font-size:10px;padding:8px 10px;" onclick="openCoachClientChat(\'' + esc(cl.id) + '\')">CHAT</button>' +
-        '<button class="btn btn-outline" style="font-size:10px;padding:8px 10px;" onclick="copyClientInvite(\'' + esc(cl.id) + '\',\'' + esc(cl.inviteToken || '') + '\')">LINK</button>' +
-        '<button class="btn btn-outline" style="font-size:10px;padding:8px 10px;" onclick="toggleClientPaid(\'' + esc(cl.id) + '\',' + (cl.paid ? 'false' : 'true') + ')">' + (cl.paid ? 'SEGNA NON PAGATO' : 'SEGNA PAGATO') + '</button>' +
-        '<button class="btn btn-outline" style="font-size:10px;padding:8px 10px;" onclick="revokeCoachClient(\'' + esc(cl.id) + '\')">REVOCA</button>' +
-        '<button class="btn btn-outline" style="font-size:10px;padding:8px 10px;color:#c66;border-color:#c66;" onclick="removeCoachClient(\'' + esc(cl.id) + '\')">RIMUOVI</button>' +
+        ' · Prossimo check: ' + esc(fmtDay(cl.nextCheckAt)) +
+        (code ? (' · Codice link: <b style="color:var(--gold);">' + esc(code) + '</b>') : '') + '</div></div></div>' +
+        '<div class="cp-client-actions" style="margin-top:10px;">' +
+        '<button class="btn btn-primary" onclick="openCoachClient(\'' + esc(cl.id) + '\')">APRI</button>' +
+        '<button class="btn btn-outline" onclick="openCoachClientChat(\'' + esc(cl.id) + '\')">CHAT</button>' +
+        '<button class="btn btn-outline" onclick="copyClientInvite(\'' + esc(cl.id) + '\',\'' + esc(cl.inviteToken || '') + '\')">LINK</button>' +
+        '<button class="btn btn-outline" onclick="toggleClientPaid(\'' + esc(cl.id) + '\',' + (cl.paid ? 'false' : 'true') + ')">' + (cl.paid ? 'SEGNA NON PAGATO' : 'SEGNA PAGATO') + '</button>' +
+        '<button class="btn btn-outline" onclick="revokeCoachClient(\'' + esc(cl.id) + '\')">REVOCA</button>' +
+        '<button class="btn btn-outline" style="color:#c66;border-color:#c66;" onclick="removeCoachClient(\'' + esc(cl.id) + '\')">RIMUOVI</button>' +
         '</div></div>';
     }).join('');
   } catch (err) {
@@ -1080,18 +1251,47 @@ async function copyClientInvite(id, token) {
   let text = '';
   try {
     const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 20000);
-    text = snap.inviteText || '';
-    if (!text) {
-      const url = snap.inviteUrl || ((store.__cpOrigin && token) ? store.__cpOrigin + '/c/' + token : '');
-      const user = snap.credentials && snap.credentials.username;
-      const pass = snap.credentials && snap.credentials.password;
-      text = 'Link: ' + url + '\nUtente: ' + (user || '') + '\nPassword: ' + (pass || '');
-    }
+    text = snap.inviteText || formatInviteShareText({
+      name: snap.client && snap.client.displayName,
+      inviteUrl: snap.inviteUrl || ((store.__cpOrigin && token) ? store.__cpOrigin + '/c/' + token : ''),
+      inviteCode: snap.inviteCode || inviteShortCode(token || (snap.inviteUrl || '').split('/').pop()),
+      username: snap.credentials && snap.credentials.username,
+      password: snap.credentials && snap.credentials.password
+    });
   } catch (_) {
-    if (store.__cpOrigin && token) text = store.__cpOrigin + '/c/' + token;
+    if (store.__cpOrigin && token) {
+      text = formatInviteShareText({
+        inviteUrl: store.__cpOrigin + '/c/' + token,
+        inviteCode: inviteShortCode(token),
+        token: token
+      });
+    }
   }
   if (!text) { practiceToast('Link non disponibile', 'warning'); return; }
   copyOrShare(text, 'Invito Nurvan');
+  try { alert('Invito univoco pronto.\n\n' + text); } catch (_) {}
+}
+
+async function rotateClientInvite(id) {
+  if (!confirm('Rigenerare il link? Il vecchio smette di funzionare.')) return;
+  try {
+    const res = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/rotate-invite', {
+      method: 'POST', headers: practiceHeaders(true), body: '{}'
+    }, 20000);
+    const text = res.inviteText || formatInviteShareText({
+      inviteUrl: res.inviteUrl,
+      inviteCode: res.inviteCode,
+      username: res.credentials && res.credentials.username,
+      password: res.credentials && res.credentials.password
+    });
+    await copyOrShare(text, 'Nuovo invito Nurvan');
+    practiceToast('Nuovo link univoco creato', 'success');
+    try { alert('Nuovo link univoco.\n\n' + text); } catch (_) {}
+    if (currentView === 'coachClient') renderPracticeView();
+    else loadCoachClientList();
+  } catch (err) {
+    practiceToast((err && err.message) || 'Rigenerazione fallita', 'danger');
+  }
 }
 
 async function toggleClientPaid(id, paid) {
@@ -1329,7 +1529,7 @@ async function renderCoachWorkspace(c) {
     c.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">' +
       '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">← LISTA</button>' +
       '<button class="btn btn-primary" style="font-size:10px;" onclick="openCoachClientChat(\'' + esc(id) + '\')">CHAT</button>' +
-      '<button class="btn btn-outline" style="font-size:10px;" onclick="exitCoachSession()">ESCI COACH</button></div>' +
+      '<button class="btn btn-outline" style="font-size:10px;" onclick="openCoachDrawer()">MENU</button></div>' +
       '<h1 style="color:#fff;font-size:22px;margin:0 0 4px;">' + esc(cl.displayName || 'Cliente') + '</h1>' +
       '<div style="font-size:11px;color:#888;margin-bottom:6px;">@' + esc(cl.username || '') + ' · ' +
       (cl.intakeMode === 'transition' ? 'Transizione' : 'Nuovo') + (cl.intakeDone ? ' · questionario ok' : ' · questionario in attesa') + '</div>' +
@@ -1364,7 +1564,10 @@ async function renderCoachWorkspace(c) {
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestCheckFromClient(\'' + esc(id) + '\')">RICHIEDI CHECK</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestExamsFromClient(\'' + esc(id) + '\')">RICHIEDI ESAMI</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="resetClientPassword(\'' + esc(id) + '\')">REIMPOSTA PASSWORD</button>' +
-      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="copyClientInvite(\'' + esc(id) + '\',\'' + esc(cl.inviteToken || '') + '\')">COPIA LINK + CREDENZIALI</button></div>' +
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="copyClientInvite(\'' + esc(id) + '\',\'' + esc(cl.inviteToken || '') + '\')">COPIA LINK + CREDENZIALI</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="rotateClientInvite(\'' + esc(id) + '\')">RIGENERA LINK UNIVOCO</button>' +
+      (snap.inviteCode || cl.inviteToken ? ('<div class="cp-help" style="margin-top:6px;">Codice invito: <b style="color:var(--gold);">' + esc(snap.inviteCode || inviteShortCode(cl.inviteToken)) + '</b></div>') : '') +
+      '</div>' +
       '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:8px;">Vedi dati del cliente</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
       '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'training\')">ALLENAMENTO</button>' +
@@ -2604,30 +2807,46 @@ async function pollPracticeInbox() {
       if (typeof persist === 'function') persist();
     } else if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) {
       const box = await practiceFetch('/api/coach/inbox', { method: 'GET', headers: practiceHeaders(false) }, 12000);
+      const accountKey = String((store.accountUser && (store.accountUser.id || store.accountUser.email)) || 'coach');
+      if (!store.coachInboxByAccount || typeof store.coachInboxByAccount !== 'object') store.coachInboxByAccount = {};
+      const accState = store.coachInboxByAccount[accountKey] || { ready: false, seenId: 0 };
       const maxCoachId = (box.events || []).reduce(function (m, e) { return Math.max(m, Number(e.id || 0)); }, 0);
-      if (!store.coachInboxReady) {
+      if (!accState.ready) {
+        accState.ready = true;
+        accState.seenId = maxCoachId;
+        store.coachInboxByAccount[accountKey] = accState;
         store.coachInboxReady = true;
         store.coachSeenEventId = maxCoachId;
         if (typeof persist === 'function') persist();
         return;
       }
-      const seen = store.coachSeenEventId || 0;
+      const seen = Number(accState.seenId || store.coachSeenEventId || 0);
+      const ackIds = [];
       (box.events || []).forEach(function (e) {
         const id = Number(e.id || 0);
-        if (id > seen) {
-          const route = { view: 'coachClient', clientId: String(e.client_id || '') };
-          if (e.kind === 'message') notifyUser('Messaggio cliente', (e.display_name || 'Atleta') + ' ti ha scritto', Object.assign({}, route, { view: 'chat' }));
-          else if (e.kind === 'ask_coach') notifyUser('Richiesta dal cliente', (e.display_name || 'Atleta') + ' chiede al coach', Object.assign({}, route, { view: 'chat' }));
-          else if (e.kind === 'password_help') notifyUser('Recupero password', (e.display_name || 'Atleta') + ' ha chiesto la password', route);
-          else if (e.kind === 'leave_request') notifyUser('Fine collaborazione', (e.display_name || 'Atleta') + ' ha chiesto di chiudere', route);
-          else if (e.kind === 'change_request') notifyUser('Modifica da approvare', (e.display_name || 'Atleta') + ' vuole cambiare il programma', route);
-          else if (e.kind === 'change_notice') notifyUser('Atleta ha modificato', (e.display_name || 'Atleta') + ' ha cambiato il programma', route);
-          else if (e.kind === 'request_program') notifyUser('Richiesta scheda', (e.display_name || 'Atleta') + ' chiede la scheda', route);
-          else if (e.kind === 'workout_started') notifyUser('In allenamento', (e.display_name || 'Atleta') + ' ha iniziato il workout', route);
-          else if (e.kind === 'workout_done') notifyUser('Workout finito', (e.display_name || 'Atleta') + ' ha finalizzato', Object.assign({}, route, { view: 'workout_done' }));
-        }
+        if (id <= seen) return;
+        ackIds.push(id);
+        const from = (e.payload && e.payload.from) || '';
+        if (e.kind === 'message' && from === 'coach') return;
+        const route = { view: 'coachClient', clientId: String(e.client_id || '') };
+        if (e.kind === 'message') notifyUser('Messaggio cliente', (e.display_name || 'Atleta') + ' ti ha scritto', Object.assign({}, route, { view: 'chat' }));
+        else if (e.kind === 'ask_coach') notifyUser('Richiesta dal cliente', (e.display_name || 'Atleta') + ' chiede al coach', Object.assign({}, route, { view: 'chat' }));
+        else if (e.kind === 'password_help') notifyUser('Recupero password', (e.display_name || 'Atleta') + ' ha chiesto la password', route);
+        else if (e.kind === 'leave_request') notifyUser('Fine collaborazione', (e.display_name || 'Atleta') + ' ha chiesto di chiudere', route);
+        else if (e.kind === 'change_request') notifyUser('Modifica da approvare', (e.display_name || 'Atleta') + ' vuole cambiare il programma', route);
+        else if (e.kind === 'change_notice') notifyUser('Atleta ha modificato', (e.display_name || 'Atleta') + ' ha cambiato il programma', route);
+        else if (e.kind === 'request_program') notifyUser('Richiesta scheda', (e.display_name || 'Atleta') + ' chiede la scheda', route);
+        else if (e.kind === 'workout_started') notifyUser('In allenamento', (e.display_name || 'Atleta') + ' ha iniziato il workout', route);
+        else if (e.kind === 'workout_done') notifyUser('Workout finito', (e.display_name || 'Atleta') + ' ha finalizzato', Object.assign({}, route, { view: 'workout_done' }));
       });
-      store.coachSeenEventId = (box.events || []).reduce(function (m, e) { return Math.max(m, Number(e.id || 0)); }, seen);
+      accState.seenId = Math.max(seen, maxCoachId);
+      store.coachInboxByAccount[accountKey] = accState;
+      store.coachSeenEventId = accState.seenId;
+      if (ackIds.length) {
+        practiceFetch('/api/coach/inbox/ack', {
+          method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ ids: ackIds })
+        }, 8000).catch(function () {});
+      }
       if (typeof persist === 'function') persist();
     }
   } catch (_) {}
@@ -2713,18 +2932,52 @@ async function bootCoachPractice() {
   ensurePracticeOverlays();
   ensureAssignBanner();
   requestNotifyPermission();
+  const urlToken = detectInviteToken();
   try {
     const shell = JSON.parse(localStorage.getItem('GS_CLIENT_SHELL') || 'null');
     if (shell && shell.locked && shell.inviteToken) {
-      store.clientShell = true;
-      store.inviteToken = store.inviteToken || shell.inviteToken;
+      if (urlToken && shell.inviteToken !== urlToken) {
+        clearClientShellLock();
+      } else if (!urlToken) {
+        store.clientShell = true;
+        store.inviteToken = store.inviteToken || shell.inviteToken;
+      }
     }
   } catch (_) {}
-  const token = detectInviteToken() || store.inviteToken;
+  const token = urlToken || store.inviteToken;
   if (token) {
     store.inviteToken = token;
-    store.clientShell = true;
   }
+  // Athlete JWT bound to a different invite → force re-login for this link
+  if (urlToken && typeof isAthleteRole === 'function' && isAthleteRole() && store.accountToken) {
+    const bound = store.inviteTokenBound || (store.clientProfile && store.clientProfile.inviteToken) || '';
+    const shellTok = (function () {
+      try { return (JSON.parse(localStorage.getItem('GS_CLIENT_SHELL') || 'null') || {}).inviteToken || ''; } catch (_) { return ''; }
+    })();
+    if ((bound && bound !== urlToken) || (shellTok && shellTok !== urlToken) || (store.inviteToken && store.inviteToken !== urlToken && shellTok !== urlToken)) {
+      store.accountToken = null;
+      store.accountUser = null;
+      store.role = null;
+      store.clientProfile = null;
+      clearClientShellLock();
+      store.inviteToken = urlToken;
+      store.clientShell = true;
+      if (typeof persist === 'function') persist();
+      applyClientChrome();
+      showClientInvite(urlToken);
+      return;
+    }
+  }
+  // Coach master opening /c/... — confirm before entering client shell
+  if (urlToken && store.coachSessionActive && !(typeof isAthleteRole === 'function' && isAthleteRole())) {
+    if (!confirm('Questo è un link cliente. Entrare come atleta su questo dispositivo? (Il master resta separato solo se usi un altro browser/profilo.)')) {
+      try { history.replaceState(null, '', '/'); } catch (_) {}
+      store.inviteToken = null;
+      applyClientChrome();
+      return;
+    }
+  }
+  if (token) store.clientShell = true;
   applyClientChrome();
   if (token && !(typeof isAthleteRole === 'function' && isAthleteRole() && store.accountToken)) {
     showClientInvite(token);
@@ -2732,6 +2985,7 @@ async function bootCoachPractice() {
   }
   if (typeof isAthleteRole === 'function' && isAthleteRole() && store.accountToken) {
     store.clientShell = true;
+    store.inviteTokenBound = store.inviteToken || urlToken || '';
     await refreshAthleteMe();
     startPresenceHeartbeat();
     if (store.clientProfile && store.clientProfile.needIntake) showClientIntake(store.clientProfile.intake || {});
@@ -2852,16 +3106,11 @@ function wrapPracticeHooks() {
       if (store && store.coachSessionActive && !store.coachAssigning && !(typeof isAthleteRole === 'function' && isAthleteRole())) {
         const coachCore = { coachHub: 1, coachClient: 1, coachChat: 1 };
         const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, import: 1, programs: 1 };
-        const ok = coachCore[raw] || (store.coachViewingClient && clientDomains[raw]) || (store.coachAssigning && (clientDomains[raw] || raw === 'import' || raw === 'programs'));
+        const ok = coachCore[raw] || ((store.coachViewingClient || store.coachAssigning) && clientDomains[raw]);
         if (!ok) {
-          if (!confirm('Stai uscendo dall’hub Coach per tornare all’app personale. Continuare?')) return;
-          store.coachSessionActive = false;
-          if (store.coachViewingClient) {
-            leaveCoachClientView(true);
-          }
-          if (typeof persist === 'function') persist();
+          practiceToast('Sei in modalità Coach. Usa ESCI COACH per tornare all’app personale.', 'warning');
+          return;
         }
-        // Viewing client + open import → start assign sandbox for that client
         if (raw === 'import' && store.coachViewingClient && !store.coachAssigning) {
           const id = store.coachWorkspace && store.coachWorkspace.clientId;
           const name = (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente';
@@ -2975,6 +3224,11 @@ function wrapPracticeHooks() {
       const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
       const shell = !!(store.clientShell || athlete);
       try { sessionStorage.removeItem('GS_SESSION_AUTH'); } catch (_) {}
+      store.coachInboxReady = false;
+      store.coachSeenEventId = 0;
+      store.coachInboxByAccount = {};
+      store.clientInboxReady = false;
+      store.clientSeenEventId = 0;
       _lo();
       store.role = null;
       store.clientProfile = null;
@@ -2982,6 +3236,7 @@ function wrapPracticeHooks() {
       store.coachSessionActive = false;
       store.accountToken = null;
       store.accountUser = null;
+      store.inviteTokenBound = null;
       if (shell && token) {
         store.clientShell = true;
         store.inviteToken = token;
@@ -2993,6 +3248,7 @@ function wrapPracticeHooks() {
         applyClientChrome();
         return;
       }
+      clearClientShellLock();
       applyClientChrome();
     };
     logoutAccount.__cpWrapped = true;
@@ -3228,7 +3484,7 @@ function callOverlayMarkup() {
     '<div id="cp-call-status" style="font-size:11px;color:#aaa;flex:1;text-align:center;">Connessione…</div>' +
     '<span style="width:48px;"></span></div>' +
     '<div id="cp-call-stage">' +
-    '<video id="cp-call-remote" autoplay playsinline webkit-playsinline></video>' +
+    '<video id="cp-call-remote" autoplay playsinline muted webkit-playsinline></video>' +
     '<video id="cp-call-local" autoplay playsinline muted webkit-playsinline></video>' +
     '<div id="cp-call-controls">' +
     '<button type="button" id="cp-call-mute" class="cp-call-btn" title="Microfono" onclick="toggleCallMute()">MIC</button>' +
@@ -3323,17 +3579,31 @@ async function fetchRemotePeerId(role, clientId) {
   return null;
 }
 
+function attachRemoteStream(remote) {
+  const el = document.getElementById('cp-call-remote');
+  if (!el) return;
+  el.srcObject = remote;
+  el.muted = true;
+  const playP = el.play && el.play();
+  if (playP && playP.then) {
+    playP.then(function () {
+      try { el.muted = false; } catch (_) {}
+    }).catch(function () {
+      try { el.muted = true; el.play(); } catch (_) {}
+    });
+  } else {
+    try { el.muted = false; } catch (_) {}
+  }
+  setCallStatus('In chiamata');
+}
+
 function bindPeerIncoming(stream) {
   if (!__cpCall.peer) return;
   __cpCall.peer.on('call', function (call) {
     setCallStatus('Risposta chiamata…');
     __cpCall.call = call;
     call.answer(stream);
-    call.on('stream', function (remote) {
-      const el = document.getElementById('cp-call-remote');
-      if (el) el.srcObject = remote;
-      setCallStatus('In chiamata');
-    });
+    call.on('stream', function (remote) { attachRemoteStream(remote); });
     call.on('close', function () { hangupInternalVideocall(true); });
     call.on('error', function () { practiceToast('Errore chiamata', 'danger'); });
   });
@@ -3349,7 +3619,7 @@ async function startInternalVideocall(clientId, role) {
     return;
   }
   ensureCallOverlay().classList.add('active');
-  setCallStatus('Avvio PeerJS…');
+  setCallStatus('Carico PeerJS…');
   __cpCall.role = role;
   __cpCall.clientId = clientId;
   __cpCall.muted = false;
@@ -3358,10 +3628,16 @@ async function startInternalVideocall(clientId, role) {
   try {
     const PeerCtor = await loadPeerJs();
     if (!PeerCtor) throw new Error('PeerJS non disponibile');
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user' },
-      audio: true
-    });
+    setCallStatus('Permessi camera/microfono…');
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: true
+      });
+    } catch (mediaErr) {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    }
     __cpCall.local = stream;
     const loc = document.getElementById('cp-call-local');
     if (loc) {
@@ -3369,7 +3645,9 @@ async function startInternalVideocall(clientId, role) {
       try { loc.play(); } catch (_) {}
     }
 
+    setCallStatus('Configuro ICE…');
     const iceServers = await fetchWebRtcIceServers();
+    setCallStatus('Connessione PeerServer…');
     const peer = new PeerCtor(undefined, {
       host: '0.peerjs.com',
       port: 443,
@@ -3381,7 +3659,7 @@ async function startInternalVideocall(clientId, role) {
     __cpCall.peer = peer;
 
     await new Promise(function (resolve, reject) {
-      const t = setTimeout(function () { reject(new Error('Timeout PeerServer')); }, 20000);
+      const t = setTimeout(function () { reject(new Error('Timeout PeerServer (rete/firewall). Riprova su Wi‑Fi o configura TURN.')); }, 20000);
       peer.on('open', function (id) {
         clearTimeout(t);
         __cpCall.myPeerId = id;
@@ -3397,7 +3675,6 @@ async function startInternalVideocall(clientId, role) {
     await publishPeerId(role, clientId, __cpCall.myPeerId);
     setCallStatus('In attesa dell’altro… ID ' + String(__cpCall.myPeerId).slice(0, 8));
 
-    // Coach (or whoever starts) tries to dial the other peer when ready
     let tries = 0;
     __cpCall.poll = setInterval(async function () {
       if (__cpCall.call) return;
@@ -3412,14 +3689,7 @@ async function startInternalVideocall(clientId, role) {
         setCallStatus('Chiamo…');
         const call = peer.call(remoteId, stream);
         __cpCall.call = call;
-        call.on('stream', function (remote) {
-          const el = document.getElementById('cp-call-remote');
-          if (el) {
-            el.srcObject = remote;
-            try { el.play(); } catch (_) {}
-          }
-          setCallStatus('In chiamata');
-        });
+        call.on('stream', function (remote) { attachRemoteStream(remote); });
         call.on('close', function () { hangupInternalVideocall(true); });
         call.on('error', function (e) {
           practiceToast((e && e.message) || 'Chiamata fallita', 'danger');
@@ -3475,6 +3745,10 @@ window.submitAddClient = submitAddClient;
 window.loadCoachClientList = loadCoachClientList;
 window.debounceCoachClientList = debounceCoachClientList;
 window.copyClientInvite = copyClientInvite;
+window.rotateClientInvite = rotateClientInvite;
+window.openCoachDrawer = openCoachDrawer;
+window.closeCoachDrawer = closeCoachDrawer;
+window.switchCoachClientFromHeader = switchCoachClientFromHeader;
 window.toggleClientPaid = toggleClientPaid;
 window.revokeCoachClient = revokeCoachClient;
 window.removeCoachClient = removeCoachClient;

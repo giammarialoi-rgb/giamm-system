@@ -324,7 +324,7 @@ label, label span, .card label, .card label span {
   -webkit-text-fill-color: #eee !important;
 }
 body.coach-viewing-client main {
-  padding-top: 8px;
+  /* session bar already reserved via --cp-session-bar */
 }
 
 nav.bottom-nav {
@@ -7963,6 +7963,9 @@ function requestAppNotificationPermission() {
   } catch (_) {}
 }
 function scheduleAllItemAlerts() {
+  if (typeof store !== 'undefined' && store && (store.coachViewingClient || store.coachAssigning)) {
+    return;
+  }
   const jobs = [];
   ((DATA && DATA.therapy && DATA.therapy.medications) || []).forEach(function (m, i) {
     if (!m || !m.alertEnabled) return;
