@@ -537,7 +537,43 @@ select, input {
 .stats-chip.is-on { background:var(--gold); border-color:var(--gold); color:#000; }
 .stats-chip-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 .stats-anatomy-detail { padding:0 14px 12px; font-size:11px; color:#888; min-height:18px; }
-.stats-check-photos { display:flex; gap:10px; justify-content:center; }
+.stats-period {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.stats-period .btn {
+  font-size: 11px;
+  padding: 8px 10px;
+  color: #eee;
+  -webkit-text-fill-color: #eee;
+}
+.stats-period .btn.btn-primary {
+  color: #000;
+  -webkit-text-fill-color: #000;
+}
+.stats-period .btn.btn-outline {
+  color: var(--gold);
+  -webkit-text-fill-color: var(--gold);
+}
+.stats-check-photos {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+#check-fisico-pdf-modal,
+#check-fisico-pdf-modal .card,
+#check-fisico-pdf-modal label,
+#check-fisico-pdf-modal label span,
+.stats-anatomy label,
+.stats-anatomy label span {
+  color: #eee !important;
+  -webkit-text-fill-color: #eee !important;
+}
+#check-fisico-pdf-modal h3 {
+  color: var(--gold) !important;
+  -webkit-text-fill-color: var(--gold) !important;
+}
 .stats-check-slot {
   flex:1; max-width:156px; min-height:168px; border:1px dashed #333; border-radius:14px;
   background:#0c0c0c; overflow:hidden; position:relative; cursor:pointer;
@@ -1713,20 +1749,20 @@ body.focus-mode [data-rewards-only] {
 
 <input type="file" id="check-photo-input" style="display:none;" accept="image/*" onchange="onCheckPhotoInput(event)">
 <div id="check-fisico-pdf-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:10050;align-items:center;justify-content:center;padding:16px;">
-  <div class="card" style="max-width:460px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--gold);background:#111;">
+  <div class="card" style="max-width:460px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--gold);background:#111;color:#eee;">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
       <h3 style="font-size:14px;color:var(--gold);font-weight:800;">PDF PER IL COACH</h3>
       <button class="btn btn-outline" style="font-size:10px;padding:2px 6px;" onclick="closeCheckFisicoPdfModal()">✕</button>
     </div>
-    <div style="padding:12px 4px 4px;font-size:12px;color:#eee;">
-      <div style="font-size:10px;color:#888;font-weight:800;margin-bottom:8px;">OLTRE A FOTO E PESO, COSA INSERIRE</div>
-      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;"><input type="radio" name="cf-pdf-train" value="detailed" onchange="setCheckFisicoPdfOpt('pdfTraining','detailed')"><span>Allenamento dettagliato (serie, ripetizioni, RIR/RPE)</span></label>
-      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px;"><input type="radio" name="cf-pdf-train" value="summary" onchange="setCheckFisicoPdfOpt('pdfTraining','summary')"><span>Solo foto + tonnellaggio e intensità settimanale</span></label>
-      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input type="checkbox" id="cf-pdf-nutr" onchange="setCheckFisicoPdfOpt('pdfNutrition', this.checked)"> Aderenza alimentazione</label>
-      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;"><input type="checkbox" id="cf-pdf-macro" onchange="setCheckFisicoPdfOpt('pdfMacros', this.checked)"><span>Modifiche registrate con macros allegati</span></label>
-      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input type="checkbox" id="cf-pdf-supp" onchange="setCheckFisicoPdfOpt('pdfSupp', this.checked)"> Aderenza integrazione</label>
-      <label style="display:flex;gap:8px;align-items:center;margin-bottom:12px;"><input type="checkbox" id="cf-pdf-ther" onchange="setCheckFisicoPdfOpt('pdfTherapy', this.checked)"> Aderenza terapia</label>
-      <div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">NOTE PER IL COACH</div>
+    <div style="padding:12px 4px 4px;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee;">
+      <div style="font-size:10px;color:#aaa;font-weight:800;margin-bottom:8px;">OLTRE A FOTO E PESO, COSA INSERIRE</div>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;color:#eee !important;-webkit-text-fill-color:#eee;"><input type="radio" name="cf-pdf-train" value="detailed" onchange="setCheckFisicoPdfOpt('pdfTraining','detailed')"><span style="color:#eee !important;-webkit-text-fill-color:#eee;">Allenamento dettagliato (serie, ripetizioni, RIR/RPE)</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px;color:#eee !important;-webkit-text-fill-color:#eee;"><input type="radio" name="cf-pdf-train" value="summary" onchange="setCheckFisicoPdfOpt('pdfTraining','summary')"><span style="color:#eee !important;-webkit-text-fill-color:#eee;">Solo foto + tonnellaggio e intensità settimanale</span></label>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;color:#eee !important;-webkit-text-fill-color:#eee;"><input type="checkbox" id="cf-pdf-nutr" onchange="setCheckFisicoPdfOpt('pdfNutrition', this.checked)"> <span style="color:#eee !important;">Aderenza alimentazione</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;color:#eee !important;-webkit-text-fill-color:#eee;"><input type="checkbox" id="cf-pdf-macro" onchange="setCheckFisicoPdfOpt('pdfMacros', this.checked)"><span style="color:#eee !important;-webkit-text-fill-color:#eee;">Modifiche registrate con macros allegati</span></label>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;color:#eee !important;-webkit-text-fill-color:#eee;"><input type="checkbox" id="cf-pdf-supp" onchange="setCheckFisicoPdfOpt('pdfSupp', this.checked)"> <span style="color:#eee !important;">Aderenza integrazione</span></label>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:12px;color:#eee !important;-webkit-text-fill-color:#eee;"><input type="checkbox" id="cf-pdf-ther" onchange="setCheckFisicoPdfOpt('pdfTherapy', this.checked)"> <span style="color:#eee !important;">Aderenza terapia</span></label>
+      <div style="font-size:10px;color:#aaa;font-weight:800;margin-bottom:6px;">NOTE PER IL COACH</div>
       <textarea id="cf-pdf-notes" rows="3" placeholder="Es. ho avuto la febbre 3 giorni, ho dormito poco…" oninput="onCheckFisicoNotes(this.value)" style="width:100%;padding:10px;background:#0a0a0a;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
     </div>
     <div class="modal-sticky-footer" style="display:flex;gap:8px;margin-top:12px;">
@@ -45770,18 +45806,12 @@ function renderCheckFisicoCardHtml() {
     '<input id="check-weight-input" type="number" step="0.1" inputmode="decimal" value="' + esc(String(draft.weight || '')) + '" oninput="onCheckFisicoWeight(this.value)" style="width:100%;padding:10px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:16px;font-weight:800;"></div>' +
     '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">RESOCONTO ALLENAMENTI</div>' +
     '<div class="stats-period">' + periodBtns + '</div></div>' +
-    '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">NOTE PER IL COACH</div>' +
+    '<div style="margin-top:12px;"><div style="font-size:10px;color:#aaa;font-weight:800;margin-bottom:6px;">NOTE PER IL COACH</div>' +
     '<textarea id="check-notes-input" rows="2" placeholder="Es. ho avuto la febbre 3 giorni…" oninput="onCheckFisicoNotes(this.value)" style="width:100%;padding:10px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:13px;resize:vertical;">' + esc(String(draft.notes || '')) + '</textarea></div>' +
-    '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">ANALISI COACH AI</div>' +
-    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#eee;margin-bottom:6px;"><input type="checkbox" ' + (draft.photosOnly ? 'checked' : '') + ' onchange="setCheckFisicoAiOpt(\'photosOnly\', this.checked)"> Analizza solo foto</label>' +
-    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#eee;margin-bottom:6px;"><input type="checkbox" ' + (draft.ctxTraining ? 'checked' : '') + ' ' + (draft.photosOnly ? 'disabled' : '') + ' onchange="setCheckFisicoAiOpt(\'ctxTraining\', this.checked)"> Contestualizza con allenamento</label>' +
-    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#eee;margin-bottom:6px;"><input type="checkbox" ' + (draft.ctxSupp ? 'checked' : '') + ' ' + (draft.photosOnly ? 'disabled' : '') + ' onchange="setCheckFisicoAiOpt(\'ctxSupp\', this.checked)"> Contestualizza con integrazione</label>' +
-    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#eee;margin-bottom:6px;"><input type="checkbox" ' + (draft.ctxTherapy ? 'checked' : '') + ' ' + (draft.photosOnly ? 'disabled' : '') + ' onchange="setCheckFisicoAiOpt(\'ctxTherapy\', this.checked)"> Contestualizza con terapia</label>' +
-    '</div>' +
+    '<div style="margin-top:10px;padding:10px;background:#141414;border:1px solid #2a2a2a;border-radius:10px;font-size:11px;color:#ccc;line-height:1.4;">Il check lo valuta solo il <b style="color:#fff;">coach reale</b>. Salva o invialo dalla chat/PDF — niente analisi AI qui.</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">' +
     '<button type="button" class="btn btn-primary" style="flex:1;min-width:140px;font-size:11px;" onclick="saveCheckFisico()">Salva check</button>' +
-    '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:11px;border-color:var(--gold);color:var(--gold);" onclick="analyzeCheckFisicoWithCoach()">Analizza check fisico</button>' +
-    '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:11px;" onclick="sendCheckFisicoToCoach()">Invia al coach</button>' +
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:11px;border-color:var(--gold);color:var(--gold);" onclick="sendCheckFisicoToCoach()">Invia al coach</button>' +
     '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:11px;" onclick="exportCheckFisicoPdf()">Esporta PDF</button>' +
     '</div>' +
     '<div style="margin-top:14px;font-size:10px;font-weight:800;color:#777;letter-spacing:0.6px;">ULTIMI CHECK</div>' +
@@ -46008,50 +46038,11 @@ function buildCheckFisicoCoachPrompt(entry, report) {
   return msg;
 }
 async function analyzeCheckFisicoWithCoach() {
-  const entry = await saveCheckFisico();
-  if (!entry) return;
-  const d = checkFisicoDraft();
-  const front = d.front || await getDocumentFile('bodycheck_front_' + entry.id);
-  const back = d.back || await getDocumentFile('bodycheck_back_' + entry.id);
-  if (d.photosOnly && !front && !back) {
-    if (typeof showToast === 'function') showToast('Carica almeno una foto per analizzare solo le foto', 'danger');
-    return;
+  // Client cannot use Coach AI for body checks — only the human coach reviews them.
+  if (typeof showToast === 'function') {
+    showToast('Il check lo valuta solo il coach reale. Puoi inviarglielo da qui.', 'info');
   }
-  const report = buildCheckFisicoTextReport(entry);
-  const msg = buildCheckFisicoCoachPrompt(entry, report);
-  const images = [];
-  if (front) {
-    const f = await shrinkDataUrlForAi(front, 480);
-    if (f) images.push({ mime: 'image/jpeg', dataUrl: f, label: 'fronte' });
-  }
-  if (back) {
-    const b = await shrinkDataUrlForAi(back, 480);
-    if (b) images.push({ mime: 'image/jpeg', dataUrl: b, label: 'retro' });
-  }
-  navigate('ai');
-  let tries = 0;
-  function kick() {
-    tries++;
-    const input = $('ai-input');
-    const hist = $('chat-history');
-    if (input) input.value = msg;
-    if (hist && typeof askAIInner === 'function') {
-      withBusy(function () {
-        return askAIInner(msg, {
-          images: images,
-          checkFisico: true,
-          photosOnly: !!d.photosOnly,
-          ctxTraining: !d.photosOnly && !!d.ctxTraining,
-          ctxSupp: !d.photosOnly && !!d.ctxSupp,
-          ctxTherapy: !d.photosOnly && !!d.ctxTherapy,
-          timeoutMs: 120000
-        });
-      }, 'Coach AI sta analizzando il check fisico…', { immediate: true });
-      return;
-    }
-    if (tries < 15) setTimeout(kick, 120);
-  }
-  setTimeout(kick, 80);
+  if (typeof sendCheckFisicoToCoach === 'function') return sendCheckFisicoToCoach();
 }
 function setCheckFisicoPdfOpt(key, val) {
   checkFisicoDraft()[key] = val;
