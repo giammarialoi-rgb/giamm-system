@@ -453,6 +453,7 @@ async function confirmDemoUnlock() {
     if (!payload || !payload.ok) throw new Error((payload && payload.error) || 'Sblocco non riuscito.');
     store.coachUnlocked = true;
     if (typeof persist === 'function') persist();
+    requestNotifyPermission();
     showOverlay('cp-demo', false);
     applyClientChrome();
     practiceToast('Pagamento ricevuto. Modalità Coach sbloccata.', 'success');
@@ -825,20 +826,56 @@ function snapshotCoachMaster() {
     therapy: store.therapy ? JSON.parse(JSON.stringify(store.therapy)) : null,
     exams: store.exams ? JSON.parse(JSON.stringify(store.exams)) : null,
     activeProgramId: store.activeProgramId || null,
-    activeProgram: store.activeProgram ? JSON.parse(JSON.stringify(store.activeProgram)) : null
+    activeProgram: store.activeProgram ? JSON.parse(JSON.stringify(store.activeProgram)) : null,
+    currentWeek: typeof currentWeek !== 'undefined' ? currentWeek : 1,
+    currentDay: typeof currentDay !== 'undefined' ? currentDay : 0
   };
 }
 
-function restoreCoachMaster(backup) {
+function emptyClientAssignDraft() {
+  return {
+    id: 'assign_draft_' + Date.now(),
+    title: 'Bozza per cliente',
+    weeks: [],
+    nutrition: null,
+    supplementation: null,
+    therapy: null,
+    exams: null,
+    depersonalized: true
+  };
+}
+
+async function restoreCoachMaster(backup) {
   if (!backup) return;
-  try { DATA = backup.DATA || {}; } catch (_) {}
+  try { DATA = backup.DATA || { title: 'Nessun Programma Attivo', weeks: [] }; } catch (_) {}
   store.nutrition = backup.nutrition;
   store.supplementation = backup.supplementation;
   store.therapy = backup.therapy;
   store.exams = backup.exams;
   store.activeProgramId = backup.activeProgramId;
   store.activeProgram = backup.activeProgram;
+  if (typeof currentWeek !== 'undefined') currentWeek = backup.currentWeek || 1;
+  if (typeof currentDay !== 'undefined') currentDay = backup.currentDay || 0;
   if (typeof persist === 'function') persist();
+  try {
+    if (backup.DATA && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
+      await GiammariaPersistence.activateCanonicalProgram(backup.DATA);
+    }
+  } catch (err) {
+    console.warn('[ASSIGN_RESTORE_IDB]', err);
+  }
+}
+
+function requestNotifyPermission() {
+  try {
+    const native = typeof nativeBridge === 'function' ? nativeBridge() : (typeof NativeConfig !== 'undefined' ? NativeConfig : null);
+    if (native && typeof native.requestNotifications === 'function') native.requestNotifications();
+  } catch (_) {}
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  } catch (_) {}
 }
 
 function ensureAssignBanner() {
@@ -853,15 +890,15 @@ function ensureAssignBanner() {
   const job = store.coachAssigning;
   if (!job) { bar.style.display = 'none'; return; }
   bar.style.display = 'block';
-  bar.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;">ASSEGNAZIONE A ' + esc(job.name || 'cliente') + '</div>' +
-    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Importa o scegli, poi <b style="color:#fff;">apri e modifica</b> (es. aggiungi la Leg Extension al giorno 2). La tua scheda personale non cambia.</div>' +
+  bar.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;">ASSEGNAZIONE A ' + esc(job.name || 'cliente') + ' · SPAZIO CLIENTE</div>' +
+    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Questo non è il tuo allenamento. Importa o scegli, modifica, poi invia. Annulla per tornare al master.</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'training\')">ALLENAMENTO</button>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'nutrition\')">ALIMENTAZIONE</button>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'supplements\')">INTEGRAZIONE</button>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'therapy\')">TERAPIA</button>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'exams\')">ESAMI</button></div>' +
-    '<div style="display:flex;gap:8px;"><button class="btn btn-primary" style="flex:1;font-size:11px;" onclick="confirmAssignSandbox()">CONFERMA ASSEGNAZIONE</button>' +
+    '<div style="display:flex;gap:8px;"><button class="btn btn-primary" style="flex:1;font-size:11px;" onclick="confirmAssignSandbox()">INVIA AL CLIENTE</button>' +
     '<button class="btn btn-outline" style="flex:1;font-size:11px;" onclick="cancelAssignSandbox()">ANNULLA</button></div>';
 }
 
@@ -872,25 +909,44 @@ function openAssignChooser(clientId, name) {
   if (!p) return;
   p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">ASSEGNA SCHEDA</div>' +
     '<h2>Cosa vuoi assegnare a ' + esc(name || 'cliente') + '?</h2>' +
-    '<p class="cp-help">Si apre il flusso generale dell’app. Dopo import o scelta <b style="color:#fff;">visualizzi e puoi modificare</b> (aggiungere un esercizio, cambiare un pasto, ecc.) e solo dopo confermi l’invio al cliente. La tua scheda personale resta intatta.</p>' +
+    '<p class="cp-help">Si apre uno <b style="color:#fff;">spazio cliente separato</b> dal tuo allenamento. Importa o scegli, modifica, poi INVIA. Solo «usa scheda attiva» parte dalla tua come base.</p>' +
     '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'import\')">IMPORTA PDF / EXCEL / WORD</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'programs\')">DATABASE PROGRAMMI</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'copy\')">USA SCHEDA ATTIVA COME BASE</button>' +
     '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\', false)">ANNULLA</button>';
   showOverlay('cp-assign', true);
+  requestNotifyPermission();
 }
 
 function beginAssignSandbox(clientId, name, mode) {
-  store.coachAssigning = { clientId: clientId, name: name, mode: mode };
+  requestNotifyPermission();
+  store.coachAssigning = { clientId: clientId, name: name, mode: mode || 'import' };
   window.__cpAssignBackup = snapshotCoachMaster();
   if (typeof persist === 'function') persist();
+  // import / database: spazio cliente vuoto. copy: parte dalla scheda personale (solo in memoria).
+  if (mode !== 'copy') {
+    const draft = emptyClientAssignDraft();
+    try { DATA = draft; } catch (_) {}
+    store.activeProgram = draft;
+    store.activeProgramId = draft.id;
+    store.nutrition = null;
+    store.supplementation = null;
+    store.therapy = null;
+    store.exams = null;
+    if (typeof currentWeek !== 'undefined') currentWeek = 1;
+    if (typeof currentDay !== 'undefined') currentDay = 0;
+  }
   showOverlay('cp-assign', false);
   ensureAssignBanner();
-  if (mode === 'import') navigate('import');
-  else if (mode === 'programs') navigate('programs');
-  else {
+  if (mode === 'import') {
+    navigate('import');
+    practiceToast('Spazio cliente vuoto: importa il file da assegnare. Il tuo allenamento resta intatto.', 'success');
+  } else if (mode === 'programs') {
+    navigate('programs');
+    practiceToast('Scegli una scheda dal database per il cliente. La tua resta intatta.', 'success');
+  } else {
     navigate('training');
-    practiceToast('Apri i giorni, modifica se serve, poi CONFERMA ASSEGNAZIONE.', 'success');
+    practiceToast('Copia della tua scheda attiva come base cliente. Modifica e conferma.', 'success');
   }
 }
 
@@ -907,38 +963,55 @@ function detectSandboxKinds() {
 async function confirmAssignSandbox() {
   const job = store.coachAssigning;
   if (!job || !job.clientId) return;
-  const payload = { activeProgram: (typeof DATA !== 'undefined' ? DATA : null) };
-  if (DATA && DATA.nutrition) payload.nutrition = DATA.nutrition;
-  else if (store.nutrition) payload.nutrition = store.nutrition;
-  if (DATA && DATA.supplementation) payload.supplementation = DATA.supplementation;
-  if (DATA && DATA.therapy) payload.therapy = DATA.therapy;
-  if (DATA && DATA.exams) payload.exams = DATA.exams;
   const kinds = detectSandboxKinds();
-  try {
+  if (!kinds.length) {
+    practiceToast('Nessun contenuto da assegnare: importa o scegli una scheda prima.', 'warning');
+    return;
+  }
+  const run = async function () {
+    const payload = {
+      activeProgram: (typeof DATA !== 'undefined' && DATA) ? JSON.parse(JSON.stringify(DATA)) : null
+    };
+    if (DATA && DATA.nutrition) payload.nutrition = JSON.parse(JSON.stringify(DATA.nutrition));
+    else if (store.nutrition) payload.nutrition = JSON.parse(JSON.stringify(store.nutrition));
+    if (DATA && DATA.supplementation) payload.supplementation = JSON.parse(JSON.stringify(DATA.supplementation));
+    else if (store.supplementation) payload.supplementation = JSON.parse(JSON.stringify(store.supplementation));
+    if (DATA && DATA.therapy) payload.therapy = JSON.parse(JSON.stringify(DATA.therapy));
+    else if (store.therapy) payload.therapy = JSON.parse(JSON.stringify(store.therapy));
+    if (DATA && DATA.exams) payload.exams = JSON.parse(JSON.stringify(DATA.exams));
+    else if (store.exams) payload.exams = JSON.parse(JSON.stringify(store.exams));
     await practiceFetch('/api/coach/clients/' + encodeURIComponent(job.clientId) + '/assign', {
       method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ data: payload, kinds: kinds })
-    }, 25000);
-    restoreCoachMaster(window.__cpAssignBackup || job.backup);
+    }, 45000);
+    await restoreCoachMaster(window.__cpAssignBackup || job.backup);
     window.__cpAssignBackup = null;
     store.coachAssigning = null;
     if (typeof persist === 'function') persist();
     ensureAssignBanner();
-    practiceToast('Scheda assegnata al cliente', 'success');
+    practiceToast('Scheda inviata a ' + (job.name || 'cliente'), 'success');
     store.coachWorkspace = { clientId: job.clientId };
     navigate('coachClient');
+  };
+  try {
+    if (typeof withBusy === 'function') {
+      await withBusy(run, 'Invio scheda al cliente…', { immediate: true });
+    } else {
+      practiceToast('Invio in corso…', 'info');
+      await run();
+    }
   } catch (err) {
     practiceToast((err && err.message) || 'Assegnazione fallita', 'danger');
   }
 }
 
-function cancelAssignSandbox() {
+async function cancelAssignSandbox() {
   const job = store.coachAssigning;
-  if (job) restoreCoachMaster(window.__cpAssignBackup || job.backup);
+  if (job) await restoreCoachMaster(window.__cpAssignBackup || job.backup);
   window.__cpAssignBackup = null;
   store.coachAssigning = null;
   if (typeof persist === 'function') persist();
   ensureAssignBanner();
-  practiceToast('Assegnazione annullata', 'warning');
+  practiceToast('Assegnazione annullata — scheda personale ripristinata', 'warning');
   navigate('coachHub');
 }
 
@@ -1232,6 +1305,7 @@ async function requestLeaveCoach() {
 }
 
 function notifyUser(title, body) {
+  requestNotifyPermission();
   try {
     const native = typeof nativeBridge === 'function' ? nativeBridge() : (typeof NativeConfig !== 'undefined' ? NativeConfig : null);
     if (native && typeof native.notifyNow === 'function') {
@@ -1242,7 +1316,9 @@ function notifyUser(title, body) {
   try {
     if (typeof Notification !== 'undefined') {
       if (Notification.permission === 'granted') new Notification(title, { body: body });
-      else if (Notification.permission !== 'denied') Notification.requestPermission();
+      else if (Notification.permission !== 'denied') Notification.requestPermission().then(function (p) {
+        if (p === 'granted') new Notification(title, { body: body });
+      });
     }
   } catch (_) {}
 }
@@ -1285,8 +1361,11 @@ async function pollPracticeInbox() {
         if (id > seen && e.kind !== 'message') {
           const copy = eventNotifyCopy(e.kind);
           if (copy) notifyUser(copy[0], copy[1]);
-          if (e.kind === 'change_approved' && typeof syncAccountData === 'function') {
-            syncAccountData(true).then(function () { rememberApprovedProgram(); if (typeof render === 'function') render(); }).catch(function () {});
+          if ((e.kind === 'program_assigned' || e.kind === 'nutrition_assigned' || e.kind === 'supplements_assigned' || e.kind === 'therapy_assigned' || e.kind === 'exams_assigned' || e.kind === 'change_approved') && typeof syncAccountData === 'function') {
+            syncAccountData(true).then(function () {
+              if (e.kind === 'change_approved') rememberApprovedProgram();
+              if (typeof render === 'function') render();
+            }).catch(function () {});
           }
           if (e.kind === 'max_freedom') refreshAthleteMe();
         }
@@ -1360,13 +1439,10 @@ async function bootCoachPractice() {
   ensurePracticeStyle();
   ensurePracticeOverlays();
   ensureAssignBanner();
+  requestNotifyPermission();
   const token = detectInviteToken() || store.inviteToken;
   if (token) store.inviteToken = token;
   applyClientChrome();
-  try {
-    const native = typeof nativeBridge === 'function' ? nativeBridge() : (typeof NativeConfig !== 'undefined' ? NativeConfig : null);
-    if (native && native.requestNotifications) native.requestNotifications();
-  } catch (_) {}
   if (token && !(typeof isAthleteRole === 'function' && isAthleteRole() && store.accountToken)) {
     showClientInvite(token);
     return;

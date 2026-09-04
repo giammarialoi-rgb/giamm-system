@@ -3010,6 +3010,7 @@ async function syncAccountData(download=false){
 }
 function scheduleAccountSync(){
   if(!store.accountToken) return;
+  if (store.coachAssigning) return;
   clearTimeout(accountSyncTimer);
   accountSyncTimer = setTimeout(function () {
     accountRequest('/api/account/sync', {
@@ -5231,6 +5232,10 @@ async function requestProgramReprogramInner(kind, desired, goal, secondary, cons
 function persistActiveProgramStructure() {
   try {
     if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks)) return;
+    if (store && store.coachAssigning) {
+      store.activeProgram = DATA;
+      return;
+    }
     if (store.activeProgramId && !DATA.id) DATA.id = store.activeProgramId;
     if (DATA.id && !store.activeProgramId) store.activeProgramId = DATA.id;
     DATA.duration_weeks = DATA.weeks.length;
@@ -6283,9 +6288,21 @@ function persist() {
   ensureStoreIntegrity();
   try { upsertLiveCoachArchive(); } catch (_) {}
   try {
-    const sanitized = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.sanitizeStoreForLocalStorage) 
+    let sanitized = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.sanitizeStoreForLocalStorage) 
       ? GiammariaPersistence.sanitizeStoreForLocalStorage(store) 
       : store;
+    if (store.coachAssigning && window.__cpAssignBackup && sanitized && typeof sanitized === 'object') {
+      const bak = window.__cpAssignBackup;
+      sanitized = Object.assign({}, sanitized, {
+        activeProgramId: bak.activeProgramId,
+        activeProgram: bak.activeProgram,
+        nutrition: bak.nutrition,
+        supplementation: bak.supplementation,
+        therapy: bak.therapy,
+        exams: bak.exams,
+        coachAssigning: store.coachAssigning
+      });
+    }
     if (store.stayLoggedIn === false && sanitized && typeof sanitized === 'object') {
       sanitized.accountToken = null;
       sanitized.stayLoggedIn = false;
@@ -6476,12 +6493,12 @@ function buildLocalCoachInsightAnswer(promptText) {
   return insight ? ('## Stato atleta\n\n' + insight) : null;
 }
 function afterProgramActivatedNavigate() {
-  if (store && store.coachAssigning) {
-    if (typeof showToast === 'function') showToast('Rivedi e modifica se serve, poi CONFERMA ASSEGNAZIONE.', 'success');
-    navigate('training');
-    if (typeof ensureAssignBanner === 'function') ensureAssignBanner();
-    return;
-  }
+    if (store && store.coachAssigning) {
+      if (typeof showToast === 'function') showToast('Rivedi e modifica se serve, poi INVIA AL CLIENTE.', 'success');
+      navigate('training');
+      if (typeof ensureAssignBanner === 'function') ensureAssignBanner();
+      return;
+    }
   navigate('home');
 }
 function navigate(v, e){
@@ -9173,6 +9190,26 @@ async function activateCatalogProgramInner(programId) {
         ? ('Evidence-based · ' + (entry.progression && entry.progression.model || '') + ' · volume/RIR/tempo periodizzati · ACSM 2026 / Schoenfeld')
         : 'Provenienza: archivio palestra · scheda depersonalizzata · senza kg personali'
     });
+    if (isCoachClientSandbox()) {
+      store.activeProgramId = prog.id || ('assign_draft_' + Date.now());
+      DATA = prog;
+      DATA.nutrition = null;
+      DATA.supplementation = null;
+      DATA.therapy = null;
+      DATA.exams = null;
+      store.activeProgram = DATA;
+      store.nutrition = null;
+      store.supplementation = null;
+      store.therapy = null;
+      store.exams = null;
+      currentWeek = 1;
+      currentDay = 0;
+      if (DATA.weeks?.length) store.prefs.duration = DATA.weeks.length;
+      if (typeof showToast === 'function') showToast('Bozza cliente: ' + (prog.title || '') + ' — conferma per inviare', 'success');
+      afterProgramActivatedNavigate();
+      render();
+      return;
+    }
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
       await GiammariaPersistence.activateCanonicalProgram(prog);
     } else if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveActiveProgram) {
@@ -10339,6 +10376,10 @@ async function confirmImportAndActivate() {
   }
   return withBusy(function () { return confirmImportAndActivateInner(choices, domainOnly); }, domainOnly ? 'Salvataggio…' : 'Attivazione scheda…', { immediate: true });
 }
+function isCoachClientSandbox() {
+  return !!(typeof store !== 'undefined' && store && store.coachAssigning);
+}
+
 async function confirmImportAndActivateInner(choices, domainOnly) {
   const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : (typeof programImportState !== 'undefined' ? programImportState : null);
   if (!pState || !pState.canonicalProgram) return;
@@ -10490,7 +10531,11 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
     if (prog.spreadsheet) DATA.spreadsheet = prog.spreadsheet;
 
     // Atomic IDB persist + domain read-back verify (offline, no AI)
-    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
+    // In coach→client assign sandbox: keep everything in-memory only so the coach master is untouched.
+    if (isCoachClientSandbox()) {
+      store.activeProgramId = prog.id || ('assign_draft_' + Date.now());
+      DATA.id = store.activeProgramId;
+    } else if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
       const res = await GiammariaPersistence.activateCanonicalProgram(prog);
       console.log(`[PERSISTENCE] Canonical program activated. ID: ${res.id} FP: ${res.fingerprint}`);
       store.activeProgramId = res.id;
@@ -10521,6 +10566,7 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
     try { seedImportedTechniquesIntoStore(DATA); } catch (seedErr) { console.warn('[IMPORT_TECH_SEED]', seedErr); }
 
     // Library metadata only in LocalStorage — full payloads in IndexedDB
+    if (!isCoachClientSandbox()) {
     const libEntry = {
       id: store.activeProgramId || prog.id,
       name: prog.title || DATA.title || 'Programma importato',
@@ -10535,6 +10581,19 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
       store.models.push(libEntry);
     }
     while (store.models.length > 50) store.models.shift();
+    }
+
+    if (isCoachClientSandbox()) {
+      store.activeProgram = DATA;
+      currentWeek = 1;
+      currentDay = 0;
+      try { seedImportedTechniquesIntoStore(DATA); } catch (seedErr) { console.warn('[IMPORT_TECH_SEED]', seedErr); }
+      if (typeof showToast === 'function') {
+        showToast("✓ Bozza cliente pronta (" + (DATA.weeks || []).length + " sett.) — non tocca il tuo allenamento", "success");
+      }
+      afterProgramActivatedNavigate();
+      return;
+    }
 
     persist();
     await syncProgramLibraryFromIdb();
@@ -10797,6 +10856,17 @@ async function activateSavedProgram(programId, idx) {
     }
     if (!programData) {
       alert('Programma non trovato in archivio.');
+      return;
+    }
+    if (isCoachClientSandbox()) {
+      DATA = typeof normalizeProgram === 'function' ? normalizeProgram(programData) : programData;
+      store.activeProgram = DATA;
+      store.activeProgramId = DATA.id || ('assign_draft_' + Date.now());
+      currentWeek = 1;
+      currentDay = 0;
+      if (typeof showToast === 'function') showToast('Bozza cliente pronta — conferma per inviare', 'success');
+      afterProgramActivatedNavigate();
+      render();
       return;
     }
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {

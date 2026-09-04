@@ -97,6 +97,8 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(nativeConfig, "NativeConfig");
         // Warm CredentialManager + TTS so first Google login / speak is not cold-start slow
         try { nativeConfig.warmAuthAndTts(); } catch (Exception ignored) {}
+        // Ask for notification permission early (Android 13+)
+        try { nativeConfig.requestNotifications(); } catch (Exception ignored) {}
 
         // Handle JS alerts and file picking
         web.setWebChromeClient(new WebChromeClient() {
