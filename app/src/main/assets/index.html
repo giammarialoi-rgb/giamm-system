@@ -48406,6 +48406,8 @@ function openCoachOrUnlock() {
   if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) navigate('coachHub');
   else showDemoUnlock();
 }
+
+function showDemoUnlock() {
   if (!store.accountToken) {
     practiceToast('Accedi al tuo account Nurvan per sbloccare Coach.', 'warning');
     if (typeof openAccount === 'function') openAccount();
