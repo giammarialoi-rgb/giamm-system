@@ -73,23 +73,34 @@ function sslForDatabaseUrl(urlStr) {
   return urlStr && !/localhost|127\.0\.0\.1/i.test(urlStr) ? { rejectUnauthorized: false } : false;
 }
 
-function createPgPool(connectionString) {
-  return new pg.Pool({
+function summarizeDbError(err) {
+  if (!err) return { message: "unknown" };
+  const out = {
+    message: err.message || String(err),
+    code: err.code || undefined,
+    hostname: err.hostname || undefined
+  };
+  if (err.cause && err.cause.message) out.cause = err.cause.message;
+  return out;
+}
+
+function attachPoolGuards(poolInstance, label) {
+  if (!poolInstance || poolInstance.__nurvanGuarded) return poolInstance;
+  poolInstance.__nurvanGuarded = true;
+  poolInstance.on("error", (err) => {
+    logDbIssue("PG_POOL_ERROR " + (label || ""), summarizeDbError(err));
+  });
+  return poolInstance;
+}
+
+function createPgPool(connectionString, label) {
+  return attachPoolGuards(new pg.Pool({
     connectionString,
     ssl: sslForDatabaseUrl(connectionString),
     max: 10,
     idleTimeoutMillis: 20000,
     connectionTimeoutMillis: 12000
-  });
-}
-
-function summarizeDbError(err) {
-  if (!err) return { message: "unknown" };
-  return {
-    message: err.message,
-    code: err.code,
-    hostname: err.hostname || undefined
-  };
+  }), label || hostnameOf(connectionString));
 }
 
 function hostnameOf(urlStr) {
@@ -97,7 +108,7 @@ function hostnameOf(urlStr) {
 }
 
 const poolHolder = {
-  current: createPgPool(databaseUrlCandidates()[0] || process.env.DATABASE_URL || "postgres://127.0.0.1/nurvan")
+  current: createPgPool(databaseUrlCandidates()[0] || process.env.DATABASE_URL || "postgres://127.0.0.1/nurvan", "boot")
 };
 const pool = new Proxy({}, {
   get(_target, prop) {
@@ -111,6 +122,7 @@ let dbInitialized = false;
 let dbInitError = null;
 let dbHost = "";
 let lastDbLogKey = "";
+let initInFlight = null;
 
 function logDbIssue(label, extra) {
   const key = label + JSON.stringify(extra || {});
@@ -121,17 +133,20 @@ function logDbIssue(label, extra) {
 
 async function initDb() {
   if (dbInitialized) return;
-  const urls = databaseUrlCandidates();
-  if (!urls.length) {
-    dbInitError = { message: "DATABASE_URL missing" };
-    return;
-  }
-  for (const url of urls) {
-    const host = hostnameOf(url);
-    const next = createPgPool(url);
-    try {
-      const client = await next.connect();
+  if (initInFlight) return initInFlight;
+  initInFlight = (async () => {
+    const urls = databaseUrlCandidates();
+    if (!urls.length) {
+      dbInitError = { message: "DATABASE_URL missing" };
+      return;
+    }
+    for (const url of urls) {
+      if (dbInitialized) return;
+      const host = hostnameOf(url);
+      const next = createPgPool(url, host || "candidate");
+      let client = null;
       try {
+        client = await next.connect();
         await client.query("BEGIN");
         await client.query(`
         CREATE TABLE IF NOT EXISTS app_users (
@@ -173,35 +188,50 @@ async function initDb() {
         try {
           await ensureCoachPracticeTables(client);
         } catch (practiceErr) {
-          console.error("Coach practice tables error:", practiceErr && practiceErr.message ? practiceErr.message : practiceErr);
+          console.error("Coach practice tables error:", summarizeDbError(practiceErr));
         }
+        client.release();
+        client = null;
+        const previous = poolHolder.current;
+        poolHolder.current = next;
         dbInitialized = true;
         dbInitError = null;
         dbHost = host;
-        const previous = poolHolder.current;
-        poolHolder.current = next;
-        if (previous && previous !== next) previous.end().catch(() => {});
         console.log("Database tables verified successfully. host=" + host);
+        if (previous && previous !== next) {
+          setTimeout(() => {
+            previous.end().catch((err) => logDbIssue("PG_POOL_END", summarizeDbError(err)));
+          }, 1500);
+        }
         return;
       } catch (err) {
-        await client.query("ROLLBACK").catch(() => {});
-        dbInitError = summarizeDbError(err);
-        logDbIssue("DB Init Error:", dbInitError);
-      } finally {
-        client.release();
+        dbInitError = Object.assign(summarizeDbError(err), { hostname: host || err.hostname });
+        logDbIssue("DB Connection Error during init:", dbInitError);
+        try { if (client) await client.query("ROLLBACK"); } catch (_) {}
+        try { if (client) client.release(true); } catch (_) {}
+        await next.end().catch(() => {});
       }
-    } catch (err) {
-      dbInitError = Object.assign(summarizeDbError(err), { hostname: host || err.hostname });
-      logDbIssue("DB Connection Error during init:", dbInitError);
-      await next.end().catch(() => {});
     }
-  }
+  })().finally(() => { initInFlight = null; });
+  return initInFlight;
 }
 
-initDb();
+initDb().catch((err) => logDbIssue("DB_INIT_UNHANDLED", summarizeDbError(err)));
 setInterval(() => {
-  if (!dbInitialized) initDb().catch(() => {});
+  if (!dbInitialized) initDb().catch((err) => logDbIssue("DB_INIT_RETRY", summarizeDbError(err)));
 }, 25000);
+
+process.on("unhandledRejection", (reason) => {
+  logDbIssue("UNHANDLED_REJECTION", summarizeDbError(reason));
+});
+process.on("uncaughtException", (err) => {
+  logDbIssue("UNCAUGHT_EXCEPTION", summarizeDbError(err));
+  // Keep process up for transient pg client noise after pool swap; hard-exit on non-pg crashes.
+  const msg = String(err && err.message || "");
+  if (!/postgres|pg-|ECONN|ENOTFOUND|connection|SSL|timeout/i.test(msg)) {
+    process.exit(1);
+  }
+});
 
 async function hashPassword(password) {
   return bcrypt.hash(password, 10);
