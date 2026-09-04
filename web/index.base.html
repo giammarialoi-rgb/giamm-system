@@ -399,7 +399,7 @@ nav.bottom-nav {
   transition: transform .08s ease, opacity .08s;
 }
 
-select, input {
+select, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]) {
   width: 100%;
   background: #1a1a1a;
   border: 1px solid #333;
@@ -408,6 +408,17 @@ select, input {
   border-radius: 8px;
   font-size: 14px;
   box-sizing: border-box;
+}
+input[type="checkbox"], input[type="radio"] {
+  width: 18px !important;
+  min-width: 18px !important;
+  max-width: 22px !important;
+  height: 18px !important;
+  padding: 0 !important;
+  margin: 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  accent-color: var(--gold);
 }
 .pw-field {
   position: relative;
@@ -10748,10 +10759,14 @@ function detectProgramDomains(prog) {
   return domains;
 }
 
-function openImportDomainPicker(available) {
+function openImportDomainPicker(available, prechecked) {
   return new Promise(function (resolve) {
-    if (!available || available.length <= 1) {
-      resolve(available && available.length ? available.slice() : ['training']);
+    if (!available || !available.length) {
+      resolve(['training']);
+      return;
+    }
+    if (available.length === 1) {
+      resolve(available.slice());
       return;
     }
     const labels = {
@@ -10761,15 +10776,17 @@ function openImportDomainPicker(available) {
       therapy: 'Terapia',
       exams: 'Esami'
     };
+    const pre = Array.isArray(prechecked) && prechecked.length ? prechecked : available;
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10130;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:16px;';
     overlay.innerHTML = '<div class="card" style="max-width:420px;width:100%;padding:16px;background:#111;border:1px solid var(--gold);color:#eee;">' +
       '<h3 style="color:var(--gold);margin:0 0 8px;font-size:15px;">Cosa vuoi importare?</h3>' +
-      '<p style="font-size:12px;color:#bbb;margin:0 0 12px;">Il file contiene piu categorie. Seleziona cosa assegnare' +
-      (typeof store !== 'undefined' && store && store.coachAssigning ? ' al cliente' : '') + '.</p>' +
+      '<p style="font-size:12px;color:#bbb;margin:0 0 12px;">Seleziona una o piu sezioni. Quelle non scelte restano come sono (non vengono cancellate).</p>' +
       available.map(function (d) {
-        return '<label style="display:flex;gap:10px;align-items:center;margin:8px 0;font-size:13px;color:#eee !important;-webkit-text-fill-color:#eee !important;">' +
-          '<input type="checkbox" class="imp-dom-cb" value="' + d + '" checked> ' + (labels[d] || d) + '</label>';
+        const ck = pre.indexOf(d) >= 0 ? ' checked' : '';
+        return '<label style="display:flex;gap:10px;align-items:flex-start;margin:8px 0;font-size:13px;color:#eee !important;-webkit-text-fill-color:#eee !important;width:100%;box-sizing:border-box;">' +
+          '<input type="checkbox" class="imp-dom-cb" value="' + d + '"' + ck + ' style="margin-top:2px;flex-shrink:0;width:18px;height:18px;">' +
+          '<span style="flex:1;min-width:0;">' + (labels[d] || d) + '</span></label>';
       }).join('') +
       '<button class="btn btn-primary" id="imp-dom-ok" style="width:100%;margin-top:12px;">CONTINUA</button>' +
       '<button class="btn btn-outline" id="imp-dom-cancel" style="width:100%;margin-top:8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;">ANNULLA</button></div>';
@@ -10792,13 +10809,13 @@ async function confirmImportAndActivate() {
   }
   const peek = pState.canonicalProgram;
   const available = detectProgramDomains(peek);
-  const forced = (pState.importDomain && pState.importDomain !== 'all') ? [pState.importDomain === 'supplements' ? 'supplements' : pState.importDomain] : null;
-  let selectedDomains = forced;
-  if (!selectedDomains) {
-    hideBusyOverlay();
-    selectedDomains = await openImportDomainPicker(available.length ? available : ['training']);
-    if (!selectedDomains) return;
-  }
+  const hint = (pState.importDomain && pState.importDomain !== 'all')
+    ? [pState.importDomain === 'supplements' ? 'supplements' : pState.importDomain]
+    : available.slice();
+  hideBusyOverlay();
+  // Sempre chiedi se il file ha più sezioni; non forzare e non cancellare le altre
+  let selectedDomains = await openImportDomainPicker(available.length ? available : hint, hint);
+  if (!selectedDomains) return;
   pState.selectedDomains = selectedDomains;
   const domainOnly = selectedDomains.indexOf('training') < 0;
   const hasTraining = selectedDomains.indexOf('training') >= 0;
@@ -10890,6 +10907,12 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
     const hasTraining = (prog.weeks || []).some((w) => ((w.sessions || w.days || []).length > 0));
     choices = choices || { weeksMode: 'keep', daysMode: 'keep', progression: 'keep', weeks: (prog.weeks || []).length, days: 4, goal: 'IPERTROFIA / MASSA' };
 
+    const prevData = (typeof DATA !== 'undefined' && DATA && typeof DATA === 'object')
+      ? JSON.parse(JSON.stringify(DATA))
+      : null;
+    const selDomEarly = (pState.selectedDomains || []).slice();
+    const keepDom = function (d) { return !selDomEarly.length || selDomEarly.indexOf(d) < 0; };
+
     let trainingPayload = prog.training || prog;
     // Re-lock every NxM from raw / scheme / notes before normalize (kills lingering 3× defaults)
     try {
@@ -10905,6 +10928,17 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
     if (!DATA.title && prog.title) DATA.title = prog.title;
     if (prog.warmup) DATA.warmup = prog.warmup;
     else if (trainingPayload.warmup) DATA.warmup = trainingPayload.warmup;
+    // Preserve existing sections not selected in this import
+    if (prevData) {
+      if (keepDom('training') && Array.isArray(prevData.weeks) && prevData.weeks.length) {
+        DATA.weeks = prevData.weeks;
+        DATA.title = prevData.title || DATA.title;
+      }
+      if (keepDom('nutrition') && prevData.nutrition) DATA.nutrition = prevData.nutrition;
+      if (keepDom('supplements') && prevData.supplementation) DATA.supplementation = prevData.supplementation;
+      if (keepDom('therapy') && prevData.therapy) DATA.therapy = prevData.therapy;
+      if (keepDom('exams') && prevData.exams) DATA.exams = prevData.exams;
+    }
     try {
       if (typeof enforceAllPrescriptions === 'function') enforceAllPrescriptions(DATA);
       else if (window.NurvanPrescription) window.NurvanPrescription.enforceAllPrescriptions(DATA);

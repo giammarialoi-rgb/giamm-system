@@ -453,6 +453,9 @@ function ensurePracticeStyle() {
     'body.coach-session .btn-outline,body.coach-viewing-client .btn-outline,.cp-chat-tools .btn-outline,.cp-chat-composer .btn-outline{color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;}',
     'body.coach-session .btn-primary,body.coach-viewing-client .btn-primary{color:#000 !important;-webkit-text-fill-color:#000 !important;}',
     'body.coach-session input[type="search"],body.coach-session input[type="text"]:not(.cp-chat-input),body.coach-viewing-client input[type="search"],body.coach-viewing-client input[type="text"]:not(.cp-chat-input){background:#111 !important;color:#fff !important;-webkit-text-fill-color:#fff !important;border:1px solid #333;border-radius:8px;padding:10px;width:100%;}',
+    'body.coach-session input[type="checkbox"],body.coach-viewing-client input[type="checkbox"],.card input[type="checkbox"],#view-container input[type="checkbox"]{width:18px !important;min-width:18px !important;max-width:22px !important;height:18px !important;padding:0 !important;margin:0;flex-shrink:0;box-sizing:border-box;}',
+    'body.coach-session label:has(input[type="checkbox"]),body.coach-viewing-client label:has(input[type="checkbox"]),.card label:has(input[type="checkbox"]){display:flex !important;align-items:flex-start;gap:10px;width:100%;box-sizing:border-box;}',
+    'body.coach-session label:has(input[type="checkbox"])>span,body.coach-viewing-client label:has(input[type="checkbox"])>span,.card label:has(input[type="checkbox"])>span{flex:1;min-width:0;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.35;}',
     'body.coach-session .fab-save,body.coach-viewing-client .fab-save,body.role-athlete .fab-save{display:none !important;}',
     'body.coach-session header #profile-button{display:none !important;}',
     'body.coach-session header #account-button{display:none !important;}',
@@ -638,19 +641,49 @@ function renderInvitePanel(info) {
   const p = document.getElementById('cp-invite-panel');
   if (!p) return;
   const inApp = isInAppBrowser();
-  p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">INVITO COACH</div>' +
+  const canClose = !!(typeof isAthleteRole === 'function' && !isAthleteRole() && store && store.coachSessionActive)
+    || !!(store && store.accountToken && store.role !== 'athlete');
+  p.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">INVITO COACH</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 10px;" onclick="closeClientInviteOverlay()">' + (canClose ? 'CHIUDI' : 'ESCI') + '</button></div>' +
     '<h2>Ciao' + (info && info.displayName ? ', ' + esc(info.displayName) : '') + '</h2>' +
     '<p class="cp-help">Ti segue <b style="color:#fff;">' + esc((info && info.coachName) || 'il tuo coach') + '</b>. Accedi con nome utente e password che ti ha dato. Un solo link, su qualsiasi telefono.</p>' +
     (info && info.intakeMode === 'new' ? '<p class="cp-help">Al primo accesso compilerai un questionario di acquisizione (menu a tendina).</p>' : '<p class="cp-help">Il coach ha già le tue informazioni: entri subito in app.</p>') +
+    (info && info.error ? '<p class="cp-help" style="color:#f88;">' + esc(info.error) + '</p>' : '') +
     (inApp ? '<p class="cp-help">Puoi già accedere da qui. Per installare Nurvan sulla Home, apri il link in Safari o Chrome.</p>' : '') +
     '<div class="cp-field"><label>Nome utente</label><input id="cp-login-user" type="text" autocomplete="username" value="' + esc((info && info.username) || '') + '"></div>' +
     '<div class="cp-field"><label>Password</label><div class="cp-pw-row"><input id="cp-login-pass" type="password" autocomplete="current-password">' +
     '<button class="btn btn-outline" type="button" style="font-size:10px;padding:8px 10px;" onclick="toggleClientLoginPassword()">MOSTRA</button></div></div>' +
-    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#ccc;margin:8px 0;"><input id="cp-login-stay" type="checkbox" checked> Resta connesso</label>' +
+    '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#ccc;margin:8px 0;width:100%;box-sizing:border-box;"><input id="cp-login-stay" type="checkbox" checked style="margin-top:2px;flex-shrink:0;width:18px;height:18px;"><span style="flex:1;min-width:0;">Resta connesso</span></label>' +
     '<div id="cp-invite-status" class="cp-help"></div>' +
     '<button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="submitClientInviteLogin()">ACCEDI</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="requestClientPasswordHelp()">RICHIEDI RECUPERO PASSWORD AL COACH</button>' +
     '<p class="cp-help" style="margin-top:12px;">Questo link apre solo lo spazio cliente Nurvan collegato al coach. Non è l’app completa.</p>';
+}
+
+function closeClientInviteOverlay() {
+  showOverlay('cp-invite', false);
+  const coachHere = !!(store && store.coachSessionActive) || !!(store && store.accountToken && store.role !== 'athlete');
+  if (coachHere) {
+    try { history.replaceState(null, '', '/'); } catch (_) {}
+    store.inviteToken = null;
+    store.clientShell = false;
+    if (typeof persist === 'function') persist();
+    applyClientChrome();
+    if (typeof navigate === 'function') navigate(store.coachSessionActive ? 'coachHub' : 'home');
+    return;
+  }
+  // Atleta senza sessione: esci dal shell invite senza restare bloccato
+  try {
+    store.inviteToken = null;
+    store.clientShell = false;
+    clearClientShellLock();
+    history.replaceState(null, '', '/');
+  } catch (_) {}
+  if (typeof persist === 'function') persist();
+  applyClientChrome();
+  practiceToast('Finestra chiusa. Apri di nuovo il link invito del coach per accedere.', 'info');
+  if (typeof navigate === 'function') navigate('home');
 }
 
 async function showClientInvite(token) {
@@ -692,6 +725,7 @@ async function submitClientInviteLogin() {
     store.role = 'athlete';
     store.clientShell = true;
     store.clientProfile = payload.client || null;
+    if (payload.inviteToken) store.inviteToken = payload.inviteToken;
     store.inviteTokenBound = store.inviteToken || '';
     try {
       localStorage.setItem('GS_CLIENT_SHELL', JSON.stringify({
@@ -708,6 +742,9 @@ async function submitClientInviteLogin() {
     } catch (_) {}
     if (typeof persist === 'function') persist();
     showOverlay('cp-invite', false);
+    try {
+      if (store.inviteToken) history.replaceState(null, '', '/c/' + encodeURIComponent(store.inviteToken));
+    } catch (_) {}
     requestNotifyPermission();
     try { await syncAccountData(true); } catch (_) {}
     applyClientChrome();
@@ -717,7 +754,8 @@ async function submitClientInviteLogin() {
     practiceToast('Bentornato, ' + (payload.user && payload.user.name || username), 'success');
     startPresenceHeartbeat();
   } catch (err) {
-    if (status) status.textContent = (err && err.message) || 'Accesso non riuscito.';
+    const msg = (err && err.message) || 'Accesso non riuscito.';
+    if (status) status.innerHTML = '<span style="color:#f88;">' + esc(msg.replace(/^HTTP\s*\d+:\s*/i, '')) + '</span>';
   }
 }
 
@@ -1140,10 +1178,12 @@ function renderCoachHub(c) {
     '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">I tuoi clienti</h1></div>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="exitCoachSession()">ESCI DALL’HUB</button></div>' +
     '<div class="card" style="padding:12px;margin-bottom:12px;">' +
-    '<label style="display:flex;gap:10px;align-items:center;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee !important;margin-bottom:10px;padding:8px;background:#141414;border-radius:8px;border:1px solid #2a2a2a;">' +
-    '<input type="checkbox" ' + (hide ? 'checked' : '') + ' onchange="toggleCoachHidePresence(this.checked)"> <span style="color:#eee !important;-webkit-text-fill-color:#eee !important;">Nascondi che sei online agli atleti</span></label>' +
-    '<label style="display:flex;gap:10px;align-items:center;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee !important;margin-bottom:10px;padding:8px;background:#141414;border-radius:8px;border:1px solid #2a2a2a;">' +
-    '<input type="checkbox" ' + ((store.coachAllowVideocall !== false) ? 'checked' : '') + ' onchange="toggleCoachVideocall(this.checked)"> <span style="color:#eee !important;-webkit-text-fill-color:#eee !important;">Consenti videocall interne con i clienti</span></label>' +
+    '<label class="cp-toggle-row" style="display:flex;gap:10px;align-items:flex-start;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee !important;margin-bottom:10px;padding:10px;background:#141414;border-radius:8px;border:1px solid #2a2a2a;width:100%;box-sizing:border-box;">' +
+    '<input type="checkbox" ' + (hide ? 'checked' : '') + ' onchange="toggleCoachHidePresence(this.checked)" style="margin-top:2px;flex-shrink:0;width:18px;height:18px;">' +
+    '<span style="flex:1;min-width:0;color:#eee !important;-webkit-text-fill-color:#eee !important;line-height:1.35;">Nascondi che sei online agli atleti</span></label>' +
+    '<label class="cp-toggle-row" style="display:flex;gap:10px;align-items:flex-start;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee !important;margin-bottom:10px;padding:10px;background:#141414;border-radius:8px;border:1px solid #2a2a2a;width:100%;box-sizing:border-box;">' +
+    '<input type="checkbox" ' + ((store.coachAllowVideocall !== false) ? 'checked' : '') + ' onchange="toggleCoachVideocall(this.checked)" style="margin-top:2px;flex-shrink:0;width:18px;height:18px;">' +
+    '<span style="flex:1;min-width:0;color:#eee !important;-webkit-text-fill-color:#eee !important;line-height:1.35;">Consenti videocall interne con i clienti</span></label>' +
     '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button></div>' +
     '<div id="cp-client-list"><div class="cp-help">Caricamento…</div></div>';
@@ -1811,8 +1851,58 @@ function beginAssignSandbox(clientId, name, mode) {
   store.__cpAssignBarExpanded = false;
   window.__cpAssignBackup = snapshotCoachMaster();
   if (typeof persist === 'function') persist();
-  // import / database: spazio cliente vuoto. copy: parte dalla scheda personale (solo in memoria).
-  if (mode !== 'copy') {
+  // copy: parte dalla scheda personale. import/programs/mylib: parti dai dati GIÀ del cliente (merge), non bozza vuota.
+  if (mode === 'copy') {
+    /* keep master DATA as base (already snapshotted) */
+  } else {
+    seedAssignSandboxFromClient(clientId);
+  }
+  showOverlay('cp-assign', false);
+  ensureAssignBanner();
+  if (mode === 'import') {
+    navigate('import');
+    practiceToast('Spazio cliente: parti dai dati già assegnati. Importi solo le sezioni che scegli — le altre restano.', 'success');
+  } else if (mode === 'mylib') {
+    openCoachLibraryAssignPicker(clientId, name);
+  } else if (mode === 'programs') {
+    promptCatalogFromIntakeThenOpen(clientId, name);
+  } else {
+    navigate('training');
+    practiceToast('Copia della tua scheda attiva come base cliente. Modifica e conferma.', 'success');
+  }
+}
+
+function seedAssignSandboxFromClient(clientId) {
+  const ws = store.coachWorkspace;
+  const data = (ws && String(ws.clientId) === String(clientId) && ws.data) ? ws.data : null;
+  const prog = (data && data.activeProgram) ? data.activeProgram : null;
+  const hasWeeks = !!(prog && Array.isArray(prog.weeks) && prog.weeks.length);
+  if (hasWeeks || (data && (data.nutrition || data.supplementation || data.therapy || data.exams))) {
+    try {
+      let base = prog && typeof prog === 'object' ? JSON.parse(JSON.stringify(prog)) : emptyClientAssignDraft();
+      if (!base.id) base.id = 'assign_merge_' + Date.now();
+      if (data.nutrition) base.nutrition = JSON.parse(JSON.stringify(data.nutrition));
+      if (data.supplementation) base.supplementation = JSON.parse(JSON.stringify(data.supplementation));
+      if (data.therapy) base.therapy = JSON.parse(JSON.stringify(data.therapy));
+      if (data.exams) base.exams = JSON.parse(JSON.stringify(data.exams));
+      DATA = base;
+      store.activeProgram = base;
+      store.activeProgramId = base.id;
+      store.nutrition = base.nutrition || null;
+      store.supplementation = base.supplementation || null;
+      store.therapy = base.therapy || null;
+      store.exams = base.exams || null;
+    } catch (_) {
+      const draft = emptyClientAssignDraft();
+      try { DATA = draft; } catch (__) {}
+      store.activeProgram = draft;
+      store.activeProgramId = draft.id;
+      store.nutrition = null;
+      store.supplementation = null;
+      store.therapy = null;
+      store.exams = null;
+    }
+  } else {
     const draft = emptyClientAssignDraft();
     try { DATA = draft; } catch (_) {}
     store.activeProgram = draft;
@@ -1821,21 +1911,45 @@ function beginAssignSandbox(clientId, name, mode) {
     store.supplementation = null;
     store.therapy = null;
     store.exams = null;
-    if (typeof currentWeek !== 'undefined') currentWeek = 1;
-    if (typeof currentDay !== 'undefined') currentDay = 0;
   }
-  showOverlay('cp-assign', false);
-  ensureAssignBanner();
-  if (mode === 'import') {
-    navigate('import');
-    practiceToast('Spazio cliente vuoto: importa il file da assegnare. Il tuo allenamento resta intatto.', 'success');
-  } else if (mode === 'mylib') {
-    openCoachLibraryAssignPicker(clientId, name);
-  } else if (mode === 'programs') {
-    promptCatalogFromIntakeThenOpen(clientId, name);
-  } else {
-    navigate('training');
-    practiceToast('Copia della tua scheda attiva come base cliente. Modifica e conferma.', 'success');
+  if (typeof currentWeek !== 'undefined') currentWeek = 1;
+  if (typeof currentDay !== 'undefined') currentDay = 0;
+  // Async refresh: if workspace stale/empty, pull snapshot then re-seed without wiping imports already done
+  if (clientId) {
+    practiceFetch('/api/coach/clients/' + encodeURIComponent(clientId) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 20000).then(function (snap) {
+      if (!store.coachAssigning || String(store.coachAssigning.clientId) !== String(clientId)) return;
+      store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, {
+        clientId: clientId,
+        client: snap.client || (store.coachWorkspace && store.coachWorkspace.client),
+        data: snap.data || {}
+      });
+      const curWeeks = (typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
+      const remoteProg = snap.data && snap.data.activeProgram;
+      const remoteWeeks = (remoteProg && Array.isArray(remoteProg.weeks)) ? remoteProg.weeks.length : 0;
+      // Only adopt remote base if local draft still empty (no training yet imported)
+      if (curWeeks < 1 && remoteWeeks > 0) {
+        seedAssignSandboxFromClient(clientId);
+        if (typeof render === 'function' && currentView === 'import') render();
+      } else if (curWeeks < 1) {
+        // Fill missing domains from remote without touching local weeks
+        if (snap.data && snap.data.nutrition && !(DATA && DATA.nutrition)) {
+          DATA.nutrition = snap.data.nutrition;
+          store.nutrition = snap.data.nutrition;
+        }
+        if (snap.data && snap.data.supplementation && !(DATA && DATA.supplementation)) {
+          DATA.supplementation = snap.data.supplementation;
+          store.supplementation = snap.data.supplementation;
+        }
+        if (snap.data && snap.data.therapy && !(DATA && DATA.therapy)) {
+          DATA.therapy = snap.data.therapy;
+          store.therapy = snap.data.therapy;
+        }
+        if (snap.data && snap.data.exams && !(DATA && DATA.exams)) {
+          DATA.exams = snap.data.exams;
+          store.exams = snap.data.exams;
+        }
+      }
+    }).catch(function () {});
   }
 }
 
@@ -2032,10 +2146,25 @@ async function confirmAssignSandboxSend() {
       if (!kinds.filter(function (k) { return k !== 'training'; }).length) {
         throw new Error('Nessun contenuto da inviare.');
       }
-      payload.activeProgram = payload.activeProgram || { title: 'Piano cliente', weeks: [] };
+      // Domain-only (es. sola alimentazione): non mandare weeks vuote che potrebbero far perdere la scheda
+      if (kinds.indexOf('training') < 0) {
+        delete payload.activeProgram;
+      } else {
+        payload.activeProgram = payload.activeProgram || { title: 'Piano cliente', weeks: [] };
+      }
     } else {
       payload.activeProgram.programExpiryAnchor = 'assign';
       payload.activeProgram.programWeeksPlanned = payload.activeProgram.weeks.length;
+    }
+    // Se non stiamo assegnando training, non includere weeks nel payload
+    if (kinds.indexOf('training') < 0 && payload.activeProgram) {
+      const shell = {
+        nutrition: payload.activeProgram.nutrition,
+        supplementation: payload.activeProgram.supplementation,
+        therapy: payload.activeProgram.therapy,
+        exams: payload.activeProgram.exams
+      };
+      payload.activeProgram = shell;
     }
     await practiceFetch('/api/coach/clients/' + encodeURIComponent(job.clientId) + '/assign', {
       method: 'POST', headers: practiceHeaders(true),
@@ -3584,6 +3713,7 @@ wrapPracticeHooks();
 
 window.bootCoachPractice = bootCoachPractice;
 window.showClientInvite = showClientInvite;
+window.closeClientInviteOverlay = closeClientInviteOverlay;
 window.submitClientInviteLogin = submitClientInviteLogin;
 window.showClientIntake = showClientIntake;
 window.submitClientIntake = submitClientIntake;

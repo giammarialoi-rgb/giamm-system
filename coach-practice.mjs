@@ -447,25 +447,61 @@ export function mountCoachPractice(app, deps) {
       const token = String(req.body?.token || "").trim();
       const username = slugName(req.body?.username || req.body?.name);
       const password = String(req.body?.password || "");
-      if (!token || !username || password.length < 4) {
+      if (!username || password.length < 4) {
         return res.status(400).json({ error: "Inserisci nome utente e password assegnati dal coach." });
       }
-      const q = await pool.query(
-        "SELECT * FROM coach_clients WHERE invite_token = $1 AND username = $2",
-        [token, username]
-      );
-      const client = q.rows[0];
-      if (!client || client.status !== "active") {
-        return res.status(401).json({ error: "Dati non validi o accesso revocato." });
+
+      async function userForClient(row) {
+        const userRes = await pool.query(
+          "SELECT id, email, name, password_hash, provider FROM app_users WHERE id = $1",
+          [row.athlete_user_id]
+        );
+        return userRes.rows[0] || null;
       }
-      const userRes = await pool.query(
-        "SELECT id, email, name, password_hash, provider FROM app_users WHERE id = $1",
-        [client.athlete_user_id]
-      );
-      const user = userRes.rows[0];
-      if (!user || !(await verifyPassword(password, user.password_hash))) {
-        return res.status(401).json({ error: "Nome o password non corretti." });
+
+      let client = null;
+      let user = null;
+
+      if (token) {
+        const q = await pool.query(
+          "SELECT * FROM coach_clients WHERE invite_token = $1 AND username = $2 AND status = 'active'",
+          [token, username]
+        );
+        if (q.rows[0]) {
+          const u = await userForClient(q.rows[0]);
+          if (u && (await verifyPassword(password, u.password_hash))) {
+            client = q.rows[0];
+            user = u;
+          } else if (q.rows[0]) {
+            return res.status(401).json({ error: "Nome o password non corretti." });
+          }
+        }
       }
+
+      // Link vecchio/rigenerato: risolvi per username + password
+      if (!client) {
+        const q2 = await pool.query(
+          "SELECT * FROM coach_clients WHERE username = $1 AND status = 'active' ORDER BY id DESC LIMIT 12",
+          [username]
+        );
+        for (const row of q2.rows) {
+          const u = await userForClient(row);
+          if (u && (await verifyPassword(password, u.password_hash))) {
+            client = row;
+            user = u;
+            break;
+          }
+        }
+      }
+
+      if (!client || !user) {
+        return res.status(401).json({
+          error: token
+            ? "Accesso non riuscito. Controlla utente/password, oppure chiedi al coach il link invito aggiornato."
+            : "Nome o password non corretti."
+        });
+      }
+
       const jwtUser = {
         id: user.id,
         email: user.email,
@@ -484,7 +520,8 @@ export function mountCoachPractice(app, deps) {
           role: "athlete",
           clientId: String(client.id)
         },
-        client: clientRow(client, { includeIntake: true })
+        client: clientRow(client, { includeIntake: true }),
+        inviteToken: client.invite_token
       });
     } catch (err) {
       console.error("CLIENT_LOGIN", err && err.message ? err.message : err);
@@ -723,13 +760,23 @@ export function mountCoachPractice(app, deps) {
       await initDb();
       const token = String(req.body?.token || "").trim();
       const username = slugName(req.body?.username || req.body?.name);
-      if (!token || !username) return res.status(400).json({ error: "Inserisci nome utente." });
-      const q = await pool.query(
-        "SELECT * FROM coach_clients WHERE invite_token = $1 AND username = $2 AND status = 'active'",
-        [token, username]
-      );
-      const client = q.rows[0];
-      if (!client) return res.status(404).json({ error: "Dati non trovati. Controlla il link e il nome utente." });
+      if (!username) return res.status(400).json({ error: "Inserisci nome utente." });
+      let client = null;
+      if (token) {
+        const q = await pool.query(
+          "SELECT * FROM coach_clients WHERE invite_token = $1 AND username = $2 AND status = 'active'",
+          [token, username]
+        );
+        client = q.rows[0] || null;
+      }
+      if (!client) {
+        const q2 = await pool.query(
+          "SELECT * FROM coach_clients WHERE username = $1 AND status = 'active' ORDER BY id DESC LIMIT 1",
+          [username]
+        );
+        client = q2.rows[0] || null;
+      }
+      if (!client) return res.status(404).json({ error: "Dati non trovati. Controlla il nome utente (o chiedi al coach il link aggiornato)." });
       await pool.query(
         "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'password_help',$2)",
         [client.id, JSON.stringify({ username })]
@@ -1255,12 +1302,46 @@ export function mountCoachPractice(app, deps) {
     const patch = req.body?.data && typeof req.body.data === "object" ? req.body.data : {};
     const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
     const current = existing.rows[0]?.data || {};
+    const kinds = Array.isArray(req.body?.kinds) && req.body.kinds.length
+      ? req.body.kinds.map((k) => String(k)).filter((k) => KIND_EVENTS[k] || k === "exams_request")
+      : detectAssignKinds(patch);
+    const unique = [...new Set(kinds.length ? kinds : ["training"])];
     const merged = {
       ...current,
-      ...patch,
       assignedAt: new Date().toISOString(),
       assignedByCoach: true
     };
+    const curProg = current.activeProgram && typeof current.activeProgram === "object" ? current.activeProgram : {};
+    const patchProg = patch.activeProgram && typeof patch.activeProgram === "object" ? patch.activeProgram : null;
+    if (unique.includes("training") && patchProg) {
+      merged.activeProgram = { ...curProg, ...patchProg };
+    } else if (patchProg) {
+      // Domain-only assign: keep existing weeks/title, merge other fields onto activeProgram shell
+      merged.activeProgram = {
+        ...curProg,
+        nutrition: unique.includes("nutrition")
+          ? (patch.nutrition || patchProg.nutrition || curProg.nutrition)
+          : curProg.nutrition,
+        supplementation: unique.includes("supplements")
+          ? (patch.supplementation || patchProg.supplementation || curProg.supplementation)
+          : curProg.supplementation,
+        therapy: unique.includes("therapy")
+          ? (patch.therapy || patchProg.therapy || curProg.therapy)
+          : curProg.therapy,
+        exams: unique.includes("exams")
+          ? (patch.exams || patchProg.exams || curProg.exams)
+          : curProg.exams
+      };
+      if (!Array.isArray(merged.activeProgram.weeks) || !merged.activeProgram.weeks.length) {
+        if (Array.isArray(curProg.weeks) && curProg.weeks.length) merged.activeProgram.weeks = curProg.weeks;
+      }
+    } else if (curProg && Object.keys(curProg).length) {
+      merged.activeProgram = curProg;
+    }
+    if (unique.includes("nutrition") && patch.nutrition) merged.nutrition = patch.nutrition;
+    if (unique.includes("supplements") && patch.supplementation) merged.supplementation = patch.supplementation;
+    if (unique.includes("therapy") && patch.therapy) merged.therapy = patch.therapy;
+    if (unique.includes("exams") && patch.exams) merged.exams = patch.exams;
     await pool.query(
       `INSERT INTO app_account_data(user_id, data, updated_at)
        VALUES($1,$2,NOW())
@@ -1280,10 +1361,6 @@ export function mountCoachPractice(app, deps) {
     if (scheduleBits.length) {
       await pool.query(`UPDATE coach_clients SET ${scheduleBits.join(", ")} WHERE id = $1`, scheduleVals);
     }
-    const kinds = Array.isArray(req.body?.kinds) && req.body.kinds.length
-      ? req.body.kinds.map((k) => String(k)).filter((k) => KIND_EVENTS[k] || k === "exams_request")
-      : detectAssignKinds(patch);
-    const unique = [...new Set(kinds.length ? kinds : ["training"])];
     for (const kind of unique) {
       const eventKind = KIND_EVENTS[kind] || (kind === "exams_request" ? "exams_request" : "program_assigned");
       await pool.query(
