@@ -34,6 +34,13 @@ services:
         sync: false
       - key: APPLE_PRIVATE_KEY
         sync: false
+      # Optional WebRTC TURN for videocalls behind mobile/NAT (set in Render dashboard).
+      - key: TURN_URLS
+        sync: false
+      - key: TURN_USERNAME
+        sync: false
+      - key: TURN_CREDENTIAL
+        sync: false
 databases:
   - name: coach-db
     databaseName: coach

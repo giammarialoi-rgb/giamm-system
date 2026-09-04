@@ -15,11 +15,22 @@ function assert(cond, msg) {
   }
 }
 
-const { slugName, sanitizeIntake, intakeMissing, profileFromIntake, clientNeedsIntake, clientRow, bandMid, INTAKE_KEYS, INTAKE_REQUIRED } = CoachPracticeLib;
+const { slugName, sanitizeIntake, intakeMissing, profileFromIntake, clientNeedsIntake, clientRow, bandMid, INTAKE_KEYS, INTAKE_REQUIRED, buildWebRtcIceServers } = CoachPracticeLib;
 
 assert(slugName("Marco Rossi") === "marcorossi", "slug strips spaces");
 assert(slugName("Giàmmàrià") === "giammaria", "slug strips accents");
 assert(slugName("") === "atleta", "slug fallback");
+
+const iceStunOnly = buildWebRtcIceServers({});
+assert(Array.isArray(iceStunOnly) && iceStunOnly.length >= 2 && iceStunOnly.every((s) => !s.username), "ICE STUN-only without TURN env");
+const iceWithTurn = buildWebRtcIceServers({
+  TURN_URLS: "turn:example.com:3478, turns:example.com:5349",
+  TURN_USERNAME: "user",
+  TURN_CREDENTIAL: "secret"
+});
+const turnEntry = iceWithTurn.find((s) => s.username === "user");
+assert(turnEntry && Array.isArray(turnEntry.urls) && turnEntry.urls.length === 2 && turnEntry.credential === "secret", "ICE includes TURN when env set");
+assert(!iceWithTurn.some((s) => String(JSON.stringify(s)).includes("console")), "ICE builder has no console side effects");
 
 assert(bandMid("25-29") === 27, "band mid range");
 assert(bandMid("60+") === 60, "band mid plus");
@@ -70,6 +81,7 @@ const ui = fs.readFileSync(path.join(__dirname, "web/coach-practice-ui.js"), "ut
 assert(ui.includes("ASSEGNA SCHEDA") && (ui.includes("Consenti massima libertà") || ui.includes("Consenti massima liberta")), "assign + max freedom");
 assert(ui.includes("Scadenza automatica") && ui.includes("confirmAssignSandboxSend"), "auto expiry on assign");
 assert(ui.includes("fetchWebRtcIceServers") && ui.includes("/api/webrtc/ice"), "videocall ICE fetch");
+assert(ui.includes("toggleCallMute") && ui.includes("cp-call-controls") && ui.includes("safe-area-inset"), "videocall mobile controls + safe area");
 assert(ui.includes("cp-modal-open") && ui.includes("clearChatAttachPreview"), "modal z-index + attach clear");
 assert(ui.includes("chatFileIconKind") && ui.includes("cp-file-chip"), "chat file icons");
 assert((ui.includes("AZZERA (PER ME)") || ui.includes("AZZERA CHAT (PER ME)")) && ui.includes("NUOVA CHAT") && ui.includes("openChatAttachSheet"), "chat thread tools");
@@ -170,6 +182,10 @@ try {
   assert(locked.status === 401, "clients API requires login");
   const athleteBlocked = await fetch("http://127.0.0.1:" + port + "/api/client/me");
   assert(athleteBlocked.status === 401, "client me requires athlete JWT");
+  const iceRes = await fetch("http://127.0.0.1:" + port + "/api/webrtc/ice");
+  const iceJson = await iceRes.json();
+  assert(iceRes.status === 200 && iceJson.ok && Array.isArray(iceJson.iceServers) && iceJson.iceServers.length >= 2, "GET /api/webrtc/ice returns STUN");
+  assert(iceJson.iceServers.every((s) => !s.credential), "ICE without TURN env has no credentials");
 } finally {
   await new Promise((resolve, reject) => server.close((err) => err ? reject(err) : resolve()));
 }

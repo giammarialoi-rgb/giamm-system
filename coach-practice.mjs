@@ -128,6 +128,33 @@ function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
   return row;
 }
 
+/** Build WebRTC iceServers from env (STUN always; TURN only when fully configured). Never logs credentials. */
+function buildWebRtcIceServers(env) {
+  const src = env && typeof env === "object" ? env : process.env;
+  const iceServers = [
+    { urls: ["stun:stun.l.google.com:19302"] },
+    { urls: ["stun:stun1.l.google.com:19302"] }
+  ];
+  try {
+    const turnUrls = String(src.TURN_URLS || "")
+      .split(/[\s,;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const turnUser = String(src.TURN_USERNAME || "").trim();
+    const turnCred = String(src.TURN_CREDENTIAL || "").trim();
+    if (turnUrls.length && turnUser && turnCred) {
+      iceServers.push({
+        urls: turnUrls,
+        username: turnUser,
+        credential: turnCred
+      });
+    }
+  } catch (_) {
+    /* keep STUN-only on malformed env */
+  }
+  return iceServers;
+}
+
 export const CoachPracticeLib = {
   slugName,
   sanitizeIntake,
@@ -138,6 +165,7 @@ export const CoachPracticeLib = {
   bandMid,
   isOnlineAt,
   isWorkoutLive,
+  buildWebRtcIceServers,
   INTAKE_KEYS,
   INTAKE_REQUIRED
 };
@@ -859,24 +887,18 @@ export function mountCoachPractice(app, deps) {
   });
 
   app.get("/api/webrtc/ice", async (_req, res) => {
-    const iceServers = [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" }
-    ];
-    const turnUrls = String(process.env.TURN_URLS || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const turnUser = String(process.env.TURN_USERNAME || "").trim();
-    const turnCred = String(process.env.TURN_CREDENTIAL || "").trim();
-    if (turnUrls.length && turnUser && turnCred) {
-      iceServers.push({
-        urls: turnUrls.length === 1 ? turnUrls[0] : turnUrls,
-        username: turnUser,
-        credential: turnCred
+    try {
+      const iceServers = buildWebRtcIceServers(process.env);
+      return res.json({ ok: true, iceServers });
+    } catch (_) {
+      return res.json({
+        ok: true,
+        iceServers: [
+          { urls: ["stun:stun.l.google.com:19302"] },
+          { urls: ["stun:stun1.l.google.com:19302"] }
+        ]
       });
     }
-    return res.json({ ok: true, iceServers });
   });
 
   app.post("/api/coach/unlock/demo", async (req, res) => {

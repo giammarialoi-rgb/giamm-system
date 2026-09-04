@@ -49022,12 +49022,18 @@ function ensurePracticeStyle() {
     '.cp-exam-cat{margin:10px 0;border:1px solid #222;border-radius:10px;padding:8px;}',
     '.cp-exam-cat h4{margin:0 0 6px;font-size:11px;color:var(--gold);}',
     '.cp-exam-item{display:flex;gap:8px;align-items:center;font-size:12px;color:#ddd;padding:4px 0;}',
-    '#cp-call-overlay{position:fixed;inset:0;z-index:10120;background:#050505;display:none;flex-direction:column;}',
+    '#cp-call-overlay{position:fixed;inset:0;z-index:10120;background:#050505;display:none;flex-direction:column;width:100%;height:100%;height:100dvh;max-height:100dvh;overflow:hidden;box-sizing:border-box;}',
     '#cp-call-overlay.active{display:flex;}',
+    '#cp-call-overlay .cp-call-bar{padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top,0px));display:flex;justify-content:space-between;align-items:center;gap:8px;background:rgba(8,8,8,.92);border-bottom:1px solid #333;flex-shrink:0;z-index:3;}',
     '#cp-call-stage{position:relative;flex:1;min-height:0;background:#000;overflow:hidden;}',
     '#cp-call-remote{position:absolute;inset:0;width:100% !important;height:100% !important;object-fit:cover;background:#000;z-index:1;}',
-    '#cp-call-local{position:absolute;right:12px;bottom:24px;width:112px !important;height:150px !important;border-radius:10px;border:1px solid var(--gold);z-index:2;object-fit:cover;background:#111;}',
-    '#cp-call-overlay .cp-call-bar{padding:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:#111;border-bottom:1px solid #333;flex-shrink:0;z-index:3;}'
+    '#cp-call-local{position:absolute;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(92px + env(safe-area-inset-bottom,0px));width:104px !important;height:140px !important;border-radius:10px;border:1px solid var(--gold);z-index:2;object-fit:cover;background:#111;box-shadow:0 4px 16px rgba(0,0,0,.45);}',
+    '#cp-call-controls{position:absolute;left:0;right:0;bottom:0;z-index:4;display:flex;justify-content:center;align-items:center;gap:18px;padding:14px 16px;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,rgba(0,0,0,.75));}',
+    '#cp-call-controls .cp-call-btn{width:52px;height:52px;border-radius:50%;border:1px solid #444;background:#1a1a1a;color:#eee;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent;}',
+    '#cp-call-controls .cp-call-btn.is-off{background:#333;color:#f66;border-color:#844;}',
+    '#cp-call-controls .cp-call-btn.cp-call-hangup{background:#b00020;border-color:#b00020;color:#fff;width:58px;height:58px;}',
+    '@media (orientation:landscape){#cp-call-local{width:148px !important;height:100px !important;bottom:calc(72px + env(safe-area-inset-bottom,0px));right:max(16px,env(safe-area-inset-right,0px));}#cp-call-controls{gap:24px;padding:10px 20px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));}#cp-call-controls .cp-call-btn{width:48px;height:48px;}#cp-call-controls .cp-call-btn.cp-call-hangup{width:54px;height:54px;}}',
+    '@media (min-width:900px){#cp-call-local{width:132px !important;height:176px !important;}}'
   ].join('');
 }
 
@@ -51893,7 +51899,7 @@ async function decryptChatBody(body, role, clientId) {
 }
 
 /* ——— Videocall via PeerJS (open-source WebRTC) ——— */
-var __cpCall = { peer: null, call: null, local: null, role: null, clientId: null, poll: null, myPeerId: null };
+var __cpCall = { peer: null, call: null, local: null, role: null, clientId: null, poll: null, myPeerId: null, muted: false, camOff: false };
 
 function loadPeerJs() {
   return new Promise(function (resolve, reject) {
@@ -51917,37 +51923,80 @@ function loadPeerJs() {
   });
 }
 
+function callOverlayMarkup() {
+  return '<div class="cp-call-bar">' +
+    '<div style="color:var(--gold);font-weight:800;font-size:12px;">VIDEOCALL</div>' +
+    '<div id="cp-call-status" style="font-size:11px;color:#aaa;flex:1;text-align:center;">Connessione…</div>' +
+    '<span style="width:48px;"></span></div>' +
+    '<div id="cp-call-stage">' +
+    '<video id="cp-call-remote" autoplay playsinline webkit-playsinline></video>' +
+    '<video id="cp-call-local" autoplay playsinline muted webkit-playsinline></video>' +
+    '<div id="cp-call-controls">' +
+    '<button type="button" id="cp-call-mute" class="cp-call-btn" title="Microfono" onclick="toggleCallMute()">MIC</button>' +
+    '<button type="button" class="cp-call-btn cp-call-hangup" title="Chiudi" onclick="hangupInternalVideocall()">FINE</button>' +
+    '<button type="button" id="cp-call-cam" class="cp-call-btn" title="Videocamera" onclick="toggleCallCamera()">CAM</button>' +
+    '</div></div>';
+}
+
 function ensureCallOverlay() {
   let ov = document.getElementById('cp-call-overlay');
+  if (ov && !document.getElementById('cp-call-controls')) {
+    ov.innerHTML = callOverlayMarkup();
+    return ov;
+  }
   if (ov) return ov;
   ov = document.createElement('div');
   ov.id = 'cp-call-overlay';
-  ov.innerHTML = '<div class="cp-call-bar">' +
-    '<div style="color:var(--gold);font-weight:800;font-size:12px;">VIDEOCALL</div>' +
-    '<div id="cp-call-status" style="font-size:11px;color:#aaa;flex:1;text-align:center;">Connessione…</div>' +
-    '<button class="btn btn-outline" style="font-size:11px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="hangupInternalVideocall()">CHIUDI</button></div>' +
-    '<div id="cp-call-stage">' +
-    '<video id="cp-call-remote" autoplay playsinline></video>' +
-    '<video id="cp-call-local" autoplay playsinline muted></video></div>';
+  ov.innerHTML = callOverlayMarkup();
   document.body.appendChild(ov);
   return ov;
 }
 
-async function fetchWebRtcIceServers() {
-  const fallback = [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' }
+function defaultStunIceServers() {
+  return [
+    { urls: ['stun:stun.l.google.com:19302'] },
+    { urls: ['stun:stun1.l.google.com:19302'] }
   ];
+}
+
+async function fetchWebRtcIceServers() {
   try {
     const res = await practiceFetch('/api/webrtc/ice', { method: 'GET', headers: practiceHeaders(false) }, 8000);
     if (res && Array.isArray(res.iceServers) && res.iceServers.length) return res.iceServers;
   } catch (_) {}
-  return fallback;
+  return defaultStunIceServers();
 }
 
 function setCallStatus(t) {
   const el = document.getElementById('cp-call-status');
   if (el) el.textContent = t || '';
+}
+
+function syncCallControlButtons() {
+  const muteBtn = document.getElementById('cp-call-mute');
+  const camBtn = document.getElementById('cp-call-cam');
+  if (muteBtn) {
+    muteBtn.textContent = __cpCall.muted ? 'MUTE' : 'MIC';
+    muteBtn.classList.toggle('is-off', !!__cpCall.muted);
+  }
+  if (camBtn) {
+    camBtn.textContent = __cpCall.camOff ? 'OFF' : 'CAM';
+    camBtn.classList.toggle('is-off', !!__cpCall.camOff);
+  }
+}
+
+function toggleCallMute() {
+  if (!__cpCall.local) return;
+  __cpCall.muted = !__cpCall.muted;
+  __cpCall.local.getAudioTracks().forEach(function (t) { t.enabled = !__cpCall.muted; });
+  syncCallControlButtons();
+}
+
+function toggleCallCamera() {
+  if (!__cpCall.local) return;
+  __cpCall.camOff = !__cpCall.camOff;
+  __cpCall.local.getVideoTracks().forEach(function (t) { t.enabled = !__cpCall.camOff; });
+  syncCallControlButtons();
 }
 
 async function publishPeerId(role, clientId, peerId) {
@@ -52004,13 +52053,22 @@ async function startInternalVideocall(clientId, role) {
   setCallStatus('Avvio PeerJS…');
   __cpCall.role = role;
   __cpCall.clientId = clientId;
+  __cpCall.muted = false;
+  __cpCall.camOff = false;
+  syncCallControlButtons();
   try {
     const PeerCtor = await loadPeerJs();
     if (!PeerCtor) throw new Error('PeerJS non disponibile');
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user' },
+      audio: true
+    });
     __cpCall.local = stream;
     const loc = document.getElementById('cp-call-local');
-    if (loc) loc.srcObject = stream;
+    if (loc) {
+      loc.srcObject = stream;
+      try { loc.play(); } catch (_) {}
+    }
 
     const iceServers = await fetchWebRtcIceServers();
     const peer = new PeerCtor(undefined, {
@@ -52057,7 +52115,10 @@ async function startInternalVideocall(clientId, role) {
         __cpCall.call = call;
         call.on('stream', function (remote) {
           const el = document.getElementById('cp-call-remote');
-          if (el) el.srcObject = remote;
+          if (el) {
+            el.srcObject = remote;
+            try { el.play(); } catch (_) {}
+          }
           setCallStatus('In chiamata');
         });
         call.on('close', function () { hangupInternalVideocall(true); });
@@ -52095,7 +52156,7 @@ function hangupInternalVideocall(silent) {
       body: JSON.stringify({ signal: { type: 'peerjs', action: 'hangup' } })
     }, 8000).catch(function () {});
   }
-  __cpCall = { peer: null, call: null, local: null, role: null, clientId: null, poll: null, myPeerId: null };
+  __cpCall = { peer: null, call: null, local: null, role: null, clientId: null, poll: null, myPeerId: null, muted: false, camOff: false };
   const ov = document.getElementById('cp-call-overlay');
   if (ov) ov.classList.remove('active');
   const loc = document.getElementById('cp-call-local');
@@ -52106,6 +52167,8 @@ function hangupInternalVideocall(silent) {
 
 window.startInternalVideocall = startInternalVideocall;
 window.hangupInternalVideocall = hangupInternalVideocall;
+window.toggleCallMute = toggleCallMute;
+window.toggleCallCamera = toggleCallCamera;
 window.confirmDemoUnlock = confirmDemoUnlock;
 window.openAddClientWizard = openAddClientWizard;
 window.setAddClientMode = setAddClientMode;
