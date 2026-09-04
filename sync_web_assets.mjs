@@ -12,6 +12,7 @@ export const ANDROID_STATIC_ASSETS = [
   'nurvan_logo.png',
   'nurvan_app_icon.png',
   'xlsx.full.min.js',
+  'peerjs.min.js',
   'data.json',
   'program-catalog-index.json',
   'program-catalog-body.json',
