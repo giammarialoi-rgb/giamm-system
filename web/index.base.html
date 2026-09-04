@@ -107,6 +107,11 @@ body {
   opacity: 0.98;
   filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.35));
 }
+body.coach-viewing-client button[onclick*="askCoachAiForDomain"],
+body.coach-viewing-client .nutrition-confirm-card button,
+body.coach-viewing-client [data-athlete-only="1"] {
+  display: none !important;
+}
 #nurvan-busy-overlay {
   position: fixed;
   inset: 0;
@@ -13472,8 +13477,8 @@ function renderStats(c){
   }).join('');
   c.innerHTML = `
     <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">PERFORMANCE LAB</h1>
-    <div style="font-size:10px; color:#777; margin-bottom:15px; font-weight:700; letter-spacing:1px;">ATTIVITÀ · CRONOLOGIA · FATICA</div>
-    ${renderAdaptiveDeloadCardHtml()}
+    <div style="font-size:10px; color:#777; margin-bottom:15px; font-weight:700; letter-spacing:1px;">${store && store.coachViewingClient ? 'VISTA MASTER · DATI CLIENTE' : 'ATTIVITÀ · CRONOLOGIA · FATICA'}</div>
+    ${store && store.coachViewingClient ? '' : renderAdaptiveDeloadCardHtml()}
     ${last ? `<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid rgba(212,175,55,0.35);">
       <div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:6px;">ULTIMA SESSIONE FINALIZZATA</div>
       <div style="font-size:11px;color:#aaa;">W${last.week} · Seduta ${(last.day||0)+1} · ${esc(String(last.at||'').replace('T',' ').slice(0,16))}</div>
@@ -13511,7 +13516,7 @@ function renderStats(c){
   setTimeout(function () {
     renderStatsData();
     drillStatsMuscle((store.prefs && store.prefs.statsMuscle) || 'GENERALE');
-    refreshCheckFisicoThumbs();
+    if (!(store && store.coachViewingClient)) refreshCheckFisicoThumbs();
   }, 50);
 }
 
@@ -13608,13 +13613,36 @@ function summarizeCheckLogs(period) {
   return { rows: rows, sessions: rows.length, sets: sets, tonnage: Math.round(tonnage), kcal: Math.round(kcal), intensity: Math.round(intensity), muscles: muscles };
 }
 function renderCheckFisicoCardHtml() {
+  const hist = (store.bodyChecks || []).slice().reverse().slice(0, 8);
+  // MASTER view: read client's checks, comment only — no athlete upload/send CTAs
+  if (store && store.coachViewingClient) {
+    const histHtml = hist.length ? hist.map(function (c, i) {
+      const photos = (c.hasFront || c.front || c.hasBack || c.back)
+        ? '<div style="display:flex;gap:6px;margin-top:6px;">' +
+          (c.front ? '<img src="' + c.front + '" style="width:72px;height:96px;object-fit:cover;border-radius:6px;">' : '') +
+          (c.back ? '<img src="' + c.back + '" style="width:72px;height:96px;object-fit:cover;border-radius:6px;">' : '') +
+          '</div>'
+        : '';
+      return '<div style="padding:10px 0;border-bottom:1px solid #1c1c1c;">' +
+        '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;">' +
+        '<span>' + esc(String(c.at || '').replace('T', ' ').slice(0, 16)) + ' · ' + esc(checkFisicoPeriodMeta(c.period).label) + '</span>' +
+        '<span style="color:var(--gold);font-weight:800;">' + (c.weight != null && c.weight !== '' ? (c.weight + ' kg') : '—') + '</span></div>' +
+        (c.notes ? '<div style="font-size:11px;color:#aaa;margin-top:4px;">Nota cliente: ' + esc(c.notes) + '</div>' : '') +
+        (c.coachComment ? '<div style="font-size:11px;color:var(--gold);margin-top:4px;">Tuo commento: ' + esc(c.coachComment) + '</div>' : '') +
+        photos +
+        '<div style="margin-top:8px;"><textarea id="cp-check-comment-' + i + '" rows="2" placeholder="Commento coach (solo lettura check)…" style="width:100%;padding:8px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:12px;"></textarea>' +
+        '<button type="button" class="btn btn-outline" style="width:100%;margin-top:6px;font-size:10px;" onclick="saveCoachCheckComment(' + i + ')">SALVA COMMENTO</button></div></div>';
+    }).join('') : '<div style="font-size:11px;color:#666;">Il cliente non ha ancora caricato check.</div>';
+    return '<div class="card stats-anatomy" style="margin-bottom:12px;">' +
+      '<div class="stats-anatomy-head"><h2>Check fisici del cliente</h2><div class="stats-anatomy-hint">Solo lettura · puoi commentare</div></div>' +
+      '<div style="padding:12px 14px 14px;">' + histHtml + '</div></div>';
+  }
   const draft = checkFisicoDraft();
-  const hist = (store.bodyChecks || []).slice().reverse().slice(0, 5);
   const periodBtns = CHECK_FISICO_PERIODS.map(function (p) {
     const on = draft.period === p.id;
     return '<button type="button" class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" onclick="setCheckFisicoPeriod(\'' + p.id + '\')">' + p.label + '</button>';
   }).join('');
-  const histHtml = hist.length ? hist.map(function (c) {
+  const histHtml = hist.length ? hist.slice(0, 5).map(function (c) {
     return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #1c1c1c;font-size:11px;">' +
       '<span>' + esc(String(c.at || '').replace('T', ' ').slice(0, 16)) + ' · ' + esc(checkFisicoPeriodMeta(c.period).label) + '</span>' +
       '<span style="color:var(--gold);font-weight:800;">' + (c.weight != null && c.weight !== '' ? (c.weight + ' kg') : '—') + '</span></div>';
@@ -13658,6 +13686,32 @@ function renderCheckFisicoCardHtml() {
     histHtml +
     '</div></div>';
 }
+
+async function saveCoachCheckComment(idxFromEnd) {
+  const hist = (store.bodyChecks || []).slice().reverse();
+  const entry = hist[idxFromEnd];
+  if (!entry) return;
+  const ta = document.getElementById('cp-check-comment-' + idxFromEnd);
+  const comment = (ta && ta.value || '').trim();
+  if (!comment) { if (typeof showToast === 'function') showToast('Scrivi un commento', 'warning'); return; }
+  entry.coachComment = comment;
+  entry.coachCommentedAt = new Date().toISOString();
+  // write back into store.bodyChecks by id/at
+  const all = store.bodyChecks || [];
+  for (let i = 0; i < all.length; i++) {
+    if ((all[i].id && all[i].id === entry.id) || all[i].at === entry.at) {
+      all[i].coachComment = comment;
+      all[i].coachCommentedAt = entry.coachCommentedAt;
+      break;
+    }
+  }
+  if (typeof pushCoachClientEdits === 'function') {
+    await pushCoachClientEdits();
+  } else if (typeof persist === 'function') persist();
+  if (typeof showToast === 'function') showToast('Commento salvato sul check del cliente', 'success');
+  if (typeof render === 'function') render();
+}
+window.saveCoachCheckComment = saveCoachCheckComment;
 function onCheckFisicoWeight(v) {
   checkFisicoDraft().weight = v;
 }

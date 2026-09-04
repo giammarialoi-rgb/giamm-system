@@ -15,6 +15,7 @@ export const ANDROID_STATIC_ASSETS = [
   'data.json',
   'program-catalog-index.json',
   'program-catalog-body.json',
+  'exam-request-catalog.json',
   'manifest.webmanifest',
   'sw.js',
   'apple-touch-icon.png',
