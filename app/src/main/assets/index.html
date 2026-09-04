@@ -297,13 +297,31 @@ html, body {
 }
 main {
   margin-top: calc(var(--header-height) + env(safe-area-inset-top, 0px) + var(--cp-session-bar, 0px));
-  margin-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+  margin-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   padding: 15px;
-  height: calc(100dvh - var(--header-height) - 110px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--cp-session-bar, 0px));
+  height: calc(100dvh - var(--header-height) - 64px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--cp-session-bar, 0px));
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   box-sizing: border-box;
+}
+body.cp-chat-view main {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.btn-outline {
+  color: #d4af37 !important;
+  -webkit-text-fill-color: #d4af37 !important;
+}
+.btn-primary {
+  color: #000 !important;
+  -webkit-text-fill-color: #000 !important;
+}
+label, label span, .card label, .card label span {
+  color: #eee !important;
+  -webkit-text-fill-color: #eee !important;
 }
 body.coach-viewing-client main {
   padding-top: 8px;
@@ -315,13 +333,13 @@ nav.bottom-nav {
   left: 0;
   right: 0;
   width: 100%;
-  height: calc(110px + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 15px);
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 8px);
   background: #000;
   border-top: 1px solid var(--border);
   display: flex;
   z-index: 1000;
-  box-shadow: 0 -15px 50px rgba(0,0,0,1);
+  box-shadow: 0 -8px 24px rgba(0,0,0,.8);
   box-sizing: border-box;
   transform: translateZ(0);
 }
@@ -334,14 +352,14 @@ nav.bottom-nav {
   justify-content: center;
   color: #666;
   text-decoration: none;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 800;
-  gap: 4px;
+  gap: 2px;
 }
 
 .nav-item.active { color: var(--gold); }
-.nav-item svg { width: 38px; height: 38px; fill: #555; transition: all 0.2s; }
-.nav-item.active svg { fill: var(--gold); transform: translateY(-3px) scale(1.08); }
+.nav-item svg { width: 22px; height: 22px; fill: #555; transition: all 0.2s; }
+.nav-item.active svg { fill: var(--gold); transform: translateY(-1px) scale(1.06); }
 
 .card {
   background: var(--surface);
@@ -371,8 +389,8 @@ nav.bottom-nav {
   text-transform: uppercase;
 }
 
-.btn-primary { background: var(--gold); color: #000; }
-.btn-outline { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
+.btn-primary { background: var(--gold); color: #000 !important; -webkit-text-fill-color: #000 !important; }
+.btn-outline { background: transparent; border: 1px solid var(--gold); color: #d4af37 !important; -webkit-text-fill-color: #d4af37 !important; }
 
 .btn:active, .nav-item:active, button:active:not(.pw-toggle),
 .btn.is-pressed, .nav-item.is-pressed, button.is-pressed {
@@ -34382,6 +34400,12 @@ function stopVoiceInput(){
   if(voiceRecognition){ voiceRecognition.stop(); voiceRecognition = null; }
   if(window.speechSynthesis) window.speechSynthesis.cancel();
   const status = $('voice-status'); if(status) status.textContent = '';
+  window.__cpDictating = false;
+  const btn = document.getElementById('cp-dictate-btn');
+  if (btn) {
+    btn.classList.remove('cp-dictate-on');
+    btn.classList.add('cp-dictate-off');
+  }
 }
 function toggleVoiceOutput(){
   const status = $('voice-status');
@@ -35737,12 +35761,32 @@ function handleUniversalFileSelected(event) {
   const file = event.target?.files?.[0];
   if (!file) return;
   const intent = resolveFilePickIntent(file && file.name);
+  if (intent === 'CHAT_ATTACH' || (store && store.__cpChatAttachIntent)) {
+    store.__cpChatAttachIntent = false;
+    clearFilePickIntent();
+    const reader = new FileReader();
+    reader.onload = async function () {
+      try {
+        const dataUrl = String(reader.result || '');
+        const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '');
+        await attachNativeDocToChat({ name: file.name, mime: file.type || 'application/octet-stream', base64: base64 });
+      } catch (err) {
+        if (typeof showToast === 'function') showToast((err && err.message) || 'Allegato non caricato', 'danger');
+      }
+    };
+    reader.readAsDataURL(file);
+    if (event.target) event.target.value = '';
+    return;
+  }
   processUniversalFile(file, intent);
   if (event.target) event.target.value = '';
 }
 
 function handleImportFileSelected(event) {
-  setFilePickIntent('IMPORT');
+  // Do not overwrite chat-attach / check-photo intents set by the caller
+  if (!(store && store.__cpChatAttachIntent) && window._activeFileAction !== 'CHAT_ATTACH' && window._activeFileAction !== 'CHECK_FISICO_PHOTO') {
+    setFilePickIntent('IMPORT');
+  }
   handleUniversalFileSelected(event);
 }
 
@@ -43219,6 +43263,7 @@ function applySsttStartInputs() {
 function renderTraining(c){
   console.debug('WORKOUT_OPEN', { week: currentWeek, session: currentDay });
   try {
+    if (typeof advanceToNextOpenTrainingDay === 'function') advanceToNextOpenTrainingDay(false);
     const intensType = (store.prefs.weekIntensity && (store.prefs.weekIntensity[currentWeek] || store.prefs.weekIntensity[String(currentWeek)])) || store.prefs.intensityType || 'RIR';
     const weeksList = DATA.weeks;
     if(!weeksList.length) throw new Error('Nessuna settimana disponibile');
@@ -44314,6 +44359,50 @@ function calcStats(){
   if($('d-sets')) $('d-sets').innerText = s;
 }
 
+function isTrainingDayFinalized(week, day) {
+  const w = Number(week) || 1;
+  const d = Number(day) || 0;
+  return (store.logs || []).some(function (l) {
+    return l && Number(l.week) === w && Number(l.day) === d;
+  });
+}
+function advanceToNextOpenTrainingDay(forceFromCurrent) {
+  try {
+    if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return false;
+    let w = Number(currentWeek) || 1;
+    let d = Number(currentDay) || 0;
+    if (forceFromCurrent) {
+      // step past current (just finalized)
+      const weekObj = DATA.weeks[w - 1];
+      const sessions = (weekObj && (weekObj.sessions || weekObj.days)) || [];
+      if (d + 1 < sessions.length) d += 1;
+      else { w += 1; d = 0; }
+    }
+    for (let guard = 0; guard < 80; guard++) {
+      if (w > DATA.weeks.length) {
+        currentWeek = DATA.weeks.length;
+        const last = DATA.weeks[currentWeek - 1];
+        const sess = (last && (last.sessions || last.days)) || [];
+        currentDay = Math.max(0, sess.length - 1);
+        return false;
+      }
+      const weekObj = DATA.weeks[w - 1];
+      const sessions = (weekObj && (weekObj.sessions || weekObj.days)) || [];
+      if (!sessions.length) { w += 1; d = 0; continue; }
+      if (d >= sessions.length) { w += 1; d = 0; continue; }
+      if (!isTrainingDayFinalized(w, d)) {
+        currentWeek = w;
+        currentDay = d;
+        return true;
+      }
+      d += 1;
+    }
+  } catch (_) {}
+  return false;
+}
+window.advanceToNextOpenTrainingDay = advanceToNextOpenTrainingDay;
+window.isTrainingDayFinalized = isTrainingDayFinalized;
+
 function finalizeWorkout(){
   markSessionClockIfNeeded();
   const snap = collectSessionStats({ currentSessionOnly: true });
@@ -44361,18 +44450,8 @@ function finalizeWorkout(){
   store.logs.push(logEntry);
   if (store.logs.length > 60) store.logs = store.logs.slice(-60);
   store.sessionStartedAt = null;
-  // Advance to next training day for next session
-  try {
-    const weekObj = DATA && DATA.weeks && DATA.weeks[(currentWeek || 1) - 1];
-    const sessions = weekObj && (weekObj.sessions || weekObj.days) || [];
-    if (sessions.length) {
-      if ((currentDay || 0) + 1 < sessions.length) currentDay = (currentDay || 0) + 1;
-      else if ((currentWeek || 1) < (DATA.weeks.length || 1)) {
-        currentWeek = (currentWeek || 1) + 1;
-        currentDay = 0;
-      }
-    }
-  } catch (_) {}
+  // Close this session and jump to next non-finalized day
+  try { advanceToNextOpenTrainingDay(true); } catch (_) {}
   persist();
   persistActiveProgramStructure();
   window.__pendingCoachAnalyze = {
@@ -44476,12 +44555,13 @@ function maybeAskCoachAfterComplete() {
       if (typeof askRealCoachForDomain === 'function') {
         askRealCoachForDomain('training');
         setTimeout(function () {
-          const input = document.getElementById('cp-ath-msg') || document.querySelector('#cp-ws-msg, #cp-chat-input');
+          const input = document.getElementById('cp-client-msg') || document.getElementById('cp-ath-msg') || document.querySelector('#cp-ws-msg, #cp-chat-input');
           if (input) {
             input.value = 'Coach, ho finalizzato allenamento settimana ' + (logEntry.week) +
               ' giorno ' + ((logEntry.day || 0) + 1) +
               '. Durata ' + Math.floor((logEntry.durationSec || 0) / 60) + ' min, tonnellaggio ' + logEntry.tonnage +
               ' kg, intensità ' + logEntry.intensity + '. Puoi darmi un feedback?';
+            input.focus();
           }
         }, 400);
       }
@@ -48745,17 +48825,19 @@ function ensurePracticeStyle() {
   }
   s.textContent = [
     '.cp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10070;display:none;align-items:center;justify-content:center;padding:16px;}',
-    '.cp-panel{background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:16px;color:#eee;}',
+    '.cp-panel{background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:16px;color:#eee !important;-webkit-text-fill-color:#eee;}',
     '.cp-panel h2{color:var(--gold);font-size:16px;margin:0 0 8px;}',
-    '.cp-help{font-size:12px;color:#bbb !important;line-height:1.45;margin:0 0 12px;}',
+    '.cp-help{font-size:12px;color:#bbb !important;-webkit-text-fill-color:#bbb;line-height:1.45;margin:0 0 12px;}',
     '.cp-field{margin-bottom:10px;}',
-    '.cp-field label{display:block;font-size:10px;color:#e8e8e8 !important;-webkit-text-fill-color:#e8e8e8;font-weight:800;margin-bottom:4px;}',
-    '.cp-field input,.cp-field select,.cp-field textarea{width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff !important;-webkit-text-fill-color:#fff;border-radius:8px;}',
+    '.cp-field label{display:block;font-size:10px;color:#e8e8e8 !important;-webkit-text-fill-color:#e8e8e8 !important;font-weight:800;margin-bottom:4px;}',
+    '.cp-field input,.cp-field select,.cp-field textarea{width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff !important;-webkit-text-fill-color:#fff !important;border-radius:8px;}',
     '.cp-field input::placeholder,.cp-panel input::placeholder{color:#888 !important;}',
     '.cp-mode{display:flex;gap:8px;margin-bottom:12px;}',
     '.cp-mode button{flex:1;font-size:11px;padding:10px 8px;line-height:1.3;}',
-    'body.coach-session label,body.coach-viewing-client label,#cp-client-list label,.card label{color:#e8e8e8 !important;-webkit-text-fill-color:#e8e8e8;}',
-    'body.coach-session input[type="search"],body.coach-session input[type="text"],body.coach-viewing-client input[type="search"],body.coach-viewing-client input[type="text"]{background:#111 !important;color:#fff !important;-webkit-text-fill-color:#fff;border:1px solid #333;border-radius:8px;padding:10px;width:100%;}',
+    'body.coach-session label,body.coach-viewing-client label,#cp-client-list label,.card label,body.coach-session label span,body.coach-viewing-client label span,.card label span{color:#eee !important;-webkit-text-fill-color:#eee !important;}',
+    'body.coach-session .btn-outline,body.coach-viewing-client .btn-outline,.cp-chat-tools .btn-outline,.cp-chat-composer .btn-outline{color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;}',
+    'body.coach-session .btn-primary,body.coach-viewing-client .btn-primary{color:#000 !important;-webkit-text-fill-color:#000 !important;}',
+    'body.coach-session input[type="search"],body.coach-session input[type="text"]:not(.cp-chat-input),body.coach-viewing-client input[type="search"],body.coach-viewing-client input[type="text"]:not(.cp-chat-input){background:#111 !important;color:#fff !important;-webkit-text-fill-color:#fff !important;border:1px solid #333;border-radius:8px;padding:10px;width:100%;}',
     'body.coach-session .fab-save,body.coach-viewing-client .fab-save,body.role-athlete .fab-save{display:none !important;}',
     'body.coach-session header #profile-button{display:none !important;}',
     'body.coach-session header #account-button{display:none !important;}',
@@ -48768,7 +48850,22 @@ function ensurePracticeStyle() {
     '.cp-lightbox img{max-width:100%;max-height:72vh;border-radius:10px;object-fit:contain;}',
     '.cp-badge{font-size:9px;padding:3px 6px;border-radius:4px;border:1px solid #444;color:#ccc;margin-left:6px;}',
     '.cp-row{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #222;}',
-    '.cp-chat-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}',
+    '.cp-chat-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}',
+    '.cp-chat-shell{display:flex;flex-direction:column;flex:1;min-height:0;height:100%;}',
+    '.cp-chat-thread{flex:1;min-height:0;overflow:auto;background:#0a0a0a;border:1px solid #222;border-radius:12px;padding:8px;}',
+    '.cp-chat-composer{display:flex;gap:6px;align-items:center;margin-top:6px;flex-shrink:0;}',
+    '.cp-icon-btn{width:40px;height:40px;min-width:40px;padding:0 !important;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;}',
+    '.cp-icon-btn svg{width:18px;height:18px;fill:currentColor;stroke:currentColor;}',
+    '.cp-icon-btn.cp-dictate-on{border-color:#2ecc71 !important;color:#2ecc71 !important;-webkit-text-fill-color:#2ecc71 !important;background:rgba(46,204,113,.12);}',
+    '.cp-icon-btn.cp-dictate-off{border-color:#e74c3c !important;color:#e74c3c !important;-webkit-text-fill-color:#e74c3c !important;}',
+    '.cp-chat-input{flex:1;min-width:0;padding:10px 12px !important;border-radius:20px !important;border:1px solid #333 !important;background:#151515 !important;color:#fff !important;-webkit-text-fill-color:#fff !important;width:auto !important;}',
+    '.cp-attach-sheet{position:fixed;inset:0;z-index:10140;background:rgba(0,0,0,.72);display:none;align-items:flex-end;justify-content:center;padding:16px;}',
+    '.cp-attach-sheet.active{display:flex;}',
+    '.cp-attach-sheet .cp-sheet{width:100%;max-width:420px;background:#121212;border:1px solid #333;border-radius:16px 16px 12px 12px;padding:14px;color:#eee;}',
+    '.cp-attach-sheet button{width:100%;margin-top:8px;}',
+    '.cp-inapp-notify{position:fixed;left:10px;right:10px;top:calc(var(--header-height) + 8px + var(--cp-session-bar, 0px));z-index:10160;background:#151515;border:1px solid var(--gold);border-radius:12px;padding:10px 12px;color:#eee;box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;}',
+    '.cp-inapp-notify b{color:var(--gold);display:block;font-size:12px;margin-bottom:2px;}',
+    '.cp-inapp-notify span{font-size:11px;color:#ccc;}',
     '.cp-assign-bar{position:fixed;left:8px;right:8px;bottom:72px;z-index:10080;background:#111;border:1px solid var(--gold);border-radius:12px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.45);}',
     '.cp-pw-row{display:flex;gap:6px;align-items:center;}',
     '.cp-pw-row input{flex:1;}',
@@ -49133,10 +49230,20 @@ function applyClientPayloadToLocal(payload) {
     if (payload.profile) DATA.profile = payload.profile;
   }
   try {
-    const last = (store.logs || []).slice().reverse().find(function (l) { return l && (l.week || l.day != null); });
-    if (last) {
-      currentWeek = Number(last.week) || 1;
-      currentDay = Number(last.day) || 0;
+    const lastOpen = (store.logs || []).slice().reverse().find(function (l) { return l && (l.week || l.day != null); });
+    if (typeof advanceToNextOpenTrainingDay === 'function') {
+      if (lastOpen) {
+        currentWeek = Number(lastOpen.week) || 1;
+        currentDay = Number(lastOpen.day) || 0;
+        advanceToNextOpenTrainingDay(true);
+      } else {
+        currentWeek = 1;
+        currentDay = 0;
+        advanceToNextOpenTrainingDay(false);
+      }
+    } else if (lastOpen) {
+      currentWeek = Number(lastOpen.week) || 1;
+      currentDay = Number(lastOpen.day) || 0;
     } else {
       currentWeek = 1;
       currentDay = 0;
@@ -49379,10 +49486,10 @@ function renderCoachHub(c) {
     '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">I tuoi clienti</h1></div>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="exitCoachSession()">ESCI DALL’HUB</button></div>' +
     '<div class="card" style="padding:12px;margin-bottom:12px;">' +
-    '<label style="display:flex;gap:10px;align-items:center;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee;margin-bottom:10px;padding:8px;background:#141414;border-radius:8px;border:1px solid #2a2a2a;">' +
-    '<input type="checkbox" ' + (hide ? 'checked' : '') + ' onchange="toggleCoachHidePresence(this.checked)"> <span style="color:#eee !important;">Nascondi che sei online agli atleti</span></label>' +
-    '<label style="display:flex;gap:10px;align-items:center;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee;margin-bottom:10px;padding:8px;background:#141414;border-radius:8px;border:1px solid #2a2a2a;">' +
-    '<input type="checkbox" ' + ((store.coachAllowVideocall !== false) ? 'checked' : '') + ' onchange="toggleCoachVideocall(this.checked)"> <span style="color:#eee !important;">Consenti videocall interne con i clienti</span></label>' +
+    '<label style="display:flex;gap:10px;align-items:center;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee !important;margin-bottom:10px;padding:8px;background:#141414;border-radius:8px;border:1px solid #2a2a2a;">' +
+    '<input type="checkbox" ' + (hide ? 'checked' : '') + ' onchange="toggleCoachHidePresence(this.checked)"> <span style="color:#eee !important;-webkit-text-fill-color:#eee !important;">Nascondi che sei online agli atleti</span></label>' +
+    '<label style="display:flex;gap:10px;align-items:center;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee !important;margin-bottom:10px;padding:8px;background:#141414;border-radius:8px;border:1px solid #2a2a2a;">' +
+    '<input type="checkbox" ' + ((store.coachAllowVideocall !== false) ? 'checked' : '') + ' onchange="toggleCoachVideocall(this.checked)"> <span style="color:#eee !important;-webkit-text-fill-color:#eee !important;">Consenti videocall interne con i clienti</span></label>' +
     '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button></div>' +
     '<div id="cp-client-list"><div class="cp-help">Caricamento…</div></div>';
@@ -49572,16 +49679,31 @@ function openCoachClientChat(id) {
   navigate('coachChat');
 }
 
-function chatToolsHtml(inputId, sendCall, clearCall, newCall) {
-  return '<div style="display:flex;gap:8px;margin-top:10px;align-items:center;">' +
-    '<input id="' + inputId + '" type="text" placeholder="Scrivi…">' +
-    '<button class="btn btn-primary" onclick="' + sendCall + '">INVIA</button></div>' +
+function cpSvg(name) {
+  if (name === 'attach') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 6.5l-7.8 7.8a2.5 2.5 0 103.5 3.5l8.1-8.1a4 4 0 10-5.7-5.7l-8.5 8.5a5.5 5.5 0 107.8 7.8l7.1-7.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  if (name === 'mic') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3z" fill="currentColor"/><path d="M5 11a7 7 0 0014 0M12 18v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  if (name === 'video') return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 10l6-3v10l-6-3z" fill="currentColor"/></svg>';
+  if (name === 'send') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2-6-8-2z" fill="currentColor"/></svg>';
+  return '';
+}
+
+function chatToolsHtml(inputId, sendCall, clearCall, newCall, opts) {
+  opts = opts || {};
+  const videoBtn = opts.videoCall
+    ? '<button type="button" class="btn btn-outline cp-icon-btn" title="Videocall" onclick="' + opts.videoCall + '">' + cpSvg('video') + '</button>'
+    : '';
+  return '<div id="cp-chat-attach-preview" class="cp-help" style="margin:0;"></div>' +
+    '<div class="cp-chat-composer">' +
+    '<button type="button" class="btn btn-outline cp-icon-btn" title="Allega" onclick="openChatAttachSheet()">' + cpSvg('attach') + '</button>' +
+    '<button type="button" id="cp-dictate-btn" class="btn btn-outline cp-icon-btn cp-dictate-off" title="Dettatura" onclick="toggleChatDictation(\'' + inputId + '\')">' + cpSvg('mic') + '</button>' +
+    videoBtn +
+    '<input id="' + inputId + '" class="cp-chat-input" type="text" placeholder="Messaggio cifrato…">' +
+    '<button type="button" class="btn btn-primary cp-icon-btn" title="Invia" onclick="' + sendCall + '">' + cpSvg('send') + '</button>' +
+    '</div>' +
     '<div class="cp-chat-tools">' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="startChatDictation(\'' + inputId + '\')">🎙 DETTA</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="pickChatAttachment()">📎 ALLEGA</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="' + clearCall + '">AZZERA CHAT (PER ME)</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="' + newCall + '">NUOVA CHAT</button>' +
-    '</div><div id="cp-attach-preview" class="cp-help"></div>';
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:8px 10px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="' + clearCall + '">AZZERA (PER ME)</button>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:8px 10px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="' + newCall + '">NUOVA CHAT</button>' +
+    '</div>';
 }
 
 function renderMessageHtml(m, mine) {
@@ -49662,7 +49784,7 @@ async function askExerciseInfoToCoach(idx, exerciseName) {
   const name = exerciseName || 'esercizio';
   const week = (typeof currentWeek !== 'undefined' ? currentWeek : 1);
   const day = (typeof currentDay !== 'undefined' ? currentDay : 0) + 1;
-  const msg = 'Coach chiedo info su allenamento ' + day + ' settimana ' + week + ' esercizio "' + name + '"';
+  const msg = 'Coach, chiedo info su: esercizio "' + name + '" · allenamento giorno ' + day + ' · settimana ' + week + '.';
   if (typeof isAthleteRole === 'function' && isAthleteRole()) {
     let online = !!store.coachOnline;
     try {
@@ -49673,11 +49795,16 @@ async function askExerciseInfoToCoach(idx, exerciseName) {
     if (!online) {
       if (!confirm('Il coach non è online. Chiedere comunque?')) return;
     }
+    window.__cpChatPrefill = msg;
     navigate('clientChat');
     setTimeout(function () {
-      const input = document.getElementById('cp-ath-msg');
-      if (input) { input.value = msg; input.focus(); }
-    }, 350);
+      const input = document.getElementById('cp-client-msg') || document.getElementById('cp-ath-msg');
+      if (input) {
+        input.value = window.__cpChatPrefill || msg;
+        input.focus();
+      }
+      window.__cpChatPrefill = null;
+    }, 280);
     return;
   }
   practiceToast(msg, 'info');
@@ -49730,7 +49857,14 @@ async function renderCoachWorkspace(c) {
       esc(presenceLabel(cl.online, cl.lastSeenAt, cl.workoutLive)) + '</div>' +
       '<div class="card" style="padding:10px;margin-bottom:12px;border-color:rgba(212,175,55,.35);"><div style="font-size:11px;color:var(--gold);font-weight:800;">ALLENAMENTI CLIENTE</div>' +
       '<div style="font-size:12px;color:#ddd;margin-top:4px;">' + esc(lastWoLabel) + '</div>' +
-      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="enterCoachClientView(\'stats\')">APRI STATS / CRONOLOGIA</button></div>' +
+      (logs.length ? ('<div style="margin-top:8px;">' + logs.slice().reverse().slice(0, 6).map(function (row, i) {
+        const realIdx = logs.length - 1 - i;
+        return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #222;font-size:11px;">' +
+          '<span style="color:#ccc;">W' + (row.week || '?') + ' · S' + ((row.day || 0) + 1) + ' · ' + esc(String(row.at || '').replace('T', ' ').slice(0, 16)) +
+          '<br><span style="color:#888;">' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg · ' + (row.kcal || 0) + ' kcal</span></span>' +
+          '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="openClientWorkoutReport(' + realIdx + ')">VEDI REPORT</button></div>';
+      }).join('') + '</div>') : '') +
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="enterCoachClientView(\'stats\')">APRI STATS / CRONOLOGIA</button></div>' +
       (cl.leaveRequested ? '<div class="card" style="padding:12px;margin-bottom:12px;border-color:#c66;"><div style="font-weight:900;color:#c66;">Richiesta fine collaborazione</div>' +
         '<button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="confirmLeaveClient(\'' + esc(id) + '\')">CONFERMA FINE COLLABORAZIONE</button></div>' : '') +
       ((snap.pendingChange || cl.hasPendingChange) ? '<div class="card" style="padding:12px;margin-bottom:12px;border-color:var(--gold);"><div style="font-weight:900;color:var(--gold);">Modifica richiesta dall’atleta</div>' +
@@ -50438,13 +50572,24 @@ async function rejectClientChange(id) {
 }
 
 function renderClientChat(c) {
-  c.innerHTML = '<div style="margin-bottom:12px;"><span style="font-size:10px;color:var(--gold);font-weight:800;">COACH · E2E 🔒</span>' +
-    '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">Chat con il coach</h1></div>' +
-    '<div class="card" style="padding:12px;"><div id="cp-client-chat" style="max-height:52vh;overflow:auto;"></div>' +
-    chatToolsHtml('cp-client-msg', 'sendAthleteHumanMessage()', 'clearChatForMe(null,\'athlete\')', 'newChatThread(null,\'athlete\')') +
-    '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="startInternalVideocall(null,\'athlete\')">📹 VIDEOCALL INTERNA</button>' +
+  if (document.body) document.body.classList.add('cp-chat-view');
+  c.innerHTML = '<div class="cp-chat-shell">' +
+    '<div style="flex-shrink:0;margin-bottom:6px;"><span style="font-size:10px;color:var(--gold);font-weight:800;">COACH · E2E</span>' +
+    '<h1 style="color:#fff;margin:2px 0 0;font-size:18px;">Chat con il coach</h1></div>' +
+    '<div id="cp-client-chat" class="cp-chat-thread"></div>' +
+    chatToolsHtml('cp-client-msg', 'sendAthleteHumanMessage()', 'clearChatForMe(null,\'athlete\')', 'newChatThread(null,\'athlete\')', {
+      videoCall: 'startInternalVideocall(null,\'athlete\')'
+    }) +
     '</div>';
+  window.__cpChatInputId = 'cp-client-msg';
   ensureE2EReady('athlete', null).then(function () { startChatPoll(null, 'cp-client-chat', 'athlete'); });
+  if (window.__cpChatPrefill) {
+    setTimeout(function () {
+      const input = document.getElementById('cp-client-msg');
+      if (input) { input.value = window.__cpChatPrefill; input.focus(); }
+      window.__cpChatPrefill = null;
+    }, 120);
+  }
 }
 
 var __cpChatPoll = null;
@@ -50493,54 +50638,83 @@ async function loadHumanMessages(clientId, boxId, role, silent) {
 }
 
 function startChatDictation(inputId) {
-  window.__cpVoiceTarget = inputId;
-  if (typeof startVoiceInputFor === 'function') startVoiceInputFor(inputId);
-  else if (typeof startVoiceInput === 'function') startVoiceInput();
-  else practiceToast('Dettatura non disponibile su questo dispositivo', 'warning');
+  toggleChatDictation(inputId);
 }
 
-function pickChatAttachment() {
+function setDictateButtonState(on) {
+  const btn = document.getElementById('cp-dictate-btn');
+  if (!btn) return;
+  btn.classList.toggle('cp-dictate-on', !!on);
+  btn.classList.toggle('cp-dictate-off', !on);
+}
+
+function toggleChatDictation(inputId) {
+  window.__cpVoiceTarget = inputId;
+  if (window.__cpDictating) {
+    window.__cpDictating = false;
+    setDictateButtonState(false);
+    if (typeof stopVoiceInput === 'function') stopVoiceInput();
+    practiceToast('Dettatura terminata', 'info');
+    return;
+  }
+  window.__cpDictating = true;
+  setDictateButtonState(true);
+  if (typeof startVoiceInputFor === 'function') startVoiceInputFor(inputId);
+  else if (typeof startVoiceInput === 'function') startVoiceInput();
+  else {
+    window.__cpDictating = false;
+    setDictateButtonState(false);
+    practiceToast('Dettatura non disponibile su questo dispositivo', 'warning');
+  }
+}
+
+function openChatAttachSheet() {
+  ensurePracticeStyle();
+  let sheet = document.getElementById('cp-attach-sheet');
+  if (!sheet) {
+    sheet = document.createElement('div');
+    sheet.id = 'cp-attach-sheet';
+    sheet.className = 'cp-attach-sheet';
+    sheet.innerHTML = '<div class="cp-sheet">' +
+      '<div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:4px;">Allega alla chat</div>' +
+      '<div class="cp-help" style="margin-bottom:4px;">Scegli come caricare il file</div>' +
+      '<button type="button" class="btn btn-primary" onclick="pickChatAttachmentMode(\'camera\')">SCATTA FOTO</button>' +
+      '<button type="button" class="btn btn-outline" style="color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="pickChatAttachmentMode(\'file\')">ALLEGA FILE O FOTO</button>' +
+      '<button type="button" class="btn btn-outline" style="color:#ccc !important;-webkit-text-fill-color:#ccc !important;border-color:#555;" onclick="closeChatAttachSheet()">ANNULLA</button>' +
+      '</div>';
+    sheet.addEventListener('click', function (ev) { if (ev.target === sheet) closeChatAttachSheet(); });
+    document.body.appendChild(sheet);
+  }
+  sheet.classList.add('active');
+}
+function closeChatAttachSheet() {
+  const sheet = document.getElementById('cp-attach-sheet');
+  if (sheet) sheet.classList.remove('active');
+}
+
+function pickChatAttachmentMode(mode) {
+  closeChatAttachSheet();
   store.__cpChatAttachIntent = true;
   if (typeof setFilePickIntent === 'function') setFilePickIntent('CHAT_ATTACH');
   const native = typeof nativeBridge === 'function' ? nativeBridge() : (typeof NativeConfig !== 'undefined' ? NativeConfig : null);
-  const choice = confirm('OK = scatta/scegli foto\nAnnulla = scegli file documento');
-  if (choice) {
+  if (mode === 'camera') {
     if (native && typeof native.pickCamera === 'function') {
       try { native.pickCamera(); return; } catch (_) {}
     }
-  } else if (native && typeof native.pickDocument === 'function') {
+    const cam = document.getElementById('camera-import-input');
+    if (cam) { cam.click(); return; }
+  }
+  if (native && typeof native.pickDocument === 'function') {
     try { native.pickDocument(); return; } catch (_) {}
   }
-  const inp = document.createElement('input');
-  inp.type = 'file';
-  inp.accept = choice ? 'image/*' : 'image/*,.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp';
-  if (choice) inp.capture = 'environment';
-  inp.onchange = function () {
-    const file = inp.files && inp.files[0];
-    if (!file) return;
-    showAttachProgress(5, file.name);
-    if (/^image\//i.test(file.type)) {
-      compressChatImage(file).then(function (att) {
-        showAttachProgress(100, file.name);
-        setPendingAttachment(att);
-        hideAttachProgress();
-      });
-    } else {
-      if (file.size > 900000) { practiceToast('File troppo grande (max circa 700 KB)', 'warning'); hideAttachProgress(); return; }
-      const reader = new FileReader();
-      reader.onprogress = function (ev) {
-        if (ev.lengthComputable) showAttachProgress(Math.round((ev.loaded / ev.total) * 100), file.name);
-      };
-      reader.onload = function () {
-        const data = String(reader.result || '');
-        if (data.length > 450000) { practiceToast('Documento troppo grande', 'warning'); hideAttachProgress(); return; }
-        setPendingAttachment({ kind: 'file', name: file.name, mime: file.type || 'application/octet-stream', data: data });
-        hideAttachProgress();
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-  inp.click();
+  const uni = document.getElementById('universal-file-input');
+  if (uni) { uni.click(); return; }
+  // last resort
+  pickChatAttachment();
+}
+
+function pickChatAttachment() {
+  openChatAttachSheet();
 }
 
 function showAttachProgress(pct, name) {
@@ -50734,11 +50908,11 @@ function notifyUser(title, body, route) {
     if (!route) return;
     try { handleNotifyRoute(route); } catch (_) {}
   };
+  showInAppNotify(title, body, route);
   try {
     const native = typeof nativeBridge === 'function' ? nativeBridge() : (typeof NativeConfig !== 'undefined' ? NativeConfig : null);
     if (native && typeof native.notifyNow === 'function') {
-      native.notifyNow(JSON.stringify({ title: title, body: body, id: 'n_' + Date.now(), route: route || '' }));
-      // Native tap routing is best-effort; also keep in-app toast path
+      native.notifyNow(JSON.stringify({ title: title, body: body, id: 'n_' + Date.now(), route: route || null }));
     }
   } catch (_) {}
   try {
@@ -50764,12 +50938,35 @@ function notifyUser(title, body, route) {
   } catch (_) {}
 }
 
+function showInAppNotify(title, body, route) {
+  let el = document.getElementById('cp-inapp-notify');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'cp-inapp-notify';
+    el.className = 'cp-inapp-notify';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = '<b>' + esc(title || 'Nurvan') + '</b><span>' + esc(body || '') + '</span>';
+  el.onclick = function () {
+    el.style.display = 'none';
+    try { handleNotifyRoute(route); } catch (_) {}
+  };
+  el.style.display = 'block';
+  clearTimeout(window.__cpInappNotifyTimer);
+  window.__cpInappNotifyTimer = setTimeout(function () {
+    if (el) el.style.display = 'none';
+  }, 8000);
+}
+
 function handleNotifyRoute(route) {
+  if (typeof route === 'string') {
+    try { route = JSON.parse(route); } catch (_) { route = { view: route }; }
+  }
   route = route || {};
   const view = route.view || route;
   const clientId = route.clientId;
   if (typeof isAthleteRole === 'function' && isAthleteRole()) {
-    if (view === 'clientChat' || view === 'message') return navigate('clientChat');
+    if (view === 'clientChat' || view === 'message' || view === 'chat') return navigate('clientChat');
     if (view === 'check' || view === 'check_request') return navigate('athlete');
     if (view === 'exams' || view === 'exams_request') return navigate('exams');
     if (view === 'training' || view === 'program_assigned') return navigate('training');
@@ -50781,13 +50978,58 @@ function handleNotifyRoute(route) {
   if (clientId) {
     store.coachSessionActive = true;
     if (view === 'chat' || view === 'message' || view === 'ask_coach') return openCoachClientChat(clientId);
-    if (view === 'training' || view === 'workout_started' || view === 'workout_done') {
+    if (view === 'workout_done' || view === 'stats') {
+      store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: clientId });
+      return openCoachClient(clientId);
+    }
+    if (view === 'training' || view === 'workout_started') {
       store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: clientId });
       return enterCoachClientView('training');
     }
     return openCoachClient(clientId);
   }
   if (view === 'coachHub') return enterCoachSession();
+}
+
+function openClientWorkoutReport(logIndex) {
+  const logs = (store.coachWorkspace && store.coachWorkspace.data && Array.isArray(store.coachWorkspace.data.logs))
+    ? store.coachWorkspace.data.logs
+    : (store.logs || []);
+  const row = logs[logIndex];
+  if (!row) { practiceToast('Report non trovato', 'warning'); return; }
+  ensurePracticeStyle();
+  let box = document.getElementById('cp-workout-report');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'cp-workout-report';
+    box.className = 'cp-overlay';
+    box.style.display = 'none';
+    document.body.appendChild(box);
+  }
+  const mins = Math.max(1, Math.floor((row.durationSec || 0) / 60));
+  const muscles = row.muscles || {};
+  const muscleHtml = Object.keys(muscles).filter(function (k) { return muscles[k] > 0; }).map(function (k) {
+    return '<div class="cp-row"><span>' + esc(k) + '</span><span>' + muscles[k] + ' serie</span></div>';
+  }).join('') || '<div class="cp-help">Nessun dettaglio muscolare.</div>';
+  box.innerHTML = '<div class="cp-panel">' +
+    '<h2>Report allenamento</h2>' +
+    '<div class="cp-help">W' + esc(String(row.week || '?')) + ' · seduta ' + ((row.day || 0) + 1) + ' · ' + esc(String(row.at || '').replace('T', ' ').slice(0, 16)) + '</div>' +
+    '<div class="cp-row"><span>Durata</span><span>' + mins + ' min</span></div>' +
+    '<div class="cp-row"><span>Serie</span><span>' + (row.sets || 0) + '</span></div>' +
+    '<div class="cp-row"><span>Esercizi</span><span>' + (row.exercises || 0) + '</span></div>' +
+    '<div class="cp-row"><span>Tonnellaggio</span><span>' + (row.tonnage || 0) + ' kg</span></div>' +
+    '<div class="cp-row"><span>Intensità</span><span>' + (row.intensity || 0) + ' pts</span></div>' +
+    '<div class="cp-row"><span>Kcal</span><span>' + (row.kcal || 0) + '</span></div>' +
+    '<div style="margin-top:10px;font-size:11px;color:var(--gold);font-weight:800;">MUSCOLI</div>' + muscleHtml +
+    '<button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="enterCoachClientView(\'stats\')">APRI STATS COMPLETE</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="closeClientWorkoutReport()">CHIUDI</button>' +
+    '</div>';
+  box.style.display = 'flex';
+  box.onclick = function (ev) { if (ev.target === box) closeClientWorkoutReport(); };
+}
+function closeClientWorkoutReport() {
+  const box = document.getElementById('cp-workout-report');
+  if (box) box.style.display = 'none';
 }
 
 function eventNotifyCopy(kind) {
@@ -50871,7 +51113,7 @@ async function pollPracticeInbox() {
           else if (e.kind === 'change_notice') notifyUser('Atleta ha modificato', (e.display_name || 'Atleta') + ' ha cambiato il programma', route);
           else if (e.kind === 'request_program') notifyUser('Richiesta scheda', (e.display_name || 'Atleta') + ' chiede la scheda', route);
           else if (e.kind === 'workout_started') notifyUser('In allenamento', (e.display_name || 'Atleta') + ' ha iniziato il workout', route);
-          else if (e.kind === 'workout_done') notifyUser('Workout finito', (e.display_name || 'Atleta') + ' ha finalizzato', route);
+          else if (e.kind === 'workout_done') notifyUser('Workout finito', (e.display_name || 'Atleta') + ' ha finalizzato', Object.assign({}, route, { view: 'workout_done' }));
         }
       });
       store.coachSeenEventId = (box.events || []).reduce(function (m, e) { return Math.max(m, Number(e.id || 0)); }, seen);
@@ -50883,6 +51125,9 @@ async function pollPracticeInbox() {
 function renderPracticeView() {
   const c = typeof $ === 'function' ? $('view-container') : document.getElementById('view-container');
   if (!c) return false;
+  if (document.body && currentView !== 'clientChat' && currentView !== 'coachChat') {
+    document.body.classList.remove('cp-chat-view');
+  }
   if (currentView === 'coachHub') { ensurePracticeStyle(); c.innerHTML = ''; renderCoachHub(c); applyClientChrome(); return true; }
   if (currentView === 'clientChat') { ensurePracticeStyle(); c.innerHTML = ''; renderClientChat(c); applyClientChrome(); return true; }
   if (currentView === 'coachClient') { ensurePracticeStyle(); c.innerHTML = ''; renderCoachWorkspace(c); applyClientChrome(); return true; }
@@ -50897,26 +51142,21 @@ function renderCoachChatPage(c) {
     c.innerHTML = '<div class="cp-help">Seleziona un cliente.</div>';
     return;
   }
+  if (document.body) document.body.classList.add('cp-chat-view');
   ensureClientViewBanner();
   const name = (store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'Cliente';
   const videoOk = store.coachAllowVideocall !== false;
-  c.innerHTML = '<div style="display:flex;flex-direction:column;height:calc(100dvh - 140px);min-height:420px;padding-bottom:8px;">' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachClient\')">← SCHEDA</button>' +
-    '<div style="text-align:center;flex:1;"><div style="font-size:10px;color:var(--gold);font-weight:800;">CHAT E2E 🔒</div>' +
-    '<div style="font-size:16px;font-weight:900;color:#fff;">' + esc(name) + '</div></div>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">HUB</button></div>' +
-    '<div id="cp-wa-chat" style="flex:1;overflow:auto;background:#0a0a0a;border:1px solid #222;border-radius:12px;padding:10px;margin-bottom:10px;"></div>' +
-    '<div id="cp-chat-attach-preview" class="cp-help"></div>' +
-    '<div style="display:flex;gap:8px;align-items:center;">' +
-    '<button class="btn btn-outline" style="font-size:12px;padding:10px;" onclick="pickChatAttachment()">📎</button>' +
-    '<button class="btn btn-outline" style="font-size:12px;padding:10px;" onclick="startChatDictation(\'cp-chat-input\')">🎙</button>' +
-    (videoOk ? '<button class="btn btn-outline" style="font-size:12px;padding:10px;" title="Videocall" onclick="startInternalVideocall(\'' + esc(id) + '\',\'coach\')">📹</button>' : '') +
-    '<input id="cp-chat-input" type="text" placeholder="Messaggio cifrato…" style="flex:1;padding:12px;border-radius:20px;border:1px solid #333;background:#151515;color:#fff;">' +
-    '<button class="btn btn-primary" style="border-radius:20px;padding:10px 14px;" onclick="sendCoachHumanMessage(\'' + esc(id) + '\')">➤</button></div>' +
-    '<div class="cp-chat-tools" style="margin-top:8px;">' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="clearChatForMe(\'' + esc(id) + '\',\'coach\')">AZZERA (PER ME)</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="newChatThread(\'' + esc(id) + '\',\'coach\')">NUOVA CHAT</button></div></div>';
+  c.innerHTML = '<div class="cp-chat-shell">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-shrink:0;">' +
+    '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachClient\')">← SCHEDA</button>' +
+    '<div style="text-align:center;flex:1;"><div style="font-size:10px;color:var(--gold);font-weight:800;">CHAT E2E</div>' +
+    '<div style="font-size:15px;font-weight:900;color:#fff;">' + esc(name) + '</div></div>' +
+    '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachHub\')">HUB</button></div>' +
+    '<div id="cp-wa-chat" class="cp-chat-thread"></div>' +
+    chatToolsHtml('cp-chat-input', 'sendCoachHumanMessage(\'' + esc(id) + '\')', 'clearChatForMe(\'' + esc(id) + '\',\'coach\')', 'newChatThread(\'' + esc(id) + '\',\'coach\')', {
+      videoCall: videoOk ? ('startInternalVideocall(\'' + esc(id) + '\',\'coach\')') : ''
+    }) +
+    '</div>';
   window.__cpChatInputId = 'cp-chat-input';
   ensureE2EReady('coach', id).then(function () { startChatPoll(id, 'cp-wa-chat', 'coach'); });
 }
@@ -51665,6 +51905,14 @@ window.requestCheckFromClient = requestCheckFromClient;
 window.editClientSchedule = editClientSchedule;
 window.toggleCoachHidePresence = toggleCoachHidePresence;
 window.handleNotifyRoute = handleNotifyRoute;
+window.openChatAttachSheet = openChatAttachSheet;
+window.closeChatAttachSheet = closeChatAttachSheet;
+window.pickChatAttachmentMode = pickChatAttachmentMode;
+window.toggleChatDictation = toggleChatDictation;
+window.openClientWorkoutReport = openClientWorkoutReport;
+window.closeClientWorkoutReport = closeClientWorkoutReport;
+window.startChatDictation = startChatDictation;
+window.pickChatAttachment = pickChatAttachment;
 window.sendCheckToClient = sendCheckToClient;
 window.pushCoachClientEdits = pushCoachClientEdits;
 window.askExerciseInfoToCoach = askExerciseInfoToCoach;

@@ -147,11 +147,18 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     public static void notifyNow(Context context, String id, String title, String body) {
+        notifyNow(context, id, title, body, null);
+    }
+
+    public static void notifyNow(Context context, String id, String title, String body, String routeJson) {
         ensureChannel(context);
         if (title == null || title.isEmpty()) title = "Nurvan";
         if (body == null) body = "";
         Intent open = new Intent(context, MainActivity.class);
-        open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        if (routeJson != null && !routeJson.isEmpty()) {
+            open.putExtra("nurvan_route", routeJson);
+        }
         int req = Math.abs(String.valueOf(id != null ? id : title).hashCode());
         PendingIntent pi = PendingIntent.getActivity(
                 context, req, open,

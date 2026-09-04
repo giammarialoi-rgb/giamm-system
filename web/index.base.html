@@ -297,13 +297,31 @@ html, body {
 }
 main {
   margin-top: calc(var(--header-height) + env(safe-area-inset-top, 0px) + var(--cp-session-bar, 0px));
-  margin-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+  margin-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   padding: 15px;
-  height: calc(100dvh - var(--header-height) - 110px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--cp-session-bar, 0px));
+  height: calc(100dvh - var(--header-height) - 64px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--cp-session-bar, 0px));
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   box-sizing: border-box;
+}
+body.cp-chat-view main {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.btn-outline {
+  color: #d4af37 !important;
+  -webkit-text-fill-color: #d4af37 !important;
+}
+.btn-primary {
+  color: #000 !important;
+  -webkit-text-fill-color: #000 !important;
+}
+label, label span, .card label, .card label span {
+  color: #eee !important;
+  -webkit-text-fill-color: #eee !important;
 }
 body.coach-viewing-client main {
   padding-top: 8px;
@@ -315,13 +333,13 @@ nav.bottom-nav {
   left: 0;
   right: 0;
   width: 100%;
-  height: calc(110px + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 15px);
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 8px);
   background: #000;
   border-top: 1px solid var(--border);
   display: flex;
   z-index: 1000;
-  box-shadow: 0 -15px 50px rgba(0,0,0,1);
+  box-shadow: 0 -8px 24px rgba(0,0,0,.8);
   box-sizing: border-box;
   transform: translateZ(0);
 }
@@ -334,14 +352,14 @@ nav.bottom-nav {
   justify-content: center;
   color: #666;
   text-decoration: none;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 800;
-  gap: 4px;
+  gap: 2px;
 }
 
 .nav-item.active { color: var(--gold); }
-.nav-item svg { width: 38px; height: 38px; fill: #555; transition: all 0.2s; }
-.nav-item.active svg { fill: var(--gold); transform: translateY(-3px) scale(1.08); }
+.nav-item svg { width: 22px; height: 22px; fill: #555; transition: all 0.2s; }
+.nav-item.active svg { fill: var(--gold); transform: translateY(-1px) scale(1.06); }
 
 .card {
   background: var(--surface);
@@ -371,8 +389,8 @@ nav.bottom-nav {
   text-transform: uppercase;
 }
 
-.btn-primary { background: var(--gold); color: #000; }
-.btn-outline { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
+.btn-primary { background: var(--gold); color: #000 !important; -webkit-text-fill-color: #000 !important; }
+.btn-outline { background: transparent; border: 1px solid var(--gold); color: #d4af37 !important; -webkit-text-fill-color: #d4af37 !important; }
 
 .btn:active, .nav-item:active, button:active:not(.pw-toggle),
 .btn.is-pressed, .nav-item.is-pressed, button.is-pressed {
@@ -2335,6 +2353,12 @@ function stopVoiceInput(){
   if(voiceRecognition){ voiceRecognition.stop(); voiceRecognition = null; }
   if(window.speechSynthesis) window.speechSynthesis.cancel();
   const status = $('voice-status'); if(status) status.textContent = '';
+  window.__cpDictating = false;
+  const btn = document.getElementById('cp-dictate-btn');
+  if (btn) {
+    btn.classList.remove('cp-dictate-on');
+    btn.classList.add('cp-dictate-off');
+  }
 }
 function toggleVoiceOutput(){
   const status = $('voice-status');
@@ -3690,12 +3714,32 @@ function handleUniversalFileSelected(event) {
   const file = event.target?.files?.[0];
   if (!file) return;
   const intent = resolveFilePickIntent(file && file.name);
+  if (intent === 'CHAT_ATTACH' || (store && store.__cpChatAttachIntent)) {
+    store.__cpChatAttachIntent = false;
+    clearFilePickIntent();
+    const reader = new FileReader();
+    reader.onload = async function () {
+      try {
+        const dataUrl = String(reader.result || '');
+        const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '');
+        await attachNativeDocToChat({ name: file.name, mime: file.type || 'application/octet-stream', base64: base64 });
+      } catch (err) {
+        if (typeof showToast === 'function') showToast((err && err.message) || 'Allegato non caricato', 'danger');
+      }
+    };
+    reader.readAsDataURL(file);
+    if (event.target) event.target.value = '';
+    return;
+  }
   processUniversalFile(file, intent);
   if (event.target) event.target.value = '';
 }
 
 function handleImportFileSelected(event) {
-  setFilePickIntent('IMPORT');
+  // Do not overwrite chat-attach / check-photo intents set by the caller
+  if (!(store && store.__cpChatAttachIntent) && window._activeFileAction !== 'CHAT_ATTACH' && window._activeFileAction !== 'CHECK_FISICO_PHOTO') {
+    setFilePickIntent('IMPORT');
+  }
   handleUniversalFileSelected(event);
 }
 
@@ -11172,6 +11216,7 @@ function applySsttStartInputs() {
 function renderTraining(c){
   console.debug('WORKOUT_OPEN', { week: currentWeek, session: currentDay });
   try {
+    if (typeof advanceToNextOpenTrainingDay === 'function') advanceToNextOpenTrainingDay(false);
     const intensType = (store.prefs.weekIntensity && (store.prefs.weekIntensity[currentWeek] || store.prefs.weekIntensity[String(currentWeek)])) || store.prefs.intensityType || 'RIR';
     const weeksList = DATA.weeks;
     if(!weeksList.length) throw new Error('Nessuna settimana disponibile');
@@ -12267,6 +12312,50 @@ function calcStats(){
   if($('d-sets')) $('d-sets').innerText = s;
 }
 
+function isTrainingDayFinalized(week, day) {
+  const w = Number(week) || 1;
+  const d = Number(day) || 0;
+  return (store.logs || []).some(function (l) {
+    return l && Number(l.week) === w && Number(l.day) === d;
+  });
+}
+function advanceToNextOpenTrainingDay(forceFromCurrent) {
+  try {
+    if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return false;
+    let w = Number(currentWeek) || 1;
+    let d = Number(currentDay) || 0;
+    if (forceFromCurrent) {
+      // step past current (just finalized)
+      const weekObj = DATA.weeks[w - 1];
+      const sessions = (weekObj && (weekObj.sessions || weekObj.days)) || [];
+      if (d + 1 < sessions.length) d += 1;
+      else { w += 1; d = 0; }
+    }
+    for (let guard = 0; guard < 80; guard++) {
+      if (w > DATA.weeks.length) {
+        currentWeek = DATA.weeks.length;
+        const last = DATA.weeks[currentWeek - 1];
+        const sess = (last && (last.sessions || last.days)) || [];
+        currentDay = Math.max(0, sess.length - 1);
+        return false;
+      }
+      const weekObj = DATA.weeks[w - 1];
+      const sessions = (weekObj && (weekObj.sessions || weekObj.days)) || [];
+      if (!sessions.length) { w += 1; d = 0; continue; }
+      if (d >= sessions.length) { w += 1; d = 0; continue; }
+      if (!isTrainingDayFinalized(w, d)) {
+        currentWeek = w;
+        currentDay = d;
+        return true;
+      }
+      d += 1;
+    }
+  } catch (_) {}
+  return false;
+}
+window.advanceToNextOpenTrainingDay = advanceToNextOpenTrainingDay;
+window.isTrainingDayFinalized = isTrainingDayFinalized;
+
 function finalizeWorkout(){
   markSessionClockIfNeeded();
   const snap = collectSessionStats({ currentSessionOnly: true });
@@ -12314,18 +12403,8 @@ function finalizeWorkout(){
   store.logs.push(logEntry);
   if (store.logs.length > 60) store.logs = store.logs.slice(-60);
   store.sessionStartedAt = null;
-  // Advance to next training day for next session
-  try {
-    const weekObj = DATA && DATA.weeks && DATA.weeks[(currentWeek || 1) - 1];
-    const sessions = weekObj && (weekObj.sessions || weekObj.days) || [];
-    if (sessions.length) {
-      if ((currentDay || 0) + 1 < sessions.length) currentDay = (currentDay || 0) + 1;
-      else if ((currentWeek || 1) < (DATA.weeks.length || 1)) {
-        currentWeek = (currentWeek || 1) + 1;
-        currentDay = 0;
-      }
-    }
-  } catch (_) {}
+  // Close this session and jump to next non-finalized day
+  try { advanceToNextOpenTrainingDay(true); } catch (_) {}
   persist();
   persistActiveProgramStructure();
   window.__pendingCoachAnalyze = {
@@ -12429,12 +12508,13 @@ function maybeAskCoachAfterComplete() {
       if (typeof askRealCoachForDomain === 'function') {
         askRealCoachForDomain('training');
         setTimeout(function () {
-          const input = document.getElementById('cp-ath-msg') || document.querySelector('#cp-ws-msg, #cp-chat-input');
+          const input = document.getElementById('cp-client-msg') || document.getElementById('cp-ath-msg') || document.querySelector('#cp-ws-msg, #cp-chat-input');
           if (input) {
             input.value = 'Coach, ho finalizzato allenamento settimana ' + (logEntry.week) +
               ' giorno ' + ((logEntry.day || 0) + 1) +
               '. Durata ' + Math.floor((logEntry.durationSec || 0) / 60) + ' min, tonnellaggio ' + logEntry.tonnage +
               ' kg, intensità ' + logEntry.intensity + '. Puoi darmi un feedback?';
+            input.focus();
           }
         }, 400);
       }
