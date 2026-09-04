@@ -15,6 +15,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { extractExcelStructuredForApi, detectFormat, DI_MAX_BYTES } from "./document-intelligence-core.mjs";
+import { ensureCoachPracticeTables, mountCoachPractice } from "./coach-practice.mjs";
 
 dotenv.config();
 
@@ -85,6 +86,11 @@ async function initDb() {
         );
       `);
       await client.query("COMMIT");
+      try {
+        await ensureCoachPracticeTables(client);
+      } catch (practiceErr) {
+        console.error("Coach practice tables error:", practiceErr);
+      }
       dbInitialized = true;
       console.log("Database tables verified successfully.");
     } catch (err) {
@@ -177,12 +183,15 @@ async function sendPasswordResetEmail(email, code) {
 }
 
 function issueAccountToken(user) {
+  const role = user.role || (user.provider === "coach_client" ? "athlete" : "user");
   return jwt.sign(
     {
       sub: String(user.id),
       email: user.email,
       name: user.name,
-      provider: user.provider
+      provider: user.provider,
+      role,
+      clientId: user.clientId || undefined
     },
     JWT_SECRET,
     { expiresIn: "90d" }
@@ -195,11 +204,15 @@ async function accountFromBearer(authHeader) {
   try {
     const payload = jwt.verify(token, JWT_SECRET);
     if (!payload || !payload.sub) return null;
+    const provider = payload.provider;
+    const role = payload.role || (provider === "coach_client" ? "athlete" : "user");
     return {
       id: payload.sub,
       email: payload.email,
       name: payload.name,
-      provider: payload.provider
+      provider,
+      role,
+      clientId: payload.clientId || null
     };
   } catch (_) {
     return null;
@@ -1027,7 +1040,8 @@ app.get("/health", (req, res) => {
     googleOAuthConfigured: allowedGoogleAudiences().length > 0,
     chatVision: true,
     chatStateless: true,
-    coachChatVersion: "vision-stateless-v1"
+    coachChatVersion: "vision-stateless-v1",
+    coachPracticeVersion: "coach-client-v1"
   });
 });
 
@@ -1477,8 +1491,19 @@ app.post(["/api/chat", "/coach", "/api/coach"], async (req, res) => {
 
     const currentW = Number(context.currentWeek) || 1;
     const currentD = Number(context.currentDay) >= 0 ? Number(context.currentDay) + 1 : 1;
+    const athleteLocked = !!(authUser && (authUser.role === "athlete" || authUser.provider === "coach_client"));
 
-    const system = `
+    const athleteSystem = `
+Sei Coach AI di Nurvan. Rispondi sempre in italiano, in modo chiaro e evidence-based.
+L'utente è un ATLETA seguito da un coach umano. NON puoi modificare il programma, i carichi, le serie o la nutrizione.
+NON includere JSON con action "modify_program". NON proporre operazioni di modifica.
+Puoi solo spiegare esercizi, tecnica, cibo, integrazione e terapia in modo informativo.
+Se chiede di cambiare la scheda, digli di scrivere al suo coach dalla chat Coach.
+Non tenere memoria di conversazioni precedenti.
+${context && context.checkFisico ? `Analizza le foto del check fisico (struttura e definizione). Niente diagnosi mediche.` : ""}
+`;
+
+    const system = athleteLocked ? athleteSystem : `
 Sei Coach AI, l'assistente scientifico di allenamento di élite all'interno dell'applicazione Giammaria System.
 Rispondi sempre in italiano in modo chiaro, autorevole, motivante e rigorosamente evidence-based.
 Non tenere memoria di conversazioni precedenti: ogni domanda è autonoma. Ignora qualsiasi cronologia chat.
@@ -1597,13 +1622,17 @@ Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico
       });
     }
 
-    const replyText = response.text || "";
+    let replyText = response.text || "";
     let proposedAction = null;
     const jsonMatch = replyText.match(/```(?:json)?\s*({[\s\S]*?"action"\s*:\s*"modify_program"[\s\S]*?\})\s*```/i);
     if (jsonMatch) {
       try {
         proposedAction = JSON.parse(jsonMatch[1]);
       } catch (_) {}
+    }
+    if (athleteLocked) {
+      proposedAction = null;
+      replyText = replyText.replace(/```(?:json)?\s*\{[\s\S]*?"action"\s*:\s*"modify_program"[\s\S]*?\}\s*```/gi, "").trim();
     }
 
     return res.json({
@@ -1625,6 +1654,16 @@ Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico
       details: error?.message
     });
   }
+});
+
+mountCoachPractice(app, {
+  pool,
+  initDb,
+  hashPassword,
+  verifyPassword,
+  issueAccountToken,
+  accountFromBearer,
+  webDir: path.join(__dirname, "web")
 });
 
 app.use(express.static(path.join(__dirname, "web")));

@@ -1,0 +1,733 @@
+import crypto from "node:crypto";
+import path from "node:path";
+import fs from "node:fs";
+
+function slugName(name) {
+  const s = String(name || "atleta")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 20);
+  return s || "atleta";
+}
+
+function publicOrigin(req) {
+  const proto = String(req.headers["x-forwarded-proto"] || req.protocol || "https").split(",")[0].trim();
+  const host = String(req.headers["x-forwarded-host"] || req.headers.host || "localhost").split(",")[0].trim();
+  return `${proto}://${host}`;
+}
+
+const INTAKE_KEYS = [
+  "firstName", "lastName", "sex", "ageBand", "heightBand", "weightBand",
+  "trainingAge", "level", "goal", "sessionsPerWeek", "sessionMinutes",
+  "equipment", "splitPref", "injuryPrimary", "injurySecondary", "medicalLimit",
+  "jobType", "sleepHours", "stress"
+];
+
+const INTAKE_REQUIRED = [
+  "firstName", "lastName", "sex", "ageBand", "heightBand", "weightBand",
+  "trainingAge", "level", "goal", "sessionsPerWeek", "sessionMinutes",
+  "equipment", "injuryPrimary", "jobType", "sleepHours", "stress"
+];
+
+function sanitizeIntake(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  INTAKE_KEYS.forEach((k) => {
+    const v = raw[k];
+    if (v == null) return;
+    out[k] = String(v).trim().slice(0, 80);
+  });
+  return out;
+}
+
+function intakeMissing(intake) {
+  return INTAKE_REQUIRED.filter((k) => !intake[k]);
+}
+
+function bandMid(value) {
+  const s = String(value || "");
+  const range = s.match(/(\d+)\s*[-–]\s*(\d+)/);
+  if (range) return Math.round((Number(range[1]) + Number(range[2])) / 2);
+  const one = s.match(/(\d+)/);
+  return one ? Number(one[1]) : "";
+}
+
+function profileFromIntake(intake) {
+  const name = [intake.firstName, intake.lastName].filter(Boolean).join(" ").trim();
+  return {
+    name,
+    sex: intake.sex === "Femmina" ? "f" : (intake.sex === "Maschio" ? "m" : ""),
+    age: bandMid(intake.ageBand),
+    height: bandMid(intake.heightBand),
+    weight: bandMid(intake.weightBand),
+    goal: intake.goal || "",
+    intake
+  };
+}
+
+function clientNeedsIntake(row) {
+  return (row.intake_mode || "new") === "new" && !row.intake_completed_at;
+}
+
+function clientRow(r, { includeIntake = false } = {}) {
+  if (!r) return null;
+  const row = {
+    id: String(r.id),
+    displayName: r.display_name,
+    username: r.username,
+    status: r.status,
+    paid: !!r.paid,
+    billingCycle: r.billing_cycle || "monthly",
+    nextDueAt: r.next_due_at,
+    allowProgramDb: !!r.allow_program_db,
+    lastWorkoutAt: r.last_workout_at,
+    unreadCount: Number(r.unread_count || 0),
+    inviteToken: r.invite_token,
+    createdAt: r.created_at,
+    intakeMode: r.intake_mode || "new",
+    intakeDone: !!r.intake_completed_at
+  };
+  if (includeIntake) {
+    row.intake = r.intake || {};
+    row.needIntake = clientNeedsIntake(r);
+  }
+  return row;
+}
+
+export const CoachPracticeLib = {
+  slugName,
+  sanitizeIntake,
+  intakeMissing,
+  profileFromIntake,
+  clientNeedsIntake,
+  clientRow,
+  bandMid,
+  INTAKE_KEYS,
+  INTAKE_REQUIRED
+};
+
+export async function ensureCoachPracticeTables(client) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS coach_licenses (
+      user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
+      source TEXT NOT NULL DEFAULT 'demo',
+      status TEXT NOT NULL DEFAULT 'active',
+      unlocked_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS coach_clients (
+      id BIGSERIAL PRIMARY KEY,
+      coach_user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+      athlete_user_id BIGINT REFERENCES app_users(id) ON DELETE SET NULL,
+      display_name TEXT NOT NULL,
+      username TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      paid BOOLEAN NOT NULL DEFAULT TRUE,
+      billing_cycle TEXT NOT NULL DEFAULT 'monthly',
+      next_due_at TIMESTAMPTZ,
+      allow_program_db BOOLEAN NOT NULL DEFAULT FALSE,
+      invite_token TEXT NOT NULL UNIQUE,
+      last_workout_at TIMESTAMPTZ,
+      unread_count INT NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE (coach_user_id, username)
+    );
+    CREATE INDEX IF NOT EXISTS idx_coach_clients_coach_status
+      ON coach_clients (coach_user_id, status, display_name);
+    CREATE INDEX IF NOT EXISTS idx_coach_clients_due
+      ON coach_clients (coach_user_id, next_due_at);
+    CREATE TABLE IF NOT EXISTS coach_messages (
+      id BIGSERIAL PRIMARY KEY,
+      client_id BIGINT NOT NULL REFERENCES coach_clients(id) ON DELETE CASCADE,
+      from_role TEXT NOT NULL,
+      body TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      read_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_coach_messages_client
+      ON coach_messages (client_id, created_at DESC);
+    CREATE TABLE IF NOT EXISTS coach_events (
+      id BIGSERIAL PRIMARY KEY,
+      client_id BIGINT NOT NULL REFERENCES coach_clients(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL,
+      payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      read_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_coach_events_client
+      ON coach_events (client_id, created_at DESC);
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS intake_mode TEXT NOT NULL DEFAULT 'new';
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS intake JSONB NOT NULL DEFAULT '{}'::jsonb;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS intake_completed_at TIMESTAMPTZ;
+  `);
+}
+
+export function mountCoachPractice(app, deps) {
+  const {
+    pool,
+    initDb,
+    hashPassword,
+    verifyPassword,
+    issueAccountToken,
+    accountFromBearer,
+    webDir
+  } = deps;
+
+  async function requireUser(req) {
+    const auth = await accountFromBearer(req.headers.authorization);
+    if (!auth) return null;
+    return auth;
+  }
+
+  async function requireCoach(req, res) {
+    const auth = await requireUser(req);
+    if (!auth) {
+      res.status(401).json({ error: "Accedi per usare la modalità Coach." });
+      return null;
+    }
+    if (auth.role === "athlete") {
+      res.status(403).json({ error: "Account atleta: usa il client." });
+      return null;
+    }
+    await initDb();
+    const lic = await pool.query(
+      "SELECT user_id, status FROM coach_licenses WHERE user_id = $1 AND status = 'active'",
+      [auth.id]
+    );
+    if (!lic.rows.length) {
+      res.status(403).json({ error: "Modalità Coach non sbloccata.", code: "COACH_LOCKED" });
+      return null;
+    }
+    return auth;
+  }
+
+  async function requireAthlete(req, res) {
+    const auth = await requireUser(req);
+    if (!auth || auth.role !== "athlete") {
+      res.status(401).json({ error: "Accedi con le credenziali del coach." });
+      return null;
+    }
+    await initDb();
+    const row = await pool.query(
+      "SELECT * FROM coach_clients WHERE athlete_user_id = $1 AND status = 'active'",
+      [auth.id]
+    );
+    if (!row.rows[0]) {
+      res.status(403).json({ error: "Accesso revocato dal coach." });
+      return null;
+    }
+    return { auth, client: row.rows[0] };
+  }
+
+  const indexHtml = path.join(webDir, "index.html");
+  app.get("/c/:token", (req, res) => {
+    if (!fs.existsSync(indexHtml)) return res.status(404).send("App non disponibile");
+    res.setHeader("Cache-Control", "no-store");
+    res.sendFile(indexHtml);
+  });
+
+  app.get("/api/client/invite/:token", async (req, res) => {
+    try {
+      await initDb();
+      const token = String(req.params.token || "").trim();
+      const q = await pool.query(
+        `SELECT c.display_name, c.username, c.status, c.intake_mode, u.name AS coach_name
+         FROM coach_clients c
+         JOIN app_users u ON u.id = c.coach_user_id
+         WHERE c.invite_token = $1`,
+        [token]
+      );
+      const row = q.rows[0];
+      if (!row || row.status !== "active") {
+        return res.status(404).json({ error: "Invito non valido o scaduto." });
+      }
+      return res.json({
+        ok: true,
+        coachName: row.coach_name || "Coach",
+        displayName: row.display_name,
+        username: row.username,
+        intakeMode: row.intake_mode || "new"
+      });
+    } catch (err) {
+      console.error("INVITE_LOOKUP", err);
+      return res.status(500).json({ error: "Invito non disponibile." });
+    }
+  });
+
+  app.post("/api/client/login", async (req, res) => {
+    try {
+      await initDb();
+      const token = String(req.body?.token || "").trim();
+      const username = slugName(req.body?.username || req.body?.name);
+      const password = String(req.body?.password || "");
+      if (!token || !username || password.length < 4) {
+        return res.status(400).json({ error: "Inserisci nome utente e password assegnati dal coach." });
+      }
+      const q = await pool.query(
+        "SELECT * FROM coach_clients WHERE invite_token = $1 AND username = $2",
+        [token, username]
+      );
+      const client = q.rows[0];
+      if (!client || client.status !== "active") {
+        return res.status(401).json({ error: "Dati non validi o accesso revocato." });
+      }
+      const userRes = await pool.query(
+        "SELECT id, email, name, password_hash, provider FROM app_users WHERE id = $1",
+        [client.athlete_user_id]
+      );
+      const user = userRes.rows[0];
+      if (!user || !(await verifyPassword(password, user.password_hash))) {
+        return res.status(401).json({ error: "Nome o password non corretti." });
+      }
+      const jwtUser = {
+        id: user.id,
+        email: user.email,
+        name: client.display_name,
+        provider: "coach_client",
+        role: "athlete",
+        clientId: String(client.id)
+      };
+      return res.json({
+        token: issueAccountToken(jwtUser),
+        user: {
+          id: user.id,
+          email: user.email,
+          name: client.display_name,
+          provider: "coach_client",
+          role: "athlete",
+          clientId: String(client.id)
+        },
+        client: clientRow(client, { includeIntake: true })
+      });
+    } catch (err) {
+      console.error("CLIENT_LOGIN", err);
+      return res.status(500).json({ error: "Accesso non riuscito." });
+    }
+  });
+
+  app.get("/api/client/me", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    try {
+      const coach = await pool.query("SELECT name FROM app_users WHERE id = $1", [ctx.client.coach_user_id]);
+      const events = await pool.query(
+        "SELECT id, kind, payload, created_at, read_at FROM coach_events WHERE client_id = $1 ORDER BY created_at DESC LIMIT 20",
+        [ctx.client.id]
+      );
+      return res.json({
+        ok: true,
+        client: clientRow(ctx.client, { includeIntake: true }),
+        coachName: coach.rows[0]?.name || "Coach",
+        events: events.rows
+      });
+    } catch (err) {
+      return res.status(500).json({ error: "Profilo client non disponibile." });
+    }
+  });
+
+  app.get("/api/client/messages", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const rows = await pool.query(
+      "SELECT id, from_role, body, created_at, read_at FROM coach_messages WHERE client_id = $1 ORDER BY created_at DESC LIMIT 80",
+      [ctx.client.id]
+    );
+    await pool.query(
+      "UPDATE coach_messages SET read_at = NOW() WHERE client_id = $1 AND from_role = 'coach' AND read_at IS NULL",
+      [ctx.client.id]
+    );
+    await pool.query("UPDATE coach_clients SET unread_count = 0 WHERE id = $1", [ctx.client.id]);
+    return res.json({ ok: true, messages: rows.rows.reverse() });
+  });
+
+  app.post("/api/client/messages", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const body = String(req.body?.body || "").trim().slice(0, 2000);
+    if (!body) return res.status(400).json({ error: "Messaggio vuoto." });
+    const ins = await pool.query(
+      "INSERT INTO coach_messages(client_id, from_role, body) VALUES($1,'athlete',$2) RETURNING id, from_role, body, created_at, read_at",
+      [ctx.client.id, body]
+    );
+    await pool.query("UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1", [ctx.client.id]);
+    return res.json({ ok: true, message: ins.rows[0] });
+  });
+
+  app.post("/api/client/request-program", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'request_program',$2)",
+      [ctx.client.id, JSON.stringify({ note: String(req.body?.note || "").slice(0, 500) })]
+    );
+    await pool.query("UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1", [ctx.client.id]);
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/client/intake", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const intake = sanitizeIntake(req.body?.intake || req.body);
+    const missing = intakeMissing(intake);
+    if (missing.length) {
+      return res.status(400).json({ error: "Completa tutti i campi obbligatori.", missing });
+    }
+    const profile = profileFromIntake(intake);
+    await pool.query(
+      "UPDATE coach_clients SET display_name = $2, intake = $3, intake_completed_at = NOW() WHERE id = $1",
+      [ctx.client.id, profile.name || ctx.client.display_name, JSON.stringify(intake)]
+    );
+    const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [ctx.auth.id]);
+    const current = existing.rows[0]?.data || {};
+    const merged = {
+      ...current,
+      profile: { ...(current.profile || {}), ...profile },
+      intakeCompletedAt: new Date().toISOString()
+    };
+    await pool.query(
+      `INSERT INTO app_account_data(user_id, data, updated_at)
+       VALUES($1,$2,NOW())
+       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+      [ctx.auth.id, JSON.stringify(merged)]
+    );
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'intake_completed',$2)",
+      [ctx.client.id, JSON.stringify({ name: profile.name, goal: intake.goal })]
+    );
+    const fresh = await pool.query("SELECT * FROM coach_clients WHERE id = $1", [ctx.client.id]);
+    return res.json({ ok: true, client: clientRow(fresh.rows[0], { includeIntake: true }), profile });
+  });
+
+  app.post("/api/client/workout-ping", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    await pool.query("UPDATE coach_clients SET last_workout_at = NOW() WHERE id = $1", [ctx.client.id]);
+    return res.json({ ok: true });
+  });
+
+  app.get("/api/coach/status", async (req, res) => {
+    const auth = await requireUser(req);
+    if (!auth) return res.status(401).json({ error: "Unauthorized." });
+    if (auth.role === "athlete") return res.json({ ok: true, unlocked: false, role: "athlete" });
+    await initDb();
+    const lic = await pool.query("SELECT source, status, unlocked_at FROM coach_licenses WHERE user_id = $1", [auth.id]);
+    const unlocked = !!(lic.rows[0] && lic.rows[0].status === "active");
+    return res.json({ ok: true, unlocked, role: "coach", license: lic.rows[0] || null });
+  });
+
+  app.post("/api/coach/unlock/demo", async (req, res) => {
+    const auth = await requireUser(req);
+    if (!auth) return res.status(401).json({ error: "Accedi al tuo account Nurvan per sbloccare." });
+    if (auth.role === "athlete") return res.status(403).json({ error: "Un atleta non può sbloccare Coach." });
+    await initDb();
+    await pool.query(
+      `INSERT INTO coach_licenses(user_id, source, status, unlocked_at)
+       VALUES($1,'demo','active',NOW())
+       ON CONFLICT (user_id) DO UPDATE SET source='demo', status='active', unlocked_at=NOW()`,
+      [auth.id]
+    );
+    return res.json({ ok: true, unlocked: true, source: "demo" });
+  });
+
+  app.get("/api/coach/clients", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const q = String(req.query.q || "").trim();
+    const limit = Math.min(40, Math.max(10, Number(req.query.limit) || 30));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+    const params = [coach.id, limit, offset];
+    let where = "coach_user_id = $1 AND status <> 'removed'";
+    if (q) {
+      params.push("%" + q.toLowerCase() + "%");
+      where += ` AND (LOWER(display_name) LIKE $4 OR username LIKE $4)`;
+    }
+    const rows = await pool.query(
+      `SELECT id, display_name, username, status, paid, billing_cycle, next_due_at, allow_program_db,
+              last_workout_at, unread_count, invite_token, created_at, intake_mode, intake_completed_at
+       FROM coach_clients WHERE ${where}
+       ORDER BY display_name ASC
+       LIMIT $2 OFFSET $3`,
+      params
+    );
+    const count = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM coach_clients WHERE ${where.replace("$4", "$2")}`,
+      q ? [coach.id, "%" + q.toLowerCase() + "%"] : [coach.id]
+    );
+    return res.json({
+      ok: true,
+      clients: rows.rows.map(clientRow),
+      total: count.rows[0]?.n || 0,
+      origin: publicOrigin(req)
+    });
+  });
+
+  app.post("/api/coach/clients", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const intakeMode = String(req.body?.intakeMode || req.body?.mode || "new") === "transition" ? "transition" : "new";
+    const intake = sanitizeIntake(req.body?.intake || {});
+    const firstName = String(req.body?.firstName || intake.firstName || "").trim();
+    const lastName = String(req.body?.lastName || intake.lastName || "").trim();
+    const displayName = String(req.body?.name || req.body?.displayName || [firstName, lastName].filter(Boolean).join(" ")).trim().slice(0, 80);
+    const password = String(req.body?.password || "");
+    if (displayName.length < 2 || password.length < 4) {
+      return res.status(400).json({ error: "Nome e password (min. 4) sono obbligatori." });
+    }
+    if (intakeMode === "transition") {
+      const filled = sanitizeIntake({ ...intake, firstName: firstName || intake.firstName, lastName: lastName || intake.lastName });
+      const missing = intakeMissing(filled);
+      if (missing.length) {
+        return res.status(400).json({
+          error: "In transizione il questionario lo compili tu: mancano dei campi.",
+          missing
+        });
+      }
+      Object.assign(intake, filled);
+    } else {
+      if (firstName) intake.firstName = firstName;
+      if (lastName) intake.lastName = lastName;
+    }
+    let username = slugName(req.body?.username || displayName);
+    for (let i = 0; i < 20; i++) {
+      const tryName = i === 0 ? username : username + String(i + 1);
+      const exists = await pool.query(
+        "SELECT 1 FROM coach_clients WHERE coach_user_id = $1 AND username = $2",
+        [coach.id, tryName]
+      );
+      if (!exists.rows.length) { username = tryName; break; }
+    }
+    const inviteToken = crypto.randomBytes(12).toString("base64url");
+    const email = `c.${inviteToken}@client.nurvan.internal`;
+    const hash = await hashPassword(password);
+    const db = await pool.connect();
+    try {
+      await db.query("BEGIN");
+      const userIns = await db.query(
+        `INSERT INTO app_users(email, name, password_hash, provider)
+         VALUES($1,$2,$3,'coach_client') RETURNING id, email, name, provider`,
+        [email, displayName, hash]
+      );
+      const athlete = userIns.rows[0];
+      await db.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb) ON CONFLICT (user_id) DO NOTHING", [athlete.id]);
+      const due = new Date(Date.now() + 30 * 86400000).toISOString();
+      const completedAt = intakeMode === "transition" ? new Date().toISOString() : null;
+      const cli = await db.query(
+        `INSERT INTO coach_clients(
+           coach_user_id, athlete_user_id, display_name, username, status, paid, next_due_at, invite_token,
+           intake_mode, intake, intake_completed_at
+         ) VALUES($1,$2,$3,$4,'active',TRUE,$5,$6,$7,$8,$9)
+         RETURNING *`,
+        [coach.id, athlete.id, displayName, username, due, inviteToken, intakeMode, JSON.stringify(intake), completedAt]
+      );
+      if (intakeMode === "transition") {
+        const profile = profileFromIntake(intake);
+        await db.query(
+          `INSERT INTO app_account_data(user_id, data, updated_at)
+           VALUES($1,$2,NOW())
+           ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+          [athlete.id, JSON.stringify({ profile, assignedByCoach: true, intakeCompletedAt: completedAt })]
+        );
+      }
+      await db.query("COMMIT");
+      const row = cli.rows[0];
+      const origin = publicOrigin(req);
+      return res.json({
+        ok: true,
+        client: clientRow(row, { includeIntake: true }),
+        inviteUrl: `${origin}/c/${inviteToken}`,
+        credentials: { username, displayName }
+      });
+    } catch (err) {
+      await db.query("ROLLBACK");
+      console.error("CREATE_CLIENT", err);
+      return res.status(500).json({ error: "Cliente non creato." });
+    } finally {
+      db.release();
+    }
+  });
+
+  async function loadOwnedClient(coach, id, res) {
+    const q = await pool.query(
+      "SELECT * FROM coach_clients WHERE id = $1 AND coach_user_id = $2 AND status <> 'removed'",
+      [id, coach.id]
+    );
+    if (!q.rows[0]) {
+      res.status(404).json({ error: "Cliente non trovato." });
+      return null;
+    }
+    return q.rows[0];
+  }
+
+  app.post("/api/coach/clients/:id/revoke", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    await pool.query("UPDATE coach_clients SET status = 'revoked' WHERE id = $1", [row.id]);
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/coach/clients/:id/remove", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    await pool.query("UPDATE coach_clients SET status = 'removed' WHERE id = $1", [row.id]);
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/coach/clients/:id/paid", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const paid = !!req.body?.paid;
+    const next = paid ? new Date(Date.now() + 30 * 86400000).toISOString() : row.next_due_at;
+    await pool.query("UPDATE coach_clients SET paid = $2, next_due_at = $3 WHERE id = $1", [row.id, paid, next]);
+    if (!paid) {
+      await pool.query(
+        "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'payment_due',$2)",
+        [row.id, JSON.stringify({ name: row.display_name })]
+      );
+    }
+    return res.json({ ok: true, paid });
+  });
+
+  app.post("/api/coach/clients/:id/allow-db", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const on = !!req.body?.allow;
+    await pool.query("UPDATE coach_clients SET allow_program_db = $2 WHERE id = $1", [row.id, on]);
+    return res.json({ ok: true, allowProgramDb: on });
+  });
+
+  app.post("/api/coach/clients/:id/intake", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const intake = sanitizeIntake(req.body?.intake || req.body);
+    const missing = intakeMissing(intake);
+    if (missing.length) {
+      return res.status(400).json({ error: "Questionario incompleto.", missing });
+    }
+    const profile = profileFromIntake(intake);
+    await pool.query(
+      "UPDATE coach_clients SET display_name = $2, intake = $3, intake_completed_at = NOW() WHERE id = $1",
+      [row.id, profile.name || row.display_name, JSON.stringify(intake)]
+    );
+    if (row.athlete_user_id) {
+      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
+      const current = existing.rows[0]?.data || {};
+      const merged = { ...current, profile: { ...(current.profile || {}), ...profile } };
+      await pool.query(
+        `INSERT INTO app_account_data(user_id, data, updated_at)
+         VALUES($1,$2,NOW())
+         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        [row.athlete_user_id, JSON.stringify(merged)]
+      );
+    }
+    return res.json({ ok: true, client: { ...clientRow(row, { includeIntake: true }), intake, intakeDone: true, displayName: profile.name } });
+  });
+
+  app.post("/api/coach/clients/:id/check-request", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'check_request',$2)",
+      [row.id, JSON.stringify({ note: String(req.body?.note || "").slice(0, 400) })]
+    );
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/coach/clients/:id/assign", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const patch = req.body?.data && typeof req.body.data === "object" ? req.body.data : {};
+    const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
+    const current = existing.rows[0]?.data || {};
+    const merged = {
+      ...current,
+      ...patch,
+      assignedAt: new Date().toISOString(),
+      assignedByCoach: true
+    };
+    await pool.query(
+      `INSERT INTO app_account_data(user_id, data, updated_at)
+       VALUES($1,$2,NOW())
+       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+      [row.athlete_user_id, JSON.stringify(merged)]
+    );
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'program_assigned',$2)",
+      [row.id, JSON.stringify({ at: merged.assignedAt })]
+    );
+    return res.json({ ok: true });
+  });
+
+  app.get("/api/coach/clients/:id/snapshot", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const data = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
+    const origin = publicOrigin(req);
+    return res.json({
+      ok: true,
+      client: clientRow(row, { includeIntake: true }),
+      inviteUrl: `${origin}/c/${row.invite_token}`,
+      intake: row.intake || {},
+      data: data.rows[0]?.data || {}
+    });
+  });
+
+  app.get("/api/coach/clients/:id/messages", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const msgs = await pool.query(
+      "SELECT id, from_role, body, created_at, read_at FROM coach_messages WHERE client_id = $1 ORDER BY created_at DESC LIMIT 80",
+      [row.id]
+    );
+    await pool.query(
+      "UPDATE coach_messages SET read_at = NOW() WHERE client_id = $1 AND from_role = 'athlete' AND read_at IS NULL",
+      [row.id]
+    );
+    await pool.query("UPDATE coach_clients SET unread_count = 0 WHERE id = $1", [row.id]);
+    return res.json({ ok: true, messages: msgs.rows.reverse() });
+  });
+
+  app.post("/api/coach/clients/:id/messages", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const body = String(req.body?.body || "").trim().slice(0, 2000);
+    if (!body) return res.status(400).json({ error: "Messaggio vuoto." });
+    const ins = await pool.query(
+      "INSERT INTO coach_messages(client_id, from_role, body) VALUES($1,'coach',$2) RETURNING id, from_role, body, created_at, read_at",
+      [row.id, body]
+    );
+    return res.json({ ok: true, message: ins.rows[0] });
+  });
+
+  app.get("/api/coach/clients/:id/events", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const ev = await pool.query(
+      "SELECT id, kind, payload, created_at, read_at FROM coach_events WHERE client_id = $1 ORDER BY created_at DESC LIMIT 40",
+      [row.id]
+    );
+    return res.json({ ok: true, events: ev.rows });
+  });
+}
