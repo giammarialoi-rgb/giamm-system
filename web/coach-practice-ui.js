@@ -75,11 +75,55 @@ function isInAppBrowser() {
   return /WhatsApp|FBAN|FBAV|Instagram|Line\/|Telegram/i.test(ua);
 }
 
+function isClientShellLocked() {
+  try {
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) return true;
+  } catch (_) {}
+  return !!(store && (store.clientShell || (store.inviteToken && !store.accountToken)));
+}
+
+function fmtShortDate(v) {
+  if (!v) return '—';
+  try {
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch (_) { return '—'; }
+}
+
+function fmtDay(v) {
+  if (!v) return '—';
+  try {
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('it-IT');
+  } catch (_) { return '—'; }
+}
+
+function presenceLabel(online, lastSeen, liveWorkout) {
+  if (liveWorkout) return 'In allenamento ora';
+  if (online) return 'Online ora';
+  if (lastSeen) return 'Offline · ultimo accesso ' + fmtShortDate(lastSeen);
+  return 'Offline · mai visto';
+}
+
 function gatePracticeView(v) {
-  if (typeof isAthleteRole !== 'function' || !isAthleteRole()) return v;
-  const blocked = { community: 1, pricing: 1, coachHub: 1, coachClient: 1, import: 1 };
-  if (blocked[v]) return 'home';
-  if ((v === 'programs' || v === 'db') && !(store.clientProfile && store.clientProfile.allowProgramDb)) return 'home';
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+    const blocked = {
+      community: 1, pricing: 1, coachHub: 1, coachClient: 1, import: 1,
+      generate: 1, catalog: 1, library: 1, db: 1, programs: 1, unlock: 1
+    };
+    if ((v === 'programs' || v === 'db') && store.clientProfile && store.clientProfile.allowProgramDb) return v;
+    if (blocked[v]) return 'home';
+    return v;
+  }
+  if (store && store.coachSessionActive && !store.coachAssigning) {
+    const coachCore = { coachHub: 1, coachClient: 1 };
+    const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1 };
+    if (coachCore[v]) return v;
+    if (store.coachViewingClient && clientDomains[v]) return v;
+    // leaving coach session handled in navigate wrap
+  }
   return v;
 }
 
@@ -87,9 +131,12 @@ function applyClientChrome() {
   try {
     const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
     const unlocked = typeof isCoachUnlocked === 'function' && isCoachUnlocked();
+    const coachSession = !!(store && store.coachSessionActive && !athlete);
     if (document.body) {
       document.body.classList.toggle('role-athlete', !!athlete);
       document.body.classList.toggle('coach-unlocked', !!unlocked);
+      document.body.classList.toggle('coach-session', !!coachSession);
+      document.body.classList.toggle('coach-viewing-client', !!(store && store.coachViewingClient));
     }
     const stats = typeof $ === 'function' ? $('nav-stats') : document.getElementById('nav-stats');
     const ai = typeof $ === 'function' ? $('nav-ai') : document.getElementById('nav-ai');
@@ -98,13 +145,17 @@ function applyClientChrome() {
       if (athlete) {
         if (span) span.textContent = 'COACH';
         stats.onclick = function (event) { navigate('clientChat', event); };
+      } else if (coachSession) {
+        if (span) span.textContent = 'HUB';
+        stats.onclick = function (event) { navigate('coachHub', event); };
       } else {
+        if (span) span.textContent = 'STATS';
         stats.onclick = function (event) { navigate('stats', event); };
       }
     }
-    if (ai) ai.style.display = athlete ? 'none' : '';
+    if (ai) ai.style.display = (athlete || coachSession) ? 'none' : '';
     document.querySelectorAll('[data-hub="full"]').forEach(function (el) {
-      el.style.display = athlete ? 'none' : '';
+      el.style.display = (athlete || coachSession) ? 'none' : '';
     });
     document.querySelectorAll('[data-hub="coach"]').forEach(function (el) {
       el.style.display = athlete ? 'none' : 'flex';
@@ -112,24 +163,85 @@ function applyClientChrome() {
     const coachBtn = document.getElementById('coach-unlock-button');
     if (coachBtn) {
       coachBtn.style.display = athlete ? 'none' : '';
-      coachBtn.textContent = unlocked ? 'HUB COACH' : 'SBLOCCA COACH';
+      if (coachSession) coachBtn.textContent = 'ESCI COACH';
+      else coachBtn.textContent = unlocked ? 'HUB COACH' : 'SBLOCCA COACH';
+      coachBtn.onclick = function () {
+        if (coachSession) exitCoachSession();
+        else openCoachOrUnlock();
+      };
     }
     if (athlete) {
       document.querySelectorAll('button').forEach(function (btn) {
         const tx = String(btn.textContent || '');
         if (/CHIEDI A COACH AI/i.test(tx)) btn.textContent = tx.replace(/CHIEDI A COACH AI(?:\s*\([^)]+\))?/i, 'CHIEDI AL COACH');
       });
+      // Block free-account entry points
+      const acc = document.getElementById('account-button');
+      if (acc) {
+        acc.textContent = 'ESCI CLIENT';
+        acc.onclick = function () { logoutAccount(); };
+      }
     }
     document.querySelectorAll('[data-hub="athlete"]').forEach(function (el) {
       el.style.display = athlete ? 'flex' : 'none';
     });
     document.querySelectorAll('[data-hub="programs"]').forEach(function (el) {
       const allow = !athlete || (store.clientProfile && store.clientProfile.allowProgramDb);
-      el.style.display = allow ? '' : 'none';
+      el.style.display = (allow && !coachSession) ? '' : 'none';
     });
+    ensureCoachSessionBanner();
+    ensureClientViewBanner();
   } catch (err) {
     console.warn('[CLIENT_CHROME]', err);
   }
+}
+
+function ensureCoachSessionBanner() {
+  let bar = document.getElementById('cp-coach-session-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'cp-coach-session-bar';
+    bar.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;z-index:10060;background:#111;border-bottom:1px solid var(--gold);padding:8px 12px;font-size:11px;';
+    document.body.appendChild(bar);
+  }
+  if (!(store && store.coachSessionActive) || (typeof isAthleteRole === 'function' && isAthleteRole())) {
+    bar.style.display = 'none';
+    document.body.style.paddingTop = '';
+    return;
+  }
+  bar.style.display = 'block';
+  document.body.style.paddingTop = '42px';
+  bar.innerHTML = '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">' +
+    '<span style="color:var(--gold);font-weight:800;">SESSIONE COACH</span>' +
+    '<span style="color:#aaa;flex:1;">Hub clienti separato dall’app personale</span>' +
+    '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="exitCoachSession()">ESCI</button></div>';
+}
+
+function ensureClientViewBanner() {
+  let bar = document.getElementById('cp-client-view-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'cp-client-view-bar';
+    bar.style.cssText = 'display:none;position:fixed;left:8px;right:8px;bottom:72px;z-index:10075;background:#111;border:1px solid var(--gold);border-radius:12px;padding:10px;';
+    document.body.appendChild(bar);
+  }
+  if (!(store && store.coachViewingClient && store.coachWorkspace && store.coachWorkspace.clientId)) {
+    bar.style.display = 'none';
+    return;
+  }
+  if (store.coachAssigning) { bar.style.display = 'none'; return; }
+  const name = (store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente';
+  bar.style.display = 'block';
+  bar.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;">DATI DI ' + esc(name) + '</div>' +
+    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Stai guardando la scheda del cliente, non la tua.</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'training\')">ALLENAMENTO</button>' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'nutrition\')">ALIMENTAZIONE</button>' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'supplements\')">INTEGRAZIONE</button>' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'therapy\')">TERAPIA</button>' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'exams\')">ESAMI</button>' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'stats\')">STATS</button>' +
+    '<button class="btn btn-primary" style="font-size:10px;" onclick="leaveCoachClientView()">TORNA ALLA SCHEDA</button></div>';
 }
 
 function ensurePracticeStyle() {
@@ -279,7 +391,7 @@ function renderInvitePanel(info) {
     '<div id="cp-invite-status" class="cp-help"></div>' +
     '<button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="submitClientInviteLogin()">ACCEDI</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="requestClientPasswordHelp()">RICHIEDI RECUPERO PASSWORD AL COACH</button>' +
-    '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="showOverlay(\'cp-invite\', false)">CHIUDI</button>';
+    '<p class="cp-help" style="margin-top:12px;">Questo link apre solo lo spazio cliente Nurvan collegato al coach. Non è l’app completa.</p>';
 }
 
 async function showClientInvite(token) {
@@ -319,21 +431,31 @@ async function submitClientInviteLogin() {
     store.accountToken = payload.token;
     store.accountUser = payload.user;
     store.role = 'athlete';
+    store.clientShell = true;
     store.clientProfile = payload.client || null;
+    try {
+      localStorage.setItem('GS_CLIENT_SHELL', JSON.stringify({
+        inviteToken: store.inviteToken,
+        locked: true,
+        at: Date.now()
+      }));
+    } catch (_) {}
     try {
       if (store.stayLoggedIn) sessionStorage.removeItem('GS_SESSION_AUTH');
       else sessionStorage.setItem('GS_SESSION_AUTH', JSON.stringify({
-        token: payload.token, user: payload.user, role: 'athlete', inviteToken: store.inviteToken
+        token: payload.token, user: payload.user, role: 'athlete', inviteToken: store.inviteToken, clientShell: true
       }));
     } catch (_) {}
     if (typeof persist === 'function') persist();
     showOverlay('cp-invite', false);
+    requestNotifyPermission();
     try { await syncAccountData(true); } catch (_) {}
     applyClientChrome();
     if (payload.client && payload.client.needIntake) showClientIntake(payload.client.intake || { firstName: '', lastName: '' });
     else showClientTutorial(false);
     if (typeof render === 'function') render();
     practiceToast('Bentornato, ' + (payload.user && payload.user.name || username), 'success');
+    startPresenceHeartbeat();
   } catch (err) {
     if (status) status.textContent = (err && err.message) || 'Accesso non riuscito.';
   }
@@ -415,8 +537,94 @@ function closeClientTutorial() {
 }
 
 function openCoachOrUnlock() {
-  if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) navigate('coachHub');
+  if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) enterCoachSession();
   else showDemoUnlock();
+}
+
+function enterCoachSession() {
+  store.coachSessionActive = true;
+  store.coachViewingClient = false;
+  if (typeof persist === 'function') persist();
+  requestNotifyPermission();
+  applyClientChrome();
+  navigate('coachHub');
+}
+
+function exitCoachSession(force) {
+  if (!force && !confirm('Uscire dall’hub Coach? Tornerai all’app personale Nurvan.')) return false;
+  if (store.coachAssigning) {
+    practiceToast('Prima completa o annulla l’assegnazione.', 'warning');
+    return false;
+  }
+  if (store.coachViewingClient) leaveCoachClientView(true);
+  store.coachSessionActive = false;
+  store.coachWorkspace = null;
+  if (typeof persist === 'function') persist();
+  applyClientChrome();
+  navigate('home');
+  practiceToast('Sessione Coach chiusa', 'success');
+  return true;
+}
+
+function applyClientPayloadToLocal(payload) {
+  payload = payload || {};
+  const prog = payload.activeProgram || payload;
+  try {
+    DATA = (typeof normalizeProgram === 'function' && prog && prog.weeks)
+      ? normalizeProgram(prog)
+      : (prog && typeof prog === 'object' ? prog : { title: 'Cliente', weeks: [] });
+  } catch (_) {
+    DATA = { title: 'Cliente', weeks: [] };
+  }
+  store.activeProgram = DATA;
+  store.activeProgramId = (DATA && DATA.id) || ('client_view_' + Date.now());
+  store.nutrition = payload.nutrition || (DATA && DATA.nutrition) || null;
+  store.supplementation = payload.supplementation || (DATA && DATA.supplementation) || null;
+  store.therapy = payload.therapy || (DATA && DATA.therapy) || null;
+  store.exams = payload.exams || (DATA && DATA.exams) || null;
+  if (DATA) {
+    DATA.nutrition = store.nutrition;
+    DATA.supplementation = store.supplementation;
+    DATA.therapy = store.therapy;
+    DATA.exams = store.exams;
+  }
+  if (typeof currentWeek !== 'undefined') currentWeek = 1;
+  if (typeof currentDay !== 'undefined') currentDay = 0;
+}
+
+async function enterCoachClientView(domain) {
+  const id = store.coachWorkspace && store.coachWorkspace.clientId;
+  if (!id) return;
+  if (!window.__cpCoachViewBackup) window.__cpCoachViewBackup = snapshotCoachMaster();
+  let data = store.coachWorkspace.data;
+  try {
+    const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 25000);
+    data = snap.data || data || {};
+    store.coachWorkspace.data = data;
+    store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
+  } catch (_) {}
+  applyClientPayloadToLocal(data);
+  store.coachViewingClient = true;
+  store.coachSessionActive = true;
+  if (typeof persist === 'function') persist();
+  ensureClientViewBanner();
+  navigate(domain || 'training');
+  practiceToast('Stai vedendo i dati del cliente', 'success');
+}
+
+async function leaveCoachClientView(silent) {
+  if (window.__cpCoachViewBackup) {
+    await restoreCoachMaster(window.__cpCoachViewBackup);
+    window.__cpCoachViewBackup = null;
+  }
+  store.coachViewingClient = false;
+  if (typeof persist === 'function') persist();
+  ensureClientViewBanner();
+  if (!silent) {
+    const id = store.coachWorkspace && store.coachWorkspace.clientId;
+    if (id) navigate('coachClient');
+    else navigate('coachHub');
+  }
 }
 
 function showDemoUnlock() {
@@ -452,6 +660,7 @@ async function confirmDemoUnlock() {
     const payload = await practiceFetch('/api/coach/unlock/demo', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 20000);
     if (!payload || !payload.ok) throw new Error((payload && payload.error) || 'Sblocco non riuscito.');
     store.coachUnlocked = true;
+    store.coachSessionActive = true;
     if (typeof persist === 'function') persist();
     requestNotifyPermission();
     showOverlay('cp-demo', false);
@@ -518,9 +727,15 @@ function athleteHomeModulesHtml() {
 }
 
 function athleteHomeHtml() {
+  const coachStatus = store.coachOnline
+    ? '<div style="font-size:12px;color:#6c6;margin-top:8px;">● Coach online</div>'
+    : (store.coachLastSeen
+      ? '<div style="font-size:12px;color:#888;margin-top:8px;">● Coach offline · ultimo ' + esc(fmtShortDate(store.coachLastSeen)) + '</div>'
+      : '<div style="font-size:12px;color:#888;margin-top:8px;">● Stato coach non disponibile</div>');
   return '<div style="text-align:center;padding:16px 0 8px;">' +
     '<img src="nurvan_logo.png" class="logo-blend" alt="NURVAN" style="width:132px;max-width:46vw;filter:drop-shadow(0 0 16px var(--gold));">' +
     '<h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;margin:8px 0 0;">NURVAN</h1>' +
+    coachStatus +
     '<button class="btn btn-outline" style="margin-top:10px;font-size:11px;" onclick="reloadClientHome()">⟳ AGGIORNA</button>' +
     '</div>' +
     athleteWaitingHomeHtml() +
@@ -553,14 +768,21 @@ function renderCoachHub(c) {
     c.innerHTML = renderCoachUnlockCardHtml();
     return;
   }
+  store.coachSessionActive = true;
   const q = esc(window.__cpClientQ || '');
-  c.innerHTML = '<div style="margin-bottom:12px;"><span style="font-size:10px;color:var(--gold);font-weight:800;">HUB COACH</span>' +
+  const hide = !!(store.coachHidePresence);
+  c.innerHTML = '<div style="margin-bottom:12px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">' +
+    '<div><span style="font-size:10px;color:var(--gold);font-weight:800;">HUB COACH</span>' +
     '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">I tuoi clienti</h1></div>' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="exitCoachSession()">ESCI DALL’HUB</button></div>' +
     '<div class="card" style="padding:12px;margin-bottom:12px;">' +
+    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#ccc;margin-bottom:10px;">' +
+    '<input type="checkbox" ' + (hide ? 'checked' : '') + ' onchange="toggleCoachHidePresence(this.checked)"> Nascondi che sei online agli atleti</label>' +
     '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()">' +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button></div>' +
     '<div id="cp-client-list"><div class="cp-help">Caricamento…</div></div>';
   loadCoachClientList();
+  applyClientChrome();
 }
 
 var __cpListTimer = 0;
@@ -584,13 +806,19 @@ async function loadCoachClientList() {
     box.innerHTML = rows.map(function (cl) {
       const badge = cl.intakeMode === 'transition' ? 'Transizione' : (cl.intakeDone ? 'Questionario ok' : 'Nuovo · questionario');
       const paid = cl.paid ? 'Pagato' : 'Non pagato';
+      const presence = presenceLabel(cl.online, cl.lastSeenAt, cl.workoutLive);
+      const presenceColor = cl.workoutLive ? '#6c6' : (cl.online ? '#6c6' : '#888');
       return '<div class="card" style="padding:12px;margin-bottom:10px;">' +
         '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">' +
         '<div><div style="font-size:15px;font-weight:900;color:#fff;">' + esc(cl.displayName) +
-        (cl.leaveRequested ? ' <span class="cp-badge" style="color:#c66;border-color:#c66;">FINE RICHIESTA</span>' : '') + '</div>' +
+        (cl.leaveRequested ? ' <span class="cp-badge" style="color:#c66;border-color:#c66;">FINE RICHIESTA</span>' : '') +
+        (cl.workoutLive ? ' <span class="cp-badge" style="color:#6c6;border-color:#6c6;">IN WORKOUT</span>' : '') + '</div>' +
         '<div style="font-size:11px;color:#888;">@' + esc(cl.username) + ' · ' + esc(badge) + ' · ' + esc(paid) +
         (cl.unreadCount ? ' · ' + cl.unreadCount + ' nuovi' : '') +
-        (cl.hasPendingChange ? ' · modifica da approvare' : '') + '</div></div></div>' +
+        (cl.hasPendingChange ? ' · modifica da approvare' : '') + '</div>' +
+        '<div style="font-size:11px;color:' + presenceColor + ';margin-top:4px;">● ' + esc(presence) + '</div>' +
+        '<div style="font-size:10px;color:#777;margin-top:4px;">Scheda scade: ' + esc(fmtDay(cl.programExpiresAt)) +
+        ' · Prossimo check: ' + esc(fmtDay(cl.nextCheckAt)) + '</div></div></div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">' +
         '<button class="btn btn-primary" style="font-size:10px;padding:8px 10px;" onclick="openCoachClient(\'' + esc(cl.id) + '\')">APRI</button>' +
         '<button class="btn btn-outline" style="font-size:10px;padding:8px 10px;" onclick="openCoachClientChat(\'' + esc(cl.id) + '\')">CHAT</button>' +
@@ -726,14 +954,23 @@ async function removeCoachClient(id) {
 }
 
 async function openCoachClient(id) {
+  if (store.coachViewingClient) await leaveCoachClientView(true);
+  store.coachSessionActive = true;
   store.coachWorkspace = { clientId: id };
   if (typeof persist === 'function') persist();
   navigate('coachClient');
 }
 
 function openCoachClientChat(id) {
+  store.coachSessionActive = true;
   store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: id, chat: true });
   navigate('coachClient');
+  setTimeout(function () {
+    const el = document.getElementById('cp-ws-chat-card');
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const input = document.getElementById('cp-ws-msg');
+    if (input) input.focus();
+  }, 400);
 }
 
 function chatToolsHtml(inputId, sendCall, clearCall, newCall) {
@@ -786,33 +1023,55 @@ async function renderCoachWorkspace(c) {
         return '<div class="cp-help" style="margin:0 0 4px;">' + esc(e.kind) + ' · ' + esc(String(e.created_at || '').replace('T', ' ').slice(0, 16)) + '</div>';
       }).join('');
     } catch (_) {}
-    c.innerHTML = '<button class="btn btn-outline" style="font-size:10px;margin-bottom:10px;" onclick="navigate(\'coachHub\')">← LISTA</button>' +
+    c.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">' +
+      '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">← LISTA</button>' +
+      '<button class="btn btn-primary" style="font-size:10px;" onclick="openCoachClientChat(\'' + esc(id) + '\')">CHAT</button>' +
+      '<button class="btn btn-outline" style="font-size:10px;" onclick="exitCoachSession()">ESCI COACH</button></div>' +
       '<h1 style="color:#fff;font-size:22px;margin:0 0 4px;">' + esc(cl.displayName || 'Cliente') + '</h1>' +
-      '<div style="font-size:11px;color:#888;margin-bottom:12px;">@' + esc(cl.username || '') + ' · ' +
+      '<div style="font-size:11px;color:#888;margin-bottom:6px;">@' + esc(cl.username || '') + ' · ' +
       (cl.intakeMode === 'transition' ? 'Transizione' : 'Nuovo') + (cl.intakeDone ? ' · questionario ok' : ' · questionario in attesa') + '</div>' +
+      '<div style="font-size:12px;margin-bottom:12px;color:' + (cl.workoutLive || cl.online ? '#6c6' : '#888') + ';">● ' +
+      esc(presenceLabel(cl.online, cl.lastSeenAt, cl.workoutLive)) + '</div>' +
       (cl.leaveRequested ? '<div class="card" style="padding:12px;margin-bottom:12px;border-color:#c66;"><div style="font-weight:900;color:#c66;">Richiesta fine collaborazione</div>' +
         '<button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="confirmLeaveClient(\'' + esc(id) + '\')">CONFERMA FINE COLLABORAZIONE</button></div>' : '') +
       ((snap.pendingChange || cl.hasPendingChange) ? '<div class="card" style="padding:12px;margin-bottom:12px;border-color:var(--gold);"><div style="font-weight:900;color:var(--gold);">Modifica richiesta dall’atleta</div>' +
         '<p class="cp-help">' + esc((snap.pendingChange && snap.pendingChange.summary) || 'Vuole cambiare il programma.') + '</p>' +
         '<button class="btn btn-primary" style="width:100%;margin-top:6px;" onclick="approveClientChange(\'' + esc(id) + '\')">APPROVA MODIFICA</button>' +
         '<button class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="rejectClientChange(\'' + esc(id) + '\')">RIFIUTA</button></div>' : '') +
-      '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;">Programma</div>' +
+      '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;">Programma cliente</div>' +
       '<div style="font-size:12px;color:#ccc;">' + esc(prog.title || 'Nessuna scheda assegnata') + (weeks ? ' · ' + weeks + ' settimane' : '') + '</div>' +
+      '<div style="font-size:11px;color:#aaa;margin-top:8px;">Scade: <b style="color:#fff;">' + esc(fmtDay(cl.programExpiresAt)) + '</b> · Prossimo check: <b style="color:#fff;">' + esc(fmtDay(cl.nextCheckAt)) + '</b></div>' +
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="editClientSchedule(\'' + esc(id) + '\')">IMPOSTA SCADENZA / CHECK</button>' +
       '<label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:12px;color:#ccc;line-height:1.35;"><input id="cp-max-freedom" type="checkbox"' + (cl.allowMaxFreedom ? ' checked' : '') + ' onchange="toggleMaxFreedom(\'' + esc(id) + '\', this.checked)"> <span><b style="color:#fff;">Consenti massima libertà</b> — l’atleta può modificare da solo. Ti arriva comunque un avviso. Senza spunta, ogni modifica è una richiesta che tu approvi.</span></label>' +
       '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="openAssignChooser(\'' + esc(id) + '\',\'' + esc(cl.displayName || '') + '\')">ASSEGNA SCHEDA</button>' +
-      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="sendCheckToClient(\'' + esc(id) + '\')">INVIA CHECK</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestCheckFromClient(\'' + esc(id) + '\')">RICHIEDI CHECK</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestExamsFromClient(\'' + esc(id) + '\')">RICHIEDI ESAMI</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="resetClientPassword(\'' + esc(id) + '\')">REIMPOSTA PASSWORD</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="copyClientInvite(\'' + esc(id) + '\',\'' + esc(cl.inviteToken || '') + '\')">COPIA LINK + CREDENZIALI</button></div>' +
+      '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:8px;">Vedi dati del cliente</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+      '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'training\')">ALLENAMENTO</button>' +
+      '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'stats\')">STATS WORKOUT</button>' +
+      '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'nutrition\')">ALIMENTAZIONE</button>' +
+      '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'supplements\')">INTEGRAZIONE</button>' +
+      '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'therapy\')">TERAPIA</button>' +
+      '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'exams\')">ESAMI</button>' +
+      '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'athlete\')">PROFILO</button></div></div>' +
       '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;">Anagrafica acquisizione</div>' +
       (intakeRows || '<div class="cp-help">Questionario non ancora compilato.</div>') + '</div>' +
-      '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;">Richieste</div>' +
+      '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;">Attività / richieste</div>' +
       (eventsHtml || '<div class="cp-help">Nessuna richiesta recente.</div>') + '</div>' +
-      '<div class="card" style="padding:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:8px;">Chat</div>' +
+      '<div class="card" id="cp-ws-chat-card" style="padding:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:8px;">Chat con ' + esc(cl.displayName || 'cliente') + '</div>' +
       '<div id="cp-ws-chat" style="min-height:80px;max-height:46vh;overflow:auto;"></div>' +
       chatToolsHtml('cp-ws-msg', 'sendCoachHumanMessage(\'' + esc(id) + '\')', 'clearChatForMe(\'' + esc(id) + '\',\'coach\')', 'newChatThread(\'' + esc(id) + '\',\'coach\')') +
       '</div>';
     startChatPoll(id, 'cp-ws-chat', 'coach');
+    if (store.coachWorkspace && store.coachWorkspace.chat) {
+      setTimeout(function () {
+        const el = document.getElementById('cp-ws-chat-card');
+        if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    }
   } catch (err) {
     c.innerHTML = '<div class="cp-help">' + esc((err && err.message) || 'Snapshot non disponibile.') + '</div>';
   }
@@ -980,8 +1239,20 @@ async function confirmAssignSandbox() {
     else if (store.therapy) payload.therapy = JSON.parse(JSON.stringify(store.therapy));
     if (DATA && DATA.exams) payload.exams = JSON.parse(JSON.stringify(DATA.exams));
     else if (store.exams) payload.exams = JSON.parse(JSON.stringify(store.exams));
+    const defExp = new Date(Date.now() + 56 * 86400000).toISOString().slice(0, 10);
+    const programExpiresAt = prompt('Scadenza programma per il cliente (AAAA-MM-GG)', defExp);
+    if (programExpiresAt === null) throw new Error('Invio annullato');
+    const defChk = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+    const nextCheckAt = prompt('Prossimo check (AAAA-MM-GG, opzionale)', defChk);
+    if (nextCheckAt === null) throw new Error('Invio annullato');
     await practiceFetch('/api/coach/clients/' + encodeURIComponent(job.clientId) + '/assign', {
-      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ data: payload, kinds: kinds })
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({
+        data: payload,
+        kinds: kinds,
+        programExpiresAt: programExpiresAt || null,
+        nextCheckAt: nextCheckAt || null
+      })
     }, 45000);
     await restoreCoachMaster(window.__cpAssignBackup || job.backup);
     window.__cpAssignBackup = null;
@@ -989,6 +1260,7 @@ async function confirmAssignSandbox() {
     if (typeof persist === 'function') persist();
     ensureAssignBanner();
     practiceToast('Scheda inviata a ' + (job.name || 'cliente'), 'success');
+    store.coachSessionActive = true;
     store.coachWorkspace = { clientId: job.clientId };
     navigate('coachClient');
   };
@@ -1019,13 +1291,54 @@ async function assignActiveToClient(id) {
   openAssignChooser(id, (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) || '');
 }
 
-async function sendCheckToClient(id) {
+async function requestCheckFromClient(id) {
+  const def = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const when = prompt('Quando vuoi ricevere il check? (AAAA-MM-GG)', def);
+  if (when === null) return;
   try {
     await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/check-request', {
-      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ note: '' })
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ note: '', nextCheckAt: when || null })
     }, 15000);
-    practiceToast('Check inviato al cliente', 'success');
-  } catch (err) { practiceToast((err && err.message) || 'Invio check fallito', 'danger'); }
+    practiceToast('Check richiesto al cliente', 'success');
+    if (currentView === 'coachClient') openCoachClient(id);
+  } catch (err) { practiceToast((err && err.message) || 'Richiesta check fallita', 'danger'); }
+}
+
+async function sendCheckToClient(id) {
+  return requestCheckFromClient(id);
+}
+
+async function editClientSchedule(id) {
+  const cl = store.coachWorkspace && store.coachWorkspace.client;
+  const exp = prompt('Scadenza programma (AAAA-MM-GG, vuoto = lascia)', cl && cl.programExpiresAt ? String(cl.programExpiresAt).slice(0, 10) : '');
+  if (exp === null) return;
+  const chk = prompt('Prossimo check (AAAA-MM-GG, vuoto = lascia)', cl && cl.nextCheckAt ? String(cl.nextCheckAt).slice(0, 10) : '');
+  if (chk === null) return;
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/schedule', {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({
+        programExpiresAt: exp || null,
+        nextCheckAt: chk || null
+      })
+    }, 15000);
+    practiceToast('Date aggiornate', 'success');
+    openCoachClient(id);
+  } catch (err) { practiceToast((err && err.message) || 'Aggiornamento date fallito', 'danger'); }
+}
+
+async function toggleCoachHidePresence(hide) {
+  try {
+    await practiceFetch('/api/coach/presence/hide', {
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ hide: !!hide })
+    }, 12000);
+    store.coachHidePresence = !!hide;
+    if (typeof persist === 'function') persist();
+    practiceToast(hide ? 'Presenza nascosta agli atleti' : 'Gli atleti possono vederti online', 'success');
+  } catch (err) {
+    practiceToast((err && err.message) || 'Impostazione presenza fallita', 'danger');
+  }
 }
 
 async function requestExamsFromClient(id) {
@@ -1304,40 +1617,81 @@ async function requestLeaveCoach() {
   }
 }
 
-function notifyUser(title, body) {
+function notifyUser(title, body, route) {
   requestNotifyPermission();
+  const go = function () {
+    if (!route) return;
+    try { handleNotifyRoute(route); } catch (_) {}
+  };
   try {
     const native = typeof nativeBridge === 'function' ? nativeBridge() : (typeof NativeConfig !== 'undefined' ? NativeConfig : null);
     if (native && typeof native.notifyNow === 'function') {
-      native.notifyNow(JSON.stringify({ title: title, body: body, id: 'n_' + Date.now() }));
-      return;
+      native.notifyNow(JSON.stringify({ title: title, body: body, id: 'n_' + Date.now(), route: route || '' }));
+      // Native tap routing is best-effort; also keep in-app toast path
     }
   } catch (_) {}
   try {
     if (typeof Notification !== 'undefined') {
-      if (Notification.permission === 'granted') new Notification(title, { body: body });
-      else if (Notification.permission !== 'denied') Notification.requestPermission().then(function (p) {
-        if (p === 'granted') new Notification(title, { body: body });
-      });
+      if (Notification.permission === 'granted') {
+        const n = new Notification(title, { body: body, data: { route: route || '' } });
+        n.onclick = function () {
+          try { window.focus(); } catch (_) {}
+          go();
+          try { n.close(); } catch (_) {}
+        };
+        return;
+      }
+      if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(function (p) {
+          if (p === 'granted') {
+            const n = new Notification(title, { body: body, data: { route: route || '' } });
+            n.onclick = function () { try { window.focus(); } catch (_) {} go(); };
+          }
+        });
+      }
     }
   } catch (_) {}
 }
 
+function handleNotifyRoute(route) {
+  route = route || {};
+  const view = route.view || route;
+  const clientId = route.clientId;
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+    if (view === 'clientChat' || view === 'message') return navigate('clientChat');
+    if (view === 'check' || view === 'check_request') return navigate('athlete');
+    if (view === 'exams' || view === 'exams_request') return navigate('exams');
+    if (view === 'training' || view === 'program_assigned') return navigate('training');
+    if (view === 'nutrition' || view === 'nutrition_assigned') return navigate('nutrition');
+    if (view === 'supplements' || view === 'supplements_assigned') return navigate('supplements');
+    if (view === 'therapy' || view === 'therapy_assigned') return navigate('therapy');
+    return navigate('home');
+  }
+  if (clientId) {
+    store.coachSessionActive = true;
+    if (view === 'chat' || view === 'message' || view === 'ask_coach') return openCoachClientChat(clientId);
+    return openCoachClient(clientId);
+  }
+  if (view === 'coachHub') return enterCoachSession();
+}
+
 function eventNotifyCopy(kind) {
   const map = {
-    program_assigned: ['Scheda assegnata', 'Il coach ti ha assegnato un allenamento'],
-    nutrition_assigned: ['Alimentazione aggiornata', 'Il coach ha inviato il piano alimentare'],
-    supplements_assigned: ['Integrazione aggiornata', 'Il coach ha inviato l’integrazione'],
-    therapy_assigned: ['Terapia aggiornata', 'Il coach ha aggiornato la terapia'],
-    exams_assigned: ['Esami aggiornati', 'Il coach ha caricato degli esami'],
-    exams_request: ['Richiesta esami', 'Il coach ha chiesto degli esami'],
-    check_request: ['Check richiesto', 'Il coach ha chiesto un check fisico'],
-    message: ['Nuovo messaggio', 'Hai un messaggio dal coach'],
-    password_reset: ['Password aggiornata', 'Il coach ha reimpostato la password'],
-    leave_confirmed: ['Collaborazione chiusa', 'Il coach ha confermato la chiusura'],
-    change_approved: ['Modifica approvata', 'Il coach ha approvato la tua modifica'],
-    change_rejected: ['Modifica rifiutata', 'Il coach ha rifiutato la modifica'],
-    max_freedom: ['Libertà aggiornata', 'Il coach ha cambiato il consenso di modifica']
+    program_assigned: ['Scheda assegnata', 'Il coach ti ha assegnato un allenamento', { view: 'training' }],
+    nutrition_assigned: ['Alimentazione aggiornata', 'Il coach ha inviato il piano alimentare', { view: 'nutrition' }],
+    supplements_assigned: ['Integrazione aggiornata', 'Il coach ha inviato l’integrazione', { view: 'supplements' }],
+    therapy_assigned: ['Terapia aggiornata', 'Il coach ha aggiornato la terapia', { view: 'therapy' }],
+    exams_assigned: ['Esami aggiornati', 'Il coach ha caricato degli esami', { view: 'exams' }],
+    exams_request: ['Richiesta esami', 'Il coach ha chiesto degli esami', { view: 'exams' }],
+    check_request: ['Check richiesto', 'Il coach ha chiesto un check fisico', { view: 'check' }],
+    message: ['Nuovo messaggio', 'Hai un messaggio dal coach', { view: 'clientChat' }],
+    password_reset: ['Password aggiornata', 'Il coach ha reimpostato la password', { view: 'home' }],
+    leave_confirmed: ['Collaborazione chiusa', 'Il coach ha confermato la chiusura', { view: 'home' }],
+    change_approved: ['Modifica approvata', 'Il coach ha approvato la tua modifica', { view: 'training' }],
+    change_rejected: ['Modifica rifiutata', 'Il coach ha rifiutato la modifica', { view: 'clientChat' }],
+    max_freedom: ['Libertà aggiornata', 'Il coach ha cambiato il consenso di modifica', { view: 'home' }],
+    workout_started: ['Cliente in allenamento', 'Un atleta ha iniziato il workout', { view: 'coachClient' }],
+    workout_done: ['Workout completato', 'Un atleta ha finalizzato l’allenamento', { view: 'coachClient' }]
   };
   return map[kind] || null;
 }
@@ -1360,7 +1714,7 @@ async function pollPracticeInbox() {
         const id = Number(e.id || 0);
         if (id > seen && e.kind !== 'message') {
           const copy = eventNotifyCopy(e.kind);
-          if (copy) notifyUser(copy[0], copy[1]);
+          if (copy) notifyUser(copy[0], copy[1], copy[2] || { view: 'home' });
           if ((e.kind === 'program_assigned' || e.kind === 'nutrition_assigned' || e.kind === 'supplements_assigned' || e.kind === 'therapy_assigned' || e.kind === 'exams_assigned' || e.kind === 'change_approved') && typeof syncAccountData === 'function') {
             syncAccountData(true).then(function () {
               if (e.kind === 'change_approved') rememberApprovedProgram();
@@ -1371,7 +1725,7 @@ async function pollPracticeInbox() {
         }
       });
       if (box.unreadMessages && box.lastMessageId && box.lastMessageId !== store.clientSeenMsgId) {
-        if (store.clientSeenMsgId) notifyUser('Nuovo messaggio', 'Il coach ti ha scritto');
+        if (store.clientSeenMsgId) notifyUser('Nuovo messaggio', 'Il coach ti ha scritto', { view: 'clientChat' });
         store.clientSeenMsgId = box.lastMessageId;
       }
       store.clientSeenEventId = maxId;
@@ -1389,13 +1743,16 @@ async function pollPracticeInbox() {
       (box.events || []).forEach(function (e) {
         const id = Number(e.id || 0);
         if (id > seen) {
-          if (e.kind === 'message') notifyUser('Messaggio cliente', (e.display_name || 'Atleta') + ' ti ha scritto');
-          else if (e.kind === 'ask_coach') notifyUser('Richiesta dal cliente', (e.display_name || 'Atleta') + ' chiede al coach');
-          else if (e.kind === 'password_help') notifyUser('Recupero password', (e.display_name || 'Atleta') + ' ha chiesto la password');
-          else if (e.kind === 'leave_request') notifyUser('Fine collaborazione', (e.display_name || 'Atleta') + ' ha chiesto di chiudere');
-          else if (e.kind === 'change_request') notifyUser('Modifica da approvare', (e.display_name || 'Atleta') + ' vuole cambiare il programma');
-          else if (e.kind === 'change_notice') notifyUser('Atleta ha modificato', (e.display_name || 'Atleta') + ' ha cambiato il programma');
-          else if (e.kind === 'request_program') notifyUser('Richiesta scheda', (e.display_name || 'Atleta') + ' chiede la scheda');
+          const route = { view: 'coachClient', clientId: String(e.client_id || '') };
+          if (e.kind === 'message') notifyUser('Messaggio cliente', (e.display_name || 'Atleta') + ' ti ha scritto', Object.assign({}, route, { view: 'chat' }));
+          else if (e.kind === 'ask_coach') notifyUser('Richiesta dal cliente', (e.display_name || 'Atleta') + ' chiede al coach', Object.assign({}, route, { view: 'chat' }));
+          else if (e.kind === 'password_help') notifyUser('Recupero password', (e.display_name || 'Atleta') + ' ha chiesto la password', route);
+          else if (e.kind === 'leave_request') notifyUser('Fine collaborazione', (e.display_name || 'Atleta') + ' ha chiesto di chiudere', route);
+          else if (e.kind === 'change_request') notifyUser('Modifica da approvare', (e.display_name || 'Atleta') + ' vuole cambiare il programma', route);
+          else if (e.kind === 'change_notice') notifyUser('Atleta ha modificato', (e.display_name || 'Atleta') + ' ha cambiato il programma', route);
+          else if (e.kind === 'request_program') notifyUser('Richiesta scheda', (e.display_name || 'Atleta') + ' chiede la scheda', route);
+          else if (e.kind === 'workout_started') notifyUser('In allenamento', (e.display_name || 'Atleta') + ' ha iniziato il workout', route);
+          else if (e.kind === 'workout_done') notifyUser('Workout finito', (e.display_name || 'Atleta') + ' ha finalizzato', route);
         }
       });
       store.coachSeenEventId = (box.events || []).reduce(function (m, e) { return Math.max(m, Number(e.id || 0)); }, seen);
@@ -1414,25 +1771,39 @@ function renderPracticeView() {
   return false;
 }
 
-async function refreshCoachStatus() {
-  if (!store.accountToken || (typeof isAthleteRole === 'function' && isAthleteRole())) return;
-  try {
-    const s = await practiceFetch('/api/coach/status', { method: 'GET', headers: practiceHeaders(false) }, 12000);
-    store.coachUnlocked = !!(s && s.unlocked);
-    if (typeof persist === 'function') persist();
-  } catch (_) {}
-}
-
 async function refreshAthleteMe() {
   if (!store.accountToken || typeof isAthleteRole !== 'function' || !isAthleteRole()) return;
   try {
     const me = await practiceFetch('/api/client/me', { method: 'GET', headers: practiceHeaders(false) }, 15000);
     store.clientProfile = me.client || store.clientProfile;
     store.clientEvents = me.events || [];
+    store.coachOnline = !!me.coachOnline;
+    store.coachLastSeen = me.coachLastSeen || null;
     store.role = 'athlete';
+    store.clientShell = true;
     if (typeof persist === 'function') persist();
     if (me.client && me.client.needIntake) showClientIntake(me.client.intake || {});
   } catch (_) {}
+}
+
+async function refreshCoachStatus() {
+  if (!store.accountToken || (typeof isAthleteRole === 'function' && isAthleteRole())) return;
+  try {
+    const s = await practiceFetch('/api/coach/status', { method: 'GET', headers: practiceHeaders(false) }, 12000);
+    store.coachUnlocked = !!(s && s.unlocked);
+    store.coachHidePresence = !!(s && s.hidePresence);
+    if (typeof persist === 'function') persist();
+  } catch (_) {}
+}
+
+function startPresenceHeartbeat() {
+  if (window.__cpPresenceTimer) return;
+  const beat = function () {
+    if (!store || !store.accountToken) return;
+    practiceFetch('/api/presence/ping', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 8000).catch(function () {});
+  };
+  beat();
+  window.__cpPresenceTimer = setInterval(beat, 45000);
 }
 
 async function bootCoachPractice() {
@@ -1440,20 +1811,33 @@ async function bootCoachPractice() {
   ensurePracticeOverlays();
   ensureAssignBanner();
   requestNotifyPermission();
+  try {
+    const shell = JSON.parse(localStorage.getItem('GS_CLIENT_SHELL') || 'null');
+    if (shell && shell.locked && shell.inviteToken) {
+      store.clientShell = true;
+      store.inviteToken = store.inviteToken || shell.inviteToken;
+    }
+  } catch (_) {}
   const token = detectInviteToken() || store.inviteToken;
-  if (token) store.inviteToken = token;
+  if (token) {
+    store.inviteToken = token;
+    store.clientShell = true;
+  }
   applyClientChrome();
   if (token && !(typeof isAthleteRole === 'function' && isAthleteRole() && store.accountToken)) {
     showClientInvite(token);
     return;
   }
   if (typeof isAthleteRole === 'function' && isAthleteRole() && store.accountToken) {
+    store.clientShell = true;
     await refreshAthleteMe();
+    startPresenceHeartbeat();
     if (store.clientProfile && store.clientProfile.needIntake) showClientIntake(store.clientProfile.intake || {});
     else if (!store.clientTutorialDone) showClientTutorial(false);
     flushClientOutbox();
   } else {
     await refreshCoachStatus();
+    if (store.coachUnlocked) startPresenceHeartbeat();
     applyClientChrome();
   }
   if (!window.__cpInboxTimer) {
@@ -1562,9 +1946,24 @@ function wrapPracticeHooks() {
   if (typeof navigate === 'function' && !navigate.__cpWrapped) {
     const _nav = navigate;
     navigate = function (v, e) {
+      const raw = v;
+      if (store && store.coachSessionActive && !store.coachAssigning && !(typeof isAthleteRole === 'function' && isAthleteRole())) {
+        const coachCore = { coachHub: 1, coachClient: 1 };
+        const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1 };
+        const ok = coachCore[raw] || (store.coachViewingClient && clientDomains[raw]);
+        if (!ok) {
+          if (!confirm('Stai uscendo dall’hub Coach per tornare all’app personale. Continuare?')) return;
+          store.coachSessionActive = false;
+          if (store.coachViewingClient) {
+            leaveCoachClientView(true);
+          }
+          if (typeof persist === 'function') persist();
+        }
+      }
       v = gatePracticeView(v);
       if (v === 'coachHub' || v === 'clientChat' || v === 'coachClient') {
         if (e && e.preventDefault) e.preventDefault();
+        if (v === 'coachHub' || v === 'coachClient') store.coachSessionActive = true;
         currentView = v;
         document.querySelectorAll('.nav-item').forEach(function (el) { el.classList.remove('active'); });
         if (v === 'clientChat') {
@@ -1573,11 +1972,13 @@ function wrapPracticeHooks() {
         }
         renderPracticeView();
         ensureAssignBanner();
+        applyClientChrome();
         return;
       }
       _nav(v, e);
       applyClientChrome();
       ensureAssignBanner();
+      ensureClientViewBanner();
     };
     navigate.__cpWrapped = true;
   }
@@ -1664,19 +2065,43 @@ function wrapPracticeHooks() {
     logoutAccount = function () {
       const token = store.inviteToken;
       const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+      const shell = !!(store.clientShell || athlete);
       try { sessionStorage.removeItem('GS_SESSION_AUTH'); } catch (_) {}
       _lo();
       store.role = null;
       store.clientProfile = null;
       store.coachWorkspace = null;
-      if (athlete && token) {
+      store.coachSessionActive = false;
+      store.accountToken = null;
+      store.accountUser = null;
+      if (shell && token) {
+        store.clientShell = true;
         store.inviteToken = token;
+        try {
+          localStorage.setItem('GS_CLIENT_SHELL', JSON.stringify({ inviteToken: token, locked: true, at: Date.now() }));
+        } catch (_) {}
         if (typeof persist === 'function') persist();
         showClientInvite(token);
+        applyClientChrome();
+        return;
       }
       applyClientChrome();
     };
     logoutAccount.__cpWrapped = true;
+  }
+  if (typeof openAccount === 'function' && !openAccount.__cpWrapped) {
+    const _oa = openAccount;
+    openAccount = function () {
+      if (isClientShellLocked()) {
+        const t = store.inviteToken || detectInviteToken();
+        if (t) showClientInvite(t);
+        else practiceToast('Spazio cliente: usa il link del coach.', 'warning');
+        return;
+      }
+      return _oa.apply(this, arguments);
+    };
+    openAccount.__cpWrapped = true;
+    window.openAccount = openAccount;
   }
   if (typeof maybeShowRewardsOnboarding === 'function' && !maybeShowRewardsOnboarding.__cpWrapped) {
     const _rw = maybeShowRewardsOnboarding;
@@ -1700,6 +2125,19 @@ function wrapPracticeHooks() {
       return ret;
     };
     finalizeWorkout.__cpWrapped = true;
+  }
+  if (typeof markSessionClockIfNeeded === 'function' && !markSessionClockIfNeeded.__cpWrapped) {
+    const _ms = markSessionClockIfNeeded;
+    markSessionClockIfNeeded = function () {
+      const had = !!(store && store.sessionStartedAt);
+      const ret = _ms.apply(this, arguments);
+      if (!had && store && store.sessionStartedAt && typeof isAthleteRole === 'function' && isAthleteRole()) {
+        practiceFetch('/api/client/workout-start', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 8000).catch(function () {});
+      }
+      return ret;
+    };
+    markSessionClockIfNeeded.__cpWrapped = true;
+    window.markSessionClockIfNeeded = markSessionClockIfNeeded;
   }
 }
 
@@ -1732,6 +2170,14 @@ window.openAssignChooser = openAssignChooser;
 window.beginAssignSandbox = beginAssignSandbox;
 window.confirmAssignSandbox = confirmAssignSandbox;
 window.cancelAssignSandbox = cancelAssignSandbox;
+window.exitCoachSession = exitCoachSession;
+window.enterCoachSession = enterCoachSession;
+window.enterCoachClientView = enterCoachClientView;
+window.leaveCoachClientView = leaveCoachClientView;
+window.requestCheckFromClient = requestCheckFromClient;
+window.editClientSchedule = editClientSchedule;
+window.toggleCoachHidePresence = toggleCoachHidePresence;
+window.handleNotifyRoute = handleNotifyRoute;
 window.sendCheckToClient = sendCheckToClient;
 window.requestExamsFromClient = requestExamsFromClient;
 window.resetClientPassword = resetClientPassword;
