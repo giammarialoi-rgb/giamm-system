@@ -1,5 +1,5 @@
 /* Nurvan shell SW — cache UI only, never the 10k catalog. */
-const CACHE = 'nurvan-shell-v22-coach';
+const CACHE = 'nurvan-shell-v23-coach';
 const PRECACHE = [
   './',
   './index.html',
@@ -65,7 +65,21 @@ self.addEventListener('push', (event) => {
     icon: './icon-192.png',
     badge: './icon-192.png'
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  const badgeN = (payload.data && typeof payload.data.badge === 'number')
+    ? payload.data.badge
+    : (typeof payload.badge === 'number' ? payload.badge : null);
+  event.waitUntil(
+    Promise.resolve().then(function () {
+      if (badgeN != null && self.navigator && self.navigator.setAppBadge) {
+        return self.navigator.setAppBadge(badgeN).catch(function () {});
+      }
+      if (badgeN === 0 && self.navigator && self.navigator.clearAppBadge) {
+        return self.navigator.clearAppBadge().catch(function () {});
+      }
+    }).then(function () {
+      return self.registration.showNotification(title, options);
+    })
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {

@@ -143,10 +143,18 @@ assert(base.includes("Quelle non scelte restano") || base.includes("non vengono 
 assert(ui.includes("maybeOfferClientHomeInstall") && ui.includes("__nurvanDeferredInstall") && ui.includes("beforeinstallprompt"), "A2HS invite sheet");
 assert(ui.includes("maybeSubscribeWebPush") && ui.includes("pushManager.subscribe") && ui.includes("/api/push/subscribe"), "web push client subscribe");
 assert(ui.includes("toggleCoachWsSection") && ui.includes("__cpWsCollapse") && !ui.includes("cp-ws-chat-card"), "coach ws collapse + no inline chat");
+assert(ui.includes("buildExerciseInfoPrefill") && ui.includes("applyChatPrefill") && ui.includes("giorno ") && ui.includes("settimana "), "ask exercise info prefill");
+assert(ui.includes("setNurvanAppBadge") && ui.includes("clearNurvanAppBadge") && ui.includes("followClientLiveWorkout"), "app badge + live follow");
+assert(ui.includes("coachLibrary") && ui.includes("calendar: 1") && ui.includes("__cpCoachLibraryImport"), "coach library + calendar gates");
+assert(ui.includes("postVideocallChatNotice") && ui.includes("Anche l’altro deve premere VIDEO"), "videocall chat notice");
+assert(base.includes("openExamImportChooser") && base.includes("EXAM_FILE_ONLY") && base.includes("exportExamRequestPdf"), "exam import chooser + PDF request");
+assert(base.includes("__nurvanBusySafetyTimer"), "busy overlay safety timeout");
 assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY") && practice.includes("/api/push/vapid-public-key"), "web push server");
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
+assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v22-coach"), "SW push + cache v22");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v23-coach"), "SW push + cache v23");
+assert(sw.includes("setAppBadge"), "SW badging API");
 
 const build = fs.readFileSync(path.join(__dirname, "build_master25.mjs"), "utf8");
 assert(build.includes("coach-practice-ui.js"), "build injects UI");
