@@ -137,6 +137,9 @@ assert(ui.includes("__cpSending") && ui.includes("cp-chat-send-progress"), "chat
 assert(base.includes("buildOperationalRulesHtml") && base.includes("deviceTimeZone"), "ops rules + device timezone");
 assert(base.includes("CHAT COACH") || ui.includes("clientChat"), "athlete home chat coach");
 assert(base.includes("/peerjs.min.js"), "index loads PeerJS from root");
+assert(ui.includes("seedAssignSandboxFromClient") && ui.includes("closeClientInviteOverlay"), "assign merge seed + close invite");
+assert(ui.includes("input[type=\"checkbox\"]") && practice.includes("Link vecchio") || practice.includes("username = $1 AND status = 'active'"), "checkbox CSS + login username fallback");
+assert(base.includes("Quelle non scelte restano") || base.includes("non vengono cancellate"), "import domain picker merge copy");
 
 const build = fs.readFileSync(path.join(__dirname, "build_master25.mjs"), "utf8");
 assert(build.includes("coach-practice-ui.js"), "build injects UI");
