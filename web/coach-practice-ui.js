@@ -382,7 +382,7 @@ async function flushClientOutbox() {
   for (let i = 0; i < store.clientOutbox.length; i++) {
     const it = store.clientOutbox[i];
     try {
-      if (it.type === 'workout-ping') await practiceFetch('/api/client/workout-ping', { method: 'POST', headers: practiceHeaders(true), body: '{}' });
+      if (it.type === 'workout-ping') await practiceFetch('/api/client/workout-ping', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ data: it.data || null }) });
       else if (it.type === 'message') await practiceFetch('/api/client/messages', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: it.body, attachment: it.attachment || null }) });
       else if (it.type === 'request-program') await practiceFetch('/api/client/request-program', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ note: it.note || '' }) });
       else if (it.type === 'ask-coach') await practiceFetch('/api/client/ask-coach', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ domain: it.domain || 'general', note: it.note || '' }) });
@@ -606,6 +606,7 @@ function applyClientPayloadToLocal(payload) {
   store.subs = payload.subs && typeof payload.subs === 'object' ? JSON.parse(JSON.stringify(payload.subs)) : {};
   store.skips = payload.skips && typeof payload.skips === 'object' ? JSON.parse(JSON.stringify(payload.skips)) : {};
   store.logs = Array.isArray(payload.logs) ? JSON.parse(JSON.stringify(payload.logs)) : [];
+  store.bodyChecks = Array.isArray(payload.bodyChecks) ? JSON.parse(JSON.stringify(payload.bodyChecks)) : [];
   store.nutritionDaily = payload.nutritionDaily && typeof payload.nutritionDaily === 'object' ? JSON.parse(JSON.stringify(payload.nutritionDaily)) : {};
   store.bw = payload.bw && typeof payload.bw === 'object' ? JSON.parse(JSON.stringify(payload.bw)) : {};
   store.exMuscle = payload.exMuscle && typeof payload.exMuscle === 'object' ? JSON.parse(JSON.stringify(payload.exMuscle)) : {};
@@ -671,6 +672,7 @@ async function enterCoachClientView(domain) {
 
 function startClientLivePoll() {
   stopClientLivePoll();
+  window.__cpClientLiveFp = '';
   window.__cpClientLiveTimer = setInterval(async function () {
     if (!(store && store.coachViewingClient && store.coachWorkspace && store.coachWorkspace.clientId)) return;
     try {
@@ -679,12 +681,17 @@ function startClientLivePoll() {
       const data = snap.data || {};
       store.coachWorkspace.data = data;
       store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
-      // Refresh live maps without resetting week/day unless workout finished
       if (data.data) store.data = JSON.parse(JSON.stringify(data.data));
       if (Array.isArray(data.logs)) store.logs = JSON.parse(JSON.stringify(data.logs));
+      if (Array.isArray(data.bodyChecks)) store.bodyChecks = JSON.parse(JSON.stringify(data.bodyChecks));
       if (data.nutritionDaily) store.nutritionDaily = JSON.parse(JSON.stringify(data.nutritionDaily));
       if (data.subs) store.subs = JSON.parse(JSON.stringify(data.subs));
-      if (snap.client && snap.client.workoutLive && typeof render === 'function' && (currentView === 'training' || currentView === 'stats')) {
+      const fp = String((data.logs && data.logs.length) || 0) + ':' +
+        String((data.logs && data.logs.length && data.logs[data.logs.length - 1] && data.logs[data.logs.length - 1].at) || '') + ':' +
+        String(!!(snap.client && snap.client.workoutLive));
+      const domainViews = { training: 1, stats: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1 };
+      if (typeof render === 'function' && domainViews[currentView] && fp !== window.__cpClientLiveFp) {
+        window.__cpClientLiveFp = fp;
         render();
       }
     } catch (_) {}
@@ -1073,6 +1080,7 @@ function renderMessageHtml(m, mine) {
   let extra = '';
   if (att.kind === 'image' && att.data) extra = '<img src="' + att.data + '" alt="' + esc(att.name || 'foto') + '">';
   else if (att.kind === 'file' && att.data) extra = '<a href="' + att.data + '" download="' + esc(att.name || 'documento') + '" style="color:var(--gold);font-size:11px;">📄 ' + esc(att.name || 'documento') + '</a>';
+  else if (att.kind) extra = '<div style="font-size:11px;color:var(--gold);margin-top:4px;">📎 ' + esc(att.name || 'allegato') + '</div>';
   const ticks = mine
     ? (m.read_at ? ' <span style="color:#4fc3f7;">✓✓</span>' : ' <span style="color:#888;">✓</span>')
     : '';
@@ -1094,7 +1102,9 @@ async function pushCoachClientEdits() {
     data: store.data || {},
     subs: store.subs || {},
     customSets: store.customSets || {},
-    logs: store.logs || []
+    bodyChecks: Array.isArray(store.bodyChecks) ? store.bodyChecks : [],
+    // Never send empty logs — would wipe athlete history on server
+    logs: (Array.isArray(store.logs) && store.logs.length) ? store.logs : undefined
   };
   try {
     await withBusy(async function () {
@@ -1152,6 +1162,13 @@ async function renderCoachWorkspace(c) {
     const cl = snap.client || {};
     const prog = (snap.data && snap.data.activeProgram) || {};
     const weeks = (prog.weeks && prog.weeks.length) || 0;
+    const logs = (snap.data && Array.isArray(snap.data.logs)) ? snap.data.logs : [];
+    const lastLog = logs.length ? logs[logs.length - 1] : null;
+    const lastWoLabel = lastLog
+      ? ('Ultimo allenamento: W' + (lastLog.week || '?') + ' · seduta ' + ((Number(lastLog.day) || 0) + 1) +
+        (lastLog.at ? (' · ' + String(lastLog.at).replace('T', ' ').slice(0, 16)) : '') +
+        ' · ' + logs.length + ' sessioni sync')
+      : (cl.lastWorkoutAt ? ('Ultimo ping workout: ' + String(cl.lastWorkoutAt).replace('T', ' ').slice(0, 16)) : 'Nessun allenamento finalizzato sync');
     const intake = store.coachWorkspace.intake || {};
     const intakeRows = CLIENT_INTAKE_FIELDS.filter(function (f) { return intake[f.key]; }).map(function (f) {
       return '<div class="cp-row"><span style="color:#888;font-size:11px;">' + esc(f.label) + '</span><span style="font-size:12px;color:#fff;">' + esc(intake[f.key]) + '</span></div>';
@@ -1172,6 +1189,9 @@ async function renderCoachWorkspace(c) {
       (cl.intakeMode === 'transition' ? 'Transizione' : 'Nuovo') + (cl.intakeDone ? ' · questionario ok' : ' · questionario in attesa') + '</div>' +
       '<div style="font-size:12px;margin-bottom:12px;color:' + (cl.workoutLive || cl.online ? '#6c6' : '#888') + ';">● ' +
       esc(presenceLabel(cl.online, cl.lastSeenAt, cl.workoutLive)) + '</div>' +
+      '<div class="card" style="padding:10px;margin-bottom:12px;border-color:rgba(212,175,55,.35);"><div style="font-size:11px;color:var(--gold);font-weight:800;">ALLENAMENTI CLIENTE</div>' +
+      '<div style="font-size:12px;color:#ddd;margin-top:4px;">' + esc(lastWoLabel) + '</div>' +
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="enterCoachClientView(\'stats\')">APRI STATS / CRONOLOGIA</button></div>' +
       (cl.leaveRequested ? '<div class="card" style="padding:12px;margin-bottom:12px;border-color:#c66;"><div style="font-weight:900;color:#c66;">Richiesta fine collaborazione</div>' +
         '<button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="confirmLeaveClient(\'' + esc(id) + '\')">CONFERMA FINE COLLABORAZIONE</button></div>' : '') +
       ((snap.pendingChange || cl.hasPendingChange) ? '<div class="card" style="padding:12px;margin-bottom:12px;border-color:var(--gold);"><div style="font-weight:900;color:var(--gold);">Modifica richiesta dall’atleta</div>' +
@@ -1233,6 +1253,7 @@ function snapshotCoachMaster() {
     subs: store.subs ? JSON.parse(JSON.stringify(store.subs)) : {},
     skips: store.skips ? JSON.parse(JSON.stringify(store.skips)) : {},
     logs: Array.isArray(store.logs) ? JSON.parse(JSON.stringify(store.logs)) : [],
+    bodyChecks: Array.isArray(store.bodyChecks) ? JSON.parse(JSON.stringify(store.bodyChecks)) : [],
     nutritionDaily: store.nutritionDaily ? JSON.parse(JSON.stringify(store.nutritionDaily)) : {},
     profile: store.profile ? JSON.parse(JSON.stringify(store.profile)) : {},
     bw: store.bw ? JSON.parse(JSON.stringify(store.bw)) : {},
@@ -1270,6 +1291,7 @@ async function restoreCoachMaster(backup) {
   store.subs = backup.subs || {};
   store.skips = backup.skips || {};
   store.logs = backup.logs || [];
+  store.bodyChecks = backup.bodyChecks || [];
   store.nutritionDaily = backup.nutritionDaily || {};
   store.profile = backup.profile || store.profile || {};
   store.bw = backup.bw || {};
@@ -1895,22 +1917,33 @@ function compressChatImage(file) {
   });
 }
 
+function prepareChatAttachment(att, enc) {
+  if (!att) return null;
+  const plain = att.data || null;
+  if (enc && String(enc).indexOf('E2E1:') === 0) {
+    return Object.assign({}, att, { e2eData: enc, data: null });
+  }
+  // Keep plaintext data URL so server sanitizeAttachment accepts it
+  const out = Object.assign({}, att, { data: plain });
+  delete out.e2eData;
+  return out;
+}
+
 async function sendCoachHumanMessage(id) {
   const input = document.getElementById(window.__cpChatInputId || 'cp-ws-msg') || document.getElementById('cp-ws-msg') || document.getElementById('cp-chat-input');
   const body = input && input.value.trim();
-  let attachment = window.__cpPendingAttach || null;
-  if (!body && !attachment) return;
+  const pending = window.__cpPendingAttach || null;
+  if (!body && !pending) return;
   try {
     await ensureE2EReady('coach', id);
     const encBody = body ? await encryptChatBody(body, 'coach', id) : '';
-    if (attachment && attachment.data) {
-      attachment = Object.assign({}, attachment, {
-        e2eData: await encryptChatBody(attachment.data, 'coach', id),
-        data: null
-      });
+    let attachment = null;
+    if (pending && pending.data) {
+      const encAtt = await encryptChatBody(pending.data, 'coach', id);
+      attachment = prepareChatAttachment(pending, encAtt);
     }
     await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/messages', {
-      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: encBody || '', attachment: attachment, e2e: true })
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: encBody || (attachment ? '[allegato]' : ''), attachment: attachment, e2e: true })
     }, 20000);
     if (input) input.value = '';
     window.__cpPendingAttach = null;
@@ -1923,19 +1956,18 @@ async function sendCoachHumanMessage(id) {
 async function sendAthleteHumanMessage() {
   const input = document.getElementById('cp-client-msg');
   const body = input && input.value.trim();
-  let attachment = window.__cpPendingAttach || null;
-  if (!body && !attachment) return;
+  const pending = window.__cpPendingAttach || null;
+  if (!body && !pending) return;
   try {
     await ensureE2EReady('athlete', null);
     const encBody = body ? await encryptChatBody(body, 'athlete', null) : '';
-    if (attachment && attachment.data) {
-      attachment = Object.assign({}, attachment, {
-        e2eData: await encryptChatBody(attachment.data, 'athlete', null),
-        data: null
-      });
+    let attachment = null;
+    if (pending && pending.data) {
+      const encAtt = await encryptChatBody(pending.data, 'athlete', null);
+      attachment = prepareChatAttachment(pending, encAtt);
     }
     await practiceFetch('/api/client/messages', {
-      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: encBody || '', attachment: attachment, e2e: true })
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: encBody || (attachment ? '[allegato]' : ''), attachment: attachment, e2e: true })
     }, 20000);
     if (input) input.value = '';
     window.__cpPendingAttach = null;
@@ -1943,7 +1975,7 @@ async function sendAthleteHumanMessage() {
     if (prev) prev.textContent = '';
     loadHumanMessages(null, 'cp-client-chat', 'athlete');
   } catch (_) {
-    enqueueClientOutbox({ type: 'message', body: body || '[allegato]', attachment: attachment });
+    enqueueClientOutbox({ type: 'message', body: body || '[allegato]', attachment: pending });
     if (input) input.value = '';
     window.__cpPendingAttach = null;
     practiceToast('Messaggio in coda offline', 'warning');
@@ -2552,8 +2584,25 @@ function wrapPracticeHooks() {
     finalizeWorkout = function () {
       const ret = _fw.apply(this, arguments);
       if (typeof isAthleteRole === 'function' && isAthleteRole()) {
-        enqueueClientOutbox({ type: 'workout-ping' });
-        flushClientOutbox();
+        const last = Array.isArray(store.logs) && store.logs.length ? store.logs[store.logs.length - 1] : null;
+        const data = {
+          logs: Array.isArray(store.logs) ? store.logs : [],
+          data: store.data || {},
+          lastLog: last ? { week: last.week, day: last.day, at: last.at || last.ts || null } : null
+        };
+        // Sync account then push workout snapshot for coach visibility
+        Promise.resolve(typeof syncAccountData === 'function' ? syncAccountData(false) : null)
+          .catch(function () {})
+          .then(function () {
+            return practiceFetch('/api/client/workout-ping', {
+              method: 'POST', headers: practiceHeaders(true),
+              body: JSON.stringify({ data: data })
+            }, 20000);
+          })
+          .catch(function () {
+            enqueueClientOutbox({ type: 'workout-ping', data: data });
+            flushClientOutbox();
+          });
       }
       return ret;
     };
@@ -2698,8 +2747,30 @@ async function decryptChatBody(body, role, clientId) {
   }
 }
 
-/* ——— Internal WebRTC videocall ——— */
-var __cpCall = { pc: null, local: null, remote: null, role: null, clientId: null, poll: null, lastId: 0 };
+/* ——— Videocall via PeerJS (open-source WebRTC) ——— */
+var __cpCall = { peer: null, call: null, local: null, role: null, clientId: null, poll: null, myPeerId: null };
+
+function loadPeerJs() {
+  return new Promise(function (resolve, reject) {
+    if (typeof Peer !== 'undefined') return resolve(Peer);
+    const existing = document.querySelector('script[data-peerjs]');
+    if (existing) {
+      existing.addEventListener('load', function () { resolve(window.Peer); });
+      existing.addEventListener('error', reject);
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = 'peerjs.min.js';
+    s.setAttribute('data-peerjs', '1');
+    s.onload = function () { resolve(window.Peer); };
+    s.onerror = function () {
+      s.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
+      s.onload = function () { resolve(window.Peer); };
+      s.onerror = reject;
+    };
+    document.head.appendChild(s);
+  });
+}
 
 function ensureCallOverlay() {
   let ov = document.getElementById('cp-call-overlay');
@@ -2707,56 +2778,60 @@ function ensureCallOverlay() {
   ov = document.createElement('div');
   ov.id = 'cp-call-overlay';
   ov.innerHTML = '<div style="padding:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:#111;border-bottom:1px solid #333;">' +
-    '<div style="color:var(--gold);font-weight:800;font-size:12px;">VIDEOCALL INTERNA</div>' +
+    '<div style="color:var(--gold);font-weight:800;font-size:12px;">VIDEOCALL · PeerJS</div>' +
+    '<div id="cp-call-status" style="font-size:11px;color:#aaa;flex:1;text-align:center;">Connessione…</div>' +
     '<button class="btn btn-outline" style="font-size:11px;" onclick="hangupInternalVideocall()">CHIUDI</button></div>' +
-    '<div style="position:relative;flex:1;background:#000;">' +
+    '<div style="position:relative;flex:1;background:#000;min-height:0;">' +
     '<video id="cp-call-remote" autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>' +
     '<video id="cp-call-local" autoplay playsinline muted></video></div>';
   document.body.appendChild(ov);
   return ov;
 }
 
-async function postCallSignal(role, clientId, signal) {
+function setCallStatus(t) {
+  const el = document.getElementById('cp-call-status');
+  if (el) el.textContent = t || '';
+}
+
+async function publishPeerId(role, clientId, peerId) {
   const path = role === 'athlete'
     ? '/api/client/call/signal'
     : '/api/coach/clients/' + encodeURIComponent(clientId) + '/call/signal';
-  await practiceFetch(path, { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ signal: signal }) }, 15000);
+  await practiceFetch(path, {
+    method: 'POST', headers: practiceHeaders(true),
+    body: JSON.stringify({ signal: { type: 'peerjs', peerId: peerId, action: 'ready' } })
+  }, 12000);
 }
 
-async function pollCallSignals() {
-  if (!__cpCall.pc) return;
-  const role = __cpCall.role;
-  const clientId = __cpCall.clientId;
+async function fetchRemotePeerId(role, clientId) {
   const path = role === 'athlete'
-    ? '/api/client/call/signals?after=' + (__cpCall.lastId || 0)
-    : '/api/coach/clients/' + encodeURIComponent(clientId) + '/call/signals?after=' + (__cpCall.lastId || 0);
-  try {
-    const res = await practiceFetch(path, { method: 'GET', headers: practiceHeaders(false) }, 12000);
-    const list = res.signals || [];
-    for (let i = 0; i < list.length; i++) {
-      const row = list[i];
-      __cpCall.lastId = Math.max(__cpCall.lastId, row.id || 0);
-      if (row.from_role === role) continue;
-      await handleRemoteSignal(row.signal);
-    }
-  } catch (_) {}
+    ? '/api/client/call/signals?after=0'
+    : '/api/coach/clients/' + encodeURIComponent(clientId) + '/call/signals?after=0';
+  const res = await practiceFetch(path, { method: 'GET', headers: practiceHeaders(false) }, 12000);
+  const list = (res.signals || []).slice().reverse();
+  for (let i = 0; i < list.length; i++) {
+    const sig = list[i] && list[i].signal;
+    if (!sig || sig.type !== 'peerjs' || !sig.peerId) continue;
+    if (list[i].from_role === role) continue;
+    return sig.peerId;
+  }
+  return null;
 }
 
-async function handleRemoteSignal(sig) {
-  const pc = __cpCall.pc;
-  if (!pc || !sig) return;
-  if (sig.type === 'offer') {
-    await pc.setRemoteDescription(sig);
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    await postCallSignal(__cpCall.role, __cpCall.clientId, pc.localDescription);
-  } else if (sig.type === 'answer') {
-    await pc.setRemoteDescription(sig);
-  } else if (sig.candidate) {
-    try { await pc.addIceCandidate(sig); } catch (_) {}
-  } else if (sig.type === 'hangup') {
-    hangupInternalVideocall(true);
-  }
+function bindPeerIncoming(stream) {
+  if (!__cpCall.peer) return;
+  __cpCall.peer.on('call', function (call) {
+    setCallStatus('Risposta chiamata…');
+    __cpCall.call = call;
+    call.answer(stream);
+    call.on('stream', function (remote) {
+      const el = document.getElementById('cp-call-remote');
+      if (el) el.srcObject = remote;
+      setCallStatus('In chiamata');
+    });
+    call.on('close', function () { hangupInternalVideocall(true); });
+    call.on('error', function () { practiceToast('Errore chiamata', 'danger'); });
+  });
 }
 
 async function startInternalVideocall(clientId, role) {
@@ -2764,48 +2839,110 @@ async function startInternalVideocall(clientId, role) {
     practiceToast('Hai disabilitato le videocall dall’hub', 'warning');
     return;
   }
-  if (__cpCall.pc) { practiceToast('Chiamata già attiva', 'info'); return; }
+  if (__cpCall.peer || __cpCall.call) {
+    practiceToast('Chiamata già attiva', 'info');
+    return;
+  }
   ensureCallOverlay().classList.add('active');
+  setCallStatus('Avvio PeerJS…');
   __cpCall.role = role;
   __cpCall.clientId = clientId;
-  __cpCall.lastId = 0;
   try {
+    const PeerCtor = await loadPeerJs();
+    if (!PeerCtor) throw new Error('PeerJS non disponibile');
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     __cpCall.local = stream;
-    document.getElementById('cp-call-local').srcObject = stream;
-    const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-    __cpCall.pc = pc;
-    stream.getTracks().forEach(function (t) { pc.addTrack(t, stream); });
-    pc.ontrack = function (ev) {
-      const remote = document.getElementById('cp-call-remote');
-      if (remote) remote.srcObject = ev.streams[0];
-    };
-    pc.onicecandidate = function (ev) {
-      if (ev.candidate) postCallSignal(role, clientId, ev.candidate.toJSON()).catch(function () {});
-    };
-    // Either side can start: create offer if we don't have remote yet
-    if (!pc.currentRemoteDescription) {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      await postCallSignal(role, clientId, pc.localDescription);
-    }
-    __cpCall.poll = setInterval(pollCallSignals, 1500);
-    pollCallSignals();
-    practiceToast('Videocall avviata', 'success');
+    const loc = document.getElementById('cp-call-local');
+    if (loc) loc.srcObject = stream;
+
+    const peer = new PeerCtor(undefined, {
+      host: '0.peerjs.com',
+      port: 443,
+      path: '/',
+      secure: true,
+      debug: 1,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
+    __cpCall.peer = peer;
+
+    await new Promise(function (resolve, reject) {
+      const t = setTimeout(function () { reject(new Error('Timeout PeerServer')); }, 20000);
+      peer.on('open', function (id) {
+        clearTimeout(t);
+        __cpCall.myPeerId = id;
+        resolve(id);
+      });
+      peer.on('error', function (err) {
+        clearTimeout(t);
+        reject(err);
+      });
+    });
+
+    bindPeerIncoming(stream);
+    await publishPeerId(role, clientId, __cpCall.myPeerId);
+    setCallStatus('In attesa dell’altro… ID ' + String(__cpCall.myPeerId).slice(0, 8));
+
+    // Coach (or whoever starts) tries to dial the other peer when ready
+    let tries = 0;
+    __cpCall.poll = setInterval(async function () {
+      if (__cpCall.call) return;
+      tries += 1;
+      if (tries > 40) {
+        setCallStatus('In attesa: apri anche la chat sull’altro dispositivo e tocca 📹');
+        return;
+      }
+      try {
+        const remoteId = await fetchRemotePeerId(role, clientId);
+        if (!remoteId || remoteId === __cpCall.myPeerId) return;
+        setCallStatus('Chiamo…');
+        const call = peer.call(remoteId, stream);
+        __cpCall.call = call;
+        call.on('stream', function (remote) {
+          const el = document.getElementById('cp-call-remote');
+          if (el) el.srcObject = remote;
+          setCallStatus('In chiamata');
+        });
+        call.on('close', function () { hangupInternalVideocall(true); });
+        call.on('error', function (e) {
+          practiceToast((e && e.message) || 'Chiamata fallita', 'danger');
+          __cpCall.call = null;
+        });
+        clearInterval(__cpCall.poll);
+        __cpCall.poll = null;
+      } catch (_) {}
+    }, 2000);
+
+    practiceToast('Videocall PeerJS attiva — entrambi devono toccare 📹', 'success');
   } catch (err) {
     hangupInternalVideocall(true);
-    practiceToast((err && err.message) || 'Camera/microfono non disponibili', 'danger');
+    practiceToast((err && err.message) || 'Camera/microfono o PeerJS non disponibili', 'danger');
   }
 }
 
 function hangupInternalVideocall(silent) {
   try {
-    if (__cpCall.pc && !silent) postCallSignal(__cpCall.role, __cpCall.clientId, { type: 'hangup' }).catch(function () {});
+    if (__cpCall.call) __cpCall.call.close();
+  } catch (_) {}
+  try {
+    if (__cpCall.peer) __cpCall.peer.destroy();
   } catch (_) {}
   if (__cpCall.poll) { clearInterval(__cpCall.poll); __cpCall.poll = null; }
   if (__cpCall.local) { __cpCall.local.getTracks().forEach(function (t) { t.stop(); }); }
-  if (__cpCall.pc) { try { __cpCall.pc.close(); } catch (_) {} }
-  __cpCall = { pc: null, local: null, remote: null, role: null, clientId: null, poll: null, lastId: 0 };
+  if (!silent && __cpCall.role) {
+    const path = __cpCall.role === 'athlete'
+      ? '/api/client/call/signal'
+      : '/api/coach/clients/' + encodeURIComponent(__cpCall.clientId) + '/call/signal';
+    practiceFetch(path, {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ signal: { type: 'peerjs', action: 'hangup' } })
+    }, 8000).catch(function () {});
+  }
+  __cpCall = { peer: null, call: null, local: null, role: null, clientId: null, poll: null, myPeerId: null };
   const ov = document.getElementById('cp-call-overlay');
   if (ov) ov.classList.remove('active');
   const loc = document.getElementById('cp-call-local');

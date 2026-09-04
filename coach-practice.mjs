@@ -290,10 +290,12 @@ export function mountCoachPractice(app, deps) {
     if (e2eData && e2eData.indexOf("E2E1:") === 0) {
       return { kind, name, mime, e2eData };
     }
-    const data = String(raw.data || "");
-    if (!/^data:[a-z0-9.+\/\-]+;base64,/i.test(data)) return null;
-    if (data.length > 450000) return null;
-    return { kind, name, mime, data };
+    const dataCandidate =
+      (raw.data != null && raw.data !== "" ? String(raw.data) : "") ||
+      (e2eData && /^data:/i.test(e2eData) ? e2eData : "");
+    if (!/^data:[a-z0-9.+\/\-]+;base64,/i.test(dataCandidate)) return null;
+    if (dataCandidate.length > 450000) return null;
+    return { kind, name, mime, data: dataCandidate };
   }
 
   async function currentThread(clientId) {
@@ -761,9 +763,38 @@ export function mountCoachPractice(app, deps) {
       "UPDATE coach_clients SET last_workout_at = NOW(), last_seen_at = NOW(), workout_started_at = NULL WHERE id = $1",
       [ctx.client.id]
     );
+    // Push workout snapshot so coach sees finalized session immediately
+    const patch = req.body?.data && typeof req.body.data === "object" ? req.body.data : null;
+    if (patch && ctx.client.athlete_user_id) {
+      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [ctx.client.athlete_user_id]);
+      const current = existing.rows[0]?.data || {};
+      const merged = { ...current };
+      Object.keys(patch).forEach((k) => {
+        if (patch[k] === undefined) return;
+        if (k === "logs" && Array.isArray(patch.logs)) {
+          // Prefer longer/newer athlete logs
+          const curLogs = Array.isArray(current.logs) ? current.logs : [];
+          merged.logs = patch.logs.length >= curLogs.length ? patch.logs : curLogs;
+          return;
+        }
+        merged[k] = patch[k];
+      });
+      merged.lastWorkoutSyncedAt = new Date().toISOString();
+      await pool.query(
+        `INSERT INTO app_account_data(user_id, data, updated_at)
+         VALUES($1,$2,NOW())
+         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        [ctx.client.athlete_user_id, JSON.stringify(merged)]
+      );
+    }
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'workout_done',$2)",
-      [ctx.client.id, JSON.stringify({ at: new Date().toISOString() })]
+      [ctx.client.id, JSON.stringify({
+        at: new Date().toISOString(),
+        week: patch && patch.lastLog ? patch.lastLog.week : null,
+        day: patch && patch.lastLog ? patch.lastLog.day : null,
+        logsCount: Array.isArray(patch && patch.logs) ? patch.logs.length : null
+      })]
     );
     return res.json({ ok: true });
   });
@@ -1187,12 +1218,21 @@ export function mountCoachPractice(app, deps) {
     const patch = req.body?.data && typeof req.body.data === "object" ? req.body.data : {};
     const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
     const current = existing.rows[0]?.data || {};
-    const merged = {
-      ...current,
-      ...patch,
-      coachPatchedAt: new Date().toISOString(),
-      assignedByCoach: true
-    };
+    const merged = { ...current };
+    Object.keys(patch).forEach((k) => {
+      if (patch[k] === undefined || patch[k] === null) return;
+      // Never wipe athlete workout history with empty coach-side logs
+      if (k === "logs") {
+        const next = Array.isArray(patch.logs) ? patch.logs : null;
+        const cur = Array.isArray(current.logs) ? current.logs : [];
+        if (!next || !next.length) return;
+        merged.logs = next.length >= cur.length ? next : cur;
+        return;
+      }
+      merged[k] = patch[k];
+    });
+    merged.coachPatchedAt = new Date().toISOString();
+    merged.assignedByCoach = true;
     await pool.query(
       `INSERT INTO app_account_data(user_id, data, updated_at)
        VALUES($1,$2,NOW())
