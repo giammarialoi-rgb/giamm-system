@@ -251,7 +251,19 @@ public class MainActivity extends Activity {
                 final String finalScript = script;
                 web.postDelayed(() -> web.evaluateJavascript(finalScript, null), 800);
             }
+            dispatchNurvanRoute(intent);
         }
+    }
+
+    private void dispatchNurvanRoute(Intent intent) {
+        if (intent == null || web == null) return;
+        String route = intent.getStringExtra("nurvan_route");
+        if (route == null || route.isEmpty()) return;
+        intent.removeExtra("nurvan_route");
+        final String safe = JSONObject.quote(route);
+        web.postDelayed(() -> web.evaluateJavascript(
+                "(function(){try{var r=" + safe + ";var o=(typeof r==='string'?JSON.parse(r):r);window.handleNotifyRoute&&window.handleNotifyRoute(o);}catch(e){console.warn(e);}})();",
+                null), 900);
     }
 
     /** Configuration only: API secrets must never be embedded in the APK. */
@@ -506,7 +518,15 @@ public class MainActivity extends Activity {
                 String id = o.optString("id", "now_" + System.currentTimeMillis());
                 String title = o.optString("title", "Nurvan");
                 String body = o.optString("body", o.optString("message", ""));
-                ReminderReceiver.notifyNow(MainActivity.this, id, title, body);
+                String routeJson = null;
+                Object routeObj = o.opt("route");
+                if (routeObj instanceof JSONObject) {
+                    routeJson = ((JSONObject) routeObj).toString();
+                } else if (routeObj != null && !JSONObject.NULL.equals(routeObj)) {
+                    String s = String.valueOf(routeObj);
+                    if (s != null && !s.isEmpty() && !"null".equals(s)) routeJson = s;
+                }
+                ReminderReceiver.notifyNow(MainActivity.this, id, title, body, routeJson);
             } catch (Exception error) {
                 Log.w("GiammariaReminder", "notifyNow failed", error);
             }
@@ -1018,6 +1038,7 @@ public class MainActivity extends Activity {
                 }));
             }
         }
+        dispatchNurvanRoute(intent);
     }
 
     private void maybeShowHealthRationale(Intent intent) {

@@ -68,7 +68,7 @@ const ui = fs.readFileSync(path.join(__dirname, "web/coach-practice-ui.js"), "ut
   assert(ui.includes(name), "UI defines " + name);
 });
 assert(ui.includes("ASSEGNA SCHEDA") && ui.includes("Consenti massima libertà"), "assign + max freedom");
-assert(ui.includes("AZZERA CHAT (PER ME)") && ui.includes("NUOVA CHAT"), "chat thread tools");
+assert((ui.includes("AZZERA (PER ME)") || ui.includes("AZZERA CHAT (PER ME)")) && ui.includes("NUOVA CHAT") && ui.includes("openChatAttachSheet"), "chat thread tools");
 assert(ui.includes("Resta connesso") && ui.includes("RICHIEDI RECUPERO PASSWORD"), "login stay + recovery");
 assert(ui.includes("CHIEDI AL COACH") || ui.includes("askRealCoachForDomain"), "real coach ask");
 assert(ui.includes("RICHIEDI CHECK") || ui.includes("requestCheckFromClient"), "coach request check");
