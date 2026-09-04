@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 import { CoachPracticeLib } from "./coach-practice.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -108,6 +109,20 @@ if (fs.existsSync(webIndex) && fs.existsSync(apkIndex)) {
   const built = fs.readFileSync(webIndex, "utf8");
   assert(built.includes("bootCoachPractice") && built.includes("TRANSIZIONE VERSO APP"), "built index includes coach UI");
   assert(built.includes("function navigate(") && built.includes("analyzeCheckFisicoWithCoach"), "built index keeps previous features");
+  const s0 = built.indexOf("<script>");
+  const s1 = built.lastIndexOf("</script>");
+  if (s0 >= 0 && s1 > s0) {
+    const tmp = path.join(__dirname, "_check_index.js");
+    fs.writeFileSync(tmp, built.slice(s0 + 8, s1));
+    try {
+      execFileSync(process.execPath, ["--check", tmp], { stdio: "pipe" });
+      assert(true, "built index.html script parses");
+    } catch (err) {
+      assert(false, "built index.html script parses: " + String(err && err.stderr || err));
+    } finally {
+      try { fs.unlinkSync(tmp); } catch (_) {}
+    }
+  }
 }
 
 import express from "express";
