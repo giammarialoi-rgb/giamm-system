@@ -22,7 +22,8 @@ const INTAKE_KEYS = [
   "firstName", "lastName", "sex", "ageBand", "heightBand", "weightBand",
   "trainingAge", "level", "goal", "sessionsPerWeek", "sessionMinutes",
   "equipment", "splitPref", "injuryPrimary", "injurySecondary", "medicalLimit",
-  "jobType", "sleepHours", "stress"
+  "jobType", "sleepHours", "stress",
+  "rmSquat", "rmBench", "rmDeadlift", "rmMilitary"
 ];
 
 const INTAKE_REQUIRED = [
@@ -116,6 +117,7 @@ function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
     leaveRequested: !!r.leave_requested_at,
     chatThread: Number(r.chat_thread || 1),
     allowMaxFreedom: !!r.allow_max_freedom,
+    allowNurvanAi: !!r.allow_nurvan_ai,
     hasPendingChange: !!(r.pending_change && (r.pending_change.summary || r.pending_change.data))
   };
   if (includeIntake) {
@@ -226,6 +228,7 @@ export async function ensureCoachPracticeTables(client) {
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS invite_password TEXT;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS leave_requested_at TIMESTAMPTZ;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS allow_max_freedom BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS allow_nurvan_ai BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS pending_change JSONB;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS workout_started_at TIMESTAMPTZ;
@@ -931,7 +934,7 @@ export function mountCoachPractice(app, deps) {
       `SELECT id, display_name, username, status, paid, billing_cycle, next_due_at, allow_program_db,
               last_workout_at, last_seen_at, workout_started_at, program_expires_at, next_check_at,
               unread_count, invite_token, created_at, intake_mode, intake_completed_at,
-              leave_requested_at, chat_thread, allow_max_freedom, pending_change
+              leave_requested_at, chat_thread, allow_max_freedom, allow_nurvan_ai, pending_change
        FROM coach_clients WHERE ${where}
        ORDER BY display_name ASC
        LIMIT $2 OFFSET $3`,
@@ -1105,6 +1108,16 @@ export function mountCoachPractice(app, deps) {
       [row.id, JSON.stringify({ allow: on })]
     );
     return res.json({ ok: true, allowMaxFreedom: on });
+  });
+
+  app.post("/api/coach/clients/:id/nurvan-ai", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const on = !!req.body?.allow;
+    await pool.query("UPDATE coach_clients SET allow_nurvan_ai = $2 WHERE id = $1", [row.id, on]);
+    return res.json({ ok: true, allowNurvanAi: on });
   });
 
   app.post("/api/coach/clients/:id/change-approve", async (req, res) => {

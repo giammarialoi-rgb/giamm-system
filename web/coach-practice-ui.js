@@ -22,7 +22,11 @@ var CLIENT_INTAKE_FIELDS = [
   { key: 'medicalLimit', label: 'Limiti medici', type: 'select', required: false, options: ['Nessuno', 'Infortunio in corso', 'Dolore ricorrente', 'Indicazione medica da rispettare'] },
   { key: 'jobType', label: 'Tipo di lavoro / giornata', type: 'select', required: true, options: ['Sedentario', 'In piedi', 'Lavoro fisico', 'Turni'] },
   { key: 'sleepHours', label: 'Sonno', type: 'select', required: true, options: ['Meno di 6 ore', '6-7 ore', '7-8 ore', 'Più di 8 ore'] },
-  { key: 'stress', label: 'Stress', type: 'select', required: true, options: ['Basso', 'Medio', 'Alto'] }
+  { key: 'stress', label: 'Stress', type: 'select', required: true, options: ['Basso', 'Medio', 'Alto'] },
+  { key: 'rmSquat', label: '1RM Squats (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '40 kg', '60 kg', '80 kg', '100 kg', '120 kg', '140 kg', '160 kg', '180 kg', '200 kg', '220+ kg'] },
+  { key: 'rmBench', label: '1RM Panca (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '20 kg', '40 kg', '60 kg', '80 kg', '100 kg', '120 kg', '140 kg', '160 kg', '180+ kg'] },
+  { key: 'rmDeadlift', label: '1RM Stacco (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '40 kg', '60 kg', '80 kg', '100 kg', '120 kg', '140 kg', '160 kg', '180 kg', '200 kg', '220 kg', '240+ kg'] },
+  { key: 'rmMilitary', label: '1RM Military press (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '20 kg', '30 kg', '40 kg', '50 kg', '60 kg', '70 kg', '80 kg', '90 kg', '100+ kg'] }
 ];
 
 var CLIENT_TUTORIAL_STEPS = [
@@ -87,7 +91,8 @@ function fmtShortDate(v) {
   try {
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const tz = (typeof deviceTimeZone === 'function') ? deviceTimeZone() : undefined;
+    return d.toLocaleString('it-IT', Object.assign({ day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }, tz ? { timeZone: tz } : {}));
   } catch (_) { return '—'; }
 }
 
@@ -96,7 +101,8 @@ function fmtDay(v) {
   try {
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleDateString('it-IT');
+    const tz = (typeof deviceTimeZone === 'function') ? deviceTimeZone() : undefined;
+    return d.toLocaleDateString('it-IT', tz ? { timeZone: tz } : undefined);
   } catch (_) { return '—'; }
 }
 
@@ -110,20 +116,25 @@ function presenceLabel(online, lastSeen, liveWorkout) {
 function gatePracticeView(v) {
   if (typeof isAthleteRole === 'function' && isAthleteRole()) {
     const blocked = {
-      community: 1, pricing: 1, coachHub: 1, coachClient: 1, import: 1,
+      community: 1, pricing: 1, coachHub: 1, coachClient: 1,
       generate: 1, catalog: 1, library: 1, db: 1, programs: 1, unlock: 1
     };
-    if ((v === 'programs' || v === 'db') && store.clientProfile && store.clientProfile.allowProgramDb) return v;
+    if (v === 'ai' && !(store.clientProfile && store.clientProfile.allowNurvanAi)) return 'home';
     if (blocked[v]) return 'home';
     return v;
   }
   if (store && store.coachSessionActive && !store.coachAssigning) {
-    const coachCore = { coachHub: 1, coachClient: 1, coachChat: 1 };
+    const coachCore = { coachHub: 1, coachClient: 1, coachChat: 1, coachLibrary: 1 };
     const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1 };
     if (coachCore[v]) return v;
+    if (store.__cpCoachLibraryImport && (v === 'import' || v === 'coachLibrary')) return v;
     if (store.coachViewingClient && clientDomains[v]) return v;
   }
   return v;
+}
+
+function athleteCanUseNurvanAi() {
+  return !!(typeof isAthleteRole === 'function' && isAthleteRole() && store && store.clientProfile && store.clientProfile.allowNurvanAi);
 }
 
 function clearClientShellLock() {
@@ -231,7 +242,10 @@ function applyClientChrome() {
           return false;
         };
       }
-      if (ai) ai.style.display = athlete ? 'none' : '';
+      if (ai) {
+        if (athlete) ai.style.display = athleteCanUseNurvanAi() ? '' : 'none';
+        else ai.style.display = coachSession ? 'none' : '';
+      }
     }
     document.querySelectorAll('[data-hub="full"]').forEach(function (el) {
       el.style.display = (athlete || coachSession) ? 'none' : '';
@@ -253,7 +267,11 @@ function applyClientChrome() {
     if (athlete) {
       document.querySelectorAll('button').forEach(function (btn) {
         const tx = String(btn.textContent || '');
-        if (/CHIEDI A COACH AI/i.test(tx)) btn.textContent = tx.replace(/CHIEDI A COACH AI(?:\s*\([^)]+\))?/i, 'CHIEDI AL COACH');
+        if (/CHIEDI A COACH AI/i.test(tx) && !athleteCanUseNurvanAi()) {
+          btn.style.display = 'none';
+        } else if (/CHIEDI A COACH AI/i.test(tx)) {
+          btn.textContent = tx.replace(/CHIEDI A COACH AI(?:\s*\([^)]+\))?/i, 'CHIEDI AL COACH');
+        }
       });
       const acc = document.getElementById('account-button');
       if (acc) {
@@ -265,8 +283,10 @@ function applyClientChrome() {
       el.style.display = athlete ? 'flex' : 'none';
     });
     document.querySelectorAll('[data-hub="programs"]').forEach(function (el) {
-      const allow = !athlete || (store.clientProfile && store.clientProfile.allowProgramDb);
-      el.style.display = (allow && !coachSession) ? '' : 'none';
+      el.style.display = (athlete || coachSession) ? 'none' : '';
+    });
+    document.querySelectorAll('[data-athlete-ai]').forEach(function (el) {
+      el.style.display = athleteCanUseNurvanAi() ? '' : 'none';
     });
     ensureCoachSessionBanner();
     hideLegacyClientViewBanner();
@@ -380,6 +400,7 @@ function ensureCoachDrawer() {
     (hasClient ? ('<div class="cp-help" style="margin-bottom:10px;">Cliente: <b style="color:#fff;">' + esc(name) + '</b></div>') : '<div class="cp-help">Nessun cliente aperto. Apri dalla lista.</div>') +
     '<div class="cp-drawer-grid">' +
     '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachHub\')">LISTA CLIENTI</button>' +
+    '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachLibrary\')">IL MIO DATABASE</button>' +
     (hasClient ? (
       '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();openCoachClient(\'' + esc(id) + '\')">SCHEDA CLIENTE</button>' +
       '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();openCoachClientChat(\'' + esc(id) + '\')">CHAT</button>' +
@@ -476,8 +497,18 @@ function ensurePracticeStyle() {
     '.cp-inapp-notify{position:fixed;left:10px;right:10px;top:calc(var(--header-height) + 8px + var(--cp-session-bar, 0px));z-index:10160;background:#151515;border:1px solid var(--gold);border-radius:12px;padding:10px 12px;color:#eee;box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;}',
     '.cp-inapp-notify b{color:var(--gold);display:block;font-size:12px;margin-bottom:2px;}',
     '.cp-inapp-notify span{font-size:11px;color:#ccc;}',
-    '.cp-assign-bar{position:fixed;left:8px;right:8px;bottom:72px;z-index:10080;background:#111;border:1px solid var(--gold);border-radius:12px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.45);}',
-    'body.cp-modal-open .cp-assign-bar{visibility:hidden !important;pointer-events:none !important;}',
+    '.cp-assign-bar{position:fixed;right:10px;bottom:calc(72px + env(safe-area-inset-bottom,0px));left:auto;z-index:10080;background:#111;border:1px solid var(--gold);border-radius:12px;padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.45);max-width:min(360px,calc(100vw - 20px));max-height:min(42vh,320px);overflow:auto;box-sizing:border-box;}',
+    '.cp-assign-bar.cp-assign-collapsed{left:auto;right:10px;bottom:calc(72px + env(safe-area-inset-bottom,0px));padding:0;max-width:none;max-height:none;overflow:visible;background:transparent;border:0;box-shadow:none;}',
+    '.cp-assign-chip{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;background:#111;border:1px solid var(--gold);border-radius:999px;color:var(--gold);font-size:11px;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 6px 18px rgba(0,0,0,.4);}',
+    '.cp-assign-bar.cp-assign-expanded{left:8px;right:8px;width:auto;max-width:none;}',
+    'body.cp-assign-expanded main{padding-bottom:calc(160px + env(safe-area-inset-bottom,0px)) !important;}',
+    'body.cp-modal-open .cp-assign-bar,body.cp-busy .cp-assign-bar{visibility:hidden !important;pointer-events:none !important;}',
+    '.cp-chat-send-progress{height:3px;background:#222;border-radius:2px;overflow:hidden;margin:4px 0 0;display:none;}',
+    '.cp-chat-send-progress.active{display:block;}',
+    '.cp-chat-send-progress>i{display:block;height:100%;width:35%;background:var(--gold);animation:cpSendBar 0.9s ease-in-out infinite;}',
+    '@keyframes cpSendBar{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}',
+    '.cp-icon-btn.cp-send-pressed{transform:scale(0.88);filter:brightness(1.25);transition:transform .12s ease,filter .12s ease;}',
+    '.cp-icon-btn.cp-sending{opacity:.55;pointer-events:none;}',
     '.cp-pw-row{display:flex;gap:6px;align-items:center;}',
     '.cp-pw-row input{flex:1;}',
     '.cp-cal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}',
@@ -1049,10 +1080,12 @@ function athleteWaitingHomeHtml() {
 function athleteHomeModulesHtml() {
   return '<div class="card" style="margin-top:12px;"><div class="card-header"><h2>Menu</h2></div>' +
     '<div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:10px;">' +
+    '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'clientChat\')"><span style="font-size:18px;">💬</span><span style="font-size:11px;font-weight:800;">Chat coach</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'nutrition\')"><span style="font-size:18px;">🥗</span><span style="font-size:11px;font-weight:800;">Alimentazione</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'supplements\')"><span style="font-size:18px;">💊</span><span style="font-size:11px;font-weight:800;">Integrazione</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'therapy\')"><span style="font-size:18px;">🩺</span><span style="font-size:11px;font-weight:800;">Terapia</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'exams\')"><span style="font-size:18px;">🧪</span><span style="font-size:11px;font-weight:800;">Esami</span></button>' +
+    '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="startDomainImport(\'nutrition\')"><span style="font-size:18px;">📥</span><span style="font-size:11px;font-weight:800;">Importa file</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'calendar\')"><span style="font-size:18px;">📅</span><span style="font-size:11px;font-weight:800;">Calendario</span></button>' +
     '</div></div>';
 }
@@ -1369,17 +1402,33 @@ function chatToolsHtml(inputId, sendCall, clearCall, newCall, opts) {
     ? '<button type="button" class="btn btn-outline cp-icon-btn" title="Videocall" onclick="' + opts.videoCall + '">' + cpSvg('video') + '</button>'
     : '';
   return '<div id="cp-chat-attach-preview" class="cp-help" style="margin:0;"></div>' +
+    '<div id="cp-chat-send-progress" class="cp-chat-send-progress" aria-hidden="true"><i></i></div>' +
     '<div class="cp-chat-composer">' +
     '<button type="button" class="btn btn-outline cp-icon-btn" title="Allega" onclick="openChatAttachSheet()">' + cpSvg('attach') + '</button>' +
     '<button type="button" id="cp-dictate-btn" class="btn btn-outline cp-icon-btn cp-dictate-off" title="Dettatura" onclick="toggleChatDictation(\'' + inputId + '\')">' + cpSvg('mic') + '</button>' +
     videoBtn +
     '<input id="' + inputId + '" class="cp-chat-input" type="text" placeholder="Messaggio cifrato…">' +
-    '<button type="button" class="btn btn-primary cp-icon-btn" title="Invia" onclick="' + sendCall + '">' + cpSvg('send') + '</button>' +
+    '<button type="button" id="cp-chat-send-btn" class="btn btn-primary cp-icon-btn" title="Invia" onclick="pulseChatSendBtn();' + sendCall + '">' + cpSvg('send') + '</button>' +
     '</div>' +
     '<div class="cp-chat-tools">' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:8px 10px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="' + clearCall + '">AZZERA (PER ME)</button>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:8px 10px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="' + newCall + '">NUOVA CHAT</button>' +
     '</div>';
+}
+
+function pulseChatSendBtn() {
+  const btn = document.getElementById('cp-chat-send-btn');
+  if (!btn) return;
+  btn.classList.add('cp-send-pressed');
+  setTimeout(function () { btn.classList.remove('cp-send-pressed'); }, 160);
+}
+
+function setChatSending(on) {
+  window.__cpSending = !!on;
+  const prog = document.getElementById('cp-chat-send-progress');
+  const btn = document.getElementById('cp-chat-send-btn');
+  if (prog) prog.classList.toggle('active', !!on);
+  if (btn) btn.classList.toggle('cp-sending', !!on);
 }
 
 function renderMessageHtml(m, mine) {
@@ -1559,7 +1608,11 @@ async function renderCoachWorkspace(c) {
       '<label style="display:flex;gap:10px;align-items:flex-start;margin:0;padding:0;background:transparent;border:0;font-size:12px;line-height:1.4;color:#eee !important;-webkit-text-fill-color:#eee !important;">' +
       '<input id="cp-max-freedom" type="checkbox"' + (cl.allowMaxFreedom ? ' checked' : '') + ' onchange="toggleMaxFreedom(\'' + esc(id) + '\', this.checked)" style="margin-top:3px;flex-shrink:0;width:18px;height:18px;">' +
       '<span style="display:block;color:#eee !important;-webkit-text-fill-color:#eee !important;"><b style="color:#fff !important;-webkit-text-fill-color:#fff !important;">Consenti massima libertà</b><br>' +
-      '<span style="color:#bbb !important;-webkit-text-fill-color:#bbb !important;font-size:11px;">L\'atleta puo modificare da solo. Ti arriva comunque un avviso. Senza spunta, ogni modifica richiede la tua approvazione.</span></span></label></div>' +
+      '<span style="color:#bbb !important;-webkit-text-fill-color:#bbb !important;font-size:11px;">L\'atleta puo modificare da solo. Ti arriva comunque un avviso. Senza spunta, ogni modifica richiede la tua approvazione.</span></span></label>' +
+      '<label style="display:flex;gap:10px;align-items:flex-start;margin:12px 0 0;padding:0;background:transparent;border:0;font-size:12px;line-height:1.4;color:#eee !important;-webkit-text-fill-color:#eee !important;">' +
+      '<input id="cp-nurvan-ai" type="checkbox"' + (cl.allowNurvanAi ? ' checked' : '') + ' onchange="toggleNurvanAi(\'' + esc(id) + '\', this.checked)" style="margin-top:3px;flex-shrink:0;width:18px;height:18px;">' +
+      '<span style="display:block;color:#eee !important;-webkit-text-fill-color:#eee !important;"><b style="color:#fff !important;-webkit-text-fill-color:#fff !important;">Consenti Nurvan AI</b><br>' +
+      '<span style="color:#bbb !important;-webkit-text-fill-color:#bbb !important;font-size:11px;">Se attivo, il cliente vede Coach AI nell\'app. Di default e nascosta.</span></span></label></div>' +
       '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="openAssignChooser(\'' + esc(id) + '\',\'' + esc(cl.displayName || '') + '\')">ASSEGNA SCHEDA</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestCheckFromClient(\'' + esc(id) + '\')">RICHIEDI CHECK</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestExamsFromClient(\'' + esc(id) + '\')">RICHIEDI ESAMI</button>' +
@@ -1693,10 +1746,26 @@ function ensureAssignBanner() {
     document.body.appendChild(bar);
   }
   const job = store.coachAssigning;
-  if (!job) { bar.style.display = 'none'; return; }
+  if (!job) {
+    bar.style.display = 'none';
+    bar.classList.remove('cp-assign-expanded', 'cp-assign-collapsed');
+    if (document.body) document.body.classList.remove('cp-assign-expanded');
+    return;
+  }
+  const expanded = !!store.__cpAssignBarExpanded;
   bar.style.display = 'block';
-  bar.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;">ASSEGNAZIONE A ' + esc(job.name || 'cliente') + ' · SPAZIO CLIENTE</div>' +
-    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Questo non è il tuo allenamento. Importa o scegli, modifica, poi invia. Annulla per tornare al master.</div>' +
+  bar.classList.toggle('cp-assign-expanded', expanded);
+  bar.classList.toggle('cp-assign-collapsed', !expanded);
+  if (document.body) document.body.classList.toggle('cp-assign-expanded', expanded);
+  if (!expanded) {
+    bar.innerHTML = '<button type="button" class="cp-assign-chip" onclick="toggleAssignBannerExpand()">' +
+      'ASSEGNA · ' + esc((job.name || 'cliente').slice(0, 18)) + ' ▴</button>';
+    return;
+  }
+  bar.innerHTML = '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px;">' +
+    '<div style="font-size:11px;color:var(--gold);font-weight:800;">ASSEGNAZIONE A ' + esc(job.name || 'cliente') + ' · SPAZIO CLIENTE</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="toggleAssignBannerExpand()">RIDUCI</button></div>' +
+    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Questo non è il tuo allenamento. Importa o scegli, modifica, poi invia.</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'training\')">ALLENAMENTO</button>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'nutrition\')">ALIMENTAZIONE</button>' +
@@ -1705,6 +1774,18 @@ function ensureAssignBanner() {
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'exams\')">ESAMI</button></div>' +
     '<div style="display:flex;gap:8px;"><button class="btn btn-primary" style="flex:1;font-size:11px;" onclick="confirmAssignSandbox()">INVIA AL CLIENTE</button>' +
     '<button class="btn btn-outline" style="flex:1;font-size:11px;" onclick="cancelAssignSandbox()">ANNULLA</button></div>';
+}
+
+function toggleAssignBannerExpand() {
+  store.__cpAssignBarExpanded = !store.__cpAssignBarExpanded;
+  ensureAssignBanner();
+}
+
+function collapseAssignBannerForOverlay() {
+  if (store && store.coachAssigning && store.__cpAssignBarExpanded) {
+    store.__cpAssignBarExpanded = false;
+    ensureAssignBanner();
+  }
 }
 
 function openAssignChooser(clientId, name) {
@@ -1716,7 +1797,8 @@ function openAssignChooser(clientId, name) {
     '<h2>Cosa vuoi assegnare a ' + esc(name || 'cliente') + '?</h2>' +
     '<p class="cp-help">Si apre uno <b style="color:#fff;">spazio cliente separato</b> dal tuo allenamento. Importa o scegli, modifica, poi INVIA. Solo «usa scheda attiva» parte dalla tua come base.</p>' +
     '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'import\')">IMPORTA PDF / EXCEL / WORD</button>' +
-    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'programs\')">DATABASE PROGRAMMI</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'mylib\')">DAL MIO DATABASE</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'programs\')">DATABASE PROGRAMMI (NURVAN)</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'copy\')">USA SCHEDA ATTIVA COME BASE</button>' +
     '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\', false)">ANNULLA</button>';
   showOverlay('cp-assign', true);
@@ -1726,6 +1808,7 @@ function openAssignChooser(clientId, name) {
 function beginAssignSandbox(clientId, name, mode) {
   requestNotifyPermission();
   store.coachAssigning = { clientId: clientId, name: name, mode: mode || 'import' };
+  store.__cpAssignBarExpanded = false;
   window.__cpAssignBackup = snapshotCoachMaster();
   if (typeof persist === 'function') persist();
   // import / database: spazio cliente vuoto. copy: parte dalla scheda personale (solo in memoria).
@@ -1746,6 +1829,8 @@ function beginAssignSandbox(clientId, name, mode) {
   if (mode === 'import') {
     navigate('import');
     practiceToast('Spazio cliente vuoto: importa il file da assegnare. Il tuo allenamento resta intatto.', 'success');
+  } else if (mode === 'mylib') {
+    openCoachLibraryAssignPicker(clientId, name);
   } else if (mode === 'programs') {
     promptCatalogFromIntakeThenOpen(clientId, name);
   } else {
@@ -2057,6 +2142,7 @@ function ensureCpModal() {
 
 function openCpModal(html) {
   ensurePracticeStyle();
+  collapseAssignBannerForOverlay();
   const ov = ensureCpModal();
   const panel = document.getElementById('cp-modal-panel');
   if (panel) panel.innerHTML = html;
@@ -2261,6 +2347,22 @@ async function toggleMaxFreedom(id, allow) {
   } catch (err) {
     practiceToast((err && err.message) || 'Aggiornamento non riuscito', 'danger');
     const el = document.getElementById('cp-max-freedom');
+    if (el) el.checked = !allow;
+  }
+}
+
+async function toggleNurvanAi(id, allow) {
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/nurvan-ai', {
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ allow: !!allow })
+    }, 15000);
+    if (store.coachWorkspace && store.coachWorkspace.client && String(store.coachWorkspace.clientId) === String(id)) {
+      store.coachWorkspace.client.allowNurvanAi = !!allow;
+    }
+    practiceToast(allow ? 'Nurvan AI attiva per il cliente' : 'Nurvan AI nascosta al cliente', 'success');
+  } catch (err) {
+    practiceToast((err && err.message) || 'Aggiornamento non riuscito', 'danger');
+    const el = document.getElementById('cp-nurvan-ai');
     if (el) el.checked = !allow;
   }
 }
@@ -2505,10 +2607,12 @@ function prepareChatAttachment(att, enc) {
 }
 
 async function sendCoachHumanMessage(id) {
+  if (window.__cpSending) return;
   const input = document.getElementById(window.__cpChatInputId || 'cp-ws-msg') || document.getElementById('cp-ws-msg') || document.getElementById('cp-chat-input');
   const body = input && input.value.trim();
   const pending = window.__cpPendingAttach || null;
   if (!body && !pending) return;
+  setChatSending(true);
   try {
     await ensureE2EReady('coach', id);
     const encBody = body ? await encryptChatBody(body, 'coach', id) : '';
@@ -2524,13 +2628,16 @@ async function sendCoachHumanMessage(id) {
     clearChatAttachPreview();
     loadHumanMessages(id, document.getElementById('cp-wa-chat') ? 'cp-wa-chat' : 'cp-ws-chat', 'coach');
   } catch (err) { practiceToast((err && err.message) || 'Messaggio non inviato', 'danger'); }
+  finally { setChatSending(false); }
 }
 
 async function sendAthleteHumanMessage() {
+  if (window.__cpSending) return;
   const input = document.getElementById('cp-client-msg');
   const body = input && input.value.trim();
   const pending = window.__cpPendingAttach || null;
   if (!body && !pending) return;
+  setChatSending(true);
   try {
     await ensureE2EReady('athlete', null);
     const encBody = body ? await encryptChatBody(body, 'athlete', null) : '';
@@ -2550,7 +2657,7 @@ async function sendAthleteHumanMessage() {
     if (input) input.value = '';
     clearChatAttachPreview();
     practiceToast('Messaggio in coda offline', 'warning');
-  }
+  } finally { setChatSending(false); }
 }
 
 async function clearChatForMe(clientId, role) {
@@ -2862,6 +2969,7 @@ function renderPracticeView() {
   if (currentView === 'clientChat') { ensurePracticeStyle(); c.innerHTML = ''; renderClientChat(c); applyClientChrome(); return true; }
   if (currentView === 'coachClient') { ensurePracticeStyle(); c.innerHTML = ''; renderCoachWorkspace(c); applyClientChrome(); return true; }
   if (currentView === 'coachChat') { ensurePracticeStyle(); c.innerHTML = ''; renderCoachChatPage(c); applyClientChrome(); return true; }
+  if (currentView === 'coachLibrary') { ensurePracticeStyle(); c.innerHTML = ''; renderCoachLibrary(c); applyClientChrome(); return true; }
   stopChatPoll();
   return false;
 }
@@ -2889,6 +2997,148 @@ function renderCoachChatPage(c) {
     '</div>';
   window.__cpChatInputId = 'cp-chat-input';
   ensureE2EReady('coach', id).then(function () { startChatPoll(id, 'cp-wa-chat', 'coach'); });
+}
+
+function coachLibraryList() {
+  if (!store.coachProgramLibrary) store.coachProgramLibrary = [];
+  return store.coachProgramLibrary;
+}
+
+function renderCoachLibrary(c) {
+  store.coachSessionActive = true;
+  store.__cpCoachLibraryImport = false;
+  const rows = coachLibraryList();
+  c.innerHTML = '<div style="margin-bottom:12px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">' +
+    '<div><span style="font-size:10px;color:var(--gold);font-weight:800;">COACH</span>' +
+    '<h1 style="color:#fff;margin:2px 0 0;font-size:20px;">Il mio database schede</h1>' +
+    '<p class="cp-help" style="margin-top:6px;">Personale: importi qui senza toccare la scheda attiva né i clienti. Poi assegni dal flusso ASSEGNA.</p></div>' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">HUB</button></div>' +
+    '<button class="btn btn-primary" style="width:100%;margin-bottom:12px;" onclick="beginCoachLibraryImport()">IMPORTA NEL MIO DATABASE</button>' +
+    (rows.length
+      ? rows.map(function (e, i) {
+        const meta = e.meta || {};
+        return '<div class="card" style="padding:12px;margin-bottom:8px;">' +
+          '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">' +
+          '<div><div style="font-size:14px;font-weight:800;color:#fff;">' + esc(e.title || 'Scheda') + '</div>' +
+          '<div style="font-size:10px;color:#888;margin-top:4px;">' + esc(e.source || '') +
+          (meta.weeks ? (' · ' + meta.weeks + ' sett.') : '') +
+          (e.savedAt ? (' · ' + esc(String(e.savedAt).replace('T', ' ').slice(0, 16))) : '') +
+          '</div></div>' +
+          '<div style="display:flex;flex-direction:column;gap:6px;">' +
+          '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="deleteCoachLibraryEntry(\'' + esc(e.id) + '\')">ELIMINA</button>' +
+          '</div></div></div>';
+      }).join('')
+      : '<div class="cp-help">Nessuna scheda salvata. Importa PDF/Excel come fai di solito — resta qui, non si attiva sul tuo profilo.</div>');
+}
+
+function beginCoachLibraryImport() {
+  store.__cpCoachLibraryImport = true;
+  store.coachSessionActive = true;
+  const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : null;
+  if (pState) {
+    pState.importDomain = 'training';
+    pState.canonicalProgram = null;
+    pState.currentImportId = null;
+  }
+  navigate('import');
+  practiceToast('Import nel tuo database personale (non attiva la scheda master).', 'success');
+}
+
+async function saveCanonicalToCoachLibrary(prog, filename) {
+  prog = prog || {};
+  if (!store.coachProgramLibrary) store.coachProgramLibrary = [];
+  const id = 'cpl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  const weeks = Array.isArray(prog.weeks) ? prog.weeks.length : 0;
+  let payload = prog;
+  try { payload = JSON.parse(JSON.stringify(prog)); } catch (_) { payload = prog; }
+  const entry = {
+    id: id,
+    title: prog.title || filename || 'Scheda coach',
+    source: filename || '',
+    savedAt: new Date().toISOString(),
+    meta: { weeks: weeks },
+    payload: payload
+  };
+  store.coachProgramLibrary.unshift(entry);
+  while (store.coachProgramLibrary.length > 40) store.coachProgramLibrary.pop();
+  store.__cpCoachLibraryImport = false;
+  const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : null;
+  if (pState) {
+    pState.canonicalProgram = null;
+    pState.currentImportId = null;
+    pState.isConfirming = false;
+  }
+  if (typeof persist === 'function') persist();
+  if (typeof scheduleAccountSync === 'function') scheduleAccountSync();
+  practiceToast('Scheda salvata nel mio database', 'success');
+  navigate('coachLibrary');
+}
+
+function deleteCoachLibraryEntry(id) {
+  if (!confirm('Eliminare questa scheda dal tuo database?')) return;
+  store.coachProgramLibrary = (store.coachProgramLibrary || []).filter(function (e) { return e && e.id !== id; });
+  if (typeof persist === 'function') persist();
+  if (typeof scheduleAccountSync === 'function') scheduleAccountSync();
+  if (typeof render === 'function') render();
+}
+
+function openCoachLibraryAssignPicker(clientId, name) {
+  ensurePracticeStyle();
+  ensurePracticeOverlays();
+  const p = document.getElementById('cp-assign-panel');
+  if (!p) return;
+  const rows = coachLibraryList();
+  if (!rows.length) {
+    p.innerHTML = '<h2>Database vuoto</h2><p class="cp-help">Importa prima una scheda in «Il mio database».</p>' +
+      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);navigate(\'coachLibrary\')">APRI IL MIO DATABASE</button>' +
+      '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\', false)">CHIUDI</button>';
+    showOverlay('cp-assign', true);
+    return;
+  }
+  p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">DAL MIO DATABASE</div>' +
+    '<h2>Scegli scheda per ' + esc(name || 'cliente') + '</h2>' +
+    '<div style="max-height:50vh;overflow:auto;margin:10px 0;">' +
+    rows.map(function (e) {
+      return '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;text-align:left;" onclick="applyCoachLibraryToAssign(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'' + esc(e.id) + '\')">' +
+        esc(e.title || 'Scheda') + '</button>';
+    }).join('') +
+    '</div>' +
+    '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\', false)">ANNULLA</button>';
+  showOverlay('cp-assign', true);
+}
+
+function applyCoachLibraryToAssign(clientId, name, entryId) {
+  const entry = (store.coachProgramLibrary || []).find(function (e) { return e && e.id === entryId; });
+  if (!entry || !entry.payload) {
+    practiceToast('Scheda non trovata', 'danger');
+    return;
+  }
+  if (!store.coachAssigning) {
+    store.coachAssigning = { clientId: clientId, name: name, mode: 'mylib' };
+    store.__cpAssignBarExpanded = false;
+    window.__cpAssignBackup = snapshotCoachMaster();
+  }
+  try {
+    let prog = entry.payload;
+    try { prog = JSON.parse(JSON.stringify(entry.payload)); } catch (_) {}
+    if (typeof normalizeProgram === 'function') prog = normalizeProgram(prog);
+    DATA = prog;
+    store.activeProgram = prog;
+    store.activeProgramId = prog.id || ('lib_' + entryId);
+    if (prog.nutrition) { store.nutrition = prog.nutrition; DATA.nutrition = prog.nutrition; }
+    if (prog.supplementation) { store.supplementation = prog.supplementation; DATA.supplementation = prog.supplementation; }
+    if (prog.therapy) { store.therapy = prog.therapy; DATA.therapy = prog.therapy; }
+    if (prog.exams) { store.exams = prog.exams; DATA.exams = prog.exams; }
+    if (typeof currentWeek !== 'undefined') currentWeek = 1;
+    if (typeof currentDay !== 'undefined') currentDay = 0;
+  } catch (err) {
+    practiceToast((err && err.message) || 'Caricamento fallito', 'danger');
+    return;
+  }
+  showOverlay('cp-assign', false);
+  ensureAssignBanner();
+  navigate('training');
+  practiceToast('Scheda dal tuo database caricata nello spazio cliente. Modifica e INVIA.', 'success');
 }
 
 async function refreshAthleteMe() {
@@ -3120,7 +3370,7 @@ function wrapPracticeHooks() {
       v = gatePracticeView(v);
       if (v === 'coachHub' || v === 'clientChat' || v === 'coachClient' || v === 'coachChat') {
         if (e && e.preventDefault) e.preventDefault();
-        if (v === 'coachHub' || v === 'coachClient' || v === 'coachChat') store.coachSessionActive = true;
+        if (v === 'coachHub' || v === 'coachClient' || v === 'coachChat' || v === 'coachLibrary') store.coachSessionActive = true;
         currentView = v;
         document.querySelectorAll('.nav-item').forEach(function (el) { el.classList.remove('active'); });
         if (v === 'clientChat') {
@@ -3167,6 +3417,7 @@ function wrapPracticeHooks() {
     const _ask = askCoachAiForDomain;
     askCoachAiForDomain = function (domain) {
       if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+        if (athleteCanUseNurvanAi()) return _ask(domain);
         askRealCoachForDomain(domain);
         return;
       }
@@ -3461,18 +3712,32 @@ function loadPeerJs() {
     if (typeof Peer !== 'undefined') return resolve(Peer);
     const existing = document.querySelector('script[data-peerjs]');
     if (existing) {
+      if (typeof Peer !== 'undefined') return resolve(Peer);
       existing.addEventListener('load', function () { resolve(window.Peer); });
-      existing.addEventListener('error', reject);
+      existing.addEventListener('error', function () { reject(new Error('PeerJS script error')); });
       return;
     }
+    const localUrl = (typeof location !== 'undefined' && location.origin)
+      ? (location.origin.replace(/\/$/, '') + '/peerjs.min.js')
+      : '/peerjs.min.js';
     const s = document.createElement('script');
-    s.src = 'peerjs.min.js';
+    s.src = localUrl;
     s.setAttribute('data-peerjs', '1');
-    s.onload = function () { resolve(window.Peer); };
+    s.onload = function () {
+      if (typeof window.Peer !== 'undefined') resolve(window.Peer);
+      else reject(new Error('PeerJS non definito dopo load'));
+    };
     s.onerror = function () {
-      s.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
-      s.onload = function () { resolve(window.Peer); };
-      s.onerror = reject;
+      s.removeAttribute('data-peerjs');
+      const cdn = document.createElement('script');
+      cdn.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
+      cdn.setAttribute('data-peerjs', '1');
+      cdn.onload = function () {
+        if (typeof window.Peer !== 'undefined') resolve(window.Peer);
+        else reject(new Error('PeerJS CDN senza Peer'));
+      };
+      cdn.onerror = function () { reject(new Error('Impossibile caricare PeerJS')); };
+      document.head.appendChild(cdn);
     };
     document.head.appendChild(s);
   });
@@ -3619,7 +3884,7 @@ async function startInternalVideocall(clientId, role) {
     return;
   }
   ensureCallOverlay().classList.add('active');
-  setCallStatus('Carico PeerJS…');
+  setCallStatus('Scarico PeerJS…');
   __cpCall.role = role;
   __cpCall.clientId = clientId;
   __cpCall.muted = false;
@@ -3628,7 +3893,7 @@ async function startInternalVideocall(clientId, role) {
   try {
     const PeerCtor = await loadPeerJs();
     if (!PeerCtor) throw new Error('PeerJS non disponibile');
-    setCallStatus('Permessi camera/microfono…');
+    setCallStatus('PeerJS OK · permessi camera…');
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -3760,6 +4025,18 @@ window.beginAssignSandbox = beginAssignSandbox;
 window.confirmAssignSandbox = confirmAssignSandbox;
 window.promptCatalogFromIntakeThenOpen = promptCatalogFromIntakeThenOpen;
 window.cancelAssignSandbox = cancelAssignSandbox;
+window.toggleAssignBannerExpand = toggleAssignBannerExpand;
+window.collapseAssignBannerForOverlay = collapseAssignBannerForOverlay;
+window.pulseChatSendBtn = pulseChatSendBtn;
+window.setChatSending = setChatSending;
+window.toggleNurvanAi = toggleNurvanAi;
+window.renderCoachLibrary = renderCoachLibrary;
+window.beginCoachLibraryImport = beginCoachLibraryImport;
+window.saveCanonicalToCoachLibrary = saveCanonicalToCoachLibrary;
+window.deleteCoachLibraryEntry = deleteCoachLibraryEntry;
+window.openCoachLibraryAssignPicker = openCoachLibraryAssignPicker;
+window.applyCoachLibraryToAssign = applyCoachLibraryToAssign;
+window.athleteCanUseNurvanAi = athleteCanUseNurvanAi;
 window.exitCoachSession = exitCoachSession;
 window.enterCoachSession = enterCoachSession;
 window.enterCoachClientView = enterCoachClientView;
