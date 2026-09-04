@@ -200,19 +200,22 @@ function ensureCoachSessionBanner() {
   if (!bar) {
     bar = document.createElement('div');
     bar.id = 'cp-coach-session-bar';
-    bar.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;z-index:10060;background:#111;border-bottom:1px solid var(--gold);padding:8px 12px;font-size:11px;';
+    bar.style.cssText = 'display:none;position:fixed;left:0;right:0;z-index:1005;background:#111;border-bottom:1px solid var(--gold);padding:6px 12px;font-size:11px;';
     document.body.appendChild(bar);
   }
   if (!(store && store.coachSessionActive) || (typeof isAthleteRole === 'function' && isAthleteRole())) {
     bar.style.display = 'none';
-    document.body.style.paddingTop = '';
+    document.documentElement.style.removeProperty('--cp-session-bar');
     return;
   }
+  // Sit under the app header so it does not cover GIAMMARIA / MENU
+  const headerH = (document.querySelector('header') && document.querySelector('header').offsetHeight) || 60;
+  bar.style.top = 'calc(' + headerH + 'px + env(safe-area-inset-top, 0px))';
   bar.style.display = 'block';
-  document.body.style.paddingTop = '42px';
+  document.documentElement.style.setProperty('--cp-session-bar', '36px');
   bar.innerHTML = '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">' +
     '<span style="color:var(--gold);font-weight:800;">SESSIONE COACH</span>' +
-    '<span style="color:#aaa;flex:1;">Hub clienti separato dall’app personale</span>' +
+    '<span style="color:#bbb;flex:1;font-size:10px;">Hub clienti · mondo separato</span>' +
     '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="exitCoachSession()">ESCI</button></div>';
 }
 
@@ -254,30 +257,42 @@ function ensureClientViewBanner() {
 }
 
 function ensurePracticeStyle() {
-  if (document.getElementById('coach-practice-style')) return;
-  const s = document.createElement('style');
-  s.id = 'coach-practice-style';
+  let s = document.getElementById('coach-practice-style');
+  if (!s) {
+    s = document.createElement('style');
+    s.id = 'coach-practice-style';
+    document.head.appendChild(s);
+  }
   s.textContent = [
     '.cp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10070;display:none;align-items:center;justify-content:center;padding:16px;}',
-    '.cp-panel{background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:16px;}',
+    '.cp-panel{background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:16px;color:#eee;}',
     '.cp-panel h2{color:var(--gold);font-size:16px;margin:0 0 8px;}',
-    '.cp-help{font-size:12px;color:#aaa;line-height:1.45;margin:0 0 12px;}',
+    '.cp-help{font-size:12px;color:#bbb !important;line-height:1.45;margin:0 0 12px;}',
     '.cp-field{margin-bottom:10px;}',
-    '.cp-field label{display:block;font-size:10px;color:#888;font-weight:800;margin-bottom:4px;}',
-    '.cp-field input,.cp-field select{width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;}',
+    '.cp-field label{display:block;font-size:10px;color:#e8e8e8 !important;-webkit-text-fill-color:#e8e8e8;font-weight:800;margin-bottom:4px;}',
+    '.cp-field input,.cp-field select,.cp-field textarea{width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff !important;-webkit-text-fill-color:#fff;border-radius:8px;}',
+    '.cp-field input::placeholder,.cp-panel input::placeholder{color:#888 !important;}',
     '.cp-mode{display:flex;gap:8px;margin-bottom:12px;}',
     '.cp-mode button{flex:1;font-size:11px;padding:10px 8px;line-height:1.3;}',
+    'body.coach-session label,body.coach-viewing-client label,#cp-client-list label,.card label{color:#e8e8e8 !important;-webkit-text-fill-color:#e8e8e8;}',
+    'body.coach-session input[type="search"],body.coach-session input[type="text"],body.coach-viewing-client input[type="search"],body.coach-viewing-client input[type="text"]{background:#111 !important;color:#fff !important;-webkit-text-fill-color:#fff;border:1px solid #333;border-radius:8px;padding:10px;width:100%;}',
+    'body.coach-session .fab-save,body.coach-viewing-client .fab-save,body.role-athlete .fab-save{display:none !important;}',
+    'body.coach-session header #profile-button{display:none !important;}',
+    'body.coach-session header #account-button{display:none !important;}',
+    '.cp-msg{padding:8px 10px;border-radius:10px;margin:6px 0;font-size:13px;line-height:1.4;color:#f2f2f2 !important;}',
+    '.cp-msg.me{background:#1a1608;border:1px solid rgba(212,175,55,.35);margin-left:18%;}',
+    '.cp-msg.them{background:#151515;border:1px solid #333;margin-right:18%;}',
+    '.cp-msg-img{display:block;max-width:220px;max-height:220px;width:auto;height:auto;object-fit:cover;border-radius:10px;margin-top:6px;cursor:pointer;border:1px solid #333;}',
+    '.cp-lightbox{position:fixed;inset:0;z-index:10150;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:16px;flex-direction:column;gap:12px;}',
+    '.cp-lightbox.active{display:flex;}',
+    '.cp-lightbox img{max-width:100%;max-height:72vh;border-radius:10px;object-fit:contain;}',
     '.cp-badge{font-size:9px;padding:3px 6px;border-radius:4px;border:1px solid #444;color:#ccc;margin-left:6px;}',
     '.cp-row{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #222;}',
-    '.cp-msg{padding:8px 10px;border-radius:8px;margin:6px 0;font-size:12px;line-height:1.4;}',
-    '.cp-msg.me{background:#1a1608;border:1px solid rgba(212,175,55,.35);}',
-    '.cp-msg.them{background:#151515;border:1px solid #333;}',
-    '.cp-msg img{max-width:100%;border-radius:8px;margin-top:6px;}',
     '.cp-chat-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}',
     '.cp-assign-bar{position:fixed;left:8px;right:8px;bottom:72px;z-index:10080;background:#111;border:1px solid var(--gold);border-radius:12px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.45);}',
     '.cp-pw-row{display:flex;gap:6px;align-items:center;}',
     '.cp-pw-row input{flex:1;}',
-    'body.cp-has-client-bar #app,body.cp-has-client-bar .main,body.cp-has-client-bar #content{padding-top:118px !important;}',
+    'body.cp-has-client-bar main{padding-top:12px !important;}',
     '.cp-cal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}',
     '.cp-cal-grid select{width:100%;padding:12px 8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:14px;font-weight:700;}',
     '.cp-exam-cat{margin:10px 0;border:1px solid #222;border-radius:10px;padding:8px;}',
@@ -288,7 +303,6 @@ function ensurePracticeStyle() {
     '#cp-call-overlay video{width:100%;background:#000;object-fit:cover;}',
     '#cp-call-local{position:absolute;right:12px;top:72px;width:112px;height:150px;border-radius:10px;border:1px solid var(--gold);z-index:2;}'
   ].join('');
-  document.head.appendChild(s);
 }
 
 function ensurePracticeOverlays() {
@@ -523,7 +537,7 @@ async function submitClientIntake() {
 }
 
 function showClientTutorial(force) {
-  if (!force && store.clientTutorialDone) return;
+  if (!force && isClientTutorialDone()) return;
   ensurePracticeStyle();
   ensurePracticeOverlays();
   const p = document.getElementById('cp-tutorial-panel');
@@ -533,12 +547,28 @@ function showClientTutorial(force) {
   showOverlay('cp-tutorial', true);
 }
 
+function tutorialStorageKey() {
+  const id = (store.accountUser && (store.accountUser.id || store.accountUser.email)) || store.inviteToken || 'anon';
+  return 'NURVAN_CLIENT_TUTORIAL_DONE_' + String(id);
+}
+
+function isClientTutorialDone() {
+  if (store && store.clientTutorialDone) return true;
+  try { return localStorage.getItem(tutorialStorageKey()) === '1'; } catch (_) { return false; }
+}
+
+function markClientTutorialDone() {
+  store.clientTutorialDone = true;
+  try { localStorage.setItem(tutorialStorageKey(), '1'); } catch (_) {}
+  if (typeof persist === 'function') persist();
+}
+
 function drawClientTutorial() {
   const p = document.getElementById('cp-tutorial-panel');
   if (!p) return;
   const i = window.__cpTutStep || 0;
   const step = CLIENT_TUTORIAL_STEPS[i] || CLIENT_TUTORIAL_STEPS[0];
-  p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">GUIDA ' + (i + 1) + '/5</div>' +
+  p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">GUIDA ' + (i + 1) + '/5 · solo al primo accesso</div>' +
     '<h2>' + esc(step.t) + '</h2>' +
     '<p class="cp-help">' + esc(step.d) + '</p>' +
     '<div style="display:flex;gap:8px;">' +
@@ -550,8 +580,7 @@ function drawClientTutorial() {
 }
 
 function closeClientTutorial() {
-  store.clientTutorialDone = true;
-  if (typeof persist === 'function') persist();
+  markClientTutorialDone();
   showOverlay('cp-tutorial', false);
 }
 
@@ -870,11 +899,11 @@ function renderCoachHub(c) {
     '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">I tuoi clienti</h1></div>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="exitCoachSession()">ESCI DALL’HUB</button></div>' +
     '<div class="card" style="padding:12px;margin-bottom:12px;">' +
-    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#ccc;margin-bottom:8px;">' +
-    '<input type="checkbox" ' + (hide ? 'checked' : '') + ' onchange="toggleCoachHidePresence(this.checked)"> Nascondi che sei online agli atleti</label>' +
-    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:#ccc;margin-bottom:10px;">' +
-    '<input type="checkbox" ' + ((store.coachAllowVideocall !== false) ? 'checked' : '') + ' onchange="toggleCoachVideocall(this.checked)"> Consenti videocall interne con i clienti</label>' +
-    '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()">' +
+    '<label style="display:flex;gap:10px;align-items:center;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee;margin-bottom:10px;padding:8px;background:#141414;border-radius:8px;border:1px solid #2a2a2a;">' +
+    '<input type="checkbox" ' + (hide ? 'checked' : '') + ' onchange="toggleCoachHidePresence(this.checked)"> <span style="color:#eee !important;">Nascondi che sei online agli atleti</span></label>' +
+    '<label style="display:flex;gap:10px;align-items:center;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee;margin-bottom:10px;padding:8px;background:#141414;border-radius:8px;border:1px solid #2a2a2a;">' +
+    '<input type="checkbox" ' + ((store.coachAllowVideocall !== false) ? 'checked' : '') + ' onchange="toggleCoachVideocall(this.checked)"> <span style="color:#eee !important;">Consenti videocall interne con i clienti</span></label>' +
+    '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button></div>' +
     '<div id="cp-client-list"><div class="cp-help">Caricamento…</div></div>';
   loadCoachClientList();
@@ -1078,17 +1107,47 @@ function chatToolsHtml(inputId, sendCall, clearCall, newCall) {
 function renderMessageHtml(m, mine) {
   const att = m.attachment || {};
   let extra = '';
-  if (att.kind === 'image' && att.data) extra = '<img src="' + att.data + '" alt="' + esc(att.name || 'foto') + '">';
-  else if (att.kind === 'file' && att.data) extra = '<a href="' + att.data + '" download="' + esc(att.name || 'documento') + '" style="color:var(--gold);font-size:11px;">📄 ' + esc(att.name || 'documento') + '</a>';
-  else if (att.kind) extra = '<div style="font-size:11px;color:var(--gold);margin-top:4px;">📎 ' + esc(att.name || 'allegato') + '</div>';
+  if (att.kind === 'image' && att.data) {
+    const src = att.data.replace(/"/g, '');
+    extra = '<img class="cp-msg-img" src="' + src + '" alt="' + esc(att.name || 'foto') + '" onclick="openChatLightbox(this.src)">' +
+      '<div style="font-size:10px;color:#888;margin-top:4px;">Tocca per ingrandire</div>';
+  } else if (att.kind === 'file' && att.data) {
+    extra = '<a href="' + att.data + '" download="' + esc(att.name || 'documento') + '" style="color:var(--gold);font-size:11px;">📄 ' + esc(att.name || 'documento') + '</a>';
+  } else if (att.kind) {
+    extra = '<div style="font-size:11px;color:var(--gold);margin-top:4px;">📎 ' + esc(att.name || 'allegato') + '</div>';
+  }
   const ticks = mine
     ? (m.read_at ? ' <span style="color:#4fc3f7;">✓✓</span>' : ' <span style="color:#888;">✓</span>')
     : '';
   const lock = (m.e2e || (typeof m.body === 'string' && m.body.indexOf('E2E1:') === 0)) ? ' 🔒' : '';
   const text = m._plain != null ? m._plain : (m.body || '');
-  return '<div class="cp-msg ' + (mine ? 'me' : 'them') + '">' + esc(text) + lock + extra +
-    '<div style="font-size:9px;color:#666;margin-top:4px;">' + esc(String(m.created_at || '').replace('T', ' ').slice(0, 16)) + ticks + '</div></div>';
+  const showText = text && text !== '[allegato]';
+  return '<div class="cp-msg ' + (mine ? 'me' : 'them') + '">' + (showText ? esc(text) + lock : '') + extra +
+    '<div style="font-size:9px;color:#888;margin-top:4px;">' + esc(String(m.created_at || '').replace('T', ' ').slice(0, 16)) + ticks + '</div></div>';
 }
+
+function openChatLightbox(src) {
+  ensurePracticeStyle();
+  let box = document.getElementById('cp-lightbox');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'cp-lightbox';
+    box.className = 'cp-lightbox';
+    box.onclick = function (ev) { if (ev.target === box) closeChatLightbox(); };
+    document.body.appendChild(box);
+  }
+  box.innerHTML = '<img src="' + String(src || '').replace(/"/g, '') + '" alt="foto">' +
+    '<div style="display:flex;gap:8px;width:100%;max-width:360px;">' +
+    '<a class="btn btn-primary" style="flex:1;text-align:center;text-decoration:none;" href="' + String(src || '').replace(/"/g, '') + '" download="nurvan-chat.jpg">SALVA</a>' +
+    '<button class="btn btn-outline" style="flex:1;" onclick="closeChatLightbox()">CHIUDI</button></div>';
+  box.classList.add('active');
+}
+function closeChatLightbox() {
+  const box = document.getElementById('cp-lightbox');
+  if (box) box.classList.remove('active');
+}
+window.openChatLightbox = openChatLightbox;
+window.closeChatLightbox = closeChatLightbox;
 
 async function pushCoachClientEdits() {
   const id = store.coachWorkspace && store.coachWorkspace.clientId;
@@ -1202,7 +1261,7 @@ async function renderCoachWorkspace(c) {
       '<div style="font-size:12px;color:#ccc;">' + esc(prog.title || 'Nessuna scheda assegnata') + (weeks ? ' · ' + weeks + ' settimane' : '') + '</div>' +
       '<div style="font-size:11px;color:#aaa;margin-top:8px;">Scade: <b style="color:#fff;">' + esc(fmtDay(cl.programExpiresAt)) + '</b> · Prossimo check: <b style="color:#fff;">' + esc(fmtDay(cl.nextCheckAt)) + '</b></div>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="editClientSchedule(\'' + esc(id) + '\')">IMPOSTA SCADENZA / CHECK</button>' +
-      '<label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:12px;color:#ccc;line-height:1.35;"><input id="cp-max-freedom" type="checkbox"' + (cl.allowMaxFreedom ? ' checked' : '') + ' onchange="toggleMaxFreedom(\'' + esc(id) + '\', this.checked)"> <span><b style="color:#fff;">Consenti massima libertà</b> — l’atleta può modificare da solo. Ti arriva comunque un avviso. Senza spunta, ogni modifica è una richiesta che tu approvi.</span></label>' +
+      '<label style="display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee;line-height:1.4;"><input id="cp-max-freedom" type="checkbox"' + (cl.allowMaxFreedom ? ' checked' : '') + ' onchange="toggleMaxFreedom(\'' + esc(id) + '\', this.checked)" style="margin-top:2px;flex-shrink:0;"> <span style="color:#eee !important;-webkit-text-fill-color:#eee;"><b style="color:#fff !important;">Consenti massima libertà</b> — l\'atleta può modificare da solo. Ti arriva comunque un avviso. Senza spunta, ogni modifica è una richiesta che tu approvi.</span></label>' +
       '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="openAssignChooser(\'' + esc(id) + '\',\'' + esc(cl.displayName || '') + '\')">ASSEGNA SCHEDA</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestCheckFromClient(\'' + esc(id) + '\')">RICHIEDI CHECK</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestExamsFromClient(\'' + esc(id) + '\')">RICHIEDI ESAMI</button>' +
@@ -1387,13 +1446,136 @@ function beginAssignSandbox(clientId, name, mode) {
     navigate('import');
     practiceToast('Spazio cliente vuoto: importa il file da assegnare. Il tuo allenamento resta intatto.', 'success');
   } else if (mode === 'programs') {
-    navigate('programs');
-    practiceToast('Scegli una scheda dal database per il cliente. La tua resta intatta.', 'success');
+    promptCatalogFromIntakeThenOpen(clientId, name);
   } else {
     navigate('training');
     practiceToast('Copia della tua scheda attiva come base cliente. Modifica e conferma.', 'success');
   }
 }
+
+function mapIntakeToCatalogFilters(intake) {
+  intake = intake || {};
+  const filters = { q: '', days: '', split: '', goal: '', equipment: '', experience: '', duration: '', progression: '', audience: '' };
+  const sex = String(intake.sex || '').toLowerCase();
+  if (/femmin/.test(sex)) filters.audience = 'female';
+  else if (/masch|uomo/.test(sex)) filters.audience = 'male';
+  else if (sex) filters.audience = 'unisex';
+
+  const goal = String(intake.goal || '');
+  if (/ipertrof/i.test(goal)) filters.goal = 'ipertrofia';
+  else if (/forza/i.test(goal)) filters.goal = 'forza';
+  else if (/dimagr/i.test(goal)) filters.goal = 'cut';
+  else if (/ricompos/i.test(goal)) filters.goal = 'recomp';
+  else if (/performance|power/i.test(goal)) filters.goal = 'powerbuilding';
+  else if (/gara/i.test(goal)) filters.goal = 'forza';
+  else if (/salute|postura/i.test(goal)) filters.goal = 'ipertrofia';
+
+  const sess = String(intake.sessionsPerWeek || '');
+  if (/^2/.test(sess)) filters.days = '2';
+  else if (/^3/.test(sess)) filters.days = '3';
+  else if (/^4/.test(sess)) filters.days = '4';
+  else if (/^5/.test(sess)) filters.days = '5';
+  else if (/^6/.test(sess)) filters.days = '6';
+
+  const eq = String(intake.equipment || '');
+  if (/corpo\s*libero/i.test(eq)) filters.equipment = 'bodyweight';
+  else if (/casa/i.test(eq)) filters.equipment = 'casa';
+  else if (/palestra|macchine|pesi|panca/i.test(eq)) filters.equipment = 'palestra';
+
+  const level = String(intake.level || '');
+  if (/princip/i.test(level)) filters.experience = 'principiante';
+  else if (/interm/i.test(level)) filters.experience = 'intermedio';
+  else if (/avanz|agon/i.test(level)) filters.experience = 'avanzato';
+
+  const split = String(intake.splitPref || '');
+  if (/full\s*body/i.test(split)) filters.split = 'fullbody';
+  else if (/upper|lower/i.test(split)) filters.split = 'upper_lower';
+  else if (/distretto|mono/i.test(split)) filters.split = 'monofrequency';
+  else if (/push|pull|ppl/i.test(split)) filters.split = 'upper_lower';
+
+  const bits = [];
+  if (filters.days) bits.push(filters.days + ' giorni');
+  if (filters.split) bits.push(filters.split.replace('_', ' '));
+  if (filters.goal) bits.push(filters.goal);
+  if (filters.audience === 'female') bits.push('donna');
+  if (filters.audience === 'male') bits.push('uomo');
+  if (filters.equipment) bits.push(filters.equipment);
+  if (filters.experience) bits.push(filters.experience);
+  filters.q = bits.join(' ');
+  return filters;
+}
+
+function intakeFilterSummary(filters, intake) {
+  const parts = [];
+  if (intake && (intake.firstName || intake.lastName)) parts.push(((intake.firstName || '') + ' ' + (intake.lastName || '')).trim());
+  if (intake && intake.sex) parts.push(intake.sex);
+  if (filters.goal) parts.push(filters.goal);
+  if (filters.days) parts.push(filters.days + ' gg');
+  if (filters.equipment) parts.push(filters.equipment);
+  if (filters.experience) parts.push(filters.experience);
+  if (filters.audience) parts.push(filters.audience);
+  if (filters.split) parts.push(filters.split);
+  return parts.filter(Boolean).join(' · ') || 'anagrafica cliente';
+}
+
+async function promptCatalogFromIntakeThenOpen(clientId, name) {
+  let intake = (store.coachWorkspace && String(store.coachWorkspace.clientId) === String(clientId) && store.coachWorkspace.intake) || {};
+  if (!intake || !Object.keys(intake).length) {
+    try {
+      const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(clientId) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 20000);
+      intake = snap.intake || (snap.client && snap.client.intake) || {};
+      store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, {
+        clientId: clientId,
+        client: snap.client || (store.coachWorkspace && store.coachWorkspace.client),
+        intake: intake,
+        data: snap.data || {}
+      });
+    } catch (_) {}
+  }
+  const hasAnag = !!(intake && (intake.goal || intake.sex || intake.sessionsPerWeek || intake.level || intake.equipment));
+  if (!hasAnag) {
+    window.__cpCatalogFromIntake = null;
+    navigate('programs');
+    practiceToast('Database programmi: anagrafica assente — cerca liberamente.', 'warning');
+    return;
+  }
+  const mapped = mapIntakeToCatalogFilters(intake);
+  const summary = intakeFilterSummary(mapped, intake);
+  openCpModal(
+    '<h2>Cerca nel database</h2>' +
+    '<p class="cp-help">Il cliente <b style="color:#fff;">' + esc(name || 'cliente') + '</b> ha compilato l\'anagrafica. Vuoi filtrare le schede in base a quei dati?</p>' +
+    '<div style="padding:10px;background:#141414;border:1px solid #333;border-radius:10px;font-size:12px;color:#eee;margin-bottom:12px;line-height:1.45;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:4px;">FILTRI DA ANAGRAFICA</div>' +
+    esc(summary) +
+    (mapped.q ? '<div style="margin-top:6px;color:#aaa;font-size:11px;">Query: ' + esc(mapped.q) + '</div>' : '') +
+    '</div>' +
+    '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="applyCatalogFromIntake(true)">SI, USA ANAGRAFICA</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="applyCatalogFromIntake(false)">NO, CERCA LIBERAMENTE</button>' +
+    '<button class="btn btn-outline" style="width:100%;" onclick="closeCpModal()">ANNULLA</button>'
+  );
+  window.__cpPendingIntakeFilters = { mapped: mapped, intake: intake, name: name };
+}
+
+function applyCatalogFromIntake(useIt) {
+  const pending = window.__cpPendingIntakeFilters || {};
+  closeCpModal();
+  if (useIt && pending.mapped) {
+    window.__catalogFilters = Object.assign({}, pending.mapped);
+    window.__cpCatalogFromIntake = {
+      summary: intakeFilterSummary(pending.mapped, pending.intake),
+      name: pending.name || '',
+      at: Date.now()
+    };
+    practiceToast('Database filtrato sull\'anagrafica di ' + (pending.name || 'cliente'), 'success');
+  } else {
+    window.__cpCatalogFromIntake = null;
+    window.__catalogFilters = { q: '', days: '', split: '', goal: '', equipment: '', experience: '', duration: '', progression: '', audience: '' };
+    practiceToast('Database aperto senza filtri anagrafica', 'info');
+  }
+  navigate('programs');
+}
+window.applyCatalogFromIntake = applyCatalogFromIntake;
+window.mapIntakeToCatalogFilters = mapIntakeToCatalogFilters;
 
 function detectSandboxKinds() {
   const kinds = [];
@@ -1413,6 +1595,28 @@ async function confirmAssignSandbox() {
     practiceToast('Nessun contenuto da assegnare: importa o scegli una scheda prima.', 'warning');
     return;
   }
+  const defExp = new Date(Date.now() + 56 * 86400000).toISOString().slice(0, 10);
+  const defChk = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+  openCpModal(
+    '<h2>Invia scheda al cliente</h2>' +
+    '<p class="cp-help">Contenuti: ' + esc(kinds.join(', ')) + '. Imposta scadenza e check (niente testo libero).</p>' +
+    '<div class="cp-field"><label>SCADENZA PROGRAMMA</label>' + buildEuDateSelects('cp-asg-exp', defExp) + '</div>' +
+    '<div class="cp-field" style="margin-top:12px;"><label>PROSSIMO CHECK</label>' + buildEuDateSelects('cp-asg-chk', defChk) + '</div>' +
+    '<button class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="confirmAssignSandboxSend()">CONFERMA INVIO</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="closeCpModal()">ANNULLA</button>'
+  );
+}
+
+async function confirmAssignSandboxSend() {
+  const job = store.coachAssigning;
+  if (!job || !job.clientId) { closeCpModal(); return; }
+  const kinds = detectSandboxKinds();
+  const programExpiresAt = readEuDateSelects('cp-asg-exp');
+  const nextCheckAt = readEuDateSelects('cp-asg-chk');
+  if (!programExpiresAt || !nextCheckAt) {
+    practiceToast('Date non valide', 'warning');
+    return;
+  }
   const run = async function () {
     const payload = {
       activeProgram: (typeof DATA !== 'undefined' && DATA) ? JSON.parse(JSON.stringify(DATA)) : null
@@ -1425,21 +1629,19 @@ async function confirmAssignSandbox() {
     else if (store.therapy) payload.therapy = JSON.parse(JSON.stringify(store.therapy));
     if (DATA && DATA.exams) payload.exams = JSON.parse(JSON.stringify(DATA.exams));
     else if (store.exams) payload.exams = JSON.parse(JSON.stringify(store.exams));
-    const defExp = new Date(Date.now() + 56 * 86400000).toISOString().slice(0, 10);
-    const programExpiresAt = prompt('Scadenza programma per il cliente (AAAA-MM-GG)', defExp);
-    if (programExpiresAt === null) throw new Error('Invio annullato');
-    const defChk = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
-    const nextCheckAt = prompt('Prossimo check (AAAA-MM-GG, opzionale)', defChk);
-    if (nextCheckAt === null) throw new Error('Invio annullato');
+    if (!payload.activeProgram || !Array.isArray(payload.activeProgram.weeks) || !payload.activeProgram.weeks.length) {
+      throw new Error('Scheda allenamento vuota: importa prima di inviare.');
+    }
     await practiceFetch('/api/coach/clients/' + encodeURIComponent(job.clientId) + '/assign', {
       method: 'POST', headers: practiceHeaders(true),
       body: JSON.stringify({
         data: payload,
         kinds: kinds,
-        programExpiresAt: programExpiresAt || null,
-        nextCheckAt: nextCheckAt || null
+        programExpiresAt: programExpiresAt,
+        nextCheckAt: nextCheckAt
       })
     }, 45000);
+    closeCpModal();
     await restoreCoachMaster(window.__cpAssignBackup || job.backup);
     window.__cpAssignBackup = null;
     store.coachAssigning = null;
@@ -1461,6 +1663,7 @@ async function confirmAssignSandbox() {
     practiceToast((err && err.message) || 'Assegnazione fallita', 'danger');
   }
 }
+window.confirmAssignSandboxSend = confirmAssignSandboxSend;
 
 async function cancelAssignSandbox() {
   const job = store.coachAssigning;
@@ -2149,10 +2352,13 @@ async function pollPracticeInbox() {
           const copy = eventNotifyCopy(e.kind);
           if (copy) notifyUser(copy[0], copy[1], copy[2] || { view: 'home' });
           if ((e.kind === 'program_assigned' || e.kind === 'nutrition_assigned' || e.kind === 'supplements_assigned' || e.kind === 'therapy_assigned' || e.kind === 'exams_assigned' || e.kind === 'change_approved' || e.kind === 'coach_modified') && typeof syncAccountData === 'function') {
+            window.__cpForceRemoteProgram = true;
             syncAccountData(true).then(function () {
+              window.__cpForceRemoteProgram = false;
               if (e.kind === 'change_approved') rememberApprovedProgram();
               if (typeof render === 'function') render();
-            }).catch(function () {});
+              practiceToast('Nuova scheda ricevuta dal coach', 'success');
+            }).catch(function () { window.__cpForceRemoteProgram = false; });
           }
           if (e.kind === 'max_freedom') refreshAthleteMe();
         }
@@ -2298,7 +2504,7 @@ async function bootCoachPractice() {
     await refreshAthleteMe();
     startPresenceHeartbeat();
     if (store.clientProfile && store.clientProfile.needIntake) showClientIntake(store.clientProfile.intake || {});
-    else if (!store.clientTutorialDone) showClientTutorial(false);
+    else if (!isClientTutorialDone()) showClientTutorial(false);
     flushClientOutbox();
   } else {
     await refreshCoachStatus();
@@ -2969,6 +3175,7 @@ window.assignActiveToClient = assignActiveToClient;
 window.openAssignChooser = openAssignChooser;
 window.beginAssignSandbox = beginAssignSandbox;
 window.confirmAssignSandbox = confirmAssignSandbox;
+window.promptCatalogFromIntakeThenOpen = promptCatalogFromIntakeThenOpen;
 window.cancelAssignSandbox = cancelAssignSandbox;
 window.exitCoachSession = exitCoachSession;
 window.enterCoachSession = enterCoachSession;
