@@ -67,7 +67,12 @@ const ui = fs.readFileSync(path.join(__dirname, "web/coach-practice-ui.js"), "ut
 ["bootCoachPractice", "openAddClientWizard", "setAddClientMode", "submitAddClient", "showClientIntake", "submitClientIntake", "showClientTutorial", "showDemoUnlock", "renderCoachHub", "renderClientChat"].forEach((name) => {
   assert(ui.includes(name), "UI defines " + name);
 });
-assert(ui.includes("NUOVO CLIENTE") && ui.includes("TRANSIZIONE VERSO APP"), "UI has both add-client modes");
+assert(ui.includes("ASSEGNA SCHEDA") && ui.includes("Consenti massima libertà"), "assign + max freedom");
+assert(ui.includes("AZZERA CHAT (PER ME)") && ui.includes("NUOVA CHAT"), "chat thread tools");
+assert(ui.includes("Resta connesso") && ui.includes("RICHIEDI RECUPERO PASSWORD"), "login stay + recovery");
+assert(ui.includes("CHIEDI AL COACH") || ui.includes("askRealCoachForDomain"), "real coach ask");
+assert(ui.includes("INVIA CHECK"), "coach send check");
+assert(!ui.includes("127.0.0.1:7810"), "debug ingest removed");
 assert(ui.includes("Anzianità di allenamento") && ui.includes("Problema fisico principale") && ui.includes("Tempo a sessione"), "UI intake has requested fields");
 INTAKE_REQUIRED.forEach((k) => {
   assert(ui.includes("key: '" + k + "'") || ui.includes('key: "' + k + '"'), "UI field " + k + " matches server");
@@ -82,7 +87,8 @@ assert(base.includes("Analizza check fisico") || base.includes("analyzeCheckFisi
 assert(base.includes("NURVAN HUB"), "menu hub kept");
 assert(base.includes("bootCoachPractice"), "finishInit boots practice");
 assert(base.includes("athleteInfoOnly"), "athlete chat flag");
-assert(base.includes("Solo il tuo coach può modificare la scheda"), "proposal blocked for athlete");
+assert(base.includes("massima libertà") || base.includes("allowMaxFreedom"), "athlete edit gate / max freedom");
+assert(base.includes("afterProgramActivatedNavigate"), "assign preview after import");
 
 const api = fs.readFileSync(path.join(__dirname, "coach-api.mjs"), "utf8");
 assert(api.includes("mountCoachPractice"), "API mounts practice");
@@ -91,7 +97,7 @@ assert(api.includes("coachPracticeVersion"), "health version");
 assert(api.includes("role"), "JWT has role");
 
 const practice = fs.readFileSync(path.join(__dirname, "coach-practice.mjs"), "utf8");
-["/api/coach/unlock/demo", "/api/coach/clients", "/api/client/login", "/api/client/intake", "/c/:token", "intake_mode"].forEach((s) => {
+["/api/coach/unlock/demo", "/api/coach/clients", "/api/client/login", "/api/client/intake", "/c/:token", "intake_mode", "/api/client/ask-coach", "/api/client/change-request", "allow_max_freedom"].forEach((s) => {
   assert(practice.includes(s), "server has " + s);
 });
 
@@ -155,6 +161,16 @@ try {
 } finally {
   await new Promise((resolve, reject) => server.close((err) => err ? reject(err) : resolve()));
 }
+
+assert(api.includes("dbReady"), "health exposes dbReady");
+
+import { parseExamLineRecord, harvestLabExamRecords } from "./universal-import-engine.mjs";
+const labLine = parseExamLineRecord("Emoglobina 15,2 g/dL 13,5 - 17,5");
+assert(labLine && labLine.parameter && /emoglobina/i.test(labLine.parameter) && String(labLine.value).includes("15"), "lab line without header still parses");
+assert(labLine.range || labLine.reference_range, "lab line keeps reference range without parentheses");
+const harvested = harvestLabExamRecords("ESAMI\nEmoglobina    15,2    g/dL    13,5 - 17,5\nGlicemia 95 mg/dL (70-100)\nPanca piana 4x10 RIR 2");
+assert(harvested.length >= 2, "harvest finds lab rows without ESAMI section switch");
+assert(harvested.every((r) => !/panca/i.test(r.parameter || "")), "harvest skips training lines");
 
 if (failed) {
   console.error("\n" + failed + " checks failed");

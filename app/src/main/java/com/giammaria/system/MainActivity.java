@@ -498,6 +498,19 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void notifyNow(String json) {
+            try {
+                JSONObject o = new JSONObject(json != null ? json : "{}");
+                String id = o.optString("id", "now_" + System.currentTimeMillis());
+                String title = o.optString("title", "Nurvan");
+                String body = o.optString("body", o.optString("message", ""));
+                ReminderReceiver.notifyNow(MainActivity.this, id, title, body);
+            } catch (Exception error) {
+                Log.w("GiammariaReminder", "notifyNow failed", error);
+            }
+        }
+
+        @JavascriptInterface
         public void requestNotifications() {
             runOnUiThread(() -> {
                 ReminderReceiver.ensureChannel(MainActivity.this);
