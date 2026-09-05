@@ -6,6 +6,7 @@ import {
   coachOsFeaturePublicPayload,
   resolveCoachOsFeatureFlags
 } from "./feature-flags.mjs";
+import { loadCoachToday } from "./server/coach-os/today.mjs";
 
 function slugName(name) {
   const s = String(name || "atleta")
@@ -1260,6 +1261,21 @@ export function mountCoachPractice(app, deps) {
         overrides: lic.rows[0] && lic.rows[0].feature_flags
       })
     });
+  });
+
+  app.get("/api/coach/today", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const today = await loadCoachToday(pool, coach.id, {
+        date: req.query.date,
+        timeZone: req.query.timezone
+      });
+      return res.json({ ok: true, ...today });
+    } catch (error) {
+      console.error("COACH_TODAY", error && error.message ? error.message : error);
+      return res.status(500).json({ error: "Impossibile caricare Today." });
+    }
   });
 
   app.get("/api/webrtc/ice", async (_req, res) => {

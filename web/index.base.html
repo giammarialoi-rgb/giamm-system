@@ -11690,6 +11690,7 @@ function exportActiveProgram() {
 function renderImport(c){
   const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : (typeof programImportState !== 'undefined' ? programImportState : null);
   const prog = pState?.canonicalProgram;
+  const coachNativeImport = !!(store && store.__coachOsNativeImport);
 
   if (pState && pState.isAnalyzing) {
     c.innerHTML = `
@@ -11737,15 +11738,15 @@ function renderImport(c){
     c.innerHTML = `
       <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <div>
-          <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">DOCUMENT REVIEW</span>
-          <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">${esc(summary?.status || 'REVISIONE PROGRAMMA')}</h2>
+          <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">${coachNativeImport ? 'COACH OS · IMPORT PROGRAM' : 'DOCUMENT REVIEW'}</span>
+          <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">${esc(summary?.status || (coachNativeImport ? 'PREVIEW & CORRECTION' : 'REVISIONE PROGRAMMA'))}</h2>
           <div style="font-size:11px;color:#888;margin-top:4px;">${esc(pState.filename || prog.source?.filename || '')} · ${esc(summary?.classification || ir?.document?.classification || '')} · ${esc(summary?.format || '')}</div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-outline" style="font-size:11px; padding:6px 12px;" onclick="cancelCurrentImportReview()">ANNULLA</button>
           ${!valResult.valid ? `<button class="btn btn-outline" style="font-size:11px; padding:6px 12px;border-color:#ff9800;color:#ff9800;" onclick="forceConfirmImportOverride()">FORZA ATTIVAZIONE</button>` : ''}
           <button class="btn btn-outline" style="font-size:11px; padding:6px 12px;" onclick="exportImportProvenance()">PROVENANCE</button>
-          <button class="btn btn-primary" style="font-size:11px; padding:6px 14px; ${!valResult.valid ? 'background:var(--accent-red);border-color:var(--accent-red);' : ''}" onclick="confirmImportAndActivate()">${pState.isConfirming ? 'ATTIVAZIONE...' : (!valResult.valid ? '⚠️ CONFERMA E ATTIVA' : '✓ CONFERMA E ATTIVA')}</button>
+          <button class="btn btn-primary" style="font-size:11px; padding:6px 14px; ${!valResult.valid ? 'background:var(--accent-red);border-color:var(--accent-red);' : ''}" onclick="confirmImportAndActivate()">${pState.isConfirming ? 'SALVATAGGIO...' : (coachNativeImport ? (!valResult.valid ? 'CONFERMA E SALVA' : 'SALVA NEL COACH DATABASE') : (!valResult.valid ? '⚠️ CONFERMA E ATTIVA' : '✓ CONFERMA E ATTIVA'))}</button>
         </div>
       </div>
 
@@ -11829,11 +11830,11 @@ function renderImport(c){
   const aiAllowed = !athleteImp || !!(store.clientProfile && store.clientProfile.allowNurvanAi);
   c.innerHTML = `
     <div style="margin-bottom:16px;">
-      <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">${athleteImp ? 'IMPORTA DOCUMENTI' : 'DAL FILE ALL\'ALLENAMENTO'}</span>
-      <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">${athleteImp ? 'Alimentazione, integrazione, terapia, esami' : 'Importa la scheda del coach'}</h2>
+      <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">${coachNativeImport ? 'COACH OS · PROGRAMS' : (athleteImp ? 'IMPORTA DOCUMENTI' : 'DAL FILE ALL\'ALLENAMENTO')}</span>
+      <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">${coachNativeImport ? 'Import Program' : (athleteImp ? 'Alimentazione, integrazione, terapia, esami' : 'Importa la scheda del coach')}</h2>
       <p style="font-size:12px;color:#888;margin:8px 0 0;line-height:1.45;max-width:420px;">${athleteImp
         ? 'Scegli un file (PDF, Excel, Word, immagine). La scheda di allenamento arriva solo dal tuo coach.'
-        : 'Excel, PDF o Word → revisione → attiva e logga. Non ricostruire a mano. (Altri domini restano opzionali.)'}</p>
+        : (coachNativeImport ? 'Upload → extraction → preview → domain picker → validation → Coach Database / cliente.' : 'Excel, PDF o Word → revisione → attiva e logga. Non ricostruire a mano. (Altri domini restano opzionali.)')}</p>
     </div>
 
     <div class="pill-tabs" style="margin-bottom:14px; flex-wrap:wrap;">
@@ -12578,7 +12579,8 @@ async function confirmImportAndActivate() {
   const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : (typeof programImportState !== 'undefined' ? programImportState : null);
   if (!pState || !pState.canonicalProgram) return;
   if (pState.isConfirming) return;
-  if (store && store.__cpCoachLibraryImport && typeof saveCanonicalToCoachLibrary === 'function') {
+  const nativeCoachImport = !!(store && store.__coachOsNativeImport);
+  if (store && store.__cpCoachLibraryImport && !nativeCoachImport && typeof saveCanonicalToCoachLibrary === 'function') {
     return withBusy(function () { return saveCanonicalToCoachLibrary(pState.canonicalProgram, pState.filename || ''); }, 'Salvo nel mio database…', { immediate: true });
   }
   const peek = pState.canonicalProgram;
@@ -12588,9 +12590,35 @@ async function confirmImportAndActivate() {
     : available.slice();
   hideBusyOverlay();
   // Sempre chiedi se il file ha più sezioni; non forzare e non cancellare le altre
-  let selectedDomains = await openImportDomainPicker(available.length ? available : hint, hint);
+  let selectedDomains = await openImportDomainPicker(
+    available.length ? available : hint,
+    nativeCoachImport ? (available.length ? available : hint) : hint,
+    nativeCoachImport ? {
+      forceAsk: true,
+      title: 'Cosa vuoi salvare nel programma?',
+      help: 'Seleziona sempre i domini: Workout, Nutrition, Integration, Therapy, Exams. Solo quelli scelti entreranno nel Coach Database.'
+    } : null
+  );
   if (!selectedDomains) return;
   pState.selectedDomains = selectedDomains;
+  if (nativeCoachImport && typeof saveCanonicalToCoachLibrary === 'function') {
+    const selectedProgram = JSON.parse(JSON.stringify(peek));
+    const allow = function (domain) { return selectedDomains.indexOf(domain) >= 0; };
+    if (!allow('training')) {
+      selectedProgram.weeks = [];
+      selectedProgram.training = Object.assign({}, selectedProgram.training || {}, { weeks: [] });
+    }
+    if (!allow('nutrition')) delete selectedProgram.nutrition;
+    if (!allow('supplements')) delete selectedProgram.supplementation;
+    if (!allow('therapy')) delete selectedProgram.therapy;
+    if (!allow('exams')) delete selectedProgram.exams;
+    selectedProgram.selectedDomains = selectedDomains.slice();
+    return withBusy(
+      function () { return saveCanonicalToCoachLibrary(selectedProgram, pState.filename || ''); },
+      'Salvo nel Coach Database…',
+      { immediate: true }
+    );
+  }
   const domainOnly = selectedDomains.indexOf('training') < 0;
   const hasTraining = selectedDomains.indexOf('training') >= 0;
   let choices = { weeksMode: 'keep', daysMode: 'keep', progression: 'keep', weeks: (peek.weeks || []).length, days: 4, goal: 'IPERTROFIA / MASSA' };

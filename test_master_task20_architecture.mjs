@@ -180,6 +180,7 @@ function createTestRuntime() {
         classList: {
           add: () => {},
           remove: () => {},
+          toggle: () => {},
           contains: () => false
         },
         addEventListener: () => {},
@@ -209,7 +210,7 @@ function createTestRuntime() {
       value: '',
       innerHTML: '',
       style: {},
-      classList: { add: () => {}, remove: () => {} },
+      classList: { add: () => {}, remove: () => {}, toggle: () => {} },
       setAttribute: () => {},
       appendChild: () => {},
       querySelector: () => null,

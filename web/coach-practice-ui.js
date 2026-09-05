@@ -154,7 +154,12 @@ function gatePracticeView(v) {
     return v;
   }
   if (store && store.coachSessionActive && !store.coachAssigning) {
-    const coachCore = { coachHub: 1, coachClient: 1, coachChat: 1, coachLibrary: 1 };
+    const coachCore = {
+      coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
+      coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
+      coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
+      coachAutomations: 1, coachBusiness: 1, coachCrm: 1
+    };
     const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, calendar: 1 };
     if (coachCore[v]) return v;
     if (store.__cpCoachLibraryImport && (v === 'import' || v === 'coachLibrary')) return v;
@@ -336,6 +341,9 @@ function applyClientChrome() {
     ensureCoachSessionBanner();
     hideLegacyClientViewBanner();
     ensureCoachDrawer();
+    if (window.CoachOS && typeof window.CoachOS.applyShell === 'function') {
+      window.CoachOS.applyShell(coachSession, athlete);
+    }
   } catch (err) {
     console.warn('[CLIENT_CHROME]', err);
   }
@@ -390,6 +398,10 @@ function ensureCoachHeaderControls(coachSession) {
   const opts = ['<option value="">Cliente…</option>'].concat(clients.map(function (cl) {
     return '<option value="' + esc(String(cl.id)) + '"' + (String(cl.id) === curId ? ' selected' : '') + '>' + esc(cl.displayName || cl.username || ('#' + cl.id)) + '</option>';
   }));
+  if (window.CoachOS && typeof window.CoachOS.renderHeaderControls === 'function' &&
+      window.CoachOS.renderHeaderControls(wrap, clients, curId)) {
+    return;
+  }
   wrap.innerHTML =
     '<select id="cp-client-switcher" class="cp-client-switcher" title="Cambia cliente" style="max-width:42vw;min-width:0;flex:1 1 auto;" onchange="switchCoachClientFromHeader(this.value)">' + opts.join('') + '</select>' +
     '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;flex-shrink:0;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachHub\')">LISTA</button>' +
@@ -513,6 +525,11 @@ function ensureCoachSessionBanner() {
     || (store.coachAssigning && store.coachWorkspace && store.coachWorkspace.assignName)
     || '';
   const viewing = !!(store.coachViewingClient || store.coachAssigning);
+  if (typeof coachFeatureEnabled === 'function' && coachFeatureEnabled('coachShellV2') && !viewing) {
+    bar.style.display = 'none';
+    document.documentElement.style.removeProperty('--cp-session-bar');
+    return;
+  }
   let mid = 'Hub clienti · mondo separato';
   if (viewing && name) mid = 'Cliente: <b style="color:#fff;">' + esc(name) + '</b>';
   else if (store.coachWorkspace && store.coachWorkspace.clientId && name) mid = 'Scheda: <b style="color:#fff;">' + esc(name) + '</b>';
@@ -1842,6 +1859,12 @@ function openCoachOrUnlock() {
   else showDemoUnlock();
 }
 
+function coachLandingView() {
+  return (typeof coachFeatureEnabled === 'function' && coachFeatureEnabled('coachTodayV2'))
+    ? 'coachToday'
+    : 'coachHub';
+}
+
 function enterCoachSession() {
   if (store.coachViewingClient) {
     try { leaveCoachClientView(true); } catch (_) {}
@@ -1851,7 +1874,7 @@ function enterCoachSession() {
   if (typeof persist === 'function') persist();
   requestNotifyPermission();
   applyClientChrome();
-  navigate('coachHub');
+  navigate(coachLandingView());
 }
 
 function exitCoachSession(force) {
@@ -2285,7 +2308,7 @@ async function confirmDemoUnlock() {
     showOverlay('cp-demo', false);
     applyClientChrome();
     practiceToast('Pagamento ricevuto. Modalità Coach sbloccata.', 'success');
-    navigate('coachHub');
+    navigate(coachLandingView());
   } catch (err) {
     const raw = String((err && err.message) || '');
     const msg = /404|not found|failed/i.test(raw)
@@ -2302,7 +2325,7 @@ function renderCoachUnlockCardHtml() {
     return '<div class="card" style="border:1px solid var(--gold);margin-bottom:14px;padding:12px;">' +
       '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Modalità Coach</div>' +
       '<p style="font-size:11px;color:#aaa;margin:0 0 10px;">Hub clienti, inviti e chat umana.</p>' +
-      '<button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="navigate(\'coachHub\')">APRI HUB COACH</button></div>';
+      '<button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="enterCoachSession()">APRI COACH</button></div>';
   }
   return '<div class="card" style="border:1px solid var(--gold);margin-bottom:14px;padding:12px;">' +
     '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Diventa Coach</div>' +
@@ -4918,6 +4941,11 @@ function renderPracticeView() {
   if (document.body && document.body.classList && currentView !== 'clientChat' && currentView !== 'coachChat') {
     document.body.classList.remove('cp-chat-view');
   }
+  if (window.CoachOS && typeof window.CoachOS.renderView === 'function' &&
+      window.CoachOS.renderView(currentView, c)) {
+    applyClientChrome();
+    return true;
+  }
   if (currentView === 'coachHub') { ensurePracticeStyle(); c.innerHTML = ''; renderCoachHub(c); applyClientChrome(); return true; }
   if (currentView === 'clientChat') { ensurePracticeStyle(); c.innerHTML = ''; renderClientChat(c); applyClientChrome(); return true; }
   if (currentView === 'coachClient') { ensurePracticeStyle(); c.innerHTML = ''; renderCoachWorkspace(c); applyClientChrome(); return true; }
@@ -5020,10 +5048,15 @@ async function saveCanonicalToCoachLibrary(prog, filename) {
     pState.canonicalProgram = null;
     pState.currentImportId = null;
     pState.isConfirming = false;
+    pState.selectedDomains = null;
   }
   if (typeof persist === 'function') persist();
   if (typeof scheduleAccountSync === 'function') scheduleAccountSync();
   practiceToast('Scheda salvata nel mio database', 'success');
+  if (store.__coachOsNativeImport && window.CoachOS && typeof window.CoachOS.afterNativeImport === 'function') {
+    window.CoachOS.afterNativeImport(entry);
+    return;
+  }
   navigate('coachLibrary');
 }
 
@@ -5411,7 +5444,12 @@ function wrapPracticeHooks() {
     navigate = function (v, e) {
       const raw = v;
       if (store && store.coachSessionActive && !store.coachAssigning && !(typeof isAthleteRole === 'function' && isAthleteRole())) {
-        const coachCore = { coachHub: 1, coachClient: 1, coachChat: 1, coachLibrary: 1 };
+        const coachCore = {
+          coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
+          coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
+          coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
+          coachAutomations: 1, coachBusiness: 1, coachCrm: 1
+        };
         const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, import: 1, programs: 1, calendar: 1 };
         const ok = coachCore[raw]
           || ((store.coachViewingClient || store.coachAssigning) && clientDomains[raw])
@@ -5645,6 +5683,9 @@ wrapPracticeHooks();
 try { captureInstallPromptEarly(); } catch (_) {}
 
 window.bootCoachPractice = bootCoachPractice;
+window.practiceFetch = practiceFetch;
+window.practiceHeaders = practiceHeaders;
+window.practiceToast = practiceToast;
 window.toggleCoachWsSection = toggleCoachWsSection;
 window.maybeOfferClientHomeInstall = maybeOfferClientHomeInstall;
 window.maybeSubscribeWebPush = maybeSubscribeWebPush;
