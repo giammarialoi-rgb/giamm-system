@@ -802,14 +802,16 @@ function fmtNotifyWhen(iso) {
   return raw.replace('T', ' ').slice(0, 16);
 }
 
-function coachEventLabel(kind, name) {
+function coachEventLabel(kind, name, payload) {
   const n = name || 'Atleta';
+  const p = payload && typeof payload === 'object' ? payload : {};
   if (kind === 'message') return { title: 'Messaggio', body: n + ' ti ha scritto', view: 'chat' };
   if (kind === 'ask_coach') {
-    const dom = String((payload && payload.domain) || '');
-    if (dom === 'max_freedom') return { title: 'Richiesta libertà', body: n + ' chiede di generare in autonomia', view: 'chat' };
-    if (dom === 'nutrition') return { title: 'Richiesta alimentazione', body: n + ' chiede un piano alimentare', view: 'chat' };
-    if (dom === 'supplements') return { title: 'Richiesta integrazione', body: n + ' chiede un protocollo di integrazione', view: 'chat' };
+    const dom = String(p.domain || '');
+    if (dom === 'max_freedom') return { title: 'Richiesta libertà', body: n + ' chiede di generare in autonomia' + (p.note ? (': ' + String(p.note).slice(0, 80)) : ''), view: 'coachClient', unlockFeature: 'max_freedom' };
+    if (dom === 'nurvan_ai') return { title: 'Richiesta Nurvan AI', body: n + ' chiede Coach AI' + (p.note ? (': ' + String(p.note).slice(0, 80)) : ''), view: 'coachClient', unlockFeature: 'nurvan_ai' };
+    if (dom === 'nutrition') return { title: 'Richiesta alimentazione', body: n + ' chiede un piano alimentare', view: 'coachClient' };
+    if (dom === 'supplements') return { title: 'Richiesta integrazione', body: n + ' chiede un protocollo di integrazione', view: 'coachClient' };
     return { title: 'Richiesta al coach', body: n + ' chiede qualcosa', view: 'chat' };
   }
   if (kind === 'password_help') return { title: 'Recupero password', body: n + ' ha chiesto la password', view: 'coachClient' };
@@ -817,6 +819,8 @@ function coachEventLabel(kind, name) {
   if (kind === 'change_request') return { title: 'Modifica da approvare', body: n + ' vuole cambiare il programma', view: 'coachClient' };
   if (kind === 'change_notice') return { title: 'Atleta ha modificato', body: n + ' ha cambiato il programma', view: 'coachClient' };
   if (kind === 'request_program') return { title: 'Richiesta scheda', body: n + ' chiede la scheda', view: 'coachClient' };
+  if (kind === 'unlock_approved') return { title: 'Sblocco approvato', body: 'Hai approvato una richiesta di ' + n, view: 'coachClient' };
+  if (kind === 'unlock_rejected') return { title: 'Sblocco negato', body: 'Hai negato una richiesta di ' + n, view: 'coachClient' };
   if (kind === 'workout_started') return { title: 'In allenamento', body: n + ' ha iniziato il workout', view: 'workout_started' };
   if (kind === 'workout_done') return { title: 'Workout finito', body: n + ' ha finalizzato', view: 'workout_done' };
   const copy = eventNotifyCopy(kind);
@@ -871,11 +875,24 @@ function buildAthleteNotifyItems(box) {
   events.slice(0, 30).forEach(function (e) {
     const copy = eventNotifyCopy(e.kind) || ['Aggiornamento', String(e.kind || 'Notifica'), { view: 'home' }];
     const unread = !e.read_at;
+    let payload = e.payload;
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload); } catch (_) { payload = {}; }
+    }
+    payload = payload && typeof payload === 'object' ? payload : {};
+    let body = copy[1];
+    if ((e.kind === 'unlock_rejected' || e.kind === 'change_rejected') && payload.note) {
+      body = String(payload.note);
+    } else if (e.kind === 'unlock_approved' && payload.note) {
+      body = String(payload.note);
+    } else if (e.kind === 'max_freedom') {
+      body = payload.allow ? 'Il coach ti ha concesso la massima libertà' : 'Il coach ha limitato le modifiche autonome';
+    }
     items.push({
       key: 'ev_' + e.id,
       kind: 'event',
-      title: copy[0] + (unread ? '' : ''),
-      body: copy[1],
+      title: copy[0],
+      body: body,
       when: fmtNotifyWhen(e.created_at),
       unread: unread,
       route: copy[2] || { view: 'home' },
@@ -898,6 +915,10 @@ function countAthleteUnread(box) {
 function renderNotifyItemsHtml(items, emptyText) {
   if (!items || !items.length) return '<div class="cp-help">' + esc(emptyText || 'Nessuna notifica.') + '</div>';
   return items.map(function (it, idx) {
+    const unlockBtns = (it.unlockFeature && it.route && it.route.clientId)
+      ? ('<button type="button" class="btn btn-primary" onclick="approveUnlockRequest(\'' + esc(String(it.route.clientId)) + '\',\'' + esc(String(it.unlockFeature)) + '\',' + idx + ')">APPROVA</button>' +
+        '<button type="button" class="btn btn-outline" onclick="rejectUnlockRequest(\'' + esc(String(it.route.clientId)) + '\',\'' + esc(String(it.unlockFeature)) + '\',' + idx + ')">NEGA</button>')
+      : '';
     return '<div class="cp-notify-item" style="' + (it.unread ? 'border-color:rgba(212,175,55,.55);' : 'opacity:.88;') + '">' +
       '<button type="button" class="cp-notify-item-main" onclick="openNotifyItem(' + idx + ')">' +
       '<b>' + esc(it.title) + (it.unread ? ' · NUOVA' : '') + '</b>' +
@@ -905,6 +926,7 @@ function renderNotifyItemsHtml(items, emptyText) {
       (it.when ? '<small>' + esc(it.when) + '</small>' : '') +
       '</button>' +
       '<div class="cp-notify-actions">' +
+      unlockBtns +
       '<button type="button" class="btn btn-outline" onclick="markNotifyRead(' + idx + ')">SEGNA LETTA</button>' +
       '<button type="button" class="btn btn-outline" onclick="dismissNotifyItem(' + idx + ')">CANCELLA</button>' +
       '</div></div>';
@@ -918,7 +940,7 @@ function buildCoachNotifyItems(box) {
     const df = e.dismissed_for;
     if (Array.isArray(df) && df.indexOf('coach') >= 0) return;
     const name = e.display_name || 'Atleta';
-    const lab = coachEventLabel(e.kind, name);
+    const lab = coachEventLabel(e.kind, name, e.payload);
     items.push({
       key: 'ev_' + e.id,
       kind: 'event',
@@ -927,11 +949,26 @@ function buildCoachNotifyItems(box) {
       when: fmtNotifyWhen(e.created_at),
       unread: true,
       route: { view: lab.view, clientId: String(e.client_id || '') },
-      eventIds: [Number(e.id)]
+      eventIds: [Number(e.id)],
+      unlockFeature: lab.unlockFeature || null
     });
   });
   (box.clients || []).forEach(function (c) {
     const n = Number(c.unreadCount || 0);
+    if (c.hasPendingUnlock) {
+      items.unshift({
+        key: 'unlock_' + c.id,
+        kind: 'event',
+        title: 'Sblocco da approvare',
+        body: (c.displayName || 'Cliente') + ' chiede di sbloccare una funzione',
+        when: '',
+        unread: true,
+        route: { view: 'coachClient', clientId: String(c.id) },
+        eventIds: [],
+        unlockFeature: 'max_freedom'
+      });
+    }
+    if (n <= 0 && !c.hasPendingChange && !c.leaveRequested && !c.hasPendingUnlock) return;
     if (n <= 0) return;
     const already = items.some(function (it) {
       return it.route && String(it.route.clientId) === String(c.id) && (it.route.view === 'chat' || it.title === 'Messaggio');
@@ -941,7 +978,7 @@ function buildCoachNotifyItems(box) {
       key: 'cl_' + c.id,
       kind: 'message',
       title: n === 1 ? 'Messaggio non letto' : (n + ' messaggi non letti'),
-      body: (c.displayName || 'Cliente') + (c.hasPendingChange ? ' · modifica da approvare' : '') + (c.leaveRequested ? ' · fine richiesta' : ''),
+      body: (c.displayName || 'Cliente') + (c.hasPendingChange ? ' · modifica da approvare' : '') + (c.hasPendingUnlock ? ' · sblocco da approvare' : '') + (c.leaveRequested ? ' · fine richiesta' : ''),
       when: '',
       unread: true,
       route: { view: 'chat', clientId: String(c.id) },
@@ -958,7 +995,7 @@ function buildCoachClientNotifyItems(events, clientId, clientName) {
     if (!e) return null;
     const df = e.dismissed_for;
     if (Array.isArray(df) && df.indexOf('coach') >= 0) return null;
-    const lab = coachEventLabel(e.kind, name);
+    const lab = coachEventLabel(e.kind, name, e.payload);
     const unread = !e.read_at;
     return {
       key: 'ev_' + e.id,
@@ -968,7 +1005,8 @@ function buildCoachClientNotifyItems(events, clientId, clientName) {
       when: fmtNotifyWhen(e.created_at),
       unread: unread,
       route: { view: lab.view, clientId: cid },
-      eventIds: [Number(e.id)]
+      eventIds: [Number(e.id)],
+      unlockFeature: lab.unlockFeature || null
     };
   }).filter(Boolean);
 }
@@ -2815,7 +2853,17 @@ async function renderCoachWorkspace(c) {
       ((snap.pendingChange || cl.hasPendingChange) ? '<div class="card" style="padding:12px;margin-bottom:12px;border-color:var(--gold);"><div style="font-weight:900;color:var(--gold);">Modifica richiesta dall’atleta</div>' +
         '<p class="cp-help">' + esc((snap.pendingChange && snap.pendingChange.summary) || 'Vuole cambiare il programma.') + '</p>' +
         '<button class="btn btn-primary" style="width:100%;margin-top:6px;" onclick="approveClientChange(\'' + esc(id) + '\')">APPROVA MODIFICA</button>' +
-        '<button class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="rejectClientChange(\'' + esc(id) + '\')">RIFIUTA</button></div>' : '') +
+        '<button class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="rejectClientChange(\'' + esc(id) + '\')">NEGA (con messaggio)</button></div>' : '') +
+      ((snap.pendingUnlock || cl.hasPendingUnlock || (cl.pendingUnlock && cl.pendingUnlock.feature)) ? (function () {
+        const pu = snap.pendingUnlock || cl.pendingUnlock || { feature: 'max_freedom' };
+        const feat = pu.feature || 'max_freedom';
+        const featLabel = feat === 'nurvan_ai' ? 'Nurvan AI' : 'massima libertà (genera alimentazione/integrazione)';
+        return '<div class="card" style="padding:12px;margin-bottom:12px;border-color:var(--gold);"><div style="font-weight:900;color:var(--gold);">Richiesta sblocco funzione</div>' +
+          '<p class="cp-help">L’atleta chiede: <b style="color:#fff;">' + esc(featLabel) + '</b></p>' +
+          (pu.note ? ('<p class="cp-help" style="color:#ccc;">Messaggio: ' + esc(pu.note) + '</p>') : '') +
+          '<button class="btn btn-primary" style="width:100%;margin-top:6px;" onclick="approveUnlockRequest(\'' + esc(id) + '\',\'' + esc(feat) + '\')">APPROVA SBLOCCO</button>' +
+          '<button class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="rejectUnlockRequest(\'' + esc(id) + '\',\'' + esc(feat) + '\')">NEGA (con messaggio)</button></div>';
+      })() : '') +
       '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;">Programma cliente</div>' +
       '<div style="font-size:12px;color:#ccc;">' + esc(prog.title || 'Nessuna scheda assegnata') + (weeks ? ' · ' + weeks + ' settimane' : '') + '</div>' +
       '<div style="font-size:11px;color:#aaa;margin-top:8px;">Scade: <b style="color:#fff;">' + esc(fmtDay(cl.programExpiresAt)) + '</b> · Prossimo check: <b style="color:#fff;">' + esc(fmtDay(cl.nextCheckAt)) + '</b></div>' +
@@ -3911,14 +3959,69 @@ async function approveClientChange(id) {
 }
 
 async function rejectClientChange(id) {
-  if (!confirm('Rifiutare la modifica dell’atleta?')) return;
+  const note = prompt('Messaggio di spiegazione per il cliente (obbligatorio):');
+  if (note == null) return;
+  if (!String(note).trim() || String(note).trim().length < 3) {
+    practiceToast('Serve un messaggio di almeno 3 caratteri.', 'warning');
+    return;
+  }
   try {
     await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/change-reject', {
-      method: 'POST', headers: practiceHeaders(true), body: '{}'
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ note: String(note).trim() })
     }, 15000);
-    practiceToast('Modifica rifiutata', 'warning');
+    practiceToast('Modifica negata: il cliente ha ricevuto la spiegazione', 'warning');
     renderCoachWorkspace(document.getElementById('view-container'));
-  } catch (err) { practiceToast((err && err.message) || 'Rifiuto fallito', 'danger'); }
+    try { refreshNotificationsCenterUi(); } catch (_) {}
+  } catch (err) { practiceToast((err && err.message) || 'Negazione fallita', 'danger'); }
+}
+
+async function approveUnlockRequest(id, feature, notifyIdx) {
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/unlock-approve', {
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ feature: feature || 'max_freedom' })
+    }, 15000);
+    practiceToast('Sblocco approvato: il cliente è stato avvisato', 'success');
+    if (store.coachWorkspace && store.coachWorkspace.client && String(store.coachWorkspace.clientId) === String(id)) {
+      if (feature === 'nurvan_ai') store.coachWorkspace.client.allowNurvanAi = true;
+      else store.coachWorkspace.client.allowMaxFreedom = true;
+      store.coachWorkspace.client.hasPendingUnlock = false;
+      store.coachWorkspace.client.pendingUnlock = null;
+    }
+    if (typeof notifyIdx === 'number') {
+      try { await dismissNotifyItem(notifyIdx); } catch (_) {}
+    }
+    try { closeNotificationsCenter(); } catch (_) {}
+    if (currentView === 'coachClient') renderCoachWorkspace(document.getElementById('view-container'));
+    else if (String(store.coachWorkspace && store.coachWorkspace.clientId) === String(id)) openCoachClient(id);
+    setTimeout(function () { pollPracticeInbox(); }, 400);
+  } catch (err) { practiceToast((err && err.message) || 'Approvazione fallita', 'danger'); }
+}
+
+async function rejectUnlockRequest(id, feature, notifyIdx) {
+  const note = prompt('Messaggio di spiegazione per il cliente (obbligatorio se neghi):');
+  if (note == null) return;
+  if (!String(note).trim() || String(note).trim().length < 3) {
+    practiceToast('Serve un messaggio di almeno 3 caratteri per spiegare il diniego.', 'warning');
+    return;
+  }
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/unlock-reject', {
+      method: 'POST',
+      headers: practiceHeaders(true),
+      body: JSON.stringify({ feature: feature || 'max_freedom', note: String(note).trim() })
+    }, 15000);
+    practiceToast('Richiesta negata: spiegazione inviata al cliente', 'warning');
+    if (store.coachWorkspace && store.coachWorkspace.client && String(store.coachWorkspace.clientId) === String(id)) {
+      store.coachWorkspace.client.hasPendingUnlock = false;
+      store.coachWorkspace.client.pendingUnlock = null;
+    }
+    if (typeof notifyIdx === 'number') {
+      try { await dismissNotifyItem(notifyIdx); } catch (_) {}
+    }
+    try { closeNotificationsCenter(); } catch (_) {}
+    if (currentView === 'coachClient') renderCoachWorkspace(document.getElementById('view-container'));
+    setTimeout(function () { pollPracticeInbox(); }, 400);
+  } catch (err) { practiceToast((err && err.message) || 'Negazione fallita', 'danger'); }
 }
 
 function renderClientChat(c) {
@@ -4411,7 +4514,9 @@ function eventNotifyCopy(kind) {
     password_reset: ['Password aggiornata', 'Il coach ha reimpostato la password', { view: 'home' }],
     leave_confirmed: ['Collaborazione chiusa', 'Il coach ha confermato la chiusura', { view: 'home' }],
     change_approved: ['Modifica approvata', 'Il coach ha approvato la tua modifica', { view: 'training' }],
-    change_rejected: ['Modifica rifiutata', 'Il coach ha rifiutato la modifica', { view: 'clientChat' }],
+    change_rejected: ['Modifica rifiutata', 'Il coach ha rifiutato la modifica — leggi il messaggio', { view: 'clientChat' }],
+    unlock_approved: ['Sblocco approvato', 'Il coach ha sbloccato la funzione richiesta', { view: 'home' }],
+    unlock_rejected: ['Sblocco negato', 'Il coach ha negato la richiesta — leggi la spiegazione', { view: 'clientChat' }],
     max_freedom: ['Libertà aggiornata', 'Il coach ha cambiato il consenso di modifica', { view: 'home' }],
     coach_modified: ['Piano aggiornato', 'Il coach ha modificato qualcosa per te', { view: 'home' }],
     workout_started: ['Cliente in allenamento', 'Un atleta ha iniziato il workout', { view: 'coachClient' }],
@@ -4441,7 +4546,17 @@ async function pollPracticeInbox() {
         const id = Number(e.id || 0);
         if (id > seen && e.kind !== 'message') {
           const copy = eventNotifyCopy(e.kind);
-          if (copy) notifyUser(copy[0], copy[1], copy[2] || { view: 'home' });
+          if (copy) {
+            let body = copy[1];
+            let payload = e.payload;
+            if (typeof payload === 'string') {
+              try { payload = JSON.parse(payload); } catch (_) { payload = {}; }
+            }
+            payload = payload && typeof payload === 'object' ? payload : {};
+            if ((e.kind === 'unlock_rejected' || e.kind === 'change_rejected') && payload.note) body = String(payload.note);
+            else if (e.kind === 'unlock_approved' && payload.note) body = String(payload.note);
+            notifyUser(copy[0], body, copy[2] || { view: 'home' });
+          }
           if ((e.kind === 'program_assigned' || e.kind === 'nutrition_assigned' || e.kind === 'supplements_assigned' || e.kind === 'therapy_assigned' || e.kind === 'exams_assigned' || e.kind === 'change_approved' || e.kind === 'coach_modified') && typeof syncAccountData === 'function') {
             window.__cpForceRemoteProgram = true;
             syncAccountData(true).then(function () {
@@ -4451,7 +4566,7 @@ async function pollPracticeInbox() {
               practiceToast('Nuova scheda ricevuta dal coach', 'success');
             }).catch(function () { window.__cpForceRemoteProgram = false; });
           }
-          if (e.kind === 'max_freedom') refreshAthleteMe();
+          if (e.kind === 'max_freedom' || e.kind === 'unlock_approved' || e.kind === 'unlock_rejected') refreshAthleteMe();
         }
       });
       if (box.unreadMessages && box.lastMessageId && box.lastMessageId !== store.clientSeenMsgId) {
@@ -4488,7 +4603,15 @@ async function pollPracticeInbox() {
         if (e.kind === 'message' && from === 'coach') return;
         const route = { view: 'coachClient', clientId: String(e.client_id || '') };
         if (e.kind === 'message') notifyUser('Messaggio cliente', (e.display_name || 'Atleta') + ' ti ha scritto', Object.assign({}, route, { view: 'chat' }));
-        else if (e.kind === 'ask_coach') notifyUser('Richiesta dal cliente', (e.display_name || 'Atleta') + ' chiede al coach', Object.assign({}, route, { view: 'chat' }));
+        else if (e.kind === 'ask_coach') {
+          const dom = (e.payload && e.payload.domain) || '';
+          const unlock = dom === 'max_freedom' || dom === 'nurvan_ai' || e.payload && e.payload.unlock;
+          notifyUser(
+            unlock ? 'Sblocco da approvare' : 'Richiesta dal cliente',
+            (e.display_name || 'Atleta') + (dom === 'max_freedom' ? ' chiede massima libertà' : (dom === 'nurvan_ai' ? ' chiede Nurvan AI' : ' chiede al coach')),
+            unlock ? route : Object.assign({}, route, { view: 'chat' })
+          );
+        }
         else if (e.kind === 'password_help') notifyUser('Recupero password', (e.display_name || 'Atleta') + ' ha chiesto la password', route);
         else if (e.kind === 'leave_request') notifyUser('Fine collaborazione', (e.display_name || 'Atleta') + ' ha chiesto di chiudere', route);
         else if (e.kind === 'change_request') notifyUser('Modifica da approvare', (e.display_name || 'Atleta') + ' vuole cambiare il programma', route);
@@ -5701,6 +5824,8 @@ window.confirmLeaveClient = confirmLeaveClient;
 window.toggleMaxFreedom = toggleMaxFreedom;
 window.approveClientChange = approveClientChange;
 window.rejectClientChange = rejectClientChange;
+window.approveUnlockRequest = approveUnlockRequest;
+window.rejectUnlockRequest = rejectUnlockRequest;
 window.sendCoachHumanMessage = sendCoachHumanMessage;
 window.sendAthleteHumanMessage = sendAthleteHumanMessage;
 window.startChatDictation = startChatDictation;
