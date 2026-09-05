@@ -153,8 +153,14 @@ assert(ui.includes("friendlyApiError") && ui.includes("RIPROVA"), "hub list frie
 assert(base.includes("Server non disponibile") && base.includes("looksHtml"), "readApiJson HTML sanitize");
 assert(ui.includes("openNotificationsCenter") && ui.includes("cp-notify-btn") && ui.includes("NOTIFICHE") && ui.includes("LE TUE NOTIFICHE"), "in-app notifications center athlete+coach");
 assert(ui.includes("NOTIFICHE CLIENTE") && ui.includes("buildCoachClientNotifyItems") && ui.includes("openClientSheetNotify"), "coach client-scoped notifies with time");
+assert(ui.includes("SEGNA LETTA") && ui.includes("CANCELLA TUTTE") && ui.includes("markNotifyRead") && ui.includes("dismissNotifyItem") && ui.includes("dismissAllNotifyItems"), "notify mark-read/dismiss UI");
 assert(practice.includes("/api/client/inbox/ack"), "client inbox ack");
+assert(practice.includes("/api/client/inbox/dismiss") && practice.includes("/api/coach/inbox/dismiss") && practice.includes("dismissed_for"), "inbox dismiss client+coach");
 assert(base.includes("hub-tile-notify") && base.includes("openNotificationsCenter"), "athlete hub notify tile");
+assert(base.includes("__nutritionDayUserPicked") && base.includes("saveNutritionPlanEdits") && base.includes("__cpNutritionDirty"), "nutrition day pin + dirty SALVA");
+assert(base.includes("openGenerateSupplementationWizard") && base.includes("SUPPLEMENT_GOAL_CATALOG") && base.includes("GENERA INTEGRAZIONE"), "supplementation goal wizard");
+assert(base.includes("header .logo-container span") && /header \.logo-container span\s*\{\s*display:\s*none/i.test(base), "header logo text hidden");
+assert(!/<div class="logo-container"><img[^>]*><span>NURVAN<\/span>/i.test(base), "header logo has no NURVAN span");
 assert(ui.includes("setNurvanAppBadge") && ui.includes("clearNurvanAppBadge") && ui.includes("followClientLiveWorkout"), "app badge + live follow");
 assert(ui.includes("coachLibrary") && ui.includes("calendar: 1") && ui.includes("__cpCoachLibraryImport"), "coach library + calendar gates");
 assert(ui.includes("postVideocallChatNotice") && ui.includes("Anche l’altro deve premere VIDEO"), "videocall chat notice");
@@ -164,7 +170,7 @@ assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY")
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v24-coach"), "SW push + cache v24");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v25-coach"), "SW push + cache v25");
 assert(sw.includes("setAppBadge"), "SW badging API");
 
 const build = fs.readFileSync(path.join(__dirname, "build_master25.mjs"), "utf8");

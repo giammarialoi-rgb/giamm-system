@@ -250,14 +250,7 @@ header .logo-container img {
   filter: drop-shadow(0 0 8px rgba(212,175,55,0.35));
 }
 header .logo-container span {
-  font-size: 15px;
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
+  display: none !important;
 }
 
 #account-button {
@@ -1177,7 +1170,7 @@ body.focus-mode [data-rewards-only] {
 </div>
 
 <header>
-  <div class="logo-container"><img src="nurvan_logo.png" alt="Nurvan"><span>NURVAN</span></div>
+  <div class="logo-container"><img src="nurvan_logo.png" alt="Nurvan"></div>
   <div class="header-actions">
   <button class="btn btn-outline" id="account-button" onclick="openAccount()">ACCEDI</button>
   <button class="btn btn-outline" id="profile-button" style="margin-left:6px;" onclick="openAthleteProfile()">PROFILO</button>
@@ -35687,16 +35680,206 @@ function buildNutritionPlanFromProfile(overrides, weekOpts) {
 }
 
 function buildDefaultSupplementationFromProfile() {
+  return buildSupplementationFromGoals(['base'], {});
+}
+
+const SUPPLEMENT_GOAL_CATALOG = {
+  base: [
+    { name: 'Creatina monoidrato', dose: '5', unit: 'g', timing: 'Qualsiasi momento', frequency: 'Quotidiano', notes: 'Base forza/massa; non è farmaco.' },
+    { name: 'Vitamina D3', dose: '2000', unit: 'UI', timing: 'Con un pasto', frequency: 'Quotidiano', notes: 'Utile se poco sole — conferma con esami/medico.' },
+    { name: 'Omega-3 (EPA+DHA)', dose: '1–2', unit: 'g', timing: 'Con pasto', frequency: 'Quotidiano', notes: 'Supporto generale; non sostituisce terapia.' },
+    { name: 'Proteine whey (opz.)', dose: '20–40', unit: 'g', timing: 'Post-allenamento o snack', frequency: 'Se serve a target proteico', notes: 'Convenienza, non obbligatoria.' }
+  ],
+  forza: [
+    { name: 'Creatina monoidrato', dose: '5', unit: 'g', timing: 'Ogni giorno', frequency: 'Quotidiano', notes: 'Forza e potenza.' },
+    { name: 'Beta-alanina', dose: '3–5', unit: 'g', timing: 'Durante il giorno', frequency: 'Quotidiano', notes: 'Buffer acido lattico; formicolio possibile.' },
+    { name: 'Citrullina malato', dose: '6–8', unit: 'g', timing: 'Pre-allenamento', frequency: 'Giorni di workout', notes: 'Pompa e resistenza.' }
+  ],
+  cuore: [
+    { name: 'Omega-3 (EPA+DHA)', dose: '2', unit: 'g', timing: 'Con pasto', frequency: 'Quotidiano', notes: 'Supporto cardiovascolare — non sostituisce terapia.' },
+    { name: 'Coenzima Q10', dose: '100–200', unit: 'mg', timing: 'Con pasto grasso', frequency: 'Quotidiano', notes: 'Supporto energetico cellulare.' },
+    { name: 'Magnesio', dose: '200–400', unit: 'mg', timing: 'Sera', frequency: 'Quotidiano', notes: 'Rilassamento e ritmo; evita eccesso.' }
+  ],
+  fegato: [
+    { name: 'Silimarina (cardo mariano)', dose: '200–400', unit: 'mg', timing: 'Con pasto', frequency: 'Quotidiano', notes: 'Supporto epatico tradizionale — non è cura.' },
+    { name: 'N-acetilcisteina (NAC)', dose: '600', unit: 'mg', timing: 'A stomaco vuoto o con pasto', frequency: 'Quotidiano', notes: 'Precursore glutatione; valuta con medico.' }
+  ],
+  articolazioni: [
+    { name: 'Collagene idrolizzato', dose: '10–15', unit: 'g', timing: 'Con pasto', frequency: 'Quotidiano', notes: 'Supporto tessuto connettivo.' },
+    { name: 'Glucosamina + Condroitina', dose: '1500 / 800', unit: 'mg', timing: 'Con pasto', frequency: 'Quotidiano', notes: 'Articolazioni; risposta individuale.' },
+    { name: 'Curcuma (curcumina)', dose: '500–1000', unit: 'mg', timing: 'Con pasto + pepe nero', frequency: 'Quotidiano', notes: 'Comfort articolare.' }
+  ],
+  recupero: [
+    { name: 'Magnesio bisglicinato', dose: '200–300', unit: 'mg', timing: 'Sera', frequency: 'Quotidiano', notes: 'Sonno e recupero muscolare.' },
+    { name: 'Zinco', dose: '15–25', unit: 'mg', timing: 'Sera lontano da calcio', frequency: 'Quotidiano', notes: 'Recupero e immunità; non superare a lungo.' },
+    { name: 'Ashwagandha KSM-66', dose: '300–600', unit: 'mg', timing: 'Sera', frequency: 'Quotidiano', notes: 'Stress e recupero; non in gravidanza.' }
+  ],
+  energia: [
+    { name: 'Caffeina', dose: '100–200', unit: 'mg', timing: 'Pre-allenamento', frequency: 'Al bisogno', notes: 'Focus e performance; evita sera.' },
+    { name: 'Vitamine B-complex', dose: '1', unit: 'cps', timing: 'Mattina', frequency: 'Quotidiano', notes: 'Metabolismo energetico.' },
+    { name: 'Rhodiola rosea', dose: '200–400', unit: 'mg', timing: 'Mattina', frequency: 'Quotidiano', notes: 'Adattamento allo stress.' }
+  ]
+};
+
+const SUPPLEMENT_GOAL_LABELS = {
+  base: 'Base necessari per ogni atleta',
+  forza: 'Forza / massa',
+  cuore: 'Protezione cuore',
+  fegato: 'Protezione fegato',
+  articolazioni: 'Articolazioni',
+  recupero: 'Recupero / sonno',
+  energia: 'Energia / focus'
+};
+
+function buildSupplementationFromGoals(goalKeys, opts) {
+  opts = opts || {};
+  const keys = Array.isArray(goalKeys) && goalKeys.length ? goalKeys.slice() : ['base'];
+  if (keys.indexOf('base') < 0) keys.unshift('base');
+  const seen = {};
+  const items = [];
+  keys.forEach(function (k) {
+    (SUPPLEMENT_GOAL_CATALOG[k] || []).forEach(function (it) {
+      const id = String(it.name || '').toLowerCase();
+      if (!id || seen[id]) return;
+      seen[id] = 1;
+      items.push(Object.assign({}, it));
+    });
+  });
+  const goal = String((opts.goal != null ? opts.goal : ((store.profile && (store.profile.goal || store.profile.primary_goal)) || ''))).toLowerCase();
+  if (/forza|massa|ipertrof|bulk/.test(goal) && keys.indexOf('forza') < 0) {
+    (SUPPLEMENT_GOAL_CATALOG.forza || []).forEach(function (it) {
+      const id = String(it.name || '').toLowerCase();
+      if (!id || seen[id]) return;
+      seen[id] = 1;
+      items.push(Object.assign({}, it));
+    });
+  }
   return {
     present: true,
-    protocol_name: 'Integrazione da profilo · Nurvan',
-    items: [
-      { name: 'Creatina monoidrato', dose: '5', unit: 'g', timing: 'Qualsiasi momento', frequency: 'Quotidiano', notes: 'Evidenza solida su forza/massa; non è farmaco.' },
-      { name: 'Vitamina D3', dose: '2000', unit: 'UI', timing: 'Con un pasto', frequency: 'Quotidiano', notes: 'Utile se esposizione solare scarsa — conferma con esami/medico.' },
-      { name: 'Omega-3 (EPA+DHA)', dose: '1–2', unit: 'g', timing: 'Con pasto', frequency: 'Quotidiano', notes: 'Supporto generale; non sostituisce terapia.' },
-      { name: 'Proteine whey (opz.)', dose: '20–40', unit: 'g', timing: 'Post-allenamento o snack', frequency: 'Se serve a target proteico', notes: 'Convenienza, non obbligatoria.' }
-    ]
+    protocol_name: opts.planName || ('Integrazione · ' + keys.map(function (k) { return SUPPLEMENT_GOAL_LABELS[k] || k; }).join(' + ')),
+    items: items
   };
+}
+
+function openGenerateSupplementationWizard() {
+  const existing = document.getElementById('gen-supp-plan-modal');
+  if (existing) existing.remove();
+  window.__genSuppPlan = { mode: 'auto', goals: { base: true, forza: false, cuore: false, fegato: false, articolazioni: false, recupero: false, energia: false } };
+  const overlay = document.createElement('div');
+  overlay.id = 'gen-supp-plan-modal';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10120;align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;';
+  overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
+  const goalChecks = Object.keys(SUPPLEMENT_GOAL_LABELS).map(function (k) {
+    const checked = k === 'base' ? ' checked' : '';
+    const disabled = k === 'base' ? ' disabled' : '';
+    return '<label style="display:flex;gap:10px;align-items:flex-start;margin:0 0 8px;padding:8px;background:#141414;border:1px solid #333;border-radius:8px;font-size:12px;color:#eee;">' +
+      '<input type="checkbox" data-supp-goal="' + k + '"' + checked + disabled + ' onchange="onGenSuppGoalChange()" style="margin-top:2px;width:18px;height:18px;flex-shrink:0;">' +
+      '<span>' + SUPPLEMENT_GOAL_LABELS[k] + (k === 'base' ? ' (sempre)' : '') + '</span></label>';
+  }).join('');
+  overlay.innerHTML =
+    '<div class="card" style="max-width:460px;width:100%;max-height:min(88vh,720px);overflow:auto;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">GENERA INTEGRAZIONE</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'gen-supp-plan-modal\').remove()">CHIUDI</button></div>' +
+    '<div style="font-size:12px;color:#bbb;margin-bottom:10px;line-height:1.4;">Automatico dal profilo, oppure preciso scegliendo gli obiettivi.</div>' +
+    '<div style="display:flex;gap:6px;margin-bottom:12px;">' +
+    '<button type="button" id="gen-supp-mode-auto" class="btn btn-primary" style="flex:1;font-size:11px;" onclick="setGenSuppMode(\'auto\')">AUTOMATICO</button>' +
+    '<button type="button" id="gen-supp-mode-precise" class="btn btn-outline" style="flex:1;font-size:11px;" onclick="setGenSuppMode(\'precise\')">PRECISO</button></div>' +
+    '<div id="gen-supp-precise" style="display:none;margin-bottom:12px;">' + goalChecks + '</div>' +
+    '<div id="gen-supp-preview" style="font-size:11px;color:#888;margin-bottom:12px;"></div>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;" onclick="confirmGenerateSupplementation()">CREA INTEGRAZIONE</button></div>';
+  document.body.appendChild(overlay);
+  refreshGenSuppPreview();
+}
+
+function setGenSuppMode(mode) {
+  window.__genSuppPlan = window.__genSuppPlan || { goals: { base: true } };
+  window.__genSuppPlan.mode = mode === 'precise' ? 'precise' : 'auto';
+  const precise = document.getElementById('gen-supp-precise');
+  const autoBtn = document.getElementById('gen-supp-mode-auto');
+  const precBtn = document.getElementById('gen-supp-mode-precise');
+  if (precise) precise.style.display = window.__genSuppPlan.mode === 'precise' ? 'block' : 'none';
+  if (autoBtn) autoBtn.className = 'btn ' + (window.__genSuppPlan.mode === 'auto' ? 'btn-primary' : 'btn-outline');
+  if (precBtn) precBtn.className = 'btn ' + (window.__genSuppPlan.mode === 'precise' ? 'btn-primary' : 'btn-outline');
+  if (autoBtn) autoBtn.style.cssText = 'flex:1;font-size:11px;';
+  if (precBtn) precBtn.style.cssText = 'flex:1;font-size:11px;';
+  refreshGenSuppPreview();
+}
+
+function onGenSuppGoalChange() {
+  const st = window.__genSuppPlan || { goals: {} };
+  st.goals = st.goals || {};
+  document.querySelectorAll('[data-supp-goal]').forEach(function (el) {
+    st.goals[el.getAttribute('data-supp-goal')] = !!el.checked || el.getAttribute('data-supp-goal') === 'base';
+  });
+  st.goals.base = true;
+  window.__genSuppPlan = st;
+  refreshGenSuppPreview();
+}
+
+function refreshGenSuppPreview() {
+  const st = window.__genSuppPlan || { mode: 'auto', goals: { base: true } };
+  let keys = ['base'];
+  if (st.mode === 'precise') {
+    keys = Object.keys(st.goals || {}).filter(function (k) { return st.goals[k]; });
+    if (keys.indexOf('base') < 0) keys.unshift('base');
+  }
+  const plan = buildSupplementationFromGoals(keys, { planName: 'preview' });
+  const el = document.getElementById('gen-supp-preview');
+  if (el) el.textContent = (st.mode === 'auto' ? 'Dal profilo + base: ' : 'Selezionati: ') + (plan.items || []).length + ' integratori';
+}
+
+function confirmGenerateSupplementation() {
+  const st = window.__genSuppPlan || { mode: 'auto', goals: { base: true } };
+  let keys = ['base'];
+  if (st.mode === 'precise') {
+    onGenSuppGoalChange();
+    keys = Object.keys((window.__genSuppPlan && window.__genSuppPlan.goals) || {}).filter(function (k) {
+      return window.__genSuppPlan.goals[k];
+    });
+    if (keys.indexOf('base') < 0) keys.unshift('base');
+  }
+  const plan = buildSupplementationFromGoals(keys, {
+    planName: (st.mode === 'precise' ? 'Integrazione precisa' : 'Integrazione automatica') + ' · ' + keys.join('+')
+  });
+  if (!DATA) window.DATA = {};
+  DATA.supplementation = plan;
+  if (typeof store !== 'undefined' && store) {
+    store.supplementation = plan;
+    store.__cpSupplementsDirty = true;
+  }
+  if (typeof persist === 'function') persist();
+  if (typeof GiammariaPersistence !== 'undefined') {
+    const saveSupp = GiammariaPersistence.saveSupplements || GiammariaPersistence.saveSupplementation;
+    if (saveSupp) saveSupp.call(GiammariaPersistence, DATA.supplementation).catch(function () {});
+  }
+  const modal = document.getElementById('gen-supp-plan-modal');
+  if (modal) modal.remove();
+  if (typeof render === 'function') render();
+  if (typeof showToast === 'function') showToast('Integrazione creata (' + (plan.items || []).length + ' voci). Premi SALVA se modifichi.', 'success');
+}
+
+async function saveSupplementationEdits() {
+  if (typeof store !== 'undefined' && store) store.supplementation = (DATA && DATA.supplementation) || store.supplementation;
+  if (typeof persist === 'function') persist();
+  try {
+    if (typeof store !== 'undefined' && store && store.coachViewingClient && typeof pushCoachClientEdits === 'function') {
+      await pushCoachClientEdits();
+    } else if (typeof syncAccountData === 'function' && store && store.accountToken) {
+      await syncAccountData(true);
+    }
+  } catch (err) {
+    if (typeof showToast === 'function') showToast((err && err.message) || 'Salvataggio fallito', 'danger');
+    return;
+  }
+  if (typeof store !== 'undefined' && store) store.__cpSupplementsDirty = false;
+  if (typeof render === 'function') render();
+  if (typeof showToast === 'function') showToast('Integrazione salvata', 'success');
+}
+
+function applySupplementationFromProfile() {
+  openGenerateSupplementationWizard();
+  setTimeout(function () { setGenSuppMode('auto'); }, 0);
 }
 
 function normalizeNutritionFromChanges(changes, op) {
@@ -39350,6 +39533,7 @@ function enrichImportedFoods(nutrition) {
 
 function selectNutritionDay(idx) {
   currentNutritionDayIndex = Number(idx) || 0;
+  window.__nutritionDayUserPicked = true;
   render();
 }
 
@@ -39493,7 +39677,7 @@ function renderNutrition(c) {
     const d0 = DATA.nutrition.days[0];
     const blob = JSON.stringify(d0 || {});
     const isLegacyTipo = /^giorno\s*tipo$/i.test(String(d0.day || '').replace(/\s*·.*$/, '').trim());
-    const isCoachOrProfilePlan = /settiman|ON\s*\/\s*OFF|da profilo|Nurvan|Coach|evidence-informed/i.test(String(DATA.nutrition.plan_name || DATA.nutrition.notes || ''));
+    const isCoachOrProfilePlan = /settiman|ON\s*\/\s*OFF|da profilo|Nurvan|Coach|evidence-informed|Piano preciso|Piano automatico/i.test(String(DATA.nutrition.plan_name || DATA.nutrition.notes || ''));
     const looksLegacyDemo = /Luned[iì].*\(ON\)/i.test(blob) && /Albume d'uovo/i.test(blob) && /Petto di Pollo/i.test(blob);
     const looksEmptyMondayOnly = /^luned[iì]/i.test(String(d0.day || '')) && !(d0.meals || []).some((m) => (m.foods || m.items || []).length);
     if (isLegacyTipo && !isCoachOrProfilePlan) {
@@ -39510,14 +39694,16 @@ function renderNutrition(c) {
 
   const days = DATA.nutrition.days || [];
   enrichImportedFoods(DATA.nutrition);
-  // Open on today's weekday when possible
-  try {
-    const todayPlan = nutritionPlanForToday();
-    if (todayPlan && days.length) {
-      const idx = days.indexOf(todayPlan);
-      if (idx >= 0) currentNutritionDayIndex = idx;
-    }
-  } catch (_) {}
+  // Jump to today only once — never override after user picks a day tab
+  if (!window.__nutritionDayUserPicked) {
+    try {
+      const todayPlan = nutritionPlanForToday();
+      if (todayPlan && days.length) {
+        const idx = days.indexOf(todayPlan);
+        if (idx >= 0) currentNutritionDayIndex = idx;
+      }
+    } catch (_) {}
+  }
   if (currentNutritionDayIndex >= days.length) currentNutritionDayIndex = Math.max(0, days.length - 1);
   const activeDay = days[currentNutritionDayIndex] || { day: '', meals: [] };
 
@@ -39535,6 +39721,7 @@ function renderNutrition(c) {
   const targetPro = DATA.nutrition.daily_protein_target || 0;
   const targetCarb = DATA.nutrition.daily_carbs_target || 0;
   const targetFat = DATA.nutrition.daily_fats_target || 0;
+  const nutrDirty = !!(typeof store !== 'undefined' && store && store.__cpNutritionDirty);
 
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
@@ -39543,6 +39730,7 @@ function renderNutrition(c) {
         <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${t('nutrition')}</h1>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${nutrDirty ? '<button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="saveNutritionPlanEdits()">SALVA</button>' : ''}
         <button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="openGenerateNutritionPlanWizard()">GENERA PIANO</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain('nutrition')">CHIEDI A COACH AI</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="startDomainImport('nutrition')">${t('importNutrition')}</button>
@@ -39803,6 +39991,7 @@ function saveFoodItem() {
 function deleteFoodItem(dayIdx, mealIdx, foodIdx) {
   if (confirm("Rimuovere questo alimento?")) {
     DATA.nutrition.days[dayIdx].meals[mealIdx].foods.splice(foodIdx, 1);
+    markNutritionDirty();
     persist();
     render();
     if (typeof showToast === 'function') showToast("Alimento rimosso", "info");
@@ -39952,18 +40141,41 @@ function confirmGenerateNutritionPlan() {
   });
   if (!DATA) window.DATA = {};
   DATA.nutrition = plan;
-  if (typeof store !== 'undefined' && store) store.nutrition = plan;
+  if (typeof store !== 'undefined' && store) {
+    store.nutrition = plan;
+    store.__cpNutritionDirty = true;
+  }
   if (typeof persist === 'function') persist();
   const modal = document.getElementById('gen-nutrition-plan-modal');
   if (modal) modal.remove();
+  window.__nutritionDayUserPicked = true;
   if (typeof currentNutritionDayIndex !== 'undefined') currentNutritionDayIndex = 0;
   if (typeof render === 'function') render();
   if (typeof showToast === 'function') {
-    showToast('Piano creato: ' + dayCount + ' giorni, ' + comboCount + ' combinazioni', 'success');
+    showToast('Piano creato: ' + dayCount + ' giorni, ' + comboCount + ' combinazioni. Premi SALVA se fai altre modifiche.', 'success');
   }
-  if (typeof store !== 'undefined' && store && store.coachViewingClient && typeof practiceToast === 'function') {
-    practiceToast('Ricorda: SALVA MODIFICHE o INVIA AL CLIENTE per sincronizzare', 'info');
+}
+
+async function saveNutritionPlanEdits() {
+  if (typeof store !== 'undefined' && store) store.nutrition = (DATA && DATA.nutrition) || store.nutrition;
+  if (typeof persist === 'function') persist();
+  try {
+    if (typeof store !== 'undefined' && store && store.coachViewingClient && typeof pushCoachClientEdits === 'function') {
+      await pushCoachClientEdits();
+    } else if (typeof syncAccountData === 'function' && store && store.accountToken) {
+      await syncAccountData(true);
+    }
+  } catch (err) {
+    if (typeof showToast === 'function') showToast((err && err.message) || 'Salvataggio fallito', 'danger');
+    return;
   }
+  if (typeof store !== 'undefined' && store) store.__cpNutritionDirty = false;
+  if (typeof render === 'function') render();
+  if (typeof showToast === 'function') showToast('Alimentazione salvata', 'success');
+}
+
+function markNutritionDirty() {
+  if (typeof store !== 'undefined' && store) store.__cpNutritionDirty = true;
 }
 
 function openAddNutritionDayWizard() {
@@ -40055,6 +40267,8 @@ function nutritionWizardFinish(manualOnly) {
   }
   DATA.nutrition.days.push(dayObj);
   currentNutritionDayIndex = DATA.nutrition.days.length - 1;
+  window.__nutritionDayUserPicked = true;
+  markNutritionDirty();
   persist();
   const modal = document.getElementById('add-nutrition-day-modal');
   if (modal) modal.remove();
@@ -40062,18 +40276,6 @@ function nutritionWizardFinish(manualOnly) {
   if (typeof showToast === 'function') {
     showToast(manualOnly ? (day + ' creato — compila i pasti') : (day + ' creato con pasti e macro'), 'success');
   }
-}
-
-function applySupplementationFromProfile() {
-  DATA.supplementation = buildDefaultSupplementationFromProfile();
-  store.supplementation = DATA.supplementation;
-  persist();
-  if (typeof GiammariaPersistence !== 'undefined') {
-    const saveSupp = GiammariaPersistence.saveSupplements || GiammariaPersistence.saveSupplementation;
-    if (saveSupp) saveSupp.call(GiammariaPersistence, DATA.supplementation).catch(function () {});
-  }
-  render();
-  if (typeof showToast === 'function') showToast('Integrazione generata dal profilo', 'success');
 }
 
 function startDomainImport(domain) {
@@ -40196,6 +40398,7 @@ function renderSupplements(c) {
   if (!Array.isArray(DATA.supplementation.items)) DATA.supplementation.items = [];
 
   const items = DATA.supplementation.items || [];
+  const suppDirty = !!(typeof store !== 'undefined' && store && store.__cpSupplementsDirty);
 
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
@@ -40204,9 +40407,11 @@ function renderSupplements(c) {
         <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${t('supplementation')}</h1>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${suppDirty ? '<button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="saveSupplementationEdits()">SALVA</button>' : ''}
+        <button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="openGenerateSupplementationWizard()">GENERA INTEGRAZIONE</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain('supplements')">CHIEDI A COACH AI</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="startDomainImport('supplements')">${t('importSupplements')}</button>
-        <button class="btn btn-primary" style="font-size:10px;padding:6px 12px;" onclick="openAddSupplementModal()">${t('addItem')}</button>
+        <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openAddSupplementModal()">${t('addItem')}</button>
       </div>
     </div>
     <div class="card" style="border:1px solid var(--border);margin-bottom:12px;padding:12px;">
@@ -40228,7 +40433,7 @@ function renderSupplements(c) {
         <p style="margin:0;font-size:12px;">Nessun integratore importato o aggiunto.</p>
         <p style="margin:8px 0 0;font-size:11px;color:#666;">Importa una scheda con sezione Integrazione, chiedi a Coach AI in base al profilo, oppure aggiungi dal catalogo.</p>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
-          <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="applySupplementationFromProfile()">GENERA DA PROFILO</button>
+          <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="openGenerateSupplementationWizard()">GENERA INTEGRAZIONE</button>
           <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="askCoachAiForDomain('supplements')">CHIEDI A COACH AI</button>
           <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="startDomainImport('supplements')">${t('importSupplements')}</button>
         </div>
@@ -49442,6 +49647,14 @@ if (typeof window !== 'undefined') {
   window.setGenNutritionMode = setGenNutritionMode;
   window.onGenNutritionMacroChange = onGenNutritionMacroChange;
   window.confirmGenerateNutritionPlan = confirmGenerateNutritionPlan;
+  window.saveNutritionPlanEdits = saveNutritionPlanEdits;
+  window.markNutritionDirty = markNutritionDirty;
+  window.openGenerateSupplementationWizard = openGenerateSupplementationWizard;
+  window.setGenSuppMode = setGenSuppMode;
+  window.onGenSuppGoalChange = onGenSuppGoalChange;
+  window.confirmGenerateSupplementation = confirmGenerateSupplementation;
+  window.saveSupplementationEdits = saveSupplementationEdits;
+  window.applySupplementationFromProfile = applySupplementationFromProfile;
   window.balanceMacroPercents = balanceMacroPercents;
   window.selectNutritionDay = selectNutritionDay;
   window.render = render;
@@ -50026,10 +50239,15 @@ function ensurePracticeStyle() {
     '#cp-notify-center{position:fixed;inset:0;z-index:10170;background:rgba(0,0,0,.88);display:none;align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;}',
     '#cp-notify-center.active{display:flex;}',
     '#cp-notify-center .cp-notify-panel{width:100%;max-width:440px;max-height:min(78vh,640px);overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px;padding:14px;color:#eee;box-sizing:border-box;}',
-    '.cp-notify-item{display:block;width:100%;text-align:left;padding:12px;margin:0 0 8px;background:#141414;border:1px solid #333;border-radius:10px;color:#eee !important;-webkit-text-fill-color:#eee !important;cursor:pointer;}',
+    '.cp-notify-item{display:block;width:100%;text-align:left;padding:12px;margin:0 0 8px;background:#141414;border:1px solid #333;border-radius:10px;color:#eee !important;-webkit-text-fill-color:#eee !important;box-sizing:border-box;}',
+    '.cp-notify-item-main{display:block;width:100%;text-align:left;background:transparent;border:0;padding:0;color:inherit;cursor:pointer;}',
     '.cp-notify-item b{display:block;color:var(--gold);font-size:12px;margin-bottom:4px;}',
     '.cp-notify-item span{display:block;font-size:11px;color:#bbb;}',
     '.cp-notify-item small{display:block;font-size:10px;color:#777;margin-top:6px;}',
+    '.cp-notify-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}',
+    '.cp-notify-actions .btn{flex:1;min-width:110px;font-size:10px;padding:8px 6px;}',
+    '.cp-notify-toolbar{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;}',
+    '.cp-notify-toolbar .btn{flex:1;min-width:120px;font-size:10px;padding:8px 6px;}',
     '.cp-assign-bar{position:fixed;right:10px;bottom:calc(72px + env(safe-area-inset-bottom,0px));left:auto;z-index:10080;background:#111;border:1px solid var(--gold);border-radius:12px;padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.45);max-width:min(360px,calc(100vw - 20px));max-height:min(42vh,320px);overflow:auto;box-sizing:border-box;}',
     '.cp-assign-bar.cp-assign-collapsed{left:auto;right:10px;bottom:calc(72px + env(safe-area-inset-bottom,0px));padding:0;max-width:none;max-height:none;overflow:visible;background:transparent;border:0;box-shadow:none;}',
     '.cp-assign-chip{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;background:#111;border:1px solid var(--gold);border-radius:999px;color:var(--gold);font-size:11px;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 6px 18px rgba(0,0,0,.4);}',
@@ -50237,12 +50455,25 @@ function athleteNotifyRoute(kind) {
   return (copy && copy[2]) || { view: 'home' };
 }
 
+function notifyIsAthlete() {
+  return typeof isAthleteRole === 'function' && isAthleteRole();
+}
+
+function notifyAckPath() {
+  return notifyIsAthlete() ? '/api/client/inbox/ack' : '/api/coach/inbox/ack';
+}
+
+function notifyDismissPath() {
+  return notifyIsAthlete() ? '/api/client/inbox/dismiss' : '/api/coach/inbox/dismiss';
+}
+
 function buildAthleteNotifyItems(box) {
   const items = [];
   const unreadMsg = Number(box.unreadMessages || 0);
   if (unreadMsg > 0) {
     items.push({
       key: 'msg',
+      kind: 'message',
       title: unreadMsg === 1 ? 'Nuovo messaggio' : (unreadMsg + ' messaggi nuovi'),
       body: 'Il coach ti ha scritto — apri la chat',
       when: '',
@@ -50251,7 +50482,12 @@ function buildAthleteNotifyItems(box) {
       eventIds: []
     });
   }
-  const events = (box.events || []).filter(function (e) { return e && e.kind !== 'message'; }).slice();
+  const events = (box.events || []).filter(function (e) {
+    if (!e || e.kind === 'message') return false;
+    const df = e.dismissed_for;
+    if (Array.isArray(df) && df.indexOf('athlete') >= 0) return false;
+    return true;
+  }).slice();
   events.sort(function (a, b) {
     const au = a.read_at ? 1 : 0;
     const bu = b.read_at ? 1 : 0;
@@ -50263,29 +50499,41 @@ function buildAthleteNotifyItems(box) {
     const unread = !e.read_at;
     items.push({
       key: 'ev_' + e.id,
+      kind: 'event',
       title: copy[0] + (unread ? '' : ''),
       body: copy[1],
       when: fmtNotifyWhen(e.created_at),
       unread: unread,
       route: copy[2] || { view: 'home' },
-      eventIds: unread ? [Number(e.id)] : []
+      eventIds: [Number(e.id)]
     });
   });
   return items;
 }
 
 function countAthleteUnread(box) {
-  const unreadEv = (box.events || []).filter(function (e) { return e && !e.read_at && e.kind !== 'message'; }).length;
+  const unreadEv = (box.events || []).filter(function (e) {
+    if (!e || e.read_at || e.kind === 'message') return false;
+    const df = e.dismissed_for;
+    if (Array.isArray(df) && df.indexOf('athlete') >= 0) return false;
+    return true;
+  }).length;
   return Number(box.unreadMessages || 0) + unreadEv;
 }
 
 function renderNotifyItemsHtml(items, emptyText) {
   if (!items || !items.length) return '<div class="cp-help">' + esc(emptyText || 'Nessuna notifica.') + '</div>';
   return items.map(function (it, idx) {
-    return '<button type="button" class="cp-notify-item" style="' + (it.unread ? 'border-color:rgba(212,175,55,.55);' : 'opacity:.88;') + '" onclick="openNotifyItem(' + idx + ')">' +
+    return '<div class="cp-notify-item" style="' + (it.unread ? 'border-color:rgba(212,175,55,.55);' : 'opacity:.88;') + '">' +
+      '<button type="button" class="cp-notify-item-main" onclick="openNotifyItem(' + idx + ')">' +
       '<b>' + esc(it.title) + (it.unread ? ' · NUOVA' : '') + '</b>' +
       '<span>' + esc(it.body) + '</span>' +
-      (it.when ? '<small>' + esc(it.when) + '</small>' : '') + '</button>';
+      (it.when ? '<small>' + esc(it.when) + '</small>' : '') +
+      '</button>' +
+      '<div class="cp-notify-actions">' +
+      '<button type="button" class="btn btn-outline" onclick="event.stopPropagation();markNotifyRead(' + idx + ')">SEGNA LETTA</button>' +
+      '<button type="button" class="btn btn-outline" onclick="event.stopPropagation();dismissNotifyItem(' + idx + ')">CANCELLA</button>' +
+      '</div></div>';
   }).join('');
 }
 
@@ -50293,13 +50541,17 @@ function buildCoachNotifyItems(box) {
   const items = [];
   (box.events || []).forEach(function (e) {
     if (!e) return;
+    const df = e.dismissed_for;
+    if (Array.isArray(df) && df.indexOf('coach') >= 0) return;
     const name = e.display_name || 'Atleta';
     const lab = coachEventLabel(e.kind, name);
     items.push({
       key: 'ev_' + e.id,
+      kind: 'event',
       title: lab.title,
       body: lab.body,
       when: fmtNotifyWhen(e.created_at),
+      unread: true,
       route: { view: lab.view, clientId: String(e.client_id || '') },
       eventIds: [Number(e.id)]
     });
@@ -50313,9 +50565,11 @@ function buildCoachNotifyItems(box) {
     if (already) return;
     items.push({
       key: 'cl_' + c.id,
+      kind: 'message',
       title: n === 1 ? 'Messaggio non letto' : (n + ' messaggi non letti'),
       body: (c.displayName || 'Cliente') + (c.hasPendingChange ? ' · modifica da approvare' : '') + (c.leaveRequested ? ' · fine richiesta' : ''),
       when: '',
+      unread: true,
       route: { view: 'chat', clientId: String(c.id) },
       eventIds: []
     });
@@ -50328,16 +50582,19 @@ function buildCoachClientNotifyItems(events, clientId, clientName) {
   const cid = String(clientId || '');
   return (events || []).map(function (e) {
     if (!e) return null;
+    const df = e.dismissed_for;
+    if (Array.isArray(df) && df.indexOf('coach') >= 0) return null;
     const lab = coachEventLabel(e.kind, name);
     const unread = !e.read_at;
     return {
       key: 'ev_' + e.id,
+      kind: 'event',
       title: lab.title + (unread ? '' : ''),
       body: lab.body,
       when: fmtNotifyWhen(e.created_at),
       unread: unread,
       route: { view: lab.view, clientId: cid },
-      eventIds: unread ? [Number(e.id)] : []
+      eventIds: [Number(e.id)]
     };
   }).filter(Boolean);
 }
@@ -50345,6 +50602,42 @@ function buildCoachClientNotifyItems(events, clientId, clientName) {
 function closeNotificationsCenter() {
   const el = document.getElementById('cp-notify-center');
   if (el) el.classList.remove('active');
+}
+
+async function ackNotifyEventIds(ids) {
+  const list = (ids || []).map(function (n) { return Number(n); }).filter(function (n) { return n > 0; });
+  if (!list.length) return;
+  await practiceFetch(notifyAckPath(), {
+    method: 'POST', headers: practiceHeaders(true),
+    body: JSON.stringify({ ids: list })
+  }, 10000).catch(function () {});
+}
+
+async function dismissNotifyEventIds(ids) {
+  const list = (ids || []).map(function (n) { return Number(n); }).filter(function (n) { return n > 0; });
+  if (!list.length) return;
+  await practiceFetch(notifyDismissPath(), {
+    method: 'POST', headers: practiceHeaders(true),
+    body: JSON.stringify({ ids: list })
+  }, 10000).catch(function () {});
+}
+
+async function ackNotifyMessages(it) {
+  if (!it || it.kind !== 'message') return;
+  try {
+    if (notifyIsAthlete()) {
+      await practiceFetch('/api/client/messages', { method: 'GET', headers: practiceHeaders(false) }, 12000).catch(function () {});
+    } else if (it.route && it.route.clientId) {
+      await practiceFetch('/api/coach/clients/' + encodeURIComponent(String(it.route.clientId)) + '/messages', {
+        method: 'GET', headers: practiceHeaders(false)
+      }, 12000).catch(function () {});
+    }
+  } catch (_) {}
+}
+
+function refreshNotificationsCenterUi() {
+  const scoped = store.__cpNotifyScopeId || '';
+  openNotificationsCenter(scoped || undefined);
 }
 
 async function openNotificationsCenter(clientId) {
@@ -50357,6 +50650,7 @@ async function openNotificationsCenter(clientId) {
     document.body.appendChild(el);
   }
   const scopedId = clientId ? String(clientId) : '';
+  store.__cpNotifyScopeId = scopedId;
   const scopedName = scopedId
     ? ((store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente')
     : '';
@@ -50367,7 +50661,7 @@ async function openNotificationsCenter(clientId) {
   try {
     let items = [];
     let title = 'NOTIFICHE';
-    if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+    if (notifyIsAthlete()) {
       const box = await practiceFetch('/api/client/inbox', { method: 'GET', headers: practiceHeaders(false) }, 15000);
       items = buildAthleteNotifyItems(box);
       updateNotifyCount(countAthleteUnread(box), items);
@@ -50383,16 +50677,24 @@ async function openNotificationsCenter(clientId) {
       updateNotifyCount(items.length, items);
       title = 'NOTIFICHE COACH';
     }
+    store.__cpNotifyItems = items;
+    const toolbar = items.length
+      ? ('<div class="cp-notify-toolbar">' +
+        '<button type="button" class="btn btn-outline" onclick="markAllNotifyRead()">SEGNA TUTTE LETTE</button>' +
+        '<button type="button" class="btn btn-outline" onclick="dismissAllNotifyItems()">CANCELLA TUTTE</button>' +
+        '</div>')
+      : '';
     el.innerHTML = '<div class="cp-notify-panel">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">' +
       '<div style="font-size:10px;color:var(--gold);font-weight:800;">' + esc(title) + (items.length ? ' · ' + items.length : '') + '</div>' +
       '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="closeNotificationsCenter()">CHIUDI</button></div>' +
-      (typeof isAthleteRole === 'function' && isAthleteRole()
+      (notifyIsAthlete()
         ? '<div class="cp-help" style="margin-bottom:8px;">Messaggi e aggiornamenti del coach, con data e ora.</div>'
         : (scopedId
           ? '<div class="cp-help" style="margin-bottom:8px;">Solo attività di questo cliente, con data e ora.</div>'
           : '<div class="cp-help" style="margin-bottom:8px;">Panoramica di tutti i clienti.</div>')) +
-      renderNotifyItemsHtml(items, (typeof isAthleteRole === 'function' && isAthleteRole())
+      toolbar +
+      renderNotifyItemsHtml(items, notifyIsAthlete()
         ? 'Nessuna notifica per ora.'
         : (scopedId ? 'Nessuna attività recente per questo cliente.' : 'Nessuna notifica da leggere.')) +
       '</div>';
@@ -50404,20 +50706,72 @@ async function openNotificationsCenter(clientId) {
   }
 }
 
+async function markNotifyRead(idx) {
+  const items = store.__cpNotifyItems || [];
+  const it = items[Number(idx)];
+  if (!it) return;
+  if (it.kind === 'message') {
+    await ackNotifyMessages(it);
+  } else if (it.eventIds && it.eventIds.length) {
+    await ackNotifyEventIds(it.eventIds);
+  }
+  it.unread = false;
+  setTimeout(function () { pollPracticeInbox(); }, 300);
+  refreshNotificationsCenterUi();
+}
+
+async function dismissNotifyItem(idx) {
+  const items = store.__cpNotifyItems || [];
+  const it = items[Number(idx)];
+  if (!it) return;
+  if (it.kind === 'message') {
+    await ackNotifyMessages(it);
+  } else if (it.eventIds && it.eventIds.length) {
+    await dismissNotifyEventIds(it.eventIds);
+  }
+  setTimeout(function () { pollPracticeInbox(); }, 300);
+  refreshNotificationsCenterUi();
+}
+
+async function markAllNotifyRead() {
+  const items = store.__cpNotifyItems || [];
+  if (!items.length) return;
+  const ids = [];
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (it.kind === 'message') await ackNotifyMessages(it);
+    else if (it.eventIds && it.eventIds.length) ids.push.apply(ids, it.eventIds);
+  }
+  if (ids.length) await ackNotifyEventIds(ids);
+  setTimeout(function () { pollPracticeInbox(); }, 300);
+  refreshNotificationsCenterUi();
+}
+
+async function dismissAllNotifyItems() {
+  const items = store.__cpNotifyItems || [];
+  if (!items.length) return;
+  if (!window.confirm('Cancellare tutte le notifiche dalla lista?')) return;
+  const ids = [];
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (it.kind === 'message') await ackNotifyMessages(it);
+    else if (it.eventIds && it.eventIds.length) ids.push.apply(ids, it.eventIds);
+  }
+  if (ids.length) await dismissNotifyEventIds(ids);
+  setTimeout(function () { pollPracticeInbox(); }, 300);
+  refreshNotificationsCenterUi();
+}
+
 async function openNotifyItem(idx) {
   const items = store.__cpNotifyItems || [];
   const it = items[Number(idx)];
   if (!it) return;
   closeNotificationsCenter();
   try {
-    if (it.eventIds && it.eventIds.length) {
-      const path = (typeof isAthleteRole === 'function' && isAthleteRole())
-        ? '/api/client/inbox/ack'
-        : '/api/coach/inbox/ack';
-      await practiceFetch(path, {
-        method: 'POST', headers: practiceHeaders(true),
-        body: JSON.stringify({ ids: it.eventIds })
-      }, 10000).catch(function () {});
+    if (it.kind === 'message') {
+      await ackNotifyMessages(it);
+    } else if (it.eventIds && it.eventIds.length) {
+      await ackNotifyEventIds(it.eventIds);
     }
   } catch (_) {}
   try { handleNotifyRoute(it.route); } catch (_) {}
@@ -54513,6 +54867,10 @@ window.clearNurvanAppBadge = clearNurvanAppBadge;
 window.openNotificationsCenter = openNotificationsCenter;
 window.closeNotificationsCenter = closeNotificationsCenter;
 window.openNotifyItem = openNotifyItem;
+window.markNotifyRead = markNotifyRead;
+window.dismissNotifyItem = dismissNotifyItem;
+window.markAllNotifyRead = markAllNotifyRead;
+window.dismissAllNotifyItems = dismissAllNotifyItems;
 window.openClientSheetNotify = openClientSheetNotify;
 window.ensureNotifyButton = ensureNotifyButton;
 window.assignActiveToClient = assignActiveToClient;

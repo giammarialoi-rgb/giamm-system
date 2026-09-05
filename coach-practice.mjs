@@ -241,6 +241,7 @@ export async function ensureCoachPracticeTables(client) {
     ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS attachment JSONB;
     ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS thread_id INT NOT NULL DEFAULT 1;
     ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS hidden_for TEXT[] NOT NULL DEFAULT '{}';
+    ALTER TABLE coach_events ADD COLUMN IF NOT EXISTS dismissed_for TEXT[] NOT NULL DEFAULT '{}';
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS e2e_pubkey_coach TEXT;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS e2e_pubkey_athlete TEXT;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS push_subscription JSONB;
@@ -869,7 +870,11 @@ export function mountCoachPractice(app, deps) {
     const ctx = await requireAthlete(req, res);
     if (!ctx) return;
     const events = await pool.query(
-      "SELECT id, kind, payload, created_at, read_at FROM coach_events WHERE client_id = $1 ORDER BY id DESC LIMIT 30",
+      `SELECT id, kind, payload, created_at, read_at, dismissed_for
+       FROM coach_events
+       WHERE client_id = $1
+         AND NOT ('athlete' = ANY(COALESCE(dismissed_for, '{}')))
+       ORDER BY id DESC LIMIT 30`,
       [ctx.client.id]
     );
     const unread = await pool.query(
@@ -901,6 +906,24 @@ export function mountCoachPractice(app, deps) {
       `UPDATE coach_events
        SET read_at = NOW()
        WHERE client_id = $1 AND id = ANY($2::bigint[]) AND read_at IS NULL`,
+      [ctx.client.id, ids]
+    );
+    return res.json({ ok: true, updated: result.rowCount || 0 });
+  });
+
+  app.post("/api/client/inbox/dismiss", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((n) => Number(n)).filter((n) => n > 0) : [];
+    if (!ids.length) return res.json({ ok: true, updated: 0 });
+    const result = await pool.query(
+      `UPDATE coach_events
+       SET read_at = COALESCE(read_at, NOW()),
+           dismissed_for = CASE
+             WHEN 'athlete' = ANY(COALESCE(dismissed_for, '{}')) THEN dismissed_for
+             ELSE array_append(COALESCE(dismissed_for, '{}'), 'athlete')
+           END
+       WHERE client_id = $1 AND id = ANY($2::bigint[])`,
       [ctx.client.id, ids]
     );
     return res.json({ ok: true, updated: result.rowCount || 0 });
@@ -1945,10 +1968,12 @@ export function mountCoachPractice(app, deps) {
       [coach.id]
     );
     const events = await pool.query(
-      `SELECT e.id, e.kind, e.client_id, e.created_at, e.payload, c.display_name
+      `SELECT e.id, e.kind, e.client_id, e.created_at, e.payload, e.read_at, c.display_name
        FROM coach_events e
        JOIN coach_clients c ON c.id = e.client_id
-       WHERE c.coach_user_id = $1 AND e.read_at IS NULL
+       WHERE c.coach_user_id = $1
+         AND e.read_at IS NULL
+         AND NOT ('coach' = ANY(COALESCE(e.dismissed_for, '{}')))
        ORDER BY e.id DESC LIMIT 20`,
       [coach.id]
     );
@@ -1993,13 +2018,36 @@ export function mountCoachPractice(app, deps) {
     return res.json({ ok: true, updated: result.rowCount || 0 });
   });
 
+  app.post("/api/coach/inbox/dismiss", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((n) => Number(n)).filter((n) => n > 0) : [];
+    if (!ids.length) return res.json({ ok: true, updated: 0 });
+    const result = await pool.query(
+      `UPDATE coach_events e
+       SET read_at = COALESCE(e.read_at, NOW()),
+           dismissed_for = CASE
+             WHEN 'coach' = ANY(COALESCE(e.dismissed_for, '{}')) THEN e.dismissed_for
+             ELSE array_append(COALESCE(e.dismissed_for, '{}'), 'coach')
+           END
+       FROM coach_clients c
+       WHERE e.client_id = c.id AND c.coach_user_id = $1 AND e.id = ANY($2::bigint[])`,
+      [coach.id, ids]
+    );
+    return res.json({ ok: true, updated: result.rowCount || 0 });
+  });
+
   app.get("/api/coach/clients/:id/events", async (req, res) => {
     const coach = await requireCoach(req, res);
     if (!coach) return;
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
     const ev = await pool.query(
-      "SELECT id, kind, payload, created_at, read_at FROM coach_events WHERE client_id = $1 ORDER BY created_at DESC LIMIT 40",
+      `SELECT id, kind, payload, created_at, read_at
+       FROM coach_events
+       WHERE client_id = $1
+         AND NOT ('coach' = ANY(COALESCE(dismissed_for, '{}')))
+       ORDER BY created_at DESC LIMIT 40`,
       [row.id]
     );
     return res.json({ ok: true, events: ev.rows });
