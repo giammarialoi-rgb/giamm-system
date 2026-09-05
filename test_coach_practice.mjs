@@ -117,7 +117,9 @@ assert(base.includes("openImportDomainPicker") && base.includes("detectProgramDo
 assert(base.includes("isCoachClientSandbox"), "coach sandbox import gate");
 assert(base.includes("openGenerateNutritionPlanWizard") && base.includes("balanceMacroPercents") && base.includes("GENERA PIANO"), "nutrition precise plan wizard");
 assert(base.includes("comboCount") && base.includes("dayCount") && base.includes("NUTRITION_MEAL_COMBO_VARIANTS"), "nutrition days + combo variants");
-assert(base.includes("Inserisci pasti liberi") && base.includes("onGenNutritionFreeToggle") && base.includes("applyFreeMealsToNutritionPlan"), "nutrition free meals wizard");
+assert(base.includes("Inserisci pasti liberi") && base.includes("onGenNutritionFreeToggle") && base.includes("applyFreeMealsToNutritionPlan") && base.includes("gen-nutr-free-slot") && base.includes("freeMealSlot"), "nutrition free meals wizard + meal slot");
+assert(base.includes("athleteCanSelfGeneratePlans") && base.includes("CHIEDI LIBERTÀ DI GENERARE") && ui.includes("requestAthleteGenerateFreedom"), "athlete generate gated by max freedom");
+assert(base.includes('<base href="/">') && base.includes('src="/nurvan_logo.png"'), "root-absolute logos for /c/ invite links");
 assert(base.includes("ALLERGIE E INTOLLERANZE") && base.includes("filterFoodForRestrictions") && base.includes("ensureAllergenIntoleranceCatalog") && base.includes("safe_phrases"), "nutrition allergy filter wizard");
 const allergenCatPath = path.join(__dirname, "web/allergen-intolerance-catalog.json");
 assert(fs.existsSync(allergenCatPath), "allergen catalog file exists");
@@ -199,7 +201,7 @@ assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY")
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v34-coach"), "SW push + cache v34");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v35-coach"), "SW push + cache v35");
 assert(base.includes("updateSupplementField") && base.includes("markSupplementsDirty") && base.includes("DOSAGGIO"), "supplement inline edit fields");
 assert(ui.includes("benvenuto nel mio servizio coaching") && practice.includes("benvenuto nel mio servizio coaching") && ui.includes("formatInviteShareText"), "client invite welcome message");
 assert(ui.includes("intakeAllergiesHtml") && ui.includes("ALIMENTAZIONE · ALLERGIE") && practice.includes("allergies") && practice.includes("profileFromIntake"), "intake optional allergies/intolerances");

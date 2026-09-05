@@ -805,7 +805,13 @@ function fmtNotifyWhen(iso) {
 function coachEventLabel(kind, name) {
   const n = name || 'Atleta';
   if (kind === 'message') return { title: 'Messaggio', body: n + ' ti ha scritto', view: 'chat' };
-  if (kind === 'ask_coach') return { title: 'Richiesta al coach', body: n + ' chiede qualcosa', view: 'chat' };
+  if (kind === 'ask_coach') {
+    const dom = String((payload && payload.domain) || '');
+    if (dom === 'max_freedom') return { title: 'Richiesta libertà', body: n + ' chiede di generare in autonomia', view: 'chat' };
+    if (dom === 'nutrition') return { title: 'Richiesta alimentazione', body: n + ' chiede un piano alimentare', view: 'chat' };
+    if (dom === 'supplements') return { title: 'Richiesta integrazione', body: n + ' chiede un protocollo di integrazione', view: 'chat' };
+    return { title: 'Richiesta al coach', body: n + ' chiede qualcosa', view: 'chat' };
+  }
   if (kind === 'password_help') return { title: 'Recupero password', body: n + ' ha chiesto la password', view: 'coachClient' };
   if (kind === 'leave_request') return { title: 'Fine collaborazione', body: n + ' ha chiesto di chiudere', view: 'coachClient' };
   if (kind === 'change_request') return { title: 'Modifica da approvare', body: n + ' vuole cambiare il programma', view: 'coachClient' };
@@ -2043,7 +2049,7 @@ function athleteHomeHtml() {
       ? '<div style="font-size:12px;color:#888;margin-top:8px;">● Coach offline · ultimo ' + esc(fmtShortDate(store.coachLastSeen)) + '</div>'
       : '<div style="font-size:12px;color:#888;margin-top:8px;">● Stato coach non disponibile</div>');
   return '<div style="text-align:center;padding:16px 0 8px;">' +
-    '<img src="nurvan_logo.png" class="logo-blend" alt="NURVAN" style="width:132px;max-width:46vw;filter:drop-shadow(0 0 16px var(--gold));">' +
+    '<img src="/nurvan_logo.png" class="logo-blend" alt="NURVAN" style="width:132px;max-width:46vw;filter:drop-shadow(0 0 16px var(--gold));">' +
     '<h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;margin:8px 0 0;">NURVAN</h1>' +
     coachStatus +
     '<button class="btn btn-outline" style="margin-top:10px;font-size:11px;" onclick="reloadClientHome()">⟳ AGGIORNA</button>' +
@@ -4224,17 +4230,28 @@ async function requestClientPasswordHelp() {
   }
 }
 
-async function askRealCoachForDomain(domain) {
-  const note = prompt('Messaggio per il coach (opzionale):') || '';
+async function askRealCoachForDomain(domain, presetNote) {
+  const note = (presetNote != null)
+    ? String(presetNote)
+    : (prompt('Messaggio per il coach (opzionale):') || '');
   try {
     await practiceFetch('/api/client/ask-coach', {
       method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ domain: domain || 'general', note: note })
     }, 15000);
-    practiceToast('Richiesta inviata al coach', 'success');
+    practiceToast(domain === 'max_freedom' ? 'Richiesta di libertà inviata al coach' : 'Richiesta inviata al coach', 'success');
   } catch (err) {
     enqueueClientOutbox({ type: 'ask-coach', domain: domain, note: note });
     practiceToast('Richiesta salvata: partirà quando sei online.', 'warning');
   }
+}
+
+function requestAthleteGenerateFreedom(domain) {
+  const notes = {
+    nutrition: 'Chiedo la libertà di generare l’alimentazione in autonomia.',
+    supplements: 'Chiedo la libertà di generare l’integrazione in autonomia.',
+    general: 'Chiedo la massima libertà per generare alimentazione e integrazione in autonomia.'
+  };
+  return askRealCoachForDomain('max_freedom', notes[domain] || notes.general);
 }
 
 async function requestLeaveCoach() {
@@ -5693,6 +5710,7 @@ window.newChatThread = newChatThread;
 window.toggleClientLoginPassword = toggleClientLoginPassword;
 window.requestClientPasswordHelp = requestClientPasswordHelp;
 window.askRealCoachForDomain = askRealCoachForDomain;
+window.requestAthleteGenerateFreedom = requestAthleteGenerateFreedom;
 window.requestLeaveCoach = requestLeaveCoach;
 window.reloadClientHome = reloadClientHome;
 window.requestProgramFromCoach = requestProgramFromCoach;
