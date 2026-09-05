@@ -123,10 +123,10 @@ ok(todayUi.includes("updateAttention") && todayUi.includes("attentionMenu"), "To
 
 const flags = resolveCoachOsFeatureFlags({ env: {} });
 ok(flags.coachTasksV1 && flags.clientTimelineV1, "Phase 2 feature flags enabled");
-ok(!flags.clientIntelligence && !flags.checkInCenterV1, "Phase 3 flags remain disabled");
+ok(flags.clientIntelligence && flags.checkInCenterV1, "Phase 3 intelligence and check-in flags enabled");
 
 const release = JSON.parse(fs.readFileSync(path.join(root, "release.json"), "utf8"));
-ok(release.schemaTarget === "0002", "release targets Phase 2 migration");
+ok(Number(release.schemaTarget) >= 2, "release includes Phase 2 migration");
 
 const webIndex = path.join(root, "web/index.html");
 const apkIndex = path.join(root, "app/src/main/assets/index.html");

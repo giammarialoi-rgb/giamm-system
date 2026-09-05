@@ -22,6 +22,24 @@ import {
   updateCoachAttention,
   updateCoachTask
 } from "./server/coach-os/workspace.mjs";
+import {
+  createCheckInRequest,
+  getCoachCheckIn,
+  listClientCheckIns,
+  listCoachCheckIns,
+  reviewCoachCheckIn,
+  submitClientCheckIn
+} from "./server/coach-os/checkins.mjs";
+import {
+  buildDeterministicIntelligence,
+  saveIntelligenceSnapshot
+} from "./server/coach-os/intelligence.mjs";
+import {
+  auditMediaAccess,
+  createMediaAccessToken,
+  purgeExpiredPrivateMedia,
+  verifyMediaAccessToken
+} from "./server/media/private-store.mjs";
 
 function slugName(name) {
   const s = String(name || "atleta")
@@ -350,7 +368,8 @@ export function mountCoachPractice(app, deps) {
     verifyPassword,
     issueAccountToken,
     accountFromBearer,
-    webDir
+    webDir,
+    mediaSigningSecret
   } = deps;
 
   let vapidReady = false;
@@ -495,6 +514,105 @@ export function mountCoachPractice(app, deps) {
     }
     return { auth, client: row.rows[0] };
   }
+
+  let lastMediaPurgeAt = 0;
+  async function maybePurgePrivateMedia() {
+    if (Date.now() - lastMediaPurgeAt < 60 * 60_000) return;
+    lastMediaPurgeAt = Date.now();
+    try { await purgeExpiredPrivateMedia(pool); } catch (_) {}
+  }
+
+  async function loadAuthorizedMedia(auth, mediaId) {
+    const result = await pool.query(
+      `SELECT m.*, c.athlete_user_id
+       FROM coach_media_objects m
+       JOIN coach_clients c ON c.id = m.client_id
+       WHERE m.id = $1 AND m.revoked_at IS NULL AND m.retention_until > NOW()`,
+      [mediaId]
+    );
+    const media = result.rows[0];
+    if (!media) return { media: null, allowed: false, reason: "not_found" };
+    let allowed;
+    if (auth.role === "athlete") {
+      allowed = String(media.athlete_user_id) === String(auth.id);
+    } else {
+      allowed = String(media.coach_user_id) === String(auth.id);
+      if (allowed) {
+        const license = await pool.query(
+          "SELECT 1 FROM coach_licenses WHERE user_id = $1 AND status = 'active'",
+          [auth.id]
+        );
+        allowed = !!license.rows.length;
+      }
+    }
+    return { media, allowed, reason: allowed ? "allowed" : "ownership" };
+  }
+
+  app.post("/api/media/:id/access", async (req, res) => {
+    const auth = await requireUser(req);
+    if (!auth) return res.status(401).json({ error: "Unauthorized." });
+    await initDb();
+    await maybePurgePrivateMedia();
+    const access = await loadAuthorizedMedia(auth, req.params.id);
+    if (!access.allowed) {
+      if (access.media) await auditMediaAccess(pool, access.media.id, auth, "denied", access.reason);
+      return res.status(access.media ? 403 : 404).json({ error: "Media non disponibile." });
+    }
+    const actorRole = auth.role === "athlete" ? "athlete" : "coach";
+    const token = createMediaAccessToken(mediaSigningSecret, {
+      mediaId: access.media.id,
+      actorUserId: auth.id,
+      actorRole,
+      ttlSeconds: 300
+    });
+    await auditMediaAccess(pool, access.media.id, auth, "signed", "access_token_issued");
+    return res.json({
+      ok: true,
+      token,
+      expiresIn: 300,
+      contentPath: `/api/media/${encodeURIComponent(access.media.id)}/content`
+    });
+  });
+
+  app.get("/api/media/:id/content", async (req, res) => {
+    const auth = await requireUser(req);
+    if (!auth) return res.status(401).json({ error: "Unauthorized." });
+    await initDb();
+    const actorRole = auth.role === "athlete" ? "athlete" : "coach";
+    const verified = verifyMediaAccessToken(mediaSigningSecret, req.query.token, {
+      mediaId: req.params.id,
+      actorUserId: auth.id,
+      actorRole
+    });
+    if (!verified.ok) {
+      return res.status(403).json({ error: "Accesso media scaduto o non valido.", code: "MEDIA_ACCESS_DENIED" });
+    }
+    const access = await loadAuthorizedMedia(auth, req.params.id);
+    if (!access.allowed) {
+      if (access.media) await auditMediaAccess(pool, access.media.id, auth, "denied", access.reason);
+      return res.status(access.media ? 403 : 404).json({ error: "Media non disponibile." });
+    }
+    await auditMediaAccess(pool, access.media.id, auth, "allowed", "content");
+    res.setHeader("Content-Type", access.media.content_type);
+    res.setHeader("Content-Length", String(access.media.byte_size));
+    res.setHeader("Cache-Control", "private, no-store, max-age=0");
+    res.setHeader("Content-Disposition", "inline");
+    return res.end(access.media.object_data);
+  });
+
+  app.delete("/api/media/:id", async (req, res) => {
+    const auth = await requireUser(req);
+    if (!auth) return res.status(401).json({ error: "Unauthorized." });
+    await initDb();
+    const access = await loadAuthorizedMedia(auth, req.params.id);
+    if (!access.allowed) {
+      if (access.media) await auditMediaAccess(pool, access.media.id, auth, "denied", access.reason);
+      return res.status(access.media ? 403 : 404).json({ error: "Media non disponibile." });
+    }
+    await pool.query("UPDATE coach_media_objects SET revoked_at = NOW() WHERE id = $1", [access.media.id]);
+    await auditMediaAccess(pool, access.media.id, auth, "revoked", "user_request");
+    return res.json({ ok: true });
+  });
 
   function sanitizeAttachment(raw) {
     if (!raw || typeof raw !== "object") return null;
@@ -775,6 +893,44 @@ export function mountCoachPractice(app, deps) {
       });
     } catch (err) {
       return res.status(500).json({ error: "Profilo client non disponibile." });
+    }
+  });
+
+  app.get("/api/client/check-ins", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const checkIns = await listClientCheckIns(pool, ctx.client.id, { limit: req.query.limit });
+    return res.json({ ok: true, checkIns });
+  });
+
+  app.post("/api/client/check-ins", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    try {
+      const account = await pool.query(
+        "SELECT data FROM app_account_data WHERE user_id = $1",
+        [ctx.client.athlete_user_id]
+      );
+      const result = await submitClientCheckIn(
+        pool,
+        ctx.client,
+        account.rows[0]?.data || {},
+        req.body || {}
+      );
+      await pool.query(
+        "UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1",
+        [ctx.client.id]
+      );
+      notifyCoachPush(
+        ctx.client.coach_user_id,
+        "Nuovo check-in",
+        (ctx.client.display_name || "Atleta") + " ha inviato un check-in",
+        { view: "check_in", clientId: String(ctx.client.id), checkInId: result.checkIn.id }
+      ).catch(() => {});
+      return res.status(201).json({ ok: true, ...result });
+    } catch (error) {
+      console.error("CLIENT_CHECK_IN", error && error.message ? error.message : error);
+      return res.status(400).json({ error: error.message || "Check-in non salvato." });
     }
   });
 
@@ -1693,6 +1849,94 @@ export function mountCoachPractice(app, deps) {
     } catch (error) {
       console.error("CLIENT_TIMELINE", error && error.message ? error.message : error);
       return res.status(500).json({ error: "Impossibile caricare la timeline." });
+    }
+  });
+
+  app.get("/api/coach/clients/:id/intelligence", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const client = await loadOwnedClient(coach, req.params.id, res);
+    if (!client) return;
+    const dataResult = await pool.query(
+      "SELECT data FROM app_account_data WHERE user_id = $1",
+      [client.athlete_user_id]
+    );
+    const intelligence = buildDeterministicIntelligence(client, dataResult.rows[0]?.data || {});
+    await saveIntelligenceSnapshot(pool, coach.id, client.id, intelligence);
+    return res.json({ ok: true, ...intelligence });
+  });
+
+  app.get("/api/coach/check-ins", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const checkIns = await listCoachCheckIns(pool, coach.id, {
+      status: req.query.status,
+      limit: req.query.limit
+    });
+    return res.json({ ok: true, checkIns });
+  });
+
+  app.post("/api/coach/check-ins/request", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const client = await loadOwnedClient(coach, req.body?.clientId, res);
+    if (!client) return;
+    const checkIn = await createCheckInRequest(pool, coach.id, client.id, req.body || {});
+    await pool.query(
+      "UPDATE coach_clients SET next_check_at = COALESCE($2, NOW()) WHERE id = $1",
+      [client.id, req.body?.dueAt || null]
+    );
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'check_request',$2)",
+      [client.id, JSON.stringify({ checkInId: checkIn.id, note: req.body?.note || "" })]
+    );
+    notifyAthletePush(
+      client,
+      "Check-in richiesto",
+      "Il coach ti ha chiesto un nuovo check-in.",
+      { view: "stats", checkInId: checkIn.id }
+    ).catch(() => {});
+    return res.status(201).json({ ok: true, checkIn });
+  });
+
+  app.get("/api/coach/check-ins/:id", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const checkIn = await getCoachCheckIn(pool, coach.id, req.params.id);
+    if (!checkIn) return res.status(404).json({ error: "Check-in non trovato." });
+    return res.json({ ok: true, checkIn });
+  });
+
+  app.post("/api/coach/check-ins/:id/review", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const before = await getCoachCheckIn(pool, coach.id, req.params.id);
+    if (!before) return res.status(404).json({ error: "Check-in non trovato." });
+    try {
+      const checkIn = await reviewCoachCheckIn(pool, coach.id, req.params.id, req.body || {});
+      if (!checkIn) return res.status(409).json({ error: "Check-in non revisionabile." });
+      await pool.query(
+        `UPDATE coach_tasks SET status = 'completed', completed_at = NOW(), updated_at = NOW()
+         WHERE coach_user_id = $1 AND source_entity_type = 'check_in'
+           AND source_entity_id = $2 AND status IN ('open','snoozed')`,
+        [coach.id, String(checkIn.id)]
+      );
+      await pool.query(
+        "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'check_in_reviewed',$2)",
+        [before.clientId, JSON.stringify({ checkInId: checkIn.id })]
+      );
+      const client = await loadOwnedClient(coach, before.clientId, res);
+      if (client) {
+        notifyAthletePush(
+          client,
+          "Check-in revisionato",
+          "Il coach ha risposto al tuo check-in.",
+          { view: "stats", checkInId: checkIn.id }
+        ).catch(() => {});
+      }
+      return res.json({ ok: true, checkIn });
+    } catch (error) {
+      return res.status(400).json({ error: error.message || "Review non salvata." });
     }
   });
 

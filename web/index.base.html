@@ -16538,11 +16538,26 @@ async function confirmCheckFisicoPdfExport() {
   };
   const front = d.front || await getDocumentFile('bodycheck_front_' + entry.id);
   const back = d.back || await getDocumentFile('bodycheck_back_' + entry.id);
+  let sentToCoachOs = false;
+  if (window.__checkFisicoPdfMode === 'send' &&
+      typeof isAthleteRole === 'function' && isAthleteRole() &&
+      typeof submitClientCheckInToCoach === 'function' &&
+      !entry.serverCheckInId) {
+    try {
+      await submitClientCheckInToCoach(entry, front, back);
+      sentToCoachOs = true;
+      if (typeof showToast === 'function') showToast('Check-in inviato al coach', 'success');
+    } catch (error) {
+      if (typeof showToast === 'function') {
+        showToast((error && error.message) || 'Invio app non riuscito: puoi condividere il PDF', 'warning');
+      }
+    }
+  }
   const bytes = buildCheckFisicoPdfBytes(entry, front, back, pack);
   const blob = new Blob([bytes], { type: 'application/pdf' });
   const filename = 'nurvan-check-fisico-' + String(entry.at || '').slice(0, 10) + '.pdf';
   shareOrSavePdfBlob(blob, filename, 'Check fisico NURVAN — quadro per il coach');
-  if (window.__checkFisicoPdfMode === 'send' && typeof showToast === 'function') {
+  if (window.__checkFisicoPdfMode === 'send' && !sentToCoachOs && typeof showToast === 'function') {
     showToast('PDF pronto: invialo al coach da WhatsApp, mail o Drive', 'success');
   }
 }

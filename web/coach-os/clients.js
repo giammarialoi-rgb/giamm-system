@@ -186,6 +186,9 @@
     const status = payload.operationalStatus || {};
     const action = payload.nextAction || {};
     const snapshot = payload.snapshot || {};
+    const intelligence = payload.intelligence || {};
+    const derived = intelligence.derivedMetrics || {};
+    const signals = intelligence.signals || [];
     const weight = snapshot.weight || {};
     const timeline = payload.timeline || [];
     store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, {
@@ -212,10 +215,26 @@
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Athlete snapshot</h2></div>' +
       '<div class="coach-os-grid-2" style="grid-template-columns:repeat(2,minmax(0,1fr));">' +
       snapshotMetric('Weight', weight.current ? weight.current + ' kg' : '—', weight.delta == null ? '' : ((weight.delta > 0 ? '+' : '') + weight.delta + ' kg')) +
-      snapshotMetric('Adherence', snapshot.adherence == null ? 'Pending' : snapshot.adherence + '%', 'Deterministic in Phase 3') +
-      snapshotMetric('Training', snapshot.training && snapshot.training.programTitle || 'No program', snapshot.training && snapshot.training.weeks ? snapshot.training.weeks + ' weeks' : '') +
-      snapshotMetric('Last workout', snapshot.training && snapshot.training.lastWorkoutAt ? relativeDate(snapshot.training.lastWorkoutAt) : '—', (snapshot.training && snapshot.training.completedWorkouts || 0) + ' synced') +
+      snapshotMetric('Adherence', derived.adherence && derived.adherence.value != null ? derived.adherence.value + '%' : '—', 'Last 28 days') +
+      snapshotMetric(
+        'Training',
+        snapshot.training && snapshot.training.programTitle || 'No program',
+        (snapshot.training && snapshot.training.weeks ? snapshot.training.weeks + ' weeks' : '') +
+          (snapshot.training && snapshot.training.lastWorkoutAt ? ' · ' + relativeDate(snapshot.training.lastWorkoutAt) : '')
+      ) +
+      snapshotMetric('Performance', derived.performance && derived.performance.deltaPct != null ? ((derived.performance.deltaPct > 0 ? '+' : '') + derived.performance.deltaPct + '%') : '—', 'Tonnage trend') +
       '</div></section>' +
+
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Athlete intelligence</h2>' +
+      '<span class="coach-os-muted">Deterministic · ' + escText(intelligence.formulaVersion || 'pending') + '</span></div>' +
+      (signals.length
+        ? '<div class="coach-os-list">' + signals.map(function (signal) {
+          return '<div class="coach-os-row"><span class="coach-os-status-dot ' + escText(signal.severity || 'low') +
+            '"></span><span class="coach-os-row-main"><strong>' + escText(signal.title || signal.id) +
+            '</strong><span>' + escText(signal.detail || '') + '</span></span></div>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">Nessun rischio deterministico rilevato. Apri i dati per il dettaglio.</div>') +
+      '</section>' +
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Timeline</h2>' +
       '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.loadFullTimeline()">VIEW ALL</button></div>' +
@@ -259,11 +278,19 @@
     }
     container.innerHTML = '<div class="coach-os-page"><div class="coach-os-skeleton">Loading client overview…</div></div>';
     try {
-      const payload = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/overview', {
-        method: 'GET',
-        headers: practiceHeaders(false)
-      }, 20000);
+      const results = await Promise.all([
+        practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/overview', {
+          method: 'GET',
+          headers: practiceHeaders(false)
+        }, 20000),
+        practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/intelligence', {
+          method: 'GET',
+          headers: practiceHeaders(false)
+        }, 20000).catch(function () { return null; })
+      ]);
+      const payload = results[0];
       if (!payload || !payload.ok) throw new Error(payload && payload.error || 'Overview unavailable');
+      if (results[1] && results[1].ok) payload.intelligence = results[1];
       renderOverviewData(container, payload);
     } catch (error) {
       container.innerHTML = '<div class="coach-os-page"><div class="coach-os-error">' +
