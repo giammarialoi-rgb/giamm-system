@@ -2,8 +2,15 @@ import fs from 'fs';
 import { execSync } from 'child_process';
 import { JS_PRODUCT_SERVICES } from './prepare_task20_js_services.mjs';
 import { syncWebAssetsToAndroid } from './sync_web_assets.mjs';
+import { resolveCoachOsFeatureFlags } from './feature-flags.mjs';
 
 console.log('=== MASTER BUILD 25: DATA FIDELITY & E2E RECOVERY ===');
+
+const RELEASE_META = JSON.parse(fs.readFileSync('release.json', 'utf8'));
+const COACH_OS_FEATURES = resolveCoachOsFeatureFlags({ env: process.env });
+const COACH_OS_FEATURE_LINES = Object.entries(COACH_OS_FEATURES)
+  .map(([name, enabled]) => `          ${name}: ${enabled}`)
+  .join(',\n');
 
 // 0. Ensure bundles are fresh
 console.log('Regenerating persistence and import bundles...');
@@ -64,8 +71,10 @@ const CONFIG_HEADER = `<script>
       // LAYER 0 & 1: CENTRAL CONFIG & RUNTIME RESOLUTION
       // ====================================================
       const CONFIG = {
-        appVersion: "2.5.0",
-        build: "MASTER-TASK-35-AI-OS",
+        appVersion: ${JSON.stringify(RELEASE_META.versionName)},
+        androidVersionCode: ${Number(RELEASE_META.androidVersionCode) || 0},
+        build: ${JSON.stringify(RELEASE_META.webBuild)},
+        schemaTarget: ${JSON.stringify(RELEASE_META.schemaTarget || null)},
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -76,7 +85,8 @@ const CONFIG_HEADER = `<script>
           offlineAI: true,
           examineEvidence: true,
           exportJsonBackup: true,
-          importFullReview: true
+          importFullReview: true,
+${COACH_OS_FEATURE_LINES}
         }
       };
 
@@ -1043,6 +1053,9 @@ try {
 
 const fullHtml = `${headerHtml}${CONFIG_HEADER}\n${middleCore}\n${coachPracticeUi}\n${exportCode}`;
 
+const releaseMetaScript =
+  'self.NURVAN_RELEASE = Object.freeze(' + JSON.stringify(RELEASE_META) + ');\\n';
+fs.writeFileSync('web/release-meta.js', releaseMetaScript, 'utf8');
 fs.writeFileSync('web/index.html', fullHtml, 'utf8');
 syncWebAssetsToAndroid();
 

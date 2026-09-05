@@ -1,8 +1,10 @@
 /* Nurvan shell SW — cache UI only, never the 10k catalog. */
-const CACHE = 'nurvan-shell-v41-coach';
+importScripts('./release-meta.js');
+const CACHE = 'nurvan-shell-v' + String((self.NURVAN_RELEASE && self.NURVAN_RELEASE.androidVersionCode) || 'dev') + '-coach';
 const PRECACHE = [
   './',
   './index.html',
+  './release-meta.js',
   './manifest.webmanifest',
   './apple-touch-icon.png',
   './icon-192.png',

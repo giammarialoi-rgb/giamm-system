@@ -23,7 +23,9 @@ function assert(condition, message) {
 async function runSuite() {
   // TEST 1: Golden Excel Ingestion & Multi-Domain Data Fidelity
   console.log('--- TEST 1: Golden Excel Ingestion (GIANMARIA LOI(2).xlsx) ---');
-  const xlsxPath = 'GIANMARIA LOI(2).xlsx';
+  const xlsxPath = fs.existsSync('GIANMARIA LOI(2).xlsx')
+    ? 'GIANMARIA LOI(2).xlsx'
+    : 'app/src/androidTest/assets/GIANMARIA LOI(2).xlsx';
   assert(fs.existsSync(xlsxPath), 'GIANMARIA LOI(2).xlsx exists in workspace');
 
   const buf = fs.readFileSync(xlsxPath);

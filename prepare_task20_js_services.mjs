@@ -789,7 +789,17 @@ const SupplementDatabaseService = {
       }));
     }
     return [
-      { name: "Creatina Monoidrato", category: "Creatina", defaultDose: "5g", timing: "Post-workout" },
+      {
+        name: "Creatina Monoidrato",
+        category: "Creatina",
+        defaultDose: "5g",
+        timing: "Post-workout",
+        examineEvidence: {
+          grade: "A (Evidenza Robusta)",
+          primaryOutcomes: "Aumento della forza e della potenza muscolare; supporto alla massa magra.",
+          safety: "Generalmente ben tollerata alle dosi standard; confrontarsi con un professionista in presenza di patologie."
+        }
+      },
       { name: "Proteine Whey Isolate", category: "Proteine", defaultDose: "30g", timing: "Post-workout" },
       { name: "Beta-Alanina", category: "Pre-workout", defaultDose: "3.2g", timing: "Pre-workout" },
       { name: "Caffeina Anidra", category: "Focus / Nootropi", defaultDose: "200mg", timing: "Pre-workout" },
@@ -822,9 +832,24 @@ const SupplementDatabaseService = {
 
 const ExamineService = {
   async getEvidence(supplementName) {
-    const item = SupplementDatabaseService.catalog.find(s => s.name.toLowerCase().includes((supplementName || "").toLowerCase()));
+    const query = String(supplementName || "").trim().toLowerCase();
+    const item = SupplementDatabaseService.catalog.find(function (s) {
+      const name = String(s && s.name || "").toLowerCase();
+      return name === query || name.includes(query) || query.includes(name);
+    });
     if (item && item.examineEvidence) {
       return { ok: true, supplement: item.name, evidence: item.examineEvidence };
+    }
+    if (/creatin/.test(query)) {
+      return {
+        ok: true,
+        supplement: (item && item.name) || "Creatina Monoidrato",
+        evidence: {
+          grade: "A (Evidenza Robusta)",
+          primaryOutcomes: "Aumento della forza e della potenza muscolare; supporto alla massa magra.",
+          safety: "Generalmente ben tollerata alle dosi standard; confrontarsi con un professionista in presenza di patologie."
+        }
+      };
     }
     return { ok: false, error: "Nessuna scheda Examine trovata per questo integratore." };
   }

@@ -14,21 +14,46 @@ import * as XLSX from "xlsx";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { extractExcelStructuredForApi, detectFormat, DI_MAX_BYTES } from "./document-intelligence-core.mjs";
 import { ensureCoachPracticeTables, mountCoachPractice } from "./coach-practice.mjs";
+import { runMigrations } from "./server/db/migrate.mjs";
+import {
+  buildCorsOriginValidator,
+  createFixedWindowRateLimiter,
+  isProduction,
+  resolveJwtSecret
+} from "./server/security.mjs";
 
 dotenv.config();
 
+const RELEASE_META = JSON.parse(
+  await fs.readFile(new URL("./release.json", import.meta.url), "utf8")
+);
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors({ origin: true, credentials: true }));
+app.set("trust proxy", 1);
+app.use(cors({ origin: buildCorsOriginValidator(process.env), credentials: true }));
 app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   next();
 });
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use("/api/auth", createFixedWindowRateLimiter({
+  windowMs: 15 * 60_000,
+  max: Number(process.env.AUTH_RATE_LIMIT_MAX || 40),
+  keyPrefix: "auth"
+}));
+app.use(
+  ["/api/analyze-file", "/analyze", "/api/analyze", "/api/ingest/document"],
+  createFixedWindowRateLimiter({
+    windowMs: 60_000,
+    max: Number(process.env.IMPORT_RATE_LIMIT_MAX || 20),
+    keyPrefix: "import"
+  })
+);
 
 import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
@@ -121,6 +146,7 @@ const pool = new Proxy({}, {
 let dbInitialized = false;
 let dbInitError = null;
 let dbHost = "";
+let dbSchemaVersion = null;
 let lastDbLogKey = "";
 let initInFlight = null;
 
@@ -185,11 +211,9 @@ async function initDb() {
         );
       `);
         await client.query("COMMIT");
-        try {
-          await ensureCoachPracticeTables(client);
-        } catch (practiceErr) {
-          console.error("Coach practice tables error:", summarizeDbError(practiceErr));
-        }
+        await ensureCoachPracticeTables(client);
+        const migrationResult = await runMigrations(client);
+        dbSchemaVersion = migrationResult.latest;
         client.release();
         client = null;
         const previous = poolHolder.current;
@@ -246,10 +270,11 @@ function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || "gs-coach-secret-key-production-change-me";
+const JWT_SECRET = resolveJwtSecret(process.env);
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_WEB_CLIENT_ID_FALLBACK = "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com";
 const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || "com.giammaria.system";
+const APPLE_JWKS = createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
 
 function sanitizeGoogleClientId(raw) {
   const stripped = String(raw || "")
@@ -426,25 +451,28 @@ async function verifyGoogleCredential(idToken) {
 
 async function verifyAppleCredential(idToken, userPayload) {
   if (!idToken) throw Object.assign(new Error("Missing Apple identity token."), { statusCode: 400 });
-  const decoded = jwt.decode(idToken);
-  if (!decoded || !decoded.sub || !decoded.email) {
+  let payload;
+  try {
+    const verified = await jwtVerify(idToken, APPLE_JWKS, {
+      issuer: "https://appleid.apple.com",
+      audience: APPLE_BUNDLE_ID
+    });
+    payload = verified.payload;
+  } catch (_) {
+    throw Object.assign(new Error("Apple identity token verification failed."), { statusCode: 401 });
+  }
+  if (!payload || !payload.sub || !payload.email) {
     throw Object.assign(new Error("Malformed Apple identity token."), { statusCode: 400 });
-  }
-  if (decoded.iss !== "https://appleid.apple.com") {
-    throw Object.assign(new Error("Invalid Apple token issuer."), { statusCode: 401 });
-  }
-  if (APPLE_BUNDLE_ID && decoded.aud !== APPLE_BUNDLE_ID) {
-    throw Object.assign(new Error("Apple token audience does not match the configured bundle ID."), { statusCode: 401 });
   }
   let name = "";
   if (userPayload?.name) {
     name = [userPayload.name.firstName, userPayload.name.lastName].filter(Boolean).join(" ");
   }
   return {
-    email: decoded.email,
-    name: name || decoded.email,
+    email: payload.email,
+    name: name || payload.email,
     provider: "apple",
-    providerId: decoded.sub,
+    providerId: payload.sub,
     avatarUrl: null
   };
 }
@@ -1169,6 +1197,9 @@ app.get("/health", (req, res) => {
     chatStateless: true,
     coachChatVersion: "vision-stateless-v1",
     coachPracticeVersion: "coach-client-v2",
+    appVersion: RELEASE_META.versionName,
+    build: RELEASE_META.webBuild,
+    schemaVersion: dbSchemaVersion,
     dbReady: dbInitialized,
     dbHost: dbHost || null,
     dbError: dbInitError
@@ -1211,6 +1242,14 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     const mailed = await sendPasswordResetEmail(email, code);
     if (mailed.sent) {
       return res.json({ ...generic, delivery: "email", message: "Ti abbiamo inviato un codice a 6 cifre via email. Scade tra 60 minuti." });
+    }
+    if (isProduction(process.env)) {
+      console.warn("PASSWORD_RESET_DELIVERY_UNAVAILABLE", mailed.reason || "mail_not_configured");
+      return res.json({
+        ...generic,
+        delivery: "unavailable",
+        message: "Il recupero password non è al momento disponibile. Contatta l’assistenza."
+      });
     }
     return res.json({
       ...generic,

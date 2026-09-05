@@ -20,7 +20,10 @@ import {
 import XLSX from 'xlsx';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const GOLDEN = path.join(__dirname, 'GIANMARIA LOI(2).xlsx');
+const GOLDEN_ROOT = path.join(__dirname, 'GIANMARIA LOI(2).xlsx');
+const GOLDEN = fs.existsSync(GOLDEN_ROOT)
+  ? GOLDEN_ROOT
+  : path.join(__dirname, 'app/src/androidTest/assets/GIANMARIA LOI(2).xlsx');
 
 let passCount = 0;
 let failCount = 0;

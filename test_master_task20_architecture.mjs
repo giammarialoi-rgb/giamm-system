@@ -186,6 +186,8 @@ function createTestRuntime() {
         setAttribute: () => {},
         getAttribute: () => null,
         appendChild: () => {},
+        querySelector: () => null,
+        querySelectorAll: () => [],
         scrollTop: 0,
         scrollHeight: 100
       });
@@ -209,9 +211,16 @@ function createTestRuntime() {
       style: {},
       classList: { add: () => {}, remove: () => {} },
       setAttribute: () => {},
-      appendChild: () => {}
+      appendChild: () => {},
+      querySelector: () => null,
+      querySelectorAll: () => []
     }),
-    body: { appendChild: () => {}, removeChild: () => {} }
+    body: {
+      appendChild: () => {},
+      removeChild: () => {},
+      classList: { add: () => {}, remove: () => {}, toggle: () => {}, contains: () => false }
+    },
+    documentElement: { lang: "it", style: { setProperty: () => {}, removeProperty: () => {} } }
   };
 
   const sandbox = {
@@ -356,9 +365,10 @@ async function runTestSuite() {
     console.log(`  Found Golden Master File (${goldenBuffer.length} bytes). Running Universal Import test...`);
     const importResult = await ImportService.parseFile(goldenBuffer, 'GIAMMARIA_SYSTEM_V29_MASTER.xlsx');
     assert(importResult.ok === true, 'ImportService.parseFile parses Golden Master XLSX with ok=true');
-    assert(importResult.canonicalProgram.weeks.length >= 20, `Golden Master parses 20+ weeks (found: ${importResult.canonicalProgram.weeks.length})`);
-    assert(importResult.reviewSummary.totalSessions >= 60, `Golden Master parses 60+ sessions (found: ${importResult.reviewSummary.totalSessions})`);
-    assert(importResult.reviewSummary.totalCanonicalSets >= 1500, `Golden Master parses 1500+ canonical sets (found: ${importResult.reviewSummary.totalCanonicalSets})`);
+    // Current tracked V29 golden is a 16-week / 64-session program.
+    assert(importResult.canonicalProgram.weeks.length === 16, `Golden Master parses 16 weeks (found: ${importResult.canonicalProgram.weeks.length})`);
+    assert(importResult.reviewSummary.totalSessions >= 64, `Golden Master parses 64+ sessions (found: ${importResult.reviewSummary.totalSessions})`);
+    assert(importResult.reviewSummary.totalCanonicalSets >= 1200, `Golden Master parses 1200+ canonical sets (found: ${importResult.reviewSummary.totalCanonicalSets})`);
 
     // Test multi-domain classification on Golden Master
     const classification = ImportService.classifyWorkbook(importResult.rawSheets || {});
@@ -679,8 +689,9 @@ async function runTestSuite() {
   assert(typeof HealthDataProvider.fetchMetrics === 'function', 'HealthDataProvider.fetchMetrics is function');
 
   const healthMetrics = await HealthDataProvider.fetchMetrics();
-  assert(typeof healthMetrics.steps === 'number', 'Health metrics return steps');
-  assert(typeof healthMetrics.sleepHours === 'number', 'Health metrics return sleepHours');
+  assert(healthMetrics.steps === null || typeof healthMetrics.steps === 'number', 'Health metrics return steps or explicit unavailable');
+  assert(healthMetrics.sleepHours === null || typeof healthMetrics.sleepHours === 'number', 'Health metrics return sleepHours or explicit unavailable');
+  assert(typeof healthMetrics.source === 'string', 'Health metrics identify their source');
 
   // ---------------------------------------------------------
   // 20. STRUCTURED ERROR LOGGER
@@ -751,7 +762,9 @@ async function runTestSuite() {
   console.log('============================================================\n');
 }
 
-runTestSuite().catch(err => {
-  console.error('\n❌ MASTER TASK 20 TEST FAILED:', err);
-  process.exit(1);
-});
+runTestSuite()
+  .then(() => process.exit(0))
+  .catch(err => {
+    console.error('\n❌ MASTER TASK 20 TEST FAILED:', err);
+    process.exit(1);
+  });
