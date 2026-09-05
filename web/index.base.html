@@ -12529,13 +12529,15 @@ function detectProgramDomains(prog) {
   return domains;
 }
 
-function openImportDomainPicker(available, prechecked) {
+function openImportDomainPicker(available, prechecked, opts) {
+  opts = opts || {};
   return new Promise(function (resolve) {
     if (!available || !available.length) {
       resolve(['training']);
       return;
     }
-    if (available.length === 1) {
+    // Single domain: skip only for generic import; assign-from-library always asks
+    if (available.length === 1 && !opts.forceAsk) {
       resolve(available.slice());
       return;
     }
@@ -12547,11 +12549,13 @@ function openImportDomainPicker(available, prechecked) {
       exams: 'Esami'
     };
     const pre = Array.isArray(prechecked) && prechecked.length ? prechecked : available;
+    const title = opts.title || 'Cosa vuoi importare?';
+    const help = opts.help || 'Seleziona una o piu sezioni. Quelle non scelte restano come sono (non vengono cancellate).';
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10130;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:16px;';
     overlay.innerHTML = '<div class="card" style="max-width:420px;width:100%;padding:16px;background:#111;border:1px solid var(--gold);color:#eee;">' +
-      '<h3 style="color:var(--gold);margin:0 0 8px;font-size:15px;">Cosa vuoi importare?</h3>' +
-      '<p style="font-size:12px;color:#bbb;margin:0 0 12px;">Seleziona una o piu sezioni. Quelle non scelte restano come sono (non vengono cancellate).</p>' +
+      '<h3 style="color:var(--gold);margin:0 0 8px;font-size:15px;">' + title + '</h3>' +
+      '<p style="font-size:12px;color:#bbb;margin:0 0 12px;">' + help + '</p>' +
       available.map(function (d) {
         const ck = pre.indexOf(d) >= 0 ? ' checked' : '';
         return '<label style="display:flex;gap:10px;align-items:flex-start;margin:8px 0;font-size:13px;color:#eee !important;-webkit-text-fill-color:#eee !important;width:100%;box-sizing:border-box;">' +

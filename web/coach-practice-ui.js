@@ -4945,38 +4945,107 @@ function openCoachLibraryAssignPicker(clientId, name) {
   showOverlay('cp-assign', true);
 }
 
-function applyCoachLibraryToAssign(clientId, name, entryId) {
+async function applyCoachLibraryToAssign(clientId, name, entryId) {
   const entry = (store.coachProgramLibrary || []).find(function (e) { return e && e.id === entryId; });
   if (!entry || !entry.payload) {
     practiceToast('Scheda non trovata', 'danger');
     return;
   }
+  let prog = entry.payload;
+  try { prog = JSON.parse(JSON.stringify(entry.payload)); } catch (_) {}
+  try {
+    if (typeof normalizeProgram === 'function') prog = normalizeProgram(prog);
+  } catch (_) {}
+  const available = (typeof detectProgramDomains === 'function')
+    ? detectProgramDomains(prog)
+    : ['training', 'nutrition', 'supplements', 'therapy', 'exams'].filter(function (d) {
+      if (d === 'training') return Array.isArray(prog.weeks) && prog.weeks.length;
+      if (d === 'nutrition') return !!(prog.nutrition);
+      if (d === 'supplements') return !!(prog.supplementation);
+      if (d === 'therapy') return !!(prog.therapy);
+      if (d === 'exams') return !!(prog.exams);
+      return false;
+    });
+  if (!available.length) {
+    practiceToast('Questa scheda non ha sezioni da assegnare', 'danger');
+    return;
+  }
+  // Always ask: even if the library entry has everything, coach may omit e.g. integrazione
+  const selected = (typeof openImportDomainPicker === 'function')
+    ? await openImportDomainPicker(available, available, {
+      forceAsk: true,
+      title: 'Cosa vuoi assegnare a ' + (name || 'cliente') + '?',
+      help: 'Anche se la scheda contiene tutto, deseleziona ciò che non vuoi (es. integrazione). Le sezioni non scelte restano come sono già sul cliente.'
+    })
+    : available.slice();
+  if (!selected || !selected.length) return;
+
   if (!store.coachAssigning) {
     store.coachAssigning = { clientId: clientId, name: name, mode: 'mylib' };
     store.__cpAssignBarExpanded = false;
     window.__cpAssignBackup = snapshotCoachMaster();
+    seedAssignSandboxFromClient(clientId);
   }
   try {
-    let prog = entry.payload;
-    try { prog = JSON.parse(JSON.stringify(entry.payload)); } catch (_) {}
-    if (typeof normalizeProgram === 'function') prog = normalizeProgram(prog);
-    DATA = prog;
-    store.activeProgram = prog;
-    store.activeProgramId = prog.id || ('lib_' + entryId);
-    if (prog.nutrition) { store.nutrition = prog.nutrition; DATA.nutrition = prog.nutrition; }
-    if (prog.supplementation) { store.supplementation = prog.supplementation; DATA.supplementation = prog.supplementation; }
-    if (prog.therapy) { store.therapy = prog.therapy; DATA.therapy = prog.therapy; }
-    if (prog.exams) { store.exams = prog.exams; DATA.exams = prog.exams; }
-    if (typeof currentWeek !== 'undefined') currentWeek = 1;
-    if (typeof currentDay !== 'undefined') currentDay = 0;
+    let base;
+    try {
+      base = (typeof DATA !== 'undefined' && DATA && typeof DATA === 'object')
+        ? JSON.parse(JSON.stringify(DATA))
+        : emptyClientAssignDraft();
+    } catch (_) {
+      base = emptyClientAssignDraft();
+    }
+    if (!base || typeof base !== 'object') base = emptyClientAssignDraft();
+    if (!Array.isArray(base.weeks)) base.weeks = [];
+
+    const allow = function (d) { return selected.indexOf(d) >= 0; };
+    if (allow('training')) {
+      base.weeks = Array.isArray(prog.weeks) ? prog.weeks : [];
+      if (prog.title) base.title = prog.title;
+      if (prog.meta) base.meta = prog.meta;
+      if (prog.notes) base.notes = prog.notes;
+      base.id = prog.id || ('lib_' + entryId);
+      if (typeof currentWeek !== 'undefined') currentWeek = 1;
+      if (typeof currentDay !== 'undefined') currentDay = 0;
+    }
+    if (allow('nutrition') && prog.nutrition) {
+      base.nutrition = prog.nutrition;
+      store.nutrition = prog.nutrition;
+    }
+    if (allow('supplements') && prog.supplementation) {
+      base.supplementation = prog.supplementation;
+      store.supplementation = prog.supplementation;
+    }
+    if (allow('therapy') && prog.therapy) {
+      base.therapy = prog.therapy;
+      store.therapy = prog.therapy;
+    }
+    if (allow('exams') && prog.exams) {
+      base.exams = prog.exams;
+      store.exams = prog.exams;
+    }
+    // Keep non-selected domains on base (client seed); sync store mirrors
+    if (!allow('nutrition')) store.nutrition = base.nutrition || null;
+    if (!allow('supplements')) store.supplementation = base.supplementation || null;
+    if (!allow('therapy')) store.therapy = base.therapy || null;
+    if (!allow('exams')) store.exams = base.exams || null;
+
+    DATA = base;
+    store.activeProgram = base;
+    store.activeProgramId = base.id || ('lib_' + entryId);
   } catch (err) {
     practiceToast((err && err.message) || 'Caricamento fallito', 'danger');
     return;
   }
   showOverlay('cp-assign', false);
   ensureAssignBanner();
-  navigate('training');
-  practiceToast('Scheda dal tuo database caricata nello spazio cliente. Modifica e INVIA.', 'success');
+  const go = selected.indexOf('training') >= 0 ? 'training'
+    : (selected.indexOf('nutrition') >= 0 ? 'nutrition'
+      : (selected.indexOf('supplements') >= 0 ? 'supplements'
+        : (selected.indexOf('therapy') >= 0 ? 'therapy'
+          : (selected.indexOf('exams') >= 0 ? 'exams' : 'training'))));
+  navigate(go);
+  practiceToast('Sezioni selezionate caricate nello spazio cliente. Modifica e INVIA.', 'success');
 }
 
 async function refreshAthleteMe() {
