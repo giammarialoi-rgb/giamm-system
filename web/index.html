@@ -36365,14 +36365,23 @@ async function apiFetch(url, options, timeoutMs=90000) {
 async function readApiJson(response) {
   const raw = await response.text();
   let payload = {};
-  try { payload = raw ? JSON.parse(raw) : {}; } catch(err) { console.error('[Coach AI] invalid JSON', response.status, raw); }
+  const looksHtml = /^\s*</.test(raw) || /<!DOCTYPE/i.test(raw) || /<html[\s>]/i.test(raw);
+  try { payload = raw ? JSON.parse(raw) : {}; } catch(err) {
+    console.error('[Coach AI] invalid JSON', response.status, String(raw || '').slice(0, 200));
+  }
   if(!response.ok) {
-    const message = payload.error || payload.message || raw || 'Risposta vuota del server';
-    const detail = payload.detail ? (' — ' + payload.detail) : '';
+    let message = payload.error || payload.message || '';
+    if (!message || looksHtml) {
+      message = response.status >= 500
+        ? ('Server non disponibile (' + response.status + '). Riprova tra poco.')
+        : ('Errore server (' + response.status + ').');
+    }
+    const detail = (payload.detail && !looksHtml) ? (' — ' + payload.detail) : '';
     console.error('[Coach AI] server error', response.status, message, payload.detail || '');
     throw new Error(`HTTP ${response.status}: ${message}${detail}`);
   }
   if(!raw) throw new Error(`HTTP ${response.status}: risposta vuota del server`);
+  if (looksHtml) throw new Error('Server non disponibile (' + response.status + '). Riprova tra poco.');
   return payload;
 }
 function setCount(value) {
@@ -49425,10 +49434,24 @@ function applyClientChrome() {
   }
 }
 
+function coachHeaderBack() {
+  if (store && store.coachViewingClient) {
+    leaveCoachClientView();
+    return;
+  }
+  if (store && store.coachAssigning) {
+    if (typeof cancelAssignSandbox === 'function') cancelAssignSandbox();
+    return;
+  }
+  exitCoachSession();
+}
+
 function ensureCoachHeaderControls(coachSession) {
   let wrap = document.getElementById('cp-coach-header-controls');
   if (!coachSession) {
     if (wrap) wrap.style.display = 'none';
+    const hubBtn = document.getElementById('menu-hub-button');
+    if (hubBtn) hubBtn.style.display = '';
     return;
   }
   const coachBtn = document.getElementById('coach-unlock-button');
@@ -49441,6 +49464,8 @@ function ensureCoachHeaderControls(coachSession) {
     headerActions.insertBefore(wrap, coachBtn);
   }
   wrap.style.display = 'flex';
+  const hubBtn = document.getElementById('menu-hub-button');
+  if (hubBtn) hubBtn.style.display = 'none';
   const clients = (store.__cpClientList || []).slice();
   const curId = store.coachWorkspace && store.coachWorkspace.clientId ? String(store.coachWorkspace.clientId) : '';
   const opts = ['<option value="">Cliente…</option>'].concat(clients.map(function (cl) {
@@ -49449,7 +49474,7 @@ function ensureCoachHeaderControls(coachSession) {
   wrap.innerHTML =
     '<select id="cp-client-switcher" class="cp-client-switcher" title="Cambia cliente" onchange="switchCoachClientFromHeader(this.value)">' + opts.join('') + '</select>' +
     '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachHub\')">LISTA</button>' +
-    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="openCoachDrawer()">MENU</button>';
+    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="coachHeaderBack()">INDIETRO</button>';
 }
 
 function switchCoachClientFromHeader(id) {
@@ -50236,11 +50261,19 @@ function ensureLiveFollowBanner() {
   if (!el) {
     el = document.createElement('div');
     el.id = 'cp-live-follow-banner';
-    el.style.cssText = 'position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:10050;background:#0a2a0a;border:1px solid #6c6;color:#9f9;padding:8px 14px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.5px;';
+    el.style.cssText = 'position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:10050;background:#0a2a0a;border:1px solid #6c6;color:#9f9;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.5px;display:flex;align-items:center;gap:10px;';
     document.body.appendChild(el);
   }
-  el.style.display = 'block';
-  el.textContent = '● LIVE · stai seguendo l’allenamento';
+  el.style.display = 'flex';
+  el.innerHTML = '<span>● LIVE · stai seguendo l’allenamento</span>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 10px;border-color:#6c6;color:#9f9 !important;-webkit-text-fill-color:#9f9 !important;" onclick="stopLiveFollowWorkout()">STOP</button>';
+}
+
+function stopLiveFollowWorkout() {
+  window.__cpFollowLive = false;
+  stopClientLivePoll();
+  ensureLiveFollowBanner();
+  practiceToast('Follow live interrotto', 'info');
 }
 
 function stopClientLivePoll(opts) {
@@ -50442,6 +50475,17 @@ function debounceCoachClientList() {
   __cpListTimer = setTimeout(loadCoachClientList, 280);
 }
 
+function friendlyApiError(err) {
+  const raw = String((err && err.message) || err || '').trim();
+  if (!raw) return 'Server non disponibile. Riprova tra poco.';
+  if (/<!DOCTYPE|<html[\s>]|^\s*</i.test(raw) || /HTTP\s*5\d\d/i.test(raw) && /</.test(raw)) {
+    const code = (raw.match(/HTTP\s*(\d{3})/i) || [])[1] || '500';
+    return 'Server non disponibile (' + code + '). Riprova tra poco.';
+  }
+  if (raw.length > 160) return raw.slice(0, 140).replace(/\s+\S*$/, '') + '…';
+  return raw;
+}
+
 async function loadCoachClientList() {
   const box = document.getElementById('cp-client-list');
   if (!box) return;
@@ -50485,7 +50529,73 @@ async function loadCoachClientList() {
         '</div></div>';
     }).join('');
   } catch (err) {
-    box.innerHTML = '<div class="cp-help">' + esc((err && err.message) || 'Lista non disponibile.') + '</div>';
+    box.innerHTML = '<div class="cp-help" style="margin-bottom:10px;">' + esc(friendlyApiError(err)) + '</div>' +
+      '<button type="button" class="btn btn-outline" style="width:100%;" onclick="loadCoachClientList()">RIPROVA</button>';
+  }
+}
+
+function ensureCoachDomainToolbar(domain) {
+  const c = document.getElementById('view-container');
+  let bar = document.getElementById('cp-domain-toolbar');
+  const domains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1 };
+  const d = domain || currentView;
+  if (!c || !(store && store.coachViewingClient) || !domains[d]) {
+    if (bar) bar.remove();
+    return;
+  }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'cp-domain-toolbar';
+    bar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;';
+  }
+  bar.setAttribute('data-domain', d);
+  bar.innerHTML =
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:120px;font-size:11px;color:#c66 !important;-webkit-text-fill-color:#c66 !important;border-color:#c66;" onclick="clearCoachClientDomain(\'' + esc(d) + '\')">CANCELLA</button>' +
+    '<button type="button" class="btn btn-primary" style="flex:1;min-width:120px;font-size:11px;" onclick="startDomainImport(\'' + esc(d) + '\')">IMPORTA NUOVO</button>';
+  if (bar.parentElement !== c || c.firstChild !== bar) {
+    c.insertBefore(bar, c.firstChild);
+  }
+}
+
+async function clearCoachClientDomain(domain) {
+  if (!(store && store.coachViewingClient)) return;
+  const labels = {
+    training: 'allenamento',
+    nutrition: 'alimentazione',
+    supplements: 'integrazione',
+    therapy: 'terapia',
+    exams: 'esami'
+  };
+  const label = labels[domain] || domain;
+  if (!window.confirm('Cancellare ' + label + ' del cliente? Le modifiche verranno inviate al cliente.')) return;
+  try {
+    if (domain === 'training') {
+      if (typeof DATA !== 'undefined' && DATA) {
+        DATA.weeks = [];
+        if (DATA.title) DATA.title = '';
+      }
+      store.customSets = {};
+      store.subs = {};
+    } else if (domain === 'nutrition') {
+      store.nutrition = null;
+      if (typeof DATA !== 'undefined' && DATA) DATA.nutrition = null;
+    } else if (domain === 'supplements') {
+      store.supplementation = null;
+      if (typeof DATA !== 'undefined' && DATA) DATA.supplementation = null;
+    } else if (domain === 'therapy') {
+      store.therapy = null;
+      if (typeof DATA !== 'undefined' && DATA) DATA.therapy = null;
+    } else if (domain === 'exams') {
+      store.exams = null;
+      if (typeof DATA !== 'undefined' && DATA) DATA.exams = null;
+    } else {
+      return;
+    }
+    if (typeof persist === 'function') persist();
+    await pushCoachClientEdits();
+    if (typeof render === 'function') render();
+  } catch (err) {
+    practiceToast((err && err.message) || 'Cancellazione fallita', 'danger');
   }
 }
 
@@ -50927,8 +51037,7 @@ async function renderCoachWorkspace(c) {
     const collapsed = store.__cpWsCollapse;
     c.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">' +
       '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">← LISTA</button>' +
-      '<button class="btn btn-primary" style="font-size:10px;" onclick="openCoachClientChat(\'' + esc(id) + '\')">CHAT</button>' +
-      '<button class="btn btn-outline" style="font-size:10px;" onclick="openCoachDrawer()">MENU</button></div>' +
+      '<button class="btn btn-primary" style="font-size:10px;" onclick="openCoachClientChat(\'' + esc(id) + '\')">CHAT</button></div>' +
       '<h1 style="color:#fff;font-size:22px;margin:0 0 4px;">' + esc(cl.displayName || 'Cliente') + '</h1>' +
       '<div style="font-size:11px;color:#888;margin-bottom:6px;">@' + esc(cl.username || '') + ' · ' +
       (cl.intakeMode === 'transition' ? 'Transizione' : 'Nuovo') + (cl.intakeDone ? ' · questionario ok' : ' · questionario in attesa') + '</div>' +
@@ -50965,6 +51074,7 @@ async function renderCoachWorkspace(c) {
       '<span style="display:block;color:#eee !important;-webkit-text-fill-color:#eee !important;"><b style="color:#fff !important;-webkit-text-fill-color:#fff !important;">Consenti Nurvan AI</b><br>' +
       '<span style="color:#bbb !important;-webkit-text-fill-color:#bbb !important;font-size:11px;">Se attivo, il cliente vede Coach AI nell\'app. Di default e nascosta.</span></span></label></div>' +
       '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="openAssignChooser(\'' + esc(id) + '\',\'' + esc(cl.displayName || '') + '\')">ASSEGNA SCHEDA</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="enterCoachClientView(\'training\')">VISUALIZZA ALLENAMENTO</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestCheckFromClient(\'' + esc(id) + '\')">RICHIEDI CHECK</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestExamsFromClient(\'' + esc(id) + '\')">RICHIEDI ESAMI</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="resetClientPassword(\'' + esc(id) + '\')">REIMPOSTA PASSWORD</button>' +
@@ -51332,7 +51442,7 @@ function ensureAssignBanner() {
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="toggleAssignBannerExpand()">RIDUCI</button></div>' +
     '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Questo non è il tuo allenamento. Importa o scegli, modifica, poi invia.</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'training\')">ALLENAMENTO</button>' +
+    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'training\')">VISUALIZZA ALLENAMENTO</button>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'nutrition\')">ALIMENTAZIONE</button>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'supplements\')">INTEGRAZIONE</button>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'therapy\')">TERAPIA</button>' +
@@ -53081,6 +53191,7 @@ function wrapPracticeHooks() {
           }
         }
         if (c && (currentView === 'athlete' || currentView === 'settings' || currentView === 'home' || currentView === 'pricing')) injectCoachUnlockInto(c);
+        ensureCoachDomainToolbar(currentView);
       } catch (_) {}
       applyClientChrome();
       ensureAssignBanner();
@@ -53727,6 +53838,11 @@ window.removeCoachClient = removeCoachClient;
 window.openCoachClient = openCoachClient;
 window.openCoachClientChat = openCoachClientChat;
 window.followClientLiveWorkout = followClientLiveWorkout;
+window.stopLiveFollowWorkout = stopLiveFollowWorkout;
+window.coachHeaderBack = coachHeaderBack;
+window.clearCoachClientDomain = clearCoachClientDomain;
+window.ensureCoachDomainToolbar = ensureCoachDomainToolbar;
+window.friendlyApiError = friendlyApiError;
 window.setNurvanAppBadge = setNurvanAppBadge;
 window.clearNurvanAppBadge = clearNurvanAppBadge;
 window.assignActiveToClient = assignActiveToClient;

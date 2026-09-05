@@ -4318,14 +4318,23 @@ async function apiFetch(url, options, timeoutMs=90000) {
 async function readApiJson(response) {
   const raw = await response.text();
   let payload = {};
-  try { payload = raw ? JSON.parse(raw) : {}; } catch(err) { console.error('[Coach AI] invalid JSON', response.status, raw); }
+  const looksHtml = /^\s*</.test(raw) || /<!DOCTYPE/i.test(raw) || /<html[\s>]/i.test(raw);
+  try { payload = raw ? JSON.parse(raw) : {}; } catch(err) {
+    console.error('[Coach AI] invalid JSON', response.status, String(raw || '').slice(0, 200));
+  }
   if(!response.ok) {
-    const message = payload.error || payload.message || raw || 'Risposta vuota del server';
-    const detail = payload.detail ? (' — ' + payload.detail) : '';
+    let message = payload.error || payload.message || '';
+    if (!message || looksHtml) {
+      message = response.status >= 500
+        ? ('Server non disponibile (' + response.status + '). Riprova tra poco.')
+        : ('Errore server (' + response.status + ').');
+    }
+    const detail = (payload.detail && !looksHtml) ? (' — ' + payload.detail) : '';
     console.error('[Coach AI] server error', response.status, message, payload.detail || '');
     throw new Error(`HTTP ${response.status}: ${message}${detail}`);
   }
   if(!raw) throw new Error(`HTTP ${response.status}: risposta vuota del server`);
+  if (looksHtml) throw new Error('Server non disponibile (' + response.status + '). Riprova tra poco.');
   return payload;
 }
 function setCount(value) {
