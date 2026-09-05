@@ -1081,27 +1081,7 @@ const CalendarService = {
     const weekNum = this._programWeekNumber(iso, s, d);
     const events = [];
 
-    const weeks = (d && (d.weeks || (d.training && d.training.weeks))) || [];
-    if (weeks.length) {
-      const wIdx = (weekNum && weekNum > 0) ? Math.min(weeks.length, weekNum) - 1 : 0;
-      const week = weeks[wIdx];
-      const sessions = (week && (week.sessions || week.days)) || [];
-      const named = sessions.some((sess) => /lun|mar|mer|gio|ven|sab|dom/i.test(String(sess.day || sess.day_name || sess.name || '')));
-      sessions.forEach((sess, idx) => {
-        const label = String(sess.day || sess.day_name || sess.name || sess.title || '');
-        const matchName = named && this._matchesWeekday([label], weekdayIt);
-        const matchIdx = !named && idx === ((date.getDay() + 6) % 7);
-        if (matchName || matchIdx) {
-          events.push({
-            type: 'workout',
-            title: sess.name || sess.title || sess.day || 'Allenamento',
-            time: sess.time || '18:00',
-            detail: weekNum ? ('Settimana ' + weekNum) : '',
-            action: "navigate('training')"
-          });
-        }
-      });
-    }
+    // Workouts are NOT projected from the active program — only finalized (custom) events.
 
     ((d && d.nutrition && d.nutrition.days) || []).forEach((nd) => {
       if (this._matchesWeekday([nd.day], weekdayIt)) {
