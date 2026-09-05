@@ -150,14 +150,18 @@ function inviteShortCode(token) {
 
 function formatInviteShareText(opts) {
   opts = opts || {};
+  const name = String(opts.name || opts.displayName || '').trim() || 'atleta';
   const code = opts.inviteCode || inviteShortCode(opts.token || opts.inviteUrl);
-  return [
-    'Cliente: ' + (opts.name || '—'),
-    'Codice invito: ' + (code || '—'),
-    'Link (univoco): ' + (opts.inviteUrl || ''),
+  const lines = [
+    'Ciao ' + name + ',',
+    'benvenuto nel mio servizio coaching, clicka sul link qui sotto ed inserisci i dati richiesti che trovi in basso nel messaggio, compila il form se richiesto, preparati a prenderti cura del tuo corpo sotto ogni aspetto 💪🏻🏋️‍♂️🍎💊🧬',
+    '',
+    'Link: ' + (opts.inviteUrl || ''),
     'Utente: ' + (opts.username || ''),
     'Password: ' + (opts.password || '')
-  ].join('\n');
+  ];
+  if (code) lines.push('Codice invito: ' + code);
+  return lines.join('\n');
 }
 
 function applyClientChrome() {
@@ -2203,7 +2207,15 @@ async function submitAddClient() {
     const url = payload.inviteUrl || '';
     const user = payload.credentials && payload.credentials.username;
     const pass = (payload.credentials && payload.credentials.password) || password;
-    const msg = payload.inviteText || ('Link: ' + url + '\nUtente: ' + user + '\nPassword: ' + pass);
+    const display = (payload.credentials && payload.credentials.displayName) ||
+      ((firstName + ' ' + lastName).trim()) || 'atleta';
+    const msg = payload.inviteText || formatInviteShareText({
+      name: display,
+      inviteUrl: url,
+      inviteCode: payload.inviteCode || inviteShortCode(url),
+      username: user,
+      password: pass
+    });
     await copyOrShare(msg, 'Invito Nurvan');
     practiceToast('Creato ' + firstName + '. Utente ' + user, 'success');
     try { alert('Invito pronto.\n\n' + msg + (intakeMode === 'new' ? '\n\nAl primo accesso compilerà il questionario.' : '\n\nTransizione: entra senza questionario.')); } catch (_) {}
