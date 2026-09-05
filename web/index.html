@@ -51511,9 +51511,46 @@ function ensureCoachHeaderControls(coachSession) {
     '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;flex-shrink:0;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="coachHeaderBack()">INDIETRO</button>';
 }
 
-function switchCoachClientFromHeader(id) {
+function coachStaySectionForSwitch() {
+  const view = (typeof currentView !== 'undefined') ? String(currentView || '') : '';
+  if (view === 'coachChat' || view === 'clientChat') return { kind: 'chat' };
+  const domains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, calendar: 1, athlete: 1 };
+  if (domains[view] && store && store.coachViewingClient) return { kind: 'domain', domain: view };
+  if (view === 'coachClient') return { kind: 'scheda' };
+  if (view === 'coachHub' || view === 'coachLibrary') return { kind: 'stay', view: view };
+  if (store && store.coachViewingClient && domains[view]) return { kind: 'domain', domain: view };
+  return { kind: 'scheda' };
+}
+
+async function switchCoachClientFromHeader(id) {
   if (!id) return;
-  if (store.coachViewingClient) leaveCoachClientView(true);
+  const prevId = store.coachWorkspace && store.coachWorkspace.clientId ? String(store.coachWorkspace.clientId) : '';
+  if (String(id) === prevId) return;
+  if (store.coachAssigning) {
+    practiceToast('Annulla o invia l’assegnazione prima di cambiare cliente', 'warning');
+    ensureCoachHeaderControls();
+    return;
+  }
+  const stay = coachStaySectionForSwitch();
+  if (stay.kind === 'chat') {
+    if (store.coachViewingClient) await leaveCoachClientView(true);
+    openCoachClientChat(id);
+    return;
+  }
+  if (stay.kind === 'domain') {
+    await leaveCoachClientView(true);
+    store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: id });
+    if (typeof persist === 'function') persist();
+    await enterCoachClientView(stay.domain, { silent: true });
+    return;
+  }
+  if (stay.kind === 'stay') {
+    store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: id });
+    if (typeof persist === 'function') persist();
+    ensureCoachHeaderControls();
+    return;
+  }
+  if (store.coachViewingClient) await leaveCoachClientView(true);
   openCoachClient(id);
 }
 
@@ -53075,7 +53112,7 @@ function applyClientPayloadToLocal(payload) {
   }
 }
 
-async function enterCoachClientView(domain) {
+async function enterCoachClientView(domain, opts) {
   const id = store.coachWorkspace && store.coachWorkspace.clientId;
   if (!id) return;
   if (typeof withBusy === 'function') {
@@ -53110,7 +53147,7 @@ async function enterCoachClientView(domain) {
   ensureClientViewBanner();
   startClientLivePoll();
   navigate(domain || 'training');
-  practiceToast('Stai vedendo i dati del cliente', 'success');
+  if (!(opts && opts.silent)) practiceToast('Stai vedendo i dati del cliente', 'success');
 }
 
 function startClientLivePoll() {

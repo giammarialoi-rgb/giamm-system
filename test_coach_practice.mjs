@@ -211,7 +211,7 @@ assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY")
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v39-coach") && sw.includes("isAsset"), "SW push + cache v39 + asset no-html fallback");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v40-coach") && sw.includes("isAsset"), "SW push + cache v40 + asset no-html fallback");
 assert(base.includes("updateSupplementField") && base.includes("markSupplementsDirty") && base.includes("DOSAGGIO"), "supplement inline edit fields");
 assert(ui.includes("benvenuto nel mio servizio coaching") && practice.includes("benvenuto nel mio servizio coaching") && ui.includes("formatInviteShareText"), "client invite welcome message");
 assert(ui.includes("intakeAllergiesHtml") && ui.includes("ALIMENTAZIONE · ALLERGIE") && practice.includes("allergies") && practice.includes("profileFromIntake"), "intake optional allergies/intolerances");
@@ -233,8 +233,10 @@ assert(base.includes("id: 'BRACCIA'") && base.includes("id: 'GAMBE'") && base.in
 assert(base.includes("workoutSessionTimerHtml") && base.includes("pauseWorkoutSessionTimer") && base.includes("sessionElapsedMs"), "session timer pause/stop");
 assert(ui.includes("ensureOfflineSyncListeners") && ui.includes("flushAllOfflineQueues") && ui.includes("account-sync") && base.includes("queueAccountSyncIfOffline"), "web offline queue + reconnect flush");
 assert(base.includes("onProfilePhotoSelected") && base.includes("compressProfilePhoto") && base.includes("photoThumb"), "profile photo upload");
-assert(fs.readFileSync(path.join(__dirname, "app/build.gradle"), "utf8").includes('versionName "1.5.32"'), "APK version 1.5.32");
+assert(fs.readFileSync(path.join(__dirname, "app/build.gradle"), "utf8").includes('versionName "1.5.33"'), "APK version 1.5.33");
 assert(ui.includes("Cosa vuoi assegnare a") && ui.includes("forceAsk: true") && base.includes("forceAsk"), "assign from library asks domains");
+assert(ui.includes("coachStaySectionForSwitch") && ui.includes("openCoachClientChat(id)") && ui.includes("stay.kind === 'chat'"), "header client switch stays on current section");
+assert(fs.existsSync(path.join(__dirname, "docs/APP_FUNZIONI.md")), "app functions catalog file exists");
 
 const build = fs.readFileSync(path.join(__dirname, "build_master25.mjs"), "utf8");
 assert(build.includes("coach-practice-ui.js"), "build injects UI");
