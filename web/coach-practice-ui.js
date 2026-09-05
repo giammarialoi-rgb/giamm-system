@@ -482,6 +482,7 @@ function ensurePracticeStyle() {
   }
   s.textContent = [
     '.cp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10110;display:none;align-items:center;justify-content:center;padding:16px;}',
+    '#cp-tutorial.cp-overlay{z-index:10155;}',
     '#cp-modal.cp-overlay{z-index:10120;}',
     '.cp-panel{background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:16px;color:#eee !important;-webkit-text-fill-color:#eee;}',
     '.cp-panel h2{color:var(--gold);font-size:16px;margin:0 0 8px;}',
@@ -1432,13 +1433,20 @@ async function submitClientIntake() {
   }
 }
 
+function isClientTutorialVisible() {
+  const el = document.getElementById('cp-tutorial');
+  return !!(el && el.style.display === 'flex');
+}
+
 function showClientTutorial(force) {
   if (!force && isClientTutorialDone()) return;
   ensurePracticeStyle();
   ensurePracticeOverlays();
   const p = document.getElementById('cp-tutorial-panel');
   if (!p) return;
-  window.__cpTutStep = 0;
+  try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
+  try { hideA2hsSheet(); } catch (_) {}
+  if (!isClientTutorialVisible() || force) window.__cpTutStep = 0;
   drawClientTutorial();
   showOverlay('cp-tutorial', true);
 }
@@ -1459,25 +1467,60 @@ function markClientTutorialDone() {
   if (typeof persist === 'function') persist();
 }
 
+function advanceClientTutorial(delta) {
+  const n = CLIENT_TUTORIAL_STEPS.length;
+  let i = Number(window.__cpTutStep);
+  if (!Number.isFinite(i) || i < 0) i = 0;
+  i = Math.max(0, Math.min(n - 1, i + (Number(delta) || 0)));
+  window.__cpTutStep = i;
+  drawClientTutorial();
+}
+
 function drawClientTutorial() {
   const p = document.getElementById('cp-tutorial-panel');
   if (!p) return;
-  const i = window.__cpTutStep || 0;
+  const n = CLIENT_TUTORIAL_STEPS.length;
+  let i = Number(window.__cpTutStep);
+  if (!Number.isFinite(i) || i < 0) i = 0;
+  if (i >= n) i = n - 1;
+  window.__cpTutStep = i;
   const step = CLIENT_TUTORIAL_STEPS[i] || CLIENT_TUTORIAL_STEPS[0];
-  p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">GUIDA ' + (i + 1) + '/5 · solo al primo accesso</div>' +
+  p.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">GUIDA ' + (i + 1) + '/' + n + ' · solo al primo accesso</div>' +
+    '<button type="button" class="btn btn-outline" data-tut="skip" style="font-size:10px;padding:4px 10px;flex-shrink:0;">SALTA</button></div>' +
     '<h2>' + esc(step.t) + '</h2>' +
     '<p class="cp-help">' + esc(step.d) + '</p>' +
     '<div style="display:flex;gap:8px;">' +
-    (i > 0 ? '<button class="btn btn-outline" style="flex:1;" onclick="window.__cpTutStep--;drawClientTutorial()">INDIETRO</button>' : '') +
-    (i < CLIENT_TUTORIAL_STEPS.length - 1
-      ? '<button class="btn btn-primary" style="flex:1;" onclick="window.__cpTutStep++;drawClientTutorial()">AVANTI</button>'
-      : '<button class="btn btn-primary" style="flex:1;" onclick="closeClientTutorial()">HO CAPITO</button>') +
+    (i > 0 ? '<button type="button" class="btn btn-outline" data-tut="back" style="flex:1;">INDIETRO</button>' : '') +
+    (i < n - 1
+      ? '<button type="button" class="btn btn-primary" data-tut="next" style="flex:1;">AVANTI</button>'
+      : '<button type="button" class="btn btn-primary" data-tut="done" style="flex:1;">HO CAPITO</button>') +
     '</div>';
+  const bind = function (sel, fn) {
+    const btn = p.querySelector(sel);
+    if (!btn) return;
+    btn.addEventListener('click', function (ev) {
+      try { if (ev) { ev.preventDefault(); ev.stopPropagation(); } } catch (_) {}
+      fn();
+    });
+  };
+  bind('[data-tut="back"]', function () { advanceClientTutorial(-1); });
+  bind('[data-tut="next"]', function () { advanceClientTutorial(1); });
+  bind('[data-tut="done"]', function () { closeClientTutorial(); });
+  bind('[data-tut="skip"]', function () { closeClientTutorial(); });
 }
 
 function closeClientTutorial() {
   markClientTutorialDone();
   showOverlay('cp-tutorial', false);
+  const pending = window.__cpA2hsPending;
+  window.__cpA2hsPending = null;
+  if (pending) {
+    const tok = pending === true ? (store && store.inviteToken) : pending;
+    setTimeout(function () {
+      try { maybeOfferClientHomeInstall(tok); } catch (_) {}
+    }, 400);
+  }
 }
 
 function openCoachOrUnlock() {
@@ -3001,6 +3044,10 @@ function maybeOfferClientHomeInstall(token) {
     maybeSubscribeWebPush();
     return;
   }
+  if (isClientTutorialVisible()) {
+    window.__cpA2hsPending = token || store.inviteToken || true;
+    return;
+  }
   const t = token || store.inviteToken || '';
   try {
     if (t && localStorage.getItem(a2hsDismissKey(t)) === '1') return;
@@ -3045,11 +3092,13 @@ function maybeOfferClientHomeInstall(token) {
         deferred.prompt();
         Promise.resolve(deferred.userChoice).then(function () {
           window.__nurvanDeferredInstall = null;
+          try { if (t) localStorage.setItem(a2hsDismissKey(t), '1'); } catch (_) {}
           hideA2hsSheet();
           maybeSubscribeWebPush();
         }).catch(function () { hideA2hsSheet(); });
         return;
       }
+      try { if (t) localStorage.setItem(a2hsDismissKey(t), '1'); } catch (_) {}
       hideA2hsSheet();
     };
   }
@@ -5115,6 +5164,7 @@ window.showClientIntake = showClientIntake;
 window.submitClientIntake = submitClientIntake;
 window.showClientTutorial = showClientTutorial;
 window.drawClientTutorial = drawClientTutorial;
+window.advanceClientTutorial = advanceClientTutorial;
 window.closeClientTutorial = closeClientTutorial;
 window.showDemoUnlock = showDemoUnlock;
 window.openCoachOrUnlock = openCoachOrUnlock;
