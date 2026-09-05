@@ -44601,13 +44601,15 @@ function detectProgramDomains(prog) {
   return domains;
 }
 
-function openImportDomainPicker(available, prechecked) {
+function openImportDomainPicker(available, prechecked, opts) {
+  opts = opts || {};
   return new Promise(function (resolve) {
     if (!available || !available.length) {
       resolve(['training']);
       return;
     }
-    if (available.length === 1) {
+    // Single domain: skip only for generic import; assign-from-library always asks
+    if (available.length === 1 && !opts.forceAsk) {
       resolve(available.slice());
       return;
     }
@@ -44619,11 +44621,13 @@ function openImportDomainPicker(available, prechecked) {
       exams: 'Esami'
     };
     const pre = Array.isArray(prechecked) && prechecked.length ? prechecked : available;
+    const title = opts.title || 'Cosa vuoi importare?';
+    const help = opts.help || 'Seleziona una o piu sezioni. Quelle non scelte restano come sono (non vengono cancellate).';
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10130;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:16px;';
     overlay.innerHTML = '<div class="card" style="max-width:420px;width:100%;padding:16px;background:#111;border:1px solid var(--gold);color:#eee;">' +
-      '<h3 style="color:var(--gold);margin:0 0 8px;font-size:15px;">Cosa vuoi importare?</h3>' +
-      '<p style="font-size:12px;color:#bbb;margin:0 0 12px;">Seleziona una o piu sezioni. Quelle non scelte restano come sono (non vengono cancellate).</p>' +
+      '<h3 style="color:var(--gold);margin:0 0 8px;font-size:15px;">' + title + '</h3>' +
+      '<p style="font-size:12px;color:#bbb;margin:0 0 12px;">' + help + '</p>' +
       available.map(function (d) {
         const ck = pre.indexOf(d) >= 0 ? ' checked' : '';
         return '<label style="display:flex;gap:10px;align-items:flex-start;margin:8px 0;font-size:13px;color:#eee !important;-webkit-text-fill-color:#eee !important;width:100%;box-sizing:border-box;">' +
@@ -56086,38 +56090,107 @@ function openCoachLibraryAssignPicker(clientId, name) {
   showOverlay('cp-assign', true);
 }
 
-function applyCoachLibraryToAssign(clientId, name, entryId) {
+async function applyCoachLibraryToAssign(clientId, name, entryId) {
   const entry = (store.coachProgramLibrary || []).find(function (e) { return e && e.id === entryId; });
   if (!entry || !entry.payload) {
     practiceToast('Scheda non trovata', 'danger');
     return;
   }
+  let prog = entry.payload;
+  try { prog = JSON.parse(JSON.stringify(entry.payload)); } catch (_) {}
+  try {
+    if (typeof normalizeProgram === 'function') prog = normalizeProgram(prog);
+  } catch (_) {}
+  const available = (typeof detectProgramDomains === 'function')
+    ? detectProgramDomains(prog)
+    : ['training', 'nutrition', 'supplements', 'therapy', 'exams'].filter(function (d) {
+      if (d === 'training') return Array.isArray(prog.weeks) && prog.weeks.length;
+      if (d === 'nutrition') return !!(prog.nutrition);
+      if (d === 'supplements') return !!(prog.supplementation);
+      if (d === 'therapy') return !!(prog.therapy);
+      if (d === 'exams') return !!(prog.exams);
+      return false;
+    });
+  if (!available.length) {
+    practiceToast('Questa scheda non ha sezioni da assegnare', 'danger');
+    return;
+  }
+  // Always ask: even if the library entry has everything, coach may omit e.g. integrazione
+  const selected = (typeof openImportDomainPicker === 'function')
+    ? await openImportDomainPicker(available, available, {
+      forceAsk: true,
+      title: 'Cosa vuoi assegnare a ' + (name || 'cliente') + '?',
+      help: 'Anche se la scheda contiene tutto, deseleziona ciò che non vuoi (es. integrazione). Le sezioni non scelte restano come sono già sul cliente.'
+    })
+    : available.slice();
+  if (!selected || !selected.length) return;
+
   if (!store.coachAssigning) {
     store.coachAssigning = { clientId: clientId, name: name, mode: 'mylib' };
     store.__cpAssignBarExpanded = false;
     window.__cpAssignBackup = snapshotCoachMaster();
+    seedAssignSandboxFromClient(clientId);
   }
   try {
-    let prog = entry.payload;
-    try { prog = JSON.parse(JSON.stringify(entry.payload)); } catch (_) {}
-    if (typeof normalizeProgram === 'function') prog = normalizeProgram(prog);
-    DATA = prog;
-    store.activeProgram = prog;
-    store.activeProgramId = prog.id || ('lib_' + entryId);
-    if (prog.nutrition) { store.nutrition = prog.nutrition; DATA.nutrition = prog.nutrition; }
-    if (prog.supplementation) { store.supplementation = prog.supplementation; DATA.supplementation = prog.supplementation; }
-    if (prog.therapy) { store.therapy = prog.therapy; DATA.therapy = prog.therapy; }
-    if (prog.exams) { store.exams = prog.exams; DATA.exams = prog.exams; }
-    if (typeof currentWeek !== 'undefined') currentWeek = 1;
-    if (typeof currentDay !== 'undefined') currentDay = 0;
+    let base;
+    try {
+      base = (typeof DATA !== 'undefined' && DATA && typeof DATA === 'object')
+        ? JSON.parse(JSON.stringify(DATA))
+        : emptyClientAssignDraft();
+    } catch (_) {
+      base = emptyClientAssignDraft();
+    }
+    if (!base || typeof base !== 'object') base = emptyClientAssignDraft();
+    if (!Array.isArray(base.weeks)) base.weeks = [];
+
+    const allow = function (d) { return selected.indexOf(d) >= 0; };
+    if (allow('training')) {
+      base.weeks = Array.isArray(prog.weeks) ? prog.weeks : [];
+      if (prog.title) base.title = prog.title;
+      if (prog.meta) base.meta = prog.meta;
+      if (prog.notes) base.notes = prog.notes;
+      base.id = prog.id || ('lib_' + entryId);
+      if (typeof currentWeek !== 'undefined') currentWeek = 1;
+      if (typeof currentDay !== 'undefined') currentDay = 0;
+    }
+    if (allow('nutrition') && prog.nutrition) {
+      base.nutrition = prog.nutrition;
+      store.nutrition = prog.nutrition;
+    }
+    if (allow('supplements') && prog.supplementation) {
+      base.supplementation = prog.supplementation;
+      store.supplementation = prog.supplementation;
+    }
+    if (allow('therapy') && prog.therapy) {
+      base.therapy = prog.therapy;
+      store.therapy = prog.therapy;
+    }
+    if (allow('exams') && prog.exams) {
+      base.exams = prog.exams;
+      store.exams = prog.exams;
+    }
+    // Keep non-selected domains on base (client seed); sync store mirrors
+    if (!allow('nutrition')) store.nutrition = base.nutrition || null;
+    if (!allow('supplements')) store.supplementation = base.supplementation || null;
+    if (!allow('therapy')) store.therapy = base.therapy || null;
+    if (!allow('exams')) store.exams = base.exams || null;
+
+    DATA = base;
+    store.activeProgram = base;
+    store.activeProgramId = base.id || ('lib_' + entryId);
   } catch (err) {
     practiceToast((err && err.message) || 'Caricamento fallito', 'danger');
     return;
   }
   showOverlay('cp-assign', false);
   ensureAssignBanner();
-  navigate('training');
-  practiceToast('Scheda dal tuo database caricata nello spazio cliente. Modifica e INVIA.', 'success');
+  const go = selected.indexOf('training') >= 0 ? 'training'
+    : (selected.indexOf('nutrition') >= 0 ? 'nutrition'
+      : (selected.indexOf('supplements') >= 0 ? 'supplements'
+        : (selected.indexOf('therapy') >= 0 ? 'therapy'
+          : (selected.indexOf('exams') >= 0 ? 'exams' : 'training'))));
+  navigate(go);
+  practiceToast('Sezioni selezionate caricate nello spazio cliente. Modifica e INVIA.', 'success');
 }
 
 async function refreshAthleteMe() {
