@@ -3443,6 +3443,252 @@ function scaleFoodRow(food, factor) {
   return f;
 }
 
+/** Embedded runtime cache; full DB loaded from allergen-intolerance-catalog.json */
+let __allergenCatalogCache = null;
+
+function foldAllergenText(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[''`´]/g, '');
+}
+
+function getAllergenIntoleranceCatalog() {
+  if (__allergenCatalogCache && Array.isArray(__allergenCatalogCache.items)) return __allergenCatalogCache;
+  if (window.__allergenIntoleranceCatalog && Array.isArray(window.__allergenIntoleranceCatalog.items)) {
+    __allergenCatalogCache = window.__allergenIntoleranceCatalog;
+    return __allergenCatalogCache;
+  }
+  return { version: 0, items: [] };
+}
+
+async function ensureAllergenIntoleranceCatalog() {
+  if (getAllergenIntoleranceCatalog().items && getAllergenIntoleranceCatalog().items.length) {
+    return getAllergenIntoleranceCatalog();
+  }
+  try {
+    const res = await fetch('allergen-intolerance-catalog.json', { cache: 'no-store' });
+    if (res && res.ok) {
+      const json = await res.json();
+      if (json && Array.isArray(json.items) && json.items.length) {
+        window.__allergenIntoleranceCatalog = json;
+        __allergenCatalogCache = json;
+        return json;
+      }
+    }
+  } catch (_) {}
+  try {
+    const origin = (typeof COACH_API_ORIGIN === 'string' && COACH_API_ORIGIN) ? COACH_API_ORIGIN : '';
+    if (origin) {
+      const res2 = await fetch(origin.replace(/\/$/, '') + '/allergen-intolerance-catalog.json', { cache: 'no-store' });
+      if (res2 && res2.ok) {
+        const json = await res2.json();
+        if (json && Array.isArray(json.items)) {
+          window.__allergenIntoleranceCatalog = json;
+          __allergenCatalogCache = json;
+          return json;
+        }
+      }
+    }
+  } catch (_) {}
+  return getAllergenIntoleranceCatalog();
+}
+
+function foodHitsAllergenItem(foodName, item) {
+  const blob = foldAllergenText(foodName);
+  if (!blob || !item) return false;
+  const safe = (item.safe_phrases || []).some(function (p) {
+    const phrase = foldAllergenText(p);
+    return phrase && blob.indexOf(phrase) >= 0;
+  });
+  if (safe) return false;
+  return (item.keywords || []).some(function (k) {
+    const key = foldAllergenText(k);
+    return key && blob.indexOf(key) >= 0;
+  });
+}
+
+function filterFoodForRestrictions(food, restrictionIds, catalog) {
+  if (!food || !restrictionIds || !restrictionIds.length) return food;
+  const items = (catalog && catalog.items) || [];
+  const hits = items.filter(function (it) {
+    return restrictionIds.indexOf(it.id) >= 0 && foodHitsAllergenItem(food.name || food.food || '', it);
+  });
+  if (!hits.length) return food;
+  for (let i = 0; i < hits.length; i++) {
+    const subs = hits[i].substitutes || [];
+    for (let j = 0; j < subs.length; j++) {
+      const sub = subs[j];
+      if (!sub || !sub.name) continue;
+      const stillHit = restrictionIds.some(function (rid) {
+        const rule = items.find(function (x) { return x.id === rid; });
+        return rule && foodHitsAllergenItem(sub.name, rule);
+      });
+      if (!stillHit) {
+        return Object.assign({}, sub, {
+          notes: (sub.notes ? sub.notes + ' · ' : '') + 'Sostituto per ' + (hits.map(function (h) { return h.label; }).join(', '))
+        });
+      }
+    }
+  }
+  return null;
+}
+
+function filterMealTemplateForRestrictions(templates, restrictionIds) {
+  const catalog = getAllergenIntoleranceCatalog();
+  if (!restrictionIds || !restrictionIds.length || !templates) return templates;
+  const out = {};
+  Object.keys(templates).forEach(function (mealName) {
+    const foods = (templates[mealName] || []).map(function (f) {
+      return filterFoodForRestrictions(f, restrictionIds, catalog);
+    }).filter(Boolean);
+    out[mealName] = foods.length ? foods : [{
+      name: 'Pasto semplice (senza allergeni selezionati)',
+      quantity: 1,
+      unit: 'pasto',
+      kcal: 200,
+      protein: 20,
+      carbs: 20,
+      fat: 5,
+      notes: 'Compila a mano: template vuoto dopo filtri allergie/intolleranze'
+    }];
+  });
+  return out;
+}
+
+function applyFreeMealsToNutritionPlan(plan, freeDayLabels) {
+  if (!plan || !Array.isArray(plan.days) || !freeDayLabels || !freeDayLabels.length) return plan;
+  const wanted = freeDayLabels.map(function (d) { return foldAllergenText(d).slice(0, 4); });
+  plan.days.forEach(function (day) {
+    const base = foldAllergenText(String(day.day || '').split('·')[0]).slice(0, 4);
+    if (wanted.indexOf(base) < 0) return;
+    const freeMeal = {
+      name: 'Pasto libero',
+      free: true,
+      foods: [{
+        name: 'Pasto libero (a scelta)',
+        quantity: 1,
+        unit: 'pasto',
+        kcal: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        notes: 'Non prescritto: scegli tu cosa mangiare in questo slot'
+      }]
+    };
+    if (!Array.isArray(day.meals)) day.meals = [];
+    let idx = day.meals.findIndex(function (m) {
+      return /spuntino/i.test(String(m.name || '')) && !/mattina/i.test(String(m.name || ''));
+    });
+    if (idx < 0) idx = day.meals.length ? day.meals.length - 1 : -1;
+    if (idx >= 0) day.meals[idx] = freeMeal;
+    else day.meals.push(freeMeal);
+    if (!/libero/i.test(String(day.day || ''))) day.day = String(day.day || '') + ' · libero';
+  });
+  return plan;
+}
+
+function nutritionRestrictionChipsHtml(selectedIds) {
+  const catalog = getAllergenIntoleranceCatalog();
+  const selected = selectedIds || [];
+  if (!catalog.items || !catalog.items.length) {
+    return '<div class="cp-help">Catalogo allergie in caricamento…</div>';
+  }
+  const allergies = catalog.items.filter(function (x) { return x.kind === 'allergy'; });
+  const intolerances = catalog.items.filter(function (x) { return x.kind === 'intolerance'; });
+  function group(title, list) {
+    return '<div style="font-size:10px;color:var(--gold);font-weight:800;margin:8px 0 6px;">' + title + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+      list.map(function (it) {
+        const on = selected.indexOf(it.id) >= 0;
+        return '<label style="display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid ' + (on ? 'var(--gold)' : '#333') + ';border-radius:8px;background:#141414;font-size:10px;color:#eee;">' +
+          '<input type="checkbox" data-restr="' + it.id + '" ' + (on ? 'checked' : '') + ' onchange="onGenNutritionRestrictionChange()" style="width:14px;height:14px;">' +
+          esc(it.label) + '</label>';
+      }).join('') + '</div>';
+  }
+  return group('ALLERGIE (EU)', allergies) + group('INTOLLERANZE', intolerances) +
+    '<div style="font-size:9px;color:#666;margin-top:8px;line-height:1.35;">Il piano esclude/sostituisce cibi il cui nome coincide con i keyword del catalogo. Non sostituisce parere medico.</div>';
+}
+
+function onGenNutritionRestrictionChange() {
+  const st = window.__genNutrPlan || {};
+  const boxes = document.querySelectorAll('#gen-nutr-restrictions input[data-restr]');
+  st.restrictions = [];
+  boxes.forEach(function (b) {
+    if (b.checked) st.restrictions.push(b.getAttribute('data-restr'));
+  });
+  window.__genNutrPlan = st;
+  try {
+    if (store && store.profile) store.profile.allergies = (st.restrictions || []).slice();
+  } catch (_) {}
+}
+
+function onGenNutritionFreeToggle() {
+  const st = window.__genNutrPlan || {};
+  const en = document.getElementById('gen-nutr-free-enable');
+  st.freeEnabled = !!(en && en.checked);
+  const box = document.getElementById('gen-nutr-free-box');
+  if (box) box.style.display = st.freeEnabled ? 'block' : 'none';
+  window.__genNutrPlan = st;
+  refreshGenNutritionFreeDays();
+}
+
+function onGenNutritionFreeCountChange() {
+  const st = window.__genNutrPlan || {};
+  const el = document.getElementById('gen-nutr-free-count');
+  st.freeCount = Math.min(7, Math.max(1, parseInt(el && el.value, 10) || 1));
+  window.__genNutrPlan = st;
+  refreshGenNutritionFreeDays();
+}
+
+function refreshGenNutritionFreeDays() {
+  const st = window.__genNutrPlan || {};
+  const host = document.getElementById('gen-nutr-free-days');
+  if (!host) return;
+  const dayCount = Math.min(7, Math.max(1, parseInt((document.getElementById('gen-nutr-days') || {}).value, 10) || st.dayCount || 7));
+  const freeCount = Math.min(dayCount, Math.max(1, Number(st.freeCount) || 1));
+  st.freeCount = freeCount;
+  const days = (typeof WEEKDAY_IT !== 'undefined' ? WEEKDAY_IT : ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica']).slice(0, dayCount);
+  const selected = Array.isArray(st.freeDays) ? st.freeDays.slice() : [];
+  host.innerHTML = '<div style="font-size:10px;color:#aaa;margin-bottom:6px;">Seleziona ' + freeCount + ' giorn' + (freeCount === 1 ? 'o' : 'i') + ' con pasto libero</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">' +
+    days.map(function (d) {
+      const on = selected.indexOf(d) >= 0;
+      return '<label style="display:flex;align-items:center;gap:6px;padding:8px;border:1px solid ' + (on ? 'var(--gold)' : '#333') + ';border-radius:8px;background:#111;font-size:11px;color:#eee;">' +
+        '<input type="checkbox" data-free-day="' + d + '" ' + (on ? 'checked' : '') + ' onchange="onGenNutritionFreeDayChange()" style="width:16px;height:16px;">' +
+        esc(d) + '</label>';
+    }).join('') + '</div>' +
+    '<div id="gen-nutr-free-hint" style="font-size:10px;color:#888;margin-top:6px;"></div>';
+  onGenNutritionFreeDayChange();
+}
+
+function onGenNutritionFreeDayChange() {
+  const st = window.__genNutrPlan || {};
+  const boxes = document.querySelectorAll('#gen-nutr-free-days input[data-free-day]');
+  const picked = [];
+  boxes.forEach(function (b) {
+    if (b.checked) picked.push(b.getAttribute('data-free-day'));
+  });
+  const need = Math.min(7, Math.max(1, Number(st.freeCount) || 1));
+  if (picked.length > need) {
+    const overflow = picked.slice(need);
+    overflow.forEach(function (d) {
+      boxes.forEach(function (b) {
+        if (b.getAttribute('data-free-day') === d) b.checked = false;
+      });
+    });
+    st.freeDays = picked.slice(0, need);
+  } else {
+    st.freeDays = picked;
+  }
+  window.__genNutrPlan = st;
+  const hint = document.getElementById('gen-nutr-free-hint');
+  if (hint) {
+    const n = (st.freeDays || []).length;
+    hint.textContent = n === need
+      ? ('Ok: ' + n + ' / ' + need + ' giorni con pasto libero.')
+      : ('Selezionati ' + n + ' / ' + need + ' — completa la selezione.');
+    hint.style.color = n === need ? '#6c6' : '#c96';
+  }
+}
+
 const NUTRITION_MEAL_TEMPLATES_ON = {
   Colazione: [
     { name: 'Avena', quantity: 60, unit: 'g', kcal: 230, protein: 8, carbs: 40, fat: 4 },
@@ -3633,7 +3879,10 @@ function fillNutritionDayWithMeals(dayLabel, targets, opts) {
   opts = opts || {};
   const isOn = opts.trainingDay !== false;
   const mealCount = opts.mealCount || 4;
-  const templates = opts.templates || nutritionComboTemplates(opts.comboIndex, isOn);
+  let templates = opts.templates || nutritionComboTemplates(opts.comboIndex, isOn);
+  if (opts.restrictions && opts.restrictions.length) {
+    templates = filterMealTemplateForRestrictions(templates, opts.restrictions);
+  }
   const kcalTarget = isOn ? targets.tdee : Math.round(targets.tdee * 0.88);
   const mealNames = mealCount === 2 ? ['Colazione', 'Cena']
     : mealCount === 3 ? ['Colazione', 'Pranzo', 'Cena']
@@ -3670,26 +3919,38 @@ function buildWeeklyNutritionPlan(overrides, weekOpts) {
   const pattern = buildOnOffPattern(onCount, offCount).slice(0, dayCount);
   while (pattern.length < dayCount) pattern.push(true);
   const mealCount = weekOpts.mealCount || 4;
+  const restrictions = Array.isArray(weekOpts.restrictions) ? weekOpts.restrictions : [];
   const days = WEEKDAY_IT.slice(0, dayCount).map(function (label, i) {
     return fillNutritionDayWithMeals(label, targets, {
       trainingDay: pattern[i],
       mealCount: mealCount,
-      comboIndex: i % comboCount
+      comboIndex: i % comboCount,
+      restrictions: restrictions
     });
   });
   const pctNote = (targets.proteinPct != null)
     ? (' Macro ' + targets.proteinPct + '/' + targets.carbsPct + '/' + targets.fatPct + '%.')
     : '';
-  return {
+  const restrNote = restrictions.length
+    ? (' Filtri: ' + restrictions.join(', ') + '.')
+    : '';
+  let plan = {
     present: true,
     plan_name: weekOpts.planName || ('Piano · ' + dayCount + ' gg · ' + comboCount + ' combinazioni'),
     daily_calories_target: targets.tdee,
     daily_protein_target: targets.protein,
     daily_carbs_target: targets.carbs,
     daily_fats_target: targets.fat,
-    notes: 'Piano organizzativo evidence-informed (proteine ~1.6–2.2 g/kg; non è diagnosi o terapia).' + pctNote,
+    notes: 'Piano organizzativo evidence-informed (proteine ~1.6–2.2 g/kg; non è diagnosi o terapia).' + pctNote + restrNote,
+    restrictions: restrictions.slice(),
     days: days
   };
+  if (Array.isArray(weekOpts.freeDays) && weekOpts.freeDays.length) {
+    plan = applyFreeMealsToNutritionPlan(plan, weekOpts.freeDays);
+    plan.free_days = weekOpts.freeDays.slice();
+    plan.notes += ' Pasti liberi: ' + weekOpts.freeDays.join(', ') + '.';
+  }
+  return plan;
 }
 
 function buildNutritionPlanFromProfile(overrides, weekOpts) {
@@ -8065,17 +8326,23 @@ function macroPctOptionsHtml(selected) {
   return html;
 }
 
-function openGenerateNutritionPlanWizard() {
+async function openGenerateNutritionPlanWizard() {
   const existing = document.getElementById('gen-nutrition-plan-modal');
   if (existing) existing.remove();
+  await ensureAllergenIntoleranceCatalog();
   const base = computeNutritionTargetsFromProfile({});
+  const profileRestr = (store && store.profile && Array.isArray(store.profile.allergies)) ? store.profile.allergies.slice() : [];
   window.__genNutrPlan = {
     mode: 'auto',
     p: 40, c: 40, f: 20,
     dayCount: 7,
     comboCount: 2,
     mealCount: 4,
-    kcal: base.tdee || 2200
+    kcal: base.tdee || 2200,
+    freeEnabled: false,
+    freeCount: 1,
+    freeDays: [],
+    restrictions: profileRestr
   };
   const overlay = document.createElement('div');
   overlay.id = 'gen-nutrition-plan-modal';
@@ -8086,7 +8353,7 @@ function openGenerateNutritionPlanWizard() {
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;">GENERA ALIMENTAZIONE</div>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'gen-nutrition-plan-modal\').remove()">CHIUDI</button></div>' +
-    '<div style="font-size:12px;color:#bbb;margin-bottom:10px;line-height:1.4;">Automatico dal profilo, oppure preciso con distribuzione macros, giorni e combinazioni diverse.</div>' +
+    '<div style="font-size:12px;color:#bbb;margin-bottom:10px;line-height:1.4;">Automatico dal profilo, oppure preciso con macros, pasti liberi e filtri allergie/intolleranze.</div>' +
     '<div style="display:flex;gap:6px;margin-bottom:12px;">' +
     '<button type="button" id="gen-nutr-mode-auto" class="btn btn-primary" style="flex:1;font-size:11px;" onclick="setGenNutritionMode(\'auto\')">AUTOMATICO</button>' +
     '<button type="button" id="gen-nutr-mode-precise" class="btn btn-outline" style="flex:1;font-size:11px;" onclick="setGenNutritionMode(\'precise\')">PRECISO</button></div>' +
@@ -8100,7 +8367,7 @@ function openGenerateNutritionPlanWizard() {
     '<div id="gen-nutr-macro-preview" style="font-size:11px;color:var(--gold);margin-bottom:4px;">40% / 40% / 20%</div>' +
     '<div id="gen-nutr-gram-preview" style="font-size:10px;color:#888;"></div></div>' +
     '<div style="margin-bottom:10px;"><label style="font-size:10px;color:#ccc;">Applica per quanti giorni (1–7)</label>' +
-    '<select id="gen-nutr-days" onchange="window.__genNutrPlan.dayCount=parseInt(this.value,10);refreshGenNutritionPreview()" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
+    '<select id="gen-nutr-days" onchange="window.__genNutrPlan.dayCount=parseInt(this.value,10);refreshGenNutritionPreview();refreshGenNutritionFreeDays()" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     [1,2,3,4,5,6,7].map(function (n) { return '<option value="' + n + '"' + (n === 7 ? ' selected' : '') + '>' + n + (n === 1 ? ' giorno' : ' giorni') + '</option>'; }).join('') +
     '</select></div>' +
     '<div style="margin-bottom:10px;"><label style="font-size:10px;color:#ccc;">Combinazioni diverse di pasti (1–7)</label>' +
@@ -8113,6 +8380,18 @@ function openGenerateNutritionPlanWizard() {
     '<option value="3">3 pasti</option><option value="4" selected>4 pasti</option><option value="5">5 pasti</option></select></div>' +
     '<div style="margin-bottom:12px;"><label style="font-size:10px;color:#ccc;">Target kcal (opzionale)</label>' +
     '<input id="gen-nutr-kcal" type="number" value="' + (base.tdee || 2200) + '" oninput="window.__genNutrPlan.kcal=parseInt(this.value,10)||0;refreshGenNutritionPreview()" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></div>' +
+    '<div style="margin-bottom:12px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
+    '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#eee;margin:0;">' +
+    '<input id="gen-nutr-free-enable" type="checkbox" onchange="onGenNutritionFreeToggle()" style="width:18px;height:18px;">' +
+    '<span><b style="color:var(--gold);">Inserisci pasti liberi</b><br><span style="font-size:10px;color:#888;">Sostituisce uno slot (di solito spuntino) nei giorni scelti</span></span></label>' +
+    '<div id="gen-nutr-free-box" style="display:none;margin-top:10px;">' +
+    '<label style="font-size:10px;color:#ccc;">Quanti pasti liberi</label>' +
+    '<select id="gen-nutr-free-count" onchange="onGenNutritionFreeCountChange()" style="width:100%;margin-top:4px;margin-bottom:8px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
+    [1,2,3,4,5,6,7].map(function (n) { return '<option value="' + n + '">' + n + '</option>'; }).join('') +
+    '</select><div id="gen-nutr-free-days"></div></div></div>' +
+    '<div style="margin-bottom:12px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:4px;">ALLERGIE E INTOLLERANZE</div>' +
+    '<div id="gen-nutr-restrictions">' + nutritionRestrictionChipsHtml(profileRestr) + '</div></div>' +
     '<button type="button" class="btn btn-primary" style="width:100%;" onclick="confirmGenerateNutritionPlan()">CREA PIANO</button>' +
     '</div>';
   document.body.appendChild(overlay);
@@ -8173,6 +8452,8 @@ function refreshGenNutritionPreview() {
 
 function confirmGenerateNutritionPlan() {
   const st = window.__genNutrPlan || {};
+  onGenNutritionRestrictionChange();
+  if (st.freeEnabled) onGenNutritionFreeDayChange();
   const dayCount = Math.min(7, Math.max(1, parseInt((document.getElementById('gen-nutr-days') || {}).value, 10) || st.dayCount || 7));
   const comboCount = Math.min(7, Math.max(1, parseInt((document.getElementById('gen-nutr-combos') || {}).value, 10) || st.comboCount || 2));
   const mealCount = Math.min(5, Math.max(2, parseInt((document.getElementById('gen-nutr-meals') || {}).value, 10) || st.mealCount || 4));
@@ -8185,6 +8466,18 @@ function confirmGenerateNutritionPlan() {
     overrides.carbsPct = st.c || 40;
     overrides.fatPct = st.f || 20;
   }
+  const restrictions = Array.isArray(st.restrictions) ? st.restrictions.slice() : [];
+  let freeDays = [];
+  if (st.freeEnabled) {
+    const need = Math.min(dayCount, Math.max(1, Number(st.freeCount) || 1));
+    freeDays = Array.isArray(st.freeDays) ? st.freeDays.slice() : [];
+    if (freeDays.length !== need) {
+      if (typeof showToast === 'function') {
+        showToast('Seleziona esattamente ' + need + ' giorn' + (need === 1 ? 'o' : 'i') + ' per i pasti liberi', 'warning');
+      }
+      return;
+    }
+  }
   const onCount = Math.min(dayCount, Math.max(1, Math.ceil(dayCount * 0.57)));
   const plan = buildWeeklyNutritionPlan(overrides, {
     dayCount: dayCount,
@@ -8192,6 +8485,8 @@ function confirmGenerateNutritionPlan() {
     mealCount: mealCount,
     onCount: onCount,
     offCount: Math.max(0, dayCount - onCount),
+    restrictions: restrictions,
+    freeDays: freeDays,
     planName: (st.mode === 'precise' ? 'Piano preciso' : 'Piano automatico') + ' · ' + dayCount + ' gg · ' + comboCount + ' comb.'
   });
   if (!DATA) window.DATA = {};
@@ -8199,6 +8494,9 @@ function confirmGenerateNutritionPlan() {
   if (typeof store !== 'undefined' && store) {
     store.nutrition = plan;
     store.__cpNutritionDirty = true;
+    store.__cpKeepLocalNutrition = true;
+    if (!store.profile) store.profile = {};
+    store.profile.allergies = restrictions.slice();
   }
   if (typeof persist === 'function') persist();
   const modal = document.getElementById('gen-nutrition-plan-modal');
@@ -8207,7 +8505,10 @@ function confirmGenerateNutritionPlan() {
   if (typeof currentNutritionDayIndex !== 'undefined') currentNutritionDayIndex = 0;
   if (typeof render === 'function') render();
   if (typeof showToast === 'function') {
-    showToast('Piano creato: ' + dayCount + ' giorni, ' + comboCount + ' combinazioni. Premi SALVA se fai altre modifiche.', 'success');
+    const bits = [dayCount + ' giorni', comboCount + ' combinazioni'];
+    if (freeDays.length) bits.push(freeDays.length + ' pasti liberi');
+    if (restrictions.length) bits.push(restrictions.length + ' filtri');
+    showToast('Piano creato: ' + bits.join(', ') + '. Premi SALVA se fai altre modifiche.', 'success');
   }
 }
 
@@ -17712,7 +18013,16 @@ if (typeof window !== 'undefined') {
   window.openGenerateNutritionPlanWizard = openGenerateNutritionPlanWizard;
   window.setGenNutritionMode = setGenNutritionMode;
   window.onGenNutritionMacroChange = onGenNutritionMacroChange;
+  window.onGenNutritionFreeToggle = onGenNutritionFreeToggle;
+  window.onGenNutritionFreeCountChange = onGenNutritionFreeCountChange;
+  window.onGenNutritionFreeDayChange = onGenNutritionFreeDayChange;
+  window.refreshGenNutritionFreeDays = refreshGenNutritionFreeDays;
+  window.onGenNutritionRestrictionChange = onGenNutritionRestrictionChange;
   window.confirmGenerateNutritionPlan = confirmGenerateNutritionPlan;
+  window.filterFoodForRestrictions = filterFoodForRestrictions;
+  window.applyFreeMealsToNutritionPlan = applyFreeMealsToNutritionPlan;
+  window.ensureAllergenIntoleranceCatalog = ensureAllergenIntoleranceCatalog;
+  window.getAllergenIntoleranceCatalog = getAllergenIntoleranceCatalog;
   window.saveNutritionPlanEdits = saveNutritionPlanEdits;
   window.normalizeNutritionMeals = normalizeNutritionMeals;
   window.markNutritionDirty = markNutritionDirty;
