@@ -8424,7 +8424,16 @@ async function openGenerateNutritionPlanWizard() {
   if (existing) existing.remove();
   await ensureAllergenIntoleranceCatalog();
   const base = computeNutritionTargetsFromProfile({});
-  const profileRestr = (store && store.profile && Array.isArray(store.profile.allergies)) ? store.profile.allergies.slice() : [];
+  const profileRestr = (function () {
+    if (store && store.coachViewingClient) {
+      const cp = store.__cpClientViewProfile || (store.coachWorkspace && store.coachWorkspace.clientProfile) || {};
+      if (Array.isArray(cp.allergies) && cp.allergies.length) return cp.allergies.slice();
+      const intake = (store.coachWorkspace && store.coachWorkspace.intake) || {};
+      if (Array.isArray(intake.allergies) && intake.allergies.length) return intake.allergies.slice();
+    }
+    if (store && store.profile && Array.isArray(store.profile.allergies)) return store.profile.allergies.slice();
+    return [];
+  })();
   window.__genNutrPlan = {
     mode: 'auto',
     p: 40, c: 40, f: 20,
@@ -8588,8 +8597,17 @@ function confirmGenerateNutritionPlan() {
     store.nutrition = plan;
     store.__cpNutritionDirty = true;
     store.__cpKeepLocalNutrition = true;
-    if (!store.profile) store.profile = {};
-    store.profile.allergies = restrictions.slice();
+    if (store.coachViewingClient) {
+      store.__cpClientViewProfile = Object.assign({}, store.__cpClientViewProfile || {}, { allergies: restrictions.slice() });
+      if (store.coachWorkspace) {
+        store.coachWorkspace.clientProfile = store.__cpClientViewProfile;
+        if (!store.coachWorkspace.intake) store.coachWorkspace.intake = {};
+        store.coachWorkspace.intake.allergies = restrictions.slice();
+      }
+    } else {
+      if (!store.profile) store.profile = {};
+      store.profile.allergies = restrictions.slice();
+    }
   }
   if (typeof persist === 'function') persist();
   const modal = document.getElementById('gen-nutrition-plan-modal');
