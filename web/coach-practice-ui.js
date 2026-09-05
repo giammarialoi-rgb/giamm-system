@@ -1421,6 +1421,9 @@ function openCoachOrUnlock() {
 }
 
 function enterCoachSession() {
+  if (store.coachViewingClient) {
+    try { leaveCoachClientView(true); } catch (_) {}
+  }
   store.coachSessionActive = true;
   store.coachViewingClient = false;
   if (typeof persist === 'function') persist();
@@ -1569,18 +1572,28 @@ function applyClientPayloadToLocal(payload) {
   store.loadTypes = payload.loadTypes && typeof payload.loadTypes === 'object' ? JSON.parse(JSON.stringify(payload.loadTypes)) : {};
   store.tempos = payload.tempos && typeof payload.tempos === 'object' ? JSON.parse(JSON.stringify(payload.tempos)) : {};
   store.bonus = payload.bonus && typeof payload.bonus === 'object' ? JSON.parse(JSON.stringify(payload.bonus)) : {};
+  // Never merge client profile into the coach's personal store.profile (causes Giada→Giammaria leak)
   if (payload.profile && typeof payload.profile === 'object') {
-    store.profile = Object.assign({}, store.profile || {}, payload.profile);
+    store.__cpClientViewProfile = JSON.parse(JSON.stringify(payload.profile));
+    if (store.coachWorkspace) store.coachWorkspace.clientProfile = store.__cpClientViewProfile;
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+      store.profile = Object.assign({}, store.profile || {}, payload.profile);
+    }
   }
   if (DATA) {
-    if (typeof normalizeNutritionMeals === 'function' && store.nutrition) {
+    if (typeof normalizeNutritionMeals === 'function' && store.nutrition && !isClearedDomainPayload(store.nutrition, 'nutrition')) {
       store.nutrition = normalizeNutritionMeals(store.nutrition);
     }
     DATA.nutrition = store.nutrition;
     DATA.supplementation = store.supplementation;
     DATA.therapy = store.therapy;
     DATA.exams = store.exams;
-    if (payload.profile) DATA.profile = payload.profile;
+    if (typeof isAthleteRole === 'function' && isAthleteRole() && payload.profile) {
+      DATA.profile = payload.profile;
+    } else if (DATA.profile && store.coachViewingClient) {
+      // Keep program profile display separate; do not overwrite coach identity in DATA
+      delete DATA.profile;
+    }
   }
   try {
     const lastOpen = (store.logs || []).slice().reverse().find(function (l) { return l && (l.week || l.day != null); });
@@ -1620,6 +1633,9 @@ async function enterCoachClientView(domain) {
       store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
       store.coachWorkspace.intake = snap.intake || store.coachWorkspace.intake;
       applyClientPayloadToLocal(data);
+      if (window.__cpCoachViewBackup && window.__cpCoachViewBackup.profile) {
+        store.profile = JSON.parse(JSON.stringify(window.__cpCoachViewBackup.profile));
+      }
     }, 'Carico dati cliente…', { immediate: true });
   } else {
     if (!window.__cpCoachViewBackup) window.__cpCoachViewBackup = snapshotCoachMaster();
@@ -1629,6 +1645,9 @@ async function enterCoachClientView(domain) {
       store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
       applyClientPayloadToLocal(snap.data || {});
     } catch (_) { applyClientPayloadToLocal(store.coachWorkspace.data || {}); }
+    if (window.__cpCoachViewBackup && window.__cpCoachViewBackup.profile) {
+      store.profile = JSON.parse(JSON.stringify(window.__cpCoachViewBackup.profile));
+    }
   }
   store.coachViewingClient = true;
   store.coachSessionActive = true;
@@ -2776,7 +2795,10 @@ async function restoreCoachMaster(backup) {
   store.logs = backup.logs || [];
   store.bodyChecks = backup.bodyChecks || [];
   store.nutritionDaily = backup.nutritionDaily || {};
-  store.profile = backup.profile || store.profile || {};
+  store.profile = (backup.profile != null && typeof backup.profile === 'object')
+    ? backup.profile
+    : (store.profile && !store.__cpClientViewProfile ? store.profile : {});
+  if (store.__cpClientViewProfile) delete store.__cpClientViewProfile;
   store.bw = backup.bw || {};
   store.exMuscle = backup.exMuscle || {};
   store.loadTypes = backup.loadTypes || {};
@@ -4641,6 +4663,14 @@ async function bootCoachPractice() {
     if (store.coachUnlocked) startPresenceHeartbeat();
     applyClientChrome();
     if (store.accountToken) setTimeout(function () { maybeSubscribeWebPush(); }, 1500);
+    try {
+      if (store.coachViewingClient && !window.__cpCoachViewBackup) {
+        store.coachViewingClient = false;
+      }
+      if (typeof purgeCoachProfileLeakIfNeeded === 'function' && purgeCoachProfileLeakIfNeeded()) {
+        practiceToast('Profilo coach ripristinato (dati cliente rimossi)', 'info');
+      }
+    } catch (_) {}
   }
   if (!window.__cpInboxTimer) {
     window.__cpInboxTimer = setInterval(pollPracticeInbox, 8000);

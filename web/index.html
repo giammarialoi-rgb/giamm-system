@@ -34106,6 +34106,69 @@ function isAthleteRole() {
   const u = store && store.accountUser;
   return !!(store && (store.role === 'athlete' || (u && (u.role === 'athlete' || u.provider === 'coach_client'))));
 }
+function foldProfileIdentity(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function profileConflictsWithAccountUser(profile) {
+  if (!profile || typeof profile !== 'object') return false;
+  const au = store && store.accountUser;
+  if (!au) return false;
+  const accountName = foldProfileIdentity(au.name || au.displayName || '');
+  const profileName = foldProfileIdentity(profile.name || '');
+  if (!accountName || !profileName) return false;
+  if (accountName === profileName) return false;
+  const a0 = accountName.split(' ')[0];
+  const p0 = profileName.split(' ')[0];
+  if (a0 && p0 && (accountName.indexOf(p0) >= 0 || profileName.indexOf(a0) >= 0)) return false;
+  return true;
+}
+function seedCoachProfileFromAccount(prev) {
+  const au = (store && store.accountUser) || {};
+  const name = String(au.name || au.displayName || '').trim();
+  return {
+    name: name || '',
+    sex: (prev && prev.sex && !profileConflictsWithAccountUser(prev)) ? prev.sex : 'm',
+    age: null,
+    weight: null,
+    height: null,
+    goal: '',
+    focusMuscles: [],
+    updatedAt: new Date().toISOString(),
+    ownedByAccount: true,
+    purgedClientLeak: true
+  };
+}
+function purgeCoachProfileLeakIfNeeded() {
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) return false;
+  if (!(store && store.accountUser)) return false;
+  const bak = window.__cpCoachViewBackup || window.__cpAssignBackup;
+  if (store.coachViewingClient || store.coachAssigning) {
+    if (bak && bak.profile && typeof bak.profile === 'object') {
+      // Keep runtime profile as coach identity while viewing; don't purge bak
+      if (profileConflictsWithAccountUser(store.profile)) {
+        store.profile = JSON.parse(JSON.stringify(bak.profile));
+        return true;
+      }
+    }
+    return false;
+  }
+  if (store.coachViewingClient && !bak) {
+    store.coachViewingClient = false;
+  }
+  if (profileConflictsWithAccountUser(store.profile)) {
+    store.profile = seedCoachProfileFromAccount(store.profile);
+    if (DATA && DATA.profile && profileConflictsWithAccountUser(DATA.profile)) {
+      DATA.profile = store.profile;
+    }
+    try { if (typeof persist === 'function') persist(); } catch (_) {}
+    try {
+      if (typeof scheduleAccountSync === 'function') scheduleAccountSync();
+      else if (typeof syncAccountData === 'function') syncAccountData(false);
+    } catch (_) {}
+    return true;
+  }
+  return false;
+}
 function isCoachUnlocked() {
   return !!(store && store.coachUnlocked && !isAthleteRole());
 }
@@ -35087,9 +35150,15 @@ function accountPayload(opts){
   const supp = (DATA && DATA.supplementation) || store.supplementation || null;
   const ther = (DATA && DATA.therapy) || store.therapy || null;
   const exams = (DATA && DATA.exams) || store.exams || null;
+  // While viewing/assigning a client, never upload the client's identity as the coach profile
+  let profileOut = store.profile || {};
+  if (store.coachViewingClient || store.coachAssigning) {
+    const bak = window.__cpCoachViewBackup || window.__cpAssignBackup;
+    if (bak && bak.profile && typeof bak.profile === 'object') profileOut = bak.profile;
+  }
   const payload = {
     prefs: store.prefs || {},
-    profile: store.profile || {},
+    profile: profileOut,
     logs: Array.isArray(store.logs) ? store.logs.slice(-80) : [],
     data: store.data || {},
     customSets: store.customSets || {},
@@ -35175,7 +35244,22 @@ function applyRemoteAccountData(remote, preferLocal) {
     store.bonus = Object.assign({}, remote.bonus || {}, store.bonus || {});
     store.exMuscle = Object.assign({}, remote.exMuscle || {}, store.exMuscle || {});
     store.prefs = Object.assign({}, remote.prefs || {}, store.prefs || {});
-    store.profile = Object.assign({}, remote.profile || {}, store.profile || {});
+    const athleteRole = typeof isAthleteRole === 'function' && isAthleteRole();
+    if (athleteRole) {
+      store.profile = Object.assign({}, remote.profile || {}, store.profile || {});
+    } else if (store.__cpProfileOwnedCleared || store.profileClearedAt) {
+      // intentional local clear — do not resurrect remote poisoned profile
+    } else if (remote.profile && profileConflictsWithAccountUser(remote.profile)) {
+      if (!store.profile || !store.profile.name || profileConflictsWithAccountUser(store.profile)) {
+        store.profile = seedCoachProfileFromAccount(store.profile);
+      }
+      // keep local coach profile; skip merging remote Giada-like blob
+    } else {
+      store.profile = Object.assign({}, remote.profile || {}, store.profile || {});
+      if (profileConflictsWithAccountUser(store.profile)) {
+        store.profile = seedCoachProfileFromAccount(store.profile);
+      }
+    }
     if (Array.isArray(remote.logs) && remote.logs.length) {
       const byId = {};
       (store.logs || []).concat(remote.logs).forEach(function (row) {
@@ -35282,6 +35366,12 @@ function applyRemoteAccountData(remote, preferLocal) {
 async function syncAccountData(download=false){
   const status = $('account-status'); if(status) status.textContent = 'Sincronizzazione…';
   try {
+    // Never download/upload account blob while the coach sandbox has client data loaded in RAM
+    if (store.coachViewingClient || store.coachAssigning) {
+      if (status) status.textContent = 'Sync in pausa (vista cliente).';
+      return;
+    }
+    try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
     if(download){
       const response = await accountRequest('/api/account/me', { method: 'GET' });
       const payload = await readApiJson(response);
@@ -35289,6 +35379,7 @@ async function syncAccountData(download=false){
       const localScore = accountDataScore(store, DATA);
       const remoteScore = accountDataScore(remote, remote.activeProgram);
       applyRemoteAccountData(remote, localScore > remoteScore && !window.__cpForceRemoteProgram);
+      try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
       // Athlete must not overwrite a just-assigned coach program with empty/local draft
       const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
       const skipProgUpload = athlete && !!(remote.assignedByCoach || window.__cpForceRemoteProgram);
@@ -39367,6 +39458,7 @@ function persist() {
           supplementation: bak.supplementation,
           therapy: bak.therapy,
           exams: bak.exams,
+          profile: (bak.profile != null && typeof bak.profile === 'object') ? bak.profile : (sanitized.profile || {}),
           coachAssigning: store.coachAssigning || null,
           coachViewingClient: !!store.coachViewingClient,
           coachSessionActive: !!store.coachSessionActive
@@ -42269,8 +42361,17 @@ function saveAthleteProfile() {
   };
   store.profile = profile;
   store.prefs.focusMuscles = profile.focusMuscles || [];
+  store.profileClearedAt = null;
+  store.__cpProfileOwnedCleared = false;
   if (DATA) DATA.profile = profile;
   persist();
+  try {
+    if (!(store.coachViewingClient || store.coachAssigning) && typeof syncAccountData === 'function') {
+      syncAccountData(false);
+    } else if (typeof scheduleAccountSync === 'function') {
+      scheduleAccountSync();
+    }
+  } catch (_) {}
   if (typeof showToast === 'function') showToast('Profilo salvato', 'success');
   else alert('Profilo salvato');
   maybeOfferNutritionFromProfile();
@@ -46475,9 +46576,20 @@ function athleteAvatarSvg(avatar) {
 function renderAthleteProfile(container) {
   ensureRewardsReady();
   applyFocusUi();
+  try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
+  if (store && store.coachViewingClient) {
+    const clientName = (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) ||
+      (store.__cpClientViewProfile && store.__cpClientViewProfile.name) || 'cliente';
+    container.innerHTML = '<div class="card" style="border:1px solid var(--gold);padding:14px;margin-bottom:12px;">' +
+      '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:6px;">PROFILO PERSONALE</div>' +
+      '<p style="font-size:13px;color:#ddd;line-height:1.45;margin:0 0 12px;">Stai visualizzando <b style="color:#fff;">' + esc(clientName) + '</b>. ' +
+      'Il tuo profilo coach resta separato: esci dalla vista cliente per modificarlo.</p>' +
+      '<button type="button" class="btn btn-primary" style="width:100%;" onclick="leaveCoachClientView()">ESCI VISTA CLIENTE</button></div>';
+    return;
+  }
   const r = store.rewards || {};
   const profile = store.profile || (DATA && DATA.profile) || {};
-  const name = profile.name || 'Atleta';
+  const name = profile.name || ((store.accountUser && store.accountUser.name) || 'Atleta');
   const rewardsUi = isRewardsMode();
   const ach = (r.achievements || []).slice(-8);
   let html = '<div style="margin-bottom:12px;">' +
@@ -50119,6 +50231,9 @@ if (typeof window !== 'undefined') {
   window.syncHealthSamplesAndRefresh = syncHealthSamplesAndRefresh;
   window.confirmExerciseMapping = confirmExerciseMapping;
   window.isAthleteRole = isAthleteRole;
+  window.purgeCoachProfileLeakIfNeeded = purgeCoachProfileLeakIfNeeded;
+  window.profileConflictsWithAccountUser = profileConflictsWithAccountUser;
+  window.seedCoachProfileFromAccount = seedCoachProfileFromAccount;
   window.isCoachUnlocked = isCoachUnlocked;
 }
 
@@ -51552,6 +51667,9 @@ function openCoachOrUnlock() {
 }
 
 function enterCoachSession() {
+  if (store.coachViewingClient) {
+    try { leaveCoachClientView(true); } catch (_) {}
+  }
   store.coachSessionActive = true;
   store.coachViewingClient = false;
   if (typeof persist === 'function') persist();
@@ -51700,18 +51818,28 @@ function applyClientPayloadToLocal(payload) {
   store.loadTypes = payload.loadTypes && typeof payload.loadTypes === 'object' ? JSON.parse(JSON.stringify(payload.loadTypes)) : {};
   store.tempos = payload.tempos && typeof payload.tempos === 'object' ? JSON.parse(JSON.stringify(payload.tempos)) : {};
   store.bonus = payload.bonus && typeof payload.bonus === 'object' ? JSON.parse(JSON.stringify(payload.bonus)) : {};
+  // Never merge client profile into the coach's personal store.profile (causes Giada→Giammaria leak)
   if (payload.profile && typeof payload.profile === 'object') {
-    store.profile = Object.assign({}, store.profile || {}, payload.profile);
+    store.__cpClientViewProfile = JSON.parse(JSON.stringify(payload.profile));
+    if (store.coachWorkspace) store.coachWorkspace.clientProfile = store.__cpClientViewProfile;
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+      store.profile = Object.assign({}, store.profile || {}, payload.profile);
+    }
   }
   if (DATA) {
-    if (typeof normalizeNutritionMeals === 'function' && store.nutrition) {
+    if (typeof normalizeNutritionMeals === 'function' && store.nutrition && !isClearedDomainPayload(store.nutrition, 'nutrition')) {
       store.nutrition = normalizeNutritionMeals(store.nutrition);
     }
     DATA.nutrition = store.nutrition;
     DATA.supplementation = store.supplementation;
     DATA.therapy = store.therapy;
     DATA.exams = store.exams;
-    if (payload.profile) DATA.profile = payload.profile;
+    if (typeof isAthleteRole === 'function' && isAthleteRole() && payload.profile) {
+      DATA.profile = payload.profile;
+    } else if (DATA.profile && store.coachViewingClient) {
+      // Keep program profile display separate; do not overwrite coach identity in DATA
+      delete DATA.profile;
+    }
   }
   try {
     const lastOpen = (store.logs || []).slice().reverse().find(function (l) { return l && (l.week || l.day != null); });
@@ -51751,6 +51879,9 @@ async function enterCoachClientView(domain) {
       store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
       store.coachWorkspace.intake = snap.intake || store.coachWorkspace.intake;
       applyClientPayloadToLocal(data);
+      if (window.__cpCoachViewBackup && window.__cpCoachViewBackup.profile) {
+        store.profile = JSON.parse(JSON.stringify(window.__cpCoachViewBackup.profile));
+      }
     }, 'Carico dati cliente…', { immediate: true });
   } else {
     if (!window.__cpCoachViewBackup) window.__cpCoachViewBackup = snapshotCoachMaster();
@@ -51760,6 +51891,9 @@ async function enterCoachClientView(domain) {
       store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
       applyClientPayloadToLocal(snap.data || {});
     } catch (_) { applyClientPayloadToLocal(store.coachWorkspace.data || {}); }
+    if (window.__cpCoachViewBackup && window.__cpCoachViewBackup.profile) {
+      store.profile = JSON.parse(JSON.stringify(window.__cpCoachViewBackup.profile));
+    }
   }
   store.coachViewingClient = true;
   store.coachSessionActive = true;
@@ -52907,7 +53041,10 @@ async function restoreCoachMaster(backup) {
   store.logs = backup.logs || [];
   store.bodyChecks = backup.bodyChecks || [];
   store.nutritionDaily = backup.nutritionDaily || {};
-  store.profile = backup.profile || store.profile || {};
+  store.profile = (backup.profile != null && typeof backup.profile === 'object')
+    ? backup.profile
+    : (store.profile && !store.__cpClientViewProfile ? store.profile : {});
+  if (store.__cpClientViewProfile) delete store.__cpClientViewProfile;
   store.bw = backup.bw || {};
   store.exMuscle = backup.exMuscle || {};
   store.loadTypes = backup.loadTypes || {};
@@ -54772,6 +54909,14 @@ async function bootCoachPractice() {
     if (store.coachUnlocked) startPresenceHeartbeat();
     applyClientChrome();
     if (store.accountToken) setTimeout(function () { maybeSubscribeWebPush(); }, 1500);
+    try {
+      if (store.coachViewingClient && !window.__cpCoachViewBackup) {
+        store.coachViewingClient = false;
+      }
+      if (typeof purgeCoachProfileLeakIfNeeded === 'function' && purgeCoachProfileLeakIfNeeded()) {
+        practiceToast('Profilo coach ripristinato (dati cliente rimossi)', 'info');
+      }
+    } catch (_) {}
   }
   if (!window.__cpInboxTimer) {
     window.__cpInboxTimer = setInterval(pollPracticeInbox, 8000);
