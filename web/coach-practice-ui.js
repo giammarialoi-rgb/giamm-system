@@ -264,6 +264,7 @@ function applyClientChrome() {
       };
     }
     ensureCoachHeaderControls(coachSession);
+    ensureNotifyButton();
     if (athlete) {
       document.querySelectorAll('button').forEach(function (btn) {
         const tx = String(btn.textContent || '');
@@ -409,11 +410,18 @@ function ensureCoachDrawer() {
   const viewing = !!(store && store.coachViewingClient);
   const id = hasClient ? String(store.coachWorkspace.clientId) : '';
   const name = (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente';
+  const n = Math.max(0, Number(store.__cpNotifyCount || 0));
   panel.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
     '<div style="color:var(--gold);font-weight:800;font-size:13px;">MENU COACH</div>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="closeCoachDrawer()">CHIUDI</button></div>' +
     (hasClient ? ('<div class="cp-help" style="margin-bottom:10px;">Cliente: <b style="color:#fff;">' + esc(name) + '</b></div>') : '<div class="cp-help">Nessun cliente aperto. Apri dalla lista.</div>') +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:10px;position:relative;" onclick="closeCoachDrawer();openNotificationsCenter()">' +
+    'NOTIFICHE' + (n > 0 ? (' <span class="cp-notify-count" style="position:static;display:inline-flex;margin-left:6px;">' + (n > 99 ? '99+' : n) + '</span>') : '') +
+    '</button>' +
+    (hasClient
+      ? ('<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="closeCoachDrawer();openNotificationsCenter(\'' + esc(id) + '\')">NOTIFICHE CLIENTE · ORA</button>')
+      : '') +
     '<div class="cp-drawer-grid">' +
     '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachHub\')">LISTA CLIENTI</button>' +
     '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachLibrary\')">IL MIO DATABASE</button>' +
@@ -519,6 +527,15 @@ function ensurePracticeStyle() {
     '.cp-inapp-notify{position:fixed;left:10px;right:10px;top:calc(var(--header-height) + 8px + var(--cp-session-bar, 0px));z-index:10160;background:#151515;border:1px solid var(--gold);border-radius:12px;padding:10px 12px;color:#eee;box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;}',
     '.cp-inapp-notify b{color:var(--gold);display:block;font-size:12px;margin-bottom:2px;}',
     '.cp-inapp-notify span{font-size:11px;color:#ccc;}',
+    '#cp-notify-btn{position:relative;font-size:9px;padding:6px 8px;margin-left:6px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;}',
+    '#cp-notify-btn .cp-notify-count{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#c66;color:#fff !important;-webkit-text-fill-color:#fff !important;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;}',
+    '#cp-notify-center{position:fixed;inset:0;z-index:10170;background:rgba(0,0,0,.88);display:none;align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;}',
+    '#cp-notify-center.active{display:flex;}',
+    '#cp-notify-center .cp-notify-panel{width:100%;max-width:440px;max-height:min(78vh,640px);overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px;padding:14px;color:#eee;box-sizing:border-box;}',
+    '.cp-notify-item{display:block;width:100%;text-align:left;padding:12px;margin:0 0 8px;background:#141414;border:1px solid #333;border-radius:10px;color:#eee !important;-webkit-text-fill-color:#eee !important;cursor:pointer;}',
+    '.cp-notify-item b{display:block;color:var(--gold);font-size:12px;margin-bottom:4px;}',
+    '.cp-notify-item span{display:block;font-size:11px;color:#bbb;}',
+    '.cp-notify-item small{display:block;font-size:10px;color:#777;margin-top:6px;}',
     '.cp-assign-bar{position:fixed;right:10px;bottom:calc(72px + env(safe-area-inset-bottom,0px));left:auto;z-index:10080;background:#111;border:1px solid var(--gold);border-radius:12px;padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.45);max-width:min(360px,calc(100vw - 20px));max-height:min(42vh,320px);overflow:auto;box-sizing:border-box;}',
     '.cp-assign-bar.cp-assign-collapsed{left:auto;right:10px;bottom:calc(72px + env(safe-area-inset-bottom,0px));padding:0;max-width:none;max-height:none;overflow:visible;background:transparent;border:0;box-shadow:none;}',
     '.cp-assign-chip{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;background:#111;border:1px solid var(--gold);border-radius:999px;color:var(--gold);font-size:11px;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 6px 18px rgba(0,0,0,.4);}',
@@ -655,6 +672,280 @@ function clearNurvanAppBadge() {
     if (typeof window !== 'undefined' && window.NativeConfig) return;
     if (navigator.clearAppBadge) navigator.clearAppBadge().catch(function () {});
   } catch (_) {}
+}
+
+function updateNotifyCount(n, items) {
+  store.__cpNotifyCount = Math.max(0, Number(n) || 0);
+  if (Array.isArray(items)) store.__cpNotifyItems = items;
+  setNurvanAppBadge(store.__cpNotifyCount);
+  ensureNotifyButton();
+}
+
+function ensureNotifyButton() {
+  const headerActions = document.querySelector('.header-actions');
+  if (!headerActions) return;
+  let btn = document.getElementById('cp-notify-btn');
+  const logged = !!(store && store.accountToken);
+  const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+  const coachSession = !!(store && store.coachSessionActive && !athlete);
+  // Coach: notifiche generali nel MENU COACH. Header solo atleta (o coach fuori sessione).
+  if (!logged || coachSession) {
+    if (btn) btn.style.display = 'none';
+    return;
+  }
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'cp-notify-btn';
+    btn.className = 'btn btn-outline';
+    btn.onclick = function () { openNotificationsCenter(); };
+    const account = document.getElementById('account-button');
+    if (account && account.parentElement === headerActions) headerActions.insertBefore(btn, account.nextSibling);
+    else headerActions.insertBefore(btn, headerActions.firstChild);
+  }
+  const n = Math.max(0, Number(store.__cpNotifyCount || 0));
+  btn.style.display = '';
+  btn.innerHTML = 'NOTIFICHE' + (n > 0 ? '<span class="cp-notify-count">' + (n > 99 ? '99+' : n) + '</span>' : '');
+}
+
+function fmtNotifyWhen(iso) {
+  const raw = String(iso || '');
+  if (!raw) return '';
+  const d = new Date(raw);
+  if (!isNaN(d.getTime())) {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return dd + '/' + mm + ' · ' + hh + ':' + mi;
+  }
+  return raw.replace('T', ' ').slice(0, 16);
+}
+
+function coachEventLabel(kind, name) {
+  const n = name || 'Atleta';
+  if (kind === 'message') return { title: 'Messaggio', body: n + ' ti ha scritto', view: 'chat' };
+  if (kind === 'ask_coach') return { title: 'Richiesta al coach', body: n + ' chiede qualcosa', view: 'chat' };
+  if (kind === 'password_help') return { title: 'Recupero password', body: n + ' ha chiesto la password', view: 'coachClient' };
+  if (kind === 'leave_request') return { title: 'Fine collaborazione', body: n + ' ha chiesto di chiudere', view: 'coachClient' };
+  if (kind === 'change_request') return { title: 'Modifica da approvare', body: n + ' vuole cambiare il programma', view: 'coachClient' };
+  if (kind === 'change_notice') return { title: 'Atleta ha modificato', body: n + ' ha cambiato il programma', view: 'coachClient' };
+  if (kind === 'request_program') return { title: 'Richiesta scheda', body: n + ' chiede la scheda', view: 'coachClient' };
+  if (kind === 'workout_started') return { title: 'In allenamento', body: n + ' ha iniziato il workout', view: 'workout_started' };
+  if (kind === 'workout_done') return { title: 'Workout finito', body: n + ' ha finalizzato', view: 'workout_done' };
+  const copy = eventNotifyCopy(kind);
+  if (copy) return { title: copy[0], body: n + ' · ' + copy[1], view: 'coachClient' };
+  return { title: 'Attività', body: n + ' · ' + String(kind || 'evento'), view: 'coachClient' };
+}
+
+function athleteNotifyRoute(kind) {
+  const copy = eventNotifyCopy(kind);
+  return (copy && copy[2]) || { view: 'home' };
+}
+
+function buildAthleteNotifyItems(box) {
+  const items = [];
+  const unreadMsg = Number(box.unreadMessages || 0);
+  if (unreadMsg > 0) {
+    items.push({
+      key: 'msg',
+      title: unreadMsg === 1 ? 'Nuovo messaggio' : (unreadMsg + ' messaggi nuovi'),
+      body: 'Il coach ti ha scritto — apri la chat',
+      when: '',
+      unread: true,
+      route: { view: 'clientChat' },
+      eventIds: []
+    });
+  }
+  const events = (box.events || []).filter(function (e) { return e && e.kind !== 'message'; }).slice();
+  events.sort(function (a, b) {
+    const au = a.read_at ? 1 : 0;
+    const bu = b.read_at ? 1 : 0;
+    if (au !== bu) return au - bu;
+    return Number(b.id || 0) - Number(a.id || 0);
+  });
+  events.slice(0, 30).forEach(function (e) {
+    const copy = eventNotifyCopy(e.kind) || ['Aggiornamento', String(e.kind || 'Notifica'), { view: 'home' }];
+    const unread = !e.read_at;
+    items.push({
+      key: 'ev_' + e.id,
+      title: copy[0] + (unread ? '' : ''),
+      body: copy[1],
+      when: fmtNotifyWhen(e.created_at),
+      unread: unread,
+      route: copy[2] || { view: 'home' },
+      eventIds: unread ? [Number(e.id)] : []
+    });
+  });
+  return items;
+}
+
+function countAthleteUnread(box) {
+  const unreadEv = (box.events || []).filter(function (e) { return e && !e.read_at && e.kind !== 'message'; }).length;
+  return Number(box.unreadMessages || 0) + unreadEv;
+}
+
+function renderNotifyItemsHtml(items, emptyText) {
+  if (!items || !items.length) return '<div class="cp-help">' + esc(emptyText || 'Nessuna notifica.') + '</div>';
+  return items.map(function (it, idx) {
+    return '<button type="button" class="cp-notify-item" style="' + (it.unread ? 'border-color:rgba(212,175,55,.55);' : 'opacity:.88;') + '" onclick="openNotifyItem(' + idx + ')">' +
+      '<b>' + esc(it.title) + (it.unread ? ' · NUOVA' : '') + '</b>' +
+      '<span>' + esc(it.body) + '</span>' +
+      (it.when ? '<small>' + esc(it.when) + '</small>' : '') + '</button>';
+  }).join('');
+}
+
+function buildCoachNotifyItems(box) {
+  const items = [];
+  (box.events || []).forEach(function (e) {
+    if (!e) return;
+    const name = e.display_name || 'Atleta';
+    const lab = coachEventLabel(e.kind, name);
+    items.push({
+      key: 'ev_' + e.id,
+      title: lab.title,
+      body: lab.body,
+      when: fmtNotifyWhen(e.created_at),
+      route: { view: lab.view, clientId: String(e.client_id || '') },
+      eventIds: [Number(e.id)]
+    });
+  });
+  (box.clients || []).forEach(function (c) {
+    const n = Number(c.unreadCount || 0);
+    if (n <= 0) return;
+    const already = items.some(function (it) {
+      return it.route && String(it.route.clientId) === String(c.id) && (it.route.view === 'chat' || it.title === 'Messaggio');
+    });
+    if (already) return;
+    items.push({
+      key: 'cl_' + c.id,
+      title: n === 1 ? 'Messaggio non letto' : (n + ' messaggi non letti'),
+      body: (c.displayName || 'Cliente') + (c.hasPendingChange ? ' · modifica da approvare' : '') + (c.leaveRequested ? ' · fine richiesta' : ''),
+      when: '',
+      route: { view: 'chat', clientId: String(c.id) },
+      eventIds: []
+    });
+  });
+  return items;
+}
+
+function buildCoachClientNotifyItems(events, clientId, clientName) {
+  const name = clientName || 'Cliente';
+  const cid = String(clientId || '');
+  return (events || []).map(function (e) {
+    if (!e) return null;
+    const lab = coachEventLabel(e.kind, name);
+    const unread = !e.read_at;
+    return {
+      key: 'ev_' + e.id,
+      title: lab.title + (unread ? '' : ''),
+      body: lab.body,
+      when: fmtNotifyWhen(e.created_at),
+      unread: unread,
+      route: { view: lab.view, clientId: cid },
+      eventIds: unread ? [Number(e.id)] : []
+    };
+  }).filter(Boolean);
+}
+
+function closeNotificationsCenter() {
+  const el = document.getElementById('cp-notify-center');
+  if (el) el.classList.remove('active');
+}
+
+async function openNotificationsCenter(clientId) {
+  ensurePracticeStyle();
+  let el = document.getElementById('cp-notify-center');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'cp-notify-center';
+    el.onclick = function (ev) { if (ev.target === el) closeNotificationsCenter(); };
+    document.body.appendChild(el);
+  }
+  const scopedId = clientId ? String(clientId) : '';
+  const scopedName = scopedId
+    ? ((store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente')
+    : '';
+  el.innerHTML = '<div class="cp-notify-panel"><div style="font-size:10px;color:var(--gold);font-weight:800;">' +
+    (scopedId ? ('NOTIFICHE · ' + esc(scopedName)) : 'NOTIFICHE') + '</div>' +
+    '<div class="cp-help" style="margin:8px 0;">Caricamento…</div></div>';
+  el.classList.add('active');
+  try {
+    let items = [];
+    let title = 'NOTIFICHE';
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+      const box = await practiceFetch('/api/client/inbox', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+      items = buildAthleteNotifyItems(box);
+      updateNotifyCount(countAthleteUnread(box), items);
+      title = 'LE TUE NOTIFICHE';
+    } else if (scopedId) {
+      const ev = await practiceFetch('/api/coach/clients/' + encodeURIComponent(scopedId) + '/events', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+      items = buildCoachClientNotifyItems(ev.events || [], scopedId, scopedName);
+      store.__cpNotifyItems = items;
+      title = 'NOTIFICHE · ' + scopedName;
+    } else {
+      const box = await practiceFetch('/api/coach/inbox', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+      items = buildCoachNotifyItems(box);
+      updateNotifyCount(items.length, items);
+      title = 'NOTIFICHE COACH';
+    }
+    el.innerHTML = '<div class="cp-notify-panel">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">' +
+      '<div style="font-size:10px;color:var(--gold);font-weight:800;">' + esc(title) + (items.length ? ' · ' + items.length : '') + '</div>' +
+      '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="closeNotificationsCenter()">CHIUDI</button></div>' +
+      (typeof isAthleteRole === 'function' && isAthleteRole()
+        ? '<div class="cp-help" style="margin-bottom:8px;">Messaggi e aggiornamenti del coach, con data e ora.</div>'
+        : (scopedId
+          ? '<div class="cp-help" style="margin-bottom:8px;">Solo attività di questo cliente, con data e ora.</div>'
+          : '<div class="cp-help" style="margin-bottom:8px;">Panoramica di tutti i clienti.</div>')) +
+      renderNotifyItemsHtml(items, (typeof isAthleteRole === 'function' && isAthleteRole())
+        ? 'Nessuna notifica per ora.'
+        : (scopedId ? 'Nessuna attività recente per questo cliente.' : 'Nessuna notifica da leggere.')) +
+      '</div>';
+  } catch (err) {
+    el.innerHTML = '<div class="cp-notify-panel"><div style="font-size:10px;color:var(--gold);font-weight:800;">NOTIFICHE</div>' +
+      '<div class="cp-help">' + esc(friendlyApiError(err)) + '</div>' +
+      '<button type="button" class="btn btn-outline" style="width:100%;" onclick="openNotificationsCenter(' + (scopedId ? ("'" + esc(scopedId) + "'") : '') + ')">RIPROVA</button>' +
+      '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="closeNotificationsCenter()">CHIUDI</button></div>';
+  }
+}
+
+async function openNotifyItem(idx) {
+  const items = store.__cpNotifyItems || [];
+  const it = items[Number(idx)];
+  if (!it) return;
+  closeNotificationsCenter();
+  try {
+    if (it.eventIds && it.eventIds.length) {
+      const path = (typeof isAthleteRole === 'function' && isAthleteRole())
+        ? '/api/client/inbox/ack'
+        : '/api/coach/inbox/ack';
+      await practiceFetch(path, {
+        method: 'POST', headers: practiceHeaders(true),
+        body: JSON.stringify({ ids: it.eventIds })
+      }, 10000).catch(function () {});
+    }
+  } catch (_) {}
+  try { handleNotifyRoute(it.route); } catch (_) {}
+  setTimeout(function () { pollPracticeInbox(); }, 400);
+}
+
+function openClientSheetNotify(idx) {
+  store.__cpNotifyItems = window.__cpClientSheetNotifies || [];
+  openNotifyItem(idx);
+}
+
+function maybePromptUnreadNotifications() {
+  if (!(store && store.accountToken)) return;
+  if (store.__cpNotifPrompted) return;
+  const n = Number(store.__cpNotifyCount || 0);
+  if (n <= 0) return;
+  store.__cpNotifPrompted = true;
+  showInAppNotify(
+    n === 1 ? '1 notifica da leggere' : (n + ' notifiche da leggere'),
+    'Tocca per aprirle',
+    { view: '__notify_center' }
+  );
 }
 
 function scheduleAthleteLiveWorkoutSync() {
@@ -1256,8 +1547,11 @@ function athleteWaitingHomeHtml() {
 }
 
 function athleteHomeModulesHtml() {
+  const n = Math.max(0, Number(store.__cpNotifyCount || 0));
   return '<div class="card" style="margin-top:12px;"><div class="card-header"><h2>Menu</h2></div>' +
     '<div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:10px;">' +
+    '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;" onclick="openNotificationsCenter()"><span style="font-size:18px;">🔔</span><span style="font-size:11px;font-weight:800;">Notifiche</span>' +
+    (n > 0 ? '<span class="cp-notify-count" style="position:absolute;top:6px;right:8px;">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'clientChat\')"><span style="font-size:18px;">💬</span><span style="font-size:11px;font-weight:800;">Chat coach</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'nutrition\')"><span style="font-size:18px;">🥗</span><span style="font-size:11px;font-weight:800;">Alimentazione</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'supplements\')"><span style="font-size:18px;">💊</span><span style="font-size:11px;font-weight:800;">Integrazione</span></button>' +
@@ -1412,8 +1706,9 @@ function ensureCoachDomainToolbar(domain) {
   }
   bar.setAttribute('data-domain', d);
   bar.innerHTML =
-    '<button type="button" class="btn btn-outline" style="flex:1;min-width:120px;font-size:11px;color:#c66 !important;-webkit-text-fill-color:#c66 !important;border-color:#c66;" onclick="clearCoachClientDomain(\'' + esc(d) + '\')">CANCELLA</button>' +
-    '<button type="button" class="btn btn-primary" style="flex:1;min-width:120px;font-size:11px;" onclick="startDomainImport(\'' + esc(d) + '\')">IMPORTA NUOVO</button>';
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:100px;font-size:11px;" onclick="openNotificationsCenter(\'' + esc(String(store.coachWorkspace.clientId)) + '\')">NOTIFICHE</button>' +
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:100px;font-size:11px;color:#c66 !important;-webkit-text-fill-color:#c66 !important;border-color:#c66;" onclick="clearCoachClientDomain(\'' + esc(d) + '\')">CANCELLA</button>' +
+    '<button type="button" class="btn btn-primary" style="flex:1;min-width:100px;font-size:11px;" onclick="startDomainImport(\'' + esc(d) + '\')">IMPORTA NUOVO</button>';
   if (bar.parentElement !== c || c.firstChild !== bar) {
     c.insertBefore(bar, c.firstChild);
   }
@@ -1887,19 +2182,28 @@ async function renderCoachWorkspace(c) {
       return '<div class="cp-row"><span style="color:#888;font-size:11px;">' + esc(f.label) + '</span><span style="font-size:12px;color:#fff;">' + esc(intake[f.key]) + '</span></div>';
     }).join('');
     let eventsHtml = '';
+    let clientNotifyItems = [];
     try {
       const ev = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/events', { method: 'GET', headers: practiceHeaders(false) }, 15000);
-      eventsHtml = (ev.events || []).slice(0, 8).map(function (e) {
-        return '<div class="cp-help" style="margin:0 0 4px;">' + esc(e.kind) + ' · ' + esc(String(e.created_at || '').replace('T', ' ').slice(0, 16)) + '</div>';
+      clientNotifyItems = buildCoachClientNotifyItems(ev.events || [], id, cl.displayName || 'Cliente');
+      eventsHtml = clientNotifyItems.slice(0, 10).map(function (it, idx) {
+        return '<button type="button" class="cp-notify-item" style="margin-bottom:6px;' + (it.unread ? 'border-color:rgba(212,175,55,.55);' : '') + '" onclick="openClientSheetNotify(' + idx + ')">' +
+          '<b>' + esc(it.title) + (it.unread ? ' · NUOVA' : '') + '</b>' +
+          '<span>' + esc(it.body) + '</span>' +
+          (it.when ? '<small>' + esc(it.when) + '</small>' : '') + '</button>';
       }).join('');
+      window.__cpClientSheetNotifies = clientNotifyItems;
     } catch (_) {}
     if (!store.__cpWsCollapse || typeof store.__cpWsCollapse !== 'object') {
-      store.__cpWsCollapse = { intake: true, events: true };
+      store.__cpWsCollapse = { intake: true, events: false };
     }
     const collapsed = store.__cpWsCollapse;
     c.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">' +
       '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">← LISTA</button>' +
-      '<button class="btn btn-primary" style="font-size:10px;" onclick="openCoachClientChat(\'' + esc(id) + '\')">CHAT</button></div>' +
+      '<button class="btn btn-primary" style="font-size:10px;" onclick="openCoachClientChat(\'' + esc(id) + '\')">CHAT</button>' +
+      '<button class="btn btn-outline" style="font-size:10px;position:relative;" onclick="openNotificationsCenter(\'' + esc(id) + '\')">NOTIFICHE' +
+      (clientNotifyItems.filter(function (x) { return x.unread; }).length ? (' <span class="cp-notify-count" style="position:static;display:inline-flex;margin-left:4px;">' + clientNotifyItems.filter(function (x) { return x.unread; }).length + '</span>') : '') +
+      '</button></div>' +
       '<h1 style="color:#fff;font-size:22px;margin:0 0 4px;">' + esc(cl.displayName || 'Cliente') + '</h1>' +
       '<div style="font-size:11px;color:#888;margin-bottom:6px;">@' + esc(cl.username || '') + ' · ' +
       (cl.intakeMode === 'transition' ? 'Transizione' : 'Nuovo') + (cl.intakeDone ? ' · questionario ok' : ' · questionario in attesa') + '</div>' +
@@ -1961,10 +2265,11 @@ async function renderCoachWorkspace(c) {
       (intakeRows || '<div class="cp-help">Questionario non ancora compilato.</div>') + '</div></div>' +
       '<div class="card" style="padding:12px;margin-bottom:12px;">' +
       '<button type="button" class="cp-ws-collapse-h" onclick="toggleCoachWsSection(\'events\')" style="display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;background:transparent;border:0;padding:0;cursor:pointer;text-align:left;">' +
-      '<span style="font-weight:900;color:var(--gold);">Attività / richieste</span>' +
+      '<span style="font-weight:900;color:var(--gold);">Notifiche cliente (con orario)</span>' +
       '<span id="cp-ws-arrow-events" style="color:var(--gold);font-size:14px;">' + (collapsed.events ? '▸' : '▾') + '</span></button>' +
       '<div id="cp-events-body" style="margin-top:8px;' + (collapsed.events ? 'display:none;' : '') + '">' +
-      (eventsHtml || '<div class="cp-help">Nessuna richiesta recente.</div>') + '</div></div>';
+      (eventsHtml || '<div class="cp-help">Nessuna attività recente.</div>') +
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="openNotificationsCenter(\'' + esc(id) + '\')">VEDI TUTTE</button></div></div>';
     // Chat solo in navigate('coachChat') — niente composer inline qui
   } catch (err) {
     c.innerHTML = '<div class="cp-help">' + esc((err && err.message) || 'Snapshot non disponibile.') + '</div>';
@@ -3408,6 +3713,10 @@ function handleNotifyRoute(route) {
   }
   route = route || {};
   const view = route.view || route;
+  if (view === '__notify_center' || view === 'notifications') {
+    openNotificationsCenter();
+    return;
+  }
   const clientId = route.clientId;
   if (typeof isAthleteRole === 'function' && isAthleteRole()) {
     if (view === 'clientChat' || view === 'message' || view === 'chat') return navigate('clientChat');
@@ -3504,11 +3813,14 @@ async function pollPracticeInbox() {
     if (typeof isAthleteRole === 'function' && isAthleteRole()) {
       const box = await practiceFetch('/api/client/inbox', { method: 'GET', headers: practiceHeaders(false) }, 12000);
       const maxId = (box.events || []).reduce(function (m, e) { return Math.max(m, Number(e.id || 0)); }, 0);
+      const items = buildAthleteNotifyItems(box);
+      updateNotifyCount(countAthleteUnread(box), items);
       if (!store.clientInboxReady) {
         store.clientInboxReady = true;
         store.clientSeenEventId = maxId;
         store.clientSeenMsgId = box.lastMessageId || 0;
         if (typeof persist === 'function') persist();
+        maybePromptUnreadNotifications();
         return;
       }
       const seen = store.clientSeenEventId || 0;
@@ -3534,9 +3846,6 @@ async function pollPracticeInbox() {
         store.clientSeenMsgId = box.lastMessageId;
       }
       store.clientSeenEventId = maxId;
-      const unreadEv = (box.events || []).filter(function (e) { return e && !e.read_at && e.kind !== 'message'; }).length;
-      const badgeN = Number(box.unreadMessages || 0) + unreadEv;
-      setNurvanAppBadge(badgeN);
       if (typeof persist === 'function') persist();
     } else if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) {
       const box = await practiceFetch('/api/coach/inbox', { method: 'GET', headers: practiceHeaders(false) }, 12000);
@@ -3544,9 +3853,8 @@ async function pollPracticeInbox() {
       if (!store.coachInboxByAccount || typeof store.coachInboxByAccount !== 'object') store.coachInboxByAccount = {};
       const accState = store.coachInboxByAccount[accountKey] || { ready: false, seenId: 0 };
       const maxCoachId = (box.events || []).reduce(function (m, e) { return Math.max(m, Number(e.id || 0)); }, 0);
-      const unreadSum = (box.clients || []).reduce(function (s, c) { return s + Number(c.unreadCount || 0); }, 0)
-        + (box.events || []).length;
-      setNurvanAppBadge(unreadSum);
+      const items = buildCoachNotifyItems(box);
+      updateNotifyCount(items.length, items);
       if (!accState.ready) {
         accState.ready = true;
         accState.seenId = maxCoachId;
@@ -3554,6 +3862,7 @@ async function pollPracticeInbox() {
         store.coachInboxReady = true;
         store.coachSeenEventId = maxCoachId;
         if (typeof persist === 'function') persist();
+        maybePromptUnreadNotifications();
         return;
       }
       const seen = Number(accState.seenId || store.coachSeenEventId || 0);
@@ -4707,6 +5016,11 @@ window.ensureCoachDomainToolbar = ensureCoachDomainToolbar;
 window.friendlyApiError = friendlyApiError;
 window.setNurvanAppBadge = setNurvanAppBadge;
 window.clearNurvanAppBadge = clearNurvanAppBadge;
+window.openNotificationsCenter = openNotificationsCenter;
+window.closeNotificationsCenter = closeNotificationsCenter;
+window.openNotifyItem = openNotifyItem;
+window.openClientSheetNotify = openClientSheetNotify;
+window.ensureNotifyButton = ensureNotifyButton;
 window.assignActiveToClient = assignActiveToClient;
 window.openAssignChooser = openAssignChooser;
 window.beginAssignSandbox = beginAssignSandbox;

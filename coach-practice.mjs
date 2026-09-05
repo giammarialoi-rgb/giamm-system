@@ -892,6 +892,20 @@ export function mountCoachPractice(app, deps) {
     });
   });
 
+  app.post("/api/client/inbox/ack", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((n) => Number(n)).filter((n) => n > 0) : [];
+    if (!ids.length) return res.json({ ok: true, updated: 0 });
+    const result = await pool.query(
+      `UPDATE coach_events
+       SET read_at = NOW()
+       WHERE client_id = $1 AND id = ANY($2::bigint[]) AND read_at IS NULL`,
+      [ctx.client.id, ids]
+    );
+    return res.json({ ok: true, updated: result.rowCount || 0 });
+  });
+
   app.post("/api/client/password-help", async (req, res) => {
     try {
       await initDb();

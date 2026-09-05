@@ -1265,6 +1265,10 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">🧭</span>
         <span style="font-size:11px;font-weight:800;">Guida</span>
       </button>
+      <button class="btn btn-outline" id="hub-tile-notify" data-hub="athlete" style="display:none;height:70px;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;" onclick="closeMenuHub();openNotificationsCenter()">
+        <span style="font-size:20px;">🔔</span>
+        <span style="font-size:11px;font-weight:800;">Notifiche</span>
+      </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('settings')">
         <span style="font-size:20px;">⚙️</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="settings">Impostazioni</span>
@@ -35322,15 +35326,62 @@ function computeNutritionTargetsFromProfile(overrides) {
   let tdee = Math.round(bmr * 1.55);
   if (/dimagr|cut|defin/.test(goal)) tdee = Math.round(tdee * 0.85);
   else if (/massa|ipertrof|bulk/.test(goal)) tdee = Math.round(tdee * 1.1);
-  let protein = Math.round(weight * (/forza|massa|ipertrof/.test(goal) ? 2.0 : 1.8));
-  let fat = Math.round(weight * 0.8);
-  let carbs = Math.max(80, Math.round((tdee - protein * 4 - fat * 9) / 4));
+  if (Number.isFinite(Number(overrides.kcal)) && Number(overrides.kcal) > 0) tdee = Math.round(Number(overrides.kcal));
+
+  const hasPct = [overrides.proteinPct, overrides.carbsPct, overrides.fatPct].every(function (n) {
+    return Number.isFinite(Number(n)) && Number(n) > 0;
+  });
+  let protein, carbs, fat;
+  if (hasPct) {
+    const pPct = Number(overrides.proteinPct);
+    const cPct = Number(overrides.carbsPct);
+    const fPct = Number(overrides.fatPct);
+    protein = Math.max(40, Math.round((tdee * (pPct / 100)) / 4));
+    carbs = Math.max(40, Math.round((tdee * (cPct / 100)) / 4));
+    fat = Math.max(20, Math.round((tdee * (fPct / 100)) / 9));
+    tdee = Math.round(protein * 4 + carbs * 4 + fat * 9);
+    return { tdee: tdee, protein: protein, carbs: carbs, fat: fat, proteinPct: pPct, carbsPct: cPct, fatPct: fPct };
+  }
+
+  protein = Math.round(weight * (/forza|massa|ipertrof/.test(goal) ? 2.0 : 1.8));
+  fat = Math.round(weight * 0.8);
+  carbs = Math.max(80, Math.round((tdee - protein * 4 - fat * 9) / 4));
   if (Number.isFinite(Number(overrides.protein)) && Number(overrides.protein) > 0) protein = Math.round(Number(overrides.protein));
   if (Number.isFinite(Number(overrides.carbs)) && Number(overrides.carbs) > 0) carbs = Math.round(Number(overrides.carbs));
   if (Number.isFinite(Number(overrides.fat)) && Number(overrides.fat) > 0) fat = Math.round(Number(overrides.fat));
-  if (Number.isFinite(Number(overrides.kcal)) && Number(overrides.kcal) > 0) tdee = Math.round(Number(overrides.kcal));
-  else tdee = Math.round(protein * 4 + carbs * 4 + fat * 9);
+  if (!(Number.isFinite(Number(overrides.kcal)) && Number(overrides.kcal) > 0)) {
+    tdee = Math.round(protein * 4 + carbs * 4 + fat * 9);
+  }
   return { tdee: tdee, protein: protein, carbs: carbs, fat: fat };
+}
+
+/** When one macro % changes, split the remainder equally across the other two (5% steps). */
+function balanceMacroPercents(changed, value, current) {
+  current = current || { p: 40, c: 40, f: 20 };
+  let p = Number(current.p) || 40;
+  let c = Number(current.c) || 40;
+  let f = Number(current.f) || 20;
+  let v = Math.round(Number(value) / 5) * 5;
+  v = Math.max(10, Math.min(70, v));
+  const splitRem = function (rem) {
+    const a = Math.round(rem / 2 / 5) * 5;
+    return [a, rem - a];
+  };
+  if (changed === 'p') {
+    p = v;
+    const parts = splitRem(100 - p);
+    c = parts[0]; f = parts[1];
+  } else if (changed === 'c') {
+    c = v;
+    const parts = splitRem(100 - c);
+    p = parts[0]; f = parts[1];
+  } else {
+    f = v;
+    const parts = splitRem(100 - f);
+    p = parts[0]; c = parts[1];
+  }
+  if (p + c + f !== 100) f = 100 - p - c;
+  return { p: p, c: c, f: f };
 }
 
 function parseNutritionWeekRequest(text) {
@@ -35434,11 +35485,145 @@ const NUTRITION_MEAL_TEMPLATES_OFF = {
   ]
 };
 
+/** Extra meal-layout variants so comboCount 1–7 can avoid repeating the same day. */
+const NUTRITION_MEAL_COMBO_VARIANTS = [
+  NUTRITION_MEAL_TEMPLATES_ON,
+  NUTRITION_MEAL_TEMPLATES_OFF,
+  {
+    Colazione: [
+      { name: 'Pancake proteici', quantity: 120, unit: 'g', kcal: 220, protein: 20, carbs: 22, fat: 5 },
+      { name: 'Mirtilli', quantity: 80, unit: 'g', kcal: 45, protein: 0, carbs: 11, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Manzo magro', quantity: 140, unit: 'g', kcal: 250, protein: 36, carbs: 0, fat: 12 },
+      { name: 'Patate dolci', quantity: 200, unit: 'g', kcal: 180, protein: 3, carbs: 41, fat: 0 },
+      { name: 'Insalata', quantity: 150, unit: 'g', kcal: 25, protein: 2, carbs: 4, fat: 0 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ],
+    Spuntino: [
+      { name: 'Skyr', quantity: 150, unit: 'g', kcal: 90, protein: 16, carbs: 5, fat: 0 },
+      { name: 'Noci', quantity: 15, unit: 'g', kcal: 100, protein: 2, carbs: 2, fat: 10 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Fiocchi di latte', quantity: 150, unit: 'g', kcal: 110, protein: 18, carbs: 5, fat: 2 }
+    ],
+    Cena: [
+      { name: 'Merluzzo', quantity: 180, unit: 'g', kcal: 150, protein: 32, carbs: 0, fat: 2 },
+      { name: 'Riso integrale', quantity: 80, unit: 'g', kcal: 280, protein: 6, carbs: 58, fat: 2 },
+      { name: 'Zucchine', quantity: 200, unit: 'g', kcal: 35, protein: 2, carbs: 6, fat: 0 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Toast integrale', quantity: 2, unit: 'pz', kcal: 160, protein: 6, carbs: 28, fat: 2 },
+      { name: 'Uovo strapazzato', quantity: 2, unit: 'pz', kcal: 140, protein: 12, carbs: 1, fat: 10 },
+      { name: 'Kiwi', quantity: 1, unit: 'pz', kcal: 45, protein: 1, carbs: 10, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Petto di tacchino', quantity: 160, unit: 'g', kcal: 175, protein: 38, carbs: 0, fat: 2 },
+      { name: 'Pasta integrale', quantity: 90, unit: 'g', kcal: 310, protein: 12, carbs: 60, fat: 2 },
+      { name: 'Pomodoro', quantity: 150, unit: 'g', kcal: 30, protein: 1, carbs: 6, fat: 0 },
+      { name: 'Olio EVO', quantity: 10, unit: 'g', kcal: 90, protein: 0, carbs: 0, fat: 10 }
+    ],
+    Spuntino: [
+      { name: 'Banana', quantity: 1, unit: 'pz', kcal: 90, protein: 1, carbs: 23, fat: 0 },
+      { name: 'Burro di arachidi', quantity: 15, unit: 'g', kcal: 90, protein: 4, carbs: 3, fat: 8 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Whey protein', quantity: 30, unit: 'g', kcal: 115, protein: 24, carbs: 2, fat: 1 }
+    ],
+    Cena: [
+      { name: 'Gamberi', quantity: 160, unit: 'g', kcal: 160, protein: 34, carbs: 1, fat: 2 },
+      { name: 'Cous cous', quantity: 80, unit: 'g', kcal: 280, protein: 9, carbs: 55, fat: 2 },
+      { name: 'Verdure miste', quantity: 200, unit: 'g', kcal: 50, protein: 3, carbs: 8, fat: 0 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Yogurt greco 0%', quantity: 200, unit: 'g', kcal: 120, protein: 20, carbs: 8, fat: 0 },
+      { name: 'Granola', quantity: 40, unit: 'g', kcal: 180, protein: 5, carbs: 28, fat: 6 },
+      { name: 'Fragole', quantity: 100, unit: 'g', kcal: 35, protein: 1, carbs: 8, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Pollo coscia senza pelle', quantity: 160, unit: 'g', kcal: 220, protein: 32, carbs: 0, fat: 10 },
+      { name: 'Farro', quantity: 80, unit: 'g', kcal: 280, protein: 10, carbs: 55, fat: 2 },
+      { name: 'Insalata', quantity: 150, unit: 'g', kcal: 25, protein: 2, carbs: 4, fat: 0 }
+    ],
+    Spuntino: [
+      { name: 'Ricotta light', quantity: 100, unit: 'g', kcal: 110, protein: 12, carbs: 4, fat: 5 },
+      { name: 'Miele', quantity: 10, unit: 'g', kcal: 30, protein: 0, carbs: 8, fat: 0 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Pera', quantity: 1, unit: 'pz', kcal: 80, protein: 0, carbs: 20, fat: 0 }
+    ],
+    Cena: [
+      { name: 'Hamburger di tacchino', quantity: 150, unit: 'g', kcal: 200, protein: 30, carbs: 2, fat: 8 },
+      { name: 'Patate al forno', quantity: 220, unit: 'g', kcal: 180, protein: 4, carbs: 40, fat: 0 },
+      { name: 'Broccoli', quantity: 200, unit: 'g', kcal: 55, protein: 5, carbs: 8, fat: 0 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Porridge di avena', quantity: 70, unit: 'g', kcal: 260, protein: 9, carbs: 45, fat: 5 },
+      { name: 'Albume', quantity: 150, unit: 'g', kcal: 80, protein: 16, carbs: 1, fat: 0 },
+      { name: 'Cannella', quantity: 1, unit: 'g', kcal: 3, protein: 0, carbs: 1, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Lonza di maiale magra', quantity: 140, unit: 'g', kcal: 220, protein: 34, carbs: 0, fat: 9 },
+      { name: 'Orzo', quantity: 80, unit: 'g', kcal: 280, protein: 8, carbs: 56, fat: 2 },
+      { name: 'Peperoni', quantity: 150, unit: 'g', kcal: 40, protein: 1, carbs: 8, fat: 0 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ],
+    Spuntino: [
+      { name: 'Frutta secca mista', quantity: 25, unit: 'g', kcal: 140, protein: 4, carbs: 8, fat: 11 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Yogurt proteico', quantity: 150, unit: 'g', kcal: 100, protein: 15, carbs: 6, fat: 1 }
+    ],
+    Cena: [
+      { name: 'Orata', quantity: 180, unit: 'g', kcal: 180, protein: 32, carbs: 0, fat: 6 },
+      { name: 'Verdure al forno', quantity: 250, unit: 'g', kcal: 70, protein: 3, carbs: 12, fat: 1 },
+      { name: 'Pane di segale', quantity: 40, unit: 'g', kcal: 90, protein: 3, carbs: 16, fat: 1 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Smoothie proteico', quantity: 300, unit: 'ml', kcal: 220, protein: 28, carbs: 18, fat: 3 },
+      { name: 'Fiocchi d’avena', quantity: 30, unit: 'g', kcal: 110, protein: 4, carbs: 18, fat: 2 }
+    ],
+    Pranzo: [
+      { name: 'Petto di pollo', quantity: 160, unit: 'g', kcal: 264, protein: 49, carbs: 0, fat: 5 },
+      { name: 'Riso basmati', quantity: 85, unit: 'g', kcal: 295, protein: 6, carbs: 65, fat: 1 },
+      { name: 'Fagiolini', quantity: 180, unit: 'g', kcal: 45, protein: 3, carbs: 8, fat: 0 },
+      { name: 'Olio EVO', quantity: 10, unit: 'g', kcal: 90, protein: 0, carbs: 0, fat: 10 }
+    ],
+    Spuntino: [
+      { name: 'Crackers integrali', quantity: 30, unit: 'g', kcal: 120, protein: 3, carbs: 20, fat: 3 },
+      { name: 'Fesa di tacchino', quantity: 40, unit: 'g', kcal: 40, protein: 8, carbs: 0, fat: 1 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Arancia', quantity: 1, unit: 'pz', kcal: 60, protein: 1, carbs: 14, fat: 0 }
+    ],
+    Cena: [
+      { name: 'Bresaola', quantity: 80, unit: 'g', kcal: 120, protein: 26, carbs: 0, fat: 2 },
+      { name: 'Mozzarella light', quantity: 80, unit: 'g', kcal: 140, protein: 16, carbs: 1, fat: 8 },
+      { name: 'Rucola e pomodorini', quantity: 150, unit: 'g', kcal: 35, protein: 2, carbs: 5, fat: 0 }
+    ]
+  }
+];
+
+function nutritionComboTemplates(comboIndex, trainingDay) {
+  const list = NUTRITION_MEAL_COMBO_VARIANTS;
+  const idx = Math.abs(Number(comboIndex) || 0) % Math.max(1, list.length);
+  if (list[idx]) return list[idx];
+  return trainingDay === false ? NUTRITION_MEAL_TEMPLATES_OFF : NUTRITION_MEAL_TEMPLATES_ON;
+}
+
 function fillNutritionDayWithMeals(dayLabel, targets, opts) {
   opts = opts || {};
   const isOn = opts.trainingDay !== false;
   const mealCount = opts.mealCount || 4;
-  const templates = isOn ? NUTRITION_MEAL_TEMPLATES_ON : NUTRITION_MEAL_TEMPLATES_OFF;
+  const templates = opts.templates || nutritionComboTemplates(opts.comboIndex, isOn);
   const kcalTarget = isOn ? targets.tdee : Math.round(targets.tdee * 0.88);
   const mealNames = mealCount === 2 ? ['Colazione', 'Cena']
     : mealCount === 3 ? ['Colazione', 'Pranzo', 'Cena']
@@ -35457,8 +35642,9 @@ function fillNutritionDayWithMeals(dayLabel, targets, opts) {
       foods: tpl.map(function (f) { return scaleFoodRow(f, factor); })
     };
   });
+  const comboTag = opts.comboIndex != null ? (' · C' + (Number(opts.comboIndex) + 1)) : '';
   return {
-    day: dayLabel + (isOn ? ' · ON' : ' · OFF'),
+    day: dayLabel + (isOn ? ' · ON' : ' · OFF') + comboTag,
     training_day: isOn,
     meals: meals
   };
@@ -35467,27 +35653,37 @@ function fillNutritionDayWithMeals(dayLabel, targets, opts) {
 function buildWeeklyNutritionPlan(overrides, weekOpts) {
   weekOpts = weekOpts || {};
   const targets = computeNutritionTargetsFromProfile(overrides);
-  const onCount = weekOpts.onCount != null ? weekOpts.onCount : 4;
-  const offCount = weekOpts.offCount != null ? weekOpts.offCount : (7 - onCount);
-  const pattern = buildOnOffPattern(onCount, offCount);
+  const dayCount = Math.min(7, Math.max(1, Number(weekOpts.dayCount) || 7));
+  const comboCount = Math.min(7, Math.max(1, Number(weekOpts.comboCount) || 2));
+  const onCount = weekOpts.onCount != null ? weekOpts.onCount : Math.min(dayCount, 4);
+  const offCount = weekOpts.offCount != null ? weekOpts.offCount : Math.max(0, dayCount - onCount);
+  const pattern = buildOnOffPattern(onCount, offCount).slice(0, dayCount);
+  while (pattern.length < dayCount) pattern.push(true);
   const mealCount = weekOpts.mealCount || 4;
-  const days = WEEKDAY_IT.map(function (label, i) {
-    return fillNutritionDayWithMeals(label, targets, { trainingDay: pattern[i], mealCount: mealCount });
+  const days = WEEKDAY_IT.slice(0, dayCount).map(function (label, i) {
+    return fillNutritionDayWithMeals(label, targets, {
+      trainingDay: pattern[i],
+      mealCount: mealCount,
+      comboIndex: i % comboCount
+    });
   });
+  const pctNote = (targets.proteinPct != null)
+    ? (' Macro ' + targets.proteinPct + '/' + targets.carbsPct + '/' + targets.fatPct + '%.')
+    : '';
   return {
     present: true,
-    plan_name: weekOpts.planName || ('Piano settimanale · ' + onCount + ' ON / ' + offCount + ' OFF'),
+    plan_name: weekOpts.planName || ('Piano · ' + dayCount + ' gg · ' + comboCount + ' combinazioni'),
     daily_calories_target: targets.tdee,
     daily_protein_target: targets.protein,
     daily_carbs_target: targets.carbs,
     daily_fats_target: targets.fat,
-    notes: 'Piano organizzativo evidence-informed (proteine ~1.6–2.2 g/kg; non è diagnosi o terapia).',
+    notes: 'Piano organizzativo evidence-informed (proteine ~1.6–2.2 g/kg; non è diagnosi o terapia).' + pctNote,
     days: days
   };
 }
 
 function buildNutritionPlanFromProfile(overrides, weekOpts) {
-  return buildWeeklyNutritionPlan(overrides, Object.assign({ onCount: 4, offCount: 3 }, weekOpts || {}));
+  return buildWeeklyNutritionPlan(overrides, Object.assign({ onCount: 4, offCount: 3, dayCount: 7, comboCount: 2 }, weekOpts || {}));
 }
 
 function buildDefaultSupplementationFromProfile() {
@@ -39347,9 +39543,10 @@ function renderNutrition(c) {
         <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${t('nutrition')}</h1>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="openGenerateNutritionPlanWizard()">GENERA PIANO</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain('nutrition')">CHIEDI A COACH AI</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="startDomainImport('nutrition')">${t('importNutrition')}</button>
-        <button class="btn btn-primary" style="font-size:10px;padding:6px 12px;" onclick="addNutritionDay()">${t('addDay')}</button>
+        <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="addNutritionDay()">${t('addDay')}</button>
       </div>
     </div>
     ${nutritionConfirmCardHtml()}
@@ -39372,7 +39569,8 @@ function renderNutrition(c) {
         <p style="margin:0;font-size:13px;color:#ccc;">${t('emptyNutrition')}</p>
         <p style="margin:10px 0 0;font-size:11px;color:#666;">Puoi importare un file, aggiungere un giorno della settimana, oppure compilare il profilo e generare un piano suggerito.</p>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
-          <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="askCoachAiForDomain('nutrition')">CHIEDI A COACH AI (DA PROFILO)</button>
+          <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="openGenerateNutritionPlanWizard()">GENERA PIANO</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="askCoachAiForDomain('nutrition')">CHIEDI A COACH AI (DA PROFILO)</button>
           <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="addNutritionDay()">${t('addDay')}</button>
           <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="startDomainImport('nutrition')">${t('importNutrition')}</button>
         </div>
@@ -39613,6 +39811,159 @@ function deleteFoodItem(dayIdx, mealIdx, foodIdx) {
 
 function addNutritionDay() {
   openAddNutritionDayWizard();
+}
+
+function macroPctOptionsHtml(selected) {
+  let html = '';
+  for (let n = 10; n <= 70; n += 5) {
+    html += '<option value="' + n + '"' + (Number(selected) === n ? ' selected' : '') + '>' + n + '%</option>';
+  }
+  return html;
+}
+
+function openGenerateNutritionPlanWizard() {
+  const existing = document.getElementById('gen-nutrition-plan-modal');
+  if (existing) existing.remove();
+  const base = computeNutritionTargetsFromProfile({});
+  window.__genNutrPlan = {
+    mode: 'auto',
+    p: 40, c: 40, f: 20,
+    dayCount: 7,
+    comboCount: 2,
+    mealCount: 4,
+    kcal: base.tdee || 2200
+  };
+  const overlay = document.createElement('div');
+  overlay.id = 'gen-nutrition-plan-modal';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10120;align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;';
+  overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
+  overlay.innerHTML =
+    '<div class="card" style="max-width:460px;width:100%;max-height:min(88vh,720px);overflow:auto;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">GENERA ALIMENTAZIONE</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'gen-nutrition-plan-modal\').remove()">CHIUDI</button></div>' +
+    '<div style="font-size:12px;color:#bbb;margin-bottom:10px;line-height:1.4;">Automatico dal profilo, oppure preciso con distribuzione macros, giorni e combinazioni diverse.</div>' +
+    '<div style="display:flex;gap:6px;margin-bottom:12px;">' +
+    '<button type="button" id="gen-nutr-mode-auto" class="btn btn-primary" style="flex:1;font-size:11px;" onclick="setGenNutritionMode(\'auto\')">AUTOMATICO</button>' +
+    '<button type="button" id="gen-nutr-mode-precise" class="btn btn-outline" style="flex:1;font-size:11px;" onclick="setGenNutritionMode(\'precise\')">PRECISO</button></div>' +
+    '<div id="gen-nutr-precise" style="display:none;margin-bottom:12px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
+    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Distribuzione macros (si ribilanciano tra loro)</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">' +
+    '<label style="font-size:10px;color:#ccc;">Proteine<select id="gen-nutr-p" onchange="onGenNutritionMacroChange(\'p\')" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' + macroPctOptionsHtml(40) + '</select></label>' +
+    '<label style="font-size:10px;color:#ccc;">Carboidrati<select id="gen-nutr-c" onchange="onGenNutritionMacroChange(\'c\')" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' + macroPctOptionsHtml(40) + '</select></label>' +
+    '<label style="font-size:10px;color:#ccc;">Grassi<select id="gen-nutr-f" onchange="onGenNutritionMacroChange(\'f\')" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' + macroPctOptionsHtml(20) + '</select></label>' +
+    '</div>' +
+    '<div id="gen-nutr-macro-preview" style="font-size:11px;color:var(--gold);margin-bottom:4px;">40% / 40% / 20%</div>' +
+    '<div id="gen-nutr-gram-preview" style="font-size:10px;color:#888;"></div></div>' +
+    '<div style="margin-bottom:10px;"><label style="font-size:10px;color:#ccc;">Applica per quanti giorni (1–7)</label>' +
+    '<select id="gen-nutr-days" onchange="window.__genNutrPlan.dayCount=parseInt(this.value,10);refreshGenNutritionPreview()" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
+    [1,2,3,4,5,6,7].map(function (n) { return '<option value="' + n + '"' + (n === 7 ? ' selected' : '') + '>' + n + (n === 1 ? ' giorno' : ' giorni') + '</option>'; }).join('') +
+    '</select></div>' +
+    '<div style="margin-bottom:10px;"><label style="font-size:10px;color:#ccc;">Combinazioni diverse di pasti (1–7)</label>' +
+    '<select id="gen-nutr-combos" onchange="window.__genNutrPlan.comboCount=parseInt(this.value,10)" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
+    [1,2,3,4,5,6,7].map(function (n) { return '<option value="' + n + '"' + (n === 2 ? ' selected' : '') + '>' + n + (n === 1 ? ' combinazione (si ripete)' : ' combinazioni') + '</option>'; }).join('') +
+    '</select>' +
+    '<div style="font-size:10px;color:#777;margin-top:4px;">Se i giorni &gt; combinazioni, le layout si ripetono in rotazione.</div></div>' +
+    '<div style="margin-bottom:10px;"><label style="font-size:10px;color:#ccc;">Pasti al giorno</label>' +
+    '<select id="gen-nutr-meals" onchange="window.__genNutrPlan.mealCount=parseInt(this.value,10)" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
+    '<option value="3">3 pasti</option><option value="4" selected>4 pasti</option><option value="5">5 pasti</option></select></div>' +
+    '<div style="margin-bottom:12px;"><label style="font-size:10px;color:#ccc;">Target kcal (opzionale)</label>' +
+    '<input id="gen-nutr-kcal" type="number" value="' + (base.tdee || 2200) + '" oninput="window.__genNutrPlan.kcal=parseInt(this.value,10)||0;refreshGenNutritionPreview()" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></div>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;" onclick="confirmGenerateNutritionPlan()">CREA PIANO</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  refreshGenNutritionPreview();
+}
+
+function setGenNutritionMode(mode) {
+  window.__genNutrPlan = window.__genNutrPlan || { p: 40, c: 40, f: 20 };
+  window.__genNutrPlan.mode = mode === 'precise' ? 'precise' : 'auto';
+  const precise = document.getElementById('gen-nutr-precise');
+  const autoBtn = document.getElementById('gen-nutr-mode-auto');
+  const precBtn = document.getElementById('gen-nutr-mode-precise');
+  if (precise) precise.style.display = window.__genNutrPlan.mode === 'precise' ? 'block' : 'none';
+  if (autoBtn) {
+    autoBtn.className = 'btn ' + (window.__genNutrPlan.mode === 'auto' ? 'btn-primary' : 'btn-outline');
+    autoBtn.style.cssText = 'flex:1;font-size:11px;';
+  }
+  if (precBtn) {
+    precBtn.className = 'btn ' + (window.__genNutrPlan.mode === 'precise' ? 'btn-primary' : 'btn-outline');
+    precBtn.style.cssText = 'flex:1;font-size:11px;';
+  }
+  refreshGenNutritionPreview();
+}
+
+function onGenNutritionMacroChange(which) {
+  const st = window.__genNutrPlan || { p: 40, c: 40, f: 20 };
+  const el = document.getElementById(which === 'p' ? 'gen-nutr-p' : (which === 'c' ? 'gen-nutr-c' : 'gen-nutr-f'));
+  const val = el ? parseInt(el.value, 10) : 40;
+  const next = balanceMacroPercents(which, val, { p: st.p, c: st.c, f: st.f });
+  st.p = next.p; st.c = next.c; st.f = next.f;
+  window.__genNutrPlan = st;
+  const pEl = document.getElementById('gen-nutr-p');
+  const cEl = document.getElementById('gen-nutr-c');
+  const fEl = document.getElementById('gen-nutr-f');
+  if (pEl) pEl.value = String(st.p);
+  if (cEl) cEl.value = String(st.c);
+  if (fEl) fEl.value = String(st.f);
+  refreshGenNutritionPreview();
+}
+
+function refreshGenNutritionPreview() {
+  const st = window.__genNutrPlan || { p: 40, c: 40, f: 20, kcal: 0, mode: 'auto' };
+  const kcal = Number(st.kcal) || 0;
+  const overrides = kcal > 0 ? { kcal: kcal } : {};
+  if (st.mode === 'precise') {
+    overrides.proteinPct = st.p;
+    overrides.carbsPct = st.c;
+    overrides.fatPct = st.f;
+  }
+  const t = computeNutritionTargetsFromProfile(overrides);
+  const prev = document.getElementById('gen-nutr-macro-preview');
+  const grams = document.getElementById('gen-nutr-gram-preview');
+  if (prev) prev.textContent = (st.mode === 'precise')
+    ? (st.p + '% P / ' + st.c + '% C / ' + st.f + '% F')
+    : 'Macro automatiche da profilo';
+  if (grams) grams.textContent = '~' + t.tdee + ' kcal · P ' + t.protein + 'g · C ' + t.carbs + 'g · F ' + t.fat + 'g';
+}
+
+function confirmGenerateNutritionPlan() {
+  const st = window.__genNutrPlan || {};
+  const dayCount = Math.min(7, Math.max(1, parseInt((document.getElementById('gen-nutr-days') || {}).value, 10) || st.dayCount || 7));
+  const comboCount = Math.min(7, Math.max(1, parseInt((document.getElementById('gen-nutr-combos') || {}).value, 10) || st.comboCount || 2));
+  const mealCount = Math.min(5, Math.max(2, parseInt((document.getElementById('gen-nutr-meals') || {}).value, 10) || st.mealCount || 4));
+  const kcalEl = document.getElementById('gen-nutr-kcal');
+  const kcal = kcalEl ? parseInt(kcalEl.value, 10) : (st.kcal || 0);
+  const overrides = {};
+  if (kcal > 0) overrides.kcal = kcal;
+  if (st.mode === 'precise') {
+    overrides.proteinPct = st.p || 40;
+    overrides.carbsPct = st.c || 40;
+    overrides.fatPct = st.f || 20;
+  }
+  const onCount = Math.min(dayCount, Math.max(1, Math.ceil(dayCount * 0.57)));
+  const plan = buildWeeklyNutritionPlan(overrides, {
+    dayCount: dayCount,
+    comboCount: comboCount,
+    mealCount: mealCount,
+    onCount: onCount,
+    offCount: Math.max(0, dayCount - onCount),
+    planName: (st.mode === 'precise' ? 'Piano preciso' : 'Piano automatico') + ' · ' + dayCount + ' gg · ' + comboCount + ' comb.'
+  });
+  if (!DATA) window.DATA = {};
+  DATA.nutrition = plan;
+  if (typeof store !== 'undefined' && store) store.nutrition = plan;
+  if (typeof persist === 'function') persist();
+  const modal = document.getElementById('gen-nutrition-plan-modal');
+  if (modal) modal.remove();
+  if (typeof currentNutritionDayIndex !== 'undefined') currentNutritionDayIndex = 0;
+  if (typeof render === 'function') render();
+  if (typeof showToast === 'function') {
+    showToast('Piano creato: ' + dayCount + ' giorni, ' + comboCount + ' combinazioni', 'success');
+  }
+  if (typeof store !== 'undefined' && store && store.coachViewingClient && typeof practiceToast === 'function') {
+    practiceToast('Ricorda: SALVA MODIFICHE o INVIA AL CLIENTE per sincronizzare', 'info');
+  }
 }
 
 function openAddNutritionDayWizard() {
@@ -49087,6 +49438,11 @@ if (typeof window !== 'undefined') {
   window.closeBonusModal = closeBonusModal;
   window.saveAll = saveAll;
   window.addNutritionDay = addNutritionDay;
+  window.openGenerateNutritionPlanWizard = openGenerateNutritionPlanWizard;
+  window.setGenNutritionMode = setGenNutritionMode;
+  window.onGenNutritionMacroChange = onGenNutritionMacroChange;
+  window.confirmGenerateNutritionPlan = confirmGenerateNutritionPlan;
+  window.balanceMacroPercents = balanceMacroPercents;
   window.selectNutritionDay = selectNutritionDay;
   window.render = render;
   window.addNutritionMeal = addNutritionMeal;
@@ -49402,6 +49758,7 @@ function applyClientChrome() {
       };
     }
     ensureCoachHeaderControls(coachSession);
+    ensureNotifyButton();
     if (athlete) {
       document.querySelectorAll('button').forEach(function (btn) {
         const tx = String(btn.textContent || '');
@@ -49547,11 +49904,18 @@ function ensureCoachDrawer() {
   const viewing = !!(store && store.coachViewingClient);
   const id = hasClient ? String(store.coachWorkspace.clientId) : '';
   const name = (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente';
+  const n = Math.max(0, Number(store.__cpNotifyCount || 0));
   panel.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
     '<div style="color:var(--gold);font-weight:800;font-size:13px;">MENU COACH</div>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="closeCoachDrawer()">CHIUDI</button></div>' +
     (hasClient ? ('<div class="cp-help" style="margin-bottom:10px;">Cliente: <b style="color:#fff;">' + esc(name) + '</b></div>') : '<div class="cp-help">Nessun cliente aperto. Apri dalla lista.</div>') +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:10px;position:relative;" onclick="closeCoachDrawer();openNotificationsCenter()">' +
+    'NOTIFICHE' + (n > 0 ? (' <span class="cp-notify-count" style="position:static;display:inline-flex;margin-left:6px;">' + (n > 99 ? '99+' : n) + '</span>') : '') +
+    '</button>' +
+    (hasClient
+      ? ('<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="closeCoachDrawer();openNotificationsCenter(\'' + esc(id) + '\')">NOTIFICHE CLIENTE · ORA</button>')
+      : '') +
     '<div class="cp-drawer-grid">' +
     '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachHub\')">LISTA CLIENTI</button>' +
     '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachLibrary\')">IL MIO DATABASE</button>' +
@@ -49657,6 +50021,15 @@ function ensurePracticeStyle() {
     '.cp-inapp-notify{position:fixed;left:10px;right:10px;top:calc(var(--header-height) + 8px + var(--cp-session-bar, 0px));z-index:10160;background:#151515;border:1px solid var(--gold);border-radius:12px;padding:10px 12px;color:#eee;box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;}',
     '.cp-inapp-notify b{color:var(--gold);display:block;font-size:12px;margin-bottom:2px;}',
     '.cp-inapp-notify span{font-size:11px;color:#ccc;}',
+    '#cp-notify-btn{position:relative;font-size:9px;padding:6px 8px;margin-left:6px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;}',
+    '#cp-notify-btn .cp-notify-count{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#c66;color:#fff !important;-webkit-text-fill-color:#fff !important;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;}',
+    '#cp-notify-center{position:fixed;inset:0;z-index:10170;background:rgba(0,0,0,.88);display:none;align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;}',
+    '#cp-notify-center.active{display:flex;}',
+    '#cp-notify-center .cp-notify-panel{width:100%;max-width:440px;max-height:min(78vh,640px);overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px;padding:14px;color:#eee;box-sizing:border-box;}',
+    '.cp-notify-item{display:block;width:100%;text-align:left;padding:12px;margin:0 0 8px;background:#141414;border:1px solid #333;border-radius:10px;color:#eee !important;-webkit-text-fill-color:#eee !important;cursor:pointer;}',
+    '.cp-notify-item b{display:block;color:var(--gold);font-size:12px;margin-bottom:4px;}',
+    '.cp-notify-item span{display:block;font-size:11px;color:#bbb;}',
+    '.cp-notify-item small{display:block;font-size:10px;color:#777;margin-top:6px;}',
     '.cp-assign-bar{position:fixed;right:10px;bottom:calc(72px + env(safe-area-inset-bottom,0px));left:auto;z-index:10080;background:#111;border:1px solid var(--gold);border-radius:12px;padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.45);max-width:min(360px,calc(100vw - 20px));max-height:min(42vh,320px);overflow:auto;box-sizing:border-box;}',
     '.cp-assign-bar.cp-assign-collapsed{left:auto;right:10px;bottom:calc(72px + env(safe-area-inset-bottom,0px));padding:0;max-width:none;max-height:none;overflow:visible;background:transparent;border:0;box-shadow:none;}',
     '.cp-assign-chip{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;background:#111;border:1px solid var(--gold);border-radius:999px;color:var(--gold);font-size:11px;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 6px 18px rgba(0,0,0,.4);}',
@@ -49793,6 +50166,280 @@ function clearNurvanAppBadge() {
     if (typeof window !== 'undefined' && window.NativeConfig) return;
     if (navigator.clearAppBadge) navigator.clearAppBadge().catch(function () {});
   } catch (_) {}
+}
+
+function updateNotifyCount(n, items) {
+  store.__cpNotifyCount = Math.max(0, Number(n) || 0);
+  if (Array.isArray(items)) store.__cpNotifyItems = items;
+  setNurvanAppBadge(store.__cpNotifyCount);
+  ensureNotifyButton();
+}
+
+function ensureNotifyButton() {
+  const headerActions = document.querySelector('.header-actions');
+  if (!headerActions) return;
+  let btn = document.getElementById('cp-notify-btn');
+  const logged = !!(store && store.accountToken);
+  const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+  const coachSession = !!(store && store.coachSessionActive && !athlete);
+  // Coach: notifiche generali nel MENU COACH. Header solo atleta (o coach fuori sessione).
+  if (!logged || coachSession) {
+    if (btn) btn.style.display = 'none';
+    return;
+  }
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'cp-notify-btn';
+    btn.className = 'btn btn-outline';
+    btn.onclick = function () { openNotificationsCenter(); };
+    const account = document.getElementById('account-button');
+    if (account && account.parentElement === headerActions) headerActions.insertBefore(btn, account.nextSibling);
+    else headerActions.insertBefore(btn, headerActions.firstChild);
+  }
+  const n = Math.max(0, Number(store.__cpNotifyCount || 0));
+  btn.style.display = '';
+  btn.innerHTML = 'NOTIFICHE' + (n > 0 ? '<span class="cp-notify-count">' + (n > 99 ? '99+' : n) + '</span>' : '');
+}
+
+function fmtNotifyWhen(iso) {
+  const raw = String(iso || '');
+  if (!raw) return '';
+  const d = new Date(raw);
+  if (!isNaN(d.getTime())) {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return dd + '/' + mm + ' · ' + hh + ':' + mi;
+  }
+  return raw.replace('T', ' ').slice(0, 16);
+}
+
+function coachEventLabel(kind, name) {
+  const n = name || 'Atleta';
+  if (kind === 'message') return { title: 'Messaggio', body: n + ' ti ha scritto', view: 'chat' };
+  if (kind === 'ask_coach') return { title: 'Richiesta al coach', body: n + ' chiede qualcosa', view: 'chat' };
+  if (kind === 'password_help') return { title: 'Recupero password', body: n + ' ha chiesto la password', view: 'coachClient' };
+  if (kind === 'leave_request') return { title: 'Fine collaborazione', body: n + ' ha chiesto di chiudere', view: 'coachClient' };
+  if (kind === 'change_request') return { title: 'Modifica da approvare', body: n + ' vuole cambiare il programma', view: 'coachClient' };
+  if (kind === 'change_notice') return { title: 'Atleta ha modificato', body: n + ' ha cambiato il programma', view: 'coachClient' };
+  if (kind === 'request_program') return { title: 'Richiesta scheda', body: n + ' chiede la scheda', view: 'coachClient' };
+  if (kind === 'workout_started') return { title: 'In allenamento', body: n + ' ha iniziato il workout', view: 'workout_started' };
+  if (kind === 'workout_done') return { title: 'Workout finito', body: n + ' ha finalizzato', view: 'workout_done' };
+  const copy = eventNotifyCopy(kind);
+  if (copy) return { title: copy[0], body: n + ' · ' + copy[1], view: 'coachClient' };
+  return { title: 'Attività', body: n + ' · ' + String(kind || 'evento'), view: 'coachClient' };
+}
+
+function athleteNotifyRoute(kind) {
+  const copy = eventNotifyCopy(kind);
+  return (copy && copy[2]) || { view: 'home' };
+}
+
+function buildAthleteNotifyItems(box) {
+  const items = [];
+  const unreadMsg = Number(box.unreadMessages || 0);
+  if (unreadMsg > 0) {
+    items.push({
+      key: 'msg',
+      title: unreadMsg === 1 ? 'Nuovo messaggio' : (unreadMsg + ' messaggi nuovi'),
+      body: 'Il coach ti ha scritto — apri la chat',
+      when: '',
+      unread: true,
+      route: { view: 'clientChat' },
+      eventIds: []
+    });
+  }
+  const events = (box.events || []).filter(function (e) { return e && e.kind !== 'message'; }).slice();
+  events.sort(function (a, b) {
+    const au = a.read_at ? 1 : 0;
+    const bu = b.read_at ? 1 : 0;
+    if (au !== bu) return au - bu;
+    return Number(b.id || 0) - Number(a.id || 0);
+  });
+  events.slice(0, 30).forEach(function (e) {
+    const copy = eventNotifyCopy(e.kind) || ['Aggiornamento', String(e.kind || 'Notifica'), { view: 'home' }];
+    const unread = !e.read_at;
+    items.push({
+      key: 'ev_' + e.id,
+      title: copy[0] + (unread ? '' : ''),
+      body: copy[1],
+      when: fmtNotifyWhen(e.created_at),
+      unread: unread,
+      route: copy[2] || { view: 'home' },
+      eventIds: unread ? [Number(e.id)] : []
+    });
+  });
+  return items;
+}
+
+function countAthleteUnread(box) {
+  const unreadEv = (box.events || []).filter(function (e) { return e && !e.read_at && e.kind !== 'message'; }).length;
+  return Number(box.unreadMessages || 0) + unreadEv;
+}
+
+function renderNotifyItemsHtml(items, emptyText) {
+  if (!items || !items.length) return '<div class="cp-help">' + esc(emptyText || 'Nessuna notifica.') + '</div>';
+  return items.map(function (it, idx) {
+    return '<button type="button" class="cp-notify-item" style="' + (it.unread ? 'border-color:rgba(212,175,55,.55);' : 'opacity:.88;') + '" onclick="openNotifyItem(' + idx + ')">' +
+      '<b>' + esc(it.title) + (it.unread ? ' · NUOVA' : '') + '</b>' +
+      '<span>' + esc(it.body) + '</span>' +
+      (it.when ? '<small>' + esc(it.when) + '</small>' : '') + '</button>';
+  }).join('');
+}
+
+function buildCoachNotifyItems(box) {
+  const items = [];
+  (box.events || []).forEach(function (e) {
+    if (!e) return;
+    const name = e.display_name || 'Atleta';
+    const lab = coachEventLabel(e.kind, name);
+    items.push({
+      key: 'ev_' + e.id,
+      title: lab.title,
+      body: lab.body,
+      when: fmtNotifyWhen(e.created_at),
+      route: { view: lab.view, clientId: String(e.client_id || '') },
+      eventIds: [Number(e.id)]
+    });
+  });
+  (box.clients || []).forEach(function (c) {
+    const n = Number(c.unreadCount || 0);
+    if (n <= 0) return;
+    const already = items.some(function (it) {
+      return it.route && String(it.route.clientId) === String(c.id) && (it.route.view === 'chat' || it.title === 'Messaggio');
+    });
+    if (already) return;
+    items.push({
+      key: 'cl_' + c.id,
+      title: n === 1 ? 'Messaggio non letto' : (n + ' messaggi non letti'),
+      body: (c.displayName || 'Cliente') + (c.hasPendingChange ? ' · modifica da approvare' : '') + (c.leaveRequested ? ' · fine richiesta' : ''),
+      when: '',
+      route: { view: 'chat', clientId: String(c.id) },
+      eventIds: []
+    });
+  });
+  return items;
+}
+
+function buildCoachClientNotifyItems(events, clientId, clientName) {
+  const name = clientName || 'Cliente';
+  const cid = String(clientId || '');
+  return (events || []).map(function (e) {
+    if (!e) return null;
+    const lab = coachEventLabel(e.kind, name);
+    const unread = !e.read_at;
+    return {
+      key: 'ev_' + e.id,
+      title: lab.title + (unread ? '' : ''),
+      body: lab.body,
+      when: fmtNotifyWhen(e.created_at),
+      unread: unread,
+      route: { view: lab.view, clientId: cid },
+      eventIds: unread ? [Number(e.id)] : []
+    };
+  }).filter(Boolean);
+}
+
+function closeNotificationsCenter() {
+  const el = document.getElementById('cp-notify-center');
+  if (el) el.classList.remove('active');
+}
+
+async function openNotificationsCenter(clientId) {
+  ensurePracticeStyle();
+  let el = document.getElementById('cp-notify-center');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'cp-notify-center';
+    el.onclick = function (ev) { if (ev.target === el) closeNotificationsCenter(); };
+    document.body.appendChild(el);
+  }
+  const scopedId = clientId ? String(clientId) : '';
+  const scopedName = scopedId
+    ? ((store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente')
+    : '';
+  el.innerHTML = '<div class="cp-notify-panel"><div style="font-size:10px;color:var(--gold);font-weight:800;">' +
+    (scopedId ? ('NOTIFICHE · ' + esc(scopedName)) : 'NOTIFICHE') + '</div>' +
+    '<div class="cp-help" style="margin:8px 0;">Caricamento…</div></div>';
+  el.classList.add('active');
+  try {
+    let items = [];
+    let title = 'NOTIFICHE';
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+      const box = await practiceFetch('/api/client/inbox', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+      items = buildAthleteNotifyItems(box);
+      updateNotifyCount(countAthleteUnread(box), items);
+      title = 'LE TUE NOTIFICHE';
+    } else if (scopedId) {
+      const ev = await practiceFetch('/api/coach/clients/' + encodeURIComponent(scopedId) + '/events', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+      items = buildCoachClientNotifyItems(ev.events || [], scopedId, scopedName);
+      store.__cpNotifyItems = items;
+      title = 'NOTIFICHE · ' + scopedName;
+    } else {
+      const box = await practiceFetch('/api/coach/inbox', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+      items = buildCoachNotifyItems(box);
+      updateNotifyCount(items.length, items);
+      title = 'NOTIFICHE COACH';
+    }
+    el.innerHTML = '<div class="cp-notify-panel">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">' +
+      '<div style="font-size:10px;color:var(--gold);font-weight:800;">' + esc(title) + (items.length ? ' · ' + items.length : '') + '</div>' +
+      '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="closeNotificationsCenter()">CHIUDI</button></div>' +
+      (typeof isAthleteRole === 'function' && isAthleteRole()
+        ? '<div class="cp-help" style="margin-bottom:8px;">Messaggi e aggiornamenti del coach, con data e ora.</div>'
+        : (scopedId
+          ? '<div class="cp-help" style="margin-bottom:8px;">Solo attività di questo cliente, con data e ora.</div>'
+          : '<div class="cp-help" style="margin-bottom:8px;">Panoramica di tutti i clienti.</div>')) +
+      renderNotifyItemsHtml(items, (typeof isAthleteRole === 'function' && isAthleteRole())
+        ? 'Nessuna notifica per ora.'
+        : (scopedId ? 'Nessuna attività recente per questo cliente.' : 'Nessuna notifica da leggere.')) +
+      '</div>';
+  } catch (err) {
+    el.innerHTML = '<div class="cp-notify-panel"><div style="font-size:10px;color:var(--gold);font-weight:800;">NOTIFICHE</div>' +
+      '<div class="cp-help">' + esc(friendlyApiError(err)) + '</div>' +
+      '<button type="button" class="btn btn-outline" style="width:100%;" onclick="openNotificationsCenter(' + (scopedId ? ("'" + esc(scopedId) + "'") : '') + ')">RIPROVA</button>' +
+      '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="closeNotificationsCenter()">CHIUDI</button></div>';
+  }
+}
+
+async function openNotifyItem(idx) {
+  const items = store.__cpNotifyItems || [];
+  const it = items[Number(idx)];
+  if (!it) return;
+  closeNotificationsCenter();
+  try {
+    if (it.eventIds && it.eventIds.length) {
+      const path = (typeof isAthleteRole === 'function' && isAthleteRole())
+        ? '/api/client/inbox/ack'
+        : '/api/coach/inbox/ack';
+      await practiceFetch(path, {
+        method: 'POST', headers: practiceHeaders(true),
+        body: JSON.stringify({ ids: it.eventIds })
+      }, 10000).catch(function () {});
+    }
+  } catch (_) {}
+  try { handleNotifyRoute(it.route); } catch (_) {}
+  setTimeout(function () { pollPracticeInbox(); }, 400);
+}
+
+function openClientSheetNotify(idx) {
+  store.__cpNotifyItems = window.__cpClientSheetNotifies || [];
+  openNotifyItem(idx);
+}
+
+function maybePromptUnreadNotifications() {
+  if (!(store && store.accountToken)) return;
+  if (store.__cpNotifPrompted) return;
+  const n = Number(store.__cpNotifyCount || 0);
+  if (n <= 0) return;
+  store.__cpNotifPrompted = true;
+  showInAppNotify(
+    n === 1 ? '1 notifica da leggere' : (n + ' notifiche da leggere'),
+    'Tocca per aprirle',
+    { view: '__notify_center' }
+  );
 }
 
 function scheduleAthleteLiveWorkoutSync() {
@@ -50394,8 +51041,11 @@ function athleteWaitingHomeHtml() {
 }
 
 function athleteHomeModulesHtml() {
+  const n = Math.max(0, Number(store.__cpNotifyCount || 0));
   return '<div class="card" style="margin-top:12px;"><div class="card-header"><h2>Menu</h2></div>' +
     '<div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:10px;">' +
+    '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;" onclick="openNotificationsCenter()"><span style="font-size:18px;">🔔</span><span style="font-size:11px;font-weight:800;">Notifiche</span>' +
+    (n > 0 ? '<span class="cp-notify-count" style="position:absolute;top:6px;right:8px;">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'clientChat\')"><span style="font-size:18px;">💬</span><span style="font-size:11px;font-weight:800;">Chat coach</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'nutrition\')"><span style="font-size:18px;">🥗</span><span style="font-size:11px;font-weight:800;">Alimentazione</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'supplements\')"><span style="font-size:18px;">💊</span><span style="font-size:11px;font-weight:800;">Integrazione</span></button>' +
@@ -50550,8 +51200,9 @@ function ensureCoachDomainToolbar(domain) {
   }
   bar.setAttribute('data-domain', d);
   bar.innerHTML =
-    '<button type="button" class="btn btn-outline" style="flex:1;min-width:120px;font-size:11px;color:#c66 !important;-webkit-text-fill-color:#c66 !important;border-color:#c66;" onclick="clearCoachClientDomain(\'' + esc(d) + '\')">CANCELLA</button>' +
-    '<button type="button" class="btn btn-primary" style="flex:1;min-width:120px;font-size:11px;" onclick="startDomainImport(\'' + esc(d) + '\')">IMPORTA NUOVO</button>';
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:100px;font-size:11px;" onclick="openNotificationsCenter(\'' + esc(String(store.coachWorkspace.clientId)) + '\')">NOTIFICHE</button>' +
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:100px;font-size:11px;color:#c66 !important;-webkit-text-fill-color:#c66 !important;border-color:#c66;" onclick="clearCoachClientDomain(\'' + esc(d) + '\')">CANCELLA</button>' +
+    '<button type="button" class="btn btn-primary" style="flex:1;min-width:100px;font-size:11px;" onclick="startDomainImport(\'' + esc(d) + '\')">IMPORTA NUOVO</button>';
   if (bar.parentElement !== c || c.firstChild !== bar) {
     c.insertBefore(bar, c.firstChild);
   }
@@ -51025,19 +51676,28 @@ async function renderCoachWorkspace(c) {
       return '<div class="cp-row"><span style="color:#888;font-size:11px;">' + esc(f.label) + '</span><span style="font-size:12px;color:#fff;">' + esc(intake[f.key]) + '</span></div>';
     }).join('');
     let eventsHtml = '';
+    let clientNotifyItems = [];
     try {
       const ev = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/events', { method: 'GET', headers: practiceHeaders(false) }, 15000);
-      eventsHtml = (ev.events || []).slice(0, 8).map(function (e) {
-        return '<div class="cp-help" style="margin:0 0 4px;">' + esc(e.kind) + ' · ' + esc(String(e.created_at || '').replace('T', ' ').slice(0, 16)) + '</div>';
+      clientNotifyItems = buildCoachClientNotifyItems(ev.events || [], id, cl.displayName || 'Cliente');
+      eventsHtml = clientNotifyItems.slice(0, 10).map(function (it, idx) {
+        return '<button type="button" class="cp-notify-item" style="margin-bottom:6px;' + (it.unread ? 'border-color:rgba(212,175,55,.55);' : '') + '" onclick="openClientSheetNotify(' + idx + ')">' +
+          '<b>' + esc(it.title) + (it.unread ? ' · NUOVA' : '') + '</b>' +
+          '<span>' + esc(it.body) + '</span>' +
+          (it.when ? '<small>' + esc(it.when) + '</small>' : '') + '</button>';
       }).join('');
+      window.__cpClientSheetNotifies = clientNotifyItems;
     } catch (_) {}
     if (!store.__cpWsCollapse || typeof store.__cpWsCollapse !== 'object') {
-      store.__cpWsCollapse = { intake: true, events: true };
+      store.__cpWsCollapse = { intake: true, events: false };
     }
     const collapsed = store.__cpWsCollapse;
     c.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">' +
       '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">← LISTA</button>' +
-      '<button class="btn btn-primary" style="font-size:10px;" onclick="openCoachClientChat(\'' + esc(id) + '\')">CHAT</button></div>' +
+      '<button class="btn btn-primary" style="font-size:10px;" onclick="openCoachClientChat(\'' + esc(id) + '\')">CHAT</button>' +
+      '<button class="btn btn-outline" style="font-size:10px;position:relative;" onclick="openNotificationsCenter(\'' + esc(id) + '\')">NOTIFICHE' +
+      (clientNotifyItems.filter(function (x) { return x.unread; }).length ? (' <span class="cp-notify-count" style="position:static;display:inline-flex;margin-left:4px;">' + clientNotifyItems.filter(function (x) { return x.unread; }).length + '</span>') : '') +
+      '</button></div>' +
       '<h1 style="color:#fff;font-size:22px;margin:0 0 4px;">' + esc(cl.displayName || 'Cliente') + '</h1>' +
       '<div style="font-size:11px;color:#888;margin-bottom:6px;">@' + esc(cl.username || '') + ' · ' +
       (cl.intakeMode === 'transition' ? 'Transizione' : 'Nuovo') + (cl.intakeDone ? ' · questionario ok' : ' · questionario in attesa') + '</div>' +
@@ -51099,10 +51759,11 @@ async function renderCoachWorkspace(c) {
       (intakeRows || '<div class="cp-help">Questionario non ancora compilato.</div>') + '</div></div>' +
       '<div class="card" style="padding:12px;margin-bottom:12px;">' +
       '<button type="button" class="cp-ws-collapse-h" onclick="toggleCoachWsSection(\'events\')" style="display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;background:transparent;border:0;padding:0;cursor:pointer;text-align:left;">' +
-      '<span style="font-weight:900;color:var(--gold);">Attività / richieste</span>' +
+      '<span style="font-weight:900;color:var(--gold);">Notifiche cliente (con orario)</span>' +
       '<span id="cp-ws-arrow-events" style="color:var(--gold);font-size:14px;">' + (collapsed.events ? '▸' : '▾') + '</span></button>' +
       '<div id="cp-events-body" style="margin-top:8px;' + (collapsed.events ? 'display:none;' : '') + '">' +
-      (eventsHtml || '<div class="cp-help">Nessuna richiesta recente.</div>') + '</div></div>';
+      (eventsHtml || '<div class="cp-help">Nessuna attività recente.</div>') +
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="openNotificationsCenter(\'' + esc(id) + '\')">VEDI TUTTE</button></div></div>';
     // Chat solo in navigate('coachChat') — niente composer inline qui
   } catch (err) {
     c.innerHTML = '<div class="cp-help">' + esc((err && err.message) || 'Snapshot non disponibile.') + '</div>';
@@ -52546,6 +53207,10 @@ function handleNotifyRoute(route) {
   }
   route = route || {};
   const view = route.view || route;
+  if (view === '__notify_center' || view === 'notifications') {
+    openNotificationsCenter();
+    return;
+  }
   const clientId = route.clientId;
   if (typeof isAthleteRole === 'function' && isAthleteRole()) {
     if (view === 'clientChat' || view === 'message' || view === 'chat') return navigate('clientChat');
@@ -52642,11 +53307,14 @@ async function pollPracticeInbox() {
     if (typeof isAthleteRole === 'function' && isAthleteRole()) {
       const box = await practiceFetch('/api/client/inbox', { method: 'GET', headers: practiceHeaders(false) }, 12000);
       const maxId = (box.events || []).reduce(function (m, e) { return Math.max(m, Number(e.id || 0)); }, 0);
+      const items = buildAthleteNotifyItems(box);
+      updateNotifyCount(countAthleteUnread(box), items);
       if (!store.clientInboxReady) {
         store.clientInboxReady = true;
         store.clientSeenEventId = maxId;
         store.clientSeenMsgId = box.lastMessageId || 0;
         if (typeof persist === 'function') persist();
+        maybePromptUnreadNotifications();
         return;
       }
       const seen = store.clientSeenEventId || 0;
@@ -52672,9 +53340,6 @@ async function pollPracticeInbox() {
         store.clientSeenMsgId = box.lastMessageId;
       }
       store.clientSeenEventId = maxId;
-      const unreadEv = (box.events || []).filter(function (e) { return e && !e.read_at && e.kind !== 'message'; }).length;
-      const badgeN = Number(box.unreadMessages || 0) + unreadEv;
-      setNurvanAppBadge(badgeN);
       if (typeof persist === 'function') persist();
     } else if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) {
       const box = await practiceFetch('/api/coach/inbox', { method: 'GET', headers: practiceHeaders(false) }, 12000);
@@ -52682,9 +53347,8 @@ async function pollPracticeInbox() {
       if (!store.coachInboxByAccount || typeof store.coachInboxByAccount !== 'object') store.coachInboxByAccount = {};
       const accState = store.coachInboxByAccount[accountKey] || { ready: false, seenId: 0 };
       const maxCoachId = (box.events || []).reduce(function (m, e) { return Math.max(m, Number(e.id || 0)); }, 0);
-      const unreadSum = (box.clients || []).reduce(function (s, c) { return s + Number(c.unreadCount || 0); }, 0)
-        + (box.events || []).length;
-      setNurvanAppBadge(unreadSum);
+      const items = buildCoachNotifyItems(box);
+      updateNotifyCount(items.length, items);
       if (!accState.ready) {
         accState.ready = true;
         accState.seenId = maxCoachId;
@@ -52692,6 +53356,7 @@ async function pollPracticeInbox() {
         store.coachInboxReady = true;
         store.coachSeenEventId = maxCoachId;
         if (typeof persist === 'function') persist();
+        maybePromptUnreadNotifications();
         return;
       }
       const seen = Number(accState.seenId || store.coachSeenEventId || 0);
@@ -53845,6 +54510,11 @@ window.ensureCoachDomainToolbar = ensureCoachDomainToolbar;
 window.friendlyApiError = friendlyApiError;
 window.setNurvanAppBadge = setNurvanAppBadge;
 window.clearNurvanAppBadge = clearNurvanAppBadge;
+window.openNotificationsCenter = openNotificationsCenter;
+window.closeNotificationsCenter = closeNotificationsCenter;
+window.openNotifyItem = openNotifyItem;
+window.openClientSheetNotify = openClientSheetNotify;
+window.ensureNotifyButton = ensureNotifyButton;
 window.assignActiveToClient = assignActiveToClient;
 window.openAssignChooser = openAssignChooser;
 window.beginAssignSandbox = beginAssignSandbox;
