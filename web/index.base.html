@@ -4216,6 +4216,7 @@ function confirmGenerateSupplementation() {
   if (typeof store !== 'undefined' && store) {
     store.supplementation = plan;
     store.__cpSupplementsDirty = true;
+    store.__cpKeepLocalSupplements = true;
   }
   if (typeof persist === 'function') persist();
   if (typeof GiammariaPersistence !== 'undefined') {
@@ -8900,24 +8901,43 @@ function renderSupplements(c) {
   html += `
     <div style="display:flex;flex-direction:column;gap:10px;">
       ${items.map((it, idx) => `
-        <div class="card-compact" style="border:1px solid var(--border);background:var(--surface);">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
-            <div>
-              <span style="font-size:15px;font-weight:900;color:var(--gold);">${safeDisplayValue(it.name, 'Integratore')}</span>
-              ${it.brand ? `<div style="font-size:10px;color:#888;margin-top:2px;">${safeDisplayValue(it.brand, '')}</div>` : ''}
-              <div style="display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap;">
-                <span style="background:rgba(212,175,55,0.15);color:var(--gold);font-size:11px;font-weight:800;padding:2px 6px;border-radius:4px;">${safeDisplayValue(it.dose, '')} ${safeDisplayValue(it.unit, '')}</span>
-                <span style="background:#222;color:#aaa;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;">${safeDisplayValue(it.timing, 'Generale')}</span>
-                <span style="background:#181818;color:#777;font-size:10px;padding:2px 6px;border-radius:4px;">${safeDisplayValue(it.frequency, 'Quotidiano')}</span>
-              </div>
+        <div class="card-compact" style="border:1px solid var(--border);background:var(--surface);padding:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+            <div style="flex:1;min-width:0;">
+              <label style="font-size:9px;color:#666;font-weight:800;">NOME</label>
+              <input type="text" value="${esc(it.name || '')}" oninput="updateSupplementField(${idx},'name',this.value)" style="width:100%;margin-top:3px;padding:8px;background:#111;border:1px solid #333;color:var(--gold);border-radius:6px;font-size:14px;font-weight:800;" />
+              ${it.brand ? `<div style="font-size:10px;color:#888;margin-top:4px;">${safeDisplayValue(it.brand, '')}</div>` : ''}
             </div>
-            <div style="display:flex;gap:4px;">
+            <div style="display:flex;gap:4px;flex-shrink:0;padding-top:14px;">
               <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;" title="Duplica" onclick="duplicateSupplementItem(${idx})">📋</button>
               <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;color:var(--accent-red);" title="Elimina" onclick="deleteSupplementItem(${idx})">✕</button>
             </div>
           </div>
-          ${it.notes ? `<div style="font-size:11px;color:#888;margin-bottom:8px;">${safeDisplayValue(it.notes, '')}</div>` : ''}
-          <div style="display:flex;gap:8px;margin-top:8px;border-top:1px solid #1c1c1c;padding-top:6px;">
+          <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:8px;margin-bottom:8px;">
+            <div>
+              <label style="font-size:9px;color:#666;font-weight:800;">DOSAGGIO</label>
+              <input type="text" value="${esc(it.dose || '')}" oninput="updateSupplementField(${idx},'dose',this.value)" placeholder="Es. 5" style="width:100%;margin-top:3px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;" />
+            </div>
+            <div>
+              <label style="font-size:9px;color:#666;font-weight:800;">UNITÀ</label>
+              <input type="text" value="${esc(it.unit || '')}" oninput="updateSupplementField(${idx},'unit',this.value)" placeholder="g, mg, cps" style="width:100%;margin-top:3px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;" />
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div>
+              <label style="font-size:9px;color:#666;font-weight:800;">TIMING</label>
+              <input type="text" value="${esc(it.timing || '')}" oninput="updateSupplementField(${idx},'timing',this.value)" placeholder="Es. Post-workout" list="supp-timing-suggestions" style="width:100%;margin-top:3px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;" />
+            </div>
+            <div>
+              <label style="font-size:9px;color:#666;font-weight:800;">FREQUENZA</label>
+              <input type="text" value="${esc(it.frequency || '')}" oninput="updateSupplementField(${idx},'frequency',this.value)" placeholder="Es. Quotidiano" list="supp-freq-suggestions" style="width:100%;margin-top:3px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;" />
+            </div>
+          </div>
+          <div style="margin-bottom:8px;">
+            <label style="font-size:9px;color:#666;font-weight:800;">NOTE</label>
+            <input type="text" value="${esc(it.notes || '')}" oninput="updateSupplementField(${idx},'notes',this.value)" placeholder="Modalità, avvertenze…" style="width:100%;margin-top:3px;padding:8px;background:#111;border:1px solid #333;color:#ccc;border-radius:6px;font-size:12px;" />
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px;border-top:1px solid #1c1c1c;padding-top:6px;">
             <button class="btn btn-outline" style="flex:1;font-size:10px;padding:4px 8px;border-color:rgba(212,175,55,0.4);color:var(--gold);" data-name="${esc(it.name || '')}" onclick="openExamineEvidenceModal(this.getAttribute('data-name'))">🔬 ${t('scientificEvidence')}</button>
             <button class="btn btn-outline" style="flex:1;font-size:10px;padding:4px 8px;" data-name="${esc(it.name || '')}" onclick="askAiAboutSupplement(this.getAttribute('data-name'))">🤖 ${t('askCoach')}</button>
           </div>
@@ -8925,9 +8945,62 @@ function renderSupplements(c) {
         </div>
       `).join('')}
     </div>
+    <datalist id="supp-timing-suggestions">
+      <option value="Mattina"></option>
+      <option value="Colazione"></option>
+      <option value="Con un pasto"></option>
+      <option value="Pre-allenamento"></option>
+      <option value="Post-allenamento"></option>
+      <option value="Sera"></option>
+      <option value="Prima di dormire"></option>
+      <option value="Qualsiasi momento"></option>
+    </datalist>
+    <datalist id="supp-freq-suggestions">
+      <option value="Quotidiano"></option>
+      <option value="Giorni di workout"></option>
+      <option value="2×/settimana"></option>
+      <option value="3×/settimana"></option>
+      <option value="Se serve a target proteico"></option>
+    </datalist>
   `;
 
   c.innerHTML = html;
+}
+
+function markSupplementsDirty() {
+  if (typeof store !== 'undefined' && store) {
+    store.__cpSupplementsDirty = true;
+    store.__cpKeepLocalSupplements = true;
+    if (DATA && DATA.supplementation) store.supplementation = DATA.supplementation;
+  }
+  ensureSuppSaveButtonVisible();
+}
+
+function ensureSuppSaveButtonVisible() {
+  try {
+    const wrap = document.querySelector('#view-container div[style*="justify-content:space-between"] div[style*="flex-wrap"]');
+    if (!wrap) return;
+    if (wrap.querySelector('[onclick="saveSupplementationEdits()"]')) return;
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-primary';
+    btn.style.cssText = 'font-size:10px;padding:6px 10px;';
+    btn.setAttribute('onclick', 'saveSupplementationEdits()');
+    btn.textContent = 'SALVA';
+    wrap.insertBefore(btn, wrap.firstChild);
+  } catch (_) {}
+}
+
+function updateSupplementField(idx, field, value) {
+  if (!DATA || !DATA.supplementation || !Array.isArray(DATA.supplementation.items)) return;
+  const it = DATA.supplementation.items[idx];
+  if (!it) return;
+  const key = String(field || '');
+  if (['name', 'dose', 'unit', 'timing', 'frequency', 'notes', 'brand'].indexOf(key) < 0) return;
+  it[key] = value;
+  DATA.supplementation.present = true;
+  if (typeof store !== 'undefined' && store) store.supplementation = DATA.supplementation;
+  markSupplementsDirty();
+  try { if (typeof persist === 'function') persist(); } catch (_) {}
 }
 
 function openAddSupplementModal() {
@@ -9021,7 +9094,8 @@ function saveSupplementItem() {
   if (!DATA.supplementation) DATA.supplementation = { items: [] };
   if (!DATA.supplementation.items) DATA.supplementation.items = [];
   DATA.supplementation.items.push(item);
-
+  DATA.supplementation.present = true;
+  markSupplementsDirty();
   persist();
   try { scheduleAllItemAlerts(); } catch (_) {}
   closeAddSupplementModal();
@@ -9033,6 +9107,7 @@ function duplicateSupplementItem(idx) {
   const it = DATA.supplementation.items[idx];
   if (it) {
     DATA.supplementation.items.push(JSON.parse(JSON.stringify(it)));
+    markSupplementsDirty();
     persist();
     render();
     if (typeof showToast === 'function') showToast("Integratore duplicato", "success");
@@ -9042,6 +9117,7 @@ function duplicateSupplementItem(idx) {
 function deleteSupplementItem(idx) {
   if (confirm("Rimuovere questo integratore dal protocollo?")) {
     DATA.supplementation.items.splice(idx, 1);
+    markSupplementsDirty();
     persist();
     render();
     if (typeof showToast === 'function') showToast("Integratore rimosso", "info");
@@ -18143,6 +18219,8 @@ if (typeof window !== 'undefined') {
   window.onGenSuppGoalChange = onGenSuppGoalChange;
   window.confirmGenerateSupplementation = confirmGenerateSupplementation;
   window.saveSupplementationEdits = saveSupplementationEdits;
+  window.markSupplementsDirty = markSupplementsDirty;
+  window.updateSupplementField = updateSupplementField;
   window.applySupplementationFromProfile = applySupplementationFromProfile;
   window.balanceMacroPercents = balanceMacroPercents;
   window.selectNutritionDay = selectNutritionDay;
@@ -18151,6 +18229,8 @@ if (typeof window !== 'undefined') {
   window.chooseCoachReadMode = chooseCoachReadMode;
   window.openExamineEvidenceModal = openExamineEvidenceModal;
   window.duplicateSupplementItem = duplicateSupplementItem;
+  window.deleteSupplementItem = deleteSupplementItem;
+  window.updateSupplementField = updateSupplementField;
   window.askAiAboutSupplement = askAiAboutSupplement;
   window.explainExamParameterAI = explainExamParameterAI;
   window.changeCalendarMonth = changeCalendarMonth;
