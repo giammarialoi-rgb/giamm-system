@@ -23,7 +23,8 @@ const coachOsCss = fs.existsSync('web/coach-os/design-system.css')
 const coachOsCode = [
   'web/coach-os/shell.js',
   'web/coach-os/today.js',
-  'web/coach-os/programs.js'
+  'web/coach-os/programs.js',
+  'web/coach-os/clients.js'
 ].filter((file) => fs.existsSync(file))
   .map((file) => fs.readFileSync(file, 'utf8'))
   .join('\n');

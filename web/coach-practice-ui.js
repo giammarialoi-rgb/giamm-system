@@ -2756,6 +2756,7 @@ async function removeCoachClient(id) {
 async function openCoachClient(id) {
   if (store.coachViewingClient) await leaveCoachClientView(true);
   store.coachSessionActive = true;
+  store.__coachOsClientLegacy = false;
   primeCoachWorkspaceForClient(id);
   ensureCoachSessionBanner();
   if (typeof persist === 'function') persist();

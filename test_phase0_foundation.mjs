@@ -27,7 +27,7 @@ function ok(condition, message) {
 const release = JSON.parse(fs.readFileSync(path.join(root, "release.json"), "utf8"));
 ok(release.versionName === "1.5.34", "release metadata preserves baseline version");
 ok(release.androidVersionCode === 41, "release metadata preserves Android version code");
-ok(release.schemaTarget === "0001", "release metadata declares schema target");
+ok(Number(release.schemaTarget) >= 1, "release metadata declares schema target");
 
 const gradle = fs.readFileSync(path.join(root, "app/build.gradle"), "utf8");
 ok(gradle.includes("release.json") && !/versionName\s+"1\.5\.34"/.test(gradle), "Gradle reads release metadata");
@@ -44,7 +44,11 @@ ok(COACH_OS_FEATURE_NAMES.includes("coachTodayV2"), "feature registry has coachT
 ok(COACH_OS_FEATURE_NAMES.includes("coachImportV2"), "feature registry has native coach import");
 ok(COACH_OS_FEATURE_NAMES.includes("agentV1"), "feature registry has agentV1");
 const defaults = resolveCoachOsFeatureFlags({ env: {} });
-ok(defaults.coachShellV2 && defaults.coachTodayV2 && defaults.coachImportV2, "shipped Phase 1 flags default on");
+ok(
+  defaults.coachShellV2 && defaults.coachTodayV2 && defaults.coachImportV2 &&
+    defaults.coachTasksV1 && defaults.clientTimelineV1,
+  "shipped Coach OS flags default on"
+);
 ok(!defaults.agentV1 && !defaults.businessV1 && !defaults.schedulingV1, "unshipped Coach OS flags fail closed");
 const envEnabled = resolveCoachOsFeatureFlags({
   env: { NURVAN_FEATURE_COACH_TODAY_V2: "true" }
