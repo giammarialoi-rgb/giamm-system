@@ -117,6 +117,30 @@ assert(base.includes("openImportDomainPicker") && base.includes("detectProgramDo
 assert(base.includes("isCoachClientSandbox"), "coach sandbox import gate");
 assert(base.includes("openGenerateNutritionPlanWizard") && base.includes("balanceMacroPercents") && base.includes("GENERA PIANO"), "nutrition precise plan wizard");
 assert(base.includes("comboCount") && base.includes("dayCount") && base.includes("NUTRITION_MEAL_COMBO_VARIANTS"), "nutrition days + combo variants");
+assert(base.includes("Inserisci pasti liberi") && base.includes("onGenNutritionFreeToggle") && base.includes("applyFreeMealsToNutritionPlan"), "nutrition free meals wizard");
+assert(base.includes("ALLERGIE E INTOLLERANZE") && base.includes("filterFoodForRestrictions") && base.includes("ensureAllergenIntoleranceCatalog") && base.includes("safe_phrases"), "nutrition allergy filter wizard");
+const allergenCatPath = path.join(__dirname, "web/allergen-intolerance-catalog.json");
+assert(fs.existsSync(allergenCatPath), "allergen catalog file exists");
+const allergenCat = JSON.parse(fs.readFileSync(allergenCatPath, "utf8"));
+assert(Array.isArray(allergenCat.items) && allergenCat.items.length >= 20, "allergen catalog has full EU+intolerance set");
+assert(allergenCat.items.some((x) => x.id === "arachidi") && allergenCat.items.some((x) => x.id === "lattosio"), "catalog has peanuts + lactose");
+assert(allergenCat.items.filter((x) => x.kind === "allergy").length >= 14, "EU Annex II allergies present");
+assert(fs.readFileSync(path.join(__dirname, "sync_web_assets.mjs"), "utf8").includes("allergen-intolerance-catalog.json"), "sync copies allergen catalog");
+{
+  const fold = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[''`´]/g, "");
+  const hit = (foodName, item) => {
+    const blob = fold(foodName);
+    if ((item.safe_phrases || []).some((p) => blob.includes(fold(p)))) return false;
+    return (item.keywords || []).some((k) => blob.includes(fold(k)));
+  };
+  const peanut = allergenCat.items.find((x) => x.id === "arachidi");
+  const lactose = allergenCat.items.find((x) => x.id === "lattosio");
+  const milk = allergenCat.items.find((x) => x.id === "latte");
+  assert(hit("Burro di arachidi", peanut) && !hit("Burro di mandorle", peanut), "peanut filter hits PB not almond butter");
+  assert(hit("Yogurt greco 0%", lactose) && !hit("Latte senza lattosio", lactose), "lactose filter + safe phrase");
+  assert(hit("Mozzarella light", milk) && !hit("Latte di mandorla", milk), "milk allergy + plant milk safe");
+  assert(!hit("Burro di arachidi", milk), "milk allergy does not flag peanut butter");
+}
 assert(base.includes("setDictateButtonState"), "dictate button state reset");
 
 const api = fs.readFileSync(path.join(__dirname, "coach-api.mjs"), "utf8");
@@ -175,7 +199,7 @@ assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY")
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v27-coach"), "SW push + cache v27");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v28-coach"), "SW push + cache v28");
 assert(base.includes("normalizeNutritionMeals") && ui.includes("preferFilledNutrition") && ui.includes("keepLocalNutr"), "nutrition meal normalize + coach live poll keep");
 assert(sw.includes("setAppBadge"), "SW badging API");
 
