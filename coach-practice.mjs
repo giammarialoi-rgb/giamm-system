@@ -19,6 +19,21 @@ function publicOrigin(req) {
   return `${proto}://${host}`;
 }
 
+function formatInviteShareText(opts = {}) {
+  const name = String(opts.name || opts.displayName || "").trim() || "atleta";
+  const code = opts.inviteCode || String(opts.token || opts.inviteUrl || "").split("/").pop().slice(-6).toUpperCase();
+  const lines = [
+    `Ciao ${name},`,
+    "benvenuto nel mio servizio coaching, clicka sul link qui sotto ed inserisci i dati richiesti che trovi in basso nel messaggio, compila il form se richiesto, preparati a prenderti cura del tuo corpo sotto ogni aspetto 💪🏻🏋️‍♂️🍎💊🧬",
+    "",
+    `Link: ${opts.inviteUrl || ""}`,
+    `Utente: ${opts.username || ""}`,
+    `Password: ${opts.password || ""}`
+  ];
+  if (code) lines.push(`Codice invito: ${code}`);
+  return lines.join("\n");
+}
+
 const INTAKE_KEYS = [
   "firstName", "lastName", "sex", "ageBand", "heightBand", "weightBand",
   "trainingAge", "level", "goal", "sessionsPerWeek", "sessionMinutes",
@@ -1286,7 +1301,15 @@ export function mountCoachPractice(app, deps) {
         ok: true,
         client: clientRow(row, { includeIntake: true, includeSecrets: true }),
         inviteUrl,
-        inviteText: `Link: ${inviteUrl}\nUtente: ${username}\nPassword: ${password}`,
+        inviteCode: String(inviteToken).slice(-6).toUpperCase(),
+        inviteText: formatInviteShareText({
+          name: displayName,
+          inviteUrl,
+          inviteCode: String(inviteToken).slice(-6).toUpperCase(),
+          username,
+          password,
+          token: inviteToken
+        }),
         credentials: { username, displayName, password }
       });
     } catch (err) {
@@ -1735,13 +1758,14 @@ export function mountCoachPractice(app, deps) {
       client: clientRow(row, { includeIntake: true, includeSecrets: true }),
       inviteUrl,
       inviteCode,
-      inviteText: [
-        `Cliente: ${row.display_name}`,
-        `Codice invito: ${inviteCode}`,
-        `Link (univoco): ${inviteUrl}`,
-        `Utente: ${row.username}`,
-        `Password: ${row.invite_password || "(reimposta dal coach)"}`
-      ].join("\n"),
+      inviteText: formatInviteShareText({
+        name: row.display_name,
+        inviteUrl,
+        inviteCode,
+        username: row.username,
+        password: row.invite_password || "(reimposta dal coach)",
+        token: row.invite_token
+      }),
       credentials: { username: row.username, password: row.invite_password || "" },
       intake: row.intake || {},
       data: data.rows[0]?.data || {},
@@ -2017,13 +2041,14 @@ export function mountCoachPractice(app, deps) {
       inviteToken,
       inviteUrl,
       inviteCode: code,
-      inviteText: [
-        `Cliente: ${row.display_name}`,
-        `Codice invito: ${code}`,
-        `Link (univoco): ${inviteUrl}`,
-        `Utente: ${row.username}`,
-        `Password: ${row.invite_password || "(reimposta dal coach)"}`
-      ].join("\n"),
+      inviteText: formatInviteShareText({
+        name: row.display_name,
+        inviteUrl,
+        inviteCode: code,
+        username: row.username,
+        password: row.invite_password || "(reimposta dal coach)",
+        token: inviteToken
+      }),
       credentials: { username: row.username, password: row.invite_password || "" }
     });
   });
