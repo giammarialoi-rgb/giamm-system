@@ -7521,11 +7521,12 @@ function gramsForFood(f) {
 
 function enrichImportedFoods(nutrition) {
   if (!nutrition || !Array.isArray(nutrition.days)) return nutrition;
+  nutrition = normalizeNutritionMeals(nutrition);
   const svc = (typeof FoodDatabaseService !== 'undefined') ? FoodDatabaseService : null;
   const engineEnrich = (typeof enrichFoodItemMacros === 'function') ? enrichFoodItemMacros : null;
   nutrition.days.forEach(function (day) {
     (day.meals || []).forEach(function (meal) {
-      (meal.foods || meal.items || []).forEach(function (f) {
+      (meal.foods || []).forEach(function (f) {
         if (engineEnrich) {
           engineEnrich(f);
           if (foodMacroVal(f, 'kcal') || foodMacroVal(f, 'pro')) return;
@@ -7554,9 +7555,35 @@ function enrichImportedFoods(nutrition) {
   return nutrition;
 }
 
+function normalizeNutritionMeals(nutrition) {
+  if (!nutrition || typeof nutrition !== 'object') return nutrition;
+  if (!Array.isArray(nutrition.days)) nutrition.days = [];
+  nutrition.days.forEach(function (day) {
+    if (!day || typeof day !== 'object') return;
+    if (!Array.isArray(day.meals)) day.meals = [];
+    day.meals.forEach(function (meal) {
+      if (!meal || typeof meal !== 'object') return;
+      if ((!meal.foods || !meal.foods.length) && Array.isArray(meal.items) && meal.items.length) {
+        meal.foods = meal.items;
+      }
+      if (!Array.isArray(meal.foods)) meal.foods = [];
+      if (!meal.items) meal.items = meal.foods;
+    });
+  });
+  if (nutrition.present == null && nutrition.days.length) nutrition.present = true;
+  return nutrition;
+}
+
 function selectNutritionDay(idx) {
   currentNutritionDayIndex = Number(idx) || 0;
   window.__nutritionDayUserPicked = true;
+  if (typeof DATA !== 'undefined' && DATA && store && store.nutrition && (!DATA.nutrition || !(DATA.nutrition.days && DATA.nutrition.days.length))) {
+    DATA.nutrition = store.nutrition;
+  }
+  if (typeof DATA !== 'undefined' && DATA && DATA.nutrition && typeof normalizeNutritionMeals === 'function') {
+    DATA.nutrition = normalizeNutritionMeals(DATA.nutrition);
+    if (store) store.nutrition = DATA.nutrition;
+  }
   render();
 }
 
@@ -7684,6 +7711,7 @@ window.confirmNutritionDay = confirmNutritionDay;
 
 function renderNutrition(c) {
   // Never invent a fake Monday meal plan
+  if (!DATA.nutrition && store && store.nutrition) DATA.nutrition = store.nutrition;
   if (!DATA.nutrition) {
     DATA.nutrition = {
       plan_name: '',
@@ -7695,20 +7723,23 @@ function renderNutrition(c) {
       days: []
     };
   }
-  // Remove legacy single "Giorno tipo" placeholder — user must create or import explicitly
+  DATA.nutrition = normalizeNutritionMeals(DATA.nutrition);
+  if (store) store.nutrition = DATA.nutrition;
+  // Only wipe unmistakable legacy demos — never wipe imports / coach / multi-day / dirty plans
   if (Array.isArray(DATA.nutrition.days) && DATA.nutrition.days.length === 1) {
     const d0 = DATA.nutrition.days[0];
     const blob = JSON.stringify(d0 || {});
     const isLegacyTipo = /^giorno\s*tipo$/i.test(String(d0.day || '').replace(/\s*·.*$/, '').trim());
-    const isCoachOrProfilePlan = /settiman|ON\s*\/\s*OFF|da profilo|Nurvan|Coach|evidence-informed|Piano preciso|Piano automatico|Integrazione/i.test(String(DATA.nutrition.plan_name || DATA.nutrition.notes || ''))
-      || !!(store && (store.__cpNutritionDirty || store.__cpKeepLocalNutrition));
+    const hasAnyFood = (d0.meals || []).some(function (m) { return (m.foods || m.items || []).length; });
+    const protect = !!(store && (store.__cpNutritionDirty || store.__cpKeepLocalNutrition || store.coachViewingClient || store.coachAssigning))
+      || /settiman|ON\s*\/\s*OFF|da profilo|Nurvan|Coach|evidence-informed|Piano preciso|Piano automatico|import/i.test(String(DATA.nutrition.plan_name || DATA.nutrition.notes || ''))
+      || hasAnyFood;
     const looksLegacyDemo = /Luned[iì].*\(ON\)/i.test(blob) && /Albume d'uovo/i.test(blob) && /Petto di Pollo/i.test(blob);
-    const looksEmptyMondayOnly = /^luned[iì]/i.test(String(d0.day || '')) && !(d0.meals || []).some((m) => (m.foods || m.items || []).length);
-    if (isLegacyTipo && !isCoachOrProfilePlan) {
+    if (!protect && isLegacyTipo) {
       DATA.nutrition = { plan_name: '', present: false, days: [], daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
       store.nutrition = DATA.nutrition;
       persist();
-    } else if (!isCoachOrProfilePlan && (looksLegacyDemo || (looksEmptyMondayOnly && DATA.nutrition.plan_name === 'Piano Nutrizionale Personalizzato'))) {
+    } else if (!protect && looksLegacyDemo && DATA.nutrition.plan_name === 'Piano Nutrizionale Personalizzato') {
       DATA.nutrition = { plan_name: '', present: false, days: [], daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
       store.nutrition = DATA.nutrition;
       persist();
@@ -11722,7 +11753,12 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
       const sandbox = isCoachClientSandbox();
       if (prog.nutrition && allow('nutrition')) {
         DATA.nutrition = (typeof enrichImportedFoods === 'function') ? enrichImportedFoods(prog.nutrition) : prog.nutrition;
+        if (typeof normalizeNutritionMeals === 'function') DATA.nutrition = normalizeNutritionMeals(DATA.nutrition);
         store.nutrition = DATA.nutrition;
+        store.__cpNutritionDirty = true;
+        store.__cpKeepLocalNutrition = true;
+        window.__nutritionDayUserPicked = true;
+        if (typeof currentNutritionDayIndex !== 'undefined') currentNutritionDayIndex = 0;
         if (!sandbox && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveNutrition) {
           await GiammariaPersistence.saveNutrition(DATA.nutrition);
         }
@@ -17678,6 +17714,7 @@ if (typeof window !== 'undefined') {
   window.onGenNutritionMacroChange = onGenNutritionMacroChange;
   window.confirmGenerateNutritionPlan = confirmGenerateNutritionPlan;
   window.saveNutritionPlanEdits = saveNutritionPlanEdits;
+  window.normalizeNutritionMeals = normalizeNutritionMeals;
   window.markNutritionDirty = markNutritionDirty;
   window.openGenerateSupplementationWizard = openGenerateSupplementationWizard;
   window.setGenSuppMode = setGenSuppMode;

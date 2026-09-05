@@ -175,7 +175,8 @@ assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY")
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v26-coach"), "SW push + cache v26");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v27-coach"), "SW push + cache v27");
+assert(base.includes("normalizeNutritionMeals") && ui.includes("preferFilledNutrition") && ui.includes("keepLocalNutr"), "nutrition meal normalize + coach live poll keep");
 assert(sw.includes("setAppBadge"), "SW badging API");
 
 const build = fs.readFileSync(path.join(__dirname, "build_master25.mjs"), "utf8");

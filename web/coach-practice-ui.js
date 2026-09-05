@@ -315,6 +315,12 @@ function ensureCoachHeaderControls(coachSession) {
     if (wrap) wrap.style.display = 'none';
     const hubBtn = document.getElementById('menu-hub-button');
     if (hubBtn) hubBtn.style.display = '';
+    const profileBtn = document.getElementById('profile-button');
+    if (profileBtn) profileBtn.style.display = '';
+    const notifyBtn = document.getElementById('cp-notify-btn');
+    if (notifyBtn) notifyBtn.style.display = '';
+    const coachBtnRestore = document.getElementById('coach-unlock-button');
+    if (coachBtnRestore) coachBtnRestore.style.display = '';
     return;
   }
   const coachBtn = document.getElementById('coach-unlock-button');
@@ -327,17 +333,23 @@ function ensureCoachHeaderControls(coachSession) {
     headerActions.insertBefore(wrap, coachBtn);
   }
   wrap.style.display = 'flex';
+  wrap.style.cssText = 'display:flex;align-items:center;gap:4px;flex-wrap:nowrap;max-width:min(62vw,340px);min-width:0;overflow:hidden;';
   const hubBtn = document.getElementById('menu-hub-button');
   if (hubBtn) hubBtn.style.display = 'none';
+  const profileBtn = document.getElementById('profile-button');
+  if (profileBtn) profileBtn.style.display = 'none';
+  const notifyBtn = document.getElementById('cp-notify-btn');
+  if (notifyBtn) notifyBtn.style.display = 'none';
+  if (coachBtn) coachBtn.style.display = 'none';
   const clients = (store.__cpClientList || []).slice();
   const curId = store.coachWorkspace && store.coachWorkspace.clientId ? String(store.coachWorkspace.clientId) : '';
   const opts = ['<option value="">Cliente…</option>'].concat(clients.map(function (cl) {
     return '<option value="' + esc(String(cl.id)) + '"' + (String(cl.id) === curId ? ' selected' : '') + '>' + esc(cl.displayName || cl.username || ('#' + cl.id)) + '</option>';
   }));
   wrap.innerHTML =
-    '<select id="cp-client-switcher" class="cp-client-switcher" title="Cambia cliente" onchange="switchCoachClientFromHeader(this.value)">' + opts.join('') + '</select>' +
-    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachHub\')">LISTA</button>' +
-    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="coachHeaderBack()">INDIETRO</button>';
+    '<select id="cp-client-switcher" class="cp-client-switcher" title="Cambia cliente" style="max-width:42vw;min-width:0;flex:1 1 auto;" onchange="switchCoachClientFromHeader(this.value)">' + opts.join('') + '</select>' +
+    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;flex-shrink:0;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachHub\')">LISTA</button>' +
+    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;flex-shrink:0;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="coachHeaderBack()">INDIETRO</button>';
 }
 
 function switchCoachClientFromHeader(id) {
@@ -1435,6 +1447,29 @@ function exitCoachSession(force) {
   return true;
 }
 
+function preferFilledNutrition(a, b) {
+  function score(n) {
+    if (!n || typeof n !== 'object') return 0;
+    const days = Array.isArray(n.days) ? n.days : [];
+    let foods = 0;
+    days.forEach(function (d) {
+      (d.meals || []).forEach(function (m) {
+        foods += ((m.foods && m.foods.length) || (m.items && m.items.length) || 0);
+      });
+    });
+    return days.length * 10 + foods;
+  }
+  return score(a) >= score(b) ? (a || b || null) : (b || a || null);
+}
+
+function preferFilledSupplementation(a, b) {
+  function score(s) {
+    if (!s || typeof s !== 'object') return 0;
+    return (Array.isArray(s.items) ? s.items.length : 0);
+  }
+  return score(a) >= score(b) ? (a || b || null) : (b || a || null);
+}
+
 function applyClientPayloadToLocal(payload) {
   payload = payload || {};
   const prog = payload.activeProgram || payload;
@@ -1447,8 +1482,10 @@ function applyClientPayloadToLocal(payload) {
   }
   store.activeProgram = DATA;
   store.activeProgramId = (DATA && DATA.id) || ('client_view_' + Date.now());
-  store.nutrition = payload.nutrition || (DATA && DATA.nutrition) || null;
-  store.supplementation = payload.supplementation || (DATA && DATA.supplementation) || null;
+  const nutr = preferFilledNutrition(payload.nutrition, DATA && DATA.nutrition);
+  const supp = preferFilledSupplementation(payload.supplementation, DATA && DATA.supplementation);
+  store.nutrition = nutr;
+  store.supplementation = supp;
   store.therapy = payload.therapy || (DATA && DATA.therapy) || null;
   store.exams = payload.exams || (DATA && DATA.exams) || null;
   store.data = payload.data && typeof payload.data === 'object' ? JSON.parse(JSON.stringify(payload.data)) : {};
@@ -1467,6 +1504,9 @@ function applyClientPayloadToLocal(payload) {
     store.profile = Object.assign({}, store.profile || {}, payload.profile);
   }
   if (DATA) {
+    if (typeof normalizeNutritionMeals === 'function' && store.nutrition) {
+      store.nutrition = normalizeNutritionMeals(store.nutrition);
+    }
     DATA.nutrition = store.nutrition;
     DATA.supplementation = store.supplementation;
     DATA.therapy = store.therapy;
@@ -1550,11 +1590,41 @@ function startClientLivePoll() {
       if (Array.isArray(data.bodyChecks)) store.bodyChecks = JSON.parse(JSON.stringify(data.bodyChecks));
       if (data.nutritionDaily) store.nutritionDaily = JSON.parse(JSON.stringify(data.nutritionDaily));
       if (data.subs) store.subs = JSON.parse(JSON.stringify(data.subs));
-      if (data.activeProgram) {
+      // Never wipe domain edits with a stale activeProgram shell from live poll
+      const keepLocalNutr = !!(store.__cpNutritionDirty || store.__cpKeepLocalNutrition);
+      const keepLocalSupp = !!(store.__cpSupplementsDirty || store.__cpKeepLocalSupplements);
+      const localNutr = (DATA && DATA.nutrition) || store.nutrition;
+      const localSupp = (DATA && DATA.supplementation) || store.supplementation;
+      const localTher = (DATA && DATA.therapy) || store.therapy;
+      const localExams = (DATA && DATA.exams) || store.exams;
+      if (data.activeProgram && typeof data.activeProgram === 'object') {
         try {
-          DATA = data.activeProgram;
-          store.activeProgram = data.activeProgram;
+          const next = JSON.parse(JSON.stringify(data.activeProgram));
+          const remoteNutr = preferFilledNutrition(data.nutrition, next.nutrition);
+          const remoteSupp = preferFilledSupplementation(data.supplementation, next.supplementation);
+          next.nutrition = keepLocalNutr ? preferFilledNutrition(localNutr, remoteNutr) : preferFilledNutrition(remoteNutr, localNutr);
+          next.supplementation = keepLocalSupp ? preferFilledSupplementation(localSupp, remoteSupp) : preferFilledSupplementation(remoteSupp, localSupp);
+          next.therapy = data.therapy || next.therapy || localTher || null;
+          next.exams = data.exams || next.exams || localExams || null;
+          if (typeof normalizeNutritionMeals === 'function' && next.nutrition) {
+            next.nutrition = normalizeNutritionMeals(next.nutrition);
+          }
+          DATA = next;
+          store.activeProgram = next;
+          store.nutrition = next.nutrition;
+          store.supplementation = next.supplementation;
+          store.therapy = next.therapy;
+          store.exams = next.exams;
         } catch (_) {}
+      } else {
+        if (!keepLocalNutr && data.nutrition) {
+          store.nutrition = preferFilledNutrition(data.nutrition, localNutr);
+          if (DATA) DATA.nutrition = store.nutrition;
+        }
+        if (!keepLocalSupp && data.supplementation) {
+          store.supplementation = preferFilledSupplementation(data.supplementation, localSupp);
+          if (DATA) DATA.supplementation = store.supplementation;
+        }
       }
       let dataFp = '';
       try {
@@ -2279,7 +2349,21 @@ async function pushCoachClientEdits(opts) {
         body: JSON.stringify({ data: payload, notify: true })
       }, 25000);
     }, 'Salvo…', { immediate: true, maxMs: 30000 });
-    if (store.coachWorkspace) store.coachWorkspace.data = Object.assign({}, store.coachWorkspace.data || {}, payload);
+    if (store.coachWorkspace) {
+      store.coachWorkspace.data = Object.assign({}, store.coachWorkspace.data || {}, payload);
+      if (payload.nutrition) {
+        store.coachWorkspace.data.nutrition = payload.nutrition;
+        if (store.coachWorkspace.data.activeProgram && typeof store.coachWorkspace.data.activeProgram === 'object') {
+          store.coachWorkspace.data.activeProgram.nutrition = payload.nutrition;
+        }
+      }
+      if (payload.supplementation) {
+        store.coachWorkspace.data.supplementation = payload.supplementation;
+        if (store.coachWorkspace.data.activeProgram && typeof store.coachWorkspace.data.activeProgram === 'object') {
+          store.coachWorkspace.data.activeProgram.supplementation = payload.supplementation;
+        }
+      }
+    }
     practiceToast('Modifiche inviate al cliente', 'success');
   } catch (err) {
     practiceToast((err && err.message) || 'Salvataggio fallito', 'danger');
