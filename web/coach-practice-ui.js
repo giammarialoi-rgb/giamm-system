@@ -269,6 +269,7 @@ function applyClientChrome() {
     }
     ensureCoachHeaderControls(coachSession);
     ensureNotifyButton();
+    if (typeof updatePersonalBackButton === 'function') updatePersonalBackButton();
     if (athlete) {
       document.querySelectorAll('button').forEach(function (btn) {
         const tx = String(btn.textContent || '');
@@ -278,10 +279,19 @@ function applyClientChrome() {
           btn.textContent = tx.replace(/CHIEDI A COACH AI(?:\s*\([^)]+\))?/i, 'CHIEDI AL COACH');
         }
       });
-      const acc = document.getElementById('account-button');
-      if (acc) {
-        acc.textContent = 'ESCI CLIENT';
-        acc.onclick = function () { logoutAccount(); };
+      const profileBtn = document.getElementById('profile-button');
+      if (profileBtn) {
+        profileBtn.textContent = 'ESCI CLIENT';
+        profileBtn.onclick = function () { logoutAccount(); };
+      }
+    } else {
+      const profileBtn = document.getElementById('profile-button');
+      if (profileBtn && !coachSession) {
+        profileBtn.onclick = function () {
+          if (typeof openProfileHub === 'function') openProfileHub();
+          else if (typeof openAthleteProfile === 'function') openAthleteProfile();
+        };
+        if (typeof updateAccountButton === 'function') updateAccountButton();
       }
     }
     document.querySelectorAll('[data-hub="athlete"]').forEach(function (el) {
@@ -779,8 +789,8 @@ function ensureNotifyButton() {
     btn.id = 'cp-notify-btn';
     btn.className = 'btn btn-outline';
     btn.onclick = function () { openNotificationsCenter(); };
-    const account = document.getElementById('account-button');
-    if (account && account.parentElement === headerActions) headerActions.insertBefore(btn, account.nextSibling);
+    const profile = document.getElementById('profile-button');
+    if (profile && profile.parentElement === headerActions) headerActions.insertBefore(btn, profile.nextSibling);
     else headerActions.insertBefore(btn, headerActions.firstChild);
   }
   const n = Math.max(0, Number(store.__cpNotifyCount || 0));

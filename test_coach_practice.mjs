@@ -123,6 +123,12 @@ assert(base.includes("location.protocol === 'http:'") && base.includes('src="nur
 assert(base.includes("selectFoodFromDb") && base.includes("data-food-idx") && base.includes("foodRestrictionWarnHtml") && base.includes("__foodSearchHits"), "food DB pick + allergy warn");
 assert(ui.includes("coachInboxShouldIgnore") && ui.includes("coach_modified") && ui.includes("parseCoachEventPayload"), "coach inbox ignores own actions");
 assert(fs.readFileSync(path.join(__dirname, "build_master25.mjs"), "utf8").includes("lastIndexOf(scriptTagMarker, dataStartIdx)"), "build keeps early base script + DOM header");
+assert(base.includes("maybeClearLogsOnProgramSwitch") && base.includes("clearWorkoutLogsForNewProgram"), "new program clears workout logs");
+assert(base.includes("openHardResetModal") && base.includes("confirmHardResetScope") && base.includes("executeHardResetPersonal") && base.includes("executeHardResetCoach"), "hard reset scopes all/personal/coach");
+assert(base.includes("checkFisicoRequiresHumanCoach") && base.includes("openDomainQuickSwitch") && base.includes("domainTitleTapHtml"), "check gate + domain quick switch");
+assert(base.includes("Giorno selezionato:") && base.includes("personalNavBack") && base.includes("openProfileHub"), "nutrition day label + personal back + profile hub");
+assert(base.includes("id=\"personal-back-button\"") && !base.includes('id="account-button"'), "header merges account into profilo");
+assert(base.includes("CalendarService.addEvent") && fs.readFileSync(path.join(__dirname, "prepare_task20_js_services.mjs"), "utf8").includes("Workouts are NOT projected"), "calendar no phantom workouts + finalize/exam addEvent");
 assert(base.includes("ALLERGIE E INTOLLERANZE") && base.includes("filterFoodForRestrictions") && base.includes("ensureAllergenIntoleranceCatalog") && base.includes("safe_phrases"), "nutrition allergy filter wizard");
 const allergenCatPath = path.join(__dirname, "web/allergen-intolerance-catalog.json");
 assert(fs.existsSync(allergenCatPath), "allergen catalog file exists");

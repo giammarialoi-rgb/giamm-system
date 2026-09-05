@@ -238,7 +238,7 @@ header .logo-container {
   min-width: 0;
   align-items: center;
   justify-content: flex-end;
-  gap: 4px;
+  gap: 8px;
   position: relative;
   z-index: 1102;
   overflow-x: auto;
@@ -253,15 +253,19 @@ header .logo-container {
 .header-actions > #cp-coach-header-controls {
   flex-shrink: 0;
 }
-#menu-hub-button {
+#menu-hub-button,
+#profile-button,
+#coach-unlock-button,
+#personal-back-button {
   flex-shrink: 0;
-  font-size: 9px;
-  padding: 6px 9px;
+  font-size: 10px;
+  padding: 7px 11px;
   font-weight: 800;
   touch-action: manipulation;
   position: relative;
   z-index: 1102;
   white-space: nowrap;
+  border-radius: 8px;
 }
 
 header .logo-container img {
@@ -277,39 +281,17 @@ header .logo-container span {
   display: none !important;
 }
 
-#account-button {
-  flex-shrink: 0;
-  margin-left: 0;
-  font-size: 9px;
-  padding: 6px 8px;
-  font-weight: 800;
-  border-radius: 8px;
-  max-width: 88px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  touch-action: manipulation;
-  position: relative;
-  z-index: 1101;
-}
+#account-button { display: none !important; }
 
-#profile-button {
-  flex-shrink: 0;
-  margin-left: 0;
-  font-size: 9px;
-  padding: 6px 8px;
-  font-weight: 800;
-  touch-action: manipulation;
-  position: relative;
-  z-index: 1101;
-  white-space: nowrap;
-}
-#coach-unlock-button {
-  flex-shrink: 0;
-  margin-left: 0 !important;
-  font-size: 9px !important;
-  padding: 6px 8px !important;
-  white-space: nowrap;
+#profile-hub-sheet {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10060;
+  background: rgba(0,0,0,0.78);
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
 }
 
 header .btn {
@@ -1204,10 +1186,10 @@ body.focus-mode [data-rewards-only] {
 <header>
   <div class="logo-container"><img src="nurvan_logo.png" alt="Nurvan" onerror="this.onerror=null;this.src='icon-192.png'"></div>
   <div class="header-actions">
-  <button class="btn btn-outline" id="account-button" onclick="openAccount()">ACCEDI</button>
-  <button class="btn btn-outline" id="profile-button" style="margin-left:6px;" onclick="openAthleteProfile()">PROFILO</button>
-  <button class="btn btn-primary" id="coach-unlock-button" style="margin-left:6px;" onclick="openCoachOrUnlock()">COACH</button>
-  <button class="btn btn-outline" id="menu-hub-button" style="margin-left:6px;" onclick="openMenuHub()">MENU</button>
+  <button type="button" class="btn btn-outline" id="personal-back-button" style="display:none;margin-left:0;" onclick="personalNavBack()">INDIETRO</button>
+  <button type="button" class="btn btn-outline" id="profile-button" onclick="openProfileHub()">PROFILO</button>
+  <button type="button" class="btn btn-primary" id="coach-unlock-button" onclick="openCoachOrUnlock()">COACH</button>
+  <button type="button" class="btn btn-outline" id="menu-hub-button" onclick="openMenuHub()">MENU</button>
   </div>
 </header>
 
@@ -2663,8 +2645,38 @@ function loadCoachArchive(id) {
 window.loadCoachArchive = loadCoachArchive;
 window.archiveCurrentCoachChat = archiveCurrentCoachChat;
 function updateAccountButton(){
-  const button = $('account-button');
-  if(button) button.textContent = store.accountUser?.name ? store.accountUser.name.split(' ')[0].toUpperCase() : t('accedi');
+  const button = $('profile-button');
+  if (!button) return;
+  const name = store.accountUser?.name ? store.accountUser.name.split(' ')[0].toUpperCase() : '';
+  button.textContent = name || t('profilo') || 'PROFILO';
+}
+function openProfileHub() {
+  let el = document.getElementById('profile-hub-sheet');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'profile-hub-sheet';
+    el.onclick = function (ev) { if (ev.target === el) closeProfileHub(); };
+    document.body.appendChild(el);
+  }
+  const logged = !!(store.accountToken && store.accountUser);
+  const uname = logged ? (store.accountUser.name || store.accountUser.email || 'Account') : '';
+  el.innerHTML = '<div style="width:100%;max-width:420px;background:#121212;border:1px solid #333;border-radius:14px 14px 0 0;padding:16px;" onclick="event.stopPropagation()">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+    '<div style="font-size:13px;font-weight:900;color:var(--gold);letter-spacing:1px;">PROFILO</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="closeProfileHub()">CHIUDI</button></div>' +
+    (logged ? ('<div style="font-size:12px;color:#ccc;margin-bottom:12px;">Ciao, <b style="color:#fff;">' + esc(uname) + '</b></div>') : '<div style="font-size:12px;color:#888;margin-bottom:12px;">Accedi per sincronizzare i dati.</div>') +
+    '<div style="display:grid;gap:8px;">' +
+    '<button type="button" class="btn btn-primary" style="width:100%;height:44px;font-weight:800;" onclick="closeProfileHub();openAthleteProfile()">Profilo atleta</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;height:44px;font-weight:800;" onclick="closeProfileHub();openAccount()">' + (logged ? 'Account / Sync' : 'Accedi / Registrati') + '</button>' +
+    (logged ? '<button type="button" class="btn btn-outline" style="width:100%;height:44px;font-weight:800;border-color:#442222;color:var(--accent-red);" onclick="closeProfileHub();logoutAccount()">Esci</button>' : '') +
+    '</div></div>';
+  el.style.display = 'flex';
+  pushUiOverlay('profile-hub-sheet');
+}
+function closeProfileHub() {
+  const el = document.getElementById('profile-hub-sheet');
+  if (el) el.style.display = 'none';
+  popUiOverlay('profile-hub-sheet');
 }
 function t(key){
   if (typeof I18nService !== 'undefined' && I18nService.t) return I18nService.t(key);
@@ -7680,7 +7692,75 @@ function navigate(v, e){
   currentView = v;
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   const a = $(`nav-${v}`); if(a) a.classList.add('active');
+  updatePersonalBackButton();
   render();
+}
+
+function personalNavBack() {
+  if (window.__gsNavStack && window.__gsNavStack.length) {
+    const prev = window.__gsNavStack.pop();
+    if (prev && prev !== currentView) {
+      currentView = prev;
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      const a = $('nav-' + prev); if (a) a.classList.add('active');
+      updatePersonalBackButton();
+      render();
+      return;
+    }
+  }
+  if (currentView && currentView !== 'home') navigate('home');
+}
+
+function updatePersonalBackButton() {
+  const btn = document.getElementById('personal-back-button');
+  if (!btn) return;
+  const inCoach = document.body && document.body.classList.contains('coach-session');
+  const stack = window.__gsNavStack || [];
+  const show = !inCoach && currentView && currentView !== 'home' && stack.length > 0;
+  btn.style.display = show ? 'inline-flex' : 'none';
+}
+
+function openDomainQuickSwitch() {
+  let el = document.getElementById('domain-quick-switch');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'domain-quick-switch';
+    el.style.cssText = 'display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.72);align-items:flex-end;justify-content:center;padding:16px;';
+    el.onclick = function (ev) { if (ev.target === el) closeDomainQuickSwitch(); };
+    document.body.appendChild(el);
+  }
+  const hasTher = !!(DATA && DATA.therapy && ((DATA.therapy.medications && DATA.therapy.medications.length) || DATA.therapy.present));
+  const items = [
+    { v: 'training', label: 'Allenamento' },
+    { v: 'nutrition', label: 'Alimentazione' },
+    { v: 'supplements', label: 'Integrazione' },
+    { v: 'therapy', label: 'Terapia' },
+    { v: 'exams', label: 'Esami' }
+  ];
+  el.innerHTML = '<div style="width:100%;max-width:420px;background:#121212;border:1px solid #333;border-radius:14px 14px 0 0;padding:16px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-size:13px;font-weight:900;color:var(--gold);letter-spacing:1px;">PASSA A</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="closeDomainQuickSwitch()">CHIUDI</button></div>' +
+    '<div style="display:grid;gap:8px;">' +
+    items.map(function (it) {
+      const dim = (it.v === 'therapy' && !hasTher) ? 'opacity:.55;' : '';
+      return '<button type="button" class="btn ' + (currentView === it.v ? 'btn-primary' : 'btn-outline') + '" style="width:100%;height:44px;font-weight:800;' + dim + '" onclick="closeDomainQuickSwitch();navigate(\'' + it.v + '\')">' + it.label + '</button>';
+    }).join('') +
+    '</div></div>';
+  el.style.display = 'flex';
+  pushUiOverlay('domain-quick-switch');
+}
+
+function closeDomainQuickSwitch() {
+  const el = document.getElementById('domain-quick-switch');
+  if (el) el.style.display = 'none';
+  popUiOverlay('domain-quick-switch');
+}
+
+function domainTitleTapHtml(eyebrow, title) {
+  return '<div role="button" tabindex="0" onclick="openDomainQuickSwitch()" style="cursor:pointer;-webkit-tap-highlight-color:transparent;">' +
+    '<span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">' + eyebrow + '</span>' +
+    '<h1 style="color:#fff;margin:2px 0 0;font-size:20px;">' + title + ' <span style="font-size:11px;color:#666;font-weight:700;">▾</span></h1>' +
+    '</div>';
 }
 
 function pushUiOverlay(id) {
@@ -8205,10 +8285,7 @@ function renderNutrition(c) {
 
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
-      <div>
-        <span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">NUTRITION</span>
-        <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${t('nutrition')}</h1>
-      </div>
+      ${domainTitleTapHtml('NUTRITION', t('nutrition'))}
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         ${nutrDirty ? '<button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="saveNutritionPlanEdits()">SALVA</button>' : ''}
         ${athleteDomainActionButtonsHtml('nutrition', { compact: true })}
@@ -8248,6 +8325,10 @@ function renderNutrition(c) {
   }
 
   html += `
+    <div style="position:sticky;top:0;z-index:5;background:#0a0a0a;padding:8px 0 10px;margin-bottom:4px;border-bottom:1px solid #222;">
+      <div style="font-size:12px;font-weight:900;color:#fff;">Giorno selezionato: <span style="color:var(--gold);">${esc(safeDisplayValue(activeDay.day, 'Giorno ' + (currentNutritionDayIndex + 1)))}</span></div>
+    </div>
+
     <div class="card" style="border:1px solid var(--border);background:linear-gradient(135deg, #16140d 0%, #0c0c0c 100%);margin-bottom:16px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <span style="font-size:11px;font-weight:800;color:var(--gold);">${t('dailyTotals')} • ${safeDisplayValue(activeDay.day, t('today'))}</span>
@@ -8270,11 +8351,17 @@ function renderNutrition(c) {
     </div>
 
     <div class="pill-tabs">
-      ${days.map((d, idx) => `
-        <div class="pill-tab ${idx === currentNutritionDayIndex ? 'active' : ''}" onclick="selectNutritionDay(${idx})">
-          ${safeDisplayValue(d.day, 'Giorno ' + (idx + 1))}
-        </div>
-      `).join('')}
+      ${days.map((d, idx) => {
+        const isSel = idx === currentNutritionDayIndex;
+        const fold = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); };
+        const names = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+        const todayName = names[new Date().getDay()];
+        const isToday = fold(d.day).indexOf(fold(todayName).slice(0, 4)) >= 0;
+        const todayStyle = isToday ? 'box-shadow:0 0 0 1px var(--gold);' : '';
+        return '<div class="pill-tab ' + (isSel ? 'active' : '') + '" style="' + todayStyle + '" onclick="selectNutritionDay(' + idx + ')">' +
+          safeDisplayValue(d.day, 'Giorno ' + (idx + 1)) + (isToday ? ' · oggi' : '') +
+          '</div>';
+      }).join('')}
     </div>
 
     <div style="display:flex;flex-direction:column;gap:14px;">
@@ -9026,8 +9113,7 @@ function renderSupplements(c) {
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
       <div>
-        <span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">SUPPLEMENTATION</span>
-        <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${t('supplementation')}</h1>
+        ${domainTitleTapHtml('SUPPLEMENTATION', t('supplementation'))}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         ${suppDirty ? '<button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="saveSupplementationEdits()">SALVA</button>' : ''}
@@ -9561,8 +9647,7 @@ function renderTherapy(c) {
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <div>
-        <span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">MEDICAL THERAPY TRACKER</span>
-        <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${t('therapy')}</h1>
+        ${domainTitleTapHtml('MEDICAL THERAPY', t('therapy'))}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain('therapy')">CHIEDI A COACH AI</button>
@@ -9857,10 +9942,7 @@ function renderExams(c) {
 
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
-      <div>
-        <span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">CLINICAL LAB MONITORING</span>
-        <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">Esami Ematochimici</h1>
-      </div>
+      ${domainTitleTapHtml('CLINICAL LAB', 'Esami Ematochimici')}
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="openExamReminderModal()">📅 PROMEMORIA</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="openExamImportChooser()">IMPORTA REFERTO</button>
@@ -10120,12 +10202,14 @@ function openExamReminderModal() {
   DATA.exams.reminders.push({ title: title.trim() || 'Esami', date, notifyDate, createdAt: new Date().toISOString() });
   // Mirror on calendar custom events if available
   try {
-    if (typeof CalendarService !== 'undefined' && CalendarService.addCustomEvent) {
-      CalendarService.addCustomEvent({
+    if (typeof CalendarService !== 'undefined' && CalendarService.addEvent) {
+      CalendarService.addEvent({
         date,
         title: 'Esami: ' + (title.trim() || 'Controllo'),
         type: 'exam',
-        notifyDate
+        time: '09:00',
+        notifyDate,
+        action: "navigate('exams')"
       });
     }
   } catch (_) {}
@@ -11019,6 +11103,8 @@ async function generateAndActivateProgram() {
     const result = await ProgramGeneratorService.generate({ days: days, goal: goal, level: level, weeks: weeks });
     const prog = normalizeProgram(result.program);
     prog.source_summary = 'Generato da template strutturato (' + (result.source || 'local') + ') · modificabile';
+    if (!prog.id) prog.id = 'gen_' + Date.now();
+    await maybeClearLogsOnProgramSwitch(prog.id);
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
       await GiammariaPersistence.activateCanonicalProgram(prog);
     } else if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveActiveProgram) {
@@ -11086,8 +11172,9 @@ async function activateCatalogProgramInner(programId) {
         ? ('Evidence-based · ' + (entry.progression && entry.progression.model || '') + ' · volume/RIR/tempo periodizzati · ACSM 2026 / Schoenfeld')
         : 'Provenienza: archivio palestra · scheda depersonalizzata · senza kg personali'
     });
+    const newId = prog.id || ('catalog_' + Date.now());
     if (isCoachClientSandbox()) {
-      store.activeProgramId = prog.id || ('assign_draft_' + Date.now());
+      store.activeProgramId = newId || ('assign_draft_' + Date.now());
       DATA = prog;
       DATA.nutrition = null;
       DATA.supplementation = null;
@@ -11106,6 +11193,7 @@ async function activateCatalogProgramInner(programId) {
       render();
       return;
     }
+    await maybeClearLogsOnProgramSwitch(newId);
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
       await GiammariaPersistence.activateCanonicalProgram(prog);
     } else if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveActiveProgram) {
@@ -11117,7 +11205,7 @@ async function activateCatalogProgramInner(programId) {
     DATA.therapy = null;
     DATA.exams = null;
     store.activeProgram = DATA;
-    store.activeProgramId = prog.id;
+    store.activeProgramId = newId;
     store.nutrition = null;
     store.supplementation = null;
     store.therapy = null;
@@ -11352,7 +11440,7 @@ function renderPrograms(c){
       <div style="position:absolute; top:0; right:0; background:${weeks.length ? 'var(--gold)' : '#444'}; color:${weeks.length ? '#000' : '#fff'}; font-size:9px; font-weight:900; padding:3px 10px; border-bottom-left-radius:6px; letter-spacing:1px;">${weeks.length ? 'ATTIVO' : 'VUOTO'}</div>
       <div class="card-header" style="padding-bottom:8px;">
         <span style="font-size:11px; color:var(--gold); font-weight:800; text-transform:uppercase;">Programma Attivo</span>
-        <h3 style="font-size:18px; margin:4px 0 0; color:#fff; font-weight:800;">${esc(weeks.length ? (DATA?.title || 'Programma Senza Titolo') : 'Nessun programma caricato')}</h3>
+        <h3 style="font-size:13px; margin:4px 0 0; color:#fff; font-weight:700; line-height:1.35; word-break:break-word; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${esc(weeks.length ? (DATA?.title || 'Programma Senza Titolo') : 'Nessun programma caricato')}</h3>
         <p style="font-size:11px; color:#888; margin:2px 0 0;">${weeks.length ? ('Durata: ' + duration + ' settimane · ' + sessionsCount + ' sedute') : 'Scegli una scheda dal database o importa un file.'}</p>
       </div>
       ${weeks.length ? `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); gap:8px; margin:12px 0;">
@@ -11362,11 +11450,11 @@ function renderPrograms(c){
         <div class="card" style="padding:10px; text-align:center;"><div style="font-size:18px; font-weight:900; color:var(--gold);">${totalSets}</div><div style="font-size:9px; color:#888;">SERIE</div></div>
       </div>
       <div style="border-top:1px solid #222; padding-top:10px; margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
-        <span style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; background:rgba(212,175,55,0.15); color:var(--gold);">ALLENAMENTO</span>
-        <span style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasNutr ? 'color:#4caf50;' : 'color:#555;'}">ALIMENTAZIONE</span>
-        <span style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasSupp ? 'color:#2196f3;' : 'color:#555;'}">INTEGRAZIONE</span>
-        <span style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasTherapy ? 'color:#ab47bc;' : 'color:#555;'}">TERAPIA</span>
-        <span style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasExams ? 'color:#26c6da;' : 'color:#555;'}">ESAMI</span>
+        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; background:rgba(212,175,55,0.15); color:var(--gold); border-color:rgba(212,175,55,0.35);" onclick="navigate('training')">ALLENAMENTO</button>
+        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasNutr ? 'color:#4caf50;border-color:#2a4a2a;' : 'color:#555;border-color:#333;'}" onclick="navigate('nutrition')">ALIMENTAZIONE</button>
+        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasSupp ? 'color:#2196f3;border-color:#1a3a4a;' : 'color:#555;border-color:#333;'}" onclick="navigate('supplements')">INTEGRAZIONE</button>
+        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasTherapy ? 'color:#ab47bc;border-color:#3a2a4a;' : 'color:#555;border-color:#333;'}" onclick="navigate('therapy')">TERAPIA</button>
+        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasExams ? 'color:#26c6da;border-color:#1a3a3a;' : 'color:#555;border-color:#333;'}" onclick="navigate('exams')">ESAMI</button>
       </div>` : ''}
     </div>
 
@@ -12552,7 +12640,13 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
     if (isCoachClientSandbox()) {
       store.activeProgramId = prog.id || ('assign_draft_' + Date.now());
       DATA.id = store.activeProgramId;
-    } else if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
+    } else {
+      const switchId = prog.id || DATA.id || ('import_' + Date.now());
+      const replacingTraining = hasTraining && (!selDomEarly.length || selDomEarly.indexOf('training') >= 0);
+      if (replacingTraining) {
+        await maybeClearLogsOnProgramSwitch(switchId);
+      }
+      if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
       const res = await GiammariaPersistence.activateCanonicalProgram(prog);
       console.log(`[PERSISTENCE] Canonical program activated. ID: ${res.id} FP: ${res.fingerprint}`);
       store.activeProgramId = res.id;
@@ -12565,6 +12659,7 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
       store.activeProgramId = res.id;
     } else {
       store.activeProgramId = prog.id;
+    }
     }
 
     if (prog.nutrition && allowDom('nutrition')) store.nutrition = prog.nutrition;
@@ -12934,8 +13029,8 @@ function renderHome(c) {
                 <div style="font-size:9px; color:#666;">Creato il ${new Date(m.date).toLocaleDateString()}</div>
               </div>
               <div style="display:flex; gap:5px;">
-                <button class="btn btn-outline" style="font-size:9px; padding:4px 8px;" onclick="activateSavedProgram(${JSON.stringify(m.id)}, ${i})">ATTIVA</button>
-                <button class="btn btn-outline" style="font-size:9px; padding:4px 8px; border-color:var(--accent-red); color:var(--accent-red);" onclick="deleteSavedProgram(${JSON.stringify(m.id)}, ${i})">X</button>
+                <button type="button" class="btn btn-outline" style="font-size:9px; padding:4px 8px;" onclick="event.stopPropagation();activateSavedProgram(${JSON.stringify(m.id)}, ${i})">ATTIVA</button>
+                <button type="button" class="btn btn-outline" style="font-size:9px; padding:4px 8px; border-color:var(--accent-red); color:var(--accent-red);" onclick="event.stopPropagation();deleteSavedProgram(${JSON.stringify(m.id)}, ${i})">X</button>
               </div>
             </div>
           `).join('') : '<div style="font-size:11px; color:#555; text-align:center;">Nessun modello salvato. Carica documenti nel DB per generarne uno.</div>'}
@@ -12952,17 +13047,24 @@ function renderHome(c) {
 
 async function activateSavedProgram(programId, idx) {
   try {
+    const model = (typeof idx === 'number' && store.models && store.models[idx]) ? store.models[idx]
+      : (store.models || []).find(function (m) { return m && String(m.id) === String(programId); });
+    const label = (model && model.name) || 'questo programma';
+    if (!confirm('Attivare «' + label + '»?\n\nI carichi e le serie finalizzate del programma precedente verranno azzerati.')) return;
     let programData = null;
-    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadProgram) {
-      programData = await GiammariaPersistence.loadProgram(programId);
+    if (programId && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadProgram) {
+      try { programData = await GiammariaPersistence.loadProgram(programId); } catch (_) { programData = null; }
     }
-    if (!programData && store.models[idx]?.data) {
+    if (!programData && model && model.data) programData = model.data;
+    if (!programData && typeof idx === 'number' && store.models[idx] && store.models[idx].data) {
       programData = store.models[idx].data;
     }
     if (!programData) {
-      alert('Programma non trovato in archivio.');
+      if (typeof showToast === 'function') showToast('Programma non trovato in archivio.', 'warning');
+      else alert('Programma non trovato in archivio.');
       return;
     }
+    const newId = programId || programData.id || ('saved_' + Date.now());
     if (isCoachClientSandbox()) {
       DATA = typeof normalizeProgram === 'function' ? normalizeProgram(programData) : programData;
       store.activeProgram = DATA;
@@ -12974,6 +13076,7 @@ async function activateSavedProgram(programId, idx) {
       render();
       return;
     }
+    await maybeClearLogsOnProgramSwitch(newId);
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
       await GiammariaPersistence.activateCanonicalProgram(programData);
     } else if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveActiveProgram) {
@@ -12986,14 +13089,14 @@ async function activateSavedProgram(programId, idx) {
     if (programData.therapy) { DATA.therapy = programData.therapy; store.therapy = programData.therapy; }
     if (programData.exams) { DATA.exams = programData.exams; store.exams = programData.exams; }
     store.activeProgram = DATA;
-    store.activeProgramId = programId;
+    store.activeProgramId = newId;
     currentWeek = 1;
     currentDay = 0;
     if (DATA.weeks?.length) store.prefs.duration = DATA.weeks.length;
     persist();
     await syncProgramLibraryFromIdb();
     render();
-    if (typeof showToast === 'function') showToast('Programma attivato', 'success');
+    if (typeof showToast === 'function') showToast('Programma attivato — carichi azzerati', 'success');
     else alert('Programma attivato con successo.');
   } catch (e) {
     console.error('[ACTIVATE PROGRAM]', e);
@@ -13010,20 +13113,24 @@ function loadModelAsActive(idx) {
 }
 
 async function deleteSavedProgram(programId, idx) {
-  if (!confirm('Eliminare definitivamente questo programma? L\'operazione non può essere annullata.')) return;
+  const model = (typeof idx === 'number' && store.models && store.models[idx]) ? store.models[idx]
+    : (store.models || []).find(function (m) { return m && String(m.id) === String(programId); });
+  const label = (model && model.name) || 'questo programma';
+  if (!confirm('Eliminare «' + label + '»?\n\nL\'operazione non può essere annullata.')) return;
   try {
     if (programId && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.deleteProgram) {
       await GiammariaPersistence.deleteProgram(programId);
     }
-    if (typeof idx === 'number' && store.models[idx]) store.models.splice(idx, 1);
-    else store.models = store.models.filter(m => m.id !== programId);
-    if (store.activeProgramId === programId) {
+    if (typeof idx === 'number' && store.models && store.models[idx]) store.models.splice(idx, 1);
+    else store.models = (store.models || []).filter(function (m) { return m && m.id !== programId; });
+    if (String(store.activeProgramId) === String(programId)) {
       store.activeProgramId = null;
       store.activeProgram = null;
     }
     persist();
     await syncProgramLibraryFromIdb();
     render();
+    if (typeof showToast === 'function') showToast('Programma eliminato', 'info');
   } catch (e) {
     alert('Errore eliminazione: ' + (e.message || e));
   }
@@ -13135,6 +13242,7 @@ function renderTraining(c){
     }
 
     let h = ssttCard;
+    h += `<div style="margin-bottom:10px;">${domainTitleTapHtml('WORKOUT', t('training') || 'Allenamento')}</div>`;
     if (DATA.warmup && DATA.warmup.present && Array.isArray(DATA.warmup.items) && DATA.warmup.items.length) {
       h += `<div class="card" style="margin-bottom:12px;padding:12px;border:1px dashed rgba(76,175,80,0.55);background:rgba(76,175,80,0.06);">
         <div style="font-size:10px;font-weight:800;color:#81c784;letter-spacing:1px;margin-bottom:8px;">${esc(DATA.warmup.label || 'RISCALDAMENTO')}</div>
@@ -14285,6 +14393,27 @@ function finalizeWorkout(){
   store.logs.push(logEntry);
   if (store.logs.length > 60) store.logs = store.logs.slice(-60);
   store.sessionStartedAt = null;
+  try {
+    if (typeof CalendarService !== 'undefined' && CalendarService.addEvent) {
+      const dayIso = new Date().toISOString().slice(0, 10);
+      const sessTitle = (function () {
+        try {
+          const w = DATA && DATA.weeks && DATA.weeks[(currentWeek || 1) - 1];
+          const days = w && (w.sessions || w.days);
+          const d = days && days[currentDay || 0];
+          return (d && (d.name || d.title || d.day)) || 'Allenamento';
+        } catch (_) { return 'Allenamento'; }
+      })();
+      CalendarService.addEvent({
+        date: dayIso,
+        type: 'workout',
+        title: sessTitle,
+        time: new Date().toTimeString().slice(0, 5),
+        detail: 'Settimana ' + (currentWeek || 1) + ' · finalizzato',
+        action: "navigate('training')"
+      });
+    }
+  } catch (calErr) { console.warn('[CAL_WORKOUT]', calErr); }
   // Close this session and jump to next non-finalized day
   try { advanceToNextOpenTrainingDay(true); } catch (_) {}
   persist();
@@ -15738,10 +15867,14 @@ function renderCheckFisicoCardHtml() {
     '<div class="stats-period">' + periodBtns + '</div></div>' +
     '<div style="margin-top:12px;"><div style="font-size:10px;color:#aaa;font-weight:800;margin-bottom:6px;">NOTE PER IL COACH</div>' +
     '<textarea id="check-notes-input" rows="2" placeholder="Es. ho avuto la febbre 3 giorni…" oninput="onCheckFisicoNotes(this.value)" style="width:100%;padding:10px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:13px;resize:vertical;">' + esc(String(draft.notes || '')) + '</textarea></div>' +
-    '<div style="margin-top:10px;padding:10px;background:#141414;border:1px solid #2a2a2a;border-radius:10px;font-size:11px;color:#ccc;line-height:1.4;">Il check lo valuta solo il <b style="color:#fff;">coach reale</b>. Salva o invialo dalla chat/PDF — niente analisi AI qui.</div>' +
+    (checkFisicoRequiresHumanCoach()
+      ? '<div style="margin-top:10px;padding:10px;background:#141414;border:1px solid #2a2a2a;border-radius:10px;font-size:11px;color:#ccc;line-height:1.4;">Il check lo valuta solo il <b style="color:#fff;">coach reale</b>. Salva o invialo dalla chat/PDF — niente analisi AI qui.</div>'
+      : '<div style="margin-top:10px;padding:10px;background:#141414;border:1px solid #2a2a2a;border-radius:10px;font-size:11px;color:#ccc;line-height:1.4;">Nella tua area personale puoi salvare il check e, se vuoi, chiedere un’analisi al Coach AI.</div>') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">' +
     '<button type="button" class="btn btn-primary" style="flex:1;min-width:140px;font-size:11px;" onclick="saveCheckFisico()">Salva check</button>' +
-    '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:11px;border-color:var(--gold);color:var(--gold);" onclick="sendCheckFisicoToCoach()">Invia al coach</button>' +
+    (checkFisicoRequiresHumanCoach()
+      ? '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:11px;border-color:var(--gold);color:var(--gold);" onclick="sendCheckFisicoToCoach()">Invia al coach</button>'
+      : '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:11px;border-color:var(--gold);color:var(--gold);" onclick="analyzeCheckFisicoWithCoach()">Analizza con Coach AI</button>') +
     '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:11px;" onclick="exportCheckFisicoPdf()">Esporta PDF</button>' +
     '</div>' +
     '<div style="margin-top:14px;font-size:10px;font-weight:800;color:#777;letter-spacing:0.6px;">ULTIMI CHECK</div>' +
@@ -15967,12 +16100,31 @@ function buildCheckFisicoCoachPrompt(entry, report) {
   if (d.notes) msg += '\n\nNOTE ATLETA: ' + d.notes;
   return msg;
 }
+function checkFisicoRequiresHumanCoach() {
+  try {
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) return true;
+  } catch (_) {}
+  return false;
+}
 async function analyzeCheckFisicoWithCoach() {
-  // Client cannot use Coach AI for body checks — only the human coach reviews them.
-  if (typeof showToast === 'function') {
-    showToast('Il check lo valuta solo il coach reale. Puoi inviarglielo da qui.', 'info');
+  if (checkFisicoRequiresHumanCoach()) {
+    if (typeof showToast === 'function') {
+      showToast('Il check lo valuta solo il coach reale. Puoi inviarglielo da qui.', 'info');
+    }
+    if (typeof sendCheckFisicoToCoach === 'function') return sendCheckFisicoToCoach();
+    return;
   }
-  if (typeof sendCheckFisicoToCoach === 'function') return sendCheckFisicoToCoach();
+  // Personal area: allow Coach AI / local analysis path
+  try {
+    const prompt = typeof buildCheckFisicoCoachPrompt === 'function' ? buildCheckFisicoCoachPrompt() : '';
+    if (typeof askAI === 'function' && prompt) {
+      navigate('ai');
+      setTimeout(function () { askAI(prompt); }, 200);
+      return;
+    }
+  } catch (_) {}
+  if (typeof showToast === 'function') showToast('Apri Coach AI e chiedi un’analisi del check salvato.', 'info');
+  navigate('ai');
 }
 function setCheckFisicoPdfOpt(key, val) {
   checkFisicoDraft()[key] = val;
@@ -18161,6 +18313,22 @@ function addExerciseFromDb(encodedName, encodedMuscle) {
 window.addExerciseFromDb = addExerciseFromDb;
 
 function saveAll(){ persist(); alert("Salvataggio completato."); }
+async function clearWorkoutLogsForNewProgram() {
+  store.data = {};
+  store.customSets = {};
+  if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.clearWorkoutLogs) {
+    try { await GiammariaPersistence.clearWorkoutLogs(); } catch (e) { console.error(e); }
+  }
+}
+
+async function maybeClearLogsOnProgramSwitch(newProgramId) {
+  const prev = store && store.activeProgramId != null ? String(store.activeProgramId) : '';
+  const next = newProgramId != null ? String(newProgramId) : '';
+  if (!next || (prev && prev === next)) return false;
+  await clearWorkoutLogsForNewProgram();
+  return true;
+}
+
 async function resetWorkoutData(){
   if(confirm("Azzerare tutti i carichi e lo storico allenamenti registrati? Il programma attivo, nutrizione, terapia e integrazione resteranno intatti.")){
     return withBusy(async function () {
@@ -18179,20 +18347,61 @@ async function resetWorkoutData(){
   }
 }
 async function resetAllData(){
-  if(confirm("HARD RESET: cancellare definitivamente ogni dato, scheda e configurazione da LocalStorage e IndexedDB? L'operazione non può essere annullata.")){
-    return withBusy(async function () {
+  openHardResetModal();
+}
+
+function openHardResetModal() {
+  let el = document.getElementById('hard-reset-modal');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'hard-reset-modal';
+    el.style.cssText = 'display:none;position:fixed;inset:0;z-index:10070;background:rgba(0,0,0,.8);align-items:center;justify-content:center;padding:16px;';
+    el.onclick = function (ev) { if (ev.target === el) closeHardResetModal(); };
+    document.body.appendChild(el);
+  }
+  el.innerHTML = '<div class="card" style="max-width:440px;width:100%;border:2px solid var(--accent-red);padding:16px;" onclick="event.stopPropagation()">' +
+    '<div style="font-size:14px;font-weight:900;color:var(--accent-red);margin-bottom:8px;">HARD RESET</div>' +
+    '<div style="font-size:12px;color:#bbb;line-height:1.4;margin-bottom:14px;">Cosa vuoi resettare? L’operazione non può essere annullata.</div>' +
+    '<div style="display:grid;gap:8px;">' +
+    '<button type="button" class="btn btn-outline" style="width:100%;font-weight:800;border-color:var(--accent-red);color:var(--accent-red);" onclick="confirmHardResetScope(\'all\')">Tutto (app completa)</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;font-weight:800;" onclick="confirmHardResetScope(\'personal\')">Solo parte personale</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;font-weight:800;" onclick="confirmHardResetScope(\'coach\')">Solo hub coach</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;" onclick="closeHardResetModal()">Annulla</button>' +
+    '</div></div>';
+  el.style.display = 'flex';
+  pushUiOverlay('hard-reset-modal');
+}
+function closeHardResetModal() {
+  const el = document.getElementById('hard-reset-modal');
+  if (el) el.style.display = 'none';
+  popUiOverlay('hard-reset-modal');
+}
+async function confirmHardResetScope(scope) {
+  const labels = {
+    all: 'HARD RESET totale: cancellare ogni dato, scheda e configurazione?',
+    personal: 'Resettare solo la parte personale (programmi, carichi, nutrizione, calendario)? Il hub coach resta.',
+    coach: 'Resettare solo il hub coach (sessione, workspace, cache clienti)? La parte personale resta.'
+  };
+  if (!confirm(labels[scope] || labels.all)) return;
+  closeHardResetModal();
+  if (scope === 'all') return executeHardResetAll();
+  if (scope === 'personal') return executeHardResetPersonal();
+  if (scope === 'coach') return executeHardResetCoach();
+}
+async function executeHardResetAll() {
+  return withBusy(async function () {
     try {
-      if(typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.wipeDatabase){
+      if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.wipeDatabase) {
         await GiammariaPersistence.wipeDatabase();
       }
-    } catch(e){ console.error('IndexedDB wipe error:', e); }
+    } catch (e) { console.error('IndexedDB wipe error:', e); }
     try {
-      if(typeof localStorage !== 'undefined') localStorage.clear();
-      if(typeof sessionStorage !== 'undefined') sessionStorage.clear();
+      if (typeof localStorage !== 'undefined') localStorage.clear();
+      if (typeof sessionStorage !== 'undefined') sessionStorage.clear();
       clearFilePickIntent();
-    } catch(e){}
+    } catch (e) {}
     try {
-      if(typeof window !== 'undefined') {
+      if (typeof window !== 'undefined') {
         window.pendingProgramImport = null;
         window.activeCoachProposals = null;
         if (window.programImportState) {
@@ -18200,29 +18409,83 @@ async function resetAllData(){
           window.programImportState.currentImportId = null;
         }
       }
-    } catch(e){}
+    } catch (e) {}
+    if (typeof window !== 'undefined' && window.location) window.location.reload();
+  }, 'Hard reset…', { immediate: true });
+}
+async function executeHardResetPersonal() {
+  return withBusy(async function () {
+    try {
+      if (typeof GiammariaPersistence !== 'undefined') {
+        if (GiammariaPersistence.clearWorkoutLogs) await GiammariaPersistence.clearWorkoutLogs();
+        if (GiammariaPersistence.saveActiveProgram) await GiammariaPersistence.saveActiveProgram(null);
+        if (GiammariaPersistence.saveNutrition) await GiammariaPersistence.saveNutrition(null);
+        if (GiammariaPersistence.saveSupplements) await GiammariaPersistence.saveSupplements(null);
+        if (GiammariaPersistence.saveTherapy) await GiammariaPersistence.saveTherapy(null);
+        if (GiammariaPersistence.saveExams) await GiammariaPersistence.saveExams(null);
+      }
+    } catch (e) { console.warn(e); }
     DATA = {
-      profile: { name: "", age: null, weight: null, height: null, goal: "", activeSplit: "Nessun programma", currentPhase: "", coachName: "Nurvan AI" },
-      activeProgram: null,
-      activeProgramId: null,
-      activeProgramName: null,
-      programTitle: "NESSUN PROGRAMMA ATTIVO",
-      training: { weeks: [] },
-      weeks: [],
-      nutrition: { present: false, days: [], notes: [] },
-      supplementation: { present: false, items: [] },
-      therapy: { present: false, medications: [], protocols: [], entries: [] },
-      exams: { present: false, records: [], items: [] },
-      exerciseDb: DATA?.exerciseDb || {}
+      title: 'Nessun Programma Attivo', weeks: [], nutrition: null, supplementation: null, therapy: null, exams: null,
+      exerciseDb: (DATA && DATA.exerciseDb) || {}
     };
-    store = { activeTab: 'home', curW: 1, curS: 1, curEx: 0, timer: 0, timerRunning: false, timerInterval: null, data: {}, customSets: {}, customEx: [], docs: [], logs: [], notes: {}, profile: null, nutrition: null, supplementation: null, therapy: null, exams: null, activeProgram: null, activeProgramId: null };
-    if(typeof window !== 'undefined' && window.location){
-      window.location.reload();
-    } else {
-      render();
-    }
-    }, 'Hard reset…', { immediate: true });
-  }
+    const keepKeys = {};
+    Object.keys(store || {}).forEach(function (k) {
+      if (/^coach|account|clientOutbox|practice|__cp/i.test(k) || k === 'accountToken' || k === 'accountUser') keepKeys[k] = store[k];
+    });
+    store.data = {};
+    store.customSets = {};
+    store.logs = [];
+    store.models = [];
+    store.nutrition = null;
+    store.supplementation = null;
+    store.therapy = null;
+    store.exams = null;
+    store.activeProgram = null;
+    store.activeProgramId = null;
+    store.calendarEvents = [];
+    store.profile = null;
+    store.bodyChecks = [];
+    Object.keys(keepKeys).forEach(function (k) { store[k] = keepKeys[k]; });
+    try {
+      if (typeof CalendarService !== 'undefined') {
+        CalendarService._customCache = [];
+        if (CalendarService._saveCustom) CalendarService._saveCustom();
+      }
+      localStorage.removeItem('GS_CAL_EVENTS');
+    } catch (_) {}
+    persist();
+    currentView = 'home';
+    render();
+    if (typeof showToast === 'function') showToast('Parte personale resettata', 'info');
+  }, 'Reset personale…', { immediate: true });
+}
+async function executeHardResetCoach() {
+  return withBusy(async function () {
+    try {
+      if (typeof exitCoachSession === 'function') exitCoachSession();
+    } catch (_) {}
+    const keys = Object.keys(store || {});
+    keys.forEach(function (k) {
+      if (/^coach|__cp|clientOutbox|practiceToken|coachToken|coachWorkspace|coachClients|coachSeen/i.test(k)) {
+        try { delete store[k]; } catch (_) { store[k] = null; }
+      }
+    });
+    store.coachViewingClient = null;
+    store.coachAssigning = false;
+    store.coachSession = null;
+    store.coachWorkspace = null;
+    try {
+      localStorage.removeItem('GS_COACH_TOKEN');
+      localStorage.removeItem('GS_COACH_SESSION');
+      sessionStorage.removeItem('GS_COACH_TOKEN');
+    } catch (_) {}
+    try { document.body.classList.remove('coach-session', 'coach-viewing-client'); } catch (_) {}
+    persist();
+    currentView = 'home';
+    render();
+    if (typeof showToast === 'function') showToast('Hub coach resettato', 'info');
+  }, 'Reset hub coach…', { immediate: true });
 }
 
 if (typeof window !== 'undefined') {
@@ -18260,6 +18523,21 @@ if (typeof window !== 'undefined') {
   window.syncAccountData = syncAccountData;
   window.updateAccountButton = updateAccountButton;
   window.openAthleteProfile = openAthleteProfile;
+  window.openProfileHub = openProfileHub;
+  window.closeProfileHub = closeProfileHub;
+  window.personalNavBack = personalNavBack;
+  window.updatePersonalBackButton = updatePersonalBackButton;
+  window.openDomainQuickSwitch = openDomainQuickSwitch;
+  window.closeDomainQuickSwitch = closeDomainQuickSwitch;
+  window.openHardResetModal = openHardResetModal;
+  window.closeHardResetModal = closeHardResetModal;
+  window.confirmHardResetScope = confirmHardResetScope;
+  window.activateSavedProgram = activateSavedProgram;
+  window.deleteSavedProgram = deleteSavedProgram;
+  window.resetAllData = resetAllData;
+  window.checkFisicoRequiresHumanCoach = checkFisicoRequiresHumanCoach;
+  window.clearWorkoutLogsForNewProgram = clearWorkoutLogsForNewProgram;
+  window.maybeClearLogsOnProgramSwitch = maybeClearLogsOnProgramSwitch;
   window.ensureRewardsReady = ensureRewardsReady;
   window.maybeShowRewardsOnboarding = maybeShowRewardsOnboarding;
   window.dismissIosInstallHint = dismissIosInstallHint;
