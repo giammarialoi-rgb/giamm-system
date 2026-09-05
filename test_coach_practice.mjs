@@ -199,10 +199,11 @@ assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY")
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v33-coach"), "SW push + cache v33");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v34-coach"), "SW push + cache v34");
 assert(base.includes("updateSupplementField") && base.includes("markSupplementsDirty") && base.includes("DOSAGGIO"), "supplement inline edit fields");
 assert(ui.includes("benvenuto nel mio servizio coaching") && practice.includes("benvenuto nel mio servizio coaching") && ui.includes("formatInviteShareText"), "client invite welcome message");
 assert(ui.includes("intakeAllergiesHtml") && ui.includes("ALIMENTAZIONE · ALLERGIE") && practice.includes("allergies") && practice.includes("profileFromIntake"), "intake optional allergies/intolerances");
+assert(ui.includes("advanceClientTutorial") && ui.includes('data-tut="next"') && ui.includes("#cp-tutorial.cp-overlay{z-index:10155;}") && ui.includes("__cpA2hsPending"), "client tutorial click + A2HS defer");
 assert(ui.includes("emptyDomainShell") && ui.includes("isClearedDomainPayload") && ui.includes("cleared: true"), "domain clear empty shells");
 assert(ui.includes("preferFilledTherapy") && ui.includes("__cpTherapyCleared") && ui.includes("__cpTrainingCleared"), "clear therapy/training keep flags");
 assert(practice.includes("CLEARABLE") && practice.includes("emptyCleared") && practice.includes("clearedTraining"), "API patch-data accepts domain clears");
