@@ -56,6 +56,19 @@ function sanitizeIntake(raw) {
     if (v == null) return;
     out[k] = String(v).trim().slice(0, 80);
   });
+  // Optional allergies/intolerances: catalog ids used by nutrition plan generator
+  if (Array.isArray(raw.allergies)) {
+    out.allergies = raw.allergies
+      .map((x) => String(x || "").trim().slice(0, 40))
+      .filter(Boolean)
+      .slice(0, 40);
+  } else if (typeof raw.allergies === "string" && raw.allergies.trim()) {
+    out.allergies = raw.allergies
+      .split(/[,;|]/)
+      .map((x) => x.trim().slice(0, 40))
+      .filter(Boolean)
+      .slice(0, 40);
+  }
   return out;
 }
 
@@ -73,6 +86,9 @@ function bandMid(value) {
 
 function profileFromIntake(intake) {
   const name = [intake.firstName, intake.lastName].filter(Boolean).join(" ").trim();
+  const allergies = Array.isArray(intake.allergies)
+    ? intake.allergies.map((x) => String(x || "").trim()).filter(Boolean).slice(0, 40)
+    : [];
   return {
     name,
     sex: intake.sex === "Femmina" ? "f" : (intake.sex === "Maschio" ? "m" : ""),
@@ -80,6 +96,7 @@ function profileFromIntake(intake) {
     height: bandMid(intake.heightBand),
     weight: bandMid(intake.weightBand),
     goal: intake.goal || "",
+    allergies,
     intake
   };
 }

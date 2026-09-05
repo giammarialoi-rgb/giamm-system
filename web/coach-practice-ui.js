@@ -618,7 +618,7 @@ function intakeFormHtml(prefix, values, opts) {
   opts = opts || {};
   values = values || {};
   const skipName = !!opts.skipName;
-  return CLIENT_INTAKE_FIELDS.filter(function (f) {
+  const fields = CLIENT_INTAKE_FIELDS.filter(function (f) {
     return !(skipName && (f.key === 'firstName' || f.key === 'lastName'));
   }).map(function (f) {
     const id = prefix + '-' + f.key;
@@ -634,6 +634,50 @@ function intakeFormHtml(prefix, values, opts) {
     return '<div class="cp-field"><label for="' + id + '">' + f.label + req + '</label>' +
       '<select id="' + id + '">' + optsHtml + '</select></div>';
   }).join('');
+  return fields + intakeAllergiesHtml(prefix, values.allergies);
+}
+
+function intakeAllergiesHtml(prefix, selectedIds) {
+  const selected = Array.isArray(selectedIds) ? selectedIds : [];
+  let catalog = { items: [] };
+  try {
+    if (typeof getAllergenIntoleranceCatalog === 'function') catalog = getAllergenIntoleranceCatalog() || catalog;
+    else if (window.__allergenIntoleranceCatalog) catalog = window.__allergenIntoleranceCatalog;
+  } catch (_) {}
+  const items = (catalog && catalog.items) || [];
+  if (!items.length) {
+    return '<div class="cp-field" id="' + prefix + '-allergies" style="margin-top:8px;">' +
+      '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:4px;">ALIMENTAZIONE (opzionale)</div>' +
+      '<div class="cp-help">Allergie/intolleranze: catalogo in caricamento…</div></div>';
+  }
+  const allergies = items.filter(function (x) { return x.kind === 'allergy'; });
+  const intolerances = items.filter(function (x) { return x.kind === 'intolerance'; });
+  function group(title, list) {
+    return '<div style="font-size:10px;color:#aaa;font-weight:800;margin:8px 0 6px;">' + title + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+      list.map(function (it) {
+        const on = selected.indexOf(it.id) >= 0;
+        return '<label style="display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid ' + (on ? 'var(--gold)' : '#333') + ';border-radius:8px;background:#141414;font-size:10px;color:#eee;">' +
+          '<input type="checkbox" data-restr="' + it.id + '" ' + (on ? 'checked' : '') + ' style="width:14px;height:14px;">' +
+          esc(it.label) + '</label>';
+      }).join('') + '</div>';
+  }
+  return '<div class="cp-field" id="' + prefix + '-allergies" style="margin-top:10px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:4px;">ALIMENTAZIONE · ALLERGIE / INTOLLERANZE</div>' +
+    '<div style="font-size:10px;color:#888;margin-bottom:6px;line-height:1.35;">Opzionale. Serve al coach per generare la dieta escludendo questi alimenti.</div>' +
+    group('Allergie (EU)', allergies) +
+    group('Intolleranze', intolerances) +
+    '</div>';
+}
+
+function readIntakeAllergies(prefix) {
+  const host = document.getElementById(prefix + '-allergies');
+  if (!host) return [];
+  const out = [];
+  host.querySelectorAll('input[data-restr]').forEach(function (b) {
+    if (b.checked) out.push(b.getAttribute('data-restr'));
+  });
+  return out;
 }
 
 function readIntakeForm(prefix) {
@@ -642,7 +686,21 @@ function readIntakeForm(prefix) {
     const el = document.getElementById(prefix + '-' + f.key);
     if (el) out[f.key] = String(el.value || '').trim();
   });
+  out.allergies = readIntakeAllergies(prefix);
   return out;
+}
+
+function intakeAllergyLabels(ids) {
+  const selected = Array.isArray(ids) ? ids : [];
+  if (!selected.length) return '';
+  let catalog = { items: [] };
+  try {
+    if (typeof getAllergenIntoleranceCatalog === 'function') catalog = getAllergenIntoleranceCatalog() || catalog;
+    else if (window.__allergenIntoleranceCatalog) catalog = window.__allergenIntoleranceCatalog;
+  } catch (_) {}
+  const map = {};
+  (catalog.items || []).forEach(function (it) { map[it.id] = it.label || it.id; });
+  return selected.map(function (id) { return map[id] || id; }).join(', ');
 }
 
 function intakeFormMissing(data) {
@@ -1329,15 +1387,18 @@ async function submitClientInviteLogin() {
   }
 }
 
-function showClientIntake(prefill) {
+async function showClientIntake(prefill) {
   ensurePracticeStyle();
   ensurePracticeOverlays();
   const p = document.getElementById('cp-intake-panel');
   if (!p) return;
+  try {
+    if (typeof ensureAllergenIntoleranceCatalog === 'function') await ensureAllergenIntoleranceCatalog();
+  } catch (_) {}
   const data = prefill || (store.clientProfile && store.clientProfile.intake) || {};
   p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">ACQUISIZIONE</div>' +
     '<h2>Questionario iniziale</h2>' +
-    '<p class="cp-help">Compila tutti i campi. Nome e cognome a mano; il resto è a tendina. Serve al coach per impostare la scheda.</p>' +
+    '<p class="cp-help">Compila i campi obbligatori. Nome e cognome a mano; il resto è a tendina. In fondo puoi indicare allergie/intolleranze (opzionale) per la dieta.</p>' +
     '<div id="cp-intake-fields">' + intakeFormHtml('cpi', data) + '</div>' +
     '<div id="cp-intake-status" class="cp-help"></div>' +
     '<button class="btn btn-primary" style="width:100%;" onclick="submitClientIntake()">INVIA AL COACH</button>';
@@ -2147,11 +2208,25 @@ function openAddClientWizard() {
   window.__cpAddMode = window.__cpAddMode || 'new';
   drawAddClientWizard();
   showOverlay('cp-add', true);
+  try {
+    if (typeof ensureAllergenIntoleranceCatalog === 'function') {
+      ensureAllergenIntoleranceCatalog().then(function () {
+        if (window.__cpAddMode === 'transition') drawAddClientWizard();
+      }).catch(function () {});
+    }
+  } catch (_) {}
 }
 
 function setAddClientMode(mode) {
   window.__cpAddMode = mode === 'transition' ? 'transition' : 'new';
   drawAddClientWizard();
+  if (window.__cpAddMode === 'transition') {
+    try {
+      if (typeof ensureAllergenIntoleranceCatalog === 'function') {
+        ensureAllergenIntoleranceCatalog().then(function () { drawAddClientWizard(); }).catch(function () {});
+      }
+    } catch (_) {}
+  }
 }
 
 function drawAddClientWizard() {
@@ -2641,9 +2716,12 @@ async function renderCoachWorkspace(c) {
         ' · ' + logs.length + ' sessioni sync')
       : (cl.lastWorkoutAt ? ('Ultimo ping workout: ' + String(cl.lastWorkoutAt).replace('T', ' ').slice(0, 16)) : 'Nessun allenamento finalizzato sync');
     const intake = store.coachWorkspace.intake || {};
+    const allergyTxt = intakeAllergyLabels(intake.allergies || (store.__cpClientViewProfile && store.__cpClientViewProfile.allergies));
     const intakeRows = CLIENT_INTAKE_FIELDS.filter(function (f) { return intake[f.key]; }).map(function (f) {
       return '<div class="cp-row"><span style="color:#888;font-size:11px;">' + esc(f.label) + '</span><span style="font-size:12px;color:#fff;">' + esc(intake[f.key]) + '</span></div>';
-    }).join('');
+    }).join('') + (allergyTxt
+      ? '<div class="cp-row"><span style="color:#888;font-size:11px;">Allergie / intolleranze</span><span style="font-size:12px;color:#fff;">' + esc(allergyTxt) + '</span></div>'
+      : '');
     let eventsHtml = '';
     let clientNotifyItems = [];
     try {
