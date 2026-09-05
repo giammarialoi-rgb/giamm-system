@@ -144,6 +144,11 @@ assert(ui.includes("maybeOfferClientHomeInstall") && ui.includes("__nurvanDeferr
 assert(ui.includes("maybeSubscribeWebPush") && ui.includes("pushManager.subscribe") && ui.includes("/api/push/subscribe"), "web push client subscribe");
 assert(ui.includes("toggleCoachWsSection") && ui.includes("__cpWsCollapse") && !ui.includes("cp-ws-chat-card"), "coach ws collapse + no inline chat");
 assert(ui.includes("buildExerciseInfoPrefill") && ui.includes("applyChatPrefill") && ui.includes("giorno ") && ui.includes("settimana "), "ask exercise info prefill");
+assert(ui.includes("coachHeaderBack") && ui.includes("INDIETRO") && ui.includes("menu-hub-button"), "INDIETRO header + hide hub menu");
+assert(ui.includes("VISUALIZZA ALLENAMENTO") && ui.includes("stopLiveFollowWorkout") && ui.includes(">STOP<"), "visualizza allenamento + live STOP");
+assert(ui.includes("ensureCoachDomainToolbar") && ui.includes("clearCoachClientDomain") && ui.includes("IMPORTA NUOVO") && ui.includes("CANCELLA"), "domain cancel/import toolbar");
+assert(ui.includes("friendlyApiError") && ui.includes("RIPROVA"), "hub list friendly retry");
+assert(base.includes("Server non disponibile") && base.includes("looksHtml"), "readApiJson HTML sanitize");
 assert(ui.includes("setNurvanAppBadge") && ui.includes("clearNurvanAppBadge") && ui.includes("followClientLiveWorkout"), "app badge + live follow");
 assert(ui.includes("coachLibrary") && ui.includes("calendar: 1") && ui.includes("__cpCoachLibraryImport"), "coach library + calendar gates");
 assert(ui.includes("postVideocallChatNotice") && ui.includes("Anche l’altro deve premere VIDEO"), "videocall chat notice");
@@ -153,7 +158,7 @@ assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY")
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v23-coach"), "SW push + cache v23");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v24-coach"), "SW push + cache v24");
 assert(sw.includes("setAppBadge"), "SW badging API");
 
 const build = fs.readFileSync(path.join(__dirname, "build_master25.mjs"), "utf8");
