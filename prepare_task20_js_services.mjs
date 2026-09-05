@@ -872,16 +872,51 @@ const DrugDatabaseService = {
 
 const ExerciseDatabaseService = {
   getAllExercises() {
-    return (typeof EXERCISE_DICTIONARY !== 'undefined' ? EXERCISE_DICTIONARY : []).map(e => ({
+    const base = (typeof EXERCISE_DICTIONARY !== 'undefined' ? EXERCISE_DICTIONARY : []).map(e => ({
       name: e.normalized,
       muscle_group: e.muscle,
       secondary_muscles: (e.muscles || []).filter(m => m !== e.muscle)
     }));
+    const custom = (typeof store !== 'undefined' && Array.isArray(store.customEx)) ? store.customEx : [];
+    custom.forEach(function (c) {
+      if (!c || !c.name) return;
+      base.push({
+        name: c.name,
+        muscle_group: c.muscle_group || c.macro_group || 'ALTRO',
+        secondary_muscles: []
+      });
+    });
+    return base;
   },
   filterByMuscle(muscle) {
     if (!muscle || muscle === 'ALL') return this.getAllExercises();
     const m = muscle.toUpperCase();
-    return this.getAllExercises().filter(e => e.muscle_group === m || e.secondary_muscles.includes(m));
+    return this.getAllExercises().filter(e => e.muscle_group === m || (e.secondary_muscles || []).includes(m));
+  },
+  search(q, limit = 20) {
+    const query = String(q || '').trim().toLowerCase();
+    if (!query) return this.getAllExercises().slice(0, limit);
+    return this.getAllExercises().filter(function (e) {
+      return String(e.name || '').toLowerCase().indexOf(query) >= 0;
+    }).slice(0, limit);
+  },
+  addCustom(name, muscle) {
+    const n = String(name || '').trim();
+    if (!n) return null;
+    if (typeof store === 'undefined') return null;
+    if (!Array.isArray(store.customEx)) store.customEx = [];
+    const key = n.toLowerCase();
+    if (store.customEx.some(function (e) { return String(e.name || '').toLowerCase() === key; })) {
+      return store.customEx.find(function (e) { return String(e.name || '').toLowerCase() === key; });
+    }
+    const entry = {
+      name: n,
+      muscle_group: String(muscle || 'ALTRO').toUpperCase(),
+      source: 'manual',
+      createdAt: new Date().toISOString()
+    };
+    store.customEx.push(entry);
+    return entry;
   },
   suggestMatches(rawName, limit = 5) {
     const raw = String(rawName || '').trim().toLowerCase();
@@ -903,6 +938,16 @@ const ExerciseDatabaseService = {
       });
       if (score > 0) scored.push({ name: e.normalized, muscle: e.muscle, score });
     });
+    try {
+      ((typeof store !== 'undefined' && store.customEx) || []).forEach(function (c) {
+        const name = String(c.name || '').toLowerCase();
+        if (!name) return;
+        let score = 0;
+        if (name === raw) score = 95;
+        else if (name.includes(raw) || raw.includes(name)) score = 65;
+        if (score > 0) scored.push({ name: c.name, muscle: c.muscle_group || 'ALTRO', score });
+      });
+    } catch (_) {}
     scored.sort((a, b) => b.score - a.score);
     const out = [];
     const seen = {};

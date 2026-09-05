@@ -1663,14 +1663,32 @@ body.focus-mode [data-rewards-only] {
       <label style="font-size:10px;color:var(--gold);font-weight:800;">NOME ESERCIZIO</label>
       <input id="replace-manual-name" type="text" placeholder="Es. Curl manubri inclinato" style="width:100%;margin:4px 0 10px;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;">
       <label style="font-size:10px;color:var(--gold);font-weight:800;">MACROGRUPPO MUSCOLARE (statistiche)</label>
-      <select id="replace-manual-muscle" style="width:100%;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;">
-        <option value="SCHIENA">Schiena</option>
+      <select id="replace-manual-muscle" style="width:100%;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;margin-bottom:8px;">
+        <option value="SCHIENA">Schiena / Dorsali</option>
         <option value="SPALLE">Spalle</option>
         <option value="PETTO">Petto</option>
+        <option value="BRACCIA">Braccia</option>
         <option value="ADDOME">Addome</option>
         <option value="GLUTEI">Glutei</option>
-        <option value="GAMBE_POLPACCI">Gambe &amp; Polpacci</option>
+        <option value="GAMBE">Gambe</option>
       </select>
+      <label style="font-size:10px;color:var(--gold);font-weight:800;">SOTTOCATEGORIA</label>
+      <select id="replace-manual-fine" style="width:100%;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;margin-bottom:8px;">
+        <option value="SCHIENA">Schiena</option>
+        <option value="DORSALI">Dorsali</option>
+        <option value="SPALLE">Spalle</option>
+        <option value="PETTO">Petto</option>
+        <option value="BICIPITI">Bicipiti</option>
+        <option value="TRICIPITI">Tricipiti</option>
+        <option value="QUADRICIPITI">Quadricipiti</option>
+        <option value="FEMORALI">Femorali</option>
+        <option value="GLUTEI">Glutei</option>
+        <option value="POLPACCI">Polpacci</option>
+        <option value="ADDOME">Addome</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:#ccc;margin-top:8px;">
+        <input id="replace-save-library" type="checkbox" style="width:16px;height:16px;"> Aggiungi anche alla libreria esercizi (per sostituzioni)
+      </label>
     </div>
     <div id="replace-library-block">
       <input id="replace-search" type="search" placeholder="Cerca alternativa..." oninput="window.renderReplacementOptions && window.renderReplacementOptions(this.value)">
@@ -1704,11 +1722,22 @@ body.focus-mode [data-rewards-only] {
     <label style="font-size:10px;color:var(--gold);font-weight:800;">NOME ESERCIZIO *</label>
     <input id="bonus-name" type="text" placeholder="Es. Alzate Laterali ai Cavi" style="margin-bottom:8px;" required>
     
-    <label style="font-size:10px;color:var(--gold);font-weight:800;">GRUPPO MUSCOLARE</label>
+    <label style="font-size:10px;color:var(--gold);font-weight:800;">GRUPPO MUSCOLARE (macro)</label>
+    <select id="bonus-macro" style="margin-bottom:8px;" onchange="syncBonusFineFromMacro()">
+      <option value="SCHIENA">Schiena / Dorsali</option>
+      <option value="SPALLE">Spalle</option>
+      <option value="PETTO">Petto</option>
+      <option value="BRACCIA">Braccia</option>
+      <option value="ADDOME">Addome</option>
+      <option value="GLUTEI">Glutei</option>
+      <option value="GAMBE">Gambe</option>
+    </select>
+    <label style="font-size:10px;color:var(--gold);font-weight:800;">SOTTOCATEGORIA (statistiche)</label>
     <select id="bonus-group" style="margin-bottom:8px;">
       <option value="SPALLE">Spalle</option>
       <option value="PETTO">Petto</option>
       <option value="SCHIENA">Schiena / Dorso</option>
+      <option value="DORSALI">Dorsali (lat)</option>
       <option value="BICIPITI">Bicipiti</option>
       <option value="TRICIPITI">Tricipiti</option>
       <option value="QUADRICIPITI">Quadricipiti</option>
@@ -1753,7 +1782,10 @@ body.focus-mode [data-rewards-only] {
     </div>
 
     <label style="font-size:10px;color:var(--gold);font-weight:800;">NOTE</label>
-    <input id="bonus-notes" type="text" placeholder="Note tecniche" style="margin-bottom:15px;">
+    <input id="bonus-notes" type="text" placeholder="Note tecniche" style="margin-bottom:10px;">
+    <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:#ccc;margin-bottom:15px;">
+      <input id="bonus-save-library" type="checkbox" style="width:16px;height:16px;"> Aggiungi alla libreria esercizi (per sostituzioni future)
+    </label>
 
     <div style="display:flex;gap:10px;">
       <button class="btn btn-outline" style="flex:1;" onclick="closeBonusModal()">ANNULLA</button>
@@ -3176,7 +3208,16 @@ function accountPayload(opts){
         savedAt: e && e.savedAt,
         payload: e && e.payload
       };
-    }) : []
+    }) : [],
+    customEx: Array.isArray(store.customEx) ? store.customEx.slice(0, 200).map(function (e) {
+      return {
+        name: e && e.name,
+        muscle_group: e && e.muscle_group,
+        macro_group: e && e.macro_group,
+        source: e && e.source,
+        createdAt: e && e.createdAt
+      };
+    }).filter(function (e) { return e && e.name; }) : []
   };
   if (includeProgram) {
     const hasWeeks = !!(DATA && Array.isArray(DATA.weeks) && DATA.weeks.length);
@@ -3271,6 +3312,16 @@ function applyRemoteAccountData(remote, preferLocal) {
         if (row && row.id) byId[row.id] = row;
       });
       store.coachProgramLibrary = Object.keys(byId).map(function (k) { return byId[k]; }).slice(0, 40);
+    }
+    if (Array.isArray(remote.customEx) && remote.customEx.length) {
+      if (!Array.isArray(store.customEx)) store.customEx = [];
+      const seen = {};
+      store.customEx.concat(remote.customEx).forEach(function (row) {
+        if (!row || !row.name) return;
+        const key = String(row.name).toLowerCase();
+        if (!seen[key]) seen[key] = row;
+      });
+      store.customEx = Object.keys(seen).map(function (k) { return seen[k]; }).slice(0, 200);
     }
   }
   const localWeeks = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
@@ -3376,12 +3427,19 @@ async function syncAccountData(download=false){
 function scheduleAccountSync(){
   if(!store.accountToken) return;
   if (store.coachAssigning || store.coachViewingClient) return;
+  if (typeof queueAccountSyncIfOffline === 'function' && queueAccountSyncIfOffline()) return;
   clearTimeout(accountSyncTimer);
   accountSyncTimer = setTimeout(function () {
+    if (typeof isAppOnline === 'function' && !isAppOnline()) {
+      if (typeof queueAccountSyncIfOffline === 'function') queueAccountSyncIfOffline();
+      return;
+    }
     accountRequest('/api/account/sync', {
       method: 'POST',
       body: JSON.stringify({ data: accountPayload({ includeProgram: false }) })
-    }).then(function (response) { return readApiJson(response); }).catch(function () {});
+    }).then(function (response) { return readApiJson(response); }).catch(function () {
+      if (typeof enqueueClientOutbox === 'function') enqueueClientOutbox({ type: 'account-sync', note: 'retry' });
+    });
   }, 1500);
 }
 
@@ -4536,6 +4594,14 @@ function seedExerciseDatabase() {
   if (!DATA.exerciseDb || !Object.keys(DATA.exerciseDb).length) {
     DATA.exerciseDb = built;
   }
+  try {
+    ensureCustomExerciseLibrary().forEach(function (c) {
+      if (!c || !c.name) return;
+      const m = String(c.muscle_group || c.macro_group || 'ALTRO').toUpperCase();
+      if (!DATA.exerciseDb[m]) DATA.exerciseDb[m] = [];
+      if (DATA.exerciseDb[m].indexOf(c.name) < 0) DATA.exerciseDb[m].push(c.name);
+    });
+  } catch (_) {}
 }
 function documentMime(filename, fallback) {
   const name = String(filename || '').toLowerCase();
@@ -7015,10 +7081,61 @@ function openBonusModal() {
 function closeBonusModal() {
   $('bonus-modal').style.display = 'none';
 }
+function syncBonusFineFromMacro() {
+  const macro = ($('bonus-macro') && $('bonus-macro').value) || 'SPALLE';
+  const fine = $('bonus-group');
+  if (!fine) return;
+  const map = {
+    SCHIENA: 'SCHIENA',
+    SPALLE: 'SPALLE',
+    PETTO: 'PETTO',
+    BRACCIA: 'BICIPITI',
+    ADDOME: 'ADDOME',
+    GLUTEI: 'GLUTEI',
+    GAMBE: 'QUADRICIPITI'
+  };
+  fine.value = map[macro] || 'ALTRO';
+}
+
+function ensureCustomExerciseLibrary() {
+  if (!store.customEx || !Array.isArray(store.customEx)) store.customEx = [];
+  return store.customEx;
+}
+
+function addExerciseToLibrary(name, muscle, source) {
+  const n = String(name || '').trim();
+  if (!n) return false;
+  const lib = ensureCustomExerciseLibrary();
+  const key = n.toLowerCase();
+  if (lib.some(function (e) { return String(e.name || '').toLowerCase() === key; })) return false;
+  const fine = String(muscle || 'ALTRO').toUpperCase();
+  const macro = normalizeMacroMuscleGroup(fine);
+  lib.push({
+    name: n,
+    muscle_group: fine,
+    macro_group: macro,
+    source: source || 'manual',
+    createdAt: new Date().toISOString()
+  });
+  try {
+    if (!DATA.exerciseDb || typeof DATA.exerciseDb !== 'object') DATA.exerciseDb = {};
+    if (!Array.isArray(DATA.exerciseDb[fine])) DATA.exerciseDb[fine] = [];
+    if (DATA.exerciseDb[fine].indexOf(n) < 0) DATA.exerciseDb[fine].push(n);
+  } catch (_) {}
+  try {
+    if (typeof ExerciseDatabaseService !== 'undefined' && ExerciseDatabaseService.addCustom) {
+      ExerciseDatabaseService.addCustom(n, fine);
+    }
+  } catch (_) {}
+  persist();
+  return true;
+}
+
 function saveBonusExercise() {
   const name = $('bonus-name').value.trim();
   if(!name) { alert('Inserisci il nome dell’esercizio bonus.'); return; }
   const group = $('bonus-group').value;
+  const macro = ($('bonus-macro') && $('bonus-macro').value) || normalizeMacroMuscleGroup(group);
   const sets = parseInt($('bonus-sets').value, 10) || 3;
   const reps = $('bonus-reps').value.trim() || '8-12';
   const intensity = $('bonus-intensity').value.trim() || '1 RIR';
@@ -7026,6 +7143,7 @@ function saveBonusExercise() {
   const load = $('bonus-load').value ? parseFloat($('bonus-load').value) : null;
   const tempo = $('bonus-tempo').value.trim();
   const notes = $('bonus-notes').value.trim();
+  const saveLib = !!( $('bonus-save-library') && $('bonus-save-library').checked );
 
   const key = `w${currentWeek}_d${currentDay}`;
   if(!store.bonus[key]) store.bonus[key] = [];
@@ -7034,6 +7152,7 @@ function saveBonusExercise() {
     name: name,
     movement: group,
     muscle_group: group,
+    macro_group: macro,
     muscle_groups: [group],
     sets: sets,
     repsTarget: reps,
@@ -7046,6 +7165,7 @@ function saveBonusExercise() {
     isBonus: true,
     is_bonus: true
   });
+  if (saveLib) addExerciseToLibrary(name, group, 'bonus');
   persist();
   closeBonusModal();
   render();
@@ -7075,22 +7195,46 @@ const MUSCLE_TAXONOMY = {
 };
 
 const MACRO_MUSCLE_GROUPS = [
-  { id: 'SCHIENA', label: 'Schiena' },
+  { id: 'SCHIENA', label: 'Schiena / Dorsali' },
   { id: 'SPALLE', label: 'Spalle' },
   { id: 'PETTO', label: 'Petto' },
+  { id: 'BRACCIA', label: 'Braccia' },
   { id: 'ADDOME', label: 'Addome' },
   { id: 'GLUTEI', label: 'Glutei' },
-  { id: 'GAMBE_POLPACCI', label: 'Gambe & Polpacci' }
+  { id: 'GAMBE', label: 'Gambe' }
 ];
+
+const FINE_MUSCLE_GROUPS = [
+  { id: 'PETTO', label: 'Petto', macro: 'PETTO' },
+  { id: 'SCHIENA', label: 'Schiena / Dorsali', macro: 'SCHIENA' },
+  { id: 'DORSALI', label: 'Dorsali (lat)', macro: 'SCHIENA' },
+  { id: 'SPALLE', label: 'Spalle', macro: 'SPALLE' },
+  { id: 'BICIPITI', label: 'Bicipiti', macro: 'BRACCIA' },
+  { id: 'TRICIPITI', label: 'Tricipiti', macro: 'BRACCIA' },
+  { id: 'QUADRICIPITI', label: 'Quadricipiti', macro: 'GAMBE' },
+  { id: 'FEMORALI', label: 'Femorali', macro: 'GAMBE' },
+  { id: 'GLUTEI', label: 'Glutei', macro: 'GLUTEI' },
+  { id: 'POLPACCI', label: 'Polpacci', macro: 'GAMBE' },
+  { id: 'ADDOME', label: 'Addome', macro: 'ADDOME' },
+  { id: 'ALTRO', label: 'Altro', macro: 'ADDOME' }
+];
+
+function fineMuscleOptionsHtml(selected) {
+  const sel = String(selected || 'SPALLE');
+  return FINE_MUSCLE_GROUPS.map(function (g) {
+    return '<option value="' + g.id + '"' + (sel === g.id ? ' selected' : '') + '>' + g.label + '</option>';
+  }).join('');
+}
 
 function normalizeMacroMuscleGroup(raw) {
   const g = String(raw || '').toUpperCase().replace(/&/g, '_').replace(/\s+/g, '_');
   if (['SCHIENA', 'DORSO', 'DORSALI', 'BACK', 'LAT', 'LATS', 'TRAP'].includes(g)) return 'SCHIENA';
-  if (['SPALLE', 'DELTOIDI', 'SHOULDERS', 'DELTS', 'BICIPITI', 'TRICIPITI', 'BRACCIA', 'ARMS'].includes(g)) return 'SPALLE';
+  if (['SPALLE', 'DELTOIDI', 'SHOULDERS', 'DELTS'].includes(g)) return 'SPALLE';
+  if (['BICIPITI', 'TRICIPITI', 'BRACCIA', 'ARMS', 'BICEPS', 'TRICEPS'].includes(g)) return 'BRACCIA';
   if (['PETTO', 'CHEST', 'PECS'].includes(g)) return 'PETTO';
-  if (['ADDOME', 'CORE', 'ABS', 'ABDOMINAL'].includes(g)) return 'ADDOME';
+  if (['ADDOME', 'CORE', 'ABS', 'ABDOMINAL', 'ALTRO'].includes(g)) return 'ADDOME';
   if (['GLUTEI', 'GLUTES', 'GLUTE'].includes(g)) return 'GLUTEI';
-  if (['GAMBE_POLPACCI', 'GAMBE', 'LEGS', 'QUADRICIPITI', 'QUADS', 'FEMORALI', 'HAMSTRINGS', 'POLPACCI', 'CALVES', 'QUAD', 'HAM'].includes(g)) return 'GAMBE_POLPACCI';
+  if (['GAMBE_POLPACCI', 'GAMBE', 'LEGS', 'QUADRICIPITI', 'QUADS', 'FEMORALI', 'HAMSTRINGS', 'POLPACCI', 'CALVES', 'QUAD', 'HAM'].includes(g)) return 'GAMBE';
   return g;
 }
 
@@ -10636,6 +10780,10 @@ function saveAthleteProfile() {
     activeSplit: prev.activeSplit || null,
     currentPhase: prev.currentPhase || null,
     coachName: prev.coachName || 'Nurvan AI',
+    photoUrl: prev.photoUrl || null,
+    photoThumb: prev.photoThumb || null,
+    photoUpdatedAt: prev.photoUpdatedAt || null,
+    athleteStatus: prev.athleteStatus || '',
     updatedAt: new Date().toISOString()
   };
   store.profile = profile;
@@ -13243,6 +13391,7 @@ function renderTraining(c){
 
     let h = ssttCard;
     h += `<div style="margin-bottom:10px;">${domainTitleTapHtml('WORKOUT', t('training') || 'Allenamento')}</div>`;
+    h += workoutSessionTimerHtml();
     if (DATA.warmup && DATA.warmup.present && Array.isArray(DATA.warmup.items) && DATA.warmup.items.length) {
       h += `<div class="card" style="margin-bottom:12px;padding:12px;border:1px dashed rgba(76,175,80,0.55);background:rgba(76,175,80,0.06);">
         <div style="font-size:10px;font-weight:800;color:#81c784;letter-spacing:1px;margin-bottom:8px;">${esc(DATA.warmup.label || 'RISCALDAMENTO')}</div>
@@ -14256,8 +14405,12 @@ function confirmReplacement(){
   if (replacementDraft.manual) {
     const name = ($('replace-manual-name') && $('replace-manual-name').value || '').trim();
     const muscle = ($('replace-manual-muscle') && $('replace-manual-muscle').value) || 'PETTO';
+    const fine = ($('replace-manual-fine') && $('replace-manual-fine').value) || muscle;
     if (!name) { alert('Inserisci il nome dell\'esercizio.'); return; }
     substituteEx(replacementDraft.idx, name, muscle);
+    if ($('replace-save-library') && $('replace-save-library').checked) {
+      addExerciseToLibrary(name, fine, 'replace');
+    }
     replacementDraft = null;
     const m = $('replace-modal');
     if (m) m.style.display = 'none';
@@ -14393,6 +14546,13 @@ function finalizeWorkout(){
   store.logs.push(logEntry);
   if (store.logs.length > 60) store.logs = store.logs.slice(-60);
   store.sessionStartedAt = null;
+  store.sessionPausedMs = 0;
+  store.sessionPausedAt = null;
+  store.sessionClockRunning = false;
+  if (window.__workoutSessionTimerIv) {
+    clearInterval(window.__workoutSessionTimerIv);
+    window.__workoutSessionTimerIv = null;
+  }
   try {
     if (typeof CalendarService !== 'undefined' && CalendarService.addEvent) {
       const dayIso = new Date().toISOString().slice(0, 10);
@@ -14920,7 +15080,15 @@ function renderAthleteProfile(container) {
     '<span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">' + t('athleteProfile') + '</span>' +
     '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">' + esc(name) + '</h1></div>';
   html += '<div class="card" style="text-align:center;margin-bottom:14px;border:1px solid rgba(212,175,55,0.35);">';
-  html += athleteAvatarSvg(r.avatar);
+  if (profile.photoThumb || profile.photoUrl) {
+    html += '<img src="' + esc(profile.photoThumb || profile.photoUrl) + '" alt="Foto profilo" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);margin:8px auto;display:block;">';
+  } else {
+    html += athleteAvatarSvg(r.avatar);
+  }
+  html += '<div style="margin:8px 0 4px;"><input type="file" id="profile-photo-input" accept="image/*" style="display:none;" onchange="onProfilePhotoSelected(event)">' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="document.getElementById(\'profile-photo-input\').click()">Aggiungi / cambia foto</button>' +
+    (profile.photoThumb || profile.photoUrl ? ' <button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:#533;color:#c66;" onclick="clearProfilePhoto()">Rimuovi</button>' : '') +
+    '</div>';
   if (rewardsUi) {
     html += '<div data-rewards-only style="font-size:20px;font-weight:900;color:var(--gold);">Lv ' + (r.level || 1) +
       ' · ' + String(r.tier || 'bronze').toUpperCase() + '</div>';
@@ -14986,6 +15154,67 @@ function renderAthleteProfile(container) {
   }
   html += '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="navigate(\'settings\')">Altre impostazioni</button>';
   container.innerHTML = html;
+}
+
+function clearProfilePhoto() {
+  if (!store.profile) store.profile = {};
+  store.profile.photoUrl = null;
+  store.profile.photoThumb = null;
+  store.profile.photoUpdatedAt = new Date().toISOString();
+  if (DATA) DATA.profile = store.profile;
+  persist();
+  if (typeof scheduleAccountSync === 'function') scheduleAccountSync();
+  renderAthleteProfile($('view-container') || document.getElementById('view-container'));
+}
+function onProfilePhotoSelected(ev) {
+  const file = ev && ev.target && ev.target.files && ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function () {
+    const dataUrl = String(reader.result || '');
+    compressProfilePhoto(dataUrl, function (thumb) {
+      if (!store.profile) store.profile = {};
+      store.profile.photoThumb = thumb || dataUrl;
+      store.profile.photoUrl = store.profile.photoThumb;
+      store.profile.photoUpdatedAt = new Date().toISOString();
+      if (DATA) DATA.profile = store.profile;
+      persist();
+      try {
+        if (typeof syncAccountData === 'function') syncAccountData(false);
+        else if (typeof scheduleAccountSync === 'function') scheduleAccountSync();
+      } catch (_) {}
+      if (typeof showToast === 'function') showToast('Foto profilo aggiornata', 'success');
+      if (typeof renderAthleteProfile === 'function') {
+        const c = $('view-container') || document.getElementById('view-container');
+        if (c) renderAthleteProfile(c);
+      }
+    });
+  };
+  reader.readAsDataURL(file);
+}
+function compressProfilePhoto(dataUrl, cb) {
+  try {
+    const img = new Image();
+    img.onload = function () {
+      const max = 256;
+      let w = img.width;
+      let h = img.height;
+      if (w > max || h > max) {
+        if (w > h) { h = Math.round(h * max / w); w = max; }
+        else { w = Math.round(w * max / h); h = max; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      cb(canvas.toDataURL('image/jpeg', 0.72));
+    };
+    img.onerror = function () { cb(dataUrl); };
+    img.src = dataUrl;
+  } catch (_) {
+    cb(dataUrl);
+  }
 }
 
 function openAthleteProfile() {
@@ -15307,8 +15536,101 @@ function markSessionClockIfNeeded() {
   if (!store.sessionStartedAt) {
     store.sessionStartedAt = Date.now();
     store.sessionStartedDate = new Date().toISOString().slice(0, 10);
+    store.sessionPausedMs = 0;
+    store.sessionPausedAt = null;
+    store.sessionClockRunning = true;
     try { persist(); } catch (_) {}
+  } else if (store.sessionClockRunning !== false) {
+    store.sessionClockRunning = true;
   }
+  ensureWorkoutSessionTimerTick();
+}
+
+function sessionElapsedMs() {
+  if (!store.sessionStartedAt) return 0;
+  const pausedExtra = Number(store.sessionPausedMs || 0);
+  if (store.sessionClockRunning === false && store.sessionPausedAt) {
+    return Math.max(0, Number(store.sessionPausedAt) - Number(store.sessionStartedAt) - pausedExtra);
+  }
+  return Math.max(0, Date.now() - Number(store.sessionStartedAt) - pausedExtra);
+}
+
+function formatSessionClock(ms) {
+  const total = Math.floor(Math.max(0, ms) / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function workoutSessionTimerHtml() {
+  const running = !!store.sessionStartedAt && store.sessionClockRunning !== false;
+  const started = !!store.sessionStartedAt;
+  const label = started ? formatSessionClock(sessionElapsedMs()) : '00:00';
+  return '<div class="card" id="workout-session-timer" style="margin-bottom:12px;padding:10px 12px;border:1px solid rgba(212,175,55,.45);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
+    '<div><div style="font-size:9px;color:var(--gold);font-weight:800;letter-spacing:1px;">TIMER ALLENAMENTO</div>' +
+    '<div id="workout-session-clock" style="font-size:22px;font-weight:900;color:#fff;font-variant-numeric:tabular-nums;">' + label + '</div>' +
+    '<div style="font-size:9px;color:#777;">Indipendente dal recupero serie</div></div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+    (!started
+      ? '<button type="button" class="btn btn-primary" style="font-size:10px;padding:8px 10px;" onclick="startWorkoutSessionTimer()">AVVIA</button>'
+      : (running
+        ? '<button type="button" class="btn btn-outline" style="font-size:10px;padding:8px 10px;" onclick="pauseWorkoutSessionTimer()">PAUSA</button>'
+        : '<button type="button" class="btn btn-primary" style="font-size:10px;padding:8px 10px;" onclick="resumeWorkoutSessionTimer()">RIPRENDI</button>')) +
+    (started ? '<button type="button" class="btn btn-outline" style="font-size:10px;padding:8px 10px;border-color:#533;color:#c66;" onclick="stopWorkoutSessionTimer()">STOP</button>' : '') +
+    '</div></div>';
+}
+
+function startWorkoutSessionTimer() {
+  store.sessionStartedAt = Date.now();
+  store.sessionStartedDate = new Date().toISOString().slice(0, 10);
+  store.sessionPausedMs = 0;
+  store.sessionPausedAt = null;
+  store.sessionClockRunning = true;
+  persist();
+  ensureWorkoutSessionTimerTick();
+  if (typeof render === 'function' && currentView === 'training') render();
+}
+function pauseWorkoutSessionTimer() {
+  if (!store.sessionStartedAt || store.sessionClockRunning === false) return;
+  store.sessionPausedAt = Date.now();
+  store.sessionClockRunning = false;
+  persist();
+  if (typeof render === 'function' && currentView === 'training') render();
+}
+function resumeWorkoutSessionTimer() {
+  if (!store.sessionStartedAt) return startWorkoutSessionTimer();
+  if (store.sessionPausedAt) {
+    store.sessionPausedMs = Number(store.sessionPausedMs || 0) + (Date.now() - Number(store.sessionPausedAt));
+    store.sessionPausedAt = null;
+  }
+  store.sessionClockRunning = true;
+  persist();
+  ensureWorkoutSessionTimerTick();
+  if (typeof render === 'function' && currentView === 'training') render();
+}
+function stopWorkoutSessionTimer() {
+  if (!confirm('Stoppare il timer allenamento? Il recupero serie non viene toccato.')) return;
+  store.sessionStartedAt = null;
+  store.sessionPausedMs = 0;
+  store.sessionPausedAt = null;
+  store.sessionClockRunning = false;
+  if (window.__workoutSessionTimerIv) {
+    clearInterval(window.__workoutSessionTimerIv);
+    window.__workoutSessionTimerIv = null;
+  }
+  persist();
+  if (typeof render === 'function' && currentView === 'training') render();
+}
+function ensureWorkoutSessionTimerTick() {
+  if (window.__workoutSessionTimerIv) return;
+  window.__workoutSessionTimerIv = setInterval(function () {
+    const el = document.getElementById('workout-session-clock');
+    if (!el) return;
+    if (!store.sessionStartedAt || store.sessionClockRunning === false) return;
+    el.textContent = formatSessionClock(sessionElapsedMs());
+  }, 1000);
 }
 
 function buildSessionPayloadForSync() {
@@ -15497,7 +15819,7 @@ function collectSessionStats(opts) {
   });
   out.kcal = Math.round(out.sets * 6.5 + out.weight * 0.02);
   if (store.sessionStartedAt) {
-    out.durationSec = Math.max(60, Math.round((Date.now() - Number(store.sessionStartedAt)) / 1000));
+    out.durationSec = Math.max(60, Math.round(sessionElapsedMs() / 1000));
   } else if (store.health && store.health.durationSec && onlyCurrent) {
     out.durationSec = Number(store.health.durationSec) || 0;
   } else {
@@ -15540,10 +15862,13 @@ function statsMuscleVolume(muscles, groupId) {
   if (groupId === 'GENERALE' || groupId === 'TOTAL') {
     return MACRO_MUSCLE_GROUPS.reduce(function (sum, g) { return sum + statsMuscleVolume(m, g.id); }, 0);
   }
-  if (groupId === 'SPALLE') return (m.SPALLE || 0) + (m.DELTOIDI || 0) + (m.BICIPITI || 0) + (m.TRICIPITI || 0);
+  if (groupId === 'SPALLE') return (m.SPALLE || 0) + (m.DELTOIDI || 0);
+  if (groupId === 'BRACCIA') return (m.BRACCIA || 0) + (m.BICIPITI || 0) + (m.TRICIPITI || 0);
   if (groupId === 'SCHIENA') return (m.SCHIENA || 0) + (m.DORSALI || 0) + (m.TRAPEZIO || 0);
-  if (groupId === 'ADDOME') return (m.ADDOME || 0) + (m.CORE || 0);
-  if (groupId === 'GAMBE_POLPACCI') return (m.GAMBE_POLPACCI || 0) + (m.QUADRICIPITI || 0) + (m.FEMORALI || 0) + (m.POLPACCI || 0);
+  if (groupId === 'ADDOME') return (m.ADDOME || 0) + (m.CORE || 0) + (m.ALTRO || 0);
+  if (groupId === 'GAMBE' || groupId === 'GAMBE_POLPACCI') {
+    return (m.GAMBE || 0) + (m.GAMBE_POLPACCI || 0) + (m.QUADRICIPITI || 0) + (m.FEMORALI || 0) + (m.POLPACCI || 0);
+  }
   return m[groupId] || 0;
 }
 function statsBodySrc(view) {
@@ -15562,33 +15887,35 @@ function statsHotspots(view) {
       { id: 'SPALLE', top: '24%', left: '74%', width: '16%', height: '16%' },
       { id: 'SCHIENA', top: '38%', left: '38%', width: '24%', height: '8%' },
       { id: 'GLUTEI', top: '45%', left: '30%', width: '40%', height: '12%' },
-      { id: 'GAMBE_POLPACCI', top: '56%', left: '28%', width: '44%', height: '16%' },
-      { id: 'GAMBE_POLPACCI', top: '72%', left: '32%', width: '36%', height: '14%' }
+      { id: 'GAMBE', top: '56%', left: '28%', width: '44%', height: '16%' },
+      { id: 'GAMBE', top: '72%', left: '32%', width: '36%', height: '14%' }
     ];
   }
   return [
     { id: 'PETTO', top: '16%', left: '32%', width: '36%', height: '12%' },
     { id: 'SPALLE', top: '13%', left: '16%', width: '18%', height: '11%' },
     { id: 'SPALLE', top: '13%', left: '66%', width: '18%', height: '11%' },
-    { id: 'SPALLE', top: '23%', left: '10%', width: '16%', height: '16%' },
-    { id: 'SPALLE', top: '23%', left: '74%', width: '16%', height: '16%' },
+    { id: 'BRACCIA', top: '23%', left: '10%', width: '16%', height: '16%' },
+    { id: 'BRACCIA', top: '23%', left: '74%', width: '16%', height: '16%' },
     { id: 'ADDOME', top: '27%', left: '36%', width: '28%', height: '14%' },
     { id: 'ADDOME', top: '28%', left: '24%', width: '14%', height: '13%' },
     { id: 'ADDOME', top: '28%', left: '62%', width: '14%', height: '13%' },
-    { id: 'GAMBE_POLPACCI', top: '44%', left: '28%', width: '20%', height: '20%' },
-    { id: 'GAMBE_POLPACCI', top: '44%', left: '52%', width: '20%', height: '20%' },
-    { id: 'GAMBE_POLPACCI', top: '66%', left: '30%', width: '16%', height: '16%' },
-    { id: 'GAMBE_POLPACCI', top: '66%', left: '54%', width: '16%', height: '16%' }
+    { id: 'GAMBE', top: '44%', left: '28%', width: '20%', height: '20%' },
+    { id: 'GAMBE', top: '44%', left: '52%', width: '20%', height: '20%' },
+    { id: 'GAMBE', top: '66%', left: '30%', width: '16%', height: '16%' },
+    { id: 'GAMBE', top: '66%', left: '54%', width: '16%', height: '16%' }
   ];
 }
 function statsMuscleChipColor(id) {
   if (id === 'GENERALE') return '#d4af37';
   if (id === 'PETTO') return '#e53935';
   if (id === 'SPALLE') return '#ff9800';
+  if (id === 'BRACCIA') return '#ab47bc';
   if (id === 'ADDOME') return '#66bb6a';
   if (id === 'SCHIENA') return '#fdd835';
   if (id === 'GLUTEI') return '#ec407a';
-  return '#7e57c2';
+  if (id === 'GAMBE' || id === 'GAMBE_POLPACCI') return '#7e57c2';
+  return '#78909c';
 }
 function hotspotClass(groupId, muscles) {
   const n = statsMuscleVolume(muscles, groupId);
@@ -15727,9 +16054,11 @@ function drillStatsMuscle(group) {
     TOTAL: MACRO_MUSCLE_GROUPS.map(function (g) { return g.label; }),
     PETTO: ['Alto', 'Medio', 'Basso'],
     SCHIENA: ['Dorsali', 'Trapezio', 'Lombari'],
-    SPALLE: ['Deltoide anteriore', 'Laterale', 'Posteriore', 'Bicipiti', 'Tricipiti'],
+    SPALLE: ['Deltoide anteriore', 'Laterale', 'Posteriore'],
+    BRACCIA: ['Bicipiti', 'Tricipiti'],
     GLUTEI: ['Glutei'],
     ADDOME: ['Addome / Core'],
+    GAMBE: ['Quadricipiti', 'Femorali', 'Polpacci'],
     GAMBE_POLPACCI: ['Quadricipiti', 'Femorali', 'Polpacci']
   };
   const list = subgroups[group] || [group];
@@ -18570,6 +18899,17 @@ if (typeof window !== 'undefined') {
   window.buildSuggestedNutritionFromProfile = buildSuggestedNutritionFromProfile;
   window.buildProgressCenterSnapshotLocal = buildProgressCenterSnapshotLocal;
   window.saveAthleteProfile = saveAthleteProfile;
+  window.onProfilePhotoSelected = onProfilePhotoSelected;
+  window.clearProfilePhoto = clearProfilePhoto;
+  window.compressProfilePhoto = compressProfilePhoto;
+  window.syncBonusFineFromMacro = syncBonusFineFromMacro;
+  window.addExerciseToLibrary = addExerciseToLibrary;
+  window.startWorkoutSessionTimer = startWorkoutSessionTimer;
+  window.pauseWorkoutSessionTimer = pauseWorkoutSessionTimer;
+  window.resumeWorkoutSessionTimer = resumeWorkoutSessionTimer;
+  window.stopWorkoutSessionTimer = stopWorkoutSessionTimer;
+  window.ensureWorkoutSessionTimerTick = ensureWorkoutSessionTimerTick;
+  window.sessionElapsedMs = sessionElapsedMs;
   window.updateCatalogFiltersFromUi = updateCatalogFiltersFromUi;
   window.filterProgramCatalog = filterProgramCatalog;
   window.activateCatalogProgram = activateCatalogProgram;

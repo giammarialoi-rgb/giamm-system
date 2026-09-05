@@ -69,6 +69,19 @@ function sanitizeIntake(raw) {
       .filter(Boolean)
       .slice(0, 40);
   }
+  // Optional natural/enhanced + drugs + labs
+  const status = String(raw.athleteStatus || "").trim().toLowerCase();
+  if (status === "natural" || status === "enhanced") out.athleteStatus = status;
+  if (raw.onDrugs === "si" || raw.onDrugs === "no") out.onDrugs = raw.onDrugs;
+  if (raw.drugsDetail) out.drugsDetail = String(raw.drugsDetail).trim().slice(0, 800);
+  if (raw.drugsDuration) out.drugsDuration = String(raw.drugsDuration).trim().slice(0, 80);
+  if (raw.noRecentLabs === true || raw.noRecentLabs === "true" || raw.noRecentLabs === 1) {
+    out.noRecentLabs = true;
+    out.recentLabs = "";
+  } else if (raw.recentLabs) {
+    out.recentLabs = String(raw.recentLabs).trim().slice(0, 800);
+    out.noRecentLabs = false;
+  }
   return out;
 }
 
@@ -97,6 +110,12 @@ function profileFromIntake(intake) {
     weight: bandMid(intake.weightBand),
     goal: intake.goal || "",
     allergies,
+    athleteStatus: intake.athleteStatus || "",
+    onDrugs: intake.onDrugs || "",
+    drugsDetail: intake.drugsDetail || "",
+    drugsDuration: intake.drugsDuration || "",
+    recentLabs: intake.recentLabs || "",
+    noRecentLabs: !!intake.noRecentLabs,
     intake
   };
 }

@@ -645,7 +645,66 @@ function intakeFormHtml(prefix, values, opts) {
     return '<div class="cp-field"><label for="' + id + '">' + f.label + req + '</label>' +
       '<select id="' + id + '">' + optsHtml + '</select></div>';
   }).join('');
-  return fields + intakeAllergiesHtml(prefix, values.allergies);
+  return fields + intakeAllergiesHtml(prefix, values.allergies) + intakeEnhancedHtml(prefix, values);
+}
+
+function intakeEnhancedHtml(prefix, values) {
+  values = values || {};
+  const status = values.athleteStatus || '';
+  const enh = status === 'enhanced';
+  const noLabs = !!values.noRecentLabs;
+  return '<div class="cp-field" id="' + prefix + '-enhanced-block" style="margin-top:10px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:6px;">STATUS ATLETA (opzionale)</div>' +
+    '<div style="font-size:10px;color:#888;margin-bottom:8px;line-height:1.35;">Natural o enhanced. Se enhanced, indica farmaci e analisi recenti.</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' +
+    '<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid ' + (status === 'natural' ? 'var(--gold)' : '#333') + ';border-radius:8px;background:#111;font-size:11px;color:#eee;">' +
+    '<input type="radio" name="' + prefix + '-athleteStatus" value="natural" ' + (status === 'natural' ? 'checked' : '') + ' onchange="toggleIntakeEnhancedFields(\'' + prefix + '\')"> Natural</label>' +
+    '<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid ' + (enh ? 'var(--gold)' : '#333') + ';border-radius:8px;background:#111;font-size:11px;color:#eee;">' +
+    '<input type="radio" name="' + prefix + '-athleteStatus" value="enhanced" ' + (enh ? 'checked' : '') + ' onchange="toggleIntakeEnhancedFields(\'' + prefix + '\')"> Enhanced</label>' +
+    '</div>' +
+    '<div id="' + prefix + '-enhanced-fields" style="display:' + (enh ? 'block' : 'none') + ';">' +
+    '<label style="font-size:10px;color:#aaa;font-weight:800;">Sotto farmaci?</label>' +
+    '<select id="' + prefix + '-onDrugs" style="width:100%;margin:4px 0 8px;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;">' +
+    '<option value="">Seleziona…</option>' +
+    '<option value="si"' + (values.onDrugs === 'si' ? ' selected' : '') + '>Sì</option>' +
+    '<option value="no"' + (values.onDrugs === 'no' ? ' selected' : '') + '>No</option>' +
+    '</select>' +
+    '<label style="font-size:10px;color:#aaa;font-weight:800;">Quali farmaci / protocolli</label>' +
+    '<textarea id="' + prefix + '-drugsDetail" rows="2" placeholder="Es. Testosterone …" style="width:100%;margin:4px 0 8px;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;">' + esc(values.drugsDetail || '') + '</textarea>' +
+    '<label style="font-size:10px;color:#aaa;font-weight:800;">Da quanto tempo</label>' +
+    '<input id="' + prefix + '-drugsDuration" type="text" value="' + esc(values.drugsDuration || '') + '" placeholder="Es. 8 settimane / 3 mesi" style="width:100%;margin:4px 0 8px;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;">' +
+    '</div>' +
+    '<label style="font-size:10px;color:#aaa;font-weight:800;margin-top:6px;display:block;">Ultime analisi</label>' +
+    '<textarea id="' + prefix + '-recentLabs" rows="2" placeholder="Es. Emocromo 01/2026 — OK / valori rilevanti…" style="width:100%;margin:4px 0 8px;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;" ' + (noLabs ? 'disabled' : '') + '>' + esc(values.recentLabs || '') + '</textarea>' +
+    '<label style="display:flex;align-items:center;gap:8px;font-size:11px;color:#ccc;">' +
+    '<input type="checkbox" id="' + prefix + '-noRecentLabs" ' + (noLabs ? 'checked' : '') + ' onchange="toggleIntakeNoLabs(\'' + prefix + '\')"> Non ho analisi recenti</label>' +
+    '</div>';
+}
+
+function toggleIntakeEnhancedFields(prefix) {
+  const block = document.getElementById(prefix + '-enhanced-fields');
+  if (!block) return;
+  const checked = document.querySelector('input[name="' + prefix + '-athleteStatus"]:checked');
+  block.style.display = (checked && checked.value === 'enhanced') ? 'block' : 'none';
+}
+function toggleIntakeNoLabs(prefix) {
+  const cb = document.getElementById(prefix + '-noRecentLabs');
+  const ta = document.getElementById(prefix + '-recentLabs');
+  if (ta) {
+    ta.disabled = !!(cb && cb.checked);
+    if (cb && cb.checked) ta.value = '';
+  }
+}
+
+function readIntakeEnhanced(prefix) {
+  const statusEl = document.querySelector('input[name="' + prefix + '-athleteStatus"]:checked');
+  const athleteStatus = statusEl ? String(statusEl.value || '') : '';
+  const onDrugs = (document.getElementById(prefix + '-onDrugs') || {}).value || '';
+  const drugsDetail = String((document.getElementById(prefix + '-drugsDetail') || {}).value || '').trim().slice(0, 800);
+  const drugsDuration = String((document.getElementById(prefix + '-drugsDuration') || {}).value || '').trim().slice(0, 80);
+  const noRecentLabs = !!(document.getElementById(prefix + '-noRecentLabs') && document.getElementById(prefix + '-noRecentLabs').checked);
+  const recentLabs = noRecentLabs ? '' : String((document.getElementById(prefix + '-recentLabs') || {}).value || '').trim().slice(0, 800);
+  return { athleteStatus: athleteStatus, onDrugs: onDrugs, drugsDetail: drugsDetail, drugsDuration: drugsDuration, recentLabs: recentLabs, noRecentLabs: noRecentLabs };
 }
 
 function intakeAllergiesHtml(prefix, selectedIds) {
@@ -698,6 +757,7 @@ function readIntakeForm(prefix) {
     if (el) out[f.key] = String(el.value || '').trim();
   });
   out.allergies = readIntakeAllergies(prefix);
+  Object.assign(out, readIntakeEnhanced(prefix));
   return out;
 }
 
@@ -742,7 +802,44 @@ async function copyOrShare(text, label) {
 function enqueueClientOutbox(item) {
   if (!store.clientOutbox) store.clientOutbox = [];
   store.clientOutbox.push(Object.assign({ id: 'ob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), at: Date.now() }, item));
+  if (store.clientOutbox.length > 80) store.clientOutbox = store.clientOutbox.slice(-80);
   if (typeof persist === 'function') persist();
+}
+
+function isAppOnline() {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
+  } catch (_) {}
+  return true;
+}
+
+function ensureOfflineSyncListeners() {
+  if (window.__nurvanOfflineSyncBound) return;
+  window.__nurvanOfflineSyncBound = true;
+  try {
+    window.addEventListener('online', function () {
+      if (typeof showToast === 'function') showToast('Online — sincronizzazione…', 'info');
+      flushAllOfflineQueues().catch(function () {});
+    });
+    window.addEventListener('offline', function () {
+      if (typeof showToast === 'function') showToast('Offline: i dati restano salvati in locale', 'warning');
+    });
+  } catch (_) {}
+}
+
+async function flushAllOfflineQueues() {
+  try { await flushClientOutbox(); } catch (_) {}
+  try {
+    if (typeof syncAccountData === 'function' && store && store.accountToken && isAppOnline()) {
+      await syncAccountData(false);
+    }
+  } catch (_) {}
+}
+
+function queueAccountSyncIfOffline() {
+  if (isAppOnline()) return false;
+  enqueueClientOutbox({ type: 'account-sync', note: 'deferred' });
+  return true;
 }
 
 function setNurvanAppBadge(n) {
@@ -1340,7 +1437,9 @@ async function pushAthleteLiveWorkoutSync() {
 
 async function flushClientOutbox() {
   if (!store || !store.accountToken || !Array.isArray(store.clientOutbox) || !store.clientOutbox.length) return;
+  if (!isAppOnline()) return;
   const left = [];
+  let didAccountSync = false;
   for (let i = 0; i < store.clientOutbox.length; i++) {
     const it = store.clientOutbox[i];
     try {
@@ -1351,6 +1450,12 @@ async function flushClientOutbox() {
       else if (it.type === 'ask-coach') await practiceFetch('/api/client/ask-coach', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ domain: it.domain || 'general', note: it.note || '' }) });
       else if (it.type === 'change-request') await practiceFetch('/api/client/change-request', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ summary: it.summary || '', data: it.data || {} }) });
       else if (it.type === 'change-notice') await practiceFetch('/api/client/change-notice', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ summary: it.summary || '', data: it.data || {} }) });
+      else if (it.type === 'account-sync') {
+        if (!didAccountSync && typeof syncAccountData === 'function') {
+          await syncAccountData(false);
+          didAccountSync = true;
+        }
+      }
     } catch (_) { left.push(it); }
   }
   store.clientOutbox = left;
@@ -2861,7 +2966,12 @@ async function renderCoachWorkspace(c) {
       return '<div class="cp-row"><span style="color:#888;font-size:11px;">' + esc(f.label) + '</span><span style="font-size:12px;color:#fff;">' + esc(intake[f.key]) + '</span></div>';
     }).join('') + (allergyTxt
       ? '<div class="cp-row"><span style="color:#888;font-size:11px;">Allergie / intolleranze</span><span style="font-size:12px;color:#fff;">' + esc(allergyTxt) + '</span></div>'
-      : '');
+      : '') +
+      (intake.athleteStatus ? '<div class="cp-row"><span style="color:#888;font-size:11px;">Status</span><span style="font-size:12px;color:#fff;">' + esc(intake.athleteStatus === 'enhanced' ? 'Enhanced' : 'Natural') + '</span></div>' : '') +
+      (intake.athleteStatus === 'enhanced' && intake.onDrugs ? '<div class="cp-row"><span style="color:#888;font-size:11px;">Sotto farmaci</span><span style="font-size:12px;color:#fff;">' + esc(intake.onDrugs === 'si' ? 'Sì' : 'No') + '</span></div>' : '') +
+      (intake.drugsDetail ? '<div class="cp-row"><span style="color:#888;font-size:11px;">Farmaci</span><span style="font-size:12px;color:#fff;">' + esc(intake.drugsDetail) + (intake.drugsDuration ? (' · ' + esc(intake.drugsDuration)) : '') + '</span></div>' : '') +
+      (intake.noRecentLabs ? '<div class="cp-row"><span style="color:#888;font-size:11px;">Analisi</span><span style="font-size:12px;color:#fff;">Non ha analisi recenti</span></div>'
+        : (intake.recentLabs ? '<div class="cp-row"><span style="color:#888;font-size:11px;">Ultime analisi</span><span style="font-size:12px;color:#fff;">' + esc(intake.recentLabs) + '</span></div>' : ''));
     let eventsHtml = '';
     let clientNotifyItems = [];
     try {
@@ -4918,6 +5028,7 @@ async function bootCoachPractice() {
   ensurePracticeStyle();
   ensurePracticeOverlays();
   ensureAssignBanner();
+  ensureOfflineSyncListeners();
   requestNotifyPermission();
   try {
     if (navigator.serviceWorker) {
@@ -5897,6 +6008,12 @@ window.copyOrShare = copyOrShare;
 window.showOverlay = showOverlay;
 window.applyClientChrome = applyClientChrome;
 window.CLIENT_INTAKE_FIELDS = CLIENT_INTAKE_FIELDS;
+window.toggleIntakeEnhancedFields = toggleIntakeEnhancedFields;
+window.toggleIntakeNoLabs = toggleIntakeNoLabs;
+window.ensureOfflineSyncListeners = ensureOfflineSyncListeners;
+window.flushAllOfflineQueues = flushAllOfflineQueues;
+window.isAppOnline = isAppOnline;
+window.queueAccountSyncIfOffline = queueAccountSyncIfOffline;
 window.isAthleteRole = isAthleteRole;
 window.isCoachUnlocked = isCoachUnlocked;
 window.clientProgramSlice = clientProgramSlice;

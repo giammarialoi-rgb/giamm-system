@@ -211,7 +211,7 @@ assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY")
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v37-coach") && sw.includes("isAsset"), "SW push + cache v37 + asset no-html fallback");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v38-coach") && sw.includes("isAsset"), "SW push + cache v38 + asset no-html fallback");
 assert(base.includes("updateSupplementField") && base.includes("markSupplementsDirty") && base.includes("DOSAGGIO"), "supplement inline edit fields");
 assert(ui.includes("benvenuto nel mio servizio coaching") && practice.includes("benvenuto nel mio servizio coaching") && ui.includes("formatInviteShareText"), "client invite welcome message");
 assert(ui.includes("intakeAllergiesHtml") && ui.includes("ALIMENTAZIONE · ALLERGIE") && practice.includes("allergies") && practice.includes("profileFromIntake"), "intake optional allergies/intolerances");
@@ -224,6 +224,16 @@ assert(ui.includes("__cpClientViewProfile") && base.includes("purgeCoachProfileL
 assert(base.includes("Sync in pausa (vista cliente)") && base.includes("bak.profile"), "sync/persist shield coach profile");
 assert(base.includes("normalizeNutritionMeals") && ui.includes("preferFilledNutrition") && ui.includes("keepLocalNutr"), "nutrition meal normalize + coach live poll keep");
 assert(sw.includes("setAppBadge"), "SW badging API");
+
+// Phase B (1.5.31)
+assert(ui.includes("intakeEnhancedHtml") && ui.includes("athleteStatus") && ui.includes("toggleIntakeEnhancedFields") && ui.includes("recentLabs"), "intake natural/enhanced + labs");
+assert(practice.includes("athleteStatus") && practice.includes("onDrugs") && practice.includes("recentLabs") && practice.includes("noRecentLabs"), "server sanitizes enhanced intake");
+assert(base.includes("addExerciseToLibrary") && base.includes("replace-save-library") && base.includes("bonus-save-library"), "manual exercise library checkbox");
+assert(base.includes("id: 'BRACCIA'") && base.includes("id: 'GAMBE'") && base.includes("FINE_MUSCLE_GROUPS") && base.includes("normalizeMacroMuscleGroup"), "macro BRACCIA/GAMBE + fine groups");
+assert(base.includes("workoutSessionTimerHtml") && base.includes("pauseWorkoutSessionTimer") && base.includes("sessionElapsedMs"), "session timer pause/stop");
+assert(ui.includes("ensureOfflineSyncListeners") && ui.includes("flushAllOfflineQueues") && ui.includes("account-sync") && base.includes("queueAccountSyncIfOffline"), "web offline queue + reconnect flush");
+assert(base.includes("onProfilePhotoSelected") && base.includes("compressProfilePhoto") && base.includes("photoThumb"), "profile photo upload");
+assert(fs.readFileSync(path.join(__dirname, "app/build.gradle"), "utf8").includes('versionName "1.5.31"'), "APK version 1.5.31");
 
 const build = fs.readFileSync(path.join(__dirname, "build_master25.mjs"), "utf8");
 assert(build.includes("coach-practice-ui.js"), "build injects UI");
