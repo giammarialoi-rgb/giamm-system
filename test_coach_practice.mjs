@@ -154,6 +154,11 @@ assert(base.includes("Server non disponibile") && base.includes("looksHtml"), "r
 assert(ui.includes("openNotificationsCenter") && ui.includes("cp-notify-btn") && ui.includes("NOTIFICHE") && ui.includes("LE TUE NOTIFICHE"), "in-app notifications center athlete+coach");
 assert(ui.includes("NOTIFICHE CLIENTE") && ui.includes("buildCoachClientNotifyItems") && ui.includes("openClientSheetNotify"), "coach client-scoped notifies with time");
 assert(ui.includes("SEGNA LETTA") && ui.includes("CANCELLA TUTTE") && ui.includes("markNotifyRead") && ui.includes("dismissNotifyItem") && ui.includes("dismissAllNotifyItems"), "notify mark-read/dismiss UI");
+assert(ui.includes("Notifica archiviata") && ui.includes("removeNotifyItemLocal"), "notify archive action + optimistic remove");
+assert(base.includes("syncAccountData(false)") && base.includes("__cpKeepLocalNutrition"), "nutrition save upload-only keep local");
+assert(ui.includes("pushCoachClientEdits(opts)") && (base.includes("domains: ['nutrition']") || base.includes('domains: ["nutrition"]') || ui.includes("indexOf('nutrition')")), "slim coach nutrition push");
+assert(practice.includes("windowMs = 300000") || practice.includes("windowMs = 300000") || /isOnlineAt\([^)]*300000/.test(practice) || practice.includes("300000"), "coach online window 5min");
+assert(base.includes("overflow-x: auto") && base.includes(".header-actions"), "header actions scroll to avoid MENU clip");
 assert(practice.includes("/api/client/inbox/ack"), "client inbox ack");
 assert(practice.includes("/api/client/inbox/dismiss") && practice.includes("/api/coach/inbox/dismiss") && practice.includes("dismissed_for"), "inbox dismiss client+coach");
 assert(base.includes("hub-tile-notify") && base.includes("openNotificationsCenter"), "athlete hub notify tile");
@@ -170,7 +175,7 @@ assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY")
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v25-coach"), "SW push + cache v25");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v26-coach"), "SW push + cache v26");
 assert(sw.includes("setAppBadge"), "SW badging API");
 
 const build = fs.readFileSync(path.join(__dirname, "build_master25.mjs"), "utf8");

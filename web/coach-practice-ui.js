@@ -256,8 +256,8 @@ function applyClientChrome() {
     const coachBtn = document.getElementById('coach-unlock-button');
     if (coachBtn) {
       coachBtn.style.display = athlete ? 'none' : '';
-      if (coachSession) coachBtn.textContent = 'ESCI COACH';
-      else coachBtn.textContent = unlocked ? 'HUB COACH' : 'SBLOCCA COACH';
+      if (coachSession) coachBtn.textContent = 'ESCI';
+      else coachBtn.textContent = unlocked ? 'HUB' : 'COACH';
       coachBtn.onclick = function () {
         if (coachSession) exitCoachSession();
         else openCoachOrUnlock();
@@ -527,7 +527,7 @@ function ensurePracticeStyle() {
     '.cp-inapp-notify{position:fixed;left:10px;right:10px;top:calc(var(--header-height) + 8px + var(--cp-session-bar, 0px));z-index:10160;background:#151515;border:1px solid var(--gold);border-radius:12px;padding:10px 12px;color:#eee;box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;}',
     '.cp-inapp-notify b{color:var(--gold);display:block;font-size:12px;margin-bottom:2px;}',
     '.cp-inapp-notify span{font-size:11px;color:#ccc;}',
-    '#cp-notify-btn{position:relative;font-size:9px;padding:6px 8px;margin-left:6px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;}',
+    '#cp-notify-btn{position:relative;font-size:9px;padding:6px 8px;margin-left:0;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;flex-shrink:0;white-space:nowrap;}',
     '#cp-notify-btn .cp-notify-count{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#c66;color:#fff !important;-webkit-text-fill-color:#fff !important;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;}',
     '#cp-notify-center{position:fixed;inset:0;z-index:10170;background:rgba(0,0,0,.88);display:none;align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;}',
     '#cp-notify-center.active{display:flex;}',
@@ -824,8 +824,8 @@ function renderNotifyItemsHtml(items, emptyText) {
       (it.when ? '<small>' + esc(it.when) + '</small>' : '') +
       '</button>' +
       '<div class="cp-notify-actions">' +
-      '<button type="button" class="btn btn-outline" onclick="event.stopPropagation();markNotifyRead(' + idx + ')">SEGNA LETTA</button>' +
-      '<button type="button" class="btn btn-outline" onclick="event.stopPropagation();dismissNotifyItem(' + idx + ')">CANCELLA</button>' +
+      '<button type="button" class="btn btn-outline" onclick="markNotifyRead(' + idx + ')">SEGNA LETTA</button>' +
+      '<button type="button" class="btn btn-outline" onclick="dismissNotifyItem(' + idx + ')">CANCELLA</button>' +
       '</div></div>';
   }).join('');
 }
@@ -899,33 +899,31 @@ function closeNotificationsCenter() {
 
 async function ackNotifyEventIds(ids) {
   const list = (ids || []).map(function (n) { return Number(n); }).filter(function (n) { return n > 0; });
-  if (!list.length) return;
-  await practiceFetch(notifyAckPath(), {
+  if (!list.length) return { ok: true, updated: 0 };
+  return practiceFetch(notifyAckPath(), {
     method: 'POST', headers: practiceHeaders(true),
     body: JSON.stringify({ ids: list })
-  }, 10000).catch(function () {});
+  }, 15000);
 }
 
 async function dismissNotifyEventIds(ids) {
   const list = (ids || []).map(function (n) { return Number(n); }).filter(function (n) { return n > 0; });
-  if (!list.length) return;
-  await practiceFetch(notifyDismissPath(), {
+  if (!list.length) return { ok: true, updated: 0 };
+  return practiceFetch(notifyDismissPath(), {
     method: 'POST', headers: practiceHeaders(true),
     body: JSON.stringify({ ids: list })
-  }, 10000).catch(function () {});
+  }, 15000);
 }
 
 async function ackNotifyMessages(it) {
   if (!it || it.kind !== 'message') return;
-  try {
-    if (notifyIsAthlete()) {
-      await practiceFetch('/api/client/messages', { method: 'GET', headers: practiceHeaders(false) }, 12000).catch(function () {});
-    } else if (it.route && it.route.clientId) {
-      await practiceFetch('/api/coach/clients/' + encodeURIComponent(String(it.route.clientId)) + '/messages', {
-        method: 'GET', headers: practiceHeaders(false)
-      }, 12000).catch(function () {});
-    }
-  } catch (_) {}
+  if (notifyIsAthlete()) {
+    await practiceFetch('/api/client/messages', { method: 'GET', headers: practiceHeaders(false) }, 12000);
+  } else if (it.route && it.route.clientId) {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(String(it.route.clientId)) + '/messages', {
+      method: 'GET', headers: practiceHeaders(false)
+    }, 12000);
+  }
 }
 
 function refreshNotificationsCenterUi() {
@@ -999,60 +997,111 @@ async function openNotificationsCenter(clientId) {
   }
 }
 
+function removeNotifyItemLocal(idx) {
+  const items = (store.__cpNotifyItems || []).slice();
+  if (idx < 0 || idx >= items.length) return;
+  items.splice(idx, 1);
+  store.__cpNotifyItems = items;
+  const unreadLeft = items.filter(function (x) { return x && x.unread; }).length;
+  updateNotifyCount(unreadLeft, items);
+  const panel = document.querySelector('#cp-notify-center .cp-notify-panel');
+  if (!panel) return;
+  const headerRow = panel.children[0] ? panel.children[0].outerHTML : '';
+  const help = panel.querySelector('.cp-help');
+  const helpHtml = help ? help.outerHTML : '';
+  const toolbar = items.length
+    ? ('<div class="cp-notify-toolbar">' +
+      '<button type="button" class="btn btn-outline" onclick="markAllNotifyRead()">SEGNA TUTTE LETTE</button>' +
+      '<button type="button" class="btn btn-outline" onclick="dismissAllNotifyItems()">CANCELLA TUTTE</button>' +
+      '</div>')
+    : '';
+  const empty = notifyIsAthlete()
+    ? 'Nessuna notifica per ora.'
+    : ((store.__cpNotifyScopeId) ? 'Nessuna attività recente per questo cliente.' : 'Nessuna notifica da leggere.');
+  panel.innerHTML = headerRow + helpHtml + toolbar + renderNotifyItemsHtml(items, empty);
+}
+
 async function markNotifyRead(idx) {
   const items = store.__cpNotifyItems || [];
   const it = items[Number(idx)];
   if (!it) return;
-  if (it.kind === 'message') {
-    await ackNotifyMessages(it);
-  } else if (it.eventIds && it.eventIds.length) {
-    await ackNotifyEventIds(it.eventIds);
+  try {
+    if (it.kind === 'message') {
+      await ackNotifyMessages(it);
+    } else if (it.eventIds && it.eventIds.length) {
+      await ackNotifyEventIds(it.eventIds);
+      await dismissNotifyEventIds(it.eventIds);
+    }
+    removeNotifyItemLocal(Number(idx));
+    practiceToast('Notifica archiviata', 'success');
+    setTimeout(function () { pollPracticeInbox(); }, 400);
+  } catch (err) {
+    practiceToast((err && err.message) || 'Impossibile segnare come letta', 'danger');
   }
-  it.unread = false;
-  setTimeout(function () { pollPracticeInbox(); }, 300);
-  refreshNotificationsCenterUi();
 }
 
 async function dismissNotifyItem(idx) {
   const items = store.__cpNotifyItems || [];
   const it = items[Number(idx)];
   if (!it) return;
-  if (it.kind === 'message') {
-    await ackNotifyMessages(it);
-  } else if (it.eventIds && it.eventIds.length) {
-    await dismissNotifyEventIds(it.eventIds);
+  try {
+    if (it.kind === 'message') {
+      await ackNotifyMessages(it);
+    } else if (it.eventIds && it.eventIds.length) {
+      await dismissNotifyEventIds(it.eventIds);
+    }
+    removeNotifyItemLocal(Number(idx));
+    practiceToast('Notifica cancellata', 'success');
+    setTimeout(function () { pollPracticeInbox(); }, 400);
+  } catch (err) {
+    practiceToast((err && err.message) || 'Impossibile cancellare', 'danger');
   }
-  setTimeout(function () { pollPracticeInbox(); }, 300);
-  refreshNotificationsCenterUi();
 }
 
 async function markAllNotifyRead() {
-  const items = store.__cpNotifyItems || [];
+  const items = (store.__cpNotifyItems || []).slice();
   if (!items.length) return;
-  const ids = [];
-  for (let i = 0; i < items.length; i++) {
-    const it = items[i];
-    if (it.kind === 'message') await ackNotifyMessages(it);
-    else if (it.eventIds && it.eventIds.length) ids.push.apply(ids, it.eventIds);
+  try {
+    const ids = [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (it.kind === 'message') await ackNotifyMessages(it);
+      else if (it.eventIds && it.eventIds.length) ids.push.apply(ids, it.eventIds);
+    }
+    if (ids.length) {
+      await ackNotifyEventIds(ids);
+      await dismissNotifyEventIds(ids);
+    }
+    store.__cpNotifyItems = [];
+    updateNotifyCount(0, []);
+    practiceToast('Tutte archiviate', 'success');
+    refreshNotificationsCenterUi();
+    setTimeout(function () { pollPracticeInbox(); }, 400);
+  } catch (err) {
+    practiceToast((err && err.message) || 'Operazione non riuscita', 'danger');
   }
-  if (ids.length) await ackNotifyEventIds(ids);
-  setTimeout(function () { pollPracticeInbox(); }, 300);
-  refreshNotificationsCenterUi();
 }
 
 async function dismissAllNotifyItems() {
-  const items = store.__cpNotifyItems || [];
+  const items = (store.__cpNotifyItems || []).slice();
   if (!items.length) return;
   if (!window.confirm('Cancellare tutte le notifiche dalla lista?')) return;
-  const ids = [];
-  for (let i = 0; i < items.length; i++) {
-    const it = items[i];
-    if (it.kind === 'message') await ackNotifyMessages(it);
-    else if (it.eventIds && it.eventIds.length) ids.push.apply(ids, it.eventIds);
+  try {
+    const ids = [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (it.kind === 'message') await ackNotifyMessages(it);
+      else if (it.eventIds && it.eventIds.length) ids.push.apply(ids, it.eventIds);
+    }
+    if (ids.length) await dismissNotifyEventIds(ids);
+    store.__cpNotifyItems = [];
+    updateNotifyCount(0, []);
+    practiceToast('Lista svuotata', 'success');
+    refreshNotificationsCenterUi();
+    setTimeout(function () { pollPracticeInbox(); }, 400);
+  } catch (err) {
+    practiceToast((err && err.message) || 'Operazione non riuscita', 'danger');
   }
-  if (ids.length) await dismissNotifyEventIds(ids);
-  setTimeout(function () { pollPracticeInbox(); }, 300);
-  refreshNotificationsCenterUi();
 }
 
 async function openNotifyItem(idx) {
@@ -2175,32 +2224,66 @@ function closeChatLightbox() {
 window.openChatLightbox = openChatLightbox;
 window.closeChatLightbox = closeChatLightbox;
 
-async function pushCoachClientEdits() {
+async function pushCoachClientEdits(opts) {
+  opts = opts || {};
   const id = store.coachWorkspace && store.coachWorkspace.clientId;
   if (!id || !store.coachViewingClient) return;
-  const payload = {
-    activeProgram: typeof DATA !== 'undefined' ? DATA : null,
-    nutrition: store.nutrition || (DATA && DATA.nutrition) || null,
-    supplementation: store.supplementation || (DATA && DATA.supplementation) || null,
-    therapy: store.therapy || (DATA && DATA.therapy) || null,
-    exams: store.exams || (DATA && DATA.exams) || null,
-    data: store.data || {},
-    subs: store.subs || {},
-    customSets: store.customSets || {},
-    bodyChecks: Array.isArray(store.bodyChecks) ? store.bodyChecks : [],
-    // Never send empty logs — would wipe athlete history on server
-    logs: (Array.isArray(store.logs) && store.logs.length) ? store.logs : undefined
-  };
+  const domains = Array.isArray(opts.domains) ? opts.domains : null;
+  if (typeof DATA !== 'undefined' && DATA) {
+    if (store.nutrition) DATA.nutrition = store.nutrition;
+    if (store.supplementation) DATA.supplementation = store.supplementation;
+    if (store.therapy) DATA.therapy = store.therapy;
+    if (store.exams) DATA.exams = store.exams;
+  }
+  const nutr = store.nutrition || (DATA && DATA.nutrition) || null;
+  const supp = store.supplementation || (DATA && DATA.supplementation) || null;
+  const ther = store.therapy || (DATA && DATA.therapy) || null;
+  const exams = store.exams || (DATA && DATA.exams) || null;
+  let payload;
+  if (domains && domains.length) {
+    payload = {};
+    if (domains.indexOf('nutrition') >= 0) {
+      payload.nutrition = nutr;
+      payload.activeProgram = Object.assign({}, (DATA && typeof DATA === 'object') ? DATA : { title: 'Piano cliente', weeks: [] }, { nutrition: nutr });
+    }
+    if (domains.indexOf('supplements') >= 0) {
+      payload.supplementation = supp;
+      payload.activeProgram = Object.assign({}, payload.activeProgram || (DATA && typeof DATA === 'object' ? DATA : { title: 'Piano cliente', weeks: [] }), { supplementation: supp });
+    }
+    if (domains.indexOf('therapy') >= 0) payload.therapy = ther;
+    if (domains.indexOf('exams') >= 0) payload.exams = exams;
+    if (domains.indexOf('training') >= 0) {
+      payload.activeProgram = typeof DATA !== 'undefined' ? DATA : null;
+      payload.data = store.data || {};
+      payload.subs = store.subs || {};
+      payload.customSets = store.customSets || {};
+    }
+  } else {
+    payload = {
+      activeProgram: typeof DATA !== 'undefined' ? DATA : null,
+      nutrition: nutr,
+      supplementation: supp,
+      therapy: ther,
+      exams: exams,
+      data: store.data || {},
+      subs: store.subs || {},
+      customSets: store.customSets || {},
+      bodyChecks: Array.isArray(store.bodyChecks) ? store.bodyChecks : [],
+      logs: (Array.isArray(store.logs) && store.logs.length) ? store.logs : undefined
+    };
+  }
   try {
     await withBusy(async function () {
       await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/patch-data', {
         method: 'POST', headers: practiceHeaders(true),
         body: JSON.stringify({ data: payload, notify: true })
-      }, 45000);
-    }, 'Salvo modifiche al cliente…', { immediate: true });
+      }, 25000);
+    }, 'Salvo…', { immediate: true, maxMs: 30000 });
+    if (store.coachWorkspace) store.coachWorkspace.data = Object.assign({}, store.coachWorkspace.data || {}, payload);
     practiceToast('Modifiche inviate al cliente', 'success');
   } catch (err) {
     practiceToast((err && err.message) || 'Salvataggio fallito', 'danger');
+    throw err;
   }
 }
 
@@ -3305,6 +3388,9 @@ async function toggleCoachHidePresence(hide) {
     }, 12000);
     store.coachHidePresence = !!hide;
     if (typeof persist === 'function') persist();
+    if (!hide) {
+      practiceFetch('/api/presence/ping', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 8000).catch(function () {});
+    }
     practiceToast(hide ? 'Presenza nascosta agli atleti' : 'Gli atleti possono vederti online', 'success');
   } catch (err) {
     practiceToast((err && err.message) || 'Impostazione presenza fallita', 'danger');
@@ -4251,9 +4337,17 @@ function startPresenceHeartbeat() {
   const beat = function () {
     if (!store || !store.accountToken) return;
     practiceFetch('/api/presence/ping', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 8000).catch(function () {});
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+      const prev = !!store.coachOnline;
+      refreshAthleteMe().then(function () {
+        if (prev !== !!store.coachOnline && typeof currentView !== 'undefined' && currentView === 'home' && typeof render === 'function') {
+          try { render(); } catch (_) {}
+        }
+      }).catch(function () {});
+    }
   };
   beat();
-  window.__cpPresenceTimer = setInterval(beat, 45000);
+  window.__cpPresenceTimer = setInterval(beat, 30000);
 }
 
 async function bootCoachPractice() {

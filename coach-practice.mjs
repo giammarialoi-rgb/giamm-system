@@ -73,7 +73,7 @@ function clientNeedsIntake(row) {
   return (row.intake_mode || "new") === "new" && !row.intake_completed_at;
 }
 
-function isOnlineAt(ts, windowMs = 120000) {
+function isOnlineAt(ts, windowMs = 300000) {
   if (!ts) return false;
   const t = new Date(ts).getTime();
   if (!Number.isFinite(t)) return false;
@@ -719,7 +719,7 @@ export function mountCoachPractice(app, deps) {
     if (!coach) return;
     const hide = !!req.body?.hide;
     await pool.query(
-      `UPDATE coach_licenses SET hide_presence = $2 WHERE user_id = $1`,
+      `UPDATE coach_licenses SET hide_presence = $2, last_seen_at = CASE WHEN $2 THEN last_seen_at ELSE NOW() END WHERE user_id = $1`,
       [coach.id, hide]
     );
     return res.json({ ok: true, hidePresence: hide });
@@ -1134,12 +1134,16 @@ export function mountCoachPractice(app, deps) {
     await initDb();
     const lic = await pool.query("SELECT source, status, unlocked_at, hide_presence, last_seen_at, allow_videocall FROM coach_licenses WHERE user_id = $1", [auth.id]);
     const unlocked = !!(lic.rows[0] && lic.rows[0].status === "active");
+    const hide = !!(lic.rows[0] && lic.rows[0].hide_presence);
+    if (unlocked && !hide) {
+      await pool.query("UPDATE coach_licenses SET last_seen_at = NOW() WHERE user_id = $1", [auth.id]);
+    }
     return res.json({
       ok: true,
       unlocked,
       role: "coach",
       license: lic.rows[0] || null,
-      hidePresence: !!(lic.rows[0] && lic.rows[0].hide_presence),
+      hidePresence: hide,
       allowVideocall: lic.rows[0] ? lic.rows[0].allow_videocall !== false : true
     });
   });
@@ -1615,8 +1619,28 @@ export function mountCoachPractice(app, deps) {
         merged.logs = next.length >= cur.length ? next : cur;
         return;
       }
+      if (k === "activeProgram" && patch.activeProgram && typeof patch.activeProgram === "object") {
+        const curProg = current.activeProgram && typeof current.activeProgram === "object" ? current.activeProgram : {};
+        merged.activeProgram = { ...curProg, ...patch.activeProgram };
+        if ((!Array.isArray(merged.activeProgram.weeks) || !merged.activeProgram.weeks.length) && Array.isArray(curProg.weeks)) {
+          merged.activeProgram.weeks = curProg.weeks;
+        }
+        return;
+      }
       merged[k] = patch[k];
     });
+    if (patch.nutrition) {
+      merged.nutrition = patch.nutrition;
+      if (merged.activeProgram && typeof merged.activeProgram === "object") {
+        merged.activeProgram = { ...merged.activeProgram, nutrition: patch.nutrition };
+      }
+    }
+    if (patch.supplementation) {
+      merged.supplementation = patch.supplementation;
+      if (merged.activeProgram && typeof merged.activeProgram === "object") {
+        merged.activeProgram = { ...merged.activeProgram, supplementation: patch.supplementation };
+      }
+    }
     merged.coachPatchedAt = new Date().toISOString();
     merged.assignedByCoach = true;
     await pool.query(

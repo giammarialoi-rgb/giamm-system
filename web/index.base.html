@@ -202,41 +202,57 @@ header {
   width: 100%;
   height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
   padding-top: env(safe-area-inset-top, 0px);
-  padding-left: max(12px, env(safe-area-inset-left, 0px));
-  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  padding-left: max(8px, env(safe-area-inset-left, 0px));
+  padding-right: max(8px, env(safe-area-inset-right, 0px));
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   z-index: 1100;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
   box-sizing: border-box;
+  overflow: visible;
 }
 
 header .logo-container {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 0;
-  flex: 1;
+  min-width: 34px;
+  flex: 0 0 auto;
   overflow: hidden;
 }
 .header-actions {
   display: flex;
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-width: 0;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
   position: relative;
   z-index: 1102;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 1px;
+}
+.header-actions::-webkit-scrollbar { display: none; }
+.header-actions > .btn,
+.header-actions > #cp-notify-btn,
+.header-actions > #cp-coach-header-controls {
+  flex-shrink: 0;
 }
 #menu-hub-button {
   flex-shrink: 0;
-  font-size: 10px;
-  padding: 7px 10px;
+  font-size: 9px;
+  padding: 6px 9px;
   font-weight: 800;
   touch-action: manipulation;
   position: relative;
   z-index: 1102;
+  white-space: nowrap;
 }
 
 header .logo-container img {
@@ -255,12 +271,12 @@ header .logo-container span {
 
 #account-button {
   flex-shrink: 0;
-  margin-left: 10px;
-  font-size: 10px;
-  padding: 7px 12px;
+  margin-left: 0;
+  font-size: 9px;
+  padding: 6px 8px;
   font-weight: 800;
   border-radius: 8px;
-  max-width: 120px;
+  max-width: 88px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -271,13 +287,21 @@ header .logo-container span {
 
 #profile-button {
   flex-shrink: 0;
-  margin-left: 6px;
-  font-size: 10px;
-  padding: 7px 10px;
+  margin-left: 0;
+  font-size: 9px;
+  padding: 6px 8px;
   font-weight: 800;
   touch-action: manipulation;
   position: relative;
   z-index: 1101;
+  white-space: nowrap;
+}
+#coach-unlock-button {
+  flex-shrink: 0;
+  margin-left: 0 !important;
+  font-size: 9px !important;
+  padding: 6px 8px !important;
+  white-space: nowrap;
 }
 
 header .btn {
@@ -3012,6 +3036,10 @@ function nativeAuthError(message){
 function accountPayload(opts){
   opts = opts || {};
   const includeProgram = opts.includeProgram !== false;
+  const nutr = (DATA && DATA.nutrition) || store.nutrition || null;
+  const supp = (DATA && DATA.supplementation) || store.supplementation || null;
+  const ther = (DATA && DATA.therapy) || store.therapy || null;
+  const exams = (DATA && DATA.exams) || store.exams || null;
   const payload = {
     prefs: store.prefs || {},
     profile: store.profile || {},
@@ -3031,6 +3059,10 @@ function accountPayload(opts){
     activeProgramId: store.activeProgramId || (DATA && DATA.id) || null,
     rewards: store.rewards || null,
     lastLocalSavedAt: new Date().toISOString(),
+    nutrition: nutr,
+    supplementation: supp,
+    therapy: ther,
+    exams: exams,
     nutritionDaily: store.nutritionDaily || {},
     calendarEvents: Array.isArray(store.calendarEvents) ? store.calendarEvents.slice(-80) : [],
     coachArchives: Array.isArray(store.coachArchives) ? store.coachArchives.slice(0, 24).map(function (a) {
@@ -3057,8 +3089,18 @@ function accountPayload(opts){
       };
     }) : []
   };
-  if (includeProgram && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length) {
-    payload.activeProgram = DATA;
+  if (includeProgram) {
+    const hasWeeks = !!(DATA && Array.isArray(DATA.weeks) && DATA.weeks.length);
+    const hasDomain = !!(nutr || supp || ther || exams);
+    if (hasWeeks || hasDomain) {
+      payload.activeProgram = Object.assign({}, DATA || { title: 'Piano', weeks: [] }, {
+        nutrition: nutr,
+        supplementation: supp,
+        therapy: ther,
+        exams: exams
+      });
+      if (!Array.isArray(payload.activeProgram.weeks)) payload.activeProgram.weeks = [];
+    }
   }
   return payload;
 }
@@ -3144,12 +3186,24 @@ function applyRemoteAccountData(remote, preferLocal) {
   if (takeRemote) {
     try {
       window.__cpProgramLock = true;
+      const keepNutr = !!(store.__cpKeepLocalNutrition || store.__cpNutritionDirty);
+      const keepSupp = !!(store.__cpKeepLocalSupplements || store.__cpSupplementsDirty);
+      const localNutr = keepNutr ? ((DATA && DATA.nutrition) || store.nutrition) : null;
+      const localSupp = keepSupp ? ((DATA && DATA.supplementation) || store.supplementation) : null;
       DATA = typeof normalizeProgram === 'function' ? normalizeProgram(remoteProg) : remoteProg;
       store.activeProgram = DATA;
       store.activeProgramId = DATA.id || remote.activeProgramId || store.activeProgramId;
       if (athlete) store.clientAssignedAt = remoteAssigned || new Date().toISOString();
-      if (remote.nutrition) store.nutrition = remote.nutrition;
-      if (remote.supplementation) store.supplementation = remote.supplementation;
+      if (keepNutr && localNutr) {
+        store.nutrition = localNutr;
+      } else if (remote.nutrition) {
+        store.nutrition = remote.nutrition;
+      }
+      if (keepSupp && localSupp) {
+        store.supplementation = localSupp;
+      } else if (remote.supplementation) {
+        store.supplementation = remote.supplementation;
+      }
       if (remote.therapy) store.therapy = remote.therapy;
       if (remote.exams) store.exams = remote.exams;
       if (DATA) {
@@ -3163,6 +3217,16 @@ function applyRemoteAccountData(remote, preferLocal) {
       console.warn('[ACCOUNT_RESTORE_PROGRAM]', e);
     } finally {
       window.__cpProgramLock = false;
+    }
+  } else {
+    // Domain-only remote fields without replacing the whole program
+    if (!store.__cpKeepLocalNutrition && !store.__cpNutritionDirty && remote.nutrition) {
+      store.nutrition = remote.nutrition;
+      if (DATA) DATA.nutrition = remote.nutrition;
+    }
+    if (!store.__cpKeepLocalSupplements && !store.__cpSupplementsDirty && remote.supplementation) {
+      store.supplementation = remote.supplementation;
+      if (DATA) DATA.supplementation = remote.supplementation;
     }
   }
   store.accountToken = token;
@@ -3813,19 +3877,25 @@ function confirmGenerateSupplementation() {
 }
 
 async function saveSupplementationEdits() {
+  if (typeof DATA !== 'undefined' && DATA) DATA.supplementation = (store && store.supplementation) || DATA.supplementation;
   if (typeof store !== 'undefined' && store) store.supplementation = (DATA && DATA.supplementation) || store.supplementation;
   if (typeof persist === 'function') persist();
+  if (typeof store !== 'undefined' && store) store.__cpKeepLocalSupplements = true;
   try {
     if (typeof store !== 'undefined' && store && store.coachViewingClient && typeof pushCoachClientEdits === 'function') {
-      await pushCoachClientEdits();
+      await pushCoachClientEdits({ domains: ['supplements'] });
     } else if (typeof syncAccountData === 'function' && store && store.accountToken) {
-      await syncAccountData(true);
+      await syncAccountData(false);
     }
   } catch (err) {
+    if (typeof store !== 'undefined' && store) store.__cpKeepLocalSupplements = false;
     if (typeof showToast === 'function') showToast((err && err.message) || 'Salvataggio fallito', 'danger');
     return;
   }
-  if (typeof store !== 'undefined' && store) store.__cpSupplementsDirty = false;
+  if (typeof store !== 'undefined' && store) {
+    store.__cpSupplementsDirty = false;
+    setTimeout(function () { try { store.__cpKeepLocalSupplements = false; } catch (_) {} }, 120000);
+  }
   if (typeof render === 'function') render();
   if (typeof showToast === 'function') showToast('Integrazione salvata', 'success');
 }
@@ -7630,7 +7700,8 @@ function renderNutrition(c) {
     const d0 = DATA.nutrition.days[0];
     const blob = JSON.stringify(d0 || {});
     const isLegacyTipo = /^giorno\s*tipo$/i.test(String(d0.day || '').replace(/\s*·.*$/, '').trim());
-    const isCoachOrProfilePlan = /settiman|ON\s*\/\s*OFF|da profilo|Nurvan|Coach|evidence-informed|Piano preciso|Piano automatico/i.test(String(DATA.nutrition.plan_name || DATA.nutrition.notes || ''));
+    const isCoachOrProfilePlan = /settiman|ON\s*\/\s*OFF|da profilo|Nurvan|Coach|evidence-informed|Piano preciso|Piano automatico|Integrazione/i.test(String(DATA.nutrition.plan_name || DATA.nutrition.notes || ''))
+      || !!(store && (store.__cpNutritionDirty || store.__cpKeepLocalNutrition));
     const looksLegacyDemo = /Luned[iì].*\(ON\)/i.test(blob) && /Albume d'uovo/i.test(blob) && /Petto di Pollo/i.test(blob);
     const looksEmptyMondayOnly = /^luned[iì]/i.test(String(d0.day || '')) && !(d0.meals || []).some((m) => (m.foods || m.items || []).length);
     if (isLegacyTipo && !isCoachOrProfilePlan) {
@@ -8110,19 +8181,25 @@ function confirmGenerateNutritionPlan() {
 }
 
 async function saveNutritionPlanEdits() {
+  if (typeof DATA !== 'undefined' && DATA) DATA.nutrition = (store && store.nutrition) || DATA.nutrition;
   if (typeof store !== 'undefined' && store) store.nutrition = (DATA && DATA.nutrition) || store.nutrition;
   if (typeof persist === 'function') persist();
+  if (typeof store !== 'undefined' && store) store.__cpKeepLocalNutrition = true;
   try {
     if (typeof store !== 'undefined' && store && store.coachViewingClient && typeof pushCoachClientEdits === 'function') {
-      await pushCoachClientEdits();
+      await pushCoachClientEdits({ domains: ['nutrition'] });
     } else if (typeof syncAccountData === 'function' && store && store.accountToken) {
-      await syncAccountData(true);
+      await syncAccountData(false);
     }
   } catch (err) {
+    if (typeof store !== 'undefined' && store) store.__cpKeepLocalNutrition = false;
     if (typeof showToast === 'function') showToast((err && err.message) || 'Salvataggio fallito', 'danger');
     return;
   }
-  if (typeof store !== 'undefined' && store) store.__cpNutritionDirty = false;
+  if (typeof store !== 'undefined' && store) {
+    store.__cpNutritionDirty = false;
+    setTimeout(function () { try { store.__cpKeepLocalNutrition = false; } catch (_) {} }, 120000);
+  }
   if (typeof render === 'function') render();
   if (typeof showToast === 'function') showToast('Alimentazione salvata', 'success');
 }
