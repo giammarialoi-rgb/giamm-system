@@ -119,7 +119,10 @@ assert(base.includes("openGenerateNutritionPlanWizard") && base.includes("balanc
 assert(base.includes("comboCount") && base.includes("dayCount") && base.includes("NUTRITION_MEAL_COMBO_VARIANTS"), "nutrition days + combo variants");
 assert(base.includes("Inserisci pasti liberi") && base.includes("onGenNutritionFreeToggle") && base.includes("applyFreeMealsToNutritionPlan") && base.includes("gen-nutr-free-slot") && base.includes("freeMealSlot"), "nutrition free meals wizard + meal slot");
 assert(base.includes("athleteCanSelfGeneratePlans") && base.includes("CHIEDI LIBERTÀ DI GENERARE") && ui.includes("requestAthleteGenerateFreedom"), "athlete generate gated by max freedom");
-assert(base.includes('<base href="/">') && base.includes('src="/nurvan_logo.png"'), "root-absolute logos for /c/ invite links");
+assert(base.includes("location.protocol === 'http:'") && base.includes('src="nurvan_logo.png"') && !base.includes('src="/nurvan_logo.png"'), "conditional base + relative logos (APK file:// safe)");
+assert(base.includes("selectFoodFromDb") && base.includes("data-food-idx") && base.includes("foodRestrictionWarnHtml") && base.includes("__foodSearchHits"), "food DB pick + allergy warn");
+assert(ui.includes("coachInboxShouldIgnore") && ui.includes("coach_modified") && ui.includes("parseCoachEventPayload"), "coach inbox ignores own actions");
+assert(fs.readFileSync(path.join(__dirname, "build_master25.mjs"), "utf8").includes("lastIndexOf(scriptTagMarker, dataStartIdx)"), "build keeps early base script + DOM header");
 assert(base.includes("ALLERGIE E INTOLLERANZE") && base.includes("filterFoodForRestrictions") && base.includes("ensureAllergenIntoleranceCatalog") && base.includes("safe_phrases"), "nutrition allergy filter wizard");
 const allergenCatPath = path.join(__dirname, "web/allergen-intolerance-catalog.json");
 assert(fs.existsSync(allergenCatPath), "allergen catalog file exists");
@@ -156,6 +159,7 @@ const practice = fs.readFileSync(path.join(__dirname, "coach-practice.mjs"), "ut
   assert(practice.includes(s), "server has " + s);
 });
 assert(practice.includes("e.payload") || practice.includes("e.payload,"), "coach inbox returns payload");
+assert(practice.includes("e.payload->>'from'") && practice.includes("'coach_modified'"), "coach inbox SQL filters self noise");
 assert(practice.includes("allow_nurvan_ai") && practice.includes("/nurvan-ai"), "server has allow_nurvan_ai");
 
 assert(ui.includes("toggleAssignBannerExpand") && ui.includes("cp-assign-collapsed"), "assign bar collapsible");
@@ -164,7 +168,7 @@ assert(ui.includes("coachProgramLibrary") && ui.includes("saveCanonicalToCoachLi
 assert(ui.includes("__cpSending") && ui.includes("cp-chat-send-progress"), "chat send UX");
 assert(base.includes("buildOperationalRulesHtml") && base.includes("deviceTimeZone"), "ops rules + device timezone");
 assert(base.includes("CHAT COACH") || ui.includes("clientChat"), "athlete home chat coach");
-assert(base.includes("/peerjs.min.js"), "index loads PeerJS from root");
+assert(base.includes('src="peerjs.min.js"') && !base.includes('src="/peerjs.min.js"'), "index loads PeerJS relative (APK safe)");
 assert(ui.includes("seedAssignSandboxFromClient") && ui.includes("closeClientInviteOverlay"), "assign merge seed + close invite");
 assert(ui.includes("input[type=\"checkbox\"]") && practice.includes("Link vecchio") || practice.includes("username = $1 AND status = 'active'"), "checkbox CSS + login username fallback");
 assert(base.includes("Quelle non scelte restano") || base.includes("non vengono cancellate"), "import domain picker merge copy");
@@ -201,7 +205,7 @@ assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY")
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v36-coach"), "SW push + cache v36");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v37-coach") && sw.includes("isAsset"), "SW push + cache v37 + asset no-html fallback");
 assert(base.includes("updateSupplementField") && base.includes("markSupplementsDirty") && base.includes("DOSAGGIO"), "supplement inline edit fields");
 assert(ui.includes("benvenuto nel mio servizio coaching") && practice.includes("benvenuto nel mio servizio coaching") && ui.includes("formatInviteShareText"), "client invite welcome message");
 assert(ui.includes("intakeAllergiesHtml") && ui.includes("ALIMENTAZIONE · ALLERGIE") && practice.includes("allergies") && practice.includes("profileFromIntake"), "intake optional allergies/intolerances");
@@ -229,8 +233,12 @@ if (fs.existsSync(webIndex) && fs.existsSync(apkIndex)) {
   const built = fs.readFileSync(webIndex, "utf8");
   assert(built.includes("bootCoachPractice") && built.includes("TRANSIZIONE VERSO APP"), "built index includes coach UI");
   assert(built.includes("function navigate(") && built.includes("sendCheckFisicoToCoach"), "built index keeps previous features");
+  assert(built.includes('id="splash"') && built.includes("logo-container") && built.includes("location.protocol === 'http:'"), "built index keeps splash/header + conditional base");
+  assert(built.includes('src="nurvan_logo.png"') && !built.includes('src="/nurvan_logo.png"'), "built logos are relative");
   assert(!built.includes("Analizza check fisico"), "built index has no client AI check CTA");
-  const s0 = built.indexOf("<script>");
+  const dataMarker = "var DATA=null, currentView='home'";
+  const dataIdx = built.indexOf(dataMarker);
+  const s0 = dataIdx >= 0 ? built.lastIndexOf("<script>", dataIdx) : built.indexOf("<script>");
   const s1 = built.lastIndexOf("</script>");
   if (s0 >= 0 && s1 > s0) {
     const tmp = path.join(__dirname, "_check_index.js");

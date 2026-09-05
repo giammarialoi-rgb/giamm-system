@@ -11,10 +11,14 @@ execSync('node generate_bundles.mjs', { stdio: 'inherit' });
 
 const baseHtml = fs.readFileSync('web/index.base.html', 'utf8');
 
-// 1. HEADER HTML (Head, CSS, Modals, DOM Views up to <script>)
+// 1. HEADER HTML (Head, CSS, Modals, DOM Views up to main app <script>)
+const dataStartMarker = "var DATA=null, currentView='home'";
+const dataStartIdx = baseHtml.indexOf(dataStartMarker);
+if (dataStartIdx === -1) throw new Error('Could not find dataStartMarker in baseHtml');
+
 const scriptTagMarker = '<script>';
-const scriptTagIdx = baseHtml.indexOf(scriptTagMarker);
-if (scriptTagIdx === -1) throw new Error('Could not find <script> tag in web/index.base.html');
+const scriptTagIdx = baseHtml.lastIndexOf(scriptTagMarker, dataStartIdx);
+if (scriptTagIdx === -1) throw new Error('Could not find main <script> tag before DATA in web/index.base.html');
 
 const headerHtml = baseHtml.substring(0, scriptTagIdx);
 
@@ -157,10 +161,6 @@ const CONFIG_HEADER = `<script>
 `;
 
 // 2. MIDDLE CORE: UI views, workout logger, renderers
-const dataStartMarker = "var DATA=null, currentView='home'";
-const dataStartIdx = baseHtml.indexOf(dataStartMarker);
-if (dataStartIdx === -1) throw new Error('Could not find dataStartMarker in baseHtml');
-
 const endCoreMarker = '// LAYER 2: BUSINESS DOMAIN SERVICES';
 const endCoreIdx = baseHtml.indexOf(endCoreMarker, dataStartIdx);
 if (endCoreIdx === -1) throw new Error('Could not find LAYER 2 marker in baseHtml');
@@ -1004,6 +1004,7 @@ window.applySsttStartInputs = typeof applySsttStartInputs !== 'undefined' ? appl
 window.exportStatsCsv = typeof exportStatsCsv !== 'undefined' ? exportStatsCsv : (() => {});
 window.renderStatsData = typeof renderStatsData !== 'undefined' ? renderStatsData : (() => {});
 window.filterFoodDb = typeof filterFoodDb !== 'undefined' ? filterFoodDb : (() => {});
+window.selectFoodFromDb = typeof selectFoodFromDb !== 'undefined' ? selectFoodFromDb : (() => {});
 window.filterSupplementDb = typeof filterSupplementDb !== 'undefined' ? filterSupplementDb : (() => {});
 window.searchDb = typeof searchDb !== 'undefined' ? searchDb : (() => {});
 window.runWeeklyCheckIn = typeof runWeeklyCheckIn !== 'undefined' ? runWeeklyCheckIn : (() => {});

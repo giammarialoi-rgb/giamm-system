@@ -802,10 +802,49 @@ function fmtNotifyWhen(iso) {
   return raw.replace('T', ' ').slice(0, 16);
 }
 
+function coachInboxShouldIgnore(e) {
+  if (!e) return true;
+  const noise = {
+    coach_modified: 1,
+    program_assigned: 1,
+    nutrition_assigned: 1,
+    supplements_assigned: 1,
+    therapy_assigned: 1,
+    exams_assigned: 1,
+    unlock_approved: 1,
+    unlock_rejected: 1,
+    max_freedom: 1,
+    change_approved: 1,
+    change_rejected: 1,
+    password_reset: 1,
+    exams_request: 1,
+    check_request: 1,
+    leave_confirmed: 1,
+    payment_due: 1
+  };
+  if (noise[e.kind]) return true;
+  if (e.kind === 'message') {
+    const payload = parseCoachEventPayload(e.payload);
+    if (payload.from === 'coach') return true;
+  }
+  return false;
+}
+
+function parseCoachEventPayload(payload) {
+  let p = payload;
+  if (typeof p === 'string') {
+    try { p = JSON.parse(p); } catch (_) { p = {}; }
+  }
+  return p && typeof p === 'object' ? p : {};
+}
+
 function coachEventLabel(kind, name, payload) {
   const n = name || 'Atleta';
-  const p = payload && typeof payload === 'object' ? payload : {};
-  if (kind === 'message') return { title: 'Messaggio', body: n + ' ti ha scritto', view: 'chat' };
+  const p = parseCoachEventPayload(payload);
+  if (kind === 'message') {
+    if (p.from === 'coach') return { title: 'Messaggio inviato', body: 'Hai scritto a ' + n, view: 'chat', skip: true };
+    return { title: 'Messaggio', body: n + ' ti ha scritto', view: 'chat' };
+  }
   if (kind === 'ask_coach') {
     const dom = String(p.domain || '');
     if (dom === 'max_freedom') return { title: 'Richiesta libertà', body: n + ' chiede di generare in autonomia' + (p.note ? (': ' + String(p.note).slice(0, 80)) : ''), view: 'coachClient', unlockFeature: 'max_freedom' };
@@ -937,10 +976,12 @@ function buildCoachNotifyItems(box) {
   const items = [];
   (box.events || []).forEach(function (e) {
     if (!e) return;
+    if (coachInboxShouldIgnore(e)) return;
     const df = e.dismissed_for;
     if (Array.isArray(df) && df.indexOf('coach') >= 0) return;
     const name = e.display_name || 'Atleta';
     const lab = coachEventLabel(e.kind, name, e.payload);
+    if (lab.skip) return;
     items.push({
       key: 'ev_' + e.id,
       kind: 'event',
@@ -993,9 +1034,11 @@ function buildCoachClientNotifyItems(events, clientId, clientName) {
   const cid = String(clientId || '');
   return (events || []).map(function (e) {
     if (!e) return null;
+    if (coachInboxShouldIgnore(e)) return null;
     const df = e.dismissed_for;
     if (Array.isArray(df) && df.indexOf('coach') >= 0) return null;
     const lab = coachEventLabel(e.kind, name, e.payload);
+    if (lab.skip) return null;
     const unread = !e.read_at;
     return {
       key: 'ev_' + e.id,
@@ -2087,7 +2130,7 @@ function athleteHomeHtml() {
       ? '<div style="font-size:12px;color:#888;margin-top:8px;">● Coach offline · ultimo ' + esc(fmtShortDate(store.coachLastSeen)) + '</div>'
       : '<div style="font-size:12px;color:#888;margin-top:8px;">● Stato coach non disponibile</div>');
   return '<div style="text-align:center;padding:16px 0 8px;">' +
-    '<img src="/nurvan_logo.png" class="logo-blend" alt="NURVAN" style="width:132px;max-width:46vw;filter:drop-shadow(0 0 16px var(--gold));">' +
+    '<img src="nurvan_logo.png" class="logo-blend" alt="NURVAN" style="width:132px;max-width:46vw;filter:drop-shadow(0 0 16px var(--gold));" onerror="this.onerror=null;this.src=\'icon-192.png\'">' +
     '<h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;margin:8px 0 0;">NURVAN</h1>' +
     coachStatus +
     '<button class="btn btn-outline" style="margin-top:10px;font-size:11px;" onclick="reloadClientHome()">⟳ AGGIORNA</button>' +
@@ -4601,6 +4644,7 @@ async function pollPracticeInbox() {
         ackIds.push(id);
         const from = (e.payload && e.payload.from) || '';
         if (e.kind === 'message' && from === 'coach') return;
+        if (coachInboxShouldIgnore(e)) return;
         const route = { view: 'coachClient', clientId: String(e.client_id || '') };
         if (e.kind === 'message') notifyUser('Messaggio cliente', (e.display_name || 'Atleta') + ' ti ha scritto', Object.assign({}, route, { view: 'chat' }));
         else if (e.kind === 'ask_coach') {
