@@ -39568,11 +39568,12 @@ function gramsForFood(f) {
 
 function enrichImportedFoods(nutrition) {
   if (!nutrition || !Array.isArray(nutrition.days)) return nutrition;
+  nutrition = normalizeNutritionMeals(nutrition);
   const svc = (typeof FoodDatabaseService !== 'undefined') ? FoodDatabaseService : null;
   const engineEnrich = (typeof enrichFoodItemMacros === 'function') ? enrichFoodItemMacros : null;
   nutrition.days.forEach(function (day) {
     (day.meals || []).forEach(function (meal) {
-      (meal.foods || meal.items || []).forEach(function (f) {
+      (meal.foods || []).forEach(function (f) {
         if (engineEnrich) {
           engineEnrich(f);
           if (foodMacroVal(f, 'kcal') || foodMacroVal(f, 'pro')) return;
@@ -39601,9 +39602,35 @@ function enrichImportedFoods(nutrition) {
   return nutrition;
 }
 
+function normalizeNutritionMeals(nutrition) {
+  if (!nutrition || typeof nutrition !== 'object') return nutrition;
+  if (!Array.isArray(nutrition.days)) nutrition.days = [];
+  nutrition.days.forEach(function (day) {
+    if (!day || typeof day !== 'object') return;
+    if (!Array.isArray(day.meals)) day.meals = [];
+    day.meals.forEach(function (meal) {
+      if (!meal || typeof meal !== 'object') return;
+      if ((!meal.foods || !meal.foods.length) && Array.isArray(meal.items) && meal.items.length) {
+        meal.foods = meal.items;
+      }
+      if (!Array.isArray(meal.foods)) meal.foods = [];
+      if (!meal.items) meal.items = meal.foods;
+    });
+  });
+  if (nutrition.present == null && nutrition.days.length) nutrition.present = true;
+  return nutrition;
+}
+
 function selectNutritionDay(idx) {
   currentNutritionDayIndex = Number(idx) || 0;
   window.__nutritionDayUserPicked = true;
+  if (typeof DATA !== 'undefined' && DATA && store && store.nutrition && (!DATA.nutrition || !(DATA.nutrition.days && DATA.nutrition.days.length))) {
+    DATA.nutrition = store.nutrition;
+  }
+  if (typeof DATA !== 'undefined' && DATA && DATA.nutrition && typeof normalizeNutritionMeals === 'function') {
+    DATA.nutrition = normalizeNutritionMeals(DATA.nutrition);
+    if (store) store.nutrition = DATA.nutrition;
+  }
   render();
 }
 
@@ -39731,6 +39758,7 @@ window.confirmNutritionDay = confirmNutritionDay;
 
 function renderNutrition(c) {
   // Never invent a fake Monday meal plan
+  if (!DATA.nutrition && store && store.nutrition) DATA.nutrition = store.nutrition;
   if (!DATA.nutrition) {
     DATA.nutrition = {
       plan_name: '',
@@ -39742,20 +39770,23 @@ function renderNutrition(c) {
       days: []
     };
   }
-  // Remove legacy single "Giorno tipo" placeholder — user must create or import explicitly
+  DATA.nutrition = normalizeNutritionMeals(DATA.nutrition);
+  if (store) store.nutrition = DATA.nutrition;
+  // Only wipe unmistakable legacy demos — never wipe imports / coach / multi-day / dirty plans
   if (Array.isArray(DATA.nutrition.days) && DATA.nutrition.days.length === 1) {
     const d0 = DATA.nutrition.days[0];
     const blob = JSON.stringify(d0 || {});
     const isLegacyTipo = /^giorno\s*tipo$/i.test(String(d0.day || '').replace(/\s*·.*$/, '').trim());
-    const isCoachOrProfilePlan = /settiman|ON\s*\/\s*OFF|da profilo|Nurvan|Coach|evidence-informed|Piano preciso|Piano automatico|Integrazione/i.test(String(DATA.nutrition.plan_name || DATA.nutrition.notes || ''))
-      || !!(store && (store.__cpNutritionDirty || store.__cpKeepLocalNutrition));
+    const hasAnyFood = (d0.meals || []).some(function (m) { return (m.foods || m.items || []).length; });
+    const protect = !!(store && (store.__cpNutritionDirty || store.__cpKeepLocalNutrition || store.coachViewingClient || store.coachAssigning))
+      || /settiman|ON\s*\/\s*OFF|da profilo|Nurvan|Coach|evidence-informed|Piano preciso|Piano automatico|import/i.test(String(DATA.nutrition.plan_name || DATA.nutrition.notes || ''))
+      || hasAnyFood;
     const looksLegacyDemo = /Luned[iì].*\(ON\)/i.test(blob) && /Albume d'uovo/i.test(blob) && /Petto di Pollo/i.test(blob);
-    const looksEmptyMondayOnly = /^luned[iì]/i.test(String(d0.day || '')) && !(d0.meals || []).some((m) => (m.foods || m.items || []).length);
-    if (isLegacyTipo && !isCoachOrProfilePlan) {
+    if (!protect && isLegacyTipo) {
       DATA.nutrition = { plan_name: '', present: false, days: [], daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
       store.nutrition = DATA.nutrition;
       persist();
-    } else if (!isCoachOrProfilePlan && (looksLegacyDemo || (looksEmptyMondayOnly && DATA.nutrition.plan_name === 'Piano Nutrizionale Personalizzato'))) {
+    } else if (!protect && looksLegacyDemo && DATA.nutrition.plan_name === 'Piano Nutrizionale Personalizzato') {
       DATA.nutrition = { plan_name: '', present: false, days: [], daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
       store.nutrition = DATA.nutrition;
       persist();
@@ -43769,7 +43800,12 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
       const sandbox = isCoachClientSandbox();
       if (prog.nutrition && allow('nutrition')) {
         DATA.nutrition = (typeof enrichImportedFoods === 'function') ? enrichImportedFoods(prog.nutrition) : prog.nutrition;
+        if (typeof normalizeNutritionMeals === 'function') DATA.nutrition = normalizeNutritionMeals(DATA.nutrition);
         store.nutrition = DATA.nutrition;
+        store.__cpNutritionDirty = true;
+        store.__cpKeepLocalNutrition = true;
+        window.__nutritionDayUserPicked = true;
+        if (typeof currentNutritionDayIndex !== 'undefined') currentNutritionDayIndex = 0;
         if (!sandbox && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveNutrition) {
           await GiammariaPersistence.saveNutrition(DATA.nutrition);
         }
@@ -49725,6 +49761,7 @@ if (typeof window !== 'undefined') {
   window.onGenNutritionMacroChange = onGenNutritionMacroChange;
   window.confirmGenerateNutritionPlan = confirmGenerateNutritionPlan;
   window.saveNutritionPlanEdits = saveNutritionPlanEdits;
+  window.normalizeNutritionMeals = normalizeNutritionMeals;
   window.markNutritionDirty = markNutritionDirty;
   window.openGenerateSupplementationWizard = openGenerateSupplementationWizard;
   window.setGenSuppMode = setGenSuppMode;
@@ -50099,6 +50136,12 @@ function ensureCoachHeaderControls(coachSession) {
     if (wrap) wrap.style.display = 'none';
     const hubBtn = document.getElementById('menu-hub-button');
     if (hubBtn) hubBtn.style.display = '';
+    const profileBtn = document.getElementById('profile-button');
+    if (profileBtn) profileBtn.style.display = '';
+    const notifyBtn = document.getElementById('cp-notify-btn');
+    if (notifyBtn) notifyBtn.style.display = '';
+    const coachBtnRestore = document.getElementById('coach-unlock-button');
+    if (coachBtnRestore) coachBtnRestore.style.display = '';
     return;
   }
   const coachBtn = document.getElementById('coach-unlock-button');
@@ -50111,17 +50154,23 @@ function ensureCoachHeaderControls(coachSession) {
     headerActions.insertBefore(wrap, coachBtn);
   }
   wrap.style.display = 'flex';
+  wrap.style.cssText = 'display:flex;align-items:center;gap:4px;flex-wrap:nowrap;max-width:min(62vw,340px);min-width:0;overflow:hidden;';
   const hubBtn = document.getElementById('menu-hub-button');
   if (hubBtn) hubBtn.style.display = 'none';
+  const profileBtn = document.getElementById('profile-button');
+  if (profileBtn) profileBtn.style.display = 'none';
+  const notifyBtn = document.getElementById('cp-notify-btn');
+  if (notifyBtn) notifyBtn.style.display = 'none';
+  if (coachBtn) coachBtn.style.display = 'none';
   const clients = (store.__cpClientList || []).slice();
   const curId = store.coachWorkspace && store.coachWorkspace.clientId ? String(store.coachWorkspace.clientId) : '';
   const opts = ['<option value="">Cliente…</option>'].concat(clients.map(function (cl) {
     return '<option value="' + esc(String(cl.id)) + '"' + (String(cl.id) === curId ? ' selected' : '') + '>' + esc(cl.displayName || cl.username || ('#' + cl.id)) + '</option>';
   }));
   wrap.innerHTML =
-    '<select id="cp-client-switcher" class="cp-client-switcher" title="Cambia cliente" onchange="switchCoachClientFromHeader(this.value)">' + opts.join('') + '</select>' +
-    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachHub\')">LISTA</button>' +
-    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="coachHeaderBack()">INDIETRO</button>';
+    '<select id="cp-client-switcher" class="cp-client-switcher" title="Cambia cliente" style="max-width:42vw;min-width:0;flex:1 1 auto;" onchange="switchCoachClientFromHeader(this.value)">' + opts.join('') + '</select>' +
+    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;flex-shrink:0;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachHub\')">LISTA</button>' +
+    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;flex-shrink:0;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="coachHeaderBack()">INDIETRO</button>';
 }
 
 function switchCoachClientFromHeader(id) {
@@ -51219,6 +51268,29 @@ function exitCoachSession(force) {
   return true;
 }
 
+function preferFilledNutrition(a, b) {
+  function score(n) {
+    if (!n || typeof n !== 'object') return 0;
+    const days = Array.isArray(n.days) ? n.days : [];
+    let foods = 0;
+    days.forEach(function (d) {
+      (d.meals || []).forEach(function (m) {
+        foods += ((m.foods && m.foods.length) || (m.items && m.items.length) || 0);
+      });
+    });
+    return days.length * 10 + foods;
+  }
+  return score(a) >= score(b) ? (a || b || null) : (b || a || null);
+}
+
+function preferFilledSupplementation(a, b) {
+  function score(s) {
+    if (!s || typeof s !== 'object') return 0;
+    return (Array.isArray(s.items) ? s.items.length : 0);
+  }
+  return score(a) >= score(b) ? (a || b || null) : (b || a || null);
+}
+
 function applyClientPayloadToLocal(payload) {
   payload = payload || {};
   const prog = payload.activeProgram || payload;
@@ -51231,8 +51303,10 @@ function applyClientPayloadToLocal(payload) {
   }
   store.activeProgram = DATA;
   store.activeProgramId = (DATA && DATA.id) || ('client_view_' + Date.now());
-  store.nutrition = payload.nutrition || (DATA && DATA.nutrition) || null;
-  store.supplementation = payload.supplementation || (DATA && DATA.supplementation) || null;
+  const nutr = preferFilledNutrition(payload.nutrition, DATA && DATA.nutrition);
+  const supp = preferFilledSupplementation(payload.supplementation, DATA && DATA.supplementation);
+  store.nutrition = nutr;
+  store.supplementation = supp;
   store.therapy = payload.therapy || (DATA && DATA.therapy) || null;
   store.exams = payload.exams || (DATA && DATA.exams) || null;
   store.data = payload.data && typeof payload.data === 'object' ? JSON.parse(JSON.stringify(payload.data)) : {};
@@ -51251,6 +51325,9 @@ function applyClientPayloadToLocal(payload) {
     store.profile = Object.assign({}, store.profile || {}, payload.profile);
   }
   if (DATA) {
+    if (typeof normalizeNutritionMeals === 'function' && store.nutrition) {
+      store.nutrition = normalizeNutritionMeals(store.nutrition);
+    }
     DATA.nutrition = store.nutrition;
     DATA.supplementation = store.supplementation;
     DATA.therapy = store.therapy;
@@ -51334,11 +51411,41 @@ function startClientLivePoll() {
       if (Array.isArray(data.bodyChecks)) store.bodyChecks = JSON.parse(JSON.stringify(data.bodyChecks));
       if (data.nutritionDaily) store.nutritionDaily = JSON.parse(JSON.stringify(data.nutritionDaily));
       if (data.subs) store.subs = JSON.parse(JSON.stringify(data.subs));
-      if (data.activeProgram) {
+      // Never wipe domain edits with a stale activeProgram shell from live poll
+      const keepLocalNutr = !!(store.__cpNutritionDirty || store.__cpKeepLocalNutrition);
+      const keepLocalSupp = !!(store.__cpSupplementsDirty || store.__cpKeepLocalSupplements);
+      const localNutr = (DATA && DATA.nutrition) || store.nutrition;
+      const localSupp = (DATA && DATA.supplementation) || store.supplementation;
+      const localTher = (DATA && DATA.therapy) || store.therapy;
+      const localExams = (DATA && DATA.exams) || store.exams;
+      if (data.activeProgram && typeof data.activeProgram === 'object') {
         try {
-          DATA = data.activeProgram;
-          store.activeProgram = data.activeProgram;
+          const next = JSON.parse(JSON.stringify(data.activeProgram));
+          const remoteNutr = preferFilledNutrition(data.nutrition, next.nutrition);
+          const remoteSupp = preferFilledSupplementation(data.supplementation, next.supplementation);
+          next.nutrition = keepLocalNutr ? preferFilledNutrition(localNutr, remoteNutr) : preferFilledNutrition(remoteNutr, localNutr);
+          next.supplementation = keepLocalSupp ? preferFilledSupplementation(localSupp, remoteSupp) : preferFilledSupplementation(remoteSupp, localSupp);
+          next.therapy = data.therapy || next.therapy || localTher || null;
+          next.exams = data.exams || next.exams || localExams || null;
+          if (typeof normalizeNutritionMeals === 'function' && next.nutrition) {
+            next.nutrition = normalizeNutritionMeals(next.nutrition);
+          }
+          DATA = next;
+          store.activeProgram = next;
+          store.nutrition = next.nutrition;
+          store.supplementation = next.supplementation;
+          store.therapy = next.therapy;
+          store.exams = next.exams;
         } catch (_) {}
+      } else {
+        if (!keepLocalNutr && data.nutrition) {
+          store.nutrition = preferFilledNutrition(data.nutrition, localNutr);
+          if (DATA) DATA.nutrition = store.nutrition;
+        }
+        if (!keepLocalSupp && data.supplementation) {
+          store.supplementation = preferFilledSupplementation(data.supplementation, localSupp);
+          if (DATA) DATA.supplementation = store.supplementation;
+        }
       }
       let dataFp = '';
       try {
@@ -52063,7 +52170,21 @@ async function pushCoachClientEdits(opts) {
         body: JSON.stringify({ data: payload, notify: true })
       }, 25000);
     }, 'Salvo…', { immediate: true, maxMs: 30000 });
-    if (store.coachWorkspace) store.coachWorkspace.data = Object.assign({}, store.coachWorkspace.data || {}, payload);
+    if (store.coachWorkspace) {
+      store.coachWorkspace.data = Object.assign({}, store.coachWorkspace.data || {}, payload);
+      if (payload.nutrition) {
+        store.coachWorkspace.data.nutrition = payload.nutrition;
+        if (store.coachWorkspace.data.activeProgram && typeof store.coachWorkspace.data.activeProgram === 'object') {
+          store.coachWorkspace.data.activeProgram.nutrition = payload.nutrition;
+        }
+      }
+      if (payload.supplementation) {
+        store.coachWorkspace.data.supplementation = payload.supplementation;
+        if (store.coachWorkspace.data.activeProgram && typeof store.coachWorkspace.data.activeProgram === 'object') {
+          store.coachWorkspace.data.activeProgram.supplementation = payload.supplementation;
+        }
+      }
+    }
     practiceToast('Modifiche inviate al cliente', 'success');
   } catch (err) {
     practiceToast((err && err.message) || 'Salvataggio fallito', 'danger');
