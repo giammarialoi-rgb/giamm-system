@@ -1447,9 +1447,53 @@ function exitCoachSession(force) {
   return true;
 }
 
+function emptyDomainShell(domain) {
+  const at = new Date().toISOString();
+  if (domain === 'nutrition') {
+    return {
+      plan_name: '',
+      present: false,
+      days: [],
+      daily_calories_target: null,
+      daily_protein_target: null,
+      daily_carbs_target: null,
+      daily_fats_target: null,
+      cleared: true,
+      clearedAt: at
+    };
+  }
+  if (domain === 'supplements' || domain === 'supplementation') {
+    return { protocol_name: '', items: [], present: false, cleared: true, clearedAt: at };
+  }
+  if (domain === 'therapy') {
+    return { present: false, medications: [], protocols: [], entries: [], cleared: true, clearedAt: at };
+  }
+  if (domain === 'exams') {
+    return { patient_name: '', records: [], present: false, reminders: [], cleared: true, clearedAt: at };
+  }
+  return null;
+}
+
+function isClearedDomainPayload(obj, kind) {
+  if (!obj || typeof obj !== 'object') return false;
+  if (obj.cleared === true) return true;
+  if (obj.present === false) {
+    if (kind === 'nutrition') return !(Array.isArray(obj.days) && obj.days.length);
+    if (kind === 'supplements' || kind === 'supplementation') return !(Array.isArray(obj.items) && obj.items.length);
+    if (kind === 'therapy') {
+      return !(Array.isArray(obj.medications) && obj.medications.length) &&
+        !(Array.isArray(obj.entries) && obj.entries.length);
+    }
+    if (kind === 'exams') return !(Array.isArray(obj.records) && obj.records.length);
+  }
+  return false;
+}
+
 function preferFilledNutrition(a, b) {
+  if (a && isClearedDomainPayload(a, 'nutrition')) return a;
+  if (b && isClearedDomainPayload(b, 'nutrition') && !(a && !isClearedDomainPayload(a, 'nutrition'))) return b;
   function score(n) {
-    if (!n || typeof n !== 'object') return 0;
+    if (!n || typeof n !== 'object' || isClearedDomainPayload(n, 'nutrition')) return 0;
     const days = Array.isArray(n.days) ? n.days : [];
     let foods = 0;
     days.forEach(function (d) {
@@ -1463,9 +1507,34 @@ function preferFilledNutrition(a, b) {
 }
 
 function preferFilledSupplementation(a, b) {
+  if (a && isClearedDomainPayload(a, 'supplementation')) return a;
+  if (b && isClearedDomainPayload(b, 'supplementation') && !(a && !isClearedDomainPayload(a, 'supplementation'))) return b;
   function score(s) {
-    if (!s || typeof s !== 'object') return 0;
+    if (!s || typeof s !== 'object' || isClearedDomainPayload(s, 'supplementation')) return 0;
     return (Array.isArray(s.items) ? s.items.length : 0);
+  }
+  return score(a) >= score(b) ? (a || b || null) : (b || a || null);
+}
+
+function preferFilledTherapy(a, b) {
+  if (a && isClearedDomainPayload(a, 'therapy')) return a;
+  if (b && isClearedDomainPayload(b, 'therapy') && !(a && !isClearedDomainPayload(a, 'therapy'))) return b;
+  function score(t) {
+    if (!t || typeof t !== 'object' || isClearedDomainPayload(t, 'therapy')) return 0;
+    return (Array.isArray(t.medications) ? t.medications.length : 0) +
+      (Array.isArray(t.entries) ? t.entries.length : 0) +
+      (Array.isArray(t.protocols) ? t.protocols.length : 0);
+  }
+  return score(a) >= score(b) ? (a || b || null) : (b || a || null);
+}
+
+function preferFilledExams(a, b) {
+  if (a && isClearedDomainPayload(a, 'exams')) return a;
+  if (b && isClearedDomainPayload(b, 'exams') && !(a && !isClearedDomainPayload(a, 'exams'))) return b;
+  function score(e) {
+    if (!e || typeof e !== 'object' || isClearedDomainPayload(e, 'exams')) return 0;
+    return (Array.isArray(e.records) ? e.records.length : 0) +
+      (Array.isArray(e.items) ? e.items.length : 0);
   }
   return score(a) >= score(b) ? (a || b || null) : (b || a || null);
 }
@@ -1593,6 +1662,9 @@ function startClientLivePoll() {
       // Never wipe domain edits with a stale activeProgram shell from live poll
       const keepLocalNutr = !!(store.__cpNutritionDirty || store.__cpKeepLocalNutrition);
       const keepLocalSupp = !!(store.__cpSupplementsDirty || store.__cpKeepLocalSupplements);
+      const keepLocalTher = !!store.__cpTherapyCleared;
+      const keepLocalExams = !!store.__cpExamsCleared;
+      const keepLocalTraining = !!store.__cpTrainingCleared;
       const localNutr = (DATA && DATA.nutrition) || store.nutrition;
       const localSupp = (DATA && DATA.supplementation) || store.supplementation;
       const localTher = (DATA && DATA.therapy) || store.therapy;
@@ -1600,13 +1672,20 @@ function startClientLivePoll() {
       if (data.activeProgram && typeof data.activeProgram === 'object') {
         try {
           const next = JSON.parse(JSON.stringify(data.activeProgram));
+          if (keepLocalTraining && DATA && Array.isArray(DATA.weeks) && !DATA.weeks.length && DATA.clearedTraining) {
+            next.weeks = [];
+            next.title = DATA.title || '';
+            next.clearedTraining = true;
+          }
           const remoteNutr = preferFilledNutrition(data.nutrition, next.nutrition);
           const remoteSupp = preferFilledSupplementation(data.supplementation, next.supplementation);
+          const remoteTher = preferFilledTherapy(data.therapy, next.therapy);
+          const remoteExams = preferFilledExams(data.exams, next.exams);
           next.nutrition = keepLocalNutr ? preferFilledNutrition(localNutr, remoteNutr) : preferFilledNutrition(remoteNutr, localNutr);
           next.supplementation = keepLocalSupp ? preferFilledSupplementation(localSupp, remoteSupp) : preferFilledSupplementation(remoteSupp, localSupp);
-          next.therapy = data.therapy || next.therapy || localTher || null;
-          next.exams = data.exams || next.exams || localExams || null;
-          if (typeof normalizeNutritionMeals === 'function' && next.nutrition) {
+          next.therapy = keepLocalTher ? preferFilledTherapy(localTher, remoteTher) : preferFilledTherapy(remoteTher, localTher);
+          next.exams = keepLocalExams ? preferFilledExams(localExams, remoteExams) : preferFilledExams(remoteExams, localExams);
+          if (typeof normalizeNutritionMeals === 'function' && next.nutrition && !isClearedDomainPayload(next.nutrition, 'nutrition')) {
             next.nutrition = normalizeNutritionMeals(next.nutrition);
           }
           DATA = next;
@@ -1624,6 +1703,14 @@ function startClientLivePoll() {
         if (!keepLocalSupp && data.supplementation) {
           store.supplementation = preferFilledSupplementation(data.supplementation, localSupp);
           if (DATA) DATA.supplementation = store.supplementation;
+        }
+        if (!keepLocalTher && data.therapy) {
+          store.therapy = preferFilledTherapy(data.therapy, localTher);
+          if (DATA) DATA.therapy = store.therapy;
+        }
+        if (!keepLocalExams && data.exams) {
+          store.exams = preferFilledExams(data.exams, localExams);
+          if (DATA) DATA.exams = store.exams;
         }
       }
       let dataFp = '';
@@ -1986,30 +2073,45 @@ async function clearCoachClientDomain(domain) {
   const label = labels[domain] || domain;
   if (!window.confirm('Cancellare ' + label + ' del cliente? Le modifiche verranno inviate al cliente.')) return;
   try {
+    const pushDomain = domain === 'supplements' ? 'supplements' : domain;
     if (domain === 'training') {
       if (typeof DATA !== 'undefined' && DATA) {
         DATA.weeks = [];
-        if (DATA.title) DATA.title = '';
+        DATA.title = '';
+        DATA.clearedTraining = true;
+        DATA.clearedAt = new Date().toISOString();
       }
       store.customSets = {};
       store.subs = {};
+      store.__cpTrainingCleared = true;
     } else if (domain === 'nutrition') {
-      store.nutrition = null;
-      if (typeof DATA !== 'undefined' && DATA) DATA.nutrition = null;
+      const empty = emptyDomainShell('nutrition');
+      store.nutrition = empty;
+      if (typeof DATA !== 'undefined' && DATA) DATA.nutrition = empty;
+      store.__cpNutritionDirty = true;
+      store.__cpKeepLocalNutrition = true;
     } else if (domain === 'supplements') {
-      store.supplementation = null;
-      if (typeof DATA !== 'undefined' && DATA) DATA.supplementation = null;
+      const empty = emptyDomainShell('supplements');
+      store.supplementation = empty;
+      if (typeof DATA !== 'undefined' && DATA) DATA.supplementation = empty;
+      store.__cpSupplementsDirty = true;
+      store.__cpKeepLocalSupplements = true;
     } else if (domain === 'therapy') {
-      store.therapy = null;
-      if (typeof DATA !== 'undefined' && DATA) DATA.therapy = null;
+      const empty = emptyDomainShell('therapy');
+      store.therapy = empty;
+      if (typeof DATA !== 'undefined' && DATA) DATA.therapy = empty;
+      store.__cpTherapyCleared = true;
     } else if (domain === 'exams') {
-      store.exams = null;
-      if (typeof DATA !== 'undefined' && DATA) DATA.exams = null;
+      const empty = emptyDomainShell('exams');
+      store.exams = empty;
+      if (typeof DATA !== 'undefined' && DATA) DATA.exams = empty;
+      store.__cpExamsCleared = true;
     } else {
       return;
     }
     if (typeof persist === 'function') persist();
-    await pushCoachClientEdits();
+    await pushCoachClientEdits({ domains: [pushDomain], cleared: true });
+    practiceToast(label.charAt(0).toUpperCase() + label.slice(1) + ' cancellata', 'success');
     if (typeof render === 'function') render();
   } catch (err) {
     practiceToast((err && err.message) || 'Cancellazione fallita', 'danger');
@@ -2299,16 +2401,17 @@ async function pushCoachClientEdits(opts) {
   const id = store.coachWorkspace && store.coachWorkspace.clientId;
   if (!id || !store.coachViewingClient) return;
   const domains = Array.isArray(opts.domains) ? opts.domains : null;
+  const silentToast = !!opts.cleared;
   if (typeof DATA !== 'undefined' && DATA) {
-    if (store.nutrition) DATA.nutrition = store.nutrition;
-    if (store.supplementation) DATA.supplementation = store.supplementation;
-    if (store.therapy) DATA.therapy = store.therapy;
-    if (store.exams) DATA.exams = store.exams;
+    if (store.nutrition != null) DATA.nutrition = store.nutrition;
+    if (store.supplementation != null) DATA.supplementation = store.supplementation;
+    if (store.therapy != null) DATA.therapy = store.therapy;
+    if (store.exams != null) DATA.exams = store.exams;
   }
-  const nutr = store.nutrition || (DATA && DATA.nutrition) || null;
-  const supp = store.supplementation || (DATA && DATA.supplementation) || null;
-  const ther = store.therapy || (DATA && DATA.therapy) || null;
-  const exams = store.exams || (DATA && DATA.exams) || null;
+  const nutr = (store.nutrition != null) ? store.nutrition : ((DATA && DATA.nutrition) || null);
+  const supp = (store.supplementation != null) ? store.supplementation : ((DATA && DATA.supplementation) || null);
+  const ther = (store.therapy != null) ? store.therapy : ((DATA && DATA.therapy) || null);
+  const exams = (store.exams != null) ? store.exams : ((DATA && DATA.exams) || null);
   let payload;
   if (domains && domains.length) {
     payload = {};
@@ -2320,8 +2423,14 @@ async function pushCoachClientEdits(opts) {
       payload.supplementation = supp;
       payload.activeProgram = Object.assign({}, payload.activeProgram || (DATA && typeof DATA === 'object' ? DATA : { title: 'Piano cliente', weeks: [] }), { supplementation: supp });
     }
-    if (domains.indexOf('therapy') >= 0) payload.therapy = ther;
-    if (domains.indexOf('exams') >= 0) payload.exams = exams;
+    if (domains.indexOf('therapy') >= 0) {
+      payload.therapy = ther;
+      payload.activeProgram = Object.assign({}, payload.activeProgram || (DATA && typeof DATA === 'object' ? DATA : { title: 'Piano cliente', weeks: [] }), { therapy: ther });
+    }
+    if (domains.indexOf('exams') >= 0) {
+      payload.exams = exams;
+      payload.activeProgram = Object.assign({}, payload.activeProgram || (DATA && typeof DATA === 'object' ? DATA : { title: 'Piano cliente', weeks: [] }), { exams: exams });
+    }
     if (domains.indexOf('training') >= 0) {
       payload.activeProgram = typeof DATA !== 'undefined' ? DATA : null;
       payload.data = store.data || {};
@@ -2346,25 +2455,40 @@ async function pushCoachClientEdits(opts) {
     await withBusy(async function () {
       await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/patch-data', {
         method: 'POST', headers: practiceHeaders(true),
-        body: JSON.stringify({ data: payload, notify: true })
+        body: JSON.stringify({ data: payload, notify: true, summary: silentToast ? 'Il coach ha cancellato una sezione del piano' : undefined })
       }, 25000);
-    }, 'Salvo…', { immediate: true, maxMs: 30000 });
+    }, silentToast ? 'Cancello…' : 'Salvo…', { immediate: true, maxMs: 30000 });
     if (store.coachWorkspace) {
       store.coachWorkspace.data = Object.assign({}, store.coachWorkspace.data || {}, payload);
-      if (payload.nutrition) {
+      if (Object.prototype.hasOwnProperty.call(payload, 'nutrition')) {
         store.coachWorkspace.data.nutrition = payload.nutrition;
         if (store.coachWorkspace.data.activeProgram && typeof store.coachWorkspace.data.activeProgram === 'object') {
           store.coachWorkspace.data.activeProgram.nutrition = payload.nutrition;
         }
       }
-      if (payload.supplementation) {
+      if (Object.prototype.hasOwnProperty.call(payload, 'supplementation')) {
         store.coachWorkspace.data.supplementation = payload.supplementation;
         if (store.coachWorkspace.data.activeProgram && typeof store.coachWorkspace.data.activeProgram === 'object') {
           store.coachWorkspace.data.activeProgram.supplementation = payload.supplementation;
         }
       }
+      if (Object.prototype.hasOwnProperty.call(payload, 'therapy')) {
+        store.coachWorkspace.data.therapy = payload.therapy;
+        if (store.coachWorkspace.data.activeProgram && typeof store.coachWorkspace.data.activeProgram === 'object') {
+          store.coachWorkspace.data.activeProgram.therapy = payload.therapy;
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(payload, 'exams')) {
+        store.coachWorkspace.data.exams = payload.exams;
+        if (store.coachWorkspace.data.activeProgram && typeof store.coachWorkspace.data.activeProgram === 'object') {
+          store.coachWorkspace.data.activeProgram.exams = payload.exams;
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(payload, 'activeProgram') && payload.activeProgram) {
+        store.coachWorkspace.data.activeProgram = payload.activeProgram;
+      }
     }
-    practiceToast('Modifiche inviate al cliente', 'success');
+    if (!silentToast) practiceToast('Modifiche inviate al cliente', 'success');
   } catch (err) {
     practiceToast((err && err.message) || 'Salvataggio fallito', 'danger');
     throw err;

@@ -199,7 +199,10 @@ assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY")
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v28-coach"), "SW push + cache v28");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v29-coach"), "SW push + cache v29");
+assert(ui.includes("emptyDomainShell") && ui.includes("isClearedDomainPayload") && ui.includes("cleared: true"), "domain clear empty shells");
+assert(ui.includes("preferFilledTherapy") && ui.includes("__cpTherapyCleared") && ui.includes("__cpTrainingCleared"), "clear therapy/training keep flags");
+assert(practice.includes("CLEARABLE") && practice.includes("emptyCleared") && practice.includes("clearedTraining"), "API patch-data accepts domain clears");
 assert(base.includes("normalizeNutritionMeals") && ui.includes("preferFilledNutrition") && ui.includes("keepLocalNutr"), "nutrition meal normalize + coach live poll keep");
 assert(sw.includes("setAppBadge"), "SW badging API");
 
