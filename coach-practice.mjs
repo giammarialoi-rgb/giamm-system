@@ -7,6 +7,21 @@ import {
   resolveCoachOsFeatureFlags
 } from "./feature-flags.mjs";
 import { loadCoachToday } from "./server/coach-os/today.mjs";
+import {
+  buildClientOverview,
+  createCoachTask,
+  createSavedView,
+  DEFAULT_SAVED_VIEWS,
+  listClientTimeline,
+  listCoachAttention,
+  listCoachTasks,
+  listSavedViews,
+  projectClientTimeline,
+  reorderCoachTasks,
+  syncCoachAttention,
+  updateCoachAttention,
+  updateCoachTask
+} from "./server/coach-os/workspace.mjs";
 
 function slugName(name) {
   const s = String(name || "atleta")
@@ -154,6 +169,7 @@ function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
     id: String(r.id),
     displayName: r.display_name,
     username: r.username,
+    photo: r.photo_thumb || r.photo_url || null,
     status: r.status,
     paid: !!r.paid,
     billingCycle: r.billing_cycle || "monthly",
@@ -1271,11 +1287,131 @@ export function mountCoachPractice(app, deps) {
         date: req.query.date,
         timeZone: req.query.timezone
       });
+      await syncCoachAttention(pool, coach.id, today.attention);
+      today.attention = await listCoachAttention(pool, coach.id, { limit: 12 });
+      today.tasks = await listCoachTasks(pool, coach.id, { status: "open", limit: 8 });
+      today.kpi.attention = today.attention.length;
       return res.json({ ok: true, ...today });
     } catch (error) {
       console.error("COACH_TODAY", error && error.message ? error.message : error);
       return res.status(500).json({ error: "Impossibile caricare Today." });
     }
+  });
+
+  app.get("/api/coach/attention", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const items = await listCoachAttention(pool, coach.id, {
+      limit: req.query.limit,
+      includeClosed: req.query.includeClosed === "true"
+    });
+    return res.json({ ok: true, items });
+  });
+
+  app.patch("/api/coach/attention/:id", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const item = await updateCoachAttention(pool, coach.id, req.params.id, req.body || {});
+      if (!item) return res.status(404).json({ error: "Attention non trovata." });
+      return res.json({ ok: true, item });
+    } catch (error) {
+      return res.status(400).json({ error: error.message || "Attention non valida." });
+    }
+  });
+
+  app.get("/api/coach/tasks", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const tasks = await listCoachTasks(pool, coach.id, {
+      status: req.query.status,
+      limit: req.query.limit
+    });
+    return res.json({ ok: true, tasks });
+  });
+
+  app.post("/api/coach/tasks", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    if (req.body?.clientId) {
+      const owned = await loadOwnedClient(coach, req.body.clientId, res);
+      if (!owned) return;
+    }
+    try {
+      const task = await createCoachTask(pool, coach.id, req.body || {});
+      return res.status(201).json({ ok: true, task });
+    } catch (error) {
+      return res.status(400).json({ error: error.message || "Task non valido." });
+    }
+  });
+
+  app.patch("/api/coach/tasks/:id", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const task = await updateCoachTask(pool, coach.id, req.params.id, req.body || {});
+      if (!task) return res.status(404).json({ error: "Task non trovato." });
+      return res.json({ ok: true, task });
+    } catch (error) {
+      return res.status(400).json({ error: error.message || "Task non valido." });
+    }
+  });
+
+  app.post("/api/coach/tasks/reorder", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const tasks = await reorderCoachTasks(pool, coach.id, req.body?.ids || []);
+    return res.json({ ok: true, tasks });
+  });
+
+  app.get("/api/coach/tasks/daily-summary", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const tasks = await listCoachTasks(pool, coach.id, { status: "open", limit: 100 });
+    const counts = tasks.reduce((out, task) => {
+      out[task.priority] = (out[task.priority] || 0) + 1;
+      return out;
+    }, {});
+    return res.json({
+      ok: true,
+      summary: {
+        total: tasks.length,
+        byPriority: counts,
+        overdue: tasks.filter((task) => task.dueAt && new Date(task.dueAt).getTime() < Date.now()).length
+      },
+      tasks
+    });
+  });
+
+  app.get("/api/coach/saved-views", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const views = await listSavedViews(pool, coach.id);
+    return res.json({ ok: true, views });
+  });
+
+  app.post("/api/coach/saved-views", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const view = await createSavedView(pool, coach.id, req.body || {});
+      return res.status(201).json({ ok: true, view });
+    } catch (error) {
+      return res.status(400).json({ error: error.message || "Vista non valida." });
+    }
+  });
+
+  app.delete("/api/coach/saved-views/:id", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    if (String(req.params.id).startsWith("system:")) {
+      return res.status(400).json({ error: "Le viste di sistema non si eliminano." });
+    }
+    await pool.query(
+      "DELETE FROM coach_saved_views WHERE id = $1 AND coach_user_id = $2 AND is_system = FALSE",
+      [req.params.id, coach.id]
+    );
+    return res.json({ ok: true });
   });
 
   app.get("/api/webrtc/ice", async (_req, res) => {
@@ -1311,32 +1447,103 @@ export function mountCoachPractice(app, deps) {
     const coach = await requireCoach(req, res);
     if (!coach) return;
     const q = String(req.query.q || "").trim();
-    const limit = Math.min(40, Math.max(10, Number(req.query.limit) || 30));
-    const offset = Math.max(0, Number(req.query.offset) || 0);
-    const params = [coach.id, limit, offset];
-    let where = "coach_user_id = $1 AND status <> 'removed'";
-    if (q) {
-      params.push("%" + q.toLowerCase() + "%");
-      where += ` AND (LOWER(display_name) LIKE $4 OR username LIKE $4)`;
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 30));
+    const cursorOffset = Math.max(0, Number(req.query.cursor) || Number(req.query.offset) || 0);
+    let filter = String(req.query.filter || "all").toLowerCase();
+    let sort = String(req.query.sort || "name").toLowerCase();
+    const savedViewId = String(req.query.savedViewId || "");
+    if (savedViewId) {
+      const systemView = DEFAULT_SAVED_VIEWS.find((view) => view.id === savedViewId);
+      if (systemView) {
+        filter = systemView.filters.filter || filter;
+        sort = systemView.sort.by || sort;
+      } else if (/^\d+$/.test(savedViewId)) {
+        const saved = await pool.query(
+          "SELECT filters, sort FROM coach_saved_views WHERE id = $1 AND coach_user_id = $2",
+          [savedViewId, coach.id]
+        );
+        if (saved.rows[0]) {
+          filter = String(saved.rows[0].filters?.filter || filter).toLowerCase();
+          sort = String(saved.rows[0].sort?.by || sort).toLowerCase();
+        }
+      }
     }
+
+    const params = [coach.id];
+    const conditions = ["c.coach_user_id = $1", "c.status <> 'removed'"];
+    const addParam = (value) => {
+      params.push(value);
+      return "$" + params.length;
+    };
+    if (q) {
+      const p = addParam("%" + q.toLowerCase() + "%");
+      conditions.push(`(LOWER(c.display_name) LIKE ${p} OR LOWER(c.username) LIKE ${p})`);
+    }
+    if (req.query.status && ["active", "revoked"].includes(String(req.query.status))) {
+      conditions.push(`c.status = ${addParam(String(req.query.status))}`);
+    }
+    const attentionCondition = `(
+      c.unread_count > 0 OR c.pending_change IS NOT NULL OR c.pending_unlock IS NOT NULL
+      OR c.leave_requested_at IS NOT NULL OR c.paid = FALSE
+      OR (c.next_due_at IS NOT NULL AND c.next_due_at <= NOW())
+      OR (c.next_check_at IS NOT NULL AND c.next_check_at <= NOW())
+      OR (c.program_expires_at IS NOT NULL AND c.program_expires_at <= NOW() + INTERVAL '7 days')
+      OR (c.last_workout_at IS NOT NULL AND c.last_workout_at <= NOW() - INTERVAL '7 days')
+      OR (c.last_workout_at IS NULL AND c.created_at <= NOW() - INTERVAL '7 days')
+    )`;
+    const filters = {
+      active: "c.status = 'active'",
+      inactive: "(c.last_workout_at <= NOW() - INTERVAL '7 days' OR (c.last_workout_at IS NULL AND c.created_at <= NOW() - INTERVAL '7 days'))",
+      attention: attentionCondition,
+      checkin: "(c.next_check_at IS NOT NULL AND c.next_check_at <= NOW())",
+      payment: "(c.paid = FALSE OR (c.next_due_at IS NOT NULL AND c.next_due_at <= NOW()))",
+      program: "jsonb_array_length(COALESCE(d.data->'activeProgram'->'weeks', '[]'::jsonb)) > 0",
+      nutrition: "(d.data ? 'nutrition' OR (d.data->'activeProgram') ? 'nutrition')",
+      injury: "(COALESCE(c.intake->>'injuryPrimary','') NOT IN ('', 'Nessuno'))",
+      unread: "c.unread_count > 0",
+      new: "c.created_at >= NOW() - INTERVAL '30 days'"
+    };
+    if (filters[filter]) conditions.push(filters[filter]);
+
+    const orderBy = {
+      name: "LOWER(c.display_name) ASC, c.id ASC",
+      recent: "c.last_workout_at DESC NULLS LAST, c.id DESC",
+      due: "COALESCE(c.next_due_at, c.next_check_at, c.program_expires_at) ASC NULLS LAST, c.id ASC",
+      attention: `${attentionCondition} DESC, c.unread_count DESC, c.display_name ASC`
+    }[sort] || "LOWER(c.display_name) ASC, c.id ASC";
+    const where = conditions.join(" AND ");
+    const countParams = params.slice();
+    const limitParam = addParam(limit);
+    const offsetParam = addParam(cursorOffset);
     const rows = await pool.query(
-      `SELECT id, display_name, username, status, paid, billing_cycle, next_due_at, allow_program_db,
-              last_workout_at, last_seen_at, workout_started_at, program_expires_at, next_check_at,
-              unread_count, invite_token, created_at, intake_mode, intake_completed_at,
-              leave_requested_at, chat_thread, allow_max_freedom, allow_nurvan_ai, pending_change, pending_unlock
-       FROM coach_clients WHERE ${where}
-       ORDER BY display_name ASC
-       LIMIT $2 OFFSET $3`,
+      `SELECT c.id, c.display_name, c.username, c.status, c.paid, c.billing_cycle, c.next_due_at, c.allow_program_db,
+              c.last_workout_at, c.last_seen_at, c.workout_started_at, c.program_expires_at, c.next_check_at,
+              c.unread_count, c.invite_token, c.created_at, c.intake_mode, c.intake, c.intake_completed_at,
+              c.leave_requested_at, c.chat_thread, c.allow_max_freedom, c.allow_nurvan_ai, c.pending_change, c.pending_unlock,
+              d.data->'profile'->>'photoThumb' AS photo_thumb,
+              d.data->'profile'->>'photoUrl' AS photo_url
+       FROM coach_clients c
+       LEFT JOIN app_account_data d ON d.user_id = c.athlete_user_id
+       WHERE ${where}
+       ORDER BY ${orderBy}
+       LIMIT ${limitParam} OFFSET ${offsetParam}`,
       params
     );
     const count = await pool.query(
-      `SELECT COUNT(*)::int AS n FROM coach_clients WHERE ${where.replace("$4", "$2")}`,
-      q ? [coach.id, "%" + q.toLowerCase() + "%"] : [coach.id]
+      `SELECT COUNT(*)::int AS n
+       FROM coach_clients c
+       LEFT JOIN app_account_data d ON d.user_id = c.athlete_user_id
+       WHERE ${where}`,
+      countParams
     );
+    const total = count.rows[0]?.n || 0;
     return res.json({
       ok: true,
       clients: rows.rows.map(clientRow),
-      total: count.rows[0]?.n || 0,
+      total,
+      filter,
+      sort,
+      nextCursor: cursorOffset + rows.rows.length < total ? String(cursorOffset + rows.rows.length) : null,
       origin: publicOrigin(req)
     });
   });
@@ -1447,6 +1654,47 @@ export function mountCoachPractice(app, deps) {
     }
     return q.rows[0];
   }
+
+  app.get("/api/coach/clients/:id/overview", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const client = await loadOwnedClient(coach, req.params.id, res);
+    if (!client) return;
+    try {
+      const dataResult = await pool.query(
+        "SELECT data FROM app_account_data WHERE user_id = $1",
+        [client.athlete_user_id]
+      );
+      const data = dataResult.rows[0]?.data || {};
+      const overview = await buildClientOverview(pool, coach.id, client, data);
+      return res.json({ ok: true, ...overview });
+    } catch (error) {
+      console.error("CLIENT_OVERVIEW", error && error.message ? error.message : error);
+      return res.status(500).json({ error: "Impossibile caricare il riepilogo cliente." });
+    }
+  });
+
+  app.get("/api/coach/clients/:id/timeline", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const client = await loadOwnedClient(coach, req.params.id, res);
+    if (!client) return;
+    try {
+      const dataResult = await pool.query(
+        "SELECT data FROM app_account_data WHERE user_id = $1",
+        [client.athlete_user_id]
+      );
+      await projectClientTimeline(pool, coach.id, client, dataResult.rows[0]?.data || {});
+      const timeline = await listClientTimeline(pool, coach.id, client.id, {
+        limit: req.query.limit,
+        cursor: req.query.cursor
+      });
+      return res.json({ ok: true, ...timeline });
+    } catch (error) {
+      console.error("CLIENT_TIMELINE", error && error.message ? error.message : error);
+      return res.status(500).json({ error: "Impossibile caricare la timeline." });
+    }
+  });
 
   app.post("/api/coach/clients/:id/revoke", async (req, res) => {
     const coach = await requireCoach(req, res);

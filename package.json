@@ -13,6 +13,7 @@
     "test": "node test_master_task26_stabilization.mjs",
     "test:phase0": "node test_phase0_foundation.mjs",
     "test:phase1": "node test_phase1_coach_ui.mjs",
+    "test:phase2": "node test_phase2_clients.mjs",
     "test:coach": "node test_coach_practice.mjs",
     "test:25": "node test_master_task25_e2e_fidelity.mjs",
     "test:26": "node test_master_task26_stabilization.mjs",
@@ -25,7 +26,7 @@
     "test:33": "node test_master_task33_beta.mjs",
     "generate:science10k": "node generate_science_programs_10k.mjs",
     "test:science10k": "node test_science_catalog_10k.mjs",
-    "test:regression": "node test_phase0_foundation.mjs && node test_phase1_coach_ui.mjs && node test_coach_practice.mjs && node test_master_task26_stabilization.mjs && node test_master_task25_e2e_fidelity.mjs && node test_master_task20_architecture.mjs"
+    "test:regression": "node test_phase0_foundation.mjs && node test_phase1_coach_ui.mjs && node test_phase2_clients.mjs && node test_coach_practice.mjs && node test_master_task26_stabilization.mjs && node test_master_task25_e2e_fidelity.mjs && node test_master_task20_architecture.mjs"
   },
   "engines": {
     "node": ">=20"
