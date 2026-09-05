@@ -1,7 +1,11 @@
 //file:noinspection GrDeprecatedAPIUsage
+import groovy.json.JsonSlurper
+
 plugins {
     id 'com.android.application'
 }
+
+def releaseMeta = new JsonSlurper().parse(rootProject.file('release.json'))
 
 android {
     namespace 'com.giammaria.system'
@@ -12,8 +16,8 @@ android {
         applicationId "com.giammaria.system"
         minSdk 26
         targetSdk 35
-        versionCode 41
-        versionName "1.5.34"
+        versionCode (releaseMeta.androidVersionCode as Integer)
+        versionName (releaseMeta.versionName as String)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // The production endpoint is public; it can be replaced at build time
         // with -PcoachApiUrl=https://another-host.example.

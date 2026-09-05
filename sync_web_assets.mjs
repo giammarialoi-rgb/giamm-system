@@ -20,6 +20,7 @@ export const ANDROID_STATIC_ASSETS = [
   'allergen-intolerance-catalog.json',
   'manifest.webmanifest',
   'sw.js',
+  'release-meta.js',
   'apple-touch-icon.png',
   'icon-180.png',
   'icon-192.png',

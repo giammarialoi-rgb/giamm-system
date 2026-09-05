@@ -22,7 +22,10 @@ import {
 import { GiammariaPersistenceEngine, getDeterministicFingerprint } from './persistence-core.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
-const GOLDEN = path.join(ROOT, 'GIANMARIA LOI(2).xlsx');
+const GOLDEN_ROOT = path.join(ROOT, 'GIANMARIA LOI(2).xlsx');
+const GOLDEN = fs.existsSync(GOLDEN_ROOT)
+  ? GOLDEN_ROOT
+  : path.join(ROOT, 'app/src/androidTest/assets/GIANMARIA LOI(2).xlsx');
 const PDF_FIXTURE = path.join(ROOT, 'test_workout.pdf');
 const BASE = path.join(ROOT, 'web/index.base.html');
 const WEB = path.join(ROOT, 'web/index.html');
@@ -189,6 +192,7 @@ async function main() {
   console.log('=== MASTER TASK 33 — BETA FINALIZATION ===\n');
   const baseHtml = fs.readFileSync(BASE, 'utf8');
   const buildSrc = fs.readFileSync(BUILD, 'utf8');
+  const releaseMeta = JSON.parse(fs.readFileSync(path.join(ROOT, 'release.json'), 'utf8'));
 
   console.log('[P0] App start / navigation / runtime contracts...');
   assert(/function init\s*\(/.test(baseHtml), 'init() defined');
@@ -198,7 +202,7 @@ async function main() {
     assert(baseHtml.includes(`navigate('${view}')`) || baseHtml.includes(`currentView === '${view}'`), `view ${view} routed`);
   }
   assert(/file:\/\/\/android_asset\/index\.html/.test(fs.readFileSync(path.join(ROOT, 'app/src/main/java/com/giammaria/system/MainActivity.java'), 'utf8')), 'MainActivity loads android_asset/index.html');
-  assert(/build:\s*"MASTER-TASK-33"/.test(buildSrc), 'Build tag MASTER-TASK-33 in pipeline');
+  assert(buildSrc.includes('RELEASE_META') && releaseMeta.webBuild, 'Build tag comes from release metadata');
 
   console.log('\n[P0] Excel import E2E golden GIANMARIA LOI(2).xlsx...');
   assert(fs.existsSync(GOLDEN), 'Golden Excel exists');
@@ -378,7 +382,7 @@ async function main() {
   assert(fs.existsSync(WEB) && fs.existsSync(ASSETS), 'Built web + assets exist');
   if (fs.existsSync(WEB) && fs.existsSync(ASSETS)) {
     const webHtml = fs.readFileSync(WEB, 'utf8');
-    assert(/MASTER-TASK-33/.test(webHtml), 'Built bundle tagged MASTER-TASK-33');
+    assert(webHtml.includes(releaseMeta.webBuild), 'Built bundle tagged from release metadata');
     assert(md5(WEB) === md5(ASSETS), 'web/index.html MD5 == assets/index.html');
     assert(/JSON\.parse\(JSON\.stringify\(obj\)\)/.test(webHtml), 'Fingerprint clones aliases before hash');
     assert(/extractPdfPlainText/.test(webHtml), 'PDF extractor in built Android bundle');

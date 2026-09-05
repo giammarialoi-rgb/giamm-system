@@ -59,6 +59,36 @@ async function practiceFetch(path, options, timeoutMs) {
   return res.json();
 }
 
+function coachFeatureDefaultsFromConfig() {
+  try {
+    return Object.assign({}, (window.CONFIG && window.CONFIG.features) || {});
+  } catch (_) {
+    return {};
+  }
+}
+
+function coachFeatureEnabled(name) {
+  const defaults = coachFeatureDefaultsFromConfig();
+  const remote = (store && store.coachFeatureFlags) || {};
+  if (typeof remote[name] === 'boolean') return remote[name];
+  return defaults[name] === true;
+}
+
+async function refreshCoachFeatureFlags() {
+  if (!store || !store.accountToken || (typeof isAthleteRole === 'function' && isAthleteRole())) return {};
+  try {
+    const payload = await practiceFetch('/api/coach/features', {
+      method: 'GET',
+      headers: practiceHeaders(false)
+    }, 12000);
+    if (payload && payload.flags && typeof payload.flags === 'object') {
+      store.coachFeatureFlags = Object.assign({}, payload.flags);
+      if (typeof persist === 'function') persist();
+    }
+  } catch (_) {}
+  return Object.assign({}, store.coachFeatureFlags || {});
+}
+
 function practiceToast(msg, kind) {
   if (typeof showToast === 'function') showToast(msg, kind || 'success');
   else try { console.log('[PRACTICE]', msg); } catch (_) {}
@@ -4885,7 +4915,7 @@ async function pollPracticeInbox() {
 function renderPracticeView() {
   const c = typeof $ === 'function' ? $('view-container') : document.getElementById('view-container');
   if (!c) return false;
-  if (document.body && currentView !== 'clientChat' && currentView !== 'coachChat') {
+  if (document.body && document.body.classList && currentView !== 'clientChat' && currentView !== 'coachChat') {
     document.body.classList.remove('cp-chat-view');
   }
   if (currentView === 'coachHub') { ensurePracticeStyle(); c.innerHTML = ''; renderCoachHub(c); applyClientChrome(); return true; }
@@ -5155,6 +5185,9 @@ async function refreshCoachStatus() {
     store.coachUnlocked = !!(s && s.unlocked);
     store.coachHidePresence = !!(s && s.hidePresence);
     store.coachAllowVideocall = s && s.allowVideocall !== false;
+    if (s && s.featureFlags && typeof s.featureFlags === 'object') {
+      store.coachFeatureFlags = Object.assign({}, s.featureFlags);
+    }
     if (typeof persist === 'function') persist();
   } catch (_) {}
 }
@@ -6168,6 +6201,8 @@ window.ensureOfflineSyncListeners = ensureOfflineSyncListeners;
 window.flushAllOfflineQueues = flushAllOfflineQueues;
 window.isAppOnline = isAppOnline;
 window.queueAccountSyncIfOffline = queueAccountSyncIfOffline;
+window.coachFeatureEnabled = coachFeatureEnabled;
+window.refreshCoachFeatureFlags = refreshCoachFeatureFlags;
 window.isAthleteRole = isAthleteRole;
 window.isCoachUnlocked = isCoachUnlocked;
 window.clientProgramSlice = clientProgramSlice;

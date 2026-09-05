@@ -2,6 +2,10 @@ import crypto from "node:crypto";
 import path from "node:path";
 import fs from "node:fs";
 import webpush from "web-push";
+import {
+  coachOsFeaturePublicPayload,
+  resolveCoachOsFeatureFlags
+} from "./feature-flags.mjs";
 
 function slugName(name) {
   const s = String(name || "atleta")
@@ -185,7 +189,10 @@ function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
     row.needIntake = clientNeedsIntake(r);
   }
   if (includeSecrets) {
-    row.invitePassword = r.invite_password || "";
+    // Compatibility field intentionally remains empty. Invite credentials are
+    // returned once at create/reset/rotate and are never persisted in plaintext.
+    row.invitePassword = "";
+    row.credentialsAvailable = false;
   }
   return row;
 }
@@ -1219,7 +1226,7 @@ export function mountCoachPractice(app, deps) {
     if (!auth) return res.status(401).json({ error: "Unauthorized." });
     if (auth.role === "athlete") return res.json({ ok: true, unlocked: false, role: "athlete" });
     await initDb();
-    const lic = await pool.query("SELECT source, status, unlocked_at, hide_presence, last_seen_at, allow_videocall FROM coach_licenses WHERE user_id = $1", [auth.id]);
+    const lic = await pool.query("SELECT source, status, unlocked_at, hide_presence, last_seen_at, allow_videocall, feature_flags FROM coach_licenses WHERE user_id = $1", [auth.id]);
     const unlocked = !!(lic.rows[0] && lic.rows[0].status === "active");
     const hide = !!(lic.rows[0] && lic.rows[0].hide_presence);
     if (unlocked && !hide) {
@@ -1231,7 +1238,27 @@ export function mountCoachPractice(app, deps) {
       role: "coach",
       license: lic.rows[0] || null,
       hidePresence: hide,
-      allowVideocall: lic.rows[0] ? lic.rows[0].allow_videocall !== false : true
+      allowVideocall: lic.rows[0] ? lic.rows[0].allow_videocall !== false : true,
+      featureFlags: resolveCoachOsFeatureFlags({
+        env: process.env,
+        overrides: lic.rows[0] && lic.rows[0].feature_flags
+      })
+    });
+  });
+
+  app.get("/api/coach/features", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const lic = await pool.query(
+      "SELECT feature_flags FROM coach_licenses WHERE user_id = $1",
+      [coach.id]
+    );
+    return res.json({
+      ok: true,
+      ...coachOsFeaturePublicPayload({
+        env: process.env,
+        overrides: lic.rows[0] && lic.rows[0].feature_flags
+      })
     });
   });
 
@@ -1351,10 +1378,10 @@ export function mountCoachPractice(app, deps) {
       const cli = await db.query(
         `INSERT INTO coach_clients(
            coach_user_id, athlete_user_id, display_name, username, status, paid, next_due_at, invite_token,
-           intake_mode, intake, intake_completed_at, invite_password
-         ) VALUES($1,$2,$3,$4,'active',TRUE,$5,$6,$7,$8,$9,$10)
+           intake_mode, intake, intake_completed_at, invite_password, credentials_issued_at
+         ) VALUES($1,$2,$3,$4,'active',TRUE,$5,$6,$7,$8,$9,NULL,NOW())
          RETURNING *`,
-        [coach.id, athlete.id, displayName, username, due, inviteToken, intakeMode, JSON.stringify(intake), completedAt, password]
+        [coach.id, athlete.id, displayName, username, due, inviteToken, intakeMode, JSON.stringify(intake), completedAt]
       );
       if (intakeMode === "transition") {
         const profile = profileFromIntake(intake);
@@ -1382,7 +1409,7 @@ export function mountCoachPractice(app, deps) {
           password,
           token: inviteToken
         }),
-        credentials: { username, displayName, password }
+        credentials: { username, displayName, password, oneTime: true }
       });
     } catch (err) {
       await db.query("ROLLBACK");
@@ -1916,10 +1943,10 @@ export function mountCoachPractice(app, deps) {
         inviteUrl,
         inviteCode,
         username: row.username,
-        password: row.invite_password || "(reimposta dal coach)",
+        password: "(reimposta dal coach)",
         token: row.invite_token
       }),
-      credentials: { username: row.username, password: row.invite_password || "" },
+      credentials: { username: row.username, password: "", oneTime: true, requiresReset: true },
       intake: row.intake || {},
       data: data.rows[0]?.data || {},
       pendingChange: row.pending_change ? { summary: row.pending_change.summary || "modifica", at: row.pending_change.at } : null,
@@ -2089,8 +2116,21 @@ export function mountCoachPractice(app, deps) {
     });
   });
 
+  let lastCallSignalCleanupAt = 0;
+  async function cleanupOldCallSignals() {
+    const now = Date.now();
+    if (now - lastCallSignalCleanupAt < 15 * 60_000) return;
+    lastCallSignalCleanupAt = now;
+    try {
+      await pool.query(
+        "DELETE FROM coach_call_signals WHERE created_at < NOW() - INTERVAL '24 hours'"
+      );
+    } catch (_) {}
+  }
+
   async function insertCallSignal(clientId, fromRole, signal) {
     if (!signal || typeof signal !== "object") return null;
+    await cleanupOldCallSignals();
     const ins = await pool.query(
       `INSERT INTO coach_call_signals(client_id, from_role, signal)
        VALUES($1,$2,$3::jsonb) RETURNING id, from_role, signal, created_at`,
@@ -2100,6 +2140,7 @@ export function mountCoachPractice(app, deps) {
   }
 
   async function listCallSignals(clientId, afterId) {
+    await cleanupOldCallSignals();
     const rows = await pool.query(
       `SELECT id, from_role, signal, created_at FROM coach_call_signals
        WHERE client_id = $1 AND id > $2 ORDER BY id ASC LIMIT 40`,
@@ -2164,12 +2205,17 @@ export function mountCoachPractice(app, deps) {
     if (row.athlete_user_id) {
       await pool.query("UPDATE app_users SET password_hash = $2, updated_at = NOW() WHERE id = $1", [row.athlete_user_id, hash]);
     }
-    await pool.query("UPDATE coach_clients SET invite_password = $2 WHERE id = $1", [row.id, password]);
+    await pool.query(
+      `UPDATE coach_clients
+       SET invite_password = NULL, credentials_issued_at = NOW(), invite_secret_rotated_at = NOW()
+       WHERE id = $1`,
+      [row.id]
+    );
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'password_reset',$2)",
       [row.id, JSON.stringify({ username: row.username })]
     );
-    return res.json({ ok: true, credentials: { username: row.username, password } });
+    return res.json({ ok: true, credentials: { username: row.username, password, oneTime: true } });
   });
 
   app.post("/api/coach/clients/:id/rotate-invite", async (req, res) => {
@@ -2178,13 +2224,24 @@ export function mountCoachPractice(app, deps) {
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
     const inviteToken = crypto.randomBytes(12).toString("base64url");
+    const password = crypto.randomBytes(8).toString("base64url").slice(0, 12);
+    const passwordHash = await hashPassword(password);
     const email = `c.${inviteToken}@client.nurvan.internal`;
     const db = await pool.connect();
     try {
       await db.query("BEGIN");
-      await db.query("UPDATE coach_clients SET invite_token = $2 WHERE id = $1", [row.id, inviteToken]);
+      await db.query(
+        `UPDATE coach_clients
+         SET invite_token = $2, invite_password = NULL,
+             credentials_issued_at = NOW(), invite_secret_rotated_at = NOW()
+         WHERE id = $1`,
+        [row.id, inviteToken]
+      );
       if (row.athlete_user_id) {
-        await db.query("UPDATE app_users SET email = $2, updated_at = NOW() WHERE id = $1", [row.athlete_user_id, email]);
+        await db.query(
+          "UPDATE app_users SET email = $2, password_hash = $3, updated_at = NOW() WHERE id = $1",
+          [row.athlete_user_id, email, passwordHash]
+        );
       }
       await db.query("COMMIT");
     } catch (err) {
@@ -2206,10 +2263,10 @@ export function mountCoachPractice(app, deps) {
         inviteUrl,
         inviteCode: code,
         username: row.username,
-        password: row.invite_password || "(reimposta dal coach)",
+        password,
         token: inviteToken
       }),
-      credentials: { username: row.username, password: row.invite_password || "" }
+      credentials: { username: row.username, password, oneTime: true }
     });
   });
 

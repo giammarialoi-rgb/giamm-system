@@ -211,7 +211,7 @@ assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY")
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v41-coach") && sw.includes("isAsset"), "SW push + cache v41 + asset no-html fallback");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("release-meta.js") && sw.includes("NURVAN_RELEASE") && sw.includes("isAsset"), "SW push + release-driven cache + asset no-html fallback");
 assert(base.includes("updateSupplementField") && base.includes("markSupplementsDirty") && base.includes("DOSAGGIO"), "supplement inline edit fields");
 assert(ui.includes("benvenuto nel mio servizio coaching") && practice.includes("benvenuto nel mio servizio coaching") && ui.includes("formatInviteShareText"), "client invite welcome message");
 assert(ui.includes("intakeAllergiesHtml") && ui.includes("ALIMENTAZIONE · ALLERGIE") && practice.includes("allergies") && practice.includes("profileFromIntake"), "intake optional allergies/intolerances");
@@ -233,7 +233,8 @@ assert(base.includes("id: 'BRACCIA'") && base.includes("id: 'GAMBE'") && base.in
 assert(base.includes("workoutSessionTimerHtml") && base.includes("pauseWorkoutSessionTimer") && base.includes("sessionElapsedMs"), "session timer pause/stop");
 assert(ui.includes("ensureOfflineSyncListeners") && ui.includes("flushAllOfflineQueues") && ui.includes("account-sync") && base.includes("queueAccountSyncIfOffline"), "web offline queue + reconnect flush");
 assert(base.includes("onProfilePhotoSelected") && base.includes("compressProfilePhoto") && base.includes("photoThumb"), "profile photo upload");
-assert(fs.readFileSync(path.join(__dirname, "app/build.gradle"), "utf8").includes('versionName "1.5.34"'), "APK version 1.5.34");
+const releaseMeta = JSON.parse(fs.readFileSync(path.join(__dirname, "release.json"), "utf8"));
+assert(releaseMeta.versionName === "1.5.34" && fs.readFileSync(path.join(__dirname, "app/build.gradle"), "utf8").includes("release.json"), "APK version comes from release metadata");
 assert(ui.includes("Cosa vuoi assegnare a") && ui.includes("forceAsk: true") && base.includes("forceAsk"), "assign from library asks domains");
 assert(ui.includes("coachStaySectionForSwitch") && ui.includes("openCoachClientChat(id)") && ui.includes("stay.kind === 'chat'"), "header client switch stays on current section");
 assert(ui.includes("primeCoachWorkspaceForClient") && ui.includes("coachClientDisplayName"), "header switch refreshes client name on banner/chat");
