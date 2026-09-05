@@ -549,7 +549,11 @@ export function mountCoachPractice(app, deps) {
   };
 
   const indexHtml = path.join(webDir, "index.html");
-  app.get("/c/:token", (req, res) => {
+  app.get("/c/:token", (req, res, next) => {
+    const tok = String(req.params.token || "");
+    if (/\.(png|jpe?g|gif|webp|svg|ico|js|css|json|map|webmanifest|html|txt|woff2?)$/i.test(tok)) {
+      return next();
+    }
     if (!fs.existsSync(indexHtml)) return res.status(404).send("App non disponibile");
     res.setHeader("Cache-Control", "no-store");
     res.sendFile(indexHtml);
@@ -2223,6 +2227,15 @@ export function mountCoachPractice(app, deps) {
        WHERE c.coach_user_id = $1
          AND e.read_at IS NULL
          AND NOT ('coach' = ANY(COALESCE(e.dismissed_for, '{}')))
+         AND NOT (
+           e.kind = 'message' AND COALESCE(e.payload->>'from','') = 'coach'
+         )
+         AND e.kind NOT IN (
+           'coach_modified','program_assigned','nutrition_assigned','supplements_assigned',
+           'therapy_assigned','exams_assigned','unlock_approved','unlock_rejected',
+           'max_freedom','change_approved','change_rejected','password_reset',
+           'exams_request','check_request','leave_confirmed','payment_due'
+         )
        ORDER BY e.id DESC LIMIT 20`,
       [coach.id]
     );
@@ -2293,10 +2306,19 @@ export function mountCoachPractice(app, deps) {
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
     const ev = await pool.query(
-      `SELECT id, kind, payload, created_at, read_at
+      `SELECT id, kind, payload, created_at, read_at, dismissed_for
        FROM coach_events
        WHERE client_id = $1
          AND NOT ('coach' = ANY(COALESCE(dismissed_for, '{}')))
+         AND NOT (
+           kind = 'message' AND COALESCE(payload->>'from','') = 'coach'
+         )
+         AND kind NOT IN (
+           'coach_modified','program_assigned','nutrition_assigned','supplements_assigned',
+           'therapy_assigned','exams_assigned','unlock_approved','unlock_rejected',
+           'max_freedom','change_approved','change_rejected','password_reset',
+           'exams_request','check_request','leave_confirmed','payment_due'
+         )
        ORDER BY created_at DESC LIMIT 40`,
       [row.id]
     );

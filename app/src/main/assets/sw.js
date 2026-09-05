@@ -1,5 +1,5 @@
 /* Nurvan shell SW — cache UI only, never the 10k catalog. */
-const CACHE = 'nurvan-shell-v36-coach';
+const CACHE = 'nurvan-shell-v37-coach';
 const PRECACHE = [
   './',
   './index.html',
@@ -35,6 +35,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   if (/program-catalog|xlsx\.full/i.test(url.pathname)) return;
+  const isAsset = /\.(png|jpe?g|gif|webp|svg|ico|woff2?|css|js|json|webmanifest)$/i.test(url.pathname);
 
   event.respondWith(
     fetch(req)
@@ -45,7 +46,11 @@ self.addEventListener('fetch', (event) => {
         }
         return res;
       })
-      .catch(() => caches.match(req).then((hit) => hit || caches.match('./index.html')))
+      .catch(() => caches.match(req).then((hit) => {
+        if (hit) return hit;
+        if (isAsset) return undefined;
+        return caches.match('./index.html');
+      }))
   );
 });
 

@@ -10,12 +10,22 @@
 <meta name="apple-mobile-web-app-title" content="Nurvan">
 <meta name="application-name" content="Nurvan">
 <meta name="description" content="Train. Fuel. Recover. Track. Evolve.">
-<base href="/">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<script>
+(function () {
+  try {
+    if (location.protocol === 'http:' || location.protocol === 'https:') {
+      var b = document.createElement('base');
+      b.href = '/';
+      document.head.insertBefore(b, document.head.firstChild);
+    }
+  } catch (_) {}
+})();
+</script>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <title>NURVAN | TRAIN. FUEL. RECOVER. TRACK. EVOLVE.</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800;900&display=swap');
@@ -96,10 +106,8 @@ body {
   object-fit: contain;
   position: relative;
   z-index: 1;
-  /* Kill the square black tile: fade edges + blend blacks into dark bg */
-  mix-blend-mode: screen;
-  -webkit-mask-image: radial-gradient(circle at center, #000 42%, rgba(0,0,0,0.85) 62%, transparent 78%);
-  mask-image: radial-gradient(circle at center, #000 42%, rgba(0,0,0,0.85) 62%, transparent 78%);
+  mix-blend-mode: normal;
+  opacity: 0.98;
   filter: drop-shadow(0 0 18px rgba(212, 175, 55, 0.28));
 }
 .logo-blend {
@@ -261,9 +269,8 @@ header .logo-container img {
   width: 34px;
   object-fit: contain;
   flex-shrink: 0;
-  mix-blend-mode: screen;
-  -webkit-mask-image: radial-gradient(circle at center, #000 52%, rgba(0,0,0,0.7) 72%, transparent 92%);
-  mask-image: radial-gradient(circle at center, #000 52%, rgba(0,0,0,0.7) 72%, transparent 92%);
+  mix-blend-mode: normal;
+  opacity: 0.98;
   filter: drop-shadow(0 0 8px rgba(212,175,55,0.35));
 }
 header .logo-container span {
@@ -1155,7 +1162,7 @@ body.focus-mode [data-rewards-only] {
 
 </style>
   <script src="xlsx.full.min.js"></script>
-  <script src="/peerjs.min.js"></script>
+  <script src="peerjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" onerror="console.warn('tesseract.js CDN unavailable — OCR fallback active')"></script>
 </head>
 <body>
@@ -1163,7 +1170,7 @@ body.focus-mode [data-rewards-only] {
 <div id="splash">
   <div class="splash-logo-wrap">
     <div class="splash-ring" aria-hidden="true"></div>
-    <img src="/nurvan_logo.png" alt="Nurvan">
+    <img src="nurvan_logo.png" alt="Nurvan" onerror="this.onerror=null;this.src='icon-192.png'">
   </div>
   <span class="splash-brand">NURVAN</span>
   <div class="splash-tagline">Train. Fuel. Recover. Track. Evolve.</div>
@@ -1195,7 +1202,7 @@ body.focus-mode [data-rewards-only] {
 </div>
 
 <header>
-  <div class="logo-container"><img src="/nurvan_logo.png" alt="Nurvan"></div>
+  <div class="logo-container"><img src="nurvan_logo.png" alt="Nurvan" onerror="this.onerror=null;this.src='icon-192.png'"></div>
   <div class="header-actions">
   <button class="btn btn-outline" id="account-button" onclick="openAccount()">ACCEDI</button>
   <button class="btn btn-outline" id="profile-button" style="margin-left:6px;" onclick="openAthleteProfile()">PROFILO</button>
@@ -1308,7 +1315,7 @@ body.focus-mode [data-rewards-only] {
     <div style="margin-bottom:10px;">
       <label style="font-size:10px;color:#888;">Cerca nel Database Alimenti</label>
       <input type="text" id="food-search-input" class="input" placeholder="Es. Petto di Pollo..." oninput="filterFoodDb(this.value)">
-      <div id="food-db-suggestions" style="display:none;background:#111;border:1px solid #333;border-radius:6px;max-height:120px;overflow-y:auto;margin-top:4px;"></div>
+      <div id="food-db-suggestions" style="display:none;background:#111;border:1px solid #333;border-radius:6px;max-height:200px;overflow-y:auto;margin-top:4px;position:relative;z-index:2;"></div>
     </div>
     <div style="margin-bottom:10px;">
       <label style="font-size:10px;color:#888;">Nome Alimento</label>
@@ -8334,9 +8341,15 @@ function openAddFoodModal(dayIdx, mealIdx) {
   $('food-fat-input').value = '';
   $('food-note-input').value = '';
   activeSelectedFoodRef = null;
+  __foodSearchHits = [];
   $('food-db-suggestions').style.display = 'none';
+  const warnEl = document.getElementById('food-restriction-warn');
+  if (warnEl) warnEl.remove();
   $('add-food-modal').style.display = 'flex';
   pushUiOverlay('add-food-modal');
+  if (typeof ensureAllergenIntoleranceCatalog === 'function') {
+    ensureAllergenIntoleranceCatalog().catch(function () {});
+  }
 }
 
 function closeAddFoodModal() {
@@ -8345,10 +8358,52 @@ function closeAddFoodModal() {
 }
 
 let __foodSearchTimer = null;
+let __foodSearchHits = [];
+
+function currentNutritionRestrictionIds() {
+  try {
+    if (store && store.coachViewingClient) {
+      const cp = store.__cpClientViewProfile || (store.coachWorkspace && store.coachWorkspace.clientProfile) || {};
+      if (Array.isArray(cp.allergies) && cp.allergies.length) return cp.allergies.slice();
+      const intake = (store.coachWorkspace && store.coachWorkspace.intake) || {};
+      if (Array.isArray(intake.allergies) && intake.allergies.length) return intake.allergies.slice();
+    }
+    if (store && store.profile && Array.isArray(store.profile.allergies)) return store.profile.allergies.slice();
+  } catch (_) {}
+  return [];
+}
+
+function foodRestrictionWarnHtml(foodName) {
+  const ids = currentNutritionRestrictionIds();
+  if (!ids.length || !foodName) return '';
+  try {
+    const catalog = typeof getAllergenIntoleranceCatalog === 'function' ? getAllergenIntoleranceCatalog() : null;
+    const items = (catalog && catalog.items) || [];
+    const hits = items.filter(function (it) {
+      return ids.indexOf(it.id) >= 0 && typeof foodHitsAllergenItem === 'function' && foodHitsAllergenItem(foodName, it);
+    });
+    if (!hits.length) return '';
+    const labels = hits.map(function (h) { return h.label || h.id; }).join(', ');
+    return '<div id="food-restriction-warn" style="margin:8px 0;padding:8px 10px;border:1px solid #c66;border-radius:8px;background:#1a1010;font-size:11px;color:#f88;line-height:1.35;">⚠ Incompatibile con allergie/intolleranze: ' + esc(labels) + '. Scegli un’alternativa o conferma solo se consapevole.</div>';
+  } catch (_) {}
+  return '';
+}
+
+function updateFoodRestrictionWarn(foodName) {
+  let el = document.getElementById('food-restriction-warn');
+  const html = foodRestrictionWarnHtml(foodName);
+  const host = document.getElementById('food-name-input');
+  if (!host || !host.parentElement) return;
+  if (el) el.remove();
+  if (!html) return;
+  host.parentElement.insertAdjacentHTML('afterend', html);
+}
+
 async function filterFoodDb(query) {
   const box = $('food-db-suggestions');
   if (!query || query.length < 1) {
     box.style.display = 'none';
+    __foodSearchHits = [];
     return;
   }
   clearTimeout(__foodSearchTimer);
@@ -8368,23 +8423,35 @@ async function filterFoodDb(query) {
     }
     if (!foods || foods.length === 0) {
       box.style.display = 'none';
+      __foodSearchHits = [];
       return;
     }
-    box.innerHTML = foods.slice(0, 8).map(function (f) {
+    __foodSearchHits = foods.slice(0, 8);
+    const restrIds = currentNutritionRestrictionIds();
+    box.innerHTML = __foodSearchHits.map(function (f, idx) {
       const kcal = f.kcalPer100 != null ? f.kcalPer100 : f.kcal;
       const prov = f.provenance ? (typeof DataProvenance !== 'undefined' ? DataProvenance.label(f.provenance) : (f.provenance.kind || '')) : '';
-      const safe = JSON.stringify({
-        name: f.name, kcalPer100: kcal, proPer100: f.proPer100 != null ? f.proPer100 : f.pro,
-        carbPer100: f.carbPer100 != null ? f.carbPer100 : f.carb, fatPer100: f.fatPer100 != null ? f.fatPer100 : f.fat,
-        unit: f.unit || 'g', provenance: f.provenance || null, brand: f.brand || null
-      }).replace(/'/g, '&#39;');
-      return '<div style="padding:8px 10px;border-bottom:1px solid #222;cursor:pointer;" onclick=\'selectFoodFromDb(' + safe + ')\'>' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:11px;font-weight:700;color:#fff;">' + esc(f.name) + '</span>' +
-        '<span style="font-size:10px;color:var(--gold);">' + Math.round(kcal || 0) + ' kcal/100g</span></div>' +
+      let warn = '';
+      if (restrIds.length) {
+        const tip = foodRestrictionWarnHtml(f.name || '');
+        if (tip) warn = '<div style="font-size:9px;color:#f88;margin-top:2px;">⚠ possibile allergene/intolleranza</div>';
+      }
+      return '<button type="button" data-food-idx="' + idx + '" style="display:block;width:100%;text-align:left;padding:10px;border:0;border-bottom:1px solid #222;background:#111;cursor:pointer;-webkit-tap-highlight-color:rgba(212,175,55,.25);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span style="font-size:12px;font-weight:700;color:#fff;">' + esc(f.name) + '</span>' +
+        '<span style="font-size:10px;color:var(--gold);flex-shrink:0;">' + Math.round(kcal || 0) + ' kcal/100g</span></div>' +
         (prov ? '<div style="font-size:9px;color:#666;margin-top:2px;">' + esc(prov) + (source !== 'local' ? ' · ' + source : '') + '</div>' : '') +
-        '</div>';
+        warn +
+        '</button>';
     }).join('');
     box.style.display = 'block';
+    box.onclick = function (ev) {
+      const btn = ev.target && ev.target.closest ? ev.target.closest('[data-food-idx]') : null;
+      if (!btn) return;
+      try { ev.preventDefault(); ev.stopPropagation(); } catch (_) {}
+      const idx = parseInt(btn.getAttribute('data-food-idx'), 10);
+      if (!Number.isFinite(idx) || !__foodSearchHits[idx]) return;
+      selectFoodFromDb(__foodSearchHits[idx]);
+    };
   }, 180);
 }
 
@@ -8393,9 +8460,13 @@ let activeSelectedFoodRef = null;
 function selectFoodFromDb(food) {
   const n = (typeof normalizeFoodRecord === 'function') ? normalizeFoodRecord(food) : food;
   activeSelectedFoodRef = n;
-  $('food-name-input').value = n.name;
-  $('food-unit-input').value = n.unit || 'g';
-  $('food-db-suggestions').style.display = 'none';
+  const nameEl = $('food-name-input');
+  const unitEl = $('food-unit-input');
+  if (nameEl) nameEl.value = n.name || '';
+  if (unitEl) unitEl.value = n.unit || 'g';
+  const box = $('food-db-suggestions');
+  if (box) box.style.display = 'none';
+  updateFoodRestrictionWarn(n.name || '');
   recalcFoodMacrosFromDb();
 }
 
@@ -12756,7 +12827,7 @@ function renderHome(c) {
   if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
     c.innerHTML = `
       <div style="text-align:center;padding:20px 0;">
-        <img src="/nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));">
+        <img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));" onerror="this.onerror=null;this.src='icon-192.png'">
         <h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1>
       </div>
 
@@ -12811,7 +12882,7 @@ function renderHome(c) {
   const frequency = store.prefs.frequency || sessions.length;
 
   c.innerHTML = `
-    <div style="text-align:center;padding:20px 0;"><img src="/nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
+    <div style="text-align:center;padding:20px 0;"><img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));" onerror="this.onerror=null;this.src='icon-192.png'"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
 
     <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>${t('activeSession')}</h2></div><div style="padding:20px;"><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].name||sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><div style="display:flex;gap:10px;margin-top:20px;">
         <button class="btn btn-primary" style="flex:2;font-size:16px;height:55px;" onclick="navigate('training')">${t('startWorkout')}</button>
@@ -18293,6 +18364,9 @@ if (typeof window !== 'undefined') {
   window.closeBonusModal = closeBonusModal;
   window.saveAll = saveAll;
   window.addNutritionDay = addNutritionDay;
+  window.filterFoodDb = filterFoodDb;
+  window.selectFoodFromDb = selectFoodFromDb;
+  window.updateFoodRestrictionWarn = updateFoodRestrictionWarn;
   window.openGenerateNutritionPlanWizard = openGenerateNutritionPlanWizard;
   window.athleteCanSelfGeneratePlans = athleteCanSelfGeneratePlans;
   window.requestAthleteGenerateFreedom = typeof requestAthleteGenerateFreedom !== 'undefined' ? requestAthleteGenerateFreedom : undefined;
