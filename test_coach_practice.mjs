@@ -115,6 +115,8 @@ assert(base.includes("massima libertà") || base.includes("allowMaxFreedom"), "a
 assert(base.includes("afterProgramActivatedNavigate"), "assign preview after import");
 assert(base.includes("openImportDomainPicker") && base.includes("detectProgramDomains"), "import domain picker");
 assert(base.includes("isCoachClientSandbox"), "coach sandbox import gate");
+assert(base.includes("openGenerateNutritionPlanWizard") && base.includes("balanceMacroPercents") && base.includes("GENERA PIANO"), "nutrition precise plan wizard");
+assert(base.includes("comboCount") && base.includes("dayCount") && base.includes("NUTRITION_MEAL_COMBO_VARIANTS"), "nutrition days + combo variants");
 assert(base.includes("setDictateButtonState"), "dictate button state reset");
 
 const api = fs.readFileSync(path.join(__dirname, "coach-api.mjs"), "utf8");
@@ -149,6 +151,10 @@ assert(ui.includes("VISUALIZZA ALLENAMENTO") && ui.includes("stopLiveFollowWorko
 assert(ui.includes("ensureCoachDomainToolbar") && ui.includes("clearCoachClientDomain") && ui.includes("IMPORTA NUOVO") && ui.includes("CANCELLA"), "domain cancel/import toolbar");
 assert(ui.includes("friendlyApiError") && ui.includes("RIPROVA"), "hub list friendly retry");
 assert(base.includes("Server non disponibile") && base.includes("looksHtml"), "readApiJson HTML sanitize");
+assert(ui.includes("openNotificationsCenter") && ui.includes("cp-notify-btn") && ui.includes("NOTIFICHE") && ui.includes("LE TUE NOTIFICHE"), "in-app notifications center athlete+coach");
+assert(ui.includes("NOTIFICHE CLIENTE") && ui.includes("buildCoachClientNotifyItems") && ui.includes("openClientSheetNotify"), "coach client-scoped notifies with time");
+assert(practice.includes("/api/client/inbox/ack"), "client inbox ack");
+assert(base.includes("hub-tile-notify") && base.includes("openNotificationsCenter"), "athlete hub notify tile");
 assert(ui.includes("setNurvanAppBadge") && ui.includes("clearNurvanAppBadge") && ui.includes("followClientLiveWorkout"), "app badge + live follow");
 assert(ui.includes("coachLibrary") && ui.includes("calendar: 1") && ui.includes("__cpCoachLibraryImport"), "coach library + calendar gates");
 assert(ui.includes("postVideocallChatNotice") && ui.includes("Anche l’altro deve premere VIDEO"), "videocall chat notice");
