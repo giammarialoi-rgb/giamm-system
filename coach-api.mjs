@@ -1832,7 +1832,8 @@ mountCoachPractice(app, {
   verifyPassword,
   issueAccountToken,
   accountFromBearer,
-  webDir: path.join(__dirname, "web")
+  webDir: path.join(__dirname, "web"),
+  mediaSigningSecret: process.env.MEDIA_SIGNING_SECRET || JWT_SECRET
 });
 
 app.use(express.static(path.join(__dirname, "web")));

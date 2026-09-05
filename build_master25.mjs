@@ -24,7 +24,8 @@ const coachOsCode = [
   'web/coach-os/shell.js',
   'web/coach-os/today.js',
   'web/coach-os/programs.js',
-  'web/coach-os/clients.js'
+  'web/coach-os/clients.js',
+  'web/coach-os/checkins.js'
 ].filter((file) => fs.existsSync(file))
   .map((file) => fs.readFileSync(file, 'utf8'))
   .join('\n');
