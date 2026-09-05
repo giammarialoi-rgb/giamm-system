@@ -51511,6 +51511,50 @@ function ensureCoachHeaderControls(coachSession) {
     '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;flex-shrink:0;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="coachHeaderBack()">INDIETRO</button>';
 }
 
+function coachClientFromList(id) {
+  const cid = String(id || '');
+  if (!cid) return null;
+  const list = (store && store.__cpClientList) || [];
+  for (let i = 0; i < list.length; i++) {
+    if (String(list[i].id) === cid) return list[i];
+  }
+  return null;
+}
+
+function coachClientDisplayName(id) {
+  const cid = String(id || (store.coachWorkspace && store.coachWorkspace.clientId) || '');
+  const ws = store && store.coachWorkspace;
+  if (ws && ws.client && String(ws.clientId) === cid && (ws.client.displayName || ws.client.username)) {
+    return ws.client.displayName || ws.client.username;
+  }
+  const hit = coachClientFromList(cid);
+  if (hit) return hit.displayName || hit.username || '';
+  return '';
+}
+
+/** Update workspace identity when switching clients without wiping the whole session. */
+function primeCoachWorkspaceForClient(id, extra) {
+  const cid = String(id || '');
+  const prevId = store.coachWorkspace && store.coachWorkspace.clientId ? String(store.coachWorkspace.clientId) : '';
+  const hit = coachClientFromList(cid);
+  const clientStub = hit
+    ? Object.assign({}, hit)
+    : { id: cid, displayName: coachClientDisplayName(cid) || 'Cliente' };
+  const base = (store.coachWorkspace && prevId === cid) ? Object.assign({}, store.coachWorkspace) : {};
+  store.coachWorkspace = Object.assign(base, {
+    clientId: cid,
+    client: clientStub
+  }, extra || {});
+  if (prevId && prevId !== cid) {
+    store.coachWorkspace.data = null;
+    store.coachWorkspace.intake = null;
+    store.__cpE2EPeer = null;
+    try { if (typeof stopChatPoll === 'function') stopChatPoll(); } catch (_) {}
+  }
+  if (typeof persist === 'function') persist();
+  return store.coachWorkspace;
+}
+
 function coachStaySectionForSwitch() {
   const view = (typeof currentView !== 'undefined') ? String(currentView || '') : '';
   if (view === 'coachChat' || view === 'clientChat') return { kind: 'chat' };
@@ -51539,14 +51583,15 @@ async function switchCoachClientFromHeader(id) {
   }
   if (stay.kind === 'domain') {
     await leaveCoachClientView(true);
-    store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: id });
-    if (typeof persist === 'function') persist();
+    primeCoachWorkspaceForClient(id);
+    ensureCoachSessionBanner();
+    ensureCoachHeaderControls();
     await enterCoachClientView(stay.domain, { silent: true });
     return;
   }
   if (stay.kind === 'stay') {
-    store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: id });
-    if (typeof persist === 'function') persist();
+    primeCoachWorkspaceForClient(id);
+    ensureCoachSessionBanner();
     ensureCoachHeaderControls();
     return;
   }
@@ -51579,7 +51624,7 @@ function ensureCoachSessionBanner() {
   const headerH = (document.querySelector('header') && document.querySelector('header').offsetHeight) || 60;
   bar.style.top = headerH + 'px';
   bar.style.display = 'block';
-  const name = (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName)
+  const name = coachClientDisplayName()
     || (store.coachAssigning && store.coachWorkspace && store.coachWorkspace.assignName)
     || '';
   const viewing = !!(store.coachViewingClient || store.coachAssigning);
@@ -51617,7 +51662,7 @@ function ensureCoachDrawer() {
   const hasClient = !!(store && store.coachWorkspace && store.coachWorkspace.clientId);
   const viewing = !!(store && store.coachViewingClient);
   const id = hasClient ? String(store.coachWorkspace.clientId) : '';
-  const name = (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'cliente';
+  const name = coachClientDisplayName(id) || 'cliente';
   const n = Math.max(0, Number(store.__cpNotifyCount || 0));
   panel.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
@@ -53803,14 +53848,17 @@ async function removeCoachClient(id) {
 async function openCoachClient(id) {
   if (store.coachViewingClient) await leaveCoachClientView(true);
   store.coachSessionActive = true;
-  store.coachWorkspace = { clientId: id };
+  primeCoachWorkspaceForClient(id);
+  ensureCoachSessionBanner();
   if (typeof persist === 'function') persist();
   navigate('coachClient');
 }
 
 function openCoachClientChat(id) {
   store.coachSessionActive = true;
-  store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: id, chat: true });
+  primeCoachWorkspaceForClient(id, { chat: true });
+  ensureCoachSessionBanner();
+  ensureCoachHeaderControls();
   try { clearNurvanAppBadge(); } catch (_) {}
   navigate('coachChat');
 }
@@ -56002,7 +56050,7 @@ function renderCoachChatPage(c) {
   }
   if (document.body) document.body.classList.add('cp-chat-view');
   ensureClientViewBanner();
-  const name = (store.coachWorkspace.client && store.coachWorkspace.client.displayName) || 'Cliente';
+  const name = coachClientDisplayName(id) || 'Cliente';
   const videoOk = store.coachAllowVideocall !== false;
   c.innerHTML = '<div class="cp-chat-shell">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-shrink:0;">' +
