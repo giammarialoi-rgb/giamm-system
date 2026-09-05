@@ -152,7 +152,7 @@ assert(api.includes("coachPracticeVersion"), "health version");
 assert(api.includes("role"), "JWT has role");
 
 const practice = fs.readFileSync(path.join(__dirname, "coach-practice.mjs"), "utf8");
-["/api/coach/unlock/demo", "/api/coach/clients", "/api/client/login", "/api/client/intake", "/c/:token", "intake_mode", "/api/client/ask-coach", "/api/client/change-request", "allow_max_freedom", "/api/webrtc/ice", "TURN_URLS", "anchorExpiryOnFirstWorkout", "/api/coach/inbox/ack", "rotate-invite"].forEach((s) => {
+["/api/coach/unlock/demo", "/api/coach/clients", "/api/client/login", "/api/client/intake", "/c/:token", "intake_mode", "/api/client/ask-coach", "/api/client/change-request", "allow_max_freedom", "/api/webrtc/ice", "TURN_URLS", "anchorExpiryOnFirstWorkout", "/api/coach/inbox/ack", "rotate-invite", "unlock-approve", "unlock-reject", "pending_unlock"].forEach((s) => {
   assert(practice.includes(s), "server has " + s);
 });
 assert(practice.includes("e.payload") || practice.includes("e.payload,"), "coach inbox returns payload");
@@ -201,10 +201,11 @@ assert(practice.includes("sendWebPush") && practice.includes("VAPID_PUBLIC_KEY")
 assert(practice.includes("push_subscription") && practice.includes("notifyAthletePush") && practice.includes("notifyCoachPush"), "push columns + notify helpers");
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
-assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v35-coach"), "SW push + cache v35");
+assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("nurvan-shell-v36-coach"), "SW push + cache v36");
 assert(base.includes("updateSupplementField") && base.includes("markSupplementsDirty") && base.includes("DOSAGGIO"), "supplement inline edit fields");
 assert(ui.includes("benvenuto nel mio servizio coaching") && practice.includes("benvenuto nel mio servizio coaching") && ui.includes("formatInviteShareText"), "client invite welcome message");
 assert(ui.includes("intakeAllergiesHtml") && ui.includes("ALIMENTAZIONE · ALLERGIE") && practice.includes("allergies") && practice.includes("profileFromIntake"), "intake optional allergies/intolerances");
+assert(practice.includes("/api/coach/clients/:id/unlock-approve") && practice.includes("/api/coach/clients/:id/unlock-reject") && practice.includes("pending_unlock") && ui.includes("approveUnlockRequest") && ui.includes("rejectUnlockRequest"), "coach approve/deny unlock with note");
 assert(ui.includes("advanceClientTutorial") && ui.includes('data-tut="next"') && ui.includes("#cp-tutorial.cp-overlay{z-index:10155;}") && ui.includes("__cpA2hsPending"), "client tutorial click + A2HS defer");
 assert(ui.includes("emptyDomainShell") && ui.includes("isClearedDomainPayload") && ui.includes("cleared: true"), "domain clear empty shells");
 assert(ui.includes("preferFilledTherapy") && ui.includes("__cpTherapyCleared") && ui.includes("__cpTrainingCleared"), "clear therapy/training keep flags");

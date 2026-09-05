@@ -151,7 +151,15 @@ function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
     chatThread: Number(r.chat_thread || 1),
     allowMaxFreedom: !!r.allow_max_freedom,
     allowNurvanAi: !!r.allow_nurvan_ai,
-    hasPendingChange: !!(r.pending_change && (r.pending_change.summary || r.pending_change.data))
+    hasPendingChange: !!(r.pending_change && (r.pending_change.summary || r.pending_change.data)),
+    hasPendingUnlock: !!(r.pending_unlock && r.pending_unlock.feature),
+    pendingUnlock: r.pending_unlock && r.pending_unlock.feature
+      ? {
+          feature: String(r.pending_unlock.feature || "max_freedom"),
+          note: String(r.pending_unlock.note || "").slice(0, 800),
+          at: r.pending_unlock.at || null
+        }
+      : null
   };
   if (includeIntake) {
     row.intake = r.intake || {};
@@ -263,6 +271,7 @@ export async function ensureCoachPracticeTables(client) {
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS allow_max_freedom BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS allow_nurvan_ai BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS pending_change JSONB;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS pending_unlock JSONB;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS workout_started_at TIMESTAMPTZ;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS program_expires_at TIMESTAMPTZ;
@@ -813,12 +822,35 @@ export function mountCoachPractice(app, deps) {
     if (!ctx) return;
     const domain = String(req.body?.domain || "general").slice(0, 40);
     const note = String(req.body?.note || "").slice(0, 800);
+    const unlockFeatures = { max_freedom: 1, nurvan_ai: 1 };
+    if (unlockFeatures[domain]) {
+      await pool.query(
+        "UPDATE coach_clients SET pending_unlock = $2::jsonb, unread_count = unread_count + 1 WHERE id = $1",
+        [ctx.client.id, JSON.stringify({
+          feature: domain,
+          note,
+          at: new Date().toISOString(),
+          name: ctx.client.display_name || ""
+        })]
+      );
+    } else {
+      await pool.query("UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1", [ctx.client.id]);
+    }
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'ask_coach',$2)",
-      [ctx.client.id, JSON.stringify({ domain, note })]
+      [ctx.client.id, JSON.stringify({ domain, note, unlock: !!unlockFeatures[domain] })]
     );
-    await pool.query("UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1", [ctx.client.id]);
-    return res.json({ ok: true });
+    try {
+      await notifyCoachPush(
+        ctx.client.coach_user_id,
+        unlockFeatures[domain] ? "Richiesta sblocco" : "Richiesta dal cliente",
+        String(ctx.client.display_name || "Atleta") + (unlockFeatures[domain]
+          ? (domain === "nurvan_ai" ? " chiede Nurvan AI" : " chiede massima libertà")
+          : " chiede qualcosa"),
+        { view: "coachClient", clientId: String(ctx.client.id) }
+      );
+    } catch (_) {}
+    return res.json({ ok: true, pendingUnlock: !!unlockFeatures[domain] });
   });
 
   app.post("/api/client/change-request", async (req, res) => {
@@ -1225,7 +1257,7 @@ export function mountCoachPractice(app, deps) {
       `SELECT id, display_name, username, status, paid, billing_cycle, next_due_at, allow_program_db,
               last_workout_at, last_seen_at, workout_started_at, program_expires_at, next_check_at,
               unread_count, invite_token, created_at, intake_mode, intake_completed_at,
-              leave_requested_at, chat_thread, allow_max_freedom, allow_nurvan_ai, pending_change
+              leave_requested_at, chat_thread, allow_max_freedom, allow_nurvan_ai, pending_change, pending_unlock
        FROM coach_clients WHERE ${where}
        ORDER BY display_name ASC
        LIMIT $2 OFFSET $3`,
@@ -1401,11 +1433,19 @@ export function mountCoachPractice(app, deps) {
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
     const on = !!req.body?.allow;
-    await pool.query("UPDATE coach_clients SET allow_max_freedom = $2 WHERE id = $1", [row.id, on]);
+    await pool.query(
+      "UPDATE coach_clients SET allow_max_freedom = $2, pending_unlock = CASE WHEN $2 THEN NULL ELSE pending_unlock END WHERE id = $1",
+      [row.id, on]
+    );
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'max_freedom',$2)",
       [row.id, JSON.stringify({ allow: on })]
     );
+    if (on) {
+      notifyAthletePush(row, "Libertà concessa", "Il coach ti ha sbloccato la generazione in autonomia", { view: "home" }).catch(() => {});
+    } else {
+      notifyAthletePush(row, "Libertà aggiornata", "Il coach ha limitato le modifiche autonome", { view: "home" }).catch(() => {});
+    }
     return res.json({ ok: true, allowMaxFreedom: on });
   });
 
@@ -1415,8 +1455,73 @@ export function mountCoachPractice(app, deps) {
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
     const on = !!req.body?.allow;
-    await pool.query("UPDATE coach_clients SET allow_nurvan_ai = $2 WHERE id = $1", [row.id, on]);
+    await pool.query(
+      "UPDATE coach_clients SET allow_nurvan_ai = $2, pending_unlock = CASE WHEN $2 AND (pending_unlock->>'feature') = 'nurvan_ai' THEN NULL ELSE pending_unlock END WHERE id = $1",
+      [row.id, on]
+    );
     return res.json({ ok: true, allowNurvanAi: on });
+  });
+
+  function unlockFeatureLabel(feature) {
+    if (feature === "nurvan_ai") return "Nurvan AI";
+    return "massima libertà (genera alimentazione/integrazione)";
+  }
+
+  app.post("/api/coach/clients/:id/unlock-approve", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const pending = row.pending_unlock && typeof row.pending_unlock === "object" ? row.pending_unlock : null;
+    const feature = String(req.body?.feature || (pending && pending.feature) || "max_freedom").slice(0, 40);
+    if (!pending || String(pending.feature) !== feature) {
+      return res.status(400).json({ error: "Nessuna richiesta di sblocco in attesa per questa funzione." });
+    }
+    if (feature === "nurvan_ai") {
+      await pool.query("UPDATE coach_clients SET allow_nurvan_ai = TRUE, pending_unlock = NULL WHERE id = $1", [row.id]);
+    } else {
+      await pool.query("UPDATE coach_clients SET allow_max_freedom = TRUE, pending_unlock = NULL WHERE id = $1", [row.id]);
+    }
+    const label = unlockFeatureLabel(feature);
+    const msg = "Richiesta approvata: ti ho sbloccato " + label + ".";
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'unlock_approved',$2)",
+      [row.id, JSON.stringify({ feature, note: msg, label })]
+    );
+    try { await insertMessage(row.id, "coach", msg, null); } catch (_) {}
+    notifyAthletePush(row, "Richiesta approvata", msg, { view: "home" }).catch(() => {});
+    return res.json({
+      ok: true,
+      feature,
+      allowMaxFreedom: feature !== "nurvan_ai" ? true : !!row.allow_max_freedom,
+      allowNurvanAi: feature === "nurvan_ai" ? true : !!row.allow_nurvan_ai
+    });
+  });
+
+  app.post("/api/coach/clients/:id/unlock-reject", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const pending = row.pending_unlock && typeof row.pending_unlock === "object" ? row.pending_unlock : null;
+    const feature = String(req.body?.feature || (pending && pending.feature) || "max_freedom").slice(0, 40);
+    const note = String(req.body?.note || "").trim().slice(0, 800);
+    if (!note || note.length < 3) {
+      return res.status(400).json({ error: "Scrivi un messaggio di spiegazione per il cliente (obbligatorio)." });
+    }
+    if (!pending || String(pending.feature) !== feature) {
+      return res.status(400).json({ error: "Nessuna richiesta di sblocco in attesa per questa funzione." });
+    }
+    await pool.query("UPDATE coach_clients SET pending_unlock = NULL WHERE id = $1", [row.id]);
+    const label = unlockFeatureLabel(feature);
+    const chatBody = "Richiesta di sblocco (" + label + ") negata.\n\n" + note;
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'unlock_rejected',$2)",
+      [row.id, JSON.stringify({ feature, note, label })]
+    );
+    try { await insertMessage(row.id, "coach", chatBody, null); } catch (_) {}
+    notifyAthletePush(row, "Richiesta negata", note.slice(0, 140), { view: "clientChat" }).catch(() => {});
+    return res.json({ ok: true, feature, note });
   });
 
   app.post("/api/coach/clients/:id/change-approve", async (req, res) => {
@@ -1470,12 +1575,20 @@ export function mountCoachPractice(app, deps) {
     if (!coach) return;
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
+    const note = String(req.body?.note || "").trim().slice(0, 800);
+    if (!note || note.length < 3) {
+      return res.status(400).json({ error: "Scrivi un messaggio di spiegazione per il cliente (obbligatorio)." });
+    }
     await pool.query("UPDATE coach_clients SET pending_change = NULL WHERE id = $1", [row.id]);
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'change_rejected',$2)",
-      [row.id, JSON.stringify({ note: String(req.body?.note || "").slice(0, 300) })]
+      [row.id, JSON.stringify({ note })]
     );
-    return res.json({ ok: true });
+    try {
+      await insertMessage(row.id, "coach", "Modifica non approvata.\n\n" + note, null);
+    } catch (_) {}
+    notifyAthletePush(row, "Modifica rifiutata", note.slice(0, 140), { view: "clientChat" }).catch(() => {});
+    return res.json({ ok: true, note });
   });
 
   app.post("/api/coach/clients/:id/intake", async (req, res) => {
@@ -1786,7 +1899,14 @@ export function mountCoachPractice(app, deps) {
       credentials: { username: row.username, password: row.invite_password || "" },
       intake: row.intake || {},
       data: data.rows[0]?.data || {},
-      pendingChange: row.pending_change ? { summary: row.pending_change.summary || "modifica", at: row.pending_change.at } : null
+      pendingChange: row.pending_change ? { summary: row.pending_change.summary || "modifica", at: row.pending_change.at } : null,
+      pendingUnlock: row.pending_unlock && row.pending_unlock.feature
+        ? {
+            feature: String(row.pending_unlock.feature || "max_freedom"),
+            note: String(row.pending_unlock.note || "").slice(0, 800),
+            at: row.pending_unlock.at || null
+          }
+        : null
     });
   });
 
@@ -2088,10 +2208,10 @@ export function mountCoachPractice(app, deps) {
     const coach = await requireCoach(req, res);
     if (!coach) return;
     const clients = await pool.query(
-      `SELECT id, display_name, unread_count, leave_requested_at, pending_change
+      `SELECT id, display_name, unread_count, leave_requested_at, pending_change, pending_unlock
        FROM coach_clients
        WHERE coach_user_id = $1 AND status = 'active'
-         AND (unread_count > 0 OR leave_requested_at IS NOT NULL OR pending_change IS NOT NULL)
+         AND (unread_count > 0 OR leave_requested_at IS NOT NULL OR pending_change IS NOT NULL OR pending_unlock IS NOT NULL)
        ORDER BY unread_count DESC, display_name ASC
        LIMIT 40`,
       [coach.id]
@@ -2113,7 +2233,8 @@ export function mountCoachPractice(app, deps) {
         displayName: r.display_name,
         unreadCount: Number(r.unread_count || 0),
         leaveRequested: !!r.leave_requested_at,
-        hasPendingChange: !!r.pending_change
+        hasPendingChange: !!r.pending_change,
+        hasPendingUnlock: !!(r.pending_unlock && r.pending_unlock.feature)
       })),
       events: events.rows.map((r) => {
         let payload = r.payload;
