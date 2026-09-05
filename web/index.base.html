@@ -10,11 +10,12 @@
 <meta name="apple-mobile-web-app-title" content="Nurvan">
 <meta name="application-name" content="Nurvan">
 <meta name="description" content="Train. Fuel. Recover. Track. Evolve.">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<base href="/">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <title>NURVAN | TRAIN. FUEL. RECOVER. TRACK. EVOLVE.</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800;900&display=swap');
@@ -1162,7 +1163,7 @@ body.focus-mode [data-rewards-only] {
 <div id="splash">
   <div class="splash-logo-wrap">
     <div class="splash-ring" aria-hidden="true"></div>
-    <img src="nurvan_logo.png" alt="Nurvan">
+    <img src="/nurvan_logo.png" alt="Nurvan">
   </div>
   <span class="splash-brand">NURVAN</span>
   <div class="splash-tagline">Train. Fuel. Recover. Track. Evolve.</div>
@@ -1194,7 +1195,7 @@ body.focus-mode [data-rewards-only] {
 </div>
 
 <header>
-  <div class="logo-container"><img src="nurvan_logo.png" alt="Nurvan"></div>
+  <div class="logo-container"><img src="/nurvan_logo.png" alt="Nurvan"></div>
   <div class="header-actions">
   <button class="btn btn-outline" id="account-button" onclick="openAccount()">ACCEDI</button>
   <button class="btn btn-outline" id="profile-button" style="margin-left:6px;" onclick="openAthleteProfile()">PROFILO</button>
@@ -3644,14 +3645,16 @@ function filterMealTemplateForRestrictions(templates, restrictionIds) {
   return out;
 }
 
-function applyFreeMealsToNutritionPlan(plan, freeDayLabels) {
+function applyFreeMealsToNutritionPlan(plan, freeDayLabels, mealSlot) {
   if (!plan || !Array.isArray(plan.days) || !freeDayLabels || !freeDayLabels.length) return plan;
+  const slot = normalizeFreeMealSlot(mealSlot);
+  const slotRe = freeMealSlotRegex(slot);
   const wanted = freeDayLabels.map(function (d) { return foldAllergenText(d).slice(0, 4); });
   plan.days.forEach(function (day) {
     const base = foldAllergenText(String(day.day || '').split('·')[0]).slice(0, 4);
     if (wanted.indexOf(base) < 0) return;
     const freeMeal = {
-      name: 'Pasto libero',
+      name: slot,
       free: true,
       foods: [{
         name: 'Pasto libero (a scelta)',
@@ -3661,19 +3664,37 @@ function applyFreeMealsToNutritionPlan(plan, freeDayLabels) {
         protein: 0,
         carbs: 0,
         fat: 0,
-        notes: 'Non prescritto: scegli tu cosa mangiare in questo slot'
+        notes: 'Non prescritto: scegli tu cosa mangiare a ' + slot.toLowerCase()
       }]
     };
     if (!Array.isArray(day.meals)) day.meals = [];
-    let idx = day.meals.findIndex(function (m) {
-      return /spuntino/i.test(String(m.name || '')) && !/mattina/i.test(String(m.name || ''));
-    });
-    if (idx < 0) idx = day.meals.length ? day.meals.length - 1 : -1;
+    let idx = day.meals.findIndex(function (m) { return slotRe.test(String(m.name || '')); });
+    if (idx < 0) {
+      // Fallback: se lo slot non esiste (es. solo 2 pasti), usa l’ordine tipico
+      const order = { Colazione: 0, Pranzo: 1, Cena: 2 };
+      idx = Math.min(order[slot] || 0, Math.max(0, day.meals.length - 1));
+      if (!day.meals.length) idx = -1;
+    }
     if (idx >= 0) day.meals[idx] = freeMeal;
     else day.meals.push(freeMeal);
     if (!/libero/i.test(String(day.day || ''))) day.day = String(day.day || '') + ' · libero';
   });
   return plan;
+}
+
+function normalizeFreeMealSlot(slot) {
+  const s = String(slot || '').trim().toLowerCase();
+  if (s.indexOf('colaz') >= 0) return 'Colazione';
+  if (s.indexOf('pranz') >= 0) return 'Pranzo';
+  if (s.indexOf('cen') >= 0) return 'Cena';
+  return 'Cena';
+}
+
+function freeMealSlotRegex(slot) {
+  const s = normalizeFreeMealSlot(slot);
+  if (s === 'Colazione') return /colaz/i;
+  if (s === 'Pranzo') return /pranz/i;
+  return /cen/i;
 }
 
 function nutritionRestrictionChipsHtml(selectedIds) {
@@ -3709,6 +3730,13 @@ function onGenNutritionRestrictionChange() {
   try {
     if (store && store.profile) store.profile.allergies = (st.restrictions || []).slice();
   } catch (_) {}
+}
+
+function onGenNutritionFreeSlotChange() {
+  const st = window.__genNutrPlan || {};
+  const el = document.getElementById('gen-nutr-free-slot');
+  st.freeMealSlot = normalizeFreeMealSlot(el && el.value);
+  window.__genNutrPlan = st;
 }
 
 function onGenNutritionFreeToggle() {
@@ -4037,9 +4065,11 @@ function buildWeeklyNutritionPlan(overrides, weekOpts) {
     days: days
   };
   if (Array.isArray(weekOpts.freeDays) && weekOpts.freeDays.length) {
-    plan = applyFreeMealsToNutritionPlan(plan, weekOpts.freeDays);
+    const slot = normalizeFreeMealSlot(weekOpts.freeMealSlot || 'Cena');
+    plan = applyFreeMealsToNutritionPlan(plan, weekOpts.freeDays, slot);
     plan.free_days = weekOpts.freeDays.slice();
-    plan.notes += ' Pasti liberi: ' + weekOpts.freeDays.join(', ') + '.';
+    plan.free_meal_slot = slot;
+    plan.notes += ' Pasti liberi (' + slot + '): ' + weekOpts.freeDays.join(', ') + '.';
   }
   return plan;
 }
@@ -4131,6 +4161,12 @@ function buildSupplementationFromGoals(goalKeys, opts) {
 }
 
 function openGenerateSupplementationWizard() {
+  if (!athleteCanSelfGeneratePlans()) {
+    if (typeof showToast === 'function') {
+      showToast('Per generare serve la massima libertà del coach. Puoi importare o chiedere al coach.', 'warning');
+    }
+    return;
+  }
   const existing = document.getElementById('gen-supp-plan-modal');
   if (existing) existing.remove();
   window.__genSuppPlan = { mode: 'auto', goals: { base: true, forza: false, cuore: false, fegato: false, articolazioni: false, recupero: false, energia: false } };
@@ -8063,6 +8099,34 @@ function confirmNutritionDay(ok) {
 }
 window.confirmNutritionDay = confirmNutritionDay;
 
+function athleteCanSelfGeneratePlans() {
+  if (typeof isAthleteRole !== 'function' || !isAthleteRole()) return true;
+  return !!(store && store.clientProfile && store.clientProfile.allowMaxFreedom);
+}
+
+function athleteDomainActionButtonsHtml(domain, opts) {
+  opts = opts || {};
+  const compact = opts.compact !== false;
+  const btn = compact ? 'font-size:10px;padding:6px 10px;' : 'font-size:11px;padding:8px 14px;';
+  const isNutr = domain === 'nutrition';
+  const importFn = isNutr ? "startDomainImport('nutrition')" : "startDomainImport('supplements')";
+  const importLabel = isNutr
+    ? (typeof t === 'function' ? t('importNutrition') : 'IMPORTA')
+    : (typeof t === 'function' ? t('importSupplements') : 'IMPORTA');
+  const genFn = isNutr ? 'openGenerateNutritionPlanWizard()' : 'openGenerateSupplementationWizard()';
+  const genLabel = isNutr ? 'GENERA PIANO' : 'GENERA INTEGRAZIONE';
+  const askDomain = isNutr ? 'nutrition' : 'supplements';
+  const askLabel = isNutr ? 'CHIEDI ALIMENTAZIONE AL COACH' : 'CHIEDI INTEGRAZIONE AL COACH';
+  if (athleteCanSelfGeneratePlans()) {
+    return '<button class="btn btn-primary" style="' + btn + '" onclick="' + genFn + '">' + genLabel + '</button>' +
+      '<button class="btn btn-outline" style="' + btn + 'border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain(\'' + askDomain + '\')">CHIEDI A COACH AI</button>' +
+      '<button class="btn btn-outline" style="' + btn + '" onclick="' + importFn + '">' + importLabel + '</button>';
+  }
+  return '<button class="btn btn-outline" style="' + btn + '" onclick="' + importFn + '">' + importLabel + '</button>' +
+    '<button class="btn btn-primary" style="' + btn + '" onclick="askRealCoachForDomain(\'' + askDomain + '\')">' + askLabel + '</button>' +
+    '<button class="btn btn-outline" style="' + btn + 'border-color:var(--gold);color:var(--gold);" onclick="requestAthleteGenerateFreedom(\'' + askDomain + '\')">CHIEDI LIBERTÀ DI GENERARE</button>';
+}
+
 function renderNutrition(c) {
   // Never invent a fake Monday meal plan
   if (!DATA.nutrition && store && store.nutrition) DATA.nutrition = store.nutrition;
@@ -8140,9 +8204,7 @@ function renderNutrition(c) {
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         ${nutrDirty ? '<button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="saveNutritionPlanEdits()">SALVA</button>' : ''}
-        <button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="openGenerateNutritionPlanWizard()">GENERA PIANO</button>
-        <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain('nutrition')">CHIEDI A COACH AI</button>
-        <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="startDomainImport('nutrition')">${t('importNutrition')}</button>
+        ${athleteDomainActionButtonsHtml('nutrition', { compact: true })}
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="addNutritionDay()">${t('addDay')}</button>
       </div>
     </div>
@@ -8164,12 +8226,12 @@ function renderNutrition(c) {
     html += `
       <div class="card" style="text-align:center;padding:30px 15px;color:#888;">
         <p style="margin:0;font-size:13px;color:#ccc;">${t('emptyNutrition')}</p>
-        <p style="margin:10px 0 0;font-size:11px;color:#666;">Puoi importare un file, aggiungere un giorno della settimana, oppure compilare il profilo e generare un piano suggerito.</p>
+        <p style="margin:10px 0 0;font-size:11px;color:#666;">${athleteCanSelfGeneratePlans()
+          ? 'Puoi importare un file, aggiungere un giorno, oppure generare un piano suggerito.'
+          : 'Puoi importare un file, chiedere il piano al coach, oppure chiedere la libertà di generarlo in autonomia.'}</p>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
-          <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="openGenerateNutritionPlanWizard()">GENERA PIANO</button>
-          <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="askCoachAiForDomain('nutrition')">CHIEDI A COACH AI (DA PROFILO)</button>
-          <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="addNutritionDay()">${t('addDay')}</button>
-          <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="startDomainImport('nutrition')">${t('importNutrition')}</button>
+          ${athleteDomainActionButtonsHtml('nutrition', { compact: false })}
+          ${athleteCanSelfGeneratePlans() ? `<button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="addNutritionDay()">${t('addDay')}</button>` : ''}
         </div>
       </div>
       <div style="font-size:9px;color:#666;line-height:1.4;margin:12px 0 8px;padding:8px;border:1px solid #222;border-radius:6px;">${(typeof NUTRITION_DISCLAIMER !== 'undefined') ? NUTRITION_DISCLAIMER : 'Informazioni nutrizionali a scopo informativo, non consulenza medica.'}</div>
@@ -8420,6 +8482,12 @@ function macroPctOptionsHtml(selected) {
 }
 
 async function openGenerateNutritionPlanWizard() {
+  if (!athleteCanSelfGeneratePlans()) {
+    if (typeof showToast === 'function') {
+      showToast('Per generare serve la massima libertà del coach. Puoi importare o chiedere al coach.', 'warning');
+    }
+    return;
+  }
   const existing = document.getElementById('gen-nutrition-plan-modal');
   if (existing) existing.remove();
   await ensureAllergenIntoleranceCatalog();
@@ -8444,6 +8512,7 @@ async function openGenerateNutritionPlanWizard() {
     freeEnabled: false,
     freeCount: 1,
     freeDays: [],
+    freeMealSlot: 'Cena',
     restrictions: profileRestr
   };
   const overlay = document.createElement('div');
@@ -8485,8 +8554,14 @@ async function openGenerateNutritionPlanWizard() {
     '<div style="margin-bottom:12px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
     '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#eee;margin:0;">' +
     '<input id="gen-nutr-free-enable" type="checkbox" onchange="onGenNutritionFreeToggle()" style="width:18px;height:18px;">' +
-    '<span><b style="color:var(--gold);">Inserisci pasti liberi</b><br><span style="font-size:10px;color:#888;">Sostituisce uno slot (di solito spuntino) nei giorni scelti</span></span></label>' +
+    '<span><b style="color:var(--gold);">Inserisci pasti liberi</b><br><span style="font-size:10px;color:#888;">Sostituisce colazione, pranzo o cena nei giorni scelti</span></span></label>' +
     '<div id="gen-nutr-free-box" style="display:none;margin-top:10px;">' +
+    '<label style="font-size:10px;color:#ccc;">Pasto da rendere libero</label>' +
+    '<select id="gen-nutr-free-slot" onchange="onGenNutritionFreeSlotChange()" style="width:100%;margin-top:4px;margin-bottom:8px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
+    '<option value="Colazione">Colazione</option>' +
+    '<option value="Pranzo">Pranzo</option>' +
+    '<option value="Cena" selected>Cena</option>' +
+    '</select>' +
     '<label style="font-size:10px;color:#ccc;">Quanti pasti liberi</label>' +
     '<select id="gen-nutr-free-count" onchange="onGenNutritionFreeCountChange()" style="width:100%;margin-top:4px;margin-bottom:8px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     [1,2,3,4,5,6,7].map(function (n) { return '<option value="' + n + '">' + n + '</option>'; }).join('') +
@@ -8570,7 +8645,10 @@ function confirmGenerateNutritionPlan() {
   }
   const restrictions = Array.isArray(st.restrictions) ? st.restrictions.slice() : [];
   let freeDays = [];
+  let freeMealSlot = 'Cena';
   if (st.freeEnabled) {
+    onGenNutritionFreeSlotChange();
+    freeMealSlot = normalizeFreeMealSlot(st.freeMealSlot || 'Cena');
     const need = Math.min(dayCount, Math.max(1, Number(st.freeCount) || 1));
     freeDays = Array.isArray(st.freeDays) ? st.freeDays.slice() : [];
     if (freeDays.length !== need) {
@@ -8589,6 +8667,7 @@ function confirmGenerateNutritionPlan() {
     offCount: Math.max(0, dayCount - onCount),
     restrictions: restrictions,
     freeDays: freeDays,
+    freeMealSlot: freeMealSlot,
     planName: (st.mode === 'precise' ? 'Piano preciso' : 'Piano automatico') + ' · ' + dayCount + ' gg · ' + comboCount + ' comb.'
   });
   if (!DATA) window.DATA = {};
@@ -8881,9 +8960,7 @@ function renderSupplements(c) {
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         ${suppDirty ? '<button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="saveSupplementationEdits()">SALVA</button>' : ''}
-        <button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="openGenerateSupplementationWizard()">GENERA INTEGRAZIONE</button>
-        <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="askCoachAiForDomain('supplements')">CHIEDI A COACH AI</button>
-        <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="startDomainImport('supplements')">${t('importSupplements')}</button>
+        ${athleteDomainActionButtonsHtml('supplements', { compact: true })}
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openAddSupplementModal()">${t('addItem')}</button>
       </div>
     </div>
@@ -8904,11 +8981,11 @@ function renderSupplements(c) {
       <div class="card" style="text-align:center;padding:30px 15px;color:#888;">
         <div style="font-size:24px;margin-bottom:8px;">🧴</div>
         <p style="margin:0;font-size:12px;">Nessun integratore importato o aggiunto.</p>
-        <p style="margin:8px 0 0;font-size:11px;color:#666;">Importa una scheda con sezione Integrazione, chiedi a Coach AI in base al profilo, oppure aggiungi dal catalogo.</p>
+        <p style="margin:8px 0 0;font-size:11px;color:#666;">${athleteCanSelfGeneratePlans()
+          ? 'Importa una scheda, chiedi a Coach AI, oppure genera un protocollo dal profilo.'
+          : 'Puoi importare, chiedere l’integrazione al coach, oppure chiedere la libertà di generarla in autonomia.'}</p>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
-          <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="openGenerateSupplementationWizard()">GENERA INTEGRAZIONE</button>
-          <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="askCoachAiForDomain('supplements')">CHIEDI A COACH AI</button>
-          <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;" onclick="startDomainImport('supplements')">${t('importSupplements')}</button>
+          ${athleteDomainActionButtonsHtml('supplements', { compact: false })}
         </div>
       </div>
     `;
@@ -12679,7 +12756,7 @@ function renderHome(c) {
   if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
     c.innerHTML = `
       <div style="text-align:center;padding:20px 0;">
-        <img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));">
+        <img src="/nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));">
         <h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1>
       </div>
 
@@ -12734,7 +12811,7 @@ function renderHome(c) {
   const frequency = store.prefs.frequency || sessions.length;
 
   c.innerHTML = `
-    <div style="text-align:center;padding:20px 0;"><img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
+    <div style="text-align:center;padding:20px 0;"><img src="/nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
 
     <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>${t('activeSession')}</h2></div><div style="padding:20px;"><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].name||sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><div style="display:flex;gap:10px;margin-top:20px;">
         <button class="btn btn-primary" style="flex:2;font-size:16px;height:55px;" onclick="navigate('training')">${t('startWorkout')}</button>
@@ -18217,6 +18294,9 @@ if (typeof window !== 'undefined') {
   window.saveAll = saveAll;
   window.addNutritionDay = addNutritionDay;
   window.openGenerateNutritionPlanWizard = openGenerateNutritionPlanWizard;
+  window.athleteCanSelfGeneratePlans = athleteCanSelfGeneratePlans;
+  window.requestAthleteGenerateFreedom = typeof requestAthleteGenerateFreedom !== 'undefined' ? requestAthleteGenerateFreedom : undefined;
+  window.onGenNutritionFreeSlotChange = onGenNutritionFreeSlotChange;
   window.setGenNutritionMode = setGenNutritionMode;
   window.onGenNutritionMacroChange = onGenNutritionMacroChange;
   window.onGenNutritionFreeToggle = onGenNutritionFreeToggle;
