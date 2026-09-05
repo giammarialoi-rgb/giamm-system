@@ -17,6 +17,16 @@ console.log('Regenerating persistence and import bundles...');
 execSync('node generate_bundles.mjs', { stdio: 'inherit' });
 
 const baseHtml = fs.readFileSync('web/index.base.html', 'utf8');
+const coachOsCss = fs.existsSync('web/coach-os/design-system.css')
+  ? fs.readFileSync('web/coach-os/design-system.css', 'utf8')
+  : '';
+const coachOsCode = [
+  'web/coach-os/shell.js',
+  'web/coach-os/today.js',
+  'web/coach-os/programs.js'
+].filter((file) => fs.existsSync(file))
+  .map((file) => fs.readFileSync(file, 'utf8'))
+  .join('\n');
 
 // 1. HEADER HTML (Head, CSS, Modals, DOM Views up to main app <script>)
 const dataStartMarker = "var DATA=null, currentView='home'";
@@ -1051,7 +1061,10 @@ try {
   console.warn('coach-practice-ui.js not injected', err && err.message);
 }
 
-const fullHtml = `${headerHtml}${CONFIG_HEADER}\n${middleCore}\n${coachPracticeUi}\n${exportCode}`;
+const coachOsStyleTag = coachOsCss
+  ? `<style id="coach-os-design-system">\n${coachOsCss}\n</style>\n`
+  : '';
+const fullHtml = `${headerHtml}${coachOsStyleTag}${CONFIG_HEADER}\n${middleCore}\n${coachPracticeUi}\n${coachOsCode}\n${exportCode}`;
 
 const releaseMetaScript =
   'self.NURVAN_RELEASE = Object.freeze(' + JSON.stringify(RELEASE_META) + ');\\n';

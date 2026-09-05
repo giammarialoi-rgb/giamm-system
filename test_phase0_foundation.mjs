@@ -44,7 +44,8 @@ ok(COACH_OS_FEATURE_NAMES.includes("coachTodayV2"), "feature registry has coachT
 ok(COACH_OS_FEATURE_NAMES.includes("coachImportV2"), "feature registry has native coach import");
 ok(COACH_OS_FEATURE_NAMES.includes("agentV1"), "feature registry has agentV1");
 const defaults = resolveCoachOsFeatureFlags({ env: {} });
-ok(COACH_OS_FEATURE_NAMES.every((name) => defaults[name] === false), "Coach OS flags fail closed");
+ok(defaults.coachShellV2 && defaults.coachTodayV2 && defaults.coachImportV2, "shipped Phase 1 flags default on");
+ok(!defaults.agentV1 && !defaults.businessV1 && !defaults.schedulingV1, "unshipped Coach OS flags fail closed");
 const envEnabled = resolveCoachOsFeatureFlags({
   env: { NURVAN_FEATURE_COACH_TODAY_V2: "true" }
 });
