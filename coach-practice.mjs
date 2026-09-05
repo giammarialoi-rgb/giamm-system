@@ -1609,8 +1609,55 @@ export function mountCoachPractice(app, deps) {
     const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
     const current = existing.rows[0]?.data || {};
     const merged = { ...current };
+    const CLEARABLE = new Set(["nutrition", "supplementation", "therapy", "exams"]);
+    const emptyCleared = (k) => {
+      const at = new Date().toISOString();
+      if (k === "nutrition") {
+        return {
+          plan_name: "",
+          present: false,
+          days: [],
+          daily_calories_target: null,
+          daily_protein_target: null,
+          daily_carbs_target: null,
+          daily_fats_target: null,
+          cleared: true,
+          clearedAt: at
+        };
+      }
+      if (k === "supplementation") return { protocol_name: "", items: [], present: false, cleared: true, clearedAt: at };
+      if (k === "therapy") return { present: false, medications: [], protocols: [], entries: [], cleared: true, clearedAt: at };
+      if (k === "exams") return { patient_name: "", records: [], present: false, reminders: [], cleared: true, clearedAt: at };
+      return { present: false, cleared: true, clearedAt: at };
+    };
+    const isCleared = (obj, kind) => {
+      if (obj == null) return true;
+      if (typeof obj !== "object") return false;
+      if (obj.cleared === true) return true;
+      if (obj.present === false) {
+        if (kind === "nutrition") return !(Array.isArray(obj.days) && obj.days.length);
+        if (kind === "supplementation") return !(Array.isArray(obj.items) && obj.items.length);
+        if (kind === "therapy") {
+          return !(Array.isArray(obj.medications) && obj.medications.length) &&
+            !(Array.isArray(obj.entries) && obj.entries.length);
+        }
+        if (kind === "exams") return !(Array.isArray(obj.records) && obj.records.length);
+      }
+      return false;
+    };
+    const applyDomainToProgram = (key, value) => {
+      if (!merged.activeProgram || typeof merged.activeProgram !== "object") return;
+      merged.activeProgram = { ...merged.activeProgram, [key]: value };
+    };
     Object.keys(patch).forEach((k) => {
-      if (patch[k] === undefined || patch[k] === null) return;
+      if (patch[k] === undefined) return;
+      // Explicit null clears for domain payloads (CANCELLA toolbar)
+      if (patch[k] === null && CLEARABLE.has(k)) {
+        merged[k] = emptyCleared(k);
+        applyDomainToProgram(k, merged[k]);
+        return;
+      }
+      if (patch[k] === null) return;
       // Never wipe athlete workout history with empty coach-side logs
       if (k === "logs") {
         const next = Array.isArray(patch.logs) ? patch.logs : null;
@@ -1622,24 +1669,40 @@ export function mountCoachPractice(app, deps) {
       if (k === "activeProgram" && patch.activeProgram && typeof patch.activeProgram === "object") {
         const curProg = current.activeProgram && typeof current.activeProgram === "object" ? current.activeProgram : {};
         merged.activeProgram = { ...curProg, ...patch.activeProgram };
-        if ((!Array.isArray(merged.activeProgram.weeks) || !merged.activeProgram.weeks.length) && Array.isArray(curProg.weeks)) {
+        const forceClearWeeks = !!(patch.activeProgram.clearedTraining || patch.activeProgram.__clearedWeeks);
+        if (forceClearWeeks) {
+          merged.activeProgram.weeks = [];
+          if (patch.activeProgram.title != null) merged.activeProgram.title = patch.activeProgram.title;
+        } else if ((!Array.isArray(merged.activeProgram.weeks) || !merged.activeProgram.weeks.length) && Array.isArray(curProg.weeks)) {
           merged.activeProgram.weeks = curProg.weeks;
         }
         return;
       }
       merged[k] = patch[k];
     });
-    if (patch.nutrition) {
-      merged.nutrition = patch.nutrition;
-      if (merged.activeProgram && typeof merged.activeProgram === "object") {
-        merged.activeProgram = { ...merged.activeProgram, nutrition: patch.nutrition };
-      }
+    if (Object.prototype.hasOwnProperty.call(patch, "nutrition")) {
+      merged.nutrition = isCleared(patch.nutrition, "nutrition")
+        ? (patch.nutrition && typeof patch.nutrition === "object" ? patch.nutrition : emptyCleared("nutrition"))
+        : patch.nutrition;
+      applyDomainToProgram("nutrition", merged.nutrition);
     }
-    if (patch.supplementation) {
-      merged.supplementation = patch.supplementation;
-      if (merged.activeProgram && typeof merged.activeProgram === "object") {
-        merged.activeProgram = { ...merged.activeProgram, supplementation: patch.supplementation };
-      }
+    if (Object.prototype.hasOwnProperty.call(patch, "supplementation")) {
+      merged.supplementation = isCleared(patch.supplementation, "supplementation")
+        ? (patch.supplementation && typeof patch.supplementation === "object" ? patch.supplementation : emptyCleared("supplementation"))
+        : patch.supplementation;
+      applyDomainToProgram("supplementation", merged.supplementation);
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "therapy")) {
+      merged.therapy = isCleared(patch.therapy, "therapy")
+        ? (patch.therapy && typeof patch.therapy === "object" ? patch.therapy : emptyCleared("therapy"))
+        : patch.therapy;
+      applyDomainToProgram("therapy", merged.therapy);
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "exams")) {
+      merged.exams = isCleared(patch.exams, "exams")
+        ? (patch.exams && typeof patch.exams === "object" ? patch.exams : emptyCleared("exams"))
+        : patch.exams;
+      applyDomainToProgram("exams", merged.exams);
     }
     merged.coachPatchedAt = new Date().toISOString();
     merged.assignedByCoach = true;
