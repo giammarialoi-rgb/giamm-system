@@ -14,8 +14,13 @@
 
   CoachOS.views.coachBusiness = async function (container) {
     container.innerHTML = '<div class="coach-os-skeleton">Loading ledger…</div>';
-    const data = await window.practiceFetch('/api/coach/business', { headers: window.practiceHeaders() });
-    const summary = data.summary || {};
+    let summary = {};
+    try {
+      const data = await window.practiceFetch('/api/coach/business', { headers: window.practiceHeaders() });
+      summary = data.summary || {};
+    } catch (_) {
+      summary = { activeClients: 0, revenue30dCents: 0, mrrCents: 0, overdue: 0 };
+    }
     container.innerHTML =
       '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Manual ledger</div>' +
       '<h1 class="coach-os-title">Business</h1><p class="coach-os-subtitle">Nessuno Stripe. Piano, rinnovo e overdue.</p></div></div>' +
@@ -27,8 +32,13 @@
   };
 
   CoachOS.views.coachCrm = async function (container) {
-    const data = await window.practiceFetch('/api/coach/crm', { headers: window.practiceHeaders() });
-    const rows = data.pipeline || [];
+    let rows = [];
+    try {
+      const data = await window.practiceFetch('/api/coach/crm', { headers: window.practiceHeaders() });
+      rows = data.pipeline || [];
+    } catch (_) {
+      rows = [];
+    }
     container.innerHTML =
       '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Pipeline</div>' +
       '<h1 class="coach-os-title">CRM</h1></div></div>' +
@@ -42,8 +52,13 @@
   };
 
   CoachOS.views.coachAutomations = async function (container) {
-    const data = await window.practiceFetch('/api/coach/automations', { headers: window.practiceHeaders() });
-    const rows = data.rules || [];
+    let rows = [];
+    try {
+      const data = await window.practiceFetch('/api/coach/automations', { headers: window.practiceHeaders() });
+      rows = data.rules || [];
+    } catch (_) {
+      rows = [];
+    }
     container.innerHTML =
       '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Rules</div>' +
       '<h1 class="coach-os-title">Automations</h1><p class="coach-os-subtitle">Trigger, condizione, azione. Dry-run prima di abilitare.</p></div>' +

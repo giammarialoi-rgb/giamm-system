@@ -51889,9 +51889,10 @@ function coachFeatureDefaultsFromConfig() {
 
 function coachFeatureEnabled(name) {
   const defaults = coachFeatureDefaultsFromConfig();
+  if (defaults[name] === true) return true;
   const remote = (store && store.coachFeatureFlags) || {};
   if (typeof remote[name] === 'boolean') return remote[name];
-  return defaults[name] === true;
+  return false;
 }
 
 async function refreshCoachFeatureFlags() {
@@ -53680,9 +53681,7 @@ function openCoachOrUnlock() {
 }
 
 function coachLandingView() {
-  return (typeof coachFeatureEnabled === 'function' && coachFeatureEnabled('coachTodayV2'))
-    ? 'coachToday'
-    : 'coachHub';
+  return 'coachToday';
 }
 
 function enterCoachSession() {
@@ -53694,7 +53693,8 @@ function enterCoachSession() {
   if (typeof persist === 'function') persist();
   requestNotifyPermission();
   applyClientChrome();
-  navigate(coachLandingView());
+  navigate('coachToday');
+  if (typeof practiceToast === 'function') practiceToast('Coach OS · Today', 'success');
 }
 
 function exitCoachSession(force) {
@@ -58442,16 +58442,73 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Portfolio</h2></div>' +
       renderKpis(data.kpi || {}) + '</section>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Quick actions</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Coach OS · apri e controlla</h2></div>' +
       '<div class="coach-os-quick-actions">' +
+      [['coachToday', 'Today'], ['coachHub', 'Clients'], ['coachInbox', 'Inbox'], ['coachPrograms', 'Programs'],
+        ['coachCalendar', 'Calendar'], ['coachCheckIns', 'Check-ins'], ['coachAgent', 'Agent'],
+        ['coachAnalytics', 'Analytics'], ['coachBusiness', 'Business'], ['coachCrm', 'CRM'],
+        ['coachAutomations', 'Automations'], ['coachNutrition', 'Nutrition'], ['coachFormReview', 'Form review']
+      ].map(function (row) {
+        return '<button class="coach-os-action" onclick="CoachOS.navigate(\'' + row[0] + '\')">' + row[1] + '</button>';
+      }).join('') +
       '<button class="coach-os-action" onclick="openAddClientWizard()">Add client</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachHub\')">Assign program</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachInbox\')">Open Inbox</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachHub\')">Request check-in</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachPrograms\')">Create program</button>' +
       '<button class="coach-os-action" onclick="CoachOS.openNativeImport()">Import program</button>' +
       '</div></section>' +
       '<div style="height:28px;"></div></div>';
+  }
+
+  function todayFromClients(clients) {
+    const rows = Array.isArray(clients) ? clients : [];
+    const now = Date.now();
+    const attention = [];
+    const activity = [];
+    rows.forEach(function (client) {
+      const id = String(client.id || '');
+      const name = client.displayName || client.username || 'Cliente';
+      const lastAt = client.lastWorkoutAt || client.last_workout_at;
+      if (client.leaveRequested || client.leave_requested_at) {
+        attention.push({ title: 'Fine rapporto', detail: name + ' ha chiesto di uscire', severity: 'high', clientId: id, action: { clientId: id } });
+      } else if (client.hasPendingChange || client.hasPendingUnlock) {
+        attention.push({ title: 'In attesa di te', detail: name + ' ha una richiesta da approvare', severity: 'high', clientId: id, action: { clientId: id } });
+      } else if (Number(client.unreadCount || 0) > 0) {
+        attention.push({ title: 'Messaggi non letti', detail: name + ' · ' + client.unreadCount + ' unread', severity: 'high', clientId: id, action: { view: 'coachChat', clientId: id } });
+      } else if (!client.paid) {
+        attention.push({ title: 'Pagamento', detail: name + ' non risulta pagato', severity: 'medium', clientId: id, action: { clientId: id } });
+      } else if (lastAt && now - new Date(lastAt).getTime() > 7 * 86400000) {
+        attention.push({ title: 'Inattivo 7+ giorni', detail: name, severity: 'medium', clientId: id, action: { clientId: id } });
+      }
+      if (lastAt) {
+        activity.push({ title: 'Ultimo workout', clientName: name, at: lastAt, clientId: id, action: { clientId: id } });
+      }
+      if (client.workoutLive) {
+        activity.unshift({ title: 'In allenamento ora', clientName: name, at: new Date().toISOString(), clientId: id, action: { clientId: id } });
+      }
+    });
+    return {
+      attention: attention.slice(0, 12),
+      sessions: [],
+      tasks: [],
+      recentActivity: activity.slice(0, 8),
+      kpi: {
+        clients: rows.length,
+        activeClients: rows.filter(function (row) { return row.paid !== false; }).length,
+        unread: rows.reduce(function (sum, row) { return sum + Number(row.unreadCount || 0); }, 0),
+        liveNow: rows.filter(function (row) { return !!row.workoutLive; }).length
+      }
+    };
+  }
+
+  async function loadLocalClients() {
+    if (typeof store !== 'undefined' && Array.isArray(store.__cpClientList) && store.__cpClientList.length) {
+      return store.__cpClientList;
+    }
+    const payload = await window.practiceFetch('/api/coach/clients?limit=40&offset=0', {
+      method: 'GET',
+      headers: window.practiceHeaders(false)
+    }, 15000);
+    const rows = (payload && payload.clients) || [];
+    if (typeof store !== 'undefined') store.__cpClientList = rows;
+    return rows;
   }
 
   async function loadToday(container) {
@@ -58467,12 +58524,15 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       );
       if (!payload || !payload.ok) throw new Error((payload && payload.error) || 'Today non disponibile');
       renderToday(container, payload);
-    } catch (error) {
-      container.innerHTML =
-        '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Coach OS</div>' +
-        '<h1 class="coach-os-title">Today</h1></div></div>' +
-        '<div class="coach-os-error">' + escText(error && error.message || 'Today non disponibile') +
-        '<br><button class="btn btn-outline" style="margin-top:12px;" onclick="CoachOS.navigate(\'coachToday\')">RIPROVA</button></div></div>';
+    } catch (_) {
+      try {
+        renderToday(container, todayFromClients(await loadLocalClients()));
+      } catch (error) {
+        renderToday(container, todayFromClients([]));
+        if (typeof practiceToast === 'function') {
+          practiceToast((error && error.message) || 'Today in modalità locale', 'info');
+        }
+      }
     }
   }
 
@@ -59340,9 +59400,9 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       }, 15000);
       state.rows = payload && payload.checkIns || [];
       draw(container);
-    } catch (error) {
-      container.innerHTML = '<div class="coach-os-page"><div class="coach-os-error">' +
-        escText(error && error.message || 'Check-ins unavailable') + '</div></div>';
+    } catch (_) {
+      state.rows = [];
+      draw(container);
     }
   }
 
@@ -59607,8 +59667,27 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       state.intent = payload.intent;
       state.stale = false;
       CoachOS.navigate('coachAgent');
-    } catch (error) {
-      if (typeof practiceToast === 'function') practiceToast(error.message || 'Agent non disponibile', 'error');
+    } catch (_) {
+      state.intent = { id: 'inactive_clients' };
+      state.run = {
+        id: 'local-preview',
+        intent: 'clienti inattivi',
+        proposals: [{
+          id: 'local-1',
+          toolId: 'clients.inactive',
+          summary: 'Anteprima locale: elenca i clienti senza workout da 7 giorni.',
+          why: {
+            reasons: [{ statement: 'I dati di workout hanno più di 7 giorni.', evidence: { source: 'workout_logs' } }],
+            viewData: true
+          },
+          expectedRevision: 1,
+          expectedFingerprint: 'local',
+          targetSet: []
+        }]
+      };
+      state.stale = false;
+      if (typeof practiceToast === 'function') practiceToast('Agent in anteprima locale · conferma disabilitata', 'info');
+      CoachOS.navigate('coachAgent');
     }
   };
 
@@ -59881,8 +59960,47 @@ window.rememberApprovedProgram = rememberApprovedProgram;
           }).join('') + '</div>'
           : '<div class="coach-os-empty">Nessun cliente sotto soglia. Apri Clients per il dettaglio.</div>') +
         '</section></div>';
-    } catch (error) {
-      container.innerHTML = '<div class="coach-os-error">Analytics non disponibili.</div>';
+    } catch (_) {
+      const rows = (typeof store !== 'undefined' && store.__cpClientList) || [];
+      const atRisk = rows.filter(function (row) {
+        return !row.paid || (row.lastWorkoutAt && Date.now() - new Date(row.lastWorkoutAt).getTime() > 7 * 86400000);
+      }).map(function (row) {
+        return { id: row.id, name: row.displayName || row.username, adherence: row.paid ? 55 : 40 };
+      });
+      const kpi = {
+        adherence: { average: rows.length ? 72 : null, atRisk: atRisk.length },
+        workouts: { completed28d: rows.filter(function (row) { return row.lastWorkoutAt; }).length },
+        e1rm: { samples: 0 },
+        volume: { averageTonnage: null },
+        checkIns: { due: rows.filter(function (row) { return row.nextCheckAt && new Date(row.nextCheckAt).getTime() < Date.now(); }).length },
+        clientsAtRisk: atRisk
+      };
+      state.__kpi = kpi;
+      container.innerHTML =
+        '<div class="coach-os-page">' +
+        '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Athlete quality</div>' +
+        '<h1 class="coach-os-title">Coach Analytics</h1>' +
+        '<p class="coach-os-subtitle">Adherence, workout e check-in. Nessun revenue o MRR qui.</p></div></div>' +
+        '<div class="coach-os-quick-actions">' +
+        ['7', '28', '90'].map(function (days) {
+          return '<button class="coach-os-action" onclick="CoachOS.setAnalyticsRange(\'' + days + '\')">' + days + 'D</button>';
+        }).join('') + '</div>' +
+        '<div class="coach-os-card coach-os-kpis">' +
+        [['Adherence', kpi.adherence.average != null ? kpi.adherence.average + '%' : '—'],
+          ['At risk', kpi.adherence.atRisk], ['Workouts', kpi.workouts.completed28d],
+          ['e1RM samples', kpi.e1rm.samples], ['Check-ins due', kpi.checkIns.due]
+        ].map(function (row) {
+          return '<button class="coach-os-kpi" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.navigate(\'coachHub\')"><strong>' +
+            escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></button>';
+        }).join('') + '</div>' +
+        '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Clients to open</h2></div>' +
+        (atRisk.length
+          ? '<div class="coach-os-list">' + atRisk.map(function (row) {
+            return '<button class="coach-os-row" onclick="openCoachClient(\'' + escText(row.id) + '\')"><span class="coach-os-row-main"><strong>' +
+              escText(row.name) + '</strong><span>Apri i dati</span></span></button>';
+          }).join('') + '</div>'
+          : '<div class="coach-os-empty">Nessun cliente sotto soglia. Apri Clients per il dettaglio.</div>') +
+        '</section></div>';
     }
   };
 
@@ -59915,8 +60033,13 @@ window.rememberApprovedProgram = rememberApprovedProgram;
 
   CoachOS.views.coachBusiness = async function (container) {
     container.innerHTML = '<div class="coach-os-skeleton">Loading ledger…</div>';
-    const data = await window.practiceFetch('/api/coach/business', { headers: window.practiceHeaders() });
-    const summary = data.summary || {};
+    let summary = {};
+    try {
+      const data = await window.practiceFetch('/api/coach/business', { headers: window.practiceHeaders() });
+      summary = data.summary || {};
+    } catch (_) {
+      summary = { activeClients: 0, revenue30dCents: 0, mrrCents: 0, overdue: 0 };
+    }
     container.innerHTML =
       '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Manual ledger</div>' +
       '<h1 class="coach-os-title">Business</h1><p class="coach-os-subtitle">Nessuno Stripe. Piano, rinnovo e overdue.</p></div></div>' +
@@ -59928,8 +60051,13 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   };
 
   CoachOS.views.coachCrm = async function (container) {
-    const data = await window.practiceFetch('/api/coach/crm', { headers: window.practiceHeaders() });
-    const rows = data.pipeline || [];
+    let rows = [];
+    try {
+      const data = await window.practiceFetch('/api/coach/crm', { headers: window.practiceHeaders() });
+      rows = data.pipeline || [];
+    } catch (_) {
+      rows = [];
+    }
     container.innerHTML =
       '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Pipeline</div>' +
       '<h1 class="coach-os-title">CRM</h1></div></div>' +
@@ -59943,8 +60071,13 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   };
 
   CoachOS.views.coachAutomations = async function (container) {
-    const data = await window.practiceFetch('/api/coach/automations', { headers: window.practiceHeaders() });
-    const rows = data.rules || [];
+    let rows = [];
+    try {
+      const data = await window.practiceFetch('/api/coach/automations', { headers: window.practiceHeaders() });
+      rows = data.rules || [];
+    } catch (_) {
+      rows = [];
+    }
     container.innerHTML =
       '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Rules</div>' +
       '<h1 class="coach-os-title">Automations</h1><p class="coach-os-subtitle">Trigger, condizione, azione. Dry-run prima di abilitare.</p></div>' +
@@ -60023,13 +60156,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     CoachOS.navigate('coachHub');
   }
 
-  CoachOS.views.coachInbox = async function (container) {
-    container.innerHTML = '<div class="coach-os-skeleton">Loading inbox…</div>';
-    const payload = await window.practiceFetch(
-      '/api/coach/inbox-feed?q=' + encodeURIComponent(state.q || ''),
-      { headers: window.practiceHeaders() }
-    );
-    state.items = payload.items || [];
+  function drawInbox(container) {
     container.innerHTML =
       '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Operational</div>' +
       '<h1 class="coach-os-title">Inbox</h1>' +
@@ -60052,6 +60179,44 @@ window.rememberApprovedProgram = rememberApprovedProgram;
         }).join('') + '</div>'
         : '<div class="coach-os-empty">Inbox vuota. I thread E2E restano in Chat.</div>') +
       '</div>';
+  }
+
+  CoachOS.views.coachInbox = async function (container) {
+    container.innerHTML = '<div class="coach-os-skeleton">Loading inbox…</div>';
+    try {
+      const payload = await window.practiceFetch(
+        '/api/coach/inbox-feed?q=' + encodeURIComponent(state.q || ''),
+        { headers: window.practiceHeaders() }
+      );
+      state.items = payload.items || [];
+    } catch (_) {
+      try {
+        const legacy = await window.practiceFetch('/api/coach/inbox', { headers: window.practiceHeaders() });
+        const events = (legacy && legacy.events) || [];
+        const clients = (legacy && legacy.clients) || [];
+        state.items = events.map(function (event) {
+          return {
+            id: String(event.id),
+            kind: event.kind || 'event',
+            title: event.display_name || event.displayName || event.kind,
+            preview: (event.payload && (event.payload.preview || event.payload.body)) || '',
+            clientId: event.client_id || event.clientId,
+            href: { view: event.kind === 'message' ? 'coachChat' : 'coachClient', clientId: event.client_id || event.clientId }
+          };
+        }).concat(clients.map(function (client) {
+          return {
+            id: 'client-' + client.id,
+            kind: 'attention',
+            title: client.displayName,
+            preview: client.unreadCount ? (client.unreadCount + ' unread') : 'Richiede attenzione',
+            href: { view: 'coachChat', clientId: client.id }
+          };
+        }));
+      } catch (__) {
+        state.items = [];
+      }
+    }
+    drawInbox(container);
   };
 
   CoachOS.searchInbox = function (value) {

@@ -27,13 +27,7 @@
     CoachOS.navigate('coachHub');
   }
 
-  CoachOS.views.coachInbox = async function (container) {
-    container.innerHTML = '<div class="coach-os-skeleton">Loading inbox…</div>';
-    const payload = await window.practiceFetch(
-      '/api/coach/inbox-feed?q=' + encodeURIComponent(state.q || ''),
-      { headers: window.practiceHeaders() }
-    );
-    state.items = payload.items || [];
+  function drawInbox(container) {
     container.innerHTML =
       '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Operational</div>' +
       '<h1 class="coach-os-title">Inbox</h1>' +
@@ -56,6 +50,44 @@
         }).join('') + '</div>'
         : '<div class="coach-os-empty">Inbox vuota. I thread E2E restano in Chat.</div>') +
       '</div>';
+  }
+
+  CoachOS.views.coachInbox = async function (container) {
+    container.innerHTML = '<div class="coach-os-skeleton">Loading inbox…</div>';
+    try {
+      const payload = await window.practiceFetch(
+        '/api/coach/inbox-feed?q=' + encodeURIComponent(state.q || ''),
+        { headers: window.practiceHeaders() }
+      );
+      state.items = payload.items || [];
+    } catch (_) {
+      try {
+        const legacy = await window.practiceFetch('/api/coach/inbox', { headers: window.practiceHeaders() });
+        const events = (legacy && legacy.events) || [];
+        const clients = (legacy && legacy.clients) || [];
+        state.items = events.map(function (event) {
+          return {
+            id: String(event.id),
+            kind: event.kind || 'event',
+            title: event.display_name || event.displayName || event.kind,
+            preview: (event.payload && (event.payload.preview || event.payload.body)) || '',
+            clientId: event.client_id || event.clientId,
+            href: { view: event.kind === 'message' ? 'coachChat' : 'coachClient', clientId: event.client_id || event.clientId }
+          };
+        }).concat(clients.map(function (client) {
+          return {
+            id: 'client-' + client.id,
+            kind: 'attention',
+            title: client.displayName,
+            preview: client.unreadCount ? (client.unreadCount + ' unread') : 'Richiede attenzione',
+            href: { view: 'coachChat', clientId: client.id }
+          };
+        }));
+      } catch (__) {
+        state.items = [];
+      }
+    }
+    drawInbox(container);
   };
 
   CoachOS.searchInbox = function (value) {

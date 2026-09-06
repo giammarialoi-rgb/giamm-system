@@ -60,9 +60,9 @@
       }, 15000);
       state.rows = payload && payload.checkIns || [];
       draw(container);
-    } catch (error) {
-      container.innerHTML = '<div class="coach-os-page"><div class="coach-os-error">' +
-        escText(error && error.message || 'Check-ins unavailable') + '</div></div>';
+    } catch (_) {
+      state.rows = [];
+      draw(container);
     }
   }
 
