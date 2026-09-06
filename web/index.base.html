@@ -2362,18 +2362,27 @@ function plannedRepsRirFromRow(row, setNum) {
   }
   return { reps: reps == null ? '' : reps, rir: rir == null ? '' : rir };
 }
-function collectPrevWeekSetLogs(exIdx, row) {
-  if (currentWeek <= 1) return [];
-  const name = exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '';
-  const prevIdx = findMatchingExerciseIndex(currentWeek - 1, currentDay, name, exIdx);
-  const prevName = normalizeExerciseKey(exerciseNameAt(currentWeek - 1, currentDay, prevIdx));
+function weekExerciseWasLogged(week, day, exIdx) {
+  if (!store || !store.data) return false;
+  for (let s = 1; s <= 12; s++) {
+    const base = 'w' + week + '_d' + day + '_e' + exIdx + '_s' + s;
+    if (store.data[base + '_done'] || store.data[base + '_load_user']) return true;
+  }
+  return (store.logs || []).some(function (row) {
+    return row && Number(row.week) === Number(week) && Number(row.day) === Number(day);
+  });
+}
+function collectSetLogsAtWeek(week, day, exIdx, row) {
+  const name = exerciseNameAt(currentWeek, day, exIdx) || (row && (row.name || row.exercise)) || '';
+  const prevIdx = findMatchingExerciseIndex(week, day, name, exIdx);
+  const prevName = normalizeExerciseKey(exerciseNameAt(week, day, prevIdx));
   const thisName = normalizeExerciseKey(name);
   if (thisName && prevName && thisName !== prevName) return [];
   const out = [];
   for (let s = 1; s <= 10; s++) {
-    const load = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_load'];
-    const reps = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_reps'];
-    const rir = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_rir'];
+    const load = store.data['w' + week + '_d' + day + '_e' + prevIdx + '_s' + s + '_load'];
+    const reps = store.data['w' + week + '_d' + day + '_e' + prevIdx + '_s' + s + '_reps'];
+    const rir = store.data['w' + week + '_d' + day + '_e' + prevIdx + '_s' + s + '_rir'];
     const hasLoad = load !== undefined && load !== '' && load != null;
     const hasReps = reps !== undefined && reps !== '' && reps != null;
     const hasRir = rir !== undefined && rir !== '' && rir != null;
@@ -2383,10 +2392,42 @@ function collectPrevWeekSetLogs(exIdx, row) {
       load: hasLoad ? load : '',
       reps: hasReps ? reps : '',
       rir: hasRir ? rir : '',
-      prevIdx: prevIdx
+      prevIdx: prevIdx,
+      done: !!store.data['w' + week + '_d' + day + '_e' + prevIdx + '_s' + s + '_done']
     });
   }
   return out;
+}
+function uniquePositiveLoads(sets) {
+  const loads = (sets || []).map(function (s) { return parseFloat(s.load); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
+  const uniq = [];
+  loads.forEach(function (n) { if (uniq.indexOf(n) < 0) uniq.push(n); });
+  return uniq;
+}
+function collectPrevWeekSetLogs(exIdx, row) {
+  if (currentWeek <= 1) return [];
+  const name = exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '';
+  let fallback = [];
+  for (let w = currentWeek - 1; w >= 1; w--) {
+    const idx = findMatchingExerciseIndex(w, currentDay, name, exIdx);
+    const logged = collectSetLogsAtWeek(w, currentDay, exIdx, row);
+    if (!logged.length) continue;
+    if (uniquePositiveLoads(logged).length > 1) return logged;
+    if (weekExerciseWasLogged(w, currentDay, idx) && !fallback.length) fallback = logged;
+  }
+  return fallback;
+}
+function effectiveSetLoad(exIdx, setNum, row) {
+  const k = 'w' + currentWeek + '_d' + currentDay + '_e' + exIdx + '_s' + setNum;
+  if (store.data[k + '_done'] || store.data[k + '_load_user']) {
+    const owned = store.data[k + '_load'];
+    if (owned !== undefined && owned !== '' && owned != null) return owned;
+  }
+  const sugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(exIdx, setNum, row || {}) : null;
+  if (Number(sugg) > 0) return sugg;
+  const stored = store.data[k + '_load'];
+  if (stored !== undefined && stored !== '' && stored != null) return stored;
+  return '';
 }
 function epleyE1rm(load, reps) {
   const L = parseFloat(load);
@@ -5545,7 +5586,7 @@ function normalizeProgram(payload) {
             id: s.id || `${exId}_s${sIdx + 1}`,
             order: s.order || sIdx + 1,
             reps: s.reps ?? s.target_reps ?? repsTarget,
-            load: s.load != null ? Number(s.load) : (s.target_load != null ? Number(s.target_load) : plannedLoad),
+            load: s.load != null ? Number(s.load) : (s.target_load != null ? Number(s.target_load) : (sIdx === 0 ? plannedLoad : null)),
             load_formula: s.load_formula || null,
             sets_formula: s.sets_formula || null,
             set_type: drop ? 'dropset' : (s.set_type || 'working'),
@@ -5569,7 +5610,16 @@ function normalizeProgram(payload) {
         if (rawSource) {
           const template = rawSource[0] || {};
           for (let sIdx = 0; sIdx < setsCount; sIdx++) {
-            canonicalSets.push(mapSetRow(rawSource[sIdx] || { ...template }, sIdx, setsCount));
+            if (rawSource[sIdx]) {
+              canonicalSets.push(mapSetRow(rawSource[sIdx], sIdx, setsCount));
+            } else {
+              const pad = Object.assign({}, template);
+              delete pad.load;
+              delete pad.target_load;
+              delete pad.actual_load;
+              delete pad.logged_load;
+              canonicalSets.push(mapSetRow(pad, sIdx, setsCount));
+            }
           }
           if (setInfo.mismatched) {
             console.warn('[IMPORT_FIDELITY] sets mismatch padded', exName, 'declared/target=', setsCount, 'modelRows=', rawSource.length);
@@ -6960,19 +7010,13 @@ function completeSetQuick(exIdx, setNum, restText) {
   } : { load: '', reps: '', rir: '' };
 
   const loadEl = $(k + '_load');
-  let load = store.data[k + '_load'];
   const rowForSugg = exerciseRowAt(currentWeek, currentDay, exIdx) || {};
-  if (load !== undefined && load !== '' && load != null && !store.data[doneKey]
-    && typeof isLegacyCopiedTopPrefill === 'function' && isLegacyCopiedTopPrefill(load, exIdx, setNum, rowForSugg)) {
-    load = '';
-  }
+  let load = (typeof effectiveSetLoad === 'function') ? effectiveSetLoad(exIdx, setNum, rowForSugg) : store.data[k + '_load'];
   if (load === undefined || load === '' || load == null) {
     const fromInput = loadEl && loadEl.value !== '' && loadEl.value != null ? loadEl.value : '';
-    const fromPh = loadEl && loadEl.placeholder ? loadEl.placeholder : '';
-    const setKg = (typeof suggestedLoadForSet === 'function')
-      ? suggestedLoadForSet(exIdx, setNum, exerciseRowAt(currentWeek, currentDay, exIdx) || {})
-      : null;
-    load = fromInput || fromPh || (Number(setKg) > 0 ? setKg : '') || prev.load || '';
+    load = fromInput || prev.load || '';
+  }
+  if (load !== undefined && load !== '' && load != null) {
     store.data[k + '_load'] = load;
     if (loadEl) loadEl.value = load;
   }
@@ -11365,6 +11409,15 @@ function suggestProgramsForProfile(profile) {
     .map((x) => x.p);
 }
 
+function openProgramTemplateCreate() {
+  navigate('programs');
+  setTimeout(function () {
+    const el = document.getElementById('program-create-template');
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 120);
+}
+window.openProgramTemplateCreate = openProgramTemplateCreate;
+
 async function generateAndActivateProgram() {
   const days = parseInt(($('gen-days') && $('gen-days').value) || '4', 10);
   const goal = ($('gen-goal') && $('gen-goal').value) || 'hypertrophy';
@@ -11681,7 +11734,7 @@ function renderPrograms(c){
       <button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="promptCatalogFromIntakeThenOpen('${esc(store.coachAssigning.clientId)}','${esc(store.coachAssigning.name || '')}')">FILTRA CON ANAGRAFICA CLIENTE</button>
     </div>` : '')}
 
-    <div class="card" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
+    <div class="card" id="program-create-template" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
       <div class="card-header"><h3 style="font-size:13px;color:var(--gold);font-weight:800;margin:0;">GENERA PROGRAMMA (rules-based)</h3></div>
       <p style="font-size:11px;color:#888;margin:0 0 10px;">Template strutturati (non AI random). Puoi attivare e modificare dopo.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
@@ -11705,6 +11758,9 @@ function renderPrograms(c){
           <option value="8" selected>8 settimane</option>
           <option value="12">12 settimane</option>
         </select>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <button class="btn btn-outline" style="font-size:11px;padding:6px 12px;" onclick="openAiProgramWizard()">AI CREATE</button>
       </div>
       <button class="btn btn-primary" style="width:100%;font-size:12px;" onclick="generateAndActivateProgram()">GENERA E ATTIVA</button>
     </div>
@@ -13363,25 +13419,26 @@ function renderHome(c) {
         <h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1>
       </div>
 
-      <div class="card" style="border:2px solid var(--gold);padding:24px;text-align:center;">
+      <div class="card" style="border:2px solid var(--gold);padding:22px 18px;">
+        <div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">CREA IL TUO PROGRAMMA</div>
         <div style="font-size:18px;font-weight:900;color:var(--gold);margin-bottom:8px;">${t('noActiveProgram')}</div>
-        <p style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:20px;">
-          Dal PDF/Excel del coach all'allenamento interattivo — oppure scegli una scheda con provenienza dal database.
+        <p style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:16px;">
+          Quattro percorsi equivalenti. Scegline uno: poi alleni.
         </p>
-        <div style="display:flex;flex-direction:column;gap:10px;max-width:320px;margin:0 auto;">
-          <button class="btn btn-primary" style="height:50px;font-size:14px;font-weight:900;" onclick="navigate('import')">
-            IMPORTA PDF / EXCEL / WORD
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn btn-primary" style="min-height:52px;font-size:13px;font-weight:900;text-align:left;padding:10px 14px;" onclick="navigate('import')">
+            IMPORTA FILE<br><span style="font-size:10px;font-weight:600;opacity:.85;">PDF / Excel / Word del coach</span>
           </button>
-          <button class="btn btn-outline" style="height:44px;font-size:12px;font-weight:800;border-color:var(--gold);color:var(--gold);" onclick="navigate('programs')">
-            DATABASE PROGRAMMI
+          <button class="btn btn-outline" style="min-height:48px;font-size:12px;font-weight:800;border-color:var(--gold);color:var(--gold);text-align:left;padding:10px 14px;" onclick="navigate('programs')">
+            DATABASE PROGRAMMI<br><span style="font-size:10px;font-weight:600;color:#aaa;">Schede già pronte · preview e attiva</span>
           </button>
-          <button class="btn btn-outline" style="height:44px;font-size:12px;font-weight:800;" onclick="navigate('programs');setTimeout(function(){ if(typeof generateAndActivateProgram==='function'){} },0)">
-            CREA DA TEMPLATE
+          <button class="btn btn-outline" style="min-height:48px;font-size:12px;font-weight:800;text-align:left;padding:10px 14px;" onclick="openProgramTemplateCreate()">
+            CREA DA TEMPLATE<br><span style="font-size:10px;font-weight:600;color:#aaa;">Rules-based: giorni, obiettivo, livello</span>
           </button>
-          <button class="btn btn-outline" style="height:44px;font-size:12px;font-weight:800;" onclick="openAiProgramWizard()">
-            AI CREATE
+          <button class="btn btn-outline" style="min-height:48px;font-size:12px;font-weight:800;text-align:left;padding:10px 14px;" onclick="openAiProgramWizard()">
+            AI CREATE<br><span style="font-size:10px;font-weight:600;color:#aaa;">Descrivi la scheda · JSON canonico · conferma</span>
           </button>
-          <button class="btn btn-outline" style="height:44px;font-size:12px;font-weight:800;" onclick="openAthleteProfile()">
+          <button class="btn btn-outline" style="min-height:44px;font-size:12px;font-weight:800;" onclick="openAthleteProfile()">
             COMPLETA PROFILO
           </button>
         </div>
@@ -13389,14 +13446,12 @@ function renderHome(c) {
 
       ${homeDomainModulesHtml()}
 
-      <div class="card">
-        <div class="card-header"><h2>GESTIONE & MANUTENZIONE</h2></div>
-        <div style="padding:15px;display:flex;flex-direction:column;gap:10px;">
-          <button class="btn btn-outline" style="width:100%;border-color:var(--accent-red);color:var(--accent-red);font-size:10px;" onclick="resetAllData()">
-            ${t('hardResetLocal')}
-          </button>
-        </div>
-      </div>
+      <details style="margin-top:18px;padding:8px 4px;">
+        <summary style="font-size:10px;color:#666;cursor:pointer;">Manutenzione</summary>
+        <button class="btn btn-outline" style="width:100%;margin-top:10px;border-color:#442222;color:#a66;font-size:10px;" onclick="resetAllData()">
+          ${t('hardResetLocal')}
+        </button>
+      </details>
     `;
     return;
   }
@@ -13422,7 +13477,7 @@ function renderHome(c) {
   c.innerHTML = `
     <div style="text-align:center;padding:20px 0;"><img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));" onerror="this.onerror=null;this.src='icon-192.png'"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
 
-    <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>${t('activeSession')}</h2></div><div style="padding:20px;"><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].name||sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><div style="display:flex;gap:10px;margin-top:20px;">
+    <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>${t('activeSession')}</h2></div><div style="padding:20px;"><div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">OGGI · PROSSIMA AZIONE</div><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].name||sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><div style="display:flex;gap:10px;margin-top:20px;">
         <button class="btn btn-primary" style="flex:2;font-size:16px;height:55px;" onclick="navigate('training')">${t('startWorkout')}</button>
         <button class="btn btn-outline" style="flex:1;font-size:12px;height:55px;border-color:var(--gold);color:var(--gold);" onclick="navigate('${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'clientChat' : 'programs'}')">${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'CHAT COACH' : 'PROGRAMMI'}</button>
       </div></div></div>
@@ -13624,7 +13679,11 @@ function applySsttStartInputs() {
           (ex.sets || []).forEach((st, si) => {
             if (st.load == null && st.target_load == null) return;
             const k = 'w' + wNum + '_d' + di + '_e' + ei + '_s' + (si + 1) + '_load';
-            if (store && store.data) store.data[k] = st.load != null ? st.load : st.target_load;
+            if (!store || !store.data) return;
+            if (store.data[k + '_done'] || store.data[k + '_load_user']) return;
+            if (typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(wNum, di, ei)) return;
+            if (wNum > 1 && typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(wNum - 1, di, ei)) return;
+            store.data[k] = st.load != null ? st.load : st.target_load;
           });
         });
       });
@@ -13772,24 +13831,9 @@ function renderTraining(c){
         for(let s = 1; s <= totalSets; s++) {
           const k = `w${currentWeek}_d${currentDay}_e${fIdx}_s${s}`;
           const setObj = Array.isArray(row.sets) ? row.sets[s - 1] : null;
-          let sugg = '';
-          const setKg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(fIdx, s, row) : null;
-          if (Number(setKg) > 0) sugg = setKg;
-          else {
-            const prevSets = (typeof collectPrevWeekSetLogs === 'function') ? collectPrevWeekSetLogs(fIdx, row) : [];
-            const prevSame = prevSets.find(function (ps) { return Number(ps.set) === s; });
-            if (prevSame && Number(prevSame.load) > 0) sugg = prevSame.load;
-          }
           const isDone = Boolean(store.data[k + '_done']);
-          let storedLoad = store.data[k + '_load'];
-          if (!isDone && storedLoad !== undefined && storedLoad !== '' && storedLoad != null
-            && typeof isLegacyCopiedTopPrefill === 'function' && isLegacyCopiedTopPrefill(storedLoad, fIdx, s, row)
-            && Number(sugg) > 0) {
-            storedLoad = sugg;
-          }
-          const shownLoad = (storedLoad !== undefined && storedLoad !== '' && storedLoad != null)
-            ? storedLoad
-            : (Number(sugg) > 0 ? sugg : '');
+          const shownLoad = (typeof effectiveSetLoad === 'function') ? effectiveSetLoad(fIdx, s, row) : (store.data[k + '_load'] || '');
+          const sugg = (typeof suggestedLoadForSet === 'function') ? (suggestedLoadForSet(fIdx, s, row) || '') : '';
           const targetRepsRaw = setObj ? (setObj.reps ?? setObj.target_reps) : row.repsTarget;
           const shownReps = (store.data[k + '_reps'] !== undefined && store.data[k + '_reps'] !== '' && store.data[k + '_reps'] != null)
             ? store.data[k + '_reps']
@@ -13871,10 +13915,12 @@ function renderTraining(c){
         const isDone = Boolean(store.data[k + '_done']);
         const restBonus = esc(bEx.rest || '60-90s');
         let bonusSugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(fIdx, s, bEx) : null;
-        if (!(Number(bonusSugg) > 0)) bonusSugg = bEx.plannedLoad || '';
-        const bonusShown = (store.data[k + '_load'] !== undefined && store.data[k + '_load'] !== '' && store.data[k + '_load'] != null)
-          ? store.data[k + '_load']
-          : (bonusSugg || '');
+        if (!(Number(bonusSugg) > 0)) bonusSugg = (s === 1 ? (bEx.plannedLoad || '') : '');
+        const bonusShown = (typeof effectiveSetLoad === 'function')
+          ? effectiveSetLoad(fIdx, s, bEx)
+          : ((store.data[k + '_load'] !== undefined && store.data[k + '_load'] !== '' && store.data[k + '_load'] != null)
+            ? store.data[k + '_load']
+            : (bonusSugg || ''));
         h += `<div class="set-row">
           <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
           <input type="number" id="${k}_load" step="0.5" placeholder="${bonusSugg || ''}" value="${bonusShown}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
@@ -14771,6 +14817,7 @@ function updateTempo(idx, val) {
 
 function updateData(key, val){
   store.data[key] = val;
+  if (/_s\d+_load$/.test(String(key || ''))) store.data[String(key).replace(/_load$/, '_load_user')] = 1;
   persist();
   calcStats();
   try { if (typeof scheduleAthleteLiveWorkoutSync === 'function') scheduleAthleteLiveWorkoutSync(); } catch (_) {}
@@ -18214,9 +18261,13 @@ function seedProgramLoadsIntoStore(program) {
         const planned = ex.plannedLoad != null ? Number(ex.plannedLoad) : (ex.load != null ? Number(ex.load) : null);
         const sets = Array.isArray(ex.sets) && ex.sets.length ? ex.sets : [{ load: planned }];
         sets.forEach(function (st, si) {
-          const val = st && (st.load != null ? st.load : (st.target_load != null ? st.target_load : planned));
+          const own = st && (st.load != null && st.load !== '') ? st.load : (st && st.target_load != null && st.target_load !== '' ? st.target_load : null);
+          const val = own != null ? own : (si === 0 ? planned : null);
           if (val == null || val === '' || !Number.isFinite(Number(val))) return;
           const k = 'w' + wNum + '_d' + di + '_e' + ei + '_s' + (si + 1) + '_load';
+          if (store.data[k + '_done'] || store.data[k + '_load_user']) return;
+          if (typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(wNum, di, ei)) return;
+          if (wNum > 1 && typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(wNum - 1, di, ei)) return;
           store.data[k] = Number(val);
           n++;
         });
