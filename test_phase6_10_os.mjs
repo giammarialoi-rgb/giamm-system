@@ -83,12 +83,12 @@ for (const route of [
   ok(practice.includes(route), `API exposes ${route}`);
 }
 
-ok(fs.readFileSync(path.join(root, "web/coach-os/analytics.js"), "utf8").includes("Nessun revenue"), "Analytics UI forbids business copy");
-ok(fs.readFileSync(path.join(root, "web/coach-os/inbox.js"), "utf8").includes("PREVIEW BROADCAST"), "Inbox can preview broadcast without sending");
-ok(fs.readFileSync(path.join(root, "web/coach-os/clients.js"), "utf8").includes("MODIFY") && fs.readFileSync(path.join(root, "web/coach-os/clients.js"), "utf8").includes("OPEN DATA"), "Athlete Brain has approve/modify/open data");
-ok(fs.readFileSync(path.join(root, "web/coach-os/media-ai.js"), "utf8").includes("CONFIRM & LOG"), "meal UI requires confirm");
-ok(fs.readFileSync(path.join(root, "web/coach-os/media-ai.js"), "utf8").includes("SAVE MARKERS"), "video form review captures markers");
-ok(fs.readFileSync(path.join(root, "web/coach-os/today.js"), "utf8").includes("Needs attention") && !fs.readFileSync(path.join(root, "web/coach-os/today.js"), "utf8").includes("MRR"), "Today stays operational without business KPI");
+ok(fs.readFileSync(path.join(root, "web/coach-os/analytics.js"), "utf8").includes("coNoRevenue") || fs.readFileSync(path.join(root, "web/coach-os/analytics.js"), "utf8").includes("coAnalyticsSubtitle"), "Analytics UI forbids business copy");
+ok(fs.readFileSync(path.join(root, "web/coach-os/inbox.js"), "utf8").includes("coPreviewBroadcast"), "Inbox can preview broadcast without sending");
+ok(fs.readFileSync(path.join(root, "web/coach-os/clients.js"), "utf8").includes("coModify") && fs.readFileSync(path.join(root, "web/coach-os/clients.js"), "utf8").includes("coOpenData"), "Athlete Brain has approve/modify/open data");
+ok(fs.readFileSync(path.join(root, "web/coach-os/media-ai.js"), "utf8").includes("coConfirmLog"), "meal UI requires confirm");
+ok(fs.readFileSync(path.join(root, "web/coach-os/media-ai.js"), "utf8").includes("coSaveMarkers"), "video form review captures markers");
+ok(fs.readFileSync(path.join(root, "web/coach-os/today.js"), "utf8").includes("coNeedsAttention") && !fs.readFileSync(path.join(root, "web/coach-os/today.js"), "utf8").includes("MRR"), "Today stays operational without business KPI");
 ok(fs.readFileSync(path.join(root, "server/db/migrations/0006_business_crm.sql"), "utf8").includes("coach_payment_events"), "business migration exists");
 ok(fs.readFileSync(path.join(root, "server/db/migrations/0007_inbox_media_ai.sql"), "utf8").includes("meal_logs"), "media AI migration exists");
 

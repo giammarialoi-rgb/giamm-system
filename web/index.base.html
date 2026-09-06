@@ -11738,15 +11738,15 @@ function renderImport(c){
     c.innerHTML = `
       <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <div>
-          <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">${coachNativeImport ? 'COACH OS · IMPORT PROGRAM' : 'DOCUMENT REVIEW'}</span>
-          <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">${esc(summary?.status || (coachNativeImport ? 'PREVIEW & CORRECTION' : 'REVISIONE PROGRAMMA'))}</h2>
+          <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">${coachNativeImport ? (typeof t === 'function' ? t('coOsImportProgram') : 'COACH OS · IMPORTA PROGRAMMA') : (typeof t === 'function' ? t('coDocumentReview') : 'REVISIONE DOCUMENTO')}</span>
+          <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">${esc(summary?.status || (coachNativeImport ? (typeof t === 'function' ? t('coPreviewCorrection') : 'ANTEPRIMA E CORREZIONE') : 'REVISIONE PROGRAMMA'))}</h2>
           <div style="font-size:11px;color:#888;margin-top:4px;">${esc(pState.filename || prog.source?.filename || '')} · ${esc(summary?.classification || ir?.document?.classification || '')} · ${esc(summary?.format || '')}</div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-outline" style="font-size:11px; padding:6px 12px;" onclick="cancelCurrentImportReview()">ANNULLA</button>
           ${!valResult.valid ? `<button class="btn btn-outline" style="font-size:11px; padding:6px 12px;border-color:#ff9800;color:#ff9800;" onclick="forceConfirmImportOverride()">FORZA ATTIVAZIONE</button>` : ''}
-          <button class="btn btn-outline" style="font-size:11px; padding:6px 12px;" onclick="exportImportProvenance()">PROVENANCE</button>
-          <button class="btn btn-primary" style="font-size:11px; padding:6px 14px; ${!valResult.valid ? 'background:var(--accent-red);border-color:var(--accent-red);' : ''}" onclick="confirmImportAndActivate()">${pState.isConfirming ? 'SALVATAGGIO...' : (coachNativeImport ? (!valResult.valid ? 'CONFERMA E SALVA' : 'SALVA NEL COACH DATABASE') : (!valResult.valid ? '⚠️ CONFERMA E ATTIVA' : '✓ CONFERMA E ATTIVA'))}</button>
+          <button class="btn btn-outline" style="font-size:11px; padding:6px 12px;" onclick="exportImportProvenance()">${typeof t === 'function' ? t('coProvenance') : 'PROVENIENZA'}</button>
+          <button class="btn btn-primary" style="font-size:11px; padding:6px 14px; ${!valResult.valid ? 'background:var(--accent-red);border-color:var(--accent-red);' : ''}" onclick="confirmImportAndActivate()">${pState.isConfirming ? 'SALVATAGGIO...' : (coachNativeImport ? (!valResult.valid ? 'CONFERMA E SALVA' : (typeof t === 'function' ? t('coSaveCoachDb') : 'SALVA NEL COACH DATABASE')) : (!valResult.valid ? '⚠️ CONFERMA E ATTIVA' : '✓ CONFERMA E ATTIVA'))}</button>
         </div>
       </div>
 
@@ -11830,11 +11830,11 @@ function renderImport(c){
   const aiAllowed = !athleteImp || !!(store.clientProfile && store.clientProfile.allowNurvanAi);
   c.innerHTML = `
     <div style="margin-bottom:16px;">
-      <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">${coachNativeImport ? 'COACH OS · PROGRAMS' : (athleteImp ? 'IMPORTA DOCUMENTI' : 'DAL FILE ALL\'ALLENAMENTO')}</span>
-      <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">${coachNativeImport ? 'Import Program' : (athleteImp ? 'Alimentazione, integrazione, terapia, esami' : 'Importa la scheda del coach')}</h2>
+      <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">${coachNativeImport ? (typeof t === 'function' ? t('coOsPrograms') : 'COACH OS · PROGRAMMI') : (athleteImp ? 'IMPORTA DOCUMENTI' : 'DAL FILE ALL\'ALLENAMENTO')}</span>
+      <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">${coachNativeImport ? (typeof t === 'function' ? t('coImportProgramTitle') : 'Importa programma') : (athleteImp ? 'Alimentazione, integrazione, terapia, esami' : 'Importa la scheda del coach')}</h2>
       <p style="font-size:12px;color:#888;margin:8px 0 0;line-height:1.45;max-width:420px;">${athleteImp
         ? 'Scegli un file (PDF, Excel, Word, immagine). La scheda di allenamento arriva solo dal tuo coach.'
-        : (coachNativeImport ? 'Upload → extraction → preview → domain picker → validation → Coach Database / cliente.' : 'Excel, PDF o Word → revisione → attiva e logga. Non ricostruire a mano. (Altri domini restano opzionali.)')}</p>
+        : (coachNativeImport ? (typeof t === 'function' ? t('coImportHintEn') : 'Carica → estrazione → anteprima → scegli i domini → validazione → database coach / cliente.') : 'Excel, PDF o Word → revisione → attiva e logga. Non ricostruire a mano. (Altri domini restano opzionali.)')}</p>
     </div>
 
     <div class="pill-tabs" style="margin-bottom:14px; flex-wrap:wrap;">

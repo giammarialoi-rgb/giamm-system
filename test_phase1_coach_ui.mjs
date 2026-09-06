@@ -96,11 +96,11 @@ const practice = fs.readFileSync(path.join(root, "web/coach-practice-ui.js"), "u
 const base = fs.readFileSync(path.join(root, "web/index.base.html"), "utf8");
 
 ok(shell.includes("coachToday") && shell.includes("coachInbox") && shell.includes("coachPrograms") && shell.includes("coachCalendar"), "Coach shell defines five primary destinations");
-ok(shell.includes("Home") && shell.includes("Clients") && shell.includes("Inbox") && shell.includes("Programs") && shell.includes("Calendar"), "Coach bottom navigation contract present");
-ok(todayUi.includes("Needs attention") && todayUi.includes("My tasks") && todayUi.includes("Recent activity"), "Today hierarchy is action-first");
-ok(todayUi.indexOf("Needs attention") < todayUi.indexOf("Portfolio"), "Today places attention before KPIs");
+ok(shell.includes("coHome") && shell.includes("coClients") && shell.includes("coInbox") && shell.includes("coPrograms") && shell.includes("coCalendar"), "Coach bottom navigation contract present");
+ok(todayUi.includes("coNeedsAttention") && todayUi.includes("coMyTasks") && todayUi.includes("coRecentActivity"), "Today hierarchy is action-first");
+ok(todayUi.indexOf("coNeedsAttention") < todayUi.indexOf("coPortfolio"), "Today places attention before KPIs");
 ok(programs.includes("openNativeImport") && programs.includes("coachImport"), "Programs owns native Coach import route");
-ok(base.includes("COACH OS · IMPORT PROGRAM") && base.includes("SALVA NEL COACH DATABASE"), "native import owns Coach copy and completion");
+ok((base.includes("COACH OS · IMPORT PROGRAM") || base.includes("coOsImportProgram")) && (base.includes("SALVA NEL COACH DATABASE") || base.includes("coSaveCoachDb")), "native import owns Coach copy and completion");
 ok(base.includes("forceAsk: true") && base.includes("selectedDomains"), "domain picker remains explicit");
 ok(styles.includes("@media (min-width: 360px)") && styles.includes("@media (min-width: 390px)") && styles.includes("@media (min-width: 768px)") && styles.includes("@media (min-width: 1024px)") && styles.includes("@media (min-width: 1440px)") && styles.includes("--co-space-"), "design system includes tokens and 360/390/768/1024/1440 breakpoints");
 ok(practice.includes("window.CoachOS.applyShell") && practice.includes("coachLandingView"), "legacy practice shell delegates behind feature flag");
@@ -115,7 +115,7 @@ if (fs.existsSync(webIndex) && fs.existsSync(apkIndex)) {
   const hash = (file) => crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
   ok(hash(webIndex) === hash(apkIndex), "Web/APK index parity");
   const built = fs.readFileSync(webIndex, "utf8");
-  ok(built.includes("coach-os-design-system") && built.includes("Needs attention") && built.includes("openNativeImport"), "built bundle contains Coach OS Phase 1");
+  ok(built.includes("coach-os-design-system") && (built.includes("Needs attention") || built.includes("Richiede attenzione") || built.includes("coNeedsAttention")) && built.includes("openNativeImport"), "built bundle contains Coach OS Phase 1");
 }
 
 console.log("\nPhase 1 Coach UI checks passed.");

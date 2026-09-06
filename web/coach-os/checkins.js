@@ -10,10 +10,14 @@
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
   function formatDate(value) {
     if (!value) return '—';
     try {
-      return new Date(value).toLocaleString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+      return new Date(value).toLocaleString(CoachOS.locale ? CoachOS.locale() : 'it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
     } catch (_) {
       return '—';
     }
@@ -23,23 +27,23 @@
     const date = row.receivedAt || row.requestedAt || row.createdAt;
     return '<button type="button" class="coach-os-row" onclick="CoachOS.openCheckIn(' + index + ')">' +
       '<span class="coach-os-status-dot ' + (row.status === 'received' ? 'high' : (row.status === 'requested' ? 'medium' : 'low')) + '"></span>' +
-      '<span class="coach-os-row-main"><strong>' + escText(row.clientName || 'Client') + '</strong>' +
+      '<span class="coach-os-row-main"><strong>' + escText(row.clientName || tx('coClientFallback')) + '</strong>' +
       '<span>' + escText(row.status.replace(/_/g, ' ')) + ' · ' + escText(formatDate(date)) +
       (row.weight ? ' · ' + Number(row.weight) + ' kg' : '') + '</span></span><span>›</span></button>';
   }
 
   function draw(container) {
     const tabs = [
-      ['requested', 'Requested'],
-      ['received', 'Received'],
-      ['to_review', 'To review'],
-      ['reviewed', 'Reviewed']
+      ['requested', tx('coRequested')],
+      ['received', tx('coReceived')],
+      ['to_review', tx('coToReview')],
+      ['reviewed', tx('coReviewed')]
     ];
     container.innerHTML =
       '<div class="coach-os-page">' +
       '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Coach OS</div>' +
-      '<h1 class="coach-os-title">Check-ins</h1><p class="coach-os-subtitle">Review, respond e crea il prossimo passo.</p></div>' +
-      '<button class="btn btn-primary" style="min-height:44px;" onclick="CoachOS.requestCheckInPicker()">REQUEST</button></div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coCheckIns')) + '</h1><p class="coach-os-subtitle">' + escText(tx('coCheckInsSubtitle')) + '</p></div>' +
+      '<button class="btn btn-primary" style="min-height:44px;" onclick="CoachOS.requestCheckInPicker()">' + escText(tx('coRequest')) + '</button></div>' +
       '<div style="display:flex;gap:7px;overflow:auto;padding-bottom:4px;margin-bottom:12px;">' +
       tabs.map(function (tab) {
         return '<button class="pill-tab' + (state.status === tab[0] ? ' active' : '') +
@@ -47,12 +51,12 @@
       }).join('') + '</div>' +
       (state.rows.length
         ? '<div class="coach-os-list">' + state.rows.map(rowHtml).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessun check-in in questa coda.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoCheckIns')) + '</div>') +
       '</div>';
   }
 
   async function renderCheckIns(container) {
-    container.innerHTML = '<div class="coach-os-page"><div class="coach-os-skeleton">Loading check-ins…</div></div>';
+    container.innerHTML = '<div class="coach-os-page"><div class="coach-os-skeleton">' + escText(tx('coLoadingCheckIns')) + '</div></div>';
     try {
       const payload = await practiceFetch('/api/coach/check-ins?status=' + encodeURIComponent(state.status), {
         method: 'GET',
@@ -83,7 +87,7 @@
 
   function signalRows(summary) {
     const signals = summary && summary.signals || [];
-    if (!signals.length) return '<div class="coach-os-empty">Nessun segnale deterministico rilevato.</div>';
+    if (!signals.length) return '<div class="coach-os-empty">' + escText(tx('coNoSignals')) + '</div>';
     return '<div class="coach-os-list">' + signals.map(function (signal) {
       return '<div class="coach-os-row"><span class="coach-os-status-dot ' + escText(signal.severity || 'low') +
         '"></span><span class="coach-os-row-main"><strong>' + escText(signal.title || signal.id) +
@@ -98,29 +102,29 @@
     const panel = document.getElementById('cp-assign-panel');
     if (!panel) return;
     panel.innerHTML =
-      '<div class="coach-os-card-kicker">Review & Respond</div><h2>' + escText(row.clientName || 'Client') + '</h2>' +
+      '<div class="coach-os-card-kicker">' + escText(tx('coReviewRespond')) + '</div><h2>' + escText(row.clientName || tx('coClientFallback')) + '</h2>' +
       '<div class="coach-os-grid-2" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:12px;">' +
-      '<div class="coach-os-card" style="margin:0;"><div class="coach-os-card-kicker">Weight</div><div class="coach-os-card-title">' +
+      '<div class="coach-os-card" style="margin:0;"><div class="coach-os-card-kicker">' + escText(tx('coWeight')) + '</div><div class="coach-os-card-title">' +
       (row.weight ? Number(row.weight) + ' kg' : '—') + '</div></div>' +
-      '<div class="coach-os-card" style="margin:0;"><div class="coach-os-card-kicker">Received</div><div class="coach-os-card-title" style="font-size:12px;">' +
+      '<div class="coach-os-card" style="margin:0;"><div class="coach-os-card-kicker">' + escText(tx('coReceived')) + '</div><div class="coach-os-card-title" style="font-size:12px;">' +
       escText(formatDate(row.receivedAt || row.requestedAt)) + '</div></div></div>' +
-      '<div class="coach-os-card"><div class="coach-os-card-kicker">Athlete notes</div><div class="coach-os-muted" style="color:#ddd;margin-top:8px;">' +
-      escText(row.notes || 'No notes') + '</div></div>' +
-      '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">Deterministic signals</div>' +
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coCoachFeedback')) + '</div><div class="coach-os-muted" style="color:#ddd;margin-top:8px;">' +
+      escText(row.notes || tx('coNoNotes')) + '</div></div>' +
+      '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">' + escText(tx('coSignals')) + '</div>' +
       signalRows(row.deterministicSummary) +
-      (row.previous ? '<div class="coach-os-card" style="margin-top:12px;"><div class="coach-os-card-kicker">Previous check</div>' +
+      (row.previous ? '<div class="coach-os-card" style="margin-top:12px;"><div class="coach-os-card-kicker">' + escText(tx('coPreviousCheck')) + '</div>' +
         '<div class="coach-os-muted" style="margin-top:8px;">' + escText(formatDate(row.previous.received_at)) +
         (row.previous.weight ? ' · ' + Number(row.previous.weight) + ' kg' : '') + '</div></div>' : '') +
-      ((row.media || []).length ? '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">Private media</div>' +
+      ((row.media || []).length ? '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">' + escText(tx('coPrivateMedia')) + '</div>' +
         '<div class="coach-os-quick-actions">' + row.media.map(function (media) {
           return '<button class="coach-os-action" onclick="CoachOS.openCheckInMedia(\'' + escText(media.id) + '\')">' +
-            escText(media.kind || 'Media') + '<br><span class="coach-os-muted">' + Math.round(Number(media.byteSize || 0) / 1024) + ' KB</span></button>';
+            escText(media.kind || tx('coPrivateMedia')) + '<br><span class="coach-os-muted">' + Math.round(Number(media.byteSize || 0) / 1024) + ' KB</span></button>';
         }).join('') + '</div>' : '') +
-      '<label style="display:block;margin-top:14px;font-size:10px;color:var(--co-muted);">COACH RESPONSE</label>' +
-      '<textarea id="coach-checkin-response" rows="4" style="width:100%;margin-top:6px;" placeholder="Risposta operativa all’atleta…">' +
+      '<label style="display:block;margin-top:14px;font-size:10px;color:var(--co-muted);">' + escText(tx('coCoachResponse')) + '</label>' +
+      '<textarea id="coach-checkin-response" rows="4" style="width:100%;margin-top:6px;" placeholder="' + escText(tx('coResponsePlaceholder')) + '">' +
       escText(row.coachResponse || '') + '</textarea>' +
-      '<button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="CoachOS.reviewCheckIn()">SAVE REVIEW & RESPOND</button>' +
-      '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="showOverlay(\'cp-assign\',false)">CLOSE</button>';
+      '<button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="CoachOS.reviewCheckIn()">' + escText(tx('coSaveReview')) + '</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coClose')) + '</button>';
     showOverlay('cp-assign', true);
   }
 
@@ -129,7 +133,7 @@
     const input = document.getElementById('coach-checkin-response');
     const response = input && input.value.trim();
     if (!row || !response) {
-      practiceToast('Scrivi una risposta al cliente', 'warning');
+      practiceToast(tx('coWriteResponse'), 'warning');
       return;
     }
     try {
@@ -139,7 +143,7 @@
         body: JSON.stringify({ response: response })
       }, 15000);
       showOverlay('cp-assign', false);
-      practiceToast('Check-in revisionato', 'success');
+      practiceToast(tx('coCheckInReviewed'), 'success');
       CoachOS.navigate('coachCheckIns');
     } catch (error) {
       practiceToast((error && error.message) || 'Review non salvata', 'danger');
@@ -159,13 +163,13 @@
       }
       ensurePracticeOverlays();
       const panel = document.getElementById('cp-assign-panel');
-      panel.innerHTML = '<div class="coach-os-card-kicker">Request check-in</div><h2>Scegli il cliente</h2>' +
+      panel.innerHTML = '<div class="coach-os-card-kicker">' + escText(tx('coRequestCheckIn')) + '</div><h2>' + escText(tx('coChooseClient')) + '</h2>' +
         '<div class="coach-os-list" style="max-height:52vh;overflow:auto;">' + clients.map(function (client) {
           return '<button class="coach-os-row" onclick="CoachOS.requestCheckIn(\'' + escText(client.id) + '\')">' +
             '<span class="coach-os-row-main"><strong>' + escText(client.displayName || client.username) +
             '</strong></span><span>›</span></button>';
         }).join('') + '</div>' +
-        '<button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="showOverlay(\'cp-assign\',false)">CLOSE</button>';
+        '<button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coClose')) + '</button>';
       showOverlay('cp-assign', true);
     } catch (error) {
       practiceToast((error && error.message) || 'Clienti non disponibili', 'danger');
@@ -180,7 +184,7 @@
         body: JSON.stringify({ clientId: clientId })
       }, 15000);
       showOverlay('cp-assign', false);
-      practiceToast('Check-in richiesto', 'success');
+      practiceToast(tx('coCheckInRequested'), 'success');
       CoachOS.navigate('coachCheckIns');
     } catch (error) {
       practiceToast((error && error.message) || 'Richiesta non inviata', 'danger');

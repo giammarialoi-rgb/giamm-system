@@ -950,7 +950,7 @@ function renderSettings(c) {
 function changeAppLanguage(lang) {
   I18nService.setLanguage(lang);
   render();
-  if (typeof showToast === 'function') showToast("Lingua aggiornata", "success");
+  if (typeof showToast === 'function') showToast(typeof t === 'function' ? t('coLanguageUpdated') : 'Lingua aggiornata', "success");
 }
 
 function exportFullDatabaseBackup() {

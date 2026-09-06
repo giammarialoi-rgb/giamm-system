@@ -11,6 +11,26 @@
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
+  function typeLabel(type) {
+    const map = {
+      'Coaching Call': 'coTypeCall',
+      'Check-in': 'coTypeCheckIn',
+      'Review': 'coTypeReview',
+      'Consultation': 'coTypeConsult',
+      'Custom Session': 'coTypeCustom',
+      'Training Session': 'coTypeTraining'
+    };
+    return map[type] ? tx(map[type]) : type;
+  }
+
+  function rangeLabel(range) {
+    return ({ day: tx('coDay'), week: tx('coWeek'), month: tx('coMonth') })[range] || range;
+  }
+
   function timeZone() {
     try {
       return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -35,22 +55,22 @@
     const rows = state.appointments.filter(inRange);
     container.innerHTML =
       '<div class="coach-os-page">' +
-      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Online coaching · ' + escText(timeZone()) + '</div>' +
-      '<h1 class="coach-os-title">Calendar</h1>' +
-      '<p class="coach-os-subtitle">Availability → booking → reminder → reschedule/cancel. Nessun Google/Apple Calendar.</p></div>' +
-      '<button class="btn" style="background:#111;color:#fff;" onclick="CoachOS.createAppointmentPrompt()">NEW SESSION</button></div>' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coOnlineCoaching')) + ' · ' + escText(timeZone()) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coCalendar')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(tx('coCalendarSubtitle')) + ' ' + escText(tx('coNoCalendarHint')) + '</p></div>' +
+      '<button class="btn" style="background:#111;color:#fff;" onclick="CoachOS.createAppointmentPrompt()">' + escText(tx('coNewSession')) + '</button></div>' +
       '<div class="coach-os-quick-actions">' +
       ['day', 'week', 'month'].map(function (range) {
         return '<button class="coach-os-action' + (state.range === range ? ' active' : '') + '" onclick="CoachOS.setCalendarRange(\'' + range + '\')">' +
-          range.toUpperCase() + '</button>';
+          escText(rangeLabel(range)) + '</button>';
       }).join('') +
-      '<button class="coach-os-action" onclick="CoachOS.setAvailabilityPrompt()">AVAILABILITY</button>' +
-      '<a class="coach-os-action" href="/api/coach/appointments.ics">ICAL</a></div>' +
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Session types</h2></div>' +
+      '<button class="coach-os-action" onclick="CoachOS.setAvailabilityPrompt()">' + escText(tx('coAvailability')) + '</button>' +
+      '<a class="coach-os-action" href="/api/coach/appointments.ics">' + escText(tx('coIcal')) + '</a></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionTypes')) + '</h2></div>' +
       '<div class="coach-os-quick-actions">' + TYPES.map(function (type) {
-        return '<span class="coach-os-action" style="cursor:default;">' + escText(type) + '</span>';
+        return '<span class="coach-os-action" style="cursor:default;">' + escText(typeLabel(type)) + '</span>';
       }).join('') + '</div></section>' +
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Availability</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coAvailability')) + '</h2></div>' +
       (state.availability.length
         ? '<div class="coach-os-list">' + state.availability.map(function (rule) {
           function clock(minute) {
@@ -61,31 +81,31 @@
             return hours + ':' + mins;
           }
           return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' +
-            escText(rule.weekday != null ? 'Giorno ' + rule.weekday : 'Regola') + '</strong><span>' +
+            escText(rule.weekday != null ? tx('coDay') + ' ' + rule.weekday : tx('coRule')) + '</strong><span>' +
             escText(clock(rule.startMinute) || rule.startTime || '') + '–' +
             escText(clock(rule.endMinute) || rule.endTime || '') +
             ' · ' + escText(rule.timeZone || timeZone()) + '</span></span></div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessuna disponibilità. Imposta orari prima di prenotare.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoAvailability')) + '</div>') +
       '</section>' +
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Upcoming</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coUpcoming')) + '</h2></div>' +
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (item) {
           return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' +
-            escText(item.title) + '</strong><span>' + escText(item.type) + ' · ' +
+            escText(item.title) + '</strong><span>' + escText(typeLabel(item.type)) + ' · ' +
             escText(String(item.startsAt || '').replace('T', ' ').slice(0, 16)) + ' · ' +
             escText(item.timeZone) + '</span></span>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.rescheduleAppointment(\'' +
-            escText(item.id) + '\')">RESCHEDULE</button>' +
+            escText(item.id) + '\')">' + escText(tx('coReschedule')) + '</button>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.cancelAppointment(\'' +
-            escText(item.id) + '\')">CANCEL</button></div>';
+            escText(item.id) + '\')">' + escText(tx('coCancel')) + '</button></div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessuna sessione in questa vista. Imposta disponibilità e prenota una Coaching Call.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoSessions')) + '</div>') +
       '</section></div>';
   }
 
   CoachOS.views.coachCalendar = async function (container) {
-    container.innerHTML = '<div class="coach-os-skeleton">Loading calendar…</div>';
+    container.innerHTML = '<div class="coach-os-skeleton">' + escText(tx('coLoadingCalendar')) + '</div>';
     try {
       const payload = await window.practiceFetch('/api/coach/appointments', { headers: window.practiceHeaders() });
       state.appointments = payload.appointments || [];
@@ -109,11 +129,11 @@
   };
 
   CoachOS.setAvailabilityPrompt = async function () {
-    const weekday = window.prompt('Giorno settimana (0=Dom … 6=Sab)', '1');
+    const weekday = window.prompt(tx('coWeekdayPrompt'), '1');
     if (weekday == null) return;
-    const startTime = window.prompt('Inizio (HH:MM)', '09:00');
+    const startTime = window.prompt(tx('coStartTime'), '09:00');
     if (!startTime) return;
-    const endTime = window.prompt('Fine (HH:MM)', '17:00');
+    const endTime = window.prompt(tx('coEndTime'), '17:00');
     if (!endTime) return;
     await window.practiceFetch('/api/coach/availability', {
       method: 'POST',
@@ -129,12 +149,12 @@
   };
 
   CoachOS.createAppointmentPrompt = async function () {
-    const title = window.prompt('Titolo sessione', 'Coaching Call');
+    const title = window.prompt(tx('coSessionTitle'), tx('coTypeCall'));
     if (!title) return;
-    const type = window.prompt('Tipo: ' + TYPES.join(', '), 'Coaching Call') || 'Coaching Call';
-    const startsAt = window.prompt('Inizio ISO (es. 2026-09-06T09:00:00.000Z)');
+    const type = window.prompt(tx('coSessionType') + ': ' + TYPES.map(typeLabel).join(', '), 'Coaching Call') || 'Coaching Call';
+    const startsAt = window.prompt(tx('coStartIso'));
     if (!startsAt) return;
-    const weeks = window.prompt('Ricorrenza settimane (1 = singola)', '1') || '1';
+    const weeks = window.prompt(tx('coRecurrenceWeeks'), '1') || '1';
     try {
       await window.practiceFetch('/api/coach/appointments', {
         method: 'POST',
@@ -155,7 +175,7 @@
   };
 
   CoachOS.rescheduleAppointment = async function (id) {
-    const startsAt = window.prompt('Nuovo inizio ISO');
+    const startsAt = window.prompt(tx('coNewStartIso'));
     if (!startsAt) return;
     await window.practiceFetch('/api/coach/appointments/' + encodeURIComponent(id), {
       method: 'PATCH',

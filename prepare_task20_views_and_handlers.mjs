@@ -951,7 +951,7 @@ function renderSettings(c) {
 function changeAppLanguage(lang) {
   I18nService.setLanguage(lang);
   render();
-  showToast("Lingua aggiornata", "success");
+  showToast(typeof t === 'function' ? t('coLanguageUpdated') : 'Lingua aggiornata', "success");
 }
 
 function exportFullDatabaseBackup() {
