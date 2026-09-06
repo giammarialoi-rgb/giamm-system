@@ -1578,7 +1578,7 @@ body.focus-mode [data-rewards-only] {
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="toggleAccountMode()" id="account-mode" data-i18n="createAccount">CREA UN ACCOUNT</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="togglePasswordRecovery()" id="account-forgot">PASSWORD DIMENTICATA</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="logoutAccount()" id="account-logout">ESCI</button>
-    <button class="btn btn-primary" style="width:100%;margin-top:8px;display:none;" onclick="syncAccountData()" id="account-sync">SINCRONIZZA DATI</button>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px;display:none;" onclick="syncAccountData(true)" id="account-sync">SINCRONIZZA DATI</button>
     <div id="account-status" class="msg ai" style="margin-top:10px;"></div>
   </div>
 </div>
@@ -2215,25 +2215,40 @@ body.coach-os-v2 main {
 .coach-os-action {
   min-height: 72px;
   padding: 12px;
-  border: 1px solid var(--co-border);
+  border: 0;
   border-radius: var(--co-radius-sm);
-  background: var(--co-surface);
+  background: var(--co-surface-raised);
   color: var(--co-text);
   text-align: left;
   font-size: 11px;
   font-weight: 800;
 }
 
+.coach-os-action:focus-visible,
+.coach-os-row:focus-visible,
+.coach-os-side-link:focus-visible {
+  outline: 2px solid var(--co-accent);
+  outline-offset: 2px;
+}
+
 .coach-os-empty,
 .coach-os-error,
 .coach-os-skeleton {
-  border: 1px solid var(--co-border);
+  border: 0;
   border-radius: var(--co-radius-md);
-  padding: 24px 16px;
+  padding: 28px 18px;
   color: var(--co-muted);
   text-align: center;
   font-size: 11px;
-  line-height: 1.5;
+  line-height: 1.55;
+  background: var(--co-surface);
+}
+
+.coach-os-empty strong {
+  display: block;
+  color: var(--co-text);
+  font-size: 13px;
+  margin-bottom: 6px;
 }
 
 .coach-os-skeleton {
@@ -2269,8 +2284,17 @@ body.coach-os-v2 .nav-item svg {
   height: 20px;
 }
 
+@media (min-width: 320px) {
+  .coach-os-page { padding-left: 8px; padding-right: 8px; overflow-x: hidden; }
+}
+
 @media (min-width: 360px) {
   .coach-os-page { padding-left: 2px; padding-right: 2px; }
+}
+
+@media (min-width: 375px) {
+  .coach-os-page { padding-left: 10px; padding-right: 10px; }
+  .coach-os-title { font-size: 24px; }
 }
 
 @media (min-width: 390px) {
@@ -2283,6 +2307,16 @@ body.coach-os-v2 .nav-item svg {
 
 @media (min-width: 390px) {
   .coach-os-title { font-size: 28px; }
+}
+
+@media (min-width: 412px) {
+  .coach-os-page { padding-left: 14px; padding-right: 14px; }
+  .coach-os-action { min-height: 44px; }
+}
+
+@media (min-width: 430px) {
+  .coach-os-page { padding-left: 16px; padding-right: 16px; }
+  .coach-os-title { font-size: 26px; }
 }
 
 @media (min-width: 540px) {
@@ -2470,7 +2504,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MASTER-TASK-35-AI-OS",
-        schemaTarget: "0007",
+        schemaTarget: "0008",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -32210,6 +32244,42 @@ function createActionDispatcher(deps = {}) {
       appliedCount++;
     }
 
+    const deloadActions = list.filter((a) => a && a.op_type === 'apply_deload');
+    for (const a of deloadActions) {
+      const pct = Number((a.changes && a.changes.volumeReductionPct) || a.volumeReductionPct || 40);
+      const weeks = Number((a.changes && a.changes.weeks) || a.weeks || 1);
+      if (!program || !Array.isArray(program.weeks) || !program.weeks.length) {
+        throw new Error('Deload non applicabile: nessun programma attivo.');
+      }
+      const startWeek = (typeof globalThis !== 'undefined' && globalThis.currentWeek) ? Number(globalThis.currentWeek) : 1;
+      const weekList = program.weeks || [];
+      for (let i = 0; i < weekList.length; i++) {
+        const weekNum = Number(weekList[i].weekNumber || weekList[i].week || (i + 1));
+        if (weekNum < startWeek || weekNum >= startWeek + weeks) continue;
+        weekList[i].deload = true;
+        weekList[i].volumeReductionPct = pct;
+        const sessions = weekList[i].sessions || weekList[i].days || [];
+        sessions.forEach((day) => {
+          (day.exercises || day.rows || []).forEach((ex) => {
+            const sets = Array.isArray(ex.sets) ? ex.sets.length : (ex.setCount || 0);
+            if (sets > 1) {
+              const next = Math.max(1, Math.round(sets * (1 - pct / 100)));
+              ex.setCount = next;
+              if (Array.isArray(ex.sets)) ex.sets = ex.sets.slice(0, next);
+            }
+          });
+        });
+      }
+      setData(program);
+      if (s) {
+        s.activeProgram = program;
+        if (!s.prefs) s.prefs = {};
+        s.prefs.deloadActive = { fromWeek: startWeek, weeks, volumeReductionPct: pct, appliedAt: new Date().toISOString() };
+      }
+      applied.push(a);
+      appliedCount++;
+    }
+
     const rewardsActions = list.filter(isRewardsAction);
     for (const a of rewardsActions) {
       if (a.op_type === 'award_xp' && a.source !== 'SYSTEM') {
@@ -33407,7 +33477,7 @@ const I18nService = {
       coPrimaryAction: "Azione principale", coAskPlanExecute: "Chiedi. Pianifica. Esegui.",
       coOnlineCoaching: "Coaching online", coSchedule: "Pianifica",
       coScheduleHint: "Chiamata, verifica e revisione.",
-      coTodaySubtitle: "Priorità, clienti e prossime azioni in un solo posto.",
+      coTodaySubtitle: "Chi ha bisogno di te, ora. Poi task, sessioni e azioni rapide.",
       coNoUrgency: "Nessuna urgenza. Il portfolio è sotto controllo.",
       coNoTasks: "I task operativi compariranno qui.", coNoActivity: "Nessuna attività recente.",
       coAddTask: "Aggiungi task", coAddClient: "Aggiungi cliente", coImportProgram: "Importa programma",
@@ -33537,6 +33607,11 @@ const I18nService = {
       coAgentPlaceholder: "Es. mostra i clienti inattivi, proponi un deload, crea un task…",
       coPlanSteps: "Piano: capisci → anteprima → conferma",
       coAgentLocal: "Agente in anteprima locale · conferma disabilitata",
+      coAgentUnavailable: "Agent non disponibile",
+      coAgentUnavailableHint: "Il backend Agent non ha risposto. Nessuna proposta è stata creata. Cosa puoi fare: riprova quando la rete è attiva.",
+      coRetry: "Riprova",
+      coAgentAudit: "Activity / Audit",
+      coAgentAuditEmpty: "Nessun evento audit.",
       coGoodMorning: "Buongiorno", coGoodAfternoon: "Buon pomeriggio",
       coGoodEvening: "Buonasera", coNurvanAgent: "Agente Nurvan",
       coAttEnd: "Fine rapporto", coAttEndDetail: "ha chiesto di uscire",
@@ -33566,7 +33641,33 @@ const I18nService = {
       coNoClientOpen: "Nessun cliente aperto. Apri dalla lista.",
       coClientNotifyNow: "Notifiche cliente · ora",
       coOpenClientCalendar: "Apri un cliente per il suo calendario",
-      coStaleProposal: "Questa proposta non è più aggiornata perché i dati sono cambiati."
+      coStaleProposal: "Questa proposta non è più aggiornata perché i dati sono cambiati.",
+      coActionCenter: "Centro azioni",
+      coActionCenterEmpty: "Nessuna azione in sospeso.",
+      coActionCenterEmptyWhy: "Quando un atleta invia un check-in, una richiesta o un appuntamento, arriva qui con un pulsante per aprirlo.",
+      coAgentOperativeHint: "Assistente operativo: legge i dati, propone, aspetta conferma. Nessuna esecuzione silenziosa.",
+      coNoUrgencyWhy: "Non ci sono urgenze aperte. Puoi rivedere il centro azioni o creare un task.",
+      coNoTasksWhy: "I task ti ricordano follow-up e revisioni. Aggiungine uno per non perdere un atleta.",
+      coNoSessionsWhy: "Senza sessioni oggi non hai un orario fissato. Apri il calendario per prenotare.",
+      coNoActivityWhy: "L’attività compare quando un atleta si allena, scrive o invia una verifica.",
+      coNoProgramWhy: "Questo atleta non ha ancora un programma attivo. Senza scheda non può allenarsi sul piano.",
+      coLastActivity: "Ultima attività",
+      coLastWorkout: "Ultimo allenamento",
+      coLastCheckIn: "Ultimo check-in",
+      coNextScheduled: "Prossimo evento",
+      coOpenRequests: "Richieste aperte",
+      coPendingCoach: "Azioni coach in attesa",
+      coDataStale: "Dati non aggiornati",
+      coOnTarget: "ON TARGET",
+      coBelowTarget: "BELOW TARGET",
+      coAboveTarget: "ABOVE TARGET",
+      coInsufficientData: "INSUFFICIENT DATA",
+      coNoShow: "No show",
+      coSendToClient: "Invia al cliente",
+      coAiCreateUnavailable: "AI Create non disponibile. Cosa puoi fare: usa Crea da template.",
+      coProgramHealth: "Program health",
+      coBroadcastSend: "Invia broadcast",
+      coBroadcastHistory: "Storico broadcast"
     },
     en: {
       coHome: "Today", coClients: "Clients", coInbox: "Inbox", coPrograms: "Programs", coCalendar: "Calendar",
@@ -33578,7 +33679,7 @@ const I18nService = {
       coPrimaryAction: "Primary action", coAskPlanExecute: "Ask. Plan. Execute.",
       coOnlineCoaching: "Online coaching", coSchedule: "Schedule",
       coScheduleHint: "Call, check-in and review.",
-      coTodaySubtitle: "Priorities, clients and next actions in one place.",
+      coTodaySubtitle: "Who needs you now. Then tasks, sessions and quick actions.",
       coNoUrgency: "Nothing urgent. The portfolio is under control.",
       coNoTasks: "Operational tasks will appear here.", coNoActivity: "No recent activity.",
       coAddTask: "Add task", coAddClient: "Add client", coImportProgram: "Import program",
@@ -33708,6 +33809,11 @@ const I18nService = {
       coAgentPlaceholder: "E.g. show inactive clients, propose a deload, create a task…",
       coPlanSteps: "Plan: understand → preview → confirm",
       coAgentLocal: "Agent in local preview · confirm disabled",
+      coAgentUnavailable: "Agent unavailable",
+      coAgentUnavailableHint: "The Agent backend did not respond. No proposal was created. What you can do: retry when the network is available.",
+      coRetry: "Retry",
+      coAgentAudit: "Activity / Audit",
+      coAgentAuditEmpty: "No audit events.",
       coGoodMorning: "Good morning", coGoodAfternoon: "Good afternoon",
       coGoodEvening: "Good evening", coNurvanAgent: "Nurvan Agent",
       coAttEnd: "End of relationship", coAttEndDetail: "asked to leave",
@@ -33737,7 +33843,33 @@ const I18nService = {
       coNoClientOpen: "No client open. Open one from the list.",
       coClientNotifyNow: "Client notifications · now",
       coOpenClientCalendar: "Open a client for their calendar",
-      coStaleProposal: "This proposal is outdated because the data changed."
+      coStaleProposal: "This proposal is outdated because the data changed.",
+      coActionCenter: "Action Center",
+      coActionCenterEmpty: "No pending actions.",
+      coActionCenterEmptyWhy: "When an athlete sends a check-in, a request or a booking, it appears here with an open button.",
+      coAgentOperativeHint: "Operational assistant: reads data, proposes, waits for confirm. No silent execution.",
+      coNoUrgencyWhy: "Nothing urgent is open. Review the Action Center or add a task.",
+      coNoTasksWhy: "Tasks track follow-ups. Add one so an athlete is not forgotten.",
+      coNoSessionsWhy: "No sessions today. Open the calendar to book.",
+      coNoActivityWhy: "Activity appears when an athlete trains, writes or sends a check-in.",
+      coNoProgramWhy: "This athlete has no active program yet. Assign one so they can train.",
+      coLastActivity: "Last activity",
+      coLastWorkout: "Last workout",
+      coLastCheckIn: "Last check-in",
+      coNextScheduled: "Next scheduled event",
+      coOpenRequests: "Open requests",
+      coPendingCoach: "Pending coach actions",
+      coDataStale: "Data stale",
+      coOnTarget: "ON TARGET",
+      coBelowTarget: "BELOW TARGET",
+      coAboveTarget: "ABOVE TARGET",
+      coInsufficientData: "INSUFFICIENT DATA",
+      coNoShow: "No show",
+      coSendToClient: "Send to client",
+      coAiCreateUnavailable: "AI Create unavailable. What you can do: use Create from template.",
+      coProgramHealth: "Program health",
+      coBroadcastSend: "Send broadcast",
+      coBroadcastHistory: "Broadcast history"
     }
   };
   packs.es = Object.assign({}, packs.en, {
@@ -34815,6 +34947,27 @@ const ProgramGeneratorService = {
     } catch (_) {}
     const local = this.generateLocal(opts || {});
     return { program: local.program, source: 'local' };
+  },
+  async aiCreate(opts) {
+    const base = (typeof ConfigService !== 'undefined' && ConfigService.getCoachApiUrl) ? ConfigService.getCoachApiUrl() : '';
+    const token = (typeof store !== 'undefined' && store.accountToken) ? store.accountToken : '';
+    if (!base || !token) {
+      const err = new Error('AI Create unavailable');
+      err.code = 'AI_UNAVAILABLE';
+      throw err;
+    }
+    const res = await fetch(base.replace(/\/$/, '') + '/api/program/ai-create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify(opts || {})
+    });
+    const data = await res.json().catch(function () { return {}; });
+    if (!res.ok || !data.program) {
+      const err = new Error((data && data.error) || 'AI Create unavailable');
+      err.code = 'AI_UNAVAILABLE';
+      throw err;
+    }
+    return { program: data.program, source: 'ai' };
   }
 };
 
@@ -35287,6 +35440,8 @@ function isCoachUnlocked() {
 }
 var store = loadStore();
 ensureStoreIntegrity();
+if (store.trainingWeek) currentWeek = Math.max(1, Number(store.trainingWeek) || 1);
+if (typeof store.trainingDay === 'number') currentDay = Math.max(0, Number(store.trainingDay) || 0);
 if(!store.prefs) store.prefs = { intensityType: 'RIR', duration: 16, frequency: 4 };
 if(!store.prefs.duration) store.prefs.duration = 16;
 if(typeof store.prefs.durationUserSet!=='boolean') store.prefs.durationUserSet = false;
@@ -35468,18 +35623,27 @@ function plannedRepsRirFromRow(row, setNum) {
   }
   return { reps: reps == null ? '' : reps, rir: rir == null ? '' : rir };
 }
-function collectPrevWeekSetLogs(exIdx, row) {
-  if (currentWeek <= 1) return [];
-  const name = exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '';
-  const prevIdx = findMatchingExerciseIndex(currentWeek - 1, currentDay, name, exIdx);
-  const prevName = normalizeExerciseKey(exerciseNameAt(currentWeek - 1, currentDay, prevIdx));
+function weekExerciseWasLogged(week, day, exIdx) {
+  if (!store || !store.data) return false;
+  for (let s = 1; s <= 12; s++) {
+    const base = 'w' + week + '_d' + day + '_e' + exIdx + '_s' + s;
+    if (store.data[base + '_done'] || store.data[base + '_load_user']) return true;
+  }
+  return (store.logs || []).some(function (row) {
+    return row && Number(row.week) === Number(week) && Number(row.day) === Number(day);
+  });
+}
+function collectSetLogsAtWeek(week, day, exIdx, row) {
+  const name = exerciseNameAt(currentWeek, day, exIdx) || (row && (row.name || row.exercise)) || '';
+  const prevIdx = findMatchingExerciseIndex(week, day, name, exIdx);
+  const prevName = normalizeExerciseKey(exerciseNameAt(week, day, prevIdx));
   const thisName = normalizeExerciseKey(name);
   if (thisName && prevName && thisName !== prevName) return [];
   const out = [];
   for (let s = 1; s <= 10; s++) {
-    const load = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_load'];
-    const reps = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_reps'];
-    const rir = store.data['w' + (currentWeek - 1) + '_d' + currentDay + '_e' + prevIdx + '_s' + s + '_rir'];
+    const load = store.data['w' + week + '_d' + day + '_e' + prevIdx + '_s' + s + '_load'];
+    const reps = store.data['w' + week + '_d' + day + '_e' + prevIdx + '_s' + s + '_reps'];
+    const rir = store.data['w' + week + '_d' + day + '_e' + prevIdx + '_s' + s + '_rir'];
     const hasLoad = load !== undefined && load !== '' && load != null;
     const hasReps = reps !== undefined && reps !== '' && reps != null;
     const hasRir = rir !== undefined && rir !== '' && rir != null;
@@ -35489,10 +35653,78 @@ function collectPrevWeekSetLogs(exIdx, row) {
       load: hasLoad ? load : '',
       reps: hasReps ? reps : '',
       rir: hasRir ? rir : '',
-      prevIdx: prevIdx
+      prevIdx: prevIdx,
+      done: !!store.data['w' + week + '_d' + day + '_e' + prevIdx + '_s' + s + '_done']
     });
   }
   return out;
+}
+function uniquePositiveLoads(sets) {
+  const loads = (sets || []).map(function (s) { return parseFloat(s.load); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
+  const uniq = [];
+  loads.forEach(function (n) { if (uniq.indexOf(n) < 0) uniq.push(n); });
+  return uniq;
+}
+function collectPrevWeekSetLogs(exIdx, row) {
+  if (currentWeek <= 1) return [];
+  const name = exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '';
+  let fallback = [];
+  for (let w = currentWeek - 1; w >= 1; w--) {
+    const idx = findMatchingExerciseIndex(w, currentDay, name, exIdx);
+    const logged = collectSetLogsAtWeek(w, currentDay, exIdx, row);
+    if (!logged.length) continue;
+    if (uniquePositiveLoads(logged).length > 1) return logged;
+    if (weekExerciseWasLogged(w, currentDay, idx) && !fallback.length) fallback = logged;
+  }
+  return fallback;
+}
+function sessionWasFinalized(week, day) {
+  return (store.logs || []).some(function (row) {
+    return row && Number(row.week) === Number(week) && Number(row.day) === Number(day);
+  });
+}
+function loadsNearlyEqual(a, b) {
+  const x = parseFloat(String(a).replace(',', '.'));
+  const y = parseFloat(String(b).replace(',', '.'));
+  return Number.isFinite(x) && Number.isFinite(y) && Math.abs(x - y) < 0.05;
+}
+function isStaleCopiedSetPrefill(stored, exIdx, setNum, row) {
+  const n = parseFloat(String(stored).replace(',', '.'));
+  if (!Number.isFinite(n) || n <= 0 || currentWeek <= 1) return false;
+  const prevSets = collectPrevWeekSetLogs(exIdx, row || {});
+  const loads = uniquePositiveLoads(prevSets);
+  if (loads.length < 2) return false;
+  const top = Math.max.apply(null, loads);
+  const first = parseFloat(prevSets[0] && prevSets[0].load);
+  const prevSame = prevSets.find(function (ps) { return Number(ps.set) === Number(setNum); });
+  const prevN = prevSame ? parseFloat(prevSame.load) : NaN;
+  if (!Number.isFinite(prevN)) return false;
+  if (loadsNearlyEqual(prevN, n)) return false;
+  const policy = workoutProgressionPolicy(prevSets, row || {});
+  const fromThis = applyProgressionToLoad(prevN, policy.addKg);
+  if (loadsNearlyEqual(fromThis, n)) return false;
+  const copied = [
+    top,
+    first,
+    Math.round(top * 1.025 * 2) / 2,
+    applyProgressionToLoad(top, 1.25),
+    applyProgressionToLoad(top, 2.5),
+    applyProgressionToLoad(first, 1.25),
+    applyProgressionToLoad(first, 2.5)
+  ];
+  return copied.some(function (x) { return loadsNearlyEqual(n, x); });
+}
+function effectiveSetLoad(exIdx, setNum, row) {
+  const k = 'w' + currentWeek + '_d' + currentDay + '_e' + exIdx + '_s' + setNum;
+  const stored = store.data[k + '_load'];
+  if (store.data[k + '_done'] && stored !== undefined && stored !== '' && stored != null) return stored;
+  if (sessionWasFinalized(currentWeek, currentDay) && stored !== undefined && stored !== '' && stored != null) return stored;
+  const stale = isStaleCopiedSetPrefill(stored, exIdx, setNum, row);
+  if (store.data[k + '_load_user'] && !stale && stored !== undefined && stored !== '' && stored != null) return stored;
+  const sugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(exIdx, setNum, row || {}) : null;
+  if (Number(sugg) > 0) return sugg;
+  if (!stale && stored !== undefined && stored !== '' && stored != null) return stored;
+  return '';
 }
 function epleyE1rm(load, reps) {
   const L = parseFloat(load);
@@ -35501,16 +35733,79 @@ function epleyE1rm(load, reps) {
   if (!Number.isFinite(R) || R <= 0) return L;
   return L * (1 + R / 30);
 }
-function getLoadSuggestion(exerciseIndex, row){
-  if(currentWeek <= 1) return null;
-  const prevSets = collectPrevWeekSetLogs(exerciseIndex, row || {});
-  const loads = prevSets.map(function (s) { return parseFloat(s.load); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
-  if (!loads.length) return null;
-  const top = Math.max.apply(null, loads);
-  const rirs = prevSets.map(function (s) { return parseFloat(s.rir); }).filter(Number.isFinite);
+function roundLoadStep(kg) {
+  const n = parseFloat(kg);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(n * 2) / 2;
+}
+function applyProgressionToLoad(prevLoad, addKg) {
+  const n = parseFloat(prevLoad);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return roundLoadStep(n + (Number(addKg) || 0));
+}
+/** Same increment for every exercise: keep / +1.25 / +2.5 from THAT set's last week, never copy the top set. */
+function workoutProgressionPolicy(prevSets, row) {
+  const sets = Array.isArray(prevSets) ? prevSets : [];
+  const loads = sets.map(function (s) { return parseFloat(s.load); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
+  const rirs = sets.map(function (s) { return parseFloat(s.rir); }).filter(Number.isFinite);
+  const repsN = sets.map(function (s) { return parseFloat(String(s.reps).replace(/[^\d.].*/, '')); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
+  const top = loads.length ? Math.max.apply(null, loads) : null;
   const avgRir = rirs.length ? rirs.reduce(function (a, b) { return a + b; }, 0) / rirs.length : null;
-  const mul = (avgRir != null && avgRir >= 2) ? 1.025 : 1;
-  return Math.round(top * mul * 2) / 2;
+  const targetReps = parseFloat(String((row && (row.repsTarget || row.reps)) || '').replace(/[^\d.].*/, '')) || (repsN[0] || 0);
+  const hitReps = !targetReps || (repsN.length && repsN.every(function (r) { return r >= targetReps * 0.9; }));
+  const missed = targetReps && repsN.length && repsN.some(function (r) { return r < targetReps * 0.7; });
+  let addKg = 0;
+  let advice = '';
+  if (!loads.length) {
+    advice = 'Ripeti lo schema e registra i kg reali: senza carichi loggati non posso dirti se aumentare.';
+  } else if (missed) {
+    advice = 'Alcune serie sono sotto target: ripeti il carico di ogni serie e chiudi le reps prima di alzare.';
+  } else if (avgRir != null && avgRir >= 2.5 && hitReps) {
+    addKg = 2.5;
+    advice = 'Margine alto (RIR medio ' + avgRir.toFixed(1) + '): +2,5 kg su ogni serie, o +1 rep.';
+  } else if (avgRir != null && avgRir >= 1.5 && hitReps) {
+    addKg = 1.25;
+    advice = 'Buona seduta: +1,25 kg su ogni serie (o +2,5 / +1 rep se la tecnica è pulita).';
+  } else if (avgRir != null && avgRir <= 0.5 && !missed) {
+    advice = 'Vicino al cedimento: ripeti il carico di ogni serie o +1 rep se la tecnica è pulita.';
+  } else {
+    advice = 'Ripeti il carico di ogni serie e cerca +1 rep. Aumenta i kg se chiudi tutte le serie con RIR ≥ 2.';
+  }
+  return { addKg: addKg, advice: advice, top: top };
+}
+function suggestedLoadForSet(exerciseIndex, setNum, row) {
+  if (currentWeek <= 1) return null;
+  const prevSets = collectPrevWeekSetLogs(exerciseIndex, row || {});
+  if (!prevSets.length) return null;
+  const prevSame = prevSets.find(function (ps) { return Number(ps.set) === Number(setNum); });
+  if (!prevSame || prevSame.load === '' || prevSame.load == null) return null;
+  const policy = workoutProgressionPolicy(prevSets, row || {});
+  return applyProgressionToLoad(prevSame.load, policy.addKg);
+}
+function isLegacyCopiedTopPrefill(stored, exerciseIndex, setNum, row) {
+  const n = parseFloat(stored);
+  if (!Number.isFinite(n) || n <= 0 || currentWeek <= 1) return false;
+  const prevSets = collectPrevWeekSetLogs(exerciseIndex, row || {});
+  const loads = prevSets.map(function (s) { return parseFloat(s.load); }).filter(function (x) { return Number.isFinite(x) && x > 0; });
+  if (!loads.length) return false;
+  const top = Math.max.apply(null, loads);
+  const legacy = Math.round(top * 1.025 * 2) / 2;
+  if (n !== legacy) return false;
+  const prevSame = prevSets.find(function (ps) { return Number(ps.set) === Number(setNum); });
+  const prevN = prevSame ? parseFloat(prevSame.load) : NaN;
+  return !Number.isFinite(prevN) || prevN !== n;
+}
+function getLoadSuggestion(exerciseIndex, row, setNum) {
+  if (setNum != null) return suggestedLoadForSet(exerciseIndex, setNum, row);
+  if (currentWeek <= 1) return null;
+  const prevSets = collectPrevWeekSetLogs(exerciseIndex, row || {});
+  if (!prevSets.length) return null;
+  const policy = workoutProgressionPolicy(prevSets, row || {});
+  const topRow = prevSets.filter(function (s) { return parseFloat(s.load) > 0; }).sort(function (a, b) {
+    return parseFloat(b.load) - parseFloat(a.load);
+  })[0];
+  if (!topRow) return null;
+  return applyProgressionToLoad(topRow.load, policy.addKg);
 }
 
 function formatPrevWeekLoadAdvice(exIdx, row) {
@@ -35520,31 +35815,14 @@ function formatPrevWeekLoadAdvice(exIdx, row) {
   const prevParts = prevSets.map(function (s) {
     return (s.load !== '' ? s.load : '?') + '×' + (s.reps !== '' ? s.reps : '?') + (s.rir !== '' ? (' @' + s.rir) : '');
   });
-  const loads = prevSets.map(function (s) { return parseFloat(s.load); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
-  const rirs = prevSets.map(function (s) { return parseFloat(s.rir); }).filter(Number.isFinite);
-  const repsN = prevSets.map(function (s) { return parseFloat(String(s.reps).replace(/[^\d.].*/, '')); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
-  const top = loads.length ? Math.max.apply(null, loads) : null;
-  const avgRir = rirs.length ? rirs.reduce(function (a, b) { return a + b; }, 0) / rirs.length : null;
-  const targetReps = parseFloat(String((row && (row.repsTarget || row.reps)) || '').replace(/[^\d.].*/, '')) || (repsN[0] || 0);
-  const hitReps = !targetReps || (repsN.length && repsN.every(function (r) { return r >= targetReps * 0.9; }));
-  const missed = targetReps && repsN.length && repsN.some(function (r) { return r < targetReps * 0.7; });
-  let advice = '';
-  if (!loads.length) {
-    advice = 'Ripeti lo schema e registra i kg reali: senza carichi loggati non posso dirti se aumentare.';
-  } else if (missed) {
-    advice = 'Alcune serie sono sotto target: ripeti ~' + top + ' kg e chiudi le reps prima di alzare.';
-  } else if (avgRir != null && avgRir >= 2.5 && hitReps) {
-    const next = Math.round(top * 1.025 * 2) / 2;
-    advice = 'Margine alto (RIR medio ' + avgRir.toFixed(1) + '): puoi aumentare. Target ~' + next + ' kg.';
-  } else if (avgRir != null && avgRir >= 1.5 && hitReps) {
-    const next = Math.round((top + 1.25) * 2) / 2;
-    advice = 'Buona seduta: +1,25/2,5 kg o +1 rep. Target ~' + next + ' kg.';
-  } else if (avgRir != null && avgRir <= 0.5 && !missed) {
-    advice = 'Vicino al cedimento: ripeti ~' + top + ' kg o +1 rep se la tecnica è pulita. Deload solo se hai fallito le serie.';
-  } else {
-    advice = 'Ripeti ~' + (top || 'lo stesso carico') + ' kg e cerca +1 rep. Aumenta i kg se chiudi tutte le serie con RIR ≥ 2.';
-  }
-  return `<div style="font-size:11px;color:var(--gold);font-weight:700;margin:0 0 6px;">Sett. scorsa: ${esc(prevParts.join(' · '))}</div>
+  const policy = workoutProgressionPolicy(prevSets, row || {});
+  const nextParts = prevSets.map(function (s) {
+    const next = applyProgressionToLoad(s.load, policy.addKg);
+    return next != null ? String(next) : null;
+  }).filter(Boolean);
+  let advice = policy.advice;
+  if (nextParts.length) advice += ' Questa seduta: ' + nextParts.join(' · ') + ' kg (ogni serie dalla stessa di sett. scorsa).';
+  return `<div data-prefill="per-set" style="font-size:11px;color:var(--gold);font-weight:700;margin:0 0 6px;">Sett. scorsa: ${esc(prevParts.join(' · '))}</div>
     <div style="font-size:10px;color:#aaa;margin:0 0 8px;">${esc(advice)}</div>`;
 }
 
@@ -36317,6 +36595,8 @@ function accountPayload(opts){
     health: store.health || null,
     activeProgramId: store.activeProgramId || (DATA && DATA.id) || null,
     rewards: store.rewards || null,
+    currentWeek: typeof currentWeek !== 'undefined' ? currentWeek : (store.trainingWeek || 1),
+    currentDay: typeof currentDay !== 'undefined' ? currentDay : (typeof store.trainingDay === 'number' ? store.trainingDay : 0),
     lastLocalSavedAt: new Date().toISOString(),
     nutrition: nutr,
     supplementation: supp,
@@ -36375,26 +36655,46 @@ function accountPayload(opts){
 function accountDataScore(src, prog) {
   let n = 0;
   const p = prog || (src && src.activeProgram) || null;
-  if (p && Array.isArray(p.weeks)) n += p.weeks.length * 80;
-  if (src && src.data && typeof src.data === 'object') n += Object.keys(src.data).length;
-  if (src && Array.isArray(src.logs)) n += src.logs.length * 8;
-  if (src && src.customSets) n += Object.keys(src.customSets).length;
+  if (p && Array.isArray(p.weeks)) n += p.weeks.length * 10;
+  if (src && src.data && typeof src.data === 'object') n += Object.keys(src.data).length * 8;
+  if (src && Array.isArray(src.logs)) n += src.logs.length * 20;
+  if (src && src.customSets) n += Object.keys(src.customSets).length * 4;
   return n;
 }
 function applyRemoteAccountData(remote, preferLocal) {
   if (!remote || typeof remote !== 'object') return;
   const token = store.accountToken, user = store.accountUser;
+  // Always union workout maps so a phone with empty local data cannot drop cloud loads
+  store.data = Object.assign({}, remote.data || {}, store.data || {});
+  store.customSets = Object.assign({}, remote.customSets || {}, store.customSets || {});
+  store.bw = Object.assign({}, remote.bw || {}, store.bw || {});
+  store.skips = Object.assign({}, remote.skips || {}, store.skips || {});
+  store.subs = Object.assign({}, remote.subs || {}, store.subs || {});
+  store.loadTypes = Object.assign({}, remote.loadTypes || {}, store.loadTypes || {});
+  store.tempos = Object.assign({}, remote.tempos || {}, store.tempos || {});
+  store.exIntensity = Object.assign({}, remote.exIntensity || {}, store.exIntensity || {});
+  store.maxTests = Object.assign({}, remote.maxTests || {}, store.maxTests || {});
+  store.bonus = Object.assign({}, remote.bonus || {}, store.bonus || {});
+  store.exMuscle = Object.assign({}, remote.exMuscle || {}, store.exMuscle || {});
+  if (remote.currentWeek) {
+    currentWeek = Math.max(1, Number(remote.currentWeek) || currentWeek);
+    store.trainingWeek = currentWeek;
+  }
+  if (typeof remote.currentDay === 'number') {
+    currentDay = Math.max(0, Number(remote.currentDay) || 0);
+    store.trainingDay = currentDay;
+  }
+  if (Array.isArray(remote.logs) && remote.logs.length) {
+    const byId = {};
+    (store.logs || []).concat(remote.logs).forEach(function (row) {
+      if (!row) return;
+      byId[row.id || row.at] = row;
+    });
+    store.logs = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
+      return String(a.at || '').localeCompare(String(b.at || ''));
+    }).slice(-80);
+  }
   if (!preferLocal) {
-    store.data = Object.assign({}, remote.data || {}, store.data || {});
-    store.customSets = Object.assign({}, remote.customSets || {}, store.customSets || {});
-    store.bw = Object.assign({}, remote.bw || {}, store.bw || {});
-    store.skips = Object.assign({}, remote.skips || {}, store.skips || {});
-    store.subs = Object.assign({}, remote.subs || {}, store.subs || {});
-    store.loadTypes = Object.assign({}, remote.loadTypes || {}, store.loadTypes || {});
-    store.tempos = Object.assign({}, remote.tempos || {}, store.tempos || {});
-    store.exIntensity = Object.assign({}, remote.exIntensity || {}, store.exIntensity || {});
-    store.bonus = Object.assign({}, remote.bonus || {}, store.bonus || {});
-    store.exMuscle = Object.assign({}, remote.exMuscle || {}, store.exMuscle || {});
     store.prefs = Object.assign({}, remote.prefs || {}, store.prefs || {});
     const athleteRole = typeof isAthleteRole === 'function' && isAthleteRole();
     if (athleteRole) {
@@ -36411,16 +36711,6 @@ function applyRemoteAccountData(remote, preferLocal) {
       if (profileConflictsWithAccountUser(store.profile)) {
         store.profile = seedCoachProfileFromAccount(store.profile);
       }
-    }
-    if (Array.isArray(remote.logs) && remote.logs.length) {
-      const byId = {};
-      (store.logs || []).concat(remote.logs).forEach(function (row) {
-        if (!row) return;
-        byId[row.id || row.at] = row;
-      });
-      store.logs = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
-        return String(a.at || '').localeCompare(String(b.at || ''));
-      }).slice(-80);
     }
     if (Array.isArray(remote.bodyChecks) && remote.bodyChecks.length) {
       const byId = {};
@@ -36534,26 +36824,25 @@ async function syncAccountData(download=false){
       return;
     }
     try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
-    if(download){
-      const response = await accountRequest('/api/account/me', { method: 'GET' });
-      const payload = await readApiJson(response);
-      const remote = payload.data || {};
-      const localScore = accountDataScore(store, DATA);
-      const remoteScore = accountDataScore(remote, remote.activeProgram);
-      applyRemoteAccountData(remote, localScore > remoteScore && !window.__cpForceRemoteProgram);
-      try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
-      // Athlete must not overwrite a just-assigned coach program with empty/local draft
-      const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
-      const skipProgUpload = athlete && !!(remote.assignedByCoach || window.__cpForceRemoteProgram);
-      if (localScore > 0) {
-        try {
-          await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload({ includeProgram: !skipProgUpload }) }) });
-        } catch (_) {}
-      }
-      persist(); render();
-    } else {
-      const response = await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload({ includeProgram: true }) }) });
-      await readApiJson(response);
+    const response = await accountRequest('/api/account/me', { method: 'GET' });
+    const payload = await readApiJson(response);
+    const remote = payload.data || {};
+    const localScore = accountDataScore(store, DATA);
+    const remoteScore = accountDataScore(remote, remote.activeProgram);
+    applyRemoteAccountData(remote, localScore > remoteScore && !window.__cpForceRemoteProgram);
+    try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
+    const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+    const skipProgUpload = athlete && !!(remote.assignedByCoach || window.__cpForceRemoteProgram);
+    const localHasLoads = !!(store.data && Object.keys(store.data).length) || (Array.isArray(store.logs) && store.logs.length);
+    const remoteHasLoads = !!(remote.data && Object.keys(remote.data).length) || (Array.isArray(remote.logs) && remote.logs.length);
+    if (download || localHasLoads || remoteHasLoads || localScore > 0) {
+      try {
+        await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload({ includeProgram: !skipProgUpload }) }) });
+      } catch (_) {}
+    }
+    persist();
+    if (download) {
+      try { render(); } catch (_) {}
     }
     if(status) status.textContent = 'Dati sincronizzati correttamente.';
   } catch(error){
@@ -36565,6 +36854,8 @@ async function syncAccountData(download=false){
 function scheduleAccountSync(){
   if(!store.accountToken) return;
   if (store.coachAssigning || store.coachViewingClient) return;
+  const hasLoads = !!(store.data && Object.keys(store.data).length) || (Array.isArray(store.logs) && store.logs.length);
+  if (!hasLoads) return;
   if (typeof queueAccountSyncIfOffline === 'function' && queueAccountSyncIfOffline()) return;
   clearTimeout(accountSyncTimer);
   accountSyncTimer = setTimeout(function () {
@@ -38592,7 +38883,7 @@ function normalizeProgram(payload) {
             id: s.id || `${exId}_s${sIdx + 1}`,
             order: s.order || sIdx + 1,
             reps: s.reps ?? s.target_reps ?? repsTarget,
-            load: s.load != null ? Number(s.load) : (s.target_load != null ? Number(s.target_load) : plannedLoad),
+            load: s.load != null ? Number(s.load) : (s.target_load != null ? Number(s.target_load) : (sIdx === 0 ? plannedLoad : null)),
             load_formula: s.load_formula || null,
             sets_formula: s.sets_formula || null,
             set_type: drop ? 'dropset' : (s.set_type || 'working'),
@@ -38616,7 +38907,16 @@ function normalizeProgram(payload) {
         if (rawSource) {
           const template = rawSource[0] || {};
           for (let sIdx = 0; sIdx < setsCount; sIdx++) {
-            canonicalSets.push(mapSetRow(rawSource[sIdx] || { ...template }, sIdx, setsCount));
+            if (rawSource[sIdx]) {
+              canonicalSets.push(mapSetRow(rawSource[sIdx], sIdx, setsCount));
+            } else {
+              const pad = Object.assign({}, template);
+              delete pad.load;
+              delete pad.target_load;
+              delete pad.actual_load;
+              delete pad.logged_load;
+              canonicalSets.push(mapSetRow(pad, sIdx, setsCount));
+            }
           }
           if (setInfo.mismatched) {
             console.warn('[IMPORT_FIDELITY] sets mismatch padded', exName, 'declared/target=', setsCount, 'modelRows=', rawSource.length);
@@ -39913,10 +40213,13 @@ function showPrevLoad(e, key) {
     if (!tt) return;
     let tip = `SETT. PREC: ${prevVal}kg`;
     try {
-      const m = String(key).match(/_e(\d+)_/);
+      const m = String(key).match(/_e(\d+)_s(\d+)/);
       const exIdx = m ? parseInt(m[1], 10) : null;
+      const setNum = m ? parseInt(m[2], 10) : null;
       if (exIdx != null) {
-        const sugg = getLoadSuggestion(exIdx, {});
+        const sugg = (typeof suggestedLoadForSet === 'function' && setNum != null)
+          ? suggestedLoadForSet(exIdx, setNum, {})
+          : getLoadSuggestion(exIdx, {});
         if (sugg != null) {
           const prevN = parseFloat(prevVal);
           if (Number.isFinite(prevN) && sugg > prevN) tip += ` → prova ~${sugg}kg`;
@@ -40004,12 +40307,13 @@ function completeSetQuick(exIdx, setNum, restText) {
   } : { load: '', reps: '', rir: '' };
 
   const loadEl = $(k + '_load');
-  let load = store.data[k + '_load'];
+  const rowForSugg = exerciseRowAt(currentWeek, currentDay, exIdx) || {};
+  let load = (typeof effectiveSetLoad === 'function') ? effectiveSetLoad(exIdx, setNum, rowForSugg) : store.data[k + '_load'];
   if (load === undefined || load === '' || load == null) {
     const fromInput = loadEl && loadEl.value !== '' && loadEl.value != null ? loadEl.value : '';
-    const fromPh = loadEl && loadEl.placeholder ? loadEl.placeholder : '';
-    const coachKg = (typeof getLoadSuggestion === 'function') ? getLoadSuggestion(exIdx, exerciseRowAt(currentWeek, currentDay, exIdx) || {}) : null;
-    load = fromInput || fromPh || (Number(coachKg) > 0 ? coachKg : '') || prev.load || prevSet.load || '';
+    load = fromInput || prev.load || '';
+  }
+  if (load !== undefined && load !== '' && load != null) {
     store.data[k + '_load'] = load;
     if (loadEl) loadEl.value = load;
   }
@@ -40712,28 +41016,41 @@ function finishInit() {
   const splash = $('splash');
   if (splash) splash.style.pointerEvents = 'none';
   setSplashProgress(95, 'Quasi pronto…');
-  setTimeout(() => {
-    setSplashProgress(100, 'Pronto');
-    if (splash) {
-      splash.style.opacity = '0';
-      splash.style.pointerEvents = 'none';
+  setTimeout(function () {
+    setSplashProgress(92, 'Allineo i tuoi allenamenti…');
+    const afterHydrate = function () {
+      setSplashProgress(100, 'Pronto');
+      if (splash) {
+        splash.style.opacity = '0';
+        splash.style.pointerEvents = 'none';
+      }
+      setTimeout(function () {
+        if (splash) splash.style.display = 'none';
+        render();
+        applyChromeI18n();
+        try { applyFocusUi(); } catch (_) {}
+        try { maybeShowRewardsOnboarding(); } catch (_) {}
+        try { maybeShowIosInstallHint(); } catch (_) {}
+        try { scheduleAllItemAlerts(); } catch (_) {}
+        try { registerNurvanServiceWorker(); } catch (_) {}
+        try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
+        try { if (typeof bootCoachPractice === 'function') bootCoachPractice(); } catch (_) {}
+      }, 400);
+    };
+    const canPull = !!(store.accountToken && typeof syncAccountData === 'function' && !store.coachViewingClient && !store.coachAssigning);
+    if (!canPull) {
+      afterHydrate();
+      return;
     }
-    setTimeout(() => {
-      if (splash) splash.style.display = 'none';
-      render();
-      applyChromeI18n();
-      try { applyFocusUi(); } catch (_) {}
-      try { maybeShowRewardsOnboarding(); } catch (_) {}
-      try { maybeShowIosInstallHint(); } catch (_) {}
-      try { scheduleAllItemAlerts(); } catch (_) {}
-      try { registerNurvanServiceWorker(); } catch (_) {}
-      try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
-      try { if (typeof bootCoachPractice === 'function') bootCoachPractice(); } catch (_) {}
-    }, 400);
+    Promise.resolve(syncAccountData(true)).catch(function () {}).then(afterHydrate);
   }, 280);
 }
 function persist() {
   ensureStoreIntegrity();
+  try {
+    store.trainingWeek = typeof currentWeek !== 'undefined' ? currentWeek : store.trainingWeek;
+    store.trainingDay = typeof currentDay !== 'undefined' ? currentDay : store.trainingDay;
+  } catch (_) {}
   try { upsertLiveCoachArchive(); } catch (_) {}
   try {
     let sanitized = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.sanitizeStoreForLocalStorage) 
@@ -41144,9 +41461,9 @@ function render() {
     renderSettings(c);
     return;
   }
-  if (currentView === 'athlete') {
+  if (currentView === 'athlete' || currentView === 'profile') {
     c.innerHTML = '';
-    renderAthleteProfile(c);
+    renderProfile(c);
     const va = $('view-athlete');
     if (va) { va.style.display = 'none'; va.setAttribute('aria-hidden', 'true'); }
     return;
@@ -41182,9 +41499,10 @@ function render() {
   else if (currentView === 'exams') renderExams(c);
   else if (currentView === 'calendar') renderCalendar(c);
   else if (currentView === 'community') renderCommunity(c);
-  else if (currentView === 'athlete') renderAthleteProfile(c);
+  else if (currentView === 'athlete' || currentView === 'profile') renderProfile(c);
   else if (currentView === 'settings') renderSettings(c);
   else if (currentView === 'pricing') renderPricing(c);
+  else if (currentView === 'progress') renderProgressCenter(c);
   else renderHome(c);
   applyChromeI18n();
 }
@@ -43565,6 +43883,13 @@ function renderCalendar(c) {
         <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="changeCalendarMonth(1)">▶</button>
       </div>
     </div>
+    ${(typeof isAthleteRole === 'function' && isAthleteRole()) ? `
+    <div class="card" style="margin-bottom:12px;padding:12px;border:1px solid var(--border);">
+      <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Prenota sessione</div>
+      <p style="font-size:11px;color:#aaa;margin:0 0 8px;">Vedi gli slot del coach e conferma data/ora. Collisioni e blackout restano sul server.</p>
+      <button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="openAthleteBooking()">Vedi slot disponibili</button>
+      <div id="athlete-booking-box" style="margin-top:8px;"></div>
+    </div>` : ''}
     <div class="card" style="padding:10px;margin-bottom:14px;border:1px solid var(--border);">
       <div class="calendar-grid" style="margin-top:0;">
         ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d => '<div class="calendar-day-header">' + d + '</div>').join('')}
@@ -43654,6 +43979,54 @@ async function removeCalendarEvent(id) {
   render();
 }
 
+async function openAthleteBooking() {
+  const box = document.getElementById('athlete-booking-box');
+  if (box) box.textContent = 'Carico slot…';
+  try {
+    const date = calendarSelectedDate || new Date().toISOString().slice(0, 10);
+    const payload = await practiceFetch('/api/client/availability/slots?date=' + encodeURIComponent(date), {
+      method: 'GET',
+      headers: practiceHeaders(false)
+    }, 15000);
+    const slots = payload.slots || [];
+    if (!box) return;
+    if (!slots.length) {
+      box.innerHTML = '<div style="font-size:12px;color:#aaa;">Nessuno slot disponibile in questa data. Cosa puoi fare: scegli un altro giorno o chiedi al coach.</div>';
+      return;
+    }
+    box.innerHTML = slots.map(function (slot, i) {
+      return '<button class="btn btn-outline" style="width:100%;margin-top:6px;font-size:11px;" onclick="confirmAthleteBooking(' + i + ')">' +
+        esc(slot.date) + ' · ' + esc(String(slot.startMinute)) + '-' + esc(String(slot.endMinute)) + ' · ' + esc(slot.timeZone || '') + '</button>';
+    }).join('');
+    window.__athleteSlots = slots;
+  } catch (error) {
+    if (box) box.textContent = (error && error.message) || 'Prenotazione non disponibile. Cosa puoi fare: riprova.';
+  }
+}
+
+async function confirmAthleteBooking(index) {
+  const slot = (window.__athleteSlots || [])[index];
+  if (!slot) return;
+  const start = new Date(slot.date + 'T00:00:00');
+  start.setMinutes(Number(slot.startMinute) || 0);
+  try {
+    await practiceFetch('/api/client/appointments', {
+      method: 'POST',
+      headers: practiceHeaders(true),
+      body: JSON.stringify({
+        title: 'Coaching Call',
+        type: 'Coaching Call',
+        startsAt: start.toISOString(),
+        timeZone: slot.timeZone || 'UTC'
+      })
+    }, 15000);
+    if (typeof showToast === 'function') showToast('Sessione prenotata', 'success');
+    render();
+  } catch (error) {
+    if (typeof showToast === 'function') showToast((error && error.message) || 'Prenotazione rifiutata. Cosa puoi fare: scegli un altro orario.', 'warning');
+  }
+}
+
 function changeCalendarMonth(delta) {
   calendarCurrentMonth += delta;
   if (calendarCurrentMonth > 11) {
@@ -43734,60 +44107,10 @@ function renderSettings(c) {
       <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${t('settings')}</h1>
     </div>
 
-    <!-- Athlete Profile Card -->
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">👤 ${t('athleteProfile')}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">${t('labelName')}</label>
-          <input id="profile-name" type="text" value="${esc((store.profile||(DATA&&DATA.profile)||{}).name||'')}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">Sesso</label>
-          <select id="profile-sex" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
-            <option value="m" ${(String((store.profile||{}).sex||'m').toLowerCase().indexOf('f')===0)?'':'selected'}>Maschio</option>
-            <option value="f" ${(String((store.profile||{}).sex||'').toLowerCase().indexOf('f')===0)?'selected':''}>Femmina</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">${t('labelAge')}</label>
-          <input id="profile-age" type="number" value="${esc(String((store.profile||(DATA&&DATA.profile)||{}).age||''))}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">${t('labelWeight')}</label>
-          <input id="profile-weight" type="number" step="0.1" value="${esc(String((store.profile||(DATA&&DATA.profile)||{}).weight||''))}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">${t('labelHeight')}</label>
-          <input id="profile-height" type="number" value="${esc(String((store.profile||(DATA&&DATA.profile)||{}).height||''))}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">1RM Squat (kg)</label>
-          <input id="profile-squat" type="number" step="0.5" value="${esc(String((store.profile||(DATA&&DATA.profile)||{}).squatMax||''))}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">1RM Panca (kg)</label>
-          <input id="profile-bench" type="number" step="0.5" value="${esc(String((store.profile||(DATA&&DATA.profile)||{}).benchMax||''))}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">1RM Stacco (kg)</label>
-          <input id="profile-deadlift" type="number" step="0.5" value="${esc(String((store.profile||(DATA&&DATA.profile)||{}).deadliftMax||''))}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="font-size:10px;color:#666;font-weight:800;">${t('labelGoal')}</label>
-          <input id="profile-goal" type="text" value="${esc((store.profile||(DATA&&DATA.profile)||{}).goal||'')}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="font-size:10px;color:#666;font-weight:800;">Su quali parti vuoi concentrarti?</label>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
-            ${['PETTO','DORSALI','SPALLE','BICIPITI','TRICIPITI','QUADRICIPITI','FEMORALI','GLUTEI','POLPACCI','ADDOME'].map((m) => {
-              const on = ((store.profile||{}).focusMuscles || store.prefs.focusMuscles || []).indexOf(m) >= 0;
-              return `<label style="font-size:10px;border:1px solid ${on?'var(--gold)':'#333'};color:${on?'var(--gold)':'#aaa'};padding:6px 8px;border-radius:6px;"><input type="checkbox" class="profile-focus" value="${m}" ${on?'checked':''} style="margin-right:4px;">${m}</label>`;
-            }).join('')}
-          </div>
-        </div>
-      </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="saveAthleteProfile()">${t('saveProfile')}</button>
+      <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Profilo</div>
+      <p style="font-size:11px;color:#aaa;margin:0 0 10px;line-height:1.4;">Identità, foto, 1RM e muscoli focus si modificano nel Profilo. Qui restano preferenze e comportamento dell'app.</p>
+      <button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="navigate('profile')">Apri profilo</button>
     </div>
 
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
@@ -43806,7 +44129,7 @@ function renderSettings(c) {
         <button class="btn ${(store.rewards&&store.rewards.mode==='focus')?'btn-primary':'btn-outline'}" style="flex:1;font-size:11px;" onclick="setRewardsModeFromSettings('focus')">Focus</button>
         <button class="btn ${(store.rewards&&store.rewards.mode==='rewards')?'btn-primary':'btn-outline'}" style="flex:1;font-size:11px;" onclick="setRewardsModeFromSettings('rewards')">Rewards</button>
       </div>
-      <button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="openAthleteProfile()">Profilo Atleta</button>
+      <button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="navigate('profile')">Profilo</button>
       ${(typeof isAthleteRole === 'function' && isAthleteRole()) ? '' : `
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin:10px 0 6px;gap:10px;">Condividi terapia/esami con Coach AI <input type="checkbox" ${store.prefs.shareMedicalWithCoach?'checked':''} onchange="store.prefs.shareMedicalWithCoach=this.checked;persist()"></label>
       <div style="font-size:10px;color:#666;line-height:1.4;">Privacy: terapia ed esami non entrano mai in ranking, XP o share card. Al Coach solo con opt-in esplicito.</div>
@@ -43827,8 +44150,8 @@ function renderSettings(c) {
 
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
       <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">Connessione Salute</div>
-      <p style="font-size:11px;color:#aaa;margin-bottom:10px;">Autorizza Health Connect di Android per condividere allenamenti e misure con altre app.</p>
-      <button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="openHealthConnect()">Abilita Connessione Salute</button>
+      <p style="font-size:11px;color:#aaa;margin-bottom:10px;">Health Connect è disponibile solo sull'app Android. Nel browser non c'è sincronizzazione salute.</p>
+      <button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="openHealthConnect()">Apri Connessione Salute</button>
     </div>
 
     <!-- Language Switcher Card -->
@@ -44017,12 +44340,12 @@ function renderPricing(c) {
     <div style="margin-bottom:14px;text-align:center;">
       <span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">NURVAN PRO</span>
       <h1 style="color:#fff;margin:4px 0 0;font-size:22px;">Piani & Abbonamenti</h1>
-      <p style="font-size:11px;color:#aaa;margin-top:4px;">Sblocca Coach AI, Universal Import e monitoraggio completo.</p>
+      <p style="font-size:11px;color:#aaa;margin-top:4px;">I piani a pagamento non sono disponibili in questa versione. Nessun checkout e nessun addebito.</p>
     </div>
-    <div class="card" style="margin-bottom:14px;text-align:center;border:1px solid var(--gold);">
-      <div style="font-size:12px;color:#ccc;">Passa a PRO</div>
-      <div style="font-size:22px;font-weight:900;color:var(--gold);margin:4px 0;">Sconto atleta</div>
-      <div style="font-size:11px;color:#888;margin-bottom:8px;">Pagamento sicuro. Puoi cambiare piano quando vuoi.</div>
+    <div class="card" style="margin-bottom:14px;text-align:center;border:1px solid #444;">
+      <div style="font-size:12px;color:#ccc;">Pagamenti</div>
+      <div style="font-size:18px;font-weight:900;color:var(--gold);margin:4px 0;">Non disponibile</div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px;">Stripe e i piani Pro non sono attivi. L'app resta usabile con il piano attuale, senza pagamento finto.</div>
     </div>
 
     <div class="pricing-grid">
@@ -44040,8 +44363,8 @@ function renderPricing(c) {
               <p style="font-size:11px;color:#ccc;margin-bottom:12px;line-height:1.4;">${p.description}</p>
             </div>
             <div>
-              <button class="btn ${isCurrent ? 'btn-outline' : 'btn-primary'}" style="width:100%;font-size:11px;padding:10px;" onclick="switchPlan('${p.name.toUpperCase().split(' ')[0]}')">
-                ${isCurrent ? '✓ PIANO ATTIVO' : (p.price === 0 ? 'ATTIVA FREE' : 'SCEGLI ' + p.name)}
+              <button class="btn btn-outline" style="width:100%;font-size:11px;padding:10px;" disabled aria-disabled="true" title="Pagamenti non disponibili">
+                ${isCurrent ? 'PIANO ATTUALE' : 'NON DISPONIBILE'}
               </button>
             </div>
           </div>
@@ -44054,8 +44377,9 @@ function renderPricing(c) {
 }
 
 function switchPlan(planName) {
-  EntitlementService.setPlan(planName);
-  if (typeof showToast === 'function') showToast("Piano aggiornato a: " + planName, "success");
+  if (typeof showToast === 'function') {
+    showToast('Pagamenti non disponibili. Il piano non è stato cambiato' + (planName ? (' (' + planName + ')') : '') + '.', 'warning');
+  }
 }
 
 function renderCommunity(c) {
@@ -44081,10 +44405,14 @@ function renderCommunity(c) {
   } catch (_) {}
   c.innerHTML = `
     <h1 class="text-gold" style="font-size:22px;font-weight:900;margin-bottom:8px;">Community</h1>
+    <div class="card" style="padding:14px;margin-bottom:12px;border:1px solid #444;">
+      <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Non disponibile</div>
+      <p style="font-size:12px;color:#aaa;margin:0;line-height:1.4;">Nurvan non ha un social interno. Qui trovi solo link esterni e la condivisione del tuo profilo. Nessun feed, nessun ingest, nessuna community finta.</p>
+    </div>
     ${readinessHtml}
     <div class="card" style="padding:16px;text-align:center;margin-bottom:12px;">
-      <div style="font-size:14px;font-weight:800;margin-bottom:6px;">Condividi e scopri</div>
-      <p style="font-size:12px;color:#888;margin-bottom:12px;">Nessun ingest di contenuti Reddit. Solo link ufficiali e condivisione profilo.</p>
+      <div style="font-size:14px;font-weight:800;margin-bottom:6px;">Condividi il profilo</div>
+      <p style="font-size:12px;color:#888;margin-bottom:12px;">Link ufficiali e condivisione testo. Non è una community Nurvan.</p>
       <button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="shareAthleteCard()">Condividi il mio profilo</button>
       <button class="btn btn-outline" style="width:100%;" onclick="openHealthConnect()">Connessione Salute</button>
     </div>
@@ -44122,11 +44450,11 @@ function openHealthConnect() {
       if (typeof showToast === 'function') showToast('Richiesta permessi Connessione Salute…', 'info');
     } else {
       navigate('settings');
-      if (typeof showToast === 'function') showToast('Apri Impostazioni → Connessione Salute', 'info');
+      if (typeof showToast === 'function') showToast('Health Connect è disponibile solo sull\'app Android. Nel browser non c\'è sincronizzazione.', 'warning');
     }
   } catch (e) {
     navigate('settings');
-    if (typeof showToast === 'function') showToast('Apri Impostazioni → Connessione Salute', 'warning');
+    if (typeof showToast === 'function') showToast('Health Connect non disponibile in questo ambiente. Cosa puoi fare: apri l\'app Android.', 'warning');
   }
   setTimeout(function () {
     syncHealthSamplesAndRefresh().catch(function () {});
@@ -44377,6 +44705,15 @@ function suggestProgramsForProfile(profile) {
     .sort((a, b) => b.score - a.score || b.p.exercises - a.p.exercises)
     .map((x) => x.p);
 }
+
+function openProgramTemplateCreate() {
+  navigate('programs');
+  setTimeout(function () {
+    const el = document.getElementById('program-create-template');
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 120);
+}
+window.openProgramTemplateCreate = openProgramTemplateCreate;
 
 async function generateAndActivateProgram() {
   const days = parseInt(($('gen-days') && $('gen-days').value) || '4', 10);
@@ -44694,7 +45031,7 @@ function renderPrograms(c){
       <button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="promptCatalogFromIntakeThenOpen('${esc(store.coachAssigning.clientId)}','${esc(store.coachAssigning.name || '')}')">FILTRA CON ANAGRAFICA CLIENTE</button>
     </div>` : '')}
 
-    <div class="card" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
+    <div class="card" id="program-create-template" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
       <div class="card-header"><h3 style="font-size:13px;color:var(--gold);font-weight:800;margin:0;">GENERA PROGRAMMA (rules-based)</h3></div>
       <p style="font-size:11px;color:#888;margin:0 0 10px;">Template strutturati (non AI random). Puoi attivare e modificare dopo.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
@@ -44718,6 +45055,9 @@ function renderPrograms(c){
           <option value="8" selected>8 settimane</option>
           <option value="12">12 settimane</option>
         </select>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <button class="btn btn-outline" style="font-size:11px;padding:6px 12px;" onclick="openAiProgramWizard()">AI CREATE</button>
       </div>
       <button class="btn btn-primary" style="width:100%;font-size:12px;" onclick="generateAndActivateProgram()">GENERA E ATTIVA</button>
     </div>
@@ -46376,19 +46716,26 @@ function renderHome(c) {
         <h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1>
       </div>
 
-      <div class="card" style="border:2px solid var(--gold);padding:24px;text-align:center;">
+      <div class="card" style="border:2px solid var(--gold);padding:22px 18px;">
+        <div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">CREA IL TUO PROGRAMMA</div>
         <div style="font-size:18px;font-weight:900;color:var(--gold);margin-bottom:8px;">${t('noActiveProgram')}</div>
-        <p style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:20px;">
-          Dal PDF/Excel del coach all'allenamento interattivo — oppure scegli una scheda con provenienza dal database.
+        <p style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:16px;">
+          Quattro percorsi equivalenti. Scegline uno: poi alleni.
         </p>
-        <div style="display:flex;flex-direction:column;gap:10px;max-width:320px;margin:0 auto;">
-          <button class="btn btn-primary" style="height:50px;font-size:14px;font-weight:900;" onclick="navigate('import')">
-            IMPORTA PDF / EXCEL / WORD
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn btn-primary" style="min-height:52px;font-size:13px;font-weight:900;text-align:left;padding:10px 14px;" onclick="navigate('import')">
+            IMPORTA FILE<br><span style="font-size:10px;font-weight:600;opacity:.85;">PDF / Excel / Word del coach</span>
           </button>
-          <button class="btn btn-outline" style="height:44px;font-size:12px;font-weight:800;border-color:var(--gold);color:var(--gold);" onclick="navigate('programs')">
-            DATABASE PROGRAMMI
+          <button class="btn btn-outline" style="min-height:48px;font-size:12px;font-weight:800;border-color:var(--gold);color:var(--gold);text-align:left;padding:10px 14px;" onclick="navigate('programs')">
+            DATABASE PROGRAMMI<br><span style="font-size:10px;font-weight:600;color:#aaa;">Schede già pronte · preview e attiva</span>
           </button>
-          <button class="btn btn-outline" style="height:44px;font-size:12px;font-weight:800;" onclick="openAthleteProfile()">
+          <button class="btn btn-outline" style="min-height:48px;font-size:12px;font-weight:800;text-align:left;padding:10px 14px;" onclick="openProgramTemplateCreate()">
+            CREA DA TEMPLATE<br><span style="font-size:10px;font-weight:600;color:#aaa;">Rules-based: giorni, obiettivo, livello</span>
+          </button>
+          <button class="btn btn-outline" style="min-height:48px;font-size:12px;font-weight:800;text-align:left;padding:10px 14px;" onclick="openAiProgramWizard()">
+            AI CREATE<br><span style="font-size:10px;font-weight:600;color:#aaa;">Descrivi la scheda · JSON canonico · conferma</span>
+          </button>
+          <button class="btn btn-outline" style="min-height:44px;font-size:12px;font-weight:800;" onclick="openAthleteProfile()">
             COMPLETA PROFILO
           </button>
         </div>
@@ -46396,14 +46743,12 @@ function renderHome(c) {
 
       ${homeDomainModulesHtml()}
 
-      <div class="card">
-        <div class="card-header"><h2>GESTIONE & MANUTENZIONE</h2></div>
-        <div style="padding:15px;display:flex;flex-direction:column;gap:10px;">
-          <button class="btn btn-outline" style="width:100%;border-color:var(--accent-red);color:var(--accent-red);font-size:10px;" onclick="resetAllData()">
-            ${t('hardResetLocal')}
-          </button>
-        </div>
-      </div>
+      <details style="margin-top:18px;padding:8px 4px;">
+        <summary style="font-size:10px;color:#666;cursor:pointer;">Manutenzione</summary>
+        <button class="btn btn-outline" style="width:100%;margin-top:10px;border-color:#442222;color:#a66;font-size:10px;" onclick="resetAllData()">
+          ${t('hardResetLocal')}
+        </button>
+      </details>
     `;
     return;
   }
@@ -46429,7 +46774,7 @@ function renderHome(c) {
   c.innerHTML = `
     <div style="text-align:center;padding:20px 0;"><img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));" onerror="this.onerror=null;this.src='icon-192.png'"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
 
-    <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>${t('activeSession')}</h2></div><div style="padding:20px;"><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].name||sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><div style="display:flex;gap:10px;margin-top:20px;">
+    <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>${t('activeSession')}</h2></div><div style="padding:20px;"><div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">OGGI · PROSSIMA AZIONE</div><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].name||sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><div style="display:flex;gap:10px;margin-top:20px;">
         <button class="btn btn-primary" style="flex:2;font-size:16px;height:55px;" onclick="navigate('training')">${t('startWorkout')}</button>
         <button class="btn btn-outline" style="flex:1;font-size:12px;height:55px;border-color:var(--gold);color:var(--gold);" onclick="navigate('${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'clientChat' : 'programs'}')">${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'CHAT COACH' : 'PROGRAMMI'}</button>
       </div></div></div>
@@ -46631,7 +46976,11 @@ function applySsttStartInputs() {
           (ex.sets || []).forEach((st, si) => {
             if (st.load == null && st.target_load == null) return;
             const k = 'w' + wNum + '_d' + di + '_e' + ei + '_s' + (si + 1) + '_load';
-            if (store && store.data) store.data[k] = st.load != null ? st.load : st.target_load;
+            if (!store || !store.data) return;
+            if (store.data[k + '_done'] || store.data[k + '_load_user']) return;
+            if (typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(wNum, di, ei)) return;
+            if (wNum > 1 && typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(wNum - 1, di, ei)) return;
+            store.data[k] = st.load != null ? st.load : st.target_load;
           });
         });
       });
@@ -46779,18 +47128,18 @@ function renderTraining(c){
         for(let s = 1; s <= totalSets; s++) {
           const k = `w${currentWeek}_d${currentDay}_e${fIdx}_s${s}`;
           const setObj = Array.isArray(row.sets) ? row.sets[s - 1] : null;
-          let sugg = '';
-          const coachKg = (typeof getLoadSuggestion === 'function') ? getLoadSuggestion(fIdx, row) : null;
-          if (Number(coachKg) > 0) sugg = coachKg;
-          else {
-            const prevSets = (typeof collectPrevWeekSetLogs === 'function') ? collectPrevWeekSetLogs(fIdx, row) : [];
-            const prevSame = prevSets.find(function (ps) { return ps.set === s; }) || prevSets[0];
-            if (prevSame && Number(prevSame.load) > 0) sugg = prevSame.load;
-          }
           const isDone = Boolean(store.data[k + '_done']);
-          const shownLoad = (store.data[k + '_load'] !== undefined && store.data[k + '_load'] !== '' && store.data[k + '_load'] != null)
-            ? store.data[k + '_load']
-            : (Number(sugg) > 0 ? sugg : '');
+          const prevStored = store.data[k + '_load'];
+          const shownLoad = (typeof effectiveSetLoad === 'function') ? effectiveSetLoad(fIdx, s, row) : (prevStored || '');
+          const sugg = (typeof suggestedLoadForSet === 'function') ? (suggestedLoadForSet(fIdx, s, row) || '') : '';
+          if (!isDone && !sessionWasFinalized(currentWeek, currentDay) && Number(shownLoad) > 0
+            && Number(prevStored) !== Number(shownLoad)) {
+            store.data[k + '_load'] = shownLoad;
+            if (store.data[k + '_load_user'] && isStaleCopiedSetPrefill(prevStored, fIdx, s, row)) {
+              delete store.data[k + '_load_user'];
+            }
+            window.__loadPrefillDirty = true;
+          }
           const targetRepsRaw = setObj ? (setObj.reps ?? setObj.target_reps) : row.repsTarget;
           const shownReps = (store.data[k + '_reps'] !== undefined && store.data[k + '_reps'] !== '' && store.data[k + '_reps'] != null)
             ? store.data[k + '_reps']
@@ -46871,9 +47220,16 @@ function renderTraining(c){
         const k = `w${currentWeek}_d${currentDay}_e${fIdx}_s${s}`;
         const isDone = Boolean(store.data[k + '_done']);
         const restBonus = esc(bEx.rest || '60-90s');
+        let bonusSugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(fIdx, s, bEx) : null;
+        if (!(Number(bonusSugg) > 0)) bonusSugg = (s === 1 ? (bEx.plannedLoad || '') : '');
+        const bonusShown = (typeof effectiveSetLoad === 'function')
+          ? effectiveSetLoad(fIdx, s, bEx)
+          : ((store.data[k + '_load'] !== undefined && store.data[k + '_load'] !== '' && store.data[k + '_load'] != null)
+            ? store.data[k + '_load']
+            : (bonusSugg || ''));
         h += `<div class="set-row">
           <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
-          <input type="number" id="${k}_load" step="0.5" placeholder="${bEx.plannedLoad || ''}" value="${store.data[k+'_load']||''}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
+          <input type="number" id="${k}_load" step="0.5" placeholder="${bonusSugg || ''}" value="${bonusShown}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
           <select onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${store.data[k+'_reps']==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
           <select onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${store.data[k+'_rir']==i?'selected':''}>${i}</option>`).join('')}</select>
           <button class="set-done-btn ${isDone?'active':''}" onclick="completeSetQuick(${fIdx}, ${s}, '${restBonus}')">${isDone?'✓':'○'}</button>
@@ -46902,6 +47258,10 @@ function renderTraining(c){
       <div style="height:120px;"></div>`;
     c.innerHTML = h;
     calcStats();
+    if (window.__loadPrefillDirty) {
+      window.__loadPrefillDirty = false;
+      try { persist(); } catch (_) {}
+    }
   } catch(error) {
     console.error('WORKOUT_RENDER_ERROR', error);
     c.innerHTML = `
@@ -47767,6 +48127,7 @@ function updateTempo(idx, val) {
 
 function updateData(key, val){
   store.data[key] = val;
+  if (/_s\d+_load$/.test(String(key || ''))) store.data[String(key).replace(/_load$/, '_load_user')] = 1;
   persist();
   calcStats();
   try { if (typeof scheduleAthleteLiveWorkoutSync === 'function') scheduleAthleteLiveWorkoutSync(); } catch (_) {}
@@ -48247,7 +48608,7 @@ function registerNurvanServiceWorker() {
   if (typeof window !== 'undefined' && window.NativeConfig) return;
   if (!('serviceWorker' in navigator)) return;
   if (location.protocol === 'file:') return;
-  navigator.serviceWorker.register('./sw.js').catch(function () {});
+  navigator.serviceWorker.register('./sw.js?v=prefill4').catch(function () {});
 }
 
 function maybeShowRewardsOnboarding() {
@@ -48507,6 +48868,10 @@ function athleteAvatarSvg(avatar) {
     '</svg></div>';
 }
 
+function renderProfile(container) {
+  return renderAthleteProfile(container);
+}
+
 function renderAthleteProfile(container) {
   ensureRewardsReady();
   applyFocusUi();
@@ -48566,8 +48931,21 @@ function renderAthleteProfile(container) {
     '<input id="profile-weight" type="number" step="0.1" value="' + esc(String(profile.weight || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelHeight') + '</label>' +
     '<input id="profile-height" type="number" value="' + esc(String(profile.height || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Squat (kg)</label>' +
+    '<input id="profile-squat" type="number" step="0.5" value="' + esc(String(profile.squatMax || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Panca (kg)</label>' +
+    '<input id="profile-bench" type="number" step="0.5" value="' + esc(String(profile.benchMax || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Stacco (kg)</label>' +
+    '<input id="profile-deadlift" type="number" step="0.5" value="' + esc(String(profile.deadliftMax || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div style="grid-column:1/-1;"><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelGoal') + '</label>' +
     '<input id="profile-goal" type="text" value="' + esc(profile.goal || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<div style="grid-column:1/-1;"><label style="font-size:10px;color:#666;font-weight:800;">Su quali parti vuoi concentrarti?</label>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">' +
+    ['PETTO','DORSALI','SPALLE','BICIPITI','TRICIPITI','QUADRICIPITI','FEMORALI','GLUTEI','POLPACCI','ADDOME'].map(function (m) {
+      const on = ((profile.focusMuscles || store.prefs.focusMuscles || []).indexOf(m) >= 0);
+      return '<label style="font-size:10px;border:1px solid ' + (on ? 'var(--gold)' : '#333') + ';color:' + (on ? 'var(--gold)' : '#aaa') + ';padding:6px 8px;border-radius:6px;"><input type="checkbox" class="profile-focus" value="' + m + '"' + (on ? ' checked' : '') + ' style="margin-right:4px;">' + m + '</label>';
+    }).join('') +
+    '</div></div>' +
     '</div>' +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="saveAthleteProfile()">' + t('saveProfile') + '</button>' +
     '</div>';
@@ -48602,6 +48980,12 @@ function renderAthleteProfile(container) {
       '<p style="font-size:11px;color:#aaa;margin-bottom:8px;">Puoi chiedere di chiudere la collaborazione solo se non ci sono pagamenti in sospeso. Il coach deve confermare.</p>' +
       '<button class="btn btn-outline" style="width:100%;font-size:11px;color:#c66;border-color:#c66;" onclick="requestLeaveCoach()">CHIUDI COLLABORAZIONE CON IL COACH</button></div>';
   }
+  html += '<div class="card" style="border:1px solid var(--border);margin-bottom:14px;">' +
+    '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">Account</div>' +
+    '<button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="navigate(\'settings\')">Preferenze app</button>' +
+    (typeof openAccount === 'function' ? '<button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="openAccount()">Account e accesso</button>' : '') +
+    (typeof logoutAccount === 'function' ? '<button class="btn btn-outline" style="width:100%;font-size:11px;color:#c66;border-color:#c66;" onclick="logoutAccount()">Esci</button>' : '') +
+    '</div>';
   html += '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="navigate(\'settings\')">Altre impostazioni</button>';
   container.innerHTML = html;
 }
@@ -48677,7 +49061,7 @@ function openAthleteProfile() {
     }
   } catch (_) {}
   try { closeMenuHub(); } catch (_) {}
-  navigate('athlete');
+  navigate('profile');
 }
 
 function renderAdaptiveDeloadCardHtml() {
@@ -48710,13 +49094,17 @@ async function acceptAdaptiveDeload() {
   const proposal = window.__pendingDeloadProposal || { action_type: 'APPLY_DELOAD', volumeReductionPct: 40, weeks: 1 };
   try {
     if (typeof ActionDispatcher !== 'undefined' && ActionDispatcher && ActionDispatcher.dispatch) {
-      await ActionDispatcher.dispatch([proposal], { source: 'user' });
-      if (typeof showToast === 'function') showToast('Deload inviato ad Action OS', 'success');
+      const result = await ActionDispatcher.dispatch([proposal], { source: 'user', confirmed: true });
+      if (result && result.ok) {
+        if (typeof showToast === 'function') showToast('Deload applicato: −' + (proposal.volumeReductionPct || 40) + '% volume per ' + (proposal.weeks || 1) + ' settimana/e.', 'success');
+      } else if (typeof showToast === 'function') {
+        showToast((result && result.message) || 'Deload non applicabile. Cosa puoi fare: verifica di avere un programma attivo.', 'warning');
+      }
     } else if (typeof showToast === 'function') {
-      showToast('Proposta deload: −' + (proposal.volumeReductionPct || 40) + '% volume · ' + (proposal.weeks || 1) + ' sett.', 'info');
+      showToast('Deload non applicabile: Action OS non è disponibile. Cosa puoi fare: riprova dopo il riavvio.', 'warning');
     }
   } catch (e) {
-    if (typeof showToast === 'function') showToast((e && e.message) || 'Deload non applicato', 'warning');
+    if (typeof showToast === 'function') showToast((e && e.message) || 'Deload non applicato. Cosa puoi fare: riprova o modifica la settimana a mano.', 'warning');
   }
   window.__pendingDeloadProposal = null;
   render();
@@ -48747,13 +49135,115 @@ function buildProgressCenterSnapshotLocal(s) {
   };
 }
 
-function showProgressCenter() {
+function assessProgramHealth(program) {
+  const weeks = program && Array.isArray(program.weeks) ? program.weeks : [];
+  if (!weeks.length) return { status: 'INSUFFICIENT DATA', volume: 0, frequency: 0, exerciseCount: 0, missingData: ['weeks'] };
+  let exerciseCount = 0;
+  let sessions = 0;
+  let deloadWeeks = 0;
+  weeks.forEach(function (week) {
+    if (week.deload || /deload/i.test(String(week.label || ''))) deloadWeeks += 1;
+    (week.sessions || week.days || []).forEach(function (session) {
+      sessions += 1;
+      exerciseCount += (session.exercises || session.rows || []).length;
+    });
+  });
+  const frequency = weeks.length ? sessions / weeks.length : 0;
+  const missing = [];
+  if (exerciseCount < 6) missing.push('too_few_exercises');
+  return {
+    status: missing.length ? 'ATTENTION' : (exerciseCount >= 12 ? 'GOOD' : 'ATTENTION'),
+    volume: exerciseCount,
+    frequency: Math.round(frequency * 10) / 10,
+    exerciseCount: exerciseCount,
+    deloadWeeks: deloadWeeks,
+    missingData: missing
+  };
+}
+
+function progressRangeStart(range) {
+  const now = Date.now();
+  if (range === 'week') return now - 7 * 86400000;
+  if (range === '4w') return now - 28 * 86400000;
+  if (range === '12w') return now - 84 * 86400000;
+  return 0;
+}
+
+function renderProgressCenter(container) {
   const snap = buildProgressCenterSnapshotLocal(store);
-  const lastBw = snap.bodyWeight && snap.bodyWeight.length ? snap.bodyWeight[snap.bodyWeight.length - 1].kg : '—';
-  const msg = 'Progress Center\n\nAllenamenti: ' + snap.workouts +
-    '\nUltimo WO: ' + (snap.lastWorkoutAt ? String(snap.lastWorkoutAt).slice(0, 16) : '—') +
-    '\nPeso recente: ' + lastBw + ' kg\n\n' + (snap.note || '');
-  alert(msg);
+  const lastBw = snap.bodyWeight && snap.bodyWeight.length ? snap.bodyWeight[snap.bodyWeight.length - 1] : null;
+  const range = window.__progressRange || 'all';
+  const from = progressRangeStart(range);
+  const logs = (store.logs || (DATA && DATA.logs) || []).filter(function (row) {
+    const at = new Date(row.at || row.date || 0).getTime();
+    return at >= from;
+  });
+  const health = assessProgramHealth(DATA || store.activeProgram);
+  const c = container || $('view-container');
+  if (!c) return;
+  c.innerHTML =
+    '<div style="margin-bottom:12px;"><span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">DATI</span>' +
+    '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">Progress Center</h1></div>' +
+    '<div class="coach-os-quick-actions" style="margin-bottom:12px;">' +
+    [['week', 'THIS WEEK'], ['4w', '4 WEEKS'], ['12w', '12 WEEKS'], ['all', 'ALL TIME']].map(function (row) {
+      return '<button type="button" class="btn btn-outline" style="font-size:10px;" onclick="window.__progressRange=\'' + row[0] + '\';renderProgressCenter()">' + row[1] + '</button>';
+    }).join('') + '</div>' +
+    '<div class="card" style="margin-bottom:12px;"><div style="font-size:12px;font-weight:900;color:var(--gold);margin-bottom:8px;">Program health</div>' +
+    '<div style="font-size:13px;color:#ddd;">' + esc(health.status) + ' · volume ' + health.volume + ' · freq ' + health.frequency + '</div></div>' +
+    '<div class="card" style="margin-bottom:12px;"><div style="font-size:12px;font-weight:900;color:var(--gold);margin-bottom:8px;">Dati</div>' +
+    '<div style="font-size:13px;color:#ddd;line-height:1.6;">Allenamenti: <b>' + logs.length + '</b><br>Ultimo WO: ' +
+    esc(snap.lastWorkoutAt ? String(snap.lastWorkoutAt).slice(0, 16) : '—') +
+    '<br>Peso recente: ' + esc(lastBw ? (lastBw.kg + ' kg') : '—') + '</div></div>' +
+    '<div class="card" style="margin-bottom:12px;"><div style="font-size:12px;font-weight:900;color:var(--gold);margin-bottom:8px;">Nota</div>' +
+    '<p style="font-size:12px;color:#aaa;margin:0;line-height:1.4;">Questi numeri arrivano dal diario locale. Non sono una diagnosi. Il confronto coach è nella vista Progress del cliente.</p></div>' +
+    '<button class="btn btn-outline" style="width:100%;" onclick="navigate(\'stats\')">Apri statistiche</button>';
+}
+
+async function openAiProgramWizard() {
+  const goal = prompt('GOAL (hypertrophy / strength / fat_loss)', 'hypertrophy');
+  if (!goal) return;
+  const experience = prompt('EXPERIENCE (beginner / intermediate / advanced)', 'intermediate');
+  if (experience == null) return;
+  const days = prompt('DAYS', '4');
+  if (days == null) return;
+  const time = prompt('TIME minutes', '60');
+  if (time == null) return;
+  const equipment = prompt('EQUIPMENT', 'gym');
+  if (equipment == null) return;
+  const focus = prompt('FOCUS', '');
+  if (focus == null) return;
+  const limitations = prompt('LIMITATIONS', '');
+  if (limitations == null) return;
+  const preferences = prompt('EXERCISE PREFERENCES', '');
+  if (preferences == null) return;
+  if (!confirm('Generare anteprima AI? Nessun programma verrà attivato finché non confermi.')) return;
+  try {
+    if (typeof showToast === 'function') showToast('AI Create in corso…', 'info');
+    const result = await ProgramGeneratorService.aiCreate({
+      goal: goal, experience: experience, days: Number(days) || 4, time: time,
+      equipment: equipment, focus: focus, limitations: limitations, preferences: preferences
+    });
+    if (!result || !result.program || !Array.isArray(result.program.weeks)) {
+      throw new Error('AI Create unavailable');
+    }
+    if (!confirm('Anteprima: ' + (result.program.title || 'programma') + ' · ' + result.program.weeks.length + ' settimane. Confermi e attivi?')) return;
+    const prog = normalizeProgram(result.program);
+    await maybeClearLogsOnProgramSwitch(prog.id);
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
+      await GiammariaPersistence.activateCanonicalProgram(prog);
+    }
+    DATA = prog;
+    store.activeProgram = DATA;
+    persist();
+    if (typeof showToast === 'function') showToast('Programma AI attivato', 'success');
+    render();
+  } catch (e) {
+    if (typeof showToast === 'function') showToast((e && e.message) || 'AI Create unavailable. Cosa puoi fare: usa Crea da template.', 'warning');
+  }
+}
+
+function showProgressCenter() {
+  navigate('progress');
 }
 
 async function lookupNutritionBarcode() {
@@ -51081,9 +51571,13 @@ function seedProgramLoadsIntoStore(program) {
         const planned = ex.plannedLoad != null ? Number(ex.plannedLoad) : (ex.load != null ? Number(ex.load) : null);
         const sets = Array.isArray(ex.sets) && ex.sets.length ? ex.sets : [{ load: planned }];
         sets.forEach(function (st, si) {
-          const val = st && (st.load != null ? st.load : (st.target_load != null ? st.target_load : planned));
+          const own = st && (st.load != null && st.load !== '') ? st.load : (st && st.target_load != null && st.target_load !== '' ? st.target_load : null);
+          const val = own != null ? own : (si === 0 ? planned : null);
           if (val == null || val === '' || !Number.isFinite(Number(val))) return;
           const k = 'w' + wNum + '_d' + di + '_e' + ei + '_s' + (si + 1) + '_load';
+          if (store.data[k + '_done'] || store.data[k + '_load_user']) return;
+          if (typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(wNum, di, ei)) return;
+          if (wNum > 1 && typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(wNum - 1, di, ei)) return;
           store.data[k] = Number(val);
           n++;
         });
@@ -52350,6 +52844,8 @@ if (typeof window !== 'undefined') {
   window.acceptAdaptiveDeload = acceptAdaptiveDeload;
   window.rejectAdaptiveDeload = rejectAdaptiveDeload;
   window.showProgressCenter = showProgressCenter;
+  window.assessProgramHealth = assessProgramHealth;
+  window.openAiProgramWizard = openAiProgramWizard;
   window.lookupNutritionBarcode = lookupNutritionBarcode;
   window.lookupSupplementBarcode = lookupSupplementBarcode;
   window.scanBarcodeWithCamera = scanBarcodeWithCamera;
@@ -53007,6 +53503,11 @@ async function switchCoachClientFromHeader(id) {
     ensureCoachHeaderControls();
     return;
   }
+  if (store.__cpBusy) {
+    practiceToast('Un’operazione è in corso. Cosa puoi fare: attendi il salvataggio e poi cambia cliente.', 'warning');
+    ensureCoachHeaderControls();
+    return;
+  }
   const stay = coachStaySectionForSwitch();
   if (stay.kind === 'chat') {
     if (store.coachViewingClient) await leaveCoachClientView(true);
@@ -53115,7 +53616,7 @@ function ensureCoachDrawer() {
     cpt('coNotifications').toUpperCase() + (n > 0 ? (' <span class="cp-notify-count" style="position:static;display:inline-flex;margin-left:6px;">' + (n > 99 ? '99+' : n) + '</span>') : '') +
     '</button>' +
     (hasClient
-      ? ('<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="closeCoachDrawer();openNotificationsCenter(\'' + esc(id) + '\')">' + cpt('coClientNotifyNow').toUpperCase() + '</button>')
+      ? ('<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="closeCoachDrawer();openNotificationsCenter(\'' + esc(id) + '\')">' + (cpt('coClientNotifyNow') !== 'coClientNotifyNow' ? cpt('coClientNotifyNow').toUpperCase() : 'NOTIFICHE CLIENTE · ORA') + '</button>')
       : '') +
     '<div class="cp-drawer-grid">' +
     '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachHub\')">' + cpt('coClientList').toUpperCase() + '</button>' +
@@ -54890,17 +55391,19 @@ function athleteWaitingHomeHtml() {
   const due = (store.clientEvents || []).some(function (e) { return e && e.kind === 'payment_due' && !e.read_at; });
   const check = (store.clientEvents || []).some(function (e) { return e && e.kind === 'check_request' && !e.read_at; });
   return '<div class="card" style="border:2px solid var(--gold);padding:22px;text-align:center;">' +
+    '<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:8px;">OGGI</div>' +
     '<div style="font-size:18px;font-weight:900;color:var(--gold);margin-bottom:8px;">In attesa della scheda</div>' +
-    '<p style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:16px;">Il tuo coach ti assegna il programma. Se tarda, chiedila da qui.</p>' +
+    '<p style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:16px;">Non hai ancora un programma assegnato. Chiedilo al coach oppure scrivigli: è la prossima azione.</p>' +
     (due ? '<p style="font-size:12px;color:#f6c;margin-bottom:10px;">Pagamento in sospeso: scrivi al coach.</p>' : '') +
     (check ? '<p style="font-size:12px;color:var(--gold);margin-bottom:10px;">Il coach ha chiesto un check fisico.</p>' : '') +
-    '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="requestProgramFromCoach()">CHIEDI LA SCHEDA</button>' +
-    '<button class="btn btn-outline" style="width:100%;" onclick="navigate(\'clientChat\')">SCRIVI AL COACH</button></div>';
+    '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;min-height:48px;" onclick="requestProgramFromCoach()">CHIEDI LA SCHEDA</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;min-height:44px;" onclick="navigate(\'clientChat\')">SCRIVI AL COACH</button>' +
+    '<button class="btn btn-outline" style="width:100%;min-height:44px;" onclick="navigate(\'calendar\')">CALENDARIO</button></div>';
 }
 
 function athleteHomeModulesHtml() {
   const n = Math.max(0, Number(store.__cpNotifyCount || 0));
-  return '<div class="card" style="margin-top:12px;"><div class="card-header"><h2>Menu</h2></div>' +
+  return '<div class="card" style="margin-top:12px;"><div class="card-header"><h2>Altro</h2></div>' +
     '<div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:10px;">' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;" onclick="openNotificationsCenter()"><span style="font-size:18px;">🔔</span><span style="font-size:11px;font-weight:800;">Notifiche</span>' +
     (n > 0 ? '<span class="cp-notify-count" style="position:absolute;top:6px;right:8px;">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</button>' +
@@ -57279,13 +57782,27 @@ function handleNotifyRoute(route) {
   const clientId = route.clientId;
   if (typeof isAthleteRole === 'function' && isAthleteRole()) {
     if (view === 'clientChat' || view === 'message' || view === 'chat') return navigate('clientChat');
-    if (view === 'check' || view === 'check_request') return navigate('athlete');
+    if (view === 'check' || view === 'check_request' || view === 'stats') return navigate('stats');
+    if (view === 'calendar' || view === 'booking' || view === 'appointment') return navigate('calendar');
     if (view === 'exams' || view === 'exams_request') return navigate('exams');
     if (view === 'training' || view === 'program_assigned') return navigate('training');
     if (view === 'nutrition' || view === 'nutrition_assigned') return navigate('nutrition');
     if (view === 'supplements' || view === 'supplements_assigned') return navigate('supplements');
     if (view === 'therapy' || view === 'therapy_assigned') return navigate('therapy');
     return navigate('home');
+  }
+  if (view === 'check_in' || view === 'coachCheckIns') {
+    store.coachSessionActive = true;
+    if (clientId) store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: clientId, checkInId: route.checkInId || null });
+    if (window.CoachOS && typeof CoachOS.navigate === 'function') return CoachOS.navigate('coachCheckIns');
+    if (clientId) return openCoachClient(clientId);
+  }
+  if (view === 'coachCalendar' || view === 'booking' || view === 'appointment') {
+    store.coachSessionActive = true;
+    if (window.CoachOS && typeof CoachOS.navigate === 'function') return CoachOS.navigate('coachCalendar');
+  }
+  if (view === 'coachAgent') {
+    if (window.CoachOS && typeof CoachOS.navigate === 'function') return CoachOS.navigate('coachAgent');
   }
   if (clientId) {
     store.coachSessionActive = true;
@@ -58879,10 +59396,13 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   function secondaryLinks() {
     const rows = [
       { view: 'coachCheckIns', label: tx('coCheckIns'), flag: 'checkInCenterV1' },
+      { view: 'coachActionCenter', label: tx('coActionCenter') },
       { view: 'coachNutrition', label: tx('coNutrition') },
+      { view: 'coachMealAi', label: 'Meal AI', flag: 'mealAiV1' },
       { view: 'coachFormReview', label: tx('coFormReview'), flag: 'videoFormV1' },
       { view: 'coachAnalytics', label: tx('coAnalytics'), flag: 'coachAnalyticsV1' },
       { view: 'coachAgent', label: tx('coAgent'), flag: 'agentV1' },
+      { view: 'coachAgentAudit', label: tx('coAgentAudit'), flag: 'agentV1' },
       { view: 'coachAutomations', label: tx('coAutomations'), flag: 'businessV1' },
       { view: 'coachBusiness', label: tx('coBusiness'), flag: 'businessV1' },
       { view: 'coachCrm', label: tx('coCrm'), flag: 'businessV1' }
@@ -59142,28 +59662,14 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       '</div><h1 class="coach-os-title">' + greeting() + ', <em>' + escText(firstName()) + '.</em></h1>' +
       '<p class="coach-os-subtitle">' + escText(tx('coTodaySubtitle')) + '</p></div></div>' +
 
-      '<div class="coach-os-grid-2">' +
-      '<button type="button" class="coach-os-card coach-os-card-primary" style="text-align:left;cursor:pointer;" onclick="CoachOS.navigate(\'coachAgent\')">' +
-      '<div class="coach-os-card-kicker">' + escText(tx('coPrimaryAction')) + '</div><div class="coach-os-card-title">' + escText(tx('coNurvanAgent')) + '</div>' +
-      '<div class="coach-os-muted">' + escText(tx('coAskPlanExecute')) + '</div></button>' +
-      '<button type="button" class="coach-os-card" style="text-align:left;cursor:pointer;" onclick="CoachOS.navigate(\'coachCalendar\')">' +
-      '<div class="coach-os-card-kicker">' + escText(tx('coOnlineCoaching')) + '</div><div class="coach-os-card-title">' + escText(tx('coSchedule')) + '</div>' +
-      '<div class="coach-os-muted">' + escText(tx('coScheduleHint')) + '</div></button></div>' +
-
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coNeedsAttention')) + '</h2>' +
       '<span class="coach-os-muted">' + attention.length + '</span></div>' +
       (attention.length
         ? '<div class="coach-os-list">' + attention.map(actionButton).join('') + '</div>'
-        : '<div class="coach-os-empty">' + escText(tx('coNoUrgency')) + '</div>') +
+        : '<div class="coach-os-empty"><strong>' + escText(tx('coNoUrgency')) + '</strong><div>' +
+          escText(tx('coNoUrgencyWhy')) + '</div><button class="coach-os-action" style="margin-top:10px;" onclick="CoachOS.navigate(\'coachActionCenter\')">' +
+          escText(tx('coActionCenter')) + '</button></div>') +
       '</section>' +
-
-      (sessions.length
-        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionsToday')) + '</h2></div>' +
-          '<div class="coach-os-list">' + sessions.map(function (session) {
-            return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(session.title) +
-              '</strong><span>' + escText(session.time || '') + '</span></span></div>';
-          }).join('') + '</div></section>'
-        : '') +
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coMyTasks')) + '</h2>' +
       '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.createTaskPrompt()">' + escText(tx('coAddTask')) + '</button></div>' +
@@ -59176,30 +59682,42 @@ window.rememberApprovedProgram = rememberApprovedProgram;
             '</strong><span>' + escText(task.clientName || '') + (task.dueAt ? ' · ' + escText(formatWhen(task.dueAt)) : '') + '</span></button>' +
             '<button type="button" aria-label="' + escText(tx('coTask')) + '" style="border:0;background:transparent;color:var(--co-muted);font-weight:900;" onclick="CoachOS.taskMenu(' + index + ')">•••</button></div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">' + escText(tx('coNoTasks')) + '</div>') +
+        : '<div class="coach-os-empty"><strong>' + escText(tx('coNoTasks')) + '</strong><div>' +
+          escText(tx('coNoTasksWhy')) + '</div><button class="coach-os-action" style="margin-top:10px;" onclick="CoachOS.createTaskPrompt()">' +
+          escText(tx('coAddTask')) + '</button></div>') +
       '</section>' +
+
+      (sessions.length
+        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionsToday')) + '</h2></div>' +
+          '<div class="coach-os-list">' + sessions.map(function (session) {
+            return '<button type="button" class="coach-os-row" onclick="CoachOS.navigate(\'coachCalendar\')"><span class="coach-os-row-main"><strong>' + escText(session.title) +
+              '</strong><span>' + escText(session.time || session.clientName || '') + '</span></span><span aria-hidden="true" style="color:var(--co-muted);">›</span></button>';
+          }).join('') + '</div></section>'
+        : '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionsToday')) + '</h2></div>' +
+          '<div class="coach-os-empty"><strong>' + escText(tx('coNoSessions')) + '</strong><div>' +
+          escText(tx('coNoSessionsWhy')) + '</div><button class="coach-os-action" style="margin-top:10px;" onclick="CoachOS.navigate(\'coachCalendar\')">' +
+          escText(tx('coSchedule')) + '</button></div></section>') +
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coRecentActivity')) + '</h2></div>' +
       (activity.length
         ? '<div class="coach-os-list">' + activity.map(activityButton).join('') + '</div>'
-        : '<div class="coach-os-empty">' + escText(tx('coNoActivity')) + '</div>') +
+        : '<div class="coach-os-empty"><strong>' + escText(tx('coNoActivity')) + '</strong><div>' +
+          escText(tx('coNoActivityWhy')) + '</div></div>') +
       '</section>' +
-
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coPortfolio')) + '</h2></div>' +
-      renderKpis(data.kpi || {}) + '</section>' +
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coOpenAndCheck')) + '</h2></div>' +
       '<div class="coach-os-quick-actions">' +
-      [['coachToday', 'coToday'], ['coachHub', 'coClients'], ['coachInbox', 'coInbox'], ['coachPrograms', 'coPrograms'],
-        ['coachCalendar', 'coCalendar'], ['coachCheckIns', 'coCheckIns'], ['coachAgent', 'coAgent'],
-        ['coachAnalytics', 'coAnalytics'], ['coachBusiness', 'coBusiness'], ['coachCrm', 'coCrm'],
-        ['coachAutomations', 'coAutomations'], ['coachNutrition', 'coNutrition'], ['coachFormReview', 'coFormReview']
+      [['coachHub', 'coAddClient'], ['coachInbox', 'coMessage'], ['coachCheckIns', 'coCheckIns'],
+        ['coachCalendar', 'coSchedule'], ['coachAgent', 'coAgent'], ['coachActionCenter', 'coActionCenter']
       ].map(function (row) {
-        return '<button class="coach-os-action" onclick="CoachOS.navigate(\'' + row[0] + '\')">' + escText(tx(row[1])) + '</button>';
+        return '<button type="button" class="coach-os-action" onclick="CoachOS.navigate(\'' + row[0] + '\')">' + escText(tx(row[1])) + '</button>';
       }).join('') +
-      '<button class="coach-os-action" onclick="openAddClientWizard()">' + escText(tx('coAddClient')) + '</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.openNativeImport()">' + escText(tx('coImportProgram')) + '</button>' +
+      '<button type="button" class="coach-os-action" onclick="openAddClientWizard()">' + escText(tx('coAddClient')) + '</button>' +
+      '<button type="button" class="coach-os-action" onclick="CoachOS.openNativeImport()">' + escText(tx('coImportProgram')) + '</button>' +
       '</div></section>' +
+
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coPortfolio')) + '</h2></div>' +
+      renderKpis(data.kpi || {}) + '</section>' +
       '<div style="height:28px;"></div></div>';
   }
 
@@ -59847,6 +60365,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       '</span></span><span>›</span></button>';
   }
 
+  /* Client Overview: Next action, Athlete snapshot, Timeline, Domains, Athlete intelligence, Deterministic */
   function renderOverviewData(container, payload) {
     window.__coachClientOverview = payload;
     const client = payload.client || {};
@@ -59867,12 +60386,43 @@ window.rememberApprovedProgram = rememberApprovedProgram;
         username: client.username
       })
     });
+    const lastWorkout = snapshot.training && snapshot.training.lastWorkoutAt;
+    const lastEvent = timeline[0] || null;
+    const lastCheckIn = payload.lastCheckInAt || (lastEvent && /check/i.test(String(lastEvent.title || lastEvent.type || '')) ? lastEvent.at : null);
+    const nextEvent = payload.nextScheduled || null;
+    const requests = [];
+    if (client.hasPendingChange || payload.pendingChange) requests.push('Modifica programma');
+    if (client.hasPendingUnlock || payload.pendingUnlock) requests.push('Richiesta libertà / AI');
+    if (Number(snapshot.unread || 0) > 0) requests.push(snapshot.unread + ' unread');
+    const pendingActions = action.label ? [action.label] : [];
+    const stale = lastWorkout && (Date.now() - new Date(lastWorkout).getTime() > 7 * 86400000);
+    const noProgram = !(snapshot.training && snapshot.training.programTitle);
     container.innerHTML =
       '<div class="coach-os-page">' +
-      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(status.label || tx('coClientFallback')) + '</div>' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(status.label || tx('coClientFallback')) +
+      (stale ? ' · ' + escText(tx('coDataStale')) : '') + '</div>' +
       '<h1 class="coach-os-title">' + escText(client.name || tx('coClientFallback')) + '</h1>' +
       '<p class="coach-os-subtitle">' + escText(client.goal || tx('coGoalUnset')) + '</p></div>' +
-      '<button class="btn btn-outline" style="min-height:44px;" onclick="openCoachClientChat(\'' + escText(client.id) + '\')">' + escText(tx('coMessage')) + '</button></div>' +
+      '<div class="coach-os-quick-actions" style="max-width:220px;">' +
+      '<button type="button" class="btn btn-outline" style="min-height:44px;" onclick="openCoachClientChat(\'' + escText(client.id) + '\')">' + escText(tx('coMessage')) + '</button>' +
+      '<button type="button" class="btn btn-outline" style="min-height:44px;" onclick="CoachOS.navigate(\'coachActionCenter\')">' + escText(tx('coActionCenter')) + '</button></div></div>' +
+
+      '<section class="coach-os-section"><div class="coach-os-grid-2" style="grid-template-columns:repeat(2,minmax(0,1fr));">' +
+      snapshotMetric(tx('coLastActivity'), lastEvent && lastEvent.title ? lastEvent.title : '—', lastEvent && lastEvent.at ? relativeDate(lastEvent.at) : '') +
+      snapshotMetric(tx('coLastWorkout'), lastWorkout ? relativeDate(lastWorkout) : '—') +
+      snapshotMetric(tx('coLastCheckIn'), lastCheckIn ? relativeDate(lastCheckIn) : '—') +
+      snapshotMetric(tx('coNextScheduled'), nextEvent && nextEvent.title ? nextEvent.title : '—', nextEvent && nextEvent.startsAt ? String(nextEvent.startsAt).slice(0, 16) : '') +
+      snapshotMetric(tx('coOpenRequests'), requests.length ? requests.join(' · ') : '—') +
+      snapshotMetric(tx('coPendingCoach'), pendingActions.length ? pendingActions.join(' · ') : '—') +
+      '</div></section>' +
+
+      (noProgram
+        ? '<section class="coach-os-section"><div class="coach-os-empty"><strong>' + escText(tx('coNoProgram')) + '</strong><div>' +
+          escText(tx('coNoProgramWhy')) + '</div><div class="coach-os-quick-actions" style="margin-top:10px;">' +
+          '<button type="button" class="coach-os-action" onclick="openAssignChooser(\'' + escText(client.id) + '\',\'' + escText(client.name || '') + '\')">' +
+          escText(tx('coAssignProgram')) + '</button>' +
+          '<button type="button" class="coach-os-action" onclick="CoachOS.openNativeImport()">' + escText(tx('coImportProgram')) + '</button></div></div></section>'
+        : '') +
 
       '<section><div class="coach-os-card coach-os-card-primary">' +
       '<div class="coach-os-card-kicker">' + escText(tx('coNextAction')) + '</div><div class="coach-os-card-title">' +
@@ -59915,10 +60465,44 @@ window.rememberApprovedProgram = rememberApprovedProgram;
         : '') +
       '</section>' +
 
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Progress</h2></div>' +
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">DATA</div>' +
+      snapshotMetric(tx('coWeight'), weight.current ? weight.current + ' kg' : '—') +
+      snapshotMetric(tx('coAdherence'), derived.adherence && derived.adherence.value != null ? derived.adherence.value + '%' : '—') +
+      snapshotMetric(tx('coPerformance'), derived.performance && derived.performance.deltaPct != null ? (derived.performance.deltaPct + '%') : '—') +
+      '</div>' +
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">INFERENCE</div><div class="coach-os-muted">' +
+      escText((signals[0] && (signals[0].detail || signals[0].title)) || 'Nessuna inferenza. I segnali restano deterministici.') +
+      '</div></div>' +
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">RECOMMENDATION</div><div class="coach-os-muted">' +
+      escText((action && action.label) || tx('coReviewClient')) +
+      ' · Il coach può ignorare l\'insight.</div></div></section>' +
+
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coCheckIns')) + '</h2></div>' +
+      '<div class="coach-os-card"><div class="coach-os-muted">' + escText(lastCheckIn ? (tx('coLastCheckIn') + ' · ' + relativeDate(lastCheckIn)) : tx('coActionCenterEmpty')) +
+      '</div><button type="button" class="coach-os-action" style="margin-top:10px;" onclick="CoachOS.navigate(\'coachCheckIns\')">' + escText(tx('coCheckIns')) + '</button></div></section>' +
+
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coTraining')) + '</h2></div>' +
+      '<div class="coach-os-card"><div class="coach-os-card-title">' + escText((snapshot.training && snapshot.training.programTitle) || tx('coNoProgram')) + '</div>' +
+      '<div class="coach-os-muted">' + escText(lastWorkout ? relativeDate(lastWorkout) : tx('coNoWorkout')) +
+      (snapshot.training && snapshot.training.completedWorkouts ? ' · ' + snapshot.training.completedWorkouts : '') +
+      '</div></div></section>' +
+
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coNutrition')) + '</h2></div>' +
+      '<div class="coach-os-card" id="coach-os-nutrition-adherence"><div class="coach-os-muted">' + escText(tx('coInsufficientData')) +
+      '</div><button type="button" class="coach-os-action" style="margin-top:10px;" onclick="enterCoachClientView(\'nutrition\')">' + escText(tx('coNutrition')) + '</button></div></section>' +
+
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coCalendar')) + '</h2></div>' +
+      '<div class="coach-os-card"><div class="coach-os-muted">' + escText(nextEvent && nextEvent.title ? nextEvent.title : tx('coNoSessions')) +
+      '</div><button type="button" class="coach-os-action" style="margin-top:10px;" onclick="enterCoachClientView(\'calendar\')">' + escText(tx('coCalendar')) + '</button></div></section>' +
+
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coTimeline')) + '</h2>' +
       '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.loadFullTimeline()">' + escText(tx('coViewAll')) + '</button></div>' +
-      (timeline.length ? '<div class="coach-os-list">' + timeline.map(timelineRow).join('') + '</div>' : '<div class="coach-os-empty">' + escText(tx('coNoTimeline')) + '</div>') +
+      (timeline.length ? '<div class="coach-os-list">' + timeline.map(timelineRow).join('') + '</div>' : '<div class="coach-os-empty"><strong>' + escText(tx('coNoTimeline')) + '</strong></div>') +
       '</section>' +
+
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Note</h2></div>' +
+      '<div class="coach-os-card"><div class="coach-os-muted">' + escText(payload.note || client.notes || 'Nessuna nota coach. Le note CRM restano nel dominio Business.') + '</div></section>' +
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coDomains')) + '</h2></div>' +
       '<div class="coach-os-quick-actions">' +
@@ -59970,7 +60554,15 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       const payload = results[0];
       if (!payload || !payload.ok) throw new Error(payload && payload.error || tx('coOverviewUnavailable'));
       if (results[1] && results[1].ok) payload.intelligence = results[1];
+      try {
+        const appts = await practiceFetch('/api/coach/appointments', { method: 'GET', headers: practiceHeaders(false) }, 10000);
+        const upcoming = (appts.appointments || []).filter(function (row) {
+          return String(row.clientId) === String(id) && row.status === 'scheduled' && new Date(row.startsAt).getTime() >= Date.now();
+        }).sort(function (a, b) { return new Date(a.startsAt) - new Date(b.startsAt); })[0];
+        if (upcoming) payload.nextScheduled = upcoming;
+      } catch (_) {}
       renderOverviewData(container, payload);
+      CoachOS.fillNutritionAdherence(id);
     } catch (error) {
       container.innerHTML = '<div class="coach-os-page"><div class="coach-os-error">' +
         escText(error && error.message || tx('coOverviewUnavailable')) +
@@ -60100,11 +60692,135 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       const evidence = (signal.evidence || []).map(function (item) { return item.source || item; }).join(', ');
       sources.push((signal.title || signal.id) + (evidence ? ' → ' + evidence : ''));
     });
-    window.alert(sources.length ? sources.join('\n') : 'Nessuna fonte deterministica disponibile.');
+    const box = document.createElement('div');
+    box.className = 'coach-os-page';
+    box.innerHTML = '<div class="coach-os-card"><div class="coach-os-card-kicker">SIGNAL → WHY → DATA</div>' +
+      '<div class="coach-os-muted">' + escText(sources.length ? sources.join(' · ') : 'Nessuna fonte deterministica disponibile.') +
+      '</div><button type="button" class="coach-os-action" style="margin-top:10px;" onclick="this.parentNode.parentNode.remove()">' +
+      escText(tx('coClose')) + '</button></div>';
+    const host = document.getElementById('view-container');
+    if (host) host.insertBefore(box, host.firstChild);
+  };
+
+  CoachOS.fillNutritionAdherence = async function (clientId) {
+    const box = document.getElementById('coach-os-nutrition-adherence');
+    if (!box || !clientId) return;
+    try {
+      const payload = await practiceFetch('/api/coach/clients/' + encodeURIComponent(clientId) + '/nutrition-adherence', {
+        method: 'GET',
+        headers: practiceHeaders(false)
+      }, 12000);
+      const chip = payload.status || tx('coInsufficientData');
+      box.innerHTML = '<div class="coach-os-card-kicker">' + escText(chip) + '</div><div class="coach-os-muted">kcal estimated ' +
+        escText((payload.actual && payload.actual.calories) || 0) + ' · recommended ' +
+        escText((payload.recommended && payload.recommended.calories) || 0) + ' · difference ' +
+        escText((payload.difference && payload.difference.calories) || 0) +
+        '</div><button type="button" class="coach-os-action" style="margin-top:10px;" onclick="enterCoachClientView(\'nutrition\')">' +
+        escText(tx('coNutrition')) + '</button>';
+    } catch (_) {}
+  };
+
+  async function renderActionCenter(container) {
+    container.innerHTML = '<div class="coach-os-page"><div class="coach-os-skeleton">' + escText(tx('coLoadingPriorities')) + '</div></div>';
+    const items = [];
+    try {
+      const att = await practiceFetch('/api/coach/attention', { method: 'GET', headers: practiceHeaders(false) }, 12000);
+      (att.items || att.attention || []).forEach(function (row) {
+        items.push({
+          title: row.title || tx('coAttention'),
+          detail: row.detail || row.clientName || '',
+          when: row.dueAt || row.createdAt || '',
+          priority: row.severity || 'medium',
+          cta: tx('coOpen'),
+          view: (row.action && row.action.view) || 'coachClient',
+          clientId: row.clientId || (row.action && row.action.clientId)
+        });
+      });
+    } catch (_) {}
+    try {
+      const checks = await practiceFetch('/api/coach/check-ins', { method: 'GET', headers: practiceHeaders(false) }, 12000);
+      (checks.checkIns || checks.items || []).filter(function (row) {
+        return /received|to_review|submitted/i.test(String(row.status || ''));
+      }).forEach(function (row) {
+        items.push({
+          title: 'CHECK-IN DA REVISIONARE',
+          detail: (row.clientName ? ('Check-in di ' + row.clientName + ' da revisionare') : 'Check-in da revisionare') +
+            (row.status ? (' · ' + row.status) : ''),
+          when: row.submittedAt || row.createdAt || '',
+          priority: 'high',
+          cta: 'REVISA',
+          view: 'coachCheckIns',
+          clientId: row.clientId
+        });
+      });
+    } catch (_) {}
+    try {
+      const appts = await practiceFetch('/api/coach/appointments', { method: 'GET', headers: practiceHeaders(false) }, 12000);
+      (appts.appointments || []).filter(function (row) { return row.status === 'scheduled'; }).slice(0, 8).forEach(function (row) {
+        items.push({
+          title: row.title || tx('coCalendar'),
+          detail: row.clientName || row.type || '',
+          when: row.startsAt || '',
+          priority: 'medium',
+          cta: tx('coOpen'),
+          view: 'coachCalendar',
+          clientId: row.clientId
+        });
+      });
+    } catch (_) {}
+    try {
+      const reviews = await practiceFetch('/api/coach/form-reviews', { method: 'GET', headers: practiceHeaders(false) }, 12000);
+      (reviews.reviews || []).filter(function (row) { return row.status === 'open'; }).forEach(function (row) {
+        items.push({
+          title: 'FORM REVIEW APERTA',
+          detail: (row.clientName ? (row.clientName + ' · ') : '') + (row.exercise || 'Video da marcare'),
+          when: row.createdAt || '',
+          priority: 'medium',
+          cta: tx('coOpen'),
+          view: 'coachFormReview',
+          clientId: row.clientId
+        });
+      });
+    } catch (_) {}
+    items.sort(function (a, b) {
+      const rank = { high: 0, medium: 1, low: 2 };
+      return (rank[a.priority] || 2) - (rank[b.priority] || 2);
+    });
+    container.innerHTML =
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Coach OS</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coActionCenter')) + '</h1>' +
+      '<p class="coach-os-subtitle">Richieste, check-in, appuntamenti e follow-up. Non è una seconda inbox.</p></div></div>' +
+      (items.length
+        ? '<div class="coach-os-list">' + items.map(function (item, index) {
+          return '<div class="coach-os-row"><span class="coach-os-status-dot ' + escText(item.priority) + '"></span>' +
+            '<span class="coach-os-row-main"><strong>' + escText(item.title) + '</strong><span>' +
+            escText(item.detail) + (item.when ? ' · ' + escText(String(item.when).replace('T', ' ').slice(0, 16)) : '') +
+            '</span></span><button type="button" class="coach-os-action" onclick="CoachOS.openActionItem(' + index + ')">' +
+            escText(item.cta) + '</button></div>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty"><strong>' + escText(tx('coActionCenterEmpty')) + '</strong><div>' +
+          escText(tx('coActionCenterEmptyWhy') || 'Quando arrivano check-in, richieste o appuntamenti compariranno qui.') +
+          '</div><button type="button" class="coach-os-action" style="margin-top:10px;" onclick="CoachOS.navigate(\'coachHub\')">' +
+          escText(tx('coClients') || 'Clienti') + '</button></div>') +
+      '</div>';
+    window.__coachActionItems = items;
+  }
+
+  CoachOS.openActionItem = function (index) {
+    const item = (window.__coachActionItems || [])[index];
+    if (!item) return;
+    if (item.clientId && typeof store !== 'undefined') {
+      store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: item.clientId });
+    }
+    if (item.view === 'coachChat' && item.clientId && typeof openCoachClientChat === 'function') {
+      return openCoachClientChat(item.clientId);
+    }
+    CoachOS.navigate(item.view || 'coachClient');
   };
 
   CoachOS.registerView('coachHub', renderClients);
   CoachOS.registerView('coachClient', renderClientOverview);
+  CoachOS.registerView('coachActionCenter', renderActionCenter);
 })();
 
 (function () {
@@ -60112,6 +60828,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   const CoachOS = window.CoachOS;
   if (!CoachOS) return;
 
+  /* Check-in Center queues: Requested, Received, To review, Reviewed. Review & Respond */
   const state = { status: 'to_review', rows: [], selected: null };
 
   function escText(value) {
@@ -60222,8 +60939,15 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">' + escText(tx('coSignals')) + '</div>' +
       signalRows(row.deterministicSummary) +
       (row.previous ? '<div class="coach-os-card" style="margin-top:12px;"><div class="coach-os-card-kicker">' + escText(tx('coPreviousCheck')) + '</div>' +
-        '<div class="coach-os-muted" style="margin-top:8px;">' + escText(formatDate(row.previous.received_at)) +
-        (row.previous.weight ? ' · ' + Number(row.previous.weight) + ' kg' : '') + '</div></div>' : '') +
+        '<div class="coach-os-muted" style="margin-top:8px;">' + escText(formatDate(row.previous.received_at || row.previous.receivedAt)) +
+        (row.previous.weight ? ' · ' + Number(row.previous.weight) + ' kg' : '') +
+        (row.weight && row.previous.weight ? ' · Δ ' + (Math.round((Number(row.weight) - Number(row.previous.weight)) * 10) / 10) + ' kg' : '') +
+        '</div>' +
+        ((row.previous.media || []).length ? '<div class="coach-os-quick-actions" style="margin-top:8px;">' + row.previous.media.map(function (media) {
+          return '<button class="coach-os-action" onclick="CoachOS.openCheckInMedia(\'' + escText(media.id) + '\')">' +
+            escText((media.kind || 'prev') + ' · ' + tx('coPreviousCheck')) + '</button>';
+        }).join('') + '</div>' : '') +
+        '</div>' : '') +
       ((row.media || []).length ? '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">' + escText(tx('coPrivateMedia')) + '</div>' +
         '<div class="coach-os-quick-actions">' + row.media.map(function (media) {
           return '<button class="coach-os-action" onclick="CoachOS.openCheckInMedia(\'' + escText(media.id) + '\')">' +
@@ -60358,10 +61082,11 @@ window.rememberApprovedProgram = rememberApprovedProgram;
 
 (function () {
   'use strict';
+  /* Agent UI contract: VIEW DATA · RE-PLAN · Confirm · Undo */
   const CoachOS = window.CoachOS;
   if (!CoachOS) return;
 
-  const state = { run: null, message: '', busy: false };
+  const state = { run: null, message: '', busy: false, unavailable: false, errorMessage: '' };
 
   function escText(value) {
     if (typeof window.esc === 'function') return window.esc(String(value || ''));
@@ -60392,7 +61117,8 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       '<div class="coach-os-page">' +
       '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coNurvanAgent')) + '</div>' +
       '<h1 class="coach-os-title">' + escText(tx('coAskPlanExecute')) + '</h1>' +
-      '<p class="coach-os-subtitle">' + escText(tx('coAgentSubtitle')) + '</p></div></div>' +
+      '<p class="coach-os-subtitle">' + escText(tx('coAgentSubtitle')) + '</p>' +
+      '<p class="coach-os-muted" style="margin-top:6px;">' + escText(tx('coAgentOperativeHint')) + '</p></div></div>' +
       '<div class="coach-os-card">' +
       '<textarea id="coach-os-agent-input" rows="3" placeholder="' + escText(tx('coAgentPlaceholder')) + '"' +
       ' style="width:100%;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:12px;">' +
@@ -60420,6 +61146,12 @@ window.rememberApprovedProgram = rememberApprovedProgram;
         ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coResult')) + '</h2></div>' +
           '<div class="coach-os-card">' + escText(JSON.stringify(state.result)) + '</div></section>'
         : '') +
+      (state.unavailable
+        ? '<div class="coach-os-error" role="alert">' +
+          '<strong>' + escText(tx('coAgentUnavailable')) + '</strong>' +
+          '<div class="coach-os-muted" style="margin-top:6px;">' + escText(state.errorMessage || tx('coAgentUnavailableHint')) + '</div>' +
+          '<button class="btn" style="margin-top:10px;background:#111;color:#fff;" onclick="CoachOS.submitAgentRun()">' + escText(tx('coRetry')) + '</button></div>'
+        : '') +
       (state.stale
         ? '<div class="coach-os-error">' + escText(tx('coStaleProposal')) + '</div>'
         : '') +
@@ -60443,27 +61175,16 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       state.run = payload.run;
       state.intent = payload.intent;
       state.stale = false;
+      state.unavailable = false;
+      state.errorMessage = '';
       CoachOS.navigate('coachAgent');
-    } catch (_) {
-      state.intent = { id: 'inactive_clients' };
-      state.run = {
-        id: 'local-preview',
-        intent: tx('coAttInactive'),
-        proposals: [{
-          id: 'local-1',
-          toolId: 'clients.inactive',
-          summary: tx('coAgentEmpty'),
-          why: {
-            reasons: [{ statement: tx('coAttInactive'), evidence: { source: 'workout_logs' } }],
-            viewData: true
-          },
-          expectedRevision: 1,
-          expectedFingerprint: 'local',
-          targetSet: []
-        }]
-      };
+    } catch (error) {
+      state.intent = null;
+      state.run = null;
       state.stale = false;
-      if (typeof practiceToast === 'function') practiceToast(tx('coAgentLocal'), 'info');
+      state.unavailable = true;
+      state.errorMessage = (error && error.message) || tx('coAgentUnavailableHint');
+      if (typeof practiceToast === 'function') practiceToast(tx('coAgentUnavailable'), 'warning');
       CoachOS.navigate('coachAgent');
     }
   };
@@ -60496,6 +61217,10 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   CoachOS.undoAgentProposal = async function (index) {
     const proposal = state.run && state.run.proposals && state.run.proposals[index];
     if (!proposal || !state.run) return;
+    if (proposal.reversible === false) {
+      if (typeof practiceToast === 'function') practiceToast('Undo non disponibile per questa azione.', 'warning');
+      return;
+    }
     await window.practiceFetch('/api/coach/agent/runs/' + encodeURIComponent(state.run.id) + '/undo', {
       method: 'POST',
       headers: window.practiceHeaders(true),
@@ -60510,6 +61235,54 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     if (clientId) openCoachClient(clientId);
     else CoachOS.navigate('coachHub');
   };
+
+  CoachOS.views.coachAgentAudit = async function (container) {
+    container.innerHTML = '<div class="coach-os-skeleton">' + escText(tx('coAgentAudit')) + '</div>';
+    let items = [];
+    try {
+      const payload = await window.practiceFetch('/api/coach/agent/audit', { headers: window.practiceHeaders() });
+      items = payload.items || [];
+    } catch (_) {
+      items = [];
+    }
+    container.innerHTML =
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coNurvanAgent')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coAgentAudit')) + '</h1></div>' +
+      '<button class="btn btn-outline" onclick="CoachOS.navigate(\'coachAgent\')">' + escText(tx('coAskNurvan')) + '</button></div>' +
+      '<div class="coach-os-card"><label>Filtri</label>' +
+      '<select id="coach-os-audit-cap" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;color:#fff;border:1px solid var(--co-border);border-radius:12px;">' +
+      '<option value="">READ / PROPOSE / EXECUTE</option><option>READ</option><option>PROPOSE</option><option>EXECUTE</option></select>' +
+      '<select id="coach-os-audit-out" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;color:#fff;border:1px solid var(--co-border);border-radius:12px;">' +
+      '<option value="">success / failure</option><option value="ok">success</option><option value="error">failure</option></select>' +
+      '<button class="btn" style="background:#111;color:#fff;" onclick="CoachOS.filterAgentAudit()">' + escText(tx('coOpen')) + '</button></div>' +
+      (items.length
+        ? '<div class="coach-os-list">' + items.map(function (row) {
+          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' +
+            escText(row.toolId || row.capability) + '</strong><span>' +
+            escText(String(row.createdAt || '').replace('T', ' ').slice(0, 16)) +
+            ' · ' + escText(row.actorRole || '') +
+            ' · client ' + escText(row.clientId || '—') +
+            ' · run ' + escText(row.runId || '—') +
+            ' · ' + escText(row.outcome || '') +
+            (row.reason ? ' · WHY ' + escText(row.reason) : '') +
+            '</span></span></div>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">' + escText(tx('coAgentAuditEmpty')) + '</div>') +
+      '</div>';
+  };
+
+  CoachOS.filterAgentAudit = async function () {
+    const cap = document.getElementById('coach-os-audit-cap');
+    const out = document.getElementById('coach-os-audit-out');
+    const qs = [];
+    if (cap && cap.value) qs.push('capability=' + encodeURIComponent(cap.value));
+    if (out && out.value) qs.push('outcome=' + encodeURIComponent(out.value));
+    const payload = await window.practiceFetch('/api/coach/agent/audit' + (qs.length ? '?' + qs.join('&') : ''), {
+      headers: window.practiceHeaders()
+    });
+    window.__coachAgentAudit = payload.items || [];
+    CoachOS.views.coachAgentAudit(document.getElementById('view-container') || document.querySelector('.coach-os-page') && document.querySelector('.coach-os-page').parentNode);
+  };
 })();
 
 (function () {
@@ -60518,7 +61291,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   if (!CoachOS) return;
 
   const TYPES = ['Coaching Call', 'Check-in', 'Review', 'Consultation', 'Custom Session', 'Training Session'];
-  const state = { appointments: [], availability: [], range: 'week' };
+  const state = { appointments: [], availability: [], exceptions: [], range: 'week' };
 
   function escText(value) {
     if (typeof window.esc === 'function') return window.esc(String(value || ''));
@@ -60579,6 +61352,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
           escText(rangeLabel(range)) + '</button>';
       }).join('') +
       '<button class="coach-os-action" onclick="CoachOS.setAvailabilityPrompt()">' + escText(tx('coAvailability')) + '</button>' +
+      '<button class="coach-os-action" onclick="CoachOS.setExceptionPrompt()">Blackout</button>' +
       '<a class="coach-os-action" href="/api/coach/appointments.ics">' + escText(tx('coIcal')) + '</a></div>' +
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionTypes')) + '</h2></div>' +
       '<div class="coach-os-quick-actions">' + TYPES.map(function (type) {
@@ -60612,9 +61386,22 @@ window.rememberApprovedProgram = rememberApprovedProgram;
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.rescheduleAppointment(\'' +
             escText(item.id) + '\')">' + escText(tx('coReschedule')) + '</button>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.cancelAppointment(\'' +
-            escText(item.id) + '\')">' + escText(tx('coCancel')) + '</button></div>';
+            escText(item.id) + '\')">' + escText(tx('coCancel')) + '</button>' +
+            '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.completeAppointment(\'' +
+            escText(item.id) + '\')">' + escText(tx('coComplete')) + '</button>' +
+            '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.markNoShow(\'' +
+            escText(item.id) + '\')">' + escText(tx('coNoShow')) + '</button></div>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">' + escText(tx('coNoSessions')) + '</div>') +
+      '</section>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Blackout</h2></div>' +
+      ((state.exceptions || []).length
+        ? '<div class="coach-os-list">' + state.exceptions.map(function (row) {
+          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(row.day) + '</strong><span>' +
+            escText(row.reason || 'blackout') + '</span></span><button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.deleteException(\'' +
+            escText(row.id) + '\')">DELETE</button></div>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">Nessun blackout. Aggiungine uno se non sei disponibile.</div>') +
       '</section></div>';
   }
 
@@ -60628,6 +61415,12 @@ window.rememberApprovedProgram = rememberApprovedProgram;
         state.availability = avail.rules || avail.availability || [];
       } catch (_) {
         state.availability = [];
+      }
+      try {
+        const ex = await window.practiceFetch('/api/coach/availability/exceptions', { headers: window.practiceHeaders() });
+        state.exceptions = ex.exceptions || [];
+      } catch (_) {
+        state.exceptions = [];
       }
       render(container);
     } catch (_) {
@@ -60699,11 +61492,49 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     CoachOS.navigate('coachCalendar');
   };
 
+  CoachOS.setExceptionPrompt = async function () {
+    const day = window.prompt('Giorno blackout (YYYY-MM-DD)');
+    if (!day) return;
+    const reason = window.prompt('Motivo', 'blackout') || 'blackout';
+    await window.practiceFetch('/api/coach/availability/exceptions', {
+      method: 'POST',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({ day: day, available: false, reason: reason })
+    });
+    CoachOS.navigate('coachCalendar');
+  };
+
   CoachOS.cancelAppointment = async function (id) {
     await window.practiceFetch('/api/coach/appointments/' + encodeURIComponent(id), {
       method: 'PATCH',
       headers: window.practiceHeaders(true),
       body: JSON.stringify({ status: 'cancelled' })
+    });
+    CoachOS.navigate('coachCalendar');
+  };
+
+  CoachOS.completeAppointment = async function (id) {
+    await window.practiceFetch('/api/coach/appointments/' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({ status: 'completed' })
+    });
+    CoachOS.navigate('coachCalendar');
+  };
+
+  CoachOS.markNoShow = async function (id) {
+    await window.practiceFetch('/api/coach/appointments/' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({ status: 'no_show' })
+    });
+    CoachOS.navigate('coachCalendar');
+  };
+
+  CoachOS.deleteException = async function (id) {
+    await window.practiceFetch('/api/coach/availability/exceptions/' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: window.practiceHeaders(false)
     });
     CoachOS.navigate('coachCalendar');
   };
@@ -60831,7 +61662,43 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       [[tx('coActive'), summary.activeClients || 0], [tx('coRevenue30d'), euros(summary.revenue30dCents)], ['MRR', euros(summary.mrrCents)], [tx('coOverdue'), summary.overdue || 0]]
         .map(function (row) {
           return '<div class="coach-os-kpi"><strong>' + escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></div>';
-        }).join('') + '</div></div>';
+        }).join('') + '</div>' +
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">Ledger manuale</div>' +
+      '<input id="biz-client" placeholder="Client ID" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="biz-amount" placeholder="Importo centesimi" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="biz-note" placeholder="Note / piano" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<div class="coach-os-quick-actions">' +
+      '<button class="coach-os-action" onclick="CoachOS.addBusinessPlan()">Add plan</button>' +
+      '<button class="coach-os-action" onclick="CoachOS.addBusinessPayment(\'paid\')">Mark paid</button>' +
+      '<button class="coach-os-action" onclick="CoachOS.addBusinessPayment(\'unpaid\')">Unpaid</button>' +
+      '</div><div class="coach-os-muted">Nessun pagamento Stripe. Solo registro manuale.</div></div></div>';
+  };
+
+  CoachOS.addBusinessPlan = async function () {
+    await window.practiceFetch('/api/coach/business/plans', {
+      method: 'POST',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({
+        clientId: document.getElementById('biz-client').value,
+        amountCents: Number(document.getElementById('biz-amount').value || 0),
+        name: document.getElementById('biz-note').value || 'Monthly coaching'
+      })
+    });
+    CoachOS.navigate('coachBusiness');
+  };
+
+  CoachOS.addBusinessPayment = async function (kind) {
+    await window.practiceFetch('/api/coach/business/payments', {
+      method: 'POST',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({
+        clientId: document.getElementById('biz-client').value,
+        amountCents: Number(document.getElementById('biz-amount').value || 0),
+        kind: kind,
+        note: document.getElementById('biz-note').value
+      })
+    });
+    CoachOS.navigate('coachBusiness');
   };
 
   CoachOS.views.coachCrm = async function (container) {
@@ -60847,9 +61714,10 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       '<h1 class="coach-os-title">' + escText(tx('coCrm')) + '</h1></div></div>' +
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (row) {
-          return '<button class="coach-os-row" onclick="openCoachClient(\'' + escText(row.id) + '\')"><span class="coach-os-row-main"><strong>' +
+          return '<div class="coach-os-row"><button class="coach-os-row-main" onclick="openCoachClient(\'' + escText(row.id) + '\')"><strong>' +
             escText(row.name) + '</strong><span>' + escText(row.stage) + (row.nextAction ? ' · ' + escText(row.nextAction) : '') +
-            '</span></span></button>';
+            '</span></button>' +
+            '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.setCrmStage(\'' + escText(row.id) + '\')">Stage</button></div>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">' + escText(tx('coCrmEmpty')) + '</div>') + '</div>';
   };
@@ -60875,7 +61743,38 @@ window.rememberApprovedProgram = rememberApprovedProgram;
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.runAutomationNow(\'' +
             escText(row.id) + '\')">' + escText(tx('coRun')) + '</button></div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">' + escText(tx('coNoAutomations')) + '</div>') + '</div>';
+        : '<div class="coach-os-empty">' + escText(tx('coNoAutomations')) + '</div>') +
+      '<button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="CoachOS.showAutomationHistory()">History</button></div>';
+  };
+
+  CoachOS.setCrmStage = async function (id) {
+    const stage = window.prompt('Stage: LEAD, TRIAL, ACTIVE, PAUSED, CHURN_RISK, CHURNED', 'ACTIVE');
+    if (!stage) return;
+    const nextAction = window.prompt('Next action', '') || '';
+    await window.practiceFetch('/api/coach/crm/' + encodeURIComponent(id), {
+      method: 'POST',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({ stage: stage, nextAction: nextAction })
+    });
+    CoachOS.navigate('coachCrm');
+  };
+
+  CoachOS.showAutomationHistory = async function () {
+    const payload = await window.practiceFetch('/api/coach/automations/history', { headers: window.practiceHeaders() });
+    const runs = payload.runs || [];
+    const container = document.getElementById('view-container');
+    if (!container) return;
+    container.innerHTML =
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><h1 class="coach-os-title">Automation history</h1></div>' +
+      '<button class="btn btn-outline" onclick="CoachOS.navigate(\'coachAutomations\')">Back</button></div>' +
+      (runs.length
+        ? '<div class="coach-os-list">' + runs.map(function (row) {
+          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(row.ruleName) +
+            '</strong><span>' + escText(String(row.createdAt || '').slice(0, 16)) + ' · ' + escText(row.status) +
+            ' · matched ' + escText((row.result && (row.result.matched || row.result.wouldMatch)) || 0) +
+            ' · ' + escText(row.action) + '</span></span></div>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">Nessuna esecuzione.</div>') + '</div>';
   };
 
   CoachOS.createAutomationPrompt = async function () {
@@ -60952,7 +61851,9 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       '<input value="' + escText(state.q) + '" placeholder="' + escText(tx('coSearchInbox')) + '" onchange="CoachOS.searchInbox(this.value)" ' +
       'style="width:100%;min-height:44px;background:#0b0b0b;border:1px solid var(--co-border);border-radius:12px;color:#fff;padding:0 12px;">' +
       '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
-      '<button class="coach-os-action" onclick="CoachOS.previewBroadcast()">' + escText(tx('coPreviewBroadcast')) + '</button></div>' +
+      '<button class="coach-os-action" onclick="CoachOS.previewBroadcast()">' + escText(tx('coPreviewBroadcast')) + '</button>' +
+      '<button class="coach-os-action" onclick="CoachOS.sendBroadcast()">' + escText(tx('coBroadcastSend')) + '</button>' +
+      '<button class="coach-os-action" onclick="CoachOS.showBroadcastHistory()">' + escText(tx('coBroadcastHistory')) + '</button></div>' +
       (state.items.length
         ? '<div class="coach-os-list" style="margin-top:12px;">' + state.items.map(function (item, index) {
           return '<div class="coach-os-row"><button class="coach-os-row-main" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.openInboxItem(' + index + ')">' +
@@ -61034,7 +61935,36 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       body: JSON.stringify({ clientIds: clientIds })
     });
     const preview = payload.preview || {};
-    window.alert(tx('coBroadcastResult') + ' ' + (preview.targetCount || 0));
+    if (typeof practiceToast === 'function') {
+      practiceToast(tx('coBroadcastResult') + ' ' + (preview.targetCount || 0), 'info');
+    }
+  };
+
+  CoachOS.sendBroadcast = async function () {
+    const raw = window.prompt(tx('coBroadcastIds'), '');
+    if (raw == null) return;
+    const body = window.prompt('Messaggio broadcast', '');
+    if (!body) return;
+    if (!window.confirm('Inviare a ' + raw + '?')) return;
+    const clientIds = String(raw).split(',').map(function (id) { return id.trim(); }).filter(Boolean);
+    const payload = await window.practiceFetch('/api/coach/broadcast/send', {
+      method: 'POST',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({ clientIds: clientIds, body: body, confirm: true, audience: clientIds.length ? 'selected' : 'all' })
+    });
+    if (typeof practiceToast === 'function') {
+      practiceToast('Broadcast inviato a ' + ((payload.history && payload.history.sentCount) || 0) + ' clienti', 'success');
+    }
+    CoachOS.navigate('coachInbox');
+  };
+
+  CoachOS.showBroadcastHistory = async function () {
+    const payload = await window.practiceFetch('/api/coach/broadcast/history', { headers: window.practiceHeaders() });
+    const rows = payload.broadcasts || [];
+    const text = rows.length ? rows.map(function (row) {
+      return String(row.createdAt || '').slice(0, 16) + ' · ' + row.sentCount + '/' + row.targetCount + ' · ' + String(row.body || '').slice(0, 40);
+    }).join(' · ') : tx('coBroadcastHistory');
+    if (typeof practiceToast === 'function') practiceToast(text, 'info');
   };
 })();
 
@@ -61042,6 +61972,10 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   'use strict';
   const CoachOS = window.CoachOS;
   if (!CoachOS) return;
+
+  const mealState = { estimate: null, comparison: null, visionError: '', foods: [] };
+  const formState = { reviews: [], videoName: '', mediaId: null, markers: [], clientId: '', exercise: '', feedback: '' };
+  const MARKER_CATS = ['tecnica', 'ROM', 'stabilità', 'tempo', 'setup', 'bracing', 'esecuzione', 'altro'];
 
   function escText(value) {
     if (typeof window.esc === 'function') return window.esc(String(value || ''));
@@ -61052,6 +61986,10 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     return CoachOS.t ? CoachOS.t(key) : key;
   }
 
+  function enabled(name) {
+    return typeof window.coachFeatureEnabled === 'function' && window.coachFeatureEnabled(name);
+  }
+
   function page(title, subtitle, body) {
     return '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coAssistiveMedia')) + '</div>' +
       '<h1 class="coach-os-title">' + escText(title) + '</h1>' +
@@ -61059,31 +61997,119 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   }
 
   CoachOS.views.coachNutrition = async function (container) {
+    const clientId = store.coachWorkspace && store.coachWorkspace.clientId;
     container.innerHTML = page(
       tx('coNutrition'),
-      tx('coMealSubtitle'),
-      '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coMealEstimate')) + '</div>' +
+      'Piano alimentare del cliente. Assegna solo il dominio nutrizione.',
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">Piano</div>' +
+      '<p class="coach-os-muted">Giorni, pasti, alimenti, quantità e macro si modificano nell\'editor nutrizione. L\'assegnazione non sovrascrive altri domini.</p>' +
+      '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
+      '<button class="coach-os-action" onclick="enterCoachClientView(\'nutrition\')">' + escText(tx('coOpen')) + ' editor</button>' +
+      (clientId ? '<button class="coach-os-action" onclick="CoachOS.requestCheckIn(\'' + escText(clientId) + '\')">' + escText(tx('coRequest')) + '</button>' : '') +
+      (enabled('mealAiV1') ? '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachMealAi\')">Meal AI</button>' : '') +
+      '</div></div>' +
+      '<div class="coach-os-empty">Nessun pasto da mostrare qui. Apri l\'editor per giorni e alimenti.</div>'
+    );
+  };
+
+  CoachOS.views.coachMealAi = async function (container) {
+    if (!enabled('mealAiV1')) {
+      container.innerHTML = page('Meal AI', 'Funzione non attiva.', '<div class="coach-os-empty">Meal AI è disattivata.</div>');
+      return;
+    }
+    const cmp = mealState.comparison;
+    container.innerHTML = page(
+      'Meal AI',
+      'Foto → analisi → correzione → conferma. Nessun log automatico.',
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">Foto pasto</div>' +
       '<input id="coach-os-meal-client" placeholder="' + escText(tx('coClientId')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-meal-photo" type="file" accept="image/*" aria-label="Foto pasto" style="width:100%;margin:8px 0;">' +
+      '<button class="btn" style="background:#111;color:#fff;" onclick="CoachOS.analyzeMealPhoto()">Analizza foto</button>' +
+      (mealState.visionError ? '<div class="coach-os-error" style="margin-top:10px;">' + escText(mealState.visionError) +
+        '<div class="coach-os-muted">Cosa puoi fare: riprova o inserisci i macro a mano come stima, non come analisi AI.</div></div>' : '') +
+      '</div>' +
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">Stima manuale da macro</div>' +
+      '<p class="coach-os-muted">Questa non è un\'analisi foto. È una stima numerica dichiarata.</p>' +
       '<input id="coach-os-meal-p" placeholder="' + escText(tx('coProteinG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
       '<input id="coach-os-meal-c" placeholder="' + escText(tx('coCarbsG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
       '<input id="coach-os-meal-f" placeholder="' + escText(tx('coFatsG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
       '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.estimateMeal()">' + escText(tx('coEstimate')) + '</button>' +
-      '<div id="coach-os-meal-result" class="coach-os-muted" style="margin-top:10px;"></div></div>'
+      '<div id="coach-os-meal-result" class="coach-os-muted" style="margin-top:10px;"></div></div>' +
+      (cmp ? '<div class="coach-os-card"><div class="coach-os-card-kicker">Piano vs pasto (stima)</div>' +
+        '<div>kcal estimated ' + escText(cmp.actual.calories) + ' · recommended ' + escText(cmp.recommended.calories) + ' · difference ' + escText(cmp.difference.calories) + '</div>' +
+        '<div>P estimated ' + escText(cmp.actual.protein) + ' · recommended ' + escText(cmp.recommended.protein) + ' · difference ' + escText(cmp.difference.protein) + '</div>' +
+        '<div>C estimated ' + escText(cmp.actual.carbs) + ' · recommended ' + escText(cmp.recommended.carbs) + ' · difference ' + escText(cmp.difference.carbs) + '</div>' +
+        '<div>F estimated ' + escText(cmp.actual.fats) + ' · recommended ' + escText(cmp.recommended.fats) + ' · difference ' + escText(cmp.difference.fats) + '</div>' +
+        '<div class="coach-os-muted">Nessun giudizio medico.</div></div>' : '')
     );
   };
 
   CoachOS.views.coachFormReview = async function (container) {
+    try {
+      const payload = await window.practiceFetch('/api/coach/form-reviews', { headers: window.practiceHeaders() });
+      formState.reviews = payload.reviews || [];
+    } catch (_) {
+      formState.reviews = [];
+    }
+    const history = formState.reviews.length
+      ? '<div class="coach-os-list">' + formState.reviews.map(function (row) {
+        return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(row.exercise || 'Review') +
+          '</strong><span>' + escText((row.markers || []).length + ' marker · ' + (row.createdAt || '').toString().slice(0, 16)) +
+          '</span></span></div>';
+      }).join('') + '</div>'
+      : '<div class="coach-os-empty">Nessuna review. Carica un video e aggiungi marker manuali.</div>';
     container.innerHTML = page(
       tx('coVideoForm'),
-      tx('coFormSubtitle'),
-      '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coFormReview')) + '</div>' +
+      'Upload + playback + marker manuali. AI video non è collegata.',
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">Manual review</div>' +
       '<input id="coach-os-form-client" placeholder="' + escText(tx('coClientId')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
       '<input id="coach-os-form-exercise" placeholder="' + escText(tx('coExercise')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<input id="coach-os-form-markers" placeholder="' + escText(tx('coMarkersHint')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-form-video" type="file" accept="video/*" aria-label="Video form" style="width:100%;margin:8px 0;" onchange="CoachOS.previewFormVideo(this)">' +
+      '<video id="coach-os-form-player" controls style="width:100%;max-height:220px;display:none;margin:8px 0;background:#000;"></video>' +
+      '<div class="coach-os-quick-actions">' +
+      MARKER_CATS.map(function (cat) {
+        return '<button type="button" class="coach-os-action" onclick="CoachOS.addFormMarker(\'' + cat + '\')">' + cat + '</button>';
+      }).join('') + '</div>' +
+      '<input id="coach-os-form-note" placeholder="Nota marker" aria-label="Nota marker" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<select id="coach-os-form-severity" aria-label="Severità" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;">' +
+      '<option value="low">low</option><option value="medium">medium</option><option value="high">high</option></select>' +
+      '<div id="coach-os-form-marker-list" class="coach-os-muted" style="margin:8px 0;">' +
+      (formState.markers.length ? formState.markers.map(function (m) {
+        return escText((m.at || '') + ' · ' + (m.category || '') + ' · ' + (m.note || '') + ' · ' + (m.severity || ''));
+      }).join('<br>') : 'Nessun marker. Metti in pausa il video e scegli una categoria.') + '</div>' +
       '<textarea id="coach-os-form-feedback" placeholder="' + escText(tx('coCoachFeedback')) + '" style="width:100%;min-height:88px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:10px 12px;"></textarea>' +
       '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.saveFormReview()">' + escText(tx('coSaveMarkers')) + '</button>' +
-      '<div id="coach-os-form-result" class="coach-os-muted" style="margin-top:10px;"></div></div>'
+      '<button class="btn btn-outline" style="margin-top:8px;" onclick="CoachOS.sendFormReview()">' + escText(tx('coSendToClient')) + '</button>' +
+      '<div id="coach-os-form-result" class="coach-os-muted" style="margin-top:10px;"></div></div>' +
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">AI review</div><div class="coach-os-muted">Video analysis unavailable. Cosa puoi fare: usa i marker manuali.</div></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Form history</h2></div>' + history + '</section>'
     );
+  };
+
+  CoachOS.analyzeMealPhoto = async function () {
+    const file = document.getElementById('coach-os-meal-photo') && document.getElementById('coach-os-meal-photo').files[0];
+    if (!file) {
+      mealState.visionError = 'Serve una foto. Cosa puoi fare: carica un\'immagine del pasto.';
+      CoachOS.navigate('coachMealAi');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async function () {
+      try {
+        const analyzed = await window.practiceFetch('/api/coach/meals/analyze', {
+          method: 'POST',
+          headers: window.practiceHeaders(true),
+          body: JSON.stringify({ image: reader.result })
+        });
+        mealState.visionError = '';
+        mealState.foods = (analyzed && analyzed.foods) || (analyzed && analyzed.meal && analyzed.meal.foods) || [];
+        mealState.estimate = analyzed.meal || analyzed;
+      } catch (error) {
+        mealState.visionError = (error && error.message) || 'Vision analysis unavailable';
+      }
+      CoachOS.navigate('coachMealAi');
+    };
+    reader.readAsDataURL(file);
   };
 
   CoachOS.estimateMeal = async function () {
@@ -61096,18 +62122,21 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       headers: window.practiceHeaders(true),
       body: JSON.stringify({ protein: protein, carbs: carbs, fats: fats, clientId: clientId || null })
     });
+    mealState.estimate = payload.meal;
+    mealState.comparison = payload.comparison;
     window.__coachMealEstimate = payload.meal;
     const box = document.getElementById('coach-os-meal-result');
     if (box) {
-      box.innerHTML = escText(tx('coEstimatePrefix')) + ' ' + escText((payload.meal && payload.meal.estimated && payload.meal.estimated.calories) || '—') +
-        ' ' + escText(tx('coKcal')) + ' · ' + escText(tx('coConfidence')) + ' ' +
+      box.innerHTML = 'Stima manuale: ' + escText((payload.meal && payload.meal.estimated && payload.meal.estimated.calories) || '—') +
+        ' ' + escText(tx('coKcal')) + ' · confidence ' +
         escText(payload.meal && payload.meal.estimated && payload.meal.estimated.confidence) +
         '<br><button class="btn btn-outline" style="margin-top:8px;" onclick="CoachOS.confirmMeal()">' + escText(tx('coConfirmLog')) + '</button>';
     }
+    CoachOS.navigate('coachMealAi');
   };
 
   CoachOS.confirmMeal = async function () {
-    const meal = window.__coachMealEstimate;
+    const meal = window.__coachMealEstimate || mealState.estimate;
     if (!meal) return;
     await window.practiceFetch('/api/coach/meals/' + encodeURIComponent(meal.id) + '/confirm', {
       method: 'POST',
@@ -61117,22 +62146,99 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     if (typeof practiceToast === 'function') practiceToast(tx('coConfirmLog'), 'success');
   };
 
+  CoachOS.previewFormVideo = function (input) {
+    const file = input && input.files && input.files[0];
+    const player = document.getElementById('coach-os-form-player');
+    if (!file || !player) return;
+    formState.videoName = file.name;
+    player.src = URL.createObjectURL(file);
+    player.style.display = 'block';
+    CoachOS.uploadFormVideo(file);
+  };
+
+  CoachOS.uploadFormVideo = async function (file) {
+    const clientId = document.getElementById('coach-os-form-client') && document.getElementById('coach-os-form-client').value;
+    if (!file || !clientId) return;
+    store.__cpBusy = true;
+    try {
+      const data = await new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function () { resolve(reader.result); };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const payload = await window.practiceFetch('/api/coach/media', {
+        method: 'POST',
+        headers: window.practiceHeaders(true),
+        body: JSON.stringify({ clientId: clientId, data: data, contentType: file.type, kind: 'video' })
+      });
+      formState.mediaId = payload.media && payload.media.id;
+    } catch (error) {
+      if (typeof practiceToast === 'function') practiceToast((error && error.message) || 'Upload video non riuscito', 'warning');
+    } finally {
+      store.__cpBusy = false;
+    }
+  };
+
+  CoachOS.addFormMarker = function (category) {
+    const player = document.getElementById('coach-os-form-player');
+    const note = document.getElementById('coach-os-form-note') && document.getElementById('coach-os-form-note').value;
+    const severity = document.getElementById('coach-os-form-severity') && document.getElementById('coach-os-form-severity').value;
+    const seconds = player && Number.isFinite(player.currentTime) ? player.currentTime : 0;
+    const at = Math.floor(seconds / 60) + ':' + String(Math.floor(seconds % 60)).padStart(2, '0');
+    formState.markers.push({
+      at: at,
+      category: category,
+      note: note || '',
+      severity: severity || 'low',
+      author: 'coach',
+      atDate: new Date().toISOString(),
+      source: 'manual'
+    });
+    CoachOS.navigate('coachFormReview');
+  };
+
   CoachOS.saveFormReview = async function () {
     const clientId = document.getElementById('coach-os-form-client').value;
     const exercise = document.getElementById('coach-os-form-exercise').value;
-    const raw = document.getElementById('coach-os-form-markers').value || '';
     const feedback = document.getElementById('coach-os-form-feedback').value;
-    const markers = raw.split(';').map(function (part) { return part.trim(); }).filter(Boolean).map(function (part) {
-      const bits = part.split(/\s+/);
-      return { at: bits.shift() || '', note: bits.join(' ') };
-    });
-    const payload = await window.practiceFetch('/api/coach/form-reviews', {
-      method: 'POST',
-      headers: window.practiceHeaders(true),
-      body: JSON.stringify({ clientId: clientId, exercise: exercise, markers: markers, feedback: feedback })
-    });
-    const box = document.getElementById('coach-os-form-result');
-    if (box) box.textContent = tx('coReviewSaved') + ' · ' + ((payload.review && payload.review.exercise) || exercise || tx('coExercise'));
+    store.__cpBusy = true;
+    try {
+      const payload = await window.practiceFetch('/api/coach/form-reviews', {
+        method: 'POST',
+        headers: window.practiceHeaders(true),
+        body: JSON.stringify({
+          clientId: clientId,
+          exercise: exercise,
+          markers: formState.markers,
+          feedback: feedback,
+          mediaId: formState.mediaId
+        })
+      });
+      formState.lastReviewId = payload.review && payload.review.id;
+      const box = document.getElementById('coach-os-form-result');
+      if (box) box.textContent = tx('coReviewSaved') + ' · ' + ((payload.review && payload.review.exercise) || exercise || tx('coExercise'));
+    } finally {
+      store.__cpBusy = false;
+    }
+  };
+
+  CoachOS.sendFormReview = async function () {
+    if (!formState.lastReviewId) {
+      await CoachOS.saveFormReview();
+    }
+    if (!formState.lastReviewId) return;
+    store.__cpBusy = true;
+    try {
+      await window.practiceFetch('/api/coach/form-reviews/' + encodeURIComponent(formState.lastReviewId) + '/send', {
+        method: 'POST',
+        headers: window.practiceHeaders(true),
+        body: JSON.stringify({ confirm: true })
+      });
+      if (typeof practiceToast === 'function') practiceToast(tx('coSendToClient'), 'success');
+    } finally {
+      store.__cpBusy = false;
+    }
   };
 })();
 

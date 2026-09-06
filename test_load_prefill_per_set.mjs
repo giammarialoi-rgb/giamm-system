@@ -141,6 +141,43 @@ weeks.forEach(function (w) {
   console.log("OK   finalized current set stays, other sets still follow last week");
 }
 
+// Copied 225.5 marked as user-typed is still stale on unfinalized session
+{
+  const data = {};
+  setLoads(data, 1, 3, 0, [220, 200, 200], { reps: 6, rir: 2, done: true });
+  data.w2_d3_e0_s1_load = 225.5;
+  data.w2_d3_e0_s1_load_user = 1;
+  data.w2_d3_e0_s2_load = 225.5;
+  data.w2_d3_e0_s2_load_user = 1;
+  data.w2_d3_e0_s3_load = 225.5;
+  const ctx = makeCtx({
+    currentWeek: 2,
+    currentDay: 3,
+    store: { data: data, logs: [{ week: 1, day: 3 }], subs: {} },
+    DATA: { weeks: weeks }
+  });
+  assert.equal(ctx.effectiveSetLoad(0, 1, {}), 221.5);
+  assert.equal(ctx.effectiveSetLoad(0, 2, {}), 201.5);
+  assert.equal(ctx.effectiveSetLoad(0, 3, {}), 201.5);
+  console.log("OK   stale copied 225.5 is replaced even if marked user-owned");
+}
+
+// Finalized current session keeps stored loads
+{
+  const data = {};
+  setLoads(data, 1, 3, 0, [220, 200, 200], { reps: 6, rir: 2, done: true });
+  setLoads(data, 2, 3, 0, [225.5, 225.5, 225.5]);
+  const ctx = makeCtx({
+    currentWeek: 2,
+    currentDay: 3,
+    store: { data: data, logs: [{ week: 1, day: 3 }, { week: 2, day: 3 }], subs: {} },
+    DATA: { weeks: weeks }
+  });
+  assert.equal(ctx.effectiveSetLoad(0, 1, {}), 225.5);
+  assert.equal(ctx.effectiveSetLoad(0, 2, {}), 225.5);
+  console.log("OK   finalized workout loads are left untouched");
+}
+
 assert.ok(html.includes("effectiveSetLoad"), "render uses effectiveSetLoad helper");
 assert.ok(html.includes("_load_user"), "manual kg edits are marked user-owned");
 console.log("OK   per-set load prefill");

@@ -1872,6 +1872,14 @@ mountProgramGenerateRoutes(app, {
   requireAuth: async (req) => accountFromBearer(req.headers.authorization)
 });
 
+app.use(function (req, res, next) {
+  const p = String(req.path || "");
+  if (p === "/" || p === "/index.html" || p.endsWith(".html") || p === "/sw.js") {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+    res.setHeader("Pragma", "no-cache");
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, "web")));
 
 app.listen(port, () => {
