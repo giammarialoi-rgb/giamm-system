@@ -2417,16 +2417,52 @@ function collectPrevWeekSetLogs(exIdx, row) {
   }
   return fallback;
 }
+function sessionWasFinalized(week, day) {
+  return (store.logs || []).some(function (row) {
+    return row && Number(row.week) === Number(week) && Number(row.day) === Number(day);
+  });
+}
+function loadsNearlyEqual(a, b) {
+  const x = parseFloat(String(a).replace(',', '.'));
+  const y = parseFloat(String(b).replace(',', '.'));
+  return Number.isFinite(x) && Number.isFinite(y) && Math.abs(x - y) < 0.05;
+}
+function isStaleCopiedSetPrefill(stored, exIdx, setNum, row) {
+  const n = parseFloat(String(stored).replace(',', '.'));
+  if (!Number.isFinite(n) || n <= 0 || currentWeek <= 1) return false;
+  const prevSets = collectPrevWeekSetLogs(exIdx, row || {});
+  const loads = uniquePositiveLoads(prevSets);
+  if (loads.length < 2) return false;
+  const top = Math.max.apply(null, loads);
+  const first = parseFloat(prevSets[0] && prevSets[0].load);
+  const prevSame = prevSets.find(function (ps) { return Number(ps.set) === Number(setNum); });
+  const prevN = prevSame ? parseFloat(prevSame.load) : NaN;
+  if (!Number.isFinite(prevN)) return false;
+  if (loadsNearlyEqual(prevN, n)) return false;
+  const policy = workoutProgressionPolicy(prevSets, row || {});
+  const fromThis = applyProgressionToLoad(prevN, policy.addKg);
+  if (loadsNearlyEqual(fromThis, n)) return false;
+  const copied = [
+    top,
+    first,
+    Math.round(top * 1.025 * 2) / 2,
+    applyProgressionToLoad(top, 1.25),
+    applyProgressionToLoad(top, 2.5),
+    applyProgressionToLoad(first, 1.25),
+    applyProgressionToLoad(first, 2.5)
+  ];
+  return copied.some(function (x) { return loadsNearlyEqual(n, x); });
+}
 function effectiveSetLoad(exIdx, setNum, row) {
   const k = 'w' + currentWeek + '_d' + currentDay + '_e' + exIdx + '_s' + setNum;
-  if (store.data[k + '_done'] || store.data[k + '_load_user']) {
-    const owned = store.data[k + '_load'];
-    if (owned !== undefined && owned !== '' && owned != null) return owned;
-  }
+  const stored = store.data[k + '_load'];
+  if (store.data[k + '_done'] && stored !== undefined && stored !== '' && stored != null) return stored;
+  if (sessionWasFinalized(currentWeek, currentDay) && stored !== undefined && stored !== '' && stored != null) return stored;
+  const stale = isStaleCopiedSetPrefill(stored, exIdx, setNum, row);
+  if (store.data[k + '_load_user'] && !stale && stored !== undefined && stored !== '' && stored != null) return stored;
   const sugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(exIdx, setNum, row || {}) : null;
   if (Number(sugg) > 0) return sugg;
-  const stored = store.data[k + '_load'];
-  if (stored !== undefined && stored !== '' && stored != null) return stored;
+  if (!stale && stored !== undefined && stored !== '' && stored != null) return stored;
   return '';
 }
 function epleyE1rm(load, reps) {
@@ -2524,8 +2560,8 @@ function formatPrevWeekLoadAdvice(exIdx, row) {
     return next != null ? String(next) : null;
   }).filter(Boolean);
   let advice = policy.advice;
-  if (nextParts.length) advice += ' Prefill: ' + nextParts.join(' · ') + ' kg.';
-  return `<div style="font-size:11px;color:var(--gold);font-weight:700;margin:0 0 6px;">Sett. scorsa: ${esc(prevParts.join(' · '))}</div>
+  if (nextParts.length) advice += ' Questa seduta: ' + nextParts.join(' · ') + ' kg (ogni serie dalla stessa di sett. scorsa).';
+  return `<div data-prefill="per-set" style="font-size:11px;color:var(--gold);font-weight:700;margin:0 0 6px;">Sett. scorsa: ${esc(prevParts.join(' · '))}</div>
     <div style="font-size:10px;color:#aaa;margin:0 0 8px;">${esc(advice)}</div>`;
 }
 
@@ -13832,8 +13868,17 @@ function renderTraining(c){
           const k = `w${currentWeek}_d${currentDay}_e${fIdx}_s${s}`;
           const setObj = Array.isArray(row.sets) ? row.sets[s - 1] : null;
           const isDone = Boolean(store.data[k + '_done']);
-          const shownLoad = (typeof effectiveSetLoad === 'function') ? effectiveSetLoad(fIdx, s, row) : (store.data[k + '_load'] || '');
+          const prevStored = store.data[k + '_load'];
+          const shownLoad = (typeof effectiveSetLoad === 'function') ? effectiveSetLoad(fIdx, s, row) : (prevStored || '');
           const sugg = (typeof suggestedLoadForSet === 'function') ? (suggestedLoadForSet(fIdx, s, row) || '') : '';
+          if (!isDone && !sessionWasFinalized(currentWeek, currentDay) && Number(shownLoad) > 0
+            && Number(prevStored) !== Number(shownLoad)) {
+            store.data[k + '_load'] = shownLoad;
+            if (store.data[k + '_load_user'] && isStaleCopiedSetPrefill(prevStored, fIdx, s, row)) {
+              delete store.data[k + '_load_user'];
+            }
+            window.__loadPrefillDirty = true;
+          }
           const targetRepsRaw = setObj ? (setObj.reps ?? setObj.target_reps) : row.repsTarget;
           const shownReps = (store.data[k + '_reps'] !== undefined && store.data[k + '_reps'] !== '' && store.data[k + '_reps'] != null)
             ? store.data[k + '_reps']
@@ -13952,6 +13997,10 @@ function renderTraining(c){
       <div style="height:120px;"></div>`;
     c.innerHTML = h;
     calcStats();
+    if (window.__loadPrefillDirty) {
+      window.__loadPrefillDirty = false;
+      try { persist(); } catch (_) {}
+    }
   } catch(error) {
     console.error('WORKOUT_RENDER_ERROR', error);
     c.innerHTML = `
@@ -15298,7 +15347,7 @@ function registerNurvanServiceWorker() {
   if (typeof window !== 'undefined' && window.NativeConfig) return;
   if (!('serviceWorker' in navigator)) return;
   if (location.protocol === 'file:') return;
-  navigator.serviceWorker.register('./sw.js').catch(function () {});
+  navigator.serviceWorker.register('./sw.js?v=prefill4').catch(function () {});
 }
 
 function maybeShowRewardsOnboarding() {

@@ -1,9 +1,7 @@
 /* Nurvan shell SW — cache UI only, never the 10k catalog. */
 importScripts('./release-meta.js');
-const CACHE = 'nurvan-shell-v' + String((self.NURVAN_RELEASE && self.NURVAN_RELEASE.androidVersionCode) || 'dev') + '-coach';
+const CACHE = 'nurvan-shell-v' + String((self.NURVAN_RELEASE && self.NURVAN_RELEASE.androidVersionCode) || 'dev') + '-coach-prefill4';
 const PRECACHE = [
-  './',
-  './index.html',
   './release-meta.js',
   './manifest.webmanifest',
   './apple-touch-icon.png',
@@ -39,6 +37,11 @@ self.addEventListener('fetch', (event) => {
   if (/program-catalog|xlsx\.full/i.test(url.pathname)) return;
   const isAsset = /\.(png|jpe?g|gif|webp|svg|ico|woff2?|css|js|json|webmanifest)$/i.test(url.pathname);
 
+  const isHtml = req.mode === 'navigate' || url.pathname === '/' || /index\.html$/i.test(url.pathname);
+  if (isHtml) {
+    event.respondWith(fetch(req, { cache: 'no-store' }).catch(() => caches.match(req)));
+    return;
+  }
   event.respondWith(
     fetch(req)
       .then((res) => {
@@ -51,7 +54,7 @@ self.addEventListener('fetch', (event) => {
       .catch(() => caches.match(req).then((hit) => {
         if (hit) return hit;
         if (isAsset) return undefined;
-        return caches.match('./index.html');
+        return undefined;
       }))
   );
 });
