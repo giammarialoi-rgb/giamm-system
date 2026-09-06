@@ -17,6 +17,7 @@ import path from "node:path";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { extractExcelStructuredForApi, detectFormat, DI_MAX_BYTES } from "./document-intelligence-core.mjs";
 import { ensureCoachPracticeTables, mountCoachPractice } from "./coach-practice.mjs";
+import { mountProgramGenerateRoutes } from "./server/program/generator.mjs";
 import { runMigrations } from "./server/db/migrate.mjs";
 import {
   buildCorsOriginValidator,
@@ -1404,6 +1405,32 @@ app.get("/api/account/me", async (req, res) => {
   }
 });
 
+function mergeAccountDataBlobs(current, incoming) {
+  const cur = current && typeof current === "object" ? current : {};
+  const inc = incoming && typeof incoming === "object" ? incoming : {};
+  const merged = { ...cur, ...inc, lastSyncedAt: new Date().toISOString() };
+  const mapKeys = [
+    "data", "customSets", "bw", "skips", "subs", "loadTypes", "tempos",
+    "exIntensity", "maxTests", "bonus", "exMuscle", "nutritionDaily"
+  ];
+  for (const key of mapKeys) {
+    const a = cur[key] && typeof cur[key] === "object" && !Array.isArray(cur[key]) ? cur[key] : {};
+    const b = inc[key] && typeof inc[key] === "object" && !Array.isArray(inc[key]) ? inc[key] : {};
+    merged[key] = Object.keys(b).length ? { ...a, ...b } : (Object.keys(a).length ? a : (merged[key] || {}));
+  }
+  const byId = {};
+  (Array.isArray(cur.logs) ? cur.logs : []).concat(Array.isArray(inc.logs) ? inc.logs : []).forEach((row) => {
+    if (!row) return;
+    byId[row.id || row.at] = row;
+  });
+  const logs = Object.keys(byId).map((k) => byId[k]).sort((a, b) => String(a.at || "").localeCompare(String(b.at || "")));
+  if (logs.length) merged.logs = logs.slice(-80);
+  else if (Array.isArray(cur.logs) && cur.logs.length) merged.logs = cur.logs;
+  if (inc.activeProgram == null && cur.activeProgram) merged.activeProgram = cur.activeProgram;
+  else if (!merged.activeProgram && cur.activeProgram) merged.activeProgram = cur.activeProgram;
+  return merged;
+}
+
 app.post("/api/account/sync", async (req, res) => {
   const auth = await accountFromBearer(req.headers.authorization);
   if (!auth) return res.status(401).json({ error: "Unauthorized." });
@@ -1412,8 +1439,7 @@ app.post("/api/account/sync", async (req, res) => {
     if (clientData && clientData.activeProgram == null) delete clientData.activeProgram;
     const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
     const current = existing.rows[0]?.data || {};
-    const merged = { ...current, ...clientData, lastSyncedAt: new Date().toISOString() };
-    if (!merged.activeProgram && current.activeProgram) merged.activeProgram = current.activeProgram;
+    const merged = mergeAccountDataBlobs(current, clientData);
     await pool.query(
       `INSERT INTO app_account_data(user_id, data, updated_at)
        VALUES($1, $2, NOW())
@@ -1462,7 +1488,9 @@ app.post("/api/account/data", async (req, res) => {
   const auth = await accountFromBearer(req.headers.authorization);
   if (!auth) return res.status(401).json({ error: "Sessione scaduta o non autorizzata." });
   try {
-    const dataPayload = req.body?.data || {};
+    const incoming = req.body?.data || {};
+    const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
+    const dataPayload = mergeAccountDataBlobs(existing.rows[0]?.data || {}, incoming);
     await pool.query(
       `INSERT INTO app_account_data (user_id, data, updated_at)
        VALUES ($1, $2, NOW())
@@ -1838,6 +1866,10 @@ mountCoachPractice(app, {
   accountFromBearer,
   webDir: path.join(__dirname, "web"),
   mediaSigningSecret: process.env.MEDIA_SIGNING_SECRET || JWT_SECRET
+});
+
+mountProgramGenerateRoutes(app, {
+  requireAuth: async (req) => accountFromBearer(req.headers.authorization)
 });
 
 app.use(express.static(path.join(__dirname, "web")));
