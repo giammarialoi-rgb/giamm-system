@@ -148,7 +148,12 @@ function gatePracticeView(v) {
   if (typeof isAthleteRole === 'function' && isAthleteRole()) {
     const blocked = {
       community: 1, pricing: 1, coachHub: 1, coachClient: 1,
-      generate: 1, catalog: 1, library: 1, db: 1, programs: 1, unlock: 1
+      generate: 1, catalog: 1, library: 1, db: 1, programs: 1, unlock: 1,
+      coachToday: 1, coachInbox: 1, coachChat: 1, coachPrograms: 1, coachImport: 1,
+      coachCalendar: 1, coachLibrary: 1, coachCheckIns: 1, coachNutrition: 1,
+      coachAnalytics: 1, coachAgent: 1, coachAutomations: 1, coachBusiness: 1,
+      coachCrm: 1, coachActionCenter: 1, coachFormReview: 1,
+      coachMealAi: 1, coachAgentAudit: 1
     };
     if (v === 'ai' && !(store.clientProfile && store.clientProfile.allowNurvanAi)) return 'home';
     if (blocked[v]) return 'home';
@@ -159,7 +164,8 @@ function gatePracticeView(v) {
       coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
       coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
       coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
-      coachAutomations: 1, coachBusiness: 1, coachCrm: 1
+      coachAutomations: 1, coachBusiness: 1, coachCrm: 1,
+      coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1
     };
     const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, calendar: 1 };
     if (coachCore[v]) return v;
@@ -459,7 +465,11 @@ function coachStaySectionForSwitch() {
   const domains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, calendar: 1, athlete: 1 };
   if (domains[view] && store && store.coachViewingClient) return { kind: 'domain', domain: view };
   if (view === 'coachClient') return { kind: 'scheda' };
-  if (view === 'coachHub' || view === 'coachLibrary') return { kind: 'stay', view: view };
+  if (view === 'coachHub' || view === 'coachLibrary' || view === 'coachCheckIns' || view === 'coachCalendar'
+    || view === 'coachInbox' || view === 'coachActionCenter' || view === 'coachToday' || view === 'coachAgent'
+    || view === 'coachMealAi' || view === 'coachFormReview' || view === 'coachAgentAudit') {
+    return { kind: 'stay', view: view };
+  }
   if (store && store.coachViewingClient && domains[view]) return { kind: 'domain', domain: view };
   return { kind: 'scheda' };
 }
@@ -470,6 +480,11 @@ async function switchCoachClientFromHeader(id) {
   if (String(id) === prevId) return;
   if (store.coachAssigning) {
     practiceToast('Annulla o invia l’assegnazione prima di cambiare cliente', 'warning');
+    ensureCoachHeaderControls();
+    return;
+  }
+  if (store.__cpBusy) {
+    practiceToast('Un’operazione è in corso. Cosa puoi fare: attendi il salvataggio e poi cambia cliente.', 'warning');
     ensureCoachHeaderControls();
     return;
   }
@@ -581,7 +596,7 @@ function ensureCoachDrawer() {
     cpt('coNotifications').toUpperCase() + (n > 0 ? (' <span class="cp-notify-count" style="position:static;display:inline-flex;margin-left:6px;">' + (n > 99 ? '99+' : n) + '</span>') : '') +
     '</button>' +
     (hasClient
-      ? ('<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="closeCoachDrawer();openNotificationsCenter(\'' + esc(id) + '\')">' + cpt('coClientNotifyNow').toUpperCase() + '</button>')
+      ? ('<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="closeCoachDrawer();openNotificationsCenter(\'' + esc(id) + '\')">' + (cpt('coClientNotifyNow') !== 'coClientNotifyNow' ? cpt('coClientNotifyNow').toUpperCase() : 'NOTIFICHE CLIENTE · ORA') + '</button>')
       : '') +
     '<div class="cp-drawer-grid">' +
     '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachHub\')">' + cpt('coClientList').toUpperCase() + '</button>' +
@@ -597,7 +612,7 @@ function ensureCoachDrawer() {
       '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'exams\')">' + cpt('coDomainExams').toUpperCase() + '</button>' +
       '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'stats\')">' + cpt('coAnalytics').toUpperCase() + '</button>'
     ) : (
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();practiceToast(\'' + cpt('coOpenClientCalendar').replace(/'/g, '\\\'') + '\',\'warning\');navigate(\'coachHub\')">' + cpt('coCalendar').toUpperCase() + '</button>'
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachCalendar\')">' + cpt('coCalendar').toUpperCase() + '</button>'
     )) +
     '</div>' +
     (viewing
@@ -935,10 +950,91 @@ async function copyOrShare(text, label) {
 }
 
 function enqueueClientOutbox(item) {
+  const persistFn = typeof persist === 'function' ? persist : null;
+  if (typeof OutboxCore !== 'undefined' && OutboxCore.enqueueOutbox) {
+    return OutboxCore.enqueueOutbox(store, item, persistFn);
+  }
   if (!store.clientOutbox) store.clientOutbox = [];
-  store.clientOutbox.push(Object.assign({ id: 'ob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), at: Date.now() }, item));
-  if (store.clientOutbox.length > 80) store.clientOutbox = store.clientOutbox.slice(-80);
-  if (typeof persist === 'function') persist();
+  const id = (item && item.id) ? String(item.id) : ('ob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+  const next = Object.assign({ id: id, at: Date.now(), status: 'QUEUED', attempts: 0 }, item, { id: id });
+  const idx = store.clientOutbox.findIndex(function (row) { return row && row.id === id; });
+  if (idx >= 0) store.clientOutbox[idx] = Object.assign({}, store.clientOutbox[idx], next);
+  else {
+    store.clientOutbox.push(next);
+    if (store.clientOutbox.length > 80) store.clientOutbox = store.clientOutbox.slice(-80);
+  }
+  if (persistFn) persistFn();
+  return store.clientOutbox.find(function (row) { return row && row.id === id; });
+}
+
+async function sendOutboxItem(it) {
+  const operationId = it && it.id;
+  if (it.type === 'workout-ping') {
+    return practiceFetch('/api/client/workout-ping', {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ data: it.data || null, operationId: operationId })
+    });
+  }
+  if (it.type === 'workout-live-sync') {
+    return practiceFetch('/api/client/workout-live-sync', {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ data: it.data || null, operationId: operationId })
+    });
+  }
+  if (it.type === 'message') {
+    return practiceFetch('/api/client/messages', {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ body: it.body, attachment: it.attachment || null, operationId: operationId })
+    });
+  }
+  if (it.type === 'request-program') {
+    return practiceFetch('/api/client/request-program', {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ note: it.note || '', operationId: operationId })
+    });
+  }
+  if (it.type === 'ask-coach') {
+    return practiceFetch('/api/client/ask-coach', {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ domain: it.domain || 'general', note: it.note || '', operationId: operationId })
+    });
+  }
+  if (it.type === 'change-request') {
+    return practiceFetch('/api/client/change-request', {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ summary: it.summary || '', data: it.data || {}, operationId: operationId })
+    });
+  }
+  if (it.type === 'change-notice') {
+    return practiceFetch('/api/client/change-notice', {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ summary: it.summary || '', data: it.data || {}, operationId: operationId })
+    });
+  }
+  if (it.type === 'check-in') {
+    let media = Array.isArray(it.media) ? it.media.slice() : [];
+    if ((!media.length) && Array.isArray(it.mediaRefs) && typeof getDocumentFile === 'function') {
+      for (let i = 0; i < it.mediaRefs.length; i++) {
+        const ref = it.mediaRefs[i];
+        const data = ref && (ref.data || await getDocumentFile(ref.docKey));
+        if (data) media.push({ kind: (ref && ref.kind) || 'photo', data: data });
+      }
+    }
+    return practiceFetch('/api/client/check-ins', {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({
+        operationId: operationId,
+        weight: it.weight,
+        notes: it.notes || '',
+        media: media
+      })
+    }, 30000);
+  }
+  if (it.type === 'account-sync') {
+    if (typeof syncAccountData === 'function') return syncAccountData(false);
+    return { ok: true };
+  }
+  return { ok: true };
 }
 
 function isAppOnline() {
@@ -973,7 +1069,7 @@ async function flushAllOfflineQueues() {
 
 function queueAccountSyncIfOffline() {
   if (isAppOnline()) return false;
-  enqueueClientOutbox({ type: 'account-sync', note: 'deferred' });
+  enqueueClientOutbox({ id: 'account-sync', type: 'account-sync', note: 'deferred' });
   return true;
 }
 
@@ -1563,38 +1659,61 @@ async function pushAthleteLiveWorkoutSync() {
   try {
     await practiceFetch('/api/client/workout-live-sync', {
       method: 'POST', headers: practiceHeaders(true),
-      body: JSON.stringify({ data: payload })
+      body: JSON.stringify({ data: payload, operationId: 'wlive_' + String(store.sessionStartedAt || 'x') })
     }, 12000);
   } catch (_) {
-    enqueueClientOutbox({ type: 'workout-live-sync', data: payload });
+    enqueueClientOutbox({
+      id: 'wlive_' + String(store.sessionStartedAt || 'x'),
+      type: 'workout-live-sync',
+      data: payload
+    });
   }
 }
 
 async function flushClientOutbox() {
-  if (!store || !store.accountToken || !Array.isArray(store.clientOutbox) || !store.clientOutbox.length) return;
-  if (!isAppOnline()) return;
-  const left = [];
-  let didAccountSync = false;
-  for (let i = 0; i < store.clientOutbox.length; i++) {
-    const it = store.clientOutbox[i];
-    try {
-      if (it.type === 'workout-ping') await practiceFetch('/api/client/workout-ping', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ data: it.data || null }) });
-      else if (it.type === 'workout-live-sync') await practiceFetch('/api/client/workout-live-sync', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ data: it.data || null }) });
-      else if (it.type === 'message') await practiceFetch('/api/client/messages', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: it.body, attachment: it.attachment || null }) });
-      else if (it.type === 'request-program') await practiceFetch('/api/client/request-program', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ note: it.note || '' }) });
-      else if (it.type === 'ask-coach') await practiceFetch('/api/client/ask-coach', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ domain: it.domain || 'general', note: it.note || '' }) });
-      else if (it.type === 'change-request') await practiceFetch('/api/client/change-request', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ summary: it.summary || '', data: it.data || {} }) });
-      else if (it.type === 'change-notice') await practiceFetch('/api/client/change-notice', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ summary: it.summary || '', data: it.data || {} }) });
-      else if (it.type === 'account-sync') {
-        if (!didAccountSync && typeof syncAccountData === 'function') {
-          await syncAccountData(false);
-          didAccountSync = true;
+  if (!store || !store.accountToken || !Array.isArray(store.clientOutbox) || !store.clientOutbox.length) {
+    return { flushed: 0, remaining: 0 };
+  }
+  if (!store.__outboxFlushing && typeof OutboxCore !== 'undefined' && OutboxCore.resetInFlightOutbox) {
+    OutboxCore.resetInFlightOutbox(store);
+  }
+  if (typeof OutboxCore !== 'undefined' && OutboxCore.flushOutbox) {
+    return OutboxCore.flushOutbox(store, {
+      isOnline: isAppOnline,
+      persist: typeof persist === 'function' ? persist : null,
+      send: sendOutboxItem,
+      onAck: function (it, ack) {
+        if (it && it.type === 'check-in' && OutboxCore.applyCheckInAck) {
+          OutboxCore.applyCheckInAck(store, it, ack);
         }
       }
-    } catch (_) { left.push(it); }
+    });
   }
-  store.clientOutbox = left;
-  if (typeof persist === 'function') persist();
+  if (!isAppOnline()) return { flushed: 0, remaining: store.clientOutbox.length, skipped: 'offline' };
+  if (store.__outboxFlushing) return store.__outboxFlushPromise || { flushed: 0, remaining: store.clientOutbox.length, skipped: 'locked' };
+  store.__outboxFlushing = true;
+  const run = (async function () {
+    const left = [];
+    let flushed = 0;
+    let didAccountSync = false;
+    for (let i = 0; i < store.clientOutbox.length; i++) {
+      const it = store.clientOutbox[i];
+      if (it.type === 'account-sync' && didAccountSync) continue;
+      try {
+        await sendOutboxItem(it);
+        if (it.type === 'account-sync') didAccountSync = true;
+        flushed += 1;
+      } catch (_) { left.push(it); }
+    }
+    store.clientOutbox = left;
+    if (typeof persist === 'function') persist();
+    return { flushed: flushed, remaining: left.length };
+  })();
+  store.__outboxFlushPromise = run;
+  try { return await run; } finally {
+    store.__outboxFlushing = false;
+    store.__outboxFlushPromise = null;
+  }
 }
 
 function renderInvitePanel(info) {
@@ -2356,17 +2475,19 @@ function athleteWaitingHomeHtml() {
   const due = (store.clientEvents || []).some(function (e) { return e && e.kind === 'payment_due' && !e.read_at; });
   const check = (store.clientEvents || []).some(function (e) { return e && e.kind === 'check_request' && !e.read_at; });
   return '<div class="card" style="border:2px solid var(--gold);padding:22px;text-align:center;">' +
+    '<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:8px;">OGGI</div>' +
     '<div style="font-size:18px;font-weight:900;color:var(--gold);margin-bottom:8px;">In attesa della scheda</div>' +
-    '<p style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:16px;">Il tuo coach ti assegna il programma. Se tarda, chiedila da qui.</p>' +
+    '<p style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:16px;">Non hai ancora un programma assegnato. Chiedilo al coach oppure scrivigli: è la prossima azione.</p>' +
     (due ? '<p style="font-size:12px;color:#f6c;margin-bottom:10px;">Pagamento in sospeso: scrivi al coach.</p>' : '') +
     (check ? '<p style="font-size:12px;color:var(--gold);margin-bottom:10px;">Il coach ha chiesto un check fisico.</p>' : '') +
-    '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="requestProgramFromCoach()">CHIEDI LA SCHEDA</button>' +
-    '<button class="btn btn-outline" style="width:100%;" onclick="navigate(\'clientChat\')">SCRIVI AL COACH</button></div>';
+    '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;min-height:48px;" onclick="requestProgramFromCoach()">CHIEDI LA SCHEDA</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;min-height:44px;" onclick="navigate(\'clientChat\')">SCRIVI AL COACH</button>' +
+    '<button class="btn btn-outline" style="width:100%;min-height:44px;" onclick="navigate(\'calendar\')">CALENDARIO</button></div>';
 }
 
 function athleteHomeModulesHtml() {
   const n = Math.max(0, Number(store.__cpNotifyCount || 0));
-  return '<div class="card" style="margin-top:12px;"><div class="card-header"><h2>Menu</h2></div>' +
+  return '<div class="card" style="margin-top:12px;"><div class="card-header"><h2>Altro</h2></div>' +
     '<div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:10px;">' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;" onclick="openNotificationsCenter()"><span style="font-size:18px;">🔔</span><span style="font-size:11px;font-weight:800;">Notifiche</span>' +
     (n > 0 ? '<span class="cp-notify-count" style="position:absolute;top:6px;right:8px;">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</button>' +
@@ -2410,8 +2531,12 @@ async function reloadClientHome() {
 async function requestProgramFromCoach() {
   try {
     enqueueClientOutbox({ type: 'request-program' });
-    await flushClientOutbox();
-    practiceToast('Richiesta inviata al coach', 'success');
+    const result = await flushClientOutbox();
+    if (result && result.remaining > 0) {
+      practiceToast('Richiesta salvata: partirà quando sei online.', 'warning');
+    } else {
+      practiceToast('Richiesta inviata al coach', 'success');
+    }
   } catch (_) {
     practiceToast('Richiesta salvata: partirà quando sei online.', 'warning');
   }
@@ -3046,7 +3171,19 @@ async function askExerciseInfoToCoach(idx, exerciseName) {
   const athleteOk = (typeof isAthleteRole === 'function' && isAthleteRole())
     || !!(store && store.clientShell && store.accountToken);
   if (!athleteOk) {
-    practiceToast(prefill.trim(), 'info');
+    const prompt = (typeof buildPersonalExerciseInfoPrompt === 'function')
+      ? buildPersonalExerciseInfoPrompt(idx, exerciseName)
+      : (prefill + 'Perché aumentare o restare? Come aumentare? Esecuzione? Se vuoi anche la tecnica dimmelo.');
+    if (typeof navigate === 'function') navigate('ai');
+    setTimeout(function () {
+      if (typeof withBusy === 'function' && typeof askAIInner === 'function') {
+        withBusy(function () { return askAIInner(prompt); }, 'Nurvan AI sta pensando…', { immediate: true });
+      } else if (typeof askAIInner === 'function') {
+        askAIInner(prompt);
+      } else if (typeof practiceToast === 'function') {
+        practiceToast('Apri Coach AI e incolla il contesto esercizio', 'info');
+      }
+    }, 220);
     return;
   }
   if (!store || !store.accountToken) {
@@ -4580,22 +4717,32 @@ async function sendAthleteHumanMessage() {
   const pending = window.__cpPendingAttach || null;
   if (!body && !pending) return;
   setChatSending(true);
+  const operationId = (typeof OutboxCore !== 'undefined' && OutboxCore.makeOperationId)
+    ? OutboxCore.makeOperationId('msg')
+    : ('msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+  let encBody = '';
+  let attachment = null;
   try {
     await ensureE2EReady('athlete', null);
-    const encBody = body ? await encryptChatBody(body, 'athlete', null) : '';
-    let attachment = null;
+    encBody = body ? await encryptChatBody(body, 'athlete', null) : '';
     if (pending && pending.data) {
       const encAtt = await encryptChatBody(pending.data, 'athlete', null);
       attachment = prepareChatAttachment(pending, encAtt);
     }
     await practiceFetch('/api/client/messages', {
-      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ body: encBody || (attachment ? '[allegato]' : ''), attachment: attachment, e2e: true })
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ body: encBody || (attachment ? '[allegato]' : ''), attachment: attachment, e2e: true, operationId: operationId })
     }, 20000);
     if (input) input.value = '';
     clearChatAttachPreview();
     loadHumanMessages(null, 'cp-client-chat', 'athlete');
   } catch (_) {
-    enqueueClientOutbox({ type: 'message', body: body || '[allegato]', attachment: pending });
+    enqueueClientOutbox({
+      id: operationId,
+      type: 'message',
+      body: encBody || body || '[allegato]',
+      attachment: attachment || pending
+    });
     if (input) input.value = '';
     clearChatAttachPreview();
     practiceToast('Messaggio in coda offline', 'warning');
@@ -4646,13 +4793,17 @@ async function askRealCoachForDomain(domain, presetNote) {
   const note = (presetNote != null)
     ? String(presetNote)
     : (prompt('Messaggio per il coach (opzionale):') || '');
+  const operationId = (typeof OutboxCore !== 'undefined' && OutboxCore.makeOperationId)
+    ? OutboxCore.makeOperationId('ask')
+    : ('ask_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
   try {
     await practiceFetch('/api/client/ask-coach', {
-      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ domain: domain || 'general', note: note })
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ domain: domain || 'general', note: note, operationId: operationId })
     }, 15000);
     practiceToast(domain === 'max_freedom' ? 'Richiesta di libertà inviata al coach' : 'Richiesta inviata al coach', 'success');
   } catch (err) {
-    enqueueClientOutbox({ type: 'ask-coach', domain: domain, note: note });
+    enqueueClientOutbox({ id: operationId, type: 'ask-coach', domain: domain, note: note });
     practiceToast('Richiesta salvata: partirà quando sei online.', 'warning');
   }
 }
@@ -4745,13 +4896,27 @@ function handleNotifyRoute(route) {
   const clientId = route.clientId;
   if (typeof isAthleteRole === 'function' && isAthleteRole()) {
     if (view === 'clientChat' || view === 'message' || view === 'chat') return navigate('clientChat');
-    if (view === 'check' || view === 'check_request') return navigate('athlete');
+    if (view === 'check' || view === 'check_request' || view === 'stats') return navigate('stats');
+    if (view === 'calendar' || view === 'booking' || view === 'appointment') return navigate('calendar');
     if (view === 'exams' || view === 'exams_request') return navigate('exams');
     if (view === 'training' || view === 'program_assigned') return navigate('training');
     if (view === 'nutrition' || view === 'nutrition_assigned') return navigate('nutrition');
     if (view === 'supplements' || view === 'supplements_assigned') return navigate('supplements');
     if (view === 'therapy' || view === 'therapy_assigned') return navigate('therapy');
     return navigate('home');
+  }
+  if (view === 'check_in' || view === 'coachCheckIns') {
+    store.coachSessionActive = true;
+    if (clientId) store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, { clientId: clientId, checkInId: route.checkInId || null });
+    if (window.CoachOS && typeof CoachOS.navigate === 'function') return CoachOS.navigate('coachCheckIns');
+    if (clientId) return openCoachClient(clientId);
+  }
+  if (view === 'coachCalendar' || view === 'booking' || view === 'appointment') {
+    store.coachSessionActive = true;
+    if (window.CoachOS && typeof CoachOS.navigate === 'function') return CoachOS.navigate('coachCalendar');
+  }
+  if (view === 'coachAgent') {
+    if (window.CoachOS && typeof CoachOS.navigate === 'function') return CoachOS.navigate('coachAgent');
   }
   if (clientId) {
     store.coachSessionActive = true;
@@ -5407,15 +5572,23 @@ function queueAthleteProgramChange(kind, summary, data) {
     const pending = window.__cpPendingChange;
     window.__cpPendingChange = null;
     if (!pending) return;
+    const operationId = (typeof OutboxCore !== 'undefined' && OutboxCore.makeOperationId)
+      ? OutboxCore.makeOperationId(pending.kind === 'notice' ? 'chnot' : 'chreq')
+      : ('chg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
     try {
       const path = pending.kind === 'notice' ? '/api/client/change-notice' : '/api/client/change-request';
       await practiceFetch(path, {
         method: 'POST', headers: practiceHeaders(true),
-        body: JSON.stringify({ summary: pending.summary, data: pending.data })
+        body: JSON.stringify({ summary: pending.summary, data: pending.data, operationId: operationId })
       }, 20000);
       practiceToast(pending.kind === 'notice' ? 'Modifica salvata. Avviso inviato al coach.' : 'Richiesta di modifica inviata al coach.', 'success');
     } catch (err) {
-      enqueueClientOutbox({ type: pending.kind === 'notice' ? 'change-notice' : 'change-request', summary: pending.summary, data: pending.data });
+      enqueueClientOutbox({
+        id: operationId,
+        type: pending.kind === 'notice' ? 'change-notice' : 'change-request',
+        summary: pending.summary,
+        data: pending.data
+      });
       practiceToast((err && err.message) || 'Modifica in coda offline', 'warning');
     }
   }, 700);
@@ -5456,7 +5629,8 @@ function wrapPracticeHooks() {
           coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
           coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
           coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
-          coachAutomations: 1, coachBusiness: 1, coachCrm: 1
+          coachAutomations: 1, coachBusiness: 1, coachCrm: 1,
+          coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1
         };
         const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, import: 1, programs: 1, calendar: 1 };
         const ok = coachCore[raw]
@@ -5653,17 +5827,18 @@ function wrapPracticeHooks() {
           programExpiryAnchor: alreadyAnchored ? 'first_workout' : (DATA && DATA.programExpiryAnchor) || 'assign',
           anchorExpiryOnFirstWorkout: !alreadyAnchored && Array.isArray(store.logs) && store.logs.length === 1
         };
+        const operationId = 'wping_' + String((last && (last.id || last.at)) || Date.now());
         // Sync account then push workout snapshot for coach visibility
         Promise.resolve(typeof syncAccountData === 'function' ? syncAccountData(false) : null)
           .catch(function () {})
           .then(function () {
             return practiceFetch('/api/client/workout-ping', {
               method: 'POST', headers: practiceHeaders(true),
-              body: JSON.stringify({ data: data })
+              body: JSON.stringify({ data: data, operationId: operationId })
             }, 20000);
           })
           .catch(function () {
-            enqueueClientOutbox({ type: 'workout-ping', data: data });
+            enqueueClientOutbox({ id: operationId, type: 'workout-ping', data: data });
             flushClientOutbox();
           });
       }
