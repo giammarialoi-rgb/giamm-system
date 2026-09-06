@@ -3486,25 +3486,15 @@ function isStandalonePwaLocal() {
 function applyInviteManifestStartUrl(token) {
   if (!token) return;
   try {
+    const href = '/c/' + encodeURIComponent(token) + '/manifest.webmanifest';
     const existing = document.querySelector('link[rel="manifest"]');
-    const href = existing ? existing.getAttribute('href') : 'manifest.webmanifest';
-    fetch(href, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (man) {
-      const start = '/c/' + encodeURIComponent(token);
-      const next = Object.assign({}, man, { start_url: start, scope: '/', id: start });
-      const blob = new Blob([JSON.stringify(next)], { type: 'application/manifest+json' });
-      const url = URL.createObjectURL(blob);
-      if (existing) {
-        if (existing.__cpBlob) try { URL.revokeObjectURL(existing.__cpBlob); } catch (_) {}
-        existing.__cpBlob = url;
-        existing.setAttribute('href', url);
-      } else {
-        const link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = url;
-        link.__cpBlob = url;
-        document.head.appendChild(link);
-      }
-    }).catch(function () {});
+    if (existing) existing.setAttribute('href', href);
+    else {
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = href;
+      document.head.appendChild(link);
+    }
   } catch (_) {}
 }
 
@@ -5441,12 +5431,22 @@ async function bootCoachPractice() {
       } else if (!urlToken) {
         store.clientShell = true;
         store.inviteToken = store.inviteToken || shell.inviteToken;
+        try {
+          if (typeof history !== 'undefined' && history.replaceState && location && !/^\/c\//.test(location.pathname || '')) {
+            history.replaceState(null, '', '/c/' + encodeURIComponent(shell.inviteToken) + (location.search || '') + (location.hash || ''));
+          }
+        } catch (_) {}
       }
     }
   } catch (_) {}
-  const token = urlToken || store.inviteToken;
+  const token = urlToken || store.inviteToken || detectInviteToken();
   if (token) {
     store.inviteToken = token;
+    store.clientShell = true;
+    try {
+      localStorage.setItem('GS_CLIENT_SHELL', JSON.stringify({ inviteToken: token, locked: true, at: Date.now() }));
+    } catch (_) {}
+    try { applyInviteManifestStartUrl(token); } catch (_) {}
   }
   // Athlete JWT bound to a different invite → force re-login for this link
   if (urlToken && typeof isAthleteRole === 'function' && isAthleteRole() && store.accountToken) {
@@ -5675,7 +5675,7 @@ function wrapPracticeHooks() {
       _render();
       try {
         const c = document.getElementById('view-container');
-        if (c && currentView === 'home' && typeof isAthleteRole === 'function' && isAthleteRole()) {
+        if (c && currentView === 'home' && ((typeof isAthleteRole === 'function' && isAthleteRole()) || (typeof isClientShellLocked === 'function' && isClientShellLocked()))) {
           if (!DATA || !DATA.weeks || !DATA.weeks.length) c.innerHTML = athleteHomeHtml();
           else if (!c.querySelector('[data-cp-reload]')) {
             const hold = document.createElement('div');

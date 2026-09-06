@@ -1649,11 +1649,67 @@ app.post("/api/ingest/document", upload.single("file"), async (req, res) => {
   }
 });
 
+function slimCoachContext(context) {
+  if (!context || typeof context !== "object") return {};
+  const out = { ...context };
+  if (out.programSummary && typeof out.programSummary === "object") {
+    const weeks = Array.isArray(out.programSummary.weeks) ? out.programSummary.weeks.slice(0, 4) : [];
+    out.programSummary = {
+      title: out.programSummary.title || "",
+      weeks: weeks.map((w) => ({
+        week: w.week,
+        sessions: (w.sessions || []).slice(0, 6).map((s) => ({
+          name: s.name,
+          exercises: (s.exercises || []).slice(0, 14)
+        }))
+      }))
+    };
+  }
+  if (out.performanceSummary && typeof out.performanceSummary === "object") {
+    const ex = out.performanceSummary.exercises || out.performanceSummary.rows || [];
+    out.performanceSummary = {
+      week: out.performanceSummary.week,
+      sessions: out.performanceSummary.sessions,
+      exercises: Array.isArray(ex) ? ex.slice(0, 8) : ex
+    };
+  }
+  if (out.therapy && out.therapy.medications) {
+    out.therapy = {
+      medications: out.therapy.medications.slice(0, 8).map((m) => ({
+        name: m.name || m.medication || m.drug,
+        dose: m.dose || m.dosage || ""
+      }))
+    };
+  }
+  if (out.exams) {
+    const items = Array.isArray(out.exams) ? out.exams : (out.exams.items || out.exams.records || []);
+    out.exams = { count: items.length };
+  }
+  if (out.profile && typeof out.profile === "object") {
+    out.profile = {
+      name: out.profile.name || out.profile.first_name || "",
+      goal: out.profile.goal || out.profile.primary_goal || null,
+      weight: Number(out.profile.weight) > 0 ? Number(out.profile.weight) : null
+    };
+  }
+  if (out.supplementationDetail && out.supplementationDetail.items) {
+    out.supplementationDetail = {
+      items: out.supplementationDetail.items.slice(0, 12).map((it) => ({
+        name: it.name,
+        dose: it.dose,
+        timing: it.timing
+      }))
+    };
+  }
+  return out;
+}
+
 app.post(["/api/chat", "/coach", "/api/coach"], async (req, res) => {
   try {
     if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({
-        error: "GEMINI_API_KEY is not configured on the server."
+      return res.status(503).json({
+        error: "Coach AI non è configurato sul server.",
+        code: "AI_UNAVAILABLE"
       });
     }
 
@@ -1665,7 +1721,7 @@ app.post(["/api/chat", "/coach", "/api/coach"], async (req, res) => {
       return res.status(400).json({ error: "message is required." });
     }
 
-    let context = req.body?.context ?? {};
+    let context = slimCoachContext(req.body?.context ?? {});
     const imageParts = imagePartsFromRequest(req.body?.images);
 
     const authUser = await accountFromBearer(req.headers.authorization);
@@ -1808,19 +1864,23 @@ Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico
 
     const ai = getClient();
     const textPart = { text: input };
+    async function generateOnce(parts) {
+      return ai.models.generateContent({
+        model: MODEL,
+        contents: [{ role: "user", parts }]
+      });
+    }
     let response;
     try {
-      response = await ai.models.generateContent({
-        model: MODEL,
-        contents: [{ role: "user", parts: imageParts.length ? [textPart, ...imageParts] : [textPart] }]
-      });
-    } catch (visionErr) {
-      if (!imageParts.length) throw visionErr;
-      console.warn("Gemini multimodal chat failed, retrying text-only", visionErr?.message);
-      response = await ai.models.generateContent({
-        model: MODEL,
-        contents: [{ role: "user", parts: [textPart] }]
-      });
+      response = await generateOnce(imageParts.length ? [textPart, ...imageParts] : [textPart]);
+    } catch (firstErr) {
+      console.warn("Gemini chat first attempt failed", firstErr?.message || firstErr);
+      try {
+        response = await generateOnce([textPart]);
+      } catch (retryErr) {
+        console.error("Gemini chat retry failed", retryErr?.message || retryErr);
+        throw firstErr;
+      }
     }
 
     let replyText = response.text || "";

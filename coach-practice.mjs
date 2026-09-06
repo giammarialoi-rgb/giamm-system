@@ -765,6 +765,36 @@ export function mountCoachPractice(app, deps) {
     res.sendFile(indexHtml);
   });
 
+  app.get("/c/:token/manifest.webmanifest", (req, res) => {
+    const tok = String(req.params.token || "").trim();
+    if (!tok || /\.\.|[\\/]/.test(tok)) return res.status(400).json({ error: "token non valido" });
+    const start = "/c/" + encodeURIComponent(tok);
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Content-Type", "application/manifest+json");
+    res.json({
+      id: start,
+      name: "Nurvan",
+      short_name: "Nurvan",
+      description: "Train. Fuel. Recover. Track. Evolve.",
+      lang: "it",
+      dir: "ltr",
+      start_url: start,
+      scope: "/",
+      display: "standalone",
+      display_override: ["standalone", "minimal-ui"],
+      orientation: "portrait",
+      background_color: "#000000",
+      theme_color: "#000000",
+      categories: ["health", "fitness", "lifestyle"],
+      icons: [
+        { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: "/icon-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        { src: "/apple-touch-icon.png", sizes: "180x180", type: "image/png", purpose: "any" }
+      ]
+    });
+  });
+
   app.get("/api/push/vapid-public-key", (req, res) => {
     const publicKey = process.env.VAPID_PUBLIC_KEY || "";
     if (!publicKey) return res.status(503).json({ error: "Web Push non configurato.", configured: false });

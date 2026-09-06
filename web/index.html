@@ -22,6 +22,7 @@
 })();
 </script>
 <link rel="manifest" href="manifest.webmanifest">
+<script src="exercise-catalog-extra.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -487,7 +488,7 @@ input[type="checkbox"], input[type="radio"] {
 .delta-pos { color: var(--success); }
 .delta-neg { color: var(--accent-red); }
 
-.chart-container { height: 260px; margin-bottom: 10px; }
+.chart-container { height: 380px; margin-bottom: 14px; }
 
 .fab-save {
   position: fixed; right: 20px; bottom: 130px;
@@ -1857,7 +1858,23 @@ body.focus-mode [data-rewards-only] {
       <button class="btn btn-outline" style="font-size:10px;padding:2px 6px;" onclick="closeCheckFisicoPdfModal()">✕</button>
     </div>
     <div style="padding:12px 4px 4px;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee;">
-      <div style="font-size:10px;color:#aaa;font-weight:800;margin-bottom:8px;">OLTRE A FOTO E PESO, COSA INSERIRE</div>
+      <div style="font-size:10px;color:#aaa;font-weight:800;margin-bottom:8px;">PERIODO ALLENAMENTI DA ESPORTARE</div>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;color:#eee;"><input type="radio" name="cf-pdf-range" value="preset" checked onchange="onCheckFisicoPdfRangeMode()"> <span>Preset del check (7/14/21/30 giorni)</span></label>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;color:#eee;"><input type="radio" name="cf-pdf-range" value="weeks" onchange="onCheckFisicoPdfRangeMode()"> <span>Da settimana a settimana</span></label>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;color:#eee;"><input type="radio" name="cf-pdf-range" value="dates" onchange="onCheckFisicoPdfRangeMode()"> <span>Da data a data</span></label>
+      <div id="cf-pdf-weeks-wrap" style="display:none;margin:0 0 10px;gap:8px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div><label style="font-size:10px;color:#888;">Da settimana</label><input id="cf-pdf-from-week" type="number" min="1" value="1" style="width:100%;padding:8px;background:#0a0a0a;border:1px solid #2a2a2a;color:#fff;border-radius:8px;"></div>
+          <div><label style="font-size:10px;color:#888;">A settimana</label><input id="cf-pdf-to-week" type="number" min="1" value="4" style="width:100%;padding:8px;background:#0a0a0a;border:1px solid #2a2a2a;color:#fff;border-radius:8px;"></div>
+        </div>
+      </div>
+      <div id="cf-pdf-dates-wrap" style="display:none;margin:0 0 10px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div><label style="font-size:10px;color:#888;">Dal</label><input id="cf-pdf-from-date" type="date" style="width:100%;padding:8px;background:#0a0a0a;border:1px solid #2a2a2a;color:#fff;border-radius:8px;"></div>
+          <div><label style="font-size:10px;color:#888;">Al</label><input id="cf-pdf-to-date" type="date" style="width:100%;padding:8px;background:#0a0a0a;border:1px solid #2a2a2a;color:#fff;border-radius:8px;"></div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:#aaa;font-weight:800;margin:12px 0 8px;">OLTRE A FOTO E PESO, COSA INSERIRE</div>
       <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;color:#eee !important;-webkit-text-fill-color:#eee;"><input type="radio" name="cf-pdf-train" value="detailed" onchange="setCheckFisicoPdfOpt('pdfTraining','detailed')"><span style="color:#eee !important;-webkit-text-fill-color:#eee;">Allenamento dettagliato (serie, ripetizioni, RIR/RPE)</span></label>
       <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px;color:#eee !important;-webkit-text-fill-color:#eee;"><input type="radio" name="cf-pdf-train" value="summary" onchange="setCheckFisicoPdfOpt('pdfTraining','summary')"><span style="color:#eee !important;-webkit-text-fill-color:#eee;">Solo foto + tonnellaggio e intensità settimanale</span></label>
       <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;color:#eee !important;-webkit-text-fill-color:#eee;"><input type="checkbox" id="cf-pdf-nutr" onchange="setCheckFisicoPdfOpt('pdfNutrition', this.checked)"> <span style="color:#eee !important;">Aderenza alimentazione</span></label>
@@ -35440,8 +35457,40 @@ function purgeCoachProfileLeakIfNeeded() {
 function isCoachUnlocked() {
   return !!(store && store.coachUnlocked && !isAthleteRole());
 }
+function restoreClientShellSync() {
+  try {
+    const pathName = (typeof location !== 'undefined' && location.pathname) || '';
+    const m = String(pathName).match(/^\/c\/([^/?#]+)/);
+    let urlTok = '';
+    try { urlTok = (m && decodeURIComponent(m[1])) || (new URLSearchParams((location && location.search) || '').get('c')) || ''; } catch (_) { urlTok = (m && m[1]) || ''; }
+    let shell = null;
+    try { shell = JSON.parse(localStorage.getItem('GS_CLIENT_SHELL') || 'null'); } catch (_) {}
+    if (urlTok) {
+      localStorage.setItem('GS_CLIENT_SHELL', JSON.stringify({ inviteToken: urlTok, locked: true, at: Date.now() }));
+      if (typeof store !== 'undefined' && store) {
+        store.inviteToken = urlTok;
+        store.clientShell = true;
+      }
+      return urlTok;
+    }
+    if (shell && shell.locked && shell.inviteToken) {
+      if (typeof store !== 'undefined' && store) {
+        store.inviteToken = store.inviteToken || shell.inviteToken;
+        store.clientShell = true;
+      }
+      try {
+        if (typeof history !== 'undefined' && history.replaceState && !/^\/c\//.test(pathName)) {
+          history.replaceState(null, '', '/c/' + encodeURIComponent(shell.inviteToken) + ((location && location.search) || '') + ((location && location.hash) || ''));
+        }
+      } catch (_) {}
+      return shell.inviteToken;
+    }
+  } catch (_) {}
+  return '';
+}
 var store = loadStore();
 ensureStoreIntegrity();
+restoreClientShellSync();
 if (store.trainingWeek) currentWeek = Math.max(1, Number(store.trainingWeek) || 1);
 if (typeof store.trainingDay === 'number') currentDay = Math.max(0, Number(store.trainingDay) || 0);
 if(!store.prefs) store.prefs = { intensityType: 'RIR', duration: 16, frequency: 4 };
@@ -38019,11 +38068,36 @@ function buildExerciseDbFromDictionary() {
   return db;
 }
 
+function mergeExtraExerciseCatalog(db) {
+  if (!DATA) DATA = { weeks: [] };
+  const extra = (typeof WEB_EXERCISE_CATALOG !== 'undefined' && Array.isArray(WEB_EXERCISE_CATALOG)) ? WEB_EXERCISE_CATALOG : [];
+  const aliases = DATA.exerciseAliases || {};
+  extra.forEach(function (ex) {
+    if (!ex || !ex.name) return;
+    const m = String(ex.muscle || 'ALTRO').toUpperCase();
+    if (!db[m]) db[m] = [];
+    if (db[m].indexOf(ex.name) < 0) db[m].push(ex.name);
+    const keys = [ex.en, ex.name].concat(ex.aliases || []).filter(Boolean);
+    aliases[ex.name] = keys.map(function (s) { return String(s).toLowerCase(); });
+  });
+  DATA.exerciseAliases = aliases;
+  return db;
+}
+function exerciseNameMatchesQuery(name, query) {
+  const q = String(query || '').trim().toLowerCase();
+  if (!q) return true;
+  const n = String(name || '').toLowerCase();
+  if (n.indexOf(q) >= 0) return true;
+  const aliases = (DATA && DATA.exerciseAliases && DATA.exerciseAliases[name]) || [];
+  return aliases.some(function (a) { return a.indexOf(q) >= 0; });
+}
 function seedExerciseDatabase() {
-  const built = buildExerciseDbFromDictionary();
+  const built = mergeExtraExerciseCatalog(buildExerciseDbFromDictionary());
   if (!DATA) DATA = { weeks: [] };
   if (!DATA.exerciseDb || !Object.keys(DATA.exerciseDb).length) {
     DATA.exerciseDb = built;
+  } else {
+    DATA.exerciseDb = mergeExtraExerciseCatalog(DATA.exerciseDb);
   }
   try {
     ensureCustomExerciseLibrary().forEach(function (c) {
@@ -41028,15 +41102,23 @@ function finishInit() {
       }
       setTimeout(function () {
         if (splash) splash.style.display = 'none';
-        render();
-        applyChromeI18n();
-        try { applyFocusUi(); } catch (_) {}
-        try { maybeShowRewardsOnboarding(); } catch (_) {}
-        try { maybeShowIosInstallHint(); } catch (_) {}
-        try { scheduleAllItemAlerts(); } catch (_) {}
-        try { registerNurvanServiceWorker(); } catch (_) {}
-        try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
-        try { if (typeof bootCoachPractice === 'function') bootCoachPractice(); } catch (_) {}
+        const finishUi = function () {
+          render();
+          applyChromeI18n();
+          try { applyFocusUi(); } catch (_) {}
+          try { maybeShowRewardsOnboarding(); } catch (_) {}
+          try { maybeShowIosInstallHint(); } catch (_) {}
+          try { scheduleAllItemAlerts(); } catch (_) {}
+          try { registerNurvanServiceWorker(); } catch (_) {}
+          try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
+        };
+        const locked = !!(store && (store.clientShell || store.inviteToken));
+        if (locked && typeof bootCoachPractice === 'function') {
+          Promise.resolve(bootCoachPractice()).catch(function () {}).then(finishUi);
+        } else {
+          finishUi();
+          try { if (typeof bootCoachPractice === 'function') bootCoachPractice(); } catch (_) {}
+        }
       }, 400);
     };
     const canPull = !!(store.accountToken && typeof syncAccountData === 'function' && !store.coachViewingClient && !store.coachAssigning);
@@ -42753,45 +42835,24 @@ function renderSupplements(c) {
   }
 
   html += `
-    <div style="display:flex;flex-direction:column;gap:10px;">
+    <div style="display:flex;flex-direction:column;gap:8px;">
       ${items.map((it, idx) => `
         <div class="card-compact" style="border:1px solid var(--border);background:var(--surface);padding:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
             <div style="flex:1;min-width:0;">
-              <label style="font-size:9px;color:#666;font-weight:800;">NOME</label>
-              <input type="text" value="${esc(it.name || '')}" oninput="updateSupplementField(${idx},'name',this.value)" style="width:100%;margin-top:3px;padding:8px;background:#111;border:1px solid #333;color:var(--gold);border-radius:6px;font-size:14px;font-weight:800;" />
-              ${it.brand ? `<div style="font-size:10px;color:#888;margin-top:4px;">${safeDisplayValue(it.brand, '')}</div>` : ''}
+              <div style="font-size:14px;font-weight:800;color:#fff;">${esc(it.name || 'Integratore')}</div>
+              ${it.brand ? `<div style="font-size:10px;color:#888;margin-top:2px;">${esc(it.brand)}</div>` : ''}
+              <div style="font-size:12px;color:#bbb;margin-top:6px;">Dose: ${esc(it.dose || '—')}${it.unit ? (' ' + esc(it.unit)) : ''}</div>
+              <div style="font-size:12px;color:#bbb;margin-top:2px;">Frequenza: ${esc(it.frequency || '—')}</div>
+              ${it.timing ? `<div style="font-size:11px;color:#888;margin-top:2px;">Timing: ${esc(it.timing)}</div>` : ''}
             </div>
-            <div style="display:flex;gap:4px;flex-shrink:0;padding-top:14px;">
+            <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+              <button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="editSupplementItem(${idx})">EDIT</button>
               <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;" title="Duplica" onclick="duplicateSupplementItem(${idx})">📋</button>
               <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;color:var(--accent-red);" title="Elimina" onclick="deleteSupplementItem(${idx})">✕</button>
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:8px;margin-bottom:8px;">
-            <div>
-              <label style="font-size:9px;color:#666;font-weight:800;">DOSAGGIO</label>
-              <input type="text" value="${esc(it.dose || '')}" oninput="updateSupplementField(${idx},'dose',this.value)" placeholder="Es. 5" style="width:100%;margin-top:3px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;" />
-            </div>
-            <div>
-              <label style="font-size:9px;color:#666;font-weight:800;">UNITÀ</label>
-              <input type="text" value="${esc(it.unit || '')}" oninput="updateSupplementField(${idx},'unit',this.value)" placeholder="g, mg, cps" style="width:100%;margin-top:3px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;" />
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-            <div>
-              <label style="font-size:9px;color:#666;font-weight:800;">TIMING</label>
-              <input type="text" value="${esc(it.timing || '')}" oninput="updateSupplementField(${idx},'timing',this.value)" placeholder="Es. Post-workout" list="supp-timing-suggestions" style="width:100%;margin-top:3px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;" />
-            </div>
-            <div>
-              <label style="font-size:9px;color:#666;font-weight:800;">FREQUENZA</label>
-              <input type="text" value="${esc(it.frequency || '')}" oninput="updateSupplementField(${idx},'frequency',this.value)" placeholder="Es. Quotidiano" list="supp-freq-suggestions" style="width:100%;margin-top:3px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;" />
-            </div>
-          </div>
-          <div style="margin-bottom:8px;">
-            <label style="font-size:9px;color:#666;font-weight:800;">NOTE</label>
-            <input type="text" value="${esc(it.notes || '')}" oninput="updateSupplementField(${idx},'notes',this.value)" placeholder="Modalità, avvertenze…" style="width:100%;margin-top:3px;padding:8px;background:#111;border:1px solid #333;color:#ccc;border-radius:6px;font-size:12px;" />
-          </div>
-          <div style="display:flex;gap:8px;margin-top:4px;border-top:1px solid #1c1c1c;padding-top:6px;">
+          <div style="display:flex;gap:8px;margin-top:8px;border-top:1px solid #1c1c1c;padding-top:6px;">
             <button class="btn btn-outline" style="flex:1;font-size:10px;padding:4px 8px;border-color:rgba(212,175,55,0.4);color:var(--gold);" data-name="${esc(it.name || '')}" onclick="openExamineEvidenceModal(this.getAttribute('data-name'))">🔬 ${t('scientificEvidence')}</button>
             <button class="btn btn-outline" style="flex:1;font-size:10px;padding:4px 8px;" data-name="${esc(it.name || '')}" onclick="askAiAboutSupplement(this.getAttribute('data-name'))">🤖 ${t('askCoach')}</button>
           </div>
@@ -42858,6 +42919,7 @@ function updateSupplementField(idx, field, value) {
 }
 
 function openAddSupplementModal() {
+  window.__suppEditIndex = null;
   const nameEl = $('supp-name-input');
   const doseEl = $('supp-dose-input');
   const notesEl = $('supp-notes-input') || $('supp-note-input');
@@ -42866,7 +42928,24 @@ function openAddSupplementModal() {
   if (nameEl) nameEl.value = '';
   if (doseEl) doseEl.value = '';
   if (notesEl) notesEl.value = '';
+  if ($('supp-unit-input')) $('supp-unit-input').value = 'g';
+  if ($('supp-timing-input')) $('supp-timing-input').value = '';
+  if ($('supp-freq-input')) $('supp-freq-input').value = '';
   if (box) box.style.display = 'none';
+  if (modal) modal.style.display = 'flex';
+}
+function editSupplementItem(idx) {
+  const it = DATA && DATA.supplementation && DATA.supplementation.items && DATA.supplementation.items[idx];
+  if (!it) return;
+  window.__suppEditIndex = idx;
+  if ($('supp-name-input')) $('supp-name-input').value = it.name || '';
+  if ($('supp-dose-input')) $('supp-dose-input').value = it.dose || '';
+  if ($('supp-unit-input')) $('supp-unit-input').value = it.unit || 'g';
+  if ($('supp-timing-input')) $('supp-timing-input').value = it.timing || '';
+  if ($('supp-freq-input')) $('supp-freq-input').value = it.frequency || '';
+  if ($('supp-notes-input')) $('supp-notes-input').value = it.notes || '';
+  else if ($('supp-note-input')) $('supp-note-input').value = it.notes || '';
+  const modal = $('add-supplement-modal');
   if (modal) modal.style.display = 'flex';
 }
 
@@ -42947,14 +43026,20 @@ function saveSupplementItem() {
 
   if (!DATA.supplementation) DATA.supplementation = { items: [] };
   if (!DATA.supplementation.items) DATA.supplementation.items = [];
-  DATA.supplementation.items.push(item);
+  if (Number.isInteger(window.__suppEditIndex) && DATA.supplementation.items[window.__suppEditIndex]) {
+    DATA.supplementation.items[window.__suppEditIndex] = Object.assign({}, DATA.supplementation.items[window.__suppEditIndex], item);
+    window.__suppEditIndex = null;
+    if (typeof showToast === 'function') showToast('Integratore aggiornato', 'success');
+  } else {
+    DATA.supplementation.items.push(item);
+    if (typeof showToast === 'function') showToast('Integratore aggiunto', 'success');
+  }
   DATA.supplementation.present = true;
   markSupplementsDirty();
   persist();
   try { scheduleAllItemAlerts(); } catch (_) {}
   closeAddSupplementModal();
   render();
-  if (typeof showToast === 'function') showToast("Integratore aggiunto", "success");
 }
 
 function duplicateSupplementItem(idx) {
@@ -46711,6 +46796,10 @@ function buildOperationalRulesHtml(prog) {
 window.buildOperationalRulesHtml = buildOperationalRulesHtml;
 
 function renderHome(c) {
+  if (typeof isClientShellLocked === 'function' && isClientShellLocked() && (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) && typeof athleteHomeHtml === 'function') {
+    c.innerHTML = athleteHomeHtml();
+    return;
+  }
   if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
     c.innerHTML = `
       <div style="text-align:center;padding:20px 0;">
@@ -47702,8 +47791,9 @@ function collectWorkoutPdfExportOpts() {
     toWeek: parseInt(($('pdf-to-week') || {}).value, 10) || 1,
     toDay: parseInt(($('pdf-to-day') || {}).value, 10) || 0,
     pickedSessions: picked,
-    includeLogged: !!($('pdf-inc-logged') || {}).checked,
-    includePlanned: !!($('pdf-inc-planned') || {}).checked,
+    loadMode: ((document.querySelector('input[name="pdf-load-mode"]:checked') || {}).value) || '',
+    includeLogged: (function () { const m = ((document.querySelector('input[name="pdf-load-mode"]:checked') || {}).value) || ''; return m === 'logged' || m === 'both'; })(),
+    includePlanned: (function () { const m = ((document.querySelector('input[name="pdf-load-mode"]:checked') || {}).value) || ''; return m === 'planned' || m === 'both'; })(),
     nutrition: !!($('pdf-inc-nutrition') || {}).checked,
     supp: !!($('pdf-inc-supp') || {}).checked,
     therapy: !!($('pdf-inc-therapy') || {}).checked
@@ -47743,9 +47833,11 @@ function openWorkoutPdfExportModal() {
     '</div></div>' +
     '<div id="pdf-pick-wrap" style="display:none;margin-bottom:12px;max-height:220px;overflow:auto;border:1px solid #222;padding:8px;border-radius:8px;">' +
     '<div id="pdf-pick-list"></div></div>' +
-    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Carichi</div>' +
-    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;color:#eee;"><input type="checkbox" id="pdf-inc-logged" checked> Includi i carichi già fatti</label>' +
-    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:12px;color:#eee;"><input type="checkbox" id="pdf-inc-planned"> Includi i carichi previsti (settimane successive)</label>' +
+    '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:8px;">COSA INCLUDERE NEI CARICHI (obbligatorio)</div>' +
+    '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;margin-bottom:8px;color:#eee;"><input type="radio" name="pdf-load-mode" value="logged"> <span>Solo dati già registrati (sedute fatte)</span></label>' +
+    '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;margin-bottom:8px;color:#eee;"><input type="radio" name="pdf-load-mode" value="planned"> <span>Solo carichi previsti / futuri</span></label>' +
+    '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;margin-bottom:8px;color:#eee;"><input type="radio" name="pdf-load-mode" value="both"> <span>Registrati e previsti</span></label>' +
+    '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;margin-bottom:12px;color:#eee;"><input type="radio" name="pdf-load-mode" value="none"> <span>Nessun carico (solo schema serie × reps)</span></label>' +
     '<div style="font-size:11px;color:#aaa;margin-bottom:10px;">Includi sezioni extra (se presenti nel programma):</div>' +
     '<label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;color:#eee;"><input type="checkbox" id="pdf-inc-nutrition"> Alimentazione</label>' +
     '<label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;color:#eee;"><input type="checkbox" id="pdf-inc-supp"> Integrazione</label>' +
@@ -47949,7 +48041,14 @@ function buildWorkoutPdfBytes(opts) {
     if (ansi.length <= maxChars) return s;
     return s.slice(0, Math.max(1, maxChars - 1)) + '.';
   }
-  function needSpace(h) { if (y - h < MB) { flushPage(); drawHeader(); } }
+  var headerDay = '';
+  function needSpace(h) {
+    if (y - h < MB) {
+      flushPage();
+      drawHeader();
+      if (headerDay) dayTitle(headerDay + '  ·  continua', null, true);
+    }
+  }
   function drawWatermark() {
     if (y < 380) return;
     cmds.unshift(
@@ -47997,8 +48096,8 @@ function buildWorkoutPdfBytes(opts) {
     txt('F1', 11, GOLD, ML + 12, y - 13, clipFit(label.toUpperCase(), CW - 20, 11));
     y -= barH + 12;
   }
-  function dayTitle(label, extra) {
-    needSpace(48);
+  function dayTitle(label, extra, skipNeed) {
+    if (!skipNeed) needSpace(48);
     y -= 14;
     var barH = 22;
     rct(ML, y - barH, CW, barH, '0.08 0.08 0.08');
@@ -48033,7 +48132,6 @@ function buildWorkoutPdfBytes(opts) {
     return { kcal: Math.round(kcal), p: Math.round(p), c: Math.round(c), f: Math.round(f) };
   }
 
-  var firstWeekDrawn = true;
   for (var wi = startW; wi <= endW; wi++) {
     var week = weeksList[wi - 1];
     if (!week) continue;
@@ -48045,21 +48143,16 @@ function buildWorkoutPdfBytes(opts) {
     if (!includedDays.length) continue;
     var weekNum = week.weekNumber || week.week || wi;
     headerWeek = 'Settimana ' + weekNum + (week.title ? ('  ·  ' + week.title) : '');
-    if (firstWeekDrawn) drawHeader();
-    else startFreshPage();
-    firstWeekDrawn = false;
-
-    var firstDayOfWeek = true;
     var dayTotal = days.length || 1;
     includedDays.forEach(function (item) {
       var day = item.day;
       var di = item.di;
-      if (!firstDayOfWeek) startFreshPage();
-      firstDayOfWeek = false;
+      startFreshPage();
       var dayLabel = (typeof sessionDisplayName === 'function')
         ? sessionDisplayName(day, di)
         : (day.name || day.title || day.day || ('Giorno ' + (di + 1)));
-      dayTitle(dayLabel + '  ·  Giorno ' + (di + 1) + '/' + dayTotal);
+      headerDay = dayLabel + '  ·  Giorno ' + (di + 1) + '/' + dayTotal;
+      dayTitle(headerDay);
 
       var list = day.exercises || day.rows || [];
       list.forEach(function (row, ei) {
@@ -48129,7 +48222,7 @@ function buildWorkoutPdfBytes(opts) {
   }
 
   headerWeek = '';
-  if (firstWeekDrawn) drawHeader();
+  headerDay = '';
 
   if (opts.nutrition && DATA.nutrition && Array.isArray(DATA.nutrition.days) && DATA.nutrition.days.length) {
     startSectionPage();
@@ -48147,11 +48240,12 @@ function buildWorkoutPdfBytes(opts) {
         dayH += 17;
         dayH += ((meal.foods || meal.items || []).length) * 12;
       });
-      if (ni > 0 && (y - dayH < MB)) startFreshPage();
+      startFreshPage();
       var macros = nutritionDayMacros(nd);
       var macroLine = (macros.kcal ? (macros.kcal + ' kcal') : '') +
         (macros.p || macros.c || macros.f ? ('  |  P ' + (macros.p || 0) + 'g  C ' + (macros.c || 0) + 'g  F ' + (macros.f || 0) + 'g') : '');
-      dayTitle((nd.day || ('Giorno ' + (ni + 1))) + '  ·  Giorno ' + (ni + 1) + '/' + nutrDays, macroLine);
+      headerDay = (nd.day || ('Giorno ' + (ni + 1))) + '  ·  Giorno ' + (ni + 1) + '/' + nutrDays;
+      dayTitle(headerDay, macroLine);
       (nd.meals || []).forEach(function (meal) {
         needSpace(16);
         txt('F1', 8, BLACK, ML + 4, y, clipFit(meal.name || 'Pasto', CW - 8, 8));
@@ -48312,6 +48406,10 @@ function shareOrSavePdfBlob(blob, filename, shareText) {
 }
 function exportWorkoutPdf() {
   const opts = collectWorkoutPdfExportOpts();
+  if (!opts.loadMode) {
+    alert('Scegli cosa includere nei carichi: già registrati, previsti, entrambi o solo schema.');
+    return;
+  }
   if (opts.scope === 'pick' && !(opts.pickedSessions && opts.pickedSessions.length)) {
     alert('Seleziona almeno una seduta da esportare.');
     return;
@@ -48396,7 +48494,7 @@ function renderReplacementOptions(query){
   if (DATA) DATA.exerciseDb = db;
   const groups = Object.entries(db || {}).map(([group, items]) => [
     group,
-    (items || []).filter(name => name !== replacementDraft.current && String(name).toLowerCase().includes(q))
+    (items || []).filter(name => name !== replacementDraft.current && exerciseNameMatchesQuery(name, q))
   ]).filter(([, items]) => items.length);
 
   const box = $('replace-options');
@@ -50163,7 +50261,7 @@ function renderStats(c){
       <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">DURATA</div><div style="font-size:18px;font-weight:900;">${durM}m ${durS}s</div></div>
         <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">CALORIE STIMATE</div><div style="font-size:18px;font-weight:900;">${snap.kcal} kcal</div></div>
-        <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">TONNELLAGGIO</div><div style="font-size:18px;font-weight:900;">${Math.round(snap.weight || 0)} kg</div></div>
+        <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">VOLUME SESSIONE</div><div style="font-size:18px;font-weight:900;">${Math.round(snap.weight || 0)} kg</div><div style="font-size:9px;color:#666;margin-top:4px;">Tonnellaggio alzato, non peso corporeo</div></div>
         <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">INTENSITÀ</div><div style="font-size:18px;font-weight:900;">${Math.round(snap.intensity || 0)} pts</div></div>
         <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">ESERCIZI</div><div style="font-size:18px;font-weight:900;">${snap.exercises}</div></div>
         <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">SERIE</div><div style="font-size:18px;font-weight:900;">${snap.sets}</div></div>
@@ -50180,9 +50278,9 @@ function renderStats(c){
     </div>
 
     <div class="card"><div class="card-header"><h2>Riepilogo Settimanale</h2></div><div style="padding:15px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>SETT</th><th>VOL (KG)</th><th>DELTA</th><th>INT (PTS)</th><th>DELTA</th><th>BW (KG)</th><th>PTS</th></tr></thead><tbody id="summary-body"></tbody></table></div></div>
-    <div class="card"><div class="card-header"><h2>Progressione Volume (kg)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="volChart"></canvas></div></div></div>
-    <div class="card"><div class="card-header"><h2>Volume Efficace (pts)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="rirChart"></canvas></div></div></div>
-    <div class="card"><div class="card-header"><h2>Andamento Peso Corporeo (kg)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="bwChart"></canvas></div></div></div>
+    <div class="card"><div class="card-header"><h2 id="vol-chart-title">Progressione Volume (kg) nel tempo</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="volChart"></canvas></div><div style="font-size:10px;color:#777;">Andamento del volume del gruppo selezionato, settimana per settimana.</div></div></div>
+    <div class="card"><div class="card-header"><h2>Volume Efficace (pts) nel tempo</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="rirChart"></canvas></div></div></div>
+    <div class="card"><div class="card-header"><h2>Andamento Peso Corporeo (kg)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="bwChart"></canvas></div><div style="font-size:10px;color:#777;">Solo pesi realmente registrati (check fisico o BW in scheda). N/D se assente.</div></div></div>
     <div style="height:120px;"></div>
   `;
   setTimeout(function () {
@@ -50225,10 +50323,15 @@ function drillStatsMuscle(group) {
     });
   }
   const label = (STATS_MUSCLE_CHIPS.find(function (x) { return x.id === group; }) || {}).label || (group === 'TOTAL' ? 'Generale' : group);
-  const uniq = Array.from(new Set(exercises)).slice(0, 12);
-  box.innerHTML = '<div style="color:#fff;font-weight:800;margin-bottom:4px;">' + esc(label) + '</div>' +
+  const uniq = Array.from(new Set(exercises)).slice(0, 16);
+  const vols = window.__statsMuscleVolumeByWeek || [];
+  const totalVol = vols.reduce(function (s, n) { return s + (Number(n) || 0); }, 0);
+  const weekBits = vols.map(function (n, i) { return 'W' + (i + 1) + ' ' + Math.round(Number(n) || 0) + ' kg'; }).join(' · ');
+  box.innerHTML = '<div style="color:#fff;font-weight:800;margin-bottom:4px;">Volume ' + esc(label) + '</div>' +
+    '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">' + Math.round(totalVol) + ' kg nel periodo</div>' +
+    (weekBits ? '<div style="margin-bottom:6px;color:#aaa;">' + esc(weekBits) + '</div>' : '') +
     '<div style="margin-bottom:6px;">Distretti: ' + list.map(function (x) { return esc(x); }).join(' · ') + '</div>' +
-    (uniq.length ? '<div>Esercizi: ' + uniq.map(esc).join(', ') + '</div>' : '<div>Nessun esercizio mappato nel programma attivo.</div>');
+    (uniq.length ? '<div>Esercizi usati per questo calcolo: ' + uniq.map(esc).join(', ') + '</div>' : '<div>Nessun esercizio di questo gruppo nel programma/log.</div>');
 }
 window.drillStatsMuscle = drillStatsMuscle;
 
@@ -50246,7 +50349,7 @@ function checkFisicoDraft() {
     const last = (store.bodyChecks || [])[store.bodyChecks.length - 1] || {};
     window.__checkFisicoDraft = {
       period: last.period || 'bisettimanale',
-      weight: last.weight || (store.profile && store.profile.weight) || '',
+      weight: last.weight || '',
       front: null,
       back: null,
       notes: '',
@@ -50263,13 +50366,53 @@ function checkFisicoDraft() {
   }
   return window.__checkFisicoDraft;
 }
-function logsInCheckPeriod(period) {
+function logsInCheckPeriod(period, rangeOpts) {
+  rangeOpts = rangeOpts || {};
+  const logs = store.logs || [];
+  if (rangeOpts.rangeMode === 'weeks') {
+    const a = Math.max(1, Number(rangeOpts.fromWeek) || 1);
+    const b = Math.max(1, Number(rangeOpts.toWeek) || a);
+    const lo = Math.min(a, b);
+    const hi = Math.max(a, b);
+    return logs.filter(function (row) {
+      const w = Number(row.week) || 0;
+      return w >= lo && w <= hi;
+    });
+  }
+  if (rangeOpts.rangeMode === 'dates') {
+    const from = Date.parse(rangeOpts.fromDate || '') || 0;
+    const to = Date.parse(rangeOpts.toDate || '') || Date.now();
+    const end = Math.max(from, to) + 86400000;
+    const start = Math.min(from, to);
+    return logs.filter(function (row) {
+      const t = Date.parse(row.at || '');
+      return t && t >= start && t < end;
+    });
+  }
   const days = checkFisicoPeriodMeta(period).days;
-  const since = Date.now() - days * 86400000;
-  return (store.logs || []).filter(function (row) {
+  const anchor = Date.parse(rangeOpts.anchorAt || '') || Date.now();
+  const since = anchor - days * 86400000;
+  return logs.filter(function (row) {
     const t = Date.parse(row.at || '');
-    return t && t >= since;
+    return t && t >= since && t <= anchor + 86400000;
   });
+}
+function onCheckFisicoPdfRangeMode() {
+  const mode = ((document.querySelector('input[name="cf-pdf-range"]:checked') || {}).value) || 'preset';
+  const weeks = $('cf-pdf-weeks-wrap');
+  const dates = $('cf-pdf-dates-wrap');
+  if (weeks) weeks.style.display = mode === 'weeks' ? 'block' : 'none';
+  if (dates) dates.style.display = mode === 'dates' ? 'block' : 'none';
+}
+function collectCheckFisicoPdfRange() {
+  const mode = ((document.querySelector('input[name="cf-pdf-range"]:checked') || {}).value) || 'preset';
+  return {
+    rangeMode: mode,
+    fromWeek: parseInt(($('cf-pdf-from-week') || {}).value, 10) || 1,
+    toWeek: parseInt(($('cf-pdf-to-week') || {}).value, 10) || 1,
+    fromDate: (($('cf-pdf-from-date') || {}).value) || '',
+    toDate: (($('cf-pdf-to-date') || {}).value) || ''
+  };
 }
 function sortLogsChronological(rows) {
   return (rows || []).slice().sort(function (a, b) {
@@ -50282,8 +50425,8 @@ function sortLogsChronological(rows) {
     return (Number(a && a.day) || 0) - (Number(b && b.day) || 0);
   });
 }
-function summarizeCheckLogs(period) {
-  const rows = sortLogsChronological(logsInCheckPeriod(period));
+function summarizeCheckLogs(period, rangeOpts) {
+  const rows = sortLogsChronological(logsInCheckPeriod(period, rangeOpts));
   const muscles = {};
   let sets = 0, tonnage = 0, kcal = 0, intensity = 0;
   rows.forEach(function (row) {
@@ -50682,6 +50825,12 @@ function openCheckFisicoPdfModal(mode) {
     const focused = focusId ? (store.bodyChecks || []).find(function (c) { return c && c.id === focusId; }) : null;
     notes.value = (focused && focused.notes) || d.notes || '';
   }
+  const weeksCount = (DATA && Array.isArray(DATA.weeks) && DATA.weeks.length) ? DATA.weeks.length : 16;
+  const fromW = $('cf-pdf-from-week');
+  const toW = $('cf-pdf-to-week');
+  if (fromW) { fromW.max = String(weeksCount); fromW.value = fromW.value || '1'; }
+  if (toW) { toW.max = String(weeksCount); if (!toW.value || Number(toW.value) < 1) toW.value = String(Math.min(4, weeksCount)); }
+  onCheckFisicoPdfRangeMode();
   m.style.display = 'flex';
 }
 function exportCheckFisicoPdf() {
@@ -50804,13 +50953,20 @@ async function confirmCheckFisicoPdfExport() {
     if (typeof showToast === 'function') showToast('Nessun check da esportare', 'danger');
     return;
   }
+  const range = collectCheckFisicoPdfRange();
   const pack = {
     trainingMode: d.pdfTraining === 'detailed' ? 'detailed' : 'summary',
     includeNutrition: d.pdfNutrition !== false,
     includeMacros: d.pdfMacros !== false,
     includeSupp: d.pdfSupp !== false,
     includeTherapy: d.pdfTherapy !== false,
-    notes: modalNotes || entry.notes || ''
+    notes: modalNotes || entry.notes || '',
+    rangeMode: range.rangeMode,
+    fromWeek: range.fromWeek,
+    toWeek: range.toWeek,
+    fromDate: range.fromDate,
+    toDate: range.toDate,
+    anchorAt: entry.at
   };
   const front = focusId ? await getDocumentFile('bodycheck_front_' + entry.id) : (snapFront || await getDocumentFile('bodycheck_front_' + entry.id));
   const back = focusId ? await getDocumentFile('bodycheck_back_' + entry.id) : (snapBack || await getDocumentFile('bodycheck_back_' + entry.id));
@@ -50986,14 +51142,20 @@ function collectCheckFisicoPdfExtraLines(entry, pack) {
   if (pack.notes) addBlock('NOTE ATLETA', [pack.notes]);
   if (pack.trainingMode === 'detailed') {
     const body = [];
-    const logs = sortLogsChronological(logsInCheckPeriod(period));
+    const logs = sortLogsChronological(logsInCheckPeriod(period, pack));
     if (!logs.length) body.push('Nessuna sessione finalizzata nel periodo.');
     logs.forEach(function (row) {
       const date = String(row.at || '').replace('T', ' ').slice(0, 16);
-      const title = (row.title || 'Allenamento') + '  ·  ' + date + '  ·  W' + (row.week || '?') + ' S' + ((row.day || 0) + 1);
-      body.push(title);
-      if (row.tonnage) body.push((row.sets || 0) + ' serie   ' + (row.tonnage || 0) + ' kg');
-      collectLoggedSessionDetailLines(Number(row.week) || 1, Number(row.day) || 0).forEach(function (l) { body.push(l); });
+      const week = Number(row.week) || 1;
+      const day = Number(row.day) || 0;
+      const sess = DATA && DATA.weeks && DATA.weeks[week - 1] && ((DATA.weeks[week - 1].sessions || DATA.weeks[week - 1].days || [])[day]);
+      const dayName = (typeof sessionDisplayName === 'function' && sess) ? sessionDisplayName(sess, day) : (row.title || 'Allenamento');
+      body.push('SETTIMANA ' + week);
+      body.push('GIORNO ' + (day + 1) + '  ·  ' + dayName + (date ? ('  ·  ' + date) : ''));
+      if (row.tonnage) body.push((row.sets || 0) + ' serie   ' + (row.tonnage || 0) + ' kg  volume');
+      body.push('Esercizio / Serie / Carico / Ripetizioni / Intensita');
+      collectLoggedSessionDetailLines(week, day).forEach(function (l) { body.push(l); });
+      body.push('--- fine seduta ---');
       body.push('');
     });
     addBlock('ALLENAMENTO DETTAGLIATO', body);
@@ -51094,7 +51256,7 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl, pack) {
   const DARK = '0.12 0.12 0.12';
   const GRAY = '0.4 0.4 0.4';
   const period = checkFisicoPeriodMeta(entry.period);
-  const sum = summarizeCheckLogs(entry.period);
+  const sum = summarizeCheckLogs(entry.period, pack);
   const athlete = (store.profile && store.profile.name) || (store.account && store.account.name) || 'Atleta';
   const dateStr = new Date(entry.at || Date.now()).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
   const cmds = [];
@@ -51108,7 +51270,12 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl, pack) {
   txt('F2', 9, '0.75 0.75 0.75', ML + 108, H - 36, 'CHECK FISICO');
   txt('F2', 8, '0.7 0.7 0.7', ML + 108, H - 50, athlete + '  |  ' + dateStr);
   let y = H - 86;
-  txt('F1', 12, DARK, ML, y, 'Peso ' + entry.weight + ' kg   ·   ' + period.label + ' (' + period.days + ' giorni)');
+  const rangeLabel = (pack && pack.rangeMode === 'weeks')
+    ? ('Settimane ' + Math.min(Number(pack.fromWeek) || 1, Number(pack.toWeek) || 1) + '–' + Math.max(Number(pack.fromWeek) || 1, Number(pack.toWeek) || 1))
+    : ((pack && pack.rangeMode === 'dates' && (pack.fromDate || pack.toDate))
+      ? ((pack.fromDate || '…') + ' – ' + (pack.toDate || '…'))
+      : (period.label + ' (' + period.days + ' giorni)'));
+  txt('F1', 12, DARK, ML, y, 'Peso ' + entry.weight + ' kg   ·   ' + rangeLabel);
   y -= 18;
   txt('F2', 9, GRAY, ML, y, 'Sessioni ' + sum.sessions + '   Serie ' + sum.sets + '   Tonnellaggio ' + sum.tonnage + ' kg   kcal ' + sum.kcal);
   y -= 16;
@@ -51160,10 +51327,20 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl, pack) {
   txt('F2', 6, GRAY, ML, 40, 'Documento generato da NURVAN. Non sostituisce il parere medico o del coach.');
   const extraLines = collectCheckFisicoPdfExtraLines(entry, pack || {});
   const extraPages = [];
-  const perPage = 36;
-  for (let i = 0; i < extraLines.length; i += perPage) {
-    extraPages.push(extraLines.slice(i, i + perPage));
-  }
+  let pageBuf = [];
+  let pageY = H - 74;
+  extraLines.forEach(function (line) {
+    const isDay = !!(line && (line.indexOf('SETTIMANA ') === 0 || line.indexOf('GIORNO ') === 0));
+    const need = isDay ? 36 : 16;
+    if ((isDay && pageBuf.length && pageY - need < 56) || pageY - 16 < 48) {
+      extraPages.push(pageBuf);
+      pageBuf = [];
+      pageY = H - 74;
+    }
+    pageBuf.push(line);
+    pageY -= (isDay ? 20 : 16);
+  });
+  if (pageBuf.length) extraPages.push(pageBuf);
   const stream = cmds.join('\n');
   const objs = [];
   function addObj(body) { objs.push(typeof body === 'string' ? pdfLatin1(body) : body); return objs.length; }
@@ -51188,10 +51365,14 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl, pack) {
   extraPages.forEach(function (pageLines, pi) {
     const extraCmds = [];
     extraCmds.push('BT /F1 12 Tf ' + GOLD + ' rg 1 0 0 1 ' + ML + ' ' + (H - 50) + ' Tm (' + pdfEsc('QUADRO PER IL COACH  ·  p. ' + (pi + 2)) + ') Tj ET');
-    pageLines.forEach(function (line, li) {
-      const isTitle = line && line === line.toUpperCase() && line.length > 3 && line.indexOf('  ') < 0;
-      const font = (isTitle || (line && line.indexOf('Allenamento') === 0) || (line && line.indexOf('ALLENAMENTO') === 0)) ? 'F1' : 'F2';
-      extraCmds.push('BT /' + font + ' 8 Tf ' + DARK + ' rg 1 0 0 1 ' + ML + ' ' + (H - 74 - li * 18) + ' Tm (' + pdfEsc(line) + ') Tj ET');
+    let ly = H - 74;
+    pageLines.forEach(function (line) {
+      const isDay = !!(line && (line.indexOf('SETTIMANA ') === 0 || line.indexOf('GIORNO ') === 0));
+      const isTitle = isDay || (line && (line.indexOf('ALLENAMENTO') === 0 || line.indexOf('NOTE') === 0 || line.indexOf('PIANO') === 0 || line.indexOf('ADERENZA') === 0 || line.indexOf('INTEGRAZIONE') === 0 || line.indexOf('TERAPIA') === 0 || line.indexOf('MODIFICHE') === 0));
+      const font = isTitle ? 'F1' : 'F2';
+      const size = isDay ? 11 : (isTitle ? 10 : 8);
+      extraCmds.push('BT /' + font + ' ' + size + ' Tf ' + (isDay ? GOLD : DARK) + ' rg 1 0 0 1 ' + ML + ' ' + ly + ' Tm (' + pdfEsc(line) + ') Tj ET');
+      ly -= isDay ? 20 : 16;
     });
     const extraStream = extraCmds.join('\n');
     contentIds.push(addStreamObj('<< /Length ' + extraStream.length + ' >>', pdfLatin1(extraStream)));
@@ -51239,6 +51420,15 @@ window.analyzeCheckFisicoWithCoach = analyzeCheckFisicoWithCoach;
 window.sendCheckFisicoToCoach = sendCheckFisicoToCoach;
 window.exportCheckFisicoPdf = exportCheckFisicoPdf;
 
+function recordedBodyWeightForWeek(week) {
+  const w = Number(week);
+  const fromBw = parseFloat(store && store.bw && store.bw[w]);
+  if (Number.isFinite(fromBw) && fromBw > 0) return fromBw;
+  const checks = (store.bodyChecks || []).filter(function (c) { return Number(c.weight) > 0; });
+  if (!checks.length) return null;
+  // Map a check to the training week stored on save (store.bw) — without that, do not invent a week mapping.
+  return null;
+}
 function renderSimpleChart(canvasId, data, color, type='line') {
   const canvas = $(canvasId);
   if(!canvas) return;
@@ -51349,7 +51539,7 @@ function renderStatsData(){
       const rows = (store.logs || []).filter(function (row) { return Number(row.week) === w; });
       const wV = rows.reduce(function (s, row) { return s + (Number(row.tonnage) || 0); }, 0);
       const wR = rows.reduce(function (s, row) { return s + (Number(row.intensity) || 0); }, 0);
-      vD.push(wV); rD.push(wR); bwD.push(parseFloat(store.bw[w]) || null); pD.push(wV > 0 && store.bw[w] ? wV / store.bw[w] : 0);
+      vD.push(wV); rD.push(wR); bwD.push(recordedBodyWeightForWeek(w)); pD.push(wV > 0 && recordedBodyWeightForWeek(w) ? wV / recordedBodyWeightForWeek(w) : 0);
     }
   } else {
   for(let w = 1; w <= weeksCount; w++){
@@ -51416,7 +51606,7 @@ function renderStatsData(){
       });
     });
 
-    const bw = parseFloat(store.bw[w]) || null;
+    const bw = recordedBodyWeightForWeek(w);
     vD.push(wV);
     rD.push(wR);
     bwD.push(bw);
@@ -51434,15 +51624,24 @@ function renderStatsData(){
       <td class="${dV>=0?'delta-pos':'delta-neg'}">${dV>=0?'+':''}${Math.round(dV)}</td>
       <td>${Math.round(rD[i])}</td>
       <td class="${dI>=0?'delta-pos':'delta-neg'}">${dI>=0?'+':''}${Math.round(dI)}</td>
-      <td>${bwD[i] || '--'}</td>
+      <td>${bwD[i] != null ? bwD[i] : 'N/D'}</td>
       <td><b>${Math.round(pD[i])}</b></td>
     </tr>`;
   });
   if($('summary-body')) $('summary-body').innerHTML = tH;
 
+  const groupLabel = (MACRO_MUSCLE_GROUPS.find(function (g) { return g.id === selectedGroup; }) || {}).label || 'generale';
+  const titleEl = $('vol-chart-title');
+  if (titleEl) titleEl.textContent = selectedGroup === 'TOTAL' ? 'Progressione Volume (kg) nel tempo' : ('Volume ' + groupLabel + ' (kg) nel tempo');
+  if (!bwD.some(function (v) { return v != null && Number(v) > 0; })) {
+    const checks = (store.bodyChecks || []).filter(function (c) { return Number(c.weight) > 0; }).sort(function (a, b) { return (Date.parse(a.at || '') || 0) - (Date.parse(b.at || '') || 0); });
+    if (checks.length) bwD = checks.map(function (c) { return Number(c.weight); });
+  }
   renderSimpleChart('volChart', vD, '#d4af37', 'line');
   renderSimpleChart('rirChart', rD, '#ff4d4d', 'line');
   renderSimpleChart('bwChart', bwD, '#54a0ff', 'bar');
+  window.__statsMuscleVolumeByWeek = vD;
+  window.__statsMuscleSelected = selectedGroup;
 }
 
 function renderAI(c){
@@ -52518,7 +52717,7 @@ async function askAIInner(q0, opts){
         intensityType: store.prefs && store.prefs.intensityType,
         weekIntensity: store.prefs && store.prefs.weekIntensity,
         prefs: { intensityType: store.prefs && store.prefs.intensityType },
-        profile: store.profile || {},
+        profile: store.profile ? { name: store.profile.name || store.profile.first_name || '', goal: store.profile.goal || store.profile.primary_goal || null, weight: Number(store.profile.weight) > 0 ? Number(store.profile.weight) : null } : {},
         language: langCode,
         athleteGoals: (store.profile && (store.profile.goal || store.profile.primary_goal)) || null,
         performanceSummary: isSessionReview ? (window.__sessionCoachFallback && window.__sessionCoachFallback.logEntry) : performanceSummary,
@@ -52535,9 +52734,12 @@ async function askAIInner(q0, opts){
     if (!isSessionReview) {
       chatBody.context.nutrition = DATA && DATA.nutrition && DATA.nutrition.days ? { days: DATA.nutrition.days.length } : null;
       chatBody.context.supplementation = DATA && DATA.supplementation && DATA.supplementation.items ? { items: DATA.supplementation.items.length } : null;
-      if (store.prefs && store.prefs.shareMedicalWithCoach) {
-        chatBody.context.therapy = DATA && DATA.therapy ? DATA.therapy : null;
-        chatBody.context.exams = DATA && DATA.exams ? DATA.exams : null;
+      if (store.prefs && store.prefs.shareMedicalWithCoach && DATA && DATA.therapy && DATA.therapy.medications) {
+        chatBody.context.therapy = {
+          medications: DATA.therapy.medications.slice(0, 8).map(function (m) {
+            return { name: m.name || m.medication, dose: m.dose || '' };
+          })
+        };
       }
     }
     if (opts.checkFisico && opts.photosOnly) {
@@ -52574,8 +52776,9 @@ async function askAIInner(q0, opts){
     const payload = await readApiJson(response);
     if(requestToken !== coachRequestToken) return;
     if (!response.ok || payload.ok === false) {
-      const err = new Error(payload.error || 'Coach AI error');
+      const err = new Error(payload.details || payload.error || 'Coach AI error');
       err.code = payload.code || '';
+      err.status = response.status;
       throw err;
     }
     const reply = String(payload.reply || payload.message || payload.response || '').trim();
@@ -53376,6 +53579,8 @@ if (typeof window !== 'undefined') {
   window.openAddSupplementModal = openAddSupplementModal;
   window.closeAddSupplementModal = closeAddSupplementModal;
   window.saveSupplementItem = saveSupplementItem;
+  window.editSupplementItem = editSupplementItem;
+  window.onCheckFisicoPdfRangeMode = onCheckFisicoPdfRangeMode;
   window.filterSuppDb = filterSuppDb;
   window.filterSupplementDb = filterSuppDb;
   window.selectSuppFromDb = selectSuppFromDb;
@@ -57211,25 +57416,15 @@ function isStandalonePwaLocal() {
 function applyInviteManifestStartUrl(token) {
   if (!token) return;
   try {
+    const href = '/c/' + encodeURIComponent(token) + '/manifest.webmanifest';
     const existing = document.querySelector('link[rel="manifest"]');
-    const href = existing ? existing.getAttribute('href') : 'manifest.webmanifest';
-    fetch(href, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (man) {
-      const start = '/c/' + encodeURIComponent(token);
-      const next = Object.assign({}, man, { start_url: start, scope: '/', id: start });
-      const blob = new Blob([JSON.stringify(next)], { type: 'application/manifest+json' });
-      const url = URL.createObjectURL(blob);
-      if (existing) {
-        if (existing.__cpBlob) try { URL.revokeObjectURL(existing.__cpBlob); } catch (_) {}
-        existing.__cpBlob = url;
-        existing.setAttribute('href', url);
-      } else {
-        const link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = url;
-        link.__cpBlob = url;
-        document.head.appendChild(link);
-      }
-    }).catch(function () {});
+    if (existing) existing.setAttribute('href', href);
+    else {
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = href;
+      document.head.appendChild(link);
+    }
   } catch (_) {}
 }
 
@@ -59166,12 +59361,22 @@ async function bootCoachPractice() {
       } else if (!urlToken) {
         store.clientShell = true;
         store.inviteToken = store.inviteToken || shell.inviteToken;
+        try {
+          if (typeof history !== 'undefined' && history.replaceState && location && !/^\/c\//.test(location.pathname || '')) {
+            history.replaceState(null, '', '/c/' + encodeURIComponent(shell.inviteToken) + (location.search || '') + (location.hash || ''));
+          }
+        } catch (_) {}
       }
     }
   } catch (_) {}
-  const token = urlToken || store.inviteToken;
+  const token = urlToken || store.inviteToken || detectInviteToken();
   if (token) {
     store.inviteToken = token;
+    store.clientShell = true;
+    try {
+      localStorage.setItem('GS_CLIENT_SHELL', JSON.stringify({ inviteToken: token, locked: true, at: Date.now() }));
+    } catch (_) {}
+    try { applyInviteManifestStartUrl(token); } catch (_) {}
   }
   // Athlete JWT bound to a different invite → force re-login for this link
   if (urlToken && typeof isAthleteRole === 'function' && isAthleteRole() && store.accountToken) {
@@ -59400,7 +59605,7 @@ function wrapPracticeHooks() {
       _render();
       try {
         const c = document.getElementById('view-container');
-        if (c && currentView === 'home' && typeof isAthleteRole === 'function' && isAthleteRole()) {
+        if (c && currentView === 'home' && ((typeof isAthleteRole === 'function' && isAthleteRole()) || (typeof isClientShellLocked === 'function' && isClientShellLocked()))) {
           if (!DATA || !DATA.weeks || !DATA.weeks.length) c.innerHTML = athleteHomeHtml();
           else if (!c.querySelector('[data-cp-reload]')) {
             const hold = document.createElement('div');

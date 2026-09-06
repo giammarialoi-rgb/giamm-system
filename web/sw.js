@@ -12,7 +12,8 @@ const PRECACHE = [
   './muscle-male-front.png',
   './muscle-male-back.png',
   './muscle-female-front.png',
-  './muscle-female-back.png'
+  './muscle-female-back.png',
+  './exercise-catalog-extra.js'
 ];
 
 self.addEventListener('install', (event) => {
