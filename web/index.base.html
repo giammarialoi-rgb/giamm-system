@@ -1926,8 +1926,10 @@ async function withBusy(fn, label, opts) {
     try { hideBusyOverlay(); } catch (_) {}
   }, maxMs);
   try {
+    if (typeof store !== 'undefined' && store) store.__cpBusy = true;
     return await Promise.resolve().then(fn);
   } finally {
+    if (typeof store !== 'undefined' && store) store.__cpBusy = false;
     if (timer) clearTimeout(timer);
     hideBusyOverlay();
   }
@@ -3606,7 +3608,7 @@ function scheduleAccountSync(){
       method: 'POST',
       body: JSON.stringify({ data: accountPayload({ includeProgram: false }) })
     }).then(function (response) { return readApiJson(response); }).catch(function () {
-      if (typeof enqueueClientOutbox === 'function') enqueueClientOutbox({ type: 'account-sync', note: 'retry' });
+      if (typeof enqueueClientOutbox === 'function') enqueueClientOutbox({ id: 'account-sync', type: 'account-sync', note: 'retry' });
     });
   }, 1500);
 }
@@ -14164,9 +14166,9 @@ function openMaxTestPlannerModal(preselectExIdx) {
     const n = parseInt(weekSel.value, 10) || 0;
     const el = $('max-test-warn');
     if (!el) return;
-    if (n <= 1) el.textContent = 'Sconsigliato: troppo presto per un test massimale serio. Preferisci almeno 3–4 settimane di preparazione.';
-    else if (n === 2) el.textContent = 'Attenzione: 2 settimane sono al limite. Meglio 3+ se possibile.';
-    else el.textContent = 'Ok: prepareremo taper e intensità verso il test.';
+    if (n <= 1) el.textContent = 'Sconsigliato: troppo presto per un 1RM. Se insisti applicheremo comunque un taper compresso (niente 8–12 nella settimana del test). Cit. Pritchard / Travis JSCR 2021.';
+    else if (n === 2) el.textContent = 'Attenzione: 2 settimane sono al limite (volume −30–70%, ultimo heavy stacco 7–10g). Se insisti il taper resta compresso.';
+    else el.textContent = 'Ok: taper per alzata (volume giù, intensità alta ~≥85%). Set tipici: squat 3×2, panca 3×3, stacco 3×1.';
   };
   weekSel.onchange = updateWarn;
   updateWarn();
@@ -14198,6 +14200,7 @@ function confirmMaxTestPlan() {
   if (!store.maxTests) store.maxTests = {};
   store.maxTests[key] = {
     exercise: name,
+    originalName: row.name || row.exercise || name,
     exIdx: exIdx,
     dayIdx: currentDay,
     fromWeek: currentWeek,
@@ -14213,41 +14216,238 @@ function confirmMaxTestPlan() {
   render();
 }
 
+function classifyMaxTestLift(name) {
+  const s = String(name || '').toLowerCase();
+  if (/stacco|deadlift|dead lift/.test(s) && !/rumeno|rdl|romanian/.test(s)) return 'deadlift';
+  if (/squat|accosciata/.test(s)) return 'squat';
+  if (/military|overhead|ohp|lento avanti|shoulder press|spinta in alto|military press/.test(s)) return 'military';
+  if (/trazion|pull[- ]?up|chin[- ]?up/.test(s)) return 'pullup';
+  if (/panca|bench/.test(s)) return 'bench';
+  return 'other';
+}
+function maxTestTaperScheme(lift, weeksToTest) {
+  const n = Number(weeksToTest);
+  if (n === 0) {
+    if (lift === 'deadlift') return { sets: 3, reps: 1, rir: 0, applySets: true, note: 'TEST 1RM stacco: warm-up breve + singole. Ultimo heavy 7–10g prima (Travis / Pritchard).' };
+    if (lift === 'squat') return { sets: 4, repsSeq: [2, 2, 1, 1], rir: 0, applySets: true, note: 'TEST 1RM squat: doppie tecniche poi singole. Non cercare volume.' };
+    if (lift === 'bench' || lift === 'military' || lift === 'pullup') return { sets: 4, repsSeq: [3, 2, 1, 1], rir: 0, applySets: true, note: 'TEST 1RM: triple/doppie di rampa + singole. Cessazione heavy <7g (panca).' };
+    return { sets: 4, repsSeq: [3, 2, 1, 1], rir: 0, applySets: true, note: 'TEST 1RM: warm-up progressivo + singole tecniche. Non cercare volume.' };
+  }
+  if (n === 1) {
+    if (lift === 'deadlift') return { sets: 3, reps: 1, rir: 2, applySets: true, note: 'Taper stacco: 3×1, volume −50–70%. Ultimo heavy già passato (7–10g). Pritchard / PMC7552788.' };
+    if (lift === 'squat') return { sets: 3, reps: 2, rir: 2, applySets: true, note: 'Taper squat: 3×2, volume giù, intensità alta. Ultimo heavy ~5–10g prima del test.' };
+    if (lift === 'bench') return { sets: 3, reps: 3, rir: 2, applySets: true, note: 'Taper panca: 3×3 (~≥85%), volume −30–50%. Recovery più breve dello stacco.' };
+    if (lift === 'military' || lift === 'pullup') return { sets: 3, reps: 3, rir: 2, applySets: true, note: 'Taper come panca: 3×3, volume ridotto. Recovery più breve dello stacco.' };
+    return { sets: 3, reps: 3, rir: 2, applySets: true, note: 'Taper 1RM: volume −30–70%, intensità alta, niente 8–12.' };
+  }
+  if (n === 2) {
+    if (lift === 'deadlift') return { sets: 3, reps: 2, rir: 2, applySets: true, note: 'Ultimo heavy stacco (7–10g dal test): 3×2, poi cessazione lunga.' };
+    if (lift === 'squat') return { sets: 3, reps: 3, rir: 2, applySets: true, note: 'Pre-taper squat: 3×3, volume −30–40%, intensità alta.' };
+    if (lift === 'bench' || lift === 'military' || lift === 'pullup') return { sets: 3, reps: 3, rir: 2, applySets: true, note: 'Pre-taper: volume −30%, tieni intensità. Panca/OHP/trazioni sopportano volume più a lungo.' };
+    return { sets: 3, reps: 3, rir: 2, applySets: true, note: 'Avvicinamento: volume ridotto, RIR 2, niente accumulo 8–12.' };
+  }
+  return { applySets: false, rir: 3, note: 'Avvicinamento 1RM: tecnica pulita, RIR 2–3. Il taper parte 1–2 settimane prima.' };
+}
+function applyMaxTestSchemeToExercise(ex, scheme) {
+  if (!ex || !scheme) return;
+  if (scheme.rir != null) ex.rirTarget = scheme.rir;
+  if (scheme.rir === 0) ex.rpeTarget = 10;
+  if (scheme.note) ex.notes = [ex.notes || '', scheme.note].filter(Boolean).join(' | ');
+  if (!scheme.applySets) return;
+  const n = Math.max(1, Number(scheme.sets) || 3);
+  const seq = Array.isArray(scheme.repsSeq) ? scheme.repsSeq : null;
+  const reps = seq ? seq[seq.length - 1] : (scheme.reps != null ? scheme.reps : 3);
+  ex.repsTarget = seq ? seq[0] : reps;
+  ex.reps = seq ? (seq[0] + (seq.length > 1 ? ('–' + seq[seq.length - 1]) : '')) : reps;
+  ex.reps_target = ex.repsTarget;
+  ex.scheme = n + '×' + (seq ? seq.join('/') : reps);
+  function rowFor(i) {
+    const r = seq ? (seq[Math.min(i, seq.length - 1)] || reps) : reps;
+    return { order: i + 1, set_number: i + 1, reps: r, target_reps: r, rir: scheme.rir };
+  }
+  if (Array.isArray(ex.sets) && ex.sets.length) {
+    const next = [];
+    for (let i = 0; i < n; i++) {
+      next.push(Object.assign({}, ex.sets[i] || ex.sets[ex.sets.length - 1] || {}, rowFor(i)));
+    }
+    ex.sets = next;
+  } else if (typeof ex.sets === 'number' || ex.sets_count != null) {
+    ex.sets_count = n;
+    if (typeof ex.sets === 'number') ex.sets = n;
+  } else {
+    ex.sets = [];
+    for (let i = 0; i < n; i++) ex.sets.push(rowFor(i));
+  }
+}
 function applyMaxTestAdaptation(key, plan) {
   if (!plan || !DATA || !DATA.weeks) return;
-  const nameLc = maxTestKey(plan.exercise || key);
+  const aliases = [plan.exercise || key, plan.originalName, key].map(maxTestKey).filter(Boolean);
+  const lift = classifyMaxTestLift(plan.exercise || plan.originalName || key);
   DATA.weeks.forEach(function (week, wi) {
     const weekNum = week.weekNumber || week.week || (wi + 1);
     const days = week.sessions || week.days || [];
-    days.forEach(function (day) {
+    days.forEach(function (day, di) {
+      if (typeof isTrainingDayFinalized === 'function' && isTrainingDayFinalized(weekNum, di)) return;
       const list = day.exercises || day.rows || [];
-      list.forEach(function (ex) {
-        const exName = maxTestKey(ex.name || ex.exercise || '');
-        if (exName !== nameLc) return;
+      list.forEach(function (ex, ei) {
+        const sub = store && store.subs && store.subs['w' + weekNum + '_d' + di + '_e' + ei];
+        const names = [sub, ex.name, ex.exercise].map(maxTestKey).filter(Boolean);
+        const nameHit = names.some(function (n) { return aliases.indexOf(n) >= 0; });
+        const liftHit = lift !== 'other' && classifyMaxTestLift(sub || ex.name || ex.exercise) === lift && ei === plan.exIdx;
+        if (!nameHit && !liftHit) return;
+        if (typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(weekNum, di, ei)) return;
         const weeksToTest = plan.targetWeek - weekNum;
         if (weeksToTest < 0) return;
-        if (weeksToTest === 0) {
-          ex.notes = [ex.notes || '', 'TEST 1RM: warm-up progressivo + singole tecniche. Non cercare volume.'].filter(Boolean).join(' | ');
-          ex.rirTarget = 0;
-          ex.rpeTarget = 10;
-          if (Array.isArray(ex.sets) && ex.sets.length) {
-            ex.sets = ex.sets.slice(0, Math.min(ex.sets.length, 5)).map(function (s, i) {
-              const copy = Object.assign({}, s);
-              if (i >= ex.sets.length - 2) { copy.reps = 1; copy.target_reps = 1; copy.rir = 0; }
-              return copy;
-            });
-          }
-        } else if (weeksToTest === 1) {
-          ex.notes = [ex.notes || '', 'Pre-test: volume ridotto, intensità alta, RIR 1–2.'].filter(Boolean).join(' | ');
-          if (ex.rirTarget != null) ex.rirTarget = Math.max(1, Number(ex.rirTarget) - 1);
-        } else if (weeksToTest <= 3) {
-          ex.notes = [ex.notes || '', 'Avvicinamento 1RM: tecnica pulita, RIR 2–3.'].filter(Boolean).join(' | ');
-        }
+        applyMaxTestSchemeToExercise(ex, maxTestTaperScheme(lift, weeksToTest));
       });
     });
   });
 }
 
+function pdfSessionKey(wi, di) {
+  return 'w' + wi + '_d' + di;
+}
+function pdfExerciseDisplayName(wi, di, ei, row) {
+  return (store && store.subs && store.subs['w' + wi + '_d' + di + '_e' + ei]) || (row && (row.name || row.exercise)) || '—';
+}
+function workoutPdfScopeBounds(opts) {
+  const weeksList = (DATA && DATA.weeks) || [];
+  const scope = (opts && opts.scope) || 'week';
+  let startW = 1;
+  let endW = weeksList.length;
+  if (scope === 'day' || scope === 'week') { startW = currentWeek; endW = currentWeek; }
+  else if (scope === '2weeks') { startW = currentWeek; endW = Math.min(weeksList.length, currentWeek + 1); }
+  else if (scope === '4weeks') { startW = currentWeek; endW = Math.min(weeksList.length, currentWeek + 3); }
+  else if (scope === 'range') {
+    startW = Math.max(1, Number(opts.fromWeek) || 1);
+    endW = Math.min(weeksList.length, Number(opts.toWeek) || weeksList.length);
+    if (endW < startW) { const t = startW; startW = endW; endW = t; }
+  } else {
+    startW = 1;
+    endW = weeksList.length;
+  }
+  return { startW: startW, endW: endW, scope: scope };
+}
+function pdfIncludeSession(opts, wi, di) {
+  const scope = (opts && opts.scope) || 'week';
+  if (scope === 'day') return wi === currentWeek && di === currentDay;
+  if (scope === 'range') {
+    const fromW = Number(opts.fromWeek) || 1;
+    const fromD = Number(opts.fromDay) || 0;
+    const toW = Number(opts.toWeek) || fromW;
+    const toD = Number(opts.toDay) || 99;
+    const a = fromW * 100 + fromD;
+    const b = toW * 100 + toD;
+    const cur = wi * 100 + di;
+    return cur >= Math.min(a, b) && cur <= Math.max(a, b);
+  }
+  if (scope === 'pick') {
+    const keys = (opts && opts.pickedSessions) || [];
+    return keys.indexOf(pdfSessionKey(wi, di)) >= 0;
+  }
+  return true;
+}
+function pdfSetLoadDisplay(opts, wi, di, ei, s, row) {
+  const includeLogged = !opts || opts.includeLogged !== false;
+  const includePlanned = !!(opts && opts.includePlanned);
+  const base = 'w' + wi + '_d' + di + '_e' + ei + '_s' + s;
+  const logged = store && store.data ? store.data[base + '_load'] : undefined;
+  const hasLogged = includeLogged && logged !== undefined && logged !== '' && logged != null;
+  let planned = '';
+  if (includePlanned) {
+    if (row && Array.isArray(row.sets) && row.sets[s - 1]) {
+      planned = row.sets[s - 1].load || row.sets[s - 1].target_load || '';
+    }
+    if ((planned === '' || planned == null) && row) planned = row.plannedLoad || '';
+    if ((planned === '' || planned == null) && typeof suggestedLoadForSet === 'function') {
+      const prevW = currentWeek;
+      const prevD = currentDay;
+      currentWeek = wi;
+      currentDay = di;
+      const sugg = suggestedLoadForSet(ei, s, row || {});
+      currentWeek = prevW;
+      currentDay = prevD;
+      if (Number(sugg) > 0) planned = sugg;
+    }
+  }
+  if (hasLogged && includePlanned && planned !== '' && planned != null && String(planned) !== String(logged)) {
+    return String(logged) + ' (~' + planned + ')';
+  }
+  if (hasLogged) return String(logged);
+  if (includePlanned && planned !== '' && planned != null) return '~' + planned;
+  return '—';
+}
+function onWorkoutPdfScopeChange() {
+  const scope = (($('pdf-scope') || {}).value) || 'week';
+  const range = $('pdf-range-wrap');
+  const pick = $('pdf-pick-wrap');
+  if (range) range.style.display = scope === 'range' ? 'block' : 'none';
+  if (pick) pick.style.display = scope === 'pick' ? 'block' : 'none';
+}
+function onWorkoutPdfRangeWeekChange(which) {
+  const weeks = (DATA && DATA.weeks) || [];
+  const weekEl = $(which === 'to' ? 'pdf-to-week' : 'pdf-from-week');
+  const dayEl = $(which === 'to' ? 'pdf-to-day' : 'pdf-from-day');
+  const wi = parseInt((weekEl || {}).value, 10) || 1;
+  const w = weeks[wi - 1];
+  const days = (w && (w.sessions || w.days)) || [];
+  if (!dayEl) return;
+  const keep = dayEl.value;
+  dayEl.innerHTML = days.map(function (d, i) {
+    const name = (typeof sessionDisplayName === 'function') ? sessionDisplayName(d, i) : ('Seduta ' + (i + 1));
+    return '<option value="' + i + '">' + esc(name) + ' (#' + (i + 1) + ')</option>';
+  }).join('');
+  if (dayEl.querySelector('option[value="' + keep + '"]')) dayEl.value = keep;
+}
+function populateWorkoutPdfRangeControls() {
+  const weeks = (DATA && DATA.weeks) || [];
+  function fillWeek(sel, val) {
+    if (!sel) return;
+    sel.innerHTML = weeks.map(function (w, i) {
+      const n = w.weekNumber || w.week || (i + 1);
+      return '<option value="' + (i + 1) + '">Settimana ' + n + '</option>';
+    }).join('');
+    sel.value = String(val);
+  }
+  fillWeek($('pdf-from-week'), 1);
+  fillWeek($('pdf-to-week'), Math.min(weeks.length, currentWeek || 1));
+  onWorkoutPdfRangeWeekChange('from');
+  onWorkoutPdfRangeWeekChange('to');
+  const toDay = $('pdf-to-day');
+  if (toDay && toDay.options && toDay.options.length) toDay.selectedIndex = toDay.options.length - 1;
+  const pick = $('pdf-pick-list');
+  if (pick) {
+    pick.innerHTML = weeks.map(function (w, wi) {
+      const days = w.sessions || w.days || [];
+      const wn = w.weekNumber || w.week || (wi + 1);
+      return '<div style="font-size:10px;color:var(--gold);margin:8px 0 4px;">SETTIMANA ' + wn + '</div>' +
+        days.map(function (d, di) {
+          const name = (typeof sessionDisplayName === 'function') ? sessionDisplayName(d, di) : ('Seduta ' + (di + 1));
+          return '<label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:6px;color:#eee;"><input type="checkbox" class="pdf-pick-sess" value="' + pdfSessionKey(wi + 1, di) + '">' + esc(name) + '</label>';
+        }).join('');
+    }).join('');
+  }
+}
+function collectWorkoutPdfExportOpts() {
+  const scope = (($('pdf-scope') || {}).value) || 'week';
+  const picked = [];
+  document.querySelectorAll('#pdf-pick-wrap input.pdf-pick-sess:checked').forEach(function (el) {
+    if (el && el.value) picked.push(el.value);
+  });
+  return {
+    scope: scope,
+    fromWeek: parseInt(($('pdf-from-week') || {}).value, 10) || 1,
+    fromDay: parseInt(($('pdf-from-day') || {}).value, 10) || 0,
+    toWeek: parseInt(($('pdf-to-week') || {}).value, 10) || 1,
+    toDay: parseInt(($('pdf-to-day') || {}).value, 10) || 0,
+    pickedSessions: picked,
+    includeLogged: !!($('pdf-inc-logged') || {}).checked,
+    includePlanned: !!($('pdf-inc-planned') || {}).checked,
+    nutrition: !!($('pdf-inc-nutrition') || {}).checked,
+    supp: !!($('pdf-inc-supp') || {}).checked,
+    therapy: !!($('pdf-inc-therapy') || {}).checked
+  };
+}
 function openWorkoutPdfExportModal() {
   if (!DATA || !DATA.weeks || !DATA.weeks.length) {
     alert('Nessun allenamento da esportare.');
@@ -14258,30 +14458,45 @@ function openWorkoutPdfExportModal() {
     modal = document.createElement('div');
     modal.id = 'workout-pdf-modal';
     modal.className = 'modal';
-    modal.innerHTML = `<div class="modal-card" style="max-width:460px;">
-      <div class="card-header"><h2>ESPORTA PDF</h2><button class="btn btn-outline" onclick="closeWorkoutPdfExportModal()">CHIUDI</button></div>
-      <div class="modal-body-scroll" style="padding:12px;">
-        <label style="font-size:10px;color:#888;">Ambito</label>
-        <select id="pdf-scope" style="width:100%;margin:4px 0 12px;padding:10px;background:#111;color:#fff;border:1px solid #333;">
-          <option value="day">Solo questo giorno</option>
-          <option value="week" selected>Questa settimana</option>
-          <option value="2weeks">Due settimane</option>
-          <option value="4weeks">Quattro settimane</option>
-          <option value="all">Tutto l'allenamento</option>
-        </select>
-        <div style="font-size:11px;color:#aaa;margin-bottom:10px;">Includi sezioni extra (se presenti nel programma):</div>
-        <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;color:#eee;"><input type="checkbox" id="pdf-inc-nutrition"> Alimentazione</label>
-        <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;color:#eee;"><input type="checkbox" id="pdf-inc-supp"> Integrazione</label>
-        <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;color:#eee;"><input type="checkbox" id="pdf-inc-therapy"> Terapia</label>
-        <div style="font-size:10px;color:#666;margin-top:8px;">Crea un file PDF da salvare sul telefono o inoltrare (WhatsApp, Drive, mail).</div>
-      </div>
-      <div class="modal-sticky-footer">
-        <button class="btn btn-outline" style="flex:1;" onclick="closeWorkoutPdfExportModal()">ANNULLA</button>
-        <button class="btn btn-primary" style="flex:1;" onclick="exportWorkoutPdf()">SALVA / INOLTRA PDF</button>
-      </div>
-    </div>`;
     document.body.appendChild(modal);
   }
+  modal.innerHTML = '<div class="modal-card" style="max-width:460px;">' +
+    '<div class="card-header"><h2>ESPORTA PDF</h2><button class="btn btn-outline" onclick="closeWorkoutPdfExportModal()">CHIUDI</button></div>' +
+    '<div class="modal-body-scroll" style="padding:12px;">' +
+    '<label style="font-size:10px;color:#888;">Ambito</label>' +
+    '<select id="pdf-scope" onchange="onWorkoutPdfScopeChange()" style="width:100%;margin:4px 0 12px;padding:10px;background:#111;color:#fff;border:1px solid #333;">' +
+    '<option value="day">Solo questo giorno</option>' +
+    '<option value="week" selected>Questa settimana</option>' +
+    '<option value="2weeks">Due settimane</option>' +
+    '<option value="4weeks">Quattro settimane</option>' +
+    '<option value="all">Tutto l\'allenamento</option>' +
+    '<option value="range">Da una seduta a un\'altra</option>' +
+    '<option value="pick">Scelta seduta per seduta</option>' +
+    '</select>' +
+    '<div id="pdf-range-wrap" style="display:none;margin-bottom:12px;">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+    '<div><label style="font-size:10px;color:#888;">Da settimana</label><select id="pdf-from-week" onchange="onWorkoutPdfRangeWeekChange(\'from\')" style="width:100%;margin-top:4px;padding:8px;background:#111;color:#fff;border:1px solid #333;"></select></div>' +
+    '<div><label style="font-size:10px;color:#888;">Da seduta</label><select id="pdf-from-day" style="width:100%;margin-top:4px;padding:8px;background:#111;color:#fff;border:1px solid #333;"></select></div>' +
+    '<div><label style="font-size:10px;color:#888;">A settimana</label><select id="pdf-to-week" onchange="onWorkoutPdfRangeWeekChange(\'to\')" style="width:100%;margin-top:4px;padding:8px;background:#111;color:#fff;border:1px solid #333;"></select></div>' +
+    '<div><label style="font-size:10px;color:#888;">A seduta</label><select id="pdf-to-day" style="width:100%;margin-top:4px;padding:8px;background:#111;color:#fff;border:1px solid #333;"></select></div>' +
+    '</div></div>' +
+    '<div id="pdf-pick-wrap" style="display:none;margin-bottom:12px;max-height:220px;overflow:auto;border:1px solid #222;padding:8px;border-radius:8px;">' +
+    '<div id="pdf-pick-list"></div></div>' +
+    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Carichi</div>' +
+    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;color:#eee;"><input type="checkbox" id="pdf-inc-logged" checked> Includi i carichi già fatti</label>' +
+    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:12px;color:#eee;"><input type="checkbox" id="pdf-inc-planned"> Includi i carichi previsti (settimane successive)</label>' +
+    '<div style="font-size:11px;color:#aaa;margin-bottom:10px;">Includi sezioni extra (se presenti nel programma):</div>' +
+    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;color:#eee;"><input type="checkbox" id="pdf-inc-nutrition"> Alimentazione</label>' +
+    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;color:#eee;"><input type="checkbox" id="pdf-inc-supp"> Integrazione</label>' +
+    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;color:#eee;"><input type="checkbox" id="pdf-inc-therapy"> Terapia</label>' +
+    '<div style="font-size:10px;color:#666;margin-top:8px;">Crea un file PDF da salvare sul telefono o inoltrare (WhatsApp, Drive, mail).</div>' +
+    '</div>' +
+    '<div class="modal-sticky-footer">' +
+    '<button class="btn btn-outline" style="flex:1;" onclick="closeWorkoutPdfExportModal()">ANNULLA</button>' +
+    '<button class="btn btn-primary" style="flex:1;" onclick="exportWorkoutPdf()">SALVA / INOLTRA PDF</button>' +
+    '</div></div>';
+  populateWorkoutPdfRangeControls();
+  onWorkoutPdfScopeChange();
   modal.style.display = 'flex';
 }
 
@@ -14293,13 +14508,10 @@ function closeWorkoutPdfExportModal() {
 function buildWorkoutPdfHtml(opts) {
   opts = opts || {};
   const weeksList = DATA.weeks || [];
-  let startW = 1;
-  let endW = weeksList.length;
-  const scope = opts.scope || 'week';
-  if (scope === 'day' || scope === 'week') { startW = currentWeek; endW = currentWeek; }
-  else if (scope === '2weeks') { startW = currentWeek; endW = Math.min(weeksList.length, currentWeek + 1); }
-  else if (scope === '4weeks') { startW = currentWeek; endW = Math.min(weeksList.length, currentWeek + 3); }
-  else { startW = 1; endW = weeksList.length; }
+  const bounds = workoutPdfScopeBounds(opts);
+  const startW = bounds.startW;
+  const endW = bounds.endW;
+  const scope = bounds.scope;
 
   const athlete = (store.account && store.account.name) || (store.profile && (store.profile.first_name || store.profile.name)) || '';
   let body = '';
@@ -14309,7 +14521,7 @@ function buildWorkoutPdfHtml(opts) {
     const days = week.sessions || week.days || [];
     body += '<h2 class="pdf-week" style="color:#c9a227;margin:22px 0 8px;font-size:16px;border-bottom:1px solid #333;padding-bottom:6px;">Settimana ' + (week.weekNumber || week.week || wi) + (week.title ? (' — ' + esc(week.title)) : '') + '</h2>';
     days.forEach(function (day, di) {
-      if (scope === 'day' && (wi !== currentWeek || di !== currentDay)) return;
+      if (!pdfIncludeSession(opts, wi, di)) return;
       const dayTitle = (typeof sessionDisplayName === 'function')
         ? sessionDisplayName(day, di)
         : (day.name || day.title || day.day || ('Giorno ' + (di + 1)));
@@ -14318,7 +14530,7 @@ function buildWorkoutPdfHtml(opts) {
       body += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px;">';
       body += '<thead><tr style="background:#1a1a1a;color:#c9a227;text-align:left;"><th style="padding:6px;border:1px solid #333;">Esercizio</th><th style="padding:6px;border:1px solid #333;">Schema</th><th style="padding:6px;border:1px solid #333;">Serie / carichi</th><th style="padding:6px;border:1px solid #333;">Rest</th></tr></thead><tbody>';
       list.forEach(function (row, ei) {
-        const name = store.subs[`w${wi}_d${di}_e${ei}`] || row.name || row.exercise || '—';
+        const name = pdfExerciseDisplayName(wi, di, ei, row);
         const scheme = (typeof formatSetRepScheme === 'function' ? formatSetRepScheme(row) : { scheme: row.scheme || '', setCount: (row.sets && row.sets.length) || 3 });
         const setCount = (typeof getExerciseSetCount === 'function')
           ? (function () { const prevW = currentWeek, prevD = currentDay; currentWeek = wi; currentDay = di; const n = getExerciseSetCount(ei); currentWeek = prevW; currentDay = prevD; return n; })()
@@ -14331,10 +14543,7 @@ function buildWorkoutPdfHtml(opts) {
           const rir = store.data[base + '_rir'];
           const tech = store.data[base + '_tech'];
           const done = store.data[base + '_done'] ? '✓' : '';
-          const planned = (Array.isArray(row.sets) && row.sets[s - 1])
-            ? (row.sets[s - 1].load || row.sets[s - 1].target_load || '')
-            : (row.plannedLoad || '');
-          const loadShow = (load !== undefined && load !== '' && load != null) ? load : (planned !== '' && planned != null ? ('~' + planned) : '—');
+          const loadShow = pdfSetLoadDisplay(opts, wi, di, ei, s, row);
           const repsShow = (reps !== undefined && reps !== '' && reps != null) ? reps : (row.repsTarget || '—');
           setLines.push('S' + s + ': ' + loadShow + ' kg × ' + repsShow + (rir !== undefined && rir !== '' && rir != null ? (' @' + rir) : '') + (tech ? (' [' + tech + ']') : '') + (done ? ' ' + done : ''));
         }
@@ -14452,11 +14661,9 @@ function buildWorkoutPdfBytes(opts) {
   var LGRAY = '0.92 0.92 0.92';
 
   var weeksList = DATA.weeks || [];
-  var startW = 1, endW = weeksList.length;
-  var scope = opts.scope || 'week';
-  if (scope === 'day' || scope === 'week') { startW = currentWeek; endW = currentWeek; }
-  else if (scope === '2weeks') { startW = currentWeek; endW = Math.min(weeksList.length, currentWeek + 1); }
-  else if (scope === '4weeks') { startW = currentWeek; endW = Math.min(weeksList.length, currentWeek + 3); }
+  var bounds = workoutPdfScopeBounds(opts);
+  var startW = bounds.startW, endW = bounds.endW;
+  var scope = bounds.scope;
   var athlete = (store.account && store.account.name) || (store.profile && (store.profile.first_name || store.profile.name)) || '';
 
   var pages = [];
@@ -14570,6 +14777,11 @@ function buildWorkoutPdfBytes(opts) {
     var week = weeksList[wi - 1];
     if (!week) continue;
     var days = week.sessions || week.days || [];
+    var includedDays = [];
+    days.forEach(function (day, di) {
+      if (pdfIncludeSession(opts, wi, di)) includedDays.push({ day: day, di: di });
+    });
+    if (!includedDays.length) continue;
     var weekNum = week.weekNumber || week.week || wi;
     headerWeek = 'Settimana ' + weekNum + (week.title ? ('  ·  ' + week.title) : '');
     if (firstWeekDrawn) drawHeader();
@@ -14578,8 +14790,9 @@ function buildWorkoutPdfBytes(opts) {
 
     var firstDayOfWeek = true;
     var dayTotal = days.length || 1;
-    days.forEach(function (day, di) {
-      if (scope === 'day' && (wi !== currentWeek || di !== currentDay)) return;
+    includedDays.forEach(function (item) {
+      var day = item.day;
+      var di = item.di;
       if (!firstDayOfWeek) startFreshPage();
       firstDayOfWeek = false;
       var dayLabel = (typeof sessionDisplayName === 'function')
@@ -14589,7 +14802,7 @@ function buildWorkoutPdfBytes(opts) {
 
       var list = day.exercises || day.rows || [];
       list.forEach(function (row, ei) {
-        var name = (store.subs && store.subs['w' + wi + '_d' + di + '_e' + ei]) || row.name || row.exercise || '-';
+        var name = pdfExerciseDisplayName(wi, di, ei, row);
         var scheme = (typeof formatSetRepScheme === 'function' ? formatSetRepScheme(row) : { scheme: row.scheme || '', setCount: (row.sets && row.sets.length) || 3 });
         var setCount = (typeof getExerciseSetCount === 'function')
           ? (function () { var pW = currentWeek, pD = currentDay; currentWeek = wi; currentDay = di; var n = getExerciseSetCount(ei); currentWeek = pW; currentDay = pD; return n; })()
@@ -14630,10 +14843,7 @@ function buildWorkoutPdfBytes(opts) {
           var rir = store.data[base + '_rir'];
           var tech = store.data[base + '_tech'];
           var done = store.data[base + '_done'];
-          var planned = (Array.isArray(row.sets) && row.sets[s - 1])
-            ? (row.sets[s - 1].load || row.sets[s - 1].target_load || '')
-            : (row.plannedLoad || '');
-          var loadShow = (load !== undefined && load !== '' && load != null) ? String(load) : (planned !== '' && planned != null ? ('~' + planned) : '-');
+          var loadShow = pdfSetLoadDisplay(opts, wi, di, ei, s, row);
           var repsShow = (reps !== undefined && reps !== '' && reps != null) ? String(reps) : (row.repsTarget || '-');
           var rirShow = (rir !== undefined && rir !== '' && rir != null) ? ('@' + rir) : '-';
           var techShow = tech ? String(tech) : '';
@@ -14696,7 +14906,7 @@ function buildWorkoutPdfBytes(opts) {
           txt('F2', 8, DARK, ML + 16, y, clipFit(line, CW - 20, 8));
           y -= 12;
         });
-        y -= 4;
+        y -= 10;
       });
     });
   }
@@ -14840,13 +15050,11 @@ function shareOrSavePdfBlob(blob, filename, shareText) {
   reader.readAsDataURL(blob);
 }
 function exportWorkoutPdf() {
-  const scope = (($('pdf-scope') || {}).value) || 'week';
-  const opts = {
-    scope: scope,
-    nutrition: !!($('pdf-inc-nutrition') || {}).checked,
-    supp: !!($('pdf-inc-supp') || {}).checked,
-    therapy: !!($('pdf-inc-therapy') || {}).checked
-  };
+  const opts = collectWorkoutPdfExportOpts();
+  if (opts.scope === 'pick' && !(opts.pickedSessions && opts.pickedSessions.length)) {
+    alert('Seleziona almeno una seduta da esportare.');
+    return;
+  }
   closeWorkoutPdfExportModal();
   try {
     const bytes = buildWorkoutPdfBytes(opts);
@@ -16674,7 +16882,7 @@ function renderStats(c){
   const durM = Math.floor(snap.durationSec / 60);
   const durS = snap.durationSec % 60;
   const hist = (store.logs || []).slice().reverse().slice(0, 12).map(function (row) {
-    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #222;font-size:11px;">' +
+    return '<div role="button" tabindex="0" onclick="openLoggedSessionReview(' + (Number(row.week) || 1) + ',' + (Number(row.day) || 0) + ')" style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #222;font-size:11px;cursor:pointer;">' +
       '<span>W' + (row.week || '?') + ' · S' + ((row.day || 0) + 1) + ' · ' + esc(String(row.at || '').replace('T', ' ').slice(0, 16)) + '</span>' +
       '<span style="color:var(--gold);font-weight:800;">' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg</span></div>';
   }).join('');
@@ -16682,7 +16890,7 @@ function renderStats(c){
     <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">PERFORMANCE LAB</h1>
     <div style="font-size:10px; color:#777; margin-bottom:15px; font-weight:700; letter-spacing:1px;">${store && store.coachViewingClient ? 'VISTA MASTER · DATI CLIENTE' : 'ATTIVITÀ · CRONOLOGIA · FATICA'}</div>
     ${store && store.coachViewingClient ? '' : renderAdaptiveDeloadCardHtml()}
-    ${last ? `<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid rgba(212,175,55,0.35);">
+    ${last ? `<div class="card" role="button" tabindex="0" onclick="openLoggedSessionReview(${Number(last.week)||1},${Number(last.day)||0})" style="margin-bottom:12px;padding:12px;border:1px solid rgba(212,175,55,0.35);cursor:pointer;">
       <div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:6px;">ULTIMA SESSIONE FINALIZZATA</div>
       <div style="font-size:11px;color:#aaa;">W${last.week} · Seduta ${(last.day||0)+1} · ${esc(String(last.at||'').replace('T',' ').slice(0,16))}</div>
     </div>` : ''}
@@ -16802,8 +17010,19 @@ function logsInCheckPeriod(period) {
     return t && t >= since;
   });
 }
+function sortLogsChronological(rows) {
+  return (rows || []).slice().sort(function (a, b) {
+    const ta = Date.parse(a && a.at || '') || 0;
+    const tb = Date.parse(b && b.at || '') || 0;
+    if (ta !== tb) return ta - tb;
+    const wa = Number(a && a.week) || 0;
+    const wb = Number(b && b.week) || 0;
+    if (wa !== wb) return wa - wb;
+    return (Number(a && a.day) || 0) - (Number(b && b.day) || 0);
+  });
+}
 function summarizeCheckLogs(period) {
-  const rows = logsInCheckPeriod(period);
+  const rows = sortLogsChronological(logsInCheckPeriod(period));
   const muscles = {};
   let sets = 0, tonnage = 0, kcal = 0, intensity = 0;
   rows.forEach(function (row) {
@@ -16848,9 +17067,17 @@ function renderCheckFisicoCardHtml() {
     return '<button type="button" class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" onclick="setCheckFisicoPeriod(\'' + p.id + '\')">' + p.label + '</button>';
   }).join('');
   const histHtml = hist.length ? hist.slice(0, 5).map(function (c) {
-    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #1c1c1c;font-size:11px;">' +
-      '<span>' + esc(String(c.at || '').replace('T', ' ').slice(0, 16)) + ' · ' + esc(checkFisicoPeriodMeta(c.period).label) + '</span>' +
-      '<span style="color:var(--gold);font-weight:800;">' + (c.weight != null && c.weight !== '' ? (c.weight + ' kg') : '—') + '</span></div>';
+    const syncState = c.checkInSyncState || (c.serverCheckInId ? 'SYNCED' : '');
+    const syncLabel = (typeof checkInStatusLabel === 'function' && syncState)
+      ? checkInStatusLabel(syncState)
+      : (syncState === 'QUEUED' || syncState === 'SYNCING'
+        ? 'In attesa di connessione'
+        : (syncState === 'SYNCED' ? 'Inviato' : (syncState === 'FAILED' ? 'Errore — riprova' : '')));
+    return '<div role="button" tabindex="0" onclick="openSavedCheckFisico(\'' + esc(String(c.id || '')) + '\')" style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #1c1c1c;font-size:11px;cursor:pointer;">' +
+      '<span>' + esc(String(c.at || '').replace('T', ' ').slice(0, 16)) + ' · ' + esc(checkFisicoPeriodMeta(c.period).label) +
+      (syncLabel ? ' · ' + esc(syncLabel) : '') + '</span>' +
+      '<span style="color:var(--gold);font-weight:800;">' + (c.weight != null && c.weight !== '' ? (c.weight + ' kg') : '—') + '</span></div>' +
+      (syncState === 'FAILED' ? '<button type="button" class="btn btn-outline" style="width:100%;margin:4px 0 8px;font-size:10px;" onclick="event.stopPropagation();retryCheckInSend(\'' + esc(String(c.id || '')) + '\')">RIPROVA</button>' : '');
   }).join('') : '<div style="font-size:11px;color:#666;">Nessun check salvato.</div>';
   return '<div class="card stats-anatomy" style="margin-bottom:12px;">' +
     '<div class="stats-anatomy-head"><h2>Check fisici</h2><div class="stats-anatomy-hint">Foto · peso · resoconto</div></div>' +
@@ -17014,7 +17241,7 @@ function pickCheckPhoto(side, camera) {
 async function refreshCheckFisicoThumbs() {
   const last = (store.bodyChecks || [])[store.bodyChecks.length - 1];
   const draft = checkFisicoDraft();
-  if (draft.front || draft.back || !last) return;
+  if (draft.clearedAt || draft.front || draft.back || !last) return;
   try {
     if (last.hasFront) {
       const f = await getDocumentFile('bodycheck_front_' + last.id);
@@ -17042,7 +17269,8 @@ async function saveCheckFisico() {
     notes: draft.notes || '',
     hasFront: !!draft.front,
     hasBack: !!draft.back,
-    analysis: ''
+    analysis: '',
+    checkInSyncState: 'DRAFT'
   };
   if (draft.front) await saveDocumentFile('bodycheck_front_' + id, draft.front);
   if (draft.back) await saveDocumentFile('bodycheck_back_' + id, draft.back);
@@ -17054,6 +17282,11 @@ async function saveCheckFisico() {
   if (!store.bw) store.bw = {};
   store.bw[currentWeek || 1] = entry.weight;
   persist();
+  draft.front = null;
+  draft.back = null;
+  draft.weight = '';
+  draft.notes = '';
+  draft.clearedAt = Date.now();
   if (typeof showToast === 'function') showToast('Check fisico salvato', 'success');
   if (typeof render === 'function' && currentView === 'stats') render();
   return entry;
@@ -17105,7 +17338,8 @@ function buildCheckFisicoCoachPrompt(entry, report) {
   }
   if (!photosOnly) msg += '\n' + report;
   else msg += '\nAtleta: ' + ((store.profile && store.profile.name) || (store.account && store.account.name) || 'Atleta') + '\nPeso: ' + ((entry && entry.weight) || d.weight || '—') + ' kg';
-  if (d.notes) msg += '\n\nNOTE ATLETA: ' + d.notes;
+  const notes = (entry && entry.notes) || d.notes;
+  if (notes) msg += '\n\nNOTE ATLETA: ' + notes;
   return msg;
 }
 function checkFisicoRequiresHumanCoach() {
@@ -17122,17 +17356,46 @@ async function analyzeCheckFisicoWithCoach() {
     if (typeof sendCheckFisicoToCoach === 'function') return sendCheckFisicoToCoach();
     return;
   }
-  // Personal area: allow Coach AI / local analysis path
+  const d = checkFisicoDraft();
+  const snapFront = d.front;
+  const snapBack = d.back;
+  const snapNotes = d.notes;
+  const photosOnly = !!d.photosOnly;
+  const ctxSupp = !!d.ctxSupp;
+  const ctxTherapy = !!d.ctxTherapy;
+  let entry = (store.bodyChecks || [])[store.bodyChecks.length - 1];
+  const weight = parseFloat(String(d.weight || '').replace(',', '.'));
+  if (weight > 0 && (!entry || String(d.weight) !== String(entry.weight) || d.front || d.back || d.notes)) {
+    entry = await saveCheckFisico();
+    if (!entry) return;
+  }
+  const report = typeof buildCheckFisicoTextReport === 'function' ? buildCheckFisicoTextReport(entry) : '';
+  const prompt = typeof buildCheckFisicoCoachPrompt === 'function'
+    ? buildCheckFisicoCoachPrompt(entry || { notes: snapNotes, weight: weight || (entry && entry.weight) }, report)
+    : '';
+  if (!prompt) {
+    if (typeof showToast === 'function') showToast('Apri Coach AI e chiedi un’analisi del check salvato.', 'info');
+    navigate('ai');
+    return;
+  }
+  const images = [];
   try {
-    const prompt = typeof buildCheckFisicoCoachPrompt === 'function' ? buildCheckFisicoCoachPrompt() : '';
-    if (typeof askAI === 'function' && prompt) {
-      navigate('ai');
-      setTimeout(function () { askAI(prompt); }, 200);
-      return;
-    }
+    const front = snapFront || (entry && typeof getDocumentFile === 'function' ? await getDocumentFile('bodycheck_front_' + entry.id) : null);
+    const back = snapBack || (entry && typeof getDocumentFile === 'function' ? await getDocumentFile('bodycheck_back_' + entry.id) : null);
+    if (front && typeof shrinkDataUrlForAi === 'function') images.push({ dataUrl: await shrinkDataUrlForAi(front, 640), label: 'fronte', mime: 'image/jpeg' });
+    else if (front) images.push({ dataUrl: front, label: 'fronte', mime: 'image/jpeg' });
+    if (back && typeof shrinkDataUrlForAi === 'function') images.push({ dataUrl: await shrinkDataUrlForAi(back, 640), label: 'retro', mime: 'image/jpeg' });
+    else if (back) images.push({ dataUrl: back, label: 'retro', mime: 'image/jpeg' });
   } catch (_) {}
-  if (typeof showToast === 'function') showToast('Apri Coach AI e chiedi un’analisi del check salvato.', 'info');
   navigate('ai');
+  setTimeout(function () {
+    const opts = { checkFisico: true, photosOnly: photosOnly, ctxSupp: ctxSupp, ctxTherapy: ctxTherapy, images: images };
+    if (typeof withBusy === 'function') {
+      withBusy(function () { return askAIInner(prompt, opts); }, 'Nurvan AI sta analizzando il check fisico…', { immediate: true });
+    } else {
+      askAIInner(prompt, opts);
+    }
+  }, 220);
 }
 function setCheckFisicoPdfOpt(key, val) {
   checkFisicoDraft()[key] = val;
@@ -17152,7 +17415,12 @@ function openCheckFisicoPdfModal(mode) {
   const macros = $('cf-pdf-macro'); if (macros) macros.checked = d.pdfMacros !== false;
   const supp = $('cf-pdf-supp'); if (supp) supp.checked = d.pdfSupp !== false;
   const ther = $('cf-pdf-ther'); if (ther) ther.checked = d.pdfTherapy !== false;
-  const notes = $('cf-pdf-notes'); if (notes) notes.value = d.notes || '';
+  const notes = $('cf-pdf-notes');
+  if (notes) {
+    const focusId = window.__checkFisicoFocusId;
+    const focused = focusId ? (store.bodyChecks || []).find(function (c) { return c && c.id === focusId; }) : null;
+    notes.value = (focused && focused.notes) || d.notes || '';
+  }
   m.style.display = 'flex';
 }
 function exportCheckFisicoPdf() {
@@ -17161,19 +17429,119 @@ function exportCheckFisicoPdf() {
 function sendCheckFisicoToCoach() {
   openCheckFisicoPdfModal('send');
 }
+function closeSavedRecordOverlay() {
+  const el = document.getElementById('saved-record-overlay');
+  if (el) el.remove();
+}
+async function openSavedCheckFisico(id) {
+  const entry = (store.bodyChecks || []).find(function (c) { return c && String(c.id) === String(id); });
+  if (!entry) {
+    if (typeof showToast === 'function') showToast('Check non trovato', 'warning');
+    return;
+  }
+  closeSavedRecordOverlay();
+  let front = '';
+  let back = '';
+  try {
+    if (entry.hasFront) front = await getDocumentFile('bodycheck_front_' + entry.id) || '';
+    if (entry.hasBack) back = await getDocumentFile('bodycheck_back_' + entry.id) || '';
+  } catch (_) {}
+  const overlay = document.createElement('div');
+  overlay.id = 'saved-record-overlay';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10130;align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;';
+  overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
+  const date = String(entry.at || '').replace('T', ' ').slice(0, 16);
+  overlay.innerHTML =
+    '<div class="card" style="max-width:460px;width:100%;max-height:min(88vh,720px);overflow:auto;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">CHECK SALVATO</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="closeSavedRecordOverlay()">CHIUDI</button></div>' +
+    '<div style="font-size:12px;color:#ccc;margin-bottom:10px;">' + esc(date) + ' · ' + esc(checkFisicoPeriodMeta(entry.period).label) + ' · <b style="color:var(--gold);">' + (entry.weight != null ? (entry.weight + ' kg') : '—') + '</b></div>' +
+    '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
+    (front ? '<img src="' + front + '" alt="Fronte" style="width:48%;max-height:260px;object-fit:cover;border-radius:8px;">' : '<div style="flex:1;background:#111;border-radius:8px;padding:20px;color:#666;font-size:11px;text-align:center;">Nessuna foto fronte</div>') +
+    (back ? '<img src="' + back + '" alt="Retro" style="width:48%;max-height:260px;object-fit:cover;border-radius:8px;">' : '<div style="flex:1;background:#111;border-radius:8px;padding:20px;color:#666;font-size:11px;text-align:center;">Nessuna foto retro</div>') +
+    '</div>' +
+    (entry.notes ? '<div style="font-size:12px;color:#aaa;margin-bottom:12px;">' + esc(entry.notes) + '</div>' : '') +
+    '<div style="display:flex;gap:8px;">' +
+    '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;" onclick="exportSavedCheckFisico(\'' + esc(String(entry.id)) + '\')">Esporta PDF</button>' +
+    '<button type="button" class="btn btn-primary" style="flex:1;font-size:11px;" onclick="sendSavedCheckFisico(\'' + esc(String(entry.id)) + '\')">Invia PDF</button>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+}
+function exportSavedCheckFisico(id) {
+  window.__checkFisicoFocusId = id;
+  closeSavedRecordOverlay();
+  openCheckFisicoPdfModal('export');
+}
+function sendSavedCheckFisico(id) {
+  window.__checkFisicoFocusId = id;
+  closeSavedRecordOverlay();
+  openCheckFisicoPdfModal('send');
+}
+function openLoggedSessionReview(week, day) {
+  week = Number(week) || 1;
+  day = Number(day) || 0;
+  const log = (store.logs || []).find(function (row) {
+    return row && Number(row.week) === week && Number(row.day) === day;
+  });
+  const w = DATA && DATA.weeks && DATA.weeks[week - 1];
+  const sess = w && (w.sessions || w.days || [])[day];
+  const title = (typeof sessionDisplayName === 'function' && sess)
+    ? sessionDisplayName(sess, day)
+    : ((sess && (sess.name || sess.title || sess.day)) || ('Seduta ' + (day + 1)));
+  const lines = (typeof collectLoggedSessionDetailLines === 'function')
+    ? collectLoggedSessionDetailLines(week, day)
+    : [];
+  const date = log ? String(log.at || '').replace('T', ' ').slice(0, 16) : '';
+  closeSavedRecordOverlay();
+  const overlay = document.createElement('div');
+  overlay.id = 'saved-record-overlay';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10130;align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;';
+  overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
+  const body = lines.length
+    ? lines.map(function (l) {
+      const isEx = l && l.indexOf('  ') !== 0;
+      return '<div style="font-size:' + (isEx ? '13px;color:#fff;font-weight:800;margin-top:10px;' : '12px;color:#bbb;padding-left:10px;') + '">' + esc(l) + '</div>';
+    }).join('')
+    : '<div style="font-size:12px;color:#888;">Nessuna serie registrata in store.data per questa seduta.</div>';
+  overlay.innerHTML =
+    '<div class="card" style="max-width:460px;width:100%;max-height:min(88vh,720px);overflow:auto;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">SEDUTA FINALIZZATA</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="closeSavedRecordOverlay()">CHIUDI</button></div>' +
+    '<div style="font-size:14px;color:#fff;font-weight:800;margin-bottom:4px;">' + esc(title) + '</div>' +
+    '<div style="font-size:11px;color:#888;margin-bottom:12px;">W' + week + ' · S' + (day + 1) + (date ? (' · ' + esc(date)) : '') +
+    (log && log.sets ? (' · ' + log.sets + ' serie') : '') +
+    (log && log.tonnage ? (' · ' + log.tonnage + ' kg') : '') + '</div>' +
+    body + '</div>';
+  document.body.appendChild(overlay);
+}
 async function confirmCheckFisicoPdfExport() {
   const d = checkFisicoDraft();
   const notesEl = $('cf-pdf-notes');
-  if (notesEl) d.notes = notesEl.value || '';
+  const modalNotes = notesEl ? (notesEl.value || '') : (d.notes || '');
+  if (notesEl) d.notes = modalNotes;
   closeCheckFisicoPdfModal();
-  let entry = (store.bodyChecks || [])[store.bodyChecks.length - 1];
-  if (!d.weight && !(entry && entry.weight)) {
-    if (typeof showToast === 'function') showToast('Inserisci il peso prima di esportare', 'danger');
-    return;
+  const focusId = window.__checkFisicoFocusId;
+  window.__checkFisicoFocusId = null;
+  const snapFront = d.front;
+  const snapBack = d.back;
+  let entry = focusId
+    ? (store.bodyChecks || []).find(function (c) { return c && c.id === focusId; })
+    : (store.bodyChecks || [])[store.bodyChecks.length - 1];
+  if (!focusId) {
+    if (!d.weight && !(entry && entry.weight)) {
+      if (typeof showToast === 'function') showToast('Inserisci il peso prima di esportare', 'danger');
+      return;
+    }
+    if (!entry || String(d.weight) !== String(entry.weight) || d.front || d.back || d.notes) {
+      entry = await saveCheckFisico();
+      if (!entry) return;
+    }
   }
-  if (!entry || String(d.weight) !== String(entry.weight) || d.front || d.back || d.notes) {
-    entry = await saveCheckFisico();
-    if (!entry) return;
+  if (!entry) {
+    if (typeof showToast === 'function') showToast('Nessun check da esportare', 'danger');
+    return;
   }
   const pack = {
     trainingMode: d.pdfTraining === 'detailed' ? 'detailed' : 'summary',
@@ -17181,22 +17549,32 @@ async function confirmCheckFisicoPdfExport() {
     includeMacros: d.pdfMacros !== false,
     includeSupp: d.pdfSupp !== false,
     includeTherapy: d.pdfTherapy !== false,
-    notes: d.notes || ''
+    notes: modalNotes || entry.notes || ''
   };
-  const front = d.front || await getDocumentFile('bodycheck_front_' + entry.id);
-  const back = d.back || await getDocumentFile('bodycheck_back_' + entry.id);
+  const front = focusId ? await getDocumentFile('bodycheck_front_' + entry.id) : (snapFront || await getDocumentFile('bodycheck_front_' + entry.id));
+  const back = focusId ? await getDocumentFile('bodycheck_back_' + entry.id) : (snapBack || await getDocumentFile('bodycheck_back_' + entry.id));
   let sentToCoachOs = false;
   if (window.__checkFisicoPdfMode === 'send' &&
       typeof isAthleteRole === 'function' && isAthleteRole() &&
       typeof submitClientCheckInToCoach === 'function' &&
       !entry.serverCheckInId) {
     try {
-      await submitClientCheckInToCoach(entry, front, back);
-      sentToCoachOs = true;
-      if (typeof showToast === 'function') showToast('Check-in inviato al coach', 'success');
+      const sent = await submitClientCheckInToCoach(entry, front, back);
+      if (sent && sent.queued) {
+        sentToCoachOs = true;
+        if (typeof showToast === 'function') showToast('In attesa di connessione', 'warning');
+      } else if (sent && sent.checkIn) {
+        sentToCoachOs = true;
+        if (typeof showToast === 'function') showToast('Inviato', 'success');
+      } else if (entry.serverCheckInId) {
+        sentToCoachOs = true;
+        if (typeof showToast === 'function') showToast('Inviato', 'success');
+      } else {
+        if (typeof showToast === 'function') showToast('Errore — riprova', 'danger');
+      }
     } catch (error) {
       if (typeof showToast === 'function') {
-        showToast((error && error.message) || 'Invio app non riuscito: puoi condividere il PDF', 'warning');
+        showToast('Errore — riprova', 'danger');
       }
     }
   }
@@ -17260,13 +17638,62 @@ function wrapCoachPdfLines(text, max) {
   });
   return out;
 }
+function padPdfCol(s, n) {
+  const t = String(s || '');
+  if (t.length >= n) return t.slice(0, n);
+  return t + Array(n - t.length + 1).join(' ');
+}
+function collectStructuredNutritionPlanLines() {
+  const nutr = DATA && DATA.nutrition;
+  const lines = [];
+  if (!nutr) return lines;
+  const kcal = nutr.daily_calories_target || (nutr.targets && nutr.targets.kcal);
+  const p = nutr.daily_protein_target || (nutr.targets && nutr.targets.protein);
+  const c = nutr.daily_carbs_target || (nutr.targets && nutr.targets.carbs);
+  const f = nutr.daily_fats_target || (nutr.targets && nutr.targets.fat);
+  if (kcal || p || c || f) {
+    lines.push('Target: ' + (kcal || '—') + ' kcal  |  P ' + (p || '—') + 'g  |  C ' + (c || '—') + 'g  |  F ' + (f || '—') + 'g');
+    lines.push('');
+  }
+  const days = nutr.days || [];
+  days.forEach(function (nd, ni) {
+    let dk = 0, dp = 0, dc = 0, df = 0;
+    (nd.meals || []).forEach(function (meal) {
+      (meal.foods || meal.items || []).forEach(function (food) {
+        if (typeof foodMacroVal === 'function') {
+          dk += Number(foodMacroVal(food, 'kcal')) || 0;
+          dp += Number(foodMacroVal(food, 'pro')) || 0;
+          dc += Number(foodMacroVal(food, 'carb')) || 0;
+          df += Number(foodMacroVal(food, 'fat')) || 0;
+        }
+      });
+    });
+    const macroLine = (dk ? (Math.round(dk) + ' kcal') : '') +
+      (dp || dc || df ? ('  |  P ' + Math.round(dp) + 'g  C ' + Math.round(dc) + 'g  F ' + Math.round(df) + 'g') : '');
+    lines.push((nd.day || ('Giorno ' + (ni + 1))) + '  ·  Giorno ' + (ni + 1) + '/' + days.length + (macroLine ? ('  ·  ' + macroLine) : ''));
+    (nd.meals || []).forEach(function (meal) {
+      lines.push('  ' + (meal.name || 'Pasto'));
+      (meal.foods || meal.items || []).forEach(function (food) {
+        const qty = food.quantity || food.qty || food.amount || '';
+        const unit = food.unit || '';
+        const fkcal = (typeof foodMacroVal === 'function') ? foodMacroVal(food, 'kcal') : (Number(food.kcal) || 0);
+        lines.push('    ' + (food.name || food.food || '-') + (qty ? ('  ' + qty + unit) : '') + (fkcal ? ('  ' + Math.round(fkcal) + ' kcal') : ''));
+      });
+      lines.push('');
+    });
+    lines.push('');
+  });
+  return lines;
+}
 function collectLoggedSessionDetailLines(week, day) {
   const w = DATA && DATA.weeks && DATA.weeks[week - 1];
   const sess = w && (w.sessions || w.days) && (w.sessions || w.days)[day];
   const list = (sess && (sess.exercises || sess.rows)) || [];
   const lines = [];
   list.forEach(function (ex, ei) {
-    const name = (ex && (ex.name || ex.exercise)) || ('Esercizio ' + (ei + 1));
+    const name = (typeof pdfExerciseDisplayName === 'function')
+      ? pdfExerciseDisplayName(week, day, ei, ex)
+      : ((store && store.subs && store.subs['w' + week + '_d' + day + '_e' + ei]) || (ex && (ex.name || ex.exercise)) || ('Esercizio ' + (ei + 1)));
     const sets = [];
     for (let s = 1; s <= 12; s++) {
       const load = store.data['w' + week + '_d' + day + '_e' + ei + '_s' + s + '_load'];
@@ -17275,9 +17702,12 @@ function collectLoggedSessionDetailLines(week, day) {
       const hasLoad = load !== undefined && load !== '' && load != null;
       const hasReps = reps !== undefined && reps !== '' && reps != null;
       if (!hasLoad && !hasReps) continue;
-      sets.push('s' + s + ' ' + (hasLoad ? (load + 'kg') : '') + (hasReps ? (' x' + reps) : '') + (rir !== undefined && rir !== '' && rir != null ? (' @' + rir) : ''));
+      sets.push('S' + s + '  ' + (hasLoad ? (load + ' kg') : '—') + (hasReps ? ('  x ' + reps) : '') + (rir !== undefined && rir !== '' && rir != null ? ('  @' + rir) : ''));
     }
-    if (sets.length) lines.push(name + ': ' + sets.join(' · '));
+    if (sets.length) {
+      lines.push(name);
+      sets.forEach(function (line) { lines.push('  ' + line); });
+    }
   });
   return lines;
 }
@@ -17295,15 +17725,21 @@ function collectCheckFisicoPdfExtraLines(entry, pack) {
   if (pack.notes) addBlock('NOTE ATLETA', [pack.notes]);
   if (pack.trainingMode === 'detailed') {
     const body = [];
-    const logs = logsInCheckPeriod(period);
+    const logs = sortLogsChronological(logsInCheckPeriod(period));
     if (!logs.length) body.push('Nessuna sessione finalizzata nel periodo.');
-    logs.slice().reverse().forEach(function (row) {
-      body.push(String(row.at || '').replace('T', ' ').slice(0, 16) + '  W' + (row.week || '?') + ' S' + ((row.day || 0) + 1) + '  ' + (row.tonnage || 0) + ' kg  int ' + (row.intensity || 0));
-      collectLoggedSessionDetailLines(Number(row.week) || 1, Number(row.day) || 0).forEach(function (l) { body.push('  ' + l); });
+    logs.forEach(function (row) {
+      const date = String(row.at || '').replace('T', ' ').slice(0, 16);
+      const title = (row.title || 'Allenamento') + '  ·  ' + date + '  ·  W' + (row.week || '?') + ' S' + ((row.day || 0) + 1);
+      body.push(title);
+      if (row.tonnage) body.push((row.sets || 0) + ' serie   ' + (row.tonnage || 0) + ' kg');
+      collectLoggedSessionDetailLines(Number(row.week) || 1, Number(row.day) || 0).forEach(function (l) { body.push(l); });
+      body.push('');
     });
-    addBlock('ALLENAMENTO DETTAGLIATO (serie / reps / RIR-RPE)', body);
+    addBlock('ALLENAMENTO DETTAGLIATO', body);
   }
   if (pack.includeNutrition) {
+    const planLines = collectStructuredNutritionPlanLines();
+    if (planLines.length) addBlock('PIANO ALIMENTARE', planLines);
     const daily = store.nutritionDaily || {};
     const keys = Object.keys(daily).filter(function (k) {
       const t = Date.parse(k);
@@ -17313,10 +17749,24 @@ function collectCheckFisicoPdfExtraLines(entry, pack) {
     if (!keys.length) body.push('Nessuna conferma pasti nel periodo.');
     keys.forEach(function (k) {
       const st = daily[k] || {};
-      body.push(k + '  ' + (st.confirmed ? 'confermato piano' : 'inseriti alimenti reali'));
-      (st.foods || []).slice(0, 18).forEach(function (f) {
-        body.push('  - ' + (f.meal ? (f.meal + ': ') : '') + (f.name || '') + (f.qty ? (' ' + f.qty + (f.unit || '')) : ''));
+      body.push(k + '  ·  ' + (st.confirmed ? 'piano confermato' : 'alimenti reali'));
+      const byMeal = {};
+      (st.foods || []).forEach(function (f) {
+        const meal = f.meal || f.mealName || 'Pasto';
+        if (!byMeal[meal]) byMeal[meal] = [];
+        byMeal[meal].push(f);
       });
+      Object.keys(byMeal).forEach(function (meal) {
+        body.push('  ' + meal);
+        byMeal[meal].slice(0, 12).forEach(function (f) {
+          const qty = f.qty || f.quantity || f.amount || '';
+          const unit = f.unit || '';
+          const kcal = (typeof foodMacroVal === 'function') ? foodMacroVal(f, 'kcal') : (Number(f.kcal) || 0);
+          body.push('    ' + (f.name || f.food || '') + (qty ? ('  ' + qty + unit) : '') + (kcal ? ('  ' + Math.round(kcal) + ' kcal') : ''));
+        });
+        body.push('');
+      });
+      body.push('');
     });
     addBlock('ADERENZA ALIMENTAZIONE', body);
   }
@@ -17355,23 +17805,24 @@ function collectCheckFisicoPdfExtraLines(entry, pack) {
     addBlock('MODIFICHE REGISTRATE E MACROS', body);
   }
   if (pack.includeSupp) {
-    const items = (DATA && DATA.supplementation && DATA.supplementation.items) || [];
+    const items = (DATA && DATA.supplementation && (DATA.supplementation.items || DATA.supplementation.supplements)) || [];
     const body = items.length
-      ? items.map(function (it) {
-        return '- ' + (it.name || '') + (it.dose ? ('  ' + it.dose + (it.unit || '')) : '') + (it.timing ? ('  ' + it.timing) : '') + (it.frequency ? ('  ' + it.frequency) : '');
-      })
+      ? ['INTEGRATORE                  DOSE            TIMING                 FREQUENZA'].concat(items.map(function (it) {
+        const dose = String(it.dose || it.dosage || '') + (it.unit ? (' ' + it.unit) : '');
+        return padPdfCol(it.name || it.supplement || '-', 28) + '  ' + padPdfCol(dose, 14) + '  ' + padPdfCol(it.timing || '', 20) + '  ' + (it.frequency || '');
+      }))
       : ['Nessun integratore in piano.'];
-    addBlock('ADERENZA INTEGRAZIONE', body);
+    addBlock('INTEGRAZIONE', body);
   }
   if (pack.includeTherapy) {
-    const meds = (DATA && DATA.therapy && DATA.therapy.medications) || [];
+    const meds = (DATA && DATA.therapy && (DATA.therapy.medications || DATA.therapy.items)) || [];
     const body = meds.length
-      ? meds.map(function (m) {
+      ? ['FARMACO                      DOSE            TIMING                 SETT.'].concat(meds.map(function (m) {
         const wk = m.start_week || m.weekStart || m.week_start || '';
-        return '- ' + (m.name || m.drug || '') + (m.dose ? ('  ' + m.dose) : '') + (wk ? ('  sett. ' + wk) : '') + (m.timing ? ('  ' + m.timing) : '');
-      })
+        return padPdfCol(m.name || m.medication || m.drug || '-', 28) + '  ' + padPdfCol(m.dose || m.dosage || '', 14) + '  ' + padPdfCol(m.timing || '', 20) + '  ' + (wk ? ('sett. ' + wk) : '');
+      }))
       : ['Nessuna terapia in piano.'];
-    addBlock('ADERENZA TERAPIA', body);
+    addBlock('TERAPIA', body);
   }
   while (lines.length && lines[lines.length - 1] === '') lines.pop();
   return lines;
@@ -17437,18 +17888,18 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl, pack) {
     txt('F2', 8, GRAY, ML, y, 'Nessuna sessione finalizzata nel periodo.');
     y -= 14;
   } else {
-    sum.rows.slice().reverse().forEach(function (row) {
+    sortLogsChronological(sum.rows).forEach(function (row) {
       if (y < 70) return;
       const line = String(row.at || '').replace('T', ' ').slice(0, 16) + '   W' + (row.week || '?') + ' S' + ((row.day || 0) + 1) + '   ' + (row.sets || 0) + ' serie   ' + (row.tonnage || 0) + ' kg';
       txt('F2', 8, DARK, ML, y, line);
-      y -= 13;
+      y -= 14;
     });
   }
   y -= 10;
   txt('F2', 6, GRAY, ML, 40, 'Documento generato da NURVAN. Non sostituisce il parere medico o del coach.');
   const extraLines = collectCheckFisicoPdfExtraLines(entry, pack || {});
   const extraPages = [];
-  const perPage = 42;
+  const perPage = 36;
   for (let i = 0; i < extraLines.length; i += perPage) {
     extraPages.push(extraLines.slice(i, i + perPage));
   }
@@ -17477,7 +17928,9 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl, pack) {
     const extraCmds = [];
     extraCmds.push('BT /F1 12 Tf ' + GOLD + ' rg 1 0 0 1 ' + ML + ' ' + (H - 50) + ' Tm (' + pdfEsc('QUADRO PER IL COACH  ·  p. ' + (pi + 2)) + ') Tj ET');
     pageLines.forEach(function (line, li) {
-      extraCmds.push('BT /F2 8 Tf ' + DARK + ' rg 1 0 0 1 ' + ML + ' ' + (H - 74 - li * 16) + ' Tm (' + pdfEsc(line) + ') Tj ET');
+      const isTitle = line && line === line.toUpperCase() && line.length > 3 && line.indexOf('  ') < 0;
+      const font = (isTitle || (line && line.indexOf('Allenamento') === 0) || (line && line.indexOf('ALLENAMENTO') === 0)) ? 'F1' : 'F2';
+      extraCmds.push('BT /' + font + ' 8 Tf ' + DARK + ' rg 1 0 0 1 ' + ML + ' ' + (H - 74 - li * 18) + ' Tm (' + pdfEsc(line) + ') Tj ET');
     });
     const extraStream = extraCmds.join('\n');
     contentIds.push(addStreamObj('<< /Length ' + extraStream.length + ' >>', pdfLatin1(extraStream)));
@@ -18521,6 +18974,47 @@ async function runEvidenceSearch() {
 }
 window.runEvidenceSearch = runEvidenceSearch;
 
+function buildPersonalExerciseInfoPrompt(idx, exerciseName) {
+  const week = (typeof currentWeek !== 'undefined' ? currentWeek : 1);
+  const day = (typeof currentDay !== 'undefined' ? currentDay : 0);
+  const w = DATA && DATA.weeks && DATA.weeks[week - 1];
+  const sess = w && (w.sessions || w.days || [])[day];
+  const row = ((sess && (sess.exercises || sess.rows)) || [])[idx] || {};
+  const name = (store && store.subs && store.subs['w' + week + '_d' + day + '_e' + idx]) || exerciseName || row.name || row.exercise || 'esercizio';
+  const scheme = (typeof formatSetRepScheme === 'function')
+    ? (formatSetRepScheme(row).scheme || '')
+    : ((row.scheme || '') || ((row.sets_count || (Array.isArray(row.sets) ? row.sets.length : row.sets) || '') + '×' + (row.repsTarget || row.reps || '')));
+  const doneLines = [];
+  for (let s = 1; s <= 12; s++) {
+    const load = store && store.data ? store.data['w' + week + '_d' + day + '_e' + idx + '_s' + s + '_load'] : undefined;
+    const reps = store && store.data ? store.data['w' + week + '_d' + day + '_e' + idx + '_s' + s + '_reps'] : undefined;
+    const rir = store && store.data ? store.data['w' + week + '_d' + day + '_e' + idx + '_s' + s + '_rir'] : undefined;
+    const hasLoad = load !== undefined && load !== '' && load != null;
+    const hasReps = reps !== undefined && reps !== '' && reps != null;
+    if (!hasLoad && !hasReps) continue;
+    doneLines.push('S' + s + ': ' + (hasLoad ? (load + ' kg') : '—') + (hasReps ? (' × ' + reps) : '') + (rir !== undefined && rir !== '' && rir != null ? (' @RIR ' + rir) : ''));
+  }
+  const prevSets = (typeof collectPrevWeekSetLogs === 'function') ? collectPrevWeekSetLogs(idx, row) : [];
+  const policy = (typeof workoutProgressionPolicy === 'function') ? workoutProgressionPolicy(prevSets, row) : { addKg: 0, advice: '' };
+  const suggLines = [];
+  for (let s = 1; s <= Math.max(3, prevSets.length); s++) {
+    const sugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(idx, s, row) : null;
+    const eff = (typeof effectiveSetLoad === 'function') ? effectiveSetLoad(idx, s, row) : '';
+    if (sugg || eff) suggLines.push('S' + s + ': previsto ' + (sugg || '—') + (eff !== '' && String(eff) !== String(sugg) ? (' · effettivo ' + eff) : ''));
+  }
+  return [
+    'Parlami di questo esercizio della mia scheda personale. NON modificare il programma se non lo chiedo esplicitamente.',
+    'Esercizio: ' + name,
+    'Settimana ' + week + ' · seduta ' + (day + 1),
+    'Schema: ' + (scheme || 'n/d'),
+    'Carichi già fatti: ' + (doneLines.length ? doneLines.join('; ') : 'nessuno registrato in questa seduta'),
+    'Nota increment/hold: ' + (policy.advice || 'n/d') + (policy.addKg ? (' (proposta +' + policy.addKg + ' kg)') : ' (resta o +1 rep)'),
+    (suggLines.length ? ('Carichi previsti da policy: ' + suggLines.join('; ')) : ''),
+    '',
+    'Spiegami in modo pratico: 1) perché in questo momento conviene aumentare oppure restare bassi; 2) come aumentare in sicurezza se c\'è margine; 3) i punti chiave di esecuzione.',
+    'In chiusura chiedimi esplicitamente se voglio anche i dettagli di tecnica/esecuzione.'
+  ].filter(Boolean).join('\n');
+}
 async function askAI(){
   if (typeof isAthleteRole === 'function' && isAthleteRole() && !(store.clientProfile && store.clientProfile.allowNurvanAi)) {
     if (typeof showToast === 'function') showToast('Nurvan AI non abilitata dal tuo coach', 'warning');
@@ -19663,6 +20157,16 @@ if (typeof window !== 'undefined') {
   window.openWorkoutPdfExportModal = openWorkoutPdfExportModal;
   window.closeWorkoutPdfExportModal = closeWorkoutPdfExportModal;
   window.exportWorkoutPdf = exportWorkoutPdf;
+  window.onWorkoutPdfScopeChange = onWorkoutPdfScopeChange;
+  window.onWorkoutPdfRangeWeekChange = onWorkoutPdfRangeWeekChange;
+  window.openSavedCheckFisico = openSavedCheckFisico;
+  window.openLoggedSessionReview = openLoggedSessionReview;
+  window.closeSavedRecordOverlay = closeSavedRecordOverlay;
+  window.exportSavedCheckFisico = exportSavedCheckFisico;
+  window.sendSavedCheckFisico = sendSavedCheckFisico;
+  window.askAIInner = askAIInner;
+  window.buildPersonalExerciseInfoPrompt = buildPersonalExerciseInfoPrompt;
+  window.classifyMaxTestLift = classifyMaxTestLift;
   window.openMaxTestPlannerModal = openMaxTestPlannerModal;
   window.closeMaxTestPlannerModal = closeMaxTestPlannerModal;
   window.confirmMaxTestPlan = confirmMaxTestPlan;
