@@ -25,11 +25,20 @@ assert.ok(html.includes("practice timeout") && !html.includes("locked && typeof 
 assert.ok(html.includes("skip leftover client-shell rewrite"), "personal sessions are not hijacked by leftover client shell");
 assert.ok(html.includes("delete payload.activeProgram.exerciseDb"), "account sync does not upload the exercise catalog");
 assert.ok(html.includes("isClientShellLocked") && html.includes("athleteHomeHtml"), "empty client home is not the main create-program screen");
+assert.ok(html.includes("nurvan_client_ctx") && html.includes("nurvan_app_mode") && html.includes("__NURVAN_CLIENT_BOOT"), "head boot persists client token via cookie and boot flag");
+assert.ok(html.includes("display-mode: standalone") && html.includes("location.replace('/c/'"), "standalone Home launch at / reopens /c/token");
+assert.ok(html.includes("function persistNurvanAppMode"), "master/client app mode is persisted");
 assert.ok(practice.includes("GS_CLIENT_SHELL") && practice.includes("applyInviteManifestStartUrl(token)"), "invite token persisted for Home reopen");
 assert.ok(practice.includes("/c/' + encodeURIComponent(token) + '/manifest.webmanifest'") || practice.includes("/manifest.webmanifest"), "invite manifest is a durable /c/token URL");
+assert.ok(practice.includes("persistClientAppContext"), "practice UI writes client cookies");
 assert.ok(html.includes("history.replaceState") && html.includes("/c/"), "cold start at / is rewritten to /c/token");
 const apiPractice = fs.readFileSync(path.join(root, "coach-practice.mjs"), "utf8");
 assert.ok(apiPractice.includes("/c/:token/manifest.webmanifest") && apiPractice.includes("start_url"), "server serves per-token PWA manifest");
+assert.ok(apiPractice.includes("function injectClientPwaHtml") && apiPractice.includes("__NURVAN_CLIENT_BOOT"), "server injects per-token manifest into /c/:token HTML");
+assert.ok(apiPractice.includes('res.redirect(302, "/c/"') || apiPractice.includes("res.redirect(302, \"/c/\""), "GET / with client cookies redirects to /c/token");
+const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
+assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("ios-client-pwa1"), "SW does not precache the root manifest");
+assert.ok(sw.includes("isClientDoc") && sw.includes(".webmanifest"), "SW keeps /c/* and manifests on the network");
 
 assert.ok(html.includes('name="cf-pdf-range"') && html.includes('value="weeks"') && html.includes('value="dates"'), "check PDF has week and date range");
 assert.ok(html.includes("rangeMode === 'weeks'") && html.includes("rangeMode === 'dates'"), "check logs filtered by custom range");

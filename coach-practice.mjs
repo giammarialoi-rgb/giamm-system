@@ -405,6 +405,45 @@ export async function ensureCoachPracticeTables(client) {
   `);
 }
 
+function parseCookieHeader(header) {
+  const out = {};
+  String(header || "").split(";").forEach((part) => {
+    const i = part.indexOf("=");
+    if (i < 0) return;
+    const k = part.slice(0, i).trim();
+    let v = part.slice(i + 1).trim();
+    try { v = decodeURIComponent(v); } catch (_) {}
+    if (k) out[k] = v;
+  });
+  return out;
+}
+
+function isSafeInviteToken(tok) {
+  const t = String(tok || "").trim();
+  return !!(t && t.length <= 160 && !/\.\.|[\\/]/.test(t) && /^[A-Za-z0-9._~-]+$/.test(t));
+}
+
+function clientCookieOptions(req) {
+  const secure = !!(req.secure || String(req.headers["x-forwarded-proto"] || "").includes("https"));
+  return { path: "/", maxAge: 31536000 * 1000, sameSite: "lax", secure, httpOnly: false };
+}
+
+function injectClientPwaHtml(html, token) {
+  const start = "/c/" + encodeURIComponent(token);
+  let out = String(html || "");
+  out = out.replace(
+    /<link\s+rel=["']manifest["'][^>]*>/i,
+    '<link rel="manifest" href="' + start + '/manifest.webmanifest">'
+  );
+  const boot = "<script>window.__NURVAN_CLIENT_BOOT=" + JSON.stringify({ token, mode: "client" }) + ";</script>";
+  if (/<head[^>]*>/i.test(out)) {
+    out = out.replace(/<head[^>]*>/i, (open) => open + "\n" + boot);
+  } else {
+    out = boot + out;
+  }
+  return out;
+}
+
 export function mountCoachPractice(app, deps) {
   const {
     pool,
@@ -755,14 +794,28 @@ export function mountCoachPractice(app, deps) {
   };
 
   const indexHtml = path.join(webDir, "index.html");
+  app.get(["/", "/index.html"], (req, res, next) => {
+    const cookies = parseCookieHeader(req.headers.cookie);
+    const ctx = String(cookies.nurvan_client_ctx || "").trim();
+    const mode = String(cookies.nurvan_app_mode || "").trim();
+    if (mode === "client" && isSafeInviteToken(ctx)) {
+      res.setHeader("Cache-Control", "no-store");
+      return res.redirect(302, "/c/" + encodeURIComponent(ctx));
+    }
+    return next();
+  });
   app.get("/c/:token", (req, res, next) => {
     const tok = String(req.params.token || "");
     if (/\.(png|jpe?g|gif|webp|svg|ico|js|css|json|map|webmanifest|html|txt|woff2?)$/i.test(tok)) {
       return next();
     }
     if (!fs.existsSync(indexHtml)) return res.status(404).send("App non disponibile");
+    const html = injectClientPwaHtml(fs.readFileSync(indexHtml, "utf8"), tok);
+    res.cookie("nurvan_client_ctx", tok, clientCookieOptions(req));
+    res.cookie("nurvan_app_mode", "client", clientCookieOptions(req));
     res.setHeader("Cache-Control", "no-store");
-    res.sendFile(indexHtml);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.send(html);
   });
 
   app.get("/c/:token/manifest.webmanifest", (req, res) => {

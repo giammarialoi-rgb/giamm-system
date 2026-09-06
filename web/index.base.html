@@ -13,6 +13,40 @@
 <script>
 (function () {
   try {
+    var pathName = String(location.pathname || '');
+    var m = pathName.match(/^\/c\/([^/?#]+)/);
+    var urlTok = '';
+    try { urlTok = (m && decodeURIComponent(m[1])) || ''; } catch (_) { urlTok = (m && m[1]) || ''; }
+    var boot = (typeof window !== 'undefined' && window.__NURVAN_CLIENT_BOOT) ? window.__NURVAN_CLIENT_BOOT : null;
+    if (!urlTok && boot && boot.token) urlTok = String(boot.token || '');
+    function readCk(name) {
+      var hit = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      if (!hit) return '';
+      try { return decodeURIComponent(hit[1]); } catch (_) { return hit[1] || ''; }
+    }
+    var cookieTok = readCk('nurvan_client_ctx');
+    var appMode = readCk('nurvan_app_mode');
+    var year = 31536000;
+    function writeCk(name, val) {
+      document.cookie = name + '=' + encodeURIComponent(val) + '; Path=/; Max-Age=' + year + '; SameSite=Lax';
+    }
+    if (urlTok) {
+      window.__NURVAN_CLIENT_BOOT = { token: urlTok, mode: 'client' };
+      writeCk('nurvan_client_ctx', urlTok);
+      writeCk('nurvan_app_mode', 'client');
+      try { localStorage.setItem('GS_CLIENT_SHELL', JSON.stringify({ inviteToken: urlTok, locked: true, at: Date.now() })); } catch (_) {}
+    } else if (cookieTok && appMode === 'client' && !/^\/c\//.test(pathName)) {
+      var standalone = false;
+      try {
+        standalone = !!(window.navigator && window.navigator.standalone === true) ||
+          !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+      } catch (_) {}
+      if (standalone) {
+        location.replace('/c/' + encodeURIComponent(cookieTok) + (location.search || '') + (location.hash || ''));
+      }
+    }
+  } catch (_) {}
+  try {
     if (location.protocol === 'http:' || location.protocol === 'https:') {
       var b = document.createElement('base');
       b.href = '/';
@@ -2196,6 +2230,12 @@ function purgeCoachProfileLeakIfNeeded() {
 function isCoachUnlocked() {
   return !!(store && store.coachUnlocked && !isAthleteRole());
 }
+function persistNurvanAppMode(mode, token) {
+  try {
+    if (mode) document.cookie = 'nurvan_app_mode=' + encodeURIComponent(mode) + '; Path=/; Max-Age=31536000; SameSite=Lax';
+    if (token) document.cookie = 'nurvan_client_ctx=' + encodeURIComponent(token) + '; Path=/; Max-Age=31536000; SameSite=Lax';
+  } catch (_) {}
+}
 function restoreClientShellSync() {
   try {
     const pathName = (typeof location !== 'undefined' && location.pathname) || '';
@@ -2204,8 +2244,35 @@ function restoreClientShellSync() {
     try { urlTok = (m && decodeURIComponent(m[1])) || (new URLSearchParams((location && location.search) || '').get('c')) || ''; } catch (_) { urlTok = (m && m[1]) || ''; }
     let shell = null;
     try { shell = JSON.parse(localStorage.getItem('GS_CLIENT_SHELL') || 'null'); } catch (_) {}
+    const fromPath = !!urlTok;
+    if (!urlTok && typeof window !== 'undefined' && window.__NURVAN_CLIENT_BOOT && window.__NURVAN_CLIENT_BOOT.token) {
+      urlTok = String(window.__NURVAN_CLIENT_BOOT.token || '');
+    }
+    const fromBoot = !fromPath && !!urlTok;
+    let cookieTok = '';
+    let cookieMode = '';
+    try {
+      const ck = (document.cookie.match(/(?:^|; )nurvan_client_ctx=([^;]*)/) || [])[1];
+      if (ck) cookieTok = decodeURIComponent(ck);
+      const md = (document.cookie.match(/(?:^|; )nurvan_app_mode=([^;]*)/) || [])[1];
+      if (md) cookieMode = decodeURIComponent(md);
+    } catch (_) {}
+    if (!urlTok && cookieTok && cookieMode === 'client') urlTok = cookieTok;
+    const fromCookieOnly = !fromPath && !fromBoot && !!urlTok;
     if (urlTok) {
+      const storedAthlete = !!(store && (
+        store.role === 'athlete' ||
+        (store.accountUser && store.accountUser.role === 'athlete') ||
+        (store.clientProfile && store.accountToken)
+      ));
+      const personalMaster = !!(store && store.accountToken && !storedAthlete);
+      const forcedClient = fromPath || fromBoot || !!(typeof window !== 'undefined' && window.__NURVAN_CLIENT_BOOT && window.__NURVAN_CLIENT_BOOT.mode === 'client');
+      if (personalMaster && fromCookieOnly && !forcedClient && !/^\/c\//.test(pathName)) {
+        console.info('[BOOT] skip leftover client-shell rewrite on personal session');
+        return '';
+      }
       localStorage.setItem('GS_CLIENT_SHELL', JSON.stringify({ inviteToken: urlTok, locked: true, at: Date.now() }));
+      persistNurvanAppMode('client', urlTok);
       if (typeof store !== 'undefined' && store) {
         store.inviteToken = urlTok;
         store.clientShell = true;
@@ -2219,7 +2286,8 @@ function restoreClientShellSync() {
         (store.clientProfile && store.accountToken)
       ));
       const personalMaster = !!(store && store.accountToken && !storedAthlete);
-      if (personalMaster && !/^\/c\//.test(pathName)) {
+      const forcedClient = !!(typeof window !== 'undefined' && window.__NURVAN_CLIENT_BOOT && window.__NURVAN_CLIENT_BOOT.mode === 'client');
+      if (personalMaster && !forcedClient && !/^\/c\//.test(pathName)) {
         console.info('[BOOT] skip leftover client-shell rewrite on personal session');
         return '';
       }
@@ -7852,6 +7920,18 @@ function finishInit() {
       hydrated = true;
       window.__bootAligning = false;
       console.info('[BOOT] align ' + (alignState || 'ok'));
+      try {
+        const pathNow = (typeof location !== 'undefined' && location.pathname) || '';
+        const onClientPath = /^\/c\//.test(pathNow);
+        const athlete = !!(store && (
+          store.role === 'athlete' ||
+          (store.accountUser && store.accountUser.role === 'athlete') ||
+          store.clientShell ||
+          onClientPath
+        ));
+        if (onClientPath && store && (store.inviteToken || store.clientShell)) persistNurvanAppMode('client', store.inviteToken);
+        else if (store && store.accountToken && !athlete) persistNurvanAppMode('master');
+      } catch (_) {}
       setSplashProgress(100, 'Pronto');
       if (splash) {
         splash.style.opacity = '0';

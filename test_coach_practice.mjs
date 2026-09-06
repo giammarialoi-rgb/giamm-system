@@ -298,9 +298,29 @@ try {
   const html = await invitePage.text();
   assert(invitePage.status === 200, "GET /c/:token serves app");
   assert(html.includes("NURVAN") || html.includes("bootCoachPractice") || html.includes("<!doctype"), "invite URL returns SPA html");
+  assert(html.includes('href="/c/demo-token/manifest.webmanifest"'), "invite HTML points iOS at the per-token manifest before JS");
+  assert(html.includes("__NURVAN_CLIENT_BOOT") && html.includes("demo-token"), "invite HTML injects client boot token");
+  const setCookies = (typeof invitePage.headers.getSetCookie === "function")
+    ? invitePage.headers.getSetCookie()
+    : [invitePage.headers.get("set-cookie")].filter(Boolean);
+  const cookieBlob = setCookies.join("; ");
+  assert(/nurvan_client_ctx=demo-token/i.test(cookieBlob), "GET /c/:token sets client context cookie");
+  assert(/nurvan_app_mode=client/i.test(cookieBlob), "GET /c/:token sets client app mode cookie");
+  const rootClient = await fetch("http://127.0.0.1:" + port + "/", {
+    redirect: "manual",
+    headers: { cookie: "nurvan_client_ctx=demo-token; nurvan_app_mode=client" }
+  });
+  const loc = String(rootClient.headers.get("location") || "");
+  assert(rootClient.status === 302 && loc.includes("/c/demo-token"), "GET / with client cookies redirects to /c/token");
+  const rootMaster = await fetch("http://127.0.0.1:" + port + "/", {
+    redirect: "manual",
+    headers: { cookie: "nurvan_client_ctx=demo-token; nurvan_app_mode=master" }
+  });
+  assert(rootMaster.status !== 302, "GET / with master mode does not redirect into client");
   const man = await fetch("http://127.0.0.1:" + port + "/c/demo-token/manifest.webmanifest");
   const manJson = await man.json();
   assert(man.status === 200 && manJson.start_url === "/c/demo-token", "GET /c/:token/manifest.webmanifest keeps client start_url");
+  assert(manJson.id === "/c/demo-token", "per-token manifest id is the client start URL");
   const locked = await fetch("http://127.0.0.1:" + port + "/api/coach/clients");
   assert(locked.status === 401, "clients API requires login");
   const athleteBlocked = await fetch("http://127.0.0.1:" + port + "/api/client/me");
