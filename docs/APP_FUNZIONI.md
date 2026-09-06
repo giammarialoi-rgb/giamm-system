@@ -391,7 +391,7 @@ La sessione Coach usa una shell distinta. Personal e Client restano invariati ne
 - **Nurvan Agent V1** — READ/PROPOSE/EXECUTE ristretto, WHY, conferma, stale protection, audit, undo.
 - **Coach Analytics** — qualità atleta, senza revenue/MRR.
 - **Business / CRM / Automations** — ledger manuale, pipeline LEAD→CHURNED, regole con dry-run. Stripe non è richiesto.
-- **Athlete Brain** — interpretazione ancorata ai segnali deterministici; feedback Approve/Dismiss.
+- **Athlete Brain** — interpretazione ancorata ai segnali deterministici; feedback Approve/Modify/Dismiss/Ask Agent/Open data.
 - **Nutrition / Form review** — stima pasto con conferma obbligatoria; marker video.
 
 Feature flag indipendenti permettono il rollback di ogni superficie.

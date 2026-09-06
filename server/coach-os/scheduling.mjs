@@ -60,11 +60,19 @@ export async function listAvailability(pool, coachId) {
   }));
 }
 
+function parseClock(value) {
+  if (value == null || value === "") return null;
+  if (Number.isFinite(Number(value)) && !String(value).includes(":")) return Number(value);
+  const match = String(value).trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return Number.NaN;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
 export async function saveAvailabilityRule(pool, coachId, input = {}) {
   const weekday = Number(input.weekday);
   if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) throw new Error("Invalid weekday.");
-  const startMinute = Number(input.startMinute);
-  const endMinute = Number(input.endMinute);
+  const startMinute = parseClock(input.startMinute != null ? input.startMinute : input.startTime);
+  const endMinute = parseClock(input.endMinute != null ? input.endMinute : input.endTime);
   if (!(endMinute > startMinute)) throw new Error("Availability end must be after start.");
   const result = await pool.query(
     `INSERT INTO coach_availability_rules(
@@ -117,9 +125,22 @@ export async function listAppointments(pool, coachId, options = {}) {
 }
 
 export async function createAppointment(pool, coachId, input = {}) {
+  const created = [];
+  const weeks = Math.min(12, Math.max(1, Number(input.recurrenceWeeks || 1)));
+  const firstStart = asDate(input.startsAt);
+  const firstEnd = input.endsAt ? asDate(input.endsAt) : new Date(firstStart.getTime() + 45 * 60000);
+  for (let week = 0; week < weeks; week += 1) {
+    const startsAt = new Date(firstStart.getTime() + week * 7 * 86400000);
+    const endsAt = new Date(firstEnd.getTime() + week * 7 * 86400000);
+    created.push(await insertAppointment(pool, coachId, { ...input, startsAt, endsAt }));
+  }
+  return weeks === 1 ? created[0] : { series: created, count: created.length };
+}
+
+async function insertAppointment(pool, coachId, input = {}) {
   const type = normalizeSessionType(input.type);
-  const startsAt = asDate(input.startsAt);
-  const endsAt = input.endsAt ? asDate(input.endsAt) : new Date(startsAt.getTime() + 45 * 60000);
+  const startsAt = input.startsAt instanceof Date ? input.startsAt : asDate(input.startsAt);
+  const endsAt = input.endsAt instanceof Date ? input.endsAt : (input.endsAt ? asDate(input.endsAt) : new Date(startsAt.getTime() + 45 * 60000));
   if (endsAt <= startsAt) throw new Error("Appointment end must be after start.");
   const clash = await pool.query(
     `SELECT id FROM coach_appointments

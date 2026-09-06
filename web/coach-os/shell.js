@@ -70,6 +70,7 @@
     const rows = [
       { view: 'coachCheckIns', label: 'Check-ins', flag: 'checkInCenterV1' },
       { view: 'coachNutrition', label: 'Nutrition' },
+      { view: 'coachFormReview', label: 'Form review', flag: 'videoFormV1' },
       { view: 'coachAnalytics', label: 'Analytics', flag: 'coachAnalyticsV1' },
       { view: 'coachAgent', label: 'Agent', flag: 'agentV1' },
       { view: 'coachAutomations', label: 'Automations', flag: 'businessV1' },
@@ -183,6 +184,7 @@
       coachCalendar: ['Calendar', 'Scheduling per coaching online'],
       coachCheckIns: ['Check-ins', 'Richiesti, ricevuti e da revisionare'],
       coachNutrition: ['Nutrition', 'Vista portfolio nutrizione'],
+      coachFormReview: ['Form review', 'Video, marker e feedback esercizio'],
       coachAnalytics: ['Analytics', 'Adherence e performance dei clienti'],
       coachAgent: ['Nurvan Agent', 'Ask. Plan. Execute.'],
       coachAutomations: ['Automations', 'Trigger, condizioni e azioni'],

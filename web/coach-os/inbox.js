@@ -40,12 +40,19 @@
       '<p class="coach-os-subtitle">Messaggi, check-in, richieste e attention. La chat 1:1 resta il thread.</p></div></div>' +
       '<input value="' + escText(state.q) + '" placeholder="Cerca messaggi o clienti" onchange="CoachOS.searchInbox(this.value)" ' +
       'style="width:100%;min-height:44px;background:#0b0b0b;border:1px solid var(--co-border);border-radius:12px;color:#fff;padding:0 12px;">' +
+      '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
+      '<button class="coach-os-action" onclick="CoachOS.previewBroadcast()">PREVIEW BROADCAST</button></div>' +
       (state.items.length
         ? '<div class="coach-os-list" style="margin-top:12px;">' + state.items.map(function (item, index) {
-          return '<button class="coach-os-row" onclick="CoachOS.openInboxItem(' + index + ')">' +
-            '<span class="coach-os-status-dot ' + (item.unread ? 'high' : 'low') + '"></span>' +
-            '<span class="coach-os-row-main"><strong>' + escText(item.title) + '</strong><span>' +
-            escText(item.kind) + (item.preview ? ' · ' + escText(item.preview) : '') + '</span></span></button>';
+          return '<div class="coach-os-row"><button class="coach-os-row-main" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.openInboxItem(' + index + ')">' +
+            '<strong>' + escText(item.title) + (item.pinned ? ' · PIN' : '') + '</strong><span>' +
+            escText(item.kind) + (item.preview ? ' · ' + escText(item.preview) : '') +
+            (item.reaction ? ' · ' + escText(item.reaction) : '') + '</span></button>' +
+            (item.kind === 'message'
+              ? '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.pinInboxItem(\'' + escText(item.id) + '\',' + (item.pinned ? 'false' : 'true') + ')">' +
+                (item.pinned ? 'UNPIN' : 'PIN') + '</button>'
+              : '') +
+            '</div>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">Inbox vuota. I thread E2E restano in Chat.</div>') +
       '</div>';
@@ -57,5 +64,27 @@
   };
   CoachOS.openInboxItem = function (index) {
     openItem(state.items[index] || {});
+  };
+
+  CoachOS.pinInboxItem = async function (id, pinned) {
+    await window.practiceFetch('/api/coach/messages/' + encodeURIComponent(id) + '/pin', {
+      method: 'POST',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({ pinned: !!pinned })
+    });
+    CoachOS.navigate('coachInbox');
+  };
+
+  CoachOS.previewBroadcast = async function () {
+    const raw = window.prompt('Client IDs da includere nella preview (virgola)', '');
+    if (raw == null) return;
+    const clientIds = String(raw).split(',').map(function (id) { return id.trim(); }).filter(Boolean);
+    const payload = await window.practiceFetch('/api/coach/broadcast/preview', {
+      method: 'POST',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({ clientIds: clientIds })
+    });
+    const preview = payload.preview || {};
+    window.alert('Preview broadcast: ' + (preview.targetCount || 0) + ' target. Nessun messaggio inviato.');
   };
 })();
