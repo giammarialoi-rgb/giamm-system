@@ -35474,6 +35474,16 @@ function restoreClientShellSync() {
       return urlTok;
     }
     if (shell && shell.locked && shell.inviteToken) {
+      const storedAthlete = !!(store && (
+        store.role === 'athlete' ||
+        (store.accountUser && store.accountUser.role === 'athlete') ||
+        (store.clientProfile && store.accountToken)
+      ));
+      const personalMaster = !!(store && store.accountToken && !storedAthlete);
+      if (personalMaster && !/^\/c\//.test(pathName)) {
+        console.info('[BOOT] skip leftover client-shell rewrite on personal session');
+        return '';
+      }
       if (typeof store !== 'undefined' && store) {
         store.inviteToken = store.inviteToken || shell.inviteToken;
         store.clientShell = true;
@@ -36699,6 +36709,8 @@ function accountPayload(opts){
         exams: exams
       });
       if (!Array.isArray(payload.activeProgram.weeks)) payload.activeProgram.weeks = [];
+      delete payload.activeProgram.exerciseDb;
+      delete payload.activeProgram.exerciseAliases;
     }
   }
   return payload;
@@ -36892,7 +36904,7 @@ async function syncAccountData(download=false){
       } catch (_) {}
     }
     persist();
-    if (download) {
+    if (download && !window.__bootAligning) {
       try { render(); } catch (_) {}
     }
     if(status) status.textContent = 'Dati sincronizzati correttamente.';
@@ -41094,7 +41106,13 @@ function finishInit() {
   setSplashProgress(95, 'Quasi pronto…');
   setTimeout(function () {
     setSplashProgress(92, 'Allineo i tuoi allenamenti…');
-    const afterHydrate = function () {
+    console.info('[BOOT] align start');
+    let hydrated = false;
+    const afterHydrate = function (alignState) {
+      if (hydrated) return;
+      hydrated = true;
+      window.__bootAligning = false;
+      console.info('[BOOT] align ' + (alignState || 'ok'));
       setSplashProgress(100, 'Pronto');
       if (splash) {
         splash.style.opacity = '0';
@@ -41102,7 +41120,7 @@ function finishInit() {
       }
       setTimeout(function () {
         if (splash) splash.style.display = 'none';
-        const finishUi = function () {
+        try {
           render();
           applyChromeI18n();
           try { applyFocusUi(); } catch (_) {}
@@ -41111,22 +41129,39 @@ function finishInit() {
           try { scheduleAllItemAlerts(); } catch (_) {}
           try { registerNurvanServiceWorker(); } catch (_) {}
           try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
-        };
-        const locked = !!(store && (store.clientShell || store.inviteToken));
-        if (locked && typeof bootCoachPractice === 'function') {
-          Promise.resolve(bootCoachPractice()).catch(function () {}).then(finishUi);
-        } else {
-          finishUi();
-          try { if (typeof bootCoachPractice === 'function') bootCoachPractice(); } catch (_) {}
+        } catch (uiErr) {
+          console.error('[BOOT] first render', uiErr);
         }
-      }, 400);
+        try {
+          if (typeof bootCoachPractice === 'function') {
+            Promise.race([
+              Promise.resolve(bootCoachPractice()),
+              new Promise(function (res) {
+                setTimeout(function () { console.warn('[BOOT] practice timeout'); res(); }, 8000);
+              })
+            ]).catch(function (err) { console.warn('[BOOT] practice', err && err.message); });
+          }
+        } catch (bootErr) {
+          console.warn('[BOOT] practice start', bootErr);
+        }
+      }, 200);
     };
     const canPull = !!(store.accountToken && typeof syncAccountData === 'function' && !store.coachViewingClient && !store.coachAssigning);
     if (!canPull) {
-      afterHydrate();
+      afterHydrate('skip');
       return;
     }
-    Promise.resolve(syncAccountData(true)).catch(function () {}).then(afterHydrate);
+    window.__bootAligning = true;
+    const ALIGN_MS = 8000;
+    Promise.race([
+      Promise.resolve(syncAccountData(true)).then(function () { return 'ok'; }),
+      new Promise(function (res) { setTimeout(function () { res('timeout'); }, ALIGN_MS); })
+    ]).then(function (state) {
+      afterHydrate(state);
+    }).catch(function (err) {
+      console.warn('[BOOT] align error', err && (err.message || err));
+      afterHydrate('error');
+    });
   }, 280);
 }
 function persist() {
