@@ -100,6 +100,9 @@ function detectInviteToken() {
     const path = String(location.pathname || '').replace(/\/+$/, '');
     const m = path.match(/\/c\/([^/?#]+)/);
     if (m && m[1]) return decodeURIComponent(m[1]);
+    if (typeof window !== 'undefined' && window.__NURVAN_CLIENT_BOOT && window.__NURVAN_CLIENT_BOOT.token) {
+      return String(window.__NURVAN_CLIENT_BOOT.token || '');
+    }
     const q = new URLSearchParams(location.search || '');
     return q.get('c') || '';
   } catch (_) { return ''; }
@@ -184,6 +187,17 @@ function clearClientShellLock() {
   if (store) {
     store.clientShell = false;
   }
+}
+
+function persistClientAppContext(token) {
+  if (!token) return;
+  try {
+    if (typeof persistNurvanAppMode === 'function') persistNurvanAppMode('client', token);
+    else {
+      document.cookie = 'nurvan_client_ctx=' + encodeURIComponent(token) + '; Path=/; Max-Age=31536000; SameSite=Lax';
+      document.cookie = 'nurvan_app_mode=client; Path=/; Max-Age=31536000; SameSite=Lax';
+    }
+  } catch (_) {}
 }
 
 function inviteShortCode(token) {
@@ -5446,6 +5460,7 @@ async function bootCoachPractice() {
     try {
       localStorage.setItem('GS_CLIENT_SHELL', JSON.stringify({ inviteToken: token, locked: true, at: Date.now() }));
     } catch (_) {}
+    persistClientAppContext(token);
     try { applyInviteManifestStartUrl(token); } catch (_) {}
   }
   // Athlete JWT bound to a different invite → force re-login for this link
@@ -5473,6 +5488,10 @@ async function bootCoachPractice() {
     if (!confirm('Questo è un link cliente. Entrare come atleta su questo dispositivo? (Il master resta separato solo se usi un altro browser/profilo.)')) {
       try { history.replaceState(null, '', '/'); } catch (_) {}
       store.inviteToken = null;
+      try {
+        if (typeof persistNurvanAppMode === 'function') persistNurvanAppMode('master');
+        else document.cookie = 'nurvan_app_mode=master; Path=/; Max-Age=31536000; SameSite=Lax';
+      } catch (_) {}
       applyClientChrome();
       return;
     }
@@ -5774,6 +5793,7 @@ function wrapPracticeHooks() {
         try {
           localStorage.setItem('GS_CLIENT_SHELL', JSON.stringify({ inviteToken: token, locked: true, at: Date.now() }));
         } catch (_) {}
+        persistClientAppContext(token);
         if (typeof persist === 'function') persist();
         showClientInvite(token);
         applyClientChrome();
