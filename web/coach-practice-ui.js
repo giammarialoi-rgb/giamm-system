@@ -69,9 +69,10 @@ function coachFeatureDefaultsFromConfig() {
 
 function coachFeatureEnabled(name) {
   const defaults = coachFeatureDefaultsFromConfig();
+  if (defaults[name] === true) return true;
   const remote = (store && store.coachFeatureFlags) || {};
   if (typeof remote[name] === 'boolean') return remote[name];
-  return defaults[name] === true;
+  return false;
 }
 
 async function refreshCoachFeatureFlags() {
@@ -1860,9 +1861,7 @@ function openCoachOrUnlock() {
 }
 
 function coachLandingView() {
-  return (typeof coachFeatureEnabled === 'function' && coachFeatureEnabled('coachTodayV2'))
-    ? 'coachToday'
-    : 'coachHub';
+  return 'coachToday';
 }
 
 function enterCoachSession() {
@@ -1874,7 +1873,8 @@ function enterCoachSession() {
   if (typeof persist === 'function') persist();
   requestNotifyPermission();
   applyClientChrome();
-  navigate(coachLandingView());
+  navigate('coachToday');
+  if (typeof practiceToast === 'function') practiceToast('Coach OS · Today', 'success');
 }
 
 function exitCoachSession(force) {

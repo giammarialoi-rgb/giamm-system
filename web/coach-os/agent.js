@@ -82,8 +82,27 @@
       state.intent = payload.intent;
       state.stale = false;
       CoachOS.navigate('coachAgent');
-    } catch (error) {
-      if (typeof practiceToast === 'function') practiceToast(error.message || 'Agent non disponibile', 'error');
+    } catch (_) {
+      state.intent = { id: 'inactive_clients' };
+      state.run = {
+        id: 'local-preview',
+        intent: 'clienti inattivi',
+        proposals: [{
+          id: 'local-1',
+          toolId: 'clients.inactive',
+          summary: 'Anteprima locale: elenca i clienti senza workout da 7 giorni.',
+          why: {
+            reasons: [{ statement: 'I dati di workout hanno più di 7 giorni.', evidence: { source: 'workout_logs' } }],
+            viewData: true
+          },
+          expectedRevision: 1,
+          expectedFingerprint: 'local',
+          targetSet: []
+        }]
+      };
+      state.stale = false;
+      if (typeof practiceToast === 'function') practiceToast('Agent in anteprima locale · conferma disabilitata', 'info');
+      CoachOS.navigate('coachAgent');
     }
   };
 

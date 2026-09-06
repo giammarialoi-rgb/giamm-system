@@ -132,16 +132,73 @@
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Portfolio</h2></div>' +
       renderKpis(data.kpi || {}) + '</section>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Quick actions</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Coach OS · apri e controlla</h2></div>' +
       '<div class="coach-os-quick-actions">' +
+      [['coachToday', 'Today'], ['coachHub', 'Clients'], ['coachInbox', 'Inbox'], ['coachPrograms', 'Programs'],
+        ['coachCalendar', 'Calendar'], ['coachCheckIns', 'Check-ins'], ['coachAgent', 'Agent'],
+        ['coachAnalytics', 'Analytics'], ['coachBusiness', 'Business'], ['coachCrm', 'CRM'],
+        ['coachAutomations', 'Automations'], ['coachNutrition', 'Nutrition'], ['coachFormReview', 'Form review']
+      ].map(function (row) {
+        return '<button class="coach-os-action" onclick="CoachOS.navigate(\'' + row[0] + '\')">' + row[1] + '</button>';
+      }).join('') +
       '<button class="coach-os-action" onclick="openAddClientWizard()">Add client</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachHub\')">Assign program</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachInbox\')">Open Inbox</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachHub\')">Request check-in</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachPrograms\')">Create program</button>' +
       '<button class="coach-os-action" onclick="CoachOS.openNativeImport()">Import program</button>' +
       '</div></section>' +
       '<div style="height:28px;"></div></div>';
+  }
+
+  function todayFromClients(clients) {
+    const rows = Array.isArray(clients) ? clients : [];
+    const now = Date.now();
+    const attention = [];
+    const activity = [];
+    rows.forEach(function (client) {
+      const id = String(client.id || '');
+      const name = client.displayName || client.username || 'Cliente';
+      const lastAt = client.lastWorkoutAt || client.last_workout_at;
+      if (client.leaveRequested || client.leave_requested_at) {
+        attention.push({ title: 'Fine rapporto', detail: name + ' ha chiesto di uscire', severity: 'high', clientId: id, action: { clientId: id } });
+      } else if (client.hasPendingChange || client.hasPendingUnlock) {
+        attention.push({ title: 'In attesa di te', detail: name + ' ha una richiesta da approvare', severity: 'high', clientId: id, action: { clientId: id } });
+      } else if (Number(client.unreadCount || 0) > 0) {
+        attention.push({ title: 'Messaggi non letti', detail: name + ' · ' + client.unreadCount + ' unread', severity: 'high', clientId: id, action: { view: 'coachChat', clientId: id } });
+      } else if (!client.paid) {
+        attention.push({ title: 'Pagamento', detail: name + ' non risulta pagato', severity: 'medium', clientId: id, action: { clientId: id } });
+      } else if (lastAt && now - new Date(lastAt).getTime() > 7 * 86400000) {
+        attention.push({ title: 'Inattivo 7+ giorni', detail: name, severity: 'medium', clientId: id, action: { clientId: id } });
+      }
+      if (lastAt) {
+        activity.push({ title: 'Ultimo workout', clientName: name, at: lastAt, clientId: id, action: { clientId: id } });
+      }
+      if (client.workoutLive) {
+        activity.unshift({ title: 'In allenamento ora', clientName: name, at: new Date().toISOString(), clientId: id, action: { clientId: id } });
+      }
+    });
+    return {
+      attention: attention.slice(0, 12),
+      sessions: [],
+      tasks: [],
+      recentActivity: activity.slice(0, 8),
+      kpi: {
+        clients: rows.length,
+        activeClients: rows.filter(function (row) { return row.paid !== false; }).length,
+        unread: rows.reduce(function (sum, row) { return sum + Number(row.unreadCount || 0); }, 0),
+        liveNow: rows.filter(function (row) { return !!row.workoutLive; }).length
+      }
+    };
+  }
+
+  async function loadLocalClients() {
+    if (typeof store !== 'undefined' && Array.isArray(store.__cpClientList) && store.__cpClientList.length) {
+      return store.__cpClientList;
+    }
+    const payload = await window.practiceFetch('/api/coach/clients?limit=40&offset=0', {
+      method: 'GET',
+      headers: window.practiceHeaders(false)
+    }, 15000);
+    const rows = (payload && payload.clients) || [];
+    if (typeof store !== 'undefined') store.__cpClientList = rows;
+    return rows;
   }
 
   async function loadToday(container) {
@@ -157,12 +214,15 @@
       );
       if (!payload || !payload.ok) throw new Error((payload && payload.error) || 'Today non disponibile');
       renderToday(container, payload);
-    } catch (error) {
-      container.innerHTML =
-        '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Coach OS</div>' +
-        '<h1 class="coach-os-title">Today</h1></div></div>' +
-        '<div class="coach-os-error">' + escText(error && error.message || 'Today non disponibile') +
-        '<br><button class="btn btn-outline" style="margin-top:12px;" onclick="CoachOS.navigate(\'coachToday\')">RIPROVA</button></div></div>';
+    } catch (_) {
+      try {
+        renderToday(container, todayFromClients(await loadLocalClients()));
+      } catch (error) {
+        renderToday(container, todayFromClients([]));
+        if (typeof practiceToast === 'function') {
+          practiceToast((error && error.message) || 'Today in modalità locale', 'info');
+        }
+      }
     }
   }
 
