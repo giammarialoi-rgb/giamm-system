@@ -298,8 +298,14 @@ header .btn {
   touch-action: manipulation;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 html, body {
   height: 100%;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
 }
 main {
@@ -666,6 +672,23 @@ input[type="checkbox"], input[type="radio"] {
 .skip-btn { color: var(--accent-red); font-size: 10px; font-weight: 800; cursor: pointer; }
 .exercise-skipped { opacity: 0.35; pointer-events: none; }
 .skip-reason { font-size: 10px; font-style: italic; color: var(--accent-red); margin-top: 4px; }
+.exercise-name-heading {
+  font-size: 17px;
+  font-weight: 900;
+  margin: 8px 0 4px;
+  color: #fff;
+  letter-spacing: 0.15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.3;
+}
+.exercise-name-heading .ex-mark {
+  color: var(--gold);
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+}
 
 /* Fully responsive centered modals */
 #account-modal {
@@ -2377,6 +2400,48 @@ body.coach-os-v2 .nav-item svg {
 
   body.coach-os-v2 main {
     padding: 32px 48px 56px;
+  }
+}
+
+@media (orientation: portrait) {
+  #coach-os-sidebar {
+    display: none !important;
+  }
+  body.coach-os-v2 nav.bottom-nav {
+    display: flex !important;
+  }
+  body.coach-os-v2 header {
+    padding-left: max(8px, env(safe-area-inset-left, 0px)) !important;
+  }
+  body.coach-os-v2 main {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 14px 14px 28px !important;
+    height: calc(100dvh - var(--header-height) - 64px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--cp-session-bar, 0px));
+  }
+  .coach-os-page {
+    max-width: 100%;
+  }
+  .coach-os-title {
+    font-size: clamp(22px, 6.4vw, 30px);
+  }
+  .coach-os-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .coach-os-quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .coach-os-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (orientation: portrait) and (min-width: 700px) {
+  .coach-os-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .coach-os-quick-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -45476,12 +45541,76 @@ function seedImportedTechniquesIntoStore(program) {
 }
 
 /** Pre-activation: choose weeks / days / progression before locking the import. */
+function programHasPresumedLoads(prog) {
+  const weeks = (prog && (prog.weeks || (prog.training && prog.training.weeks))) || [];
+  for (let wi = 0; wi < weeks.length; wi++) {
+    const days = weeks[wi].sessions || weeks[wi].days || [];
+    for (let di = 0; di < days.length; di++) {
+      const exs = days[di].exercises || days[di].rows || [];
+      for (let ei = 0; ei < exs.length; ei++) {
+        const ex = exs[ei] || {};
+        if (Number(ex.plannedLoad) > 0 || Number(ex.load) > 0 || Number(ex.load_value) > 0 || Number(ex.load_target) > 0) return true;
+        const sets = ex.sets || [];
+        for (let si = 0; si < sets.length; si++) {
+          const s = sets[si] || {};
+          if (Number(s.load) > 0 || Number(s.target_load) > 0) return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function stripPresumedLoads(prog) {
+  if (!prog) return;
+  const weeks = prog.weeks || [];
+  weeks.forEach(function (w) {
+    (w.sessions || w.days || []).forEach(function (d) {
+      (d.exercises || d.rows || []).forEach(function (ex) {
+        if (!ex) return;
+        ex.plannedLoad = null;
+        ex.load = null;
+        ex.load_value = null;
+        ex.load_target = null;
+        (ex.sets || []).forEach(function (s) {
+          if (!s) return;
+          s.load = null;
+          s.target_load = null;
+        });
+      });
+    });
+  });
+  if (prog.training && Array.isArray(prog.training.weeks) && prog.training.weeks !== prog.weeks) {
+    stripPresumedLoads(prog.training);
+  }
+}
+
+function openImportLoadsChoice() {
+  return new Promise(function (resolve) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal';
+    overlay.style.display = 'flex';
+    overlay.style.zIndex = '2710';
+    overlay.innerHTML = '<div class="modal-content" style="max-width:420px;">' +
+      '<h2 style="color:var(--gold);margin-top:0;">Carichi presunti</h2>' +
+      '<p style="font-size:13px;color:#ccc;margin:0 0 14px;">Il documento contiene kg stimati. Vuoi importarli nella scheda? Se no, la sezione carichi resta vuota.</p>' +
+      '<div style="display:flex;gap:8px;margin-top:8px;">' +
+      '<button class="btn btn-outline" id="imp-loads-no" style="flex:1;">NO, LASCIA VUOTI</button>' +
+      '<button class="btn btn-primary" id="imp-loads-yes" style="flex:1;">SI, IMPORTA</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('#imp-loads-no').onclick = function () { overlay.remove(); resolve(false); };
+    overlay.querySelector('#imp-loads-yes').onclick = function () { overlay.remove(); resolve(true); };
+  });
+}
+
 function openImportActivationChoices(prog) {
   return new Promise((resolve) => {
     const importedWeeks = Math.max(1, (prog.weeks || []).length || 1);
     const importedDays = Math.max(1, ((prog.weeks || [])[0]?.sessions || (prog.weeks || [])[0]?.days || []).length || (store.prefs.frequency || 4));
     const prefWeeks = Math.max(1, parseInt(store.prefs.duration, 10) || importedWeeks);
     const prefDays = Math.max(1, parseInt(store.prefs.frequency, 10) || importedDays);
+    const hasLoads = programHasPresumedLoads(prog);
     const overlay = document.createElement('div');
     overlay.className = 'modal';
     overlay.style.display = 'flex';
@@ -45535,6 +45664,19 @@ function openImportActivationChoices(prog) {
         </select>
       </div>
 
+      ${hasLoads ? `<div style="margin:12px 0;padding:10px;border:1px solid #333;border-radius:8px;">
+        <b style="color:#fff;font-size:13px;">Carichi presunti</b>
+        <p style="font-size:11px;color:#aaa;margin:6px 0 8px;">Il documento contiene kg stimati. Se scegli no, la sezione carichi resta vuota.</p>
+        <label style="display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-size:12px;color:#ccc;">
+          <input type="radio" name="imp-loads" value="yes" checked style="margin-top:3px;">
+          <span><b style="color:#fff;">Importa i carichi presunti</b><br><small>I kg stimati compaiono nella scheda.</small></span>
+        </label>
+        <label style="display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-size:12px;color:#ccc;">
+          <input type="radio" name="imp-loads" value="no" style="margin-top:3px;">
+          <span><b style="color:#fff;">Lascia vuota la sezione carichi</b><br><small>Li inserisci tu in allenamento.</small></span>
+        </label>
+      </div>` : ''}
+
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button class="btn btn-outline" id="imp-act-cancel" style="flex:1;">ANNULLA</button>
         <button class="btn btn-primary" id="imp-act-ok" style="flex:1;">CONFERMA E ATTIVA</button>
@@ -45557,13 +45699,15 @@ function openImportActivationChoices(prog) {
       const progression = overlay.querySelector('input[name="imp-prog-mode"]:checked').value;
       const weeks = Math.min(52, Math.max(1, parseInt(overlay.querySelector('#imp-weeks-val').value, 10) || importedWeeks));
       const days = Math.min(7, Math.max(1, parseInt(overlay.querySelector('#imp-days-val').value, 10) || importedDays));
+      const loadsEl = overlay.querySelector('input[name="imp-loads"]:checked');
       finish({
         weeksMode,
         daysMode,
         weeks: weeksMode === 'set' ? weeks : importedWeeks,
         days: daysMode === 'set' ? days : importedDays,
         progression,
-        goal: (overlay.querySelector('#imp-goal-primary') || {}).value || 'IPERTROFIA / MASSA'
+        goal: (overlay.querySelector('#imp-goal-primary') || {}).value || 'IPERTROFIA / MASSA',
+        importLoads: hasLoads ? !!(loadsEl && loadsEl.value === 'yes') : false
       });
     };
   });
@@ -45679,6 +45823,11 @@ async function confirmImportAndActivate() {
     if (!allow('therapy')) delete selectedProgram.therapy;
     if (!allow('exams')) delete selectedProgram.exams;
     selectedProgram.selectedDomains = selectedDomains.slice();
+    if (allow('training') && programHasPresumedLoads(selectedProgram)) {
+      hideBusyOverlay();
+      const wantLoads = await openImportLoadsChoice();
+      if (wantLoads === false) stripPresumedLoads(selectedProgram);
+    }
     return withBusy(
       function () { return saveCanonicalToCoachLibrary(selectedProgram, pState.filename || ''); },
       'Salvo nel Coach Database…',
@@ -45864,6 +46013,13 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
       prog.weeks = DATA.weeks;
       prog.training = { weeks: DATA.weeks };
       prog.duration_weeks = DATA.weeks.length;
+    }
+
+    if (hasTraining && choices && choices.importLoads === false) {
+      stripPresumedLoads(DATA);
+      stripPresumedLoads(prog);
+    } else if (hasTraining && choices && choices.importLoads) {
+      try { seedProgramLoadsIntoStore(DATA); } catch (_) {}
     }
 
     // Attach multi-domain payload onto DATA before persist (respect domain picker)
@@ -46542,7 +46698,7 @@ function renderTraining(c){
             ${!skipReason ? `<span class="skip-btn" onclick="openSkipModal(${fIdx})">SALTA</span>` : `<span style="color:var(--gold); font-size:9px; font-weight:800;">SALTATO</span>`}
           </div>
         </div>
-        <div style="font-size:16px;font-weight:900;margin:6px 0 2px;">${esc(curEx)}</div>
+        <div class="exercise-name-heading"><span class="ex-mark" aria-hidden="true">▸</span><span>${esc(curEx)}</span></div>
         <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px;">${esc(schemeInfo.scheme)} <span style="font-size:10px;font-weight:600;color:#aaa;">${schemeInfo.setCount} serie · ${esc(schemeInfo.reps)} rip</span></div>
         ${formatLastSessionChip(fIdx, row)}
         ${formatMaxTestChip(fIdx, curEx)}
@@ -46635,7 +46791,7 @@ function renderTraining(c){
           <div style="font-size:10px;color:var(--gold);font-weight:800;text-transform:uppercase;">${esc(bEx.movement || 'BONUS')} <span style="color:var(--gold-glow)">[BONUS]</span></div>
           <button class="btn btn-outline" style="border-color:var(--accent-red);color:var(--accent-red);font-size:9px;padding:3px 6px;" onclick="deleteBonusExercise(${bIdx})">RIMUOVI</button>
         </div>
-        <div style="font-size:16px;font-weight:900;margin:6px 0 2px;">${esc(curEx)}</div>
+        <div class="exercise-name-heading"><span class="ex-mark" aria-hidden="true">▸</span><span>${esc(curEx)}</span></div>
         <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px;">${esc(bonusScheme.scheme)} <span style="font-size:10px;font-weight:600;color:#aaa;">${bonusScheme.setCount} serie · ${esc(bonusScheme.reps)} rip</span></div>
         ${formatLastSessionChip(fIdx, bEx)}
         ${formatMaxTestChip(fIdx, curEx)}
@@ -46997,11 +47153,11 @@ function buildWorkoutPdfHtml(opts) {
     const week = weeksList[wi - 1];
     if (!week) continue;
     const days = week.sessions || week.days || [];
-    body += '<h2 style="color:#c9a227;margin:22px 0 8px;font-size:16px;border-bottom:1px solid #333;padding-bottom:6px;">Settimana ' + (week.weekNumber || week.week || wi) + (week.title ? (' — ' + esc(week.title)) : '') + '</h2>';
+    body += '<h2 class="pdf-week" style="color:#c9a227;margin:22px 0 8px;font-size:16px;border-bottom:1px solid #333;padding-bottom:6px;">Settimana ' + (week.weekNumber || week.week || wi) + (week.title ? (' — ' + esc(week.title)) : '') + '</h2>';
     days.forEach(function (day, di) {
       if (scope === 'day' && (wi !== currentWeek || di !== currentDay)) return;
       const dayTitle = day.name || day.title || day.day || ('Giorno ' + (di + 1));
-      body += '<h3 style="margin:14px 0 8px;font-size:14px;color:#fff;">' + esc(dayTitle) + '</h3>';
+      body += '<h3 class="pdf-day" style="margin:14px 0 8px;font-size:14px;color:#fff;">' + esc(dayTitle) + '</h3>';
       const list = day.exercises || day.rows || [];
       body += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px;">';
       body += '<thead><tr style="background:#1a1a1a;color:#c9a227;text-align:left;"><th style="padding:6px;border:1px solid #333;">Esercizio</th><th style="padding:6px;border:1px solid #333;">Schema</th><th style="padding:6px;border:1px solid #333;">Serie / carichi</th><th style="padding:6px;border:1px solid #333;">Rest</th></tr></thead><tbody>';
@@ -47036,18 +47192,35 @@ function buildWorkoutPdfHtml(opts) {
   }
 
   if (opts.nutrition && DATA.nutrition && Array.isArray(DATA.nutrition.days) && DATA.nutrition.days.length) {
-    body += '<h2 style="color:#c9a227;margin:24px 0 8px;font-size:16px;">Alimentazione</h2>';
-    DATA.nutrition.days.forEach(function (nd) {
-      body += '<h3 style="font-size:13px;margin:10px 0 4px;">' + esc(nd.day || 'Giorno') + '</h3>';
+    body += '<h2 class="pdf-section" style="color:#c9a227;margin:24px 0 8px;font-size:16px;">Alimentazione</h2>';
+    DATA.nutrition.days.forEach(function (nd, ni) {
+      let kcal = 0, p = 0, c = 0, f = 0;
       (nd.meals || []).forEach(function (meal) {
-        body += '<div style="font-size:11px;margin:4px 0;"><b>' + esc(meal.name || 'Pasto') + '</b>: '
-          + esc((meal.foods || []).map(function (f) { return (f.name || f.food || '') + (f.qty || f.amount ? (' ' + (f.qty || f.amount)) : ''); }).join(', '))
-          + '</div>';
+        (meal.foods || meal.items || []).forEach(function (food) {
+          if (typeof foodMacroVal === 'function') {
+            kcal += foodMacroVal(food, 'kcal');
+            p += foodMacroVal(food, 'pro');
+            c += foodMacroVal(food, 'carb');
+            f += foodMacroVal(food, 'fat');
+          }
+        });
+      });
+      const macroLine = (kcal ? (Math.round(kcal) + ' kcal') : '') +
+        ((p || c || f) ? ('  ·  P ' + Math.round(p) + 'g  C ' + Math.round(c) + 'g  F ' + Math.round(f) + 'g') : '');
+      body += '<h3 class="pdf-day" style="font-size:13px;margin:10px 0 4px;display:flex;justify-content:space-between;gap:12px;"><span>' + esc(nd.day || ('Giorno ' + (ni + 1))) + '</span><span style="font-weight:600;color:#aaa;">' + esc(macroLine) + '</span></h3>';
+      (nd.meals || []).forEach(function (meal) {
+        body += '<div style="font-size:11px;margin:8px 0 4px;"><b>' + esc(meal.name || 'Pasto') + '</b></div><ul style="margin:0 0 8px 18px;padding:0;">';
+        (meal.foods || meal.items || []).forEach(function (food) {
+          const qty = food.quantity || food.qty || food.amount;
+          const fkcal = (typeof foodMacroVal === 'function') ? foodMacroVal(food, 'kcal') : (Number(food.kcal) || 0);
+          body += '<li>' + esc((food.name || food.food || '-') + (qty ? ('  ' + qty + (food.unit || '')) : '') + (fkcal ? ('  ' + Math.round(fkcal) + ' kcal') : '')) + '</li>';
+        });
+        body += '</ul>';
       });
     });
   }
   if (opts.supp && DATA.supplementation) {
-    body += '<h2 style="color:#c9a227;margin:24px 0 8px;font-size:16px;">Integrazione</h2>';
+    body += '<h2 class="pdf-section" style="color:#c9a227;margin:24px 0 8px;font-size:16px;">Integrazione</h2>';
     const items = DATA.supplementation.items || DATA.supplementation.supplements || (Array.isArray(DATA.supplementation) ? DATA.supplementation : []);
     if (Array.isArray(items) && items.length) {
       body += '<ul style="font-size:11px;">' + items.map(function (it) {
@@ -47059,7 +47232,7 @@ function buildWorkoutPdfHtml(opts) {
   }
   if (opts.therapy && (DATA.therapy || store.therapy)) {
     const ther = DATA.therapy || store.therapy;
-    body += '<h2 style="color:#c9a227;margin:24px 0 8px;font-size:16px;">Terapia</h2>';
+    body += '<h2 class="pdf-section" style="color:#c9a227;margin:24px 0 8px;font-size:16px;">Terapia</h2>';
     const items = ther.items || ther.drugs || (Array.isArray(ther) ? ther : []);
     if (Array.isArray(items) && items.length) {
       body += '<ul style="font-size:11px;">' + items.map(function (it) {
@@ -47078,7 +47251,13 @@ function buildWorkoutPdfHtml(opts) {
       .head { display:flex; align-items:center; gap:14px; border-bottom:2px solid #c9a227; padding-bottom:12px; margin-bottom:16px; }
       .head img { width:64px; height:64px; object-fit:contain; }
       .meta { font-size:11px; color:#aaa; }
-      @media print { body { background:#fff; color:#111; } h2,h3,.head span { color:#111 !important; } table th { color:#8a6d1a !important; } }
+      @media print {
+        body { background:#fff; color:#111; }
+        h2,h3,.head span { color:#111 !important; }
+        table th { color:#8a6d1a !important; }
+        .pdf-week + .pdf-week, .pdf-day + .pdf-day { page-break-before: always; }
+        h2.pdf-week:not(:first-of-type), h3.pdf-day:not(:first-of-type), h2.pdf-section { page-break-before: always; }
+      }
     </style></head><body>
     <div class="head">
       <img src="${logoUrl}" alt="Nurvan" onerror="this.style.display='none'">
@@ -47138,6 +47317,13 @@ function buildWorkoutPdfBytes(opts) {
   function ln(x1, y1, x2, y2, color, w) {
     cmds.push(color + ' RG ' + (w || 0.5) + ' w ' + x1 + ' ' + y1 + ' m ' + x2 + ' ' + y2 + ' l S');
   }
+  function clipFit(s, maxW, size) {
+    s = String(s == null ? '' : s);
+    var maxChars = Math.max(1, Math.floor(maxW / Math.max(3.2, size * 0.5)));
+    var ansi = pdfWinAnsi(s);
+    if (ansi.length <= maxChars) return s;
+    return s.slice(0, Math.max(1, maxChars - 1)) + '.';
+  }
   function needSpace(h) { if (y - h < MB) { flushPage(); drawHeader(); } }
   function flushPage() {
     pageNum++;
@@ -47156,30 +47342,69 @@ function buildWorkoutPdfBytes(opts) {
     txt('F2', 7, '0.55 0.55 0.55', W - MR - 140, H - 45, dateStr + (DATA.title ? ('  |  ' + DATA.title) : ''));
     y = H - 80;
   }
+  function startFreshPage() {
+    if (cmds.length) flushPage();
+    drawHeader();
+  }
+  function startSectionPage() {
+    if (y < (H - 82)) startFreshPage();
+  }
   function sectionTitle(label) {
     needSpace(30);
     rct(ML, y - 2, CW, 20, '0.08 0.08 0.08');
     rct(ML, y - 2, 4, 20, GOLD);
-    txt('F1', 11, GOLD, ML + 12, y + 4, label.toUpperCase());
+    txt('F1', 11, GOLD, ML + 12, y + 4, clipFit(label.toUpperCase(), CW - 20, 11));
     y -= 28;
   }
-  function dayTitle(label) {
+  function dayTitle(label, extra) {
     needSpace(22);
     ln(ML, y + 6, ML + CW, y + 6, LGRAY, 0.5);
-    txt('F1', 10, DARK, ML, y - 6, label);
+    txt('F1', 10, DARK, ML, y - 6, clipFit(label, extra ? 230 : CW, 10));
+    if (extra) txt('F2', 8, GRAY, ML + 240, y - 6, clipFit(extra, CW - 240, 8));
     y -= 22;
+  }
+  function nutritionDayMacros(nd) {
+    var kcal = 0, p = 0, c = 0, f = 0;
+    (nd.meals || []).forEach(function (meal) {
+      (meal.foods || meal.items || []).forEach(function (food) {
+        if (typeof foodMacroVal === 'function') {
+          kcal += foodMacroVal(food, 'kcal');
+          p += foodMacroVal(food, 'pro');
+          c += foodMacroVal(food, 'carb');
+          f += foodMacroVal(food, 'fat');
+        } else {
+          kcal += Number(food.kcal || food.calories) || 0;
+          p += Number(food.protein || food.pro || food.protein_g) || 0;
+          c += Number(food.carbs || food.carb || food.carbs_g) || 0;
+          f += Number(food.fat || food.fats || food.fat_g) || 0;
+        }
+      });
+    });
+    if (!kcal && DATA.nutrition) {
+      kcal = Number(DATA.nutrition.daily_calories_target) || 0;
+      p = Number(DATA.nutrition.daily_protein_target) || 0;
+      c = Number(DATA.nutrition.daily_carbs_target) || 0;
+      f = Number(DATA.nutrition.daily_fats_target) || 0;
+    }
+    return { kcal: Math.round(kcal), p: Math.round(p), c: Math.round(c), f: Math.round(f) };
   }
 
   drawHeader();
 
+  var firstWeekDrawn = true;
   for (var wi = startW; wi <= endW; wi++) {
     var week = weeksList[wi - 1];
     if (!week) continue;
     var days = week.sessions || week.days || [];
+    if (!firstWeekDrawn) startFreshPage();
+    firstWeekDrawn = false;
     sectionTitle('Settimana ' + (week.weekNumber || week.week || wi) + (week.title ? ('  -  ' + week.title) : ''));
 
+    var firstDayOfWeek = true;
     days.forEach(function (day, di) {
       if (scope === 'day' && (wi !== currentWeek || di !== currentDay)) return;
+      if (!firstDayOfWeek) startFreshPage();
+      firstDayOfWeek = false;
       var dayLabel = day.name || day.title || day.day || ('Giorno ' + (di + 1));
       dayTitle(dayLabel);
 
@@ -47194,11 +47419,11 @@ function buildWorkoutPdfBytes(opts) {
         var tableH = 16 + setCount * rowH + 6;
         needSpace(tableH + 24);
 
-        txt('F1', 9, DARK, ML, y, name);
-        if (scheme.scheme) txt('F2', 7, GRAY, ML + 250, y, scheme.scheme);
-        if (row.rest) txt('F2', 7, GRAY, ML + 380, y, 'Rest: ' + row.rest);
+        txt('F1', 9, DARK, ML, y, clipFit(name, 240, 9));
+        if (scheme.scheme) txt('F2', 7, GRAY, ML + 250, y, clipFit(scheme.scheme, 120, 7));
+        if (row.rest) txt('F2', 7, GRAY, ML + 380, y, clipFit('Rest: ' + row.rest, 70, 7));
         var tempo = (store.tempos && store.tempos['w' + wi + '_d' + di + '_e' + ei]) || row.tempo || '';
-        if (tempo) txt('F2', 7, GRAY, ML + 450, y, 'Tempo: ' + tempo);
+        if (tempo) txt('F2', 7, GRAY, ML + 450, y, clipFit('Tempo: ' + tempo, 65, 7));
         y -= 14;
 
         var cols = [
@@ -47236,11 +47461,11 @@ function buildWorkoutPdfBytes(opts) {
           ln(ML, y - rowH + 4, ML + CW, y - rowH + 4, '0.88 0.88 0.88', 0.3);
 
           txt('F1', 8, DARK, cols[0].x + 4, y - 8, 'S' + s);
-          txt('F2', 8, BLACK, cols[1].x + 4, y - 8, loadShow);
-          txt('F2', 8, BLACK, cols[2].x + 4, y - 8, repsShow);
-          txt('F2', 8, DARK, cols[3].x + 4, y - 8, rirShow);
-          txt('F2', 7, GRAY, cols[4].x + 4, y - 8, techShow);
-          if (noteShow) txt('F2', 7, '0.3 0.65 0.3', cols[5].x + 4, y - 8, noteShow);
+          txt('F2', 8, BLACK, cols[1].x + 4, y - 8, clipFit(loadShow, cols[1].w - 8, 8));
+          txt('F2', 8, BLACK, cols[2].x + 4, y - 8, clipFit(repsShow, cols[2].w - 8, 8));
+          txt('F2', 8, DARK, cols[3].x + 4, y - 8, clipFit(rirShow, cols[3].w - 8, 8));
+          txt('F2', 7, GRAY, cols[4].x + 4, y - 8, clipFit(techShow, cols[4].w - 8, 7));
+          if (noteShow) txt('F2', 7, '0.3 0.65 0.3', cols[5].x + 4, y - 8, clipFit(noteShow, cols[5].w - 8, 7));
 
           y -= rowH;
         }
@@ -47251,46 +47476,68 @@ function buildWorkoutPdfBytes(opts) {
   }
 
   if (opts.nutrition && DATA.nutrition && Array.isArray(DATA.nutrition.days) && DATA.nutrition.days.length) {
+    startSectionPage();
     sectionTitle('PIANO ALIMENTARE');
     var targets = DATA.nutrition;
     if (targets.daily_calories_target) {
       needSpace(16);
-      txt('F2', 8, BLACK, ML, y, 'Target: ' + (targets.daily_calories_target || '-') + ' kcal  |  P ' + (targets.daily_protein_target || '-') + 'g  |  C ' + (targets.daily_carbs_target || '-') + 'g  |  F ' + (targets.daily_fats_target || '-') + 'g');
+      txt('F2', 8, BLACK, ML, y, clipFit('Target: ' + (targets.daily_calories_target || '-') + ' kcal  |  P ' + (targets.daily_protein_target || '-') + 'g  |  C ' + (targets.daily_carbs_target || '-') + 'g  |  F ' + (targets.daily_fats_target || '-') + 'g', CW, 8));
       y -= 16;
     }
-    DATA.nutrition.days.forEach(function (nd) {
-      dayTitle(nd.day || 'Giorno');
+    DATA.nutrition.days.forEach(function (nd, ni) {
+      if (ni > 0) startFreshPage();
+      var macros = nutritionDayMacros(nd);
+      var macroLine = (macros.kcal ? (macros.kcal + ' kcal') : '') +
+        (macros.p || macros.c || macros.f ? ('  |  P ' + (macros.p || 0) + 'g  C ' + (macros.c || 0) + 'g  F ' + (macros.f || 0) + 'g') : '');
+      dayTitle(nd.day || ('Giorno ' + (ni + 1)), macroLine);
       (nd.meals || []).forEach(function (meal) {
-        needSpace(14);
-        txt('F1', 8, BLACK, ML + 4, y, meal.name || 'Pasto');
-        var foods = (meal.foods || []).map(function (f) {
-          var qty = (f.quantity || f.qty || f.amount);
-          return (f.name || f.food || '') + (qty ? (' ' + qty + (f.unit || 'g')) : '') + (f.kcal ? (' ' + f.kcal + 'kcal') : '');
-        }).join(',  ');
-        txt('F2', 8, BLACK, ML + 80, y, foods.length > 100 ? foods.slice(0, 97) + '...' : foods);
+        needSpace(16);
+        txt('F1', 8, BLACK, ML + 4, y, clipFit(meal.name || 'Pasto', CW - 8, 8));
         y -= 13;
+        (meal.foods || meal.items || []).forEach(function (f) {
+          needSpace(12);
+          var qty = f.quantity || f.qty || f.amount;
+          var unit = f.unit || '';
+          var fkcal = (typeof foodMacroVal === 'function') ? foodMacroVal(f, 'kcal') : (Number(f.kcal) || 0);
+          var line = (f.name || f.food || '-') +
+            (qty ? ('  ' + qty + unit) : '') +
+            (fkcal ? ('  ' + Math.round(fkcal) + ' kcal') : '');
+          txt('F2', 8, DARK, ML + 16, y, clipFit(line, CW - 20, 8));
+          y -= 12;
+        });
+        y -= 4;
       });
     });
   }
 
   if (opts.supp && DATA.supplementation) {
+    startSectionPage();
     sectionTitle('INTEGRAZIONE');
     var suppItems = DATA.supplementation.items || DATA.supplementation.supplements || [];
     if (suppItems.length) {
-      needSpace(16 + suppItems.length * 13);
+      var sCols = [
+        { label: 'INTEGRATORE', x: ML + 4, w: 150 },
+        { label: 'DOSE', x: ML + 154, w: 80 },
+        { label: 'TIMING', x: ML + 234, w: 160 },
+        { label: 'FREQUENZA', x: ML + 394, w: 121 }
+      ];
+      needSpace(20);
       rct(ML, y - 10, CW, 14, '0.12 0.12 0.12');
-      txt('F1', 6.5, GOLD, ML + 4, y - 7, 'INTEGRATORE');
-      txt('F1', 6.5, GOLD, ML + 180, y - 7, 'DOSE');
-      txt('F1', 6.5, GOLD, ML + 280, y - 7, 'TIMING');
-      txt('F1', 6.5, GOLD, ML + 400, y - 7, 'FREQUENZA');
+      sCols.forEach(function (c) { txt('F1', 6.5, GOLD, c.x, y - 7, c.label); });
       y -= 16;
       suppItems.forEach(function (it, i) {
         needSpace(14);
         if (i % 2 === 1) rct(ML, y - 9, CW, 13, '0.96 0.96 0.96');
-        txt('F2', 8, BLACK, ML + 4, y - 6, it.name || it.supplement || '-');
-        txt('F2', 8, BLACK, ML + 180, y - 6, (it.dose || '') + (it.unit ? (' ' + it.unit) : ''));
-        txt('F2', 8, BLACK, ML + 280, y - 6, it.timing || '');
-        txt('F2', 8, BLACK, ML + 400, y - 6, it.frequency || '');
+        var dose = String(it.dose || it.dosage || '') + (it.unit ? (' ' + it.unit) : '');
+        var sVals = [
+          it.name || it.supplement || '-',
+          dose,
+          it.timing || '',
+          it.frequency || ''
+        ];
+        sCols.forEach(function (c, ci) {
+          txt('F2', 8, BLACK, c.x, y - 6, clipFit(sVals[ci], c.w - 6, 8));
+        });
         y -= 13;
       });
     }
@@ -47298,23 +47545,34 @@ function buildWorkoutPdfBytes(opts) {
 
   if (opts.therapy && (DATA.therapy || store.therapy)) {
     var ther = DATA.therapy || store.therapy;
+    startSectionPage();
     sectionTitle('TERAPIA');
     var meds = ther.medications || ther.items || [];
     if (meds.length) {
-      needSpace(16 + meds.length * 13);
+      var tCols = [
+        { label: 'FARMACO', x: ML + 4, w: 130 },
+        { label: 'PRINCIPIO', x: ML + 134, w: 110 },
+        { label: 'DOSE', x: ML + 244, w: 80 },
+        { label: 'TIMING', x: ML + 324, w: 110 },
+        { label: 'FREQ.', x: ML + 434, w: 81 }
+      ];
+      needSpace(20);
       rct(ML, y - 10, CW, 14, '0.12 0.12 0.12');
-      txt('F1', 6.5, GOLD, ML + 4, y - 7, 'FARMACO');
-      txt('F1', 6.5, GOLD, ML + 160, y - 7, 'PRINCIPIO ATTIVO');
-      txt('F1', 6.5, GOLD, ML + 300, y - 7, 'DOSE');
-      txt('F1', 6.5, GOLD, ML + 400, y - 7, 'CATEGORIA');
+      tCols.forEach(function (c) { txt('F1', 6.5, GOLD, c.x, y - 7, c.label); });
       y -= 16;
       meds.forEach(function (m, i) {
         needSpace(14);
         if (i % 2 === 1) rct(ML, y - 9, CW, 13, '0.96 0.96 0.96');
-        txt('F2', 8, BLACK, ML + 4, y - 6, m.name || m.medication || '-');
-        txt('F2', 8, BLACK, ML + 160, y - 6, m.active_ingredient || '');
-        txt('F2', 8, BLACK, ML + 300, y - 6, m.dose || '');
-        txt('F2', 8, BLACK, ML + 400, y - 6, m.category || '');
+        var tVals = [
+          m.name || m.medication || m.drug || '-',
+          m.active_ingredient || m.principle || '',
+          m.dose || m.dosage || '',
+          m.timing || '',
+          m.frequency || m.category || ''
+        ];
+        tCols.forEach(function (c, ci) {
+          txt('F2', 8, BLACK, c.x, y - 6, clipFit(tVals[ci], c.w - 6, 8));
+        });
         y -= 13;
       });
     }

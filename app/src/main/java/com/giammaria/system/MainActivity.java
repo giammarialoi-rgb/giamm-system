@@ -14,6 +14,7 @@ import android.webkit.ValueCallback;
 import android.webkit.PermissionRequest;
 import android.net.Uri;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.provider.MediaStore;
@@ -90,6 +91,7 @@ public class MainActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        applyReadableViewport(s);
         s.setAllowFileAccess(true);
         //noinspection deprecation
         s.setAllowFileAccessFromFileURLs(true);
@@ -238,6 +240,7 @@ public class MainActivity extends Activity {
         web.clearCache(true);
         web.loadUrl("file:///android_asset/index.html");
         setContentView(web);
+        applyReadableViewport(web.getSettings());
         maybeShowHealthRationale(getIntent());
 
         Intent intent = getIntent();
@@ -258,6 +261,24 @@ public class MainActivity extends Activity {
             }
             dispatchNurvanRoute(intent);
         }
+    }
+
+    /** Keep CSS pixels 1:1 with the device width. Tablets otherwise crop a zoomed desktop layout. */
+    private void applyReadableViewport(WebSettings settings) {
+        if (settings == null) return;
+        settings.setUseWideViewPort(true);
+        settings.setLoadWithOverviewMode(true);
+        settings.setSupportZoom(false);
+        settings.setBuiltInZoomControls(false);
+        settings.setDisplayZoomControls(false);
+        settings.setTextZoom(100);
+        if (web != null) web.setInitialScale(100);
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if (web != null) applyReadableViewport(web.getSettings());
     }
 
     private void dispatchNurvanRoute(Intent intent) {
