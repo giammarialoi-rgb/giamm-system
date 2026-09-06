@@ -49,11 +49,11 @@ ok(
     defaults.coachTasksV1 && defaults.clientTimelineV1,
   "shipped Coach OS flags default on"
 );
-ok(!defaults.agentV1 && !defaults.businessV1 && !defaults.schedulingV1, "unshipped Coach OS flags fail closed");
+ok(defaults.agentV1 && defaults.schedulingV1 && defaults.businessV1 && defaults.inboxV2, "shipped later-phase Coach OS flags default on");
 const envEnabled = resolveCoachOsFeatureFlags({
   env: { NURVAN_FEATURE_COACH_TODAY_V2: "true" }
 });
-ok(envEnabled.coachTodayV2 === true && envEnabled.agentV1 === false, "environment enables only requested flag");
+ok(envEnabled.coachTodayV2 === true, "environment enables requested flag");
 const overridden = resolveCoachOsFeatureFlags({
   env: { NURVAN_FEATURE_AGENT_V1: "true" },
   overrides: { agentV1: false, unknownFlag: true }

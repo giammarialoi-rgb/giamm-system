@@ -189,6 +189,7 @@ async function initDb() {
         CREATE TABLE IF NOT EXISTS app_account_data (
           user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
           data JSONB NOT NULL DEFAULT '{}'::jsonb,
+          revision BIGINT NOT NULL DEFAULT 1,
           updated_at TIMESTAMPTZ DEFAULT NOW()
         );
         ALTER TABLE app_users ADD COLUMN IF NOT EXISTS provider TEXT DEFAULT 'email';
@@ -199,6 +200,7 @@ async function initDb() {
         ALTER TABLE app_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
         UPDATE app_users SET provider = 'email' WHERE provider IS NULL;
         ALTER TABLE app_account_data ADD COLUMN IF NOT EXISTS data JSONB NOT NULL DEFAULT '{}'::jsonb;
+        ALTER TABLE app_account_data ADD COLUMN IF NOT EXISTS revision BIGINT NOT NULL DEFAULT 1;
         ALTER TABLE app_account_data ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
         CREATE INDEX IF NOT EXISTS idx_app_users_provider ON app_users(provider, provider_id);
         CREATE INDEX IF NOT EXISTS idx_app_users_email ON app_users(email);
@@ -1415,7 +1417,8 @@ app.post("/api/account/sync", async (req, res) => {
     await pool.query(
       `INSERT INTO app_account_data(user_id, data, updated_at)
        VALUES($1, $2, NOW())
-       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+       ON CONFLICT (user_id) DO UPDATE SET
+         data = EXCLUDED.data, revision = app_account_data.revision + 1, updated_at = NOW()`,
       [auth.id, JSON.stringify(merged)]
     );
     return res.json({ ok: true, data: merged });
@@ -1464,7 +1467,7 @@ app.post("/api/account/data", async (req, res) => {
       `INSERT INTO app_account_data (user_id, data, updated_at)
        VALUES ($1, $2, NOW())
        ON CONFLICT (user_id)
-       DO UPDATE SET data = $2, updated_at = NOW()`,
+       DO UPDATE SET data = $2, revision = app_account_data.revision + 1, updated_at = NOW()`,
       [auth.id, JSON.stringify(dataPayload)]
     );
     return res.json({ ok: true, saved_at: new Date().toISOString() });
@@ -1513,7 +1516,8 @@ app.post("/api/program/modify", async (req, res) => {
     if (auth && modResult.ok) {
       await pool.query(
         `UPDATE app_account_data
-         SET data = jsonb_set(data, '{activeProgram}', $1::jsonb), updated_at = NOW()
+         SET data = jsonb_set(data, '{activeProgram}', $1::jsonb),
+             revision = revision + 1, updated_at = NOW()
          WHERE user_id = $2`,
         [JSON.stringify(modResult.program), auth.id]
       );

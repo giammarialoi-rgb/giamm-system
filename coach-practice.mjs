@@ -32,8 +32,52 @@ import {
 } from "./server/coach-os/checkins.mjs";
 import {
   buildDeterministicIntelligence,
+  interpretAthleteBrain,
   saveIntelligenceSnapshot
 } from "./server/coach-os/intelligence.mjs";
+import {
+  confirmAgentProposal,
+  getAgentRun,
+  listAgentAudit,
+  loadCoachPreferences,
+  saveCoachPreferences,
+  startAgentRun,
+  undoAgentProposal
+} from "./server/agent/index.mjs";
+import {
+  createAppointment,
+  findAvailabilitySlots,
+  listAppointments,
+  listAvailability,
+  saveAvailabilityRule,
+  SESSION_TYPES,
+  toIcs,
+  updateAppointment
+} from "./server/coach-os/scheduling.mjs";
+import { loadCoachAnalytics } from "./server/coach-os/analytics.mjs";
+import {
+  createAutomation,
+  listClientPlans,
+  listCrmPipeline,
+  listPaymentEvents,
+  recordPaymentEvent,
+  runAutomationDry,
+  setAutomationEnabled,
+  summarizeBusiness,
+  updateCrmStage,
+  upsertClientPlan
+} from "./server/coach-os/business.mjs";
+import {
+  listQuickReplies,
+  loadCoachInbox,
+  pinCoachMessage,
+  reactCoachMessage
+} from "./server/coach-os/inbox.mjs";
+import {
+  confirmMealLog,
+  createFormReview,
+  createMealEstimate
+} from "./server/coach-os/media-ai.mjs";
 import {
   auditMediaAccess,
   createMediaAccessToken,
@@ -1105,7 +1149,8 @@ export function mountCoachPractice(app, deps) {
       await pool.query(
         `INSERT INTO app_account_data(user_id, data, updated_at)
          VALUES($1,$2,NOW())
-         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
+           revision = app_account_data.revision + 1, updated_at = NOW()`,
         [ctx.client.athlete_user_id, JSON.stringify(merged)]
       );
     }
@@ -1270,7 +1315,8 @@ export function mountCoachPractice(app, deps) {
     await pool.query(
       `INSERT INTO app_account_data(user_id, data, updated_at)
        VALUES($1,$2,NOW())
-       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
+         revision = app_account_data.revision + 1, updated_at = NOW()`,
       [ctx.auth.id, JSON.stringify(merged)]
     );
     await pool.query(
@@ -1312,7 +1358,8 @@ export function mountCoachPractice(app, deps) {
         await pool.query(
           `INSERT INTO app_account_data(user_id, data, updated_at)
            VALUES($1,$2,NOW())
-           ON CONFLICT (user_id) DO UPDATE SET data = app_account_data.data || EXCLUDED.data, updated_at = NOW()`,
+           ON CONFLICT (user_id) DO UPDATE SET data = app_account_data.data || EXCLUDED.data,
+             revision = app_account_data.revision + 1, updated_at = NOW()`,
           [ctx.client.athlete_user_id, JSON.stringify({ activeProgram: ap, programExpiryAnchor: "first_workout" })]
         );
       }
@@ -1336,7 +1383,8 @@ export function mountCoachPractice(app, deps) {
       await pool.query(
         `INSERT INTO app_account_data(user_id, data, updated_at)
          VALUES($1,$2,NOW())
-         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
+           revision = app_account_data.revision + 1, updated_at = NOW()`,
         [ctx.client.athlete_user_id, JSON.stringify(merged)]
       );
     }
@@ -1387,7 +1435,8 @@ export function mountCoachPractice(app, deps) {
       await pool.query(
         `INSERT INTO app_account_data(user_id, data, updated_at)
          VALUES($1,$2,NOW())
-         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
+           revision = app_account_data.revision + 1, updated_at = NOW()`,
         [ctx.client.athlete_user_id, JSON.stringify(merged)]
       );
     }
@@ -1767,7 +1816,8 @@ export function mountCoachPractice(app, deps) {
         await db.query(
           `INSERT INTO app_account_data(user_id, data, updated_at)
            VALUES($1,$2,NOW())
-           ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+           ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
+             revision = app_account_data.revision + 1, updated_at = NOW()`,
           [athlete.id, JSON.stringify({ profile, assignedByCoach: true, intakeCompletedAt: completedAt })]
         );
       }
@@ -1862,6 +1912,10 @@ export function mountCoachPractice(app, deps) {
       [client.athlete_user_id]
     );
     const intelligence = buildDeterministicIntelligence(client, dataResult.rows[0]?.data || {});
+    const flags = resolveCoachOsFeatureFlags({ env: process.env });
+    if (flags.athleteBrainV1) {
+      intelligence.aiInterpretation = interpretAthleteBrain(intelligence);
+    }
     await saveIntelligenceSnapshot(pool, coach.id, client.id, intelligence);
     return res.json({ ok: true, ...intelligence });
   });
@@ -2116,7 +2170,8 @@ export function mountCoachPractice(app, deps) {
       await pool.query(
         `INSERT INTO app_account_data(user_id, data, updated_at)
          VALUES($1,$2,NOW())
-         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
+           revision = app_account_data.revision + 1, updated_at = NOW()`,
         [row.athlete_user_id, JSON.stringify(merged)]
       );
     }
@@ -2171,7 +2226,8 @@ export function mountCoachPractice(app, deps) {
       await pool.query(
         `INSERT INTO app_account_data(user_id, data, updated_at)
          VALUES($1,$2,NOW())
-         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
+           revision = app_account_data.revision + 1, updated_at = NOW()`,
         [row.athlete_user_id, JSON.stringify(merged)]
       );
     }
@@ -2274,7 +2330,8 @@ export function mountCoachPractice(app, deps) {
     await pool.query(
       `INSERT INTO app_account_data(user_id, data, updated_at)
        VALUES($1,$2,NOW())
-       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
+         revision = app_account_data.revision + 1, updated_at = NOW()`,
       [row.athlete_user_id, JSON.stringify(merged)]
     );
     const scheduleBits = [];
@@ -2420,7 +2477,8 @@ export function mountCoachPractice(app, deps) {
     await pool.query(
       `INSERT INTO app_account_data(user_id, data, updated_at)
        VALUES($1,$2,NOW())
-       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
+         revision = app_account_data.revision + 1, updated_at = NOW()`,
       [row.athlete_user_id, JSON.stringify(merged)]
     );
     if (req.body?.notify !== false) {
@@ -2565,7 +2623,8 @@ export function mountCoachPractice(app, deps) {
       await pool.query(
         `INSERT INTO app_account_data(user_id, data, updated_at)
          VALUES($1,$2,NOW())
-         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
+           revision = app_account_data.revision + 1, updated_at = NOW()`,
         [row.athlete_user_id, JSON.stringify(merged)]
       );
     }
@@ -2907,5 +2966,357 @@ export function mountCoachPractice(app, deps) {
       [row.id]
     );
     return res.json({ ok: true, events: ev.rows });
+  });
+
+  function agentHooks() {
+    return {
+      sendMessage: async (clientId, body, attachment) => insertMessage(clientId, "coach", body, attachment),
+      assignProgram: async (clientId, payload) => {
+        const row = await pool.query(
+          "SELECT * FROM coach_clients WHERE id = $1",
+          [clientId]
+        );
+        if (!row.rows[0]) throw new Error("Client not found.");
+        const existing = await pool.query(
+          "SELECT data FROM app_account_data WHERE user_id = $1",
+          [row.rows[0].athlete_user_id]
+        );
+        const current = existing.rows[0]?.data || {};
+        const patch = payload.data && typeof payload.data === "object" ? payload.data : {};
+        const kinds = Array.isArray(payload.kinds) ? payload.kinds : ["training"];
+        const merged = { ...current, assignedAt: new Date().toISOString(), assignedByCoach: true };
+        if (kinds.includes("training") && patch.activeProgram) merged.activeProgram = patch.activeProgram;
+        await pool.query(
+          `INSERT INTO app_account_data(user_id, data, updated_at)
+           VALUES($1,$2,NOW())
+           ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
+             revision = app_account_data.revision + 1, updated_at = NOW()`,
+          [row.rows[0].athlete_user_id, JSON.stringify(merged)]
+        );
+        return { ok: true, kinds };
+      },
+      restoreClientData: async (clientId, data) => {
+        const row = await pool.query("SELECT athlete_user_id FROM coach_clients WHERE id = $1", [clientId]);
+        if (!row.rows[0]?.athlete_user_id) return;
+        await pool.query(
+          `UPDATE app_account_data SET data = $2, revision = revision + 1, updated_at = NOW()
+           WHERE user_id = $1`,
+          [row.rows[0].athlete_user_id, JSON.stringify(data || {})]
+        );
+      }
+    };
+  }
+
+  app.post("/api/coach/agent/runs", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const result = await startAgentRun(pool, coach.id, req.body || {}, {
+        env: process.env,
+        flags: resolveCoachOsFeatureFlags({ env: process.env })
+      });
+      return res.status(201).json(result);
+    } catch (error) {
+      return res.status(error.statusCode || 400).json({ error: error.message, code: error.code });
+    }
+  });
+
+  app.get("/api/coach/agent/runs/:id", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const run = await getAgentRun(pool, coach.id, req.params.id);
+    if (!run) return res.status(404).json({ error: "Run not found." });
+    return res.json({ ok: true, run });
+  });
+
+  app.post("/api/coach/agent/runs/:id/confirm", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const result = await confirmAgentProposal(pool, coach.id, req.body || {}, agentHooks(), {
+        env: process.env,
+        flags: resolveCoachOsFeatureFlags({ env: process.env })
+      });
+      return res.json({ ok: true, ...result });
+    } catch (error) {
+      const status = error.statusCode || (error.code === "STALE_PROPOSAL" ? 409 : 400);
+      return res.status(status).json({
+        error: error.message,
+        code: error.code,
+        diff: error.diff || null
+      });
+    }
+  });
+
+  app.post("/api/coach/agent/runs/:id/undo", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const result = await undoAgentProposal(pool, coach.id, req.body?.proposalId, agentHooks());
+      return res.json(result);
+    } catch (error) {
+      return res.status(400).json({ error: error.message, code: error.code });
+    }
+  });
+
+  app.get("/api/coach/agent/audit", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const items = await listAgentAudit(pool, coach.id, { limit: req.query.limit });
+    return res.json({ ok: true, items });
+  });
+
+  app.get("/api/coach/preferences", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    return res.json({ ok: true, ...(await loadCoachPreferences(pool, coach.id)) });
+  });
+
+  app.put("/api/coach/preferences", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const saved = await saveCoachPreferences(pool, coach.id, req.body || {}, "coach");
+    return res.json({ ok: true, ...saved });
+  });
+
+  app.get("/api/coach/availability", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    return res.json({ ok: true, rules: await listAvailability(pool, coach.id), types: SESSION_TYPES });
+  });
+
+  app.post("/api/coach/availability", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const rule = await saveAvailabilityRule(pool, coach.id, req.body || {});
+      return res.status(201).json({ ok: true, rule });
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/coach/availability/slots", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const slots = await findAvailabilitySlots(pool, coach.id, req.query || {});
+      return res.json({ ok: true, slots });
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/coach/appointments", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const appointments = await listAppointments(pool, coach.id, req.query || {});
+    return res.json({ ok: true, appointments });
+  });
+
+  app.get("/api/coach/appointments.ics", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const appointments = await listAppointments(pool, coach.id, req.query || {});
+    res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+    return res.send(toIcs(appointments, "Nurvan Coach"));
+  });
+
+  app.post("/api/coach/appointments", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    if (req.body?.clientId) {
+      const owned = await loadOwnedClient(coach, req.body.clientId, res);
+      if (!owned) return;
+    }
+    try {
+      const appointment = await createAppointment(pool, coach.id, req.body || {});
+      return res.status(201).json({ ok: true, appointment });
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/coach/appointments/:id", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const appointment = await updateAppointment(pool, coach.id, req.params.id, req.body || {});
+      if (!appointment) return res.status(404).json({ error: "Appointment not found." });
+      return res.json({ ok: true, appointment });
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/coach/analytics", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const analytics = await loadCoachAnalytics(pool, coach.id, req.query || {});
+    return res.json({ ok: true, analytics });
+  });
+
+  app.get("/api/coach/business", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const plans = await listClientPlans(pool, coach.id);
+    const events = await listPaymentEvents(pool, coach.id);
+    return res.json({
+      ok: true,
+      plans,
+      events,
+      summary: summarizeBusiness(plans, events)
+    });
+  });
+
+  app.post("/api/coach/business/plans", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const owned = await loadOwnedClient(coach, req.body?.clientId, res);
+    if (!owned) return;
+    const plan = await upsertClientPlan(pool, coach.id, req.body || {});
+    return res.status(201).json({ ok: true, plan });
+  });
+
+  app.post("/api/coach/business/payments", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const owned = await loadOwnedClient(coach, req.body?.clientId, res);
+    if (!owned) return;
+    const event = await recordPaymentEvent(pool, coach.id, req.body || {});
+    return res.status(201).json({ ok: true, event });
+  });
+
+  app.get("/api/coach/crm", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    return res.json({ ok: true, pipeline: await listCrmPipeline(pool, coach.id) });
+  });
+
+  app.post("/api/coach/crm/:id", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const owned = await loadOwnedClient(coach, req.params.id, res);
+    if (!owned) return;
+    const item = await updateCrmStage(pool, coach.id, owned.id, req.body || {});
+    return res.json({ ok: true, item });
+  });
+
+  app.get("/api/coach/automations", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const result = await pool.query(
+      "SELECT * FROM automation_rules WHERE coach_user_id = $1 ORDER BY created_at DESC",
+      [coach.id]
+    );
+    return res.json({
+      ok: true,
+      rules: (result.rows || []).map((row) => ({
+        id: String(row.id),
+        name: row.name,
+        trigger: row.trigger,
+        action: row.action,
+        enabled: !!row.enabled
+      }))
+    });
+  });
+
+  app.post("/api/coach/automations", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const rule = await createAutomation(pool, coach.id, req.body || {});
+    return res.status(201).json({ ok: true, rule });
+  });
+
+  app.post("/api/coach/automations/:id/enable", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const rule = await setAutomationEnabled(pool, coach.id, req.params.id, req.body?.enabled !== false);
+    if (!rule) return res.status(404).json({ error: "Automation not found." });
+    return res.json({ ok: true, rule });
+  });
+
+  app.post("/api/coach/automations/:id/dry-run", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const preview = await runAutomationDry(pool, coach.id, req.params.id, req.body || {});
+      return res.json({ ok: true, preview });
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/coach/inbox-feed", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const feed = await loadCoachInbox(pool, coach.id, req.query || {});
+    return res.json({ ok: true, ...feed });
+  });
+
+  app.post("/api/coach/messages/:id/pin", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await pinCoachMessage(pool, coach.id, req.params.id, req.body?.pinned !== false);
+    if (!row) return res.status(404).json({ error: "Message not found." });
+    return res.json({ ok: true, message: row });
+  });
+
+  app.post("/api/coach/messages/:id/react", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await reactCoachMessage(pool, coach.id, req.params.id, req.body?.reaction);
+    if (!row) return res.status(404).json({ error: "Message not found." });
+    return res.json({ ok: true, message: row });
+  });
+
+  app.get("/api/coach/quick-replies", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    return res.json({ ok: true, replies: await listQuickReplies(pool, coach.id) });
+  });
+
+  app.post("/api/coach/clients/:id/brain-feedback", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const client = await loadOwnedClient(coach, req.params.id, res);
+    if (!client) return;
+    await pool.query(
+      `INSERT INTO athlete_brain_feedback(
+         coach_user_id, client_id, interpretation_fingerprint, decision, note
+       ) VALUES($1,$2,$3,$4,$5)`,
+      [
+        coach.id,
+        client.id,
+        String(req.body?.interpretationFingerprint || ""),
+        String(req.body?.decision || "dismiss").slice(0, 20),
+        String(req.body?.note || "").slice(0, 400) || null
+      ]
+    );
+    return res.status(201).json({ ok: true });
+  });
+
+  app.post("/api/coach/meals/estimate", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const meal = await createMealEstimate(pool, { coachUserId: coach.id, clientId: req.body?.clientId }, req.body || {});
+    return res.status(201).json({ ok: true, meal });
+  });
+
+  app.post("/api/coach/meals/:id/confirm", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const meal = await confirmMealLog(pool, req.params.id, { coachUserId: coach.id }, req.body || {});
+    if (!meal) return res.status(404).json({ error: "Meal not found." });
+    return res.json({ ok: true, meal });
+  });
+
+  app.post("/api/coach/form-reviews", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const owned = await loadOwnedClient(coach, req.body?.clientId, res);
+    if (!owned) return;
+    const review = await createFormReview(pool, coach.id, req.body || {});
+    return res.status(201).json({ ok: true, review });
   });
 }

@@ -2,7 +2,7 @@
 
 Catalogo di ciò che l’app sa fare oggi (web + APK). Non è un elenco di funzioni JavaScript: è la mappa delle operazioni che puoi compiere nei tre ruoli.
 
-Versione di riferimento: **1.5.33** (header coach: lo switch cliente resta nella sezione corrente).
+Versione di riferimento: **1.5.34** (Coach OS: Today, Clients, Inbox, Agent, scheduling, analytics e ledger manuale).
 
 ---
 
@@ -34,7 +34,7 @@ Home, Allenamento, Programmi, Alimentazione, Integrazione, Terapia, Esami, Calen
 ### Barra bassa
 | Personale | Atleta | Coach in sessione |
 |---|---|---|
-| Home · Workout · Stats · Coach AI · Menu | Home · Workout · Chat coach · (AI se concessa) · Menu | Hub · Cliente · Chat · Menu coach |
+| Home · Workout · Stats · Coach AI · Menu | Home · Workout · Chat coach · (AI se concessa) · Menu | Home/Today · Clients · Inbox · Programs · Calendar |
 
 ### Scorciatoie
 - Tap sul titolo di un dominio (allenamento, alimentazione, …) → cambio rapido dominio.
@@ -375,6 +375,26 @@ Senza scheda:
 | Database coach | Import personale, assegna con picker |
 | Chat | Messaggi, file, video |
 | Notifiche | Leggi, archivia, apri destinazione |
+
+---
+
+## 23b. Coach OS (v1.5.34)
+
+La sessione Coach usa una shell distinta. Personal e Client restano invariati nei permessi.
+
+- **Today** — attention, sessioni, task, activity recente, Agent. KPI secondari.
+- **Clients** — filtri, saved views, Client Overview (Next Action → snapshot → intelligence → timeline → domini).
+- **Inbox** — feed messaggi, check-in e attention; la chat 1:1 resta il thread.
+- **Programs** — database coach e Import Program nativo con picker domini.
+- **Calendar** — booking online (Coaching Call, Check-in, Review, Consultation, Custom, Training).
+- **Check-in Center** — requested / received / to review / reviewed; media privati firmati.
+- **Nurvan Agent V1** — READ/PROPOSE/EXECUTE ristretto, WHY, conferma, stale protection, audit, undo.
+- **Coach Analytics** — qualità atleta, senza revenue/MRR.
+- **Business / CRM / Automations** — ledger manuale, pipeline LEAD→CHURNED, regole con dry-run. Stripe non è richiesto.
+- **Athlete Brain** — interpretazione ancorata ai segnali deterministici; feedback Approve/Dismiss.
+- **Nutrition / Form review** — stima pasto con conferma obbligatoria; marker video.
+
+Feature flag indipendenti permettono il rollback di ogni superficie.
 
 ---
 

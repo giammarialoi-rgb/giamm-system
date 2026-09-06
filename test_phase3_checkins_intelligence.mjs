@@ -138,9 +138,8 @@ ok(base.includes("submitClientCheckInToCoach") && base.includes("serverCheckInId
 
 const flags = resolveCoachOsFeatureFlags({ env: {} });
 ok(flags.clientIntelligence && flags.checkInCenterV1, "Phase 3 flags enabled");
-ok(!flags.agentV1, "Agent remains disabled before Phase 4");
 const release = JSON.parse(fs.readFileSync(path.join(root, "release.json"), "utf8"));
-ok(release.schemaTarget === "0003", "release targets Phase 3 migration");
+ok(Number(release.schemaTarget) >= 3, "release includes Phase 3 migration");
 
 const webIndex = path.join(root, "web/index.html");
 const apkIndex = path.join(root, "app/src/main/assets/index.html");

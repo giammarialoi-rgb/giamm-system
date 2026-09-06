@@ -86,7 +86,7 @@ ok(Array.isArray(today.sessions) && Array.isArray(today.tasks), "Today reserves 
 
 const flags = resolveCoachOsFeatureFlags({ env: {} });
 ok(flags.coachShellV2 && flags.coachTodayV2 && flags.coachImportV2, "Phase 1 flags enabled");
-ok(!flags.agentV1 && !flags.schedulingV1, "deferred flags remain disabled");
+ok(flags.agentV1 && flags.schedulingV1, "later Coach OS flags remain independently togglable");
 
 const shell = fs.readFileSync(path.join(root, "web/coach-os/shell.js"), "utf8");
 const todayUi = fs.readFileSync(path.join(root, "web/coach-os/today.js"), "utf8");
