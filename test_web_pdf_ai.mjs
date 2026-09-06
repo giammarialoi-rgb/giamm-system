@@ -12,7 +12,7 @@ assert.ok(html.includes("pdfExerciseDisplayName"), "check/workout PDF use substi
 assert.ok(html.includes("sortLogsChronological"), "logs sorted first→last");
 assert.ok(!/logs\.slice\(\)\.reverse\(\)/.test(html.match(/function collectCheckFisicoPdfExtraLines[\s\S]*?function buildCheckFisicoPdfBytes/)[0]), "check extra lines are not newest-first");
 assert.ok(html.includes('value="range"') && html.includes('value="pick"'), "export modal has range and picker");
-assert.ok(html.includes("pdf-inc-logged") && html.includes("pdf-inc-planned"), "export modal has load toggles");
+assert.ok(html.includes('name="pdf-load-mode"') && html.includes('value="logged"') && html.includes('value="planned"'), "export modal requires load choice");
 assert.ok(html.includes("collectStructuredNutritionPlanLines"), "check PDF reuses structured nutrition");
 assert.ok(/askAIInner\(buildCheckFisicoCoachPrompt|askAIInner\(prompt/.test(html.match(/async function analyzeCheckFisicoWithCoach[\s\S]*?function setCheckFisicoPdfOpt/)[0]), "analyze uses askAIInner");
 assert.ok(!/askAI\(prompt\)/.test(html.match(/async function analyzeCheckFisicoWithCoach[\s\S]*?function setCheckFisicoPdfOpt/)[0]), "analyze no longer calls askAI(prompt)");

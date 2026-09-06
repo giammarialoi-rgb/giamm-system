@@ -212,7 +212,7 @@ assert(practice.includes("push_subscription") && practice.includes("notifyAthlet
 assert(practice.includes("/api/client/workout-live-sync") && practice.includes("coachRequest"), "live sync + exam request persist");
 const sw = fs.readFileSync(path.join(__dirname, "web/sw.js"), "utf8");
 assert(sw.includes("addEventListener('push'") && sw.includes("notificationclick") && sw.includes("release-meta.js") && sw.includes("NURVAN_RELEASE") && sw.includes("isAsset"), "SW push + release-driven cache + asset no-html fallback");
-assert(base.includes("updateSupplementField") && base.includes("markSupplementsDirty") && base.includes("DOSAGGIO"), "supplement inline edit fields");
+assert(base.includes("updateSupplementField") && base.includes("markSupplementsDirty") && base.includes("editSupplementItem") && base.includes("Dose:"), "supplement compact list + Edit");
 assert(ui.includes("benvenuto nel mio servizio coaching") && practice.includes("benvenuto nel mio servizio coaching") && ui.includes("formatInviteShareText"), "client invite welcome message");
 assert(ui.includes("intakeAllergiesHtml") && ui.includes("ALIMENTAZIONE · ALLERGIE") && practice.includes("allergies") && practice.includes("profileFromIntake"), "intake optional allergies/intolerances");
 assert(practice.includes("/api/coach/clients/:id/unlock-approve") && practice.includes("/api/coach/clients/:id/unlock-reject") && practice.includes("pending_unlock") && ui.includes("approveUnlockRequest") && ui.includes("rejectUnlockRequest"), "coach approve/deny unlock with note");
@@ -298,6 +298,9 @@ try {
   const html = await invitePage.text();
   assert(invitePage.status === 200, "GET /c/:token serves app");
   assert(html.includes("NURVAN") || html.includes("bootCoachPractice") || html.includes("<!doctype"), "invite URL returns SPA html");
+  const man = await fetch("http://127.0.0.1:" + port + "/c/demo-token/manifest.webmanifest");
+  const manJson = await man.json();
+  assert(man.status === 200 && manJson.start_url === "/c/demo-token", "GET /c/:token/manifest.webmanifest keeps client start_url");
   const locked = await fetch("http://127.0.0.1:" + port + "/api/coach/clients");
   assert(locked.status === 401, "clients API requires login");
   const athleteBlocked = await fetch("http://127.0.0.1:" + port + "/api/client/me");
