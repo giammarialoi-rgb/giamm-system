@@ -8,6 +8,14 @@
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
+  function loc() {
+    return CoachOS.locale ? CoachOS.locale() : 'it-IT';
+  }
+
   function firstName() {
     const account = (typeof store !== 'undefined' && store.accountUser) || {};
     return String(account.name || 'Coach').trim().split(/\s+/)[0] || 'Coach';
@@ -15,9 +23,9 @@
 
   function greeting() {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Buongiorno';
-    if (hour < 18) return 'Buon pomeriggio';
-    return 'Buonasera';
+    if (hour < 12) return tx('coGoodMorning');
+    if (hour < 18) return tx('coGoodAfternoon');
+    return tx('coGoodEvening');
   }
 
   function timeZone() {
@@ -32,7 +40,7 @@
   function formatWhen(value) {
     if (!value) return '';
     try {
-      return new Date(value).toLocaleString('it-IT', {
+      return new Date(value).toLocaleString(loc(), {
         day: '2-digit',
         month: 'short',
         hour: '2-digit',
@@ -48,24 +56,24 @@
     return '<div class="coach-os-row">' +
       '<span class="coach-os-status-dot ' + escText(item.severity || 'low') + '"></span>' +
       '<button type="button" class="coach-os-row-main" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.openTodayAttention(' + index + ')"><strong>' +
-      escText(item.title || 'Richiede attenzione') + '</strong><span>' + escText(item.detail || '') +
+      escText(item.title || tx('coRequiresAttention')) + '</strong><span>' + escText(item.detail || '') +
       (item.dueAt ? ' · ' + escText(formatWhen(item.dueAt)) : '') + '</span></button>' +
-      '<button type="button" aria-label="Azioni attention" style="border:0;background:transparent;color:var(--co-muted);font-weight:900;" onclick="CoachOS.attentionMenu(' + index + ')">•••</button></div>';
+      '<button type="button" aria-label="' + escText(tx('coAttention')) + '" style="border:0;background:transparent;color:var(--co-muted);font-weight:900;" onclick="CoachOS.attentionMenu(' + index + ')">•••</button></div>';
   }
 
   function activityButton(item, index) {
     return '<button type="button" class="coach-os-row" onclick="CoachOS.openTodayActivity(' + index + ')">' +
-      '<span class="coach-os-row-main"><strong>' + escText(item.title || 'Attività') + '</strong>' +
+      '<span class="coach-os-row-main"><strong>' + escText(item.title || tx('coActivity')) + '</strong>' +
       '<span>' + escText(item.clientName || '') + (item.at ? ' · ' + escText(formatWhen(item.at)) : '') + '</span></span>' +
       '<span aria-hidden="true" style="color:var(--co-muted);">›</span></button>';
   }
 
   function renderKpis(kpi) {
     const rows = [
-      [kpi.clients || 0, 'Clients'],
-      [kpi.activeClients || 0, 'Active'],
-      [kpi.unread || 0, 'Unread'],
-      [kpi.liveNow || 0, 'Live']
+      [kpi.clients || 0, tx('coKpiClients')],
+      [kpi.activeClients || 0, tx('coKpiActive')],
+      [kpi.unread || 0, tx('coKpiUnread')],
+      [kpi.liveNow || 0, tx('coKpiLive')]
     ];
     return '<div class="coach-os-card coach-os-kpis">' + rows.map(function (row) {
       return '<div class="coach-os-kpi"><strong>' + Number(row[0] || 0) + '</strong><span>' + row[1] + '</span></div>';
@@ -81,68 +89,68 @@
 
     container.innerHTML =
       '<div class="coach-os-page">' +
-      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Today · ' +
-      escText(new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'short' })) +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coToday')) + ' · ' +
+      escText(new Date().toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'short' })) +
       '</div><h1 class="coach-os-title">' + greeting() + ', <em>' + escText(firstName()) + '.</em></h1>' +
-      '<p class="coach-os-subtitle">Priorità, clienti e prossime azioni in un solo posto.</p></div></div>' +
+      '<p class="coach-os-subtitle">' + escText(tx('coTodaySubtitle')) + '</p></div></div>' +
 
       '<div class="coach-os-grid-2">' +
       '<button type="button" class="coach-os-card coach-os-card-primary" style="text-align:left;cursor:pointer;" onclick="CoachOS.navigate(\'coachAgent\')">' +
-      '<div class="coach-os-card-kicker">Primary action</div><div class="coach-os-card-title">Nurvan Agent</div>' +
-      '<div class="coach-os-muted">Ask. Plan. Execute.</div></button>' +
+      '<div class="coach-os-card-kicker">' + escText(tx('coPrimaryAction')) + '</div><div class="coach-os-card-title">' + escText(tx('coNurvanAgent')) + '</div>' +
+      '<div class="coach-os-muted">' + escText(tx('coAskPlanExecute')) + '</div></button>' +
       '<button type="button" class="coach-os-card" style="text-align:left;cursor:pointer;" onclick="CoachOS.navigate(\'coachCalendar\')">' +
-      '<div class="coach-os-card-kicker">Online coaching</div><div class="coach-os-card-title">Schedule</div>' +
-      '<div class="coach-os-muted">Call, check-in e review.</div></button></div>' +
+      '<div class="coach-os-card-kicker">' + escText(tx('coOnlineCoaching')) + '</div><div class="coach-os-card-title">' + escText(tx('coSchedule')) + '</div>' +
+      '<div class="coach-os-muted">' + escText(tx('coScheduleHint')) + '</div></button></div>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Needs attention</h2>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coNeedsAttention')) + '</h2>' +
       '<span class="coach-os-muted">' + attention.length + '</span></div>' +
       (attention.length
         ? '<div class="coach-os-list">' + attention.map(actionButton).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessuna urgenza. Il portfolio è sotto controllo.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoUrgency')) + '</div>') +
       '</section>' +
 
       (sessions.length
-        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Today’s sessions</h2></div>' +
+        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionsToday')) + '</h2></div>' +
           '<div class="coach-os-list">' + sessions.map(function (session) {
             return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(session.title) +
               '</strong><span>' + escText(session.time || '') + '</span></span></div>';
           }).join('') + '</div></section>'
         : '') +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">My tasks</h2>' +
-      '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.createTaskPrompt()">ADD TASK</button></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coMyTasks')) + '</h2>' +
+      '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.createTaskPrompt()">' + escText(tx('coAddTask')) + '</button></div>' +
       (tasks.length
         ? '<div class="coach-os-list">' + tasks.map(function (task, index) {
-          return '<div class="coach-os-row"><button type="button" aria-label="Completa task" title="Completa" ' +
+          return '<div class="coach-os-row"><button type="button" aria-label="' + escText(tx('coComplete')) + '" title="' + escText(tx('coComplete')) + '" ' +
             'style="width:32px;height:32px;border-radius:50%;border:1px solid var(--co-border);background:transparent;color:var(--co-accent);" ' +
             'onclick="CoachOS.completeTask(\'' + escText(task.id) + '\')">✓</button>' +
             '<button type="button" class="coach-os-row-main" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.openTodayTask(' + index + ')"><strong>' + escText(task.title) +
             '</strong><span>' + escText(task.clientName || '') + (task.dueAt ? ' · ' + escText(formatWhen(task.dueAt)) : '') + '</span></button>' +
-            '<button type="button" aria-label="Azioni task" style="border:0;background:transparent;color:var(--co-muted);font-weight:900;" onclick="CoachOS.taskMenu(' + index + ')">•••</button></div>';
+            '<button type="button" aria-label="' + escText(tx('coTask')) + '" style="border:0;background:transparent;color:var(--co-muted);font-weight:900;" onclick="CoachOS.taskMenu(' + index + ')">•••</button></div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">I task operativi compariranno qui.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoTasks')) + '</div>') +
       '</section>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Recent activity</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coRecentActivity')) + '</h2></div>' +
       (activity.length
         ? '<div class="coach-os-list">' + activity.map(activityButton).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessuna attività recente.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoActivity')) + '</div>') +
       '</section>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Portfolio</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coPortfolio')) + '</h2></div>' +
       renderKpis(data.kpi || {}) + '</section>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Coach OS · apri e controlla</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coOpenAndCheck')) + '</h2></div>' +
       '<div class="coach-os-quick-actions">' +
-      [['coachToday', 'Today'], ['coachHub', 'Clients'], ['coachInbox', 'Inbox'], ['coachPrograms', 'Programs'],
-        ['coachCalendar', 'Calendar'], ['coachCheckIns', 'Check-ins'], ['coachAgent', 'Agent'],
-        ['coachAnalytics', 'Analytics'], ['coachBusiness', 'Business'], ['coachCrm', 'CRM'],
-        ['coachAutomations', 'Automations'], ['coachNutrition', 'Nutrition'], ['coachFormReview', 'Form review']
+      [['coachToday', 'coToday'], ['coachHub', 'coClients'], ['coachInbox', 'coInbox'], ['coachPrograms', 'coPrograms'],
+        ['coachCalendar', 'coCalendar'], ['coachCheckIns', 'coCheckIns'], ['coachAgent', 'coAgent'],
+        ['coachAnalytics', 'coAnalytics'], ['coachBusiness', 'coBusiness'], ['coachCrm', 'coCrm'],
+        ['coachAutomations', 'coAutomations'], ['coachNutrition', 'coNutrition'], ['coachFormReview', 'coFormReview']
       ].map(function (row) {
-        return '<button class="coach-os-action" onclick="CoachOS.navigate(\'' + row[0] + '\')">' + row[1] + '</button>';
+        return '<button class="coach-os-action" onclick="CoachOS.navigate(\'' + row[0] + '\')">' + escText(tx(row[1])) + '</button>';
       }).join('') +
-      '<button class="coach-os-action" onclick="openAddClientWizard()">Add client</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.openNativeImport()">Import program</button>' +
+      '<button class="coach-os-action" onclick="openAddClientWizard()">' + escText(tx('coAddClient')) + '</button>' +
+      '<button class="coach-os-action" onclick="CoachOS.openNativeImport()">' + escText(tx('coImportProgram')) + '</button>' +
       '</div></section>' +
       '<div style="height:28px;"></div></div>';
   }
@@ -154,24 +162,24 @@
     const activity = [];
     rows.forEach(function (client) {
       const id = String(client.id || '');
-      const name = client.displayName || client.username || 'Cliente';
+      const name = client.displayName || client.username || tx('coClientFallback');
       const lastAt = client.lastWorkoutAt || client.last_workout_at;
       if (client.leaveRequested || client.leave_requested_at) {
-        attention.push({ title: 'Fine rapporto', detail: name + ' ha chiesto di uscire', severity: 'high', clientId: id, action: { clientId: id } });
+        attention.push({ title: tx('coAttEnd'), detail: name + ' ' + tx('coAttEndDetail'), severity: 'high', clientId: id, action: { clientId: id } });
       } else if (client.hasPendingChange || client.hasPendingUnlock) {
-        attention.push({ title: 'In attesa di te', detail: name + ' ha una richiesta da approvare', severity: 'high', clientId: id, action: { clientId: id } });
+        attention.push({ title: tx('coAttAwaiting'), detail: name + ' ' + tx('coAttAwaitingDetail'), severity: 'high', clientId: id, action: { clientId: id } });
       } else if (Number(client.unreadCount || 0) > 0) {
-        attention.push({ title: 'Messaggi non letti', detail: name + ' · ' + client.unreadCount + ' unread', severity: 'high', clientId: id, action: { view: 'coachChat', clientId: id } });
+        attention.push({ title: tx('coAttUnread'), detail: name + ' · ' + client.unreadCount + ' ' + tx('coUnread'), severity: 'high', clientId: id, action: { view: 'coachChat', clientId: id } });
       } else if (!client.paid) {
-        attention.push({ title: 'Pagamento', detail: name + ' non risulta pagato', severity: 'medium', clientId: id, action: { clientId: id } });
+        attention.push({ title: tx('coAttPayment'), detail: name + ' ' + tx('coAttPaymentDetail'), severity: 'medium', clientId: id, action: { clientId: id } });
       } else if (lastAt && now - new Date(lastAt).getTime() > 7 * 86400000) {
-        attention.push({ title: 'Inattivo 7+ giorni', detail: name, severity: 'medium', clientId: id, action: { clientId: id } });
+        attention.push({ title: tx('coAttInactive'), detail: name, severity: 'medium', clientId: id, action: { clientId: id } });
       }
       if (lastAt) {
-        activity.push({ title: 'Ultimo workout', clientName: name, at: lastAt, clientId: id, action: { clientId: id } });
+        activity.push({ title: tx('coAttLastWorkout'), clientName: name, at: lastAt, clientId: id, action: { clientId: id } });
       }
       if (client.workoutLive) {
-        activity.unshift({ title: 'In allenamento ora', clientName: name, at: new Date().toISOString(), clientId: id, action: { clientId: id } });
+        activity.unshift({ title: tx('coAttLiveNow'), clientName: name, at: new Date().toISOString(), clientId: id, action: { clientId: id } });
       }
     });
     return {
@@ -204,7 +212,7 @@
   async function loadToday(container) {
     container.innerHTML =
       '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Coach OS</div>' +
-      '<h1 class="coach-os-title">Today</h1></div></div><div class="coach-os-skeleton">Caricamento priorità…</div></div>';
+      '<h1 class="coach-os-title">' + escText(tx('coToday')) + '</h1></div></div><div class="coach-os-skeleton">' + escText(tx('coLoadingPriorities')) + '</div></div>';
     try {
       const date = new Date().toISOString().slice(0, 10);
       const payload = await window.practiceFetch(
@@ -300,18 +308,18 @@
     ensurePracticeOverlays();
     const panel = document.getElementById('cp-assign-panel');
     if (!panel) return;
-    panel.innerHTML = '<div class="coach-os-card-kicker">Task</div><h2>' + escText(task.title) + '</h2>' +
-      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="CoachOS.completeTask(\'' + escText(task.id) + '\')">COMPLETE</button>' +
-      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="CoachOS.snoozeTask(\'' + escText(task.id) + '\')">SNOOZE 1 DAY</button>' +
+    panel.innerHTML = '<div class="coach-os-card-kicker">' + escText(tx('coTask')) + '</div><h2>' + escText(task.title) + '</h2>' +
+      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="CoachOS.completeTask(\'' + escText(task.id) + '\')">' + escText(tx('coComplete')) + '</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="CoachOS.snoozeTask(\'' + escText(task.id) + '\')">' + escText(tx('coSnooze')) + '</button>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">' +
-      '<button class="btn btn-outline" onclick="CoachOS.moveTask(' + index + ',-1)">MOVE UP</button>' +
-      '<button class="btn btn-outline" onclick="CoachOS.moveTask(' + index + ',1)">MOVE DOWN</button></div>' +
-      (task.clientId ? '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\',false);openCoachClient(\'' + escText(task.clientId) + '\')">OPEN CLIENT</button>' : '') +
-      '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\',false)">CLOSE</button>';
+      '<button class="btn btn-outline" onclick="CoachOS.moveTask(' + index + ',-1)">' + escText(tx('coMoveUp')) + '</button>' +
+      '<button class="btn btn-outline" onclick="CoachOS.moveTask(' + index + ',1)">' + escText(tx('coMoveDown')) + '</button></div>' +
+      (task.clientId ? '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\',false);openCoachClient(\'' + escText(task.clientId) + '\')">' + escText(tx('coOpenClient')) + '</button>' : '') +
+      '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coClose')) + '</button>';
     showOverlay('cp-assign', true);
   };
   CoachOS.createTaskPrompt = async function () {
-    const title = prompt('Nuovo task');
+    const title = prompt(tx('coAddTask'));
     if (!title) return;
     try {
       await practiceFetch('/api/coach/tasks', {
@@ -343,12 +351,12 @@
     ensurePracticeOverlays();
     const panel = document.getElementById('cp-assign-panel');
     if (!panel) return;
-    panel.innerHTML = '<div class="coach-os-card-kicker">Attention</div><h2>' + escText(item.title) + '</h2>' +
+    panel.innerHTML = '<div class="coach-os-card-kicker">' + escText(tx('coAttention')) + '</div><h2>' + escText(item.title) + '</h2>' +
       '<p class="cp-help">' + escText(item.detail || '') + '</p>' +
-      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="CoachOS.updateAttention(\'' + escText(item.id) + '\',\'resolved\')">RESOLVE</button>' +
-      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="CoachOS.updateAttention(\'' + escText(item.id) + '\',\'snoozed\',new Date(Date.now()+86400000).toISOString())">SNOOZE 1 DAY</button>' +
-      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\',false);CoachOS.openTodayAttention(' + index + ')">OPEN CLIENT</button>' +
-      '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\',false)">CLOSE</button>';
+      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="CoachOS.updateAttention(\'' + escText(item.id) + '\',\'resolved\')">' + escText(tx('coResolve')) + '</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="CoachOS.updateAttention(\'' + escText(item.id) + '\',\'snoozed\',new Date(Date.now()+86400000).toISOString())">' + escText(tx('coSnooze')) + '</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\',false);CoachOS.openTodayAttention(' + index + ')">' + escText(tx('coOpenClient')) + '</button>' +
+      '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coClose')) + '</button>';
     showOverlay('cp-assign', true);
   };
   CoachOS.registerView('coachToday', loadToday);

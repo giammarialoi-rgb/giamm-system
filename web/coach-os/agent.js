@@ -10,15 +10,19 @@
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
   function whyHtml(why) {
     const reasons = (why && why.reasons) || [];
     if (!reasons.length) return '';
-    return '<div class="coach-os-muted" style="margin-top:8px;">WHY</div><div class="coach-os-list">' +
+    return '<div class="coach-os-muted" style="margin-top:8px;">' + escText(tx('coWhy')) + '</div><div class="coach-os-list">' +
       reasons.map(function (reason) {
         return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' +
           escText(reason.statement || '') + '</strong><span>' +
           escText(JSON.stringify(reason.evidence || {})) + '</span></span>' +
-          (why.viewData ? '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.openAgentViewData()">VIEW DATA</button>' : '') +
+          (why.viewData ? '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.openAgentViewData()">' + escText(tx('coViewData')) + '</button>' : '') +
           '</div>';
       }).join('') + '</div>';
   }
@@ -28,38 +32,38 @@
     const proposals = (run && run.proposals) || [];
     container.innerHTML =
       '<div class="coach-os-page">' +
-      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Nurvan Agent</div>' +
-      '<h1 class="coach-os-title">Ask. Plan. Execute.</h1>' +
-      '<p class="coach-os-subtitle">Intent → Plan → Preview → Confirmation → Result. Nessuna write senza conferma.</p></div></div>' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coNurvanAgent')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coAskPlanExecute')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(tx('coAgentSubtitle')) + '</p></div></div>' +
       '<div class="coach-os-card">' +
-      '<textarea id="coach-os-agent-input" rows="3" placeholder="Es. mostra i clienti inattivi, proponi un deload, crea un task…"' +
+      '<textarea id="coach-os-agent-input" rows="3" placeholder="' + escText(tx('coAgentPlaceholder')) + '"' +
       ' style="width:100%;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:12px;">' +
       escText(state.message) + '</textarea>' +
-      '<button class="btn" style="margin-top:10px;background:#111;color:#fff;" onclick="CoachOS.submitAgentRun()">ASK NURVAN</button></div>' +
+      '<button class="btn" style="margin-top:10px;background:#111;color:#fff;" onclick="CoachOS.submitAgentRun()">' + escText(tx('coAskNurvan')) + '</button></div>' +
       (run
-        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Intent</h2></div>' +
+        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coIntent')) + '</h2></div>' +
           '<div class="coach-os-card"><strong>' + escText(run.intent || (state.intent && state.intent.id) || '') +
-          '</strong><div class="coach-os-muted">Plan: understand → preview → confirm</div></div></section>'
+          '</strong><div class="coach-os-muted">' + escText(tx('coPlanSteps')) + '</div></div></section>'
         : '') +
       (proposals.length
-        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Preview</h2></div>' +
+        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coPreview')) + '</h2></div>' +
           proposals.map(function (proposal, index) {
             return '<div class="coach-os-card" style="margin-bottom:10px;"><div class="coach-os-card-kicker">' +
               escText(proposal.toolId) + '</div><div class="coach-os-card-title">' + escText(proposal.summary) +
               '</div>' + whyHtml(proposal.why) +
               '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
-              '<button class="coach-os-action" onclick="CoachOS.confirmAgentProposal(' + index + ')">CONFIRM</button>' +
-              '<button class="coach-os-action" onclick="CoachOS.undoAgentProposal(' + index + ')">UNDO</button>' +
-              '<button class="coach-os-action" onclick="CoachOS.refreshAgentRun()">REFRESH DATA</button>' +
-              '<button class="coach-os-action" onclick="CoachOS.submitAgentRun()">RE-PLAN</button></div></div>';
+              '<button class="coach-os-action" onclick="CoachOS.confirmAgentProposal(' + index + ')">' + escText(tx('coConfirm')) + '</button>' +
+              '<button class="coach-os-action" onclick="CoachOS.undoAgentProposal(' + index + ')">' + escText(tx('coUndo')) + '</button>' +
+              '<button class="coach-os-action" onclick="CoachOS.refreshAgentRun()">' + escText(tx('coRefreshData')) + '</button>' +
+              '<button class="coach-os-action" onclick="CoachOS.submitAgentRun()">' + escText(tx('coReplan')) + '</button></div></div>';
           }).join('') + '</section>'
-        : '<div class="coach-os-empty">Chiedi un comando ristretto: inattivi, check-in mancanti, deload, messaggio o task.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coAgentEmpty')) + '</div>') +
       (state.result
-        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Result</h2></div>' +
+        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coResult')) + '</h2></div>' +
           '<div class="coach-os-card">' + escText(JSON.stringify(state.result)) + '</div></section>'
         : '') +
       (state.stale
-        ? '<div class="coach-os-error">Questa proposta non è più aggiornata perché i dati sono cambiati.</div>'
+        ? '<div class="coach-os-error">' + escText(tx('coStaleProposal')) + '</div>'
         : '') +
       '</div>';
   }
@@ -86,13 +90,13 @@
       state.intent = { id: 'inactive_clients' };
       state.run = {
         id: 'local-preview',
-        intent: 'clienti inattivi',
+        intent: tx('coAttInactive'),
         proposals: [{
           id: 'local-1',
           toolId: 'clients.inactive',
-          summary: 'Anteprima locale: elenca i clienti senza workout da 7 giorni.',
+          summary: tx('coAgentEmpty'),
           why: {
-            reasons: [{ statement: 'I dati di workout hanno più di 7 giorni.', evidence: { source: 'workout_logs' } }],
+            reasons: [{ statement: tx('coAttInactive'), evidence: { source: 'workout_logs' } }],
             viewData: true
           },
           expectedRevision: 1,
@@ -101,7 +105,7 @@
         }]
       };
       state.stale = false;
-      if (typeof practiceToast === 'function') practiceToast('Agent in anteprima locale · conferma disabilitata', 'info');
+      if (typeof practiceToast === 'function') practiceToast(tx('coAgentLocal'), 'info');
       CoachOS.navigate('coachAgent');
     }
   };
@@ -126,7 +130,7 @@
       CoachOS.navigate('coachAgent');
     } catch (error) {
       if (error && error.code === 'STALE_PROPOSAL') state.stale = true;
-      if (typeof practiceToast === 'function') practiceToast(error.message || 'Conferma rifiutata', 'warning');
+      if (typeof practiceToast === 'function') practiceToast(error.message || tx('coDismiss'), 'warning');
       CoachOS.navigate('coachAgent');
     }
   };
@@ -139,7 +143,7 @@
       headers: window.practiceHeaders(true),
       body: JSON.stringify({ proposalId: proposal.id })
     });
-    if (typeof practiceToast === 'function') practiceToast('Azione annullata', 'info');
+    if (typeof practiceToast === 'function') practiceToast(tx('coUndo'), 'info');
   };
 
   CoachOS.refreshAgentRun = CoachOS.submitAgentRun;

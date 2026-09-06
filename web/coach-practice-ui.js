@@ -565,41 +565,46 @@ function ensureCoachDrawer() {
   const hasClient = !!(store && store.coachWorkspace && store.coachWorkspace.clientId);
   const viewing = !!(store && store.coachViewingClient);
   const id = hasClient ? String(store.coachWorkspace.clientId) : '';
-  const name = coachClientDisplayName(id) || 'cliente';
+  const cpt = function (key) {
+    if (window.CoachOS && CoachOS.t) return CoachOS.t(key);
+    if (typeof t === 'function') return t(key);
+    return key;
+  };
+  const name = coachClientDisplayName(id) || cpt('coClientFallback');
   const n = Math.max(0, Number(store.__cpNotifyCount || 0));
   panel.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
-    '<div style="color:var(--gold);font-weight:800;font-size:13px;">MENU COACH</div>' +
-    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="closeCoachDrawer()">CHIUDI</button></div>' +
-    (hasClient ? ('<div class="cp-help" style="margin-bottom:10px;">Cliente: <b style="color:#fff;">' + esc(name) + '</b></div>') : '<div class="cp-help">Nessun cliente aperto. Apri dalla lista.</div>') +
+    '<div style="color:var(--gold);font-weight:800;font-size:13px;">' + cpt('coMenuCoach').toUpperCase() + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="closeCoachDrawer()">' + cpt('coClose').toUpperCase() + '</button></div>' +
+    (hasClient ? ('<div class="cp-help" style="margin-bottom:10px;">' + cpt('coClientFallback') + ': <b style="color:#fff;">' + esc(name) + '</b></div>') : '<div class="cp-help">' + cpt('coNoClientOpen') + '</div>') +
     '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:10px;position:relative;" onclick="closeCoachDrawer();openNotificationsCenter()">' +
-    'NOTIFICHE' + (n > 0 ? (' <span class="cp-notify-count" style="position:static;display:inline-flex;margin-left:6px;">' + (n > 99 ? '99+' : n) + '</span>') : '') +
+    cpt('coNotifications').toUpperCase() + (n > 0 ? (' <span class="cp-notify-count" style="position:static;display:inline-flex;margin-left:6px;">' + (n > 99 ? '99+' : n) + '</span>') : '') +
     '</button>' +
     (hasClient
-      ? ('<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="closeCoachDrawer();openNotificationsCenter(\'' + esc(id) + '\')">NOTIFICHE CLIENTE · ORA</button>')
+      ? ('<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="closeCoachDrawer();openNotificationsCenter(\'' + esc(id) + '\')">' + cpt('coClientNotifyNow').toUpperCase() + '</button>')
       : '') +
     '<div class="cp-drawer-grid">' +
-    '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachHub\')">LISTA CLIENTI</button>' +
-    '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachLibrary\')">IL MIO DATABASE</button>' +
+    '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachHub\')">' + cpt('coClientList').toUpperCase() + '</button>' +
+    '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachLibrary\')">' + cpt('coMyDatabase').toUpperCase() + '</button>' +
     (hasClient ? (
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();openCoachClient(\'' + esc(id) + '\')">SCHEDA CLIENTE</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();openCoachClientChat(\'' + esc(id) + '\')">CHAT</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'calendar\')">CALENDARIO</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'training\')">ALLENAMENTO</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'nutrition\')">ALIMENTAZIONE</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'supplements\')">INTEGRAZIONE</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'therapy\')">TERAPIA</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'exams\')">ESAMI</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'stats\')">STATS</button>'
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();openCoachClient(\'' + esc(id) + '\')">' + cpt('coClientSheet').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();openCoachClientChat(\'' + esc(id) + '\')">' + cpt('coChat').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'calendar\')">' + cpt('coCalendar').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'training\')">' + cpt('coTraining').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'nutrition\')">' + cpt('coNutrition').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'supplements\')">' + cpt('coDomainIntegration').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'therapy\')">' + cpt('coDomainTherapy').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'exams\')">' + cpt('coDomainExams').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'stats\')">' + cpt('coAnalytics').toUpperCase() + '</button>'
     ) : (
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();practiceToast(\'Apri un cliente per il suo calendario\',\'warning\');navigate(\'coachHub\')">CALENDARIO</button>'
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();practiceToast(\'' + cpt('coOpenClientCalendar').replace(/'/g, '\\\'') + '\',\'warning\');navigate(\'coachHub\')">' + cpt('coCalendar').toUpperCase() + '</button>'
     )) +
     '</div>' +
     (viewing
-      ? ('<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="closeCoachDrawer();pushCoachClientEdits()">SALVA MODIFICHE</button>' +
-        '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="closeCoachDrawer();leaveCoachClientView()">TORNA ALLA SCHEDA</button>')
+      ? ('<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="closeCoachDrawer();pushCoachClientEdits()">' + cpt('coSaveEdits').toUpperCase() + '</button>' +
+        '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="closeCoachDrawer();leaveCoachClientView()">' + cpt('coBackToSheet').toUpperCase() + '</button>')
       : '') +
-    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:16px;color:#c66 !important;-webkit-text-fill-color:#c66 !important;" onclick="closeCoachDrawer();exitCoachSession()">ESCI COACH</button>';
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:16px;color:#c66 !important;-webkit-text-fill-color:#c66 !important;" onclick="closeCoachDrawer();exitCoachSession()">' + cpt('coExitCoach').toUpperCase() + '</button>';
 }
 
 function openCoachDrawer() {
@@ -1874,7 +1879,9 @@ function enterCoachSession() {
   requestNotifyPermission();
   applyClientChrome();
   navigate('coachToday');
-  if (typeof practiceToast === 'function') practiceToast('Coach OS · Today', 'success');
+  if (typeof practiceToast === 'function') {
+    practiceToast((window.CoachOS && CoachOS.t) ? CoachOS.t('coToastToday') : 'Coach OS · Oggi', 'success');
+  }
 }
 
 function exitCoachSession(force) {

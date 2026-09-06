@@ -7,6 +7,19 @@
     return typeof window.coachFeatureEnabled === 'function' && window.coachFeatureEnabled(name);
   }
 
+  function tx(key) {
+    if (typeof window.t === 'function') return window.t(key);
+    if (typeof I18nService !== 'undefined' && I18nService.t) return I18nService.t(key);
+    return key;
+  }
+
+  function locale() {
+    const lang = (typeof I18nService !== 'undefined' && I18nService.getLanguage)
+      ? I18nService.getLanguage()
+      : 'it';
+    return ({ it: 'it-IT', en: 'en-GB', es: 'es-ES', fr: 'fr-FR', de: 'de-DE', pt: 'pt-BR', ru: 'ru-RU', zh: 'zh-CN', ar: 'ar-SA', hi: 'hi-IN' })[lang] || 'it-IT';
+  }
+
   function escText(value) {
     if (typeof window.esc === 'function') return window.esc(String(value || ''));
     return String(value || '').replace(/[&<>"']/g, function (ch) {
@@ -55,27 +68,29 @@
       brand.className = 'coach-os-brand';
       logo.appendChild(brand);
     }
-    brand.innerHTML = '<strong>' + escText(coachName()) + '</strong><small>Coach mode</small>';
+    brand.innerHTML = '<strong>' + escText(coachName()) + '</strong><small>' + escText(tx('coCoachMode')) + '</small>';
   }
 
-  const primaryLinks = [
-    { view: 'coachToday', label: 'Home' },
-    { view: 'coachHub', label: 'Clients' },
-    { view: 'coachInbox', label: 'Inbox' },
-    { view: 'coachPrograms', label: 'Programs' },
-    { view: 'coachCalendar', label: 'Calendar' }
-  ];
+  function primaryLinks() {
+    return [
+      { view: 'coachToday', label: tx('coHome') },
+      { view: 'coachHub', label: tx('coClients') },
+      { view: 'coachInbox', label: tx('coInbox') },
+      { view: 'coachPrograms', label: tx('coPrograms') },
+      { view: 'coachCalendar', label: tx('coCalendar') }
+    ];
+  }
 
   function secondaryLinks() {
     const rows = [
-      { view: 'coachCheckIns', label: 'Check-ins', flag: 'checkInCenterV1' },
-      { view: 'coachNutrition', label: 'Nutrition' },
-      { view: 'coachFormReview', label: 'Form review', flag: 'videoFormV1' },
-      { view: 'coachAnalytics', label: 'Analytics', flag: 'coachAnalyticsV1' },
-      { view: 'coachAgent', label: 'Agent', flag: 'agentV1' },
-      { view: 'coachAutomations', label: 'Automations', flag: 'businessV1' },
-      { view: 'coachBusiness', label: 'Business', flag: 'businessV1' },
-      { view: 'coachCrm', label: 'CRM', flag: 'businessV1' }
+      { view: 'coachCheckIns', label: tx('coCheckIns'), flag: 'checkInCenterV1' },
+      { view: 'coachNutrition', label: tx('coNutrition') },
+      { view: 'coachFormReview', label: tx('coFormReview'), flag: 'videoFormV1' },
+      { view: 'coachAnalytics', label: tx('coAnalytics'), flag: 'coachAnalyticsV1' },
+      { view: 'coachAgent', label: tx('coAgent'), flag: 'agentV1' },
+      { view: 'coachAutomations', label: tx('coAutomations'), flag: 'businessV1' },
+      { view: 'coachBusiness', label: tx('coBusiness'), flag: 'businessV1' },
+      { view: 'coachCrm', label: tx('coCrm'), flag: 'businessV1' }
     ];
     return rows.filter(function (row) { return !row.flag || enabled(row.flag); });
   }
@@ -99,20 +114,20 @@
       '<div class="coach-os-sidebar-brand"><img src="nurvan_logo.png" alt="Nurvan"><span>' +
       escText(coachName()) + '</span></div>' +
       '<nav class="coach-os-sidebar-nav">' +
-      primaryLinks.map(function (row) { return linkHtml(row, active); }).join('') +
-      '<div class="coach-os-card-kicker" style="padding:20px 12px 8px;">More</div>' +
+      primaryLinks().map(function (row) { return linkHtml(row, active); }).join('') +
+      '<div class="coach-os-card-kicker" style="padding:20px 12px 8px;">' + escText(tx('coMore')) + '</div>' +
       secondaryLinks().map(function (row) { return linkHtml(row, active); }).join('') +
       '</nav>' +
       '<div class="coach-os-sidebar-footer">' +
-      '<button type="button" class="coach-os-side-link" onclick="CoachOS.openSettings()">Profile & Settings</button>' +
-      '<button type="button" class="coach-os-side-link" onclick="CoachOS.openHelp()">Help</button>' +
-      '<button type="button" class="coach-os-side-link" onclick="exitCoachSession()">Exit Coach</button>' +
+      '<button type="button" class="coach-os-side-link" onclick="CoachOS.openSettings()">' + escText(tx('coProfileSettings')) + '</button>' +
+      '<button type="button" class="coach-os-side-link" onclick="CoachOS.openHelp()">' + escText(tx('coHelp')) + '</button>' +
+      '<button type="button" class="coach-os-side-link" onclick="exitCoachSession()">' + escText(tx('coExitCoach')) + '</button>' +
       '</div>';
   }
 
   function mapBottomNav() {
     const ids = ['nav-home', 'nav-training', 'nav-stats', 'nav-ai', 'nav-db'];
-    primaryLinks.forEach(function (row, index) {
+    primaryLinks().forEach(function (row, index) {
       const element = document.getElementById(ids[index]);
       if (!element) return;
       element.style.display = '';
@@ -143,19 +158,19 @@
     if (!enabled('coachShellV2')) return false;
     wrap.className = 'coach-os-header-controls';
     wrap.style.cssText = '';
-    const options = ['<option value="">Cliente…</option>'].concat((clients || []).map(function (client) {
+    const options = ['<option value="">' + escText(tx('coClientFallback')) + '…</option>'].concat((clients || []).map(function (client) {
       const id = String(client.id);
       return '<option value="' + escText(id) + '"' + (id === String(curId || '') ? ' selected' : '') + '>' +
         escText(client.displayName || client.username || ('#' + id)) + '</option>';
     }));
     const notificationCount = Math.max(0, Number((typeof store !== 'undefined' && store.__cpNotifyCount) || 0));
     wrap.innerHTML =
-      '<select id="cp-client-switcher" class="coach-os-client-select" title="Cambia cliente" aria-label="Cambia cliente" onchange="switchCoachClientFromHeader(this.value)">' +
+      '<select id="cp-client-switcher" class="coach-os-client-select" title="' + escText(tx('coSwitchClient')) + '" aria-label="' + escText(tx('coSwitchClient')) + '" onchange="switchCoachClientFromHeader(this.value)">' +
       options.join('') + '</select>' +
-      '<button type="button" class="btn btn-outline coach-os-icon-btn" aria-label="Notifiche" title="Notifiche" onclick="openNotificationsCenter()">♢' +
+      '<button type="button" class="btn btn-outline coach-os-icon-btn" aria-label="' + escText(tx('coNotifications')) + '" title="' + escText(tx('coNotifications')) + '" onclick="openNotificationsCenter()">♢' +
       (notificationCount ? '<span class="cp-notify-count">' + (notificationCount > 99 ? '99+' : notificationCount) + '</span>' : '') +
       '</button>' +
-      '<button type="button" class="btn btn-outline coach-os-icon-btn" aria-label="Menu Coach e profilo" title="Menu Coach" onclick="openCoachDrawer()">' +
+      '<button type="button" class="btn btn-outline coach-os-icon-btn" aria-label="' + escText(tx('coCoachMenu')) + '" title="' + escText(tx('coCoachMenu')) + '" onclick="openCoachDrawer()">' +
       '<span style="font-size:10px;font-weight:900;">' + escText(initials()) + '</span></button>';
     return true;
   }
@@ -165,8 +180,8 @@
       '<div class="coach-os-page">' +
       '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Coach OS</div>' +
       '<h1 class="coach-os-title">' + escText(title) + '</h1>' +
-      '<p class="coach-os-subtitle">' + escText(body || 'Questa sezione verrà attivata nella fase dedicata.') + '</p></div></div>' +
-      '<div class="coach-os-empty">La struttura è pronta. I dati e le azioni compariranno quando la feature sarà abilitata.</div>' +
+      '<p class="coach-os-subtitle">' + escText(body || tx('coPlaceholderSoon')) + '</p></div></div>' +
+      '<div class="coach-os-empty">' + escText(tx('coPlaceholderReady')) + '</div>' +
       '</div>';
   }
 
@@ -180,16 +195,16 @@
       return true;
     }
     const placeholders = {
-      coachInbox: ['Inbox', 'Messaggi, check-in, richieste e approvazioni'],
-      coachCalendar: ['Calendar', 'Scheduling per coaching online'],
-      coachCheckIns: ['Check-ins', 'Richiesti, ricevuti e da revisionare'],
-      coachNutrition: ['Nutrition', 'Vista portfolio nutrizione'],
-      coachFormReview: ['Form review', 'Video, marker e feedback esercizio'],
-      coachAnalytics: ['Analytics', 'Adherence e performance dei clienti'],
-      coachAgent: ['Nurvan Agent', 'Ask. Plan. Execute.'],
-      coachAutomations: ['Automations', 'Trigger, condizioni e azioni'],
-      coachBusiness: ['Business', 'Ledger e rinnovi'],
-      coachCrm: ['CRM', 'Pipeline coaching leggera']
+      coachInbox: [tx('coInbox'), tx('coInboxSubtitle')],
+      coachCalendar: [tx('coCalendar'), tx('coCalendarSubtitle')],
+      coachCheckIns: [tx('coCheckIns'), tx('coCheckInsSubtitle')],
+      coachNutrition: [tx('coNutrition'), tx('coMealSubtitle')],
+      coachFormReview: [tx('coFormReview'), tx('coFormSubtitle')],
+      coachAnalytics: [tx('coAnalytics'), tx('coAnalyticsSubtitle')],
+      coachAgent: [tx('coAgent'), tx('coAskPlanExecute')],
+      coachAutomations: [tx('coAutomations'), tx('coAutomationsSubtitle')],
+      coachBusiness: [tx('coBusiness'), tx('coBusinessSubtitle')],
+      coachCrm: [tx('coCrm'), tx('coCrmEmpty')]
     };
     if (placeholders[view]) {
       renderPlaceholder(container, placeholders[view][0], placeholders[view][1]);
@@ -213,12 +228,14 @@
 
   function openHelp() {
     if (typeof window.practiceToast === 'function') {
-      window.practiceToast('Guida Coach OS: Today → Attention → Client → Decide → Execute', 'info');
+      window.practiceToast(tx('coHelpToast'), 'info');
     } else {
-      alert('Today → Attention → Client → Understand → Decide → Nurvan executes');
+      alert(tx('coHelpToast'));
     }
   }
 
+  CoachOS.t = tx;
+  CoachOS.locale = locale;
   CoachOS.enabled = enabled;
   CoachOS.navigate = navTo;
   CoachOS.applyShell = applyShell;

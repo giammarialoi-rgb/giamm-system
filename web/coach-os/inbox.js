@@ -10,6 +10,10 @@
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
   function openItem(item) {
     const href = item.href || {};
     if (href.view === 'coachChat' && href.clientId && typeof openCoachClientChat === 'function') {
@@ -29,31 +33,31 @@
 
   function drawInbox(container) {
     container.innerHTML =
-      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Operational</div>' +
-      '<h1 class="coach-os-title">Inbox</h1>' +
-      '<p class="coach-os-subtitle">Messaggi, check-in, richieste e attention. La chat 1:1 resta il thread.</p></div></div>' +
-      '<input value="' + escText(state.q) + '" placeholder="Cerca messaggi o clienti" onchange="CoachOS.searchInbox(this.value)" ' +
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coOperational')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coInbox')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(tx('coInboxSubtitle')) + '</p></div></div>' +
+      '<input value="' + escText(state.q) + '" placeholder="' + escText(tx('coSearchInbox')) + '" onchange="CoachOS.searchInbox(this.value)" ' +
       'style="width:100%;min-height:44px;background:#0b0b0b;border:1px solid var(--co-border);border-radius:12px;color:#fff;padding:0 12px;">' +
       '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
-      '<button class="coach-os-action" onclick="CoachOS.previewBroadcast()">PREVIEW BROADCAST</button></div>' +
+      '<button class="coach-os-action" onclick="CoachOS.previewBroadcast()">' + escText(tx('coPreviewBroadcast')) + '</button></div>' +
       (state.items.length
         ? '<div class="coach-os-list" style="margin-top:12px;">' + state.items.map(function (item, index) {
           return '<div class="coach-os-row"><button class="coach-os-row-main" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.openInboxItem(' + index + ')">' +
-            '<strong>' + escText(item.title) + (item.pinned ? ' · PIN' : '') + '</strong><span>' +
+            '<strong>' + escText(item.title) + (item.pinned ? ' · ' + escText(tx('coPinned')) : '') + '</strong><span>' +
             escText(item.kind) + (item.preview ? ' · ' + escText(item.preview) : '') +
             (item.reaction ? ' · ' + escText(item.reaction) : '') + '</span></button>' +
             (item.kind === 'message'
               ? '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.pinInboxItem(\'' + escText(item.id) + '\',' + (item.pinned ? 'false' : 'true') + ')">' +
-                (item.pinned ? 'UNPIN' : 'PIN') + '</button>'
+                escText(item.pinned ? tx('coUnpin') : tx('coPin')) + '</button>'
               : '') +
             '</div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">Inbox vuota. I thread E2E restano in Chat.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coInboxEmpty')) + '</div>') +
       '</div>';
   }
 
   CoachOS.views.coachInbox = async function (container) {
-    container.innerHTML = '<div class="coach-os-skeleton">Loading inbox…</div>';
+    container.innerHTML = '<div class="coach-os-skeleton">' + escText(tx('coLoadingInbox')) + '</div>';
     try {
       const payload = await window.practiceFetch(
         '/api/coach/inbox-feed?q=' + encodeURIComponent(state.q || ''),
@@ -79,7 +83,7 @@
             id: 'client-' + client.id,
             kind: 'attention',
             title: client.displayName,
-            preview: client.unreadCount ? (client.unreadCount + ' unread') : 'Richiede attenzione',
+            preview: client.unreadCount ? (client.unreadCount + ' ' + tx('coUnread')) : tx('coRequiresAttention'),
             href: { view: 'coachChat', clientId: client.id }
           };
         }));
@@ -108,7 +112,7 @@
   };
 
   CoachOS.previewBroadcast = async function () {
-    const raw = window.prompt('Client IDs da includere nella preview (virgola)', '');
+    const raw = window.prompt(tx('coBroadcastIds'), '');
     if (raw == null) return;
     const clientIds = String(raw).split(',').map(function (id) { return id.trim(); }).filter(Boolean);
     const payload = await window.practiceFetch('/api/coach/broadcast/preview', {
@@ -117,6 +121,6 @@
       body: JSON.stringify({ clientIds: clientIds })
     });
     const preview = payload.preview || {};
-    window.alert('Preview broadcast: ' + (preview.targetCount || 0) + ' target. Nessun messaggio inviato.');
+    window.alert(tx('coBroadcastResult') + ' ' + (preview.targetCount || 0));
   };
 })();

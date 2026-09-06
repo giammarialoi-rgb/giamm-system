@@ -8,36 +8,40 @@
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
   function page(title, subtitle, body) {
-    return '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Assistive media</div>' +
+    return '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coAssistiveMedia')) + '</div>' +
       '<h1 class="coach-os-title">' + escText(title) + '</h1>' +
       '<p class="coach-os-subtitle">' + escText(subtitle) + '</p></div></div>' + body + '</div>';
   }
 
   CoachOS.views.coachNutrition = async function (container) {
     container.innerHTML = page(
-      'Nutrition',
-      'Photo → Estimate → Confirm → Log. L’AI non salva senza conferma.',
-      '<div class="coach-os-card"><div class="coach-os-card-kicker">Meal estimate</div>' +
-      '<input id="coach-os-meal-client" placeholder="Client ID" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<input id="coach-os-meal-p" placeholder="Protein g" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<input id="coach-os-meal-c" placeholder="Carbs g" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<input id="coach-os-meal-f" placeholder="Fats g" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.estimateMeal()">ESTIMATE</button>' +
+      tx('coNutrition'),
+      tx('coMealSubtitle'),
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coMealEstimate')) + '</div>' +
+      '<input id="coach-os-meal-client" placeholder="' + escText(tx('coClientId')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-meal-p" placeholder="' + escText(tx('coProteinG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-meal-c" placeholder="' + escText(tx('coCarbsG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-meal-f" placeholder="' + escText(tx('coFatsG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.estimateMeal()">' + escText(tx('coEstimate')) + '</button>' +
       '<div id="coach-os-meal-result" class="coach-os-muted" style="margin-top:10px;"></div></div>'
     );
   };
 
   CoachOS.views.coachFormReview = async function (container) {
     container.innerHTML = page(
-      'Video form',
-      'Video → Markers → Feedback → Exercise history. Nessuna diagnosi clinica.',
-      '<div class="coach-os-card"><div class="coach-os-card-kicker">Form review</div>' +
-      '<input id="coach-os-form-client" placeholder="Client ID" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<input id="coach-os-form-exercise" placeholder="Exercise" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<input id="coach-os-form-markers" placeholder="Markers (es. 0:12 knee valgus; 0:28 depth)" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<textarea id="coach-os-form-feedback" placeholder="Feedback coach" style="width:100%;min-height:88px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:10px 12px;"></textarea>' +
-      '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.saveFormReview()">SAVE MARKERS</button>' +
+      tx('coVideoForm'),
+      tx('coFormSubtitle'),
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coFormReview')) + '</div>' +
+      '<input id="coach-os-form-client" placeholder="' + escText(tx('coClientId')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-form-exercise" placeholder="' + escText(tx('coExercise')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-form-markers" placeholder="' + escText(tx('coMarkersHint')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<textarea id="coach-os-form-feedback" placeholder="' + escText(tx('coCoachFeedback')) + '" style="width:100%;min-height:88px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:10px 12px;"></textarea>' +
+      '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.saveFormReview()">' + escText(tx('coSaveMarkers')) + '</button>' +
       '<div id="coach-os-form-result" class="coach-os-muted" style="margin-top:10px;"></div></div>'
     );
   };
@@ -55,9 +59,10 @@
     window.__coachMealEstimate = payload.meal;
     const box = document.getElementById('coach-os-meal-result');
     if (box) {
-      box.innerHTML = 'Stima ' + escText((payload.meal && payload.meal.estimated && payload.meal.estimated.calories) || '—') +
-        ' kcal · confidence ' + escText(payload.meal && payload.meal.estimated && payload.meal.estimated.confidence) +
-        '<br><button class="btn btn-outline" style="margin-top:8px;" onclick="CoachOS.confirmMeal()">CONFIRM & LOG</button>';
+      box.innerHTML = escText(tx('coEstimatePrefix')) + ' ' + escText((payload.meal && payload.meal.estimated && payload.meal.estimated.calories) || '—') +
+        ' ' + escText(tx('coKcal')) + ' · ' + escText(tx('coConfidence')) + ' ' +
+        escText(payload.meal && payload.meal.estimated && payload.meal.estimated.confidence) +
+        '<br><button class="btn btn-outline" style="margin-top:8px;" onclick="CoachOS.confirmMeal()">' + escText(tx('coConfirmLog')) + '</button>';
     }
   };
 
@@ -69,7 +74,7 @@
       headers: window.practiceHeaders(true),
       body: JSON.stringify(meal.estimated || {})
     });
-    if (typeof practiceToast === 'function') practiceToast('Pasto confermato', 'success');
+    if (typeof practiceToast === 'function') practiceToast(tx('coConfirmLog'), 'success');
   };
 
   CoachOS.saveFormReview = async function () {
@@ -87,6 +92,6 @@
       body: JSON.stringify({ clientId: clientId, exercise: exercise, markers: markers, feedback: feedback })
     });
     const box = document.getElementById('coach-os-form-result');
-    if (box) box.textContent = 'Review salvata · ' + ((payload.review && payload.review.exercise) || exercise || 'exercise');
+    if (box) box.textContent = tx('coReviewSaved') + ' · ' + ((payload.review && payload.review.exercise) || exercise || tx('coExercise'));
   };
 })();

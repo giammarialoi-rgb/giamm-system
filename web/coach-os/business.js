@@ -8,12 +8,16 @@
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
   function euros(cents) {
     return '€' + (Number(cents || 0) / 100).toFixed(0);
   }
 
   CoachOS.views.coachBusiness = async function (container) {
-    container.innerHTML = '<div class="coach-os-skeleton">Loading ledger…</div>';
+    container.innerHTML = '<div class="coach-os-skeleton">' + escText(tx('coLoadingLedger')) + '</div>';
     let summary = {};
     try {
       const data = await window.practiceFetch('/api/coach/business', { headers: window.practiceHeaders() });
@@ -22,10 +26,10 @@
       summary = { activeClients: 0, revenue30dCents: 0, mrrCents: 0, overdue: 0 };
     }
     container.innerHTML =
-      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Manual ledger</div>' +
-      '<h1 class="coach-os-title">Business</h1><p class="coach-os-subtitle">Nessuno Stripe. Piano, rinnovo e overdue.</p></div></div>' +
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coManualLedger')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coBusiness')) + '</h1><p class="coach-os-subtitle">' + escText(tx('coBusinessSubtitle')) + '</p></div></div>' +
       '<div class="coach-os-card coach-os-kpis">' +
-      [['Active', summary.activeClients || 0], ['Revenue 30d', euros(summary.revenue30dCents)], ['MRR', euros(summary.mrrCents)], ['Overdue', summary.overdue || 0]]
+      [[tx('coActive'), summary.activeClients || 0], [tx('coRevenue30d'), euros(summary.revenue30dCents)], ['MRR', euros(summary.mrrCents)], [tx('coOverdue'), summary.overdue || 0]]
         .map(function (row) {
           return '<div class="coach-os-kpi"><strong>' + escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></div>';
         }).join('') + '</div></div>';
@@ -40,15 +44,15 @@
       rows = [];
     }
     container.innerHTML =
-      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Pipeline</div>' +
-      '<h1 class="coach-os-title">CRM</h1></div></div>' +
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coCrm')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coCrm')) + '</h1></div></div>' +
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (row) {
           return '<button class="coach-os-row" onclick="openCoachClient(\'' + escText(row.id) + '\')"><span class="coach-os-row-main"><strong>' +
             escText(row.name) + '</strong><span>' + escText(row.stage) + (row.nextAction ? ' · ' + escText(row.nextAction) : '') +
             '</span></span></button>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessun cliente in pipeline.</div>') + '</div>';
+        : '<div class="coach-os-empty">' + escText(tx('coCrmEmpty')) + '</div>') + '</div>';
   };
 
   CoachOS.views.coachAutomations = async function (container) {
@@ -60,23 +64,23 @@
       rows = [];
     }
     container.innerHTML =
-      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Rules</div>' +
-      '<h1 class="coach-os-title">Automations</h1><p class="coach-os-subtitle">Trigger, condizione, azione. Dry-run prima di abilitare.</p></div>' +
-      '<button class="btn btn-outline" onclick="CoachOS.createAutomationPrompt()">NEW RULE</button></div>' +
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coRules')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coAutomations')) + '</h1><p class="coach-os-subtitle">' + escText(tx('coAutomationsSubtitle')) + '</p></div>' +
+      '<button class="btn btn-outline" onclick="CoachOS.createAutomationPrompt()">' + escText(tx('coNewRule')) + '</button></div>' +
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (row) {
           return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(row.name) +
             '</strong><span>' + escText(row.trigger) + ' → ' + escText(row.action) + '</span></span>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.dryRunAutomation(\'' +
-            escText(row.id) + '\')">DRY RUN</button>' +
+            escText(row.id) + '\')">' + escText(tx('coDryRun')) + '</button>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.runAutomationNow(\'' +
-            escText(row.id) + '\')">RUN</button></div>';
+            escText(row.id) + '\')">' + escText(tx('coRun')) + '</button></div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessuna automation. Restano fuori dall’Agent V1.</div>') + '</div>';
+        : '<div class="coach-os-empty">' + escText(tx('coNoAutomations')) + '</div>') + '</div>';
   };
 
   CoachOS.createAutomationPrompt = async function () {
-    const name = window.prompt('Nome automation', 'Check-in received → task');
+    const name = window.prompt(tx('coAutomationName'), tx('coAutomationDefault'));
     if (!name) return;
     await window.practiceFetch('/api/coach/automations', {
       method: 'POST',
@@ -92,7 +96,7 @@
       headers: window.practiceHeaders(true),
       body: JSON.stringify({})
     });
-    if (typeof practiceToast === 'function') practiceToast('Dry-run: ' + (payload.preview && payload.preview.action), 'info');
+    if (typeof practiceToast === 'function') practiceToast(tx('coDryRunPrefix') + ' ' + (payload.preview && payload.preview.action), 'info');
   };
 
   CoachOS.runAutomationNow = async function (id) {
@@ -103,7 +107,7 @@
     });
     const failed = payload.result && payload.result.failed;
     if (typeof practiceToast === 'function') {
-      practiceToast(failed ? 'Automation failed → task creato' : 'Automation eseguita', failed ? 'danger' : 'success');
+      practiceToast(failed ? tx('coAutomationFailed') : tx('coAutomationRan'), failed ? 'danger' : 'success');
     }
   };
 })();

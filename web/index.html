@@ -33323,6 +33323,368 @@ const I18nService = {
   }
 };
 
+(function applyCoachOsI18n(service) {
+  const packs = {
+    it: {
+      coHome: "Oggi", coClients: "Clienti", coInbox: "Posta", coPrograms: "Programmi", coCalendar: "Calendario",
+      coCheckIns: "Verifiche", coNutrition: "Alimentazione", coFormReview: "Revisione tecnica",
+      coAnalytics: "Analisi", coAgent: "Agente", coAutomations: "Automazioni", coBusiness: "Attività", coCrm: "Pipeline",
+      coMore: "Altro", coProfileSettings: "Profilo e impostazioni", coHelp: "Guida", coExitCoach: "Esci da Coach",
+      coToday: "Oggi", coNeedsAttention: "Richiede attenzione", coMyTasks: "I miei task",
+      coRecentActivity: "Attività recente", coPortfolio: "Portfolio", coSessionsToday: "Sessioni di oggi",
+      coPrimaryAction: "Azione principale", coAskPlanExecute: "Chiedi. Pianifica. Esegui.",
+      coOnlineCoaching: "Coaching online", coSchedule: "Pianifica",
+      coScheduleHint: "Chiamata, verifica e revisione.",
+      coTodaySubtitle: "Priorità, clienti e prossime azioni in un solo posto.",
+      coNoUrgency: "Nessuna urgenza. Il portfolio è sotto controllo.",
+      coNoTasks: "I task operativi compariranno qui.", coNoActivity: "Nessuna attività recente.",
+      coAddTask: "Aggiungi task", coAddClient: "Aggiungi cliente", coImportProgram: "Importa programma",
+      coAssignProgram: "Assegna programma", coOpenAndCheck: "Coach OS · apri e controlla",
+      coKpiClients: "Clienti", coKpiActive: "Attivi", coKpiUnread: "Non letti", coKpiLive: "Live",
+      coComplete: "Completa", coSnooze: "Posticipa 1 giorno", coMoveUp: "Su", coMoveDown: "Giù",
+      coOpenClient: "Apri cliente", coClose: "Chiudi", coResolve: "Risolvi", coTask: "Task",
+      coAttention: "Attenzione", coLoadingPriorities: "Caricamento priorità…",
+      coToastToday: "Coach OS · Oggi", coRequiresAttention: "Richiede attenzione", coActivity: "Attività",
+      coAllClients: "Tutti i clienti", coSearchClients: "Cerca clienti…", coSaveView: "Salva vista",
+      coLoadMore: "Carica altri", coLoadingClients: "Caricamento clienti…",
+      coFilterAll: "Tutti", coFilterActive: "Attivi", coFilterAttention: "Attenzione",
+      coFilterInactive: "Inattivi", coFilterUnread: "Non letti", coFilterCheckin: "Verifiche",
+      coFilterPayment: "Pagamenti", coFilterProgram: "Programma", coFilterNutrition: "Alimentazione",
+      coFilterInjury: "Infortunio",
+      coStatusOnTrack: "In linea", coStatusAtRisk: "A rischio", coStatusAwaiting: "In attesa del coach",
+      coStatusPayment: "Pagamento dovuto", coNoWorkout: "Nessun allenamento",
+      coWorkoutToday: "Allenamento oggi", coWorkoutYesterday: "Allenamento ieri",
+      coNextAction: "Prossima azione", coOpen: "Apri", coMessage: "Messaggio",
+      coAthleteSnapshot: "Riepilogo atleta", coAthleteIntelligence: "Intelligenza atleta",
+      coAthleteBrain: "Cervello atleta", coApprove: "Approva", coModify: "Modifica",
+      coDismiss: "Ignora", coAskAgent: "Chiedi all’agente", coOpenData: "Apri dati",
+      coTimeline: "Cronologia", coViewAll: "Vedi tutto", coDomains: "Domini",
+      coWeight: "Peso", coAdherence: "Aderenza", coTraining: "Allenamento",
+      coPerformance: "Prestazione", coLast28d: "Ultimi 28 giorni", coNoProgram: "Nessun programma",
+      coTonnageTrend: "Trend tonnellaggio", coGoalUnset: "Obiettivo non impostato",
+      coNoTimeline: "Ancora nessuna attività rilevante.", coReviewClient: "Revisiona cliente",
+      coSavedAtRisk: "A rischio", coSavedNoWorkout: "Nessun workout 7g",
+      coSavedCheckIns: "Verifiche", coSavedPayments: "Pagamenti", coSavedNew: "Nuovi clienti",
+      coInboxSubtitle: "Messaggi, verifiche, richieste e attenzione. La chat 1:1 resta il thread.",
+      coSearchInbox: "Cerca messaggi o clienti", coPreviewBroadcast: "Anteprima broadcast",
+      coInboxEmpty: "Posta vuota. I thread restano in Chat.", coPin: "Fissa", coUnpin: "Sblocca",
+      coProgramsSubtitle: "Importa, crea e assegna programmi senza uscire da Coach.",
+      coSmartImport: "Import intelligente", coImportProgramTitle: "Importa programma",
+      coImportHint: "PDF, Excel, Word, immagini. Scegli sempre i domini.",
+      coCreateProgram: "Crea programma", coCreateHint: "Catalogo Nurvan o generazione guidata.",
+      coCoachDatabase: "Database coach", coAssign: "Assegna", coWeeks: "settimane",
+      coDomainPlan: "Piano per dominio",
+      coCalendarSubtitle: "Disponibilità → prenotazione → promemoria → sposta/annulla.",
+      coNewSession: "Nuova sessione", coAvailability: "Disponibilità",
+      coSessionTypes: "Tipi di sessione", coUpcoming: "Prossime",
+      coReschedule: "Sposta", coCancel: "Annulla",
+      coNoSessions: "Nessuna sessione in questa vista. Imposta la disponibilità e prenota una chiamata.",
+      coNoAvailability: "Nessuna disponibilità. Imposta gli orari prima di prenotare.",
+      coTypeCall: "Chiamata coaching", coTypeCheckIn: "Verifica", coTypeReview: "Revisione",
+      coTypeConsult: "Consulenza", coTypeCustom: "Sessione personalizzata", coTypeTraining: "Sessione di allenamento",
+      coDay: "Giorno", coWeek: "Settimana", coMonth: "Mese",
+      coCheckInsSubtitle: "Richiesti, ricevuti e da revisionare",
+      coRequested: "Richiesti", coReceived: "Ricevuti", coToReview: "Da revisionare", coReviewed: "Revisionati",
+      coNoCheckIns: "Nessuna verifica in questa coda.", coRequestCheckIn: "Richiedi verifica",
+      coAnalyticsSubtitle: "Aderenza, allenamenti e verifiche. Nessun ricavo o MRR qui.",
+      coNoRevenue: "Nessun ricavo o MRR qui.", coAtRisk: "A rischio", coWorkouts: "Allenamenti",
+      coE1rm: "Campioni e1RM", coVolume: "Volume", coCheckInsDue: "Verifiche in scadenza",
+      coClientsToOpen: "Clienti da aprire", coNoAtRisk: "Nessun cliente sotto soglia. Apri Clienti per i dettagli.",
+      coBusinessSubtitle: "Nessuno Stripe. Piano, rinnovo e scaduti.",
+      coActive: "Attivi", coRevenue30d: "Ricavi 30g", coOverdue: "Scaduti",
+      coCrmEmpty: "Nessun cliente in pipeline.",
+      coAutomationsSubtitle: "Trigger, condizione, azione. Prova a secco prima di abilitare.",
+      coNewRule: "Nuova regola", coDryRun: "Prova a secco", coRun: "Esegui",
+      coNoAutomations: "Nessuna automazione. Restano fuori dall’Agente V1.",
+      coMealSubtitle: "Foto → Stima → Conferma → Registro. L’AI non salva senza conferma.",
+      coMealEstimate: "Stima pasto", coEstimate: "Stima", coConfirmLog: "Conferma e registra",
+      coFormSubtitle: "Video → Marker → Feedback → Storico esercizio. Nessuna diagnosi clinica.",
+      coSaveMarkers: "Salva marker", coAgentSubtitle: "Intento → Piano → Anteprima → Conferma → Risultato.",
+      coAskNurvan: "Chiedi a Nurvan", coConfirm: "Conferma", coUndo: "Annulla",
+      coRefreshData: "Aggiorna dati", coReplan: "Ripianifica", coViewData: "Vedi dati",
+      coAgentEmpty: "Chiedi un comando: inattivi, verifiche mancanti, deload, messaggio o task.",
+      coIntent: "Intento", coPreview: "Anteprima", coResult: "Risultato",
+      coWhy: "PERCHÉ",
+      coHelpToast: "Guida Coach OS: Oggi → Attenzione → Cliente → Decidi → Esegui",
+      coCancel: "Annulla",
+      coCoachMode: "Modalità Coach", coClientFallback: "Cliente", coUnread: "non letti",
+      coLiveWorkout: "Allenamento live", coClientsUnavailable: "Clienti non disponibili",
+      coRetry: "Riprova", coNoClientsView: "Nessun cliente per questa vista.",
+      coClientFilter: "Filtro clienti", coDaysAgo: "g fa",
+      coLoadingOverview: "Caricamento scheda cliente…", coLoadingOps: "Caricamento operazioni…",
+      coOverviewUnavailable: "Scheda non disponibile", coOpenClassic: "Apri workspace classico",
+      coBackOverview: "← Scheda cliente", coDeterministic: "Deterministico",
+      coNoRisks: "Nessun rischio deterministico rilevato. Apri i dati per il dettaglio.",
+      coSaveViewPrompt: "Nome della vista salvata", coViewSaved: "Vista salvata",
+      coViewNotSaved: "Vista non salvata", coOperational: "Operativo",
+      coLoadingInbox: "Caricamento posta…", coPinned: "fisso",
+      coBroadcastIds: "ID clienti da includere nell’anteprima (virgola)",
+      coBroadcastResult: "Anteprima broadcast. Nessun messaggio inviato. Destinatari:",
+      coProgramBuilder: "Costruttore programmi", coProgramsCount: "programmi",
+      coProgramEmpty: "Il database è vuoto. Importa il primo programma scegliendo i domini.",
+      coChooseClient: "Scegli il cliente", coAddClientFirst: "Aggiungi prima un cliente.",
+      coProgramActions: "Azioni programma", coDuplicate: "Duplica", coExport: "Esporta",
+      coArchive: "Archivia", coImportComplete: "Import completato",
+      coProgramSaved: "Programma salvato",
+      coAssignNow: "è nel database coach. Vuoi assegnarlo ora?",
+      coAssignToClient: "Assegna al cliente", coDone: "Fatto",
+      coCopySuffix: " · Copia", coArchiveConfirm: "Archiviare questo programma?",
+      coLoadingCalendar: "Caricamento calendario…",
+      coNoCalendarHint: "Nessun Google/Apple Calendar.",
+      coIcal: "iCal", coRule: "Regola", coSessionTitle: "Titolo sessione",
+      coSessionType: "Tipo", coStartIso: "Inizio ISO (es. 2026-09-06T09:00:00.000Z)",
+      coRecurrenceWeeks: "Ricorrenza settimane (1 = singola)",
+      coNewStartIso: "Nuovo inizio ISO",
+      coWeekdayPrompt: "Giorno settimana (0=Dom … 6=Sab)",
+      coStartTime: "Inizio (HH:MM)", coEndTime: "Fine (HH:MM)",
+      coLoadingCheckIns: "Caricamento verifiche…", coRequest: "Richiedi",
+      coReviewRespond: "Revisiona e rispondi", coNoNotes: "Nessuna nota",
+      coSignals: "Segnali deterministici", coPreviousCheck: "Verifica precedente",
+      coPrivateMedia: "Media privati", coCoachResponse: "Risposta coach",
+      coSaveReview: "Salva revisione e rispondi",
+      coNoSignals: "Nessun segnale deterministico rilevato.",
+      coResponsePlaceholder: "Risposta operativa all’atleta…",
+      coWriteResponse: "Scrivi una risposta al cliente",
+      coCheckInReviewed: "Verifica revisionata",
+      coCheckInRequested: "Verifica richiesta",
+      coLoadingAnalytics: "Caricamento analisi…",
+      coAthleteQuality: "Qualità atleta", coDaysShort: "g",
+      coFilterClient: "Filtra per ID cliente (vuoto = portfolio)",
+      coLoadingLedger: "Caricamento registro…", coManualLedger: "Registro manuale",
+      coRules: "Regole", coAutomationName: "Nome automazione",
+      coAutomationDefault: "Verifica ricevuta → task",
+      coAutomationFailed: "Automazione fallita → task creato",
+      coAutomationRan: "Automazione eseguita", coDryRunPrefix: "Prova a secco:",
+      coAssistiveMedia: "Media assistivi", coVideoForm: "Video tecnica",
+      coClientId: "ID cliente", coProteinG: "Proteine g",
+      coCarbsG: "Carboidrati g", coFatsG: "Grassi g", coExercise: "Esercizio",
+      coMarkersHint: "Marker (es. 0:12 ginocchio in valgo; 0:28 profondità)",
+      coCoachFeedback: "Feedback coach", coEstimatePrefix: "Stima",
+      coKcal: "kcal", coConfidence: "affidabilità",
+      coReviewSaved: "Revisione salvata",
+      coAgentPlaceholder: "Es. mostra i clienti inattivi, proponi un deload, crea un task…",
+      coPlanSteps: "Piano: capisci → anteprima → conferma",
+      coAgentLocal: "Agente in anteprima locale · conferma disabilitata",
+      coGoodMorning: "Buongiorno", coGoodAfternoon: "Buon pomeriggio",
+      coGoodEvening: "Buonasera", coNurvanAgent: "Agente Nurvan",
+      coAttEnd: "Fine rapporto", coAttEndDetail: "ha chiesto di uscire",
+      coAttAwaiting: "In attesa di te",
+      coAttAwaitingDetail: "ha una richiesta da approvare",
+      coAttUnread: "Messaggi non letti", coAttPayment: "Pagamento",
+      coAttPaymentDetail: "non risulta pagato",
+      coAttInactive: "Inattivo 7+ giorni",
+      coAttLastWorkout: "Ultimo allenamento", coAttLiveNow: "In allenamento ora",
+      coPlaceholderReady: "La struttura è pronta. I dati e le azioni compariranno quando la funzione sarà abilitata.",
+      coPlaceholderSoon: "Questa sezione verrà attivata nella fase dedicata.",
+      coSwitchClient: "Cambia cliente", coNotifications: "Notifiche",
+      coCoachMenu: "Menu Coach", coLanguageUpdated: "Lingua aggiornata",
+      coOsImportProgram: "COACH OS · IMPORTA PROGRAMMA",
+      coOsPrograms: "COACH OS · PROGRAMMI",
+      coPreviewCorrection: "ANTEPRIMA E CORREZIONE",
+      coDocumentReview: "REVISIONE DOCUMENTO",
+      coProvenance: "PROVENIENZA",
+      coSaveCoachDb: "SALVA NEL COACH DATABASE",
+      coImportHintEn: "Carica → estrazione → anteprima → scegli i domini → validazione → database coach / cliente.",
+      coDomainWorkout: "Allenamento", coDomainTherapy: "Terapia",
+      coDomainExams: "Esami", coDomainIntegration: "Integrazione",
+      coMenuCoach: "Menu Coach", coClientList: "Lista clienti",
+      coMyDatabase: "Il mio database", coClientSheet: "Scheda cliente",
+      coChat: "Chat", coSaveEdits: "Salva modifiche",
+      coBackToSheet: "Torna alla scheda",
+      coNoClientOpen: "Nessun cliente aperto. Apri dalla lista.",
+      coClientNotifyNow: "Notifiche cliente · ora",
+      coOpenClientCalendar: "Apri un cliente per il suo calendario",
+      coStaleProposal: "Questa proposta non è più aggiornata perché i dati sono cambiati."
+    },
+    en: {
+      coHome: "Today", coClients: "Clients", coInbox: "Inbox", coPrograms: "Programs", coCalendar: "Calendar",
+      coCheckIns: "Check-ins", coNutrition: "Nutrition", coFormReview: "Form review",
+      coAnalytics: "Analytics", coAgent: "Agent", coAutomations: "Automations", coBusiness: "Business", coCrm: "CRM",
+      coMore: "More", coProfileSettings: "Profile & Settings", coHelp: "Help", coExitCoach: "Exit Coach",
+      coToday: "Today", coNeedsAttention: "Needs attention", coMyTasks: "My tasks",
+      coRecentActivity: "Recent activity", coPortfolio: "Portfolio", coSessionsToday: "Today’s sessions",
+      coPrimaryAction: "Primary action", coAskPlanExecute: "Ask. Plan. Execute.",
+      coOnlineCoaching: "Online coaching", coSchedule: "Schedule",
+      coScheduleHint: "Call, check-in and review.",
+      coTodaySubtitle: "Priorities, clients and next actions in one place.",
+      coNoUrgency: "Nothing urgent. The portfolio is under control.",
+      coNoTasks: "Operational tasks will appear here.", coNoActivity: "No recent activity.",
+      coAddTask: "Add task", coAddClient: "Add client", coImportProgram: "Import program",
+      coAssignProgram: "Assign program", coOpenAndCheck: "Coach OS · open and review",
+      coKpiClients: "Clients", coKpiActive: "Active", coKpiUnread: "Unread", coKpiLive: "Live",
+      coComplete: "Complete", coSnooze: "Snooze 1 day", coMoveUp: "Up", coMoveDown: "Down",
+      coOpenClient: "Open client", coClose: "Close", coResolve: "Resolve", coTask: "Task",
+      coAttention: "Attention", coLoadingPriorities: "Loading priorities…",
+      coToastToday: "Coach OS · Today", coRequiresAttention: "Needs attention", coActivity: "Activity",
+      coAllClients: "All clients", coSearchClients: "Search clients…", coSaveView: "Save view",
+      coLoadMore: "Load more", coLoadingClients: "Loading clients…",
+      coFilterAll: "All", coFilterActive: "Active", coFilterAttention: "Attention",
+      coFilterInactive: "Inactive", coFilterUnread: "Unread", coFilterCheckin: "Check-ins",
+      coFilterPayment: "Payments", coFilterProgram: "Program", coFilterNutrition: "Nutrition",
+      coFilterInjury: "Injury",
+      coStatusOnTrack: "On track", coStatusAtRisk: "At risk", coStatusAwaiting: "Awaiting coach",
+      coStatusPayment: "Payment due", coNoWorkout: "No workout",
+      coWorkoutToday: "Workout today", coWorkoutYesterday: "Workout yesterday",
+      coNextAction: "Next action", coOpen: "Open", coMessage: "Message",
+      coAthleteSnapshot: "Athlete snapshot", coAthleteIntelligence: "Athlete intelligence",
+      coAthleteBrain: "Athlete Brain", coApprove: "Approve", coModify: "Modify",
+      coDismiss: "Dismiss", coAskAgent: "Ask Agent", coOpenData: "Open data",
+      coTimeline: "Timeline", coViewAll: "View all", coDomains: "Domains",
+      coWeight: "Weight", coAdherence: "Adherence", coTraining: "Training",
+      coPerformance: "Performance", coLast28d: "Last 28 days", coNoProgram: "No program",
+      coTonnageTrend: "Tonnage trend", coGoalUnset: "Goal not set",
+      coNoTimeline: "No significant activity yet.", coReviewClient: "Review client",
+      coSavedAtRisk: "At Risk", coSavedNoWorkout: "No Workout 7d",
+      coSavedCheckIns: "Check-ins", coSavedPayments: "Payments", coSavedNew: "New Clients",
+      coInboxSubtitle: "Messages, check-ins, requests and attention. 1:1 chat stays the thread.",
+      coSearchInbox: "Search messages or clients", coPreviewBroadcast: "Preview broadcast",
+      coInboxEmpty: "Inbox empty. E2E threads stay in Chat.", coPin: "Pin", coUnpin: "Unpin",
+      coProgramsSubtitle: "Import, create and assign programs without leaving Coach.",
+      coSmartImport: "Smart import", coImportProgramTitle: "Import program",
+      coImportHint: "PDF, Excel, Word, images. Always pick the domains.",
+      coCreateProgram: "Create program", coCreateHint: "Nurvan catalog or rules-based generation.",
+      coCoachDatabase: "Coach database", coAssign: "Assign", coWeeks: "weeks",
+      coDomainPlan: "Domain plan",
+      coCalendarSubtitle: "Availability → booking → reminder → reschedule/cancel.",
+      coNewSession: "New session", coAvailability: "Availability",
+      coSessionTypes: "Session types", coUpcoming: "Upcoming",
+      coReschedule: "Reschedule", coCancel: "Cancel",
+      coNoSessions: "No sessions in this view. Set availability and book a call.",
+      coNoAvailability: "No availability. Set hours before booking.",
+      coTypeCall: "Coaching Call", coTypeCheckIn: "Check-in", coTypeReview: "Review",
+      coTypeConsult: "Consultation", coTypeCustom: "Custom Session", coTypeTraining: "Training Session",
+      coDay: "Day", coWeek: "Week", coMonth: "Month",
+      coCheckInsSubtitle: "Requested, received and to review",
+      coRequested: "Requested", coReceived: "Received", coToReview: "To review", coReviewed: "Reviewed",
+      coNoCheckIns: "No check-ins in this queue.", coRequestCheckIn: "Request check-in",
+      coAnalyticsSubtitle: "Adherence, workouts and check-ins. No revenue or MRR here.",
+      coNoRevenue: "No revenue or MRR here.", coAtRisk: "At risk", coWorkouts: "Workouts",
+      coE1rm: "e1RM samples", coVolume: "Volume", coCheckInsDue: "Check-ins due",
+      coClientsToOpen: "Clients to open", coNoAtRisk: "No clients below threshold. Open Clients for details.",
+      coBusinessSubtitle: "No Stripe. Plan, renewal and overdue.",
+      coActive: "Active", coRevenue30d: "Revenue 30d", coOverdue: "Overdue",
+      coCrmEmpty: "No clients in the pipeline.",
+      coAutomationsSubtitle: "Trigger, condition, action. Dry-run before enabling.",
+      coNewRule: "New rule", coDryRun: "Dry run", coRun: "Run",
+      coNoAutomations: "No automations. They stay outside Agent V1.",
+      coMealSubtitle: "Photo → Estimate → Confirm → Log. AI does not save without confirmation.",
+      coMealEstimate: "Meal estimate", coEstimate: "Estimate", coConfirmLog: "Confirm & log",
+      coFormSubtitle: "Video → Markers → Feedback → Exercise history. No clinical diagnosis.",
+      coSaveMarkers: "Save markers", coAgentSubtitle: "Intent → Plan → Preview → Confirmation → Result.",
+      coAskNurvan: "Ask Nurvan", coConfirm: "Confirm", coUndo: "Undo",
+      coRefreshData: "Refresh data", coReplan: "Re-plan", coViewData: "View data",
+      coAgentEmpty: "Ask a restricted command: inactive, missing check-ins, deload, message or task.",
+      coIntent: "Intent", coPreview: "Preview", coResult: "Result",
+      coWhy: "WHY",
+      coHelpToast: "Coach OS guide: Today → Attention → Client → Decide → Execute",
+      coCancel: "Cancel",
+      coCoachMode: "Coach mode", coClientFallback: "Client", coUnread: "unread",
+      coLiveWorkout: "Live workout", coClientsUnavailable: "Clients unavailable",
+      coRetry: "Retry", coNoClientsView: "No clients for this view.",
+      coClientFilter: "Client filter", coDaysAgo: "d ago",
+      coLoadingOverview: "Loading client overview…", coLoadingOps: "Loading client operations…",
+      coOverviewUnavailable: "Overview unavailable", coOpenClassic: "Open classic workspace",
+      coBackOverview: "← Client overview", coDeterministic: "Deterministic",
+      coNoRisks: "No deterministic risk detected. Open data for details.",
+      coSaveViewPrompt: "Saved view name", coViewSaved: "View saved",
+      coViewNotSaved: "View not saved", coOperational: "Operational",
+      coLoadingInbox: "Loading inbox…", coPinned: "pinned",
+      coBroadcastIds: "Client IDs to include in the preview (comma)",
+      coBroadcastResult: "Broadcast preview. No message sent. Recipients:",
+      coProgramBuilder: "Program builder", coProgramsCount: "programs",
+      coProgramEmpty: "The database is empty. Import the first program and pick the domains.",
+      coChooseClient: "Choose the client", coAddClientFirst: "Add a client first.",
+      coProgramActions: "Program actions", coDuplicate: "Duplicate", coExport: "Export",
+      coArchive: "Archive", coImportComplete: "Import complete",
+      coProgramSaved: "Program saved",
+      coAssignNow: "is in the coach database. Assign it now?",
+      coAssignToClient: "Assign to client", coDone: "Done",
+      coCopySuffix: " · Copy", coArchiveConfirm: "Archive this program?",
+      coLoadingCalendar: "Loading calendar…",
+      coNoCalendarHint: "No Google/Apple Calendar.",
+      coIcal: "iCal", coRule: "Rule", coSessionTitle: "Session title",
+      coSessionType: "Type", coStartIso: "Start ISO (e.g. 2026-09-06T09:00:00.000Z)",
+      coRecurrenceWeeks: "Repeat weeks (1 = once)",
+      coNewStartIso: "New start ISO",
+      coWeekdayPrompt: "Weekday (0=Sun … 6=Sat)",
+      coStartTime: "Start (HH:MM)", coEndTime: "End (HH:MM)",
+      coLoadingCheckIns: "Loading check-ins…", coRequest: "Request",
+      coReviewRespond: "Review and respond", coNoNotes: "No notes",
+      coSignals: "Deterministic signals", coPreviousCheck: "Previous check",
+      coPrivateMedia: "Private media", coCoachResponse: "Coach response",
+      coSaveReview: "Save review and respond",
+      coNoSignals: "No deterministic signal detected.",
+      coResponsePlaceholder: "Operational reply to the athlete…",
+      coWriteResponse: "Write a reply to the client",
+      coCheckInReviewed: "Check-in reviewed",
+      coCheckInRequested: "Check-in requested",
+      coLoadingAnalytics: "Loading coach analytics…",
+      coAthleteQuality: "Athlete quality", coDaysShort: "d",
+      coFilterClient: "Filter by client ID (empty = portfolio)",
+      coLoadingLedger: "Loading ledger…", coManualLedger: "Manual ledger",
+      coRules: "Rules", coAutomationName: "Automation name",
+      coAutomationDefault: "Check-in received → task",
+      coAutomationFailed: "Automation failed → task created",
+      coAutomationRan: "Automation ran", coDryRunPrefix: "Dry run:",
+      coAssistiveMedia: "Assistive media", coVideoForm: "Video form",
+      coClientId: "Client ID", coProteinG: "Protein g",
+      coCarbsG: "Carbs g", coFatsG: "Fats g", coExercise: "Exercise",
+      coMarkersHint: "Markers (e.g. 0:12 knee valgus; 0:28 depth)",
+      coCoachFeedback: "Coach feedback", coEstimatePrefix: "Estimate",
+      coKcal: "kcal", coConfidence: "confidence",
+      coReviewSaved: "Review saved",
+      coAgentPlaceholder: "E.g. show inactive clients, propose a deload, create a task…",
+      coPlanSteps: "Plan: understand → preview → confirm",
+      coAgentLocal: "Agent in local preview · confirm disabled",
+      coGoodMorning: "Good morning", coGoodAfternoon: "Good afternoon",
+      coGoodEvening: "Good evening", coNurvanAgent: "Nurvan Agent",
+      coAttEnd: "End of relationship", coAttEndDetail: "asked to leave",
+      coAttAwaiting: "Waiting on you",
+      coAttAwaitingDetail: "has a request to approve",
+      coAttUnread: "Unread messages", coAttPayment: "Payment",
+      coAttPaymentDetail: "is not marked as paid",
+      coAttInactive: "Inactive 7+ days",
+      coAttLastWorkout: "Last workout", coAttLiveNow: "Training now",
+      coPlaceholderReady: "The structure is ready. Data and actions appear when the feature is enabled.",
+      coPlaceholderSoon: "This section will be enabled in its dedicated phase.",
+      coSwitchClient: "Switch client", coNotifications: "Notifications",
+      coCoachMenu: "Coach menu", coLanguageUpdated: "Language updated",
+      coOsImportProgram: "COACH OS · IMPORT PROGRAM",
+      coOsPrograms: "COACH OS · PROGRAMS",
+      coPreviewCorrection: "PREVIEW & CORRECTION",
+      coDocumentReview: "DOCUMENT REVIEW",
+      coProvenance: "PROVENANCE",
+      coSaveCoachDb: "SAVE TO COACH DATABASE",
+      coImportHintEn: "Upload → extraction → preview → domain picker → validation → Coach database / client.",
+      coDomainWorkout: "Workout", coDomainTherapy: "Therapy",
+      coDomainExams: "Exams", coDomainIntegration: "Integration",
+      coMenuCoach: "Coach menu", coClientList: "Client list",
+      coMyDatabase: "My database", coClientSheet: "Client sheet",
+      coChat: "Chat", coSaveEdits: "Save changes",
+      coBackToSheet: "Back to sheet",
+      coNoClientOpen: "No client open. Open one from the list.",
+      coClientNotifyNow: "Client notifications · now",
+      coOpenClientCalendar: "Open a client for their calendar",
+      coStaleProposal: "This proposal is outdated because the data changed."
+    }
+  };
+  packs.es = Object.assign({}, packs.en, {
+    coHome: "Hoy", coClients: "Clientes", coInbox: "Bandeja", coPrograms: "Programas", coCalendar: "Calendario",
+    coToday: "Hoy", coNeedsAttention: "Requiere atención", coMyTasks: "Mis tareas", coAddClient: "Añadir cliente"
+  });
+  packs.fr = Object.assign({}, packs.en, {
+    coHome: "Aujourd’hui", coClients: "Clients", coInbox: "Boîte", coPrograms: "Programmes", coCalendar: "Calendrier",
+    coToday: "Aujourd’hui", coNeedsAttention: "À traiter", coMyTasks: "Mes tâches", coAddClient: "Ajouter un client"
+  });
+  packs.de = Object.assign({}, packs.en, {
+    coHome: "Heute", coClients: "Klienten", coInbox: "Posteingang", coPrograms: "Programme", coCalendar: "Kalender",
+    coToday: "Heute", coNeedsAttention: "Braucht Aufmerksamkeit", coMyTasks: "Meine Aufgaben", coAddClient: "Klient hinzufügen"
+  });
+  Object.keys(packs).forEach(function (lang) {
+    if (service.dictionaries[lang]) Object.assign(service.dictionaries[lang], packs[lang]);
+  });
+})(I18nService);
+
 const FoodDatabaseService = {
   get catalog() {
     if (typeof FOOD_CATALOG !== 'undefined' && Array.isArray(FOOD_CATALOG) && FOOD_CATALOG.length) {
@@ -44442,15 +44804,15 @@ function renderImport(c){
     c.innerHTML = `
       <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <div>
-          <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">${coachNativeImport ? 'COACH OS · IMPORT PROGRAM' : 'DOCUMENT REVIEW'}</span>
-          <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">${esc(summary?.status || (coachNativeImport ? 'PREVIEW & CORRECTION' : 'REVISIONE PROGRAMMA'))}</h2>
+          <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">${coachNativeImport ? (typeof t === 'function' ? t('coOsImportProgram') : 'COACH OS · IMPORTA PROGRAMMA') : (typeof t === 'function' ? t('coDocumentReview') : 'REVISIONE DOCUMENTO')}</span>
+          <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">${esc(summary?.status || (coachNativeImport ? (typeof t === 'function' ? t('coPreviewCorrection') : 'ANTEPRIMA E CORREZIONE') : 'REVISIONE PROGRAMMA'))}</h2>
           <div style="font-size:11px;color:#888;margin-top:4px;">${esc(pState.filename || prog.source?.filename || '')} · ${esc(summary?.classification || ir?.document?.classification || '')} · ${esc(summary?.format || '')}</div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-outline" style="font-size:11px; padding:6px 12px;" onclick="cancelCurrentImportReview()">ANNULLA</button>
           ${!valResult.valid ? `<button class="btn btn-outline" style="font-size:11px; padding:6px 12px;border-color:#ff9800;color:#ff9800;" onclick="forceConfirmImportOverride()">FORZA ATTIVAZIONE</button>` : ''}
-          <button class="btn btn-outline" style="font-size:11px; padding:6px 12px;" onclick="exportImportProvenance()">PROVENANCE</button>
-          <button class="btn btn-primary" style="font-size:11px; padding:6px 14px; ${!valResult.valid ? 'background:var(--accent-red);border-color:var(--accent-red);' : ''}" onclick="confirmImportAndActivate()">${pState.isConfirming ? 'SALVATAGGIO...' : (coachNativeImport ? (!valResult.valid ? 'CONFERMA E SALVA' : 'SALVA NEL COACH DATABASE') : (!valResult.valid ? '⚠️ CONFERMA E ATTIVA' : '✓ CONFERMA E ATTIVA'))}</button>
+          <button class="btn btn-outline" style="font-size:11px; padding:6px 12px;" onclick="exportImportProvenance()">${typeof t === 'function' ? t('coProvenance') : 'PROVENIENZA'}</button>
+          <button class="btn btn-primary" style="font-size:11px; padding:6px 14px; ${!valResult.valid ? 'background:var(--accent-red);border-color:var(--accent-red);' : ''}" onclick="confirmImportAndActivate()">${pState.isConfirming ? 'SALVATAGGIO...' : (coachNativeImport ? (!valResult.valid ? 'CONFERMA E SALVA' : (typeof t === 'function' ? t('coSaveCoachDb') : 'SALVA NEL COACH DATABASE')) : (!valResult.valid ? '⚠️ CONFERMA E ATTIVA' : '✓ CONFERMA E ATTIVA'))}</button>
         </div>
       </div>
 
@@ -44534,11 +44896,11 @@ function renderImport(c){
   const aiAllowed = !athleteImp || !!(store.clientProfile && store.clientProfile.allowNurvanAi);
   c.innerHTML = `
     <div style="margin-bottom:16px;">
-      <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">${coachNativeImport ? 'COACH OS · PROGRAMS' : (athleteImp ? 'IMPORTA DOCUMENTI' : 'DAL FILE ALL\'ALLENAMENTO')}</span>
-      <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">${coachNativeImport ? 'Import Program' : (athleteImp ? 'Alimentazione, integrazione, terapia, esami' : 'Importa la scheda del coach')}</h2>
+      <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">${coachNativeImport ? (typeof t === 'function' ? t('coOsPrograms') : 'COACH OS · PROGRAMMI') : (athleteImp ? 'IMPORTA DOCUMENTI' : 'DAL FILE ALL\'ALLENAMENTO')}</span>
+      <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">${coachNativeImport ? (typeof t === 'function' ? t('coImportProgramTitle') : 'Importa programma') : (athleteImp ? 'Alimentazione, integrazione, terapia, esami' : 'Importa la scheda del coach')}</h2>
       <p style="font-size:12px;color:#888;margin:8px 0 0;line-height:1.45;max-width:420px;">${athleteImp
         ? 'Scegli un file (PDF, Excel, Word, immagine). La scheda di allenamento arriva solo dal tuo coach.'
-        : (coachNativeImport ? 'Upload → extraction → preview → domain picker → validation → Coach Database / cliente.' : 'Excel, PDF o Word → revisione → attiva e logga. Non ricostruire a mano. (Altri domini restano opzionali.)')}</p>
+        : (coachNativeImport ? (typeof t === 'function' ? t('coImportHintEn') : 'Carica → estrazione → anteprima → scegli i domini → validazione → database coach / cliente.') : 'Excel, PDF o Word → revisione → attiva e logga. Non ricostruire a mano. (Altri domini restano opzionali.)')}</p>
     </div>
 
     <div class="pill-tabs" style="margin-bottom:14px; flex-wrap:wrap;">
@@ -52385,41 +52747,46 @@ function ensureCoachDrawer() {
   const hasClient = !!(store && store.coachWorkspace && store.coachWorkspace.clientId);
   const viewing = !!(store && store.coachViewingClient);
   const id = hasClient ? String(store.coachWorkspace.clientId) : '';
-  const name = coachClientDisplayName(id) || 'cliente';
+  const cpt = function (key) {
+    if (window.CoachOS && CoachOS.t) return CoachOS.t(key);
+    if (typeof t === 'function') return t(key);
+    return key;
+  };
+  const name = coachClientDisplayName(id) || cpt('coClientFallback');
   const n = Math.max(0, Number(store.__cpNotifyCount || 0));
   panel.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
-    '<div style="color:var(--gold);font-weight:800;font-size:13px;">MENU COACH</div>' +
-    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="closeCoachDrawer()">CHIUDI</button></div>' +
-    (hasClient ? ('<div class="cp-help" style="margin-bottom:10px;">Cliente: <b style="color:#fff;">' + esc(name) + '</b></div>') : '<div class="cp-help">Nessun cliente aperto. Apri dalla lista.</div>') +
+    '<div style="color:var(--gold);font-weight:800;font-size:13px;">' + cpt('coMenuCoach').toUpperCase() + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="closeCoachDrawer()">' + cpt('coClose').toUpperCase() + '</button></div>' +
+    (hasClient ? ('<div class="cp-help" style="margin-bottom:10px;">' + cpt('coClientFallback') + ': <b style="color:#fff;">' + esc(name) + '</b></div>') : '<div class="cp-help">' + cpt('coNoClientOpen') + '</div>') +
     '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:10px;position:relative;" onclick="closeCoachDrawer();openNotificationsCenter()">' +
-    'NOTIFICHE' + (n > 0 ? (' <span class="cp-notify-count" style="position:static;display:inline-flex;margin-left:6px;">' + (n > 99 ? '99+' : n) + '</span>') : '') +
+    cpt('coNotifications').toUpperCase() + (n > 0 ? (' <span class="cp-notify-count" style="position:static;display:inline-flex;margin-left:6px;">' + (n > 99 ? '99+' : n) + '</span>') : '') +
     '</button>' +
     (hasClient
-      ? ('<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="closeCoachDrawer();openNotificationsCenter(\'' + esc(id) + '\')">NOTIFICHE CLIENTE · ORA</button>')
+      ? ('<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="closeCoachDrawer();openNotificationsCenter(\'' + esc(id) + '\')">' + cpt('coClientNotifyNow').toUpperCase() + '</button>')
       : '') +
     '<div class="cp-drawer-grid">' +
-    '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachHub\')">LISTA CLIENTI</button>' +
-    '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachLibrary\')">IL MIO DATABASE</button>' +
+    '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachHub\')">' + cpt('coClientList').toUpperCase() + '</button>' +
+    '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();navigate(\'coachLibrary\')">' + cpt('coMyDatabase').toUpperCase() + '</button>' +
     (hasClient ? (
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();openCoachClient(\'' + esc(id) + '\')">SCHEDA CLIENTE</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();openCoachClientChat(\'' + esc(id) + '\')">CHAT</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'calendar\')">CALENDARIO</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'training\')">ALLENAMENTO</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'nutrition\')">ALIMENTAZIONE</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'supplements\')">INTEGRAZIONE</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'therapy\')">TERAPIA</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'exams\')">ESAMI</button>' +
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'stats\')">STATS</button>'
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();openCoachClient(\'' + esc(id) + '\')">' + cpt('coClientSheet').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();openCoachClientChat(\'' + esc(id) + '\')">' + cpt('coChat').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'calendar\')">' + cpt('coCalendar').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'training\')">' + cpt('coTraining').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'nutrition\')">' + cpt('coNutrition').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'supplements\')">' + cpt('coDomainIntegration').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'therapy\')">' + cpt('coDomainTherapy').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'exams\')">' + cpt('coDomainExams').toUpperCase() + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();enterCoachClientView(\'stats\')">' + cpt('coAnalytics').toUpperCase() + '</button>'
     ) : (
-      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();practiceToast(\'Apri un cliente per il suo calendario\',\'warning\');navigate(\'coachHub\')">CALENDARIO</button>'
+      '<button type="button" class="btn btn-outline" onclick="closeCoachDrawer();practiceToast(\'' + cpt('coOpenClientCalendar').replace(/'/g, '\\\'') + '\',\'warning\');navigate(\'coachHub\')">' + cpt('coCalendar').toUpperCase() + '</button>'
     )) +
     '</div>' +
     (viewing
-      ? ('<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="closeCoachDrawer();pushCoachClientEdits()">SALVA MODIFICHE</button>' +
-        '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="closeCoachDrawer();leaveCoachClientView()">TORNA ALLA SCHEDA</button>')
+      ? ('<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="closeCoachDrawer();pushCoachClientEdits()">' + cpt('coSaveEdits').toUpperCase() + '</button>' +
+        '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="closeCoachDrawer();leaveCoachClientView()">' + cpt('coBackToSheet').toUpperCase() + '</button>')
       : '') +
-    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:16px;color:#c66 !important;-webkit-text-fill-color:#c66 !important;" onclick="closeCoachDrawer();exitCoachSession()">ESCI COACH</button>';
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:16px;color:#c66 !important;-webkit-text-fill-color:#c66 !important;" onclick="closeCoachDrawer();exitCoachSession()">' + cpt('coExitCoach').toUpperCase() + '</button>';
 }
 
 function openCoachDrawer() {
@@ -53694,7 +54061,9 @@ function enterCoachSession() {
   requestNotifyPermission();
   applyClientChrome();
   navigate('coachToday');
-  if (typeof practiceToast === 'function') practiceToast('Coach OS · Today', 'success');
+  if (typeof practiceToast === 'function') {
+    practiceToast((window.CoachOS && CoachOS.t) ? CoachOS.t('coToastToday') : 'Coach OS · Oggi', 'success');
+  }
 }
 
 function exitCoachSession(force) {
@@ -58081,6 +58450,19 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     return typeof window.coachFeatureEnabled === 'function' && window.coachFeatureEnabled(name);
   }
 
+  function tx(key) {
+    if (typeof window.t === 'function') return window.t(key);
+    if (typeof I18nService !== 'undefined' && I18nService.t) return I18nService.t(key);
+    return key;
+  }
+
+  function locale() {
+    const lang = (typeof I18nService !== 'undefined' && I18nService.getLanguage)
+      ? I18nService.getLanguage()
+      : 'it';
+    return ({ it: 'it-IT', en: 'en-GB', es: 'es-ES', fr: 'fr-FR', de: 'de-DE', pt: 'pt-BR', ru: 'ru-RU', zh: 'zh-CN', ar: 'ar-SA', hi: 'hi-IN' })[lang] || 'it-IT';
+  }
+
   function escText(value) {
     if (typeof window.esc === 'function') return window.esc(String(value || ''));
     return String(value || '').replace(/[&<>"']/g, function (ch) {
@@ -58129,27 +58511,29 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       brand.className = 'coach-os-brand';
       logo.appendChild(brand);
     }
-    brand.innerHTML = '<strong>' + escText(coachName()) + '</strong><small>Coach mode</small>';
+    brand.innerHTML = '<strong>' + escText(coachName()) + '</strong><small>' + escText(tx('coCoachMode')) + '</small>';
   }
 
-  const primaryLinks = [
-    { view: 'coachToday', label: 'Home' },
-    { view: 'coachHub', label: 'Clients' },
-    { view: 'coachInbox', label: 'Inbox' },
-    { view: 'coachPrograms', label: 'Programs' },
-    { view: 'coachCalendar', label: 'Calendar' }
-  ];
+  function primaryLinks() {
+    return [
+      { view: 'coachToday', label: tx('coHome') },
+      { view: 'coachHub', label: tx('coClients') },
+      { view: 'coachInbox', label: tx('coInbox') },
+      { view: 'coachPrograms', label: tx('coPrograms') },
+      { view: 'coachCalendar', label: tx('coCalendar') }
+    ];
+  }
 
   function secondaryLinks() {
     const rows = [
-      { view: 'coachCheckIns', label: 'Check-ins', flag: 'checkInCenterV1' },
-      { view: 'coachNutrition', label: 'Nutrition' },
-      { view: 'coachFormReview', label: 'Form review', flag: 'videoFormV1' },
-      { view: 'coachAnalytics', label: 'Analytics', flag: 'coachAnalyticsV1' },
-      { view: 'coachAgent', label: 'Agent', flag: 'agentV1' },
-      { view: 'coachAutomations', label: 'Automations', flag: 'businessV1' },
-      { view: 'coachBusiness', label: 'Business', flag: 'businessV1' },
-      { view: 'coachCrm', label: 'CRM', flag: 'businessV1' }
+      { view: 'coachCheckIns', label: tx('coCheckIns'), flag: 'checkInCenterV1' },
+      { view: 'coachNutrition', label: tx('coNutrition') },
+      { view: 'coachFormReview', label: tx('coFormReview'), flag: 'videoFormV1' },
+      { view: 'coachAnalytics', label: tx('coAnalytics'), flag: 'coachAnalyticsV1' },
+      { view: 'coachAgent', label: tx('coAgent'), flag: 'agentV1' },
+      { view: 'coachAutomations', label: tx('coAutomations'), flag: 'businessV1' },
+      { view: 'coachBusiness', label: tx('coBusiness'), flag: 'businessV1' },
+      { view: 'coachCrm', label: tx('coCrm'), flag: 'businessV1' }
     ];
     return rows.filter(function (row) { return !row.flag || enabled(row.flag); });
   }
@@ -58173,20 +58557,20 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       '<div class="coach-os-sidebar-brand"><img src="nurvan_logo.png" alt="Nurvan"><span>' +
       escText(coachName()) + '</span></div>' +
       '<nav class="coach-os-sidebar-nav">' +
-      primaryLinks.map(function (row) { return linkHtml(row, active); }).join('') +
-      '<div class="coach-os-card-kicker" style="padding:20px 12px 8px;">More</div>' +
+      primaryLinks().map(function (row) { return linkHtml(row, active); }).join('') +
+      '<div class="coach-os-card-kicker" style="padding:20px 12px 8px;">' + escText(tx('coMore')) + '</div>' +
       secondaryLinks().map(function (row) { return linkHtml(row, active); }).join('') +
       '</nav>' +
       '<div class="coach-os-sidebar-footer">' +
-      '<button type="button" class="coach-os-side-link" onclick="CoachOS.openSettings()">Profile & Settings</button>' +
-      '<button type="button" class="coach-os-side-link" onclick="CoachOS.openHelp()">Help</button>' +
-      '<button type="button" class="coach-os-side-link" onclick="exitCoachSession()">Exit Coach</button>' +
+      '<button type="button" class="coach-os-side-link" onclick="CoachOS.openSettings()">' + escText(tx('coProfileSettings')) + '</button>' +
+      '<button type="button" class="coach-os-side-link" onclick="CoachOS.openHelp()">' + escText(tx('coHelp')) + '</button>' +
+      '<button type="button" class="coach-os-side-link" onclick="exitCoachSession()">' + escText(tx('coExitCoach')) + '</button>' +
       '</div>';
   }
 
   function mapBottomNav() {
     const ids = ['nav-home', 'nav-training', 'nav-stats', 'nav-ai', 'nav-db'];
-    primaryLinks.forEach(function (row, index) {
+    primaryLinks().forEach(function (row, index) {
       const element = document.getElementById(ids[index]);
       if (!element) return;
       element.style.display = '';
@@ -58217,19 +58601,19 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     if (!enabled('coachShellV2')) return false;
     wrap.className = 'coach-os-header-controls';
     wrap.style.cssText = '';
-    const options = ['<option value="">Cliente…</option>'].concat((clients || []).map(function (client) {
+    const options = ['<option value="">' + escText(tx('coClientFallback')) + '…</option>'].concat((clients || []).map(function (client) {
       const id = String(client.id);
       return '<option value="' + escText(id) + '"' + (id === String(curId || '') ? ' selected' : '') + '>' +
         escText(client.displayName || client.username || ('#' + id)) + '</option>';
     }));
     const notificationCount = Math.max(0, Number((typeof store !== 'undefined' && store.__cpNotifyCount) || 0));
     wrap.innerHTML =
-      '<select id="cp-client-switcher" class="coach-os-client-select" title="Cambia cliente" aria-label="Cambia cliente" onchange="switchCoachClientFromHeader(this.value)">' +
+      '<select id="cp-client-switcher" class="coach-os-client-select" title="' + escText(tx('coSwitchClient')) + '" aria-label="' + escText(tx('coSwitchClient')) + '" onchange="switchCoachClientFromHeader(this.value)">' +
       options.join('') + '</select>' +
-      '<button type="button" class="btn btn-outline coach-os-icon-btn" aria-label="Notifiche" title="Notifiche" onclick="openNotificationsCenter()">♢' +
+      '<button type="button" class="btn btn-outline coach-os-icon-btn" aria-label="' + escText(tx('coNotifications')) + '" title="' + escText(tx('coNotifications')) + '" onclick="openNotificationsCenter()">♢' +
       (notificationCount ? '<span class="cp-notify-count">' + (notificationCount > 99 ? '99+' : notificationCount) + '</span>' : '') +
       '</button>' +
-      '<button type="button" class="btn btn-outline coach-os-icon-btn" aria-label="Menu Coach e profilo" title="Menu Coach" onclick="openCoachDrawer()">' +
+      '<button type="button" class="btn btn-outline coach-os-icon-btn" aria-label="' + escText(tx('coCoachMenu')) + '" title="' + escText(tx('coCoachMenu')) + '" onclick="openCoachDrawer()">' +
       '<span style="font-size:10px;font-weight:900;">' + escText(initials()) + '</span></button>';
     return true;
   }
@@ -58239,8 +58623,8 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       '<div class="coach-os-page">' +
       '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Coach OS</div>' +
       '<h1 class="coach-os-title">' + escText(title) + '</h1>' +
-      '<p class="coach-os-subtitle">' + escText(body || 'Questa sezione verrà attivata nella fase dedicata.') + '</p></div></div>' +
-      '<div class="coach-os-empty">La struttura è pronta. I dati e le azioni compariranno quando la feature sarà abilitata.</div>' +
+      '<p class="coach-os-subtitle">' + escText(body || tx('coPlaceholderSoon')) + '</p></div></div>' +
+      '<div class="coach-os-empty">' + escText(tx('coPlaceholderReady')) + '</div>' +
       '</div>';
   }
 
@@ -58254,16 +58638,16 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       return true;
     }
     const placeholders = {
-      coachInbox: ['Inbox', 'Messaggi, check-in, richieste e approvazioni'],
-      coachCalendar: ['Calendar', 'Scheduling per coaching online'],
-      coachCheckIns: ['Check-ins', 'Richiesti, ricevuti e da revisionare'],
-      coachNutrition: ['Nutrition', 'Vista portfolio nutrizione'],
-      coachFormReview: ['Form review', 'Video, marker e feedback esercizio'],
-      coachAnalytics: ['Analytics', 'Adherence e performance dei clienti'],
-      coachAgent: ['Nurvan Agent', 'Ask. Plan. Execute.'],
-      coachAutomations: ['Automations', 'Trigger, condizioni e azioni'],
-      coachBusiness: ['Business', 'Ledger e rinnovi'],
-      coachCrm: ['CRM', 'Pipeline coaching leggera']
+      coachInbox: [tx('coInbox'), tx('coInboxSubtitle')],
+      coachCalendar: [tx('coCalendar'), tx('coCalendarSubtitle')],
+      coachCheckIns: [tx('coCheckIns'), tx('coCheckInsSubtitle')],
+      coachNutrition: [tx('coNutrition'), tx('coMealSubtitle')],
+      coachFormReview: [tx('coFormReview'), tx('coFormSubtitle')],
+      coachAnalytics: [tx('coAnalytics'), tx('coAnalyticsSubtitle')],
+      coachAgent: [tx('coAgent'), tx('coAskPlanExecute')],
+      coachAutomations: [tx('coAutomations'), tx('coAutomationsSubtitle')],
+      coachBusiness: [tx('coBusiness'), tx('coBusinessSubtitle')],
+      coachCrm: [tx('coCrm'), tx('coCrmEmpty')]
     };
     if (placeholders[view]) {
       renderPlaceholder(container, placeholders[view][0], placeholders[view][1]);
@@ -58287,12 +58671,14 @@ window.rememberApprovedProgram = rememberApprovedProgram;
 
   function openHelp() {
     if (typeof window.practiceToast === 'function') {
-      window.practiceToast('Guida Coach OS: Today → Attention → Client → Decide → Execute', 'info');
+      window.practiceToast(tx('coHelpToast'), 'info');
     } else {
-      alert('Today → Attention → Client → Understand → Decide → Nurvan executes');
+      alert(tx('coHelpToast'));
     }
   }
 
+  CoachOS.t = tx;
+  CoachOS.locale = locale;
   CoachOS.enabled = enabled;
   CoachOS.navigate = navTo;
   CoachOS.applyShell = applyShell;
@@ -58318,6 +58704,14 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
+  function loc() {
+    return CoachOS.locale ? CoachOS.locale() : 'it-IT';
+  }
+
   function firstName() {
     const account = (typeof store !== 'undefined' && store.accountUser) || {};
     return String(account.name || 'Coach').trim().split(/\s+/)[0] || 'Coach';
@@ -58325,9 +58719,9 @@ window.rememberApprovedProgram = rememberApprovedProgram;
 
   function greeting() {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Buongiorno';
-    if (hour < 18) return 'Buon pomeriggio';
-    return 'Buonasera';
+    if (hour < 12) return tx('coGoodMorning');
+    if (hour < 18) return tx('coGoodAfternoon');
+    return tx('coGoodEvening');
   }
 
   function timeZone() {
@@ -58342,7 +58736,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   function formatWhen(value) {
     if (!value) return '';
     try {
-      return new Date(value).toLocaleString('it-IT', {
+      return new Date(value).toLocaleString(loc(), {
         day: '2-digit',
         month: 'short',
         hour: '2-digit',
@@ -58358,24 +58752,24 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     return '<div class="coach-os-row">' +
       '<span class="coach-os-status-dot ' + escText(item.severity || 'low') + '"></span>' +
       '<button type="button" class="coach-os-row-main" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.openTodayAttention(' + index + ')"><strong>' +
-      escText(item.title || 'Richiede attenzione') + '</strong><span>' + escText(item.detail || '') +
+      escText(item.title || tx('coRequiresAttention')) + '</strong><span>' + escText(item.detail || '') +
       (item.dueAt ? ' · ' + escText(formatWhen(item.dueAt)) : '') + '</span></button>' +
-      '<button type="button" aria-label="Azioni attention" style="border:0;background:transparent;color:var(--co-muted);font-weight:900;" onclick="CoachOS.attentionMenu(' + index + ')">•••</button></div>';
+      '<button type="button" aria-label="' + escText(tx('coAttention')) + '" style="border:0;background:transparent;color:var(--co-muted);font-weight:900;" onclick="CoachOS.attentionMenu(' + index + ')">•••</button></div>';
   }
 
   function activityButton(item, index) {
     return '<button type="button" class="coach-os-row" onclick="CoachOS.openTodayActivity(' + index + ')">' +
-      '<span class="coach-os-row-main"><strong>' + escText(item.title || 'Attività') + '</strong>' +
+      '<span class="coach-os-row-main"><strong>' + escText(item.title || tx('coActivity')) + '</strong>' +
       '<span>' + escText(item.clientName || '') + (item.at ? ' · ' + escText(formatWhen(item.at)) : '') + '</span></span>' +
       '<span aria-hidden="true" style="color:var(--co-muted);">›</span></button>';
   }
 
   function renderKpis(kpi) {
     const rows = [
-      [kpi.clients || 0, 'Clients'],
-      [kpi.activeClients || 0, 'Active'],
-      [kpi.unread || 0, 'Unread'],
-      [kpi.liveNow || 0, 'Live']
+      [kpi.clients || 0, tx('coKpiClients')],
+      [kpi.activeClients || 0, tx('coKpiActive')],
+      [kpi.unread || 0, tx('coKpiUnread')],
+      [kpi.liveNow || 0, tx('coKpiLive')]
     ];
     return '<div class="coach-os-card coach-os-kpis">' + rows.map(function (row) {
       return '<div class="coach-os-kpi"><strong>' + Number(row[0] || 0) + '</strong><span>' + row[1] + '</span></div>';
@@ -58391,68 +58785,68 @@ window.rememberApprovedProgram = rememberApprovedProgram;
 
     container.innerHTML =
       '<div class="coach-os-page">' +
-      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Today · ' +
-      escText(new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'short' })) +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coToday')) + ' · ' +
+      escText(new Date().toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'short' })) +
       '</div><h1 class="coach-os-title">' + greeting() + ', <em>' + escText(firstName()) + '.</em></h1>' +
-      '<p class="coach-os-subtitle">Priorità, clienti e prossime azioni in un solo posto.</p></div></div>' +
+      '<p class="coach-os-subtitle">' + escText(tx('coTodaySubtitle')) + '</p></div></div>' +
 
       '<div class="coach-os-grid-2">' +
       '<button type="button" class="coach-os-card coach-os-card-primary" style="text-align:left;cursor:pointer;" onclick="CoachOS.navigate(\'coachAgent\')">' +
-      '<div class="coach-os-card-kicker">Primary action</div><div class="coach-os-card-title">Nurvan Agent</div>' +
-      '<div class="coach-os-muted">Ask. Plan. Execute.</div></button>' +
+      '<div class="coach-os-card-kicker">' + escText(tx('coPrimaryAction')) + '</div><div class="coach-os-card-title">' + escText(tx('coNurvanAgent')) + '</div>' +
+      '<div class="coach-os-muted">' + escText(tx('coAskPlanExecute')) + '</div></button>' +
       '<button type="button" class="coach-os-card" style="text-align:left;cursor:pointer;" onclick="CoachOS.navigate(\'coachCalendar\')">' +
-      '<div class="coach-os-card-kicker">Online coaching</div><div class="coach-os-card-title">Schedule</div>' +
-      '<div class="coach-os-muted">Call, check-in e review.</div></button></div>' +
+      '<div class="coach-os-card-kicker">' + escText(tx('coOnlineCoaching')) + '</div><div class="coach-os-card-title">' + escText(tx('coSchedule')) + '</div>' +
+      '<div class="coach-os-muted">' + escText(tx('coScheduleHint')) + '</div></button></div>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Needs attention</h2>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coNeedsAttention')) + '</h2>' +
       '<span class="coach-os-muted">' + attention.length + '</span></div>' +
       (attention.length
         ? '<div class="coach-os-list">' + attention.map(actionButton).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessuna urgenza. Il portfolio è sotto controllo.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoUrgency')) + '</div>') +
       '</section>' +
 
       (sessions.length
-        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Today’s sessions</h2></div>' +
+        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionsToday')) + '</h2></div>' +
           '<div class="coach-os-list">' + sessions.map(function (session) {
             return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(session.title) +
               '</strong><span>' + escText(session.time || '') + '</span></span></div>';
           }).join('') + '</div></section>'
         : '') +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">My tasks</h2>' +
-      '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.createTaskPrompt()">ADD TASK</button></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coMyTasks')) + '</h2>' +
+      '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.createTaskPrompt()">' + escText(tx('coAddTask')) + '</button></div>' +
       (tasks.length
         ? '<div class="coach-os-list">' + tasks.map(function (task, index) {
-          return '<div class="coach-os-row"><button type="button" aria-label="Completa task" title="Completa" ' +
+          return '<div class="coach-os-row"><button type="button" aria-label="' + escText(tx('coComplete')) + '" title="' + escText(tx('coComplete')) + '" ' +
             'style="width:32px;height:32px;border-radius:50%;border:1px solid var(--co-border);background:transparent;color:var(--co-accent);" ' +
             'onclick="CoachOS.completeTask(\'' + escText(task.id) + '\')">✓</button>' +
             '<button type="button" class="coach-os-row-main" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.openTodayTask(' + index + ')"><strong>' + escText(task.title) +
             '</strong><span>' + escText(task.clientName || '') + (task.dueAt ? ' · ' + escText(formatWhen(task.dueAt)) : '') + '</span></button>' +
-            '<button type="button" aria-label="Azioni task" style="border:0;background:transparent;color:var(--co-muted);font-weight:900;" onclick="CoachOS.taskMenu(' + index + ')">•••</button></div>';
+            '<button type="button" aria-label="' + escText(tx('coTask')) + '" style="border:0;background:transparent;color:var(--co-muted);font-weight:900;" onclick="CoachOS.taskMenu(' + index + ')">•••</button></div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">I task operativi compariranno qui.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoTasks')) + '</div>') +
       '</section>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Recent activity</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coRecentActivity')) + '</h2></div>' +
       (activity.length
         ? '<div class="coach-os-list">' + activity.map(activityButton).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessuna attività recente.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoActivity')) + '</div>') +
       '</section>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Portfolio</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coPortfolio')) + '</h2></div>' +
       renderKpis(data.kpi || {}) + '</section>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Coach OS · apri e controlla</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coOpenAndCheck')) + '</h2></div>' +
       '<div class="coach-os-quick-actions">' +
-      [['coachToday', 'Today'], ['coachHub', 'Clients'], ['coachInbox', 'Inbox'], ['coachPrograms', 'Programs'],
-        ['coachCalendar', 'Calendar'], ['coachCheckIns', 'Check-ins'], ['coachAgent', 'Agent'],
-        ['coachAnalytics', 'Analytics'], ['coachBusiness', 'Business'], ['coachCrm', 'CRM'],
-        ['coachAutomations', 'Automations'], ['coachNutrition', 'Nutrition'], ['coachFormReview', 'Form review']
+      [['coachToday', 'coToday'], ['coachHub', 'coClients'], ['coachInbox', 'coInbox'], ['coachPrograms', 'coPrograms'],
+        ['coachCalendar', 'coCalendar'], ['coachCheckIns', 'coCheckIns'], ['coachAgent', 'coAgent'],
+        ['coachAnalytics', 'coAnalytics'], ['coachBusiness', 'coBusiness'], ['coachCrm', 'coCrm'],
+        ['coachAutomations', 'coAutomations'], ['coachNutrition', 'coNutrition'], ['coachFormReview', 'coFormReview']
       ].map(function (row) {
-        return '<button class="coach-os-action" onclick="CoachOS.navigate(\'' + row[0] + '\')">' + row[1] + '</button>';
+        return '<button class="coach-os-action" onclick="CoachOS.navigate(\'' + row[0] + '\')">' + escText(tx(row[1])) + '</button>';
       }).join('') +
-      '<button class="coach-os-action" onclick="openAddClientWizard()">Add client</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.openNativeImport()">Import program</button>' +
+      '<button class="coach-os-action" onclick="openAddClientWizard()">' + escText(tx('coAddClient')) + '</button>' +
+      '<button class="coach-os-action" onclick="CoachOS.openNativeImport()">' + escText(tx('coImportProgram')) + '</button>' +
       '</div></section>' +
       '<div style="height:28px;"></div></div>';
   }
@@ -58464,24 +58858,24 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     const activity = [];
     rows.forEach(function (client) {
       const id = String(client.id || '');
-      const name = client.displayName || client.username || 'Cliente';
+      const name = client.displayName || client.username || tx('coClientFallback');
       const lastAt = client.lastWorkoutAt || client.last_workout_at;
       if (client.leaveRequested || client.leave_requested_at) {
-        attention.push({ title: 'Fine rapporto', detail: name + ' ha chiesto di uscire', severity: 'high', clientId: id, action: { clientId: id } });
+        attention.push({ title: tx('coAttEnd'), detail: name + ' ' + tx('coAttEndDetail'), severity: 'high', clientId: id, action: { clientId: id } });
       } else if (client.hasPendingChange || client.hasPendingUnlock) {
-        attention.push({ title: 'In attesa di te', detail: name + ' ha una richiesta da approvare', severity: 'high', clientId: id, action: { clientId: id } });
+        attention.push({ title: tx('coAttAwaiting'), detail: name + ' ' + tx('coAttAwaitingDetail'), severity: 'high', clientId: id, action: { clientId: id } });
       } else if (Number(client.unreadCount || 0) > 0) {
-        attention.push({ title: 'Messaggi non letti', detail: name + ' · ' + client.unreadCount + ' unread', severity: 'high', clientId: id, action: { view: 'coachChat', clientId: id } });
+        attention.push({ title: tx('coAttUnread'), detail: name + ' · ' + client.unreadCount + ' ' + tx('coUnread'), severity: 'high', clientId: id, action: { view: 'coachChat', clientId: id } });
       } else if (!client.paid) {
-        attention.push({ title: 'Pagamento', detail: name + ' non risulta pagato', severity: 'medium', clientId: id, action: { clientId: id } });
+        attention.push({ title: tx('coAttPayment'), detail: name + ' ' + tx('coAttPaymentDetail'), severity: 'medium', clientId: id, action: { clientId: id } });
       } else if (lastAt && now - new Date(lastAt).getTime() > 7 * 86400000) {
-        attention.push({ title: 'Inattivo 7+ giorni', detail: name, severity: 'medium', clientId: id, action: { clientId: id } });
+        attention.push({ title: tx('coAttInactive'), detail: name, severity: 'medium', clientId: id, action: { clientId: id } });
       }
       if (lastAt) {
-        activity.push({ title: 'Ultimo workout', clientName: name, at: lastAt, clientId: id, action: { clientId: id } });
+        activity.push({ title: tx('coAttLastWorkout'), clientName: name, at: lastAt, clientId: id, action: { clientId: id } });
       }
       if (client.workoutLive) {
-        activity.unshift({ title: 'In allenamento ora', clientName: name, at: new Date().toISOString(), clientId: id, action: { clientId: id } });
+        activity.unshift({ title: tx('coAttLiveNow'), clientName: name, at: new Date().toISOString(), clientId: id, action: { clientId: id } });
       }
     });
     return {
@@ -58514,7 +58908,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   async function loadToday(container) {
     container.innerHTML =
       '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Coach OS</div>' +
-      '<h1 class="coach-os-title">Today</h1></div></div><div class="coach-os-skeleton">Caricamento priorità…</div></div>';
+      '<h1 class="coach-os-title">' + escText(tx('coToday')) + '</h1></div></div><div class="coach-os-skeleton">' + escText(tx('coLoadingPriorities')) + '</div></div>';
     try {
       const date = new Date().toISOString().slice(0, 10);
       const payload = await window.practiceFetch(
@@ -58610,18 +59004,18 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     ensurePracticeOverlays();
     const panel = document.getElementById('cp-assign-panel');
     if (!panel) return;
-    panel.innerHTML = '<div class="coach-os-card-kicker">Task</div><h2>' + escText(task.title) + '</h2>' +
-      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="CoachOS.completeTask(\'' + escText(task.id) + '\')">COMPLETE</button>' +
-      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="CoachOS.snoozeTask(\'' + escText(task.id) + '\')">SNOOZE 1 DAY</button>' +
+    panel.innerHTML = '<div class="coach-os-card-kicker">' + escText(tx('coTask')) + '</div><h2>' + escText(task.title) + '</h2>' +
+      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="CoachOS.completeTask(\'' + escText(task.id) + '\')">' + escText(tx('coComplete')) + '</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="CoachOS.snoozeTask(\'' + escText(task.id) + '\')">' + escText(tx('coSnooze')) + '</button>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">' +
-      '<button class="btn btn-outline" onclick="CoachOS.moveTask(' + index + ',-1)">MOVE UP</button>' +
-      '<button class="btn btn-outline" onclick="CoachOS.moveTask(' + index + ',1)">MOVE DOWN</button></div>' +
-      (task.clientId ? '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\',false);openCoachClient(\'' + escText(task.clientId) + '\')">OPEN CLIENT</button>' : '') +
-      '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\',false)">CLOSE</button>';
+      '<button class="btn btn-outline" onclick="CoachOS.moveTask(' + index + ',-1)">' + escText(tx('coMoveUp')) + '</button>' +
+      '<button class="btn btn-outline" onclick="CoachOS.moveTask(' + index + ',1)">' + escText(tx('coMoveDown')) + '</button></div>' +
+      (task.clientId ? '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\',false);openCoachClient(\'' + escText(task.clientId) + '\')">' + escText(tx('coOpenClient')) + '</button>' : '') +
+      '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coClose')) + '</button>';
     showOverlay('cp-assign', true);
   };
   CoachOS.createTaskPrompt = async function () {
-    const title = prompt('Nuovo task');
+    const title = prompt(tx('coAddTask'));
     if (!title) return;
     try {
       await practiceFetch('/api/coach/tasks', {
@@ -58653,12 +59047,12 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     ensurePracticeOverlays();
     const panel = document.getElementById('cp-assign-panel');
     if (!panel) return;
-    panel.innerHTML = '<div class="coach-os-card-kicker">Attention</div><h2>' + escText(item.title) + '</h2>' +
+    panel.innerHTML = '<div class="coach-os-card-kicker">' + escText(tx('coAttention')) + '</div><h2>' + escText(item.title) + '</h2>' +
       '<p class="cp-help">' + escText(item.detail || '') + '</p>' +
-      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="CoachOS.updateAttention(\'' + escText(item.id) + '\',\'resolved\')">RESOLVE</button>' +
-      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="CoachOS.updateAttention(\'' + escText(item.id) + '\',\'snoozed\',new Date(Date.now()+86400000).toISOString())">SNOOZE 1 DAY</button>' +
-      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\',false);CoachOS.openTodayAttention(' + index + ')">OPEN CLIENT</button>' +
-      '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\',false)">CLOSE</button>';
+      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="CoachOS.updateAttention(\'' + escText(item.id) + '\',\'resolved\')">' + escText(tx('coResolve')) + '</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="CoachOS.updateAttention(\'' + escText(item.id) + '\',\'snoozed\',new Date(Date.now()+86400000).toISOString())">' + escText(tx('coSnooze')) + '</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\',false);CoachOS.openTodayAttention(' + index + ')">' + escText(tx('coOpenClient')) + '</button>' +
+      '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coClose')) + '</button>';
     showOverlay('cp-assign', true);
   };
   CoachOS.registerView('coachToday', loadToday);
@@ -58674,6 +59068,10 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
   function library() {
     if (!store.coachProgramLibrary) store.coachProgramLibrary = [];
     return store.coachProgramLibrary;
@@ -58682,11 +59080,11 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   function domains(entry) {
     const payload = (entry && entry.payload) || {};
     const result = [];
-    if ((payload.weeks || []).length) result.push('Workout');
-    if (payload.nutrition) result.push('Nutrition');
-    if (payload.supplementation) result.push('Integration');
-    if (payload.therapy) result.push('Therapy');
-    if (payload.exams) result.push('Exams');
+    if ((payload.weeks || []).length) result.push(tx('coDomainWorkout'));
+    if (payload.nutrition) result.push(tx('coNutrition'));
+    if (payload.supplementation) result.push(tx('coDomainIntegration'));
+    if (payload.therapy) result.push(tx('coDomainTherapy'));
+    if (payload.exams) result.push(tx('coDomainExams'));
     return result;
   }
 
@@ -58695,33 +59093,33 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     container.innerHTML =
       '<div class="coach-os-page">' +
       '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Coach OS</div>' +
-      '<h1 class="coach-os-title">Programs</h1>' +
-      '<p class="coach-os-subtitle">Importa, crea e assegna programmi senza uscire dal Coach OS.</p></div></div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coPrograms')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(tx('coProgramsSubtitle')) + '</p></div></div>' +
 
       '<div class="coach-os-grid-2">' +
       '<button type="button" class="coach-os-card coach-os-card-primary" style="text-align:left;cursor:pointer;" onclick="CoachOS.openNativeImport()">' +
-      '<div class="coach-os-card-kicker">Smart import</div><div class="coach-os-card-title">Import Program</div>' +
-      '<div class="coach-os-muted">PDF, Excel, Word, immagini. Scegli sempre i domini.</div></button>' +
+      '<div class="coach-os-card-kicker">' + escText(tx('coSmartImport')) + '</div><div class="coach-os-card-title">' + escText(tx('coImportProgramTitle')) + '</div>' +
+      '<div class="coach-os-muted">' + escText(tx('coImportHint')) + '</div></button>' +
       '<button type="button" class="coach-os-card" style="text-align:left;cursor:pointer;" onclick="CoachOS.openNurvanCatalog()">' +
-      '<div class="coach-os-card-kicker">Program builder</div><div class="coach-os-card-title">Create program</div>' +
-      '<div class="coach-os-muted">Catalogo Nurvan o generazione rules-based.</div></button></div>' +
+      '<div class="coach-os-card-kicker">' + escText(tx('coProgramBuilder')) + '</div><div class="coach-os-card-title">' + escText(tx('coCreateProgram')) + '</div>' +
+      '<div class="coach-os-muted">' + escText(tx('coCreateHint')) + '</div></button></div>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Coach database</h2>' +
-      '<span class="coach-os-muted">' + rows.length + ' programs</span></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coCoachDatabase')) + '</h2>' +
+      '<span class="coach-os-muted">' + rows.length + ' ' + escText(tx('coProgramsCount')) + '</span></div>' +
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (entry) {
           const ds = domains(entry);
           const weeks = entry.meta && entry.meta.weeks ? entry.meta.weeks : ((entry.payload && entry.payload.weeks || []).length);
           return '<div class="coach-os-row" style="cursor:default;">' +
-            '<span class="coach-os-row-main"><strong>' + escText(entry.title || 'Program') + '</strong>' +
-            '<span>' + (weeks ? weeks + ' weeks' : 'Domain plan') +
+            '<span class="coach-os-row-main"><strong>' + escText(entry.title || tx('coPrograms')) + '</strong>' +
+            '<span>' + (weeks ? weeks + ' ' + tx('coWeeks') : tx('coDomainPlan')) +
             (ds.length ? ' · ' + escText(ds.join(', ')) : '') + '</span></span>' +
             '<button type="button" class="btn btn-primary" style="font-size:9px;padding:7px 9px;" onclick="CoachOS.chooseClientForProgram(\'' +
-            escText(entry.id) + '\')">ASSIGN</button>' +
+            escText(entry.id) + '\')">' + escText(tx('coAssign')) + '</button>' +
             '<button type="button" class="btn btn-outline" style="font-size:9px;padding:7px 9px;" onclick="CoachOS.programMenu(\'' +
             escText(entry.id) + '\')">•••</button></div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">Il database è vuoto.<br>Importa il primo programma mantenendo il domain picker esplicito.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coProgramEmpty')) + '</div>') +
       '</section><div style="height:28px;"></div></div>';
   }
 
@@ -58778,16 +59176,16 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       const panel = document.getElementById('cp-assign-panel');
       if (!panel) return;
       panel.innerHTML =
-        '<div class="coach-os-card-kicker">Assign program</div><h2>Scegli il cliente</h2>' +
+        '<div class="coach-os-card-kicker">' + escText(tx('coAssignProgram')) + '</div><h2>' + escText(tx('coChooseClient')) + '</h2>' +
         (clients.length
           ? '<div class="coach-os-list" style="max-height:52vh;overflow:auto;">' + clients.map(function (client) {
             return '<button type="button" class="coach-os-row" onclick="CoachOS.assignProgramToClient(\'' +
               escText(entryId) + '\',\'' + escText(client.id) + '\')"><span class="coach-os-row-main"><strong>' +
-              escText(client.displayName || client.username || 'Cliente') + '</strong><span>' +
-              escText(client.status || 'active') + '</span></span><span>›</span></button>';
+              escText(client.displayName || client.username || tx('coClientFallback')) + '</strong><span>' +
+              escText(client.status || tx('coFilterActive')) + '</span></span><span>›</span></button>';
           }).join('') + '</div>'
-          : '<div class="coach-os-empty">Aggiungi prima un cliente.</div>') +
-        '<button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="showOverlay(\'cp-assign\',false)">ANNULLA</button>';
+          : '<div class="coach-os-empty">' + escText(tx('coAddClientFirst')) + '</div>') +
+        '<button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coCancel')) + '</button>';
       showOverlay('cp-assign', true);
     } catch (error) {
       practiceToast((error && error.message) || 'Clienti non disponibili', 'danger');
@@ -58809,7 +59207,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     try { payload = JSON.parse(JSON.stringify(entry.payload)); } catch (_) {}
     const copy = Object.assign({}, entry, {
       id: 'cpl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-      title: (entry.title || 'Program') + ' · Copy',
+      title: (entry.title || tx('coPrograms')) + tx('coCopySuffix'),
       payload: payload,
       savedAt: new Date().toISOString(),
       archivedAt: null
@@ -58837,16 +59235,16 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     const panel = document.getElementById('cp-assign-panel');
     if (!panel) return;
     panel.innerHTML =
-      '<div class="coach-os-card-kicker">Program actions</div><h2>' + escText(entry.title || 'Program') + '</h2>' +
+      '<div class="coach-os-card-kicker">' + escText(tx('coProgramActions')) + '</div><h2>' + escText(entry.title || tx('coPrograms')) + '</h2>' +
       '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\',false);CoachOS.chooseClientForProgram(\'' +
-      escText(entry.id) + '\')">ASSIGN</button>' +
+      escText(entry.id) + '\')">' + escText(tx('coAssign')) + '</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\',false);CoachOS.duplicateProgram(\'' +
-      escText(entry.id) + '\')">DUPLICATE</button>' +
+      escText(entry.id) + '\')">' + escText(tx('coDuplicate')) + '</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\',false);CoachOS.exportProgram(\'' +
-      escText(entry.id) + '\')">EXPORT</button>' +
+      escText(entry.id) + '\')">' + escText(tx('coExport')) + '</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="CoachOS.archiveProgram(\'' +
-      escText(entry.id) + '\')">ARCHIVE</button>' +
-      '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\',false)">CLOSE</button>';
+      escText(entry.id) + '\')">' + escText(tx('coArchive')) + '</button>' +
+      '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coClose')) + '</button>';
     showOverlay('cp-assign', true);
   }
 
@@ -58865,11 +59263,11 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       const panel = document.getElementById('cp-assign-panel');
       if (!panel) return;
       panel.innerHTML =
-        '<div class="coach-os-card-kicker">Import complete</div><h2>Program saved</h2>' +
-        '<p class="cp-help">' + escText(entry.title || 'Program') + ' è nel Coach Database. Vuoi assegnarlo ora?</p>' +
+        '<div class="coach-os-card-kicker">' + escText(tx('coImportComplete')) + '</div><h2>' + escText(tx('coProgramSaved')) + '</h2>' +
+        '<p class="cp-help">' + escText(entry.title || tx('coPrograms')) + ' ' + escText(tx('coAssignNow')) + '</p>' +
         '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\',false);CoachOS.chooseClientForProgram(\'' +
-        escText(entry.id) + '\')">ASSIGN TO CLIENT</button>' +
-        '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\',false)">DONE</button>';
+        escText(entry.id) + '\')">' + escText(tx('coAssignToClient')) + '</button>' +
+        '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coDone')) + '</button>';
       showOverlay('cp-assign', true);
     }, 0);
   }
@@ -58883,7 +59281,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   CoachOS.exportProgram = function (id) { withEntry(id, exportProgram); };
   CoachOS.archiveProgram = function (id) {
     withEntry(id, function (entry) {
-      if (!confirm('Archiviare questo programma?')) return;
+      if (!confirm(tx('coArchiveConfirm'))) return;
       entry.archivedAt = new Date().toISOString();
       persist();
       if (typeof scheduleAccountSync === 'function') scheduleAccountSync();
@@ -58918,18 +59316,22 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
   function clientStatus(client) {
     const now = Date.now();
     if (!client.paid || (client.nextDueAt && new Date(client.nextDueAt).getTime() < now)) {
-      return { id: 'payment_due', label: 'Payment due', severity: 'high' };
+      return { id: 'payment_due', label: tx('coStatusPayment'), severity: 'high' };
     }
     if (client.hasPendingChange || client.hasPendingUnlock || client.leaveRequested || Number(client.unreadCount || 0) > 0) {
-      return { id: 'awaiting_coach', label: 'Awaiting coach', severity: 'high' };
+      return { id: 'awaiting_coach', label: tx('coStatusAwaiting'), severity: 'high' };
     }
     if (client.lastWorkoutAt && new Date(client.lastWorkoutAt).getTime() < now - 7 * 86400000) {
-      return { id: 'at_risk', label: 'At risk', severity: 'medium' };
+      return { id: 'at_risk', label: tx('coStatusAtRisk'), severity: 'medium' };
     }
-    return { id: 'on_track', label: 'On track', severity: 'low' };
+    return { id: 'on_track', label: tx('coStatusOnTrack'), severity: 'low' };
   }
 
   function initials(name) {
@@ -58939,22 +59341,22 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   }
 
   function relativeDate(value) {
-    if (!value) return 'No workout';
+    if (!value) return tx('coNoWorkout');
     const days = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 86400000));
-    if (days === 0) return 'Workout today';
-    if (days === 1) return 'Workout yesterday';
-    return 'Workout ' + days + 'd ago';
+    if (days === 0) return tx('coWorkoutToday');
+    if (days === 1) return tx('coWorkoutYesterday');
+    return days + ' ' + tx('coDaysAgo');
   }
 
   function clientCard(client) {
     const status = clientStatus(client);
-    const name = client.displayName || client.username || 'Client';
+    const name = client.displayName || client.username || tx('coClientFallback');
     const avatar = client.photo
       ? '<img src="' + escText(client.photo) + '" alt="" style="width:44px;height:44px;border-radius:14px;object-fit:cover;">'
       : '<span style="width:44px;height:44px;border-radius:14px;background:#222;display:flex;align-items:center;justify-content:center;color:var(--co-accent);font-weight:900;">' + escText(initials(name)) + '</span>';
     const badges = [];
-    if (client.unreadCount) badges.push(client.unreadCount + ' unread');
-    if (client.workoutLive) badges.push('Live workout');
+    if (client.unreadCount) badges.push(client.unreadCount + ' ' + tx('coUnread'));
+    if (client.workoutLive) badges.push(tx('coLiveWorkout'));
     return '<button type="button" class="coach-os-row" style="min-height:82px;" onclick="openCoachClient(\'' + escText(client.id) + '\')">' +
       avatar +
       '<span class="coach-os-row-main"><strong>' + escText(name) + '</strong>' +
@@ -58980,7 +59382,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
         method: 'GET',
         headers: practiceHeaders(false)
       }, 15000);
-      if (!payload || !payload.ok) throw new Error(payload && payload.error || 'Clients unavailable');
+      if (!payload || !payload.ok) throw new Error(payload && payload.error || tx('coClientsUnavailable'));
       state.clients = append ? state.clients.concat(payload.clients || []) : (payload.clients || []);
       state.total = Number(payload.total || state.clients.length);
       state.nextCursor = payload.nextCursor || null;
@@ -58990,9 +59392,9 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     } catch (error) {
       container.innerHTML =
         '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Coach OS</div>' +
-        '<h1 class="coach-os-title">Clients</h1></div></div><div class="coach-os-error">' +
-        escText(error && error.message || 'Clients unavailable') +
-        '<br><button class="btn btn-outline" style="margin-top:12px;" onclick="CoachOS.navigate(\'coachHub\')">RETRY</button></div></div>';
+        '<h1 class="coach-os-title">' + escText(tx('coClients')) + '</h1></div></div><div class="coach-os-error">' +
+        escText(error && error.message || tx('coClientsUnavailable')) +
+        '<br><button class="btn btn-outline" style="margin-top:12px;" onclick="CoachOS.navigate(\'coachHub\')">' + escText(tx('coRetry')) + '</button></div></div>';
     }
   }
 
@@ -59015,7 +59417,16 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   }
 
   function viewChips() {
-    const all = [{ id: '', name: 'All clients' }].concat(state.views || []);
+    const all = [{ id: '', name: tx('coAllClients') }].concat((state.views || []).map(function (view) {
+      const map = {
+        'At Risk': 'coSavedAtRisk',
+        'No Workout 7d': 'coSavedNoWorkout',
+        'Check-ins': 'coSavedCheckIns',
+        'Payments': 'coSavedPayments',
+        'New Clients': 'coSavedNew'
+      };
+      return map[view.name] ? Object.assign({}, view, { name: tx(map[view.name]) }) : view;
+    }));
     return '<div style="display:flex;gap:7px;overflow:auto;padding-bottom:4px;margin-bottom:12px;">' +
       all.map(function (view) {
         const active = String(state.savedViewId) === String(view.id);
@@ -59028,27 +59439,33 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   function drawClients(container) {
     container.innerHTML =
       '<div class="coach-os-page">' +
-      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Portfolio</div>' +
-      '<h1 class="coach-os-title">Clients</h1><p class="coach-os-subtitle">' + state.total +
-      ' clienti · trova subito chi richiede attenzione.</p></div>' +
-      '<button class="btn btn-primary" style="min-height:44px;" onclick="openAddClientWizard()">ADD CLIENT</button></div>' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coPortfolio')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coClients')) + '</h1><p class="coach-os-subtitle">' + state.total +
+      ' ' + escText(tx('coClients').toLowerCase()) + ' · ' + escText(tx('coNeedsAttention').toLowerCase()) + '.</p></div>' +
+      '<button class="btn btn-primary" style="min-height:44px;" onclick="openAddClientWizard()">' + escText(tx('coAddClient')) + '</button></div>' +
       '<div class="coach-os-card" style="padding:12px;">' +
-      '<input type="search" value="' + escText(state.query) + '" placeholder="Search clients…" aria-label="Search clients" ' +
+      '<input type="search" value="' + escText(state.query) + '" placeholder="' + escText(tx('coSearchClients')) + '" aria-label="' + escText(tx('coSearchClients')) + '" ' +
       'oninput="CoachOS.searchClients(this.value)" style="width:100%;min-height:44px;background:#0b0b0b;border:1px solid var(--co-border);border-radius:12px;color:#fff;padding:0 12px;">' +
       '</div>' +
       viewChips() +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
-      '<select aria-label="Client filter" onchange="CoachOS.setClientFilter(this.value)" style="width:auto;min-height:40px;">' +
+      '<select aria-label="' + escText(tx('coClientFilter')) + '" onchange="CoachOS.setClientFilter(this.value)" style="width:auto;min-height:40px;">' +
       ['all', 'active', 'attention', 'inactive', 'unread', 'checkin', 'payment', 'program', 'nutrition', 'injury'].map(function (filter) {
+        const labels = {
+          all: 'coFilterAll', active: 'coFilterActive', attention: 'coFilterAttention',
+          inactive: 'coFilterInactive', unread: 'coFilterUnread', checkin: 'coFilterCheckin',
+          payment: 'coFilterPayment', program: 'coFilterProgram', nutrition: 'coFilterNutrition',
+          injury: 'coFilterInjury'
+        };
         return '<option value="' + filter + '"' + (state.filter === filter ? ' selected' : '') + '>' +
-          filter.replace(/^\w/, function (c) { return c.toUpperCase(); }) + '</option>';
+          escText(tx(labels[filter] || filter)) + '</option>';
       }).join('') + '</select>' +
-      '<button type="button" class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.saveCurrentClientView()">SAVE VIEW</button></div>' +
+      '<button type="button" class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.saveCurrentClientView()">' + escText(tx('coSaveView')) + '</button></div>' +
       (state.clients.length
         ? '<div class="coach-os-list">' + state.clients.map(clientCard).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessun cliente per questa vista.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoClientsView')) + '</div>') +
       (state.nextCursor
-        ? '<button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="CoachOS.loadMoreClients()">LOAD MORE</button>'
+        ? '<button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="CoachOS.loadMoreClients()">' + escText(tx('coLoadMore')) + '</button>'
         : '') +
       '<div style="height:28px;"></div></div>';
   }
@@ -59057,8 +59474,8 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     store.coachSessionActive = true;
     store.__coachOsClientLegacy = false;
     container.innerHTML =
-      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Portfolio</div>' +
-      '<h1 class="coach-os-title">Clients</h1></div></div><div class="coach-os-skeleton">Loading clients…</div></div>';
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coPortfolio')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coClients')) + '</h1></div></div><div class="coach-os-skeleton">' + escText(tx('coLoadingClients')) + '</div></div>';
     await loadViews();
     await loadClients(container, false);
   }
@@ -59073,8 +59490,8 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   function timelineRow(event, index) {
     return '<button type="button" class="coach-os-row" onclick="CoachOS.openTimelineEvent(' + index + ')">' +
       '<span class="coach-os-status-dot low"></span><span class="coach-os-row-main"><strong>' +
-      escText(event.summary || event.type) + '</strong><span>' + escText(event.domain || 'general') +
-      (event.at ? ' · ' + escText(new Date(event.at).toLocaleDateString('it-IT')) : '') +
+      escText(event.summary || event.type) + '</strong><span>' +       escText(event.domain || tx('coDomains')) +
+      (event.at ? ' · ' + escText(new Date(event.at).toLocaleDateString(CoachOS.locale ? CoachOS.locale() : 'it-IT')) : '') +
       '</span></span><span>›</span></button>';
   }
 
@@ -59100,67 +59517,67 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     });
     container.innerHTML =
       '<div class="coach-os-page">' +
-      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(status.label || 'Client') + '</div>' +
-      '<h1 class="coach-os-title">' + escText(client.name || 'Client') + '</h1>' +
-      '<p class="coach-os-subtitle">' + escText(client.goal || 'Goal not set') + '</p></div>' +
-      '<button class="btn btn-outline" style="min-height:44px;" onclick="openCoachClientChat(\'' + escText(client.id) + '\')">MESSAGE</button></div>' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(status.label || tx('coClientFallback')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(client.name || tx('coClientFallback')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(client.goal || tx('coGoalUnset')) + '</p></div>' +
+      '<button class="btn btn-outline" style="min-height:44px;" onclick="openCoachClientChat(\'' + escText(client.id) + '\')">' + escText(tx('coMessage')) + '</button></div>' +
 
       '<section><div class="coach-os-card coach-os-card-primary">' +
-      '<div class="coach-os-card-kicker">Next action</div><div class="coach-os-card-title">' +
-      escText(action.label || 'Review client') + '</div>' +
-      '<button class="btn" style="margin-top:10px;background:#111;color:#fff !important;-webkit-text-fill-color:#fff !important;" onclick="CoachOS.runClientNextAction()">OPEN</button>' +
+      '<div class="coach-os-card-kicker">' + escText(tx('coNextAction')) + '</div><div class="coach-os-card-title">' +
+      escText(action.label || tx('coReviewClient')) + '</div>' +
+      '<button class="btn" style="margin-top:10px;background:#111;color:#fff !important;-webkit-text-fill-color:#fff !important;" onclick="CoachOS.runClientNextAction()">' + escText(tx('coOpen')) + '</button>' +
       '</div></section>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Athlete snapshot</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coAthleteSnapshot')) + '</h2></div>' +
       '<div class="coach-os-grid-2" style="grid-template-columns:repeat(2,minmax(0,1fr));">' +
-      snapshotMetric('Weight', weight.current ? weight.current + ' kg' : '—', weight.delta == null ? '' : ((weight.delta > 0 ? '+' : '') + weight.delta + ' kg')) +
-      snapshotMetric('Adherence', derived.adherence && derived.adherence.value != null ? derived.adherence.value + '%' : '—', 'Last 28 days') +
+      snapshotMetric(tx('coWeight'), weight.current ? weight.current + ' kg' : '—', weight.delta == null ? '' : ((weight.delta > 0 ? '+' : '') + weight.delta + ' kg')) +
+      snapshotMetric(tx('coAdherence'), derived.adherence && derived.adherence.value != null ? derived.adherence.value + '%' : '—', tx('coLast28d')) +
       snapshotMetric(
-        'Training',
-        snapshot.training && snapshot.training.programTitle || 'No program',
-        (snapshot.training && snapshot.training.weeks ? snapshot.training.weeks + ' weeks' : '') +
+        tx('coTraining'),
+        snapshot.training && snapshot.training.programTitle || tx('coNoProgram'),
+        (snapshot.training && snapshot.training.weeks ? snapshot.training.weeks + ' ' + tx('coWeeks') : '') +
           (snapshot.training && snapshot.training.lastWorkoutAt ? ' · ' + relativeDate(snapshot.training.lastWorkoutAt) : '')
       ) +
-      snapshotMetric('Performance', derived.performance && derived.performance.deltaPct != null ? ((derived.performance.deltaPct > 0 ? '+' : '') + derived.performance.deltaPct + '%') : '—', 'Tonnage trend') +
+      snapshotMetric(tx('coPerformance'), derived.performance && derived.performance.deltaPct != null ? ((derived.performance.deltaPct > 0 ? '+' : '') + derived.performance.deltaPct + '%') : '—', tx('coTonnageTrend')) +
       '</div></section>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Athlete intelligence</h2>' +
-      '<span class="coach-os-muted">Deterministic · ' + escText(intelligence.formulaVersion || 'pending') + '</span></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coAthleteIntelligence')) + '</h2>' +
+      '<span class="coach-os-muted">' + escText(tx('coDeterministic')) + ' · ' + escText(intelligence.formulaVersion || '—') + '</span></div>' +
       (signals.length
         ? '<div class="coach-os-list">' + signals.map(function (signal) {
           return '<div class="coach-os-row"><span class="coach-os-status-dot ' + escText(signal.severity || 'low') +
             '"></span><span class="coach-os-row-main"><strong>' + escText(signal.title || signal.id) +
             '</strong><span>' + escText(signal.detail || '') + '</span></span></div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessun rischio deterministico rilevato. Apri i dati per il dettaglio.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoRisks')) + '</div>') +
       (brain
-        ? '<div class="coach-os-card" style="margin-top:12px;"><div class="coach-os-card-kicker">Athlete Brain</div>' +
+        ? '<div class="coach-os-card" style="margin-top:12px;"><div class="coach-os-card-kicker">' + escText(tx('coAthleteBrain')) + '</div>' +
           '<div class="coach-os-card-title">' + escText(brain.currentStatus || '') + '</div>' +
           '<div class="coach-os-muted">' + escText((brain.suggestedAction && brain.suggestedAction.text) || '') + '</div>' +
           '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
-          '<button class="coach-os-action" onclick="CoachOS.brainFeedback(\'approve\')">APPROVE</button>' +
-          '<button class="coach-os-action" onclick="CoachOS.brainFeedback(\'modify\')">MODIFY</button>' +
-          '<button class="coach-os-action" onclick="CoachOS.brainFeedback(\'dismiss\')">DISMISS</button>' +
-          '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachAgent\')">ASK AGENT</button>' +
-          '<button class="coach-os-action" onclick="CoachOS.openBrainData()">OPEN DATA</button></div></div>'
+          '<button class="coach-os-action" onclick="CoachOS.brainFeedback(\'approve\')">' + escText(tx('coApprove')) + '</button>' +
+          '<button class="coach-os-action" onclick="CoachOS.brainFeedback(\'modify\')">' + escText(tx('coModify')) + '</button>' +
+          '<button class="coach-os-action" onclick="CoachOS.brainFeedback(\'dismiss\')">' + escText(tx('coDismiss')) + '</button>' +
+          '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachAgent\')">' + escText(tx('coAskAgent')) + '</button>' +
+          '<button class="coach-os-action" onclick="CoachOS.openBrainData()">' + escText(tx('coOpenData')) + '</button></div></div>'
         : '') +
       '</section>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Timeline</h2>' +
-      '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.loadFullTimeline()">VIEW ALL</button></div>' +
-      (timeline.length ? '<div class="coach-os-list">' + timeline.map(timelineRow).join('') + '</div>' : '<div class="coach-os-empty">No significant activity yet.</div>') +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coTimeline')) + '</h2>' +
+      '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.loadFullTimeline()">' + escText(tx('coViewAll')) + '</button></div>' +
+      (timeline.length ? '<div class="coach-os-list">' + timeline.map(timelineRow).join('') + '</div>' : '<div class="coach-os-empty">' + escText(tx('coNoTimeline')) + '</div>') +
       '</section>' +
 
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Domains</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coDomains')) + '</h2></div>' +
       '<div class="coach-os-quick-actions">' +
-      '<button class="coach-os-action" onclick="enterCoachClientView(\'training\')">Program</button>' +
-      '<button class="coach-os-action" onclick="enterCoachClientView(\'nutrition\')">Nutrition</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachCheckIns\')">Check-ins</button>' +
-      '<button class="coach-os-action" onclick="openCoachClientChat(\'' + escText(client.id) + '\')">Messages</button>' +
-      '<button class="coach-os-action" onclick="enterCoachClientView(\'calendar\')">Calendar</button>' +
-      '<button class="coach-os-action" onclick="enterCoachClientView(\'stats\')">Analytics</button>' +
-      '<button class="coach-os-action" onclick="enterCoachClientView(\'athlete\')">Profile</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.openLegacyClientWorkspace()">More actions</button>' +
+      '<button class="coach-os-action" onclick="enterCoachClientView(\'training\')">' + escText(tx('coPrograms')) + '</button>' +
+      '<button class="coach-os-action" onclick="enterCoachClientView(\'nutrition\')">' + escText(tx('coNutrition')) + '</button>' +
+      '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachCheckIns\')">' + escText(tx('coCheckIns')) + '</button>' +
+      '<button class="coach-os-action" onclick="openCoachClientChat(\'' + escText(client.id) + '\')">' + escText(tx('coMessage')) + '</button>' +
+      '<button class="coach-os-action" onclick="enterCoachClientView(\'calendar\')">' + escText(tx('coCalendar')) + '</button>' +
+      '<button class="coach-os-action" onclick="enterCoachClientView(\'stats\')">' + escText(tx('coAnalytics')) + '</button>' +
+      '<button class="coach-os-action" onclick="enterCoachClientView(\'athlete\')">' + escText(tx('profilo')) + '</button>' +
+      '<button class="coach-os-action" onclick="CoachOS.openLegacyClientWorkspace()">' + escText(tx('coMore')) + '</button>' +
       '</div></section><div style="height:28px;"></div></div>';
     applyClientChrome();
   }
@@ -59172,12 +59589,12 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       return;
     }
     if (store.__coachOsClientLegacy) {
-      container.innerHTML = '<div class="coach-os-skeleton">Loading client operations…</div>';
+      container.innerHTML = '<div class="coach-os-skeleton">' + escText(tx('coLoadingOps')) + '</div>';
       Promise.resolve(renderCoachWorkspace(container)).then(function () {
         const back = document.createElement('button');
         back.className = 'btn btn-outline';
         back.style.cssText = 'width:100%;margin-bottom:12px;';
-        back.textContent = '← CLIENT OVERVIEW';
+        back.textContent = tx('coBackOverview');
         back.onclick = function () {
           store.__coachOsClientLegacy = false;
           render();
@@ -59186,7 +59603,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       });
       return;
     }
-    container.innerHTML = '<div class="coach-os-page"><div class="coach-os-skeleton">Loading client overview…</div></div>';
+    container.innerHTML = '<div class="coach-os-page"><div class="coach-os-skeleton">' + escText(tx('coLoadingOverview')) + '</div></div>';
     try {
       const results = await Promise.all([
         practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/overview', {
@@ -59199,13 +59616,13 @@ window.rememberApprovedProgram = rememberApprovedProgram;
         }, 20000).catch(function () { return null; })
       ]);
       const payload = results[0];
-      if (!payload || !payload.ok) throw new Error(payload && payload.error || 'Overview unavailable');
+      if (!payload || !payload.ok) throw new Error(payload && payload.error || tx('coOverviewUnavailable'));
       if (results[1] && results[1].ok) payload.intelligence = results[1];
       renderOverviewData(container, payload);
     } catch (error) {
       container.innerHTML = '<div class="coach-os-page"><div class="coach-os-error">' +
-        escText(error && error.message || 'Overview unavailable') +
-        '<br><button class="btn btn-outline" style="margin-top:12px;" onclick="CoachOS.openLegacyClientWorkspace()">OPEN CLASSIC WORKSPACE</button></div></div>';
+        escText(error && error.message || tx('coOverviewUnavailable')) +
+        '<br><button class="btn btn-outline" style="margin-top:12px;" onclick="CoachOS.openLegacyClientWorkspace()">' + escText(tx('coOpenClassic')) + '</button></div></div>';
     }
   }
 
@@ -59231,7 +59648,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     if (container && state.nextCursor) loadClients(container, true);
   };
   CoachOS.saveCurrentClientView = async function () {
-    const name = prompt('Nome della vista salvata');
+    const name = prompt(tx('coSaveViewPrompt'));
     if (!name) return;
     try {
       await practiceFetch('/api/coach/saved-views', {
@@ -59240,10 +59657,10 @@ window.rememberApprovedProgram = rememberApprovedProgram;
         body: JSON.stringify({ name: name, filters: { filter: state.filter, q: state.query }, sort: { by: state.sort } })
       }, 12000);
       await loadViews();
-      practiceToast('Vista salvata', 'success');
+      practiceToast(tx('coViewSaved'), 'success');
       CoachOS.navigate('coachHub');
     } catch (error) {
-      practiceToast((error && error.message) || 'Vista non salvata', 'danger');
+      practiceToast((error && error.message) || tx('coViewNotSaved'), 'danger');
     }
   };
   CoachOS.openLegacyClientWorkspace = function () {
@@ -59350,10 +59767,14 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
   function formatDate(value) {
     if (!value) return '—';
     try {
-      return new Date(value).toLocaleString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+      return new Date(value).toLocaleString(CoachOS.locale ? CoachOS.locale() : 'it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
     } catch (_) {
       return '—';
     }
@@ -59363,23 +59784,23 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     const date = row.receivedAt || row.requestedAt || row.createdAt;
     return '<button type="button" class="coach-os-row" onclick="CoachOS.openCheckIn(' + index + ')">' +
       '<span class="coach-os-status-dot ' + (row.status === 'received' ? 'high' : (row.status === 'requested' ? 'medium' : 'low')) + '"></span>' +
-      '<span class="coach-os-row-main"><strong>' + escText(row.clientName || 'Client') + '</strong>' +
+      '<span class="coach-os-row-main"><strong>' + escText(row.clientName || tx('coClientFallback')) + '</strong>' +
       '<span>' + escText(row.status.replace(/_/g, ' ')) + ' · ' + escText(formatDate(date)) +
       (row.weight ? ' · ' + Number(row.weight) + ' kg' : '') + '</span></span><span>›</span></button>';
   }
 
   function draw(container) {
     const tabs = [
-      ['requested', 'Requested'],
-      ['received', 'Received'],
-      ['to_review', 'To review'],
-      ['reviewed', 'Reviewed']
+      ['requested', tx('coRequested')],
+      ['received', tx('coReceived')],
+      ['to_review', tx('coToReview')],
+      ['reviewed', tx('coReviewed')]
     ];
     container.innerHTML =
       '<div class="coach-os-page">' +
       '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Coach OS</div>' +
-      '<h1 class="coach-os-title">Check-ins</h1><p class="coach-os-subtitle">Review, respond e crea il prossimo passo.</p></div>' +
-      '<button class="btn btn-primary" style="min-height:44px;" onclick="CoachOS.requestCheckInPicker()">REQUEST</button></div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coCheckIns')) + '</h1><p class="coach-os-subtitle">' + escText(tx('coCheckInsSubtitle')) + '</p></div>' +
+      '<button class="btn btn-primary" style="min-height:44px;" onclick="CoachOS.requestCheckInPicker()">' + escText(tx('coRequest')) + '</button></div>' +
       '<div style="display:flex;gap:7px;overflow:auto;padding-bottom:4px;margin-bottom:12px;">' +
       tabs.map(function (tab) {
         return '<button class="pill-tab' + (state.status === tab[0] ? ' active' : '') +
@@ -59387,12 +59808,12 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       }).join('') + '</div>' +
       (state.rows.length
         ? '<div class="coach-os-list">' + state.rows.map(rowHtml).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessun check-in in questa coda.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoCheckIns')) + '</div>') +
       '</div>';
   }
 
   async function renderCheckIns(container) {
-    container.innerHTML = '<div class="coach-os-page"><div class="coach-os-skeleton">Loading check-ins…</div></div>';
+    container.innerHTML = '<div class="coach-os-page"><div class="coach-os-skeleton">' + escText(tx('coLoadingCheckIns')) + '</div></div>';
     try {
       const payload = await practiceFetch('/api/coach/check-ins?status=' + encodeURIComponent(state.status), {
         method: 'GET',
@@ -59423,7 +59844,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
 
   function signalRows(summary) {
     const signals = summary && summary.signals || [];
-    if (!signals.length) return '<div class="coach-os-empty">Nessun segnale deterministico rilevato.</div>';
+    if (!signals.length) return '<div class="coach-os-empty">' + escText(tx('coNoSignals')) + '</div>';
     return '<div class="coach-os-list">' + signals.map(function (signal) {
       return '<div class="coach-os-row"><span class="coach-os-status-dot ' + escText(signal.severity || 'low') +
         '"></span><span class="coach-os-row-main"><strong>' + escText(signal.title || signal.id) +
@@ -59438,29 +59859,29 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     const panel = document.getElementById('cp-assign-panel');
     if (!panel) return;
     panel.innerHTML =
-      '<div class="coach-os-card-kicker">Review & Respond</div><h2>' + escText(row.clientName || 'Client') + '</h2>' +
+      '<div class="coach-os-card-kicker">' + escText(tx('coReviewRespond')) + '</div><h2>' + escText(row.clientName || tx('coClientFallback')) + '</h2>' +
       '<div class="coach-os-grid-2" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:12px;">' +
-      '<div class="coach-os-card" style="margin:0;"><div class="coach-os-card-kicker">Weight</div><div class="coach-os-card-title">' +
+      '<div class="coach-os-card" style="margin:0;"><div class="coach-os-card-kicker">' + escText(tx('coWeight')) + '</div><div class="coach-os-card-title">' +
       (row.weight ? Number(row.weight) + ' kg' : '—') + '</div></div>' +
-      '<div class="coach-os-card" style="margin:0;"><div class="coach-os-card-kicker">Received</div><div class="coach-os-card-title" style="font-size:12px;">' +
+      '<div class="coach-os-card" style="margin:0;"><div class="coach-os-card-kicker">' + escText(tx('coReceived')) + '</div><div class="coach-os-card-title" style="font-size:12px;">' +
       escText(formatDate(row.receivedAt || row.requestedAt)) + '</div></div></div>' +
-      '<div class="coach-os-card"><div class="coach-os-card-kicker">Athlete notes</div><div class="coach-os-muted" style="color:#ddd;margin-top:8px;">' +
-      escText(row.notes || 'No notes') + '</div></div>' +
-      '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">Deterministic signals</div>' +
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coCoachFeedback')) + '</div><div class="coach-os-muted" style="color:#ddd;margin-top:8px;">' +
+      escText(row.notes || tx('coNoNotes')) + '</div></div>' +
+      '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">' + escText(tx('coSignals')) + '</div>' +
       signalRows(row.deterministicSummary) +
-      (row.previous ? '<div class="coach-os-card" style="margin-top:12px;"><div class="coach-os-card-kicker">Previous check</div>' +
+      (row.previous ? '<div class="coach-os-card" style="margin-top:12px;"><div class="coach-os-card-kicker">' + escText(tx('coPreviousCheck')) + '</div>' +
         '<div class="coach-os-muted" style="margin-top:8px;">' + escText(formatDate(row.previous.received_at)) +
         (row.previous.weight ? ' · ' + Number(row.previous.weight) + ' kg' : '') + '</div></div>' : '') +
-      ((row.media || []).length ? '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">Private media</div>' +
+      ((row.media || []).length ? '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">' + escText(tx('coPrivateMedia')) + '</div>' +
         '<div class="coach-os-quick-actions">' + row.media.map(function (media) {
           return '<button class="coach-os-action" onclick="CoachOS.openCheckInMedia(\'' + escText(media.id) + '\')">' +
-            escText(media.kind || 'Media') + '<br><span class="coach-os-muted">' + Math.round(Number(media.byteSize || 0) / 1024) + ' KB</span></button>';
+            escText(media.kind || tx('coPrivateMedia')) + '<br><span class="coach-os-muted">' + Math.round(Number(media.byteSize || 0) / 1024) + ' KB</span></button>';
         }).join('') + '</div>' : '') +
-      '<label style="display:block;margin-top:14px;font-size:10px;color:var(--co-muted);">COACH RESPONSE</label>' +
-      '<textarea id="coach-checkin-response" rows="4" style="width:100%;margin-top:6px;" placeholder="Risposta operativa all’atleta…">' +
+      '<label style="display:block;margin-top:14px;font-size:10px;color:var(--co-muted);">' + escText(tx('coCoachResponse')) + '</label>' +
+      '<textarea id="coach-checkin-response" rows="4" style="width:100%;margin-top:6px;" placeholder="' + escText(tx('coResponsePlaceholder')) + '">' +
       escText(row.coachResponse || '') + '</textarea>' +
-      '<button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="CoachOS.reviewCheckIn()">SAVE REVIEW & RESPOND</button>' +
-      '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="showOverlay(\'cp-assign\',false)">CLOSE</button>';
+      '<button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="CoachOS.reviewCheckIn()">' + escText(tx('coSaveReview')) + '</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coClose')) + '</button>';
     showOverlay('cp-assign', true);
   }
 
@@ -59469,7 +59890,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     const input = document.getElementById('coach-checkin-response');
     const response = input && input.value.trim();
     if (!row || !response) {
-      practiceToast('Scrivi una risposta al cliente', 'warning');
+      practiceToast(tx('coWriteResponse'), 'warning');
       return;
     }
     try {
@@ -59479,7 +59900,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
         body: JSON.stringify({ response: response })
       }, 15000);
       showOverlay('cp-assign', false);
-      practiceToast('Check-in revisionato', 'success');
+      practiceToast(tx('coCheckInReviewed'), 'success');
       CoachOS.navigate('coachCheckIns');
     } catch (error) {
       practiceToast((error && error.message) || 'Review non salvata', 'danger');
@@ -59499,13 +59920,13 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       }
       ensurePracticeOverlays();
       const panel = document.getElementById('cp-assign-panel');
-      panel.innerHTML = '<div class="coach-os-card-kicker">Request check-in</div><h2>Scegli il cliente</h2>' +
+      panel.innerHTML = '<div class="coach-os-card-kicker">' + escText(tx('coRequestCheckIn')) + '</div><h2>' + escText(tx('coChooseClient')) + '</h2>' +
         '<div class="coach-os-list" style="max-height:52vh;overflow:auto;">' + clients.map(function (client) {
           return '<button class="coach-os-row" onclick="CoachOS.requestCheckIn(\'' + escText(client.id) + '\')">' +
             '<span class="coach-os-row-main"><strong>' + escText(client.displayName || client.username) +
             '</strong></span><span>›</span></button>';
         }).join('') + '</div>' +
-        '<button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="showOverlay(\'cp-assign\',false)">CLOSE</button>';
+        '<button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coClose')) + '</button>';
       showOverlay('cp-assign', true);
     } catch (error) {
       practiceToast((error && error.message) || 'Clienti non disponibili', 'danger');
@@ -59520,7 +59941,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
         body: JSON.stringify({ clientId: clientId })
       }, 15000);
       showOverlay('cp-assign', false);
-      practiceToast('Check-in richiesto', 'success');
+      practiceToast(tx('coCheckInRequested'), 'success');
       CoachOS.navigate('coachCheckIns');
     } catch (error) {
       practiceToast((error && error.message) || 'Richiesta non inviata', 'danger');
@@ -59595,15 +60016,19 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
   function whyHtml(why) {
     const reasons = (why && why.reasons) || [];
     if (!reasons.length) return '';
-    return '<div class="coach-os-muted" style="margin-top:8px;">WHY</div><div class="coach-os-list">' +
+    return '<div class="coach-os-muted" style="margin-top:8px;">' + escText(tx('coWhy')) + '</div><div class="coach-os-list">' +
       reasons.map(function (reason) {
         return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' +
           escText(reason.statement || '') + '</strong><span>' +
           escText(JSON.stringify(reason.evidence || {})) + '</span></span>' +
-          (why.viewData ? '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.openAgentViewData()">VIEW DATA</button>' : '') +
+          (why.viewData ? '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.openAgentViewData()">' + escText(tx('coViewData')) + '</button>' : '') +
           '</div>';
       }).join('') + '</div>';
   }
@@ -59613,38 +60038,38 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     const proposals = (run && run.proposals) || [];
     container.innerHTML =
       '<div class="coach-os-page">' +
-      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Nurvan Agent</div>' +
-      '<h1 class="coach-os-title">Ask. Plan. Execute.</h1>' +
-      '<p class="coach-os-subtitle">Intent → Plan → Preview → Confirmation → Result. Nessuna write senza conferma.</p></div></div>' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coNurvanAgent')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coAskPlanExecute')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(tx('coAgentSubtitle')) + '</p></div></div>' +
       '<div class="coach-os-card">' +
-      '<textarea id="coach-os-agent-input" rows="3" placeholder="Es. mostra i clienti inattivi, proponi un deload, crea un task…"' +
+      '<textarea id="coach-os-agent-input" rows="3" placeholder="' + escText(tx('coAgentPlaceholder')) + '"' +
       ' style="width:100%;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:12px;">' +
       escText(state.message) + '</textarea>' +
-      '<button class="btn" style="margin-top:10px;background:#111;color:#fff;" onclick="CoachOS.submitAgentRun()">ASK NURVAN</button></div>' +
+      '<button class="btn" style="margin-top:10px;background:#111;color:#fff;" onclick="CoachOS.submitAgentRun()">' + escText(tx('coAskNurvan')) + '</button></div>' +
       (run
-        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Intent</h2></div>' +
+        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coIntent')) + '</h2></div>' +
           '<div class="coach-os-card"><strong>' + escText(run.intent || (state.intent && state.intent.id) || '') +
-          '</strong><div class="coach-os-muted">Plan: understand → preview → confirm</div></div></section>'
+          '</strong><div class="coach-os-muted">' + escText(tx('coPlanSteps')) + '</div></div></section>'
         : '') +
       (proposals.length
-        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Preview</h2></div>' +
+        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coPreview')) + '</h2></div>' +
           proposals.map(function (proposal, index) {
             return '<div class="coach-os-card" style="margin-bottom:10px;"><div class="coach-os-card-kicker">' +
               escText(proposal.toolId) + '</div><div class="coach-os-card-title">' + escText(proposal.summary) +
               '</div>' + whyHtml(proposal.why) +
               '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
-              '<button class="coach-os-action" onclick="CoachOS.confirmAgentProposal(' + index + ')">CONFIRM</button>' +
-              '<button class="coach-os-action" onclick="CoachOS.undoAgentProposal(' + index + ')">UNDO</button>' +
-              '<button class="coach-os-action" onclick="CoachOS.refreshAgentRun()">REFRESH DATA</button>' +
-              '<button class="coach-os-action" onclick="CoachOS.submitAgentRun()">RE-PLAN</button></div></div>';
+              '<button class="coach-os-action" onclick="CoachOS.confirmAgentProposal(' + index + ')">' + escText(tx('coConfirm')) + '</button>' +
+              '<button class="coach-os-action" onclick="CoachOS.undoAgentProposal(' + index + ')">' + escText(tx('coUndo')) + '</button>' +
+              '<button class="coach-os-action" onclick="CoachOS.refreshAgentRun()">' + escText(tx('coRefreshData')) + '</button>' +
+              '<button class="coach-os-action" onclick="CoachOS.submitAgentRun()">' + escText(tx('coReplan')) + '</button></div></div>';
           }).join('') + '</section>'
-        : '<div class="coach-os-empty">Chiedi un comando ristretto: inattivi, check-in mancanti, deload, messaggio o task.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coAgentEmpty')) + '</div>') +
       (state.result
-        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Result</h2></div>' +
+        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coResult')) + '</h2></div>' +
           '<div class="coach-os-card">' + escText(JSON.stringify(state.result)) + '</div></section>'
         : '') +
       (state.stale
-        ? '<div class="coach-os-error">Questa proposta non è più aggiornata perché i dati sono cambiati.</div>'
+        ? '<div class="coach-os-error">' + escText(tx('coStaleProposal')) + '</div>'
         : '') +
       '</div>';
   }
@@ -59671,13 +60096,13 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       state.intent = { id: 'inactive_clients' };
       state.run = {
         id: 'local-preview',
-        intent: 'clienti inattivi',
+        intent: tx('coAttInactive'),
         proposals: [{
           id: 'local-1',
           toolId: 'clients.inactive',
-          summary: 'Anteprima locale: elenca i clienti senza workout da 7 giorni.',
+          summary: tx('coAgentEmpty'),
           why: {
-            reasons: [{ statement: 'I dati di workout hanno più di 7 giorni.', evidence: { source: 'workout_logs' } }],
+            reasons: [{ statement: tx('coAttInactive'), evidence: { source: 'workout_logs' } }],
             viewData: true
           },
           expectedRevision: 1,
@@ -59686,7 +60111,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
         }]
       };
       state.stale = false;
-      if (typeof practiceToast === 'function') practiceToast('Agent in anteprima locale · conferma disabilitata', 'info');
+      if (typeof practiceToast === 'function') practiceToast(tx('coAgentLocal'), 'info');
       CoachOS.navigate('coachAgent');
     }
   };
@@ -59711,7 +60136,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       CoachOS.navigate('coachAgent');
     } catch (error) {
       if (error && error.code === 'STALE_PROPOSAL') state.stale = true;
-      if (typeof practiceToast === 'function') practiceToast(error.message || 'Conferma rifiutata', 'warning');
+      if (typeof practiceToast === 'function') practiceToast(error.message || tx('coDismiss'), 'warning');
       CoachOS.navigate('coachAgent');
     }
   };
@@ -59724,7 +60149,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       headers: window.practiceHeaders(true),
       body: JSON.stringify({ proposalId: proposal.id })
     });
-    if (typeof practiceToast === 'function') practiceToast('Azione annullata', 'info');
+    if (typeof practiceToast === 'function') practiceToast(tx('coUndo'), 'info');
   };
 
   CoachOS.refreshAgentRun = CoachOS.submitAgentRun;
@@ -59746,6 +60171,26 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   function escText(value) {
     if (typeof window.esc === 'function') return window.esc(String(value || ''));
     return String(value || '').replace(/[&<>"']/g, '');
+  }
+
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
+  function typeLabel(type) {
+    const map = {
+      'Coaching Call': 'coTypeCall',
+      'Check-in': 'coTypeCheckIn',
+      'Review': 'coTypeReview',
+      'Consultation': 'coTypeConsult',
+      'Custom Session': 'coTypeCustom',
+      'Training Session': 'coTypeTraining'
+    };
+    return map[type] ? tx(map[type]) : type;
+  }
+
+  function rangeLabel(range) {
+    return ({ day: tx('coDay'), week: tx('coWeek'), month: tx('coMonth') })[range] || range;
   }
 
   function timeZone() {
@@ -59772,22 +60217,22 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     const rows = state.appointments.filter(inRange);
     container.innerHTML =
       '<div class="coach-os-page">' +
-      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Online coaching · ' + escText(timeZone()) + '</div>' +
-      '<h1 class="coach-os-title">Calendar</h1>' +
-      '<p class="coach-os-subtitle">Availability → booking → reminder → reschedule/cancel. Nessun Google/Apple Calendar.</p></div>' +
-      '<button class="btn" style="background:#111;color:#fff;" onclick="CoachOS.createAppointmentPrompt()">NEW SESSION</button></div>' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coOnlineCoaching')) + ' · ' + escText(timeZone()) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coCalendar')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(tx('coCalendarSubtitle')) + ' ' + escText(tx('coNoCalendarHint')) + '</p></div>' +
+      '<button class="btn" style="background:#111;color:#fff;" onclick="CoachOS.createAppointmentPrompt()">' + escText(tx('coNewSession')) + '</button></div>' +
       '<div class="coach-os-quick-actions">' +
       ['day', 'week', 'month'].map(function (range) {
         return '<button class="coach-os-action' + (state.range === range ? ' active' : '') + '" onclick="CoachOS.setCalendarRange(\'' + range + '\')">' +
-          range.toUpperCase() + '</button>';
+          escText(rangeLabel(range)) + '</button>';
       }).join('') +
-      '<button class="coach-os-action" onclick="CoachOS.setAvailabilityPrompt()">AVAILABILITY</button>' +
-      '<a class="coach-os-action" href="/api/coach/appointments.ics">ICAL</a></div>' +
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Session types</h2></div>' +
+      '<button class="coach-os-action" onclick="CoachOS.setAvailabilityPrompt()">' + escText(tx('coAvailability')) + '</button>' +
+      '<a class="coach-os-action" href="/api/coach/appointments.ics">' + escText(tx('coIcal')) + '</a></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionTypes')) + '</h2></div>' +
       '<div class="coach-os-quick-actions">' + TYPES.map(function (type) {
-        return '<span class="coach-os-action" style="cursor:default;">' + escText(type) + '</span>';
+        return '<span class="coach-os-action" style="cursor:default;">' + escText(typeLabel(type)) + '</span>';
       }).join('') + '</div></section>' +
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Availability</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coAvailability')) + '</h2></div>' +
       (state.availability.length
         ? '<div class="coach-os-list">' + state.availability.map(function (rule) {
           function clock(minute) {
@@ -59798,31 +60243,31 @@ window.rememberApprovedProgram = rememberApprovedProgram;
             return hours + ':' + mins;
           }
           return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' +
-            escText(rule.weekday != null ? 'Giorno ' + rule.weekday : 'Regola') + '</strong><span>' +
+            escText(rule.weekday != null ? tx('coDay') + ' ' + rule.weekday : tx('coRule')) + '</strong><span>' +
             escText(clock(rule.startMinute) || rule.startTime || '') + '–' +
             escText(clock(rule.endMinute) || rule.endTime || '') +
             ' · ' + escText(rule.timeZone || timeZone()) + '</span></span></div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessuna disponibilità. Imposta orari prima di prenotare.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoAvailability')) + '</div>') +
       '</section>' +
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Upcoming</h2></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coUpcoming')) + '</h2></div>' +
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (item) {
           return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' +
-            escText(item.title) + '</strong><span>' + escText(item.type) + ' · ' +
+            escText(item.title) + '</strong><span>' + escText(typeLabel(item.type)) + ' · ' +
             escText(String(item.startsAt || '').replace('T', ' ').slice(0, 16)) + ' · ' +
             escText(item.timeZone) + '</span></span>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.rescheduleAppointment(\'' +
-            escText(item.id) + '\')">RESCHEDULE</button>' +
+            escText(item.id) + '\')">' + escText(tx('coReschedule')) + '</button>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.cancelAppointment(\'' +
-            escText(item.id) + '\')">CANCEL</button></div>';
+            escText(item.id) + '\')">' + escText(tx('coCancel')) + '</button></div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessuna sessione in questa vista. Imposta disponibilità e prenota una Coaching Call.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coNoSessions')) + '</div>') +
       '</section></div>';
   }
 
   CoachOS.views.coachCalendar = async function (container) {
-    container.innerHTML = '<div class="coach-os-skeleton">Loading calendar…</div>';
+    container.innerHTML = '<div class="coach-os-skeleton">' + escText(tx('coLoadingCalendar')) + '</div>';
     try {
       const payload = await window.practiceFetch('/api/coach/appointments', { headers: window.practiceHeaders() });
       state.appointments = payload.appointments || [];
@@ -59846,11 +60291,11 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   };
 
   CoachOS.setAvailabilityPrompt = async function () {
-    const weekday = window.prompt('Giorno settimana (0=Dom … 6=Sab)', '1');
+    const weekday = window.prompt(tx('coWeekdayPrompt'), '1');
     if (weekday == null) return;
-    const startTime = window.prompt('Inizio (HH:MM)', '09:00');
+    const startTime = window.prompt(tx('coStartTime'), '09:00');
     if (!startTime) return;
-    const endTime = window.prompt('Fine (HH:MM)', '17:00');
+    const endTime = window.prompt(tx('coEndTime'), '17:00');
     if (!endTime) return;
     await window.practiceFetch('/api/coach/availability', {
       method: 'POST',
@@ -59866,12 +60311,12 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   };
 
   CoachOS.createAppointmentPrompt = async function () {
-    const title = window.prompt('Titolo sessione', 'Coaching Call');
+    const title = window.prompt(tx('coSessionTitle'), tx('coTypeCall'));
     if (!title) return;
-    const type = window.prompt('Tipo: ' + TYPES.join(', '), 'Coaching Call') || 'Coaching Call';
-    const startsAt = window.prompt('Inizio ISO (es. 2026-09-06T09:00:00.000Z)');
+    const type = window.prompt(tx('coSessionType') + ': ' + TYPES.map(typeLabel).join(', '), 'Coaching Call') || 'Coaching Call';
+    const startsAt = window.prompt(tx('coStartIso'));
     if (!startsAt) return;
-    const weeks = window.prompt('Ricorrenza settimane (1 = singola)', '1') || '1';
+    const weeks = window.prompt(tx('coRecurrenceWeeks'), '1') || '1';
     try {
       await window.practiceFetch('/api/coach/appointments', {
         method: 'POST',
@@ -59892,7 +60337,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   };
 
   CoachOS.rescheduleAppointment = async function (id) {
-    const startsAt = window.prompt('Nuovo inizio ISO');
+    const startsAt = window.prompt(tx('coNewStartIso'));
     if (!startsAt) return;
     await window.practiceFetch('/api/coach/appointments/' + encodeURIComponent(id), {
       method: 'PATCH',
@@ -59922,44 +60367,52 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
   const state = { range: '28', clientId: '' };
 
+  function drawAnalytics(container, kpi, atRisk) {
+    const riskRows = atRisk || kpi.clientsAtRisk || [];
+    container.innerHTML =
+      '<div class="coach-os-page">' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coAthleteQuality')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coAnalytics')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(tx('coAnalyticsSubtitle')) + '</p></div></div>' +
+      '<div class="coach-os-quick-actions">' +
+      ['7', '28', '90'].map(function (days) {
+        return '<button class="coach-os-action" onclick="CoachOS.setAnalyticsRange(\'' + days + '\')">' + days + tx('coDaysShort') + '</button>';
+      }).join('') +
+      '<button class="coach-os-action" onclick="CoachOS.filterAnalyticsClient()">' + escText(tx('coClientFallback')) + '</button></div>' +
+      '<div class="coach-os-card coach-os-kpis">' +
+      [[tx('coAdherence'), kpi.adherence && kpi.adherence.average != null ? kpi.adherence.average + '%' : '—'],
+        [tx('coAtRisk'), kpi.adherence && kpi.adherence.atRisk || 0],
+        [tx('coWorkouts'), kpi.workouts && kpi.workouts.completed28d || 0],
+        [tx('coE1rm'), kpi.e1rm && kpi.e1rm.samples || 0],
+        [tx('coVolume'), kpi.volume && kpi.volume.averageTonnage != null ? kpi.volume.averageTonnage : '—'],
+        [tx('coCheckInsDue'), kpi.checkIns && kpi.checkIns.due || 0]
+      ].map(function (row) {
+        return '<button class="coach-os-kpi" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.navigate(\'coachHub\')"><strong>' +
+          escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></button>';
+      }).join('') + '</div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coClientsToOpen')) + '</h2></div>' +
+      (riskRows.length
+        ? '<div class="coach-os-list">' + riskRows.map(function (row) {
+          return '<button class="coach-os-row" onclick="openCoachClient(\'' + escText(row.id) + '\')"><span class="coach-os-row-main"><strong>' +
+            escText(row.name) + '</strong><span>' + escText(tx('coAdherence')) + ' ' + escText(row.adherence) + '%</span></span></button>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">' + escText(tx('coNoAtRisk')) + '</div>') +
+      '</section></div>';
+  }
+
   CoachOS.views.coachAnalytics = async function (container) {
-    container.innerHTML = '<div class="coach-os-skeleton">Loading coach analytics…</div>';
+    container.innerHTML = '<div class="coach-os-skeleton">' + escText(tx('coLoadingAnalytics')) + '</div>';
     try {
       const query = '?range=' + encodeURIComponent(state.range) +
         (state.clientId ? '&clientId=' + encodeURIComponent(state.clientId) : '');
       const data = await window.practiceFetch('/api/coach/analytics' + query, { headers: window.practiceHeaders() });
-      const kpi = data.analytics || {};
-      container.innerHTML =
-        '<div class="coach-os-page">' +
-        '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Athlete quality</div>' +
-        '<h1 class="coach-os-title">Coach Analytics</h1>' +
-        '<p class="coach-os-subtitle">Adherence, workout e check-in. Nessun revenue o MRR qui.</p></div></div>' +
-        '<div class="coach-os-quick-actions">' +
-        ['7', '28', '90'].map(function (days) {
-          return '<button class="coach-os-action" onclick="CoachOS.setAnalyticsRange(\'' + days + '\')">' + days + 'D</button>';
-        }).join('') +
-        '<button class="coach-os-action" onclick="CoachOS.filterAnalyticsClient()">CLIENT</button></div>' +
-        '<div class="coach-os-card coach-os-kpis">' +
-        [['Adherence', kpi.adherence && kpi.adherence.average != null ? kpi.adherence.average + '%' : '—'],
-          ['At risk', kpi.adherence && kpi.adherence.atRisk || 0],
-          ['Workouts', kpi.workouts && kpi.workouts.completed28d || 0],
-          ['e1RM samples', kpi.e1rm && kpi.e1rm.samples || 0],
-          ['Volume', kpi.volume && kpi.volume.averageTonnage != null ? kpi.volume.averageTonnage : '—'],
-          ['Check-ins due', kpi.checkIns && kpi.checkIns.due || 0]
-        ].map(function (row) {
-          return '<button class="coach-os-kpi" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.navigate(\'coachHub\')"><strong>' +
-            escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></button>';
-        }).join('') + '</div>' +
-        '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Clients to open</h2></div>' +
-        ((kpi.clientsAtRisk || []).length
-          ? '<div class="coach-os-list">' + kpi.clientsAtRisk.map(function (row) {
-            return '<button class="coach-os-row" onclick="openCoachClient(\'' + escText(row.id) + '\')"><span class="coach-os-row-main"><strong>' +
-              escText(row.name) + '</strong><span>Adherence ' + escText(row.adherence) + '%</span></span></button>';
-          }).join('') + '</div>'
-          : '<div class="coach-os-empty">Nessun cliente sotto soglia. Apri Clients per il dettaglio.</div>') +
-        '</section></div>';
+      drawAnalytics(container, data.analytics || {}, data.analytics && data.analytics.clientsAtRisk);
     } catch (_) {
       const rows = (typeof store !== 'undefined' && store.__cpClientList) || [];
       const atRisk = rows.filter(function (row) {
@@ -59975,32 +60428,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
         checkIns: { due: rows.filter(function (row) { return row.nextCheckAt && new Date(row.nextCheckAt).getTime() < Date.now(); }).length },
         clientsAtRisk: atRisk
       };
-      state.__kpi = kpi;
-      container.innerHTML =
-        '<div class="coach-os-page">' +
-        '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Athlete quality</div>' +
-        '<h1 class="coach-os-title">Coach Analytics</h1>' +
-        '<p class="coach-os-subtitle">Adherence, workout e check-in. Nessun revenue o MRR qui.</p></div></div>' +
-        '<div class="coach-os-quick-actions">' +
-        ['7', '28', '90'].map(function (days) {
-          return '<button class="coach-os-action" onclick="CoachOS.setAnalyticsRange(\'' + days + '\')">' + days + 'D</button>';
-        }).join('') + '</div>' +
-        '<div class="coach-os-card coach-os-kpis">' +
-        [['Adherence', kpi.adherence.average != null ? kpi.adherence.average + '%' : '—'],
-          ['At risk', kpi.adherence.atRisk], ['Workouts', kpi.workouts.completed28d],
-          ['e1RM samples', kpi.e1rm.samples], ['Check-ins due', kpi.checkIns.due]
-        ].map(function (row) {
-          return '<button class="coach-os-kpi" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.navigate(\'coachHub\')"><strong>' +
-            escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></button>';
-        }).join('') + '</div>' +
-        '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Clients to open</h2></div>' +
-        (atRisk.length
-          ? '<div class="coach-os-list">' + atRisk.map(function (row) {
-            return '<button class="coach-os-row" onclick="openCoachClient(\'' + escText(row.id) + '\')"><span class="coach-os-row-main"><strong>' +
-              escText(row.name) + '</strong><span>Apri i dati</span></span></button>';
-          }).join('') + '</div>'
-          : '<div class="coach-os-empty">Nessun cliente sotto soglia. Apri Clients per il dettaglio.</div>') +
-        '</section></div>';
+      drawAnalytics(container, kpi, atRisk);
     }
   };
 
@@ -60010,7 +60438,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   };
 
   CoachOS.filterAnalyticsClient = function () {
-    const id = window.prompt('Filtra per client ID (vuoto = portfolio)', state.clientId || '');
+    const id = window.prompt(tx('coFilterClient'), state.clientId || '');
     if (id == null) return;
     state.clientId = String(id).trim();
     CoachOS.navigate('coachAnalytics');
@@ -60027,12 +60455,16 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
   function euros(cents) {
     return '€' + (Number(cents || 0) / 100).toFixed(0);
   }
 
   CoachOS.views.coachBusiness = async function (container) {
-    container.innerHTML = '<div class="coach-os-skeleton">Loading ledger…</div>';
+    container.innerHTML = '<div class="coach-os-skeleton">' + escText(tx('coLoadingLedger')) + '</div>';
     let summary = {};
     try {
       const data = await window.practiceFetch('/api/coach/business', { headers: window.practiceHeaders() });
@@ -60041,10 +60473,10 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       summary = { activeClients: 0, revenue30dCents: 0, mrrCents: 0, overdue: 0 };
     }
     container.innerHTML =
-      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Manual ledger</div>' +
-      '<h1 class="coach-os-title">Business</h1><p class="coach-os-subtitle">Nessuno Stripe. Piano, rinnovo e overdue.</p></div></div>' +
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coManualLedger')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coBusiness')) + '</h1><p class="coach-os-subtitle">' + escText(tx('coBusinessSubtitle')) + '</p></div></div>' +
       '<div class="coach-os-card coach-os-kpis">' +
-      [['Active', summary.activeClients || 0], ['Revenue 30d', euros(summary.revenue30dCents)], ['MRR', euros(summary.mrrCents)], ['Overdue', summary.overdue || 0]]
+      [[tx('coActive'), summary.activeClients || 0], [tx('coRevenue30d'), euros(summary.revenue30dCents)], ['MRR', euros(summary.mrrCents)], [tx('coOverdue'), summary.overdue || 0]]
         .map(function (row) {
           return '<div class="coach-os-kpi"><strong>' + escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></div>';
         }).join('') + '</div></div>';
@@ -60059,15 +60491,15 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       rows = [];
     }
     container.innerHTML =
-      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Pipeline</div>' +
-      '<h1 class="coach-os-title">CRM</h1></div></div>' +
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coCrm')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coCrm')) + '</h1></div></div>' +
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (row) {
           return '<button class="coach-os-row" onclick="openCoachClient(\'' + escText(row.id) + '\')"><span class="coach-os-row-main"><strong>' +
             escText(row.name) + '</strong><span>' + escText(row.stage) + (row.nextAction ? ' · ' + escText(row.nextAction) : '') +
             '</span></span></button>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessun cliente in pipeline.</div>') + '</div>';
+        : '<div class="coach-os-empty">' + escText(tx('coCrmEmpty')) + '</div>') + '</div>';
   };
 
   CoachOS.views.coachAutomations = async function (container) {
@@ -60079,23 +60511,23 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       rows = [];
     }
     container.innerHTML =
-      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Rules</div>' +
-      '<h1 class="coach-os-title">Automations</h1><p class="coach-os-subtitle">Trigger, condizione, azione. Dry-run prima di abilitare.</p></div>' +
-      '<button class="btn btn-outline" onclick="CoachOS.createAutomationPrompt()">NEW RULE</button></div>' +
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coRules')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coAutomations')) + '</h1><p class="coach-os-subtitle">' + escText(tx('coAutomationsSubtitle')) + '</p></div>' +
+      '<button class="btn btn-outline" onclick="CoachOS.createAutomationPrompt()">' + escText(tx('coNewRule')) + '</button></div>' +
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (row) {
           return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(row.name) +
             '</strong><span>' + escText(row.trigger) + ' → ' + escText(row.action) + '</span></span>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.dryRunAutomation(\'' +
-            escText(row.id) + '\')">DRY RUN</button>' +
+            escText(row.id) + '\')">' + escText(tx('coDryRun')) + '</button>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.runAutomationNow(\'' +
-            escText(row.id) + '\')">RUN</button></div>';
+            escText(row.id) + '\')">' + escText(tx('coRun')) + '</button></div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">Nessuna automation. Restano fuori dall’Agent V1.</div>') + '</div>';
+        : '<div class="coach-os-empty">' + escText(tx('coNoAutomations')) + '</div>') + '</div>';
   };
 
   CoachOS.createAutomationPrompt = async function () {
-    const name = window.prompt('Nome automation', 'Check-in received → task');
+    const name = window.prompt(tx('coAutomationName'), tx('coAutomationDefault'));
     if (!name) return;
     await window.practiceFetch('/api/coach/automations', {
       method: 'POST',
@@ -60111,7 +60543,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       headers: window.practiceHeaders(true),
       body: JSON.stringify({})
     });
-    if (typeof practiceToast === 'function') practiceToast('Dry-run: ' + (payload.preview && payload.preview.action), 'info');
+    if (typeof practiceToast === 'function') practiceToast(tx('coDryRunPrefix') + ' ' + (payload.preview && payload.preview.action), 'info');
   };
 
   CoachOS.runAutomationNow = async function (id) {
@@ -60122,7 +60554,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     });
     const failed = payload.result && payload.result.failed;
     if (typeof practiceToast === 'function') {
-      practiceToast(failed ? 'Automation failed → task creato' : 'Automation eseguita', failed ? 'danger' : 'success');
+      practiceToast(failed ? tx('coAutomationFailed') : tx('coAutomationRan'), failed ? 'danger' : 'success');
     }
   };
 })();
@@ -60137,6 +60569,10 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   function escText(value) {
     if (typeof window.esc === 'function') return window.esc(String(value || ''));
     return String(value || '').replace(/[&<>"']/g, '');
+  }
+
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
   }
 
   function openItem(item) {
@@ -60158,31 +60594,31 @@ window.rememberApprovedProgram = rememberApprovedProgram;
 
   function drawInbox(container) {
     container.innerHTML =
-      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Operational</div>' +
-      '<h1 class="coach-os-title">Inbox</h1>' +
-      '<p class="coach-os-subtitle">Messaggi, check-in, richieste e attention. La chat 1:1 resta il thread.</p></div></div>' +
-      '<input value="' + escText(state.q) + '" placeholder="Cerca messaggi o clienti" onchange="CoachOS.searchInbox(this.value)" ' +
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coOperational')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(tx('coInbox')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(tx('coInboxSubtitle')) + '</p></div></div>' +
+      '<input value="' + escText(state.q) + '" placeholder="' + escText(tx('coSearchInbox')) + '" onchange="CoachOS.searchInbox(this.value)" ' +
       'style="width:100%;min-height:44px;background:#0b0b0b;border:1px solid var(--co-border);border-radius:12px;color:#fff;padding:0 12px;">' +
       '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
-      '<button class="coach-os-action" onclick="CoachOS.previewBroadcast()">PREVIEW BROADCAST</button></div>' +
+      '<button class="coach-os-action" onclick="CoachOS.previewBroadcast()">' + escText(tx('coPreviewBroadcast')) + '</button></div>' +
       (state.items.length
         ? '<div class="coach-os-list" style="margin-top:12px;">' + state.items.map(function (item, index) {
           return '<div class="coach-os-row"><button class="coach-os-row-main" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.openInboxItem(' + index + ')">' +
-            '<strong>' + escText(item.title) + (item.pinned ? ' · PIN' : '') + '</strong><span>' +
+            '<strong>' + escText(item.title) + (item.pinned ? ' · ' + escText(tx('coPinned')) : '') + '</strong><span>' +
             escText(item.kind) + (item.preview ? ' · ' + escText(item.preview) : '') +
             (item.reaction ? ' · ' + escText(item.reaction) : '') + '</span></button>' +
             (item.kind === 'message'
               ? '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.pinInboxItem(\'' + escText(item.id) + '\',' + (item.pinned ? 'false' : 'true') + ')">' +
-                (item.pinned ? 'UNPIN' : 'PIN') + '</button>'
+                escText(item.pinned ? tx('coUnpin') : tx('coPin')) + '</button>'
               : '') +
             '</div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">Inbox vuota. I thread E2E restano in Chat.</div>') +
+        : '<div class="coach-os-empty">' + escText(tx('coInboxEmpty')) + '</div>') +
       '</div>';
   }
 
   CoachOS.views.coachInbox = async function (container) {
-    container.innerHTML = '<div class="coach-os-skeleton">Loading inbox…</div>';
+    container.innerHTML = '<div class="coach-os-skeleton">' + escText(tx('coLoadingInbox')) + '</div>';
     try {
       const payload = await window.practiceFetch(
         '/api/coach/inbox-feed?q=' + encodeURIComponent(state.q || ''),
@@ -60208,7 +60644,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
             id: 'client-' + client.id,
             kind: 'attention',
             title: client.displayName,
-            preview: client.unreadCount ? (client.unreadCount + ' unread') : 'Richiede attenzione',
+            preview: client.unreadCount ? (client.unreadCount + ' ' + tx('coUnread')) : tx('coRequiresAttention'),
             href: { view: 'coachChat', clientId: client.id }
           };
         }));
@@ -60237,7 +60673,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   };
 
   CoachOS.previewBroadcast = async function () {
-    const raw = window.prompt('Client IDs da includere nella preview (virgola)', '');
+    const raw = window.prompt(tx('coBroadcastIds'), '');
     if (raw == null) return;
     const clientIds = String(raw).split(',').map(function (id) { return id.trim(); }).filter(Boolean);
     const payload = await window.practiceFetch('/api/coach/broadcast/preview', {
@@ -60246,7 +60682,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       body: JSON.stringify({ clientIds: clientIds })
     });
     const preview = payload.preview || {};
-    window.alert('Preview broadcast: ' + (preview.targetCount || 0) + ' target. Nessun messaggio inviato.');
+    window.alert(tx('coBroadcastResult') + ' ' + (preview.targetCount || 0));
   };
 })();
 
@@ -60260,36 +60696,40 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     return String(value || '').replace(/[&<>"']/g, '');
   }
 
+  function tx(key) {
+    return CoachOS.t ? CoachOS.t(key) : key;
+  }
+
   function page(title, subtitle, body) {
-    return '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Assistive media</div>' +
+    return '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coAssistiveMedia')) + '</div>' +
       '<h1 class="coach-os-title">' + escText(title) + '</h1>' +
       '<p class="coach-os-subtitle">' + escText(subtitle) + '</p></div></div>' + body + '</div>';
   }
 
   CoachOS.views.coachNutrition = async function (container) {
     container.innerHTML = page(
-      'Nutrition',
-      'Photo → Estimate → Confirm → Log. L’AI non salva senza conferma.',
-      '<div class="coach-os-card"><div class="coach-os-card-kicker">Meal estimate</div>' +
-      '<input id="coach-os-meal-client" placeholder="Client ID" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<input id="coach-os-meal-p" placeholder="Protein g" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<input id="coach-os-meal-c" placeholder="Carbs g" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<input id="coach-os-meal-f" placeholder="Fats g" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.estimateMeal()">ESTIMATE</button>' +
+      tx('coNutrition'),
+      tx('coMealSubtitle'),
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coMealEstimate')) + '</div>' +
+      '<input id="coach-os-meal-client" placeholder="' + escText(tx('coClientId')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-meal-p" placeholder="' + escText(tx('coProteinG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-meal-c" placeholder="' + escText(tx('coCarbsG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-meal-f" placeholder="' + escText(tx('coFatsG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.estimateMeal()">' + escText(tx('coEstimate')) + '</button>' +
       '<div id="coach-os-meal-result" class="coach-os-muted" style="margin-top:10px;"></div></div>'
     );
   };
 
   CoachOS.views.coachFormReview = async function (container) {
     container.innerHTML = page(
-      'Video form',
-      'Video → Markers → Feedback → Exercise history. Nessuna diagnosi clinica.',
-      '<div class="coach-os-card"><div class="coach-os-card-kicker">Form review</div>' +
-      '<input id="coach-os-form-client" placeholder="Client ID" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<input id="coach-os-form-exercise" placeholder="Exercise" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<input id="coach-os-form-markers" placeholder="Markers (es. 0:12 knee valgus; 0:28 depth)" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<textarea id="coach-os-form-feedback" placeholder="Feedback coach" style="width:100%;min-height:88px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:10px 12px;"></textarea>' +
-      '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.saveFormReview()">SAVE MARKERS</button>' +
+      tx('coVideoForm'),
+      tx('coFormSubtitle'),
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coFormReview')) + '</div>' +
+      '<input id="coach-os-form-client" placeholder="' + escText(tx('coClientId')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-form-exercise" placeholder="' + escText(tx('coExercise')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-form-markers" placeholder="' + escText(tx('coMarkersHint')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<textarea id="coach-os-form-feedback" placeholder="' + escText(tx('coCoachFeedback')) + '" style="width:100%;min-height:88px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:10px 12px;"></textarea>' +
+      '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.saveFormReview()">' + escText(tx('coSaveMarkers')) + '</button>' +
       '<div id="coach-os-form-result" class="coach-os-muted" style="margin-top:10px;"></div></div>'
     );
   };
@@ -60307,9 +60747,10 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     window.__coachMealEstimate = payload.meal;
     const box = document.getElementById('coach-os-meal-result');
     if (box) {
-      box.innerHTML = 'Stima ' + escText((payload.meal && payload.meal.estimated && payload.meal.estimated.calories) || '—') +
-        ' kcal · confidence ' + escText(payload.meal && payload.meal.estimated && payload.meal.estimated.confidence) +
-        '<br><button class="btn btn-outline" style="margin-top:8px;" onclick="CoachOS.confirmMeal()">CONFIRM & LOG</button>';
+      box.innerHTML = escText(tx('coEstimatePrefix')) + ' ' + escText((payload.meal && payload.meal.estimated && payload.meal.estimated.calories) || '—') +
+        ' ' + escText(tx('coKcal')) + ' · ' + escText(tx('coConfidence')) + ' ' +
+        escText(payload.meal && payload.meal.estimated && payload.meal.estimated.confidence) +
+        '<br><button class="btn btn-outline" style="margin-top:8px;" onclick="CoachOS.confirmMeal()">' + escText(tx('coConfirmLog')) + '</button>';
     }
   };
 
@@ -60321,7 +60762,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       headers: window.practiceHeaders(true),
       body: JSON.stringify(meal.estimated || {})
     });
-    if (typeof practiceToast === 'function') practiceToast('Pasto confermato', 'success');
+    if (typeof practiceToast === 'function') practiceToast(tx('coConfirmLog'), 'success');
   };
 
   CoachOS.saveFormReview = async function () {
@@ -60339,7 +60780,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       body: JSON.stringify({ clientId: clientId, exercise: exercise, markers: markers, feedback: feedback })
     });
     const box = document.getElementById('coach-os-form-result');
-    if (box) box.textContent = 'Review salvata · ' + ((payload.review && payload.review.exercise) || exercise || 'exercise');
+    if (box) box.textContent = tx('coReviewSaved') + ' · ' + ((payload.review && payload.review.exercise) || exercise || tx('coExercise'));
   };
 })();
 
