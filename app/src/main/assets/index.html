@@ -47214,7 +47214,7 @@ function buildWorkoutPdfHtml(opts) {
       const dayTitle = (typeof sessionDisplayName === 'function')
         ? sessionDisplayName(day, di)
         : (day.name || day.title || day.day || ('Giorno ' + (di + 1)));
-      body += '<h3 class="pdf-day" style="margin:14px 0 8px;font-size:16px;color:#c9a227;font-weight:900;letter-spacing:0.4px;">' + esc(dayTitle) + '</h3>';
+      body += '<h3 class="pdf-day" style="margin:14px 0 8px;font-size:16px;color:#c9a227;font-weight:900;letter-spacing:0.4px;">' + esc(dayTitle) + ' · Giorno ' + (di + 1) + '/' + (days.length || 1) + '</h3>';
       const list = day.exercises || day.rows || [];
       body += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px;">';
       body += '<thead><tr style="background:#1a1a1a;color:#c9a227;text-align:left;"><th style="padding:6px;border:1px solid #333;">Esercizio</th><th style="padding:6px;border:1px solid #333;">Schema</th><th style="padding:6px;border:1px solid #333;">Serie / carichi</th><th style="padding:6px;border:1px solid #333;">Rest</th></tr></thead><tbody>';
@@ -47264,7 +47264,7 @@ function buildWorkoutPdfHtml(opts) {
       });
       const macroLine = (kcal ? (Math.round(kcal) + ' kcal') : '') +
         ((p || c || f) ? ('  ·  P ' + Math.round(p) + 'g  C ' + Math.round(c) + 'g  F ' + Math.round(f) + 'g') : '');
-      body += '<h3 class="pdf-day" style="font-size:13px;margin:10px 0 4px;display:flex;justify-content:space-between;gap:12px;"><span>' + esc(nd.day || ('Giorno ' + (ni + 1))) + '</span><span style="font-weight:600;color:#aaa;">' + esc(macroLine) + '</span></h3>';
+      body += '<h3 class="pdf-day" style="font-size:13px;margin:18px 0 8px;display:flex;justify-content:space-between;gap:12px;"><span>' + esc(nd.day || ('Giorno ' + (ni + 1))) + ' · Giorno ' + (ni + 1) + '/' + DATA.nutrition.days.length + '</span><span style="font-weight:600;color:#aaa;">' + esc(macroLine) + '</span></h3>';
       (nd.meals || []).forEach(function (meal) {
         body += '<div style="font-size:11px;margin:8px 0 4px;"><b>' + esc(meal.name || 'Pasto') + '</b></div><ul style="margin:0 0 8px 18px;padding:0;">';
         (meal.foods || meal.items || []).forEach(function (food) {
@@ -47364,6 +47364,7 @@ function buildWorkoutPdfBytes(opts) {
   var cmds = [];
   var y = H - MT;
   var pageNum = 0;
+  var headerWeek = '';
 
   function txt(font, size, color, x, yy, s) {
     cmds.push('BT /' + font + ' ' + size + ' Tf ' + color + ' rg 1 0 0 1 ' + x + ' ' + yy + ' Tm (' + pdfEsc(s) + ') Tj ET');
@@ -47408,6 +47409,10 @@ function buildWorkoutPdfBytes(opts) {
     var dateStr = new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
     txt('F2', 7, '0.55 0.55 0.55', W - MR - 140, H - 45, dateStr + (DATA.title ? ('  |  ' + DATA.title) : ''));
     y = H - 80;
+    if (headerWeek) {
+      txt('F1', 11, GOLD, ML, y, clipFit(headerWeek, CW, 11));
+      y -= 18;
+    }
   }
   function startFreshPage() {
     if (cmds.length) flushPage();
@@ -47417,19 +47422,23 @@ function buildWorkoutPdfBytes(opts) {
     if (y < (H - 82)) startFreshPage();
   }
   function sectionTitle(label) {
-    needSpace(30);
-    rct(ML, y - 2, CW, 20, '0.08 0.08 0.08');
-    rct(ML, y - 2, 4, 20, GOLD);
-    txt('F1', 11, GOLD, ML + 12, y + 4, clipFit(label.toUpperCase(), CW - 20, 11));
-    y -= 28;
+    needSpace(40);
+    y -= 10;
+    var barH = 20;
+    rct(ML, y - barH, CW, barH, '0.08 0.08 0.08');
+    rct(ML, y - barH, 4, barH, GOLD);
+    txt('F1', 11, GOLD, ML + 12, y - 13, clipFit(label.toUpperCase(), CW - 20, 11));
+    y -= barH + 12;
   }
   function dayTitle(label, extra) {
-    needSpace(28);
-    rct(ML, y - 6, CW, 24, '0.08 0.08 0.08');
-    rct(ML, y - 6, 4, 24, GOLD);
-    txt('F1', 13, GOLD, ML + 12, y + 2, clipFit(String(label || '').toUpperCase(), extra ? 240 : CW - 20, 13));
-    if (extra) txt('F2', 8, '0.7 0.7 0.7', ML + 260, y + 2, clipFit(extra, CW - 270, 8));
-    y -= 30;
+    needSpace(48);
+    y -= 14;
+    var barH = 22;
+    rct(ML, y - barH, CW, barH, '0.08 0.08 0.08');
+    rct(ML, y - barH, 4, barH, GOLD);
+    txt('F1', 12, GOLD, ML + 12, y - 14, clipFit(String(label || '').toUpperCase(), extra ? 268 : CW - 20, 12));
+    if (extra) txt('F2', 8, '0.78 0.78 0.78', ML + 292, y - 14, clipFit(extra, CW - 302, 8));
+    y -= barH + 12;
   }
   function nutritionDayMacros(nd) {
     var kcal = 0, p = 0, c = 0, f = 0;
@@ -47457,18 +47466,19 @@ function buildWorkoutPdfBytes(opts) {
     return { kcal: Math.round(kcal), p: Math.round(p), c: Math.round(c), f: Math.round(f) };
   }
 
-  drawHeader();
-
   var firstWeekDrawn = true;
   for (var wi = startW; wi <= endW; wi++) {
     var week = weeksList[wi - 1];
     if (!week) continue;
     var days = week.sessions || week.days || [];
-    if (!firstWeekDrawn) startFreshPage();
+    var weekNum = week.weekNumber || week.week || wi;
+    headerWeek = 'Settimana ' + weekNum + (week.title ? ('  ·  ' + week.title) : '');
+    if (firstWeekDrawn) drawHeader();
+    else startFreshPage();
     firstWeekDrawn = false;
-    sectionTitle('Settimana ' + (week.weekNumber || week.week || wi) + (week.title ? ('  -  ' + week.title) : ''));
 
     var firstDayOfWeek = true;
+    var dayTotal = days.length || 1;
     days.forEach(function (day, di) {
       if (scope === 'day' && (wi !== currentWeek || di !== currentDay)) return;
       if (!firstDayOfWeek) startFreshPage();
@@ -47476,7 +47486,7 @@ function buildWorkoutPdfBytes(opts) {
       var dayLabel = (typeof sessionDisplayName === 'function')
         ? sessionDisplayName(day, di)
         : (day.name || day.title || day.day || ('Giorno ' + (di + 1)));
-      dayTitle(dayLabel);
+      dayTitle(dayLabel + '  ·  Giorno ' + (di + 1) + '/' + dayTotal);
 
       var list = day.exercises || day.rows || [];
       list.forEach(function (row, ei) {
@@ -47504,14 +47514,15 @@ function buildWorkoutPdfBytes(opts) {
         if (row.rest) meta.push('Rest ' + row.rest);
         if (tempo) meta.push('Tempo ' + tempo);
 
-        rct(ML, y - 30, CW, barH, '0.08 0.08 0.08');
-        rct(ML, y - 30, 4, barH, GOLD);
-        txt('F1', 12, GOLD, ML + 12, y - 6, clipFit(name, CW - (meta.length ? 180 : 20), 12));
-        if (meta.length) txt('F2', 7, '0.75 0.65 0.35', ML + 300, y - 6, clipFit(meta.join('  ·  '), 210, 7));
+        y -= 6;
+        rct(ML, y - barH, CW, barH, '0.08 0.08 0.08');
+        rct(ML, y - barH, 4, barH, GOLD);
+        txt('F1', 12, GOLD, ML + 12, y - 12, clipFit(name, CW - (meta.length ? 180 : 20), 12));
+        if (meta.length) txt('F2', 7, '0.75 0.65 0.35', ML + 300, y - 12, clipFit(meta.join('  ·  '), 210, 7));
         cols.forEach(function (c) {
-          txt('F1', 6.5, GOLD, c.x + 4, y - 24, c.label);
+          txt('F1', 6.5, GOLD, c.x + 4, y - 28, c.label);
         });
-        y -= barH;
+        y -= barH + 4;
 
         for (var s = 1; s <= setCount; s++) {
           var base = 'w' + wi + '_d' + di + '_e' + ei + '_s' + s;
@@ -47547,6 +47558,9 @@ function buildWorkoutPdfBytes(opts) {
     });
   }
 
+  headerWeek = '';
+  if (firstWeekDrawn) drawHeader();
+
   if (opts.nutrition && DATA.nutrition && Array.isArray(DATA.nutrition.days) && DATA.nutrition.days.length) {
     startSectionPage();
     sectionTitle('PIANO ALIMENTARE');
@@ -47554,10 +47568,11 @@ function buildWorkoutPdfBytes(opts) {
     if (targets.daily_calories_target) {
       needSpace(16);
       txt('F2', 8, BLACK, ML, y, clipFit('Target: ' + (targets.daily_calories_target || '-') + ' kcal  |  P ' + (targets.daily_protein_target || '-') + 'g  |  C ' + (targets.daily_carbs_target || '-') + 'g  |  F ' + (targets.daily_fats_target || '-') + 'g', CW, 8));
-      y -= 16;
+      y -= 22;
     }
+    var nutrDays = DATA.nutrition.days.length;
     DATA.nutrition.days.forEach(function (nd, ni) {
-      var dayH = 30;
+      var dayH = 52;
       (nd.meals || []).forEach(function (meal) {
         dayH += 17;
         dayH += ((meal.foods || meal.items || []).length) * 12;
@@ -47566,7 +47581,7 @@ function buildWorkoutPdfBytes(opts) {
       var macros = nutritionDayMacros(nd);
       var macroLine = (macros.kcal ? (macros.kcal + ' kcal') : '') +
         (macros.p || macros.c || macros.f ? ('  |  P ' + (macros.p || 0) + 'g  C ' + (macros.c || 0) + 'g  F ' + (macros.f || 0) + 'g') : '');
-      dayTitle(nd.day || ('Giorno ' + (ni + 1)), macroLine);
+      dayTitle((nd.day || ('Giorno ' + (ni + 1))) + '  ·  Giorno ' + (ni + 1) + '/' + nutrDays, macroLine);
       (nd.meals || []).forEach(function (meal) {
         needSpace(16);
         txt('F1', 8, BLACK, ML + 4, y, clipFit(meal.name || 'Pasto', CW - 8, 8));
@@ -47588,6 +47603,7 @@ function buildWorkoutPdfBytes(opts) {
   }
 
   if (opts.supp && DATA.supplementation) {
+    headerWeek = '';
     startSectionPage();
     sectionTitle('INTEGRAZIONE');
     var suppItems = DATA.supplementation.items || DATA.supplementation.supplements || [];
@@ -47622,6 +47638,7 @@ function buildWorkoutPdfBytes(opts) {
 
   if (opts.therapy && (DATA.therapy || store.therapy)) {
     var ther = DATA.therapy || store.therapy;
+    headerWeek = '';
     startSectionPage();
     sectionTitle('TERAPIA');
     var meds = ther.medications || ther.items || [];
