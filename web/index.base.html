@@ -1578,7 +1578,7 @@ body.focus-mode [data-rewards-only] {
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="toggleAccountMode()" id="account-mode" data-i18n="createAccount">CREA UN ACCOUNT</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="togglePasswordRecovery()" id="account-forgot">PASSWORD DIMENTICATA</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="logoutAccount()" id="account-logout">ESCI</button>
-    <button class="btn btn-primary" style="width:100%;margin-top:8px;display:none;" onclick="syncAccountData()" id="account-sync">SINCRONIZZA DATI</button>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px;display:none;" onclick="syncAccountData(true)" id="account-sync">SINCRONIZZA DATI</button>
     <div id="account-status" class="msg ai" style="margin-top:10px;"></div>
   </div>
 </div>
@@ -2179,6 +2179,8 @@ function isCoachUnlocked() {
 }
 var store = loadStore();
 ensureStoreIntegrity();
+if (store.trainingWeek) currentWeek = Math.max(1, Number(store.trainingWeek) || 1);
+if (typeof store.trainingDay === 'number') currentDay = Math.max(0, Number(store.trainingDay) || 0);
 if(!store.prefs) store.prefs = { intensityType: 'RIR', duration: 16, frequency: 4 };
 if(!store.prefs.duration) store.prefs.duration = 16;
 if(typeof store.prefs.durationUserSet!=='boolean') store.prefs.durationUserSet = false;
@@ -2393,16 +2395,79 @@ function epleyE1rm(load, reps) {
   if (!Number.isFinite(R) || R <= 0) return L;
   return L * (1 + R / 30);
 }
-function getLoadSuggestion(exerciseIndex, row){
-  if(currentWeek <= 1) return null;
-  const prevSets = collectPrevWeekSetLogs(exerciseIndex, row || {});
-  const loads = prevSets.map(function (s) { return parseFloat(s.load); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
-  if (!loads.length) return null;
-  const top = Math.max.apply(null, loads);
-  const rirs = prevSets.map(function (s) { return parseFloat(s.rir); }).filter(Number.isFinite);
+function roundLoadStep(kg) {
+  const n = parseFloat(kg);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(n * 2) / 2;
+}
+function applyProgressionToLoad(prevLoad, addKg) {
+  const n = parseFloat(prevLoad);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return roundLoadStep(n + (Number(addKg) || 0));
+}
+/** Same increment for every exercise: keep / +1.25 / +2.5 from THAT set's last week, never copy the top set. */
+function workoutProgressionPolicy(prevSets, row) {
+  const sets = Array.isArray(prevSets) ? prevSets : [];
+  const loads = sets.map(function (s) { return parseFloat(s.load); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
+  const rirs = sets.map(function (s) { return parseFloat(s.rir); }).filter(Number.isFinite);
+  const repsN = sets.map(function (s) { return parseFloat(String(s.reps).replace(/[^\d.].*/, '')); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
+  const top = loads.length ? Math.max.apply(null, loads) : null;
   const avgRir = rirs.length ? rirs.reduce(function (a, b) { return a + b; }, 0) / rirs.length : null;
-  const mul = (avgRir != null && avgRir >= 2) ? 1.025 : 1;
-  return Math.round(top * mul * 2) / 2;
+  const targetReps = parseFloat(String((row && (row.repsTarget || row.reps)) || '').replace(/[^\d.].*/, '')) || (repsN[0] || 0);
+  const hitReps = !targetReps || (repsN.length && repsN.every(function (r) { return r >= targetReps * 0.9; }));
+  const missed = targetReps && repsN.length && repsN.some(function (r) { return r < targetReps * 0.7; });
+  let addKg = 0;
+  let advice = '';
+  if (!loads.length) {
+    advice = 'Ripeti lo schema e registra i kg reali: senza carichi loggati non posso dirti se aumentare.';
+  } else if (missed) {
+    advice = 'Alcune serie sono sotto target: ripeti il carico di ogni serie e chiudi le reps prima di alzare.';
+  } else if (avgRir != null && avgRir >= 2.5 && hitReps) {
+    addKg = 2.5;
+    advice = 'Margine alto (RIR medio ' + avgRir.toFixed(1) + '): +2,5 kg su ogni serie, o +1 rep.';
+  } else if (avgRir != null && avgRir >= 1.5 && hitReps) {
+    addKg = 1.25;
+    advice = 'Buona seduta: +1,25 kg su ogni serie (o +2,5 / +1 rep se la tecnica è pulita).';
+  } else if (avgRir != null && avgRir <= 0.5 && !missed) {
+    advice = 'Vicino al cedimento: ripeti il carico di ogni serie o +1 rep se la tecnica è pulita.';
+  } else {
+    advice = 'Ripeti il carico di ogni serie e cerca +1 rep. Aumenta i kg se chiudi tutte le serie con RIR ≥ 2.';
+  }
+  return { addKg: addKg, advice: advice, top: top };
+}
+function suggestedLoadForSet(exerciseIndex, setNum, row) {
+  if (currentWeek <= 1) return null;
+  const prevSets = collectPrevWeekSetLogs(exerciseIndex, row || {});
+  if (!prevSets.length) return null;
+  const prevSame = prevSets.find(function (ps) { return Number(ps.set) === Number(setNum); });
+  if (!prevSame || prevSame.load === '' || prevSame.load == null) return null;
+  const policy = workoutProgressionPolicy(prevSets, row || {});
+  return applyProgressionToLoad(prevSame.load, policy.addKg);
+}
+function isLegacyCopiedTopPrefill(stored, exerciseIndex, setNum, row) {
+  const n = parseFloat(stored);
+  if (!Number.isFinite(n) || n <= 0 || currentWeek <= 1) return false;
+  const prevSets = collectPrevWeekSetLogs(exerciseIndex, row || {});
+  const loads = prevSets.map(function (s) { return parseFloat(s.load); }).filter(function (x) { return Number.isFinite(x) && x > 0; });
+  if (!loads.length) return false;
+  const top = Math.max.apply(null, loads);
+  const legacy = Math.round(top * 1.025 * 2) / 2;
+  if (n !== legacy) return false;
+  const prevSame = prevSets.find(function (ps) { return Number(ps.set) === Number(setNum); });
+  const prevN = prevSame ? parseFloat(prevSame.load) : NaN;
+  return !Number.isFinite(prevN) || prevN !== n;
+}
+function getLoadSuggestion(exerciseIndex, row, setNum) {
+  if (setNum != null) return suggestedLoadForSet(exerciseIndex, setNum, row);
+  if (currentWeek <= 1) return null;
+  const prevSets = collectPrevWeekSetLogs(exerciseIndex, row || {});
+  if (!prevSets.length) return null;
+  const policy = workoutProgressionPolicy(prevSets, row || {});
+  const topRow = prevSets.filter(function (s) { return parseFloat(s.load) > 0; }).sort(function (a, b) {
+    return parseFloat(b.load) - parseFloat(a.load);
+  })[0];
+  if (!topRow) return null;
+  return applyProgressionToLoad(topRow.load, policy.addKg);
 }
 
 function formatPrevWeekLoadAdvice(exIdx, row) {
@@ -2412,30 +2477,13 @@ function formatPrevWeekLoadAdvice(exIdx, row) {
   const prevParts = prevSets.map(function (s) {
     return (s.load !== '' ? s.load : '?') + '×' + (s.reps !== '' ? s.reps : '?') + (s.rir !== '' ? (' @' + s.rir) : '');
   });
-  const loads = prevSets.map(function (s) { return parseFloat(s.load); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
-  const rirs = prevSets.map(function (s) { return parseFloat(s.rir); }).filter(Number.isFinite);
-  const repsN = prevSets.map(function (s) { return parseFloat(String(s.reps).replace(/[^\d.].*/, '')); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
-  const top = loads.length ? Math.max.apply(null, loads) : null;
-  const avgRir = rirs.length ? rirs.reduce(function (a, b) { return a + b; }, 0) / rirs.length : null;
-  const targetReps = parseFloat(String((row && (row.repsTarget || row.reps)) || '').replace(/[^\d.].*/, '')) || (repsN[0] || 0);
-  const hitReps = !targetReps || (repsN.length && repsN.every(function (r) { return r >= targetReps * 0.9; }));
-  const missed = targetReps && repsN.length && repsN.some(function (r) { return r < targetReps * 0.7; });
-  let advice = '';
-  if (!loads.length) {
-    advice = 'Ripeti lo schema e registra i kg reali: senza carichi loggati non posso dirti se aumentare.';
-  } else if (missed) {
-    advice = 'Alcune serie sono sotto target: ripeti ~' + top + ' kg e chiudi le reps prima di alzare.';
-  } else if (avgRir != null && avgRir >= 2.5 && hitReps) {
-    const next = Math.round(top * 1.025 * 2) / 2;
-    advice = 'Margine alto (RIR medio ' + avgRir.toFixed(1) + '): puoi aumentare. Target ~' + next + ' kg.';
-  } else if (avgRir != null && avgRir >= 1.5 && hitReps) {
-    const next = Math.round((top + 1.25) * 2) / 2;
-    advice = 'Buona seduta: +1,25/2,5 kg o +1 rep. Target ~' + next + ' kg.';
-  } else if (avgRir != null && avgRir <= 0.5 && !missed) {
-    advice = 'Vicino al cedimento: ripeti ~' + top + ' kg o +1 rep se la tecnica è pulita. Deload solo se hai fallito le serie.';
-  } else {
-    advice = 'Ripeti ~' + (top || 'lo stesso carico') + ' kg e cerca +1 rep. Aumenta i kg se chiudi tutte le serie con RIR ≥ 2.';
-  }
+  const policy = workoutProgressionPolicy(prevSets, row || {});
+  const nextParts = prevSets.map(function (s) {
+    const next = applyProgressionToLoad(s.load, policy.addKg);
+    return next != null ? String(next) : null;
+  }).filter(Boolean);
+  let advice = policy.advice;
+  if (nextParts.length) advice += ' Prefill: ' + nextParts.join(' · ') + ' kg.';
   return `<div style="font-size:11px;color:var(--gold);font-weight:700;margin:0 0 6px;">Sett. scorsa: ${esc(prevParts.join(' · '))}</div>
     <div style="font-size:10px;color:#aaa;margin:0 0 8px;">${esc(advice)}</div>`;
 }
@@ -3209,6 +3257,8 @@ function accountPayload(opts){
     health: store.health || null,
     activeProgramId: store.activeProgramId || (DATA && DATA.id) || null,
     rewards: store.rewards || null,
+    currentWeek: typeof currentWeek !== 'undefined' ? currentWeek : (store.trainingWeek || 1),
+    currentDay: typeof currentDay !== 'undefined' ? currentDay : (typeof store.trainingDay === 'number' ? store.trainingDay : 0),
     lastLocalSavedAt: new Date().toISOString(),
     nutrition: nutr,
     supplementation: supp,
@@ -3267,26 +3317,46 @@ function accountPayload(opts){
 function accountDataScore(src, prog) {
   let n = 0;
   const p = prog || (src && src.activeProgram) || null;
-  if (p && Array.isArray(p.weeks)) n += p.weeks.length * 80;
-  if (src && src.data && typeof src.data === 'object') n += Object.keys(src.data).length;
-  if (src && Array.isArray(src.logs)) n += src.logs.length * 8;
-  if (src && src.customSets) n += Object.keys(src.customSets).length;
+  if (p && Array.isArray(p.weeks)) n += p.weeks.length * 10;
+  if (src && src.data && typeof src.data === 'object') n += Object.keys(src.data).length * 8;
+  if (src && Array.isArray(src.logs)) n += src.logs.length * 20;
+  if (src && src.customSets) n += Object.keys(src.customSets).length * 4;
   return n;
 }
 function applyRemoteAccountData(remote, preferLocal) {
   if (!remote || typeof remote !== 'object') return;
   const token = store.accountToken, user = store.accountUser;
+  // Always union workout maps so a phone with empty local data cannot drop cloud loads
+  store.data = Object.assign({}, remote.data || {}, store.data || {});
+  store.customSets = Object.assign({}, remote.customSets || {}, store.customSets || {});
+  store.bw = Object.assign({}, remote.bw || {}, store.bw || {});
+  store.skips = Object.assign({}, remote.skips || {}, store.skips || {});
+  store.subs = Object.assign({}, remote.subs || {}, store.subs || {});
+  store.loadTypes = Object.assign({}, remote.loadTypes || {}, store.loadTypes || {});
+  store.tempos = Object.assign({}, remote.tempos || {}, store.tempos || {});
+  store.exIntensity = Object.assign({}, remote.exIntensity || {}, store.exIntensity || {});
+  store.maxTests = Object.assign({}, remote.maxTests || {}, store.maxTests || {});
+  store.bonus = Object.assign({}, remote.bonus || {}, store.bonus || {});
+  store.exMuscle = Object.assign({}, remote.exMuscle || {}, store.exMuscle || {});
+  if (remote.currentWeek) {
+    currentWeek = Math.max(1, Number(remote.currentWeek) || currentWeek);
+    store.trainingWeek = currentWeek;
+  }
+  if (typeof remote.currentDay === 'number') {
+    currentDay = Math.max(0, Number(remote.currentDay) || 0);
+    store.trainingDay = currentDay;
+  }
+  if (Array.isArray(remote.logs) && remote.logs.length) {
+    const byId = {};
+    (store.logs || []).concat(remote.logs).forEach(function (row) {
+      if (!row) return;
+      byId[row.id || row.at] = row;
+    });
+    store.logs = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
+      return String(a.at || '').localeCompare(String(b.at || ''));
+    }).slice(-80);
+  }
   if (!preferLocal) {
-    store.data = Object.assign({}, remote.data || {}, store.data || {});
-    store.customSets = Object.assign({}, remote.customSets || {}, store.customSets || {});
-    store.bw = Object.assign({}, remote.bw || {}, store.bw || {});
-    store.skips = Object.assign({}, remote.skips || {}, store.skips || {});
-    store.subs = Object.assign({}, remote.subs || {}, store.subs || {});
-    store.loadTypes = Object.assign({}, remote.loadTypes || {}, store.loadTypes || {});
-    store.tempos = Object.assign({}, remote.tempos || {}, store.tempos || {});
-    store.exIntensity = Object.assign({}, remote.exIntensity || {}, store.exIntensity || {});
-    store.bonus = Object.assign({}, remote.bonus || {}, store.bonus || {});
-    store.exMuscle = Object.assign({}, remote.exMuscle || {}, store.exMuscle || {});
     store.prefs = Object.assign({}, remote.prefs || {}, store.prefs || {});
     const athleteRole = typeof isAthleteRole === 'function' && isAthleteRole();
     if (athleteRole) {
@@ -3303,16 +3373,6 @@ function applyRemoteAccountData(remote, preferLocal) {
       if (profileConflictsWithAccountUser(store.profile)) {
         store.profile = seedCoachProfileFromAccount(store.profile);
       }
-    }
-    if (Array.isArray(remote.logs) && remote.logs.length) {
-      const byId = {};
-      (store.logs || []).concat(remote.logs).forEach(function (row) {
-        if (!row) return;
-        byId[row.id || row.at] = row;
-      });
-      store.logs = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
-        return String(a.at || '').localeCompare(String(b.at || ''));
-      }).slice(-80);
     }
     if (Array.isArray(remote.bodyChecks) && remote.bodyChecks.length) {
       const byId = {};
@@ -3426,26 +3486,25 @@ async function syncAccountData(download=false){
       return;
     }
     try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
-    if(download){
-      const response = await accountRequest('/api/account/me', { method: 'GET' });
-      const payload = await readApiJson(response);
-      const remote = payload.data || {};
-      const localScore = accountDataScore(store, DATA);
-      const remoteScore = accountDataScore(remote, remote.activeProgram);
-      applyRemoteAccountData(remote, localScore > remoteScore && !window.__cpForceRemoteProgram);
-      try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
-      // Athlete must not overwrite a just-assigned coach program with empty/local draft
-      const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
-      const skipProgUpload = athlete && !!(remote.assignedByCoach || window.__cpForceRemoteProgram);
-      if (localScore > 0) {
-        try {
-          await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload({ includeProgram: !skipProgUpload }) }) });
-        } catch (_) {}
-      }
-      persist(); render();
-    } else {
-      const response = await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload({ includeProgram: true }) }) });
-      await readApiJson(response);
+    const response = await accountRequest('/api/account/me', { method: 'GET' });
+    const payload = await readApiJson(response);
+    const remote = payload.data || {};
+    const localScore = accountDataScore(store, DATA);
+    const remoteScore = accountDataScore(remote, remote.activeProgram);
+    applyRemoteAccountData(remote, localScore > remoteScore && !window.__cpForceRemoteProgram);
+    try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
+    const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+    const skipProgUpload = athlete && !!(remote.assignedByCoach || window.__cpForceRemoteProgram);
+    const localHasLoads = !!(store.data && Object.keys(store.data).length) || (Array.isArray(store.logs) && store.logs.length);
+    const remoteHasLoads = !!(remote.data && Object.keys(remote.data).length) || (Array.isArray(remote.logs) && remote.logs.length);
+    if (download || localHasLoads || remoteHasLoads || localScore > 0) {
+      try {
+        await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload({ includeProgram: !skipProgUpload }) }) });
+      } catch (_) {}
+    }
+    persist();
+    if (download) {
+      try { render(); } catch (_) {}
     }
     if(status) status.textContent = 'Dati sincronizzati correttamente.';
   } catch(error){
@@ -3457,6 +3516,8 @@ async function syncAccountData(download=false){
 function scheduleAccountSync(){
   if(!store.accountToken) return;
   if (store.coachAssigning || store.coachViewingClient) return;
+  const hasLoads = !!(store.data && Object.keys(store.data).length) || (Array.isArray(store.logs) && store.logs.length);
+  if (!hasLoads) return;
   if (typeof queueAccountSyncIfOffline === 'function' && queueAccountSyncIfOffline()) return;
   clearTimeout(accountSyncTimer);
   accountSyncTimer = setTimeout(function () {
@@ -6805,10 +6866,13 @@ function showPrevLoad(e, key) {
     if (!tt) return;
     let tip = `SETT. PREC: ${prevVal}kg`;
     try {
-      const m = String(key).match(/_e(\d+)_/);
+      const m = String(key).match(/_e(\d+)_s(\d+)/);
       const exIdx = m ? parseInt(m[1], 10) : null;
+      const setNum = m ? parseInt(m[2], 10) : null;
       if (exIdx != null) {
-        const sugg = getLoadSuggestion(exIdx, {});
+        const sugg = (typeof suggestedLoadForSet === 'function' && setNum != null)
+          ? suggestedLoadForSet(exIdx, setNum, {})
+          : getLoadSuggestion(exIdx, {});
         if (sugg != null) {
           const prevN = parseFloat(prevVal);
           if (Number.isFinite(prevN) && sugg > prevN) tip += ` → prova ~${sugg}kg`;
@@ -6897,11 +6961,18 @@ function completeSetQuick(exIdx, setNum, restText) {
 
   const loadEl = $(k + '_load');
   let load = store.data[k + '_load'];
+  const rowForSugg = exerciseRowAt(currentWeek, currentDay, exIdx) || {};
+  if (load !== undefined && load !== '' && load != null && !store.data[doneKey]
+    && typeof isLegacyCopiedTopPrefill === 'function' && isLegacyCopiedTopPrefill(load, exIdx, setNum, rowForSugg)) {
+    load = '';
+  }
   if (load === undefined || load === '' || load == null) {
     const fromInput = loadEl && loadEl.value !== '' && loadEl.value != null ? loadEl.value : '';
     const fromPh = loadEl && loadEl.placeholder ? loadEl.placeholder : '';
-    const coachKg = (typeof getLoadSuggestion === 'function') ? getLoadSuggestion(exIdx, exerciseRowAt(currentWeek, currentDay, exIdx) || {}) : null;
-    load = fromInput || fromPh || (Number(coachKg) > 0 ? coachKg : '') || prev.load || prevSet.load || '';
+    const setKg = (typeof suggestedLoadForSet === 'function')
+      ? suggestedLoadForSet(exIdx, setNum, exerciseRowAt(currentWeek, currentDay, exIdx) || {})
+      : null;
+    load = fromInput || fromPh || (Number(setKg) > 0 ? setKg : '') || prev.load || '';
     store.data[k + '_load'] = load;
     if (loadEl) loadEl.value = load;
   }
@@ -7604,28 +7675,41 @@ function finishInit() {
   const splash = $('splash');
   if (splash) splash.style.pointerEvents = 'none';
   setSplashProgress(95, 'Quasi pronto…');
-  setTimeout(() => {
-    setSplashProgress(100, 'Pronto');
-    if (splash) {
-      splash.style.opacity = '0';
-      splash.style.pointerEvents = 'none';
+  setTimeout(function () {
+    setSplashProgress(92, 'Allineo i tuoi allenamenti…');
+    const afterHydrate = function () {
+      setSplashProgress(100, 'Pronto');
+      if (splash) {
+        splash.style.opacity = '0';
+        splash.style.pointerEvents = 'none';
+      }
+      setTimeout(function () {
+        if (splash) splash.style.display = 'none';
+        render();
+        applyChromeI18n();
+        try { applyFocusUi(); } catch (_) {}
+        try { maybeShowRewardsOnboarding(); } catch (_) {}
+        try { maybeShowIosInstallHint(); } catch (_) {}
+        try { scheduleAllItemAlerts(); } catch (_) {}
+        try { registerNurvanServiceWorker(); } catch (_) {}
+        try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
+        try { if (typeof bootCoachPractice === 'function') bootCoachPractice(); } catch (_) {}
+      }, 400);
+    };
+    const canPull = !!(store.accountToken && typeof syncAccountData === 'function' && !store.coachViewingClient && !store.coachAssigning);
+    if (!canPull) {
+      afterHydrate();
+      return;
     }
-    setTimeout(() => {
-      if (splash) splash.style.display = 'none';
-      render();
-      applyChromeI18n();
-      try { applyFocusUi(); } catch (_) {}
-      try { maybeShowRewardsOnboarding(); } catch (_) {}
-      try { maybeShowIosInstallHint(); } catch (_) {}
-      try { scheduleAllItemAlerts(); } catch (_) {}
-      try { registerNurvanServiceWorker(); } catch (_) {}
-      try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
-      try { if (typeof bootCoachPractice === 'function') bootCoachPractice(); } catch (_) {}
-    }, 400);
+    Promise.resolve(syncAccountData(true)).catch(function () {}).then(afterHydrate);
   }, 280);
 }
 function persist() {
   ensureStoreIntegrity();
+  try {
+    store.trainingWeek = typeof currentWeek !== 'undefined' ? currentWeek : store.trainingWeek;
+    store.trainingDay = typeof currentDay !== 'undefined' ? currentDay : store.trainingDay;
+  } catch (_) {}
   try { upsertLiveCoachArchive(); } catch (_) {}
   try {
     let sanitized = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.sanitizeStoreForLocalStorage) 
@@ -8036,9 +8120,9 @@ function render() {
     renderSettings(c);
     return;
   }
-  if (currentView === 'athlete') {
+  if (currentView === 'athlete' || currentView === 'profile') {
     c.innerHTML = '';
-    renderAthleteProfile(c);
+    renderProfile(c);
     const va = $('view-athlete');
     if (va) { va.style.display = 'none'; va.setAttribute('aria-hidden', 'true'); }
     return;
@@ -8074,9 +8158,10 @@ function render() {
   else if (currentView === 'exams') renderExams(c);
   else if (currentView === 'calendar') renderCalendar(c);
   else if (currentView === 'community') renderCommunity(c);
-  else if (currentView === 'athlete') renderAthleteProfile(c);
+  else if (currentView === 'athlete' || currentView === 'profile') renderProfile(c);
   else if (currentView === 'settings') renderSettings(c);
   else if (currentView === 'pricing') renderPricing(c);
+  else if (currentView === 'progress') renderProgressCenter(c);
   else renderHome(c);
   applyChromeI18n();
 }
@@ -10457,6 +10542,13 @@ function renderCalendar(c) {
         <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="changeCalendarMonth(1)">▶</button>
       </div>
     </div>
+    ${(typeof isAthleteRole === 'function' && isAthleteRole()) ? `
+    <div class="card" style="margin-bottom:12px;padding:12px;border:1px solid var(--border);">
+      <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Prenota sessione</div>
+      <p style="font-size:11px;color:#aaa;margin:0 0 8px;">Vedi gli slot del coach e conferma data/ora. Collisioni e blackout restano sul server.</p>
+      <button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="openAthleteBooking()">Vedi slot disponibili</button>
+      <div id="athlete-booking-box" style="margin-top:8px;"></div>
+    </div>` : ''}
     <div class="card" style="padding:10px;margin-bottom:14px;border:1px solid var(--border);">
       <div class="calendar-grid" style="margin-top:0;">
         ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d => '<div class="calendar-day-header">' + d + '</div>').join('')}
@@ -10546,6 +10638,54 @@ async function removeCalendarEvent(id) {
   render();
 }
 
+async function openAthleteBooking() {
+  const box = document.getElementById('athlete-booking-box');
+  if (box) box.textContent = 'Carico slot…';
+  try {
+    const date = calendarSelectedDate || new Date().toISOString().slice(0, 10);
+    const payload = await practiceFetch('/api/client/availability/slots?date=' + encodeURIComponent(date), {
+      method: 'GET',
+      headers: practiceHeaders(false)
+    }, 15000);
+    const slots = payload.slots || [];
+    if (!box) return;
+    if (!slots.length) {
+      box.innerHTML = '<div style="font-size:12px;color:#aaa;">Nessuno slot disponibile in questa data. Cosa puoi fare: scegli un altro giorno o chiedi al coach.</div>';
+      return;
+    }
+    box.innerHTML = slots.map(function (slot, i) {
+      return '<button class="btn btn-outline" style="width:100%;margin-top:6px;font-size:11px;" onclick="confirmAthleteBooking(' + i + ')">' +
+        esc(slot.date) + ' · ' + esc(String(slot.startMinute)) + '-' + esc(String(slot.endMinute)) + ' · ' + esc(slot.timeZone || '') + '</button>';
+    }).join('');
+    window.__athleteSlots = slots;
+  } catch (error) {
+    if (box) box.textContent = (error && error.message) || 'Prenotazione non disponibile. Cosa puoi fare: riprova.';
+  }
+}
+
+async function confirmAthleteBooking(index) {
+  const slot = (window.__athleteSlots || [])[index];
+  if (!slot) return;
+  const start = new Date(slot.date + 'T00:00:00');
+  start.setMinutes(Number(slot.startMinute) || 0);
+  try {
+    await practiceFetch('/api/client/appointments', {
+      method: 'POST',
+      headers: practiceHeaders(true),
+      body: JSON.stringify({
+        title: 'Coaching Call',
+        type: 'Coaching Call',
+        startsAt: start.toISOString(),
+        timeZone: slot.timeZone || 'UTC'
+      })
+    }, 15000);
+    if (typeof showToast === 'function') showToast('Sessione prenotata', 'success');
+    render();
+  } catch (error) {
+    if (typeof showToast === 'function') showToast((error && error.message) || 'Prenotazione rifiutata. Cosa puoi fare: scegli un altro orario.', 'warning');
+  }
+}
+
 function changeCalendarMonth(delta) {
   calendarCurrentMonth += delta;
   if (calendarCurrentMonth > 11) {
@@ -10626,60 +10766,10 @@ function renderSettings(c) {
       <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${t('settings')}</h1>
     </div>
 
-    <!-- Athlete Profile Card -->
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">👤 ${t('athleteProfile')}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">${t('labelName')}</label>
-          <input id="profile-name" type="text" value="${esc((store.profile||(DATA&&DATA.profile)||{}).name||'')}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">Sesso</label>
-          <select id="profile-sex" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
-            <option value="m" ${(String((store.profile||{}).sex||'m').toLowerCase().indexOf('f')===0)?'':'selected'}>Maschio</option>
-            <option value="f" ${(String((store.profile||{}).sex||'').toLowerCase().indexOf('f')===0)?'selected':''}>Femmina</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">${t('labelAge')}</label>
-          <input id="profile-age" type="number" value="${esc(String((store.profile||(DATA&&DATA.profile)||{}).age||''))}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">${t('labelWeight')}</label>
-          <input id="profile-weight" type="number" step="0.1" value="${esc(String((store.profile||(DATA&&DATA.profile)||{}).weight||''))}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">${t('labelHeight')}</label>
-          <input id="profile-height" type="number" value="${esc(String((store.profile||(DATA&&DATA.profile)||{}).height||''))}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">1RM Squat (kg)</label>
-          <input id="profile-squat" type="number" step="0.5" value="${esc(String((store.profile||(DATA&&DATA.profile)||{}).squatMax||''))}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">1RM Panca (kg)</label>
-          <input id="profile-bench" type="number" step="0.5" value="${esc(String((store.profile||(DATA&&DATA.profile)||{}).benchMax||''))}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div>
-          <label style="font-size:10px;color:#666;font-weight:800;">1RM Stacco (kg)</label>
-          <input id="profile-deadlift" type="number" step="0.5" value="${esc(String((store.profile||(DATA&&DATA.profile)||{}).deadliftMax||''))}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="font-size:10px;color:#666;font-weight:800;">${t('labelGoal')}</label>
-          <input id="profile-goal" type="text" value="${esc((store.profile||(DATA&&DATA.profile)||{}).goal||'')}" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" />
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="font-size:10px;color:#666;font-weight:800;">Su quali parti vuoi concentrarti?</label>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
-            ${['PETTO','DORSALI','SPALLE','BICIPITI','TRICIPITI','QUADRICIPITI','FEMORALI','GLUTEI','POLPACCI','ADDOME'].map((m) => {
-              const on = ((store.profile||{}).focusMuscles || store.prefs.focusMuscles || []).indexOf(m) >= 0;
-              return `<label style="font-size:10px;border:1px solid ${on?'var(--gold)':'#333'};color:${on?'var(--gold)':'#aaa'};padding:6px 8px;border-radius:6px;"><input type="checkbox" class="profile-focus" value="${m}" ${on?'checked':''} style="margin-right:4px;">${m}</label>`;
-            }).join('')}
-          </div>
-        </div>
-      </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="saveAthleteProfile()">${t('saveProfile')}</button>
+      <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Profilo</div>
+      <p style="font-size:11px;color:#aaa;margin:0 0 10px;line-height:1.4;">Identità, foto, 1RM e muscoli focus si modificano nel Profilo. Qui restano preferenze e comportamento dell'app.</p>
+      <button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="navigate('profile')">Apri profilo</button>
     </div>
 
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
@@ -10698,7 +10788,7 @@ function renderSettings(c) {
         <button class="btn ${(store.rewards&&store.rewards.mode==='focus')?'btn-primary':'btn-outline'}" style="flex:1;font-size:11px;" onclick="setRewardsModeFromSettings('focus')">Focus</button>
         <button class="btn ${(store.rewards&&store.rewards.mode==='rewards')?'btn-primary':'btn-outline'}" style="flex:1;font-size:11px;" onclick="setRewardsModeFromSettings('rewards')">Rewards</button>
       </div>
-      <button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="openAthleteProfile()">Profilo Atleta</button>
+      <button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="navigate('profile')">Profilo</button>
       ${(typeof isAthleteRole === 'function' && isAthleteRole()) ? '' : `
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin:10px 0 6px;gap:10px;">Condividi terapia/esami con Coach AI <input type="checkbox" ${store.prefs.shareMedicalWithCoach?'checked':''} onchange="store.prefs.shareMedicalWithCoach=this.checked;persist()"></label>
       <div style="font-size:10px;color:#666;line-height:1.4;">Privacy: terapia ed esami non entrano mai in ranking, XP o share card. Al Coach solo con opt-in esplicito.</div>
@@ -10719,8 +10809,8 @@ function renderSettings(c) {
 
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
       <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">Connessione Salute</div>
-      <p style="font-size:11px;color:#aaa;margin-bottom:10px;">Autorizza Health Connect di Android per condividere allenamenti e misure con altre app.</p>
-      <button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="openHealthConnect()">Abilita Connessione Salute</button>
+      <p style="font-size:11px;color:#aaa;margin-bottom:10px;">Health Connect è disponibile solo sull'app Android. Nel browser non c'è sincronizzazione salute.</p>
+      <button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="openHealthConnect()">Apri Connessione Salute</button>
     </div>
 
     <!-- Language Switcher Card -->
@@ -10909,12 +10999,12 @@ function renderPricing(c) {
     <div style="margin-bottom:14px;text-align:center;">
       <span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">NURVAN PRO</span>
       <h1 style="color:#fff;margin:4px 0 0;font-size:22px;">Piani & Abbonamenti</h1>
-      <p style="font-size:11px;color:#aaa;margin-top:4px;">Sblocca Coach AI, Universal Import e monitoraggio completo.</p>
+      <p style="font-size:11px;color:#aaa;margin-top:4px;">I piani a pagamento non sono disponibili in questa versione. Nessun checkout e nessun addebito.</p>
     </div>
-    <div class="card" style="margin-bottom:14px;text-align:center;border:1px solid var(--gold);">
-      <div style="font-size:12px;color:#ccc;">Passa a PRO</div>
-      <div style="font-size:22px;font-weight:900;color:var(--gold);margin:4px 0;">Sconto atleta</div>
-      <div style="font-size:11px;color:#888;margin-bottom:8px;">Pagamento sicuro. Puoi cambiare piano quando vuoi.</div>
+    <div class="card" style="margin-bottom:14px;text-align:center;border:1px solid #444;">
+      <div style="font-size:12px;color:#ccc;">Pagamenti</div>
+      <div style="font-size:18px;font-weight:900;color:var(--gold);margin:4px 0;">Non disponibile</div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px;">Stripe e i piani Pro non sono attivi. L'app resta usabile con il piano attuale, senza pagamento finto.</div>
     </div>
 
     <div class="pricing-grid">
@@ -10932,8 +11022,8 @@ function renderPricing(c) {
               <p style="font-size:11px;color:#ccc;margin-bottom:12px;line-height:1.4;">${p.description}</p>
             </div>
             <div>
-              <button class="btn ${isCurrent ? 'btn-outline' : 'btn-primary'}" style="width:100%;font-size:11px;padding:10px;" onclick="switchPlan('${p.name.toUpperCase().split(' ')[0]}')">
-                ${isCurrent ? '✓ PIANO ATTIVO' : (p.price === 0 ? 'ATTIVA FREE' : 'SCEGLI ' + p.name)}
+              <button class="btn btn-outline" style="width:100%;font-size:11px;padding:10px;" disabled aria-disabled="true" title="Pagamenti non disponibili">
+                ${isCurrent ? 'PIANO ATTUALE' : 'NON DISPONIBILE'}
               </button>
             </div>
           </div>
@@ -10946,8 +11036,9 @@ function renderPricing(c) {
 }
 
 function switchPlan(planName) {
-  EntitlementService.setPlan(planName);
-  if (typeof showToast === 'function') showToast("Piano aggiornato a: " + planName, "success");
+  if (typeof showToast === 'function') {
+    showToast('Pagamenti non disponibili. Il piano non è stato cambiato' + (planName ? (' (' + planName + ')') : '') + '.', 'warning');
+  }
 }
 
 function renderCommunity(c) {
@@ -10973,10 +11064,14 @@ function renderCommunity(c) {
   } catch (_) {}
   c.innerHTML = `
     <h1 class="text-gold" style="font-size:22px;font-weight:900;margin-bottom:8px;">Community</h1>
+    <div class="card" style="padding:14px;margin-bottom:12px;border:1px solid #444;">
+      <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Non disponibile</div>
+      <p style="font-size:12px;color:#aaa;margin:0;line-height:1.4;">Nurvan non ha un social interno. Qui trovi solo link esterni e la condivisione del tuo profilo. Nessun feed, nessun ingest, nessuna community finta.</p>
+    </div>
     ${readinessHtml}
     <div class="card" style="padding:16px;text-align:center;margin-bottom:12px;">
-      <div style="font-size:14px;font-weight:800;margin-bottom:6px;">Condividi e scopri</div>
-      <p style="font-size:12px;color:#888;margin-bottom:12px;">Nessun ingest di contenuti Reddit. Solo link ufficiali e condivisione profilo.</p>
+      <div style="font-size:14px;font-weight:800;margin-bottom:6px;">Condividi il profilo</div>
+      <p style="font-size:12px;color:#888;margin-bottom:12px;">Link ufficiali e condivisione testo. Non è una community Nurvan.</p>
       <button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="shareAthleteCard()">Condividi il mio profilo</button>
       <button class="btn btn-outline" style="width:100%;" onclick="openHealthConnect()">Connessione Salute</button>
     </div>
@@ -11014,11 +11109,11 @@ function openHealthConnect() {
       if (typeof showToast === 'function') showToast('Richiesta permessi Connessione Salute…', 'info');
     } else {
       navigate('settings');
-      if (typeof showToast === 'function') showToast('Apri Impostazioni → Connessione Salute', 'info');
+      if (typeof showToast === 'function') showToast('Health Connect è disponibile solo sull\'app Android. Nel browser non c\'è sincronizzazione.', 'warning');
     }
   } catch (e) {
     navigate('settings');
-    if (typeof showToast === 'function') showToast('Apri Impostazioni → Connessione Salute', 'warning');
+    if (typeof showToast === 'function') showToast('Health Connect non disponibile in questo ambiente. Cosa puoi fare: apri l\'app Android.', 'warning');
   }
   setTimeout(function () {
     syncHealthSamplesAndRefresh().catch(function () {});
@@ -13280,6 +13375,12 @@ function renderHome(c) {
           <button class="btn btn-outline" style="height:44px;font-size:12px;font-weight:800;border-color:var(--gold);color:var(--gold);" onclick="navigate('programs')">
             DATABASE PROGRAMMI
           </button>
+          <button class="btn btn-outline" style="height:44px;font-size:12px;font-weight:800;" onclick="navigate('programs');setTimeout(function(){ if(typeof generateAndActivateProgram==='function'){} },0)">
+            CREA DA TEMPLATE
+          </button>
+          <button class="btn btn-outline" style="height:44px;font-size:12px;font-weight:800;" onclick="openAiProgramWizard()">
+            AI CREATE
+          </button>
           <button class="btn btn-outline" style="height:44px;font-size:12px;font-weight:800;" onclick="openAthleteProfile()">
             COMPLETA PROFILO
           </button>
@@ -13672,16 +13773,22 @@ function renderTraining(c){
           const k = `w${currentWeek}_d${currentDay}_e${fIdx}_s${s}`;
           const setObj = Array.isArray(row.sets) ? row.sets[s - 1] : null;
           let sugg = '';
-          const coachKg = (typeof getLoadSuggestion === 'function') ? getLoadSuggestion(fIdx, row) : null;
-          if (Number(coachKg) > 0) sugg = coachKg;
+          const setKg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(fIdx, s, row) : null;
+          if (Number(setKg) > 0) sugg = setKg;
           else {
             const prevSets = (typeof collectPrevWeekSetLogs === 'function') ? collectPrevWeekSetLogs(fIdx, row) : [];
-            const prevSame = prevSets.find(function (ps) { return ps.set === s; }) || prevSets[0];
+            const prevSame = prevSets.find(function (ps) { return Number(ps.set) === s; });
             if (prevSame && Number(prevSame.load) > 0) sugg = prevSame.load;
           }
           const isDone = Boolean(store.data[k + '_done']);
-          const shownLoad = (store.data[k + '_load'] !== undefined && store.data[k + '_load'] !== '' && store.data[k + '_load'] != null)
-            ? store.data[k + '_load']
+          let storedLoad = store.data[k + '_load'];
+          if (!isDone && storedLoad !== undefined && storedLoad !== '' && storedLoad != null
+            && typeof isLegacyCopiedTopPrefill === 'function' && isLegacyCopiedTopPrefill(storedLoad, fIdx, s, row)
+            && Number(sugg) > 0) {
+            storedLoad = sugg;
+          }
+          const shownLoad = (storedLoad !== undefined && storedLoad !== '' && storedLoad != null)
+            ? storedLoad
             : (Number(sugg) > 0 ? sugg : '');
           const targetRepsRaw = setObj ? (setObj.reps ?? setObj.target_reps) : row.repsTarget;
           const shownReps = (store.data[k + '_reps'] !== undefined && store.data[k + '_reps'] !== '' && store.data[k + '_reps'] != null)
@@ -13763,9 +13870,14 @@ function renderTraining(c){
         const k = `w${currentWeek}_d${currentDay}_e${fIdx}_s${s}`;
         const isDone = Boolean(store.data[k + '_done']);
         const restBonus = esc(bEx.rest || '60-90s');
+        let bonusSugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(fIdx, s, bEx) : null;
+        if (!(Number(bonusSugg) > 0)) bonusSugg = bEx.plannedLoad || '';
+        const bonusShown = (store.data[k + '_load'] !== undefined && store.data[k + '_load'] !== '' && store.data[k + '_load'] != null)
+          ? store.data[k + '_load']
+          : (bonusSugg || '');
         h += `<div class="set-row">
           <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
-          <input type="number" id="${k}_load" step="0.5" placeholder="${bEx.plannedLoad || ''}" value="${store.data[k+'_load']||''}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
+          <input type="number" id="${k}_load" step="0.5" placeholder="${bonusSugg || ''}" value="${bonusShown}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
           <select onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${store.data[k+'_reps']==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
           <select onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${store.data[k+'_rir']==i?'selected':''}>${i}</option>`).join('')}</select>
           <button class="set-done-btn ${isDone?'active':''}" onclick="completeSetQuick(${fIdx}, ${s}, '${restBonus}')">${isDone?'✓':'○'}</button>
@@ -15399,6 +15511,10 @@ function athleteAvatarSvg(avatar) {
     '</svg></div>';
 }
 
+function renderProfile(container) {
+  return renderAthleteProfile(container);
+}
+
 function renderAthleteProfile(container) {
   ensureRewardsReady();
   applyFocusUi();
@@ -15458,8 +15574,21 @@ function renderAthleteProfile(container) {
     '<input id="profile-weight" type="number" step="0.1" value="' + esc(String(profile.weight || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelHeight') + '</label>' +
     '<input id="profile-height" type="number" value="' + esc(String(profile.height || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Squat (kg)</label>' +
+    '<input id="profile-squat" type="number" step="0.5" value="' + esc(String(profile.squatMax || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Panca (kg)</label>' +
+    '<input id="profile-bench" type="number" step="0.5" value="' + esc(String(profile.benchMax || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Stacco (kg)</label>' +
+    '<input id="profile-deadlift" type="number" step="0.5" value="' + esc(String(profile.deadliftMax || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div style="grid-column:1/-1;"><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelGoal') + '</label>' +
     '<input id="profile-goal" type="text" value="' + esc(profile.goal || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<div style="grid-column:1/-1;"><label style="font-size:10px;color:#666;font-weight:800;">Su quali parti vuoi concentrarti?</label>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">' +
+    ['PETTO','DORSALI','SPALLE','BICIPITI','TRICIPITI','QUADRICIPITI','FEMORALI','GLUTEI','POLPACCI','ADDOME'].map(function (m) {
+      const on = ((profile.focusMuscles || store.prefs.focusMuscles || []).indexOf(m) >= 0);
+      return '<label style="font-size:10px;border:1px solid ' + (on ? 'var(--gold)' : '#333') + ';color:' + (on ? 'var(--gold)' : '#aaa') + ';padding:6px 8px;border-radius:6px;"><input type="checkbox" class="profile-focus" value="' + m + '"' + (on ? ' checked' : '') + ' style="margin-right:4px;">' + m + '</label>';
+    }).join('') +
+    '</div></div>' +
     '</div>' +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="saveAthleteProfile()">' + t('saveProfile') + '</button>' +
     '</div>';
@@ -15494,6 +15623,12 @@ function renderAthleteProfile(container) {
       '<p style="font-size:11px;color:#aaa;margin-bottom:8px;">Puoi chiedere di chiudere la collaborazione solo se non ci sono pagamenti in sospeso. Il coach deve confermare.</p>' +
       '<button class="btn btn-outline" style="width:100%;font-size:11px;color:#c66;border-color:#c66;" onclick="requestLeaveCoach()">CHIUDI COLLABORAZIONE CON IL COACH</button></div>';
   }
+  html += '<div class="card" style="border:1px solid var(--border);margin-bottom:14px;">' +
+    '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">Account</div>' +
+    '<button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="navigate(\'settings\')">Preferenze app</button>' +
+    (typeof openAccount === 'function' ? '<button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="openAccount()">Account e accesso</button>' : '') +
+    (typeof logoutAccount === 'function' ? '<button class="btn btn-outline" style="width:100%;font-size:11px;color:#c66;border-color:#c66;" onclick="logoutAccount()">Esci</button>' : '') +
+    '</div>';
   html += '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="navigate(\'settings\')">Altre impostazioni</button>';
   container.innerHTML = html;
 }
@@ -15569,7 +15704,7 @@ function openAthleteProfile() {
     }
   } catch (_) {}
   try { closeMenuHub(); } catch (_) {}
-  navigate('athlete');
+  navigate('profile');
 }
 
 function renderAdaptiveDeloadCardHtml() {
@@ -15602,13 +15737,17 @@ async function acceptAdaptiveDeload() {
   const proposal = window.__pendingDeloadProposal || { action_type: 'APPLY_DELOAD', volumeReductionPct: 40, weeks: 1 };
   try {
     if (typeof ActionDispatcher !== 'undefined' && ActionDispatcher && ActionDispatcher.dispatch) {
-      await ActionDispatcher.dispatch([proposal], { source: 'user' });
-      if (typeof showToast === 'function') showToast('Deload inviato ad Action OS', 'success');
+      const result = await ActionDispatcher.dispatch([proposal], { source: 'user', confirmed: true });
+      if (result && result.ok) {
+        if (typeof showToast === 'function') showToast('Deload applicato: −' + (proposal.volumeReductionPct || 40) + '% volume per ' + (proposal.weeks || 1) + ' settimana/e.', 'success');
+      } else if (typeof showToast === 'function') {
+        showToast((result && result.message) || 'Deload non applicabile. Cosa puoi fare: verifica di avere un programma attivo.', 'warning');
+      }
     } else if (typeof showToast === 'function') {
-      showToast('Proposta deload: −' + (proposal.volumeReductionPct || 40) + '% volume · ' + (proposal.weeks || 1) + ' sett.', 'info');
+      showToast('Deload non applicabile: Action OS non è disponibile. Cosa puoi fare: riprova dopo il riavvio.', 'warning');
     }
   } catch (e) {
-    if (typeof showToast === 'function') showToast((e && e.message) || 'Deload non applicato', 'warning');
+    if (typeof showToast === 'function') showToast((e && e.message) || 'Deload non applicato. Cosa puoi fare: riprova o modifica la settimana a mano.', 'warning');
   }
   window.__pendingDeloadProposal = null;
   render();
@@ -15639,13 +15778,115 @@ function buildProgressCenterSnapshotLocal(s) {
   };
 }
 
-function showProgressCenter() {
+function assessProgramHealth(program) {
+  const weeks = program && Array.isArray(program.weeks) ? program.weeks : [];
+  if (!weeks.length) return { status: 'INSUFFICIENT DATA', volume: 0, frequency: 0, exerciseCount: 0, missingData: ['weeks'] };
+  let exerciseCount = 0;
+  let sessions = 0;
+  let deloadWeeks = 0;
+  weeks.forEach(function (week) {
+    if (week.deload || /deload/i.test(String(week.label || ''))) deloadWeeks += 1;
+    (week.sessions || week.days || []).forEach(function (session) {
+      sessions += 1;
+      exerciseCount += (session.exercises || session.rows || []).length;
+    });
+  });
+  const frequency = weeks.length ? sessions / weeks.length : 0;
+  const missing = [];
+  if (exerciseCount < 6) missing.push('too_few_exercises');
+  return {
+    status: missing.length ? 'ATTENTION' : (exerciseCount >= 12 ? 'GOOD' : 'ATTENTION'),
+    volume: exerciseCount,
+    frequency: Math.round(frequency * 10) / 10,
+    exerciseCount: exerciseCount,
+    deloadWeeks: deloadWeeks,
+    missingData: missing
+  };
+}
+
+function progressRangeStart(range) {
+  const now = Date.now();
+  if (range === 'week') return now - 7 * 86400000;
+  if (range === '4w') return now - 28 * 86400000;
+  if (range === '12w') return now - 84 * 86400000;
+  return 0;
+}
+
+function renderProgressCenter(container) {
   const snap = buildProgressCenterSnapshotLocal(store);
-  const lastBw = snap.bodyWeight && snap.bodyWeight.length ? snap.bodyWeight[snap.bodyWeight.length - 1].kg : '—';
-  const msg = 'Progress Center\n\nAllenamenti: ' + snap.workouts +
-    '\nUltimo WO: ' + (snap.lastWorkoutAt ? String(snap.lastWorkoutAt).slice(0, 16) : '—') +
-    '\nPeso recente: ' + lastBw + ' kg\n\n' + (snap.note || '');
-  alert(msg);
+  const lastBw = snap.bodyWeight && snap.bodyWeight.length ? snap.bodyWeight[snap.bodyWeight.length - 1] : null;
+  const range = window.__progressRange || 'all';
+  const from = progressRangeStart(range);
+  const logs = (store.logs || (DATA && DATA.logs) || []).filter(function (row) {
+    const at = new Date(row.at || row.date || 0).getTime();
+    return at >= from;
+  });
+  const health = assessProgramHealth(DATA || store.activeProgram);
+  const c = container || $('view-container');
+  if (!c) return;
+  c.innerHTML =
+    '<div style="margin-bottom:12px;"><span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">DATI</span>' +
+    '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">Progress Center</h1></div>' +
+    '<div class="coach-os-quick-actions" style="margin-bottom:12px;">' +
+    [['week', 'THIS WEEK'], ['4w', '4 WEEKS'], ['12w', '12 WEEKS'], ['all', 'ALL TIME']].map(function (row) {
+      return '<button type="button" class="btn btn-outline" style="font-size:10px;" onclick="window.__progressRange=\'' + row[0] + '\';renderProgressCenter()">' + row[1] + '</button>';
+    }).join('') + '</div>' +
+    '<div class="card" style="margin-bottom:12px;"><div style="font-size:12px;font-weight:900;color:var(--gold);margin-bottom:8px;">Program health</div>' +
+    '<div style="font-size:13px;color:#ddd;">' + esc(health.status) + ' · volume ' + health.volume + ' · freq ' + health.frequency + '</div></div>' +
+    '<div class="card" style="margin-bottom:12px;"><div style="font-size:12px;font-weight:900;color:var(--gold);margin-bottom:8px;">Dati</div>' +
+    '<div style="font-size:13px;color:#ddd;line-height:1.6;">Allenamenti: <b>' + logs.length + '</b><br>Ultimo WO: ' +
+    esc(snap.lastWorkoutAt ? String(snap.lastWorkoutAt).slice(0, 16) : '—') +
+    '<br>Peso recente: ' + esc(lastBw ? (lastBw.kg + ' kg') : '—') + '</div></div>' +
+    '<div class="card" style="margin-bottom:12px;"><div style="font-size:12px;font-weight:900;color:var(--gold);margin-bottom:8px;">Nota</div>' +
+    '<p style="font-size:12px;color:#aaa;margin:0;line-height:1.4;">Questi numeri arrivano dal diario locale. Non sono una diagnosi. Il confronto coach è nella vista Progress del cliente.</p></div>' +
+    '<button class="btn btn-outline" style="width:100%;" onclick="navigate(\'stats\')">Apri statistiche</button>';
+}
+
+async function openAiProgramWizard() {
+  const goal = prompt('GOAL (hypertrophy / strength / fat_loss)', 'hypertrophy');
+  if (!goal) return;
+  const experience = prompt('EXPERIENCE (beginner / intermediate / advanced)', 'intermediate');
+  if (experience == null) return;
+  const days = prompt('DAYS', '4');
+  if (days == null) return;
+  const time = prompt('TIME minutes', '60');
+  if (time == null) return;
+  const equipment = prompt('EQUIPMENT', 'gym');
+  if (equipment == null) return;
+  const focus = prompt('FOCUS', '');
+  if (focus == null) return;
+  const limitations = prompt('LIMITATIONS', '');
+  if (limitations == null) return;
+  const preferences = prompt('EXERCISE PREFERENCES', '');
+  if (preferences == null) return;
+  if (!confirm('Generare anteprima AI? Nessun programma verrà attivato finché non confermi.')) return;
+  try {
+    if (typeof showToast === 'function') showToast('AI Create in corso…', 'info');
+    const result = await ProgramGeneratorService.aiCreate({
+      goal: goal, experience: experience, days: Number(days) || 4, time: time,
+      equipment: equipment, focus: focus, limitations: limitations, preferences: preferences
+    });
+    if (!result || !result.program || !Array.isArray(result.program.weeks)) {
+      throw new Error('AI Create unavailable');
+    }
+    if (!confirm('Anteprima: ' + (result.program.title || 'programma') + ' · ' + result.program.weeks.length + ' settimane. Confermi e attivi?')) return;
+    const prog = normalizeProgram(result.program);
+    await maybeClearLogsOnProgramSwitch(prog.id);
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
+      await GiammariaPersistence.activateCanonicalProgram(prog);
+    }
+    DATA = prog;
+    store.activeProgram = DATA;
+    persist();
+    if (typeof showToast === 'function') showToast('Programma AI attivato', 'success');
+    render();
+  } catch (e) {
+    if (typeof showToast === 'function') showToast((e && e.message) || 'AI Create unavailable. Cosa puoi fare: usa Crea da template.', 'warning');
+  }
+}
+
+function showProgressCenter() {
+  navigate('progress');
 }
 
 async function lookupNutritionBarcode() {
@@ -19242,6 +19483,8 @@ if (typeof window !== 'undefined') {
   window.acceptAdaptiveDeload = acceptAdaptiveDeload;
   window.rejectAdaptiveDeload = rejectAdaptiveDeload;
   window.showProgressCenter = showProgressCenter;
+  window.assessProgramHealth = assessProgramHealth;
+  window.openAiProgramWizard = openAiProgramWizard;
   window.lookupNutritionBarcode = lookupNutritionBarcode;
   window.lookupSupplementBarcode = lookupSupplementBarcode;
   window.scanBarcodeWithCamera = scanBarcodeWithCamera;
