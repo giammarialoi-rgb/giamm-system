@@ -61,6 +61,7 @@ import {
   listCrmPipeline,
   listPaymentEvents,
   recordPaymentEvent,
+  runAutomation,
   runAutomationDry,
   setAutomationEnabled,
   summarizeBusiness,
@@ -3245,6 +3246,36 @@ export function mountCoachPractice(app, deps) {
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
+  });
+
+  app.post("/api/coach/automations/:id/run", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const result = await runAutomation(pool, coach.id, req.params.id, req.body || {});
+      return res.json({ ok: true, result });
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/coach/broadcast/preview", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const ids = [...new Set((Array.isArray(req.body?.clientIds) ? req.body.clientIds : []).map(String))];
+    const owned = await pool.query(
+      "SELECT id, display_name FROM coach_clients WHERE coach_user_id = $1 AND id = ANY($2::bigint[]) AND status <> 'removed'",
+      [coach.id, ids]
+    );
+    return res.json({
+      ok: true,
+      preview: {
+        targetCount: owned.rows.length,
+        targets: owned.rows.map((row) => ({ id: String(row.id), name: row.display_name })),
+        action: "PREPARE_BROADCAST",
+        sent: false
+      }
+    });
   });
 
   app.get("/api/coach/inbox-feed", async (req, res) => {

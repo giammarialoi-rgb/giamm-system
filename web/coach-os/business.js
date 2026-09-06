@@ -53,7 +53,9 @@
           return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(row.name) +
             '</strong><span>' + escText(row.trigger) + ' → ' + escText(row.action) + '</span></span>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.dryRunAutomation(\'' +
-            escText(row.id) + '\')">DRY RUN</button></div>';
+            escText(row.id) + '\')">DRY RUN</button>' +
+            '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.runAutomationNow(\'' +
+            escText(row.id) + '\')">RUN</button></div>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">Nessuna automation. Restano fuori dall’Agent V1.</div>') + '</div>';
   };
@@ -76,5 +78,17 @@
       body: JSON.stringify({})
     });
     if (typeof practiceToast === 'function') practiceToast('Dry-run: ' + (payload.preview && payload.preview.action), 'info');
+  };
+
+  CoachOS.runAutomationNow = async function (id) {
+    const payload = await window.practiceFetch('/api/coach/automations/' + encodeURIComponent(id) + '/run', {
+      method: 'POST',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({})
+    });
+    const failed = payload.result && payload.result.failed;
+    if (typeof practiceToast === 'function') {
+      practiceToast(failed ? 'Automation failed → task creato' : 'Automation eseguita', failed ? 'danger' : 'success');
+    }
   };
 })();

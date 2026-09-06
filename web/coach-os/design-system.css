@@ -387,10 +387,49 @@ body.coach-os-v2 .nav-item svg {
   height: 20px;
 }
 
+@media (min-width: 360px) {
+  .coach-os-page { padding-left: 2px; padding-right: 2px; }
+}
+
+@media (min-width: 390px) {
+  .coach-os-title { font-size: 26px; }
+}
+
+@media (min-width: 360px) {
+  .coach-os-page { padding-left: 12px; padding-right: 12px; }
+}
+
+@media (min-width: 390px) {
+  .coach-os-title { font-size: 28px; }
+}
+
 @media (min-width: 540px) {
   .coach-os-brand { display: block; max-width: 150px; }
   .coach-os-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .coach-os-quick-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 768px) {
+  .coach-os-page { max-width: 820px; }
+  .coach-os-quick-actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: 768px) {
+  #coach-os-sidebar {
+    display: flex;
+    position: fixed;
+    z-index: 1050;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 196px;
+    transform: none;
+  }
+  body.coach-os-v2 nav.bottom-nav { display: none; }
+  body.coach-os-v2 main {
+    margin-left: 196px;
+    width: calc(100% - 196px);
+  }
 }
 
 @media (min-width: 1024px) {
@@ -476,5 +515,15 @@ body.coach-os-v2 .nav-item svg {
 
   .coach-os-grid-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1440px) {
+  .coach-os-page {
+    max-width: 1320px;
+  }
+
+  body.coach-os-v2 main {
+    padding: 32px 48px 56px;
   }
 }

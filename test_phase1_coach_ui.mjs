@@ -102,7 +102,7 @@ ok(todayUi.indexOf("Needs attention") < todayUi.indexOf("Portfolio"), "Today pla
 ok(programs.includes("openNativeImport") && programs.includes("coachImport"), "Programs owns native Coach import route");
 ok(base.includes("COACH OS · IMPORT PROGRAM") && base.includes("SALVA NEL COACH DATABASE"), "native import owns Coach copy and completion");
 ok(base.includes("forceAsk: true") && base.includes("selectedDomains"), "domain picker remains explicit");
-ok(styles.includes("@media (min-width: 1024px)") && styles.includes("--co-space-"), "design system includes tokens and desktop sidebar");
+ok(styles.includes("@media (min-width: 360px)") && styles.includes("@media (min-width: 390px)") && styles.includes("@media (min-width: 768px)") && styles.includes("@media (min-width: 1024px)") && styles.includes("@media (min-width: 1440px)") && styles.includes("--co-space-"), "design system includes tokens and 360/390/768/1024/1440 breakpoints");
 ok(practice.includes("window.CoachOS.applyShell") && practice.includes("coachLandingView"), "legacy practice shell delegates behind feature flag");
 
 for (const existing of ["function renderTraining(", "function renderNutrition(", "function syncAccountData(", "function enqueueClientOutbox("]) {

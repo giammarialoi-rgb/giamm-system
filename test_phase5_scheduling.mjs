@@ -63,6 +63,39 @@ console.log("OK  ", "overlapping appointments are rejected");
 const ics = toIcs([first], "Nurvan");
 ok(ics.includes("BEGIN:VEVENT") && ics.includes("DTSTART:"), "iCal export contains events");
 
+const recurrencePool = {
+  async query(sql) {
+    const text = String(sql);
+    if (text.includes("tstzrange")) return { rows: [] };
+    if (text.includes("INSERT INTO coach_appointments")) {
+      return {
+        rows: [{
+          id: Date.now(),
+          client_id: 4,
+          type: "Coaching Call",
+          title: "Series",
+          starts_at: "2026-09-06T09:00:00.000Z",
+          ends_at: "2026-09-06T09:45:00.000Z",
+          timezone: "Europe/Rome",
+          status: "scheduled",
+          notes: "",
+          created_by: "coach",
+          created_at: new Date().toISOString()
+        }]
+      };
+    }
+    return { rows: [] };
+  }
+};
+const series = await createAppointment(recurrencePool, 1, {
+  type: "Coaching Call",
+  title: "Weekly",
+  startsAt: "2026-09-06T09:00:00.000Z",
+  timeZone: "Europe/Rome",
+  recurrenceWeeks: 3
+});
+ok(series.count === 3 && series.series.length === 3, "weekly recurrence creates a 3-week series");
+
 const practice = fs.readFileSync(path.join(root, "coach-practice.mjs"), "utf8");
 ok(practice.includes("/api/coach/appointments"), "appointments API exists");
 ok(practice.includes("/api/coach/availability"), "availability API exists");

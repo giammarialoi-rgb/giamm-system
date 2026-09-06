@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { aggregateCoachAnalytics } from "./server/coach-os/analytics.mjs";
-import { CRM_STAGES, summarizeBusiness } from "./server/coach-os/business.mjs";
+import { CRM_STAGES, recordFailedAutomation, summarizeBusiness } from "./server/coach-os/business.mjs";
 import { inboxItem } from "./server/coach-os/inbox.mjs";
 import { interpretAthleteBrain } from "./server/coach-os/intelligence.mjs";
 import { estimateMealFromHints } from "./server/coach-os/media-ai.mjs";
@@ -32,6 +32,7 @@ const analytics = aggregateCoachAnalytics([
 ok(analytics.provenance.businessMetricsExcluded, "Coach Analytics excludes business metrics");
 ok(analytics.adherence.atRisk === 1 && analytics.clientsAtRisk[0].name === "Marco", "low adherence becomes an actionable client");
 ok(!JSON.stringify(analytics).includes("mrr"), "analytics payload has no MRR");
+ok(analytics.e1rm.samples === 0, "e1RM samples stay athlete-quality only");
 
 const business = summarizeBusiness(
   [{ status: "active", cadence: "monthly", amountCents: 20000, nextDueAt: new Date(Date.now() - 86400000).toISOString() }],
@@ -40,6 +41,11 @@ const business = summarizeBusiness(
 ok(business.stripeRequired === false, "manual ledger does not require Stripe");
 ok(business.overdue === 1 && business.mrrCents === 20000, "overdue and MRR come from the ledger");
 ok(CRM_STAGES[0] === "LEAD" && CRM_STAGES.includes("CHURNED"), "CRM pipeline is LEAD to CHURNED");
+
+const failed = await recordFailedAutomation({
+  async query() { return { rows: [{ id: 11, title: "Automation failed: rule", source: "automation" }] }; }
+}, 1, { id: "9", name: "Check-in received", action: "create_task" }, new Error("dry-run boom"));
+ok(failed.failed && failed.task, "failed automation creates a coach task");
 
 const item = inboxItem("message", { id: 1, client_id: 4, client_name: "Marco", body: "ciao", created_at: new Date().toISOString() });
 ok(item.kind === "message" && item.unread, "Inbox item preserves unread message state");
@@ -67,6 +73,8 @@ for (const route of [
   "/api/coach/business",
   "/api/coach/crm",
   "/api/coach/automations",
+  "/api/coach/automations/:id/run",
+  "/api/coach/broadcast/preview",
   "/api/coach/inbox-feed",
   "/api/coach/clients/:id/brain-feedback",
   "/api/coach/meals/estimate",
@@ -76,9 +84,11 @@ for (const route of [
 }
 
 ok(fs.readFileSync(path.join(root, "web/coach-os/analytics.js"), "utf8").includes("Nessun revenue"), "Analytics UI forbids business copy");
-ok(fs.readFileSync(path.join(root, "web/coach-os/inbox.js"), "utf8").includes("Inbox"), "Inbox UI exists");
-ok(fs.readFileSync(path.join(root, "web/coach-os/clients.js"), "utf8").includes("Athlete Brain"), "Client Overview shows Athlete Brain");
+ok(fs.readFileSync(path.join(root, "web/coach-os/inbox.js"), "utf8").includes("PREVIEW BROADCAST"), "Inbox can preview broadcast without sending");
+ok(fs.readFileSync(path.join(root, "web/coach-os/clients.js"), "utf8").includes("MODIFY") && fs.readFileSync(path.join(root, "web/coach-os/clients.js"), "utf8").includes("OPEN DATA"), "Athlete Brain has approve/modify/open data");
 ok(fs.readFileSync(path.join(root, "web/coach-os/media-ai.js"), "utf8").includes("CONFIRM & LOG"), "meal UI requires confirm");
+ok(fs.readFileSync(path.join(root, "web/coach-os/media-ai.js"), "utf8").includes("SAVE MARKERS"), "video form review captures markers");
+ok(fs.readFileSync(path.join(root, "web/coach-os/today.js"), "utf8").includes("Needs attention") && !fs.readFileSync(path.join(root, "web/coach-os/today.js"), "utf8").includes("MRR"), "Today stays operational without business KPI");
 ok(fs.readFileSync(path.join(root, "server/db/migrations/0006_business_crm.sql"), "utf8").includes("coach_payment_events"), "business migration exists");
 ok(fs.readFileSync(path.join(root, "server/db/migrations/0007_inbox_media_ai.sql"), "utf8").includes("meal_logs"), "media AI migration exists");
 

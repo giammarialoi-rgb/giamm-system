@@ -175,6 +175,45 @@ export async function setAutomationEnabled(pool, coachId, id, enabled) {
   return result.rows[0] ? automationRow(result.rows[0]) : null;
 }
 
+export async function recordFailedAutomation(pool, coachId, rule, error) {
+  const { createCoachTask } = await import("./workspace.mjs");
+  const task = await createCoachTask(pool, coachId, {
+    title: "Automation failed: " + String(rule.name || rule.action || "rule"),
+    source: "automation",
+    priority: "high",
+    metadata: { ruleId: rule.id, error: String(error && error.message || error || "failed") }
+  });
+  return { task, failed: true };
+}
+
+export async function runAutomation(pool, coachId, id, context = {}) {
+  const rule = await pool.query(
+    "SELECT * FROM automation_rules WHERE id = $1 AND coach_user_id = $2",
+    [id, coachId]
+  );
+  if (!rule.rows[0]) throw new Error("Automation not found.");
+  try {
+    const result = {
+      matched: Number(context.matchCount || 0),
+      action: rule.rows[0].action,
+      trigger: rule.rows[0].trigger
+    };
+    await pool.query(
+      `INSERT INTO automation_runs(rule_id, coach_user_id, dry_run, status, result)
+       VALUES($1,$2,FALSE,'completed',$3)`,
+      [id, coachId, JSON.stringify(result)]
+    );
+    return result;
+  } catch (error) {
+    await pool.query(
+      `INSERT INTO automation_runs(rule_id, coach_user_id, dry_run, status, result)
+       VALUES($1,$2,FALSE,'failed',$3)`,
+      [id, coachId, JSON.stringify({ error: error.message })]
+    );
+    return recordFailedAutomation(pool, coachId, automationRow(rule.rows[0]), error);
+  }
+}
+
 export async function runAutomationDry(pool, coachId, id, context = {}) {
   const rule = await pool.query(
     "SELECT * FROM automation_rules WHERE id = $1 AND coach_user_id = $2",

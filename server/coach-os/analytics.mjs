@@ -44,6 +44,11 @@ export function aggregateCoachAnalytics(rows, now = Date.now()) {
     out.engagement.unread += Number(row.client.unread_count || row.client.unreadCount || 0);
     if (row.client.workoutLive || row.client.workout_live) out.engagement.liveNow += 1;
     if (intelligence.signals.some((signal) => signal.id === "missing_check_in")) out.checkIns.due += 1;
+    const profile = (row.data && row.data.profile) || {};
+    const oneRms = [profile.rmSquat, profile.rmBench, profile.rmDeadlift, row.data && row.data.e1rm]
+      .map(Number)
+      .filter((value) => Number.isFinite(value) && value > 0);
+    if (oneRms.length) out.e1rm.samples += 1;
   }
   out.adherence.average = adherences.length
     ? Math.round(adherences.reduce((sum, value) => sum + value, 0) / adherences.length)
@@ -60,17 +65,25 @@ export function aggregateCoachAnalytics(rows, now = Date.now()) {
 }
 
 export async function loadCoachAnalytics(pool, coachId, options = {}) {
+  const clientId = options.clientId || options.client_id || null;
   const result = await pool.query(
     `SELECT c.*, d.data
      FROM coach_clients c
      LEFT JOIN app_account_data d ON d.user_id = c.athlete_user_id
      WHERE c.coach_user_id = $1 AND c.status <> 'removed'
+       AND ($3::bigint IS NULL OR c.id = $3::bigint)
      ORDER BY c.display_name ASC
      LIMIT $2`,
-    [coachId, Math.min(200, Number(options.limit) || 100)]
+    [coachId, Math.min(200, Number(options.limit) || 100), clientId]
   );
-  return aggregateCoachAnalytics((result.rows || []).map((row) => ({
+  const analytics = aggregateCoachAnalytics((result.rows || []).map((row) => ({
     client: row,
     data: row.data || {}
   })));
+  analytics.filters = {
+    rangeDays: Number(options.range || options.days || 28),
+    clientId: clientId ? String(clientId) : null,
+    savedView: options.savedView || options.view || null
+  };
+  return analytics;
 }

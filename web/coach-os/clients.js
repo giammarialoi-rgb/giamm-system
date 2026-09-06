@@ -241,8 +241,10 @@
           '<div class="coach-os-muted">' + escText((brain.suggestedAction && brain.suggestedAction.text) || '') + '</div>' +
           '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
           '<button class="coach-os-action" onclick="CoachOS.brainFeedback(\'approve\')">APPROVE</button>' +
+          '<button class="coach-os-action" onclick="CoachOS.brainFeedback(\'modify\')">MODIFY</button>' +
           '<button class="coach-os-action" onclick="CoachOS.brainFeedback(\'dismiss\')">DISMISS</button>' +
-          '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachAgent\')">ASK AGENT</button></div></div>'
+          '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachAgent\')">ASK AGENT</button>' +
+          '<button class="coach-os-action" onclick="CoachOS.openBrainData()">OPEN DATA</button></div></div>'
         : '') +
       '</section>' +
 
@@ -394,12 +396,18 @@
     const id = payload.client && payload.client.id;
     const brain = payload.intelligence && payload.intelligence.aiInterpretation;
     if (!id || !brain) return;
+    let note = '';
+    if (decision === 'modify') {
+      note = window.prompt('Modifica la next action o annota il dato da rivedere', (brain.suggestedAction && brain.suggestedAction.text) || '') || '';
+      if (!note) return;
+    }
     try {
       await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/brain-feedback', {
         method: 'POST',
         headers: practiceHeaders(true),
         body: JSON.stringify({
           decision: decision,
+          note: note,
           interpretationFingerprint: brain.sourceFingerprint
         })
       });
@@ -407,6 +415,25 @@
     } catch (error) {
       if (typeof practiceToast === 'function') practiceToast((error && error.message) || 'Feedback non salvato', 'danger');
     }
+  };
+
+  CoachOS.openBrainData = function () {
+    const payload = window.__coachClientOverview || {};
+    const intelligence = payload.intelligence || {};
+    const brain = intelligence.aiInterpretation || {};
+    const sources = [];
+    (brain.positives || []).forEach(function (row) {
+      if (row && row.source) sources.push(row.text + ' → ' + (row.source.source || 'derived'));
+    });
+    (brain.risks || []).forEach(function (row) {
+      const evidence = (row.evidence || []).map(function (item) { return item.source || item; }).join(', ');
+      sources.push((row.text || row.signalId) + (evidence ? ' → ' + evidence : ''));
+    });
+    (intelligence.signals || []).forEach(function (signal) {
+      const evidence = (signal.evidence || []).map(function (item) { return item.source || item; }).join(', ');
+      sources.push((signal.title || signal.id) + (evidence ? ' → ' + evidence : ''));
+    });
+    window.alert(sources.length ? sources.join('\n') : 'Nessuna fonte deterministica disponibile.');
   };
 
   CoachOS.registerView('coachHub', renderClients);
