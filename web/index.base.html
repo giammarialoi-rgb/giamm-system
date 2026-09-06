@@ -689,6 +689,13 @@ input[type="checkbox"], input[type="radio"] {
   line-height: 1;
   flex-shrink: 0;
 }
+.session-name-heading {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 0.4px;
+  line-height: 1.2;
+}
 
 /* Fully responsive centered modals */
 #account-modal {
@@ -12433,24 +12440,42 @@ function seedImportedTechniquesIntoStore(program) {
 }
 
 /** Pre-activation: choose weeks / days / progression before locking the import. */
-function programHasPresumedLoads(prog) {
+function parseLoadKg(v) {
+  if (v == null || v === '') return 0;
+  const n = parseFloat(String(v).replace(',', '.').replace(/[^\d.\-]/g, ''));
+  return (Number.isFinite(n) && n > 0) ? n : 0;
+}
+
+function isMarkedLoadSet(s) {
+  if (!s) return false;
+  return !!(s.done || s.logged || s.actual_load != null || s.recorded_load != null || s.logged_load != null);
+}
+
+function countImportLoadKinds(prog) {
   const weeks = (prog && (prog.weeks || (prog.training && prog.training.weeks))) || [];
-  for (let wi = 0; wi < weeks.length; wi++) {
-    const days = weeks[wi].sessions || weeks[wi].days || [];
-    for (let di = 0; di < days.length; di++) {
-      const exs = days[di].exercises || days[di].rows || [];
-      for (let ei = 0; ei < exs.length; ei++) {
-        const ex = exs[ei] || {};
-        if (Number(ex.plannedLoad) > 0 || Number(ex.load) > 0 || Number(ex.load_value) > 0 || Number(ex.load_target) > 0) return true;
-        const sets = ex.sets || [];
-        for (let si = 0; si < sets.length; si++) {
-          const s = sets[si] || {};
-          if (Number(s.load) > 0 || Number(s.target_load) > 0) return true;
-        }
-      }
-    }
-  }
-  return false;
+  let presumed = 0;
+  let marked = 0;
+  weeks.forEach(function (w) {
+    (w.sessions || w.days || []).forEach(function (d) {
+      (d.exercises || d.rows || []).forEach(function (ex) {
+        const sets = (ex && ex.sets) || [];
+        let exPresumed = parseLoadKg(ex && (ex.plannedLoad || ex.load || ex.load_value || ex.load_target));
+        sets.forEach(function (s) {
+          const kg = parseLoadKg(s && (s.actual_load || s.logged_load || s.recorded_load || s.load || s.target_load));
+          if (!kg) return;
+          if (isMarkedLoadSet(s)) marked++;
+          else presumed++;
+        });
+        if (!sets.length && exPresumed) presumed++;
+      });
+    });
+  });
+  return { presumed: presumed, marked: marked };
+}
+
+function programHasPresumedLoads(prog) {
+  const kinds = countImportLoadKinds(prog);
+  return (kinds.presumed + kinds.marked) > 0;
 }
 
 function stripPresumedLoads(prog) {
@@ -12477,22 +12502,47 @@ function stripPresumedLoads(prog) {
   }
 }
 
-function openImportLoadsChoice() {
+function openImportLoadsChoice(prog) {
   return new Promise(function (resolve) {
+    const kinds = countImportLoadKinds(prog || {});
     const overlay = document.createElement('div');
     overlay.className = 'modal';
     overlay.style.display = 'flex';
     overlay.style.zIndex = '2710';
-    overlay.innerHTML = '<div class="modal-content" style="max-width:420px;">' +
-      '<h2 style="color:var(--gold);margin-top:0;">Carichi presunti</h2>' +
-      '<p style="font-size:13px;color:#ccc;margin:0 0 14px;">Il documento contiene kg stimati. Vuoi importarli nella scheda? Se no, la sezione carichi resta vuota.</p>' +
+    overlay.innerHTML = '<div class="modal-content" style="max-width:460px;">' +
+      '<h2 style="color:var(--gold);margin-top:0;">Carichi da importare</h2>' +
+      '<p style="font-size:13px;color:#ccc;margin:0 0 12px;">Scegli cosa scrivere nella scheda. Se non importi un tipo, quei campi kg restano vuoti.</p>' +
+      '<div style="margin:0 0 12px;padding:10px;border:1px solid #333;border-radius:8px;font-size:12px;color:#bbb;">' +
+        '<div>Presunti (stimati): <b style="color:#fff;">' + kinds.presumed + '</b></div>' +
+        '<div style="margin-top:4px;">Segnati (già scritti): <b style="color:#fff;">' + kinds.marked + '</b></div>' +
+      '</div>' +
+      '<div style="margin:12px 0;padding:10px;border:1px solid #333;border-radius:8px;">' +
+        '<b style="color:#fff;font-size:13px;">Carichi presunti</b>' +
+        '<p style="font-size:11px;color:#aaa;margin:6px 0 8px;">Kg stimati dal documento. Se sì, restano come riferimento (~kg), non compilano i campi.</p>' +
+        '<label style="display:flex;gap:8px;align-items:center;margin:6px 0;font-size:12px;color:#ccc;"><input type="radio" name="imp-presumed" value="yes"> Sì, importa i presunti</label>' +
+        '<label style="display:flex;gap:8px;align-items:center;margin:6px 0;font-size:12px;color:#ccc;"><input type="radio" name="imp-presumed" value="no" checked> No, non scrivere i presunti</label>' +
+      '</div>' +
+      '<div style="margin:12px 0;padding:10px;border:1px solid #333;border-radius:8px;">' +
+        '<b style="color:#fff;font-size:13px;">Carichi segnati</b>' +
+        '<p style="font-size:11px;color:#aaa;margin:6px 0 8px;">Kg già compilati/scritti. Se sì, compaiono già nei campi carico.</p>' +
+        '<label style="display:flex;gap:8px;align-items:center;margin:6px 0;font-size:12px;color:#ccc;"><input type="radio" name="imp-marked" value="yes"> Sì, importa i segnati (già scritti)</label>' +
+        '<label style="display:flex;gap:8px;align-items:center;margin:6px 0;font-size:12px;color:#ccc;"><input type="radio" name="imp-marked" value="no" checked> No, lascia i campi vuoti</label>' +
+      '</div>' +
       '<div style="display:flex;gap:8px;margin-top:8px;">' +
-      '<button class="btn btn-outline" id="imp-loads-no" style="flex:1;">NO, LASCIA VUOTI</button>' +
-      '<button class="btn btn-primary" id="imp-loads-yes" style="flex:1;">SI, IMPORTA</button>' +
+      '<button class="btn btn-outline" id="imp-loads-cancel" style="flex:1;">ANNULLA</button>' +
+      '<button class="btn btn-primary" id="imp-loads-ok" style="flex:1;">CONTINUA</button>' +
       '</div></div>';
     document.body.appendChild(overlay);
-    overlay.querySelector('#imp-loads-no').onclick = function () { overlay.remove(); resolve(false); };
-    overlay.querySelector('#imp-loads-yes').onclick = function () { overlay.remove(); resolve(true); };
+    overlay.querySelector('#imp-loads-cancel').onclick = function () { overlay.remove(); resolve(null); };
+    overlay.querySelector('#imp-loads-ok').onclick = function () {
+      const presumedEl = overlay.querySelector('input[name="imp-presumed"]:checked');
+      const markedEl = overlay.querySelector('input[name="imp-marked"]:checked');
+      overlay.remove();
+      resolve({
+        presumed: !!(presumedEl && presumedEl.value === 'yes'),
+        marked: !!(markedEl && markedEl.value === 'yes')
+      });
+    };
   });
 }
 
@@ -12502,7 +12552,6 @@ function openImportActivationChoices(prog) {
     const importedDays = Math.max(1, ((prog.weeks || [])[0]?.sessions || (prog.weeks || [])[0]?.days || []).length || (store.prefs.frequency || 4));
     const prefWeeks = Math.max(1, parseInt(store.prefs.duration, 10) || importedWeeks);
     const prefDays = Math.max(1, parseInt(store.prefs.frequency, 10) || importedDays);
-    const hasLoads = programHasPresumedLoads(prog);
     const overlay = document.createElement('div');
     overlay.className = 'modal';
     overlay.style.display = 'flex';
@@ -12556,19 +12605,6 @@ function openImportActivationChoices(prog) {
         </select>
       </div>
 
-      ${hasLoads ? `<div style="margin:12px 0;padding:10px;border:1px solid #333;border-radius:8px;">
-        <b style="color:#fff;font-size:13px;">Carichi presunti</b>
-        <p style="font-size:11px;color:#aaa;margin:6px 0 8px;">Il documento contiene kg stimati. Se scegli no, la sezione carichi resta vuota.</p>
-        <label style="display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-size:12px;color:#ccc;">
-          <input type="radio" name="imp-loads" value="yes" checked style="margin-top:3px;">
-          <span><b style="color:#fff;">Importa i carichi presunti</b><br><small>I kg stimati compaiono nella scheda.</small></span>
-        </label>
-        <label style="display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-size:12px;color:#ccc;">
-          <input type="radio" name="imp-loads" value="no" style="margin-top:3px;">
-          <span><b style="color:#fff;">Lascia vuota la sezione carichi</b><br><small>Li inserisci tu in allenamento.</small></span>
-        </label>
-      </div>` : ''}
-
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button class="btn btn-outline" id="imp-act-cancel" style="flex:1;">ANNULLA</button>
         <button class="btn btn-primary" id="imp-act-ok" style="flex:1;">CONFERMA E ATTIVA</button>
@@ -12591,15 +12627,13 @@ function openImportActivationChoices(prog) {
       const progression = overlay.querySelector('input[name="imp-prog-mode"]:checked').value;
       const weeks = Math.min(52, Math.max(1, parseInt(overlay.querySelector('#imp-weeks-val').value, 10) || importedWeeks));
       const days = Math.min(7, Math.max(1, parseInt(overlay.querySelector('#imp-days-val').value, 10) || importedDays));
-      const loadsEl = overlay.querySelector('input[name="imp-loads"]:checked');
       finish({
         weeksMode,
         daysMode,
         weeks: weeksMode === 'set' ? weeks : importedWeeks,
         days: daysMode === 'set' ? days : importedDays,
         progression,
-        goal: (overlay.querySelector('#imp-goal-primary') || {}).value || 'IPERTROFIA / MASSA',
-        importLoads: hasLoads ? !!(loadsEl && loadsEl.value === 'yes') : false
+        goal: (overlay.querySelector('#imp-goal-primary') || {}).value || 'IPERTROFIA / MASSA'
       });
     };
   });
@@ -12715,10 +12749,11 @@ async function confirmImportAndActivate() {
     if (!allow('therapy')) delete selectedProgram.therapy;
     if (!allow('exams')) delete selectedProgram.exams;
     selectedProgram.selectedDomains = selectedDomains.slice();
-    if (allow('training') && programHasPresumedLoads(selectedProgram)) {
+    if (allow('training')) {
       hideBusyOverlay();
-      const wantLoads = await openImportLoadsChoice();
-      if (wantLoads === false) stripPresumedLoads(selectedProgram);
+      const loadChoice = await openImportLoadsChoice(selectedProgram);
+      if (!loadChoice) return;
+      if (!loadChoice.presumed && !loadChoice.marked) stripPresumedLoads(selectedProgram);
     }
     return withBusy(
       function () { return saveCanonicalToCoachLibrary(selectedProgram, pState.filename || ''); },
@@ -12733,6 +12768,11 @@ async function confirmImportAndActivate() {
     hideBusyOverlay();
     choices = await openImportActivationChoices(peek);
     if (!choices) return;
+    hideBusyOverlay();
+    const loadChoice = await openImportLoadsChoice(peek);
+    if (!loadChoice) return;
+    choices.importPresumed = !!loadChoice.presumed;
+    choices.importMarked = !!loadChoice.marked;
   }
   return withBusy(function () { return confirmImportAndActivateInner(choices, domainOnly); }, domainOnly ? 'Salvataggio…' : 'Attivazione scheda…', { immediate: true });
 }
@@ -12907,11 +12947,19 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
       prog.duration_weeks = DATA.weeks.length;
     }
 
-    if (hasTraining && choices && choices.importLoads === false) {
-      stripPresumedLoads(DATA);
-      stripPresumedLoads(prog);
-    } else if (hasTraining && choices && choices.importLoads) {
-      try { seedProgramLoadsIntoStore(DATA); } catch (_) {}
+    if (hasTraining && choices) {
+      const wantP = !!choices.importPresumed;
+      const wantM = !!choices.importMarked;
+      if (wantM) {
+        try { seedProgramLoadsIntoStore(DATA); } catch (_) {}
+      }
+      if (!wantP && !wantM) {
+        stripPresumedLoads(DATA);
+        stripPresumedLoads(prog);
+      } else if (!wantP && wantM) {
+        stripPresumedLoads(DATA);
+        stripPresumedLoads(prog);
+      }
     }
 
     // Attach multi-domain payload onto DATA before persist (respect domain picker)
@@ -13491,6 +13539,12 @@ function applySsttStartInputs() {
   }
 }
 
+function sessionDisplayName(day, di) {
+  const label = day && (day.name || day.title || day.day || day.session || day.session_name);
+  if (label && String(label).trim()) return String(label).trim();
+  return 'Giorno ' + ((di || 0) + 1);
+}
+
 function renderTraining(c){
   console.debug('WORKOUT_OPEN', { week: currentWeek, session: currentDay });
   try {
@@ -13552,7 +13606,7 @@ function renderTraining(c){
     }
     h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
       <select onchange="currentWeek=parseInt(this.value);currentDay=0;render()">${weeksList.map(ww=>`<option value="${ww.weekNumber || ww.week}" ${(ww.weekNumber || ww.week)===currentWeek?'selected':''}>Settimana ${ww.weekNumber || ww.week}</option>`).join('')}</select>
-      <select onchange="currentDay=parseInt(this.value);render()">${allDays.map((dd,i)=>`<option value="${i}" ${i===currentDay?'selected':''}>${esc(dd.name||dd.title||dd.day||'Giorno '+(i+1))}${dd.is_bonus || dd.isBonus?' [BONUS]':''}</option>`).join('')}</select>
+      <select onchange="currentDay=parseInt(this.value);render()">${allDays.map((dd,i)=>`<option value="${i}" ${i===currentDay?'selected':''}>${esc(sessionDisplayName(dd, i))}${dd.is_bonus || dd.isBonus?' [BONUS]':''}</option>`).join('')}</select>
     </div>`;
     h += `<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
       <button class="btn btn-outline" type="button" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="undoWorkoutModification()" ${workoutUndoCount()?'':'disabled'}>ANNULLA ULTIMA MODIFICA${workoutUndoCount()?(' · '+workoutUndoCount()):''}</button>
@@ -13563,7 +13617,8 @@ function renderTraining(c){
       <button class="btn btn-outline" type="button" style="font-size:10px;padding:8px 10px;" onclick="openMaxTestPlannerModal()">MASSIMALE</button>
     </div>`;
 
-    h += `<div class="card"><div class="card-header"><h2>${esc(w.title)}</h2></div><div style="padding:15px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"><span style="font-size:11px;font-weight:700;color:var(--text-secondary);">${esc(d.title || d.day || 'Sessione')}${d.is_bonus || d.isBonus?' (BONUS)':''}</span><input type="number" step="0.1" placeholder="BW kg" value="${store.bw[currentWeek]||''}" onchange="store.bw[currentWeek]=this.value;persist()" style="width:90px;padding:6px;text-align:center;"></div><div id="exercises-list">`;
+    const sessionName = sessionDisplayName(d, currentDay);
+    h += `<div class="card"><div class="card-header"><h2>${esc(w.title)}</h2></div><div style="padding:15px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;"><div><div style="font-size:10px;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Sessione</div><div class="session-name-heading">${esc(sessionName)}${d.is_bonus || d.isBonus?' (BONUS)':''}</div></div><input type="number" step="0.1" placeholder="BW kg" value="${store.bw[currentWeek]||''}" onchange="store.bw[currentWeek]=this.value;persist()" style="width:90px;padding:6px;text-align:center;"></div><div id="exercises-list">`;
 
     // Render ALL exercises in this session
     let renderedCount = 0;
@@ -14048,8 +14103,10 @@ function buildWorkoutPdfHtml(opts) {
     body += '<h2 class="pdf-week" style="color:#c9a227;margin:22px 0 8px;font-size:16px;border-bottom:1px solid #333;padding-bottom:6px;">Settimana ' + (week.weekNumber || week.week || wi) + (week.title ? (' — ' + esc(week.title)) : '') + '</h2>';
     days.forEach(function (day, di) {
       if (scope === 'day' && (wi !== currentWeek || di !== currentDay)) return;
-      const dayTitle = day.name || day.title || day.day || ('Giorno ' + (di + 1));
-      body += '<h3 class="pdf-day" style="margin:14px 0 8px;font-size:14px;color:#fff;">' + esc(dayTitle) + '</h3>';
+      const dayTitle = (typeof sessionDisplayName === 'function')
+        ? sessionDisplayName(day, di)
+        : (day.name || day.title || day.day || ('Giorno ' + (di + 1)));
+      body += '<h3 class="pdf-day" style="margin:14px 0 8px;font-size:16px;color:#c9a227;font-weight:900;letter-spacing:0.4px;">' + esc(dayTitle) + '</h3>';
       const list = day.exercises || day.rows || [];
       body += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px;">';
       body += '<thead><tr style="background:#1a1a1a;color:#c9a227;text-align:left;"><th style="padding:6px;border:1px solid #333;">Esercizio</th><th style="padding:6px;border:1px solid #333;">Schema</th><th style="padding:6px;border:1px solid #333;">Serie / carichi</th><th style="padding:6px;border:1px solid #333;">Rest</th></tr></thead><tbody>';
@@ -14147,8 +14204,8 @@ function buildWorkoutPdfHtml(opts) {
         body { background:#fff; color:#111; }
         h2,h3,.head span { color:#111 !important; }
         table th { color:#8a6d1a !important; }
-        .pdf-week + .pdf-week, .pdf-day + .pdf-day { page-break-before: always; }
-        h2.pdf-week:not(:first-of-type), h3.pdf-day:not(:first-of-type), h2.pdf-section { page-break-before: always; }
+        h2.pdf-week:not(:first-of-type), h2.pdf-section { page-break-before: always; }
+        h3.pdf-day { page-break-inside: avoid; }
       }
     </style></head><body>
     <div class="head">
@@ -14217,7 +14274,17 @@ function buildWorkoutPdfBytes(opts) {
     return s.slice(0, Math.max(1, maxChars - 1)) + '.';
   }
   function needSpace(h) { if (y - h < MB) { flushPage(); drawHeader(); } }
+  function drawWatermark() {
+    if (y < 380) return;
+    cmds.unshift(
+      'q /GS0 gs',
+      'BT /F1 64 Tf ' + GOLD + ' rg 1 0 0 1 118 410 Tm (NURVAN) Tj ET',
+      'BT /F2 11 Tf ' + GOLD + ' rg 1 0 0 1 210 378 Tm (TRAIN. FUEL. RECOVER.) Tj ET',
+      'Q'
+    );
+  }
   function flushPage() {
+    drawWatermark();
     pageNum++;
     txt('F2', 7, GRAY, W - MR - 30, MB - 20, 'Pag. ' + pageNum);
     pages.push(cmds.join('\n'));
@@ -14249,11 +14316,12 @@ function buildWorkoutPdfBytes(opts) {
     y -= 28;
   }
   function dayTitle(label, extra) {
-    needSpace(22);
-    ln(ML, y + 6, ML + CW, y + 6, LGRAY, 0.5);
-    txt('F1', 10, DARK, ML, y - 6, clipFit(label, extra ? 230 : CW, 10));
-    if (extra) txt('F2', 8, GRAY, ML + 240, y - 6, clipFit(extra, CW - 240, 8));
-    y -= 22;
+    needSpace(28);
+    rct(ML, y - 6, CW, 24, '0.08 0.08 0.08');
+    rct(ML, y - 6, 4, 24, GOLD);
+    txt('F1', 13, GOLD, ML + 12, y + 2, clipFit(String(label || '').toUpperCase(), extra ? 240 : CW - 20, 13));
+    if (extra) txt('F2', 8, '0.7 0.7 0.7', ML + 260, y + 2, clipFit(extra, CW - 270, 8));
+    y -= 30;
   }
   function nutritionDayMacros(nd) {
     var kcal = 0, p = 0, c = 0, f = 0;
@@ -14297,7 +14365,9 @@ function buildWorkoutPdfBytes(opts) {
       if (scope === 'day' && (wi !== currentWeek || di !== currentDay)) return;
       if (!firstDayOfWeek) startFreshPage();
       firstDayOfWeek = false;
-      var dayLabel = day.name || day.title || day.day || ('Giorno ' + (di + 1));
+      var dayLabel = (typeof sessionDisplayName === 'function')
+        ? sessionDisplayName(day, di)
+        : (day.name || day.title || day.day || ('Giorno ' + (di + 1)));
       dayTitle(dayLabel);
 
       var list = day.exercises || day.rows || [];
@@ -14308,15 +14378,9 @@ function buildWorkoutPdfBytes(opts) {
           ? (function () { var pW = currentWeek, pD = currentDay; currentWeek = wi; currentDay = di; var n = getExerciseSetCount(ei); currentWeek = pW; currentDay = pD; return n; })()
           : (scheme.setCount || 3);
         var rowH = 14;
-        var tableH = 16 + setCount * rowH + 6;
-        needSpace(tableH + 24);
-
-        txt('F1', 9, DARK, ML, y, clipFit(name, 240, 9));
-        if (scheme.scheme) txt('F2', 7, GRAY, ML + 250, y, clipFit(scheme.scheme, 120, 7));
-        if (row.rest) txt('F2', 7, GRAY, ML + 380, y, clipFit('Rest: ' + row.rest, 70, 7));
-        var tempo = (store.tempos && store.tempos['w' + wi + '_d' + di + '_e' + ei]) || row.tempo || '';
-        if (tempo) txt('F2', 7, GRAY, ML + 450, y, clipFit('Tempo: ' + tempo, 65, 7));
-        y -= 14;
+        var barH = 36;
+        var tableH = barH + setCount * rowH + 6;
+        needSpace(tableH + 10);
 
         var cols = [
           { label: 'SERIE', x: ML, w: 50 },
@@ -14326,12 +14390,20 @@ function buildWorkoutPdfBytes(opts) {
           { label: 'TECNICA', x: ML + 300, w: 100 },
           { label: 'NOTE', x: ML + 400, w: CW - 400 }
         ];
+        var tempo = (store.tempos && store.tempos['w' + wi + '_d' + di + '_e' + ei]) || row.tempo || '';
+        var meta = [];
+        if (scheme.scheme) meta.push(scheme.scheme);
+        if (row.rest) meta.push('Rest ' + row.rest);
+        if (tempo) meta.push('Tempo ' + tempo);
 
-        rct(ML, y - 12, CW, 16, '0.12 0.12 0.12');
+        rct(ML, y - 30, CW, barH, '0.08 0.08 0.08');
+        rct(ML, y - 30, 4, barH, GOLD);
+        txt('F1', 12, GOLD, ML + 12, y - 6, clipFit(name, CW - (meta.length ? 180 : 20), 12));
+        if (meta.length) txt('F2', 7, '0.75 0.65 0.35', ML + 300, y - 6, clipFit(meta.join('  ·  '), 210, 7));
         cols.forEach(function (c) {
-          txt('F1', 6.5, GOLD, c.x + 4, y - 8, c.label);
+          txt('F1', 6.5, GOLD, c.x + 4, y - 24, c.label);
         });
-        y -= 16;
+        y -= barH;
 
         for (var s = 1; s <= setCount; s++) {
           var base = 'w' + wi + '_d' + di + '_e' + ei + '_s' + s;
@@ -14377,7 +14449,12 @@ function buildWorkoutPdfBytes(opts) {
       y -= 16;
     }
     DATA.nutrition.days.forEach(function (nd, ni) {
-      if (ni > 0) startFreshPage();
+      var dayH = 30;
+      (nd.meals || []).forEach(function (meal) {
+        dayH += 17;
+        dayH += ((meal.foods || meal.items || []).length) * 12;
+      });
+      if (ni > 0 && (y - dayH < MB)) startFreshPage();
       var macros = nutritionDayMacros(nd);
       var macroLine = (macros.kcal ? (macros.kcal + ' kcal') : '') +
         (macros.p || macros.c || macros.f ? ('  |  P ' + (macros.p || 0) + 'g  C ' + (macros.c || 0) + 'g  F ' + (macros.f || 0) + 'g') : '');
@@ -14491,7 +14568,7 @@ function buildWorkoutPdfBytes(opts) {
   var pageObjIds = [];
   var pagesId = addObj('');
   pages.forEach(function (_, i) {
-    pageObjIds.push(addObj('<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Contents ' + contentIds[i] + ' 0 R /Resources << /Font << /F1 ' + f1 + ' 0 R /F2 ' + f2 + ' 0 R >> >> >>'));
+    pageObjIds.push(addObj('<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Contents ' + contentIds[i] + ' 0 R /Resources << /Font << /F1 ' + f1 + ' 0 R /F2 ' + f2 + ' 0 R >> /ExtGState << /GS0 << /Type /ExtGState /ca 0.08 /CA 0.08 >> >> >> >>'));
   });
   objs[pagesId - 1] = '<< /Type /Pages /Kids [' + pageObjIds.map(function (id) { return id + ' 0 R'; }).join(' ') + '] /Count ' + pageObjIds.length + ' >>';
   var catalogId = addObj('<< /Type /Catalog /Pages ' + pagesId + ' 0 R >>');
