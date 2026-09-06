@@ -208,6 +208,54 @@ export function buildDeterministicIntelligence(client, accountData = {}, now = D
   };
 }
 
+export function interpretAthleteBrain({ signals = [], derivedMetrics = {}, sourceFingerprint = null } = {}) {
+  const positives = [];
+  const risks = [];
+  if (derivedMetrics.adherence && derivedMetrics.adherence.value != null && derivedMetrics.adherence.value >= 80) {
+    positives.push({
+      text: `Adherence ${derivedMetrics.adherence.value}% negli ultimi 28 giorni.`,
+      source: derivedMetrics.adherence
+    });
+  }
+  if (derivedMetrics.performance && derivedMetrics.performance.deltaPct != null && derivedMetrics.performance.deltaPct > 5) {
+    positives.push({
+      text: `Tonnage medio +${derivedMetrics.performance.deltaPct}% rispetto al periodo precedente.`,
+      source: derivedMetrics.performance
+    });
+  }
+  for (const signal of signals) {
+    risks.push({
+      text: signal.detail || signal.title,
+      signalId: signal.id,
+      evidence: signal.evidence
+    });
+  }
+  const top = signals[0] || null;
+  const suggestedAction = top
+    ? {
+      text: top.id === "missing_check_in"
+        ? "Richiedi o revisiona il check-in."
+        : top.id === "inactivity"
+          ? "Apri il cliente e valuta un nudge o una modifica di volume."
+          : "Apri i dati e decidi la next action.",
+      signalId: top.id,
+      viewData: { view: "coachClient" }
+    }
+    : { text: "Nessun rischio deterministico. Mantieni il piano corrente.", signalId: null };
+  return {
+    currentStatus: top
+      ? `Segnale principale: ${top.title}.`
+      : "Nessun segnale di rischio deterministico.",
+    positives,
+    risks,
+    suggestedAction,
+    grounded: true,
+    clinicalDiagnosis: false,
+    sourceFingerprint,
+    generatedAt: new Date().toISOString()
+  };
+}
+
 export async function saveIntelligenceSnapshot(pool, coachId, clientId, intelligence) {
   await pool.query(
     `INSERT INTO coach_client_metric_snapshots(

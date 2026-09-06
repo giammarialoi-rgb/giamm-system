@@ -313,6 +313,8 @@ function timelineSpec(kind, row) {
     change_approved: ["approval", "program", "coach", "Modifica programma approvata", "training"],
     change_rejected: ["approval", "program", "coach", "Modifica programma rifiutata", "coachClient"],
     check_request: ["check_in_request", "check-in", "coach", "Check-in richiesto", "coachClient"],
+    check_in_received: ["check_in", "check-in", "client", "Check-in ricevuto", "coachCheckIns"],
+    check_in_reviewed: ["check_in_review", "check-in", "coach", "Check-in revisionato", "coachCheckIns"],
     payment_due: ["payment", "business", "system", "Pagamento in scadenza", "coachClient"]
   };
   return map[kind] || [kind || "event", "general", row.from_role || "system", String(kind || "Attività").replace(/_/g, " "), "coachClient"];

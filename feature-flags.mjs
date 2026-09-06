@@ -8,17 +8,20 @@
 export const COACH_OS_FEATURE_DEFAULTS = Object.freeze({
   coachShellV2: true,
   coachTodayV2: true,
-  coachOverviewV2: false,
+  coachOverviewV2: true,
   coachImportV2: true,
   coachTasksV1: true,
   clientTimelineV1: true,
   clientIntelligence: true,
   checkInCenterV1: true,
-  agentV1: false,
-  schedulingV1: false,
-  coachAnalyticsV1: false,
-  businessV1: false,
-  inboxV2: false
+  agentV1: true,
+  schedulingV1: true,
+  coachAnalyticsV1: true,
+  businessV1: true,
+  inboxV2: true,
+  athleteBrainV1: true,
+  mealAiV1: true,
+  videoFormV1: true
 });
 
 export const COACH_OS_FEATURE_NAMES = Object.freeze(Object.keys(COACH_OS_FEATURE_DEFAULTS));

@@ -129,8 +129,8 @@
     const sidebar = document.getElementById('coach-os-sidebar');
     const brand = document.getElementById('coach-os-header-brand');
     if (!useShell) {
-      if (sidebar) sidebar.remove();
-      if (brand) brand.remove();
+      if (sidebar && sidebar.parentNode) sidebar.parentNode.removeChild(sidebar);
+      if (brand && brand.parentNode) brand.parentNode.removeChild(brand);
       return;
     }
     ensureBrand();

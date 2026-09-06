@@ -2349,7 +2349,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MASTER-TASK-35-AI-OS",
-        schemaTarget: "0003",
+        schemaTarget: "0007",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -2363,17 +2363,20 @@ body.coach-os-v2 .nav-item svg {
           importFullReview: true,
           coachShellV2: true,
           coachTodayV2: true,
-          coachOverviewV2: false,
+          coachOverviewV2: true,
           coachImportV2: true,
           coachTasksV1: true,
           clientTimelineV1: true,
           clientIntelligence: true,
           checkInCenterV1: true,
-          agentV1: false,
-          schedulingV1: false,
-          coachAnalyticsV1: false,
-          businessV1: false,
-          inboxV2: false
+          agentV1: true,
+          schedulingV1: true,
+          coachAnalyticsV1: true,
+          businessV1: true,
+          inboxV2: true,
+          athleteBrainV1: true,
+          mealAiV1: true,
+          videoFormV1: true
         }
       };
 
@@ -31718,6 +31721,7 @@ if (typeof window !== 'undefined') {
 var ACTION_SOURCES = Object.freeze(['MANUAL', 'AI', 'IMPORT', 'AUTOMATION', 'SYSTEM']);
 var ACTION_SCOPES = Object.freeze(['SESSION_ADJUSTMENT', 'PROGRAM_ADJUSTMENT']);
 var AI_CONTROL_MODES = Object.freeze(['manual', 'suggest', 'confirm', 'auto']);
+var TOOL_CAPABILITIES = Object.freeze(['READ', 'PROPOSE', 'EXECUTE']);
 
 var AI_CONTROL_DEFAULTS = Object.freeze({
   programming: 'confirm',
@@ -31776,6 +31780,57 @@ var ACTION_DEFS = [
   { action_type: 'APPLY_DELOAD', op_type: 'apply_deload', entity_type: 'program', domain: 'autoregulation' },
   { action_type: 'PROPOSE_PROGRESSION', op_type: 'propose_progression', entity_type: 'set', domain: 'progression' }
 ];
+
+/**
+ * Coach Agent V1 tool registry. This is deliberately small. Scheduling,
+ * business, CRM, automations, broadcast and groups are not V1 tools.
+ */
+var AGENT_V1_TOOL_DEFS = Object.freeze([
+  { id: 'clients.search', capability: 'READ', roles: ['coach'], target: 'portfolio', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: [] },
+  { id: 'clients.status', capability: 'READ', roles: ['coach'], target: 'client', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'clients.activity', capability: 'READ', roles: ['coach'], target: 'client', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'clients.inactive', capability: 'READ', roles: ['coach'], target: 'portfolio', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: [] },
+  { id: 'checkins.missing', capability: 'READ', roles: ['coach'], target: 'portfolio', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: [] },
+  { id: 'messages.unread', capability: 'READ', roles: ['coach'], target: 'portfolio', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: [] },
+  { id: 'program.status', capability: 'READ', roles: ['coach'], target: 'client', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'tasks.list', capability: 'READ', roles: ['coach'], target: 'coach', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'coachTasksV1', required: [] },
+  { id: 'tasks.daily_summary', capability: 'READ', roles: ['coach'], target: 'coach', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'coachTasksV1', required: [] },
+  { id: 'program.draft', capability: 'PROPOSE', roles: ['coach'], target: 'client', impact: 'medium', confirmation: 'execute', reversible: false, audit: 'full', offline: 'draft-only', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'program.propose_modification', capability: 'PROPOSE', roles: ['coach'], target: 'client', impact: 'medium', confirmation: 'execute', reversible: false, audit: 'full', offline: 'draft-only', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'program.propose_deload', capability: 'PROPOSE', roles: ['coach'], target: 'client', impact: 'medium', confirmation: 'execute', reversible: false, audit: 'full', offline: 'draft-only', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'messages.prepare', capability: 'PROPOSE', roles: ['coach'], target: 'client', impact: 'medium', confirmation: 'execute', reversible: false, audit: 'full', offline: 'draft-only', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'checkins.prepare_request', capability: 'PROPOSE', roles: ['coach'], target: 'client', impact: 'medium', confirmation: 'execute', reversible: false, audit: 'full', offline: 'draft-only', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'program.assign', capability: 'EXECUTE', roles: ['coach'], target: 'client', impact: 'high', confirmation: 'always', reversible: true, audit: 'full', offline: 'never', featureFlag: 'agentV1', required: ['clientId', 'proposalId'] },
+  { id: 'program.apply_modification', capability: 'EXECUTE', roles: ['coach'], target: 'client', impact: 'high', confirmation: 'always', reversible: true, audit: 'full', offline: 'never', featureFlag: 'agentV1', required: ['clientId', 'proposalId'] },
+  { id: 'messages.send', capability: 'EXECUTE', roles: ['coach'], target: 'client', impact: 'high', confirmation: 'always', reversible: false, audit: 'full', offline: 'never', featureFlag: 'agentV1', required: ['clientId', 'proposalId', 'encryptedBody'] },
+  { id: 'checkins.request', capability: 'EXECUTE', roles: ['coach'], target: 'client', impact: 'high', confirmation: 'always', reversible: false, audit: 'full', offline: 'never', featureFlag: 'agentV1', required: ['clientId', 'proposalId'] },
+  { id: 'tasks.create', capability: 'EXECUTE', roles: ['coach'], target: 'coach', impact: 'low', confirmation: 'policy', reversible: true, audit: 'full', offline: 'never', featureFlag: 'coachTasksV1', required: ['title'] },
+  { id: 'tasks.complete', capability: 'EXECUTE', roles: ['coach'], target: 'coach', impact: 'low', confirmation: 'policy', reversible: true, audit: 'full', offline: 'never', featureFlag: 'coachTasksV1', required: ['taskId'] },
+  { id: 'tasks.snooze', capability: 'EXECUTE', roles: ['coach'], target: 'coach', impact: 'low', confirmation: 'policy', reversible: true, audit: 'full', offline: 'never', featureFlag: 'coachTasksV1', required: ['taskId'] },
+  { id: 'tasks.reorder', capability: 'EXECUTE', roles: ['coach'], target: 'coach', impact: 'low', confirmation: 'bulk', reversible: true, audit: 'full', offline: 'never', featureFlag: 'coachTasksV1', required: ['ids'] }
+]);
+
+const TOOL_BY_ID = Object.freeze(Object.fromEntries(AGENT_V1_TOOL_DEFS.map((tool) => [tool.id, tool])));
+
+function getAgentToolDef(id) {
+  return TOOL_BY_ID[String(id || '')] || null;
+}
+
+function listAgentTools({ role = 'coach', capability = null } = {}) {
+  return AGENT_V1_TOOL_DEFS.filter((tool) =>
+    tool.roles.includes(role) && (!capability || tool.capability === capability)
+  );
+}
+
+function validateAgentToolInput(toolId, input) {
+  const tool = getAgentToolDef(toolId);
+  if (!tool) return { valid: false, errors: ['unknown_tool'] };
+  const payload = input && typeof input === 'object' ? input : {};
+  const errors = (tool.required || [])
+    .filter((name) => payload[name] == null || payload[name] === '')
+    .map((name) => 'missing_' + name);
+  return { valid: errors.length === 0, errors, tool };
+}
 
 const BY_ACTION = Object.create(null);
 const BY_OP = Object.create(null);
@@ -32087,8 +32142,13 @@ function createActionDispatcher(deps = {}) {
 {
   ACTION_SOURCES,
   ACTION_SCOPES,
+  TOOL_CAPABILITIES,
   AI_CONTROL_DEFAULTS,
   ACTION_DEFS,
+  AGENT_V1_TOOL_DEFS,
+  getAgentToolDef,
+  listAgentTools,
+  validateAgentToolInput,
   getActionDef,
   defaultAiControlPrefs,
   ensureAiControlPrefs,
@@ -58094,8 +58154,8 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     const sidebar = document.getElementById('coach-os-sidebar');
     const brand = document.getElementById('coach-os-header-brand');
     if (!useShell) {
-      if (sidebar) sidebar.remove();
-      if (brand) brand.remove();
+      if (sidebar && sidebar.parentNode) sidebar.parentNode.removeChild(sidebar);
+      if (brand && brand.parentNode) brand.parentNode.removeChild(brand);
       return;
     }
     ensureBrand();
@@ -58916,6 +58976,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     const intelligence = payload.intelligence || {};
     const derived = intelligence.derivedMetrics || {};
     const signals = intelligence.signals || [];
+    const brain = intelligence.aiInterpretation || null;
     const weight = snapshot.weight || {};
     const timeline = payload.timeline || [];
     store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, {
@@ -58961,6 +59022,15 @@ window.rememberApprovedProgram = rememberApprovedProgram;
             '</strong><span>' + escText(signal.detail || '') + '</span></span></div>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">Nessun rischio deterministico rilevato. Apri i dati per il dettaglio.</div>') +
+      (brain
+        ? '<div class="coach-os-card" style="margin-top:12px;"><div class="coach-os-card-kicker">Athlete Brain</div>' +
+          '<div class="coach-os-card-title">' + escText(brain.currentStatus || '') + '</div>' +
+          '<div class="coach-os-muted">' + escText((brain.suggestedAction && brain.suggestedAction.text) || '') + '</div>' +
+          '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
+          '<button class="coach-os-action" onclick="CoachOS.brainFeedback(\'approve\')">APPROVE</button>' +
+          '<button class="coach-os-action" onclick="CoachOS.brainFeedback(\'dismiss\')">DISMISS</button>' +
+          '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachAgent\')">ASK AGENT</button></div></div>'
+        : '') +
       '</section>' +
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Timeline</h2>' +
@@ -59103,6 +59173,26 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       if (container) renderOverviewData(container, payload);
     } catch (error) {
       practiceToast((error && error.message) || 'Timeline non disponibile', 'danger');
+    }
+  };
+
+  CoachOS.brainFeedback = async function (decision) {
+    const payload = window.__coachClientOverview || {};
+    const id = payload.client && payload.client.id;
+    const brain = payload.intelligence && payload.intelligence.aiInterpretation;
+    if (!id || !brain) return;
+    try {
+      await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/brain-feedback', {
+        method: 'POST',
+        headers: practiceHeaders(true),
+        body: JSON.stringify({
+          decision: decision,
+          interpretationFingerprint: brain.sourceFingerprint
+        })
+      });
+      if (typeof practiceToast === 'function') practiceToast('Feedback registrato', 'success');
+    } catch (error) {
+      if (typeof practiceToast === 'function') practiceToast((error && error.message) || 'Feedback non salvato', 'danger');
     }
   };
 
@@ -59353,6 +59443,459 @@ window.rememberApprovedProgram = rememberApprovedProgram;
   CoachOS.submitClientCheckInToCoach = submitClientCheckInToCoach;
   window.submitClientCheckInToCoach = submitClientCheckInToCoach;
   CoachOS.registerView('coachCheckIns', renderCheckIns);
+})();
+
+(function () {
+  'use strict';
+  const CoachOS = window.CoachOS;
+  if (!CoachOS) return;
+
+  const state = { run: null, message: '', busy: false };
+
+  function escText(value) {
+    if (typeof window.esc === 'function') return window.esc(String(value || ''));
+    return String(value || '').replace(/[&<>"']/g, '');
+  }
+
+  function whyHtml(why) {
+    const reasons = (why && why.reasons) || [];
+    if (!reasons.length) return '';
+    return '<div class="coach-os-muted" style="margin-top:8px;">WHY</div><div class="coach-os-list">' +
+      reasons.map(function (reason) {
+        return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' +
+          escText(reason.statement || '') + '</strong><span>' +
+          escText(JSON.stringify(reason.evidence || {})) + '</span></span>' +
+          (why.viewData ? '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.openAgentViewData()">VIEW DATA</button>' : '') +
+          '</div>';
+      }).join('') + '</div>';
+  }
+
+  function render(container) {
+    const run = state.run;
+    const proposals = (run && run.proposals) || [];
+    container.innerHTML =
+      '<div class="coach-os-page">' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Nurvan Agent</div>' +
+      '<h1 class="coach-os-title">Ask. Plan. Execute.</h1>' +
+      '<p class="coach-os-subtitle">Intent → Plan → Preview → Confirmation → Result. Nessuna write senza conferma.</p></div></div>' +
+      '<div class="coach-os-card">' +
+      '<textarea id="coach-os-agent-input" rows="3" placeholder="Es. mostra i clienti inattivi, proponi un deload, crea un task…"' +
+      ' style="width:100%;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:12px;">' +
+      escText(state.message) + '</textarea>' +
+      '<button class="btn" style="margin-top:10px;background:#111;color:#fff;" onclick="CoachOS.submitAgentRun()">ASK NURVAN</button></div>' +
+      (run
+        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Intent</h2></div>' +
+          '<div class="coach-os-card"><strong>' + escText(run.intent || (state.intent && state.intent.id) || '') +
+          '</strong><div class="coach-os-muted">Plan: understand → preview → confirm</div></div></section>'
+        : '') +
+      (proposals.length
+        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Preview</h2></div>' +
+          proposals.map(function (proposal, index) {
+            return '<div class="coach-os-card" style="margin-bottom:10px;"><div class="coach-os-card-kicker">' +
+              escText(proposal.toolId) + '</div><div class="coach-os-card-title">' + escText(proposal.summary) +
+              '</div>' + whyHtml(proposal.why) +
+              '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
+              '<button class="coach-os-action" onclick="CoachOS.confirmAgentProposal(' + index + ')">CONFIRM</button>' +
+              '<button class="coach-os-action" onclick="CoachOS.undoAgentProposal(' + index + ')">UNDO</button>' +
+              '<button class="coach-os-action" onclick="CoachOS.refreshAgentRun()">REFRESH DATA</button>' +
+              '<button class="coach-os-action" onclick="CoachOS.submitAgentRun()">RE-PLAN</button></div></div>';
+          }).join('') + '</section>'
+        : '<div class="coach-os-empty">Chiedi un comando ristretto: inattivi, check-in mancanti, deload, messaggio o task.</div>') +
+      (state.result
+        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Result</h2></div>' +
+          '<div class="coach-os-card">' + escText(JSON.stringify(state.result)) + '</div></section>'
+        : '') +
+      (state.stale
+        ? '<div class="coach-os-error">Questa proposta non è più aggiornata perché i dati sono cambiati.</div>'
+        : '') +
+      '</div>';
+  }
+
+  CoachOS.views.coachAgent = function (container) {
+    render(container);
+  };
+
+  CoachOS.submitAgentRun = async function () {
+    const input = document.getElementById('coach-os-agent-input');
+    state.message = input ? input.value : state.message;
+    const clientId = store.coachWorkspace && store.coachWorkspace.clientId;
+    try {
+      const payload = await window.practiceFetch('/api/coach/agent/runs', {
+        method: 'POST',
+        headers: window.practiceHeaders(true),
+        body: JSON.stringify({ message: state.message, clientId: clientId || null })
+      });
+      state.run = payload.run;
+      state.intent = payload.intent;
+      state.stale = false;
+      CoachOS.navigate('coachAgent');
+    } catch (error) {
+      if (typeof practiceToast === 'function') practiceToast(error.message || 'Agent non disponibile', 'error');
+    }
+  };
+
+  CoachOS.confirmAgentProposal = async function (index) {
+    const proposal = state.run && state.run.proposals && state.run.proposals[index];
+    if (!proposal || !state.run) return;
+    try {
+      const payload = await window.practiceFetch('/api/coach/agent/runs/' + encodeURIComponent(state.run.id) + '/confirm', {
+        method: 'POST',
+        headers: window.practiceHeaders(true),
+        body: JSON.stringify({
+          proposalId: proposal.id,
+          expectedRevision: proposal.expectedRevision,
+          expectedFingerprint: proposal.expectedFingerprint,
+          idempotencyKey: 'ui:' + proposal.id,
+          targetSet: proposal.targetSet
+        })
+      });
+      state.result = payload.result;
+      state.stale = false;
+      CoachOS.navigate('coachAgent');
+    } catch (error) {
+      if (error && error.code === 'STALE_PROPOSAL') state.stale = true;
+      if (typeof practiceToast === 'function') practiceToast(error.message || 'Conferma rifiutata', 'warning');
+      CoachOS.navigate('coachAgent');
+    }
+  };
+
+  CoachOS.undoAgentProposal = async function (index) {
+    const proposal = state.run && state.run.proposals && state.run.proposals[index];
+    if (!proposal || !state.run) return;
+    await window.practiceFetch('/api/coach/agent/runs/' + encodeURIComponent(state.run.id) + '/undo', {
+      method: 'POST',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({ proposalId: proposal.id })
+    });
+    if (typeof practiceToast === 'function') practiceToast('Azione annullata', 'info');
+  };
+
+  CoachOS.refreshAgentRun = CoachOS.submitAgentRun;
+  CoachOS.openAgentViewData = function () {
+    const clientId = store.coachWorkspace && store.coachWorkspace.clientId;
+    if (clientId) openCoachClient(clientId);
+    else CoachOS.navigate('coachHub');
+  };
+})();
+
+(function () {
+  'use strict';
+  const CoachOS = window.CoachOS;
+  if (!CoachOS) return;
+
+  const TYPES = ['Coaching Call', 'Check-in', 'Review', 'Consultation', 'Custom Session', 'Training Session'];
+  const state = { appointments: [], availability: [] };
+
+  function escText(value) {
+    if (typeof window.esc === 'function') return window.esc(String(value || ''));
+    return String(value || '').replace(/[&<>"']/g, '');
+  }
+
+  function render(container) {
+    container.innerHTML =
+      '<div class="coach-os-page">' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Online coaching</div>' +
+      '<h1 class="coach-os-title">Calendar</h1>' +
+      '<p class="coach-os-subtitle">Call, check-in e review. Timezone esplicita, niente booking palestra-first.</p></div>' +
+      '<button class="btn" style="background:#111;color:#fff;" onclick="CoachOS.createAppointmentPrompt()">NEW SESSION</button></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Session types</h2></div>' +
+      '<div class="coach-os-quick-actions">' + TYPES.map(function (type) {
+        return '<span class="coach-os-action" style="cursor:default;">' + escText(type) + '</span>';
+      }).join('') + '</div></section>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Upcoming</h2></div>' +
+      (state.appointments.length
+        ? '<div class="coach-os-list">' + state.appointments.map(function (item) {
+          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' +
+            escText(item.title) + '</strong><span>' + escText(item.type) + ' · ' +
+            escText(String(item.startsAt || '').replace('T', ' ').slice(0, 16)) + ' · ' +
+            escText(item.timeZone) + '</span></span>' +
+            '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.cancelAppointment(\'' +
+            escText(item.id) + '\')">CANCEL</button></div>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">Nessuna sessione. Imposta disponibilità e prenota una Coaching Call.</div>') +
+      '</section></div>';
+  }
+
+  CoachOS.views.coachCalendar = async function (container) {
+    container.innerHTML = '<div class="coach-os-skeleton">Loading calendar…</div>';
+    try {
+      const payload = await window.practiceFetch('/api/coach/appointments', { headers: window.practiceHeaders() });
+      state.appointments = payload.appointments || [];
+      render(container);
+    } catch (_) {
+      render(container);
+    }
+  };
+
+  CoachOS.createAppointmentPrompt = async function () {
+    const title = window.prompt('Titolo sessione', 'Coaching Call');
+    if (!title) return;
+    const startsAt = window.prompt('Inizio ISO (es. 2026-09-06T09:00:00.000Z)');
+    if (!startsAt) return;
+    try {
+      await window.practiceFetch('/api/coach/appointments', {
+        method: 'POST',
+        headers: window.practiceHeaders(true),
+        body: JSON.stringify({
+          title: title,
+          type: 'Coaching Call',
+          startsAt: startsAt,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+          clientId: store.coachWorkspace && store.coachWorkspace.clientId || null
+        })
+      });
+      CoachOS.navigate('coachCalendar');
+    } catch (error) {
+      if (typeof practiceToast === 'function') practiceToast(error.message || 'Prenotazione non salvata', 'error');
+    }
+  };
+
+  CoachOS.cancelAppointment = async function (id) {
+    await window.practiceFetch('/api/coach/appointments/' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({ status: 'cancelled' })
+    });
+    CoachOS.navigate('coachCalendar');
+  };
+})();
+
+(function () {
+  'use strict';
+  const CoachOS = window.CoachOS;
+  if (!CoachOS) return;
+
+  function escText(value) {
+    if (typeof window.esc === 'function') return window.esc(String(value || ''));
+    return String(value || '').replace(/[&<>"']/g, '');
+  }
+
+  CoachOS.views.coachAnalytics = async function (container) {
+    container.innerHTML = '<div class="coach-os-skeleton">Loading coach analytics…</div>';
+    try {
+      const data = await window.practiceFetch('/api/coach/analytics', { headers: window.practiceHeaders() });
+      const kpi = data.analytics || {};
+      container.innerHTML =
+        '<div class="coach-os-page">' +
+        '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Athlete quality</div>' +
+        '<h1 class="coach-os-title">Coach Analytics</h1>' +
+        '<p class="coach-os-subtitle">Adherence, workout e check-in. Nessun revenue o MRR qui.</p></div></div>' +
+        '<div class="coach-os-card coach-os-kpis">' +
+        [['Adherence', kpi.adherence && kpi.adherence.average != null ? kpi.adherence.average + '%' : '—'],
+          ['At risk', kpi.adherence && kpi.adherence.atRisk || 0],
+          ['Workouts 28d', kpi.workouts && kpi.workouts.completed28d || 0],
+          ['Check-ins due', kpi.checkIns && kpi.checkIns.due || 0]
+        ].map(function (row) {
+          return '<div class="coach-os-kpi"><strong>' + escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></div>';
+        }).join('') + '</div>' +
+        '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Clients to open</h2></div>' +
+        ((kpi.clientsAtRisk || []).length
+          ? '<div class="coach-os-list">' + kpi.clientsAtRisk.map(function (row) {
+            return '<button class="coach-os-row" onclick="openCoachClient(\'' + escText(row.id) + '\')"><span class="coach-os-row-main"><strong>' +
+              escText(row.name) + '</strong><span>Adherence ' + escText(row.adherence) + '%</span></span></button>';
+          }).join('') + '</div>'
+          : '<div class="coach-os-empty">Nessun cliente sotto soglia. Apri Clients per il dettaglio.</div>') +
+        '</section></div>';
+    } catch (error) {
+      container.innerHTML = '<div class="coach-os-error">Analytics non disponibili.</div>';
+    }
+  };
+})();
+
+(function () {
+  'use strict';
+  const CoachOS = window.CoachOS;
+  if (!CoachOS) return;
+
+  function escText(value) {
+    if (typeof window.esc === 'function') return window.esc(String(value || ''));
+    return String(value || '').replace(/[&<>"']/g, '');
+  }
+
+  function euros(cents) {
+    return '€' + (Number(cents || 0) / 100).toFixed(0);
+  }
+
+  CoachOS.views.coachBusiness = async function (container) {
+    container.innerHTML = '<div class="coach-os-skeleton">Loading ledger…</div>';
+    const data = await window.practiceFetch('/api/coach/business', { headers: window.practiceHeaders() });
+    const summary = data.summary || {};
+    container.innerHTML =
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Manual ledger</div>' +
+      '<h1 class="coach-os-title">Business</h1><p class="coach-os-subtitle">Nessuno Stripe. Piano, rinnovo e overdue.</p></div></div>' +
+      '<div class="coach-os-card coach-os-kpis">' +
+      [['Active', summary.activeClients || 0], ['Revenue 30d', euros(summary.revenue30dCents)], ['MRR', euros(summary.mrrCents)], ['Overdue', summary.overdue || 0]]
+        .map(function (row) {
+          return '<div class="coach-os-kpi"><strong>' + escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></div>';
+        }).join('') + '</div></div>';
+  };
+
+  CoachOS.views.coachCrm = async function (container) {
+    const data = await window.practiceFetch('/api/coach/crm', { headers: window.practiceHeaders() });
+    const rows = data.pipeline || [];
+    container.innerHTML =
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Pipeline</div>' +
+      '<h1 class="coach-os-title">CRM</h1></div></div>' +
+      (rows.length
+        ? '<div class="coach-os-list">' + rows.map(function (row) {
+          return '<button class="coach-os-row" onclick="openCoachClient(\'' + escText(row.id) + '\')"><span class="coach-os-row-main"><strong>' +
+            escText(row.name) + '</strong><span>' + escText(row.stage) + (row.nextAction ? ' · ' + escText(row.nextAction) : '') +
+            '</span></span></button>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">Nessun cliente in pipeline.</div>') + '</div>';
+  };
+
+  CoachOS.views.coachAutomations = async function (container) {
+    const data = await window.practiceFetch('/api/coach/automations', { headers: window.practiceHeaders() });
+    const rows = data.rules || [];
+    container.innerHTML =
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Rules</div>' +
+      '<h1 class="coach-os-title">Automations</h1><p class="coach-os-subtitle">Trigger, condizione, azione. Dry-run prima di abilitare.</p></div>' +
+      '<button class="btn btn-outline" onclick="CoachOS.createAutomationPrompt()">NEW RULE</button></div>' +
+      (rows.length
+        ? '<div class="coach-os-list">' + rows.map(function (row) {
+          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(row.name) +
+            '</strong><span>' + escText(row.trigger) + ' → ' + escText(row.action) + '</span></span>' +
+            '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.dryRunAutomation(\'' +
+            escText(row.id) + '\')">DRY RUN</button></div>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">Nessuna automation. Restano fuori dall’Agent V1.</div>') + '</div>';
+  };
+
+  CoachOS.createAutomationPrompt = async function () {
+    const name = window.prompt('Nome automation', 'Check-in received → task');
+    if (!name) return;
+    await window.practiceFetch('/api/coach/automations', {
+      method: 'POST',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({ name: name, trigger: 'check_in_received', action: 'create_task' })
+    });
+    CoachOS.navigate('coachAutomations');
+  };
+
+  CoachOS.dryRunAutomation = async function (id) {
+    const payload = await window.practiceFetch('/api/coach/automations/' + encodeURIComponent(id) + '/dry-run', {
+      method: 'POST',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({})
+    });
+    if (typeof practiceToast === 'function') practiceToast('Dry-run: ' + (payload.preview && payload.preview.action), 'info');
+  };
+})();
+
+(function () {
+  'use strict';
+  const CoachOS = window.CoachOS;
+  if (!CoachOS) return;
+
+  const state = { items: [], q: '' };
+
+  function escText(value) {
+    if (typeof window.esc === 'function') return window.esc(String(value || ''));
+    return String(value || '').replace(/[&<>"']/g, '');
+  }
+
+  function openItem(item) {
+    const href = item.href || {};
+    if (href.view === 'coachChat' && href.clientId && typeof openCoachClientChat === 'function') {
+      openCoachClientChat(href.clientId);
+      return;
+    }
+    if (href.view === 'coachCheckIns') {
+      CoachOS.navigate('coachCheckIns');
+      return;
+    }
+    if (href.clientId && typeof openCoachClient === 'function') {
+      openCoachClient(href.clientId);
+      return;
+    }
+    CoachOS.navigate('coachHub');
+  }
+
+  CoachOS.views.coachInbox = async function (container) {
+    container.innerHTML = '<div class="coach-os-skeleton">Loading inbox…</div>';
+    const payload = await window.practiceFetch(
+      '/api/coach/inbox-feed?q=' + encodeURIComponent(state.q || ''),
+      { headers: window.practiceHeaders() }
+    );
+    state.items = payload.items || [];
+    container.innerHTML =
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Operational</div>' +
+      '<h1 class="coach-os-title">Inbox</h1>' +
+      '<p class="coach-os-subtitle">Messaggi, check-in, richieste e attention. La chat 1:1 resta il thread.</p></div></div>' +
+      '<input value="' + escText(state.q) + '" placeholder="Cerca messaggi o clienti" onchange="CoachOS.searchInbox(this.value)" ' +
+      'style="width:100%;min-height:44px;background:#0b0b0b;border:1px solid var(--co-border);border-radius:12px;color:#fff;padding:0 12px;">' +
+      (state.items.length
+        ? '<div class="coach-os-list" style="margin-top:12px;">' + state.items.map(function (item, index) {
+          return '<button class="coach-os-row" onclick="CoachOS.openInboxItem(' + index + ')">' +
+            '<span class="coach-os-status-dot ' + (item.unread ? 'high' : 'low') + '"></span>' +
+            '<span class="coach-os-row-main"><strong>' + escText(item.title) + '</strong><span>' +
+            escText(item.kind) + (item.preview ? ' · ' + escText(item.preview) : '') + '</span></span></button>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">Inbox vuota. I thread E2E restano in Chat.</div>') +
+      '</div>';
+  };
+
+  CoachOS.searchInbox = function (value) {
+    state.q = value;
+    CoachOS.navigate('coachInbox');
+  };
+  CoachOS.openInboxItem = function (index) {
+    openItem(state.items[index] || {});
+  };
+})();
+
+(function () {
+  'use strict';
+  const CoachOS = window.CoachOS;
+  if (!CoachOS) return;
+
+  function escText(value) {
+    if (typeof window.esc === 'function') return window.esc(String(value || ''));
+    return String(value || '').replace(/[&<>"']/g, '');
+  }
+
+  CoachOS.views.coachNutrition = async function (container) {
+    container.innerHTML =
+      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Portfolio</div>' +
+      '<h1 class="coach-os-title">Nutrition</h1>' +
+      '<p class="coach-os-subtitle">Stima pasto → conferma → log. L’AI non salva senza conferma.</p></div></div>' +
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">Meal estimate</div>' +
+      '<input id="coach-os-meal-p" placeholder="Protein g" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-meal-c" placeholder="Carbs g" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<input id="coach-os-meal-f" placeholder="Fats g" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.estimateMeal()">ESTIMATE</button>' +
+      '<div id="coach-os-meal-result" class="coach-os-muted" style="margin-top:10px;"></div></div></div>';
+  };
+
+  CoachOS.estimateMeal = async function () {
+    const protein = document.getElementById('coach-os-meal-p').value;
+    const carbs = document.getElementById('coach-os-meal-c').value;
+    const fats = document.getElementById('coach-os-meal-f').value;
+    const payload = await window.practiceFetch('/api/coach/meals/estimate', {
+      method: 'POST',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify({ protein: protein, carbs: carbs, fats: fats })
+    });
+    window.__coachMealEstimate = payload.meal;
+    const box = document.getElementById('coach-os-meal-result');
+    if (box) {
+      box.innerHTML = 'Stima ' + escText((payload.meal && payload.meal.estimated && payload.meal.estimated.calories) || '—') +
+        ' kcal · confidence ' + escText(payload.meal && payload.meal.estimated && payload.meal.estimated.confidence) +
+        '<br><button class="btn btn-outline" style="margin-top:8px;" onclick="CoachOS.confirmMeal()">CONFIRM & LOG</button>';
+    }
+  };
+
+  CoachOS.confirmMeal = async function () {
+    const meal = window.__coachMealEstimate;
+    if (!meal) return;
+    await window.practiceFetch('/api/coach/meals/' + encodeURIComponent(meal.id) + '/confirm', {
+      method: 'POST',
+      headers: window.practiceHeaders(true),
+      body: JSON.stringify(meal.estimated || {})
+    });
+    if (typeof practiceToast === 'function') practiceToast('Pasto confermato', 'success');
+  };
 })();
 
 

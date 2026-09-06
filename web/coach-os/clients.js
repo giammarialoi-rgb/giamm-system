@@ -189,6 +189,7 @@
     const intelligence = payload.intelligence || {};
     const derived = intelligence.derivedMetrics || {};
     const signals = intelligence.signals || [];
+    const brain = intelligence.aiInterpretation || null;
     const weight = snapshot.weight || {};
     const timeline = payload.timeline || [];
     store.coachWorkspace = Object.assign({}, store.coachWorkspace || {}, {
@@ -234,6 +235,15 @@
             '</strong><span>' + escText(signal.detail || '') + '</span></span></div>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">Nessun rischio deterministico rilevato. Apri i dati per il dettaglio.</div>') +
+      (brain
+        ? '<div class="coach-os-card" style="margin-top:12px;"><div class="coach-os-card-kicker">Athlete Brain</div>' +
+          '<div class="coach-os-card-title">' + escText(brain.currentStatus || '') + '</div>' +
+          '<div class="coach-os-muted">' + escText((brain.suggestedAction && brain.suggestedAction.text) || '') + '</div>' +
+          '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
+          '<button class="coach-os-action" onclick="CoachOS.brainFeedback(\'approve\')">APPROVE</button>' +
+          '<button class="coach-os-action" onclick="CoachOS.brainFeedback(\'dismiss\')">DISMISS</button>' +
+          '<button class="coach-os-action" onclick="CoachOS.navigate(\'coachAgent\')">ASK AGENT</button></div></div>'
+        : '') +
       '</section>' +
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">Timeline</h2>' +
@@ -376,6 +386,26 @@
       if (container) renderOverviewData(container, payload);
     } catch (error) {
       practiceToast((error && error.message) || 'Timeline non disponibile', 'danger');
+    }
+  };
+
+  CoachOS.brainFeedback = async function (decision) {
+    const payload = window.__coachClientOverview || {};
+    const id = payload.client && payload.client.id;
+    const brain = payload.intelligence && payload.intelligence.aiInterpretation;
+    if (!id || !brain) return;
+    try {
+      await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/brain-feedback', {
+        method: 'POST',
+        headers: practiceHeaders(true),
+        body: JSON.stringify({
+          decision: decision,
+          interpretationFingerprint: brain.sourceFingerprint
+        })
+      });
+      if (typeof practiceToast === 'function') practiceToast('Feedback registrato', 'success');
+    } catch (error) {
+      if (typeof practiceToast === 'function') practiceToast((error && error.message) || 'Feedback non salvato', 'danger');
     }
   };
 

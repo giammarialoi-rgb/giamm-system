@@ -149,6 +149,29 @@ export async function loadCoachToday(pool, coachId, options = {}) {
   );
 
   const kpi = kpiResult.rows && kpiResult.rows[0] ? kpiResult.rows[0] : {};
+  let sessions = [];
+  try {
+    const sessionResult = await pool.query(
+      `SELECT a.id, a.type, a.title, a.starts_at, a.timezone, c.display_name
+       FROM coach_appointments a
+       LEFT JOIN coach_clients c ON c.id = a.client_id
+       WHERE a.coach_user_id = $1 AND a.status = 'scheduled'
+         AND a.starts_at::date = $2::date
+       ORDER BY a.starts_at ASC
+       LIMIT 12`,
+      [coachId, date]
+    );
+    sessions = (sessionResult.rows || []).filter((row) => row.starts_at).map((row) => ({
+      id: String(row.id),
+      title: row.title || row.type,
+      type: row.type,
+      time: row.starts_at,
+      timeZone: row.timezone,
+      clientName: row.display_name || null
+    }));
+  } catch (_) {
+    sessions = [];
+  }
   return {
     date,
     timeZone,
@@ -161,7 +184,7 @@ export async function loadCoachToday(pool, coachId, options = {}) {
       attention: attention.length
     },
     attention: attention.slice(0, 12),
-    sessions: [],
+    sessions,
     tasks: [],
     recentActivity: (recentResult.rows || []).map((row) => ({
       id: String(row.id),

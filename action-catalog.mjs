@@ -7,6 +7,7 @@
 export const ACTION_SOURCES = Object.freeze(['MANUAL', 'AI', 'IMPORT', 'AUTOMATION', 'SYSTEM']);
 export const ACTION_SCOPES = Object.freeze(['SESSION_ADJUSTMENT', 'PROGRAM_ADJUSTMENT']);
 export const AI_CONTROL_MODES = Object.freeze(['manual', 'suggest', 'confirm', 'auto']);
+export const TOOL_CAPABILITIES = Object.freeze(['READ', 'PROPOSE', 'EXECUTE']);
 
 export const AI_CONTROL_DEFAULTS = Object.freeze({
   programming: 'confirm',
@@ -65,6 +66,57 @@ export const ACTION_DEFS = [
   { action_type: 'APPLY_DELOAD', op_type: 'apply_deload', entity_type: 'program', domain: 'autoregulation' },
   { action_type: 'PROPOSE_PROGRESSION', op_type: 'propose_progression', entity_type: 'set', domain: 'progression' }
 ];
+
+/**
+ * Coach Agent V1 tool registry. This is deliberately small. Scheduling,
+ * business, CRM, automations, broadcast and groups are not V1 tools.
+ */
+export const AGENT_V1_TOOL_DEFS = Object.freeze([
+  { id: 'clients.search', capability: 'READ', roles: ['coach'], target: 'portfolio', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: [] },
+  { id: 'clients.status', capability: 'READ', roles: ['coach'], target: 'client', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'clients.activity', capability: 'READ', roles: ['coach'], target: 'client', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'clients.inactive', capability: 'READ', roles: ['coach'], target: 'portfolio', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: [] },
+  { id: 'checkins.missing', capability: 'READ', roles: ['coach'], target: 'portfolio', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: [] },
+  { id: 'messages.unread', capability: 'READ', roles: ['coach'], target: 'portfolio', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: [] },
+  { id: 'program.status', capability: 'READ', roles: ['coach'], target: 'client', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'tasks.list', capability: 'READ', roles: ['coach'], target: 'coach', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'coachTasksV1', required: [] },
+  { id: 'tasks.daily_summary', capability: 'READ', roles: ['coach'], target: 'coach', impact: 'low', confirmation: 'never', reversible: false, audit: 'summary', offline: 'cache', featureFlag: 'coachTasksV1', required: [] },
+  { id: 'program.draft', capability: 'PROPOSE', roles: ['coach'], target: 'client', impact: 'medium', confirmation: 'execute', reversible: false, audit: 'full', offline: 'draft-only', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'program.propose_modification', capability: 'PROPOSE', roles: ['coach'], target: 'client', impact: 'medium', confirmation: 'execute', reversible: false, audit: 'full', offline: 'draft-only', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'program.propose_deload', capability: 'PROPOSE', roles: ['coach'], target: 'client', impact: 'medium', confirmation: 'execute', reversible: false, audit: 'full', offline: 'draft-only', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'messages.prepare', capability: 'PROPOSE', roles: ['coach'], target: 'client', impact: 'medium', confirmation: 'execute', reversible: false, audit: 'full', offline: 'draft-only', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'checkins.prepare_request', capability: 'PROPOSE', roles: ['coach'], target: 'client', impact: 'medium', confirmation: 'execute', reversible: false, audit: 'full', offline: 'draft-only', featureFlag: 'agentV1', required: ['clientId'] },
+  { id: 'program.assign', capability: 'EXECUTE', roles: ['coach'], target: 'client', impact: 'high', confirmation: 'always', reversible: true, audit: 'full', offline: 'never', featureFlag: 'agentV1', required: ['clientId', 'proposalId'] },
+  { id: 'program.apply_modification', capability: 'EXECUTE', roles: ['coach'], target: 'client', impact: 'high', confirmation: 'always', reversible: true, audit: 'full', offline: 'never', featureFlag: 'agentV1', required: ['clientId', 'proposalId'] },
+  { id: 'messages.send', capability: 'EXECUTE', roles: ['coach'], target: 'client', impact: 'high', confirmation: 'always', reversible: false, audit: 'full', offline: 'never', featureFlag: 'agentV1', required: ['clientId', 'proposalId', 'encryptedBody'] },
+  { id: 'checkins.request', capability: 'EXECUTE', roles: ['coach'], target: 'client', impact: 'high', confirmation: 'always', reversible: false, audit: 'full', offline: 'never', featureFlag: 'agentV1', required: ['clientId', 'proposalId'] },
+  { id: 'tasks.create', capability: 'EXECUTE', roles: ['coach'], target: 'coach', impact: 'low', confirmation: 'policy', reversible: true, audit: 'full', offline: 'never', featureFlag: 'coachTasksV1', required: ['title'] },
+  { id: 'tasks.complete', capability: 'EXECUTE', roles: ['coach'], target: 'coach', impact: 'low', confirmation: 'policy', reversible: true, audit: 'full', offline: 'never', featureFlag: 'coachTasksV1', required: ['taskId'] },
+  { id: 'tasks.snooze', capability: 'EXECUTE', roles: ['coach'], target: 'coach', impact: 'low', confirmation: 'policy', reversible: true, audit: 'full', offline: 'never', featureFlag: 'coachTasksV1', required: ['taskId'] },
+  { id: 'tasks.reorder', capability: 'EXECUTE', roles: ['coach'], target: 'coach', impact: 'low', confirmation: 'bulk', reversible: true, audit: 'full', offline: 'never', featureFlag: 'coachTasksV1', required: ['ids'] }
+]);
+
+const TOOL_BY_ID = Object.freeze(Object.fromEntries(AGENT_V1_TOOL_DEFS.map((tool) => [tool.id, tool])));
+
+export function getAgentToolDef(id) {
+  return TOOL_BY_ID[String(id || '')] || null;
+}
+
+export function listAgentTools({ role = 'coach', capability = null } = {}) {
+  return AGENT_V1_TOOL_DEFS.filter((tool) =>
+    tool.roles.includes(role) && (!capability || tool.capability === capability)
+  );
+}
+
+export function validateAgentToolInput(toolId, input) {
+  const tool = getAgentToolDef(toolId);
+  if (!tool) return { valid: false, errors: ['unknown_tool'] };
+  const payload = input && typeof input === 'object' ? input : {};
+  const errors = (tool.required || [])
+    .filter((name) => payload[name] == null || payload[name] === '')
+    .map((name) => 'missing_' + name);
+  return { valid: errors.length === 0, errors, tool };
+}
 
 const BY_ACTION = Object.create(null);
 const BY_OP = Object.create(null);
@@ -376,8 +428,13 @@ export function createActionDispatcher(deps = {}) {
 export default {
   ACTION_SOURCES,
   ACTION_SCOPES,
+  TOOL_CAPABILITIES,
   AI_CONTROL_DEFAULTS,
   ACTION_DEFS,
+  AGENT_V1_TOOL_DEFS,
+  getAgentToolDef,
+  listAgentTools,
+  validateAgentToolInput,
   getActionDef,
   defaultAiControlPrefs,
   ensureAiControlPrefs,
