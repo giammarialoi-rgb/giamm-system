@@ -2313,6 +2313,7 @@ function restoreClientShellSync() {
 var store = loadStore();
 ensureStoreIntegrity();
 restoreClientShellSync();
+try { hydrateKnowledgeExtras(); } catch (_) {}
 if (store.trainingWeek) currentWeek = Math.max(1, Number(store.trainingWeek) || 1);
 if (typeof store.trainingDay === 'number') currentDay = Math.max(0, Number(store.trainingDay) || 0);
 if(!store.prefs) store.prefs = { intensityType: 'RIR', duration: 16, frequency: 4 };
@@ -6467,7 +6468,8 @@ async function undoLastAction() {
   }
 }
 
-const WORKOUT_UNDO_MAX = 10;
+const WORKOUT_UNDO_MAX = 30;
+let __undoCoalesce = { key: '', at: 0 };
 function pushWorkoutUndoSnapshot(label) {
   try {
     if (!store.workoutUndo) store.workoutUndo = [];
@@ -6482,16 +6484,37 @@ function pushWorkoutUndoSnapshot(label) {
       customSets: JSON.parse(JSON.stringify(store.customSets || {})),
       loadTypes: JSON.parse(JSON.stringify(store.loadTypes || {})),
       tempos: JSON.parse(JSON.stringify(store.tempos || {})),
-      exIntensity: JSON.parse(JSON.stringify(store.exIntensity || {}))
+      exIntensity: JSON.parse(JSON.stringify(store.exIntensity || {})),
+      bonus: JSON.parse(JSON.stringify(store.bonus || {})),
+      bw: JSON.parse(JSON.stringify(store.bw || {}))
     });
     if (store.workoutUndo.length > WORKOUT_UNDO_MAX) {
       store.workoutUndo.splice(0, store.workoutUndo.length - WORKOUT_UNDO_MAX);
     }
+    refreshWorkoutUndoButton();
   } catch (_) {}
+}
+function maybePushFieldUndo(label, key) {
+  const now = Date.now();
+  const k = String(key || label || '');
+  if (__undoCoalesce.key === k && (now - __undoCoalesce.at) < 2500) {
+    __undoCoalesce.at = now;
+    return;
+  }
+  pushWorkoutUndoSnapshot(label || 'campo');
+  __undoCoalesce = { key: k, at: now };
+}
+function refreshWorkoutUndoButton() {
+  const btn = document.getElementById('workout-undo-btn');
+  if (!btn) return;
+  const n = workoutUndoCount();
+  btn.disabled = !n;
+  btn.textContent = 'ANNULLA ULTIMA MODIFICA' + (n ? (' · ' + n) : '');
 }
 function undoWorkoutModification() {
   if (!store.workoutUndo || !store.workoutUndo.length) {
     if (typeof showToast === 'function') showToast('Nessuna modifica da annullare', 'info');
+    refreshWorkoutUndoButton();
     return;
   }
   const snap = store.workoutUndo.pop();
@@ -6503,8 +6526,11 @@ function undoWorkoutModification() {
   store.loadTypes = snap.loadTypes || {};
   store.tempos = snap.tempos || {};
   store.exIntensity = snap.exIntensity || {};
+  if (snap.bonus) store.bonus = snap.bonus;
+  if (snap.bw) store.bw = snap.bw;
   if (snap.week) currentWeek = snap.week;
   if (typeof snap.day === 'number') currentDay = snap.day;
+  __undoCoalesce = { key: '', at: 0 };
   persist();
   if (typeof showToast === 'function') {
     showToast('Annullata: ' + (snap.label || 'ultima modifica') + ' (' + store.workoutUndo.length + ' rimaste)', 'success');
@@ -7497,6 +7523,7 @@ function saveBonusExercise() {
   const notes = $('bonus-notes').value.trim();
   const saveLib = !!( $('bonus-save-library') && $('bonus-save-library').checked );
 
+  pushWorkoutUndoSnapshot('esercizio bonus');
   const key = `w${currentWeek}_d${currentDay}`;
   if(!store.bonus[key]) store.bonus[key] = [];
   store.bonus[key].push({
@@ -7521,6 +7548,7 @@ function saveBonusExercise() {
   persist();
   closeBonusModal();
   render();
+  try { queueExerciseKnowledgeAdapt(name, group); } catch (_) {}
 }
 function deleteBonusExercise(index) {
   if(!confirm('Rimuovere questo esercizio bonus?')) return;
@@ -8029,6 +8057,10 @@ function persist() {
     if (store.stayLoggedIn === false && sanitized && typeof sanitized === 'object') {
       sanitized.accountToken = null;
       sanitized.stayLoggedIn = false;
+    }
+    if (sanitized && typeof sanitized === 'object') {
+      try { delete sanitized.workoutUndo; } catch (_) {}
+      try { delete sanitized.trainingKnowledgeExtra; } catch (_) {}
     }
     localStorage.setItem('GS_STORE', JSON.stringify(sanitized));
   } catch (quotaErr) {
@@ -14032,7 +14064,7 @@ function renderTraining(c){
       <select onchange="currentDay=parseInt(this.value);render()">${allDays.map((dd,i)=>`<option value="${i}" ${i===currentDay?'selected':''}>${esc(sessionDisplayName(dd, i))}${dd.is_bonus || dd.isBonus?' [BONUS]':''}</option>`).join('')}</select>
     </div>`;
     h += `<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
-      <button class="btn btn-outline" type="button" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="undoWorkoutModification()" ${workoutUndoCount()?'':'disabled'}>ANNULLA ULTIMA MODIFICA${workoutUndoCount()?(' · '+workoutUndoCount()):''}</button>
+      <button id="workout-undo-btn" class="btn btn-outline" type="button" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="undoWorkoutModification()" ${workoutUndoCount()?'':'disabled'}>ANNULLA ULTIMA MODIFICA${workoutUndoCount()?(' · '+workoutUndoCount()):''}</button>
       <button class="btn btn-outline" style="font-size:10px; padding:6px 12px;" onclick="toggleIntensityType()">${t('activeScale')}: ${intensType}</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
@@ -14251,6 +14283,7 @@ function renderTraining(c){
 }
 
 function toggleLoadType(idx, type) {
+  pushWorkoutUndoSnapshot('tipo carico');
   store.loadTypes[`w${currentWeek}_d${currentDay}_e${idx}`] = type;
   persist();
   render();
@@ -14278,9 +14311,11 @@ function setExIntensity(idx, type) {
 
 function updateSetIntensityValue(exIdx, setNum, val) {
   const k = `w${currentWeek}_d${currentDay}_e${exIdx}_s${setNum}_rir`;
+  maybePushFieldUndo('intensità', k);
   store.data[k] = val;
   persist();
   calcStats();
+  refreshWorkoutUndoButton();
   const total = getExerciseSetCount(exIdx);
   if (setNum < total && String(val).trim() !== '') {
     const apply = confirm('Assegnare questo valore di intensità anche alle serie successive di questo esercizio?');
@@ -15308,10 +15343,12 @@ function updateTempo(idx, val) {
 }
 
 function updateData(key, val){
+  maybePushFieldUndo(/_load$/.test(String(key || '')) ? 'carico' : (/_reps$/.test(String(key || '')) ? 'reps' : 'serie'), key);
   store.data[key] = val;
   if (/_s\d+_load$/.test(String(key || ''))) store.data[String(key).replace(/_load$/, '_load_user')] = 1;
   persist();
   calcStats();
+  refreshWorkoutUndoButton();
   try { if (typeof scheduleAthleteLiveWorkoutSync === 'function') scheduleAthleteLiveWorkoutSync(); } catch (_) {}
 }
 function substituteEx(idx, val, muscleGroup){
@@ -15326,8 +15363,9 @@ function substituteEx(idx, val, muscleGroup){
   }
   persist();
   render();
+  try { queueExerciseKnowledgeAdapt(val, muscleGroup); } catch (_) {}
 }
-function toggleReplaceManual(checked) {
+function toggleReplaceManual(checked){
   const manual = $('replace-manual-fields');
   const library = $('replace-library-block');
   if (manual) manual.style.display = checked ? 'block' : 'none';
@@ -19318,6 +19356,107 @@ function waitForDomId(id, cb, tries) {
   setTimeout(function () { waitForDomId(id, cb, left - 1); }, 80);
 }
 
+function knowledgeExtraStorageKey() {
+  const id = (store && store.accountUser && (store.accountUser.id || store.accountUser.email)) || (store && store.inviteToken) || 'local';
+  return 'NURVAN_KNOWLEDGE_EXTRA_' + String(id);
+}
+function readKnowledgeExtras() {
+  const seen = {};
+  const out = [];
+  function add(arr) {
+    (Array.isArray(arr) ? arr : []).forEach(function (e) {
+      const n = String(e && (e.name || e.title) || '').trim();
+      if (!n || seen[n.toLowerCase()]) return;
+      seen[n.toLowerCase()] = true;
+      out.push(e);
+    });
+  }
+  try { add(store && store.trainingKnowledgeExtra); } catch (_) {}
+  try { add(JSON.parse(localStorage.getItem(knowledgeExtraStorageKey()) || '[]')); } catch (_) {}
+  return out;
+}
+function hydrateKnowledgeExtras() {
+  const list = readKnowledgeExtras();
+  if (store) store.trainingKnowledgeExtra = list;
+  try {
+    const K = window.NURVAN_TRAINING_KNOWLEDGE;
+    if (K && typeof K.setExtraExercises === 'function') K.setExtraExercises(list);
+  } catch (_) {}
+}
+function persistKnowledgeExtra(entry) {
+  if (!entry || !entry.name) return;
+  hydrateKnowledgeExtras();
+  const list = readKnowledgeExtras();
+  const key = String(entry.name).toLowerCase();
+  const next = list.filter(function (e) { return String(e.name || '').toLowerCase() !== key; });
+  next.unshift({
+    name: String(entry.name).trim(),
+    muscle: String(entry.muscle || '').trim(),
+    how: String(entry.how || entry.body || '').trim(),
+    mistakes: String(entry.mistakes || '').trim(),
+    cue: String(entry.cue || '').trim(),
+    at: Date.now()
+  });
+  if (store) store.trainingKnowledgeExtra = next.slice(0, 200);
+  try { localStorage.setItem(knowledgeExtraStorageKey(), JSON.stringify(store.trainingKnowledgeExtra)); } catch (_) {}
+  hydrateKnowledgeExtras();
+}
+function parseAiJsonObject(text) {
+  const raw = String(text || '');
+  const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const blob = fence ? fence[1] : raw;
+  const start = blob.indexOf('{');
+  const end = blob.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  try { return JSON.parse(blob.slice(start, end + 1)); } catch (_) { return null; }
+}
+async function researchExerciseKnowledge(name, muscle) {
+  const title = String(name || '').trim();
+  if (!title) return { unknown: true };
+  const headers = { 'Content-Type': 'application/json' };
+  if (store && store.accountToken) headers.Authorization = 'Bearer ' + store.accountToken;
+  const prompt = 'Scheda tecnica breve per l\'esercizio "' + title + '"' + (muscle ? (' (distretto ' + muscle + ')') : '') +
+    '. Rispondi SOLO JSON valido: {"name":"nome canonico","muscle":"PETTO|DORSALI|SCHIENA|QUADRICIPITI|FEMORALI|GLUTEI|SPALLE|BICIPITI|TRICIPITI|ADDOME|POLPACCI|ALTRO","how":"esecuzione in 2-4 frasi","mistakes":"errori comuni","cue":"una cue"}. ' +
+    'Se NON è un esercizio di allenamento reale, {"unknown":true}. Italiano, niente markdown.';
+  const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+  const endpoint = typeof coachEndpoint === 'function' ? coachEndpoint('/api/chat') : '/api/chat';
+  const res = await fetchFn(endpoint, {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify({ message: prompt, context: { knowledgeLookup: true, currentWeek: 1, currentDay: 0 } })
+  }, 25000);
+  const json = typeof readApiJson === 'function' ? await readApiJson(res) : await res.json();
+  const parsed = parseAiJsonObject((json && (json.reply || json.text || json.message)) || '');
+  if (!parsed || parsed.unknown) return { unknown: true, title: title };
+  return {
+    kind: 'exercise',
+    title: parsed.name || title,
+    muscle: parsed.muscle || muscle || '',
+    body: parsed.how || '',
+    mistakes: parsed.mistakes || '',
+    cue: parsed.cue || '',
+    matched: true,
+    researched: true
+  };
+}
+async function queueExerciseKnowledgeAdapt(name, muscle) {
+  const n = String(name || '').trim();
+  if (!n) return;
+  hydrateKnowledgeExtras();
+  const lookup = window.lookupTrainingKnowledge || (window.NURVAN_TRAINING_KNOWLEDGE && window.NURVAN_TRAINING_KNOWLEDGE.lookupAny);
+  const hit = typeof lookup === 'function' ? lookup(n) : null;
+  if (hit && hit.matched && hit.score !== 0 && (hit.custom || (hit.score && hit.score >= 70) || hit.body)) {
+    if (hit.matched && String(hit.title || '').toLowerCase() === n.toLowerCase()) return;
+    if (hit.matched && hit.score >= 80) return;
+  }
+  try {
+    const found = await researchExerciseKnowledge(n, muscle);
+    if (found && found.matched && !found.unknown && found.body) {
+      persistKnowledgeExtra({ name: found.title || n, muscle: found.muscle || muscle, how: found.body, mistakes: found.mistakes, cue: found.cue });
+    }
+  } catch (_) {}
+}
+
 function knowledgeCatLabel(cat) {
   if (cat === 'scale') return 'Scale';
   if (cat === 'tecniche') return 'Tecniche';
@@ -19345,6 +19484,7 @@ function knowledgeResultsHtml() {
   const q = (window.__knowledgeQuery || '').trim();
   const tab = window.__knowledgeTab || 'esercizi';
   const K = window.NURVAN_TRAINING_KNOWLEDGE || {};
+  try { hydrateKnowledgeExtras(); } catch (_) {}
   const search = typeof K.searchKnowledge === 'function' ? K.searchKnowledge : window.searchTrainingKnowledge;
   let rows = [];
   try { rows = search ? search(q) : []; } catch (_) { rows = []; }
@@ -19357,14 +19497,19 @@ function knowledgeResultsHtml() {
   }
   const muscles = [];
   rows.forEach(function (r) {
-    if (r.muscle && muscles.indexOf(r.muscle) < 0) muscles.push(r.muscle);
+    const m = r.muscle || 'ALTRO';
+    if (muscles.indexOf(m) < 0) muscles.push(m);
   });
+  if (!window.__knowledgeCollapsed || typeof window.__knowledgeCollapsed !== 'object') window.__knowledgeCollapsed = {};
   let body = '';
   if (tab === 'esercizi' && !q && muscles.length) {
     muscles.forEach(function (m) {
-      const chunk = rows.filter(function (r) { return r.muscle === m; });
-      body += '<div style="font-size:11px;color:var(--gold);font-weight:800;margin:14px 0 8px;">' + esc(m) + '</div>';
-      chunk.forEach(function (item) { body += renderKnowledgeCard(item); });
+      const collapsed = window.__knowledgeCollapsed[m] !== false;
+      const chunk = rows.filter(function (r) { return (r.muscle || 'ALTRO') === m; });
+      body += '<button type="button" class="btn btn-outline" style="width:100%;display:flex;justify-content:space-between;align-items:center;margin:8px 0 6px;padding:10px 12px;text-align:left;" onclick="toggleKnowledgeMuscle(\'' + String(m).replace(/'/g, "\\'") + '\')">' +
+        '<span style="font-size:12px;font-weight:800;color:var(--gold);">' + esc(m) + ' · ' + chunk.length + '</span>' +
+        '<span style="color:var(--gold);">' + (collapsed ? '▸' : '▾') + '</span></button>';
+      if (!collapsed) chunk.forEach(function (item) { body += renderKnowledgeCard(item); });
     });
   } else {
     rows.slice(0, 80).forEach(function (item) { body += renderKnowledgeCard(item); });
@@ -19372,10 +19517,29 @@ function knowledgeResultsHtml() {
   return body || '<div style="color:#aaa;font-size:12px;">Nessuna voce. Prova un altro nome (es. panca, RIR, drop set, PPL).</div>';
 }
 
-function filterTrainingKnowledge(val) {
-  window.__knowledgeQuery = String(val || '');
+function toggleKnowledgeMuscle(muscle) {
+  if (!window.__knowledgeCollapsed || typeof window.__knowledgeCollapsed !== 'object') window.__knowledgeCollapsed = {};
+  const cur = window.__knowledgeCollapsed[muscle];
+  const collapsed = cur === undefined ? true : !!cur;
+  window.__knowledgeCollapsed[muscle] = !collapsed;
   const host = document.getElementById('knowledge-results');
   if (host) host.innerHTML = knowledgeResultsHtml();
+}
+
+function filterTrainingKnowledge(val) {
+  window.__knowledgeQuery = String(val || '');
+  const x = document.getElementById('knowledge-search-clear');
+  if (x) x.style.display = String(val || '').trim() ? 'inline-flex' : 'none';
+  const host = document.getElementById('knowledge-results');
+  if (host) host.innerHTML = knowledgeResultsHtml();
+}
+
+function clearKnowledgeSearch() {
+  window.__knowledgeQuery = '';
+  const input = document.getElementById('knowledge-search');
+  if (input) input.value = '';
+  filterTrainingKnowledge('');
+  if (input) try { input.focus(); } catch (_) {}
 }
 
 function setKnowledgeTab(tab) {
@@ -19385,6 +19549,7 @@ function setKnowledgeTab(tab) {
 
 function renderTrainingKnowledge(c) {
   if (!c) return;
+  try { hydrateKnowledgeExtras(); } catch (_) {}
   const q = window.__knowledgeQuery || '';
   const tab = window.__knowledgeTab || 'esercizi';
   const tabs = [
@@ -19400,9 +19565,12 @@ function renderTrainingKnowledge(c) {
   c.innerHTML = '<div class="card" style="padding:14px;">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;">ENCICLOPEDIA</div>' +
     '<h2 style="color:#fff;font-size:20px;margin:4px 0 8px;">Info training</h2>' +
-    '<p style="font-size:12px;color:#aaa;line-height:1.4;margin:0 0 12px;">Spiegazioni brevi di esercizi, tecniche di intensità, RIR/RPE, progressioni e split. Non modifica la tua scheda.</p>' +
-    '<input id="knowledge-search" class="input" value="' + esc(q) + '" placeholder="Cerca esercizio, RIR, drop set, split…" oninput="filterTrainingKnowledge(this.value)" style="width:100%;margin-bottom:10px;">' +
-    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">' + tabs + '</div>' +
+    '<p style="font-size:12px;color:#aaa;line-height:1.4;margin:0 0 12px;">Spiegazioni di esercizi, tecniche, RIR/RPE, progressioni e split. Disponibile anche in Client Area. Non modifica la scheda.</p>' +
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">' +
+    '<input id="knowledge-search" class="input" value="' + esc(q) + '" placeholder="Cerca esercizio, RIR, drop set, split…" oninput="filterTrainingKnowledge(this.value)" style="flex:1;">' +
+    '<button type="button" id="knowledge-search-clear" class="btn btn-outline" style="min-width:44px;height:44px;display:' + (String(q).trim() ? 'inline-flex' : 'none') + ';align-items:center;justify-content:center;" onclick="clearKnowledgeSearch()" aria-label="Cancella ricerca">✕</button></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">' + tabs + '</div>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:12px;" onclick="openAddEncyclopediaExercise()">+ AGGIUNGI ESERCIZIO</button>' +
     '<div id="knowledge-results">' + knowledgeResultsHtml() + '</div>' +
     '</div><div style="height:80px;"></div>';
 }
@@ -19412,12 +19580,12 @@ function closeExerciseInfoSheet() {
   if (el) el.style.display = 'none';
 }
 
-function openExerciseInfoSheet(idx, exerciseName) {
-  const name = (typeof resolveExerciseNameForAsk === 'function')
-    ? resolveExerciseNameForAsk(idx, exerciseName)
-    : (exerciseName || 'esercizio');
-  const lookup = window.lookupTrainingKnowledge || (window.NURVAN_TRAINING_KNOWLEDGE && window.NURVAN_TRAINING_KNOWLEDGE.lookupAny);
-  const explained = typeof lookup === 'function' ? lookup(name) : (typeof explainExercise === 'function' ? explainExercise(name) : null);
+function paintExerciseInfoSheet(opts) {
+  opts = opts || {};
+  const idx = opts.idx;
+  const name = opts.name || 'esercizio';
+  const explained = opts.explained || {};
+  const athlete = (typeof isAthleteRole === 'function' && isAthleteRole()) || !!(store && store.clientShell && store.accountToken);
   const week = (typeof currentWeek !== 'undefined' ? currentWeek : 1);
   const day = (typeof currentDay !== 'undefined' ? currentDay : 0);
   const w = DATA && DATA.weeks && DATA.weeks[week - 1];
@@ -19425,7 +19593,6 @@ function openExerciseInfoSheet(idx, exerciseName) {
   const row = ((sess && (sess.exercises || sess.rows)) || [])[idx] || {};
   const prevSets = (typeof collectPrevWeekSetLogs === 'function') ? collectPrevWeekSetLogs(idx, row) : [];
   const policy = (typeof workoutProgressionPolicy === 'function') ? workoutProgressionPolicy(prevSets, row) : { advice: '', addKg: 0 };
-  const athlete = (typeof isAthleteRole === 'function' && isAthleteRole()) || !!(store && store.clientShell && store.accountToken);
   let sheet = document.getElementById('ex-info-sheet');
   if (!sheet) {
     sheet = document.createElement('div');
@@ -19434,25 +19601,124 @@ function openExerciseInfoSheet(idx, exerciseName) {
     sheet.onclick = function (ev) { if (ev.target === sheet) closeExerciseInfoSheet(); };
     document.body.appendChild(sheet);
   }
-  const title = (explained && explained.title) || name;
-  const body = (explained && explained.body) || 'Tieni la tecnica pulita e il RIR della scheda.';
-  const mistakes = explained && explained.mistakes ? ('<p style="font-size:12px;color:#f0c0c0;line-height:1.4;"><b>Errori comuni:</b> ' + esc(explained.mistakes) + '</p>') : '';
-  const cue = explained && explained.cue ? ('<p style="font-size:12px;color:var(--gold);">' + esc(explained.cue) + '</p>') : '';
-  const muscle = explained && explained.muscle ? (' · ' + explained.muscle) : '';
+  const title = explained.title || name;
+  const body = opts.loading
+    ? 'Cerco l’esecuzione corretta…'
+    : (explained.body || 'Tieni la tecnica pulita e il RIR della scheda.');
+  const mistakes = !opts.loading && explained.mistakes ? ('<p style="font-size:12px;color:#f0c0c0;line-height:1.4;"><b>Errori comuni:</b> ' + esc(explained.mistakes) + '</p>') : '';
+  const cue = !opts.loading && explained.cue ? ('<p style="font-size:12px;color:var(--gold);">' + esc(explained.cue) + '</p>') : '';
+  const muscle = explained.muscle ? (' · ' + explained.muscle) : '';
+  const unknown = !!(opts.unknown && !opts.loading);
   sheet.innerHTML = '<div style="width:100%;max-width:520px;max-height:88vh;overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px 16px 12px 12px;padding:16px;color:#eee;box-sizing:border-box;" onclick="event.stopPropagation()">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;">CHIEDI INFO' + esc(muscle) + '</div>' +
     '<h2 style="color:#fff;font-size:18px;margin:6px 0 8px;">' + esc(title) + '</h2>' +
     '<p style="font-size:13px;color:#ccc;line-height:1.45;">' + esc(body) + '</p>' +
     mistakes + cue +
+    (unknown ? '<p style="font-size:12px;color:#f6c;">Non risulta un esercizio standard. Puoi aggiungerlo all’enciclopedia con la tua spiegazione.</p>' : '') +
     '<div style="margin:10px 0;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:4px;">RIR / CARICO</div>' +
     '<p style="font-size:12px;color:#ccc;line-height:1.4;margin:0;">' + esc(policy.advice || 'RIR 2 = due reps in canna. Se chiudi le serie, la settimana dopo +2,5 kg (o +1 kg se i pesi sono già bassi).') + '</p></div>' +
     '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="openKnowledgeFor(decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">APRI ENCICLOPEDIA</button>' +
+    (unknown ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="closeExerciseInfoSheet();openAddEncyclopediaExercise(decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">AGGIUNGI ALL’ENCICLOPEDIA</button>' : '') +
     (athlete
       ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="closeExerciseInfoSheet();askHumanCoachAboutExercise(' + Number(idx) + ', decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">SCRIVI AL COACH</button>'
       : '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="askCoachAiFromInfoSheet(' + Number(idx) + ', decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">CHIEDI A COACH AI</button>') +
     '<button type="button" class="btn btn-outline" style="width:100%;" onclick="closeExerciseInfoSheet()">CHIUDI</button></div>';
   sheet.style.display = 'flex';
+}
+
+function openExerciseInfoSheet(idx, exerciseName) {
+  try { hydrateKnowledgeExtras(); } catch (_) {}
+  const name = (typeof resolveExerciseNameForAsk === 'function')
+    ? resolveExerciseNameForAsk(idx, exerciseName)
+    : (exerciseName || 'esercizio');
+  const lookup = window.lookupTrainingKnowledge || (window.NURVAN_TRAINING_KNOWLEDGE && window.NURVAN_TRAINING_KNOWLEDGE.lookupAny);
+  const explained = typeof lookup === 'function' ? lookup(name) : (typeof explainExercise === 'function' ? explainExercise(name) : null);
+  const matched = !!(explained && explained.matched && explained.body);
+  paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: !matched });
+  if (matched) return;
+  Promise.resolve(researchExerciseKnowledge(name)).then(function (found) {
+    if (found && found.matched && !found.unknown && found.body) {
+      persistKnowledgeExtra({ name: found.title || name, muscle: found.muscle, how: found.body, mistakes: found.mistakes, cue: found.cue });
+      paintExerciseInfoSheet({ idx: idx, name: name, explained: found, loading: false });
+    } else {
+      paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: false, unknown: true });
+    }
+  }).catch(function () {
+    paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: false, unknown: true });
+  });
+}
+
+function openAddEncyclopediaExercise(prefillName) {
+  let box = document.getElementById('ex-add-knowledge');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'ex-add-knowledge';
+    box.style.cssText = 'display:none;position:fixed;inset:0;z-index:10160;background:rgba(0,0,0,.88);align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;';
+    box.onclick = function (ev) { if (ev.target === box) box.style.display = 'none'; };
+    document.body.appendChild(box);
+  }
+  const muscles = ['PETTO','DORSALI','SCHIENA','QUADRICIPITI','FEMORALI','GLUTEI','SPALLE','BICIPITI','TRICIPITI','ADDOME','POLPACCI','ALTRO'];
+  box.innerHTML = '<div style="width:100%;max-width:520px;max-height:90vh;overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px;padding:16px;box-sizing:border-box;" onclick="event.stopPropagation()">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">ENCICLOPEDIA</div>' +
+    '<h2 style="color:#fff;font-size:18px;margin:6px 0 10px;">Aggiungi esercizio</h2>' +
+    '<label style="font-size:10px;color:#aaa;">Nome</label>' +
+    '<input id="ek-name" class="input" style="width:100%;margin:4px 0 10px;" value="' + esc(prefillName || '') + '">' +
+    '<label style="font-size:10px;color:#aaa;">Distretto</label>' +
+    '<select id="ek-muscle" class="input" style="width:100%;margin:4px 0 10px;">' + muscles.map(function (m) { return '<option value="' + m + '">' + m + '</option>'; }).join('') + '</select>' +
+    '<p style="font-size:12px;color:#ccc;line-height:1.4;">Vuoi scrivere tu esecuzione, errori e cue, oppure far cercare in automatico?</p>' +
+    '<div id="ek-manual" style="display:none;">' +
+    '<label style="font-size:10px;color:#aaa;">Esecuzione</label><textarea id="ek-how" rows="3" class="input" style="width:100%;margin:4px 0 8px;"></textarea>' +
+    '<label style="font-size:10px;color:#aaa;">Errori comuni</label><textarea id="ek-mistakes" rows="2" class="input" style="width:100%;margin:4px 0 8px;"></textarea>' +
+    '<label style="font-size:10px;color:#aaa;">Cue</label><input id="ek-cue" class="input" style="width:100%;margin:4px 0 10px;">' +
+    '</div>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="document.getElementById(\'ek-manual\').style.display=\'block\'">SCRIVO IO LA SPIEGAZIONE</button>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="saveEncyclopediaExercise(false)">RICERCA AUTOMATICA</button>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="saveEncyclopediaExercise(true)">SALVA SPIEGAZIONE MANUALE</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;" onclick="document.getElementById(\'ex-add-knowledge\').style.display=\'none\'">ANNULLA</button></div>';
+  box.style.display = 'flex';
+}
+
+async function saveEncyclopediaExercise(manual) {
+  const nameEl = document.getElementById('ek-name');
+  const muscleEl = document.getElementById('ek-muscle');
+  const name = nameEl ? String(nameEl.value || '').trim() : '';
+  const muscle = muscleEl ? muscleEl.value : 'ALTRO';
+  if (!name) {
+    if (typeof showToast === 'function') showToast('Inserisci il nome dell’esercizio', 'warning');
+    return;
+  }
+  if (manual) {
+    persistKnowledgeExtra({
+      name: name,
+      muscle: muscle,
+      how: (document.getElementById('ek-how') || {}).value || '',
+      mistakes: (document.getElementById('ek-mistakes') || {}).value || '',
+      cue: (document.getElementById('ek-cue') || {}).value || ''
+    });
+    const box = document.getElementById('ex-add-knowledge');
+    if (box) box.style.display = 'none';
+    if (typeof showToast === 'function') showToast('Esercizio salvato in enciclopedia', 'success');
+    if (typeof currentView !== 'undefined' && currentView === 'knowledge') render();
+    return;
+  }
+  if (typeof showToast === 'function') showToast('Ricerca esecuzione in corso…', 'info');
+  try {
+    const found = await researchExerciseKnowledge(name, muscle);
+    if (!found || found.unknown || !found.body) {
+      if (typeof showToast === 'function') showToast('Non ho trovato un’esecuzione standard. Scrivila tu.', 'warning');
+      const man = document.getElementById('ek-manual');
+      if (man) man.style.display = 'block';
+      return;
+    }
+    persistKnowledgeExtra({ name: found.title || name, muscle: found.muscle || muscle, how: found.body, mistakes: found.mistakes, cue: found.cue });
+    const box = document.getElementById('ex-add-knowledge');
+    if (box) box.style.display = 'none';
+    if (typeof showToast === 'function') showToast('Esercizio aggiunto: ' + (found.title || name), 'success');
+    if (typeof currentView !== 'undefined' && currentView === 'knowledge') render();
+  } catch (err) {
+    if (typeof showToast === 'function') showToast((err && err.message) || 'Ricerca non riuscita', 'danger');
+  }
 }
 
 function openKnowledgeFor(query) {
@@ -19495,12 +19761,23 @@ function askHumanCoachAboutExercise(idx, exerciseName) {
 
 window.openExerciseInfoSheet = openExerciseInfoSheet;
 window.closeExerciseInfoSheet = closeExerciseInfoSheet;
+window.paintExerciseInfoSheet = paintExerciseInfoSheet;
 window.askCoachAiFromInfoSheet = askCoachAiFromInfoSheet;
 window.askHumanCoachAboutExercise = askHumanCoachAboutExercise;
 window.renderTrainingKnowledge = renderTrainingKnowledge;
 window.openKnowledgeFor = openKnowledgeFor;
 window.filterTrainingKnowledge = filterTrainingKnowledge;
 window.setKnowledgeTab = setKnowledgeTab;
+window.clearKnowledgeSearch = clearKnowledgeSearch;
+window.toggleKnowledgeMuscle = toggleKnowledgeMuscle;
+window.openAddEncyclopediaExercise = openAddEncyclopediaExercise;
+window.saveEncyclopediaExercise = saveEncyclopediaExercise;
+window.persistKnowledgeExtra = persistKnowledgeExtra;
+window.researchExerciseKnowledge = researchExerciseKnowledge;
+window.hydrateKnowledgeExtras = hydrateKnowledgeExtras;
+window.maybePushFieldUndo = maybePushFieldUndo;
+window.refreshWorkoutUndoButton = refreshWorkoutUndoButton;
+window.pushWorkoutUndoSnapshot = pushWorkoutUndoSnapshot;
 
 function buildPersonalExerciseInfoPrompt(idx, exerciseName) {
   const week = (typeof currentWeek !== 'undefined' ? currentWeek : 1);
@@ -20549,6 +20826,8 @@ if (typeof window !== 'undefined') {
   window.togglePasswordRecovery = togglePasswordRecovery;
   window.requestPasswordResetCode = requestPasswordResetCode;
   window.undoWorkoutModification = undoWorkoutModification;
+  window.maybePushFieldUndo = maybePushFieldUndo;
+  window.refreshWorkoutUndoButton = refreshWorkoutUndoButton;
   window.logoutAccount = logoutAccount;
   window.nativeGoogleResult = nativeGoogleResult;
   window.nativeAppleResult = nativeAppleResult;

@@ -20,6 +20,8 @@ assert.ok(html.includes("function classifyMaxTestLift") && html.includes("weekEx
 assert.ok(html.includes("function openSavedCheckFisico") && html.includes("function openLoggedSessionReview"), "storico reopen exists");
 assert.ok(html.includes("draft.clearedAt = Date.now()"), "save check clears compose draft");
 assert.ok(html.includes("function openExerciseInfoSheet") && html.includes("askCoachAiFromInfoSheet"), "CHIEDI INFO shows local info then optional Coach AI");
+assert.ok(html.includes("function researchExerciseKnowledge") && html.includes("function openAddEncyclopediaExercise"), "CHIEDI INFO can research and add encyclopedia entries");
+assert.ok(html.includes("function maybePushFieldUndo") && html.includes("clearKnowledgeSearch"), "undo stack and encyclopedia search clear exist");
 assert.ok(practice.includes("openExerciseInfoSheet"), "workout CHIEDI INFO opens the info sheet");
 assert.ok(html.includes("waitForDomId('chat-history'"), "Coach AI from info sheet waits for the chat DOM");
 assert.ok(!/addKg = 1\.25/.test(html), "workout progression does not add 1.25 kg");

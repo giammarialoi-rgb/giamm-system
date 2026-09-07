@@ -144,15 +144,43 @@
     return hit ? 40 + hit * 8 : 0;
   }
 
+  let EXTRA_EXERCISES = [];
+  function setExtraExercises(list) {
+    EXTRA_EXERCISES = Array.isArray(list) ? list.map(function (e) {
+      return {
+        name: String(e.name || e.title || '').trim(),
+        muscle: String(e.muscle || '').trim(),
+        how: String(e.how || e.body || '').trim(),
+        mistakes: String(e.mistakes || '').trim(),
+        cue: String(e.cue || '').trim(),
+        aliases: Array.isArray(e.aliases) ? e.aliases : []
+      };
+    }).filter(function (e) { return e.name; }) : [];
+  }
+  function extraItems() { return EXTRA_EXERCISES; }
+
   function explainExercise(name) {
     const raw = String(name || '').trim();
     if (!raw) return null;
     let best = null;
     let bestScore = 0;
-    EXERCISES.concat(catalogItems()).forEach(function (item) {
+    EXTRA_EXERCISES.concat(EXERCISES, catalogItems()).forEach(function (item) {
       const s = matchScore(raw, item);
       if (s > bestScore) { bestScore = s; best = item; }
     });
+    const extraHit = best && EXTRA_EXERCISES.some(function (e) { return fold(e.name) === fold(best.name); });
+    if (extraHit && bestScore >= 50) {
+      return {
+        kind: 'exercise',
+        title: best.name,
+        muscle: best.muscle || '',
+        body: best.how || '',
+        mistakes: best.mistakes || '',
+        cue: best.cue || '',
+        matched: true,
+        custom: true
+      };
+    }
     if (!best || bestScore < 40) {
       return {
         kind: 'exercise',
@@ -165,9 +193,9 @@
     }
     const mg = muscleGuide(best.muscle);
     const specific = EXERCISES.filter(function (e) { return fold(e.name) === fold(best.name); })[0];
-    const how = (specific && specific.how) || (mg && mg.how) || '';
-    const mistakes = (specific && specific.mistakes) || (mg && mg.mistakes) || '';
-    const cue = (specific && specific.cue) || (mg && mg.cue) || '';
+    const how = (specific && specific.how) || (best.how) || (mg && mg.how) || '';
+    const mistakes = (specific && specific.mistakes) || (best.mistakes) || (mg && mg.mistakes) || '';
+    const cue = (specific && specific.cue) || (best.cue) || (mg && mg.cue) || '';
     return {
       kind: 'exercise',
       title: best.name || raw,
@@ -176,11 +204,23 @@
       body: how,
       mistakes: mistakes,
       cue: cue,
-      matched: true
+      matched: true,
+      score: bestScore
     };
   }
 
   function allEntries() {
+    const extras = EXTRA_EXERCISES.map(function (item) {
+      return {
+        id: 'ex-custom-' + fold(item.name).replace(/\s+/g, '-'),
+        cat: 'esercizi',
+        muscle: item.muscle || '',
+        title: item.name,
+        body: item.how || '',
+        extra: { body: item.how, mistakes: item.mistakes, cue: item.cue },
+        custom: true
+      };
+    });
     const exFromCatalog = catalogItems().map(function (item) {
       const explained = explainExercise(item.name);
       return {
@@ -193,7 +233,7 @@
         extra: explained
       };
     });
-    return SCALES.concat(TECHNIQUES, PROGRESSIONS, SPLITS, exFromCatalog);
+    return SCALES.concat(TECHNIQUES, PROGRESSIONS, SPLITS, extras, exFromCatalog);
   }
 
   function searchKnowledge(query) {
@@ -248,7 +288,9 @@
     explainExercise: explainExercise,
     searchKnowledge: searchKnowledge,
     lookupAny: lookupAny,
-    allEntries: allEntries
+    allEntries: allEntries,
+    setExtraExercises: setExtraExercises,
+    extraItems: extraItems
   };
   root.explainExercise = explainExercise;
   root.searchTrainingKnowledge = searchKnowledge;
