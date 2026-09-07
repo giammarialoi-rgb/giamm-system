@@ -271,7 +271,12 @@ function applyClientChrome() {
           return false;
         };
       }
-      if (ai) ai.style.display = 'none';
+      if (ai) {
+        ai.style.display = '';
+        const sp = ai.querySelector('span');
+        if (sp) sp.textContent = 'AI';
+        ai.onclick = function (event) { navigate('ai', event); };
+      }
     } else {
       if (home) {
         const sp = home.querySelector('span');
@@ -303,12 +308,15 @@ function applyClientChrome() {
         };
       }
       if (ai) {
-        if (athlete) ai.style.display = athleteCanUseNurvanAi() ? '' : 'none';
-        else ai.style.display = coachSession ? 'none' : '';
+        if (athlete) ai.style.display = 'none';
+        else ai.style.display = '';
       }
     }
     document.querySelectorAll('[data-hub="full"]').forEach(function (el) {
       el.style.display = (athlete || coachSession) ? 'none' : '';
+    });
+    document.querySelectorAll('[data-hub="personal-ai"]').forEach(function (el) {
+      el.style.display = athlete ? 'none' : '';
     });
     document.querySelectorAll('[data-hub="coach"]').forEach(function (el) {
       el.style.display = athlete ? 'none' : 'flex';
@@ -317,10 +325,10 @@ function applyClientChrome() {
     if (coachBtn) {
       coachBtn.style.display = athlete ? 'none' : '';
       if (coachSession) coachBtn.textContent = 'ESCI';
-      else coachBtn.textContent = unlocked ? 'HUB' : 'COACH';
+      else coachBtn.textContent = 'COACH';
       coachBtn.onclick = function () {
         if (coachSession) exitCoachSession();
-        else openCoachOrUnlock();
+        else openPersonalCoachAi();
       };
     }
     ensureCoachHeaderControls(coachSession);
@@ -364,6 +372,15 @@ function applyClientChrome() {
     ensureCoachDrawer();
     if (window.CoachOS && typeof window.CoachOS.applyShell === 'function') {
       window.CoachOS.applyShell(coachSession, athlete);
+    }
+    if (coachSession && !athlete) {
+      const aiBtn = document.getElementById('nav-ai');
+      if (aiBtn) {
+        aiBtn.style.display = '';
+        const sp = aiBtn.querySelector('span');
+        if (sp) sp.textContent = 'AI';
+        aiBtn.onclick = function (event) { navigate('ai', event); };
+      }
     }
   } catch (err) {
     console.warn('[CLIENT_CHROME]', err);
@@ -2077,6 +2094,13 @@ function closeClientTutorial() {
   }
 }
 
+function openPersonalCoachAi() {
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+    if (typeof navigate === 'function') navigate('clientChat');
+    return;
+  }
+  if (typeof navigate === 'function') navigate('ai');
+}
 function openCoachOrUnlock() {
   if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) enterCoachSession();
   else showDemoUnlock();
@@ -5992,6 +6016,7 @@ window.advanceClientTutorial = advanceClientTutorial;
 window.closeClientTutorial = closeClientTutorial;
 window.showDemoUnlock = showDemoUnlock;
 window.openCoachOrUnlock = openCoachOrUnlock;
+window.openPersonalCoachAi = openPersonalCoachAi;
 /* ——— E2E chat crypto (ECDH P-256 + AES-GCM) ——— */
 function b64FromBuf(buf) {
   const bytes = new Uint8Array(buf);

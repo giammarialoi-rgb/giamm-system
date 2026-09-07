@@ -84,10 +84,14 @@
   function secondaryLinks() {
     const rows = [
       { view: 'coachCheckIns', label: tx('coCheckIns'), flag: 'checkInCenterV1' },
+      { view: 'coachActionCenter', label: tx('coActionCenter') },
       { view: 'coachNutrition', label: tx('coNutrition') },
+      { view: 'coachMealAi', label: 'Meal AI', flag: 'mealAiV1' },
       { view: 'coachFormReview', label: tx('coFormReview'), flag: 'videoFormV1' },
       { view: 'coachAnalytics', label: tx('coAnalytics'), flag: 'coachAnalyticsV1' },
+      { view: 'ai', label: 'Coach AI' },
       { view: 'coachAgent', label: tx('coAgent'), flag: 'agentV1' },
+      { view: 'coachAgentAudit', label: tx('coAgentAudit'), flag: 'agentV1' },
       { view: 'coachAutomations', label: tx('coAutomations'), flag: 'businessV1' },
       { view: 'coachBusiness', label: tx('coBusiness'), flag: 'businessV1' },
       { view: 'coachCrm', label: tx('coCrm'), flag: 'businessV1' }

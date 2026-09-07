@@ -103,6 +103,13 @@ assert.ok(html.includes("function researchExerciseKnowledge") && html.includes("
 assert.ok(html.includes("function persistKnowledgeExtra") && html.includes("NURVAN_KNOWLEDGE_EXTRA_"), "custom encyclopedia entries persist separately from workouts");
 assert.ok(html.includes("function queueExerciseKnowledgeAdapt"), "new session exercises adapt encyclopedia in background");
 assert.ok(html.includes("function toggleReplaceManual"), "replace-manual toggle is a real function");
+assert.ok(html.includes("function encyclopedizeProgramExercises") && html.includes("function toggleKnowledgeEditMode"), "user exercises get encyclopedized and cards can be edited");
+assert.ok(html.includes("hiddenProgramIds") && html.includes("L’allenamento attivo resta"), "deleting the active program from the list keeps it running");
+assert.ok(html.includes("function deleteBodyCheck") && html.includes("function toggleStatsHistory"), "checks can be deleted and session history closed");
+assert.ok(html.includes("function statsWeeksCount") && html.includes("weekLoadModeLabel"), "stats tables cover all weeks and load mode");
+assert.ok(html.includes("function applySelectedSuperset") && html.includes("COLLEGA IN SUPERSET"), "training can pair supersets");
+assert.ok(practice.includes("function openPersonalCoachAi") && practice.includes("navigate('ai')"), "personal COACH opens Coach AI");
+assert.ok(practice.includes("if (athlete) ai.style.display = 'none'"), "clients do not get Coach AI");
 
 const kctx = { console };
 kctx.window = kctx;

@@ -508,16 +508,19 @@ input[type="checkbox"], input[type="radio"] {
 
 .perf-table {
   width: 100%;
+  min-width: 640px;
   border-collapse: collapse;
-  font-size: 10px;
+  font-size: 11px;
   color: #ccc;
 }
 
 .perf-table th, .perf-table td {
   border: 1px solid #222;
-  padding: 8px 4px;
+  padding: 8px 6px;
   text-align: center;
+  white-space: nowrap;
 }
+.perf-table tr.stats-current-week td { background: rgba(212,175,55,0.08); }
 
 .perf-table th { background: #151515; color: var(--gold); }
 .delta-pos { color: var(--success); }
@@ -1302,7 +1305,7 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">📅</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="calendar">Calendario</span>
       </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('ai')">
+      <button class="btn btn-outline" data-hub="personal-ai" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('ai')">
         <span style="font-size:20px;">🤖</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="coachAI">Coach AI</span>
       </button>
@@ -35414,6 +35417,7 @@ function ensureStoreIntegrity() {
       : { mode: null, onboardingDone: false, xp: 0, level: 1, tier: 'bronze', streakDays: 0, ledger: [], achievements: [], avatar: { frame: 'frame_standard', outfit: 'outfit_charcoal', unlocked: ['frame_standard', 'outfit_charcoal'] }, prefs: {}, shareDefaults: {} };
   }
   if (!Array.isArray(store.bodyChecks)) store.bodyChecks = [];
+  if (!Array.isArray(store.hiddenProgramIds)) store.hiddenProgramIds = [];
   if (store.bodyComposition === undefined) store.bodyComposition = null;
   if (store.nutritionLoop === undefined) store.nutritionLoop = null;
   if (store.seasonBoard === undefined) store.seasonBoard = null;
@@ -38135,13 +38139,14 @@ async function syncProgramLibraryFromIdb() {
   if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.listPrograms) return;
   try {
     const list = await GiammariaPersistence.listPrograms();
+    const hidden = (store.hiddenProgramIds || []).map(function (id) { return String(id); });
     store.models = list.map(p => ({
       id: p.id,
       name: p.title || 'Programma',
       date: p.updatedAt ? new Date(p.updatedAt).getTime() : Date.now(),
       isActive: !!p.isActive,
       summary: p.summary || null
-    }));
+    })).filter(function (m) { return hidden.indexOf(String(m.id)) < 0; });
   } catch (e) {
     console.warn('[LIBRARY SYNC]', e);
   }
@@ -40767,6 +40772,7 @@ function addExerciseToLibrary(name, muscle, source) {
     }
   } catch (_) {}
   persist();
+  try { queueExerciseKnowledgeAdapt(n, fine); } catch (_) {}
   return true;
 }
 
@@ -47149,6 +47155,7 @@ async function activateSavedProgram(programId, idx) {
     if (DATA.weeks?.length) store.prefs.duration = DATA.weeks.length;
     persist();
     await syncProgramLibraryFromIdb();
+    try { encyclopedizeProgramExercises(); } catch (_) {}
     render();
     if (typeof showToast === 'function') showToast('Programma attivato — carichi azzerati', 'success');
     else alert('Programma attivato con successo.');
@@ -47170,21 +47177,23 @@ async function deleteSavedProgram(programId, idx) {
   const model = (typeof idx === 'number' && store.models && store.models[idx]) ? store.models[idx]
     : (store.models || []).find(function (m) { return m && String(m.id) === String(programId); });
   const label = (model && model.name) || 'questo programma';
-  if (!confirm('Eliminare «' + label + '»?\n\nL\'operazione non può essere annullata.')) return;
+  if (!confirm('Togliere «' + label + '» dalla lista?')) return;
   try {
-    if (programId && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.deleteProgram) {
+    const isActive = String(store.activeProgramId) === String(programId);
+    if (isActive) {
+      if (!Array.isArray(store.hiddenProgramIds)) store.hiddenProgramIds = [];
+      if (store.hiddenProgramIds.indexOf(programId) < 0) store.hiddenProgramIds.push(programId);
+    } else if (programId && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.deleteProgram) {
       await GiammariaPersistence.deleteProgram(programId);
     }
     if (typeof idx === 'number' && store.models && store.models[idx]) store.models.splice(idx, 1);
-    else store.models = (store.models || []).filter(function (m) { return m && m.id !== programId; });
-    if (String(store.activeProgramId) === String(programId)) {
-      store.activeProgramId = null;
-      store.activeProgram = null;
-    }
+    else store.models = (store.models || []).filter(function (m) { return m && String(m.id) !== String(programId); });
     persist();
     await syncProgramLibraryFromIdb();
     render();
-    if (typeof showToast === 'function') showToast('Programma eliminato', 'info');
+    if (typeof showToast === 'function') {
+      showToast(isActive ? 'Tolto dalla lista. L’allenamento attivo resta.' : 'Programma rimosso dalla lista', 'info');
+    }
   } catch (e) {
     alert('Errore eliminazione: ' + (e.message || e));
   }
@@ -47331,6 +47340,10 @@ function renderTraining(c){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
       <button class="btn btn-outline" type="button" style="font-size:10px;padding:8px 10px;border-color:var(--gold);color:var(--gold);" onclick="openWorkoutPdfExportModal()">ESPORTA PDF</button>
       <button class="btn btn-outline" type="button" style="font-size:10px;padding:8px 10px;" onclick="openMaxTestPlannerModal()">MASSIMALE</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <button class="btn ${window.__ssSelect ? 'btn-primary' : 'btn-outline'}" type="button" style="font-size:10px;padding:8px 10px;" onclick="toggleSupersetMode()">${window.__ssSelect ? 'ANNULLA SELEZIONE' : 'SUPERSET'}</button>
+      ${window.__ssSelect ? '<button class="btn btn-primary" type="button" style="font-size:10px;padding:8px 10px;" onclick="applySelectedSuperset()">COLLEGA IN SUPERSET</button>' : ''}
     </div>`;
 
     const sessionName = sessionDisplayName(d, currentDay);
@@ -47348,7 +47361,10 @@ function renderTraining(c){
       const exIntens = store.exIntensity[`w${currentWeek}_d${currentDay}_e${fIdx}`] || intensType;
       const totalSets = getExerciseSetCount(fIdx);
       const schemeInfo = formatSetRepScheme(row);
-      const supersetTag = row.superset_id ? `<span class="tag-pill" style="border:1px solid var(--gold);color:var(--gold);font-size:8px;padding:2px 6px;border-radius:4px;margin-left:6px;letter-spacing:0.5px;">SUPERSET [${esc(row.superset_id)}]</span>` : '';
+      const ssLetter = row.superset_id ? sessionSupersetLetter(row.superset_id, exerciseList) : '';
+      const ssOrd = row.superset_id ? sessionSupersetOrder(row.superset_id, exerciseList, ri) : 0;
+      const supersetTag = row.superset_id ? `<span class="tag-pill" style="border:1px solid var(--gold);color:var(--gold);font-size:8px;padding:2px 6px;border-radius:4px;margin-left:6px;letter-spacing:0.5px;">SUPERSET ${esc(ssLetter)}${ssOrd}</span>` : '';
+      const ssPick = window.__ssSelect ? `<label style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--gold);font-weight:800;"><input type="checkbox" ${window.__ssPicked && window.__ssPicked[fIdx] ? 'checked' : ''} onchange="toggleSupersetPick(${fIdx})"> SS</label>` : '';
       if (ri < 3) {
       }
 
@@ -47356,6 +47372,8 @@ function renderTraining(c){
         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
           <div style="font-size:10px;color:var(--gold);font-weight:800;opacity:0.8;text-transform:uppercase;">${esc(row.movement || 'ESERCIZIO')} ${row.is_bonus || row.isBonus ? '<span style="color:var(--gold-glow)">[BONUS]</span>' : ''} ${supersetTag}</div>
           <div style="display:flex; gap:8px; align-items:center;">
+            ${ssPick}
+            ${row.superset_id && !window.__ssSelect ? `<button type="button" class="btn btn-outline" style="font-size:8px;padding:2px 6px;" onclick="unlinkSuperset('${String(row.superset_id).replace(/'/g, '')}')">SCOLLEGA</button>` : ''}
             <span class="load-toggle ${exIntens==='RIR'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RIR')">RIR</span>
             <span class="load-toggle ${exIntens==='RPE'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RPE')">RPE</span>
             ${!skipReason ? `<span class="skip-btn" onclick="openSkipModal(${fIdx})">SALTA</span>` : `<span style="color:var(--gold); font-size:9px; font-weight:800;">SALTATO</span>`}
@@ -48601,6 +48619,64 @@ function exportWorkoutPdf() {
 function updateTempo(idx, val) {
   store.tempos[`w${currentWeek}_d${currentDay}_e${idx}`] = val;
   persist();
+}
+
+function currentSessionExercises() {
+  const w = DATA && DATA.weeks && DATA.weeks[currentWeek - 1];
+  const sess = w && (w.sessions || w.days || [])[currentDay];
+  return (sess && (sess.exercises || sess.rows)) || [];
+}
+function sessionSupersetLetter(ssId, list) {
+  const ids = [];
+  (list || currentSessionExercises()).forEach(function (ex) {
+    if (ex && ex.superset_id && ids.indexOf(ex.superset_id) < 0) ids.push(ex.superset_id);
+  });
+  const i = ids.indexOf(ssId);
+  return i >= 0 ? String.fromCharCode(65 + i) : 'A';
+}
+function sessionSupersetOrder(ssId, list, idx) {
+  let n = 0;
+  (list || []).forEach(function (ex, i) {
+    if (ex && ex.superset_id === ssId && i <= idx) n += 1;
+  });
+  return n || 1;
+}
+function toggleSupersetMode() {
+  window.__ssSelect = !window.__ssSelect;
+  window.__ssPicked = {};
+  render();
+}
+function toggleSupersetPick(idx) {
+  if (!window.__ssPicked) window.__ssPicked = {};
+  window.__ssPicked[idx] = !window.__ssPicked[idx];
+}
+function applySelectedSuperset() {
+  const idxs = Object.keys(window.__ssPicked || {}).filter(function (k) { return window.__ssPicked[k]; }).map(Number);
+  if (idxs.length < 2) {
+    if (typeof showToast === 'function') showToast('Seleziona almeno 2 esercizi', 'warning');
+    return;
+  }
+  const list = currentSessionExercises();
+  if (!list.length) return;
+  pushWorkoutUndoSnapshot('superset');
+  const ssId = 'ss_' + Date.now().toString(36);
+  idxs.forEach(function (i) {
+    if (list[i]) list[i].superset_id = ssId;
+  });
+  persistActiveProgramStructure();
+  window.__ssSelect = false;
+  window.__ssPicked = {};
+  if (typeof showToast === 'function') showToast('Superset collegato: lavora in alternanza, poco o niente riposo tra i due', 'success');
+  render();
+}
+function unlinkSuperset(ssId) {
+  const list = currentSessionExercises();
+  pushWorkoutUndoSnapshot('scollega superset');
+  list.forEach(function (ex) {
+    if (ex && ex.superset_id === ssId) ex.superset_id = null;
+  });
+  persistActiveProgramStructure();
+  render();
 }
 
 function updateData(key, val){
@@ -50430,7 +50506,7 @@ function renderStats(c){
     </div>` : ''}
     ${renderMuscleMap(snap.muscles)}
     ${renderCheckFisicoCardHtml()}
-    ${hist ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:8px;">CRONOLOGIA SESSIONI</div>' + hist + '</div>' : ''}
+    ${hist ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:11px;font-weight:800;color:var(--gold);">CRONOLOGIA SESSIONI</div><button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;" onclick="toggleStatsHistory()">' + (store.prefs && store.prefs.statsHistoryOpen === false ? '▸' : '✕') + '</button></div>' + ((store.prefs && store.prefs.statsHistoryOpen === false) ? '' : hist) + '</div>' : ''}
     <div class="card" style="margin-bottom:12px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;"><h2>Statistiche</h2><button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="exportStatsCsv()">Esporta</button></div>
       <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -50452,7 +50528,7 @@ function renderStats(c){
       </div>
     </div>
 
-    <div class="card"><div class="card-header"><h2>Riepilogo Settimanale</h2></div><div style="padding:15px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>SETT</th><th>VOL (KG)</th><th>DELTA</th><th>INT (PTS)</th><th>DELTA</th><th>BW (KG)</th><th>PTS</th></tr></thead><tbody id="summary-body"></tbody></table></div></div>
+    <div class="card"><div class="card-header"><h2>Riepilogo Settimanale</h2></div><div style="padding:15px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>SETT</th><th>VOL (KG)</th><th>DELTA</th><th>INT (PTS)</th><th>DELTA</th><th>CARICO</th><th>BW (KG)</th><th>PTS</th></tr></thead><tbody id="summary-body"></tbody></table><div style="font-size:10px;color:#777;margin-top:8px;">Tutte le settimane del mesociclo. CARICO = Totale o Per parte (come in seduta). Il volume per parte è già raddoppiato. Mix = entrambe le modalità in quella settimana.</div></div></div>
     <div class="card"><div class="card-header"><h2 id="vol-chart-title">Progressione Volume (kg) nel tempo</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="volChart"></canvas></div><div style="font-size:10px;color:#777;">Andamento del volume del gruppo selezionato, settimana per settimana.</div></div></div>
     <div class="card"><div class="card-header"><h2>Volume Efficace (pts) nel tempo</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="rirChart"></canvas></div></div></div>
     <div class="card"><div class="card-header"><h2>Andamento Peso Corporeo (kg)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="bwChart"></canvas></div><div style="font-size:10px;color:#777;">Solo pesi realmente registrati (check fisico o BW in scheda). N/D se assente.</div></div></div>
@@ -50652,10 +50728,12 @@ function renderCheckFisicoCardHtml() {
       : (syncState === 'QUEUED' || syncState === 'SYNCING'
         ? 'In attesa di connessione'
         : (syncState === 'SYNCED' ? 'Inviato' : (syncState === 'FAILED' ? 'Errore — riprova' : '')));
-    return '<div role="button" tabindex="0" onclick="openSavedCheckFisico(\'' + esc(String(c.id || '')) + '\')" style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #1c1c1c;font-size:11px;cursor:pointer;">' +
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1c1c1c;font-size:11px;">' +
+      '<div role="button" tabindex="0" onclick="openSavedCheckFisico(\'' + esc(String(c.id || '')) + '\')" style="flex:1;display:flex;justify-content:space-between;gap:8px;cursor:pointer;">' +
       '<span>' + esc(String(c.at || '').replace('T', ' ').slice(0, 16)) + ' · ' + esc(checkFisicoPeriodMeta(c.period).label) +
       (syncLabel ? ' · ' + esc(syncLabel) : '') + '</span>' +
       '<span style="color:var(--gold);font-weight:800;">' + (c.weight != null && c.weight !== '' ? (c.weight + ' kg') : '—') + '</span></div>' +
+      '<button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;border-color:var(--accent-red);color:var(--accent-red);font-size:11px;" onclick="event.stopPropagation();deleteBodyCheck(\'' + esc(String(c.id || '')) + '\')">X</button></div>' +
       (syncState === 'FAILED' ? '<button type="button" class="btn btn-outline" style="width:100%;margin:4px 0 8px;font-size:10px;" onclick="event.stopPropagation();retryCheckInSend(\'' + esc(String(c.id || '')) + '\')">RIPROVA</button>' : '');
   }).join('') : '<div style="font-size:11px;color:#666;">Nessun check salvato.</div>';
   return '<div class="card stats-anatomy" style="margin-bottom:12px;">' +
@@ -50831,6 +50909,17 @@ async function refreshCheckFisicoThumbs() {
       if (b) { draft.back = b; const img = $('check-photo-back'); const slot = $('check-slot-back'); if (img) { img.src = b; img.style.display = 'block'; } if (slot) slot.classList.add('has-pic'); }
     }
   } catch (_) {}
+}
+async function deleteBodyCheck(id) {
+  const checkId = String(id || '');
+  if (!checkId) return;
+  if (!confirm('Eliminare questo check?')) return;
+  store.bodyChecks = (store.bodyChecks || []).filter(function (c) { return String(c && c.id) !== checkId; });
+  persist();
+  try { if (typeof removeDocumentFile === 'function') await removeDocumentFile('bodycheck_front_' + checkId); } catch (_) {}
+  try { if (typeof removeDocumentFile === 'function') await removeDocumentFile('bodycheck_back_' + checkId); } catch (_) {}
+  if (typeof showToast === 'function') showToast('Check rimosso', 'info');
+  if (typeof currentView !== 'undefined' && currentView === 'stats') render();
 }
 async function saveCheckFisico() {
   const draft = checkFisicoDraft();
@@ -51704,9 +51793,35 @@ function renderSimpleChart(canvasId, data, color, type='line') {
   }
 }
 
+function toggleStatsHistory() {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.statsHistoryOpen = store.prefs.statsHistoryOpen === false;
+  persist();
+  if (typeof currentView !== 'undefined' && currentView === 'stats') render();
+}
+function statsWeeksCount() {
+  const fromData = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
+  const fromPref = Number(store && store.prefs && store.prefs.duration) || 0;
+  const fromLogs = (store.logs || []).reduce(function (m, row) { return Math.max(m, Number(row.week) || 0); }, 0);
+  const fromCur = (typeof currentWeek === 'number') ? currentWeek : 0;
+  return Math.max(1, fromData, fromPref, fromLogs, fromCur);
+}
+function weekLoadModeLabel(w) {
+  let part = 0, tot = 0;
+  Object.keys(store.loadTypes || {}).forEach(function (k) {
+    if (String(k).indexOf('w' + w + '_') === 0) {
+      if (store.loadTypes[k] === 'part') part += 1;
+      else tot += 1;
+    }
+  });
+  if (part && tot) return 'Misto';
+  if (part) return 'Per parte';
+  if (tot) return 'Totale';
+  return '—';
+}
 function renderStatsData(){
   const selectedGroup = $('stats-muscle-group') ? $('stats-muscle-group').value : 'TOTAL';
-  const weeksCount = (DATA && Array.isArray(DATA.weeks) && DATA.weeks.length) ? DATA.weeks.length : Math.max(1, (store.logs || []).reduce(function (m, row) { return Math.max(m, Number(row.week) || 0); }, 0) || 1);
+  const weeksCount = statsWeeksCount();
   let vD = [], rD = [], bwD = [], pD = [];
 
   if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
@@ -51790,17 +51905,25 @@ function renderStatsData(){
   }
 
   let tH = '';
+  const modes = [];
+  for (let i = 0; i < weeksCount; i++) modes.push(weekLoadModeLabel(i + 1));
   vD.forEach((v, i) => {
+    const prevMode = i > 0 ? modes[i - 1] : '';
+    const mode = modes[i] || '—';
+    const mixDelta = i > 0 && prevMode !== '—' && mode !== '—' && prevMode !== mode;
     const dV = i > 0 ? (v - vD[i-1]) : 0;
     const dI = i > 0 ? (rD[i] - rD[i-1]) : 0;
-    tH += `<tr>
-      <td><b>W${i+1}</b></td>
-      <td>${Math.round(v)}</td>
-      <td class="${dV>=0?'delta-pos':'delta-neg'}">${dV>=0?'+':''}${Math.round(dV)}</td>
-      <td>${Math.round(rD[i])}</td>
-      <td class="${dI>=0?'delta-pos':'delta-neg'}">${dI>=0?'+':''}${Math.round(dI)}</td>
+    const empty = !(v > 0);
+    const cur = (typeof currentWeek === 'number' && currentWeek === (i + 1));
+    tH += `<tr class="${cur ? 'stats-current-week' : ''}">
+      <td><b>W${i+1}</b>${cur ? ' · ora' : ''}</td>
+      <td>${empty ? '—' : Math.round(v)}</td>
+      <td class="${empty || i === 0 ? '' : (dV>=0?'delta-pos':'delta-neg')}">${empty || i === 0 ? '—' : ((dV>=0?'+':'') + Math.round(dV) + (mixDelta ? ' *' : ''))}</td>
+      <td>${empty ? '—' : Math.round(rD[i])}</td>
+      <td class="${empty || i === 0 ? '' : (dI>=0?'delta-pos':'delta-neg')}">${empty || i === 0 ? '—' : ((dI>=0?'+':'') + Math.round(dI) + (mixDelta ? ' *' : ''))}</td>
+      <td>${mode}</td>
       <td>${bwD[i] != null ? bwD[i] : 'N/D'}</td>
-      <td><b>${Math.round(pD[i])}</b></td>
+      <td><b>${empty ? '—' : Math.round(pD[i])}</b></td>
     </tr>`;
   });
   if($('summary-body')) $('summary-body').innerHTML = tH;
@@ -52662,6 +52785,15 @@ function persistKnowledgeExtra(entry) {
   try { localStorage.setItem(knowledgeExtraStorageKey(), JSON.stringify(store.trainingKnowledgeExtra)); } catch (_) {}
   hydrateKnowledgeExtras();
 }
+function removeKnowledgeExtra(name) {
+  const key = String(name || '').toLowerCase();
+  if (!key) return;
+  hydrateKnowledgeExtras();
+  const next = readKnowledgeExtras().filter(function (e) { return String(e.name || '').toLowerCase() !== key; });
+  if (store) store.trainingKnowledgeExtra = next;
+  try { localStorage.setItem(knowledgeExtraStorageKey(), JSON.stringify(next)); } catch (_) {}
+  hydrateKnowledgeExtras();
+}
 function parseAiJsonObject(text) {
   const raw = String(text || '');
   const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -52719,6 +52851,55 @@ async function queueExerciseKnowledgeAdapt(name, muscle) {
   } catch (_) {}
 }
 
+function collectUserExerciseNames() {
+  const seen = {};
+  const out = [];
+  function add(name, muscle) {
+    const n = String(name || '').trim();
+    if (!n) return;
+    const key = n.toLowerCase();
+    if (seen[key]) return;
+    seen[key] = true;
+    out.push({ name: n, muscle: String(muscle || '').trim() });
+  }
+  try {
+    if (DATA && Array.isArray(DATA.weeks)) {
+      DATA.weeks.forEach(function (w) {
+        (w.sessions || w.days || []).forEach(function (s) {
+          (s.exercises || s.rows || []).forEach(function (e) {
+            add(e.name || e.exercise, e.muscle_group || e.movement || (e.muscle_groups && e.muscle_groups[0]));
+          });
+        });
+      });
+    }
+  } catch (_) {}
+  try {
+    Object.keys(store.subs || {}).forEach(function (k) { add(store.subs[k], store.exMuscle && store.exMuscle[k]); });
+  } catch (_) {}
+  try {
+    Object.keys(store.bonus || {}).forEach(function (k) {
+      (store.bonus[k] || []).forEach(function (b) { add(b.exercise || b.name, b.muscle_group || b.movement); });
+    });
+  } catch (_) {}
+  try {
+    (store.customEx || []).forEach(function (e) { add(e.name || e, e.muscle_group); });
+  } catch (_) {}
+  return out;
+}
+
+let __encycSweepBusy = false;
+async function encyclopedizeProgramExercises() {
+  if (__encycSweepBusy) return;
+  __encycSweepBusy = true;
+  try {
+    const list = collectUserExerciseNames().slice(0, 16);
+    for (let i = 0; i < list.length; i++) {
+      await queueExerciseKnowledgeAdapt(list[i].name, list[i].muscle);
+    }
+  } catch (_) {}
+  __encycSweepBusy = false;
+}
+
 function knowledgeCatLabel(cat) {
   if (cat === 'scale') return 'Scale';
   if (cat === 'tecniche') return 'Tecniche';
@@ -52732,13 +52913,25 @@ function renderKnowledgeCard(item) {
   if (!item) return '';
   const muscle = item.muscle ? (' · ' + esc(item.muscle)) : '';
   const extra = item.extra || {};
+  const how = item.body || extra.body || extra.how || '';
+  const mistakes = extra.mistakes || '';
+  const cue = extra.cue || '';
+  const custom = !!(item.custom || String(item.id || '').indexOf('ex-custom-') === 0);
+  const edit = !!window.__knowledgeEdit || custom || (item.cat === 'esercizi');
+  const btns = edit
+    ? '<div style="display:flex;gap:6px;margin-top:10px;">' +
+      '<button type="button" class="btn btn-outline" style="flex:1;font-size:10px;padding:6px;" data-n="' + encodeURIComponent(item.title || '') + '" data-m="' + encodeURIComponent(item.muscle || '') + '" data-h="' + encodeURIComponent(how) + '" data-e="' + encodeURIComponent(mistakes) + '" data-c="' + encodeURIComponent(cue) + '" onclick="openKnowledgeEditFromBtn(this)">MODIFICA</button>' +
+      (custom ? '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px;border-color:var(--accent-red);color:var(--accent-red);" data-n="' + encodeURIComponent(item.title || '') + '" onclick="deleteEncyclopediaExercise(decodeURIComponent(this.getAttribute(\'data-n\')||\'\'))">ELIMINA</button>' : '') +
+      '</div>'
+    : '';
   return '<div class="card" style="padding:12px;margin-bottom:10px;border:1px solid #222;">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:.6px;">' + esc(knowledgeCatLabel(item.cat)) + esc(muscle) + '</div>' +
     '<div style="font-size:15px;font-weight:800;color:#fff;margin:4px 0 6px;">' + esc(item.title) + '</div>' +
     (item.en ? '<div style="font-size:11px;color:#888;margin-bottom:6px;">' + esc(item.en) + '</div>' : '') +
-    '<p style="font-size:12px;color:#ccc;line-height:1.45;margin:0 0 8px;">' + esc(item.body || extra.body || '') + '</p>' +
-    (extra.mistakes ? '<p style="font-size:11px;color:#aaa;line-height:1.4;margin:0 0 6px;"><b style="color:#f88;">Errori:</b> ' + esc(extra.mistakes) + '</p>' : '') +
-    (extra.cue ? '<p style="font-size:11px;color:var(--gold);margin:0;">Cue: ' + esc(extra.cue) + '</p>' : '') +
+    '<p style="font-size:12px;color:#ccc;line-height:1.45;margin:0 0 8px;">' + esc(how) + '</p>' +
+    (mistakes ? '<p style="font-size:11px;color:#aaa;line-height:1.4;margin:0 0 6px;"><b style="color:#f88;">Errori:</b> ' + esc(mistakes) + '</p>' : '') +
+    (cue ? '<p style="font-size:11px;color:var(--gold);margin:0;">Cue: ' + esc(cue) + '</p>' : '') +
+    btns +
     '</div>';
 }
 
@@ -52832,9 +53025,11 @@ function renderTrainingKnowledge(c) {
     '<input id="knowledge-search" class="input" value="' + esc(q) + '" placeholder="Cerca esercizio, RIR, drop set, split…" oninput="filterTrainingKnowledge(this.value)" style="flex:1;">' +
     '<button type="button" id="knowledge-search-clear" class="btn btn-outline" style="min-width:44px;height:44px;display:' + (String(q).trim() ? 'inline-flex' : 'none') + ';align-items:center;justify-content:center;" onclick="clearKnowledgeSearch()" aria-label="Cancella ricerca">✕</button></div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">' + tabs + '</div>' +
-    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:12px;" onclick="openAddEncyclopediaExercise()">+ AGGIUNGI ESERCIZIO</button>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="openAddEncyclopediaExercise()">+ AGGIUNGI ESERCIZIO</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:12px;" onclick="toggleKnowledgeEditMode()">' + (window.__knowledgeEdit ? 'ESCI DA MODIFICA' : 'MODIFICA ENCICLOPEDIA') + '</button>' +
     '<div id="knowledge-results">' + knowledgeResultsHtml() + '</div>' +
     '</div><div style="height:80px;"></div>';
+  try { encyclopedizeProgramExercises(); } catch (_) {}
 }
 
 function closeExerciseInfoSheet() {
@@ -52911,7 +53106,27 @@ function openExerciseInfoSheet(idx, exerciseName) {
   });
 }
 
-function openAddEncyclopediaExercise(prefillName) {
+function toggleKnowledgeEditMode() {
+  window.__knowledgeEdit = !window.__knowledgeEdit;
+  if (typeof render === 'function') render();
+}
+function openKnowledgeEditFromBtn(btn) {
+  if (!btn) return;
+  openAddEncyclopediaExercise(decodeURIComponent(btn.getAttribute('data-n') || ''), {
+    muscle: decodeURIComponent(btn.getAttribute('data-m') || ''),
+    how: decodeURIComponent(btn.getAttribute('data-h') || ''),
+    mistakes: decodeURIComponent(btn.getAttribute('data-e') || ''),
+    cue: decodeURIComponent(btn.getAttribute('data-c') || '')
+  });
+}
+function deleteEncyclopediaExercise(name) {
+  if (!confirm('Eliminare «' + name + '» dall’enciclopedia?')) return;
+  removeKnowledgeExtra(name);
+  if (typeof showToast === 'function') showToast('Voce tolta dall’enciclopedia', 'info');
+  if (typeof currentView !== 'undefined' && currentView === 'knowledge') render();
+}
+function openAddEncyclopediaExercise(prefillName, draft) {
+  draft = draft || {};
   let box = document.getElementById('ex-add-knowledge');
   if (!box) {
     box = document.createElement('div');
@@ -52921,18 +53136,20 @@ function openAddEncyclopediaExercise(prefillName) {
     document.body.appendChild(box);
   }
   const muscles = ['PETTO','DORSALI','SCHIENA','QUADRICIPITI','FEMORALI','GLUTEI','SPALLE','BICIPITI','TRICIPITI','ADDOME','POLPACCI','ALTRO'];
+  const muscleVal = String(draft.muscle || 'ALTRO').toUpperCase();
+  const hasDraft = !!(draft.how || draft.mistakes || draft.cue);
   box.innerHTML = '<div style="width:100%;max-width:520px;max-height:90vh;overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px;padding:16px;box-sizing:border-box;" onclick="event.stopPropagation()">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;">ENCICLOPEDIA</div>' +
-    '<h2 style="color:#fff;font-size:18px;margin:6px 0 10px;">Aggiungi esercizio</h2>' +
+    '<h2 style="color:#fff;font-size:18px;margin:6px 0 10px;">' + (hasDraft || prefillName ? 'Modifica esercizio' : 'Aggiungi esercizio') + '</h2>' +
     '<label style="font-size:10px;color:#aaa;">Nome</label>' +
     '<input id="ek-name" class="input" style="width:100%;margin:4px 0 10px;" value="' + esc(prefillName || '') + '">' +
     '<label style="font-size:10px;color:#aaa;">Distretto</label>' +
-    '<select id="ek-muscle" class="input" style="width:100%;margin:4px 0 10px;">' + muscles.map(function (m) { return '<option value="' + m + '">' + m + '</option>'; }).join('') + '</select>' +
+    '<select id="ek-muscle" class="input" style="width:100%;margin:4px 0 10px;">' + muscles.map(function (m) { return '<option value="' + m + '"' + (m === muscleVal ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select>' +
     '<p style="font-size:12px;color:#ccc;line-height:1.4;">Vuoi scrivere tu esecuzione, errori e cue, oppure far cercare in automatico?</p>' +
-    '<div id="ek-manual" style="display:none;">' +
-    '<label style="font-size:10px;color:#aaa;">Esecuzione</label><textarea id="ek-how" rows="3" class="input" style="width:100%;margin:4px 0 8px;"></textarea>' +
-    '<label style="font-size:10px;color:#aaa;">Errori comuni</label><textarea id="ek-mistakes" rows="2" class="input" style="width:100%;margin:4px 0 8px;"></textarea>' +
-    '<label style="font-size:10px;color:#aaa;">Cue</label><input id="ek-cue" class="input" style="width:100%;margin:4px 0 10px;">' +
+    '<div id="ek-manual" style="display:' + (hasDraft ? 'block' : 'none') + ';">' +
+    '<label style="font-size:10px;color:#aaa;">Esecuzione</label><textarea id="ek-how" rows="3" class="input" style="width:100%;margin:4px 0 8px;">' + esc(draft.how || '') + '</textarea>' +
+    '<label style="font-size:10px;color:#aaa;">Errori comuni</label><textarea id="ek-mistakes" rows="2" class="input" style="width:100%;margin:4px 0 8px;">' + esc(draft.mistakes || '') + '</textarea>' +
+    '<label style="font-size:10px;color:#aaa;">Cue</label><input id="ek-cue" class="input" style="width:100%;margin:4px 0 10px;" value="' + esc(draft.cue || '') + '">' +
     '</div>' +
     '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="document.getElementById(\'ek-manual\').style.display=\'block\'">SCRIVO IO LA SPIEGAZIONE</button>' +
     '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="saveEncyclopediaExercise(false)">RICERCA AUTOMATICA</button>' +
@@ -53034,6 +53251,11 @@ window.clearKnowledgeSearch = clearKnowledgeSearch;
 window.toggleKnowledgeMuscle = toggleKnowledgeMuscle;
 window.openAddEncyclopediaExercise = openAddEncyclopediaExercise;
 window.saveEncyclopediaExercise = saveEncyclopediaExercise;
+window.toggleKnowledgeEditMode = toggleKnowledgeEditMode;
+window.openKnowledgeEditFromBtn = openKnowledgeEditFromBtn;
+window.deleteEncyclopediaExercise = deleteEncyclopediaExercise;
+window.encyclopedizeProgramExercises = encyclopedizeProgramExercises;
+window.removeKnowledgeExtra = removeKnowledgeExtra;
 window.persistKnowledgeExtra = persistKnowledgeExtra;
 window.researchExerciseKnowledge = researchExerciseKnowledge;
 window.hydrateKnowledgeExtras = hydrateKnowledgeExtras;
@@ -54088,6 +54310,12 @@ if (typeof window !== 'undefined') {
   window.togglePasswordRecovery = togglePasswordRecovery;
   window.requestPasswordResetCode = requestPasswordResetCode;
   window.undoWorkoutModification = undoWorkoutModification;
+  window.toggleStatsHistory = toggleStatsHistory;
+  window.deleteBodyCheck = deleteBodyCheck;
+  window.toggleSupersetMode = toggleSupersetMode;
+  window.applySelectedSuperset = applySelectedSuperset;
+  window.unlinkSuperset = unlinkSuperset;
+  window.toggleSupersetPick = toggleSupersetPick;
   window.maybePushFieldUndo = maybePushFieldUndo;
   window.refreshWorkoutUndoButton = refreshWorkoutUndoButton;
   window.logoutAccount = logoutAccount;
@@ -54810,7 +55038,12 @@ function applyClientChrome() {
           return false;
         };
       }
-      if (ai) ai.style.display = 'none';
+      if (ai) {
+        ai.style.display = '';
+        const sp = ai.querySelector('span');
+        if (sp) sp.textContent = 'AI';
+        ai.onclick = function (event) { navigate('ai', event); };
+      }
     } else {
       if (home) {
         const sp = home.querySelector('span');
@@ -54842,12 +55075,15 @@ function applyClientChrome() {
         };
       }
       if (ai) {
-        if (athlete) ai.style.display = athleteCanUseNurvanAi() ? '' : 'none';
-        else ai.style.display = coachSession ? 'none' : '';
+        if (athlete) ai.style.display = 'none';
+        else ai.style.display = '';
       }
     }
     document.querySelectorAll('[data-hub="full"]').forEach(function (el) {
       el.style.display = (athlete || coachSession) ? 'none' : '';
+    });
+    document.querySelectorAll('[data-hub="personal-ai"]').forEach(function (el) {
+      el.style.display = athlete ? 'none' : '';
     });
     document.querySelectorAll('[data-hub="coach"]').forEach(function (el) {
       el.style.display = athlete ? 'none' : 'flex';
@@ -54856,10 +55092,10 @@ function applyClientChrome() {
     if (coachBtn) {
       coachBtn.style.display = athlete ? 'none' : '';
       if (coachSession) coachBtn.textContent = 'ESCI';
-      else coachBtn.textContent = unlocked ? 'HUB' : 'COACH';
+      else coachBtn.textContent = 'COACH';
       coachBtn.onclick = function () {
         if (coachSession) exitCoachSession();
-        else openCoachOrUnlock();
+        else openPersonalCoachAi();
       };
     }
     ensureCoachHeaderControls(coachSession);
@@ -54903,6 +55139,15 @@ function applyClientChrome() {
     ensureCoachDrawer();
     if (window.CoachOS && typeof window.CoachOS.applyShell === 'function') {
       window.CoachOS.applyShell(coachSession, athlete);
+    }
+    if (coachSession && !athlete) {
+      const aiBtn = document.getElementById('nav-ai');
+      if (aiBtn) {
+        aiBtn.style.display = '';
+        const sp = aiBtn.querySelector('span');
+        if (sp) sp.textContent = 'AI';
+        aiBtn.onclick = function (event) { navigate('ai', event); };
+      }
     }
   } catch (err) {
     console.warn('[CLIENT_CHROME]', err);
@@ -56616,6 +56861,13 @@ function closeClientTutorial() {
   }
 }
 
+function openPersonalCoachAi() {
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+    if (typeof navigate === 'function') navigate('clientChat');
+    return;
+  }
+  if (typeof navigate === 'function') navigate('ai');
+}
 function openCoachOrUnlock() {
   if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) enterCoachSession();
   else showDemoUnlock();
@@ -60531,6 +60783,7 @@ window.advanceClientTutorial = advanceClientTutorial;
 window.closeClientTutorial = closeClientTutorial;
 window.showDemoUnlock = showDemoUnlock;
 window.openCoachOrUnlock = openCoachOrUnlock;
+window.openPersonalCoachAi = openPersonalCoachAi;
 /* ——— E2E chat crypto (ECDH P-256 + AES-GCM) ——— */
 function b64FromBuf(buf) {
   const bytes = new Uint8Array(buf);
@@ -61172,6 +61425,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       { view: 'coachMealAi', label: 'Meal AI', flag: 'mealAiV1' },
       { view: 'coachFormReview', label: tx('coFormReview'), flag: 'videoFormV1' },
       { view: 'coachAnalytics', label: tx('coAnalytics'), flag: 'coachAnalyticsV1' },
+      { view: 'ai', label: 'Coach AI' },
       { view: 'coachAgent', label: tx('coAgent'), flag: 'agentV1' },
       { view: 'coachAgentAudit', label: tx('coAgentAudit'), flag: 'agentV1' },
       { view: 'coachAutomations', label: tx('coAutomations'), flag: 'businessV1' },
