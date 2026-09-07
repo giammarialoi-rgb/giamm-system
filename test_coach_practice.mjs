@@ -94,6 +94,13 @@ assert(ui.includes("GS_CLIENT_SHELL") || ui.includes("clientShell"), "client she
 assert(ui.includes("Notification") && ui.includes("onclick"), "web notification click");
 assert(!ui.includes("127.0.0.1:7810"), "debug ingest removed");
 assert(ui.includes("Anzianità di allenamento") && ui.includes("Problema fisico principale") && ui.includes("Tempo a sessione"), "UI intake has requested fields");
+assert(ui.includes("function isClientIntakeVisible") && ui.includes("NURVAN_INTAKE_DRAFT_") && ui.includes("bindIntakeDraftAutosave"), "intake answers are drafted locally");
+assert(ui.includes("needIntake && !isClientIntakeVisible()"), "athlete refresh does not rebuild an open intake form");
+assert(ui.includes("__cpIntakeShowGen"), "concurrent intake opens do not wipe the visible form");
+assert(ui.includes("mergeIntakeFormData") && ui.includes("clearIntakeDraft"), "submitted intake clears the draft and restore uses merged answers");
+assert(!/if \(me\.client && me\.client\.needIntake\) showClientIntake/.test(ui), "refreshAthleteMe no longer always remounts intake");
+assert(ui.includes("function submitClientIntake") && ui.includes("clearIntakeDraft"), "successful intake submit drops the local draft");
+assert(ui.includes("showClientIntake(prefill, force)"), "intake remount requires an explicit force flag");
 INTAKE_REQUIRED.forEach((k) => {
   assert(ui.includes("key: '" + k + "'") || ui.includes('key: "' + k + '"'), "UI field " + k + " matches server");
 });

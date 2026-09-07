@@ -1858,21 +1858,35 @@ async function submitClientInviteLogin() {
   }
 }
 
-async function showClientIntake(prefill) {
+async function showClientIntake(prefill, force) {
   ensurePracticeStyle();
   ensurePracticeOverlays();
   const p = document.getElementById('cp-intake-panel');
   if (!p) return;
+  if (!force && isClientIntakeVisible()) {
+    showOverlay('cp-intake', true);
+    bindIntakeDraftAutosave('cpi');
+    return;
+  }
+  window.__cpIntakeShowGen = (window.__cpIntakeShowGen || 0) + 1;
+  const gen = window.__cpIntakeShowGen;
   try {
     if (typeof ensureAllergenIntoleranceCatalog === 'function') await ensureAllergenIntoleranceCatalog();
   } catch (_) {}
-  const data = prefill || (store.clientProfile && store.clientProfile.intake) || {};
+  if (gen !== window.__cpIntakeShowGen) return;
+  if (!force && isClientIntakeVisible()) {
+    showOverlay('cp-intake', true);
+    bindIntakeDraftAutosave('cpi');
+    return;
+  }
+  const data = mergeIntakeFormData(prefill);
   p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">ACQUISIZIONE</div>' +
     '<h2>Questionario iniziale</h2>' +
     '<p class="cp-help">Compila i campi obbligatori. Nome e cognome a mano; il resto è a tendina. In fondo puoi indicare allergie/intolleranze (opzionale) per la dieta.</p>' +
     '<div id="cp-intake-fields">' + intakeFormHtml('cpi', data) + '</div>' +
     '<div id="cp-intake-status" class="cp-help"></div>' +
     '<button class="btn btn-primary" style="width:100%;" onclick="submitClientIntake()">INVIA AL COACH</button>';
+  bindIntakeDraftAutosave('cpi');
   showOverlay('cp-intake', true);
 }
 
@@ -1893,6 +1907,7 @@ async function submitClientIntake() {
     }, 20000);
     store.clientProfile = payload.client || store.clientProfile;
     if (payload.profile) store.profile = Object.assign({}, store.profile || {}, payload.profile);
+    clearIntakeDraft();
     if (typeof persist === 'function') persist();
     showOverlay('cp-intake', false);
     showClientTutorial(false);
@@ -1901,6 +1916,75 @@ async function submitClientIntake() {
   } catch (err) {
     if (status) status.textContent = (err && err.message) || 'Invio non riuscito.';
   }
+}
+
+function isClientIntakeVisible() {
+  const el = document.getElementById('cp-intake');
+  return !!(el && el.style.display === 'flex' && document.getElementById('cp-intake-fields'));
+}
+
+function intakeDraftStorageKey() {
+  const id = (store && store.accountUser && (store.accountUser.id || store.accountUser.email)) || (store && store.inviteToken) || 'anon';
+  return 'NURVAN_INTAKE_DRAFT_' + String(id);
+}
+
+function compactIntakeValues(obj) {
+  const out = {};
+  if (!obj || typeof obj !== 'object') return out;
+  Object.keys(obj).forEach(function (k) {
+    const v = obj[k];
+    if (v == null || v === '') return;
+    if (Array.isArray(v) && !v.length) return;
+    out[k] = v;
+  });
+  return out;
+}
+
+function loadIntakeDraft() {
+  try {
+    const raw = sessionStorage.getItem(intakeDraftStorageKey()) || localStorage.getItem(intakeDraftStorageKey());
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (parsed && parsed.intake && typeof parsed.intake === 'object') return parsed.intake;
+  } catch (_) {}
+  return null;
+}
+
+function saveIntakeDraft(intake) {
+  try {
+    const payload = JSON.stringify({ intake: intake || {}, at: Date.now() });
+    sessionStorage.setItem(intakeDraftStorageKey(), payload);
+    localStorage.setItem(intakeDraftStorageKey(), payload);
+  } catch (_) {}
+}
+
+function clearIntakeDraft() {
+  try { sessionStorage.removeItem(intakeDraftStorageKey()); } catch (_) {}
+  try { localStorage.removeItem(intakeDraftStorageKey()); } catch (_) {}
+}
+
+function bindIntakeDraftAutosave(prefix) {
+  const host = document.getElementById('cp-intake-fields');
+  if (!host || host.getAttribute('data-intake-draft-bound') === '1') return;
+  host.setAttribute('data-intake-draft-bound', '1');
+  const save = function () {
+    try { saveIntakeDraft(readIntakeForm(prefix)); } catch (_) {}
+  };
+  host.addEventListener('input', save);
+  host.addEventListener('change', save);
+}
+
+function mergeIntakeFormData(prefill) {
+  let live = {};
+  try {
+    if (document.getElementById('cp-intake-fields')) live = readIntakeForm('cpi');
+  } catch (_) {}
+  return Object.assign(
+    {},
+    compactIntakeValues((store && store.clientProfile && store.clientProfile.intake) || {}),
+    compactIntakeValues(prefill || {}),
+    compactIntakeValues(loadIntakeDraft() || {}),
+    compactIntakeValues(live)
+  );
 }
 
 function isClientTutorialVisible() {
@@ -5384,7 +5468,7 @@ async function refreshAthleteMe() {
     store.role = 'athlete';
     store.clientShell = true;
     if (typeof persist === 'function') persist();
-    if (me.client && me.client.needIntake) showClientIntake(me.client.intake || {});
+    if (me.client && me.client.needIntake && !isClientIntakeVisible()) showClientIntake(me.client.intake || {});
   } catch (_) {}
 }
 
@@ -5507,7 +5591,7 @@ async function bootCoachPractice() {
     store.inviteTokenBound = store.inviteToken || urlToken || '';
     await refreshAthleteMe();
     startPresenceHeartbeat();
-    if (store.clientProfile && store.clientProfile.needIntake) showClientIntake(store.clientProfile.intake || {});
+    if (store.clientProfile && store.clientProfile.needIntake && !isClientIntakeVisible()) showClientIntake(store.clientProfile.intake || {});
     else if (!isClientTutorialDone()) showClientTutorial(false);
     flushClientOutbox();
     setTimeout(function () {
