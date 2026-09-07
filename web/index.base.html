@@ -19417,7 +19417,8 @@ async function researchExerciseKnowledge(name, muscle) {
   if (store && store.accountToken) headers.Authorization = 'Bearer ' + store.accountToken;
   const prompt = 'Scheda tecnica breve per l\'esercizio "' + title + '"' + (muscle ? (' (distretto ' + muscle + ')') : '') +
     '. Rispondi SOLO JSON valido: {"name":"nome canonico","muscle":"PETTO|DORSALI|SCHIENA|QUADRICIPITI|FEMORALI|GLUTEI|SPALLE|BICIPITI|TRICIPITI|ADDOME|POLPACCI|ALTRO","how":"esecuzione in 2-4 frasi","mistakes":"errori comuni","cue":"una cue"}. ' +
-    'Se NON è un esercizio di allenamento reale, {"unknown":true}. Italiano, niente markdown.';
+    'Italiano tecnico ma chiaro da sala pesi. Usa «colonna in posizione neutra», «non flettere/arrotondare la schiena sotto carico», «fletti le anche», «adduci le scapole». ' +
+    'Vietato: calchi dall’inglese (es. «neutro il rachide»), metafore, slang da social, tono letterario. Se NON è un esercizio di allenamento reale, {"unknown":true}. Niente markdown.';
   const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
   const endpoint = typeof coachEndpoint === 'function' ? coachEndpoint('/api/chat') : '/api/chat';
   const res = await fetchFn(endpoint, {

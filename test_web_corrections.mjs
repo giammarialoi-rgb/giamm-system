@@ -37,7 +37,7 @@ assert.ok(apiPractice.includes("/c/:token/manifest.webmanifest") && apiPractice.
 assert.ok(apiPractice.includes("function injectClientPwaHtml") && apiPractice.includes("__NURVAN_CLIENT_BOOT"), "server injects per-token manifest into /c/:token HTML");
 assert.ok(apiPractice.includes('res.redirect(302, "/c/"') || apiPractice.includes("res.redirect(302, \"/c/\""), "GET / with client cookies redirects to /c/token");
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
-assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("knowledge2"), "SW does not precache the root manifest");
+assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("knowledge3"), "SW does not precache the root manifest");
 assert.ok(sw.includes("isClientDoc") && sw.includes(".webmanifest"), "SW keeps /c/* and manifests on the network");
 assert.ok(sw.includes("training-knowledge.js"), "SW precaches the training encyclopedia");
 
@@ -89,6 +89,8 @@ const knowledge = fs.readFileSync(path.join(root, "web/training-knowledge.js"), 
 assert.ok(knowledge.includes("RIR") && knowledge.includes("RPE") && knowledge.includes("Drop set"), "encyclopedia covers RIR/RPE and intensity techniques");
 assert.ok(knowledge.includes("Full body") && knowledge.includes("Push Pull Legs") && knowledge.includes("+2,5 kg"), "encyclopedia covers splits and 2.5 kg progression");
 assert.ok(knowledge.includes("Panca piana") && knowledge.includes("PETTO"), "encyclopedia has exercises by muscle");
+assert.ok(knowledge.includes("colonna in posizione neutra") && knowledge.includes("Adduci le scapole"), "encyclopedia uses technical Italian cues");
+assert.ok(!knowledge.includes("Neutro il rachide") && !knowledge.includes("Schiena tonda sotto carico"), "encyclopedia avoids literary calques");
 assert.ok(knowledge.includes("function setExtraExercises") && knowledge.includes("EXTRA_EXERCISES"), "encyclopedia accepts custom extras");
 
 assert.ok(html.includes("function maybePushFieldUndo") && html.includes('id="workout-undo-btn"'), "workout undo button exists");
