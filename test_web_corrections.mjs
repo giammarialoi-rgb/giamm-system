@@ -48,7 +48,7 @@ assert.ok(html.includes("SETTIMANA ") && html.includes("GIORNO ") && html.includ
 assert.ok(html.includes("VOLUME SESSIONE") && html.includes("non peso corporeo"), "tonnage is not labeled as body weight");
 assert.ok(html.includes("function recordedBodyWeightForWeek"), "body weight chart uses recorded values only");
 assert.ok(html.includes("Volume ") && html.includes("__statsMuscleVolumeByWeek"), "muscle drill shows that muscle volume");
-assert.ok(/height:\s*380px/.test(html), "charts are taller");
+assert.ok(/height:\s*280px/.test(html) && html.includes("formatChartAxis"), "charts use compact height and axis labels that do not clip");
 
 assert.ok(html.includes("function editSupplementItem") && html.includes("onclick=\"editSupplementItem("), "supplements have compact Edit");
 assert.ok(!/updateSupplementField\(\$\{idx\},'name'/.test(html), "supplement list is not always-open name inputs");
@@ -105,9 +105,13 @@ assert.ok(html.includes("function queueExerciseKnowledgeAdapt"), "new session ex
 assert.ok(html.includes("function toggleReplaceManual"), "replace-manual toggle is a real function");
 assert.ok(html.includes("function encyclopedizeProgramExercises") && html.includes("function toggleKnowledgeEditMode"), "user exercises get encyclopedized and cards can be edited");
 assert.ok(html.includes("hiddenProgramIds") && html.includes("L’allenamento attivo resta"), "deleting the active program from the list keeps it running");
+assert.ok(html.includes("function deleteSavedProgramFromList") && html.includes("data-id="), "saved-program X uses data attributes, not broken stringify");
 assert.ok(html.includes("function deleteBodyCheck") && html.includes("function toggleStatsHistory"), "checks can be deleted and session history closed");
 assert.ok(html.includes("function statsWeeksCount") && html.includes("weekLoadModeLabel"), "stats tables cover all weeks and load mode");
+assert.ok(html.includes("function setStatsZoom") && html.includes("stats-zoom-chip") && html.includes("function statsZoomSlice"), "stats have zoom chips and sliced charts");
+assert.ok(html.includes("function pinTrainingDay") && html.includes("shouldStayOnPinnedTraining"), "finalized days stay open instead of auto-advancing");
 assert.ok(html.includes("function applySelectedSuperset") && html.includes("COLLEGA IN SUPERSET"), "training can pair supersets");
+assert.ok(practice.includes("stayPinned") && practice.includes("__pinnedTraining"), "client-shell apply does not bounce a pinned finalized day");
 assert.ok(practice.includes("function openPersonalCoachAi") && practice.includes("navigate('ai')"), "personal COACH opens Coach AI");
 assert.ok(practice.includes("if (athlete) ai.style.display = 'none'"), "clients do not get Coach AI");
 assert.ok(html.includes("function startEditFinalizedWorkout") && html.includes("function saveFinalizedWorkoutEdits"), "finalized workouts can be reopened and saved in place");
