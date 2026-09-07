@@ -37,8 +37,9 @@ assert.ok(apiPractice.includes("/c/:token/manifest.webmanifest") && apiPractice.
 assert.ok(apiPractice.includes("function injectClientPwaHtml") && apiPractice.includes("__NURVAN_CLIENT_BOOT"), "server injects per-token manifest into /c/:token HTML");
 assert.ok(apiPractice.includes('res.redirect(302, "/c/"') || apiPractice.includes("res.redirect(302, \"/c/\""), "GET / with client cookies redirects to /c/token");
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
-assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("ios-client-pwa1"), "SW does not precache the root manifest");
+assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("knowledge1"), "SW does not precache the root manifest");
 assert.ok(sw.includes("isClientDoc") && sw.includes(".webmanifest"), "SW keeps /c/* and manifests on the network");
+assert.ok(sw.includes("training-knowledge.js"), "SW precaches the training encyclopedia");
 
 assert.ok(html.includes('name="cf-pdf-range"') && html.includes('value="weeks"') && html.includes('value="dates"'), "check PDF has week and date range");
 assert.ok(html.includes("rangeMode === 'weeks'") && html.includes("rangeMode === 'dates'"), "check logs filtered by custom range");
@@ -78,5 +79,15 @@ assert.equal(slim.exams.count, 4);
 const restoreStart = html.indexOf("function restoreClientShellSync");
 const restoreEnd = html.indexOf("var store = loadStore()");
 assert.ok(restoreStart >= 0 && restoreEnd > restoreStart);
+
+assert.ok(html.includes("function progressionAddKg") && html.includes("isLightProgressionLoad"), "load jumps use 2.5 kg or 1 kg on light lifts");
+assert.ok(!/addKg = 1\.25/.test(html), "progression no longer uses 1.25 kg jumps");
+assert.ok(html.includes("function openExerciseInfoSheet") && html.includes("renderTrainingKnowledge"), "CHIEDI INFO opens a local explanation sheet");
+assert.ok(html.includes("navigate('knowledge')") && html.includes("Info training"), "hub has the training encyclopedia page");
+assert.ok(practice.includes("openExerciseInfoSheet"), "workout CHIEDI INFO uses the explanation sheet");
+const knowledge = fs.readFileSync(path.join(root, "web/training-knowledge.js"), "utf8");
+assert.ok(knowledge.includes("RIR") && knowledge.includes("RPE") && knowledge.includes("Drop set"), "encyclopedia covers RIR/RPE and intensity techniques");
+assert.ok(knowledge.includes("Full body") && knowledge.includes("Push Pull Legs") && knowledge.includes("+2,5 kg"), "encyclopedia covers splits and 2.5 kg progression");
+assert.ok(knowledge.includes("Panca piana") && knowledge.includes("PETTO"), "encyclopedia has exercises by muscle");
 
 console.log("OK   web corrections: pdf choice/pages, coach slim, client shell, check range, stats, supp, catalog");

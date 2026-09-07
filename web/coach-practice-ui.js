@@ -3265,6 +3265,10 @@ function applyChatPrefill(text, tries) {
 }
 
 async function askExerciseInfoToCoach(idx, exerciseName) {
+  if (typeof openExerciseInfoSheet === 'function') {
+    openExerciseInfoSheet(idx, exerciseName);
+    return;
+  }
   const prefill = buildExerciseInfoPrefill(idx, exerciseName);
   const athleteOk = (typeof isAthleteRole === 'function' && isAthleteRole())
     || !!(store && store.clientShell && store.accountToken);
