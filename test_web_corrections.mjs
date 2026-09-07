@@ -37,7 +37,7 @@ assert.ok(apiPractice.includes("/c/:token/manifest.webmanifest") && apiPractice.
 assert.ok(apiPractice.includes("function injectClientPwaHtml") && apiPractice.includes("__NURVAN_CLIENT_BOOT"), "server injects per-token manifest into /c/:token HTML");
 assert.ok(apiPractice.includes('res.redirect(302, "/c/"') || apiPractice.includes("res.redirect(302, \"/c/\""), "GET / with client cookies redirects to /c/token");
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
-assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("knowledge1"), "SW does not precache the root manifest");
+assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("knowledge2"), "SW does not precache the root manifest");
 assert.ok(sw.includes("isClientDoc") && sw.includes(".webmanifest"), "SW keeps /c/* and manifests on the network");
 assert.ok(sw.includes("training-knowledge.js"), "SW precaches the training encyclopedia");
 
@@ -89,5 +89,28 @@ const knowledge = fs.readFileSync(path.join(root, "web/training-knowledge.js"), 
 assert.ok(knowledge.includes("RIR") && knowledge.includes("RPE") && knowledge.includes("Drop set"), "encyclopedia covers RIR/RPE and intensity techniques");
 assert.ok(knowledge.includes("Full body") && knowledge.includes("Push Pull Legs") && knowledge.includes("+2,5 kg"), "encyclopedia covers splits and 2.5 kg progression");
 assert.ok(knowledge.includes("Panca piana") && knowledge.includes("PETTO"), "encyclopedia has exercises by muscle");
+assert.ok(knowledge.includes("function setExtraExercises") && knowledge.includes("EXTRA_EXERCISES"), "encyclopedia accepts custom extras");
+
+assert.ok(html.includes("function maybePushFieldUndo") && html.includes('id="workout-undo-btn"'), "workout undo button exists");
+assert.ok(html.includes("maybePushFieldUndo(/_load$/") && html.includes("function updateData"), "load edits snapshot undo");
+assert.ok(html.includes("function refreshWorkoutUndoButton"), "undo button refreshes without full render");
+assert.ok(html.includes("function clearKnowledgeSearch") && html.includes('id="knowledge-search-clear"'), "encyclopedia search has clear X");
+assert.ok(html.includes("function toggleKnowledgeMuscle") && html.includes("__knowledgeCollapsed"), "muscle groups can collapse");
+assert.ok(html.includes("function openAddEncyclopediaExercise") && html.includes("function saveEncyclopediaExercise"), "encyclopedia can add exercises");
+assert.ok(html.includes("function researchExerciseKnowledge") && html.includes("knowledgeLookup"), "new exercises can be researched");
+assert.ok(html.includes("function persistKnowledgeExtra") && html.includes("NURVAN_KNOWLEDGE_EXTRA_"), "custom encyclopedia entries persist separately from workouts");
+assert.ok(html.includes("function queueExerciseKnowledgeAdapt"), "new session exercises adapt encyclopedia in background");
+assert.ok(html.includes("function toggleReplaceManual"), "replace-manual toggle is a real function");
+
+const kctx = { console };
+kctx.window = kctx;
+kctx.self = kctx;
+vm.createContext(kctx);
+vm.runInContext(knowledge, kctx);
+kctx.NURVAN_TRAINING_KNOWLEDGE.setExtraExercises([{ name: "Foo row", muscle: "DORSALI", how: "Tira le scapole", mistakes: "strap", cue: "gomiti" }]);
+const extraHit = kctx.lookupTrainingKnowledge("Foo row");
+assert.equal(extraHit.matched, true);
+assert.ok(String(extraHit.body).includes("Tira le scapole"));
+assert.equal(extraHit.custom, true);
 
 console.log("OK   web corrections: pdf choice/pages, coach slim, client shell, check range, stats, supp, catalog");
