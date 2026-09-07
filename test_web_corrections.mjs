@@ -110,6 +110,9 @@ assert.ok(html.includes("function statsWeeksCount") && html.includes("weekLoadMo
 assert.ok(html.includes("function applySelectedSuperset") && html.includes("COLLEGA IN SUPERSET"), "training can pair supersets");
 assert.ok(practice.includes("function openPersonalCoachAi") && practice.includes("navigate('ai')"), "personal COACH opens Coach AI");
 assert.ok(practice.includes("if (athlete) ai.style.display = 'none'"), "clients do not get Coach AI");
+assert.ok(html.includes("function startEditFinalizedWorkout") && html.includes("function saveFinalizedWorkoutEdits"), "finalized workouts can be reopened and saved in place");
+assert.ok(html.includes("MODIFICA ALLENAMENTO FINALIZZATO") && html.includes("updateSessionBodyWeight"), "finalized banner can edit BW without wiping the log");
+assert.ok(html.includes("La seduta resta finalizzata"), "editing a finalized session does not un-finalize it");
 
 const kctx = { console };
 kctx.window = kctx;

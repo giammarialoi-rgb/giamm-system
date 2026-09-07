@@ -47347,7 +47347,18 @@ function renderTraining(c){
     </div>`;
 
     const sessionName = sessionDisplayName(d, currentDay);
-    h += `<div class="card"><div class="card-header"><h2>${esc(w.title)}</h2></div><div style="padding:15px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;"><div><div style="font-size:10px;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Sessione</div><div class="session-name-heading">${esc(sessionName)}${d.is_bonus || d.isBonus?' (BONUS)':''}</div></div><input type="number" step="0.1" placeholder="BW kg" value="${store.bw[currentWeek]||''}" onchange="store.bw[currentWeek]=this.value;persist()" style="width:90px;padding:6px;text-align:center;"></div><div id="exercises-list">`;
+    const dayFinalized = (typeof isTrainingDayFinalized === 'function') && isTrainingDayFinalized(currentWeek, currentDay);
+    const editingFinalized = dayFinalized && isEditingFinalizedSession();
+    if (dayFinalized) {
+      h += `<div class="card" style="margin-bottom:10px;padding:12px;border:1px solid var(--gold);">
+        <div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:.6px;">SEDUTA FINALIZZATA · W${currentWeek} · S${currentDay + 1}</div>
+        <p style="font-size:12px;color:#aaa;margin:6px 0 10px;">Resta finalizzata. Puoi tornare indietro e correggere BW, kg o reps.</p>
+        ${editingFinalized
+          ? '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;" onclick="cancelEditFinalizedWorkout()">CHIUDI MODIFICA</button>'
+          : '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;" onclick="startEditFinalizedWorkout()">MODIFICA ALLENAMENTO FINALIZZATO</button>'}
+      </div>`;
+    }
+    h += `<div class="card"><div class="card-header"><h2>${esc(w.title)}</h2></div><div style="padding:15px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;"><div><div style="font-size:10px;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Sessione</div><div class="session-name-heading">${esc(sessionName)}${d.is_bonus || d.isBonus?' (BONUS)':''}</div></div><label style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;"><span style="font-size:8px;color:#888;font-weight:800;">BW sett. ${currentWeek}</span><input type="number" step="0.1" placeholder="BW kg" value="${store.bw[currentWeek]||''}" onchange="updateSessionBodyWeight(this.value)" style="width:90px;padding:6px;text-align:center;"></label></div><div id="exercises-list">`;
 
     // Render ALL exercises in this session
     let renderedCount = 0;
@@ -47532,7 +47543,11 @@ function renderTraining(c){
         <div style="text-align:center;"><b id="d-rir" style="color:var(--accent-red);font-size:18px;">0</b><br><span style="font-size:9px;color:#666;">INTENSITÀ</span></div>
         <div style="text-align:center;"><b id="d-sets" style="color:#fff;font-size:18px;">0</b><br><span style="font-size:9px;color:#666;">SERIE</span></div>
       </div>
-      <div style="padding:20px;"><button class="btn btn-primary" style="width:100%; height:55px; font-size:16px; box-shadow: 0 0 20px rgba(212,175,55,0.3);" onclick="finalizeWorkout()">FINALIZZA ALLENAMENTO</button></div>
+      <div style="padding:20px;">${dayFinalized
+        ? (editingFinalized
+          ? '<button class="btn btn-primary" style="width:100%;height:55px;font-size:16px;" onclick="saveFinalizedWorkoutEdits()">SALVA MODIFICHE</button>'
+          : '<button class="btn btn-outline" style="width:100%;height:55px;font-size:14px;" onclick="startEditFinalizedWorkout()">MODIFICA ALLENAMENTO FINALIZZATO</button>')
+        : '<button class="btn btn-primary" style="width:100%; height:55px; font-size:16px; box-shadow: 0 0 20px rgba(212,175,55,0.3);" onclick="finalizeWorkout()">FINALIZZA ALLENAMENTO</button>'}</div>
       <div style="height:120px;"></div>`;
     c.innerHTML = h;
     calcStats();
@@ -48866,8 +48881,90 @@ function advanceToNextOpenTrainingDay(forceFromCurrent) {
 }
 window.advanceToNextOpenTrainingDay = advanceToNextOpenTrainingDay;
 window.isTrainingDayFinalized = isTrainingDayFinalized;
+function finalizedSessionKey(week, day) {
+  return 'w' + (Number(week) || 1) + '_d' + (Number(day) || 0);
+}
+function isEditingFinalizedSession() {
+  return window.__editFinalizedKey === finalizedSessionKey(currentWeek, currentDay);
+}
+function startEditFinalizedWorkout(week, day) {
+  if (week != null && week !== '') currentWeek = Number(week) || 1;
+  if (day != null && day !== '') currentDay = Number(day) || 0;
+  window.__editFinalizedKey = finalizedSessionKey(currentWeek, currentDay);
+  try { if (typeof closeSavedRecordOverlay === 'function') closeSavedRecordOverlay(); } catch (_) {}
+  if (typeof navigate === 'function') navigate('training');
+  else render();
+  if (typeof showToast === 'function') showToast('Seduta finalizzata: correggi BW, kg o reps. Poi salva le modifiche.', 'info');
+}
+function cancelEditFinalizedWorkout() {
+  window.__editFinalizedKey = '';
+  render();
+}
+function updateSessionBodyWeight(val) {
+  if (!store.bw) store.bw = {};
+  try { if (typeof maybePushFieldUndo === 'function') maybePushFieldUndo('peso corporeo', 'bw_' + (currentWeek || 1)); } catch (_) {}
+  store.bw[currentWeek] = val;
+  persist();
+  try { refreshFinalizedLogInPlace(false); } catch (_) {}
+}
+function refreshFinalizedLogInPlace(recompute) {
+  const week = currentWeek || 1;
+  const day = currentDay || 0;
+  const logs = store.logs || [];
+  let hit = null;
+  for (let i = logs.length - 1; i >= 0; i--) {
+    const l = logs[i];
+    if (l && Number(l.week) === Number(week) && Number(l.day) === Number(day)) { hit = l; break; }
+  }
+  if (!hit) return null;
+  hit.bw = store.bw && store.bw[week];
+  hit.editedAt = new Date().toISOString();
+  if (recompute && typeof collectSessionStats === 'function') {
+    const snap = collectSessionStats({ currentSessionOnly: true });
+    hit.tonnage = Math.round(snap.weight || 0);
+    hit.intensity = Math.round(snap.intensity || 0);
+    hit.sets = snap.sets || hit.sets;
+    hit.exercises = snap.exercises || hit.exercises;
+    hit.kcal = snap.kcal || hit.kcal;
+    hit.muscles = snap.muscles || hit.muscles;
+  }
+  return hit;
+}
+function saveFinalizedWorkoutEdits() {
+  const hit = refreshFinalizedLogInPlace(true);
+  if (!hit) {
+    if (typeof showToast === 'function') showToast('Nessuna seduta finalizzata da aggiornare', 'warning');
+    return;
+  }
+  window.__editFinalizedKey = '';
+  persist();
+  try { persistActiveProgramStructure(); } catch (_) {}
+  try {
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveWorkoutLogsSnapshot) {
+      GiammariaPersistence.saveWorkoutLogsSnapshot({
+        data: store.data || {},
+        customSets: store.customSets || {},
+        bw: store.bw || {},
+        logs: store.logs || [],
+        health: store.health || null,
+        updatedAt: new Date().toISOString()
+      }).catch(function () {});
+    }
+  } catch (_) {}
+  if (typeof showToast === 'function') showToast('Modifiche salvate. La seduta resta finalizzata.', 'success');
+  render();
+}
+window.startEditFinalizedWorkout = startEditFinalizedWorkout;
+window.cancelEditFinalizedWorkout = cancelEditFinalizedWorkout;
+window.saveFinalizedWorkoutEdits = saveFinalizedWorkoutEdits;
+window.updateSessionBodyWeight = updateSessionBodyWeight;
+window.isEditingFinalizedSession = isEditingFinalizedSession;
 
 function finalizeWorkout(){
+  if (typeof isTrainingDayFinalized === 'function' && isTrainingDayFinalized(currentWeek, currentDay)) {
+    startEditFinalizedWorkout();
+    return;
+  }
   markSessionClockIfNeeded();
   const snap = collectSessionStats({ currentSessionOnly: true });
   const intensityPts = Math.round(snap.intensity || 0);
@@ -51187,6 +51284,7 @@ function openLoggedSessionReview(week, day) {
     '<div style="font-size:11px;color:#888;margin-bottom:12px;">W' + week + ' · S' + (day + 1) + (date ? (' · ' + esc(date)) : '') +
     (log && log.sets ? (' · ' + log.sets + ' serie') : '') +
     (log && log.tonnage ? (' · ' + log.tonnage + ' kg') : '') + '</div>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="startEditFinalizedWorkout(' + week + ',' + day + ')">MODIFICA ALLENAMENTO FINALIZZATO</button>' +
     body + '</div>';
   document.body.appendChild(overlay);
 }
