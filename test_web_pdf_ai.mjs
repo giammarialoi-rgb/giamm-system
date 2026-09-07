@@ -19,9 +19,10 @@ assert.ok(!/askAI\(prompt\)/.test(html.match(/async function analyzeCheckFisicoW
 assert.ok(html.includes("function classifyMaxTestLift") && html.includes("weekExerciseWasLogged"), "taper classifies lift and skips logged weeks");
 assert.ok(html.includes("function openSavedCheckFisico") && html.includes("function openLoggedSessionReview"), "storico reopen exists");
 assert.ok(html.includes("draft.clearedAt = Date.now()"), "save check clears compose draft");
-assert.ok(practice.includes("buildPersonalExerciseInfoPrompt") && practice.includes("askAIInner"), "personal CHIEDI INFO goes to Coach AI");
-assert.ok(/if \(!athleteOk\) \{[\s\S]*navigate\('ai'\)/.test(practice), "personal path navigates to ai");
-assert.ok(!/if \(!athleteOk\) \{\s*practiceToast\(prefill/.test(practice), "personal path is not toast-only");
+assert.ok(html.includes("function openExerciseInfoSheet") && html.includes("askCoachAiFromInfoSheet"), "CHIEDI INFO shows local info then optional Coach AI");
+assert.ok(practice.includes("openExerciseInfoSheet"), "workout CHIEDI INFO opens the info sheet");
+assert.ok(html.includes("waitForDomId('chat-history'"), "Coach AI from info sheet waits for the chat DOM");
+assert.ok(!/addKg = 1\.25/.test(html), "workout progression does not add 1.25 kg");
 
 const start = html.indexOf("function maxTestKey");
 const end = html.indexOf("function pdfSessionKey");

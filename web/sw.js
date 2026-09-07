@@ -1,6 +1,6 @@
 /* Nurvan shell SW — cache UI only, never the 10k catalog. */
 importScripts('./release-meta.js');
-const CACHE = 'nurvan-shell-v' + String((self.NURVAN_RELEASE && self.NURVAN_RELEASE.androidVersionCode) || 'dev') + '-ios-client-pwa1';
+const CACHE = 'nurvan-shell-v' + String((self.NURVAN_RELEASE && self.NURVAN_RELEASE.androidVersionCode) || 'dev') + '-knowledge1';
 const PRECACHE = [
   './release-meta.js',
   './apple-touch-icon.png',
@@ -12,7 +12,8 @@ const PRECACHE = [
   './muscle-male-back.png',
   './muscle-female-front.png',
   './muscle-female-back.png',
-  './exercise-catalog-extra.js'
+  './exercise-catalog-extra.js',
+  './training-knowledge.js'
 ];
 
 self.addEventListener('install', (event) => {

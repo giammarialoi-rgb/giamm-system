@@ -57,6 +57,7 @@
 </script>
 <link rel="manifest" href="manifest.webmanifest">
 <script src="exercise-catalog-extra.js"></script>
+<script src="training-knowledge.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -1308,6 +1309,10 @@ body.focus-mode [data-rewards-only] {
       <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('import')">
         <span style="font-size:20px;">📥</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="importProgram">Importa Scheda</span>
+      </button>
+      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('knowledge')">
+        <span style="font-size:20px;">📖</span>
+        <span style="font-size:11px;font-weight:800;">Info training</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('stats')">
         <span style="font-size:20px;">📊</span>
@@ -35872,7 +35877,18 @@ function applyProgressionToLoad(prevLoad, addKg) {
   if (!Number.isFinite(n) || n <= 0) return null;
   return roundLoadStep(n + (Number(addKg) || 0));
 }
-/** Same increment for every exercise: keep / +1.25 / +2.5 from THAT set's last week, never copy the top set. */
+function isLightProgressionLoad(row, prevLoad) {
+  const n = parseFloat(prevLoad);
+  if (Number.isFinite(n) && n > 0 && n < 20) return true;
+  const name = String((row && (row.name || row.exercise || '')) || '').toLowerCase();
+  return /alzate laterali|lateral raise|front raise|rear delt|curl|croci|fly|crossover|kickback|face pull|polsi|wrist|calf|concentr/i.test(name);
+}
+function progressionAddKg(prevSets, row) {
+  const loads = (Array.isArray(prevSets) ? prevSets : []).map(function (s) { return parseFloat(s.load); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
+  const ref = loads.length ? Math.min.apply(null, loads) : parseFloat(row && (row.plannedLoad || row.load));
+  return isLightProgressionLoad(row, ref) ? 1 : 2.5;
+}
+/** Same increment from THAT set's last week: keep / +2.5 (or +1 if already light). Never 1.25. Never copy the top set. */
 function workoutProgressionPolicy(prevSets, row) {
   const sets = Array.isArray(prevSets) ? prevSets : [];
   const loads = sets.map(function (s) { return parseFloat(s.load); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
@@ -35885,22 +35901,21 @@ function workoutProgressionPolicy(prevSets, row) {
   const missed = targetReps && repsN.length && repsN.some(function (r) { return r < targetReps * 0.7; });
   let addKg = 0;
   let advice = '';
+  const step = progressionAddKg(sets, row);
+  const stepTxt = step === 1 ? '+1 kg (carico già basso)' : '+2,5 kg';
   if (!loads.length) {
     advice = 'Ripeti lo schema e registra i kg reali: senza carichi loggati non posso dirti se aumentare.';
   } else if (missed) {
     advice = 'Alcune serie sono sotto target: ripeti il carico di ogni serie e chiudi le reps prima di alzare.';
-  } else if (avgRir != null && avgRir >= 2.5 && hitReps) {
-    addKg = 2.5;
-    advice = 'Margine alto (RIR medio ' + avgRir.toFixed(1) + '): +2,5 kg su ogni serie, o +1 rep.';
   } else if (avgRir != null && avgRir >= 1.5 && hitReps) {
-    addKg = 1.25;
-    advice = 'Buona seduta: +1,25 kg su ogni serie (o +2,5 / +1 rep se la tecnica è pulita).';
+    addKg = step;
+    advice = (avgRir >= 2.5 ? 'Margine alto' : 'Buona seduta') + ' (RIR medio ' + avgRir.toFixed(1) + '): ' + stepTxt + ' su ogni serie, o +1 rep.';
   } else if (avgRir != null && avgRir <= 0.5 && !missed) {
     advice = 'Vicino al cedimento: ripeti il carico di ogni serie o +1 rep se la tecnica è pulita.';
   } else {
-    advice = 'Ripeti il carico di ogni serie e cerca +1 rep. Aumenta i kg se chiudi tutte le serie con RIR ≥ 2.';
+    advice = 'Ripeti il carico di ogni serie e cerca +1 rep. Aumenta di 2,5 kg (1 kg se i pesi sono già bassi) se chiudi tutte le serie con RIR ≥ 2.';
   }
-  return { addKg: addKg, advice: advice, top: top };
+  return { addKg: addKg, advice: advice, top: top, step: step };
 }
 function suggestedLoadForSet(exerciseIndex, setNum, row) {
   if (currentWeek <= 1) return null;
@@ -41672,6 +41687,11 @@ function render() {
     renderPricing(c);
     return;
   }
+  if (currentView === 'knowledge') {
+    c.innerHTML = '';
+    renderTrainingKnowledge(c);
+    return;
+  }
 
   if (!DATA) {
     c.innerHTML = `
@@ -41702,6 +41722,7 @@ function render() {
   else if (currentView === 'settings') renderSettings(c);
   else if (currentView === 'pricing') renderPricing(c);
   else if (currentView === 'progress') renderProgressCenter(c);
+  else if (currentView === 'knowledge') renderTrainingKnowledge(c);
   else renderHome(c);
   applyChromeI18n();
 }
@@ -47443,8 +47464,9 @@ function renderTraining(c){
         </div>`;
       }
 
-      h += `<div style="margin-top:10px;border-top:1px solid #222;padding-top:10px;">
-        <button class="btn btn-outline" style="width:100%;font-size:10px;padding:6px 8px;" onclick="addSetToExercise(${fIdx})">+ SERIE</button>
+      h += `<div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid #222;padding-top:10px;flex-wrap:wrap;">
+        <button class="btn btn-outline" style="flex:1;font-size:10px;padding:6px 8px;" onclick="addSetToExercise(${fIdx})">+ SERIE</button>
+        <button class="btn btn-outline" style="flex:2;font-size:10px;padding:6px 8px;border-color:var(--gold);color:var(--gold);" data-ex="${encodeURIComponent(curEx)}" onclick="event.stopPropagation();askExerciseInfoToCoach(${fIdx}, decodeURIComponent(this.getAttribute('data-ex')||''))">CHIEDI INFO</button>
       </div>`;
       h += `</div>`;
     });
@@ -52549,6 +52571,198 @@ async function runEvidenceSearch() {
 }
 window.runEvidenceSearch = runEvidenceSearch;
 
+function waitForDomId(id, cb, tries) {
+  const left = typeof tries === 'number' ? tries : 20;
+  const el = document.getElementById(id);
+  if (el) { cb(el); return; }
+  if (left <= 0) { cb(null); return; }
+  setTimeout(function () { waitForDomId(id, cb, left - 1); }, 80);
+}
+
+function knowledgeCatLabel(cat) {
+  if (cat === 'scale') return 'Scale';
+  if (cat === 'tecniche') return 'Tecniche';
+  if (cat === 'progressioni') return 'Progressioni';
+  if (cat === 'split') return 'Split';
+  if (cat === 'esercizi') return 'Esercizi';
+  return cat || 'Info';
+}
+
+function renderKnowledgeCard(item) {
+  if (!item) return '';
+  const muscle = item.muscle ? (' · ' + esc(item.muscle)) : '';
+  const extra = item.extra || {};
+  return '<div class="card" style="padding:12px;margin-bottom:10px;border:1px solid #222;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:.6px;">' + esc(knowledgeCatLabel(item.cat)) + esc(muscle) + '</div>' +
+    '<div style="font-size:15px;font-weight:800;color:#fff;margin:4px 0 6px;">' + esc(item.title) + '</div>' +
+    (item.en ? '<div style="font-size:11px;color:#888;margin-bottom:6px;">' + esc(item.en) + '</div>' : '') +
+    '<p style="font-size:12px;color:#ccc;line-height:1.45;margin:0 0 8px;">' + esc(item.body || extra.body || '') + '</p>' +
+    (extra.mistakes ? '<p style="font-size:11px;color:#aaa;line-height:1.4;margin:0 0 6px;"><b style="color:#f88;">Errori:</b> ' + esc(extra.mistakes) + '</p>' : '') +
+    (extra.cue ? '<p style="font-size:11px;color:var(--gold);margin:0;">Cue: ' + esc(extra.cue) + '</p>' : '') +
+    '</div>';
+}
+
+function knowledgeResultsHtml() {
+  const q = (window.__knowledgeQuery || '').trim();
+  const tab = window.__knowledgeTab || 'esercizi';
+  const K = window.NURVAN_TRAINING_KNOWLEDGE || {};
+  const search = typeof K.searchKnowledge === 'function' ? K.searchKnowledge : window.searchTrainingKnowledge;
+  let rows = [];
+  try { rows = search ? search(q) : []; } catch (_) { rows = []; }
+  if (!q) {
+    if (tab === 'scale') rows = K.SCALES || [];
+    else if (tab === 'tecniche') rows = K.TECHNIQUES || [];
+    else if (tab === 'progressioni') rows = K.PROGRESSIONS || [];
+    else if (tab === 'split') rows = K.SPLITS || [];
+    else rows = (typeof search === 'function' ? search('') : []).filter(function (x) { return x.cat === 'esercizi'; });
+  }
+  const muscles = [];
+  rows.forEach(function (r) {
+    if (r.muscle && muscles.indexOf(r.muscle) < 0) muscles.push(r.muscle);
+  });
+  let body = '';
+  if (tab === 'esercizi' && !q && muscles.length) {
+    muscles.forEach(function (m) {
+      const chunk = rows.filter(function (r) { return r.muscle === m; });
+      body += '<div style="font-size:11px;color:var(--gold);font-weight:800;margin:14px 0 8px;">' + esc(m) + '</div>';
+      chunk.forEach(function (item) { body += renderKnowledgeCard(item); });
+    });
+  } else {
+    rows.slice(0, 80).forEach(function (item) { body += renderKnowledgeCard(item); });
+  }
+  return body || '<div style="color:#aaa;font-size:12px;">Nessuna voce. Prova un altro nome (es. panca, RIR, drop set, PPL).</div>';
+}
+
+function filterTrainingKnowledge(val) {
+  window.__knowledgeQuery = String(val || '');
+  const host = document.getElementById('knowledge-results');
+  if (host) host.innerHTML = knowledgeResultsHtml();
+}
+
+function setKnowledgeTab(tab) {
+  window.__knowledgeTab = tab || 'esercizi';
+  if (typeof render === 'function') render();
+}
+
+function renderTrainingKnowledge(c) {
+  if (!c) return;
+  const q = window.__knowledgeQuery || '';
+  const tab = window.__knowledgeTab || 'esercizi';
+  const tabs = [
+    ['esercizi', 'Esercizi'],
+    ['tecniche', 'Tecniche'],
+    ['scale', 'RIR / RPE'],
+    ['progressioni', 'Progressioni'],
+    ['split', 'Split']
+  ].map(function (t) {
+    const on = tab === t[0];
+    return '<button type="button" class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" style="font-size:10px;padding:6px 8px;" onclick="setKnowledgeTab(\'' + t[0] + '\')">' + t[1] + '</button>';
+  }).join('');
+  c.innerHTML = '<div class="card" style="padding:14px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">ENCICLOPEDIA</div>' +
+    '<h2 style="color:#fff;font-size:20px;margin:4px 0 8px;">Info training</h2>' +
+    '<p style="font-size:12px;color:#aaa;line-height:1.4;margin:0 0 12px;">Spiegazioni brevi di esercizi, tecniche di intensità, RIR/RPE, progressioni e split. Non modifica la tua scheda.</p>' +
+    '<input id="knowledge-search" class="input" value="' + esc(q) + '" placeholder="Cerca esercizio, RIR, drop set, split…" oninput="filterTrainingKnowledge(this.value)" style="width:100%;margin-bottom:10px;">' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">' + tabs + '</div>' +
+    '<div id="knowledge-results">' + knowledgeResultsHtml() + '</div>' +
+    '</div><div style="height:80px;"></div>';
+}
+
+function closeExerciseInfoSheet() {
+  const el = document.getElementById('ex-info-sheet');
+  if (el) el.style.display = 'none';
+}
+
+function openExerciseInfoSheet(idx, exerciseName) {
+  const name = (typeof resolveExerciseNameForAsk === 'function')
+    ? resolveExerciseNameForAsk(idx, exerciseName)
+    : (exerciseName || 'esercizio');
+  const lookup = window.lookupTrainingKnowledge || (window.NURVAN_TRAINING_KNOWLEDGE && window.NURVAN_TRAINING_KNOWLEDGE.lookupAny);
+  const explained = typeof lookup === 'function' ? lookup(name) : (typeof explainExercise === 'function' ? explainExercise(name) : null);
+  const week = (typeof currentWeek !== 'undefined' ? currentWeek : 1);
+  const day = (typeof currentDay !== 'undefined' ? currentDay : 0);
+  const w = DATA && DATA.weeks && DATA.weeks[week - 1];
+  const sess = w && (w.sessions || w.days || [])[day];
+  const row = ((sess && (sess.exercises || sess.rows)) || [])[idx] || {};
+  const prevSets = (typeof collectPrevWeekSetLogs === 'function') ? collectPrevWeekSetLogs(idx, row) : [];
+  const policy = (typeof workoutProgressionPolicy === 'function') ? workoutProgressionPolicy(prevSets, row) : { advice: '', addKg: 0 };
+  const athlete = (typeof isAthleteRole === 'function' && isAthleteRole()) || !!(store && store.clientShell && store.accountToken);
+  let sheet = document.getElementById('ex-info-sheet');
+  if (!sheet) {
+    sheet = document.createElement('div');
+    sheet.id = 'ex-info-sheet';
+    sheet.style.cssText = 'display:none;position:fixed;inset:0;z-index:10150;background:rgba(0,0,0,.88);align-items:flex-end;justify-content:center;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));box-sizing:border-box;';
+    sheet.onclick = function (ev) { if (ev.target === sheet) closeExerciseInfoSheet(); };
+    document.body.appendChild(sheet);
+  }
+  const title = (explained && explained.title) || name;
+  const body = (explained && explained.body) || 'Tieni la tecnica pulita e il RIR della scheda.';
+  const mistakes = explained && explained.mistakes ? ('<p style="font-size:12px;color:#f0c0c0;line-height:1.4;"><b>Errori comuni:</b> ' + esc(explained.mistakes) + '</p>') : '';
+  const cue = explained && explained.cue ? ('<p style="font-size:12px;color:var(--gold);">' + esc(explained.cue) + '</p>') : '';
+  const muscle = explained && explained.muscle ? (' · ' + explained.muscle) : '';
+  sheet.innerHTML = '<div style="width:100%;max-width:520px;max-height:88vh;overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px 16px 12px 12px;padding:16px;color:#eee;box-sizing:border-box;" onclick="event.stopPropagation()">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">CHIEDI INFO' + esc(muscle) + '</div>' +
+    '<h2 style="color:#fff;font-size:18px;margin:6px 0 8px;">' + esc(title) + '</h2>' +
+    '<p style="font-size:13px;color:#ccc;line-height:1.45;">' + esc(body) + '</p>' +
+    mistakes + cue +
+    '<div style="margin:10px 0;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:4px;">RIR / CARICO</div>' +
+    '<p style="font-size:12px;color:#ccc;line-height:1.4;margin:0;">' + esc(policy.advice || 'RIR 2 = due reps in canna. Se chiudi le serie, la settimana dopo +2,5 kg (o +1 kg se i pesi sono già bassi).') + '</p></div>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="openKnowledgeFor(decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">APRI ENCICLOPEDIA</button>' +
+    (athlete
+      ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="closeExerciseInfoSheet();askHumanCoachAboutExercise(' + Number(idx) + ', decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">SCRIVI AL COACH</button>'
+      : '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="askCoachAiFromInfoSheet(' + Number(idx) + ', decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">CHIEDI A COACH AI</button>') +
+    '<button type="button" class="btn btn-outline" style="width:100%;" onclick="closeExerciseInfoSheet()">CHIUDI</button></div>';
+  sheet.style.display = 'flex';
+}
+
+function openKnowledgeFor(query) {
+  closeExerciseInfoSheet();
+  window.__knowledgeQuery = String(query || '');
+  window.__knowledgeTab = 'esercizi';
+  if (typeof navigate === 'function') navigate('knowledge');
+}
+
+function askCoachAiFromInfoSheet(idx, exerciseName) {
+  closeExerciseInfoSheet();
+  const prompt = (typeof buildPersonalExerciseInfoPrompt === 'function')
+    ? buildPersonalExerciseInfoPrompt(idx, exerciseName)
+    : String(exerciseName || 'esercizio');
+  if (typeof navigate === 'function') navigate('ai');
+  waitForDomId('chat-history', function (h) {
+    if (!h) {
+      if (typeof showToast === 'function') showToast('Coach AI non pronto: apri Coach AI dal menu e riprova', 'warning');
+      return;
+    }
+    waitForDomId('ai-input', function (inp) {
+      if (typeof withBusy === 'function' && typeof askAIInner === 'function') {
+        withBusy(function () { return askAIInner(prompt); }, 'Nurvan AI sta pensando…', { immediate: true });
+      } else if (typeof askAIInner === 'function') {
+        askAIInner(prompt);
+      }
+      if (inp) try { inp.focus(); } catch (_) {}
+    });
+  });
+}
+
+function askHumanCoachAboutExercise(idx, exerciseName) {
+  const prefill = (typeof buildExerciseInfoPrefill === 'function')
+    ? buildExerciseInfoPrefill(idx, exerciseName)
+    : (String(exerciseName || 'esercizio') + ' — ');
+  window.__cpChatPrefill = prefill;
+  if (typeof navigate === 'function') navigate('clientChat');
+  if (typeof applyChatPrefill === 'function') applyChatPrefill(prefill);
+}
+
+window.openExerciseInfoSheet = openExerciseInfoSheet;
+window.closeExerciseInfoSheet = closeExerciseInfoSheet;
+window.askCoachAiFromInfoSheet = askCoachAiFromInfoSheet;
+window.askHumanCoachAboutExercise = askHumanCoachAboutExercise;
+window.renderTrainingKnowledge = renderTrainingKnowledge;
+window.openKnowledgeFor = openKnowledgeFor;
+window.filterTrainingKnowledge = filterTrainingKnowledge;
+window.setKnowledgeTab = setKnowledgeTab;
+
 function buildPersonalExerciseInfoPrompt(idx, exerciseName) {
   const week = (typeof currentWeek !== 'undefined' ? currentWeek : 1);
   const day = (typeof currentDay !== 'undefined' ? currentDay : 0);
@@ -57310,6 +57524,10 @@ function applyChatPrefill(text, tries) {
 }
 
 async function askExerciseInfoToCoach(idx, exerciseName) {
+  if (typeof openExerciseInfoSheet === 'function') {
+    openExerciseInfoSheet(idx, exerciseName);
+    return;
+  }
   const prefill = buildExerciseInfoPrefill(idx, exerciseName);
   const athleteOk = (typeof isAthleteRole === 'function' && isAthleteRole())
     || !!(store && store.clientShell && store.accountToken);
