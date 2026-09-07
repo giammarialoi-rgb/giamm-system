@@ -526,7 +526,71 @@ input[type="checkbox"], input[type="radio"] {
 .delta-pos { color: var(--success); }
 .delta-neg { color: var(--accent-red); }
 
-.chart-container { height: 380px; margin-bottom: 14px; }
+.chart-container { height: 280px; margin-bottom: 14px; }
+.chart-container canvas { width: 100%; height: 100%; display: block; }
+
+.stats-zoom-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.stats-zoom-chip {
+  flex: 0 0 auto;
+  min-width: 54px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(212,175,55,0.45);
+  background: #111;
+  color: #ccc;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+.stats-zoom-chip.is-on {
+  background: var(--gold);
+  color: #000;
+  border-color: var(--gold);
+}
+.stats-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.stats-kpi {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 10px;
+  padding: 12px;
+}
+.stats-kpi .k { font-size: 9px; color: #888; font-weight: 800; letter-spacing: 0.6px; }
+.stats-kpi .v { font-size: 18px; font-weight: 900; color: var(--gold); margin-top: 4px; }
+.stats-kpi .d { font-size: 10px; margin-top: 4px; color: #777; }
+.stats-volbar {
+  height: 6px;
+  background: #1a1a1a;
+  border-radius: 3px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.stats-volbar > i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #3d6ea8, #d4af37, #ff4d4d);
+}
+.saved-prog-x {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  border-radius: 18px;
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+  font-size: 16px;
+  line-height: 1;
+}
 
 .fab-save {
   position: fixed; right: 20px; bottom: 130px;
@@ -38146,7 +38210,11 @@ async function syncProgramLibraryFromIdb() {
       date: p.updatedAt ? new Date(p.updatedAt).getTime() : Date.now(),
       isActive: !!p.isActive,
       summary: p.summary || null
-    })).filter(function (m) { return hidden.indexOf(String(m.id)) < 0; });
+    })).filter(function (m) {
+      const id = String(m.id || '');
+      const name = String(m.name || '');
+      return hidden.indexOf(id) < 0 && hidden.indexOf(name) < 0 && hidden.indexOf('name:' + name) < 0;
+    });
   } catch (e) {
     console.warn('[LIBRARY SYNC]', e);
   }
@@ -47089,8 +47157,8 @@ function renderHome(c) {
                 <div style="font-size:9px; color:#666;">Creato il ${new Date(m.date).toLocaleDateString()}</div>
               </div>
               <div style="display:flex; gap:5px;">
-                <button type="button" class="btn btn-outline" style="font-size:9px; padding:4px 8px;" onclick="event.stopPropagation();activateSavedProgram(${JSON.stringify(m.id)}, ${i})">ATTIVA</button>
-                <button type="button" class="btn btn-outline" style="font-size:9px; padding:4px 8px; border-color:var(--accent-red); color:var(--accent-red);" onclick="event.stopPropagation();deleteSavedProgram(${JSON.stringify(m.id)}, ${i})">X</button>
+                <button type="button" class="btn btn-outline" style="font-size:9px; padding:4px 8px;" onclick="event.stopPropagation();activateSavedProgram(${JSON.stringify(m.id || '')}, ${i})">ATTIVA</button>
+                <button type="button" class="btn btn-outline saved-prog-x" data-id="${esc(m.id || '')}" data-idx="${i}" data-name="${esc(m.name || '')}" onclick="event.stopPropagation();deleteSavedProgramFromList(this)" aria-label="Togli dalla lista">✕</button>
               </div>
             </div>
           `).join('') : '<div style="font-size:11px; color:#555; text-align:center;">Nessun modello salvato. Carica documenti nel DB per generarne uno.</div>'}
@@ -47173,21 +47241,33 @@ function loadModelAsActive(idx) {
   applyModel(idx);
 }
 
-async function deleteSavedProgram(programId, idx) {
-  const model = (typeof idx === 'number' && store.models && store.models[idx]) ? store.models[idx]
-    : (store.models || []).find(function (m) { return m && String(m.id) === String(programId); });
-  const label = (model && model.name) || 'questo programma';
-  if (!confirm('Togliere «' + label + '» dalla lista?')) return;
+function deleteSavedProgramFromList(btn) {
+  if (!btn) return;
+  const idx = Number(btn.getAttribute('data-idx'));
+  const id = btn.getAttribute('data-id') || '';
+  const name = btn.getAttribute('data-name') || '';
+  deleteSavedProgram(id, Number.isFinite(idx) ? idx : -1, name);
+}
+async function deleteSavedProgram(programId, idx, nameHint) {
+  const model = (typeof idx === 'number' && idx >= 0 && store.models && store.models[idx]) ? store.models[idx]
+    : (store.models || []).find(function (m) { return m && (String(m.id) === String(programId) || String(m.name) === String(nameHint || '')); });
+  const name = String(nameHint || (model && model.name) || '').trim();
+  const id = String(programId || (model && model.id) || '').trim();
   try {
-    const isActive = String(store.activeProgramId) === String(programId);
-    if (isActive) {
-      if (!Array.isArray(store.hiddenProgramIds)) store.hiddenProgramIds = [];
-      if (store.hiddenProgramIds.indexOf(programId) < 0) store.hiddenProgramIds.push(programId);
-    } else if (programId && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.deleteProgram) {
-      await GiammariaPersistence.deleteProgram(programId);
+    if (!Array.isArray(store.hiddenProgramIds)) store.hiddenProgramIds = [];
+    [id, name, name ? ('name:' + name) : ''].forEach(function (k) {
+      if (k && store.hiddenProgramIds.indexOf(k) < 0) store.hiddenProgramIds.push(k);
+    });
+    const isActive = !!(id && String(store.activeProgramId) === id);
+    if (!isActive && id && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.deleteProgram) {
+      try { await GiammariaPersistence.deleteProgram(id); } catch (_) {}
     }
-    if (typeof idx === 'number' && store.models && store.models[idx]) store.models.splice(idx, 1);
-    else store.models = (store.models || []).filter(function (m) { return m && String(m.id) !== String(programId); });
+    store.models = (store.models || []).filter(function (m) {
+      if (!m) return false;
+      if (id && String(m.id) === id) return false;
+      if (name && String(m.name) === name) return false;
+      return true;
+    });
     persist();
     await syncProgramLibraryFromIdb();
     render();
@@ -47270,10 +47350,32 @@ function sessionDisplayName(day, di) {
   return 'Giorno ' + ((di || 0) + 1);
 }
 
+function pinTrainingDay(week, day) {
+  window.__pinnedTraining = { week: Number(week) || 1, day: Number(day) || 0, at: Date.now() };
+  try {
+    store.trainingWeek = window.__pinnedTraining.week;
+    store.trainingDay = window.__pinnedTraining.day;
+  } catch (_) {}
+}
+function shouldStayOnPinnedTraining() {
+  if (window.__editFinalizedKey) return true;
+  const p = window.__pinnedTraining;
+  return !!(p && (Date.now() - Number(p.at || 0)) < 6 * 60 * 60 * 1000);
+}
+window.pinTrainingDay = pinTrainingDay;
+window.shouldStayOnPinnedTraining = shouldStayOnPinnedTraining;
 function renderTraining(c){
   console.debug('WORKOUT_OPEN', { week: currentWeek, session: currentDay });
   try {
-    if (typeof advanceToNextOpenTrainingDay === 'function') advanceToNextOpenTrainingDay(false);
+    if (shouldStayOnPinnedTraining()) {
+      const p = window.__pinnedTraining;
+      if (p) {
+        currentWeek = Number(p.week) || currentWeek;
+        currentDay = Number(p.day) || 0;
+      }
+    } else if (typeof advanceToNextOpenTrainingDay === 'function') {
+      advanceToNextOpenTrainingDay(false);
+    }
     const intensType = (store.prefs.weekIntensity && (store.prefs.weekIntensity[currentWeek] || store.prefs.weekIntensity[String(currentWeek)])) || store.prefs.intensityType || 'RIR';
     const weeksList = DATA.weeks;
     if(!weeksList.length) throw new Error('Nessuna settimana disponibile');
@@ -47330,8 +47432,8 @@ function renderTraining(c){
       </div>`;
     }
     h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-      <select onchange="currentWeek=parseInt(this.value);currentDay=0;render()">${weeksList.map(ww=>`<option value="${ww.weekNumber || ww.week}" ${(ww.weekNumber || ww.week)===currentWeek?'selected':''}>Settimana ${ww.weekNumber || ww.week}</option>`).join('')}</select>
-      <select onchange="currentDay=parseInt(this.value);render()">${allDays.map((dd,i)=>`<option value="${i}" ${i===currentDay?'selected':''}>${esc(sessionDisplayName(dd, i))}${dd.is_bonus || dd.isBonus?' [BONUS]':''}</option>`).join('')}</select>
+      <select onchange="pinTrainingDay(this.value,0);currentWeek=parseInt(this.value,10);currentDay=0;render()">${weeksList.map(ww=>`<option value="${ww.weekNumber || ww.week}" ${(ww.weekNumber || ww.week)===currentWeek?'selected':''}>Settimana ${ww.weekNumber || ww.week}</option>`).join('')}</select>
+      <select onchange="pinTrainingDay(currentWeek,this.value);currentDay=parseInt(this.value,10);render()">${allDays.map((dd,i)=>`<option value="${i}" ${i===currentDay?'selected':''}>${esc(sessionDisplayName(dd, i))}${dd.is_bonus || dd.isBonus?' [BONUS]':''}</option>`).join('')}</select>
     </div>`;
     h += `<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
       <button id="workout-undo-btn" class="btn btn-outline" type="button" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="undoWorkoutModification()" ${workoutUndoCount()?'':'disabled'}>ANNULLA ULTIMA MODIFICA${workoutUndoCount()?(' · '+workoutUndoCount()):''}</button>
@@ -48890,6 +48992,7 @@ function isEditingFinalizedSession() {
 function startEditFinalizedWorkout(week, day) {
   if (week != null && week !== '') currentWeek = Number(week) || 1;
   if (day != null && day !== '') currentDay = Number(day) || 0;
+  pinTrainingDay(currentWeek, currentDay);
   window.__editFinalizedKey = finalizedSessionKey(currentWeek, currentDay);
   try { if (typeof closeSavedRecordOverlay === 'function') closeSavedRecordOverlay(); } catch (_) {}
   if (typeof navigate === 'function') navigate('training');
@@ -48898,6 +49001,7 @@ function startEditFinalizedWorkout(week, day) {
 }
 function cancelEditFinalizedWorkout() {
   window.__editFinalizedKey = '';
+  pinTrainingDay(currentWeek, currentDay);
   render();
 }
 function updateSessionBodyWeight(val) {
@@ -48937,6 +49041,7 @@ function saveFinalizedWorkoutEdits() {
     return;
   }
   window.__editFinalizedKey = '';
+  pinTrainingDay(currentWeek, currentDay);
   persist();
   try { persistActiveProgramStructure(); } catch (_) {}
   try {
@@ -49040,6 +49145,8 @@ function finalizeWorkout(){
     }
   } catch (calErr) { console.warn('[CAL_WORKOUT]', calErr); }
   // Close this session and jump to next non-finalized day
+  window.__pinnedTraining = null;
+  window.__editFinalizedKey = '';
   try { advanceToNextOpenTrainingDay(true); } catch (_) {}
   persist();
   persistActiveProgramStructure();
@@ -50589,17 +50696,24 @@ function renderStats(c){
   const durM = Math.floor(snap.durationSec / 60);
   const durS = snap.durationSec % 60;
   const hist = (store.logs || []).slice().reverse().slice(0, 12).map(function (row) {
-    return '<div role="button" tabindex="0" onclick="openLoggedSessionReview(' + (Number(row.week) || 1) + ',' + (Number(row.day) || 0) + ')" style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #222;font-size:11px;cursor:pointer;">' +
-      '<span>W' + (row.week || '?') + ' · S' + ((row.day || 0) + 1) + ' · ' + esc(String(row.at || '').replace('T', ' ').slice(0, 16)) + '</span>' +
-      '<span style="color:var(--gold);font-weight:800;">' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg</span></div>';
+    const hw = Number(row.week) || 1;
+    const hd = Number(row.day) || 0;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #222;font-size:11px;">' +
+      '<button type="button" style="flex:1;text-align:left;background:none;border:0;color:inherit;padding:0;cursor:pointer;" onclick="openLoggedSessionReview(' + hw + ',' + hd + ')">' +
+      '<span>W' + (row.week || '?') + ' · S' + (hd + 1) + ' · ' + esc(String(row.at || '').replace('T', ' ').slice(0, 16)) + '</span>' +
+      '<div style="color:var(--gold);font-weight:800;margin-top:2px;">' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg</div></button>' +
+      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="startEditFinalizedWorkout(' + hw + ',' + hd + ')">MODIFICA</button></div>';
   }).join('');
   c.innerHTML = `
     <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">PERFORMANCE LAB</h1>
     <div style="font-size:10px; color:#777; margin-bottom:15px; font-weight:700; letter-spacing:1px;">${store && store.coachViewingClient ? 'VISTA MASTER · DATI CLIENTE' : 'ATTIVITÀ · CRONOLOGIA · FATICA'}</div>
     ${store && store.coachViewingClient ? '' : renderAdaptiveDeloadCardHtml()}
-    ${last ? `<div class="card" role="button" tabindex="0" onclick="openLoggedSessionReview(${Number(last.week)||1},${Number(last.day)||0})" style="margin-bottom:12px;padding:12px;border:1px solid rgba(212,175,55,0.35);cursor:pointer;">
+    ${last ? `<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid rgba(212,175,55,0.35);">
+      <div role="button" tabindex="0" onclick="openLoggedSessionReview(${Number(last.week)||1},${Number(last.day)||0})" style="cursor:pointer;">
       <div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:6px;">ULTIMA SESSIONE FINALIZZATA</div>
       <div style="font-size:11px;color:#aaa;">W${last.week} · Seduta ${(last.day||0)+1} · ${esc(String(last.at||'').replace('T',' ').slice(0,16))}</div>
+      </div>
+      <button type="button" class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="startEditFinalizedWorkout(${Number(last.week)||1},${Number(last.day)||0})">MODIFICA ALLENAMENTO FINALIZZATO</button>
     </div>` : ''}
     ${renderMuscleMap(snap.muscles)}
     ${renderCheckFisicoCardHtml()}
@@ -50625,10 +50739,26 @@ function renderStats(c){
       </div>
     </div>
 
-    <div class="card"><div class="card-header"><h2>Riepilogo Settimanale</h2></div><div style="padding:15px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>SETT</th><th>VOL (KG)</th><th>DELTA</th><th>INT (PTS)</th><th>DELTA</th><th>CARICO</th><th>BW (KG)</th><th>PTS</th></tr></thead><tbody id="summary-body"></tbody></table><div style="font-size:10px;color:#777;margin-top:8px;">Tutte le settimane del mesociclo. CARICO = Totale o Per parte (come in seduta). Il volume per parte è già raddoppiato. Mix = entrambe le modalità in quella settimana.</div></div></div>
-    <div class="card"><div class="card-header"><h2 id="vol-chart-title">Progressione Volume (kg) nel tempo</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="volChart"></canvas></div><div style="font-size:10px;color:#777;">Andamento del volume del gruppo selezionato, settimana per settimana.</div></div></div>
-    <div class="card"><div class="card-header"><h2>Volume Efficace (pts) nel tempo</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="rirChart"></canvas></div></div></div>
-    <div class="card"><div class="card-header"><h2>Andamento Peso Corporeo (kg)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="bwChart"></canvas></div><div style="font-size:10px;color:#777;">Solo pesi realmente registrati (check fisico o BW in scheda). N/D se assente.</div></div></div>
+    <div class="card">
+      <div class="card-header"><h2>Progressione volume</h2></div>
+      <div style="padding:15px;">
+        <div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;letter-spacing:0.6px;">ZOOM PERIODO</div>
+        <div class="stats-zoom-row" id="stats-zoom-row">${[1,2,4,8,12,0].map(function (n) {
+          const zoomCur = (store.prefs && store.prefs.statsZoomWeeks != null) ? Number(store.prefs.statsZoomWeeks) : 8;
+          return '<button type="button" class="stats-zoom-chip' + (zoomCur === n ? ' is-on' : '') + '" data-zoom="' + n + '" onclick="setStatsZoom(' + n + ')">' + (n ? (n + ' sett.') : 'Tutto') + '</button>';
+        }).join('')}</div>
+        <div class="stats-kpi-grid">
+          <div class="stats-kpi"><div class="k">VOLUME TOTALE</div><div class="v" id="stats-kpi-tot">—</div><div class="d" id="stats-kpi-tot-d">kg nel periodo</div></div>
+          <div class="stats-kpi"><div class="k">VOLUME SETTIMANA</div><div class="v" id="stats-kpi-week">—</div><div class="d" id="stats-kpi-week-d">settimana corrente</div></div>
+          <div class="stats-kpi"><div class="k">VARIAZIONE</div><div class="v" id="stats-kpi-var">—</div><div class="d">vs settimana precedente</div></div>
+          <div class="stats-kpi"><div class="k">CARICO</div><div class="v" id="stats-kpi-mode">—</div><div class="d" id="stats-kpi-mode-d">Totale / Per parte</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card"><div class="card-header"><h2>Macro tabella settimane</h2></div><div style="padding:15px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>SETT</th><th>VOL (KG)</th><th>VAR %</th><th>INT (PTS)</th><th>CARICO</th><th>BW</th></tr></thead><tbody id="summary-body"></tbody></table><div style="font-size:10px;color:#777;margin-top:8px;">Tutte le settimane del mesociclo, anche se sei ancora all’inizio. CARICO = Totale o Per parte. Il volume per parte è già raddoppiato.</div></div></div>
+    <div class="card"><div class="card-header"><h2 id="vol-chart-title">Volume (kg)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="volChart"></canvas></div><div style="font-size:10px;color:#777;">Barre del gruppo selezionato. Lo zoom taglia l’asse tempo; le settimane vuote non spezzano il grafico.</div></div></div>
+    <div class="card"><div class="card-header"><h2>Volume efficace (pts)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="rirChart"></canvas></div></div></div>
+    <div class="card"><div class="card-header"><h2>Peso corporeo (kg)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="bwChart"></canvas></div><div style="font-size:10px;color:#777;">Solo pesi realmente registrati (check fisico o BW in scheda). N/D se assente.</div></div></div>
     <div style="height:120px;"></div>
   `;
   setTimeout(function () {
@@ -51252,6 +51382,7 @@ function sendSavedCheckFisico(id) {
 function openLoggedSessionReview(week, day) {
   week = Number(week) || 1;
   day = Number(day) || 0;
+  pinTrainingDay(week, day);
   const log = (store.logs || []).find(function (row) {
     return row && Number(row.week) === week && Number(row.day) === day;
   });
@@ -51791,7 +51922,13 @@ function recordedBodyWeightForWeek(week) {
   // Map a check to the training week stored on save (store.bw) — without that, do not invent a week mapping.
   return null;
 }
-function renderSimpleChart(canvasId, data, color, type='line') {
+function formatChartAxis(n) {
+  const v = Math.abs(Number(n) || 0);
+  if (v >= 10000) return Math.round(n / 1000) + 'k';
+  if (v >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  return String(Math.round(n));
+}
+function renderSimpleChart(canvasId, data, color, type='line', labelOffset) {
   const canvas = $(canvasId);
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -51805,13 +51942,14 @@ function renderSimpleChart(canvasId, data, color, type='line') {
   const h = rect.height || 260;
   ctx.clearRect(0, 0, w, h);
 
-  const padding = { top: 30, right: 20, bottom: 40, left: 50 };
+  const padding = { top: 44, right: 16, bottom: 36, left: 42 };
   const chartW = w - padding.left - padding.right;
   const chartH = h - padding.top - padding.bottom;
+  const weekBase = Number(labelOffset) || 0;
 
   const validVals = data.filter(v => typeof v === 'number' && !isNaN(v) && v > 0);
-  const maxVal = validVals.length ? Math.max(...validVals) * 1.15 : 100;
-  const minVal = validVals.length ? Math.min(0, Math.min(...validVals) * 0.9) : 0;
+  const maxVal = validVals.length ? Math.max(...validVals) * 1.18 : 100;
+  const minVal = 0;
   const valRange = (maxVal - minVal) || 1;
 
   ctx.strokeStyle = '#222';
@@ -51827,7 +51965,7 @@ function renderSimpleChart(canvasId, data, color, type='line') {
     ctx.fillStyle = '#666';
     ctx.font = '10px Inter, sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(Math.round(val), padding.left - 8, y + 3);
+    ctx.fillText(formatChartAxis(val), padding.left - 6, y + 3);
   }
 
   const n = data.length;
@@ -51839,11 +51977,11 @@ function renderSimpleChart(canvasId, data, color, type='line') {
   ctx.textAlign = 'center';
   for(let i = 0; i < n; i++) {
     const x = n === 1 ? padding.left + chartW / 2 : padding.left + stepX * i;
-    ctx.fillText(`W${i + 1}`, x, h - padding.bottom + 20);
+    ctx.fillText('W' + (weekBase + i + 1), x, h - padding.bottom + 18);
   }
 
   if(type === 'bar') {
-    const barW = Math.max(12, Math.min(30, chartW / n - 8));
+    const barW = Math.max(10, Math.min(28, chartW / n - 8));
     data.forEach((val, i) => {
       if(val == null || isNaN(val) || val <= 0) return;
       const x = (n === 1 ? padding.left + chartW / 2 : padding.left + stepX * i) - barW / 2;
@@ -51856,7 +51994,7 @@ function renderSimpleChart(canvasId, data, color, type='line') {
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 9px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(Math.round(val), x + barW / 2, y - 5);
+      ctx.fillText(formatChartAxis(val), x + barW / 2, y - 6);
     });
   } else {
     ctx.strokeStyle = color;
@@ -51886,7 +52024,7 @@ function renderSimpleChart(canvasId, data, color, type='line') {
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 9px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(Math.round(val), x, y - 8);
+      ctx.fillText(formatChartAxis(val), x, y - 10);
     });
   }
 }
@@ -51903,6 +52041,34 @@ function statsWeeksCount() {
   const fromLogs = (store.logs || []).reduce(function (m, row) { return Math.max(m, Number(row.week) || 0); }, 0);
   const fromCur = (typeof currentWeek === 'number') ? currentWeek : 0;
   return Math.max(1, fromData, fromPref, fromLogs, fromCur);
+}
+function statsZoomWeeks() {
+  if (store && store.prefs && store.prefs.statsZoomWeeks != null && store.prefs.statsZoomWeeks !== '') {
+    const z = Number(store.prefs.statsZoomWeeks);
+    if (Number.isFinite(z) && z >= 0) return z;
+  }
+  return 8;
+}
+function setStatsZoom(n) {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.statsZoomWeeks = Number(n) || 0;
+  persist();
+  document.querySelectorAll('.stats-zoom-chip').forEach(function (el) {
+    el.classList.toggle('is-on', Number(el.getAttribute('data-zoom')) === store.prefs.statsZoomWeeks);
+  });
+  renderStatsData();
+}
+function statsZoomSlice(arr) {
+  const z = statsZoomWeeks();
+  if (!arr || !arr.length || !z || z >= arr.length) return { data: (arr || []).slice(), offset: 0 };
+  let lastHit = 0;
+  arr.forEach(function (v, i) { if (Number(v) > 0) lastHit = i + 1; });
+  const end = Math.min(arr.length, Math.max(lastHit, Number(currentWeek) || 1, z));
+  const start = Math.max(0, end - z);
+  return { data: arr.slice(start, end), offset: start };
+}
+function formatStatsKg(n) {
+  return Math.round(Number(n) || 0).toLocaleString('it-IT');
 }
 function weekLoadModeLabel(w) {
   let part = 0, tot = 0;
@@ -52004,38 +52170,56 @@ function renderStatsData(){
 
   let tH = '';
   const modes = [];
+  const peakV = Math.max.apply(null, vD.filter(function (x) { return x > 0; }).concat([1]));
   for (let i = 0; i < weeksCount; i++) modes.push(weekLoadModeLabel(i + 1));
   vD.forEach((v, i) => {
     const prevMode = i > 0 ? modes[i - 1] : '';
     const mode = modes[i] || '—';
     const mixDelta = i > 0 && prevMode !== '—' && mode !== '—' && prevMode !== mode;
-    const dV = i > 0 ? (v - vD[i-1]) : 0;
-    const dI = i > 0 ? (rD[i] - rD[i-1]) : 0;
+    const prevV = i > 0 ? vD[i - 1] : 0;
     const empty = !(v > 0);
+    const varPct = (empty || i === 0 || !(prevV > 0)) ? null : ((v - prevV) / prevV) * 100;
     const cur = (typeof currentWeek === 'number' && currentWeek === (i + 1));
+    const barPct = empty ? 0 : Math.max(4, Math.round((v / peakV) * 100));
     tH += `<tr class="${cur ? 'stats-current-week' : ''}">
-      <td><b>W${i+1}</b>${cur ? ' · ora' : ''}</td>
-      <td>${empty ? '—' : Math.round(v)}</td>
-      <td class="${empty || i === 0 ? '' : (dV>=0?'delta-pos':'delta-neg')}">${empty || i === 0 ? '—' : ((dV>=0?'+':'') + Math.round(dV) + (mixDelta ? ' *' : ''))}</td>
-      <td>${empty ? '—' : Math.round(rD[i])}</td>
-      <td class="${empty || i === 0 ? '' : (dI>=0?'delta-pos':'delta-neg')}">${empty || i === 0 ? '—' : ((dI>=0?'+':'') + Math.round(dI) + (mixDelta ? ' *' : ''))}</td>
+      <td><b>W${i+1}</b>${cur ? ' · ora' : ''}<div class="stats-volbar"><i style="width:${barPct}%"></i></div></td>
+      <td>${empty ? '—' : formatStatsKg(v)}</td>
+      <td class="${varPct == null ? '' : (varPct>=0?'delta-pos':'delta-neg')}">${varPct == null ? '—' : ((varPct>=0?'+':'') + varPct.toFixed(1) + '%' + (mixDelta ? ' *' : ''))}</td>
+      <td>${empty ? '—' : formatStatsKg(rD[i])}</td>
       <td>${mode}</td>
       <td>${bwD[i] != null ? bwD[i] : 'N/D'}</td>
-      <td><b>${empty ? '—' : Math.round(pD[i])}</b></td>
     </tr>`;
   });
   if($('summary-body')) $('summary-body').innerHTML = tH;
 
+  const focusWeek = Math.max(1, Number(currentWeek) || 1);
+  const weekVol = vD[focusWeek - 1] || 0;
+  const prevVol = focusWeek > 1 ? (vD[focusWeek - 2] || 0) : 0;
+  const totVol = vD.reduce(function (s, n) { return s + (Number(n) || 0); }, 0);
+  const weekVar = (weekVol > 0 && prevVol > 0) ? ((weekVol - prevVol) / prevVol) * 100 : null;
+  if ($('stats-kpi-tot')) $('stats-kpi-tot').textContent = formatStatsKg(totVol) + ' kg';
+  if ($('stats-kpi-week')) $('stats-kpi-week').textContent = weekVol > 0 ? (formatStatsKg(weekVol) + ' kg') : '—';
+  if ($('stats-kpi-week-d')) $('stats-kpi-week-d').textContent = 'settimana ' + focusWeek;
+  if ($('stats-kpi-var')) {
+    $('stats-kpi-var').textContent = weekVar == null ? '—' : ((weekVar >= 0 ? '+' : '') + weekVar.toFixed(1) + '%');
+    $('stats-kpi-var').style.color = weekVar == null ? '' : (weekVar >= 0 ? 'var(--success)' : 'var(--accent-red)');
+  }
+  if ($('stats-kpi-mode')) $('stats-kpi-mode').textContent = weekLoadModeLabel(focusWeek);
+  if ($('stats-kpi-mode-d')) $('stats-kpi-mode-d').textContent = 'settimana ' + focusWeek;
+
   const groupLabel = (MACRO_MUSCLE_GROUPS.find(function (g) { return g.id === selectedGroup; }) || {}).label || 'generale';
   const titleEl = $('vol-chart-title');
-  if (titleEl) titleEl.textContent = selectedGroup === 'TOTAL' ? 'Progressione Volume (kg) nel tempo' : ('Volume ' + groupLabel + ' (kg) nel tempo');
+  if (titleEl) titleEl.textContent = selectedGroup === 'TOTAL' ? 'Volume (kg)' : ('Volume ' + groupLabel + ' (kg)');
   if (!bwD.some(function (v) { return v != null && Number(v) > 0; })) {
     const checks = (store.bodyChecks || []).filter(function (c) { return Number(c.weight) > 0; }).sort(function (a, b) { return (Date.parse(a.at || '') || 0) - (Date.parse(b.at || '') || 0); });
     if (checks.length) bwD = checks.map(function (c) { return Number(c.weight); });
   }
-  renderSimpleChart('volChart', vD, '#d4af37', 'line');
-  renderSimpleChart('rirChart', rD, '#ff4d4d', 'line');
-  renderSimpleChart('bwChart', bwD, '#54a0ff', 'bar');
+  const volSlice = statsZoomSlice(vD);
+  const rirSlice = statsZoomSlice(rD);
+  const bwSlice = statsZoomSlice(bwD);
+  renderSimpleChart('volChart', volSlice.data, '#d4af37', 'bar', volSlice.offset);
+  renderSimpleChart('rirChart', rirSlice.data, '#ff4d4d', 'line', rirSlice.offset);
+  renderSimpleChart('bwChart', bwSlice.data, '#54a0ff', 'bar', bwSlice.offset);
   window.__statsMuscleVolumeByWeek = vD;
   window.__statsMuscleSelected = selectedGroup;
 }
@@ -54409,6 +54593,10 @@ if (typeof window !== 'undefined') {
   window.requestPasswordResetCode = requestPasswordResetCode;
   window.undoWorkoutModification = undoWorkoutModification;
   window.toggleStatsHistory = toggleStatsHistory;
+  window.setStatsZoom = setStatsZoom;
+  window.deleteSavedProgramFromList = deleteSavedProgramFromList;
+  window.pinTrainingDay = pinTrainingDay;
+  window.shouldStayOnPinnedTraining = shouldStayOnPinnedTraining;
   window.deleteBodyCheck = deleteBodyCheck;
   window.toggleSupersetMode = toggleSupersetMode;
   window.applySelectedSuperset = applySelectedSuperset;
@@ -57154,6 +57342,13 @@ function applyClientPayloadToLocal(payload) {
     }
   }
   try {
+    const stayPinned = (typeof shouldStayOnPinnedTraining === 'function' && shouldStayOnPinnedTraining())
+      || !!(typeof window !== 'undefined' && window.__editFinalizedKey)
+      || !!(typeof window !== 'undefined' && window.__pinnedTraining && (Date.now() - Number(window.__pinnedTraining.at || 0)) < 6 * 60 * 60 * 1000);
+    if (stayPinned && typeof window !== 'undefined' && window.__pinnedTraining) {
+      currentWeek = Number(window.__pinnedTraining.week) || currentWeek || 1;
+      currentDay = Number(window.__pinnedTraining.day) || 0;
+    } else {
     const lastOpen = (store.logs || []).slice().reverse().find(function (l) { return l && (l.week || l.day != null); });
     if (typeof advanceToNextOpenTrainingDay === 'function') {
       if (lastOpen) {
@@ -57171,6 +57366,7 @@ function applyClientPayloadToLocal(payload) {
     } else {
       currentWeek = 1;
       currentDay = 0;
+    }
     }
   } catch (_) {
     currentWeek = 1;

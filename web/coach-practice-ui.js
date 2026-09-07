@@ -2289,6 +2289,13 @@ function applyClientPayloadToLocal(payload) {
     }
   }
   try {
+    const stayPinned = (typeof shouldStayOnPinnedTraining === 'function' && shouldStayOnPinnedTraining())
+      || !!(typeof window !== 'undefined' && window.__editFinalizedKey)
+      || !!(typeof window !== 'undefined' && window.__pinnedTraining && (Date.now() - Number(window.__pinnedTraining.at || 0)) < 6 * 60 * 60 * 1000);
+    if (stayPinned && typeof window !== 'undefined' && window.__pinnedTraining) {
+      currentWeek = Number(window.__pinnedTraining.week) || currentWeek || 1;
+      currentDay = Number(window.__pinnedTraining.day) || 0;
+    } else {
     const lastOpen = (store.logs || []).slice().reverse().find(function (l) { return l && (l.week || l.day != null); });
     if (typeof advanceToNextOpenTrainingDay === 'function') {
       if (lastOpen) {
@@ -2306,6 +2313,7 @@ function applyClientPayloadToLocal(payload) {
     } else {
       currentWeek = 1;
       currentDay = 0;
+    }
     }
   } catch (_) {
     currentWeek = 1;
