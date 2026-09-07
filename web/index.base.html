@@ -58,6 +58,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <script src="exercise-catalog-extra.js"></script>
 <script src="training-knowledge.js"></script>
+<script src="training-analytics-engine.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -536,6 +537,23 @@ input[type="checkbox"], input[type="radio"] {
   padding: 2px 0 8px;
   -webkit-overflow-scrolling: touch;
 }
+.stats-slider-wrap { margin: 8px 0 12px; }
+.stats-slider-wrap input[type="range"] {
+  width: 100%;
+  accent-color: var(--gold);
+  height: 28px;
+}
+.stats-slider-lab {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #888;
+  font-weight: 800;
+  margin-top: 4px;
+}
+.stats-metric-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 10px; }
+.stats-adv-row { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid #1c1c1c; font-size: 11px; }
+.stats-adv-row span:last-child { color: var(--gold); font-weight: 800; }
 .stats-zoom-chip {
   flex: 0 0 auto;
   min-width: 54px;
@@ -17469,11 +17487,14 @@ function renderStats(c){
       </div>
     </div>
     <div class="card">
-      <div class="card-header"><h2>Filtro Gruppo Muscolare</h2></div>
+      <div class="card-header"><h2>Filtri</h2></div>
       <div style="padding:15px;">
         <select id="stats-muscle-group" onchange="renderStatsData()" style="margin-bottom:10px;">
-          <option value="TOTAL">Generale · tutti i muscoli</option>
+          <option value="TOTAL">Gruppo · tutti</option>
           ${MACRO_MUSCLE_GROUPS.map(function (g) { return '<option value="' + g.id + '">' + g.label + '</option>'; }).join('')}
+        </select>
+        <select id="stats-exercise-filter" onchange="setStatsExercise(this.value)" style="margin-bottom:4px;">
+          <option value="">Esercizio · tutti</option>
         </select>
       </div>
     </div>
@@ -17481,23 +17502,33 @@ function renderStats(c){
     <div class="card">
       <div class="card-header"><h2>Progressione volume</h2></div>
       <div style="padding:15px;">
-        <div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;letter-spacing:0.6px;">ZOOM PERIODO</div>
-        <div class="stats-zoom-row" id="stats-zoom-row">${[1,2,4,8,12,0].map(function (n) {
-          const zoomCur = (store.prefs && store.prefs.statsZoomWeeks != null) ? Number(store.prefs.statsZoomWeeks) : 8;
-          return '<button type="button" class="stats-zoom-chip' + (zoomCur === n ? ' is-on' : '') + '" data-zoom="' + n + '" onclick="setStatsZoom(' + n + ')">' + (n ? (n + ' sett.') : 'Tutto') + '</button>';
-        }).join('')}</div>
+        <div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;letter-spacing:0.6px;">ASSE TEMPO</div>
+        <div class="stats-zoom-row">
+          <button type="button" class="stats-zoom-chip${(store.prefs && store.prefs.statsAxis === 'calendar') ? '' : ' is-on'}" onclick="setStatsAxis('training')">Settimane di scheda</button>
+          <button type="button" class="stats-zoom-chip${(store.prefs && store.prefs.statsAxis === 'calendar') ? ' is-on' : ''}" onclick="setStatsAxis('calendar')">Per data</button>
+        </div>
+        <div style="font-size:10px;color:#888;font-weight:800;margin:8px 0 4px;letter-spacing:0.6px;">ZOOM PERIODO</div>
+        <div class="stats-slider-wrap">
+          <input type="range" id="stats-zoom-slider" min="1" max="8" value="8" oninput="setStatsZoomSlider(this.value)">
+          <div class="stats-slider-lab"><span id="stats-zoom-slider-lab">8 sett.</span><span>Tutto</span></div>
+        </div>
         <div class="stats-kpi-grid">
-          <div class="stats-kpi"><div class="k">VOLUME TOTALE</div><div class="v" id="stats-kpi-tot">—</div><div class="d" id="stats-kpi-tot-d">kg nel periodo</div></div>
-          <div class="stats-kpi"><div class="k">VOLUME SETTIMANA</div><div class="v" id="stats-kpi-week">—</div><div class="d" id="stats-kpi-week-d">settimana corrente</div></div>
-          <div class="stats-kpi"><div class="k">VARIAZIONE</div><div class="v" id="stats-kpi-var">—</div><div class="d">vs settimana precedente</div></div>
-          <div class="stats-kpi"><div class="k">CARICO</div><div class="v" id="stats-kpi-mode">—</div><div class="d" id="stats-kpi-mode-d">Totale / Per parte</div></div>
+          <div class="stats-kpi"><div class="k">VOLUME TOTALE</div><div class="v" id="stats-kpi-tot">—</div><div class="d" id="stats-kpi-tot-d">kg nel periodo zoomato</div></div>
+          <div class="stats-kpi"><div class="k">VOLUME SETTIMANA</div><div class="v" id="stats-kpi-week">—</div><div class="d" id="stats-kpi-week-d">ultima settimana nel zoom</div></div>
+          <div class="stats-kpi"><div class="k">VARIAZIONE</div><div class="v" id="stats-kpi-var">—</div><div class="d" id="stats-kpi-var-d">vs settimana precedente</div></div>
+          <div class="stats-kpi"><div class="k">INTENSITÀ MEDIA</div><div class="v" id="stats-kpi-int">—</div><div class="d" id="stats-kpi-int-d">da RIR/RPE se presenti</div></div>
         </div>
       </div>
     </div>
-    <div class="card"><div class="card-header"><h2>Macro tabella settimane</h2></div><div style="padding:15px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>SETT</th><th>VOL (KG)</th><th>VAR %</th><th>INT (PTS)</th><th>CARICO</th><th>BW</th></tr></thead><tbody id="summary-body"></tbody></table><div style="font-size:10px;color:#777;margin-top:8px;">Tutte le settimane del mesociclo, anche se sei ancora all’inizio. CARICO = Totale o Per parte. Il volume per parte è già raddoppiato.</div></div></div>
-    <div class="card"><div class="card-header"><h2 id="vol-chart-title">Volume (kg)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="volChart"></canvas></div><div style="font-size:10px;color:#777;">Barre del gruppo selezionato. Lo zoom taglia l’asse tempo; le settimane vuote non spezzano il grafico.</div></div></div>
-    <div class="card"><div class="card-header"><h2>Volume efficace (pts)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="rirChart"></canvas></div></div></div>
+    <div class="card"><div class="card-header"><h2>Tabella analitica</h2></div><div style="padding:15px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>PERIODO</th><th>VOL</th><th>Δ%</th><th>SERIE</th><th>REP</th><th>INT</th><th>e1RM</th><th>FREQ</th><th>BW</th></tr></thead><tbody id="summary-body"></tbody></table><div style="font-size:10px;color:#777;margin-top:8px;">Zoom sulle settimane di scheda (W1, W2…), non sulla data in cui hai finalizzato. INT = intensità media 0–10 da RIR/RPE. Celle vuote = dati mancanti, non zeri inventati.</div></div></div>
+    <div class="card"><div class="card-header"><h2 id="vol-chart-title">Volume (kg)</h2></div><div style="padding:15px;">
+      <div class="stats-metric-tabs" id="stats-metric-tabs"></div>
+      <div class="chart-container"><canvas id="volChart"></canvas></div>
+      <div style="font-size:10px;color:#777;">Candele verdi/rosse = settimana su/giù vs la precedente. Linee MA solo se ci sono abbastanza periodi.</div>
+    </div></div>
+    <div class="card"><div class="card-header"><h2>Volume efficace (pts)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="rirChart"></canvas></div><div id="stats-effective-note" style="font-size:10px;color:#777;line-height:1.45;">Volume efficace = Σ carico × (reps + RIR). Con RPE, RIR = 10 − RPE. Stima del lavoro se la serie fosse andata a cedimento: non è il tonnellaggio.</div></div></div>
     <div class="card"><div class="card-header"><h2>Peso corporeo (kg)</h2></div><div style="padding:15px;"><div class="chart-container"><canvas id="bwChart"></canvas></div><div style="font-size:10px;color:#777;">Solo pesi realmente registrati (check fisico o BW in scheda). N/D se assente.</div></div></div>
+    <div class="card" id="stats-advanced-card"><div class="card-header"><h2>Stats avanzate</h2></div><div id="stats-advanced-body" style="padding:15px;font-size:11px;color:#bbb;"></div></div>
     <div style="height:120px;"></div>
   `;
   setTimeout(function () {
@@ -18788,13 +18819,44 @@ function statsZoomWeeks() {
   }
   return 8;
 }
-function setStatsZoom(n) {
+function statsAxis() {
+  return (store && store.prefs && store.prefs.statsAxis === 'calendar') ? 'calendar' : 'training';
+}
+function setStatsAxis(axis) {
   if (!store.prefs) store.prefs = {};
-  store.prefs.statsZoomWeeks = Number(n) || 0;
+  store.prefs.statsAxis = axis === 'calendar' ? 'calendar' : 'training';
   persist();
-  document.querySelectorAll('.stats-zoom-chip').forEach(function (el) {
-    el.classList.toggle('is-on', Number(el.getAttribute('data-zoom')) === store.prefs.statsZoomWeeks);
-  });
+  if (typeof currentView !== 'undefined' && currentView === 'stats') render();
+}
+function setStatsExercise(name) {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.statsExercise = name || '';
+  persist();
+  renderStatsData();
+}
+function setStatsChartMetric(metric) {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.statsChartMetric = metric || 'volume';
+  persist();
+  renderStatsData();
+}
+function setStatsZoom(n) {
+  setStatsZoomSlider(n);
+}
+function setStatsZoomSlider(n) {
+  if (!store.prefs) store.prefs = {};
+  const slider = $('stats-zoom-slider');
+  const max = slider ? Number(slider.max) || 1 : statsWeeksCount();
+  const v = Number(n);
+  store.prefs.statsZoomWeeks = (v >= max) ? 0 : Math.max(1, v);
+  persist();
+  if (slider) slider.value = String(v >= max ? max : Math.max(1, v));
+  const lab = $('stats-zoom-slider-lab');
+  if (lab) {
+    lab.textContent = (store.prefs.statsZoomWeeks === 0)
+      ? ('Tutto · ' + (statsAxis() === 'calendar' ? 'settimane di calendario' : 'settimane di scheda'))
+      : (store.prefs.statsZoomWeeks + (statsAxis() === 'calendar' ? ' sett. di calendario' : ' sett. di scheda'));
+  }
   renderStatsData();
 }
 function statsZoomSlice(arr) {
@@ -18808,6 +18870,88 @@ function statsZoomSlice(arr) {
 }
 function formatStatsKg(n) {
   return Math.round(Number(n) || 0).toLocaleString('it-IT');
+}
+function buildTrainingAnalytics() {
+  const TAE = window.TrainingAnalyticsEngine;
+  if (!TAE || !TAE.build) return null;
+  const selectedGroup = $('stats-muscle-group') ? $('stats-muscle-group').value : 'TOTAL';
+  return TAE.build(store, DATA, {
+    axis: statsAxis(),
+    zoomWeeks: statsZoomWeeks(),
+    muscle: selectedGroup,
+    exercise: (store.prefs && store.prefs.statsExercise) || '',
+    matchMuscle: function (name, movement, groups, muscle, eK) {
+      return typeof exerciseMatchesMuscleGroup === 'function'
+        ? exerciseMatchesMuscleGroup(name, movement, groups, muscle, eK)
+        : true;
+    }
+  });
+}
+function renderTerminalChart(canvasId, analytics, metric) {
+  const canvas = $(canvasId);
+  if (!canvas || !analytics) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = (rect.height || 260) * dpr;
+  ctx.scale(dpr, dpr);
+  const w = rect.width;
+  const h = rect.height || 260;
+  ctx.clearRect(0, 0, w, h);
+  const padding = { top: 44, right: 16, bottom: 36, left: 42 };
+  const chartW = w - padding.left - padding.right;
+  const chartH = h - padding.top - padding.bottom;
+  const labels = analytics.charts.labels || [];
+  const series = (analytics.charts[metric] || analytics.charts.volume || []).map(function (v) { return Number(v) || 0; });
+  const n = series.length;
+  if (!n) return;
+  const valid = series.filter(function (v) { return v > 0; });
+  const maxVal = (valid.length ? Math.max.apply(null, valid) : 100) * 1.18;
+  const valRange = maxVal || 1;
+  ctx.strokeStyle = '#222';
+  for (let i = 0; i <= 4; i++) {
+    const y = padding.top + (chartH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(w - padding.right, y); ctx.stroke();
+    ctx.fillStyle = '#666'; ctx.font = '10px Inter, sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(formatChartAxis(maxVal - (valRange / 4) * i), padding.left - 6, y + 3);
+  }
+  const stepX = chartW / (n > 1 ? n - 1 : 1);
+  const xAt = function (i) { return n === 1 ? padding.left + chartW / 2 : padding.left + stepX * i; };
+  ctx.fillStyle = '#666'; ctx.font = '10px Inter, sans-serif'; ctx.textAlign = 'center';
+  labels.forEach(function (lab, i) { ctx.fillText(String(lab), xAt(i), h - padding.bottom + 18); });
+  if (metric === 'volume' && analytics.charts.candles) {
+    const cw = Math.max(6, Math.min(18, chartW / n - 6));
+    analytics.charts.candles.forEach(function (c, i) {
+      if (c.empty || !(c.close > 0 || c.open > 0)) return;
+      const x = xAt(i);
+      const yO = padding.top + chartH - (c.open / valRange) * chartH;
+      const yC = padding.top + chartH - (c.close / valRange) * chartH;
+      const yH = padding.top + chartH - (c.high / valRange) * chartH;
+      const yL = padding.top + chartH - (c.low / valRange) * chartH;
+      ctx.strokeStyle = c.up ? '#3dd68c' : '#ff4d4d';
+      ctx.beginPath(); ctx.moveTo(x, yH); ctx.lineTo(x, yL); ctx.stroke();
+      ctx.fillStyle = c.up ? '#3dd68c' : '#ff4d4d';
+      const top = Math.min(yO, yC);
+      ctx.fillRect(x - cw / 2, top, cw, Math.max(2, Math.abs(yC - yO)));
+    });
+    [['ma4', '#54a0ff'], ['ma8', '#d4af37'], ['ma12', '#c56cf0']].forEach(function (pair) {
+      const arr = analytics.charts[pair[0]] || [];
+      if (!arr.some(function (v) { return v != null; })) return;
+      ctx.strokeStyle = pair[1]; ctx.lineWidth = 1.4; ctx.beginPath();
+      let started = false;
+      arr.forEach(function (v, i) {
+        if (v == null) return;
+        const x = xAt(i);
+        const y = padding.top + chartH - (v / valRange) * chartH;
+        if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    });
+  } else {
+    renderSimpleChart(canvasId, series, metric === 'intensity' ? '#ff4d4d' : '#d4af37', metric === 'e1rm' ? 'line' : 'bar', 0);
+    return;
+  }
 }
 function weekLoadModeLabel(w) {
   let part = 0, tot = 0;
@@ -18824,142 +18968,144 @@ function weekLoadModeLabel(w) {
 }
 function renderStatsData(){
   const selectedGroup = $('stats-muscle-group') ? $('stats-muscle-group').value : 'TOTAL';
-  const weeksCount = statsWeeksCount();
-  let vD = [], rD = [], bwD = [], pD = [];
-
-  if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
-    for (let w = 1; w <= weeksCount; w++) {
-      const rows = (store.logs || []).filter(function (row) { return Number(row.week) === w; });
-      const wV = rows.reduce(function (s, row) { return s + (Number(row.tonnage) || 0); }, 0);
-      const wR = rows.reduce(function (s, row) { return s + (Number(row.intensity) || 0); }, 0);
-      vD.push(wV); rD.push(wR); bwD.push(recordedBodyWeightForWeek(w)); pD.push(wV > 0 && recordedBodyWeightForWeek(w) ? wV / recordedBodyWeightForWeek(w) : 0);
+  const analytics = buildTrainingAnalytics();
+  const slider = $('stats-zoom-slider');
+  if (slider) {
+    const max = Math.max(1, (analytics && analytics.weekCount) || statsWeeksCount());
+    slider.max = String(max);
+    const z = statsZoomWeeks();
+    slider.value = String(z === 0 ? max : Math.min(max, Math.max(1, z)));
+    const lab = $('stats-zoom-slider-lab');
+    if (lab) {
+      lab.textContent = z === 0
+        ? ('Tutto · ' + (statsAxis() === 'calendar' ? 'calendario' : 'scheda'))
+        : (z + (statsAxis() === 'calendar' ? ' sett. di calendario' : ' sett. di scheda'));
     }
-  } else {
-  for(let w = 1; w <= weeksCount; w++){
-    let wV = 0, wR = 0;
-    const weekObj = DATA.weeks[w - 1];
-    const sessions = weekObj?.sessions || weekObj?.days || [];
-
-    sessions.forEach((dayObj, dIdx) => {
-      const exerciseList = dayObj.exercises || dayObj.rows || [];
-      exerciseList.forEach((row, eIdx) => {
-        const eK = `w${w}_d${dIdx}_e${eIdx}`;
-        const curEx = store.subs[eK] || row.name || row.exercise;
-        if(!exerciseMatchesMuscleGroup(curEx, row.movement, row.muscle_groups || row.muscleGroups, selectedGroup, eK)) return;
-
-        if(store.skips[eK]) return;
-        const isPart = store.loadTypes[eK] === 'part';
-        const multiplier = isPart ? 2 : 1;
-        const exIntens = store.exIntensity[eK] || store.prefs.intensityType || 'RIR';
-
-        for(let s = 1; s <= 20; s++){
-          const k = `${eK}_s${s}`;
-          const l = parseFloat(store.data[`${k}_load`] || 0) * multiplier;
-          const rp = parseInt(store.data[`${k}_reps`] || 0, 10);
-          if(l > 0 && rp > 0){
-            wV += l * rp;
-            const intensVal = parseInt(store.data[`${k}_rir`] || 0, 10);
-            if(exIntens === 'RIR') {
-              wR += l * (rp + intensVal);
-            } else {
-              const approxRir = Math.max(0, 10 - intensVal);
-              wR += l * (rp + approxRir);
-            }
-          }
-        }
-      });
-
-      const bonusList = store.bonus[`w${w}_d${dIdx}`] || [];
-      bonusList.forEach((bEx, bIdx) => {
-        const fIdx = 900 + bIdx;
-        const eK = `w${w}_d${dIdx}_e${fIdx}`;
-        const curEx = bEx.exercise || bEx.name;
-        if(!exerciseMatchesMuscleGroup(curEx, bEx.movement, bEx.muscle_groups, selectedGroup, eK)) return;
-
-        if(store.skips[eK]) return;
-        const isPart = store.loadTypes[eK] === 'part';
-        const multiplier = isPart ? 2 : 1;
-        const exIntens = store.exIntensity[eK] || store.prefs.intensityType || 'RIR';
-
-        for(let s = 1; s <= 20; s++){
-          const k = `${eK}_s${s}`;
-          const l = parseFloat(store.data[`${k}_load`] || 0) * multiplier;
-          const rp = parseInt(store.data[`${k}_reps`] || 0, 10);
-          if(l > 0 && rp > 0){
-            wV += l * rp;
-            const intensVal = parseInt(store.data[`${k}_rir`] || 0, 10);
-            if(exIntens === 'RIR') {
-              wR += l * (rp + intensVal);
-            } else {
-              const approxRir = Math.max(0, 10 - intensVal);
-              wR += l * (rp + approxRir);
-            }
-          }
-        }
-      });
-    });
-
-    const bw = recordedBodyWeightForWeek(w);
-    vD.push(wV);
-    rD.push(wR);
-    bwD.push(bw);
-    pD.push(wV > 0 && bw ? (wV / bw) : 0);
   }
+  const exSel = $('stats-exercise-filter');
+  if (exSel && analytics) {
+    const cur = (store.prefs && store.prefs.statsExercise) || '';
+    const names = analytics.exercises || [];
+    exSel.innerHTML = '<option value="">Esercizio · tutti</option>' + names.map(function (n) {
+      return '<option value="' + esc(n) + '"' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>';
+    }).join('');
+  }
+  const tabs = $('stats-metric-tabs');
+  if (tabs) {
+    const metric = (store.prefs && store.prefs.statsChartMetric) || 'volume';
+    tabs.innerHTML = [['volume', 'VOLUME'], ['e1rm', 'e1RM'], ['sets', 'SERIE'], ['reps', 'REP'], ['intensity', 'INT']].map(function (pair) {
+      return '<button type="button" class="stats-zoom-chip' + (metric === pair[0] ? ' is-on' : '') + '" onclick="setStatsChartMetric(\'' + pair[0] + '\')">' + pair[1] + '</button>';
+    }).join('');
   }
 
+  if (!analytics) {
+    if ($('summary-body')) $('summary-body').innerHTML = '<tr><td colspan="9">Motore analytics non caricato</td></tr>';
+    return;
+  }
+
+  const peakV = Math.max.apply(null, analytics.table.map(function (w) { return w.volume; }).concat([1]));
   let tH = '';
-  const modes = [];
-  const peakV = Math.max.apply(null, vD.filter(function (x) { return x > 0; }).concat([1]));
-  for (let i = 0; i < weeksCount; i++) modes.push(weekLoadModeLabel(i + 1));
-  vD.forEach((v, i) => {
-    const prevMode = i > 0 ? modes[i - 1] : '';
-    const mode = modes[i] || '—';
-    const mixDelta = i > 0 && prevMode !== '—' && mode !== '—' && prevMode !== mode;
-    const prevV = i > 0 ? vD[i - 1] : 0;
-    const empty = !(v > 0);
-    const varPct = (empty || i === 0 || !(prevV > 0)) ? null : ((v - prevV) / prevV) * 100;
-    const cur = (typeof currentWeek === 'number' && currentWeek === (i + 1));
-    const barPct = empty ? 0 : Math.max(4, Math.round((v / peakV) * 100));
-    tH += `<tr class="${cur ? 'stats-current-week' : ''}">
-      <td><b>W${i+1}</b>${cur ? ' · ora' : ''}<div class="stats-volbar"><i style="width:${barPct}%"></i></div></td>
-      <td>${empty ? '—' : formatStatsKg(v)}</td>
-      <td class="${varPct == null ? '' : (varPct>=0?'delta-pos':'delta-neg')}">${varPct == null ? '—' : ((varPct>=0?'+':'') + varPct.toFixed(1) + '%' + (mixDelta ? ' *' : ''))}</td>
-      <td>${empty ? '—' : formatStatsKg(rD[i])}</td>
-      <td>${mode}</td>
-      <td>${bwD[i] != null ? bwD[i] : 'N/D'}</td>
-    </tr>`;
+  analytics.table.forEach(function (row, i) {
+    const prev = i > 0 ? analytics.table[i - 1] : null;
+    const varPct = (row.empty || !prev || !prev.volume) ? null : ((row.volume - prev.volume) / prev.volume) * 100;
+    const barPct = row.empty ? 0 : Math.max(4, Math.round((row.volume / peakV) * 100));
+    const bw = statsAxis() === 'training' && /^tw-(\d+)$/.test(row.key)
+      ? recordedBodyWeightForWeek(Number(RegExp.$1))
+      : null;
+    tH += '<tr class="' + (!row.empty && i === analytics.table.length - 1 ? 'stats-current-week' : '') + '">' +
+      '<td><b>' + esc(row.label) + '</b><div class="stats-volbar"><i style="width:' + barPct + '%"></i></div></td>' +
+      '<td>' + (row.empty ? '—' : formatStatsKg(row.volume)) + '</td>' +
+      '<td class="' + (varPct == null ? '' : (varPct >= 0 ? 'delta-pos' : 'delta-neg')) + '">' + (varPct == null ? '—' : ((varPct >= 0 ? '+' : '') + varPct.toFixed(1) + '%')) + '</td>' +
+      '<td>' + (row.empty ? '—' : row.sets) + '</td>' +
+      '<td>' + (row.empty ? '—' : row.reps) + '</td>' +
+      '<td>' + (row.avgIntensity == null ? '—' : row.avgIntensity.toFixed(1)) + '</td>' +
+      '<td>' + (row.e1rm == null ? '—' : row.e1rm) + '</td>' +
+      '<td>' + (row.empty ? '—' : row.frequency) + '</td>' +
+      '<td>' + (bw != null ? bw : 'N/D') + '</td></tr>';
   });
-  if($('summary-body')) $('summary-body').innerHTML = tH;
+  if ($('summary-body')) $('summary-body').innerHTML = tH;
 
-  const focusWeek = Math.max(1, Number(currentWeek) || 1);
-  const weekVol = vD[focusWeek - 1] || 0;
-  const prevVol = focusWeek > 1 ? (vD[focusWeek - 2] || 0) : 0;
-  const totVol = vD.reduce(function (s, n) { return s + (Number(n) || 0); }, 0);
-  const weekVar = (weekVol > 0 && prevVol > 0) ? ((weekVol - prevVol) / prevVol) * 100 : null;
-  if ($('stats-kpi-tot')) $('stats-kpi-tot').textContent = formatStatsKg(totVol) + ' kg';
-  if ($('stats-kpi-week')) $('stats-kpi-week').textContent = weekVol > 0 ? (formatStatsKg(weekVol) + ' kg') : '—';
-  if ($('stats-kpi-week-d')) $('stats-kpi-week-d').textContent = 'settimana ' + focusWeek;
+  const k = analytics.kpis;
+  if ($('stats-kpi-tot')) $('stats-kpi-tot').textContent = k.volumeTotal > 0 ? (formatStatsKg(k.volumeTotal) + ' kg') : '—';
+  if ($('stats-kpi-tot-d')) $('stats-kpi-tot-d').textContent = 'kg nel periodo zoomato · ' + analytics.window.weeks.length + ' ' + (statsAxis() === 'calendar' ? 'sett. calendario' : 'sett. scheda');
+  if ($('stats-kpi-week')) $('stats-kpi-week').textContent = k.volumeWeek > 0 ? (formatStatsKg(k.volumeWeek) + ' kg') : '—';
+  if ($('stats-kpi-week-d')) $('stats-kpi-week-d').textContent = k.weekLabel || 'ultima nel zoom';
   if ($('stats-kpi-var')) {
-    $('stats-kpi-var').textContent = weekVar == null ? '—' : ((weekVar >= 0 ? '+' : '') + weekVar.toFixed(1) + '%');
-    $('stats-kpi-var').style.color = weekVar == null ? '' : (weekVar >= 0 ? 'var(--success)' : 'var(--accent-red)');
+    $('stats-kpi-var').textContent = k.volumeVarWeek == null ? '—' : ((k.volumeVarWeek >= 0 ? '+' : '') + k.volumeVarWeek + '%');
+    $('stats-kpi-var').style.color = k.volumeVarWeek == null ? '' : (k.volumeVarWeek >= 0 ? 'var(--success)' : 'var(--accent-red)');
   }
-  if ($('stats-kpi-mode')) $('stats-kpi-mode').textContent = weekLoadModeLabel(focusWeek);
-  if ($('stats-kpi-mode-d')) $('stats-kpi-mode-d').textContent = 'settimana ' + focusWeek;
+  if ($('stats-kpi-int')) {
+    if (k.avgIntensity == null) {
+      $('stats-kpi-int').textContent = '—';
+      if ($('stats-kpi-int-d')) $('stats-kpi-int-d').textContent = analytics.quality.setsWithEffort ? '—' : 'Nessun RIR o RPE nel periodo';
+    } else {
+      $('stats-kpi-int').textContent = k.avgIntensity.toFixed(1) + ' / 10';
+      const bits = [];
+      if (k.avgRir != null) bits.push('RIR ' + k.avgRir);
+      if (k.avgRpe != null) bits.push('RPE ' + k.avgRpe);
+      if ($('stats-kpi-int-d')) $('stats-kpi-int-d').textContent = bits.join(' · ') + ' · scale opposte';
+    }
+  }
+  const note = $('stats-effective-note');
+  if (note) note.textContent = analytics.effectiveVolumeNote;
 
   const groupLabel = (MACRO_MUSCLE_GROUPS.find(function (g) { return g.id === selectedGroup; }) || {}).label || 'generale';
   const titleEl = $('vol-chart-title');
-  if (titleEl) titleEl.textContent = selectedGroup === 'TOTAL' ? 'Volume (kg)' : ('Volume ' + groupLabel + ' (kg)');
+  const metric = (store.prefs && store.prefs.statsChartMetric) || 'volume';
+  if (titleEl) titleEl.textContent = (selectedGroup === 'TOTAL' ? '' : (groupLabel + ' · ')) + ({ volume: 'Volume (kg)', e1rm: 'e1RM (kg)', sets: 'Serie', reps: 'Ripetizioni', intensity: 'Intensità media' }[metric] || 'Volume (kg)');
+  renderTerminalChart('volChart', analytics, metric);
+  renderSimpleChart('rirChart', analytics.charts.effective, '#ff4d4d', 'line', 0);
+  const bwD = analytics.table.map(function (row) {
+    if (statsAxis() === 'training' && /^tw-(\d+)$/.test(row.key)) return recordedBodyWeightForWeek(Number(RegExp.$1));
+    return null;
+  });
   if (!bwD.some(function (v) { return v != null && Number(v) > 0; })) {
     const checks = (store.bodyChecks || []).filter(function (c) { return Number(c.weight) > 0; }).sort(function (a, b) { return (Date.parse(a.at || '') || 0) - (Date.parse(b.at || '') || 0); });
-    if (checks.length) bwD = checks.map(function (c) { return Number(c.weight); });
+    renderSimpleChart('bwChart', checks.length ? checks.map(function (c) { return Number(c.weight); }) : bwD, '#54a0ff', 'bar', 0);
+  } else {
+    renderSimpleChart('bwChart', bwD, '#54a0ff', 'bar', 0);
   }
-  const volSlice = statsZoomSlice(vD);
-  const rirSlice = statsZoomSlice(rD);
-  const bwSlice = statsZoomSlice(bwD);
-  renderSimpleChart('volChart', volSlice.data, '#d4af37', 'bar', volSlice.offset);
-  renderSimpleChart('rirChart', rirSlice.data, '#ff4d4d', 'line', rirSlice.offset);
-  renderSimpleChart('bwChart', bwSlice.data, '#54a0ff', 'bar', bwSlice.offset);
-  window.__statsMuscleVolumeByWeek = vD;
+
+  const adv = $('stats-advanced-body');
+  if (adv) {
+    const cmp = analytics.comparison || {};
+    const fat = analytics.fatigue || {};
+    const rec = analytics.recovery || {};
+    const lm = analytics.landmarks || {};
+    const prHtml = (analytics.prs || []).slice(-6).reverse().map(function (p) {
+      return '<div class="stats-adv-row"><span>' + esc(p.type.toUpperCase()) + ' · ' + esc(p.name) + '</span><span>' + esc(String(p.value)) + (p.week ? (' · W' + p.week) : '') + '</span></div>';
+    }).join('') || '<div>Nessun PR derivabile dai log.</div>';
+    const exHtml = (analytics.byExercise || []).slice(0, 8).map(function (e) {
+      return '<div class="stats-adv-row"><span>' + esc(e.name) + '</span><span>' + formatStatsKg(e.volume) + ' kg · ' + e.sets + ' serie</span></div>';
+    }).join('') || '<div>Nessun esercizio nel periodo.</div>';
+    const ins = (analytics.insights || []).map(function (t) { return '<div style="margin:0 0 8px;">• ' + esc(t) + '</div>'; }).join('');
+    const delta = function (v, unit) { return v == null ? '—' : ((v >= 0 ? '+' : '') + v + (unit || '%')); };
+    adv.innerHTML =
+      '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">CONFRONTO PERIODO</div>' +
+      '<div class="stats-adv-row"><span>Volume</span><span>' + delta(cmp.volume) + '</span></div>' +
+      '<div class="stats-adv-row"><span>Serie</span><span>' + delta(cmp.sets) + '</span></div>' +
+      '<div class="stats-adv-row"><span>Reps</span><span>' + delta(cmp.reps) + '</span></div>' +
+      '<div class="stats-adv-row"><span>e1RM</span><span>' + delta(cmp.e1rm) + '</span></div>' +
+      '<div class="stats-adv-row"><span>Intensità</span><span>' + (cmp.intensity == null ? '—' : ((cmp.intensity >= 0 ? '+' : '') + cmp.intensity)) + '</span></div>' +
+      '<div style="font-size:10px;color:#777;margin:8px 0 14px;">Variazione descrittiva vs periodo precedente della stessa lunghezza. Un + non è automaticamente un miglioramento.</div>' +
+      '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">VOLUME PER ESERCIZIO</div>' + exHtml +
+      '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">LANDMARKS (stima configurabile)</div>' +
+      '<div>MV ' + lm.MV + ' · MEV ' + lm.MEV + ' · MAV ' + lm.MAV_LOW + '–' + lm.MAV_HIGH + ' · MRV ' + lm.MRV + '</div>' +
+      '<div style="margin-top:4px;">Serie ultima settimana: ' + (lm.currentSets == null ? '—' : lm.currentSets) + (lm.status ? (' · ' + esc(lm.status.replace(/_/g, ' '))) : '') + '</div>' +
+      '<div style="font-size:10px;color:#777;margin:6px 0 14px;">Non sono soglie fisiologiche universali. Solo stima iniziale.</div>' +
+      '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">CARICO / FATICA (stima)</div>' +
+      '<div class="stats-adv-row"><span>Acute</span><span>' + (fat.acute == null ? '—' : formatStatsKg(fat.acute) + ' kg') + '</span></div>' +
+      '<div class="stats-adv-row"><span>Chronic</span><span>' + (fat.chronic == null ? '—' : formatStatsKg(fat.chronic) + ' kg') + '</span></div>' +
+      '<div class="stats-adv-row"><span>Stress</span><span>' + (fat.stress == null ? '—' : fat.stress) + '</span></div>' +
+      '<div style="font-size:10px;color:#777;margin:6px 0 14px;">' + esc(fat.note || '') + '</div>' +
+      '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">RECOVERY ESTIMATE</div>' +
+      '<div>' + (rec.estimate ? esc(rec.estimate.replace(/_/g, ' ')) : '—') + '</div>' +
+      '<div style="font-size:10px;color:#777;margin:6px 0 14px;">' + esc(rec.note || '') + '</div>' +
+      '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">PR RILEVATI</div>' + prHtml +
+      '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">INSIGHT</div>' + ins;
+  }
+
+  window.__statsMuscleVolumeByWeek = analytics.charts.volume;
   window.__statsMuscleSelected = selectedGroup;
 }
 
@@ -21333,6 +21479,10 @@ if (typeof window !== 'undefined') {
   window.undoWorkoutModification = undoWorkoutModification;
   window.toggleStatsHistory = toggleStatsHistory;
   window.setStatsZoom = setStatsZoom;
+  window.setStatsZoomSlider = setStatsZoomSlider;
+  window.setStatsAxis = setStatsAxis;
+  window.setStatsExercise = setStatsExercise;
+  window.setStatsChartMetric = setStatsChartMetric;
   window.deleteSavedProgramFromList = deleteSavedProgramFromList;
   window.pinTrainingDay = pinTrainingDay;
   window.shouldStayOnPinnedTraining = shouldStayOnPinnedTraining;
