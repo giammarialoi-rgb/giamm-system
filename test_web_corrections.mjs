@@ -37,7 +37,7 @@ assert.ok(apiPractice.includes("/c/:token/manifest.webmanifest") && apiPractice.
 assert.ok(apiPractice.includes("function injectClientPwaHtml") && apiPractice.includes("__NURVAN_CLIENT_BOOT"), "server injects per-token manifest into /c/:token HTML");
 assert.ok(apiPractice.includes('res.redirect(302, "/c/"') || apiPractice.includes("res.redirect(302, \"/c/\""), "GET / with client cookies redirects to /c/token");
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
-assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("knowledge3"), "SW does not precache the root manifest");
+assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("analytics1"), "SW does not precache the root manifest");
 assert.ok(sw.includes("isClientDoc") && sw.includes(".webmanifest"), "SW keeps /c/* and manifests on the network");
 assert.ok(sw.includes("training-knowledge.js"), "SW precaches the training encyclopedia");
 
@@ -107,8 +107,8 @@ assert.ok(html.includes("function encyclopedizeProgramExercises") && html.includ
 assert.ok(html.includes("hiddenProgramIds") && html.includes("L’allenamento attivo resta"), "deleting the active program from the list keeps it running");
 assert.ok(html.includes("function deleteSavedProgramFromList") && html.includes("data-id="), "saved-program X uses data attributes, not broken stringify");
 assert.ok(html.includes("function deleteBodyCheck") && html.includes("function toggleStatsHistory"), "checks can be deleted and session history closed");
-assert.ok(html.includes("function statsWeeksCount") && html.includes("weekLoadModeLabel"), "stats tables cover all weeks and load mode");
-assert.ok(html.includes("function setStatsZoom") && html.includes("stats-zoom-chip") && html.includes("function statsZoomSlice"), "stats have zoom chips and sliced charts");
+assert.ok(html.includes("function statsWeeksCount") && html.includes("TrainingAnalyticsEngine"), "stats tables use the analytics engine");
+assert.ok(html.includes("function setStatsZoom") && html.includes("stats-zoom-slider") && html.includes("function setStatsAxis"), "stats zoom is a training-week slider");
 assert.ok(html.includes("function pinTrainingDay") && html.includes("shouldStayOnPinnedTraining"), "finalized days stay open instead of auto-advancing");
 assert.ok(html.includes("function applySelectedSuperset") && html.includes("COLLEGA IN SUPERSET"), "training can pair supersets");
 assert.ok(practice.includes("stayPinned") && practice.includes("__pinnedTraining"), "client-shell apply does not bounce a pinned finalized day");
