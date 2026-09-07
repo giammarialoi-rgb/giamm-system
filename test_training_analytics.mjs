@@ -113,12 +113,55 @@ const zoomed = TAE.applyZoom(
 );
 assert.equal(zoomed.weeks.length, 1);
 
+assert.equal(TAE.estimatedNrm(150, 1), 150);
+assert.ok(TAE.estimatedNrm(150, 5) > 100 && TAE.estimatedNrm(150, 5) < 150);
+assert.equal(TAE.estimatedNrm(150, 20), null);
+
+const fat = TAE.intraSessionFatigue([
+  { set: 1, loadRaw: 120, reps: 6, rpe: 7 },
+  { set: 4, loadRaw: 120, reps: 5, rpe: 9 }
+]);
+assert.equal(fat.repLoss, -16.7);
+assert.ok(fat.signal === "moderate" || fat.signal === "high");
+
+const storeSnap = {
+  data: {
+    w1_d0_e0_s1_load: 100, w1_d0_e0_s1_reps: 5, w1_d0_e0_s1_rir: 2,
+    w2_d0_e0_s1_load: 105, w2_d0_e0_s1_reps: 5, w2_d0_e0_s1_rir: 2
+  },
+  prefs: { intensityType: "RIR", duration: 2 },
+  logs: [],
+  bw: { 1: 90 }
+};
+const dataSnap = { weeks: [{ sessions: [{ exercises: [{ name: "Panca" }] }] }, { sessions: [{ exercises: [{ name: "Panca" }] }] }] };
+const before = TAE.rawFingerprint(storeSnap);
+TAE.clearCache();
+TAE.build(storeSnap, dataSnap, { axis: "training", zoomWeeks: 0 });
+TAE.liveAfterSet(storeSnap, dataSnap, { week: 2, day: 0, exIdx: 0, set: 1 });
+TAE.exerciseReport(storeSnap, dataSnap, { week: 2, day: 0, exIdx: 0, set: 1 });
+const reco = TAE.recommendNext(storeSnap, dataSnap, { week: 2, day: 0, exIdx: 0, set: 1 });
+assert.equal(TAE.rawFingerprint(storeSnap), before, "analytics never mutates raw workout data");
+assert.ok(reco.action === "increase" || reco.action === "maintain");
+assert.equal(reco.kind, "heuristic");
+assert.ok(reco.why);
+
+const emptyLive = TAE.liveAfterSet({ data: {}, prefs: {} }, { weeks: [] }, { week: 1, day: 0, exIdx: 0, set: 1 });
+assert.equal(emptyLive.empty, true);
+
+const expl = TAE.explainMetric("e1rm");
+assert.equal(expl.evidenceLevel, "DERIVED");
+assert.ok(String(expl.limitations).includes("Not a tested 1RM"));
+
 const html = fs.readFileSync(path.join(root, "web/index.base.html"), "utf8");
 assert.ok(html.includes("training-analytics-engine.js"), "stats page loads the engine");
 assert.ok(html.includes("INTENSITÀ MEDIA") && !html.includes("id=\"stats-kpi-mode\""), "carico per parte KPI is gone");
 assert.ok(html.includes("stats-zoom-slider") && html.includes("setStatsAxis"), "slider + training/date axis");
+assert.ok(html.includes("TRAINING MARKET") && html.includes("setStatsAdvancedMode"), "one main chart + advanced exercise/muscle");
+assert.ok(html.includes("function showLiveSetIntel") && html.includes("acceptIntelRecommendation"), "live post-set and Accept/Keep recommendations");
+assert.ok(html.includes("store.intelligence"), "recommendations live outside raw workout rows");
 
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
 assert.ok(sw.includes("training-analytics-engine.js"), "SW precaches the analytics engine");
+assert.ok(fs.existsSync(path.join(root, "TRAINING_ANALYTICS_METHODOLOGY.md")), "methodology doc exists");
 
-console.log("OK   training analytics engine formulas + zoom axis");
+console.log("OK   training analytics engine formulas + zoom axis + intelligence");

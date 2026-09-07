@@ -583,6 +583,15 @@
         e1rm: windowed.weeks.map(function (w) { return w.e1rm; }),
         sets: windowed.weeks.map(function (w) { return w.sets; }),
         reps: windowed.weeks.map(function (w) { return w.reps; }),
+        load: windowed.weeks.map(function (w) { return w.avgLoad; }),
+        frequency: windowed.weeks.map(function (w) { return w.frequency; }),
+        sessions: windowed.weeks.map(function (w) { return w.sessionCount; }),
+        bw: windowed.weeks.map(function (w) {
+          const m = String(w.key || '').match(/^tw-(\d+)$/);
+          if (!m || !store || !store.bw) return null;
+          const v = num(store.bw[m[1]] || store.bw[Number(m[1])]);
+          return v != null && v > 0 ? v : null;
+        }),
         labels: windowed.weeks.map(function (w) { return w.label; }),
         ma4: movingAverage(volumes, 4),
         ma8: movingAverage(volumes, 8),
@@ -614,15 +623,358 @@
       exercises: Array.from(new Set(sets.map(function (s) { return s.name; }))).sort()
     };
     analytics.insights = insightsFrom(analytics);
+    analytics.trainingLoad = trainingLoadFromWeeks(windowed.weeks);
+    analytics.adaptation = adaptationFromComparison(comparison, windowed.weeks);
+    analytics.formulaVersion = FORMULA_VERSION;
+    analytics.kind = 'derived';
     _cache = { key: fp, at: Date.now(), value: analytics };
     return analytics;
+  }
+
+  const FORMULA_VERSION = 'intel-v1';
+  const METRIC_CATALOG = {
+    volume: { id: 'volume', category: 'volume', definition: 'Tonnage load × reps', formula: 'Σ(load × reps × partMultiplier)', unit: 'kg', evidenceLevel: 'DERIVED', formulaVersion: 'epley-v1', confidence: 'high', limitations: 'Skipped sets ignored. Part multiplier is a calculation mode.' },
+    e1rm: { id: 'e1rm', category: 'strength', definition: 'Estimated one-repetition maximum', formula: 'Epley: load × (1 + reps/30); singles = load', unit: 'kg', evidenceLevel: 'DERIVED', formulaVersion: 'epley-v1', confidence: 'medium', limitations: 'Unreliable above 12 reps. Exercise-specific. Not a tested 1RM.' },
+    intensity10: { id: 'intensity10', category: 'intensity', definition: 'Effort on a 0–10 scale from RIR or RPE', formula: 'RIR → 10−RIR; RPE → RPE', unit: '/10', evidenceLevel: 'DERIVED', formulaVersion: 'rir-rpe-v1', confidence: 'medium', limitations: 'Missing effort stays empty. Scales are opposite.' },
+    landmarks: { id: 'landmarks', category: 'landmarks', definition: 'Configurable weekly-set zones MV/MEV/MAV/MRV', formula: 'user prefs or defaults', unit: 'sets', evidenceLevel: 'MODEL_BASED', formulaVersion: 'landmarks-v1', confidence: 'low', limitations: 'Not universal physiology. Configurable estimates.' },
+    recovery: { id: 'recovery', category: 'recovery', definition: 'Recovery Estimate from acute/chronic volume', formula: 'acute/chronic labels', unit: 'label', evidenceLevel: 'HEURISTIC', formulaVersion: 'acwr-adapt-v1', confidence: 'low', limitations: 'Not a measured readiness score. Never shown as a percent.' },
+    atlCtl: { id: 'atlCtl', category: 'workload', definition: 'Adapted ATL/CTL/TSB from weekly volume', formula: 'ATL=last week; CTL=mean last 4; TSB=CTL−ATL', unit: 'kg', evidenceLevel: 'MODEL_BASED', formulaVersion: 'atl-adapt-v1', confidence: 'low', limitations: 'Endurance-derived model adapted for trend only. Not overtraining diagnosis.' },
+    recommendation: { id: 'recommendation', category: 'recommendations', definition: 'Suggested next-session load change', formula: 'rules on e1RM/RPE/recovery', unit: 'kg', evidenceLevel: 'HEURISTIC', formulaVersion: 'reco-v1', confidence: 'medium', limitations: 'Never writes programmed workouts. User must Accept.' }
+  };
+
+  function estimatedNrm(e1, n) {
+    const e = num(e1);
+    const r = int(n);
+    if (e == null || r == null || r < 1 || r > EPLEY_MAX_REPS) return null;
+    if (r === 1) return e;
+    return round1(e / (1 + r / 30));
+  }
+
+  function intensityDistribution(sets) {
+    const bins = { '<60': 0, '60-70': 0, '70-80': 0, '80-90': 0, '90+': 0 };
+    let used = 0;
+    (sets || []).forEach(function (s) {
+      if (s.e1rm == null || !(s.loadRaw > 0)) return;
+      const pct = (s.loadRaw / s.e1rm) * 100;
+      used += 1;
+      if (pct < 60) bins['<60'] += 1;
+      else if (pct < 70) bins['60-70'] += 1;
+      else if (pct < 80) bins['70-80'] += 1;
+      else if (pct < 90) bins['80-90'] += 1;
+      else bins['90+'] += 1;
+    });
+    return { bins: bins, used: used, kind: 'derived', formulaVersion: FORMULA_VERSION };
+  }
+
+  function intraSessionFatigue(sets) {
+    const rows = (sets || []).slice().sort(function (a, b) { return a.set - b.set; });
+    if (rows.length < 2) return { signal: null, repLoss: null, rpeDrift: null, kind: 'heuristic', note: 'Servono almeno 2 serie' };
+    const first = rows[0];
+    const last = rows[rows.length - 1];
+    const sameLoad = first.loadRaw > 0 && Math.abs(first.loadRaw - last.loadRaw) < 0.6;
+    const repLoss = (sameLoad && first.reps > 0) ? round1(((last.reps - first.reps) / first.reps) * 100) : null;
+    const rpeDrift = (first.rpe != null && last.rpe != null) ? round1(last.rpe - first.rpe) : null;
+    let signal = null;
+    if (repLoss != null && repLoss <= -15 && rpeDrift != null && rpeDrift >= 1) signal = 'moderate';
+    else if (repLoss != null && repLoss <= -25) signal = 'high';
+    else if ((repLoss != null && repLoss < 0) || (rpeDrift != null && rpeDrift > 0.4)) signal = 'low';
+    else if (repLoss != null || rpeDrift != null) signal = 'stable';
+    return { signal: signal, repLoss: repLoss, rpeDrift: rpeDrift, kind: 'heuristic', formulaVersion: FORMULA_VERSION, note: 'Classificazione euristica, non misura fisiologica.' };
+  }
+
+  function trainingLoadFromWeeks(weeks) {
+    const fat = fatigueFromWeeks(weeks);
+    const atl = fat.acute;
+    const ctl = fat.chronic;
+    const tsb = (atl != null && ctl != null) ? Math.round(ctl - atl) : null;
+    return {
+      sessionLoad: atl,
+      weeklyLoad: atl,
+      acute: atl,
+      chronic: ctl,
+      stress: fat.stress,
+      atl: atl,
+      ctl: ctl,
+      tsb: tsb,
+      kind: 'model_based',
+      methodology: 'Adapted ATL/CTL/TSB from weekly tonnage. Endurance-derived, context-dependent. Trend only.',
+      evidenceLevel: 'MODEL_BASED',
+      formulaVersion: 'atl-adapt-v1',
+      note: fat.note
+    };
+  }
+
+  function adaptationFromComparison(comparison, weeks) {
+    const vol = comparison && comparison.volume;
+    const e1 = comparison && comparison.e1rm;
+    const intD = comparison && comparison.intensity;
+    let signal = null;
+    let confidence = 'LOW';
+    const filled = (weeks || []).filter(function (w) { return !w.empty; }).length;
+    if (filled < 2 || (vol == null && e1 == null)) {
+      return { signal: null, volumeResponse: 'insufficient_data', kind: 'estimated', confidence: 'LOW', note: 'Servono almeno 2 settimane con dati.' };
+    }
+    if (filled >= 4) confidence = 'MEDIUM';
+    if (e1 != null && e1 > 2 && (vol == null || vol < 25)) { signal = 'POSITIVE'; }
+    else if (e1 != null && e1 < -2 && vol != null && vol > 15) { signal = 'NEGATIVE'; }
+    else if (e1 != null && Math.abs(e1) <= 2 && vol != null && Math.abs(vol) <= 8) { signal = 'NEUTRAL'; }
+    else if (vol != null || e1 != null) { signal = 'MIXED'; }
+    let volumeResponse = 'insufficient_data';
+    if (vol != null && e1 != null) {
+      if (vol > 5 && e1 > 1) volumeResponse = 'positive_response';
+      else if (vol > 10 && e1 <= 0) volumeResponse = 'negative_response';
+      else volumeResponse = 'neutral_response';
+    }
+    return {
+      signal: signal,
+      volumeResponse: volumeResponse,
+      intensityDelta: intD,
+      kind: 'estimated',
+      confidence: confidence,
+      formulaVersion: FORMULA_VERSION,
+      note: 'Segnale adattativo descrittivo. Non è una diagnosi di overtraining.'
+    };
+  }
+
+  function setsForExercise(store, data, name, opts) {
+    return normalizeSets(store, data, Object.assign({}, opts || {}, { exercise: name || '' }));
+  }
+
+  function analyzeExercise(store, data, name, opts) {
+    const sets = setsForExercise(store, data, name, opts);
+    if (!sets.length) {
+      return { name: name, empty: true, e1rm: null, note: 'Not enough valid sets', kind: 'derived' };
+    }
+    const e1s = sets.map(function (s) { return s.e1rm; }).filter(function (n) { return n != null; });
+    const current = e1s.length ? e1s[e1s.length - 1] : null;
+    const best = e1s.length ? Math.max.apply(null, e1s) : null;
+    const prevBest = e1s.length > 1 ? Math.max.apply(null, e1s.slice(0, -1)) : null;
+    const trend = (current != null && prevBest != null) ? pctDelta(current, prevBest) : null;
+    const today = sets.filter(function (s) {
+      const last = sets[sets.length - 1];
+      return last && s.week === last.week && s.day === last.day;
+    });
+    return {
+      name: name,
+      empty: false,
+      sets: sets.length,
+      volume: Math.round(sets.reduce(function (a, s) { return a + s.volume; }, 0)),
+      avgLoad: mean(sets.map(function (s) { return s.loadRaw; })),
+      avgRpe: mean(sets.map(function (s) { return s.rpe; })),
+      avgRir: mean(sets.map(function (s) { return s.rir; })),
+      e1rm: current,
+      e1rmBest: best,
+      e5rm: estimatedNrm(current, 5),
+      e8rm: estimatedNrm(current, 8),
+      e10rm: estimatedNrm(current, 10),
+      trend: trend,
+      prStatus: (current != null && prevBest != null && current > prevBest) ? 'new_estimated_pr' : null,
+      intensityDist: intensityDistribution(sets),
+      fatigue: intraSessionFatigue(today),
+      kind: 'derived',
+      formulaVersion: FORMULA_VERSION
+    };
+  }
+
+  function liveAfterSet(store, data, loc) {
+    loc = loc || {};
+    const week = Number(loc.week) || 1;
+    const day = Number(loc.day) || 0;
+    const exIdx = Number(loc.exIdx) || 0;
+    const setN = Number(loc.set) || 1;
+    const all = normalizeSets(store, data, {});
+    const name = resolveExerciseName(data, store, week, day, exIdx);
+    const today = all.filter(function (s) { return s.week === week && s.day === day && s.exIdx === exIdx; });
+    const current = today.find(function (s) { return s.set === setN; }) || today[today.length - 1];
+    if (!current) {
+      return { empty: true, note: 'Not enough valid sets', kind: 'derived', formulaVersion: FORMULA_VERSION };
+    }
+    const hist = all.filter(function (s) {
+      return s.name === name && (s.week < week || (s.week === week && (s.day < day || (s.day === day && s.set < setN))));
+    });
+    const prevBest = hist.reduce(function (m, s) { return (s.e1rm != null && (m == null || s.e1rm > m)) ? s.e1rm : m; }, null);
+    const vsBest = (current.e1rm != null && prevBest != null) ? pctDelta(current.e1rm, prevBest) : null;
+    const lastSession = hist.filter(function (s) {
+      const last = hist[hist.length - 1];
+      return last && s.week === last.week && s.day === last.day;
+    });
+    const lastVol = lastSession.reduce(function (a, s) { return a + s.volume; }, 0);
+    const todayVol = today.reduce(function (a, s) { return a + s.volume; }, 0);
+    return {
+      empty: false,
+      name: name,
+      week: week,
+      day: day,
+      exIdx: exIdx,
+      set: setN,
+      load: current.loadRaw,
+      reps: current.reps,
+      rpe: current.rpe,
+      rir: current.rir,
+      e1rm: current.e1rm,
+      relativeIntensity: relativeIntensity(current.loadRaw, current.e1rm),
+      volumeSet: current.volume,
+      volumeToday: Math.round(todayVol),
+      vsPreviousBest: vsBest,
+      vsLastSessionVolume: lastVol > 0 ? pctDelta(todayVol, lastVol) : null,
+      fatigue: intraSessionFatigue(today),
+      kind: 'derived',
+      formulaVersion: FORMULA_VERSION
+    };
+  }
+
+  function exerciseReport(store, data, loc) {
+    const live = liveAfterSet(store, data, loc);
+    if (live.empty) return live;
+    const all = normalizeSets(store, data, { exercise: live.name });
+    const today = all.filter(function (s) { return s.week === loc.week && s.day === loc.day && s.exIdx === loc.exIdx; });
+    const prevDays = all.filter(function (s) { return !(s.week === loc.week && s.day === loc.day); });
+    const lastDayKey = prevDays.length ? (prevDays[prevDays.length - 1].week + '_' + prevDays[prevDays.length - 1].day) : null;
+    const last = lastDayKey ? prevDays.filter(function (s) { return (s.week + '_' + s.day) === lastDayKey; }) : [];
+    const todayE1 = today.reduce(function (m, s) { return (s.e1rm != null && (m == null || s.e1rm > m)) ? s.e1rm : m; }, null);
+    const lastE1 = last.reduce(function (m, s) { return (s.e1rm != null && (m == null || s.e1rm > m)) ? s.e1rm : m; }, null);
+    const todayVol = today.reduce(function (a, s) { return a + s.volume; }, 0);
+    const lastVol = last.reduce(function (a, s) { return a + s.volume; }, 0);
+    const bestSet = today.slice().sort(function (a, b) { return (b.e1rm || 0) - (a.e1rm || 0); })[0];
+    let status = null;
+    if (todayE1 != null && lastE1 != null) {
+      if (todayE1 > lastE1) status = 'Performance improved';
+      else if (todayE1 < lastE1) status = 'Performance declined';
+      else status = 'Performance stable';
+    }
+    return Object.assign({}, live, {
+      report: true,
+      volumeToday: Math.round(todayVol),
+      bestSet: bestSet ? (bestSet.loadRaw + ' × ' + bestSet.reps) : null,
+      e1rmToday: todayE1,
+      e1rmPrev: lastE1,
+      e1rmChange: (todayE1 != null && lastE1 != null) ? pctDelta(todayE1, lastE1) : null,
+      volumeChange: lastVol > 0 ? pctDelta(todayVol, lastVol) : null,
+      avgRpe: mean(today.map(function (s) { return s.rpe; })),
+      status: status,
+      kind: 'derived'
+    });
+  }
+
+  function recommendNext(store, data, loc) {
+    const report = exerciseReport(store, data, loc);
+    const base = {
+      action: 'insufficient',
+      suggestedLoad: null,
+      deltaKg: null,
+      why: 'Servono più esposizioni con carico e reps validi.',
+      evidence: [],
+      confidence: 'LOW',
+      kind: 'heuristic',
+      formulaVersion: 'reco-v1',
+      evidenceLevel: 'HEURISTIC',
+      name: (report && report.name) || ''
+    };
+    if (report.empty || report.e1rmToday == null) return base;
+    const lastLoad = report.load;
+    const e1up = report.e1rmChange != null && report.e1rmChange > 1.5;
+    const e1down = report.e1rmChange != null && report.e1rmChange < -1.5;
+    const rpeHigh = report.avgRpe != null && report.avgRpe >= 9;
+    const rpeOk = report.avgRpe == null || report.avgRpe <= 8.5;
+    const fat = report.fatigue || {};
+    const evidence = [];
+    if (report.e1rmChange != null) evidence.push('e1RM ' + (report.e1rmChange >= 0 ? '+' : '') + report.e1rmChange + '% vs seduta precedente');
+    if (report.avgRpe != null) evidence.push('RPE medio ' + report.avgRpe);
+    if (fat.signal) evidence.push('Intra-session fatigue: ' + fat.signal);
+    let action = 'maintain';
+    let delta = 0;
+    let why = 'Prestazione stabile: mantieni il carico.';
+    let conf = report.e1rmPrev == null ? 'LOW' : 'MEDIUM';
+    if (e1up && rpeOk && fat.signal !== 'high') {
+      action = 'increase';
+      delta = lastLoad < 20 ? 1 : 2.5;
+      why = 'e1RM in aumento e RPE nella fascia obiettivo. Suggerimento, non modifica automatica.';
+      conf = 'MEDIUM';
+    } else if (e1down && (rpeHigh || fat.signal === 'high' || fat.signal === 'moderate')) {
+      action = 'reduce_volume';
+      delta = 0;
+      why = 'Prestazione in calo con fatica/RPE alti. Valuta di togliere 1 serie di lavoro. Non è una diagnosi.';
+      conf = 'MEDIUM';
+    }
+    return {
+      action: action,
+      suggestedLoad: lastLoad != null ? round1(lastLoad + delta) : null,
+      deltaKg: delta,
+      why: why,
+      evidence: evidence,
+      confidence: conf,
+      kind: 'heuristic',
+      formulaVersion: 'reco-v1',
+      evidenceLevel: 'HEURISTIC',
+      name: report.name,
+      week: loc.week,
+      day: loc.day,
+      exIdx: loc.exIdx
+    };
+  }
+
+  function preWorkout(store, data, loc, matchMuscle) {
+    const sets = normalizeSets(store, data, { matchMuscle: matchMuscle });
+    const week = Number(loc && loc.week) || 1;
+    const day = Number(loc && loc.day) || 0;
+    const lastLog = ((store && store.logs) || []).filter(function (l) {
+      return l && !(Number(l.week) === week && Number(l.day) === day);
+    }).pop();
+    const recent = sets.filter(function (s) { return s.week === week || s.week === week - 1; });
+    const fat = fatigueFromWeeks(trainingBuckets(sets, Math.max(week, 4)));
+    return {
+      lastSession: lastLog ? { week: lastLog.week, day: lastLog.day, at: lastLog.at, tonnage: lastLog.tonnage } : null,
+      recentSets: recent.length,
+      recentVolume: Math.round(recent.reduce(function (a, s) { return a + s.volume; }, 0)),
+      recovery: recoveryFromStore(store, trainingBuckets(sets, Math.max(week, 4))),
+      fatigue: fat,
+      kind: 'estimated',
+      formulaVersion: FORMULA_VERSION,
+      note: 'Contesto pre-seduta. Non modifica la scheda.'
+    };
+  }
+
+  function sessionSummary(store, data, loc) {
+    const week = Number(loc && loc.week) || 1;
+    const day = Number(loc && loc.day) || 0;
+    const today = normalizeSets(store, data, {}).filter(function (s) { return s.week === week && s.day === day; });
+    const prev = normalizeSets(store, data, {}).filter(function (s) { return s.week < week || (s.week === week && s.day < day); });
+    const lastKey = prev.length ? (prev[prev.length - 1].week + '_' + prev[prev.length - 1].day) : null;
+    const last = lastKey ? prev.filter(function (s) { return (s.week + '_' + s.day) === lastKey; }) : [];
+    const vol = today.reduce(function (a, s) { return a + s.volume; }, 0);
+    const lastVol = last.reduce(function (a, s) { return a + s.volume; }, 0);
+    return {
+      volume: Math.round(vol),
+      sets: today.length,
+      avgRpe: mean(today.map(function (s) { return s.rpe; })),
+      volumeChange: lastVol > 0 ? pctDelta(vol, lastVol) : null,
+      fatigue: intraSessionFatigue(today),
+      kind: 'derived',
+      formulaVersion: FORMULA_VERSION
+    };
+  }
+
+  function rawFingerprint(store) {
+    return JSON.stringify({
+      data: (store && store.data) || {},
+      logs: (store && store.logs) || [],
+      bw: (store && store.bw) || {},
+      customSets: (store && store.customSets) || {}
+    });
+  }
+
+  function explainMetric(id) {
+    return METRIC_CATALOG[id] || null;
   }
 
   return {
     EPLEY_MAX_REPS: EPLEY_MAX_REPS,
     DEFAULT_LANDMARKS: DEFAULT_LANDMARKS,
+    FORMULA_VERSION: FORMULA_VERSION,
+    METRIC_CATALOG: METRIC_CATALOG,
     intensityFromRirRpe: intensityFromRirRpe,
     epley1rm: epley1rm,
+    estimatedNrm: estimatedNrm,
     relativeIntensity: relativeIntensity,
     movingAverage: movingAverage,
     isoWeekKey: isoWeekKey,
@@ -631,6 +983,16 @@
     comparePeriods: comparePeriods,
     applyZoom: applyZoom,
     landmarksFor: landmarksFor,
+    intensityDistribution: intensityDistribution,
+    intraSessionFatigue: intraSessionFatigue,
+    analyzeExercise: analyzeExercise,
+    liveAfterSet: liveAfterSet,
+    exerciseReport: exerciseReport,
+    recommendNext: recommendNext,
+    preWorkout: preWorkout,
+    sessionSummary: sessionSummary,
+    explainMetric: explainMetric,
+    rawFingerprint: rawFingerprint,
     build: build,
     clearCache: function () { _cache = { key: '', at: 0, value: null }; }
   };
