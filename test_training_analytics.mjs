@@ -743,9 +743,41 @@ assert.ok(!/shareOrSavePdfBlob[\s\S]{0,800}location\.href/.test(html), "PDF shar
 assert.ok(html.includes("store.intelligence"), "recommendations live outside raw workout rows");
 assert.ok(!/function setStatsAdvancedMode[\s\S]{0,220}render\(\);/.test(html), "advanced mode does not full-render");
 
+function primaryMuscle(name) {
+  return ((TAE.muscleContributionForExercise(name, {}) || {}).primary || [])[0] || null;
+}
+[
+  ["Panca piana", "PETTO"],
+  ["Squat con bilanciere", "GAMBE"],
+  ["Rematore con bilanciere", "DORSO"],
+  ["Curl manubri", "BRACCIA"],
+  ["Alzate laterali", "SPALLE"],
+  ["Crunch", "ADDOME"],
+  ["Hip thrust", "GAMBE"],
+  ["Trazioni alla sbarra", "DORSO"],
+  ["Stacco da terra", "GAMBE"],
+  ["French press", "BRACCIA"],
+  ["Military press", "SPALLE"],
+  ["Leg press 45", "GAMBE"]
+].forEach(function (row) {
+  assert.equal(primaryMuscle(row[0]), row[1], row[0] + " → " + row[1]);
+});
+const latRaise = TAE.muscleContributionForExercise("Alzate laterali", {});
+assert.ok((latRaise.primary || []).indexOf("GAMBE") < 0, "lateral raise is not classified as legs");
+assert.equal(TAE.normalizeMuscleId("SCHIENA"), "DORSO");
+assert.equal(TAE.normalizeMuscleId("QUADRICIPITI"), "GAMBE");
+assert.equal(TAE.normalizeMuscleId("GLUTEI"), "GAMBE");
+assert.equal(TAE.normalizeMuscleId("BICIPITI"), "BRACCIA");
+assert.deepEqual(TAE.MACRO_MUSCLE_IDS.slice().sort(), ["ADDOME", "BRACCIA", "DORSO", "GAMBE", "PETTO", "SPALLE"]);
+const rollIds = (backAll.byMuscle || []).map(function (m) { return m.id; });
+rollIds.forEach(function (id) {
+  assert.ok(TAE.MACRO_MUSCLE_IDS.indexOf(id) >= 0, "byMuscle key is a macro: " + id);
+});
+assert.ok(html.includes("id: 'DORSO'") && html.includes("label: 'Dorso'") && !html.includes("label: 'Schiena / Dorsali'"), "UI uses the six macro groups");
+
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
 assert.ok(sw.includes("training-analytics-engine.js"), "SW precaches the analytics engine");
-assert.ok(sw.includes("analytics11"), "SW cache bumped after snapshot consistency lock");
+assert.ok(sw.includes("analytics12"), "SW cache bumped after six-group muscle taxonomy");
 assert.ok(fs.existsSync(path.join(root, "TRAINING_ANALYTICS_METHODOLOGY.md")), "methodology doc exists");
 
 console.log("OK   training analytics engine formulas + zoom axis + intelligence");

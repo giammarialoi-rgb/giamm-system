@@ -236,7 +236,7 @@ assert(sw.includes("setAppBadge"), "SW badging API");
 assert(ui.includes("intakeEnhancedHtml") && ui.includes("athleteStatus") && ui.includes("toggleIntakeEnhancedFields") && ui.includes("recentLabs"), "intake natural/enhanced + labs");
 assert(practice.includes("athleteStatus") && practice.includes("onDrugs") && practice.includes("recentLabs") && practice.includes("noRecentLabs"), "server sanitizes enhanced intake");
 assert(base.includes("addExerciseToLibrary") && base.includes("replace-save-library") && base.includes("bonus-save-library"), "manual exercise library checkbox");
-assert(base.includes("id: 'BRACCIA'") && base.includes("id: 'GAMBE'") && base.includes("FINE_MUSCLE_GROUPS") && base.includes("normalizeMacroMuscleGroup"), "macro BRACCIA/GAMBE + fine groups");
+assert(base.includes("id: 'BRACCIA'") && base.includes("id: 'GAMBE'") && base.includes("id: 'DORSO'") && base.includes("FINE_MUSCLE_GROUPS") && base.includes("normalizeMacroMuscleGroup"), "six macro groups PETTO/GAMBE/ADDOME/BRACCIA/SPALLE/DORSO");
 assert(base.includes("workoutSessionTimerHtml") && base.includes("pauseWorkoutSessionTimer") && base.includes("sessionElapsedMs"), "session timer pause/stop");
 assert(ui.includes("ensureOfflineSyncListeners") && ui.includes("flushAllOfflineQueues") && ui.includes("account-sync") && base.includes("queueAccountSyncIfOffline"), "web offline queue + reconnect flush");
 assert(base.includes("onProfilePhotoSelected") && base.includes("compressProfilePhoto") && base.includes("photoThumb"), "profile photo upload");

@@ -37,7 +37,7 @@ assert.ok(apiPractice.includes("/c/:token/manifest.webmanifest") && apiPractice.
 assert.ok(apiPractice.includes("function injectClientPwaHtml") && apiPractice.includes("__NURVAN_CLIENT_BOOT"), "server injects per-token manifest into /c/:token HTML");
 assert.ok(apiPractice.includes('res.redirect(302, "/c/"') || apiPractice.includes("res.redirect(302, \"/c/\""), "GET / with client cookies redirects to /c/token");
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
-assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("analytics11"), "SW does not precache the root manifest");
+assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("analytics12"), "SW does not precache the root manifest");
 assert.ok(sw.includes("isClientDoc") && sw.includes(".webmanifest"), "SW keeps /c/* and manifests on the network");
 assert.ok(sw.includes("training-knowledge.js"), "SW precaches the training encyclopedia");
 
