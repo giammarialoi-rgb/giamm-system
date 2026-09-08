@@ -1,9 +1,8 @@
 /* Nurvan shell SW — cache UI only, never the 10k catalog. */
 importScripts('./release-meta.js');
-const CACHE = 'nurvan-shell-v' + String((self.NURVAN_RELEASE && self.NURVAN_RELEASE.androidVersionCode) || 'dev') + '-coach-prefill4';
+const CACHE = 'nurvan-shell-v' + String((self.NURVAN_RELEASE && self.NURVAN_RELEASE.androidVersionCode) || 'dev') + '-analytics4';
 const PRECACHE = [
   './release-meta.js',
-  './manifest.webmanifest',
   './apple-touch-icon.png',
   './icon-192.png',
   './icon-512.png',
@@ -12,7 +11,10 @@ const PRECACHE = [
   './muscle-male-front.png',
   './muscle-male-back.png',
   './muscle-female-front.png',
-  './muscle-female-back.png'
+  './muscle-female-back.png',
+  './exercise-catalog-extra.js',
+  './training-knowledge.js',
+  './training-analytics-engine.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -37,7 +39,12 @@ self.addEventListener('fetch', (event) => {
   if (/program-catalog|xlsx\.full/i.test(url.pathname)) return;
   const isAsset = /\.(png|jpe?g|gif|webp|svg|ico|woff2?|css|js|json|webmanifest)$/i.test(url.pathname);
 
-  const isHtml = req.mode === 'navigate' || url.pathname === '/' || /index\.html$/i.test(url.pathname);
+  if (/\.webmanifest$/i.test(url.pathname)) {
+    event.respondWith(fetch(req, { cache: 'no-store' }).catch(() => caches.match(req)));
+    return;
+  }
+  const isClientDoc = /^\/c\/[^/]+\/?$/.test(url.pathname);
+  const isHtml = req.mode === 'navigate' || url.pathname === '/' || /index\.html$/i.test(url.pathname) || isClientDoc;
   if (isHtml) {
     event.respondWith(fetch(req, { cache: 'no-store' }).catch(() => caches.match(req)));
     return;
