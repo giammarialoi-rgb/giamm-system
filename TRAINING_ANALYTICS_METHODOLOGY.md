@@ -17,6 +17,16 @@ Livelli di evidenza: MEASURED | DERIVED | EVIDENCE_SUPPORTED | MODEL_BASED | HEU
 
 ---
 
+## Export Check Fisico — niente riavvio SPA
+
+**Causa:** su iOS, WebKit e PWA standalone l’attributo `download` di un `<a href="blob:…">` viene ignorato. Un `a.click()` **naviga il documento corrente verso il PDF**. Chiudendo il file, la WebView/PWA ricarica l’HTML: route, profilo e tab si perdono.
+
+**Fix:** `shareOrSavePdfBlob` non naviga più la scheda. Ordine: NativeConfig share/download → Web Share API → overlay in-app (`#nurvan-pdf-overlay` + iframe). Snapshot `sessionStorage.NURVAN_SURFACE` (`reason: 'pdf'`) solo per un eventuale reload vero; si cancella dopo il restore o alla chiusura overlay.
+
+**Limite OS:** se il sistema distrugge la WebView (memory, iOS che uccide la PWA in background), lo stato non può essere garantito oltre lo snapshot di view/settimana/giorno. Non è un reload innescato dal blob.
+
+---
+
 ## Serie, ripetizioni, carico medio, frequenza, sedute
 
 **Tipo:** DERIVED.  

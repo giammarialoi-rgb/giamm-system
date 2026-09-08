@@ -152,11 +152,16 @@ const expl = TAE.explainMetric("e1rm");
 assert.equal(expl.evidenceLevel, "DERIVED");
 assert.ok(String(expl.limitIt).includes("1RM testato"));
 assert.ok(expl.nameIt && expl.whatIt && expl.howIt && expl.limitIt);
-["volume", "bw", "sets", "reps", "load", "frequency", "sessions", "e1rm", "intensity", "landmarks", "recovery", "atlCtl", "hardSets", "effectiveVolume", "adaptation", "fatigue", "performance", "volumeResponse", "muscleContribution", "trainingLoad"].forEach(function (id) {
+["volume", "bw", "sets", "reps", "load", "frequency", "sessions", "e1rm", "intensity", "landmarks", "recovery", "atlCtl", "hardSets", "effectiveVolume", "adaptation", "fatigue", "performance", "volumeResponse", "muscleContribution", "trainingLoad", "rpe", "rir", "mev", "mav", "mrv", "readiness", "confidence", "performanceVsPrevious", "volumeVsPrevious", "atl", "ctl", "tsb", "recommendation"].forEach(function (id) {
   const row = TAE.explainMetric(id);
   assert.ok(row, "catalog has " + id);
-  assert.ok(row.nameIt && row.whatIt && row.howIt && row.limitIt && row.evidenceLevel && row.formulaVersion, "catalog fields for " + id);
+  assert.ok(row.nameIt && row.shortNameIt && row.whatIt && row.howIt && row.limitIt && row.unit && row.evidenceLevel && row.formulaVersion, "catalog fields for " + id);
+  assert.ok(row.technicalName, "technical label for " + id);
 });
+assert.equal(TAE.humanState("fatigue", "high"), "Fatica elevata");
+assert.equal(TAE.humanState("recovery", "GOOD"), "Recupero buono");
+assert.equal(TAE.humanState("performance", "POSITIVE"), "Prestazione in miglioramento");
+assert.ok(String(TAE.explainMetric("mrv").whatIt).toLowerCase().includes("serie"));
 
 function week2days(name) {
   return { sessions: [{ exercises: [{ name: name }] }, { exercises: [{ name: name }] }] };
@@ -297,7 +302,13 @@ assert.ok(html.includes("training-analytics-engine.js"), "stats page loads the e
 assert.ok(html.includes("INTENSITÀ MEDIA") && !html.includes("id=\"stats-kpi-mode\""), "carico per parte KPI is gone");
 assert.ok(html.includes("stats-zoom-slider") && html.includes("setStatsAxis"), "slider + training/date axis");
 assert.ok(html.includes("Training Market") && html.includes("setStatsAdvancedMode"), "one main chart + advanced exercise/muscle");
+assert.ok(html.includes("function compactChartX") && html.includes("function formatMrvWeekCell"), "market ticks + human MRV cells");
+assert.ok(html.includes("SERIE vs LIMITE") && html.includes("Attuale: ") && html.includes("Limite superiore stimato"), "MRV cell is human-readable");
+assert.ok(!html.includes("row.sets + ' / '"), "no ambiguous sets/MRV slash");
 assert.ok(html.includes("function showLiveSetIntel") && html.includes("acceptIntelRecommendation"), "live post-set and Accept/Keep recommendations");
+assert.ok(html.includes("clientMayApplyIntel") && html.includes("CHIEDI AL COACH"), "client cannot apply intel; asks the coach");
+assert.ok(html.includes("openPdfStayInApp") && html.includes("blobDownloadWouldNavigate") && html.includes("nurvan-pdf-overlay"), "check PDF stays in-app on iOS/PWA");
+assert.ok(!/shareOrSavePdfBlob[\s\S]{0,800}location\.href/.test(html), "PDF share does not navigate location.href");
 assert.ok(html.includes("store.intelligence"), "recommendations live outside raw workout rows");
 assert.ok(!/function setStatsAdvancedMode[\s\S]{0,220}render\(\);/.test(html), "advanced mode does not full-render");
 

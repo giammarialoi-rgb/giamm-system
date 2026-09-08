@@ -1125,10 +1125,14 @@
 
   const FORMULA_VERSION = 'intel-v1';
   function catalogRow(id, cat, nameIt, whatIt, whyIt, howIt, limitIt, evidenceLevel, formulaVersion, formula, unit, extra) {
+    extra = extra || {};
     return Object.assign({
       id: id,
       category: cat,
       nameIt: nameIt,
+      shortNameIt: extra.shortNameIt || nameIt,
+      technicalName: extra.technicalName || '',
+      humanName: nameIt,
       whatIt: whatIt,
       whyIt: whyIt,
       howIt: howIt,
@@ -1139,8 +1143,8 @@
       unit: unit || '',
       evidenceLevel: evidenceLevel,
       formulaVersion: formulaVersion,
-      confidence: extra && extra.confidence || 'medium'
-    }, extra || {});
+      confidence: extra.confidence || 'medium'
+    }, extra);
   }
 
   const METRIC_CATALOG = {
@@ -1287,8 +1291,97 @@
       'Aiuta a leggere se lo stesso volume è “caro” o “economico” in termini di fatica.',
       'Usa volume, peso del muscolo e intensità 0–10 se presente.',
       'Non misura il sistema nervoso. Non è una percentuale fisiologica.',
-      'HEURISTIC', 'fatcost-v1', 'volume × contrib × intensity/10', 'segnale', { confidence: 'low' })
+      'HEURISTIC', 'fatcost-v1', 'volume × contrib × intensity/10', 'segnale', { confidence: 'low' }),
+    rpe: catalogRow('rpe', 'intensity', 'Sforzo percepito',
+      'Quanto è stata impegnativa la serie, su una scala da 1 a 10. RPE 9 significa che la serie è stata molto impegnativa e restava circa 1 ripetizione in riserva.',
+      'Serve a leggere lo sforzo reale, non solo i kg sul bilanciere.',
+      'Usa il valore RPE che hai scritto. Se usi la scala RIR, lo sforzo equivale a 10 − RIR.',
+      'È una percezione. Due persone possono dare numeri diversi allo stesso set.',
+      'DERIVED', 'rir-rpe-v1', 'RPE registrato, oppure 10−RIR', '/10', { shortNameIt: 'RPE', technicalName: 'RPE — Rate of Perceived Exertion' }),
+    rir: catalogRow('rir', 'intensity', 'Ripetizioni in riserva',
+      'Quante ripetizioni avresti probabilmente potuto completare ancora mantenendo una tecnica accettabile.',
+      'Indica il margine dal cedimento, utile per capire se il lavoro era facile o duro.',
+      'Usa il RIR registrato. Se la scala è RPE, RIR ≈ 10 − RPE.',
+      'È una stima percepita, non un conteggio fisiologico.',
+      'DERIVED', 'rir-rpe-v1', 'RIR registrato, oppure 10−RPE', 'rip', { shortNameIt: 'RIR', technicalName: 'RIR — Reps in Reserve' }),
+    mev: catalogRow('mev', 'landmarks', 'Volume minimo efficace stimato',
+      'È una stima del volume dal quale iniziamo a osservare una risposta positiva. Non rappresenta un numero universale valido per tutti.',
+      'Serve come riferimento basso, non come obbligo di allenarti a quel numero.',
+      'Valore configurabile o default del modello di landmark.',
+      'Stima individuale. Una settimana sotto MEV non prova che non ci sia adattamento.',
+      'MODEL_BASED', 'landmarks-v1', 'prefs.volumeLandmarks.MEV', 'serie', { shortNameIt: 'MEV', technicalName: 'MEV — Minimum Effective Volume', confidence: 'low' }),
+    mav: catalogRow('mav', 'landmarks', 'Zona di volume più produttiva stimata',
+      'È la fascia di volume nella quale i dati disponibili suggeriscono un buon rapporto tra stimolo e costo di fatica. È una stima individuale e può cambiare nel tempo.',
+      'Aiuta a leggere se sei nella zona in cui il lavoro tende a pagare di più.',
+      'Intervallo MAV_LOW–MAV_HIGH da preferenze o default.',
+      'Non è una zona magica. Prestazione e recupero pesano di più di questo numero.',
+      'MODEL_BASED', 'landmarks-v1', 'prefs.volumeLandmarks.MAV', 'serie', { shortNameIt: 'MAV', technicalName: 'MAV — Maximum Adaptive Volume', confidence: 'low' }),
+    mrv: catalogRow('mrv', 'landmarks', 'Limite superiore di volume stimato',
+      'È una stima del livello di volume oltre il quale il costo di fatica e recupero può iniziare a compromettere la capacità di continuare a progredire. Non è un limite fisiologico universale. Nella tabella, il valore attuale è le serie della settimana (filtro muscolare); il riferimento è questo MRV, non un massimale.',
+      'È un riferimento, non un ordine automatico di ridurre le serie.',
+      'Valore MRV da preferenze o default. 87 serie su tutto il corpo non si confronta con un MRV da singolo gruppo.',
+      'Volume sopra MRV con prestazione in aumento e recupero stabile → continua a monitorare, non ridurre in automatico.',
+      'MODEL_BASED', 'landmarks-v1', 'prefs.volumeLandmarks.MRV', 'serie', { shortNameIt: 'MRV', technicalName: 'MRV — Maximum Recoverable Volume', confidence: 'low' }),
+    readiness: catalogRow('readiness', 'recovery', 'Prontezza stimata',
+      'Lettura combinata di recupero e fatica recente. Non è una misura fisiologica diretta.',
+      'Serve a capire se i dati recenti suggeriscono di procedere come al solito o di monitorare.',
+      'Deriva dai segnali di recupero e fatica del motore.',
+      'Non è HRV né un test di laboratorio.',
+      'HEURISTIC', 'acwr-adapt-v1', 'recovery + fatigue labels', 'segnale', { shortNameIt: 'Readiness', technicalName: 'Readiness', confidence: 'low' }),
+    confidence: catalogRow('confidence', 'recommendations', 'Confidenza della stima',
+      'Quanto i dati disponibili sono sufficienti per fidarsi del segnale. Bassa confidenza non significa che il dato sia sbagliato: significa che manca storia.',
+      'Evita di prendere decisioni nette su poche osservazioni.',
+      'Sale con più settimane e più esposizioni dello stesso esercizio.',
+      'Non è un p-value statistico.',
+      'HEURISTIC', 'intel-v1', 'filled weeks / exposures', 'livello', { shortNameIt: 'Confidenza', technicalName: 'Confidence' }),
+    performanceVsPrevious: catalogRow('performanceVsPrevious', 'strength', 'Prestazione vs precedente',
+      'Quanto la prestazione di oggi (soprattutto e1RM dello stesso esercizio) differisce dalla precedente esposizione comparabile. Il confronto considera carico, ripetizioni e, quando disponibili, RPE/RIR.',
+      'Dice se stai andando meglio, uguale o peggio sullo stesso movimento.',
+      'Delta percentuale di e1RM (e, se manca, stabilità di carico/rep).',
+      'Vale solo a parità di esercizio. Non confronta panca e squat.',
+      'ESTIMATED', 'perf-v1', 'Δ e1RM vs previous exposure', '%', { shortNameIt: 'vs prec.', technicalName: 'Performance vs previous' }),
+    volumeVsPrevious: catalogRow('volumeVsPrevious', 'volume', 'Volume vs precedente',
+      'Variazione percentuale del volume rispetto alla settimana o seduta precedente.',
+      'Mostra se hai fatto più o meno lavoro, non se è stato meglio.',
+      'Delta di tonnellaggio sul confronto periodo.',
+      'Un + non è automaticamente un miglioramento.',
+      'DERIVED', 'tonnage-v1', 'Δ volume', '%', { shortNameIt: 'Δ volume', technicalName: 'Volume vs previous' }),
+    atl: catalogRow('atl', 'workload', 'Carico recente stimato',
+      'Volume dell’ultima settimana, usato come carico acuto. Modello adattato dall’endurance.',
+      'Dice se il carico recente è alto rispetto a quello abituale.',
+      'ATL = tonnellaggio dell’ultima settimana visibile.',
+      'Non è una misura fisiologica diretta.',
+      'MODEL_BASED', 'atl-adapt-v1', 'ATL = last week volume', 'kg', { shortNameIt: 'ATL', technicalName: 'ATL — Acute Training Load', confidence: 'low' }),
+    ctl: catalogRow('ctl', 'workload', 'Carico abituale stimato',
+      'Media del volume fino a quattro settimane, usata come carico cronico.',
+      'È il riferimento rispetto a cui leggere il carico recente.',
+      'CTL = media del tonnellaggio delle ultime settimane disponibili (fino a 4).',
+      'Modello adattato. Poche settimane = stima poco stabile.',
+      'MODEL_BASED', 'atl-adapt-v1', 'CTL = mean last ≤4 weeks', 'kg', { shortNameIt: 'CTL', technicalName: 'CTL — Chronic Training Load', confidence: 'low' }),
+    tsb: catalogRow('tsb', 'workload', 'Bilancio del carico stimato',
+      'Differenza tra carico abituale e carico recente (CTL − ATL). Positivo = recente più leggero; negativo = recente più pesante.',
+      'Aiuta a vedere se stai accumulando o scaricando, non a diagnosticare overtraining.',
+      'TSB = CTL − ATL.',
+      'Modello adattato dall’endurance. Solo tendenza.',
+      'MODEL_BASED', 'atl-adapt-v1', 'TSB = CTL − ATL', 'kg', { shortNameIt: 'TSB', technicalName: 'TSB — Training Stress Balance', confidence: 'low' })
   };
+  (function attachCatalogLabels() {
+    const tech = {
+      volume: 'Volume / Tonnage', bw: 'BW', sets: 'Sets', reps: 'Reps', load: 'Load',
+      frequency: 'Frequency', sessions: 'Sessions', e1rm: 'e1RM — Estimated 1RM',
+      intensity: 'Intensity', intensity10: 'Intensity /10', landmarks: 'MV / MEV / MAV / MRV',
+      recovery: 'Recovery', atlCtl: 'ATL / CTL / TSB', trainingLoad: 'Training Load',
+      hardSets: 'Hard Sets', effectiveVolume: 'Effective Volume', adaptation: 'Adaptation',
+      fatigue: 'Fatigue', performance: 'Performance', volumeResponse: 'Volume Response',
+      muscleContribution: 'Muscle Contribution', recommendation: 'Recommendation',
+      effectiveDose: 'Effective Training Dose', fatigueCost: 'Fatigue Cost'
+    };
+    Object.keys(METRIC_CATALOG).forEach(function (id) {
+      const row = METRIC_CATALOG[id];
+      if (!row.technicalName) row.technicalName = tech[id] || id;
+      if (!row.shortNameIt) row.shortNameIt = row.nameIt;
+    });
+  })();
 
   function estimatedNrm(e1, n) {
     const e = num(e1);
@@ -1685,6 +1778,43 @@
     return map[key] || (key == null ? '—' : String(key).replace(/_/g, ' '));
   }
 
+  function humanState(domain, key) {
+    if (key == null || key === '') return 'Dati insufficienti';
+    const d = String(domain || '');
+    const k = String(key);
+    if (d === 'fatigue' || d === 'fatigueSignal') {
+      if (k === 'low' || k === 'LOW') return 'Fatica bassa';
+      if (k === 'moderate' || k === 'MODERATE' || k === 'MEDIUM') return 'Fatica moderata';
+      if (k === 'high' || k === 'HIGH' || k === 'ELEVATED') return 'Fatica elevata';
+      if (k === 'stable') return 'Fatica stabile';
+    }
+    if (d === 'recovery') {
+      if (k === 'GOOD' || k === 'good' || k === 'balanced_load' || k === 'low_recent_load') return 'Recupero buono';
+      if (k === 'MODERATE' || k === 'MEDIUM' || k === 'LOW' || k === 'low' || k === 'high_recent_load') return 'Recupero da monitorare';
+      if (k === 'INSUFFICIENT_DATA' || k === 'insufficient_data') return 'Dati insufficienti';
+    }
+    if (d === 'performance') {
+      if (k === 'POSITIVE' || k === 'Prestazione in miglioramento') return 'Prestazione in miglioramento';
+      if (k === 'NEGATIVE' || k === 'Prestazione in calo') return 'Prestazione in calo';
+      if (k === 'NEUTRAL' || k === 'Prestazione stabile') return 'Prestazione stabile';
+      if (k === 'MIXED') return 'Prestazione mista';
+      if (k === 'INSUFFICIENT_DATA') return 'Dati insufficienti';
+    }
+    if (d === 'adaptation' || d === 'volumeResponse') {
+      if (k === 'POSITIVE' || k === 'positive_response') return 'Risposta positiva';
+      if (k === 'NEGATIVE' || k === 'negative_response') return 'Risposta negativa';
+      if (k === 'NEUTRAL' || k === 'neutral_response') return 'Risposta neutra';
+      if (k === 'MIXED') return 'Risposta mista';
+      if (k === 'INSUFFICIENT_DATA' || k === 'insufficient_data') return 'Dati insufficienti';
+    }
+    if (d === 'confidence') {
+      if (k === 'LOW' || k === 'low') return 'Confidenza: bassa';
+      if (k === 'MEDIUM' || k === 'medium' || k === 'MODERATE') return 'Confidenza: media';
+      if (k === 'HIGH' || k === 'high') return 'Confidenza: alta';
+    }
+    return labelIt(k);
+  }
+
   return {
     EPLEY_MAX_REPS: EPLEY_MAX_REPS,
     DEFAULT_LANDMARKS: DEFAULT_LANDMARKS,
@@ -1716,6 +1846,7 @@
     buildByMuscle: buildByMuscle,
     listProgramExercises: listProgramExercises,
     labelIt: labelIt,
+    humanState: humanState,
     build: build,
     clearCache: function () { _cache = { key: '', at: 0, value: null }; }
   };
