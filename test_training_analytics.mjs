@@ -196,10 +196,33 @@ const oneDayData = {
   weeks: [
     { sessions: [{ exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }] },
     { sessions: [{ exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }] },
-    { sessions: [{ exercises: [{ name: "Squat" }] }] }
+    { sessions: [{ exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }] }
   ]
 };
-assert.equal(TAE.isWeekComplete(oneDayW3, oneDayData, 3), false, "W3 with only day 1 is incomplete if other weeks have 4 days");
+assert.equal(TAE.isWeekComplete(oneDayW3, oneDayData, 3), false, "W3 with 4 planned days and only day 1 finalized is incomplete");
+
+const twoDayFreq = {
+  data: {
+    w1_d0_e0_s1_load: 100, w1_d0_e0_s1_reps: 10,
+    w1_d1_e0_s1_load: 100, w1_d1_e0_s1_reps: 10
+  },
+  prefs: { intensityType: "RIR", duration: 2, frequency: 4 },
+  logs: [{ week: 1, day: 0 }, { week: 1, day: 1 }]
+};
+const twoDayProg = { weeks: [{ sessions: [{ exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }] }] };
+assert.equal(TAE.isWeekComplete(twoDayFreq, twoDayProg, 1), true, "a 2-day week is complete when both days are done, even if prefs.frequency is 4");
+TAE.clearCache();
+const twoDayBuild = TAE.build(twoDayFreq, twoDayProg, { axis: "training", zoomWeeks: 2, includeIncompleteWeeks: false, currentWeek: 1 });
+assert.ok(twoDayBuild.kpis.volumeTotal > 0, "stats still show volume when the week matches the scheda");
+
+const noLogVol = {
+  data: { w1_d0_e0_s1_load: 80, w1_d0_e0_s1_reps: 8, w2_d0_e0_s1_load: 85, w2_d0_e0_s1_reps: 8 },
+  prefs: { intensityType: "RIR", duration: 2, frequency: 4, includeIncompleteWeeks: false },
+  logs: []
+};
+TAE.clearCache();
+const noLogBuild = TAE.build(noLogVol, { weeks: [{ sessions: [{ exercises: [{ name: "Panca piana" }] }] }, { sessions: [{ exercises: [{ name: "Panca piana" }] }] }] }, { axis: "training", zoomWeeks: 2, includeIncompleteWeeks: false, currentWeek: 2 });
+assert.ok(noLogBuild.kpis.volumeTotal > 0, "weeks with recorded sets still appear if none are marked complete");
 
 TAE.clearCache();
 const z2off = TAE.build(incompleteStore, incompleteData, { axis: "training", zoomWeeks: 2, includeIncompleteWeeks: false, currentWeek: 3 });
@@ -845,6 +868,7 @@ assert.ok(midDone.volumeDelta < -30, "finalized fewer sets is a real volume drop
 assert.ok(midDone.performanceDelta > 0, "finalized volume drop does not rewrite performance");
 assert.ok(html.includes("classifyActiveProgramMuscles") && html.includes("exMuscleByName") && html.includes("dorsey"), "active program muscles are classified and persisted");
 assert.ok(html.includes("GRUPPI DELLA SCHEDA") && html.includes("setProgramExerciseMuscle"), "stats can reassign program exercises to muscle groups");
+assert.ok(html.includes("toggleStatsFold") && html.includes("statsAdvancedOpen") && html.includes("statsCheckFisicoOpen"), "gruppi, check fisici and advanced analysis fold");
 assert.ok(html.includes("volumeComparable === false") && html.includes("Seduta ancora aperta"), "UI withholds fake mid-session volume crash");
 const rollIds = (backAll.byMuscle || []).map(function (m) { return m.id; });
 rollIds.forEach(function (id) {
@@ -854,7 +878,7 @@ assert.ok(html.includes("id: 'DORSO'") && html.includes("label: 'Dorso'") && !ht
 
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
 assert.ok(sw.includes("training-analytics-engine.js"), "SW precaches the analytics engine");
-assert.ok(sw.includes("analytics15"), "SW cache bumped after program muscle assigner");
+assert.ok(sw.includes("analytics16"), "SW cache bumped after stats fold and volume restore");
 assert.ok(fs.existsSync(path.join(root, "TRAINING_ANALYTICS_METHODOLOGY.md")), "methodology doc exists");
 
 console.log("OK   training analytics engine formulas + zoom axis + intelligence");
