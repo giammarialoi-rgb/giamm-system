@@ -366,6 +366,34 @@ assert.ok(pancaReco.suggestedLoad != null);
 assert.ok(pancaReco.why);
 assert.equal(TAE.rawFingerprint(pancaStore), pancaBefore, "panca analytics does not mutate raw data");
 
+function assertSameMetricPair(label, week) {
+  const snap = TAE.exerciseAnalyticsSnapshot(pancaStore, pancaProg, { week: week, day: 0, exIdx: 0, set: 3 });
+  const reco = TAE.recommendNext(pancaStore, pancaProg, { week: week, day: 0, exIdx: 0, set: 3 }, snap);
+  const live = TAE.liveAfterSet(pancaStore, pancaProg, { week: week, day: 0, exIdx: 0, set: 3 }, snap);
+  const report = TAE.exerciseReport(pancaStore, pancaProg, { week: week, day: 0, exIdx: 0, set: 3 }, snap);
+  const kind = snap.performanceMetric;
+  assert.ok(kind === "e1rm" || kind === "topLoad" || kind === "load" || kind === "reps", label + " has one pair metric");
+  const cur = TAE.performanceValueForExposure(snap.currentExposure, kind);
+  const prev = TAE.performanceValueForExposure(snap.previousExposure, kind);
+  assert.equal(snap.currentPerformance, cur, label + " current uses pair metric");
+  assert.equal(snap.previousPerformance, prev, label + " previous uses the same pair metric");
+  const math = Math.round(((cur - prev) / prev) * 1000) / 10;
+  assert.equal(snap.performanceDelta, math, label + " performanceDelta is pctDelta(current, previous)");
+  assert.equal(reco.performanceDelta, snap.performanceDelta, label + " reco == snapshot");
+  assert.equal(reco.basedOn.performanceDelta, snap.performanceDelta, label + " basedOn == snapshot");
+  assert.equal(live.vsPreviousExposure, snap.performanceDelta, label + " live == snapshot");
+  assert.equal(report.snapshot.performanceDelta, snap.performanceDelta, label + " report == snapshot");
+  assert.notEqual(snap.volumeDelta, snap.performanceDelta, label + " volume stays a separate number");
+  return snap;
+}
+const pairE2 = assertSameMetricPair("E2 vs E1", 2);
+const pairE3 = assertSameMetricPair("E3 vs E2", 3);
+assert.equal(pairE2.performanceMetric, "e1rm");
+assert.equal(pairE3.performanceMetric, "topLoad");
+assert.equal(pairE3.e1rmDelta, -0.5, "e1RM stays visible and separate on E3");
+assert.equal(pairE3.performanceDelta, 2.1);
+assert.ok(!html.includes("e1rmChange") && !html.includes("vsPreviousBest") && !html.includes("rep.performance && rep.performance.delta"));
+
 const volDiff = {};
 writeSets(volDiff, 1, 0, 0, [[120, 8, 1], [120, 8, 1], [120, 8, 1], [120, 8, 1]]);
 writeSets(volDiff, 2, 0, 0, [[120, 9, 1], [120, 9, 1], [120, 9, 1]]);
