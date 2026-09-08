@@ -216,7 +216,7 @@ assert.equal(z3off.kpis.volumeTotal, z2off.kpis.volumeTotal, "zoom 3 OFF still e
 TAE.clearCache();
 const z2on = TAE.build(incompleteStore, incompleteData, { axis: "training", zoomWeeks: 2, includeIncompleteWeeks: true, currentWeek: 3 });
 assert.equal(z2on.kpis.volumeTotal, 2500, "zoom 2 ON includes partial W3 + W2");
-assert.ok(z2on.kpis.volumeVarWeek < -50, "ON variation uses partial W3 vs full W2");
+assert.equal(z2on.kpis.volumeVarWeek, null, "partial W3 does not invent a week-to-week crash");
 assert.ok(z2on.window.weeks.some(function (w) { return w.inProgress; }));
 
 const contrib = TAE.muscleContributionForExercise("Panca Piana con Bilanciere", {});
@@ -805,10 +805,19 @@ function primaryMuscle(name) {
   ["Stacco da terra", "GAMBE"],
   ["French press", "BRACCIA"],
   ["Military press", "SPALLE"],
-  ["Leg press 45", "GAMBE"]
+  ["Leg press 45", "GAMBE"],
+  ["dorsey machine 1 braccio", "DORSO"],
+  ["Dorsey machine", "DORSO"],
+  ["low row 1 braccio", "DORSO"],
+  ["Plancia", "ADDOME"],
+  ["Addominali ai cavi", "ADDOME"],
+  ["Alzate gambe", "ADDOME"]
 ].forEach(function (row) {
   assert.equal(primaryMuscle(row[0]), row[1], row[0] + " → " + row[1]);
 });
+assert.equal(primaryMuscle("xyz macchina inventata 99"), null, "unknown names are not dumped into ADDOME");
+const namedAbs = TAE.muscleContributionForExercise("Crunch macchina", { storedMuscle: "ADDOME" });
+assert.equal((namedAbs.primary || [])[0], "ADDOME");
 const latRaise = TAE.muscleContributionForExercise("Alzate laterali", {});
 assert.ok((latRaise.primary || []).indexOf("GAMBE") < 0, "lateral raise is not classified as legs");
 assert.equal(TAE.normalizeMuscleId("SCHIENA"), "DORSO");
@@ -816,6 +825,19 @@ assert.equal(TAE.normalizeMuscleId("QUADRICIPITI"), "GAMBE");
 assert.equal(TAE.normalizeMuscleId("GLUTEI"), "GAMBE");
 assert.equal(TAE.normalizeMuscleId("BICIPITI"), "BRACCIA");
 assert.deepEqual(TAE.MACRO_MUSCLE_IDS.slice().sort(), ["ADDOME", "BRACCIA", "DORSO", "GAMBE", "PETTO", "SPALLE"]);
+
+const midWeek = {};
+writeSets(midWeek, 1, 0, 0, [[100, 8, 1], [100, 8, 1], [100, 8, 1], [100, 8, 1], [100, 8, 1]]);
+writeSets(midWeek, 2, 0, 0, [[105, 8, 1], [105, 8, 1], [105, 8, 1]]);
+const midOpen = TAE.exerciseAnalyticsSnapshot({ data: midWeek, prefs: { intensityType: "RIR", duration: 2 }, logs: [{ week: 1, day: 0 }] }, nWeeks("Panca piana", 2), { week: 2, day: 0, exIdx: 0, set: 3 });
+assert.equal(midOpen.volumeDelta, null, "open session with fewer sets does not invent -40% volume");
+assert.equal(midOpen.volumeComparable, false);
+assert.ok(midOpen.performanceDelta != null && midOpen.performanceDelta > 0, "open session still compares performed top sets");
+const midDone = TAE.exerciseAnalyticsSnapshot({ data: midWeek, prefs: { intensityType: "RIR", duration: 2 }, logs: [{ week: 1, day: 0 }, { week: 2, day: 0 }] }, nWeeks("Panca piana", 2), { week: 2, day: 0, exIdx: 0, set: 3 });
+assert.ok(midDone.volumeDelta < -30, "finalized fewer sets is a real volume drop");
+assert.ok(midDone.performanceDelta > 0, "finalized volume drop does not rewrite performance");
+assert.ok(html.includes("classifyActiveProgramMuscles") && html.includes("exMuscleByName") && html.includes("dorsey"), "active program muscles are classified and persisted");
+assert.ok(html.includes("volumeComparable === false") && html.includes("Seduta ancora aperta"), "UI withholds fake mid-session volume crash");
 const rollIds = (backAll.byMuscle || []).map(function (m) { return m.id; });
 rollIds.forEach(function (id) {
   assert.ok(TAE.MACRO_MUSCLE_IDS.indexOf(id) >= 0, "byMuscle key is a macro: " + id);
@@ -824,7 +846,7 @@ assert.ok(html.includes("id: 'DORSO'") && html.includes("label: 'Dorso'") && !ht
 
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
 assert.ok(sw.includes("training-analytics-engine.js"), "SW precaches the analytics engine");
-assert.ok(sw.includes("analytics13"), "SW cache bumped after analytics snapshot contract");
+assert.ok(sw.includes("analytics14"), "SW cache bumped after muscle + volume-comparable contract");
 assert.ok(fs.existsSync(path.join(root, "TRAINING_ANALYTICS_METHODOLOGY.md")), "methodology doc exists");
 
 console.log("OK   training analytics engine formulas + zoom axis + intelligence");
