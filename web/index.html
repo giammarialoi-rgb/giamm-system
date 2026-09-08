@@ -577,6 +577,45 @@ input[type="checkbox"], input[type="radio"] {
   gap: 8px;
   margin-bottom: 4px;
 }
+.stats-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+  font-size: 11px;
+  color: #bbb;
+}
+.stats-check input { accent-color: var(--gold); }
+.stats-adv-row.is-click { cursor: pointer; }
+.stats-adv-row.is-click:hover { background: rgba(212,175,55,0.08); }
+.stats-lm-bar {
+  position: relative;
+  height: 10px;
+  margin: 8px 0 14px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.stats-lm-bar i {
+  position: absolute;
+  top: 0; bottom: 0;
+  background: linear-gradient(90deg, #444, var(--gold));
+}
+.stats-lm-bar b {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 16px;
+  background: #fff;
+}
+.ex-intel-bubble {
+  margin: 8px 0;
+  padding: 10px;
+  border: 1px solid rgba(212,175,55,0.4);
+  background: #111;
+  border-radius: 10px;
+}
 .stats-kpi {
   background: #111;
   border: 1px solid #222;
@@ -40660,88 +40699,186 @@ function queueLiveSetIntel(exIdx, setNum) {
     window.__liveRecommendation = null;
   }
 }
+function showLiveSetIntel(exIdx) { return showLiveSetIntelHtml(exIdx); }
 function showLiveSetIntelHtml(exIdx) {
   const live = window.__liveSetIntel;
   if (!live || live.empty || Number(live.exIdx) !== Number(exIdx)) return '';
-  let h = '<div class="card" style="margin:8px 0;padding:10px;border:1px solid rgba(212,175,55,0.4);background:#111;">';
-  h += '<div style="font-size:10px;color:var(--gold);font-weight:800;">SET ' + live.set + ' · ANALYTICS LIVE</div>';
+  const TAE = window.TrainingAnalyticsEngine;
+  const L = function (k) { return (TAE && TAE.labelIt) ? TAE.labelIt(k) : String(k || '—'); };
+  let h = '<div class="ex-intel-bubble">';
+  h += '<div style="font-size:10px;color:var(--gold);font-weight:800;">SET ' + live.set + ' COMPLETATO</div>';
   h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + esc(String(live.load)) + ' × ' + esc(String(live.reps));
   if (live.rpe != null) h += ' · RPE ' + live.rpe;
   if (live.rir != null) h += ' · RIR ' + live.rir;
   h += '</div>';
-  h += '<div class="stats-adv-row"><span>e1RM (stima)</span><span>' + (live.e1rm == null ? '—' : (live.e1rm + ' kg')) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>e1RM stimato</span><span>' + (live.e1rm == null ? '—' : (live.e1rm + ' kg')) + '</span></div>';
   h += '<div class="stats-adv-row"><span>vs miglior e1RM</span><span>' + (live.vsPreviousBest == null ? '—' : ((live.vsPreviousBest >= 0 ? '+' : '') + live.vsPreviousBest + '%')) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Volume oggi</span><span>' + formatStatsKg(live.volumeToday) + ' kg</span></div>';
-  if (live.fatigue && live.fatigue.signal) h += '<div class="stats-adv-row"><span>Fatica intra-seduta</span><span>' + esc(live.fatigue.signal) + '</span></div>';
-  h += '<div style="font-size:9px;color:#777;margin-top:6px;">Derived · non modifica i kg che hai scritto. <button type="button" class="btn btn-outline" style="font-size:8px;padding:2px 6px;" onclick="explainIntelMetric(\'e1rm\')">come si calcola</button></div>';
+  if (live.fatigue && live.fatigue.signal) h += '<div class="stats-adv-row"><span>Fatica intra-seduta</span><span>' + esc(L(live.fatigue.signal)) + '</span></div>';
+  h += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato · non modifica i kg che hai scritto. <button type="button" class="btn btn-outline" style="font-size:8px;padding:2px 6px;" onclick="explainIntelMetric(\'e1rm\')">come si calcola</button></div>';
   const rep = window.__liveExerciseReport;
   if (rep && !rep.empty && Number(rep.exIdx) === Number(exIdx)) {
     h += '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-top:10px;">REPORT ESERCIZIO</div>';
     h += '<div class="stats-adv-row"><span>Volume</span><span>' + formatStatsKg(rep.volumeToday) + ' kg</span></div>';
-    h += '<div class="stats-adv-row"><span>Best set</span><span>' + esc(rep.bestSet || '—') + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Miglior serie</span><span>' + esc(rep.bestSet || '—') + '</span></div>';
     h += '<div class="stats-adv-row"><span>e1RM oggi</span><span>' + (rep.e1rmToday == null ? '—' : (rep.e1rmToday + ' kg')) + '</span></div>';
     h += '<div class="stats-adv-row"><span>vs seduta prec.</span><span>' + (rep.e1rmChange == null ? '—' : ((rep.e1rmChange >= 0 ? '+' : '') + rep.e1rmChange + '%')) + '</span></div>';
     if (rep.status) h += '<div style="font-size:11px;margin-top:6px;">' + esc(rep.status) + '</div>';
   }
   const reco = window.__liveRecommendation;
   if (reco && reco.action && reco.action !== 'insufficient') {
-    h += '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-top:10px;">SUGGERIMENTO PROSSIMA SEDUTA</div>';
-    h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + (reco.action === 'increase' ? ('+' + reco.deltaKg + ' kg → ' + reco.suggestedLoad + ' kg') : (reco.action === 'reduce_volume' ? 'Valuta −1 serie di lavoro' : 'Mantieni il carico')) + '</div>';
-    h += '<div style="font-size:10px;color:#aaa;">' + esc(reco.why) + '</div>';
-    h += '<div style="font-size:9px;color:#777;margin:4px 0;">Confidence ' + esc(reco.confidence) + ' · ' + esc((reco.evidence || []).join(' · ')) + '</div>';
-    h += '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">';
-    h += '<button type="button" class="btn btn-primary" style="font-size:10px;padding:6px 8px;" onclick="acceptIntelRecommendation(' + exIdx + ')">ACCETTA</button>';
-    h += '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="keepPlannedIntelRecommendation(' + exIdx + ')">MANTIENI SCHEDA</button>';
-    h += '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="dismissIntelRecommendation(' + exIdx + ')">SCARTA</button>';
-    h += '</div>';
+    h += intelRecoHtml(exIdx, reco, L);
   }
   h += '</div>';
   return h;
+}
+function intelRecoHtml(exIdx, reco, L) {
+  L = L || function (k) { return String(k || '—'); };
+  let h = '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-top:10px;">PESO CONSIGLIATO</div>';
+  h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + (reco.action === 'increase' ? ('+' + reco.deltaKg + ' kg → ' + reco.suggestedLoad + ' kg') : (reco.action === 'reduce_volume' ? 'Valuta −1–2 serie di lavoro' : 'Mantieni il carico')) + '</div>';
+  h += '<div style="font-size:10px;color:#aaa;">' + esc(reco.why) + '</div>';
+  if (reco.mrvNote) h += '<div style="font-size:10px;color:#c9a227;margin-top:4px;">' + esc(reco.mrvNote) + '</div>';
+  h += '<div style="font-size:9px;color:#777;margin:4px 0;">Confidenza ' + esc(L(reco.confidence)) + ' · ' + esc((reco.evidence || []).join(' · ')) + '</div>';
+  h += '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">';
+  h += '<button type="button" class="btn btn-primary" style="font-size:10px;padding:6px 8px;" onclick="acceptIntelRecommendation(' + exIdx + ')">Accetta</button>';
+  h += '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="keepPlannedIntelRecommendation(' + exIdx + ')">Mantieni</button>';
+  h += '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="dismissIntelRecommendation(' + exIdx + ')">Scarta</button>';
+  h += '</div>';
+  return h;
+}
+function toggleExerciseIntel(exIdx) {
+  if (!window.__exIntelOpen) window.__exIntelOpen = {};
+  window.__exIntelOpen[exIdx] = !window.__exIntelOpen[exIdx];
+  const box = document.getElementById('ex-intel-panel-' + exIdx);
+  if (!box) return;
+  if (window.__exIntelOpen[exIdx]) {
+    box.style.display = 'block';
+    box.innerHTML = exerciseIntelBodyHtml(exIdx);
+  } else {
+    box.style.display = 'none';
+  }
+}
+function exerciseIntelPanelHtml(exIdx) {
+  const open = !!(window.__exIntelOpen && window.__exIntelOpen[exIdx]);
+  return '<div style="margin:8px 0;">' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:5px 8px;" onclick="toggleExerciseIntel(' + exIdx + ')">Analytics</button>' +
+    '<div id="ex-intel-panel-' + exIdx + '" class="ex-intel-bubble" style="display:' + (open ? 'block' : 'none') + '">' +
+    (open ? exerciseIntelBodyHtml(exIdx) : '') +
+    '</div></div>';
+}
+function exerciseIntelBodyHtml(exIdx) {
+  const TAE = window.TrainingAnalyticsEngine;
+  if (!TAE || !TAE.liveAfterSet) return '<div>Motore analytics non disponibile.</div>';
+  const L = function (k) { return TAE.labelIt ? TAE.labelIt(k) : String(k || '—'); };
+  const total = (typeof getExerciseSetCount === 'function') ? getExerciseSetCount(exIdx) : 1;
+  const loc = { week: currentWeek, day: currentDay, exIdx: exIdx, set: total };
+  const live = TAE.liveAfterSet(store, DATA, loc);
+  const reco = window.__exIntelReco && Number(window.__exIntelReco.exIdx) === Number(exIdx)
+    ? window.__exIntelReco
+    : null;
+  let h = '';
+  if (live.empty) {
+    h += '<div>Dati insufficienti. Completa almeno una serie con kg e rip.</div>';
+  } else {
+    h += '<div class="stats-adv-row"><span>e1RM stimato</span><span>' + (live.e1rm == null ? '—' : (live.e1rm + ' kg')) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Volume oggi</span><span>' + formatStatsKg(live.volumeToday) + ' kg</span></div>';
+    h += '<div class="stats-adv-row"><span>RPE / RIR</span><span>' + (live.rpe == null ? '—' : live.rpe) + ' / ' + (live.rir == null ? '—' : live.rir) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Andamento vs precedente</span><span>' + (live.vsPreviousBest == null ? '—' : ((live.vsPreviousBest >= 0 ? '+' : '') + live.vsPreviousBest + '%')) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Fatica intra-seduta</span><span>' + esc(L(live.fatigue && live.fatigue.signal)) + '</span></div>';
+  }
+  h += '<button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px;" onclick="calculateSuggestedLoad(' + exIdx + ')">Calcola peso consigliato</button>';
+  if (reco && reco.action && reco.action !== 'insufficient') h += intelRecoHtml(exIdx, reco, L);
+  else if (reco && reco.action === 'insufficient') h += '<div style="font-size:10px;color:#888;margin-top:8px;">' + esc(reco.why) + '</div>';
+  return h;
+}
+function calculateSuggestedLoad(exIdx) {
+  const TAE = window.TrainingAnalyticsEngine;
+  if (!TAE || !TAE.recommendNext) return;
+  const total = (typeof getExerciseSetCount === 'function') ? getExerciseSetCount(exIdx) : 1;
+  const reco = TAE.recommendNext(store, DATA, { week: currentWeek, day: currentDay, exIdx: exIdx, set: total });
+  window.__liveRecommendation = reco;
+  window.__exIntelReco = reco;
+  const box = document.getElementById('ex-intel-panel-' + exIdx);
+  if (box) box.innerHTML = exerciseIntelBodyHtml(exIdx);
 }
 function explainIntelMetric(id) {
   const TAE = window.TrainingAnalyticsEngine;
   const row = TAE && TAE.explainMetric ? TAE.explainMetric(id) : null;
   if (!row) return;
-  const msg = (row.definition || id) + '\n\nFormula: ' + (row.formula || '—') + '\nLivello: ' + (row.evidenceLevel || '—') + '\nLimiti: ' + (row.limitations || '—');
+  const msg = (row.whatIt || row.definition || id) + '\n\nPerché: ' + (row.whyIt || '—') + '\n\nCome: ' + (row.howIt || '—') + '\n\nLimiti: ' + (row.limitIt || row.limitations || '—') + '\n\nLivello: ' + (row.evidenceLevel || '—');
   if (typeof showToast === 'function') showToast(msg, 'info');
   else alert(msg);
 }
 function acceptIntelRecommendation(exIdx) {
   ensureIntelligenceStore();
-  const reco = window.__liveRecommendation;
+  const reco = window.__liveRecommendation || window.__exIntelReco;
   if (!reco) return;
+  const nowKey = 'w' + currentWeek + '_d' + currentDay + '_e' + exIdx;
+  if (reco.suggestedLoad != null) {
+    store.intelTargets[nowKey] = { load: reco.suggestedLoad, action: reco.action, at: new Date().toISOString(), name: reco.name, accepted: true };
+    const total = (typeof getExerciseSetCount === 'function') ? getExerciseSetCount(exIdx) : 0;
+    for (let s = 1; s <= total; s++) {
+      const sk = nowKey + '_s' + s;
+      if (store.data[sk + '_done']) continue;
+      const el = document.getElementById(sk + '_load');
+      if (el && !store.data[sk + '_load_user']) {
+        el.value = reco.suggestedLoad;
+      }
+    }
+  }
   const nextWeek = (Number(currentWeek) || 1) + 1;
-  const key = 'w' + nextWeek + '_d' + currentDay + '_e' + exIdx;
-  store.intelTargets[key] = { load: reco.suggestedLoad, action: reco.action, at: new Date().toISOString(), name: reco.name };
-  store.intelligence.applied.push({ at: new Date().toISOString(), key: key, reco: reco });
+  const nextKey = 'w' + nextWeek + '_d' + currentDay + '_e' + exIdx;
+  store.intelTargets[nextKey] = { load: reco.suggestedLoad, action: reco.action, at: new Date().toISOString(), name: reco.name };
+  store.intelligence.applied.push({ at: new Date().toISOString(), key: nowKey, reco: reco });
   persist();
-  if (typeof showToast === 'function') showToast('Suggerimento accettato per la prossima seduta. La scheda originale non è stata riscritta.', 'success');
+  if (typeof showToast === 'function') showToast('Suggerimento accettato sui set non ancora eseguiti. La scheda originale non è stata riscritta.', 'success');
 }
 function keepPlannedIntelRecommendation(exIdx) {
   ensureIntelligenceStore();
-  const reco = window.__liveRecommendation;
+  const reco = window.__liveRecommendation || window.__exIntelReco;
   if (reco) store.intelligence.dismissed.push({ at: new Date().toISOString(), keepPlanned: true, reco: reco, exIdx: exIdx });
   persist();
   if (typeof showToast === 'function') showToast('Scheda invariata. Il suggerimento resta in analytics.', 'info');
 }
 function dismissIntelRecommendation(exIdx) {
   ensureIntelligenceStore();
-  const reco = window.__liveRecommendation;
+  const reco = window.__liveRecommendation || window.__exIntelReco;
   if (reco) store.intelligence.dismissed.push({ at: new Date().toISOString(), reco: reco, exIdx: exIdx });
   window.__liveRecommendation = null;
+  window.__exIntelReco = null;
   persist();
-  render();
+  const box = document.getElementById('ex-intel-panel-' + exIdx);
+  if (box) box.innerHTML = exerciseIntelBodyHtml(exIdx);
+}
+function sessionSummaryCardHtml() {
+  const sum = window.__lastSessionSummary;
+  if (!sum) return '';
+  const TAE = window.TrainingAnalyticsEngine;
+  const L = function (k) { return (TAE && TAE.labelIt) ? TAE.labelIt(k) : String(k || '—'); };
+  let h = '<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid var(--gold);">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:10px;color:var(--gold);font-weight:800;">RIEPILOGO SEDUTA</div>';
+  h += '<button type="button" class="btn btn-outline" style="font-size:9px;padding:3px 6px;" onclick="window.__lastSessionSummary=null;this.closest(\'.card\').remove()">Chiudi</button></div>';
+  h += '<div class="stats-adv-row"><span>Volume</span><span>' + (sum.volumeChange == null ? formatStatsKg(sum.volume) + ' kg' : ((sum.volumeChange >= 0 ? '+' : '') + sum.volumeChange + '%')) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Serie</span><span>' + (sum.setsChange == null ? sum.sets : ((sum.setsChange >= 0 ? '+' : '') + sum.setsChange + '%')) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Prestazione</span><span>' + (sum.performanceChange == null ? '—' : ((sum.performanceChange >= 0 ? '+' : '') + sum.performanceChange + '%')) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>RPE medio</span><span>' + (sum.avgRpe == null ? '—' : sum.avgRpe) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Fatica</span><span>' + esc(L(sum.fatigue && sum.fatigue.signal)) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Recupero</span><span>' + esc(L(sum.recovery && (sum.recovery.signal || sum.recovery.estimate))) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Adattamento</span><span>' + esc(L(sum.adaptation && sum.adaptation.signal)) + '</span></div>';
+  h += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato dal motore. Non modifica lo storico.</div></div>';
+  return h;
 }
 function preWorkoutIntelHtml() {
   const TAE = window.TrainingAnalyticsEngine;
   if (!TAE || !TAE.preWorkout) return '';
   const ctx = TAE.preWorkout(store, DATA, { week: currentWeek, day: currentDay }, typeof exerciseMatchesMuscleGroup === 'function' ? function (n, m, g, muscle, eK) { return exerciseMatchesMuscleGroup(n, m, g, muscle, eK); } : null);
   const last = ctx.lastSession;
+  const L = function (k) { return TAE.labelIt ? TAE.labelIt(k) : String(k || '—'); };
   let h = '<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid #333;">';
-  h += '<div style="font-size:10px;color:var(--gold);font-weight:800;">PRE-WORKOUT INTELLIGENCE</div>';
+  h += '<div style="font-size:10px;color:var(--gold);font-weight:800;">PRIMA DELLA SEDUTA</div>';
   h += '<div class="stats-adv-row"><span>Ultima seduta</span><span>' + (last ? ('W' + last.week + ' · S' + ((last.day || 0) + 1) + (last.tonnage ? (' · ' + last.tonnage + ' kg') : '')) : '—') + '</span></div>';
   h += '<div class="stats-adv-row"><span>Volume recente</span><span>' + (ctx.recentVolume ? (formatStatsKg(ctx.recentVolume) + ' kg') : '—') + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Recovery estimate</span><span>' + (ctx.recovery && ctx.recovery.estimate ? esc(ctx.recovery.estimate.replace(/_/g, ' ')) : '—') + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Segnale di recupero</span><span>' + esc(L(ctx.recovery && (ctx.recovery.signal || ctx.recovery.estimate))) + '</span></div>';
   h += '<div style="font-size:9px;color:#777;margin-top:6px;">' + esc(ctx.note || '') + '</div></div>';
   return h;
 }
@@ -47547,6 +47684,7 @@ function renderTraining(c){
     let h = ssttCard;
     h += `<div style="margin-bottom:10px;">${domainTitleTapHtml('WORKOUT', t('training') || 'Allenamento')}</div>`;
     h += workoutSessionTimerHtml();
+    try { h += sessionSummaryCardHtml(); } catch (_) {}
     try { h += preWorkoutIntelHtml(); } catch (_) {}
     if (DATA.warmup && DATA.warmup.present && Array.isArray(DATA.warmup.items) && DATA.warmup.items.length) {
       h += `<div class="card" style="margin-bottom:12px;padding:12px;border:1px dashed rgba(76,175,80,0.55);background:rgba(76,175,80,0.06);">
@@ -47622,6 +47760,7 @@ function renderTraining(c){
           </div>
         </div>
         <div class="exercise-name-heading"><span class="ex-mark" aria-hidden="true">▸</span><span>${esc(curEx)}</span></div>
+        ${exerciseIntelPanelHtml(fIdx)}
         <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px;">${esc(schemeInfo.scheme)} <span style="font-size:10px;font-weight:600;color:#aaa;">${schemeInfo.setCount} serie · ${esc(schemeInfo.reps)} rip</span></div>
         ${formatLastSessionChip(fIdx, row)}
         ${formatMaxTestChip(fIdx, curEx)}
@@ -47716,6 +47855,7 @@ function renderTraining(c){
           <button class="btn btn-outline" style="border-color:var(--accent-red);color:var(--accent-red);font-size:9px;padding:3px 6px;" onclick="deleteBonusExercise(${bIdx})">RIMUOVI</button>
         </div>
         <div class="exercise-name-heading"><span class="ex-mark" aria-hidden="true">▸</span><span>${esc(curEx)}</span></div>
+        ${exerciseIntelPanelHtml(fIdx)}
         <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px;">${esc(bonusScheme.scheme)} <span style="font-size:10px;font-weight:600;color:#aaa;">${bonusScheme.setCount} serie · ${esc(bonusScheme.reps)} rip</span></div>
         ${formatLastSessionChip(fIdx, bEx)}
         ${formatMaxTestChip(fIdx, curEx)}
@@ -49246,6 +49386,16 @@ function finalizeWorkout(){
   };
   store.logs.push(logEntry);
   if (store.logs.length > 60) store.logs = store.logs.slice(-60);
+  try {
+    ensureIntelligenceStore();
+    const TAE = window.TrainingAnalyticsEngine;
+    if (TAE && TAE.sessionSummary) {
+      const sum = TAE.sessionSummary(store, DATA, { week: currentWeek, day: currentDay });
+      store.intelligence.sessionSummaries = store.intelligence.sessionSummaries || [];
+      store.intelligence.sessionSummaries.push({ at: new Date().toISOString(), week: currentWeek, day: currentDay, summary: sum });
+      window.__lastSessionSummary = sum;
+    }
+  } catch (_) {}
   store.sessionStartedAt = null;
   store.sessionPausedMs = 0;
   store.sessionPausedAt = null;
@@ -50863,7 +51013,7 @@ function renderStats(c){
     <div class="card">
       <div class="card-header"><h2>Filtri</h2></div>
       <div style="padding:15px;">
-        <select id="stats-muscle-group" onchange="renderStatsData()" style="margin-bottom:10px;">
+        <select id="stats-muscle-group" onchange="keepStatsScroll(function(){ if(!store.prefs) store.prefs={}; store.prefs.statsMuscle=document.getElementById('stats-muscle-group').value||'TOTAL'; persist(); renderStatsData(); })" style="margin-bottom:10px;">
           <option value="TOTAL">Gruppo · tutti</option>
           ${MACRO_MUSCLE_GROUPS.map(function (g) { return '<option value="' + g.id + '">' + g.label + '</option>'; }).join('')}
         </select>
@@ -50878,14 +51028,16 @@ function renderStats(c){
       <div style="padding:15px;">
         <div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;letter-spacing:0.6px;">ASSE TEMPO</div>
         <div class="stats-zoom-row">
-          <button type="button" class="stats-zoom-chip${(store.prefs && store.prefs.statsAxis === 'calendar') ? '' : ' is-on'}" onclick="setStatsAxis('training')">Settimane di scheda</button>
-          <button type="button" class="stats-zoom-chip${(store.prefs && store.prefs.statsAxis === 'calendar') ? ' is-on' : ''}" onclick="setStatsAxis('calendar')">Per data</button>
+          <button type="button" data-stats-axis="training" class="stats-zoom-chip${(store.prefs && store.prefs.statsAxis === 'calendar') ? '' : ' is-on'}" onclick="setStatsAxis('training')">Settimane di scheda</button>
+          <button type="button" data-stats-axis="calendar" class="stats-zoom-chip${(store.prefs && store.prefs.statsAxis === 'calendar') ? ' is-on' : ''}" onclick="setStatsAxis('calendar')">Per data</button>
         </div>
         <div style="font-size:10px;color:#888;font-weight:800;margin:8px 0 4px;letter-spacing:0.6px;">ZOOM PERIODO</div>
+        <div class="stats-zoom-row" id="stats-zoom-presets"></div>
         <div class="stats-slider-wrap">
           <input type="range" id="stats-zoom-slider" min="1" max="8" value="8" oninput="setStatsZoomSlider(this.value)">
           <div class="stats-slider-lab"><span id="stats-zoom-slider-lab">8 sett.</span><span>Tutto</span></div>
         </div>
+        <label class="stats-check"><input type="checkbox" id="stats-include-incomplete" ${store.prefs && store.prefs.includeIncompleteWeeks ? 'checked' : ''} onchange="setIncludeIncompleteWeeks(this.checked)"> Includi settimane non concluse</label>
         <div class="stats-kpi-grid">
           <div class="stats-kpi"><div class="k">VOLUME TOTALE</div><div class="v" id="stats-kpi-tot">—</div><div class="d" id="stats-kpi-tot-d">kg nel periodo zoomato</div></div>
           <div class="stats-kpi"><div class="k">VOLUME SETTIMANA</div><div class="v" id="stats-kpi-week">—</div><div class="d" id="stats-kpi-week-d">ultima settimana nel zoom</div></div>
@@ -50894,22 +51046,24 @@ function renderStats(c){
         </div>
       </div>
     </div>
-    <div class="card"><div class="card-header"><h2>TRAINING MARKET</h2></div><div style="padding:15px;">
+    <div class="card"><div class="card-header"><h2>Training Market</h2></div><div style="padding:15px;">
       <div class="stats-metric-tabs" id="stats-metric-tabs"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <h2 id="vol-chart-title" style="font-size:13px;margin:0;">Volume (kg)</h2>
         <button type="button" class="btn btn-outline" style="font-size:9px;padding:4px 8px;" onclick="explainIntelMetric((store.prefs&&store.prefs.statsChartMetric)||'volume')">come si calcola</button>
       </div>
       <div class="chart-container"><canvas id="volChart"></canvas></div>
-      <div id="stats-effective-note" style="font-size:10px;color:#777;">Un solo grafico. Cambia metrica senza ricaricare la pagina. Candele su volume; le altre serie sono barre/linee. Celle vuote = dati mancanti.</div>
+      <div id="stats-effective-note" style="font-size:10px;color:#777;">Volume: somma dei kg alzati (carico × ripetizioni) nel periodo. Un volume più alto è un fatto, non automaticamente un miglioramento.</div>
     </div></div>
-    <div class="card"><div class="card-header"><h2>Tabella analitica</h2></div><div style="padding:15px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>PERIODO</th><th>VOL</th><th>Δ%</th><th>SERIE</th><th>REP</th><th>INT</th><th>e1RM</th><th>FREQ</th><th>BW</th></tr></thead><tbody id="summary-body"></tbody></table><div style="font-size:10px;color:#777;margin-top:8px;">Zoom sulle settimane di scheda (W1, W2…). e1RM in tabella è il max della settimana, non una somma tra esercizi.</div></div></div>
-    <div class="card" id="stats-advanced-card"><div class="card-header"><h2>ADVANCED ANALYTICS</h2></div>
+    <div class="card"><div class="card-header"><h2>Tabella analitica</h2></div><div style="padding:15px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>PERIODO</th><th>VOL</th><th>Δ%</th><th>SERIE</th><th>REP</th><th>INT</th><th>MRV</th><th>FREQ</th><th>BW</th></tr></thead><tbody id="summary-body"></tbody></table><div style="font-size:10px;color:#777;margin-top:8px;">Zoom sulle settimane di scheda (W1, W2…). MRV è una stima configurabile di serie settimanali, non un e1RM e non una somma tra esercizi.</div></div></div>
+    <div class="card" id="stats-advanced-card"><div class="card-header"><h2>Analisi avanzata</h2></div>
       <div style="padding:12px 15px 0;">
         <div class="stats-zoom-row">
-          <button type="button" class="stats-zoom-chip${(store.prefs && store.prefs.statsAdvancedMode === 'muscle') ? '' : ' is-on'}" onclick="setStatsAdvancedMode('exercise')">EXERCISE</button>
-          <button type="button" class="stats-zoom-chip${(store.prefs && store.prefs.statsAdvancedMode === 'muscle') ? ' is-on' : ''}" onclick="setStatsAdvancedMode('muscle')">MUSCLE GROUP</button>
+          <button type="button" data-adv-mode="exercise" class="stats-zoom-chip${(store.prefs && store.prefs.statsAdvancedMode === 'muscle') ? '' : ' is-on'}" onclick="setStatsAdvancedMode('exercise')">Esercizio</button>
+          <button type="button" data-adv-mode="muscle" class="stats-zoom-chip${(store.prefs && store.prefs.statsAdvancedMode === 'muscle') ? ' is-on' : ''}" onclick="setStatsAdvancedMode('muscle')">Gruppo muscolare</button>
         </div>
+        <select id="stats-advanced-exercise" onchange="setStatsExercise(this.value)" style="margin:10px 0 6px;"></select>
+        <select id="stats-advanced-muscle" onchange="setStatsMuscleFromAdvanced(this.value)" style="margin:0 0 6px;"></select>
       </div>
       <div id="stats-advanced-body" style="padding:15px;font-size:11px;color:#bbb;"></div>
     </div>
@@ -52206,57 +52360,131 @@ function statsZoomWeeks() {
 function statsAxis() {
   return (store && store.prefs && store.prefs.statsAxis === 'calendar') ? 'calendar' : 'training';
 }
+const STATS_MARKET_NOTES = {
+  volume: 'Volume: somma dei kg alzati (carico × ripetizioni) nel periodo. Un volume più alto è un fatto, non automaticamente un miglioramento.',
+  bw: 'Peso corporeo: il BW che hai inserito per quella settimana. Se manca resta vuoto, non viene inventato.',
+  sets: 'Serie: quante serie valide hai registrato. 1 serie non vale 1 per ogni muscolo coinvolto.',
+  reps: 'Ripetizioni: somma delle rip registrate. Serve a vedere se è cambiato lo schema, non la forza.',
+  load: 'Carico medio: media dei kg delle serie. Non è la percentuale del massimale.',
+  frequency: 'Frequenza: sedute distinte nella settimana. Va letta insieme al volume, non da sola.',
+  sessions: 'Sedute: quanti allenamenti ci sono nel periodo zoomato.',
+  trainingLoad: 'Training load: carico settimanale come tendenza. Modello adattato, non una misura fisiologica diretta.',
+  intensity: 'Intensità: sforzo 0–10 da RIR o RPE. Senza RIR/RPE il dato resta vuoto.',
+  e1rm: 'e1RM: stima del massimale sullo stesso esercizio. Non è un 1RM testato e non si somma tra esercizi.'
+};
+function applyStatsMarketNote(metric) {
+  const note = $('stats-effective-note');
+  if (!note) return;
+  const id = metric || 'volume';
+  note.textContent = STATS_MARKET_NOTES[id] || STATS_MARKET_NOTES.volume;
+}
+function keepStatsScroll(fn) {
+  const nodes = [];
+  [document.scrollingElement, document.documentElement, document.body, $('view-container'), $('app'), document.querySelector('main')].forEach(function (el) {
+    if (el && nodes.indexOf(el) < 0) nodes.push(el);
+  });
+  const snap = nodes.map(function (el) { return { el: el, t: el.scrollTop }; });
+  const y = window.scrollY || window.pageYOffset || 0;
+  try { fn(); } finally {
+    const restore = function () {
+      snap.forEach(function (s) { try { s.el.scrollTop = s.t; } catch (_) {} });
+      try { window.scrollTo(0, y); } catch (_) {}
+    };
+    restore();
+    requestAnimationFrame(restore);
+    setTimeout(restore, 0);
+    setTimeout(restore, 80);
+  }
+}
 function setStatsAxis(axis) {
-  if (!store.prefs) store.prefs = {};
-  store.prefs.statsAxis = axis === 'calendar' ? 'calendar' : 'training';
-  persist();
-  if (typeof currentView !== 'undefined' && currentView === 'stats') render();
+  keepStatsScroll(function () {
+    if (!store.prefs) store.prefs = {};
+    store.prefs.statsAxis = axis === 'calendar' ? 'calendar' : 'training';
+    document.querySelectorAll('[data-stats-axis]').forEach(function (el) {
+      el.classList.toggle('is-on', el.getAttribute('data-stats-axis') === store.prefs.statsAxis);
+    });
+    persist();
+    renderStatsData();
+  });
 }
 function setStatsExercise(name) {
-  if (!store.prefs) store.prefs = {};
-  store.prefs.statsExercise = name || '';
-  persist();
-  renderStatsData();
+  keepStatsScroll(function () {
+    if (!store.prefs) store.prefs = {};
+    store.prefs.statsExercise = name || '';
+    persist();
+    const analytics = buildTrainingAnalytics();
+    fillStatsAdvancedPanel(analytics);
+  });
 }
 function setStatsAdvancedMode(mode) {
-  if (!store.prefs) store.prefs = {};
-  store.prefs.statsAdvancedMode = mode === 'muscle' ? 'muscle' : 'exercise';
-  persist();
-  if (typeof currentView !== 'undefined' && currentView === 'stats') render();
+  keepStatsScroll(function () {
+    if (!store.prefs) store.prefs = {};
+    store.prefs.statsAdvancedMode = mode === 'muscle' ? 'muscle' : 'exercise';
+    document.querySelectorAll('[data-adv-mode]').forEach(function (el) {
+      el.classList.toggle('is-on', el.getAttribute('data-adv-mode') === store.prefs.statsAdvancedMode);
+    });
+    persist();
+    fillStatsAdvancedPanel(buildTrainingAnalytics());
+  });
+}
+function setIncludeIncompleteWeeks(on) {
+  keepStatsScroll(function () {
+    if (!store.prefs) store.prefs = {};
+    store.prefs.includeIncompleteWeeks = !!on;
+    persist();
+    renderStatsData();
+  });
+}
+function setStatsMuscleFromAdvanced(id) {
+  keepStatsScroll(function () {
+    if (!store.prefs) store.prefs = {};
+    store.prefs.statsMuscle = id || 'TOTAL';
+    const sel = $('stats-muscle-group');
+    if (sel) sel.value = (!id || id === 'TOTAL') ? 'TOTAL' : id;
+    persist();
+    fillStatsAdvancedPanel(buildTrainingAnalytics());
+  });
 }
 function setStatsChartMetric(metric) {
-  if (!store.prefs) store.prefs = {};
-  store.prefs.statsChartMetric = metric || 'volume';
-  persist();
-  renderStatsData();
+  keepStatsScroll(function () {
+    if (!store.prefs) store.prefs = {};
+    store.prefs.statsChartMetric = metric || 'volume';
+    persist();
+    applyStatsMarketNote(store.prefs.statsChartMetric);
+    const tabs = $('stats-metric-tabs');
+    if (tabs) {
+      tabs.querySelectorAll('[data-chart-metric]').forEach(function (el) {
+        el.classList.toggle('is-on', el.getAttribute('data-chart-metric') === store.prefs.statsChartMetric);
+      });
+    }
+    const analytics = buildTrainingAnalytics();
+    const selectedGroup = $('stats-muscle-group') ? $('stats-muscle-group').value : 'TOTAL';
+    const groupLabel = (MACRO_MUSCLE_GROUPS.find(function (g) { return g.id === selectedGroup; }) || {}).label || '';
+    const titleEl = $('vol-chart-title');
+    if (titleEl) titleEl.textContent = (selectedGroup === 'TOTAL' ? '' : (groupLabel + ' · ')) + ({ volume: 'Volume (kg)', trainingLoad: 'Training load (kg)', sets: 'Serie', reps: 'Ripetizioni', intensity: 'Intensità media', bw: 'Peso corporeo (kg)', load: 'Carico medio (kg)', frequency: 'Frequenza', sessions: 'Sedute' }[store.prefs.statsChartMetric] || 'Volume (kg)');
+    if (analytics) renderTerminalChart('volChart', analytics, store.prefs.statsChartMetric);
+  });
 }
 function setStatsZoom(n) {
   setStatsZoomSlider(n);
 }
 function setStatsZoomSlider(n) {
-  if (!store.prefs) store.prefs = {};
-  const slider = $('stats-zoom-slider');
-  const max = slider ? Number(slider.max) || 1 : statsWeeksCount();
-  const v = Number(n);
-  store.prefs.statsZoomWeeks = (v >= max) ? 0 : Math.max(1, v);
-  persist();
-  if (slider) slider.value = String(v >= max ? max : Math.max(1, v));
-  const lab = $('stats-zoom-slider-lab');
-  if (lab) {
-    lab.textContent = (store.prefs.statsZoomWeeks === 0)
-      ? ('Tutto · ' + (statsAxis() === 'calendar' ? 'settimane di calendario' : 'settimane di scheda'))
-      : (store.prefs.statsZoomWeeks + (statsAxis() === 'calendar' ? ' sett. di calendario' : ' sett. di scheda'));
-  }
-  renderStatsData();
-}
-function statsZoomSlice(arr) {
-  const z = statsZoomWeeks();
-  if (!arr || !arr.length || !z || z >= arr.length) return { data: (arr || []).slice(), offset: 0 };
-  let lastHit = 0;
-  arr.forEach(function (v, i) { if (Number(v) > 0) lastHit = i + 1; });
-  const end = Math.min(arr.length, Math.max(lastHit, Number(currentWeek) || 1, z));
-  const start = Math.max(0, end - z);
-  return { data: arr.slice(start, end), offset: start };
+  keepStatsScroll(function () {
+    if (!store.prefs) store.prefs = {};
+    const slider = $('stats-zoom-slider');
+    const max = slider ? Number(slider.max) || 1 : statsWeeksCount();
+    const v = Number(n);
+    store.prefs.statsZoomWeeks = (v === 0 || v >= max) ? 0 : Math.max(1, v);
+    persist();
+    if (slider) slider.value = String(store.prefs.statsZoomWeeks === 0 ? max : Math.max(1, v));
+    const lab = $('stats-zoom-slider-lab');
+    if (lab) {
+      lab.textContent = (store.prefs.statsZoomWeeks === 0)
+        ? ('Tutto · ' + (statsAxis() === 'calendar' ? 'settimane di calendario' : 'settimane di scheda'))
+        : (store.prefs.statsZoomWeeks + (statsAxis() === 'calendar' ? ' sett. di calendario' : ' sett. di scheda'));
+    }
+    renderStatsData();
+  });
 }
 function formatStatsKg(n) {
   return Math.round(Number(n) || 0).toLocaleString('it-IT');
@@ -52270,6 +52498,8 @@ function buildTrainingAnalytics() {
     zoomWeeks: statsZoomWeeks(),
     muscle: selectedGroup,
     exercise: (store.prefs && store.prefs.statsExercise) || '',
+    includeIncompleteWeeks: !!(store.prefs && store.prefs.includeIncompleteWeeks),
+    currentWeek: (typeof currentWeek === 'number') ? currentWeek : (store.trainingWeek || 1),
     matchMuscle: function (name, movement, groups, muscle, eK) {
       return typeof exerciseMatchesMuscleGroup === 'function'
         ? exerciseMatchesMuscleGroup(name, movement, groups, muscle, eK)
@@ -52340,8 +52570,151 @@ function renderTerminalChart(canvasId, analytics, metric) {
     });
   } else {
     renderSimpleChart(canvasId, series, metric === 'intensity' ? '#ff4d4d' : '#d4af37', metric === 'e1rm' ? 'line' : 'bar', 0);
+  }
+  const marks = analytics.charts.prMarks || [];
+  marks.forEach(function (m) {
+    if (m.index < 0 || m.index >= n) return;
+    const x = xAt(m.index);
+    const y = padding.top + 10;
+    ctx.fillStyle = '#d4af37';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - 4, y + 7);
+    ctx.lineTo(x + 4, y + 7);
+    ctx.closePath();
+    ctx.fill();
+  });
+}
+function fillStatsAdvancedPanel(analytics) {
+  const adv = $('stats-advanced-body');
+  if (!adv) return;
+  if (!analytics) analytics = buildTrainingAnalytics();
+  if (!analytics) {
+    adv.textContent = 'Motore analytics non caricato';
     return;
   }
+  const selectedGroup = (store.prefs && store.prefs.statsMuscle) || ($('stats-muscle-group') ? $('stats-muscle-group').value : 'TOTAL');
+  const groupLabel = (MACRO_MUSCLE_GROUPS.find(function (g) { return g.id === selectedGroup; }) || {}).label ||
+    ((typeof FINE_MUSCLE_GROUPS !== 'undefined' && FINE_MUSCLE_GROUPS.find(function (g) { return g.id === selectedGroup; })) || {}).label || 'generale';
+  const cmp = analytics.comparison || {};
+  const fat = analytics.fatigue || {};
+  const rec = analytics.recovery || {};
+  const lm = analytics.landmarks || {};
+  const tl = analytics.trainingLoad || {};
+  const ad = analytics.adaptation || {};
+  const TAE = window.TrainingAnalyticsEngine;
+  const L = function (k) { return (TAE && TAE.labelIt) ? TAE.labelIt(k) : String(k || '—'); };
+  const mode = (store.prefs && store.prefs.statsAdvancedMode === 'muscle') ? 'muscle' : 'exercise';
+  const exSelA = $('stats-advanced-exercise');
+  const musSelA = $('stats-advanced-muscle');
+  const allEx = (analytics.programExercises && analytics.programExercises.length ? analytics.programExercises : analytics.exercises) || [];
+  if (exSelA) {
+    const cur = (store.prefs && store.prefs.statsExercise) || '';
+    const keepFocus = document.activeElement === exSelA;
+    if (!keepFocus) {
+      exSelA.style.display = mode === 'exercise' ? 'block' : 'none';
+      exSelA.innerHTML = '<option value="">Scegli esercizio</option>' + allEx.map(function (n) {
+        return '<option value="' + esc(n) + '"' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>';
+      }).join('');
+    } else {
+      exSelA.style.display = mode === 'exercise' ? 'block' : 'none';
+    }
+  }
+  if (musSelA) {
+    const keepFocusM = document.activeElement === musSelA;
+    musSelA.style.display = mode === 'muscle' ? 'block' : 'none';
+    if (!keepFocusM) {
+      const curM = selectedGroup || 'TOTAL';
+      const opts = [{ id: 'TOTAL', label: 'Tutti i gruppi' }].concat(typeof FINE_MUSCLE_GROUPS !== 'undefined' ? FINE_MUSCLE_GROUPS : MACRO_MUSCLE_GROUPS);
+      musSelA.innerHTML = opts.map(function (g) {
+        return '<option value="' + g.id + '"' + (g.id === curM ? ' selected' : '') + '>' + esc(g.label) + '</option>';
+      }).join('');
+    }
+  }
+  const prHtml = (analytics.prs || []).slice(-6).reverse().map(function (p) {
+    return '<div class="stats-adv-row"><span>' + esc(L(p.type)) + ' · ' + esc(p.name) + '</span><span>' + esc(String(p.value)) + (p.week ? (' · W' + p.week) : '') + '</span></div>';
+  }).join('') || '<div>Nessun PR derivabile dai log.</div>';
+  const exHtml = (analytics.byExercise || []).map(function (e) {
+    return '<div class="stats-adv-row is-click" onclick="setStatsExercise(\'' + String(e.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')"><span>' + esc(e.name) + '</span><span>' + formatStatsKg(e.volume) + ' kg · ' + e.sets + ' serie' + (mode === 'exercise' && e.e1rm != null ? (' · e1RM ' + e.e1rm) : '') + '</span></div>';
+  }).join('') || '<div>Nessun esercizio nel periodo.</div>';
+  let focusHtml = '';
+  if (mode === 'exercise' && store.prefs && store.prefs.statsExercise && TAE && TAE.analyzeExercise) {
+    const ax = TAE.analyzeExercise(store, DATA, store.prefs.statsExercise, {
+      matchMuscle: function (name, movement, groups, muscle, eK) {
+        return typeof exerciseMatchesMuscleGroup === 'function' ? exerciseMatchesMuscleGroup(name, movement, groups, muscle, eK) : true;
+      }
+    });
+    if (ax.empty) {
+      focusHtml = '<div style="margin-bottom:12px;">Dati insufficienti per questo esercizio</div>';
+    } else {
+      const dist = ax.intensityDist && ax.intensityDist.bins;
+      const fatSig = ax.fatigue || {};
+      focusHtml = '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">' + esc(ax.name) + ' · esercizio</div>' +
+        '<div class="stats-adv-row"><span>e1RM corrente (stima)</span><span>' + (ax.e1rm == null ? '—' : (ax.e1rm + ' kg')) + '</span></div>' +
+        '<div class="stats-adv-row"><span>Andamento vs best prec.</span><span>' + (ax.trend == null ? '—' : ((ax.trend >= 0 ? '+' : '') + ax.trend + '%')) + '</span></div>' +
+        '<div class="stats-adv-row"><span>Miglior e1RM</span><span>' + (ax.e1rmBest == null ? '—' : (ax.e1rmBest + ' kg')) + '</span></div>' +
+        '<div class="stats-adv-row"><span>e5RM / e8RM / e10RM</span><span>' + [ax.e5rm, ax.e8rm, ax.e10rm].map(function (n) { return n == null ? '—' : n; }).join(' / ') + '</span></div>' +
+        '<div class="stats-adv-row"><span>RPE / RIR medi</span><span>' + (ax.avgRpe == null ? '—' : ax.avgRpe) + ' / ' + (ax.avgRir == null ? '—' : ax.avgRir) + '</span></div>' +
+        '<div class="stats-adv-row"><span>Fatica intra-seduta</span><span>' + esc(L(fatSig.signal)) + '</span></div>' +
+        (ax.prStatus ? '<div style="margin:6px 0;">Nuovo PR stimato</div>' : '') +
+        (dist ? '<div style="font-size:10px;color:#888;margin:8px 0 12px;">Distribuzione %1RM · ' + Object.keys(dist).map(function (k) { return k + ' ' + dist[k]; }).join(' · ') + '</div>' : '');
+    }
+  } else if (mode === 'muscle') {
+    const mg = (analytics.byMuscle || []).find(function (m) {
+      return m.id === selectedGroup || m.macro === selectedGroup;
+    }) || (selectedGroup === 'TOTAL' ? (analytics.byMuscle || [])[0] : null);
+    focusHtml = '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">' + esc(groupLabel) + ' · gruppo muscolare</div>';
+    if (mg) {
+      focusHtml +=
+        '<div class="stats-adv-row"><span>Serie nominali</span><span>' + mg.nominalSets + '</span></div>' +
+        '<div class="stats-adv-row"><span>Serie dirette</span><span>' + mg.directSets + '</span></div>' +
+        '<div class="stats-adv-row"><span>Serie indirette</span><span>' + mg.indirectSets + '</span></div>' +
+        '<div class="stats-adv-row"><span>Serie pesate (euristica)</span><span>' + mg.effectiveWeightedSets + '</span></div>' +
+        '<div class="stats-adv-row"><span>Dose interna ETD</span><span>' + mg.effectiveTrainingDose + '</span></div>' +
+        '<div class="stats-adv-row"><span>Costo di fatica (modello)</span><span>' + esc(L(mg.fatigueCost)) + '</span></div>' +
+        '<div class="stats-adv-row"><span>Volume</span><span>' + formatStatsKg(mg.volume) + ' kg</span></div>' +
+        '<div class="stats-adv-row"><span>Frequenza</span><span>' + mg.frequency + '</span></div>' +
+        '<div class="stats-adv-row"><span>RPE medio</span><span>' + (mg.avgRpe == null ? '—' : mg.avgRpe) + '</span></div>' +
+        '<div style="font-size:10px;color:#777;margin:6px 0 12px;">Nessun e1RM aggregato tra esercizi diversi. Diretto/indiretto è un modello, non una misura fisiologica.</div>';
+    } else {
+      focusHtml += '<div>Dati insufficienti per questo gruppo.</div>';
+    }
+    focusHtml += '<div style="color:#888;font-weight:800;margin-bottom:6px;">ESERCIZI DEL GRUPPO</div>' + exHtml;
+  }
+  const ins = (analytics.insights || []).map(function (t) { return '<div style="margin:0 0 8px;">• ' + esc(t) + '</div>'; }).join('');
+  const delta = function (v, unit) { return v == null ? '—' : ((v >= 0 ? '+' : '') + v + (unit || '%')); };
+  const prf = analytics.performanceResponse || {};
+  const vr = analytics.volumeResponse || {};
+  const fs = analytics.fatigueSignal || {};
+  const curSets = lm.currentSets;
+  const span = (lm.MRV || 20);
+  const pct = curSets == null ? 0 : Math.max(2, Math.min(100, Math.round((curSets / span) * 100)));
+  adv.innerHTML = focusHtml +
+    '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">CONFRONTO PERIODO</div>' +
+    '<div class="stats-adv-row"><span>Volume</span><span>' + delta(cmp.volume) + '</span></div>' +
+    '<div class="stats-adv-row"><span>Serie</span><span>' + delta(cmp.sets) + '</span></div>' +
+    '<div class="stats-adv-row"><span>e1RM (solo se hai scelto un esercizio)</span><span>' + (mode === 'exercise' ? delta(cmp.e1rm) : '—') + '</span></div>' +
+    '<div style="font-size:10px;color:#777;margin:8px 0 14px;">Descrittivo. Un + non è automaticamente un miglioramento.</div>' +
+    (mode === 'exercise' ? ('<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">VOLUME PER ESERCIZIO</div>' + exHtml) : '') +
+    '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">LANDMARK DI VOLUME (stima)</div>' +
+    '<div>MV ' + lm.MV + ' · MEV ' + lm.MEV + ' · MAV ' + lm.MAV_LOW + '–' + lm.MAV_HIGH + ' · MRV ' + lm.MRV + '</div>' +
+    '<div class="stats-lm-bar"><i style="width:' + pct + '%"></i><b style="left:' + pct + '%"></b></div>' +
+    '<div style="margin-top:4px;">Serie ultima settimana: ' + (curSets == null ? '—' : curSets) + (lm.status ? (' · ' + esc(L(lm.status))) : '') + '</div>' +
+    '<div style="font-size:10px;color:#777;margin:6px 0 14px;">Stima individuale / configurabile. Non rappresenta una soglia fisiologica universale. <button type="button" class="btn btn-outline" style="font-size:8px;padding:2px 6px;" onclick="explainIntelMetric(\'landmarks\')">come si calcola</button></div>' +
+    '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">RISPOSTA</div>' +
+    '<div class="stats-adv-row"><span>Prestazione</span><span>' + esc(L(prf.signal)) + '</span></div>' +
+    '<div class="stats-adv-row"><span>Risposta al volume</span><span>' + esc(L(vr.signal)) + '</span></div>' +
+    '<div class="stats-adv-row"><span>Fatica</span><span>' + esc(L(fs.signal)) + (fs.reason ? (' · ' + esc(fs.reason)) : '') + '</span></div>' +
+    '<div class="stats-adv-row"><span>Recupero</span><span>' + esc(L(rec.signal || rec.estimate)) + '</span></div>' +
+    '<div class="stats-adv-row"><span>Adattamento</span><span>' + esc(L(ad.signal)) + ' · confidenza ' + esc(L(ad.confidence)) + '</span></div>' +
+    '<div style="font-size:10px;color:#777;margin:6px 0 14px;">' + esc(ad.note || rec.note || '') + '</div>' +
+    '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">TRAINING LOAD (modello adattato)</div>' +
+    '<div class="stats-adv-row"><span>ATL · carico acuto</span><span>' + (tl.atl == null ? '—' : formatStatsKg(tl.atl) + ' kg') + '</span></div>' +
+    '<div class="stats-adv-row"><span>CTL · carico cronico</span><span>' + (tl.ctl == null ? '—' : formatStatsKg(tl.ctl) + ' kg') + '</span></div>' +
+    '<div class="stats-adv-row"><span>TSB · bilancio</span><span>' + (tl.tsb == null ? '—' : tl.tsb) + '</span></div>' +
+    '<div style="font-size:10px;color:#777;margin:6px 0 14px;">Modello adattato e dipendente dal contesto; non è una misura fisiologica diretta. ' + esc(tl.methodology || fat.note || '') + '</div>' +
+    '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">PR RILEVATI</div>' + prHtml +
+    '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">INSIGHT</div>' + ins;
 }
 function weekLoadModeLabel(w) {
   let part = 0, tot = 0;
@@ -52373,7 +52746,7 @@ function renderStatsData(){
     }
   }
   const exSel = $('stats-exercise-filter');
-  if (exSel && analytics) {
+  if (exSel && analytics && document.activeElement !== exSel && exSel.options.length <= 1) {
     const cur = (store.prefs && store.prefs.statsExercise) || '';
     const names = analytics.exercises || [];
     exSel.innerHTML = '<option value="">Esercizio · tutti</option>' + names.map(function (n) {
@@ -52383,10 +52756,20 @@ function renderStatsData(){
   const tabs = $('stats-metric-tabs');
   if (tabs) {
     const metric = (store.prefs && store.prefs.statsChartMetric) || 'volume';
-    tabs.innerHTML = [['volume', 'VOLUME'], ['bw', 'BW'], ['sets', 'SETS'], ['reps', 'REPS'], ['load', 'LOAD'], ['frequency', 'FREQ'], ['sessions', 'SESSIONS'], ['e1rm', 'e1RM'], ['intensity', 'INT']].map(function (pair) {
-      return '<button type="button" class="stats-zoom-chip' + (metric === pair[0] ? ' is-on' : '') + '" onclick="setStatsChartMetric(\'' + pair[0] + '\')">' + pair[1] + '</button>';
+    tabs.innerHTML = [['volume', 'Volume'], ['bw', 'BW'], ['sets', 'Serie'], ['reps', 'Ripetizioni'], ['load', 'Carico'], ['frequency', 'Frequenza'], ['sessions', 'Sedute'], ['trainingLoad', 'Training load']].map(function (pair) {
+      return '<button type="button" data-chart-metric="' + pair[0] + '" class="stats-zoom-chip' + (metric === pair[0] ? ' is-on' : '') + '" onclick="setStatsChartMetric(\'' + pair[0] + '\')">' + pair[1] + '</button>';
     }).join('');
   }
+  const presets = $('stats-zoom-presets');
+  if (presets) {
+    const z = statsZoomWeeks();
+    presets.innerHTML = [[1,'1W'],[2,'2W'],[4,'4W'],[8,'8W'],[12,'12W'],[26,'6M'],[52,'1Y'],[0,'Tutto']].map(function (pair) {
+      const on = (pair[0] === 0 && z === 0) || (pair[0] !== 0 && z === pair[0]);
+      return '<button type="button" class="stats-zoom-chip' + (on ? ' is-on' : '') + '" onclick="setStatsZoom(' + pair[0] + ')">' + pair[1] + '</button>';
+    }).join('');
+  }
+  const inc = $('stats-include-incomplete');
+  if (inc) inc.checked = !!(store.prefs && store.prefs.includeIncompleteWeeks);
 
   if (!analytics) {
     if ($('summary-body')) $('summary-body').innerHTML = '<tr><td colspan="9">Motore analytics non caricato</td></tr>';
@@ -52409,7 +52792,7 @@ function renderStatsData(){
       '<td>' + (row.empty ? '—' : row.sets) + '</td>' +
       '<td>' + (row.empty ? '—' : row.reps) + '</td>' +
       '<td>' + (row.avgIntensity == null ? '—' : row.avgIntensity.toFixed(1)) + '</td>' +
-      '<td>' + (row.e1rm == null ? '—' : row.e1rm) + '</td>' +
+      '<td>' + (row.empty ? '—' : (row.sets + ' / ' + ((analytics.landmarks && analytics.landmarks.MRV) || 20))) + '</td>' +
       '<td>' + (row.empty ? '—' : row.frequency) + '</td>' +
       '<td>' + (bw != null ? bw : 'N/D') + '</td></tr>';
   });
@@ -52424,6 +52807,7 @@ function renderStatsData(){
     $('stats-kpi-var').textContent = k.volumeVarWeek == null ? '—' : ((k.volumeVarWeek >= 0 ? '+' : '') + k.volumeVarWeek + '%');
     $('stats-kpi-var').style.color = k.volumeVarWeek == null ? '' : (k.volumeVarWeek >= 0 ? 'var(--success)' : 'var(--accent-red)');
   }
+  if ($('stats-kpi-var-d')) $('stats-kpi-var-d').textContent = k.volumeVarNote || 'vs settimana precedente';
   if ($('stats-kpi-int')) {
     if (k.avgIntensity == null) {
       $('stats-kpi-int').textContent = '—';
@@ -52436,86 +52820,15 @@ function renderStatsData(){
       if ($('stats-kpi-int-d')) $('stats-kpi-int-d').textContent = bits.join(' · ') + ' · scale opposte';
     }
   }
-  const note = $('stats-effective-note');
-  if (note) note.textContent = analytics.effectiveVolumeNote;
-
-  const groupLabel = (MACRO_MUSCLE_GROUPS.find(function (g) { return g.id === selectedGroup; }) || {}).label || 'generale';
-  const titleEl = $('vol-chart-title');
   const metric = (store.prefs && store.prefs.statsChartMetric) || 'volume';
-  if (titleEl) titleEl.textContent = (selectedGroup === 'TOTAL' ? '' : (groupLabel + ' · ')) + ({ volume: 'Volume (kg)', e1rm: 'e1RM stima (kg)', sets: 'Serie', reps: 'Ripetizioni', intensity: 'Intensità media', bw: 'Peso corporeo (kg)', load: 'Carico medio (kg)', frequency: 'Frequenza', sessions: 'Sedute' }[metric] || 'Volume (kg)');
-  renderTerminalChart('volChart', analytics, metric);
+  applyStatsMarketNote(metric);
 
-  const adv = $('stats-advanced-body');
-  if (adv) {
-    const cmp = analytics.comparison || {};
-    const fat = analytics.fatigue || {};
-    const rec = analytics.recovery || {};
-    const lm = analytics.landmarks || {};
-    const tl = analytics.trainingLoad || {};
-    const ad = analytics.adaptation || {};
-    const TAE = window.TrainingAnalyticsEngine;
-    const mode = (store.prefs && store.prefs.statsAdvancedMode === 'muscle') ? 'muscle' : 'exercise';
-    const prHtml = (analytics.prs || []).slice(-6).reverse().map(function (p) {
-      return '<div class="stats-adv-row"><span>' + esc(p.type.toUpperCase()) + ' · ' + esc(p.name) + '</span><span>' + esc(String(p.value)) + (p.week ? (' · W' + p.week) : '') + '</span></div>';
-    }).join('') || '<div>Nessun PR derivabile dai log.</div>';
-    const exHtml = (analytics.byExercise || []).slice(0, 8).map(function (e) {
-      return '<div class="stats-adv-row"><span>' + esc(e.name) + '</span><span>' + formatStatsKg(e.volume) + ' kg · ' + e.sets + ' serie' + (e.e1rm != null ? (' · e1RM ' + e.e1rm) : '') + '</span></div>';
-    }).join('') || '<div>Nessun esercizio nel periodo.</div>';
-    let focusHtml = '';
-    if (mode === 'exercise' && store.prefs && store.prefs.statsExercise && TAE && TAE.analyzeExercise) {
-      const ax = TAE.analyzeExercise(store, DATA, store.prefs.statsExercise, {
-        matchMuscle: function (name, movement, groups, muscle, eK) {
-          return typeof exerciseMatchesMuscleGroup === 'function' ? exerciseMatchesMuscleGroup(name, movement, groups, muscle, eK) : true;
-        }
-      });
-      if (ax.empty) {
-        focusHtml = '<div style="margin-bottom:12px;">e1RM —<br>Not enough valid sets</div>';
-      } else {
-        const dist = ax.intensityDist && ax.intensityDist.bins;
-        focusHtml = '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">' + esc(ax.name) + ' · EXERCISE</div>' +
-          '<div class="stats-adv-row"><span>e1RM corrente (stima)</span><span>' + (ax.e1rm == null ? '—' : (ax.e1rm + ' kg')) + '</span></div>' +
-          '<div class="stats-adv-row"><span>Trend vs best prec.</span><span>' + (ax.trend == null ? '—' : ((ax.trend >= 0 ? '+' : '') + ax.trend + '%')) + '</span></div>' +
-          '<div class="stats-adv-row"><span>Best e1RM</span><span>' + (ax.e1rmBest == null ? '—' : (ax.e1rmBest + ' kg')) + '</span></div>' +
-          '<div class="stats-adv-row"><span>e5RM / e8RM / e10RM</span><span>' + [ax.e5rm, ax.e8rm, ax.e10rm].map(function (n) { return n == null ? '—' : n; }).join(' / ') + '</span></div>' +
-          (ax.prStatus ? '<div style="margin:6px 0;">New estimated PR</div>' : '') +
-          (dist ? '<div style="font-size:10px;color:#888;margin:8px 0 12px;">Distribuzione %1RM · ' + Object.keys(dist).map(function (k) { return k + ' ' + dist[k]; }).join(' · ') + '</div>' : '');
-      }
-    } else if (mode === 'muscle') {
-      focusHtml = '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">' + esc(groupLabel) + ' · MUSCLE GROUP</div>' +
-        '<div class="stats-adv-row"><span>Volume periodo</span><span>' + formatStatsKg(k.volumeTotal) + ' kg</span></div>' +
-        '<div class="stats-adv-row"><span>Serie</span><span>' + (k.sets || '—') + '</span></div>' +
-        '<div class="stats-adv-row"><span>Frequenza</span><span>' + (k.sessions || '—') + '</span></div>' +
-        '<div class="stats-adv-row"><span>RPE medio</span><span>' + (k.avgRpe == null ? '—' : k.avgRpe) + '</span></div>' +
-        '<div style="font-size:10px;color:#777;margin:6px 0 12px;">Nessun e1RM aggregato tra esercizi diversi.</div>' +
-        '<div style="color:#888;font-weight:800;margin-bottom:6px;">ESERCIZI DEL GRUPPO</div>' + exHtml;
-    }
-    const ins = (analytics.insights || []).map(function (t) { return '<div style="margin:0 0 8px;">• ' + esc(t) + '</div>'; }).join('');
-    const delta = function (v, unit) { return v == null ? '—' : ((v >= 0 ? '+' : '') + v + (unit || '%')); };
-    adv.innerHTML = focusHtml +
-      '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">CONFRONTO PERIODO</div>' +
-      '<div class="stats-adv-row"><span>Volume</span><span>' + delta(cmp.volume) + '</span></div>' +
-      '<div class="stats-adv-row"><span>Serie</span><span>' + delta(cmp.sets) + '</span></div>' +
-      '<div class="stats-adv-row"><span>e1RM (se filtro esercizio)</span><span>' + delta(cmp.e1rm) + '</span></div>' +
-      '<div style="font-size:10px;color:#777;margin:8px 0 14px;">Descrittivo. Un + non è automaticamente un miglioramento.</div>' +
-      (mode === 'exercise' ? ('<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">VOLUME PER ESERCIZIO</div>' + exHtml) : '') +
-      '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">LANDMARKS (stima configurabile)</div>' +
-      '<div>MV ' + lm.MV + ' · MEV ' + lm.MEV + ' · MAV ' + lm.MAV_LOW + '–' + lm.MAV_HIGH + ' · MRV ' + lm.MRV + '</div>' +
-      '<div style="margin-top:4px;">Serie ultima settimana: ' + (lm.currentSets == null ? '—' : lm.currentSets) + (lm.status ? (' · ' + esc(lm.status.replace(/_/g, ' '))) : '') + '</div>' +
-      '<div style="font-size:10px;color:#777;margin:6px 0 14px;">Non sono soglie fisiologiche universali. <button type="button" class="btn btn-outline" style="font-size:8px;padding:2px 6px;" onclick="explainIntelMetric(\'landmarks\')">come si calcola</button></div>' +
-      '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">TRAINING LOAD (modello adattato)</div>' +
-      '<div class="stats-adv-row"><span>ATL · acute</span><span>' + (tl.atl == null ? '—' : formatStatsKg(tl.atl) + ' kg') + '</span></div>' +
-      '<div class="stats-adv-row"><span>CTL · chronic</span><span>' + (tl.ctl == null ? '—' : formatStatsKg(tl.ctl) + ' kg') + '</span></div>' +
-      '<div class="stats-adv-row"><span>TSB</span><span>' + (tl.tsb == null ? '—' : tl.tsb) + '</span></div>' +
-      '<div style="font-size:10px;color:#777;margin:6px 0 14px;">' + esc(tl.methodology || fat.note || '') + '</div>' +
-      '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">ADATTAMENTO (stima)</div>' +
-      '<div>' + (ad.signal || '—') + ' · ' + esc(ad.volumeResponse || '') + ' · confidenza ' + esc(ad.confidence || 'LOW') + '</div>' +
-      '<div style="font-size:10px;color:#777;margin:6px 0 14px;">' + esc(ad.note || '') + '</div>' +
-      '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">RECOVERY ESTIMATE</div>' +
-      '<div>' + (rec.estimate ? esc(rec.estimate.replace(/_/g, ' ')) : '—') + '</div>' +
-      '<div style="font-size:10px;color:#777;margin:6px 0 14px;">' + esc(rec.note || '') + '</div>' +
-      '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">PR RILEVATI</div>' + prHtml +
-      '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">INSIGHT</div>' + ins;
-  }
+  const groupLabel = (MACRO_MUSCLE_GROUPS.find(function (g) { return g.id === selectedGroup; }) || {}).label ||
+    ((typeof FINE_MUSCLE_GROUPS !== 'undefined' && FINE_MUSCLE_GROUPS.find(function (g) { return g.id === selectedGroup; })) || {}).label || 'generale';
+  const titleEl = $('vol-chart-title');
+  if (titleEl) titleEl.textContent = (selectedGroup === 'TOTAL' ? '' : (groupLabel + ' · ')) + ({ volume: 'Volume (kg)', trainingLoad: 'Training load (kg)', sets: 'Serie', reps: 'Ripetizioni', intensity: 'Intensità media', bw: 'Peso corporeo (kg)', load: 'Carico medio (kg)', frequency: 'Frequenza', sessions: 'Sedute' }[metric] || 'Volume (kg)');
+  renderTerminalChart('volChart', analytics, metric);
+  fillStatsAdvancedPanel(analytics);
 
   window.__statsMuscleVolumeByWeek = analytics.charts.volume;
   window.__statsMuscleSelected = selectedGroup;
@@ -54896,6 +55209,12 @@ if (typeof window !== 'undefined') {
   window.setStatsExercise = setStatsExercise;
   window.setStatsAdvancedMode = setStatsAdvancedMode;
   window.setStatsChartMetric = setStatsChartMetric;
+  window.setIncludeIncompleteWeeks = setIncludeIncompleteWeeks;
+  window.setStatsMuscleFromAdvanced = setStatsMuscleFromAdvanced;
+  window.fillStatsAdvancedPanel = fillStatsAdvancedPanel;
+  window.applyStatsMarketNote = applyStatsMarketNote;
+  window.toggleExerciseIntel = toggleExerciseIntel;
+  window.calculateSuggestedLoad = calculateSuggestedLoad;
   window.acceptIntelRecommendation = acceptIntelRecommendation;
   window.keepPlannedIntelRecommendation = keepPlannedIntelRecommendation;
   window.dismissIntelRecommendation = dismissIntelRecommendation;

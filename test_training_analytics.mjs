@@ -151,14 +151,134 @@ assert.equal(emptyLive.empty, true);
 const expl = TAE.explainMetric("e1rm");
 assert.equal(expl.evidenceLevel, "DERIVED");
 assert.ok(String(expl.limitations).includes("Not a tested 1RM"));
+assert.ok(expl.nameIt && expl.whatIt && expl.howIt && expl.limitIt);
+
+function week2days(name) {
+  return { sessions: [{ exercises: [{ name: name }] }, { exercises: [{ name: name }] }] };
+}
+const incompleteStore = {
+  data: {
+    w1_d0_e0_s1_load: 100, w1_d0_e0_s1_reps: 10,
+    w1_d1_e0_s1_load: 100, w1_d1_e0_s1_reps: 10,
+    w2_d0_e0_s1_load: 100, w2_d0_e0_s1_reps: 10,
+    w2_d1_e0_s1_load: 100, w2_d1_e0_s1_reps: 10,
+    w3_d0_e0_s1_load: 50, w3_d0_e0_s1_reps: 10
+  },
+  prefs: { intensityType: "RIR", duration: 3, includeIncompleteWeeks: false },
+  logs: [
+    { week: 1, day: 0 }, { week: 1, day: 1 },
+    { week: 2, day: 0 }, { week: 2, day: 1 },
+    { week: 3, day: 0 }
+  ],
+  trainingWeek: 3
+};
+const incompleteData = { weeks: [week2days("Squat"), week2days("Squat"), week2days("Squat")] };
+assert.equal(TAE.isWeekComplete(incompleteStore, incompleteData, 1), true);
+assert.equal(TAE.isWeekComplete(incompleteStore, incompleteData, 2), true);
+assert.equal(TAE.isWeekComplete(incompleteStore, incompleteData, 3), false);
+const oneDayW3 = {
+  data: { w3_d0_e0_s1_load: 50, w3_d0_e0_s1_reps: 10, w1_d0_e0_s1_load: 100, w1_d0_e0_s1_reps: 10, w1_d1_e0_s1_load: 100, w1_d1_e0_s1_reps: 10, w1_d2_e0_s1_load: 100, w1_d2_e0_s1_reps: 10, w1_d3_e0_s1_load: 100, w1_d3_e0_s1_reps: 10 },
+  prefs: { intensityType: "RIR", duration: 3, frequency: 4 },
+  logs: [{ week: 1, day: 0 }, { week: 1, day: 1 }, { week: 1, day: 2 }, { week: 1, day: 3 }, { week: 3, day: 0 }],
+  trainingWeek: 3
+};
+const oneDayData = {
+  weeks: [
+    { sessions: [{ exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }] },
+    { sessions: [{ exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }, { exercises: [{ name: "Squat" }] }] },
+    { sessions: [{ exercises: [{ name: "Squat" }] }] }
+  ]
+};
+assert.equal(TAE.isWeekComplete(oneDayW3, oneDayData, 3), false, "W3 with only day 1 is incomplete if other weeks have 4 days");
+
+TAE.clearCache();
+const z2off = TAE.build(incompleteStore, incompleteData, { axis: "training", zoomWeeks: 2, includeIncompleteWeeks: false, currentWeek: 3 });
+assert.equal(z2off.window.weeks.length, 2);
+assert.ok(z2off.window.weeks.every(function (w) { return w.complete; }), "zoom 2 OFF uses only complete weeks");
+assert.equal(z2off.kpis.volumeTotal, 4000, "zoom 2 OFF is W1+W2 not W3+W2");
+assert.ok(z2off.kpis.volumeVarWeek == null || Math.abs(z2off.kpis.volumeVarWeek) < 1, "W2 vs W1 is flat, not -75%");
+assert.ok(String(z2off.kpis.volumeVarNote || "").includes("W3") || String(z2off.kpis.volumeVarNote || "").includes("in corso"));
+
+TAE.clearCache();
+const z3off = TAE.build(incompleteStore, incompleteData, { axis: "training", zoomWeeks: 3, includeIncompleteWeeks: false, currentWeek: 3 });
+assert.equal(z3off.kpis.volumeTotal, z2off.kpis.volumeTotal, "zoom 3 OFF still excludes incomplete W3");
+
+TAE.clearCache();
+const z2on = TAE.build(incompleteStore, incompleteData, { axis: "training", zoomWeeks: 2, includeIncompleteWeeks: true, currentWeek: 3 });
+assert.equal(z2on.kpis.volumeTotal, 2500, "zoom 2 ON includes partial W3 + W2");
+assert.ok(z2on.kpis.volumeVarWeek < -50, "ON variation uses partial W3 vs full W2");
+assert.ok(z2on.window.weeks.some(function (w) { return w.inProgress; }));
+
+const contrib = TAE.muscleContributionForExercise("Panca Piana con Bilanciere", {});
+assert.ok(contrib.primary.includes("PETTO"));
+const byM = TAE.buildByMuscle(TAE.normalizeSets(incompleteStore, incompleteData, {}));
+assert.ok(byM.length, "byMuscle rollup exists");
+assert.ok(byM.some(function (m) { return m.directSets > 0 || m.indirectSets > 0; }));
+
+TAE.clearCache();
+const snap2 = JSON.parse(JSON.stringify(storeSnap));
+const before2 = TAE.rawFingerprint(snap2);
+TAE.build(snap2, dataSnap, { axis: "training", zoomWeeks: 0 });
+TAE.liveAfterSet(snap2, dataSnap, { week: 2, day: 0, exIdx: 0, set: 1 });
+TAE.recommendNext(snap2, dataSnap, { week: 2, day: 0, exIdx: 0, set: 1 });
+assert.deepEqual(snap2.data, storeSnap.data, "deepEqual store.data before/after analytics");
+assert.equal(TAE.rawFingerprint(snap2), before2);
+
+const incReco = TAE.recommendNext({
+  data: {
+    w1_d0_e0_s1_load: 100, w1_d0_e0_s1_reps: 5, w1_d0_e0_s1_rir: 2,
+    w2_d0_e0_s1_load: 110, w2_d0_e0_s1_reps: 5, w2_d0_e0_s1_rir: 2
+  },
+  prefs: { intensityType: "RIR", duration: 2 },
+  logs: [{ week: 1, day: 0 }, { week: 2, day: 0 }]
+}, { weeks: [{ sessions: [{ exercises: [{ name: "Panca" }] }] }, { sessions: [{ exercises: [{ name: "Panca" }] }] }] }, { week: 2, day: 0, exIdx: 0, set: 1 });
+assert.equal(incReco.action, "increase");
+
+const maintainReco = TAE.recommendNext({
+  data: {
+    w1_d0_e0_s1_load: 100, w1_d0_e0_s1_reps: 5, w1_d0_e0_s1_rir: 2,
+    w2_d0_e0_s1_load: 100, w2_d0_e0_s1_reps: 5, w2_d0_e0_s1_rir: 2
+  },
+  prefs: { intensityType: "RIR", duration: 2 },
+  logs: [{ week: 1, day: 0 }, { week: 2, day: 0 }]
+}, { weeks: [{ sessions: [{ exercises: [{ name: "Panca" }] }] }, { sessions: [{ exercises: [{ name: "Panca" }] }] }] }, { week: 2, day: 0, exIdx: 0, set: 1 });
+assert.ok(maintainReco.action === "maintain" || maintainReco.action === "increase");
+
+const reduceReco = TAE.recommendNext({
+  data: {
+    w1_d0_e0_s1_load: 120, w1_d0_e0_s1_reps: 5, w1_d0_e0_s1_rir: 1,
+    w2_d0_e0_s1_load: 120, w2_d0_e0_s1_reps: 3, w2_d0_e0_s1_rir: 0
+  },
+  prefs: { intensityType: "RIR", duration: 2 },
+  logs: [{ week: 1, day: 0 }, { week: 2, day: 0 }]
+}, { weeks: [{ sessions: [{ exercises: [{ name: "Panca" }] }] }, { sessions: [{ exercises: [{ name: "Panca" }] }] }] }, { week: 2, day: 0, exIdx: 0, set: 1 });
+assert.ok(reduceReco.action === "reduce_volume" || reduceReco.action === "maintain");
+
+const manySets = {};
+for (let s = 1; s <= 22; s++) {
+  manySets["w2_d0_e0_s" + s + "_load"] = 110;
+  manySets["w2_d0_e0_s" + s + "_reps"] = 5;
+  manySets["w2_d0_e0_s" + s + "_rir"] = 2;
+}
+manySets.w1_d0_e0_s1_load = 100;
+manySets.w1_d0_e0_s1_reps = 5;
+manySets.w1_d0_e0_s1_rir = 2;
+const aboveMrv = TAE.recommendNext({
+  data: manySets,
+  prefs: { intensityType: "RIR", duration: 2 },
+  logs: [{ week: 1, day: 0 }, { week: 2, day: 0 }]
+}, { weeks: [{ sessions: [{ exercises: [{ name: "Panca" }] }] }, { sessions: [{ exercises: [{ name: "Panca" }] }] }] }, { week: 2, day: 0, exIdx: 0, set: 22 });
+assert.notEqual(aboveMrv.action, "reduce_volume", "above estimated MRV with positive response does not auto-reduce");
+assert.ok(aboveMrv.mrvNote);
 
 const html = fs.readFileSync(path.join(root, "web/index.base.html"), "utf8");
 assert.ok(html.includes("training-analytics-engine.js"), "stats page loads the engine");
 assert.ok(html.includes("INTENSITÀ MEDIA") && !html.includes("id=\"stats-kpi-mode\""), "carico per parte KPI is gone");
 assert.ok(html.includes("stats-zoom-slider") && html.includes("setStatsAxis"), "slider + training/date axis");
-assert.ok(html.includes("TRAINING MARKET") && html.includes("setStatsAdvancedMode"), "one main chart + advanced exercise/muscle");
+assert.ok(html.includes("Training Market") && html.includes("setStatsAdvancedMode"), "one main chart + advanced exercise/muscle");
 assert.ok(html.includes("function showLiveSetIntel") && html.includes("acceptIntelRecommendation"), "live post-set and Accept/Keep recommendations");
 assert.ok(html.includes("store.intelligence"), "recommendations live outside raw workout rows");
+assert.ok(!/function setStatsAdvancedMode[\s\S]{0,220}render\(\);/.test(html), "advanced mode does not full-render");
 
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
 assert.ok(sw.includes("training-analytics-engine.js"), "SW precaches the analytics engine");
