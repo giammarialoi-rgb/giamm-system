@@ -37,7 +37,7 @@ assert.ok(apiPractice.includes("/c/:token/manifest.webmanifest") && apiPractice.
 assert.ok(apiPractice.includes("function injectClientPwaHtml") && apiPractice.includes("__NURVAN_CLIENT_BOOT"), "server injects per-token manifest into /c/:token HTML");
 assert.ok(apiPractice.includes('res.redirect(302, "/c/"') || apiPractice.includes("res.redirect(302, \"/c/\""), "GET / with client cookies redirects to /c/token");
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
-assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("analytics15"), "SW does not precache the root manifest");
+assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("analytics16"), "SW does not precache the root manifest");
 assert.ok(sw.includes("isClientDoc") && sw.includes(".webmanifest"), "SW keeps /c/* and manifests on the network");
 assert.ok(sw.includes("training-knowledge.js"), "SW precaches the training encyclopedia");
 
@@ -106,7 +106,7 @@ assert.ok(html.includes("function toggleReplaceManual"), "replace-manual toggle 
 assert.ok(html.includes("function encyclopedizeProgramExercises") && html.includes("function toggleKnowledgeEditMode"), "user exercises get encyclopedized and cards can be edited");
 assert.ok(html.includes("hiddenProgramIds") && html.includes("L’allenamento attivo resta"), "deleting the active program from the list keeps it running");
 assert.ok(html.includes("function deleteSavedProgramFromList") && html.includes("data-id="), "saved-program X uses data attributes, not broken stringify");
-assert.ok(html.includes("function deleteBodyCheck") && html.includes("function toggleStatsHistory"), "checks can be deleted and session history closed");
+assert.ok(html.includes("function deleteBodyCheck") && html.includes("function toggleStatsHistory") && html.includes("function toggleStatsFold"), "checks can be deleted and stats sections fold");
 assert.ok(html.includes("Includi settimane non concluse") && html.includes("setIncludeIncompleteWeeks"), "incomplete-week checkbox");
 assert.ok(html.includes("stats-advanced-exercise") && html.includes("stats-advanced-muscle"), "advanced exercise and muscle selectors");
 assert.ok(html.includes("function fillStatsAdvancedPanel"), "advanced panel updates in place");

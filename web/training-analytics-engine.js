@@ -218,13 +218,14 @@
 
   function isWeekComplete(store, data, week) {
     const planned = plannedDaysForWeek(data, week);
-    const need = Math.max(planned, typicalPlannedDays(data, store));
-    if (!need) return false;
-    if (planned) {
+    if (planned > 0) {
       for (let d = 0; d < planned; d++) {
         if (!sessionFinalized(store, week, d)) return false;
       }
+      return true;
     }
+    const need = typicalPlannedDays(data, store);
+    if (!need) return false;
     return finalizedDayCount(store, week) >= need;
   }
 
@@ -281,7 +282,9 @@
           if (prevDiff) return;
         }
       }
-      if (!matchMuscle(name, meta.movement, meta.muscle_groups || meta.muscleGroups, muscle, eK)) return;
+      try {
+        if (!matchMuscle(name, meta.movement, meta.muscle_groups || meta.muscleGroups, muscle, eK)) return;
+      } catch (_) {}
       if (exerciseFilter && !sameExerciseName(name, exerciseFilter)) return;
       const isPart = !!(store && store.loadTypes && store.loadTypes[eK] === 'part');
       const load = isPart ? loadRaw * 2 : loadRaw;
@@ -461,6 +464,11 @@
         out.push(i);
       }
     });
+    if (!out.length) {
+      (weeks || []).forEach(function (w, i) {
+        if (w && !w.empty) out.push(i);
+      });
+    }
     return out;
   }
 

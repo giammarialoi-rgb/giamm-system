@@ -8413,10 +8413,14 @@ function getExerciseMuscleGroups(exerciseName, movement, explicitGroups) {
 const STATS_MUSCLE_CHIPS = [{ id: 'GENERALE', label: 'Generale' }].concat(MACRO_MUSCLE_GROUPS);
 
 function exerciseMatchesMuscleGroup(exerciseName, movement, explicitGroups, selectedGroup, subsKey) {
-  if (!selectedGroup || selectedGroup === 'TOTAL' || selectedGroup === 'GENERALE') return true;
-  const groups = resolveExerciseMacroGroups(exerciseName, movement, explicitGroups, subsKey);
-  const sel = normalizeMacroMuscleGroup(selectedGroup);
-  return groups.includes(sel);
+  if (!selectedGroup || selectedGroup === 'TOTAL' || selectedGroup === 'GENERALE' || selectedGroup === 'ALL') return true;
+  try {
+    const groups = resolveExerciseMacroGroups(exerciseName, movement, explicitGroups, subsKey);
+    const sel = normalizeMacroMuscleGroup(selectedGroup);
+    return groups.includes(sel);
+  } catch (_) {
+    return true;
+  }
 }
 
 async function init() {
@@ -18254,7 +18258,8 @@ function renderStats(c){
       <div id="stats-effective-note" style="font-size:10px;color:#777;">Volume: somma dei kg alzati (carico × ripetizioni) nel periodo. Un volume più alto è un fatto, non automaticamente un miglioramento.</div>
     </div></div>
     <div class="card"><div class="card-header"><h2>Tabella analitica</h2></div><div style="padding:15px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>PERIODO</th><th>VOL</th><th>Δ%</th><th>SERIE</th><th>REP</th><th>INT</th><th>SERIE vs LIMITE</th><th>FREQ</th><th>BW</th></tr></thead><tbody id="summary-body"></tbody></table><div style="font-size:10px;color:#777;margin-top:8px;">Zoom sulle settimane di scheda (W1, W2…). Con filtro «Tutti» la colonna è il volume totale (serie di tutto il corpo), senza MRV di un singolo muscolo. Con un gruppo selezionato, «Serie vs limite» confronta le serie di quel distretto con il suo MRV stimato. Unità: serie / settimana. <button type="button" class="btn btn-outline" style="font-size:8px;padding:2px 6px;" onclick="explainIntelMetric('mrv')">ⓘ Cosa significa?</button></div></div></div>
-    <div class="card" id="stats-advanced-card"><div class="card-header"><h2>Analisi avanzata</h2></div>
+    <div class="card" id="stats-advanced-card"><div class="card-header" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleStatsFold('statsAdvancedOpen')"><h2>Analisi avanzata</h2>${statsFoldChevron('statsAdvancedOpen')}</div>
+      <div id="stats-advanced-fold" style="${statsFoldOpen('statsAdvancedOpen') ? '' : 'display:none;'}">
       <div style="padding:12px 15px 0;">
         <div class="stats-zoom-row">
           <button type="button" data-adv-mode="exercise" class="stats-zoom-chip${(store.prefs && store.prefs.statsAdvancedMode === 'muscle') ? '' : ' is-on'}" onclick="setStatsAdvancedMode('exercise')">Esercizio</button>
@@ -18264,6 +18269,7 @@ function renderStats(c){
         <select id="stats-advanced-muscle" onchange="setStatsMuscleFromAdvanced(this.value)" style="margin:0 0 6px;"></select>
       </div>
       <div id="stats-advanced-body" style="padding:15px;font-size:11px;color:#bbb;"></div>
+      </div>
     </div>
     <div style="height:120px;"></div>
   `;
@@ -18446,8 +18452,8 @@ function renderCheckFisicoCardHtml() {
         '<button type="button" class="btn btn-outline" style="width:100%;margin-top:6px;font-size:10px;" onclick="saveCoachCheckComment(' + i + ')">SALVA COMMENTO</button></div></div>';
     }).join('') : '<div style="font-size:11px;color:#666;">Il cliente non ha ancora caricato check.</div>';
     return '<div class="card stats-anatomy" style="margin-bottom:12px;">' +
-      '<div class="stats-anatomy-head"><h2>Check fisici del cliente</h2><div class="stats-anatomy-hint">Solo lettura · puoi commentare</div></div>' +
-      '<div style="padding:12px 14px 14px;">' + histHtml + '</div></div>';
+      '<div class="stats-anatomy-head" style="cursor:pointer;" onclick="toggleStatsFold(\'statsCheckFisicoOpen\')"><h2>Check fisici del cliente</h2><div style="display:flex;align-items:center;gap:8px;"><div class="stats-anatomy-hint">Solo lettura · puoi commentare</div>' + statsFoldChevron('statsCheckFisicoOpen') + '</div></div>' +
+      '<div style="padding:12px 14px 14px;' + (statsFoldOpen('statsCheckFisicoOpen') ? '' : 'display:none;') + '">' + histHtml + '</div></div>';
   }
   const draft = checkFisicoDraft();
   const periodBtns = CHECK_FISICO_PERIODS.map(function (p) {
@@ -18470,8 +18476,8 @@ function renderCheckFisicoCardHtml() {
       (syncState === 'FAILED' ? '<button type="button" class="btn btn-outline" style="width:100%;margin:4px 0 8px;font-size:10px;" onclick="event.stopPropagation();retryCheckInSend(\'' + esc(String(c.id || '')) + '\')">RIPROVA</button>' : '');
   }).join('') : '<div style="font-size:11px;color:#666;">Nessun check salvato.</div>';
   return '<div class="card stats-anatomy" style="margin-bottom:12px;">' +
-    '<div class="stats-anatomy-head"><h2>Check fisici</h2><div class="stats-anatomy-hint">Foto · peso · resoconto</div></div>' +
-    '<div style="padding:12px 14px 14px;">' +
+    '<div class="stats-anatomy-head" style="cursor:pointer;" onclick="toggleStatsFold(\'statsCheckFisicoOpen\')"><h2>Check fisici</h2><div style="display:flex;align-items:center;gap:8px;"><div class="stats-anatomy-hint">Foto · peso · resoconto</div>' + statsFoldChevron('statsCheckFisicoOpen') + '</div></div>' +
+    '<div style="padding:12px 14px 14px;' + (statsFoldOpen('statsCheckFisicoOpen') ? '' : 'display:none;') + '">' +
     '<div class="stats-check-photos">' +
     '<div class="stats-check-slot' + (draft.front ? ' has-pic' : '') + '" id="check-slot-front" onclick="pickCheckPhoto(\'front\')">' +
     '<div class="ph">Fronte<br><span style="font-size:18px;">＋</span></div>' +
@@ -19544,6 +19550,22 @@ function toggleStatsHistory() {
   persist();
   if (typeof currentView !== 'undefined' && currentView === 'stats') render();
 }
+function statsFoldOpen(key) {
+  return !!(store.prefs && store.prefs[key]);
+}
+function toggleStatsFold(key) {
+  if (!store.prefs) store.prefs = {};
+  store.prefs[key] = !store.prefs[key];
+  persist();
+  keepStatsScroll(function () {
+    if (typeof currentView !== 'undefined' && currentView === 'stats') render();
+  });
+}
+function statsFoldChevron(key) {
+  const open = statsFoldOpen(key);
+  return '<button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;" onclick="event.stopPropagation();toggleStatsFold(\'' + key + '\')" aria-expanded="' + (open ? 'true' : 'false') + '" aria-label="' + (open ? 'Chiudi sezione' : 'Apri sezione') + '">' + (open ? '▾' : '▸') + '</button>';
+}
+window.toggleStatsFold = toggleStatsFold;
 function statsWeeksCount() {
   const fromData = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
   const fromPref = Number(store && store.prefs && store.prefs.duration) || 0;
@@ -21155,7 +21177,8 @@ function setProgramExerciseMuscle(encodedName, muscle) {
 }
 
 function renderProgramMuscleAssignHtml() {
-  const rows = listActiveProgramExercisesForMuscleFix();
+  let rows = [];
+  try { rows = listActiveProgramExercisesForMuscleFix(); } catch (_) { return ''; }
   if (!rows.length) return '';
   const missing = rows.filter(function (r) { return !r.muscle; }).length;
   const body = rows.map(function (r) {
@@ -21168,11 +21191,16 @@ function renderProgramMuscleAssignHtml() {
       '<div style="font-size:9px;color:#888;">' + (r.muscle ? esc(lab) : 'Senza gruppo') + (r.source === 'manual' ? ' · scelto da te' : '') + '</div></div>' +
       '<select class="input" style="width:132px;font-size:11px;padding:6px;" onchange="setProgramExerciseMuscle(\'' + encodeURIComponent(r.name) + '\', this.value)">' + opts + '</select></div>';
   }).join('');
+  const open = statsFoldOpen('statsMuscleAssignOpen');
   return '<div class="card" style="margin-top:12px;padding:12px;">' +
-    '<div style="font-size:11px;font-weight:800;color:var(--gold);">GRUPPI DELLA SCHEDA</div>' +
-    '<p style="font-size:11px;color:#aaa;line-height:1.4;margin:6px 0 10px;">Ogni esercizio deve stare in un distretto. Curl al cavo è Braccia, non Gambe. Se Addome è vuoto, assegna qui i due esercizi di core.</p>' +
-    (missing ? '<div style="font-size:11px;color:#f6c;margin-bottom:8px;">' + missing + ' esercizio/i senza gruppo.</div>' : '') +
-    body +
+    '<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleStatsFold(\'statsMuscleAssignOpen\')">' +
+    '<div style="font-size:11px;font-weight:800;color:var(--gold);">GRUPPI DELLA SCHEDA' + (missing ? ' · ' + missing + ' da assegnare' : '') + '</div>' +
+    statsFoldChevron('statsMuscleAssignOpen') + '</div>' +
+    (open ? (
+      '<p style="font-size:11px;color:#aaa;line-height:1.4;margin:6px 0 10px;">Ogni esercizio deve stare in un distretto. Curl al cavo è Braccia, non Gambe. Se Addome è vuoto, assegna qui i due esercizi di core.</p>' +
+      (missing ? '<div style="font-size:11px;color:#f6c;margin-bottom:8px;">' + missing + ' esercizio/i senza gruppo.</div>' : '') +
+      body
+    ) : '') +
     '</div>';
 }
 window.setProgramExerciseMuscle = setProgramExerciseMuscle;
