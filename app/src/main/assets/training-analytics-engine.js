@@ -1718,6 +1718,15 @@
     }).map(function (k) { return summarizeExposure(map[k]); });
   }
 
+  function performanceValueForExposure(exp, kind) {
+    if (!exp) return null;
+    if (kind === 'topLoad') return exp.topLoad != null ? exp.topLoad : exp.avgLoad;
+    if (kind === 'load') return exp.avgLoad != null ? exp.avgLoad : exp.topLoad;
+    if (kind === 'reps') return exp.avgReps;
+    if (kind === 'e1rm') return exp.peakE1 != null ? exp.peakE1 : exp.topLoad;
+    return exp.peakE1 != null ? exp.peakE1 : exp.topLoad;
+  }
+
   function compareExposures(curr, prev) {
     if (!curr || !prev || !curr.setCount || !prev.setCount) {
       return {
@@ -2292,13 +2301,17 @@
       }),
       currentVolume: currExp ? Math.round(currExp.volume) : 0,
       previousVolume: comparePrev ? Math.round(comparePrev.volume) : 0,
-      currentPerformance: currExp ? currExp.peakE1 : null,
-      previousPerformance: comparePrev ? comparePrev.peakE1 : null,
+      currentPerformance: performanceValueForExposure(compareCurr, comparison && comparison.deltaKind),
+      previousPerformance: performanceValueForExposure(comparePrev, comparison && comparison.deltaKind),
+      performanceMetric: comparison ? (comparison.deltaKind || null) : null,
       volumeDelta: comparison ? comparison.volumeDelta : null,
+      volumeDeltaPct: comparison ? comparison.volumeDelta : null,
+      performanceDeltaPct: comparison ? comparison.delta : null,
       currentE1RM: peakE1,
       lastSetE1RM: currentSet && currentSet.e1rm != null ? currentSet.e1rm : null,
       previousE1RM: prevPeak,
       e1rmDelta: comparison ? comparison.e1Delta : null,
+      e1rmDeltaPct: comparison ? comparison.e1Delta : null,
       currentRPE: currExp && currExp.avgRpe != null ? round1(currExp.avgRpe) : (currentSet && currentSet.rpe),
       previousRPE: comparePrev && comparePrev.avgRpe != null ? round1(comparePrev.avgRpe) : null,
       currentRIR: currExp && currExp.avgRir != null ? round1(currExp.avgRir) : (currentSet && currentSet.rir),
@@ -2309,6 +2322,7 @@
       relativeIntensity: currentSet ? relativeIntensity(currentSet.loadRaw, intensityRef) : (currExp ? relativeIntensity(currExp.topLoad, intensityRef) : null),
       volumeSet: currentSet ? currentSet.volume : 0,
       performanceDelta: comparison ? comparison.delta : null,
+      source: 'exerciseAnalyticsSnapshot',
       performanceDirection: direction,
       comparison: comparison,
       multiTrend: multi.trend || direction,
@@ -2348,6 +2362,11 @@
     snapObj.volumeContract.current = snapObj.currentVolume;
     snapObj.volumeContract.previous = snapObj.previousVolume;
     const layered = attachPerformanceIntensityLayer(snapObj, { exposures: exposures, contrib: contrib });
+    layered.intensityState = layered.pic && layered.pic.intensityState;
+    layered.effortState = layered.pic && layered.pic.effortState;
+    layered.fatigueState = layered.fatigue && layered.fatigue.signal;
+    layered.recoveryState = layered.recovery && (layered.recovery.signal || layered.recovery.estimate);
+    layered.adaptationState = layered.pic && layered.pic.overallSignal;
     if (store && store.prefs && store.prefs.debugAnalytics) {
       const tr = debugExerciseTrace(layered, null);
       if (typeof console !== 'undefined' && console.info) console.info('[TRAINING-INTEL-TRACE]', tr);
@@ -2406,10 +2425,23 @@
       currentRIR: s.currentRIR,
       previousRIR: s.previousRIR,
       performanceDelta: s.performanceDelta,
+      performanceDeltaPct: s.performanceDeltaPct != null ? s.performanceDeltaPct : s.performanceDelta,
       volumeDelta: s.volumeDelta,
+      volumeDeltaPct: s.volumeDeltaPct != null ? s.volumeDeltaPct : s.volumeDelta,
+      e1rmDeltaPct: s.e1rmDeltaPct != null ? s.e1rmDeltaPct : s.e1rmDelta,
+      performanceState: s.performanceState,
+      intensityState: s.intensityState,
+      effortState: s.effortState,
+      fatigueState: s.fatigueState || (s.fatigue && s.fatigue.signal),
+      recoveryState: s.recoveryState || (s.recovery && (s.recovery.signal || s.recovery.estimate)),
+      adaptationState: s.adaptationState,
       recommendation: reco ? reco.action : null,
+      recommendationTarget: reco ? reco.suggestedLoad : null,
       recommendationPerformanceDelta: reco ? reco.performanceDelta : null,
       recommendationVolumeDelta: reco ? reco.volumeDelta : null,
+      confidence: s.confidence,
+      source: s.source || 'exerciseAnalyticsSnapshot',
+      formulaVersion: s.formulaVersion,
       eligibility: reco && reco.eligibility ? reco.eligibility : isRecommendationEligible(s)
     };
   }
@@ -2481,7 +2513,26 @@
       currentExposureId: snap.currentExposureId || null,
       previousExposureId: snap.previousExposureId || null,
       fatigueState: fat || null,
-      recoveryState: recSig || null
+      recoveryState: recSig || null,
+      intensityState: pic.intensityState || null,
+      effortState: pic.effortState || null,
+      adaptationState: pic.overallSignal || null,
+      recommendationAction: 'insufficient',
+      targetWeight: lastLoad != null ? round1(lastLoad) : null,
+      targetReps: snap.currentReps != null ? snap.currentReps : null,
+      targetSets: snap.currentExposure && snap.currentExposure.setCount ? snap.currentExposure.setCount : null,
+      reasons: evidence,
+      basedOn: {
+        source: snap.source || 'exerciseAnalyticsSnapshot',
+        currentExposureId: snap.currentExposureId || null,
+        previousExposureId: snap.previousExposureId || null,
+        performanceDelta: snap.performanceDelta,
+        volumeDelta: snap.volumeDelta,
+        e1rmDelta: snap.e1rmDelta,
+        fatigueState: fat || null,
+        recoveryState: recSig || null,
+        formulaVersion: snap.formulaVersion || 'snap-v1'
+      }
     };
     if (snap.empty || snap.exposures < 1 || lastLoad == null) {
       if (lastLoad == null) base.why = 'Non ci sono abbastanza dati per una stima affidabile. Manca un carico registrato.';
@@ -2492,7 +2543,9 @@
       if (sameDay) return base;
       return Object.assign({}, base, {
         action: 'maintain',
+        recommendationAction: 'maintain',
         suggestedLoad: round1(lastLoad),
+        targetWeight: round1(lastLoad),
         why: 'Baseline dalla prima esposizione. Mantieni il carico attuale; dopo la seconda seduta la stima diventa più precisa.',
         evidence: ['Una sola esposizione precedente'],
         confidence: 'LOW',
@@ -2547,7 +2600,9 @@
     }
     return Object.assign({}, base, {
       action: action,
+      recommendationAction: action,
       suggestedLoad: round1(lastLoad + delta),
+      targetWeight: round1(lastLoad + delta),
       deltaKg: delta,
       why: why,
       confidence: conf,
@@ -2712,8 +2767,18 @@
       eligibility: eligibility,
       currentExposureId: snap.currentExposureId,
       previousExposureId: snap.previousExposureId,
-      fatigueState: decision.fatigueState || (snap.fatigue && snap.fatigue.signal) || null,
-      recoveryState: decision.recoveryState || (snap.recovery && (snap.recovery.signal || snap.recovery.estimate)) || null
+      fatigueState: decision.fatigueState || snap.fatigueState || (snap.fatigue && snap.fatigue.signal) || null,
+      recoveryState: decision.recoveryState || snap.recoveryState || (snap.recovery && (snap.recovery.signal || snap.recovery.estimate)) || null,
+      adaptationState: decision.adaptationState || snap.adaptationState || null,
+      basedOn: decision.basedOn || {
+        source: snap.source || 'exerciseAnalyticsSnapshot',
+        currentExposureId: snap.currentExposureId || null,
+        previousExposureId: snap.previousExposureId || null,
+        performanceDelta: snap.performanceDelta,
+        volumeDelta: snap.volumeDelta,
+        fatigueState: snap.fatigueState || (snap.fatigue && snap.fatigue.signal) || null,
+        recoveryState: snap.recoveryState || (snap.recovery && (snap.recovery.signal || snap.recovery.estimate)) || null
+      }
     });
   }
 
@@ -2883,11 +2948,14 @@
       if (k === 'worsened') return 'Peggiorato';
     }
     if (d === 'adaptation' || d === 'volumeResponse') {
-      if (k === 'POSITIVE' || k === 'positive_response') return 'Risposta positiva';
-      if (k === 'NEGATIVE' || k === 'negative_response') return 'Risposta negativa';
-      if (k === 'NEUTRAL' || k === 'neutral_response') return 'Risposta neutra';
-      if (k === 'MIXED') return 'Risposta mista';
-      if (k === 'INSUFFICIENT_DATA' || k === 'insufficient_data') return 'Dati insufficienti';
+      if (k === 'POSITIVE' || k === 'positive_response' || k === 'positive') return 'Risposta positiva';
+      if (k === 'NEGATIVE' || k === 'negative_response' || k === 'negative') return 'Risposta negativa';
+      if (k === 'NEUTRAL' || k === 'neutral_response' || k === 'stable') return 'Risposta neutra';
+      if (k === 'MIXED' || k === 'mixed') return 'Risposta mista';
+      if (k === 'efficient_exposure') return 'Esposizione efficiente';
+      if (k === 'fatigue_accumulation') return 'Possibile accumulo di fatica';
+      if (k === 'monitor') return 'Da monitorare';
+      if (k === 'INSUFFICIENT_DATA' || k === 'insufficient_data' || k === 'insufficient') return 'Dati insufficienti';
     }
     if (d === 'confidence') {
       if (k === 'LOW' || k === 'low') return 'Confidenza: bassa';
@@ -2930,6 +2998,7 @@
     evaluatePerformanceContext: evaluatePerformanceContext,
     classifySetRoles: classifySetRoles,
     compareExposures: compareExposures,
+    performanceValueForExposure: performanceValueForExposure,
     performanceFromSets: performanceFromSets,
     groupExposures: groupExposures,
     sameExerciseName: sameExerciseName,
