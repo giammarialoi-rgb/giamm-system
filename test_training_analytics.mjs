@@ -342,6 +342,15 @@ TAE.clearCache();
 const pancaLive2 = TAE.liveAfterSet(pancaStore, pancaProg, { week: 2, day: 0, exIdx: 0, set: 3 });
 const pancaLive3 = TAE.liveAfterSet(pancaStore, pancaProg, { week: 3, day: 0, exIdx: 0, set: 3 });
 const pancaAx = TAE.analyzeExercise(pancaStore, pancaProg, "Panca piana");
+TAE.clearCache();
+const pancaSnap1 = TAE.exerciseAnalyticsSnapshot(pancaStore, pancaProg, { week: 1, day: 0, exIdx: 0, set: 3 });
+const pancaReco1 = TAE.recommendNext(pancaStore, pancaProg, { week: 1, day: 0, exIdx: 0, set: 3 }, pancaSnap1);
+assert.equal(pancaSnap1.previousExposure, null);
+assert.equal(pancaSnap1.performanceDelta, null);
+assert.equal(pancaSnap1.volumeDelta, null);
+assert.ok(pancaReco1.why);
+assert.ok(pancaReco1.action === "insufficient" || pancaReco1.eligibility.reason);
+
 assert.equal(pancaLive2.direction, "improving", "bench exposure 2 is improving");
 assert.notEqual(pancaLive2.direction, "declining");
 assert.equal(pancaLive3.direction, "improving", "bench exposure 3 is improving");
@@ -526,7 +535,7 @@ assert.equal(firstReco.action, "insufficient");
 assert.equal(firstReco.performanceDelta, firstSnap.performanceDelta);
 
 assert.ok(html.includes("exerciseAnalyticsSnapshot") && html.includes("recommendNext(store, DATA, loc, snap)"), "UI passes the same snapshot into recommendation");
-assert.ok(html.includes("Intensità vs precedente") && html.includes("OUTPUT") && html.includes("EFFORT") && html.includes("DOSE"), "exercise card shows intensity + OUTPUT/EFFORT/DOSE");
+assert.ok(html.includes("Intensità vs precedente") && html.includes("PRESTAZIONE ESPRESSA") && html.includes("SFORZO") && html.includes("DOSE DI LAVORO"), "exercise card shows intensity + Italian PIC sections");
 assert.ok(TAE.evaluatePerformanceContext, "performance context evaluator exists");
 
 const ab = {};
@@ -703,6 +712,13 @@ const cardPlus = todaySnap.performanceDelta;
 const recoPlus = todayReco.performanceDelta;
 assert.equal(cardPlus, recoPlus, "screenshot regression: card and recommendation cannot show +1.9 vs -2.6");
 assert.equal(todaySnap.volumeDelta, todayReco.volumeDelta, "screenshot regression: card and recommendation cannot show +5.3 vs -8.1");
+assert.equal(todayReco.basedOn.performanceDelta, todaySnap.performanceDelta);
+assert.equal(todayReco.basedOn.volumeDelta, todaySnap.volumeDelta);
+assert.equal(todayReco.basedOn.currentExposureId, todaySnap.currentExposureId);
+assert.equal(todayReco.basedOn.previousExposureId, todaySnap.previousExposureId);
+assert.equal(todaySnap.source, "exerciseAnalyticsSnapshot");
+assert.equal(todaySnap.performanceDeltaPct, todaySnap.performanceDelta);
+assert.equal(todaySnap.volumeDeltaPct, todaySnap.volumeDelta);
 assert.deepEqual(staleStore.data, contradictBefore);
 
 const trace = TAE.debugExerciseTrace(todaySnap, todayReco);
@@ -731,6 +747,9 @@ assert.equal(silentNull.eligible, false);
 assert.ok(silentNull.reason);
 
 assert.ok(html.includes("recommendNext(store, DATA, loc, snap)") && html.includes("live.snapshot"), "UI binds recommendation to the displayed snapshot");
+assert.ok(html.includes("PRESTAZIONE ESPRESSA") && html.includes("SFORZO") && html.includes("COSTO (MODELLO)"));
+assert.ok(!html.includes(">OUTPUT</div>") && !html.includes(">RESPONSE</div>") && !html.includes(">COST</div>"));
+assert.ok(!html.includes("rep.performance && rep.performance.delta") && !html.includes("live.vsPreviousBest"));
 
 TAE.liveAfterSet(abStore, abProg, { week: 2, day: 0, exIdx: 0, set: 3 }, abSnap);
 TAE.evaluatePerformanceContext(abSnap);
@@ -777,7 +796,7 @@ assert.ok(html.includes("id: 'DORSO'") && html.includes("label: 'Dorso'") && !ht
 
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
 assert.ok(sw.includes("training-analytics-engine.js"), "SW precaches the analytics engine");
-assert.ok(sw.includes("analytics12"), "SW cache bumped after six-group muscle taxonomy");
+assert.ok(sw.includes("analytics13"), "SW cache bumped after analytics snapshot contract");
 assert.ok(fs.existsSync(path.join(root, "TRAINING_ANALYTICS_METHODOLOGY.md")), "methodology doc exists");
 
 console.log("OK   training analytics engine formulas + zoom axis + intelligence");
