@@ -7563,6 +7563,19 @@ function queueLiveSetIntel(exIdx, setNum) {
     window.__liveRecommendation = null;
   }
 }
+function formatIntelPct(v) {
+  if (v == null || v === '') return '—';
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '—';
+  return (n >= 0 ? '+' : '') + n + '%';
+}
+function intelDirectionLine(obj) {
+  const TAE = window.TrainingAnalyticsEngine;
+  const d = (obj && (obj.direction || obj.performanceDirection)) || 'insufficient';
+  const H = (TAE && TAE.humanState) ? TAE.humanState('performance', d) : String(d);
+  const arrow = d === 'improving' ? '↑ ' : (d === 'declining' ? '↓ ' : '');
+  return arrow + H;
+}
 function showLiveSetIntel(exIdx) { return showLiveSetIntelHtml(exIdx); }
 function showLiveSetIntelHtml(exIdx) {
   const live = window.__liveSetIntel;
@@ -7581,7 +7594,9 @@ function showLiveSetIntelHtml(exIdx) {
       (live.rpe != null && live.rir != null ? ' · ' : '') +
       (live.rir != null ? ('RIR ' + live.rir) : '') + '</span></div>';
   }
-  h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + (live.vsPreviousBest == null ? '—' : ((live.vsPreviousBest >= 0 ? '+' : '') + live.vsPreviousBest + '%')) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(live.vsPreviousExposure != null ? live.vsPreviousExposure : live.vsPreviousBest) + '</span></div>';
+  h += '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(live)) + (live.confidence ? (' · ' + esc(H('confidence', live.confidence))) : '') + '</div>';
+  h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(live.volumeVsPrevious != null ? live.volumeVsPrevious : live.vsLastSessionVolume) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(live.volumeToday) + ' kg</span></div>';
   if (live.fatigue && live.fatigue.signal) h += '<div class="stats-adv-row"><span>Fatica durante la seduta</span><span>' + esc(H('fatigue', live.fatigue.signal)) + '</span></div>';
   h += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato · non modifica i kg che hai scritto. ' + metricExplainBtn('e1rm', 'ⓘ Come si calcola?') + '</div>';
@@ -7591,13 +7606,16 @@ function showLiveSetIntelHtml(exIdx) {
     h += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + formatStatsKg(rep.volumeToday) + ' kg</span></div>';
     h += '<div class="stats-adv-row"><span>Miglior serie</span><span>' + esc(rep.bestSet || '—') + '</span></div>';
     h += '<div class="stats-adv-row"><span>Massimale stimato oggi</span><span>' + (rep.e1rmToday == null ? '—' : (rep.e1rmToday + ' kg')) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Prestazione vs seduta prec.</span><span>' + (rep.e1rmChange == null ? '—' : ((rep.e1rmChange >= 0 ? '+' : '') + rep.e1rmChange + '%')) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(rep.performance && rep.performance.delta != null ? rep.performance.delta : rep.e1rmChange) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(rep.volumeChange) + '</span></div>';
     if (rep.status) h += '<div style="font-size:11px;margin-top:6px;">' + esc(rep.status) + '</div>';
   }
   const reco = window.__liveRecommendation;
   if (reco && reco.action && reco.action !== 'insufficient') {
     h += intelRecoHtml(exIdx, reco, L);
-  } else if (isClientAthleteView() && live.vsPreviousBest != null && live.vsPreviousBest < -5) {
+  } else if (reco && reco.action === 'insufficient') {
+    h += '<div style="font-size:10px;color:#888;margin-top:8px;">' + esc(reco.why || 'Non ci sono abbastanza dati per una stima affidabile.') + '</div>';
+  } else if (isClientAthleteView() && live.direction === 'declining') {
     h += '<div style="font-size:11px;color:#ccc;margin-top:10px;">La prestazione è diminuita rispetto alle ultime esposizioni.</div>';
     h += '<button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px;" onclick="askHumanCoachAboutExercise(' + exIdx + ',\'esercizio\')">CHIEDI AL COACH</button>';
   }
@@ -7609,7 +7627,10 @@ function intelRecoHtml(exIdx, reco, L) {
   const TAE = window.TrainingAnalyticsEngine;
   const H = function (d, k) { return (TAE && TAE.humanState) ? TAE.humanState(d, k) : L(k); };
   let h = '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-top:10px;">PESO CONSIGLIATO</div>';
-  h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + (reco.action === 'increase' ? ('+' + reco.deltaKg + ' kg → ' + reco.suggestedLoad + ' kg') : (reco.action === 'reduce_volume' ? 'Valuta −1–2 serie di lavoro' : 'Mantieni il carico')) + '</div>';
+  const recoLine = reco.action === 'increase'
+    ? ('Peso consigliato ' + reco.suggestedLoad + ' kg (+' + reco.deltaKg + ' kg)')
+    : (reco.action === 'reduce_volume' ? 'Riduci il carico — valuta −1–2 serie di lavoro' : 'Mantieni il carico attuale' + (reco.suggestedLoad != null ? (' · ' + reco.suggestedLoad + ' kg') : ''));
+  h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + esc(recoLine) + '</div>';
   h += '<div style="font-size:10px;color:#aaa;">' + esc(reco.why) + '</div>';
   if (reco.mrvNote) h += '<div style="font-size:10px;color:#c9a227;margin-top:4px;">' + esc(reco.mrvNote) + '</div>';
   h += '<div style="font-size:9px;color:#777;margin:4px 0;">' + esc(H('confidence', reco.confidence)) + ' · ' + esc((reco.evidence || []).join(' · ')) + ' ' + metricExplainBtn('recommendation', 'ⓘ Perché?') + '</div>';
@@ -7657,8 +7678,8 @@ function exerciseIntelBodyHtml(exIdx) {
     ? window.__exIntelReco
     : null;
   let h = '';
-  if (live.empty) {
-    h += '<div>Dati insufficienti. Completa almeno una serie con kg e rip.</div>';
+  if (live.empty && !live.noCurrentSets) {
+    h += '<div>Dati insufficienti. Completa almeno una serie con kg e rip, oppure calcola il peso dalla storia precedente.</div>';
   } else {
     const effort = (live.rpe != null || live.rir != null)
       ? ((live.rpe != null && live.rpe >= 8) || (live.rir != null && live.rir <= 2) ? 'Molto alto — ' : '') +
@@ -7669,14 +7690,16 @@ function exerciseIntelBodyHtml(exIdx) {
     h += '<div class="stats-adv-row"><span>Massimale stimato</span><span>' + (live.e1rm == null ? '—' : (live.e1rm + ' kg')) + '</span></div>';
     h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(live.volumeToday) + ' kg</span></div>';
     h += '<div class="stats-adv-row"><span>Sforzo</span><span>' + esc(effort) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + (live.vsPreviousBest == null ? '—' : ((live.vsPreviousBest >= 0 ? '+' : '') + live.vsPreviousBest + '%')) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(live.vsPreviousExposure != null ? live.vsPreviousExposure : live.vsPreviousBest) + '</span></div>';
+    h += '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(live)) + (live.confidence ? (' · ' + esc(H('confidence', live.confidence))) : '') + '</div>';
+    h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(live.volumeVsPrevious != null ? live.volumeVsPrevious : live.vsLastSessionVolume) + '</span></div>';
     h += '<div class="stats-adv-row"><span>Fatica durante la seduta</span><span>' + esc(H('fatigue', live.fatigue && live.fatigue.signal)) + '</span></div>';
-    h += '<div style="font-size:9px;color:#777;margin-top:6px;">' + metricExplainBtn('e1rm') + ' ' + metricExplainBtn('rpe') + ' ' + metricExplainBtn('performanceVsPrevious') + '</div>';
+    h += '<div style="font-size:9px;color:#777;margin-top:6px;">' + metricExplainBtn('e1rm') + ' ' + metricExplainBtn('rpe') + ' ' + metricExplainBtn('performanceVsPrevious') + ' ' + metricExplainBtn('volumeVsPrevious') + '</div>';
   }
   h += '<button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px;" onclick="calculateSuggestedLoad(' + exIdx + ')">Calcola peso consigliato</button>';
   if (reco && reco.action && reco.action !== 'insufficient') h += intelRecoHtml(exIdx, reco, L);
-  else if (reco && reco.action === 'insufficient') h += '<div style="font-size:10px;color:#888;margin-top:8px;">' + esc(reco.why) + '</div>';
-  if (isClientAthleteView() && live && !live.empty && live.vsPreviousBest != null && live.vsPreviousBest < -5) {
+  else if (reco && reco.action === 'insufficient') h += '<div style="font-size:10px;color:#888;margin-top:8px;">' + esc(reco.why || 'Non ci sono abbastanza dati per una stima affidabile.') + '</div>';
+  if (isClientAthleteView() && live && !live.empty && live.direction === 'declining') {
     h += '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;border-color:var(--gold);color:var(--gold);" onclick="askHumanCoachAboutExercise(' + exIdx + ',\'esercizio\')">CHIEDI AL COACH</button>';
   }
   return h;
@@ -7760,14 +7783,15 @@ function sessionSummaryCardHtml() {
   h += '<button type="button" class="btn btn-outline" style="font-size:9px;padding:3px 6px;" onclick="window.__lastSessionSummary=null;this.closest(\'.card\').remove()">Chiudi</button></div>';
   h += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + (sum.volumeChange == null ? formatStatsKg(sum.volume) + ' kg' : ((sum.volumeChange >= 0 ? '+' : '') + sum.volumeChange + '%')) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Serie</span><span>' + (sum.setsChange == null ? (sum.sets + ' serie') : ((sum.setsChange >= 0 ? '+' : '') + sum.setsChange + '%')) + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Prestazione</span><span>' + (sum.performanceChange == null ? '—' : ((sum.performanceChange >= 0 ? '+' : '') + sum.performanceChange + '%')) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(sum.performanceChange) + '</span></div>';
+  h += '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(sum)) + '</div>';
   h += '<div class="stats-adv-row"><span>Sforzo percepito medio</span><span>' + (sum.avgRpe == null ? '—' : (sum.avgRpe + '/10')) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Fatica stimata</span><span>' + esc(H('fatigue', sum.fatigue && sum.fatigue.signal)) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Recupero stimato</span><span>' + esc(H('recovery', sum.recovery && (sum.recovery.signal || sum.recovery.estimate))) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Risposta all\'allenamento</span><span>' + esc(H('adaptation', sum.adaptation && sum.adaptation.signal)) + '</span></div>';
   if (sum.adaptation && sum.adaptation.confidence) h += '<div class="stats-adv-row"><span>Confidenza</span><span>' + esc(H('confidence', sum.adaptation.confidence)) + ' ' + metricExplainBtn('confidence', 'ⓘ Perché?') + '</span></div>';
   h += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato dal motore. Non modifica lo storico. ' + metricExplainBtn('performance') + '</div>';
-  if (isClientAthleteView() && sum.performanceChange != null && sum.performanceChange < -5) {
+  if (isClientAthleteView() && sum.performanceDirection === 'declining') {
     h += '<div style="font-size:11px;color:#ccc;margin-top:10px;">La prestazione è diminuita rispetto alle ultime esposizioni.</div>';
     h += '<button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px;" onclick="askRealCoachForDomain(\'training\')">CHIEDI AL COACH</button>';
   }
@@ -17978,7 +18002,7 @@ function renderStats(c){
       <div class="chart-container"><canvas id="volChart"></canvas></div>
       <div id="stats-effective-note" style="font-size:10px;color:#777;">Volume: somma dei kg alzati (carico × ripetizioni) nel periodo. Un volume più alto è un fatto, non automaticamente un miglioramento.</div>
     </div></div>
-    <div class="card"><div class="card-header"><h2>Tabella analitica</h2></div><div style="padding:15px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>PERIODO</th><th>VOL</th><th>Δ%</th><th>SERIE</th><th>REP</th><th>INT</th><th>SERIE vs LIMITE</th><th>FREQ</th><th>BW</th></tr></thead><tbody id="summary-body"></tbody></table><div style="font-size:10px;color:#777;margin-top:8px;">Zoom sulle settimane di scheda (W1, W2…). «Serie vs limite» confronta le serie della settimana con il limite superiore stimato (MRV) del gruppo filtrato, non un massimale. <button type="button" class="btn btn-outline" style="font-size:8px;padding:2px 6px;" onclick="explainIntelMetric('mrv')">ⓘ Cosa significa?</button></div></div></div>
+    <div class="card"><div class="card-header"><h2>Tabella analitica</h2></div><div style="padding:15px;overflow-x:auto;"><table class="perf-table"><thead><tr><th>PERIODO</th><th>VOL</th><th>Δ%</th><th>SERIE</th><th>REP</th><th>INT</th><th>SERIE vs LIMITE</th><th>FREQ</th><th>BW</th></tr></thead><tbody id="summary-body"></tbody></table><div style="font-size:10px;color:#777;margin-top:8px;">Zoom sulle settimane di scheda (W1, W2…). Con filtro «Tutti» la colonna è il volume totale (serie di tutto il corpo), senza MRV di un singolo muscolo. Con un gruppo selezionato, «Serie vs limite» confronta le serie di quel distretto con il suo MRV stimato. Unità: serie / settimana. <button type="button" class="btn btn-outline" style="font-size:8px;padding:2px 6px;" onclick="explainIntelMetric('mrv')">ⓘ Cosa significa?</button></div></div></div>
     <div class="card" id="stats-advanced-card"><div class="card-header"><h2>Analisi avanzata</h2></div>
       <div style="padding:12px 15px 0;">
         <div class="stats-zoom-row">
@@ -18214,7 +18238,8 @@ function renderCheckFisicoCardHtml() {
     '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">PESO CORPOREO (kg)</div>' +
     '<input id="check-weight-input" type="number" step="0.1" inputmode="decimal" value="' + esc(String(draft.weight || '')) + '" oninput="onCheckFisicoWeight(this.value)" style="width:100%;padding:10px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:16px;font-weight:800;"></div>' +
     '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">RESOCONTO ALLENAMENTI</div>' +
-    '<div class="stats-period">' + periodBtns + '</div></div>' +
+    '<div class="stats-period">' + periodBtns + '</div>' +
+    '<div style="font-size:10px;color:#777;margin-top:6px;">Il volume del check è globale (serie e tonnellaggio di tutto il corpo). Per confrontarlo con MEV/MAV/MRV apri Analisi avanzata e seleziona un gruppo muscolare.</div></div>' +
     '<div style="margin-top:12px;"><div style="font-size:10px;color:#aaa;font-weight:800;margin-bottom:6px;">NOTE PER IL COACH</div>' +
     '<textarea id="check-notes-input" rows="2" placeholder="Es. ho avuto la febbre 3 giorni…" oninput="onCheckFisicoNotes(this.value)" style="width:100%;padding:10px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:13px;resize:vertical;">' + esc(String(draft.notes || '')) + '</textarea></div>' +
     (checkFisicoRequiresHumanCoach()
@@ -18430,7 +18455,7 @@ function buildCheckFisicoTextReport(entry) {
   const sessions = sum.rows.map(function (row) {
     return '- ' + String(row.at || '').replace('T', ' ').slice(0, 16) + ' · W' + (row.week || '?') + ' S' + ((row.day || 0) + 1) + ' · ' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg';
   }).join('\n');
-  return 'CHECK FISICO NURVAN (non è un check-in settimanale)\nAtleta: ' + name + '\nPeso: ' + (weight || '—') + ' kg\nPeriodo: ' + meta.label + ' (' + meta.days + ' giorni)\nSessioni: ' + sum.sessions + ' · Serie: ' + sum.sets + ' · Tonnellaggio: ' + sum.tonnage + ' kg · kcal: ' + sum.kcal + '\nMuscoli: ' + (muscleLine || 'n/d') + '\nFoto fronte: ' + ((entry && entry.hasFront) || checkFisicoDraft().front ? 'sì' : 'no') + '\nFoto retro: ' + ((entry && entry.hasBack) || checkFisicoDraft().back ? 'sì' : 'no') + '\n\nSessioni:\n' + (sessions || '- nessuna sessione nel periodo');
+  return 'CHECK FISICO NURVAN (non è un check-in settimanale)\nAtleta: ' + name + '\nPeso: ' + (weight || '—') + ' kg\nPeriodo: ' + meta.label + ' (' + meta.days + ' giorni)\nScala volume: globale (tutto il corpo), non MRV di un singolo muscolo\nSessioni: ' + sum.sessions + ' · Serie: ' + sum.sets + ' · Tonnellaggio: ' + sum.tonnage + ' kg · kcal: ' + sum.kcal + '\nMuscoli: ' + (muscleLine || 'n/d') + '\nFoto fronte: ' + ((entry && entry.hasFront) || checkFisicoDraft().front ? 'sì' : 'no') + '\nFoto retro: ' + ((entry && entry.hasBack) || checkFisicoDraft().back ? 'sì' : 'no') + '\n\nSessioni:\n' + (sessions || '- nessuna sessione nel periodo');
 }
 function shrinkDataUrlForAi(dataUrl, maxW) {
   return new Promise(function (resolve) {
@@ -19300,9 +19325,13 @@ const STATS_MARKET_NOTES = {
 function formatMrvWeekCell(row, analytics, selectedGroup) {
   if (!row || row.empty) return '—';
   const sets = Number(row.sets) || 0;
-  const mrv = (analytics && analytics.landmarks && analytics.landmarks.MRV) || 20;
-  if (!selectedGroup || selectedGroup === 'TOTAL') {
-    return '<div style="font-size:10px;line-height:1.35;">Attuale: ' + sets + ' serie<br><span style="color:#888;">Tutto il corpo. Il limite stimato (MRV ~' + mrv + ' serie) vale per un gruppo: aprilo in Analisi avanzata.</span></div>';
+  const lm = (analytics && analytics.landmarks) || {};
+  if (!selectedGroup || selectedGroup === 'TOTAL' || lm.scale === 'global' || !lm.comparable) {
+    return '<div style="font-size:10px;line-height:1.35;">Volume totale: ' + sets + ' serie<br><span style="color:#888;">Tutto il corpo. Seleziona un gruppo muscolare per confrontare il volume con MEV/MAV/MRV.</span></div>';
+  }
+  const mrv = lm.MRV;
+  if (mrv == null) {
+    return '<div style="font-size:10px;line-height:1.35;">Attuale: ' + sets + ' serie<br><span style="color:#888;">MRV stimato: non disponibile per questo distretto.</span></div>';
   }
   let stato = 'Vicino alla stima';
   if (sets > mrv * 1.15) stato = 'Molto sopra la stima attuale';
@@ -19601,13 +19630,16 @@ function fillStatsAdvancedPanel(analytics) {
       const fatSig = ax.fatigue || {};
       focusHtml = '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">' + esc(ax.name) + ' · esercizio</div>' +
         '<div class="stats-adv-row"><span>Massimale stimato (e1RM)</span><span>' + (ax.e1rm == null ? '—' : (ax.e1rm + ' kg')) + '</span></div>' +
-        '<div class="stats-adv-row"><span>Prestazione vs best prec.</span><span>' + (ax.trend == null ? '—' : ((ax.trend >= 0 ? '+' : '') + ax.trend + '%')) + '</span></div>' +
+        '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(ax.trend) + '</span></div>' +
+        '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(ax)) + (ax.confidence ? (' · ' + esc(H('confidence', ax.confidence))) : '') + '</div>' +
+        '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(ax.volumeVsPrevious) + '</span></div>' +
         '<div class="stats-adv-row"><span>Miglior e1RM stimato</span><span>' + (ax.e1rmBest == null ? '—' : (ax.e1rmBest + ' kg')) + '</span></div>' +
         '<div class="stats-adv-row"><span>e5RM / e8RM / e10RM stimati</span><span>' + [ax.e5rm, ax.e8rm, ax.e10rm].map(function (n) { return n == null ? '—' : (n + ' kg'); }).join(' · ') + '</span></div>' +
         '<div class="stats-adv-row"><span>Sforzo medio</span><span>' + (ax.avgRpe == null ? '—' : ('RPE ' + ax.avgRpe + '/10')) + (ax.avgRir == null ? '' : (' · RIR ' + ax.avgRir)) + '</span></div>' +
         '<div class="stats-adv-row"><span>Fatica intra-seduta</span><span>' + esc(H('fatigue', fatSig.signal)) + '</span></div>' +
         (ax.prStatus ? '<div style="margin:6px 0;">Nuovo PR stimato</div>' : '') +
-        (dist ? '<div style="font-size:10px;color:#888;margin:8px 0 12px;">Distribuzione %1RM · ' + Object.keys(dist).map(function (k) { return k + ' ' + dist[k]; }).join(' · ') + '</div>' : '');
+        (dist ? '<div style="font-size:10px;color:#888;margin:8px 0 12px;">Distribuzione %1RM · ' + Object.keys(dist).map(function (k) { return k + ' ' + dist[k]; }).join(' · ') + '</div>' : '') +
+        '<div style="font-size:10px;color:#777;margin:6px 0 12px;">Scala esercizio: carico, rip, e1RM, prestazione. Non è l’MRV del gruppo muscolare.</div>';
     }
   } else if (mode === 'muscle') {
     const mg = (analytics.byMuscle || []).find(function (m) {
@@ -19637,26 +19669,44 @@ function fillStatsAdvancedPanel(analytics) {
   const vr = analytics.volumeResponse || {};
   const fs = analytics.fatigueSignal || {};
   const curSets = lm.currentSets;
-  const span = (lm.MRV || 20);
-  const pct = curSets == null ? 0 : Math.max(2, Math.min(100, Math.round((curSets / span) * 100)));
+  const exerciseFocus = mode === 'exercise' && store.prefs && store.prefs.statsExercise;
+  const comparableLm = !!(lm.comparable && lm.MRV != null) && !exerciseFocus;
+  let landmarksHtml = '';
+  if (exerciseFocus) {
+    landmarksHtml =
+      '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">VOLUME ESERCIZIO</div>' +
+      '<div style="font-size:11px;color:#ccc;margin:0 0 8px;">Questa vista è dell’esercizio, non del distretto. Per MEV/MAV/MRV seleziona un gruppo muscolare.</div>';
+  } else if (!comparableLm) {
+    landmarksHtml =
+      '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">VOLUME TOTALE</div>' +
+      '<div class="stats-adv-row"><span>Volume totale della settimana</span><span>' + (curSets == null ? '—' : (curSets + ' serie')) + '</span></div>' +
+      '<div style="font-size:11px;color:#ccc;margin:8px 0;">Per confrontare il volume con MEV/MAV/MRV seleziona un gruppo muscolare.</div>' +
+      '<div style="font-size:10px;color:#777;margin:6px 0 14px;">Questa scala è globale (tutto il corpo). Non confronta il volume totale con l’MRV di un singolo muscolo. ' + metricExplainBtn('mrv') + '</div>';
+  } else {
+    const span = lm.MRV;
+    const pct = curSets == null ? 0 : Math.max(2, Math.min(100, Math.round((curSets / span) * 100)));
+    landmarksHtml =
+      '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">' + esc(lm.title || ('VOLUME — ' + String(groupLabel).toUpperCase())) + '</div>' +
+      '<div class="stats-adv-row"><span>Volume attuale</span><span>' + (curSets == null ? '—' : (curSets + ' serie')) + '</span></div>' +
+      '<div class="stats-adv-row"><span>Volume minimo efficace stimato (MEV)</span><span>' + lm.MEV + ' serie</span></div>' +
+      '<div class="stats-adv-row"><span>Zona più produttiva stimata (MAV)</span><span>' + lm.MAV_LOW + '–' + lm.MAV_HIGH + ' serie</span></div>' +
+      '<div class="stats-adv-row"><span>Limite superiore stimato (MRV)</span><span>~' + lm.MRV + ' serie</span></div>' +
+      '<div class="stats-lm-bar"><i style="width:' + pct + '%"></i><b style="left:' + pct + '%"></b></div>' +
+      '<div style="font-size:9px;color:#777;margin-top:4px;">0 · MEV ' + lm.MEV + ' · MAV ' + lm.MAV_HIGH + ' · MRV ' + lm.MRV + ' · unità: serie / settimana</div>' +
+      '<div style="margin-top:4px;">Volume attuale: ' + (curSets == null ? '—' : (curSets + ' serie')) + (lm.status ? (' · ' + esc(L(lm.status))) : '') + ' · ' + pct + '%</div>' +
+      ((curSets != null && lm.MRV && curSets > lm.MRV)
+        ? ('<div style="font-size:11px;color:#ccc;margin:8px 0;">Il volume è sopra la stima MRV, ma va letto con prestazione, fatica e recupero: se la prestazione sale e il recupero è buono, continua a monitorare prima di ridurre.</div>')
+        : '') +
+      '<div style="font-size:10px;color:#777;margin:6px 0 14px;">Questa scala confronta le serie di <b>' + esc(groupLabel) + '</b> con una stima del volume utile. Non confronta il volume totale di tutto il corpo con un singolo muscolo. Fonte: ' + esc(lm.source === 'configured' ? 'valore configurato' : 'stima configurabile') + '. ' + metricExplainBtn('mrv') + ' ' + metricExplainBtn('mev') + ' ' + metricExplainBtn('mav') + '</div>';
+  }
   adv.innerHTML = focusHtml +
     '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">CONFRONTO PERIODO</div>' +
     '<div class="stats-adv-row"><span>Volume</span><span>' + delta(cmp.volume) + '</span></div>' +
     '<div class="stats-adv-row"><span>Serie</span><span>' + delta(cmp.sets) + '</span></div>' +
     '<div class="stats-adv-row"><span>e1RM (solo se hai scelto un esercizio)</span><span>' + (mode === 'exercise' ? delta(cmp.e1rm) : '—') + '</span></div>' +
-    '<div style="font-size:10px;color:#777;margin:8px 0 14px;">Descrittivo. Un + non è automaticamente un miglioramento.</div>' +
+    '<div style="font-size:10px;color:#777;margin:8px 0 14px;">Descrittivo. Un + non è automaticamente un miglioramento. Volume ≠ prestazione ≠ fatica.</div>' +
     (mode === 'exercise' ? ('<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">VOLUME PER ESERCIZIO</div>' + exHtml) : '') +
-      '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">VOLUME STIMATO (riferimento)</div>' +
-      '<div class="stats-adv-row"><span>Volume minimo efficace stimato (MEV)</span><span>' + lm.MEV + ' serie</span></div>' +
-      '<div class="stats-adv-row"><span>Zona più produttiva stimata (MAV)</span><span>' + lm.MAV_LOW + '–' + lm.MAV_HIGH + ' serie</span></div>' +
-      '<div class="stats-adv-row"><span>Limite superiore stimato (MRV)</span><span>~' + lm.MRV + ' serie</span></div>' +
-      '<div class="stats-adv-row"><span>Serie ultima settimana</span><span>' + (curSets == null ? '—' : (curSets + ' serie')) + '</span></div>' +
-    '<div class="stats-lm-bar"><i style="width:' + pct + '%"></i><b style="left:' + pct + '%"></b></div>' +
-    '<div style="margin-top:4px;">Volume attuale: ' + (curSets == null ? '—' : (curSets + ' serie')) + (lm.status ? (' · ' + esc(L(lm.status))) : '') + '</div>' +
-    ((curSets != null && lm.MRV && curSets > lm.MRV)
-      ? ('<div style="font-size:11px;color:#ccc;margin:8px 0;">Il volume è sopra la stima MRV, ma va letto con prestazione, fatica e recupero: se la prestazione sale e il recupero è buono, continua a monitorare prima di ridurre.</div>')
-      : '') +
-    '<div style="font-size:10px;color:#777;margin:6px 0 14px;">Stima individuale / configurabile. Non rappresenta una soglia fisiologica universale. ' + metricExplainBtn('mrv') + ' ' + metricExplainBtn('mev') + ' ' + metricExplainBtn('mav') + '</div>' +
+    landmarksHtml +
     '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">RISPOSTA</div>' +
     '<div class="stats-adv-row"><span>Prestazione</span><span>' + esc(H('performance', prf.signal)) + '</span></div>' +
     '<div class="stats-adv-row"><span>Risposta al volume</span><span>' + esc(H('volumeResponse', vr.signal)) + '</span></div>' +

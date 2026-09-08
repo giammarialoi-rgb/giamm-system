@@ -80,7 +80,31 @@ Mappa euristica: primario 1, secondario 0,5, indiretto 0,25.
 
 ---
 
-## Landmark MV / MEV / MAV / MRV
+## Prestazione vs precedente (exercise exposure)
+
+**Definizione:** confronto tra l’ultima esposizione valida dello stesso esercizio e la precedente esposizione valida. Non è la variazione di volume della seduta e non è “vs best storico”.
+
+**Segnali (in ordine):** carico, ripetizioni, e1RM di supporto, contesto RPE/RIR. Il tonnellaggio è una metrica separata (`volume vs precedente`).
+
+**Stati:** miglioramento / stabile / calo / dati insufficienti, più trend multi-seduta e confidenza.
+
+**formulaVersion:** `perf-exposure-v1`.
+
+**Regola:** same load + more reps + same RIR = prestazione in miglioramento. Un calo di volume con carico/rep/RIR in aumento non è un calo di prestazione.
+
+## Tre scale di volume
+
+- **GLOBAL:** volume totale, serie totali, ripetizioni, frequenza, sessioni, training load. Nessuna barra MEV/MAV/MRV.
+- **MUSCLE GROUP:** serie di quel distretto vs MEV/MAV/MRV di quel distretto. Unità unica: serie / settimana.
+- **EXERCISE:** carico, rip, e1RM, volume dell’esercizio, prestazione. Non è l’MRV del petto applicato alla panca.
+
+Mai confrontare serie globali (es. 87) con l’MRV di un singolo muscolo (es. 20).
+
+## Peso consigliato
+
+Funziona su esercizi canonici, custom e aggiunti in enciclopedia. Fonte primaria: storico dell’esercizio, non la voce enciclopedica. Azioni: increase / maintain / reduce_volume / insufficient, sempre con `why`. Accetta modifica solo i set futuri (`intelTargets`).
+
+---
 
 Default configurabili in `store.prefs.volumeLandmarks`.  
 **Tipo:** MODEL_BASED.  

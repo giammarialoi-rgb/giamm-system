@@ -37,7 +37,7 @@ assert.ok(apiPractice.includes("/c/:token/manifest.webmanifest") && apiPractice.
 assert.ok(apiPractice.includes("function injectClientPwaHtml") && apiPractice.includes("__NURVAN_CLIENT_BOOT"), "server injects per-token manifest into /c/:token HTML");
 assert.ok(apiPractice.includes('res.redirect(302, "/c/"') || apiPractice.includes("res.redirect(302, \"/c/\""), "GET / with client cookies redirects to /c/token");
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
-assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("analytics6"), "SW does not precache the root manifest");
+assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("analytics7"), "SW does not precache the root manifest");
 assert.ok(sw.includes("isClientDoc") && sw.includes(".webmanifest"), "SW keeps /c/* and manifests on the network");
 assert.ok(sw.includes("training-knowledge.js"), "SW precaches the training encyclopedia");
 
@@ -114,7 +114,8 @@ assert.ok(html.includes("STATS_MARKET_NOTES") && html.includes("Peso corporeo:")
 assert.ok(!/function applyStatsMarketNote[\s\S]{0,500}effectiveVolumeNote/.test(html), "market note never falls back to effective volume");
 assert.ok(/function applyStatsMarketNote[\s\S]{0,500}howIt/.test(html), "market note uses catalog howIt+limitIt");
 assert.ok(html.includes("<th>SERIE vs LIMITE</th>") && !html.includes("<th>e1RM</th>"), "weekly table uses series vs estimated MRV, not aggregated e1RM");
-assert.ok(html.includes("function formatMrvWeekCell") && html.includes("Tutto il corpo"), "TOTAL weeks do not compare whole-body sets to per-muscle MRV");
+assert.ok(html.includes("function formatMrvWeekCell") && html.includes("Volume totale") && html.includes("Tutto il corpo"), "TOTAL weeks do not compare whole-body sets to per-muscle MRV");
+assert.ok(!html.includes("lm.MRV || 20"), "advanced panel does not fall back to MRV 20 on the global scale");
 assert.ok(html.includes("function compactChartX") && html.includes("maxGap"), "market W1/W2 ticks use compact spacing");
 assert.ok(html.includes("function clientMayApplyIntel") && html.includes("CHIEDI AL COACH"), "client intel CTA asks the coach");
 assert.ok(html.includes("openPdfStayInApp") && html.includes("blobDownloadWouldNavigate"), "check export avoids same-tab blob navigation");

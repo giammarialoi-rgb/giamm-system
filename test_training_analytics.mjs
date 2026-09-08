@@ -304,7 +304,143 @@ assert.ok(html.includes("stats-zoom-slider") && html.includes("setStatsAxis"), "
 assert.ok(html.includes("Training Market") && html.includes("setStatsAdvancedMode"), "one main chart + advanced exercise/muscle");
 assert.ok(html.includes("function compactChartX") && html.includes("function formatMrvWeekCell"), "market ticks + human MRV cells");
 assert.ok(html.includes("SERIE vs LIMITE") && html.includes("Attuale: ") && html.includes("Limite superiore stimato"), "MRV cell is human-readable");
+assert.ok(html.includes("Volume totale") && html.includes("Seleziona un gruppo muscolare"), "global volume is not compared to a muscle MRV");
+assert.ok(!html.includes("lm.MRV || 20"), "no universal MRV 20 fallback in the stats UI");
+assert.ok(html.includes("Volume vs precedente") && html.includes("formatIntelPct"), "performance and volume deltas are separate");
 assert.ok(!html.includes("row.sets + ' / '"), "no ambiguous sets/MRV slash");
+assert.equal(TAE.humanState("performance", "improving"), "Prestazione in miglioramento");
+
+function writeSets(obj, week, day, exIdx, rows) {
+  rows.forEach(function (r, i) {
+    const n = i + 1;
+    obj["w" + week + "_d" + day + "_e" + exIdx + "_s" + n + "_load"] = r[0];
+    obj["w" + week + "_d" + day + "_e" + exIdx + "_s" + n + "_reps"] = r[1];
+    if (r[2] != null) obj["w" + week + "_d" + day + "_e" + exIdx + "_s" + n + "_rir"] = r[2];
+  });
+}
+function nWeeks(name, n) {
+  return {
+    weeks: Array.from({ length: n }, function () {
+      return { sessions: [{ exercises: [{ name: name }] }] };
+    })
+  };
+}
+
+const pancaData = {};
+writeSets(pancaData, 1, 0, 0, [[120, 8, 1], [120, 8, 1], [120, 8, 1]]);
+writeSets(pancaData, 2, 0, 0, [[120, 9, 1], [120, 9, 1], [120, 8, 1]]);
+writeSets(pancaData, 3, 0, 0, [[122.5, 8, 1], [122.5, 8, 1], [122.5, 8, 1]]);
+const pancaStore = {
+  data: pancaData,
+  prefs: { intensityType: "RIR", duration: 3 },
+  logs: [{ week: 1, day: 0 }, { week: 2, day: 0 }, { week: 3, day: 0 }]
+};
+const pancaProg = nWeeks("Panca piana", 3);
+const pancaBefore = TAE.rawFingerprint(pancaStore);
+TAE.clearCache();
+const pancaLive2 = TAE.liveAfterSet(pancaStore, pancaProg, { week: 2, day: 0, exIdx: 0, set: 3 });
+const pancaLive3 = TAE.liveAfterSet(pancaStore, pancaProg, { week: 3, day: 0, exIdx: 0, set: 3 });
+const pancaAx = TAE.analyzeExercise(pancaStore, pancaProg, "Panca piana");
+assert.equal(pancaLive2.direction, "improving", "bench exposure 2 is improving");
+assert.notEqual(pancaLive2.direction, "declining");
+assert.equal(pancaLive3.direction, "improving", "bench exposure 3 is improving");
+assert.notEqual(pancaLive3.direction, "declining");
+assert.equal(pancaAx.direction, "improving");
+assert.ok(pancaAx.multiTrend === "improving" || pancaLive3.trend === "improving", "multi-session bench trend is improving");
+assert.ok(pancaLive2.vsPreviousBest == null || pancaLive2.vsPreviousBest >= 0, "no false negative vs previous");
+assert.ok(pancaLive3.vsPreviousBest == null || pancaLive3.vsPreviousBest >= 0);
+const pancaReco = TAE.recommendNext(pancaStore, pancaProg, { week: 3, day: 0, exIdx: 0, set: 3 });
+assert.ok(pancaReco.action && pancaReco.action !== "undefined");
+assert.ok(pancaReco.action === "increase" || pancaReco.action === "maintain");
+assert.ok(pancaReco.suggestedLoad != null);
+assert.ok(pancaReco.why);
+assert.equal(TAE.rawFingerprint(pancaStore), pancaBefore, "panca analytics does not mutate raw data");
+
+const volDiff = {};
+writeSets(volDiff, 1, 0, 0, [[120, 8, 1], [120, 8, 1], [120, 8, 1], [120, 8, 1]]);
+writeSets(volDiff, 2, 0, 0, [[120, 9, 1], [120, 9, 1], [120, 9, 1]]);
+const volStore = { data: volDiff, prefs: { intensityType: "RIR", duration: 2 }, logs: [{ week: 1, day: 0 }, { week: 2, day: 0 }] };
+const volLive = TAE.liveAfterSet(volStore, nWeeks("Panca piana", 2), { week: 2, day: 0, exIdx: 0, set: 3 });
+assert.notEqual(volLive.direction, "declining", "fewer sets with more reps is not a performance drop");
+assert.ok(volLive.volumeVsPrevious == null || volLive.volumeVsPrevious < 0, "volume can fall while performance does not");
+
+const rirData = {};
+writeSets(rirData, 1, 0, 0, [[120, 8, 1]]);
+writeSets(rirData, 2, 0, 0, [[120, 8, 2]]);
+const rirLive = TAE.liveAfterSet({
+  data: rirData, prefs: { intensityType: "RIR", duration: 2 }, logs: [{ week: 1, day: 0 }, { week: 2, day: 0 }]
+}, nWeeks("Panca piana", 2), { week: 2, day: 0, exIdx: 0, set: 1 });
+assert.notEqual(rirLive.direction, "declining", "same output with easier RIR is not negative");
+
+const customName = "Cubo di ferro nurvan";
+const custom1 = {};
+writeSets(custom1, 1, 0, 0, [[120, 8, 2]]);
+const customProg1 = nWeeks(customName, 1);
+const customStore1 = { data: custom1, prefs: { intensityType: "RIR", duration: 1 }, logs: [{ week: 1, day: 0 }] };
+const customFirstReco = TAE.recommendNext(customStore1, customProg1, { week: 1, day: 0, exIdx: 0, set: 1 });
+assert.equal(customFirstReco.action, "insufficient");
+assert.ok(String(customFirstReco.why).toLowerCase().includes("dati") || String(customFirstReco.why).toLowerCase().includes("esposizione"));
+const customAx1 = TAE.analyzeExercise(customStore1, customProg1, customName);
+assert.equal(customAx1.empty, false);
+assert.ok(customAx1.e1rm > 0);
+
+const custom2 = Object.assign({}, custom1);
+writeSets(custom2, 2, 0, 0, [[122.5, 8, 2]]);
+const customProg2 = nWeeks(customName, 2);
+const customStore2 = { data: custom2, prefs: { intensityType: "RIR", duration: 2 }, logs: [{ week: 1, day: 0 }, { week: 2, day: 0 }] };
+const customBefore = JSON.parse(JSON.stringify(customStore2.data));
+const customLive = TAE.liveAfterSet(customStore2, customProg2, { week: 2, day: 0, exIdx: 0, set: 1 });
+const customAx = TAE.analyzeExercise(customStore2, customProg2, customName);
+const customReco = TAE.recommendNext(customStore2, customProg2, { week: 2, day: 0, exIdx: 0, set: 1 });
+const customFuture = TAE.recommendNext(customStore2, nWeeks(customName, 3), { week: 3, day: 0, exIdx: 0, set: 1 });
+assert.ok(customLive.direction === "improving" || customLive.direction === "stable");
+assert.ok(customAx.e1rm > 0);
+assert.ok(customReco.action === "increase" || customReco.action === "maintain");
+assert.ok(customReco.suggestedLoad != null && customReco.why);
+assert.ok(customFuture.action === "increase" || customFuture.action === "maintain", "future day still returns a recommendation");
+assert.ok(customFuture.action !== "insufficient" || customFuture.why);
+assert.deepEqual(customStore2.data, customBefore, "custom exercise analytics does not mutate store.data");
+
+const mrvData = {};
+for (let s = 1; s <= 16; s++) { mrvData["w1_d0_e0_s" + s + "_load"] = 100; mrvData["w1_d0_e0_s" + s + "_reps"] = 8; }
+for (let s = 1; s <= 14; s++) { mrvData["w1_d0_e1_s" + s + "_load"] = 140; mrvData["w1_d0_e1_s" + s + "_reps"] = 8; }
+for (let s = 1; s <= 57; s++) { mrvData["w1_d0_e2_s" + s + "_load"] = 80; mrvData["w1_d0_e2_s" + s + "_reps"] = 8; }
+const mrvStore = {
+  data: mrvData,
+  prefs: {
+    intensityType: "RIR",
+    duration: 1,
+    volumeLandmarks: {
+      PETTO: { MV: 6, MEV: 8, MAV_LOW: 12, MAV_HIGH: 16, MRV: 20 },
+      QUADRICIPITI: { MV: 6, MEV: 8, MAV_LOW: 10, MAV_HIGH: 14, MRV: 18 }
+    }
+  },
+  logs: [{ week: 1, day: 0 }]
+};
+const mrvProg = { weeks: [{ sessions: [{ exercises: [{ name: "Panca piana" }, { name: "Squat" }, { name: "Rematore" }] }] }] };
+TAE.clearCache();
+const globalA = TAE.build(mrvStore, mrvProg, { axis: "training", zoomWeeks: 0, muscle: "TOTAL", includeIncompleteWeeks: true });
+assert.equal(globalA.landmarks.scale, "global");
+assert.equal(globalA.landmarks.comparable, false);
+assert.equal(globalA.landmarks.MRV, null);
+assert.equal(globalA.landmarks.currentSets, 87);
+assert.ok(String(globalA.landmarks.note || "").toLowerCase().includes("gruppo"));
+TAE.clearCache();
+const chestA = TAE.build(mrvStore, mrvProg, { axis: "training", zoomWeeks: 0, muscle: "PETTO", includeIncompleteWeeks: true });
+assert.equal(chestA.landmarks.scale, "muscle");
+assert.equal(chestA.landmarks.comparable, true);
+assert.equal(chestA.landmarks.currentSets, 16);
+assert.equal(chestA.landmarks.MRV, 20);
+TAE.clearCache();
+const quadsA = TAE.build(mrvStore, mrvProg, { axis: "training", zoomWeeks: 0, muscle: "QUADRICIPITI", includeIncompleteWeeks: true });
+assert.equal(quadsA.landmarks.currentSets, 14);
+assert.equal(quadsA.landmarks.MRV, 18);
+assert.equal(quadsA.landmarks.unit, "serie / settimana");
+TAE.clearCache();
+const backAll = TAE.build(mrvStore, mrvProg, { axis: "training", zoomWeeks: 0, muscle: "TOTAL", includeIncompleteWeeks: true });
+assert.equal(backAll.landmarks.MRV, null);
+assert.equal(backAll.landmarks.currentSets, 87);
+assert.deepEqual(mrvStore.data, mrvData, "MRV scale analytics does not mutate raw sets");
 assert.ok(html.includes("function showLiveSetIntel") && html.includes("acceptIntelRecommendation"), "live post-set and Accept/Keep recommendations");
 assert.ok(html.includes("clientMayApplyIntel") && html.includes("CHIEDI AL COACH"), "client cannot apply intel; asks the coach");
 assert.ok(html.includes("openPdfStayInApp") && html.includes("blobDownloadWouldNavigate") && html.includes("nurvan-pdf-overlay"), "check PDF stays in-app on iOS/PWA");
