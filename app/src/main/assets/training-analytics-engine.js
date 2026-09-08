@@ -236,9 +236,10 @@
 
   function normalizeSets(store, data, opts) {
     opts = opts || {};
-    const matchMuscle = opts.matchMuscle || function (name, movement, groups, muscleId) {
+    const matchMuscle = opts.matchMuscle || function (name, movement, groups, muscleId, eK) {
       if (!muscleId || muscleId === 'TOTAL' || muscleId === 'GENERALE' || muscleId === 'ALL') return true;
-      const c = muscleContributionForExercise(name, { muscle_groups: groups, movement: movement });
+      const stored = storedMuscleFrom(store, name, eK);
+      const c = muscleContributionForExercise(name, { muscle_groups: groups, movement: movement, storedMuscle: stored });
       return roleForMuscle(c, muscleId) != null;
     };
     const muscle = opts.muscle || 'TOTAL';
@@ -283,6 +284,8 @@
       const estRir = effort ? effort.rir : null;
       const e1 = epley1rm(loadRaw, reps);
       const dateMs = sessionDateMs(store, row.week, row.day);
+      const storedMuscle = storedMuscleFrom(store, name, eK);
+      const contribMeta = storedMuscle ? Object.assign({}, meta, { storedMuscle: storedMuscle }) : meta;
       out.push({
         week: row.week,
         day: row.day,
@@ -305,7 +308,7 @@
         calendarKey: dateMs != null ? isoWeekKey(dateMs) : null,
         muscleGroups: (meta.muscle_groups || meta.muscleGroups || []).slice(),
         movement: meta.movement || '',
-        contribution: muscleContributionForExercise(name, meta),
+        contribution: muscleContributionForExercise(name, contribMeta),
         kind: 'observed'
       });
     });
@@ -756,13 +759,14 @@
     { re: /panca piana|panca inclin|panca declin|bench press|chest press|croci|cable fly|pec deck|pec fly|push.?up|piegament|flessioni|chest fly|svend|spoto|floor press|guillotine|multi.?bench|leverage.*(bench|panca)|distensioni.*(petto|panca)|dumbbell press|spinte.*(petto|panca|manubri)/i, primary: ['PETTO'], secondary: ['BRACCIA', 'SPALLE'] },
     { re: /\bpanca\b|\bbench\b|petto|chest/i, primary: ['PETTO'], secondary: ['BRACCIA', 'SPALLE'] },
     { re: /pullover/i, primary: ['DORSO'], secondary: ['PETTO'] },
-    { re: /trazioni|pull.?up|chin.?up|lat machine|lat pull|pulldown|pulley|remator|seal row|dorso|trazione|low row|chest supported|pendlay|meadows|t.?bar|vertical traction|mezzor|iperext|hyperext|back extension|scrollate|shrug/i, primary: ['DORSO'], secondary: ['BRACCIA'] },
+    { re: /dorsey|low row|iso[\s-]?lateral[\s-]?row|hammer[\s-]*(strength[\s-]*)?row|iso[\s-]?row|gorilla row|kelso|yates row/i, primary: ['DORSO'], secondary: ['BRACCIA'] },
+    { re: /trazioni|pull.?up|chin.?up|lat machine|lat pull|pulldown|pulley|remator|seal row|dorso|trazione|chest supported|pendlay|meadows|t.?bar|vertical traction|mezzor|iperext|hyperext|back extension|scrollate|shrug/i, primary: ['DORSO'], secondary: ['BRACCIA'] },
     { re: /\brow\b|remat/i, primary: ['DORSO'], secondary: ['BRACCIA'] },
     { re: /military|lento avanti|lento dietro|shoulder press|overhead press|alzate later|lateral raise|alzate front|front raise|rear delt|deltoid|face pull|alzate posteriori|\blento\b|spinta.*(spalle|alto)|distensioni.*(spalle|alto)/i, primary: ['SPALLE'], secondary: ['BRACCIA'] },
     { re: /curl|bicip|hammer curl|preacher|spider curl|bayesian|concentration/i, primary: ['BRACCIA'] },
     { re: /french|skull|pushdown|tricip|tricep|estensioni.*(tricip|gomito)|kickback/i, primary: ['BRACCIA'] },
     { re: /\bdips?\b|parallele/i, primary: ['PETTO'], secondary: ['BRACCIA'] },
-    { re: /crunch|plank|ab wheel|addome|sit.?up|leg raise|knee raise|hollow|situp|woodchop|pallof|abs\b|core |vacuum|bicycle/i, primary: ['ADDOME'] }
+    { re: /crunch|plancia|plank|ab wheel|ab roller|addom|sit.?up|leg raise|knee raise|hollow|situp|woodchop|wood chop|pallof|\babs\b|\bcore\b|vacuum|bicycle|alzate gambe|sollevamento gambe|ruota addom|dead bug|bird dog|russian twist|hanging/i, primary: ['ADDOME'] }
   ];
   const FINE_TO_MACRO = {
     PETTO: 'PETTO', CHEST: 'PETTO',
@@ -784,6 +788,15 @@
     return FINE_TO_MACRO[g] || g;
   }
 
+  function storedMuscleFrom(store, name, eK) {
+    if (store && eK && store.exMuscle && store.exMuscle[eK]) return store.exMuscle[eK];
+    const map = store && store.exMuscleByName;
+    if (!map || typeof map !== 'object') return null;
+    const hit = map[foldName(name)] || map[String(name || '').toLowerCase()];
+    if (!hit) return null;
+    return typeof hit === 'string' ? hit : (hit.muscle || hit.id || null);
+  }
+
   function muscleContributionForExercise(name, meta) {
     const primary = [];
     const secondary = [];
@@ -800,6 +813,8 @@
       add(primary, explicit[0]);
       explicit.slice(1).forEach(function (g) { add(secondary, g); });
     }
+    const stored = meta && (meta.storedMuscle || meta.muscle_group || meta.muscleGroup);
+    if (stored) add(primary, stored);
     const text = String(name || '') + ' ' + String((meta && meta.movement) || '');
     MUSCLE_HINTS.forEach(function (h) {
       if (!h.re.test(text)) return;
@@ -811,9 +826,9 @@
       primary: primary,
       secondary: secondary,
       indirect: indirect,
-      kind: 'heuristic',
-      evidenceLevel: 'HEURISTIC',
-      formulaVersion: 'contrib-v1'
+      kind: primary.length ? 'heuristic' : 'unknown',
+      evidenceLevel: primary.length ? 'HEURISTIC' : 'NONE',
+      formulaVersion: 'contrib-v2'
     };
   }
 
@@ -1038,7 +1053,7 @@
         volumeTotal: sumField(windowed.weeks, 'volume'),
         volumeWeek: last.empty ? 0 : last.volume,
         weekLabel: last.label,
-        volumeVarWeek: prevWeek ? pctDelta(last.volume, prevWeek.volume) : null,
+        volumeVarWeek: (prevWeek && last && !last.inProgress) ? pctDelta(last.volume, prevWeek.volume) : null,
         volumeVarNote: (function () {
           if (!prevWeek || !last) return 'Servono due settimane confrontabili';
           const a = last.label.replace(' — in corso', '');
@@ -1046,7 +1061,7 @@
           if (!includeIncomplete && skippedIncomplete.length) {
             return a + ' vs ' + b + ' (' + skippedIncomplete.map(function (w) { return w.label.replace(' — in corso', ''); }).join(', ') + ' esclusa, in corso)';
           }
-          if (last.inProgress) return a + ' vs ' + b + ' (' + a + ' parziale)';
+          if (last.inProgress) return a + ' in corso: il Δ% vs ' + b + ' resta vuoto finché la settimana non è completa';
           return a + ' vs ' + b;
         })(),
         periodVar: comparison.volume,
@@ -2256,6 +2271,17 @@
     const compareCurr = currExp || null;
     const comparePrev = currExp ? prevExp : null;
     const comparison = (compareCurr && comparePrev) ? compareExposures(compareCurr, comparePrev) : null;
+    const currentFinalized = sessionFinalized(store, week, day);
+    const volumeComparable = !!(comparison && compareCurr && comparePrev && (
+      currentFinalized || compareCurr.setCount >= comparePrev.setCount
+    ));
+    if (comparison && !volumeComparable) {
+      comparison.volumeDelta = null;
+      comparison.volumeComparable = false;
+      comparison.volumeNote = 'Seduta in corso: il volume non è ancora confrontabile con la precedente.';
+    } else if (comparison) {
+      comparison.volumeComparable = true;
+    }
     const multi = multiSessionTrend(exposures);
     const fatigueRows = today.length ? today : ((currExp && currExp.sets) || []);
     const fatigue = intraSessionFatigue(fatigueRows);
@@ -2265,7 +2291,10 @@
     const recov = recoveryFromStore(store, recBuckets);
     recov.scope = 'recent';
     recov.labelIt = 'Recupero recente';
-    const contrib = muscleContributionForExercise(pack.name, exerciseMeta(data, store, week, day, exIdx));
+    const locEk = 'w' + week + '_d' + day + '_e' + exIdx;
+    const contrib = muscleContributionForExercise(pack.name, Object.assign({}, exerciseMeta(data, store, week, day, exIdx), {
+      storedMuscle: storedMuscleFrom(store, pack.name, locEk)
+    }));
     const primary = (contrib.primary && contrib.primary[0]) || null;
     let lm = landmarksFor(store, primary || 'GENERALE', null, { scale: primary ? 'muscle' : 'global' });
     if (primary) {
@@ -2306,6 +2335,7 @@
       performanceMetric: comparison ? (comparison.deltaKind || null) : null,
       volumeDelta: comparison ? comparison.volumeDelta : null,
       volumeDeltaPct: comparison ? comparison.volumeDelta : null,
+      volumeComparable: comparison ? comparison.volumeComparable !== false : null,
       performanceDeltaPct: comparison ? comparison.delta : null,
       currentE1RM: peakE1,
       lastSetE1RM: currentSet && currentSet.e1rm != null ? currentSet.e1rm : null,
@@ -2353,9 +2383,11 @@
       performanceContract: { scope: 'exercise', metric: 'performance', period: 'exposure', unit: '% vs previous exposure' },
       volumeContract: { scope: 'exercise', metric: 'volume_load', period: 'exposure', unit: 'kg' },
       intensityContract: { scope: 'exercise', metric: 'relative_intensity', period: 'exposure', unit: '% e1RM esercizio' },
-      note: currExp
-        ? 'Confronto tra questa esposizione e la precedente dello stesso esercizio.'
-        : 'Nessuna esposizione valida oggi: i delta vs precedente restano vuoti finché non c’è almeno un set eseguito.'
+      note: !currExp
+        ? 'Nessuna esposizione valida oggi: i delta vs precedente restano vuoti finché non c’è almeno un set eseguito.'
+        : (!volumeComparable
+          ? 'Seduta in corso: la prestazione usa le serie già fatte, il volume vs precedente resta vuoto finché la seduta non è completa.'
+          : 'Confronto tra questa esposizione e la precedente dello stesso esercizio.')
     };
     snapObj.performanceContract.current = snapObj.currentPerformance;
     snapObj.performanceContract.previous = snapObj.previousPerformance;
@@ -3009,6 +3041,7 @@
     rawFingerprint: rawFingerprint,
     isWeekComplete: isWeekComplete,
     muscleContributionForExercise: muscleContributionForExercise,
+    storedMuscleFrom: storedMuscleFrom,
     buildByMuscle: buildByMuscle,
     listProgramExercises: listProgramExercises,
     labelIt: labelIt,

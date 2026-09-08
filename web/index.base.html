@@ -2245,6 +2245,7 @@ const DEFAULT_STORE = {
   data: {},
   subs: {},
   exMuscle: {},
+  exMuscleByName: {},
   bw: {},
   prefs: { intensityType: 'RIR', duration: 16, frequency: 4, aiControl: null },
   loadTypes: {},
@@ -2312,6 +2313,7 @@ function ensureStoreIntegrity() {
   if (!store.data) store.data = {};
   if (!store.subs) store.subs = {};
   if (!store.exMuscle) store.exMuscle = {};
+  if (!store.exMuscleByName || typeof store.exMuscleByName !== 'object') store.exMuscleByName = {};
   if (!store.bw) store.bw = {};
   if (!store.prefs) store.prefs = { intensityType: 'RIR', duration: 16, frequency: 4 };
   if (!store.loadTypes) store.loadTypes = {};
@@ -3765,6 +3767,7 @@ function accountPayload(opts){
     maxTests: store.maxTests || {},
     bonus: store.bonus || {},
     exMuscle: store.exMuscle || {},
+    exMuscleByName: store.exMuscleByName || {},
     health: store.health || null,
     activeProgramId: store.activeProgramId || (DATA && DATA.id) || null,
     rewards: store.rewards || null,
@@ -3851,6 +3854,7 @@ function applyRemoteAccountData(remote, preferLocal) {
   store.maxTests = Object.assign({}, remote.maxTests || {}, store.maxTests || {});
   store.bonus = Object.assign({}, remote.bonus || {}, store.bonus || {});
   store.exMuscle = Object.assign({}, remote.exMuscle || {}, store.exMuscle || {});
+  store.exMuscleByName = Object.assign({}, remote.exMuscleByName || {}, store.exMuscleByName || {});
   if (remote.currentWeek) {
     currentWeek = Math.max(1, Number(remote.currentWeek) || currentWeek);
     store.trainingWeek = currentWeek;
@@ -7744,7 +7748,10 @@ function exerciseIntelBodyHtml(exIdx) {
       h += '<div class="stats-adv-row"><span>Trend ultime esposizioni</span><span>' + esc(H('performance', snap.multiTrend)) + '</span></div>';
     }
     h += '<div class="stats-adv-row"><span>Intensità vs precedente</span><span>' + formatIntelPct(snap.intensityDelta) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(snap.volumeDelta) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + (snap.volumeComparable === false ? 'in corso' : formatIntelPct(snap.volumeDelta)) + '</span></div>';
+    if (snap.volumeComparable === false) {
+      h += '<div style="font-size:11px;color:#aaa;margin:0 0 6px;">Seduta ancora aperta: il −% di volume non è un calo, mancano serie da registrare.</div>';
+    }
     h += '<div class="stats-adv-row"><span>Fatica durante questa seduta</span><span>' + esc(H('fatigue', snap.fatigue && snap.fatigue.signal)) + '</span></div>';
     if (snap.recovery && (snap.recovery.signal || snap.recovery.estimate)) {
       h += '<div class="stats-adv-row"><span>Recupero recente</span><span>' + esc(H('recovery', snap.recovery.signal || snap.recovery.estimate)) + '</span></div>';
@@ -8132,6 +8139,7 @@ function addExerciseToLibrary(name, muscle, source) {
     }
   } catch (_) {}
   persist();
+  try { rememberExerciseMuscle(n, macro, source || 'manual'); } catch (_) {}
   try { queueExerciseKnowledgeAdapt(n, fine); } catch (_) {}
   return true;
 }
@@ -8190,11 +8198,11 @@ function deleteBonusExercise(index) {
 // Muscle Group Classification System — 6 macro groups only
 const MUSCLE_TAXONOMY = {
   "PETTO": ["panca piana", "panca inclin", "panca declin", "bench press", "chest press", "croci", "pec deck", "pec fly", "push up", "push-up", "flessioni", "piegamenti", "petto", "chest", "floor press", "dips", "parallele"],
-  "DORSO": ["trazioni", "pull up", "pull-up", "chin up", "lat machine", "lat pull", "pulldown", "rematore", "row", "pulley", "vertical traction", "dorso", "schiena", "seal row", "pullover", "scrollate", "shrug"],
+  "DORSO": ["trazioni", "pull up", "pull-up", "chin up", "lat machine", "lat pull", "pulldown", "rematore", "row", "pulley", "vertical traction", "dorso", "schiena", "seal row", "pullover", "scrollate", "shrug", "dorsey", "low row", "iso lateral", "hammer row"],
   "SPALLE": ["spinta spalle", "shoulder press", "overhead press", "military", "lento avanti", "alzate laterali", "lateral raise", "alzate frontali", "front raise", "alzate posteriori", "rear delt", "face pull", "deltoid", "spalle"],
   "BRACCIA": ["curl", "bicipit", "bicep", "hammer", "preacher", "spider", "french press", "pushdown", "tricipit", "tricep", "skull", "estensioni tricipiti", "panca stretta", "close grip"],
   "GAMBE": ["squat", "leg press", "pressa", "leg extension", "hack", "affondi", "lunge", "bulgar", "stacco rumeno", "rdl", "romanian", "leg curl", "femorali", "hamstring", "good morning", "hip thrust", "glute", "bridge", "abductor", "calf raise", "polpacc", "stacco da terra", "deadlift"],
-  "ADDOME": ["crunch", "plank", "leg raise", "addom", "sit up", "sit-up", "core", "hollow", "ab wheel", "pallof"]
+  "ADDOME": ["crunch", "plank", "plancia", "leg raise", "alzate gambe", "sollevamento gambe", "addom", "sit up", "sit-up", "core", "hollow", "ab wheel", "ab roller", "pallof", "vacuum", "woodchop", "russian twist"]
 };
 
 const MACRO_MUSCLE_GROUPS = [
@@ -8233,8 +8241,72 @@ function normalizeMacroMuscleGroup(raw) {
   return g;
 }
 
+function foldExerciseMuscleName(name) {
+  const TAE = window.TrainingAnalyticsEngine;
+  if (TAE && typeof TAE.sameExerciseName === 'function') {
+    return String(name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  return String(name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function rememberExerciseMuscle(name, muscle, source) {
+  const n = String(name || '').trim();
+  const macro = normalizeMacroMuscleGroup(muscle);
+  if (!n || !MACRO_MUSCLE_GROUPS.some(function (x) { return x.id === macro; })) return null;
+  if (!store.exMuscleByName || typeof store.exMuscleByName !== 'object') store.exMuscleByName = {};
+  const key = foldExerciseMuscleName(n);
+  const prev = store.exMuscleByName[key];
+  if (prev && prev.muscle === macro && prev.source === source) return macro;
+  store.exMuscleByName[key] = { muscle: macro, source: source || 'local', at: Date.now() };
+  return macro;
+}
+
+function lookupCatalogExerciseMuscle(name) {
+  const q = foldExerciseMuscleName(name);
+  if (!q) return null;
+  const extra = (typeof WEB_EXERCISE_CATALOG !== 'undefined' && Array.isArray(WEB_EXERCISE_CATALOG)) ? WEB_EXERCISE_CATALOG : [];
+  let best = null;
+  let bestLen = 0;
+  extra.forEach(function (row) {
+    const keys = [row.name, row.en].concat(row.aliases || []).filter(Boolean);
+    keys.forEach(function (k) {
+      const fk = foldExerciseMuscleName(k);
+      if (!fk) return;
+      if (q === fk || q.indexOf(fk) >= 0 || fk.indexOf(q) >= 0) {
+        if (fk.length > bestLen) {
+          bestLen = fk.length;
+          best = row.muscle;
+        }
+      }
+    });
+  });
+  return best ? normalizeMacroMuscleGroup(best) : null;
+}
+
+function lookupKnowledgeExerciseMuscle(name) {
+  try {
+    const extras = (typeof readKnowledgeExtras === 'function') ? readKnowledgeExtras() : ((store && store.trainingKnowledgeExtra) || []);
+    const q = foldExerciseMuscleName(name);
+    for (let i = 0; i < extras.length; i++) {
+      if (foldExerciseMuscleName(extras[i] && extras[i].name) === q && extras[i].muscle) {
+        return normalizeMacroMuscleGroup(extras[i].muscle);
+      }
+    }
+  } catch (_) {}
+  try {
+    const lookup = window.lookupTrainingKnowledge || (window.NURVAN_TRAINING_KNOWLEDGE && window.NURVAN_TRAINING_KNOWLEDGE.lookupAny);
+    const hit = typeof lookup === 'function' ? lookup(name) : null;
+    if (hit && hit.muscle && (hit.matched || hit.score >= 70 || hit.custom)) {
+      const m = normalizeMacroMuscleGroup(hit.muscle);
+      if (MACRO_MUSCLE_GROUPS.some(function (x) { return x.id === m; })) return m;
+    }
+  } catch (_) {}
+  return null;
+}
+
 function resolveExerciseMacroGroups(exerciseName, movement, explicitGroups, subsKey) {
   if (subsKey && store.exMuscle && store.exMuscle[subsKey]) {
+    rememberExerciseMuscle(exerciseName, store.exMuscle[subsKey], 'slot');
     return [store.exMuscle[subsKey]];
   }
   const macros = new Set();
@@ -8246,28 +8318,29 @@ function resolveExerciseMacroGroups(exerciseName, movement, explicitGroups, subs
 }
 
 function getExerciseMuscleGroups(exerciseName, movement, explicitGroups) {
-  const TAE = window.TrainingAnalyticsEngine;
-  if (TAE && typeof TAE.muscleContributionForExercise === 'function') {
-    const c = TAE.muscleContributionForExercise(exerciseName, {
-      muscle_groups: explicitGroups,
-      movement: movement
-    });
-    const out = [];
-    function push(g) {
-      const n = normalizeMacroMuscleGroup(g);
-      if (MACRO_MUSCLE_GROUPS.some(function (x) { return x.id === n; }) && out.indexOf(n) < 0) out.push(n);
-    }
-    (c.primary || []).forEach(push);
-    (c.secondary || []).forEach(push);
-    if (out.length) return out;
-  }
   const result = [];
   function addMacro(id) {
     const n = normalizeMacroMuscleGroup(id);
     if (MACRO_MUSCLE_GROUPS.some(function (x) { return x.id === n; }) && result.indexOf(n) < 0) result.push(n);
   }
+  const stored = store && store.exMuscleByName && store.exMuscleByName[foldExerciseMuscleName(exerciseName)];
+  if (stored && stored.muscle) addMacro(stored.muscle);
   if (Array.isArray(explicitGroups) && explicitGroups.length) {
     explicitGroups.forEach(function (g) { if (g) addMacro(g); });
+  }
+  const catalog = lookupCatalogExerciseMuscle(exerciseName);
+  if (catalog) addMacro(catalog);
+  const known = lookupKnowledgeExerciseMuscle(exerciseName);
+  if (known) addMacro(known);
+  const TAE = window.TrainingAnalyticsEngine;
+  if (TAE && typeof TAE.muscleContributionForExercise === 'function') {
+    const c = TAE.muscleContributionForExercise(exerciseName, {
+      muscle_groups: explicitGroups,
+      movement: movement,
+      storedMuscle: stored && stored.muscle
+    });
+    (c.primary || []).forEach(addMacro);
+    (c.secondary || []).forEach(addMacro);
   }
   const text = String(exerciseName || '') + ' ' + String(movement || '');
   const folded = text.toLowerCase();
@@ -8283,6 +8356,7 @@ function getExerciseMuscleGroups(exerciseName, movement, explicitGroups) {
     else if (movUpper.indexOf('GAMBE') >= 0) addMacro('GAMBE');
     else if (movUpper.indexOf('ADDOME') >= 0) addMacro('ADDOME');
   }
+  if (result[0]) rememberExerciseMuscle(exerciseName, result[0], 'triangulated');
   return result;
 }
 
@@ -8638,6 +8712,7 @@ function finishInit() {
       setTimeout(function () {
         if (splash) splash.style.display = 'none';
         try {
+          try { classifyActiveProgramMuscles(); } catch (_) {}
           render();
           applyChromeI18n();
           try { applyFocusUi(); } catch (_) {}
@@ -16170,7 +16245,10 @@ function substituteEx(idx, val, muscleGroup){
     const key = `w${w}_d${currentDay}_e${idx}`;
     store.subs[key] = val;
     if (!store.exMuscle) store.exMuscle = {};
-    if (muscleGroup) store.exMuscle[key] = muscleGroup;
+    if (muscleGroup) {
+      store.exMuscle[key] = muscleGroup;
+      rememberExerciseMuscle(val, muscleGroup, 'manual');
+    }
     else if (store.exMuscle[key]) delete store.exMuscle[key];
   }
   clearCopiedLoadsAfterSubstitution(idx);
@@ -19943,7 +20021,7 @@ function renderStatsData(){
   let tH = '';
   analytics.table.forEach(function (row, i) {
     const prev = i > 0 ? analytics.table[i - 1] : null;
-    const varPct = (row.empty || !prev || !prev.volume) ? null : ((row.volume - prev.volume) / prev.volume) * 100;
+    const varPct = (row.empty || row.inProgress || (prev && prev.inProgress) || !prev || !prev.volume) ? null : ((row.volume - prev.volume) / prev.volume) * 100;
     const barPct = row.empty ? 0 : Math.max(4, Math.round((row.volume / peakV) * 100));
     const bw = statsAxis() === 'training' && /^tw-(\d+)$/.test(row.key)
       ? recordedBodyWeightForWeek(Number(RegExp.$1))
@@ -20839,6 +20917,7 @@ function persistKnowledgeExtra(entry) {
   if (store) store.trainingKnowledgeExtra = next.slice(0, 200);
   try { localStorage.setItem(knowledgeExtraStorageKey(), JSON.stringify(store.trainingKnowledgeExtra)); } catch (_) {}
   hydrateKnowledgeExtras();
+  try { if (entry.muscle) rememberExerciseMuscle(entry.name, entry.muscle, 'encyclopedia'); } catch (_) {}
 }
 function removeKnowledgeExtra(name) {
   const key = String(name || '').toLowerCase();
@@ -20866,6 +20945,7 @@ async function researchExerciseKnowledge(name, muscle) {
   const prompt = 'Scheda tecnica breve per l\'esercizio "' + title + '"' + (muscle ? (' (distretto ' + muscle + ')') : '') +
     '. Rispondi SOLO JSON valido: {"name":"nome canonico","muscle":"PETTO|GAMBE|ADDOME|BRACCIA|SPALLE|DORSO","how":"esecuzione in 2-4 frasi","mistakes":"errori comuni","cue":"una cue"}. ' +
     'Italiano tecnico ma chiaro da sala pesi. Usa «colonna in posizione neutra», «non flettere/arrotondare la schiena sotto carico», «fletti le anche», «adduci le scapole». ' +
+    'Se il nome è una macchina da sala (es. Dorsey, Hammer row, low row 1 braccio) classificalo nel distretto reale (Dorsey = DORSO). ' +
     'Vietato: calchi dall’inglese (es. «neutro il rachide»), metafore, slang da social, tono letterario. Se NON è un esercizio di allenamento reale, {"unknown":true}. Niente markdown.';
   const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
   const endpoint = typeof coachEndpoint === 'function' ? coachEndpoint('/api/chat') : '/api/chat';
@@ -20900,8 +20980,10 @@ async function queueExerciseKnowledgeAdapt(name, muscle) {
   }
   try {
     const found = await researchExerciseKnowledge(n, muscle);
-    if (found && found.matched && !found.unknown && found.body) {
-      persistKnowledgeExtra({ name: found.title || n, muscle: found.muscle || muscle, how: found.body, mistakes: found.mistakes, cue: found.cue });
+    if (found && found.matched && !found.unknown) {
+      if (found.body) persistKnowledgeExtra({ name: found.title || n, muscle: found.muscle || muscle, how: found.body, mistakes: found.mistakes, cue: found.cue });
+      if (found.muscle) rememberExerciseMuscle(n, found.muscle, 'research');
+      if (found.title && found.title !== n && found.muscle) rememberExerciseMuscle(found.title, found.muscle, 'research');
     }
   } catch (_) {}
 }
@@ -20942,14 +21024,27 @@ function collectUserExerciseNames() {
   return out;
 }
 
+function classifyActiveProgramMuscles() {
+  const unknown = [];
+  collectUserExerciseNames().forEach(function (row) {
+    const groups = getExerciseMuscleGroups(row.name, row.muscle, row.muscle ? [row.muscle] : []);
+    if (groups[0]) rememberExerciseMuscle(row.name, groups[0], 'triangulated');
+    else unknown.push(row);
+  });
+  try { persist(); } catch (_) {}
+  return unknown;
+}
+
 let __encycSweepBusy = false;
 async function encyclopedizeProgramExercises() {
   if (__encycSweepBusy) return;
   __encycSweepBusy = true;
   try {
-    const list = collectUserExerciseNames().slice(0, 16);
+    const unknown = classifyActiveProgramMuscles();
+    const list = (unknown.length ? unknown : collectUserExerciseNames()).slice(0, 16);
     for (let i = 0; i < list.length; i++) {
-      await queueExerciseKnowledgeAdapt(list[i].name, list[i].muscle);
+      const guessed = (getExerciseMuscleGroups(list[i].name, list[i].muscle, list[i].muscle ? [list[i].muscle] : []) || [])[0];
+      await queueExerciseKnowledgeAdapt(list[i].name, list[i].muscle || guessed);
     }
   } catch (_) {}
   __encycSweepBusy = false;
