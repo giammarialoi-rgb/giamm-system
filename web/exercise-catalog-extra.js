@@ -69,7 +69,7 @@ self.WEB_EXERCISE_CATALOG = [
   { name: "Curl manubri", en: "Dumbbell Curl", muscle: "BICIPITI", eq: "manubri" },
   { name: "Curl martello", en: "Hammer Curl", muscle: "BICIPITI", eq: "manubri", aliases: ["hammer curl"] },
   { name: "Curl concentrato", en: "Concentration Curl", muscle: "BICIPITI", eq: "manubri" },
-  { name: "Curl cavi", en: "Cable Curl", muscle: "BICIPITI", eq: "cavi" },
+  { name: "Curl cavi", en: "Cable Curl", muscle: "BICIPITI", eq: "cavi", aliases: ["curl al cavo", "curl cavo", "cable curl", "curl ai cavi"] },
   { name: "Curl predicatore", en: "Preacher Curl", muscle: "BICIPITI", eq: "panca" },
   { name: "French press", en: "Skull Crusher", muscle: "TRICIPITI", eq: "bilanciere", aliases: ["skullcrusher"] },
   { name: "French press manubri", en: "Dumbbell Skull Crusher", muscle: "TRICIPITI", eq: "manubri" },

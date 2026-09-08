@@ -811,10 +811,17 @@ function primaryMuscle(name) {
   ["low row 1 braccio", "DORSO"],
   ["Plancia", "ADDOME"],
   ["Addominali ai cavi", "ADDOME"],
-  ["Alzate gambe", "ADDOME"]
+  ["Alzate gambe", "ADDOME"],
+  ["curl al cavo", "BRACCIA"],
+  ["Curl ai cavi", "BRACCIA"],
+  ["Crunch su panca", "ADDOME"],
+  ["Leg curl sdraiato", "GAMBE"]
 ].forEach(function (row) {
   assert.equal(primaryMuscle(row[0]), row[1], row[0] + " → " + row[1]);
 });
+const curlTaggedLegs = TAE.muscleContributionForExercise("curl al cavo", { muscle_groups: ["GAMBE"], storedMuscle: "GAMBE", storedSource: "triangulated" });
+assert.equal((curlTaggedLegs.primary || [])[0], "BRACCIA", "cable curl is not legs even if the program tagged it GAMBE");
+assert.ok((curlTaggedLegs.primary || []).indexOf("GAMBE") < 0);
 assert.equal(primaryMuscle("xyz macchina inventata 99"), null, "unknown names are not dumped into ADDOME");
 const namedAbs = TAE.muscleContributionForExercise("Crunch macchina", { storedMuscle: "ADDOME" });
 assert.equal((namedAbs.primary || [])[0], "ADDOME");
@@ -837,6 +844,7 @@ const midDone = TAE.exerciseAnalyticsSnapshot({ data: midWeek, prefs: { intensit
 assert.ok(midDone.volumeDelta < -30, "finalized fewer sets is a real volume drop");
 assert.ok(midDone.performanceDelta > 0, "finalized volume drop does not rewrite performance");
 assert.ok(html.includes("classifyActiveProgramMuscles") && html.includes("exMuscleByName") && html.includes("dorsey"), "active program muscles are classified and persisted");
+assert.ok(html.includes("GRUPPI DELLA SCHEDA") && html.includes("setProgramExerciseMuscle"), "stats can reassign program exercises to muscle groups");
 assert.ok(html.includes("volumeComparable === false") && html.includes("Seduta ancora aperta"), "UI withholds fake mid-session volume crash");
 const rollIds = (backAll.byMuscle || []).map(function (m) { return m.id; });
 rollIds.forEach(function (id) {
@@ -846,7 +854,7 @@ assert.ok(html.includes("id: 'DORSO'") && html.includes("label: 'Dorso'") && !ht
 
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
 assert.ok(sw.includes("training-analytics-engine.js"), "SW precaches the analytics engine");
-assert.ok(sw.includes("analytics14"), "SW cache bumped after muscle + volume-comparable contract");
+assert.ok(sw.includes("analytics15"), "SW cache bumped after program muscle assigner");
 assert.ok(fs.existsSync(path.join(root, "TRAINING_ANALYTICS_METHODOLOGY.md")), "methodology doc exists");
 
 console.log("OK   training analytics engine formulas + zoom axis + intelligence");
