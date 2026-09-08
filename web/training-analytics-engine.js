@@ -33,6 +33,19 @@
     if (!(cur > 0) || !(prev > 0)) return null;
     return round1(((cur - prev) / prev) * 100);
   }
+  function foldName(s) {
+    return String(s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+  function sameExerciseName(a, b) {
+    const fa = foldName(a);
+    const fb = foldName(b);
+    return !!fa && fa === fb;
+  }
   function mean(arr) {
     const xs = (arr || []).filter(function (n) { return Number.isFinite(n); });
     if (!xs.length) return null;
@@ -219,7 +232,11 @@
 
   function normalizeSets(store, data, opts) {
     opts = opts || {};
-    const matchMuscle = opts.matchMuscle || function () { return true; };
+    const matchMuscle = opts.matchMuscle || function (name, movement, groups, muscleId) {
+      if (!muscleId || muscleId === 'TOTAL' || muscleId === 'GENERALE' || muscleId === 'ALL') return true;
+      const c = muscleContributionForExercise(name, { muscle_groups: groups, movement: movement });
+      return roleForMuscle(c, muscleId) != null;
+    };
     const muscle = opts.muscle || 'TOTAL';
     const exerciseFilter = String(opts.exercise || '').trim().toLowerCase();
     const map = {};
@@ -242,7 +259,7 @@
       const meta = exerciseMeta(data, store, row.week, row.day, row.exIdx);
       const name = (store && store.subs && store.subs[eK]) || resolveExerciseName(data, store, row.week, row.day, row.exIdx);
       if (!matchMuscle(name, meta.movement, meta.muscle_groups || meta.muscleGroups, muscle, eK)) return;
-      if (exerciseFilter && String(name).toLowerCase().indexOf(exerciseFilter) < 0) return;
+      if (exerciseFilter && !sameExerciseName(name, exerciseFilter)) return;
       const isPart = !!(store && store.loadTypes && store.loadTypes[eK] === 'part');
       const load = isPart ? loadRaw * 2 : loadRaw;
       const scale = scaleForSet(store, eK, row.week);
@@ -526,16 +543,41 @@
     };
   }
 
-  function landmarksFor(store, muscle, weeklySets) {
-    const cfg = (store && store.prefs && store.prefs.volumeLandmarks && store.prefs.volumeLandmarks[muscle]) || DEFAULT_LANDMARKS;
+  function landmarksFor(store, muscle, weeklySets, opts) {
+    opts = opts || {};
+    const rawId = String(muscle || 'TOTAL');
+    const global = !rawId || rawId === 'TOTAL' || rawId === 'GENERALE' || rawId === 'ALL';
+    const scale = opts.scale || (global ? 'global' : (opts.scale === 'exercise' ? 'exercise' : 'muscle'));
+    const comparable = scale === 'muscle' && !global;
+    const cfgKey = global ? 'GENERALE' : rawId;
+    const hasCfg = !!(store && store.prefs && store.prefs.volumeLandmarks && store.prefs.volumeLandmarks[cfgKey]);
+    const cfg = hasCfg ? store.prefs.volumeLandmarks[cfgKey] : DEFAULT_LANDMARKS;
     const lm = {
       MV: Number(cfg.MV) || DEFAULT_LANDMARKS.MV,
       MEV: Number(cfg.MEV) || DEFAULT_LANDMARKS.MEV,
       MAV_LOW: Number(cfg.MAV_LOW) || DEFAULT_LANDMARKS.MAV_LOW,
       MAV_HIGH: Number(cfg.MAV_HIGH) || DEFAULT_LANDMARKS.MAV_HIGH,
       MRV: Number(cfg.MRV) || DEFAULT_LANDMARKS.MRV,
-      kind: 'estimated_configurable'
+      kind: 'estimated_configurable',
+      scale: scale,
+      muscle: global ? null : rawId,
+      comparable: comparable,
+      source: hasCfg ? 'configured' : 'default_configurable',
+      title: comparable ? ('VOLUME — ' + rawId) : (scale === 'exercise' ? 'VOLUME ESERCIZIO' : 'VOLUME TOTALE'),
+      unit: 'serie / settimana'
     };
+    if (!comparable) {
+      return Object.assign({
+        currentSets: weeklySets == null ? null : weeklySets,
+        status: null,
+        evidenceLevel: 'MODEL_BASED',
+        formulaVersion: 'landmarks-v1',
+        confidence: 'LOW',
+        note: scale === 'global'
+          ? 'Il volume globale non si confronta con MEV/MAV/MRV di un singolo distretto. Seleziona un gruppo muscolare.'
+          : 'I landmark di volume valgono per un gruppo muscolare, non per il singolo esercizio.'
+      }, lm, { MRV: comparable ? lm.MRV : null, MEV: comparable ? lm.MEV : null, MAV_LOW: comparable ? lm.MAV_LOW : null, MAV_HIGH: comparable ? lm.MAV_HIGH : null, MV: comparable ? lm.MV : null });
+    }
     if (weeklySets == null) return Object.assign({ currentSets: null, status: null }, lm);
     let status = null;
     if (weeklySets < lm.MV) status = 'below_estimated_MV';
@@ -543,14 +585,13 @@
     else if (weeklySets <= lm.MAV_HIGH) status = 'within_estimated_MAV';
     else if (weeklySets < lm.MRV) status = 'above_estimated_MAV';
     else status = 'at_or_above_estimated_MRV';
-    const filledHint = weeklySets != null ? 'MEDIUM' : 'LOW';
     return Object.assign({
       currentSets: weeklySets,
       status: status,
       evidenceLevel: 'MODEL_BASED',
       formulaVersion: 'landmarks-v1',
-      confidence: filledHint,
-      note: 'Stima individuale / configurabile. Non rappresenta una soglia fisiologica universale.'
+      confidence: weeklySets != null ? 'MEDIUM' : 'LOW',
+      note: 'Stima individuale / configurabile per questo distretto. Non rappresenta una soglia fisiologica universale. Fonte: ' + (hasCfg ? 'valore configurato' : 'stima configurabile di default') + '.'
     }, lm);
   }
 
@@ -1022,7 +1063,7 @@
         return arr.findIndex(function (x) { return x.name === row.name; }) === i;
       }),
       prs: detectPRs(sets),
-      landmarks: landmarksFor(store, muscle === 'TOTAL' ? 'GENERALE' : muscle, last.sets || null),
+      landmarks: landmarksFor(store, muscle, last.sets || null, { scale: (muscle && muscle !== 'TOTAL') ? 'muscle' : 'global' }),
       fatigue: fatigueFromWeeks(windowed.weeks),
       recovery: recoveryFromStore(store, windowed.weeks),
       quality: {
@@ -1335,11 +1376,11 @@
       'Non è un p-value statistico.',
       'HEURISTIC', 'intel-v1', 'filled weeks / exposures', 'livello', { shortNameIt: 'Confidenza', technicalName: 'Confidence' }),
     performanceVsPrevious: catalogRow('performanceVsPrevious', 'strength', 'Prestazione vs precedente',
-      'Quanto la prestazione di oggi (soprattutto e1RM dello stesso esercizio) differisce dalla precedente esposizione comparabile. Il confronto considera carico, ripetizioni e, quando disponibili, RPE/RIR.',
-      'Dice se stai andando meglio, uguale o peggio sullo stesso movimento.',
-      'Delta percentuale di e1RM (e, se manca, stabilità di carico/rep).',
-      'Vale solo a parità di esercizio. Non confronta panca e squat.',
-      'ESTIMATED', 'perf-v1', 'Δ e1RM vs previous exposure', '%', { shortNameIt: 'vs prec.', technicalName: 'Performance vs previous' }),
+      'Confronto tra l’ultima esposizione valida dello stesso esercizio e la precedente. Usa carico, ripetizioni, e1RM di supporto e RPE/RIR. Non usa il tonnellaggio da solo.',
+      'Dice se stai andando meglio, uguale o peggio sullo stesso movimento. Il volume della seduta è una metrica separata.',
+      'Punteggio set-by-set (carico, rip, margine) più delta e1RM come segnale di supporto. Il segno non viene invertito artificialmente.',
+      'Vale solo a parità di esercizio. Non confronta panca e squat. Un calo di volume non è un calo di prestazione.',
+      'ESTIMATED', 'perf-exposure-v1', 'compareExposures(current, previous)', '%', { shortNameIt: 'vs prec.', technicalName: 'Performance vs previous' }),
     volumeVsPrevious: catalogRow('volumeVsPrevious', 'volume', 'Volume vs precedente',
       'Variazione percentuale del volume rispetto alla settimana o seduta precedente.',
       'Mostra se hai fatto più o meno lavoro, non se è stato meglio.',
@@ -1481,36 +1522,205 @@
     return normalizeSets(store, data, Object.assign({}, opts || {}, { exercise: name || '' }));
   }
 
-  function analyzeExercise(store, data, name, opts) {
-    const sets = setsForExercise(store, data, name, opts);
-    if (!sets.length) {
-      return { name: name, empty: true, e1rm: null, note: 'Dati insufficienti', kind: 'derived' };
-    }
-    const e1s = sets.map(function (s) { return s.e1rm; }).filter(function (n) { return n != null; });
-    const current = e1s.length ? e1s[e1s.length - 1] : null;
-    const best = e1s.length ? Math.max.apply(null, e1s) : null;
-    const prevBest = e1s.length > 1 ? Math.max.apply(null, e1s.slice(0, -1)) : null;
-    const trend = (current != null && prevBest != null) ? pctDelta(current, prevBest) : null;
-    const today = sets.filter(function (s) {
-      const last = sets[sets.length - 1];
-      return last && s.week === last.week && s.day === last.day;
+  function exposureKey(s) {
+    return String(s.week) + '_' + String(s.day);
+  }
+
+  function summarizeExposure(sets) {
+    const rows = (sets || []).slice().sort(function (a, b) { return a.set - b.set; });
+    const e1s = rows.map(function (s) { return s.e1rm; }).filter(function (n) { return n != null; });
+    return {
+      week: rows.length ? rows[0].week : null,
+      day: rows.length ? rows[0].day : null,
+      name: rows.length ? rows[0].name : '',
+      sets: rows,
+      setCount: rows.length,
+      volume: rows.reduce(function (a, s) { return a + s.volume; }, 0),
+      peakE1: e1s.length ? Math.max.apply(null, e1s) : null,
+      avgLoad: mean(rows.map(function (s) { return s.loadRaw; })),
+      avgReps: mean(rows.map(function (s) { return s.reps; })),
+      avgRir: mean(rows.map(function (s) { return s.rir; })),
+      avgRpe: mean(rows.map(function (s) { return s.rpe; })),
+      topLoad: rows.reduce(function (m, s) { return (s.loadRaw > 0 && (m == null || s.loadRaw > m)) ? s.loadRaw : m; }, null)
+    };
+  }
+
+  function groupExposures(sets, name) {
+    const map = {};
+    (sets || []).forEach(function (s) {
+      if (name && s.name && !sameExerciseName(s.name, name)) return;
+      const k = exposureKey(s);
+      if (!map[k]) map[k] = [];
+      map[k].push(s);
     });
+    return Object.keys(map).sort(function (a, b) {
+      const aa = map[a][0];
+      const bb = map[b][0];
+      return aa.week - bb.week || aa.day - bb.day;
+    }).map(function (k) { return summarizeExposure(map[k]); });
+  }
+
+  function compareExposures(curr, prev) {
+    if (!curr || !prev || !curr.setCount || !prev.setCount) {
+      return {
+        direction: 'insufficient',
+        delta: null,
+        volumeDelta: null,
+        e1Delta: null,
+        loadDelta: null,
+        repsDelta: null,
+        score: 0,
+        confidence: 'LOW',
+        kind: 'derived',
+        formulaVersion: 'perf-exposure-v1',
+        note: 'Servono due esposizioni dello stesso esercizio.'
+      };
+    }
+    const e1Delta = (curr.peakE1 != null && prev.peakE1 != null) ? pctDelta(curr.peakE1, prev.peakE1) : null;
+    const loadDelta = (curr.avgLoad != null && prev.avgLoad != null) ? pctDelta(curr.avgLoad, prev.avgLoad) : null;
+    const repsDelta = (curr.avgReps != null && prev.avgReps != null) ? pctDelta(curr.avgReps, prev.avgReps) : null;
+    const volumeDelta = pctDelta(curr.volume, prev.volume);
+    let score = 0;
+    const n = Math.min(curr.sets.length, prev.sets.length);
+    for (let i = 0; i < n; i++) {
+      const c = curr.sets[i];
+      const p = prev.sets[i];
+      const loadUp = c.loadRaw > p.loadRaw + 0.4;
+      const loadDown = c.loadRaw < p.loadRaw - 0.4;
+      const repsUp = c.reps > p.reps;
+      const repsDown = c.reps < p.reps;
+      const rirEasier = c.rir != null && p.rir != null && c.rir > p.rir + 0.4;
+      const rirHarder = c.rir != null && p.rir != null && c.rir < p.rir - 0.4;
+      if (loadUp) score += 2;
+      if (loadDown) score -= 2;
+      if (repsUp) score += 1;
+      if (repsDown) score -= 1;
+      if (!loadDown && !repsDown && rirEasier) score += 1;
+      if (!loadUp && !repsUp && rirHarder) score -= 1;
+    }
+    if (e1Delta != null && e1Delta > 1) score += 2;
+    if (e1Delta != null && e1Delta < -1) score -= 1;
+    if (loadDelta != null && loadDelta > 1) score += 1;
+    if (loadDelta != null && loadDelta < -1) score -= 1;
+    let direction = 'stable';
+    if (score > 0) direction = 'improving';
+    else if (score < 0) direction = 'declining';
+    let delta = e1Delta;
+    let deltaKind = 'e1rm';
+    if (delta == null || (direction === 'improving' && e1Delta != null && e1Delta < 0) || (direction === 'declining' && e1Delta != null && e1Delta > 0)) {
+      if (loadDelta != null && Math.abs(loadDelta) >= 0.5) { delta = loadDelta; deltaKind = 'load'; }
+      else if (repsDelta != null) { delta = repsDelta; deltaKind = 'reps'; }
+    }
+    if (direction === 'stable' && (delta == null || Math.abs(delta) < 0.8)) delta = delta == null ? 0 : delta;
+    const filled = n + (e1Delta != null ? 1 : 0) + (curr.avgRir != null && prev.avgRir != null ? 1 : 0);
+    const confidence = filled >= 4 ? 'HIGH' : (filled >= 2 ? 'MEDIUM' : 'LOW');
+    return {
+      direction: direction,
+      delta: delta,
+      deltaKind: deltaKind,
+      volumeDelta: volumeDelta,
+      e1Delta: e1Delta,
+      loadDelta: loadDelta,
+      repsDelta: repsDelta,
+      score: score,
+      confidence: confidence,
+      kind: 'derived',
+      formulaVersion: 'perf-exposure-v1',
+      note: 'Confronto tra esposizioni dello stesso esercizio. Il volume è una metrica separata.'
+    };
+  }
+
+  function multiSessionTrend(exposures) {
+    if (!exposures || exposures.length < 3) return { trend: exposures && exposures.length >= 2 ? null : 'insufficient', confidence: 'LOW' };
+    const recent = exposures.slice(-4);
+    let up = 0;
+    let used = 0;
+    for (let i = 1; i < recent.length; i++) {
+      const c = compareExposures(recent[i], recent[i - 1]);
+      if (c.direction === 'insufficient') continue;
+      used += 1;
+      if (c.direction === 'improving') up += 1;
+      else if (c.direction === 'declining') up -= 1;
+    }
+    if (!used) return { trend: 'insufficient', confidence: 'LOW' };
+    let trend = 'stable';
+    if (up > 0) trend = 'improving';
+    else if (up < 0) trend = 'declining';
+    return { trend: trend, confidence: used >= 3 ? 'HIGH' : 'MEDIUM', samples: used };
+  }
+
+  function performanceFromSets(sets, name) {
+    const exposures = groupExposures(sets, name);
+    if (exposures.length < 2) {
+      return {
+        direction: 'insufficient',
+        delta: null,
+        volumeDelta: null,
+        trend: 'insufficient',
+        confidence: 'LOW',
+        exposures: exposures.length,
+        comparison: null,
+        multi: { trend: 'insufficient', confidence: 'LOW' }
+      };
+    }
+    const curr = exposures[exposures.length - 1];
+    const prev = exposures[exposures.length - 2];
+    const comparison = compareExposures(curr, prev);
+    const multi = multiSessionTrend(exposures);
+    return {
+      direction: comparison.direction,
+      delta: comparison.delta,
+      volumeDelta: comparison.volumeDelta,
+      e1Delta: comparison.e1Delta,
+      trend: multi.trend || comparison.direction,
+      confidence: comparison.confidence,
+      exposures: exposures.length,
+      current: curr,
+      previous: prev,
+      comparison: comparison,
+      multi: multi
+    };
+  }
+
+  function setsMatchingLoc(store, data, loc) {
+    loc = loc || {};
+    const week = Number(loc.week) || 1;
+    const day = Number(loc.day) || 0;
+    const exIdx = Number(loc.exIdx) || 0;
+    const name = resolveExerciseName(data, store, week, day, exIdx);
+    const all = normalizeSets(store, data, {});
+    let matched = all.filter(function (s) { return sameExerciseName(s.name, name); });
+    if (!matched.length) matched = all.filter(function (s) { return s.exIdx === exIdx; });
+    return { name: name, all: all, matched: matched, week: week, day: day, exIdx: exIdx };
+  }
+
+  function analyzeExercise(store, data, name, opts) {
+    const useSets = setsForExercise(store, data, name, opts);
+    if (!useSets.length) return { name: name, empty: true, e1rm: null, note: 'Dati insufficienti', kind: 'derived' };
+    const perf = performanceFromSets(useSets, name);
+    const currentExp = (perf.current || summarizeExposure(useSets));
+    const today = currentExp.sets || [];
     return {
       name: name,
       empty: false,
-      sets: sets.length,
-      volume: Math.round(sets.reduce(function (a, s) { return a + s.volume; }, 0)),
-      avgLoad: mean(sets.map(function (s) { return s.loadRaw; })),
-      avgRpe: mean(sets.map(function (s) { return s.rpe; })),
-      avgRir: mean(sets.map(function (s) { return s.rir; })),
-      e1rm: current,
-      e1rmBest: best,
-      e5rm: estimatedNrm(current, 5),
-      e8rm: estimatedNrm(current, 8),
-      e10rm: estimatedNrm(current, 10),
-      trend: trend,
-      prStatus: (current != null && prevBest != null && current > prevBest) ? 'new_estimated_pr' : null,
-      intensityDist: intensityDistribution(sets),
+      sets: useSets.length,
+      volume: Math.round(useSets.reduce(function (a, s) { return a + s.volume; }, 0)),
+      avgLoad: mean(useSets.map(function (s) { return s.loadRaw; })),
+      avgRpe: mean(useSets.map(function (s) { return s.rpe; })),
+      avgRir: mean(useSets.map(function (s) { return s.rir; })),
+      e1rm: currentExp.peakE1,
+      e1rmBest: useSets.reduce(function (m, s) { return (s.e1rm != null && (m == null || s.e1rm > m)) ? s.e1rm : m; }, null),
+      e5rm: estimatedNrm(currentExp.peakE1, 5),
+      e8rm: estimatedNrm(currentExp.peakE1, 8),
+      e10rm: estimatedNrm(currentExp.peakE1, 10),
+      trend: perf.delta,
+      direction: perf.direction,
+      multiTrend: perf.trend,
+      confidence: perf.confidence,
+      volumeVsPrevious: perf.volumeDelta,
+      performance: perf,
+      prStatus: (currentExp.peakE1 != null && perf.previous && perf.previous.peakE1 != null && currentExp.peakE1 > perf.previous.peakE1) ? 'new_estimated_pr' : null,
+      intensityDist: intensityDistribution(useSets),
       fatigue: intraSessionFatigue(today),
       kind: 'derived',
       formulaVersion: FORMULA_VERSION
@@ -1519,45 +1729,53 @@
 
   function liveAfterSet(store, data, loc) {
     loc = loc || {};
-    const week = Number(loc.week) || 1;
-    const day = Number(loc.day) || 0;
-    const exIdx = Number(loc.exIdx) || 0;
+    const pack = setsMatchingLoc(store, data, loc);
+    const week = pack.week;
+    const day = pack.day;
+    const exIdx = pack.exIdx;
     const setN = Number(loc.set) || 1;
-    const all = normalizeSets(store, data, {});
-    const name = resolveExerciseName(data, store, week, day, exIdx);
-    const today = all.filter(function (s) { return s.week === week && s.day === day && s.exIdx === exIdx; });
-    const current = today.find(function (s) { return s.set === setN; }) || today[today.length - 1];
-    if (!current) {
-      return { empty: true, note: 'Dati insufficienti', kind: 'derived', formulaVersion: FORMULA_VERSION };
+    const today = pack.matched.filter(function (s) { return s.week === week && s.day === day; });
+    const current = today.find(function (s) { return s.set === setN; }) || today[today.length - 1] || null;
+    const exposures = groupExposures(pack.matched, pack.name);
+    let currExp = exposures.filter(function (e) { return e.week === week && e.day === day; })[0];
+    if (!currExp && today.length) currExp = summarizeExposure(today);
+    const prevExps = exposures.filter(function (e) { return e.week < week || (e.week === week && e.day < day); });
+    const prevExp = prevExps.length ? prevExps[prevExps.length - 1] : null;
+    const comparison = (currExp && prevExp) ? compareExposures(currExp, prevExp) : (
+      prevExps.length >= 2 ? compareExposures(prevExps[prevExps.length - 1], prevExps[prevExps.length - 2]) : null
+    );
+    const multi = multiSessionTrend(exposures);
+    if (!current && !prevExp) {
+      return { empty: true, note: 'Dati insufficienti', kind: 'derived', formulaVersion: FORMULA_VERSION, name: pack.name };
     }
-    const hist = all.filter(function (s) {
-      return s.name === name && (s.week < week || (s.week === week && (s.day < day || (s.day === day && s.set < setN))));
-    });
-    const prevBest = hist.reduce(function (m, s) { return (s.e1rm != null && (m == null || s.e1rm > m)) ? s.e1rm : m; }, null);
-    const vsBest = (current.e1rm != null && prevBest != null) ? pctDelta(current.e1rm, prevBest) : null;
-    const lastSession = hist.filter(function (s) {
-      const last = hist[hist.length - 1];
-      return last && s.week === last.week && s.day === last.day;
-    });
-    const lastVol = lastSession.reduce(function (a, s) { return a + s.volume; }, 0);
-    const todayVol = today.reduce(function (a, s) { return a + s.volume; }, 0);
+    const lastVol = prevExp ? prevExp.volume : 0;
+    const todayVol = currExp ? currExp.volume : 0;
+    const direction = comparison ? comparison.direction : 'insufficient';
+    const vsPrev = comparison ? comparison.delta : null;
     return {
       empty: false,
-      name: name,
+      name: pack.name,
       week: week,
       day: day,
       exIdx: exIdx,
-      set: setN,
-      load: current.loadRaw,
-      reps: current.reps,
-      rpe: current.rpe,
-      rir: current.rir,
-      e1rm: current.e1rm,
-      relativeIntensity: relativeIntensity(current.loadRaw, current.e1rm),
-      volumeSet: current.volume,
+      set: current ? (current.set || setN) : setN,
+      load: current ? current.loadRaw : (prevExp && prevExp.topLoad),
+      reps: current ? current.reps : (prevExp && prevExp.avgReps),
+      rpe: current ? current.rpe : (prevExp && prevExp.avgRpe),
+      rir: current ? current.rir : (prevExp && prevExp.avgRir),
+      e1rm: current && current.e1rm != null ? current.e1rm : (currExp ? currExp.peakE1 : (prevExp && prevExp.peakE1)),
+      relativeIntensity: current ? relativeIntensity(current.loadRaw, current.e1rm) : null,
+      volumeSet: current ? current.volume : 0,
       volumeToday: Math.round(todayVol),
-      vsPreviousBest: vsBest,
+      vsPreviousBest: vsPrev,
+      vsPreviousExposure: vsPrev,
       vsLastSessionVolume: lastVol > 0 ? pctDelta(todayVol, lastVol) : null,
+      volumeVsPrevious: comparison ? comparison.volumeDelta : null,
+      direction: direction,
+      trend: multi.trend || direction,
+      confidence: comparison ? comparison.confidence : 'LOW',
+      performance: comparison,
+      noCurrentSets: !current,
       fatigue: intraSessionFatigue(today),
       kind: 'derived',
       formulaVersion: FORMULA_VERSION
@@ -1566,122 +1784,181 @@
 
   function exerciseReport(store, data, loc) {
     const live = liveAfterSet(store, data, loc);
-    if (live.empty) return live;
-    const all = normalizeSets(store, data, { exercise: live.name });
-    const today = all.filter(function (s) { return s.week === loc.week && s.day === loc.day && s.exIdx === loc.exIdx; });
-    const prevDays = all.filter(function (s) { return !(s.week === loc.week && s.day === loc.day); });
-    const lastDayKey = prevDays.length ? (prevDays[prevDays.length - 1].week + '_' + prevDays[prevDays.length - 1].day) : null;
-    const last = lastDayKey ? prevDays.filter(function (s) { return (s.week + '_' + s.day) === lastDayKey; }) : [];
-    const todayE1 = today.reduce(function (m, s) { return (s.e1rm != null && (m == null || s.e1rm > m)) ? s.e1rm : m; }, null);
-    const lastE1 = last.reduce(function (m, s) { return (s.e1rm != null && (m == null || s.e1rm > m)) ? s.e1rm : m; }, null);
-    const todayVol = today.reduce(function (a, s) { return a + s.volume; }, 0);
-    const lastVol = last.reduce(function (a, s) { return a + s.volume; }, 0);
-    const bestSet = today.slice().sort(function (a, b) { return (b.e1rm || 0) - (a.e1rm || 0); })[0];
-    let status = null;
-    if (todayE1 != null && lastE1 != null) {
-      if (todayE1 > lastE1) status = 'Prestazione in miglioramento';
-      else if (todayE1 < lastE1) status = 'Prestazione in calo';
-      else status = 'Prestazione stabile';
-    } else {
-      status = 'Dati insufficienti';
+    const pack = setsMatchingLoc(store, data, loc);
+    const today = pack.matched.filter(function (s) { return s.week === pack.week && s.day === pack.day; });
+    const exposures = groupExposures(pack.matched, pack.name);
+    if (!exposures.length && !today.length) {
+      return Object.assign({}, live, {
+        empty: true,
+        report: true,
+        status: 'Dati insufficienti',
+        direction: 'insufficient',
+        volumeChange: null,
+        e1rmChange: null,
+        kind: 'derived'
+      });
     }
+    const currExp = exposures.filter(function (e) { return e.week === pack.week && e.day === pack.day; })[0]
+      || (today.length ? summarizeExposure(today) : null);
+    const hist = exposures.filter(function (e) { return !(e.week === pack.week && e.day === pack.day); });
+    const last = hist.length ? hist[hist.length - 1] : null;
+    const compareCurr = currExp || last;
+    const comparePrev = currExp ? last : (hist.length >= 2 ? hist[hist.length - 2] : null);
+    const comparison = (compareCurr && comparePrev) ? compareExposures(compareCurr, comparePrev) : (live.performance || null);
+    const multi = multiSessionTrend(exposures);
+    const todayE1 = currExp ? currExp.peakE1 : null;
+    const lastE1 = last ? last.peakE1 : null;
+    const statusMap = { improving: 'Prestazione in miglioramento', declining: 'Prestazione in calo', stable: 'Prestazione stabile', insufficient: 'Dati insufficienti' };
+    const direction = comparison ? comparison.direction : 'insufficient';
+    const bestSet = today.slice().sort(function (a, b) { return (b.e1rm || 0) - (a.e1rm || 0); })[0]
+      || (last && last.sets.slice().sort(function (a, b) { return (b.e1rm || 0) - (a.e1rm || 0); })[0]);
+    const lastLoad = (currExp && currExp.topLoad) || (last && last.topLoad) || live.load;
     return Object.assign({}, live, {
+      empty: false,
       report: true,
-      volumeToday: Math.round(todayVol),
+      volumeToday: Math.round(currExp ? currExp.volume : (live.volumeToday || 0)),
       bestSet: bestSet ? (bestSet.loadRaw + ' × ' + bestSet.reps) : null,
-      e1rmToday: todayE1,
-      e1rmPrev: lastE1,
-      e1rmChange: (todayE1 != null && lastE1 != null) ? pctDelta(todayE1, lastE1) : null,
-      volumeChange: lastVol > 0 ? pctDelta(todayVol, lastVol) : null,
-      avgRpe: mean(today.map(function (s) { return s.rpe; })),
-      status: status,
+      e1rmToday: todayE1 != null ? todayE1 : lastE1,
+      e1rmPrev: currExp ? lastE1 : (hist.length >= 2 ? hist[hist.length - 2].peakE1 : null),
+      e1rmChange: comparison ? comparison.e1Delta : null,
+      volumeChange: comparison ? comparison.volumeDelta : null,
+      avgRpe: currExp ? currExp.avgRpe : (last && last.avgRpe),
+      status: statusMap[direction] || 'Dati insufficienti',
+      direction: direction,
+      trend: multi.trend || direction,
+      confidence: comparison ? comparison.confidence : 'LOW',
+      lastLoad: lastLoad,
+      exposures: exposures.length,
+      usedPreviousExposure: !currExp,
+      performance: comparison,
       kind: 'derived'
     });
   }
 
   function recommendNext(store, data, loc) {
     const report = exerciseReport(store, data, loc);
+    const name = (report && report.name) || resolveExerciseName(data, store, loc && loc.week, loc && loc.day, loc && loc.exIdx);
+    const pack = setsMatchingLoc(store, data, loc);
+    const exposures = groupExposures(pack.matched, name);
+    const lastLoad = report.lastLoad != null ? report.lastLoad : report.load;
+    const comparison = report.performance;
+    const direction = (comparison && comparison.direction) || report.direction || 'insufficient';
     const base = {
       action: 'insufficient',
-      suggestedLoad: null,
-      deltaKg: null,
-      why: 'Servono più esposizioni con carico e reps validi.',
+      suggestedLoad: lastLoad != null ? round1(lastLoad) : null,
+      deltaKg: 0,
+      why: exposures.length < 2
+        ? 'Non ci sono abbastanza dati per una stima affidabile. Serve almeno una esposizione precedente dello stesso esercizio.'
+        : 'Dati insufficienti per una raccomandazione affidabile.',
       evidence: [],
       signalsUsed: [],
       confidence: 'LOW',
       kind: 'heuristic',
       formulaVersion: 'reco-v1',
       evidenceLevel: 'HEURISTIC',
-      name: (report && report.name) || '',
-      mrvNote: null
+      name: name,
+      mrvNote: null,
+      week: loc && loc.week,
+      day: loc && loc.day,
+      exIdx: loc && loc.exIdx
     };
-    if (report.empty || report.e1rmToday == null) return base;
-    const lastLoad = report.load;
-    const e1up = report.e1rmChange != null && report.e1rmChange > 1.5;
-    const e1down = report.e1rmChange != null && report.e1rmChange < -1.5;
-    const e1Flat = report.e1rmChange != null && Math.abs(report.e1rmChange) <= 1.5;
+    if (exposures.length < 1 || !lastLoad) {
+      base.why = !lastLoad
+        ? 'Non ci sono abbastanza dati per una stima affidabile. Manca un carico registrato.'
+        : base.why;
+      return base;
+    }
+    if (exposures.length < 2 && !comparison) {
+      const locWeek = Number(loc && loc.week) || 1;
+      const locDay = Number(loc && loc.day) || 0;
+      const only = exposures[0];
+      const sameDay = only && only.week === locWeek && only.day === locDay;
+      if (sameDay) return base;
+      return Object.assign({}, base, {
+        action: 'maintain',
+        suggestedLoad: round1(lastLoad),
+        deltaKg: 0,
+        why: 'Baseline dalla prima esposizione. Mantieni il carico attuale; dopo la seconda seduta la stima diventa più precisa.',
+        evidence: ['Una sola esposizione precedente'],
+        confidence: 'LOW'
+      });
+    }
+    const contrib = muscleContributionForExercise(name, exerciseMeta(data, store, loc && loc.week, loc && loc.day, loc && loc.exIdx));
+    const primary = (contrib.primary && contrib.primary[0]) || null;
+    let lm = landmarksFor(store, primary || 'GENERALE', null, { scale: primary ? 'muscle' : 'global' });
+    if (primary) {
+      const muscleSets = normalizeSets(store, data, {
+        muscle: primary,
+        matchMuscle: function (n, movement, groups, muscle, eK) {
+          const c = muscleContributionForExercise(n, {});
+          return (c.primary || []).indexOf(primary) >= 0 || (c.secondary || []).indexOf(primary) >= 0;
+        }
+      });
+      const weekNum = Number(loc && loc.week) || 1;
+      const weekCount = muscleSets.filter(function (s) { return s.week === weekNum; }).length;
+      lm = landmarksFor(store, primary, weekCount, { scale: 'muscle' });
+    }
+    const aboveMrv = !!(lm.comparable && lm.currentSets != null && lm.MRV != null && lm.currentSets >= lm.MRV);
+    const recBuckets = trainingBuckets(pack.matched, Math.max(Number(loc && loc.week) || 1, 4));
+    const recov = recoveryFromStore(store, recBuckets);
+    const recoveryOk = recov.signal === 'GOOD' || recov.signal === 'MODERATE' || recov.signal === 'INSUFFICIENT_DATA' || recov.estimate === 'balanced_load' || recov.estimate === 'low_recent_load';
+    const fat = report.fatigue || {};
     const rpeHigh = report.avgRpe != null && report.avgRpe >= 9;
     const rpeOk = report.avgRpe == null || report.avgRpe <= 8.5;
     const rpeStable = report.avgRpe == null || report.avgRpe <= 8.7;
-    const fat = report.fatigue || {};
-    const buckets = trainingBuckets(normalizeSets(store, data, { exercise: report.name }), Math.max(Number(loc.week) || 1, 4));
-    const lastWeek = buckets.filter(function (w) { return !w.empty; }).pop();
-    const lm = landmarksFor(store, 'GENERALE', lastWeek ? lastWeek.sets : null);
-    const aboveMrv = lm.currentSets != null && lm.currentSets >= lm.MRV;
-    const rec = recoveryFromStore(store, buckets);
-    const recoveryOk = rec.signal === 'GOOD' || rec.signal === 'MODERATE' || rec.signal === 'INSUFFICIENT_DATA';
+    const improving = direction === 'improving';
+    const declining = direction === 'declining';
     const evidence = [];
-    const signalsUsed = ['performance', 'effort', 'fatigue', 'recovery', 'volume', 'landmarks'];
-    if (report.e1rmChange != null) evidence.push('e1RM ' + (report.e1rmChange >= 0 ? '+' : '') + report.e1rmChange + '% vs seduta precedente');
+    if (comparison && comparison.delta != null) evidence.push('Prestazione vs precedente ' + (comparison.delta >= 0 ? '+' : '') + comparison.delta + '%');
+    if (comparison && comparison.volumeDelta != null) evidence.push('Volume vs precedente ' + (comparison.volumeDelta >= 0 ? '+' : '') + comparison.volumeDelta + '%');
     if (report.avgRpe != null) evidence.push('RPE medio ' + report.avgRpe);
     if (fat.signal) evidence.push('Fatica intra-seduta: ' + fat.signal);
-    if (aboveMrv) evidence.push('Volume settimanale ≥ MRV stimata (' + lm.currentSets + '/' + lm.MRV + ')');
-    if (rec.signal) evidence.push('Recupero: ' + rec.signal);
+    if (aboveMrv) evidence.push('Serie del distretto ≥ MRV stimata (' + lm.currentSets + ' vs ~' + lm.MRV + ' serie)');
+    if (recov.signal) evidence.push('Recupero: ' + recov.signal);
     let action = 'maintain';
     let delta = 0;
-    let why = 'Prestazione stabile: mantieni il carico.';
-    let conf = report.e1rmPrev == null ? 'LOW' : 'MEDIUM';
+    let why = 'Prestazione stabile: mantieni il carico attuale.';
+    let conf = comparison && comparison.confidence ? comparison.confidence : 'MEDIUM';
     let mrvNote = null;
-    if (e1up && rpeOk && fat.signal !== 'high') {
+    if (improving && rpeOk && fat.signal !== 'high') {
       action = 'increase';
       delta = lastLoad < 20 ? 1 : 2.5;
-      why = 'Prestazione in aumento e sforzo nella fascia. Suggerimento, non modifica automatica.';
-      conf = 'MEDIUM';
+      why = 'Hai aumentato ripetizioni o carico mantenendo un margine simile. Suggerimento, non modifica automatica.';
       if (aboveMrv) {
         mrvNote = 'La stima di MRV potrebbe essere conservativa. Continuare a monitorare.';
-        why += ' Volume sopra la MRV stimata ma la risposta resta positiva.';
+        why += ' Volume del distretto sopra la MRV stimata ma la risposta resta positiva.';
       }
-    } else if (e1down && (rpeHigh || fat.signal === 'high' || fat.signal === 'moderate' || rec.signal === 'LOW')) {
+    } else if (declining && (rpeHigh || fat.signal === 'high' || fat.signal === 'moderate' || recov.signal === 'LOW')) {
       action = 'reduce_volume';
       delta = 0;
-      why = 'Prestazione in calo con fatica o recupero bassi. Valuta di togliere 1–2 serie di lavoro. Non è una diagnosi.';
-      conf = 'MEDIUM';
-    } else if (aboveMrv && e1up && rpeStable && recoveryOk) {
+      why = 'Prestazione in calo con fatica o recupero da monitorare. Valuta di togliere 1–2 serie di lavoro. Non è una diagnosi.';
+    } else if (aboveMrv && improving && rpeStable && recoveryOk) {
       action = 'maintain';
       mrvNote = 'La stima di MRV potrebbe essere conservativa. Continuare a monitorare.';
       why = 'La risposta prestazionale resta positiva nonostante il volume sopra la stima attuale del MRV.';
-      conf = 'MEDIUM';
-    } else if (e1Flat && rpeStable && fat.signal !== 'high') {
+    } else if (declining) {
       action = 'maintain';
-      why = 'Prestazione e sforzo stabili: mantieni il carico.';
+      why = 'Prestazione in calo ma senza fatica elevata: mantieni il carico e monitora.';
     }
     return {
       action: action,
-      suggestedLoad: lastLoad != null ? round1(lastLoad + delta) : null,
+      suggestedLoad: round1(lastLoad + delta),
       deltaKg: delta,
       why: why,
       evidence: evidence,
-      signalsUsed: signalsUsed,
+      signalsUsed: ['performance', 'effort', 'fatigue', 'recovery', 'volume', 'landmarks'],
       confidence: conf,
       kind: 'heuristic',
       formulaVersion: 'reco-v1',
       evidenceLevel: 'HEURISTIC',
-      name: report.name,
-      week: loc.week,
-      day: loc.day,
-      exIdx: loc.exIdx,
+      name: name,
+      week: loc && loc.week,
+      day: loc && loc.day,
+      exIdx: loc && loc.exIdx,
       mrvNote: mrvNote,
-      landmarks: lm
+      landmarks: lm,
+      direction: direction,
+      usedPreviousExposure: !!report.usedPreviousExposure
     };
   }
 
@@ -1709,18 +1986,47 @@
   function sessionSummary(store, data, loc) {
     const week = Number(loc && loc.week) || 1;
     const day = Number(loc && loc.day) || 0;
-    const today = normalizeSets(store, data, {}).filter(function (s) { return s.week === week && s.day === day; });
-    const prev = normalizeSets(store, data, {}).filter(function (s) { return s.week < week || (s.week === week && s.day < day); });
+    const all = normalizeSets(store, data, {});
+    const today = all.filter(function (s) { return s.week === week && s.day === day; });
+    const prev = all.filter(function (s) { return s.week < week || (s.week === week && s.day < day); });
     const lastKey = prev.length ? (prev[prev.length - 1].week + '_' + prev[prev.length - 1].day) : null;
     const last = lastKey ? prev.filter(function (s) { return (s.week + '_' + s.day) === lastKey; }) : [];
     const vol = today.reduce(function (a, s) { return a + s.volume; }, 0);
     const lastVol = last.reduce(function (a, s) { return a + s.volume; }, 0);
     const setsChange = last.length ? pctDelta(today.length, last.length) : null;
-    const todayE1 = today.reduce(function (m, s) { return (s.e1rm != null && (m == null || s.e1rm > m)) ? s.e1rm : m; }, null);
-    const lastE1 = last.reduce(function (m, s) { return (s.e1rm != null && (m == null || s.e1rm > m)) ? s.e1rm : m; }, null);
-    const perf = (todayE1 != null && lastE1 != null) ? pctDelta(todayE1, lastE1) : null;
-    const buckets = trainingBuckets(normalizeSets(store, data, {}), Math.max(week, 4));
+    const names = [];
+    today.forEach(function (s) {
+      if (s.name && names.indexOf(s.name) < 0) names.push(s.name);
+    });
+    const dirs = [];
+    const deltas = [];
+    names.forEach(function (name) {
+      const matched = all.filter(function (s) { return sameExerciseName(s.name, name); });
+      const exposures = groupExposures(matched, name);
+      const curr = exposures.filter(function (e) { return e.week === week && e.day === day; })[0];
+      const prevExps = exposures.filter(function (e) { return e.week < week || (e.week === week && e.day < day); });
+      const prevExp = prevExps.length ? prevExps[prevExps.length - 1] : null;
+      if (!curr || !prevExp) return;
+      const c = compareExposures(curr, prevExp);
+      if (c.direction === 'insufficient') return;
+      dirs.push(c.direction);
+      if (c.delta != null) deltas.push(c.delta);
+    });
+    let direction = 'insufficient';
+    if (dirs.length) {
+      const up = dirs.filter(function (d) { return d === 'improving'; }).length;
+      const down = dirs.filter(function (d) { return d === 'declining'; }).length;
+      if (up && !down) direction = 'improving';
+      else if (down && !up) direction = 'declining';
+      else if (!up && !down) direction = 'stable';
+      else direction = 'mixed';
+    }
+    const perf = deltas.length ? round1(deltas.reduce(function (a, n) { return a + n; }, 0) / deltas.length) : null;
+    const buckets = trainingBuckets(all, Math.max(week, 4));
     const rec = recoveryFromStore(store, buckets);
+    const e1Proxy = direction === 'improving' ? (perf != null ? Math.max(perf, 2.1) : 2.1)
+      : (direction === 'declining' ? (perf != null ? Math.min(perf, -2.1) : -2.1)
+        : (direction === 'stable' ? 0 : null));
     return {
       volume: Math.round(vol),
       sets: today.length,
@@ -1728,11 +2034,14 @@
       volumeChange: lastVol > 0 ? pctDelta(vol, lastVol) : null,
       setsChange: setsChange,
       performanceChange: perf,
+      performanceDirection: direction,
+      scale: 'session',
+      note: 'La prestazione è la media dei confronti exercise-specific, non il max e1RM tra alzate diverse.',
       fatigue: intraSessionFatigue(today),
       recovery: rec,
       adaptation: adaptationFromComparison({
         volume: lastVol > 0 ? pctDelta(vol, lastVol) : null,
-        e1rm: perf,
+        e1rm: e1Proxy,
         intensity: null
       }, buckets),
       kind: 'derived',
@@ -1794,11 +2103,11 @@
       if (k === 'INSUFFICIENT_DATA' || k === 'insufficient_data') return 'Dati insufficienti';
     }
     if (d === 'performance') {
-      if (k === 'POSITIVE' || k === 'Prestazione in miglioramento') return 'Prestazione in miglioramento';
-      if (k === 'NEGATIVE' || k === 'Prestazione in calo') return 'Prestazione in calo';
-      if (k === 'NEUTRAL' || k === 'Prestazione stabile') return 'Prestazione stabile';
-      if (k === 'MIXED') return 'Prestazione mista';
-      if (k === 'INSUFFICIENT_DATA') return 'Dati insufficienti';
+      if (k === 'POSITIVE' || k === 'improving' || k === 'Prestazione in miglioramento') return 'Prestazione in miglioramento';
+      if (k === 'NEGATIVE' || k === 'declining' || k === 'Prestazione in calo') return 'Prestazione in calo';
+      if (k === 'NEUTRAL' || k === 'stable' || k === 'Prestazione stabile') return 'Prestazione stabile';
+      if (k === 'MIXED' || k === 'mixed') return 'Prestazione mista';
+      if (k === 'INSUFFICIENT_DATA' || k === 'insufficient') return 'Dati insufficienti';
     }
     if (d === 'adaptation' || d === 'volumeResponse') {
       if (k === 'POSITIVE' || k === 'positive_response') return 'Risposta positiva';
@@ -1837,6 +2146,10 @@
     liveAfterSet: liveAfterSet,
     exerciseReport: exerciseReport,
     recommendNext: recommendNext,
+    compareExposures: compareExposures,
+    performanceFromSets: performanceFromSets,
+    groupExposures: groupExposures,
+    sameExerciseName: sameExerciseName,
     preWorkout: preWorkout,
     sessionSummary: sessionSummary,
     explainMetric: explainMetric,
