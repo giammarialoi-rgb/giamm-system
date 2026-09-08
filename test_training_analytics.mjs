@@ -150,8 +150,13 @@ assert.equal(emptyLive.empty, true);
 
 const expl = TAE.explainMetric("e1rm");
 assert.equal(expl.evidenceLevel, "DERIVED");
-assert.ok(String(expl.limitations).includes("Not a tested 1RM"));
+assert.ok(String(expl.limitIt).includes("1RM testato"));
 assert.ok(expl.nameIt && expl.whatIt && expl.howIt && expl.limitIt);
+["volume", "bw", "sets", "reps", "load", "frequency", "sessions", "e1rm", "intensity", "landmarks", "recovery", "atlCtl", "hardSets", "effectiveVolume", "adaptation", "fatigue", "performance", "volumeResponse", "muscleContribution", "trainingLoad"].forEach(function (id) {
+  const row = TAE.explainMetric(id);
+  assert.ok(row, "catalog has " + id);
+  assert.ok(row.nameIt && row.whatIt && row.howIt && row.limitIt && row.evidenceLevel && row.formulaVersion, "catalog fields for " + id);
+});
 
 function week2days(name) {
   return { sessions: [{ exercises: [{ name: name }] }, { exercises: [{ name: name }] }] };
@@ -270,6 +275,22 @@ const aboveMrv = TAE.recommendNext({
 }, { weeks: [{ sessions: [{ exercises: [{ name: "Panca" }] }] }, { sessions: [{ exercises: [{ name: "Panca" }] }] }] }, { week: 2, day: 0, exIdx: 0, set: 22 });
 assert.notEqual(aboveMrv.action, "reduce_volume", "above estimated MRV with positive response does not auto-reduce");
 assert.ok(aboveMrv.mrvNote);
+
+TAE.clearCache();
+const ctrlStore = JSON.parse(JSON.stringify(incompleteStore));
+const lmBefore = JSON.stringify(ctrlStore.prefs && ctrlStore.prefs.volumeLandmarks || null);
+const built = TAE.build(ctrlStore, incompleteData, { axis: "training", zoomWeeks: 2, includeIncompleteWeeks: false, currentWeek: 3 });
+assert.ok(built.control && built.control.performance && built.control.dose, "control snapshot prepared");
+assert.ok(built.personalResponse && built.personalResponse.note);
+assert.equal(built.personalResponse.formulaVersion, "personal-prep-v1");
+assert.ok(built.performanceEfficiency && built.performanceEfficiency.kind === "heuristic");
+assert.equal(JSON.stringify(ctrlStore.prefs && ctrlStore.prefs.volumeLandmarks || null), lmBefore, "one build does not rewrite landmarks");
+assert.deepEqual(ctrlStore.data, incompleteStore.data);
+assert.ok(built.recovery && (built.recovery.signal === "GOOD" || built.recovery.signal === "MODERATE" || built.recovery.signal === "LOW" || built.recovery.signal === "INSUFFICIENT_DATA"));
+
+const emptyRec = TAE.build({ data: {}, prefs: {}, logs: [] }, { weeks: [] }, { axis: "training", zoomWeeks: 0 });
+assert.ok(emptyRec.kpis.volumeTotal === 0 || emptyRec.table, "empty store still builds");
+assert.ok(emptyRec.recovery);
 
 const html = fs.readFileSync(path.join(root, "web/index.base.html"), "utf8");
 assert.ok(html.includes("training-analytics-engine.js"), "stats page loads the engine");

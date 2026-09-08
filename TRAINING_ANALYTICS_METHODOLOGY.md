@@ -1,145 +1,147 @@
-# Training Analytics Methodology
+# Metodologia Training Analytics
 
-Derived analytics only. Raw workout rows (`store.data`, logs, programmed weeks) are never rewritten by this engine. Formula version: `intel-v1`.
+Analytics derivata. Il motore non riscrive `store.data`, i workout, le serie o la programmazione. Versione formule: `intel-v1`.
 
-Every metric has `evidenceLevel`: MEASURED | DERIVED | EVIDENCE_SUPPORTED | MODEL_BASED | HEURISTIC | EXPERIMENTAL.
-
----
-
-## Volume (tonnage)
-
-**Definition:** Work as load × reps.  
-**Formula:** `Σ(load × reps × partMultiplier)` — `partMultiplier` is 2 only when the exercise is marked per-parte.  
-**Inputs:** logged load, reps.  
-**Unit:** kg. **Category:** observed→derived.  
-**Evidence:** Dose–response between weekly resistance volume and hypertrophy is supported, with large individual differences and no universal “magic number” (Schoenfeld et al. reviews).  
-**Evidence level:** DERIVED. **Confidence:** high when loads are logged.  
-**Limitations:** Does not invent warm-up vs work. Skipped exercises excluded.  
-**formulaVersion:** `epley-v1` (shared load path).
+Livelli di evidenza: MEASURED | DERIVED | EVIDENCE_SUPPORTED | MODEL_BASED | HEURISTIC | EXPERIMENTAL.
 
 ---
 
-## e1RM
+## Volume (tonnellaggio)
 
-**Definition:** Estimated 1RM from a submaximal set. Not a tested max.  
-**Formula:** Epley `load × (1 + reps/30)`; singles = load. Invalid if reps > 12.  
-**Exercise-specific.** Never sum e1RM across movements.  
-**Estimated 5/8/10RM:** invert Epley from current e1RM when that e1RM exists.  
-**Evidence:** Tested 1RM is generally reliable; prediction equations are estimates and degrade at high reps.  
-**Evidence level:** DERIVED. **formulaVersion:** `epley-v1`.  
-**Limitations:** Ugly or very high-rep sets omitted.
-
----
-
-## RPE / RIR / intensity 0–10
-
-Nurvan stores one effort number per set; scale comes from `exIntensity` / week / prefs.
-
-- RIR `n` → intensity10 = `10 − n`, paired RPE ≈ `10 − n`
-- RPE `n` → intensity10 = `n`, paired RIR ≈ `10 − n`
-
-**Evidence:** Proximity to failure (RPE/RIR) is useful for autoregulation; it is not required that every set go to failure; strength vs hypertrophy relationships differ.  
-**Evidence level:** USER REPORTED + DERIVED conversion. **formulaVersion:** `rir-rpe-v1`.  
-**Missing effort → “—”.** Never invent 8.0.
+**Definizione:** Lavoro eseguito come carico × ripetizioni.  
+**Formula:** `Σ(load × reps × partMultiplier)` — `partMultiplier` = 2 solo in modalità per parte.  
+**Input:** carico e rip registrati. **Unità:** kg. **Tipo:** DERIVED.  
+**Evidenza:** Relazione dose–risposta tra volume di resistance training e ipertrofia, con grandi differenze individuali e senza un numero magico universale (review Schoenfeld e colleghi).  
+**Limiti:** Non inventa riscaldamento vs lavoro. Serie saltate escluse.  
+**Uso:** KPI, grafico, confronto periodo. Un aumento di volume non è automaticamente progressione.
 
 ---
 
-## Relative intensity (% 1RM)
+## Serie, ripetizioni, carico medio, frequenza, sedute
 
-`load / e1RM × 100` only when that exercise has an e1RM.  
-**Evidence level:** DERIVED. Bins `<60 / 60–70 / 70–80 / 80–90 / 90+` are counts of sets with a valid e1RM.
-
----
-
-## Hard sets
-
-Heuristic: RIR ≤ 2 or RPE ≥ 8.  
-**Evidence level:** HEURISTIC. Unclassified if effort is missing.
+**Tipo:** DERIVED.  
+**Limiti:** Il conteggio nominale sovrastima o sottostima la dose se lo stesso muscolo è coinvolto in più esercizi.
 
 ---
 
-## Effective volume / effective reps
+## Peso corporeo
 
-`Σ load × (reps + estimatedRIR)`. Heuristic “work if taken to failure”.  
-**Evidence level:** HEURISTIC. Not used alone to change volume.
-
----
-
-## Volume landmarks (MV / MEV / MAV / MRV)
-
-Defaults: MV 6, MEV 8, MAV 12–16, MRV 20 weekly sets. Configurable in `store.prefs.volumeLandmarks`.  
-**Evidence:** Volume landmarks are coaching models, not universal physiology.  
-**Evidence level:** MODEL_BASED. Shown as estimated / configurable.  
-**formulaVersion:** `landmarks-v1`.
+**Tipo:** MEASURED. Solo valori inseriti. Nessuna interpolazione.
 
 ---
 
-## Fatigue (intra-session)
+## e1RM e rep max stimate
 
-Rep loss at matched load + RPE drift across sets of one exercise.  
-Signals: stable / low / moderate / high.  
-**Evidence level:** HEURISTIC. Not a fatigue percentage. Not “overtraining”.
-
----
-
-## Training load (ATL / CTL / TSB)
-
-Adapted from endurance load models:
-
-- ATL / acute = last non-empty week volume  
-- CTL / chronic = mean of up to 4 recent non-empty weeks  
-- TSB ≈ CTL − ATL  
-- Stress = acute / chronic  
-
-**Methodology:** Adapted model. **Evidence:** limited / context-dependent for hypertrophy lifting. **Use:** trend only.  
-**Evidence level:** MODEL_BASED. **formulaVersion:** `atl-adapt-v1`.  
-Never a sole decision rule. Never an overtraining lamp.
+**Definizione:** Stima del 1RM da una serie submassimale. Non è un 1RM testato.  
+**Formula:** Epley `load × (1 + reps/30)`; singoli = carico; invalido se rip > 12.  
+**e5/8/10RM:** inversione di Epley dalla e1RM corrente, solo se esiste.  
+**Tipo:** DERIVED. **formulaVersion:** `epley-v1`.  
+**Evidenza:** Il 1RM misurato ha buona affidabilità test-retest; le formule predittive peggiorano ad alte ripetizioni.  
+**Regola:** mai sommare e1RM di esercizi diversi.
 
 ---
 
-## Recovery / readiness
+## Intensità, RPE, RIR
 
-**Observed:** BW, last duration, last RPE if present.  
-**Estimated:** labels from acute/chronic (`low_recent_load` / `balanced_load` / `high_recent_load`).  
-Shown as Recovery Estimate, never “Chest 87%”.  
-**Evidence level:** HEURISTIC.
+Un numero per serie; la scala arriva da `exIntensity` / settimana / preferenze.
 
----
+- RIR `n` → intensità 10 = `10 − n`
+- RPE `n` → intensità 10 = `n`
 
-## Adaptation / volume responsiveness
-
-Compares volume Δ and e1RM Δ across the zoomed window vs the previous window.  
-Labels: POSITIVE / NEUTRAL / MIXED / NEGATIVE / insufficient data.  
-Requires ≥2 weeks with data; confidence stays LOW until ≥4.  
-**Evidence level:** ESTIMATED. Non-diagnostic.
+**Evidenza:** RPE/RIR sono utili per autoregolare; non obbliga a portare ogni serie a cedimento.  
+**Tipo:** DERIVED se lo sforzo è presente, altrimenti vuoto.
 
 ---
 
-## Recommendations
+## Serie dure e volume efficace
 
-Rules (`reco-v1`):
-
-- Increase +2.5 kg (or +1 kg if load < 20) if e1RM rose and RPE ≤ 8.5 and intra-session fatigue is not high  
-- Maintain if stable  
-- Consider −1 working set if e1RM fell and (RPE ≥ 9 or fatigue moderate/high)  
-
-Always SUGGESTED. Written only to `store.intelligence` after Accept. Programmed `DATA.weeks` is never changed by the engine.  
-**Evidence level:** HEURISTIC.
+**Serie dure:** RIR ≤ 2 o RPE ≥ 8.  
+**Volume efficace:** `Σ load × (reps + RIR)`.  
+**Tipo:** HEURISTIC. Non usarle da sole per alzare o togliere volume.
 
 ---
 
-## Autoregulation (why this exists)
+## Contributo muscolare, serie dirette/indirette, ETD, costo di fatica
 
-Literature supports RPE/RIR-based autoregulation as one valid way to progress; implementations differ and are not automatically superior to fixed loading. Velocity-based methods are optional and not assumed here (no velocity data in Nurvan).
-
----
-
-## Frequency
-
-Interpreted with weekly volume. When volume is equated, hypertrophy differences by frequency are smaller. Shown as sessions/week in the selected window.
+Mappa euristica: primario 1, secondario 0,5, indiretto 0,25.  
+**Effective Training Dose** e **Fatigue Cost** sono modelli interni per la futura centralina, non metriche fisiologiche ufficiali.  
+**Tipo:** HEURISTIC / MODEL_BASED.  
+**Letteratura:** il conteggio frazionato/diretto-indiretto è un’ipotesi di programmazione, non una misura validata in modo uniforme.
 
 ---
 
-## How to open a metric in the app
+## Landmark MV / MEV / MAV / MRV
 
-`TrainingAnalyticsEngine.explainMetric(id)` returns the catalog row (definition, formula, evidenceLevel, limitations, formulaVersion).
+Default configurabili in `store.prefs.volumeLandmarks`.  
+**Tipo:** MODEL_BASED.  
+**Regola di raccomandazione:** volume > MRV stimata **non** implica riduzione se prestazione ↑, RPE stabile e recupero stabile. In quel caso: «la stima di MRV potrebbe essere conservativa».
+
+---
+
+## Training load, ATL, CTL, TSB
+
+ATL = volume ultima settimana; CTL = media fino a 4; TSB = CTL − ATL.  
+**Tipo:** MODEL_BASED, context-dependent.  
+**Evidenza:** modelli nati nell’endurance. Qui solo tendenza. Non verdetto di overtraining e non unica base delle reco.
+
+---
+
+## Fatica
+
+Componenti: perdita di rip, deriva RPE, accumulo recente. Poi LOW / MODERATE / ELEVATED / HIGH + motivo.  
+**Tipo:** HEURISTIC. Mai «Fatigue = 73%». Mai diagnosi.
+
+---
+
+## Recupero / readiness
+
+Observed (RPE, BW, durata) / derived (acuto-cronico) / estimated (segnale GOOD / MODERATE / LOW / INSUFFICIENT DATA).  
+**Tipo:** HEURISTIC. Nessuna percentuale fisiologica.
+
+---
+
+## Prestazione, risposta al volume, adattamento
+
+**Performance response** ha più peso del confronto volume-vs-MRV.  
+**Volume response:** Δ volume vs Δ prestazione vs Δ sforzo vs recupero.  
+**Adattamento:** POSITIVE / NEUTRAL / MIXED / NEGATIVE.  
+**Tipo:** ESTIMATED. Servono più esposizioni. Una seduta non aggiorna i landmark.
+
+---
+
+## Raccomandazioni
+
+Gerarchia: prestazione → sforzo → fatica → recupero → volume → landmark come riferimento.  
+Azioni: increase / maintain / reduce_volume / insufficient.  
+Ogni reco ha why, evidence, confidence, signalsUsed.  
+Accetta / Mantieni / Scarta scrivono solo `store.intelligence` e `store.intelTargets`. Mai `programmedWeight`. In seduta, Accetta prefilla solo i set non eseguiti.
+
+---
+
+## Settimane concluse
+
+Una settimana è completa solo se tutti i giorni previsti (`sessions`/`days`) risultano finalizzati nei log.  
+Default: `includeIncompleteWeeks = false`. Zoom e variazione ignorano la settimana in corso.
+
+---
+
+## Fonti (uso cauto)
+
+- Volume e ipertrofia: review/meta-analisi sul dose–response (Schoenfeld et al.). Differenze individuali ampie.
+- Prossimità al cedimento: RPE/RIR utili; non tutte le serie devono arrivare a cedimento.
+- Autoregolazione: supportata se contestualizzata; le implementazioni non sono equivalenti.
+- Frequenza: va letta insieme al volume totale.
+- 1RM / e1RM: il test è specifico dell’esercizio; l’e1RM è una stima.
+- Training load ATL/CTL/TSB: adattati dall’endurance, contesto-dipendenti.
+- Conteggio diretto/indiretto/frazionato: pratica di programmazione, non misura biologica universale.
+
+Nessuna fonte viene usata per sostenere una conclusione più forte di quanto mostri.
+
+## Training Control Engine (preparazione)
+
+Oggetto `analytics.control` con: actual, derived, dose, stimulus, performance, effort, fatigue, recovery, adaptation, volumeResponse, landmarks, personalResponse, performanceEfficiency, confidence.
+
+`personalResponse` resta null sui campi di tolleranza finché non ci sono abbastanza esposizioni (≥4 settimane con dati). Non aggiorna `prefs.volumeLandmarks`.
+
+**Performance efficiency:** Δ e1RM / |Δ volume|. HEURISTIC. Non mostrarla come fatto fisiologico.
+
