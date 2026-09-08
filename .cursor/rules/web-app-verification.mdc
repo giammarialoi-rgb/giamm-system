@@ -1,0 +1,13 @@
+---
+description: Giammaria verifica solo la web app live
+alwaysApply: true
+---
+
+# Web app is the only review surface
+
+Giammaria guarda **solo la web app** (PWA / sito live), non APK, preview locale o file aperti in editor.
+
+- Una modifica UI/analytics **non è fatta** finché non è su `origin/main` e Render ha ridistribuito. Commit + push fanno parte del lavoro, non un extra.
+- Non chiedere di verificare su Android, Cursor preview o `localhost` come se fosse sufficiente.
+- Dopo il push, indica che deve **ricaricare la web app** (hard refresh / nuova cache SW).
+- `npm run build:web` da solo aggiorna solo questa macchina. Senza push, la web app che lui guarda resta il commit vecchio.

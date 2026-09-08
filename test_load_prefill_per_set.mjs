@@ -65,10 +65,10 @@ weeks.forEach(function (w) {
     store: { data: data, logs: [{ week: 1, day: 3 }], subs: {} },
     DATA: { weeks: weeks }
   });
-  assert.equal(ctx.effectiveSetLoad(0, 1, {}), 221.5);
-  assert.equal(ctx.effectiveSetLoad(0, 2, {}), 201.5);
-  assert.equal(ctx.effectiveSetLoad(0, 3, {}), 201.5);
-  console.log("OK   week2 ignores copied 225.5 and prefills per-set +1.25");
+  assert.equal(ctx.effectiveSetLoad(0, 1, {}), 222.5);
+  assert.equal(ctx.effectiveSetLoad(0, 2, {}), 202.5);
+  assert.equal(ctx.effectiveSetLoad(0, 3, {}), 202.5);
+  console.log("OK   week2 ignores copied 225.5 and prefills per-set +2.5");
 }
 
 // Week 3: week2 was seeded/copied identical, week1 has real variation
@@ -85,9 +85,9 @@ weeks.forEach(function (w) {
   });
   const prev = ctx.collectPrevWeekSetLogs(0, {});
   assert.equal(JSON.stringify(prev.map(function (s) { return Number(s.load); })), JSON.stringify([220, 200, 200]));
-  assert.equal(ctx.effectiveSetLoad(0, 1, {}), 221.5);
-  assert.equal(ctx.effectiveSetLoad(0, 2, {}), 201.5);
-  assert.equal(ctx.effectiveSetLoad(0, 3, {}), 201.5);
+  assert.equal(ctx.effectiveSetLoad(0, 1, {}), 222.5);
+  assert.equal(ctx.effectiveSetLoad(0, 2, {}), 202.5);
+  assert.equal(ctx.effectiveSetLoad(0, 3, {}), 202.5);
   console.log("OK   later weeks walk back to last varied week, not copied first-set");
 }
 
@@ -137,7 +137,7 @@ weeks.forEach(function (w) {
     DATA: { weeks: weeks }
   });
   assert.equal(ctx.effectiveSetLoad(0, 1, {}), 230);
-  assert.equal(ctx.effectiveSetLoad(0, 2, {}), 201.5);
+  assert.equal(ctx.effectiveSetLoad(0, 2, {}), 202.5);
   console.log("OK   finalized current set stays, other sets still follow last week");
 }
 
@@ -156,9 +156,9 @@ weeks.forEach(function (w) {
     store: { data: data, logs: [{ week: 1, day: 3 }], subs: {} },
     DATA: { weeks: weeks }
   });
-  assert.equal(ctx.effectiveSetLoad(0, 1, {}), 221.5);
-  assert.equal(ctx.effectiveSetLoad(0, 2, {}), 201.5);
-  assert.equal(ctx.effectiveSetLoad(0, 3, {}), 201.5);
+  assert.equal(ctx.effectiveSetLoad(0, 1, {}), 222.5);
+  assert.equal(ctx.effectiveSetLoad(0, 2, {}), 202.5);
+  assert.equal(ctx.effectiveSetLoad(0, 3, {}), 202.5);
   console.log("OK   stale copied 225.5 is replaced even if marked user-owned");
 }
 
@@ -180,4 +180,71 @@ weeks.forEach(function (w) {
 
 assert.ok(html.includes("effectiveSetLoad"), "render uses effectiveSetLoad helper");
 assert.ok(html.includes("_load_user"), "manual kg edits are marked user-owned");
+
+function twoExWeeks(a, b) {
+  return [1, 2, 3, 4].map(function () {
+    return { sessions: [{}, {}, {}, { exercises: [{ name: a }, { name: b }] }] };
+  });
+}
+
+{
+  const data = {};
+  setLoads(data, 1, 3, 1, [30, 30, 30], { reps: 8, rir: 2, done: true });
+  setLoads(data, 2, 3, 1, [30, 30, 30]);
+  const ctx = makeCtx({
+    currentWeek: 2,
+    currentDay: 3,
+    store: {
+      data: data,
+      logs: [{ week: 1, day: 3 }],
+      subs: { w2_d3_e1: "Multi bench leverage" }
+    },
+    DATA: { weeks: twoExWeeks("Panca piana", "Spinte con manubri") }
+  });
+  assert.equal(ctx.exerciseNameAt(2, 3, 1), "Multi bench leverage");
+  assert.equal(ctx.findMatchingExerciseIndex(1, 3, "Multi bench leverage", 1), null);
+  assert.equal(ctx.collectPrevWeekSetLogs(1, { name: "Multi bench leverage" }).length, 0);
+  assert.equal(ctx.effectiveSetLoad(1, 1, { name: "Multi bench leverage" }), "");
+  assert.equal(ctx.effectiveSetLoad(1, 2, { name: "Multi bench leverage" }), "");
+  console.log("OK   substituted slot does not inherit previous occupant's kg");
+}
+
+{
+  const data = {};
+  setLoads(data, 1, 3, 0, [80, 75, 75], { reps: 8, rir: 2, done: true });
+  const weeksMoved = [
+    { sessions: [{}, {}, {}, { exercises: [{ name: "Multi bench leverage" }, { name: "Spinte con manubri" }] }] },
+    { sessions: [{}, {}, {}, { exercises: [{ name: "Spinte con manubri" }, { name: "Multi bench leverage" }] }] }
+  ];
+  const ctx = makeCtx({
+    currentWeek: 2,
+    currentDay: 3,
+    store: { data: data, logs: [{ week: 1, day: 3 }], subs: {} },
+    DATA: { weeks: weeksMoved }
+  });
+  const prev = ctx.collectPrevWeekSetLogs(1, { name: "Multi bench leverage" });
+  assert.equal(JSON.stringify(prev.map(function (s) { return Number(s.load); })), JSON.stringify([80, 75, 75]));
+  assert.equal(ctx.effectiveSetLoad(1, 1, { name: "Multi bench leverage" }), 82.5);
+  assert.equal(ctx.effectiveSetLoad(1, 2, { name: "Multi bench leverage" }), 77.5);
+  console.log("OK   same exercise is followed across slots");
+}
+
+{
+  const data = {};
+  setLoads(data, 1, 0, 0, [80, 75], { reps: 8, rir: 2, done: true });
+  const weeksOtherDay = [
+    { sessions: [{ exercises: [{ name: "Multi bench leverage" }] }, {}, {}, { exercises: [{ name: "Spinte con manubri" }] }] },
+    { sessions: [{ exercises: [{ name: "Spinte con manubri" }] }, {}, {}, { exercises: [{ name: "Multi bench leverage" }] }] }
+  ];
+  const ctx = makeCtx({
+    currentWeek: 2,
+    currentDay: 3,
+    store: { data: data, logs: [{ week: 1, day: 0 }], subs: {} },
+    DATA: { weeks: weeksOtherDay }
+  });
+  const prev = ctx.collectPrevWeekSetLogs(0, { name: "Multi bench leverage" });
+  assert.equal(JSON.stringify(prev.map(function (s) { return Number(s.load); })), JSON.stringify([80, 75]));
+  console.log("OK   same exercise is followed across days");
+}
+
 console.log("OK   per-set load prefill");

@@ -80,6 +80,61 @@ Mappa euristica: primario 1, secondario 0,5, indiretto 0,25.
 
 ---
 
+## Snapshot unico e decision engine
+
+Per ogni esercizio la UI e il peso consigliato leggono lo stesso `exerciseAnalyticsSnapshot` (`formulaVersion: snap-v1`).
+
+Pipeline:
+
+```text
+RAW (immutabile)
+  → exerciseAnalyticsSnapshot
+  → evaluateExerciseState
+  → recommendNext
+```
+
+`recommendNext` non ricalcola performance, volume, RPE o fatica da raw paralleli. Riceve lo snapshot (o lo costruisce una volta) e decide.
+
+Campi condivisi: `performanceDelta`, `volumeDelta`, `performanceDirection`, `fatigue.signal` (solo intra-seduta), `recovery.signal` (carico recente, etichetta distinta), `currentE1RM` (picco dell’esposizione, non l’ultimo set).
+
+Azioni: `increase` / `maintain` / `monitor` / `reduce_load` / `reduce_volume` / `insufficient`.
+
+RPE 9 con prestazione in aumento → maintain/monitor, **non** riduzione automatica. Una sola seduta negativa → `monitor`, non reduce. Reduce richiede calo ripetuto + fatica + recupero/sforzo alti.
+
+---
+
+## Performance & Intensity Context
+
+Layer aggiuntivo, non un sostituto del volume.
+
+| Dimensione | Domanda | Non è |
+| --- | --- | --- |
+| Volume load | Quanto lavoro ho fatto? | Prestazione |
+| Intensità | Quanto era alto il carico (assoluto / %e1RM)? | RPE |
+| Effort | Quanto è stata difficile la serie? | Fatica cumulativa |
+| Prestazione | Quanto sono riuscito a produrre? | Tonnellaggio |
+| Fatica | Quanto è caduta la capacità in seduta / di recente? | Un RPE 9 isolato |
+| Recupero | I dati recenti sono favorevoli a una nuova esposizione? | Fatica intra-seduta |
+| Adattamento | La risposta alle dosi recenti appare positiva? | Volume > MRV |
+
+`evaluatePerformanceContext` restituisce `volumeState`, `intensityState`, `effortState`, `performanceState`, `fatigueState`, `overallSignal`, `confidence`, `reasons`, `interpretation`.
+
+Versioni: `performanceComparisonVersion: pic-v1`, `intensityContextVersion: intx-v1`, `effortContextVersion: effx-v1`, `doseContextVersion: dose-v1`, `recommendationVersion: reco-pic-v1`.
+
+Il top set pesa più dei backoff. Mixed è uno stato valido. Effective Training Dose, Performance Efficiency e Session Quality Signal sono modelli interni (HEURISTIC / MODEL_BASED), non metriche fisiologiche ufficiali.
+
+## Why Volume Load Is Not Performance
+
+```text
+130×7 @ 9, 117.5×9 @ 9, 117.5×7 @ 9
+→
+132.5×7 @ 9, 120×7 @ 9, 120×7 @ 9
+```
+
+Top load ↑, top reps =, RPE =. Il volume load può muoversi di poco o scendere perché il backoff ha perso ripetizioni. La prestazione resta positiva. Frase generata dal motore (esempio di forma): il volume è rimasto sostanzialmente invariato, ma hai aumentato il carico mantenendo le stesse ripetizioni e lo stesso livello di sforzo.
+
+---
+
 ## Prestazione vs precedente (exercise exposure)
 
 **Definizione:** confronto tra l’ultima esposizione valida dello stesso esercizio e la precedente esposizione valida. Non è la variazione di volume della seduta e non è “vs best storico”.
@@ -102,7 +157,7 @@ Mai confrontare serie globali (es. 87) con l’MRV di un singolo muscolo (es. 20
 
 ## Peso consigliato
 
-Funziona su esercizi canonici, custom e aggiunti in enciclopedia. Fonte primaria: storico dell’esercizio, non la voce enciclopedica. Azioni: increase / maintain / reduce_volume / insufficient, sempre con `why`. Accetta modifica solo i set futuri (`intelTargets`).
+Funziona su esercizi canonici, custom e aggiunti in enciclopedia. Fonte primaria: storico dell’esercizio, non la voce enciclopedica. Azioni: increase / maintain / monitor / reduce_load / reduce_volume / insufficient, sempre con `why` dallo snapshot. Accetta modifica solo i set futuri (`intelTargets`).
 
 ---
 
@@ -122,7 +177,13 @@ ATL = volume ultima settimana; CTL = media fino a 4; TSB = CTL − ATL.
 
 ## Fatica
 
-Componenti: perdita di rip, deriva RPE, accumulo recente. Poi LOW / MODERATE / ELEVATED / HIGH + motivo.  
+Due concetti distinti, mai etichettati entrambi come «fatica»:
+
+- **Fatica durante questa seduta** (`intraSessionFatigue`, `snapshot.fatigue`): perdita di rip, deriva RPE/RIR sulla stessa esposizione.
+- **Fatica / carico recente** (ATL/CTL, `fatigueFromWeeks`): accumulo sulle settimane. In UI: «Fatica recente (modello)».
+
+RPE 9 da solo non rende la fatica HIGH e non attiva una riduzione.
+
 **Tipo:** HEURISTIC. Mai «Fatigue = 73%». Mai diagnosi.
 
 ---
@@ -145,9 +206,13 @@ Observed (RPE, BW, durata) / derived (acuto-cronico) / estimated (segnale GOOD /
 
 ## Raccomandazioni
 
-Gerarchia: prestazione → sforzo → fatica → recupero → volume → landmark come riferimento.  
-Azioni: increase / maintain / reduce_volume / insufficient.  
-Ogni reco ha why, evidence, confidence, signalsUsed.  
+Gerarchia: snapshot centralizzato → `evaluateExerciseState` → azione.  
+Le reco **non** ricalcolano performance, volume, RPE o fatica da raw paralleli.
+
+Azioni: increase / maintain / monitor / reduce_load / reduce_volume / insufficient.  
+Riduci carico ≠ riduci volume. RPE 9 con prestazione ↑ → maintain/monitor, non reduce. Una sola seduta negativa → monitor. Reduce richiede calo ripetuto + fatica intra-seduta + recupero/sforzo alti.
+
+Ogni reco ha why, evidence (stessi delta dello snapshot), confidence, signalsUsed, advisable.  
 Accetta / Mantieni / Scarta scrivono solo `store.intelligence` e `store.intelTargets`. Mai `programmedWeight`. In seduta, Accetta prefilla solo i set non eseguiti.
 
 ---
