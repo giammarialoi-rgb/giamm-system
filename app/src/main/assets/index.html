@@ -40761,7 +40761,7 @@ function toggleExerciseIntel(exIdx) {
 function exerciseIntelPanelHtml(exIdx) {
   const open = !!(window.__exIntelOpen && window.__exIntelOpen[exIdx]);
   return '<div style="margin:8px 0;">' +
-    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:5px 8px;" onclick="toggleExerciseIntel(' + exIdx + ')">Analytics</button>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:5px 8px;" onclick="toggleExerciseIntel(' + exIdx + ')">Analisi</button>' +
     '<div id="ex-intel-panel-' + exIdx + '" class="ex-intel-bubble" style="display:' + (open ? 'block' : 'none') + '">' +
     (open ? exerciseIntelBodyHtml(exIdx) : '') +
     '</div></div>';
@@ -40820,15 +40820,17 @@ function acceptIntelRecommendation(exIdx) {
     for (let s = 1; s <= total; s++) {
       const sk = nowKey + '_s' + s;
       if (store.data[sk + '_done']) continue;
+      if (store.data[sk + '_load_user']) continue;
       const el = document.getElementById(sk + '_load');
-      if (el && !store.data[sk + '_load_user']) {
-        el.value = reco.suggestedLoad;
-      }
+      if (el) el.value = reco.suggestedLoad;
+      store.data[sk + '_load'] = reco.suggestedLoad;
     }
   }
   const nextWeek = (Number(currentWeek) || 1) + 1;
   const nextKey = 'w' + nextWeek + '_d' + currentDay + '_e' + exIdx;
   store.intelTargets[nextKey] = { load: reco.suggestedLoad, action: reco.action, at: new Date().toISOString(), name: reco.name };
+  store.intelligence.recommendations = store.intelligence.recommendations || [];
+  store.intelligence.recommendations.push({ at: new Date().toISOString(), key: nowKey, reco: reco, accepted: true });
   store.intelligence.applied.push({ at: new Date().toISOString(), key: nowKey, reco: reco });
   persist();
   if (typeof showToast === 'function') showToast('Suggerimento accettato sui set non ancora eseguiti. La scheda originale non è stata riscritta.', 'success');
@@ -52376,6 +52378,12 @@ function applyStatsMarketNote(metric) {
   const note = $('stats-effective-note');
   if (!note) return;
   const id = metric || 'volume';
+  const TAE = window.TrainingAnalyticsEngine;
+  const cat = TAE && TAE.explainMetric ? TAE.explainMetric(id) : null;
+  if (cat && (cat.howIt || cat.limitIt || cat.whatIt)) {
+    note.textContent = String(cat.howIt || cat.whatIt) + (cat.limitIt ? (' ' + cat.limitIt) : '');
+    return;
+  }
   note.textContent = STATS_MARKET_NOTES[id] || STATS_MARKET_NOTES.volume;
 }
 function keepStatsScroll(fn) {

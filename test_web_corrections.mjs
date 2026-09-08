@@ -37,7 +37,7 @@ assert.ok(apiPractice.includes("/c/:token/manifest.webmanifest") && apiPractice.
 assert.ok(apiPractice.includes("function injectClientPwaHtml") && apiPractice.includes("__NURVAN_CLIENT_BOOT"), "server injects per-token manifest into /c/:token HTML");
 assert.ok(apiPractice.includes('res.redirect(302, "/c/"') || apiPractice.includes("res.redirect(302, \"/c/\""), "GET / with client cookies redirects to /c/token");
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
-assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("analytics4"), "SW does not precache the root manifest");
+assert.ok(!sw.includes("'./manifest.webmanifest'") && sw.includes("analytics5"), "SW does not precache the root manifest");
 assert.ok(sw.includes("isClientDoc") && sw.includes(".webmanifest"), "SW keeps /c/* and manifests on the network");
 assert.ok(sw.includes("training-knowledge.js"), "SW precaches the training encyclopedia");
 
@@ -112,8 +112,9 @@ assert.ok(html.includes("stats-advanced-exercise") && html.includes("stats-advan
 assert.ok(html.includes("function fillStatsAdvancedPanel"), "advanced panel updates in place");
 assert.ok(html.includes("STATS_MARKET_NOTES") && html.includes("Peso corporeo:"), "market notes change with the selected metric");
 assert.ok(!/function applyStatsMarketNote[\s\S]{0,500}effectiveVolumeNote/.test(html), "market note never falls back to effective volume");
+assert.ok(/function applyStatsMarketNote[\s\S]{0,500}howIt/.test(html), "market note uses catalog howIt+limitIt");
 assert.ok(html.includes("<th>MRV</th>") && !html.includes("<th>e1RM</th>"), "weekly table uses MRV not aggregated e1RM");
-assert.ok(html.includes("toggleExerciseIntel") && html.includes("Calcola peso consigliato"), "live analytics toggle and suggested load");
+assert.ok(html.includes("toggleExerciseIntel") && html.includes("Calcola peso consigliato") && html.includes(">Analisi</button>"), "live analytics toggle and suggested load");
 assert.ok(html.includes("sessionSummary") && html.includes("RIEPILOGO SEDUTA"), "session summary after finalize");
 assert.ok(html.includes("Training Market") && html.includes("Gruppo muscolare"), "italian stats chrome");
 assert.ok(!/function setStatsAdvancedMode[\s\S]{0,400}render\(\);/.test(html), "setStatsAdvancedMode does not call render()");

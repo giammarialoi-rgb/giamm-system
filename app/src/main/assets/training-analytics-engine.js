@@ -6,6 +6,11 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
+  /* Logical sections (single file on purpose):
+     raw normalization · volume · intensity · strength · workload ·
+     fatigue · recovery · adaptation · landmarks · muscle attribution ·
+     recommendations · insights · methodology/catalog · control-prep */
+
   const EPLEY_MAX_REPS = 12;
   const HARD_RIR_MAX = 2;
   const HARD_RPE_MIN = 8;
@@ -538,18 +543,26 @@
     else if (weeklySets <= lm.MAV_HIGH) status = 'within_estimated_MAV';
     else if (weeklySets < lm.MRV) status = 'above_estimated_MAV';
     else status = 'at_or_above_estimated_MRV';
-    return Object.assign({ currentSets: weeklySets, status: status }, lm);
+    const filledHint = weeklySets != null ? 'MEDIUM' : 'LOW';
+    return Object.assign({
+      currentSets: weeklySets,
+      status: status,
+      evidenceLevel: 'MODEL_BASED',
+      formulaVersion: 'landmarks-v1',
+      confidence: filledHint,
+      note: 'Stima individuale / configurabile. Non rappresenta una soglia fisiologica universale.'
+    }, lm);
   }
 
   function fatigueFromWeeks(weeks) {
     const nonempty = (weeks || []).filter(function (w) { return !w.empty; });
-    if (!nonempty.length) return { acute: null, chronic: null, stress: null, kind: 'estimated', note: 'Not enough weekly volume' };
+    if (!nonempty.length) return { acute: null, chronic: null, stress: null, kind: 'estimated', note: 'Dati insufficienti sul volume settimanale' };
     const acute = nonempty[nonempty.length - 1].volume;
     const hist = nonempty.slice(Math.max(0, nonempty.length - 4));
-    if (hist.length < 2) return { acute: acute, chronic: null, stress: null, kind: 'estimated', note: 'Chronic load needs ≥2 settimane con volume' };
+    if (hist.length < 2) return { acute: acute, chronic: null, stress: null, kind: 'estimated', note: 'Il carico cronico serve almeno 2 settimane con volume' };
     const chronic = Math.round(hist.reduce(function (s, w) { return s + w.volume; }, 0) / hist.length);
     const stress = chronic > 0 ? round1(acute / chronic) : null;
-    return { acute: acute, chronic: chronic, stress: stress, kind: 'estimated', note: 'Acute = ultima settimana; chronic = media fino a 4 settimane; stress = acute/chronic' };
+    return { acute: acute, chronic: chronic, stress: stress, kind: 'estimated', note: 'Acuto = ultima settimana; cronico = media fino a 4 settimane; stress = acuto/cronico. Modello, non diagnosi.' };
   }
 
   function recoveryFromStore(store, weeks) {
@@ -930,9 +943,7 @@
       if (axis === 'calendar') {
         return windowed.weeks.some(function (w) { return w.key === s.calendarKey; });
       }
-      const startW = windowed.offset + 1;
-      const endW = windowed.offset + windowed.weeks.length;
-      return s.week >= startW && s.week <= endW;
+      return windowed.weeks.some(function (w) { return w.weekNum === s.week; });
     });
 
     const volumes = windowed.weeks.map(function (w) { return w.empty ? 0 : w.volume; });
@@ -1046,6 +1057,60 @@
       return 'INSUFFICIENT_DATA';
     })();
     analytics.recovery.signal = recovSig;
+    const filledN = windowed.weeks.filter(function (w) { return !w.empty; }).length;
+    const lmConf = filledN >= 6 ? 'HIGH' : (filledN >= 3 ? 'MEDIUM' : 'LOW');
+    analytics.landmarks.confidence = lmConf;
+    analytics.landmarks.evidence = {
+      weeks: filledN,
+      note: 'Una sola seduta non aggiorna MEV/MAV/MRV.'
+    };
+    const perfGain = comparison.e1rm;
+    const trainCost = comparison.volume;
+    analytics.performanceEfficiency = {
+      value: (perfGain != null && trainCost != null && Math.abs(trainCost) >= 1) ? round1(perfGain / Math.abs(trainCost)) : null,
+      kind: 'heuristic',
+      evidenceLevel: 'HEURISTIC',
+      formulaVersion: 'eff-v1',
+      note: 'Rapporto interno prestazione/costo di lavoro. Non è una metrica fisiologica ufficiale.'
+    };
+    analytics.personalResponse = {
+      volumeTolerance: filledN >= 4 ? analytics.volumeResponse.signal : null,
+      volumeResponse: analytics.volumeResponse && analytics.volumeResponse.signal,
+      intensityTolerance: null,
+      frequencyResponse: null,
+      exposures: filledN,
+      kind: 'estimated',
+      evidenceLevel: 'ESTIMATED',
+      formulaVersion: 'personal-prep-v1',
+      note: 'Richiede più esposizioni. Una sola seduta non aggiorna MEV/MAV/MRV.'
+    };
+    analytics.control = {
+      kind: 'prepared',
+      formulaVersion: 'control-prep-v1',
+      evidenceLevel: 'MODEL_BASED',
+      actual: {
+        volume: analytics.kpis.volumeTotal,
+        sets: analytics.kpis.sets,
+        intensity: analytics.kpis.avgIntensity
+      },
+      derived: {
+        e1rm: analytics.kpis.e1rm,
+        hardSets: analytics.kpis.hardSets
+      },
+      dose: analytics.dose,
+      stimulus: { effectiveTrainingDose: analytics.dose.effectiveTrainingDose, kind: 'heuristic', evidenceLevel: 'HEURISTIC' },
+      performance: analytics.performanceResponse,
+      effort: { avgRpe: analytics.kpis.avgRpe, avgRir: analytics.kpis.avgRir },
+      fatigue: analytics.fatigueSignal,
+      recovery: analytics.recovery,
+      adaptation: analytics.adaptation,
+      volumeResponse: analytics.volumeResponse,
+      landmarks: analytics.landmarks,
+      personalResponse: analytics.personalResponse,
+      performanceEfficiency: analytics.performanceEfficiency,
+      confidence: lmConf,
+      note: 'Preparazione della futura Training Control Engine. Non decide da sola la scheda.'
+    };
     analytics.charts.prMarks = (analytics.prs || []).map(function (p) {
       const idx = windowed.weeks.findIndex(function (w) {
         return w.weekNum === p.week || w.label.replace(' — in corso', '') === ('W' + p.week);
@@ -1070,7 +1135,7 @@
       limitIt: limitIt,
       definition: whatIt,
       formula: formula,
-      limitations: limitIt + (String(limitIt).indexOf('Not a tested 1RM') >= 0 || id !== 'e1rm' ? '' : ' Not a tested 1RM.'),
+      limitations: limitIt,
       unit: unit || '',
       evidenceLevel: evidenceLevel,
       formulaVersion: formulaVersion,
@@ -1125,7 +1190,7 @@
       'È una stima del massimale a una ripetizione, non un 1RM testato. Parte dal carico e dalle ripetizioni della serie e viene usata soprattutto per confrontare lo stesso esercizio nel tempo.',
       'Permette di confrontare serie con ripetizioni diverse sullo stesso movimento.',
       'Formula di Epley: carico × (1 + rip/30). I singoli valgono il carico. Sopra 12 rip la stima non viene calcolata.',
-      'Unreliable above 12 reps. Exercise-specific. Not a tested 1RM.',
+      'Meno affidabile sopra le 12 ripetizioni. Vale solo per lo stesso esercizio. Non è un 1RM testato.',
       'DERIVED', 'epley-v1', 'Epley: load × (1 + reps/30); singles = load', 'kg'),
     intensity: catalogRow('intensity', 'intensity', 'Intensità',
       'Sforzo percepito su scala 0–10, ricavato da RIR o RPE se li hai scritti.',
@@ -1137,7 +1202,7 @@
       'Stessa intensità 0–10 usata internamente dal motore.',
       'Allinea RIR e RPE su una scala unica per i confronti.',
       'RIR → 10−RIR; RPE → RPE.',
-      'Missing effort stays empty. Scales are opposite.',
+      'Senza RIR/RPE il dato resta vuoto. Le scale sono opposte.',
       'DERIVED', 'rir-rpe-v1', 'RIR → 10−RIR; RPE → RPE', '/10'),
     landmarks: catalogRow('landmarks', 'landmarks', 'Landmark di volume',
       'Zone stimate di volume settimanale (MV, MEV, MAV, MRV). Sono soglie individuali e configurabili, non fisiologia universale.',
@@ -1210,7 +1275,19 @@
       'Ti dà un’ipotesi spiegabile. Accetti, tieni o scarti.',
       'Gerarchia: prestazione, sforzo, fatica, recupero, volume, landmark come riferimento.',
       'Non scrive i kg programmati. Non diagnostica overtraining. Sopra MRV stimata con prestazione positiva non riduce in automatico.',
-      'HEURISTIC', 'reco-v1', 'rules on e1RM/RPE/recovery', 'kg')
+      'HEURISTIC', 'reco-v1', 'rules on e1RM/RPE/recovery', 'kg'),
+    effectiveDose: catalogRow('effectiveDose', 'volume', 'Dose allenante (ETD)',
+      'Modello interno della dose contestualizzata: contributo muscolare × vicinanza al cedimento.',
+      'Serve a distinguere “quante serie ho contato” da “quanto stimolo stima il modello”.',
+      'Peso del ruolo (1 / 0,5 / 0,25) moltiplicato per un fattore da RIR/RPE.',
+      'Non è una metrica scientifica ufficiale. Euristica per la futura centralina.',
+      'HEURISTIC', 'etd-v1', 'Σ contribWeight × proximity', 'dose', { confidence: 'low' }),
+    fatigueCost: catalogRow('fatigueCost', 'fatigue', 'Costo di fatica',
+      'Modello interno del costo stimato del lavoro, separato dallo stimolo.',
+      'Aiuta a leggere se lo stesso volume è “caro” o “economico” in termini di fatica.',
+      'Usa volume, peso del muscolo e intensità 0–10 se presente.',
+      'Non misura il sistema nervoso. Non è una percentuale fisiologica.',
+      'HEURISTIC', 'fatcost-v1', 'volume × contrib × intensity/10', 'segnale', { confidence: 'low' })
   };
 
   function estimatedNrm(e1, n) {
