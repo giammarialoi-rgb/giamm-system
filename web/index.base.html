@@ -2729,9 +2729,11 @@ function exerciseNameAt(week, day, idx) {
 }
 function findMatchingExerciseIndex(week, day, name, fallbackIdx) {
   const target = normalizeExerciseKey(name);
-  if (!target) return fallbackIdx;
-  const same = normalizeExerciseKey(exerciseNameAt(week, day, fallbackIdx));
-  if (same && same === target) return fallbackIdx;
+  if (!target) return fallbackIdx == null ? null : fallbackIdx;
+  if (fallbackIdx != null && fallbackIdx !== '') {
+    const same = normalizeExerciseKey(exerciseNameAt(week, day, fallbackIdx));
+    if (same && same === target) return fallbackIdx;
+  }
   const weeks = (typeof DATA !== 'undefined' && DATA && DATA.weeks) || [];
   const w = weeks[week - 1];
   const days = (w && (w.sessions || w.days)) || [];
@@ -2739,7 +2741,55 @@ function findMatchingExerciseIndex(week, day, name, fallbackIdx) {
   for (let i = 0; i < list.length; i++) {
     if (normalizeExerciseKey(exerciseNameAt(week, day, i)) === target) return i;
   }
-  return fallbackIdx;
+  return null;
+}
+function findNamedExerciseInWeek(week, name, preferDay) {
+  const target = normalizeExerciseKey(name);
+  if (!target) return null;
+  const weeks = (typeof DATA !== 'undefined' && DATA && DATA.weeks) || [];
+  const w = weeks[week - 1];
+  const days = (w && (w.sessions || w.days)) || [];
+  const tryDay = function (day) {
+    const idx = findMatchingExerciseIndex(week, day, name, null);
+    return idx == null ? null : { day: Number(day), idx: idx };
+  };
+  const seen = {};
+  const order = [];
+  if (preferDay != null && preferDay !== '') order.push(Number(preferDay));
+  for (let d = 0; d < days.length; d++) order.push(d);
+  for (let i = 0; i < order.length; i++) {
+    const d = order[i];
+    if (seen[d]) continue;
+    seen[d] = true;
+    const hit = tryDay(d);
+    if (hit) return hit;
+  }
+  return null;
+}
+function slotExerciseChanged(exIdx, row) {
+  if (currentWeek <= 1) return false;
+  const now = normalizeExerciseKey(exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '');
+  if (!now) return false;
+  for (let w = currentWeek - 1; w >= 1; w--) {
+    const prev = normalizeExerciseKey(exerciseNameAt(w, currentDay, exIdx));
+    if (prev && prev !== now) return true;
+  }
+  return false;
+}
+function matchesPreviousOccupantLoads(stored, exIdx) {
+  if (currentWeek <= 1 || !store || !store.data) return false;
+  const n = parseFloat(String(stored).replace(',', '.'));
+  if (!Number.isFinite(n) || n <= 0) return false;
+  const now = normalizeExerciseKey(exerciseNameAt(currentWeek, currentDay, exIdx));
+  for (let w = currentWeek - 1; w >= 1; w--) {
+    const prev = normalizeExerciseKey(exerciseNameAt(w, currentDay, exIdx));
+    if (!prev || (now && prev === now)) continue;
+    for (let s = 1; s <= 10; s++) {
+      const load = store.data['w' + w + '_d' + currentDay + '_e' + exIdx + '_s' + s + '_load'];
+      if (loadsNearlyEqual(load, n)) return true;
+    }
+  }
+  return false;
 }
 function plannedRepsRirFromRow(row, setNum) {
   const setObj = row && Array.isArray(row.sets) ? row.sets[setNum - 1] : null;
@@ -2761,9 +2811,10 @@ function weekExerciseWasLogged(week, day, exIdx) {
     return row && Number(row.week) === Number(week) && Number(row.day) === Number(day);
   });
 }
-function collectSetLogsAtWeek(week, day, exIdx, row) {
-  const name = exerciseNameAt(currentWeek, day, exIdx) || (row && (row.name || row.exercise)) || '';
-  const prevIdx = findMatchingExerciseIndex(week, day, name, exIdx);
+function collectSetLogsAtWeek(week, day, exIdx, row, currentName) {
+  const name = currentName || exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '';
+  const prevIdx = findMatchingExerciseIndex(week, day, name, null);
+  if (prevIdx == null) return [];
   const prevName = normalizeExerciseKey(exerciseNameAt(week, day, prevIdx));
   const thisName = normalizeExerciseKey(name);
   if (thisName && prevName && thisName !== prevName) return [];
@@ -2782,6 +2833,7 @@ function collectSetLogsAtWeek(week, day, exIdx, row) {
       reps: hasReps ? reps : '',
       rir: hasRir ? rir : '',
       prevIdx: prevIdx,
+      prevDay: day,
       done: !!store.data['w' + week + '_d' + day + '_e' + prevIdx + '_s' + s + '_done']
     });
   }
@@ -2798,11 +2850,12 @@ function collectPrevWeekSetLogs(exIdx, row) {
   const name = exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '';
   let fallback = [];
   for (let w = currentWeek - 1; w >= 1; w--) {
-    const idx = findMatchingExerciseIndex(w, currentDay, name, exIdx);
-    const logged = collectSetLogsAtWeek(w, currentDay, exIdx, row);
+    let loc = findNamedExerciseInWeek(w, name, currentDay);
+    if (!loc) continue;
+    const logged = collectSetLogsAtWeek(w, loc.day, loc.idx, row, name);
     if (!logged.length) continue;
     if (uniquePositiveLoads(logged).length > 1) return logged;
-    if (weekExerciseWasLogged(w, currentDay, idx) && !fallback.length) fallback = logged;
+    if (weekExerciseWasLogged(w, loc.day, loc.idx) && !fallback.length) fallback = logged;
   }
   return fallback;
 }
@@ -2819,6 +2872,10 @@ function loadsNearlyEqual(a, b) {
 function isStaleCopiedSetPrefill(stored, exIdx, setNum, row) {
   const n = parseFloat(String(stored).replace(',', '.'));
   if (!Number.isFinite(n) || n <= 0 || currentWeek <= 1) return false;
+  if (slotExerciseChanged(exIdx, row)) {
+    if (matchesPreviousOccupantLoads(stored, exIdx)) return true;
+    if (!collectPrevWeekSetLogs(exIdx, row || {}).length) return true;
+  }
   const prevSets = collectPrevWeekSetLogs(exIdx, row || {});
   const loads = uniquePositiveLoads(prevSets);
   if (loads.length < 2) return false;
@@ -2847,10 +2904,17 @@ function effectiveSetLoad(exIdx, setNum, row) {
   const stored = store.data[k + '_load'];
   if (store.data[k + '_done'] && stored !== undefined && stored !== '' && stored != null) return stored;
   if (sessionWasFinalized(currentWeek, currentDay) && stored !== undefined && stored !== '' && stored != null) return stored;
+  const identityShift = slotExerciseChanged(exIdx, row);
+  const occupantCopy = identityShift && matchesPreviousOccupantLoads(stored, exIdx);
   const stale = isStaleCopiedSetPrefill(stored, exIdx, setNum, row);
-  if (store.data[k + '_load_user'] && !stale && stored !== undefined && stored !== '' && stored != null) return stored;
+  const keepUser = !!(store.data[k + '_load_user'] && stored !== undefined && stored !== '' && stored != null
+    && !occupantCopy && !(stale && !identityShift));
+  if (keepUser) return stored;
   const intel = store.intelTargets && store.intelTargets['w' + currentWeek + '_d' + currentDay + '_e' + exIdx];
-  if (intel && Number(intel.load) > 0 && !store.data[k + '_load_user'] && !store.data[k + '_done']) return intel.load;
+  const nowName = normalizeExerciseKey(exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '');
+  const intelName = intel ? normalizeExerciseKey(intel.name) : '';
+  const intelSameEx = !!(intel && Number(intel.load) > 0 && (!intelName || !nowName || intelName === nowName));
+  if (intelSameEx && !store.data[k + '_load_user'] && !store.data[k + '_done'] && !occupantCopy && !stale) return intel.load;
   const sugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(exIdx, setNum, row || {}) : null;
   if (Number(sugg) > 0) return sugg;
   if (!stale && stored !== undefined && stored !== '' && stored != null) return stored;
@@ -7439,16 +7503,14 @@ function hidePrevLoad() {
 function getPrevSessionSetValues(exIdx, setNum) {
   if (currentWeek <= 1) return { load: '', reps: '', rir: '' };
   const name = exerciseNameAt(currentWeek, currentDay, exIdx);
-  const prevIdx = findMatchingExerciseIndex(currentWeek - 1, currentDay, name, exIdx);
-  const prevName = normalizeExerciseKey(exerciseNameAt(currentWeek - 1, currentDay, prevIdx));
-  const thisName = normalizeExerciseKey(name);
-  const matched = !(thisName && prevName && thisName !== prevName);
-  const base = `w${currentWeek - 1}_d${currentDay}_e${matched ? prevIdx : exIdx}_s${setNum}`;
-  const prevRow = matched ? exerciseRowAt(currentWeek - 1, currentDay, prevIdx) : null;
+  const loc = findNamedExerciseInWeek(currentWeek - 1, name, currentDay);
+  if (!loc) return { load: '', reps: '', rir: '' };
+  const base = `w${currentWeek - 1}_d${loc.day}_e${loc.idx}_s${setNum}`;
+  const prevRow = exerciseRowAt(currentWeek - 1, loc.day, loc.idx);
   const planned = plannedRepsRirFromRow(prevRow || exerciseRowAt(currentWeek, currentDay, exIdx), setNum);
-  let load = matched ? (store.data[base + '_load'] ?? '') : '';
-  let reps = matched ? (store.data[base + '_reps'] ?? '') : '';
-  let rir = matched ? (store.data[base + '_rir'] ?? '') : '';
+  let load = store.data[base + '_load'] ?? '';
+  let reps = store.data[base + '_reps'] ?? '';
+  let rir = store.data[base + '_rir'] ?? '';
   if (reps === '' || reps == null) reps = planned.reps;
   if (rir === '' || rir == null) rir = planned.rir;
   return { load: load, reps: reps, rir: rir };
@@ -7459,20 +7521,7 @@ function formatLastSessionChip(exIdx, row) {
     const advice = formatPrevWeekLoadAdvice(exIdx, row || {});
     if (advice) return advice;
   }
-  if (currentWeek <= 1) return '';
-  const parts = [];
-  for (let s = 1; s <= 8; s++) {
-    const load = store.data[`w${currentWeek - 1}_d${currentDay}_e${exIdx}_s${s}_load`];
-    const reps = store.data[`w${currentWeek - 1}_d${currentDay}_e${exIdx}_s${s}_reps`];
-    if (load === undefined || load === '' || load == null) {
-      if (reps === undefined || reps === '' || reps == null) continue;
-    }
-    if ((load !== undefined && load !== '' && load != null) || (reps !== undefined && reps !== '' && reps != null)) {
-      parts.push(`${load != null && load !== '' ? load : '?'}×${reps != null && reps !== '' ? reps : '?'}`);
-    }
-  }
-  if (!parts.length) return '';
-  return `<div class="last-session-chip" data-last-session="1" style="font-size:11px;color:var(--gold);font-weight:700;margin:0 0 8px;letter-spacing:0.2px;">Ultima seduta: ${esc(parts.join(' · '))}</div>`;
+  return '';
 }
 
 /**
@@ -7551,13 +7600,15 @@ function ensureIntelligenceStore() {
 }
 function queueLiveSetIntel(exIdx, setNum) {
   const TAE = window.TrainingAnalyticsEngine;
-  if (!TAE || !TAE.liveAfterSet) return;
+  if (!TAE || !TAE.exerciseAnalyticsSnapshot) return;
   const loc = { week: currentWeek, day: currentDay, exIdx: exIdx, set: setNum };
-  window.__liveSetIntel = TAE.liveAfterSet(store, DATA, loc);
+  const snap = TAE.exerciseAnalyticsSnapshot(store, DATA, loc);
+  window.__exIntelSnap = snap;
+  window.__liveSetIntel = TAE.liveAfterSet(store, DATA, loc, snap);
   const total = (typeof getExerciseSetCount === 'function') ? getExerciseSetCount(exIdx) : 0;
   if (total && setNum >= total) {
-    window.__liveExerciseReport = TAE.exerciseReport(store, DATA, loc);
-    window.__liveRecommendation = TAE.recommendNext(store, DATA, loc);
+    window.__liveExerciseReport = TAE.exerciseReport(store, DATA, loc, snap);
+    window.__liveRecommendation = TAE.recommendNext(store, DATA, loc, snap);
   } else {
     window.__liveExerciseReport = null;
     window.__liveRecommendation = null;
@@ -7573,7 +7624,7 @@ function intelDirectionLine(obj) {
   const TAE = window.TrainingAnalyticsEngine;
   const d = (obj && (obj.direction || obj.performanceDirection)) || 'insufficient';
   const H = (TAE && TAE.humanState) ? TAE.humanState('performance', d) : String(d);
-  const arrow = d === 'improving' ? '↑ ' : (d === 'declining' ? '↓ ' : '');
+  const arrow = d === 'improving' ? '↑ ' : (d === 'declining' ? '↓ ' : (d === 'mixed' ? '↕ ' : ''));
   return arrow + H;
 }
 function showLiveSetIntel(exIdx) { return showLiveSetIntelHtml(exIdx); }
@@ -7586,20 +7637,27 @@ function showLiveSetIntelHtml(exIdx) {
   let h = '<div class="ex-intel-bubble">';
   h += '<div style="font-size:10px;color:var(--gold);font-weight:800;">SET ' + live.set + ' COMPLETATO ✓</div>';
   h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + esc(String(live.load)) + ' kg × ' + esc(String(live.reps)) + ' rip</div>';
-  h += '<div class="stats-adv-row"><span>Massimale stimato</span><span>' + (live.e1rm == null ? '—' : (live.e1rm + ' kg')) + '</span></div>';
-  h += '<div style="font-size:9px;color:#888;">e1RM — stima, non un massimale testato</div>';
+  h += '<div class="stats-adv-row"><span>Massimale stimato (questa serie)</span><span>' + (live.lastSetE1RM == null ? '—' : (live.lastSetE1RM + ' kg')) + '</span></div>';
+  h += '<div style="font-size:9px;color:#888;">e1RM della serie appena registrata — stima, non un massimale testato</div>';
   if (live.rpe != null || live.rir != null) {
     h += '<div class="stats-adv-row"><span>Sforzo</span><span>' +
       (live.rpe != null ? ('RPE ' + live.rpe + '/10') : '') +
       (live.rpe != null && live.rir != null ? ' · ' : '') +
       (live.rir != null ? ('RIR ' + live.rir) : '') + '</span></div>';
   }
+  if (live.relativeIntensity != null) {
+    h += '<div class="stats-adv-row"><span>Intensità</span><span>' + live.relativeIntensity + '% 1RM stimato' +
+      (live.intensityBand ? (' · ' + esc(H('intensity', live.intensityBand))) : '') + '</span></div>';
+  }
   h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(live.vsPreviousExposure != null ? live.vsPreviousExposure : live.vsPreviousBest) + '</span></div>';
   h += '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(live)) + (live.confidence ? (' · ' + esc(H('confidence', live.confidence))) : '') + '</div>';
+  if (live.intensityDelta != null) {
+    h += '<div class="stats-adv-row"><span>Intensità vs precedente</span><span>' + formatIntelPct(live.intensityDelta) + '</span></div>';
+  }
   h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(live.volumeVsPrevious != null ? live.volumeVsPrevious : live.vsLastSessionVolume) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(live.volumeToday) + ' kg</span></div>';
-  if (live.fatigue && live.fatigue.signal) h += '<div class="stats-adv-row"><span>Fatica durante la seduta</span><span>' + esc(H('fatigue', live.fatigue.signal)) + '</span></div>';
-  h += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato · non modifica i kg che hai scritto. ' + metricExplainBtn('e1rm', 'ⓘ Come si calcola?') + '</div>';
+  h += '<div class="stats-adv-row"><span>Fatica durante questa seduta</span><span>' + esc(H('fatigue', live.fatigue && live.fatigue.signal)) + '</span></div>';
+  h += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato · non modifica i kg che hai scritto. ' + metricExplainBtn('e1rm', 'ⓘ Massimale stimato') + '</div>';
   const rep = window.__liveExerciseReport;
   if (rep && !rep.empty && Number(rep.exIdx) === Number(exIdx)) {
     h += '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-top:10px;">REPORT ESERCIZIO</div>';
@@ -7610,7 +7668,14 @@ function showLiveSetIntelHtml(exIdx) {
     h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(rep.volumeChange) + '</span></div>';
     if (rep.status) h += '<div style="font-size:11px;margin-top:6px;">' + esc(rep.status) + '</div>';
   }
-  const reco = window.__liveRecommendation;
+  const liveSnap = live.snapshot || window.__exIntelSnap;
+  const reco = (TAE && TAE.recommendNext && liveSnap)
+    ? TAE.recommendNext(store, DATA, { week: live.week, day: live.day, exIdx: live.exIdx, set: live.set }, liveSnap)
+    : window.__liveRecommendation;
+  if (reco) {
+    window.__liveRecommendation = reco;
+    window.__exIntelReco = reco;
+  }
   if (reco && reco.action && reco.action !== 'insufficient') {
     h += intelRecoHtml(exIdx, reco, L);
   } else if (reco && reco.action === 'insufficient') {
@@ -7629,7 +7694,13 @@ function intelRecoHtml(exIdx, reco, L) {
   let h = '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-top:10px;">PESO CONSIGLIATO</div>';
   const recoLine = reco.action === 'increase'
     ? ('Peso consigliato ' + reco.suggestedLoad + ' kg (+' + reco.deltaKg + ' kg)')
-    : (reco.action === 'reduce_volume' ? 'Riduci il carico — valuta −1–2 serie di lavoro' : 'Mantieni il carico attuale' + (reco.suggestedLoad != null ? (' · ' + reco.suggestedLoad + ' kg') : ''));
+    : (reco.action === 'reduce_volume'
+      ? 'Riduci il volume — valuta −1–2 serie di lavoro'
+      : (reco.action === 'reduce_load'
+        ? ('Riduci il carico' + (reco.suggestedLoad != null ? (' → ' + reco.suggestedLoad + ' kg') : ''))
+        : (reco.action === 'monitor'
+          ? ('Mantieni e monitora' + (reco.suggestedLoad != null ? (' · ' + reco.suggestedLoad + ' kg') : ''))
+          : 'Mantieni il carico attuale' + (reco.suggestedLoad != null ? (' · ' + reco.suggestedLoad + ' kg') : ''))));
   h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + esc(recoLine) + '</div>';
   h += '<div style="font-size:10px;color:#aaa;">' + esc(reco.why) + '</div>';
   if (reco.mrvNote) h += '<div style="font-size:10px;color:#c9a227;margin-top:4px;">' + esc(reco.mrvNote) + '</div>';
@@ -7668,15 +7739,17 @@ function exerciseIntelPanelHtml(exIdx) {
 }
 function exerciseIntelBodyHtml(exIdx) {
   const TAE = window.TrainingAnalyticsEngine;
-  if (!TAE || !TAE.liveAfterSet) return '<div>Motore analytics non disponibile.</div>';
+  if (!TAE || !TAE.exerciseAnalyticsSnapshot) return '<div>Motore analytics non disponibile.</div>';
   const L = function (k) { return TAE.labelIt ? TAE.labelIt(k) : String(k || '—'); };
   const H = function (d, k) { return TAE.humanState ? TAE.humanState(d, k) : L(k); };
   const total = (typeof getExerciseSetCount === 'function') ? getExerciseSetCount(exIdx) : 1;
   const loc = { week: currentWeek, day: currentDay, exIdx: exIdx, set: total };
-  const live = TAE.liveAfterSet(store, DATA, loc);
-  const reco = window.__exIntelReco && Number(window.__exIntelReco.exIdx) === Number(exIdx)
-    ? window.__exIntelReco
-    : null;
+  const snap = TAE.exerciseAnalyticsSnapshot(store, DATA, loc);
+  const reco = TAE.recommendNext(store, DATA, loc, snap);
+  window.__exIntelSnap = snap;
+  window.__exIntelReco = reco;
+  window.__liveRecommendation = reco;
+  const live = TAE.liveAfterSet(store, DATA, loc, snap);
   let h = '';
   if (live.empty && !live.noCurrentSets) {
     h += '<div>Dati insufficienti. Completa almeno una serie con kg e rip, oppure calcola il peso dalla storia precedente.</div>';
@@ -7687,19 +7760,67 @@ function exerciseIntelBodyHtml(exIdx) {
         (live.rpe != null && live.rir != null ? ' / ' : '') +
         (live.rir != null ? ('RIR ' + live.rir) : '')
       : '—';
-    h += '<div class="stats-adv-row"><span>Massimale stimato</span><span>' + (live.e1rm == null ? '—' : (live.e1rm + ' kg')) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(live.volumeToday) + ' kg</span></div>';
+    h += '<div class="stats-adv-row"><span>Massimale stimato</span><span>' + (snap.currentE1RM == null ? '—' : (snap.currentE1RM + ' kg')) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(snap.currentVolume) + ' kg</span></div>';
+    const intenBand = snap.intensityContext && snap.intensityContext.intensityBand;
+    const relInt = snap.intensityContext && snap.intensityContext.relativeIntensity;
+    h += '<div class="stats-adv-row"><span>Intensità</span><span>' +
+      (intenBand ? esc(H('intensity', intenBand)) : '—') +
+      (relInt != null ? (' · ' + relInt + '% 1RM stimato') : '') +
+      '</span></div>';
     h += '<div class="stats-adv-row"><span>Sforzo</span><span>' + esc(effort) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(live.vsPreviousExposure != null ? live.vsPreviousExposure : live.vsPreviousBest) + '</span></div>';
-    h += '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(live)) + (live.confidence ? (' · ' + esc(H('confidence', live.confidence))) : '') + '</div>';
-    h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(live.volumeVsPrevious != null ? live.volumeVsPrevious : live.vsLastSessionVolume) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Fatica durante la seduta</span><span>' + esc(H('fatigue', live.fatigue && live.fatigue.signal)) + '</span></div>';
-    h += '<div style="font-size:9px;color:#777;margin-top:6px;">' + metricExplainBtn('e1rm') + ' ' + metricExplainBtn('rpe') + ' ' + metricExplainBtn('performanceVsPrevious') + ' ' + metricExplainBtn('volumeVsPrevious') + '</div>';
+    h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(snap.performanceDelta) + '</span></div>';
+    h += '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine({ direction: snap.performanceDirection })) + (snap.confidence ? (' · ' + esc(H('confidence', snap.confidence))) : '') + '</div>';
+    if (snap.multiTrend && snap.exposures >= 3) {
+      h += '<div class="stats-adv-row"><span>Trend ultime esposizioni</span><span>' + esc(H('performance', snap.multiTrend)) + '</span></div>';
+    }
+    h += '<div class="stats-adv-row"><span>Intensità vs precedente</span><span>' + formatIntelPct(snap.intensityDelta) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(snap.volumeDelta) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Fatica durante questa seduta</span><span>' + esc(H('fatigue', snap.fatigue && snap.fatigue.signal)) + '</span></div>';
+    if (snap.recovery && (snap.recovery.signal || snap.recovery.estimate)) {
+      h += '<div class="stats-adv-row"><span>Recupero recente</span><span>' + esc(H('recovery', snap.recovery.signal || snap.recovery.estimate)) + '</span></div>';
+    }
+    if (snap.explanationIt) {
+      h += '<div style="font-size:11px;color:#ccc;margin:8px 0 4px;line-height:1.45;">' + esc(snap.explanationIt) + '</div>';
+    }
+    h += '<div style="font-size:9px;color:#777;margin-top:6px;">' + metricExplainBtn('performanceContext', 'ⓘ Come vengono calcolati questi dati?') + '</div>';
+    const cur = snap.currentExposure || {};
+    const prev = snap.previousExposure || {};
+    h += '<div style="color:var(--gold);font-weight:800;margin:12px 0 6px;font-size:10px;">OUTPUT</div>';
+    h += '<div class="stats-adv-row"><span>Carico (top set)</span><span>' + (cur.topLoad == null ? '—' : (cur.topLoad + ' kg')) + (prev.topLoad != null ? (' · prec. ' + prev.topLoad + ' kg') : '') + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Ripetizioni (top set)</span><span>' + (cur.topReps == null ? '—' : cur.topReps) + (prev.topReps != null ? (' · prec. ' + prev.topReps) : '') + '</span></div>';
+    h += '<div class="stats-adv-row"><span>e1RM stimato</span><span>' + (snap.currentE1RM == null ? '—' : (snap.currentE1RM + ' kg')) + '</span></div>';
+    h += '<div style="color:var(--gold);font-weight:800;margin:12px 0 6px;font-size:10px;">EFFORT</div>';
+    h += '<div class="stats-adv-row"><span>RPE</span><span>' + (snap.currentRPE == null ? '—' : snap.currentRPE) + (snap.effortTrend ? (' · ' + esc(H('effort', snap.effortTrend))) : '') + '</span></div>';
+    h += '<div class="stats-adv-row"><span>RIR</span><span>' + (snap.currentRIR == null ? '—' : snap.currentRIR) + '</span></div>';
+    h += '<div style="color:var(--gold);font-weight:800;margin:12px 0 6px;font-size:10px;">DOSE</div>';
+    h += '<div class="stats-adv-row"><span>Serie</span><span>' + (cur.setCount || 0) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Volume load</span><span>' + formatStatsKg(snap.currentVolume) + ' kg</span></div>';
+    h += '<div style="color:var(--gold);font-weight:800;margin:12px 0 6px;font-size:10px;">RESPONSE</div>';
+    h += '<div class="stats-adv-row"><span>Prestazione</span><span>' + esc(H('performance', snap.performanceState || snap.performanceDirection)) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Intensità</span><span>' + esc(H('intensity', snap.intensityContext && snap.intensityContext.intensityTrend)) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Efficienza (modello interno)</span><span>' + esc(H('effort', (snap.comparison && snap.comparison.efficiency) || '—')) + '</span></div>';
+    h += '<div style="color:var(--gold);font-weight:800;margin:12px 0 6px;font-size:10px;">COST</div>';
+    h += '<div class="stats-adv-row"><span>Fatica intra-seduta</span><span>' + esc(H('fatigue', snap.fatigue && snap.fatigue.signal)) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Recupero recente</span><span>' + esc(H('recovery', snap.recovery && (snap.recovery.signal || snap.recovery.estimate))) + '</span></div>';
+    if (store.prefs && store.prefs.debugAnalytics) {
+      h += '<pre style="font-size:9px;color:#888;white-space:pre-wrap;margin-top:8px;">' + esc(JSON.stringify({
+        volume: snap.volumeContext, intensity: snap.intensityContext, effort: snap.effortContext,
+        performance: snap.performanceContext, fatigue: snap.fatigue && snap.fatigue.signal,
+        recovery: snap.recovery && snap.recovery.signal, overall: snap.overallSignal,
+        previousTop: prev.topLoad, currentTop: cur.topLoad,
+        currentExposureId: snap.currentExposureId, previousExposureId: snap.previousExposureId,
+        cardPerformanceDelta: snap.performanceDelta, recoPerformanceDelta: reco && reco.performanceDelta,
+        cardVolumeDelta: snap.volumeDelta, recoVolumeDelta: reco && reco.volumeDelta,
+        recommendation: reco && reco.action, eligibility: reco && reco.eligibility
+      }, null, 2)) + '</pre>';
+    }
   }
   h += '<button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px;" onclick="calculateSuggestedLoad(' + exIdx + ')">Calcola peso consigliato</button>';
-  if (reco && reco.action && reco.action !== 'insufficient') h += intelRecoHtml(exIdx, reco, L);
-  else if (reco && reco.action === 'insufficient') h += '<div style="font-size:10px;color:#888;margin-top:8px;">' + esc(reco.why || 'Non ci sono abbastanza dati per una stima affidabile.') + '</div>';
-  if (isClientAthleteView() && live && !live.empty && live.direction === 'declining') {
+  const shownReco = reco && Number(reco.exIdx) === Number(exIdx) ? reco : null;
+  if (shownReco && shownReco.action && shownReco.action !== 'insufficient') h += intelRecoHtml(exIdx, shownReco, L);
+  else if (shownReco && shownReco.action === 'insufficient') h += '<div style="font-size:10px;color:#888;margin-top:8px;">' + esc(shownReco.why || 'Non ci sono abbastanza dati per una stima affidabile.') + '</div>';
+  if (isClientAthleteView() && live && !live.empty && snap.performanceDirection === 'declining') {
     h += '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;border-color:var(--gold);color:var(--gold);" onclick="askHumanCoachAboutExercise(' + exIdx + ',\'esercizio\')">CHIEDI AL COACH</button>';
   }
   return h;
@@ -7708,7 +7829,10 @@ function calculateSuggestedLoad(exIdx) {
   const TAE = window.TrainingAnalyticsEngine;
   if (!TAE || !TAE.recommendNext) return;
   const total = (typeof getExerciseSetCount === 'function') ? getExerciseSetCount(exIdx) : 1;
-  const reco = TAE.recommendNext(store, DATA, { week: currentWeek, day: currentDay, exIdx: exIdx, set: total });
+  const loc = { week: currentWeek, day: currentDay, exIdx: exIdx, set: total };
+  const snap = TAE.exerciseAnalyticsSnapshot(store, DATA, loc);
+  const reco = TAE.recommendNext(store, DATA, loc, snap);
+  window.__exIntelSnap = snap;
   window.__liveRecommendation = reco;
   window.__exIntelReco = reco;
   const box = document.getElementById('ex-intel-panel-' + exIdx);
@@ -7721,7 +7845,11 @@ function explainIntelMetric(id) {
   const human = row.nameIt || row.humanName || id;
   const tech = row.technicalName ? ('\n' + row.technicalName) : '';
   const unit = row.unit ? ('\nUnità: ' + row.unit) : '';
-  const msg = human + tech + unit + '\n\nCosa significa:\n' + (row.whatIt || row.definition || id) + '\n\nPerché lo guardiamo:\n' + (row.whyIt || '—') + '\n\nCome si calcola:\n' + (row.howIt || '—') + '\n\nLimiti / affidabilità:\n' + (row.limitIt || row.limitations || '—') + '\n\nLivello: ' + (row.evidenceLevel || '—');
+  const snap = window.__exIntelSnap;
+  const generated = (snap && snap.explanationIt && (id === 'performanceContext' || id === 'performanceVsPrevious' || id === 'performance'))
+    ? ('Lettura di questa esposizione:\n' + snap.explanationIt + '\n\n')
+    : '';
+  const msg = human + tech + unit + '\n\n' + generated + 'Cosa significa:\n' + (row.whatIt || row.definition || id) + '\n\nPerché lo guardiamo:\n' + (row.whyIt || '—') + '\n\nCome si calcola:\n' + (row.howIt || '—') + '\n\nLimiti / affidabilità:\n' + (row.limitIt || row.limitations || '—') + '\n\nLivello: ' + (row.evidenceLevel || '—');
   if (typeof showToast === 'function') showToast(msg, 'info');
   else alert(msg);
 }
@@ -7786,11 +7914,11 @@ function sessionSummaryCardHtml() {
   h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(sum.performanceChange) + '</span></div>';
   h += '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(sum)) + '</div>';
   h += '<div class="stats-adv-row"><span>Sforzo percepito medio</span><span>' + (sum.avgRpe == null ? '—' : (sum.avgRpe + '/10')) + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Fatica stimata</span><span>' + esc(H('fatigue', sum.fatigue && sum.fatigue.signal)) + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Recupero stimato</span><span>' + esc(H('recovery', sum.recovery && (sum.recovery.signal || sum.recovery.estimate))) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Fatica durante questa seduta</span><span>' + esc(H('fatigue', sum.fatigue && sum.fatigue.signal)) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Recupero recente</span><span>' + esc(H('recovery', sum.recovery && (sum.recovery.signal || sum.recovery.estimate))) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Risposta all\'allenamento</span><span>' + esc(H('adaptation', sum.adaptation && sum.adaptation.signal)) + '</span></div>';
   if (sum.adaptation && sum.adaptation.confidence) h += '<div class="stats-adv-row"><span>Confidenza</span><span>' + esc(H('confidence', sum.adaptation.confidence)) + ' ' + metricExplainBtn('confidence', 'ⓘ Perché?') + '</span></div>';
-  h += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato dal motore. Non modifica lo storico. ' + metricExplainBtn('performance') + '</div>';
+  h += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato dal motore. Non modifica lo storico. ' + metricExplainBtn('performance', 'ⓘ Prestazione') + '</div>';
   if (isClientAthleteView() && sum.performanceDirection === 'declining') {
     h += '<div style="font-size:11px;color:#ccc;margin-top:10px;">La prestazione è diminuita rispetto alle ultime esposizioni.</div>';
     h += '<button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px;" onclick="askRealCoachForDomain(\'training\')">CHIEDI AL COACH</button>';
@@ -7809,9 +7937,9 @@ function preWorkoutIntelHtml() {
   h += '<div style="font-size:10px;color:var(--gold);font-weight:800;">ALLENAMENTO DI OGGI</div>';
   h += '<div class="stats-adv-row"><span>Ultima esposizione</span><span>' + (last ? ('W' + last.week + ' · S' + ((last.day || 0) + 1) + (last.tonnage ? (' · ' + last.tonnage + ' kg') : '')) : '—') + '</span></div>';
   h += '<div class="stats-adv-row"><span>Volume recente</span><span>' + (ctx.recentVolume ? (formatStatsKg(ctx.recentVolume) + ' kg') : '—') + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Recupero stimato</span><span>' + esc(H('recovery', ctx.recovery && (ctx.recovery.signal || ctx.recovery.estimate))) + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Fatica stimata</span><span>' + esc(H('fatigue', ctx.fatigue && ctx.fatigue.signal)) + '</span></div>';
-  h += '<div style="font-size:9px;color:#777;margin-top:6px;">' + esc(ctx.note || '') + ' ' + metricExplainBtn('recovery') + '</div>';
+  h += '<div class="stats-adv-row"><span>Recupero recente</span><span>' + esc(H('recovery', ctx.recovery && (ctx.recovery.signal || ctx.recovery.estimate))) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Fatica recente (modello)</span><span>' + esc(H('fatigue', ctx.fatigue && ctx.fatigue.signal)) + '</span></div>';
+  h += '<div style="font-size:9px;color:#777;margin-top:6px;">' + esc(ctx.note || '') + ' ' + metricExplainBtn('recovery', 'ⓘ Recupero') + '</div>';
   if (isClientAthleteView()) {
     h += '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;border-color:var(--gold);color:var(--gold);" onclick="askRealCoachForDomain(\'training\')">CHIEDI AL COACH</button>';
   }
@@ -14730,13 +14858,19 @@ function renderTraining(c){
           const prevStored = store.data[k + '_load'];
           const shownLoad = (typeof effectiveSetLoad === 'function') ? effectiveSetLoad(fIdx, s, row) : (prevStored || '');
           const sugg = (typeof suggestedLoadForSet === 'function') ? (suggestedLoadForSet(fIdx, s, row) || '') : '';
-          if (!isDone && !sessionWasFinalized(currentWeek, currentDay) && Number(shownLoad) > 0
-            && Number(prevStored) !== Number(shownLoad)) {
-            store.data[k + '_load'] = shownLoad;
-            if (store.data[k + '_load_user'] && isStaleCopiedSetPrefill(prevStored, fIdx, s, row)) {
+          if (!isDone && !sessionWasFinalized(currentWeek, currentDay)) {
+            const staleCopy = (typeof isStaleCopiedSetPrefill === 'function') && isStaleCopiedSetPrefill(prevStored, fIdx, s, row);
+            if (Number(shownLoad) > 0 && Number(prevStored) !== Number(shownLoad)) {
+              store.data[k + '_load'] = shownLoad;
+              if (store.data[k + '_load_user'] && staleCopy) {
+                delete store.data[k + '_load_user'];
+              }
+              window.__loadPrefillDirty = true;
+            } else if (staleCopy && (shownLoad === '' || shownLoad == null) && prevStored !== undefined && prevStored !== '' && prevStored != null) {
+              delete store.data[k + '_load'];
               delete store.data[k + '_load_user'];
+              window.__loadPrefillDirty = true;
             }
-            window.__loadPrefillDirty = true;
           }
           const targetRepsRaw = setObj ? (setObj.reps ?? setObj.target_reps) : row.repsTarget;
           const shownReps = (store.data[k + '_reps'] !== undefined && store.data[k + '_reps'] !== '' && store.data[k + '_reps'] != null)
@@ -16023,6 +16157,20 @@ function updateData(key, val){
   refreshWorkoutUndoButton();
   try { if (typeof scheduleAthleteLiveWorkoutSync === 'function') scheduleAthleteLiveWorkoutSync(); } catch (_) {}
 }
+function clearCopiedLoadsAfterSubstitution(idx) {
+  if (!store.data) return;
+  const weeksN = (DATA && DATA.weeks && DATA.weeks.length) || 0;
+  for (let w = currentWeek; w <= weeksN; w++) {
+    const eK = 'w' + w + '_d' + currentDay + '_e' + idx;
+    if (store.intelTargets && store.intelTargets[eK]) delete store.intelTargets[eK];
+    for (let s = 1; s <= 12; s++) {
+      const base = eK + '_s' + s;
+      if (store.data[base + '_done']) continue;
+      delete store.data[base + '_load'];
+      delete store.data[base + '_load_user'];
+    }
+  }
+}
 function substituteEx(idx, val, muscleGroup){
   if(!val) return;
   pushWorkoutUndoSnapshot('sostituzione esercizio');
@@ -16033,6 +16181,7 @@ function substituteEx(idx, val, muscleGroup){
     if (muscleGroup) store.exMuscle[key] = muscleGroup;
     else if (store.exMuscle[key]) delete store.exMuscle[key];
   }
+  clearCopiedLoadsAfterSubstitution(idx);
   persist();
   render();
   try { queueExerciseKnowledgeAdapt(val, muscleGroup); } catch (_) {}
@@ -16057,7 +16206,7 @@ function openReplacementModal(idx, encodedCurrent){
     const current = decodeURIComponent(encodedCurrent || '');
     replacementDraft = { idx, current, selected: '', manual: false };
     const curEl = $('replace-current');
-    if (curEl) curEl.innerHTML = `Esercizio attuale: <b style="color:var(--gold);">${esc(current)}</b><br><span style="font-size:10px;color:#777;">Serie e parametri verranno mantenuti.</span>`;
+    if (curEl) curEl.innerHTML = `Esercizio attuale: <b style="color:var(--gold);">${esc(current)}</b><br><span style="font-size:10px;color:#777;">Serie e schema restano; i carichi seguono lo storico del nuovo esercizio, non dello slot precedente.</span>`;
     const manualToggle = $('replace-manual-toggle');
     if (manualToggle) manualToggle.checked = false;
     toggleReplaceManual(false);
@@ -19385,8 +19534,7 @@ function setStatsExercise(name) {
     if (!store.prefs) store.prefs = {};
     store.prefs.statsExercise = name || '';
     persist();
-    const analytics = buildTrainingAnalytics();
-    fillStatsAdvancedPanel(analytics);
+    renderStatsData();
   });
 }
 function setStatsAdvancedMode(mode) {
@@ -19434,7 +19582,7 @@ function setStatsChartMetric(metric) {
     const selectedGroup = $('stats-muscle-group') ? $('stats-muscle-group').value : 'TOTAL';
     const groupLabel = (MACRO_MUSCLE_GROUPS.find(function (g) { return g.id === selectedGroup; }) || {}).label || '';
     const titleEl = $('vol-chart-title');
-    if (titleEl) titleEl.textContent = (selectedGroup === 'TOTAL' ? '' : (groupLabel + ' · ')) + ({ volume: 'Volume (kg)', trainingLoad: 'Training load (kg)', sets: 'Serie', reps: 'Ripetizioni', intensity: 'Intensità media', bw: 'Peso corporeo (kg)', load: 'Carico medio (kg)', frequency: 'Frequenza', sessions: 'Sedute' }[store.prefs.statsChartMetric] || 'Volume (kg)');
+    if (titleEl) titleEl.textContent = (selectedGroup === 'TOTAL' ? '' : (groupLabel + ' · ')) + ({ volume: 'Volume (kg)', trainingLoad: 'Training load (kg)', sets: 'Serie', reps: 'Ripetizioni', intensity: 'Intensità media', bw: 'Peso corporeo (kg)', load: 'Carico medio (kg)', frequency: 'Frequenza', sessions: 'Sedute', e1rm: 'e1RM stimato (kg)', performance: 'Prestazione vs sett. prec. (%)', rpe: 'RPE medio', rir: 'RIR medio' }[store.prefs.statsChartMetric] || 'Volume (kg)');
     if (analytics) renderTerminalChart('volChart', analytics, store.prefs.statsChartMetric);
   });
 }
@@ -19547,7 +19695,7 @@ function renderTerminalChart(canvasId, analytics, metric) {
       ctx.stroke();
     });
   } else {
-    renderSimpleChart(canvasId, series, metric === 'intensity' ? '#ff4d4d' : '#d4af37', metric === 'e1rm' ? 'line' : 'bar', 0);
+    renderSimpleChart(canvasId, series, metric === 'intensity' || metric === 'rpe' ? '#ff4d4d' : '#d4af37', (metric === 'e1rm' || metric === 'performance' || metric === 'rpe' || metric === 'rir' || metric === 'intensity') ? 'line' : 'bar', 0);
   }
   const marks = analytics.charts.prMarks || [];
   marks.forEach(function (m) {
@@ -19633,6 +19781,7 @@ function fillStatsAdvancedPanel(analytics) {
         '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(ax.trend) + '</span></div>' +
         '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(ax)) + (ax.confidence ? (' · ' + esc(H('confidence', ax.confidence))) : '') + '</div>' +
         '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(ax.volumeVsPrevious) + '</span></div>' +
+        '<div class="stats-adv-row"><span>Carico medio</span><span>' + (ax.avgLoad == null ? '—' : (Math.round(ax.avgLoad * 10) / 10 + ' kg')) + '</span></div>' +
         '<div class="stats-adv-row"><span>Miglior e1RM stimato</span><span>' + (ax.e1rmBest == null ? '—' : (ax.e1rmBest + ' kg')) + '</span></div>' +
         '<div class="stats-adv-row"><span>e5RM / e8RM / e10RM stimati</span><span>' + [ax.e5rm, ax.e8rm, ax.e10rm].map(function (n) { return n == null ? '—' : (n + ' kg'); }).join(' · ') + '</span></div>' +
         '<div class="stats-adv-row"><span>Sforzo medio</span><span>' + (ax.avgRpe == null ? '—' : ('RPE ' + ax.avgRpe + '/10')) + (ax.avgRir == null ? '' : (' · RIR ' + ax.avgRir)) + '</span></div>' +
@@ -19681,7 +19830,7 @@ function fillStatsAdvancedPanel(analytics) {
       '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">VOLUME TOTALE</div>' +
       '<div class="stats-adv-row"><span>Volume totale della settimana</span><span>' + (curSets == null ? '—' : (curSets + ' serie')) + '</span></div>' +
       '<div style="font-size:11px;color:#ccc;margin:8px 0;">Per confrontare il volume con MEV/MAV/MRV seleziona un gruppo muscolare.</div>' +
-      '<div style="font-size:10px;color:#777;margin:6px 0 14px;">Questa scala è globale (tutto il corpo). Non confronta il volume totale con l’MRV di un singolo muscolo. ' + metricExplainBtn('mrv') + '</div>';
+      '<div style="font-size:10px;color:#777;margin:6px 0 14px;">Questa scala è globale (tutto il corpo). Non confronta il volume totale con l’MRV di un singolo muscolo. ' + metricExplainBtn('mrv', 'ⓘ Scala volume') + '</div>';
   } else {
     const span = lm.MRV;
     const pct = curSets == null ? 0 : Math.max(2, Math.min(100, Math.round((curSets / span) * 100)));
@@ -19697,7 +19846,7 @@ function fillStatsAdvancedPanel(analytics) {
       ((curSets != null && lm.MRV && curSets > lm.MRV)
         ? ('<div style="font-size:11px;color:#ccc;margin:8px 0;">Il volume è sopra la stima MRV, ma va letto con prestazione, fatica e recupero: se la prestazione sale e il recupero è buono, continua a monitorare prima di ridurre.</div>')
         : '') +
-      '<div style="font-size:10px;color:#777;margin:6px 0 14px;">Questa scala confronta le serie di <b>' + esc(groupLabel) + '</b> con una stima del volume utile. Non confronta il volume totale di tutto il corpo con un singolo muscolo. Fonte: ' + esc(lm.source === 'configured' ? 'valore configurato' : 'stima configurabile') + '. ' + metricExplainBtn('mrv') + ' ' + metricExplainBtn('mev') + ' ' + metricExplainBtn('mav') + '</div>';
+      '<div style="font-size:10px;color:#777;margin:6px 0 14px;">Questa scala confronta le serie di <b>' + esc(groupLabel) + '</b> con una stima del volume utile. Non confronta il volume totale di tutto il corpo con un singolo muscolo. Fonte: ' + esc(lm.source === 'configured' ? 'valore configurato' : 'stima configurabile') + '. ' + metricExplainBtn('mrv', 'ⓘ MRV') + ' ' + metricExplainBtn('mev', 'ⓘ MEV') + ' ' + metricExplainBtn('mav', 'ⓘ MAV') + '</div>';
   }
   adv.innerHTML = focusHtml +
     '<div style="color:var(--gold);font-weight:800;margin:14px 0 6px;">CONFRONTO PERIODO</div>' +
@@ -19710,8 +19859,8 @@ function fillStatsAdvancedPanel(analytics) {
     '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">RISPOSTA</div>' +
     '<div class="stats-adv-row"><span>Prestazione</span><span>' + esc(H('performance', prf.signal)) + '</span></div>' +
     '<div class="stats-adv-row"><span>Risposta al volume</span><span>' + esc(H('volumeResponse', vr.signal)) + '</span></div>' +
-    '<div class="stats-adv-row"><span>Fatica stimata</span><span>' + esc(H('fatigue', fs.signal)) + (fs.reason ? (' · ' + esc(fs.reason)) : '') + '</span></div>' +
-    '<div class="stats-adv-row"><span>Recupero stimato</span><span>' + esc(H('recovery', rec.signal || rec.estimate)) + '</span></div>' +
+    '<div class="stats-adv-row"><span>Fatica recente (modello)</span><span>' + esc(H('fatigue', fs.signal)) + (fs.reason ? (' · ' + esc(fs.reason)) : '') + '</span></div>' +
+    '<div class="stats-adv-row"><span>Recupero recente</span><span>' + esc(H('recovery', rec.signal || rec.estimate)) + '</span></div>' +
       '<div class="stats-adv-row"><span>Risposta all\'allenamento</span><span>' + esc(H('adaptation', ad.signal)) + '</span></div>' +
       '<div class="stats-adv-row"><span>Confidenza</span><span>' + esc(H('confidence', ad.confidence)) + ' ' + metricExplainBtn('confidence', 'ⓘ Perché?') + '</span></div>' +
       (analytics.performanceEfficiency && analytics.performanceEfficiency.value != null
@@ -19766,8 +19915,16 @@ function renderStatsData(){
   const tabs = $('stats-metric-tabs');
   if (tabs) {
     const metric = (store.prefs && store.prefs.statsChartMetric) || 'volume';
-    tabs.innerHTML = [['volume', 'Volume'], ['bw', 'BW'], ['sets', 'Serie'], ['reps', 'Ripetizioni'], ['load', 'Carico'], ['frequency', 'Frequenza'], ['sessions', 'Sedute'], ['trainingLoad', 'Training load']].map(function (pair) {
-      return '<button type="button" data-chart-metric="' + pair[0] + '" class="stats-zoom-chip' + (metric === pair[0] ? ' is-on' : '') + '" onclick="setStatsChartMetric(\'' + pair[0] + '\')">' + pair[1] + '</button>';
+    const exOn = !!(store.prefs && store.prefs.statsExercise);
+    const pairs = exOn
+      ? [['volume', 'Volume'], ['load', 'Carico'], ['e1rm', 'e1RM'], ['performance', 'Prestazione'], ['intensity', 'Intensità'], ['rpe', 'RPE'], ['rir', 'RIR']]
+      : [['volume', 'Volume'], ['bw', 'BW'], ['sets', 'Serie'], ['reps', 'Ripetizioni'], ['load', 'Carico'], ['frequency', 'Frequenza'], ['sessions', 'Sedute'], ['trainingLoad', 'Training load']];
+    if (!exOn && (metric === 'e1rm' || metric === 'performance' || metric === 'rpe' || metric === 'rir')) {
+      store.prefs.statsChartMetric = 'volume';
+    }
+    const useMetric = (store.prefs && store.prefs.statsChartMetric) || 'volume';
+    tabs.innerHTML = pairs.map(function (pair) {
+      return '<button type="button" data-chart-metric="' + pair[0] + '" class="stats-zoom-chip' + (useMetric === pair[0] ? ' is-on' : '') + '" onclick="setStatsChartMetric(\'' + pair[0] + '\')">' + pair[1] + '</button>';
     }).join('');
   }
   const presets = $('stats-zoom-presets');
