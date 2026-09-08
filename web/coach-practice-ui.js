@@ -337,10 +337,13 @@ function applyClientChrome() {
     if (athlete) {
       document.querySelectorAll('button').forEach(function (btn) {
         const tx = String(btn.textContent || '');
-        if (/CHIEDI A COACH AI/i.test(tx) && !athleteCanUseNurvanAi()) {
+        if (/CHIEDI A COACH AI|Chiedi all['’]AI|Ask AI/i.test(tx) && !athleteCanUseNurvanAi()) {
           btn.style.display = 'none';
-        } else if (/CHIEDI A COACH AI/i.test(tx)) {
-          btn.textContent = tx.replace(/CHIEDI A COACH AI(?:\s*\([^)]+\))?/i, 'CHIEDI AL COACH');
+        } else if (/CHIEDI A COACH AI|Chiedi all['’]AI|Ask AI/i.test(tx)) {
+          btn.textContent = tx
+            .replace(/CHIEDI A COACH AI(?:\s*\([^)]+\))?/i, 'CHIEDI AL COACH')
+            .replace(/Chiedi all['’]AI/i, 'Chiedi al coach')
+            .replace(/Ask AI/i, 'Chiedi al coach');
         }
       });
       const profileBtn = document.getElementById('profile-button');

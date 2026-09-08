@@ -56,7 +56,7 @@ Segnali con motivo e confidenza. Mai «sei in overtraining». Mai una percentual
 
 ## Come si calcola
 
-Ogni metrica ha `nameIt`, `whatIt`, `whyIt`, `howIt`, `limitIt`, `evidenceLevel`, `formulaVersion` nel catalogo.
+Ogni metrica ha `nameIt`, `shortNameIt`, `technicalName`, `whatIt`, `whyIt`, `howIt`, `limitIt`, `unit`, `evidenceLevel`, `formulaVersion`. In UI: etichetta umana prima, termine tecnico dopo. Coach e Client usano lo stesso motore; il Client vede analytics e suggerimenti ma non applica da solo le modifiche alla scheda (`CHIEDI AL COACH`).
 
 ## Training Control Engine (preparazione)
 
