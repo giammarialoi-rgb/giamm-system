@@ -562,12 +562,14 @@
   function landmarksFor(store, muscle, weeklySets, opts) {
     opts = opts || {};
     const rawId = String(muscle || 'TOTAL');
-    const global = !rawId || rawId === 'TOTAL' || rawId === 'GENERALE' || rawId === 'ALL';
+    const macroId = normalizeMuscleId(rawId);
+    const global = !rawId || rawId === 'TOTAL' || rawId === 'GENERALE' || rawId === 'ALL' || MACRO_MUSCLE_IDS.indexOf(macroId) < 0;
     const scale = opts.scale || (global ? 'global' : (opts.scale === 'exercise' ? 'exercise' : 'muscle'));
     const comparable = scale === 'muscle' && !global;
-    const cfgKey = global ? 'GENERALE' : rawId;
-    const hasCfg = !!(store && store.prefs && store.prefs.volumeLandmarks && store.prefs.volumeLandmarks[cfgKey]);
-    const cfg = hasCfg ? store.prefs.volumeLandmarks[cfgKey] : DEFAULT_LANDMARKS;
+    const lmStore = store && store.prefs && store.prefs.volumeLandmarks;
+    const cfgKey = global ? 'GENERALE' : ((lmStore && (lmStore[rawId] || lmStore[macroId])) ? (lmStore[rawId] ? rawId : macroId) : macroId);
+    const hasCfg = !!(lmStore && lmStore[cfgKey]);
+    const cfg = hasCfg ? lmStore[cfgKey] : DEFAULT_LANDMARKS;
     const lm = {
       MV: Number(cfg.MV) || DEFAULT_LANDMARKS.MV,
       MEV: Number(cfg.MEV) || DEFAULT_LANDMARKS.MEV,
@@ -576,7 +578,7 @@
       MRV: Number(cfg.MRV) || DEFAULT_LANDMARKS.MRV,
       kind: 'estimated_configurable',
       scale: scale,
-      muscle: global ? null : rawId,
+      muscle: global ? null : (MACRO_MUSCLE_IDS.indexOf(macroId) >= 0 ? macroId : rawId),
       comparable: comparable,
       source: hasCfg ? 'configured' : 'default_configurable',
       title: comparable ? ('VOLUME — ' + rawId) : (scale === 'exercise' ? 'VOLUME ESERCIZIO' : 'VOLUME TOTALE'),
@@ -743,38 +745,43 @@
   }
 
   const CONTRIB_WEIGHT = { primary: 1, secondary: 0.5, indirect: 0.25 };
+  const MACRO_MUSCLE_IDS = ['PETTO', 'DORSO', 'SPALLE', 'BRACCIA', 'ADDOME', 'GAMBE'];
   const MUSCLE_HINTS = [
-    { re: /panca|bench|chest|croci|fly|aperture/i, primary: ['PETTO'], secondary: ['TRICIPITI', 'SPALLE'] },
-    { re: /squat|hack|leg press|affondi|lunge|leg extension|press 45/i, primary: ['QUADRICIPITI'], secondary: ['GLUTEI'], indirect: ['FEMORALI'] },
-    { re: /stacco|deadlift|rdl|good morning|leg curl|femoral/i, primary: ['FEMORALI'], secondary: ['GLUTEI'], indirect: ['SCHIENA'] },
-    { re: /calf|polpac|raise/i, primary: ['POLPACCI'] },
-    { re: /row|remat|lat |dorso|trazione|pull.?down|pulley|low row/i, primary: ['SCHIENA'], secondary: ['BICIPITI'] },
-    { re: /military|lento|shoulder press|alzate later|face pull|deltoid/i, primary: ['SPALLE'], secondary: ['TRICIPITI'] },
-    { re: /curl|bicep/i, primary: ['BICIPITI'] },
-    { re: /french|skull|pushdown|triceps|dip|estensioni/i, primary: ['TRICIPITI'] },
-    { re: /hip thrust|glute|kickback/i, primary: ['GLUTEI'] },
-    { re: /crunch|plank|ab wheel|addome|sit.?up/i, primary: ['ADDOME'] }
+    { re: /calf raise|seated calf|standing calf|donkey calf|polpac/i, primary: ['GAMBE'] },
+    { re: /hip thrust|glute bridge|glute kickback|abduct|adductor|glutei|\bglute\b/i, primary: ['GAMBE'] },
+    { re: /stacco rumeno|romanian|rdl|good morning|leg curl|femoral|nordic/i, primary: ['GAMBE'] },
+    { re: /squat|hack squat|leg press|pressa 45|pressa|affondi|lunge|leg extension|bulgarian|step.?up|sissy|pistol squat/i, primary: ['GAMBE'] },
+    { re: /\bstacco\b|deadlift/i, primary: ['GAMBE'], secondary: ['DORSO'] },
+    { re: /panca stretta|close.?grip/i, primary: ['BRACCIA'], secondary: ['PETTO'] },
+    { re: /panca piana|panca inclin|panca declin|bench press|chest press|croci|cable fly|pec deck|pec fly|push.?up|piegament|flessioni|chest fly|svend|spoto|floor press|guillotine|multi.?bench|leverage.*(bench|panca)|distensioni.*(petto|panca)|dumbbell press|spinte.*(petto|panca|manubri)/i, primary: ['PETTO'], secondary: ['BRACCIA', 'SPALLE'] },
+    { re: /\bpanca\b|\bbench\b|petto|chest/i, primary: ['PETTO'], secondary: ['BRACCIA', 'SPALLE'] },
+    { re: /pullover/i, primary: ['DORSO'], secondary: ['PETTO'] },
+    { re: /trazioni|pull.?up|chin.?up|lat machine|lat pull|pulldown|pulley|remator|seal row|dorso|trazione|low row|chest supported|pendlay|meadows|t.?bar|vertical traction|mezzor|iperext|hyperext|back extension|scrollate|shrug/i, primary: ['DORSO'], secondary: ['BRACCIA'] },
+    { re: /\brow\b|remat/i, primary: ['DORSO'], secondary: ['BRACCIA'] },
+    { re: /military|lento avanti|lento dietro|shoulder press|overhead press|alzate later|lateral raise|alzate front|front raise|rear delt|deltoid|face pull|alzate posteriori|\blento\b|spinta.*(spalle|alto)|distensioni.*(spalle|alto)/i, primary: ['SPALLE'], secondary: ['BRACCIA'] },
+    { re: /curl|bicip|hammer curl|preacher|spider curl|bayesian|concentration/i, primary: ['BRACCIA'] },
+    { re: /french|skull|pushdown|tricip|tricep|estensioni.*(tricip|gomito)|kickback/i, primary: ['BRACCIA'] },
+    { re: /\bdips?\b|parallele/i, primary: ['PETTO'], secondary: ['BRACCIA'] },
+    { re: /crunch|plank|ab wheel|addome|sit.?up|leg raise|knee raise|hollow|situp|woodchop|pallof|abs\b|core |vacuum|bicycle/i, primary: ['ADDOME'] }
   ];
   const FINE_TO_MACRO = {
-    PETTO: 'PETTO', SCHIENA: 'SCHIENA', DORSALI: 'SCHIENA', SPALLE: 'SPALLE',
-    BICIPITI: 'BRACCIA', TRICIPITI: 'BRACCIA', QUADRICIPITI: 'GAMBE', FEMORALI: 'GAMBE',
-    GLUTEI: 'GLUTEI', POLPACCI: 'GAMBE', ADDOME: 'ADDOME'
+    PETTO: 'PETTO', CHEST: 'PETTO',
+    SCHIENA: 'DORSO', DORSALI: 'DORSO', DORSO: 'DORSO', BACK: 'DORSO',
+    SPALLE: 'SPALLE', DELTOIDI: 'SPALLE',
+    BICIPITI: 'BRACCIA', TRICIPITI: 'BRACCIA', BRACCIA: 'BRACCIA',
+    QUADRICIPITI: 'GAMBE', FEMORALI: 'GAMBE', GLUTEI: 'GAMBE', POLPACCI: 'GAMBE', GAMBE: 'GAMBE',
+    ADDOME: 'ADDOME', CORE: 'ADDOME'
   };
 
   function normalizeMuscleId(raw) {
     const g = String(raw || '').toUpperCase().replace(/&/g, '_').replace(/\s+/g, '_');
-    if (['SCHIENA', 'DORSO', 'DORSALI', 'BACK', 'LAT', 'LATS'].includes(g)) return g === 'DORSALI' ? 'DORSALI' : 'SCHIENA';
-    if (['SPALLE', 'DELTOIDI', 'SHOULDERS'].includes(g)) return 'SPALLE';
-    if (['BICIPITI', 'BICEPS'].includes(g)) return 'BICIPITI';
-    if (['TRICIPITI', 'TRICEPS'].includes(g)) return 'TRICIPITI';
-    if (['PETTO', 'CHEST', 'PECS'].includes(g)) return 'PETTO';
-    if (['ADDOME', 'CORE', 'ABS'].includes(g)) return 'ADDOME';
-    if (['GLUTEI', 'GLUTES'].includes(g)) return 'GLUTEI';
-    if (['QUADRICIPITI', 'QUADS', 'QUAD'].includes(g)) return 'QUADRICIPITI';
-    if (['FEMORALI', 'HAMSTRINGS', 'HAM'].includes(g)) return 'FEMORALI';
-    if (['POLPACCI', 'CALVES', 'CALF'].includes(g)) return 'POLPACCI';
-    if (['GAMBE', 'LEGS'].includes(g)) return 'QUADRICIPITI';
-    return g;
+    if (['SCHIENA', 'DORSO', 'DORSALI', 'BACK', 'LAT', 'LATS', 'TRAP', 'TRAPEZIO'].includes(g)) return 'DORSO';
+    if (['SPALLE', 'DELTOIDI', 'SHOULDERS', 'DELTS'].includes(g)) return 'SPALLE';
+    if (['BICIPITI', 'TRICIPITI', 'BRACCIA', 'ARMS', 'BICEPS', 'TRICEPS'].includes(g)) return 'BRACCIA';
+    if (['PETTO', 'CHEST', 'PECS', 'PETTORALE', 'PETTORALE_MAGGIORE', 'PETTORALE_CLAVICOLARE'].includes(g)) return 'PETTO';
+    if (['ADDOME', 'CORE', 'ABS', 'ABDOMINAL', 'ALTRO'].includes(g)) return 'ADDOME';
+    if (['GAMBE', 'LEGS', 'QUADRICIPITI', 'QUADS', 'QUAD', 'FEMORALI', 'HAMSTRINGS', 'HAM', 'GLUTEI', 'GLUTES', 'GLUTE', 'POLPACCI', 'CALVES', 'CALF', 'GAMBE_POLPACCI'].includes(g)) return 'GAMBE';
+    return FINE_TO_MACRO[g] || g;
   }
 
   function muscleContributionForExercise(name, meta) {
@@ -784,7 +791,7 @@
     const seen = {};
     function add(arr, id) {
       const n = normalizeMuscleId(id);
-      if (!n || seen[n]) return;
+      if (!n || MACRO_MUSCLE_IDS.indexOf(n) < 0 || seen[n]) return;
       seen[n] = true;
       arr.push(n);
     }
@@ -859,8 +866,10 @@
       (c.secondary || []).forEach(function (g) { if (!roles[g]) roles[g] = 'secondary'; });
       (c.indirect || []).forEach(function (g) { if (!roles[g]) roles[g] = 'indirect'; });
       Object.keys(roles).forEach(function (gid) {
-        if (!map[gid]) map[gid] = emptyMuscleRollup(gid);
-        const g = map[gid];
+        const mid = normalizeMuscleId(gid);
+        if (MACRO_MUSCLE_IDS.indexOf(mid) < 0) return;
+        if (!map[mid]) map[mid] = emptyMuscleRollup(mid);
+        const g = map[mid];
         const w = CONTRIB_WEIGHT[roles[gid]] || 0.25;
         g.nominalSets += 1;
         if (roles[gid] === 'primary') g.directSets += 1;
@@ -2899,6 +2908,8 @@
     relativeIntensity: relativeIntensity,
     movingAverage: movingAverage,
     isoWeekKey: isoWeekKey,
+    MACRO_MUSCLE_IDS: MACRO_MUSCLE_IDS,
+    normalizeMuscleId: normalizeMuscleId,
     normalizeSets: normalizeSets,
     detectPRs: detectPRs,
     comparePeriods: comparePeriods,

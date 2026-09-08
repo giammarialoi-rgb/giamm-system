@@ -1856,29 +1856,14 @@ body.focus-mode [data-rewards-only] {
     <div id="replace-manual-fields" style="display:none;margin-bottom:12px;padding:10px;border:1px solid #333;border-radius:8px;background:#111;">
       <label style="font-size:10px;color:var(--gold);font-weight:800;">NOME ESERCIZIO</label>
       <input id="replace-manual-name" type="text" placeholder="Es. Curl manubri inclinato" style="width:100%;margin:4px 0 10px;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;">
-      <label style="font-size:10px;color:var(--gold);font-weight:800;">MACROGRUPPO MUSCOLARE (statistiche)</label>
+      <label style="font-size:10px;color:var(--gold);font-weight:800;">GRUPPO MUSCOLARE</label>
       <select id="replace-manual-muscle" style="width:100%;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;margin-bottom:8px;">
-        <option value="SCHIENA">Schiena / Dorsali</option>
-        <option value="SPALLE">Spalle</option>
         <option value="PETTO">Petto</option>
-        <option value="BRACCIA">Braccia</option>
-        <option value="ADDOME">Addome</option>
-        <option value="GLUTEI">Glutei</option>
         <option value="GAMBE">Gambe</option>
-      </select>
-      <label style="font-size:10px;color:var(--gold);font-weight:800;">SOTTOCATEGORIA</label>
-      <select id="replace-manual-fine" style="width:100%;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;margin-bottom:8px;">
-        <option value="SCHIENA">Schiena</option>
-        <option value="DORSALI">Dorsali</option>
-        <option value="SPALLE">Spalle</option>
-        <option value="PETTO">Petto</option>
-        <option value="BICIPITI">Bicipiti</option>
-        <option value="TRICIPITI">Tricipiti</option>
-        <option value="QUADRICIPITI">Quadricipiti</option>
-        <option value="FEMORALI">Femorali</option>
-        <option value="GLUTEI">Glutei</option>
-        <option value="POLPACCI">Polpacci</option>
         <option value="ADDOME">Addome</option>
+        <option value="BRACCIA">Braccia</option>
+        <option value="SPALLE">Spalle</option>
+        <option value="DORSO">Dorso</option>
       </select>
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:#ccc;margin-top:8px;">
         <input id="replace-save-library" type="checkbox" style="width:16px;height:16px;"> Aggiungi anche alla libreria esercizi (per sostituzioni)
@@ -1916,30 +1901,14 @@ body.focus-mode [data-rewards-only] {
     <label style="font-size:10px;color:var(--gold);font-weight:800;">NOME ESERCIZIO *</label>
     <input id="bonus-name" type="text" placeholder="Es. Alzate Laterali ai Cavi" style="margin-bottom:8px;" required>
     
-    <label style="font-size:10px;color:var(--gold);font-weight:800;">GRUPPO MUSCOLARE (macro)</label>
-    <select id="bonus-macro" style="margin-bottom:8px;" onchange="syncBonusFineFromMacro()">
-      <option value="SCHIENA">Schiena / Dorsali</option>
-      <option value="SPALLE">Spalle</option>
+    <label style="font-size:10px;color:var(--gold);font-weight:800;">GRUPPO MUSCOLARE</label>
+    <select id="bonus-macro" style="margin-bottom:8px;">
       <option value="PETTO">Petto</option>
-      <option value="BRACCIA">Braccia</option>
-      <option value="ADDOME">Addome</option>
-      <option value="GLUTEI">Glutei</option>
       <option value="GAMBE">Gambe</option>
-    </select>
-    <label style="font-size:10px;color:var(--gold);font-weight:800;">SOTTOCATEGORIA (statistiche)</label>
-    <select id="bonus-group" style="margin-bottom:8px;">
-      <option value="SPALLE">Spalle</option>
-      <option value="PETTO">Petto</option>
-      <option value="SCHIENA">Schiena / Dorso</option>
-      <option value="DORSALI">Dorsali (lat)</option>
-      <option value="BICIPITI">Bicipiti</option>
-      <option value="TRICIPITI">Tricipiti</option>
-      <option value="QUADRICIPITI">Quadricipiti</option>
-      <option value="FEMORALI">Femorali</option>
-      <option value="GLUTEI">Glutei</option>
-      <option value="POLPACCI">Polpacci</option>
       <option value="ADDOME">Addome</option>
-      <option value="ALTRO">Altro</option>
+      <option value="BRACCIA">Braccia</option>
+      <option value="SPALLE">Spalle</option>
+      <option value="DORSO">Dorso</option>
     </select>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
@@ -8123,19 +8092,7 @@ function closeBonusModal() {
   $('bonus-modal').style.display = 'none';
 }
 function syncBonusFineFromMacro() {
-  const macro = ($('bonus-macro') && $('bonus-macro').value) || 'SPALLE';
-  const fine = $('bonus-group');
-  if (!fine) return;
-  const map = {
-    SCHIENA: 'SCHIENA',
-    SPALLE: 'SPALLE',
-    PETTO: 'PETTO',
-    BRACCIA: 'BICIPITI',
-    ADDOME: 'ADDOME',
-    GLUTEI: 'GLUTEI',
-    GAMBE: 'QUADRICIPITI'
-  };
-  fine.value = map[macro] || 'ALTRO';
+  /* kept for older tests / callers; subcategory UI removed */
 }
 
 function ensureCustomExerciseLibrary() {
@@ -8176,8 +8133,8 @@ function addExerciseToLibrary(name, muscle, source) {
 function saveBonusExercise() {
   const name = $('bonus-name').value.trim();
   if(!name) { alert('Inserisci il nome dell’esercizio bonus.'); return; }
-  const group = $('bonus-group').value;
-  const macro = ($('bonus-macro') && $('bonus-macro').value) || normalizeMacroMuscleGroup(group);
+  const macro = normalizeMacroMuscleGroup(($('bonus-macro') && $('bonus-macro').value) || 'PETTO');
+  const group = macro;
   const sets = parseInt($('bonus-sets').value, 10) || 3;
   const reps = $('bonus-reps').value.trim() || '8-12';
   const intensity = $('bonus-intensity').value.trim() || '1 RIR';
@@ -8224,61 +8181,49 @@ function deleteBonusExercise(index) {
   }
 }
 
-// Muscle Group Classification System
+// Muscle Group Classification System — 6 macro groups only
 const MUSCLE_TAXONOMY = {
-  "PETTO": ["panca", "chest", "spinta inclinata", "croci", "pec", "dip", "push up", "flessioni", "petto", "distensioni"],
-  "SCHIENA": ["trazioni", "pull up", "chin up", "lat machine", "lat", "pulldown", "rematore", "row", "pulley", "vertical traction", "stacco", "deadlift", "dorso", "schiena", "seal row"],
-  "SPALLE": ["spinta spalle", "shoulder", "lento", "military", "overhead press", "alzate laterali", "alzate posteriori", "rear delt", "face pull", "deltoid", "spalle"],
-  "BICIPITI": ["curl", "bicipit", "bicep", "hammer", "preacher", "spider"],
-  "TRICIPITI": ["french press", "pushdown", "tricipit", "tricep", "skull crusher", "dip", "estensioni tricipiti", "panca stretta"],
-  "QUADRICIPITI": ["squat", "front squat", "leg press", "pressa", "leg extension", "hack", "affondi", "lunge", "bulgar", "quad"],
-  "FEMORALI": ["stacco rumeno", "rdl", "romanian", "leg curl", "femorali", "hamstring", "good morning"],
-  "GLUTEI": ["hip thrust", "glute", "bridge", "abductor", "kickback"],
-  "POLPACCI": ["calf", "polpacc"],
-  "ADDOME": ["crunch", "plank", "leg raise", "addom", "sit up", "core", "hollow"]
+  "PETTO": ["panca piana", "panca inclin", "panca declin", "bench press", "chest press", "croci", "pec deck", "pec fly", "push up", "push-up", "flessioni", "piegamenti", "petto", "chest", "floor press", "dips", "parallele"],
+  "DORSO": ["trazioni", "pull up", "pull-up", "chin up", "lat machine", "lat pull", "pulldown", "rematore", "row", "pulley", "vertical traction", "dorso", "schiena", "seal row", "pullover", "scrollate", "shrug"],
+  "SPALLE": ["spinta spalle", "shoulder press", "overhead press", "military", "lento avanti", "alzate laterali", "lateral raise", "alzate frontali", "front raise", "alzate posteriori", "rear delt", "face pull", "deltoid", "spalle"],
+  "BRACCIA": ["curl", "bicipit", "bicep", "hammer", "preacher", "spider", "french press", "pushdown", "tricipit", "tricep", "skull", "estensioni tricipiti", "panca stretta", "close grip"],
+  "GAMBE": ["squat", "leg press", "pressa", "leg extension", "hack", "affondi", "lunge", "bulgar", "stacco rumeno", "rdl", "romanian", "leg curl", "femorali", "hamstring", "good morning", "hip thrust", "glute", "bridge", "abductor", "calf raise", "polpacc", "stacco da terra", "deadlift"],
+  "ADDOME": ["crunch", "plank", "leg raise", "addom", "sit up", "sit-up", "core", "hollow", "ab wheel", "pallof"]
 };
 
 const MACRO_MUSCLE_GROUPS = [
-  { id: 'SCHIENA', label: 'Schiena / Dorsali' },
-  { id: 'SPALLE', label: 'Spalle' },
   { id: 'PETTO', label: 'Petto' },
-  { id: 'BRACCIA', label: 'Braccia' },
+  { id: 'GAMBE', label: 'Gambe' },
   { id: 'ADDOME', label: 'Addome' },
-  { id: 'GLUTEI', label: 'Glutei' },
-  { id: 'GAMBE', label: 'Gambe' }
+  { id: 'BRACCIA', label: 'Braccia' },
+  { id: 'SPALLE', label: 'Spalle' },
+  { id: 'DORSO', label: 'Dorso' }
 ];
 
-const FINE_MUSCLE_GROUPS = [
-  { id: 'PETTO', label: 'Petto', macro: 'PETTO' },
-  { id: 'SCHIENA', label: 'Schiena / Dorsali', macro: 'SCHIENA' },
-  { id: 'DORSALI', label: 'Dorsali (lat)', macro: 'SCHIENA' },
-  { id: 'SPALLE', label: 'Spalle', macro: 'SPALLE' },
-  { id: 'BICIPITI', label: 'Bicipiti', macro: 'BRACCIA' },
-  { id: 'TRICIPITI', label: 'Tricipiti', macro: 'BRACCIA' },
-  { id: 'QUADRICIPITI', label: 'Quadricipiti', macro: 'GAMBE' },
-  { id: 'FEMORALI', label: 'Femorali', macro: 'GAMBE' },
-  { id: 'GLUTEI', label: 'Glutei', macro: 'GLUTEI' },
-  { id: 'POLPACCI', label: 'Polpacci', macro: 'GAMBE' },
-  { id: 'ADDOME', label: 'Addome', macro: 'ADDOME' },
-  { id: 'ALTRO', label: 'Altro', macro: 'ADDOME' }
-];
+const FINE_MUSCLE_GROUPS = MACRO_MUSCLE_GROUPS.map(function (g) {
+  return { id: g.id, label: g.label, macro: g.id };
+});
 
 function fineMuscleOptionsHtml(selected) {
-  const sel = String(selected || 'SPALLE');
-  return FINE_MUSCLE_GROUPS.map(function (g) {
+  const sel = normalizeMacroMuscleGroup(selected || 'PETTO');
+  return MACRO_MUSCLE_GROUPS.map(function (g) {
     return '<option value="' + g.id + '"' + (sel === g.id ? ' selected' : '') + '>' + g.label + '</option>';
   }).join('');
 }
 
 function normalizeMacroMuscleGroup(raw) {
+  const TAE = window.TrainingAnalyticsEngine;
+  if (TAE && typeof TAE.normalizeMuscleId === 'function') {
+    const n = TAE.normalizeMuscleId(raw);
+    if (MACRO_MUSCLE_GROUPS.some(function (x) { return x.id === n; })) return n;
+  }
   const g = String(raw || '').toUpperCase().replace(/&/g, '_').replace(/\s+/g, '_');
-  if (['SCHIENA', 'DORSO', 'DORSALI', 'BACK', 'LAT', 'LATS', 'TRAP'].includes(g)) return 'SCHIENA';
+  if (['SCHIENA', 'DORSO', 'DORSALI', 'BACK', 'LAT', 'LATS', 'TRAP', 'TRAPEZIO'].includes(g)) return 'DORSO';
   if (['SPALLE', 'DELTOIDI', 'SHOULDERS', 'DELTS'].includes(g)) return 'SPALLE';
   if (['BICIPITI', 'TRICIPITI', 'BRACCIA', 'ARMS', 'BICEPS', 'TRICEPS'].includes(g)) return 'BRACCIA';
-  if (['PETTO', 'CHEST', 'PECS'].includes(g)) return 'PETTO';
+  if (['PETTO', 'CHEST', 'PECS', 'PETTORALE'].includes(g)) return 'PETTO';
   if (['ADDOME', 'CORE', 'ABS', 'ABDOMINAL', 'ALTRO'].includes(g)) return 'ADDOME';
-  if (['GLUTEI', 'GLUTES', 'GLUTE'].includes(g)) return 'GLUTEI';
-  if (['GAMBE_POLPACCI', 'GAMBE', 'LEGS', 'QUADRICIPITI', 'QUADS', 'FEMORALI', 'HAMSTRINGS', 'POLPACCI', 'CALVES', 'QUAD', 'HAM'].includes(g)) return 'GAMBE';
+  if (['GAMBE_POLPACCI', 'GAMBE', 'LEGS', 'QUADRICIPITI', 'QUADS', 'QUAD', 'FEMORALI', 'HAMSTRINGS', 'HAM', 'GLUTEI', 'GLUTES', 'GLUTE', 'POLPACCI', 'CALVES', 'CALF'].includes(g)) return 'GAMBE';
   return g;
 }
 
@@ -8295,27 +8240,67 @@ function resolveExerciseMacroGroups(exerciseName, movement, explicitGroups, subs
 }
 
 function getExerciseMuscleGroups(exerciseName, movement, explicitGroups) {
-  const result = new Set();
-  if(Array.isArray(explicitGroups) && explicitGroups.length) {
-    explicitGroups.forEach(g => { if(g) result.add(String(g).toUpperCase()); });
-  }
-  const text = `${exerciseName || ''} ${movement || ''}`.toLowerCase();
-  for(const [group, keywords] of Object.entries(MUSCLE_TAXONOMY)) {
-    if(keywords.some(k => text.includes(k))) {
-      result.add(group);
+  const TAE = window.TrainingAnalyticsEngine;
+  if (TAE && typeof TAE.muscleContributionForExercise === 'function') {
+    const c = TAE.muscleContributionForExercise(exerciseName, {
+      muscle_groups: explicitGroups,
+      movement: movement
+    });
+    const out = [];
+    function push(g) {
+      const n = normalizeMacroMuscleGroup(g);
+      if (MACRO_MUSCLE_GROUPS.some(function (x) { return x.id === n; }) && out.indexOf(n) < 0) out.push(n);
     }
+    (c.primary || []).forEach(push);
+    (c.secondary || []).forEach(push);
+    if (out.length) return out;
   }
-  if(!result.size) {
+  const result = [];
+  function addMacro(id) {
+    const n = normalizeMacroMuscleGroup(id);
+    if (MACRO_MUSCLE_GROUPS.some(function (x) { return x.id === n; }) && result.indexOf(n) < 0) result.push(n);
+  }
+  if (Array.isArray(explicitGroups) && explicitGroups.length) {
+    explicitGroups.forEach(function (g) { if (g) addMacro(g); });
+  }
+  const text = String(exerciseName || '') + ' ' + String(movement || '');
+  const folded = text.toLowerCase();
+  Object.keys(MUSCLE_TAXONOMY).forEach(function (group) {
+    if (MUSCLE_TAXONOMY[group].some(function (k) { return folded.indexOf(k) >= 0; })) addMacro(group);
+  });
+  if (!result.length) {
     const movUpper = String(movement || '').toUpperCase();
-    if(movUpper.includes('DORSO') || movUpper.includes('SCHIENA')) result.add('SCHIENA');
-    else if(movUpper.includes('PETTO')) result.add('PETTO');
-    else if(movUpper.includes('SPALLE')) result.add('SPALLE');
-    else if(movUpper.includes('BRACCIA')) { result.add('BICIPITI'); result.add('TRICIPITI'); }
-    else if(movUpper.includes('GAMBE')) { result.add('QUADRICIPITI'); result.add('FEMORALI'); result.add('GLUTEI'); }
-    else result.add('ALTRO');
+    if (movUpper.indexOf('DORSO') >= 0 || movUpper.indexOf('SCHIENA') >= 0) addMacro('DORSO');
+    else if (movUpper.indexOf('PETTO') >= 0) addMacro('PETTO');
+    else if (movUpper.indexOf('SPALLE') >= 0) addMacro('SPALLE');
+    else if (movUpper.indexOf('BRACCIA') >= 0) addMacro('BRACCIA');
+    else if (movUpper.indexOf('GAMBE') >= 0) addMacro('GAMBE');
+    else if (movUpper.indexOf('ADDOME') >= 0) addMacro('ADDOME');
   }
-  return Array.from(result);
+  return result;
 }
+
+(function migrateMusclePrefsToSixMacros() {
+  try {
+    function keepMacros(list) {
+      const seen = {};
+      return (list || []).map(normalizeMacroMuscleGroup).filter(function (m) {
+        if (!MACRO_MUSCLE_GROUPS.some(function (g) { return g.id === m; }) || seen[m]) return false;
+        seen[m] = true;
+        return true;
+      });
+    }
+    if (store.prefs && store.prefs.statsMuscle && store.prefs.statsMuscle !== 'GENERALE' && store.prefs.statsMuscle !== 'TOTAL') {
+      store.prefs.statsMuscle = normalizeMacroMuscleGroup(store.prefs.statsMuscle);
+    }
+    if (store.prefs && Array.isArray(store.prefs.focusMuscles)) {
+      store.prefs.focusMuscles = keepMacros(store.prefs.focusMuscles);
+    }
+    if (store.profile && Array.isArray(store.profile.focusMuscles)) {
+      store.profile.focusMuscles = keepMacros(store.profile.focusMuscles);
+    }
+  } catch (_) {}
+})();
 
 const STATS_MUSCLE_CHIPS = [{ id: 'GENERALE', label: 'Generale' }].concat(MACRO_MUSCLE_GROUPS);
 
@@ -11898,8 +11883,8 @@ function saveAthleteProfile() {
     deadliftMax: hasSquat ? (parseFloat($('profile-deadlift')?.value) || null) : (prev.deadliftMax || null),
     goal: ($('profile-goal')?.value || '').trim(),
     focusMuscles: hasFocus
-      ? Array.from(document.querySelectorAll('.profile-focus:checked')).map((el) => el.value)
-      : (prev.focusMuscles || store.prefs.focusMuscles || []),
+      ? Array.from(document.querySelectorAll('.profile-focus:checked')).map(function (el) { return normalizeMacroMuscleGroup(el.value); }).filter(function (m, i, a) { return MACRO_MUSCLE_GROUPS.some(function (g) { return g.id === m; }) && a.indexOf(m) === i; })
+      : (prev.focusMuscles || store.prefs.focusMuscles || []).map(normalizeMacroMuscleGroup),
     activeSplit: prev.activeSplit || null,
     currentPhase: prev.currentPhase || null,
     coachName: prev.coachName || 'Nurvan AI',
@@ -12348,10 +12333,11 @@ function suggestProgramsForProfile(profile) {
   if (/ipertrof|massa|volume/.test(goal)) want.add('ipertrofia');
   if (/forza|power|1rm/.test(goal)) want.add('forza');
   if (/dimagr|cut|cardio|defin/.test(goal)) { want.add('cut'); want.add('dimagrimento'); }
-  if (/glute|gambe|lower/.test(goal) || focus.some((m) => /GLUTE|QUAD|FEMOR|GAMBE/i.test(m))) want.add('glutei');
+  if (/glute|gambe|lower/.test(goal) || focus.some(function (m) { return /GLUTE|QUAD|FEMOR|GAMBE/i.test(normalizeMacroMuscleGroup(m)); })) want.add('glutei');
   if (/casa|corpo\s*libero/.test(goal)) want.add('casa_corpo_libero');
-  if (/petto|panca|chest/.test(goal) || focus.some((m) => /PETTO/i.test(m))) want.add('petto');
-  if (/spall|deltoid/.test(goal) || focus.some((m) => /DELTOID/i.test(m))) want.add('spalle');
+  if (/petto|panca|chest/.test(goal) || focus.some(function (m) { return normalizeMacroMuscleGroup(m) === 'PETTO'; })) want.add('petto');
+  if (/spall|deltoid/.test(goal) || focus.some(function (m) { return normalizeMacroMuscleGroup(m) === 'SPALLE'; })) want.add('spalle');
+  if (/dorso|schiena|back/.test(goal) || focus.some(function (m) { return normalizeMacroMuscleGroup(m) === 'DORSO'; })) want.add('dorso');
   if (!want.size) want.add('ipertrofia');
   const freq = parseInt(store.prefs && store.prefs.frequency, 10) || 0;
   return list
@@ -16256,12 +16242,11 @@ function confirmReplacement(){
   if(!replacementDraft){ alert('Sessione sostituzione non valida.'); return; }
   if (replacementDraft.manual) {
     const name = ($('replace-manual-name') && $('replace-manual-name').value || '').trim();
-    const muscle = ($('replace-manual-muscle') && $('replace-manual-muscle').value) || 'PETTO';
-    const fine = ($('replace-manual-fine') && $('replace-manual-fine').value) || muscle;
+    const muscle = normalizeMacroMuscleGroup(($('replace-manual-muscle') && $('replace-manual-muscle').value) || 'PETTO');
     if (!name) { alert('Inserisci il nome dell\'esercizio.'); return; }
     substituteEx(replacementDraft.idx, name, muscle);
     if ($('replace-save-library') && $('replace-save-library').checked) {
-      addExerciseToLibrary(name, fine, 'replace');
+      addExerciseToLibrary(name, muscle, 'replace');
     }
     replacementDraft = null;
     const m = $('replace-modal');
@@ -17079,9 +17064,10 @@ function renderAthleteProfile(container) {
     '<input id="profile-goal" type="text" value="' + esc(profile.goal || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div style="grid-column:1/-1;"><label style="font-size:10px;color:#666;font-weight:800;">Su quali parti vuoi concentrarti?</label>' +
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">' +
-    ['PETTO','DORSALI','SPALLE','BICIPITI','TRICIPITI','QUADRICIPITI','FEMORALI','GLUTEI','POLPACCI','ADDOME'].map(function (m) {
-      const on = ((profile.focusMuscles || store.prefs.focusMuscles || []).indexOf(m) >= 0);
-      return '<label style="font-size:10px;border:1px solid ' + (on ? 'var(--gold)' : '#333') + ';color:' + (on ? 'var(--gold)' : '#aaa') + ';padding:6px 8px;border-radius:6px;"><input type="checkbox" class="profile-focus" value="' + m + '"' + (on ? ' checked' : '') + ' style="margin-right:4px;">' + m + '</label>';
+    MACRO_MUSCLE_GROUPS.map(function (g) {
+      const focusNow = (profile.focusMuscles || store.prefs.focusMuscles || []).map(normalizeMacroMuscleGroup);
+      const on = focusNow.indexOf(g.id) >= 0;
+      return '<label style="font-size:10px;border:1px solid ' + (on ? 'var(--gold)' : '#333') + ';color:' + (on ? 'var(--gold)' : '#aaa') + ';padding:6px 8px;border-radius:6px;"><input type="checkbox" class="profile-focus" value="' + g.id + '"' + (on ? ' checked' : '') + ' style="margin-right:4px;">' + g.label + '</label>';
     }).join('') +
     '</div></div>' +
     '</div>' +
@@ -17940,14 +17926,16 @@ function statsMuscleVolume(muscles, groupId) {
   if (groupId === 'GENERALE' || groupId === 'TOTAL') {
     return MACRO_MUSCLE_GROUPS.reduce(function (sum, g) { return sum + statsMuscleVolume(m, g.id); }, 0);
   }
-  if (groupId === 'SPALLE') return (m.SPALLE || 0) + (m.DELTOIDI || 0);
-  if (groupId === 'BRACCIA') return (m.BRACCIA || 0) + (m.BICIPITI || 0) + (m.TRICIPITI || 0);
-  if (groupId === 'SCHIENA') return (m.SCHIENA || 0) + (m.DORSALI || 0) + (m.TRAPEZIO || 0);
-  if (groupId === 'ADDOME') return (m.ADDOME || 0) + (m.CORE || 0) + (m.ALTRO || 0);
-  if (groupId === 'GAMBE' || groupId === 'GAMBE_POLPACCI') {
-    return (m.GAMBE || 0) + (m.GAMBE_POLPACCI || 0) + (m.QUADRICIPITI || 0) + (m.FEMORALI || 0) + (m.POLPACCI || 0);
+  const id = normalizeMacroMuscleGroup(groupId);
+  if (id === 'SPALLE') return (m.SPALLE || 0) + (m.DELTOIDI || 0);
+  if (id === 'BRACCIA') return (m.BRACCIA || 0) + (m.BICIPITI || 0) + (m.TRICIPITI || 0);
+  if (id === 'DORSO') return (m.DORSO || 0) + (m.SCHIENA || 0) + (m.DORSALI || 0) + (m.TRAPEZIO || 0);
+  if (id === 'ADDOME') return (m.ADDOME || 0) + (m.CORE || 0) + (m.ALTRO || 0);
+  if (id === 'GAMBE') {
+    return (m.GAMBE || 0) + (m.GAMBE_POLPACCI || 0) + (m.QUADRICIPITI || 0) + (m.FEMORALI || 0) + (m.POLPACCI || 0) + (m.GLUTEI || 0);
   }
-  return m[groupId] || 0;
+  if (id === 'PETTO') return (m.PETTO || 0) + (m.CHEST || 0);
+  return m[id] || m[groupId] || 0;
 }
 function statsBodySrc(view) {
   const sex = athleteSexCode();
@@ -17957,14 +17945,14 @@ function statsBodySrc(view) {
 function statsHotspots(view) {
   if (view === 'back') {
     return [
-      { id: 'SCHIENA', top: '11%', left: '34%', width: '32%', height: '12%' },
+      { id: 'DORSO', top: '11%', left: '34%', width: '32%', height: '12%' },
       { id: 'SPALLE', top: '13%', left: '18%', width: '18%', height: '11%' },
       { id: 'SPALLE', top: '13%', left: '64%', width: '18%', height: '11%' },
-      { id: 'SCHIENA', top: '22%', left: '26%', width: '48%', height: '18%' },
+      { id: 'DORSO', top: '22%', left: '26%', width: '48%', height: '18%' },
       { id: 'SPALLE', top: '24%', left: '10%', width: '16%', height: '16%' },
       { id: 'SPALLE', top: '24%', left: '74%', width: '16%', height: '16%' },
-      { id: 'SCHIENA', top: '38%', left: '38%', width: '24%', height: '8%' },
-      { id: 'GLUTEI', top: '45%', left: '30%', width: '40%', height: '12%' },
+      { id: 'DORSO', top: '38%', left: '38%', width: '24%', height: '8%' },
+      { id: 'GAMBE', top: '45%', left: '30%', width: '40%', height: '12%' },
       { id: 'GAMBE', top: '56%', left: '28%', width: '44%', height: '16%' },
       { id: 'GAMBE', top: '72%', left: '32%', width: '36%', height: '14%' }
     ];
@@ -17990,9 +17978,8 @@ function statsMuscleChipColor(id) {
   if (id === 'SPALLE') return '#ff9800';
   if (id === 'BRACCIA') return '#ab47bc';
   if (id === 'ADDOME') return '#66bb6a';
-  if (id === 'SCHIENA') return '#fdd835';
-  if (id === 'GLUTEI') return '#ec407a';
-  if (id === 'GAMBE' || id === 'GAMBE_POLPACCI') return '#7e57c2';
+  if (id === 'DORSO' || id === 'SCHIENA') return '#fdd835';
+  if (id === 'GAMBE' || id === 'GAMBE_POLPACCI' || id === 'GLUTEI') return '#7e57c2';
   return '#78909c';
 }
 function hotspotClass(groupId, muscles) {
@@ -18041,19 +18028,21 @@ function setStatsBodyView(view) {
 }
 function selectStatsMuscle(groupId) {
   if (!store.prefs) store.prefs = {};
-  store.prefs.statsMuscle = groupId || 'GENERALE';
+  const raw = groupId || 'GENERALE';
+  const id = (raw === 'GENERALE' || raw === 'TOTAL') ? raw : normalizeMacroMuscleGroup(raw);
+  store.prefs.statsMuscle = id;
   const sel = $('stats-muscle-group');
-  if (sel) sel.value = (groupId === 'GENERALE') ? 'TOTAL' : groupId;
-  const lab = (STATS_MUSCLE_CHIPS.find(function (g) { return g.id === groupId; }) || {}).label || groupId;
+  if (sel) sel.value = (id === 'GENERALE') ? 'TOTAL' : id;
+  const lab = (STATS_MUSCLE_CHIPS.find(function (g) { return g.id === id; }) || {}).label || id;
   const hint = $('stats-selected-muscle');
   if (hint) hint.textContent = lab;
   document.querySelectorAll('.stats-hotspot').forEach(function (el) {
-    el.classList.toggle('is-on', el.getAttribute('aria-label') === groupId);
+    el.classList.toggle('is-on', el.getAttribute('aria-label') === id);
   });
   document.querySelectorAll('.stats-chip').forEach(function (el) {
-    el.classList.toggle('is-on', el.getAttribute('data-group') === groupId);
+    el.classList.toggle('is-on', el.getAttribute('data-group') === id);
   });
-  drillStatsMuscle(groupId);
+  drillStatsMuscle(id);
 }
 window.setStatsBodyView = setStatsBodyView;
 window.selectStatsMuscle = selectStatsMuscle;
@@ -18180,14 +18169,14 @@ function drillStatsMuscle(group) {
   const subgroups = {
     GENERALE: MACRO_MUSCLE_GROUPS.map(function (g) { return g.label; }),
     TOTAL: MACRO_MUSCLE_GROUPS.map(function (g) { return g.label; }),
-    PETTO: ['Alto', 'Medio', 'Basso'],
+    PETTO: ['Pettorale'],
+    DORSO: ['Dorsali', 'Trapezio', 'Lombari'],
     SCHIENA: ['Dorsali', 'Trapezio', 'Lombari'],
     SPALLE: ['Deltoide anteriore', 'Laterale', 'Posteriore'],
     BRACCIA: ['Bicipiti', 'Tricipiti'],
-    GLUTEI: ['Glutei'],
     ADDOME: ['Addome / Core'],
-    GAMBE: ['Quadricipiti', 'Femorali', 'Polpacci'],
-    GAMBE_POLPACCI: ['Quadricipiti', 'Femorali', 'Polpacci']
+    GAMBE: ['Quadricipiti', 'Femorali', 'Glutei', 'Polpacci'],
+    GLUTEI: ['Quadricipiti', 'Femorali', 'Glutei', 'Polpacci']
   };
   const list = subgroups[group] || [group];
   const exercises = [];
@@ -19559,9 +19548,10 @@ function setIncludeIncompleteWeeks(on) {
 function setStatsMuscleFromAdvanced(id) {
   keepStatsScroll(function () {
     if (!store.prefs) store.prefs = {};
-    store.prefs.statsMuscle = id || 'TOTAL';
+    const raw = id || 'TOTAL';
+    store.prefs.statsMuscle = (raw === 'TOTAL' || raw === 'GENERALE') ? raw : normalizeMacroMuscleGroup(raw);
     const sel = $('stats-muscle-group');
-    if (sel) sel.value = (!id || id === 'TOTAL') ? 'TOTAL' : id;
+    if (sel) sel.value = (!store.prefs.statsMuscle || store.prefs.statsMuscle === 'GENERALE') ? 'TOTAL' : store.prefs.statsMuscle;
     persist();
     fillStatsAdvancedPanel(buildTrainingAnalytics());
   });
@@ -19752,7 +19742,7 @@ function fillStatsAdvancedPanel(analytics) {
     musSelA.style.display = mode === 'muscle' ? 'block' : 'none';
     if (!keepFocusM) {
       const curM = selectedGroup || 'TOTAL';
-      const opts = [{ id: 'TOTAL', label: 'Tutti i gruppi' }].concat(typeof FINE_MUSCLE_GROUPS !== 'undefined' ? FINE_MUSCLE_GROUPS : MACRO_MUSCLE_GROUPS);
+      const opts = [{ id: 'TOTAL', label: 'Tutti i gruppi' }].concat(MACRO_MUSCLE_GROUPS);
       musSelA.innerHTML = opts.map(function (g) {
         return '<option value="' + g.id + '"' + (g.id === curM ? ' selected' : '') + '>' + esc(g.label) + '</option>';
       }).join('');
@@ -20834,7 +20824,7 @@ function persistKnowledgeExtra(entry) {
   const next = list.filter(function (e) { return String(e.name || '').toLowerCase() !== key; });
   next.unshift({
     name: String(entry.name).trim(),
-    muscle: String(entry.muscle || '').trim(),
+    muscle: normalizeMacroMuscleGroup(entry.muscle || ''),
     how: String(entry.how || entry.body || '').trim(),
     mistakes: String(entry.mistakes || '').trim(),
     cue: String(entry.cue || '').trim(),
@@ -20868,7 +20858,7 @@ async function researchExerciseKnowledge(name, muscle) {
   const headers = { 'Content-Type': 'application/json' };
   if (store && store.accountToken) headers.Authorization = 'Bearer ' + store.accountToken;
   const prompt = 'Scheda tecnica breve per l\'esercizio "' + title + '"' + (muscle ? (' (distretto ' + muscle + ')') : '') +
-    '. Rispondi SOLO JSON valido: {"name":"nome canonico","muscle":"PETTO|DORSALI|SCHIENA|QUADRICIPITI|FEMORALI|GLUTEI|SPALLE|BICIPITI|TRICIPITI|ADDOME|POLPACCI|ALTRO","how":"esecuzione in 2-4 frasi","mistakes":"errori comuni","cue":"una cue"}. ' +
+    '. Rispondi SOLO JSON valido: {"name":"nome canonico","muscle":"PETTO|GAMBE|ADDOME|BRACCIA|SPALLE|DORSO","how":"esecuzione in 2-4 frasi","mistakes":"errori comuni","cue":"una cue"}. ' +
     'Italiano tecnico ma chiaro da sala pesi. Usa «colonna in posizione neutra», «non flettere/arrotondare la schiena sotto carico», «fletti le anche», «adduci le scapole». ' +
     'Vietato: calchi dall’inglese (es. «neutro il rachide»), metafore, slang da social, tono letterario. Se NON è un esercizio di allenamento reale, {"unknown":true}. Niente markdown.';
   const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
@@ -21264,8 +21254,8 @@ function openAddEncyclopediaExercise(prefillName, draft) {
     box.onclick = function (ev) { if (ev.target === box) box.style.display = 'none'; };
     document.body.appendChild(box);
   }
-  const muscles = ['PETTO','DORSALI','SCHIENA','QUADRICIPITI','FEMORALI','GLUTEI','SPALLE','BICIPITI','TRICIPITI','ADDOME','POLPACCI','ALTRO'];
-  const muscleVal = String(draft.muscle || 'ALTRO').toUpperCase();
+  const muscles = MACRO_MUSCLE_GROUPS.map(function (g) { return g.id; });
+  const muscleVal = normalizeMacroMuscleGroup(draft.muscle || 'PETTO');
   const hasDraft = !!(draft.how || draft.mistakes || draft.cue);
   box.innerHTML = '<div style="width:100%;max-width:520px;max-height:90vh;overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px;padding:16px;box-sizing:border-box;" onclick="event.stopPropagation()">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;">ENCICLOPEDIA</div>' +
@@ -21273,7 +21263,10 @@ function openAddEncyclopediaExercise(prefillName, draft) {
     '<label style="font-size:10px;color:#aaa;">Nome</label>' +
     '<input id="ek-name" class="input" style="width:100%;margin:4px 0 10px;" value="' + esc(prefillName || '') + '">' +
     '<label style="font-size:10px;color:#aaa;">Distretto</label>' +
-    '<select id="ek-muscle" class="input" style="width:100%;margin:4px 0 10px;">' + muscles.map(function (m) { return '<option value="' + m + '"' + (m === muscleVal ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select>' +
+    '<select id="ek-muscle" class="input" style="width:100%;margin:4px 0 10px;">' + muscles.map(function (m) {
+      const lab = (MACRO_MUSCLE_GROUPS.find(function (g) { return g.id === m; }) || {}).label || m;
+      return '<option value="' + m + '"' + (m === muscleVal ? ' selected' : '') + '>' + lab + '</option>';
+    }).join('') + '</select>' +
     '<p style="font-size:12px;color:#ccc;line-height:1.4;">Vuoi scrivere tu esecuzione, errori e cue, oppure far cercare in automatico?</p>' +
     '<div id="ek-manual" style="display:' + (hasDraft ? 'block' : 'none') + ';">' +
     '<label style="font-size:10px;color:#aaa;">Esecuzione</label><textarea id="ek-how" rows="3" class="input" style="width:100%;margin:4px 0 8px;">' + esc(draft.how || '') + '</textarea>' +
