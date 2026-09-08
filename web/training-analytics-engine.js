@@ -238,9 +238,15 @@
     opts = opts || {};
     const matchMuscle = opts.matchMuscle || function (name, movement, groups, muscleId, eK) {
       if (!muscleId || muscleId === 'TOTAL' || muscleId === 'GENERALE' || muscleId === 'ALL') return true;
-      const stored = storedMuscleFrom(store, name, eK);
-      const c = muscleContributionForExercise(name, { muscle_groups: groups, movement: movement, storedMuscle: stored });
-      return roleForMuscle(c, muscleId) != null;
+      const rec = storedMuscleRecord(store, name, eK);
+      const c = muscleContributionForExercise(name, {
+        muscle_groups: groups,
+        movement: movement,
+        storedMuscle: rec && rec.muscle,
+        storedSource: rec && rec.source
+      });
+      const id = normalizeMuscleId(muscleId);
+      return (c.primary || [])[0] === id;
     };
     const muscle = opts.muscle || 'TOTAL';
     const exerciseFilter = String(opts.exercise || '').trim().toLowerCase();
@@ -284,8 +290,10 @@
       const estRir = effort ? effort.rir : null;
       const e1 = epley1rm(loadRaw, reps);
       const dateMs = sessionDateMs(store, row.week, row.day);
-      const storedMuscle = storedMuscleFrom(store, name, eK);
-      const contribMeta = storedMuscle ? Object.assign({}, meta, { storedMuscle: storedMuscle }) : meta;
+      const storedRec = storedMuscleRecord(store, name, eK);
+      const contribMeta = storedRec
+        ? Object.assign({}, meta, { storedMuscle: storedRec.muscle, storedSource: storedRec.source })
+        : meta;
       out.push({
         week: row.week,
         day: row.day,
@@ -752,8 +760,8 @@
   const MUSCLE_HINTS = [
     { re: /calf raise|seated calf|standing calf|donkey calf|polpac/i, primary: ['GAMBE'] },
     { re: /hip thrust|glute bridge|glute kickback|abduct|adductor|glutei|\bglute\b/i, primary: ['GAMBE'] },
-    { re: /stacco rumeno|romanian|rdl|good morning|leg curl|femoral|nordic/i, primary: ['GAMBE'] },
-    { re: /squat|hack squat|leg press|pressa 45|pressa|affondi|lunge|leg extension|bulgarian|step.?up|sissy|pistol squat/i, primary: ['GAMBE'] },
+    { re: /stacco rumeno|romanian|\brdl\b|good morning|\bleg curl\b|femoral|nordic/i, primary: ['GAMBE'] },
+    { re: /squat|hack squat|leg press|pressa 45|\bpressa\b|affondi|lunge|leg extension|bulgarian|step.?up|sissy|pistol squat/i, primary: ['GAMBE'] },
     { re: /\bstacco\b|deadlift/i, primary: ['GAMBE'], secondary: ['DORSO'] },
     { re: /panca stretta|close.?grip/i, primary: ['BRACCIA'], secondary: ['PETTO'] },
     { re: /panca piana|panca inclin|panca declin|bench press|chest press|croci|cable fly|pec deck|pec fly|push.?up|piegament|flessioni|chest fly|svend|spoto|floor press|guillotine|multi.?bench|leverage.*(bench|panca)|distensioni.*(petto|panca)|dumbbell press|spinte.*(petto|panca|manubri)/i, primary: ['PETTO'], secondary: ['BRACCIA', 'SPALLE'] },
@@ -766,8 +774,22 @@
     { re: /curl|bicip|hammer curl|preacher|spider curl|bayesian|concentration/i, primary: ['BRACCIA'] },
     { re: /french|skull|pushdown|tricip|tricep|estensioni.*(tricip|gomito)|kickback/i, primary: ['BRACCIA'] },
     { re: /\bdips?\b|parallele/i, primary: ['PETTO'], secondary: ['BRACCIA'] },
-    { re: /crunch|plancia|plank|ab wheel|ab roller|addom|sit.?up|leg raise|knee raise|hollow|situp|woodchop|wood chop|pallof|\babs\b|\bcore\b|vacuum|bicycle|alzate gambe|sollevamento gambe|ruota addom|dead bug|bird dog|russian twist|hanging/i, primary: ['ADDOME'] }
+    { re: /crunch|plancia|plank|ab wheel|ab roller|addom|sit.?up|leg raise|knee raise|hollow|situp|woodchop|wood chop|pallof|\babs\b|\bcore\b|vacuum|bicycle|alzate gambe|sollevamento gambe|ruota addom|dead bug|bird dog|russian twist|hanging|macchina addom|torso (machine|rotation)|roman chair|air bike|heel tap|v[\s-]?up|jackknife/i, primary: ['ADDOME'] }
   ];
+  const NAME_MUSCLE_LOCKS = [
+    { re: /leg\s*curl|femoral|hamstring/i, id: 'GAMBE' },
+    { re: /dorsey|low row/i, id: 'DORSO' },
+    { re: /crunch|plancia|\bplank\b|addominal|\babs\b|sit[\s-]?up|leg raise|knee raise|ab wheel|ab roller|pallof|vacuum|hollow|dead bug|bird dog|woodchop|russian twist|alzate gambe|sollevamento gambe|macchina addom|torso (machine|rotation)|roman chair|air bike/i, id: 'ADDOME' },
+    { re: /curl|bicip/i, id: 'BRACCIA' }
+  ];
+
+  function nameLockedMuscle(name, movement) {
+    const text = String(name || '') + ' ' + String(movement || '');
+    for (let i = 0; i < NAME_MUSCLE_LOCKS.length; i++) {
+      if (NAME_MUSCLE_LOCKS[i].re.test(text)) return NAME_MUSCLE_LOCKS[i].id;
+    }
+    return null;
+  }
   const FINE_TO_MACRO = {
     PETTO: 'PETTO', CHEST: 'PETTO',
     SCHIENA: 'DORSO', DORSALI: 'DORSO', DORSO: 'DORSO', BACK: 'DORSO',
@@ -788,13 +810,21 @@
     return FINE_TO_MACRO[g] || g;
   }
 
-  function storedMuscleFrom(store, name, eK) {
-    if (store && eK && store.exMuscle && store.exMuscle[eK]) return store.exMuscle[eK];
+  function storedMuscleRecord(store, name, eK) {
+    if (store && eK && store.exMuscle && store.exMuscle[eK]) {
+      return { muscle: store.exMuscle[eK], source: 'slot' };
+    }
     const map = store && store.exMuscleByName;
     if (!map || typeof map !== 'object') return null;
     const hit = map[foldName(name)] || map[String(name || '').toLowerCase()];
     if (!hit) return null;
-    return typeof hit === 'string' ? hit : (hit.muscle || hit.id || null);
+    if (typeof hit === 'string') return { muscle: hit, source: 'triangulated' };
+    return { muscle: hit.muscle || hit.id || null, source: hit.source || 'triangulated' };
+  }
+
+  function storedMuscleFrom(store, name, eK) {
+    const rec = storedMuscleRecord(store, name, eK);
+    return rec ? rec.muscle : null;
   }
 
   function muscleContributionForExercise(name, meta) {
@@ -808,17 +838,30 @@
       seen[n] = true;
       arr.push(n);
     }
+    const storedSource = String((meta && meta.storedSource) || '').toLowerCase();
+    const stored = meta && (meta.storedMuscle || meta.muscle_group || meta.muscleGroup);
+    const locked = nameLockedMuscle(name, meta && meta.movement);
+    if (storedSource === 'manual' && stored) {
+      add(primary, stored);
+    } else if (locked) {
+      add(primary, locked);
+    } else if (stored) {
+      add(primary, stored);
+    }
     const explicit = (meta && (meta.muscle_groups || meta.muscleGroups)) || [];
-    if (explicit.length) {
-      add(primary, explicit[0]);
+    if (explicit.length && !locked) {
+      if (!primary.length) add(primary, explicit[0]);
+      else add(secondary, explicit[0]);
       explicit.slice(1).forEach(function (g) { add(secondary, g); });
     }
-    const stored = meta && (meta.storedMuscle || meta.muscle_group || meta.muscleGroup);
-    if (stored) add(primary, stored);
     const text = String(name || '') + ' ' + String((meta && meta.movement) || '');
     MUSCLE_HINTS.forEach(function (h) {
       if (!h.re.test(text)) return;
-      (h.primary || []).forEach(function (g) { add(primary, g); });
+      (h.primary || []).forEach(function (g) {
+        if (locked && normalizeMuscleId(g) !== locked) return;
+        if (primary.length) add(secondary, g);
+        else add(primary, g);
+      });
       (h.secondary || []).forEach(function (g) { add(secondary, g); });
       (h.indirect || []).forEach(function (g) { add(indirect, g); });
     });
@@ -2292,8 +2335,10 @@
     recov.scope = 'recent';
     recov.labelIt = 'Recupero recente';
     const locEk = 'w' + week + '_d' + day + '_e' + exIdx;
+    const storedRec = storedMuscleRecord(store, pack.name, locEk);
     const contrib = muscleContributionForExercise(pack.name, Object.assign({}, exerciseMeta(data, store, week, day, exIdx), {
-      storedMuscle: storedMuscleFrom(store, pack.name, locEk)
+      storedMuscle: storedRec && storedRec.muscle,
+      storedSource: storedRec && storedRec.source
     }));
     const primary = (contrib.primary && contrib.primary[0]) || null;
     let lm = landmarksFor(store, primary || 'GENERALE', null, { scale: primary ? 'muscle' : 'global' });
@@ -3042,6 +3087,8 @@
     isWeekComplete: isWeekComplete,
     muscleContributionForExercise: muscleContributionForExercise,
     storedMuscleFrom: storedMuscleFrom,
+    storedMuscleRecord: storedMuscleRecord,
+    nameLockedMuscle: nameLockedMuscle,
     buildByMuscle: buildByMuscle,
     listProgramExercises: listProgramExercises,
     labelIt: labelIt,
