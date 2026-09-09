@@ -227,6 +227,32 @@ function twoExWeeks(a, b) {
 }
 
 {
+  const weeksChanged = [1, 2, 3, 4].map(function (n) {
+    return { sessions: [{}, {}, {}, { exercises: [{ name: n >= 3 ? "Hack squat" : "Leg Press 45°" }] }] };
+  });
+  const data = {};
+  setLoads(data, 1, 3, 0, [190, 220, 240], { reps: 15, rir: 4, done: true });
+  setLoads(data, 2, 3, 0, [192.5, 222.5, 242.5], { reps: 15, rir: 2, done: true });
+  setLoads(data, 3, 3, 0, [80, 80, 80], { reps: 10, rir: 2, done: true });
+  const ctx3 = makeCtx({
+    currentWeek: 3,
+    currentDay: 3,
+    store: { data: data, logs: [{ week: 1, day: 3 }, { week: 2, day: 3 }], subs: {} },
+    DATA: { weeks: weeksChanged }
+  });
+  assert.equal(ctx3.collectPrevWeekSetLogs(0, { name: "Hack squat" }).length, 0);
+  const ctx4 = makeCtx({
+    currentWeek: 4,
+    currentDay: 3,
+    store: { data: data, logs: [{ week: 1, day: 3 }, { week: 2, day: 3 }, { week: 3, day: 3 }], subs: {} },
+    DATA: { weeks: weeksChanged }
+  });
+  const prev = ctx4.collectPrevWeekSetLogs(0, { name: "Hack squat" });
+  assert.equal(JSON.stringify(prev.map(function (s) { return Number(s.load); })), JSON.stringify([80, 80, 80]));
+  console.log("OK   after a slot change, sett. scorsa starts from the new exercise");
+}
+
+{
   const data = {};
   setLoads(data, 1, 3, 0, [80, 75, 75], { reps: 8, rir: 2, done: true });
   const weeksMoved = [
@@ -240,28 +266,30 @@ function twoExWeeks(a, b) {
     DATA: { weeks: weeksMoved }
   });
   const prev = ctx.collectPrevWeekSetLogs(1, { name: "Multi bench leverage" });
-  assert.equal(JSON.stringify(prev.map(function (s) { return Number(s.load); })), JSON.stringify([80, 75, 75]));
-  assert.equal(ctx.effectiveSetLoad(1, 1, { name: "Multi bench leverage" }), 82.5);
-  assert.equal(ctx.effectiveSetLoad(1, 2, { name: "Multi bench leverage" }), 77.5);
-  console.log("OK   same exercise is followed across slots");
+  assert.equal(prev.length, 0);
+  assert.equal(ctx.effectiveSetLoad(1, 1, { name: "Multi bench leverage" }), "");
+  console.log("OK   swapped slot does not inherit another slot's kg");
 }
 
 {
   const data = {};
-  setLoads(data, 1, 0, 0, [80, 75], { reps: 8, rir: 2, done: true });
+  setLoads(data, 1, 0, 0, [190, 220, 240], { reps: 15, rir: 4, done: true });
+  setLoads(data, 1, 3, 0, [80, 75], { reps: 8, rir: 2, done: true });
+  setLoads(data, 2, 3, 0, [82.5, 77.5], { reps: 8, rir: 2, done: true });
   const weeksOtherDay = [
-    { sessions: [{ exercises: [{ name: "Multi bench leverage" }] }, {}, {}, { exercises: [{ name: "Spinte con manubri" }] }] },
-    { sessions: [{ exercises: [{ name: "Spinte con manubri" }] }, {}, {}, { exercises: [{ name: "Multi bench leverage" }] }] }
+    { sessions: [{ exercises: [{ name: "Leg Press 45°" }] }, {}, {}, { exercises: [{ name: "Multi bench leverage" }] }] },
+    { sessions: [{ exercises: [{ name: "Leg Press 45°" }] }, {}, {}, { exercises: [{ name: "Multi bench leverage" }] }] },
+    { sessions: [{ exercises: [{ name: "Leg Press 45°" }] }, {}, {}, { exercises: [{ name: "Multi bench leverage" }] }] }
   ];
   const ctx = makeCtx({
-    currentWeek: 2,
+    currentWeek: 3,
     currentDay: 3,
-    store: { data: data, logs: [{ week: 1, day: 0 }], subs: {} },
+    store: { data: data, logs: [{ week: 1, day: 0 }, { week: 1, day: 3 }, { week: 2, day: 3 }], subs: {} },
     DATA: { weeks: weeksOtherDay }
   });
   const prev = ctx.collectPrevWeekSetLogs(0, { name: "Multi bench leverage" });
-  assert.equal(JSON.stringify(prev.map(function (s) { return Number(s.load); })), JSON.stringify([80, 75]));
-  console.log("OK   same exercise is followed across days");
+  assert.equal(JSON.stringify(prev.map(function (s) { return Number(s.load); })), JSON.stringify([82.5, 77.5]));
+  console.log("OK   day 4 uses last week's day 4, not another day's lift");
 }
 
 console.log("OK   per-set load prefill");

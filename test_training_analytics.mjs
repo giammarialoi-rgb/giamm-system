@@ -713,11 +713,42 @@ const movedStore = { data: moved, prefs: { intensityType: "RIR", duration: 2 }, 
 const movedSnap = TAE.exerciseAnalyticsSnapshot(movedStore, movedProg, { week: 2, day: 0, exIdx: 1, set: 1 });
 const movedReco = TAE.recommendNext(movedStore, movedProg, { week: 2, day: 0, exIdx: 1, set: 1 }, movedSnap);
 assert.ok(TAE.sameExerciseName(movedSnap.name, "Multi bench leverage"));
-assert.equal(movedSnap.lastLoad, 80, "same exercise is found in another slot");
-assert.notEqual(movedReco.suggestedLoad, 30);
-assert.equal(movedReco.suggestedLoad, 80);
+assert.equal(movedSnap.previousExposureId, null, "new slot occupant does not inherit another slot");
+assert.equal(movedSnap.performanceDirection, "insufficient");
+assert.equal(movedReco.action, "insufficient");
 
-assert.ok(html.includes("clearCopiedLoadsAfterSubstitution") && html.includes("findNamedExerciseInWeek"), "substitution clears copied slot loads and matches by name");
+assert.ok(html.includes("clearCopiedLoadsAfterSubstitution") && html.includes("collectPrevWeekSetLogs"), "substitution clears copied slot loads; last week is same day/slot");
+
+{
+  const broken = {};
+  writeSets(broken, 1, 0, 0, [[100, 8, 1]]);
+  writeSets(broken, 2, 0, 0, [[102.5, 8, 1]]);
+  writeSets(broken, 3, 0, 0, [[60, 10, 2]]);
+  writeSets(broken, 4, 0, 0, [[62.5, 10, 2]]);
+  const brokenProg = {
+    weeks: [
+      { sessions: [{ exercises: [{ name: "Panca piana" }] }] },
+      { sessions: [{ exercises: [{ name: "Panca piana" }] }] },
+      { sessions: [{ exercises: [{ name: "Hack squat" }] }] },
+      { sessions: [{ exercises: [{ name: "Hack squat" }] }] }
+    ]
+  };
+  const brokenStore = {
+    data: broken,
+    prefs: { intensityType: "RIR", duration: 4 },
+    logs: [{ week: 1, day: 0 }, { week: 2, day: 0 }, { week: 3, day: 0 }, { week: 4, day: 0 }]
+  };
+  assert.equal(TAE.slotLineageStartWeek(brokenStore, brokenProg, 3, 0, 0), 3);
+  assert.equal(TAE.slotLineageStartWeek(brokenStore, brokenProg, 4, 0, 0), 3);
+  const w3 = TAE.exerciseAnalyticsSnapshot(brokenStore, brokenProg, { week: 3, day: 0, exIdx: 0, set: 1 });
+  assert.equal(w3.previousExposureId, null, "first week after a slot change has no previous");
+  assert.equal(w3.performanceDirection, "insufficient");
+  const w4 = TAE.exerciseAnalyticsSnapshot(brokenStore, brokenProg, { week: 4, day: 0, exIdx: 0, set: 1 });
+  assert.equal(w4.previousExposureId, "w3_d0");
+  assert.equal(w4.currentExposureId, "w4_d0");
+  assert.equal(w4.previousExposure.topLoad, 60);
+  assert.ok(w4.exposureSequence.every(function (e) { return e.week >= 3; }));
+}
 
 assert.ok(TAE.buildExerciseAnalyticsSnapshot && TAE.isRecommendationEligible && TAE.debugExerciseTrace && TAE.assertComparableMetric);
 
@@ -878,7 +909,7 @@ assert.ok(html.includes("id: 'DORSO'") && html.includes("label: 'Dorso'") && !ht
 
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
 assert.ok(sw.includes("training-analytics-engine.js"), "SW precaches the analytics engine");
-assert.ok(sw.includes("analytics17"), "SW cache bumped after last-week load advice fix");
+assert.ok(sw.includes("analytics18"), "SW cache bumped after same-day last-week reference");
 assert.ok(fs.existsSync(path.join(root, "TRAINING_ANALYTICS_METHODOLOGY.md")), "methodology doc exists");
 
 console.log("OK   training analytics engine formulas + zoom axis + intelligence");
