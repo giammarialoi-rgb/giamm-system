@@ -2042,6 +2042,7 @@ function ensureBusyOverlay() {
   return el;
 }
 function showBusyOverlay(label) {
+  if (typeof isClientTutorialVisible === 'function' && isClientTutorialVisible()) return;
   var el = ensureBusyOverlay();
   var lab = document.getElementById('nurvan-busy-label');
   if (lab) lab.textContent = label || 'Caricamento…';
@@ -5451,7 +5452,8 @@ async function attachNativeDocToChat(docData) {
     return;
   }
   if (dataUrl.length > 900000) throw new Error('File troppo grande per la chat (max ~650 KB)');
-  const att = { kind: 'file', name: name, mime: mime, data: dataUrl };
+  const fileMime = (/\.pdf$/i.test(name) || /pdf/i.test(mime)) ? 'application/pdf' : mime;
+  const att = { kind: 'file', name: name, mime: fileMime, data: (fileMime === 'application/pdf' && !/^data:application\/pdf/i.test(dataUrl)) ? dataUrl.replace(/^data:[^;]+/, 'data:application/pdf') : dataUrl };
   if (typeof setPendingAttachment === 'function') setPendingAttachment(att);
   else window.__cpPendingAttach = att;
 }
@@ -8797,6 +8799,12 @@ function persist() {
           supplementation: bak.supplementation,
           therapy: bak.therapy,
           exams: bak.exams,
+          data: bak.data || {},
+          logs: bak.logs || [],
+          customSets: bak.customSets || {},
+          subs: bak.subs || {},
+          skips: bak.skips || {},
+          intelTargets: bak.intelTargets || {},
           profile: (bak.profile != null && typeof bak.profile === 'object') ? bak.profile : (sanitized.profile || {}),
           coachAssigning: store.coachAssigning || null,
           coachViewingClient: !!store.coachViewingClient,
@@ -8820,16 +8828,19 @@ function persist() {
       showToast('Memoria locale piena: i programmi restano in IndexedDB. Esegui pulizia documenti o Hard Reset se necessario.', 'danger');
     }
     try {
+      const bak = (store.coachAssigning || store.coachViewingClient)
+        ? (window.__cpAssignBackup || window.__cpCoachViewBackup)
+        : null;
       const sanitizedStore = {
         prefs: store.prefs || {},
         bw: store.bw || {},
-        customSets: store.customSets || {},
-        data: store.data || {},
-        logs: Array.isArray(store.logs) ? store.logs.slice(-40) : [],
+        customSets: bak ? (bak.customSets || {}) : (store.customSets || {}),
+        data: bak ? (bak.data || {}) : (store.data || {}),
+        logs: Array.isArray(bak && bak.logs ? bak.logs : store.logs) ? (bak && bak.logs ? bak.logs : store.logs).slice(-40) : [],
         accountToken: store.stayLoggedIn === false ? null : (store.accountToken || null),
         accountUser: store.accountUser || null,
-        activeProgramId: store.activeProgramId || null,
-        profile: store.profile || {},
+        activeProgramId: bak && bak.activeProgramId != null ? bak.activeProgramId : (store.activeProgramId || null),
+        profile: (bak && bak.profile) || store.profile || {},
         health: store.health || null,
         bodyChecks: Array.isArray(store.bodyChecks) ? store.bodyChecks.slice(-12) : [],
         role: store.role || null,
@@ -8851,6 +8862,7 @@ function persist() {
 
 let __workoutIdbSyncTimer = null;
 function scheduleWorkoutLogsIdbSync() {
+  if (store && (store.coachAssigning || store.coachViewingClient)) return;
   if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveWorkoutLogsSnapshot) return;
   clearTimeout(__workoutIdbSyncTimer);
   __workoutIdbSyncTimer = setTimeout(function () {
@@ -9112,6 +9124,15 @@ function closeTopUiOverlay() {
   const stack = window.__gsOverlayStack || [];
   const id = stack[stack.length - 1];
   if (!id) return false;
+  if (id === 'cp-tutorial') {
+    if (typeof closeClientTutorial === 'function') closeClientTutorial();
+    else {
+      const el = document.getElementById('cp-tutorial');
+      if (el) el.style.display = 'none';
+      popUiOverlay('cp-tutorial');
+    }
+    return true;
+  }
   if (id === 'workout-complete-overlay') {
     closeWorkoutCompleteOverlay();
     return true;
@@ -9246,6 +9267,11 @@ function render() {
   else if (currentView === 'knowledge') renderTrainingKnowledge(c);
   else renderHome(c);
   applyChromeI18n();
+  try {
+    if (typeof isClientTutorialVisible === 'function' && isClientTutorialVisible() && typeof drawClientTutorial === 'function') {
+      drawClientTutorial();
+    }
+  } catch (_) {}
 }
 
 
@@ -14776,6 +14802,13 @@ function pinTrainingDay(week, day) {
     store.trainingWeek = window.__pinnedTraining.week;
     store.trainingDay = window.__pinnedTraining.day;
   } catch (_) {}
+  try {
+    if (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox() && typeof DATA !== 'undefined' && DATA) {
+      if (!DATA.id && store.activeProgramId) DATA.id = store.activeProgramId;
+      store.activeProgram = DATA;
+      store.activeProgramId = DATA.id || store.activeProgramId;
+    }
+  } catch (_) {}
 }
 function shouldStayOnPinnedTraining() {
   if (window.__editFinalizedKey) return true;
@@ -14786,8 +14819,13 @@ window.pinTrainingDay = pinTrainingDay;
 window.shouldStayOnPinnedTraining = shouldStayOnPinnedTraining;
 function renderTraining(c){
   console.debug('WORKOUT_OPEN', { week: currentWeek, session: currentDay });
-  try {
-    if (shouldStayOnPinnedTraining()) {
+    try {
+    if (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox()) {
+      if (window.__pinnedTraining) {
+        currentWeek = Number(window.__pinnedTraining.week) || currentWeek || 1;
+        currentDay = Number(window.__pinnedTraining.day) || 0;
+      }
+    } else if (shouldStayOnPinnedTraining()) {
       const p = window.__pinnedTraining;
       if (p) {
         currentWeek = Number(p.week) || currentWeek;
@@ -15091,6 +15129,19 @@ function renderTraining(c){
     }
   } catch(error) {
     console.error('WORKOUT_RENDER_ERROR', error);
+    const hasWeeks = typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length;
+    if (hasWeeks) {
+      c.innerHTML = `
+      <div class="card" style="text-align:center;padding:28px 16px;">
+        <div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:6px;">ALLENAMENTO</div>
+        <h2 style="color:#fff;font-size:18px;margin:0 0 8px;">Giorno non disponibile</h2>
+        <p style="color:#888;font-size:12px;margin:0 0 16px;">La scheda c’è: scegli un altro giorno o torna alla settimana 1. Il programma non viene ricreato.</p>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button class="btn btn-primary" style="width:100%;" onclick="pinTrainingDay(1,0);currentWeek=1;currentDay=0;render()">TORNA AL GIORNO 1</button>
+        </div>
+      </div>`;
+      return;
+    }
     c.innerHTML = `
       <div class="card" style="text-align:center;padding:28px 16px;">
         <div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:6px;">ALLENAMENTO</div>

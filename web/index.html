@@ -35303,6 +35303,7 @@ function ensureBusyOverlay() {
   return el;
 }
 function showBusyOverlay(label) {
+  if (typeof isClientTutorialVisible === 'function' && isClientTutorialVisible()) return;
   var el = ensureBusyOverlay();
   var lab = document.getElementById('nurvan-busy-label');
   if (lab) lab.textContent = label || 'Caricamento…';
@@ -38712,7 +38713,8 @@ async function attachNativeDocToChat(docData) {
     return;
   }
   if (dataUrl.length > 900000) throw new Error('File troppo grande per la chat (max ~650 KB)');
-  const att = { kind: 'file', name: name, mime: mime, data: dataUrl };
+  const fileMime = (/\.pdf$/i.test(name) || /pdf/i.test(mime)) ? 'application/pdf' : mime;
+  const att = { kind: 'file', name: name, mime: fileMime, data: (fileMime === 'application/pdf' && !/^data:application\/pdf/i.test(dataUrl)) ? dataUrl.replace(/^data:[^;]+/, 'data:application/pdf') : dataUrl };
   if (typeof setPendingAttachment === 'function') setPendingAttachment(att);
   else window.__cpPendingAttach = att;
 }
@@ -42058,6 +42060,12 @@ function persist() {
           supplementation: bak.supplementation,
           therapy: bak.therapy,
           exams: bak.exams,
+          data: bak.data || {},
+          logs: bak.logs || [],
+          customSets: bak.customSets || {},
+          subs: bak.subs || {},
+          skips: bak.skips || {},
+          intelTargets: bak.intelTargets || {},
           profile: (bak.profile != null && typeof bak.profile === 'object') ? bak.profile : (sanitized.profile || {}),
           coachAssigning: store.coachAssigning || null,
           coachViewingClient: !!store.coachViewingClient,
@@ -42081,16 +42089,19 @@ function persist() {
       showToast('Memoria locale piena: i programmi restano in IndexedDB. Esegui pulizia documenti o Hard Reset se necessario.', 'danger');
     }
     try {
+      const bak = (store.coachAssigning || store.coachViewingClient)
+        ? (window.__cpAssignBackup || window.__cpCoachViewBackup)
+        : null;
       const sanitizedStore = {
         prefs: store.prefs || {},
         bw: store.bw || {},
-        customSets: store.customSets || {},
-        data: store.data || {},
-        logs: Array.isArray(store.logs) ? store.logs.slice(-40) : [],
+        customSets: bak ? (bak.customSets || {}) : (store.customSets || {}),
+        data: bak ? (bak.data || {}) : (store.data || {}),
+        logs: Array.isArray(bak && bak.logs ? bak.logs : store.logs) ? (bak && bak.logs ? bak.logs : store.logs).slice(-40) : [],
         accountToken: store.stayLoggedIn === false ? null : (store.accountToken || null),
         accountUser: store.accountUser || null,
-        activeProgramId: store.activeProgramId || null,
-        profile: store.profile || {},
+        activeProgramId: bak && bak.activeProgramId != null ? bak.activeProgramId : (store.activeProgramId || null),
+        profile: (bak && bak.profile) || store.profile || {},
         health: store.health || null,
         bodyChecks: Array.isArray(store.bodyChecks) ? store.bodyChecks.slice(-12) : [],
         role: store.role || null,
@@ -42112,6 +42123,7 @@ function persist() {
 
 let __workoutIdbSyncTimer = null;
 function scheduleWorkoutLogsIdbSync() {
+  if (store && (store.coachAssigning || store.coachViewingClient)) return;
   if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveWorkoutLogsSnapshot) return;
   clearTimeout(__workoutIdbSyncTimer);
   __workoutIdbSyncTimer = setTimeout(function () {
@@ -42373,6 +42385,15 @@ function closeTopUiOverlay() {
   const stack = window.__gsOverlayStack || [];
   const id = stack[stack.length - 1];
   if (!id) return false;
+  if (id === 'cp-tutorial') {
+    if (typeof closeClientTutorial === 'function') closeClientTutorial();
+    else {
+      const el = document.getElementById('cp-tutorial');
+      if (el) el.style.display = 'none';
+      popUiOverlay('cp-tutorial');
+    }
+    return true;
+  }
   if (id === 'workout-complete-overlay') {
     closeWorkoutCompleteOverlay();
     return true;
@@ -42507,6 +42528,11 @@ function render() {
   else if (currentView === 'knowledge') renderTrainingKnowledge(c);
   else renderHome(c);
   applyChromeI18n();
+  try {
+    if (typeof isClientTutorialVisible === 'function' && isClientTutorialVisible() && typeof drawClientTutorial === 'function') {
+      drawClientTutorial();
+    }
+  } catch (_) {}
 }
 
 
@@ -48037,6 +48063,13 @@ function pinTrainingDay(week, day) {
     store.trainingWeek = window.__pinnedTraining.week;
     store.trainingDay = window.__pinnedTraining.day;
   } catch (_) {}
+  try {
+    if (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox() && typeof DATA !== 'undefined' && DATA) {
+      if (!DATA.id && store.activeProgramId) DATA.id = store.activeProgramId;
+      store.activeProgram = DATA;
+      store.activeProgramId = DATA.id || store.activeProgramId;
+    }
+  } catch (_) {}
 }
 function shouldStayOnPinnedTraining() {
   if (window.__editFinalizedKey) return true;
@@ -48047,8 +48080,13 @@ window.pinTrainingDay = pinTrainingDay;
 window.shouldStayOnPinnedTraining = shouldStayOnPinnedTraining;
 function renderTraining(c){
   console.debug('WORKOUT_OPEN', { week: currentWeek, session: currentDay });
-  try {
-    if (shouldStayOnPinnedTraining()) {
+    try {
+    if (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox()) {
+      if (window.__pinnedTraining) {
+        currentWeek = Number(window.__pinnedTraining.week) || currentWeek || 1;
+        currentDay = Number(window.__pinnedTraining.day) || 0;
+      }
+    } else if (shouldStayOnPinnedTraining()) {
       const p = window.__pinnedTraining;
       if (p) {
         currentWeek = Number(p.week) || currentWeek;
@@ -48352,6 +48390,19 @@ function renderTraining(c){
     }
   } catch(error) {
     console.error('WORKOUT_RENDER_ERROR', error);
+    const hasWeeks = typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length;
+    if (hasWeeks) {
+      c.innerHTML = `
+      <div class="card" style="text-align:center;padding:28px 16px;">
+        <div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:6px;">ALLENAMENTO</div>
+        <h2 style="color:#fff;font-size:18px;margin:0 0 8px;">Giorno non disponibile</h2>
+        <p style="color:#888;font-size:12px;margin:0 0 16px;">La scheda c’è: scegli un altro giorno o torna alla settimana 1. Il programma non viene ricreato.</p>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button class="btn btn-primary" style="width:100%;" onclick="pinTrainingDay(1,0);currentWeek=1;currentDay=0;render()">TORNA AL GIORNO 1</button>
+        </div>
+      </div>`;
+      return;
+    }
     c.innerHTML = `
       <div class="card" style="text-align:center;padding:28px 16px;">
         <div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:6px;">ALLENAMENTO</div>
@@ -56765,7 +56816,8 @@ function applyClientChrome() {
       else coachBtn.textContent = 'COACH';
       coachBtn.onclick = function () {
         if (coachSession) exitCoachSession();
-        else openPersonalCoachAi();
+        else if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) enterCoachSession();
+        else openCoachOrUnlock();
       };
     }
     ensureCoachHeaderControls(coachSession);
@@ -56934,14 +56986,13 @@ function coachStaySectionForSwitch() {
   const view = (typeof currentView !== 'undefined') ? String(currentView || '') : '';
   if (view === 'coachChat' || view === 'clientChat') return { kind: 'chat' };
   const domains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, calendar: 1, athlete: 1 };
-  if (domains[view] && store && store.coachViewingClient) return { kind: 'domain', domain: view };
+  if (domains[view]) return { kind: 'domain', domain: view };
   if (view === 'coachClient') return { kind: 'scheda' };
   if (view === 'coachHub' || view === 'coachLibrary' || view === 'coachCheckIns' || view === 'coachCalendar'
     || view === 'coachInbox' || view === 'coachActionCenter' || view === 'coachToday' || view === 'coachAgent'
     || view === 'coachMealAi' || view === 'coachFormReview' || view === 'coachAgentAudit') {
     return { kind: 'stay', view: view };
   }
-  if (store && store.coachViewingClient && domains[view]) return { kind: 'domain', domain: view };
   return { kind: 'scheda' };
 }
 
@@ -56966,7 +57017,10 @@ async function switchCoachClientFromHeader(id) {
     return;
   }
   if (stay.kind === 'domain') {
-    await leaveCoachClientView(true);
+    window.__pinnedTraining = null;
+    window.__editFinalizedKey = '';
+    if (typeof currentWeek !== 'undefined') currentWeek = 1;
+    if (typeof currentDay !== 'undefined') currentDay = 0;
     primeCoachWorkspaceForClient(id);
     ensureCoachSessionBanner();
     ensureCoachHeaderControls();
@@ -57113,7 +57167,7 @@ function ensurePracticeStyle() {
   }
   s.textContent = [
     '.cp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10110;display:none;align-items:center;justify-content:center;padding:16px;}',
-    '#cp-tutorial.cp-overlay{z-index:10155;}',
+    '#cp-tutorial.cp-overlay{z-index:100010;pointer-events:auto;}',
     '#cp-modal.cp-overlay{z-index:10120;}',
     '.cp-panel{background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:16px;color:#eee !important;-webkit-text-fill-color:#eee;}',
     '.cp-panel h2{color:var(--gold);font-size:16px;margin:0 0 8px;}',
@@ -58488,6 +58542,7 @@ function advanceClientTutorial(delta) {
 }
 
 function drawClientTutorial() {
+  try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
   const p = document.getElementById('cp-tutorial-panel');
   if (!p) return;
   const n = CLIENT_TUTORIAL_STEPS.length;
@@ -58559,9 +58614,9 @@ function enterCoachSession() {
   if (typeof persist === 'function') persist();
   requestNotifyPermission();
   applyClientChrome();
-  navigate('coachToday');
+  navigate('coachHub');
   if (typeof practiceToast === 'function') {
-    practiceToast((window.CoachOS && CoachOS.t) ? CoachOS.t('coToastToday') : 'Coach OS · Oggi', 'success');
+    practiceToast((window.CoachOS && CoachOS.t) ? CoachOS.t('coClients') : 'Hub Coach · Clienti', 'success');
   }
 }
 
@@ -59542,18 +59597,24 @@ function setChatSending(on) {
 function renderMessageHtml(m, mine) {
   const att = m.attachment || {};
   let extra = '';
+  const attKey = 'att_' + String(m.id || Math.random()).replace(/[^\w-]/g, '');
+  if (att.kind && (att.data || att.e2eData)) {
+    if (!window.__cpChatAttMap) window.__cpChatAttMap = {};
+    window.__cpChatAttMap[attKey] = att;
+  }
   if (att.kind === 'image' && att.data) {
     const src = att.data.replace(/"/g, '');
     extra = '<img class="cp-msg-img" src="' + src + '" alt="' + esc(att.name || 'foto') + '" onclick="openChatLightbox(this.src)">' +
       '<div style="font-size:10px;color:#888;margin-top:4px;">Tocca per ingrandire</div>';
-  } else if (att.kind === 'file' && att.data) {
+  } else if (att.kind === 'file' && (att.data || att.e2eData) && !att._decryptFailed) {
     const ik = chatFileIconKind(att);
     const icon = ik === 'img' ? cpSvg('file') : cpSvg(ik);
-    extra = '<a class="cp-file-chip" href="' + att.data + '" download="' + esc(att.name || 'documento') + '">' +
-      '<span class="cp-file-ico">' + icon + '</span><span>' + esc(att.name || 'documento') + '</span></a>';
+    extra = '<button type="button" class="cp-file-chip" onclick="openChatAttachment(\'' + attKey + '\')">' +
+      '<span class="cp-file-ico">' + icon + '</span><span>' + esc(att.name || 'documento') + '</span></button>';
   } else if (att.kind) {
     const ik = chatFileIconKind(att);
-    extra = '<div class="cp-file-chip" style="margin-top:4px;"><span class="cp-file-ico">' + cpSvg(ik === 'img' ? 'file' : ik) + '</span><span>' + esc(att.name || 'allegato') + '</span></div>';
+    extra = '<div class="cp-file-chip" style="margin-top:4px;"><span class="cp-file-ico">' + cpSvg(ik === 'img' ? 'file' : ik) + '</span><span>' +
+      esc(att.name || 'allegato') + (att._decryptFailed ? ' · non apribile' : '') + '</span></div>';
   }
   const ticks = mine
     ? (m.read_at ? ' <span style="color:#4fc3f7;">✓✓</span>' : ' <span style="color:#888;">✓</span>')
@@ -59587,6 +59648,81 @@ function closeChatLightbox() {
 }
 window.openChatLightbox = openChatLightbox;
 window.closeChatLightbox = closeChatLightbox;
+
+function dataUrlToBlob(dataUrl) {
+  const raw = String(dataUrl || '');
+  const comma = raw.indexOf(',');
+  if (comma < 0) return null;
+  const meta = raw.slice(0, comma);
+  const mimeMatch = meta.match(/data:([^;,]+)/i);
+  const mime = (mimeMatch && mimeMatch[1]) || 'application/octet-stream';
+  const b64 = raw.slice(comma + 1);
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+async function resolveChatAttachmentPlain(att) {
+  if (att && att.data && String(att.data).indexOf('data:') === 0) return att.data;
+  if (att && att.e2eData && typeof decryptChatBody === 'function') {
+    const role = window.__cpChatRole || ((typeof isAthleteRole === 'function' && isAthleteRole()) ? 'athlete' : 'coach');
+    const clientId = window.__cpChatClientId || (store && store.coachWorkspace && store.coachWorkspace.clientId) || null;
+    try {
+      const plain = await decryptChatBody(att.e2eData, role, clientId);
+      if (plain && String(plain).indexOf('data:') === 0) {
+        att.data = plain;
+        delete att._decryptFailed;
+        return plain;
+      }
+    } catch (_) {}
+  }
+  return null;
+}
+
+async function openChatAttachment(attKey) {
+  const att = window.__cpChatAttMap && window.__cpChatAttMap[attKey];
+  if (!att) {
+    practiceToast('Allegato non disponibile', 'warning');
+    return;
+  }
+  if (!att.data) {
+    const recovered = await resolveChatAttachmentPlain(att);
+    if (!recovered) {
+      att._decryptFailed = true;
+      practiceToast('Allegato non apribile', 'warning');
+      return;
+    }
+  }
+  const name = att.name || 'allegato';
+  const mime = String(att.mime || '').toLowerCase();
+  const isPdf = mime.indexOf('pdf') >= 0 || /\.pdf$/i.test(name) || String(att.data).indexOf('application/pdf') >= 0;
+  try {
+    const blob = dataUrlToBlob(att.data);
+    if (!blob) throw new Error('File non valido');
+    if (isPdf && typeof shareOrSavePdfBlob === 'function') {
+      shareOrSavePdfBlob(blob, name, name);
+      return;
+    }
+    if (isPdf && typeof openPdfStayInApp === 'function') {
+      openPdfStayInApp(blob, name);
+      return;
+    }
+    if (typeof downloadBlobHelper === 'function') {
+      downloadBlobHelper(blob, name);
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+  } catch (err) {
+    practiceToast((err && err.message) || 'Impossibile aprire l’allegato', 'danger');
+  }
+}
+window.openChatAttachment = openChatAttachment;
 
 async function pushCoachClientEdits(opts) {
   opts = opts || {};
@@ -59962,6 +60098,7 @@ function snapshotCoachMaster() {
     subs: store.subs ? JSON.parse(JSON.stringify(store.subs)) : {},
     skips: store.skips ? JSON.parse(JSON.stringify(store.skips)) : {},
     logs: Array.isArray(store.logs) ? JSON.parse(JSON.stringify(store.logs)) : [],
+    intelTargets: store.intelTargets ? JSON.parse(JSON.stringify(store.intelTargets)) : {},
     bodyChecks: Array.isArray(store.bodyChecks) ? JSON.parse(JSON.stringify(store.bodyChecks)) : [],
     nutritionDaily: store.nutritionDaily ? JSON.parse(JSON.stringify(store.nutritionDaily)) : {},
     profile: store.profile ? JSON.parse(JSON.stringify(store.profile)) : {},
@@ -59971,6 +60108,44 @@ function snapshotCoachMaster() {
     tempos: store.tempos ? JSON.parse(JSON.stringify(store.tempos)) : {},
     bonus: store.bonus ? JSON.parse(JSON.stringify(store.bonus)) : {}
   };
+}
+
+function resetSandboxSessionState() {
+  store.data = {};
+  store.customSets = {};
+  store.subs = {};
+  store.skips = {};
+  store.logs = [];
+  store.intelTargets = {};
+}
+
+function stripProgramSessionPerformance(prog) {
+  if (!prog || typeof prog !== 'object') return prog;
+  const weeks = Array.isArray(prog.weeks) ? prog.weeks : [];
+  weeks.forEach(function (w) {
+    const sessions = (w && (w.sessions || w.days)) || [];
+    sessions.forEach(function (sess) {
+      const list = (sess && (sess.exercises || sess.rows)) || [];
+      list.forEach(function (ex) {
+        if (!ex || typeof ex !== 'object') return;
+        delete ex.done;
+        delete ex.actualLoad;
+        delete ex.lastLoad;
+        delete ex.history;
+        delete ex.completed;
+        if (Array.isArray(ex.sets)) {
+          ex.sets.forEach(function (s) {
+            if (!s || typeof s !== 'object') return;
+            delete s.done;
+            delete s.actual_load;
+            delete s.completed;
+          });
+        }
+      });
+    });
+  });
+  prog.depersonalized = true;
+  return prog;
 }
 
 function emptyClientAssignDraft() {
@@ -60000,6 +60175,7 @@ async function restoreCoachMaster(backup) {
   store.subs = backup.subs || {};
   store.skips = backup.skips || {};
   store.logs = backup.logs || [];
+  store.intelTargets = backup.intelTargets || {};
   store.bodyChecks = backup.bodyChecks || [];
   store.nutritionDaily = backup.nutritionDaily || {};
   store.profile = (backup.profile != null && typeof backup.profile === 'object')
@@ -60309,10 +60485,17 @@ function beginAssignSandbox(clientId, name, mode) {
   store.coachAssigning = { clientId: clientId, name: name, mode: mode || 'import' };
   store.__cpAssignBarExpanded = false;
   window.__cpAssignBackup = snapshotCoachMaster();
+  resetSandboxSessionState();
   if (typeof persist === 'function') persist();
-  // copy: parte dalla scheda personale. import/programs/mylib: parti dai dati GIÀ del cliente (merge), non bozza vuota.
+  // copy: struttura della scheda personale, senza kg/serie fatte. import/programs/mylib: merge sezioni cliente.
   if (mode === 'copy') {
-    /* keep master DATA as base (already snapshotted) */
+    try {
+      if (typeof DATA !== 'undefined' && DATA) {
+        DATA = JSON.parse(JSON.stringify(DATA));
+        stripProgramSessionPerformance(DATA);
+        store.activeProgram = DATA;
+      }
+    } catch (_) {}
   } else {
     seedAssignSandboxFromClient(clientId);
   }
@@ -60373,6 +60556,8 @@ function seedAssignSandboxFromClient(clientId) {
   }
   if (typeof currentWeek !== 'undefined') currentWeek = 1;
   if (typeof currentDay !== 'undefined') currentDay = 0;
+  try { if (typeof DATA !== 'undefined' && DATA) stripProgramSessionPerformance(DATA); } catch (_) {}
+  resetSandboxSessionState();
   // Async refresh: if workspace stale/empty, pull snapshot then re-seed without wiping imports already done
   if (clientId) {
     practiceFetch('/api/coach/clients/' + encodeURIComponent(clientId) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 20000).then(function (snap) {
@@ -60591,8 +60776,10 @@ async function confirmAssignSandboxSend() {
   }
   const run = async function () {
     const payload = {
+      assignmentId: 'asg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       activeProgram: (typeof DATA !== 'undefined' && DATA) ? JSON.parse(JSON.stringify(DATA)) : null
     };
+    try { if (payload.activeProgram) stripProgramSessionPerformance(payload.activeProgram); } catch (_) {}
     if (DATA && DATA.nutrition) payload.nutrition = JSON.parse(JSON.stringify(DATA.nutrition));
     else if (store.nutrition) payload.nutrition = JSON.parse(JSON.stringify(store.nutrition));
     if (DATA && DATA.supplementation) payload.supplementation = JSON.parse(JSON.stringify(DATA.supplementation));
@@ -61058,6 +61245,8 @@ function stopChatPoll() {
 }
 function startChatPoll(clientId, boxId, role) {
   stopChatPoll();
+  window.__cpChatRole = role || 'coach';
+  window.__cpChatClientId = clientId || null;
   loadHumanMessages(clientId, boxId, role);
   __cpChatPoll = setInterval(function () {
     if (!document.getElementById(boxId)) { stopChatPoll(); return; }
@@ -61083,7 +61272,9 @@ async function loadHumanMessages(clientId, boxId, role, silent) {
         try {
           const plainAtt = await decryptChatBody(m.attachment.e2eData, role, clientId);
           m.attachment = Object.assign({}, m.attachment, { data: plainAtt, e2eData: undefined });
-        } catch (_) {}
+        } catch (_) {
+          m.attachment = Object.assign({}, m.attachment, { _decryptFailed: true });
+        }
       }
       decrypted.push(m);
     }
@@ -61239,12 +61430,18 @@ function compressChatImage(file) {
 
 function prepareChatAttachment(att, enc) {
   if (!att) return null;
+  const name = att.name || 'allegato';
+  let mime = att.mime || '';
+  let kind = att.kind === 'image' || att.kind === 'file' ? att.kind : 'file';
+  if (/\.pdf$/i.test(name) || /pdf/i.test(mime)) {
+    mime = 'application/pdf';
+    kind = 'file';
+  }
   const plain = att.data || null;
   if (enc && String(enc).indexOf('E2E1:') === 0) {
-    return Object.assign({}, att, { e2eData: enc, data: null });
+    return Object.assign({}, att, { kind: kind, name: name, mime: mime, e2eData: enc, data: null });
   }
-  // Keep plaintext data URL so server sanitizeAttachment accepts it
-  const out = Object.assign({}, att, { data: plain });
+  const out = Object.assign({}, att, { kind: kind, name: name, mime: mime, data: plain });
   delete out.e2eData;
   return out;
 }
@@ -61916,8 +62113,10 @@ async function applyCoachLibraryToAssign(clientId, name, entryId) {
     if (!allow('exams')) store.exams = base.exams || null;
 
     DATA = base;
-    store.activeProgram = base;
+    try { stripProgramSessionPerformance(DATA); } catch (_) {}
+    store.activeProgram = DATA;
     store.activeProgramId = base.id || ('lib_' + entryId);
+    resetSandboxSessionState();
   } catch (err) {
     practiceToast((err && err.message) || 'Caricamento fallito', 'danger');
     return;
@@ -62462,6 +62661,7 @@ window.showClientTutorial = showClientTutorial;
 window.drawClientTutorial = drawClientTutorial;
 window.advanceClientTutorial = advanceClientTutorial;
 window.closeClientTutorial = closeClientTutorial;
+window.isClientTutorialVisible = isClientTutorialVisible;
 window.showDemoUnlock = showDemoUnlock;
 window.openCoachOrUnlock = openCoachOrUnlock;
 window.openPersonalCoachAi = openPersonalCoachAi;
@@ -63366,7 +63566,9 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coToday')) + ' · ' +
       escText(new Date().toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'short' })) +
       '</div><h1 class="coach-os-title">' + greeting() + ', <em>' + escText(firstName()) + '.</em></h1>' +
-      '<p class="coach-os-subtitle">' + escText(tx('coTodaySubtitle')) + '</p></div></div>' +
+      '<p class="coach-os-subtitle">' + escText(tx('coTodaySubtitle')) + '</p></div>' +
+      '<button type="button" class="btn btn-primary" style="min-height:44px;flex-shrink:0;" onclick="CoachOS.navigate(\'coachHub\')">' +
+      escText(tx('coClients')) + '</button></div>' +
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coNeedsAttention')) + '</h2>' +
       '<span class="coach-os-muted">' + attention.length + '</span></div>' +
@@ -63413,7 +63615,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coOpenAndCheck')) + '</h2></div>' +
       '<div class="coach-os-quick-actions">' +
-      [['coachHub', 'coAddClient'], ['coachInbox', 'coMessage'], ['coachCheckIns', 'coCheckIns'],
+      [['coachHub', 'coClients'], ['coachInbox', 'coMessage'], ['coachCheckIns', 'coCheckIns'],
         ['coachCalendar', 'coSchedule'], ['coachAgent', 'coAgent'], ['coachActionCenter', 'coActionCenter']
       ].map(function (row) {
         return '<button type="button" class="coach-os-action" onclick="CoachOS.navigate(\'' + row[0] + '\')">' + escText(tx(row[1])) + '</button>';

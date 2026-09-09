@@ -223,7 +223,7 @@ assert(base.includes("updateSupplementField") && base.includes("markSupplementsD
 assert(ui.includes("benvenuto nel mio servizio coaching") && practice.includes("benvenuto nel mio servizio coaching") && ui.includes("formatInviteShareText"), "client invite welcome message");
 assert(ui.includes("intakeAllergiesHtml") && ui.includes("ALIMENTAZIONE · ALLERGIE") && practice.includes("allergies") && practice.includes("profileFromIntake"), "intake optional allergies/intolerances");
 assert(practice.includes("/api/coach/clients/:id/unlock-approve") && practice.includes("/api/coach/clients/:id/unlock-reject") && practice.includes("pending_unlock") && ui.includes("approveUnlockRequest") && ui.includes("rejectUnlockRequest"), "coach approve/deny unlock with note");
-assert(ui.includes("advanceClientTutorial") && ui.includes('data-tut="next"') && ui.includes("#cp-tutorial.cp-overlay{z-index:10155;}") && ui.includes("__cpA2hsPending"), "client tutorial click + A2HS defer");
+assert(ui.includes("advanceClientTutorial") && ui.includes('data-tut="next"') && ui.includes("#cp-tutorial.cp-overlay{z-index:100010;") && ui.includes("__cpA2hsPending"), "client tutorial click + A2HS defer");
 assert(ui.includes("emptyDomainShell") && ui.includes("isClearedDomainPayload") && ui.includes("cleared: true"), "domain clear empty shells");
 assert(ui.includes("preferFilledTherapy") && ui.includes("__cpTherapyCleared") && ui.includes("__cpTrainingCleared"), "clear therapy/training keep flags");
 assert(practice.includes("CLEARABLE") && practice.includes("emptyCleared") && practice.includes("clearedTraining"), "API patch-data accepts domain clears");

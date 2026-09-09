@@ -92,30 +92,18 @@
       '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coToday')) + ' · ' +
       escText(new Date().toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'short' })) +
       '</div><h1 class="coach-os-title">' + greeting() + ', <em>' + escText(firstName()) + '.</em></h1>' +
-      '<p class="coach-os-subtitle">' + escText(tx('coTodaySubtitle')) + '</p></div></div>' +
-
-      '<div class="coach-os-grid-2">' +
-      '<button type="button" class="coach-os-card coach-os-card-primary" style="text-align:left;cursor:pointer;" onclick="CoachOS.navigate(\'coachAgent\')">' +
-      '<div class="coach-os-card-kicker">' + escText(tx('coPrimaryAction')) + '</div><div class="coach-os-card-title">' + escText(tx('coNurvanAgent')) + '</div>' +
-      '<div class="coach-os-muted">' + escText(tx('coAskPlanExecute')) + '</div></button>' +
-      '<button type="button" class="coach-os-card" style="text-align:left;cursor:pointer;" onclick="CoachOS.navigate(\'coachCalendar\')">' +
-      '<div class="coach-os-card-kicker">' + escText(tx('coOnlineCoaching')) + '</div><div class="coach-os-card-title">' + escText(tx('coSchedule')) + '</div>' +
-      '<div class="coach-os-muted">' + escText(tx('coScheduleHint')) + '</div></button></div>' +
+      '<p class="coach-os-subtitle">' + escText(tx('coTodaySubtitle')) + '</p></div>' +
+      '<button type="button" class="btn btn-primary" style="min-height:44px;flex-shrink:0;" onclick="CoachOS.navigate(\'coachHub\')">' +
+      escText(tx('coClients')) + '</button></div>' +
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coNeedsAttention')) + '</h2>' +
       '<span class="coach-os-muted">' + attention.length + '</span></div>' +
       (attention.length
         ? '<div class="coach-os-list">' + attention.map(actionButton).join('') + '</div>'
-        : '<div class="coach-os-empty">' + escText(tx('coNoUrgency')) + '</div>') +
+        : '<div class="coach-os-empty"><strong>' + escText(tx('coNoUrgency')) + '</strong><div>' +
+          escText(tx('coNoUrgencyWhy')) + '</div><button class="coach-os-action" style="margin-top:10px;" onclick="CoachOS.navigate(\'coachActionCenter\')">' +
+          escText(tx('coActionCenter')) + '</button></div>') +
       '</section>' +
-
-      (sessions.length
-        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionsToday')) + '</h2></div>' +
-          '<div class="coach-os-list">' + sessions.map(function (session) {
-            return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(session.title) +
-              '</strong><span>' + escText(session.time || '') + '</span></span></div>';
-          }).join('') + '</div></section>'
-        : '') +
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coMyTasks')) + '</h2>' +
       '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.createTaskPrompt()">' + escText(tx('coAddTask')) + '</button></div>' +
@@ -128,30 +116,42 @@
             '</strong><span>' + escText(task.clientName || '') + (task.dueAt ? ' · ' + escText(formatWhen(task.dueAt)) : '') + '</span></button>' +
             '<button type="button" aria-label="' + escText(tx('coTask')) + '" style="border:0;background:transparent;color:var(--co-muted);font-weight:900;" onclick="CoachOS.taskMenu(' + index + ')">•••</button></div>';
         }).join('') + '</div>'
-        : '<div class="coach-os-empty">' + escText(tx('coNoTasks')) + '</div>') +
+        : '<div class="coach-os-empty"><strong>' + escText(tx('coNoTasks')) + '</strong><div>' +
+          escText(tx('coNoTasksWhy')) + '</div><button class="coach-os-action" style="margin-top:10px;" onclick="CoachOS.createTaskPrompt()">' +
+          escText(tx('coAddTask')) + '</button></div>') +
       '</section>' +
+
+      (sessions.length
+        ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionsToday')) + '</h2></div>' +
+          '<div class="coach-os-list">' + sessions.map(function (session) {
+            return '<button type="button" class="coach-os-row" onclick="CoachOS.navigate(\'coachCalendar\')"><span class="coach-os-row-main"><strong>' + escText(session.title) +
+              '</strong><span>' + escText(session.time || session.clientName || '') + '</span></span><span aria-hidden="true" style="color:var(--co-muted);">›</span></button>';
+          }).join('') + '</div></section>'
+        : '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionsToday')) + '</h2></div>' +
+          '<div class="coach-os-empty"><strong>' + escText(tx('coNoSessions')) + '</strong><div>' +
+          escText(tx('coNoSessionsWhy')) + '</div><button class="coach-os-action" style="margin-top:10px;" onclick="CoachOS.navigate(\'coachCalendar\')">' +
+          escText(tx('coSchedule')) + '</button></div></section>') +
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coRecentActivity')) + '</h2></div>' +
       (activity.length
         ? '<div class="coach-os-list">' + activity.map(activityButton).join('') + '</div>'
-        : '<div class="coach-os-empty">' + escText(tx('coNoActivity')) + '</div>') +
+        : '<div class="coach-os-empty"><strong>' + escText(tx('coNoActivity')) + '</strong><div>' +
+          escText(tx('coNoActivityWhy')) + '</div></div>') +
       '</section>' +
-
-      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coPortfolio')) + '</h2></div>' +
-      renderKpis(data.kpi || {}) + '</section>' +
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coOpenAndCheck')) + '</h2></div>' +
       '<div class="coach-os-quick-actions">' +
-      [['coachToday', 'coToday'], ['coachHub', 'coClients'], ['coachInbox', 'coInbox'], ['coachPrograms', 'coPrograms'],
-        ['coachCalendar', 'coCalendar'], ['coachCheckIns', 'coCheckIns'], ['coachAgent', 'coAgent'],
-        ['coachAnalytics', 'coAnalytics'], ['coachBusiness', 'coBusiness'], ['coachCrm', 'coCrm'],
-        ['coachAutomations', 'coAutomations'], ['coachNutrition', 'coNutrition'], ['coachFormReview', 'coFormReview']
+      [['coachHub', 'coClients'], ['coachInbox', 'coMessage'], ['coachCheckIns', 'coCheckIns'],
+        ['coachCalendar', 'coSchedule'], ['coachAgent', 'coAgent'], ['coachActionCenter', 'coActionCenter']
       ].map(function (row) {
-        return '<button class="coach-os-action" onclick="CoachOS.navigate(\'' + row[0] + '\')">' + escText(tx(row[1])) + '</button>';
+        return '<button type="button" class="coach-os-action" onclick="CoachOS.navigate(\'' + row[0] + '\')">' + escText(tx(row[1])) + '</button>';
       }).join('') +
-      '<button class="coach-os-action" onclick="openAddClientWizard()">' + escText(tx('coAddClient')) + '</button>' +
-      '<button class="coach-os-action" onclick="CoachOS.openNativeImport()">' + escText(tx('coImportProgram')) + '</button>' +
+      '<button type="button" class="coach-os-action" onclick="openAddClientWizard()">' + escText(tx('coAddClient')) + '</button>' +
+      '<button type="button" class="coach-os-action" onclick="CoachOS.openNativeImport()">' + escText(tx('coImportProgram')) + '</button>' +
       '</div></section>' +
+
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coPortfolio')) + '</h2></div>' +
+      renderKpis(data.kpi || {}) + '</section>' +
       '<div style="height:28px;"></div></div>';
   }
 
@@ -351,10 +351,13 @@
     ensurePracticeOverlays();
     const panel = document.getElementById('cp-assign-panel');
     if (!panel) return;
+    const hasId = !!(item.id);
     panel.innerHTML = '<div class="coach-os-card-kicker">' + escText(tx('coAttention')) + '</div><h2>' + escText(item.title) + '</h2>' +
       '<p class="cp-help">' + escText(item.detail || '') + '</p>' +
-      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="CoachOS.updateAttention(\'' + escText(item.id) + '\',\'resolved\')">' + escText(tx('coResolve')) + '</button>' +
-      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="CoachOS.updateAttention(\'' + escText(item.id) + '\',\'snoozed\',new Date(Date.now()+86400000).toISOString())">' + escText(tx('coSnooze')) + '</button>' +
+      (hasId
+        ? ('<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="CoachOS.updateAttention(\'' + escText(item.id) + '\',\'resolved\')">' + escText(tx('coResolve')) + '</button>' +
+          '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="CoachOS.updateAttention(\'' + escText(item.id) + '\',\'snoozed\',new Date(Date.now()+86400000).toISOString())">' + escText(tx('coSnooze')) + '</button>')
+        : '<p class="cp-help">Questa attention è locale: apri il cliente. Resolve/Snooze arrivano dal server.</p>') +
       '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\',false);CoachOS.openTodayAttention(' + index + ')">' + escText(tx('coOpenClient')) + '</button>' +
       '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coClose')) + '</button>';
     showOverlay('cp-assign', true);
