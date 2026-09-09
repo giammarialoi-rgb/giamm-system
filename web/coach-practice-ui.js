@@ -162,13 +162,14 @@ function gatePracticeView(v) {
     if (blocked[v]) return 'home';
     return v;
   }
-  if (store && store.coachSessionActive && !store.coachAssigning) {
+  if (store && store.coachSessionActive && !store.coachAssigning && !window.__cpExitingCoach) {
     const coachCore = {
       coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
       coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
       coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
       coachAutomations: 1, coachBusiness: 1, coachCrm: 1,
-      coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1
+      coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
+      home: 1, settings: 1
     };
     const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, calendar: 1 };
     if (coachCore[v]) return v;
@@ -327,7 +328,7 @@ function applyClientChrome() {
       if (coachSession) coachBtn.textContent = 'ESCI';
       else coachBtn.textContent = 'COACH';
       coachBtn.onclick = function () {
-        if (coachSession) exitCoachSession();
+        if (store && store.coachSessionActive) exitCoachSession();
         else if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) enterCoachSession();
         else openCoachOrUnlock();
       };
@@ -2134,19 +2135,42 @@ function enterCoachSession() {
 
 function exitCoachSession(force) {
   if (!force && !confirm('Uscire dall’hub Coach? Tornerai all’app personale Nurvan.')) return false;
-  if (store.coachAssigning) {
-    practiceToast('Prima completa o annulla l’assegnazione.', 'warning');
-    return false;
-  }
-  if (store.coachViewingClient) leaveCoachClientView(true);
+  window.__cpExitingCoach = true;
+  const assignBak = window.__cpAssignBackup
+    || (store.coachAssigning && store.coachAssigning.backup)
+    || null;
+  const viewBak = window.__cpCoachViewBackup || null;
+  const needRestore = !!(assignBak || viewBak);
+  // Clear locks synchronously so chrome/nav are never stuck in Coach mode.
+  store.coachAssigning = null;
+  store.coachViewingClient = false;
   store.coachSessionActive = false;
   store.coachWorkspace = null;
-  clearClientShellLock();
-  closeCoachDrawer();
+  window.__cpAssignBackup = null;
+  window.__cpCoachViewBackup = null;
+  try { stopClientLivePoll(); } catch (_) {}
+  try { clearClientShellLock(); } catch (_) {}
+  try { closeCoachDrawer(); } catch (_) {}
+  try { ensureAssignBanner(); } catch (_) {}
+  try { ensureClientViewBanner(); } catch (_) {}
   if (typeof persist === 'function') persist();
   applyClientChrome();
-  navigate('home');
+  if (typeof navigate === 'function') navigate('home');
   practiceToast('Sessione Coach chiusa', 'success');
+  if (needRestore) {
+    Promise.resolve()
+      .then(function () { return restoreCoachMaster(assignBak || viewBak); })
+      .catch(function (err) { console.warn('[EXIT_COACH_RESTORE]', err); })
+      .then(function () {
+        window.__cpExitingCoach = false;
+        applyClientChrome();
+        if (typeof currentView !== 'undefined' && currentView === 'home' && typeof render === 'function') {
+          try { render(); } catch (_) {}
+        }
+      });
+  } else {
+    setTimeout(function () { window.__cpExitingCoach = false; }, 0);
+  }
   return true;
 }
 
@@ -5788,6 +5812,13 @@ async function bootCoachPractice() {
   } else {
     await refreshCoachStatus();
     if (store.coachUnlocked) startPresenceHeartbeat();
+    // Cold start: personal app is default. Sticky coachSessionActive/coachAssigning from LS
+    // trapped users in Coach mode with no in-memory backup to exit cleanly.
+    try {
+      if (store.coachAssigning && !window.__cpAssignBackup) store.coachAssigning = null;
+      if (store.coachViewingClient && !window.__cpCoachViewBackup) store.coachViewingClient = false;
+      store.coachSessionActive = false;
+    } catch (_) {}
     applyClientChrome();
     if (store.accountToken) setTimeout(function () { maybeSubscribeWebPush(); }, 1500);
     try {
@@ -5914,21 +5945,27 @@ function wrapPracticeHooks() {
     const _nav = navigate;
     navigate = function (v, e) {
       const raw = v;
-      if (store && store.coachSessionActive && !store.coachAssigning && !(typeof isAthleteRole === 'function' && isAthleteRole())) {
+      if (store && store.coachSessionActive && !store.coachAssigning && !window.__cpExitingCoach
+        && !(typeof isAthleteRole === 'function' && isAthleteRole())) {
         const coachCore = {
           coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
           coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
           coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
           coachAutomations: 1, coachBusiness: 1, coachCrm: 1,
-          coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1
+          coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
+          home: 1, settings: 1
         };
         const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, import: 1, programs: 1, calendar: 1 };
         const ok = coachCore[raw]
           || ((store.coachViewingClient || store.coachAssigning) && clientDomains[raw])
           || (store.__cpCoachLibraryImport && (raw === 'import' || raw === 'coachLibrary'));
         if (!ok) {
-          practiceToast('Sei in modalità Coach. Usa ESCI COACH per tornare all’app personale.', 'warning');
+          practiceToast('Sei in modalità Coach. Usa ESCI per tornare all’app personale.', 'warning');
           return;
+        }
+        if (raw === 'home' || raw === 'settings') {
+          store.coachSessionActive = false;
+          store.coachViewingClient = false;
         }
         if (raw === 'import' && store.coachViewingClient && !store.coachAssigning && !store.__cpCoachLibraryImport) {
           const id = store.coachWorkspace && store.coachWorkspace.clientId;

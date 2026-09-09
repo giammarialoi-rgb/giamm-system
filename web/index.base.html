@@ -8806,11 +8806,17 @@ function persist() {
           skips: bak.skips || {},
           intelTargets: bak.intelTargets || {},
           profile: (bak.profile != null && typeof bak.profile === 'object') ? bak.profile : (sanitized.profile || {}),
-          coachAssigning: store.coachAssigning || null,
-          coachViewingClient: !!store.coachViewingClient,
-          coachSessionActive: !!store.coachSessionActive
+          // Never persist sticky coach-session locks: cold start must open personal app.
+          coachAssigning: null,
+          coachViewingClient: false,
+          coachSessionActive: false
         });
       }
+    }
+    if (sanitized && typeof sanitized === 'object') {
+      sanitized.coachAssigning = null;
+      sanitized.coachViewingClient = false;
+      sanitized.coachSessionActive = false;
     }
     if (store.stayLoggedIn === false && sanitized && typeof sanitized === 'object') {
       sanitized.accountToken = null;
