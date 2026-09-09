@@ -878,7 +878,7 @@ assert.ok(html.includes("id: 'DORSO'") && html.includes("label: 'Dorso'") && !ht
 
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
 assert.ok(sw.includes("training-analytics-engine.js"), "SW precaches the analytics engine");
-assert.ok(sw.includes("analytics16"), "SW cache bumped after stats fold and volume restore");
+assert.ok(sw.includes("analytics17"), "SW cache bumped after last-week load advice fix");
 assert.ok(fs.existsSync(path.join(root, "TRAINING_ANALYTICS_METHODOLOGY.md")), "methodology doc exists");
 
 console.log("OK   training analytics engine formulas + zoom axis + intelligence");
