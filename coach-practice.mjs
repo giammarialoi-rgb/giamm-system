@@ -304,6 +304,88 @@ function buildWebRtcIceServers(env) {
   return iceServers;
 }
 
+export function sanitizeChatAttachment(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const kind = raw.kind === "image" || raw.kind === "file" ? raw.kind : null;
+  if (!kind) return null;
+  const name = String(raw.name || "allegato").slice(0, 80);
+  let mime = String(raw.mime || "").slice(0, 80);
+  if (kind === "file" && (/\.pdf$/i.test(name) || /pdf/i.test(mime))) {
+    mime = "application/pdf";
+  }
+  const e2eData = raw.e2eData ? String(raw.e2eData).slice(0, 1200000) : null;
+  if (e2eData && e2eData.indexOf("E2E1:") === 0) {
+    return { kind, name, mime, e2eData };
+  }
+  const dataCandidate =
+    (raw.data != null && raw.data !== "" ? String(raw.data) : "") ||
+    (e2eData && /^data:/i.test(e2eData) ? e2eData : "");
+  if (!/^data:[a-z0-9.+\/\-]+;base64,/i.test(dataCandidate)) return null;
+  if (dataCandidate.length > 900000) return null;
+  return { kind, name, mime, data: dataCandidate };
+}
+
+export function mergeAssignClientData(current, patch, kinds) {
+  const now = new Date().toISOString();
+  const unique = Array.isArray(kinds) && kinds.length ? [...new Set(kinds)] : ["training"];
+  const cur = current && typeof current === "object" ? current : {};
+  const src = patch && typeof patch === "object" ? patch : {};
+  const merged = { ...cur, assignedAt: now, assignedByCoach: true };
+  const curProg = cur.activeProgram && typeof cur.activeProgram === "object" ? cur.activeProgram : {};
+  const patchProg = src.activeProgram && typeof src.activeProgram === "object" ? src.activeProgram : null;
+  if (unique.includes("training") && patchProg) {
+    const assignmentId = src.assignmentId || ("asg_" + Date.now());
+    const history = Array.isArray(cur.programHistory) ? cur.programHistory.slice() : [];
+    const hasSession = !!(cur.activeProgram || (cur.data && Object.keys(cur.data).length) || (Array.isArray(cur.logs) && cur.logs.length));
+    if (hasSession) {
+      history.push({
+        archivedAt: now,
+        assignmentId: cur.assignmentId || cur.activeProgramId || null,
+        activeProgram: cur.activeProgram || null,
+        data: cur.data && typeof cur.data === "object" ? cur.data : {},
+        logs: Array.isArray(cur.logs) ? cur.logs : [],
+        customSets: cur.customSets && typeof cur.customSets === "object" ? cur.customSets : {},
+        subs: cur.subs && typeof cur.subs === "object" ? cur.subs : {}
+      });
+    }
+    merged.programHistory = history;
+    merged.assignmentId = assignmentId;
+    merged.activeProgram = { ...curProg, ...patchProg };
+    merged.data = {};
+    merged.customSets = {};
+    merged.subs = {};
+    merged.skips = {};
+    merged.logs = [];
+    merged.intelTargets = {};
+  } else if (patchProg) {
+    merged.activeProgram = {
+      ...curProg,
+      nutrition: unique.includes("nutrition")
+        ? (src.nutrition || patchProg.nutrition || curProg.nutrition)
+        : curProg.nutrition,
+      supplementation: unique.includes("supplements")
+        ? (src.supplementation || patchProg.supplementation || curProg.supplementation)
+        : curProg.supplementation,
+      therapy: unique.includes("therapy")
+        ? (src.therapy || patchProg.therapy || curProg.therapy)
+        : curProg.therapy,
+      exams: unique.includes("exams")
+        ? (src.exams || patchProg.exams || curProg.exams)
+        : curProg.exams
+    };
+    if (!Array.isArray(merged.activeProgram.weeks) || !merged.activeProgram.weeks.length) {
+      if (Array.isArray(curProg.weeks) && curProg.weeks.length) merged.activeProgram.weeks = curProg.weeks;
+    }
+  } else if (curProg && Object.keys(curProg).length) {
+    merged.activeProgram = curProg;
+  }
+  if (unique.includes("nutrition") && src.nutrition) merged.nutrition = src.nutrition;
+  if (unique.includes("supplements") && src.supplementation) merged.supplementation = src.supplementation;
+  if (unique.includes("therapy") && src.therapy) merged.therapy = src.therapy;
+  if (unique.includes("exams") && src.exams) merged.exams = src.exams;
+  return merged;
+}
+
 export const CoachPracticeLib = {
   slugName,
   sanitizeIntake,
@@ -315,6 +397,8 @@ export const CoachPracticeLib = {
   isOnlineAt,
   isWorkoutLive,
   buildWebRtcIceServers,
+  mergeAssignClientData,
+  sanitizeChatAttachment,
   INTAKE_KEYS,
   INTAKE_REQUIRED
 };
@@ -699,21 +783,7 @@ export function mountCoachPractice(app, deps) {
   });
 
   function sanitizeAttachment(raw) {
-    if (!raw || typeof raw !== "object") return null;
-    const kind = raw.kind === "image" || raw.kind === "file" ? raw.kind : null;
-    if (!kind) return null;
-    const name = String(raw.name || "allegato").slice(0, 80);
-    const mime = String(raw.mime || "").slice(0, 80);
-    const e2eData = raw.e2eData ? String(raw.e2eData).slice(0, 1200000) : null;
-    if (e2eData && e2eData.indexOf("E2E1:") === 0) {
-      return { kind, name, mime, e2eData };
-    }
-    const dataCandidate =
-      (raw.data != null && raw.data !== "" ? String(raw.data) : "") ||
-      (e2eData && /^data:/i.test(e2eData) ? e2eData : "");
-    if (!/^data:[a-z0-9.+\/\-]+;base64,/i.test(dataCandidate)) return null;
-    if (dataCandidate.length > 900000) return null;
-    return { kind, name, mime, data: dataCandidate };
+    return sanitizeChatAttachment(raw);
   }
 
   async function currentThread(clientId) {
@@ -2375,42 +2445,7 @@ export function mountCoachPractice(app, deps) {
       ? req.body.kinds.map((k) => String(k)).filter((k) => KIND_EVENTS[k] || k === "exams_request")
       : detectAssignKinds(patch);
     const unique = [...new Set(kinds.length ? kinds : ["training"])];
-    const merged = {
-      ...current,
-      assignedAt: new Date().toISOString(),
-      assignedByCoach: true
-    };
-    const curProg = current.activeProgram && typeof current.activeProgram === "object" ? current.activeProgram : {};
-    const patchProg = patch.activeProgram && typeof patch.activeProgram === "object" ? patch.activeProgram : null;
-    if (unique.includes("training") && patchProg) {
-      merged.activeProgram = { ...curProg, ...patchProg };
-    } else if (patchProg) {
-      // Domain-only assign: keep existing weeks/title, merge other fields onto activeProgram shell
-      merged.activeProgram = {
-        ...curProg,
-        nutrition: unique.includes("nutrition")
-          ? (patch.nutrition || patchProg.nutrition || curProg.nutrition)
-          : curProg.nutrition,
-        supplementation: unique.includes("supplements")
-          ? (patch.supplementation || patchProg.supplementation || curProg.supplementation)
-          : curProg.supplementation,
-        therapy: unique.includes("therapy")
-          ? (patch.therapy || patchProg.therapy || curProg.therapy)
-          : curProg.therapy,
-        exams: unique.includes("exams")
-          ? (patch.exams || patchProg.exams || curProg.exams)
-          : curProg.exams
-      };
-      if (!Array.isArray(merged.activeProgram.weeks) || !merged.activeProgram.weeks.length) {
-        if (Array.isArray(curProg.weeks) && curProg.weeks.length) merged.activeProgram.weeks = curProg.weeks;
-      }
-    } else if (curProg && Object.keys(curProg).length) {
-      merged.activeProgram = curProg;
-    }
-    if (unique.includes("nutrition") && patch.nutrition) merged.nutrition = patch.nutrition;
-    if (unique.includes("supplements") && patch.supplementation) merged.supplementation = patch.supplementation;
-    if (unique.includes("therapy") && patch.therapy) merged.therapy = patch.therapy;
-    if (unique.includes("exams") && patch.exams) merged.exams = patch.exams;
+    const merged = mergeAssignClientData(current, patch, unique);
     await pool.query(
       `INSERT INTO app_account_data(user_id, data, updated_at)
        VALUES($1,$2,NOW())
@@ -3068,8 +3103,7 @@ export function mountCoachPractice(app, deps) {
         const current = existing.rows[0]?.data || {};
         const patch = payload.data && typeof payload.data === "object" ? payload.data : {};
         const kinds = Array.isArray(payload.kinds) ? payload.kinds : ["training"];
-        const merged = { ...current, assignedAt: new Date().toISOString(), assignedByCoach: true };
-        if (kinds.includes("training") && patch.activeProgram) merged.activeProgram = patch.activeProgram;
+        const merged = mergeAssignClientData(current, patch, kinds);
         await pool.query(
           `INSERT INTO app_account_data(user_id, data, updated_at)
            VALUES($1,$2,NOW())
