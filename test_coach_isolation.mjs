@@ -179,6 +179,9 @@ assert(base.includes("isClientTutorialVisible()") && base.includes("showBusyOver
 assert(ui.includes("#cp-tutorial.cp-overlay{z-index:100010;"), "tutorial sits above busy overlay");
 assert(base.includes("drawClientTutorial()") && ui.includes("window.drawClientTutorial"), "render rebinds tutorial controls");
 
+assert(ui.includes("window.__cpExitingCoach") && ui.includes("store.coachSessionActive = false") && ui.includes("Cold start: personal app is default"), "exit coach clears sticky session; cold start personal");
+assert(base.includes("sanitized.coachSessionActive = false") && base.includes("sanitized.coachAssigning = null"), "persist never stores sticky coach session locks");
+
 if (failed) {
   console.error("\n" + failed + " isolation checks failed");
   process.exit(1);
