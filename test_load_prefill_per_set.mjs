@@ -71,12 +71,12 @@ weeks.forEach(function (w) {
   console.log("OK   week2 ignores copied 225.5 and prefills per-set +2.5");
 }
 
-// Week 3: week2 was seeded/copied identical, week1 has real variation
+// Week 3: "sett. scorsa" is week 2, even if week 1 has more load variety
 {
   const data = {};
-  setLoads(data, 1, 3, 0, [220, 200, 200], { reps: 6, rir: 2, done: true });
-  setLoads(data, 2, 3, 0, [225.5, 225.5, 225.5], { reps: 6, rir: 2, done: true });
-  setLoads(data, 3, 3, 0, [225.5, 225.5, 225.5]);
+  setLoads(data, 1, 3, 0, [190, 220, 240], { reps: 15, rir: 4, done: true });
+  setLoads(data, 2, 3, 0, [192.5, 222.5, 242.5], { reps: 15, rir: 2, done: true });
+  setLoads(data, 3, 3, 0, [192.5, 222.5, 242.5]);
   const ctx = makeCtx({
     currentWeek: 3,
     currentDay: 3,
@@ -84,11 +84,28 @@ weeks.forEach(function (w) {
     DATA: { weeks: weeks }
   });
   const prev = ctx.collectPrevWeekSetLogs(0, {});
-  assert.equal(JSON.stringify(prev.map(function (s) { return Number(s.load); })), JSON.stringify([220, 200, 200]));
-  assert.equal(ctx.effectiveSetLoad(0, 1, {}), 222.5);
-  assert.equal(ctx.effectiveSetLoad(0, 2, {}), 202.5);
-  assert.equal(ctx.effectiveSetLoad(0, 3, {}), 202.5);
-  console.log("OK   later weeks walk back to last varied week, not copied first-set");
+  assert.equal(JSON.stringify(prev.map(function (s) { return Number(s.load); })), JSON.stringify([192.5, 222.5, 242.5]));
+  assert.equal(ctx.effectiveSetLoad(0, 1, {}), 195);
+  assert.equal(ctx.effectiveSetLoad(0, 2, {}), 225);
+  assert.equal(ctx.effectiveSetLoad(0, 3, {}), 245);
+  console.log("OK   week 3 sett. scorsa is week 2, not week 1");
+}
+
+// Week 4: previous week is week 3, not an older varied week
+{
+  const data = {};
+  setLoads(data, 1, 3, 0, [190, 220, 240], { reps: 15, rir: 4, done: true });
+  setLoads(data, 2, 3, 0, [192.5, 222.5, 242.5], { reps: 15, rir: 2, done: true });
+  setLoads(data, 3, 3, 0, [195, 225, 245], { reps: 12, rir: 2, done: true });
+  const ctx = makeCtx({
+    currentWeek: 4,
+    currentDay: 3,
+    store: { data: data, logs: [{ week: 1, day: 3 }, { week: 2, day: 3 }, { week: 3, day: 3 }], subs: {} },
+    DATA: { weeks: weeks }
+  });
+  const prev = ctx.collectPrevWeekSetLogs(0, {});
+  assert.equal(JSON.stringify(prev.map(function (s) { return Number(s.load); })), JSON.stringify([195, 225, 245]));
+  console.log("OK   week 4 sett. scorsa is week 3");
 }
 
 // Easy session: +2.5 on each set

@@ -2819,16 +2819,10 @@ function uniquePositiveLoads(sets) {
 function collectPrevWeekSetLogs(exIdx, row) {
   if (currentWeek <= 1) return [];
   const name = exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '';
-  let fallback = [];
-  for (let w = currentWeek - 1; w >= 1; w--) {
-    let loc = findNamedExerciseInWeek(w, name, currentDay);
-    if (!loc) continue;
-    const logged = collectSetLogsAtWeek(w, loc.day, loc.idx, row, name);
-    if (!logged.length) continue;
-    if (uniquePositiveLoads(logged).length > 1) return logged;
-    if (weekExerciseWasLogged(w, loc.day, loc.idx) && !fallback.length) fallback = logged;
-  }
-  return fallback;
+  const prevWeek = currentWeek - 1;
+  const loc = findNamedExerciseInWeek(prevWeek, name, currentDay);
+  if (!loc) return [];
+  return collectSetLogsAtWeek(prevWeek, loc.day, loc.idx, row, name);
 }
 function sessionWasFinalized(week, day) {
   return (store.logs || []).some(function (row) {
