@@ -2782,18 +2782,13 @@ function weekExerciseWasLogged(week, day, exIdx) {
     return row && Number(row.week) === Number(week) && Number(row.day) === Number(day);
   });
 }
-function collectSetLogsAtWeek(week, day, exIdx, row, currentName) {
-  const name = currentName || exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '';
-  const prevIdx = findMatchingExerciseIndex(week, day, name, null);
-  if (prevIdx == null) return [];
-  const prevName = normalizeExerciseKey(exerciseNameAt(week, day, prevIdx));
-  const thisName = normalizeExerciseKey(name);
-  if (thisName && prevName && thisName !== prevName) return [];
+function collectSetLogsAtWeek(week, day, exIdx) {
+  if (!store || !store.data) return [];
   const out = [];
   for (let s = 1; s <= 10; s++) {
-    const load = store.data['w' + week + '_d' + day + '_e' + prevIdx + '_s' + s + '_load'];
-    const reps = store.data['w' + week + '_d' + day + '_e' + prevIdx + '_s' + s + '_reps'];
-    const rir = store.data['w' + week + '_d' + day + '_e' + prevIdx + '_s' + s + '_rir'];
+    const load = store.data['w' + week + '_d' + day + '_e' + exIdx + '_s' + s + '_load'];
+    const reps = store.data['w' + week + '_d' + day + '_e' + exIdx + '_s' + s + '_reps'];
+    const rir = store.data['w' + week + '_d' + day + '_e' + exIdx + '_s' + s + '_rir'];
     const hasLoad = load !== undefined && load !== '' && load != null;
     const hasReps = reps !== undefined && reps !== '' && reps != null;
     const hasRir = rir !== undefined && rir !== '' && rir != null;
@@ -2803,9 +2798,9 @@ function collectSetLogsAtWeek(week, day, exIdx, row, currentName) {
       load: hasLoad ? load : '',
       reps: hasReps ? reps : '',
       rir: hasRir ? rir : '',
-      prevIdx: prevIdx,
+      prevIdx: exIdx,
       prevDay: day,
-      done: !!store.data['w' + week + '_d' + day + '_e' + prevIdx + '_s' + s + '_done']
+      done: !!store.data['w' + week + '_d' + day + '_e' + exIdx + '_s' + s + '_done']
     });
   }
   return out;
@@ -2818,11 +2813,10 @@ function uniquePositiveLoads(sets) {
 }
 function collectPrevWeekSetLogs(exIdx, row) {
   if (currentWeek <= 1) return [];
-  const name = exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '';
-  const prevWeek = currentWeek - 1;
-  const loc = findNamedExerciseInWeek(prevWeek, name, currentDay);
-  if (!loc) return [];
-  return collectSetLogsAtWeek(prevWeek, loc.day, loc.idx, row, name);
+  const nowName = normalizeExerciseKey(exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '');
+  const prevName = normalizeExerciseKey(exerciseNameAt(currentWeek - 1, currentDay, exIdx));
+  if (nowName && prevName && nowName !== prevName) return [];
+  return collectSetLogsAtWeek(currentWeek - 1, currentDay, exIdx);
 }
 function sessionWasFinalized(week, day) {
   return (store.logs || []).some(function (row) {
@@ -7466,14 +7460,14 @@ function hidePrevLoad() {
   $('prev-load-tooltip').style.display = 'none';
 }
 
-/** Last-session values for the same day/exercise/set (week-1). */
+/** Last-session values for the same day slot / set (week-1). */
 function getPrevSessionSetValues(exIdx, setNum) {
   if (currentWeek <= 1) return { load: '', reps: '', rir: '' };
-  const name = exerciseNameAt(currentWeek, currentDay, exIdx);
-  const loc = findNamedExerciseInWeek(currentWeek - 1, name, currentDay);
-  if (!loc) return { load: '', reps: '', rir: '' };
-  const base = `w${currentWeek - 1}_d${loc.day}_e${loc.idx}_s${setNum}`;
-  const prevRow = exerciseRowAt(currentWeek - 1, loc.day, loc.idx);
+  const nowName = normalizeExerciseKey(exerciseNameAt(currentWeek, currentDay, exIdx));
+  const prevName = normalizeExerciseKey(exerciseNameAt(currentWeek - 1, currentDay, exIdx));
+  if (nowName && prevName && nowName !== prevName) return { load: '', reps: '', rir: '' };
+  const base = `w${currentWeek - 1}_d${currentDay}_e${exIdx}_s${setNum}`;
+  const prevRow = exerciseRowAt(currentWeek - 1, currentDay, exIdx);
   const planned = plannedRepsRirFromRow(prevRow || exerciseRowAt(currentWeek, currentDay, exIdx), setNum);
   let load = store.data[base + '_load'] ?? '';
   let reps = store.data[base + '_reps'] ?? '';

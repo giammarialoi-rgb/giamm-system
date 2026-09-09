@@ -1967,15 +1967,33 @@
     };
   }
 
+  function slotLineageStartWeek(store, data, week, day, exIdx) {
+    const name = resolveExerciseName(data, store, week, day, exIdx);
+    if (!name) return week;
+    let start = week;
+    for (let w = week - 1; w >= 1; w--) {
+      const prev = resolveExerciseName(data, store, w, day, exIdx);
+      if (!prev || !sameExerciseName(prev, name)) break;
+      start = w;
+    }
+    return start;
+  }
+
   function setsMatchingLoc(store, data, loc) {
     loc = loc || {};
     const week = Number(loc.week) || 1;
     const day = Number(loc.day) || 0;
     const exIdx = Number(loc.exIdx) || 0;
     const name = resolveExerciseName(data, store, week, day, exIdx);
+    const start = slotLineageStartWeek(store, data, week, day, exIdx);
     const all = normalizeSets(store, data, {});
-    const matched = all.filter(function (s) { return sameExerciseName(s.name, name); });
-    return { name: name, all: all, matched: matched, week: week, day: day, exIdx: exIdx };
+    const matched = all.filter(function (s) {
+      return Number(s.week) >= start && Number(s.week) <= week
+        && Number(s.day) === day
+        && Number(s.exIdx) === exIdx
+        && sameExerciseName(s.name, name);
+    });
+    return { name: name, all: all, matched: matched, week: week, day: day, exIdx: exIdx, lineageStartWeek: start };
   }
 
   function trendState(delta, dz) {
@@ -3088,6 +3106,7 @@
     groupExposures: groupExposures,
     sameExerciseName: sameExerciseName,
     resolveExerciseName: resolveExerciseName,
+    slotLineageStartWeek: slotLineageStartWeek,
     preWorkout: preWorkout,
     sessionSummary: sessionSummary,
     explainMetric: explainMetric,
