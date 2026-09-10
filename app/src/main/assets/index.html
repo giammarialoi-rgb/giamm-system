@@ -36147,15 +36147,22 @@ function isStaleCopiedSetPrefill(stored, exIdx, setNum, row) {
 function effectiveSetLoad(exIdx, setNum, row) {
   const k = 'w' + currentWeek + '_d' + currentDay + '_e' + exIdx + '_s' + setNum;
   const stored = store.data[k + '_load'];
-  if (store.data[k + '_done'] && stored !== undefined && stored !== '' && stored != null) return stored;
-  if (sessionWasFinalized(currentWeek, currentDay) && stored !== undefined && stored !== '' && stored != null) return stored;
+  const hasStored = stored !== undefined && stored !== '' && stored != null;
+  // Serie chiusa / finalizzata / valore confermato dall’atleta: sempre quello scritto, mai il suggerimento.
+  if (store.data[k + '_done'] && hasStored) return stored;
+  if (sessionWasFinalized(currentWeek, currentDay) && hasStored) return stored;
+  if (store.data[k + '_load_user'] && hasStored) return stored;
   const identityShift = slotExerciseChanged(exIdx, row);
   const occupantCopy = identityShift && matchesPreviousOccupantLoads(stored, exIdx);
   const stale = isStaleCopiedSetPrefill(stored, exIdx, setNum, row);
-  const keepUser = !!(store.data[k + '_load_user'] && stored !== undefined && stored !== '' && stored != null
-    && !occupantCopy && !(stale && !identityShift));
-  if (keepUser) return stored;
-  // Always prefer per-set progression from last week (set N → set N). Never paste one load on all sets.
+  // Prefill automatico stale (copia della settimana scorsa sbagliata): non forzarlo in UI.
+  if (stale && !store.data[k + '_load_user'] && !store.data[k + '_done']) {
+    const suggStale = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(exIdx, setNum, row || {}) : null;
+    if (Number(suggStale) > 0) return suggStale;
+    return '';
+  }
+  // Priorità: carico già in store (anche senza flag) > suggerimento. Il suggerimento non sovrascrive.
+  if (hasStored && !occupantCopy) return stored;
   const sugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(exIdx, setNum, row || {}) : null;
   if (Number(sugg) > 0) return sugg;
   const intel = store.intelTargets && store.intelTargets['w' + currentWeek + '_d' + currentDay + '_e' + exIdx];
@@ -36163,12 +36170,10 @@ function effectiveSetLoad(exIdx, setNum, row) {
   const intelName = intel ? normalizeExerciseKey(intel.name) : '';
   const intelSameEx = !!(intel && Number(intel.load) > 0 && (!intelName || !nowName || intelName === nowName));
   const prevSets = (typeof collectPrevWeekSetLogs === 'function') ? collectPrevWeekSetLogs(exIdx, row || {}) : [];
-  // Exercise-level intel is only safe when there was a single previous load (or no history).
-  if (intelSameEx && !store.data[k + '_load_user'] && !store.data[k + '_done'] && !occupantCopy && !stale && uniquePositiveLoads(prevSets).length <= 1) {
+  if (intelSameEx && !store.data[k + '_load_user'] && !store.data[k + '_done'] && !occupantCopy && uniquePositiveLoads(prevSets).length <= 1) {
     return intel.load;
   }
-  if (!stale && stored !== undefined && stored !== '' && stored != null) return stored;
-  return '';
+  return hasStored ? stored : '';
 }
 function epleyE1rm(load, reps) {
   const L = parseFloat(load);
@@ -41326,7 +41331,8 @@ function formatLastSessionChip(exIdx, row) {
 }
 
 /**
- * Phase 1 parity: 1-tap complete — fill empty fields from UI/last session/prev set, mark done, auto-rest.
+ * 1-tap complete: conferma kg/reps/RIR dal campo (scelta atleta), marca done, avvia riposo.
+ * Il suggerimento riempie solo i campi vuoti — non sovrascrive mai ciò che hai scritto.
  */
 function completeSetQuick(exIdx, setNum, restText) {
   const k = `w${currentWeek}_d${currentDay}_e${exIdx}_s${setNum}`;
@@ -41357,29 +41363,46 @@ function completeSetQuick(exIdx, setNum, restText) {
   } : { load: '', reps: '', rir: '' };
 
   const loadEl = $(k + '_load');
+  const repsEl = $(k + '_reps');
+  const rirEl = $(k + '_rir');
   const rowForSugg = exerciseRowAt(currentWeek, currentDay, exIdx) || {};
-  let load = (typeof effectiveSetLoad === 'function') ? effectiveSetLoad(exIdx, setNum, rowForSugg) : store.data[k + '_load'];
-  if (load === undefined || load === '' || load == null) {
-    const fromInput = loadEl && loadEl.value !== '' && loadEl.value != null ? loadEl.value : '';
-    load = fromInput || prev.load || '';
+  const planned = plannedRepsRirFromRow(rowForSugg, setNum);
+
+  function fieldVal(el, stored) {
+    if (el && el.value !== undefined && el.value !== null && String(el.value).trim() !== '') return el.value;
+    if (stored !== undefined && stored !== null && String(stored).trim() !== '') return stored;
+    return '';
   }
-  if (load !== undefined && load !== '' && load != null) {
+
+  // 1) Valore nel campo / store  2) solo se vuoto: suggerimento / precedente / pianificato
+  let load = fieldVal(loadEl, store.data[k + '_load']);
+  if (load === '') {
+    const sugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(exIdx, setNum, rowForSugg) : null;
+    load = (Number(sugg) > 0 ? sugg : '') || prev.load || prevSet.load || '';
+  }
+  if (load !== '') {
     store.data[k + '_load'] = load;
+    store.data[k + '_load_user'] = 1; // confermato dall’atleta col ✓
     if (loadEl) loadEl.value = load;
   }
 
-  let reps = store.data[k + '_reps'];
-  if (reps === undefined || reps === '' || reps == null) {
-    const planned = plannedRepsRirFromRow(exerciseRowAt(currentWeek, currentDay, exIdx), setNum);
+  let reps = fieldVal(repsEl, store.data[k + '_reps']);
+  if (reps === '') {
     reps = prev.reps || prevSet.reps || planned.reps || '';
-    if (reps !== '' && reps != null) store.data[k + '_reps'] = reps;
+  }
+  if (reps !== '') {
+    store.data[k + '_reps'] = reps;
+    if (repsEl) repsEl.value = reps;
   }
 
-  let rir = store.data[k + '_rir'];
-  if (rir === undefined || rir === '' || rir == null) {
-    const planned = plannedRepsRirFromRow(exerciseRowAt(currentWeek, currentDay, exIdx), setNum);
+  let rir = fieldVal(rirEl, store.data[k + '_rir']);
+  if (rir === '') {
     rir = prev.rir || prevSet.rir || planned.rir || '';
-    if (rir !== '' && rir != null) store.data[k + '_rir'] = rir;
+  }
+  if (rir !== '') {
+    store.data[k + '_rir'] = rir;
+    store.data[k + '_rir_user'] = 1;
+    if (rirEl) rirEl.value = rir;
   }
 
   store.data[doneKey] = true;
@@ -48955,19 +48978,18 @@ function renderTraining(c){
           const setObj = Array.isArray(row.sets) ? row.sets[s - 1] : null;
           const isDone = Boolean(store.data[k + '_done']);
           const prevStored = store.data[k + '_load'];
-          const shownLoad = (typeof effectiveSetLoad === 'function') ? effectiveSetLoad(fIdx, s, row) : (prevStored || '');
           const sugg = (typeof suggestedLoadForSet === 'function') ? (suggestedLoadForSet(fIdx, s, row) || '') : '';
+          // Mostra il carico salvato; se vuoto mostra il suggerimento SOLO in UI (placeholder/value), senza riscriverlo nello store.
+          const shownLoad = (prevStored !== undefined && prevStored !== '' && prevStored != null)
+            ? prevStored
+            : (sugg || '');
           if (!isDone && !sessionWasFinalized(currentWeek, currentDay)) {
             const staleCopy = (typeof isStaleCopiedSetPrefill === 'function') && isStaleCopiedSetPrefill(prevStored, fIdx, s, row);
-            if (Number(shownLoad) > 0 && Number(prevStored) !== Number(shownLoad)) {
-              store.data[k + '_load'] = shownLoad;
-              if (store.data[k + '_load_user'] && staleCopy) {
-                delete store.data[k + '_load_user'];
-              }
-              window.__loadPrefillDirty = true;
-            } else if (staleCopy && (shownLoad === '' || shownLoad == null) && prevStored !== undefined && prevStored !== '' && prevStored != null) {
+            // Rimuovi solo prefill automatici stale — mai toccare carichi confermati dall’atleta.
+            if (staleCopy && !store.data[k + '_load_user'] && !isDone
+              && prevStored !== undefined && prevStored !== '' && prevStored != null
+              && Number(sugg) > 0 && Number(prevStored) !== Number(sugg)) {
               delete store.data[k + '_load'];
-              delete store.data[k + '_load_user'];
               window.__loadPrefillDirty = true;
             }
           }
@@ -48976,10 +48998,6 @@ function renderTraining(c){
           const shownReps = (store.data[k + '_reps'] !== undefined && store.data[k + '_reps'] !== '' && store.data[k + '_reps'] != null)
             ? store.data[k + '_reps']
             : (suggReps != null ? suggReps : repsChoiceValue(targetRepsRaw));
-          if (!isDone && !sessionWasFinalized(currentWeek, currentDay) && suggReps != null
-            && (store.data[k + '_reps'] === undefined || store.data[k + '_reps'] === '' || store.data[k + '_reps'] == null)) {
-            store.data[k + '_reps'] = suggReps;
-          }
           const shownRir = (store.data[k + '_rir'] !== undefined && store.data[k + '_rir'] !== '' && store.data[k + '_rir'] != null)
             ? store.data[k + '_rir']
             : (setObj && (setObj.rir ?? setObj.target_rir) != null ? setObj.rir ?? setObj.target_rir : (row.rirTarget != null ? row.rirTarget : ''));
@@ -48992,8 +49010,8 @@ function renderTraining(c){
           h += `<div class="set-row">
             <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
             <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" onfocus="showPrevLoad(event, '${k}_load')" onblur="hidePrevLoad()" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
-            <select onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${shownReps==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
-            <select onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${shownRir==i?'selected':''}>${i}</option>`).join('')}</select>
+            <select id="${k}_reps" onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${shownReps==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
+            <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${shownRir==i?'selected':''}>${i}</option>`).join('')}</select>
             <button class="set-done-btn ${isDone?'active':''}" title="1 tap: conferma kg/reps e avvia riposo" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
             <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
           </div>
@@ -49060,16 +49078,15 @@ function renderTraining(c){
         const restBonus = esc(bEx.rest || '60-90s');
         let bonusSugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(fIdx, s, bEx) : null;
         if (!(Number(bonusSugg) > 0)) bonusSugg = (s === 1 ? (bEx.plannedLoad || '') : '');
-        const bonusShown = (typeof effectiveSetLoad === 'function')
-          ? effectiveSetLoad(fIdx, s, bEx)
-          : ((store.data[k + '_load'] !== undefined && store.data[k + '_load'] !== '' && store.data[k + '_load'] != null)
-            ? store.data[k + '_load']
-            : (bonusSugg || ''));
+        const bonusStored = store.data[k + '_load'];
+        const bonusShown = (bonusStored !== undefined && bonusStored !== '' && bonusStored != null)
+          ? bonusStored
+          : (bonusSugg || '');
         h += `<div class="set-row">
           <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
           <input type="number" id="${k}_load" step="0.5" placeholder="${bonusSugg || ''}" value="${bonusShown}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
-          <select onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${store.data[k+'_reps']==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
-          <select onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${store.data[k+'_rir']==i?'selected':''}>${i}</option>`).join('')}</select>
+          <select id="${k}_reps" onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${store.data[k+'_reps']==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
+          <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${store.data[k+'_rir']==i?'selected':''}>${i}</option>`).join('')}</select>
           <button class="set-done-btn ${isDone?'active':''}" onclick="completeSetQuick(${fIdx}, ${s}, '${restBonus}')">${isDone?'✓':'○'}</button>
           <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
         </div>`;
@@ -49177,6 +49194,7 @@ function updateSetIntensityValue(exIdx, setNum, val) {
   const k = `w${currentWeek}_d${currentDay}_e${exIdx}_s${setNum}_rir`;
   maybePushFieldUndo('intensità', k);
   store.data[k] = val;
+  store.data[`w${currentWeek}_d${currentDay}_e${exIdx}_s${setNum}_rir_user`] = 1;
   persist();
   calcStats();
   refreshWorkoutUndoButton();
@@ -49187,6 +49205,7 @@ function updateSetIntensityValue(exIdx, setNum, val) {
       pushWorkoutUndoSnapshot('intensità serie successive');
       for (let s = setNum + 1; s <= total; s++) {
         store.data[`w${currentWeek}_d${currentDay}_e${exIdx}_s${s}_rir`] = val;
+        store.data[`w${currentWeek}_d${currentDay}_e${exIdx}_s${s}_rir_user`] = 1;
       }
       persist();
       render();
