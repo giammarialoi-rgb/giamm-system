@@ -1261,6 +1261,8 @@ function coachEventLabel(kind, name, payload) {
   if (kind === 'change_request') return { title: 'Modifica da approvare', body: n + ' vuole cambiare il programma', view: 'coachClient' };
   if (kind === 'change_notice') return { title: 'Atleta ha modificato', body: n + ' ha cambiato il programma', view: 'coachClient' };
   if (kind === 'request_program') return { title: 'Richiesta scheda', body: n + ' chiede la scheda', view: 'coachClient' };
+  if (kind === 'intake_update_pending') return { title: 'Anagrafica da approvare', body: n + ' ha aggiornato i suoi dati', view: 'coachClient' };
+  if (kind === 'intake_completed') return { title: 'Questionario ricevuto', body: n + ' ha compilato l’anagrafica', view: 'coachClient' };
   if (kind === 'unlock_approved') return { title: 'Sblocco approvato', body: 'Hai approvato una richiesta di ' + n, view: 'coachClient' };
   if (kind === 'unlock_rejected') return { title: 'Sblocco negato', body: 'Hai negato una richiesta di ' + n, view: 'coachClient' };
   if (kind === 'workout_started') return { title: 'In allenamento', body: n + ' ha iniziato il workout', view: 'workout_started' };
@@ -1412,7 +1414,19 @@ function buildCoachNotifyItems(box) {
         unlockFeature: 'max_freedom'
       });
     }
-    if (n <= 0 && !c.hasPendingChange && !c.leaveRequested && !c.hasPendingUnlock) return;
+    if (c.hasPendingIntake) {
+      items.unshift({
+        key: 'intake_' + c.id,
+        kind: 'event',
+        title: 'Anagrafica da approvare',
+        body: (c.displayName || 'Cliente') + ' ha aggiornato i suoi dati',
+        when: '',
+        unread: true,
+        route: { view: 'coachClient', clientId: String(c.id) },
+        eventIds: []
+      });
+    }
+    if (n <= 0 && !c.hasPendingChange && !c.leaveRequested && !c.hasPendingUnlock && !c.hasPendingIntake) return;
     if (n <= 0) return;
     const already = items.some(function (it) {
       return it.route && String(it.route.clientId) === String(c.id) && (it.route.view === 'chat' || it.title === 'Messaggio');
@@ -1957,15 +1971,186 @@ async function submitClientIntake() {
       body: JSON.stringify({ intake: intake })
     }, 20000);
     store.clientProfile = payload.client || store.clientProfile;
-    if (payload.profile) store.profile = Object.assign({}, store.profile || {}, payload.profile);
+    if (payload.profile && !payload.pending) store.profile = Object.assign({}, store.profile || {}, payload.profile);
     clearIntakeDraft();
     if (typeof persist === 'function') persist();
     showOverlay('cp-intake', false);
-    showClientTutorial(false);
-    practiceToast('Questionario inviato', 'success');
+    if (payload.pending) {
+      practiceToast(payload.message || 'Aggiornamento inviato: in attesa del coach', 'info');
+    } else {
+      showClientTutorial(false);
+      practiceToast('Questionario inviato', 'success');
+    }
     if (typeof render === 'function') render();
   } catch (err) {
     if (status) status.textContent = (err && err.message) || 'Invio non riuscito.';
+  }
+}
+
+/** Cliente già acquisito: riapre il questionario per proporre un aggiornamento al coach. */
+async function showClientIntakeUpdate() {
+  let prefill = {};
+  try {
+    if (store.clientProfile && store.clientProfile.intake) prefill = store.clientProfile.intake;
+    else if (store.profile) {
+      prefill = {
+        firstName: String(store.profile.name || '').split(/\s+/)[0] || '',
+        lastName: String(store.profile.name || '').split(/\s+/).slice(1).join(' ') || '',
+        sex: store.profile.sex || '',
+        goal: store.profile.goal || ''
+      };
+    }
+    const me = await practiceFetch('/api/client/me', { method: 'GET', headers: practiceHeaders(false) }, 12000);
+    if (me && me.client && me.client.intake) prefill = Object.assign({}, prefill, me.client.intake);
+    if (me && me.client && me.client.hasPendingIntake) {
+      practiceToast('Hai già un aggiornamento in attesa di approvazione del coach.', 'info');
+    }
+  } catch (_) {}
+  await showClientIntake(prefill, true);
+  const p = document.getElementById('cp-intake-panel');
+  if (p) {
+    const h = p.querySelector('h2');
+    if (h) h.textContent = 'Aggiorna anagrafica';
+    const help = p.querySelector('.cp-help');
+    if (help) help.textContent = 'Le modifiche vanno al coach: diventano attive solo dopo la sua approvazione.';
+    const btn = p.querySelector('button.btn-primary');
+    if (btn) btn.textContent = 'INVIA AGGIORNAMENTO AL COACH';
+  }
+}
+
+function clientIntakeIsIncomplete(intake, client) {
+  if (client && client.needIntake) return true;
+  if (client && client.intakeDone === false) return true;
+  const data = intake && typeof intake === 'object' ? intake : {};
+  return intakeFormMissing(data).length > 0;
+}
+
+async function openCoachClientAnagrafica() {
+  const id = store.coachWorkspace && store.coachWorkspace.clientId;
+  if (!id) {
+    practiceToast('Nessun cliente aperto', 'warning');
+    return;
+  }
+  let intake = (store.coachWorkspace && store.coachWorkspace.intake) || {};
+  let client = (store.coachWorkspace && store.coachWorkspace.client) || {};
+  try {
+    const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', {
+      method: 'GET', headers: practiceHeaders(false)
+    }, 15000);
+    if (snap && snap.intake) intake = snap.intake;
+    if (snap && snap.client) {
+      client = Object.assign({}, client, snap.client);
+      store.coachWorkspace.client = client;
+      store.coachWorkspace.intake = intake;
+    }
+  } catch (_) {}
+  if (clientIntakeIsIncomplete(intake, client)) {
+    const ok = confirm('Anagrafica incompleta.\n\nVuoi inserirla tu ora, nel caso il cliente non l’abbia ancora compilata?\n\nOK = la compilo io · Annulla = solo visualizza');
+    if (ok) {
+      showCoachClientIntake(id, intake);
+      return;
+    }
+  }
+  if (typeof enterCoachClientView === 'function') enterCoachClientView('athlete');
+  else navigate('profile');
+}
+
+async function showCoachClientIntake(clientId, prefill) {
+  ensurePracticeStyle();
+  ensurePracticeOverlays();
+  const p = document.getElementById('cp-intake-panel');
+  if (!p) return;
+  try {
+    if (typeof ensureAllergenIntoleranceCatalog === 'function') await ensureAllergenIntoleranceCatalog();
+  } catch (_) {}
+  window.__cpCoachIntakeClientId = String(clientId || '');
+  const data = mergeIntakeFormData(prefill || {});
+  p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">ANAGRAFICA CLIENTE</div>' +
+    '<h2>Compila tu l’anagrafica</h2>' +
+    '<p class="cp-help">Il cliente non ha ancora i dati completi. Puoi inserirli tu: restano modificabili dal cliente, e i suoi aggiornamenti ti arriveranno da approvare.</p>' +
+    '<div id="cp-intake-fields">' + intakeFormHtml('cpi', data) + '</div>' +
+    '<div id="cp-intake-status" class="cp-help"></div>' +
+    '<button class="btn btn-primary" style="width:100%;" onclick="submitCoachClientIntake()">SALVA ANAGRAFICA</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="showOverlay(\'cp-intake\', false)">ANNULLA</button>';
+  bindIntakeDraftAutosave('cpi');
+  showOverlay('cp-intake', true);
+}
+
+async function submitCoachClientIntake() {
+  const id = window.__cpCoachIntakeClientId || (store.coachWorkspace && store.coachWorkspace.clientId);
+  const status = document.getElementById('cp-intake-status');
+  if (!id) {
+    if (status) status.textContent = 'Cliente non trovato.';
+    return;
+  }
+  const intake = readIntakeForm('cpi');
+  const missing = intakeFormMissing(intake);
+  if (missing.length) {
+    if (status) status.textContent = 'Manca: ' + missing.join(', ');
+    return;
+  }
+  if (status) status.textContent = 'Salvataggio…';
+  try {
+    const payload = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/intake', {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ intake: intake })
+    }, 20000);
+    if (store.coachWorkspace) {
+      store.coachWorkspace.intake = intake;
+      if (store.coachWorkspace.client) {
+        store.coachWorkspace.client.intakeDone = true;
+        store.coachWorkspace.client.needIntake = false;
+        store.coachWorkspace.client.intake = intake;
+        if (payload && payload.client && payload.client.displayName) {
+          store.coachWorkspace.client.displayName = payload.client.displayName;
+        }
+      }
+    }
+    clearIntakeDraft();
+    showOverlay('cp-intake', false);
+    practiceToast('Anagrafica salvata per il cliente', 'success');
+    if (typeof renderCoachWorkspace === 'function') {
+      renderCoachWorkspace(document.getElementById('view-container'));
+    } else if (typeof render === 'function') render();
+  } catch (err) {
+    if (status) status.textContent = (err && err.message) || 'Salvataggio non riuscito.';
+  }
+}
+
+async function approvePendingIntake(id) {
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/intake-approve', {
+      method: 'POST', headers: practiceHeaders(true), body: '{}'
+    }, 20000);
+    practiceToast('Aggiornamento anagrafica approvato', 'success');
+    if (typeof renderCoachWorkspace === 'function') {
+      renderCoachWorkspace(document.getElementById('view-container'));
+    }
+    try { refreshNotificationsCenterUi(); } catch (_) {}
+  } catch (err) {
+    practiceToast((err && err.message) || 'Approvazione fallita', 'danger');
+  }
+}
+
+async function rejectPendingIntake(id) {
+  const note = prompt('Messaggio di spiegazione per il cliente (obbligatorio):');
+  if (note == null) return;
+  if (!String(note).trim() || String(note).trim().length < 3) {
+    practiceToast('Serve un messaggio di almeno 3 caratteri.', 'warning');
+    return;
+  }
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/intake-reject', {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ note: String(note).trim() })
+    }, 15000);
+    practiceToast('Aggiornamento negato: il cliente ha ricevuto la spiegazione', 'warning');
+    if (typeof renderCoachWorkspace === 'function') {
+      renderCoachWorkspace(document.getElementById('view-container'));
+    }
+    try { refreshNotificationsCenterUi(); } catch (_) {}
+  } catch (err) {
+    practiceToast((err && err.message) || 'Negazione fallita', 'danger');
   }
 }
 
@@ -3618,12 +3803,15 @@ async function renderCoachWorkspace(c) {
       '<div class="card" style="padding:12px;margin-bottom:12px;border-color:rgba(212,175,55,.4);">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">' +
       '<div style="font-weight:900;color:var(--gold);">Anagrafica</div>' +
-      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:4px 8px;" onclick="enterCoachClientView(\'athlete\')">APRI PROFILO</button></div>' +
+      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:4px 8px;" onclick="openCoachClientAnagrafica()">APRI PROFILO</button></div>' +
       (anagraficaQuick.length
         ? ('<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">' + anagraficaQuick.map(function (row) {
           return '<div style="font-size:11px;color:#888;">' + esc(row[0]) + '<br><b style="color:#fff;font-size:12px;">' + esc(row[1]) + '</b></div>';
         }).join('') + '</div>')
         : '<div class="cp-help" style="margin:0;">Nessun dato anagrafico ancora — apri profilo o completa il questionario.</div>') +
+      (!cl.intakeDone
+        ? '<button type="button" class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="openCoachClientAnagrafica()">COMPILA ANAGRAFICA</button>'
+        : '') +
       '</div>' +
       (cl.workoutLive ? ('<button class="btn btn-primary" style="width:100%;margin-bottom:12px;border-color:#6c6;background:#143014;" onclick="followClientLiveWorkout(\'' + esc(id) + '\')">SEGUI ALLENAMENTO LIVE</button>') : '') +
       '<div class="card" style="padding:10px;margin-bottom:12px;border-color:rgba(212,175,55,.35);"><div style="font-size:11px;color:var(--gold);font-weight:800;">ALLENAMENTI CLIENTE</div>' +
@@ -3642,6 +3830,21 @@ async function renderCoachWorkspace(c) {
         '<p class="cp-help">' + esc((snap.pendingChange && snap.pendingChange.summary) || 'Vuole cambiare il programma.') + '</p>' +
         '<button class="btn btn-primary" style="width:100%;margin-top:6px;" onclick="approveClientChange(\'' + esc(id) + '\')">APPROVA MODIFICA</button>' +
         '<button class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="rejectClientChange(\'' + esc(id) + '\')">NEGA (con messaggio)</button></div>' : '') +
+      ((snap.pendingIntake || cl.hasPendingIntake || (cl.pendingIntake && cl.pendingIntake.intake)) ? (function () {
+        const pi = snap.pendingIntake || cl.pendingIntake || {};
+        const inc = pi.intake || {};
+        const bits = [];
+        if (inc.firstName || inc.lastName) bits.push(((inc.firstName || '') + ' ' + (inc.lastName || '')).trim());
+        if (inc.goal) bits.push(inc.goal);
+        if (inc.weightBand) bits.push(inc.weightBand);
+        if (inc.ageBand) bits.push(inc.ageBand);
+        return '<div class="card" style="padding:12px;margin-bottom:12px;border-color:var(--gold);"><div style="font-weight:900;color:var(--gold);">Aggiornamento anagrafica da approvare</div>' +
+          '<p class="cp-help">' + esc(pi.summary || 'Il cliente ha aggiornato i suoi dati.') +
+          (pi.at ? (' · ' + esc(String(pi.at).replace('T', ' ').slice(0, 16))) : '') + '</p>' +
+          (bits.length ? ('<div style="font-size:12px;color:#ddd;margin:6px 0 8px;">' + esc(bits.join(' · ')) + '</div>') : '') +
+          '<button class="btn btn-primary" style="width:100%;margin-top:6px;" onclick="approvePendingIntake(\'' + esc(id) + '\')">APPROVA ANAGRAFICA</button>' +
+          '<button class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="rejectPendingIntake(\'' + esc(id) + '\')">NEGA (con messaggio)</button></div>';
+      })() : '') +
       ((snap.pendingUnlock || cl.hasPendingUnlock || (cl.pendingUnlock && cl.pendingUnlock.feature)) ? (function () {
         const pu = snap.pendingUnlock || cl.pendingUnlock || { feature: 'max_freedom' };
         const feat = pu.feature || 'max_freedom';
@@ -3682,7 +3885,7 @@ async function renderCoachWorkspace(c) {
       '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'supplements\')">INTEGRAZIONE</button>' +
       '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'therapy\')">TERAPIA</button>' +
       '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'exams\')">ESAMI</button>' +
-      '<button class="btn btn-outline" style="font-size:10px;" onclick="enterCoachClientView(\'athlete\')">PROFILO</button></div></div>' +
+      '<button class="btn btn-outline" style="font-size:10px;" onclick="openCoachClientAnagrafica()">PROFILO</button></div></div>' +
       '<div class="card" style="padding:12px;margin-bottom:12px;">' +
       '<button type="button" class="cp-ws-collapse-h" onclick="toggleCoachWsSection(\'intake\')" style="display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;background:transparent;border:0;padding:0;cursor:pointer;text-align:left;">' +
       '<span style="font-weight:900;color:var(--gold);">Anagrafica acquisizione</span>' +
@@ -5393,7 +5596,12 @@ function eventNotifyCopy(kind) {
     max_freedom: ['Libertà aggiornata', 'Il coach ha cambiato il consenso di modifica', { view: 'home' }],
     coach_modified: ['Piano aggiornato', 'Il coach ha modificato qualcosa per te', { view: 'home' }],
     workout_started: ['Cliente in allenamento', 'Un atleta ha iniziato il workout', { view: 'coachClient' }],
-    workout_done: ['Workout completato', 'Un atleta ha finalizzato l’allenamento', { view: 'coachClient' }]
+    workout_done: ['Workout completato', 'Un atleta ha finalizzato l’allenamento', { view: 'coachClient' }],
+    intake_completed: ['Questionario ricevuto', 'Un atleta ha completato l’anagrafica', { view: 'coachClient' }],
+    intake_update_pending: ['Anagrafica da approvare', 'Il cliente ha aggiornato i suoi dati', { view: 'coachClient' }],
+    intake_update_approved: ['Anagrafica approvata', 'Il coach ha approvato l’aggiornamento anagrafica', { view: 'profile' }],
+    intake_update_rejected: ['Anagrafica non approvata', 'Il coach non ha approvato l’aggiornamento — leggi il messaggio', { view: 'clientChat' }],
+    intake_filled_by_coach: ['Anagrafica compilata', 'Il coach ha compilato la tua anagrafica', { view: 'profile' }]
   };
   return map[kind] || null;
 }
@@ -6308,6 +6516,12 @@ window.closeClientInviteOverlay = closeClientInviteOverlay;
 window.submitClientInviteLogin = submitClientInviteLogin;
 window.showClientIntake = showClientIntake;
 window.submitClientIntake = submitClientIntake;
+window.showClientIntakeUpdate = showClientIntakeUpdate;
+window.openCoachClientAnagrafica = openCoachClientAnagrafica;
+window.showCoachClientIntake = showCoachClientIntake;
+window.submitCoachClientIntake = submitCoachClientIntake;
+window.approvePendingIntake = approvePendingIntake;
+window.rejectPendingIntake = rejectPendingIntake;
 window.showClientTutorial = showClientTutorial;
 window.drawClientTutorial = drawClientTutorial;
 window.advanceClientTutorial = advanceClientTutorial;
