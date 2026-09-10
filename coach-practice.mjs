@@ -256,6 +256,14 @@ function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
     allowNurvanAi: !!r.allow_nurvan_ai,
     hasPendingChange: !!(r.pending_change && (r.pending_change.summary || r.pending_change.data)),
     hasPendingUnlock: !!(r.pending_unlock && r.pending_unlock.feature),
+    hasPendingIntake: !!(r.pending_intake && r.pending_intake.intake),
+    pendingIntake: r.pending_intake && r.pending_intake.intake
+      ? {
+          at: r.pending_intake.at || null,
+          summary: String(r.pending_intake.summary || "Aggiornamento anagrafica").slice(0, 200),
+          intake: r.pending_intake.intake
+        }
+      : null,
     pendingUnlock: r.pending_unlock && r.pending_unlock.feature
       ? {
           feature: String(r.pending_unlock.feature || "max_freedom"),
@@ -462,6 +470,7 @@ export async function ensureCoachPracticeTables(client) {
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS allow_nurvan_ai BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS pending_change JSONB;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS pending_unlock JSONB;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS pending_intake JSONB;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS workout_started_at TIMESTAMPTZ;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS program_expires_at TIMESTAMPTZ;
@@ -1455,8 +1464,36 @@ export function mountCoachPractice(app, deps) {
       return res.status(400).json({ error: "Completa tutti i campi obbligatori.", missing });
     }
     const profile = profileFromIntake(intake);
+    const alreadyDone = !!ctx.client.intake_completed_at;
+
+    // After first completion, updates wait for coach approval.
+    if (alreadyDone) {
+      const pending = {
+        at: new Date().toISOString(),
+        summary: "Aggiornamento anagrafica dal cliente",
+        intake,
+        profile
+      };
+      await pool.query(
+        "UPDATE coach_clients SET pending_intake = $2::jsonb, unread_count = unread_count + 1 WHERE id = $1",
+        [ctx.client.id, JSON.stringify(pending)]
+      );
+      await pool.query(
+        "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'intake_update_pending',$2)",
+        [ctx.client.id, JSON.stringify({ name: profile.name, goal: intake.goal, at: pending.at })]
+      );
+      const fresh = await pool.query("SELECT * FROM coach_clients WHERE id = $1", [ctx.client.id]);
+      return res.json({
+        ok: true,
+        pending: true,
+        message: "Aggiornamento inviato al coach: resta in attesa di approvazione.",
+        client: clientRow(fresh.rows[0], { includeIntake: true }),
+        profile: ctx.client.intake ? profileFromIntake(sanitizeIntake(ctx.client.intake)) : profile
+      });
+    }
+
     await pool.query(
-      "UPDATE coach_clients SET display_name = $2, intake = $3, intake_completed_at = NOW() WHERE id = $1",
+      "UPDATE coach_clients SET display_name = $2, intake = $3, intake_completed_at = NOW(), pending_intake = NULL WHERE id = $1",
       [ctx.client.id, profile.name || ctx.client.display_name, JSON.stringify(intake)]
     );
     const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [ctx.auth.id]);
@@ -1478,7 +1515,7 @@ export function mountCoachPractice(app, deps) {
       [ctx.client.id, JSON.stringify({ name: profile.name, goal: intake.goal })]
     );
     const fresh = await pool.query("SELECT * FROM coach_clients WHERE id = $1", [ctx.client.id]);
-    return res.json({ ok: true, client: clientRow(fresh.rows[0], { includeIntake: true }), profile });
+    return res.json({ ok: true, pending: false, client: clientRow(fresh.rows[0], { includeIntake: true }), profile });
   });
 
   app.post("/api/client/workout-ping", async (req, res) => {
@@ -1842,7 +1879,7 @@ export function mountCoachPractice(app, deps) {
       conditions.push(`c.status = ${addParam(String(req.query.status))}`);
     }
     const attentionCondition = `(
-      c.unread_count > 0 OR c.pending_change IS NOT NULL OR c.pending_unlock IS NOT NULL
+      c.unread_count > 0 OR c.pending_change IS NOT NULL OR c.pending_unlock IS NOT NULL OR c.pending_intake IS NOT NULL
       OR c.leave_requested_at IS NOT NULL OR c.paid = FALSE
       OR (c.next_due_at IS NOT NULL AND c.next_due_at <= NOW())
       OR (c.next_check_at IS NOT NULL AND c.next_check_at <= NOW())
@@ -2370,7 +2407,7 @@ export function mountCoachPractice(app, deps) {
     }
     const profile = profileFromIntake(intake);
     await pool.query(
-      "UPDATE coach_clients SET display_name = $2, intake = $3, intake_completed_at = NOW() WHERE id = $1",
+      "UPDATE coach_clients SET display_name = $2, intake = $3, intake_completed_at = NOW(), pending_intake = NULL WHERE id = $1",
       [row.id, profile.name || row.display_name, JSON.stringify(intake)]
     );
     if (row.athlete_user_id) {
@@ -2385,7 +2422,71 @@ export function mountCoachPractice(app, deps) {
         [row.athlete_user_id, JSON.stringify(merged)]
       );
     }
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'intake_filled_by_coach',$2)",
+      [row.id, JSON.stringify({ name: profile.name, goal: intake.goal })]
+    );
     return res.json({ ok: true, client: { ...clientRow(row, { includeIntake: true }), intake, intakeDone: true, displayName: profile.name } });
+  });
+
+  app.post("/api/coach/clients/:id/intake-approve", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const pending = row.pending_intake && typeof row.pending_intake === "object" ? row.pending_intake : null;
+    const intake = pending && pending.intake ? sanitizeIntake(pending.intake) : null;
+    if (!intake || intakeMissing(intake).length) {
+      return res.status(400).json({ error: "Nessun aggiornamento anagrafica in attesa." });
+    }
+    const profile = profileFromIntake(intake);
+    await pool.query(
+      "UPDATE coach_clients SET display_name = $2, intake = $3, intake_completed_at = COALESCE(intake_completed_at, NOW()), pending_intake = NULL WHERE id = $1",
+      [row.id, profile.name || row.display_name, JSON.stringify(intake)]
+    );
+    if (row.athlete_user_id) {
+      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
+      const current = existing.rows[0]?.data || {};
+      const merged = { ...current, profile: { ...(current.profile || {}), ...profile } };
+      await pool.query(
+        `INSERT INTO app_account_data(user_id, data, updated_at)
+         VALUES($1,$2,NOW())
+         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
+           revision = app_account_data.revision + 1, updated_at = NOW()`,
+        [row.athlete_user_id, JSON.stringify(merged)]
+      );
+    }
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'intake_update_approved',$2)",
+      [row.id, JSON.stringify({ name: profile.name, goal: intake.goal })]
+    );
+    try {
+      await insertMessage(row.id, "coach", "Ho approvato l’aggiornamento della tua anagrafica.", null);
+    } catch (_) {}
+    notifyAthletePush(row, "Anagrafica aggiornata", "Il coach ha approvato le tue modifiche", { view: "profile" }).catch(() => {});
+    const fresh = await pool.query("SELECT * FROM coach_clients WHERE id = $1", [row.id]);
+    return res.json({ ok: true, client: clientRow(fresh.rows[0], { includeIntake: true }) });
+  });
+
+  app.post("/api/coach/clients/:id/intake-reject", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const note = String(req.body?.note || "").trim().slice(0, 800);
+    if (!note || note.length < 3) {
+      return res.status(400).json({ error: "Scrivi un messaggio di spiegazione per il cliente (obbligatorio)." });
+    }
+    await pool.query("UPDATE coach_clients SET pending_intake = NULL WHERE id = $1", [row.id]);
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'intake_update_rejected',$2)",
+      [row.id, JSON.stringify({ note })]
+    );
+    try {
+      await insertMessage(row.id, "coach", "Aggiornamento anagrafica non approvato.\n\n" + note, null);
+    } catch (_) {}
+    notifyAthletePush(row, "Anagrafica non approvata", note.slice(0, 140), { view: "clientChat" }).catch(() => {});
+    return res.json({ ok: true, note });
   });
 
   app.post("/api/coach/clients/:id/check-request", async (req, res) => {
@@ -2640,6 +2741,13 @@ export function mountCoachPractice(app, deps) {
             feature: String(row.pending_unlock.feature || "max_freedom"),
             note: String(row.pending_unlock.note || "").slice(0, 800),
             at: row.pending_unlock.at || null
+          }
+        : null,
+      pendingIntake: row.pending_intake && row.pending_intake.intake
+        ? {
+            at: row.pending_intake.at || null,
+            summary: String(row.pending_intake.summary || "Aggiornamento anagrafica").slice(0, 200),
+            intake: row.pending_intake.intake
           }
         : null
     });
@@ -2974,10 +3082,10 @@ export function mountCoachPractice(app, deps) {
     const coach = await requireCoach(req, res);
     if (!coach) return;
     const clients = await pool.query(
-      `SELECT id, display_name, unread_count, leave_requested_at, pending_change, pending_unlock
+      `SELECT id, display_name, unread_count, leave_requested_at, pending_change, pending_unlock, pending_intake
        FROM coach_clients
        WHERE coach_user_id = $1 AND status = 'active'
-         AND (unread_count > 0 OR leave_requested_at IS NOT NULL OR pending_change IS NOT NULL OR pending_unlock IS NOT NULL)
+         AND (unread_count > 0 OR leave_requested_at IS NOT NULL OR pending_change IS NOT NULL OR pending_unlock IS NOT NULL OR pending_intake IS NOT NULL)
        ORDER BY unread_count DESC, display_name ASC
        LIMIT 40`,
       [coach.id]
@@ -2996,7 +3104,8 @@ export function mountCoachPractice(app, deps) {
            'coach_modified','program_assigned','nutrition_assigned','supplements_assigned',
            'therapy_assigned','exams_assigned','unlock_approved','unlock_rejected',
            'max_freedom','change_approved','change_rejected','password_reset',
-           'exams_request','check_request','leave_confirmed','payment_due'
+           'exams_request','check_request','leave_confirmed','payment_due',
+           'intake_completed','intake_update_pending','intake_filled_by_coach'
          )
        ORDER BY e.id DESC LIMIT 20`,
       [coach.id]
@@ -3009,7 +3118,8 @@ export function mountCoachPractice(app, deps) {
         unreadCount: Number(r.unread_count || 0),
         leaveRequested: !!r.leave_requested_at,
         hasPendingChange: !!r.pending_change,
-        hasPendingUnlock: !!(r.pending_unlock && r.pending_unlock.feature)
+        hasPendingUnlock: !!(r.pending_unlock && r.pending_unlock.feature),
+        hasPendingIntake: !!(r.pending_intake && r.pending_intake.intake)
       })),
       events: events.rows.map((r) => {
         let payload = r.payload;
@@ -3079,7 +3189,8 @@ export function mountCoachPractice(app, deps) {
            'coach_modified','program_assigned','nutrition_assigned','supplements_assigned',
            'therapy_assigned','exams_assigned','unlock_approved','unlock_rejected',
            'max_freedom','change_approved','change_rejected','password_reset',
-           'exams_request','check_request','leave_confirmed','payment_due'
+           'exams_request','check_request','leave_confirmed','payment_due',
+           'intake_completed','intake_update_pending','intake_filled_by_coach'
          )
        ORDER BY created_at DESC LIMIT 40`,
       [row.id]
