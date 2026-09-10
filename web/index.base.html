@@ -1470,6 +1470,10 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">🔔</span>
         <span style="font-size:11px;font-weight:800;">Notifiche</span>
       </button>
+      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-color:#c66;" onclick="closeMenuHub();recoverPersonalTrainingEmergency()">
+        <span style="font-size:20px;">♻️</span>
+        <span style="font-size:11px;font-weight:800;color:#f88;">Ripristina scheda</span>
+      </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('settings')">
         <span style="font-size:20px;">⚙️</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="settings">Impostazioni</span>
@@ -3928,6 +3932,14 @@ function applyRemoteAccountData(remote, preferLocal) {
   const remoteAssigned = String(remote.assignedAt || '');
   const localAssigned = String(store.clientAssignedAt || '');
   let takeRemote = (!localWeeks || localWeeks < 1) && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length;
+  if (window.__cpForceRemoteProgram && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length) {
+    takeRemote = true;
+  }
+  if (typeof looksLikeClientAssignDraft === 'function' && looksLikeClientAssignDraft(DATA)
+      && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length
+      && !looksLikeClientAssignDraft(remoteProg)) {
+    takeRemote = true;
+  }
   if (athlete && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length) {
     const force = !!window.__cpForceRemoteProgram;
     const newerAssign = !!(remoteAssigned && (!localAssigned || remoteAssigned > localAssigned));
@@ -3985,58 +3997,147 @@ function applyRemoteAccountData(remote, preferLocal) {
   store.accountToken = token;
   store.accountUser = user;
 }
+function looksLikeClientAssignDraft(prog) {
+  if (!prog || typeof prog !== 'object') return true;
+  const id = String(prog.id || '');
+  const title = String(prog.title || prog.original_title || '');
+  if (/^assign_|_draft_|client_view_|lib_/i.test(id)) return true;
+  if (/bozza\s+per\s+cliente|scheda\s+cliente|piano\s+cliente|assign_merge/i.test(title)) return true;
+  if (prog.depersonalized === true && /cliente|bozza|assign/i.test(title)) return true;
+  return false;
+}
+
+function programRecoveryScore(prog) {
+  if (!prog || typeof prog !== 'object') return -1;
+  const weeks = Array.isArray(prog.weeks) ? prog.weeks : [];
+  let score = weeks.length * 100;
+  weeks.forEach(function (w) {
+    const sessions = (w && (w.sessions || w.days)) || [];
+    sessions.forEach(function (s) {
+      const list = (s && (s.exercises || s.rows)) || [];
+      score += list.length * 3;
+    });
+  });
+  if (looksLikeClientAssignDraft(prog)) score -= 5000;
+  const title = String(prog.title || '');
+  if (/giammaria|personale|master|mia scheda/i.test(title)) score += 80;
+  return score;
+}
+
+function activateRecoveredProgram(prog, sourceLabel, notes) {
+  if (!prog || !Array.isArray(prog.weeks) || !prog.weeks.length) return false;
+  DATA = typeof normalizeProgram === 'function' ? normalizeProgram(prog.training || prog) : (prog.training || prog);
+  store.activeProgram = DATA;
+  store.activeProgramId = DATA.id || store.activeProgramId || ('recovered_' + Date.now());
+  if (notes) notes.push(sourceLabel + ' (' + DATA.weeks.length + ' sett. · ' + (DATA.title || 'senza titolo') + ')');
+  return true;
+}
+
 async function recoverPersonalTrainingEmergency() {
   if (store && (store.coachAssigning || store.coachViewingClient)) {
     if (typeof exitCoachSession === 'function') exitCoachSession(true);
-    await new Promise(function (r) { setTimeout(r, 400); });
+    await new Promise(function (r) { setTimeout(r, 500); });
   }
   const before = {
     weeks: (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0,
+    title: (DATA && DATA.title) || '',
     loads: Object.keys((store && store.data) || {}).length,
-    logs: Array.isArray(store && store.logs) ? store.logs.length : 0
+    logs: Array.isArray(store && store.logs) ? store.logs.length : 0,
+    draft: looksLikeClientAssignDraft(DATA)
   };
   let notes = [];
+  const candidates = [];
+
+  function addCandidate(prog, source) {
+    if (!prog || typeof prog !== 'object') return;
+    const body = prog.training && Array.isArray(prog.training.weeks) ? prog.training : prog;
+    if (!Array.isArray(body.weeks) || !body.weeks.length) return;
+    candidates.push({ prog: body, source: source, score: programRecoveryScore(body) });
+  }
+
   try {
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadWorkoutLogsSnapshot) {
       const logSnap = await GiammariaPersistence.loadWorkoutLogsSnapshot();
-      if (logSnap && logSnap.data && Object.keys(logSnap.data).length > Object.keys(store.data || {}).length) {
-        store.data = Object.assign({}, logSnap.data, store.data || {});
-        if (logSnap.customSets) store.customSets = Object.assign({}, logSnap.customSets, store.customSets || {});
-        if (Array.isArray(logSnap.logs) && logSnap.logs.length > (store.logs || []).length) store.logs = logSnap.logs;
-        notes.push('carichi da IndexedDB');
+      if (logSnap && logSnap.data && Object.keys(logSnap.data).length) {
+        const localKeys = Object.keys(store.data || {}).length;
+        if (Object.keys(logSnap.data).length >= localKeys) {
+          store.data = Object.assign({}, logSnap.data, store.data || {});
+          if (logSnap.customSets) store.customSets = Object.assign({}, logSnap.customSets, store.customSets || {});
+          if (Array.isArray(logSnap.logs) && logSnap.logs.length) {
+            const byId = {};
+            (store.logs || []).concat(logSnap.logs).forEach(function (row) {
+              if (!row) return;
+              byId[row.id || row.at] = row;
+            });
+            store.logs = Object.keys(byId).map(function (k) { return byId[k]; });
+          }
+          notes.push('carichi da IndexedDB');
+        }
       }
     }
   } catch (e) { console.warn('[RECOVER_IDB_LOGS]', e); }
+
   try {
-    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadActiveProgram) {
-      const prog = await GiammariaPersistence.loadActiveProgram();
-      const progWeeks = prog && Array.isArray(prog.weeks) ? prog.weeks.length : 0;
-      const localWeeks = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
-      if (progWeeks > localWeeks) {
-        DATA = typeof normalizeProgram === 'function' ? normalizeProgram(prog.training || prog) : (prog.training || prog);
-        store.activeProgram = DATA;
-        store.activeProgramId = DATA.id || store.activeProgramId;
-        notes.push('scheda da IndexedDB (' + progWeeks + ' sett.)');
-      }
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.getAllPrograms) {
+      const all = await GiammariaPersistence.getAllPrograms();
+      (all || []).forEach(function (p, i) { addCandidate(p, 'archivio IDB #' + (i + 1)); });
+    } else if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadActiveProgram) {
+      addCandidate(await GiammariaPersistence.loadActiveProgram(), 'scheda attiva IDB');
     }
   } catch (e) { console.warn('[RECOVER_IDB_PROG]', e); }
+
   try {
-    const lib = Array.isArray(store.coachProgramLibrary) ? store.coachProgramLibrary : [];
-    let best = null;
-    let bestWeeks = 0;
-    lib.forEach(function (e) {
-      const p = e && e.payload;
-      const w = p && Array.isArray(p.weeks) ? p.weeks.length : 0;
-      if (w > bestWeeks) { best = p; bestWeeks = w; }
+    (Array.isArray(store.coachProgramLibrary) ? store.coachProgramLibrary : []).forEach(function (e, i) {
+      addCandidate(e && e.payload, 'libreria coach · ' + ((e && e.title) || ('#' + (i + 1))));
     });
-    const localWeeks = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
-    if (best && bestWeeks > localWeeks) {
-      DATA = typeof normalizeProgram === 'function' ? normalizeProgram(best) : best;
-      store.activeProgram = DATA;
-      store.activeProgramId = DATA.id || store.activeProgramId;
-      notes.push('scheda da libreria coach (' + bestWeeks + ' sett.)');
-    }
   } catch (e) { console.warn('[RECOVER_LIB]', e); }
+
+  let remote = null;
+  try {
+    if (store.accountToken) {
+      const response = await accountRequest('/api/account/me', { method: 'GET' });
+      const payload = await readApiJson(response);
+      remote = payload.data || {};
+      addCandidate(remote.activeProgram, 'cloud account');
+      if (remote.data && Object.keys(remote.data).length) {
+        store.data = Object.assign({}, remote.data, store.data || {});
+        notes.push('carichi da cloud');
+      }
+      if (Array.isArray(remote.logs) && remote.logs.length) {
+        const byId = {};
+        (store.logs || []).concat(remote.logs).forEach(function (row) {
+          if (!row) return;
+          byId[row.id || row.at] = row;
+        });
+        store.logs = Object.keys(byId).map(function (k) { return byId[k]; });
+      }
+      if (Array.isArray(remote.coachProgramLibrary)) {
+        remote.coachProgramLibrary.forEach(function (e, i) {
+          addCandidate(e && e.payload, 'libreria cloud · ' + ((e && e.title) || ('#' + (i + 1))));
+        });
+        const byId = {};
+        (store.coachProgramLibrary || []).concat(remote.coachProgramLibrary).forEach(function (row) {
+          if (row && row.id) byId[row.id] = row;
+        });
+        store.coachProgramLibrary = Object.keys(byId).map(function (k) { return byId[k]; }).slice(0, 40);
+      }
+    }
+  } catch (e) {
+    console.warn('[RECOVER_CLOUD]', e);
+  }
+
+  candidates.sort(function (a, b) { return b.score - a.score; });
+  const best = candidates[0];
+  const localIsDraft = looksLikeClientAssignDraft(DATA);
+  const localScore = programRecoveryScore(DATA);
+  if (best && (localIsDraft || best.score > localScore + 50 || !(DATA && DATA.weeks && DATA.weeks.length))) {
+    activateRecoveredProgram(best.prog, best.source, notes);
+  } else if (!best) {
+    notes.push('nessuna scheda personale trovata nei backup');
+  } else {
+    notes.push('scheda attuale già migliore dei backup');
+  }
+
   try {
     window.__cpForceRemoteProgram = true;
     if (store.accountToken && typeof syncAccountData === 'function') {
@@ -4044,10 +4145,16 @@ async function recoverPersonalTrainingEmergency() {
       notes.push('sync cloud');
     }
   } catch (e) {
-    console.warn('[RECOVER_CLOUD]', e);
+    console.warn('[RECOVER_SYNC]', e);
   } finally {
     window.__cpForceRemoteProgram = false;
   }
+
+  // If sync left a draft active but we had a better personal candidate, re-apply it.
+  if (best && looksLikeClientAssignDraft(DATA) && !looksLikeClientAssignDraft(best.prog)) {
+    activateRecoveredProgram(best.prog, 'ripristino forzato · ' + best.source, notes);
+  }
+
   try {
     if (DATA && Array.isArray(DATA.weeks) && DATA.weeks.length && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
       await GiammariaPersistence.activateCanonicalProgram(DATA);
@@ -4055,18 +4162,23 @@ async function recoverPersonalTrainingEmergency() {
   } catch (_) {}
   if (typeof persist === 'function') persist();
   if (typeof persistActiveProgramStructure === 'function') persistActiveProgramStructure();
-  if (typeof render === 'function') render();
+  if (typeof navigate === 'function') navigate('home');
+  else if (typeof render === 'function') render();
+
   const after = {
     weeks: (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0,
+    title: (DATA && DATA.title) || '',
     loads: Object.keys((store && store.data) || {}).length,
     logs: Array.isArray(store && store.logs) ? store.logs.length : 0
   };
-  const msg = 'Recupero: ' + after.weeks + ' settimane, ' + after.loads + ' carichi, ' + after.logs + ' log'
-    + (notes.length ? ' · ' + notes.join(', ') : '')
-    + ' (prima: ' + before.weeks + '/' + before.loads + '/' + before.logs + ')';
-  if (typeof showToast === 'function') showToast(msg, after.weeks || after.loads ? 'success' : 'warning');
-  else alert(msg);
-  return after;
+  const msg = 'Scheda: «' + after.title + '» · ' + after.weeks + ' sett. · ' + after.loads + ' carichi · ' + after.logs + ' log'
+    + (notes.length ? '\n' + notes.join(' · ') : '')
+    + '\nPrima: «' + before.title + '» ' + before.weeks + '/' + before.loads;
+  if (typeof showToast === 'function') showToast(msg.replace(/\n/g, ' · '), after.weeks && !looksLikeClientAssignDraft(DATA) ? 'success' : 'warning');
+  try { alert(msg); } catch (_) {}
+  return { after: after, candidates: candidates.slice(0, 8).map(function (c) {
+    return { title: c.prog.title || '', weeks: c.prog.weeks.length, score: c.score, source: c.source };
+  }) };
 }
 window.recoverPersonalTrainingEmergency = recoverPersonalTrainingEmergency;
 
@@ -14599,6 +14711,9 @@ function renderHome(c) {
           Quattro percorsi equivalenti. Scegline uno: poi alleni.
         </p>
         <div style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn btn-outline" style="min-height:48px;font-size:12px;font-weight:800;border-color:#c66;color:#c66;text-align:left;padding:10px 14px;" onclick="recoverPersonalTrainingEmergency()">
+            RIPRISTINA LA MIA SCHEDA<br><span style="font-size:10px;font-weight:600;opacity:.85;">Cloud · IndexedDB · libreria coach</span>
+          </button>
           <button class="btn btn-primary" style="min-height:52px;font-size:13px;font-weight:900;text-align:left;padding:10px 14px;" onclick="navigate('import')">
             IMPORTA FILE<br><span style="font-size:10px;font-weight:600;opacity:.85;">PDF / Excel / Word del coach</span>
           </button>
@@ -14649,6 +14764,17 @@ function renderHome(c) {
 
   c.innerHTML = `
     <div style="text-align:center;padding:20px 0;"><img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));" onerror="this.onerror=null;this.src='icon-192.png'"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
+
+    ${(typeof looksLikeClientAssignDraft === 'function' && looksLikeClientAssignDraft(DATA))
+      ? `<div class="card" style="border:2px solid #c66;margin-bottom:12px;padding:14px;">
+          <div style="font-size:10px;font-weight:800;color:#f88;letter-spacing:1px;margin-bottom:6px;">SCHEDA SOSPETTA</div>
+          <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:8px;">Questa non sembra la tua scheda personale («${esc(DATA.title || '')}»).</div>
+          <button class="btn btn-primary" style="width:100%;min-height:48px;" onclick="recoverPersonalTrainingEmergency()">RIPRISTINA LA MIA SCHEDA</button>
+        </div>`
+      : `<div class="card" style="border:1px solid #333;margin-bottom:12px;padding:12px;">
+          <div style="font-size:11px;color:#aaa;margin-bottom:8px;">Scheda attiva: <b style="color:#fff;">${esc((DATA && DATA.title) || '—')}</b></div>
+          <button class="btn btn-outline" style="width:100%;font-size:11px;border-color:#c66;color:#c66;" onclick="recoverPersonalTrainingEmergency()">Non è la mia scheda · RIPRISTINA</button>
+        </div>`}
 
     <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>${t('activeSession')}</h2></div><div style="padding:20px;"><div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">OGGI · PROSSIMA AZIONE</div><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].name||sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><div style="display:flex;gap:10px;margin-top:20px;">
         <button class="btn btn-primary" style="flex:2;font-size:16px;height:55px;" onclick="navigate('training')">${t('startWorkout')}</button>
