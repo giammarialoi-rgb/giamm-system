@@ -3783,43 +3783,82 @@ function nativeAuthError(message){
 function accountPayload(opts){
   opts = opts || {};
   const includeProgram = opts.includeProgram !== false;
-  const nutr = (DATA && DATA.nutrition) || store.nutrition || null;
-  const supp = (DATA && DATA.supplementation) || store.supplementation || null;
-  const ther = (DATA && DATA.therapy) || store.therapy || null;
-  const exams = (DATA && DATA.exams) || store.exams || null;
-  // While viewing/assigning a client, never upload the client's identity as the coach profile
-  let profileOut = store.profile || {};
-  if (store.coachViewingClient || store.coachAssigning) {
-    const bak = window.__cpCoachViewBackup || window.__cpAssignBackup;
-    if (bak && bak.profile && typeof bak.profile === 'object') profileOut = bak.profile;
+  // While viewing/assigning a client, RAM holds client DATA — always prefer personal backup.
+  const bak = (store.coachViewingClient || store.coachAssigning)
+    ? (window.__cpCoachViewBackup || window.__cpAssignBackup)
+    : null;
+  if ((store.coachViewingClient || store.coachAssigning) && !bak) {
+    console.warn('[ACCOUNT_PAYLOAD] blocked: coach sandbox without personal backup');
+    return {
+      prefs: store.prefs || {},
+      profile: store.profile || {},
+      lastLocalSavedAt: new Date().toISOString()
+    };
   }
+  const srcProg = bak ? (bak.DATA || bak.activeProgram || null) : (typeof DATA !== 'undefined' ? DATA : null);
+  const nutr = bak
+    ? (bak.nutrition || (srcProg && srcProg.nutrition) || null)
+    : ((DATA && DATA.nutrition) || store.nutrition || null);
+  const supp = bak
+    ? (bak.supplementation || (srcProg && srcProg.supplementation) || null)
+    : ((DATA && DATA.supplementation) || store.supplementation || null);
+  const ther = bak
+    ? (bak.therapy || (srcProg && srcProg.therapy) || null)
+    : ((DATA && DATA.therapy) || store.therapy || null);
+  const exams = bak
+    ? (bak.exams || (srcProg && srcProg.exams) || null)
+    : ((DATA && DATA.exams) || store.exams || null);
+  const profileOut = (bak && bak.profile && typeof bak.profile === 'object')
+    ? bak.profile
+    : (store.profile || {});
+  const logsSrc = bak ? bak.logs : store.logs;
+  const dataSrc = bak ? bak.data : store.data;
+  const customSetsSrc = bak ? bak.customSets : store.customSets;
+  const skipsSrc = bak ? bak.skips : store.skips;
+  const subsSrc = bak ? bak.subs : store.subs;
+  const bwSrc = bak ? bak.bw : store.bw;
+  const loadTypesSrc = bak ? bak.loadTypes : store.loadTypes;
+  const temposSrc = bak ? bak.tempos : store.tempos;
+  const bonusSrc = bak ? bak.bonus : store.bonus;
+  const exMuscleSrc = bak ? bak.exMuscle : store.exMuscle;
+  const bodyChecksSrc = bak ? bak.bodyChecks : store.bodyChecks;
+  const nutritionDailySrc = bak ? bak.nutritionDaily : store.nutritionDaily;
+  const activeProgramIdOut = bak
+    ? (bak.activeProgramId || (srcProg && srcProg.id) || null)
+    : (store.activeProgramId || (DATA && DATA.id) || null);
+  const weekOut = bak
+    ? (bak.currentWeek || 1)
+    : (typeof currentWeek !== 'undefined' ? currentWeek : (store.trainingWeek || 1));
+  const dayOut = bak
+    ? (typeof bak.currentDay === 'number' ? bak.currentDay : 0)
+    : (typeof currentDay !== 'undefined' ? currentDay : (typeof store.trainingDay === 'number' ? store.trainingDay : 0));
   const payload = {
     prefs: store.prefs || {},
     profile: profileOut,
-    logs: Array.isArray(store.logs) ? store.logs.slice(-80) : [],
-    data: store.data || {},
-    customSets: store.customSets || {},
-    bw: store.bw || {},
-    skips: store.skips || {},
-    subs: store.subs || {},
-    loadTypes: store.loadTypes || {},
-    tempos: store.tempos || {},
+    logs: Array.isArray(logsSrc) ? logsSrc.slice(-80) : [],
+    data: dataSrc || {},
+    customSets: customSetsSrc || {},
+    bw: bwSrc || {},
+    skips: skipsSrc || {},
+    subs: subsSrc || {},
+    loadTypes: loadTypesSrc || {},
+    tempos: temposSrc || {},
     exIntensity: store.exIntensity || {},
     maxTests: store.maxTests || {},
-    bonus: store.bonus || {},
-    exMuscle: store.exMuscle || {},
+    bonus: bonusSrc || {},
+    exMuscle: exMuscleSrc || {},
     exMuscleByName: store.exMuscleByName || {},
     health: store.health || null,
-    activeProgramId: store.activeProgramId || (DATA && DATA.id) || null,
+    activeProgramId: activeProgramIdOut,
     rewards: store.rewards || null,
-    currentWeek: typeof currentWeek !== 'undefined' ? currentWeek : (store.trainingWeek || 1),
-    currentDay: typeof currentDay !== 'undefined' ? currentDay : (typeof store.trainingDay === 'number' ? store.trainingDay : 0),
+    currentWeek: weekOut,
+    currentDay: dayOut,
     lastLocalSavedAt: new Date().toISOString(),
     nutrition: nutr,
     supplementation: supp,
     therapy: ther,
     exams: exams,
-    nutritionDaily: store.nutritionDaily || {},
+    nutritionDaily: nutritionDailySrc || {},
     calendarEvents: Array.isArray(store.calendarEvents) ? store.calendarEvents.slice(-80) : [],
     coachArchives: Array.isArray(store.coachArchives) ? store.coachArchives.slice(0, 24).map(function (a) {
       return {
@@ -3827,7 +3866,7 @@ function accountPayload(opts){
         messages: Array.isArray(a.messages) ? a.messages.slice(-12) : []
       };
     }) : [],
-    bodyChecks: Array.isArray(store.bodyChecks) ? store.bodyChecks.slice(-16).map(function (c) {
+    bodyChecks: Array.isArray(bodyChecksSrc) ? bodyChecksSrc.slice(-16).map(function (c) {
       return {
         id: c && c.id, at: c && c.at, weight: c && c.weight, period: c && c.period,
         notes: c && c.notes, hasFront: !!(c && c.hasFront), hasBack: !!(c && c.hasBack),
@@ -3855,11 +3894,12 @@ function accountPayload(opts){
     }).filter(function (e) { return e && e.name; }) : []
   };
   if (includeProgram) {
-    const hasWeeks = !!(DATA && Array.isArray(DATA.weeks) && DATA.weeks.length);
+    const prog = srcProg;
+    const hasWeeks = !!(prog && Array.isArray(prog.weeks) && prog.weeks.length);
     const hasDomain = !!(nutr || supp || ther || exams);
     // Never upload an empty training shell — it can replace a richer cloud program.
     if (hasWeeks || hasDomain) {
-      payload.activeProgram = Object.assign({}, DATA || { title: 'Piano', weeks: [] }, {
+      payload.activeProgram = Object.assign({}, prog || { title: 'Piano', weeks: [] }, {
         nutrition: nutr,
         supplementation: supp,
         therapy: ther,
@@ -7489,7 +7529,8 @@ async function requestProgramReprogramInner(kind, desired, goal, secondary, cons
 function persistActiveProgramStructure() {
   try {
     if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks)) return;
-    if (store && store.coachAssigning) {
+    // Assign sandbox + client view: never write client program into coach IndexedDB / cloud.
+    if (store && (store.coachAssigning || store.coachViewingClient)) {
       store.activeProgram = DATA;
       return;
     }
@@ -9456,6 +9497,12 @@ function navigate(v, e){
 }
 
 function personalNavBack() {
+  const inCoach = !!(store && store.coachSessionActive) ||
+    (document.body && document.body.classList.contains('coach-session'));
+  if (inCoach && typeof coachHeaderBack === 'function') {
+    coachHeaderBack();
+    return;
+  }
   if (window.__gsNavStack && window.__gsNavStack.length) {
     const prev = window.__gsNavStack.pop();
     if (prev && prev !== currentView) {
@@ -9473,9 +9520,12 @@ function personalNavBack() {
 function updatePersonalBackButton() {
   const btn = document.getElementById('personal-back-button');
   if (!btn) return;
-  const inCoach = document.body && document.body.classList.contains('coach-session');
+  const inCoach = !!(store && store.coachSessionActive) ||
+    (document.body && document.body.classList.contains('coach-session'));
   const stack = window.__gsNavStack || [];
-  const show = !inCoach && currentView && currentView !== 'home' && stack.length > 0;
+  // In coach mode the header also exposes INDIETRO; still show this when the stack has history.
+  const show = !!currentView && stack.length > 0 &&
+    (inCoach ? (currentView !== 'coachHub' && currentView !== 'coachToday') : currentView !== 'home');
   btn.style.display = show ? 'inline-flex' : 'none';
 }
 
