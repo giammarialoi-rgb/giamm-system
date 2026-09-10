@@ -15241,10 +15241,16 @@ window.shouldStayOnPinnedTraining = shouldStayOnPinnedTraining;
 function renderTraining(c){
   console.debug('WORKOUT_OPEN', { week: currentWeek, session: currentDay });
     try {
-    if (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox()) {
-      if (window.__pinnedTraining) {
-        currentWeek = Number(window.__pinnedTraining.week) || currentWeek || 1;
+    const coachClientSurface = (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox())
+      || !!(store && (store.coachViewingClient || store.coachAssigning));
+    if (coachClientSurface) {
+      // Client/assign view: never jump to coach personal week/day.
+      if (window.__pinnedTraining && Number(window.__pinnedTraining.week) > 0) {
+        currentWeek = Number(window.__pinnedTraining.week) || 1;
         currentDay = Number(window.__pinnedTraining.day) || 0;
+      } else {
+        currentWeek = Math.max(1, Number(currentWeek) || 1);
+        currentDay = Math.max(0, Number(currentDay) || 0);
       }
     } else if (shouldStayOnPinnedTraining()) {
       const p = window.__pinnedTraining;
@@ -17583,11 +17589,36 @@ function renderAthleteProfile(container) {
   if (store && store.coachViewingClient) {
     const clientName = (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.displayName) ||
       (store.__cpClientViewProfile && store.__cpClientViewProfile.name) || 'cliente';
-    container.innerHTML = '<div class="card" style="border:1px solid var(--gold);padding:14px;margin-bottom:12px;">' +
-      '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:6px;">PROFILO PERSONALE</div>' +
-      '<p style="font-size:13px;color:#ddd;line-height:1.45;margin:0 0 12px;">Stai visualizzando <b style="color:#fff;">' + esc(clientName) + '</b>. ' +
-      'Il tuo profilo coach resta separato: esci dalla vista cliente per modificarlo.</p>' +
-      '<button type="button" class="btn btn-primary" style="width:100%;" onclick="leaveCoachClientView()">ESCI VISTA CLIENTE</button></div>';
+    const intake = (store.coachWorkspace && store.coachWorkspace.intake) || {};
+    const profile = store.__cpClientViewProfile || {};
+    const rows = [
+      ['Nome', clientName],
+      ['Username', (store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.username) || ''],
+      ['Età', intake.ageBand || profile.age || profile.ageBand || ''],
+      ['Sesso', intake.sex || profile.sex || ''],
+      ['Altezza', intake.heightBand || profile.height || ''],
+      ['Peso', intake.weightBand || profile.weight || ''],
+      ['Obiettivo', intake.goal || profile.goal || ''],
+      ['Esperienza', intake.experience || profile.experience || ''],
+      ['1RM Panca (presunto)', intake.rmBench || ''],
+      ['1RM Squat (presunto)', intake.rmSquat || ''],
+      ['1RM Stacco (presunto)', intake.rmDeadlift || '']
+    ].filter(function (r) { return r[1]; });
+    let html = '<div class="card" style="border:1px solid var(--gold);padding:14px;margin-bottom:12px;">' +
+      '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:6px;">PROFILO CLIENTE</div>' +
+      '<h2 style="color:#fff;margin:0 0 8px;font-size:20px;">' + esc(clientName) + '</h2>' +
+      '<p style="font-size:12px;color:#aaa;margin:0 0 12px;">Vista coach · i tuoi dati personali non vengono modificati.</p>';
+    if (rows.length) {
+      html += rows.map(function (r) {
+        return '<div class="cp-row" style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #222;">' +
+          '<span style="color:#888;font-size:11px;">' + esc(r[0]) + '</span><span style="color:#fff;font-size:12px;">' + esc(r[1]) + '</span></div>';
+      }).join('');
+    } else {
+      html += '<div style="font-size:12px;color:#888;">Nessuna anagrafica salvata per questo cliente.</div>';
+    }
+    html += '<button type="button" class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="navigate(\'coachClient\')">← SCHEDA CLIENTE</button>' +
+      '<button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="leaveCoachClientView()">ESCI VISTA CLIENTE</button></div>';
+    container.innerHTML = html;
     return;
   }
   const r = store.rewards || {};
@@ -21133,6 +21164,12 @@ function tryLocalWeekGoalCoach(q) {
 }
 
 function estimateLoadForExerciseName(name, row) {
+  // Never invent client loads from the coach's personal 1RM / bodyweight.
+  if (store && (store.coachViewingClient || store.coachAssigning)) {
+    if (row && Number(row.plannedLoad) > 0) return Number(row.plannedLoad);
+    if (row && Array.isArray(row.sets) && row.sets[0] && Number(row.sets[0].load) > 0) return Number(row.sets[0].load);
+    return null;
+  }
   const n = String(name || '').toLowerCase();
   const prof = store.profile || {};
   const squat = parseFloat(prof.squatMax) || 0;
@@ -21153,7 +21190,7 @@ function estimateLoadForExerciseName(name, row) {
   else if (/lateral|alzate|fly|croci/.test(n)) base = Math.max(6, bw * 0.12);
   else if (row && Number(row.plannedLoad) > 0) base = Number(row.plannedLoad);
   else if (row && Array.isArray(row.sets) && row.sets[0] && Number(row.sets[0].load) > 0) base = Number(row.sets[0].load);
-  else base = Math.round(bw * 0.35);
+  else return null;
   const load = Math.round((base * 2)) / 2;
   return load > 0 ? load : null;
 }

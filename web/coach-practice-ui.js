@@ -2326,31 +2326,50 @@ function applyClientPayloadToLocal(payload) {
     }
   }
   try {
-    const stayPinned = (typeof shouldStayOnPinnedTraining === 'function' && shouldStayOnPinnedTraining())
-      || !!(typeof window !== 'undefined' && window.__editFinalizedKey)
-      || !!(typeof window !== 'undefined' && window.__pinnedTraining && (Date.now() - Number(window.__pinnedTraining.at || 0)) < 6 * 60 * 60 * 1000);
-    if (stayPinned && typeof window !== 'undefined' && window.__pinnedTraining) {
-      currentWeek = Number(window.__pinnedTraining.week) || currentWeek || 1;
-      currentDay = Number(window.__pinnedTraining.day) || 0;
-    } else {
-    const lastOpen = (store.logs || []).slice().reverse().find(function (l) { return l && (l.week || l.day != null); });
-    if (typeof advanceToNextOpenTrainingDay === 'function') {
-      if (lastOpen) {
+    // Coach viewing/assigning a client: NEVER inherit the coach's personal pin/week/day.
+    // Fresh program → week 1 day 1. Existing client progress → only from THAT client's logs.
+    const inCoachClientContext = !!(store && (store.coachViewingClient || store.coachAssigning));
+    if (inCoachClientContext) {
+      try { window.__pinnedTraining = null; } catch (_) {}
+      const clientLogs = Array.isArray(store.logs) ? store.logs : [];
+      const lastOpen = clientLogs.slice().reverse().find(function (l) { return l && (l.week || l.day != null); });
+      const hasAnyDone = store.data && Object.keys(store.data).some(function (k) { return /_done$/.test(k) && store.data[k]; });
+      if (lastOpen && hasAnyDone) {
         currentWeek = Number(lastOpen.week) || 1;
         currentDay = Number(lastOpen.day) || 0;
-        advanceToNextOpenTrainingDay(true);
+        if (typeof advanceToNextOpenTrainingDay === 'function') advanceToNextOpenTrainingDay(true);
       } else {
         currentWeek = 1;
         currentDay = 0;
-        advanceToNextOpenTrainingDay(false);
+        try { window.__pinnedTraining = { week: 1, day: 0, at: Date.now() }; } catch (_) {}
       }
-    } else if (lastOpen) {
-      currentWeek = Number(lastOpen.week) || 1;
-      currentDay = Number(lastOpen.day) || 0;
     } else {
-      currentWeek = 1;
-      currentDay = 0;
-    }
+      const stayPinned = (typeof shouldStayOnPinnedTraining === 'function' && shouldStayOnPinnedTraining())
+        || !!(typeof window !== 'undefined' && window.__editFinalizedKey)
+        || !!(typeof window !== 'undefined' && window.__pinnedTraining && (Date.now() - Number(window.__pinnedTraining.at || 0)) < 6 * 60 * 60 * 1000);
+      if (stayPinned && typeof window !== 'undefined' && window.__pinnedTraining) {
+        currentWeek = Number(window.__pinnedTraining.week) || currentWeek || 1;
+        currentDay = Number(window.__pinnedTraining.day) || 0;
+      } else {
+        const lastOpen = (store.logs || []).slice().reverse().find(function (l) { return l && (l.week || l.day != null); });
+        if (typeof advanceToNextOpenTrainingDay === 'function') {
+          if (lastOpen) {
+            currentWeek = Number(lastOpen.week) || 1;
+            currentDay = Number(lastOpen.day) || 0;
+            advanceToNextOpenTrainingDay(true);
+          } else {
+            currentWeek = 1;
+            currentDay = 0;
+            advanceToNextOpenTrainingDay(false);
+          }
+        } else if (lastOpen) {
+          currentWeek = Number(lastOpen.week) || 1;
+          currentDay = Number(lastOpen.day) || 0;
+        } else {
+          currentWeek = 1;
+          currentDay = 0;
+        }
+      }
     }
   } catch (_) {
     currentWeek = 1;
@@ -2361,6 +2380,11 @@ function applyClientPayloadToLocal(payload) {
 async function enterCoachClientView(domain, opts) {
   const id = store.coachWorkspace && store.coachWorkspace.clientId;
   if (!id) return;
+  // Isolate from personal training surface before loading client payload.
+  try { window.__pinnedTraining = null; } catch (_) {}
+  try { window.__editFinalizedKey = ''; } catch (_) {}
+  try { window.__liveSetIntel = null; } catch (_) {}
+  try { currentWeek = 1; currentDay = 0; } catch (_) {}
   if (typeof withBusy === 'function') {
     await withBusy(async function () {
       if (!window.__cpCoachViewBackup) window.__cpCoachViewBackup = snapshotCoachMaster();
@@ -3055,7 +3079,12 @@ async function removeCoachClient(id) {
 async function openCoachClient(id) {
   if (store.coachViewingClient) await leaveCoachClientView(true);
   store.coachSessionActive = true;
-  store.__coachOsClientLegacy = false;
+  // Classic scheda cliente (ASSEGNA / Vedi dati / anagrafica) — never R1SE overview.
+  store.__coachOsClientLegacy = true;
+  // Never inherit coach personal week/day into this client session.
+  try { window.__pinnedTraining = null; } catch (_) {}
+  try { window.__editFinalizedKey = ''; } catch (_) {}
+  try { currentWeek = 1; currentDay = 0; } catch (_) {}
   primeCoachWorkspaceForClient(id);
   ensureCoachSessionBanner();
   if (typeof persist === 'function') persist();
@@ -3496,13 +3525,33 @@ async function renderCoachWorkspace(c) {
         ' · ' + logs.length + ' sessioni sync')
       : (cl.lastWorkoutAt ? ('Ultimo ping workout: ' + String(cl.lastWorkoutAt).replace('T', ' ').slice(0, 16)) : 'Nessun allenamento finalizzato sync');
     const intake = store.coachWorkspace.intake || {};
-    const allergyTxt = intakeAllergyLabels(intake.allergies || (store.__cpClientViewProfile && store.__cpClientViewProfile.allergies));
-    const intakeRows = CLIENT_INTAKE_FIELDS.filter(function (f) { return intake[f.key]; }).map(function (f) {
-      return '<div class="cp-row"><span style="color:#888;font-size:11px;">' + esc(f.label) + '</span><span style="font-size:12px;color:#fff;">' + esc(intake[f.key]) + '</span></div>';
+    const clientProfile = store.__cpClientViewProfile || (store.coachWorkspace && store.coachWorkspace.clientProfile) || {};
+    const allergyTxt = intakeAllergyLabels(intake.allergies || clientProfile.allergies);
+    function intakeOrProfile(key, profileKeys) {
+      if (intake[key]) return intake[key];
+      const keys = profileKeys || [key];
+      for (let i = 0; i < keys.length; i++) {
+        if (clientProfile[keys[i]] != null && clientProfile[keys[i]] !== '') return clientProfile[keys[i]];
+      }
+      return '';
+    }
+    const anagraficaQuick = [
+      ['Nome', cl.displayName || clientProfile.name || ''],
+      ['Età', intakeOrProfile('ageBand', ['age', 'ageBand'])],
+      ['Sesso', intakeOrProfile('sex', ['sex', 'gender'])],
+      ['Altezza', intakeOrProfile('heightBand', ['height', 'heightBand'])],
+      ['Peso', intakeOrProfile('weightBand', ['weight', 'weightBand'])],
+      ['Obiettivo', intakeOrProfile('goal', ['goal', 'primaryGoal'])]
+    ].filter(function (row) { return row[1]; });
+    const intakeRows = CLIENT_INTAKE_FIELDS.filter(function (f) {
+      return intake[f.key] || intakeOrProfile(f.key);
+    }).map(function (f) {
+      const val = intake[f.key] || intakeOrProfile(f.key);
+      return '<div class="cp-row"><span style="color:#888;font-size:11px;">' + esc(f.label) + '</span><span style="font-size:12px;color:#fff;">' + esc(val) + '</span></div>';
     }).join('') + (allergyTxt
       ? '<div class="cp-row"><span style="color:#888;font-size:11px;">Allergie / intolleranze</span><span style="font-size:12px;color:#fff;">' + esc(allergyTxt) + '</span></div>'
       : '') +
-      (intake.athleteStatus ? '<div class="cp-row"><span style="color:#888;font-size:11px;">Status</span><span style="font-size:12px;color:#fff;">' + esc(intake.athleteStatus === 'enhanced' ? 'Enhanced' : 'Natural') + '</span></div>' : '') +
+      (intake.athleteStatus || clientProfile.athleteStatus ? '<div class="cp-row"><span style="color:#888;font-size:11px;">Status</span><span style="font-size:12px;color:#fff;">' + esc((intake.athleteStatus || clientProfile.athleteStatus) === 'enhanced' ? 'Enhanced' : 'Natural') + '</span></div>' : '') +
       (intake.athleteStatus === 'enhanced' && intake.onDrugs ? '<div class="cp-row"><span style="color:#888;font-size:11px;">Sotto farmaci</span><span style="font-size:12px;color:#fff;">' + esc(intake.onDrugs === 'si' ? 'Sì' : 'No') + '</span></div>' : '') +
       (intake.drugsDetail ? '<div class="cp-row"><span style="color:#888;font-size:11px;">Farmaci</span><span style="font-size:12px;color:#fff;">' + esc(intake.drugsDetail) + (intake.drugsDuration ? (' · ' + esc(intake.drugsDuration)) : '') + '</span></div>' : '') +
       (intake.noRecentLabs ? '<div class="cp-row"><span style="color:#888;font-size:11px;">Analisi</span><span style="font-size:12px;color:#fff;">Non ha analisi recenti</span></div>'
@@ -3521,8 +3570,10 @@ async function renderCoachWorkspace(c) {
       window.__cpClientSheetNotifies = clientNotifyItems;
     } catch (_) {}
     if (!store.__cpWsCollapse || typeof store.__cpWsCollapse !== 'object') {
-      store.__cpWsCollapse = { intake: true, events: false };
+      store.__cpWsCollapse = { intake: false, events: false };
     }
+    // Anagrafica always expanded by default for quick check (incl. migration clients).
+    if (store.__cpWsCollapse.intake == null) store.__cpWsCollapse.intake = false;
     const collapsed = store.__cpWsCollapse;
     c.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">' +
       '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">← LISTA</button>' +
@@ -3535,6 +3586,16 @@ async function renderCoachWorkspace(c) {
       (cl.intakeMode === 'transition' ? 'Transizione' : 'Nuovo') + (cl.intakeDone ? ' · questionario ok' : ' · questionario in attesa') + '</div>' +
       '<div style="font-size:12px;margin-bottom:12px;color:' + (cl.workoutLive || cl.online ? '#6c6' : '#888') + ';">● ' +
       esc(presenceLabel(cl.online, cl.lastSeenAt, cl.workoutLive)) + '</div>' +
+      '<div class="card" style="padding:12px;margin-bottom:12px;border-color:rgba(212,175,55,.4);">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">' +
+      '<div style="font-weight:900;color:var(--gold);">Anagrafica</div>' +
+      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:4px 8px;" onclick="enterCoachClientView(\'athlete\')">APRI PROFILO</button></div>' +
+      (anagraficaQuick.length
+        ? ('<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">' + anagraficaQuick.map(function (row) {
+          return '<div style="font-size:11px;color:#888;">' + esc(row[0]) + '<br><b style="color:#fff;font-size:12px;">' + esc(row[1]) + '</b></div>';
+        }).join('') + '</div>')
+        : '<div class="cp-help" style="margin:0;">Nessun dato anagrafico ancora — apri profilo o completa il questionario.</div>') +
+      '</div>' +
       (cl.workoutLive ? ('<button class="btn btn-primary" style="width:100%;margin-bottom:12px;border-color:#6c6;background:#143014;" onclick="followClientLiveWorkout(\'' + esc(id) + '\')">SEGUI ALLENAMENTO LIVE</button>') : '') +
       '<div class="card" style="padding:10px;margin-bottom:12px;border-color:rgba(212,175,55,.35);"><div style="font-size:11px;color:var(--gold);font-weight:800;">ALLENAMENTI CLIENTE</div>' +
       '<div style="font-size:12px;color:#ddd;margin-top:4px;">' + esc(lastWoLabel) + '</div>' +
@@ -4354,6 +4415,10 @@ async function confirmAssignSandboxSend() {
       };
       payload.activeProgram = shell;
     }
+    // Never send coach personal loads/logs into the client assignment.
+    payload.data = {};
+    payload.logs = [];
+    payload.customSets = {};
     await practiceFetch('/api/coach/clients/' + encodeURIComponent(job.clientId) + '/assign', {
       method: 'POST', headers: practiceHeaders(true),
       body: JSON.stringify({
@@ -4371,6 +4436,8 @@ async function confirmAssignSandboxSend() {
     ensureAssignBanner();
     practiceToast('Scheda inviata a ' + (job.name || 'cliente'), 'success');
     store.coachSessionActive = true;
+    store.__coachOsClientLegacy = true;
+    try { window.__pinnedTraining = { week: 1, day: 0, at: Date.now() }; currentWeek = 1; currentDay = 0; } catch (_) {}
     store.coachWorkspace = { clientId: job.clientId };
     navigate('coachClient');
   };

@@ -8,7 +8,7 @@
 export const COACH_OS_FEATURE_DEFAULTS = Object.freeze({
   coachShellV2: true,
   coachTodayV2: true,
-  coachOverviewV2: true,
+  coachOverviewV2: false,
   coachImportV2: true,
   coachTasksV1: true,
   clientTimelineV1: true,
