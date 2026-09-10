@@ -1470,10 +1470,6 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">🔔</span>
         <span style="font-size:11px;font-weight:800;">Notifiche</span>
       </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-color:#c66;" onclick="closeMenuHub();recoverPersonalTrainingEmergency()">
-        <span style="font-size:20px;">♻️</span>
-        <span style="font-size:11px;font-weight:800;color:#f88;">Ripristina scheda</span>
-      </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('settings')">
         <span style="font-size:20px;">⚙️</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="settings">Impostazioni</span>
@@ -2821,13 +2817,30 @@ function collectPrevWeekSetLogs(exIdx, row) {
   if (currentWeek <= 1) return [];
   const nowName = normalizeExerciseKey(exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '');
   const prevName = normalizeExerciseKey(exerciseNameAt(currentWeek - 1, currentDay, exIdx));
-  if (nowName && prevName && nowName !== prevName) return [];
-  return collectSetLogsAtWeek(currentWeek - 1, currentDay, exIdx);
+  if (!nowName || !prevName || nowName === prevName) {
+    return collectSetLogsAtWeek(currentWeek - 1, currentDay, exIdx);
+  }
+  // Same day, exercise moved to another slot: match by name.
+  const sessions = (((DATA.weeks || [])[currentWeek - 2] || {}).sessions || ((DATA.weeks || [])[currentWeek - 2] || {}).days || []);
+  const day = sessions[currentDay];
+  const list = (day && (day.exercises || day.rows)) || [];
+  for (let i = 0; i < list.length; i++) {
+    const nm = normalizeExerciseKey((list[i] && (list[i].name || list[i].exercise)) || '');
+    if (nm && nm === nowName) return collectSetLogsAtWeek(currentWeek - 1, currentDay, i);
+  }
+  return [];
 }
 function sessionWasFinalized(week, day) {
   return (store.logs || []).some(function (row) {
     return row && Number(row.week) === Number(week) && Number(row.day) === Number(day);
   });
+}
+function exerciseHasCompletedSetThisSession(exIdx) {
+  if (!store || !store.data) return false;
+  for (let s = 1; s <= 12; s++) {
+    if (store.data['w' + currentWeek + '_d' + currentDay + '_e' + exIdx + '_s' + s + '_done']) return true;
+  }
+  return false;
 }
 function loadsNearlyEqual(a, b) {
   const x = parseFloat(String(a).replace(',', '.'));
@@ -2843,12 +2856,15 @@ function isStaleCopiedSetPrefill(stored, exIdx, setNum, row) {
   }
   const prevSets = collectPrevWeekSetLogs(exIdx, row || {});
   const loads = uniquePositiveLoads(prevSets);
-  if (loads.length < 2) return false;
+  if (!loads.length) return false;
   const top = Math.max.apply(null, loads);
   const first = parseFloat(prevSets[0] && prevSets[0].load);
   const prevSame = prevSets.find(function (ps) { return Number(ps.set) === Number(setNum); });
-  const prevN = prevSame ? parseFloat(prevSame.load) : NaN;
-  if (!Number.isFinite(prevN)) return false;
+  const prevN = prevSame ? parseFloat(String(prevSame.load).replace(',', '.')) : NaN;
+  // No matching previous set for this set number — any top-set paste is stale.
+  if (!Number.isFinite(prevN)) {
+    return loadsNearlyEqual(n, top) || loadsNearlyEqual(n, applyProgressionToLoad(top, 2.5)) || loadsNearlyEqual(n, applyProgressionToLoad(top, 1));
+  }
   if (loadsNearlyEqual(prevN, n)) return false;
   const policy = workoutProgressionPolicy(prevSets, row || {});
   const fromThis = applyProgressionToLoad(prevN, policy.addKg);
@@ -2859,10 +2875,13 @@ function isStaleCopiedSetPrefill(stored, exIdx, setNum, row) {
     Math.round(top * 1.025 * 2) / 2,
     applyProgressionToLoad(top, 1.25),
     applyProgressionToLoad(top, 2.5),
+    applyProgressionToLoad(top, 1),
     applyProgressionToLoad(first, 1.25),
     applyProgressionToLoad(first, 2.5)
   ];
-  return copied.some(function (x) { return loadsNearlyEqual(n, x); });
+  // Stale if it matches top-set progression but not THIS set's progression (classic deload bug).
+  if (loads.length >= 2 && !loadsNearlyEqual(prevN, top) && copied.some(function (x) { return loadsNearlyEqual(n, x); })) return true;
+  return copied.some(function (x) { return loadsNearlyEqual(n, x); }) && !loadsNearlyEqual(fromThis, n);
 }
 function effectiveSetLoad(exIdx, setNum, row) {
   const k = 'w' + currentWeek + '_d' + currentDay + '_e' + exIdx + '_s' + setNum;
@@ -2875,13 +2894,18 @@ function effectiveSetLoad(exIdx, setNum, row) {
   const keepUser = !!(store.data[k + '_load_user'] && stored !== undefined && stored !== '' && stored != null
     && !occupantCopy && !(stale && !identityShift));
   if (keepUser) return stored;
+  // Always prefer per-set progression from last week (set N → set N). Never paste one load on all sets.
+  const sugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(exIdx, setNum, row || {}) : null;
+  if (Number(sugg) > 0) return sugg;
   const intel = store.intelTargets && store.intelTargets['w' + currentWeek + '_d' + currentDay + '_e' + exIdx];
   const nowName = normalizeExerciseKey(exerciseNameAt(currentWeek, currentDay, exIdx) || (row && (row.name || row.exercise)) || '');
   const intelName = intel ? normalizeExerciseKey(intel.name) : '';
   const intelSameEx = !!(intel && Number(intel.load) > 0 && (!intelName || !nowName || intelName === nowName));
-  if (intelSameEx && !store.data[k + '_load_user'] && !store.data[k + '_done'] && !occupantCopy && !stale) return intel.load;
-  const sugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(exIdx, setNum, row || {}) : null;
-  if (Number(sugg) > 0) return sugg;
+  const prevSets = (typeof collectPrevWeekSetLogs === 'function') ? collectPrevWeekSetLogs(exIdx, row || {}) : [];
+  // Exercise-level intel is only safe when there was a single previous load (or no history).
+  if (intelSameEx && !store.data[k + '_load_user'] && !store.data[k + '_done'] && !occupantCopy && !stale && uniquePositiveLoads(prevSets).length <= 1) {
+    return intel.load;
+  }
   if (!stale && stored !== undefined && stored !== '' && stored != null) return stored;
   return '';
 }
@@ -2916,7 +2940,7 @@ function progressionAddKg(prevSets, row) {
 /** Same increment from THAT set's last week: keep / +2.5 (or +1 if already light). Never 1.25. Never copy the top set. */
 function workoutProgressionPolicy(prevSets, row) {
   const sets = Array.isArray(prevSets) ? prevSets : [];
-  const loads = sets.map(function (s) { return parseFloat(s.load); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
+  const loads = sets.map(function (s) { return parseFloat(String(s.load).replace(',', '.')); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
   const rirs = sets.map(function (s) { return parseFloat(s.rir); }).filter(Number.isFinite);
   const repsN = sets.map(function (s) { return parseFloat(String(s.reps).replace(/[^\d.].*/, '')); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
   const top = loads.length ? Math.max.apply(null, loads) : null;
@@ -2925,6 +2949,7 @@ function workoutProgressionPolicy(prevSets, row) {
   const hitReps = !targetReps || (repsN.length && repsN.every(function (r) { return r >= targetReps * 0.9; }));
   const missed = targetReps && repsN.length && repsN.some(function (r) { return r < targetReps * 0.7; });
   let addKg = 0;
+  let repBump = 0;
   let advice = '';
   const step = progressionAddKg(sets, row);
   const stepTxt = step === 1 ? '+1 kg (carico già basso)' : '+2,5 kg';
@@ -2934,13 +2959,16 @@ function workoutProgressionPolicy(prevSets, row) {
     advice = 'Alcune serie sono sotto target: ripeti il carico di ogni serie e chiudi le reps prima di alzare.';
   } else if (avgRir != null && avgRir >= 1.5 && hitReps) {
     addKg = step;
-    advice = (avgRir >= 2.5 ? 'Margine alto' : 'Buona seduta') + ' (RIR medio ' + avgRir.toFixed(1) + '): ' + stepTxt + ' su ogni serie, o +1 rep.';
+    repBump = 0;
+    advice = (avgRir >= 2.5 ? 'Margine alto' : 'Buona seduta') + ' (RIR medio ' + avgRir.toFixed(1) + '): ' + stepTxt + ' su ogni serie, stesse reps della serie corrispondente.';
   } else if (avgRir != null && avgRir <= 0.5 && !missed) {
-    advice = 'Vicino al cedimento: ripeti il carico di ogni serie o +1 rep se la tecnica è pulita.';
+    advice = 'Vicino al cedimento: ripeti il carico di ogni serie; +1 rep solo se la tecnica è pulita.';
+    repBump = 0;
   } else {
-    advice = 'Ripeti il carico di ogni serie e cerca +1 rep. Aumenta di 2,5 kg (1 kg se i pesi sono già bassi) se chiudi tutte le serie con RIR ≥ 2.';
+    repBump = 1;
+    advice = 'Tieni il carico di ogni serie e prova +1 rep. Aumenta di 2,5 kg (1 kg se i pesi sono già bassi) solo se chiudi tutte le serie con RIR ≥ 2.';
   }
-  return { addKg: addKg, advice: advice, top: top, step: step };
+  return { addKg: addKg, repBump: repBump, advice: advice, top: top, step: step };
 }
 function suggestedLoadForSet(exerciseIndex, setNum, row) {
   if (currentWeek <= 1) return null;
@@ -2951,18 +2979,33 @@ function suggestedLoadForSet(exerciseIndex, setNum, row) {
   const policy = workoutProgressionPolicy(prevSets, row || {});
   return applyProgressionToLoad(prevSame.load, policy.addKg);
 }
+function suggestedRepsForSet(exerciseIndex, setNum, row) {
+  if (currentWeek <= 1) return null;
+  const prevSets = collectPrevWeekSetLogs(exerciseIndex, row || {});
+  if (!prevSets.length) return null;
+  const prevSame = prevSets.find(function (ps) { return Number(ps.set) === Number(setNum); });
+  if (!prevSame || prevSame.reps === '' || prevSame.reps == null) return null;
+  const prevR = parseFloat(String(prevSame.reps).replace(/[^\d.].*/, ''));
+  if (!Number.isFinite(prevR) || prevR <= 0) return null;
+  const policy = workoutProgressionPolicy(prevSets, row || {});
+  if (policy.addKg > 0) return prevR;
+  if (policy.repBump > 0) return prevR + policy.repBump;
+  return prevR;
+}
 function isLegacyCopiedTopPrefill(stored, exerciseIndex, setNum, row) {
-  const n = parseFloat(stored);
+  const n = parseFloat(String(stored).replace(',', '.'));
   if (!Number.isFinite(n) || n <= 0 || currentWeek <= 1) return false;
   const prevSets = collectPrevWeekSetLogs(exerciseIndex, row || {});
-  const loads = prevSets.map(function (s) { return parseFloat(s.load); }).filter(function (x) { return Number.isFinite(x) && x > 0; });
+  const loads = prevSets.map(function (s) { return parseFloat(String(s.load).replace(',', '.')); }).filter(function (x) { return Number.isFinite(x) && x > 0; });
   if (!loads.length) return false;
   const top = Math.max.apply(null, loads);
   const legacy = Math.round(top * 1.025 * 2) / 2;
-  if (n !== legacy) return false;
+  if (n !== legacy && !loadsNearlyEqual(n, top) && !loadsNearlyEqual(n, applyProgressionToLoad(top, 2.5))) return false;
   const prevSame = prevSets.find(function (ps) { return Number(ps.set) === Number(setNum); });
-  const prevN = prevSame ? parseFloat(prevSame.load) : NaN;
-  return !Number.isFinite(prevN) || prevN !== n;
+  const prevN = prevSame ? parseFloat(String(prevSame.load).replace(',', '.')) : NaN;
+  if (!Number.isFinite(prevN)) return true;
+  const fromThis = applyProgressionToLoad(prevN, workoutProgressionPolicy(prevSets, row || {}).addKg);
+  return !loadsNearlyEqual(prevN, n) && !loadsNearlyEqual(fromThis, n);
 }
 function getLoadSuggestion(exerciseIndex, row, setNum) {
   if (setNum != null) return suggestedLoadForSet(exerciseIndex, setNum, row);
@@ -2970,8 +3013,8 @@ function getLoadSuggestion(exerciseIndex, row, setNum) {
   const prevSets = collectPrevWeekSetLogs(exerciseIndex, row || {});
   if (!prevSets.length) return null;
   const policy = workoutProgressionPolicy(prevSets, row || {});
-  const topRow = prevSets.filter(function (s) { return parseFloat(s.load) > 0; }).sort(function (a, b) {
-    return parseFloat(b.load) - parseFloat(a.load);
+  const topRow = prevSets.filter(function (s) { return parseFloat(String(s.load).replace(',', '.')) > 0; }).sort(function (a, b) {
+    return parseFloat(String(b.load).replace(',', '.')) - parseFloat(String(a.load).replace(',', '.'));
   })[0];
   if (!topRow) return null;
   return applyProgressionToLoad(topRow.load, policy.addKg);
@@ -2986,11 +3029,14 @@ function formatPrevWeekLoadAdvice(exIdx, row) {
   });
   const policy = workoutProgressionPolicy(prevSets, row || {});
   const nextParts = prevSets.map(function (s) {
-    const next = applyProgressionToLoad(s.load, policy.addKg);
-    return next != null ? String(next) : null;
+    const nextL = applyProgressionToLoad(s.load, policy.addKg);
+    const prevR = parseFloat(String(s.reps).replace(/[^\d.].*/, ''));
+    const nextR = Number.isFinite(prevR) ? (policy.addKg > 0 ? prevR : (prevR + (policy.repBump || 0))) : null;
+    if (nextL == null) return null;
+    return String(nextL) + (nextR != null ? ('×' + nextR) : '');
   }).filter(Boolean);
   let advice = policy.advice;
-  if (nextParts.length) advice += ' Questa seduta: ' + nextParts.join(' · ') + ' kg (ogni serie dalla stessa di sett. scorsa).';
+  if (nextParts.length) advice += ' Questa seduta (serie->serie): ' + nextParts.join(' · ') + '.';
   return `<div data-prefill="per-set" style="font-size:11px;color:var(--gold);font-weight:700;margin:0 0 6px;">Sett. scorsa: ${esc(prevParts.join(' · '))}</div>
     <div style="font-size:10px;color:#aaa;margin:0 0 8px;">${esc(advice)}</div>`;
 }
@@ -3285,6 +3331,7 @@ function openProfileHub() {
     '<div style="display:grid;gap:8px;">' +
     '<button type="button" class="btn btn-primary" style="width:100%;height:44px;font-weight:800;" onclick="closeProfileHub();openAthleteProfile()">Profilo atleta</button>' +
     '<button type="button" class="btn btn-outline" style="width:100%;height:44px;font-weight:800;" onclick="closeProfileHub();openAccount()">' + (logged ? 'Account / Sync' : 'Accedi / Registrati') + '</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;height:44px;font-weight:800;border-color:#555;color:#ccc;" onclick="closeProfileHub();recoverPersonalTrainingEmergency()">Ripristina scheda (backup)</button>' +
     (logged ? '<button type="button" class="btn btn-outline" style="width:100%;height:44px;font-weight:800;border-color:#442222;color:var(--accent-red);" onclick="closeProfileHub();logoutAccount()">Esci</button>' : '') +
     '</div></div>';
   el.style.display = 'flex';
@@ -4216,6 +4263,21 @@ async function collectRecoverSchedaCandidates() {
       }
     }
   } catch (e) { console.warn('[RECOVER_BUNDLED_16W]', e); }
+
+  try {
+    const raw = localStorage.getItem('nurvan_personal_program_lock');
+    if (raw) {
+      const locked = JSON.parse(raw);
+      if (locked && locked.program) addCandidate(locked.program, 'Backup locale bloccato');
+    }
+  } catch (_) {}
+
+  try {
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadProgram) {
+      const lockedProg = await GiammariaPersistence.loadProgram('personal_locked_backup');
+      addCandidate(lockedProg, 'IndexedDB · backup bloccato');
+    }
+  } catch (_) {}
 
   candidates.sort(function (a, b) { return b.score - a.score; });
   return { candidates: candidates, hintWeeks: maxWeekFromLoadKeys(store.data) || hintWeeks || 16 };
@@ -7438,6 +7500,7 @@ function persistActiveProgramStructure() {
     if (!store.prefs.programStartDate) store.prefs.programStartDate = new Date().toISOString().slice(0, 10);
     store.activeProgram = DATA;
     persist();
+    if (typeof lockPersonalProgramBackup === 'function') lockPersonalProgramBackup(DATA);
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
       GiammariaPersistence.saveProgram(DATA, true).catch(function (err) {
         console.warn('[PERSIST PROGRAM]', err);
@@ -7453,6 +7516,30 @@ function persistActiveProgramStructure() {
     console.warn('[PERSIST PROGRAM]', e);
   }
 }
+
+function lockPersonalProgramBackup(prog) {
+  try {
+    if (!prog || !Array.isArray(prog.weeks) || prog.weeks.length < 4) return;
+    if (typeof looksLikeClientAssignDraft === 'function' && looksLikeClientAssignDraft(prog)) return;
+    if (store && (store.coachAssigning || store.coachViewingClient)) return;
+    const copy = JSON.parse(JSON.stringify(prog));
+    const payload = {
+      at: new Date().toISOString(),
+      id: copy.id || 'personal_locked_backup',
+      title: copy.title || '',
+      weeks: copy.weeks.length,
+      program: copy
+    };
+    try { localStorage.setItem('nurvan_personal_program_lock', JSON.stringify(payload)); } catch (_) {}
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
+      const locked = Object.assign({}, copy, { id: 'personal_locked_backup', title: copy.title || 'Backup personale bloccato' });
+      GiammariaPersistence.saveProgram(locked, false).catch(function () {});
+    }
+  } catch (e) {
+    console.warn('[LOCK_PROGRAM]', e);
+  }
+}
+window.lockPersonalProgramBackup = lockPersonalProgramBackup;
 
 function resizeActiveProgram(desired){
   if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return false;
@@ -7798,6 +7885,9 @@ function completeSetQuick(exIdx, setNum, restText) {
   pushWorkoutUndoSnapshot(store.data[doneKey] ? 'deseleziona serie' : 'completa serie');
   if (store.data[doneKey]) {
     store.data[doneKey] = false;
+    window.__liveSetIntel = null;
+    window.__liveExerciseReport = null;
+    window.__liveRecommendation = null;
     persist();
     recordManualAction({
       action_type: 'LOG_SET',
@@ -7896,6 +7986,11 @@ function showLiveSetIntel(exIdx) { return showLiveSetIntelHtml(exIdx); }
 function showLiveSetIntelHtml(exIdx) {
   const live = window.__liveSetIntel;
   if (!live || live.empty || Number(live.exIdx) !== Number(exIdx)) return '';
+  if (Number(live.week) !== Number(currentWeek) || Number(live.day) !== Number(currentDay)) return '';
+  if (typeof exerciseHasCompletedSetThisSession === 'function' && !exerciseHasCompletedSetThisSession(exIdx)) return '';
+  // Only show after a set of THIS exercise was just finalized (not leftover from another exercise/week).
+  const kDone = 'w' + currentWeek + '_d' + currentDay + '_e' + exIdx + '_s' + live.set + '_done';
+  if (!store.data[kDone]) return '';
   const TAE = window.TrainingAnalyticsEngine;
   const L = function (k) { return (TAE && TAE.labelIt) ? TAE.labelIt(k) : String(k || '—'); };
   const H = function (d, k) { return (TAE && TAE.humanState) ? TAE.humanState(d, k) : L(k); };
@@ -8136,26 +8231,36 @@ function acceptIntelRecommendation(exIdx) {
   const reco = window.__liveRecommendation || window.__exIntelReco;
   if (!reco) return;
   const nowKey = 'w' + currentWeek + '_d' + currentDay + '_e' + exIdx;
-  if (reco.suggestedLoad != null) {
-    store.intelTargets[nowKey] = { load: reco.suggestedLoad, action: reco.action, at: new Date().toISOString(), name: reco.name, accepted: true };
-    const total = (typeof getExerciseSetCount === 'function') ? getExerciseSetCount(exIdx) : 0;
-    for (let s = 1; s <= total; s++) {
-      const sk = nowKey + '_s' + s;
-      if (store.data[sk + '_done']) continue;
-      if (store.data[sk + '_load_user']) continue;
-      const el = document.getElementById(sk + '_load');
-      if (el) el.value = reco.suggestedLoad;
-      store.data[sk + '_load'] = reco.suggestedLoad;
+  const row = (typeof exerciseRowAt === 'function') ? exerciseRowAt(currentWeek, currentDay, exIdx) : {};
+  const total = (typeof getExerciseSetCount === 'function') ? getExerciseSetCount(exIdx) : 0;
+  // Apply per-set progression — never paste one load on every set.
+  for (let s = 1; s <= total; s++) {
+    const sk = nowKey + '_s' + s;
+    if (store.data[sk + '_done']) continue;
+    if (store.data[sk + '_load_user']) continue;
+    const perLoad = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(exIdx, s, row || {}) : null;
+    const load = Number(perLoad) > 0 ? perLoad : reco.suggestedLoad;
+    if (load == null) continue;
+    const el = document.getElementById(sk + '_load');
+    if (el) el.value = load;
+    store.data[sk + '_load'] = load;
+    const perReps = (typeof suggestedRepsForSet === 'function') ? suggestedRepsForSet(exIdx, s, row || {}) : null;
+    if (perReps != null && (store.data[sk + '_reps'] === undefined || store.data[sk + '_reps'] === '' || store.data[sk + '_reps'] == null)) {
+      store.data[sk + '_reps'] = perReps;
     }
+  }
+  if (reco.suggestedLoad != null) {
+    store.intelTargets[nowKey] = { load: reco.suggestedLoad, action: reco.action, at: new Date().toISOString(), name: reco.name, accepted: true, perSet: true };
   }
   const nextWeek = (Number(currentWeek) || 1) + 1;
   const nextKey = 'w' + nextWeek + '_d' + currentDay + '_e' + exIdx;
-  store.intelTargets[nextKey] = { load: reco.suggestedLoad, action: reco.action, at: new Date().toISOString(), name: reco.name };
+  store.intelTargets[nextKey] = { load: reco.suggestedLoad, action: reco.action, at: new Date().toISOString(), name: reco.name, perSet: true };
   store.intelligence.recommendations = store.intelligence.recommendations || [];
   store.intelligence.recommendations.push({ at: new Date().toISOString(), key: nowKey, reco: reco, accepted: true });
   store.intelligence.applied.push({ at: new Date().toISOString(), key: nowKey, reco: reco });
   persist();
-  if (typeof showToast === 'function') showToast('Suggerimento accettato sui set non ancora eseguiti. La scheda originale non è stata riscritta.', 'success');
+  if (typeof render === 'function') render();
+  if (typeof showToast === 'function') showToast('Suggerimento applicato serie per serie. La scheda originale non è stata riscritta.', 'success');
 }
 function keepPlannedIntelRecommendation(exIdx) {
   ensureIntelligenceStore();
@@ -14810,9 +14915,6 @@ function renderHome(c) {
           Quattro percorsi equivalenti. Scegline uno: poi alleni.
         </p>
         <div style="display:flex;flex-direction:column;gap:10px;">
-          <button class="btn btn-outline" style="min-height:48px;font-size:12px;font-weight:800;border-color:#c66;color:#c66;text-align:left;padding:10px 14px;" onclick="recoverPersonalTrainingEmergency()">
-            SCEGLI LA MIA SCHEDA (16 SETT.)<br><span style="font-size:10px;font-weight:600;opacity:.85;">Cloud · IndexedDB · libreria coach</span>
-          </button>
           <button class="btn btn-primary" style="min-height:52px;font-size:13px;font-weight:900;text-align:left;padding:10px 14px;" onclick="navigate('import')">
             IMPORTA FILE<br><span style="font-size:10px;font-weight:600;opacity:.85;">PDF / Excel / Word del coach</span>
           </button>
@@ -14863,17 +14965,6 @@ function renderHome(c) {
 
   c.innerHTML = `
     <div style="text-align:center;padding:20px 0;"><img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));" onerror="this.onerror=null;this.src='icon-192.png'"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
-
-    ${(typeof looksLikeClientAssignDraft === 'function' && looksLikeClientAssignDraft(DATA))
-      ? `<div class="card" style="border:2px solid #c66;margin-bottom:12px;padding:14px;">
-          <div style="font-size:10px;font-weight:800;color:#f88;letter-spacing:1px;margin-bottom:6px;">SCHEDA SOSPETTA</div>
-          <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:8px;">Questa non sembra la tua scheda a 16 settimane («${esc(DATA.title || '')}»).</div>
-          <button class="btn btn-primary" style="width:100%;min-height:48px;" onclick="recoverPersonalTrainingEmergency()">RIPRISTINA LA MIA SCHEDA</button>
-        </div>`
-      : `<div class="card" style="border:1px solid #333;margin-bottom:12px;padding:12px;">
-          <div style="font-size:11px;color:#aaa;margin-bottom:8px;">Scheda attiva: <b style="color:#fff;">${esc((DATA && DATA.title) || '—')}</b></div>
-          <button class="btn btn-outline" style="width:100%;font-size:11px;border-color:#c66;color:#c66;" onclick="recoverPersonalTrainingEmergency()">Non è la mia (16 sett.) · SCEGLI SCHEDA</button>
-        </div>`}
 
     <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>${t('activeSession')}</h2></div><div style="padding:20px;"><div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">OGGI · PROSSIMA AZIONE</div><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].name||sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><div style="display:flex;gap:10px;margin-top:20px;">
         <button class="btn btn-primary" style="flex:2;font-size:16px;height:55px;" onclick="navigate('training')">${t('startWorkout')}</button>
@@ -15119,7 +15210,15 @@ function sessionDisplayName(day, di) {
 }
 
 function pinTrainingDay(week, day) {
-  window.__pinnedTraining = { week: Number(week) || 1, day: Number(day) || 0, at: Date.now() };
+  const nextW = Number(week) || 1;
+  const nextD = Number(day) || 0;
+  if (Number(currentWeek) !== nextW || Number(currentDay) !== nextD) {
+    window.__liveSetIntel = null;
+    window.__liveExerciseReport = null;
+    window.__liveRecommendation = null;
+    window.__exIntelSnap = null;
+  }
+  window.__pinnedTraining = { week: nextW, day: nextD, at: Date.now() };
   try {
     store.trainingWeek = window.__pinnedTraining.week;
     store.trainingDay = window.__pinnedTraining.day;
@@ -15320,9 +15419,14 @@ function renderTraining(c){
             }
           }
           const targetRepsRaw = setObj ? (setObj.reps ?? setObj.target_reps) : row.repsTarget;
+          const suggReps = (!isDone && typeof suggestedRepsForSet === 'function') ? suggestedRepsForSet(fIdx, s, row) : null;
           const shownReps = (store.data[k + '_reps'] !== undefined && store.data[k + '_reps'] !== '' && store.data[k + '_reps'] != null)
             ? store.data[k + '_reps']
-            : repsChoiceValue(targetRepsRaw);
+            : (suggReps != null ? suggReps : repsChoiceValue(targetRepsRaw));
+          if (!isDone && !sessionWasFinalized(currentWeek, currentDay) && suggReps != null
+            && (store.data[k + '_reps'] === undefined || store.data[k + '_reps'] === '' || store.data[k + '_reps'] == null)) {
+            store.data[k + '_reps'] = suggReps;
+          }
           const shownRir = (store.data[k + '_rir'] !== undefined && store.data[k + '_rir'] !== '' && store.data[k + '_rir'] != null)
             ? store.data[k + '_rir']
             : (setObj && (setObj.rir ?? setObj.target_rir) != null ? setObj.rir ?? setObj.target_rir : (row.rirTarget != null ? row.rirTarget : ''));
