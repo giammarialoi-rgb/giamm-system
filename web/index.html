@@ -44417,7 +44417,7 @@ function renderSupplements(c) {
           </div>
           <div style="display:flex;gap:8px;margin-top:8px;border-top:1px solid #1c1c1c;padding-top:6px;">
             <button class="btn btn-outline" style="flex:1;font-size:10px;padding:4px 8px;border-color:rgba(212,175,55,0.4);color:var(--gold);" data-name="${esc(it.name || '')}" onclick="openExamineEvidenceModal(this.getAttribute('data-name'))">🔬 ${t('scientificEvidence')}</button>
-            <button class="btn btn-outline" style="flex:1;font-size:10px;padding:4px 8px;" data-name="${esc(it.name || '')}" onclick="askAiAboutSupplement(this.getAttribute('data-name'))">🤖 ${t('askCoach')}</button>
+            <button class="btn btn-outline" style="flex:1;font-size:10px;padding:4px 8px;" data-name="${esc(it.name || '')}" onclick="askAiAboutSupplement(this.getAttribute('data-name'))">🤖 ${(typeof t === 'function' && t('askCoach') && t('askCoach') !== 'askCoach') ? t('askCoach') : 'CHIEDI A COACH AI'}</button>
           </div>
           ${itemAlertHtml('supplement', idx, it)}
         </div>
@@ -44664,12 +44664,79 @@ function closeExamineEvidenceModal() {
   $('examine-evidence-modal').style.display = 'none';
 }
 
+function buildSupplementCoachPrompt(name) {
+  const n = String(name || '').trim() || 'questo integratore';
+  let extra = '';
+  try {
+    const items = (DATA && DATA.supplementation && DATA.supplementation.items)
+      || (store && store.supplementation && store.supplementation.items)
+      || [];
+    const lower = n.toLowerCase();
+    let it = null;
+    for (let i = 0; i < items.length; i++) {
+      const nm = String((items[i] && items[i].name) || '').toLowerCase();
+      if (nm === lower) { it = items[i]; break; }
+    }
+    if (!it) {
+      for (let i = 0; i < items.length; i++) {
+        const nm = String((items[i] && items[i].name) || '').toLowerCase();
+        if (nm && (nm.indexOf(lower) >= 0 || lower.indexOf(nm) >= 0)) { it = items[i]; break; }
+      }
+    }
+    if (it) {
+      const bits = [];
+      if (it.dose) bits.push('dose ' + it.dose + (it.unit ? (' ' + it.unit) : ''));
+      if (it.timing) bits.push('timing: ' + it.timing);
+      if (it.frequency) bits.push('frequenza: ' + it.frequency);
+      if (it.brand) bits.push('brand: ' + it.brand);
+      if (it.notes) bits.push('note: ' + it.notes);
+      if (bits.length) extra = ' Nel mio protocollo attuale: ' + bits.join('; ') + '.';
+    }
+  } catch (_) {}
+  return 'Analizza l’integratore «' + n + '».' + extra +
+    ' Spiega a cosa serve, dose tipica evidence-informed, timing, interazioni/controindicazioni rilevanti per un atleta, e se ha senso rispetto al mio profilo e obiettivi. Non è consulenza medica: resta pratico e chiaro.';
+}
+
+function kickCoachAiPrompt(prompt, busyLabel) {
+  const msg = String(prompt || '').trim();
+  if (!msg) return;
+  let tries = 0;
+  function kick() {
+    tries++;
+    const input = typeof $ === 'function' ? $('ai-input') : document.getElementById('ai-input');
+    const hist = typeof $ === 'function' ? $('chat-history') : document.getElementById('chat-history');
+    if (input) input.value = msg;
+    if (hist && typeof askAIInner === 'function') {
+      if (typeof withBusy === 'function') {
+        withBusy(function () { return askAIInner(msg); }, busyLabel || 'Nurvan AI sta pensando…', { immediate: true });
+      } else {
+        askAIInner(msg);
+      }
+      return;
+    }
+    if (tries < 20) setTimeout(kick, 100);
+    else if (typeof askAI === 'function') askAI();
+  }
+  setTimeout(kick, 80);
+}
+
 function askAiAboutSupplement(name) {
-  clearCoachSession();
-  store.pendingCoachAsk = { kind: 'supplement', name: name, needVoiceChoice: true };
-  store.chatHistory = [{ role: 'assistant', text: t('voiceOrReadAsk'), voiceChoice: true }];
-  persist();
-  navigate('ai');
+  const label = String(name || '').trim();
+  // Atleta senza Nurvan AI: messaggio al coach umano su quell’integratore
+  if (typeof isAthleteRole === 'function' && isAthleteRole()
+      && !(store && store.clientProfile && store.clientProfile.allowNurvanAi)) {
+    const prefill = 'Vorrei un parere sull’integratore «' + (label || 'nel mio protocollo') + '».';
+    window.__cpChatPrefill = prefill;
+    if (typeof navigate === 'function') navigate('clientChat');
+    if (typeof applyChatPrefill === 'function') applyChatPrefill(prefill);
+    else if (typeof askRealCoachForDomain === 'function') askRealCoachForDomain('supplements', prefill);
+    return;
+  }
+  try { clearCoachSession(); } catch (_) {}
+  store.pendingCoachAsk = null;
+  const prompt = buildSupplementCoachPrompt(label);
+  if (typeof navigate === 'function') navigate('ai');
+  kickCoachAiPrompt(prompt, 'Nurvan AI analizza l’integratore…');
 }
 
 function chooseCoachReadMode(mode) {
@@ -44677,13 +44744,14 @@ function chooseCoachReadMode(mode) {
   const pending = store.pendingCoachAsk;
   store.pendingCoachAsk = null;
   const name = pending && pending.name ? pending.name : '';
-  const prompt = String(t('supplementCoachPrompt') || '').replace('{name}', name);
-  store.chatHistory = store.chatHistory.filter(function (item) { return !item.voiceChoice; });
+  const prompt = (pending && pending.kind === 'supplement')
+    ? buildSupplementCoachPrompt(name)
+    : (String((typeof t === 'function' && t('supplementCoachPrompt') !== 'supplementCoachPrompt' ? t('supplementCoachPrompt') : '') || '').replace('{name}', name)
+      || buildSupplementCoachPrompt(name));
+  store.chatHistory = (store.chatHistory || []).filter(function (item) { return !item.voiceChoice; });
   persist();
-  navigate('ai');
-  const input = $('ai-input');
-  if (input) input.value = prompt;
-  askAI();
+  if (typeof navigate === 'function') navigate('ai');
+  kickCoachAiPrompt(prompt, 'Nurvan AI sta pensando…');
 }
 
 // ====================================================
