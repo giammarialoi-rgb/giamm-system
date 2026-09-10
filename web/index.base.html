@@ -4001,13 +4001,22 @@ function looksLikeClientAssignDraft(prog) {
   if (!prog || typeof prog !== 'object') return true;
   const id = String(prog.id || '');
   const title = String(prog.title || prog.original_title || '');
-  if (/^assign_|_draft_|client_view_|lib_/i.test(id)) return true;
+  if (/^assign_|_draft_|client_view_|lib_|assign_merge/i.test(id)) return true;
   if (/bozza\s+per\s+cliente|scheda\s+cliente|piano\s+cliente|assign_merge/i.test(title)) return true;
   if (prog.depersonalized === true && /cliente|bozza|assign/i.test(title)) return true;
   return false;
 }
 
-function programRecoveryScore(prog) {
+function maxWeekFromLoadKeys(dataMap) {
+  let maxW = 0;
+  Object.keys(dataMap || {}).forEach(function (k) {
+    const m = /^w(\d+)_/i.exec(k);
+    if (m) maxW = Math.max(maxW, Number(m[1]) || 0);
+  });
+  return maxW;
+}
+
+function programRecoveryScore(prog, hintWeeks) {
   if (!prog || typeof prog !== 'object') return -1;
   const weeks = Array.isArray(prog.weeks) ? prog.weeks : [];
   let score = weeks.length * 100;
@@ -4018,102 +4027,173 @@ function programRecoveryScore(prog) {
       score += list.length * 3;
     });
   });
-  if (looksLikeClientAssignDraft(prog)) score -= 5000;
-  const title = String(prog.title || '');
-  if (/giammaria|personale|master|mia scheda/i.test(title)) score += 80;
+  if (looksLikeClientAssignDraft(prog)) score -= 8000;
+  const title = String(prog.title || prog.original_title || '');
+  if (/personalizzat|giammaria|personale|master|mia scheda/i.test(title)) score += 400;
+  if (hintWeeks && weeks.length === hintWeeks) score += 1200;
+  if (hintWeeks && weeks.length === 16) score += 200;
+  if (weeks.length === 16 && /personalizzat/i.test(title)) score += 800;
   return score;
 }
 
 function activateRecoveredProgram(prog, sourceLabel, notes) {
   if (!prog || !Array.isArray(prog.weeks) || !prog.weeks.length) return false;
-  DATA = typeof normalizeProgram === 'function' ? normalizeProgram(prog.training || prog) : (prog.training || prog);
+  // Keep existing loads/logs — only swap the scheda structure.
+  const keepData = store.data || {};
+  const keepLogs = Array.isArray(store.logs) ? store.logs : [];
+  const keepCustom = store.customSets || {};
+  DATA = typeof normalizeProgram === 'function' ? normalizeProgram(prog.training || prog) : JSON.parse(JSON.stringify(prog.training || prog));
   store.activeProgram = DATA;
   store.activeProgramId = DATA.id || store.activeProgramId || ('recovered_' + Date.now());
+  store.data = keepData;
+  store.logs = keepLogs;
+  store.customSets = keepCustom;
+  if (typeof currentWeek !== 'undefined') currentWeek = 1;
+  if (typeof currentDay !== 'undefined') currentDay = 0;
   if (notes) notes.push(sourceLabel + ' (' + DATA.weeks.length + ' sett. · ' + (DATA.title || 'senza titolo') + ')');
   return true;
 }
 
-async function recoverPersonalTrainingEmergency() {
-  if (store && (store.coachAssigning || store.coachViewingClient)) {
-    if (typeof exitCoachSession === 'function') exitCoachSession(true);
-    await new Promise(function (r) { setTimeout(r, 500); });
+function closeRecoverSchedaPicker() {
+  const el = document.getElementById('recover-scheda-picker');
+  if (el) el.style.display = 'none';
+}
+
+async function applyRecoveredSchedaChoice(index) {
+  const list = window.__cpRecoverCandidates || [];
+  const row = list[index];
+  if (!row || !row.prog) {
+    if (typeof showToast === 'function') showToast('Scheda non trovata', 'warning');
+    return;
   }
-  const before = {
-    weeks: (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0,
-    title: (DATA && DATA.title) || '',
-    loads: Object.keys((store && store.data) || {}).length,
-    logs: Array.isArray(store && store.logs) ? store.logs.length : 0,
-    draft: looksLikeClientAssignDraft(DATA)
-  };
-  let notes = [];
+  activateRecoveredProgram(row.prog, row.source, []);
+  try {
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
+      await GiammariaPersistence.activateCanonicalProgram(DATA);
+    }
+  } catch (_) {}
+  if (typeof persist === 'function') persist();
+  if (typeof persistActiveProgramStructure === 'function') persistActiveProgramStructure();
+  closeRecoverSchedaPicker();
+  if (typeof navigate === 'function') navigate('home');
+  else if (typeof render === 'function') render();
+  const msg = 'Scheda attivata: «' + (DATA.title || '') + '» · ' + DATA.weeks.length + ' settimane (carichi conservati)';
+  if (typeof showToast === 'function') showToast(msg, 'success');
+  try { alert(msg); } catch (_) {}
+}
+window.applyRecoveredSchedaChoice = applyRecoveredSchedaChoice;
+window.closeRecoverSchedaPicker = closeRecoverSchedaPicker;
+
+function showRecoverSchedaPicker(candidates, hintWeeks) {
+  let box = document.getElementById('recover-scheda-picker');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'recover-scheda-picker';
+    box.style.cssText = 'display:none;position:fixed;inset:0;z-index:10200;background:rgba(0,0,0,.92);align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;';
+    document.body.appendChild(box);
+  }
+  window.__cpRecoverCandidates = candidates;
+  const preferred = candidates.filter(function (c) {
+    return c.prog.weeks.length === (hintWeeks || 16) && !looksLikeClientAssignDraft(c.prog);
+  });
+  const rows = (preferred.length ? preferred : candidates).slice(0, 12);
+  const htmlRows = rows.map(function (c, i) {
+    const realIdx = candidates.indexOf(c);
+    const w = c.prog.weeks.length;
+    const draft = looksLikeClientAssignDraft(c.prog);
+    const mark = (w === 16 && !draft) ? ' ★ 16 sett.' : (draft ? ' · bozza/cliente' : '');
+    return '<button type="button" class="btn ' + ((w === (hintWeeks || 16) && !draft) ? 'btn-primary' : 'btn-outline') + '" style="width:100%;margin-bottom:8px;text-align:left;min-height:54px;padding:10px 12px;" onclick="applyRecoveredSchedaChoice(' + realIdx + ')">' +
+      '<div style="font-size:13px;font-weight:800;">' + esc(c.prog.title || 'Senza titolo') + mark + '</div>' +
+      '<div style="font-size:10px;color:#aaa;margin-top:4px;">' + w + ' settimane · ' + esc(c.source) + '</div></button>';
+  }).join('');
+  box.innerHTML = '<div style="width:100%;max-width:460px;max-height:85vh;overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;padding:14px;box-sizing:border-box;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">SCEGLI LA TUA SCHEDA</div>' +
+    '<h2 style="color:#fff;font-size:16px;margin:6px 0 8px;">I carichi restano. Attiva la scheda giusta.</h2>' +
+    '<p style="font-size:12px;color:#aaa;margin:0 0 12px;">Cerco in particolare programmi da <b style="color:#fff;">' + (hintWeeks || 16) + ' settimane</b> personalizzati.</p>' +
+    (htmlRows || '<div class="cp-help">Nessuna scheda trovata nei backup. Serve accesso al database Render.</div>') +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:4px;" onclick="closeRecoverSchedaPicker()">CHIUDI</button></div>';
+  box.style.display = 'flex';
+  box.onclick = function (ev) { if (ev.target === box) closeRecoverSchedaPicker(); };
+}
+
+async function collectRecoverSchedaCandidates() {
+  const hintWeeks = maxWeekFromLoadKeys(store.data) || 16;
   const candidates = [];
+  const seen = {};
 
   function addCandidate(prog, source) {
     if (!prog || typeof prog !== 'object') return;
     const body = prog.training && Array.isArray(prog.training.weeks) ? prog.training : prog;
     if (!Array.isArray(body.weeks) || !body.weeks.length) return;
-    candidates.push({ prog: body, source: source, score: programRecoveryScore(body) });
+    const key = String(body.id || '') + '|' + String(body.title || '') + '|' + body.weeks.length + '|' +
+      ((body.weeks[0] && (body.weeks[0].sessions || body.weeks[0].days) || []).length);
+    if (seen[key]) return;
+    seen[key] = 1;
+    candidates.push({
+      prog: JSON.parse(JSON.stringify(body)),
+      source: source,
+      score: programRecoveryScore(body, hintWeeks)
+    });
   }
 
   try {
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadWorkoutLogsSnapshot) {
       const logSnap = await GiammariaPersistence.loadWorkoutLogsSnapshot();
       if (logSnap && logSnap.data && Object.keys(logSnap.data).length) {
-        const localKeys = Object.keys(store.data || {}).length;
-        if (Object.keys(logSnap.data).length >= localKeys) {
-          store.data = Object.assign({}, logSnap.data, store.data || {});
-          if (logSnap.customSets) store.customSets = Object.assign({}, logSnap.customSets, store.customSets || {});
-          if (Array.isArray(logSnap.logs) && logSnap.logs.length) {
-            const byId = {};
-            (store.logs || []).concat(logSnap.logs).forEach(function (row) {
-              if (!row) return;
-              byId[row.id || row.at] = row;
-            });
-            store.logs = Object.keys(byId).map(function (k) { return byId[k]; });
-          }
-          notes.push('carichi da IndexedDB');
+        store.data = Object.assign({}, logSnap.data, store.data || {});
+        if (logSnap.customSets) store.customSets = Object.assign({}, logSnap.customSets, store.customSets || {});
+        if (Array.isArray(logSnap.logs) && logSnap.logs.length) {
+          const byId = {};
+          (store.logs || []).concat(logSnap.logs).forEach(function (row) {
+            if (!row) return;
+            byId[row.id || row.at] = row;
+          });
+          store.logs = Object.keys(byId).map(function (k) { return byId[k]; });
         }
       }
     }
-  } catch (e) { console.warn('[RECOVER_IDB_LOGS]', e); }
+  } catch (_) {}
 
   try {
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.dbGetAll) {
+      // raw envelopes keep titles even if canonical was overwritten as active
+    }
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.getAllPrograms) {
       const all = await GiammariaPersistence.getAllPrograms();
-      (all || []).forEach(function (p, i) { addCandidate(p, 'archivio IDB #' + (i + 1)); });
-    } else if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadActiveProgram) {
-      addCandidate(await GiammariaPersistence.loadActiveProgram(), 'scheda attiva IDB');
+      (all || []).forEach(function (p, i) {
+        addCandidate(p, 'IndexedDB · ' + ((p && p.title) || ('programma ' + (i + 1))));
+      });
+    }
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.listPrograms && GiammariaPersistence.loadProgram) {
+      const listed = await GiammariaPersistence.listPrograms();
+      for (let i = 0; i < (listed || []).length; i++) {
+        const meta = listed[i];
+        try {
+          const full = await GiammariaPersistence.loadProgram(meta.id);
+          addCandidate(full, 'IndexedDB · ' + ((meta && meta.title) || meta.id) + (meta.isActive ? ' (attiva)' : ''));
+        } catch (_) {}
+      }
     }
   } catch (e) { console.warn('[RECOVER_IDB_PROG]', e); }
 
   try {
     (Array.isArray(store.coachProgramLibrary) ? store.coachProgramLibrary : []).forEach(function (e, i) {
-      addCandidate(e && e.payload, 'libreria coach · ' + ((e && e.title) || ('#' + (i + 1))));
+      addCandidate(e && e.payload, 'Libreria coach · ' + ((e && e.title) || ('#' + (i + 1))));
     });
-  } catch (e) { console.warn('[RECOVER_LIB]', e); }
+  } catch (_) {}
 
-  let remote = null;
   try {
     if (store.accountToken) {
       const response = await accountRequest('/api/account/me', { method: 'GET' });
       const payload = await readApiJson(response);
-      remote = payload.data || {};
-      addCandidate(remote.activeProgram, 'cloud account');
+      const remote = payload.data || {};
+      addCandidate(remote.activeProgram, 'Cloud · scheda account');
       if (remote.data && Object.keys(remote.data).length) {
         store.data = Object.assign({}, remote.data, store.data || {});
-        notes.push('carichi da cloud');
-      }
-      if (Array.isArray(remote.logs) && remote.logs.length) {
-        const byId = {};
-        (store.logs || []).concat(remote.logs).forEach(function (row) {
-          if (!row) return;
-          byId[row.id || row.at] = row;
-        });
-        store.logs = Object.keys(byId).map(function (k) { return byId[k]; });
       }
       if (Array.isArray(remote.coachProgramLibrary)) {
         remote.coachProgramLibrary.forEach(function (e, i) {
-          addCandidate(e && e.payload, 'libreria cloud · ' + ((e && e.title) || ('#' + (i + 1))));
+          addCandidate(e && e.payload, 'Libreria cloud · ' + ((e && e.title) || ('#' + (i + 1))));
         });
         const byId = {};
         (store.coachProgramLibrary || []).concat(remote.coachProgramLibrary).forEach(function (row) {
@@ -4122,63 +4202,82 @@ async function recoverPersonalTrainingEmergency() {
         store.coachProgramLibrary = Object.keys(byId).map(function (k) { return byId[k]; }).slice(0, 40);
       }
     }
-  } catch (e) {
-    console.warn('[RECOVER_CLOUD]', e);
-  }
+  } catch (e) { console.warn('[RECOVER_CLOUD]', e); }
+
+  // Bundled personal master (16 settimane) — always offer as first-class restore.
+  try {
+    const resp = await fetch('personal-recovery-16w.json', { cache: 'no-store' });
+    if (resp && resp.ok) {
+      const bundled = await resp.json();
+      if (bundled && Array.isArray(bundled.weeks) && bundled.weeks.length) {
+        bundled.id = bundled.id || 'personal_16w_giammaria';
+        bundled.title = bundled.title || 'Programma personalizzato 16 settimane';
+        addCandidate(bundled, 'Backup ufficiale · 16 settimane personalizzato');
+      }
+    }
+  } catch (e) { console.warn('[RECOVER_BUNDLED_16W]', e); }
 
   candidates.sort(function (a, b) { return b.score - a.score; });
-  const best = candidates[0];
-  const localIsDraft = looksLikeClientAssignDraft(DATA);
-  const localScore = programRecoveryScore(DATA);
-  if (best && (localIsDraft || best.score > localScore + 50 || !(DATA && DATA.weeks && DATA.weeks.length))) {
-    activateRecoveredProgram(best.prog, best.source, notes);
-  } else if (!best) {
-    notes.push('nessuna scheda personale trovata nei backup');
-  } else {
-    notes.push('scheda attuale già migliore dei backup');
+  return { candidates: candidates, hintWeeks: maxWeekFromLoadKeys(store.data) || hintWeeks || 16 };
+}
+
+async function recoverPersonalTrainingEmergency() {
+  if (store && (store.coachAssigning || store.coachViewingClient)) {
+    if (typeof exitCoachSession === 'function') exitCoachSession(true);
+    await new Promise(function (r) { setTimeout(r, 500); });
+  }
+  const pack = await collectRecoverSchedaCandidates();
+  const candidates = pack.candidates || [];
+  const hintWeeks = pack.hintWeeks || 16;
+  if (!candidates.length) {
+    const msg = 'Nessuna scheda di backup trovata su questo telefono/cloud. Serve il database Render o una copia della scheda a 16 settimane.';
+    if (typeof showToast === 'function') showToast(msg, 'danger');
+    try { alert(msg); } catch (_) {}
+    return { candidates: [] };
   }
 
-  try {
-    window.__cpForceRemoteProgram = true;
-    if (store.accountToken && typeof syncAccountData === 'function') {
-      await syncAccountData(true);
-      notes.push('sync cloud');
-    }
-  } catch (e) {
-    console.warn('[RECOVER_SYNC]', e);
-  } finally {
-    window.__cpForceRemoteProgram = false;
+  // Prefer the official bundled 16-week personal program when present.
+  const official = candidates.find(function (c) {
+    return c && c.prog && (c.prog.id === 'personal_16w_giammaria' || /Backup ufficiale/i.test(c.source || ''));
+  });
+  const sixteenPersonal = candidates.filter(function (c) {
+    return c.prog.weeks.length === 16 && !looksLikeClientAssignDraft(c.prog);
+  });
+  const auto = official || (sixteenPersonal.length === 1 ? sixteenPersonal[0] : null);
+  // User tapped recover: if we have the official 16w (or a single 16w personal), apply it even when another 16w draft is active.
+  const alreadyOfficial = DATA && String(DATA.id || '') === 'personal_16w_giammaria' && Array.isArray(DATA.weeks) && DATA.weeks.length === 16;
+  const shouldAuto = Boolean(auto) && !alreadyOfficial;
+
+  if (shouldAuto) {
+    activateRecoveredProgram(auto.prog, auto.source, []);
+    try {
+      if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
+        await GiammariaPersistence.activateCanonicalProgram(DATA);
+      }
+    } catch (_) {}
+    if (typeof persist === 'function') persist();
+    if (typeof persistActiveProgramStructure === 'function') persistActiveProgramStructure();
+    if (typeof navigate === 'function') navigate('home');
+    else if (typeof render === 'function') render();
+    const msg = 'Ripristinata: «' + (DATA.title || '') + '» · ' + DATA.weeks.length + ' settimane (carichi conservati)';
+    if (typeof showToast === 'function') showToast(msg, 'success');
+    try { alert(msg + '\nSe non è quella giusta, apri di nuovo Ripristina e scegli dalla lista.'); } catch (_) {}
+    // Still expose picker for alternate picks.
+    showRecoverSchedaPicker(candidates, hintWeeks);
+    return {
+      auto: true,
+      title: DATA.title,
+      weeks: DATA.weeks.length,
+      candidates: candidates.slice(0, 12).map(function (c) {
+        return { title: c.prog.title || '', weeks: c.prog.weeks.length, score: c.score, source: c.source };
+      })
+    };
   }
 
-  // If sync left a draft active but we had a better personal candidate, re-apply it.
-  if (best && looksLikeClientAssignDraft(DATA) && !looksLikeClientAssignDraft(best.prog)) {
-    activateRecoveredProgram(best.prog, 'ripristino forzato · ' + best.source, notes);
-  }
-
-  try {
-    if (DATA && Array.isArray(DATA.weeks) && DATA.weeks.length && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
-      await GiammariaPersistence.activateCanonicalProgram(DATA);
-    }
-  } catch (_) {}
-  if (typeof persist === 'function') persist();
-  if (typeof persistActiveProgramStructure === 'function') persistActiveProgramStructure();
-  if (typeof navigate === 'function') navigate('home');
-  else if (typeof render === 'function') render();
-
-  const after = {
-    weeks: (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0,
-    title: (DATA && DATA.title) || '',
-    loads: Object.keys((store && store.data) || {}).length,
-    logs: Array.isArray(store && store.logs) ? store.logs.length : 0
-  };
-  const msg = 'Scheda: «' + after.title + '» · ' + after.weeks + ' sett. · ' + after.loads + ' carichi · ' + after.logs + ' log'
-    + (notes.length ? '\n' + notes.join(' · ') : '')
-    + '\nPrima: «' + before.title + '» ' + before.weeks + '/' + before.loads;
-  if (typeof showToast === 'function') showToast(msg.replace(/\n/g, ' · '), after.weeks && !looksLikeClientAssignDraft(DATA) ? 'success' : 'warning');
-  try { alert(msg); } catch (_) {}
-  return { after: after, candidates: candidates.slice(0, 8).map(function (c) {
+  showRecoverSchedaPicker(candidates, hintWeeks);
+  return { candidates: candidates.slice(0, 12).map(function (c) {
     return { title: c.prog.title || '', weeks: c.prog.weeks.length, score: c.score, source: c.source };
-  }) };
+  }), hintWeeks: hintWeeks };
 }
 window.recoverPersonalTrainingEmergency = recoverPersonalTrainingEmergency;
 
@@ -14712,7 +14811,7 @@ function renderHome(c) {
         </p>
         <div style="display:flex;flex-direction:column;gap:10px;">
           <button class="btn btn-outline" style="min-height:48px;font-size:12px;font-weight:800;border-color:#c66;color:#c66;text-align:left;padding:10px 14px;" onclick="recoverPersonalTrainingEmergency()">
-            RIPRISTINA LA MIA SCHEDA<br><span style="font-size:10px;font-weight:600;opacity:.85;">Cloud · IndexedDB · libreria coach</span>
+            SCEGLI LA MIA SCHEDA (16 SETT.)<br><span style="font-size:10px;font-weight:600;opacity:.85;">Cloud · IndexedDB · libreria coach</span>
           </button>
           <button class="btn btn-primary" style="min-height:52px;font-size:13px;font-weight:900;text-align:left;padding:10px 14px;" onclick="navigate('import')">
             IMPORTA FILE<br><span style="font-size:10px;font-weight:600;opacity:.85;">PDF / Excel / Word del coach</span>
@@ -14768,12 +14867,12 @@ function renderHome(c) {
     ${(typeof looksLikeClientAssignDraft === 'function' && looksLikeClientAssignDraft(DATA))
       ? `<div class="card" style="border:2px solid #c66;margin-bottom:12px;padding:14px;">
           <div style="font-size:10px;font-weight:800;color:#f88;letter-spacing:1px;margin-bottom:6px;">SCHEDA SOSPETTA</div>
-          <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:8px;">Questa non sembra la tua scheda personale («${esc(DATA.title || '')}»).</div>
+          <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:8px;">Questa non sembra la tua scheda a 16 settimane («${esc(DATA.title || '')}»).</div>
           <button class="btn btn-primary" style="width:100%;min-height:48px;" onclick="recoverPersonalTrainingEmergency()">RIPRISTINA LA MIA SCHEDA</button>
         </div>`
       : `<div class="card" style="border:1px solid #333;margin-bottom:12px;padding:12px;">
           <div style="font-size:11px;color:#aaa;margin-bottom:8px;">Scheda attiva: <b style="color:#fff;">${esc((DATA && DATA.title) || '—')}</b></div>
-          <button class="btn btn-outline" style="width:100%;font-size:11px;border-color:#c66;color:#c66;" onclick="recoverPersonalTrainingEmergency()">Non è la mia scheda · RIPRISTINA</button>
+          <button class="btn btn-outline" style="width:100%;font-size:11px;border-color:#c66;color:#c66;" onclick="recoverPersonalTrainingEmergency()">Non è la mia (16 sett.) · SCEGLI SCHEDA</button>
         </div>`}
 
     <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>${t('activeSession')}</h2></div><div style="padding:20px;"><div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">OGGI · PROSSIMA AZIONE</div><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].name||sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><div style="display:flex;gap:10px;margin-top:20px;">
