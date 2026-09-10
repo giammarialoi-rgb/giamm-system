@@ -1426,8 +1426,16 @@ function mergeAccountDataBlobs(current, incoming) {
   const logs = Object.keys(byId).map((k) => byId[k]).sort((a, b) => String(a.at || "").localeCompare(String(b.at || "")));
   if (logs.length) merged.logs = logs.slice(-80);
   else if (Array.isArray(cur.logs) && cur.logs.length) merged.logs = cur.logs;
-  if (inc.activeProgram == null && cur.activeProgram) merged.activeProgram = cur.activeProgram;
-  else if (!merged.activeProgram && cur.activeProgram) merged.activeProgram = cur.activeProgram;
+  // Never let an empty/sandbox program wipe a richer cloud scheda
+  const curWeeks = cur.activeProgram && Array.isArray(cur.activeProgram.weeks) ? cur.activeProgram.weeks.length : 0;
+  const incWeeks = inc.activeProgram && Array.isArray(inc.activeProgram.weeks) ? inc.activeProgram.weeks.length : 0;
+  if (inc.activeProgram == null || incWeeks < 1) {
+    if (cur.activeProgram) merged.activeProgram = cur.activeProgram;
+  } else if (curWeeks > incWeeks) {
+    merged.activeProgram = cur.activeProgram;
+  } else if (!merged.activeProgram && cur.activeProgram) {
+    merged.activeProgram = cur.activeProgram;
+  }
   return merged;
 }
 
