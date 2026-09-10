@@ -191,6 +191,8 @@
 
   function renderView(view, container) {
     if (!enabled('coachShellV2')) return false;
+    // Always use classic practice UI for client list + client sheet (no R1SE overview).
+    if (view === 'coachHub' || view === 'coachClient') return false;
     const renderer = CoachOS.views[view];
     if (typeof renderer === 'function') {
       renderer(container);
