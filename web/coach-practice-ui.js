@@ -393,15 +393,41 @@ function applyClientChrome() {
 }
 
 function coachHeaderBack() {
-  if (store && store.coachViewingClient) {
-    leaveCoachClientView();
-    return;
+  // Same stack as personal navigate(): go to the previous page, never wipe personal data.
+  if (window.__gsNavStack && window.__gsNavStack.length) {
+    const prev = window.__gsNavStack.pop();
+    if (prev && prev !== (typeof currentView !== 'undefined' ? currentView : '')) {
+      try { currentView = prev; } catch (_) {}
+      try {
+        document.querySelectorAll('.nav-item').forEach(function (el) { el.classList.remove('active'); });
+        const a = document.getElementById('nav-' + prev);
+        if (a) a.classList.add('active');
+      } catch (_) {}
+      if (typeof updatePersonalBackButton === 'function') updatePersonalBackButton();
+      if (typeof ensureCoachHeaderControls === 'function') {
+        try { ensureCoachHeaderControls(!!(store && store.coachSessionActive)); } catch (_) {}
+      }
+      if (typeof render === 'function') render();
+      return;
+    }
   }
   if (store && store.coachAssigning) {
     if (typeof cancelAssignSandbox === 'function') cancelAssignSandbox();
     return;
   }
-  exitCoachSession();
+  if (store && store.coachViewingClient) {
+    leaveCoachClientView();
+    return;
+  }
+  const view = (typeof currentView !== 'undefined') ? String(currentView || '') : '';
+  if (view === 'coachClient' || view === 'coachChat' || view === 'training' || view === 'nutrition' ||
+      view === 'supplements' || view === 'therapy' || view === 'exams' || view === 'profile' || view === 'stats') {
+    if (typeof navigate === 'function') navigate('coachHub');
+    return;
+  }
+  if (view && view !== 'coachHub' && view !== 'coachToday') {
+    if (typeof navigate === 'function') navigate('coachHub');
+  }
 }
 
 function ensureCoachHeaderControls(coachSession) {
@@ -590,6 +616,7 @@ function ensureCoachSessionBanner() {
   bar.innerHTML = '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">' +
     '<span style="color:var(--gold);font-weight:800;">SESSIONE COACH</span>' +
     '<span style="color:#bbb;flex:1;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + mid + '</span>' +
+    '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="coachHeaderBack()">INDIETRO</button>' +
     (viewing
       ? '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachHub\')">LISTA</button>'
       : '') +
@@ -2124,6 +2151,7 @@ function enterCoachSession() {
   }
   store.coachSessionActive = true;
   store.coachViewingClient = false;
+  try { window.__gsNavStack = []; } catch (_) {}
   if (typeof persist === 'function') persist();
   requestNotifyPermission();
   applyClientChrome();
@@ -2149,6 +2177,7 @@ function exitCoachSession(force) {
     store.coachWorkspace = null;
     window.__cpAssignBackup = null;
     window.__cpCoachViewBackup = null;
+    try { window.__gsNavStack = []; } catch (_) {}
     try { stopClientLivePoll(); } catch (_) {}
     try { clearClientShellLock(); } catch (_) {}
     try { closeCoachDrawer(); } catch (_) {}
