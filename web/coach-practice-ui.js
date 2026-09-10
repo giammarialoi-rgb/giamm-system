@@ -2140,36 +2140,42 @@ function exitCoachSession(force) {
     || (store.coachAssigning && store.coachAssigning.backup)
     || null;
   const viewBak = window.__cpCoachViewBackup || null;
-  const needRestore = !!(assignBak || viewBak);
-  // Clear locks synchronously so chrome/nav are never stuck in Coach mode.
-  store.coachAssigning = null;
-  store.coachViewingClient = false;
-  store.coachSessionActive = false;
-  store.coachWorkspace = null;
-  window.__cpAssignBackup = null;
-  window.__cpCoachViewBackup = null;
-  try { stopClientLivePoll(); } catch (_) {}
-  try { clearClientShellLock(); } catch (_) {}
-  try { closeCoachDrawer(); } catch (_) {}
-  try { ensureAssignBanner(); } catch (_) {}
-  try { ensureClientViewBanner(); } catch (_) {}
-  if (typeof persist === 'function') persist();
-  applyClientChrome();
-  if (typeof navigate === 'function') navigate('home');
-  practiceToast('Sessione Coach chiusa', 'success');
-  if (needRestore) {
+  const bak = assignBak || viewBak;
+
+  function finishExitChrome() {
+    store.coachAssigning = null;
+    store.coachViewingClient = false;
+    store.coachSessionActive = false;
+    store.coachWorkspace = null;
+    window.__cpAssignBackup = null;
+    window.__cpCoachViewBackup = null;
+    try { stopClientLivePoll(); } catch (_) {}
+    try { clearClientShellLock(); } catch (_) {}
+    try { closeCoachDrawer(); } catch (_) {}
+    try { ensureAssignBanner(); } catch (_) {}
+    try { ensureClientViewBanner(); } catch (_) {}
+    applyClientChrome();
+    if (typeof navigate === 'function') navigate('home');
+    practiceToast('Sessione Coach chiusa', 'success');
+    setTimeout(function () { window.__cpExitingCoach = false; }, 0);
+  }
+
+  // CRITICAL: restore personal data BEFORE any persist(). Clearing flags first
+  // then persist() wrote empty/sandbox store.data over the coach account.
+  if (bak) {
     Promise.resolve()
-      .then(function () { return restoreCoachMaster(assignBak || viewBak); })
+      .then(function () { return restoreCoachMaster(bak); })
       .catch(function (err) { console.warn('[EXIT_COACH_RESTORE]', err); })
       .then(function () {
-        window.__cpExitingCoach = false;
-        applyClientChrome();
+        finishExitChrome();
+        if (typeof persist === 'function') persist();
         if (typeof currentView !== 'undefined' && currentView === 'home' && typeof render === 'function') {
           try { render(); } catch (_) {}
         }
       });
   } else {
-    setTimeout(function () { window.__cpExitingCoach = false; }, 0);
+    finishExitChrome();
+    if (typeof persist === 'function') persist();
   }
   return true;
 }

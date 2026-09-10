@@ -1743,6 +1743,7 @@ body.focus-mode [data-rewards-only] {
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="togglePasswordRecovery()" id="account-forgot">PASSWORD DIMENTICATA</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="logoutAccount()" id="account-logout">ESCI</button>
     <button class="btn btn-primary" style="width:100%;margin-top:8px;display:none;" onclick="syncAccountData(true)" id="account-sync">SINCRONIZZA DATI</button>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;border-color:#c66;color:#c66;" onclick="recoverPersonalTrainingEmergency()">RIPRISTINA ALLENAMENTO (CLOUD/IDB)</button>
     <div id="account-status" class="msg ai" style="margin-top:10px;"></div>
   </div>
 </div>
@@ -37244,6 +37245,91 @@ function applyRemoteAccountData(remote, preferLocal) {
   store.accountToken = token;
   store.accountUser = user;
 }
+async function recoverPersonalTrainingEmergency() {
+  if (store && (store.coachAssigning || store.coachViewingClient)) {
+    if (typeof exitCoachSession === 'function') exitCoachSession(true);
+    await new Promise(function (r) { setTimeout(r, 400); });
+  }
+  const before = {
+    weeks: (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0,
+    loads: Object.keys((store && store.data) || {}).length,
+    logs: Array.isArray(store && store.logs) ? store.logs.length : 0
+  };
+  let notes = [];
+  try {
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadWorkoutLogsSnapshot) {
+      const logSnap = await GiammariaPersistence.loadWorkoutLogsSnapshot();
+      if (logSnap && logSnap.data && Object.keys(logSnap.data).length > Object.keys(store.data || {}).length) {
+        store.data = Object.assign({}, logSnap.data, store.data || {});
+        if (logSnap.customSets) store.customSets = Object.assign({}, logSnap.customSets, store.customSets || {});
+        if (Array.isArray(logSnap.logs) && logSnap.logs.length > (store.logs || []).length) store.logs = logSnap.logs;
+        notes.push('carichi da IndexedDB');
+      }
+    }
+  } catch (e) { console.warn('[RECOVER_IDB_LOGS]', e); }
+  try {
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadActiveProgram) {
+      const prog = await GiammariaPersistence.loadActiveProgram();
+      const progWeeks = prog && Array.isArray(prog.weeks) ? prog.weeks.length : 0;
+      const localWeeks = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
+      if (progWeeks > localWeeks) {
+        DATA = typeof normalizeProgram === 'function' ? normalizeProgram(prog.training || prog) : (prog.training || prog);
+        store.activeProgram = DATA;
+        store.activeProgramId = DATA.id || store.activeProgramId;
+        notes.push('scheda da IndexedDB (' + progWeeks + ' sett.)');
+      }
+    }
+  } catch (e) { console.warn('[RECOVER_IDB_PROG]', e); }
+  try {
+    const lib = Array.isArray(store.coachProgramLibrary) ? store.coachProgramLibrary : [];
+    let best = null;
+    let bestWeeks = 0;
+    lib.forEach(function (e) {
+      const p = e && e.payload;
+      const w = p && Array.isArray(p.weeks) ? p.weeks.length : 0;
+      if (w > bestWeeks) { best = p; bestWeeks = w; }
+    });
+    const localWeeks = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
+    if (best && bestWeeks > localWeeks) {
+      DATA = typeof normalizeProgram === 'function' ? normalizeProgram(best) : best;
+      store.activeProgram = DATA;
+      store.activeProgramId = DATA.id || store.activeProgramId;
+      notes.push('scheda da libreria coach (' + bestWeeks + ' sett.)');
+    }
+  } catch (e) { console.warn('[RECOVER_LIB]', e); }
+  try {
+    window.__cpForceRemoteProgram = true;
+    if (store.accountToken && typeof syncAccountData === 'function') {
+      await syncAccountData(true);
+      notes.push('sync cloud');
+    }
+  } catch (e) {
+    console.warn('[RECOVER_CLOUD]', e);
+  } finally {
+    window.__cpForceRemoteProgram = false;
+  }
+  try {
+    if (DATA && Array.isArray(DATA.weeks) && DATA.weeks.length && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
+      await GiammariaPersistence.activateCanonicalProgram(DATA);
+    }
+  } catch (_) {}
+  if (typeof persist === 'function') persist();
+  if (typeof persistActiveProgramStructure === 'function') persistActiveProgramStructure();
+  if (typeof render === 'function') render();
+  const after = {
+    weeks: (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0,
+    loads: Object.keys((store && store.data) || {}).length,
+    logs: Array.isArray(store && store.logs) ? store.logs.length : 0
+  };
+  const msg = 'Recupero: ' + after.weeks + ' settimane, ' + after.loads + ' carichi, ' + after.logs + ' log'
+    + (notes.length ? ' · ' + notes.join(', ') : '')
+    + ' (prima: ' + before.weeks + '/' + before.loads + '/' + before.logs + ')';
+  if (typeof showToast === 'function') showToast(msg, after.weeks || after.loads ? 'success' : 'warning');
+  else alert(msg);
+  return after;
+}
+window.recoverPersonalTrainingEmergency = recoverPersonalTrainingEmergency;
+
 async function syncAccountData(download=false){
   const status = $('account-status'); if(status) status.textContent = 'Sincronizzazione…';
   try {
@@ -37261,10 +37347,14 @@ async function syncAccountData(download=false){
     applyRemoteAccountData(remote, localScore > remoteScore && !window.__cpForceRemoteProgram);
     try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
     const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
-    const skipProgUpload = athlete && !!(remote.assignedByCoach || window.__cpForceRemoteProgram);
+    const localWeeks = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
+    const remoteWeeks = (remote.activeProgram && Array.isArray(remote.activeProgram.weeks)) ? remote.activeProgram.weeks.length : 0;
+    const skipProgUpload = (athlete && !!(remote.assignedByCoach || window.__cpForceRemoteProgram))
+      || localWeeks < 1
+      || (remoteWeeks > localWeeks);
     const localHasLoads = !!(store.data && Object.keys(store.data).length) || (Array.isArray(store.logs) && store.logs.length);
     const remoteHasLoads = !!(remote.data && Object.keys(remote.data).length) || (Array.isArray(remote.logs) && remote.logs.length);
-    if (download || localHasLoads || remoteHasLoads || localScore > 0) {
+    if (download || localHasLoads || remoteHasLoads || localScore > 0 || remoteScore > 0) {
       try {
         await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload({ includeProgram: !skipProgUpload }) }) });
       } catch (_) {}
@@ -58634,36 +58724,42 @@ function exitCoachSession(force) {
     || (store.coachAssigning && store.coachAssigning.backup)
     || null;
   const viewBak = window.__cpCoachViewBackup || null;
-  const needRestore = !!(assignBak || viewBak);
-  // Clear locks synchronously so chrome/nav are never stuck in Coach mode.
-  store.coachAssigning = null;
-  store.coachViewingClient = false;
-  store.coachSessionActive = false;
-  store.coachWorkspace = null;
-  window.__cpAssignBackup = null;
-  window.__cpCoachViewBackup = null;
-  try { stopClientLivePoll(); } catch (_) {}
-  try { clearClientShellLock(); } catch (_) {}
-  try { closeCoachDrawer(); } catch (_) {}
-  try { ensureAssignBanner(); } catch (_) {}
-  try { ensureClientViewBanner(); } catch (_) {}
-  if (typeof persist === 'function') persist();
-  applyClientChrome();
-  if (typeof navigate === 'function') navigate('home');
-  practiceToast('Sessione Coach chiusa', 'success');
-  if (needRestore) {
+  const bak = assignBak || viewBak;
+
+  function finishExitChrome() {
+    store.coachAssigning = null;
+    store.coachViewingClient = false;
+    store.coachSessionActive = false;
+    store.coachWorkspace = null;
+    window.__cpAssignBackup = null;
+    window.__cpCoachViewBackup = null;
+    try { stopClientLivePoll(); } catch (_) {}
+    try { clearClientShellLock(); } catch (_) {}
+    try { closeCoachDrawer(); } catch (_) {}
+    try { ensureAssignBanner(); } catch (_) {}
+    try { ensureClientViewBanner(); } catch (_) {}
+    applyClientChrome();
+    if (typeof navigate === 'function') navigate('home');
+    practiceToast('Sessione Coach chiusa', 'success');
+    setTimeout(function () { window.__cpExitingCoach = false; }, 0);
+  }
+
+  // CRITICAL: restore personal data BEFORE any persist(). Clearing flags first
+  // then persist() wrote empty/sandbox store.data over the coach account.
+  if (bak) {
     Promise.resolve()
-      .then(function () { return restoreCoachMaster(assignBak || viewBak); })
+      .then(function () { return restoreCoachMaster(bak); })
       .catch(function (err) { console.warn('[EXIT_COACH_RESTORE]', err); })
       .then(function () {
-        window.__cpExitingCoach = false;
-        applyClientChrome();
+        finishExitChrome();
+        if (typeof persist === 'function') persist();
         if (typeof currentView !== 'undefined' && currentView === 'home' && typeof render === 'function') {
           try { render(); } catch (_) {}
         }
       });
   } else {
-    setTimeout(function () { window.__cpExitingCoach = false; }, 0);
+    finishExitChrome();
+    if (typeof persist === 'function') persist();
   }
   return true;
 }
