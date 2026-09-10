@@ -37355,6 +37355,24 @@ function looksLikeClientAssignDraft(prog) {
   return false;
 }
 
+function programSessionNamesBlob(prog) {
+  const weeks = (prog && prog.weeks) || [];
+  const bits = [];
+  weeks.slice(0, 2).forEach(function (w) {
+    ((w && (w.sessions || w.days)) || []).forEach(function (s) {
+      bits.push(String((s && (s.name || s.title || s.day)) || ''));
+    });
+  });
+  return bits.join(' ');
+}
+
+function looksLikePersonalUpperLower16(prog) {
+  if (!prog || !Array.isArray(prog.weeks) || prog.weeks.length !== 16) return false;
+  if (looksLikeClientAssignDraft(prog)) return false;
+  const blob = programSessionNamesBlob(prog);
+  return /upper/i.test(blob) && /lower/i.test(blob);
+}
+
 function maxWeekFromLoadKeys(dataMap) {
   let maxW = 0;
   Object.keys(dataMap || {}).forEach(function (k) {
@@ -37362,6 +37380,53 @@ function maxWeekFromLoadKeys(dataMap) {
     if (m) maxW = Math.max(maxW, Number(m[1]) || 0);
   });
   return maxW;
+}
+
+function trainingDayHasProgress(week, day) {
+  const w = Number(week) || 1;
+  const d = Number(day) || 0;
+  if ((store.logs || []).some(function (l) {
+    return l && Number(l.week) === w && Number(l.day) === d;
+  })) return true;
+  const prefix = 'w' + w + '_d' + d + '_';
+  const data = store.data || {};
+  let hits = 0;
+  Object.keys(data).forEach(function (k) {
+    if (k.indexOf(prefix) !== 0) return;
+    if (/_done$/i.test(k) && data[k]) hits += 3;
+    else if (/(_kg|_load|_reps|_rir)$/i.test(k) && data[k] != null && data[k] !== '') hits += 1;
+  });
+  return hits >= 3;
+}
+
+/** After restoring scheda: jump to first unfinished day from loads/logs (e.g. W3 D3). */
+function restorePersonalTrainingCursor() {
+  if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return { week: 1, day: 0 };
+  let w = 1;
+  let d = 0;
+  for (let guard = 0; guard < 120; guard++) {
+    if (w > DATA.weeks.length) {
+      w = DATA.weeks.length;
+      const last = DATA.weeks[w - 1];
+      const sess = (last && (last.sessions || last.days)) || [];
+      d = Math.max(0, sess.length - 1);
+      break;
+    }
+    const weekObj = DATA.weeks[w - 1];
+    const sessions = (weekObj && (weekObj.sessions || weekObj.days)) || [];
+    if (!sessions.length) { w += 1; d = 0; continue; }
+    if (d >= sessions.length) { w += 1; d = 0; continue; }
+    if (!trainingDayHasProgress(w, d)) break;
+    d += 1;
+  }
+  currentWeek = w;
+  currentDay = d;
+  if (typeof pinTrainingDay === 'function') pinTrainingDay(w, d);
+  try {
+    store.trainingWeek = w;
+    store.trainingDay = d;
+  } catch (_) {}
+  return { week: w, day: d };
 }
 
 function programRecoveryScore(prog, hintWeeks) {
@@ -37377,11 +37442,32 @@ function programRecoveryScore(prog, hintWeeks) {
   });
   if (looksLikeClientAssignDraft(prog)) score -= 8000;
   const title = String(prog.title || prog.original_title || '');
+  const sessBlob = programSessionNamesBlob(prog);
   if (/personalizzat|giammaria|personale|master|mia scheda/i.test(title)) score += 400;
+  if (/upper/i.test(sessBlob) && /lower/i.test(sessBlob)) score += 2200;
+  if (weeks.length === 16 && /upper/i.test(sessBlob) && /lower/i.test(sessBlob)) score += 3000;
+  if (String(prog.id || '') === 'personal_16w_giammaria') score += 1800;
   if (hintWeeks && weeks.length === hintWeeks) score += 1200;
-  if (hintWeeks && weeks.length === 16) score += 200;
+  if (weeks.length === 16) score += 400;
   if (weeks.length === 16 && /personalizzat/i.test(title)) score += 800;
+  // Prefer programs whose week count covers existing load keys
+  const loadWeeks = maxWeekFromLoadKeys(store && store.data);
+  if (loadWeeks && weeks.length >= loadWeeks) score += 600;
+  if (loadWeeks && weeks.length < loadWeeks) score -= 2500;
   return score;
+}
+
+function personalSchedaNeedsRestore() {
+  if (store && (store.coachViewingClient || store.coachAssigning || store.coachSessionActive)) return false;
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) return false;
+  if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return true;
+  if (looksLikeClientAssignDraft(DATA)) return true;
+  const loadWeeks = maxWeekFromLoadKeys(store.data);
+  if (loadWeeks >= 3 && DATA.weeks.length < 8) return true;
+  if (loadWeeks >= 3 && !looksLikePersonalUpperLower16(DATA) && DATA.weeks.length !== 16) return true;
+  // Wrong short/random program while we have multi-week progress
+  if (loadWeeks >= 3 && DATA.weeks.length < 16 && !/upper/i.test(programSessionNamesBlob(DATA))) return true;
+  return false;
 }
 
 function activateRecoveredProgram(prog, sourceLabel, notes) {
@@ -37396,9 +37482,11 @@ function activateRecoveredProgram(prog, sourceLabel, notes) {
   store.data = keepData;
   store.logs = keepLogs;
   store.customSets = keepCustom;
-  if (typeof currentWeek !== 'undefined') currentWeek = 1;
-  if (typeof currentDay !== 'undefined') currentDay = 0;
-  if (notes) notes.push(sourceLabel + ' (' + DATA.weeks.length + ' sett. · ' + (DATA.title || 'senza titolo') + ')');
+  const cursor = restorePersonalTrainingCursor();
+  if (notes) {
+    notes.push(sourceLabel + ' (' + DATA.weeks.length + ' sett. · ' + (DATA.title || 'senza titolo') +
+      ' · W' + cursor.week + ' D' + (cursor.day + 1) + ')');
+  }
   return true;
 }
 
@@ -37525,6 +37613,12 @@ async function collectRecoverSchedaCandidates() {
   } catch (e) { console.warn('[RECOVER_IDB_PROG]', e); }
 
   try {
+    (Array.isArray(store.models) ? store.models : []).forEach(function (m, i) {
+      addCandidate((m && (m.data || m.program || m.payload)) || null, 'Programmi salvati · ' + ((m && m.name) || ('#' + (i + 1))));
+    });
+  } catch (_) {}
+
+  try {
     (Array.isArray(store.coachProgramLibrary) ? store.coachProgramLibrary : []).forEach(function (e, i) {
       addCandidate(e && e.payload, 'Libreria coach · ' + ((e && e.title) || ('#' + (i + 1))));
     });
@@ -37599,38 +37693,49 @@ async function recoverPersonalTrainingEmergency() {
     return { candidates: [] };
   }
 
-  // Prefer the official bundled 16-week personal program when present.
+  // Prefer best 16w Upper/Lower with real progress (not a random short program).
+  const upperLower16 = candidates.filter(function (c) {
+    return c && c.prog && looksLikePersonalUpperLower16(c.prog);
+  }).sort(function (a, b) { return b.score - a.score; });
   const official = candidates.find(function (c) {
     return c && c.prog && (c.prog.id === 'personal_16w_giammaria' || /Backup ufficiale/i.test(c.source || ''));
   });
   const sixteenPersonal = candidates.filter(function (c) {
     return c.prog.weeks.length === 16 && !looksLikeClientAssignDraft(c.prog);
-  });
-  const auto = official || (sixteenPersonal.length === 1 ? sixteenPersonal[0] : null);
-  // User tapped recover: if we have the official 16w (or a single 16w personal), apply it even when another 16w draft is active.
-  const alreadyOfficial = DATA && String(DATA.id || '') === 'personal_16w_giammaria' && Array.isArray(DATA.weeks) && DATA.weeks.length === 16;
-  const shouldAuto = Boolean(auto) && !alreadyOfficial;
+  }).sort(function (a, b) { return b.score - a.score; });
+  const auto = upperLower16[0] || official || (sixteenPersonal.length ? sixteenPersonal[0] : null);
+  const alreadyGood = !!(DATA && looksLikePersonalUpperLower16(DATA));
+  const shouldAuto = Boolean(auto) && (!alreadyGood || personalSchedaNeedsRestore());
 
-  if (shouldAuto) {
-    activateRecoveredProgram(auto.prog, auto.source, []);
+  if (shouldAuto || (alreadyGood && auto)) {
+    const pick = alreadyGood && !personalSchedaNeedsRestore() ? { prog: DATA, source: 'scheda già attiva' } : auto;
+    if (pick && pick.prog) activateRecoveredProgram(pick.prog, pick.source || 'recovery', []);
+    // Even if scheda was already correct, re-align cursor from loads (W3 D3).
+    const cursor = restorePersonalTrainingCursor();
     try {
       if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
         await GiammariaPersistence.activateCanonicalProgram(DATA);
       }
     } catch (_) {}
+    if (typeof lockPersonalProgramBackup === 'function') lockPersonalProgramBackup(DATA);
     if (typeof persist === 'function') persist();
     if (typeof persistActiveProgramStructure === 'function') persistActiveProgramStructure();
     if (typeof navigate === 'function') navigate('home');
     else if (typeof render === 'function') render();
-    const msg = 'Ripristinata: «' + (DATA.title || '') + '» · ' + DATA.weeks.length + ' settimane (carichi conservati)';
+    const dayLabel = cursor.day + 1;
+    const sess = ((DATA.weeks[cursor.week - 1] || {}).sessions || (DATA.weeks[cursor.week - 1] || {}).days || [])[cursor.day];
+    const sessName = (sess && (sess.name || sess.title || sess.day)) || ('Giorno ' + dayLabel);
+    const msg = 'Ripristinata Upper/Lower 16 sett. · Settimana ' + cursor.week + ' · Giorno ' + dayLabel +
+      ' (' + sessName + ') · carichi conservati';
     if (typeof showToast === 'function') showToast(msg, 'success');
-    try { alert(msg + '\nSe non è quella giusta, apri di nuovo Ripristina e scegli dalla lista.'); } catch (_) {}
-    // Still expose picker for alternate picks.
+    try { alert(msg + '\nSe non è quella giusta, scegli dalla lista.'); } catch (_) {}
     showRecoverSchedaPicker(candidates, hintWeeks);
     return {
       auto: true,
       title: DATA.title,
       weeks: DATA.weeks.length,
+      week: cursor.week,
+      day: cursor.day,
       candidates: candidates.slice(0, 12).map(function (c) {
         return { title: c.prog.title || '', weeks: c.prog.weeks.length, score: c.score, source: c.source };
       })
@@ -37643,6 +37748,27 @@ async function recoverPersonalTrainingEmergency() {
   }), hintWeeks: hintWeeks };
 }
 window.recoverPersonalTrainingEmergency = recoverPersonalTrainingEmergency;
+
+async function tryAutoRestorePersonalSchedaOnBoot() {
+  try {
+    if (window.__cpAutoRestoredPersonal) return;
+    if (store && (store.coachViewingClient || store.coachAssigning)) return;
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) return;
+    if (!personalSchedaNeedsRestore()) {
+      // Scheda ok: still snap cursor to next open day from loads (e.g. W3 D3).
+      if (DATA && looksLikePersonalUpperLower16(DATA)) {
+        const cursor = restorePersonalTrainingCursor();
+        if (cursor && typeof persist === 'function') persist();
+      }
+      return;
+    }
+    window.__cpAutoRestoredPersonal = true;
+    await recoverPersonalTrainingEmergency();
+  } catch (err) {
+    console.warn('[AUTO_RESTORE_PERSONAL]', err);
+  }
+}
+window.tryAutoRestorePersonalSchedaOnBoot = tryAutoRestorePersonalSchedaOnBoot;
 
 async function syncAccountData(download=false){
   const status = $('account-status'); if(status) status.textContent = 'Sincronizzazione…';
@@ -42452,6 +42578,11 @@ function finishInit() {
           try { scheduleAllItemAlerts(); } catch (_) {}
           try { registerNurvanServiceWorker(); } catch (_) {}
           try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
+          try {
+            if (typeof tryAutoRestorePersonalSchedaOnBoot === 'function') {
+              Promise.resolve(tryAutoRestorePersonalSchedaOnBoot()).catch(function () {});
+            }
+          } catch (_) {}
         } catch (uiErr) {
           console.error('[BOOT] first render', uiErr);
         }
@@ -48100,41 +48231,51 @@ function formatFileSize(bytes) {
 
 
 
+function homeCollapsibleCard(title, bodyHtml, openByDefault) {
+  const openAttr = openByDefault === false ? '' : ' open';
+  return '<details class="card" style="padding:0;overflow:hidden;"' + openAttr + '>' +
+    '<summary style="list-style:none;cursor:pointer;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;user-select:none;">' +
+    '<h2 style="margin:0;font-size:14px;color:var(--gold);">' + title + '</h2>' +
+    '<span style="color:#888;font-size:12px;">▾</span></summary>' +
+    '<div style="padding:0 16px 16px;">' + bodyHtml + '</div></details>';
+}
+
+function personalRestoreBannerHtml() {
+  if (store && (store.coachViewingClient || store.coachAssigning || store.coachSessionActive)) return '';
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) return '';
+  const needs = typeof personalSchedaNeedsRestore === 'function' && personalSchedaNeedsRestore();
+  const isUL = typeof looksLikePersonalUpperLower16 === 'function' && looksLikePersonalUpperLower16(DATA);
+  if (!needs && isUL) return '';
+  return '<div class="card" style="border:2px solid var(--gold);margin-bottom:12px;padding:14px;">' +
+    '<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">RIPRISTINO SCHEDA PERSONALE</div>' +
+    '<div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:6px;">Upper / Lower · 16 settimane</div>' +
+    '<p style="font-size:12px;color:#aaa;margin:0 0 12px;line-height:1.45;">Ripristina la scheda che hai inserito tu, con i carichi già fatti. Ti porta al prossimo giorno libero (es. settimana 3 giorno 3).</p>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;min-height:48px;font-weight:900;" onclick="recoverPersonalTrainingEmergency()">RIPRISTINA LA MIA SCHEDA</button></div>';
+}
+
 function homeDomainModulesHtml() {
   const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
-  return `
-      <div class="card">
-        <div class="card-header"><h2>${t('systemModules')}</h2></div>
-        <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:10px;">
-          <button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('nutrition')">
-            <span style="font-size:18px;">🥗</span>
-            <span style="font-size:11px;font-weight:800;">${t('nutrition')}</span>
-          </button>
-          <button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('supplements')">
-            <span style="font-size:18px;">💊</span>
-            <span style="font-size:11px;font-weight:800;">${t('supplementation')}</span>
-          </button>
-          <button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('therapy')">
-            <span style="font-size:18px;">🩺</span>
-            <span style="font-size:11px;font-weight:800;">${t('therapy')}</span>
-          </button>
-          <button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('exams')">
-            <span style="font-size:18px;">🧪</span>
-            <span style="font-size:11px;font-weight:800;">${t('exams')}</span>
-          </button>
-          <button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('calendar')">
-            <span style="font-size:18px;">📅</span>
-            <span style="font-size:11px;font-weight:800;">${t('calendar')}</span>
-          </button>
-          ${athlete ? `<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="startDomainImport('nutrition')">
-            <span style="font-size:18px;">📥</span>
-            <span style="font-size:11px;font-weight:800;">Importa file</span>
-          </button>` : `<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate('import')">
-            <span style="font-size:18px;">📥</span>
-            <span style="font-size:11px;font-weight:800;">${t('importProgram')}</span>
-          </button>`}
-        </div>
-      </div>`;
+  return homeCollapsibleCard(t('systemModules'),
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:10px;">' +
+      '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'nutrition\')">' +
+        '<span style="font-size:18px;">🥗</span>' +
+        '<span style="font-size:11px;font-weight:800;">' + t('nutrition') + '</span></button>' +
+      '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'supplements\')">' +
+        '<span style="font-size:18px;">💊</span>' +
+        '<span style="font-size:11px;font-weight:800;">' + t('supplementation') + '</span></button>' +
+      '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'therapy\')">' +
+        '<span style="font-size:18px;">🩺</span>' +
+        '<span style="font-size:11px;font-weight:800;">' + t('therapy') + '</span></button>' +
+      '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'exams\')">' +
+        '<span style="font-size:18px;">🧪</span>' +
+        '<span style="font-size:11px;font-weight:800;">' + t('exams') + '</span></button>' +
+      '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'calendar\')">' +
+        '<span style="font-size:18px;">📅</span>' +
+        '<span style="font-size:11px;font-weight:800;">' + t('calendar') + '</span></button>' +
+      (athlete
+        ? '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="startDomainImport(\'nutrition\')"><span style="font-size:18px;">📥</span><span style="font-size:11px;font-weight:800;">Importa file</span></button>'
+        : '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'import\')"><span style="font-size:18px;">📥</span><span style="font-size:11px;font-weight:800;">' + t('importProgram') + '</span></button>') +
+    '</div>', true);
 }
 
 function buildOperationalRulesHtml(prog) {
@@ -48219,14 +48360,19 @@ function renderHome(c) {
         <h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1>
       </div>
 
+      ${personalRestoreBannerHtml()}
+
       <div class="card" style="border:2px solid var(--gold);padding:22px 18px;">
         <div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">CREA IL TUO PROGRAMMA</div>
         <div style="font-size:18px;font-weight:900;color:var(--gold);margin-bottom:8px;">${t('noActiveProgram')}</div>
         <p style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:16px;">
-          Quattro percorsi equivalenti. Scegline uno: poi alleni.
+          Se avevi già la Upper/Lower a 16 settimane, usa prima il ripristino. Altrimenti scegli un percorso qui sotto.
         </p>
         <div style="display:flex;flex-direction:column;gap:10px;">
-          <button class="btn btn-primary" style="min-height:52px;font-size:13px;font-weight:900;text-align:left;padding:10px 14px;" onclick="navigate('import')">
+          <button class="btn btn-primary" style="min-height:52px;font-size:13px;font-weight:900;text-align:left;padding:10px 14px;" onclick="recoverPersonalTrainingEmergency()">
+            RIPRISTINA LA MIA SCHEDA<br><span style="font-size:10px;font-weight:600;opacity:.85;">Upper/Lower 16 sett. · carichi conservati</span>
+          </button>
+          <button class="btn btn-outline" style="min-height:52px;font-size:13px;font-weight:900;text-align:left;padding:10px 14px;" onclick="navigate('import')">
             IMPORTA FILE<br><span style="font-size:10px;font-weight:600;opacity:.85;">PDF / Excel / Word del coach</span>
           </button>
           <button class="btn btn-outline" style="min-height:48px;font-size:12px;font-weight:800;border-color:var(--gold);color:var(--gold);text-align:left;padding:10px 14px;" onclick="navigate('programs')">
@@ -48277,6 +48423,8 @@ function renderHome(c) {
   c.innerHTML = `
     <div style="text-align:center;padding:20px 0;"><img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));" onerror="this.onerror=null;this.src='icon-192.png'"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
 
+    ${personalRestoreBannerHtml()}
+
     <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>${t('activeSession')}</h2></div><div style="padding:20px;"><div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">OGGI · PROSSIMA AZIONE</div><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].name||sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><div style="display:flex;gap:10px;margin-top:20px;">
         <button class="btn btn-primary" style="flex:2;font-size:16px;height:55px;" onclick="navigate('training')">${t('startWorkout')}</button>
         <button class="btn btn-outline" style="flex:1;font-size:12px;height:55px;border-color:var(--gold);color:var(--gold);" onclick="navigate('${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'clientChat' : 'programs'}')">${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'CHAT COACH' : 'PROGRAMMI'}</button>
@@ -48297,9 +48445,8 @@ function renderHome(c) {
 
     ${homeDomainModulesHtml()}
 
-    <div class="card">
-      <div class="card-header"><h2>Struttura Programmazione</h2></div>
-      <div style="padding:15px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+    ${homeCollapsibleCard('Struttura Programmazione', `
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
         <div>
           <label style="font-size:10px; color:#666; font-weight:800;">DURATA (SETTIMANE)</label>
           <select onchange="setDesiredDuration(this.value)" style="margin-top:5px;">
@@ -48315,11 +48462,10 @@ function renderHome(c) {
           </select>
         </div>
       </div>
-    </div>
+    `, false)}
 
-    <div class="card">
-       <div class="card-header"><h2>Programmi Salvati</h2></div>
-       <div style="padding:15px;" id="saved-models-list">
+    ${homeCollapsibleCard('Programmi Salvati', `
+       <div id="saved-models-list">
           ${store.models && store.models.length ? store.models.map((m,i)=>`
             <div style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #222;">
               <div>
@@ -48333,11 +48479,11 @@ function renderHome(c) {
             </div>
           `).join('') : '<div style="font-size:11px; color:#555; text-align:center;">Nessun modello salvato. Carica documenti nel DB per generarne uno.</div>'}
        </div>
-    </div>
+    `, false)}
 
-    <div class="card"><div class="card-header"><h2>Razionale & Regole Operative</h2></div><div style="padding:15px;font-size:11px;line-height:1.5;color:#ccc;">${buildOperationalRulesHtml(DATA)}</div></div>
+    ${homeCollapsibleCard('Razionale & Regole Operative', `<div style="font-size:11px;line-height:1.5;color:#ccc;">${buildOperationalRulesHtml(DATA)}</div>`, false)}
 
-    <div class="card"><div class="card-header"><h2>${t('architectureStatus')}</h2></div><div style="padding:15px;display:flex;flex-direction:column;gap:10px;"><button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="resetWorkoutData()">${t('restoreLoads')}</button><button class="btn btn-outline" style="width:100%;border-color:var(--accent-red);color:var(--accent-red);font-size:10px;" onclick="resetAllData()">${t('hardResetApp')}</button></div></div>
+    ${homeCollapsibleCard(t('architectureStatus'), `<div style="display:flex;flex-direction:column;gap:10px;"><button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="resetWorkoutData()">${t('restoreLoads')}</button><button class="btn btn-outline" style="width:100%;border-color:var(--accent-red);color:var(--accent-red);font-size:10px;" onclick="resetAllData()">${t('hardResetApp')}</button></div>`, false)}
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div class="card" style="padding:15px;text-align:center;"><span style="font-size:11px;color:var(--text-secondary);font-weight:800;">BODYWEIGHT</span><div style="font-size:22px;font-weight:900;color:var(--gold);">${bw} kg</div></div><div class="card" style="padding:15px;text-align:center;"><span style="font-size:11px;color:var(--text-secondary);font-weight:800;">PROGRESSO</span><div style="font-size:22px;font-weight:900;color:var(--gold);">${Math.round((currentWeek/duration)*100)}%</div></div></div>
   `;
@@ -50191,11 +50337,7 @@ function calcStats(){
 }
 
 function isTrainingDayFinalized(week, day) {
-  const w = Number(week) || 1;
-  const d = Number(day) || 0;
-  return (store.logs || []).some(function (l) {
-    return l && Number(l.week) === w && Number(l.day) === d;
-  });
+  return trainingDayHasProgress(week, day);
 }
 function advanceToNextOpenTrainingDay(forceFromCurrent) {
   try {
