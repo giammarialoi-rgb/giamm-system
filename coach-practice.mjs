@@ -1233,6 +1233,18 @@ export function mountCoachPractice(app, deps) {
     const domain = String(req.body?.domain || "general").slice(0, 40);
     const note = String(req.body?.note || "").slice(0, 800);
     const unlockFeatures = { max_freedom: 1, nurvan_ai: 1 };
+    const domainLabel = ({
+      nutrition: "alimentazione",
+      supplements: "integrazione",
+      therapy: "terapia",
+      exams: "esami",
+      training: "allenamento",
+      max_freedom: "massima libertà",
+      nurvan_ai: "Nurvan AI"
+    })[domain] || domain;
+    const messageBody = note
+      ? `Richiesta ${domainLabel}:\n${note}`
+      : `Richiesta ${domainLabel}`;
     if (unlockFeatures[domain]) {
       await pool.query(
         "UPDATE coach_clients SET pending_unlock = $2::jsonb, unread_count = unread_count + 1 WHERE id = $1",
@@ -1248,19 +1260,24 @@ export function mountCoachPractice(app, deps) {
     }
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'ask_coach',$2)",
-      [ctx.client.id, JSON.stringify({ domain, note, unlock: !!unlockFeatures[domain] })]
+      [ctx.client.id, JSON.stringify({ domain, note, unlock: !!unlockFeatures[domain], message: note })]
     );
+    try {
+      await insertMessage(ctx.client.id, "athlete", messageBody);
+    } catch (_) {}
     try {
       await notifyCoachPush(
         ctx.client.coach_user_id,
-        unlockFeatures[domain] ? "Richiesta sblocco" : "Richiesta dal cliente",
-        String(ctx.client.display_name || "Atleta") + (unlockFeatures[domain]
-          ? (domain === "nurvan_ai" ? " chiede Nurvan AI" : " chiede massima libertà")
-          : " chiede qualcosa"),
-        { view: "coachClient", clientId: String(ctx.client.id) }
+        domain === "nutrition" ? "Richiesta alimentazione" : (domain === "supplements" ? "Richiesta integrazione" : (unlockFeatures[domain] ? "Richiesta sblocco" : "Richiesta dal cliente")),
+        String(ctx.client.display_name || "Atleta") + (note
+          ? (": " + note.slice(0, 180))
+          : (unlockFeatures[domain]
+            ? (domain === "nurvan_ai" ? " chiede Nurvan AI" : " chiede massima libertà")
+            : (" chiede " + domainLabel))),
+        { view: "chat", clientId: String(ctx.client.id), kind: "ask_coach" }
       );
     } catch (_) {}
-    return res.json({ ok: true, pendingUnlock: !!unlockFeatures[domain] });
+    return res.json({ ok: true, pendingUnlock: !!unlockFeatures[domain], note: note || null });
   });
 
   app.post("/api/client/change-request", async (req, res) => {

@@ -169,7 +169,7 @@ function gatePracticeView(v) {
       coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
       coachAutomations: 1, coachBusiness: 1, coachCrm: 1,
       coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
-      home: 1, settings: 1
+      home: 1, settings: 1, ai: 1
     };
     const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, calendar: 1 };
     if (coachCore[v]) return v;
@@ -1250,11 +1250,16 @@ function coachEventLabel(kind, name, payload) {
   }
   if (kind === 'ask_coach') {
     const dom = String(p.domain || '');
-    if (dom === 'max_freedom') return { title: 'Richiesta libertà', body: n + ' chiede di generare in autonomia' + (p.note ? (': ' + String(p.note).slice(0, 80)) : ''), view: 'coachClient', unlockFeature: 'max_freedom' };
-    if (dom === 'nurvan_ai') return { title: 'Richiesta Nurvan AI', body: n + ' chiede Coach AI' + (p.note ? (': ' + String(p.note).slice(0, 80)) : ''), view: 'coachClient', unlockFeature: 'nurvan_ai' };
-    if (dom === 'nutrition') return { title: 'Richiesta alimentazione', body: n + ' chiede un piano alimentare', view: 'coachClient' };
-    if (dom === 'supplements') return { title: 'Richiesta integrazione', body: n + ' chiede un protocollo di integrazione', view: 'coachClient' };
-    return { title: 'Richiesta al coach', body: n + ' chiede qualcosa', view: 'chat' };
+    const note = String(p.note || p.message || p.body || '').trim();
+    const noteBit = note ? (': ' + note.slice(0, 240)) : '';
+    if (dom === 'max_freedom') return { title: 'Richiesta libertà', body: n + ' chiede di generare in autonomia' + noteBit, view: 'chat', unlockFeature: 'max_freedom' };
+    if (dom === 'nurvan_ai') return { title: 'Richiesta Nurvan AI', body: n + ' chiede Coach AI' + noteBit, view: 'chat', unlockFeature: 'nurvan_ai' };
+    if (dom === 'nutrition') return { title: 'Richiesta alimentazione', body: n + ' chiede un piano alimentare' + noteBit, view: 'chat' };
+    if (dom === 'supplements') return { title: 'Richiesta integrazione', body: n + ' chiede un protocollo di integrazione' + noteBit, view: 'chat' };
+    if (dom === 'therapy') return { title: 'Richiesta terapia', body: n + ' chiede un aggiornamento terapia' + noteBit, view: 'chat' };
+    if (dom === 'exams') return { title: 'Richiesta esami', body: n + ' chiede esami' + noteBit, view: 'chat' };
+    if (dom === 'training') return { title: 'Richiesta scheda', body: n + ' chiede la scheda' + noteBit, view: 'chat' };
+    return { title: 'Richiesta al coach', body: n + ' chiede qualcosa' + noteBit, view: 'chat' };
   }
   if (kind === 'password_help') return { title: 'Recupero password', body: n + ' ha chiesto la password', view: 'coachClient' };
   if (kind === 'leave_request') return { title: 'Fine collaborazione', body: n + ' ha chiesto di chiudere', view: 'coachClient' };
@@ -1826,6 +1831,8 @@ function closeClientInviteOverlay() {
     try { history.replaceState(null, '', '/'); } catch (_) {}
     store.inviteToken = null;
     store.clientShell = false;
+    store.__cpClientScoped = false;
+    if (typeof restorePersonalStoreFromNamespace === 'function') restorePersonalStoreFromNamespace();
     if (typeof persist === 'function') persist();
     applyClientChrome();
     if (typeof navigate === 'function') navigate(store.coachSessionActive ? 'coachHub' : 'home');
@@ -1835,9 +1842,11 @@ function closeClientInviteOverlay() {
   try {
     store.inviteToken = null;
     store.clientShell = false;
+    store.__cpClientScoped = false;
     clearClientShellLock();
     history.replaceState(null, '', '/');
   } catch (_) {}
+  if (typeof restorePersonalStoreFromNamespace === 'function') restorePersonalStoreFromNamespace();
   if (typeof persist === 'function') persist();
   applyClientChrome();
   practiceToast('Finestra chiusa. Apri di nuovo il link invito del coach per accedere.', 'info');
@@ -1884,9 +1893,12 @@ async function submitClientInviteLogin() {
     store.accountUser = payload.user;
     store.role = 'athlete';
     store.clientShell = true;
+    store.__cpClientScoped = true;
     store.clientProfile = payload.client || null;
     if (payload.inviteToken) store.inviteToken = payload.inviteToken;
     store.inviteTokenBound = store.inviteToken || '';
+    if (typeof emptyClientTrainingState === 'function') emptyClientTrainingState();
+    try { closePersonalRecoveryUi(); } catch (_) {}
     try {
       localStorage.setItem('GS_CLIENT_SHELL', JSON.stringify({
         inviteToken: store.inviteToken,
@@ -5686,12 +5698,15 @@ async function pollPracticeInbox() {
         const route = { view: 'coachClient', clientId: String(e.client_id || '') };
         if (e.kind === 'message') notifyUser('Messaggio cliente', (e.display_name || 'Atleta') + ' ti ha scritto', Object.assign({}, route, { view: 'chat' }));
         else if (e.kind === 'ask_coach') {
-          const dom = (e.payload && e.payload.domain) || '';
-          const unlock = dom === 'max_freedom' || dom === 'nurvan_ai' || e.payload && e.payload.unlock;
+          const p = parseCoachEventPayload(e.payload);
+          const dom = p.domain || '';
+          const note = String(p.note || p.message || p.body || '').trim();
+          const lab = coachEventLabel('ask_coach', e.display_name || 'Atleta', p);
+          const unlock = dom === 'max_freedom' || dom === 'nurvan_ai' || p.unlock;
           notifyUser(
-            unlock ? 'Sblocco da approvare' : 'Richiesta dal cliente',
-            (e.display_name || 'Atleta') + (dom === 'max_freedom' ? ' chiede massima libertà' : (dom === 'nurvan_ai' ? ' chiede Nurvan AI' : ' chiede al coach')),
-            unlock ? route : Object.assign({}, route, { view: 'chat' })
+            lab.title || (unlock ? 'Sblocco da approvare' : 'Richiesta dal cliente'),
+            lab.body || ((e.display_name || 'Atleta') + (note ? (': ' + note.slice(0, 240)) : ' chiede al coach')),
+            unlock ? Object.assign({}, route, { view: 'coachClient' }) : Object.assign({}, route, { view: 'chat' })
           );
         }
         else if (e.kind === 'password_help') notifyUser('Recupero password', (e.display_name || 'Atleta') + ' ha chiesto la password', route);
@@ -6090,16 +6105,21 @@ async function bootCoachPractice() {
   }
   // Coach master opening /c/... — confirm before entering client shell
   if (urlToken && store.coachSessionActive && !(typeof isAthleteRole === 'function' && isAthleteRole())) {
-    if (!confirm('Questo è un link cliente. Entrare come atleta su questo dispositivo? (Il master resta separato solo se usi un altro browser/profilo.)')) {
+    if (!confirm('Questo è un link cliente. Entrare come atleta su questo dispositivo? I tuoi allenamenti personali restano salvati a parte e non vengono toccati.')) {
       try { history.replaceState(null, '', '/'); } catch (_) {}
       store.inviteToken = null;
+      store.clientShell = false;
+      store.__cpClientScoped = false;
+      try { clearClientShellLock(); } catch (_) {}
       try {
         if (typeof persistNurvanAppMode === 'function') persistNurvanAppMode('master');
         else document.cookie = 'nurvan_app_mode=master; Path=/; Max-Age=31536000; SameSite=Lax';
       } catch (_) {}
+      if (typeof restorePersonalStoreFromNamespace === 'function') restorePersonalStoreFromNamespace();
       applyClientChrome();
       return;
     }
+    if (typeof emptyClientTrainingState === 'function') emptyClientTrainingState();
   }
   if (token) store.clientShell = true;
   applyClientChrome();
@@ -6263,7 +6283,7 @@ function wrapPracticeHooks() {
           coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
           coachAutomations: 1, coachBusiness: 1, coachCrm: 1,
           coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
-          home: 1, settings: 1
+          home: 1, settings: 1, ai: 1
         };
         const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, import: 1, programs: 1, calendar: 1 };
         const ok = coachCore[raw]

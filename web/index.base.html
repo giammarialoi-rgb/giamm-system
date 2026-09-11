@@ -2285,26 +2285,213 @@ const DEFAULT_STORE = {
   stayLoggedIn: true
 };
 
+var GS_STORE_PERSONAL_KEY = 'GS_STORE';
+var GS_STORE_CLIENT_PENDING_KEY = 'GS_STORE_CLIENT';
+
+function detectClientBootContext() {
+  try {
+    const pathName = (typeof location !== 'undefined' && location.pathname) || '';
+    if (/^\/c\//.test(pathName)) return true;
+    if (typeof window !== 'undefined' && window.__NURVAN_CLIENT_BOOT && window.__NURVAN_CLIENT_BOOT.token) return true;
+    const q = (typeof location !== 'undefined' && location.search) ? new URLSearchParams(location.search).get('c') : '';
+    if (q) return true;
+  } catch (_) {}
+  return false;
+}
+
+function clientStoreKeyForUser(user) {
+  const uid = user && (user.id || user.email || user.username);
+  if (uid) {
+    return 'GS_STORE_CLIENT_' + String(uid).replace(/[^a-zA-Z0-9._@-]/g, '_').slice(0, 80);
+  }
+  return GS_STORE_CLIENT_PENDING_KEY;
+}
+
+function isClientStorageContext() {
+  try {
+    if (detectClientBootContext()) return true;
+    if (store && (store.clientShell || store.role === 'athlete')) return true;
+    if (store && store.accountUser && (store.accountUser.role === 'athlete' || store.accountUser.provider === 'coach_client')) return true;
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) return true;
+  } catch (_) {}
+  return false;
+}
+
+function emptyClientTrainingSnapshot() {
+  return {
+    title: 'Nessun Programma Attivo',
+    weeks: [],
+    nutrition: null,
+    supplementation: null,
+    therapy: null,
+    exams: null
+  };
+}
+
+function emptyClientTrainingState() {
+  const empty = emptyClientTrainingSnapshot();
+  try { DATA = empty; } catch (_) { window.DATA = empty; }
+  if (!store) return empty;
+  store.activeProgram = empty;
+  store.activeProgramId = null;
+  store.data = {};
+  store.logs = [];
+  store.customSets = {};
+  store.subs = {};
+  store.skips = {};
+  store.bw = {};
+  store.loadTypes = {};
+  store.tempos = {};
+  store.bonus = {};
+  store.exMuscle = {};
+  store.exMuscleByName = {};
+  store.nutrition = null;
+  store.supplementation = null;
+  store.therapy = null;
+  store.exams = null;
+  store.nutritionDaily = {};
+  store.bodyChecks = [];
+  store.clientAssignedAt = '';
+  store.models = [];
+  store.coachProgramLibrary = [];
+  store.chatHistory = [];
+  store.trainingWeek = 1;
+  store.trainingDay = 0;
+  try { currentWeek = 1; currentDay = 0; } catch (_) {}
+  store.__cpClientScoped = true;
+  return empty;
+}
+
+function parseStoredStore(raw) {
+  if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STORE));
+  const parsed = JSON.parse(raw);
+  const merged = { ...DEFAULT_STORE, ...parsed };
+  if (typeof merged.stayLoggedIn !== 'boolean') merged.stayLoggedIn = true;
+  if (merged.stayLoggedIn === false) {
+    merged.accountToken = null;
+    try {
+      const sess = JSON.parse(sessionStorage.getItem('GS_SESSION_AUTH') || 'null');
+      if (sess && sess.token) {
+        merged.accountToken = sess.token;
+        merged.accountUser = sess.user || merged.accountUser;
+        merged.role = sess.role || merged.role;
+        if (sess.inviteToken) merged.inviteToken = sess.inviteToken;
+        if (sess.clientShell) merged.clientShell = true;
+      }
+    } catch (_) {}
+  }
+  return merged;
+}
+
+function activeGsStoreKey() {
+  if (isClientStorageContext()) return clientStoreKeyForUser(store && store.accountUser);
+  return GS_STORE_PERSONAL_KEY;
+}
+
+function hydrateRuntimeFromStoreObject(parsed) {
+  const next = parsed && typeof parsed === 'object' ? parsed : JSON.parse(JSON.stringify(DEFAULT_STORE));
+  Object.keys(store).forEach(function (k) { try { delete store[k]; } catch (_) {} });
+  Object.assign(store, DEFAULT_STORE, next);
+  ensureStoreIntegrity();
+  const prog = store.activeProgram;
+  if (prog && Array.isArray(prog.weeks) && prog.weeks.length) {
+    DATA = typeof normalizeProgram === 'function' ? normalizeProgram(prog) : JSON.parse(JSON.stringify(prog));
+  } else if (typeof isClientStorageContext === 'function' && isClientStorageContext()) {
+    DATA = emptyClientTrainingSnapshot();
+    store.activeProgram = DATA;
+  }
+  // Personal program structure lives in IndexedDB (localStorage sanitizer strips activeProgram).
+  // Do not install an empty weeks[] shell here — that can later persist into personal IDB.
+  try {
+    currentWeek = Math.max(1, Number(store.trainingWeek) || 1);
+    currentDay = Math.max(0, Number(store.trainingDay) || 0);
+  } catch (_) {}
+}
+
+function restorePersonalStoreFromNamespace() {
+  try {
+    const raw = localStorage.getItem(GS_STORE_PERSONAL_KEY);
+    const parsed = parseStoredStore(raw);
+    if (parsed.role === 'athlete' || (parsed.accountUser && (parsed.accountUser.role === 'athlete' || parsed.accountUser.provider === 'coach_client'))) {
+      // Contaminated personal key from a previous shared-store bug: keep training, drop athlete identity.
+      parsed.role = parsed.coachUnlocked ? 'coach' : null;
+      if (parsed.accountUser && (parsed.accountUser.role === 'athlete' || parsed.accountUser.provider === 'coach_client')) {
+        parsed.accountToken = null;
+        parsed.accountUser = null;
+      }
+      parsed.clientShell = false;
+      parsed.inviteToken = '';
+      parsed.clientProfile = null;
+    }
+    parsed.clientShell = false;
+    parsed.__cpClientScoped = false;
+    hydrateRuntimeFromStoreObject(parsed);
+    if (!(typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length)) {
+      try { window.__cpAutoRestoredPersonal = false; } catch (_) {}
+      const loadIdb = function () {
+        if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return Promise.resolve();
+        if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.loadActiveProgram) return Promise.resolve(null);
+        return GiammariaPersistence.loadActiveProgram();
+      };
+      Promise.resolve(loadIdb()).then(function (p) {
+        if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
+        if (p && Array.isArray(p.weeks) && p.weeks.length) {
+          DATA = typeof normalizeProgram === 'function' ? normalizeProgram(p) : p;
+          store.activeProgram = DATA;
+          store.activeProgramId = DATA.id || store.activeProgramId;
+          try { if (typeof render === 'function') render(); } catch (_) {}
+          return;
+        }
+        if (typeof tryAutoRestorePersonalSchedaOnBoot === 'function') {
+          return Promise.resolve(tryAutoRestorePersonalSchedaOnBoot());
+        }
+      }).catch(function () {
+        try {
+          if (typeof tryAutoRestorePersonalSchedaOnBoot === 'function') {
+            Promise.resolve(tryAutoRestorePersonalSchedaOnBoot()).catch(function () {});
+          }
+        } catch (_) {}
+      });
+    }
+    return true;
+  } catch (err) {
+    console.warn('[RESTORE_PERSONAL_STORE]', err);
+    return false;
+  }
+}
+
+function closePersonalRecoveryUi() {
+  try {
+    const el = document.getElementById('recover-scheda-picker');
+    if (el) el.style.display = 'none';
+  } catch (_) {}
+  try { window.__cpAutoRestoredPersonal = true; } catch (_) {}
+}
+
 function loadStore(){
   try {
-    const raw = localStorage.getItem('GS_STORE');
-    if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STORE));
-    const parsed = JSON.parse(raw);
-    const merged = { ...DEFAULT_STORE, ...parsed };
-    if (typeof merged.stayLoggedIn !== 'boolean') merged.stayLoggedIn = true;
-    if (merged.stayLoggedIn === false) {
-      merged.accountToken = null;
+    const clientBoot = detectClientBootContext();
+    if (clientBoot) {
+      let clientRaw = null;
       try {
         const sess = JSON.parse(sessionStorage.getItem('GS_SESSION_AUTH') || 'null');
-        if (sess && sess.token) {
-          merged.accountToken = sess.token;
-          merged.accountUser = sess.user || merged.accountUser;
-          merged.role = sess.role || merged.role;
-          if (sess.inviteToken) merged.inviteToken = sess.inviteToken;
-        }
+        if (sess && sess.user) clientRaw = localStorage.getItem(clientStoreKeyForUser(sess.user));
       } catch (_) {}
+      if (!clientRaw) clientRaw = localStorage.getItem(GS_STORE_CLIENT_PENDING_KEY);
+      const merged = parseStoredStore(clientRaw);
+      merged.clientShell = true;
+      merged.__cpClientScoped = true;
+      if (!merged.inviteToken) {
+        try {
+          const pathName = (typeof location !== 'undefined' && location.pathname) || '';
+          const m = String(pathName).match(/^\/c\/([^/?#]+)/);
+          if (m && m[1]) merged.inviteToken = decodeURIComponent(m[1]);
+        } catch (_) {}
+      }
+      return merged;
     }
-    return merged;
+    const raw = localStorage.getItem(GS_STORE_PERSONAL_KEY);
+    return parseStoredStore(raw);
   } catch(err) {
     console.error('Invalid saved app data', err);
     return JSON.parse(JSON.stringify(DEFAULT_STORE));
@@ -2535,6 +2722,12 @@ function restoreClientShellSync() {
 var store = loadStore();
 ensureStoreIntegrity();
 restoreClientShellSync();
+try {
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) {
+    store.__cpClientScoped = true;
+    store.clientShell = true;
+  }
+} catch (_) {}
 try { restoreAppSurface(); } catch (_) {}
 try { hydrateKnowledgeExtras(); } catch (_) {}
 window.addEventListener('pageshow', function (ev) {
@@ -2554,6 +2747,7 @@ if (typeof ensureAiControlPrefs === 'function') {
 }
 
 async function ensureFactoryCleanBoot() {
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return false;
   if (store && store.prefs && store.prefs.lastCleanBoot === APP_CLEAN_BOOT_TOKEN) return false;
   const hasLocal = !!(
     (store && store.accountToken) ||
@@ -3409,8 +3603,31 @@ function openAccount(){
 }
 function closeAccount(){ const modal = $('account-modal'); if(modal) modal.style.display = 'none'; }
 function logoutAccount(){
+  const wasClient = typeof isClientStorageContext === 'function' && isClientStorageContext();
   clearTimeout(accountSyncTimer);
-  store.accountToken = null; store.accountUser = null; persist(); updateAccountButton(); openAccount();
+  store.accountToken = null; store.accountUser = null;
+  if (wasClient) {
+    try { persist(); } catch (_) {}
+    try { if (typeof clearClientShellLock === 'function') clearClientShellLock(); } catch (_) {}
+    try {
+      store.clientShell = false;
+      store.role = null;
+      store.inviteToken = '';
+      store.clientProfile = null;
+      store.__cpClientScoped = false;
+    } catch (_) {}
+    try {
+      if (typeof persistNurvanAppMode === 'function') persistNurvanAppMode('master');
+      else document.cookie = 'nurvan_app_mode=master; Path=/; Max-Age=31536000; SameSite=Lax';
+    } catch (_) {}
+    try { history.replaceState(null, '', '/'); } catch (_) {}
+    restorePersonalStoreFromNamespace();
+    try { if (typeof applyClientChrome === 'function') applyClientChrome(); } catch (_) {}
+    try { updateAccountButton(); } catch (_) {}
+    try { if (typeof navigate === 'function') navigate('home'); } catch (_) { try { render(); } catch (__) {} }
+    return;
+  }
+  persist(); updateAccountButton(); openAccount();
 }
 function syncAccountFormMode(){
   const nameEl = $('account-name');
@@ -3929,9 +4146,17 @@ function accountDataScore(src, prog) {
 function applyRemoteAccountData(remote, preferLocal) {
   if (!remote || typeof remote !== 'object') return;
   const token = store.accountToken, user = store.accountUser;
-  // Always union workout maps so a phone with empty local data cannot drop cloud loads
-  store.data = Object.assign({}, remote.data || {}, store.data || {});
-  store.customSets = Object.assign({}, remote.customSets || {}, store.customSets || {});
+  const athlete = typeof isAthleteRole === 'function' && isAthleteRole()
+    || (typeof isClientStorageContext === 'function' && isClientStorageContext());
+  // Always union workout maps so a phone with empty local data cannot drop cloud loads.
+  // Athlete/client RAM is namespaced: never keep personal local loads over an empty client cloud.
+  if (athlete) {
+    store.data = Object.assign({}, store.__cpClientScoped ? (store.data || {}) : {}, remote.data || {});
+    store.customSets = Object.assign({}, store.__cpClientScoped ? (store.customSets || {}) : {}, remote.customSets || {});
+  } else {
+    store.data = Object.assign({}, remote.data || {}, store.data || {});
+    store.customSets = Object.assign({}, remote.customSets || {}, store.customSets || {});
+  }
   store.bw = Object.assign({}, remote.bw || {}, store.bw || {});
   store.skips = Object.assign({}, remote.skips || {}, store.skips || {});
   store.subs = Object.assign({}, remote.subs || {}, store.subs || {});
@@ -4020,7 +4245,6 @@ function applyRemoteAccountData(remote, preferLocal) {
   }
   const localWeeks = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
   const remoteProg = remote.activeProgram;
-  const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
   const remoteAssigned = String(remote.assignedAt || '');
   const localAssigned = String(store.clientAssignedAt || '');
   let takeRemote = (!localWeeks || localWeeks < 1) && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length;
@@ -4039,6 +4263,22 @@ function applyRemoteAccountData(remote, preferLocal) {
     if (force || !localWeeks || newerAssign || coachFlag) {
       takeRemote = true;
     }
+  }
+  // A previous shared-store bug may have uploaded the coach personal 16w into the athlete
+  // cloud blob. Never adopt that as a client assignment unless the coach actually assigned it.
+  const remoteLooksLeakedPersonal = !!(athlete && remoteProg
+    && typeof looksLikePersonalUpperLower16 === 'function'
+    && looksLikePersonalUpperLower16(remoteProg)
+    && !remote.assignedByCoach
+    && !window.__cpForceRemoteProgram);
+  if (remoteLooksLeakedPersonal) takeRemote = false;
+  if (athlete && remoteLooksLeakedPersonal) {
+    const localProgLooksPersonal = !!(DATA && typeof looksLikePersonalUpperLower16 === 'function' && looksLikePersonalUpperLower16(DATA))
+      || !!(store && store.activeProgram && typeof looksLikePersonalUpperLower16 === 'function' && looksLikePersonalUpperLower16(store.activeProgram));
+    const localEmptyProg = !(DATA && Array.isArray(DATA.weeks) && DATA.weeks.length);
+    if (localProgLooksPersonal || localEmptyProg) emptyClientTrainingState();
+  } else if (athlete && !takeRemote && DATA && typeof looksLikePersonalUpperLower16 === 'function' && looksLikePersonalUpperLower16(DATA)) {
+    emptyClientTrainingState();
   }
   if (takeRemote) {
     try {
@@ -4223,6 +4463,7 @@ function programRecoveryScore(prog, hintWeeks) {
 }
 
 function personalSchedaNeedsRestore() {
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return false;
   if (store && (store.coachViewingClient || store.coachAssigning || store.coachSessionActive)) return false;
   if (typeof isAthleteRole === 'function' && isAthleteRole()) return false;
   if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return true;
@@ -4444,6 +4685,10 @@ async function collectRecoverSchedaCandidates() {
 }
 
 async function recoverPersonalTrainingEmergency() {
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) {
+    closePersonalRecoveryUi();
+    return { skipped: 'client' };
+  }
   if (store && (store.coachAssigning || store.coachViewingClient)) {
     if (typeof exitCoachSession === 'function') exitCoachSession(true);
     await new Promise(function (r) { setTimeout(r, 500); });
@@ -4517,6 +4762,10 @@ window.recoverPersonalTrainingEmergency = recoverPersonalTrainingEmergency;
 async function tryAutoRestorePersonalSchedaOnBoot() {
   try {
     if (window.__cpAutoRestoredPersonal) return;
+    if (typeof isClientStorageContext === 'function' && isClientStorageContext()) {
+      closePersonalRecoveryUi();
+      return;
+    }
     if (store && (store.coachViewingClient || store.coachAssigning)) return;
     if (typeof isAthleteRole === 'function' && isAthleteRole()) return;
     if (!personalSchedaNeedsRestore()) {
@@ -4534,6 +4783,13 @@ async function tryAutoRestorePersonalSchedaOnBoot() {
   }
 }
 window.tryAutoRestorePersonalSchedaOnBoot = tryAutoRestorePersonalSchedaOnBoot;
+window.detectClientBootContext = detectClientBootContext;
+window.isClientStorageContext = isClientStorageContext;
+window.clientStoreKeyForUser = clientStoreKeyForUser;
+window.emptyClientTrainingState = emptyClientTrainingState;
+window.restorePersonalStoreFromNamespace = restorePersonalStoreFromNamespace;
+window.GS_STORE_PERSONAL_KEY = GS_STORE_PERSONAL_KEY;
+window.GS_STORE_CLIENT_PENDING_KEY = GS_STORE_CLIENT_PENDING_KEY;
 
 async function syncAccountData(download=false){
   const status = $('account-status'); if(status) status.textContent = 'Sincronizzazione…';
@@ -4555,6 +4811,7 @@ async function syncAccountData(download=false){
     const localWeeks = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
     const remoteWeeks = (remote.activeProgram && Array.isArray(remote.activeProgram.weeks)) ? remote.activeProgram.weeks.length : 0;
     const skipProgUpload = (athlete && !!(remote.assignedByCoach || window.__cpForceRemoteProgram))
+      || (athlete && typeof looksLikePersonalUpperLower16 === 'function' && looksLikePersonalUpperLower16(DATA) && !remote.assignedByCoach)
       || localWeeks < 1
       || (remoteWeeks > localWeeks);
     const localHasLoads = !!(store.data && Object.keys(store.data).length) || (Array.isArray(store.logs) && store.logs.length);
@@ -7680,10 +7937,11 @@ async function requestProgramReprogramInner(kind, desired, goal, secondary, cons
 
 function persistActiveProgramStructure() {
   try {
-    if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks)) return;
-    // Assign sandbox + client view: never write client program into coach IndexedDB / cloud.
-    if (store && (store.coachAssigning || store.coachViewingClient)) {
+    if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return;
+    // Assign sandbox + client view + athlete invite: never write into coach IndexedDB / personal cloud.
+    if (store && (store.coachAssigning || store.coachViewingClient || (typeof isClientStorageContext === 'function' && isClientStorageContext()))) {
       store.activeProgram = DATA;
+      if (typeof persist === 'function') persist();
       return;
     }
     if (store.activeProgramId && !DATA.id) DATA.id = store.activeProgramId;
@@ -7715,6 +7973,7 @@ function lockPersonalProgramBackup(prog) {
     if (!prog || !Array.isArray(prog.weeks) || prog.weeks.length < 4) return;
     if (typeof looksLikeClientAssignDraft === 'function' && looksLikeClientAssignDraft(prog)) return;
     if (store && (store.coachAssigning || store.coachViewingClient)) return;
+    if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
     const copy = JSON.parse(JSON.stringify(prog));
     const payload = {
       at: new Date().toISOString(),
@@ -9105,6 +9364,23 @@ async function init() {
       return;
     }
 
+    if (typeof isClientStorageContext === 'function' && isClientStorageContext()) {
+      console.log('[INIT] Client/invite context: skip personal IDB/program restore');
+      store.__cpClientScoped = true;
+      closePersonalRecoveryUi();
+      const hasClientProg = !!(store.activeProgram && Array.isArray(store.activeProgram.weeks) && store.activeProgram.weeks.length);
+      if (hasClientProg) {
+        DATA = typeof normalizeProgram === 'function' ? normalizeProgram(store.activeProgram) : store.activeProgram;
+      } else {
+        emptyClientTrainingState();
+      }
+      if (typeof I18nService !== 'undefined' && I18nService.init) I18nService.init();
+      setSplashProgress(70, 'Spazio cliente…');
+      clearTimeout(splashTimer);
+      finishInit();
+      return;
+    }
+
     setSplashProgress(35, 'Lingua e preferenze…');
     if (typeof I18nService !== 'undefined' && I18nService.init) {
       I18nService.init();
@@ -9449,7 +9725,11 @@ function persist() {
       try { delete sanitized.workoutUndo; } catch (_) {}
       try { delete sanitized.trainingKnowledgeExtra; } catch (_) {}
     }
-    localStorage.setItem('GS_STORE', JSON.stringify(sanitized));
+    const persistKey = isClientStorageContext() ? clientStoreKeyForUser(store.accountUser) : GS_STORE_PERSONAL_KEY;
+    if (sanitized && typeof sanitized === 'object') {
+      sanitized.__cpClientScoped = !!isClientStorageContext();
+    }
+    localStorage.setItem(persistKey, JSON.stringify(sanitized));
   } catch (quotaErr) {
     console.warn('[PERSIST_WARNING] localStorage quota exceeded, performing deep sanitize:', quotaErr);
     const isQuota = quotaErr && (quotaErr.name === 'QuotaExceededError' || /quota|spazio|storage/i.test(String(quotaErr.message || '')));
@@ -9478,7 +9758,8 @@ function persist() {
         coachUnlocked: !!store.coachUnlocked,
         clientProfile: store.clientProfile || null
       };
-      localStorage.setItem('GS_STORE', JSON.stringify(sanitizedStore));
+      const persistKey = isClientStorageContext() ? clientStoreKeyForUser(store.accountUser) : GS_STORE_PERSONAL_KEY;
+      localStorage.setItem(persistKey, JSON.stringify(sanitizedStore));
     } catch (criticalErr) {
       console.error('[PERSIST_CRITICAL] Failed to persist even minimal store:', criticalErr);
     }
@@ -9492,6 +9773,7 @@ function persist() {
 let __workoutIdbSyncTimer = null;
 function scheduleWorkoutLogsIdbSync() {
   if (store && (store.coachAssigning || store.coachViewingClient)) return;
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
   if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveWorkoutLogsSnapshot) return;
   clearTimeout(__workoutIdbSyncTimer);
   __workoutIdbSyncTimer = setTimeout(function () {
@@ -9508,6 +9790,7 @@ function scheduleWorkoutLogsIdbSync() {
 
 let __rewardsIdbSyncTimer = null;
 function scheduleRewardsIdbSync() {
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
   if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveRewardsSnapshot) return;
   if (!store.rewards) return;
   clearTimeout(__rewardsIdbSyncTimer);

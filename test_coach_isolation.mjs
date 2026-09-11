@@ -182,6 +182,62 @@ assert(base.includes("drawClientTutorial()") && ui.includes("window.drawClientTu
 assert(ui.includes("window.__cpExitingCoach") && ui.includes("store.coachSessionActive = false") && ui.includes("Cold start: personal app is default"), "exit coach clears sticky session; cold start personal");
 assert(base.includes("sanitized.coachSessionActive = false") && base.includes("sanitized.coachAssigning = null"), "persist never stores sticky coach session locks");
 
+assert(base.includes("function isClientStorageContext") && base.includes("GS_STORE_CLIENT") && base.includes("function emptyClientTrainingState"), "client/personal stores are namespaced");
+assert(base.includes("Client/invite context: skip personal IDB/program restore"), "invite boot skips personal IDB hydration");
+assert(base.includes("skipped: 'client'") || base.includes('skipped: "client"'), "personal auto-restore returns without mutating client RAM");
+assert(base.includes("localStorage.setItem(persistKey") && base.includes("clientStoreKeyForUser"), "persist writes the role-scoped key");
+assert(base.includes("remoteLooksLeakedPersonal") && base.includes("!remote.assignedByCoach"), "athlete sync refuses leaked personal 16w unless coach assigned it");
+assert(base.includes("GiammariaPersistence.loadActiveProgram") && base.includes("restorePersonalStoreFromNamespace"), "leaving client invite reloads personal program from IDB");
+assert(/!DATA\.weeks\.length\) return/.test(base) || base.includes("!DATA.weeks.length) return"), "empty program shells are not written to personal IDB");
+assert(!/isClientStorageContext[\s\S]{0,200}localStorage\.removeItem\('GS_STORE'\)/.test(base) || base.includes("isClientStorageContext()) return false"), "factory clean does not wipe personal store from client invite");
+assert(ui.includes("emptyClientTrainingState()") && ui.includes("store.__cpClientScoped = true"), "client login empties athlete RAM without touching personal key");
+assert(ui.includes("restorePersonalStoreFromNamespace") && base.includes("function restorePersonalStoreFromNamespace"), "leaving invite restores personal namespace");
+
+const isolationHarness = new Function(
+  extractFn(base, "emptyClientTrainingSnapshot") + "\n" +
+  extractFn(base, "emptyClientTrainingState") + "\n" +
+  extractFn(base, "clientStoreKeyForUser") + "\n" +
+  "var GS_STORE_CLIENT_PENDING_KEY = 'GS_STORE_CLIENT';\n" +
+  "var personalLoads = { w3_d2_e0_s1_load: 45, w3_d2_e1_s1_load: 30 };\n" +
+  "var DATA = { title: 'Programma personalizzato 16 settimane', id: 'personal_16w_giammaria', weeks: new Array(16).fill({ sessions: [] }) };\n" +
+  "var currentWeek = 3, currentDay = 2;\n" +
+  "var store = { data: personalLoads, logs: [{ id: 'w3d2', week: 3 }], activeProgram: DATA, models: [{ id: 'p' }], coachProgramLibrary: [{ id: 'lib' }], customSets: { w3_d2_e0: 4 } };\n" +
+  "var personalCopy = JSON.stringify(personalLoads);\n" +
+  "emptyClientTrainingState();\n" +
+  "return {\n" +
+  "  weeks: (DATA && DATA.weeks && DATA.weeks.length) || 0,\n" +
+  "  loads: Object.keys(store.data || {}).length,\n" +
+  "  logs: (store.logs || []).length,\n" +
+  "  models: (store.models || []).length,\n" +
+  "  scoped: !!store.__cpClientScoped,\n" +
+  "  personalUntouched: JSON.stringify(personalLoads) === personalCopy,\n" +
+  "  clientKey: clientStoreKeyForUser({ id: 99, email: 'a@b.c' }),\n" +
+  "  pendingKey: clientStoreKeyForUser(null)\n" +
+  "};"
+)();
+assert(isolationHarness.weeks === 0 && isolationHarness.loads === 0 && isolationHarness.logs === 0, "empty client state has no program or loads");
+assert(isolationHarness.scoped && isolationHarness.personalUntouched, "emptying client RAM does not mutate the personal loads object");
+assert(isolationHarness.clientKey.indexOf("GS_STORE_CLIENT_") === 0 && isolationHarness.pendingKey === "GS_STORE_CLIENT", "client store keys are account-scoped");
+
+assert((ui.match(/home: 1, settings: 1, ai: 1/g) || []).length >= 2, "coach session gate allows AI view from hub and bottom nav");
+assert(ui.includes("navigate('ai', event)") && ui.includes("sp.textContent = 'AI'"), "coach chrome wires bottom AI to coach assistant");
+
+const coachEventLabel = new Function(
+  extractFn(ui, "parseCoachEventPayload") + "\n" +
+  extractFn(ui, "coachEventLabel") + "\n" +
+  "return coachEventLabel;"
+)();
+const nutr = coachEventLabel("ask_coach", "Test Signor", { domain: "nutrition", note: "niente latte, allenamento sera" });
+assert(nutr.view === "chat" && /niente latte/.test(nutr.body) && /alimentazione/i.test(nutr.title), "nutrition request notification includes personal note and opens chat");
+const supp = coachEventLabel("ask_coach", "Test Signor", { domain: "supplements", note: "creatina dopo il workout" });
+assert(supp.view === "chat" && /creatina/.test(supp.body), "supplement request notification includes personal note");
+
+assert(practice.includes("insertMessage(ctx.client.id, \"athlete\"") && practice.includes("Richiesta ${domainLabel}"), "ask-coach persists the athlete message into the chat thread");
+assert(practice.includes('view: "chat"') && practice.includes("kind: \"ask_coach\""), "ask-coach push deep-links to the client chat");
+const inboxSrc = fs.readFileSync(path.join(__dirname, "server/coach-os/inbox.mjs"), "utf8");
+assert(inboxSrc.includes("e.kind = 'ask_coach'") && inboxSrc.includes('view: "coachChat"'), "inbox feed includes ask_coach requests with chat deep-link");
+assert(fs.readFileSync(path.join(__dirname, "web/coach-os/inbox.js"), "utf8").includes("item.kind === 'ask_coach'"), "inbox UI opens ask_coach items in chat");
+
 if (failed) {
   console.error("\n" + failed + " isolation checks failed");
   process.exit(1);
