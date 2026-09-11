@@ -174,6 +174,7 @@ const practice = fs.readFileSync(path.join(__dirname, "coach-practice.mjs"), "ut
 assert(practice.includes("e.payload") || practice.includes("e.payload,"), "coach inbox returns payload");
 assert(practice.includes("e.payload->>'from'") && practice.includes("'coach_modified'"), "coach inbox SQL filters self noise");
 assert(practice.includes("allow_nurvan_ai") && practice.includes("/nurvan-ai"), "server has allow_nurvan_ai");
+assert(practice.includes("insertMessage(ctx.client.id, \"athlete\"") && practice.includes("Richiesta ${domainLabel}"), "ask-coach writes the personal note into chat");
 
 assert(ui.includes("toggleAssignBannerExpand") && ui.includes("cp-assign-collapsed"), "assign bar collapsible");
 assert(ui.includes("location.origin") && ui.includes("/peerjs.min.js"), "PeerJS absolute origin URL");

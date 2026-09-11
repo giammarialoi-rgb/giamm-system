@@ -20,6 +20,10 @@
       openCoachClientChat(href.clientId);
       return;
     }
+    if ((item.kind === 'ask_coach' || href.view === 'chat' || href.view === 'ask_coach') && href.clientId && typeof openCoachClientChat === 'function') {
+      openCoachClientChat(href.clientId);
+      return;
+    }
     if (href.view === 'coachCheckIns') {
       CoachOS.navigate('coachCheckIns');
       return;
@@ -70,13 +74,15 @@
         const events = (legacy && legacy.events) || [];
         const clients = (legacy && legacy.clients) || [];
         state.items = events.map(function (event) {
+          const payload = event.payload && typeof event.payload === 'object' ? event.payload : {};
+          const note = String(payload.note || payload.message || payload.body || payload.preview || '').trim();
           return {
             id: String(event.id),
             kind: event.kind || 'event',
             title: event.display_name || event.displayName || event.kind,
-            preview: (event.payload && (event.payload.preview || event.payload.body)) || '',
+            preview: note,
             clientId: event.client_id || event.clientId,
-            href: { view: event.kind === 'message' ? 'coachChat' : 'coachClient', clientId: event.client_id || event.clientId }
+            href: { view: (event.kind === 'message' || event.kind === 'ask_coach') ? 'coachChat' : 'coachClient', clientId: event.client_id || event.clientId }
           };
         }).concat(clients.map(function (client) {
           return {

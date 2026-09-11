@@ -44,6 +44,15 @@ export async function loadCoachInbox(pool, coachId, options = {}) {
      LIMIT 20`,
     [coachId]
   );
+  const asks = await pool.query(
+    `SELECT e.id, e.client_id, c.display_name AS client_name, e.payload, e.created_at, e.read_at
+     FROM coach_events e
+     JOIN coach_clients c ON c.id = e.client_id
+     WHERE c.coach_user_id = $1 AND e.kind = 'ask_coach'
+     ORDER BY e.created_at DESC
+     LIMIT 20`,
+    [coachId]
+  );
   const items = [
     ...(messages.rows || []).map((row) => inboxItem("message", {
       ...row,
@@ -51,6 +60,17 @@ export async function loadCoachInbox(pool, coachId, options = {}) {
       preview: row.body,
       href: { view: "coachChat", clientId: row.client_id }
     })),
+    ...(asks.rows || []).map((row) => {
+      const payload = row.payload && typeof row.payload === "object" ? row.payload : {};
+      const domain = String(payload.domain || "richiesta");
+      const note = String(payload.note || payload.message || "").trim();
+      return inboxItem("ask_coach", {
+        ...row,
+        title: (row.client_name || "Cliente") + " · richiesta " + domain,
+        preview: note || ("Chiede " + domain),
+        href: { view: "coachChat", clientId: row.client_id }
+      });
+    }),
     ...(checkIns.rows || []).map((row) => inboxItem("check_in", {
       ...row,
       title: "Check-in · " + (row.client_name || ""),
