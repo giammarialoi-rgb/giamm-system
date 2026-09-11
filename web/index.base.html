@@ -2310,9 +2310,8 @@ function clientStoreKeyForUser(user) {
 function isClientStorageContext() {
   try {
     if (detectClientBootContext()) return true;
-    if (store && (store.clientShell || store.role === 'athlete')) return true;
+    if (store && store.clientShell) return true;
     if (store && store.accountUser && (store.accountUser.role === 'athlete' || store.accountUser.provider === 'coach_client')) return true;
-    if (typeof isAthleteRole === 'function' && isAthleteRole()) return true;
   } catch (_) {}
   return false;
 }
@@ -2426,8 +2425,8 @@ function restorePersonalStoreFromNamespace() {
     parsed.clientShell = false;
     parsed.__cpClientScoped = false;
     hydrateRuntimeFromStoreObject(parsed);
+    // Read-only RAM hydrate from the existing IndexedDB copy. Isolation must not rewrite personal training.
     if (!(typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length)) {
-      try { window.__cpAutoRestoredPersonal = false; } catch (_) {}
       const loadIdb = function () {
         if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return Promise.resolve();
         if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.loadActiveProgram) return Promise.resolve(null);
@@ -2435,23 +2434,14 @@ function restorePersonalStoreFromNamespace() {
       };
       Promise.resolve(loadIdb()).then(function (p) {
         if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
-        if (p && Array.isArray(p.weeks) && p.weeks.length) {
-          DATA = typeof normalizeProgram === 'function' ? normalizeProgram(p) : p;
-          store.activeProgram = DATA;
-          store.activeProgramId = DATA.id || store.activeProgramId;
-          try { if (typeof render === 'function') render(); } catch (_) {}
-          return;
-        }
-        if (typeof tryAutoRestorePersonalSchedaOnBoot === 'function') {
-          return Promise.resolve(tryAutoRestorePersonalSchedaOnBoot());
-        }
-      }).catch(function () {
-        try {
-          if (typeof tryAutoRestorePersonalSchedaOnBoot === 'function') {
-            Promise.resolve(tryAutoRestorePersonalSchedaOnBoot()).catch(function () {});
-          }
-        } catch (_) {}
-      });
+        if (!(p && Array.isArray(p.weeks) && p.weeks.length)) return;
+        let copy = p;
+        try { copy = JSON.parse(JSON.stringify(p)); } catch (_) { copy = p; }
+        DATA = copy;
+        store.activeProgram = DATA;
+        store.activeProgramId = DATA.id || store.activeProgramId;
+        try { if (typeof render === 'function') render(); } catch (_) {}
+      }).catch(function () {});
     }
     return true;
   } catch (err) {
@@ -9726,6 +9716,10 @@ function persist() {
       try { delete sanitized.trainingKnowledgeExtra; } catch (_) {}
     }
     const persistKey = isClientStorageContext() ? clientStoreKeyForUser(store.accountUser) : GS_STORE_PERSONAL_KEY;
+    if (isClientStorageContext() && persistKey === GS_STORE_PERSONAL_KEY) {
+      console.warn('[PERSIST] refused to write personal GS_STORE from client context');
+      return;
+    }
     if (sanitized && typeof sanitized === 'object') {
       sanitized.__cpClientScoped = !!isClientStorageContext();
     }
@@ -9759,6 +9753,10 @@ function persist() {
         clientProfile: store.clientProfile || null
       };
       const persistKey = isClientStorageContext() ? clientStoreKeyForUser(store.accountUser) : GS_STORE_PERSONAL_KEY;
+      if (isClientStorageContext() && persistKey === GS_STORE_PERSONAL_KEY) {
+        console.warn('[PERSIST] refused to write personal GS_STORE from client context');
+        return;
+      }
       localStorage.setItem(persistKey, JSON.stringify(sanitizedStore));
     } catch (criticalErr) {
       console.error('[PERSIST_CRITICAL] Failed to persist even minimal store:', criticalErr);

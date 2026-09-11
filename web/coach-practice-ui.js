@@ -1833,7 +1833,6 @@ function closeClientInviteOverlay() {
     store.clientShell = false;
     store.__cpClientScoped = false;
     if (typeof restorePersonalStoreFromNamespace === 'function') restorePersonalStoreFromNamespace();
-    if (typeof persist === 'function') persist();
     applyClientChrome();
     if (typeof navigate === 'function') navigate(store.coachSessionActive ? 'coachHub' : 'home');
     return;
@@ -1847,7 +1846,6 @@ function closeClientInviteOverlay() {
     history.replaceState(null, '', '/');
   } catch (_) {}
   if (typeof restorePersonalStoreFromNamespace === 'function') restorePersonalStoreFromNamespace();
-  if (typeof persist === 'function') persist();
   applyClientChrome();
   practiceToast('Finestra chiusa. Apri di nuovo il link invito del coach per accedere.', 'info');
   if (typeof navigate === 'function') navigate('home');
