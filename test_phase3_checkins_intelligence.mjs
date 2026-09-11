@@ -131,9 +131,9 @@ ok(practice.includes("coach_media_access_audit") || fs.readFileSync(path.join(ro
 const checkinUi = fs.readFileSync(path.join(root, "web/coach-os/checkins.js"), "utf8");
 const clientUi = fs.readFileSync(path.join(root, "web/coach-os/clients.js"), "utf8");
 const base = fs.readFileSync(path.join(root, "web/index.base.html"), "utf8");
-ok(checkinUi.includes("Requested") && checkinUi.includes("Received") && checkinUi.includes("To review") && checkinUi.includes("Reviewed"), "Check-in Center has workflow queues");
-ok(checkinUi.includes("Review & Respond") && checkinUi.includes("openCheckInMedia"), "Check-in detail supports review and private media");
-ok(clientUi.includes("Athlete intelligence") && clientUi.includes("Deterministic"), "Client Overview separates deterministic intelligence");
+ok(checkinUi.includes("coRequested") && checkinUi.includes("coReceived") && checkinUi.includes("coToReview") && checkinUi.includes("coReviewed"), "Check-in Center has workflow queues");
+ok(checkinUi.includes("coReviewRespond") && checkinUi.includes("openCheckInMedia"), "Check-in detail supports review and private media");
+ok(clientUi.includes("coAthleteIntelligence") && clientUi.includes("coDeterministic"), "Client Overview separates deterministic intelligence");
 ok(base.includes("submitClientCheckInToCoach") && base.includes("serverCheckInId"), "athlete check flow submits to Check-in Center");
 
 const flags = resolveCoachOsFeatureFlags({ env: {} });
@@ -147,7 +147,7 @@ if (fs.existsSync(webIndex) && fs.existsSync(apkIndex)) {
   const hash = (file) => crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
   ok(hash(webIndex) === hash(apkIndex), "Web/APK parity");
   const built = fs.readFileSync(webIndex, "utf8");
-  ok(built.includes("Review & Respond") && built.includes("Athlete intelligence"), "built bundle contains Phase 3 UI");
+  ok(built.includes("coReviewRespond") && built.includes("Athlete intelligence"), "built bundle contains Phase 3 UI");
 }
 
 console.log("\nPhase 3 check-in and intelligence checks passed.");

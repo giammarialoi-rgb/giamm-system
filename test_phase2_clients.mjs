@@ -112,10 +112,10 @@ ok(practice.includes("loadOwnedClient(coach, req.params.id"), "overview/timeline
 
 const clientsUi = fs.readFileSync(path.join(root, "web/coach-os/clients.js"), "utf8");
 const todayUi = fs.readFileSync(path.join(root, "web/coach-os/today.js"), "utf8");
-for (const label of ["Next action", "Athlete snapshot", "Timeline", "Domains"]) {
+for (const label of ["coNextAction", "coAthleteSnapshot", "coTimeline", "coDomains"]) {
   ok(clientsUi.includes(label), `Client Overview contains ${label}`);
 }
-ok(clientsUi.indexOf("Next action") < clientsUi.indexOf("Athlete snapshot"), "Client Overview puts next action first");
+ok(clientsUi.indexOf("coNextAction") < clientsUi.indexOf("coAthleteSnapshot"), "Client Overview puts next action first");
 ok(clientsUi.includes("saveCurrentClientView") && clientsUi.includes("savedViewId"), "Clients UI supports saved views");
 ok(clientsUi.includes("openLegacyClientWorkspace"), "classic workspace remains available");
 ok(todayUi.includes("completeTask") && todayUi.includes("snoozeTask") && todayUi.includes("moveTask"), "Today supports task lifecycle and reorder");

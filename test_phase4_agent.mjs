@@ -117,8 +117,8 @@ for (const route of ["/api/coach/agent/runs", "/api/coach/agent/runs/:id/confirm
   ok(practice.includes(route), `API exposes ${route}`);
 }
 ok(practice.includes("STALE_PROPOSAL"), "confirm route returns stale code");
-ok(fs.readFileSync(path.join(root, "web/coach-os/agent.js"), "utf8").includes("VIEW DATA"), "Agent UI shows WHY view data");
-ok(fs.readFileSync(path.join(root, "web/coach-os/agent.js"), "utf8").includes("RE-PLAN"), "Agent UI offers re-plan after stale");
+ok(fs.readFileSync(path.join(root, "web/coach-os/agent.js"), "utf8").includes("coViewData"), "Agent UI shows WHY view data");
+ok(fs.readFileSync(path.join(root, "web/coach-os/agent.js"), "utf8").includes("coReplan"), "Agent UI offers re-plan after stale");
 ok(resolveCoachOsFeatureFlags({ env: {} }).agentV1, "agentV1 ships enabled");
 ok(resourceFingerprint({ a: 1 }) === resourceFingerprint({ a: 1 }), "fingerprints are stable");
 

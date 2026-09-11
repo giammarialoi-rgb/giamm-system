@@ -186,8 +186,12 @@ assert(base.includes("function isClientStorageContext") && base.includes("GS_STO
 assert(base.includes("Client/invite context: skip personal IDB/program restore"), "invite boot skips personal IDB hydration");
 assert(base.includes("skipped: 'client'") || base.includes('skipped: "client"'), "personal auto-restore returns without mutating client RAM");
 assert(base.includes("localStorage.setItem(persistKey") && base.includes("clientStoreKeyForUser"), "persist writes the role-scoped key");
+assert(base.includes("refused to write personal GS_STORE from client context"), "persist hard-refuses GS_STORE writes in client context");
 assert(base.includes("remoteLooksLeakedPersonal") && base.includes("!remote.assignedByCoach"), "athlete sync refuses leaked personal 16w unless coach assigned it");
 assert(base.includes("GiammariaPersistence.loadActiveProgram") && base.includes("restorePersonalStoreFromNamespace"), "leaving client invite reloads personal program from IDB");
+assert(extractFn(base, "restorePersonalStoreFromNamespace").indexOf("tryAutoRestorePersonalSchedaOnBoot") < 0, "leaving invite does not reimport or auto-restore the personal scheda");
+assert(extractFn(base, "restorePersonalStoreFromNamespace").indexOf("persist(") < 0 && extractFn(base, "restorePersonalStoreFromNamespace").indexOf("saveProgram") < 0, "personal restore path does not write GS_STORE or IDB");
+assert(!/restorePersonalStoreFromNamespace\(\);\s*\n\s*if \(typeof persist === 'function'\) persist\(\);/.test(ui), "closing invite does not persist onto the personal store key");
 assert(/!DATA\.weeks\.length\) return/.test(base) || base.includes("!DATA.weeks.length) return"), "empty program shells are not written to personal IDB");
 assert(!/isClientStorageContext[\s\S]{0,200}localStorage\.removeItem\('GS_STORE'\)/.test(base) || base.includes("isClientStorageContext()) return false"), "factory clean does not wipe personal store from client invite");
 assert(ui.includes("emptyClientTrainingState()") && ui.includes("store.__cpClientScoped = true"), "client login empties athlete RAM without touching personal key");
