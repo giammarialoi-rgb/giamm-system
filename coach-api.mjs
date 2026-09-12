@@ -18,6 +18,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { extractExcelStructuredForApi, detectFormat, DI_MAX_BYTES } from "./document-intelligence-core.mjs";
 import { ensureCoachPracticeTables, mountCoachPractice } from "./coach-practice.mjs";
 import { mountProgramGenerateRoutes } from "./server/program/generator.mjs";
+import { mountFoodRoutes } from "./server/food/index.mjs";
 import { runMigrations } from "./server/db/migrate.mjs";
 import {
   buildCorsOriginValidator,
@@ -53,6 +54,14 @@ app.use(
     windowMs: 60_000,
     max: Number(process.env.IMPORT_RATE_LIMIT_MAX || 20),
     keyPrefix: "import"
+  })
+);
+app.use(
+  "/api/food/analyze-photo",
+  createFixedWindowRateLimiter({
+    windowMs: 60_000,
+    max: Number(process.env.MEAL_PHOTO_RATE_LIMIT_MAX || 12),
+    keyPrefix: "meal-photo"
   })
 );
 
@@ -1197,6 +1206,7 @@ app.get("/health", (req, res) => {
     accountStorageConfigured: Boolean(process.env.DATABASE_URL),
     googleOAuthConfigured: allowedGoogleAudiences().length > 0,
     chatVision: true,
+    mealPhoto: true,
     chatStateless: true,
     coachChatVersion: "vision-stateless-v1",
     coachPracticeVersion: "coach-client-v2",
@@ -1938,6 +1948,33 @@ mountCoachPractice(app, {
 
 mountProgramGenerateRoutes(app, {
   requireAuth: async (req) => accountFromBearer(req.headers.authorization)
+});
+
+async function generateMealPhotoVision({ prompt, image, schema }) {
+  if (!process.env.GEMINI_API_KEY) {
+    const err = new Error("vision_not_configured");
+    err.statusCode = 503;
+    throw err;
+  }
+  const ai = getClient();
+  const parts = [
+    { inlineData: { mimeType: image.mimeType, data: image.data } },
+    { text: prompt }
+  ];
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: [{ role: "user", parts }],
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: schema,
+      maxOutputTokens: 2048
+    }
+  });
+  return { text: response.text || "" };
+}
+
+mountFoodRoutes(app, {
+  generateVision: generateMealPhotoVision
 });
 
 app.use(function (req, res, next) {

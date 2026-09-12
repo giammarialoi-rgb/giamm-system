@@ -129,6 +129,7 @@ Senza scheda:
 - Giorno selezionato evidenziato (oggi).
 - Aggiungi / modifica / elimina cibo (database alimenti + warning allergie).
 - Scanner barcode (foto o live).
+- Foto pasto: scatta o carica una foto, stima visiva di alimenti/grammi/kcal (e macro), conferma/modifica, inserimento nel pasto selezionato.
 - Wizard genera piano (kcal, macro, pasti liberi, giorni, combo).
 - Filtro allergie / intolleranze (catalogo UE + frasi safe).
 - Salva modifiche (sync upload-only, non rimpiazza il locale).
@@ -360,7 +361,7 @@ Senza scheda:
 | Home | Avvia seduta, programmi/chat, moduli, attiva/elimina schede, reset |
 | Allenamento | Log serie, timer, bonus, sostituzione, PDF, massimale, finalizza |
 | Stats | Grafici, muscoli, check fisico, PDF, cronologia |
-| Alimentazione | Piano, cibi, barcode, wizard, allergie, salva |
+| Alimentazione | Piano, cibi, barcode, foto pasto, wizard, allergie, salva |
 | Integrazione | Elenco, wizard, evidenze, barcode |
 | Terapia | Farmaci, alert |
 | Esami | Import, PDF richiesta, record, reminder |
