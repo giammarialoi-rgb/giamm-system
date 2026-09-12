@@ -13,7 +13,7 @@ Router/renderers principali in [`../../web/index.base.html`](../../web/index.bas
 - `programs` — catalogo, generator e programmi.
 - `import` — upload, extraction, canonical preview, domain picker e activation.
 - `db` — database esercizi.
-- `nutrition` — piano, alimenti, wizard, barcode.
+- `nutrition` — piano, alimenti, wizard, barcode, foto pasto.
 - `supplements` — integrazione.
 - `therapy` — terapia.
 - `exams` — esami.
