@@ -176,13 +176,23 @@ export const MEAL_PHOTO_RESPONSE_SCHEMA = {
         type: 'object',
         properties: {
           name: { type: 'string' },
+          visualDescription: { type: 'string' },
+          pieceCount: { type: 'number' },
+          plateCoveragePercent: { type: 'number' },
           quantity: { type: 'number' },
           unit: { type: 'string' },
+          estimatedGrams: { type: 'number' },
+          minGrams: { type: 'number' },
+          maxGrams: { type: 'number' },
+          visualGrams: { type: 'number' },
+          edibleGrams: { type: 'number' },
+          hasNonEdibleParts: { type: 'boolean' },
           kcal: { type: 'number' },
           pro: { type: 'number' },
           carb: { type: 'number' },
           fat: { type: 'number' },
           confidence: { type: 'number' },
+          quantityConfidence: { type: 'number' },
           notes: { type: 'string' }
         },
         required: ['name', 'quantity', 'unit', 'kcal', 'confidence']
@@ -232,31 +242,101 @@ function quantityToGrams(quantity, unit) {
   return qty;
 }
 
+function roundGramsPlatitude(g) {
+  const n = clampNum(g, 0, 5000, 0);
+  if (n <= 0) return 0;
+  if (n <= 15) return Math.round(n * 10) / 10;
+  if (n <= 50) return Math.round(n / 5) * 5;
+  return Math.round(n / 5) * 5;
+}
+
 export function normalizeMealPhotoItem(raw) {
   const name = String(raw?.name || raw?.food || '').replace(/\s+/g, ' ').trim();
   if (!name) return null;
   const unit = normalizeUnit(raw?.unit);
-  const quantity = clampNum(raw?.quantity ?? raw?.qty ?? raw?.grams, 0, 5000, 0);
-  const confidence = clampNum(raw?.confidence, 0, 1, 0.35);
-  const kcal = Math.round(clampNum(raw?.kcal ?? raw?.calories, 0, 4000, 0));
-  const pro = Math.round(clampNum(raw?.pro ?? raw?.protein, 0, 400, 0) * 10) / 10;
-  const carb = Math.round(clampNum(raw?.carb ?? raw?.carbs, 0, 500, 0) * 10) / 10;
-  const fat = Math.round(clampNum(raw?.fat ?? raw?.fats, 0, 300, 0) * 10) / 10;
+  const rawQty = raw?.estimatedGrams ?? raw?.quantity ?? raw?.qty ?? raw?.grams;
+  const rawGrams = quantityToGrams(rawQty, unit);
+  const grams = roundGramsPlatitude(rawGrams);
+  const quantity = unit === 'g' ? grams : (clampNum(rawQty, 0, 5000, 0) || (unit === 'ml' ? grams : 1));
+
+  const confidence = Math.round(clampNum(raw?.confidence, 0, 1, 0.35) * 100) / 100;
+  const quantityConfidence = Math.round(clampNum(raw?.quantityConfidence ?? raw?.confidence, 0, 1, confidence) * 100) / 100;
+
+  let minGrams = Number.isFinite(Number(raw?.minGrams)) && Number(raw?.minGrams) > 0 ? roundGramsPlatitude(raw.minGrams) : null;
+  let maxGrams = Number.isFinite(Number(raw?.maxGrams)) && Number(raw?.maxGrams) > 0 ? roundGramsPlatitude(raw.maxGrams) : null;
+
+  if (minGrams == null || minGrams > grams) {
+    const margin = quantityConfidence >= 0.8 ? 0.15 : quantityConfidence >= 0.6 ? 0.25 : 0.35;
+    minGrams = roundGramsPlatitude(grams * (1 - margin));
+  }
+  if (maxGrams == null || maxGrams < grams) {
+    const margin = quantityConfidence >= 0.8 ? 0.15 : quantityConfidence >= 0.6 ? 0.25 : 0.35;
+    maxGrams = roundGramsPlatitude(grams * (1 + margin));
+  }
+
+  const hasNonEdibleParts = Boolean(
+    raw?.hasNonEdibleParts ||
+    raw?.hasWaste ||
+    (raw?.visualGrams && raw?.edibleGrams && Number(raw.visualGrams) > Number(raw.edibleGrams))
+  );
+  const visualGrams = roundGramsPlatitude(raw?.visualGrams ?? (hasNonEdibleParts ? Math.round(grams * 1.35) : grams));
+  const edibleGrams = hasNonEdibleParts
+    ? roundGramsPlatitude(raw?.edibleGrams ?? grams)
+    : grams;
+
+  let kcal = Math.round(clampNum(raw?.kcal ?? raw?.calories, 0, 4000, 0));
+  let pro = Math.round(clampNum(raw?.pro ?? raw?.protein, 0, 400, 0) * 10) / 10;
+  let carb = Math.round(clampNum(raw?.carb ?? raw?.carbs, 0, 500, 0) * 10) / 10;
+  let fat = Math.round(clampNum(raw?.fat ?? raw?.fats, 0, 300, 0) * 10) / 10;
+
+  const macroKcal = Math.round(pro * 4 + carb * 4 + fat * 9);
+  if (macroKcal > 0 && (kcal === 0 || Math.abs(kcal - macroKcal) > Math.max(60, kcal * 0.4))) {
+    kcal = macroKcal;
+  }
+
+  const pieceCount = Number.isFinite(Number(raw?.pieceCount)) && Number(raw.pieceCount) > 0 ? Number(raw.pieceCount) : null;
+  const plateCoveragePercent = Number.isFinite(Number(raw?.plateCoveragePercent)) ? Number(raw.plateCoveragePercent) : null;
+
+  const isUncertain = confidence < MEAL_PHOTO_LOW_CONFIDENCE || quantityConfidence < MEAL_PHOTO_LOW_CONFIDENCE || hasNonEdibleParts;
+
+  let notes = String(raw?.notes || '').slice(0, 240);
+  if (hasNonEdibleParts && !notes.includes('scarti') && !notes.includes('ossa')) {
+    notes = (notes ? notes + ' · ' : '') + `Presenza scarti/ossa (lordo ~${visualGrams}g, edibile ~${edibleGrams}g)`;
+  }
+
   return {
     name: name.slice(0, 80),
     quantity: Math.round(quantity * 10) / 10,
     unit,
-    grams: Math.round(quantityToGrams(quantity, unit)),
+    grams,
+    estimatedGrams: grams,
+    minGrams,
+    maxGrams,
+    visualGrams,
+    edibleGrams,
+    hasNonEdibleParts,
+    pieceCount,
+    plateCoveragePercent,
     kcal,
     pro,
     carb,
     fat,
     confidence,
-    uncertain: confidence < MEAL_PHOTO_LOW_CONFIDENCE,
-    notes: String(raw?.notes || '').slice(0, 240),
+    quantityConfidence,
+    uncertain: isUncertain,
+    notes,
     provenance: raw?.provenance && typeof raw.provenance === 'object'
       ? raw.provenance
-      : { source: 'gemini_vision', kind: 'estimate', confidence, method: 'vision_estimate' }
+      : {
+        source: 'gemini_vision',
+        kind: 'estimate',
+        confidence,
+        quantityConfidence,
+        minGrams,
+        maxGrams,
+        edibleGrams,
+        method: 'vision_estimate'
+      }
   };
 }
 
@@ -272,9 +352,16 @@ export function mealPhotoItemsToFoods(items) {
       pro: it.pro,
       carb: it.carb,
       fat: it.fat,
+      minGrams: it.minGrams,
+      maxGrams: it.maxGrams,
+      quantityConfidence: it.quantityConfidence,
       notes: it.notes || (it.uncertain ? 'Stima visiva incerta — verifica quantità e kcal' : 'Stima da foto'),
       provenance: Object.assign({ source: 'gemini_vision', kind: 'estimate' }, it.provenance, {
         confidence: it.confidence,
+        quantityConfidence: it.quantityConfidence,
+        minGrams: it.minGrams,
+        maxGrams: it.maxGrams,
+        edibleGrams: it.edibleGrams,
         method: it.provenance?.method || 'vision_estimate'
       })
     }));
@@ -296,7 +383,17 @@ export function normalizeMealPhotoResult(raw, extras = {}) {
     || items.some((it) => it.uncertain);
   const warnings = [];
   if (noFoodDetected) warnings.push('Nessun alimento riconosciuto con sufficiente certezza.');
-  if (uncertain && items.length) warnings.push('Stima incerta: controlla quantità e calorie prima di salvare.');
+  if (uncertain && items.length) {
+    const hasUncertainQty = items.some((it) => it.quantityConfidence < MEAL_PHOTO_LOW_CONFIDENCE);
+    const hasBones = items.some((it) => it.hasNonEdibleParts);
+    if (hasBones) {
+      warnings.push('Alimenti con ossa/scarti rilevati: calorie e macro calcolati sulla porzione edibile netta.');
+    } else if (hasUncertainQty) {
+      warnings.push('Stima quantità incerta: controlla grammi e porzioni prima di confermare.');
+    } else {
+      warnings.push('Stima incerta: controlla quantità e calorie prima di salvare.');
+    }
+  }
   if (extras.dbEnrichFailed) warnings.push('Database alimenti non disponibile: kcal e macro restano una stima visiva.');
   return {
     ok: true,
@@ -317,30 +414,39 @@ export function normalizeMealPhotoResult(raw, extras = {}) {
 
 export function mockAnalyzeMealPhoto({ mealName } = {}) {
   return normalizeMealPhotoResult({
-    overallConfidence: 0.42,
+    overallConfidence: 0.48,
     notes: 'Stima mock — non è un riconoscimento reale. Usata solo in test / MOCK_GEMINI.',
     items: [
       {
-        name: 'Petto di pollo',
-        quantity: 150,
+        name: 'Petto di pollo ai ferri',
+        quantity: 220,
+        estimatedGrams: 220,
+        minGrams: 180,
+        maxGrams: 260,
         unit: 'g',
-        kcal: 248,
-        pro: 46.5,
+        kcal: 363,
+        pro: 68.2,
         carb: 0,
-        fat: 5.4,
-        confidence: 0.72,
-        notes: 'Stima visiva'
+        fat: 7.9,
+        confidence: 0.85,
+        quantityConfidence: 0.78,
+        pieceCount: 2,
+        notes: 'Stima visiva da 2 tranchi medi'
       },
       {
-        name: 'Riso bianco cotto',
-        quantity: 180,
+        name: 'Patate al forno',
+        quantity: 320,
+        estimatedGrams: 320,
+        minGrams: 250,
+        maxGrams: 400,
         unit: 'g',
-        kcal: 234,
-        pro: 4.8,
-        carb: 50,
-        fat: 0.4,
-        confidence: 0.4,
-        notes: 'Quantità incerta'
+        kcal: 416,
+        pro: 8,
+        carb: 70.4,
+        fat: 12.8,
+        confidence: 0.8,
+        quantityConfidence: 0.48,
+        notes: 'Porzione abbondante (~45% del piatto)'
       }
     ]
   }, { source: 'mock', mealName: mealName || 'Pranzo' });
@@ -383,9 +489,9 @@ export async function enrichMealPhotoItems(items, searchFn) {
       const found = await searchFn(item.name);
       const list = Array.isArray(found?.items) ? found.items : Array.isArray(found) ? found : [];
       const match = list.find((f) => namesLikelyMatch(item.name, f.name));
-      const grams = item.grams || quantityToGrams(item.quantity, item.unit);
-      if (match && grams > 0 && (match.kcalPer100 > 0 || match.kcal > 0)) {
-        const scaled = scaleDbMacros(match, grams);
+      const targetGrams = item.edibleGrams || item.grams || quantityToGrams(item.quantity, item.unit);
+      if (match && targetGrams > 0 && (match.kcalPer100 > 0 || match.kcal > 0)) {
+        const scaled = scaleDbMacros(match, targetGrams);
         usedDb = true;
         out.push(normalizeMealPhotoItem({
           ...item,
@@ -399,6 +505,10 @@ export async function enrichMealPhotoItems(items, searchFn) {
             sourceId: match.provenance?.sourceId || match.id || null,
             kind: match.provenance?.kind || 'generic',
             confidence: Math.min(item.confidence, match.provenance?.confidence || 0.75),
+            quantityConfidence: item.quantityConfidence,
+            minGrams: item.minGrams,
+            maxGrams: item.maxGrams,
+            edibleGrams: item.edibleGrams,
             method: 'vision_qty+db_macros',
             license: match.provenance?.license || null,
             attribution: match.provenance?.attribution || null
@@ -440,16 +550,72 @@ export function buildMealPhotoPrompt({ mealName, locale } = {}) {
   const lang = String(locale || 'it').toLowerCase().startsWith('en') ? 'en' : 'it';
   const slot = String(mealName || '').trim();
   return lang === 'en'
-    ? `You are a nutrition vision estimator for Nurvan. Identify visible foods in the photo.
-Return ONLY JSON matching the schema. Estimate cooked edible grams, kcal, protein, carbs, fats.
-If unsure, lower confidence instead of inventing hidden ingredients.
+    ? `You are an expert nutrition vision estimator for Nurvan. Analyze the photo and estimate all visible food portions realistically.
+Return ONLY JSON matching the schema.
+
+CRITICAL ESTIMATION & PORTION SIZING RULES:
+1. COMPLETE FOOD IDENTIFICATION (COMPOSITE DISHES):
+   - Identify ALL visible foods and condiments on the plate or container (eg. for chicken breast + roast potatoes + green salad + olive oil, output separate entries for each component).
+   - Do NOT merge distinct items into a single generic entry.
+
+2. AVOID SYSTEMATIC UNDERESTIMATION:
+   - Evaluate the physical scene: plate/container reference diameter (standard plate ~25-28cm, bowl ~16-20cm), surface coverage (eg. 50% of the plate), food thickness/height, and apparent density.
+   - Count pieces and their sizes (eg. 2 medium chicken fillets = ~250-320g, NOT a 100g single portion; a hearty mound of roast potatoes covering half a plate = ~300-450g, NOT 120g).
+   - Do NOT default to generic small diet portions (100g) when a generous portion is visible.
+
+3. UNCERTAINTY RANGE & DUAL CONFIDENCE:
+   - Provide "estimatedGrams" (best central estimate), "minGrams", and "maxGrams".
+   - Separate "confidence" (identity accuracy of the food) from "quantityConfidence" (accuracy of portion volume). If photo angle is ambiguous, set quantityConfidence lower.
+
+4. EDIBLE VS VISUAL WEIGHT (BONES / PEELS / SHELLS):
+   - For foods with bones (eg. chicken drumsticks, ribs, bone-in fish), shells, or peels, set "hasNonEdibleParts": true.
+   - Estimate both "visualGrams" (gross visible weight) and "edibleGrams" (net meat/edible part). Kcal/macros must be calculated on edibleGrams.
+
+5. DRESSINGS & UNVERIFIABLE CONDIMENTS:
+   - If cooking oil or sauce is visibly shining/pooling, estimate a plausible quantity (eg. 10-15g olive oil).
+   - If not verifiable, do not invent high arbitrary quantities; note uncertainty in "notes".
+
+6. REALISTIC ROUNDING (NO FALSE PRECISION):
+   - Round gram estimates to realistic increments (eg. 150g, 200g, 250g, 280g, 350g, not 247g).
+
+7. MACRONUTRIENT COHERENCE:
+   - Kcal, protein, carbs, and fats must be mathematically coherent with edibleGrams (kcal ≈ 4*pro + 4*carb + 9*fat).
+
 Meal slot hint: ${slot || 'unspecified'}.
 No medical diagnosis. If the image is not food, set noFoodDetected=true and items=[].`
-    : `Sei uno stimatore visivo di alimenti per Nurvan. Identifica i cibi visibili nella foto.
-Rispondi SOLO con JSON dello schema. Stima grammi edibili (cotti se sembra cotto), kcal, proteine, carboidrati, grassi.
-Se sei incerto, abbassa confidence: non inventare ingredienti non visibili.
+    : `Sei un esperto stimatore visivo di nutrizione per Nurvan. Analizza la foto e stima le porzioni di cibo in modo realistico.
+Rispondi SOLO con JSON conforme allo schema.
+
+REGOLE CRITICHE DI STIMA DELLE PORZIONI:
+1. IDENTIFICAZIONE COMPLETA DI TUTTI GLI ALIMENTI (PIATTI COMPOSTI):
+   - Identifica TUTTI i cibi e condimenti visibili nel piatto o contenitore (es. per piatti composti come pollo + patate al forno + insalata + olio EVO, crea voci separate per ciascun componente).
+   - Non raggruppare cibi diversi in una sola voce generica.
+
+2. EVITA LA SOTTOSTIMA SISTEMATICA:
+   - Valuta la geometria della scena: diametro di riferimento del piatto (piatto piano standard ~25-28cm, ciotola ~16-20cm), superficie occupata (es. 50% del piatto), spessore/altezza e densità apparente.
+   - Conta i pezzi e la loro dimensione (es. 2 petti di pollo medi sono ~250-320g, NON una porzione minima da 100g; un mucchio consistente di patate arrosto che copre metà piatto sono ~300-450g, NON 120g).
+   - NON assumere automaticamente porzioni minime standard da 100g se la porzione visibile è abbondante.
+
+3. RANGE DI INCERTEZZA E DOPPIA CONFIDENCE:
+   - Fornisci "estimatedGrams" (migliore stima centrale), "minGrams" e "maxGrams".
+   - Separa "confidence" (certezza sull'identità dell'alimento) da "quantityConfidence" (certezza sulla quantità/volume). Se l'angolazione è incerta, abbassa quantityConfidence.
+
+4. PESO EDIBILE VS PESO VISIVO (OSSA / SCARTI / BUCCE):
+   - Per cibi con ossa (es. cosche di pollo, costine, pesce con lische), gusci o bucce, imposta "hasNonEdibleParts": true.
+   - Stima sia "visualGrams" (peso lordo visibile) che "edibleGrams" (peso netto commestibile). Calcola kcal e macronutrienti SOLO sul peso edibile.
+
+5. CONDIMENTI E INGREDIENTI NASCOSTI:
+   - Se l'olio o il condimento è visibile (lucidità, fondo del piatto), stima una quantità plausibile (es. 10-15g olio EVO).
+   - Se non è verificabile, non inventare quantità arbitrarie enormi; segnala l'incertezza nelle note.
+
+6. ARROTONDAMENTO REALISTICO (NESSUNA FALSA PRECISIONE):
+   - Arrotonda i grammi a incrementi realistici (es. 150g, 200g, 250g, 280g, 350g, evitando numeri ingannevoli come 247g).
+
+7. COERENZA NUTRIZIONALE:
+   - Kcal, proteine, carboidrati e grassi devono essere matematicamente coerenti con i grammi edibili (kcal ≈ 4*pro + 4*carb + 9*fat).
+
 Pasto selezionato: ${slot || 'non specificato'}.
-Niente diagnosi mediche. Se la foto non è cibo, noFoodDetected=true e items=[].`;
+Niente diagnosi mediche. Se la foto non è cibo, imposta noFoodDetected=true e items=[].`;
 }
 
 export async function analyzeMealPhoto(input = {}, deps = {}) {

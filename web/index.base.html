@@ -11160,6 +11160,17 @@ function mealPhotoFoodsFromDraft() {
     const carb = parseFloat((row.querySelector('[data-f="carb"]') || {}).value);
     const fat = parseFloat((row.querySelector('[data-f="fat"]') || {}).value);
     const conf = parseFloat(row.getAttribute('data-confidence') || '0');
+    const qConf = parseFloat(row.getAttribute('data-quantity-confidence') || String(conf || 0.4));
+    const minG = parseFloat(row.getAttribute('data-min-grams') || '');
+    const maxG = parseFloat(row.getAttribute('data-max-grams') || '');
+    const edibleG = parseFloat(row.getAttribute('data-edible-grams') || '');
+    const hasWaste = row.getAttribute('data-has-waste') === '1';
+
+    let notes = (conf < 0.55 || qConf < 0.55) ? 'Stima visiva incerta — verifica quantità e kcal' : 'Stima da foto';
+    if (hasWaste) {
+      notes += ' · Ossa/scarti esclusi dal calcolo macro';
+    }
+
     foods.push({
       name: String(name).trim(),
       quantity: Number.isFinite(qty) ? qty : 100,
@@ -11168,11 +11179,18 @@ function mealPhotoFoodsFromDraft() {
       pro: Number.isFinite(pro) ? pro : 0,
       carb: Number.isFinite(carb) ? carb : 0,
       fat: Number.isFinite(fat) ? fat : 0,
-      notes: conf < 0.55 ? 'Stima visiva incerta — verifica quantità e kcal' : 'Stima da foto',
+      minGrams: Number.isFinite(minG) ? minG : null,
+      maxGrams: Number.isFinite(maxG) ? maxG : null,
+      quantityConfidence: Number.isFinite(qConf) ? qConf : conf,
+      notes: notes,
       provenance: {
         source: 'gemini_vision',
         kind: 'estimate',
         confidence: Number.isFinite(conf) ? conf : 0.4,
+        quantityConfidence: Number.isFinite(qConf) ? qConf : 0.4,
+        minGrams: Number.isFinite(minG) ? minG : null,
+        maxGrams: Number.isFinite(maxG) ? maxG : null,
+        edibleGrams: Number.isFinite(edibleG) ? edibleG : qty,
         method: 'vision_estimate'
       }
     });
@@ -11195,16 +11213,30 @@ function removeMealPhotoDraftRow(btn) {
 
 function mealPhotoDraftRowHtml(item) {
   const conf = Number(item.confidence);
-  const uncertain = item.uncertain || conf < 0.55;
+  const qConf = Number(Number.isFinite(Number(item.quantityConfidence)) ? item.quantityConfidence : conf);
+  const uncertain = item.uncertain || conf < 0.55 || qConf < 0.55;
+  const minG = item.minGrams != null ? item.minGrams : Math.round((item.quantity || 100) * 0.8);
+  const maxG = item.maxGrams != null ? item.maxGrams : Math.round((item.quantity || 100) * 1.2);
+  const hasWaste = Boolean(item.hasNonEdibleParts);
+  const visualG = item.visualGrams || item.quantity || 100;
+  const edibleG = item.edibleGrams || item.quantity || 100;
+
   const badge = uncertain
     ? '<span class="meal-photo-low" style="font-size:9px;font-weight:800;">INCERTO ' + Math.round((Number.isFinite(conf) ? conf : 0) * 100) + '%</span>'
     : '<span style="font-size:9px;color:#8c8;">' + Math.round((Number.isFinite(conf) ? conf : 0) * 100) + '%</span>';
+
+  const rangeBadge = '<span style="font-size:9px;color:#bbb;background:#222;padding:2px 5px;border-radius:4px;border:1px solid #333;">Range: ' + minG + '–' + maxG + 'g</span>';
+  const wasteBadge = hasWaste
+    ? '<span style="font-size:9px;color:#fa8;background:#2b1a10;padding:2px 5px;border-radius:4px;border:1px solid #842;">⚖ Scarti esclusi (lordo ~' + visualG + 'g)</span>'
+    : '';
+
   return '' +
-    '<div data-meal-photo-row data-confidence="' + (Number.isFinite(conf) ? conf : 0.3) + '" style="margin-bottom:8px;padding:8px;background:#121212;border:1px solid #2a2a2a;border-radius:8px;">' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">' +
+    '<div data-meal-photo-row data-confidence="' + (Number.isFinite(conf) ? conf : 0.3) + '" data-quantity-confidence="' + (Number.isFinite(qConf) ? qConf : 0.3) + '" data-min-grams="' + minG + '" data-max-grams="' + maxG + '" data-visual-grams="' + visualG + '" data-edible-grams="' + edibleG + '" data-has-waste="' + (hasWaste ? '1' : '0') + '" style="margin-bottom:8px;padding:8px;background:#121212;border:1px solid #2a2a2a;border-radius:8px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">' +
     '<input data-f="name" type="text" value="' + esc(item.name || '') + '" placeholder="Alimento" style="flex:1;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;">' +
-    badge +
-    '<button type="button" class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:#c66;" onclick="removeMealPhotoDraftRow(this)">✕</button></div>' +
+    '<div style="display:flex;align-items:center;gap:4px;">' + badge +
+    '<button type="button" class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:#c66;" onclick="removeMealPhotoDraftRow(this)">╕</button></div></div>' +
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">' + rangeBadge + wasteBadge + '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:4px;">' +
     '<label style="font-size:9px;color:#888;">Qty<input data-f="qty" type="number" value="' + esc(item.quantity != null ? item.quantity : 100) + '" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
     '<label style="font-size:9px;color:#888;">Unità<select data-f="unit" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">' +

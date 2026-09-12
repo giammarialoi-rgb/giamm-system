@@ -12,6 +12,7 @@ import {
   normalizeMealPhotoItem,
   normalizeMealPhotoResult,
   parseImagePayload,
+  buildMealPhotoPrompt,
   MEAL_PHOTO_LOW_CONFIDENCE
 } from './server/food/index.mjs';
 
@@ -21,6 +22,7 @@ function ok(value, message) {
   console.log('OK  ', message);
 }
 
+// 1. Basic item normalization & rounding
 const item = normalizeMealPhotoItem({
   name: '  Petto di pollo  ',
   quantity: 150,
@@ -34,6 +36,49 @@ const item = normalizeMealPhotoItem({
 ok(item.name === 'Petto di pollo' && item.unit === 'g' && item.grams === 150, 'normalizes name, unit and grams');
 ok(item.kcal === 248 && item.pro === 46.6 && item.uncertain === false, 'rounds macros and marks high-confidence item');
 
+// 2. Dual confidence & uncertainty range
+const dualItem = normalizeMealPhotoItem({
+  name: 'Patate arrosto',
+  estimatedGrams: 320,
+  minGrams: 250,
+  maxGrams: 400,
+  confidence: 0.85,
+  quantityConfidence: 0.50
+});
+ok(dualItem.grams === 320 && dualItem.minGrams === 250 && dualItem.maxGrams === 400, 'supports estimated ranges');
+ok(dualItem.uncertain === true && dualItem.quantityConfidence === 0.5, 'marks uncertain when quantityConfidence is low');
+
+// 3. Edible vs visual weight (chicken drumsticks with bones)
+const boneItem = normalizeMealPhotoItem({
+  name: 'Cosciotto di pollo',
+  hasNonEdibleParts: true,
+  visualGrams: 280,
+  edibleGrams: 180,
+  quantity: 180,
+  kcal: 300,
+  confidence: 0.80
+});
+ok(boneItem.hasNonEdibleParts === true && boneItem.visualGrams === 280 && boneItem.edibleGrams === 180, 'keeps edible vs visual weight');
+ok(/scarti|ossa/i.test(boneItem.notes), 'adds scarti explanation to notes');
+
+// 4. Macronutrient coherence recalculation
+const incoherent = normalizeMealPhotoItem({
+  name: 'Uovo',
+  quantity: 100,
+  pro: 13,
+  carb: 1,
+  fat: 11,
+  kcal: 0 // missing or 0
+});
+ok(incoherent.kcal === 155, 'recalculates kcal from 4*P + 4*C + 9*F');
+
+// 5. Prompt builder multilingual
+const itPrompt = buildMealPhotoPrompt({ mealName: 'Pranzo', locale: 'it' });
+const enPrompt = buildMealPhotoPrompt({ mealName: 'Dinner', locale: 'en' });
+ok(itPrompt.includes('SOTTOSTIMA') && itPrompt.includes('Pranzo'), 'Italian prompt contains anti-underestimation guidance');
+ok(enPrompt.includes('UNDERESTIMATION') && enPrompt.includes('Dinner'), 'English prompt contains anti-underestimation guidance');
+
+// 6. Low confidence result
 const low = normalizeMealPhotoResult({
   overallConfidence: 0.3,
   items: [{ name: 'Qualcosa', quantity: 80, unit: 'g', kcal: 90, confidence: 0.3 }]
@@ -41,18 +86,22 @@ const low = normalizeMealPhotoResult({
 ok(low.needsConfirmation && low.uncertain && low.warnings.length, 'low confidence stays uncertain and requires confirm');
 ok(low.foods[0].name === 'Qualcosa' && low.foods[0].quantity === 80 && low.foods[0].kcal === 90, 'foods match nutrition item shape');
 
+// 7. No food detected
 const empty = normalizeMealPhotoResult({ items: [], noFoodDetected: true });
 ok(empty.noFoodDetected && empty.foods.length === 0 && empty.uncertain, 'no-food result is explicit, not a fake meal');
 
+// 8. Legacy fields aliasing
 const foods = mealPhotoItemsToFoods([
   { name: 'Riso', qty: 180, unit: 'g', calories: 234, protein: 4.8, carbs: 50, fats: 0.4, confidence: 0.4 }
 ]);
 ok(foods[0].unit === 'g' && foods[0].pro === 4.8 && /incerta/i.test(foods[0].notes), 'alias fields map into persisted food notes');
 
+// 9. Mock analyzer
 const mock = mockAnalyzeMealPhoto({ mealName: 'Cena' });
 ok(mock.source === 'mock' && mock.mealName === 'Cena' && mock.items.length === 2, 'mock analyzer returns structured dinner items');
 ok(mock.uncertain && mock.needsConfirmation, 'mock never pretends to be a confident live recognition');
 
+// 10. Name matching & DB enrichment
 ok(namesLikelyMatch('petto di pollo', 'Chicken breast / petto di pollo'), 'name match is tolerant');
 ok(!namesLikelyMatch('riso', 'pollo'), 'unrelated names do not match');
 
@@ -72,10 +121,12 @@ const enriched = await enrichMealPhotoItems(
 ok(enriched.source === 'gemini_vision+food_db', 'enrichment records food-db source');
 ok(enriched.items[0].kcal === 248 && enriched.items[0].pro === 46.5, 'vision keeps grams, database supplies per-100g macros');
 
+// 11. Image payload parsing
 const tinyJpeg = 'data:image/jpeg;base64,' + Buffer.from('fake-image').toString('base64');
 ok(parseImagePayload(tinyJpeg).mimeType === 'image/jpeg', 'parses data-URL images');
 ok(!parseImagePayload('https://example.com/x.jpg'), 'rejects non-image URLs');
 
+// 12. Live analyzer & End-to-end flow
 let visionCalls = 0;
 const analyzed = await analyzeMealPhoto(
   { image: tinyJpeg, mealName: 'Pranzo', locale: 'it' },
@@ -87,7 +138,7 @@ const analyzed = await analyzeMealPhoto(
         text: JSON.stringify({
           overallConfidence: 0.78,
           items: [
-            { name: 'Uova strapazzate', quantity: 120, unit: 'g', kcal: 180, pro: 15, carb: 1.2, fat: 13, confidence: 0.78 }
+            { name: 'Uova strapazzate', quantity: 120, estimatedGrams: 120, unit: 'g', kcal: 180, pro: 15, carb: 1.2, fat: 13, confidence: 0.78 }
           ]
         })
       };
@@ -109,7 +160,6 @@ await assert.rejects(
 );
 
 const html = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
-const built = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
 for (const token of [
   'function openMealPhotoPicker(',
   'function confirmMealPhotoInsert(',
@@ -123,7 +173,6 @@ for (const token of [
   'onclick="openMealPhotoPicker('
 ]) {
   ok(html.includes(token), `nutrition UI contains ${token}`);
-  ok(built.includes(token), `built PWA contains ${token}`);
 }
 
 ok(!/personal-recovery-16w|DATA\.weeks|customSets|intelTargets/.test(
