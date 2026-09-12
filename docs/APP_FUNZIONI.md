@@ -134,6 +134,7 @@ Senza scheda:
 - Filtro allergie / intolleranze (catalogo UE + frasi safe).
 - Salva modifiche (sync upload-only, non rimpiazza il locale).
 - Atleta: genera / aggiungi giorno solo se il coach ha dato **massima libertà**.
+- **Azzera alimentazione**: cancella solo piano/cibi (stesso `emptyDomainShell` di CANCELLA cliente), con conferma. Non tocca allenamento, carichi, integrazione, terapia, esami. Atleta senza libertà: pulsante nascosto.
 
 ---
 
@@ -361,7 +362,7 @@ Senza scheda:
 | Home | Avvia seduta, programmi/chat, moduli, attiva/elimina schede, reset |
 | Allenamento | Log serie, timer, bonus, sostituzione, PDF, massimale, finalizza |
 | Stats | Grafici, muscoli, check fisico, PDF, cronologia |
-| Alimentazione | Piano, cibi, barcode, foto pasto, wizard, allergie, salva |
+| Alimentazione | Piano, cibi, barcode, foto pasto, wizard, allergie, salva, azzera |
 | Integrazione | Elenco, wizard, evidenze, barcode |
 | Terapia | Farmaci, alert |
 | Esami | Import, PDF richiesta, record, reminder |
