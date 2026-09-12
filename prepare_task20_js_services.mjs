@@ -158,6 +158,11 @@ const I18nService = {
       emptyNutrition: "Nessun piano alimentare. Importa una scheda o aggiungi un giorno.",
       scanBarcode: "Scansiona barcode",
       searchBarcode: "Cerca",
+      photoMeal: "Foto pasto",
+      photoMealHint: "Scatta o carica una foto: l’AI stima alimenti, grammi e kcal. Devi confermare prima di inserire.",
+      photoMealCapture: "Scatta foto",
+      photoMealUpload: "Carica foto",
+      photoMealConfirm: "Inserisci nel pasto",
       timing: "Timing",
       dose: "Dose",
       drug: "Farmaco",
@@ -256,6 +261,11 @@ const I18nService = {
       emptyNutrition: "No meal plan yet. Import a file or add a day.",
       scanBarcode: "Scan barcode",
       searchBarcode: "Search",
+      photoMeal: "Meal photo",
+      photoMealHint: "Take or upload a photo: AI estimates foods, grams and kcal. Confirm before inserting.",
+      photoMealCapture: "Take photo",
+      photoMealUpload: "Upload photo",
+      photoMealConfirm: "Add to meal",
       timing: "Timing",
       dose: "Dose",
       drug: "Medication",
@@ -341,6 +351,11 @@ const I18nService = {
       importTherapy: "Importar terapia",
       emptyNutrition: "Sin plan alimentario. Importa un archivo o añade un día.",
       scanBarcode: "Escanear código",
+      photoMeal: "Foto de comida",
+      photoMealHint: "Haz o sube una foto: la IA estima alimentos, gramos y kcal. Confirma antes de insertar.",
+      photoMealCapture: "Hacer foto",
+      photoMealUpload: "Subir foto",
+      photoMealConfirm: "Añadir a la comida",
       searchBarcode: "Buscar",
       timing: "Momento",
       dose: "Dosis",
@@ -427,6 +442,11 @@ const I18nService = {
       importTherapy: "Importer thérapie",
       emptyNutrition: "Aucun plan alimentaire. Importez un fichier ou ajoutez un jour.",
       scanBarcode: "Scanner le code-barres",
+      photoMeal: "Photo repas",
+      photoMealHint: "Prenez ou importez une photo : l’IA estime aliments, grammes et kcal. Confirmez avant d’insérer.",
+      photoMealCapture: "Prendre une photo",
+      photoMealUpload: "Importer une photo",
+      photoMealConfirm: "Ajouter au repas",
       searchBarcode: "Chercher",
       timing: "Timing",
       dose: "Dose",
@@ -513,6 +533,11 @@ const I18nService = {
       importTherapy: "Therapie importieren",
       emptyNutrition: "Kein Ernährungsplan. Datei importieren oder Tag hinzufügen.",
       scanBarcode: "Barcode scannen",
+      photoMeal: "Mahlzeitfoto",
+      photoMealHint: "Foto aufnehmen oder laden: KI schätzt Lebensmittel, Gramm und kcal. Vor dem Einfügen bestätigen.",
+      photoMealCapture: "Foto aufnehmen",
+      photoMealUpload: "Foto laden",
+      photoMealConfirm: "Zur Mahlzeit hinzufügen",
       searchBarcode: "Suchen",
       timing: "Zeitpunkt",
       dose: "Dosis",
@@ -536,6 +561,7 @@ const I18nService = {
       addDay: "Adicionar dia", importNutrition: "Importar alimentação", importSupplements: "Importar suplementação",
       importTherapy: "Importar terapia", emptyNutrition: "Sem plano alimentar. Importe um ficheiro ou adicione um dia.",
       scanBarcode: "Ler código de barras", searchBarcode: "Pesquisar",
+      photoMeal: "Foto da refeição", photoMealCapture: "Tirar foto", photoMealUpload: "Carregar foto",
       navHome: "Home", navWorkout: "Treino", navPerf: "Stats", navCoach: "Coach", menu: "Menu"
     },
     ru: {
@@ -545,6 +571,7 @@ const I18nService = {
       addDay: "Добавить день", importNutrition: "Импорт питания", importSupplements: "Импорт добавок",
       importTherapy: "Импорт терапии", emptyNutrition: "Нет плана питания. Импортируйте файл или добавьте день.",
       scanBarcode: "Сканировать штрихкод", searchBarcode: "Поиск",
+      photoMeal: "Фото еды", photoMealCapture: "Снять фото", photoMealUpload: "Загрузить фото",
       navHome: "Home", navWorkout: "Тренировка", navPerf: "Статистика", navCoach: "Coach", menu: "Меню"
     },
     zh: {
@@ -553,7 +580,8 @@ const I18nService = {
       coachAI: "AI 教练", database: "数据库", settings: "设置", importProgram: "导入计划",
       addDay: "添加日", importNutrition: "导入饮食", importSupplements: "导入补剂",
       importTherapy: "导入治疗", emptyNutrition: "暂无饮食计划。请导入文件或添加一天。",
-      scanBarcode: "扫描条码", searchBarcode: "搜索"
+      scanBarcode: "扫描条码", searchBarcode: "搜索",
+      photoMeal: "餐食照片", photoMealCapture: "拍照", photoMealUpload: "上传照片"
     },
     ar: {
       appName: "NURVAN", dashboard: "لوحة النظام", home: "لوحة النظام",
@@ -561,7 +589,8 @@ const I18nService = {
       coachAI: "مدرب AI", database: "قاعدة البيانات", settings: "الإعدادات", importProgram: "استيراد البرنامج",
       addDay: "إضافة يوم", importNutrition: "استيراد التغذية", importSupplements: "استيراد المكملات",
       importTherapy: "استيراد العلاج", emptyNutrition: "لا توجد خطة غذائية. استورد ملفاً أو أضف يوماً.",
-      scanBarcode: "مسح الباركود", searchBarcode: "بحث"
+      scanBarcode: "مسح الباركود", searchBarcode: "بحث",
+      photoMeal: "صورة الوجبة", photoMealCapture: "التقاط صورة", photoMealUpload: "تحميل صورة"
     },
     hi: {
       appName: "NURVAN", dashboard: "सिस्टम डैशबोर्ड", home: "सिस्टम डैशबोर्ड",
@@ -569,7 +598,8 @@ const I18nService = {
       coachAI: "कोच AI", database: "डेटाबेस", settings: "सेटिंग्स", importProgram: "प्रोग्राम आयात",
       addDay: "दिन जोड़ें", importNutrition: "पोषण आयात", importSupplements: "सप्लीमेंट आयात",
       importTherapy: "थेरेपी आयात", emptyNutrition: "कोई भोजन योजना नहीं। फ़ाइल आयात करें या दिन जोड़ें।",
-      scanBarcode: "बारकोड स्कैन", searchBarcode: "खोजें"
+      scanBarcode: "बारकोड स्कैन", searchBarcode: "खोजें",
+      photoMeal: "भोजन फोटो", photoMealCapture: "फोटो लें", photoMealUpload: "फोटो अपलोड"
     }
   },
 

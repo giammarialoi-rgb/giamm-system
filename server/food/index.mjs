@@ -161,7 +161,349 @@ export async function searchFoodMulti(query, env = process.env) {
   };
 }
 
-export function mountFoodRoutes(app, { requireAuth } = {}) {
+export const MEAL_PHOTO_LOW_CONFIDENCE = 0.55;
+export const MEAL_PHOTO_MAX_IMAGE_BYTES = 6 * 1024 * 1024;
+
+export const MEAL_PHOTO_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    overallConfidence: { type: 'number' },
+    notes: { type: 'string' },
+    noFoodDetected: { type: 'boolean' },
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          quantity: { type: 'number' },
+          unit: { type: 'string' },
+          kcal: { type: 'number' },
+          pro: { type: 'number' },
+          carb: { type: 'number' },
+          fat: { type: 'number' },
+          confidence: { type: 'number' },
+          notes: { type: 'string' }
+        },
+        required: ['name', 'quantity', 'unit', 'kcal', 'confidence']
+      }
+    }
+  },
+  required: ['items', 'overallConfidence']
+};
+
+export function parseImagePayload(raw, mimeHint) {
+  const source = String(raw || '').trim();
+  if (!source) return null;
+  const dataUrl = source.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/);
+  if (dataUrl) {
+    const data = dataUrl[2].replace(/\s/g, '');
+    return { mimeType: dataUrl[1], data, bytes: Math.floor(data.length * 0.75) };
+  }
+  if (/^[A-Za-z0-9+/=\s]+$/.test(source) && source.replace(/\s/g, '').length > 80) {
+    const data = source.replace(/\s/g, '');
+    const mime = typeof mimeHint === 'string' && mimeHint.startsWith('image/') ? mimeHint : 'image/jpeg';
+    return { mimeType: mime, data, bytes: Math.floor(data.length * 0.75) };
+  }
+  return null;
+}
+
+function clampNum(value, min, max, fallback = 0) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+function normalizeUnit(unit) {
+  const u = fold(unit);
+  if (u === 'ml' || u === 'millilitri') return 'ml';
+  if (u === 'porzione' || u === 'porzioni' || u === 'portion' || u === 'portions' || u === 'serving') return 'porzioni';
+  if (u === 'cucchiaio' || u === 'cucchiai' || u === 'tbsp') return 'cucchiai';
+  if (u === 'scoop' || u === 'misurino' || u === 'misurini') return 'misurini';
+  return 'g';
+}
+
+function quantityToGrams(quantity, unit) {
+  const qty = clampNum(quantity, 0, 5000, 0);
+  const u = normalizeUnit(unit);
+  if (u === 'porzioni') return qty * 100;
+  if (u === 'cucchiai') return qty * 15;
+  if (u === 'misurini') return qty * 30;
+  return qty;
+}
+
+export function normalizeMealPhotoItem(raw) {
+  const name = String(raw?.name || raw?.food || '').replace(/\s+/g, ' ').trim();
+  if (!name) return null;
+  const unit = normalizeUnit(raw?.unit);
+  const quantity = clampNum(raw?.quantity ?? raw?.qty ?? raw?.grams, 0, 5000, 0);
+  const confidence = clampNum(raw?.confidence, 0, 1, 0.35);
+  const kcal = Math.round(clampNum(raw?.kcal ?? raw?.calories, 0, 4000, 0));
+  const pro = Math.round(clampNum(raw?.pro ?? raw?.protein, 0, 400, 0) * 10) / 10;
+  const carb = Math.round(clampNum(raw?.carb ?? raw?.carbs, 0, 500, 0) * 10) / 10;
+  const fat = Math.round(clampNum(raw?.fat ?? raw?.fats, 0, 300, 0) * 10) / 10;
+  return {
+    name: name.slice(0, 80),
+    quantity: Math.round(quantity * 10) / 10,
+    unit,
+    grams: Math.round(quantityToGrams(quantity, unit)),
+    kcal,
+    pro,
+    carb,
+    fat,
+    confidence,
+    uncertain: confidence < MEAL_PHOTO_LOW_CONFIDENCE,
+    notes: String(raw?.notes || '').slice(0, 240),
+    provenance: raw?.provenance && typeof raw.provenance === 'object'
+      ? raw.provenance
+      : { source: 'gemini_vision', kind: 'estimate', confidence, method: 'vision_estimate' }
+  };
+}
+
+export function mealPhotoItemsToFoods(items) {
+  return (Array.isArray(items) ? items : [])
+    .map((it) => normalizeMealPhotoItem(it))
+    .filter(Boolean)
+    .map((it) => ({
+      name: it.name,
+      quantity: it.quantity,
+      unit: it.unit,
+      kcal: it.kcal,
+      pro: it.pro,
+      carb: it.carb,
+      fat: it.fat,
+      notes: it.notes || (it.uncertain ? 'Stima visiva incerta — verifica quantità e kcal' : 'Stima da foto'),
+      provenance: Object.assign({ source: 'gemini_vision', kind: 'estimate' }, it.provenance, {
+        confidence: it.confidence,
+        method: it.provenance?.method || 'vision_estimate'
+      })
+    }));
+}
+
+export function normalizeMealPhotoResult(raw, extras = {}) {
+  const items = (Array.isArray(raw?.items) ? raw.items : [])
+    .map((it) => normalizeMealPhotoItem(it))
+    .filter(Boolean)
+    .slice(0, 12);
+  const explicit = Number(raw?.overallConfidence);
+  const fromItems = items.length
+    ? items.reduce((sum, it) => sum + it.confidence, 0) / items.length
+    : 0;
+  const overallConfidence = clampNum(Number.isFinite(explicit) ? explicit : fromItems, 0, 1, fromItems);
+  const noFoodDetected = raw?.noFoodDetected === true || items.length === 0;
+  const uncertain = noFoodDetected
+    || overallConfidence < MEAL_PHOTO_LOW_CONFIDENCE
+    || items.some((it) => it.uncertain);
+  const warnings = [];
+  if (noFoodDetected) warnings.push('Nessun alimento riconosciuto con sufficiente certezza.');
+  if (uncertain && items.length) warnings.push('Stima incerta: controlla quantità e calorie prima di salvare.');
+  if (extras.dbEnrichFailed) warnings.push('Database alimenti non disponibile: kcal e macro restano una stima visiva.');
+  return {
+    ok: true,
+    domain: 'nutrition',
+    mealName: extras.mealName || raw?.mealName || null,
+    items,
+    foods: mealPhotoItemsToFoods(items),
+    overallConfidence: Math.round(overallConfidence * 100) / 100,
+    uncertain,
+    needsConfirmation: true,
+    noFoodDetected,
+    notes: String(raw?.notes || extras.notes || '').slice(0, 400),
+    warnings,
+    source: extras.source || 'gemini_vision',
+    diagnosis: false
+  };
+}
+
+export function mockAnalyzeMealPhoto({ mealName } = {}) {
+  return normalizeMealPhotoResult({
+    overallConfidence: 0.42,
+    notes: 'Stima mock — non è un riconoscimento reale. Usata solo in test / MOCK_GEMINI.',
+    items: [
+      {
+        name: 'Petto di pollo',
+        quantity: 150,
+        unit: 'g',
+        kcal: 248,
+        pro: 46.5,
+        carb: 0,
+        fat: 5.4,
+        confidence: 0.72,
+        notes: 'Stima visiva'
+      },
+      {
+        name: 'Riso bianco cotto',
+        quantity: 180,
+        unit: 'g',
+        kcal: 234,
+        pro: 4.8,
+        carb: 50,
+        fat: 0.4,
+        confidence: 0.4,
+        notes: 'Quantità incerta'
+      }
+    ]
+  }, { source: 'mock', mealName: mealName || 'Pranzo' });
+}
+
+export function namesLikelyMatch(a, b) {
+  const left = fold(a);
+  const right = fold(b);
+  if (!left || !right) return false;
+  if (left === right) return true;
+  if (left.length >= 4 && right.includes(left)) return true;
+  if (right.length >= 4 && left.includes(right)) return true;
+  const tokens = left.split(/\s+/).filter((t) => t.length >= 4);
+  return tokens.length > 0 && tokens.every((t) => right.includes(t));
+}
+
+function scaleDbMacros(food, grams) {
+  const ratio = (Number(grams) || 0) / 100;
+  const kcal = food.kcalPer100 != null ? food.kcalPer100 : food.kcal;
+  const pro = food.proPer100 != null ? food.proPer100 : food.pro;
+  const carb = food.carbPer100 != null ? food.carbPer100 : food.carb;
+  const fat = food.fatPer100 != null ? food.fatPer100 : food.fat;
+  return {
+    kcal: Math.round((Number(kcal) || 0) * ratio),
+    pro: Math.round((Number(pro) || 0) * ratio * 10) / 10,
+    carb: Math.round((Number(carb) || 0) * ratio * 10) / 10,
+    fat: Math.round((Number(fat) || 0) * ratio * 10) / 10
+  };
+}
+
+export async function enrichMealPhotoItems(items, searchFn) {
+  if (!items.length || typeof searchFn !== 'function') {
+    return { items, dbEnrichFailed: false, source: 'gemini_vision' };
+  }
+  let usedDb = false;
+  let dbEnrichFailed = false;
+  const out = [];
+  for (const item of items) {
+    try {
+      const found = await searchFn(item.name);
+      const list = Array.isArray(found?.items) ? found.items : Array.isArray(found) ? found : [];
+      const match = list.find((f) => namesLikelyMatch(item.name, f.name));
+      const grams = item.grams || quantityToGrams(item.quantity, item.unit);
+      if (match && grams > 0 && (match.kcalPer100 > 0 || match.kcal > 0)) {
+        const scaled = scaleDbMacros(match, grams);
+        usedDb = true;
+        out.push(normalizeMealPhotoItem({
+          ...item,
+          kcal: scaled.kcal,
+          pro: scaled.pro,
+          carb: scaled.carb,
+          fat: scaled.fat,
+          notes: item.notes,
+          provenance: {
+            source: match.provenance?.source || 'food_db',
+            sourceId: match.provenance?.sourceId || match.id || null,
+            kind: match.provenance?.kind || 'generic',
+            confidence: Math.min(item.confidence, match.provenance?.confidence || 0.75),
+            method: 'vision_qty+db_macros',
+            license: match.provenance?.license || null,
+            attribution: match.provenance?.attribution || null
+          }
+        }));
+        continue;
+      }
+    } catch (_) {
+      dbEnrichFailed = true;
+    }
+    out.push(item);
+  }
+  return {
+    items: out,
+    dbEnrichFailed,
+    source: usedDb ? 'gemini_vision+food_db' : 'gemini_vision'
+  };
+}
+
+function extractJsonObject(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (_) {}
+  const fence = raw.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/i);
+  if (fence) {
+    try { return JSON.parse(fence[1]); } catch (_) {}
+  }
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    try { return JSON.parse(raw.slice(start, end + 1)); } catch (_) {}
+  }
+  return null;
+}
+
+export function buildMealPhotoPrompt({ mealName, locale } = {}) {
+  const lang = String(locale || 'it').toLowerCase().startsWith('en') ? 'en' : 'it';
+  const slot = String(mealName || '').trim();
+  return lang === 'en'
+    ? `You are a nutrition vision estimator for Nurvan. Identify visible foods in the photo.
+Return ONLY JSON matching the schema. Estimate cooked edible grams, kcal, protein, carbs, fats.
+If unsure, lower confidence instead of inventing hidden ingredients.
+Meal slot hint: ${slot || 'unspecified'}.
+No medical diagnosis. If the image is not food, set noFoodDetected=true and items=[].`
+    : `Sei uno stimatore visivo di alimenti per Nurvan. Identifica i cibi visibili nella foto.
+Rispondi SOLO con JSON dello schema. Stima grammi edibili (cotti se sembra cotto), kcal, proteine, carboidrati, grassi.
+Se sei incerto, abbassa confidence: non inventare ingredienti non visibili.
+Pasto selezionato: ${slot || 'non specificato'}.
+Niente diagnosi mediche. Se la foto non è cibo, noFoodDetected=true e items=[].`;
+}
+
+export async function analyzeMealPhoto(input = {}, deps = {}) {
+  const env = deps.env || process.env;
+  const mealName = String(input.mealName || input.meal || '').slice(0, 60);
+  const locale = String(input.locale || 'it').slice(0, 8);
+  if (env.MOCK_GEMINI === '1' || deps.forceMock) {
+    return mockAnalyzeMealPhoto({ mealName });
+  }
+  const image = parseImagePayload(input.image || input.dataUrl || input.data, input.mimeType || input.mime);
+  if (!image) {
+    const err = new Error('image_required');
+    err.statusCode = 400;
+    throw err;
+  }
+  if (image.bytes > MEAL_PHOTO_MAX_IMAGE_BYTES) {
+    const err = new Error('image_too_large');
+    err.statusCode = 413;
+    throw err;
+  }
+  if (typeof deps.generateVision !== 'function') {
+    const err = new Error('vision_not_configured');
+    err.statusCode = 503;
+    throw err;
+  }
+  const prompt = buildMealPhotoPrompt({ mealName, locale });
+  const vision = await deps.generateVision({
+    prompt,
+    image,
+    schema: MEAL_PHOTO_RESPONSE_SCHEMA
+  });
+  const parsed = extractJsonObject(vision && vision.text);
+  if (!parsed) {
+    const err = new Error('invalid_vision_json');
+    err.statusCode = 500;
+    throw err;
+  }
+  const searchFn = deps.searchFoods || ((q) => searchFoodMulti(q, env));
+  let normalized = normalizeMealPhotoResult(parsed, { mealName, source: 'gemini_vision' });
+  const enriched = await enrichMealPhotoItems(normalized.items, searchFn);
+  normalized = normalizeMealPhotoResult({
+    items: enriched.items,
+    overallConfidence: normalized.overallConfidence,
+    notes: normalized.notes,
+    noFoodDetected: normalized.noFoodDetected
+  }, {
+    mealName,
+    source: enriched.source,
+    dbEnrichFailed: enriched.dbEnrichFailed
+  });
+  return normalized;
+}
+
+export function mountFoodRoutes(app, { requireAuth, generateVision, env } = {}) {
   app.get('/api/food/search', async (req, res) => {
     try {
       if (requireAuth) {
@@ -183,6 +525,26 @@ export function mountFoodRoutes(app, { requireAuth } = {}) {
       return res.json({ ok: true, item, attribution: item.provenance?.attribution });
     } catch (err) {
       return res.status(500).json({ ok: false, error: err.message || 'barcode_failed' });
+    }
+  });
+
+  app.post('/api/food/analyze-photo', async (req, res) => {
+    try {
+      const result = await analyzeMealPhoto(req.body || {}, {
+        generateVision,
+        env: env || process.env
+      });
+      return res.json(result);
+    } catch (err) {
+      const status = err.statusCode || (/image_required|image_too_large/i.test(err.message) ? 400 : 500);
+      return res.status(status).json({
+        ok: false,
+        error: err.message || 'meal_photo_failed',
+        needsConfirmation: true,
+        uncertain: true,
+        items: [],
+        foods: []
+      });
     }
   });
 }
