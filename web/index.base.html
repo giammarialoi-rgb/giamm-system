@@ -10530,6 +10530,85 @@ function athleteDomainActionButtonsHtml(domain, opts) {
     '<button class="btn btn-outline" style="' + btn + 'border-color:var(--gold);color:var(--gold);" onclick="requestAthleteGenerateFreedom(\'' + askDomain + '\')">CHIEDI LIBERTÀ DI GENERARE</button>';
 }
 
+function canClearPersonalNutrition() {
+  if (typeof store !== 'undefined' && store && (store.coachViewingClient || store.coachAssigning)) return false;
+  if (typeof athleteCanSelfGeneratePlans === 'function' && !athleteCanSelfGeneratePlans()) return false;
+  return true;
+}
+
+function personalNutritionClearButtonHtml(opts) {
+  opts = opts || {};
+  if (!canClearPersonalNutrition()) return '';
+  const compact = opts.compact !== false;
+  const btn = compact ? 'font-size:10px;padding:6px 10px;' : 'font-size:11px;padding:8px 14px;';
+  const label = (typeof t === 'function' && t('clearNutrition')) ? t('clearNutrition') : 'Azzera alimentazione';
+  return '<button type="button" class="btn btn-outline" data-clear-domain="nutrition" style="' + btn + 'border-color:var(--accent-red);color:var(--accent-red);" onclick="clearPersonalNutrition()">' + esc(label) + '</button>';
+}
+
+function applyPersonalNutritionClear(ctx) {
+  ctx = ctx || {};
+  const data = ctx.DATA;
+  const storeObj = ctx.store;
+  const empty = (typeof emptyDomainShell === 'function')
+    ? emptyDomainShell('nutrition')
+    : {
+      plan_name: '',
+      present: false,
+      days: [],
+      daily_calories_target: null,
+      daily_protein_target: null,
+      daily_carbs_target: null,
+      daily_fats_target: null,
+      cleared: true,
+      clearedAt: new Date().toISOString()
+    };
+  if (data) data.nutrition = empty;
+  if (storeObj) {
+    storeObj.nutrition = empty;
+    storeObj.__cpNutritionDirty = true;
+    storeObj.__cpKeepLocalNutrition = true;
+    storeObj.nutritionDaily = {};
+  }
+  return empty;
+}
+
+async function clearPersonalNutrition() {
+  if (typeof store !== 'undefined' && store && store.coachViewingClient && typeof clearCoachClientDomain === 'function') {
+    return clearCoachClientDomain('nutrition');
+  }
+  if (!canClearPersonalNutrition()) {
+    if (typeof showToast === 'function') {
+      showToast((typeof t === 'function' && t('clearNutritionLocked')) || 'Per azzerare serve la massima libertà del coach. Puoi importare o chiedere al coach.', 'warning');
+    }
+    return;
+  }
+  const confirmMsg = (typeof t === 'function' && t('clearNutritionConfirm'))
+    ? t('clearNutritionConfirm')
+    : 'Azzerare l’alimentazione? Il piano e i cibi verranno cancellati. Allenamento, integrazione, terapia ed esami restano intatti.';
+  if (!confirm(confirmMsg)) return;
+  try {
+    applyPersonalNutritionClear({
+      DATA: (typeof DATA !== 'undefined') ? DATA : null,
+      store: (typeof store !== 'undefined') ? store : null
+    });
+    if (typeof currentNutritionDayIndex !== 'undefined') currentNutritionDayIndex = 0;
+    if (typeof window !== 'undefined') window.__nutritionDayUserPicked = false;
+    if (typeof persist === 'function') persist();
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveNutrition) {
+      try { await GiammariaPersistence.saveNutrition((typeof DATA !== 'undefined' && DATA) ? DATA.nutrition : (store && store.nutrition)); } catch (_) {}
+    }
+    if (typeof syncAccountData === 'function' && store && store.accountToken) {
+      await syncAccountData(false);
+    }
+    if (typeof render === 'function') render();
+    if (typeof showToast === 'function') {
+      showToast((typeof t === 'function' && t('clearNutritionDone')) || 'Alimentazione azzerata', 'success');
+    }
+  } catch (err) {
+    if (typeof showToast === 'function') showToast((err && err.message) || 'Azzeramento non riuscito', 'danger');
+  }
+}
+
 function mealPhotoCaptureCardHtml(activeDay) {
   const meals = (activeDay && activeDay.meals) || [];
   const options = meals.length
@@ -10629,6 +10708,7 @@ function renderNutrition(c) {
         ${nutrDirty ? '<button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="saveNutritionPlanEdits()">SALVA</button>' : ''}
         ${athleteDomainActionButtonsHtml('nutrition', { compact: true })}
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="addNutritionDay()">${t('addDay')}</button>
+        ${days.length ? personalNutritionClearButtonHtml({ compact: true }) : ''}
       </div>
     </div>
     ${nutritionConfirmCardHtml()}
@@ -24486,6 +24566,10 @@ if (typeof window !== 'undefined') {
   window.saveNutritionPlanEdits = saveNutritionPlanEdits;
   window.normalizeNutritionMeals = normalizeNutritionMeals;
   window.markNutritionDirty = markNutritionDirty;
+  window.canClearPersonalNutrition = canClearPersonalNutrition;
+  window.personalNutritionClearButtonHtml = personalNutritionClearButtonHtml;
+  window.applyPersonalNutritionClear = applyPersonalNutritionClear;
+  window.clearPersonalNutrition = clearPersonalNutrition;
   window.openGenerateSupplementationWizard = openGenerateSupplementationWizard;
   window.setGenSuppMode = setGenSuppMode;
   window.onGenSuppGoalChange = onGenSuppGoalChange;

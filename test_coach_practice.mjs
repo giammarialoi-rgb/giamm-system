@@ -226,6 +226,8 @@ assert(ui.includes("intakeAllergiesHtml") && ui.includes("ALIMENTAZIONE · ALLER
 assert(practice.includes("/api/coach/clients/:id/unlock-approve") && practice.includes("/api/coach/clients/:id/unlock-reject") && practice.includes("pending_unlock") && ui.includes("approveUnlockRequest") && ui.includes("rejectUnlockRequest"), "coach approve/deny unlock with note");
 assert(ui.includes("advanceClientTutorial") && ui.includes('data-tut="next"') && ui.includes("#cp-tutorial.cp-overlay{z-index:100010;") && ui.includes("__cpA2hsPending"), "client tutorial click + A2HS defer");
 assert(ui.includes("emptyDomainShell") && ui.includes("isClearedDomainPayload") && ui.includes("cleared: true"), "domain clear empty shells");
+assert(base.includes("function clearPersonalNutrition") && base.includes("applyPersonalNutritionClear") && base.includes("personalNutritionClearButtonHtml"), "personal nutrition clear control");
+assert(base.includes("emptyDomainShell('nutrition')") && base.includes("clearNutritionConfirm"), "personal nutrition clear reuses empty shell + confirm");
 assert(ui.includes("preferFilledTherapy") && ui.includes("__cpTherapyCleared") && ui.includes("__cpTrainingCleared"), "clear therapy/training keep flags");
 assert(practice.includes("CLEARABLE") && practice.includes("emptyCleared") && practice.includes("clearedTraining"), "API patch-data accepts domain clears");
 assert(ui.includes("__cpClientViewProfile") && base.includes("purgeCoachProfileLeakIfNeeded") && base.includes("profileConflictsWithAccountUser"), "coach profile isolated from client");

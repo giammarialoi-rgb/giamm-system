@@ -163,6 +163,10 @@ const I18nService = {
       photoMealCapture: "Scatta foto",
       photoMealUpload: "Carica foto",
       photoMealConfirm: "Inserisci nel pasto",
+      clearNutrition: "Azzera alimentazione",
+      clearNutritionConfirm: "Azzerare l’alimentazione? Il piano e i cibi verranno cancellati. Allenamento, integrazione, terapia ed esami restano intatti.",
+      clearNutritionDone: "Alimentazione azzerata",
+      clearNutritionLocked: "Per azzerare serve la massima libertà del coach. Puoi importare o chiedere al coach.",
       timing: "Timing",
       dose: "Dose",
       drug: "Farmaco",
@@ -266,6 +270,10 @@ const I18nService = {
       photoMealCapture: "Take photo",
       photoMealUpload: "Upload photo",
       photoMealConfirm: "Add to meal",
+      clearNutrition: "Clear nutrition",
+      clearNutritionConfirm: "Clear nutrition? The plan and foods will be deleted. Training, supplements, therapy and exams stay intact.",
+      clearNutritionDone: "Nutrition cleared",
+      clearNutritionLocked: "Clearing requires max freedom from your coach. You can import or ask the coach.",
       timing: "Timing",
       dose: "Dose",
       drug: "Medication",
@@ -356,6 +364,10 @@ const I18nService = {
       photoMealCapture: "Hacer foto",
       photoMealUpload: "Subir foto",
       photoMealConfirm: "Añadir a la comida",
+      clearNutrition: "Borrar alimentación",
+      clearNutritionConfirm: "¿Borrar la alimentación? El plan y los alimentos se eliminarán. Entrenamiento, suplementos, terapia y exámenes no cambian.",
+      clearNutritionDone: "Alimentación borrada",
+      clearNutritionLocked: "Para borrar hace falta la máxima libertad del coach. Puedes importar o pedírselo.",
       searchBarcode: "Buscar",
       timing: "Momento",
       dose: "Dosis",
@@ -447,6 +459,10 @@ const I18nService = {
       photoMealCapture: "Prendre une photo",
       photoMealUpload: "Importer une photo",
       photoMealConfirm: "Ajouter au repas",
+      clearNutrition: "Effacer l’alimentation",
+      clearNutritionConfirm: "Effacer l’alimentation ? Le plan et les aliments seront supprimés. Entraînement, compléments, thérapie et examens restent intacts.",
+      clearNutritionDone: "Alimentation effacée",
+      clearNutritionLocked: "Effacer nécessite la liberté maximale du coach. Tu peux importer ou lui demander.",
       searchBarcode: "Chercher",
       timing: "Timing",
       dose: "Dose",
@@ -538,6 +554,10 @@ const I18nService = {
       photoMealCapture: "Foto aufnehmen",
       photoMealUpload: "Foto laden",
       photoMealConfirm: "Zur Mahlzeit hinzufügen",
+      clearNutrition: "Ernährung leeren",
+      clearNutritionConfirm: "Ernährung leeren? Plan und Lebensmittel werden gelöscht. Training, Supplements, Therapie und Untersuchungen bleiben.",
+      clearNutritionDone: "Ernährung geleert",
+      clearNutritionLocked: "Leeren braucht die volle Freiheit vom Coach. Du kannst importieren oder den Coach fragen.",
       searchBarcode: "Suchen",
       timing: "Zeitpunkt",
       dose: "Dosis",
@@ -562,6 +582,7 @@ const I18nService = {
       importTherapy: "Importar terapia", emptyNutrition: "Sem plano alimentar. Importe um ficheiro ou adicione um dia.",
       scanBarcode: "Ler código de barras", searchBarcode: "Pesquisar",
       photoMeal: "Foto da refeição", photoMealCapture: "Tirar foto", photoMealUpload: "Carregar foto",
+      clearNutrition: "Limpar alimentação", clearNutritionDone: "Alimentação limpa",
       navHome: "Home", navWorkout: "Treino", navPerf: "Stats", navCoach: "Coach", menu: "Menu"
     },
     ru: {
@@ -572,6 +593,7 @@ const I18nService = {
       importTherapy: "Импорт терапии", emptyNutrition: "Нет плана питания. Импортируйте файл или добавьте день.",
       scanBarcode: "Сканировать штрихкод", searchBarcode: "Поиск",
       photoMeal: "Фото еды", photoMealCapture: "Снять фото", photoMealUpload: "Загрузить фото",
+      clearNutrition: "Очистить питание", clearNutritionDone: "Питание очищено",
       navHome: "Home", navWorkout: "Тренировка", navPerf: "Статистика", navCoach: "Coach", menu: "Меню"
     },
     zh: {
@@ -581,7 +603,8 @@ const I18nService = {
       addDay: "添加日", importNutrition: "导入饮食", importSupplements: "导入补剂",
       importTherapy: "导入治疗", emptyNutrition: "暂无饮食计划。请导入文件或添加一天。",
       scanBarcode: "扫描条码", searchBarcode: "搜索",
-      photoMeal: "餐食照片", photoMealCapture: "拍照", photoMealUpload: "上传照片"
+      photoMeal: "餐食照片", photoMealCapture: "拍照", photoMealUpload: "上传照片",
+      clearNutrition: "清空饮食", clearNutritionDone: "饮食已清空"
     },
     ar: {
       appName: "NURVAN", dashboard: "لوحة النظام", home: "لوحة النظام",
@@ -590,7 +613,8 @@ const I18nService = {
       addDay: "إضافة يوم", importNutrition: "استيراد التغذية", importSupplements: "استيراد المكملات",
       importTherapy: "استيراد العلاج", emptyNutrition: "لا توجد خطة غذائية. استورد ملفاً أو أضف يوماً.",
       scanBarcode: "مسح الباركود", searchBarcode: "بحث",
-      photoMeal: "صورة الوجبة", photoMealCapture: "التقاط صورة", photoMealUpload: "تحميل صورة"
+      photoMeal: "صورة الوجبة", photoMealCapture: "التقاط صورة", photoMealUpload: "تحميل صورة",
+      clearNutrition: "مسح التغذية", clearNutritionDone: "تم مسح التغذية"
     },
     hi: {
       appName: "NURVAN", dashboard: "सिस्टम डैशबोर्ड", home: "सिस्टम डैशबोर्ड",
@@ -599,7 +623,8 @@ const I18nService = {
       addDay: "दिन जोड़ें", importNutrition: "पोषण आयात", importSupplements: "सप्लीमेंट आयात",
       importTherapy: "थेरेपी आयात", emptyNutrition: "कोई भोजन योजना नहीं। फ़ाइल आयात करें या दिन जोड़ें।",
       scanBarcode: "बारकोड स्कैन", searchBarcode: "खोजें",
-      photoMeal: "भोजन फोटो", photoMealCapture: "फोटो लें", photoMealUpload: "फोटो अपलोड"
+      photoMeal: "भोजन फोटो", photoMealCapture: "फोटो लें", photoMealUpload: "फोटो अपलोड",
+      clearNutrition: "पोषण साफ़ करें", clearNutritionDone: "पोषण साफ़ हो गया"
     }
   },
 
