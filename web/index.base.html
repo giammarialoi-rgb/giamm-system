@@ -1335,6 +1335,30 @@ body.focus-mode [data-rewards-only] {
   gap: 8px;
 }
 
+
+/* LIVE BARCODE SCANNER OVERLAY & VIEWFINDER */
+.barcode-viewfinder {
+  width: 280px;
+  height: 180px;
+  border: 2px solid #00ffcc;
+  border-radius: 12px;
+  box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.65), 0 0 15px rgba(0, 255, 204, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+.barcode-laser {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #00ffcc;
+  box-shadow: 0 0 8px #00ffcc;
+  animation: barcode-scan-anim 2s linear infinite alternate;
+}
+@keyframes barcode-scan-anim {
+  0% { top: 5%; }
+  100% { top: 95%; }
+}
 </style>
   <script src="xlsx.full.min.js"></script>
   <script src="peerjs.min.js"></script>
@@ -11159,16 +11183,30 @@ function mealPhotoFoodsFromDraft() {
     const pro = parseFloat((row.querySelector('[data-f="pro"]') || {}).value);
     const carb = parseFloat((row.querySelector('[data-f="carb"]') || {}).value);
     const fat = parseFloat((row.querySelector('[data-f="fat"]') || {}).value);
-    const conf = parseFloat(row.getAttribute('data-confidence') || '0');
-    const qConf = parseFloat(row.getAttribute('data-quantity-confidence') || String(conf || 0.4));
+    const conf = parseFloat(row.getAttribute('data-confidence') || '0.5');
+    const qConf = parseFloat(row.getAttribute('data-quantity-confidence') || String(conf || 0.5));
     const minG = parseFloat(row.getAttribute('data-min-grams') || '');
     const maxG = parseFloat(row.getAttribute('data-max-grams') || '');
     const edibleG = parseFloat(row.getAttribute('data-edible-grams') || '');
+    const visualG = parseFloat(row.getAttribute('data-visual-grams') || '');
     const hasWaste = row.getAttribute('data-has-waste') === '1';
+    const state = row.getAttribute('data-state') || 'unknown';
+    const rawEquiv = parseFloat(row.getAttribute('data-raw-equiv') || '');
+    const cookedEst = parseFloat(row.getAttribute('data-cooked-est') || '');
+    const isChain = row.getAttribute('data-is-chain') === '1';
+    const chainName = row.getAttribute('data-chain-name') || '';
 
-    let notes = (conf < 0.55 || qConf < 0.55) ? 'Stima visiva incerta — verifica quantità e kcal' : 'Stima da foto';
+    let notes = (conf < 0.55 || qConf < 0.55) ? 'Stima visiva incerta \u00B7 verifica quantit\u00E0 e kcal' : 'Stima AI da foto';
+    if (state === 'cooked' && Number.isFinite(rawEquiv)) {
+      notes += ' \u00B7 Cotto (equiv. ~' + rawEquiv + 'g crudo)';
+    } else if (state === 'raw') {
+      notes += ' \u00B7 Crudo';
+    }
     if (hasWaste) {
-      notes += ' · Ossa/scarti esclusi dal calcolo macro';
+      notes += ' \u00B7 Ossa/scarti esclusi dal calcolo macro';
+    }
+    if (isChain && chainName) {
+      notes += ' \u00B7 Dati ufficiali ' + chainName;
     }
 
     foods.push({
@@ -11179,19 +11217,30 @@ function mealPhotoFoodsFromDraft() {
       pro: Number.isFinite(pro) ? pro : 0,
       carb: Number.isFinite(carb) ? carb : 0,
       fat: Number.isFinite(fat) ? fat : 0,
+      state: state,
+      rawEquivalentGrams: Number.isFinite(rawEquiv) ? rawEquiv : null,
+      estimatedCookedGrams: Number.isFinite(cookedEst) ? cookedEst : null,
+      estimatedRawGrams: state === 'raw' && Number.isFinite(qty) ? qty : (Number.isFinite(rawEquiv) ? rawEquiv : null),
+      isRestaurantChain: isChain,
+      chainName: chainName || null,
+      hasNonEdibleParts: hasWaste,
+      visualGrams: Number.isFinite(visualG) ? visualG : (Number.isFinite(qty) ? qty : 100),
+      edibleGrams: Number.isFinite(edibleG) ? edibleG : (Number.isFinite(qty) ? qty : 100),
       minGrams: Number.isFinite(minG) ? minG : null,
       maxGrams: Number.isFinite(maxG) ? maxG : null,
-      quantityConfidence: Number.isFinite(qConf) ? qConf : conf,
+      quantityConfidence: Number.isFinite(qConf) ? qConf : 0.5,
+      confidence: Number.isFinite(conf) ? conf : 0.5,
       notes: notes,
       provenance: {
-        source: 'gemini_vision',
-        kind: 'estimate',
-        confidence: Number.isFinite(conf) ? conf : 0.4,
-        quantityConfidence: Number.isFinite(qConf) ? qConf : 0.4,
+        source: isChain ? 'restaurant_chain_catalog' : 'gemini_vision',
+        confidence: Number.isFinite(conf) ? conf : 0.5,
+        quantityConfidence: Number.isFinite(qConf) ? qConf : 0.5,
+        state: state,
+        rawEquivalentGrams: Number.isFinite(rawEquiv) ? rawEquiv : null,
         minGrams: Number.isFinite(minG) ? minG : null,
         maxGrams: Number.isFinite(maxG) ? maxG : null,
-        edibleGrams: Number.isFinite(edibleG) ? edibleG : qty,
-        method: 'vision_estimate'
+        edibleGrams: Number.isFinite(edibleG) ? edibleG : (Number.isFinite(qty) ? qty : 100),
+        method: isChain ? 'chain_catalog_lookup' : 'vision_estimate'
       }
     });
   });
@@ -11220,26 +11269,55 @@ function mealPhotoDraftRowHtml(item) {
   const hasWaste = Boolean(item.hasNonEdibleParts);
   const visualG = item.visualGrams || item.quantity || 100;
   const edibleG = item.edibleGrams || item.quantity || 100;
+  const state = item.state || 'unknown';
+  const rawEquiv = item.rawEquivalentGrams != null ? item.rawEquivalentGrams : null;
+  const cookedEst = item.estimatedCookedGrams != null ? item.estimatedCookedGrams : null;
+  const isChain = Boolean(item.isRestaurantChain);
+  const chainName = item.chainName || item.brand || '';
 
   const badge = uncertain
     ? '<span class="meal-photo-low" style="font-size:9px;font-weight:800;">INCERTO ' + Math.round((Number.isFinite(conf) ? conf : 0) * 100) + '%</span>'
     : '<span style="font-size:9px;color:#8c8;">' + Math.round((Number.isFinite(conf) ? conf : 0) * 100) + '%</span>';
 
-  const rangeBadge = '<span style="font-size:9px;color:#bbb;background:#222;padding:2px 5px;border-radius:4px;border:1px solid #333;">Range: ' + minG + '–' + maxG + 'g</span>';
+  const rangeBadge = '<span style="font-size:9px;color:#bbb;background:#222;padding:2px 5px;border-radius:4px;border:1px solid #333;">Range: ' + minG + ' - ' + maxG + 'g</span>';
   const wasteBadge = hasWaste
-    ? '<span style="font-size:9px;color:#fa8;background:#2b1a10;padding:2px 5px;border-radius:4px;border:1px solid #842;">⚖ Scarti esclusi (lordo ~' + visualG + 'g)</span>'
+    ? '<span style="font-size:9px;color:#fa8;background:#2b1a10;padding:2px 5px;border-radius:4px;border:1px solid #842;">\u{1F357} Scarti esclusi (lordo ~' + visualG + 'g)</span>'
+    : '';
+
+  let stateBadge = '';
+  if (state === 'cooked' && rawEquiv != null) {
+    stateBadge = '<span style="font-size:9px;color:#7bf;background:#0d2238;padding:2px 5px;border-radius:4px;border:1px solid #1e4a7a;">\u{1F35A} Cotto (equiv. ~' + rawEquiv + 'g crudo)</span>';
+  } else if (state === 'raw') {
+    stateBadge = '<span style="font-size:9px;color:#7fb;background:#0d3822;padding:2px 5px;border-radius:4px;border:1px solid #1e7a4a;">\u{1F966} Crudo</span>';
+  }
+
+  const chainBadge = isChain
+    ? '<span style="font-size:9px;color:#ffb74d;background:#332200;padding:2px 5px;border-radius:4px;border:1px solid #885500;">\u{1F3EA} ' + esc(chainName || 'Catena') + ' (Ufficiale)</span>'
     : '';
 
   return '' +
-    '<div data-meal-photo-row data-confidence="' + (Number.isFinite(conf) ? conf : 0.3) + '" data-quantity-confidence="' + (Number.isFinite(qConf) ? qConf : 0.3) + '" data-min-grams="' + minG + '" data-max-grams="' + maxG + '" data-visual-grams="' + visualG + '" data-edible-grams="' + edibleG + '" data-has-waste="' + (hasWaste ? '1' : '0') + '" style="margin-bottom:8px;padding:8px;background:#121212;border:1px solid #2a2a2a;border-radius:8px;">' +
+    '<div data-meal-photo-row ' +
+    'data-confidence="' + (Number.isFinite(conf) ? conf : 0.3) + '" ' +
+    'data-quantity-confidence="' + (Number.isFinite(qConf) ? qConf : 0.3) + '" ' +
+    'data-min-grams="' + minG + '" ' +
+    'data-max-grams="' + maxG + '" ' +
+    'data-visual-grams="' + visualG + '" ' +
+    'data-edible-grams="' + edibleG + '" ' +
+    'data-has-waste="' + (hasWaste ? '1' : '0') + '" ' +
+    'data-state="' + esc(state) + '" ' +
+    'data-raw-equiv="' + (rawEquiv != null ? rawEquiv : '') + '" ' +
+    'data-cooked-est="' + (cookedEst != null ? cookedEst : '') + '" ' +
+    'data-is-chain="' + (isChain ? '1' : '0') + '" ' +
+    'data-chain-name="' + esc(chainName) + '" ' +
+    'style="margin-bottom:8px;padding:8px;background:#121212;border:1px solid #2a2a2a;border-radius:8px;">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">' +
     '<input data-f="name" type="text" value="' + esc(item.name || '') + '" placeholder="Alimento" style="flex:1;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;">' +
     '<div style="display:flex;align-items:center;gap:4px;">' + badge +
-    '<button type="button" class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:#c66;" onclick="removeMealPhotoDraftRow(this)">╕</button></div></div>' +
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">' + rangeBadge + wasteBadge + '</div>' +
+    '<button type="button" class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:#c66;" onclick="removeMealPhotoDraftRow(this)">\u2715</button></div></div>' +
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">' + stateBadge + chainBadge + rangeBadge + wasteBadge + '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:4px;">' +
     '<label style="font-size:9px;color:#888;">Qty<input data-f="qty" type="number" value="' + esc(item.quantity != null ? item.quantity : 100) + '" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
-    '<label style="font-size:9px;color:#888;">Unità<select data-f="unit" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">' +
+    '<label style="font-size:9px;color:#888;">Unit\u00E0<select data-f="unit" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">' +
     ['g', 'ml', 'porzioni', 'cucchiai', 'misurini'].map(function (u) {
       return '<option value="' + u + '"' + ((item.unit || 'g') === u ? ' selected' : '') + '>' + u + '</option>';
     }).join('') +
@@ -11251,60 +11329,23 @@ function mealPhotoDraftRowHtml(item) {
     '</div></div>';
 }
 
-function showMealPhotoConfirm(result, thumb) {
-  __mealPhotoDraft = result;
-  const modal = document.getElementById('meal-photo-modal');
+function showMealPhotoConfirm(result) {
+  const modal = document.getElementById('meal-photo-confirm-modal');
+  if (!modal || !result) return;
   const itemsBox = document.getElementById('meal-photo-items');
-  const warn = document.getElementById('meal-photo-warning');
-  const status = document.getElementById('meal-photo-status');
-  const img = document.getElementById('meal-photo-thumb');
-  const slot = document.getElementById('meal-photo-slot-label');
-  const btn = document.getElementById('meal-photo-confirm-btn');
-  const day = DATA && DATA.nutrition && DATA.nutrition.days && DATA.nutrition.days[__mealPhotoTarget.dayIdx];
-  const meal = day && day.meals && day.meals[__mealPhotoTarget.mealIdx];
-  if (slot) slot.textContent = 'Inserimento in: ' + safeDisplayValue(day && day.day, 'Giorno') + ' · ' + safeDisplayValue(meal && meal.name, 'Pasto');
-  if (img) {
-    if (thumb) { img.src = thumb; img.style.display = 'block'; }
-    else img.style.display = 'none';
-  }
-  const items = (result && (result.items || result.foods)) || [];
-  const overall = result && result.overallConfidence;
-  const uncertain = !!(result && (result.uncertain || result.noFoodDetected || (Number(overall) < 0.55)));
-  if (status) {
-    status.textContent = items.length
-      ? (items.length + ' alimenti stimati · confidenza ' + Math.round((Number(overall) || 0) * 100) + '%')
-      : 'Nessun alimento riconosciuto';
-  }
-  if (warn) {
-    const messages = (result && result.warnings) || [];
-    if (uncertain || messages.length) {
-      warn.style.display = 'block';
-      warn.className = Number(overall) < 0.45 ? 'meal-photo-low' : 'meal-photo-uncertain';
-      warn.style.border = '1px solid #a84';
-      warn.style.background = '#1a1408';
-      warn.style.padding = '8px 10px';
-      warn.style.borderRadius = '8px';
-      warn.style.fontSize = '11px';
-      warn.textContent = messages.join(' ') || 'Stima incerta: controlla quantità e calorie prima di salvare.';
-    } else {
-      warn.style.display = 'block';
-      warn.style.border = '1px solid #385';
-      warn.style.background = '#101810';
-      warn.style.color = '#8c8';
-      warn.textContent = 'Stima ragionevole — verifica comunque i grammi prima di inserire.';
+  const summaryEl = document.getElementById('meal-photo-summary');
+  itemsBox.innerHTML = (result.items || []).map(mealPhotoDraftRowHtml).join('');
+  if (summaryEl) {
+    let summaryTxt = result.description || '';
+    if (result.totals) {
+      summaryTxt += ' (Totale: ~' + (result.totals.kcal || 0) + ' kcal | P:' + (result.totals.pro || 0) + 'g C:' + (result.totals.carb || 0) + 'g F:' + (result.totals.fat || 0) + 'g)';
     }
+    summaryEl.textContent = summaryTxt;
   }
-  if (itemsBox) {
-    itemsBox.innerHTML = items.length
-      ? items.map(function (it) { return mealPhotoDraftRowHtml(it); }).join('')
-      : '';
-  }
-  if (btn) btn.disabled = false;
-  if (modal) {
-    modal.style.display = 'flex';
-    if (typeof pushUiOverlay === 'function') pushUiOverlay('meal-photo-modal');
-  }
+  modal.style.display = 'flex';
 }
+
+
 
 function insertFoodsIntoSelectedMeal(dayIdx, mealIdx, foods) {
   if (!DATA || !DATA.nutrition || !Array.isArray(foods) || !foods.length) return 0;
@@ -19164,9 +19205,9 @@ async function lookupSupplementBarcode() {
 }
 
 function scanBarcodeWithCamera(kind) {
-  // Prefer native camera permission + live capture when available
   if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    openLiveBarcodeScanner(kind).catch(function () {
+    openLiveBarcodeScanner(kind).catch(function (err) {
+      console.warn('[BARCODE_CAM_ERR]', err);
       const id = kind === 'supplements' ? 'supp-barcode-camera' : 'nutrition-barcode-camera';
       const el = $(id);
       if (el) el.click();
@@ -19181,191 +19222,371 @@ function scanBarcodeWithCamera(kind) {
 }
 
 async function openLiveBarcodeScanner(kind) {
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+  let stream = null;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
+    });
+  } catch (err) {
+    console.warn('[BARCODE_STREAM_ERR]', err);
+    const fbModal = document.createElement('div');
+    fbModal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;';
+    fbModal.innerHTML = '' +
+      '<div style="background:#181818;border:1px solid #333;border-radius:12px;padding:20px;max-width:360px;width:100%;text-align:center;">' +
+      '<div style="font-size:28px;margin-bottom:8px;">\u{1F4F7}</div>' +
+      '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">Fotocamera Barcode</div>' +
+      '<div style="font-size:12px;color:#aaa;margin-bottom:16px;">Abilita i permessi camera nel browser oppure usa una foto dalla galleria.</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;">' +
+      '<button class="btn btn-primary" style="padding:10px;" id="bf-gallery-btn">\u{1F4C1} Carica foto barcode</button>' +
+      '<button class="btn btn-outline" style="padding:10px;" id="bf-ocr-btn">\u{1F4F8} Scansiona etichetta (OCR)</button>' +
+      '<button class="btn btn-outline" style="padding:10px;" id="bf-cancel-btn">Annulla</button>' +
+      '</div></div>';
+    document.body.appendChild(fbModal);
+    fbModal.querySelector('#bf-gallery-btn').onclick = () => {
+      fbModal.remove();
+      const id = kind === 'supplements' ? 'supp-barcode-camera' : 'nutrition-barcode-camera';
+      const el = $(id);
+      if (el) el.click();
+    };
+    fbModal.querySelector('#bf-ocr-btn').onclick = () => {
+      fbModal.remove();
+      scanNutritionLabelOcr(kind);
+    };
+    fbModal.querySelector('#bf-cancel-btn').onclick = () => fbModal.remove();
+    return;
+  }
+
+  const track = stream.getVideoTracks()[0];
   const overlay = document.createElement('div');
   overlay.id = 'barcode-live-scanner';
-  overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:10000;display:flex;flex-direction:column;';
-  overlay.innerHTML = `
-    <video id="barcode-live-video" autoplay playsinline style="flex:1;width:100%;object-fit:cover;"></video>
-    <div style="padding:12px;background:#111;display:flex;gap:8px;">
-      <button class="btn btn-outline" style="flex:1;" id="barcode-live-cancel">Annulla</button>
-      <button class="btn btn-primary" style="flex:1;" id="barcode-live-capture">Scatta</button>
-    </div>`;
+  overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:space-between;';
+
+  overlay.innerHTML = '' +
+    '<div style="position:absolute;top:0;left:0;right:0;padding:16px;display:flex;justify-content:space-between;align-items:center;z-index:10;background:linear-gradient(180deg,rgba(0,0,0,0.8),transparent);">' +
+    '<button class="btn btn-outline" style="font-size:12px;padding:6px 12px;color:#fff;border-color:#555;" id="barcode-live-cancel">\u2715 Chiudi</button>' +
+    '<div style="font-size:13px;font-weight:700;color:#00ffcc;letter-spacing:10x;">BARCODE SCANNER V2</div>' +
+    '<button class="btn btn-outline" style="font-size:12px;padding:6px 10px;color:#ffcc00;border-color:#555;" id="barcode-live-torch">\u{1F526} Torcia</button>' +
+    '</div>' +
+    '<video id="barcode-live-video" autoplay playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>' +
+    '<div style="position:relative;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;">' +
+    '<div class="barcode-viewfinder" id="barcode-viewfinder-box">' +
+    '<div class="barcode-laser"></div>' +
+    '</div>' +
+    '<div style="font-size:11px;color:#fff;margin-top:14px;text-align:center;background:rgba(0,0,0,0.6);padding:4px 12px;border-radius:20px;backdrop-filter:blur(4px);">' +
+    'Inquadra il codice a barre nel riquadro' +
+    '</div></div>' +
+    '<div style="position:absolute;bottom:0;left:0;right:0;padding:16px;background:linear-gradient(0deg,rgba(0,0,0,0.9) 0%,rgba(0,0,0,0.5) 70%,transparent 100%);display:flex;gap:8px;z-index:10;justify-content:center;">' +
+    '<button class="btn btn-outline" style="flex:1;font-size:11px;padding:10px 6px;" id="barcode-live-ocr">\u{1F4F8} OCR Etichetta</button>' +
+    '<button class="btn btn-primary" style="flex:1.2;font-size:11px;padding:10px 8px;font-weight:700;" id="barcode-live-capture">\u26A1 Scatta / Analizza</button>' +
+    '<button class="btn btn-outline" style="flex:1;font-size:11px;padding:10px 6px;" id="barcode-live-gallery">\u{1F4C1} Da Foto</button>' +
+    '</div>';
+
   document.body.appendChild(overlay);
   const video = overlay.querySelector('#barcode-live-video');
   video.srcObject = stream;
+
   let stopped = false;
+  let isTorchOn = false;
+
   function stop() {
     if (stopped) return;
     stopped = true;
-    try { stream.getTracks().forEach((t) => t.stop()); } catch (_) {}
+    try { stream.getTracks().forEach(t => t.stop()); } catch (_) {}
     overlay.remove();
   }
+
   overlay.querySelector('#barcode-live-cancel').onclick = stop;
-  let detector = null;
-  try {
-    if (typeof BarcodeDetector !== 'undefined') detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_code'] });
-  } catch (_) {}
-  async function tick() {
-    if (stopped) return;
+
+  const torchBtn = overlay.querySelector('#barcode-live-torch');
+  torchBtn.onclick = async () => {
     try {
-      if (detector && video.readyState >= 2) {
-        const codes = await detector.detect(video);
-        if (codes && codes[0] && codes[0].rawValue) {
-          const code = String(codes[0].rawValue).trim();
-          stop();
-          const input = $(kind === 'supplements' ? 'supp-barcode-input' : 'nutrition-barcode-input');
-          if (input) input.value = code;
-          const out = $(kind === 'supplements' ? 'supp-barcode-result' : 'nutrition-barcode-result');
-          await resolveBarcodeToProduct(code, out, kind);
-          return;
-        }
+      if (track && track.applyConstraints) {
+        isTorchOn = !isTorchOn;
+        await track.applyConstraints({ advanced: [{ torch: isTorchOn }] });
+        torchBtn.textContent = isTorchOn ? '\u{1F526} Torcia: ON' : '\u{1F526} Torcia';
+        torchBtn.style.background = isTorchOn ? '#ffcc00' : 'transparent';
+        torchBtn.style.color = isTorchOn ? '#000' : '#ffcc00';
       }
-    } catch (_) {}
-    requestAnimationFrame(tick);
-  }
-  overlay.querySelector('#barcode-live-capture').onclick = async function () {
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      canvas.getContext('2d').drawImage(video, 0, 0);
-      if (detector) {
-        const codes = await detector.detect(canvas);
-        if (codes && codes[0] && codes[0].rawValue) {
-          const code = String(codes[0].rawValue).trim();
-          stop();
-          const input = $(kind === 'supplements' ? 'supp-barcode-input' : 'nutrition-barcode-input');
-          if (input) input.value = code;
-          const out = $(kind === 'supplements' ? 'supp-barcode-result' : 'nutrition-barcode-result');
-          await resolveBarcodeToProduct(code, out, kind);
-          return;
-        }
-      }
-      if (typeof showToast === 'function') showToast('Barcode non letto — digita il codice', 'info');
     } catch (e) {
-      if (typeof showToast === 'function') showToast('Errore lettura barcode', 'warning');
+      console.warn('[torch]', e);
     }
   };
-  requestAnimationFrame(tick);
+
+  function playBeep() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1850, ctx.currentTime);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+      }
+    } catch (_) {}
+    try { if (navigator.vibrate) navigator.vibrate([50, 30, 50]); } catch (_) {}
+  }
+
+  async function handleFoundCode(codeVal) {
+    playBeep();
+    stop();
+    const product = await resolveBarcodeToProduct(codeVal, kind);
+    applyBarcodeProduct(product, kind);
+  }
+
+  overlay.querySelector('#barcode-live-gallery').onclick = () => {
+    stop();
+    const id = kind === 'supplements' ? 'supp-barcode-camera' : 'nutrition-barcode-camera';
+    const el = $(id);
+    if (el) el.click();
+  };
+
+  overlay.querySelector('#barcode-live-ocr').onclick = () => {
+    stop();
+    scanNutritionLabelOcr(kind);
+  };
+
+  const captureBtn = overlay.querySelector('#barcode-live-capture');
+  captureBtn.onclick = async () => {
+    if (video.readyState >= 2) {
+      const c = document.createElement('canvas');
+      c.width = video.videoWidth || 640;
+      c.height = video.videoHeight || 480;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(video, 0, 0, c.width, c.height);
+      stop();
+      const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.88));
+      if (blob) {
+        const file = new File([blob], 'barcode_capture.jpg', { type: 'image/jpeg' });
+        handleBarcodePhoto({ target: { files: [file] } }, kind);
+      }
+    }
+  };
+
+  if ('BarcodeDetector' in window) {
+    try {
+      const detector = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code', 'data_matrix'] });
+      let busy = false;
+      async function tick() {
+        if (stopped) return;
+        if (!busy && video.readyState >= 2) {
+          busy = true;
+          try {
+            const barcodes = await detector.detect(video);
+            if (barcodes && barcodes.length > 0) {
+              const found = barcodes[0].rawValue;
+              if (found) {
+                await handleFoundCode(found);
+                return;
+              }
+            }
+          } catch (_) {}
+          finally { busy = false; }
+        }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    } catch (e) {
+      const _w = e;
+    }
+  }
 }
 
 async function handleBarcodePhoto(ev, kind) {
   const file = ev && ev.target && ev.target.files && ev.target.files[0];
   if (!file) return;
-  const out = $(kind === 'supplements' ? 'supp-barcode-result' : 'nutrition-barcode-result');
-  if (out) out.textContent = 'Lettura barcode dalla foto…';
-  try {
-    let code = null;
-    if (typeof BarcodeDetector !== 'undefined') {
-      const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_code'] });
+  if (typeof showToast === 'function') showToast('Ricerca codice a barre...', 'info');
+  let codeStr = '';
+  if ('BarcodeDetector' in window) {
+    try {
       const bmp = await createImageBitmap(file);
-      const codes = await detector.detect(bmp);
-      if (codes && codes[0] && codes[0].rawValue) code = String(codes[0].rawValue).trim();
+      const detector = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'] });
+      const barcodes = await detector.detect(bmp);
+      if (barcodes && barcodes.length > 0) {
+        codeStr = barcodes[0].rawValue;
+      }
+    } catch (e) {
+      console.warn('[Detector File Err]', e);
     }
-    if (!code) {
-      // Fallback: ask user to type — WebView may lack BarcodeDetector
-      if (out) out.textContent = 'Barcode non letto automaticamente. Digita il codice sotto la foto.';
-      if (typeof showToast === 'function') showToast('Inquadra meglio o digita il codice a barre', 'info');
-      return;
-    }
-    const input = $(kind === 'supplements' ? 'supp-barcode-input' : 'nutrition-barcode-input');
-    if (input) input.value = code;
-    await resolveBarcodeToProduct(code, out, kind);
-  } catch (err) {
-    console.warn('[BARCODE_PHOTO]', err);
-    if (out) out.textContent = 'Lettura foto non riuscita — digita il codice.';
-  } finally {
-    try { ev.target.value = ''; } catch (_) {}
+  }
+  if (codeStr) {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1850, ctx.currentTime);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+      }
+    } catch (_) {}
+    const product = await resolveBarcodeToProduct(codeStr, kind);
+    applyBarcodeProduct(product, kind);
+  } else {
+    if (typeof showToast === 'function') showToast('Codice a barre non rilevato. Prova OCR etichetta.', 'warning');
   }
 }
 
-async function resolveBarcodeToProduct(code, out, kind) {
-  if (out) out.textContent = 'Ricerca Open Food Facts…';
+async function scanNutritionLabelOcr(kind) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment';
+  input.onchange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (typeof showToast === 'function') showToast('Analisi OCR etichetta nutrizionale...', 'info');
+    try {
+      const reader = new FileReader();
+      const dataUrl = await new Promise((res, rej) => {
+        reader.onload = () => res(reader.result);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const base64 = dataUrl.split(',')[1];
+      const mimeType = file.type || 'image/jpeg';
+      const res = await fetch('/api/food/ocr-label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mimeType })
+      });
+      const json = await res.json();
+      if (json && json.ok && json.data) {
+        const ocrData = json.data;
+        applyBarcodeProduct({
+          name: ocrData.name || 'Prodotto da Etichetta',
+          brand: ocrData.brand || '',
+          per100g: ocrData.per100g,
+          serving: ocrData.serving,
+          source: 'ocr_label'
+        }, kind);
+        if (typeof showToast === 'function') showToast('Etichetta acquisita: ' + (ocrData.name || ''), 'success');
+      } else {
+        if (typeof showToast === 'function') showToast('Impossibile leggere l\'etichetta nutrizionale', 'error');
+      }
+    } catch (err) {
+      console.warn('[OCR_ERR]', err);
+      if (typeof showToast === 'function') showToast('Errore durante l\'analisi OCR', 'error');
+    }
+  };
+  input.click();
+}
+
+async function resolveBarcodeToProduct(code, kind) {
+  if (!code) return null;
+  if (typeof showToast === 'function') showToast('Ricerca prodotto: ' + code + '...', 'info');
   try {
-    let product = null;
-    if (store.accountToken) {
-      try {
-        const res = await apiFetch(coachEndpoint('/api/food/barcode/' + encodeURIComponent(code)), {
-          headers: { Authorization: 'Bearer ' + store.accountToken }
-        });
-        if (res.ok) {
-          const j = await readApiJson(res);
-          product = j.product || j.item || j;
-        }
-      } catch (_) {}
+    const res = await fetch('/api/food/barcode/' + encodeURIComponent(code));
+    const json = await res.json();
+    if (json && json.ok && json.data) {
+      return { ...json.data, barcode: code };
     }
-    if (!product) {
-      const res = await fetch('https://world.openfoodfacts.org/api/v0/product/' + encodeURIComponent(code) + '.json');
-      const j = await res.json();
-      if (j && j.status === 1) product = j.product;
-    }
-    if (!product) {
-      if (out) out.textContent = 'Prodotto non trovato.';
-      return;
-    }
-    const name = product.product_name || product.product_name_it || product.name || 'Prodotto';
-    const n = product.nutriments || {};
-    const kcal = n['energy-kcal_100g'] || n.energy_kcal_100g || product.kcalPer100 || '—';
-    if (out) {
-      out.innerHTML = '<b style="color:#fff;">' + esc(name) + '</b><br>' +
-        'kcal/100g: ' + kcal +
-        ' · P: ' + (n.proteins_100g || product.proPer100 || '—') + 'g · C: ' + (n.carbohydrates_100g || '—') + 'g · F: ' + (n.fat_100g || '—') + 'g' +
-        '<div style="margin-top:8px;"><button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick=\'applyBarcodeProduct(' + JSON.stringify({
-          name,
-          brand: product.brands || product.brand || '',
-          kcal: Number(kcal) || 0,
-          pro: Number(n.proteins_100g || 0) || 0,
-          carb: Number(n.carbohydrates_100g || 0) || 0,
-          fat: Number(n.fat_100g || 0) || 0,
-          barcode: code,
-          kind: kind
-        }) + ')\'>Usa prodotto</button></div>';
-    }
-  } catch (err) {
-    if (out) out.textContent = 'Errore ricerca barcode.';
-    console.warn('[BARCODE]', err);
+  } catch (e) {
+    console.warn('[BARCODE_FETCH_ERR]', e);
   }
+  return { found: false, barcode: code };
 }
 
-function applyBarcodeProduct(p) {
-  if (!p) return;
-  if (p.kind === 'supplements') {
+function applyBarcodeProduct(product, kind) {
+  if (!product) return;
+  if (product.found === false) {
+    showBarcodeNotFoundModal(product.barcode, kind);
+    return;
+  }
+
+  const name = product.name || (product.barcode ? ('Prodotto ' + product.barcode) : 'Prodotto');
+  const p100 = product.per100g || {};
+  const kcal = Math.round(Number(p100.kcal || product.kcal || 0));
+  const pro = Math.round(Number(p100.proteins || product.pro || 0) * 10) / 10;
+  const carb = Math.round(Number(p100.carbohydrates || product.carb || 0) * 10) / 10;
+  const fat = Math.round(Number(p100.fat || product.fat || 0) * 10) / 10;
+
+  if (kind === 'supplements') {
     if (!DATA.supplementation) DATA.supplementation = { items: [], present: true };
     if (!DATA.supplementation.items) DATA.supplementation.items = [];
     DATA.supplementation.items.push({
-      name: p.name,
-      brand: p.brand || '',
+      name: name,
+      brand: product.brand || '',
       dose: '1',
       unit: 'porzione',
       timing: 'A piacere',
       frequency: 'Quotidiano',
-      notes: p.barcode ? ('barcode ' + p.barcode) : ''
+      notes: product.barcode ? ('barcode ' + product.barcode) : ''
     });
     DATA.supplementation.present = true;
     persist();
     render();
-    if (typeof showToast === 'function') showToast('Integratore aggiunto da barcode', 'success');
+    if (typeof showToast === 'function') showToast('Integratore aggiunto: ' + name, 'success');
     return;
   }
-  // nutrition — stash as selected food for add modal if open, else toast
-  activeSelectedFoodRef = {
-    name: p.name,
-    kcal: p.kcal,
-    pro: p.pro,
-    carb: p.carb,
-    fat: p.fat,
+
+  window.activeSelectedFoodRef = {
+    name: name,
+    kcal: kcal,
+    pro: pro,
+    carb: carb,
+    fat: fat,
     serving: '100g'
   };
-  if ($('food-name-input')) {
-    $('food-name-input').value = p.name;
-    if ($('food-kcal-input')) $('food-kcal-input').value = p.kcal;
-    if ($('food-pro-input')) $('food-pro-input').value = p.pro;
-    if ($('food-carb-input')) $('food-carb-input').value = p.carb;
-    if ($('food-fat-input')) $('food-fat-input').value = p.fat;
-  }
-  if (typeof showToast === 'function') showToast('Prodotto pronto: aprilo da Aggiungi alimento o usa i campi', 'success');
+
+  if ($('food-name-input')) $('food-name-input').value = name;
+  if ($('food-kcal-input')) $('food-kcal-input').value = kcal;
+  if ($('food-pro-input')) $('food-pro-input').value = pro;
+  if ($('food-carb-input')) $('food-carb-input').value = carb;
+  if ($('food-fat-input')) $('food-fat-input').value = fat;
+
+  if (typeof showToast === 'function') showToast('Prodotto acquisito: ' + name, 'success');
 }
+
+function showBarcodeNotFoundModal(code, kind) {
+  const m = document.createElement('div');
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  m.innerHTML = '' +
+    '<div style="background:#181818;border:1px solid #333;border-radius:12px;padding:20px;max-width:380px;width:100%;text-align:center;">' +
+    '<div style="font-size:28px;margin-bottom:8px;">\u{1F50d}</div>' +
+    '<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">Codice non trovato</div>' +
+    '<div style="font-size:12px;color:#aaa;margin-bottom:16px;">Il codice <b style="color:#00ffcc;">' + esc(code || '') + '</b> non \u00E8 presente nel database. Come vuoi procedere?</div>' +
+    '<div style="display:flex;flex-direction:column;gap:8px;">' +
+    '<button class="btn btn-primary" style="padding:10px;" id="nf-ocr-btn">\u{1F4F8} Scansiona Etichetta (OCR)</button>' +
+    '<button class="btn btn-outline" style="padding:10px;" id="nf-vision-btn">\u{1F374} Scatta Foto Pasto (AI)</button>' +
+    '<button class="btn btn-outline" style="padding:10px;" id="nf-manual-btn">\u{270F} Inserisci manualmente</button>' +
+    '<button class="btn btn-outline" style="padding:8px;color:#888;" id="nf-cancel-btn">Annulla</button>' +
+    '</div></div>';
+  document.body.appendChild(m);
+  m.querySelector('#nf-ocr-btn').onclick = () => {
+    m.remove();
+    scanNutritionLabelOcr(kind);
+  };
+  m.querySelector('#nf-vision-btn').onclick = () => {
+    m.remove();
+    const fp = $('meal-photo-camera') || $('meal-photo-input');
+    if (fp) fp.click();
+  };
+  m.querySelector('#nf-manual-btn').onclick = () => {
+    m.remove();
+    if ($('food-name-input')) $('food-name-input').value = 'Prodotto ' + (code || '');
+    if (typeof showToast === 'function') showToast('Compila i campi nutrizionali', 'info');
+  };
+  m.querySelector('#nf-cancel-btn').onclick = () => m.remove();
+}
+
+
 
 function markSessionClockIfNeeded() {
   if (!store.sessionStartedAt) {
@@ -24674,5 +24895,6 @@ init();
 
 // LAYER 2: BUSINESS DOMAIN SERVICES
 </script>
+<script>window.scanNutritionLabelOcr = scanNutritionLabelOcr;</script>
 </body>
 </html>
