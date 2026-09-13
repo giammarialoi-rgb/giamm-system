@@ -1950,24 +1950,31 @@ mountProgramGenerateRoutes(app, {
   requireAuth: async (req) => accountFromBearer(req.headers.authorization)
 });
 
-async function generateMealPhotoVision({ prompt, image, schema }) {
+async function generateMealPhotoVision({ prompt, image, images, schema }) {
   if (!process.env.GEMINI_API_KEY) {
     const err = new Error("vision_not_configured");
     err.statusCode = 503;
     throw err;
   }
   const ai = getClient();
-  const parts = [
-    { inlineData: { mimeType: image.mimeType, data: image.data } },
-    { text: prompt }
-  ];
+  const parts = [];
+  if (Array.isArray(images) && images.length > 0) {
+    images.forEach((img, idx) => {
+      const role = img.role === 'SIDE' ? "FOTOGRAFIA LATERALE (SIDE VIEW - ALTEZZA / SPESSORE / SEZIONE)" : "FOTOGRAFIA DALL'ALTO (TOP VIEW - AREA / SUPERFICIE / DISTRIBUZIONE)";
+      parts.push({ text: `[IMMAGINE ${idx + 1}: ${role}]` });
+      parts.push({ inlineData: { mimeType: img.mimeType || 'image/jpeg', data: img.data } });
+    });
+  } else if (image && image.data) {
+    parts.push({ inlineData: { mimeType: image.mimeType || 'image/jpeg', data: image.data } });
+  }
+  parts.push({ text: prompt });
   const response = await ai.models.generateContent({
     model: MODEL,
     contents: [{ role: "user", parts }],
     config: {
       responseMimeType: "application/json",
       responseSchema: schema,
-      maxOutputTokens: 2048
+      maxOutputTokens: 3072
     }
   });
   return { text: response.text || "" };

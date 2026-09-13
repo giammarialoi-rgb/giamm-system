@@ -492,9 +492,82 @@ export const MEAL_PHOTO_MAX_IMAGE_BYTES = 6 * 1024 * 1024;
 export const MEAL_PHOTO_RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
+    representationMode: { type: 'string', enum: ['COMPOSITE', 'COMPONENTS'] },
     overallConfidence: { type: 'number' },
     notes: { type: 'string' },
     noFoodDetected: { type: 'boolean' },
+    secondPhotoRecommendation: { type: 'string', enum: ['SECOND_PHOTO_REQUIRED', 'SECOND_PHOTO_RECOMMENDED', 'SECOND_PHOTO_NOT_NEEDED'] },
+    secondPhotoReason: { type: 'string' },
+    compositeDish: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        brand: { type: 'string' },
+        state: { type: 'string', enum: ['raw', 'cooked', 'ready_to_eat', 'dried', 'frozen', 'unknown'] },
+        quantity: { type: 'number' },
+        unit: { type: 'string' },
+        estimatedGrams: { type: 'number' },
+        minGrams: { type: 'number' },
+        maxGrams: { type: 'number' },
+        visualGrams: { type: 'number' },
+        edibleGrams: { type: 'number' },
+        hasNonEdibleParts: { type: 'boolean' },
+        kcal: { type: 'number' },
+        pro: { type: 'number' },
+        carb: { type: 'number' },
+        fat: { type: 'number' },
+        confidence: { type: 'number' },
+        foodConfidence: { type: 'number' },
+        quantityConfidence: { type: 'number' },
+        compositionConfidence: { type: 'number' },
+        notes: { type: 'string' }
+      }
+    },
+    components: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          brand: { type: 'string' },
+          state: { type: 'string', enum: ['raw', 'cooked', 'ready_to_eat', 'dried', 'frozen', 'unknown'] },
+          stateConfidence: { type: 'number' },
+          estimatedCookedGrams: { type: 'number' },
+          estimatedRawGrams: { type: 'number' },
+          rawEquivalentGrams: { type: 'number' },
+          cookingYieldFactor: { type: 'number' },
+          quantity: { type: 'number' },
+          unit: { type: 'string' },
+          estimatedGrams: { type: 'number' },
+          minGrams: { type: 'number' },
+          maxGrams: { type: 'number' },
+          visualGrams: { type: 'number' },
+          edibleGrams: { type: 'number' },
+          hasNonEdibleParts: { type: 'boolean' },
+          kcal: { type: 'number' },
+          pro: { type: 'number' },
+          carb: { type: 'number' },
+          fat: { type: 'number' },
+          confidence: { type: 'number' },
+          foodConfidence: { type: 'number' },
+          quantityConfidence: { type: 'number' },
+          compositionConfidence: { type: 'number' },
+          candidates: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                confidence: { type: 'number' }
+              },
+              required: ['name', 'confidence']
+            }
+          },
+          notes: { type: 'string' }
+        },
+        required: ['name', 'quantity', 'unit', 'kcal', 'confidence']
+      }
+    },
     items: {
       type: 'array',
       items: {
@@ -526,7 +599,9 @@ export const MEAL_PHOTO_RESPONSE_SCHEMA = {
           carb: { type: 'number' },
           fat: { type: 'number' },
           confidence: { type: 'number' },
+          foodConfidence: { type: 'number' },
           quantityConfidence: { type: 'number' },
+          compositionConfidence: { type: 'number' },
           candidates: {
             type: 'array',
             items: {
@@ -629,7 +704,100 @@ function roundGramsPlatitude(g) {
   return Math.round(n / 5) * 5;
 }
 
+export function validateNoDoubleCounting(mealDraft) {
+  if (!mealDraft || typeof mealDraft !== 'object') {
+    return { valid: true, error: null, sanitizedItems: [] };
+  }
+
+  const mode = mealDraft.representationMode === 'COMPOSITE' ? 'COMPOSITE' : 'COMPONENTS';
+  const items = Array.isArray(mealDraft.items) ? [...mealDraft.items] : [];
+  const compositeDish = mealDraft.compositeDish || null;
+  const components = Array.isArray(mealDraft.components) ? mealDraft.components : [];
+
+  const compositeName = compositeDish?.name ? fold(compositeDish.name) : '';
+  let hasCompositeInItems = false;
+
+  for (const it of items) {
+    const itName = fold(it.name || '');
+    if (compositeName && (itName === compositeName || compositeName.includes(itName) || itName.includes(compositeName))) {
+      hasCompositeInItems = true;
+    }
+  }
+
+  const isMultiComponent = items.length > 1;
+  const violationDetected = Boolean(
+    (mode === 'COMPOSITE' && isMultiComponent && compositeDish) ||
+    (mode === 'COMPONENTS' && hasCompositeInItems && components.length > 0 && items.length > components.length) ||
+    (hasCompositeInItems && isMultiComponent && items.some(it => {
+      const n = fold(it.name || '');
+      return compositeName && compositeName !== n && (compositeName.includes(n) || n.includes('riso') || n.includes('pollo') || n.includes('peperon'));
+    }))
+  );
+
+  let sanitizedItems = items;
+  if (mode === 'COMPOSITE') {
+    sanitizedItems = compositeDish ? [compositeDish] : items.slice(0, 1);
+  } else {
+    if (components && components.length > 0) {
+      sanitizedItems = components;
+    } else if (compositeDish && items.length > 1) {
+      sanitizedItems = items.filter(it => fold(it.name || '') !== compositeName);
+    }
+  }
+
+  const normalizedSanitized = sanitizedItems.map(normalizeMealPhotoItem).filter(Boolean);
+  return {
+    valid: !violationDetected,
+    violationDetected,
+    representationMode: mode,
+    sanitizedItems: normalizedSanitized,
+    activeItems: normalizedSanitized
+  };
+}
+
+export function calculateMealTotals(items = []) {
+  let totalGrams = 0;
+  let totalKcal = 0;
+  let totalPro = 0;
+  let totalCarb = 0;
+  let totalFat = 0;
+
+  for (const it of items) {
+    totalGrams += num(it.quantity || it.grams || it.visualGrams || it.edibleGrams || 0);
+    totalKcal += num(it.kcal);
+    totalPro += num(it.pro ?? it.protein ?? 0);
+    totalCarb += num(it.carb ?? it.carbs ?? 0);
+    totalFat += num(it.fat ?? it.fats ?? 0);
+  }
+
+  const roundedGrams = Math.round(totalGrams);
+  const roundedKcal = Math.round(totalKcal);
+  const roundedPro = Math.round(totalPro * 10) / 10;
+  const roundedCarb = Math.round(totalCarb * 10) / 10;
+  const roundedFat = Math.round(totalFat * 10) / 10;
+
+  const macroKcal = Math.round(roundedPro * 4 + roundedCarb * 4 + roundedFat * 9);
+  let finalKcal = roundedKcal;
+  if (macroKcal > 0 && (finalKcal === 0 || Math.abs(finalKcal - macroKcal) > Math.max(80, finalKcal * 0.4))) {
+    finalKcal = macroKcal;
+  }
+
+  return {
+    kcal: finalKcal,
+    pro: roundedPro,
+    carb: roundedCarb,
+    fat: roundedFat,
+    grams: roundedGrams,
+    totalKcal: finalKcal,
+    totalPro: roundedPro,
+    totalCarb: roundedCarb,
+    totalFat: roundedFat,
+    totalGrams: roundedGrams
+  };
+}
+
 export function normalizeMealPhotoItem(raw) {
+  if (!raw || typeof raw !== 'object') return null;
   const name = String(raw?.name || raw?.food || '').replace(/\s+/g, ' ').trim();
   if (!name) return null;
   const unit = normalizeUnit(raw?.unit);
@@ -638,11 +806,17 @@ export function normalizeMealPhotoItem(raw) {
   const grams = roundGramsPlatitude(rawGrams);
   const quantity = unit === 'g' ? grams : (clampNum(rawQty, 0, 5000, 0) || (unit === 'ml' ? grams : 1));
 
-  const confidence = Math.round(clampNum(raw?.confidence, 0, 1, 0.35) * 100) / 100;
+  const confidence = Math.round(clampNum(raw?.confidence, 0, 1, 0.4) * 100) / 100;
+  const foodConfidence = Math.round(clampNum(raw?.foodConfidence ?? raw?.confidence, 0, 1, confidence) * 100) / 100;
   const quantityConfidence = Math.round(clampNum(raw?.quantityConfidence ?? raw?.confidence, 0, 1, confidence) * 100) / 100;
+  const compositionConfidence = Math.round(clampNum(raw?.compositionConfidence ?? raw?.confidence, 0, 1, 0.5) * 100) / 100;
 
-  let minGrams = Number.isFinite(Number(raw?.minGrams)) && Number(raw?.minGrams) > 0 ? roundGramsPlatitude(raw.minGrams) : null;
-  let maxGrams = Number.isFinite(Number(raw?.maxGrams)) && Number(raw?.maxGrams) > 0 ? roundGramsPlatitude(raw.maxGrams) : null;
+  let minGrams = Number.isFinite(Number(raw?.minGrams ?? raw?.rangeMin)) && Number(raw?.minGrams ?? raw?.rangeMin) > 0
+    ? roundGramsPlatitude(raw?.minGrams ?? raw?.rangeMin)
+    : null;
+  let maxGrams = Number.isFinite(Number(raw?.maxGrams ?? raw?.rangeMax)) && Number(raw?.maxGrams ?? raw?.rangeMax) > 0
+    ? roundGramsPlatitude(raw?.maxGrams ?? raw?.rangeMax)
+    : null;
 
   if (minGrams == null || minGrams > grams) {
     const margin = quantityConfidence >= 0.8 ? 0.15 : quantityConfidence >= 0.6 ? 0.25 : 0.35;
@@ -699,11 +873,11 @@ export function normalizeMealPhotoItem(raw) {
 
   let notes = String(raw?.notes || raw?.visualDescription || '').trim();
   if (hasNonEdibleParts && !/scarti|ossa/i.test(notes)) {
-    notes = (notes ? notes + ' \u00B7 ' : '') + 'Ossa e scarti esclusi (' + visualGrams + 'g lordo -> ' + edibleGrams + 'g edibile)';
+    notes = (notes ? notes + ' · ' : '') + 'Ossa e scarti esclusi (' + visualGrams + 'g lordo -> ' + edibleGrams + 'g edibile)';
   }
   if (candidates.length > 0 && confidence < 0.85 && !notes.includes('alternative')) {
     const candStr = 'Possibili alternative: ' + candidates.slice(0, 3).map(c => `${c.name} (${Math.round(c.confidence * 100)}%)`).join(', ');
-    notes = (notes ? notes + ' \u00B7 ' : '') + candStr;
+    notes = (notes ? notes + ' · ' : '') + candStr;
   }
 
   return {
@@ -723,6 +897,8 @@ export function normalizeMealPhotoItem(raw) {
     estimatedGrams: grams,
     minGrams,
     maxGrams,
+    rangeMin: minGrams,
+    rangeMax: maxGrams,
     visualGrams,
     edibleGrams,
     hasNonEdibleParts,
@@ -733,7 +909,9 @@ export function normalizeMealPhotoItem(raw) {
     carb,
     fat,
     confidence,
+    foodConfidence,
     quantityConfidence,
+    compositionConfidence,
     candidates: candidates.length > 0 ? candidates : undefined,
     isUncertain,
     uncertain: isUncertain,
@@ -741,21 +919,66 @@ export function normalizeMealPhotoItem(raw) {
   };
 }
 
-export function normalizeMealPhotoResult(parsed = {}, { mealName = '', source = 'gemini_vision', dbEnrichFailed = false } = {}) {
-  const items = (Array.isArray(parsed?.items) ? parsed.items : [])
+export function normalizeMealPhotoResult(parsed = {}, { mealName = '', source = 'gemini_vision', dbEnrichFailed = false, imagesAnalyzed = 1, imageRoles = ['TOP'] } = {}) {
+  const compositeDish = parsed?.compositeDish ? normalizeMealPhotoItem(parsed.compositeDish) : null;
+  const components = (Array.isArray(parsed?.components) ? parsed.components : [])
     .map(normalizeMealPhotoItem)
     .filter(Boolean);
+
+  let rawItems = (Array.isArray(parsed?.items) ? parsed.items : [])
+    .map(normalizeMealPhotoItem)
+    .filter(Boolean);
+
+  // Smart automatic choice for representationMode if not explicitly set
+  let representationMode = parsed?.representationMode;
+  if (!representationMode || (representationMode !== 'COMPOSITE' && representationMode !== 'COMPONENTS')) {
+    const compositeKeywords = /lasagn|parmigiana|pasta al forno|pasta pasticciata|risotto|cous cous|paella|arancin|capra in umido|porceddu|torta salata|casserol/i;
+    const isInherentlyComposite = (compositeDish && compositeKeywords.test(compositeDish.name)) ||
+      rawItems.some(it => compositeKeywords.test(it.name));
+
+    if (isInherentlyComposite) {
+      representationMode = 'COMPOSITE';
+    } else if (components.length > 1) {
+      representationMode = 'COMPONENTS';
+    } else if (rawItems.length > 1) {
+      representationMode = 'COMPONENTS';
+    } else {
+      representationMode = compositeDish ? 'COMPOSITE' : 'COMPONENTS';
+    }
+  }
+
+  // Populate items strictly matching active representation mode
+  let items = [];
+  if (representationMode === 'COMPOSITE') {
+    if (compositeDish) {
+      items = [compositeDish];
+    } else if (rawItems.length) {
+      items = [rawItems[0]];
+    }
+  } else {
+    if (components.length) {
+      items = components;
+    } else if (rawItems.length) {
+      items = rawItems;
+    }
+  }
+
+  // Anti-Double-Counting validation
+  const validation = validateNoDoubleCounting({
+    representationMode,
+    compositeDish: compositeDish || (items.length === 1 ? items[0] : null),
+    components: components.length ? components : (items.length > 1 ? items : []),
+    items
+  });
+
+  if (!validation.valid && validation.sanitizedItems.length) {
+    items = validation.sanitizedItems;
+  }
 
   const noFoodDetected = Boolean(parsed?.noFoodDetected || items.length === 0);
   const overallConfidence = Math.round(clampNum(parsed?.overallConfidence, 0, 1, items.length ? 0.7 : 0) * 100) / 100;
 
-  let totalKcal = 0, totalPro = 0, totalCarb = 0, totalFat = 0;
-  for (const it of items) {
-    totalKcal += num(it.kcal);
-    totalPro += num(it.pro);
-    totalCarb += num(it.carb);
-    totalFat += num(it.fat);
-  }
+  const totals = calculateMealTotals(items);
 
   const hasLowConfidenceItem = items.some((it) => it.confidence < MEAL_PHOTO_LOW_CONFIDENCE || it.quantityConfidence < MEAL_PHOTO_LOW_CONFIDENCE);
   const uncertain = Boolean(noFoodDetected || overallConfidence < MEAL_PHOTO_LOW_CONFIDENCE || hasLowConfidenceItem || parsed?.uncertain || source === 'mock');
@@ -768,6 +991,11 @@ export function normalizeMealPhotoResult(parsed = {}, { mealName = '', source = 
     else warnings.push('Verifica i dati stimati prima di confermare');
   }
 
+  const secondPhotoRecommendation = parsed?.secondPhotoRecommendation ||
+    (items.some(it => /toast|panino|sandwich|burger/i.test(it.name)) ? 'SECOND_PHOTO_RECOMMENDED' : 'SECOND_PHOTO_NOT_NEEDED');
+  const secondPhotoReason = parsed?.secondPhotoReason ||
+    (secondPhotoRecommendation === 'SECOND_PHOTO_RECOMMENDED' ? 'Valutazione spessore e ripieni' : '');
+
   const foods = mealPhotoItemsToFoods(items, source);
 
   return {
@@ -775,6 +1003,13 @@ export function normalizeMealPhotoResult(parsed = {}, { mealName = '', source = 
     domain: 'nutrition',
     mealName: String(mealName || '').trim(),
     source,
+    representationMode,
+    compositeDish: compositeDish || (representationMode === 'COMPOSITE' && items.length === 1 ? items[0] : null),
+    components: components.length ? components : (representationMode === 'COMPONENTS' ? items : []),
+    imagesAnalyzed: Number(imagesAnalyzed) || 1,
+    imageRoles: Array.isArray(imageRoles) ? imageRoles : ['TOP'],
+    secondPhotoRecommendation,
+    secondPhotoReason,
     noFoodDetected,
     overallConfidence,
     uncertain,
@@ -782,12 +1017,7 @@ export function normalizeMealPhotoResult(parsed = {}, { mealName = '', source = 
     warnings,
     dbEnrichFailed: Boolean(dbEnrichFailed),
     notes: String(parsed?.notes || '').trim(),
-    totals: {
-      kcal: Math.round(totalKcal),
-      pro: Math.round(totalPro * 10) / 10,
-      carb: Math.round(totalCarb * 10) / 10,
-      fat: Math.round(totalFat * 10) / 10
-    },
+    totals,
     items,
     foods
   };
@@ -921,103 +1151,138 @@ export async function enrichMealPhotoItems(items = [], searchFn) {
   };
 }
 
-export function mockAnalyzeMealPhoto({ mealName = '' } = {}) {
+export function mockAnalyzeMealPhoto({ mealName = '', imagesAnalyzed = 1, imageRoles = ['TOP'] } = {}) {
+  const compositeDish = {
+    name: 'Riso saltato con pollo e verdure',
+    quantity: 520,
+    unit: 'g',
+    estimatedGrams: 520,
+    minGrams: 450,
+    maxGrams: 590,
+    visualGrams: 520,
+    edibleGrams: 520,
+    hasNonEdibleParts: false,
+    kcal: 640,
+    pro: 74.0,
+    carb: 54.0,
+    fat: 12.5,
+    confidence: 0.50,
+    foodConfidence: 0.85,
+    quantityConfidence: 0.50,
+    compositionConfidence: 0.75,
+    notes: 'Piatto completo (mock)'
+  };
+
+  const components = [
+    {
+      name: 'Petto di pollo alla griglia',
+      state: 'cooked',
+      stateConfidence: 0.92,
+      cookingYieldFactor: 0.80,
+      estimatedCookedGrams: 220,
+      rawEquivalentGrams: 275,
+      quantity: 220,
+      unit: 'g',
+      estimatedGrams: 220,
+      minGrams: 190,
+      maxGrams: 260,
+      visualGrams: 220,
+      edibleGrams: 220,
+      hasNonEdibleParts: false,
+      kcal: 360,
+      pro: 68.0,
+      carb: 0.0,
+      fat: 8.0,
+      confidence: 0.50,
+      foodConfidence: 0.90,
+      quantityConfidence: 0.50,
+      compositionConfidence: 0.85,
+      notes: 'Porzione abbondante (2 filetti medi)'
+    },
+    {
+      name: 'Patate al forno',
+      state: 'cooked',
+      stateConfidence: 0.90,
+      cookingYieldFactor: 0.98,
+      estimatedCookedGrams: 300,
+      rawEquivalentGrams: 305,
+      quantity: 300,
+      unit: 'g',
+      estimatedGrams: 300,
+      minGrams: 250,
+      maxGrams: 360,
+      visualGrams: 300,
+      edibleGrams: 300,
+      hasNonEdibleParts: false,
+      kcal: 280,
+      pro: 6.0,
+      carb: 54.0,
+      fat: 4.5,
+      confidence: 0.50,
+      foodConfidence: 0.88,
+      quantityConfidence: 0.50,
+      compositionConfidence: 0.80,
+      notes: 'Patate a spicchi'
+    }
+  ];
+
   return normalizeMealPhotoResult({
+    representationMode: 'COMPONENTS',
     overallConfidence: 0.50,
     uncertain: true,
     notes: 'Stima automatica da foto (mock gemini)',
     noFoodDetected: false,
-    items: [
-      {
-        name: 'Petto di pollo alla griglia',
-        state: 'cooked',
-        stateConfidence: 0.92,
-        cookingYieldFactor: 0.80,
-        estimatedCookedGrams: 220,
-        rawEquivalentGrams: 275,
-        quantity: 220,
-        unit: 'g',
-        estimatedGrams: 220,
-        minGrams: 190,
-        maxGrams: 260,
-        visualGrams: 220,
-        edibleGrams: 220,
-        hasNonEdibleParts: false,
-        kcal: 360,
-        pro: 68.0,
-        carb: 0.0,
-        fat: 8.0,
-        confidence: 0.50,
-        quantityConfidence: 0.50,
-        notes: 'Porzione abbondante (2 filetti medi)'
-      },
-      {
-        name: 'Patate al forno',
-        state: 'cooked',
-        stateConfidence: 0.90,
-        cookingYieldFactor: 0.98,
-        estimatedCookedGrams: 300,
-        rawEquivalentGrams: 305,
-        quantity: 300,
-        unit: 'g',
-        estimatedGrams: 300,
-        minGrams: 250,
-        maxGrams: 360,
-        visualGrams: 300,
-        edibleGrams: 300,
-        hasNonEdibleParts: false,
-        kcal: 280,
-        pro: 6.0,
-        carb: 54.0,
-        fat: 4.5,
-        confidence: 0.50,
-        quantityConfidence: 0.50,
-        notes: 'Patate a spicchi'
-      }
-    ]
-  }, { mealName, source: 'mock' });
+    secondPhotoRecommendation: imagesAnalyzed > 1 ? 'SECOND_PHOTO_NOT_NEEDED' : 'SECOND_PHOTO_RECOMMENDED',
+    secondPhotoReason: 'Valutazione spessore',
+    compositeDish,
+    components,
+    items: components
+  }, { mealName, source: 'mock', imagesAnalyzed, imageRoles });
 }
 
-export function buildMealPhotoPrompt({ mealName = '', notes = '', locale = 'it' } = {}) {
+export function buildMealPhotoPrompt({ mealName = '', notes = '', locale = 'it', images = [] } = {}) {
   const isEn = String(locale).toLowerCase().startsWith('en');
   const contextLines = [];
   if (mealName && mealName !== 'Pasto' && mealName !== 'Meal') {
-    contextLines.push(isEn ? ('- User meal: "' + mealName + '"') : ('- Pasto dichiarato dall\'utente: "' + mealName + '"'));
+    contextLines.push(isEn ? ('- User target meal: "' + mealName + '"') : ('- Pasto di destinazione: "' + mealName + '"'));
   }
   if (notes) {
-    contextLines.push(isEn ? ('- User notes: "' + notes + '"') : ('- Note aggiuntive dell\'utente: "' + notes + '"'));
+    contextLines.push(isEn ? ('- User notes: "' + notes + '"') : ('- Note utente: "' + notes + '"'));
   }
-  const contextBlock = contextLines.length ? ('\n' + (isEn ? 'Context:' : 'Contesto utente:') + '\n' + contextLines.join('\n') + '\n') : '';
+  if (Array.isArray(images) && images.length > 1) {
+    contextLines.push(isEn
+      ? '- MULTI-IMAGE INPUT: Image 1 is TOP VIEW (surface area/distribution), Image 2 is SIDE VIEW (thickness/height/layering).'
+      : '- INPUT MULTI-FOTO: Immagine 1 è VISTA DALL\'ALTO (area e distribuzione superficiale), Immagine 2 è VISTA LATERALE (altezza, spessore, stratificazione e ripieni).'
+    );
+  }
+  const contextBlock = contextLines.length ? ('\n' + (isEn ? 'Context:' : 'Contesto:') + '\n' + contextLines.join('\n') + '\n') : '';
 
   if (isEn) {
-    return 'You are the Nurvan Universal Nutritional AI & Computer Vision specialist (Food Intelligence V5).\n' +
-      'Analyze the food image with deep multimodal reasoning and output structured JSON strictly adhering to the schema.\n' +
+    return 'You are the Nurvan Universal Food Intelligence V7 (Food Intelligence V5/V7) Computer Vision & Nutritional AI specialist.\n' +
+      'Analyze the provided food photograph(s) using deep multimodal reasoning and produce strict JSON conforming to the schema.\n' +
       contextBlock +
-      'COMPREHENSIVE MULTIMODAL REASONING GUIDELINES:\n' +
-      '1. NON-FOOD / BLUR: If no food or drink is present, strictly set noFoodDetected: true, items: [], overallConfidence: 0.0.\n' +
-      '2. GLOBAL FOOD ONTOLOGY & REGIONAL DISHES: Universal recognition across all culinary traditions (Italian regional dishes like porceddu, capra in umido, malloreddus, culurgiones, seadas, arancini, caponata, lasagna, pasta al forno, cacio e pepe; International cuisine like couscous, poke, sushi, ramen, tacos, curries; fast food and packaged goods).\n' +
-      '3. COMPOSITE FOOD DECOMPOSITION: Decompose composite foods (e.g. sandwiches, toast with turkey & gouda, multi-ingredient poke, casseroles) into their real constituent items with individual grams and macros.\n' +
-      '4. SEPARATION OF IDENTITY VS QUANTITY: Differentiate food identification confidence from portion weight confidence. Do not mark food identity low just because portion size is estimated.\n' +
-      '5. VISUAL EVIDENCE & TEXTURES: Inspect textures, grilling marks, browning, crust, visible fillings, sauces, oil sheen, plate diameter and cutlery scale.\n' +
-      '6. MULTI-CANDIDATE RANKING: If a dish appearance is ambiguous (e.g. pasta al forno vs pasticciata vs lasagna), provide top candidates in "candidates" array.\n' +
-      '7. RAW / COOKED INTELLIGENCE: Distinguish state (raw, cooked, ready_to_eat, dried, frozen). For cooked items, provide both estimatedCookedGrams and rawEquivalentGrams.\n' +
-      '8. NON-EDIBLE PARTS (WASTE): Separate visualGrams (gross with bones/shells/peel) and edibleGrams (net edible).\n' +
-      '9. ANTI-UNDERESTIMATION: Accurately estimate visible cooking oils, dressings, and calorie-dense ingredients.';
+      'MANDATORY FOOD INTELLIGENCE V7 RULES & ANTI-UNDERESTIMATION GUIDELINES:\n' +
+      '1. NEVER DOUBLE COUNT: You must output BOTH compositeDish (if the dish can be viewed as a single recipe) AND components (if ingredients are distinguishable). BUT in the active items array, choose EITHER representationMode="COMPOSITE" with ONLY the single compositeDish OR representationMode="COMPONENTS" with ONLY the constituent items. NEVER mix composite parent dish and child items in the items array!\n' +
+      '2. MULTI-IMAGE FUSION: When top and side views are provided, fuse top (area, spread) with side (height, vertical volume, bread thickness, internal fillings). Do NOT sum quantities across photos; they are two perspectives of the same dish.\n' +
+      '3. TOAST & SANDWICHES INTELLIGENCE: Inspect toast shape, slice count, thickness and cross-section. If fillings are not visible, name as "Toast - ripieno non determinabile" without hallucinating invisible ingredients.\n' +
+      '4. ZERO INVENTION & ANTI-UNDERESTIMATION: Avoid portion UNDERESTIMATION. Never invent unobserved oils, hidden dressings or precise grams without visual cues. Lower confidence when uncertain and provide estimation ranges (minGrams / maxGrams).\n' +
+      '5. SEPARATION OF IDENTITY VS QUANTITY: Output foodConfidence, quantityConfidence, and compositionConfidence independently.\n' +
+      '6. REGIONAL & INTERNATIONAL DISHES: Visual recognition of regional Italian (porceddu, capra in umido, malloreddus, culurgiones, seadas, arancini, pasta al forno, parmigiana, lasagna, risotti) and international cuisines (couscous, paella, ramen, poke, tacos, curry).\n' +
+      '7. NUTRITIONAL CONSISTENCY: Ensure kcal approximately equals 4*pro + 4*carb + 9*fat.\n';
   }
 
-  return 'Sei lo specialista universale di Computer Vision Nutrizionale di Nurvan (Food Intelligence V5).\n' +
-    'Analizza l\'immagine del cibo con ragionamento multimodale approfondito e restituisci un JSON strutturato conforme allo schema.\n' +
+  return 'Sei lo specialista Nurvan Food Intelligence V7 (Food Intelligence V5) in Visione Multimodale e Nutrizione Clinica.\n' +
+    'Analizza le fotografie del pasto con ragionamento geometrico e nutrizionale profondo, producendo JSON valido aderente allo schema.\n' +
     contextBlock +
-    'LINEE GUIDA DI RAGIONAMENTO MULTIMODALE & ONTOLOGIA UNIVERSALE:\n' +
-    '1. NON-CIBO / FOTO NON CHIARA: Se l\'immagine non contiene cibo o bevande, imposta strictly "noFoodDetected": true, "items": [], "overallConfidence": 0.0.\n' +
-    '2. ONTOLOGIA GLOBALE & PIATTI REGIONALI: Riconoscimento universale di qualsiasi piatto o ingrediente (gastronomia italiana e regionale come porceddu/porcetto, capra in umido, malloreddus, culurgiones, seadas, arancini, caponata, lasagna, pasta al forno, pasta pasticciata, cacio e pepe, carbonara; cucina internazionale come couscous, poke, sushi, ramen, tacos, curry; catene fast food e confezionati).\n' +
-    '3. SCOMPOSIZIONE CIBI COMPOSTI: Se il pasto è un cibo composto (es. toast/panino con pane, fette di tacchino e formaggio Gouda; poke componibile; piatto misto carne e contorno), scomponilo nelle sue componenti reali con pesi e macronutrienti distinti.\n' +
-    '4. SEPARAZIONE IDENTITÀ VS QUANTITÀ: Non confondere l\'incertezza sulla grammatura con l\'identità del piatto. Se il cibo è chiaramente identificabile, mantieni "confidence" elevata (>=0.85) e imposta "quantityConfidence" appropriata con il range "minGrams" e "maxGrams".\n' +
-    '5. EVIDENZE VISIVE: Analizza consistenza visiva, crosta, doratura, grigliatura, panatura, sfogliatura, salse, lucentezza da olio di cottura, e usa piatto/posate come riferimento di scala geometrica.\n' +
-    '6. CANDIDATI MULTIPLI PER PIATTI AMBIGUI: Se un piatto presenta ambiguità visiva (es. pasta al forno vs pasticciata vs lasagna), inserisci le alternative plausibili nell\'array "candidates".\n' +
-    '7. RAW / COOKED INTELLIGENCE: Distingui accuratamente lo stato (raw, cooked, ready_to_eat, dried, frozen). Per cibi cotti che cambiano peso (pasta, riso, carne, pesce, patate, legumi), fornisci sia estimatedCookedGrams sia rawEquivalentGrams.\n' +
-    '8. SCARTI NON EDIBILI: Per cibi con ossa, lische, gusci o bucce spesse, imposta hasNonEdibleParts: true e separa visualGrams (lordo) ed edibleGrams (netto edibile).\n' +
-    '9. ANTI-SOTTOSTIMA: Non sottostimare grassi di cottura od oli visibili (se presenti, includi l\'olio come ingrediente distinto).';
+    'REGOLE FONDAMENTALI FOOD INTELLIGENCE V7 E LINEE GUIDA ANTI-SOTTOSTIMA:\n' +
+    '1. MAI DOPPIO CONTEGGIO (REQUISITO PRIMARIO): Nel JSON fornisci sia compositeDish (ricetta complessiva) che components (ingredienti scomposti). MA nell\'array items attivo inserisci ESCLUSIVAMENTE gli elementi corrispondenti a representationMode: se "COMPOSITE" un solo elemento piatto completo; se "COMPONENTS" i singoli ingredienti. MAI sommare né includere contemporaneamente il piatto intero e i suoi ingredienti in items.\n' +
+    '2. FUSIONE MULTI-FOTO DALL\'ALTO E LATERALE: Quando sono fornite 2 foto (TOP = vista dall\'alto per area e distribuzione; SIDE = vista laterale per altezza, spessore e stratificazione), fondi le evidenze volumetriche. NON sommare le quantità delle due foto: sono viste diverse dello stesso piatto.\n' +
+    '3. SCOMPOSIZIONE CIBI COMPOSTI: Riconosci piatti unici e ricette complesse. Fornisci la corretta scomposizione in ingredienti distinti mantenendo la coerenza delle grammature.\n' +
+    '4. RICONOSCIMENTO ACCURATO TOAST E PANINI: Analizza numero fette, spessore, bordi e fuoriuscita ripieno. Se il ripieno interno non è osservabile, indica "Toast - ripieno non determinabile dalla foto" con richiesta di specificare il ripieno. ZERO invenzione di ingredienti invisibili.\n' +
+    '5. ZERO INVENZIONE E GUIDA SOTTOSTIMA: Evita la SOTTOSTIMA delle porzioni. Non inventare olii non visibili, condimenti o grammature arbitrarie. Fornisci range di stima (minGrams, maxGrams) e stima centrale quando la quantità è incerta.\n' +
+    '6. SEPARAZIONE IDENTITÀ VS QUANTITÀ: Specifica foodConfidence (identità), quantityConfidence (grammatura) e compositionConfidence (ricetta).\n' +
+    '7. RICONOSCIMENTO UNIVERSALE PIATTI REGIONALI E INTERNAZIONALI: Identifica visivamente piatti tipici (porceddu, capra in umido, malloreddus, culurgiones, seadas, arancini, pasta al forno, parmigiana, lasagna, risotti, cous cous, paella, poke, sushi, ramen, tacos).\n' +
+    '8. COERENZA NUTRIZIONALE: Assicura che kcal sia coerente con 4*P + 4*C + 9*F.\n';
 }
 
 export async function analyzeMealPhoto(input = {}, opts = {}) {
@@ -1029,26 +1294,53 @@ export async function analyzeMealPhoto(input = {}, opts = {}) {
   const generateVision = opts.generateVision || opts.generateVisionFn || input.generateVision || input.generateVisionFn;
   const searchFoods = opts.searchFoods || opts.searchFn || input.searchFoods || input.searchFn;
 
-  if (env.MOCK_GEMINI === '1' || env.MOCK_GEMINI === true) {
-    return mockAnalyzeMealPhoto({ mealName });
+  const rawImages = Array.isArray(input.images) && input.images.length
+    ? input.images
+    : (input.image || input.imageBase64 || input.dataUrl || input.data
+        ? [{ role: input.role || 'TOP', data: input.image || input.imageBase64 || input.dataUrl || input.data, mimeType: input.mimeType || opts.mimeType }]
+        : []);
+
+  if (!rawImages.length && env.MOCK_GEMINI !== '1' && env.MOCK_GEMINI !== true) {
+    throw new Error('image_required');
   }
 
-  const rawImage = input.image || input.imageBase64 || input.dataUrl || input.data;
-  const payload = parseImagePayload(rawImage, input.mimeType || opts.mimeType);
-  if (!payload) throw new Error('image_required');
-  if (payload.bytes > MEAL_PHOTO_MAX_IMAGE_BYTES) throw new Error('image_too_large');
+  const parsedImages = [];
+  for (const img of rawImages) {
+    const rawData = typeof img === 'string' ? img : (img.data || img.dataUrl || img.imageBase64 || img.image);
+    const role = (img && img.role) || (parsedImages.length === 0 ? 'TOP' : 'SIDE');
+    const pl = parseImagePayload(rawData, (img && img.mimeType) || input.mimeType || opts.mimeType);
+    if (!pl) continue;
+    if (pl.bytes > MEAL_PHOTO_MAX_IMAGE_BYTES) throw new Error('image_too_large');
+    parsedImages.push({
+      role: role.toUpperCase(),
+      mimeType: pl.mimeType,
+      data: pl.data,
+      bytes: pl.bytes
+    });
+  }
 
+  const imagesAnalyzed = parsedImages.length || 1;
+  const imageRoles = parsedImages.map(p => p.role);
+
+  if (env.MOCK_GEMINI === '1' || env.MOCK_GEMINI === true) {
+    return mockAnalyzeMealPhoto({ mealName, imagesAnalyzed, imageRoles });
+  }
+
+  if (!parsedImages.length) throw new Error('image_required');
+
+  const primaryPayload = parsedImages[0];
   let parsed = null;
   let source = 'gemini_vision';
 
   if (typeof generateVision === 'function') {
-    const prompt = buildMealPhotoPrompt({ mealName, notes, locale });
+    const prompt = buildMealPhotoPrompt({ mealName, notes, locale, images: parsedImages });
     try {
       const rawRes = await generateVision({
         prompt,
-        imageBase64: payload.data,
-        mimeType: payload.mimeType,
-        image: { mimeType: payload.mimeType, data: payload.data },
+        imageBase64: primaryPayload.data,
+        mimeType: primaryPayload.mimeType,
+        image: { mimeType: primaryPayload.mimeType, data: primaryPayload.data },
+        images: parsedImages,
         schema: MEAL_PHOTO_RESPONSE_SCHEMA
       });
       if (rawRes && typeof rawRes === 'object' && 'text' in rawRes) {
@@ -1064,11 +1356,11 @@ export async function analyzeMealPhoto(input = {}, opts = {}) {
     }
   }
 
-  if (!parsed || !Array.isArray(parsed.items)) {
-    return mockAnalyzeMealPhoto({ mealName });
+  if (!parsed || (!Array.isArray(parsed.items) && !parsed.compositeDish && !Array.isArray(parsed.components))) {
+    return mockAnalyzeMealPhoto({ mealName, imagesAnalyzed, imageRoles });
   }
 
-  const normalized = normalizeMealPhotoResult(parsed, { mealName, source });
+  const normalized = normalizeMealPhotoResult(parsed, { mealName, source, imagesAnalyzed, imageRoles });
   if (!normalized.items.length) return normalized;
 
   const enriched = await enrichMealPhotoItems(normalized.items, searchFoods);
@@ -1080,7 +1372,9 @@ export async function analyzeMealPhoto(input = {}, opts = {}) {
     {
       mealName,
       source: enriched.source,
-      dbEnrichFailed: enriched.dbEnrichFailed
+      dbEnrichFailed: enriched.dbEnrichFailed,
+      imagesAnalyzed,
+      imageRoles
     }
   );
 }
@@ -1514,17 +1808,19 @@ export function mountFoodRoutes(app, opts = {}) {
       const body = req.body || {};
       const result = await analyzeMealPhoto({
         image: body.image,
+        images: body.images,
         mimeType: body.mimeType,
         mealName: body.mealName,
         notes: body.notes,
+        locale: body.locale,
         apiKey: env.GEMINI_API_KEY,
         generateVisionFn,
         searchFn: q => searchFoodMulti(q, env)
       });
       res.json(result);
     } catch (err) {
-      const status = err.message === 'IMAGE_REQUIRED' ? 400 :
-        err.message === 'IMAGE_TOO_LARGE' ? 413 : 500;
+      const status = (err.message === 'image_required' || err.message === 'IMAGE_REQUIRED') ? 400 :
+        (err.message === 'image_too_large' || err.message === 'IMAGE_TOO_LARGE') ? 413 : 500;
       res.status(status).json({ ok: false, error: err.message });
     }
   });

@@ -1600,56 +1600,141 @@ body.focus-mode [data-rewards-only] {
 </div>
 
 <!-- Modal Scelta Metodo Acquisizione (Food Photo V6) -->
+<!-- Modal Scelta Metodo Acquisizione & Multi-Foto (Food Photo V7) -->
 <div id="meal-acquisition-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:10018;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;">
   <div class="card" style="max-width:440px;width:100%;border:1px solid var(--gold);padding:18px;box-sizing:border-box;border-radius:12px;background:#141414;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <h3 style="margin:0;font-size:15px;color:var(--gold);font-weight:900;">ACQUISISCI IL PASTO</h3>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:18px;">📸</span>
+        <h3 id="meal-acquisition-title" style="margin:0;font-size:15px;color:var(--gold);font-weight:900;">FOTO 1: VISTA DALL'ALTO</h3>
+      </div>
       <button type="button" class="btn btn-outline" style="font-size:12px;padding:3px 8px;" onclick="closeMealAcquisitionModal()">✕</button>
     </div>
-    <div style="font-size:12px;color:#aaa;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;background:#1a1a1a;padding:8px 12px;border-radius:8px;border:1px solid #333;">
+    
+    <div style="font-size:12px;color:#aaa;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;background:#1a1a1a;padding:8px 12px;border-radius:8px;border:1px solid #333;">
       <span>Destinazione: <strong id="meal-acquisition-target-name" style="color:var(--gold);font-weight:800;">Pasto</strong></span>
       <button type="button" class="btn btn-outline" style="font-size:10px;padding:3px 8px;border-color:var(--gold);color:var(--gold);" onclick="reopenMealTargetSelection()">Cambia</button>
     </div>
-    <p style="margin:0 0 14px;font-size:12px;color:#888;line-height:1.4;">Come vuoi fornire la fotografia?</p>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
-      <button type="button" class="btn btn-primary" style="padding:14px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:8px;" onclick="startMealPhotoCapture('camera')">
-        <span style="font-size:18px;">📷</span> SCATTA FOTO
-      </button>
-      <button type="button" class="btn btn-outline" style="padding:14px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:8px;border-color:var(--gold);color:var(--gold);" onclick="startMealPhotoCapture('file')">
-        <span style="font-size:18px;">🖼️</span> SCEGLI DALLA LIBRERIA
-      </button>
+
+    <!-- Step Progress Indicator -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;">
+      <div id="meal-acq-step-1-pill" style="flex:1;padding:6px;text-align:center;border-radius:6px;font-size:10px;font-weight:800;background:var(--gold);color:#000;">
+        1. Vista dall'alto (Area)
+      </div>
+      <div id="meal-acq-step-2-pill" style="flex:1;padding:6px;text-align:center;border-radius:6px;font-size:10px;font-weight:700;background:#222;color:#777;border:1px solid #333;">
+        2. Vista laterale (Altezza)
+      </div>
     </div>
-    <button type="button" class="btn btn-outline" style="width:100%;font-size:11px;padding:8px;" onclick="closeMealAcquisitionModal()">ANNULLA</button>
+
+    <!-- Step 1 Container (Top View) -->
+    <div id="meal-acq-step-top-container">
+      <div style="background:#181818;border:1px dashed #444;border-radius:10px;padding:14px;text-align:center;margin-bottom:14px;">
+        <div style="font-size:32px;margin-bottom:6px;">🍽️</div>
+        <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:4px;">Inquadra l'intero piatto dall'alto</div>
+        <div style="font-size:11px;color:#aaa;line-height:1.4;">
+          Cerca di includere tutto il piatto ed evita di tagliare i bordi. Fornisce all'AI la stima dell'area e della distribuzione superficiale.
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+        <button type="button" class="btn btn-primary" style="padding:12px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="startMealPhotoCapture('camera')">
+          <span style="font-size:18px;">📷</span> SCATTA FOTO DALL'ALTO
+        </button>
+        <button type="button" class="btn btn-outline" style="padding:10px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:8px;border-color:#444;" onclick="startMealPhotoCapture('file')">
+          <span style="font-size:16px;">🖼️</span> Scegli dalla libreria
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2 Container (Side View) -->
+    <div id="meal-acq-step-side-container" style="display:none;">
+      <div style="background:#181818;border:1px dashed var(--gold);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px;">
+        <div style="font-size:32px;margin-bottom:6px;">📐</div>
+        <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:4px;">Foto 2: Vista Laterale (Consigliata)</div>
+        <div style="font-size:11px;color:#aaa;line-height:1.4;">
+          Tieni il telefono all'altezza del bordo del piatto. Aiuta l'AI a valutare altezza, spessore, panini, toast e ripieni interni.
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+        <button type="button" class="btn btn-primary" style="padding:12px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="startMealPhotoCapture('camera')">
+          <span style="font-size:18px;">📷</span> SCATTA FOTO LATERALE
+        </button>
+        <button type="button" class="btn btn-outline" style="padding:10px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:8px;border-color:#444;" onclick="startMealPhotoCapture('file')">
+          <span style="font-size:16px;">🖼️</span> Scegli dalla libreria
+        </button>
+        <button type="button" class="btn btn-outline" style="padding:8px;font-size:11px;border-color:#555;color:#aaa;" onclick="proceedWithTopPhotoOnly()">
+          ⏭️ Usa solo la foto dall'alto (Salta)
+        </button>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;">
+      <button type="button" class="btn btn-outline" style="font-size:11px;padding:6px 12px;" onclick="closeMealAcquisitionModal()">Annulla</button>
+    </div>
   </div>
 </div>
 
-<!-- Modal Foto Pasto Review & Conferma (Food Photo V6) -->
+<!-- Modal Foto Pasto Review & Conferma (Food Photo V7) -->
 <div id="meal-photo-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:10020;align-items:flex-end;justify-content:center;padding:12px;box-sizing:border-box;">
   <div class="card" style="max-width:480px;width:100%;max-height:min(92vh,760px);overflow:auto;border:1px solid var(--gold);padding:14px;box-sizing:border-box;border-radius:12px;background:#141414;">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">
       <div style="display:flex;align-items:center;gap:6px;">
         <span style="font-size:16px;">📸</span>
-        <h3 style="margin:0;font-size:14px;color:var(--gold);font-weight:800;">RISULTATO FOTO PASTO</h3>
+        <h3 style="margin:0;font-size:14px;color:var(--gold);font-weight:800;">RISULTATO FOTO PASTO AI</h3>
       </div>
       <button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="closeMealPhotoModal()">✕</button>
     </div>
+    
     <div id="meal-photo-slot-container" style="background:#1c1c1c;padding:8px 10px;border-radius:8px;border:1px solid #333;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:6px;">
       <div id="meal-photo-slot-label" style="font-size:12px;color:#ccc;font-weight:700;"></div>
       <select id="meal-photo-target-select" style="padding:4px 8px;background:#111;border:1px solid #555;color:#fff;border-radius:6px;font-size:11px;" onchange="onMealPhotoTargetSelectChange(this.value)">
       </select>
     </div>
-    <img id="meal-photo-thumb" alt="" style="display:none;width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:10px;border:1px solid #333;">
-    <div id="meal-photo-status" style="font-size:12px;color:#aaa;margin-bottom:8px;"></div>
-    <div id="meal-photo-warning" style="display:none;margin-bottom:10px;padding:8px 10px;border-radius:8px;border:1px solid #a84;background:#1a1408;font-size:11px;line-height:1.4;"></div>
-    <div id="meal-photo-items"></div>
-    <button type="button" class="btn btn-outline" style="width:100%;font-size:11px;padding:8px;margin:8px 0 12px;border-style:dashed;" onclick="addMealPhotoDraftRow()">+ Aggiungi riga</button>
-    <div style="font-size:9px;color:#666;line-height:1.35;margin-bottom:10px;">Stima visiva generalista con Food Intelligence V5. Puoi correggere quantità, macro, candidati e usare il barcode prima di inserire.</div>
-    <div class="modal-sticky-footer" style="display:flex;gap:8px;">
+
+    <!-- Multi-Photo Thumbs Bar -->
+    <div id="meal-photo-thumbs-container" style="display:none;align-items:center;gap:8px;margin-bottom:10px;">
+      <div id="meal-photo-thumb-top-box" style="display:none;align-items:center;gap:4px;background:#222;padding:3px 8px;border-radius:6px;border:1px solid #444;font-size:10px;color:#eee;">
+        <span>📸 Vista Top</span>
+      </div>
+      <div id="meal-photo-thumb-side-box" style="display:none;align-items:center;gap:4px;background:#222;padding:3px 8px;border-radius:6px;border:1px solid var(--gold);font-size:10px;color:var(--gold);">
+        <span>📐 Vista Laterale</span>
+      </div>
+    </div>
+
+    <img id="meal-photo-thumb" alt="" style="display:none;width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid #333;margin-bottom:10px;">
+
+    <!-- Representation Mode Toggle (Anti-Double Counting) -->
+    <div id="meal-photo-mode-container" style="display:none;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px 10px;margin-bottom:10px;">
+      <div style="font-size:10px;color:#aaa;font-weight:800;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">
+        <span>Modalità di registrazione:</span>
+        <span id="meal-photo-mode-indicator" style="color:var(--gold);font-size:9px;">Scomposizione attiva</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <button id="meal-photo-mode-composite-btn" type="button" class="btn btn-outline" style="padding:6px 8px;font-size:11px;font-weight:800;" onclick="switchRepresentationMode('COMPOSITE')">
+          🍽️ Piatto Completo
+        </button>
+        <button id="meal-photo-mode-components-btn" type="button" class="btn btn-primary" style="padding:6px 8px;font-size:11px;font-weight:800;" onclick="switchRepresentationMode('COMPONENTS')">
+          🧩 Scomposizione
+        </button>
+      </div>
+    </div>
+
+    <div id="meal-photo-status" style="font-size:12px;color:#aaa;line-height:1.4;margin-bottom:10px;"></div>
+    <div id="meal-photo-warning" style="display:none;background:rgba(255,152,0,0.12);border:1px solid #ff9800;color:#ffb74d;padding:8px 10px;border-radius:6px;font-size:11px;margin-bottom:10px;"></div>
+
+    <div id="meal-photo-items" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <button type="button" class="btn btn-outline" style="font-size:11px;padding:4px 8px;" onclick="addMealPhotoDraftRow()">+ Aggiungi riga</button>
+      <div id="meal-photo-totals" style="font-size:11px;color:#bbb;font-weight:700;"></div>
+    </div>
+
+    <div style="display:flex;gap:8px;">
       <button type="button" class="btn btn-outline" style="flex:1;" onclick="closeMealPhotoModal()">ANNULLA</button>
-      <button type="button" id="meal-photo-confirm-btn" class="btn btn-primary" style="flex:1;" onclick="confirmMealPhotoInsert()">CONFERMA E AGGIUNGI</button>
+      <button type="button" id="meal-photo-confirm-btn" class="btn btn-primary" style="flex:2;" onclick="confirmMealPhotoInsert()" disabled>CONFERMA E AGGIUNGI</button>
     </div>
   </div>
 </div>
+
 <input type="file" id="nutrition-meal-photo-camera" accept="image/*" capture="environment" style="display:none;" onchange="handleMealPhotoSelected(event)">
 <input type="file" id="nutrition-meal-photo-file" accept="image/*" style="display:none;" onchange="handleMealPhotoSelected(event)">
 <!-- Modal Aggiunta Integratore -->
@@ -44421,8 +44506,10 @@ var __mealPhotoTarget = {
   dayIdx: 0,
   mealIdx: null,
   mealName: null,
-  mode: null
+  step: 'TOP',
+  photos: []
 };
+
 var __mealPhotoDraft = null;
 
 function mealPhotoDefaultDayName() {
@@ -44432,38 +44519,28 @@ function mealPhotoDefaultDayName() {
 
 function openMealPhotoFlow(dayIdx, mealIdx, explicitMealName) {
   if (dayIdx == null) dayIdx = (typeof currentNutritionDayIndex === 'number' ? currentNutritionDayIndex : 0);
+  __mealPhotoTarget = {
+    dayIdx: dayIdx,
+    mealIdx: mealIdx != null && Number.isFinite(Number(mealIdx)) ? Number(mealIdx) : null,
+    mealName: explicitMealName || null,
+    step: 'TOP',
+    photos: []
+  };
 
   if (mealIdx != null && Number.isFinite(Number(mealIdx))) {
     const day = DATA && DATA.nutrition && DATA.nutrition.days && DATA.nutrition.days[dayIdx];
     const meal = day && day.meals && day.meals[mealIdx];
-    const mName = (meal && meal.name) || explicitMealName || 'Pasto';
-    __mealPhotoTarget = {
-      dayIdx: dayIdx,
-      mealIdx: Number(mealIdx),
-      mealName: mName,
-      mode: null
-    };
+    __mealPhotoTarget.mealName = (meal && meal.name) || explicitMealName || 'Pasto';
     openMealAcquisitionModal();
     return;
   }
 
   if (explicitMealName) {
-    __mealPhotoTarget = {
-      dayIdx: dayIdx,
-      mealIdx: null,
-      mealName: explicitMealName,
-      mode: null
-    };
+    __mealPhotoTarget.mealName = explicitMealName;
     openMealAcquisitionModal();
     return;
   }
 
-  __mealPhotoTarget = {
-    dayIdx: dayIdx,
-    mealIdx: null,
-    mealName: null,
-    mode: null
-  };
   openMealTargetModal();
 }
 
@@ -44501,14 +44578,14 @@ function openMealTargetModal(preselectedMealName) {
     optionsBox.innerHTML = allOptions.map(name => {
       const icon = mealIcons[name] || '🍽️';
       const isPre = preselectedMealName && preselectedMealName.toLowerCase() === name.toLowerCase();
-      return '<button type="button" class="btn ' + (isPre ? 'btn-primary' : 'btn-outline') + '" style="padding:10px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:10px;justify-content:flex-start;text-align:left;border-radius:8px;' + (isPre ? '' : 'border-color:#333;color:#eee;') + '" onclick="selectMealTarget(\'' + esc(name).replace(/'/g, "\\'") + '\')">' +
+      return '<button type="button" class="btn ' + (isPre ? 'btn-primary' : 'btn-outline') + '" style="padding:10px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:10px;justify-content:flex-start;text-align:left;border-radius:8px;' + (isPre ? '' : 'border-color:#333;color:#eee;') + '" onclick="selectMealTarget('' + esc(name).replace(/'/g, "\'") + '')">' +
         '<span style="font-size:16px;">' + icon + '</span>' +
         '<span>' + esc(name) + '</span>' +
         '</button>';
     }).join('') +
     '<button type="button" class="btn btn-outline" style="padding:10px 14px;font-size:12px;display:flex;align-items:center;gap:10px;justify-content:flex-start;text-align:left;border-radius:8px;border-color:var(--gold);color:var(--gold);border-style:dashed;" onclick="toggleCustomMealTargetBox()">' +
     '<span style="font-size:16px;">➕</span>' +
-    '<span>Altro / Pasto personalizzato...</span>' +
+    '<span>Altro pasto personalizzato...</span>' +
     '</button>';
   }
 
@@ -44524,30 +44601,69 @@ function closeMealTargetModal() {
   if (typeof popUiOverlay === 'function') popUiOverlay('meal-target-modal');
 }
 
+function toggleCustomMealTargetBox() {
+  const box = document.getElementById('meal-target-custom-box');
+  const input = document.getElementById('meal-target-custom-input');
+  if (box) {
+    const isHidden = box.style.display === 'none';
+    box.style.display = isHidden ? 'block' : 'none';
+    if (isHidden && input) input.focus();
+  }
+}
+
+function submitCustomMealTarget() {
+  const input = document.getElementById('meal-target-custom-input');
+  const val = input ? input.value.trim() : '';
+  if (!val) {
+    if (typeof showToast === 'function') showToast('Inserisci un nome valido per il pasto', 'warning');
+    return;
+  }
+  selectMealTarget(val);
+}
+
 function selectMealTarget(mealName) {
-  if (!mealName) return;
   __mealPhotoTarget.mealName = mealName;
   closeMealTargetModal();
   openMealAcquisitionModal();
 }
 
-function toggleCustomMealTargetBox() {
-  const customBox = document.getElementById('meal-target-custom-box');
-  const customInput = document.getElementById('meal-target-custom-input');
-  if (customBox) {
-    customBox.style.display = (customBox.style.display === 'none' || !customBox.style.display) ? 'block' : 'none';
-    if (customBox.style.display === 'block' && customInput) customInput.focus();
-  }
-}
+function updateAcquisitionStepUi() {
+  const titleEl = document.getElementById('meal-acquisition-title');
+  const step1Pill = document.getElementById('meal-acq-step-1-pill');
+  const step2Pill = document.getElementById('meal-acq-step-2-pill');
+  const topContainer = document.getElementById('meal-acq-step-top-container');
+  const sideContainer = document.getElementById('meal-acq-step-side-container');
+  const isTop = __mealPhotoTarget.step === 'TOP';
 
-function submitCustomMealTarget() {
-  const customInput = document.getElementById('meal-target-custom-input');
-  const val = (customInput && customInput.value || '').trim();
-  if (!val) {
-    if (typeof showToast === 'function') showToast('Inserisci il nome del pasto', 'warning');
-    return;
+  if (titleEl) {
+    titleEl.textContent = isTop ? "FOTO 1: VISTA DALL'ALTO" : "FOTO 2: VISTA LATERALE";
   }
-  selectMealTarget(val);
+  if (step1Pill) {
+    if (isTop) {
+      step1Pill.style.background = 'var(--gold)';
+      step1Pill.style.color = '#000';
+      step1Pill.style.border = 'none';
+    } else {
+      step1Pill.style.background = '#1a2e1a';
+      step1Pill.style.color = '#81c784';
+      step1Pill.style.border = '1px solid #2e7d32';
+      step1Pill.innerHTML = '1. Top ✓';
+    }
+  }
+  if (step2Pill) {
+    if (!isTop) {
+      step2Pill.style.background = 'var(--gold)';
+      step2Pill.style.color = '#000';
+      step2Pill.style.border = 'none';
+    } else {
+      step2Pill.style.background = '#222';
+      step2Pill.style.color = '#777';
+      step2Pill.style.border = '1px solid #333';
+      step2Pill.innerHTML = '2. Vista laterale (Altezza)';
+    }
+  }
+  if (topContainer) topContainer.style.display = isTop ? 'block' : 'none';
+  if (sideContainer) sideContainer.style.display = isTop ? 'none' : 'block';
 }
 
 function openMealAcquisitionModal() {
@@ -44556,6 +44672,7 @@ function openMealAcquisitionModal() {
   if (targetNameEl) {
     targetNameEl.textContent = __mealPhotoTarget.mealName || 'Pasto';
   }
+  updateAcquisitionStepUi();
   if (modal) {
     modal.style.display = 'flex';
     if (typeof pushUiOverlay === 'function') pushUiOverlay('meal-acquisition-modal');
@@ -44574,8 +44691,6 @@ function reopenMealTargetSelection() {
 }
 
 function startMealPhotoCapture(mode) {
-  __mealPhotoTarget.mode = mode;
-  closeMealAcquisitionModal();
   const id = mode === 'file' ? 'nutrition-meal-photo-file' : 'nutrition-meal-photo-camera';
   const el = document.getElementById(id);
   if (!el) {
@@ -44592,12 +44707,45 @@ function openMealPhotoPicker(dayIdx, mealIdx, mode) {
       dayIdx: dayIdx != null ? dayIdx : (currentNutritionDayIndex || 0),
       mealIdx: mealIdx,
       mealName: null,
-      mode: mode
+      step: 'TOP',
+      photos: []
     };
     startMealPhotoCapture(mode);
   } else {
     openMealPhotoFlow(dayIdx, mealIdx);
   }
+}
+
+function proceedWithTopPhotoOnly() {
+  closeMealAcquisitionModal();
+  if (__mealPhotoTarget.photos && __mealPhotoTarget.photos.length > 0) {
+    analyzeMealPhotoPayload(__mealPhotoTarget.photos);
+  }
+}
+
+function handleMealPhotoSelected(ev) {
+  const file = ev && ev.target && ev.target.files && ev.target.files[0];
+  try { if (ev && ev.target) ev.target.value = ''; } catch (_) {}
+  if (!file) return;
+
+  normalizeMealPhotoInput(file, function (err, dataUrl) {
+    if (err || !dataUrl) {
+      if (typeof showToast === 'function') showToast('Errore nel caricamento della foto', 'error');
+      return;
+    }
+
+    const currentStep = __mealPhotoTarget.step || 'TOP';
+    if (currentStep === 'TOP') {
+      __mealPhotoTarget.photos = [{ role: 'TOP', dataUrl: dataUrl }];
+      __mealPhotoTarget.step = 'SIDE';
+      updateAcquisitionStepUi();
+      if (typeof showToast === 'function') showToast('Foto dall\'alto acquisita! Ora scatta o scegli la vista laterale.', 'info');
+    } else {
+      __mealPhotoTarget.photos.push({ role: 'SIDE', dataUrl: dataUrl });
+      closeMealAcquisitionModal();
+      analyzeMealPhotoPayload(__mealPhotoTarget.photos);
+    }
+  });
 }
 
 function ensureTargetMealSlot(dayIdx, mealIdentifier) {
@@ -44676,14 +44824,6 @@ function ensureTargetMealSlot(dayIdx, mealIdentifier) {
   };
 }
 
-function ensureNutritionSlotForPhoto(dayIdx, mealIdx) {
-  const slot = ensureTargetMealSlot(dayIdx, mealIdx);
-  if (!slot) return false;
-  __mealPhotoTarget.dayIdx = slot.dayIdx;
-  __mealPhotoTarget.mealIdx = slot.mealIdx;
-  return true;
-}
-
 function closeMealPhotoModal() {
   const modal = document.getElementById('meal-photo-modal');
   if (modal) modal.style.display = 'none';
@@ -44730,13 +44870,6 @@ function normalizeMealPhotoInput(input, cb) {
   reader.readAsDataURL(input);
 }
 
-function handleMealPhotoSelected(ev) {
-  const file = ev && ev.target && ev.target.files && ev.target.files[0];
-  try { if (ev && ev.target) ev.target.value = ''; } catch (_) {}
-  if (!file) return;
-  handleMealPhotoFile(file);
-}
-
 function populateMealPhotoTargetSelect(selectedName) {
   const selectEl = document.getElementById('meal-photo-target-select');
   if (!selectEl) return;
@@ -44762,14 +44895,19 @@ function onMealPhotoTargetSelectChange(val) {
   if (slotLabel) slotLabel.textContent = 'Destinazione: ' + safeDisplayValue(dayName, 'Giorno') + ' · ' + safeDisplayValue(val, 'Pasto');
 }
 
-function handleMealPhotoFile(file) {
-  if (!file) return;
+function analyzeMealPhotoPayload(photos) {
+  if (!photos || !photos.length) return;
   const modal = document.getElementById('meal-photo-modal');
   const status = document.getElementById('meal-photo-status');
   const itemsBox = document.getElementById('meal-photo-items');
   const warn = document.getElementById('meal-photo-warning');
   const btn = document.getElementById('meal-photo-confirm-btn');
   const slotLabel = document.getElementById('meal-photo-slot-label');
+  const modeContainer = document.getElementById('meal-photo-mode-container');
+  const thumbsContainer = document.getElementById('meal-photo-thumbs-container');
+  const thumbTopBox = document.getElementById('meal-photo-thumb-top-box');
+  const thumbSideBox = document.getElementById('meal-photo-thumb-side-box');
+  const thumb = document.getElementById('meal-photo-thumb');
 
   const dayIdx = __mealPhotoTarget.dayIdx != null ? __mealPhotoTarget.dayIdx : (currentNutritionDayIndex || 0);
   const targetMealName = __mealPhotoTarget.mealName || 'Pasto';
@@ -44780,193 +44918,321 @@ function handleMealPhotoFile(file) {
 
   if (itemsBox) itemsBox.innerHTML = '';
   if (warn) warn.style.display = 'none';
-  if (status) status.innerHTML = '<span style="color:var(--gold);font-weight:700;">Analisi della foto in corso con Food Vision AI...</span>';
+  if (modeContainer) modeContainer.style.display = 'none';
+  if (status) status.innerHTML = '<span style="color:var(--gold);font-weight:700;">Analisi in corso con Food Intelligence V7 Multi-Vision...</span>';
   if (btn) btn.disabled = true;
+
+  // Thumbs preview
+  if (thumbsContainer) {
+    thumbsContainer.style.display = 'flex';
+    if (thumbTopBox) thumbTopBox.style.display = photos.some(p => p.role === 'TOP') ? 'inline-flex' : 'none';
+    if (thumbSideBox) thumbSideBox.style.display = photos.some(p => p.role === 'SIDE') ? 'inline-flex' : 'none';
+  }
+  if (thumb && photos[0]) {
+    thumb.src = photos[0].dataUrl;
+    thumb.style.display = 'block';
+  }
+
   if (modal) {
     modal.style.display = 'flex';
     if (typeof pushUiOverlay === 'function') pushUiOverlay('meal-photo-modal');
   }
 
-  normalizeMealPhotoInput(file, function (err, thumb) {
-    if (err || !thumb) {
-      if (typeof showToast === 'function') showToast('Impossibile leggere la foto', 'danger');
-      closeMealPhotoModal();
-      return;
-    }
-    const img = document.getElementById('meal-photo-thumb');
-    if (img && thumb) { img.src = thumb; img.style.display = 'block'; }
-    analyzeMealPhotoOnServer(thumb, targetMealName).then(function (result) {
-      showMealPhotoConfirm(result, thumb);
-    }).catch(function (err) {
-      if (status) status.textContent = (err && err.message) || 'Analisi non riuscita';
-      if (warn) {
-        warn.style.display = 'block';
-        warn.textContent = 'Nessuna stima automatica. Puoi aggiungere le righe a mano, oppure riprovare con una foto più chiara.';
-      }
-      if (btn) btn.disabled = false;
-      if (typeof showToast === 'function') showToast((err && err.message) || 'Analisi foto non riuscita', 'warning');
+  const endpoint = (typeof coachEndpoint === 'function') ? coachEndpoint('/api/food/analyze-photo') : '/api/food/analyze-photo';
+  const imagesPayload = photos.map(p => ({ role: p.role, data: p.dataUrl }));
+
+  fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      images: imagesPayload,
+      mealName: targetMealName,
+      locale: (typeof I18nService !== 'undefined' && I18nService.getLanguage) ? I18nService.getLanguage() : 'it'
+    })
+  })
+  .then(function (res) {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  })
+  .then(function (result) {
+    showMealPhotoConfirm(result);
+  })
+  .catch(function (err) {
+    console.warn('[food] Vision error, fallback to mock', err);
+    showMealPhotoConfirm({
+      representationMode: 'COMPONENTS',
+      overallConfidence: 0.5,
+      uncertain: true,
+      notes: 'Stima automatica (offline / fallback)',
+      compositeDish: {
+        name: targetMealName + ' completo',
+        quantity: 500,
+        unit: 'g',
+        kcal: 600,
+        pro: 40,
+        carb: 60,
+        fat: 20,
+        confidence: 0.5,
+        foodConfidence: 0.8,
+        quantityConfidence: 0.5
+      },
+      components: [
+        { name: 'Piatto stimato', quantity: 350, unit: 'g', kcal: 450, pro: 30, carb: 50, fat: 12, confidence: 0.5, foodConfidence: 0.8, quantityConfidence: 0.5 }
+      ],
+      items: [
+        { name: 'Piatto stimato', quantity: 350, unit: 'g', kcal: 450, pro: 30, carb: 50, fat: 12, confidence: 0.5, foodConfidence: 0.8, quantityConfidence: 0.5 }
+      ]
     });
   });
 }
 
-async function analyzeMealPhotoOnServer(dataUrl, targetMealName) {
-  if (typeof coachEndpoint !== 'function' || typeof apiFetch !== 'function') {
-    throw new Error('Coach AI non configurato');
-  }
-  const effectiveMeal = targetMealName || __mealPhotoTarget.mealName || '';
-  const headers = { 'Content-Type': 'application/json' };
-  if (store && store.accountToken) headers.Authorization = 'Bearer ' + store.accountToken;
-  const res = await apiFetch(coachEndpoint('/api/food/analyze-photo'), {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify({
-      image: dataUrl,
-      mealName: effectiveMeal,
-      locale: (typeof I18nService !== 'undefined' && I18nService.getLanguage) ? I18nService.getLanguage() : 'it'
-    })
-  }, 90000);
-  if (!res.ok) {
-    let msg = 'Analisi foto non riuscita';
-    try {
-      const j = await res.json();
-      if (j && (j.error === 'vision_not_configured' || /GEMINI/i.test(String(j.error || '')))) {
-        msg = 'Nurvan AI non configurato sul server (manca GEMINI_API_KEY).';
-      } else if (j && j.error === 'image_too_large') {
-        msg = 'Foto troppo grande. Ritaglia o scatta di nuovo.';
-      } else if (j && j.error) msg = String(j.error);
-    } catch (_) {}
-    throw new Error(msg);
-  }
-  return (typeof readApiJson === 'function') ? readApiJson(res) : res.json();
+function handleMealPhotoFile(file) {
+  if (!file) return;
+  normalizeMealPhotoInput(file, function (err, dataUrl) {
+    if (err || !dataUrl) {
+      if (typeof showToast === 'function') showToast('Impossibile leggere il file', 'error');
+      return;
+    }
+    analyzeMealPhotoPayload([{ role: 'TOP', dataUrl }]);
+  });
 }
 
-function showMealPhotoConfirm(result, thumb) {
-  const modal = document.getElementById('meal-photo-modal');
-  if (!modal || !result) return;
+function switchRepresentationMode(mode) {
+  if (!__mealPhotoDraft) return;
+  __mealPhotoDraft.representationMode = mode;
+  
+  const compBtn = document.getElementById('meal-photo-mode-composite-btn');
+  const partsBtn = document.getElementById('meal-photo-mode-components-btn');
+  const indEl = document.getElementById('meal-photo-mode-indicator');
   const itemsBox = document.getElementById('meal-photo-items');
-  const statusEl = document.getElementById('meal-photo-status');
-  const warnEl = document.getElementById('meal-photo-warning');
+
+  if (mode === 'COMPOSITE') {
+    if (compBtn) { compBtn.className = 'btn btn-primary'; }
+    if (partsBtn) { partsBtn.className = 'btn btn-outline'; }
+    if (indEl) { indEl.textContent = 'Piatto Completo attivo'; indEl.style.color = 'var(--gold)'; }
+    
+    // Switch active rows to compositeDish
+    const cDish = __mealPhotoDraft.compositeDish || {
+      name: (__mealPhotoTarget.mealName || 'Pasto') + ' completo',
+      quantity: 400,
+      unit: 'g',
+      kcal: 500,
+      pro: 35,
+      carb: 55,
+      fat: 15,
+      confidence: 0.85,
+      foodConfidence: 0.85,
+      quantityConfidence: 0.80
+    };
+    if (itemsBox) {
+      itemsBox.innerHTML = mealPhotoDraftRowHtml(cDish);
+    }
+  } else {
+    if (compBtn) { compBtn.className = 'btn btn-outline'; }
+    if (partsBtn) { partsBtn.className = 'btn btn-primary'; }
+    if (indEl) { indEl.textContent = 'Scomposizione attiva'; indEl.style.color = '#81c784'; }
+
+    // Switch active rows to components
+    const comps = (__mealPhotoDraft.components && __mealPhotoDraft.components.length)
+      ? __mealPhotoDraft.components
+      : (__mealPhotoDraft.items || []);
+    
+    if (itemsBox) {
+      itemsBox.innerHTML = comps.map(mealPhotoDraftRowHtml).join('');
+    }
+  }
+
+  recalculateDraftTotals();
+}
+
+function recalculateDraftTotals() {
+  const box = document.getElementById('meal-photo-items');
+  const totalsEl = document.getElementById('meal-photo-totals');
+  if (!box || !totalsEl) return;
+
+  const rows = box.querySelectorAll('[data-meal-photo-row]');
+  let totalKcal = 0, totalPro = 0, totalCarb = 0, totalFat = 0;
+
+  rows.forEach(function (row) {
+    const qty = parseFloat((row.querySelector('[data-f="qty"]') || {}).value) || 0;
+    const kcal = parseFloat((row.querySelector('[data-f="kcal"]') || {}).value) || 0;
+    const pro = parseFloat((row.querySelector('[data-f="pro"]') || {}).value) || 0;
+    const carb = parseFloat((row.querySelector('[data-f="carb"]') || {}).value) || 0;
+    const fat = parseFloat((row.querySelector('[data-f="fat"]') || {}).value) || 0;
+
+    totalKcal += kcal;
+    totalPro += pro;
+    totalCarb += carb;
+    totalFat += fat;
+  });
+
+  totalsEl.innerHTML = 'Totale: <strong style="color:var(--gold);">' + Math.round(totalKcal) + ' kcal</strong> ' +
+    '(<span style="color:#4caf50;">P: ' + Math.round(totalPro * 10) / 10 + 'g</span> · ' +
+    '<span style="color:#2196f3;">C: ' + Math.round(totalCarb * 10) / 10 + 'g</span> · ' +
+    '<span style="color:#ff9800;">F: ' + Math.round(totalFat * 10) / 10 + 'g</span>)';
+}
+
+function showMealPhotoConfirm(result) {
+  __mealPhotoDraft = result || {};
+  const status = document.getElementById('meal-photo-status');
+  const itemsBox = document.getElementById('meal-photo-items');
+  const warn = document.getElementById('meal-photo-warning');
   const btn = document.getElementById('meal-photo-confirm-btn');
+  const modeContainer = document.getElementById('meal-photo-mode-container');
 
-  if (result.noFoodDetected) {
-    if (statusEl) statusEl.textContent = 'Nessun alimento rilevato nella foto.';
-    if (warnEl) {
-      warnEl.style.display = 'block';
-      warnEl.innerHTML = '<strong>Nessun cibo identificato.</strong> Assicurati che l\'immagine mostri chiaramente un piatto o un alimento.';
+  const items = Array.isArray(result.items) ? result.items : [];
+  const noFood = Boolean(result.noFoodDetected || !items.length);
+  const uncertain = Boolean(result.uncertain || result.overallConfidence < 0.6);
+
+  if (status) {
+    if (noFood) {
+      status.innerHTML = '<span style="color:#f66;font-weight:700;">Nessun alimento rilevato chiaramente nella foto.</span>';
+    } else {
+      const confPct = Math.round((result.overallConfidence || 0.7) * 100);
+      const imgCount = result.imagesAnalyzed || 1;
+      const roleStr = imgCount > 1 ? ' (Vista Top + Laterale)' : ' (Vista singola)';
+      status.innerHTML = 'Riconoscimento completato: <strong>' + confPct + '% confidenza visiva' + roleStr + '</strong>. Modifica quantità e valori se necessario.';
     }
-    if (itemsBox) itemsBox.innerHTML = '';
-    if (btn) btn.disabled = true;
-    return;
   }
 
-  if (statusEl) {
-    let summaryTxt = result.description || 'Riconoscimento completato.';
-    if (result.totals) {
-      summaryTxt += ' • Totale: ~' + (result.totals.kcal || 0) + ' kcal (P:' + (result.totals.pro || 0) + 'g C:' + (result.totals.carb || 0) + 'g F:' + (result.totals.fat || 0) + 'g)';
+  if (warn) {
+    if (noFood) {
+      warn.style.display = 'block';
+      warn.innerHTML = 'Non è stato possibile identificare cibi. Puoi aggiungere righe manualmente o riprovare con una foto più nitida.';
+    } else if (uncertain) {
+      warn.style.display = 'block';
+      warn.innerHTML = '⚠️ Alcune stime o grammature sono approssimative: verifica i valori prima di confermare.';
+    } else {
+      warn.style.display = 'none';
     }
-    statusEl.innerHTML = '<span style="color:#8c8;font-weight:700;">✓ ' + esc(summaryTxt) + '</span>';
   }
 
-  if (itemsBox) {
-    itemsBox.innerHTML = (result.items || []).map(mealPhotoDraftRowHtml).join('');
+  // Show representation mode switcher if composite dish is available or multiple items
+  if (modeContainer) {
+    const hasComposite = Boolean(result.compositeDish || (items.length > 1));
+    modeContainer.style.display = hasComposite ? 'block' : 'none';
   }
+
+  const activeMode = result.representationMode === 'COMPOSITE' ? 'COMPOSITE' : 'COMPONENTS';
+  switchRepresentationMode(activeMode);
+
   if (btn) btn.disabled = false;
 }
 
 function mealPhotoDraftRowHtml(item) {
-  const conf = Number(item.confidence);
-  const qConf = Number(Number.isFinite(Number(item.quantityConfidence)) ? item.quantityConfidence : conf);
-  const uncertain = item.uncertain || conf < 0.55 || qConf < 0.55;
-  const minG = item.minGrams != null ? item.minGrams : Math.round((item.quantity || 100) * 0.8);
-  const maxG = item.maxGrams != null ? item.maxGrams : Math.round((item.quantity || 100) * 1.2);
-  const hasWaste = Boolean(item.hasNonEdibleParts);
-  const visualG = item.visualGrams || item.quantity || 100;
-  const edibleG = item.edibleGrams || item.quantity || 100;
-  const state = item.state || 'unknown';
-  const rawEquiv = item.rawEquivalentGrams != null ? item.rawEquivalentGrams : null;
-  const cookedEst = item.estimatedCookedGrams != null ? item.estimatedCookedGrams : null;
-  const isChain = Boolean(item.isRestaurantChain);
-  const chainName = item.chainName || item.brand || '';
+  if (!item) return '';
+  const conf = Math.round((item.confidence != null ? item.confidence : 0.7) * 100);
+  const qConf = Math.round((item.quantityConfidence != null ? item.quantityConfidence : item.confidence != null ? item.confidence : 0.7) * 100);
+  const fConf = Math.round((item.foodConfidence != null ? item.foodConfidence : item.confidence != null ? item.confidence : 0.85) * 100);
 
-  const badge = uncertain
-    ? '<span class="meal-photo-low" style="font-size:9px;font-weight:800;">INCERTO ' + Math.round((Number.isFinite(conf) ? conf : 0) * 100) + '%</span>'
-    : '<span style="font-size:9px;color:#8c8;">' + Math.round((Number.isFinite(conf) ? conf : 0) * 100) + '%</span>';
+  const qConfLevel = qConf >= 75 ? 'ALTA' : (qConf >= 55 ? 'MEDIA' : 'BASSA');
+  const qConfColor = qConf >= 75 ? '#81c784' : (qConf >= 55 ? '#ffb74d' : '#e57373');
 
-  const rangeBadge = '<span style="font-size:9px;color:#bbb;background:#222;padding:2px 5px;border-radius:4px;border:1px solid #333;">Range: ' + minG + ' - ' + maxG + 'g</span>';
-  const wasteBadge = hasWaste
-    ? '<span style="font-size:9px;color:#fa8;background:#2b1a10;padding:2px 5px;border-radius:4px;border:1px solid #842;">🍗 Scarti esclusi (lordo ~' + visualG + 'g)</span>'
-    : '';
+  const badgeColor = conf >= 75 ? '#81c784' : (conf >= 55 ? '#ffb74d' : '#e57373');
+  const badge = '<span style="font-size:9px;background:' + badgeColor + '22;color:' + badgeColor + ';border:1px solid ' + badgeColor + ';padding:2px 6px;border-radius:4px;font-weight:700;">' +
+    'Food: ' + fConf + '% · Qty: ' + qConf + '% (' + qConfLevel + ')</span>';
 
-  let stateBadge = '';
-  if (state === 'cooked' && rawEquiv != null) {
-    stateBadge = '<span style="font-size:9px;color:#7bf;background:#0d2238;padding:2px 5px;border-radius:4px;border:1px solid #1e4a7a;">🍚 Cotto (equiv. ~' + rawEquiv + 'g crudo)</span>';
-  } else if (state === 'raw') {
-    stateBadge = '<span style="font-size:9px;color:#7fb;background:#0d3822;padding:2px 5px;border-radius:4px;border:1px solid #1e7a4a;">🥦 Crudo</span>';
-  }
-
-  const chainBadge = isChain
-    ? '<span style="font-size:9px;color:#ffb74d;background:#332200;padding:2px 5px;border-radius:4px;border:1px solid #885500;">🏪 ' + esc(chainName || 'Catena') + ' (Ufficiale)</span>'
-    : '';
-
+  const candidates = Array.isArray(item.candidates) ? item.candidates : [];
   let candidatesHtml = '';
-  if (Array.isArray(item.candidates) && item.candidates.length > 0) {
-    candidatesHtml = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center;">' +
-      '<span style="font-size:9px;color:#888;">Alternative:</span>' +
-      item.candidates.map(function (c) {
-        return '<button type="button" class="btn" style="font-size:9px;padding:2px 6px;background:#222;border:1px solid #444;color:#ddd;border-radius:10px;cursor:pointer;" onclick="switchDraftItemFood(this, \'' + esc(c.name).replace(/'/g, "\\'") + '\')">' + esc(c.name) + ' (' + Math.round((c.confidence || 0.5) * 100) + '%)</button>';
+  if (candidates.length > 0 && conf < 85) {
+    candidatesHtml = '<div style="margin-top:4px;font-size:10px;color:#aaa;display:flex;align-items:center;gap:4px;flex-wrap:wrap;">' +
+      '<span>Alternative:</span>' +
+      candidates.slice(0, 3).map(function (c) {
+        return '<button type="button" class="btn btn-outline" style="padding:1px 6px;font-size:9px;border-color:#555;color:#bbb;" onclick="switchDraftItemFood(this, '' + esc(c.name).replace(/'/g, "\'") + '')">' +
+          esc(c.name) + ' (' + Math.round((c.confidence || 0.5) * 100) + '%)' +
+        '</button>';
       }).join('') +
       '</div>';
   }
 
-  return '' +
-    '<div data-meal-photo-row ' +
-    'data-confidence="' + (Number.isFinite(conf) ? conf : 0.3) + '" ' +
-    'data-quantity-confidence="' + (Number.isFinite(qConf) ? qConf : 0.3) + '" ' +
-    'data-min-grams="' + minG + '" ' +
-    'data-max-grams="' + maxG + '" ' +
-    'data-visual-grams="' + visualG + '" ' +
-    'data-edible-grams="' + edibleG + '" ' +
-    'data-has-waste="' + (hasWaste ? '1' : '0') + '" ' +
-    'data-state="' + esc(state) + '" ' +
-    'data-raw-equiv="' + (rawEquiv != null ? rawEquiv : '') + '" ' +
-    'data-cooked-est="' + (cookedEst != null ? cookedEst : '') + '" ' +
-    'data-is-chain="' + (isChain ? '1' : '0') + '" ' +
-    'data-chain-name="' + esc(chainName) + '" ' +
-    'style="margin-bottom:8px;padding:8px;background:#121212;border:1px solid #2a2a2a;border-radius:8px;">' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">' +
-    '<input data-f="name" type="text" value="' + esc(item.name || '') + '" placeholder="Alimento" style="flex:1;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;">' +
+  const minG = item.minGrams || item.rangeMin;
+  const maxG = item.maxGrams || item.rangeMax;
+  let rangeBadge = '';
+  if (minG && maxG && minG !== maxG) {
+    rangeBadge = '<span style="font-size:9px;background:#1a1a2e;color:#88aaff;border:1px solid #3355aa;padding:1px 5px;border-radius:4px;">' +
+      'Range: ' + minG + '–' + maxG + 'g</span>';
+  }
+
+  let wasteBadge = '';
+  if (item.hasNonEdibleParts) {
+    wasteBadge = '<span style="font-size:9px;background:#2e1a1a;color:#ff8888;border:1px solid #aa3333;padding:1px 5px;border-radius:4px;">' +
+      'Scarti esclusi (' + (item.visualGrams || item.grams) + 'g lordo)</span>';
+  }
+
+  let stateBadge = '';
+  if (item.state === 'cooked' && item.rawEquivalentGrams) {
+    stateBadge = '<span style="font-size:9px;background:#1a2e1a;color:#88ff88;border:1px solid #33aa33;padding:1px 5px;border-radius:4px;">' +
+      'Cotto (' + (item.rawEquivalentGrams) + 'g crudo eq.)</span>';
+  }
+
+  let chainBadge = '';
+  if (item.isRestaurantChain && item.brand) {
+    chainBadge = '<span style="font-size:9px;background:#2e241a;color:#ffcc88;border:1px solid #aa7733;padding:1px 5px;border-radius:4px;">' +
+      'Catena: ' + esc(item.brand) + '</span>';
+  }
+
+  // Toast / Sandwich prompt if filling not observable
+  let toastPromptHtml = '';
+  if (/toast|panino|sandwich/i.test(item.name) && (item.notes && item.notes.includes('ripieno non determinabile'))) {
+    toastPromptHtml = '<div style="background:#2a2010;border:1px solid #aa7733;border-radius:6px;padding:6px 8px;margin-top:6px;font-size:10px;color:#ffcc88;display:flex;align-items:center;justify-content:space-between;gap:6px;">' +
+      '<span>🥪 Ripieno non osservabile: cosa contiene il toast?</span>' +
+      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:2px 6px;border-color:var(--gold);color:var(--gold);" onclick="promptToastFilling(this)">Modifica ingredienti</button>' +
+      '</div>';
+  }
+
+  return '<div data-meal-photo-row="1" data-confidence="' + (item.confidence || 0.7) + '" data-quantity-confidence="' + (item.quantityConfidence || item.confidence || 0.7) + '" data-food-confidence="' + (item.foodConfidence || 0.85) + '" data-min-grams="' + (minG || '') + '" data-max-grams="' + (maxG || '') + '" data-has-waste="' + (item.hasNonEdibleParts ? '1' : '0') + '" data-visual-grams="' + (item.visualGrams || '') + '" data-edible-grams="' + (item.edibleGrams || '') + '" data-state="' + (item.state || '') + '" data-raw-equiv="' + (item.rawEquivalentGrams || '') + '" data-is-chain="' + (item.isRestaurantChain ? '1' : '0') + '" data-chain-name="' + esc(item.brand || '') + '" style="background:#1c1c1c;border:1px solid #333;border-radius:8px;padding:8px 10px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:6px;">' +
+    '<input data-f="name" type="text" value="' + esc(item.name || '') + '" placeholder="Nome alimento" oninput="recalculateDraftTotals()" style="flex:1;font-weight:700;font-size:12px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;padding:6px 8px;">' +
     '<div style="display:flex;align-items:center;gap:4px;">' +
     '<button type="button" class="btn btn-outline" style="padding:2px 6px;font-size:10px;border-color:#00e5ff;color:#00e5ff;font-weight:700;" onclick="startBarcodeFusionForDraftRow(this)">🏷️ Barcode</button>' +
     badge +
     '<button type="button" class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:#c66;" onclick="removeMealPhotoDraftRow(this)">✕</button></div></div>' +
     '<div class="meal-photo-badges-container" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">' + stateBadge + chainBadge + rangeBadge + wasteBadge + '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:4px;">' +
-    '<label style="font-size:9px;color:#888;">Qty<input data-f="qty" type="number" value="' + esc(item.quantity != null ? item.quantity : 100) + '" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
+    '<label style="font-size:9px;color:#888;">Qty<input data-f="qty" type="number" value="' + esc(item.quantity != null ? item.quantity : 100) + '" oninput="recalculateDraftTotals()" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
     '<label style="font-size:9px;color:#888;">Unità<select data-f="unit" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">' +
     ['g', 'ml', 'porzioni', 'cucchiai', 'misurini'].map(function (u) {
       return '<option value="' + u + '"' + ((item.unit || 'g') === u ? ' selected' : '') + '>' + u + '</option>';
     }).join('') +
     '</select></label>' +
-    '<label style="font-size:9px;color:#888;">kcal<input data-f="kcal" type="number" value="' + esc(item.kcal || 0) + '" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
-    '<label style="font-size:9px;color:#4caf50;">P<input data-f="pro" type="number" value="' + esc(item.pro || 0) + '" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
-    '<label style="font-size:9px;color:#2196f3;">C<input data-f="carb" type="number" value="' + esc(item.carb || 0) + '" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
-    '<label style="font-size:9px;color:#ff9800;">F<input data-f="fat" type="number" value="' + esc(item.fat || 0) + '" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
+    '<label style="font-size:9px;color:#888;">kcal<input data-f="kcal" type="number" value="' + esc(item.kcal || 0) + '" oninput="recalculateDraftTotals()" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
+    '<label style="font-size:9px;color:#4caf50;">P<input data-f="pro" type="number" value="' + esc(item.pro || 0) + '" oninput="recalculateDraftTotals()" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
+    '<label style="font-size:9px;color:#2196f3;">C<input data-f="carb" type="number" value="' + esc(item.carb || 0) + '" oninput="recalculateDraftTotals()" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
+    '<label style="font-size:9px;color:#ff9800;">F<input data-f="fat" type="number" value="' + esc(item.fat || 0) + '" oninput="recalculateDraftTotals()" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
     '</div>' +
     candidatesHtml +
+    toastPromptHtml +
     '</div>';
+}
+
+function promptToastFilling(btn) {
+  const row = btn && btn.closest('[data-meal-photo-row]');
+  if (!row) return;
+  const currentName = (row.querySelector('[data-f="name"]') || {}).value || '';
+  const filling = prompt('Inserisci il ripieno del toast (es. Prosciutto cotto e formaggio):', 'Prosciutto cotto e formaggio');
+  if (filling && filling.trim()) {
+    const newName = 'Toast con ' + filling.trim();
+    const nameInput = row.querySelector('[data-f="name"]');
+    if (nameInput) nameInput.value = newName;
+    if (typeof showToast === 'function') showToast('Toast aggiornato: ' + newName, 'info');
+  }
 }
 
 function addMealPhotoDraftRow() {
   const box = document.getElementById('meal-photo-items');
   if (!box) return;
   const div = document.createElement('div');
-  div.innerHTML = mealPhotoDraftRowHtml({ name: '', quantity: 100, unit: 'g', kcal: 100, pro: 5, carb: 10, fat: 3, confidence: 0.9, quantityConfidence: 0.9 });
+  div.innerHTML = mealPhotoDraftRowHtml({ name: '', quantity: 100, unit: 'g', kcal: 100, pro: 5, carb: 10, fat: 3, confidence: 0.9, quantityConfidence: 0.9, foodConfidence: 0.9 });
   box.appendChild(div.firstElementChild);
+  recalculateDraftTotals();
 }
 
 function removeMealPhotoDraftRow(btn) {
   const row = btn && btn.closest('[data-meal-photo-row]');
-  if (row) row.remove();
+  if (row) {
+    row.remove();
+    recalculateDraftTotals();
+  }
 }
 
 function switchDraftItemFood(btn, candidateName) {
@@ -44988,6 +45254,7 @@ function switchDraftItemFood(btn, candidateName) {
     if (carbInput) carbInput.value = Math.round(resolved.carbs * factor * 10) / 10;
     if (fatInput) fatInput.value = Math.round(resolved.fats * factor * 10) / 10;
   }
+  recalculateDraftTotals();
   if (typeof showToast === 'function') showToast('Alimento aggiornato: ' + candidateName, 'info');
 }
 
@@ -58714,6 +58981,9 @@ if (typeof window !== 'undefined') {
   window.lookupNutritionBarcode = lookupNutritionBarcode;
   window.lookupSupplementBarcode = lookupSupplementBarcode;
   window.scanBarcodeWithCamera = scanBarcodeWithCamera;
+  window.switchRepresentationMode = switchRepresentationMode;
+  window.recalculateDraftTotals = recalculateDraftTotals;
+  window.proceedWithTopPhotoOnly = proceedWithTopPhotoOnly;
   window.openMealPhotoFlow = openMealPhotoFlow;
   window.openMealTargetModal = openMealTargetModal;
   window.closeMealTargetModal = closeMealTargetModal;

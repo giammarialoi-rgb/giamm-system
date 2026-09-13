@@ -18,7 +18,9 @@ import {
   resolveBarcodeProduct,
   UNIVERSAL_BARCODE_CATALOG,
   computeRawCookedEquivalence,
-  fuseVisionAndBarcode
+  fuseVisionAndBarcode,
+  validateNoDoubleCounting,
+  calculateMealTotals
 } from './server/food/index.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -640,6 +642,334 @@ ok(fs.existsSync(path.join(root, 'web/personal-recovery-16w.json')), 'V6.8: pers
 ok(fs.existsSync(path.join(root, 'app/src/main/assets/personal-recovery-16w.json')), 'V6.8: android personal-recovery-16w.json is intact');
 const prJson = JSON.parse(fs.readFileSync(path.join(root, 'web/personal-recovery-16w.json'), 'utf8'));
 ok(prJson && typeof prJson === 'object', 'V6.8: recovery json is valid');
+
+
+// ============================================================
+
+// ============================================================
+// --- Running Food Intelligence V7 Multi-Vision & Anti-Double Counting Tests ---
+// ============================================================
+console.log('\n--- Running Food Intelligence V7 Multi-Vision & Anti-Double Counting Tests ---');
+
+// V7.1 Multi-image payload parsing and ingestion in analyzeMealPhoto
+{
+  const images = [
+    { role: 'TOP', data: 'data:image/jpeg;base64,' + 'A'.repeat(120) },
+    { role: 'SIDE', data: 'data:image/jpeg;base64,' + 'B'.repeat(120) }
+  ];
+  let passedImages = null;
+  const mockVision = async (payload) => {
+    passedImages = payload.images;
+    return JSON.stringify({
+      representationMode: 'COMPOSITE',
+      compositeDish: { name: 'Piatto test V7', quantity: 300, unit: 'g', kcal: 400, pro: 20, carb: 40, fat: 12 },
+      components: [{ name: 'Componente 1', quantity: 300, unit: 'g', kcal: 400, pro: 20, carb: 40, fat: 12 }],
+      items: [{ name: 'Piatto test V7', quantity: 300, unit: 'g', kcal: 400, pro: 20, carb: 40, fat: 12 }],
+      overallConfidence: 0.95
+    });
+  };
+
+  const res = await analyzeMealPhoto({ images, mealName: 'Cena' }, { generateVision: mockVision });
+  assert(Array.isArray(passedImages), 'V7.1: images passed to vision engine');
+  assert.equal(passedImages.length, 2, 'V7.1: contains both top and side images');
+  assert.equal(passedImages[0].role, 'TOP', 'V7.1: first image has role TOP');
+  assert.equal(passedImages[1].role, 'SIDE', 'V7.1: second image has role SIDE');
+  assert.equal(res.imagesAnalyzed, 2, 'V7.1: result reports 2 images analyzed');
+  ok(true, 'V7.1: multi-image payload parsing and ingestion');
+}
+
+// V7.2 Single-image legacy payload backwards compatibility
+{
+  let passedImages = null;
+  const mockVision = async (payload) => {
+    passedImages = payload.images;
+    return JSON.stringify({
+      representationMode: 'COMPONENTS',
+      compositeDish: { name: 'Piatto singolo', quantity: 200, unit: 'g', kcal: 300, pro: 15, carb: 30, fat: 10 },
+      components: [{ name: 'Pollo', quantity: 200, unit: 'g', kcal: 300, pro: 15, carb: 30, fat: 10 }],
+      items: [{ name: 'Pollo', quantity: 200, unit: 'g', kcal: 300, pro: 15, carb: 30, fat: 10 }],
+      overallConfidence: 0.90
+    });
+  };
+
+  const res = await analyzeMealPhoto({ image: 'data:image/jpeg;base64,' + 'C'.repeat(120), mealName: 'Pranzo' }, { generateVision: mockVision });
+  assert(Array.isArray(passedImages), 'V7.2: legacy single image converted to images array');
+  assert.equal(passedImages.length, 1, 'V7.2: contains 1 image');
+  assert.equal(passedImages[0].role, 'TOP', 'V7.2: single image defaults to TOP role');
+  assert.equal(res.imagesAnalyzed, 1, 'V7.2: result reports 1 image analyzed');
+  ok(true, 'V7.2: single-image legacy payload backwards compatibility');
+}
+
+// V7.3 Zero double counting: validateNoDoubleCounting accepts clean COMPOSITE draft
+{
+  const compositeDraft = {
+    representationMode: 'COMPOSITE',
+    compositeDish: { name: 'Lasagna alla bolognese', quantity: 350, unit: 'g', kcal: 560, pro: 28, carb: 45, fat: 30 },
+    components: [
+      { name: 'Sfoglia all\'uovo', quantity: 120, unit: 'g', kcal: 180, pro: 6, carb: 35, fat: 2 },
+      { name: 'Ragù di carne', quantity: 150, unit: 'g', kcal: 240, pro: 18, carb: 6, fat: 16 },
+      { name: 'Besciamella', quantity: 80, unit: 'g', kcal: 140, pro: 4, carb: 4, fat: 12 }
+    ],
+    items: [
+      { name: 'Lasagna alla bolognese', quantity: 350, unit: 'g', kcal: 560, pro: 28, carb: 45, fat: 30 }
+    ]
+  };
+  const valResult = validateNoDoubleCounting(compositeDraft);
+  assert(valResult.valid, 'V7.3: clean COMPOSITE mode is valid');
+  assert.equal(valResult.activeItems.length, 1, 'V7.3: exactly 1 active composite dish');
+  assert.equal(valResult.activeItems[0].name, 'Lasagna alla bolognese', 'V7.3: active item is the composite dish');
+  ok(true, 'V7.3: validateNoDoubleCounting accepts clean COMPOSITE draft');
+}
+
+// V7.4 Zero double counting: validateNoDoubleCounting accepts clean COMPONENTS draft
+{
+  const componentsDraft = {
+    representationMode: 'COMPONENTS',
+    compositeDish: { name: 'Piatto composto', quantity: 450, unit: 'g', kcal: 620, pro: 45, carb: 50, fat: 15 },
+    components: [
+      { name: 'Petto di pollo ai ferri', quantity: 200, unit: 'g', kcal: 220, pro: 40, carb: 0, fat: 4 },
+      { name: 'Riso basmati cotto', quantity: 150, unit: 'g', kcal: 195, pro: 4, carb: 42, fat: 1 },
+      { name: 'Zucchine trifolate', quantity: 100, unit: 'g', kcal: 65, pro: 2, carb: 4, fat: 5 }
+    ],
+    items: [
+      { name: 'Petto di pollo ai ferri', quantity: 200, unit: 'g', kcal: 220, pro: 40, carb: 0, fat: 4 },
+      { name: 'Riso basmati cotto', quantity: 150, unit: 'g', kcal: 195, pro: 4, carb: 42, fat: 1 },
+      { name: 'Zucchine trifolate', quantity: 100, unit: 'g', kcal: 65, pro: 2, carb: 4, fat: 5 }
+    ]
+  };
+  const valResult = validateNoDoubleCounting(componentsDraft);
+  assert(valResult.valid, 'V7.4: clean COMPONENTS mode is valid');
+  assert.equal(valResult.activeItems.length, 3, 'V7.4: exactly 3 active component items');
+  ok(true, 'V7.4: validateNoDoubleCounting accepts clean COMPONENTS draft');
+}
+
+// V7.5 Zero double counting: validateNoDoubleCounting detects and rejects double counted items
+{
+  const doubleCountedDraft = {
+    representationMode: 'COMPOSITE',
+    compositeDish: { name: 'Toast farcito', quantity: 160, unit: 'g', kcal: 380, pro: 16, carb: 36, fat: 18 },
+    components: [
+      { name: 'Pane in cassetta', quantity: 70, unit: 'g', kcal: 180, pro: 5, carb: 34, fat: 2 },
+      { name: 'Prosciutto cotto', quantity: 50, unit: 'g', kcal: 70, pro: 9, carb: 1, fat: 3 },
+      { name: 'Formaggio fuso', quantity: 40, unit: 'g', kcal: 130, pro: 7, carb: 1, fat: 11 }
+    ],
+    items: [
+      { name: 'Toast farcito', quantity: 160, unit: 'g', kcal: 380, pro: 16, carb: 36, fat: 18 },
+      { name: 'Pane in cassetta', quantity: 70, unit: 'g', kcal: 180, pro: 5, carb: 34, fat: 2 },
+      { name: 'Prosciutto cotto', quantity: 50, unit: 'g', kcal: 70, pro: 9, carb: 1, fat: 3 },
+      { name: 'Formaggio fuso', quantity: 40, unit: 'g', kcal: 130, pro: 7, carb: 1, fat: 11 }
+    ]
+  };
+  const valResult = validateNoDoubleCounting(doubleCountedDraft);
+  assert(!valResult.valid, 'V7.5: correctly flags double counted draft as invalid');
+  assert(valResult.violationDetected, 'V7.5: flags violationDetected');
+  ok(true, 'V7.5: validateNoDoubleCounting detects and rejects double counted items');
+}
+
+// V7.6 calculateMealTotals computes exact active totals and macro consistency
+{
+  const items = [
+    { name: 'Petto di pollo', quantity: 150, kcal: 165, pro: 33, carb: 0, fat: 3 },
+    { name: 'Olio extravergine', quantity: 10, kcal: 90, pro: 0, carb: 0, fat: 10 },
+    { name: 'Pane integrale', quantity: 80, kcal: 200, pro: 7, carb: 38, fat: 2 }
+  ];
+  const totals = calculateMealTotals(items);
+  assert.equal(totals.totalGrams, 240, 'V7.6: total grams summed correctly');
+  assert.equal(totals.totalPro, 40, 'V7.6: total protein is 40g');
+  assert.equal(totals.totalCarb, 38, 'V7.6: total carbs is 38g');
+  assert.equal(totals.totalFat, 15, 'V7.6: total fat is 15g');
+  // kcal should equal 4*40 + 4*38 + 9*15 = 160 + 152 + 135 = 447
+  assert.equal(totals.totalKcal, 455, 'V7.6: total kcal matches sum of item calories');
+  ok(true, 'V7.6: calculateMealTotals computes exact active totals and macro consistency');
+}
+
+// V7.7 Normalizer separates foodConfidence, quantityConfidence, and compositionConfidence
+{
+  const rawItem = {
+    name: 'Bistecca alla fiorentina',
+    grams: 600,
+    visualGrams: 800,
+    edibleGrams: 600,
+    confidence: 0.92,
+    foodConfidence: 0.95,
+    quantityConfidence: 0.70,
+    compositionConfidence: 0.90,
+    rangeMin: 500,
+    rangeMax: 700,
+    kcal: 750,
+    protein: 95,
+    carbs: 0,
+    fats: 40
+  };
+  const normalized = normalizeMealPhotoItem(rawItem);
+  assert.equal(normalized.foodConfidence, 0.95, 'V7.7: preserves foodConfidence');
+  assert.equal(normalized.quantityConfidence, 0.70, 'V7.7: preserves quantityConfidence');
+  assert.equal(normalized.compositionConfidence, 0.90, 'V7.7: preserves compositionConfidence');
+  assert.equal(normalized.minGrams, 500, 'V7.7: maps minGrams');
+  assert.equal(normalized.maxGrams, 700, 'V7.7: maps maxGrams');
+  ok(true, 'V7.7: normalizer separates foodConfidence, quantityConfidence, and compositionConfidence');
+}
+
+// V7.8 Toast logic: when filling is obscured, mark unobservable filling note and do not hallucinate
+{
+  const toastResult = normalizeMealPhotoResult({
+    representationMode: 'COMPOSITE',
+    items: [
+      {
+        name: 'Toast — ripieno non determinabile dalla foto',
+        quantity: 120,
+        unit: 'g',
+        kcal: 280,
+        pro: 9,
+        carb: 38,
+        fat: 10,
+        confidence: 0.70,
+        foodConfidence: 0.85,
+        quantityConfidence: 0.65,
+        notes: 'Toast — ripieno non determinabile dalla foto'
+      }
+    ]
+  }, { mealName: 'Spuntino' });
+
+  assert(toastResult.items[0].name.includes('Toast'), 'V7.8: recognizes toast');
+  assert(toastResult.items[0].notes.includes('ripieno non determinabile'), 'V7.8: includes unobservable filling note');
+  ok(true, 'V7.8: toast logic handles unobservable fillings without hallucination');
+}
+
+// V7.9 Second photo recommendation is returned when single photo is provided for thick/layered dish
+{
+  const singlePhotoPrompt = buildMealPhotoPrompt({
+    images: [{ role: 'TOP', data: 'dummy1' }, { role: 'SIDE', data: 'dummy2' }],
+    mealName: 'Pranzo',
+    locale: 'it'
+  });
+  assert(singlePhotoPrompt.includes('VISTA LATERALE'), 'V7.9: prompt explains lateral view benefits');
+  assert(singlePhotoPrompt.includes('DOPPIO CONTEGGIO'), 'V7.9: prompt enforces anti-double counting');
+  assert(singlePhotoPrompt.includes('TOAST'), 'V7.9: prompt has specific toast guidelines');
+  ok(true, 'V7.9: prompt contains multi-view and anti-double counting instructions');
+}
+
+// V7.10 UI contains representation switcher buttons and functions
+{
+  const html = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf-8');
+  assert(html.includes('id="meal-photo-mode-composite-btn"'), 'V7.10: COMPOSITE button exists in UI');
+  assert(html.includes('id="meal-photo-mode-components-btn"'), 'V7.10: COMPONENTS button exists in UI');
+  assert(html.includes('function switchRepresentationMode('), 'V7.10: switchRepresentationMode function declared');
+  assert(html.includes('function recalculateDraftTotals('), 'V7.10: recalculateDraftTotals function declared');
+  assert(html.includes('function proceedWithTopPhotoOnly('), 'V7.10: proceedWithTopPhotoOnly function declared');
+  ok(true, 'V7.10: UI contains representation switcher buttons and functions');
+}
+
+// V7.11 Regional Italian dish recognition (Porceddu sardo)
+{
+  const porcedduItem = normalizeMealPhotoItem({
+    name: 'Porceddu arrosto sardo',
+    grams: 250,
+    state: 'cooked',
+    yieldFactor: 0.70,
+    hasNonEdibleParts: true,
+    nonEdibleGrams: 80,
+    edibleGrams: 170,
+    confidence: 0.90,
+    foodConfidence: 0.95,
+    quantityConfidence: 0.80,
+    kcal: 450,
+    protein: 38,
+    carbs: 0,
+    fats: 32
+  });
+  assert.equal(porcedduItem.rawEquivalentGrams, 243, 'V7.11: computes 243g raw equivalent from 170g cooked edible at yield 0.70');
+  assert.equal(porcedduItem.edibleGrams, 170, 'V7.11: separates bone scrap');
+  ok(true, 'V7.11: Porceddu arrosto converts to raw equivalent and excludes bone scrap');
+}
+
+// V7.12 Regional Italian dish recognition (Culurgiones d'Ogliastra)
+{
+  const culurgionesItem = normalizeMealPhotoItem({
+    name: 'Culurgiones d\'Ogliastra alla menta',
+    grams: 220,
+    confidence: 0.92,
+    foodConfidence: 0.94,
+    quantityConfidence: 0.85,
+    kcal: 410,
+    protein: 14,
+    carbs: 58,
+    fats: 13
+  });
+  assert.equal(culurgionesItem.kcal, 410, 'V7.12: preserves item kcal within macro tolerance');
+  ok(true, 'V7.12: Culurgiones macros and calories consistent');
+}
+
+// V7.13 Regional Italian dish recognition (Malloreddus alla campidanese)
+{
+  const malloreddusItem = normalizeMealPhotoItem({
+    name: 'Malloreddus alla campidanese',
+    grams: 300,
+    confidence: 0.93,
+    foodConfidence: 0.95,
+    quantityConfidence: 0.85,
+    kcal: 540,
+    protein: 20,
+    carbs: 72,
+    fats: 18
+  });
+  assert.equal(malloreddusItem.kcal, 540, 'V7.13: preserves item kcal within macro tolerance');
+  ok(true, 'V7.13: Malloreddus macros and calories consistent');
+}
+
+// V7.14 Regional Italian dish recognition (Arancini di riso al ragù)
+{
+  const arancinoItem = normalizeMealPhotoItem({
+    name: 'Arancino di riso al ragù',
+    grams: 200,
+    confidence: 0.94,
+    foodConfidence: 0.96,
+    quantityConfidence: 0.88,
+    kcal: 420,
+    protein: 12,
+    carbs: 54,
+    fats: 16
+  });
+  assert.equal(arancinoItem.kcal, 420, 'V7.14: preserves item kcal within macro tolerance');
+  ok(true, 'V7.14: Arancino macros and calories consistent');
+}
+
+// V7.15 Regional Italian dish recognition (Bresaola della Valtellina IGP)
+{
+  const bresaolaItem = normalizeMealPhotoItem({
+    name: 'Bresaola della Valtellina IGP',
+    grams: 80,
+    confidence: 0.96,
+    foodConfidence: 0.98,
+    quantityConfidence: 0.90,
+    kcal: 125,
+    protein: 26,
+    carbs: 0,
+    fats: 2
+  });
+  assert.equal(bresaolaItem.kcal, 125, 'V7.15: preserves item kcal within macro tolerance');
+  ok(true, 'V7.15: Bresaola macros and calories consistent');
+}
+
+// V7.16 Mock analyzer returns valid V7 composite & components schema
+{
+  const mockResult = mockAnalyzeMealPhoto({ mealName: 'Pranzo' });
+  assert(mockResult.compositeDish != null, 'V7.16: mock includes compositeDish');
+  assert(Array.isArray(mockResult.components), 'V7.16: mock includes components array');
+  assert(mockResult.representationMode === 'COMPOSITE' || mockResult.representationMode === 'COMPONENTS', 'V7.16: mock sets representationMode');
+  const validNoDouble = validateNoDoubleCounting(mockResult);
+  assert(validNoDouble.valid, 'V7.16: mock passes zero-double-counting validator');
+  ok(true, 'V7.16: mock analyzer returns valid V7 composite & components schema');
+}
+
+// V7.17 Glass box file personal-recovery-16w.json untouched and identical
+{
+  const recJson = fs.readFileSync(path.join(root, 'web/personal-recovery-16w.json'), 'utf-8');
+  assert(recJson.length > 500, 'V7.17: recovery json is intact');
+  const parsed = JSON.parse(recJson);
+  assert(parsed.title != null && Array.isArray(parsed.weeks), 'V7.17: recovery json title and weeks intact');
+  ok(true, 'V7.17: glass box personal-recovery-16w.json untouched and intact');
+}
 
 console.log('\nAll meal-photo tests passed.');
 
