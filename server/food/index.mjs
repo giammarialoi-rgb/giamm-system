@@ -60,12 +60,30 @@ function mapUsdaFood(raw) {
 
 function mapOffProduct(raw) {
   const nuts = raw.nutriments || {};
-  const kcal = num(nuts['energy-kcal_100g'] || nuts.energy_kcal_100g || nuts.energy-kcal || (num(nuts['energy-kj_100g']) / 4.184));
-  const pro = num(nuts.proteins_100g || nuts.proteins);
-  const carb = num(nuts.carbohydrates_100g || nuts.carbohydrates);
-  const fat = num(nuts.fat_100g || nuts.fat);
+  let kcal = num(nuts['energy-kcal_100g'] || nuts.energy_kcal_100g || nuts['energy-kcal'] || nuts.energy_kcal);
+  if (!kcal && nuts['energy-kj_100g']) {
+    kcal = num(nuts['energy-kj_100g']) / 4.184;
+  }
+  if (!kcal && nuts.energy_100g) {
+    const isKcal = String(nuts.energy_unit || '').toLowerCase() === 'kcal';
+    kcal = isKcal ? num(nuts.energy_100g) : (num(nuts.energy_100g) / 4.184);
+  }
+  const pro = num(nuts.proteins_100g || nuts.proteins || nuts['proteins_value']);
+  const carb = num(nuts.carbohydrates_100g || nuts.carbohydrates || nuts['carbohydrates_value']);
+  const fat = num(nuts.fat_100g || nuts.fat || nuts['fat_value']);
+  const sugars = num(nuts.sugars_100g || nuts.sugars || nuts['sugars_value']);
+  const saturatedFat = num(nuts['saturated-fat_100g'] || nuts.saturated_fat_100g || nuts['saturated-fat'] || nuts.saturated_fat);
+  const fiber = num(nuts.fiber_100g || nuts.fiber || nuts['fiber_value']);
+  const salt = num(nuts.salt_100g || nuts.salt || (nuts.sodium_100g ? num(nuts.sodium_100g) * 2.5 : 0));
+
+  if (!kcal && (pro > 0 || carb > 0 || fat > 0)) {
+    kcal = pro * 4 + carb * 4 + fat * 9;
+  }
+
   const brand = raw.brands || raw.brand || null;
   const name = raw.product_name_it || raw.product_name || raw.generic_name_it || raw.generic_name || 'Prodotto';
+  const hasComplete = (kcal > 0) || (pro > 0 || carb > 0 || fat > 0);
+
   return {
     id: 'off_' + (raw.code || raw._id || Math.random().toString(36).slice(2, 10)),
     barcode: raw.code || null,
@@ -75,13 +93,18 @@ function mapOffProduct(raw) {
     proPer100: Math.round(pro * 10) / 10,
     carbPer100: Math.round(carb * 10) / 10,
     fatPer100: Math.round(fat * 10) / 10,
+    sugarsPer100: Math.round(sugars * 10) / 10,
+    saturatedFatPer100: Math.round(saturatedFat * 10) / 10,
+    fibersPer100: Math.round(fiber * 10) / 10,
+    saltPer100: Math.round(salt * 100) / 100,
     serving: raw.serving_size || '100g',
-    servingGrams: num(raw.serving_quantity) || 100,
+    servingGrams: num(raw.serving_quantity) || (raw.serving_size ? parseFloat(String(raw.serving_size).replace(',', '.')) : 100) || 100,
     nutriscore: raw.nutriscore_grade || null,
+    hasCompleteNutrition: hasComplete,
     provenance: {
       source: 'open_food_facts',
       kind: raw.code ? 'barcode_product' : 'crowdsourced',
-      confidence: raw.code ? 0.98 : 0.8,
+      confidence: hasComplete ? (raw.code ? 0.98 : 0.8) : 0.6,
       attribution: 'Open Food Facts (ODbL)'
     }
   };
@@ -1244,43 +1267,184 @@ export const UNIVERSAL_BARCODE_CATALOG = {
   }
 };
 
-export async function resolveBarcodeProduct(code) {
-  const clean = String(code || '').trim();
-  if (!clean) return null;
+export async function resolveBarcodeProduct(code, env = process.env) {
+  const clean = String(code || '').trim().replace(/[^0-9A-Za-z]/g, '');
+  if (!clean) return { found: false, barcode: clean };
+
   if (UNIVERSAL_BARCODE_CATALOG[clean]) {
+    const item = UNIVERSAL_BARCODE_CATALOG[clean];
+    const p100 = item.per100g || {};
     return {
       found: true,
-      ...UNIVERSAL_BARCODE_CATALOG[clean]
+      barcode: clean,
+      name: item.name,
+      brand: item.brand || '',
+      serving: item.serving || '100g',
+      servingGrams: item.servingGrams || 100,
+      per100g: {
+        kcal: Math.round(num(p100.kcal ?? item.kcal ?? 0)),
+        proteins: Math.round(num(p100.proteins ?? item.pro ?? 0) * 10) / 10,
+        carbohydrates: Math.round(num(p100.carbohydrates ?? item.carb ?? 0) * 10) / 10,
+        fat: Math.round(num(p100.fat ?? item.fat ?? 0) * 10) / 10,
+        fibers: Math.round(num(p100.fibers ?? 0) * 10) / 10,
+        salt: Math.round(num(p100.salt ?? 0) * 100) / 100
+      },
+      kcal: Math.round(num(p100.kcal ?? item.kcal ?? 0)),
+      pro: Math.round(num(p100.proteins ?? item.pro ?? 0) * 10) / 10,
+      carb: Math.round(num(p100.carbohydrates ?? item.carb ?? 0) * 10) / 10,
+      fat: Math.round(num(p100.fat ?? item.fat ?? 0) * 10) / 10,
+      hasCompleteNutrition: true,
+      nutritionAvailable: true,
+      source: 'verified_product_catalog',
+      confidence: 0.99
     };
   }
+
   try {
     const off = await lookupOffBarcode(clean);
     if (off) {
+      let finalKcal = off.kcalPer100 || 0;
+      let finalPro = off.proPer100 || 0;
+      let finalCarb = off.carbPer100 || 0;
+      let finalFat = off.fatPer100 || 0;
+      let nutritionSource = 'open_food_facts';
+      let hasComplete = !!off.hasCompleteNutrition;
+
+      if (!hasComplete && off.name) {
+        try {
+          const dbMatches = await searchFoodMulti(off.name, env);
+          if (dbMatches && dbMatches.items && dbMatches.items.length > 0) {
+            const best = dbMatches.items[0];
+            if (best.kcalPer100 || best.kcal) {
+              finalKcal = best.kcalPer100 || best.kcal || 0;
+              finalPro = best.proPer100 || best.pro || 0;
+              finalCarb = best.carbPer100 || best.carb || 0;
+              finalFat = best.fatPer100 || best.fat || 0;
+              nutritionSource = 'food_db_fallback';
+              hasComplete = true;
+            }
+          }
+        } catch (_) {}
+      }
+
       return {
         found: true,
         barcode: clean,
         name: off.name,
         brand: off.brand || '',
         serving: off.serving || '100g',
+        servingGrams: off.servingGrams || 100,
         per100g: {
-          kcal: off.kcalPer100 || 0,
-          proteins: off.proPer100 || 0,
-          carbohydrates: off.carbPer100 || 0,
-          fat: off.fatPer100 || 0,
+          kcal: finalKcal,
+          proteins: finalPro,
+          carbohydrates: finalCarb,
+          fat: finalFat,
+          sugars: off.sugarsPer100 || 0,
+          saturatedFat: off.saturatedFatPer100 || 0,
           fibers: off.fibersPer100 || 0,
           salt: off.saltPer100 || 0
         },
-        kcal: off.kcalPer100 || 0,
-        pro: off.proPer100 || 0,
-        carb: off.carbPer100 || 0,
-        fat: off.fatPer100 || 0,
-        source: 'open_food_facts'
+        kcal: finalKcal,
+        pro: finalPro,
+        carb: finalCarb,
+        fat: finalFat,
+        hasCompleteNutrition: hasComplete,
+        nutritionAvailable: hasComplete,
+        source: nutritionSource,
+        confidence: hasComplete ? 0.98 : 0.70,
+        notes: hasComplete ? '' : "Valori nutrizionali non disponibili nel database. Fotografa l'etichetta nutrizionale per completarli."
       };
     }
   } catch (err) {
     console.warn('[food] lookupOffBarcode failed', err.message);
   }
-  return { found: false, barcode: clean };
+
+  return {
+    found: false,
+    barcode: clean,
+    hasCompleteNutrition: false,
+    nutritionAvailable: false
+  };
+}
+
+export function fuseVisionAndBarcode(visionItem, barcodeProduct) {
+  if (!barcodeProduct || !barcodeProduct.found) return visionItem;
+  
+  const vName = visionItem.name || 'Alimento';
+  const isCooked = visionItem.isCooked || visionItem.state === 'cooked' || /cott[oa]|bollit[oa]|grigliat[oa]|forno/i.test(vName);
+  const visualGrams = num(visionItem.grams || visionItem.quantityGrams || visionItem.portionGrams || visionItem.quantity || 100);
+  
+  let rawEquivGrams = num(visionItem.rawEquivalentGrams);
+  if (rawEquivGrams <= 0) {
+    const eq = computeRawCookedEquivalence({ name: vName, state: isCooked ? 'cooked' : 'raw', grams: visualGrams });
+    rawEquivGrams = eq.rawEquivalentGrams || visualGrams;
+  }
+  const edibleGrams = num(visionItem.edibleGrams || visualGrams);
+
+  const p100 = barcodeProduct.per100g || {
+    kcal: barcodeProduct.kcal || 0,
+    proteins: barcodeProduct.pro || 0,
+    carbohydrates: barcodeProduct.carb || 0,
+    fat: barcodeProduct.fat || 0,
+    fibers: barcodeProduct.fibers || 0,
+    salt: barcodeProduct.salt || 0
+  };
+
+  const calcBaseGrams = (isCooked && rawEquivGrams > 0) ? rawEquivGrams : edibleGrams;
+  const mult = calcBaseGrams / 100;
+
+  const fusedKcal = Math.round(p100.kcal * mult);
+  const fusedPro = Math.round(p100.proteins * mult * 10) / 10;
+  const fusedCarb = Math.round(p100.carbohydrates * mult * 10) / 10;
+  const fusedFat = Math.round(p100.fat * mult * 10) / 10;
+  const fusedFibers = Math.round((p100.fibers || 0) * mult * 10) / 10;
+  const fusedSalt = Math.round((p100.salt || 0) * mult * 100) / 100;
+
+  const displayName = barcodeProduct.brand && !barcodeProduct.name.toLowerCase().includes(barcodeProduct.brand.toLowerCase())
+    ? `${barcodeProduct.name} (${barcodeProduct.brand})`
+    : barcodeProduct.name;
+
+  return {
+    ...visionItem,
+    name: displayName,
+    originalVisionName: vName,
+    barcode: barcodeProduct.barcode,
+    brand: barcodeProduct.brand || null,
+    serving: barcodeProduct.serving || '100g',
+    servingGrams: barcodeProduct.servingGrams || 100,
+    quantity: visualGrams,
+    grams: visualGrams,
+    quantityGrams: visualGrams,
+    rawEquivalentGrams: rawEquivGrams,
+    edibleGrams,
+    state: isCooked ? 'cooked' : 'raw',
+    isCooked,
+    kcal: fusedKcal,
+    proteins: fusedPro,
+    pro: fusedPro,
+    carbohydrates: fusedCarb,
+    carb: fusedCarb,
+    carbs: fusedCarb,
+    fat: fusedFat,
+    fats: fusedFat,
+    fibers: fusedFibers,
+    salt: fusedSalt,
+    per100g: p100,
+    isBarcodeFused: true,
+    isFused: true,
+    confidence: Math.max(Number(visionItem.confidence) || 0.85, 0.95),
+    nutritionConfidence: Number(barcodeProduct.confidence) || 0.99,
+    hasCompleteNutrition: barcodeProduct.hasCompleteNutrition !== false,
+    provenance: {
+      source: 'photo_barcode_fusion',
+      kind: 'barcode_identity_photo_quantity',
+      identityConfidence: 0.99,
+      quantityConfidence: visionItem.confidence || 0.75,
+      nutritionConfidence: barcodeProduct.confidence || 0.99,
+      attribution: `Identità Barcode ${barcodeProduct.barcode} (${barcodeProduct.brand || 'DB'}) + Stima Visiva Porzione`
+    },
+    notes: `Verificato da barcode ${barcodeProduct.barcode}. Quantità visiva: ${visualGrams}g ${isCooked ? `(≈${rawEquivGrams}g crudi)` : ''}.`
+  };
 }
 
 
@@ -1302,7 +1466,7 @@ export function mountFoodRoutes(app, opts = {}) {
   app.get('/api/food/barcode/:code', async (req, res) => {
     try {
       const code = String(req.params.code || '').trim();
-      const product = await resolveBarcodeProduct(code);
+      const product = await resolveBarcodeProduct(code, env);
       if (!product || product.found === false) {
         return res.json({ ok: true, data: { found: false, barcode: code } });
       }

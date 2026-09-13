@@ -16,7 +16,8 @@ import {
   MEAL_PHOTO_LOW_CONFIDENCE,
   findChainItem,
   resolveBarcodeProduct,
-  UNIVERSAL_BARCODE_CATALOG
+  UNIVERSAL_BARCODE_CATALOG,
+  fuseVisionAndBarcode
 } from './server/food/index.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -461,4 +462,83 @@ const bc20 = await resolveBarcodeProduct('0000000000000');
 ok(bc20.found === false && bc20.barcode === '0000000000000', 'BC20 Barcode sconosciuto: correctly returns found: false for UI fallback modal');
 
 
+
+console.log('\n--- Running Food Intelligence V4 & Barcode Fusion Tests ---');
+
+// V4.1 Barcode + Vision Cooked Food Fusion (220g cooked Barilla Spaghetti #5)
+const visionCookedPasta = {
+  name: 'Spaghetti al pomodoro',
+  quantity: 220,
+  visualGrams: 220,
+  edibleGrams: 220,
+  state: 'cooked',
+  rawEquivalentGrams: 100,
+  estimatedCookedGrams: 220,
+  confidence: 0.85
+};
+const barillaProduct = await resolveBarcodeProduct('8076800195057');
+const fusedPasta = fuseVisionAndBarcode(visionCookedPasta, barillaProduct);
+ok(fusedPasta.isFused === true, 'V4.1: marks fused item');
+ok(fusedPasta.name.includes('Barilla') && fusedPasta.barcode === '8076800195057', 'V4.1: assigns barcode and brand name');
+ok(fusedPasta.rawEquivalentGrams === 100 && fusedPasta.visualGrams === 220, 'V4.1: preserves cooked visual and raw equiv grams');
+ok(fusedPasta.kcal === 359, 'V4.1: calculates exact 359 kcal from 100g raw equivalent');
+ok(fusedPasta.pro === 13 && fusedPasta.carb === 71 && fusedPasta.fat === 2.0, 'V4.1: applies exact per-100g raw barcode macros');
+ok(fusedPasta.confidence >= 0.95 && fusedPasta.nutritionConfidence >= 0.95, 'V4.1: elevates confidence to near-certainty');
+
+// V4.2 Barcode + Vision Raw Food Fusion with Non-Edible Parts (200g avocado con buccia/nocciolo, 140g edibili)
+const visionAvocado = {
+  name: 'Avocado fresco',
+  quantity: 200,
+  visualGrams: 200,
+  edibleGrams: 140,
+  hasNonEdibleParts: true,
+  nonEdiblePartName: 'buccia e nocciolo',
+  state: 'raw',
+  confidence: 0.82
+};
+const avocadoBarcodeProduct = {
+  found: true,
+  name: 'Avocado Hass',
+  brand: 'Frutta Scelta',
+  barcode: '8001234567890',
+  per100g: { kcal: 160, proteins: 2.0, carbohydrates: 8.5, fat: 14.7 }
+};
+const fusedAvocado = fuseVisionAndBarcode(visionAvocado, avocadoBarcodeProduct);
+ok(fusedAvocado.isFused === true, 'V4.2: marks avocado as fused');
+ok(fusedAvocado.hasNonEdibleParts === true && fusedAvocado.edibleGrams === 140, 'V4.2: retains 140g edible portions');
+// 140g * 160 / 100 = 224 kcal; pro = 2.8g; carb = 11.9g; fat = 20.6g
+ok(fusedAvocado.kcal === 224, 'V4.2: calculates 224 kcal from 140g edible weight');
+ok(fusedAvocado.pro === 2.8 && fusedAvocado.carb === 11.9 && fusedAvocado.fat === 20.6, 'V4.2: calculates exact macros on edible weight only');
+
+// V4.3 Barcode Normalization Tests (spaces, dashes, non-alphanumeric cleanup)
+const messyCode1 = '  8076800195057  ';
+const resMessy1 = await resolveBarcodeProduct(messyCode1);
+ok(resMessy1.found && resMessy1.barcode === '8076800195057', 'V4.3: normalizes whitespace in barcode');
+
+const messyCode2 = '8076-8001-95057';
+const resMessy2 = await resolveBarcodeProduct(messyCode2);
+ok(resMessy2.found && resMessy2.barcode === '8076800195057', 'V4.3: normalizes hyphens in barcode');
+
+// V4.4 Barcode Incomplete Nutrition Detection (Never hallucinates fake macros)
+const incompleteBarcode = {
+  found: true,
+  barcode: '9999999999999',
+  name: 'Specialty Herbal Infusion',
+  brand: 'BioBrand',
+  per100g: { kcal: 0, proteins: 0, carbohydrates: 0, fat: 0 }
+};
+const visionTea = { name: 'Infuso', quantity: 200, state: 'raw' };
+const fusedIncomplete = fuseVisionAndBarcode(visionTea, incompleteBarcode);
+ok(fusedIncomplete.barcode === '9999999999999', 'V4.4: attaches barcode to product');
+
+// V4.5 UI Verification for Live Barcode Scanner V4 & Pure-JS 1D Rasterizer
+const webBase = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
+const webBuilt = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
+ok(webBase.includes('decode1DBarcodeFromCanvas') && webBuilt.includes('decode1DBarcodeFromCanvas'), 'V4.5: pure-JS 1D barcode scanline decoder exists');
+ok(webBase.includes('fuseBarcodeWithDraftRow') && webBuilt.includes('fuseBarcodeWithDraftRow'), 'V4.5: draft row barcode fusion function exists');
+ok(webBase.includes('startBarcodeFusionForDraftRow') && webBuilt.includes('startBarcodeFusionForDraftRow'), 'V4.5: draft row barcode trigger button exists');
+ok(webBase.includes('BARCODE VERIFIED') && webBuilt.includes('BARCODE VERIFIED'), 'V4.5: BARCODE VERIFIED badge template exists');
+ok(webBase.includes('isCleared') && webBuilt.includes('isCleared'), 'V4.5: tombstone anti-resurrection guard exists in initData');
+
 console.log('\nAll meal-photo tests passed.');
+

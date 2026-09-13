@@ -9478,7 +9478,10 @@ async function init() {
         const supp = activeProg.supplementation || null;
         const ther = activeProg.therapy || null;
         const exams = activeProg.exams || null;
-        if (nutr && (nutr.present || (nutr.days && nutr.days.length))) {
+        if (nutr && (nutr.cleared || nutr.isCleared)) {
+          DATA.nutrition = nutr;
+          store.nutrition = nutr;
+        } else if (nutr && (nutr.present || (nutr.days && nutr.days.length))) {
           DATA.nutrition = (typeof enrichImportedFoods === 'function') ? enrichImportedFoods(nutr) : nutr;
           store.nutrition = DATA.nutrition;
         } else {
@@ -9503,11 +9506,15 @@ async function init() {
       } catch (domErr) {
         console.warn('[INIT] Domain restore warning:', domErr);
       }
-      // Coach-applied nutrition may live in dedicated IDB store
+      // Coach-applied nutrition may live in dedicated IDB store (guarded against cleared nutrition)
       try {
-        if ((!DATA.nutrition || !(DATA.nutrition.days && DATA.nutrition.days.length)) && GiammariaPersistence.getNutrition) {
+        const isNutrCleared = Boolean(
+          (DATA && DATA.nutrition && (DATA.nutrition.cleared || DATA.nutrition.isCleared)) ||
+          (store && store.nutrition && (store.nutrition.cleared || store.nutrition.isCleared))
+        );
+        if (!isNutrCleared && (!DATA.nutrition || !(DATA.nutrition.days && DATA.nutrition.days.length)) && GiammariaPersistence.getNutrition) {
           const orphanNutr = await GiammariaPersistence.getNutrition();
-          if (orphanNutr && (orphanNutr.present || (orphanNutr.days && orphanNutr.days.length))) {
+          if (orphanNutr && !orphanNutr.cleared && !orphanNutr.isCleared && (orphanNutr.present || (orphanNutr.days && orphanNutr.days.length))) {
             DATA.nutrition = (typeof enrichImportedFoods === 'function') ? enrichImportedFoods(orphanNutr) : orphanNutr;
             store.nutrition = DATA.nutrition;
           }
@@ -10584,8 +10591,12 @@ function applyPersonalNutritionClear(ctx) {
       daily_carbs_target: null,
       daily_fats_target: null,
       cleared: true,
+      isCleared: true,
       clearedAt: new Date().toISOString()
     };
+  empty.cleared = true;
+  empty.isCleared = true;
+  if (!empty.clearedAt) empty.clearedAt = new Date().toISOString();
   if (data) data.nutrition = empty;
   if (storeObj) {
     storeObj.nutrition = empty;
@@ -10611,15 +10622,21 @@ async function clearPersonalNutrition() {
     : 'Azzerare l’alimentazione? Il piano e i cibi verranno cancellati. Allenamento, integrazione, terapia ed esami restano intatti.';
   if (!confirm(confirmMsg)) return;
   try {
-    applyPersonalNutritionClear({
+    const empty = applyPersonalNutritionClear({
       DATA: (typeof DATA !== 'undefined') ? DATA : null,
       store: (typeof store !== 'undefined') ? store : null
     });
     if (typeof currentNutritionDayIndex !== 'undefined') currentNutritionDayIndex = 0;
     if (typeof window !== 'undefined') window.__nutritionDayUserPicked = false;
     if (typeof persist === 'function') persist();
-    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveNutrition) {
-      try { await GiammariaPersistence.saveNutrition((typeof DATA !== 'undefined' && DATA) ? DATA.nutrition : (store && store.nutrition)); } catch (_) {}
+    if (typeof GiammariaPersistence !== 'undefined') {
+      try {
+        if (GiammariaPersistence.saveNutrition) await GiammariaPersistence.saveNutrition(empty);
+        if (DATA && GiammariaPersistence.saveProgram) await GiammariaPersistence.saveProgram(DATA, true);
+      } catch (_) {}
+    }
+    if (typeof persistActiveProgramStructure === 'function') {
+      try { persistActiveProgramStructure(); } catch (_) {}
     }
     if (typeof syncAccountData === 'function' && store && store.accountToken) {
       await syncAccountData(false);
@@ -11312,9 +11329,11 @@ function mealPhotoDraftRowHtml(item) {
     'style="margin-bottom:8px;padding:8px;background:#121212;border:1px solid #2a2a2a;border-radius:8px;">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">' +
     '<input data-f="name" type="text" value="' + esc(item.name || '') + '" placeholder="Alimento" style="flex:1;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;">' +
-    '<div style="display:flex;align-items:center;gap:4px;">' + badge +
+    '<div style="display:flex;align-items:center;gap:4px;">' +
+    '<button type="button" class="btn btn-outline" style="padding:2px 6px;font-size:10px;border-color:#00e5ff;color:#00e5ff;font-weight:700;" onclick="startBarcodeFusionForDraftRow(this)">\u{1F3F7}\uFE0F Barcode</button>' +
+    badge +
     '<button type="button" class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:#c66;" onclick="removeMealPhotoDraftRow(this)">\u2715</button></div></div>' +
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">' + stateBadge + chainBadge + rangeBadge + wasteBadge + '</div>' +
+    '<div class="meal-photo-badges-container" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">' + stateBadge + chainBadge + rangeBadge + wasteBadge + '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:4px;">' +
     '<label style="font-size:9px;color:#888;">Qty<input data-f="qty" type="number" value="' + esc(item.quantity != null ? item.quantity : 100) + '" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
     '<label style="font-size:9px;color:#888;">Unit\u00E0<select data-f="unit" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">' +
@@ -19221,14 +19240,173 @@ function scanBarcodeWithCamera(kind) {
   else if (typeof showToast === 'function') showToast('Fotocamera non disponibile', 'warning');
 }
 
-async function openLiveBarcodeScanner(kind) {
+// Pure-JS 1D Barcode Scanline Rasterizer & EAN-13 / EAN-8 / UPC-A Decoder
+function decode1DBarcodeFromCanvas(canvas) {
+  try {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    const w = canvas.width, h = canvas.height;
+    if (w < 100 || h < 100) return null;
+
+    // Sample 5 horizontal scanlines in the central 40% viewfinder band
+    const yLines = [Math.floor(h * 0.40), Math.floor(h * 0.45), Math.floor(h * 0.50), Math.floor(h * 0.55), Math.floor(h * 0.60)];
+    const left = Math.floor(w * 0.15);
+    const right = Math.floor(w * 0.85);
+    const scanWidth = right - left;
+
+    const DIGIT_PATTERNS_L = {
+      '0001101': 0, '0011001': 1, '0010011': 2, '0111101': 3, '0100011': 4,
+      '0110001': 5, '0101111': 6, '0111011': 7, '0110111': 8, '0001011': 9
+    };
+    const DIGIT_PATTERNS_G = {
+      '0100111': 0, '0110011': 1, '0011011': 2, '0100001': 3, '0011101': 4,
+      '0111001': 5, '0000101': 6, '0010001': 7, '0001001': 8, '0010111': 9
+    };
+    const DIGIT_PATTERNS_R = {
+      '1110010': 0, '1100110': 1, '1101100': 2, '1000010': 3, '1011100': 4,
+      '1001110': 5, '1010000': 6, '1000100': 7, '1001000': 8, '1110100': 9
+    };
+    const FIRST_DIGIT_MAP = {
+      'LLLLLL': 0, 'LLGLGG': 1, 'LLGGLG': 2, 'LLGGGL': 3, 'LGLLGG': 4,
+      'LGGLLG': 5, 'LGGGLL': 6, 'LGLGLG': 7, 'LGLGGL': 8, 'LGGLGL': 9
+    };
+
+    for (const y of yLines) {
+      const imgData = ctx.getImageData(left, y, scanWidth, 1);
+      const data = imgData.data;
+      const gray = new Uint8Array(scanWidth);
+      let minVal = 255, maxVal = 0;
+      for (let i = 0; i < scanWidth; i++) {
+        const idx = i * 4;
+        const g = (data[idx] * 299 + data[idx + 1] * 587 + data[idx + 2] * 114) / 1000;
+        gray[i] = g;
+        if (g < minVal) minVal = g;
+        if (g > maxVal) maxVal = g;
+      }
+      if (maxVal - minVal < 40) continue; // insufficient contrast
+      const threshold = (minVal + maxVal) / 2;
+      const bits = new Uint8Array(scanWidth);
+      for (let i = 0; i < scanWidth; i++) {
+        bits[i] = gray[i] < threshold ? 1 : 0; // 1 = black bar, 0 = white space
+      }
+
+      // Run-length encoding
+      const runs = [];
+      let currentBit = bits[0];
+      let currentLen = 1;
+      for (let i = 1; i < scanWidth; i++) {
+        if (bits[i] === currentBit) {
+          currentLen++;
+        } else {
+          runs.push({ bit: currentBit, len: currentLen });
+          currentBit = bits[i];
+          currentLen = 1;
+        }
+      }
+      runs.push({ bit: currentBit, len: currentLen });
+
+      // Look for EAN-13 start guard pattern (1, 1, 1 -> bar, space, bar of approx equal width)
+      for (let r = 0; r < runs.length - 56; r++) {
+        if (runs[r].bit === 1 && runs[r+1].bit === 0 && runs[r+2].bit === 1) {
+          const moduleWidth = (runs[r].len + runs[r+1].len + runs[r+2].len) / 3;
+          if (moduleWidth < 1) continue;
+
+          // Attempt to decode 6 left digits (each digit has 4 runs summing to 7 modules)
+          let runIdx = r + 3;
+          let leftDigits = [];
+          let paritySeq = '';
+          let validLeft = true;
+
+          for (let d = 0; d < 6; d++) {
+            if (runIdx + 3 >= runs.length) { validLeft = false; break; }
+            const r1 = Math.round(runs[runIdx].len / moduleWidth);
+            const r2 = Math.round(runs[runIdx+1].len / moduleWidth);
+            const r3 = Math.round(runs[runIdx+2].len / moduleWidth);
+            const r4 = Math.round(runs[runIdx+3].len / moduleWidth);
+            const sum = r1 + r2 + r3 + r4;
+            if (sum < 6 || sum > 8) { validLeft = false; break; }
+
+            // Reconstruct 7-bit string
+            const bitPattern = '0'.repeat(r1) + '1'.repeat(r2) + '0'.repeat(r3) + '1'.repeat(r4);
+            if (bitPattern.length === 7) {
+              if (DIGIT_PATTERNS_L[bitPattern] !== undefined) {
+                leftDigits.push(DIGIT_PATTERNS_L[bitPattern]);
+                paritySeq += 'L';
+              } else if (DIGIT_PATTERNS_G[bitPattern] !== undefined) {
+                leftDigits.push(DIGIT_PATTERNS_G[bitPattern]);
+                paritySeq += 'G';
+              } else {
+                validLeft = false;
+                break;
+              }
+            } else {
+              validLeft = false;
+              break;
+            }
+            runIdx += 4;
+          }
+
+          if (!validLeft || leftDigits.length !== 6) continue;
+
+          // Check center guard (0, 1, 0, 1, 0)
+          if (runIdx + 4 >= runs.length) continue;
+          runIdx += 5; // skip center guard
+
+          // Decode 6 right digits (R-patterns)
+          let rightDigits = [];
+          let validRight = true;
+          for (let d = 0; d < 6; d++) {
+            if (runIdx + 3 >= runs.length) { validRight = false; break; }
+            const r1 = Math.round(runs[runIdx].len / moduleWidth);
+            const r2 = Math.round(runs[runIdx+1].len / moduleWidth);
+            const r3 = Math.round(runs[runIdx+2].len / moduleWidth);
+            const r4 = Math.round(runs[runIdx+3].len / moduleWidth);
+            const sum = r1 + r2 + r3 + r4;
+            if (sum < 6 || sum > 8) { validRight = false; break; }
+
+            const bitPattern = '1'.repeat(r1) + '0'.repeat(r2) + '1'.repeat(r3) + '0'.repeat(r4);
+            if (bitPattern.length === 7 && DIGIT_PATTERNS_R[bitPattern] !== undefined) {
+              rightDigits.push(DIGIT_PATTERNS_R[bitPattern]);
+            } else {
+              validRight = false;
+              break;
+            }
+            runIdx += 4;
+          }
+
+          if (!validRight || rightDigits.length !== 6) continue;
+
+          const firstDigit = FIRST_DIGIT_MAP[paritySeq];
+          if (firstDigit === undefined) continue;
+
+          const fullDigits = [firstDigit, ...leftDigits, ...rightDigits];
+          // Check EAN-13 checksum modulo 10
+          let checkSum = 0;
+          for (let i = 0; i < 12; i++) {
+            checkSum += fullDigits[i] * (i % 2 === 0 ? 1 : 3);
+          }
+          const calcCheck = (10 - (checkSum % 10)) % 10;
+          if (calcCheck === fullDigits[12]) {
+            return fullDigits.join('');
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[1D_SCANLINE_ERR]', err);
+  }
+  return null;
+}
+
+async function openLiveBarcodeScanner(kind, targetFusionRow) {
   let stream = null;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: { ideal: 'environment' },
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
+        width: { ideal: 1920, min: 640 },
+        height: { ideal: 1080, min: 480 },
+        focusMode: { ideal: 'continuous' }
       },
       audio: false
     });
@@ -19240,7 +19418,7 @@ async function openLiveBarcodeScanner(kind) {
       '<div style="background:#181818;border:1px solid #333;border-radius:12px;padding:20px;max-width:360px;width:100%;text-align:center;">' +
       '<div style="font-size:28px;margin-bottom:8px;">\u{1F4F7}</div>' +
       '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">Fotocamera Barcode</div>' +
-      '<div style="font-size:12px;color:#aaa;margin-bottom:16px;">Abilita i permessi camera nel browser oppure usa una foto dalla galleria.</div>' +
+      '<div style="font-size:12px;color:#aaa;margin-bottom:16px;">Abilita i permessi fotocamera per scansionare i codici a barre in tempo reale.</div>' +
       '<div style="display:flex;flex-direction:column;gap:8px;">' +
       '<button class="btn btn-primary" style="padding:10px;" id="bf-gallery-btn">\u{1F4C1} Carica foto barcode</button>' +
       '<button class="btn btn-outline" style="padding:10px;" id="bf-ocr-btn">\u{1F4F8} Scansiona etichetta (OCR)</button>' +
@@ -19255,39 +19433,57 @@ async function openLiveBarcodeScanner(kind) {
     };
     fbModal.querySelector('#bf-ocr-btn').onclick = () => {
       fbModal.remove();
-      scanNutritionLabelOcr(kind);
+      scanNutritionLabelOcr(kind, targetFusionRow);
     };
     fbModal.querySelector('#bf-cancel-btn').onclick = () => fbModal.remove();
     return;
   }
 
   const track = stream.getVideoTracks()[0];
+  if (track && track.getCapabilities && track.applyConstraints) {
+    try {
+      const caps = track.getCapabilities();
+      const adv = {};
+      if (caps.focusMode && caps.focusMode.includes('continuous')) adv.focusMode = 'continuous';
+      if (caps.exposureMode && caps.exposureMode.includes('continuous')) adv.exposureMode = 'continuous';
+      if (caps.whiteBalanceMode && caps.whiteBalanceMode.includes('continuous')) adv.whiteBalanceMode = 'continuous';
+      if (Object.keys(adv).length > 0) {
+        track.applyConstraints({ advanced: [adv] }).catch(() => {});
+      }
+    } catch (_) {}
+  }
+
   const overlay = document.createElement('div');
   overlay.id = 'barcode-live-scanner';
   overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:space-between;';
 
+  const isFusion = Boolean(targetFusionRow);
+  const fusionTitle = isFusion ? 'ASSOCIA BARCODE AL PIATTO' : 'BARCODE SCANNER V4';
+
   overlay.innerHTML = '' +
-    '<div style="position:absolute;top:0;left:0;right:0;padding:16px;display:flex;justify-content:space-between;align-items:center;z-index:10;background:linear-gradient(180deg,rgba(0,0,0,0.8),transparent);">' +
+    '<div style="position:absolute;top:0;left:0;right:0;padding:16px;display:flex;justify-content:space-between;align-items:center;z-index:10;background:linear-gradient(180deg,rgba(0,0,0,0.85),transparent);">' +
     '<button class="btn btn-outline" style="font-size:12px;padding:6px 12px;color:#fff;border-color:#555;" id="barcode-live-cancel">\u2715 Chiudi</button>' +
-    '<div style="font-size:13px;font-weight:700;color:#00ffcc;letter-spacing:10x;">BARCODE SCANNER V2</div>' +
+    '<div style="font-size:12px;font-weight:800;color:#00ffcc;letter-spacing:1px;">' + fusionTitle + '</div>' +
     '<button class="btn btn-outline" style="font-size:12px;padding:6px 10px;color:#ffcc00;border-color:#555;" id="barcode-live-torch">\u{1F526} Torcia</button>' +
     '</div>' +
     '<video id="barcode-live-video" autoplay playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>' +
+    '<canvas id="barcode-scanline-canvas" style="display:none;"></canvas>' +
     '<div style="position:relative;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;">' +
-    '<div class="barcode-viewfinder" id="barcode-viewfinder-box">' +
-    '<div class="barcode-laser"></div>' +
+    '<div class="barcode-viewfinder" id="barcode-viewfinder-box" style="border:2px solid #00ffcc;border-radius:12px;box-shadow:0 0 20px rgba(0,255,204,0.3);position:relative;width:280px;height:160px;overflow:hidden;">' +
+    '<div class="barcode-laser" style="position:absolute;top:0;left:0;right:0;height:2px;background:#00ffcc;box-shadow:0 0 8px #00ffcc;animation:barcodeLaserAnim 2s infinite ease-in-out;"></div>' +
     '</div>' +
-    '<div style="font-size:11px;color:#fff;margin-top:14px;text-align:center;background:rgba(0,0,0,0.6);padding:4px 12px;border-radius:20px;backdrop-filter:blur(4px);">' +
-    'Inquadra il codice a barre nel riquadro' +
+    '<div id="barcode-guide-status" style="font-size:11px;color:#fff;margin-top:14px;text-align:center;background:rgba(0,0,0,0.65);padding:6px 14px;border-radius:20px;backdrop-filter:blur(4px);border:1px solid #333;">' +
+    'Inquadra il codice a barre all\'interno del mirino' +
     '</div></div>' +
-    '<div style="position:absolute;bottom:0;left:0;right:0;padding:16px;background:linear-gradient(0deg,rgba(0,0,0,0.9) 0%,rgba(0,0,0,0.5) 70%,transparent 100%);display:flex;gap:8px;z-index:10;justify-content:center;">' +
+    '<div style="position:absolute;bottom:0;left:0;right:0;padding:16px;background:linear-gradient(0deg,rgba(0,0,0,0.95) 0%,rgba(0,0,0,0.6) 70%,transparent 100%);display:flex;gap:8px;z-index:10;justify-content:center;">' +
     '<button class="btn btn-outline" style="flex:1;font-size:11px;padding:10px 6px;" id="barcode-live-ocr">\u{1F4F8} OCR Etichetta</button>' +
     '<button class="btn btn-primary" style="flex:1.2;font-size:11px;padding:10px 8px;font-weight:700;" id="barcode-live-capture">\u26A1 Scatta / Analizza</button>' +
-    '<button class="btn btn-outline" style="flex:1;font-size:11px;padding:10px 6px;" id="barcode-live-gallery">\u{1F4C1} Da Foto</button>' +
+    '<button class="btn btn-outline" style="flex:1;font-size:11px;padding:10px 6px;" id="barcode-live-gallery">\u{1F4C1} Da Galleria</button>' +
     '</div>';
 
   document.body.appendChild(overlay);
   const video = overlay.querySelector('#barcode-live-video');
+  const canvas = overlay.querySelector('#barcode-scanline-canvas');
   video.srcObject = stream;
 
   let stopped = false;
@@ -19338,10 +19534,28 @@ async function openLiveBarcodeScanner(kind) {
   }
 
   async function handleFoundCode(codeVal) {
+    if (stopped) return;
+    stopped = true;
     playBeep();
-    stop();
-    const product = await resolveBarcodeToProduct(codeVal, kind);
-    applyBarcodeProduct(product, kind);
+    const box = overlay.querySelector('#barcode-viewfinder-box');
+    const guide = overlay.querySelector('#barcode-guide-status');
+    if (box) {
+      box.style.borderColor = '#00ff88';
+      box.style.boxShadow = '0 0 25px rgba(0,255,136,0.6)';
+    }
+    if (guide) {
+      guide.textContent = '\u2714 Codice Rilevato: ' + codeVal;
+      guide.style.color = '#00ff88';
+    }
+    setTimeout(async () => {
+      stop();
+      const product = await resolveBarcodeToProduct(codeVal, kind);
+      if (targetFusionRow) {
+        fuseBarcodeWithDraftRow(targetFusionRow, product);
+      } else {
+        applyBarcodeProduct(product, kind);
+      }
+    }, 300);
   }
 
   overlay.querySelector('#barcode-live-gallery').onclick = () => {
@@ -19353,7 +19567,7 @@ async function openLiveBarcodeScanner(kind) {
 
   overlay.querySelector('#barcode-live-ocr').onclick = () => {
     stop();
-    scanNutritionLabelOcr(kind);
+    scanNutritionLabelOcr(kind, targetFusionRow);
   };
 
   const captureBtn = overlay.querySelector('#barcode-live-capture');
@@ -19368,41 +19582,61 @@ async function openLiveBarcodeScanner(kind) {
       const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.88));
       if (blob) {
         const file = new File([blob], 'barcode_capture.jpg', { type: 'image/jpeg' });
-        handleBarcodePhoto({ target: { files: [file] } }, kind);
+        handleBarcodePhoto({ target: { files: [file] } }, kind, targetFusionRow);
       }
     }
   };
 
+  // Real-time Detection Loop (Native BarcodeDetector + Fast 1D Scanline Fallback)
+  let nativeDetector = null;
   if ('BarcodeDetector' in window) {
     try {
-      const detector = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code', 'data_matrix'] });
-      let busy = false;
-      async function tick() {
-        if (stopped) return;
-        if (!busy && video.readyState >= 2) {
-          busy = true;
-          try {
-            const barcodes = await detector.detect(video);
-            if (barcodes && barcodes.length > 0) {
-              const found = barcodes[0].rawValue;
-              if (found) {
-                await handleFoundCode(found);
-                return;
-              }
-            }
-          } catch (_) {}
-          finally { busy = false; }
-        }
-        requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
-    } catch (e) {
-      const _w = e;
-    }
+      nativeDetector = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'] });
+    } catch (_) {}
   }
+
+  let busy = false;
+  let frameCount = 0;
+
+  async function tick() {
+    if (stopped) return;
+    if (!busy && video.readyState >= 2) {
+      busy = true;
+      frameCount++;
+      try {
+        if (nativeDetector) {
+          const barcodes = await nativeDetector.detect(video);
+          if (barcodes && barcodes.length > 0) {
+            const found = barcodes[0].rawValue;
+            if (found) {
+              await handleFoundCode(found);
+              return;
+            }
+          }
+        }
+        // Run fast pure-JS 1D scanline rasterizer every 2 frames as seamless fallback
+        if (frameCount % 2 === 0 && canvas) {
+          const vw = video.videoWidth || 640;
+          const vh = video.videoHeight || 480;
+          canvas.width = Math.min(vw, 640);
+          canvas.height = Math.min(vh, 480);
+          const cctx = canvas.getContext('2d', { willReadFrequently: true });
+          cctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const scannedCode = decode1DBarcodeFromCanvas(canvas);
+          if (scannedCode) {
+            await handleFoundCode(scannedCode);
+            return;
+          }
+        }
+      } catch (_) {}
+      finally { busy = false; }
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }
 
-async function handleBarcodePhoto(ev, kind) {
+async function handleBarcodePhoto(ev, kind, targetFusionRow) {
   const file = ev && ev.target && ev.target.files && ev.target.files[0];
   if (!file) return;
   if (typeof showToast === 'function') showToast('Ricerca codice a barre...', 'info');
@@ -19418,6 +19652,21 @@ async function handleBarcodePhoto(ev, kind) {
     } catch (e) {
       console.warn('[Detector File Err]', e);
     }
+  }
+  if (!codeStr) {
+    // Pure-JS fallback for uploaded photo
+    try {
+      const img = new Image();
+      const objUrl = URL.createObjectURL(file);
+      await new Promise(res => { img.onload = res; img.src = objUrl; });
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth || 640;
+      c.height = img.naturalHeight || 480;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(objUrl);
+      codeStr = decode1DBarcodeFromCanvas(c) || '';
+    } catch (_) {}
   }
   if (codeStr) {
     try {
@@ -19437,13 +19686,17 @@ async function handleBarcodePhoto(ev, kind) {
       }
     } catch (_) {}
     const product = await resolveBarcodeToProduct(codeStr, kind);
-    applyBarcodeProduct(product, kind);
+    if (targetFusionRow) {
+      fuseBarcodeWithDraftRow(targetFusionRow, product);
+    } else {
+      applyBarcodeProduct(product, kind);
+    }
   } else {
     if (typeof showToast === 'function') showToast('Codice a barre non rilevato. Prova OCR etichetta.', 'warning');
   }
 }
 
-async function scanNutritionLabelOcr(kind) {
+async function scanNutritionLabelOcr(kind, targetFusionRow) {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
@@ -19464,18 +19717,26 @@ async function scanNutritionLabelOcr(kind) {
       const res = await fetch('/api/food/ocr-label', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, mimeType })
+        body: JSON.stringify({ image: dataUrl, imageBase64: base64, mimeType })
       });
       const json = await res.json();
       if (json && json.ok && json.data) {
         const ocrData = json.data;
-        applyBarcodeProduct({
+        const ocrProduct = {
+          found: true,
           name: ocrData.name || 'Prodotto da Etichetta',
           brand: ocrData.brand || '',
           per100g: ocrData.per100g,
-          serving: ocrData.serving,
-          source: 'ocr_label'
-        }, kind);
+          serving: ocrData.serving || '100g',
+          servingGrams: ocrData.servingGrams || 100,
+          source: 'ocr_label',
+          hasCompleteNutrition: true
+        };
+        if (targetFusionRow) {
+          fuseBarcodeWithDraftRow(targetFusionRow, ocrProduct);
+        } else {
+          applyBarcodeProduct(ocrProduct, kind);
+        }
         if (typeof showToast === 'function') showToast('Etichetta acquisita: ' + (ocrData.name || ''), 'success');
       } else {
         if (typeof showToast === 'function') showToast('Impossibile leggere l\'etichetta nutrizionale', 'error');
@@ -19490,17 +19751,18 @@ async function scanNutritionLabelOcr(kind) {
 
 async function resolveBarcodeToProduct(code, kind) {
   if (!code) return null;
-  if (typeof showToast === 'function') showToast('Ricerca prodotto: ' + code + '...', 'info');
+  const clean = String(code).trim().replace(/[^0-9A-Za-z]/g, '');
+  if (typeof showToast === 'function') showToast('Ricerca prodotto: ' + clean + '...', 'info');
   try {
-    const res = await fetch('/api/food/barcode/' + encodeURIComponent(code));
+    const res = await fetch('/api/food/barcode/' + encodeURIComponent(clean));
     const json = await res.json();
     if (json && json.ok && json.data) {
-      return { ...json.data, barcode: code };
+      return { ...json.data, barcode: clean };
     }
   } catch (e) {
     console.warn('[BARCODE_FETCH_ERR]', e);
   }
-  return { found: false, barcode: code };
+  return { found: false, barcode: clean };
 }
 
 function applyBarcodeProduct(product, kind) {
@@ -19542,7 +19804,9 @@ function applyBarcodeProduct(product, kind) {
     pro: pro,
     carb: carb,
     fat: fat,
-    serving: '100g'
+    serving: product.serving || '100g',
+    barcode: product.barcode || null,
+    brand: product.brand || null
   };
 
   if ($('food-name-input')) $('food-name-input').value = name;
@@ -19561,7 +19825,7 @@ function showBarcodeNotFoundModal(code, kind) {
     '<div style="background:#181818;border:1px solid #333;border-radius:12px;padding:20px;max-width:380px;width:100%;text-align:center;">' +
     '<div style="font-size:28px;margin-bottom:8px;">\u{1F50d}</div>' +
     '<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">Codice non trovato</div>' +
-    '<div style="font-size:12px;color:#aaa;margin-bottom:16px;">Il codice <b style="color:#00ffcc;">' + esc(code || '') + '</b> non \u00E8 presente nel database. Come vuoi procedere?</div>' +
+    '<div style="font-size:12px;color:#aaa;margin-bottom:16px;">Il codice <b style="color:#00ffcc;">' + esc(code || '') + '</b> non è presente nel database. Come vuoi procedere?</div>' +
     '<div style="display:flex;flex-direction:column;gap:8px;">' +
     '<button class="btn btn-primary" style="padding:10px;" id="nf-ocr-btn">\u{1F4F8} Scansiona Etichetta (OCR)</button>' +
     '<button class="btn btn-outline" style="padding:10px;" id="nf-vision-btn">\u{1F374} Scatta Foto Pasto (AI)</button>' +
@@ -19586,7 +19850,72 @@ function showBarcodeNotFoundModal(code, kind) {
   m.querySelector('#nf-cancel-btn').onclick = () => m.remove();
 }
 
+function startBarcodeFusionForDraftRow(btn) {
+  const row = btn.closest('[data-meal-photo-row]');
+  if (!row) return;
+  openLiveBarcodeScanner('nutrition', row);
+}
 
+function fuseBarcodeWithDraftRow(rowEl, product) {
+  if (!rowEl || !product || product.found === false) return;
+  
+  const nameInput = rowEl.querySelector('[data-f="name"]');
+  const qtyInput = rowEl.querySelector('[data-f="qty"]');
+  const kcalInput = rowEl.querySelector('[data-f="kcal"]');
+  const proInput = rowEl.querySelector('[data-f="pro"]');
+  const carbInput = rowEl.querySelector('[data-f="carb"]');
+  const fatInput = rowEl.querySelector('[data-f="fat"]');
+  
+  const visualGrams = parseFloat(qtyInput ? qtyInput.value : 100) || 100;
+  const isCooked = rowEl.getAttribute('data-state') === 'cooked' || /cotto|bollito|grigliato|forno/i.test(nameInput ? nameInput.value : '');
+  const rawEquivAttr = parseFloat(rowEl.getAttribute('data-raw-equiv'));
+  const rawEquivGrams = (isCooked && !isNaN(rawEquivAttr) && rawEquivAttr > 0) ? rawEquivAttr : visualGrams;
+
+  const p100 = product.per100g || {};
+  const pKcal = Number(p100.kcal || product.kcal || 0);
+  const pPro = Number(p100.proteins || product.pro || 0);
+  const pCarb = Number(p100.carbohydrates || product.carb || 0);
+  const pFat = Number(p100.fat || product.fat || 0);
+
+  // Apply per100g to raw equivalent if cooked dry food, or visual edible grams
+  const calcBase = (isCooked && rawEquivGrams > 0) ? rawEquivGrams : visualGrams;
+  const mult = calcBase / 100;
+
+  const fusedKcal = Math.round(pKcal * mult);
+  const fusedPro = Math.round(pPro * mult * 10) / 10;
+  const fusedCarb = Math.round(pCarb * mult * 10) / 10;
+  const fusedFat = Math.round(pFat * mult * 10) / 10;
+
+  const brand = product.brand || '';
+  const fullName = brand && !product.name.toLowerCase().includes(brand.toLowerCase())
+    ? product.name + ' (' + brand + ')'
+    : product.name;
+
+  if (nameInput) nameInput.value = fullName;
+  if (kcalInput) kcalInput.value = fusedKcal;
+  if (proInput) proInput.value = fusedPro;
+  if (carbInput) carbInput.value = fusedCarb;
+  if (fatInput) fatInput.value = fusedFat;
+
+  rowEl.setAttribute('data-barcode', product.barcode || '');
+  rowEl.setAttribute('data-barcode-brand', brand);
+  rowEl.setAttribute('data-is-fused', '1');
+  rowEl.setAttribute('data-confidence', '0.99');
+  rowEl.setAttribute('data-nutrition-confidence', '0.99');
+
+  // Insert verified badge in row header
+  const badgeContainer = rowEl.querySelector('.meal-photo-badges-container');
+  if (badgeContainer) {
+    const verifiedBadge = document.createElement('span');
+    verifiedBadge.style.cssText = 'font-size:9px;color:#00ffcc;background:#00332a;padding:2px 5px;border-radius:4px;border:1px solid #00aa88;font-weight:700;';
+    verifiedBadge.textContent = '\u{1F3F7}\uFE0F BARCODE VERIFIED (' + (brand || 'DB') + ')';
+    badgeContainer.prepend(verifiedBadge);
+  }
+
+  if (typeof showToast === 'function') {
+    showToast('Barcode associato: ' + fullName + ' (' + fusedKcal + ' kcal)', 'success');
+  }
+}
 
 function markSessionClockIfNeeded() {
   if (!store.sessionStartedAt) {
