@@ -16784,7 +16784,7 @@ function renderHome(c) {
   if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
     c.innerHTML = `
       <div style="text-align:center;padding:20px 0;">
-        <img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));" onerror="this.onerror=null;this.src='icon-192.png'">
+        <img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:none;" onerror="this.onerror=null;this.src='icon-192.png'">
         <h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1>
       </div>
 
@@ -16849,7 +16849,7 @@ function renderHome(c) {
   const frequency = store.prefs.frequency || sessions.length;
 
   c.innerHTML = `
-    <div style="text-align:center;padding:20px 0;"><img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:drop-shadow(0 0 15px var(--gold));" onerror="this.onerror=null;this.src='icon-192.png'"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
+    <div style="text-align:center;padding:20px 0;"><img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:none;" onerror="this.onerror=null;this.src='icon-192.png'"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
 
     ${personalRestoreBannerHtml()}
 

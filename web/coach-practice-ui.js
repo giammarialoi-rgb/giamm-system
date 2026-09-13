@@ -613,13 +613,13 @@ function ensureCoachSessionBanner() {
   let mid = 'Hub clienti · mondo separato';
   if (viewing && name) mid = 'Cliente: <b style="color:#fff;">' + esc(name) + '</b>';
   else if (store.coachWorkspace && store.coachWorkspace.clientId && name) mid = 'Scheda: <b style="color:#fff;">' + esc(name) + '</b>';
+  // No back/list buttons here: the persistent top header (ensureCoachHeaderControls)
+  // already shows INDIETRO + LISTA on every coach-session page. This banner exists
+  // only to surface who you're currently viewing - duplicating those buttons here
+  // just stacked 3 near-identical nav rows on top of each other (see chat page).
   bar.innerHTML = '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">' +
     '<span style="color:var(--gold);font-weight:800;">SESSIONE COACH</span>' +
-    '<span style="color:#bbb;flex:1;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + mid + '</span>' +
-    '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="coachHeaderBack()">INDIETRO</button>' +
-    (viewing
-      ? '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachHub\')">LISTA</button>'
-      : '') +
+    '<span style="color:#bbb;flex:1;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;">' + mid + '</span>' +
     '</div>';
   const h = Math.max(32, bar.offsetHeight || 36);
   document.documentElement.style.setProperty('--cp-session-bar', h + 'px');
@@ -5763,7 +5763,7 @@ function renderCoachChatPage(c) {
     '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachClient\')">← SCHEDA</button>' +
     '<div style="text-align:center;flex:1;"><div style="font-size:10px;color:var(--gold);font-weight:800;">CHAT E2E</div>' +
     '<div style="font-size:15px;font-weight:900;color:#fff;">' + esc(name) + '</div></div>' +
-    '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachHub\')">HUB</button></div>' +
+    '<div style="width:64px;flex-shrink:0;"></div></div>' +
     '<div id="cp-wa-chat" class="cp-chat-thread"></div>' +
     chatToolsHtml('cp-chat-input', 'sendCoachHumanMessage(\'' + esc(id) + '\')', 'clearChatForMe(\'' + esc(id) + '\',\'coach\')', 'newChatThread(\'' + esc(id) + '\',\'coach\')', {
       videoCall: videoOk ? ('startInternalVideocall(\'' + esc(id) + '\',\'coach\')') : ''
