@@ -186,7 +186,8 @@ public class MainActivity extends Activity {
                     }
                 }
                 boolean captureHint = fileChooserParams != null && fileChooserParams.isCaptureEnabled();
-                if (wantsImage || captureHint) {
+                if (captureHint) {
+                    // Direct camera capture requested (<input capture="environment">)
                     if (checkSelfPermission(android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                         requestPermissions(new String[]{android.Manifest.permission.CAMERA}, 21);
                     }
@@ -202,16 +203,22 @@ public class MainActivity extends Activity {
                         Intent cam = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
                         cam.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, cameraCaptureUri);
                         cam.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
+                        startActivityForResult(cam, FILECHOOSER_RESULTCODE);
+                        return true;
+                    } catch (Exception e) {
+                        Log.e("GiammariaWebView", "camera capture failed", e);
+                    }
+                } else if (wantsImage) {
+                    // Direct gallery/library selection requested (<input accept="image/*"> without capture)
+                    try {
                         Intent gallery = new Intent(Intent.ACTION_GET_CONTENT);
                         gallery.addCategory(Intent.CATEGORY_OPENABLE);
                         gallery.setType("image/*");
-                        Intent chooser = Intent.createChooser(gallery, "Foto barcode / documento");
-                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{ cam });
+                        Intent chooser = Intent.createChooser(gallery, "Seleziona foto dalla libreria");
                         startActivityForResult(chooser, FILECHOOSER_RESULTCODE);
                         return true;
                     } catch (Exception e) {
-                        Log.e("GiammariaWebView", "camera chooser failed", e);
+                        Log.e("GiammariaWebView", "gallery chooser failed", e);
                     }
                 }
                 Intent i = new Intent(Intent.ACTION_GET_CONTENT);

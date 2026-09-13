@@ -167,6 +167,7 @@ await assert.rejects(
 const html = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
 for (const token of [
   'function openMealPhotoPicker(',
+  'function openMealPhotoFlow(',
   'function confirmMealPhotoInsert(',
   'function insertFoodsIntoSelectedMeal(',
   'function handleMealPhotoSelected(',
@@ -174,14 +175,14 @@ for (const token of [
   'id="meal-photo-modal"',
   'id="nutrition-meal-photo-camera"',
   'id="nutrition-meal-photo-file"',
-  'FOTO PASTO',
-  'onclick="openMealPhotoPicker('
+  'FOTO PASTO'
 ]) {
   ok(html.includes(token), `nutrition UI contains ${token}`);
 }
+ok(html.includes('onclick="openMealPhotoFlow(') || html.includes('onclick="openMealPhotoPicker('), 'nutrition UI contains photo click handler');
 
 ok(!/personal-recovery-16w|DATA\.weeks|customSets|intelTargets/.test(
-  html.slice(html.indexOf('function ensureNutritionSlotForPhoto'), html.indexOf('function deleteFoodItem'))
+  html.slice(html.indexOf('var __mealPhotoTarget ='), html.indexOf('function deleteFoodItem'))
 ), 'meal-photo helpers do not write training program, loads, or personal 16w');
 
 const api = fs.readFileSync(path.join(root, 'coach-api.mjs'), 'utf8');
@@ -589,6 +590,56 @@ ok(webBaseV5.includes('onNativeBarcodeScanned') && webBuiltV5.includes('onNative
 ok(webBaseV5.includes('openNutritionBackupsModal') && webBuiltV5.includes('openNutritionBackupsModal'), 'V5.4: openNutritionBackupsModal exists for manual nutrition snapshot restore');
 ok(webBaseV5.includes('restoreNutritionBackup') && webBuiltV5.includes('restoreNutritionBackup'), 'V5.4: restoreNutritionBackup exists');
 ok(webBaseV5.includes('switchDraftItemFood') && webBuiltV5.includes('switchDraftItemFood'), 'V5.4: switchDraftItemFood allows 1-tap candidate switching');
+
+
+// ==========================================
+// FOOD PHOTO V6 TEST SUITE
+// ==========================================
+
+const webBaseV6 = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
+const webBuiltV6 = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
+const appAssetsV6 = fs.readFileSync(path.join(root, 'app/src/main/assets/index.html'), 'utf8');
+const mainActivityJava = fs.readFileSync(path.join(root, 'app/src/main/java/com/giammaria/system/MainActivity.java'), 'utf8');
+
+// V6.1: Flow Entry & Modal Declarations
+ok(webBaseV6.includes('id="meal-target-modal"') && webBuiltV6.includes('id="meal-target-modal"'), 'V6.1: meal-target-modal exists in DOM');
+ok(webBaseV6.includes('id="meal-acquisition-modal"') && webBuiltV6.includes('id="meal-acquisition-modal"'), 'V6.1: meal-acquisition-modal exists in DOM');
+ok(webBaseV6.includes('openMealPhotoFlow') && webBuiltV6.includes('openMealPhotoFlow'), 'V6.1: openMealPhotoFlow function is declared');
+
+// V6.2: Target Meal Options
+ok(webBaseV6.includes('STANDARD_MEAL_NAMES') && webBuiltV6.includes('STANDARD_MEAL_NAMES'), 'V6.2: STANDARD_MEAL_NAMES defined with Colazione, Pranzo, Cena, etc.');
+ok(webBaseV6.includes('selectMealTarget') && webBuiltV6.includes('selectMealTarget'), 'V6.2: selectMealTarget sets target meal before photo capture');
+ok(webBaseV6.includes('submitCustomMealTarget') && webBuiltV6.includes('submitCustomMealTarget'), 'V6.2: submitCustomMealTarget supports custom meal names');
+
+// V6.3: Acquisition Methods (Camera vs Library)
+ok(webBaseV6.includes('startMealPhotoCapture(\'camera\')') || webBaseV6.includes('startMealPhotoCapture("camera")'), 'V6.3: SCATTA FOTO triggers camera capture');
+ok(webBaseV6.includes('startMealPhotoCapture(\'file\')') || webBaseV6.includes('startMealPhotoCapture("file")'), 'V6.3: SCEGLI DALLA LIBRERIA triggers library picker');
+ok(webBaseV6.includes('id="nutrition-meal-photo-camera"') && webBaseV6.includes('capture="environment"'), 'V6.3: camera file input has capture="environment"');
+ok(webBaseV6.includes('id="nutrition-meal-photo-file"'), 'V6.3: library file input exists');
+
+// V6.4: Android File Chooser & Camera Routing
+ok(mainActivityJava.includes('boolean captureHint = fileChooserParams != null && fileChooserParams.isCaptureEnabled();'), 'V6.4: Android separates camera capture from library chooser');
+ok(mainActivityJava.includes('startActivityForResult(cam, FILECHOOSER_RESULTCODE);'), 'V6.4: Direct camera capture intent launched when captureHint is true');
+ok(mainActivityJava.includes('Seleziona foto dalla libreria'), 'V6.4: Gallery chooser launched when wantsImage is true');
+
+// V6.5: Normalization & Review Target Selector
+ok(webBaseV6.includes('normalizeMealPhotoInput') && webBuiltV6.includes('normalizeMealPhotoInput'), 'V6.5: normalizeMealPhotoInput function exists');
+ok(webBaseV6.includes('meal-photo-target-select') && webBuiltV6.includes('meal-photo-target-select'), 'V6.5: review modal has destination meal selector dropdown');
+ok(webBaseV6.includes('onMealPhotoTargetSelectChange') && webBuiltV6.includes('onMealPhotoTargetSelectChange'), 'V6.5: allows changing target meal during review');
+
+// V6.6: Slot Guarantee & Dynamic Meal Creation
+ok(webBaseV6.includes('ensureTargetMealSlot') && webBuiltV6.includes('ensureTargetMealSlot'), 'V6.6: ensureTargetMealSlot guarantees target meal creation');
+
+// V6.7: Window Exports
+ok(webBuiltV6.includes('window.openMealPhotoFlow = openMealPhotoFlow;'), 'V6.7: openMealPhotoFlow exported to window');
+ok(webBuiltV6.includes('window.openMealTargetModal = openMealTargetModal;'), 'V6.7: openMealTargetModal exported to window');
+ok(webBuiltV6.includes('window.openMealAcquisitionModal = openMealAcquisitionModal;'), 'V6.7: openMealAcquisitionModal exported to window');
+
+// V6.8: Training and Recovery Isolation
+ok(fs.existsSync(path.join(root, 'web/personal-recovery-16w.json')), 'V6.8: personal-recovery-16w.json is intact');
+ok(fs.existsSync(path.join(root, 'app/src/main/assets/personal-recovery-16w.json')), 'V6.8: android personal-recovery-16w.json is intact');
+const prJson = JSON.parse(fs.readFileSync(path.join(root, 'web/personal-recovery-16w.json'), 'utf8'));
+ok(prJson && typeof prJson === 'object', 'V6.8: recovery json is valid');
 
 console.log('\nAll meal-photo tests passed.');
 
