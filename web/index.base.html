@@ -19993,7 +19993,8 @@ async function lookupNutritionBarcode() {
     if (out) out.textContent = 'Inserisci un codice a barre.';
     return;
   }
-  await resolveBarcodeToProduct(code, out, 'nutrition');
+  const product = await resolveBarcodeToProduct(code, 'nutrition');
+  applyBarcodeProduct(product, 'nutrition');
 }
 
 async function lookupSupplementBarcode() {
@@ -20004,7 +20005,8 @@ async function lookupSupplementBarcode() {
     if (out) out.textContent = 'Inserisci un codice a barre.';
     return;
   }
-  await resolveBarcodeToProduct(code, out, 'supplements');
+  const product = await resolveBarcodeToProduct(code, 'supplements');
+  applyBarcodeProduct(product, 'supplements');
 }
 
 function scanBarcodeWithCamera(kind) {
@@ -20355,15 +20357,21 @@ async function openLiveBarcodeScanner(kind, targetFusionRow) {
     }
     setTimeout(async () => {
       stop();
-      const product = await resolveBarcodeToProduct(codeVal, kind);
-      if (targetFusionRow) {
-        if (product && product.found !== false) {
-          fuseBarcodeWithDraftRow(targetFusionRow, product);
+      try {
+        const product = await resolveBarcodeToProduct(codeVal, kind);
+        if (targetFusionRow) {
+          if (product && product.found !== false) {
+            fuseBarcodeWithDraftRow(targetFusionRow, product);
+          } else {
+            showBarcodeNotFoundModal(codeVal, kind);
+          }
         } else {
-          showBarcodeNotFoundModal(codeVal, kind);
+          applyBarcodeProduct(product, kind);
         }
-      } else {
-        applyBarcodeProduct(product, kind);
+      } catch (err) {
+        console.error('[BARCODE_RESOLVE_ERR]', err);
+        if (typeof showToast === 'function') showToast('Errore nella ricerca del prodotto. Riprova.', 'error');
+        showBarcodeNotFoundModal(codeVal, kind);
       }
     }, 300);
   }
@@ -20495,15 +20503,21 @@ async function handleBarcodePhoto(ev, kind, targetFusionRow) {
         osc.stop(ctx.currentTime + 0.12);
       }
     } catch (_) {}
-    const product = await resolveBarcodeToProduct(codeStr, kind);
-    if (targetFusionRow) {
-      if (product && product.found !== false) {
-        fuseBarcodeWithDraftRow(targetFusionRow, product);
+    try {
+      const product = await resolveBarcodeToProduct(codeStr, kind);
+      if (targetFusionRow) {
+        if (product && product.found !== false) {
+          fuseBarcodeWithDraftRow(targetFusionRow, product);
+        } else {
+          showBarcodeNotFoundModal(codeStr, kind);
+        }
       } else {
-        showBarcodeNotFoundModal(codeStr, kind);
+        applyBarcodeProduct(product, kind);
       }
-    } else {
-      applyBarcodeProduct(product, kind);
+    } catch (err) {
+      console.error('[BARCODE_RESOLVE_ERR]', err);
+      if (typeof showToast === 'function') showToast('Errore nella ricerca del prodotto. Riprova.', 'error');
+      showBarcodeNotFoundModal(codeStr, kind);
     }
   } else {
     if (typeof showToast === 'function') showToast('Codice a barre non rilevato. Prova OCR etichetta.', 'warning');
@@ -20572,8 +20586,8 @@ async function resolveBarcodeToProduct(code, kind) {
   if (!code) return null;
   const clean = String(code).trim().replace(/[^0-9A-Za-z]/g, '');
   if (!clean) return { found: false, barcode: '' };
-  if (typeof showToast === 'function') showToast('Ricerca barcode: ' + clean + '...', 'info');
   try {
+    if (typeof showToast === 'function') showToast('Ricerca barcode: ' + clean + '...', 'info');
     let url = '/api/food/barcode/' + encodeURIComponent(clean);
     if (typeof coachEndpoint === 'function') {
       try { url = coachEndpoint(url); } catch (_) {}
@@ -20611,16 +20625,22 @@ window.onNativeBarcodeScanned = async function(code, kind, targetRowId) {
   const targetRow = window.__barcodeTargetFusionRow;
   window.__barcodeTargetFusionRow = null;
 
-  const product = await resolveBarcodeToProduct(code, kind);
-  if (targetRow) {
-    if (product && product.found !== false) {
-      fuseBarcodeWithDraftRow(targetRow, product);
-      if (typeof showToast === 'function') showToast('Barcode associato: ' + (product.name || code), 'success');
+  try {
+    const product = await resolveBarcodeToProduct(code, kind);
+    if (targetRow) {
+      if (product && product.found !== false) {
+        fuseBarcodeWithDraftRow(targetRow, product);
+        if (typeof showToast === 'function') showToast('Barcode associato: ' + (product.name || code), 'success');
+      } else {
+        showBarcodeNotFoundModal(code, kind);
+      }
     } else {
-      showBarcodeNotFoundModal(code, kind);
+      applyBarcodeProduct(product, kind);
     }
-  } else {
-    applyBarcodeProduct(product, kind);
+  } catch (err) {
+    console.error('[BARCODE_RESOLVE_ERR]', err);
+    if (typeof showToast === 'function') showToast('Errore nella ricerca del prodotto. Riprova.', 'error');
+    showBarcodeNotFoundModal(code, kind);
   }
 };
 
@@ -20647,7 +20667,9 @@ window.switchDraftItemFood = switchDraftItemFood;
 
 function applyBarcodeProduct(product, kind) {
   if (!product) return;
+  const resultEl = $(kind === 'supplements' ? 'supp-barcode-result' : 'nutrition-barcode-result');
   if (product.found === false) {
+    if (resultEl) resultEl.innerHTML = '<span style="color:#ff9800;">Codice ' + esc(product.barcode || '') + ' non trovato.</span>';
     showBarcodeNotFoundModal(product.barcode, kind);
     return;
   }
@@ -20674,10 +20696,14 @@ function applyBarcodeProduct(product, kind) {
     DATA.supplementation.present = true;
     persist();
     render();
+    if (resultEl) resultEl.innerHTML = '<span style="color:#00ffcc;">✓ Aggiunto: ' + esc(name) + '</span>';
     if (typeof showToast === 'function') showToast('Integratore aggiunto: ' + name, 'success');
     return;
   }
 
+  // Written here for when this runs inside an already-open add-food-modal
+  // (e.g. barcode fusion for a draft row); harmless no-op otherwise since
+  // openAddFoodModal() resets these fields anyway when it's opened next.
   window.activeSelectedFoodRef = {
     name: name,
     kcal: kcal,
@@ -20688,14 +20714,37 @@ function applyBarcodeProduct(product, kind) {
     barcode: product.barcode || null,
     brand: product.brand || null
   };
-
   if ($('food-name-input')) $('food-name-input').value = name;
   if ($('food-kcal-input')) $('food-kcal-input').value = kcal;
   if ($('food-pro-input')) $('food-pro-input').value = pro;
   if ($('food-carb-input')) $('food-carb-input').value = carb;
   if ($('food-fat-input')) $('food-fat-input').value = fat;
 
-  if (typeof showToast === 'function') showToast('Prodotto acquisito: ' + name, 'success');
+  // The scan button lives on the Nutrition tab, outside any open modal, so
+  // the fields above aren't visible - show the result where the user is
+  // actually looking and give a one-tap way to add it to the diary.
+  window.__lastScannedBarcodeProduct = window.activeSelectedFoodRef;
+  if (resultEl) {
+    resultEl.innerHTML =
+      '<div style="background:#111;border:1px solid #00ffcc;border-radius:8px;padding:10px;color:#eee;">' +
+      '<div style="font-weight:800;color:#00ffcc;margin-bottom:4px;">✓ ' + esc(name) + (product.brand ? ' <span style="color:#888;font-weight:400;">(' + esc(product.brand) + ')</span>' : '') + '</div>' +
+      '<div style="font-size:11px;color:#ccc;">Per 100g: ' + kcal + ' kcal · P ' + pro + 'g · C ' + carb + 'g · G ' + fat + 'g</div>' +
+      '<button type="button" class="btn btn-primary" style="margin-top:8px;font-size:11px;padding:6px 10px;" onclick="addLastScannedFoodToDiary()">➕ Aggiungi al diario</button>' +
+      '</div>';
+  }
+  if (typeof showToast === 'function') showToast('Prodotto trovato: ' + name, 'success');
+}
+
+function addLastScannedFoodToDiary() {
+  const p = window.__lastScannedBarcodeProduct;
+  if (!p) return;
+  openAddFoodModal(currentNutritionDayIndex, 0);
+  if ($('food-name-input')) $('food-name-input').value = p.name;
+  if ($('food-kcal-input')) $('food-kcal-input').value = p.kcal;
+  if ($('food-pro-input')) $('food-pro-input').value = p.pro;
+  if ($('food-carb-input')) $('food-carb-input').value = p.carb;
+  if ($('food-fat-input')) $('food-fat-input').value = p.fat;
+  window.activeSelectedFoodRef = p;
 }
 
 function showBarcodeNotFoundModal(code, kind) {
