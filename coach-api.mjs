@@ -74,6 +74,13 @@ app.use(
     message: "Troppe richieste al Coach AI. Attendi qualche secondo e riprova."
   })
 );
+const barcodeAiRateLimiter = createFixedWindowRateLimiter({
+  windowMs: 60_000,
+  max: Number(process.env.BARCODE_AI_RATE_LIMIT_MAX || 10),
+  keyPrefix: "barcode-ai",
+  code: "AI_RATE_LIMITED",
+  message: "Troppe richieste al Coach AI. Attendi qualche secondo e riprova."
+});
 
 import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
@@ -652,7 +659,7 @@ function classifyGeminiError(err) {
   return null;
 }
 
-async function generateContentWithRetry(ai, { model, partsAttempts, label }) {
+async function generateContentWithRetry(ai, { model, partsAttempts, label, config }) {
   const delaysMs = [0, 700, 1800];
   let lastErr;
   for (let attempt = 0; attempt < delaysMs.length; attempt++) {
@@ -661,7 +668,9 @@ async function generateContentWithRetry(ai, { model, partsAttempts, label }) {
     }
     const parts = partsAttempts[Math.min(attempt, partsAttempts.length - 1)];
     try {
-      return await ai.models.generateContent({ model, contents: [{ role: "user", parts }] });
+      const request = { model, contents: [{ role: "user", parts }] };
+      if (config) request.config = config;
+      return await ai.models.generateContent(request);
     } catch (err) {
       lastErr = err;
       console.warn(`${label} attempt ${attempt + 1}/${delaysMs.length} failed`, err?.message || err);
@@ -2041,8 +2050,47 @@ async function generateMealPhotoVision({ prompt, image, images, schema }) {
   return { text: response.text || "" };
 }
 
+async function lookupBarcodeWithAI(code) {
+  if (!process.env.GEMINI_API_KEY) {
+    const err = new Error("vision_not_configured");
+    err.statusCode = 503;
+    throw err;
+  }
+  const ai = getClient();
+  const prompt = `Cerca sul web informazioni sul prodotto alimentare con codice a barre (EAN/UPC) "${code}".
+Trova: nome del prodotto, marchio, e valori nutrizionali per 100g (kcal, proteine, carboidrati, grassi).
+Non inventare valori: se non trovi informazioni affidabili per questo identificativo esatto, rispondi found:false.
+
+Rispondi ESCLUSIVAMENTE con un blocco JSON tra \`\`\`json e \`\`\`, in questo formato esatto:
+\`\`\`json
+{"found":true,"name":"Nome prodotto","brand":"Marchio","per100g":{"kcal":0,"proteins":0,"carbohydrates":0,"fat":0}}
+\`\`\`
+oppure, se non trovato:
+\`\`\`json
+{"found":false}
+\`\`\``;
+  const response = await generateContentWithRetry(ai, {
+    model: MODEL,
+    partsAttempts: [[{ text: prompt }]],
+    label: "Gemini barcode AI lookup",
+    config: { tools: [{ googleSearch: {} }] }
+  });
+  const text = response.text || "";
+  const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/i);
+  if (!jsonMatch) return { found: false };
+  try {
+    const parsed = JSON.parse(jsonMatch[1]);
+    return parsed && parsed.found ? parsed : { found: false };
+  } catch (_) {
+    return { found: false };
+  }
+}
+
 mountFoodRoutes(app, {
-  generateVision: generateMealPhotoVision
+  generateVision: generateMealPhotoVision,
+  pool,
+  lookupBarcodeWithAI,
+  aiLookupRateLimiter: barcodeAiRateLimiter
 });
 
 app.use(function (req, res, next) {

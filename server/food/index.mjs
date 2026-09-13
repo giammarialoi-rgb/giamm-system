@@ -1594,7 +1594,36 @@ export const UNIVERSAL_BARCODE_CATALOG = {
   }
 };
 
-export async function resolveBarcodeProduct(code, env = process.env) {
+function customBarcodeRowToProduct(row) {
+  return {
+    found: true,
+    barcode: row.barcode,
+    name: row.name,
+    brand: row.brand || '',
+    serving: row.serving || '100g',
+    servingGrams: row.serving_grams ? Number(row.serving_grams) : 100,
+    per100g: {
+      kcal: Math.round(num(row.kcal)),
+      proteins: Math.round(num(row.proteins) * 10) / 10,
+      carbohydrates: Math.round(num(row.carbohydrates) * 10) / 10,
+      fat: Math.round(num(row.fat) * 10) / 10,
+      fibers: Math.round(num(row.fibers) * 10) / 10,
+      salt: Math.round(num(row.salt) * 100) / 100,
+      sugars: Math.round(num(row.sugars) * 10) / 10,
+      saturatedFat: Math.round(num(row.saturated_fat) * 10) / 10
+    },
+    kcal: Math.round(num(row.kcal)),
+    pro: Math.round(num(row.proteins) * 10) / 10,
+    carb: Math.round(num(row.carbohydrates) * 10) / 10,
+    fat: Math.round(num(row.fat) * 10) / 10,
+    hasCompleteNutrition: true,
+    nutritionAvailable: true,
+    source: row.source || 'ai_discovered',
+    confidence: 0.85
+  };
+}
+
+export async function resolveBarcodeProduct(code, env = process.env, pool = null) {
   const clean = String(code || '').trim().replace(/[^0-9A-Za-z]/g, '');
   if (!clean) return { found: false, barcode: clean };
 
@@ -1625,6 +1654,17 @@ export async function resolveBarcodeProduct(code, env = process.env) {
       source: 'verified_product_catalog',
       confidence: 0.99
     };
+  }
+
+  if (pool && typeof pool.query === 'function') {
+    try {
+      const custom = await pool.query('SELECT * FROM custom_barcode_products WHERE barcode = $1 LIMIT 1', [clean]);
+      if (custom.rows && custom.rows[0]) {
+        return customBarcodeRowToProduct(custom.rows[0]);
+      }
+    } catch (err) {
+      console.warn('[food] custom_barcode_products lookup failed', err.message);
+    }
   }
 
   try {
@@ -1779,6 +1819,9 @@ export function fuseVisionAndBarcode(visionItem, barcodeProduct) {
 export function mountFoodRoutes(app, opts = {}) {
   const env = opts.env || process.env;
   const generateVisionFn = opts.generateVisionFn || opts.generateVision || null;
+  const pool = opts.pool || null;
+  const lookupBarcodeWithAI = opts.lookupBarcodeWithAI || null;
+  const aiLookupRateLimiter = opts.aiLookupRateLimiter || ((req, res, next) => next());
 
   app.get('/api/food/search', async (req, res) => {
     try {
@@ -1793,11 +1836,65 @@ export function mountFoodRoutes(app, opts = {}) {
   app.get('/api/food/barcode/:code', async (req, res) => {
     try {
       const code = String(req.params.code || '').trim();
-      const product = await resolveBarcodeProduct(code, env);
+      const product = await resolveBarcodeProduct(code, env, pool);
       if (!product || product.found === false) {
         return res.json({ ok: true, data: { found: false, barcode: code } });
       }
       res.json({ ok: true, data: product, product });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  // Barcode not found anywhere (static catalog, our DB, Open Food Facts) - ask
+  // Coach AI to search the web for it, and if it finds something plausible,
+  // save it so every future scan of this code resolves instantly and locally.
+  app.post('/api/food/barcode/:code/ai-lookup', aiLookupRateLimiter, async (req, res) => {
+    const code = String(req.params.code || '').trim().replace(/[^0-9A-Za-z]/g, '');
+    if (!code) return res.status(400).json({ ok: false, error: 'Codice a barre mancante.' });
+    if (!lookupBarcodeWithAI) {
+      return res.status(503).json({ ok: false, error: 'Ricerca Coach AI non disponibile.', code: 'AI_UNAVAILABLE' });
+    }
+    try {
+      const found = await lookupBarcodeWithAI(code);
+      if (!found || found.found === false || !found.name) {
+        return res.json({ ok: true, data: { found: false, barcode: code } });
+      }
+      const per100g = found.per100g || {};
+      const row = {
+        barcode: code,
+        name: String(found.name).slice(0, 200),
+        brand: found.brand ? String(found.brand).slice(0, 120) : null,
+        serving: '100g',
+        serving_grams: 100,
+        kcal: num(per100g.kcal),
+        proteins: num(per100g.proteins),
+        carbohydrates: num(per100g.carbohydrates),
+        fat: num(per100g.fat),
+        fibers: num(per100g.fibers),
+        salt: num(per100g.salt),
+        sugars: num(per100g.sugars),
+        saturated_fat: num(per100g.saturatedFat)
+      };
+      if (pool && typeof pool.query === 'function') {
+        try {
+          await pool.query(
+            `INSERT INTO custom_barcode_products
+               (barcode, name, brand, serving, serving_grams, kcal, proteins, carbohydrates, fat, fibers, salt, sugars, saturated_fat, source)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'ai_discovered')
+             ON CONFLICT (barcode) DO UPDATE SET
+               name = EXCLUDED.name, brand = EXCLUDED.brand, kcal = EXCLUDED.kcal,
+               proteins = EXCLUDED.proteins, carbohydrates = EXCLUDED.carbohydrates,
+               fat = EXCLUDED.fat, fibers = EXCLUDED.fibers, salt = EXCLUDED.salt,
+               sugars = EXCLUDED.sugars, saturated_fat = EXCLUDED.saturated_fat`,
+            [row.barcode, row.name, row.brand, row.serving, row.serving_grams, row.kcal, row.proteins,
+              row.carbohydrates, row.fat, row.fibers, row.salt, row.sugars, row.saturated_fat]
+          );
+        } catch (err) {
+          console.warn('[food] failed to persist AI-discovered barcode', err.message);
+        }
+      }
+      res.json({ ok: true, data: customBarcodeRowToProduct(row) });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
     }

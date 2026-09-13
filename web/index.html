@@ -2846,7 +2846,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MEAL-PHOTO-V1",
-        schemaTarget: "0007",
+        schemaTarget: "0008",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -53389,13 +53389,13 @@ async function openLiveBarcodeScanner(kind, targetFusionRow) {
 
   const overlay = document.createElement('div');
   overlay.id = 'barcode-live-scanner';
-  overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:space-between;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:10500;display:flex;flex-direction:column;align-items:center;justify-content:space-between;';
 
   const isFusion = Boolean(targetFusionRow);
   const fusionTitle = isFusion ? 'ASSOCIA BARCODE AL PIATTO' : 'BARCODE SCANNER V4';
 
   overlay.innerHTML = '' +
-    '<div style="position:absolute;top:0;left:0;right:0;padding:16px;display:flex;justify-content:space-between;align-items:center;z-index:10;background:linear-gradient(180deg,rgba(0,0,0,0.85),transparent);">' +
+    '<div style="position:absolute;top:0;left:0;right:0;padding:max(16px, env(safe-area-inset-top, 16px)) max(16px, env(safe-area-inset-right, 16px)) 16px max(16px, env(safe-area-inset-left, 16px));display:flex;justify-content:space-between;align-items:center;z-index:10;background:linear-gradient(180deg,rgba(0,0,0,0.85),transparent);">' +
     '<button class="btn btn-outline" style="font-size:12px;padding:6px 12px;color:#fff;border-color:#555;" id="barcode-live-cancel">\u2715 Chiudi</button>' +
     '<div style="font-size:12px;font-weight:800;color:#00ffcc;letter-spacing:1px;">' + fusionTitle + '</div>' +
     '<button class="btn btn-outline" style="font-size:12px;padding:6px 10px;color:#ffcc00;border-color:#555;" id="barcode-live-torch">\u{1F526} Torcia</button>' +
@@ -53409,7 +53409,7 @@ async function openLiveBarcodeScanner(kind, targetFusionRow) {
     '<div id="barcode-guide-status" style="font-size:11px;color:#fff;margin-top:14px;text-align:center;background:rgba(0,0,0,0.65);padding:6px 14px;border-radius:20px;backdrop-filter:blur(4px);border:1px solid #333;">' +
     'Inquadra il codice a barre all\'interno del mirino' +
     '</div></div>' +
-    '<div style="position:absolute;bottom:0;left:0;right:0;padding:16px;background:linear-gradient(0deg,rgba(0,0,0,0.95) 0%,rgba(0,0,0,0.6) 70%,transparent 100%);display:flex;gap:8px;z-index:10;justify-content:center;">' +
+    '<div style="position:absolute;bottom:0;left:0;right:0;padding:16px 16px max(16px, env(safe-area-inset-bottom, 16px));background:linear-gradient(0deg,rgba(0,0,0,0.95) 0%,rgba(0,0,0,0.6) 70%,transparent 100%);display:flex;gap:8px;z-index:10;justify-content:center;">' +
     '<button class="btn btn-outline" style="flex:1;font-size:11px;padding:10px 6px;" id="barcode-live-ocr">\u{1F4F8} OCR Etichetta</button>' +
     '<button class="btn btn-primary" style="flex:1.2;font-size:11px;padding:10px 8px;font-weight:700;" id="barcode-live-capture">\u26A1 Scatta / Analizza</button>' +
     '<button class="btn btn-outline" style="flex:1;font-size:11px;padding:10px 6px;" id="barcode-live-gallery">\u{1F4C1} Da Galleria</button>' +
@@ -53485,7 +53485,11 @@ async function openLiveBarcodeScanner(kind, targetFusionRow) {
       stop();
       const product = await resolveBarcodeToProduct(codeVal, kind);
       if (targetFusionRow) {
-        fuseBarcodeWithDraftRow(targetFusionRow, product);
+        if (product && product.found !== false) {
+          fuseBarcodeWithDraftRow(targetFusionRow, product);
+        } else {
+          showBarcodeNotFoundModal(codeVal, kind);
+        }
       } else {
         applyBarcodeProduct(product, kind);
       }
@@ -53621,7 +53625,11 @@ async function handleBarcodePhoto(ev, kind, targetFusionRow) {
     } catch (_) {}
     const product = await resolveBarcodeToProduct(codeStr, kind);
     if (targetFusionRow) {
-      fuseBarcodeWithDraftRow(targetFusionRow, product);
+      if (product && product.found !== false) {
+        fuseBarcodeWithDraftRow(targetFusionRow, product);
+      } else {
+        showBarcodeNotFoundModal(codeStr, kind);
+      }
     } else {
       applyBarcodeProduct(product, kind);
     }
@@ -53820,19 +53828,21 @@ function applyBarcodeProduct(product, kind) {
 
 function showBarcodeNotFoundModal(code, kind) {
   const m = document.createElement('div');
-  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10510;display:flex;align-items:center;justify-content:center;padding:max(16px, env(safe-area-inset-top, 16px)) max(16px, env(safe-area-inset-right, 16px)) max(16px, env(safe-area-inset-bottom, 16px)) max(16px, env(safe-area-inset-left, 16px));';
   m.innerHTML = '' +
     '<div style="background:#181818;border:1px solid #333;border-radius:12px;padding:20px;max-width:380px;width:100%;text-align:center;">' +
     '<div style="font-size:28px;margin-bottom:8px;">\u{1F50d}</div>' +
     '<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">Codice non trovato</div>' +
     '<div style="font-size:12px;color:#aaa;margin-bottom:16px;">Il codice <b style="color:#00ffcc;">' + esc(code || '') + '</b> non è presente nel database. Come vuoi procedere?</div>' +
-    '<div style="display:flex;flex-direction:column;gap:8px;">' +
-    '<button class="btn btn-primary" style="padding:10px;" id="nf-ocr-btn">\u{1F4F8} Scansiona Etichetta (OCR)</button>' +
+    '<div id="nf-buttons" style="display:flex;flex-direction:column;gap:8px;">' +
+    '<button class="btn btn-primary" style="padding:10px;" id="nf-ai-btn">\u{1F916} Cerca con Coach AI</button>' +
+    '<button class="btn btn-outline" style="padding:10px;" id="nf-ocr-btn">\u{1F4F8} Scansiona Etichetta (OCR)</button>' +
     '<button class="btn btn-outline" style="padding:10px;" id="nf-vision-btn">\u{1F374} Scatta Foto Pasto (AI)</button>' +
     '<button class="btn btn-outline" style="padding:10px;" id="nf-manual-btn">\u{270F} Inserisci manualmente</button>' +
     '<button class="btn btn-outline" style="padding:8px;color:#888;" id="nf-cancel-btn">Annulla</button>' +
     '</div></div>';
   document.body.appendChild(m);
+  m.querySelector('#nf-ai-btn').onclick = () => searchBarcodeWithCoachAI(code, kind, m);
   m.querySelector('#nf-ocr-btn').onclick = () => {
     m.remove();
     scanNutritionLabelOcr(kind);
@@ -53848,6 +53858,37 @@ function showBarcodeNotFoundModal(code, kind) {
     if (typeof showToast === 'function') showToast('Compila i campi nutrizionali', 'info');
   };
   m.querySelector('#nf-cancel-btn').onclick = () => m.remove();
+}
+
+async function searchBarcodeWithCoachAI(code, kind, modalEl) {
+  const buttons = modalEl && modalEl.querySelector('#nf-buttons');
+  if (buttons) {
+    buttons.innerHTML = '<div style="padding:14px 0;color:#00ffcc;font-size:12px;">\u{1F916} Coach AI sta cercando il prodotto...</div>';
+  }
+  try {
+    let url = '/api/food/barcode/' + encodeURIComponent(code) + '/ai-lookup';
+    if (typeof coachEndpoint === 'function') {
+      try { url = coachEndpoint(url); } catch (_) {}
+    }
+    const fetchFn = (typeof apiFetch === 'function') ? apiFetch : fetch;
+    const res = await fetchFn(url, { method: 'POST' });
+    const json = await readApiJson(res);
+    const product = json && json.data;
+    if (modalEl) modalEl.remove();
+    if (product && product.found !== false) {
+      applyBarcodeProduct(product, kind);
+      if (typeof showToast === 'function') showToast('Coach AI ha trovato il prodotto e lo ha aggiunto al database: ' + (product.name || code), 'success');
+    } else {
+      if (typeof showToast === 'function') showToast('Coach AI non ha trovato informazioni per questo codice.', 'warning');
+      showBarcodeNotFoundModal(code, kind);
+    }
+  } catch (err) {
+    console.warn('[BARCODE_AI_LOOKUP_ERR]', err);
+    if (modalEl) modalEl.remove();
+    const msg = (typeof formatCoachError === 'function') ? formatCoachError(err) : (err.message || 'Ricerca Coach AI non riuscita.');
+    if (typeof showToast === 'function') showToast(msg, 'error');
+    showBarcodeNotFoundModal(code, kind);
+  }
 }
 
 function startBarcodeFusionForDraftRow(btn) {
