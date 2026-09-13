@@ -53455,6 +53455,7 @@ async function openLiveBarcodeScanner(kind, targetFusionRow) {
   video.srcObject = stream;
 
   let stopped = false;
+  let handlingCode = false;
   let isTorchOn = false;
 
   function stop() {
@@ -53502,8 +53503,8 @@ async function openLiveBarcodeScanner(kind, targetFusionRow) {
   }
 
   async function handleFoundCode(codeVal) {
-    if (stopped) return;
-    stopped = true;
+    if (handlingCode || stopped) return;
+    handlingCode = true;
     playBeep();
     const box = overlay.querySelector('#barcode-viewfinder-box');
     const guide = overlay.querySelector('#barcode-guide-status');
