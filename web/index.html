@@ -2846,7 +2846,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MEAL-PHOTO-V1",
-        schemaTarget: "0008",
+        schemaTarget: "0009",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -53843,6 +53843,8 @@ function applyBarcodeProduct(product, kind) {
   const pro = Math.round(Number(p100.proteins || product.pro || 0) * 10) / 10;
   const carb = Math.round(Number(p100.carbohydrates || product.carb || 0) * 10) / 10;
   const fat = Math.round(Number(p100.fat || product.fat || 0) * 10) / 10;
+  const unit = product.unit === 'ml' ? 'ml' : 'g';
+  const servingGrams = Number(product.servingGrams) > 0 ? Math.round(Number(product.servingGrams)) : 100;
 
   if (kind === 'supplements') {
     if (!DATA.supplementation) DATA.supplementation = { items: [], present: true };
@@ -53874,6 +53876,8 @@ function applyBarcodeProduct(product, kind) {
     carb: carb,
     fat: fat,
     serving: product.serving || '100g',
+    servingGrams: servingGrams,
+    unit: unit,
     barcode: product.barcode || null,
     brand: product.brand || null
   };
@@ -53882,6 +53886,7 @@ function applyBarcodeProduct(product, kind) {
   if ($('food-pro-input')) $('food-pro-input').value = pro;
   if ($('food-carb-input')) $('food-carb-input').value = carb;
   if ($('food-fat-input')) $('food-fat-input').value = fat;
+  if ($('food-unit-input')) $('food-unit-input').value = unit;
 
   // The scan button lives on the Nutrition tab, outside any open modal, so
   // the fields above aren't visible - show the result where the user is
@@ -53891,7 +53896,7 @@ function applyBarcodeProduct(product, kind) {
     resultEl.innerHTML =
       '<div style="background:#111;border:1px solid #00ffcc;border-radius:8px;padding:10px;color:#eee;">' +
       '<div style="font-weight:800;color:#00ffcc;margin-bottom:4px;">✓ ' + esc(name) + (product.brand ? ' <span style="color:#888;font-weight:400;">(' + esc(product.brand) + ')</span>' : '') + '</div>' +
-      '<div style="font-size:11px;color:#ccc;">Per 100g: ' + kcal + ' kcal · P ' + pro + 'g · C ' + carb + 'g · G ' + fat + 'g</div>' +
+      '<div style="font-size:11px;color:#ccc;">Per 100' + unit + ': ' + kcal + ' kcal · P ' + pro + 'g · C ' + carb + 'g · G ' + fat + 'g</div>' +
       '<button type="button" class="btn btn-primary" style="margin-top:8px;font-size:11px;padding:6px 10px;" onclick="addLastScannedFoodToDiary()">➕ Aggiungi al diario</button>' +
       '</div>';
   }
@@ -53907,8 +53912,15 @@ function addLastScannedFoodToDiary() {
   if ($('food-pro-input')) $('food-pro-input').value = p.pro;
   if ($('food-carb-input')) $('food-carb-input').value = p.carb;
   if ($('food-fat-input')) $('food-fat-input').value = p.fat;
+  if ($('food-unit-input')) $('food-unit-input').value = p.unit === 'ml' ? 'ml' : 'g';
+  if ($('food-qty-input') && p.servingGrams) $('food-qty-input').value = p.servingGrams;
   window.activeSelectedFoodRef = p;
 }
+// Referenced from an inline onclick="" string, which resolves identifiers
+// against window - a plain top-level declaration alone wasn't reaching it
+// (this file has a pre-existing duplicate-function-block issue, see the
+// switchDraftItemFood/startBarcodeFusionForDraftRow dupes below).
+window.addLastScannedFoodToDiary = addLastScannedFoodToDiary;
 
 function showBarcodeNotFoundModal(code, kind) {
   const m = document.createElement('div');
@@ -53980,6 +53992,8 @@ function startBarcodeFusionForDraftRow(btn) {
   if (!row) return;
   openLiveBarcodeScanner('nutrition', row);
 }
+// Also referenced from an inline onclick="" string - see note above.
+window.startBarcodeFusionForDraftRow = startBarcodeFusionForDraftRow;
 
 function fuseBarcodeWithDraftRow(rowEl, product) {
   if (!rowEl || !product || product.found === false) return;

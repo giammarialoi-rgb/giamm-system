@@ -58,6 +58,15 @@ function mapUsdaFood(raw) {
   };
 }
 
+function inferProductUnit(raw) {
+  const explicit = String(raw.product_quantity_unit || raw.serving_quantity_unit || '').trim().toLowerCase();
+  if (explicit === 'ml' || explicit === 'cl' || explicit === 'l') return 'ml';
+  if (explicit === 'g' || explicit === 'kg') return 'g';
+  const text = String(raw.quantity || raw.serving_size || '').toLowerCase();
+  if (/\b\d+([.,]\d+)?\s*(ml|cl|l)\b/.test(text) || /\bliquid|bevanda|drink|succo|latte|olio|acqua\b/.test(text)) return 'ml';
+  return 'g';
+}
+
 function mapOffProduct(raw) {
   const nuts = raw.nutriments || {};
   let kcal = num(nuts['energy-kcal_100g'] || nuts.energy_kcal_100g || nuts['energy-kcal'] || nuts.energy_kcal);
@@ -99,6 +108,7 @@ function mapOffProduct(raw) {
     saltPer100: Math.round(salt * 100) / 100,
     serving: raw.serving_size || '100g',
     servingGrams: num(raw.serving_quantity) || (raw.serving_size ? parseFloat(String(raw.serving_size).replace(',', '.')) : 100) || 100,
+    unit: inferProductUnit(raw),
     nutriscore: raw.nutriscore_grade || null,
     hasCompleteNutrition: hasComplete,
     provenance: {
@@ -1602,6 +1612,7 @@ function customBarcodeRowToProduct(row) {
     brand: row.brand || '',
     serving: row.serving || '100g',
     servingGrams: row.serving_grams ? Number(row.serving_grams) : 100,
+    unit: row.unit || 'g',
     per100g: {
       kcal: Math.round(num(row.kcal)),
       proteins: Math.round(num(row.proteins) * 10) / 10,
@@ -1637,6 +1648,7 @@ export async function resolveBarcodeProduct(code, env = process.env, pool = null
       brand: item.brand || '',
       serving: item.serving || '100g',
       servingGrams: item.servingGrams || 100,
+      unit: item.unit || 'g',
       per100g: {
         kcal: Math.round(num(p100.kcal ?? item.kcal ?? 0)),
         proteins: Math.round(num(p100.proteins ?? item.pro ?? 0) * 10) / 10,
@@ -1701,6 +1713,7 @@ export async function resolveBarcodeProduct(code, env = process.env, pool = null
         brand: off.brand || '',
         serving: off.serving || '100g',
         servingGrams: off.servingGrams || 100,
+        unit: off.unit || 'g',
         per100g: {
           kcal: finalKcal,
           proteins: finalPro,
@@ -1867,6 +1880,7 @@ export function mountFoodRoutes(app, opts = {}) {
         brand: found.brand ? String(found.brand).slice(0, 120) : null,
         serving: '100g',
         serving_grams: 100,
+        unit: found.unit === 'ml' ? 'ml' : 'g',
         kcal: num(per100g.kcal),
         proteins: num(per100g.proteins),
         carbohydrates: num(per100g.carbohydrates),
@@ -1880,14 +1894,14 @@ export function mountFoodRoutes(app, opts = {}) {
         try {
           await pool.query(
             `INSERT INTO custom_barcode_products
-               (barcode, name, brand, serving, serving_grams, kcal, proteins, carbohydrates, fat, fibers, salt, sugars, saturated_fat, source)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'ai_discovered')
+               (barcode, name, brand, serving, serving_grams, unit, kcal, proteins, carbohydrates, fat, fibers, salt, sugars, saturated_fat, source)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'ai_discovered')
              ON CONFLICT (barcode) DO UPDATE SET
-               name = EXCLUDED.name, brand = EXCLUDED.brand, kcal = EXCLUDED.kcal,
+               name = EXCLUDED.name, brand = EXCLUDED.brand, unit = EXCLUDED.unit, kcal = EXCLUDED.kcal,
                proteins = EXCLUDED.proteins, carbohydrates = EXCLUDED.carbohydrates,
                fat = EXCLUDED.fat, fibers = EXCLUDED.fibers, salt = EXCLUDED.salt,
                sugars = EXCLUDED.sugars, saturated_fat = EXCLUDED.saturated_fat`,
-            [row.barcode, row.name, row.brand, row.serving, row.serving_grams, row.kcal, row.proteins,
+            [row.barcode, row.name, row.brand, row.serving, row.serving_grams, row.unit, row.kcal, row.proteins,
               row.carbohydrates, row.fat, row.fibers, row.salt, row.sugars, row.saturated_fat]
           );
         } catch (err) {

@@ -1,0 +1,2 @@
+ALTER TABLE custom_barcode_products
+  ADD COLUMN IF NOT EXISTS unit TEXT NOT NULL DEFAULT 'g';

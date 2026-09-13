@@ -2058,12 +2058,14 @@ async function lookupBarcodeWithAI(code) {
   }
   const ai = getClient();
   const prompt = `Cerca sul web informazioni sul prodotto alimentare con codice a barre (EAN/UPC) "${code}".
-Trova: nome del prodotto, marchio, e valori nutrizionali per 100g (kcal, proteine, carboidrati, grassi).
-Non inventare valori: se non trovi informazioni affidabili per questo identificativo esatto, rispondi found:false.
+Trova: nome del prodotto, marchio, valori nutrizionali per 100g/100ml (kcal, proteine, carboidrati, grassi),
+e l'unità con cui si misura la porzione di questo prodotto: "ml" se è un liquido/bevanda (es. bibite, latte, olio, succhi),
+"g" se è solido o in polvere (es. snack, cereali, formaggi). Non inventare valori: se non trovi informazioni
+affidabili per questo identificativo esatto, rispondi found:false.
 
 Rispondi ESCLUSIVAMENTE con un blocco JSON tra \`\`\`json e \`\`\`, in questo formato esatto:
 \`\`\`json
-{"found":true,"name":"Nome prodotto","brand":"Marchio","per100g":{"kcal":0,"proteins":0,"carbohydrates":0,"fat":0}}
+{"found":true,"name":"Nome prodotto","brand":"Marchio","unit":"g","per100g":{"kcal":0,"proteins":0,"carbohydrates":0,"fat":0}}
 \`\`\`
 oppure, se non trovato:
 \`\`\`json
