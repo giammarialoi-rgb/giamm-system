@@ -34,7 +34,7 @@ ok(html.includes("clearCoachClientDomain('nutrition')"), 'coach client view reus
 ok(html.includes('function canClearPersonalNutrition') && html.includes('athleteCanSelfGeneratePlans()'), 'athlete freedom gate is respected');
 
 const applyStart = html.indexOf('function applyPersonalNutritionClear');
-const applyEnd = html.indexOf('async function clearPersonalNutrition');
+const applyEnd = html.indexOf('function openNutritionBackupsModal');
 ok(applyStart >= 0 && applyEnd > applyStart, 'apply helper is extractable');
 const applySrc = html.slice(applyStart, applyEnd);
 ok(!/DATA\.weeks|store\.data|customSets|store\.logs|supplementation|therapy|exams|personal-recovery-16w/.test(applySrc),

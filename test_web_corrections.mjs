@@ -20,8 +20,8 @@ assert.ok(api.includes("Gemini chat first attempt failed"), "server retries Gemi
 assert.ok(api.includes('status(503)') && api.includes("AI_UNAVAILABLE"), "missing key is 503 not 500");
 
 assert.ok(html.includes("function restoreClientShellSync"), "client shell restored before first render");
-assert.ok(html.includes("ALIGN_MS") && html.includes("align start"), "workout align has a timeout and does not block forever");
-assert.ok(html.includes("practice timeout") && !html.includes("locked && typeof bootCoachPractice"), "first paint does not wait for bootCoachPractice");
+assert.ok(html.includes("__nurvanWatchdog") && html.includes("Boot watchdog fired"), "boot has a watchdog timeout and does not block forever");
+assert.ok(html.includes("Promise.resolve(bootCoachPractice())") && !html.includes("locked && typeof bootCoachPractice"), "first paint does not wait for bootCoachPractice");
 assert.ok(html.includes("skip leftover client-shell rewrite"), "personal sessions are not hijacked by leftover client shell");
 assert.ok(html.includes("delete payload.activeProgram.exerciseDb"), "account sync does not upload the exercise catalog");
 assert.ok(html.includes("isClientShellLocked") && html.includes("athleteHomeHtml"), "empty client home is not the main create-program screen");

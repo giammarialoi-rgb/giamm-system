@@ -9585,6 +9585,7 @@ async function init() {
     }
 
     if (typeof isClientStorageContext === 'function' && isClientStorageContext()) {
+      console.log('[NURVAN_BOOT] Client/invite context: skip personal IDB/program restore');
       DATA = normalizeProgram(store.activeProgram || { title: 'Programma Atleta', weeks: [] });
       if (typeof syncClientTrainingState === 'function') {
         await syncClientTrainingState();
