@@ -19275,11 +19275,45 @@ function maybeShowIosInstallHint() {
   sheet.classList.add('visible');
 }
 
+function showUpdateAvailableBanner() {
+  if (document.getElementById('nurvan-update-banner')) return;
+  const b = document.createElement('div');
+  b.id = 'nurvan-update-banner';
+  b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom, 0px));z-index:10600;background:#181818;border:1px solid var(--gold);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 18px rgba(0,0,0,0.5);';
+  b.innerHTML = '' +
+    '<div style="flex:1;font-size:12px;color:#eee;line-height:1.3;">\u{1F504} È disponibile una nuova versione dell\'app.</div>' +
+    '<button class="btn btn-primary" style="font-size:11px;padding:8px 12px;white-space:nowrap;" id="nurvan-update-reload-btn">Aggiorna</button>' +
+    '<button class="btn btn-outline" style="font-size:11px;padding:8px 10px;" id="nurvan-update-dismiss-btn">✕</button>';
+  document.body.appendChild(b);
+  b.querySelector('#nurvan-update-reload-btn').onclick = () => location.reload();
+  b.querySelector('#nurvan-update-dismiss-btn').onclick = () => b.remove();
+}
+
 function registerNurvanServiceWorker() {
   if (typeof window !== 'undefined' && window.NativeConfig) return;
   if (!('serviceWorker' in navigator)) return;
   if (location.protocol === 'file:') return;
-  navigator.serviceWorker.register('./sw.js?v=prefill4').catch(function () {});
+  navigator.serviceWorker.register('./sw.js?v=prefill4').then(function (registration) {
+    if (!registration) return;
+    function watchInstalling(worker) {
+      if (!worker) return;
+      worker.addEventListener('statechange', function () {
+        // A new SW installed while one was already controlling this page = a real update, not the first install.
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+          showUpdateAvailableBanner();
+        }
+      });
+    }
+    if (registration.installing) watchInstalling(registration.installing);
+    registration.addEventListener('updatefound', function () {
+      watchInstalling(registration.installing);
+    });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') {
+        registration.update().catch(function () {});
+      }
+    });
+  }).catch(function () {});
 }
 
 function maybeShowRewardsOnboarding() {
