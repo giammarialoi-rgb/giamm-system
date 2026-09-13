@@ -6356,6 +6356,7 @@ function triggerImportCamera() {
     el.click();
   }
 }
+window.triggerImportCamera = triggerImportCamera;
 
 function triggerCoachFileSelect() {
   setFilePickIntent('COACH_AI');
@@ -11329,6 +11330,7 @@ function recalcFoodMacrosFromDb() {
   $('food-carb-input').value = Math.round((c || 0) * ratio * 10) / 10;
   $('food-fat-input').value = Math.round((f || 0) * ratio * 10) / 10;
 }
+window.recalcFoodMacrosFromDb = recalcFoodMacrosFromDb;
 
 function saveFoodItem() {
   const dayIdx = parseInt($('food-target-day').value, 10);
@@ -11478,6 +11480,7 @@ function toggleCustomMealTargetBox() {
     if (isHidden && input) input.focus();
   }
 }
+window.toggleCustomMealTargetBox = toggleCustomMealTargetBox;
 
 function submitCustomMealTarget() {
   const input = document.getElementById('meal-target-custom-input');
@@ -11762,6 +11765,7 @@ function onMealPhotoTargetSelectChange(val) {
   const dayName = (DATA && DATA.nutrition && DATA.nutrition.days && DATA.nutrition.days[dayIdx] && DATA.nutrition.days[dayIdx].day) || mealPhotoDefaultDayName();
   if (slotLabel) slotLabel.textContent = 'Destinazione: ' + safeDisplayValue(dayName, 'Giorno') + ' · ' + safeDisplayValue(val, 'Pasto');
 }
+window.onMealPhotoTargetSelectChange = onMealPhotoTargetSelectChange;
 
 function analyzeMealPhotoPayload(photos) {
   if (!photos || !photos.length) return;
@@ -14054,6 +14058,7 @@ async function openAthleteBooking() {
     if (box) box.textContent = (error && error.message) || 'Prenotazione non disponibile. Cosa puoi fare: riprova.';
   }
 }
+window.openAthleteBooking = openAthleteBooking;
 
 async function confirmAthleteBooking(index) {
   const slot = (window.__athleteSlots || [])[index];
@@ -14077,6 +14082,7 @@ async function confirmAthleteBooking(index) {
     if (typeof showToast === 'function') showToast((error && error.message) || 'Prenotazione rifiutata. Cosa puoi fare: scegli un altro orario.', 'warning');
   }
 }
+window.confirmAthleteBooking = confirmAthleteBooking;
 
 function changeCalendarMonth(delta) {
   calendarCurrentMonth += delta;
@@ -22798,6 +22804,7 @@ function keepStatsScroll(fn) {
     setTimeout(restore, 80);
   }
 }
+window.keepStatsScroll = keepStatsScroll;
 function setStatsAxis(axis) {
   keepStatsScroll(function () {
     if (!store.prefs) store.prefs = {};
