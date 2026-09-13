@@ -682,7 +682,7 @@ const I18nService = {
 (function applyCoachOsI18n(service) {
   const packs = {
     it: {
-      coHome: "Oggi", coClients: "Clienti", coInbox: "Posta", coPrograms: "Programmi", coCalendar: "Calendario",
+      coHome: "Oggi", coClients: "Clienti", coInbox: "Chat", coPrograms: "Programmi", coCalendar: "Calendario",
       coCheckIns: "Verifiche", coNutrition: "Alimentazione", coFormReview: "Revisione tecnica",
       coAnalytics: "Analisi", coAgent: "Agente", coAutomations: "Automazioni", coBusiness: "Attività", coCrm: "Pipeline",
       coMore: "Altro", coProfileSettings: "Profilo e impostazioni", coHelp: "Guida", coExitCoach: "Esci da Coach",
@@ -723,7 +723,7 @@ const I18nService = {
       coSavedCheckIns: "Verifiche", coSavedPayments: "Pagamenti", coSavedNew: "Nuovi clienti",
       coInboxSubtitle: "Messaggi, verifiche, richieste e attenzione. La chat 1:1 resta il thread.",
       coSearchInbox: "Cerca messaggi o clienti", coPreviewBroadcast: "Anteprima broadcast",
-      coInboxEmpty: "Posta vuota. I thread restano in Chat.", coPin: "Fissa", coUnpin: "Sblocca",
+      coInboxEmpty: "Nessun messaggio. I thread restano in Chat.", coPin: "Fissa", coUnpin: "Sblocca",
       coProgramsSubtitle: "Importa, crea e assegna programmi senza uscire da Coach.",
       coSmartImport: "Import intelligente", coImportProgramTitle: "Importa programma",
       coImportHint: "PDF, Excel, Word, immagini. Scegli sempre i domini.",
@@ -773,7 +773,7 @@ const I18nService = {
       coNoRisks: "Nessun rischio deterministico rilevato. Apri i dati per il dettaglio.",
       coSaveViewPrompt: "Nome della vista salvata", coViewSaved: "Vista salvata",
       coViewNotSaved: "Vista non salvata", coOperational: "Operativo",
-      coLoadingInbox: "Caricamento posta…", coPinned: "fisso",
+      coLoadingInbox: "Caricamento chat…", coPinned: "fisso",
       coBroadcastIds: "ID clienti da includere nell’anteprima (virgola)",
       coBroadcastResult: "Anteprima broadcast. Nessun messaggio inviato. Destinatari:",
       coProgramBuilder: "Costruttore programmi", coProgramsCount: "programmi",

@@ -145,7 +145,7 @@ body {
   z-index: 1;
   mix-blend-mode: normal;
   opacity: 0.98;
-  filter: drop-shadow(0 0 18px rgba(212, 175, 55, 0.28));
+  filter: none;
 }
 .logo-blend {
   /* Keep logos visible on dark UI (screen blend hid them on black) */
@@ -441,6 +441,40 @@ nav.bottom-nav {
 
 .btn-primary { background: var(--gold); color: #000 !important; -webkit-text-fill-color: #000 !important; }
 .btn-outline { background: transparent; border: 1px solid var(--gold); color: #d4af37 !important; -webkit-text-fill-color: #d4af37 !important; }
+
+/* Coach OS v2 header row (client switcher + back + notifications + avatar) -
+   every control here shares one fixed height/padding so the row reads as a
+   single consistent toolbar instead of mismatched pill sizes. */
+.coach-os-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.coach-os-header-controls select,
+.coach-os-header-controls > button {
+  height: 34px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  font-size: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.coach-os-header-controls .coach-os-icon-btn {
+  width: 34px;
+  padding: 0;
+  position: relative;
+}
+.coach-os-header-controls .coach-os-client-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 160px;
+  flex-shrink: 1;
+}
 
 .btn:active, .nav-item:active, button:active:not(.pw-toggle),
 .btn.is-pressed, .nav-item.is-pressed, button.is-pressed {
@@ -10212,8 +10246,13 @@ function updatePersonalBackButton() {
   if (!btn) return;
   const inCoach = !!(store && store.coachSessionActive) ||
     (document.body && document.body.classList.contains('coach-session'));
+  // Coach OS v2's own header (web/coach-os/shell.js headerControls) already renders
+  // its own INDIETRO next to the client switcher - showing this one too stacked two
+  // back buttons in the same header, one of them getting clipped behind the logo.
+  const usesShellV2 = !!(document.body && document.body.classList.contains('coach-os-v2'));
+  if (inCoach && usesShellV2) { btn.style.display = 'none'; return; }
   const stack = window.__gsNavStack || [];
-  // In coach mode the header also exposes INDIETRO; still show this when the stack has history.
+  // In (non-shell-v2) coach mode the header also exposes INDIETRO; still show this when the stack has history.
   const show = !!currentView && stack.length > 0 &&
     (inCoach ? (currentView !== 'coachHub' && currentView !== 'coachToday') : currentView !== 'home');
   btn.style.display = show ? 'inline-flex' : 'none';

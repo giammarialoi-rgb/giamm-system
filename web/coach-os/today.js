@@ -101,8 +101,7 @@
       (attention.length
         ? '<div class="coach-os-list">' + attention.map(actionButton).join('') + '</div>'
         : '<div class="coach-os-empty"><strong>' + escText(tx('coNoUrgency')) + '</strong><div>' +
-          escText(tx('coNoUrgencyWhy')) + '</div><button class="coach-os-action" style="margin-top:10px;" onclick="CoachOS.navigate(\'coachActionCenter\')">' +
-          escText(tx('coActionCenter')) + '</button></div>') +
+          escText(tx('coNoUrgencyWhy')) + '</div></div>') +
       '</section>' +
 
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coMyTasks')) + '</h2>' +
@@ -142,7 +141,7 @@
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coOpenAndCheck')) + '</h2></div>' +
       '<div class="coach-os-quick-actions">' +
       [['coachHub', 'coClients'], ['coachInbox', 'coMessage'], ['coachCheckIns', 'coCheckIns'],
-        ['coachCalendar', 'coSchedule'], ['coachAgent', 'coAgent'], ['coachActionCenter', 'coActionCenter']
+        ['coachCalendar', 'coSchedule'], ['coachAgent', 'coAgent']
       ].map(function (row) {
         return '<button type="button" class="coach-os-action" onclick="CoachOS.navigate(\'' + row[0] + '\')">' + escText(tx(row[1])) + '</button>';
       }).join('') +

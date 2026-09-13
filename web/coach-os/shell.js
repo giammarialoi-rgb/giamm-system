@@ -84,7 +84,6 @@
   function secondaryLinks() {
     const rows = [
       { view: 'coachCheckIns', label: tx('coCheckIns'), flag: 'checkInCenterV1' },
-      { view: 'coachActionCenter', label: tx('coActionCenter') },
       { view: 'coachNutrition', label: tx('coNutrition') },
       { view: 'coachMealAi', label: 'Meal AI', flag: 'mealAiV1' },
       { view: 'coachFormReview', label: tx('coFormReview'), flag: 'videoFormV1' },
@@ -171,7 +170,7 @@
     wrap.innerHTML =
       '<select id="cp-client-switcher" class="coach-os-client-select" title="' + escText(tx('coSwitchClient')) + '" aria-label="' + escText(tx('coSwitchClient')) + '" onchange="switchCoachClientFromHeader(this.value)">' +
       options.join('') + '</select>' +
-      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;flex-shrink:0;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="coachHeaderBack()">INDIETRO</button>' +
+      '<button type="button" class="btn btn-outline" style="color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="coachHeaderBack()">INDIETRO</button>' +
       '<button type="button" class="btn btn-outline coach-os-icon-btn" aria-label="' + escText(tx('coNotifications')) + '" title="' + escText(tx('coNotifications')) + '" onclick="openNotificationsCenter()">♢' +
       (notificationCount ? '<span class="cp-notify-count">' + (notificationCount > 99 ? '99+' : notificationCount) + '</span>' : '') +
       '</button>' +
