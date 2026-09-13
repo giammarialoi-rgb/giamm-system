@@ -84,19 +84,47 @@ public class MainActivity extends Activity {
         web = new WebView(this);
         web.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+                Log.i("NURVAN_BOOT", "Page started: " + url);
+            }
+
+            @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
+                Log.i("NURVAN_BOOT", "Page finished: " + url);
                 if (lastPickedDocument != null) {
                     dispatchPickedDocumentToWeb();
                 }
+            }
+
+            @Override
+            public void onReceivedError(WebView view, android.webkit.WebResourceRequest request, android.webkit.WebResourceError error) {
+                super.onReceivedError(view, request, error);
+                if (request != null && request.isForMainFrame()) {
+                    Log.e("NURVAN_BOOT", "Main frame error: " + (error != null ? error.getDescription() : "unknown"));
+                }
+            }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
+                Log.e("NURVAN_BOOT", "WebView render process gone. Did crash: " + (detail != null && detail.didCrash()));
+                if (web != null) {
+                    web.destroy();
+                    web = null;
+                }
+                runOnUiThread(() -> recreate());
+                return true;
             }
         });
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
-        s.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        s.setDatabaseEnabled(true);
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
         applyReadableViewport(s);
         s.setAllowFileAccess(true);
+        s.setAllowContentAccess(true);
         //noinspection deprecation
         s.setAllowFileAccessFromFileURLs(true);
         //noinspection deprecation
@@ -243,7 +271,16 @@ public class MainActivity extends Activity {
 
             @Override
             public boolean onConsoleMessage(ConsoleMessage message) {
-                Log.d("GiammariaWebView", message.message() + " (" + message.sourceId() + ":" + message.lineNumber() + ")");
+                if (message != null && message.message() != null) {
+                    String msg = message.message();
+                    if (msg.contains("[BOOT]") || msg.contains("[INIT]") || msg.contains("NURVAN_BOOT")) {
+                        Log.i("NURVAN_BOOT", "JS: " + msg);
+                    } else if (message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                        Log.e("NURVAN_BOOT", "JS Error: " + msg + " (" + message.sourceId() + ":" + message.lineNumber() + ")");
+                    } else {
+                        Log.d("GiammariaWebView", msg + " (" + message.sourceId() + ":" + message.lineNumber() + ")");
+                    }
+                }
                 return true;
             }
         });

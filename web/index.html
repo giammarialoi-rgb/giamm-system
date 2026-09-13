@@ -1362,7 +1362,39 @@ body.focus-mode [data-rewards-only] {
 </style>
   <script src="xlsx.full.min.js"></script>
   <script src="peerjs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" onerror="console.warn('tesseract.js CDN unavailable — OCR fallback active')"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer onerror="console.warn('tesseract.js CDN unavailable — OCR fallback active')"></script>
+  <script>
+  (function() {
+    window.__nurvanBootState = { stage: 'BOOT', ready: false, ts: Date.now() };
+    window.__updateBootProgress = function(pct, label) {
+      try {
+        var fill = document.getElementById('splash-bar-fill');
+        var pctEl = document.getElementById('splash-load-pct');
+        var lab = document.getElementById('splash-load-label');
+        var p = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
+        if (fill) fill.style.width = p + '%';
+        if (pctEl) pctEl.textContent = p + '%';
+        if (lab && label) lab.textContent = String(label).toUpperCase();
+      } catch (_) {}
+    };
+    window.__nurvanWatchdog = setTimeout(function() {
+      if (!window.__nurvanBootState.ready) {
+        console.warn('[NURVAN_BOOT] Boot watchdog fired (3.5s safe-mode fallback)');
+        window.__nurvanBootState.ready = true;
+        window.__updateBootProgress(100, 'PRONTO');
+        var splash = document.getElementById('splash');
+        if (splash) {
+          splash.style.opacity = '0';
+          splash.style.pointerEvents = 'none';
+          setTimeout(function() {
+            if (splash) splash.style.display = 'none';
+            try { if (typeof render === 'function') render(); } catch (e) { console.error('[NURVAN_BOOT] fallback render', e); }
+          }, 150);
+        }
+      }
+    }, 3500);
+  })();
+  </script>
 </head>
 <body>
 
@@ -42638,8 +42670,8 @@ function exerciseMatchesMuscleGroup(exerciseName, movement, explicitGroups, sele
 }
 
 async function init() {
-  console.log('[INIT] Starting NURVAN bootstrap...');
-  setSplashProgress(12, 'Bootstrap…');
+  console.log('[NURVAN_BOOT] Starting local-first bootstrap...');
+  setSplashProgress(20, 'Bootstrap…');
   try {
     if (!window.__nurvanPressFeedbackBound) {
       window.__nurvanPressFeedbackBound = true;
@@ -42657,16 +42689,20 @@ async function init() {
     }
   } catch (_) {}
   
-  // 1. Safety Timeout: Splash screen ALWAYS dismisses within 2.5 seconds
+  // Safety Timeout: Splash screen ALWAYS dismisses within 2.5 seconds
   const splashTimer = setTimeout(() => {
-    console.warn('[INIT] Splash safety timer triggered (2.5s fallback)');
+    console.warn('[NURVAN_BOOT] Splash safety timer triggered (2.5s fallback)');
     finishInit();
   }, 2500);
 
   try {
-    // 2. Initialize Persistence Core 2.0 (IndexedDB)
+    setSplashProgress(35, 'Inizializzazione storage…');
+    // Initialize Persistence Core 2.0 (IndexedDB) with timeout guard
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.init) {
-      await GiammariaPersistence.init().catch(err => console.warn('[INIT IDB Warning]', err));
+      await Promise.race([
+        GiammariaPersistence.init(),
+        new Promise(res => setTimeout(res, 1200))
+      ]).catch(err => console.warn('[NURVAN_BOOT IDB Warning]', err));
     }
 
     // Seed offline pharmacological catalog (brand + active ingredient)
@@ -42677,11 +42713,11 @@ async function init() {
           : [];
         if (!existing || !existing.length || existing.length < DRUG_CATALOG.length) {
           await GiammariaPersistence.saveDrugDatabase(DRUG_CATALOG);
-          console.log('[INIT] Drug catalog seeded:', DRUG_CATALOG.length);
+          console.log('[NURVAN_BOOT] Drug catalog seeded:', DRUG_CATALOG.length);
         }
       }
     } catch (drugErr) {
-      console.warn('[INIT] Drug catalog seed skipped', drugErr);
+      console.warn('[NURVAN_BOOT] Drug catalog seed skipped', drugErr);
     }
 
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.getLatestCheckIn) {
@@ -42701,7 +42737,7 @@ async function init() {
 
     const wiped = await ensureFactoryCleanBoot();
     if (wiped) {
-      console.log('[INIT] Clean boot applied — empty training/nutrition/therapy for new user');
+      console.log('[NURVAN_BOOT] Clean boot applied — empty training/nutrition/therapy for new user');
       if (typeof I18nService !== 'undefined' && I18nService.init) {
         I18nService.init();
       }
@@ -42712,14 +42748,9 @@ async function init() {
     }
 
     if (typeof isClientStorageContext === 'function' && isClientStorageContext()) {
-      console.log('[INIT] Client/invite context: skip personal IDB/program restore');
-      store.__cpClientScoped = true;
-      closePersonalRecoveryUi();
-      const hasClientProg = !!(store.activeProgram && Array.isArray(store.activeProgram.weeks) && store.activeProgram.weeks.length);
-      if (hasClientProg) {
-        DATA = typeof normalizeProgram === 'function' ? normalizeProgram(store.activeProgram) : store.activeProgram;
-      } else {
-        emptyClientTrainingState();
+      DATA = normalizeProgram(store.activeProgram || { title: 'Programma Atleta', weeks: [] });
+      if (typeof syncClientTrainingState === 'function') {
+        await syncClientTrainingState();
       }
       if (typeof I18nService !== 'undefined' && I18nService.init) I18nService.init();
       setSplashProgress(70, 'Spazio cliente…');
@@ -42728,26 +42759,26 @@ async function init() {
       return;
     }
 
-    setSplashProgress(35, 'Lingua e preferenze…');
+    setSplashProgress(50, 'Lingua e preferenze…');
     if (typeof I18nService !== 'undefined' && I18nService.init) {
       I18nService.init();
     }
 
-    setSplashProgress(50, 'Libreria programmi…');
-    await syncProgramLibraryFromIdb();
+    setSplashProgress(65, 'Libreria programmi…');
+    await syncProgramLibraryFromIdb().catch(err => console.warn('[NURVAN_BOOT library sync]', err));
 
-    // Restore workout logs from IDB if localStorage has none (dual-write migration)
-    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadWorkoutLogsSnapshot) {
+    // Restore workout logs from IDB if localStorage is empty or outdated
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.getWorkoutLogsSnapshot) {
       try {
-        const logSnap = await GiammariaPersistence.loadWorkoutLogsSnapshot();
-        const localKeys = Object.keys(store.data || {}).length;
-        if (logSnap && logSnap.data && localKeys === 0 && Object.keys(logSnap.data).length > 0) {
+        const logSnap = await GiammariaPersistence.getWorkoutLogsSnapshot();
+        const localKeys = store.data ? Object.keys(store.data).length : 0;
+        if (logSnap && logSnap.data && Object.keys(logSnap.data).length > localKeys) {
           store.data = logSnap.data;
           store.customSets = logSnap.customSets || store.customSets || {};
-          store.bw = Object.assign({}, store.bw || {}, logSnap.bw || {});
-          if (Array.isArray(logSnap.logs) && logSnap.logs.length && !(store.logs && store.logs.length)) store.logs = logSnap.logs;
-          if (logSnap.health) store.health = Object.assign({}, store.health || {}, logSnap.health);
-          console.log('[INIT] Restored workout logs from IndexedDB');
+          store.bw = logSnap.bw || store.bw || {};
+          store.logs = logSnap.logs || store.logs || [];
+          if (logSnap.health) store.health = logSnap.health;
+          console.log('[NURVAN_BOOT] Restored workout logs from IndexedDB');
         } else if (localKeys > 0 && GiammariaPersistence.saveWorkoutLogsSnapshot) {
           GiammariaPersistence.saveWorkoutLogsSnapshot({
             data: store.data,
@@ -42761,22 +42792,22 @@ async function init() {
           store.logs = logSnap.logs;
         }
       } catch (logErr) {
-        console.warn('[INIT] Workout log IDB restore skipped:', logErr);
+        console.warn('[NURVAN_BOOT] Workout log IDB restore skipped:', logErr);
       }
     }
 
-    // 3. Try loading active program from IndexedDB
+    // Try loading active program from IndexedDB
     let activeProg = null;
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadActiveProgram) {
       try {
         activeProg = await GiammariaPersistence.loadActiveProgram();
       } catch (idbErr) {
-        console.warn('[INIT] Could not load active program from IDB:', idbErr);
+        console.warn('[NURVAN_BOOT] Could not load active program from IDB:', idbErr);
       }
     }
 
     if (activeProg && Array.isArray(activeProg.weeks) && activeProg.weeks.length > 0) {
-      console.log('[INIT] Successfully loaded active program from IndexedDB:', activeProg.title);
+      console.log('[NURVAN_BOOT] Successfully loaded active program from IndexedDB:', activeProg.title);
       const trainingPayload = activeProg.training || activeProg;
       DATA = normalizeProgram(trainingPayload);
       // Restore multi-domain data ONLY from the active program envelope (never orphan IDB leftovers)
@@ -42811,7 +42842,7 @@ async function init() {
           DATA.exams = null; store.exams = null;
         }
       } catch (domErr) {
-        console.warn('[INIT] Domain restore warning:', domErr);
+        console.warn('[NURVAN_BOOT] Domain restore warning:', domErr);
       }
       // Coach-applied nutrition may live in dedicated IDB store (guarded against cleared nutrition)
       try {
@@ -42835,7 +42866,7 @@ async function init() {
           }
         }
       } catch (orphanErr) {
-        console.warn('[INIT] Orphan domain restore:', orphanErr);
+        console.warn('[NURVAN_BOOT] Orphan domain restore:', orphanErr);
       }
       store.activeProgram = DATA;
       store.activeProgramId = activeProg.id || store.activeProgramId;
@@ -42845,9 +42876,9 @@ async function init() {
       return;
     }
 
-    // 4. Fallback to localStorage activeProgram (legacy migration)
+    // Fallback to localStorage activeProgram (legacy migration)
     if (store && store.activeProgram && Array.isArray(store.activeProgram.weeks) && store.activeProgram.weeks.length > 0) {
-      console.log('[INIT] Loaded active program from legacy store');
+      console.log('[NURVAN_BOOT] Loaded active program from legacy store');
       DATA = normalizeProgram(store.activeProgram);
       if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
         GiammariaPersistence.saveProgram(DATA, true).catch(console.warn);
@@ -42857,12 +42888,15 @@ async function init() {
       return;
     }
 
-    // 5. Fallback to bundled data.json (supports HTTP 200 and file:/// status 0)
+    // Fallback to bundled data.json (supports HTTP 200 and file:/// status 0)
     let loadedFromDataJson = false;
     try {
       if (typeof fetch !== 'undefined') {
-        const resp = await fetch('data.json');
-        if (resp.ok || resp.status === 0) {
+        const resp = await Promise.race([
+          fetch('data.json'),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 1000))
+        ]);
+        if (resp && (resp.ok || resp.status === 0)) {
           const json = await resp.json();
           if (json && Array.isArray(json.weeks) && json.weeks.length > 0) {
             DATA = normalizeProgram(json);
@@ -42871,7 +42905,7 @@ async function init() {
         }
       }
     } catch (fetchErr) {
-      console.warn('[INIT] fetch(data.json) error, trying XHR:', fetchErr);
+      console.warn('[NURVAN_BOOT] fetch(data.json) error, trying XHR:', fetchErr);
     }
 
     if (!loadedFromDataJson && typeof XMLHttpRequest !== 'undefined') {
@@ -42891,28 +42925,28 @@ async function init() {
                 }
               }
             } catch (xhrErr) {
-              console.warn('[INIT] XHR data.json parse error:', xhrErr);
+              console.warn('[NURVAN_BOOT] XHR data.json parse error:', xhrErr);
             }
             resolve();
           }
         };
         xhr.onerror = function () { resolve(); };
         xhr.ontimeout = function () { resolve(); };
-        xhr.timeout = 1500;
+        xhr.timeout = 1000;
         xhr.send();
       });
     }
 
     if (loadedFromDataJson && DATA) {
-      console.log('[INIT] Loaded default program from data.json');
+      console.log('[NURVAN_BOOT] Loaded default program from data.json');
       clearTimeout(splashTimer);
       finishInit();
       return;
     }
 
-    // 6. Safe Empty Fallback Shell
+    // Safe Empty Fallback Shell
     if (!DATA) {
-      console.log('[INIT] No active program found, initializing empty program shell');
+      console.log('[NURVAN_BOOT] No active program found, initializing empty program shell');
       DATA = { title: "Nessun Programma Attivo", weeks: [], nutrition: null, supplementation: null, therapy: null, exams: null };
     }
     DATA.nutrition = null;
@@ -42927,7 +42961,7 @@ async function init() {
     clearTimeout(splashTimer);
     finishInit();
   } catch (globalErr) {
-    console.error('[INIT_FATAL_RECOVERY]', globalErr);
+    console.error('[NURVAN_BOOT][FATAL_RECOVERY]', globalErr);
     if (!DATA) {
       DATA = { title: "Nessun Programma Attivo", weeks: [] };
     }
@@ -42935,6 +42969,7 @@ async function init() {
     finishInit();
   }
 }
+
 function setSplashProgress(pct, label) {
   const p = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
   const fill = $('splash-bar-fill');
@@ -42946,26 +42981,54 @@ function setSplashProgress(pct, label) {
 }
 
 function finishInit() {
-  setSplashProgress(85, 'Avvio interfaccia…');
-  seedExerciseDatabase();
-  updateAccountButton();
+  if (window.__nurvanBootState && window.__nurvanBootState.ready) return;
+  if (window.__nurvanWatchdog) clearTimeout(window.__nurvanWatchdog);
+  if (window.__nurvanBootState) {
+    window.__nurvanBootState.ready = true;
+    window.__nurvanBootState.stage = 'READY';
+  }
+
+  setSplashProgress(90, 'Avvio interfaccia…');
+  try { seedExerciseDatabase(); } catch (_) {}
+  try { updateAccountButton(); } catch (_) {}
   try { hydrateGoogleClientId(); } catch (_) {}
   try { loadProgramCatalogIndex(); } catch (_) {}
+
   const splash = $('splash');
   if (splash) splash.style.pointerEvents = 'none';
-  setSplashProgress(95, 'Quasi pronto…');
+  setSplashProgress(100, 'Pronto');
+
+  if (splash) {
+    splash.style.opacity = '0';
+    splash.style.pointerEvents = 'none';
+  }
+
   setTimeout(function () {
-    setSplashProgress(92, 'Allineo i tuoi allenamenti…');
-    console.info('[BOOT] align start');
-    let hydrated = false;
-    const afterHydrate = function (alignState) {
-      if (hydrated) return;
-      hydrated = true;
-      window.__bootAligning = false;
-      console.info('[BOOT] align ' + (alignState || 'ok'));
+    if (splash) splash.style.display = 'none';
+    try {
+      try { classifyActiveProgramMuscles(); } catch (_) {}
+      render();
+      applyChromeI18n();
+      try { applyFocusUi(); } catch (_) {}
+      try { maybeShowRewardsOnboarding(); } catch (_) {}
+      try { maybeShowIosInstallHint(); } catch (_) {}
+      try { scheduleAllItemAlerts(); } catch (_) {}
+      try { registerNurvanServiceWorker(); } catch (_) {}
+      try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
+      try {
+        if (typeof tryAutoRestorePersonalSchedaOnBoot === 'function') {
+          Promise.resolve(tryAutoRestorePersonalSchedaOnBoot()).catch(function () {});
+        }
+      } catch (_) {}
+    } catch (uiErr) {
+      console.error('[NURVAN_BOOT] first render error', uiErr);
+    }
+
+    // Non-blocking background network synchronization (Local-First)
+    setTimeout(function () {
       try {
         const pathNow = (typeof location !== 'undefined' && location.pathname) || '';
-        const onClientPath = /^\/c\//.test(pathNow);
+        const onClientPath = pathNow.startsWith('/c/');
         const athlete = !!(store && (
           store.role === 'athlete' ||
           (store.accountUser && store.accountUser.role === 'athlete') ||
@@ -42975,63 +43038,27 @@ function finishInit() {
         if (onClientPath && store && (store.inviteToken || store.clientShell)) persistNurvanAppMode('client', store.inviteToken);
         else if (store && store.accountToken && !athlete) persistNurvanAppMode('master');
       } catch (_) {}
-      setSplashProgress(100, 'Pronto');
-      if (splash) {
-        splash.style.opacity = '0';
-        splash.style.pointerEvents = 'none';
+
+      const canPull = !!(store && store.accountToken && typeof syncAccountData === 'function' && !store.coachViewingClient && !store.coachAssigning);
+      if (canPull) {
+        Promise.race([
+          Promise.resolve(syncAccountData(true)),
+          new Promise(res => setTimeout(res, 5000))
+        ]).catch(function (err) {
+          console.warn('[NURVAN_BOOT] background syncAccountData notice', err && (err.message || err));
+        });
       }
-      setTimeout(function () {
-        if (splash) splash.style.display = 'none';
-        try {
-          try { classifyActiveProgramMuscles(); } catch (_) {}
-          render();
-          applyChromeI18n();
-          try { applyFocusUi(); } catch (_) {}
-          try { maybeShowRewardsOnboarding(); } catch (_) {}
-          try { maybeShowIosInstallHint(); } catch (_) {}
-          try { scheduleAllItemAlerts(); } catch (_) {}
-          try { registerNurvanServiceWorker(); } catch (_) {}
-          try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
-          try {
-            if (typeof tryAutoRestorePersonalSchedaOnBoot === 'function') {
-              Promise.resolve(tryAutoRestorePersonalSchedaOnBoot()).catch(function () {});
-            }
-          } catch (_) {}
-        } catch (uiErr) {
-          console.error('[BOOT] first render', uiErr);
-        }
-        try {
-          if (typeof bootCoachPractice === 'function') {
-            Promise.race([
-              Promise.resolve(bootCoachPractice()),
-              new Promise(function (res) {
-                setTimeout(function () { console.warn('[BOOT] practice timeout'); res(); }, 8000);
-              })
-            ]).catch(function (err) { console.warn('[BOOT] practice', err && err.message); });
-          }
-        } catch (bootErr) {
-          console.warn('[BOOT] practice start', bootErr);
-        }
-      }, 200);
-    };
-    const canPull = !!(store.accountToken && typeof syncAccountData === 'function' && !store.coachViewingClient && !store.coachAssigning);
-    if (!canPull) {
-      afterHydrate('skip');
-      return;
-    }
-    window.__bootAligning = true;
-    const ALIGN_MS = 8000;
-    Promise.race([
-      Promise.resolve(syncAccountData(true)).then(function () { return 'ok'; }),
-      new Promise(function (res) { setTimeout(function () { res('timeout'); }, ALIGN_MS); })
-    ]).then(function (state) {
-      afterHydrate(state);
-    }).catch(function (err) {
-      console.warn('[BOOT] align error', err && (err.message || err));
-      afterHydrate('error');
-    });
-  }, 280);
+
+      if (typeof bootCoachPractice === 'function') {
+        Promise.race([
+          Promise.resolve(bootCoachPractice()),
+          new Promise(res => setTimeout(res, 5000))
+        ]).catch(function (err) { console.warn('[NURVAN_BOOT] practice notice', err && err.message); });
+      }
+    }, 150);
+  }, 180);
 }
+
 function persist() {
   ensureStoreIntegrity();
   try {
@@ -44578,7 +44605,7 @@ function openMealTargetModal(preselectedMealName) {
     optionsBox.innerHTML = allOptions.map(name => {
       const icon = mealIcons[name] || '🍽️';
       const isPre = preselectedMealName && preselectedMealName.toLowerCase() === name.toLowerCase();
-      return '<button type="button" class="btn ' + (isPre ? 'btn-primary' : 'btn-outline') + '" style="padding:10px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:10px;justify-content:flex-start;text-align:left;border-radius:8px;' + (isPre ? '' : 'border-color:#333;color:#eee;') + '" onclick="selectMealTarget('' + esc(name).replace(/'/g, "\'") + '')">' +
+      return '<button type="button" class="btn ' + (isPre ? 'btn-primary' : 'btn-outline') + '" style="padding:10px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:10px;justify-content:flex-start;text-align:left;border-radius:8px;' + (isPre ? '' : 'border-color:#333;color:#eee;') + '" onclick="selectMealTarget(' + JSON.stringify(name).replace(/"/g, '&quot;') + ')">' +
         '<span style="font-size:16px;">' + icon + '</span>' +
         '<span>' + esc(name) + '</span>' +
         '</button>';
@@ -45138,7 +45165,7 @@ function mealPhotoDraftRowHtml(item) {
     candidatesHtml = '<div style="margin-top:4px;font-size:10px;color:#aaa;display:flex;align-items:center;gap:4px;flex-wrap:wrap;">' +
       '<span>Alternative:</span>' +
       candidates.slice(0, 3).map(function (c) {
-        return '<button type="button" class="btn btn-outline" style="padding:1px 6px;font-size:9px;border-color:#555;color:#bbb;" onclick="switchDraftItemFood(this, '' + esc(c.name).replace(/'/g, "\'") + '')">' +
+        return '<button type="button" class="btn btn-outline" style="padding:1px 6px;font-size:9px;border-color:#555;color:#bbb;" onclick="switchDraftItemFood(this, ' + JSON.stringify(c.name).replace(/"/g, '&quot;') + ')">' +
           esc(c.name) + ' (' + Math.round((c.confidence || 0.5) * 100) + '%)' +
         '</button>';
       }).join('') +
