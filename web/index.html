@@ -45248,6 +45248,8 @@ function promptToastFilling(btn) {
     if (typeof showToast === 'function') showToast('Toast aggiornato: ' + newName, 'info');
   }
 }
+// Referenced from an inline onclick="" string, which resolves against window.
+window.promptToastFilling = promptToastFilling;
 
 function addMealPhotoDraftRow() {
   const box = document.getElementById('meal-photo-items');
@@ -45266,47 +45268,14 @@ function removeMealPhotoDraftRow(btn) {
   }
 }
 
-function switchDraftItemFood(btn, candidateName) {
-  const row = btn && btn.closest('[data-meal-photo-row]');
-  if (!row || !candidateName) return;
-  const nameInput = row.querySelector('[data-f="name"]');
-  if (nameInput) nameInput.value = candidateName;
-
-  const resolved = resolveFoodDatabaseMacros(candidateName);
-  if (resolved) {
-    const qty = parseFloat((row.querySelector('[data-f="qty"]') || {}).value) || 100;
-    const factor = qty / 100;
-    const kcalInput = row.querySelector('[data-f="kcal"]');
-    const proInput = row.querySelector('[data-f="pro"]');
-    const carbInput = row.querySelector('[data-f="carb"]');
-    const fatInput = row.querySelector('[data-f="fat"]');
-    if (kcalInput) kcalInput.value = Math.round(resolved.kcal * factor);
-    if (proInput) proInput.value = Math.round(resolved.protein * factor * 10) / 10;
-    if (carbInput) carbInput.value = Math.round(resolved.carbs * factor * 10) / 10;
-    if (fatInput) fatInput.value = Math.round(resolved.fats * factor * 10) / 10;
-  }
-  recalculateDraftTotals();
-  if (typeof showToast === 'function') showToast('Alimento aggiornato: ' + candidateName, 'info');
-}
-
-function startBarcodeFusionForDraftRow(btn) {
-  const row = btn && btn.closest('[data-meal-photo-row]');
-  if (!row) return;
-  const rowId = 'meal_row_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-  row.setAttribute('data-target-row-id', rowId);
-  window.__activeBarcodeTargetRow = row;
-
-  if (typeof openLiveBarcodeScanner === 'function') {
-    openLiveBarcodeScanner('food_draft_row', rowId);
-  } else {
-    const manualCode = prompt('Inserisci o scansiona il barcode del prodotto:');
-    if (manualCode) {
-      if (typeof window.onNativeBarcodeScanned === 'function') {
-        window.onNativeBarcodeScanned(manualCode.trim(), 'food_draft_row', rowId);
-      }
-    }
-  }
-}
+// switchDraftItemFood/startBarcodeFusionForDraftRow are defined further down
+// (near the barcode-fusion code), where they integrate correctly with
+// fuseBarcodeWithDraftRow/__barcodeTargetFusionRow. An earlier duplicate pair
+// used to live here; it called a nonexistent resolveFoodDatabaseMacros()
+// helper and a mismatched __activeBarcodeTargetRow global, and was always
+// shadowed at runtime by the later declarations anyway (function
+// declarations in the same scope resolve to whichever comes last in source
+// order), so it was removed rather than fixed.
 
 function mealPhotoFoodsFromDraft() {
   const box = document.getElementById('meal-photo-items');
@@ -53916,10 +53885,11 @@ function addLastScannedFoodToDiary() {
   if ($('food-qty-input') && p.servingGrams) $('food-qty-input').value = p.servingGrams;
   window.activeSelectedFoodRef = p;
 }
-// Referenced from an inline onclick="" string, which resolves identifiers
-// against window - a plain top-level declaration alone wasn't reaching it
-// (this file has a pre-existing duplicate-function-block issue, see the
-// switchDraftItemFood/startBarcodeFusionForDraftRow dupes below).
+// The whole app script is wrapped in one strict-mode IIFE (see
+// build_master25.mjs), so a plain top-level `function foo(){}` is local to
+// that closure, not a real global - anything invoked from an inline
+// onclick="" string (which resolves against window) needs an explicit
+// window.X = X assignment like this one.
 window.addLastScannedFoodToDiary = addLastScannedFoodToDiary;
 
 function showBarcodeNotFoundModal(code, kind) {
