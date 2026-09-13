@@ -16,7 +16,7 @@ assert.ok(!html.includes('id="pdf-inc-logged"'), "old auto-checked load boxes ar
 assert.ok(html.includes("startFreshPage();") && html.includes("headerDay ="), "each training day starts a page and repeats title");
 
 assert.ok(api.includes("function slimCoachContext"), "server slims chat context");
-assert.ok(api.includes("Gemini chat first attempt failed"), "server retries Gemini");
+assert.ok(api.includes("generateContentWithRetry") && api.includes("isRetryableGeminiError"), "server retries Gemini with backoff");
 assert.ok(api.includes('status(503)') && api.includes("AI_UNAVAILABLE"), "missing key is 503 not 500");
 
 assert.ok(html.includes("function restoreClientShellSync"), "client shell restored before first render");

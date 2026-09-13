@@ -64,6 +64,16 @@ app.use(
     keyPrefix: "meal-photo"
   })
 );
+app.use(
+  ["/api/chat", "/coach", "/api/coach"],
+  createFixedWindowRateLimiter({
+    windowMs: 60_000,
+    max: Number(process.env.CHAT_RATE_LIMIT_MAX || 30),
+    keyPrefix: "chat",
+    code: "AI_RATE_LIMITED",
+    message: "Troppe richieste al Coach AI. Attendi qualche secondo e riprova."
+  })
+);
 
 import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
@@ -611,6 +621,54 @@ function getClient() {
     });
   }
   return new GoogleGenAI({ apiKey });
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function geminiErrorStatus(err) {
+  return Number(err?.status || err?.statusCode || err?.response?.status || err?.cause?.status) || null;
+}
+
+function isRetryableGeminiError(err) {
+  const status = geminiErrorStatus(err);
+  if (status === 429 || status === 500 || status === 503 || status === 504) return true;
+  const msg = String(err?.message || "");
+  return /RESOURCE_EXHAUSTED|UNAVAILABLE|overloaded|ECONNRESET|ETIMEDOUT|ENOTFOUND|network/i.test(msg);
+}
+
+// Maps a Gemini failure (after retries are exhausted) to the AI_* codes the
+// web client already knows how to render as friendly Italian messages.
+function classifyGeminiError(err) {
+  const status = geminiErrorStatus(err);
+  const msg = String(err?.message || "");
+  if (status === 429 || /RESOURCE_EXHAUSTED/i.test(msg)) {
+    return /quota/i.test(msg) ? "AI_QUOTA_EXCEEDED" : "AI_RATE_LIMITED";
+  }
+  if (status === 503 || status === 504 || /UNAVAILABLE|overloaded/i.test(msg)) {
+    return "AI_PROVIDER_UNAVAILABLE";
+  }
+  return null;
+}
+
+async function generateContentWithRetry(ai, { model, partsAttempts, label }) {
+  const delaysMs = [0, 700, 1800];
+  let lastErr;
+  for (let attempt = 0; attempt < delaysMs.length; attempt++) {
+    if (delaysMs[attempt] > 0) {
+      await sleep(delaysMs[attempt] + Math.floor(Math.random() * 300));
+    }
+    const parts = partsAttempts[Math.min(attempt, partsAttempts.length - 1)];
+    try {
+      return await ai.models.generateContent({ model, contents: [{ role: "user", parts }] });
+    } catch (err) {
+      lastErr = err;
+      console.warn(`${label} attempt ${attempt + 1}/${delaysMs.length} failed`, err?.message || err);
+      if (!isRetryableGeminiError(err)) break;
+    }
+  }
+  throw lastErr;
 }
 
 function cloneWeekWithUniqueIds(templateWeek, newWeekNum) {
@@ -1882,24 +1940,12 @@ Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico
 
     const ai = getClient();
     const textPart = { text: input };
-    async function generateOnce(parts) {
-      return ai.models.generateContent({
-        model: MODEL,
-        contents: [{ role: "user", parts }]
-      });
-    }
-    let response;
-    try {
-      response = await generateOnce(imageParts.length ? [textPart, ...imageParts] : [textPart]);
-    } catch (firstErr) {
-      console.warn("Gemini chat first attempt failed", firstErr?.message || firstErr);
-      try {
-        response = await generateOnce([textPart]);
-      } catch (retryErr) {
-        console.error("Gemini chat retry failed", retryErr?.message || retryErr);
-        throw firstErr;
-      }
-    }
+    // First attempt keeps any images; retries drop them (in case the image
+    // payload itself is what's tripping the model) and back off between
+    // attempts so a transient 429/503 from Gemini gets a real gap before
+    // hammering it again.
+    const partsAttempts = imageParts.length ? [[textPart, ...imageParts], [textPart]] : [[textPart]];
+    const response = await generateContentWithRetry(ai, { model: MODEL, partsAttempts, label: "Gemini chat" });
 
     let replyText = response.text || "";
     let proposedAction = null;
@@ -1928,6 +1974,21 @@ Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico
       details: error?.details,
       stack: error?.stack
     });
+    const aiCode = classifyGeminiError(error);
+    if (aiCode) {
+      const friendlyMessage = aiCode === "AI_QUOTA_EXCEEDED"
+        ? "Hai esaurito la quota Coach AI del tuo piano. Riprova nel prossimo periodo o passa a un piano superiore."
+        : aiCode === "AI_RATE_LIMITED"
+        ? "Troppe richieste al Coach AI. Attendi qualche secondo e riprova."
+        : "Coach AI temporaneamente non disponibile. Allenamento e dati locali restano utilizzabili.";
+      const retryAfter = aiCode === "AI_PROVIDER_UNAVAILABLE" ? 5 : 10;
+      res.setHeader("Retry-After", String(retryAfter));
+      return res.status(aiCode === "AI_PROVIDER_UNAVAILABLE" ? 503 : 429).json({
+        error: friendlyMessage,
+        code: aiCode,
+        retryAfter
+      });
+    }
     return res.status(error?.statusCode || 500).json({
       error: "Coach interaction failed.",
       details: error?.message

@@ -40074,7 +40074,10 @@ async function readApiJson(response) {
     }
     const detail = (payload.detail && !looksHtml) ? (' — ' + payload.detail) : '';
     console.error('[Coach AI] server error', response.status, message, payload.detail || '');
-    throw new Error(`HTTP ${response.status}: ${message}${detail}`);
+    const apiErr = new Error(`HTTP ${response.status}: ${message}${detail}`);
+    if (payload.code) apiErr.code = payload.code;
+    if (payload.retryAfter) apiErr.retryAfter = payload.retryAfter;
+    throw apiErr;
   }
   if(!raw) throw new Error(`HTTP ${response.status}: risposta vuota del server`);
   if (looksHtml) throw new Error('Server non disponibile (' + response.status + '). Riprova tra poco.');

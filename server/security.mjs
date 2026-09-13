@@ -64,7 +64,9 @@ export function createFixedWindowRateLimiter({
   windowMs = 60_000,
   max = 60,
   keyPrefix = "generic",
-  key = requestIp
+  key = requestIp,
+  code = "RATE_LIMITED",
+  message = "Troppe richieste. Riprova tra poco."
 } = {}) {
   const buckets = new Map();
 
@@ -81,8 +83,8 @@ export function createFixedWindowRateLimiter({
       const retryAfter = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
       res.setHeader("Retry-After", String(retryAfter));
       return res.status(429).json({
-        error: "Troppe richieste. Riprova tra poco.",
-        code: "RATE_LIMITED",
+        error: message,
+        code,
         retryAfter
       });
     }
