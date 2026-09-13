@@ -57,6 +57,10 @@ import androidx.health.connect.client.PermissionController;
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
+import com.google.mlkit.vision.barcode.common.Barcode;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanner;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
 
 public class MainActivity extends Activity {
     private WebView web;
@@ -99,6 +103,7 @@ public class MainActivity extends Activity {
         s.setAllowUniversalAccessFromFileURLs(true);
         nativeConfig = new NativeConfig();
         web.addJavascriptInterface(nativeConfig, "NativeConfig");
+        web.addJavascriptInterface(nativeConfig, "Android");
         // Warm CredentialManager + TTS so first Google login / speak is not cold-start slow
         try { nativeConfig.warmAuthAndTts(); } catch (Exception ignored) {}
         // Ask for notification permission early (Android 13+)
@@ -185,13 +190,24 @@ public class MainActivity extends Activity {
                     if (checkSelfPermission(android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                         requestPermissions(new String[]{android.Manifest.permission.CAMERA}, 21);
                     }
-                    Intent cam = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
-                    Intent gallery = new Intent(Intent.ACTION_GET_CONTENT);
-                    gallery.addCategory(Intent.CATEGORY_OPENABLE);
-                    gallery.setType("image/*");
-                    Intent chooser = Intent.createChooser(gallery, "Foto barcode / documento");
-                    chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{ cam });
                     try {
+                        File dir = new File(getCacheDir(), "share");
+                        if (!dir.exists()) dir.mkdirs();
+                        File photo = new File(dir, "capture-" + System.currentTimeMillis() + ".jpg");
+                        cameraCaptureUri = FileProvider.getUriForFile(
+                                MainActivity.this,
+                                getPackageName() + ".fileprovider",
+                                photo
+                        );
+                        Intent cam = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+                        cam.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, cameraCaptureUri);
+                        cam.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+                        Intent gallery = new Intent(Intent.ACTION_GET_CONTENT);
+                        gallery.addCategory(Intent.CATEGORY_OPENABLE);
+                        gallery.setType("image/*");
+                        Intent chooser = Intent.createChooser(gallery, "Foto barcode / documento");
+                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{ cam });
                         startActivityForResult(chooser, FILECHOOSER_RESULTCODE);
                         return true;
                     } catch (Exception e) {
@@ -294,6 +310,82 @@ public class MainActivity extends Activity {
 
     /** Configuration only: API secrets must never be embedded in the APK. */
     private final class NativeConfig implements RecognitionListener, TextToSpeech.OnInitListener {
+        @JavascriptInterface
+        public boolean hasNativeBarcodeScanner() {
+            return true;
+        }
+
+        @JavascriptInterface
+        public void startBarcodeScanner(final String kind, final String targetRowId) {
+            runOnUiThread(() -> {
+                try {
+                    GmsBarcodeScannerOptions options = new GmsBarcodeScannerOptions.Builder()
+                        .setBarcodeFormats(
+                            Barcode.FORMAT_EAN_13,
+                            Barcode.FORMAT_EAN_8,
+                            Barcode.FORMAT_UPC_A,
+                            Barcode.FORMAT_UPC_E,
+                            Barcode.FORMAT_CODE_128,
+                            Barcode.FORMAT_CODE_39,
+                            Barcode.FORMAT_QR_CODE
+                        )
+                        .enableAutoZoom()
+                        .build();
+
+                    GmsBarcodeScanner scanner = GmsBarcodeScanning.getClient(MainActivity.this, options);
+                    scanner.startScan()
+                        .addOnSuccessListener(barcode -> {
+                            String rawValue = barcode != null ? barcode.getRawValue() : null;
+                            if (rawValue != null && !rawValue.isEmpty()) {
+                                try {
+                                    Vibrator v = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+                                    if (v != null) {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                            v.vibrate(VibrationEffect.createWaveform(new long[]{0, 50, 30, 50}, -1));
+                                        } else {
+                                            v.vibrate(50);
+                                        }
+                                    }
+                                } catch (Exception ignored) {}
+
+                                runOnUiThread(() -> {
+                                    String js = "if (typeof window.onNativeBarcodeScanned === 'function') { " +
+                                        "window.onNativeBarcodeScanned(" + JSONObject.quote(rawValue) + ", " + JSONObject.quote(kind != null ? kind : "nutrition") + ", " + JSONObject.quote(targetRowId != null ? targetRowId : "") + "); " +
+                                        "}";
+                                    web.evaluateJavascript(js, null);
+                                });
+                            }
+                        })
+                        .addOnCanceledListener(() -> {
+                            Log.i("NativeBarcode", "Barcode scan cancelled by user");
+                            runOnUiThread(() -> {
+                                String js = "if (typeof window.onNativeBarcodeCancelled === 'function') { " +
+                                    "window.onNativeBarcodeCancelled(" + JSONObject.quote(kind != null ? kind : "nutrition") + "); " +
+                                    "}";
+                                web.evaluateJavascript(js, null);
+                            });
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.w("NativeBarcode", "Barcode scan failed: " + e.getMessage());
+                            runOnUiThread(() -> {
+                                String js = "if (typeof window.onNativeBarcodeFailed === 'function') { " +
+                                    "window.onNativeBarcodeFailed(" + JSONObject.quote(e.getMessage() != null ? e.getMessage() : "Scanner non riuscito") + ", " + JSONObject.quote(kind != null ? kind : "nutrition") + "); " +
+                                    "}";
+                                web.evaluateJavascript(js, null);
+                            });
+                        });
+                } catch (Exception err) {
+                    Log.e("NativeBarcode", "Failed to launch GmsBarcodeScanner", err);
+                    runOnUiThread(() -> {
+                        String js = "if (typeof window.onNativeBarcodeFailed === 'function') { " +
+                            "window.onNativeBarcodeFailed(" + JSONObject.quote(err.getMessage() != null ? err.getMessage() : "Errore avvio scanner") + ", " + JSONObject.quote(kind != null ? kind : "nutrition") + "); " +
+                            "}";
+                        web.evaluateJavascript(js, null);
+                    });
+                }
+            });
+        }
+
         private SpeechRecognizer recognizer;
         private TextToSpeech textToSpeech;
         private CredentialManager credentialManager;
@@ -1239,6 +1331,9 @@ public class MainActivity extends Activity {
         }
         if (requestCode == FILECHOOSER_RESULTCODE) {
             Uri result = (intent == null || resultCode != RESULT_OK) ? null : intent.getData();
+            if (result == null && resultCode == RESULT_OK && cameraCaptureUri != null) {
+                result = cameraCaptureUri;
+            }
             boolean toWebView = uploadMessage != null;
             if (toWebView) {
                 uploadMessage.onReceiveValue(result != null ? new Uri[]{result} : null);

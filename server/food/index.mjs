@@ -212,9 +212,12 @@ export const COOKING_YIELD_FACTORS = {
   'spaghetti': 2.2,
   'penne': 2.2,
   'couscous': 2.4,
+  'cuscus': 2.4,
   'quinoa': 2.6,
   'oats': 2.8,
   'avena': 2.8,
+  'orzo': 2.5,
+  'farro': 2.4,
   'lentils': 2.4,
   'lenticchie': 2.4,
   'chickpeas': 2.4,
@@ -232,6 +235,12 @@ export const COOKING_YIELD_FACTORS = {
   'bistecca': 0.75,
   'pork': 0.75,
   'maiale': 0.75,
+  'porceddu': 0.70,
+  'porcetto': 0.70,
+  'capra': 0.70,
+  'agnello': 0.72,
+  'coniglio': 0.75,
+  'vitello': 0.78,
   'fish': 0.82,
   'pesce': 0.82,
   'salmon': 0.85,
@@ -518,6 +527,17 @@ export const MEAL_PHOTO_RESPONSE_SCHEMA = {
           fat: { type: 'number' },
           confidence: { type: 'number' },
           quantityConfidence: { type: 'number' },
+          candidates: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                confidence: { type: 'number' }
+              },
+              required: ['name', 'confidence']
+            }
+          },
           notes: { type: 'string' }
         },
         required: ['name', 'quantity', 'unit', 'kcal', 'confidence']
@@ -672,9 +692,18 @@ export function normalizeMealPhotoItem(raw) {
   const isRestaurantChain = Boolean(raw?.isRestaurantChain || (brand && /old wild|mcdonald|burger king|kfc|subway|poke house/i.test(brand)));
   const isPackagedProduct = Boolean(raw?.isPackagedProduct || (brand && !isRestaurantChain));
 
+  const candidates = Array.isArray(raw?.candidates) ? raw.candidates.map(c => ({
+    name: String(c.name || '').trim(),
+    confidence: Math.round(clampNum(c.confidence, 0, 1, 0.5) * 100) / 100
+  })).filter(c => c.name && c.name.toLowerCase() !== name.toLowerCase()) : [];
+
   let notes = String(raw?.notes || raw?.visualDescription || '').trim();
   if (hasNonEdibleParts && !/scarti|ossa/i.test(notes)) {
     notes = (notes ? notes + ' \u00B7 ' : '') + 'Ossa e scarti esclusi (' + visualGrams + 'g lordo -> ' + edibleGrams + 'g edibile)';
+  }
+  if (candidates.length > 0 && confidence < 0.85 && !notes.includes('alternative')) {
+    const candStr = 'Possibili alternative: ' + candidates.slice(0, 3).map(c => `${c.name} (${Math.round(c.confidence * 100)}%)`).join(', ');
+    notes = (notes ? notes + ' \u00B7 ' : '') + candStr;
   }
 
   return {
@@ -705,6 +734,7 @@ export function normalizeMealPhotoItem(raw) {
     fat,
     confidence,
     quantityConfidence,
+    candidates: candidates.length > 0 ? candidates : undefined,
     isUncertain,
     uncertain: isUncertain,
     notes
@@ -960,32 +990,35 @@ export function buildMealPhotoPrompt({ mealName = '', notes = '', locale = 'it' 
   const contextBlock = contextLines.length ? ('\n' + (isEn ? 'Context:' : 'Contesto utente:') + '\n' + contextLines.join('\n') + '\n') : '';
 
   if (isEn) {
-    return 'You are the Nurvan nutritional AI assistant and computer vision food tracking specialist.\n' +
-      'Analyze the meal photo and extract all food items into structured JSON strictly matching the schema.\n' +
+    return 'You are the Nurvan Universal Nutritional AI & Computer Vision specialist (Food Intelligence V5).\n' +
+      'Analyze the food image with deep multimodal reasoning and output structured JSON strictly adhering to the schema.\n' +
       contextBlock +
-      'CRITICAL RULES & ANTI-UNDERESTIMATION GUIDANCE:\n' +
-      '1. If no food is detected, set noFoodDetected: true, items: [], overallConfidence: 0.0.\n' +
-      '2. Restaurant chain: identify brands like Old Wild West, McDonald\'s, Burger King, KFC, Subway, Poke House.\n' +
-      '3. Raw/Cooked Intelligence (state): classify as raw, cooked, ready_to_eat, dried, frozen. For cooked food provide rawEquivalentGrams and estimatedCookedGrams.\n' +
-      '4. Portions: provide estimatedGrams, minGrams, maxGrams.\n' +
-      '5. Waste: if non-edible parts (bones, shells) exist, set hasNonEdibleParts: true and separate visualGrams and edibleGrams.\n' +
-      '6. Macros: calculate kcal, pro, carb, fat realistically.\n' +
-      '7. ANTI-UNDERESTIMATION: Do not underestimate portions or cooking oils.';
+      'COMPREHENSIVE MULTIMODAL REASONING GUIDELINES:\n' +
+      '1. NON-FOOD / BLUR: If no food or drink is present, strictly set noFoodDetected: true, items: [], overallConfidence: 0.0.\n' +
+      '2. GLOBAL FOOD ONTOLOGY & REGIONAL DISHES: Universal recognition across all culinary traditions (Italian regional dishes like porceddu, capra in umido, malloreddus, culurgiones, seadas, arancini, caponata, lasagna, pasta al forno, cacio e pepe; International cuisine like couscous, poke, sushi, ramen, tacos, curries; fast food and packaged goods).\n' +
+      '3. COMPOSITE FOOD DECOMPOSITION: Decompose composite foods (e.g. sandwiches, toast with turkey & gouda, multi-ingredient poke, casseroles) into their real constituent items with individual grams and macros.\n' +
+      '4. SEPARATION OF IDENTITY VS QUANTITY: Differentiate food identification confidence from portion weight confidence. Do not mark food identity low just because portion size is estimated.\n' +
+      '5. VISUAL EVIDENCE & TEXTURES: Inspect textures, grilling marks, browning, crust, visible fillings, sauces, oil sheen, plate diameter and cutlery scale.\n' +
+      '6. MULTI-CANDIDATE RANKING: If a dish appearance is ambiguous (e.g. pasta al forno vs pasticciata vs lasagna), provide top candidates in "candidates" array.\n' +
+      '7. RAW / COOKED INTELLIGENCE: Distinguish state (raw, cooked, ready_to_eat, dried, frozen). For cooked items, provide both estimatedCookedGrams and rawEquivalentGrams.\n' +
+      '8. NON-EDIBLE PARTS (WASTE): Separate visualGrams (gross with bones/shells/peel) and edibleGrams (net edible).\n' +
+      '9. ANTI-UNDERESTIMATION: Accurately estimate visible cooking oils, dressings, and calorie-dense ingredients.';
   }
 
-  return 'Sei l\'assistente di computer vision nutrizionale di Nurvan. Analizza l\'alimento e il pasto nell\'immagine fornita e restituisci un JSON strutturato che rispetta ESATTAMENTE lo schema richiesto.\n' +
+  return 'Sei lo specialista universale di Computer Vision Nutrizionale di Nurvan (Food Intelligence V5).\n' +
+    'Analizza l\'immagine del cibo con ragionamento multimodale approfondito e restituisci un JSON strutturato conforme allo schema.\n' +
     contextBlock +
-    'LINEE GUIDA OBBLIGATORIE & ANTI-SOTTOSTIMA:\n' +
-    '1. Se l\'immagine NON contiene cibo o bevande, imposta "noFoodDetected": true, "items": [], "overallConfidence": 0.0.\n' +
-    '2. Se è un prodotto di una catena (es. Old Wild West, McDonald\'s, Burger King, KFC, Subway, Poke House), indica il brand e imposta isRestaurantChain: true.\n' +
-    '3. Stato del cibo (state): distingui accuratamente tra \'raw\', \'cooked\', \'ready_to_eat\', \'dried\', \'frozen\'.\n' +
-    '   Per i cibi cotti, fornisci sia estimatedCookedGrams sia rawEquivalentGrams.\n' +
-    '4. Stima delle porzioni geometrica: fornisci sempre estimatedGrams, minGrams, maxGrams.\n' +
-    '5. Separazione scarti (hasNonEdibleParts): per ossa, lische, bucce spesse, indica visualGrams (lordo) e edibleGrams (edibile netto).\n' +
-    '6. SOTTOSTIMA: Evita la sottostima di grassi aggiunti, olio di cottura e porzioni dense.';
+    'LINEE GUIDA DI RAGIONAMENTO MULTIMODALE & ONTOLOGIA UNIVERSALE:\n' +
+    '1. NON-CIBO / FOTO NON CHIARA: Se l\'immagine non contiene cibo o bevande, imposta strictly "noFoodDetected": true, "items": [], "overallConfidence": 0.0.\n' +
+    '2. ONTOLOGIA GLOBALE & PIATTI REGIONALI: Riconoscimento universale di qualsiasi piatto o ingrediente (gastronomia italiana e regionale come porceddu/porcetto, capra in umido, malloreddus, culurgiones, seadas, arancini, caponata, lasagna, pasta al forno, pasta pasticciata, cacio e pepe, carbonara; cucina internazionale come couscous, poke, sushi, ramen, tacos, curry; catene fast food e confezionati).\n' +
+    '3. SCOMPOSIZIONE CIBI COMPOSTI: Se il pasto è un cibo composto (es. toast/panino con pane, fette di tacchino e formaggio Gouda; poke componibile; piatto misto carne e contorno), scomponilo nelle sue componenti reali con pesi e macronutrienti distinti.\n' +
+    '4. SEPARAZIONE IDENTITÀ VS QUANTITÀ: Non confondere l\'incertezza sulla grammatura con l\'identità del piatto. Se il cibo è chiaramente identificabile, mantieni "confidence" elevata (>=0.85) e imposta "quantityConfidence" appropriata con il range "minGrams" e "maxGrams".\n' +
+    '5. EVIDENZE VISIVE: Analizza consistenza visiva, crosta, doratura, grigliatura, panatura, sfogliatura, salse, lucentezza da olio di cottura, e usa piatto/posate come riferimento di scala geometrica.\n' +
+    '6. CANDIDATI MULTIPLI PER PIATTI AMBIGUI: Se un piatto presenta ambiguità visiva (es. pasta al forno vs pasticciata vs lasagna), inserisci le alternative plausibili nell\'array "candidates".\n' +
+    '7. RAW / COOKED INTELLIGENCE: Distingui accuratamente lo stato (raw, cooked, ready_to_eat, dried, frozen). Per cibi cotti che cambiano peso (pasta, riso, carne, pesce, patate, legumi), fornisci sia estimatedCookedGrams sia rawEquivalentGrams.\n' +
+    '8. SCARTI NON EDIBILI: Per cibi con ossa, lische, gusci o bucce spesse, imposta hasNonEdibleParts: true e separa visualGrams (lordo) ed edibleGrams (netto edibile).\n' +
+    '9. ANTI-SOTTOSTIMA: Non sottostimare grassi di cottura od oli visibili (se presenti, includi l\'olio come ingrediente distinto).';
 }
-
-
 
 export async function analyzeMealPhoto(input = {}, opts = {}) {
   const env = opts.env || input.env || process.env || {};

@@ -17,6 +17,7 @@ import {
   findChainItem,
   resolveBarcodeProduct,
   UNIVERSAL_BARCODE_CATALOG,
+  computeRawCookedEquivalence,
   fuseVisionAndBarcode
 } from './server/food/index.mjs';
 
@@ -539,6 +540,55 @@ ok(webBase.includes('fuseBarcodeWithDraftRow') && webBuilt.includes('fuseBarcode
 ok(webBase.includes('startBarcodeFusionForDraftRow') && webBuilt.includes('startBarcodeFusionForDraftRow'), 'V4.5: draft row barcode trigger button exists');
 ok(webBase.includes('BARCODE VERIFIED') && webBuilt.includes('BARCODE VERIFIED'), 'V4.5: BARCODE VERIFIED badge template exists');
 ok(webBase.includes('isCleared') && webBuilt.includes('isCleared'), 'V4.5: tombstone anti-resurrection guard exists in initData');
+
+
+// --- Running Food Intelligence V5 Tests ---
+console.log('\n--- Running Food Intelligence V5 Tests ---');
+
+// V5.1: Multi-candidate ranking and normalization
+const itemWithCandidates = normalizeMealPhotoItem({
+  name: 'Pasta pasticciata',
+  quantity: 250,
+  unit: 'g',
+  state: 'cooked',
+  kcal: 480,
+  pro: 22,
+  carb: 58,
+  fat: 18,
+  confidence: 0.78,
+  quantityConfidence: 0.82,
+  candidates: [
+    { name: 'Lasagna alla bolognese', confidence: 0.72 },
+    { name: 'Pasta al forno con besciamella', confidence: 0.65 }
+  ]
+});
+ok(Array.isArray(itemWithCandidates.candidates) && itemWithCandidates.candidates.length === 2, 'V5.1: preserves alternative candidates array');
+ok(itemWithCandidates.notes.includes('Possibili alternative') && itemWithCandidates.notes.includes('Lasagna alla bolognese'), 'V5.1: includes candidates in notes for uncertain item');
+
+// V5.2: Regional Italian cooking yield factors
+const porcedduEquiv = computeRawCookedEquivalence({ name: 'Porceddu arrosto', state: 'cooked', grams: 210 });
+ok(porcedduEquiv.cookingYieldFactor === 0.70 && porcedduEquiv.rawEquivalentGrams === 300, 'V5.2: Porceddu arrosto uses yield 0.70 (210g cooked -> 300g raw)');
+
+const capraEquiv = computeRawCookedEquivalence({ name: 'Capra in umido', state: 'cooked', grams: 210 });
+ok(capraEquiv.cookingYieldFactor === 0.70 && capraEquiv.rawEquivalentGrams === 300, 'V5.2: Capra in umido uses yield 0.70 (210g cooked -> 300g raw)');
+
+const farroEquiv = computeRawCookedEquivalence({ name: 'Farro lesso', state: 'cooked', grams: 240 });
+ok(farroEquiv.cookingYieldFactor === 2.4 && farroEquiv.rawEquivalentGrams === 100, 'V5.2: Farro lesso uses yield 2.4 (240g cooked -> 100g raw dry)');
+
+// V5.3: Prompt verification for Food Intelligence V5
+const v5Prompt = buildMealPhotoPrompt({ mealName: 'Pranzo Tipico', notes: 'Piatto tradizionale', locale: 'it' });
+ok(v5Prompt.includes('Food Intelligence V5'), 'V5.3: prompt identifies as Food Intelligence V5');
+ok(v5Prompt.includes('porceddu') && v5Prompt.includes('malloreddus') && v5Prompt.includes('culurgiones'), 'V5.3: prompt contains regional Italian food ontology');
+ok(v5Prompt.includes('SCOMPOSIZIONE CIBI COMPOSTI'), 'V5.3: prompt instructs composite meal decomposition');
+ok(v5Prompt.includes('SEPARAZIONE IDENTITÀ VS QUANTITÀ'), 'V5.3: prompt distinguishes food identity vs portion quantity');
+
+// V5.4: UI Backups and Native Android Callbacks
+const webBaseV5 = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
+const webBuiltV5 = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
+ok(webBaseV5.includes('onNativeBarcodeScanned') && webBuiltV5.includes('onNativeBarcodeScanned'), 'V5.4: window.onNativeBarcodeScanned callback is registered');
+ok(webBaseV5.includes('openNutritionBackupsModal') && webBuiltV5.includes('openNutritionBackupsModal'), 'V5.4: openNutritionBackupsModal exists for manual nutrition snapshot restore');
+ok(webBaseV5.includes('restoreNutritionBackup') && webBuiltV5.includes('restoreNutritionBackup'), 'V5.4: restoreNutritionBackup exists');
+ok(webBaseV5.includes('switchDraftItemFood') && webBuiltV5.includes('switchDraftItemFood'), 'V5.4: switchDraftItemFood allows 1-tap candidate switching');
 
 console.log('\nAll meal-photo tests passed.');
 

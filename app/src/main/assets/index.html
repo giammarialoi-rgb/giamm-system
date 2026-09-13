@@ -42673,7 +42673,8 @@ async function init() {
       try {
         const isNutrCleared = Boolean(
           (DATA && DATA.nutrition && (DATA.nutrition.cleared || DATA.nutrition.isCleared)) ||
-          (store && store.nutrition && (store.nutrition.cleared || store.nutrition.isCleared))
+          (store && store.nutrition && (store.nutrition.cleared || store.nutrition.isCleared)) ||
+          (typeof localStorage !== 'undefined' && localStorage.getItem('nurvan_nutrition_cleared_at'))
         );
         if (!isNutrCleared && (!DATA.nutrition || !(DATA.nutrition.days && DATA.nutrition.days.length)) && GiammariaPersistence.getNutrition) {
           const orphanNutr = await GiammariaPersistence.getNutrition();
@@ -43743,6 +43744,33 @@ function applyPersonalNutritionClear(ctx) {
   ctx = ctx || {};
   const data = ctx.DATA;
   const storeObj = ctx.store;
+  const nowIso = new Date().toISOString();
+  
+  // Create snapshot backup before clearing
+  try {
+    const prevNutr = (storeObj && storeObj.nutrition) || (data && data.nutrition);
+    if (prevNutr && !prevNutr.cleared && !prevNutr.isCleared && (prevNutr.present || (prevNutr.days && prevNutr.days.length))) {
+      if (storeObj) {
+        storeObj.nutritionBackups = storeObj.nutritionBackups || [];
+        storeObj.nutritionBackups.unshift({
+          id: 'nutr_bak_' + Date.now(),
+          createdAt: nowIso,
+          source: 'manual_clear',
+          planName: prevNutr.plan_name || 'Piano Alimentare',
+          dayCount: (prevNutr.days && prevNutr.days.length) || 0,
+          nutritionSnapshot: JSON.parse(JSON.stringify(prevNutr))
+        });
+        if (storeObj.nutritionBackups.length > 10) storeObj.nutritionBackups.length = 10;
+        try { localStorage.setItem('nurvan_nutrition_backups', JSON.stringify(storeObj.nutritionBackups)); } catch (_) {}
+      }
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('nurvan_nutrition_cleared_at', nowIso);
+    }
+  } catch (bakErr) {
+    console.warn('[CLEAR_NUTRITION] backup snapshot error', bakErr);
+  }
+
   const empty = (typeof emptyDomainShell === 'function')
     ? emptyDomainShell('nutrition')
     : {
@@ -43755,20 +43783,102 @@ function applyPersonalNutritionClear(ctx) {
       daily_fats_target: null,
       cleared: true,
       isCleared: true,
-      clearedAt: new Date().toISOString()
+      clearedAt: nowIso
     };
   empty.cleared = true;
   empty.isCleared = true;
-  if (!empty.clearedAt) empty.clearedAt = new Date().toISOString();
+  empty.clearedAt = nowIso;
   if (data) data.nutrition = empty;
   if (storeObj) {
     storeObj.nutrition = empty;
+    storeObj.nutritionClearedAt = nowIso;
     storeObj.__cpNutritionDirty = true;
     storeObj.__cpKeepLocalNutrition = true;
     storeObj.nutritionDaily = {};
   }
   return empty;
 }
+
+
+function openNutritionBackupsModal() {
+  const backups = (typeof store !== 'undefined' && store.nutritionBackups) || JSON.parse(localStorage.getItem('nurvan_nutrition_backups') || '[]');
+  if (!backups.length) {
+    if (typeof showToast === 'function') showToast('Nessun backup precedente dell\'alimentazione trovato.', 'info');
+    return;
+  }
+  const modal = document.createElement('div');
+  modal.id = 'nutrition-backups-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = '' +
+    '<div style="background:#181818;border:1px solid #333;border-radius:12px;padding:20px;max-width:440px;width:100%;max-height:85vh;overflow-y:auto;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+    '<div style="font-size:16px;font-weight:700;color:#fff;">\u{1F4E6} Backup Alimentazione</div>' +
+    '<button class="btn btn-outline" style="font-size:11px;padding:4px 8px;color:#888;" onclick="this.closest(\'#nutrition-backups-modal\').remove()">Chiudi</button>' +
+    '</div>' +
+    '<div style="font-size:12px;color:#aaa;margin-bottom:12px;">I backup vengono salvati automaticamente prima di ogni azzeramento. Puoi ripristinarne uno manualmente:</div>' +
+    '<div style="display:flex;flex-direction:column;gap:8px;">' +
+    backups.map(function (b, idx) {
+      const dateStr = b.createdAt ? new Date(b.createdAt).toLocaleString('it-IT') : 'Data sconosciuta';
+      return '<div style="padding:10px;background:#222;border:1px solid #333;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">' +
+        '<div>' +
+        '<div style="font-size:13px;font-weight:700;color:#00e5ff;">' + esc(b.planName || 'Piano Alimentare') + '</div>' +
+        '<div style="font-size:11px;color:#888;">' + dateStr + ' \u00B7 ' + (b.dayCount || 0) + ' giorni</div>' +
+        '</div>' +
+        '<button class="btn btn-primary" style="font-size:11px;padding:6px 10px;" onclick="restoreNutritionBackup(\'' + b.id + '\')">Ripristina</button>' +
+        '</div>';
+    }).join('') +
+    '</div></div>';
+  document.body.appendChild(modal);
+}
+window.openNutritionBackupsModal = openNutritionBackupsModal;
+
+async function restoreNutritionBackup(backupId) {
+  const backups = (typeof store !== 'undefined' && store.nutritionBackups) || JSON.parse(localStorage.getItem('nurvan_nutrition_backups') || '[]');
+  const targetBak = backups.find(b => b.id === backupId);
+  if (!targetBak || !targetBak.nutritionSnapshot) {
+    if (typeof showToast === 'function') showToast('Backup non valido o non trovato', 'danger');
+    return;
+  }
+  if (!confirm('Ripristinare il backup del ' + new Date(targetBak.createdAt).toLocaleString('it-IT') + '? Il piano attuale verra sovrascritto.')) return;
+  
+  const restored = JSON.parse(JSON.stringify(targetBak.nutritionSnapshot));
+  delete restored.cleared;
+  delete restored.isCleared;
+  delete restored.clearedAt;
+  restored.present = true;
+
+  if (typeof DATA !== 'undefined') DATA.nutrition = restored;
+  if (typeof store !== 'undefined') {
+    store.nutrition = restored;
+    delete store.nutritionClearedAt;
+    store.__cpNutritionDirty = true;
+    store.__cpKeepLocalNutrition = true;
+  }
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('nurvan_nutrition_cleared_at');
+  }
+
+  if (typeof persist === 'function') persist();
+  if (typeof GiammariaPersistence !== 'undefined') {
+    try {
+      if (GiammariaPersistence.saveNutrition) await GiammariaPersistence.saveNutrition(restored);
+      if (DATA && GiammariaPersistence.saveProgram) await GiammariaPersistence.saveProgram(DATA, true);
+    } catch (_) {}
+  }
+  if (typeof persistActiveProgramStructure === 'function') {
+    try { persistActiveProgramStructure(); } catch (_) {}
+  }
+  if (typeof syncAccountData === 'function' && store && store.accountToken) {
+    await syncAccountData(false);
+  }
+  if (typeof render === 'function') render();
+  
+  const modal = document.getElementById('nutrition-backups-modal');
+  if (modal) modal.remove();
+  
+  if (typeof showToast === 'function') showToast('Backup alimentazione ripristinato con successo!', 'success');
+}
+window.restoreNutritionBackup = restoreNutritionBackup;
 
 async function clearPersonalNutrition() {
   if (typeof store !== 'undefined' && store && store.coachViewingClient && typeof clearCoachClientDomain === 'function') {
@@ -44475,6 +44585,16 @@ function mealPhotoDraftRowHtml(item) {
     ? '<span style="font-size:9px;color:#ffb74d;background:#332200;padding:2px 5px;border-radius:4px;border:1px solid #885500;">\u{1F3EA} ' + esc(chainName || 'Catena') + ' (Ufficiale)</span>'
     : '';
 
+  let candidatesHtml = '';
+  if (Array.isArray(item.candidates) && item.candidates.length > 0) {
+    candidatesHtml = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center;">' +
+      '<span style="font-size:9px;color:#888;">Alternative:</span>' +
+      item.candidates.map(function (c) {
+        return '<button type="button" class="btn" style="font-size:9px;padding:2px 6px;background:#222;border:1px solid #444;color:#ddd;border-radius:10px;cursor:pointer;" onclick="switchDraftItemFood(this, \'' + esc(c.name).replace(/'/g, "\\'") + '\')">' + esc(c.name) + ' (' + Math.round((c.confidence || 0.5) * 100) + '%)</button>';
+      }).join('') +
+      '</div>';
+  }
+
   return '' +
     '<div data-meal-photo-row ' +
     'data-confidence="' + (Number.isFinite(conf) ? conf : 0.3) + '" ' +
@@ -44508,7 +44628,9 @@ function mealPhotoDraftRowHtml(item) {
     '<label style="font-size:9px;color:#4caf50;">P<input data-f="pro" type="number" value="' + esc(item.pro || 0) + '" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
     '<label style="font-size:9px;color:#2196f3;">C<input data-f="carb" type="number" value="' + esc(item.carb || 0) + '" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
     '<label style="font-size:9px;color:#ff9800;">F<input data-f="fat" type="number" value="' + esc(item.fat || 0) + '" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
-    '</div></div>';
+    '</div>' +
+    candidatesHtml +
+    '</div>';
 }
 
 function showMealPhotoConfirm(result) {
@@ -52562,6 +52684,27 @@ function decode1DBarcodeFromCanvas(canvas) {
 }
 
 async function openLiveBarcodeScanner(kind, targetFusionRow) {
+  // Check if Native Android Barcode Scanner is available (GmsBarcodeScanner / ML Kit)
+  if (typeof window !== 'undefined' && window.Android && typeof window.Android.startBarcodeScanner === 'function') {
+    console.log('[BARCODE] Invoking Android Native Barcode Scanner...');
+    window.__barcodeTargetFusionRow = targetFusionRow || null;
+    try {
+      window.Android.startBarcodeScanner(kind || 'nutrition', targetFusionRow ? (targetFusionRow.getAttribute('data-row-id') || 'target_row') : '');
+      return;
+    } catch (nErr) {
+      console.warn('[BARCODE_NATIVE_ERR] Falling back to WebRTC', nErr);
+    }
+  } else if (typeof window !== 'undefined' && window.NativeConfig && typeof window.NativeConfig.startBarcodeScanner === 'function') {
+    console.log('[BARCODE] Invoking NativeConfig Barcode Scanner...');
+    window.__barcodeTargetFusionRow = targetFusionRow || null;
+    try {
+      window.NativeConfig.startBarcodeScanner(kind || 'nutrition', targetFusionRow ? (targetFusionRow.getAttribute('data-row-id') || 'target_row') : '');
+      return;
+    } catch (nErr) {
+      console.warn('[BARCODE_NATIVE_ERR] Falling back to WebRTC', nErr);
+    }
+  }
+
   let stream = null;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
@@ -52877,7 +53020,12 @@ async function scanNutritionLabelOcr(kind, targetFusionRow) {
       });
       const base64 = dataUrl.split(',')[1];
       const mimeType = file.type || 'image/jpeg';
-      const res = await fetch('/api/food/ocr-label', {
+      let ocrUrl = '/api/food/ocr-label';
+      if (typeof coachEndpoint === 'function') {
+        try { ocrUrl = coachEndpoint(ocrUrl); } catch (_) {}
+      }
+      const fetchFn = (typeof apiFetch === 'function') ? apiFetch : fetch;
+      const res = await fetchFn(ocrUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: dataUrl, imageBase64: base64, mimeType })
@@ -52915,9 +53063,15 @@ async function scanNutritionLabelOcr(kind, targetFusionRow) {
 async function resolveBarcodeToProduct(code, kind) {
   if (!code) return null;
   const clean = String(code).trim().replace(/[^0-9A-Za-z]/g, '');
-  if (typeof showToast === 'function') showToast('Ricerca prodotto: ' + clean + '...', 'info');
+  if (!clean) return { found: false, barcode: '' };
+  if (typeof showToast === 'function') showToast('Ricerca barcode: ' + clean + '...', 'info');
   try {
-    const res = await fetch('/api/food/barcode/' + encodeURIComponent(clean));
+    let url = '/api/food/barcode/' + encodeURIComponent(clean);
+    if (typeof coachEndpoint === 'function') {
+      try { url = coachEndpoint(url); } catch (_) {}
+    }
+    const fetchFn = (typeof apiFetch === 'function') ? apiFetch : fetch;
+    const res = await fetchFn(url);
     const json = await res.json();
     if (json && json.ok && json.data) {
       return { ...json.data, barcode: clean };
@@ -52927,6 +53081,61 @@ async function resolveBarcodeToProduct(code, kind) {
   }
   return { found: false, barcode: clean };
 }
+
+// Global Android Native Barcode Callbacks
+window.onNativeBarcodeScanned = async function(code, kind, targetRowId) {
+  console.log('[BARCODE_NATIVE_SCANNED]', { code, kind, targetRowId });
+  if (!code) return;
+  try {
+    const audCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audCtx.createOscillator();
+    const gain = audCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = 1800;
+    gain.gain.setValueAtTime(0.3, audCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audCtx.currentTime + 0.15);
+    osc.start();
+    osc.stop(audCtx.currentTime + 0.15);
+  } catch (_) {}
+
+  const targetRow = window.__barcodeTargetFusionRow;
+  window.__barcodeTargetFusionRow = null;
+
+  const product = await resolveBarcodeToProduct(code, kind);
+  if (targetRow) {
+    if (product && product.found !== false) {
+      fuseBarcodeWithDraftRow(targetRow, product);
+      if (typeof showToast === 'function') showToast('Barcode associato: ' + (product.name || code), 'success');
+    } else {
+      showBarcodeNotFoundModal(code, kind);
+    }
+  } else {
+    applyBarcodeProduct(product, kind);
+  }
+};
+
+window.onNativeBarcodeCancelled = function(kind) {
+  console.log('[BARCODE_NATIVE_CANCELLED]', kind);
+};
+
+window.onNativeBarcodeFailed = function(err, kind) {
+  console.warn('[BARCODE_NATIVE_FAILED]', err, kind);
+  if (typeof showToast === 'function') showToast('Scansione non riuscita: ' + err, 'warning');
+};
+
+function switchDraftItemFood(btn, newName) {
+  const row = btn.closest('[data-meal-photo-row]');
+  if (!row) return;
+  const nameInput = row.querySelector('[data-f="name"]');
+  if (nameInput) {
+    nameInput.value = newName;
+    if (typeof showToast === 'function') showToast('Alimento cambiato in: ' + newName, 'info');
+  }
+}
+window.switchDraftItemFood = switchDraftItemFood;
+
 
 function applyBarcodeProduct(product, kind) {
   if (!product) return;
