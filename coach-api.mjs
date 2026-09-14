@@ -619,6 +619,9 @@ const workoutSchema = {
 };
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
+// Meal-photo analysis can use a stronger/slower vision model than chat without touching chat latency/cost.
+// Defaults to MODEL (no behavior change) unless explicitly overridden on Render.
+const MEAL_VISION_MODEL = process.env.MEAL_VISION_MODEL || MODEL;
 
 function getClient() {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -2038,9 +2041,10 @@ async function generateMealPhotoVision({ prompt, image, images, schema }) {
     parts.push({ inlineData: { mimeType: image.mimeType || 'image/jpeg', data: image.data } });
   }
   parts.push({ text: prompt });
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: [{ role: "user", parts }],
+  const response = await generateContentWithRetry(ai, {
+    model: MEAL_VISION_MODEL,
+    partsAttempts: [parts],
+    label: "Gemini meal photo vision",
     config: {
       responseMimeType: "application/json",
       responseSchema: schema,

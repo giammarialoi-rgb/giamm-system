@@ -971,5 +971,59 @@ console.log('\n--- Running Food Intelligence V7 Multi-Vision & Anti-Double Count
   ok(true, 'V7.17: glass box personal-recovery-16w.json untouched and intact');
 }
 
+// ============================================================
+// V8: Scale Reference Calibration Tests
+// ============================================================
+console.log('\n--- Running V8 Scale Reference Calibration Tests ---');
+
+// V8.1 Prompt instructs the model to look for scale-reference objects
+{
+  const itPromptV8 = buildMealPhotoPrompt({ mealName: 'Pranzo', locale: 'it' });
+  const enPromptV8 = buildMealPhotoPrompt({ mealName: 'Dinner', locale: 'en' });
+  ok(itPromptV8.includes('CALIBRAZIONE DI SCALA') && itPromptV8.includes('scaleReferenceDetected'), 'V8.1: Italian prompt instructs scale-reference calibration');
+  ok(enPromptV8.includes('SCALE CALIBRATION') && enPromptV8.includes('scaleReferenceDetected'), 'V8.1: English prompt instructs scale-reference calibration');
+}
+
+// V8.2 normalizeMealPhotoResult propagates scale-reference fields from the model response
+{
+  const withRef = normalizeMealPhotoResult({
+    overallConfidence: 0.85,
+    scaleReferenceDetected: true,
+    scaleReferenceType: 'fork',
+    scaleReferenceNote: 'Forchetta standard usata per calibrare l\'area del piatto',
+    items: [{ name: 'Pollo alla griglia', quantity: 180, unit: 'g', kcal: 280, confidence: 0.85 }]
+  });
+  assert.equal(withRef.scaleReferenceDetected, true, 'V8.2: preserves scaleReferenceDetected=true');
+  assert.equal(withRef.scaleReferenceType, 'fork', 'V8.2: preserves scaleReferenceType');
+  assert(withRef.scaleReferenceNote.includes('Forchetta'), 'V8.2: preserves scaleReferenceNote');
+  ok(true, 'V8.2: normalizeMealPhotoResult propagates scale-reference fields');
+}
+
+// V8.3 Missing scale reference lowers trust: explicit warning is added
+{
+  const withoutRef = normalizeMealPhotoResult({
+    overallConfidence: 0.85,
+    items: [{ name: 'Pollo alla griglia', quantity: 180, unit: 'g', kcal: 280, confidence: 0.85 }]
+  });
+  assert.equal(withoutRef.scaleReferenceDetected, false, 'V8.3: defaults scaleReferenceDetected to false when absent');
+  assert(withoutRef.warnings.some(w => /riferimento di scala/i.test(w)), 'V8.3: warns the user when no scale reference is detected');
+  ok(true, 'V8.3: missing scale reference surfaces an explicit warning');
+}
+
+// V8.4 Mock analyzer reports no scale reference (never fakes calibration)
+{
+  const mockV8 = mockAnalyzeMealPhoto({ mealName: 'Cena' });
+  assert.equal(mockV8.scaleReferenceDetected, false, 'V8.4: mock never claims a fake scale-reference calibration');
+  ok(true, 'V8.4: mock analyzer is honest about missing scale reference');
+}
+
+// V8.5 Client UI surfaces scale-reference hint and confirm-modal feedback
+{
+  const htmlV8 = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
+  const builtV8 = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
+  ok(htmlV8.includes('scaleReferenceDetected') && builtV8.includes('scaleReferenceDetected'), 'V8.5: confirm modal reads scaleReferenceDetected from the result');
+  ok(htmlV8.includes('posata, una moneta') && builtV8.includes('posata, una moneta'), 'V8.5: acquisition modal hints at including a scale-reference object');
+}
+
 console.log('\nAll meal-photo tests passed.');
 

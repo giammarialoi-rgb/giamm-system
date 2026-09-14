@@ -508,6 +508,9 @@ export const MEAL_PHOTO_RESPONSE_SCHEMA = {
     noFoodDetected: { type: 'boolean' },
     secondPhotoRecommendation: { type: 'string', enum: ['SECOND_PHOTO_REQUIRED', 'SECOND_PHOTO_RECOMMENDED', 'SECOND_PHOTO_NOT_NEEDED'] },
     secondPhotoReason: { type: 'string' },
+    scaleReferenceDetected: { type: 'boolean' },
+    scaleReferenceType: { type: 'string' },
+    scaleReferenceNote: { type: 'string' },
     compositeDish: {
       type: 'object',
       properties: {
@@ -1006,6 +1009,13 @@ export function normalizeMealPhotoResult(parsed = {}, { mealName = '', source = 
   const secondPhotoReason = parsed?.secondPhotoReason ||
     (secondPhotoRecommendation === 'SECOND_PHOTO_RECOMMENDED' ? 'Valutazione spessore e ripieni' : '');
 
+  const scaleReferenceDetected = Boolean(parsed?.scaleReferenceDetected);
+  const scaleReferenceType = String(parsed?.scaleReferenceType || (scaleReferenceDetected ? '' : 'none')).trim();
+  const scaleReferenceNote = String(parsed?.scaleReferenceNote || '').trim();
+  if (!scaleReferenceDetected && !noFoodDetected && warnings.length < 2) {
+    warnings.push('Nessun riferimento di scala (posata, moneta, piatto standard) rilevato nella foto: stima approssimativa, verifica le grammature');
+  }
+
   const foods = mealPhotoItemsToFoods(items, source);
 
   return {
@@ -1020,6 +1030,9 @@ export function normalizeMealPhotoResult(parsed = {}, { mealName = '', source = 
     imageRoles: Array.isArray(imageRoles) ? imageRoles : ['TOP'],
     secondPhotoRecommendation,
     secondPhotoReason,
+    scaleReferenceDetected,
+    scaleReferenceType,
+    scaleReferenceNote,
     noFoodDetected,
     overallConfidence,
     uncertain,
@@ -1244,6 +1257,9 @@ export function mockAnalyzeMealPhoto({ mealName = '', imagesAnalyzed = 1, imageR
     noFoodDetected: false,
     secondPhotoRecommendation: imagesAnalyzed > 1 ? 'SECOND_PHOTO_NOT_NEEDED' : 'SECOND_PHOTO_RECOMMENDED',
     secondPhotoReason: 'Valutazione spessore',
+    scaleReferenceDetected: false,
+    scaleReferenceType: 'none',
+    scaleReferenceNote: 'Mock: nessun riferimento di scala nella foto di test',
     compositeDish,
     components,
     items: components
@@ -1278,7 +1294,8 @@ export function buildMealPhotoPrompt({ mealName = '', notes = '', locale = 'it',
       '4. ZERO INVENTION & ANTI-UNDERESTIMATION: Avoid portion UNDERESTIMATION. Never invent unobserved oils, hidden dressings or precise grams without visual cues. Lower confidence when uncertain and provide estimation ranges (minGrams / maxGrams).\n' +
       '5. SEPARATION OF IDENTITY VS QUANTITY: Output foodConfidence, quantityConfidence, and compositionConfidence independently.\n' +
       '6. REGIONAL & INTERNATIONAL DISHES: Visual recognition of regional Italian (porceddu, capra in umido, malloreddus, culurgiones, seadas, arancini, pasta al forno, parmigiana, lasagna, risotti) and international cuisines (couscous, paella, ramen, poke, tacos, curry).\n' +
-      '7. NUTRITIONAL CONSISTENCY: Ensure kcal approximately equals 4*pro + 4*carb + 9*fat.\n';
+      '7. NUTRITIONAL CONSISTENCY: Ensure kcal approximately equals 4*pro + 4*carb + 9*fat.\n' +
+      '8. SCALE CALIBRATION WITH REFERENCE OBJECTS (CRITICAL FOR ACCURACY): Actively scan the image for objects of known, standard real-world size that can anchor absolute scale: cutlery (table fork ~20cm, tablespoon ~18cm), a standard dinner plate (~26-28cm diameter), a side plate (~20cm), a coin, a smartphone (~14-16cm), a hand or fingers. If ANY such reference is visible, USE IT to calibrate absolute portion size instead of relying on "typical portion" priors, set scaleReferenceDetected=true, scaleReferenceType to what you used (e.g. "fork", "standard_plate", "coin", "hand", "smartphone"), and scaleReferenceNote explaining briefly how you calibrated. If NO reference object is visible, set scaleReferenceDetected=false, scaleReferenceType="none", scaleReferenceNote explaining the estimate relies on visual priors only, and LOWER quantityConfidence accordingly (portion-only priors are the single largest source of error in photo-based food logging).\n';
   }
 
   return 'Sei lo specialista Nurvan Food Intelligence V7 (Food Intelligence V5) in Visione Multimodale e Nutrizione Clinica.\n' +
@@ -1292,7 +1309,8 @@ export function buildMealPhotoPrompt({ mealName = '', notes = '', locale = 'it',
     '5. ZERO INVENZIONE E GUIDA SOTTOSTIMA: Evita la SOTTOSTIMA delle porzioni. Non inventare olii non visibili, condimenti o grammature arbitrarie. Fornisci range di stima (minGrams, maxGrams) e stima centrale quando la quantità è incerta.\n' +
     '6. SEPARAZIONE IDENTITÀ VS QUANTITÀ: Specifica foodConfidence (identità), quantityConfidence (grammatura) e compositionConfidence (ricetta).\n' +
     '7. RICONOSCIMENTO UNIVERSALE PIATTI REGIONALI E INTERNAZIONALI: Identifica visivamente piatti tipici (porceddu, capra in umido, malloreddus, culurgiones, seadas, arancini, pasta al forno, parmigiana, lasagna, risotti, cous cous, paella, poke, sushi, ramen, tacos).\n' +
-    '8. COERENZA NUTRIZIONALE: Assicura che kcal sia coerente con 4*P + 4*C + 9*F.\n';
+    '8. COERENZA NUTRIZIONALE: Assicura che kcal sia coerente con 4*P + 4*C + 9*F.\n' +
+    '9. CALIBRAZIONE DI SCALA CON OGGETTI DI RIFERIMENTO (CRITICO PER LA PRECISIONE): Cerca attivamente nell\'immagine oggetti di dimensione standard nota che permettano di calibrare la scala assoluta: posate (forchetta ~20cm, cucchiaio ~18cm), piatto piano standard (~26-28cm di diametro), piattino (~20cm), moneta, smartphone (~14-16cm), mano o dita. Se un riferimento è visibile, USALO per calibrare la grammatura assoluta invece di affidarti solo a porzioni "tipiche": imposta scaleReferenceDetected=true, scaleReferenceType con l\'oggetto usato (es. "forchetta", "piatto_standard", "moneta", "mano", "smartphone") e scaleReferenceNote spiegando brevemente la calibrazione. Se NESSUN riferimento è visibile, imposta scaleReferenceDetected=false, scaleReferenceType="none", scaleReferenceNote che spiega che la stima si basa solo su priori visivi, e ABBASSA quantityConfidence di conseguenza (la mancanza di un riferimento di scala è la causa più comune di errore nelle stime da foto).\n';
 }
 
 export async function analyzeMealPhoto(input = {}, opts = {}) {

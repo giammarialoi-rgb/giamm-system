@@ -1700,6 +1700,9 @@ body.focus-mode [data-rewards-only] {
         <div style="font-size:11px;color:#aaa;line-height:1.4;">
           Cerca di includere tutto il piatto ed evita di tagliare i bordi. Fornisce all'AI la stima dell'area e della distribuzione superficiale.
         </div>
+        <div style="font-size:10px;color:var(--gold);line-height:1.4;margin-top:6px;">
+          💡 Per una stima più precisa: se possibile inquadra anche una posata, una moneta o il piatto intero (dimensione standard) vicino al cibo.
+        </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
         <button type="button" class="btn btn-primary" style="padding:12px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="startMealPhotoCapture('camera')">
@@ -12010,12 +12013,19 @@ function showMealPhotoConfirm(result) {
     if (noFood) {
       warn.style.display = 'block';
       warn.innerHTML = 'Non è stato possibile identificare cibi. Puoi aggiungere righe manualmente o riprovare con una foto più nitida.';
+    } else if (result.scaleReferenceDetected === false) {
+      warn.style.display = 'block';
+      warn.innerHTML = '📏 Nessun riferimento di scala rilevato (posata, moneta, piatto standard): le grammature sono una stima approssimativa. Includine uno nella prossima foto per maggiore precisione.';
     } else if (uncertain) {
       warn.style.display = 'block';
       warn.innerHTML = '⚠️ Alcune stime o grammature sono approssimative: verifica i valori prima di confermare.';
     } else {
       warn.style.display = 'none';
     }
+  }
+
+  if (status && !noFood && result.scaleReferenceDetected) {
+    status.innerHTML += ' <span style="color:#81c784;">📏 Calibrato su ' + esc(String(result.scaleReferenceType || 'riferimento rilevato')) + '</span>';
   }
 
   // Show representation mode switcher if composite dish is available or multiple items
