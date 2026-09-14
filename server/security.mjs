@@ -97,6 +97,41 @@ export function createFixedWindowRateLimiter({
   };
 }
 
+/** PostgreSQL fixed-window limiter for multi-instance Cloud Run deployments.
+ * Falls back only when explicitly configured as memory or the database is not
+ * available (useful for local development); production operators should set
+ * RATE_LIMIT_STORE=postgres and DATABASE_URL. */
+export function createPostgresFixedWindowRateLimiter({ getPool, windowMs = 60_000, max = 60, keyPrefix = "generic", key = requestIp, code = "RATE_LIMITED", message = "Troppe richieste. Riprova tra poco." } = {}) {
+  const fallback = createFixedWindowRateLimiter({ windowMs, max, keyPrefix, key, code, message });
+  let tableReady = false;
+  return async function rateLimit(req, res, next) {
+    if (String(process.env.RATE_LIMIT_STORE || "memory").toLowerCase() !== "postgres") return fallback(req, res, next);
+    try {
+      const pool = getPool?.();
+      if (!pool) throw new Error("pool unavailable");
+      if (!tableReady) {
+        await pool.query("CREATE TABLE IF NOT EXISTS rate_limit_buckets (bucket_key TEXT PRIMARY KEY, window_start TIMESTAMPTZ NOT NULL, count INTEGER NOT NULL)");
+        tableReady = true;
+      }
+      const now = Date.now();
+      const start = new Date(Math.floor(now / windowMs) * windowMs);
+      const bucketKey = `${keyPrefix}:${String(key(req) || "unknown")}`;
+      const result = await pool.query(`INSERT INTO rate_limit_buckets(bucket_key, window_start, count) VALUES($1, $2, 1)
+        ON CONFLICT(bucket_key) DO UPDATE SET count = CASE WHEN rate_limit_buckets.window_start = EXCLUDED.window_start THEN rate_limit_buckets.count + 1 ELSE 1 END, window_start = EXCLUDED.window_start
+        RETURNING count`, [bucketKey, start]);
+      if (Number(result.rows[0]?.count || 0) > max) {
+        const retryAfter = Math.max(1, Math.ceil((start.getTime() + windowMs - now) / 1000));
+        res.setHeader("Retry-After", String(retryAfter));
+        return res.status(429).json({ error: message, code, retryAfter });
+      }
+      return next();
+    } catch (err) {
+      if (isProduction()) return next(err);
+      return fallback(req, res, next);
+    }
+  };
+}
+
 export const SecurityTestHelpers = Object.freeze({
   requestIp
 });

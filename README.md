@@ -5,6 +5,7 @@ Backend HTTPS per l'app di allenamento.
 ## Cosa fa
 
 - `GET /health` — verifica che il backend sia online.
+- `GET /livez` e `GET /readyz` — probe per Cloud Run; readiness richiede AI e database configurati.
 - `POST /api/analyze` — riceve PDF, DOCX, TXT o testo e lo trasforma in una programmazione strutturata JSON.
 - `POST /api/chat` — coach conversazionale Gemini.
 - La `GEMINI_API_KEY` resta esclusivamente lato server.
