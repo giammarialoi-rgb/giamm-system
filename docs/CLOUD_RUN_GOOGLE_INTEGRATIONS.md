@@ -21,6 +21,8 @@ script takes the project ID and target region(s), builds the image, deploys the
 same image to each region and binds only the database/JWT secrets by name. Run
 it only after creating those secrets and a Cloud Run service account. It never
 prints secret values and does not migrate or delete application data.
+It starts with `min-instances=0`, so the API can scale to zero; do not raise
+that setting unless the service needs to stay warm and you accept the cost.
 
 ## AI provider
 

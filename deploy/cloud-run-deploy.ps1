@@ -23,7 +23,7 @@ gcloud builds submit --tag $Image .
 
 foreach ($Region in $Regions) {
   $args = @("run", "deploy", $ServiceName, "--image", $Image, "--region", $Region,
-    "--platform", "managed", "--port", "8080", "--min-instances", "1",
+    "--platform", "managed", "--port", "8080", "--min-instances", "0",
     "--set-env-vars", "AI_PROVIDER=$AiProvider,AI_MODEL=$AiModel,GOOGLE_CLOUD_PROJECT=$ProjectId,VERTEX_AI_LOCATION=$VertexLocation,RATE_LIMIT_STORE=postgres",
     "--set-secrets", "DATABASE_URL=$DatabaseUrlSecret,JWT_SECRET=$JwtSecret")
   if ($ServiceAccount) { $args += "--service-account"; $args += $ServiceAccount }
