@@ -5089,7 +5089,17 @@ async function syncAccountData(download=false){
 function scheduleAccountSync(){
   if(!store.accountToken) return;
   if (store.coachAssigning || store.coachViewingClient) return;
-  const hasLoads = !!(store.data && Object.keys(store.data).length) || (Array.isArray(store.logs) && store.logs.length);
+  // Used to only fire for training loads/logs, so an account-synced user who only
+  // logged a meal or a supplement never actually uploaded it - persist() saved it
+  // locally, but the next boot's download sync would see nothing new on the server
+  // and could overwrite the local change with a stale remote copy. Every domain
+  // that can hold real user data should keep the cloud copy fresh, not just training.
+  const hasLoads = !!(store.data && Object.keys(store.data).length)
+    || (Array.isArray(store.logs) && store.logs.length)
+    || !!(store.nutrition && Array.isArray(store.nutrition.days) && store.nutrition.days.length)
+    || !!(store.supplementation && Array.isArray(store.supplementation.items) && store.supplementation.items.length)
+    || !!(store.therapy && Array.isArray(store.therapy.medications) && store.therapy.medications.length)
+    || !!(store.exams && Array.isArray(store.exams.records) && store.exams.records.length);
   if (!hasLoads) return;
   if (typeof queueAccountSyncIfOffline === 'function' && queueAccountSyncIfOffline()) return;
   clearTimeout(accountSyncTimer);
@@ -11499,6 +11509,7 @@ function saveFoodItem() {
   if (!DATA.nutrition.days[dayIdx].meals[mealIdx].foods) DATA.nutrition.days[dayIdx].meals[mealIdx].foods = [];
 
   DATA.nutrition.days[dayIdx].meals[mealIdx].foods.push(foodObj);
+  markNutritionDirty();
   persist();
   closeAddFoodModal();
   render();

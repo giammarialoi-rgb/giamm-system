@@ -61,4 +61,38 @@ ok(html.includes('id="food-unit-input"') && html.includes('value="pezzi">Pezzo/i
 ok(html.includes("u === 'pezzi' || u === 'pezzo' || u === 'fetta' || u === 'fette'"), 'foodQtyToGrams converts the pezzi/fetta unit using the food-aware portion guess');
 ok(html.includes("if (/albume/.test(n)) return 33") && html.includes("if (/tuorlo/.test(n)) return 18"), 'guessPortionGrams distinguishes egg white/yolk from a whole egg (uovo)');
 
+// ============================================================
+// Account-sync overwrite regression: for a logged-in (cross-device) account,
+// the IndexedDB fix above was not enough on its own. Boot runs a background,
+// non-blocking syncAccountData(true) that downloads the server's copy and
+// (via applyRemoteAccountData) overwrites local nutrition/supplementation
+// UNLESS store.__cpNutritionDirty / __cpSupplementsDirty is set - saveFoodItem
+// never set that flag, so the correct, freshly-IndexedDB-restored local
+// nutrition kept getting silently clobbered by a stale server copy moments
+// after boot, even after the first fix. Reproduced by tracing saveFoodItem ->
+// persist() -> (no dirty flag) -> next boot's background download -> overwrite.
+console.log('\n--- Running Account-Sync Overwrite Regression Tests ---');
+
+for (const src of [html, built]) {
+  const fnStart = src.indexOf('function saveFoodItem(');
+  ok(fnStart >= 0, 'saveFoodItem is declared');
+  const fnBody = src.slice(fnStart, src.indexOf('\n}', fnStart));
+  ok(fnBody.includes('markNutritionDirty()'), 'saveFoodItem marks nutrition dirty, protecting it from the background account-sync download overwrite');
+
+  // Lock in the existing protection this depends on, so nobody removes the
+  // guard while "simplifying" applyRemoteAccountData later.
+  const guardIdx = src.indexOf('!store.__cpKeepLocalNutrition && !store.__cpNutritionDirty && remote.nutrition');
+  ok(guardIdx >= 0, 'applyRemoteAccountData still refuses to overwrite local nutrition while it is dirty/kept-local');
+
+  // scheduleAccountSync used to only fire for training loads/logs, so a user who
+  // only touched nutrition/supplements/therapy/exams never actually uploaded the
+  // change - the server stayed stale, and the next background download had
+  // nothing fresh to protect against being overwritten by in the first place.
+  const schedStart = src.indexOf('function scheduleAccountSync(');
+  const schedBody = src.slice(schedStart, src.indexOf('\n}', schedStart));
+  ok(schedBody.includes('store.nutrition') && schedBody.includes('store.supplementation')
+    && schedBody.includes('store.therapy') && schedBody.includes('store.exams'),
+    'scheduleAccountSync also uploads when nutrition/supplementation/therapy/exams have real data, not just training loads');
+}
+
 console.log('\nAll domain IndexedDB sync tests passed.');
