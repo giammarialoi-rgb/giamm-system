@@ -52,7 +52,10 @@ app.post("/api/webhooks/google-health", express.raw({ type: "application/json", 
     const event = normalizeHealthEvent(JSON.parse(raw));
     await initDb();
     if (!dbInitialized) return res.status(503).json({ error: "Storage unavailable." });
-    const inserted = await pool.query("INSERT INTO health_events(id, user_id, source, event_type, occurred_at, payload) VALUES($1, $2, $3, $4, $5, $6) ON CONFLICT(id) DO NOTHING RETURNING id", [event.id, req.headers["x-user-id"] || null, event.source, event.type, event.occurredAt, JSON.stringify(event.data)]);
+    // Subscription-to-user resolution is provider-specific. Do not trust a
+    // caller-supplied user header; events remain unassigned until that verified
+    // mapping is configured by the operator.
+    const inserted = await pool.query("INSERT INTO health_events(id, user_id, source, event_type, occurred_at, payload) VALUES($1, NULL, $2, $3, $4, $5) ON CONFLICT(id) DO NOTHING RETURNING id", [event.id, event.source, event.type, event.occurredAt, JSON.stringify(event.data)]);
     return res.status(inserted.rowCount ? 202 : 200).json({ ok: true, id: event.id, duplicate: !inserted.rowCount });
   } catch (_) { return res.status(400).json({ error: "Invalid health event." }); }
 });
