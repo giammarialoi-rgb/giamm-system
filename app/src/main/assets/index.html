@@ -1600,6 +1600,7 @@ body.focus-mode [data-rewards-only] {
         <select id="food-unit-input" class="input" onchange="recalcFoodMacrosFromDb()">
           <option value="g">Grammi (g)</option>
           <option value="ml">Millilitri (ml)</option>
+          <option value="pezzi">Pezzo/i (es. 1 uovo, 4 fette)</option>
           <option value="porzioni">Porzione/i</option>
           <option value="cucchiai">Cucchiai</option>
           <option value="misurini">Misurini (scoop)</option>
@@ -43206,6 +43207,10 @@ function persist() {
   }
   scheduleWorkoutLogsIdbSync();
   scheduleRewardsIdbSync();
+  scheduleNutritionIdbSync();
+  scheduleSupplementsIdbSync();
+  scheduleTherapyIdbSync();
+  scheduleExamsIdbSync();
   scheduleAccountSync();
   updateAccountButton();
 }
@@ -43242,6 +43247,72 @@ function scheduleRewardsIdbSync() {
       GiammariaPersistence.saveActionHistorySnapshot(store.actionHistory).catch(function () {});
     }
   }, 800);
+}
+
+// Nutrition/supplementation/therapy/exams are deliberately stripped out of the
+// localStorage snapshot (sanitizeStoreForLocalStorage) because they belong in
+// their own IndexedDB stores - but unlike workout logs and rewards above,
+// nothing was scheduling that IDB write from persist() itself. Individual
+// screens (saveFoodItem, deleteFoodItem, saveSupplementItem, saveTherapyItem,
+// saveExamRecord, the "add day" wizard, ...) only ever called persist(), so a
+// meal logged today could vanish on the next reload with nothing left to
+// restore it from. This debounced sync - mirroring the exact pattern already
+// used for workout logs/rewards - makes every persist() call durably save
+// whichever of these domains changed, regardless of which screen triggered it.
+let __nutritionIdbSyncTimer = null;
+function scheduleNutritionIdbSync() {
+  if (store && (store.coachAssigning || store.coachViewingClient)) return;
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
+  if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveNutrition) return;
+  if (!store.nutrition) return;
+  clearTimeout(__nutritionIdbSyncTimer);
+  __nutritionIdbSyncTimer = setTimeout(function () {
+    GiammariaPersistence.saveNutrition(store.nutrition).catch(function (err) {
+      console.warn('[NUTRITION_IDB_SYNC]', err);
+    });
+  }, 600);
+}
+
+let __supplementsIdbSyncTimer = null;
+function scheduleSupplementsIdbSync() {
+  if (store && (store.coachAssigning || store.coachViewingClient)) return;
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
+  if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveSupplements) return;
+  if (!store.supplementation) return;
+  clearTimeout(__supplementsIdbSyncTimer);
+  __supplementsIdbSyncTimer = setTimeout(function () {
+    GiammariaPersistence.saveSupplements(store.supplementation).catch(function (err) {
+      console.warn('[SUPPLEMENTS_IDB_SYNC]', err);
+    });
+  }, 600);
+}
+
+let __therapyIdbSyncTimer = null;
+function scheduleTherapyIdbSync() {
+  if (store && (store.coachAssigning || store.coachViewingClient)) return;
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
+  if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveTherapy) return;
+  if (!store.therapy) return;
+  clearTimeout(__therapyIdbSyncTimer);
+  __therapyIdbSyncTimer = setTimeout(function () {
+    GiammariaPersistence.saveTherapy(store.therapy).catch(function (err) {
+      console.warn('[THERAPY_IDB_SYNC]', err);
+    });
+  }, 600);
+}
+
+let __examsIdbSyncTimer = null;
+function scheduleExamsIdbSync() {
+  if (store && (store.coachAssigning || store.coachViewingClient)) return;
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
+  if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveExams) return;
+  if (!store.exams) return;
+  clearTimeout(__examsIdbSyncTimer);
+  __examsIdbSyncTimer = setTimeout(function () {
+    GiammariaPersistence.saveExams(store.exams).catch(function (err) {
+      console.warn('[EXAMS_IDB_SYNC]', err);
+    });
+  }, 600);
 }
 
 function buildPerformanceSummaryForCoach() {
@@ -44526,7 +44597,9 @@ function guessPortionGrams(foodName) {
   if (/pasta|riso|cous\s*cous|orzo|farro|quinoa/.test(n)) return 80;
   if (/formaggio|cheese|grana|parmigiano/.test(n)) return 30;
   if (/prosciutto|salame|bresaola|affettat|speck|mortadella/.test(n)) return 50;
-  if (/uov[ao]/.test(n)) return 55;
+  if (/albume/.test(n)) return 33; // egg white only - smaller than a whole egg
+  if (/tuorlo/.test(n)) return 18; // yolk only
+  if (/uov[ao]/.test(n)) return 55; // whole egg
   if (/yogurt/.test(n)) return 125;
   if (/mela|banana|arancia|pera|kiwi|pesca|frutta/.test(n)) return 150;
   if (/pizza/.test(n)) return 250;
@@ -44538,6 +44611,7 @@ function foodQtyToGrams(qty, unit, foodName) {
   const q = Number(qty) || 0;
   const u = String(unit || 'g').toLowerCase();
   if (u === 'porzioni' || u === 'porzione') return q * guessPortionGrams(foodName);
+  if (u === 'pezzi' || u === 'pezzo' || u === 'fetta' || u === 'fette') return q * guessPortionGrams(foodName);
   if (u === 'cucchiai' || u === 'cucchiaio') return q * 15;
   if (u === 'misurini' || u === 'misurino') return q * 30;
   return q; // g, ml, or unrecognized unit: treat the number as already-converted
@@ -45309,7 +45383,7 @@ function mealPhotoDraftRowHtml(item) {
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:4px;">' +
     '<label style="font-size:9px;color:#888;">Qty<input data-f="qty" type="number" value="' + esc(item.quantity != null ? item.quantity : 100) + '" oninput="recalculateDraftTotals()" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;"></label>' +
     '<label style="font-size:9px;color:#888;">Unità<select data-f="unit" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">' +
-    ['g', 'ml', 'porzioni', 'cucchiai', 'misurini'].map(function (u) {
+    ['g', 'ml', 'pezzi', 'porzioni', 'cucchiai', 'misurini'].map(function (u) {
       return '<option value="' + u + '"' + ((item.unit || 'g') === u ? ' selected' : '') + '>' + u + '</option>';
     }).join('') +
     '</select></label>' +
