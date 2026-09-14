@@ -44515,14 +44515,40 @@ function selectFoodFromDb(food) {
   recalcFoodMacrosFromDb();
 }
 
+// Generic "how many grams is one porzione/pezzo of this food" guess, used when
+// switching the unit dropdown away from g/ml. A flat 100g-per-porzione assumption
+// is wrong for most foods (a slice of bread is ~30g, a whole egg ~55g, a yogurt
+// ~125g) - this keyword table gives a much closer starting point; still just a
+// starting point, so the user can always overwrite the resulting grams/kcal.
+function guessPortionGrams(foodName) {
+  const n = String(foodName || '').toLowerCase();
+  if (/fetta|fette|pane|toast|pancarr[eè]|cracker|fette biscottate/.test(n)) return 30;
+  if (/pasta|riso|cous\s*cous|orzo|farro|quinoa/.test(n)) return 80;
+  if (/formaggio|cheese|grana|parmigiano/.test(n)) return 30;
+  if (/prosciutto|salame|bresaola|affettat|speck|mortadella/.test(n)) return 50;
+  if (/uov[ao]/.test(n)) return 55;
+  if (/yogurt/.test(n)) return 125;
+  if (/mela|banana|arancia|pera|kiwi|pesca|frutta/.test(n)) return 150;
+  if (/pizza/.test(n)) return 250;
+  if (/pollo|tacchino|manzo|carne|pesce|salmone|tonno|bistecca/.test(n)) return 150;
+  return 100;
+}
+
+function foodQtyToGrams(qty, unit, foodName) {
+  const q = Number(qty) || 0;
+  const u = String(unit || 'g').toLowerCase();
+  if (u === 'porzioni' || u === 'porzione') return q * guessPortionGrams(foodName);
+  if (u === 'cucchiai' || u === 'cucchiaio') return q * 15;
+  if (u === 'misurini' || u === 'misurino') return q * 30;
+  return q; // g, ml, or unrecognized unit: treat the number as already-converted
+}
+
 function recalcFoodMacrosFromDb() {
   if (!activeSelectedFoodRef) return;
   const qty = parseFloat($('food-qty-input').value) || 100;
   const unit = ($('food-unit-input') && $('food-unit-input').value) || 'g';
-  let grams = qty;
-  if (unit === 'porzioni') grams = qty * 100;
-  else if (unit === 'cucchiai') grams = qty * 15;
-  else if (unit === 'misurini') grams = qty * 30;
+  const foodName = ($('food-name-input') && $('food-name-input').value) || (activeSelectedFoodRef && activeSelectedFoodRef.name);
+  const grams = foodQtyToGrams(qty, unit, foodName);
   const scaled = (typeof FoodDatabaseService !== 'undefined' && FoodDatabaseService.scaleMacros)
     ? FoodDatabaseService.scaleMacros(activeSelectedFoodRef, grams)
     : null;
@@ -50133,7 +50159,7 @@ function renderHome(c) {
 
     ${homeCollapsibleCard(t('architectureStatus'), `<div style="display:flex;flex-direction:column;gap:10px;"><button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="resetWorkoutData()">${t('restoreLoads')}</button><button class="btn btn-outline" style="width:100%;border-color:var(--accent-red);color:var(--accent-red);font-size:10px;" onclick="resetAllData()">${t('hardResetApp')}</button></div>`, false)}
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div class="card" style="padding:15px;text-align:center;"><span style="font-size:11px;color:var(--text-secondary);font-weight:800;">BODYWEIGHT</span><div style="font-size:22px;font-weight:900;color:var(--gold);">${bw} kg</div></div><div class="card" style="padding:15px;text-align:center;"><span style="font-size:11px;color:var(--text-secondary);font-weight:800;">PROGRESSO</span><div style="font-size:22px;font-weight:900;color:var(--gold);">${Math.round((currentWeek/duration)*100)}%</div></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div class="card" style="padding:15px;text-align:center;"><span style="font-size:11px;color:var(--text-secondary);font-weight:800;">BODYWEIGHT</span><div style="font-size:22px;font-weight:900;color:var(--gold);">${bw} kg</div></div><div class="card" style="padding:15px;text-align:center;"><span style="font-size:11px;color:var(--text-secondary);font-weight:800;">PROGRESSO</span><div style="font-size:22px;font-weight:900;color:var(--gold);">${Math.min(100, Math.round((currentWeek/(DATA.weeks.length||1))*100))}%</div></div></div>
   `;
 }
 
@@ -54033,12 +54059,18 @@ function fuseBarcodeWithDraftRow(rowEl, product) {
   
   const nameInput = rowEl.querySelector('[data-f="name"]');
   const qtyInput = rowEl.querySelector('[data-f="qty"]');
+  const unitInput = rowEl.querySelector('[data-f="unit"]');
   const kcalInput = rowEl.querySelector('[data-f="kcal"]');
   const proInput = rowEl.querySelector('[data-f="pro"]');
   const carbInput = rowEl.querySelector('[data-f="carb"]');
   const fatInput = rowEl.querySelector('[data-f="fat"]');
-  
-  const visualGrams = parseFloat(qtyInput ? qtyInput.value : 100) || 100;
+
+  // The qty field is only "grams" when unit=g/ml: if the row is in "porzioni"
+  // or "pezzi" (e.g. AI estimated "4 fette"), taking the raw number as grams
+  // silently produced near-zero calories once fused with real per-100g data.
+  const rawQty = parseFloat(qtyInput ? qtyInput.value : 100) || 100;
+  const rowUnit = (unitInput ? unitInput.value : 'g') || 'g';
+  const visualGrams = foodQtyToGrams(rawQty, rowUnit, nameInput ? nameInput.value : '');
   const isCooked = rowEl.getAttribute('data-state') === 'cooked' || /cotto|bollito|grigliato|forno/i.test(nameInput ? nameInput.value : '');
   const rawEquivAttr = parseFloat(rowEl.getAttribute('data-raw-equiv'));
   const rawEquivGrams = (isCooked && !isNaN(rawEquivAttr) && rawEquivAttr > 0) ? rawEquivAttr : visualGrams;
@@ -54068,6 +54100,10 @@ function fuseBarcodeWithDraftRow(rowEl, product) {
   if (proInput) proInput.value = fusedPro;
   if (carbInput) carbInput.value = fusedCarb;
   if (fatInput) fatInput.value = fusedFat;
+  // Reflect the grams actually used for the calculation back into qty/unit,
+  // so the row never shows e.g. "4 pezzi" next to calories computed on 160g.
+  if (qtyInput) qtyInput.value = Math.round(calcBase);
+  if (unitInput) unitInput.value = 'g';
 
   rowEl.setAttribute('data-barcode', product.barcode || '');
   rowEl.setAttribute('data-barcode-brand', brand);
@@ -54083,6 +54119,8 @@ function fuseBarcodeWithDraftRow(rowEl, product) {
     verifiedBadge.textContent = '\u{1F3F7}\uFE0F BARCODE VERIFIED (' + (brand || 'DB') + ')';
     badgeContainer.prepend(verifiedBadge);
   }
+
+  if (typeof recalculateDraftTotals === 'function') recalculateDraftTotals();
 
   if (typeof showToast === 'function') {
     showToast('Barcode associato: ' + fullName + ' (' + fusedKcal + ' kcal)', 'success');

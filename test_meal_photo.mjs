@@ -20,7 +20,8 @@ import {
   computeRawCookedEquivalence,
   fuseVisionAndBarcode,
   validateNoDoubleCounting,
-  calculateMealTotals
+  calculateMealTotals,
+  MEAL_PHOTO_RESPONSE_SCHEMA
 } from './server/food/index.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -1023,6 +1024,73 @@ console.log('\n--- Running V8 Scale Reference Calibration Tests ---');
   const builtV8 = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
   ok(htmlV8.includes('scaleReferenceDetected') && builtV8.includes('scaleReferenceDetected'), 'V8.5: confirm modal reads scaleReferenceDetected from the result');
   ok(htmlV8.includes('posata, una moneta') && builtV8.includes('posata, una moneta'), 'V8.5: acquisition modal hints at including a scale-reference object');
+}
+
+// ============================================================
+// V9: Quantity/Unit Robustness Tests (estimatedGrams vs piece/portion units)
+// ============================================================
+console.log('\n--- Running V9 Quantity/Unit Robustness Tests ---');
+
+// V9.1 estimatedGrams (already an absolute gram value) must never be re-multiplied
+// by a non-gram unit conversion - this is exactly how a real toast slice logged
+// as "70g" ended up saved as ~4g/11kcal once "unit: fetta" was also present.
+{
+  const breadItem = normalizeMealPhotoItem({
+    name: 'Pane in cassetta tostato',
+    estimatedGrams: 70,
+    quantity: 4,
+    unit: 'fetta',
+    kcal: 280,
+    confidence: 0.85
+  });
+  assert.equal(breadItem.grams, 70, 'V9.1: estimatedGrams is not re-multiplied by the "fetta" unit conversion');
+  assert.equal(breadItem.quantity, 4, 'V9.1: displayed quantity still reflects the 4-slice count, not grams');
+  ok(true, 'V9.1: estimatedGrams stays authoritative regardless of the declared unit');
+}
+
+// V9.2 Without estimatedGrams, piece/slice units fall back to a sane per-piece
+// gram estimate instead of treating "4 fette" as literally 4 grams.
+{
+  const noGramsItem = normalizeMealPhotoItem({
+    name: 'Pane in cassetta tostato',
+    quantity: 4,
+    unit: 'fetta',
+    kcal: 280,
+    confidence: 0.85
+  });
+  assert.equal(noGramsItem.grams, 160, 'V9.2: falls back to a per-slice estimate (4 x 40g) instead of 4 grams');
+  ok(true, 'V9.2: piece/slice units without estimatedGrams get a non-trivial gram fallback');
+}
+
+// V9.3 The response schema requires the model to always supply estimatedGrams,
+// closing the ambiguous-unit gap at the source rather than only patching it downstream.
+{
+  ok(MEAL_PHOTO_RESPONSE_SCHEMA.properties.compositeDish.required?.includes('estimatedGrams'), 'V9.3: compositeDish schema requires estimatedGrams');
+  ok(MEAL_PHOTO_RESPONSE_SCHEMA.properties.components.items.required.includes('estimatedGrams'), 'V9.3: components schema requires estimatedGrams');
+  ok(MEAL_PHOTO_RESPONSE_SCHEMA.properties.items.items.required.includes('estimatedGrams'), 'V9.3: items schema requires estimatedGrams');
+}
+
+// V9.4 Client-side: unit-switch recalculation uses a food-aware portion guess
+// instead of a flat 100g/porzione, and barcode fusion on a draft row respects
+// the row's own unit instead of assuming the qty field is already grams.
+{
+  const htmlV9 = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
+  const builtV9 = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
+  ok(htmlV9.includes('function guessPortionGrams(') && builtV9.includes('function guessPortionGrams('), 'V9.4: food-specific portion-size heuristic exists');
+  ok(htmlV9.includes('function foodQtyToGrams(') && builtV9.includes('function foodQtyToGrams('), 'V9.4: shared qty+unit->grams helper exists');
+  ok(htmlV9.includes('foodQtyToGrams(rawQty, rowUnit') && builtV9.includes('foodQtyToGrams(rawQty, rowUnit'), 'V9.4: barcode fusion on a draft row respects its own unit instead of assuming grams');
+  ok(htmlV9.includes('foodQtyToGrams(qty, unit, foodName)') && builtV9.includes('foodQtyToGrams(qty, unit, foodName)'), 'V9.4: manual add-food unit switch uses the food-aware portion helper');
+}
+
+// V9.5 Home dashboard progress % is derived from the active plan's actual week
+// count (which currentWeek is already clamped against) and capped at 100%,
+// instead of an unrelated "desired duration for future generation" preference
+// that could drift out of sync and show nonsense like 400%.
+{
+  const htmlV9b = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
+  const builtV9b = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
+  const expr = 'Math.min(100, Math.round((currentWeek/(DATA.weeks.length||1))*100))';
+  ok(htmlV9b.includes(expr) && builtV9b.includes(expr), 'V9.5: home progress % uses the active plan\'s week count and is capped at 100%');
 }
 
 console.log('\nAll meal-photo tests passed.');

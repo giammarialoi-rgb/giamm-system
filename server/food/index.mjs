@@ -534,7 +534,8 @@ export const MEAL_PHOTO_RESPONSE_SCHEMA = {
         quantityConfidence: { type: 'number' },
         compositionConfidence: { type: 'number' },
         notes: { type: 'string' }
-      }
+      },
+      required: ['name', 'estimatedGrams', 'unit', 'kcal', 'confidence']
     },
     components: {
       type: 'array',
@@ -578,7 +579,7 @@ export const MEAL_PHOTO_RESPONSE_SCHEMA = {
           },
           notes: { type: 'string' }
         },
-        required: ['name', 'quantity', 'unit', 'kcal', 'confidence']
+        required: ['name', 'estimatedGrams', 'unit', 'kcal', 'confidence']
       }
     },
     items: {
@@ -628,7 +629,7 @@ export const MEAL_PHOTO_RESPONSE_SCHEMA = {
           },
           notes: { type: 'string' }
         },
-        required: ['name', 'quantity', 'unit', 'kcal', 'confidence']
+        required: ['name', 'estimatedGrams', 'unit', 'kcal', 'confidence']
       }
     }
   },
@@ -695,7 +696,8 @@ function normalizeUnit(unit) {
   if (u === 'cucchiaio' || u === 'cucchiai' || u === 'tbsp') return 'cucchiai';
   if (u === 'scoop' || u === 'misurino' || u === 'misurini') return 'misurini';
   if (u === 'panino' || u === 'sandwich' || u === 'burger') return 'panino';
-  if (u === 'pezzo' || u === 'pezzi' || u === 'piece' || u === 'pieces') return 'pezzi';
+  if (u === 'pezzo' || u === 'pezzi' || u === 'piece' || u === 'pieces' ||
+      u === 'fetta' || u === 'fette' || u === 'slice' || u === 'slices') return 'pezzi';
   return 'g';
 }
 
@@ -706,6 +708,13 @@ function quantityToGrams(quantity, unit) {
   if (u === 'cucchiai') return qty * 15;
   if (u === 'misurini') return qty * 30;
   if (u === 'panino') return qty * 250;
+  // Generic piece/slice fallback: normalizeUnit() maps "pezzo/fetta/piece" here,
+  // but with no conversion factor this used to fall through to `return qty`,
+  // silently treating e.g. "4 fette" as "4 grams" (the actual bug behind a
+  // toast slice logging as 4g/11kcal). estimatedGrams from the model should
+  // always take priority over this (see normalizeMealPhotoItem), so this is
+  // only a last-resort guess when the model omits it.
+  if (u === 'pezzi') return qty * 40;
   return qty;
 }
 
@@ -814,10 +823,16 @@ export function normalizeMealPhotoItem(raw) {
   const name = String(raw?.name || raw?.food || '').replace(/\s+/g, ' ').trim();
   if (!name) return null;
   const unit = normalizeUnit(raw?.unit);
-  const rawQty = raw?.estimatedGrams ?? raw?.quantity ?? raw?.qty ?? raw?.grams;
-  const rawGrams = quantityToGrams(rawQty, unit);
+  // estimatedGrams is always an absolute gram value from the model - unlike
+  // quantity/qty it must NEVER be run through the unit conversion below, or a
+  // correct "70g" gets silently multiplied into thousands of grams whenever
+  // unit isn't "g" (e.g. the model also reporting "4 fette" alongside it,
+  // which is how a real toast slice once ended up logged as ~4g/11kcal).
+  const hasEstimatedGrams = raw?.estimatedGrams != null && Number(raw.estimatedGrams) > 0;
+  const rawQty = hasEstimatedGrams ? raw.estimatedGrams : (raw?.quantity ?? raw?.qty ?? raw?.grams);
+  const rawGrams = hasEstimatedGrams ? clampNum(raw.estimatedGrams, 0, 5000, 0) : quantityToGrams(rawQty, unit);
   const grams = roundGramsPlatitude(rawGrams);
-  const quantity = unit === 'g' ? grams : (clampNum(rawQty, 0, 5000, 0) || (unit === 'ml' ? grams : 1));
+  const quantity = unit === 'g' ? grams : (clampNum(raw?.quantity ?? raw?.qty ?? rawQty, 0, 5000, 0) || (unit === 'ml' ? grams : 1));
 
   const confidence = Math.round(clampNum(raw?.confidence, 0, 1, 0.4) * 100) / 100;
   const foodConfidence = Math.round(clampNum(raw?.foodConfidence ?? raw?.confidence, 0, 1, confidence) * 100) / 100;
