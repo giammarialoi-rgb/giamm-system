@@ -16,6 +16,12 @@ webhook deduplication.
 * Set `RATE_LIMIT_STORE=postgres` for Cloud Run. Render may retain `memory`
   while it has a single instance.
 
+The repository includes `Dockerfile` and `deploy/cloud-run-deploy.ps1`. The
+script takes the project ID and target region(s), builds the image, deploys the
+same image to each region and binds only the database/JWT secrets by name. Run
+it only after creating those secrets and a Cloud Run service account. It never
+prints secret values and does not migrate or delete application data.
+
 ## AI provider
 
 `AI_PROVIDER=gemini` uses `GEMINI_API_KEY`, stored in a platform secret.
