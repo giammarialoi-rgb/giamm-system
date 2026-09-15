@@ -1575,12 +1575,15 @@ body.focus-mode [data-rewards-only] {
 <div id="add-food-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:16px;">
   <div class="card" style="max-width:440px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--gold);">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-      <h3 style="font-size:14px;color:var(--gold);font-weight:800;">AGGIUNGI ALIMENTO</h3>
+      <h3 id="add-food-modal-title" style="font-size:14px;color:var(--gold);font-weight:800;">AGGIUNGI ALIMENTO</h3>
       <button class="btn btn-outline" style="font-size:10px;padding:2px 6px;" onclick="closeAddFoodModal()">✕</button>
     </div>
     <input type="hidden" id="food-target-day" value="0">
     <input type="hidden" id="food-target-meal" value="0">
     <div class="modal-body-scroll">
+    <button type="button" class="btn btn-outline" style="width:100%;margin-bottom:10px;font-size:11px;padding:8px;border-color:#00e5ff;color:#00e5ff;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="scanBarcodeWithCamera('nutrition')">
+      <span style="font-size:14px;">🏷️</span> Scansiona Barcode
+    </button>
     <div style="margin-bottom:10px;">
       <label style="font-size:10px;color:#888;">Cerca nel Database Alimenti</label>
       <input type="text" id="food-search-input" class="input" placeholder="Es. Petto di Pollo..." oninput="filterFoodDb(this.value)">
@@ -1632,7 +1635,7 @@ body.focus-mode [data-rewards-only] {
     </div>
     <div class="modal-sticky-footer">
       <button class="btn btn-outline" style="flex:1;" onclick="closeAddFoodModal()">ANNULLA</button>
-      <button class="btn btn-primary" style="flex:1;" onclick="saveFoodItem()">SALVA ALIMENTO</button>
+      <button id="add-food-modal-save-btn" class="btn btn-primary" style="flex:1;" onclick="saveFoodItem()">SALVA ALIMENTO</button>
     </div>
   </div>
 </div>
@@ -1642,12 +1645,12 @@ body.focus-mode [data-rewards-only] {
   <div class="card" style="max-width:440px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;border-radius:12px;background:#141414;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:18px;">📸</span>
-        <h3 style="margin:0;font-size:15px;color:var(--gold);font-weight:900;">FOTO PASTO AI</h3>
+        <span id="meal-target-modal-icon" style="font-size:18px;">📸</span>
+        <h3 id="meal-target-modal-title" style="margin:0;font-size:15px;color:var(--gold);font-weight:900;">FOTO PASTO AI</h3>
       </div>
       <button type="button" class="btn btn-outline" style="font-size:12px;padding:3px 8px;" onclick="closeMealTargetModal()">✕</button>
     </div>
-    <div style="font-size:12px;color:#bbb;margin-bottom:14px;line-height:1.4;">
+    <div id="meal-target-modal-subtitle" style="font-size:12px;color:#bbb;margin-bottom:14px;line-height:1.4;">
       Dove vuoi aggiungere questo pasto?
     </div>
     <div id="meal-target-options" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
@@ -1662,6 +1665,28 @@ body.focus-mode [data-rewards-only] {
     </div>
     <div style="display:flex;gap:8px;">
       <button type="button" class="btn btn-outline" style="flex:1;" onclick="closeMealTargetModal()">ANNULLA</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Scelta Giorno per Duplica Pasto -->
+<div id="duplicate-meal-day-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:10016;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;">
+  <div class="card" style="max-width:440px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;border-radius:12px;background:#141414;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:18px;">⧉</span>
+        <h3 style="margin:0;font-size:15px;color:var(--gold);font-weight:900;">DUPLICA PASTO</h3>
+      </div>
+      <button type="button" class="btn btn-outline" style="font-size:12px;padding:3px 8px;" onclick="closeDuplicateMealDayModal()">✕</button>
+    </div>
+    <div style="font-size:12px;color:#bbb;margin-bottom:14px;line-height:1.4;">
+      In quale giorno vuoi copiarlo? Se il giorno non esiste ancora, viene creato.
+    </div>
+    <div id="duplicate-meal-day-options" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+      <!-- Populated dynamically by openDuplicateMealDayModal() -->
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button type="button" class="btn btn-outline" style="flex:1;" onclick="closeDuplicateMealDayModal()">ANNULLA</button>
     </div>
   </div>
 </div>
@@ -2884,7 +2909,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MEAL-PHOTO-V1",
-        schemaTarget: "0009",
+        schemaTarget: "0010",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -44452,6 +44477,7 @@ function renderNutrition(c) {
                     <div style="font-size:10px;color:#aaa;text-align:right;">
                       <div>${Math.round(foodMacroVal(f, 'kcal'))} kcal</div>
                     </div>
+                    <button class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:var(--gold);border-color:#333;" onclick="editFoodItem(${currentNutritionDayIndex}, ${mIdx}, ${fIdx})">✎</button>
                     <button class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:var(--accent-red);border-color:#333;" onclick="deleteFoodItem(${currentNutritionDayIndex}, ${mIdx}, ${fIdx})">✕</button>
                   </div>
                 </div>
@@ -44460,6 +44486,7 @@ function renderNutrition(c) {
             <div style="display:flex;gap:6px;">
               <button class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;border-style:dashed;" onclick="openAddFoodModal(${currentNutritionDayIndex}, ${mIdx})">${t('addFood')}</button>
               <button class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;border-color:var(--gold);color:var(--gold);" onclick="openMealPhotoFlow(${currentNutritionDayIndex}, ${mIdx})">${typeof t === 'function' ? t('photoMeal') : 'Foto pasto'}</button>
+              <button class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;" onclick="duplicateMealItem(${currentNutritionDayIndex}, ${mIdx})" title="Duplica questo pasto in un altro giorno">⧉ Duplica</button>
             </div>
           </div>
         `;
@@ -44485,6 +44512,11 @@ function openAddFoodModal(dayIdx, mealIdx) {
   $('food-fat-input').value = '';
   $('food-note-input').value = '';
   activeSelectedFoodRef = null;
+  window.__foodEditTarget = null;
+  const titleEl = $('add-food-modal-title');
+  if (titleEl) titleEl.textContent = 'AGGIUNGI ALIMENTO';
+  const saveBtn = $('add-food-modal-save-btn');
+  if (saveBtn) saveBtn.textContent = 'SALVA ALIMENTO';
   __foodSearchHits = [];
   $('food-db-suggestions').style.display = 'none';
   const warnEl = document.getElementById('food-restriction-warn');
@@ -44495,6 +44527,47 @@ function openAddFoodModal(dayIdx, mealIdx) {
     ensureAllergenIntoleranceCatalog().catch(function () {});
   }
 }
+
+// Reopens the add-food modal pre-filled with an existing diary entry so its
+// quantity/macros can be corrected without deleting and re-adding it. Always
+// reconstructs a per-100g reference (from the stored rate if present, else
+// derived from the current kcal/qty/unit) so recalcFoodMacrosFromDb() can
+// rescale correctly as soon as the user edits quantity/unit - including for
+// items saved before per-100g rates were stored on the food object.
+function editFoodItem(dayIdx, mealIdx, foodIdx) {
+  const meal = DATA && DATA.nutrition && DATA.nutrition.days && DATA.nutrition.days[dayIdx] && DATA.nutrition.days[dayIdx].meals[mealIdx];
+  const food = meal && meal.foods && meal.foods[foodIdx];
+  if (!food) return;
+  openAddFoodModal(dayIdx, mealIdx);
+  window.__foodEditTarget = { dayIdx: dayIdx, mealIdx: mealIdx, foodIdx: foodIdx };
+  const qty = food.quantity != null ? food.quantity : (food.qty != null ? food.qty : 100);
+  const unit = food.unit || 'g';
+  $('food-name-input').value = food.name || '';
+  $('food-qty-input').value = qty;
+  $('food-unit-input').value = unit;
+  $('food-kcal-input').value = food.kcal || 0;
+  $('food-pro-input').value = food.pro || 0;
+  $('food-carb-input').value = food.carb || 0;
+  $('food-fat-input').value = food.fat || 0;
+  $('food-note-input').value = food.notes || '';
+
+  let k100 = food.kcalPer100, p100 = food.proPer100, c100 = food.carbPer100, f100 = food.fatPer100;
+  if (k100 == null) {
+    const grams = foodQtyToGrams(qty, unit, food.name) || 100;
+    const ratio100 = grams > 0 ? 100 / grams : 1;
+    k100 = Math.round((food.kcal || 0) * ratio100);
+    p100 = Math.round((food.pro || 0) * ratio100 * 10) / 10;
+    c100 = Math.round((food.carb || 0) * ratio100 * 10) / 10;
+    f100 = Math.round((food.fat || 0) * ratio100 * 10) / 10;
+  }
+  activeSelectedFoodRef = { name: food.name, kcal: k100, pro: p100, carb: c100, fat: f100, provenance: food.provenance };
+
+  const titleEl = $('add-food-modal-title');
+  if (titleEl) titleEl.textContent = 'MODIFICA ALIMENTO';
+  const saveBtn = $('add-food-modal-save-btn');
+  if (saveBtn) saveBtn.textContent = 'SALVA MODIFICHE';
+}
+window.editFoodItem = editFoodItem;
 
 function closeAddFoodModal() {
   $('add-food-modal').style.display = 'none';
@@ -44681,28 +44754,52 @@ function saveFoodItem() {
     if (typeof showToast === 'function') showToast("Inserisci il nome dell'alimento", "warning");
     return;
   }
+  const qty = parseFloat($('food-qty-input').value) || 100;
+  const unit = $('food-unit-input').value || 'g';
+  const kcal = parseFloat($('food-kcal-input').value) || 0;
+  const pro = parseFloat($('food-pro-input').value) || 0;
+  const carb = parseFloat($('food-carb-input').value) || 0;
+  const fat = parseFloat($('food-fat-input').value) || 0;
+
+  // Always persist a per-100g rate alongside the absolute values. Without this,
+  // a food saved once could never be rescaled by a later quantity edit - it
+  // just stayed stuck at whatever kcal was typed for the original quantity.
+  const grams = foodQtyToGrams(qty, unit, name) || 100;
+  const ratio100 = grams > 0 ? 100 / grams : 1;
+  const kcalPer100 = activeSelectedFoodRef && activeSelectedFoodRef.kcal != null ? activeSelectedFoodRef.kcal : Math.round(kcal * ratio100);
+  const proPer100 = activeSelectedFoodRef && activeSelectedFoodRef.pro != null ? activeSelectedFoodRef.pro : Math.round(pro * ratio100 * 10) / 10;
+  const carbPer100 = activeSelectedFoodRef && activeSelectedFoodRef.carb != null ? activeSelectedFoodRef.carb : Math.round(carb * ratio100 * 10) / 10;
+  const fatPer100 = activeSelectedFoodRef && activeSelectedFoodRef.fat != null ? activeSelectedFoodRef.fat : Math.round(fat * ratio100 * 10) / 10;
+
   const foodObj = {
     name,
-    quantity: parseFloat($('food-qty-input').value) || 100,
-    unit: $('food-unit-input').value || 'g',
-    kcal: parseFloat($('food-kcal-input').value) || 0,
-    pro: parseFloat($('food-pro-input').value) || 0,
-    carb: parseFloat($('food-carb-input').value) || 0,
-    fat: parseFloat($('food-fat-input').value) || 0,
+    quantity: qty,
+    unit,
+    kcal, pro, carb, fat,
+    kcalPer100, proPer100, carbPer100, fatPer100,
     notes: $('food-note-input').value.trim(),
     provenance: activeSelectedFoodRef && activeSelectedFoodRef.provenance ? activeSelectedFoodRef.provenance : { source: 'user', kind: 'user', confidence: 1 }
   };
 
-  if (!DATA.nutrition.days[dayIdx]) DATA.nutrition.days[dayIdx] = { day: 'Giorno ' + (dayIdx + 1), meals: [] };
-  if (!DATA.nutrition.days[dayIdx].meals[mealIdx]) DATA.nutrition.days[dayIdx].meals[mealIdx] = { name: 'Pasto', foods: [] };
-  if (!DATA.nutrition.days[dayIdx].meals[mealIdx].foods) DATA.nutrition.days[dayIdx].meals[mealIdx].foods = [];
+  const editTarget = window.__foodEditTarget;
+  const editedFoods = editTarget && DATA.nutrition && DATA.nutrition.days && DATA.nutrition.days[editTarget.dayIdx]
+    && DATA.nutrition.days[editTarget.dayIdx].meals[editTarget.mealIdx]
+    && DATA.nutrition.days[editTarget.dayIdx].meals[editTarget.mealIdx].foods;
+  if (editedFoods && editedFoods[editTarget.foodIdx] !== undefined) {
+    editedFoods[editTarget.foodIdx] = foodObj;
+    window.__foodEditTarget = null;
+  } else {
+    if (!DATA.nutrition.days[dayIdx]) DATA.nutrition.days[dayIdx] = { day: 'Giorno ' + (dayIdx + 1), meals: [] };
+    if (!DATA.nutrition.days[dayIdx].meals[mealIdx]) DATA.nutrition.days[dayIdx].meals[mealIdx] = { name: 'Pasto', foods: [] };
+    if (!DATA.nutrition.days[dayIdx].meals[mealIdx].foods) DATA.nutrition.days[dayIdx].meals[mealIdx].foods = [];
+    DATA.nutrition.days[dayIdx].meals[mealIdx].foods.push(foodObj);
+  }
 
-  DATA.nutrition.days[dayIdx].meals[mealIdx].foods.push(foodObj);
   markNutritionDirty();
   persist();
   closeAddFoodModal();
   render();
-  if (typeof showToast === 'function') showToast("Alimento aggiunto", "success");
+  if (typeof showToast === 'function') showToast(editTarget ? "Alimento aggiornato" : "Alimento aggiunto", "success");
 }
 
 const STANDARD_MEAL_NAMES = [
@@ -44756,15 +44853,28 @@ function openMealPhotoFlow(dayIdx, mealIdx, explicitMealName) {
   openMealTargetModal();
 }
 
-function openMealTargetModal(preselectedMealName) {
+// onSelect(mealName) lets any flow reuse this picker (meal-photo, barcode
+// scan, ...) instead of each one hardcoding its own destination. Defaults to
+// the meal-photo flow when no callback is given, matching every existing
+// call site that doesn't pass one.
+let __mealTargetCallback = null;
+function openMealTargetModal(preselectedMealName, onSelect, opts) {
+  __mealTargetCallback = typeof onSelect === 'function' ? onSelect : null;
+  opts = opts || {};
   const modal = document.getElementById('meal-target-modal');
   const optionsBox = document.getElementById('meal-target-options');
   const customBox = document.getElementById('meal-target-custom-box');
   const customInput = document.getElementById('meal-target-custom-input');
   if (customBox) customBox.style.display = 'none';
   if (customInput) customInput.value = '';
+  const iconEl = document.getElementById('meal-target-modal-icon');
+  const titleEl = document.getElementById('meal-target-modal-title');
+  const subtitleEl = document.getElementById('meal-target-modal-subtitle');
+  if (iconEl) iconEl.textContent = opts.icon || '📸';
+  if (titleEl) titleEl.textContent = opts.title || 'FOTO PASTO AI';
+  if (subtitleEl) subtitleEl.textContent = opts.subtitle || 'Dove vuoi aggiungere questo pasto?';
 
-  const dayIdx = (typeof currentNutritionDayIndex === 'number' ? currentNutritionDayIndex : 0);
+  const dayIdx = (typeof opts.dayIdx === 'number') ? opts.dayIdx : (typeof currentNutritionDayIndex === 'number' ? currentNutritionDayIndex : 0);
   const day = DATA && DATA.nutrition && DATA.nutrition.days && DATA.nutrition.days[dayIdx];
   const existingMeals = (day && Array.isArray(day.meals)) ? day.meals.map(m => m && m.name).filter(Boolean) : [];
 
@@ -44835,8 +44945,14 @@ function submitCustomMealTarget() {
 }
 
 function selectMealTarget(mealName) {
-  __mealPhotoTarget.mealName = mealName;
   closeMealTargetModal();
+  if (__mealTargetCallback) {
+    const cb = __mealTargetCallback;
+    __mealTargetCallback = null;
+    cb(mealName);
+    return;
+  }
+  __mealPhotoTarget.mealName = mealName;
   openMealAcquisitionModal();
 }
 
@@ -45559,6 +45675,109 @@ function deleteFoodItem(dayIdx, mealIdx, foodIdx) {
     if (typeof showToast === 'function') showToast("Alimento rimosso", "info");
   }
 }
+
+// Copy a meal's foods into a chosen day/meal - two-step picker: first the day
+// (any weekday not yet present gets created on confirm, not before), then the
+// meal name within it (reusing the same picker as meal-photo/barcode-add).
+let __duplicateMealSource = null;
+let __duplicateMealTargetDay = null;
+
+function duplicateMealItem(dayIdx, mealIdx) {
+  const meal = DATA && DATA.nutrition && DATA.nutrition.days && DATA.nutrition.days[dayIdx] && DATA.nutrition.days[dayIdx].meals[mealIdx];
+  if (!meal) return;
+  if (!(meal.foods && meal.foods.length)) {
+    if (typeof showToast === 'function') showToast("Questo pasto è vuoto, non c'è nulla da duplicare", 'warning');
+    return;
+  }
+  __duplicateMealSource = { dayIdx: dayIdx, mealIdx: mealIdx };
+  openDuplicateMealDayModal();
+}
+window.duplicateMealItem = duplicateMealItem;
+
+function openDuplicateMealDayModal() {
+  const modal = document.getElementById('duplicate-meal-day-modal');
+  const optionsBox = document.getElementById('duplicate-meal-day-options');
+  const days = (DATA && DATA.nutrition && Array.isArray(DATA.nutrition.days)) ? DATA.nutrition.days : [];
+  const existingByName = {};
+  days.forEach(function (d, idx) {
+    const name = d && d.day;
+    if (name && !(name in existingByName)) existingByName[name] = idx;
+  });
+  const allDayNames = WEEKDAY_IT.slice();
+  days.forEach(function (d) {
+    const name = d && d.day;
+    if (name && allDayNames.indexOf(name) === -1) allDayNames.push(name);
+  });
+  if (optionsBox) {
+    optionsBox.innerHTML = allDayNames.map(function (name) {
+      const existingIdx = existingByName[name];
+      const isExisting = existingIdx != null;
+      return '<button type="button" class="btn btn-outline" style="padding:10px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:space-between;border-radius:8px;border-color:#333;color:#eee;" onclick="pickDuplicateMealDay(' + JSON.stringify(name).replace(/"/g, '&quot;') + ', ' + (isExisting ? existingIdx : 'null') + ')">' +
+        '<span>' + esc(name) + '</span>' +
+        (isExisting ? '<span style="font-size:10px;color:#888;">esistente</span>' : '<span style="font-size:10px;color:var(--gold);">+ crea</span>') +
+        '</button>';
+    }).join('');
+  }
+  if (modal) {
+    modal.style.display = 'flex';
+    if (typeof pushUiOverlay === 'function') pushUiOverlay('duplicate-meal-day-modal');
+  }
+}
+window.openDuplicateMealDayModal = openDuplicateMealDayModal;
+
+function closeDuplicateMealDayModal() {
+  const modal = document.getElementById('duplicate-meal-day-modal');
+  if (modal) modal.style.display = 'none';
+  if (typeof popUiOverlay === 'function') popUiOverlay('duplicate-meal-day-modal');
+}
+window.closeDuplicateMealDayModal = closeDuplicateMealDayModal;
+
+function pickDuplicateMealDay(dayName, existingDayIdx) {
+  __duplicateMealTargetDay = { dayName: dayName, existingDayIdx: (existingDayIdx === null || existingDayIdx === undefined) ? null : existingDayIdx };
+  closeDuplicateMealDayModal();
+  openMealTargetModal(null, function (mealName) {
+    finishDuplicateMeal(mealName);
+  }, {
+    icon: '⧉',
+    title: 'DUPLICA PASTO',
+    subtitle: 'In quale pasto di "' + dayName + '" vuoi copiarlo?',
+    dayIdx: __duplicateMealTargetDay.existingDayIdx != null ? __duplicateMealTargetDay.existingDayIdx : -1
+  });
+}
+window.pickDuplicateMealDay = pickDuplicateMealDay;
+
+function finishDuplicateMeal(mealName) {
+  const src = __duplicateMealSource;
+  const targetInfo = __duplicateMealTargetDay;
+  if (!src || !targetInfo) return;
+  const sourceMeal = DATA.nutrition.days[src.dayIdx] && DATA.nutrition.days[src.dayIdx].meals[src.mealIdx];
+  if (!sourceMeal) return;
+
+  let targetDayIdx = targetInfo.existingDayIdx;
+  if (targetDayIdx == null) {
+    if (!DATA.nutrition) DATA.nutrition = { days: [], present: true };
+    if (!Array.isArray(DATA.nutrition.days)) DATA.nutrition.days = [];
+    DATA.nutrition.days.push({ day: targetInfo.dayName, meals: [] });
+    targetDayIdx = DATA.nutrition.days.length - 1;
+  }
+
+  const targetSlot = ensureTargetMealSlot(targetDayIdx, mealName);
+  if (!targetSlot) return;
+  const clonedFoods = JSON.parse(JSON.stringify(sourceMeal.foods || []));
+  if (!Array.isArray(targetSlot.meal.foods)) targetSlot.meal.foods = [];
+  targetSlot.meal.foods = targetSlot.meal.foods.concat(clonedFoods);
+  DATA.nutrition.present = true;
+  if (store) store.nutrition = DATA.nutrition;
+  markNutritionDirty();
+  persist();
+  render();
+  __duplicateMealSource = null;
+  __duplicateMealTargetDay = null;
+  if (typeof showToast === 'function') {
+    showToast('Pasto duplicato in ' + targetInfo.dayName + ' · ' + targetSlot.mealName, 'success');
+  }
+}
+window.finishDuplicateMeal = finishDuplicateMeal;
 
 function addNutritionDay() {
   openAddNutritionDayWizard();
@@ -54030,7 +54249,12 @@ function applyBarcodeProduct(product, kind) {
   // Written here for when this runs inside an already-open add-food-modal
   // (e.g. barcode fusion for a draft row); harmless no-op otherwise since
   // openAddFoodModal() resets these fields anyway when it's opened next.
-  window.activeSelectedFoodRef = {
+  // MUST be the bare (let-scoped) variable, not window.activeSelectedFoodRef:
+  // recalcFoodMacrosFromDb()/saveFoodItem() read the bare binding, so writing
+  // only the window property left them unable to see this product at all -
+  // the qty field looked live but kcal silently never rescaled from it (the
+  // exact "sandwich bread stuck at 252 kcal no matter the quantity" report).
+  activeSelectedFoodRef = {
     name: name,
     kcal: kcal,
     pro: pro,
@@ -54052,7 +54276,7 @@ function applyBarcodeProduct(product, kind) {
   // The scan button lives on the Nutrition tab, outside any open modal, so
   // the fields above aren't visible - show the result where the user is
   // actually looking and give a one-tap way to add it to the diary.
-  window.__lastScannedBarcodeProduct = window.activeSelectedFoodRef;
+  window.__lastScannedBarcodeProduct = activeSelectedFoodRef;
   if (resultEl) {
     resultEl.innerHTML =
       '<div style="background:#111;border:1px solid #00ffcc;border-radius:8px;padding:10px;color:#eee;">' +
@@ -54067,15 +54291,29 @@ function applyBarcodeProduct(product, kind) {
 function addLastScannedFoodToDiary() {
   const p = window.__lastScannedBarcodeProduct;
   if (!p) return;
-  openAddFoodModal(currentNutritionDayIndex, 0);
-  if ($('food-name-input')) $('food-name-input').value = p.name;
-  if ($('food-kcal-input')) $('food-kcal-input').value = p.kcal;
-  if ($('food-pro-input')) $('food-pro-input').value = p.pro;
-  if ($('food-carb-input')) $('food-carb-input').value = p.carb;
-  if ($('food-fat-input')) $('food-fat-input').value = p.fat;
-  if ($('food-unit-input')) $('food-unit-input').value = p.unit === 'ml' ? 'ml' : 'g';
-  if ($('food-qty-input') && p.servingGrams) $('food-qty-input').value = p.servingGrams;
-  window.activeSelectedFoodRef = p;
+  // Used to always drop the scanned product into meal index 0 regardless of
+  // which meal the user actually meant - ask instead, same picker the
+  // meal-photo flow already uses.
+  openMealTargetModal(null, function (mealName) {
+    const dayIdx = (typeof currentNutritionDayIndex === 'number' ? currentNutritionDayIndex : 0);
+    const targetSlot = (typeof ensureTargetMealSlot === 'function') ? ensureTargetMealSlot(dayIdx, mealName) : null;
+    const mealIdx = targetSlot ? targetSlot.mealIdx : 0;
+    openAddFoodModal(targetSlot ? targetSlot.dayIdx : dayIdx, mealIdx);
+    if ($('food-name-input')) $('food-name-input').value = p.name;
+    if ($('food-kcal-input')) $('food-kcal-input').value = p.kcal;
+    if ($('food-pro-input')) $('food-pro-input').value = p.pro;
+    if ($('food-carb-input')) $('food-carb-input').value = p.carb;
+    if ($('food-fat-input')) $('food-fat-input').value = p.fat;
+    if ($('food-unit-input')) $('food-unit-input').value = p.unit === 'ml' ? 'ml' : 'g';
+    activeSelectedFoodRef = p; // bare binding - see note in applyBarcodeProduct on why window.X doesn't work here
+    if ($('food-qty-input') && p.servingGrams) {
+      $('food-qty-input').value = p.servingGrams;
+      // p.kcal/pro/carb/fat above are per-100g; rescale immediately to the
+      // serving size instead of leaving the modal showing servingGrams next
+      // to the unscaled per-100g numbers until the user happens to touch qty.
+      recalcFoodMacrosFromDb();
+    }
+  }, { icon: '🏷️', title: 'AGGIUNGI AL DIARIO', subtitle: 'In quale pasto vuoi aggiungere "' + (p.name || 'questo prodotto') + '"?' });
 }
 // The whole app script is wrapped in one strict-mode IIFE (see
 // build_master25.mjs), so a plain top-level `function foo(){}` is local to
