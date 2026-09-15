@@ -900,7 +900,25 @@ export function extractExcelStructuredForApi(workbook, XLSXlib) {
       previewRows: rawRows.slice(0, 80).map((r) => (r || []).map((v) => (v == null ? "" : String(v))))
     });
   });
-  return { sheetCount: sheetsOut.length, sheets: sheetsOut };
+  const domains = { training: [], nutrition: [], supplements: [], therapy: [], unclassified: [] };
+  for (const sheet of sheetsOut) {
+    // A named worksheet is authoritative. Its rows may legitimately mention
+    // training (e.g. supplement timing) without changing its domain.
+    const name = String(sheet.name || "").toLowerCase();
+    const text = `${name} ${(sheet.previewRows || []).slice(0, 12).flat().join(" ")}`.toLowerCase();
+    const key = /integrazione|integratori|supplement/.test(name) ? "supplements"
+      : /alimentazione|nutrizione|dieta|meal/.test(name) ? "nutrition"
+      : /terapia|farmaci|medic|prescrizion/.test(name) ? "therapy"
+      : /allenamento|workout|training|scheda/.test(name) ? "training"
+      : /integrazione|integratori|supplement/.test(text) ? "supplements"
+      : /alimentazione|nutrizione|dieta|meal/.test(text) ? "nutrition"
+      : /terapia|farmaci|medic|prescrizion/.test(text) ? "therapy"
+      : /allenamento|workout|training|scheda/.test(text) ? "training" : "unclassified";
+    domains[key].push(sheet);
+  }
+  // Domain groups retain the complete deterministic sheet extraction: no cells
+  // are discarded when a workbook contains non-training information.
+  return { sheetCount: sheetsOut.length, sheets: sheetsOut, domains };
 }
 
 // ---- helpers ----

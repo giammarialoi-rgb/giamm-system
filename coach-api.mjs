@@ -3,7 +3,6 @@ import bcrypt from "bcryptjs";
 import cors from "cors";
 import dotenv from "dotenv";
 import multer from "multer";
-import { GoogleGenAI } from "@google/genai";
 import pg from "pg";
 import jwt from "jsonwebtoken";
 import ExcelJS from "exceljs";
@@ -23,10 +22,13 @@ import { mergeAccountDataBlobs } from "./server/account/index.mjs";
 import { runMigrations } from "./server/db/migrate.mjs";
 import {
   buildCorsOriginValidator,
-  createFixedWindowRateLimiter,
+  createPostgresFixedWindowRateLimiter,
   isProduction,
   resolveJwtSecret
 } from "./server/security.mjs";
+import { createAiGateway, aiPublicStatus } from "./server/ai/gateway.mjs";
+import { normalizeHealthEvent, verifyWebhookSignature } from "./server/integrations/health.mjs";
+import { calendarPublicConfig } from "./server/integrations/calendar.mjs";
 
 dotenv.config();
 
@@ -42,16 +44,33 @@ app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   next();
 });
+// Raw body must be captured before the JSON parser so webhook HMAC validation
+// is performed against the exact bytes signed by the sender.
+app.post("/api/webhooks/google-health", express.raw({ type: "application/json", limit: "1mb" }), async (req, res) => {
+  const raw = Buffer.isBuffer(req.body) ? req.body.toString("utf8") : "";
+  if (!verifyWebhookSignature(raw, req.headers["x-google-health-signature"], process.env.GOOGLE_HEALTH_WEBHOOK_SECRET)) return res.status(401).json({ error: "Invalid webhook signature." });
+  try {
+    const event = normalizeHealthEvent(JSON.parse(raw));
+    await initDb();
+    if (!dbInitialized) return res.status(503).json({ error: "Storage unavailable." });
+    // Subscription-to-user resolution is provider-specific. Do not trust a
+    // caller-supplied user header; events remain unassigned until that verified
+    // mapping is configured by the operator.
+    const inserted = await pool.query("INSERT INTO health_events(id, user_id, source, event_type, occurred_at, payload) VALUES($1, NULL, $2, $3, $4, $5) ON CONFLICT(id) DO NOTHING RETURNING id", [event.id, event.source, event.type, event.occurredAt, JSON.stringify(event.data)]);
+    return res.status(inserted.rowCount ? 202 : 200).json({ ok: true, id: event.id, duplicate: !inserted.rowCount });
+  } catch (_) { return res.status(400).json({ error: "Invalid health event." }); }
+});
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-app.use("/api/auth", createFixedWindowRateLimiter({
+const distributedRateLimiter = (options) => createPostgresFixedWindowRateLimiter({ ...options, getPool: () => pool });
+app.use("/api/auth", distributedRateLimiter({
   windowMs: 15 * 60_000,
   max: Number(process.env.AUTH_RATE_LIMIT_MAX || 40),
   keyPrefix: "auth"
 }));
 app.use(
   ["/api/analyze-file", "/analyze", "/api/analyze", "/api/ingest/document"],
-  createFixedWindowRateLimiter({
+  distributedRateLimiter({
     windowMs: 60_000,
     max: Number(process.env.IMPORT_RATE_LIMIT_MAX || 20),
     keyPrefix: "import"
@@ -59,7 +78,7 @@ app.use(
 );
 app.use(
   "/api/food/analyze-photo",
-  createFixedWindowRateLimiter({
+  distributedRateLimiter({
     windowMs: 60_000,
     max: Number(process.env.MEAL_PHOTO_RATE_LIMIT_MAX || 12),
     keyPrefix: "meal-photo"
@@ -67,7 +86,7 @@ app.use(
 );
 app.use(
   ["/api/chat", "/coach", "/api/coach"],
-  createFixedWindowRateLimiter({
+  distributedRateLimiter({
     windowMs: 60_000,
     max: Number(process.env.CHAT_RATE_LIMIT_MAX || 30),
     keyPrefix: "chat",
@@ -75,7 +94,7 @@ app.use(
     message: "Troppe richieste al Coach AI. Attendi qualche secondo e riprova."
   })
 );
-const barcodeAiRateLimiter = createFixedWindowRateLimiter({
+const barcodeAiRateLimiter = distributedRateLimiter({
   windowMs: 60_000,
   max: Number(process.env.BARCODE_AI_RATE_LIMIT_MAX || 10),
   keyPrefix: "barcode-ai",
@@ -302,7 +321,6 @@ function normalizeEmail(email) {
 
 const JWT_SECRET = resolveJwtSecret(process.env);
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
-const GOOGLE_WEB_CLIENT_ID_FALLBACK = "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com";
 const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || "com.giammaria.system";
 const APPLE_JWKS = createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
 
@@ -325,13 +343,11 @@ function allowedGoogleAudiences() {
     .map((s) => sanitizeGoogleClientId(s))
     .filter(Boolean)
     .forEach((id) => ids.add(id));
-  const fallback = sanitizeGoogleClientId(GOOGLE_WEB_CLIENT_ID_FALLBACK);
-  if (fallback) ids.add(fallback);
   return [...ids];
 }
 
 function publicGoogleClientId() {
-  return sanitizeGoogleClientId(GOOGLE_CLIENT_ID) || sanitizeGoogleClientId(GOOGLE_WEB_CLIENT_ID_FALLBACK);
+  return sanitizeGoogleClientId(GOOGLE_CLIENT_ID);
 }
 
 async function sendPasswordResetEmail(email, code) {
@@ -619,19 +635,14 @@ const workoutSchema = {
   ]
 };
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
+const AI_STATUS = aiPublicStatus(process.env);
+const MODEL = AI_STATUS.model;
 // Meal-photo analysis can use a stronger/slower vision model than chat without touching chat latency/cost.
 // Defaults to MODEL (no behavior change) unless explicitly overridden on Render.
 const MEAL_VISION_MODEL = process.env.MEAL_VISION_MODEL || MODEL;
 
 function getClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw Object.assign(new Error("GEMINI_API_KEY is not configured on the server."), {
-      statusCode: 500
-    });
-  }
-  return new GoogleGenAI({ apiKey });
+  return createAiGateway(process.env);
 }
 
 function sleep(ms) {
@@ -1226,6 +1237,9 @@ Preserva fedelmente ogni dato (serie, ripetizioni, carichi, recuperi, intensità
   if (!replyText) throw new Error("Gemini returned an empty document analysis response.");
 
   const structuredWorkout = JSON.parse(replyText);
+  // The legacy workout schema is training-centric; retain the deterministic
+  // workbook source for nutrition, supplements and therapy as well.
+  if (structured) structuredWorkout.sourceWorkbook = structured;
   console.log(`[FILE_ANALYZE_END] filename="${filename}" parser="${parser}"`);
   return { structuredWorkout, parser };
 }
@@ -1268,12 +1282,19 @@ function imagePartsFromRequest(images) {
   return parts;
 }
 
+app.get("/livez", (_req, res) => res.status(200).json({ ok: true, status: "live" }));
+app.get("/readyz", (_req, res) => {
+  const databaseRequired = Boolean(process.env.DATABASE_URL);
+  const ready = AI_STATUS.configured && (!databaseRequired || dbInitialized);
+  return res.status(ready ? 200 : 503).json({ ok: ready, status: ready ? "ready" : "not_ready", databaseRequired, dbReady: dbInitialized, aiConfigured: AI_STATUS.configured });
+});
 app.get("/health", (req, res) => {
   res.json({
     ok: true,
     status: "healthy",
     model: MODEL,
-    apiKeyConfigured: Boolean(process.env.GEMINI_API_KEY),
+    aiProvider: AI_STATUS.provider,
+    apiKeyConfigured: AI_STATUS.configured,
     accountStorageConfigured: Boolean(process.env.DATABASE_URL),
     googleOAuthConfigured: allowedGoogleAudiences().length > 0,
     chatVision: true,
@@ -1289,6 +1310,11 @@ app.get("/health", (req, res) => {
     dbError: dbInitError
   });
 });
+
+app.get("/api/integrations/calendar/config", (req, res) => res.json(calendarPublicConfig(process.env)));
+
+// Google Health event delivery is deliberately provider-neutral at the edge.
+// The provider-specific subscription handshake remains an operator action.
 
 app.get("/api/auth/public-config", (req, res) => {
   const googleClientId = publicGoogleClientId();
@@ -2076,6 +2102,19 @@ app.use(function (req, res, next) {
 });
 app.use(express.static(path.join(__dirname, "web")));
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Coach API server listening at http://localhost:${port}`);
 });
+let shuttingDown = false;
+async function gracefulShutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received: draining HTTP connections.`);
+  server.close(async () => {
+    await poolHolder.current.end().catch(() => {});
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), Number(process.env.GRACEFUL_SHUTDOWN_TIMEOUT_MS || 25_000)).unref();
+}
+process.once("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.once("SIGINT", () => gracefulShutdown("SIGINT"));

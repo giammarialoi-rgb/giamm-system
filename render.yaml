@@ -6,14 +6,20 @@ services:
     buildCommand: npm install && node build_master25.mjs
     startCommand: npm start
     plan: free
-    healthCheckPath: /health
+    healthCheckPath: /readyz
     envVars:
       - key: NODE_ENV
         value: production
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-3.1-flash-lite
+        value: gemini-2.5-flash
+      - key: AI_PROVIDER
+        value: gemini
+      - key: AI_MODEL
+        value: gemini-2.5-flash
+      - key: RATE_LIMIT_STORE
+        value: memory
       - key: CORS_ORIGINS
         sync: false
       - key: DATABASE_URL
