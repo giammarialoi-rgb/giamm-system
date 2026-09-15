@@ -34361,15 +34361,18 @@ const FoodDatabaseService = {
       }
     } catch (_) {}
     try {
+      // Open Food Facts retired the legacy cgi/search.pl endpoint used here
+      // before (it now returns 503) in favor of this search-a-licious service;
+      // its hits carry brands as an array instead of a joined string.
       if (!remote.length && typeof fetch !== 'undefined') {
-        const url = 'https://world.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(query) + '&search_simple=1&action=process&json=1&page_size=12';
+        const url = 'https://search.openfoodfacts.org/search?q=' + encodeURIComponent(query) + '&page_size=12&fields=product_name,product_name_it,generic_name,brands,nutriments,code';
         const res = await fetch(url);
         const j = await res.json();
-        (j.products || []).forEach((p) => {
+        (j.hits || []).forEach((p) => {
           const n = p.nutriments || {};
           remote.push({
             name: p.product_name || p.product_name_it || p.generic_name || 'OFF',
-            brand: p.brands || '',
+            brand: Array.isArray(p.brands) ? p.brands.join(', ') : (p.brands || ''),
             category: 'Open Food Facts',
             kcal: Number(n['energy-kcal_100g'] || n.energy_kcal_100g || 0) || 0,
             pro: Number(n.proteins_100g || 0) || 0,

@@ -6,6 +6,11 @@
 
 const USDA_BASE = 'https://api.nal.usda.gov/fdc/v1';
 const OFF_BASE = 'https://world.openfoodfacts.org';
+// Open Food Facts retired the legacy cgi/search.pl text-search endpoint (it now
+// returns 503) in favor of this new search-a-licious service. The barcode
+// lookup endpoint (OFF_BASE/api/v2/product/:code.json) is unaffected and still
+// used as-is below.
+const OFF_SEARCH_BASE = 'https://search.openfoodfacts.org';
 
 function fold(str) {
   return String(str || '')
@@ -67,7 +72,7 @@ function inferProductUnit(raw) {
   return 'g';
 }
 
-function mapOffProduct(raw) {
+export function mapOffProduct(raw) {
   const nuts = raw.nutriments || {};
   let kcal = num(nuts['energy-kcal_100g'] || nuts.energy_kcal_100g || nuts['energy-kcal'] || nuts.energy_kcal);
   if (!kcal && nuts['energy-kj_100g']) {
@@ -89,7 +94,7 @@ function mapOffProduct(raw) {
     kcal = pro * 4 + carb * 4 + fat * 9;
   }
 
-  const brand = raw.brands || raw.brand || null;
+  const brand = Array.isArray(raw.brands) ? (raw.brands.join(', ') || null) : (raw.brands || raw.brand || null);
   const name = raw.product_name_it || raw.product_name || raw.generic_name_it || raw.generic_name || 'Prodotto';
   const hasComplete = (kcal > 0) || (pro > 0 || carb > 0 || fat > 0);
 
@@ -131,7 +136,8 @@ export async function searchUsda(query, { apiKey, pageSize = 8 } = {}) {
 
 export async function searchOpenFoodFacts(query, { pageSize = 8 } = {}) {
   if (!query || query.trim().length < 2) return [];
-  const url = `${OFF_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=${pageSize}`;
+  const fields = 'product_name,product_name_it,generic_name,generic_name_it,brands,nutriments,code,serving_size,serving_quantity,nutriscore_grade,quantity';
+  const url = `${OFF_SEARCH_BASE}/search?q=${encodeURIComponent(query)}&page_size=${pageSize}&fields=${fields}`;
   const res = await fetch(url, {
     headers: {
       Accept: 'application/json',
@@ -140,7 +146,7 @@ export async function searchOpenFoodFacts(query, { pageSize = 8 } = {}) {
   });
   if (!res.ok) throw new Error('OFF_HTTP_' + res.status);
   const data = await res.json();
-  return (data.products || []).map(mapOffProduct);
+  return (data.hits || []).map(mapOffProduct);
 }
 
 export async function lookupOffBarcode(code) {
