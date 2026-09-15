@@ -38381,7 +38381,7 @@ async function syncAccountData(download=false){
   }
   return { uploaded };
 }
-function scheduleAccountSync(){
+function scheduleAccountSync(immediate){
   if(!store.accountToken) return;
   if (store.coachAssigning || store.coachViewingClient) return;
   // Used to only fire for training loads/logs, so an account-synced user who only
@@ -38398,7 +38398,7 @@ function scheduleAccountSync(){
   if (!hasLoads) return;
   if (typeof queueAccountSyncIfOffline === 'function' && queueAccountSyncIfOffline()) return;
   clearTimeout(accountSyncTimer);
-  accountSyncTimer = setTimeout(function () {
+  const run = function () {
     if (typeof isAppOnline === 'function' && !isAppOnline()) {
       if (typeof queueAccountSyncIfOffline === 'function') queueAccountSyncIfOffline();
       return;
@@ -38409,7 +38409,9 @@ function scheduleAccountSync(){
     }).then(function (response) { return readApiJson(response); }).catch(function () {
       if (typeof enqueueClientOutbox === 'function') enqueueClientOutbox({ id: 'account-sync', type: 'account-sync', note: 'retry' });
     });
-  }, 1500);
+  };
+  if (immediate) { run(); return; }
+  accountSyncTimer = setTimeout(run, 1500);
 }
 
 function newCoachQuestion(){
@@ -43364,12 +43366,12 @@ function persist() {
 }
 
 let __workoutIdbSyncTimer = null;
-function scheduleWorkoutLogsIdbSync() {
+function scheduleWorkoutLogsIdbSync(immediate) {
   if (store && (store.coachAssigning || store.coachViewingClient)) return;
   if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
   if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveWorkoutLogsSnapshot) return;
   clearTimeout(__workoutIdbSyncTimer);
-  __workoutIdbSyncTimer = setTimeout(function () {
+  const run = function () {
     GiammariaPersistence.saveWorkoutLogsSnapshot({
       data: store.data || {},
       customSets: store.customSets || {},
@@ -43378,23 +43380,27 @@ function scheduleWorkoutLogsIdbSync() {
       health: store.health || null,
       updatedAt: new Date().toISOString()
     }).catch(function (err) { console.warn('[WORKOUT_IDB_SYNC]', err); });
-  }, 600);
+  };
+  if (immediate) { run(); return; }
+  __workoutIdbSyncTimer = setTimeout(run, 600);
 }
 
 let __rewardsIdbSyncTimer = null;
-function scheduleRewardsIdbSync() {
+function scheduleRewardsIdbSync(immediate) {
   if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
   if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveRewardsSnapshot) return;
   if (!store.rewards) return;
   clearTimeout(__rewardsIdbSyncTimer);
-  __rewardsIdbSyncTimer = setTimeout(function () {
+  const run = function () {
     GiammariaPersistence.saveRewardsSnapshot(store.rewards).catch(function (err) {
       console.warn('[REWARDS_IDB_SYNC]', err);
     });
     if (GiammariaPersistence.saveActionHistorySnapshot && Array.isArray(store.actionHistory)) {
       GiammariaPersistence.saveActionHistorySnapshot(store.actionHistory).catch(function () {});
     }
-  }, 800);
+  };
+  if (immediate) { run(); return; }
+  __rewardsIdbSyncTimer = setTimeout(run, 800);
 }
 
 // Nutrition/supplementation/therapy/exams are deliberately stripped out of the
@@ -43408,60 +43414,96 @@ function scheduleRewardsIdbSync() {
 // used for workout logs/rewards - makes every persist() call durably save
 // whichever of these domains changed, regardless of which screen triggered it.
 let __nutritionIdbSyncTimer = null;
-function scheduleNutritionIdbSync() {
+function scheduleNutritionIdbSync(immediate) {
   if (store && (store.coachAssigning || store.coachViewingClient)) return;
   if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
   if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveNutrition) return;
   if (!store.nutrition) return;
   clearTimeout(__nutritionIdbSyncTimer);
-  __nutritionIdbSyncTimer = setTimeout(function () {
+  const run = function () {
     GiammariaPersistence.saveNutrition(store.nutrition).catch(function (err) {
       console.warn('[NUTRITION_IDB_SYNC]', err);
     });
-  }, 600);
+  };
+  if (immediate) { run(); return; }
+  __nutritionIdbSyncTimer = setTimeout(run, 600);
 }
 
 let __supplementsIdbSyncTimer = null;
-function scheduleSupplementsIdbSync() {
+function scheduleSupplementsIdbSync(immediate) {
   if (store && (store.coachAssigning || store.coachViewingClient)) return;
   if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
   if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveSupplements) return;
   if (!store.supplementation) return;
   clearTimeout(__supplementsIdbSyncTimer);
-  __supplementsIdbSyncTimer = setTimeout(function () {
+  const run = function () {
     GiammariaPersistence.saveSupplements(store.supplementation).catch(function (err) {
       console.warn('[SUPPLEMENTS_IDB_SYNC]', err);
     });
-  }, 600);
+  };
+  if (immediate) { run(); return; }
+  __supplementsIdbSyncTimer = setTimeout(run, 600);
 }
 
 let __therapyIdbSyncTimer = null;
-function scheduleTherapyIdbSync() {
+function scheduleTherapyIdbSync(immediate) {
   if (store && (store.coachAssigning || store.coachViewingClient)) return;
   if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
   if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveTherapy) return;
   if (!store.therapy) return;
   clearTimeout(__therapyIdbSyncTimer);
-  __therapyIdbSyncTimer = setTimeout(function () {
+  const run = function () {
     GiammariaPersistence.saveTherapy(store.therapy).catch(function (err) {
       console.warn('[THERAPY_IDB_SYNC]', err);
     });
-  }, 600);
+  };
+  if (immediate) { run(); return; }
+  __therapyIdbSyncTimer = setTimeout(run, 600);
 }
 
 let __examsIdbSyncTimer = null;
-function scheduleExamsIdbSync() {
+function scheduleExamsIdbSync(immediate) {
   if (store && (store.coachAssigning || store.coachViewingClient)) return;
   if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
   if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveExams) return;
   if (!store.exams) return;
   clearTimeout(__examsIdbSyncTimer);
-  __examsIdbSyncTimer = setTimeout(function () {
+  const run = function () {
     GiammariaPersistence.saveExams(store.exams).catch(function (err) {
       console.warn('[EXAMS_IDB_SYNC]', err);
     });
-  }, 600);
+  };
+  if (immediate) { run(); return; }
+  __examsIdbSyncTimer = setTimeout(run, 600);
 }
+
+// iOS Safari can suspend a backgrounded tab's JS almost immediately (far more
+// aggressively than desktop/Android), so a debounced write scheduled just
+// before the user switches apps can simply never fire - the optimistic
+// "Alimento aggiunto" toast already showed success, but the durable IndexedDB
+// write (and the cloud upload) hadn't happened yet. visibilitychange->hidden
+// fires reliably even on iOS Safari (unlike beforeunload, which it often
+// skips entirely) right as the tab is about to be suspended, so every pending
+// debounced save is flushed immediately instead of waiting out its timeout.
+function flushPendingPersistSyncs() {
+  try { scheduleWorkoutLogsIdbSync(true); } catch (_) {}
+  try { scheduleRewardsIdbSync(true); } catch (_) {}
+  try { scheduleNutritionIdbSync(true); } catch (_) {}
+  try { scheduleSupplementsIdbSync(true); } catch (_) {}
+  try { scheduleTherapyIdbSync(true); } catch (_) {}
+  try { scheduleExamsIdbSync(true); } catch (_) {}
+  try { scheduleAccountSync(true); } catch (_) {}
+}
+try {
+  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') flushPendingPersistSyncs();
+    });
+  }
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('pagehide', flushPendingPersistSyncs);
+  }
+} catch (_) {}
 
 function buildPerformanceSummaryForCoach() {
   if (CoachAnalyticsService != null && typeof CoachAnalyticsService.buildPerformanceSummary === 'function') {
