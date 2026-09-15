@@ -95,4 +95,39 @@ for (const src of [html, built]) {
     'scheduleAccountSync also uploads when nutrition/supplementation/therapy/exams have real data, not just training loads');
 }
 
+// ============================================================
+// Silent upload-failure regression: a real, reproduced incident where
+// pressing the explicit "SALVA" button reported success and cleared the
+// unsynced-changes protection even though the upload to the cloud silently
+// failed (network blip, cold start, ...). The next reopen then downloaded the
+// stale cloud copy (which never received the change) and overwrote the
+// correct local data - wiping a newly added day + barcode-scanned breakfast
+// in the reproduction. syncAccountData()'s own POST already swallowed its
+// error (so a failed upload never threw), so the fix is to have it report
+// {uploaded: false} instead of looking identical to success, and have the
+// explicit-save functions actually check that before declaring victory.
+// ============================================================
+console.log('\n--- Running Upload-Failure Protection Tests ---');
+
+for (const src of [html, built]) {
+  const syncStart = src.indexOf('async function syncAccountData(download=false){');
+  ok(syncStart >= 0, 'syncAccountData is declared');
+  const syncBody = src.slice(syncStart, src.indexOf('\nfunction scheduleAccountSync', syncStart));
+  ok(syncBody.includes('uploaded = true;'), 'syncAccountData marks the upload as succeeded only after the POST actually resolves');
+  ok(syncBody.includes("catch (uploadErr)") && !syncBody.includes('catch (_) {}\n    }\n    persist()'),
+    'the upload failure is no longer swallowed by an empty catch(_){} with no trace');
+  ok(syncBody.includes('return { uploaded };'), 'syncAccountData reports whether the upload actually landed');
+
+  for (const fnName of ['saveNutritionPlanEdits', 'saveSupplementationEdits']) {
+    const fnStart = src.indexOf('async function ' + fnName + '()');
+    ok(fnStart >= 0, `${fnName} is declared`);
+    const fnBody = src.slice(fnStart, src.indexOf('\nfunction ', fnStart + 20));
+    ok(fnBody.includes('const result = await syncAccountData(false);') && fnBody.includes('cloudSynced = !!(result && result.uploaded);'),
+      `${fnName} checks whether the upload actually succeeded instead of assuming it did`);
+    ok(/if \(cloudSynced\) \{\s*store\.__cpNutritionDirty = false;|if \(cloudSynced\) \{\s*store\.__cpSupplementsDirty = false;/.test(fnBody) || fnBody.includes('if (cloudSynced) {'),
+      `${fnName} only clears its dirty/unsynced-changes flag when the upload actually succeeded`);
+    ok(fnBody.includes("'warning'"), `${fnName} warns the user instead of claiming success when the cloud upload failed`);
+  }
+}
+
 console.log('\nAll domain IndexedDB sync tests passed.');

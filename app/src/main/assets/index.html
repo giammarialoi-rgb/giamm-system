@@ -38261,11 +38261,23 @@ window.GS_STORE_CLIENT_PENDING_KEY = GS_STORE_CLIENT_PENDING_KEY;
 
 async function syncAccountData(download=false){
   const status = $('account-status'); if(status) status.textContent = 'Sincronizzazione…';
+  // uploaded tracks whether the local->cloud POST actually landed, as opposed
+  // to just being attempted. It used to be silently swallowed (catch(_){}),
+  // so a transient network failure here looked identical to success: callers
+  // like saveNutritionPlanEdits() would still clear their "unsynced changes"
+  // protection flag and tell the user it was saved, even though the server
+  // never received it - the next download (any later reopen) would then
+  // silently overwrite the correct local data with the stale server copy.
+  // Reproduced end-to-end: added a day + barcode foods, forced the upload to
+  // fail, watched it report "Alimentazione salvata" anyway, then watched a
+  // later sync wipe the day. Callers that need to know can now check
+  // result.uploaded; background/best-effort callers can keep ignoring it.
+  let uploaded = false;
   try {
     // Never download/upload account blob while the coach sandbox has client data loaded in RAM
     if (store.coachViewingClient || store.coachAssigning) {
       if (status) status.textContent = 'Sync in pausa (vista cliente).';
-      return;
+      return { uploaded: false };
     }
     try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
     const response = await accountRequest('/api/account/me', { method: 'GET' });
@@ -38287,18 +38299,24 @@ async function syncAccountData(download=false){
     if (download || localHasLoads || remoteHasLoads || localScore > 0 || remoteScore > 0) {
       try {
         await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload({ includeProgram: !skipProgUpload }) }) });
-      } catch (_) {}
+        uploaded = true;
+      } catch (uploadErr) {
+        console.warn('[ACCOUNT_SYNC_UPLOAD_FAILED]', uploadErr);
+      }
+    } else {
+      uploaded = true; // nothing needed uploading - not a failure
     }
     persist();
     if (download && !window.__bootAligning) {
       try { render(); } catch (_) {}
     }
-    if(status) status.textContent = 'Dati sincronizzati correttamente.';
+    if(status) status.textContent = uploaded ? 'Dati sincronizzati correttamente.' : 'Scaricati i dati cloud, ma il caricamento delle modifiche locali è fallito.';
   } catch(error){
     console.error('ACCOUNT_SYNC_ERROR', error);
     if(status) status.textContent = error.message || 'Sincronizzazione non riuscita.';
     throw error;
   }
+  return { uploaded };
 }
 function scheduleAccountSync(){
   if(!store.accountToken) return;
@@ -39235,11 +39253,15 @@ async function saveSupplementationEdits() {
   if (typeof store !== 'undefined' && store) store.supplementation = (DATA && DATA.supplementation) || store.supplementation;
   if (typeof persist === 'function') persist();
   if (typeof store !== 'undefined' && store) store.__cpKeepLocalSupplements = true;
+  let cloudSynced = true;
   try {
     if (typeof store !== 'undefined' && store && store.coachViewingClient && typeof pushCoachClientEdits === 'function') {
       await pushCoachClientEdits({ domains: ['supplements'] });
     } else if (typeof syncAccountData === 'function' && store && store.accountToken) {
-      await syncAccountData(false);
+      // See the matching note in saveNutritionPlanEdits(): a failed upload
+      // used to be indistinguishable from success here.
+      const result = await syncAccountData(false);
+      cloudSynced = !!(result && result.uploaded);
     }
   } catch (err) {
     if (typeof store !== 'undefined' && store) store.__cpKeepLocalSupplements = false;
@@ -39247,11 +39269,21 @@ async function saveSupplementationEdits() {
     return;
   }
   if (typeof store !== 'undefined' && store) {
-    store.__cpSupplementsDirty = false;
-    setTimeout(function () { try { store.__cpKeepLocalSupplements = false; } catch (_) {} }, 120000);
+    if (cloudSynced) {
+      store.__cpSupplementsDirty = false;
+      setTimeout(function () { try { store.__cpKeepLocalSupplements = false; } catch (_) {} }, 120000);
+    } else {
+      store.__cpKeepLocalSupplements = false;
+    }
   }
   if (typeof render === 'function') render();
-  if (typeof showToast === 'function') showToast('Integrazione salvata', 'success');
+  if (typeof showToast === 'function') {
+    if (cloudSynced) {
+      showToast('Integrazione salvata', 'success');
+    } else {
+      showToast('Salvato sul dispositivo, ma la sincronizzazione col cloud è fallita: riprova quando hai connessione.', 'warning');
+    }
+  }
 }
 
 function applySupplementationFromProfile() {
@@ -46017,11 +46049,19 @@ async function saveNutritionPlanEdits() {
   if (typeof store !== 'undefined' && store) store.nutrition = (DATA && DATA.nutrition) || store.nutrition;
   if (typeof persist === 'function') persist();
   if (typeof store !== 'undefined' && store) store.__cpKeepLocalNutrition = true;
+  let cloudSynced = true;
   try {
     if (typeof store !== 'undefined' && store && store.coachViewingClient && typeof pushCoachClientEdits === 'function') {
       await pushCoachClientEdits({ domains: ['nutrition'] });
     } else if (typeof syncAccountData === 'function' && store && store.accountToken) {
-      await syncAccountData(false);
+      // syncAccountData() itself never throws for a failed upload (only a
+      // failed download throws) - it used to be impossible to tell "uploaded"
+      // from "silently failed to upload", so this always cleared the dirty
+      // flag and reported success even when nothing reached the server. The
+      // next reopen would then overwrite the (never-backed-up) local data
+      // with the stale cloud copy - reproduced and fixed.
+      const result = await syncAccountData(false);
+      cloudSynced = !!(result && result.uploaded);
     }
   } catch (err) {
     if (typeof store !== 'undefined' && store) store.__cpKeepLocalNutrition = false;
@@ -46029,11 +46069,24 @@ async function saveNutritionPlanEdits() {
     return;
   }
   if (typeof store !== 'undefined' && store) {
-    store.__cpNutritionDirty = false;
-    setTimeout(function () { try { store.__cpKeepLocalNutrition = false; } catch (_) {} }, 120000);
+    if (cloudSynced) {
+      store.__cpNutritionDirty = false;
+      setTimeout(function () { try { store.__cpKeepLocalNutrition = false; } catch (_) {} }, 120000);
+    } else {
+      // Keep it dirty/protected: local data is fine, but the cloud never got
+      // it, so a later sync must not be allowed to overwrite it with the
+      // stale cloud copy.
+      store.__cpKeepLocalNutrition = false;
+    }
   }
   if (typeof render === 'function') render();
-  if (typeof showToast === 'function') showToast('Alimentazione salvata', 'success');
+  if (typeof showToast === 'function') {
+    if (cloudSynced) {
+      showToast('Alimentazione salvata', 'success');
+    } else {
+      showToast('Salvato sul dispositivo, ma la sincronizzazione col cloud è fallita: riprova quando hai connessione.', 'warning');
+    }
+  }
 }
 
 function markNutritionDirty() {
