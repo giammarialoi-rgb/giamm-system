@@ -11210,6 +11210,7 @@ function renderNutrition(c) {
         ${nutrDirty ? '<button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="saveNutritionPlanEdits()">SALVA</button>' : ''}
         ${athleteDomainActionButtonsHtml('nutrition', { compact: true })}
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="addNutritionDay()">${t('addDay')}</button>
+        ${days.length ? '<button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="exportNutritionPdf()">📄 Esporta Alimentazione</button>' : ''}
         ${days.length ? personalNutritionClearButtonHtml({ compact: true }) : ''}
       </div>
     </div>
@@ -12891,12 +12892,14 @@ async function saveNutritionPlanEdits() {
     }
   }
   if (typeof render === 'function') render();
-  if (typeof showToast === 'function') {
-    if (cloudSynced) {
-      showToast('Alimentazione salvata', 'success');
-    } else {
-      showToast('Salvato sul dispositivo, ma la sincronizzazione col cloud è fallita: riprova quando hai connessione.', 'warning');
-    }
+  // The toast alone wasn't read as a firm confirmation - match the same
+  // unmistakable alert() the bottom-right SALVA (saveAll) already gives.
+  if (cloudSynced) {
+    if (typeof showToast === 'function') showToast('Alimentazione salvata', 'success');
+    alert('Alimentazione salvata correttamente.');
+  } else {
+    if (typeof showToast === 'function') showToast('Salvato sul dispositivo, ma la sincronizzazione col cloud è fallita: riprova quando hai connessione.', 'warning');
+    alert('Salvato sul dispositivo, ma la sincronizzazione col cloud è fallita. Riprova quando hai connessione.');
   }
 }
 
@@ -13103,14 +13106,17 @@ function maybeOfferNutritionFromProfile() {
 }
 
 function addNutritionMeal(dayIdx) {
-  const mealName = prompt("Nome del pasto (es. Snack Pomeridiano, Spuntino Notturno):", "Nuovo Pasto");
-  if (mealName && mealName.trim()) {
-    if (!DATA.nutrition.days[dayIdx].meals) DATA.nutrition.days[dayIdx].meals = [];
-    DATA.nutrition.days[dayIdx].meals.push({ name: mealName.trim(), foods: [] });
+  // Used to be a free-text prompt() - offer the standard meal names (and any
+  // already used elsewhere) first, same picker the photo/barcode flows use,
+  // with "pasto personalizzato" still available for anything else.
+  openMealTargetModal(null, function (mealName) {
+    const targetSlot = ensureTargetMealSlot(dayIdx, mealName);
+    if (!targetSlot) return;
+    markNutritionDirty();
     persist();
     render();
     if (typeof showToast === 'function') showToast("Pasto aggiunto", "success");
-  }
+  }, { icon: '🍽️', title: 'AGGIUNGI PASTO', subtitle: 'Che pasto vuoi aggiungere a questa giornata?', dayIdx: dayIdx });
 }
 
 // ====================================================
@@ -18612,7 +18618,7 @@ function buildWorkoutPdfBytes(opts) {
     rct(0, H - 60, W, 60, '0.05 0.05 0.05');
     rct(0, H - 62, W, 2, GOLD);
     txt('F1', 22, GOLD, ML, H - 45, 'NURVAN');
-    txt('F2', 8, '0.7 0.7 0.7', ML + 110, H - 38, 'TRAINING PROGRAM');
+    txt('F2', 8, '0.7 0.7 0.7', ML + 110, H - 38, opts.skipTraining ? 'PIANO ALIMENTARE' : 'TRAINING PROGRAM');
     if (athlete) txt('F2', 8, '0.7 0.7 0.7', ML + 110, H - 50, 'Atleta: ' + athlete);
     var dateStr = new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
     txt('F2', 7, '0.55 0.55 0.55', W - MR - 140, H - 45, dateStr + (DATA.title ? ('  |  ' + DATA.title) : ''));
@@ -18674,7 +18680,7 @@ function buildWorkoutPdfBytes(opts) {
     return { kcal: Math.round(kcal), p: Math.round(p), c: Math.round(c), f: Math.round(f) };
   }
 
-  for (var wi = startW; wi <= endW; wi++) {
+  for (var wi = startW; wi <= endW && !opts.skipTraining; wi++) {
     var week = weeksList[wi - 1];
     if (!week) continue;
     var days = week.sessions || week.days || [];
@@ -18883,7 +18889,7 @@ function buildWorkoutPdfBytes(opts) {
   y -= 12;
   txt('F2', 6, GRAY, ML, y, 'Documento generato automaticamente da NURVAN  |  Non sostituisce il parere medico');
   y -= 10;
-  txt('F2', 6, GRAY, ML, y, 'Settimane ' + startW + '-' + endW + '  |  ' + new Date().toLocaleDateString('it-IT') + (athlete ? ('  |  ' + athlete) : ''));
+  txt('F2', 6, GRAY, ML, y, (opts.skipTraining ? '' : ('Settimane ' + startW + '-' + endW + '  |  ')) + new Date().toLocaleDateString('it-IT') + (athlete ? ('  |  ' + athlete) : ''));
 
   if (cmds.length) flushPage();
   if (!pages.length) pages.push('BT /F1 16 Tf ' + GOLD + ' rg 1 0 0 1 40 800 Tm (NURVAN) Tj ET');
@@ -18975,6 +18981,28 @@ function exportWorkoutPdf() {
     alert('Impossibile creare il PDF: ' + (err && err.message ? err.message : err));
   }
 }
+
+// Nutrition-only export, reusing buildWorkoutPdfBytes' existing "PIANO
+// ALIMENTARE" section (already used as an optional add-on inside the workout
+// PDF) with skipTraining:true so it renders on its own instead of requiring
+// a training program / going through the workout export modal.
+function exportNutritionPdf() {
+  if (!DATA || !DATA.nutrition || !Array.isArray(DATA.nutrition.days) || !DATA.nutrition.days.length) {
+    alert('Nessuna alimentazione da esportare.');
+    return;
+  }
+  try {
+    const bytes = buildWorkoutPdfBytes({ nutrition: true, skipTraining: true, scope: 'all' });
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const stamp = new Date().toISOString().slice(0, 10);
+    const filename = 'Nurvan_Alimentazione_' + stamp + '.pdf';
+    shareOrSavePdfBlob(blob, filename);
+  } catch (err) {
+    console.error('[exportNutritionPdf]', err);
+    alert('Impossibile creare il PDF: ' + (err && err.message ? err.message : err));
+  }
+}
+window.exportNutritionPdf = exportNutritionPdf;
 function updateTempo(idx, val) {
   store.tempos[`w${currentWeek}_d${currentDay}_e${idx}`] = val;
   persist();

@@ -97,4 +97,45 @@ for (const src of sources) {
   ok(!pickBody.includes('DATA.nutrition.days.push'), '6h. picking a not-yet-existing day does not create it until the meal is actually confirmed');
 }
 
+// 7. "Aggiungi Pasto" used to be a raw prompt() for a free-text meal name -
+// now it offers the same standard-meal-name picker as the other flows, and
+// finds-or-creates the meal by name (so picking an existing name doesn't
+// duplicate it, and an existing meal's foods are never touched).
+for (const src of sources) {
+  const fnStart = src.indexOf('function addNutritionMeal(dayIdx)');
+  ok(fnStart >= 0, '7a. addNutritionMeal is declared');
+  const fnBody = src.slice(fnStart, src.indexOf('\n}', fnStart) + 1);
+  ok(!fnBody.includes('= prompt('), '7b. addNutritionMeal no longer uses a raw prompt() for the meal name');
+  ok(fnBody.includes('openMealTargetModal(') && fnBody.includes('ensureTargetMealSlot(dayIdx, mealName)'),
+    '7c. addNutritionMeal reuses the shared meal picker and finds-or-creates the meal by name');
+}
+
+// 8. The top-of-page nutrition SALVA button used to only show a toast, which
+// wasn't read as a firm confirmation - it should match the bottom-right
+// global SALVA button's unmistakable alert().
+for (const src of sources) {
+  const fnStart = src.indexOf('async function saveNutritionPlanEdits()');
+  const fnBody = src.slice(fnStart, src.indexOf('\n}', fnStart) + 1);
+  ok(fnBody.includes("alert('Alimentazione salvata correttamente.')"), '8a. saveNutritionPlanEdits confirms success with an unmissable alert(), matching saveAll()');
+  ok(fnBody.includes('cloudSynced'), '8b. the confirmation still distinguishes a real cloud save from a local-only one');
+}
+
+// 9. "Esporta Alimentazione": a nutrition-only PDF export, reusing the
+// existing PDF builder's already-built "PIANO ALIMENTARE" section instead of
+// requiring the user to go through the training PDF export and tick a box.
+for (const src of sources) {
+  ok(src.includes('function exportNutritionPdf()'), '9a. exportNutritionPdf is declared');
+  ok(src.includes('window.exportNutritionPdf = exportNutritionPdf;'), '9b. exportNutritionPdf is exported to window');
+  ok(src.includes('onclick="exportNutritionPdf()"'), '9c. the Nutrition page has an Esporta Alimentazione button');
+  const fnStart = src.indexOf('function exportNutritionPdf()');
+  const fnBody = src.slice(fnStart, src.indexOf('\nwindow.exportNutritionPdf', fnStart));
+  ok(fnBody.includes('skipTraining: true'), '9d. exportNutritionPdf skips the training-weeks section instead of requiring a training program');
+  // The training-weeks loop must actually respect skipTraining, and existing
+  // training-PDF callers (which never pass it) must be completely unaffected.
+  const buildStart = src.indexOf('function buildWorkoutPdfBytes(opts)');
+  const loopStart = src.indexOf('for (var wi = startW; wi <= endW', buildStart);
+  ok(loopStart >= 0 && src.slice(loopStart, loopStart + 60).includes('!opts.skipTraining'),
+    '9e. the training-weeks loop is skipped only when skipTraining is explicitly set');
+}
+
 console.log('\nAll food diary editing tests passed.');
