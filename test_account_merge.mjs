@@ -92,4 +92,16 @@ ok(domainHasContent({ days: [] }) === false, '7b. domainHasContent treats an emp
 ok(domainHasContent(null) === false, '7c. domainHasContent treats null as no content');
 ok(mergeDomainField({ x: { days: [1] } }, { x: { cleared: true } }, 'x').cleared === true, '7d. mergeDomainField honors an explicit cleared marker even with no cur content check needed');
 
+// 8. The user's personal "my foods" library (customFoods) must survive on its
+// own, even for a nutrition blob that otherwise has zero days - e.g. after
+// clearing the week's plan but keeping the foods typed by hand for reuse.
+{
+  ok(domainHasContent({ days: [], customFoods: [{ name: 'Formaggio Modditzosu' }] }) === true,
+    '8a. domainHasContent recognizes a nutrition shape that only has customFoods');
+  const cur = { nutrition: { present: true, days: [], customFoods: [{ name: 'Formaggio Modditzosu', kcalPer100: 350 }] } };
+  const inc = { nutrition: { present: true, days: [] } }; // stale snapshot with no customFoods at all
+  const merged = mergeAccountDataBlobs(cur, inc);
+  ok(merged.nutrition.customFoods.length === 1, '8b. a stale incoming snapshot does not wipe the custom foods library');
+}
+
 console.log('\nAll account data merge tests passed.');

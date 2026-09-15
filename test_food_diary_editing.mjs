@@ -138,4 +138,69 @@ for (const src of sources) {
     '9e. the training-weeks loop is skipped only when skipTraining is explicitly set');
 }
 
+// 10. Barcode "Da Galleria" bug: tapping it opened the camera instead of the
+// photo picker, because both buttons reused the same hidden <input> that has
+// capture="environment" - an attribute that forces mobile browsers to launch
+// the camera app directly, bypassing the gallery entirely. Fixed by giving
+// gallery loads their own hidden input (same accept, no capture attribute)
+// and pointing both "gallery" buttons at it instead.
+for (const src of sources) {
+  ok(src.includes('id="nutrition-barcode-gallery"') && src.includes('id="supp-barcode-gallery"'),
+    '10a. dedicated gallery-only file inputs exist for nutrition and supplements');
+  const nutGalleryTag = src.slice(src.indexOf('id="nutrition-barcode-gallery"') - 40, src.indexOf('id="nutrition-barcode-gallery"') + 120);
+  const suppGalleryTag = src.slice(src.indexOf('id="supp-barcode-gallery"') - 40, src.indexOf('id="supp-barcode-gallery"') + 120);
+  ok(!nutGalleryTag.includes('capture=') && !suppGalleryTag.includes('capture='),
+    '10b. the gallery-only inputs have no capture attribute, so the OS shows the real file/photo picker');
+  const bfGalleryStart = src.indexOf("querySelector('#bf-gallery-btn').onclick");
+  const bfGalleryBody = src.slice(bfGalleryStart, bfGalleryStart + 250);
+  ok(bfGalleryBody.includes('nutrition-barcode-gallery') && bfGalleryBody.includes('supp-barcode-gallery'),
+    '10c. the no-camera-permission fallback\'s "Carica foto barcode" button opens the gallery input, not the capture one');
+  const liveGalleryStart = src.indexOf("querySelector('#barcode-live-gallery').onclick");
+  const liveGalleryBody = src.slice(liveGalleryStart, liveGalleryStart + 250);
+  ok(liveGalleryBody.includes('nutrition-barcode-gallery') && liveGalleryBody.includes('supp-barcode-gallery'),
+    '10d. the live scanner\'s "Da Galleria" button opens the gallery input, not the capture one');
+}
+
+// 11. "I tuoi alimenti" - a personal custom-food library, so a product FatSecret
+// has and Nurvan's own catalog/USDA/Open Food Facts don't (e.g. a specific
+// regional product) only needs to be typed in once with its real macros, then
+// it is found again by name from then on, same idea as MyFitnessPal's "my
+// foods". Stored inside DATA.nutrition (rides the existing, already-tested
+// nutrition sync/protection instead of needing a new domain).
+for (const src of sources) {
+  const normStart = src.indexOf('function normalizeNutritionMeals(nutrition)');
+  const normBody = src.slice(normStart, src.indexOf('\n}', normStart));
+  ok(normBody.includes('nutrition.customFoods = []'), '11a. normalizeNutritionMeals always ensures a customFoods array exists');
+
+  const saveStart = src.indexOf('function saveFoodItem()');
+  const saveBody = src.slice(saveStart, src.indexOf('\nfunction ', saveStart + 10));
+  ok(saveBody.includes('!activeSelectedFoodRef && name'), '11b. saveFoodItem only remembers a food into the custom library when it was typed by hand, not picked from a DB/barcode match');
+  ok(saveBody.includes('DATA.nutrition.customFoods.push(customEntry)') && saveBody.includes('existingIdx'),
+    '11c. saveFoodItem upserts by name instead of piling up duplicates on every re-save');
+
+  const filterStart = src.indexOf('async function filterFoodDb(query)');
+  const filterBody = src.slice(filterStart, src.indexOf('\n}', filterStart + 10) + 40);
+  ok(filterBody.includes('DATA.nutrition.customFoods') && filterBody.includes('customHits'),
+    '11d. filterFoodDb merges the personal custom-food library into search suggestions');
+
+  // Caught live in the browser: picking a saved custom food from the
+  // suggestion list filled the name but showed 0 kcal/macros. Root cause -
+  // FoodDatabaseService.scaleMacros(activeSelectedFoodRef, grams) (used by
+  // recalcFoodMacrosFromDb whenever it exists, which it always does here)
+  // reads food.kcal/pro/carb/fat as the per-100g rate, not food.kcalPer100 -
+  // it always returns a (possibly all-zero) object, so the kcalPer100-aware
+  // fallback further down never even runs. The custom entry must carry both
+  // naming conventions.
+  const customEntryStart = src.indexOf('const customEntry = {', saveStart);
+  const customEntryBody = src.slice(customEntryStart, src.indexOf('};', customEntryStart));
+  ok(/kcal:\s*kcalPer100,\s*pro:\s*proPer100,\s*carb:\s*carbPer100,\s*fat:\s*fatPer100/.test(customEntryBody),
+    '11g. a saved custom food also carries the bare kcal/pro/carb/fat fields FoodDatabaseService.scaleMacros actually reads, or re-picking it recalculates to 0');
+
+  // The legacy-demo-wipe resets (the only two spots that replace an *existing*
+  // DATA.nutrition, as opposed to creating a fresh one when none exists yet)
+  // must carry the custom foods library forward instead of discarding it.
+  const wipeCount = (src.match(/customFoods: \(DATA\.nutrition\.customFoods \|\| \[\]\)/g) || []).length;
+  ok(wipeCount >= 2, '11e/f. both legacy-demo-wipe resets preserve the existing customFoods library instead of dropping it');
+}
+
 console.log('\nAll food diary editing tests passed.');

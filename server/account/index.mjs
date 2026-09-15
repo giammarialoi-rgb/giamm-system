@@ -14,7 +14,11 @@ export function domainHasContent(v) {
     (Array.isArray(v.days) && v.days.length) ||
     (Array.isArray(v.items) && v.items.length) ||
     (Array.isArray(v.medications) && v.medications.length) ||
-    (Array.isArray(v.records) && v.records.length)
+    (Array.isArray(v.records) && v.records.length) ||
+    // The user's own "my foods" library (typed once, remembered forever) -
+    // it can outlive every day/meal it was ever logged into (e.g. after
+    // clearing a week's plan), so it must count as content on its own too.
+    (Array.isArray(v.customFoods) && v.customFoods.length)
   );
 }
 

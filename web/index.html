@@ -43924,6 +43924,7 @@ function enrichImportedFoods(nutrition) {
 function normalizeNutritionMeals(nutrition) {
   if (!nutrition || typeof nutrition !== 'object') return nutrition;
   if (!Array.isArray(nutrition.days)) nutrition.days = [];
+  if (!Array.isArray(nutrition.customFoods)) nutrition.customFoods = [];
   nutrition.days.forEach(function (day) {
     if (!day || typeof day !== 'object') return;
     if (!Array.isArray(day.meals)) day.meals = [];
@@ -44350,11 +44351,11 @@ function renderNutrition(c) {
       || hasAnyFood;
     const looksLegacyDemo = /Luned[iì].*\(ON\)/i.test(blob) && /Albume d'uovo/i.test(blob) && /Petto di Pollo/i.test(blob);
     if (!protect && isLegacyTipo) {
-      DATA.nutrition = { plan_name: '', present: false, days: [], daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
+      DATA.nutrition = { plan_name: '', present: false, days: [], customFoods: (DATA.nutrition.customFoods || []), daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
       store.nutrition = DATA.nutrition;
       persist();
     } else if (!protect && looksLegacyDemo && DATA.nutrition.plan_name === 'Piano Nutrizionale Personalizzato') {
-      DATA.nutrition = { plan_name: '', present: false, days: [], daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
+      DATA.nutrition = { plan_name: '', present: false, days: [], customFoods: (DATA.nutrition.customFoods || []), daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
       store.nutrition = DATA.nutrition;
       persist();
     }
@@ -44413,6 +44414,7 @@ function renderNutrition(c) {
         <button class="btn btn-primary" style="font-size:10px;padding:8px 12px;" onclick="lookupNutritionBarcode()">${t('searchBarcode')}</button>
       </div>
       <input type="file" id="nutrition-barcode-camera" accept="image/*" capture="environment" style="display:none;" onchange="handleBarcodePhoto(event,'nutrition')">
+      <input type="file" id="nutrition-barcode-gallery" accept="image/*" style="display:none;" onchange="handleBarcodePhoto(event,'nutrition')">
       <div id="nutrition-barcode-result" style="font-size:10px;color:#888;margin-top:8px;"></div>
     </div>
     ${mealPhotoCaptureCardHtml(activeDay)}
@@ -44671,6 +44673,20 @@ async function filterFoodDb(query) {
     } catch (_) {
       foods = FoodDatabaseService.searchFoods(query) || [];
     }
+
+    // Foods the user has typed by hand before (e.g. a regional product not in
+    // any catalog, like a specific Sardinian cheese) - shown first since these
+    // are exactly what the user chose to remember.
+    const customFoods = (DATA && DATA.nutrition && Array.isArray(DATA.nutrition.customFoods)) ? DATA.nutrition.customFoods : [];
+    if (customFoods.length) {
+      const foldQ = String(query || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+      const customHits = customFoods.filter(function (f) {
+        const n = String(f.name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        return n.includes(foldQ);
+      });
+      if (customHits.length) foods = [...customHits, ...foods];
+    }
+
     if (!foods || foods.length === 0) {
       box.style.display = 'none';
       __foodSearchHits = [];
@@ -44813,6 +44829,39 @@ function saveFoodItem() {
     notes: $('food-note-input').value.trim(),
     provenance: activeSelectedFoodRef && activeSelectedFoodRef.provenance ? activeSelectedFoodRef.provenance : { source: 'user', kind: 'user', confidence: 1 }
   };
+
+  // Remember any food typed by hand (not picked from the DB/barcode search,
+  // e.g. a regional product FatSecret has and our catalog doesn't) so it can
+  // be found again next time instead of re-typing macros from scratch every
+  // time - Nurvan's own "my foods" library, same idea as MyFitnessPal's.
+  if (!activeSelectedFoodRef && name) {
+    if (!Array.isArray(DATA.nutrition.customFoods)) DATA.nutrition.customFoods = [];
+    const foldName = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); };
+    const key = foldName(name);
+    const customEntry = {
+      id: 'custom_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      name,
+      category: 'I tuoi alimenti',
+      // Both naming conventions on purpose: activeSelectedFoodRef (what a
+      // picked suggestion becomes) is read by FoodDatabaseService.scaleMacros
+      // via the bare kcal/pro/carb/fat fields - it always returns a (possibly
+      // all-zero) object when present, so recalcFoodMacrosFromDb() never falls
+      // through to the kcalPer100 fallback below it. Without these bare
+      // fields a re-picked custom food silently recalculated to 0 kcal.
+      kcal: kcalPer100, pro: proPer100, carb: carbPer100, fat: fatPer100,
+      kcalPer100, proPer100, carbPer100, fatPer100,
+      unit,
+      source: 'user_custom',
+      provenance: { source: 'user_custom', kind: 'I tuoi alimenti', confidence: 1 }
+    };
+    const existingIdx = DATA.nutrition.customFoods.findIndex(function (f) { return foldName(f.name) === key; });
+    if (existingIdx >= 0) {
+      customEntry.id = DATA.nutrition.customFoods[existingIdx].id || customEntry.id;
+      DATA.nutrition.customFoods[existingIdx] = customEntry;
+    } else {
+      DATA.nutrition.customFoods.push(customEntry);
+    }
+  }
 
   const editTarget = window.__foodEditTarget;
   const editedFoods = editTarget && DATA.nutrition && DATA.nutrition.days && DATA.nutrition.days[editTarget.dayIdx]
@@ -46340,6 +46389,7 @@ function renderSupplements(c) {
         <button class="btn btn-primary" style="font-size:10px;padding:8px 12px;" onclick="lookupSupplementBarcode()">${t('searchBarcode')}</button>
       </div>
       <input type="file" id="supp-barcode-camera" accept="image/*" capture="environment" style="display:none;" onchange="handleBarcodePhoto(event,'supplements')">
+      <input type="file" id="supp-barcode-gallery" accept="image/*" style="display:none;" onchange="handleBarcodePhoto(event,'supplements')">
       <div id="supp-barcode-result" style="font-size:10px;color:#888;margin-top:8px;"></div>
     </div>
   `;
@@ -53858,7 +53908,7 @@ async function openLiveBarcodeScanner(kind, targetFusionRow) {
     document.body.appendChild(fbModal);
     fbModal.querySelector('#bf-gallery-btn').onclick = () => {
       fbModal.remove();
-      const id = kind === 'supplements' ? 'supp-barcode-camera' : 'nutrition-barcode-camera';
+      const id = kind === 'supplements' ? 'supp-barcode-gallery' : 'nutrition-barcode-gallery';
       const el = $(id);
       if (el) el.click();
     };
@@ -54002,7 +54052,7 @@ async function openLiveBarcodeScanner(kind, targetFusionRow) {
 
   overlay.querySelector('#barcode-live-gallery').onclick = () => {
     stop();
-    const id = kind === 'supplements' ? 'supp-barcode-camera' : 'nutrition-barcode-camera';
+    const id = kind === 'supplements' ? 'supp-barcode-gallery' : 'nutrition-barcode-gallery';
     const el = $(id);
     if (el) el.click();
   };
