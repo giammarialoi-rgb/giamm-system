@@ -19,6 +19,7 @@ import { extractExcelStructuredForApi, detectFormat, DI_MAX_BYTES } from "./docu
 import { ensureCoachPracticeTables, mountCoachPractice } from "./coach-practice.mjs";
 import { mountProgramGenerateRoutes } from "./server/program/generator.mjs";
 import { mountFoodRoutes } from "./server/food/index.mjs";
+import { mergeAccountDataBlobs } from "./server/account/index.mjs";
 import { runMigrations } from "./server/db/migrate.mjs";
 import {
   buildCorsOriginValidator,
@@ -1484,40 +1485,6 @@ app.get("/api/account/me", async (req, res) => {
     return res.status(500).json({ error: "Failed to fetch account profile." });
   }
 });
-
-function mergeAccountDataBlobs(current, incoming) {
-  const cur = current && typeof current === "object" ? current : {};
-  const inc = incoming && typeof incoming === "object" ? incoming : {};
-  const merged = { ...cur, ...inc, lastSyncedAt: new Date().toISOString() };
-  const mapKeys = [
-    "data", "customSets", "bw", "skips", "subs", "loadTypes", "tempos",
-    "exIntensity", "maxTests", "bonus", "exMuscle", "nutritionDaily"
-  ];
-  for (const key of mapKeys) {
-    const a = cur[key] && typeof cur[key] === "object" && !Array.isArray(cur[key]) ? cur[key] : {};
-    const b = inc[key] && typeof inc[key] === "object" && !Array.isArray(inc[key]) ? inc[key] : {};
-    merged[key] = Object.keys(b).length ? { ...a, ...b } : (Object.keys(a).length ? a : (merged[key] || {}));
-  }
-  const byId = {};
-  (Array.isArray(cur.logs) ? cur.logs : []).concat(Array.isArray(inc.logs) ? inc.logs : []).forEach((row) => {
-    if (!row) return;
-    byId[row.id || row.at] = row;
-  });
-  const logs = Object.keys(byId).map((k) => byId[k]).sort((a, b) => String(a.at || "").localeCompare(String(b.at || "")));
-  if (logs.length) merged.logs = logs.slice(-80);
-  else if (Array.isArray(cur.logs) && cur.logs.length) merged.logs = cur.logs;
-  // Never let an empty/sandbox program wipe a richer cloud scheda
-  const curWeeks = cur.activeProgram && Array.isArray(cur.activeProgram.weeks) ? cur.activeProgram.weeks.length : 0;
-  const incWeeks = inc.activeProgram && Array.isArray(inc.activeProgram.weeks) ? inc.activeProgram.weeks.length : 0;
-  if (inc.activeProgram == null || incWeeks < 1) {
-    if (cur.activeProgram) merged.activeProgram = cur.activeProgram;
-  } else if (curWeeks > incWeeks) {
-    merged.activeProgram = cur.activeProgram;
-  } else if (!merged.activeProgram && cur.activeProgram) {
-    merged.activeProgram = cur.activeProgram;
-  }
-  return merged;
-}
 
 app.post("/api/account/sync", async (req, res) => {
   const auth = await accountFromBearer(req.headers.authorization);
