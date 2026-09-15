@@ -112,7 +112,7 @@ ok(practice.includes("24 hours"), "call signal retention cleanup is configured")
 const api = fs.readFileSync(path.join(root, "coach-api.mjs"), "utf8");
 ok(api.includes("jwtVerify") && api.includes("APPLE_JWKS"), "Apple identity token uses JWKS verification");
 ok(api.includes("buildCorsOriginValidator"), "API uses CORS allowlist validator");
-ok(api.includes("createFixedWindowRateLimiter"), "API protects auth/import endpoints");
+ok(api.includes("createPostgresFixedWindowRateLimiter") || api.includes("createFixedWindowRateLimiter"), "API protects auth/import endpoints");
 ok(api.includes("schemaVersion: dbSchemaVersion"), "health exposes schema version");
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
