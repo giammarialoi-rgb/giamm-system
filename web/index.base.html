@@ -4573,6 +4573,12 @@ function applyRemoteAccountData(remote, preferLocal) {
       if (keepNutr && localNutr) {
         store.nutrition = localNutr;
       } else if (remote.nutrition) {
+        // Durable safety net: back up whatever local nutrition is about to be
+        // replaced (across reloads, unlike the in-memory-only workoutUndo) so
+        // a bad sync/merge decision is always recoverable, not just prevented.
+        if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.backupNutrition && store.nutrition) {
+          GiammariaPersistence.backupNutrition(store.nutrition).catch(function () {});
+        }
         store.nutrition = remote.nutrition;
       }
       if (keepSupp && localSupp) {
@@ -4597,6 +4603,9 @@ function applyRemoteAccountData(remote, preferLocal) {
   } else {
     // Domain-only remote fields without replacing the whole program
     if (!store.__cpKeepLocalNutrition && !store.__cpNutritionDirty && remote.nutrition) {
+      if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.backupNutrition && store.nutrition) {
+        GiammariaPersistence.backupNutrition(store.nutrition).catch(function () {});
+      }
       store.nutrition = remote.nutrition;
       if (DATA) DATA.nutrition = remote.nutrition;
     }
@@ -11162,10 +11171,16 @@ function renderNutrition(c) {
       || hasAnyFood;
     const looksLegacyDemo = /Luned[iì].*\(ON\)/i.test(blob) && /Albume d'uovo/i.test(blob) && /Petto di Pollo/i.test(blob);
     if (!protect && isLegacyTipo) {
+      if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.backupNutrition) {
+        GiammariaPersistence.backupNutrition(DATA.nutrition).catch(function () {});
+      }
       DATA.nutrition = { plan_name: '', present: false, days: [], customFoods: (DATA.nutrition.customFoods || []), daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
       store.nutrition = DATA.nutrition;
       persist();
     } else if (!protect && looksLegacyDemo && DATA.nutrition.plan_name === 'Piano Nutrizionale Personalizzato') {
+      if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.backupNutrition) {
+        GiammariaPersistence.backupNutrition(DATA.nutrition).catch(function () {});
+      }
       DATA.nutrition = { plan_name: '', present: false, days: [], customFoods: (DATA.nutrition.customFoods || []), daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
       store.nutrition = DATA.nutrition;
       persist();
@@ -11212,6 +11227,7 @@ function renderNutrition(c) {
         ${athleteDomainActionButtonsHtml('nutrition', { compact: true })}
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="addNutritionDay()">${t('addDay')}</button>
         ${days.length ? '<button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="exportNutritionPdf()">📄 Esporta Alimentazione</button>' : ''}
+        <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openNutritionBackupsModal()" title="Ripristina una versione precedente dell'alimentazione">🕐 Backup</button>
         ${days.length ? personalNutritionClearButtonHtml({ compact: true }) : ''}
       </div>
     </div>
@@ -12936,8 +12952,10 @@ async function saveNutritionPlanEdits() {
     } else {
       // Keep it dirty/protected: local data is fine, but the cloud never got
       // it, so a later sync must not be allowed to overwrite it with the
-      // stale cloud copy.
-      store.__cpKeepLocalNutrition = false;
+      // stale cloud copy. This used to set the flag to false - the exact
+      // opposite of what the comment said - leaving only __cpNutritionDirty
+      // (never cleared in this branch) as the sole guard instead of both.
+      store.__cpKeepLocalNutrition = true;
     }
   }
   if (typeof render === 'function') render();
@@ -19053,6 +19071,89 @@ function exportNutritionPdf() {
   }
 }
 window.exportNutritionPdf = exportNutritionPdf;
+
+// Durable recovery UI for the nutrition backup snapshots taken automatically
+// (backupNutrition) right before anything ever replaces local nutrition with
+// a remote/reset value. Unlike workoutUndo this list survives app restarts,
+// since a bad overwrite is only ever discovered after a later reload.
+function nutritionBackupRelativeTime(iso) {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return '';
+  const diffMin = Math.round((Date.now() - t) / 60000);
+  if (diffMin < 1) return 'proprio ora';
+  if (diffMin < 60) return diffMin + ' min fa';
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return diffH + ' ' + (diffH === 1 ? 'ora' : 'ore') + ' fa';
+  const diffD = Math.round(diffH / 24);
+  return diffD + ' ' + (diffD === 1 ? 'giorno' : 'giorni') + ' fa';
+}
+async function openNutritionBackupsModal() {
+  let modal = document.getElementById('nutrition-backups-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'nutrition-backups-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:16px;';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = '<div style="background:#181818;border:1px solid #333;border-radius:12px;padding:20px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+    '<div style="font-size:15px;font-weight:800;color:#fff;">🕐 Backup alimentazione</div>' +
+    '<button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="closeNutritionBackupsModal()">✕</button>' +
+    '</div>' +
+    '<div style="font-size:11px;color:#999;margin-bottom:12px;">Copie salvate automaticamente prima di qualsiasi sincronizzazione che avrebbe potuto sostituire l\'alimentazione. Ripristinane una se qualcosa è andato perso.</div>' +
+    '<div id="nutrition-backups-list" style="font-size:12px;color:#888;">Caricamento…</div>' +
+    '</div>';
+  modal.style.display = 'flex';
+  const list = document.getElementById('nutrition-backups-list');
+  try {
+    const backups = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.listNutritionBackups)
+      ? await GiammariaPersistence.listNutritionBackups()
+      : [];
+    if (!backups.length) {
+      list.innerHTML = '<div style="padding:12px 0;color:#666;">Nessun backup disponibile ancora.</div>';
+      return;
+    }
+    list.innerHTML = backups.map(function (b) {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #222;">' +
+        '<div><div style="color:#eee;font-weight:600;">' + esc(nutritionBackupRelativeTime(b.updatedAt)) + '</div>' +
+        '<div style="font-size:10px;color:#777;">' + b.dayCount + ' giorni salvati</div></div>' +
+        '<button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="restoreNutritionBackup(\'' + b.id + '\')">Ripristina</button>' +
+        '</div>';
+    }).join('');
+  } catch (err) {
+    list.innerHTML = '<div style="padding:12px 0;color:#f66;">Errore nel caricare i backup.</div>';
+  }
+}
+window.openNutritionBackupsModal = openNutritionBackupsModal;
+function closeNutritionBackupsModal() {
+  const modal = document.getElementById('nutrition-backups-modal');
+  if (modal) modal.style.display = 'none';
+}
+window.closeNutritionBackupsModal = closeNutritionBackupsModal;
+async function restoreNutritionBackup(id) {
+  if (!confirm('Ripristinare questo backup? Sostituirà l\'alimentazione attuale (che verrà anch\'essa salvata come backup prima di essere sostituita).')) return;
+  try {
+    const plan = await GiammariaPersistence.getNutritionBackup(id);
+    if (!plan) {
+      if (typeof showToast === 'function') showToast('Backup non trovato', 'danger');
+      return;
+    }
+    if (DATA && DATA.nutrition && GiammariaPersistence.backupNutrition) {
+      await GiammariaPersistence.backupNutrition(DATA.nutrition).catch(function () {});
+    }
+    DATA.nutrition = plan;
+    store.nutrition = plan;
+    markNutritionDirty();
+    persist();
+    closeNutritionBackupsModal();
+    render();
+    if (typeof showToast === 'function') showToast('Alimentazione ripristinata dal backup', 'success');
+  } catch (err) {
+    if (typeof showToast === 'function') showToast('Ripristino fallito: ' + (err && err.message ? err.message : err), 'danger');
+  }
+}
+window.restoreNutritionBackup = restoreNutritionBackup;
+
 function updateTempo(idx, val) {
   store.tempos[`w${currentWeek}_d${currentDay}_e${idx}`] = val;
   persist();

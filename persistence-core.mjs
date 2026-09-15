@@ -7,6 +7,7 @@
 
 export const DB_NAME = 'GIAMMARIA_SYSTEM_DB';
 export const DB_VERSION = 7;
+export const NUTRITION_BACKUP_MAX = 8;
 
 export const STORES = {
   PROGRAMS: 'programs',             // Canonical programs (active + versions)
@@ -727,6 +728,56 @@ export class GiammariaPersistenceEngine {
   }
   async getNutrition() {
     const res = await this.dbGet(STORES.NUTRITION, 'active_nutrition');
+    return res ? res.plan : null;
+  }
+
+  // Durable, cross-reload safety net for nutrition specifically: unlike
+  // workoutUndo (in-memory, stripped from the localStorage snapshot, lost on
+  // reload), this survives app restarts - a real "avevo segnato un giorno e
+  // mezzo ed è sparito" incident traced to a sync/merge overwrite has no
+  // recovery path today, because nothing ever kept the value being replaced.
+  // Call this right before any code path is about to replace store.nutrition
+  // or DATA.nutrition with a value from somewhere else (a remote sync
+  // download, or a legacy-plan reset) - never on the user's own normal edits.
+  async backupNutrition(plan) {
+    if (!plan || typeof plan !== 'object') return { success: false };
+    try {
+      const hasContent = (Array.isArray(plan.days) && plan.days.length)
+        || (Array.isArray(plan.customFoods) && plan.customFoods.length);
+      if (!hasContent) return { success: false, reason: 'empty' };
+      const id = 'nutrition_backup_' + Date.now();
+      await this.dbPut(STORES.NUTRITION, { id, plan, updatedAt: new Date().toISOString() });
+      const all = await this.dbGetAll(STORES.NUTRITION);
+      const backups = (all || [])
+        .filter((r) => r && typeof r.id === 'string' && r.id.indexOf('nutrition_backup_') === 0)
+        .sort((a, b) => String(b.id).localeCompare(String(a.id)));
+      if (backups.length > NUTRITION_BACKUP_MAX) {
+        const stale = backups.slice(NUTRITION_BACKUP_MAX);
+        await Promise.all(stale.map((r) => this.dbDelete(STORES.NUTRITION, r.id).catch(() => {})));
+      }
+      return { success: true, id };
+    } catch (e) {
+      return { success: false, error: e && e.message };
+    }
+  }
+  async listNutritionBackups() {
+    try {
+      const all = await this.dbGetAll(STORES.NUTRITION);
+      return (all || [])
+        .filter((r) => r && typeof r.id === 'string' && r.id.indexOf('nutrition_backup_') === 0)
+        .sort((a, b) => String(b.id).localeCompare(String(a.id)))
+        .map((r) => ({
+          id: r.id,
+          updatedAt: r.updatedAt,
+          dayCount: (r.plan && Array.isArray(r.plan.days)) ? r.plan.days.length : 0
+        }));
+    } catch (e) {
+      return [];
+    }
+  }
+  async getNutritionBackup(id) {
+    if (!id) return null;
+    const res = await this.dbGet(STORES.NUTRITION, id);
     return res ? res.plan : null;
   }
 
