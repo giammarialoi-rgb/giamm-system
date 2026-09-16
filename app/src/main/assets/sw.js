@@ -47,7 +47,28 @@ self.addEventListener('fetch', (event) => {
   const isClientDoc = /^\/c\/[^/]+\/?$/.test(url.pathname);
   const isHtml = req.mode === 'navigate' || url.pathname === '/' || /index\.html$/i.test(url.pathname) || isClientDoc;
   if (isHtml) {
-    event.respondWith(fetch(req, { cache: 'no-store' }).catch(() => caches.match(req)));
+    // Stale-while-revalidate: a returning visitor gets the cached app shell
+    // instantly instead of waiting on the network - critical on a free host
+    // whose origin can take 20-30s to wake from sleep on the first request,
+    // during which the network layer would otherwise serve the host's own
+    // "waking up" interstitial instead of our page. The network fetch still
+    // runs in the background to refresh the cache for the next visit; a real
+    // new release is picked up via the existing update-available banner
+    // (each release changes CACHE's name, so its cache starts empty and this
+    // falls through to the network on that first post-update load).
+    event.respondWith(
+      caches.open(CACHE).then((cache) => cache.match(req).then((cached) => {
+        const network = fetch(req, { cache: 'no-store' }).then((res) => {
+          if (res && res.ok && res.type === 'basic') cache.put(req, res.clone()).catch(() => {});
+          return res;
+        }).catch(() => null);
+        if (cached) {
+          event.waitUntil(network);
+          return cached;
+        }
+        return network.then((res) => res || caches.match(req)).then((res) => res || fetch(req));
+      }))
+    );
     return;
   }
   event.respondWith(

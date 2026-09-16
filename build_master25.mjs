@@ -1083,7 +1083,7 @@ const coachOsStyleTag = coachOsCss
 const fullHtml = `${headerHtml}${coachOsStyleTag}${CONFIG_HEADER}\n${middleCore}\n${coachPracticeUi}\n${coachOsCode}\n${exportCode}`;
 
 const releaseMetaScript =
-  'self.NURVAN_RELEASE = Object.freeze(' + JSON.stringify(RELEASE_META) + ');\\n';
+  'self.NURVAN_RELEASE = Object.freeze(' + JSON.stringify(RELEASE_META) + ');\n';
 fs.writeFileSync('web/release-meta.js', releaseMetaScript, 'utf8');
 fs.writeFileSync('web/index.html', fullHtml, 'utf8');
 syncWebAssetsToAndroid();
