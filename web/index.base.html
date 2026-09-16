@@ -18149,7 +18149,14 @@ function warmupSchemeText(it) {
 function warmupSessionCardHtml(week, day, exerciseList) {
   var warmup = getOrCreateWarmupForSession(week, day, exerciseList);
   var key = warmupSessionKey(week, day);
-  if (!warmup) return '';
+  if (!warmup) {
+    if (store && store.coachViewingClient) {
+      return '<div class="card" style="margin-bottom:12px;padding:12px;border:1px dashed #333;">' +
+        '<div style="font-size:10px;font-weight:800;color:#888;letter-spacing:1px;margin-bottom:6px;">WARM-UP</div>' +
+        '<button class="btn btn-outline" type="button" style="width:100%;font-size:10px;padding:9px;color:var(--gold);border-color:var(--gold);" onclick="openCoachWarmupAssignModal()">ASSEGNA UN WARM-UP A QUESTO CLIENTE</button></div>';
+    }
+    return '';
+  }
   if (!warmup.items || !warmup.items.length) {
     if (warmup.fromAssignment) return '';
     return '<div class="card" style="margin-bottom:12px;padding:12px;border:1px dashed #333;">' +
@@ -18192,7 +18199,13 @@ function warmupSessionCardHtml(week, day, exerciseList) {
   } else if (!isMandatory) {
     html += '<button class="btn btn-outline" type="button" style="font-size:11px;padding:9px 10px;" onclick="skipWarmup(' + week + ',' + day + ')">SALTA</button>';
   }
-  html += '</div></div>';
+  html += '</div>';
+  if (store && store.coachViewingClient) {
+    html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #222;">' +
+      '<button class="btn btn-outline" type="button" style="width:100%;font-size:10px;padding:7px;color:var(--gold);border-color:var(--gold);" onclick="openCoachWarmupAssignModal()">' +
+      (isLocked ? 'GESTISCI WARM-UP ASSEGNATO' : 'ASSEGNA UN WARM-UP A QUESTO CLIENTE') + '</button></div>';
+  }
+  html += '</div>';
   return html;
 }
 window.warmupSessionCardHtml = warmupSessionCardHtml;

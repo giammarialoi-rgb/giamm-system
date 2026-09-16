@@ -51394,7 +51394,14 @@ function warmupSchemeText(it) {
 function warmupSessionCardHtml(week, day, exerciseList) {
   var warmup = getOrCreateWarmupForSession(week, day, exerciseList);
   var key = warmupSessionKey(week, day);
-  if (!warmup) return '';
+  if (!warmup) {
+    if (store && store.coachViewingClient) {
+      return '<div class="card" style="margin-bottom:12px;padding:12px;border:1px dashed #333;">' +
+        '<div style="font-size:10px;font-weight:800;color:#888;letter-spacing:1px;margin-bottom:6px;">WARM-UP</div>' +
+        '<button class="btn btn-outline" type="button" style="width:100%;font-size:10px;padding:9px;color:var(--gold);border-color:var(--gold);" onclick="openCoachWarmupAssignModal()">ASSEGNA UN WARM-UP A QUESTO CLIENTE</button></div>';
+    }
+    return '';
+  }
   if (!warmup.items || !warmup.items.length) {
     if (warmup.fromAssignment) return '';
     return '<div class="card" style="margin-bottom:12px;padding:12px;border:1px dashed #333;">' +
@@ -51437,7 +51444,13 @@ function warmupSessionCardHtml(week, day, exerciseList) {
   } else if (!isMandatory) {
     html += '<button class="btn btn-outline" type="button" style="font-size:11px;padding:9px 10px;" onclick="skipWarmup(' + week + ',' + day + ')">SALTA</button>';
   }
-  html += '</div></div>';
+  html += '</div>';
+  if (store && store.coachViewingClient) {
+    html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #222;">' +
+      '<button class="btn btn-outline" type="button" style="width:100%;font-size:10px;padding:7px;color:var(--gold);border-color:var(--gold);" onclick="openCoachWarmupAssignModal()">' +
+      (isLocked ? 'GESTISCI WARM-UP ASSEGNATO' : 'ASSEGNA UN WARM-UP A QUESTO CLIENTE') + '</button></div>';
+  }
+  html += '</div>';
   return html;
 }
 window.warmupSessionCardHtml = warmupSessionCardHtml;
@@ -68136,6 +68149,326 @@ window.isCoachUnlocked = isCoachUnlocked;
 window.clientProgramSlice = clientProgramSlice;
 window.queueAthleteProgramChange = queueAthleteProgramChange;
 window.ensureAssignBanner = ensureAssignBanner;
+
+// ============================================================
+// WARM-UP ENGINE — coach template library + per-client assignment
+// ============================================================
+// Calls the real, tested server endpoints from server/coach-os/warmup.mjs.
+// This is the ONLY place a coach can create/assign warm-up structure; the
+// client never gets a write path to it (see coach-practice.mjs's /api/
+// client/warmup routes) - that split IS the lock, not a UI restriction.
+
+async function openCoachWarmupAssignModal() {
+  const clientId = store.coachWorkspace && store.coachWorkspace.clientId;
+  if (!clientId) {
+    if (typeof showToast === 'function') showToast('Nessun cliente selezionato.', 'warning');
+    return;
+  }
+  window.__coachWarmupModalClientId = clientId;
+  window.__coachWarmupTemplates = window.__coachWarmupTemplates || [];
+  window.__coachWarmupCurrentAssignment = null;
+  window.__coachWarmupCompletions = [];
+  window.__coachWarmupDraft = { items: [], assignmentType: 'optional', name: 'Warm-up' };
+  window.__coachWarmupDraftTemplateId = null;
+  renderCoachWarmupAssignModal(true);
+  try {
+    const [tplRes, assignRes] = await Promise.all([
+      practiceFetch('/api/coach/warmup-templates', { method: 'GET', headers: practiceHeaders(true) }),
+      practiceFetch('/api/coach/clients/' + clientId + '/warmup', { method: 'GET', headers: practiceHeaders(true) })
+    ]);
+    window.__coachWarmupTemplates = (tplRes && tplRes.templates) || [];
+    window.__coachWarmupCurrentAssignment = (assignRes && assignRes.assignment) || null;
+    window.__coachWarmupCompletions = (assignRes && assignRes.completions) || [];
+  } catch (err) {
+    console.warn('[COACH_WARMUP_MODAL_LOAD]', err && err.message);
+  }
+  renderCoachWarmupAssignModal(false);
+}
+window.openCoachWarmupAssignModal = openCoachWarmupAssignModal;
+
+function coachWarmupDraftItemsHtml() {
+  const items = (window.__coachWarmupDraft && window.__coachWarmupDraft.items) || [];
+  if (!items.length) return '<div style="font-size:11px;color:#888;padding:10px 0;">Nessun esercizio nel draft.</div>';
+  return items.map(function (it, idx) {
+    const catLabel = (typeof WARMUP_CATEGORY_LABELS !== 'undefined' && WARMUP_CATEGORY_LABELS[it.category]) || it.category || '';
+    return '<div class="card" style="padding:10px;margin-bottom:8px;border:1px solid #333;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">' +
+      '<div><div style="font-size:12px;font-weight:800;color:#fff;">' + esc(it.name) + '</div>' +
+      '<div style="font-size:9px;color:#888;">' + esc(catLabel) + '</div></div>' +
+      '<div style="display:flex;gap:4px;">' +
+      '<button class="btn btn-outline" type="button" style="font-size:10px;padding:4px 7px;" ' + (idx === 0 ? 'disabled' : '') + ' onclick="moveCoachDraftItem(' + idx + ',-1)">↑</button>' +
+      '<button class="btn btn-outline" type="button" style="font-size:10px;padding:4px 7px;" ' + (idx === items.length - 1 ? 'disabled' : '') + ' onclick="moveCoachDraftItem(' + idx + ',1)">↓</button>' +
+      '<button class="btn btn-outline" type="button" style="font-size:10px;padding:4px 7px;color:#c66;border-color:#c66;" onclick="removeCoachDraftItem(' + idx + ')">✕</button>' +
+      '</div></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;">' +
+      '<label style="font-size:9px;color:#888;">Serie<input type="number" value="' + (it.sets || 1) + '" oninput="updateCoachDraftItemField(' + idx + ',\'sets\',this.value)" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;margin-top:2px;"></label>' +
+      '<label style="font-size:9px;color:#888;">Reps<input type="text" value="' + (it.reps != null ? esc(String(it.reps)) : '') + '" oninput="updateCoachDraftItemField(' + idx + ',\'reps\',this.value)" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;margin-top:2px;"></label>' +
+      '<label style="font-size:9px;color:#888;">Durata (s)<input type="number" value="' + (it.durationSeconds || '') + '" oninput="updateCoachDraftItemField(' + idx + ',\'durationSeconds\',this.value)" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;margin-top:2px;"></label>' +
+      '<label style="font-size:9px;color:#888;">Rec. (s)<input type="number" value="' + (it.restSeconds || 0) + '" oninput="updateCoachDraftItemField(' + idx + ',\'restSeconds\',this.value)" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;margin-top:2px;"></label>' +
+      '</div></div>';
+  }).join('');
+}
+
+function renderCoachWarmupAssignModal(loading) {
+  const existing = document.getElementById('coach-warmup-assign-modal');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'coach-warmup-assign-modal';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:10150;align-items:flex-end;justify-content:center;padding:12px;box-sizing:border-box;';
+  overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
+
+  var body = '';
+  if (loading) {
+    body = '<div style="padding:20px;text-align:center;color:#888;font-size:12px;">Caricamento…</div>';
+  } else {
+    const current = window.__coachWarmupCurrentAssignment;
+    if (current) {
+      const completions = window.__coachWarmupCompletions || [];
+      const last = completions[0];
+      body += '<div class="card" style="padding:10px;margin-bottom:12px;border:1px solid var(--gold);">';
+      body += '<div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:4px;">WARM-UP ATTUALMENTE ASSEGNATO</div>';
+      body += '<div style="font-size:12px;color:#fff;font-weight:700;">' + esc(current.name) + '</div>';
+      body += '<div style="font-size:10px;color:#888;margin-bottom:8px;">' + (current.assignmentType === 'mandatory' ? 'OBBLIGATORIO' : 'FACOLTATIVO') + ' · ' + current.items.length + ' esercizi</div>';
+      if (last) {
+        body += '<div style="font-size:10px;color:#aaa;">Ultima sessione (' + esc(last.sessionDate) + '): ' + last.completedCount + '/' + last.totalItems + ' completati (' + esc(last.status) + ')</div>';
+      }
+      body += '<button class="btn btn-outline" type="button" style="width:100%;margin-top:8px;font-size:10px;padding:7px;color:#c66;border-color:#c66;" onclick="deactivateCoachWarmupAssignment()">RIMUOVI ASSEGNAZIONE</button>';
+      body += '</div>';
+    }
+    body += '<div style="font-size:10px;font-weight:800;color:var(--gold);margin-bottom:8px;">NUOVO WARM-UP DA ASSEGNARE</div>';
+    body += '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">';
+    body += '<button class="btn btn-outline" type="button" style="flex:1;min-width:100px;font-size:10px;padding:8px;" onclick="generateCoachWarmupDraftFromClientSession()">GENERA DAL PIANO</button>';
+    body += '<button class="btn btn-outline" type="button" style="flex:1;min-width:100px;font-size:10px;padding:8px;" onclick="openCoachWarmupTemplatePicker()">DA LIBRERIA</button>';
+    body += '<button class="btn btn-outline" type="button" style="flex:1;min-width:100px;font-size:10px;padding:8px;" onclick="clearCoachWarmupDraft()">DA ZERO</button>';
+    body += '</div>';
+
+    const draft = window.__coachWarmupDraft;
+    body += '<div id="coach-warmup-draft-items">' + coachWarmupDraftItemsHtml() + '</div>';
+    body += '<button type="button" class="btn btn-outline" style="width:100%;margin:6px 0 12px;" onclick="openCoachWarmupExercisePicker()">+ AGGIUNGI ESERCIZIO</button>';
+
+    body += '<div style="margin-bottom:10px;">';
+    body += '<label style="font-size:10px;color:#ccc;display:block;margin-bottom:4px;">Nome</label>';
+    body += '<input type="text" value="' + esc(draft.name) + '" oninput="window.__coachWarmupDraft.name=this.value" style="width:100%;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">';
+    body += '</div>';
+
+    body += '<div style="display:flex;gap:12px;margin-bottom:12px;">';
+    body += '<label style="font-size:11px;color:#ccc;display:flex;align-items:center;gap:6px;"><input type="radio" name="coach-warmup-type" ' + (draft.assignmentType === 'optional' ? 'checked' : '') + ' onchange="window.__coachWarmupDraft.assignmentType=\'optional\'"> FACOLTATIVO</label>';
+    body += '<label style="font-size:11px;color:#ccc;display:flex;align-items:center;gap:6px;"><input type="radio" name="coach-warmup-type" ' + (draft.assignmentType === 'mandatory' ? 'checked' : '') + ' onchange="window.__coachWarmupDraft.assignmentType=\'mandatory\'"> OBBLIGATORIO</label>';
+    body += '</div>';
+
+    body += '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="saveCoachWarmupAsTemplate()">SALVA COME TEMPLATE RIUTILIZZABILE</button>';
+    body += '<button type="button" class="btn btn-primary" style="width:100%;" onclick="assignCoachWarmupToClient()">ASSEGNA AL CLIENTE</button>';
+  }
+
+  overlay.innerHTML =
+    '<div class="card" style="max-width:460px;width:100%;max-height:88vh;overflow:auto;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">WARM-UP · ASSEGNAZIONE</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'coach-warmup-assign-modal\').remove()">CHIUDI</button></div>' +
+    body +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+function moveCoachDraftItem(idx, dir) {
+  const items = window.__coachWarmupDraft.items;
+  const t = idx + dir;
+  if (t < 0 || t >= items.length) return;
+  const tmp = items[idx]; items[idx] = items[t]; items[t] = tmp;
+  items.forEach(function (it, i) { it.orderIndex = i; });
+  const el = document.getElementById('coach-warmup-draft-items');
+  if (el) el.innerHTML = coachWarmupDraftItemsHtml();
+}
+window.moveCoachDraftItem = moveCoachDraftItem;
+
+function removeCoachDraftItem(idx) {
+  window.__coachWarmupDraft.items.splice(idx, 1);
+  window.__coachWarmupDraft.items.forEach(function (it, i) { it.orderIndex = i; });
+  const el = document.getElementById('coach-warmup-draft-items');
+  if (el) el.innerHTML = coachWarmupDraftItemsHtml();
+}
+window.removeCoachDraftItem = removeCoachDraftItem;
+
+function updateCoachDraftItemField(idx, field, value) {
+  const it = window.__coachWarmupDraft.items[idx];
+  if (!it) return;
+  if (field === 'sets' || field === 'durationSeconds' || field === 'restSeconds') {
+    it[field] = value === '' ? (field === 'sets' ? 1 : null) : (parseInt(value, 10) || 0);
+  } else {
+    it[field] = value;
+  }
+}
+window.updateCoachDraftItemField = updateCoachDraftItemField;
+
+function clearCoachWarmupDraft() {
+  const keepType = (window.__coachWarmupDraft && window.__coachWarmupDraft.assignmentType) || 'optional';
+  window.__coachWarmupDraft = { items: [], assignmentType: keepType, name: 'Warm-up' };
+  window.__coachWarmupDraftTemplateId = null;
+  renderCoachWarmupAssignModal(false);
+}
+window.clearCoachWarmupDraft = clearCoachWarmupDraft;
+
+function generateCoachWarmupDraftFromClientSession() {
+  if (typeof WarmUpEngine === 'undefined') return;
+  const w = (typeof currentWeek !== 'undefined') ? currentWeek : 1;
+  const d = (typeof currentDay !== 'undefined') ? currentDay : 0;
+  const weekObj = (typeof DATA !== 'undefined' && DATA && DATA.weeks && DATA.weeks[w - 1]) || null;
+  const dayObj = weekObj ? ((weekObj.sessions || weekObj.days || [])[d]) : null;
+  const exerciseList = dayObj ? (dayObj.exercises || dayObj.rows || []) : [];
+  if (!exerciseList.length) {
+    if (typeof showToast === 'function') showToast('Nessun esercizio nella sessione corrente del cliente.', 'warning');
+    return;
+  }
+  const generated = WarmUpEngine.generate({ exercises: exerciseList }, { athleteLevel: 'intermediate' });
+  window.__coachWarmupDraft.items = generated.items;
+  window.__coachWarmupDraft.name = 'Warm-up · ' + (generated.mainLift || 'sessione');
+  window.__coachWarmupDraftTemplateId = null;
+  renderCoachWarmupAssignModal(false);
+}
+window.generateCoachWarmupDraftFromClientSession = generateCoachWarmupDraftFromClientSession;
+
+function openCoachWarmupTemplatePicker() {
+  const templates = window.__coachWarmupTemplates || [];
+  const existing = document.getElementById('coach-warmup-template-picker');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'coach-warmup-template-picker';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10160;align-items:flex-end;justify-content:center;padding:12px;box-sizing:border-box;';
+  overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
+  const listHtml = templates.length
+    ? templates.map(function (t) {
+        return '<div class="card" style="padding:10px;margin-bottom:8px;cursor:pointer;" onclick="pickCoachWarmupTemplate(\'' + t.id + '\')">' +
+          '<div style="font-size:12px;font-weight:700;color:#fff;">' + esc(t.name) + '</div>' +
+          '<div style="font-size:10px;color:#888;">' + t.items.length + ' esercizi</div></div>';
+      }).join('')
+    : '<div style="font-size:11px;color:#888;padding:10px 0;">Nessun template salvato ancora.</div>';
+  overlay.innerHTML =
+    '<div class="card" style="max-width:420px;width:100%;max-height:80vh;overflow:auto;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">I TUOI TEMPLATE</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'coach-warmup-template-picker\').remove()">CHIUDI</button></div>' +
+    listHtml + '</div>';
+  document.body.appendChild(overlay);
+}
+window.openCoachWarmupTemplatePicker = openCoachWarmupTemplatePicker;
+
+function pickCoachWarmupTemplate(templateId) {
+  const t = (window.__coachWarmupTemplates || []).find(function (x) { return String(x.id) === String(templateId); });
+  if (!t) return;
+  window.__coachWarmupDraft.items = JSON.parse(JSON.stringify(t.items));
+  window.__coachWarmupDraft.name = t.name;
+  window.__coachWarmupDraftTemplateId = t.id;
+  const picker = document.getElementById('coach-warmup-template-picker');
+  if (picker) picker.remove();
+  renderCoachWarmupAssignModal(false);
+}
+window.pickCoachWarmupTemplate = pickCoachWarmupTemplate;
+
+function openCoachWarmupExercisePicker() {
+  const lib = ((typeof WARMUP_EXERCISE_LIBRARY !== 'undefined' && WARMUP_EXERCISE_LIBRARY) || []).filter(function (e) { return e.coach_selectable; });
+  const existing = document.getElementById('coach-warmup-exercise-picker');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'coach-warmup-exercise-picker';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.96);z-index:10170;align-items:flex-end;justify-content:center;padding:12px;box-sizing:border-box;';
+  overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
+  const byCat = {};
+  lib.forEach(function (e) { (byCat[e.category] = byCat[e.category] || []).push(e); });
+  const listHtml = Object.keys(byCat).map(function (cat) {
+    const catLabel = (typeof WARMUP_CATEGORY_LABELS !== 'undefined' && WARMUP_CATEGORY_LABELS[cat]) || cat;
+    return '<div style="font-size:10px;font-weight:800;color:var(--gold);margin:10px 0 6px;">' + esc(catLabel) + '</div>' +
+      byCat[cat].map(function (e) {
+        return '<div class="card" style="padding:8px 10px;margin-bottom:6px;cursor:pointer;" onclick="addCoachDraftLibraryExercise(\'' + e.id + '\')">' +
+          '<div style="font-size:12px;font-weight:700;color:#fff;">' + esc(e.name) + '</div>' +
+          '<div style="font-size:10px;color:#888;">' + esc(e.description) + '</div></div>';
+      }).join('');
+  }).join('');
+  overlay.innerHTML =
+    '<div class="card" style="max-width:460px;width:100%;max-height:82vh;overflow:auto;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">SCEGLI ESERCIZIO</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'coach-warmup-exercise-picker\').remove()">CHIUDI</button></div>' +
+    listHtml + '</div>';
+  document.body.appendChild(overlay);
+}
+window.openCoachWarmupExercisePicker = openCoachWarmupExercisePicker;
+
+function addCoachDraftLibraryExercise(exerciseId) {
+  const lib = (typeof WARMUP_EXERCISE_LIBRARY !== 'undefined' && WARMUP_EXERCISE_LIBRARY) || [];
+  const ex = lib.find(function (e) { return e.id === exerciseId; });
+  if (!ex) return;
+  window.__coachWarmupDraft.items.push({
+    exerciseId: ex.id, name: ex.name, category: ex.category, orderIndex: window.__coachWarmupDraft.items.length,
+    sets: ex.default_sets || 1, reps: ex.default_reps != null ? ex.default_reps : null,
+    durationSeconds: ex.default_duration != null ? ex.default_duration : null,
+    restSeconds: ex.default_rest || 0, intensity: ex.intensity_type, notes: ex.cautions || ''
+  });
+  const picker = document.getElementById('coach-warmup-exercise-picker');
+  if (picker) picker.remove();
+  renderCoachWarmupAssignModal(false);
+}
+window.addCoachDraftLibraryExercise = addCoachDraftLibraryExercise;
+
+async function saveCoachWarmupAsTemplate() {
+  const draft = window.__coachWarmupDraft;
+  if (!draft || !draft.items.length) {
+    if (typeof showToast === 'function') showToast('Aggiungi almeno un esercizio.', 'warning');
+    return;
+  }
+  try {
+    const res = await practiceFetch('/api/coach/warmup-templates', {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ name: draft.name, items: draft.items, source: 'manual' })
+    });
+    if (res && res.template) {
+      window.__coachWarmupTemplates = [res.template].concat(window.__coachWarmupTemplates || []);
+      if (typeof showToast === 'function') showToast('Template salvato.', 'success');
+    }
+  } catch (err) {
+    if (typeof showToast === 'function') showToast('Salvataggio template non riuscito.', 'danger');
+  }
+}
+window.saveCoachWarmupAsTemplate = saveCoachWarmupAsTemplate;
+
+async function assignCoachWarmupToClient() {
+  const clientId = window.__coachWarmupModalClientId;
+  const draft = window.__coachWarmupDraft;
+  if (!clientId || !draft) return;
+  if (!draft.items.length) {
+    if (typeof showToast === 'function') showToast('Aggiungi almeno un esercizio prima di assegnare.', 'warning');
+    return;
+  }
+  try {
+    const res = await practiceFetch('/api/coach/clients/' + clientId + '/warmup-assign', {
+      method: 'POST', headers: practiceHeaders(true),
+      body: JSON.stringify({ name: draft.name, items: draft.items, assignmentType: draft.assignmentType, templateId: window.__coachWarmupDraftTemplateId || null })
+    });
+    if (res && res.assignment) {
+      if (typeof showToast === 'function') showToast('Warm-up assegnato al cliente.', 'success');
+      const modal = document.getElementById('coach-warmup-assign-modal');
+      if (modal) modal.remove();
+      if (typeof render === 'function') render();
+    }
+  } catch (err) {
+    if (typeof showToast === 'function') showToast((err && err.message) || 'Assegnazione non riuscita.', 'danger');
+  }
+}
+window.assignCoachWarmupToClient = assignCoachWarmupToClient;
+
+async function deactivateCoachWarmupAssignment() {
+  const clientId = window.__coachWarmupModalClientId;
+  if (!clientId) return;
+  try {
+    await practiceFetch('/api/coach/clients/' + clientId + '/warmup-deactivate', { method: 'POST', headers: practiceHeaders(true) });
+    if (typeof showToast === 'function') showToast('Assegnazione rimossa.', 'success');
+    const modal = document.getElementById('coach-warmup-assign-modal');
+    if (modal) modal.remove();
+    if (typeof render === 'function') render();
+  } catch (err) {
+    if (typeof showToast === 'function') showToast('Rimozione non riuscita.', 'danger');
+  }
+}
+window.deactivateCoachWarmupAssignment = deactivateCoachWarmupAssignment;
 window.rememberApprovedProgram = rememberApprovedProgram;
 
 (function () {
