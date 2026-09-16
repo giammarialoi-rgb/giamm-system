@@ -2082,10 +2082,23 @@ export async function localizeFoodSearchResults(items, lang, { pool, translateFo
   const langLabel = FOOD_LANG_LABELS[lang] || lang;
   const toTranslate = uncached.map((i) => ({ name: candidates[i].name, brand: candidates[i].brand }));
   try {
-    const timeout = new Promise((resolve) => setTimeout(() => resolve([]), 2500));
+    // generateContentWithRetry's own retry delays (700ms, then 1800ms on top
+    // of the request itself) can add up to more than a short timeout allows
+    // even in a case that eventually succeeds - 5s gives real retries room
+    // without still holding the response hostage indefinitely.
+    const TIMED_OUT = Symbol('timed_out');
+    const timeout = new Promise((resolve) => setTimeout(() => resolve(TIMED_OUT), 5000));
     const translations = await Promise.race([translateFoodNames(toTranslate, langLabel), timeout]);
+    if (translations === TIMED_OUT) {
+      console.warn('[food] AI name localization timed out after 5s for', toTranslate.length, 'item(s)');
+      return;
+    }
+    if (!Array.isArray(translations) || !translations.length) {
+      console.warn('[food] AI name localization returned no translations for', toTranslate.length, 'item(s)');
+      return;
+    }
     const toSave = [];
-    (translations || []).forEach((t) => {
+    translations.forEach((t) => {
       const candidateIdx = uncached[t.index];
       if (candidateIdx == null || !candidates[candidateIdx]) return;
       const localized = String(t.localized_name || '').trim();

@@ -104,7 +104,7 @@ function makeMockPool(existingRows = []) {
 // (bounded with a timeout), and the DB write is fire-and-forget (never
 // blocks/fails the search response even if it errors).
 const serverSrc = fs.readFileSync(path.join(root, 'server/food/index.mjs'), 'utf8');
-ok(serverSrc.includes('setTimeout(() => resolve([]), 2500)') && serverSrc.includes('Promise.race([translateFoodNames'),
+ok(/setTimeout\(\(\) => resolve\(TIMED_OUT\), 5000\)/.test(serverSrc) && serverSrc.includes('Promise.race([translateFoodNames'),
   '5a. the AI call is bounded by a timeout so a slow response never blocks the search itself');
 ok(serverSrc.includes('saveCachedFoodTranslations(pool, toSave, lang).catch(() => {})'),
   '5b. persisting the new translations is fire-and-forget, never able to fail or delay the response');
