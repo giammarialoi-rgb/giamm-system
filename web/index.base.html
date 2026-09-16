@@ -15466,8 +15466,29 @@ function suggestProgramsForProfile(profile) {
   if (/spall|deltoid/.test(goal) || focus.some(function (m) { return normalizeMacroMuscleGroup(m) === 'SPALLE'; })) want.add('spalle');
   if (/dorso|schiena|back/.test(goal) || focus.some(function (m) { return normalizeMacroMuscleGroup(m) === 'DORSO'; })) want.add('dorso');
   if (!want.size) want.add('ipertrofia');
-  const freq = parseInt(store.prefs && store.prefs.frequency, 10) || 0;
+  // Gender was never checked at all here - a male client's suggestions could
+  // include (and even lead with) programs tagged for women, or vice versa.
+  // Same audience convention as mapIntakeToCatalogFilters/rankCatalogPrograms:
+  // an untagged/"unisex" program is always fine, a mismatched explicit tag
+  // (male vs female) is excluded outright, not just de-prioritized.
+  const sexRaw = String((profile && profile.sex) || '').toLowerCase();
+  let audience = null;
+  if (/femmin/.test(sexRaw)) audience = 'female';
+  else if (/masch|uomo/.test(sexRaw)) audience = 'male';
+  // Day count used to always read store.prefs.frequency - a leftover/default
+  // (often literally 4) from whichever program was last being edited in this
+  // session, completely unrelated to a brand new client. While setting up a
+  // client (coachAssigning/coachViewingClient), the day count that client
+  // actually specified in their own intake is what must be used instead.
+  const inCoachClientContext = !!(typeof store !== 'undefined' && store && (store.coachAssigning || store.coachViewingClient));
+  const clientIntakeSessions = inCoachClientContext && store.coachWorkspace && store.coachWorkspace.intake
+    ? parseInt(store.coachWorkspace.intake.sessionsPerWeek, 10)
+    : NaN;
+  const freq = Number.isFinite(clientIntakeSessions) && clientIntakeSessions > 0
+    ? clientIntakeSessions
+    : (inCoachClientContext ? 0 : (parseInt(store.prefs && store.prefs.frequency, 10) || 0));
   return list
+    .filter((p) => !audience || !p.audience || p.audience === audience)
     .map((p) => {
       let score = 0;
       (p.goals || []).forEach((g) => { if (want.has(g)) score += 3; });

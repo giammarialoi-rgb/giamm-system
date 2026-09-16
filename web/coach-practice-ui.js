@@ -3955,6 +3955,19 @@ function snapshotCoachMaster() {
   };
 }
 
+// snapshotCoachMaster()/restoreCoachMaster() back up and restore the coach's
+// OWN personal data around every coachAssigning sandbox session (never
+// touched - it comes back exactly as it was on cancel/exit), but this reset
+// used to only clear data/customSets/subs/skips/logs/intelTargets. bw,
+// bodyChecks, nutritionDaily, exMuscle, loadTypes, tempos and bonus were
+// left completely untouched in the live store while assigning/importing a
+// plan for a client - so the coach's own logged body weight (and these
+// other personal fields) leaked straight into the client-assignment
+// sandbox, visible as if it belonged to the client being set up. Only
+// called from the coachAssigning sandbox flows (never from the separate,
+// already-correct coachViewingClient live-session path, which populates
+// all of these from the client's own synced data via applyClientPayloadToLocal
+// instead) - clearing them here is always safe.
 function resetSandboxSessionState() {
   store.data = {};
   store.customSets = {};
@@ -3962,6 +3975,13 @@ function resetSandboxSessionState() {
   store.skips = {};
   store.logs = [];
   store.intelTargets = {};
+  store.bw = {};
+  store.bodyChecks = [];
+  store.nutritionDaily = {};
+  store.exMuscle = {};
+  store.loadTypes = {};
+  store.tempos = {};
+  store.bonus = {};
 }
 
 function stripProgramSessionPerformance(prog) {
