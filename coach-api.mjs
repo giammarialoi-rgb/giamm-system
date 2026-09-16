@@ -2085,10 +2085,67 @@ oppure, se non trovato:
   }
 }
 
+const FOOD_NAME_TRANSLATION_SCHEMA = {
+  type: "object",
+  properties: {
+    translations: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          index: { type: "number" },
+          localized_name: { type: "string" }
+        },
+        required: ["index", "localized_name"]
+      }
+    }
+  },
+  required: ["translations"]
+};
+
+// Many search results (Open Food Facts especially) carry whatever language
+// their original contributor happened to use, unrelated to the user's own -
+// a literal machine translation of a product name often reads unnaturally
+// (or is just wrong for a dish that has its own name in the target market),
+// so this explicitly asks for the name people in that market would actually
+// use, not a word-for-word translation. Results are cached by the caller
+// (food_name_translations) so this only ever runs once per distinct
+// name+brand+language, not on every search.
+async function translateFoodNamesWithAI(items, langLabel) {
+  if (!process.env.GEMINI_API_KEY || !Array.isArray(items) || !items.length) return [];
+  const ai = getClient();
+  const listing = items.map((it, i) => `${i}. "${it.name}"${it.brand ? ' (marchio: ' + it.brand + ')' : ''}`).join('\n');
+  const prompt = `Sei un esperto di alimentazione per il mercato: ${langLabel}.
+Per ciascuno dei seguenti alimenti (nome originale, marchio se presente), fornisci il nome con cui questo
+specifico alimento/prodotto è realmente conosciuto o venduto in quel mercato - NON una traduzione letterale
+parola per parola, ma il nome che userebbe davvero una persona del posto (es. un piatto ha il proprio nome
+nella cucina locale, non la traduzione dei suoi ingredienti). Se il nome è già naturale in quella lingua, o è
+un marchio/nome proprio che non si traduce, restituiscilo invariato. Non inventare un prodotto diverso.
+
+${listing}`;
+  const response = await generateContentWithRetry(ai, {
+    model: MODEL,
+    partsAttempts: [[{ text: prompt }]],
+    label: "Gemini food name localization",
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: FOOD_NAME_TRANSLATION_SCHEMA,
+      maxOutputTokens: 2048
+    }
+  });
+  try {
+    const parsed = JSON.parse(response.text || "{}");
+    return Array.isArray(parsed.translations) ? parsed.translations : [];
+  } catch (_) {
+    return [];
+  }
+}
+
 mountFoodRoutes(app, {
   generateVision: generateMealPhotoVision,
   pool,
   lookupBarcodeWithAI,
+  translateFoodNames: translateFoodNamesWithAI,
   aiLookupRateLimiter: barcodeAiRateLimiter
 });
 

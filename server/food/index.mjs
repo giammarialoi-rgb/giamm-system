@@ -2016,11 +2016,96 @@ export function fuseVisionAndBarcode(visionItem, barcodeProduct) {
 
 
 
+// "Simultaneous" localization of search results into the user's own language
+// - not a literal machine translation (explicitly asked against: the point
+// is the name people in that market actually use for this food, not a
+// word-for-word rendering), and cached permanently per name+brand+language
+// so the AI is only ever asked once for a given item, never on every search.
+// Sources with already-curated Italian names (the local staple catalog,
+// official chain-restaurant menus) are skipped - only genuinely foreign-
+// named sources need this.
+const LOCALIZABLE_SOURCES = new Set(['open_food_facts', 'fatsecret', 'usda']);
+const FOOD_LANG_LABELS = { it: 'Italia', en: 'Stati Uniti / mercato anglofono', es: 'Spagna', fr: 'Francia', de: 'Germania' };
+
+function foodTranslationKey(name, brand) {
+  return fold(name) + '|' + fold(brand || '');
+}
+
+async function getCachedFoodTranslations(pool, keys, lang) {
+  if (!pool || !keys.length) return new Map();
+  try {
+    const res = await pool.query(
+      `SELECT original_key, translated_name FROM food_name_translations WHERE target_lang = $1 AND original_key = ANY($2::text[])`,
+      [lang, keys]
+    );
+    const map = new Map();
+    for (const row of res.rows) map.set(row.original_key, row.translated_name);
+    return map;
+  } catch (err) {
+    console.warn('[food] translation cache read failed', err.message);
+    return new Map();
+  }
+}
+
+async function saveCachedFoodTranslations(pool, entries, lang) {
+  if (!pool || !entries.length) return;
+  try {
+    for (const e of entries) {
+      await pool.query(
+        `INSERT INTO food_name_translations (original_key, target_lang, translated_name)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (original_key, target_lang) DO UPDATE SET translated_name = EXCLUDED.translated_name`,
+        [e.key, lang, e.translatedName]
+      );
+    }
+  } catch (err) {
+    console.warn('[food] translation cache write failed', err.message);
+  }
+}
+
+export async function localizeFoodSearchResults(items, lang, { pool, translateFoodNames } = {}) {
+  const candidates = items.filter((it) => LOCALIZABLE_SOURCES.has(it.provenance && it.provenance.source));
+  if (!candidates.length) return;
+  const keys = candidates.map((it) => foodTranslationKey(it.name, it.brand));
+  const cached = await getCachedFoodTranslations(pool, keys, lang);
+  const uncached = [];
+  candidates.forEach((it, i) => {
+    const hit = cached.get(keys[i]);
+    if (hit) {
+      it.originalName = it.name;
+      it.name = hit;
+    } else {
+      uncached.push(i);
+    }
+  });
+  if (!uncached.length || typeof translateFoodNames !== 'function') return;
+  const langLabel = FOOD_LANG_LABELS[lang] || lang;
+  const toTranslate = uncached.map((i) => ({ name: candidates[i].name, brand: candidates[i].brand }));
+  try {
+    const timeout = new Promise((resolve) => setTimeout(() => resolve([]), 2500));
+    const translations = await Promise.race([translateFoodNames(toTranslate, langLabel), timeout]);
+    const toSave = [];
+    (translations || []).forEach((t) => {
+      const candidateIdx = uncached[t.index];
+      if (candidateIdx == null || !candidates[candidateIdx]) return;
+      const localized = String(t.localized_name || '').trim();
+      if (!localized) return;
+      candidates[candidateIdx].originalName = candidates[candidateIdx].name;
+      candidates[candidateIdx].name = localized;
+      toSave.push({ key: keys[candidateIdx], translatedName: localized });
+    });
+    if (toSave.length) saveCachedFoodTranslations(pool, toSave, lang).catch(() => {});
+  } catch (err) {
+    console.warn('[food] AI name localization failed', err.message);
+  }
+}
+
 export function mountFoodRoutes(app, opts = {}) {
   const env = opts.env || process.env;
   const generateVisionFn = opts.generateVisionFn || opts.generateVision || null;
   const pool = opts.pool || null;
   const lookupBarcodeWithAI = opts.lookupBarcodeWithAI || null;
+  const translateFoodNames = opts.translateFoodNames || null;
   const aiLookupRateLimiter = opts.aiLookupRateLimiter || ((req, res, next) => next());
 
   app.get('/api/food/search', async (req, res) => {
@@ -2028,6 +2113,9 @@ export function mountFoodRoutes(app, opts = {}) {
       const q = String(req.query.q || '').trim();
       const lang = String(req.query.lang || 'it').trim().toLowerCase();
       const result = await searchFoodMulti(q, env, { lang });
+      if (result.items && result.items.length) {
+        await localizeFoodSearchResults(result.items, lang, { pool, translateFoodNames });
+      }
       res.json(result);
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
