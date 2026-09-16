@@ -11418,7 +11418,9 @@ function renderNutrition(c) {
     <div class="card" style="border:1px solid var(--border);background:linear-gradient(135deg, #16140d 0%, #0c0c0c 100%);margin-bottom:16px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <span style="font-size:11px;font-weight:800;color:var(--gold);">${t('dailyTotals')} • ${safeDisplayValue(activeDay.day, t('today'))}</span>
-        <span style="font-size:13px;font-weight:900;color:#fff;">${Math.round(dayKcal)} <span style="font-size:10px;color:#888;">${targetKcal ? ('/ ' + targetKcal + ' kcal') : 'kcal'}</span></span>
+        <span style="font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;gap:6px;">${Math.round(dayKcal)} <span style="font-size:10px;color:#888;">${targetKcal ? ('/ ' + targetKcal + ' kcal') : 'kcal'}</span>
+          <button type="button" onclick="openEditNutritionTargetsModal()" title="Modifica o rimuovi il target kcal/macro" style="background:none;border:none;color:#888;font-size:12px;padding:2px 4px;cursor:pointer;line-height:1;">✎</button>
+        </span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;">
         <div style="background:#111;padding:8px;border-radius:8px;text-align:center;border:1px solid rgba(76,175,80,0.3);">
@@ -13216,6 +13218,94 @@ async function saveNutritionPlanEdits() {
 function markNutritionDirty() {
   if (typeof store !== 'undefined' && store) store.__cpNutritionDirty = true;
 }
+
+// Direct edit for the daily kcal/macro target shown next to the logged
+// totals - independent of regenerating a whole plan. Without this, the only
+// way to change or clear daily_calories_target/protein/carbs/fats was to
+// open GENERA PIANO and build a brand new set of days, which also wipes any
+// manually-logged foods; asked live where a leftover 3200kcal target (from
+// an earlier generated plan, no longer wanted) could be edited or removed.
+function openEditNutritionTargetsModal() {
+  const existing = document.getElementById('edit-nutr-targets-modal');
+  if (existing) existing.remove();
+  if (!DATA) window.DATA = {};
+  if (!DATA.nutrition) DATA.nutrition = { plan_name: '', present: false, days: [] };
+  const n = DATA.nutrition;
+  const overlay = document.createElement('div');
+  overlay.id = 'edit-nutr-targets-modal';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10120;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
+  overlay.innerHTML =
+    '<div class="card" style="max-width:400px;width:100%;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">TARGET KCAL/MACRO</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'edit-nutr-targets-modal\').remove()">CHIUDI</button></div>' +
+    '<div style="font-size:11px;color:#888;margin-bottom:10px;line-height:1.4;">Il numero dopo lo slash nei totali giornalieri: da qui lo cambi, lo ricalcoli dal profilo, o lo rimuovi del tutto se non ti serve.</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">' +
+    '<label style="font-size:10px;color:#ccc;">Kcal<input id="edit-nutr-target-kcal" type="number" value="' + (n.daily_calories_target || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
+    '<label style="font-size:10px;color:#ccc;">Proteine (g)<input id="edit-nutr-target-pro" type="number" value="' + (n.daily_protein_target || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
+    '<label style="font-size:10px;color:#ccc;">Carbo (g)<input id="edit-nutr-target-carb" type="number" value="' + (n.daily_carbs_target || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
+    '<label style="font-size:10px;color:#ccc;">Grassi (g)<input id="edit-nutr-target-fat" type="number" value="' + (n.daily_fats_target || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
+    '</div>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;font-size:11px;" onclick="recalcEditNutritionTargetsFromProfile()">RICALCOLA DAL PROFILO</button>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="saveEditNutritionTargets()">SALVA TARGET</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;color:#c66;border-color:#c66;" onclick="clearEditNutritionTargets()">RIMUOVI TARGET</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+function recalcEditNutritionTargetsFromProfile() {
+  const t = computeNutritionTargetsFromProfile({});
+  const kcalEl = document.getElementById('edit-nutr-target-kcal');
+  const proEl = document.getElementById('edit-nutr-target-pro');
+  const carbEl = document.getElementById('edit-nutr-target-carb');
+  const fatEl = document.getElementById('edit-nutr-target-fat');
+  if (kcalEl) kcalEl.value = t.tdee;
+  if (proEl) proEl.value = t.protein;
+  if (carbEl) carbEl.value = t.carbs;
+  if (fatEl) fatEl.value = t.fat;
+}
+
+function applyNutritionTargets(kcal, pro, carb, fat) {
+  if (!DATA) window.DATA = {};
+  if (!DATA.nutrition) DATA.nutrition = { plan_name: '', present: false, days: [] };
+  DATA.nutrition.daily_calories_target = kcal;
+  DATA.nutrition.daily_protein_target = pro;
+  DATA.nutrition.daily_carbs_target = carb;
+  DATA.nutrition.daily_fats_target = fat;
+  if (typeof store !== 'undefined' && store) {
+    store.nutrition = DATA.nutrition;
+    store.__cpNutritionDirty = true;
+    store.__cpKeepLocalNutrition = true;
+  }
+  if (typeof persist === 'function') persist();
+  const modal = document.getElementById('edit-nutr-targets-modal');
+  if (modal) modal.remove();
+  if (typeof render === 'function') render();
+  if (typeof showToast === 'function') {
+    showToast(kcal ? 'Target aggiornato. Premi SALVA per sincronizzarlo.' : 'Target rimosso. Premi SALVA per sincronizzarlo.', 'success');
+  }
+}
+
+function saveEditNutritionTargets() {
+  const kcalEl = document.getElementById('edit-nutr-target-kcal');
+  const proEl = document.getElementById('edit-nutr-target-pro');
+  const carbEl = document.getElementById('edit-nutr-target-carb');
+  const fatEl = document.getElementById('edit-nutr-target-fat');
+  const kcal = kcalEl && kcalEl.value !== '' ? parseInt(kcalEl.value, 10) || 0 : null;
+  const pro = proEl && proEl.value !== '' ? parseInt(proEl.value, 10) || 0 : null;
+  const carb = carbEl && carbEl.value !== '' ? parseInt(carbEl.value, 10) || 0 : null;
+  const fat = fatEl && fatEl.value !== '' ? parseInt(fatEl.value, 10) || 0 : null;
+  applyNutritionTargets(kcal, pro, carb, fat);
+}
+
+function clearEditNutritionTargets() {
+  applyNutritionTargets(null, null, null, null);
+}
+window.openEditNutritionTargetsModal = openEditNutritionTargetsModal;
+window.recalcEditNutritionTargetsFromProfile = recalcEditNutritionTargetsFromProfile;
+window.saveEditNutritionTargets = saveEditNutritionTargets;
+window.clearEditNutritionTargets = clearEditNutritionTargets;
 
 function openAddNutritionDayWizard() {
   const existing = document.getElementById('add-nutrition-day-modal');
