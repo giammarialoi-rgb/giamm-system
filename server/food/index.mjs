@@ -209,34 +209,43 @@ async function fatSecretRequest(method, extraParams, env) {
   return data;
 }
 
-// foods.search.v3 (unlike the plain v1 method) returns structured per-serving
-// numeric fields instead of a "Per 100g - Calories: 52kcal | ..." text blob
-// that would need fragile regex parsing to use.
-export function mapFatSecretFood(raw) {
-  const servingsRaw = raw && raw.servings && raw.servings.serving;
-  const servings = Array.isArray(servingsRaw) ? servingsRaw : (servingsRaw ? [servingsRaw] : []);
-  // Prefer a serving whose description reads as a plain "100 g"/"100g" base -
-  // otherwise scale whatever the first serving reports back down to per-100g,
-  // since every other source in this file (USDA, OFF) reports per-100g too
-  // and the app assumes that convention throughout.
-  const per100 = servings.find((s) => /^100\s*g$/i.test(String(s.serving_description || '').trim()))
-    || servings.find((s) => Number(s.metric_serving_amount) === 100 && /g/i.test(String(s.metric_serving_unit || '')));
-  const base = per100 || servings[0] || {};
-  const baseGrams = per100 ? 100 : (num(base.metric_serving_amount) || num(base.serving_description && parseFloat(base.serving_description)) || 100);
+// foods.search.v3 requires Premier-tier access ("Unknown method" / error code
+// 10 confirmed live against a real Basic-tier account) - foods.search (v1)
+// is the universally-available method on every tier, but only returns a
+// free-text description like "Per 100g - Calories: 22kcal | Fat: 0.34g |
+// Carbs: 3.28g | Protein: 3.09g" (or "Per 1 serving (30g) - ...") instead of
+// structured numeric fields, so it has to be parsed.
+export function parseFatSecretDescription(description) {
+  const str = String(description || '');
+  const perMatch = str.match(/^Per\s+(.+?)\s+-\s+/i);
+  const servingText = perMatch ? perMatch[1] : '100g';
+  const gramsInParens = servingText.match(/\(([\d.]+)\s*g\)/i);
+  const plainGrams = servingText.match(/^([\d.]+)\s*g$/i);
+  const baseGrams = gramsInParens ? parseFloat(gramsInParens[1]) : (plainGrams ? parseFloat(plainGrams[1]) : 100);
+  const numFor = (label) => {
+    const m = str.match(new RegExp(label + ':\\s*([\\d.]+)', 'i'));
+    return m ? parseFloat(m[1]) : 0;
+  };
   const ratio = baseGrams > 0 ? 100 / baseGrams : 1;
+  return {
+    kcalPer100: Math.round(numFor('Calories') * ratio),
+    proPer100: Math.round(numFor('Protein') * ratio * 10) / 10,
+    carbPer100: Math.round(numFor('Carbs') * ratio * 10) / 10,
+    fatPer100: Math.round(numFor('Fat') * ratio * 10) / 10
+  };
+}
+
+export function mapFatSecretFood(raw) {
+  const parsed = parseFatSecretDescription(raw.food_description);
   return {
     id: 'fatsecret_' + (raw.food_id || Math.random().toString(36).slice(2, 10)),
     name: raw.food_name || 'Alimento',
     brand: raw.brand_name || null,
-    kcalPer100: Math.round(num(base.calories) * ratio),
-    proPer100: Math.round(num(base.protein) * ratio * 10) / 10,
-    carbPer100: Math.round(num(base.carbohydrate) * ratio * 10) / 10,
-    fatPer100: Math.round(num(base.fat) * ratio * 10) / 10,
-    sugarsPer100: base.sugar != null ? Math.round(num(base.sugar) * ratio * 10) / 10 : undefined,
-    saturatedFatPer100: base.saturated_fat != null ? Math.round(num(base.saturated_fat) * ratio * 10) / 10 : undefined,
-    fibersPer100: base.fiber != null ? Math.round(num(base.fiber) * ratio * 10) / 10 : undefined,
-    saltPer100: base.sodium != null ? Math.round(num(base.sodium) * ratio * 2.5 / 1000 * 10) / 10 : undefined,
-    serving: base.serving_description || '100g',
+    kcalPer100: parsed.kcalPer100,
+    proPer100: parsed.proPer100,
+    carbPer100: parsed.carbPer100,
+    fatPer100: parsed.fatPer100,
+    serving: '100g',
     servingGrams: 100,
     provenance: {
       source: 'fatsecret',
@@ -252,17 +261,11 @@ export async function searchFatSecret(query, { pageSize = 8, region, language } 
   const params = { search_expression: query, max_results: String(Math.min(pageSize, 50)) };
   if (region) params.region = region;
   if (language) params.language = language;
-  const data = await fatSecretRequest('foods.search.v3', params, env);
+  const data = await fatSecretRequest('foods.search', params, env);
   if (!data) return [];
-  // FatSecret's own docs are inconsistent about the exact v3 wrapper key
-  // (foods_search vs foods, with or without a nested "results") - try every
-  // shape actually seen in the wild rather than betting on one and silently
-  // returning nothing if it's wrong.
-  const foods = (data.foods_search && data.foods_search.results && data.foods_search.results.food)
-    || (data.foods_search && data.foods_search.food)
-    || (data.foods && data.foods.food)
-    || null;
+  const foods = data.foods && data.foods.food;
   if (!foods) {
+    if (data.foods && Number(data.foods.total_results) === 0) return [];
     console.warn('[food] FatSecret search returned an unrecognized response shape', JSON.stringify(Object.keys(data || {})));
     return [];
   }

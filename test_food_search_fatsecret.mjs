@@ -38,20 +38,23 @@ ok(rfc3986Encode('a&b=c') === 'a%26b%3Dc', '1c. reserved delimiter characters ar
   ok(noCreds === null, '2c. signing is skipped (not attempted with empty/garbage keys) when no credentials are configured');
 }
 
-// 3. Response mapping: structured per-serving numeric fields (foods.search.v3),
-// not the fragile "Per 100g - Calories: Xkcal | ..." text description.
+// 3. Response mapping: foods.search.v3 needs Premier-tier access - confirmed
+// live against a real (Basic-tier) account with error code 10 "Unknown
+// method" - so this parses the plain v1 method's free-text food_description
+// ("Per 100g - Calories: Xkcal | Fat: Yg | Carbs: Zg | Protein: Wg"), the
+// only method actually available on every tier.
 {
   const per100 = mapFatSecretFood({
     food_id: '123', food_name: 'Pollo petto', brand_name: null, food_type: 'Generic',
-    servings: { serving: { serving_description: '100 g', calories: '110', protein: '23', carbohydrate: '0', fat: '1.2' } }
+    food_description: 'Per 100g - Calories: 110kcal | Fat: 1.20g | Carbs: 0.00g | Protein: 23.00g'
   });
-  ok(per100.kcalPer100 === 110 && per100.proPer100 === 23, '3a. a plain "100 g" serving is used directly as the per-100g rate');
+  ok(per100.kcalPer100 === 110 && per100.proPer100 === 23, '3a. a plain "Per 100g" description is parsed directly as the per-100g rate');
 
   const scaled = mapFatSecretFood({
     food_id: '456', food_name: 'Barretta proteica', brand_name: 'Marca', food_type: 'Brand',
-    servings: { serving: { serving_description: '1 bar (50g)', metric_serving_amount: '50', metric_serving_unit: 'g', calories: '200', protein: '20', carbohydrate: '15', fat: '6' } }
+    food_description: 'Per 1 bar (50g) - Calories: 200kcal | Fat: 6.00g | Carbs: 15.00g | Protein: 20.00g'
   });
-  ok(scaled.kcalPer100 === 400 && scaled.proPer100 === 40, '3b. a non-100g serving is scaled back to a per-100g rate (50g->100g means x2)');
+  ok(scaled.kcalPer100 === 400 && scaled.proPer100 === 40, '3b. a non-100g serving ("1 bar (50g)") is scaled back to a per-100g rate (50g->100g means x2)');
   ok(scaled.provenance.source === 'fatsecret' && scaled.provenance.kind === 'branded', '3c. provenance correctly identifies the source and branded/generic kind');
 }
 
@@ -73,6 +76,11 @@ ok(serverSrc.includes("sources.push('fatsecret')"), '5b. FatSecret results contr
 ok(serverSrc.includes("fold(it.name) + '|' + fold(it.brand || '')"), '5c. dedup keys on name+brand, not a source-specific id, so the same generic food from two sources actually collapses into one suggestion');
 ok(serverSrc.includes('scored.sort((a, b) => b.score - a.score)'), '5d. results are sorted by relevance before deduping/truncating, so the best match survives and sorts first');
 ok(serverSrc.includes("const usdaKey ? Boolean") === false && serverSrc.includes('usdaKey ? searchUsda('), '5e. USDA is still skipped cleanly (not attempted) when no API key is configured');
+// Confirmed live against a real account: foods.search.v3 answers error code
+// 10 "Unknown method" (Premier-tier only) - foods.search (v1) is what's
+// actually available and must be what gets called.
+ok(serverSrc.includes("fatSecretRequest('foods.search', params, env)"), '5f. FatSecret is called via the universally-available v1 foods.search method, not the Premier-only v3');
+ok(!serverSrc.includes("'foods.search.v3'"), '5g. the Premier-only v3 method name is not referenced anywhere anymore');
 
 // 6. Locale plumbing end-to-end: client -> route -> searchFoodMulti -> FatSecret,
 // so localized results aren't hardcoded to Italian - the seam for other
