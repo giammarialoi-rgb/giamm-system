@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 function ok(value, message) {
@@ -62,6 +63,51 @@ const releaseMeta = fs.readFileSync(path.join(root, 'web/release-meta.js'), 'utf
     '3d. a successful network fetch actually populates the cache, so the *next* visit can be served from it');
   ok(!/fetch\(req, \{ cache: 'no-store' \}\)\.catch\(\(\) => caches\.match\(req\)\)\);\s*\n\s*return;/.test(fnBody),
     '3e. the old network-only-with-cache-fallback-on-failure strategy is gone');
+}
+
+// 4. Actually run sw.js's fetch handler (not just grep it) against a same-
+// origin /api/account/me GET request, and confirm it never calls
+// event.respondWith() - i.e. the request passes through untouched, straight
+// to the network, exactly like a page with no service worker at all. This is
+// the fix for the data-loss bug: caching (and, on any network hiccup, silently
+// re-serving) an account-data GET response meant a later, more complete save
+// could be reverted to an older snapshot without any visible error.
+{
+  const origin = 'https://coach-api-gemini.onrender.com';
+  const listeners = {};
+  const sandbox = {
+    self: {
+      location: { origin },
+      addEventListener: (type, fn) => { listeners[type] = fn; },
+      NURVAN_RELEASE: { androidVersionCode: 999 }
+    },
+    caches: { open: async () => ({ match: async () => undefined, put: async () => {} }), match: async () => undefined, keys: async () => [], delete: async () => true },
+    fetch: async () => ({ ok: true, type: 'basic', clone: () => ({}) }),
+    importScripts: () => {},
+    URL,
+    console
+  };
+  sandbox.self.addEventListener = (type, fn) => { listeners[type] = fn; };
+  vm.createContext(sandbox);
+  vm.runInContext(swSrc, sandbox);
+
+  function dispatchFetch(url, method = 'GET') {
+    let respondWithCalled = false;
+    const event = {
+      request: { url, method, mode: method === 'GET' && /\.html$|^\/$/.test(new URL(url).pathname) ? 'navigate' : 'no-cors' },
+      respondWith: () => { respondWithCalled = true; },
+      waitUntil: () => {}
+    };
+    listeners.fetch(event);
+    return respondWithCalled;
+  }
+
+  ok(typeof listeners.fetch === 'function', '4a. sw.js registers a fetch listener when actually executed');
+  ok(dispatchFetch(origin + '/', 'GET') === true, '4b. sanity: a same-origin navigation IS intercepted (the harness itself works)');
+  ok(dispatchFetch(origin + '/api/account/me', 'GET') === false,
+    '4c. a same-origin GET to /api/account/me is NOT intercepted - it passes straight through to a real network fetch');
+  ok(dispatchFetch(origin + '/api/coach/clients/1/patch-data', 'GET') === false,
+    '4d. the bypass covers /api/ broadly, not just the one endpoint that was reproduced');
 }
 
 console.log('\nAll service-worker cold-start tests passed.');

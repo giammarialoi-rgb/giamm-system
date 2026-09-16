@@ -37,6 +37,14 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  // Never intercept the API: account data (nutrition, training, logs...) must
+  // always be a live network round trip. Caching a GET here and falling back
+  // to it on any network hiccup silently hands the app a stale snapshot that
+  // *looks* like a fresh sync - which then gets treated as authoritative and
+  // overwrites newer local data. Reproduced live: save a meal, save another
+  // later, and a single flaky request during the next reopen quietly reverted
+  // the account to an older cached copy, wiping what was just saved.
+  if (/^\/api\//.test(url.pathname)) return;
   if (/program-catalog|xlsx\.full/i.test(url.pathname)) return;
   const isAsset = /\.(png|jpe?g|gif|webp|svg|ico|woff2?|css|js|json|webmanifest)$/i.test(url.pathname);
 
