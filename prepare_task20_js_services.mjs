@@ -1109,7 +1109,8 @@ const FoodDatabaseService = {
     const remote = [];
     try {
       if (typeof coachEndpoint === 'function' && typeof apiFetch === 'function' && typeof store !== 'undefined' && store.accountToken) {
-        const res = await apiFetch(coachEndpoint('/api/food/search?q=' + encodeURIComponent(query)), {
+        const lang = (typeof I18nService !== 'undefined' && I18nService.getLanguage) ? I18nService.getLanguage() : 'it';
+        const res = await apiFetch(coachEndpoint('/api/food/search?q=' + encodeURIComponent(query) + '&lang=' + encodeURIComponent(lang)), {
           headers: { Authorization: 'Bearer ' + store.accountToken }
         });
         if (res && res.ok) {

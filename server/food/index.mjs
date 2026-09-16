@@ -4,6 +4,8 @@
  * chain restaurant catalog, OCR label extraction & universal barcode lookup.
  */
 
+import crypto from 'node:crypto';
+
 const USDA_BASE = 'https://api.nal.usda.gov/fdc/v1';
 const OFF_BASE = 'https://world.openfoodfacts.org';
 // Open Food Facts retired the legacy cgi/search.pl text-search endpoint (it now
@@ -11,6 +13,7 @@ const OFF_BASE = 'https://world.openfoodfacts.org';
 // lookup endpoint (OFF_BASE/api/v2/product/:code.json) is unaffected and still
 // used as-is below.
 const OFF_SEARCH_BASE = 'https://search.openfoodfacts.org';
+const FATSECRET_BASE = 'https://platform.fatsecret.com/rest/server.api';
 
 function fold(str) {
   return String(str || '')
@@ -164,42 +167,182 @@ export async function lookupOffBarcode(code) {
   return mapOffProduct(data.product);
 }
 
-export async function searchFoodMulti(query, env = process.env) {
+// FatSecret's Platform API only offers OAuth 1.0a signing for the (free,
+// no IP-whitelist-required) Consumer Key/Secret tier we're using - every
+// request is signed individually, there is no bearer token to fetch first.
+// RFC3986 requires encoding !'()* too, which encodeURIComponent leaves alone -
+// a well-known OAuth1 gotcha that silently breaks the signature if skipped.
+export function rfc3986Encode(str) {
+  return encodeURIComponent(str).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+}
+export function fatSecretSignedParams(extraParams, env) {
+  const consumerKey = env.FATSECRET_CONSUMER_KEY || '';
+  const consumerSecret = env.FATSECRET_CONSUMER_SECRET || '';
+  if (!consumerKey || !consumerSecret) return null;
+  const params = {
+    oauth_consumer_key: consumerKey,
+    oauth_nonce: crypto.randomBytes(16).toString('hex'),
+    oauth_signature_method: 'HMAC-SHA1',
+    oauth_timestamp: String(Math.floor(Date.now() / 1000)),
+    oauth_version: '1.0',
+    format: 'json',
+    ...extraParams
+  };
+  const normalized = Object.keys(params).sort()
+    .map((k) => rfc3986Encode(k) + '=' + rfc3986Encode(params[k]))
+    .join('&');
+  const baseString = ['GET', rfc3986Encode(FATSECRET_BASE), rfc3986Encode(normalized)].join('&');
+  const signingKey = rfc3986Encode(consumerSecret) + '&';
+  const signature = crypto.createHmac('sha1', signingKey).update(baseString).digest('base64');
+  return { ...params, oauth_signature: signature };
+}
+async function fatSecretRequest(method, extraParams, env) {
+  const signed = fatSecretSignedParams({ method, ...extraParams }, env);
+  if (!signed) return null;
+  const qs = Object.keys(signed).map((k) => rfc3986Encode(k) + '=' + rfc3986Encode(signed[k])).join('&');
+  const res = await fetch(`${FATSECRET_BASE}?${qs}`, {
+    headers: { Accept: 'application/json', 'User-Agent': 'GiammariaSystem/1.0 (fitness-app; contact@giammaria.system)' }
+  });
+  if (!res.ok) throw new Error('FATSECRET_HTTP_' + res.status);
+  const data = await res.json();
+  if (data.error) throw new Error('FATSECRET_API_' + (data.error.code || '') + '_' + (data.error.message || ''));
+  return data;
+}
+
+// foods.search.v3 (unlike the plain v1 method) returns structured per-serving
+// numeric fields instead of a "Per 100g - Calories: 52kcal | ..." text blob
+// that would need fragile regex parsing to use.
+export function mapFatSecretFood(raw) {
+  const servingsRaw = raw && raw.servings && raw.servings.serving;
+  const servings = Array.isArray(servingsRaw) ? servingsRaw : (servingsRaw ? [servingsRaw] : []);
+  // Prefer a serving whose description reads as a plain "100 g"/"100g" base -
+  // otherwise scale whatever the first serving reports back down to per-100g,
+  // since every other source in this file (USDA, OFF) reports per-100g too
+  // and the app assumes that convention throughout.
+  const per100 = servings.find((s) => /^100\s*g$/i.test(String(s.serving_description || '').trim()))
+    || servings.find((s) => Number(s.metric_serving_amount) === 100 && /g/i.test(String(s.metric_serving_unit || '')));
+  const base = per100 || servings[0] || {};
+  const baseGrams = per100 ? 100 : (num(base.metric_serving_amount) || num(base.serving_description && parseFloat(base.serving_description)) || 100);
+  const ratio = baseGrams > 0 ? 100 / baseGrams : 1;
+  return {
+    id: 'fatsecret_' + (raw.food_id || Math.random().toString(36).slice(2, 10)),
+    name: raw.food_name || 'Alimento',
+    brand: raw.brand_name || null,
+    kcalPer100: Math.round(num(base.calories) * ratio),
+    proPer100: Math.round(num(base.protein) * ratio * 10) / 10,
+    carbPer100: Math.round(num(base.carbohydrate) * ratio * 10) / 10,
+    fatPer100: Math.round(num(base.fat) * ratio * 10) / 10,
+    sugarsPer100: base.sugar != null ? Math.round(num(base.sugar) * ratio * 10) / 10 : undefined,
+    saturatedFatPer100: base.saturated_fat != null ? Math.round(num(base.saturated_fat) * ratio * 10) / 10 : undefined,
+    fibersPer100: base.fiber != null ? Math.round(num(base.fiber) * ratio * 10) / 10 : undefined,
+    saltPer100: base.sodium != null ? Math.round(num(base.sodium) * ratio * 2.5 / 1000 * 10) / 10 : undefined,
+    serving: base.serving_description || '100g',
+    servingGrams: 100,
+    provenance: {
+      source: 'fatsecret',
+      kind: raw.food_type === 'Brand' ? 'branded' : 'generic',
+      confidence: raw.food_type === 'Brand' ? 0.9 : 0.85,
+      attribution: 'FatSecret Platform API'
+    }
+  };
+}
+
+export async function searchFatSecret(query, { pageSize = 8, region, language } = {}, env = process.env) {
+  if (!query || query.trim().length < 2) return [];
+  const params = { search_expression: query, max_results: String(Math.min(pageSize, 50)) };
+  if (region) params.region = region;
+  if (language) params.language = language;
+  const data = await fatSecretRequest('foods.search.v3', params, env);
+  if (!data) return [];
+  // FatSecret's own docs are inconsistent about the exact v3 wrapper key
+  // (foods_search vs foods, with or without a nested "results") - try every
+  // shape actually seen in the wild rather than betting on one and silently
+  // returning nothing if it's wrong.
+  const foods = (data.foods_search && data.foods_search.results && data.foods_search.results.food)
+    || (data.foods_search && data.foods_search.food)
+    || (data.foods && data.foods.food)
+    || null;
+  if (!foods) {
+    console.warn('[food] FatSecret search returned an unrecognized response shape', JSON.stringify(Object.keys(data || {})));
+    return [];
+  }
+  const list = Array.isArray(foods) ? foods : [foods];
+  return list.map(mapFatSecretFood);
+}
+
+// How well a result's name actually matches what was typed - used to rank
+// results, since previously the order was purely "whichever source answered
+// first" with no regard for relevance at all (an exact match from one source
+// could land after a barely-related partial match from another).
+export function nameMatchScore(name, foldedQuery) {
+  const n = fold(name);
+  if (!n) return 0;
+  if (n === foldedQuery) return 100;
+  const words = n.split(/\s+/);
+  // Word-boundary matches must outrank a raw substring/prefix hit on the
+  // whole string - "Petto di pollo" (a real, whole-word match on "pollo")
+  // is what someone searching "pollo" actually wants, not "Polloni" (a
+  // different word that merely happens to start with the same letters).
+  if (words[0] === foldedQuery) return 85;
+  if (words.includes(foldedQuery)) return 70;
+  if (words.some((w) => w.startsWith(foldedQuery))) return 55;
+  if (n.startsWith(foldedQuery)) return 45;
+  if (n.includes(foldedQuery)) return 30;
+  return 10;
+}
+
+// lang drives FatSecret's optional region/language localization (a premier
+// feature - harmless to pass even on accounts without it, since FatSecret
+// simply ignores it and falls back to its own default in that case) and is
+// the seam for adding more languages later without restructuring anything.
+const LANG_TO_FATSECRET_REGION = { it: ['IT', 'it'], en: ['US', 'en'], es: ['ES', 'es'], fr: ['FR', 'fr'], de: ['DE', 'de'] };
+
+export async function searchFoodMulti(query, env = process.env, { lang = 'it' } = {}) {
   const q = fold(query);
   if (!q || q.length < 2) return { items: [], source: 'empty' };
-  const items = [];
-  const sources = [];
 
-  // Check official chain restaurants first
+  // Chain catalog is synchronous/local; USDA, Open Food Facts and FatSecret
+  // are independent network calls - they used to run one after another
+  // (awaited in sequence), so the total wait was the SUM of all three
+  // instead of the slowest of the three. Every source is independently
+  // best-effort: one failing (or not being configured) never blocks the rest.
   const chainHits = searchChainCatalog(query);
-  if (chainHits.length) {
-    items.push(...chainHits);
-    sources.push('official_restaurant_data');
-  }
-
   const usdaKey = env.USDA_FDC_API_KEY || env.FDC_API_KEY || '';
-  try {
-    if (usdaKey) {
-      const usda = await searchUsda(query, { apiKey: usdaKey, pageSize: 6 });
-      items.push(...usda);
-      if (usda.length) sources.push('usda');
-    }
-  } catch (err) {
-    console.warn('[food] USDA failed', err.message);
-  }
+  const [usdaResult, offResult, fatSecretResult] = await Promise.allSettled([
+    usdaKey ? searchUsda(query, { apiKey: usdaKey, pageSize: 6 }) : Promise.resolve([]),
+    searchOpenFoodFacts(query, { pageSize: 6 }),
+    (function () {
+      const [region, language] = LANG_TO_FATSECRET_REGION[lang] || LANG_TO_FATSECRET_REGION.it;
+      return searchFatSecret(query, { pageSize: 6, region, language }, env);
+    })()
+  ]);
 
-  try {
-    const off = await searchOpenFoodFacts(query, { pageSize: 6 });
-    items.push(...off);
-    if (off.length) sources.push('open_food_facts');
-  } catch (err) {
-    console.warn('[food] OFF failed', err.message);
-  }
+  const items = [...chainHits];
+  const sources = chainHits.length ? ['official_restaurant_data'] : [];
+  if (usdaResult.status === 'fulfilled' && usdaResult.value.length) { items.push(...usdaResult.value); sources.push('usda'); }
+  else if (usdaResult.status === 'rejected') console.warn('[food] USDA failed', usdaResult.reason && usdaResult.reason.message);
+  if (offResult.status === 'fulfilled' && offResult.value.length) { items.push(...offResult.value); sources.push('open_food_facts'); }
+  else if (offResult.status === 'rejected') console.warn('[food] OFF failed', offResult.reason && offResult.reason.message);
+  if (fatSecretResult.status === 'fulfilled' && fatSecretResult.value.length) { items.push(...fatSecretResult.value); sources.push('fatsecret'); }
+  else if (fatSecretResult.status === 'rejected') console.warn('[food] FatSecret failed', fatSecretResult.reason && fatSecretResult.reason.message);
 
+  // Rank by how well the name actually matches before deduping, so which
+  // near-duplicate survives is the best-matching (and highest-confidence)
+  // one, not just whichever source happened to be pushed into the array first.
+  const scored = items.map((it) => ({
+    it,
+    score: nameMatchScore(it.name, q) + ((it.provenance && it.provenance.confidence) || 0) * 10
+  }));
+  scored.sort((a, b) => b.score - a.score);
+
+  // Dedup on name+brand only (dropping the source-specific id that used to be
+  // part of the key) - the same generic food showing up from two sources
+  // with no brand is the exact "confusing, messy-looking suggestions"
+  // complaint; two genuinely different branded products still stay separate.
   const seen = new Set();
   const deduped = [];
-  for (const it of items) {
-    const key = fold(it.name) + '|' + (it.barcode || it.id);
+  for (const { it } of scored) {
+    const key = fold(it.name) + '|' + fold(it.brand || '');
     if (seen.has(key)) continue;
     seen.add(key);
     deduped.push(it);
@@ -209,11 +352,13 @@ export async function searchFoodMulti(query, env = process.env) {
     ok: true,
     items: deduped.slice(0, 12),
     source: sources.join('+') || 'none',
-    attribution: sources.includes('open_food_facts')
-      ? 'Open Food Facts (ODbL) — keep separate from proprietary catalogs'
-      : sources.includes('usda')
-        ? 'USDA FoodData Central (CC0)'
-        : null
+    attribution: sources.includes('fatsecret')
+      ? 'FatSecret Platform API'
+      : sources.includes('open_food_facts')
+        ? 'Open Food Facts (ODbL) — keep separate from proprietary catalogs'
+        : sources.includes('usda')
+          ? 'USDA FoodData Central (CC0)'
+          : null
   };
 }
 
@@ -1878,7 +2023,8 @@ export function mountFoodRoutes(app, opts = {}) {
   app.get('/api/food/search', async (req, res) => {
     try {
       const q = String(req.query.q || '').trim();
-      const result = await searchFoodMulti(q, env);
+      const lang = String(req.query.lang || 'it').trim().toLowerCase();
+      const result = await searchFoodMulti(q, env, { lang });
       res.json(result);
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
