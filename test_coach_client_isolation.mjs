@@ -33,7 +33,7 @@ const uiSrc = fs.readFileSync(path.join(root, 'web/coach-practice-ui.js'), 'utf8
   const fnStart = uiSrc.indexOf('function resetSandboxSessionState()');
   ok(fnStart >= 0, '1a. resetSandboxSessionState is declared');
   const fnBody = uiSrc.slice(fnStart, uiSrc.indexOf('\n}', fnStart) + 2);
-  for (const field of ['data', 'customSets', 'subs', 'skips', 'logs', 'intelTargets', 'bw', 'bodyChecks', 'nutritionDaily', 'exMuscle', 'loadTypes', 'tempos', 'bonus']) {
+  for (const field of ['data', 'customSets', 'subs', 'skips', 'logs', 'intelTargets', 'bw', 'bodyChecks', 'nutritionDaily', 'exMuscle', 'loadTypes', 'tempos', 'bonus', 'warmups', 'warmupProgress']) {
     ok(fnBody.includes('store.' + field + ' = '), `1b. resetSandboxSessionState clears store.${field}`);
   }
 }
@@ -47,7 +47,7 @@ const uiSrc = fs.readFileSync(path.join(root, 'web/coach-practice-ui.js'), 'utf8
   const snapBody = uiSrc.slice(snapStart, uiSrc.indexOf('\n}', snapStart) + 2);
   const restoreStart = uiSrc.indexOf('function restoreCoachMaster(backup)');
   const restoreBody = uiSrc.slice(restoreStart, uiSrc.indexOf('\n}', restoreStart) + 2);
-  for (const field of ['bw', 'bodyChecks', 'nutritionDaily', 'exMuscle', 'loadTypes', 'tempos', 'bonus']) {
+  for (const field of ['bw', 'bodyChecks', 'nutritionDaily', 'exMuscle', 'loadTypes', 'tempos', 'bonus', 'warmups', 'warmupProgress']) {
     ok(snapBody.includes('bw: store.bw' === field ? '' : field) || snapBody.includes(field + ':'), `2a. snapshotCoachMaster backs up ${field}`);
     ok(restoreBody.includes('store.' + field + ' = backup.' + field), `2b. restoreCoachMaster restores ${field} from the backup`);
   }
@@ -63,6 +63,7 @@ const uiSrc = fs.readFileSync(path.join(root, 'web/coach-practice-ui.js'), 'utf8
   const applyStart = uiSrc.indexOf('function applyClientPayloadToLocal(payload)');
   const applyBody = uiSrc.slice(applyStart, uiSrc.indexOf('\nfunction ', applyStart + 20));
   ok(applyBody.includes('store.bw = payload.bw'), '3b. the live-session client-view path already correctly sources bw from the client\'s own payload, independently of this fix');
+  ok(applyBody.includes('store.warmups = payload.warmups'), '3d. the live-session client-view path sources the client\'s own warm-ups from their payload, same as every other personal field');
   ok(!applyBody.includes('resetSandboxSessionState'), '3c. applyClientPayloadToLocal does not call resetSandboxSessionState - the two paths are properly independent');
 }
 

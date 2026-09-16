@@ -2531,6 +2531,8 @@ function applyClientPayloadToLocal(payload) {
   store.loadTypes = payload.loadTypes && typeof payload.loadTypes === 'object' ? JSON.parse(JSON.stringify(payload.loadTypes)) : {};
   store.tempos = payload.tempos && typeof payload.tempos === 'object' ? JSON.parse(JSON.stringify(payload.tempos)) : {};
   store.bonus = payload.bonus && typeof payload.bonus === 'object' ? JSON.parse(JSON.stringify(payload.bonus)) : {};
+  store.warmups = payload.warmups && typeof payload.warmups === 'object' ? JSON.parse(JSON.stringify(payload.warmups)) : {};
+  store.warmupProgress = payload.warmupProgress && typeof payload.warmupProgress === 'object' ? JSON.parse(JSON.stringify(payload.warmupProgress)) : {};
   // Never merge client profile into the coach's personal store.profile (causes Giada→Giammaria leak)
   if (payload.profile && typeof payload.profile === 'object') {
     store.__cpClientViewProfile = JSON.parse(JSON.stringify(payload.profile));
@@ -3956,7 +3958,9 @@ function snapshotCoachMaster() {
     exMuscle: store.exMuscle ? JSON.parse(JSON.stringify(store.exMuscle)) : {},
     loadTypes: store.loadTypes ? JSON.parse(JSON.stringify(store.loadTypes)) : {},
     tempos: store.tempos ? JSON.parse(JSON.stringify(store.tempos)) : {},
-    bonus: store.bonus ? JSON.parse(JSON.stringify(store.bonus)) : {}
+    bonus: store.bonus ? JSON.parse(JSON.stringify(store.bonus)) : {},
+    warmups: store.warmups ? JSON.parse(JSON.stringify(store.warmups)) : {},
+    warmupProgress: store.warmupProgress ? JSON.parse(JSON.stringify(store.warmupProgress)) : {}
   };
 }
 
@@ -3987,6 +3991,8 @@ function resetSandboxSessionState() {
   store.loadTypes = {};
   store.tempos = {};
   store.bonus = {};
+  store.warmups = {};
+  store.warmupProgress = {};
 }
 
 function stripProgramSessionPerformance(prog) {
@@ -4057,6 +4063,8 @@ async function restoreCoachMaster(backup) {
   store.loadTypes = backup.loadTypes || {};
   store.tempos = backup.tempos || {};
   store.bonus = backup.bonus || {};
+  store.warmups = backup.warmups || {};
+  store.warmupProgress = backup.warmupProgress || {};
   if (typeof currentWeek !== 'undefined') currentWeek = backup.currentWeek || 1;
   if (typeof currentDay !== 'undefined') currentDay = backup.currentDay || 0;
   if (typeof persist === 'function') persist();

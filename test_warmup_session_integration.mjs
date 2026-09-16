@@ -1,0 +1,142 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = path.dirname(fileURLToPath(import.meta.url));
+function ok(value, message) {
+  assert.ok(value, message);
+  console.log('OK  ', message);
+}
+
+// The Warm-Up Engine is wired into the real Workout Session (not a separate
+// app): renderTraining() now shows an interactive warm-up card in place of
+// the old dead, read-only DATA.warmup block, with a player, personal editor,
+// and locked-assignment guard - all additive, existing set-logging code
+// untouched.
+console.log('--- Running Warm-Up Session-Integration Tests ---');
+
+const html = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
+const built = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
+const uiSrc = fs.readFileSync(path.join(root, 'web/coach-practice-ui.js'), 'utf8');
+
+// 1. Script tags present, and the old dead static block is gone.
+for (const src of [html, built]) {
+  ok(src.includes('<script src="warmup-exercise-library.js"></script>'), '1a. warmup-exercise-library.js is loaded');
+  ok(src.includes('<script src="warmup-engine.js"></script>'), '1b. warmup-engine.js is loaded');
+  ok(!/DATA\.warmup && DATA\.warmup\.present/.test(src), '1c. the old dead, read-only DATA.warmup render block is gone');
+  ok(src.includes('warmupSessionCardHtml(currentWeek, currentDay, exerciseList)'), '1d. renderTraining renders the new interactive warm-up card');
+  ok(/try\s*\{\s*h \+= warmupSessionCardHtml/.test(src), '1e. the warm-up card render is wrapped in try/catch, so a warm-up bug can never break the training session view');
+}
+
+// 2. Every function referenced via onclick="" in the new warm-up markup has
+// a matching window export (this codebase requires it - a plain top-level
+// function declaration is not reachable from an inline onclick attribute
+// here, confirmed live during the nutrition-target-edit feature this
+// session: the button silently does nothing, no console error).
+{
+  const onclickFns = [
+    'openWarmupPlayer', 'openWarmupEditor', 'regenerateWarmup', 'skipWarmup',
+    'openWarmupExercisePicker', 'addWarmupLibraryExercise',
+    'moveWarmupItem', 'removeWarmupItem', 'saveWarmupEdits',
+    'warmupPlayerCompleteItem', 'warmupPlayerSkipItem', 'closeWarmupPlayer'
+  ];
+  for (const fn of onclickFns) {
+    for (const src of [html, built]) {
+      ok(new RegExp('onclick="' + fn + '\\(').test(src), '2a. onclick="' + fn + '(...)" is wired up in ' + (src === html ? 'index.base.html' : 'index.html'));
+      ok(src.includes('window.' + fn + ' = ' + fn + ';'), '2b. ' + fn + ' is explicitly exported on window');
+    }
+  }
+  // updateWarmupItemField is wired via oninput="" on the sets/reps/duration/
+  // rest fields, not onclick="" - same window-export rule applies either way.
+  for (const src of [html, built]) {
+    ok(new RegExp('oninput="updateWarmupItemField\\(').test(src), '2a. oninput="updateWarmupItemField(...)" is wired up on the item fields');
+    ok(src.includes('window.updateWarmupItemField = updateWarmupItemField;'), '2b. updateWarmupItemField is explicitly exported on window');
+  }
+  // createWarmupFromScratch has no onclick of its own (openWarmupEditor calls
+  // it directly as a same-scope JS fallback when no warm-up exists yet for
+  // the session) but is still exported, matching this codebase's convention
+  // of exporting anything that could plausibly need calling from an onclick.
+  for (const src of [html, built]) {
+    ok(src.includes('window.createWarmupFromScratch = createWarmupFromScratch;'), '2c. createWarmupFromScratch is exported on window');
+  }
+}
+
+// 3. Personal domain sync: warmups/warmupProgress ride the same JSONB blob
+// sync as nutrition/bw/etc. - both the upload (accountPayload) and the
+// download (applyRemoteAccountData) sides must carry the two new fields, or
+// a warm-up created on one device would never reach another.
+{
+  const payloadStart = html.indexOf('function accountPayload(opts)');
+  const payloadBody = html.slice(payloadStart, html.indexOf('\nfunction applyRemoteAccountData', payloadStart));
+  ok(payloadBody.includes('warmups: warmupsSrc || {}'), '3a. accountPayload uploads store.warmups');
+  ok(payloadBody.includes('warmupProgress: warmupProgressSrc || {}'), '3b. accountPayload uploads store.warmupProgress');
+  const applyStart = html.indexOf('function applyRemoteAccountData(remote, preferLocal)');
+  const applyBody = html.slice(applyStart, applyStart + 3000);
+  ok(applyBody.includes("store.warmups = Object.assign({}, remote.warmups || {}, store.warmups || {})"), '3c. applyRemoteAccountData merges remote.warmups, local wins on conflict (same pattern as bw/skips/etc.)');
+  ok(applyBody.includes("store.warmupProgress = Object.assign({}, remote.warmupProgress || {}, store.warmupProgress || {})"), '3d. applyRemoteAccountData merges remote.warmupProgress');
+}
+
+// 4. Coach/client isolation triad: warmups/warmupProgress must be in the
+// same reset/snapshot/restore/apply set as every other personal field, or
+// this reintroduces exactly the class of bug fixed earlier this session
+// (coach's own data leaking into - or client data leaking out of - the
+// assignment sandbox).
+{
+  const resetStart = uiSrc.indexOf('function resetSandboxSessionState()');
+  const resetBody = uiSrc.slice(resetStart, uiSrc.indexOf('\n}', resetStart) + 2);
+  ok(resetBody.includes('store.warmups = ') && resetBody.includes('store.warmupProgress = '), '4a. resetSandboxSessionState clears both new fields');
+  const snapStart = uiSrc.indexOf('function snapshotCoachMaster()');
+  const snapBody = uiSrc.slice(snapStart, uiSrc.indexOf('\n}', snapStart) + 2);
+  ok(snapBody.includes('warmups:') && snapBody.includes('warmupProgress:'), '4b. snapshotCoachMaster backs up both new fields');
+  const restoreStart = uiSrc.indexOf('function restoreCoachMaster(backup)');
+  const restoreBody = uiSrc.slice(restoreStart, uiSrc.indexOf('\n}', restoreStart) + 2);
+  ok(restoreBody.includes('store.warmups = backup.warmups') && restoreBody.includes('store.warmupProgress = backup.warmupProgress'),
+    '4c. restoreCoachMaster restores both new fields from the backup');
+  const applyClientStart = uiSrc.indexOf('function applyClientPayloadToLocal(payload)');
+  const applyClientBody = uiSrc.slice(applyClientStart, uiSrc.indexOf('\nfunction ', applyClientStart + 20));
+  ok(applyClientBody.includes('store.warmups = payload.warmups'), '4d. the live coach-viewing-client path sources warmups from the client\'s own synced payload');
+}
+
+// 5. Lock enforcement (spec section 15): a coach-assigned, active warm-up
+// must refuse structural edits/regeneration at the function level, not just
+// hide UI buttons - the guard has to be in the code path itself.
+{
+  const editStart = html.indexOf('function openWarmupEditor(week, day)');
+  const editBody = html.slice(editStart, html.indexOf('\n}', editStart) + 2);
+  ok(editBody.includes('store.warmupAssignment && store.warmupAssignment.active') && editBody.trim().split('\n')[1].includes('return'),
+    '5a. openWarmupEditor refuses to open when a coach assignment is active - the very first check, not a UI-only omission');
+  const regenStart = html.indexOf('function regenerateWarmup(week, day)');
+  const regenBody = html.slice(regenStart, html.indexOf('\n}', regenStart) + 2);
+  ok(regenBody.includes('store.warmupAssignment && store.warmupAssignment.active'), '5b. regenerateWarmup refuses to overwrite an active coach assignment');
+  const cardStart = html.indexOf('function warmupSessionCardHtml(week, day, exerciseList)');
+  const cardEnd = html.indexOf('\nwindow.warmupSessionCardHtml', cardStart);
+  const cardBody = html.slice(cardStart, cardEnd);
+  // The function has two separate onclick="openWarmupEditor(...)" references
+  // (an empty-warmup early-return "AGGIUNGI ESERCIZI" prompt, and the real
+  // MODIFICA button) - what matters here is the *populated* card's button
+  // row specifically, so anchor on the isLocked gate closest to the end of
+  // the function (the real button row), not the first textual occurrence.
+  const gateIdx = cardBody.lastIndexOf('if (!isLocked) {');
+  ok(gateIdx >= 0, '5c. the populated-warmup button row gates MODIFICA/RICREA behind !isLocked');
+  const lockedBranch = cardBody.slice(gateIdx);
+  const isLockedTrueBranchEnd = lockedBranch.indexOf("} else if (!isMandatory) {");
+  const editableBranch = lockedBranch.slice(0, isLockedTrueBranchEnd);
+  const readonlyBranch = lockedBranch.slice(isLockedTrueBranchEnd);
+  ok(editableBranch.includes('onclick="openWarmupEditor') && editableBranch.includes('onclick="regenerateWarmup'),
+    '5d. MODIFICA/RICREA render inside the !isLocked branch');
+  ok(!readonlyBranch.includes('onclick="openWarmupEditor(') && !readonlyBranch.includes('onclick="regenerateWarmup('),
+    '5e. the locked (coach-assigned) branch never renders MODIFICA/RICREA - only SALTA when optional');
+}
+
+// 6. Player completion math: idx reaching the item count is what marks a
+// session "completed" (not e.g. a fixed threshold), so a warm-up with any
+// item count completes correctly.
+{
+  const fnStart = html.indexOf('function persistWarmupPlayerProgress(status)');
+  const fnBody = html.slice(fnStart, html.indexOf('\n}', fnStart) + 2);
+  ok(fnBody.includes("completedCount >= total && total > 0 ? 'completed' : 'partial'"),
+    '6a. status is derived from actual completed-count vs total, not a hardcoded item count');
+}
+
+console.log('\nAll warm-up session-integration tests passed.');

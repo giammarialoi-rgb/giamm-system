@@ -37571,6 +37571,8 @@ function accountPayload(opts){
   const exMuscleSrc = bak ? bak.exMuscle : store.exMuscle;
   const bodyChecksSrc = bak ? bak.bodyChecks : store.bodyChecks;
   const nutritionDailySrc = bak ? bak.nutritionDaily : store.nutritionDaily;
+  const warmupsSrc = bak ? bak.warmups : store.warmups;
+  const warmupProgressSrc = bak ? bak.warmupProgress : store.warmupProgress;
   const activeProgramIdOut = bak
     ? (bak.activeProgramId || (srcProg && srcProg.id) || null)
     : (store.activeProgramId || (DATA && DATA.id) || null);
@@ -37607,6 +37609,8 @@ function accountPayload(opts){
     therapy: ther,
     exams: exams,
     nutritionDaily: nutritionDailySrc || {},
+    warmups: warmupsSrc || {},
+    warmupProgress: warmupProgressSrc || {},
     calendarEvents: Array.isArray(store.calendarEvents) ? store.calendarEvents.slice(-80) : [],
     coachArchives: Array.isArray(store.coachArchives) ? store.coachArchives.slice(0, 24).map(function (a) {
       return {
@@ -37693,6 +37697,8 @@ function applyRemoteAccountData(remote, preferLocal) {
   store.bonus = Object.assign({}, remote.bonus || {}, store.bonus || {});
   store.exMuscle = Object.assign({}, remote.exMuscle || {}, store.exMuscle || {});
   store.exMuscleByName = Object.assign({}, remote.exMuscleByName || {}, store.exMuscleByName || {});
+  store.warmups = Object.assign({}, remote.warmups || {}, store.warmups || {});
+  store.warmupProgress = Object.assign({}, remote.warmupProgress || {}, store.warmupProgress || {});
   if (remote.currentWeek) {
     currentWeek = Math.max(1, Number(remote.currentWeek) || currentWeek);
     store.trainingWeek = currentWeek;
@@ -51296,6 +51302,455 @@ function shouldStayOnPinnedTraining() {
 }
 window.pinTrainingDay = pinTrainingDay;
 window.shouldStayOnPinnedTraining = shouldStayOnPinnedTraining;
+
+// ============================================================
+// WARM-UP ENGINE — session integration, player, personal editor
+// ============================================================
+// Additive only: nothing in the existing training/set-logging code above is
+// read or modified by any of this. A warm-up lives entirely in its own
+// store.warmups/store.warmupProgress maps, keyed the same way store.data/
+// store.skips already are (w{week}_d{day}), so it rides the same personal-
+// domain sync path (accountPayload/applyRemoteAccountData) and the same
+// coach/client isolation triad (resetSandboxSessionState/snapshotCoachMaster/
+// restoreCoachMaster/applyClientPayloadToLocal) as every other personal field.
+
+var WARMUP_CATEGORY_LABELS = {
+  raise: 'Attivazione Cardiovascolare',
+  mobility: 'Mobilità',
+  cars: 'CARs',
+  core_stability: 'Stabilità Core',
+  activation: 'Attivazione',
+  potentiation: 'Potenziamento',
+  isometric: 'Isometria',
+  specific_preparation: 'Preparazione Specifica',
+  ramp_up: 'Ramp-Up',
+  self_myofascial_release: 'Rilascio Miofasciale'
+};
+
+function warmupSessionKey(week, day) {
+  return 'w' + week + '_d' + day;
+}
+
+function warmupLibraryExercise(exerciseId) {
+  var lib = (typeof WARMUP_EXERCISE_LIBRARY !== 'undefined' && WARMUP_EXERCISE_LIBRARY) || [];
+  for (var i = 0; i < lib.length; i++) if (lib[i].id === exerciseId) return lib[i];
+  return null;
+}
+
+function warmupAthleteLevel() {
+  var lvl = store && store.profile && store.profile.experienceLevel;
+  if (lvl === 'beginner' || lvl === 'advanced') return lvl;
+  return 'intermediate';
+}
+
+// Priority order per spec section 31: a locked coach assignment always wins
+// and is never silently replaced by a fresh auto-generation.
+function getOrCreateWarmupForSession(week, day, exerciseList) {
+  var key = warmupSessionKey(week, day);
+  if (!store.warmups) store.warmups = {};
+  var assigned = store.warmupAssignment && store.warmupAssignment.active ? store.warmupAssignment : null;
+  if (assigned) return Object.assign({}, assigned, { fromAssignment: true });
+  var existing = store.warmups[key];
+  if (existing && existing.items && existing.items.length) return existing;
+  if (typeof WarmUpEngine === 'undefined' || !exerciseList || !exerciseList.length) return null;
+  var generated = WarmUpEngine.generate({ exercises: exerciseList }, {
+    athleteLevel: warmupAthleteLevel(),
+    includePotentiation: !!(store.prefs && store.prefs.warmupIncludePotentiation),
+    readiness: (store.prefs && store.prefs.lastReadinessLevel) || null
+  });
+  store.warmups[key] = generated;
+  try { persist(); } catch (_) {}
+  return generated;
+}
+
+function warmupItemDurationEstimateSeconds(it) {
+  if (it.durationSeconds) return Number(it.sets || 1) * Number(it.durationSeconds);
+  if (it.rampUp && it.rampUp.length) return it.rampUp.length * 35;
+  var reps = typeof it.reps === 'number' ? it.reps : 8;
+  return Number(it.sets || 1) * (reps * 3 + 15);
+}
+
+function estimateWarmupTotalSeconds(items) {
+  return (items || []).reduce(function (sum, it) {
+    return sum + warmupItemDurationEstimateSeconds(it) + Number(it.restSeconds || 0);
+  }, 0);
+}
+
+function warmupProgressForKey(key) {
+  if (!store.warmupProgress) store.warmupProgress = {};
+  return store.warmupProgress[key] || null;
+}
+
+function warmupSchemeText(it) {
+  if (it.rampUp && it.rampUp.length) {
+    return it.rampUp.map(function (s) { return s.load + 'kg×' + s.reps; }).join(' → ');
+  }
+  if (it.durationSeconds) return (it.sets > 1 ? it.sets + '×' : '') + it.durationSeconds + 's';
+  if (it.reps != null) return (it.sets || 1) + '×' + it.reps;
+  return '';
+}
+
+function warmupSessionCardHtml(week, day, exerciseList) {
+  var warmup = getOrCreateWarmupForSession(week, day, exerciseList);
+  var key = warmupSessionKey(week, day);
+  if (!warmup) return '';
+  if (!warmup.items || !warmup.items.length) {
+    if (warmup.fromAssignment) return '';
+    return '<div class="card" style="margin-bottom:12px;padding:12px;border:1px dashed #333;">' +
+      '<div style="font-size:10px;font-weight:800;color:#888;letter-spacing:1px;margin-bottom:6px;">WARM-UP</div>' +
+      '<div style="font-size:11px;color:#888;margin-bottom:10px;">Nessun esercizio nel warm-up di questa sessione.</div>' +
+      '<div style="display:flex;gap:6px;">' +
+      '<button class="btn btn-outline" type="button" style="flex:1;font-size:11px;padding:9px;" onclick="openWarmupEditor(' + week + ',' + day + ')">AGGIUNGI ESERCIZI</button>' +
+      '<button class="btn btn-outline" type="button" style="flex:1;font-size:11px;padding:9px;" onclick="regenerateWarmup(' + week + ',' + day + ')">GENERA AUTOMATICO</button>' +
+      '</div></div>';
+  }
+  var progress = warmupProgressForKey(key);
+  var isLocked = !!warmup.fromAssignment;
+  var isMandatory = isLocked && warmup.assignmentType === 'mandatory';
+  var totalMin = Math.max(1, Math.round(estimateWarmupTotalSeconds(warmup.items) / 60));
+  var statusBadge = '';
+  if (progress && progress.status === 'completed') {
+    statusBadge = '<span style="font-size:9px;font-weight:800;color:#4caf50;background:rgba(76,175,80,0.15);padding:3px 7px;border-radius:6px;">✓ COMPLETATO</span>';
+  } else if (progress && progress.status === 'skipped') {
+    statusBadge = '<span style="font-size:9px;font-weight:800;color:#888;background:rgba(255,255,255,0.06);padding:3px 7px;border-radius:6px;">SALTATO</span>';
+  } else if (progress && typeof progress.idx === 'number' && progress.idx > 0) {
+    statusBadge = '<span style="font-size:9px;font-weight:800;color:var(--gold);background:rgba(212,175,55,0.12);padding:3px 7px;border-radius:6px;">IN CORSO</span>';
+  }
+  var sourceLabel = isLocked
+    ? (isMandatory ? 'OBBLIGATORIO · Prescritto dal Coach' : 'FACOLTATIVO · Prescritto dal Coach')
+    : (warmup.source === 'manual' ? 'Creato da zero' : (warmup.source === 'customized' ? 'Personalizzato' : 'Generato automaticamente'));
+  var startLabel = (progress && progress.status === 'completed') ? 'RIVEDI WARM-UP'
+    : (progress && typeof progress.idx === 'number' && progress.idx > 0) ? 'RIPRENDI WARM-UP'
+    : 'AVVIA WARM-UP';
+  var html = '<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid ' + (isMandatory ? 'var(--gold)' : 'rgba(76,175,80,0.4)') + ';background:linear-gradient(135deg, rgba(76,175,80,0.08) 0%, #0c0c0c 100%);">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">';
+  html += '<div style="font-size:10px;font-weight:800;color:#81c784;letter-spacing:1px;">WARM-UP</div>';
+  html += statusBadge;
+  html += '</div>';
+  html += '<div style="font-size:11px;color:#ccc;margin-bottom:10px;">' + esc(sourceLabel) + (warmup.mainLift ? ' · per ' + esc(warmup.mainLift) : '') + '<br><span style="color:#888;">' + warmup.items.length + ' esercizi · ~' + totalMin + ' min</span></div>';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+  html += '<button class="btn btn-primary" type="button" style="flex:1;min-width:140px;font-size:11px;padding:9px 10px;" onclick="openWarmupPlayer(' + week + ',' + day + ')">' + startLabel + '</button>';
+  if (!isLocked) {
+    html += '<button class="btn btn-outline" type="button" style="font-size:11px;padding:9px 10px;" onclick="openWarmupEditor(' + week + ',' + day + ')">MODIFICA</button>';
+    html += '<button class="btn btn-outline" type="button" style="font-size:11px;padding:9px 10px;" onclick="regenerateWarmup(' + week + ',' + day + ')">RICREA</button>';
+  } else if (!isMandatory) {
+    html += '<button class="btn btn-outline" type="button" style="font-size:11px;padding:9px 10px;" onclick="skipWarmup(' + week + ',' + day + ')">SALTA</button>';
+  }
+  html += '</div></div>';
+  return html;
+}
+window.warmupSessionCardHtml = warmupSessionCardHtml;
+
+function skipWarmup(week, day) {
+  var key = warmupSessionKey(week, day);
+  if (!store.warmupProgress) store.warmupProgress = {};
+  store.warmupProgress[key] = { status: 'skipped', idx: 0, at: new Date().toISOString() };
+  try { persist(); } catch (_) {}
+  if (typeof render === 'function') render();
+}
+window.skipWarmup = skipWarmup;
+
+function regenerateWarmup(week, day) {
+  var key = warmupSessionKey(week, day);
+  if (store.warmupAssignment && store.warmupAssignment.active) {
+    if (typeof showToast === 'function') showToast('Il warm-up assegnato dal coach non può essere rigenerato.', 'warning');
+    return;
+  }
+  if (!store.warmups) store.warmups = {};
+  delete store.warmups[key];
+  if (store.warmupProgress) delete store.warmupProgress[key];
+  var w = (typeof currentWeek !== 'undefined') ? currentWeek : week;
+  var d = (typeof currentDay !== 'undefined') ? currentDay : day;
+  var weekObj = (DATA && DATA.weeks && DATA.weeks[w - 1]) || null;
+  var dayObj = weekObj ? ((weekObj.sessions || weekObj.days || [])[d]) : null;
+  var exerciseList = dayObj ? (dayObj.exercises || dayObj.rows || []) : [];
+  getOrCreateWarmupForSession(week, day, exerciseList);
+  try { persist(); } catch (_) {}
+  if (typeof showToast === 'function') showToast('Warm-up rigenerato.', 'success');
+  if (typeof render === 'function') render();
+}
+window.regenerateWarmup = regenerateWarmup;
+
+// ---------------- PERSONAL EDITOR ----------------
+
+function openWarmupEditor(week, day) {
+  if (store.warmupAssignment && store.warmupAssignment.active) return; // locked, never editable (spec section 15)
+  var key = warmupSessionKey(week, day);
+  if (!store.warmups || !store.warmups[key]) {
+    createWarmupFromScratch(week, day);
+    return;
+  }
+  window.__warmupEditState = { week: week, day: day, key: key };
+  renderWarmupEditorModal();
+}
+window.openWarmupEditor = openWarmupEditor;
+
+function createWarmupFromScratch(week, day) {
+  var key = warmupSessionKey(week, day);
+  if (!store.warmups) store.warmups = {};
+  store.warmups[key] = { source: 'manual', mode: 'manual', mainLift: null, liftKey: 'general', items: [], rampUp: null, generatedAt: new Date().toISOString() };
+  try { persist(); } catch (_) {}
+  openWarmupEditor(week, day);
+}
+window.createWarmupFromScratch = createWarmupFromScratch;
+
+function renderWarmupEditorModal() {
+  var st = window.__warmupEditState;
+  if (!st) return;
+  var warmup = store.warmups[st.key];
+  if (!warmup) return;
+  var existing = document.getElementById('warmup-editor-modal');
+  if (existing) existing.remove();
+  var overlay = document.createElement('div');
+  overlay.id = 'warmup-editor-modal';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10130;align-items:flex-end;justify-content:center;padding:12px;box-sizing:border-box;';
+  overlay.onclick = function (ev) { if (ev.target === overlay) { overlay.remove(); window.__warmupEditState = null; } };
+  var itemsHtml = warmup.items.map(function (it, idx) {
+    return '<div class="card" style="padding:10px;margin-bottom:8px;border:1px solid #333;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">' +
+      '<div><div style="font-size:12px;font-weight:800;color:#fff;">' + esc(it.name) + '</div>' +
+      '<div style="font-size:9px;color:#888;">' + esc(WARMUP_CATEGORY_LABELS[it.category] || it.category) + '</div></div>' +
+      '<div style="display:flex;gap:4px;">' +
+      '<button class="btn btn-outline" type="button" style="font-size:10px;padding:4px 7px;" ' + (idx === 0 ? 'disabled' : '') + ' onclick="moveWarmupItem(' + idx + ',-1)">↑</button>' +
+      '<button class="btn btn-outline" type="button" style="font-size:10px;padding:4px 7px;" ' + (idx === warmup.items.length - 1 ? 'disabled' : '') + ' onclick="moveWarmupItem(' + idx + ',1)">↓</button>' +
+      '<button class="btn btn-outline" type="button" style="font-size:10px;padding:4px 7px;color:#c66;border-color:#c66;" onclick="removeWarmupItem(' + idx + ')">✕</button>' +
+      '</div></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;">' +
+      '<label style="font-size:9px;color:#888;">Serie<input type="number" value="' + (it.sets || 1) + '" oninput="updateWarmupItemField(' + idx + ',\'sets\',this.value)" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;margin-top:2px;"></label>' +
+      '<label style="font-size:9px;color:#888;">Reps<input type="text" value="' + (it.reps != null ? esc(String(it.reps)) : '') + '" oninput="updateWarmupItemField(' + idx + ',\'reps\',this.value)" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;margin-top:2px;"></label>' +
+      '<label style="font-size:9px;color:#888;">Durata (s)<input type="number" value="' + (it.durationSeconds || '') + '" oninput="updateWarmupItemField(' + idx + ',\'durationSeconds\',this.value)" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;margin-top:2px;"></label>' +
+      '<label style="font-size:9px;color:#888;">Rec. (s)<input type="number" value="' + (it.restSeconds || 0) + '" oninput="updateWarmupItemField(' + idx + ',\'restSeconds\',this.value)" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;margin-top:2px;"></label>' +
+      '</div></div>';
+  }).join('');
+  overlay.innerHTML =
+    '<div class="card" style="max-width:460px;width:100%;max-height:88vh;overflow:auto;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">MODIFICA WARM-UP</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'warmup-editor-modal\').remove();window.__warmupEditState=null;">CHIUDI</button></div>' +
+    '<div id="warmup-editor-items">' + (itemsHtml || '<div style="font-size:11px;color:#888;padding:10px 0;">Nessun esercizio. Aggiungine uno per iniziare.</div>') + '</div>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin:8px 0 12px;" onclick="openWarmupExercisePicker()">+ AGGIUNGI ESERCIZIO</button>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;" onclick="saveWarmupEdits()">SALVA COME WARM-UP PERSONALE</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+function moveWarmupItem(idx, dir) {
+  var st = window.__warmupEditState;
+  var warmup = store.warmups[st.key];
+  var target = idx + dir;
+  if (target < 0 || target >= warmup.items.length) return;
+  var tmp = warmup.items[idx];
+  warmup.items[idx] = warmup.items[target];
+  warmup.items[target] = tmp;
+  warmup.items.forEach(function (it, i) { it.orderIndex = i; });
+  warmup.source = 'customized';
+  renderWarmupEditorModal();
+}
+window.moveWarmupItem = moveWarmupItem;
+
+function removeWarmupItem(idx) {
+  var st = window.__warmupEditState;
+  var warmup = store.warmups[st.key];
+  warmup.items.splice(idx, 1);
+  warmup.items.forEach(function (it, i) { it.orderIndex = i; });
+  warmup.source = 'customized';
+  renderWarmupEditorModal();
+}
+window.removeWarmupItem = removeWarmupItem;
+
+function updateWarmupItemField(idx, field, value) {
+  var st = window.__warmupEditState;
+  var warmup = store.warmups[st.key];
+  var it = warmup.items[idx];
+  if (!it) return;
+  if (field === 'sets' || field === 'durationSeconds' || field === 'restSeconds') {
+    it[field] = value === '' ? (field === 'sets' ? 1 : null) : (parseInt(value, 10) || 0);
+  } else {
+    it[field] = value;
+  }
+  warmup.source = 'customized';
+}
+window.updateWarmupItemField = updateWarmupItemField;
+
+function openWarmupExercisePicker() {
+  var existing = document.getElementById('warmup-picker-modal');
+  if (existing) existing.remove();
+  var lib = ((typeof WARMUP_EXERCISE_LIBRARY !== 'undefined' && WARMUP_EXERCISE_LIBRARY) || []).filter(function (e) { return e.personal_selectable; });
+  var overlay = document.createElement('div');
+  overlay.id = 'warmup-picker-modal';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:10140;align-items:flex-end;justify-content:center;padding:12px;box-sizing:border-box;';
+  overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
+  var byCat = {};
+  lib.forEach(function (e) { (byCat[e.category] = byCat[e.category] || []).push(e); });
+  var listHtml = Object.keys(byCat).map(function (cat) {
+    return '<div style="font-size:10px;font-weight:800;color:var(--gold);margin:10px 0 6px;">' + esc(WARMUP_CATEGORY_LABELS[cat] || cat) + '</div>' +
+      byCat[cat].map(function (e) {
+        return '<div class="card" style="padding:8px 10px;margin-bottom:6px;cursor:pointer;" onclick="addWarmupLibraryExercise(\'' + e.id + '\')">' +
+          '<div style="font-size:12px;font-weight:700;color:#fff;">' + esc(e.name) + '</div>' +
+          '<div style="font-size:10px;color:#888;">' + esc(e.description) + '</div></div>';
+      }).join('');
+  }).join('');
+  overlay.innerHTML =
+    '<div class="card" style="max-width:460px;width:100%;max-height:82vh;overflow:auto;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">SCEGLI ESERCIZIO</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'warmup-picker-modal\').remove()">CHIUDI</button></div>' +
+    listHtml +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+window.openWarmupExercisePicker = openWarmupExercisePicker;
+
+function addWarmupLibraryExercise(exerciseId) {
+  var st = window.__warmupEditState;
+  if (!st) return;
+  var ex = warmupLibraryExercise(exerciseId);
+  if (!ex) return;
+  var warmup = store.warmups[st.key];
+  warmup.items.push({
+    exerciseId: ex.id, name: ex.name, category: ex.category, orderIndex: warmup.items.length,
+    sets: ex.default_sets || 1, reps: ex.default_reps != null ? ex.default_reps : null,
+    durationSeconds: ex.default_duration != null ? ex.default_duration : null,
+    restSeconds: ex.default_rest || 0, intensity: ex.intensity_type, notes: ex.cautions || ''
+  });
+  warmup.source = 'customized';
+  var picker = document.getElementById('warmup-picker-modal');
+  if (picker) picker.remove();
+  renderWarmupEditorModal();
+}
+window.addWarmupLibraryExercise = addWarmupLibraryExercise;
+
+function saveWarmupEdits() {
+  var st = window.__warmupEditState;
+  if (!st) return;
+  try { persist(); } catch (_) {}
+  var modal = document.getElementById('warmup-editor-modal');
+  if (modal) modal.remove();
+  window.__warmupEditState = null;
+  if (typeof showToast === 'function') showToast('Warm-up personale salvato.', 'success');
+  if (typeof render === 'function') render();
+}
+window.saveWarmupEdits = saveWarmupEdits;
+
+// ---------------- PLAYER ----------------
+
+function openWarmupPlayer(week, day) {
+  var key = warmupSessionKey(week, day);
+  var warmup = (store.warmupAssignment && store.warmupAssignment.active) ? store.warmupAssignment : (store.warmups && store.warmups[key]);
+  if (!warmup || !warmup.items || !warmup.items.length) return;
+  if (!store.warmupProgress) store.warmupProgress = {};
+  var progress = store.warmupProgress[key];
+  var startIdx = (progress && progress.status !== 'completed' && typeof progress.idx === 'number') ? progress.idx : 0;
+  window.__warmupPlayerState = {
+    week: week, day: day, key: key, idx: Math.min(startIdx, warmup.items.length - 1),
+    startedAt: (progress && progress.startedAt) || new Date().toISOString(),
+    itemStates: (progress && progress.itemStates) || {}
+  };
+  renderWarmupPlayer();
+}
+window.openWarmupPlayer = openWarmupPlayer;
+
+function warmupPlayerCurrentWarmup() {
+  var st = window.__warmupPlayerState;
+  if (!st) return null;
+  return (store.warmupAssignment && store.warmupAssignment.active) ? store.warmupAssignment : (store.warmups && store.warmups[st.key]);
+}
+
+function persistWarmupPlayerProgress(status) {
+  var st = window.__warmupPlayerState;
+  if (!st) return;
+  if (!store.warmupProgress) store.warmupProgress = {};
+  var warmup = warmupPlayerCurrentWarmup();
+  var total = warmup ? warmup.items.length : 0;
+  var completedCount = Object.keys(st.itemStates).filter(function (k) { return st.itemStates[k] === 'completed'; }).length;
+  store.warmupProgress[st.key] = {
+    status: status || (completedCount >= total && total > 0 ? 'completed' : 'partial'),
+    idx: st.idx,
+    total: total,
+    completedCount: completedCount,
+    itemStates: st.itemStates,
+    startedAt: st.startedAt,
+    completedAt: status === 'completed' ? new Date().toISOString() : null
+  };
+  try { persist(); } catch (_) {}
+}
+
+function renderWarmupPlayer() {
+  var st = window.__warmupPlayerState;
+  if (!st) return;
+  var warmup = warmupPlayerCurrentWarmup();
+  if (!warmup) return;
+  var existing = document.getElementById('warmup-player-modal');
+  if (existing) existing.remove();
+  var overlay = document.createElement('div');
+  overlay.id = 'warmup-player-modal';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:#0a0a0a;z-index:10200;flex-direction:column;padding:16px;box-sizing:border-box;overflow:auto;';
+
+  if (st.idx >= warmup.items.length) {
+    persistWarmupPlayerProgress('completed');
+    overlay.innerHTML =
+      '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;">' +
+      '<div style="font-size:40px;">✓</div>' +
+      '<div style="font-size:16px;font-weight:900;color:#4caf50;">WARM-UP COMPLETATO</div>' +
+      '<button class="btn btn-primary" type="button" style="font-size:13px;padding:12px 24px;" onclick="closeWarmupPlayer()">INIZIA ALLENAMENTO</button>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    return;
+  }
+
+  var it = warmup.items[st.idx];
+  var ex = warmupLibraryExercise(it.exerciseId);
+  var n = warmup.items.length;
+  var rampHtml = '';
+  if (it.rampUp && it.rampUp.length) {
+    rampHtml = '<div style="display:flex;flex-direction:column;gap:6px;margin:14px 0;">' +
+      it.rampUp.map(function (s) { return '<div style="display:flex;justify-content:space-between;background:#141414;padding:8px 12px;border-radius:8px;"><span style="color:#ccc;font-size:13px;">' + s.load + ' kg</span><span style="color:#888;font-size:13px;">× ' + s.reps + '</span></div>'; }).join('') +
+      '</div>';
+  }
+  overlay.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+    '<div style="font-size:11px;color:#888;font-weight:800;">' + (st.idx + 1) + ' / ' + n + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="closeWarmupPlayer()">CHIUDI</button>' +
+    '</div>' +
+    '<div style="flex:1;display:flex;flex-direction:column;justify-content:center;">' +
+    '<div style="font-size:9px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:6px;">' + esc(WARMUP_CATEGORY_LABELS[it.category] || it.category || '') + '</div>' +
+    '<div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:10px;">' + esc(it.name) + '</div>' +
+    (ex ? '<div style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:10px;">' + esc(ex.description) + '</div>' +
+      '<div style="font-size:12px;color:#ccc;line-height:1.6;background:#111;padding:12px;border-radius:10px;margin-bottom:10px;">' + esc(ex.instructions) + '</div>' : '') +
+    (ex && ex.cautions ? '<div style="font-size:11px;color:#e0b040;background:rgba(224,176,64,0.1);padding:8px 10px;border-radius:8px;margin-bottom:10px;">⚠ ' + esc(ex.cautions) + '</div>' : '') +
+    '<div style="font-size:16px;font-weight:800;color:var(--gold);margin-bottom:6px;">' + esc(warmupSchemeText(it)) + '</div>' +
+    rampHtml +
+    (it.notes && !(ex && ex.cautions) ? '<div style="font-size:11px;color:#888;">' + esc(it.notes) + '</div>' : '') +
+    '</div>' +
+    '<div style="display:flex;gap:8px;margin-top:16px;">' +
+    '<button class="btn btn-outline" type="button" style="flex:1;font-size:12px;padding:12px;" onclick="warmupPlayerSkipItem()">SALTA</button>' +
+    '<button class="btn btn-primary" type="button" style="flex:2;font-size:12px;padding:12px;" onclick="warmupPlayerCompleteItem()">COMPLETATO</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+function warmupPlayerAdvance(status) {
+  var st = window.__warmupPlayerState;
+  if (!st) return;
+  st.itemStates[st.idx] = status;
+  st.idx += 1;
+  persistWarmupPlayerProgress(st.idx >= (warmupPlayerCurrentWarmup() || { items: [] }).items.length ? 'completed' : 'partial');
+  renderWarmupPlayer();
+}
+
+function warmupPlayerCompleteItem() { warmupPlayerAdvance('completed'); }
+window.warmupPlayerCompleteItem = warmupPlayerCompleteItem;
+
+function warmupPlayerSkipItem() { warmupPlayerAdvance('skipped'); }
+window.warmupPlayerSkipItem = warmupPlayerSkipItem;
+
+function closeWarmupPlayer() {
+  var modal = document.getElementById('warmup-player-modal');
+  if (modal) modal.remove();
+  window.__warmupPlayerState = null;
+  if (typeof render === 'function') render();
+}
+window.closeWarmupPlayer = closeWarmupPlayer;
 function renderTraining(c){
   console.debug('WORKOUT_OPEN', { week: currentWeek, session: currentDay });
     try {
@@ -51364,18 +51819,7 @@ function renderTraining(c){
     h += workoutSessionTimerHtml();
     try { h += sessionSummaryCardHtml(); } catch (_) {}
     try { h += preWorkoutIntelHtml(); } catch (_) {}
-    if (DATA.warmup && DATA.warmup.present && Array.isArray(DATA.warmup.items) && DATA.warmup.items.length) {
-      h += `<div class="card" style="margin-bottom:12px;padding:12px;border:1px dashed rgba(76,175,80,0.55);background:rgba(76,175,80,0.06);">
-        <div style="font-size:10px;font-weight:800;color:#81c784;letter-spacing:1px;margin-bottom:8px;">${esc(DATA.warmup.label || 'RISCALDAMENTO')}</div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          ${DATA.warmup.items.map((it) => `
-            <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">
-              <span style="font-size:12px;font-weight:700;color:#c8e6c9;">${esc(it.name || it.notes || '—')}</span>
-              <span style="font-size:11px;color:#a5d6a7;white-space:nowrap;">${esc(it.scheme || it.notes || '')}</span>
-            </div>`).join('')}
-        </div>
-      </div>`;
-    }
+    try { h += warmupSessionCardHtml(currentWeek, currentDay, exerciseList); } catch (warmupErr) { console.warn('[WARMUP_CARD]', warmupErr); }
     h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
       <select onchange="pinTrainingDay(this.value,0);currentWeek=parseInt(this.value,10);currentDay=0;render()">${weeksList.map(ww=>`<option value="${ww.weekNumber || ww.week}" ${(ww.weekNumber || ww.week)===currentWeek?'selected':''}>Settimana ${ww.weekNumber || ww.week}</option>`).join('')}</select>
       <select onchange="pinTrainingDay(currentWeek,this.value);currentDay=parseInt(this.value,10);render()">${allDays.map((dd,i)=>`<option value="${i}" ${i===currentDay?'selected':''}>${esc(sessionDisplayName(dd, i))}${dd.is_bonus || dd.isBonus?' [BONUS]':''}${(typeof isTrainingDayFinalized === 'function' && isTrainingDayFinalized(currentWeek, i)) ? ' ✓ FINALIZZATO' : ''}</option>`).join('')}</select>
@@ -63032,6 +63476,8 @@ function applyClientPayloadToLocal(payload) {
   store.loadTypes = payload.loadTypes && typeof payload.loadTypes === 'object' ? JSON.parse(JSON.stringify(payload.loadTypes)) : {};
   store.tempos = payload.tempos && typeof payload.tempos === 'object' ? JSON.parse(JSON.stringify(payload.tempos)) : {};
   store.bonus = payload.bonus && typeof payload.bonus === 'object' ? JSON.parse(JSON.stringify(payload.bonus)) : {};
+  store.warmups = payload.warmups && typeof payload.warmups === 'object' ? JSON.parse(JSON.stringify(payload.warmups)) : {};
+  store.warmupProgress = payload.warmupProgress && typeof payload.warmupProgress === 'object' ? JSON.parse(JSON.stringify(payload.warmupProgress)) : {};
   // Never merge client profile into the coach's personal store.profile (causes Giada→Giammaria leak)
   if (payload.profile && typeof payload.profile === 'object') {
     store.__cpClientViewProfile = JSON.parse(JSON.stringify(payload.profile));
@@ -64457,7 +64903,9 @@ function snapshotCoachMaster() {
     exMuscle: store.exMuscle ? JSON.parse(JSON.stringify(store.exMuscle)) : {},
     loadTypes: store.loadTypes ? JSON.parse(JSON.stringify(store.loadTypes)) : {},
     tempos: store.tempos ? JSON.parse(JSON.stringify(store.tempos)) : {},
-    bonus: store.bonus ? JSON.parse(JSON.stringify(store.bonus)) : {}
+    bonus: store.bonus ? JSON.parse(JSON.stringify(store.bonus)) : {},
+    warmups: store.warmups ? JSON.parse(JSON.stringify(store.warmups)) : {},
+    warmupProgress: store.warmupProgress ? JSON.parse(JSON.stringify(store.warmupProgress)) : {}
   };
 }
 
@@ -64488,6 +64936,8 @@ function resetSandboxSessionState() {
   store.loadTypes = {};
   store.tempos = {};
   store.bonus = {};
+  store.warmups = {};
+  store.warmupProgress = {};
 }
 
 function stripProgramSessionPerformance(prog) {
@@ -64558,6 +65008,8 @@ async function restoreCoachMaster(backup) {
   store.loadTypes = backup.loadTypes || {};
   store.tempos = backup.tempos || {};
   store.bonus = backup.bonus || {};
+  store.warmups = backup.warmups || {};
+  store.warmupProgress = backup.warmupProgress || {};
   if (typeof currentWeek !== 'undefined') currentWeek = backup.currentWeek || 1;
   if (typeof currentDay !== 'undefined') currentDay = backup.currentDay || 0;
   if (typeof persist === 'function') persist();
