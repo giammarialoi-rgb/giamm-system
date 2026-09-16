@@ -24,6 +24,8 @@ export const ANDROID_STATIC_ASSETS = [
   'training-analytics-engine.js',
   'training-knowledge.js',
   'exercise-catalog-extra.js',
+  'warmup-exercise-library.js',
+  'warmup-engine.js',
   'personal-recovery-16w.json',
   'apple-touch-icon.png',
   'icon-180.png',
