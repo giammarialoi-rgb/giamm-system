@@ -48,8 +48,14 @@ export function isCorsOriginAllowed(origin, env = process.env) {
 export function buildCorsOriginValidator(env = process.env) {
   return function validateCorsOrigin(origin, callback) {
     if (isCorsOriginAllowed(origin, env)) return callback(null, true);
-    const error = new Error("Origin not allowed by NURVAN CORS policy.");
+    // The origin used to be left out of the error entirely, so a rejection
+    // only ever surfaced as a bare "not allowed" message plus a full Express
+    // default-handler stack trace flooding the logs - no way to tell which
+    // origin actually needs whitelisting without reproducing it locally.
+    console.warn("[CORS_REJECTED]", JSON.stringify({ origin: origin || null, at: new Date().toISOString() }));
+    const error = new Error(`Origin not allowed by NURVAN CORS policy: ${origin || "(none)"}`);
     error.statusCode = 403;
+    error.corsOrigin = origin || null;
     return callback(error);
   };
 }

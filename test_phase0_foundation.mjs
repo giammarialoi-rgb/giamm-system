@@ -78,6 +78,11 @@ await new Promise((resolve, reject) => {
   validator("https://evil.example", (error, allowed) => {
     try {
       ok(!!error && allowed !== true, "CORS validator rejects disallowed origin");
+      // A rejection used to give no way to tell which origin actually needs
+      // whitelisting short of reproducing it locally - the offending origin
+      // is now part of the error itself, not just a bare generic message.
+      ok(error.message.includes("https://evil.example"), "the rejected origin is included in the error message, not just a generic refusal");
+      ok(error.corsOrigin === "https://evil.example", "the rejected origin is also exposed as a structured field for the error handler to log/branch on");
       resolve();
     } catch (err) {
       reject(err);
@@ -112,6 +117,17 @@ ok(practice.includes("24 hours"), "call signal retention cleanup is configured")
 const api = fs.readFileSync(path.join(root, "coach-api.mjs"), "utf8");
 ok(api.includes("jwtVerify") && api.includes("APPLE_JWKS"), "Apple identity token uses JWKS verification");
 ok(api.includes("buildCorsOriginValidator"), "API uses CORS allowlist validator");
+// No global error handler existed before - any error passed to next(err)
+// anywhere (the CORS validator included) fell through to Express's own
+// default handler: always a bare 500 regardless of err.statusCode, as an
+// HTML page, with the full stack trace dumped to the logs on every single
+// occurrence (a repeatedly-rejected CORS origin flooded the logs with the
+// same giant trace instead of one clean warning line).
+ok(/app\.use\(function \(err, req, res, next\)/.test(api), "a global error handler is registered");
+const errHandlerStart = api.indexOf('app.use(function (err, req, res, next)');
+const errHandlerBody = api.slice(errHandlerStart, api.indexOf('\n});', errHandlerStart) + 4);
+ok(errHandlerBody.includes('err.statusCode') && errHandlerBody.includes('res.status(status)'),
+  "the global error handler actually uses err.statusCode (e.g. the CORS validator's 403) instead of always answering 500");
 ok(api.includes("createPostgresFixedWindowRateLimiter") || api.includes("createFixedWindowRateLimiter"), "API protects auth/import endpoints");
 ok(api.includes("schemaVersion: dbSchemaVersion"), "health exposes schema version");
 

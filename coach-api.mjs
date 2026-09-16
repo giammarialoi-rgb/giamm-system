@@ -2102,6 +2102,24 @@ app.use(function (req, res, next) {
 });
 app.use(express.static(path.join(__dirname, "web")));
 
+// No global error handler existed before this, so any error passed to
+// next(err) anywhere upstream (the CORS validator included) fell through to
+// Express's own default handler: a bare 500 regardless of err.statusCode,
+// as an HTML page, plus the full stack trace dumped to the logs on every
+// single occurrence - e.g. a CORS rejection logged the same giant trace
+// every time instead of the one-line warning that's actually useful.
+app.use(function (err, req, res, next) {
+  if (res.headersSent) return next(err);
+  const status = err && err.statusCode ? err.statusCode : 500;
+  if (status === 403 && err && err.corsOrigin !== undefined) {
+    // Already logged with full context by buildCorsOriginValidator - avoid
+    // logging the same rejection twice.
+  } else {
+    console.error("[UNHANDLED_ERROR]", req.method, req.path, err && err.message);
+  }
+  res.status(status).json({ ok: false, error: (err && err.message) || "Internal server error" });
+});
+
 const server = app.listen(port, () => {
   console.log(`Coach API server listening at http://localhost:${port}`);
 });
