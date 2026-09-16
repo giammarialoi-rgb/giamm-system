@@ -10058,6 +10058,7 @@ function finishInit() {
       try { maybeShowIosInstallHint(); } catch (_) {}
       try { scheduleAllItemAlerts(); } catch (_) {}
       try { registerNurvanServiceWorker(); } catch (_) {}
+      try { if (typeof fetchWarmupAssignment === 'function') fetchWarmupAssignment().catch(function () {}); } catch (_) {}
       try { if (typeof hideBusyOverlay === 'function') hideBusyOverlay(); } catch (_) {}
       try {
         if (typeof tryAutoRestorePersonalSchedaOnBoot === 'function') {
@@ -18418,17 +18419,66 @@ function persistWarmupPlayerProgress(status) {
   var warmup = warmupPlayerCurrentWarmup();
   var total = warmup ? warmup.items.length : 0;
   var completedCount = Object.keys(st.itemStates).filter(function (k) { return st.itemStates[k] === 'completed'; }).length;
-  store.warmupProgress[st.key] = {
-    status: status || (completedCount >= total && total > 0 ? 'completed' : 'partial'),
+  var resolvedStatus = status || (completedCount >= total && total > 0 ? 'completed' : 'partial');
+  var record = {
+    status: resolvedStatus,
     idx: st.idx,
     total: total,
     completedCount: completedCount,
     itemStates: st.itemStates,
     startedAt: st.startedAt,
-    completedAt: status === 'completed' ? new Date().toISOString() : null
+    completedAt: resolvedStatus === 'completed' ? new Date().toISOString() : null
   };
+  store.warmupProgress[st.key] = record;
   try { persist(); } catch (_) {}
+  if (warmup && warmup.fromAssignment) {
+    syncWarmupCompletionToCoach(warmup.id, record, total, completedCount);
+  }
 }
+
+// Fire-and-forget, idempotent (server upserts on assignment+date) - sent on
+// every advance, not just the final one, so the coach's visibility (spec
+// section 32: "7/8 completati, 87%...") stays close to real-time. A failed
+// send (offline) is not fatal: local progress already persisted above, and
+// the next advance/open retries the same idempotent upsert.
+function syncWarmupCompletionToCoach(assignmentId, record, totalItems, completedCount) {
+  if (typeof accountRequest !== 'function' || !store.accountToken || !assignmentId) return;
+  var completedItems = Object.keys(record.itemStates || {}).map(function (idx) {
+    return { index: Number(idx), completed: record.itemStates[idx] === 'completed', skipped: record.itemStates[idx] === 'skipped' };
+  });
+  accountRequest('/api/client/warmup/complete', {
+    method: 'POST',
+    body: JSON.stringify({
+      assignmentId: assignmentId,
+      status: record.status,
+      completedItems: completedItems,
+      totalItems: totalItems,
+      completedCount: completedCount,
+      startedAt: record.startedAt,
+      completedAt: record.completedAt,
+      sessionDate: new Date().toISOString().slice(0, 10)
+    })
+  }).catch(function (err) { console.warn('[WARMUP_COMPLETE_SYNC]', err && err.message); });
+}
+
+// Fetched once at boot (athlete/client context only) and cached in
+// store.warmupAssignment - a locked, coach-authoritative warm-up always
+// takes priority over any local auto-generated/personal one (spec section
+// 31), enforced in getOrCreateWarmupForSession.
+async function fetchWarmupAssignment() {
+  if (typeof accountRequest !== 'function' || !store.accountToken) return;
+  if (store.coachViewingClient || store.coachAssigning) return; // coach's own token, not a client's
+  try {
+    const response = await accountRequest('/api/client/warmup', { method: 'GET' });
+    const payload = await readApiJson(response);
+    store.warmupAssignment = payload.assignment || null;
+    try { persist(); } catch (_) {}
+    if (typeof render === 'function' && typeof currentView !== 'undefined' && currentView === 'training') render();
+  } catch (err) {
+    console.warn('[WARMUP_ASSIGNMENT_FETCH]', err && err.message);
+  }
+}
+window.fetchWarmupAssignment = fetchWarmupAssignment;
 
 function renderWarmupPlayer() {
   var st = window.__warmupPlayerState;

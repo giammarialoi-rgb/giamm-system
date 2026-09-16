@@ -3960,7 +3960,8 @@ function snapshotCoachMaster() {
     tempos: store.tempos ? JSON.parse(JSON.stringify(store.tempos)) : {},
     bonus: store.bonus ? JSON.parse(JSON.stringify(store.bonus)) : {},
     warmups: store.warmups ? JSON.parse(JSON.stringify(store.warmups)) : {},
-    warmupProgress: store.warmupProgress ? JSON.parse(JSON.stringify(store.warmupProgress)) : {}
+    warmupProgress: store.warmupProgress ? JSON.parse(JSON.stringify(store.warmupProgress)) : {},
+    warmupAssignment: store.warmupAssignment ? JSON.parse(JSON.stringify(store.warmupAssignment)) : null
   };
 }
 
@@ -3993,6 +3994,7 @@ function resetSandboxSessionState() {
   store.bonus = {};
   store.warmups = {};
   store.warmupProgress = {};
+  store.warmupAssignment = null;
 }
 
 function stripProgramSessionPerformance(prog) {
@@ -4065,6 +4067,7 @@ async function restoreCoachMaster(backup) {
   store.bonus = backup.bonus || {};
   store.warmups = backup.warmups || {};
   store.warmupProgress = backup.warmupProgress || {};
+  store.warmupAssignment = backup.warmupAssignment || null;
   if (typeof currentWeek !== 'undefined') currentWeek = backup.currentWeek || 1;
   if (typeof currentDay !== 'undefined') currentDay = backup.currentDay || 0;
   if (typeof persist === 'function') persist();

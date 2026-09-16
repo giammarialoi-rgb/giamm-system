@@ -139,4 +139,33 @@ for (const src of [html, built]) {
     '6a. status is derived from actual completed-count vs total, not a hardcoded item count');
 }
 
+// 7. Client-side sync of a coach-assigned warm-up: fetched at boot, cached
+// in store.warmupAssignment, and given absolute priority over any local
+// auto-generated/personal plan (spec section 31). Completion is synced back
+// to the coach through the one narrow, idempotent write endpoint.
+{
+  ok(html.includes('async function fetchWarmupAssignment()'), '7a. fetchWarmupAssignment is declared');
+  const fetchStart = html.indexOf('async function fetchWarmupAssignment()');
+  const fetchBody = html.slice(fetchStart, html.indexOf('\nwindow.fetchWarmupAssignment', fetchStart));
+  ok(fetchBody.includes("accountRequest('/api/client/warmup'"), '7b. it calls the read-only client warm-up endpoint');
+  ok(fetchBody.includes('store.warmupAssignment = payload.assignment'), '7c. it caches the result on store.warmupAssignment');
+  ok(fetchBody.includes('store.coachViewingClient || store.coachAssigning'), '7d. it skips fetching while the coach sandbox is active (never fetches with the coach\'s own token as if it were a client)');
+
+  const getOrCreateStart = html.indexOf('function getOrCreateWarmupForSession(week, day, exerciseList)');
+  const getOrCreateBody = html.slice(getOrCreateStart, html.indexOf('\n}', getOrCreateStart) + 2);
+  ok(getOrCreateBody.indexOf('store.warmupAssignment') < getOrCreateBody.indexOf('store.warmups[key]'),
+    '7e. a coach assignment is checked and returned before any local/auto-generated warm-up (priority order from spec section 31)');
+
+  ok(html.includes('function syncWarmupCompletionToCoach('), '7f. syncWarmupCompletionToCoach is declared');
+  const syncStart = html.indexOf('function syncWarmupCompletionToCoach(');
+  const syncBody = html.slice(syncStart, html.indexOf('\n}', syncStart) + 2);
+  ok(syncBody.includes("'/api/client/warmup/complete'"), '7g. it posts to the one narrow completion-write endpoint');
+  ok(syncBody.includes('.catch(function (err)'), '7h. a failed sync (offline) is caught, never thrown - local progress is already persisted separately');
+
+  const progressStart = html.indexOf('function persistWarmupPlayerProgress(status)');
+  const progressBody = html.slice(progressStart, html.indexOf('\n}', progressStart) + 2);
+  ok(progressBody.includes('warmup.fromAssignment') && progressBody.includes('syncWarmupCompletionToCoach('),
+    '7i. every progress update for an assignment-sourced warm-up triggers a sync attempt, not just the final completion');
+}
+
 console.log('\nAll warm-up session-integration tests passed.');

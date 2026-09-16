@@ -36,6 +36,17 @@ import {
   saveIntelligenceSnapshot
 } from "./server/coach-os/intelligence.mjs";
 import {
+  assignWarmupToClient,
+  createWarmupTemplate,
+  deactivateWarmupAssignment,
+  deleteWarmupTemplate,
+  getActiveAssignmentForClient,
+  listWarmupCompletionsForClient,
+  listWarmupTemplates,
+  recordWarmupCompletion,
+  updateWarmupTemplate
+} from "./server/coach-os/warmup.mjs";
+import {
   confirmAgentProposal,
   getAgentRun,
   listAgentAudit,
@@ -1145,6 +1156,45 @@ export function mountCoachPractice(app, deps) {
     }
   });
 
+  // Warm-Up Engine — client side. Read-only over assignment structure: the
+  // only write route below is warmup/complete, which writes to a separate
+  // completions table and cannot alter the assignment itself. That is the
+  // entire enforcement of "the client cannot structurally edit a coach-
+  // assigned warm-up" (spec section 15/42) — no route exists for it, so
+  // there is nothing a UI bug could expose.
+  app.get("/api/client/warmup", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const assignment = await getActiveAssignmentForClient(pool, ctx.client.id);
+    return res.json({ ok: true, assignment });
+  });
+
+  app.post("/api/client/warmup/complete", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    const assignmentId = Number(req.body?.assignmentId);
+    if (!assignmentId) return res.status(400).json({ error: "assignmentId mancante." });
+    const assignment = await getActiveAssignmentForClient(pool, ctx.client.id);
+    if (!assignment || String(assignment.id) !== String(assignmentId)) {
+      return res.status(404).json({ error: "Assegnazione non trovata o non più attiva." });
+    }
+    try {
+      const completion = await recordWarmupCompletion(pool, assignmentId, ctx.client.id, req.body || {});
+      if (completion.status !== "skipped") {
+        notifyCoachPush(
+          ctx.client.coach_user_id,
+          "Warm-up completato",
+          (ctx.client.display_name || "Atleta") + " ha " + (completion.status === "completed" ? "completato" : "svolto parzialmente") + " il warm-up",
+          { view: "client", clientId: String(ctx.client.id) }
+        ).catch(() => {});
+      }
+      return res.status(201).json({ ok: true, completion });
+    } catch (error) {
+      console.error("CLIENT_WARMUP_COMPLETE", error && error.message ? error.message : error);
+      return res.status(400).json({ error: error.message || "Salvataggio non riuscito." });
+    }
+  });
+
   app.post("/api/presence/ping", async (req, res) => {
     const auth = await requireUser(req);
     if (!auth) return res.status(401).json({ error: "Unauthorized." });
@@ -2204,6 +2254,87 @@ export function mountCoachPractice(app, deps) {
     } catch (error) {
       return res.status(400).json({ error: error.message || "Review non salvata." });
     }
+  });
+
+  // Warm-Up Engine — coach side: template library + per-client assignment.
+  app.get("/api/coach/warmup-templates", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const templates = await listWarmupTemplates(pool, coach.id);
+    return res.json({ ok: true, templates });
+  });
+
+  app.post("/api/coach/warmup-templates", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const template = await createWarmupTemplate(pool, coach.id, req.body || {});
+      return res.status(201).json({ ok: true, template });
+    } catch (error) {
+      return res.status(400).json({ error: error.message || "Template non creato." });
+    }
+  });
+
+  app.patch("/api/coach/warmup-templates/:id", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const template = await updateWarmupTemplate(pool, coach.id, req.params.id, req.body || {});
+      if (!template) return res.status(404).json({ error: "Template non trovato." });
+      return res.json({ ok: true, template });
+    } catch (error) {
+      return res.status(400).json({ error: error.message || "Template non aggiornato." });
+    }
+  });
+
+  app.delete("/api/coach/warmup-templates/:id", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const deleted = await deleteWarmupTemplate(pool, coach.id, req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Template non trovato." });
+    return res.json({ ok: true });
+  });
+
+  app.get("/api/coach/clients/:id/warmup", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const client = await loadOwnedClient(coach, req.params.id, res);
+    if (!client) return;
+    const assignment = await getActiveAssignmentForClient(pool, client.id);
+    const completions = await listWarmupCompletionsForClient(pool, client.id, req.query.limit);
+    return res.json({ ok: true, assignment, completions });
+  });
+
+  app.post("/api/coach/clients/:id/warmup-assign", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const client = await loadOwnedClient(coach, req.params.id, res);
+    if (!client) return;
+    try {
+      const assignment = await assignWarmupToClient(pool, coach.id, client.id, req.body || {});
+      await pool.query(
+        "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'warmup_assigned',$2)",
+        [client.id, JSON.stringify({ assignmentId: assignment.id, assignmentType: assignment.assignmentType })]
+      );
+      notifyAthletePush(
+        client,
+        "Warm-up assegnato",
+        "Il coach ti ha assegnato un nuovo warm-up" + (assignment.assignmentType === "mandatory" ? " obbligatorio." : "."),
+        { view: "training" }
+      ).catch(() => {});
+      return res.status(201).json({ ok: true, assignment });
+    } catch (error) {
+      return res.status(400).json({ error: error.message || "Assegnazione non riuscita." });
+    }
+  });
+
+  app.post("/api/coach/clients/:id/warmup-deactivate", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const client = await loadOwnedClient(coach, req.params.id, res);
+    if (!client) return;
+    const count = await deactivateWarmupAssignment(pool, coach.id, client.id);
+    return res.json({ ok: true, deactivated: count });
   });
 
   app.post("/api/coach/clients/:id/revoke", async (req, res) => {

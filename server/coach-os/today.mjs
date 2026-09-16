@@ -81,6 +81,7 @@ function eventLabel(row) {
     program_assigned: "Programma assegnato",
     nutrition_assigned: "Alimentazione assegnata",
     supplements_assigned: "Integrazione assegnata",
+    warmup_assigned: "Warm-up assegnato",
     payment_due: "Pagamento in scadenza"
   };
   return names[row.kind] || String(row.kind || "Attività").replace(/_/g, " ");

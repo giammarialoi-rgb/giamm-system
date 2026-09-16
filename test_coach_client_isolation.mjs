@@ -33,7 +33,7 @@ const uiSrc = fs.readFileSync(path.join(root, 'web/coach-practice-ui.js'), 'utf8
   const fnStart = uiSrc.indexOf('function resetSandboxSessionState()');
   ok(fnStart >= 0, '1a. resetSandboxSessionState is declared');
   const fnBody = uiSrc.slice(fnStart, uiSrc.indexOf('\n}', fnStart) + 2);
-  for (const field of ['data', 'customSets', 'subs', 'skips', 'logs', 'intelTargets', 'bw', 'bodyChecks', 'nutritionDaily', 'exMuscle', 'loadTypes', 'tempos', 'bonus', 'warmups', 'warmupProgress']) {
+  for (const field of ['data', 'customSets', 'subs', 'skips', 'logs', 'intelTargets', 'bw', 'bodyChecks', 'nutritionDaily', 'exMuscle', 'loadTypes', 'tempos', 'bonus', 'warmups', 'warmupProgress', 'warmupAssignment']) {
     ok(fnBody.includes('store.' + field + ' = '), `1b. resetSandboxSessionState clears store.${field}`);
   }
 }
@@ -47,7 +47,7 @@ const uiSrc = fs.readFileSync(path.join(root, 'web/coach-practice-ui.js'), 'utf8
   const snapBody = uiSrc.slice(snapStart, uiSrc.indexOf('\n}', snapStart) + 2);
   const restoreStart = uiSrc.indexOf('function restoreCoachMaster(backup)');
   const restoreBody = uiSrc.slice(restoreStart, uiSrc.indexOf('\n}', restoreStart) + 2);
-  for (const field of ['bw', 'bodyChecks', 'nutritionDaily', 'exMuscle', 'loadTypes', 'tempos', 'bonus', 'warmups', 'warmupProgress']) {
+  for (const field of ['bw', 'bodyChecks', 'nutritionDaily', 'exMuscle', 'loadTypes', 'tempos', 'bonus', 'warmups', 'warmupProgress', 'warmupAssignment']) {
     ok(snapBody.includes('bw: store.bw' === field ? '' : field) || snapBody.includes(field + ':'), `2a. snapshotCoachMaster backs up ${field}`);
     ok(restoreBody.includes('store.' + field + ' = backup.' + field), `2b. restoreCoachMaster restores ${field} from the backup`);
   }

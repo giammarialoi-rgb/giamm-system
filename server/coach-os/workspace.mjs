@@ -307,6 +307,7 @@ function timelineSpec(kind, row) {
     program_assigned: ["program_assignment", "program", "coach", "Programma assegnato", "training"],
     nutrition_assigned: ["nutrition_update", "nutrition", "coach", "Alimentazione assegnata", "nutrition"],
     supplements_assigned: ["supplement_update", "supplements", "coach", "Integrazione assegnata", "supplements"],
+    warmup_assigned: ["warmup_update", "training", "coach", "Warm-up assegnato", "training"],
     therapy_assigned: ["therapy_update", "therapy", "coach", "Terapia assegnata", "therapy"],
     exams_assigned: ["exams_update", "exams", "coach", "Esami assegnati", "exams"],
     change_request: ["request", "program", "client", "Modifica programma richiesta", "coachClient"],
