@@ -18,7 +18,14 @@ export function domainHasContent(v) {
     // The user's own "my foods" library (typed once, remembered forever) -
     // it can outlive every day/meal it was ever logged into (e.g. after
     // clearing a week's plan), so it must count as content on its own too.
-    (Array.isArray(v.customFoods) && v.customFoods.length)
+    (Array.isArray(v.customFoods) && v.customFoods.length) ||
+    // A "budget" nutrition plan (kcal/macro target only, no prescribed foods -
+    // the client logs their own choices against it) has no days at all, so
+    // its target fields are the only signal that it's real content.
+    v.daily_calories_target != null ||
+    v.daily_protein_target != null ||
+    v.daily_carbs_target != null ||
+    v.daily_fats_target != null
   );
 }
 

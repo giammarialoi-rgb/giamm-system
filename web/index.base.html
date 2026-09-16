@@ -10924,6 +10924,23 @@ function nutritionPlanForToday() {
   const hit = days.find(function (d) { return fold(d.day).indexOf(fold(today).slice(0, 4)) >= 0; });
   return hit || days[(new Date().getDay() + 6) % 7] || days[0];
 }
+// A "budget" plan (kcal/macro target only) has no prescribed days - it needs
+// one to exist for "today" so the client has somewhere to log their own food
+// choices into, and so the existing logged-vs-target totals card can render.
+// Each new calendar day gets its own fresh, empty day (nothing carries over),
+// mirroring the diary-mode day/date convention used elsewhere in this file.
+function ensureBudgetNutritionToday() {
+  if (!DATA || !DATA.nutrition || DATA.nutrition.mode !== 'budget') return false;
+  if (!Array.isArray(DATA.nutrition.days)) DATA.nutrition.days = [];
+  const todayIso = isoDateOnly(new Date());
+  if (DATA.nutrition.days.some(function (d) { return d && d.date === todayIso; })) return false;
+  DATA.nutrition.days.push({
+    day: weekdayNameForDate(todayIso) + ' · ' + formatNutritionDayDate(todayIso),
+    date: todayIso,
+    meals: [{ name: 'Pasti liberi', foods: [] }]
+  });
+  return true;
+}
 function nutritionConfirmStatus() {
   if (!store.nutritionDaily) store.nutritionDaily = {};
   return store.nutritionDaily[nutritionTodayKey()] || null;
@@ -10943,6 +10960,9 @@ function plannedFoodsFromDay(day) {
   return out;
 }
 function nutritionConfirmCardHtml() {
+  // "Adherence" (did you eat what was prescribed) doesn't apply to a budget
+  // plan - there's nothing prescribed to confirm against, only a free log.
+  if (DATA && DATA.nutrition && DATA.nutrition.mode === 'budget') return '';
   if (store && store.coachViewingClient) {
     const st = nutritionConfirmStatus();
     const day = nutritionPlanForToday();
@@ -11307,6 +11327,7 @@ function renderNutrition(c) {
     }
   }
   if (!Array.isArray(DATA.nutrition.days)) DATA.nutrition.days = [];
+  if (ensureBudgetNutritionToday()) { window.__nutritionDayUserPicked = false; if (store) persist(); }
 
   const days = DATA.nutrition.days || [];
   enrichImportedFoods(DATA.nutrition);
@@ -11341,7 +11362,10 @@ function renderNutrition(c) {
 
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
-      ${domainTitleTapHtml('NUTRITION', t('nutrition'))}
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        ${domainTitleTapHtml('NUTRITION', t('nutrition'))}
+        ${DATA.nutrition.mode === 'budget' ? '<span style="font-size:9px;font-weight:800;color:#0a0a0a;background:var(--gold);padding:3px 7px;border-radius:6px;" title="Solo target kcal/macro: inserisci tu cosa mangi">BUDGET</span>' : ''}
+      </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         ${nutrDirty ? '<button id="nutrition-salva-top-btn" class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="saveNutritionPlanEdits()">SALVA</button>' : ''}
         ${athleteDomainActionButtonsHtml('nutrition', { compact: true })}
@@ -12880,10 +12904,12 @@ async function openGenerateNutritionPlanWizard() {
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;">GENERA ALIMENTAZIONE</div>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'gen-nutrition-plan-modal\').remove()">CHIUDI</button></div>' +
-    '<div style="font-size:12px;color:#bbb;margin-bottom:10px;line-height:1.4;">Automatico dal profilo, oppure preciso con macros, pasti liberi e filtri allergie/intolleranze.</div>' +
+    '<div style="font-size:12px;color:#bbb;margin-bottom:10px;line-height:1.4;">Automatico dal profilo, preciso con macros e pasti liberi, oppure solo un budget di kcal/macro che il cliente riempie con le proprie scelte.</div>' +
     '<div style="display:flex;gap:6px;margin-bottom:12px;">' +
     '<button type="button" id="gen-nutr-mode-auto" class="btn btn-primary" style="flex:1;font-size:11px;" onclick="setGenNutritionMode(\'auto\')">AUTOMATICO</button>' +
-    '<button type="button" id="gen-nutr-mode-precise" class="btn btn-outline" style="flex:1;font-size:11px;" onclick="setGenNutritionMode(\'precise\')">PRECISO</button></div>' +
+    '<button type="button" id="gen-nutr-mode-precise" class="btn btn-outline" style="flex:1;font-size:11px;" onclick="setGenNutritionMode(\'precise\')">PRECISO</button>' +
+    '<button type="button" id="gen-nutr-mode-budget" class="btn btn-outline" style="flex:1;font-size:11px;" onclick="setGenNutritionMode(\'budget\')">SOLO BUDGET</button></div>' +
+    '<div id="gen-nutr-budget-note" style="display:none;font-size:10px;color:#888;margin-bottom:10px;line-height:1.4;padding:8px;background:#141414;border:1px solid #333;border-radius:8px;">Nessun alimento prescritto: il cliente vedrà solo il target kcal/macro e inserirà da sé cosa mangia (ricerca, barcode o foto), come nel food diary.</div>' +
     '<div id="gen-nutr-precise" style="display:none;margin-bottom:12px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
     '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Distribuzione macros (si ribilanciano tra loro)</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">' +
@@ -12893,21 +12919,21 @@ async function openGenerateNutritionPlanWizard() {
     '</div>' +
     '<div id="gen-nutr-macro-preview" style="font-size:11px;color:var(--gold);margin-bottom:4px;">40% / 40% / 20%</div>' +
     '<div id="gen-nutr-gram-preview" style="font-size:10px;color:#888;"></div></div>' +
-    '<div style="margin-bottom:10px;"><label style="font-size:10px;color:#ccc;">Applica per quanti giorni (1–7)</label>' +
+    '<div id="gen-nutr-daycount-box" style="margin-bottom:10px;"><label style="font-size:10px;color:#ccc;">Applica per quanti giorni (1–7)</label>' +
     '<select id="gen-nutr-days" onchange="window.__genNutrPlan.dayCount=parseInt(this.value,10);refreshGenNutritionPreview();refreshGenNutritionFreeDays()" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     [1,2,3,4,5,6,7].map(function (n) { return '<option value="' + n + '"' + (n === 7 ? ' selected' : '') + '>' + n + (n === 1 ? ' giorno' : ' giorni') + '</option>'; }).join('') +
     '</select></div>' +
-    '<div style="margin-bottom:10px;"><label style="font-size:10px;color:#ccc;">Combinazioni diverse di pasti (1–7)</label>' +
+    '<div id="gen-nutr-combo-box" style="margin-bottom:10px;"><label style="font-size:10px;color:#ccc;">Combinazioni diverse di pasti (1–7)</label>' +
     '<select id="gen-nutr-combos" onchange="window.__genNutrPlan.comboCount=parseInt(this.value,10)" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     [1,2,3,4,5,6,7].map(function (n) { return '<option value="' + n + '"' + (n === 2 ? ' selected' : '') + '>' + n + (n === 1 ? ' combinazione (si ripete)' : ' combinazioni') + '</option>'; }).join('') +
     '</select>' +
     '<div style="font-size:10px;color:#777;margin-top:4px;">Se i giorni &gt; combinazioni, le layout si ripetono in rotazione.</div></div>' +
-    '<div style="margin-bottom:10px;"><label style="font-size:10px;color:#ccc;">Pasti al giorno</label>' +
+    '<div id="gen-nutr-mealcount-box" style="margin-bottom:10px;"><label style="font-size:10px;color:#ccc;">Pasti al giorno</label>' +
     '<select id="gen-nutr-meals" onchange="window.__genNutrPlan.mealCount=parseInt(this.value,10)" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     '<option value="3">3 pasti</option><option value="4" selected>4 pasti</option><option value="5">5 pasti</option></select></div>' +
     '<div style="margin-bottom:12px;"><label style="font-size:10px;color:#ccc;">Target kcal (opzionale)</label>' +
     '<input id="gen-nutr-kcal" type="number" value="' + (base.tdee || 2200) + '" oninput="window.__genNutrPlan.kcal=parseInt(this.value,10)||0;refreshGenNutritionPreview()" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></div>' +
-    '<div style="margin-bottom:12px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
+    '<div id="gen-nutr-freewrap-box" style="margin-bottom:12px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
     '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#eee;margin:0;">' +
     '<input id="gen-nutr-free-enable" type="checkbox" onchange="onGenNutritionFreeToggle()" style="width:18px;height:18px;">' +
     '<span><b style="color:var(--gold);">Inserisci pasti liberi</b><br><span style="font-size:10px;color:#888;">Sostituisce colazione, pranzo o cena nei giorni scelti</span></span></label>' +
@@ -12933,18 +12959,32 @@ async function openGenerateNutritionPlanWizard() {
 
 function setGenNutritionMode(mode) {
   window.__genNutrPlan = window.__genNutrPlan || { p: 40, c: 40, f: 20 };
-  window.__genNutrPlan.mode = mode === 'precise' ? 'precise' : 'auto';
+  window.__genNutrPlan.mode = mode === 'precise' ? 'precise' : (mode === 'budget' ? 'budget' : 'auto');
+  const m = window.__genNutrPlan.mode;
   const precise = document.getElementById('gen-nutr-precise');
   const autoBtn = document.getElementById('gen-nutr-mode-auto');
   const precBtn = document.getElementById('gen-nutr-mode-precise');
-  if (precise) precise.style.display = window.__genNutrPlan.mode === 'precise' ? 'block' : 'none';
+  const budgetBtn = document.getElementById('gen-nutr-mode-budget');
+  const budgetNote = document.getElementById('gen-nutr-budget-note');
+  // Day count / meal combos / free meals only make sense when the plan
+  // actually prescribes foods - a budget-only plan has no days at all.
+  ['gen-nutr-daycount-box', 'gen-nutr-combo-box', 'gen-nutr-mealcount-box', 'gen-nutr-freewrap-box'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = m === 'budget' ? 'none' : '';
+  });
+  if (precise) precise.style.display = (m === 'precise' || m === 'budget') ? 'block' : 'none';
+  if (budgetNote) budgetNote.style.display = m === 'budget' ? 'block' : 'none';
   if (autoBtn) {
-    autoBtn.className = 'btn ' + (window.__genNutrPlan.mode === 'auto' ? 'btn-primary' : 'btn-outline');
+    autoBtn.className = 'btn ' + (m === 'auto' ? 'btn-primary' : 'btn-outline');
     autoBtn.style.cssText = 'flex:1;font-size:11px;';
   }
   if (precBtn) {
-    precBtn.className = 'btn ' + (window.__genNutrPlan.mode === 'precise' ? 'btn-primary' : 'btn-outline');
+    precBtn.className = 'btn ' + (m === 'precise' ? 'btn-primary' : 'btn-outline');
     precBtn.style.cssText = 'flex:1;font-size:11px;';
+  }
+  if (budgetBtn) {
+    budgetBtn.className = 'btn ' + (m === 'budget' ? 'btn-primary' : 'btn-outline');
+    budgetBtn.style.cssText = 'flex:1;font-size:11px;';
   }
   refreshGenNutritionPreview();
 }
@@ -12969,7 +13009,7 @@ function refreshGenNutritionPreview() {
   const st = window.__genNutrPlan || { p: 40, c: 40, f: 20, kcal: 0, mode: 'auto' };
   const kcal = Number(st.kcal) || 0;
   const overrides = kcal > 0 ? { kcal: kcal } : {};
-  if (st.mode === 'precise') {
+  if (st.mode === 'precise' || st.mode === 'budget') {
     overrides.proteinPct = st.p;
     overrides.carbsPct = st.c;
     overrides.fatPct = st.f;
@@ -12977,7 +13017,7 @@ function refreshGenNutritionPreview() {
   const t = computeNutritionTargetsFromProfile(overrides);
   const prev = document.getElementById('gen-nutr-macro-preview');
   const grams = document.getElementById('gen-nutr-gram-preview');
-  if (prev) prev.textContent = (st.mode === 'precise')
+  if (prev) prev.textContent = (st.mode === 'precise' || st.mode === 'budget')
     ? (st.p + '% P / ' + st.c + '% C / ' + st.f + '% F')
     : 'Macro automatiche da profilo';
   if (grams) grams.textContent = '~' + t.tdee + ' kcal · P ' + t.protein + 'g · C ' + t.carbs + 'g · F ' + t.fat + 'g';
@@ -12986,6 +13026,11 @@ function refreshGenNutritionPreview() {
 function confirmGenerateNutritionPlan() {
   const st = window.__genNutrPlan || {};
   onGenNutritionRestrictionChange();
+  const restrictions = Array.isArray(st.restrictions) ? st.restrictions.slice() : [];
+  if (st.mode === 'budget') {
+    confirmGenerateBudgetNutritionPlan(st, restrictions);
+    return;
+  }
   if (st.freeEnabled) onGenNutritionFreeDayChange();
   const dayCount = Math.min(7, Math.max(1, parseInt((document.getElementById('gen-nutr-days') || {}).value, 10) || st.dayCount || 7));
   const comboCount = Math.min(7, Math.max(1, parseInt((document.getElementById('gen-nutr-combos') || {}).value, 10) || st.comboCount || 2));
@@ -12999,7 +13044,6 @@ function confirmGenerateNutritionPlan() {
     overrides.carbsPct = st.c || 40;
     overrides.fatPct = st.f || 20;
   }
-  const restrictions = Array.isArray(st.restrictions) ? st.restrictions.slice() : [];
   let freeDays = [];
   let freeMealSlot = 'Cena';
   if (st.freeEnabled) {
@@ -13055,6 +13099,60 @@ function confirmGenerateNutritionPlan() {
     if (freeDays.length) bits.push(freeDays.length + ' pasti liberi');
     if (restrictions.length) bits.push(restrictions.length + ' filtri');
     showToast('Piano creato: ' + bits.join(', ') + '. Premi SALVA se fai altre modifiche.', 'success');
+  }
+}
+
+// "Solo budget": assign just a daily kcal/macro target, no prescribed foods -
+// the client fills it in themselves (search/barcode/foto), like a food diary
+// against a goal instead of a fixed meal plan. Reuses the same target math as
+// the other modes (computeNutritionTargetsFromProfile) but skips
+// buildWeeklyNutritionPlan entirely, so `days` starts empty.
+function confirmGenerateBudgetNutritionPlan(st, restrictions) {
+  const kcalEl = document.getElementById('gen-nutr-kcal');
+  const kcal = kcalEl ? parseInt(kcalEl.value, 10) : (st.kcal || 0);
+  const overrides = {};
+  if (kcal > 0) overrides.kcal = kcal;
+  overrides.proteinPct = st.p || 40;
+  overrides.carbsPct = st.c || 40;
+  overrides.fatPct = st.f || 20;
+  const t = computeNutritionTargetsFromProfile(overrides);
+  const plan = {
+    plan_name: 'Budget kcal/macro',
+    present: true,
+    mode: 'budget',
+    daily_calories_target: t.tdee,
+    daily_protein_target: t.protein,
+    daily_carbs_target: t.carbs,
+    daily_fats_target: t.fat,
+    days: [],
+    customFoods: (DATA && DATA.nutrition && Array.isArray(DATA.nutrition.customFoods)) ? DATA.nutrition.customFoods.slice() : [],
+    restrictions: restrictions
+  };
+  if (!DATA) window.DATA = {};
+  DATA.nutrition = plan;
+  if (typeof store !== 'undefined' && store) {
+    store.nutrition = plan;
+    store.__cpNutritionDirty = true;
+    store.__cpKeepLocalNutrition = true;
+    if (store.coachViewingClient) {
+      store.__cpClientViewProfile = Object.assign({}, store.__cpClientViewProfile || {}, { allergies: restrictions.slice() });
+      if (store.coachWorkspace) {
+        store.coachWorkspace.clientProfile = store.__cpClientViewProfile;
+        if (!store.coachWorkspace.intake) store.coachWorkspace.intake = {};
+        store.coachWorkspace.intake.allergies = restrictions.slice();
+      }
+    } else {
+      if (!store.profile) store.profile = {};
+      store.profile.allergies = restrictions.slice();
+    }
+  }
+  if (typeof persist === 'function') persist();
+  const modal = document.getElementById('gen-nutrition-plan-modal');
+  if (modal) modal.remove();
+  window.__nutritionDayUserPicked = false;
+  if (typeof render === 'function') render();
+  if (typeof showToast === 'function') {
+    showToast('Budget creato: ' + t.tdee + ' kcal · P ' + t.protein + 'g · C ' + t.carbs + 'g · F ' + t.fat + 'g. Premi SALVA se fai altre modifiche.', 'success');
   }
 }
 

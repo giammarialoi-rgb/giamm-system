@@ -854,7 +854,11 @@ export function mountCoachPractice(app, deps) {
     const prog = patch && (patch.activeProgram || patch);
     if (prog && Array.isArray(prog.weeks) && prog.weeks.length) kinds.push("training");
     const nutr = patch.nutrition || (prog && prog.nutrition);
-    if (nutr && Array.isArray(nutr.days) && nutr.days.length) kinds.push("nutrition");
+    // A "budget" plan (kcal/macro target only, no prescribed foods) has no
+    // days at all - its target fields are what makes it real content.
+    if (nutr && ((Array.isArray(nutr.days) && nutr.days.length) ||
+      nutr.daily_calories_target != null || nutr.daily_protein_target != null ||
+      nutr.daily_carbs_target != null || nutr.daily_fats_target != null)) kinds.push("nutrition");
     const supp = patch.supplementation || (prog && prog.supplementation);
     if (supp && Array.isArray(supp.items) && supp.items.length) kinds.push("supplements");
     const th = patch.therapy || (prog && prog.therapy);

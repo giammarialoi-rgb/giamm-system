@@ -2458,7 +2458,12 @@ function preferFilledNutrition(a, b) {
         foods += ((m.foods && m.foods.length) || (m.items && m.items.length) || 0);
       });
     });
-    return days.length * 10 + foods;
+    // A "budget" plan (kcal/macro target only, no prescribed foods) has no
+    // days at all - count it as real content too, so it doesn't lose against
+    // an older foods-based plan (or nothing) still cached on the other side.
+    const hasTargets = n.daily_calories_target != null || n.daily_protein_target != null ||
+      n.daily_carbs_target != null || n.daily_fats_target != null;
+    return days.length * 10 + foods + (hasTargets ? 1 : 0);
   }
   return score(a) >= score(b) ? (a || b || null) : (b || a || null);
 }
@@ -4586,10 +4591,19 @@ function applyCatalogFromIntake(useIt) {
 window.applyCatalogFromIntake = applyCatalogFromIntake;
 window.mapIntakeToCatalogFilters = mapIntakeToCatalogFilters;
 
+function nutritionHasSandboxContent(n) {
+  if (!n || typeof n !== 'object') return false;
+  if (n.days && n.days.length) return true;
+  // A "budget" plan (kcal/macro target only, no prescribed foods) has no
+  // days at all - its target fields are what makes it real content.
+  return n.daily_calories_target != null || n.daily_protein_target != null ||
+    n.daily_carbs_target != null || n.daily_fats_target != null;
+}
+
 function detectSandboxKinds() {
   const kinds = [];
   if (typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length) kinds.push('training');
-  if ((DATA && DATA.nutrition && DATA.nutrition.days && DATA.nutrition.days.length) || (store.nutrition && store.nutrition.days && store.nutrition.days.length)) kinds.push('nutrition');
+  if (nutritionHasSandboxContent(DATA && DATA.nutrition) || nutritionHasSandboxContent(store.nutrition)) kinds.push('nutrition');
   if ((DATA && DATA.supplementation && DATA.supplementation.items && DATA.supplementation.items.length) || (store.supplementation && store.supplementation.items && store.supplementation.items.length)) kinds.push('supplements');
   if ((DATA && DATA.therapy && DATA.therapy.medications && DATA.therapy.medications.length) || (store.therapy && store.therapy.medications && store.therapy.medications.length)) kinds.push('therapy');
   if ((DATA && DATA.exams && DATA.exams.records && DATA.exams.records.length) || (store.exams && store.exams.records && store.exams.records.length)) kinds.push('exams');
