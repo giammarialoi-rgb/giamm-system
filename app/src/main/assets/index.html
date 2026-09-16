@@ -38381,6 +38381,32 @@ async function syncAccountData(download=false){
   }
   return { uploaded };
 }
+
+// syncAccountData() always does a GET /api/account/me before its POST, even
+// when the caller only wants to push a local change (measured under
+// simulated 4G latency: ~370ms + ~630ms sequentially, roughly a full extra
+// second for a round trip the caller doesn't need). The download step exists
+// to merge in remote changes and decide whether the training program is safe
+// to include - neither matters for an explicit "SALVA" tap, since the
+// server's own merge already protects a richer remote activeProgram from
+// being downgraded by a smaller local one (mergeAccountDataBlobs, tested),
+// and any remote-side changes get picked up by the next natural boot/download
+// sync regardless. This skips straight to the single upload request.
+async function uploadAccountDataFast() {
+  if (!store || !store.accountToken) return { uploaded: false };
+  if (store.coachAssigning || store.coachViewingClient) return { uploaded: false };
+  try {
+    await accountRequest('/api/account/sync', {
+      method: 'POST',
+      body: JSON.stringify({ data: accountPayload({ includeProgram: true }) })
+    });
+    return { uploaded: true };
+  } catch (uploadErr) {
+    console.warn('[ACCOUNT_UPLOAD_FAST_FAILED]', uploadErr);
+    return { uploaded: false };
+  }
+}
+
 function scheduleAccountSync(immediate){
   if(!store.accountToken) return;
   if (store.coachAssigning || store.coachViewingClient) return;
@@ -38463,6 +38489,58 @@ function sanitizeCoachDisplayText(raw) {
 }
 
 const WEEKDAY_IT = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+
+// Nutrition days only ever carried a bare weekday name ("Lunedì"), fine for a
+// single-week template but useless once used as an ongoing food diary: a
+// second "Lunedì" the following week is indistinguishable from the first,
+// and the "today" pill lit up on every day sharing today's weekday name. This
+// is the (optional, purely additive - old days without a date keep working
+// exactly as before) real-calendar-date support that unlocks that.
+function isoDateOnly(d) {
+  const dt = (d instanceof Date) ? d : new Date(d);
+  if (isNaN(dt.getTime())) return '';
+  return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+}
+function weekdayNameForDate(dateIso) {
+  const dt = new Date(dateIso + 'T00:00:00');
+  if (isNaN(dt.getTime())) return '';
+  const idx = (dt.getDay() + 6) % 7; // JS getDay(): 0=Sun..6=Sat -> align to WEEKDAY_IT (Mon-first)
+  return WEEKDAY_IT[idx];
+}
+function formatNutritionDayDate(dateIso) {
+  if (!dateIso) return '';
+  const dt = new Date(dateIso + 'T00:00:00');
+  if (isNaN(dt.getTime())) return '';
+  return dt.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+}
+// The date to suggest for the next new day: the day right after the most
+// recently dated existing day, or today if nothing is dated yet.
+function nextNutritionDayDateIso() {
+  const days = (DATA && DATA.nutrition && Array.isArray(DATA.nutrition.days)) ? DATA.nutrition.days : [];
+  let latest = null;
+  days.forEach(function (d) {
+    if (d && d.date) {
+      const dt = new Date(d.date + 'T00:00:00');
+      if (!isNaN(dt.getTime()) && (!latest || dt > latest)) latest = dt;
+    }
+  });
+  if (latest) {
+    latest.setDate(latest.getDate() + 1);
+    return isoDateOnly(latest);
+  }
+  return isoDateOnly(new Date());
+}
+// Picking a specific weekday (e.g. re-picking "Lunedì" for a second week)
+// needs an actual date to disambiguate it from the first one - the nearest
+// upcoming occurrence of that weekday on or after nextNutritionDayDateIso().
+function nextDateForWeekday(weekdayName) {
+  let d = new Date(nextNutritionDayDateIso() + 'T00:00:00');
+  for (let i = 0; i < 7; i++) {
+    if (weekdayNameForDate(isoDateOnly(d)) === weekdayName) return isoDateOnly(d);
+    d.setDate(d.getDate() + 1);
+  }
+  return isoDateOnly(d);
+}
 
 function computeNutritionTargetsFromProfile(overrides) {
   overrides = overrides || {};
@@ -44508,9 +44586,10 @@ function renderNutrition(c) {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
       ${domainTitleTapHtml('NUTRITION', t('nutrition'))}
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        ${nutrDirty ? '<button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="saveNutritionPlanEdits()">SALVA</button>' : ''}
+        ${nutrDirty ? '<button id="nutrition-salva-top-btn" class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="saveNutritionPlanEdits()">SALVA</button>' : ''}
         ${athleteDomainActionButtonsHtml('nutrition', { compact: true })}
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="addNutritionDay()">${t('addDay')}</button>
+        <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openAddNutritionWeekWizard()" title="Aggiungi 7 giorni in una volta, come un diario alimentare">📅 Aggiungi Settimana</button>
         ${days.length ? '<button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="exportNutritionPdf()">📄 Esporta Alimentazione</button>' : ''}
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openNutritionBackupsModal()" title="Ripristina una versione precedente dell'alimentazione">🕐 Backup</button>
         ${days.length ? personalNutritionClearButtonHtml({ compact: true }) : ''}
@@ -44552,7 +44631,7 @@ function renderNutrition(c) {
 
   html += `
     <div style="position:sticky;top:0;z-index:5;background:#0a0a0a;padding:8px 0 10px;margin-bottom:4px;border-bottom:1px solid #222;">
-      <div style="font-size:12px;font-weight:900;color:#fff;">Giorno selezionato: <span style="color:var(--gold);">${esc(safeDisplayValue(activeDay.day, 'Giorno ' + (currentNutritionDayIndex + 1)))}</span></div>
+      <div style="font-size:12px;font-weight:900;color:#fff;">Giorno selezionato: <span style="color:var(--gold);">${esc(safeDisplayValue(activeDay.day, 'Giorno ' + (currentNutritionDayIndex + 1)))}</span>${activeDay.date ? ` <span style="color:#888;font-weight:600;">· ${esc(formatNutritionDayDate(activeDay.date))}</span>` : ''}</div>
     </div>
 
     <div class="card" style="border:1px solid var(--border);background:linear-gradient(135deg, #16140d 0%, #0c0c0c 100%);margin-bottom:16px;">
@@ -44582,10 +44661,14 @@ function renderNutrition(c) {
         const fold = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); };
         const names = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
         const todayName = names[new Date().getDay()];
-        const isToday = fold(d.day).indexOf(fold(todayName).slice(0, 4)) >= 0;
+        // A dated day only counts as "today" on an exact date match - without
+        // this, every day sharing today's weekday name lit up once a diary
+        // spans more than one week (every "Lunedì" looked like "today").
+        const isToday = d.date ? (d.date === isoDateOnly(new Date())) : (fold(d.day).indexOf(fold(todayName).slice(0, 4)) >= 0);
         const todayStyle = isToday ? 'box-shadow:0 0 0 1px var(--gold);' : '';
+        const dateSuffix = d.date ? (' · ' + formatNutritionDayDate(d.date)) : '';
         return '<div class="pill-tab ' + (isSel ? 'active' : '') + '" style="' + todayStyle + '" onclick="selectNutritionDay(' + idx + ')">' +
-          safeDisplayValue(d.day, 'Giorno ' + (idx + 1)) + (isToday ? ' · oggi' : '') +
+          safeDisplayValue(d.day, 'Giorno ' + (idx + 1)) + esc(dateSuffix) + (isToday ? ' · oggi' : '') +
           '</div>';
       }).join('')}
     </div>
@@ -45892,25 +45975,26 @@ function openDuplicateMealDayModal() {
   const modal = document.getElementById('duplicate-meal-day-modal');
   const optionsBox = document.getElementById('duplicate-meal-day-options');
   const days = (DATA && DATA.nutrition && Array.isArray(DATA.nutrition.days)) ? DATA.nutrition.days : [];
-  const existingByName = {};
-  days.forEach(function (d, idx) {
-    const name = d && d.day;
-    if (name && !(name in existingByName)) existingByName[name] = idx;
-  });
-  const allDayNames = WEEKDAY_IT.slice();
-  days.forEach(function (d) {
-    const name = d && d.day;
-    if (name && allDayNames.indexOf(name) === -1) allDayNames.push(name);
-  });
+  // Used to dedupe by weekday name, keeping only the first match - so once a
+  // diary had two "Lunedì" (two different weeks), duplicating a meal could
+  // only ever target the first one, never the second. Every existing day is
+  // now its own option, listed by its real index (with its date, if it has
+  // one, to tell same-named days apart).
   if (optionsBox) {
-    optionsBox.innerHTML = allDayNames.map(function (name) {
-      const existingIdx = existingByName[name];
-      const isExisting = existingIdx != null;
-      return '<button type="button" class="btn btn-outline" style="padding:10px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:space-between;border-radius:8px;border-color:#333;color:#eee;" onclick="pickDuplicateMealDay(' + JSON.stringify(name).replace(/"/g, '&quot;') + ', ' + (isExisting ? existingIdx : 'null') + ')">' +
-        '<span>' + esc(name) + '</span>' +
-        (isExisting ? '<span style="font-size:10px;color:#888;">esistente</span>' : '<span style="font-size:10px;color:var(--gold);">+ crea</span>') +
+    const existingButtons = days.map(function (d, idx) {
+      const label = safeDisplayValue(d && d.day, 'Giorno ' + (idx + 1)) + (d && d.date ? ' · ' + formatNutritionDayDate(d.date) : '');
+      return '<button type="button" class="btn btn-outline" style="padding:10px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:space-between;border-radius:8px;border-color:#333;color:#eee;" onclick="pickDuplicateMealDay(null, ' + idx + ')">' +
+        '<span>' + esc(label) + '</span>' +
+        '<span style="font-size:10px;color:#888;">esistente</span>' +
         '</button>';
-    }).join('');
+    });
+    const nextIso = nextNutritionDayDateIso();
+    const nextLabel = weekdayNameForDate(nextIso) + ' · ' + formatNutritionDayDate(nextIso);
+    const nextDiaryButton = '<button type="button" class="btn btn-primary" style="padding:10px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:space-between;border-radius:8px;" onclick="pickDuplicateMealDay(' + JSON.stringify(weekdayNameForDate(nextIso)) + ', null, ' + JSON.stringify(nextIso) + ')">' +
+      '<span>➕ Prossimo giorno del diario</span>' +
+      '<span style="font-size:10px;">' + esc(nextLabel) + '</span>' +
+      '</button>';
+    optionsBox.innerHTML = nextDiaryButton + existingButtons.join('');
   }
   if (modal) {
     modal.style.display = 'flex';
@@ -45926,15 +46010,24 @@ function closeDuplicateMealDayModal() {
 }
 window.closeDuplicateMealDayModal = closeDuplicateMealDayModal;
 
-function pickDuplicateMealDay(dayName, existingDayIdx) {
-  __duplicateMealTargetDay = { dayName: dayName, existingDayIdx: (existingDayIdx === null || existingDayIdx === undefined) ? null : existingDayIdx };
+function pickDuplicateMealDay(dayName, existingDayIdx, explicitDate) {
+  const isExisting = existingDayIdx !== null && existingDayIdx !== undefined;
+  const existingDay = isExisting ? (DATA.nutrition.days[existingDayIdx] || null) : null;
+  const displayLabel = isExisting
+    ? (safeDisplayValue(existingDay && existingDay.day, 'Giorno ' + (existingDayIdx + 1)) + (existingDay && existingDay.date ? ' · ' + formatNutritionDayDate(existingDay.date) : ''))
+    : (dayName + (explicitDate ? ' · ' + formatNutritionDayDate(explicitDate) : ''));
+  __duplicateMealTargetDay = {
+    dayName: isExisting ? (existingDay && existingDay.day) : dayName,
+    existingDayIdx: isExisting ? existingDayIdx : null,
+    explicitDate: explicitDate || null
+  };
   closeDuplicateMealDayModal();
   openMealTargetModal(null, function (mealName) {
     finishDuplicateMeal(mealName);
   }, {
     icon: '⧉',
     title: 'DUPLICA PASTO',
-    subtitle: 'In quale pasto di "' + dayName + '" vuoi copiarlo?',
+    subtitle: 'In quale pasto di "' + displayLabel + '" vuoi copiarlo?',
     dayIdx: __duplicateMealTargetDay.existingDayIdx != null ? __duplicateMealTargetDay.existingDayIdx : -1
   });
 }
@@ -45951,7 +46044,9 @@ function finishDuplicateMeal(mealName) {
   if (targetDayIdx == null) {
     if (!DATA.nutrition) DATA.nutrition = { days: [], present: true };
     if (!Array.isArray(DATA.nutrition.days)) DATA.nutrition.days = [];
-    DATA.nutrition.days.push({ day: targetInfo.dayName, meals: [] });
+    const newDay = { day: targetInfo.dayName, meals: [] };
+    if (targetInfo.explicitDate) newDay.date = targetInfo.explicitDate;
+    DATA.nutrition.days.push(newDay);
     targetDayIdx = DATA.nutrition.days.length - 1;
   }
 
@@ -46207,6 +46302,13 @@ function confirmGenerateNutritionPlan() {
 }
 
 async function saveNutritionPlanEdits() {
+  // A tap here used to give no feedback at all until the whole async chain
+  // resolved (a real network round trip), so a slow connection looked
+  // indistinguishable from a tap that hadn't registered - nothing to see, no
+  // indication anything was happening, until the alert() finally popped up.
+  const btn = document.getElementById('nutrition-salva-top-btn');
+  const btnOriginalHtml = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Salvataggio…'; }
   if (typeof DATA !== 'undefined' && DATA) DATA.nutrition = (store && store.nutrition) || DATA.nutrition;
   if (typeof store !== 'undefined' && store) store.nutrition = (DATA && DATA.nutrition) || store.nutrition;
   if (typeof persist === 'function') persist();
@@ -46215,18 +46317,19 @@ async function saveNutritionPlanEdits() {
   try {
     if (typeof store !== 'undefined' && store && store.coachViewingClient && typeof pushCoachClientEdits === 'function') {
       await pushCoachClientEdits({ domains: ['nutrition'] });
-    } else if (typeof syncAccountData === 'function' && store && store.accountToken) {
-      // syncAccountData() itself never throws for a failed upload (only a
-      // failed download throws) - it used to be impossible to tell "uploaded"
-      // from "silently failed to upload", so this always cleared the dirty
-      // flag and reported success even when nothing reached the server. The
-      // next reopen would then overwrite the (never-backed-up) local data
-      // with the stale cloud copy - reproduced and fixed.
-      const result = await syncAccountData(false);
+    } else if (typeof uploadAccountDataFast === 'function' && store && store.accountToken) {
+      // An explicit SALVA tap only needs to push this change - the extra GET
+      // /api/account/me syncAccountData() always did first added a full
+      // second sequential round trip for nothing this button needed (measured
+      // under simulated 4G: ~1s just for the two requests). uploadAccountDataFast
+      // skips straight to the single upload; result.uploaded still means the
+      // same thing (never assumed true just because nothing threw).
+      const result = await uploadAccountDataFast();
       cloudSynced = !!(result && result.uploaded);
     }
   } catch (err) {
     if (typeof store !== 'undefined' && store) store.__cpKeepLocalNutrition = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = btnOriginalHtml; }
     if (typeof showToast === 'function') showToast((err && err.message) || 'Salvataggio fallito', 'danger');
     return;
   }
@@ -46277,7 +46380,7 @@ function openAddNutritionDayWizard() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;">
         ${weekdays.map((d) => {
           const taken = used.has(d.toLowerCase());
-          return `<button class="btn ${taken ? 'btn-outline' : 'btn-primary'}" style="font-size:11px;padding:8px;opacity:${taken ? 0.45 : 1};" ${taken ? 'disabled' : ''} onclick="nutritionWizardPickDay('${d}')">${d}</button>`;
+          return `<button class="btn ${taken ? 'btn-outline' : 'btn-primary'}" style="font-size:11px;padding:8px;" onclick="nutritionWizardPickDay('${d}')">${d}${taken ? ' <span style="font-size:9px;color:#888;">(già presente, ne aggiunge un altro)</span>' : ''}</button>`;
         }).join('')}
       </div>
       <div id="nutrition-wizard-step2" style="display:none;">
@@ -46346,6 +46449,7 @@ function nutritionWizardFinish(manualOnly) {
   } else {
     dayObj = fillNutritionDayWithMeals(day, targets, { trainingDay: isOn, mealCount: mealCount });
   }
+  dayObj.date = nextDateForWeekday(day);
   DATA.nutrition.days.push(dayObj);
   currentNutritionDayIndex = DATA.nutrition.days.length - 1;
   window.__nutritionDayUserPicked = true;
@@ -46358,6 +46462,71 @@ function nutritionWizardFinish(manualOnly) {
     showToast(manualOnly ? (day + ' creato — compila i pasti') : (day + ' creato con pasti e macro'), 'success');
   }
 }
+
+// "Aggiungi Settimana": the single-day wizard above works fine for building a
+// one-off weekly template, but treating this section as an actual food diary
+// (log every day going forward, indefinitely) means adding 7 dated days at
+// once instead of one tap at a time. Always empty slots to fill in as the
+// user actually eats - a diary logs what happened, it doesn't prescribe it.
+function openAddNutritionWeekWizard() {
+  const existing = document.getElementById('add-nutrition-week-modal');
+  if (existing) existing.remove();
+  const startIso = nextNutritionDayDateIso();
+  const startLabel = weekdayNameForDate(startIso) + ' ' + formatNutritionDayDate(startIso);
+  const overlay = document.createElement('div');
+  overlay.id = 'add-nutrition-week-modal';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML = `
+    <div class="card" style="max-width:420px;width:100%;border:1px solid var(--gold);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="margin:0;font-size:14px;color:var(--gold);">📅 Aggiungi Settimana</h3>
+        <button class="btn btn-outline" style="font-size:10px;padding:2px 6px;" onclick="document.getElementById('add-nutrition-week-modal').remove()">✕</button>
+      </div>
+      <div style="font-size:11px;color:#aaa;margin-bottom:10px;">Aggiunge 7 giorni vuoti da compilare come un diario, a partire da <b style="color:#eee;">${esc(startLabel)}</b>.</div>
+      <div style="font-size:11px;color:#aaa;margin-bottom:6px;">Quanti pasti al giorno?</div>
+      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+        <button class="btn btn-outline" style="font-size:10px;" onclick="nutritionWeekWizardFinish(2)">2 (C + Cena)</button>
+        <button class="btn btn-primary" style="font-size:10px;" onclick="nutritionWeekWizardFinish(3)">3 (Colazione, Pranzo, Cena)</button>
+        <button class="btn btn-outline" style="font-size:10px;" onclick="nutritionWeekWizardFinish(4)">4 (+ spuntino)</button>
+        <button class="btn btn-outline" style="font-size:10px;" onclick="nutritionWeekWizardFinish(5)">5 (+ 2 spuntini)</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+window.openAddNutritionWeekWizard = openAddNutritionWeekWizard;
+
+function nutritionWeekWizardFinish(mealCount) {
+  const mealNames = mealCount === 2
+    ? ['Colazione', 'Cena']
+    : mealCount === 4
+      ? ['Colazione', 'Pranzo', 'Spuntino', 'Cena']
+      : mealCount === 5
+        ? ['Colazione', 'Spuntino mattina', 'Pranzo', 'Spuntino', 'Cena']
+        : ['Colazione', 'Pranzo', 'Cena'];
+  if (!DATA.nutrition) DATA.nutrition = { days: [], present: true };
+  if (!DATA.nutrition.days) DATA.nutrition.days = [];
+  DATA.nutrition.present = true;
+  let cursor = new Date(nextNutritionDayDateIso() + 'T00:00:00');
+  let firstNewIdx = DATA.nutrition.days.length;
+  for (let i = 0; i < 7; i++) {
+    const dateIso = isoDateOnly(cursor);
+    DATA.nutrition.days.push({
+      day: weekdayNameForDate(dateIso),
+      date: dateIso,
+      meals: mealNames.map((name) => ({ name, foods: [] }))
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  currentNutritionDayIndex = firstNewIdx;
+  window.__nutritionDayUserPicked = true;
+  markNutritionDirty();
+  persist();
+  const modal = document.getElementById('add-nutrition-week-modal');
+  if (modal) modal.remove();
+  render();
+  if (typeof showToast === 'function') showToast('7 giorni aggiunti al diario alimentare', 'success');
+}
+window.nutritionWeekWizardFinish = nutritionWeekWizardFinish;
 
 function startDomainImport(domain) {
   // From coach client view: route into assign sandbox so imports never hit master profile

@@ -122,7 +122,12 @@ for (const src of [html, built]) {
     const fnStart = src.indexOf('async function ' + fnName + '()');
     ok(fnStart >= 0, `${fnName} is declared`);
     const fnBody = src.slice(fnStart, src.indexOf('\nfunction ', fnStart + 20));
-    ok(fnBody.includes('const result = await syncAccountData(false);') && fnBody.includes('cloudSynced = !!(result && result.uploaded);'),
+    // saveNutritionPlanEdits later switched to the faster upload-only
+    // uploadAccountDataFast() (skips the unneeded GET /api/account/me
+    // round trip a manual SALVA tap never needed) - either call is fine here,
+    // the point of this check is that *some* result is actually inspected.
+    ok((fnBody.includes('const result = await syncAccountData(false);') || fnBody.includes('const result = await uploadAccountDataFast();'))
+      && fnBody.includes('cloudSynced = !!(result && result.uploaded);'),
       `${fnName} checks whether the upload actually succeeded instead of assuming it did`);
     ok(/if \(cloudSynced\) \{\s*store\.__cpNutritionDirty = false;|if \(cloudSynced\) \{\s*store\.__cpSupplementsDirty = false;/.test(fnBody) || fnBody.includes('if (cloudSynced) {'),
       `${fnName} only clears its dirty/unsynced-changes flag when the upload actually succeeded`);

@@ -83,16 +83,17 @@ for (const src of sources) {
   ok(src.includes('function duplicateMealItem(dayIdx, mealIdx)'), '6a. duplicateMealItem is declared');
   ok(src.includes('window.duplicateMealItem = duplicateMealItem;'), '6b. duplicateMealItem is exported to window');
   ok(src.includes('onclick="duplicateMealItem(${currentNutritionDayIndex}, ${mIdx})"'), '6c. each meal card has a Duplica button');
-  ok(src.includes('function openDuplicateMealDayModal()') && src.includes('function pickDuplicateMealDay(dayName, existingDayIdx)'),
+  ok(src.includes('function openDuplicateMealDayModal()') && src.includes('function pickDuplicateMealDay(dayName, existingDayIdx, explicitDate)'),
     '6d. the day picker and its selection handler are declared');
   const finishStart = src.indexOf('function finishDuplicateMeal(mealName)');
   const finishBody = src.slice(finishStart, src.indexOf('\nwindow.finishDuplicateMeal', finishStart));
   ok(finishBody.includes('JSON.parse(JSON.stringify(sourceMeal.foods'), '6e. duplicated foods are deep-cloned, not shared by reference with the source meal');
   ok(finishBody.includes('ensureTargetMealSlot(targetDayIdx, mealName)'), '6f. the target meal is created by name if it does not already exist in the target day');
-  ok(finishBody.includes("DATA.nutrition.days.push({ day: targetInfo.dayName"), '6g. the target day is created if it does not already exist');
+  ok(finishBody.includes("const newDay = { day: targetInfo.dayName") && finishBody.includes('DATA.nutrition.days.push(newDay)'),
+    '6g. the target day is created if it does not already exist');
   // The day must NOT be created while the meal-name picker is still open (only on confirm) -
   // pickDuplicateMealDay must not itself push into DATA.nutrition.days.
-  const pickStart = src.indexOf('function pickDuplicateMealDay(dayName, existingDayIdx)');
+  const pickStart = src.indexOf('function pickDuplicateMealDay(dayName, existingDayIdx, explicitDate)');
   const pickBody = src.slice(pickStart, src.indexOf('\nwindow.pickDuplicateMealDay', pickStart));
   ok(!pickBody.includes('DATA.nutrition.days.push'), '6h. picking a not-yet-existing day does not create it until the meal is actually confirmed');
 }
