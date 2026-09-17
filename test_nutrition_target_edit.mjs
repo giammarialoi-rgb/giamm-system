@@ -61,4 +61,44 @@ for (const src of [html, built]) {
   ok(fnBody.includes('applyNutritionTargets(null, null, null, null)'), '3a. clearing passes null for all four fields');
 }
 
+// 4. Kcal <-> macro auto-balance: asked live to make kcal and macros stay
+// proportioned (e.g. kcal=1000 + carb=500g is impossible - that alone is
+// already 2000kcal). Editing kcal rescales macros keeping their split;
+// editing a macro clamps it to the kcal budget and redistributes the rest.
+for (const src of [html, built]) {
+  ok(src.includes('oninput="onEditNutritionKcalInput()"'), '4a. kcal input wires the rescale-on-kcal-change handler');
+  ok(src.includes("oninput=\"onEditNutritionMacroInput(\\'p\\')\"") &&
+    src.includes("oninput=\"onEditNutritionMacroInput(\\'c\\')\"") &&
+    src.includes("oninput=\"onEditNutritionMacroInput(\\'f\\')\""),
+    '4b. all three macro inputs wire the rebalance-on-macro-change handler');
+  ok(src.includes('window.onEditNutritionKcalInput = onEditNutritionKcalInput;'), '4c. onEditNutritionKcalInput is exported on window');
+  ok(src.includes('window.onEditNutritionMacroInput = onEditNutritionMacroInput;'), '4d. onEditNutritionMacroInput is exported on window');
+}
+{
+  const fnStart = html.indexOf('function onEditNutritionMacroInput(which)');
+  const fnBody = html.slice(fnStart, html.indexOf('\nfunction applyNutritionTargets', fnStart));
+  ok(fnBody.includes('if (editedCal > kcal) grams[which] = Math.floor(kcal / perGramCal[which]);'),
+    '4e. a macro that alone exceeds the kcal target gets clamped to fit inside it');
+  ok(fnBody.includes('const remaining = Math.max(0, kcal - grams[which] * perGramCal[which]);'),
+    '4f. the other two macros are redistributed from what is left of the kcal budget');
+  ok(!/DATA\.nutrition\.days|store\.nutrition\.days/.test(fnBody), '4g. rebalancing never touches logged/prescribed foods');
+}
+
+// 5. Optional end-of-day step count (spec: "tracciamento generale"). Lives
+// in the same already-synced, already coach/client-isolated per-day
+// container as confirmNutritionDay (store.nutritionDaily[today]) so it
+// never needs its own sync wiring and can never collide with meal data.
+for (const src of [html, built]) {
+  ok(src.includes('id="nutrition-steps-input"'), '5a. the optional steps input is rendered in the nutrition header');
+  ok(src.includes('onclick="saveNutritionSteps()"'), '5b. onclick="saveNutritionSteps()" is wired up');
+  ok(src.includes('window.saveNutritionSteps = saveNutritionSteps;'), '5c. saveNutritionSteps is explicitly exported on window');
+}
+{
+  const fnStart = html.indexOf('function saveNutritionSteps()');
+  const fnBody = html.slice(fnStart, html.indexOf('\nwindow.saveNutritionSteps', fnStart));
+  ok(fnBody.includes("store.nutritionDaily[key] = existing;"), '5d. steps are written into the per-day nutritionDaily entry');
+  ok(!/DATA\.nutrition|\.days\s*=|\.meals\s*=|\.foods\s*=/.test(fnBody), '5e. saving steps never touches nutrition plan/meal/food data');
+  ok(fnBody.includes('store.health.steps = steps'), '5f. steps also mirror into store.health for the home recovery-estimate widget');
+}
+
 console.log('\nAll nutrition target-edit tests passed.');

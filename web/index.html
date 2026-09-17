@@ -44290,6 +44290,48 @@ function confirmNutritionDay(ok) {
 }
 window.confirmNutritionDay = confirmNutritionDay;
 
+// Optional daily step count, for general activity tracking (feeds the home
+// recovery-estimate widget). Lives in store.nutritionDaily[today].steps -
+// the same already-synced, coach/client-isolated per-day container
+// confirmNutritionDay uses - so it never needs its own sync/isolation wiring
+// and can never touch DATA.nutrition/days/meals.
+function todayNutritionStepsValue() {
+  try {
+    const entry = store && store.nutritionDaily && store.nutritionDaily[nutritionTodayKey()];
+    return (entry && entry.steps) || '';
+  } catch (_) {
+    return '';
+  }
+}
+function saveNutritionSteps() {
+  const el = document.getElementById('nutrition-steps-input');
+  const steps = el && el.value !== '' ? Math.max(0, parseInt(el.value, 10) || 0) : null;
+  if (!store) return;
+  if (!store.nutritionDaily) store.nutritionDaily = {};
+  const key = nutritionTodayKey();
+  const existing = store.nutritionDaily[key] || {};
+  if (steps == null) {
+    delete existing.steps;
+  } else {
+    existing.steps = steps;
+    existing.stepsAt = new Date().toISOString();
+    store.health = store.health || {};
+    store.health.steps = steps;
+    store.health.stepsAt = existing.stepsAt;
+    store.health.stepsSource = 'manual';
+  }
+  store.nutritionDaily[key] = existing;
+  if (typeof persist === 'function') persist();
+  try {
+    if (store.accountToken && typeof uploadAccountDataFast === 'function') {
+      uploadAccountDataFast().catch(function () {});
+    }
+  } catch (_) {}
+  if (typeof showToast === 'function') showToast(steps == null ? 'Passi rimossi' : 'Passi salvati', 'success');
+  if (typeof render === 'function') render();
+}
+window.saveNutritionSteps = saveNutritionSteps;
+
 function athleteCanSelfGeneratePlans() {
   if (typeof isAthleteRole !== 'function' || !isAthleteRole()) return true;
   return !!(store && store.clientProfile && store.clientProfile.allowMaxFreedom);
@@ -44629,6 +44671,14 @@ function renderNutrition(c) {
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openNutritionBackupsModal()" title="Ripristina una versione precedente dell'alimentazione">🕐 Backup</button>
         ${days.length ? personalNutritionClearButtonHtml({ compact: true }) : ''}
       </div>
+    </div>
+    <div class="card" style="border:1px solid var(--border);margin-bottom:12px;padding:10px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div style="font-size:10px;color:#aaa;white-space:nowrap;">👣 Passi di oggi (opzionale)</div>
+        <input id="nutrition-steps-input" type="number" inputmode="numeric" placeholder="es. 8000" value="${esc(String(todayNutritionStepsValue()))}" style="flex:1;min-width:90px;padding:6px 8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;">
+        <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="saveNutritionSteps()">SALVA PASSI</button>
+      </div>
+      <div style="font-size:9px;color:#666;margin-top:4px;">Usati per il tracciamento generale e la stima di recupero in home.</div>
     </div>
     ${nutritionConfirmCardHtml()}
 
@@ -46494,14 +46544,15 @@ function openEditNutritionTargetsModal() {
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;">TARGET KCAL/MACRO</div>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'edit-nutr-targets-modal\').remove()">CHIUDI</button></div>' +
-    '<div style="font-size:11px;color:#888;margin-bottom:10px;line-height:1.4;">Il numero dopo lo slash nei totali giornalieri: da qui lo cambi, lo ricalcoli dal profilo, o lo rimuovi del tutto se non ti serve.</div>' +
+    '<div style="font-size:11px;color:#888;margin-bottom:10px;line-height:1.4;">Il numero dopo lo slash nei totali giornalieri: da qui lo cambi, lo ricalcoli dal profilo, o lo rimuovi del tutto se non ti serve. Cambiando le kcal, i macro si aggiornano mantenendo le proporzioni; cambiando un macro, gli altri due si adattano per restare dentro le kcal impostate.</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">' +
-    '<label style="font-size:10px;color:#ccc;">Kcal<input id="edit-nutr-target-kcal" type="number" value="' + (n.daily_calories_target || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
-    '<label style="font-size:10px;color:#ccc;">Proteine (g)<input id="edit-nutr-target-pro" type="number" value="' + (n.daily_protein_target || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
-    '<label style="font-size:10px;color:#ccc;">Carbo (g)<input id="edit-nutr-target-carb" type="number" value="' + (n.daily_carbs_target || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
-    '<label style="font-size:10px;color:#ccc;">Grassi (g)<input id="edit-nutr-target-fat" type="number" value="' + (n.daily_fats_target || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
+    '<label style="font-size:10px;color:#ccc;">Kcal<input id="edit-nutr-target-kcal" type="number" value="' + (n.daily_calories_target || '') + '" oninput="onEditNutritionKcalInput()" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
+    '<label style="font-size:10px;color:#ccc;">Proteine (g)<input id="edit-nutr-target-pro" type="number" value="' + (n.daily_protein_target || '') + '" oninput="onEditNutritionMacroInput(\'p\')" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
+    '<label style="font-size:10px;color:#ccc;">Carbo (g)<input id="edit-nutr-target-carb" type="number" value="' + (n.daily_carbs_target || '') + '" oninput="onEditNutritionMacroInput(\'c\')" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
+    '<label style="font-size:10px;color:#ccc;">Grassi (g)<input id="edit-nutr-target-fat" type="number" value="' + (n.daily_fats_target || '') + '" oninput="onEditNutritionMacroInput(\'f\')" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
     '</div>' +
     '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;font-size:11px;" onclick="recalcEditNutritionTargetsFromProfile()">RICALCOLA DAL PROFILO</button>' +
+    '<div style="font-size:9px;color:#666;margin-bottom:10px;line-height:1.5;">Come si calcola dal profilo: BMR (Mifflin-St Jeor da peso/altezza/età/sesso) × 1.55 (attività moderata) = mantenimento; -15% se obiettivo dimagrimento, +10% se massa. Proteine: 2.0 g/kg (massa/forza) o 1.8 g/kg (altri obiettivi). Grassi: 0.8 g/kg. Carbo: il resto delle kcal.</div>' +
     '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="saveEditNutritionTargets()">SALVA TARGET</button>' +
     '<button type="button" class="btn btn-outline" style="width:100%;color:#c66;border-color:#c66;" onclick="clearEditNutritionTargets()">RIMUOVI TARGET</button>' +
     '</div>';
@@ -46518,6 +46569,63 @@ function recalcEditNutritionTargetsFromProfile() {
   if (proEl) proEl.value = t.protein;
   if (carbEl) carbEl.value = t.carbs;
   if (fatEl) fatEl.value = t.fat;
+}
+
+// Editing kcal rescales the 3 macros keeping their current calorie split, so
+// the target never drifts out of proportion (e.g. kcal=1000 + carb=500g,
+// which alone is already 2000kcal, was possible before this).
+function onEditNutritionKcalInput() {
+  const kcalEl = document.getElementById('edit-nutr-target-kcal');
+  const proEl = document.getElementById('edit-nutr-target-pro');
+  const carbEl = document.getElementById('edit-nutr-target-carb');
+  const fatEl = document.getElementById('edit-nutr-target-fat');
+  const kcal = kcalEl ? parseInt(kcalEl.value, 10) || 0 : 0;
+  if (!kcal) return;
+  const pro = proEl ? parseInt(proEl.value, 10) || 0 : 0;
+  const carb = carbEl ? parseInt(carbEl.value, 10) || 0 : 0;
+  const fat = fatEl ? parseInt(fatEl.value, 10) || 0 : 0;
+  const totalCal = pro * 4 + carb * 4 + fat * 9;
+  let pPct, cPct, fPct;
+  if (totalCal > 0) {
+    pPct = (pro * 4) / totalCal;
+    cPct = (carb * 4) / totalCal;
+    fPct = (fat * 9) / totalCal;
+  } else {
+    pPct = 0.3; cPct = 0.4; fPct = 0.3;
+  }
+  if (proEl) proEl.value = Math.max(0, Math.round((kcal * pPct) / 4));
+  if (carbEl) carbEl.value = Math.max(0, Math.round((kcal * cPct) / 4));
+  if (fatEl) fatEl.value = Math.max(0, Math.round((kcal * fPct) / 9));
+}
+
+// Editing a macro keeps the kcal target fixed and adjusts the other two
+// macros (proportionally to their current split) so the 3 grams always add
+// up to the kcal target - never silently exceed it.
+function onEditNutritionMacroInput(which) {
+  const kcalEl = document.getElementById('edit-nutr-target-kcal');
+  const proEl = document.getElementById('edit-nutr-target-pro');
+  const carbEl = document.getElementById('edit-nutr-target-carb');
+  const fatEl = document.getElementById('edit-nutr-target-fat');
+  const kcal = kcalEl ? parseInt(kcalEl.value, 10) || 0 : 0;
+  if (!kcal) return;
+  const perGramCal = { p: 4, c: 4, f: 9 };
+  const grams = {
+    p: proEl ? parseInt(proEl.value, 10) || 0 : 0,
+    c: carbEl ? parseInt(carbEl.value, 10) || 0 : 0,
+    f: fatEl ? parseInt(fatEl.value, 10) || 0 : 0
+  };
+  const editedCal = grams[which] * perGramCal[which];
+  if (editedCal > kcal) grams[which] = Math.floor(kcal / perGramCal[which]);
+  const remaining = Math.max(0, kcal - grams[which] * perGramCal[which]);
+  const others = ['p', 'c', 'f'].filter(function (k) { return k !== which; });
+  const otherCalSum = others.reduce(function (s, k) { return s + grams[k] * perGramCal[k]; }, 0);
+  others.forEach(function (k, idx) {
+    const ratio = otherCalSum > 0 ? (grams[k] * perGramCal[k]) / otherCalSum : (idx === 0 ? 0.6 : 0.4);
+    grams[k] = Math.max(0, Math.round((remaining * ratio) / perGramCal[k]));
+  });
+  if (proEl) proEl.value = grams.p;
+  if (carbEl) carbEl.value = grams.c;
+  if (fatEl) fatEl.value = grams.f;
 }
 
 function applyNutritionTargets(kcal, pro, carb, fat) {
@@ -46558,6 +46666,8 @@ function clearEditNutritionTargets() {
 }
 window.openEditNutritionTargetsModal = openEditNutritionTargetsModal;
 window.recalcEditNutritionTargetsFromProfile = recalcEditNutritionTargetsFromProfile;
+window.onEditNutritionKcalInput = onEditNutritionKcalInput;
+window.onEditNutritionMacroInput = onEditNutritionMacroInput;
 window.saveEditNutritionTargets = saveEditNutritionTargets;
 window.clearEditNutritionTargets = clearEditNutritionTargets;
 
