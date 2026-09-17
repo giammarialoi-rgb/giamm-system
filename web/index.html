@@ -65670,7 +65670,10 @@ function openAssignChooser(clientId, name) {
 function beginAssignSandbox(clientId, name, mode) {
   requestNotifyPermission();
   store.coachAssigning = { clientId: clientId, name: name, mode: mode || 'import' };
-  store.__cpAssignBarExpanded = false;
+  // Open expanded. Collapsed, the only sign that the training screen is showing
+  // a client's draft rather than the coach's own program is a small chip, which
+  // is not enough to tell the two apart.
+  store.__cpAssignBarExpanded = true;
   window.__cpAssignBackup = snapshotCoachMaster();
   resetSandboxSessionState();
   if (typeof persist === 'function') persist();
@@ -67624,7 +67627,16 @@ function wrapPracticeHooks() {
     const _nav = navigate;
     navigate = function (v, e) {
       const raw = v;
-      if (store && store.coachSessionActive && !store.coachAssigning && !window.__cpExitingCoach
+      // This gate used to switch itself off while an assignment was open
+      // (`&& !store.coachAssigning`). clientDomains below already allows the
+      // domains an assignment legitimately needs, so the exclusion bought
+      // nothing and cost the isolation: beginAssignSandbox navigates into the
+      // personal training/import views, and with no gate the coach could walk
+      // straight on into the rest of the personal app while DATA and
+      // store.activeProgram still held the client's draft. Everything there
+      // then reads as the coach's own program. Reported as assigning a
+      // program to a client replacing the coach's personal one.
+      if (store && store.coachSessionActive && !window.__cpExitingCoach
         && !(typeof isAthleteRole === 'function' && isAthleteRole())) {
         const coachCore = {
           coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
@@ -67640,6 +67652,24 @@ function wrapPracticeHooks() {
           || (store.__cpCoachLibraryImport && (raw === 'import' || raw === 'coachLibrary'));
         if (!ok) {
           practiceToast('Sei in modalità Coach. Usa ESCI per tornare all’app personale.', 'warning');
+          return;
+        }
+        // Leaving for the personal app mid-assignment is the one exit that
+        // loses data: it turns the session off while coachAssigning is still
+        // set and the client's draft is still live, so the personal app opens
+        // onto the client's program. Send or cancel first - cancelling runs
+        // restoreCoachMaster and puts the coach's own program back.
+        if (store.coachAssigning && (raw === 'home' || raw === 'settings')) {
+          const who = store.coachAssigning.name || 'cliente';
+          const why = 'Stai preparando la scheda di ' + who +
+            '. Invia o annulla l’assegnazione prima di tornare alla tua app personale.';
+          try { practiceToast(why, 'warning'); } catch (_) {}
+          // The banner, not the toast, is what makes this legible: practiceToast
+          // renders nothing in some states, and a refusal the user cannot see
+          // just looks like a dead button. Expanding puts the reason and the two
+          // ways out (send / cancel) on screen and leaves them there.
+          store.__cpAssignBarExpanded = true;
+          ensureAssignBanner();
           return;
         }
         if (raw === 'home' || raw === 'settings') {
