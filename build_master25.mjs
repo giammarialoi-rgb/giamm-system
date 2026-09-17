@@ -1086,6 +1086,27 @@ const releaseMetaScript =
   'self.NURVAN_RELEASE = Object.freeze(' + JSON.stringify(RELEASE_META) + ');\n';
 fs.writeFileSync('web/release-meta.js', releaseMetaScript, 'utf8');
 fs.writeFileSync('web/index.html', fullHtml, 'utf8');
+
+// A SyntaxError anywhere in the bundle stops every inline script from loading,
+// so the app boots to an empty shell. Fail the build instead of shipping that.
+{
+  const vm = await import('node:vm');
+  [...fullHtml.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+    .filter(m => !/\bsrc=/i.test(m[1]))
+    .forEach((m, i) => {
+      if (!m[2].trim()) return;
+      try {
+        new vm.Script(m[2]);
+      } catch (err) {
+        const line = fullHtml.slice(0, m.index).split('\n').length;
+        throw new Error(
+          `Inline script #${i} (starts at line ${line}) does not parse: ${err.message}\n` +
+          'Build aborted: this bundle would render a blank screen.'
+        );
+      }
+    });
+}
+
 syncWebAssetsToAndroid();
 
 console.log('✅ Build Master 25 completed successfully!');
