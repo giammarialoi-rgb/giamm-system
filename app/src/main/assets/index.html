@@ -59321,6 +59321,7 @@ function knowledgeCatLabel(cat) {
   if (cat === 'progressioni') return 'Progressioni';
   if (cat === 'split') return 'Split';
   if (cat === 'esercizi') return 'Esercizi';
+  if (cat === 'warmup') return 'Riscaldamento';
   return cat || 'Info';
 }
 
@@ -59410,6 +59411,7 @@ function knowledgeResultsHtml() {
     else if (tab === 'progressioni') rows = K.PROGRESSIONS || [];
     else if (tab === 'split') rows = K.SPLITS || [];
     else if (tab === 'glossario') rows = K.GLOSSARY || [];
+    else if (tab === 'warmup') rows = (typeof search === 'function' ? search('') : []).filter(function (x) { return x.cat === 'warmup'; });
     else rows = (typeof search === 'function' ? search('') : []).filter(function (x) { return x.cat === 'esercizi'; });
   }
   if (!window.__knowledgeCollapsed || typeof window.__knowledgeCollapsed !== 'object') window.__knowledgeCollapsed = {};
@@ -59430,7 +59432,7 @@ function knowledgeResultsHtml() {
     K.MUSCLE_TREE.forEach(function (macro) {
       body += knowledgeTreeNodeHtml(macro, rows, 0);
     });
-  } else if (tab === 'esercizi' && !q) {
+  } else if ((tab === 'esercizi' || tab === 'warmup') && !q) {
     const muscles = [];
     rows.forEach(function (r) {
       const m = r.muscle || 'ALTRO';
@@ -59493,6 +59495,7 @@ function renderTrainingKnowledge(c) {
   const tab = window.__knowledgeTab || 'esercizi';
   const tabs = [
     ['esercizi', 'Esercizi'],
+    ['warmup', 'Riscaldamento'],
     ['tecniche', 'Tecniche'],
     ['scale', 'RIR / RPE'],
     ['progressioni', 'Progressioni'],
@@ -59505,7 +59508,7 @@ function renderTrainingKnowledge(c) {
   c.innerHTML = '<div class="card" style="padding:14px;">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;">ENCICLOPEDIA</div>' +
     '<h2 style="color:#fff;font-size:20px;margin:4px 0 8px;">Info training</h2>' +
-    '<p style="font-size:12px;color:#aaa;line-height:1.4;margin:0 0 12px;">Spiegazioni di esercizi, tecniche, RIR/RPE, progressioni e split. Disponibile anche in Client Area. Non modifica la scheda.</p>' +
+    '<p style="font-size:12px;color:#aaa;line-height:1.4;margin:0 0 12px;">Spiegazioni di esercizi, riscaldamento, tecniche, RIR/RPE, progressioni e split. Disponibile anche in Client Area. Non modifica la scheda.</p>' +
     '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">' +
     '<input id="knowledge-search" class="input" value="' + esc(q) + '" placeholder="Cerca esercizio, RIR, drop set, split…" oninput="filterTrainingKnowledge(this.value)" style="flex:1;">' +
     '<button type="button" id="knowledge-search-clear" class="btn btn-outline" style="min-width:44px;height:44px;display:' + (String(q).trim() ? 'inline-flex' : 'none') + ';align-items:center;justify-content:center;" onclick="clearKnowledgeSearch()" aria-label="Cancella ricerca">✕</button></div>' +

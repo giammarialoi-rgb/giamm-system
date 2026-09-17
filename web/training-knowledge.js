@@ -214,6 +214,58 @@
     } catch (_) { return []; }
   }
 
+  function warmupCatalogItems() {
+    try {
+      const list = (root.WARMUP_EXERCISE_LIBRARY || (typeof self !== 'undefined' && self.WARMUP_EXERCISE_LIBRARY) || []);
+      return Array.isArray(list) ? list : [];
+    } catch (_) { return []; }
+  }
+
+  // Kept in sync with WARMUP_CATEGORY_LABELS in index.base.html (checked by
+  // test_warmup_knowledge_library.mjs) rather than read from window at
+  // module-init time, since this file loads before that inline script runs.
+  const WARMUP_CATEGORY_LABELS = {
+    raise: 'Attivazione Cardiovascolare',
+    mobility: 'Mobilità',
+    cars: 'CARs',
+    core_stability: 'Stabilità Core',
+    activation: 'Attivazione',
+    potentiation: 'Potenziamento',
+    isometric: 'Isometria',
+    specific_preparation: 'Preparazione Specifica',
+    ramp_up: 'Ramp-Up',
+    self_myofascial_release: 'Rilascio Miofasciale'
+  };
+
+  // The Warm-Up Engine's own exercise library, folded into the same
+  // enciclopedia entries as the main exercises - so warm-up movements get
+  // the same well-written explanation cards instead of only existing inside
+  // the warm-up player. Asked live: the warm-up feature shipped without a
+  // library entry for its own exercises.
+  function warmupItems() {
+    return warmupCatalogItems().map(function (ex) {
+      const regions = Array.isArray(ex.target_regions) && ex.target_regions.length
+        ? ex.target_regions.map(function (r) { return String(r || '').replace(/_/g, ' '); }).join(', ')
+        : '';
+      const dose = ex.default_sets
+        ? (ex.default_sets + (ex.default_reps ? ' x ' + ex.default_reps + ' rip.' : (ex.default_duration ? ' x ' + ex.default_duration + ' s' : '')))
+        : '';
+      const cueBits = [];
+      if (dose) cueBits.push('Default: ' + dose);
+      if (ex.equipment && ex.equipment !== 'none') cueBits.push(ex.equipment);
+      if (regions) cueBits.push('Distretti: ' + regions);
+      const body = [ex.description, ex.instructions].filter(Boolean).join(' ');
+      return {
+        id: 'wu-' + ex.id,
+        cat: 'warmup',
+        muscle: WARMUP_CATEGORY_LABELS[ex.category] || ex.category || '',
+        title: ex.name,
+        body: body,
+        extra: { body: body, mistakes: ex.cautions || '', cue: cueBits.join(' · ') }
+      };
+    });
+  }
+
   function muscleGuide(muscle) {
     return MUSCLES[String(muscle || '').toUpperCase()] || null;
   }
@@ -329,7 +381,7 @@
     });
     return SCALES.concat(TECHNIQUES, PROGRESSIONS, SPLITS, GLOSSARY.map(function (g) {
       return { id: 'gl-' + g.id, cat: 'glossario', title: g.title, body: g.what + ' ' + g.why, extra: g };
-    }), extras, exFromCatalog);
+    }), extras, exFromCatalog, warmupItems());
   }
 
   function searchKnowledge(query) {
@@ -390,6 +442,8 @@
     EXERCISE_MUSCLE_NODE: EXERCISE_MUSCLE_NODE,
     GLOSSARY: GLOSSARY,
     EXERCISES: EXERCISES,
+    WARMUP_CATEGORY_LABELS: WARMUP_CATEGORY_LABELS,
+    warmupItems: warmupItems,
     fold: fold,
     muscleGuide: muscleGuide,
     explainExercise: explainExercise,
