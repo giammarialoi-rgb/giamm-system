@@ -10133,12 +10133,40 @@ function persist() {
           subs: bak.subs || {},
           skips: bak.skips || {},
           intelTargets: bak.intelTargets || {},
+          // These ten were backed up by snapshotCoachMaster but missing here, so
+          // while a client session was open persist() wrote the *client's* copy
+          // of each one straight into the coach's personal record. An exit that
+          // completed put them back from the in-memory snapshot and hid it; an
+          // exit that never ran - a reload, a crash, the app being killed - left
+          // the coach's own data overwritten on disk, with every later backup
+          // then capturing the already-overwritten state. Reported from the
+          // field as a day and a half of the coach's own food diary vanishing.
+          // resetSandboxSessionState() was fixed for exactly this in the assign
+          // sandbox; persist() was never brought in line. Keep this list equal
+          // to what snapshotCoachMaster() captures.
+          bodyChecks: bak.bodyChecks || [],
+          nutritionDaily: bak.nutritionDaily || {},
+          bw: bak.bw || {},
+          exMuscle: bak.exMuscle || {},
+          loadTypes: bak.loadTypes || {},
+          tempos: bak.tempos || {},
+          bonus: bak.bonus || {},
+          warmups: bak.warmups || {},
+          warmupProgress: bak.warmupProgress || {},
+          warmupAssignment: bak.warmupAssignment || null,
           profile: (bak.profile != null && typeof bak.profile === 'object') ? bak.profile : (sanitized.profile || {}),
           // Never persist sticky coach-session locks: cold start must open personal app.
           coachAssigning: null,
           coachViewingClient: false,
           coachSessionActive: false
         });
+      } else {
+        // A client session with no snapshot to restore from: we cannot tell the
+        // coach's data from the client's, so writing would risk saving the
+        // client's over the coach's. Skipping leaves the last good personal
+        // record on disk untouched, which is always the safer of the two.
+        console.warn('[PERSIST] refused to write personal store during a client session with no coach snapshot');
+        return;
       }
     }
     if (sanitized && typeof sanitized === 'object') {
@@ -10173,6 +10201,14 @@ function persist() {
       const bak = (store.coachAssigning || store.coachViewingClient)
         ? (window.__cpAssignBackup || window.__cpCoachViewBackup)
         : null;
+      // This path replaces the whole personal record with a stripped-down one -
+      // no nutritionDaily, no activeProgram, no warm-ups. Doing that during a
+      // client session would gut the coach's own record and rebuild it partly
+      // from the client's live values. Leave the last good record alone instead.
+      if (store.coachAssigning || store.coachViewingClient) {
+        console.warn('[PERSIST] skipped emergency minimal write during a client session');
+        return;
+      }
       const sanitizedStore = {
         prefs: store.prefs || {},
         bw: store.bw || {},
