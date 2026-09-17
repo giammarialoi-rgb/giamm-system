@@ -90,4 +90,25 @@ for (const [label, input] of [
   ok(noId === null, 'loadMedia short-circuits when there is no id to look up');
 }
 
+// --- the sheet looks images up under the resolved exercise name -----------
+//
+// A canonical id derived from free text makes "Stacco da terra con bilanciere"
+// a different exercise from "Stacco da terra", so the library showed a picture
+// and the workout showed a placeholder for the same lift. Programs are written
+// in free text, so this affects most of them. The encyclopedia already resolves
+// those wordings; the sheet has to ask it rather than use the raw string.
+{
+  const base = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
+  const at = base.indexOf('function openExerciseInfoSheet');
+  assert.ok(at !== -1, 'openExerciseInfoSheet not found');
+  const body = base.slice(at, base.indexOf('\nfunction ', at + 20));
+
+  ok(/const mediaName = \(explained && explained\.matched && explained\.title\) \|\| name;/.test(body),
+    'the sheet resolves the exercise name before deriving the media id');
+  ok(body.includes('exerciseIdFor(mediaName)'),
+    'and the lookup uses that resolved name, not the one written in the program');
+  ok(/\|\| name;/.test(body),
+    'an exercise the encyclopedia does not recognise falls back to the written name, so custom exercises are unchanged');
+}
+
 console.log('\nAll media UI component tests passed.');

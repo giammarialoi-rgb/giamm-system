@@ -26659,8 +26659,16 @@ function openExerciseInfoSheet(idx, exerciseName) {
   window.__exInfoMedia = null;
   const mediaSeq = (window.__exInfoSeq = (window.__exInfoSeq || 0) + 1);
   if (window.NurvanMediaUI) {
+    // Look the image up under the name the encyclopedia resolved to, not the
+    // one written in the program. A canonical id derived from free text makes
+    // "Stacco da terra con bilanciere" a different exercise from "Stacco da
+    // terra", so the library showed the picture and the workout did not, for
+    // what is the same lift. The encyclopedia already resolves those wordings;
+    // this just asks it. An exercise it does not recognise returns the written
+    // name unchanged, so a custom exercise behaves exactly as before.
+    const mediaName = (explained && explained.matched && explained.title) || name;
     window.NurvanMediaUI
-      .loadMedia('exercise', window.NurvanMediaUI.exerciseIdFor(name), name)
+      .loadMedia('exercise', window.NurvanMediaUI.exerciseIdFor(mediaName), mediaName)
       .then(function (manifest) {
         if (mediaSeq !== window.__exInfoSeq) return;
         if (!manifest || !manifest.hasMedia) return;
