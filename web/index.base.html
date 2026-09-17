@@ -18604,15 +18604,6 @@ async function fetchWarmupAssignment() {
 }
 window.fetchWarmupAssignment = fetchWarmupAssignment;
 
-function confirmWarmupExit() {
-  var msg = 'Uscire dal warm-up?\n\nIl warm-up non verrà completato.';
-  if (confirm(msg)) {
-    persistWarmupPlayerProgress('aborted');
-    closeWarmupPlayer();
-  }
-}
-window.confirmWarmupExit = confirmWarmupExit;
-
 function renderWarmupPlayer() {
   var st = window.__warmupPlayerState;
   if (!st) return;
@@ -18622,12 +18613,12 @@ function renderWarmupPlayer() {
   if (existing) existing.remove();
   var overlay = document.createElement('div');
   overlay.id = 'warmup-player-modal';
-  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:#0a0a0a;z-index:10200;flex-direction:column;padding:0;box-sizing:border-box;';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:#0a0a0a;z-index:10200;flex-direction:column;padding:16px;box-sizing:border-box;overflow:auto;';
 
   if (st.idx >= warmup.items.length) {
     persistWarmupPlayerProgress('completed');
     overlay.innerHTML =
-      '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;padding:16px;">' +
+      '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;">' +
       '<div style="font-size:40px;">✓</div>' +
       '<div style="font-size:16px;font-weight:900;color:#4caf50;">WARM-UP COMPLETATO</div>' +
       '<button class="btn btn-primary" type="button" style="font-size:13px;padding:12px 24px;" onclick="closeWarmupPlayer()">INIZIA ALLENAMENTO</button>' +
@@ -18645,16 +18636,12 @@ function renderWarmupPlayer() {
       it.rampUp.map(function (s) { return '<div style="display:flex;justify-content:space-between;background:#141414;padding:8px 12px;border-radius:8px;"><span style="color:#ccc;font-size:13px;">' + s.load + ' kg</span><span style="color:#888;font-size:13px;">× ' + s.reps + '</span></div>'; }).join('') +
       '</div>';
   }
-
-  var mediaHtml = renderMediaPlaceholder(false, null, it.name);
-
   overlay.innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:center;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;border-bottom:1px solid #222;background:#0d0d0d;flex-shrink:0;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
     '<div style="font-size:11px;color:#888;font-weight:800;">' + (st.idx + 1) + ' / ' + n + '</div>' +
-    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="confirmWarmupExit()">ESCI</button>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="closeWarmupPlayer()">CHIUDI</button>' +
     '</div>' +
-    '<div style="flex:1;overflow-y:auto;padding:16px;box-sizing:border-box;">' +
-    mediaHtml +
+    '<div style="flex:1;display:flex;flex-direction:column;justify-content:center;">' +
     '<div style="font-size:9px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:6px;">' + esc(WARMUP_CATEGORY_LABELS[it.category] || it.category || '') + '</div>' +
     '<div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:10px;">' + esc(it.name) + '</div>' +
     (ex ? '<div style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:10px;">' + esc(ex.description) + '</div>' +
@@ -18664,7 +18651,7 @@ function renderWarmupPlayer() {
     rampHtml +
     (it.notes && !(ex && ex.cautions) ? '<div style="font-size:11px;color:#888;">' + esc(it.notes) + '</div>' : '') +
     '</div>' +
-    '<div style="display:flex;gap:8px;padding:16px;background:#0d0d0d;border-top:1px solid #222;flex-shrink:0;box-sizing:border-box;">' +
+    '<div style="display:flex;gap:8px;margin-top:16px;">' +
     '<button class="btn btn-outline" type="button" style="flex:1;font-size:12px;padding:12px;" onclick="warmupPlayerSkipItem()">SALTA</button>' +
     '<button class="btn btn-primary" type="button" style="flex:2;font-size:12px;padding:12px;" onclick="warmupPlayerCompleteItem()">COMPLETATO</button>' +
     '</div>';
@@ -19000,10 +18987,6 @@ function renderTraining(c){
       <div style="height:120px;"></div>`;
     c.innerHTML = h;
     calcStats();
-    // Render media thumbnails for exercises
-    if (typeof refreshWorkoutExerciseMediaSlots === 'function') {
-      refreshWorkoutExerciseMediaSlots();
-    }
     if (window.__loadPrefillDirty) {
       window.__loadPrefillDirty = false;
       try { persist(); } catch (_) {}
@@ -26151,43 +26134,6 @@ function refreshKnowledgeMediaSlots() {
 }
 window.refreshKnowledgeMediaSlots = refreshKnowledgeMediaSlots;
 
-function refreshWorkoutExerciseMediaSlots() {
-  if (typeof NurvanExerciseMedia === 'undefined' || !NurvanExerciseMedia.canonicalExerciseId) return;
-  document.querySelectorAll('.exercise-name-heading').forEach(function (heading) {
-    const exerciseName = heading.querySelector('span:last-child');
-    const parent = heading.parentElement;
-    if (!parent || parent.dataset.mediaSlotAdded || !exerciseName) return;
-    const name = exerciseName.textContent.trim();
-    const canonicalId = NurvanExerciseMedia.canonicalExerciseId(name);
-    const slot = document.createElement('div');
-    slot.className = 'nurvan-media-slot';
-    slot.setAttribute('data-media-pending', '1');
-    slot.setAttribute('data-media-type', 'exercise');
-    slot.setAttribute('data-media-id', canonicalId);
-    slot.setAttribute('data-media-name', name);
-    slot.style.cssText = 'width:40px;height:40px;flex-shrink:0;border-radius:8px;overflow:hidden;background:#141414;border:1px solid #333;';
-    parent.insertBefore(slot, heading);
-    heading.style.flex = '1';
-    if (!parent.style.display) parent.style.display = 'flex';
-    if (!parent.style.gap) parent.style.gap = '10px';
-    if (!parent.style.alignItems) parent.style.alignItems = 'flex-start';
-    if (!parent.style.marginBottom) parent.style.marginBottom = '8px';
-    parent.dataset.mediaSlotAdded = '1';
-  });
-  // Now render the media in the slots
-  if (typeof NurvanExerciseMedia === 'undefined' || !NurvanExerciseMedia.renderInto) return;
-  document.querySelectorAll('.exercise-name-heading').parentElement && document.querySelectorAll('.nurvan-media-slot[data-media-pending="1"]').forEach(function (el) {
-    el.removeAttribute('data-media-pending');
-    NurvanExerciseMedia.renderInto(el, {
-      entityType: el.getAttribute('data-media-type'),
-      entityId: el.getAttribute('data-media-id') || null,
-      canonicalName: el.getAttribute('data-media-name') || '',
-      size: 'thumb'
-    });
-  });
-}
-window.refreshWorkoutExerciseMediaSlots = refreshWorkoutExerciseMediaSlots;
-
 function knowledgeGuideHtml(id) {
   const K = window.NURVAN_TRAINING_KNOWLEDGE || {};
   const g = K.MUSCLES && K.MUSCLES[id];
@@ -26365,66 +26311,51 @@ function closeExerciseInfoSheet() {
   if (el) el.style.display = 'none';
 }
 
-function renderMediaPlaceholder(hasMedia, imageUrl, altText) {
-  if (hasMedia && imageUrl) {
-    return ‘<div style="width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;margin-bottom:16px;background:#141414;border:1px solid #333;"><img src="’ + esc(imageUrl) + ‘" alt="’ + esc(altText || ‘Esercizio’) + ‘" style="width:100%;height:100%;object-fit:contain;"></div>’;
-  }
-  return ‘<div style="width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;margin-bottom:16px;background:#141414;border:1px solid #444;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;"><div style="font-size:60px;font-weight:900;color:#444;">?</div><div style="font-size:13px;color:#666;font-weight:500;text-align:center;">Immagine non disponibile</div></div>’;
-}
-
 function paintExerciseInfoSheet(opts) {
   opts = opts || {};
   const idx = opts.idx;
-  const name = opts.name || ‘esercizio’;
+  const name = opts.name || 'esercizio';
   const explained = opts.explained || {};
-  const media = opts.media || {};
-  const athlete = (typeof isAthleteRole === ‘function’ && isAthleteRole()) || !!(store && store.clientShell && store.accountToken);
-  const week = (typeof currentWeek !== ‘undefined’ ? currentWeek : 1);
-  const day = (typeof currentDay !== ‘undefined’ ? currentDay : 0);
+  const athlete = (typeof isAthleteRole === 'function' && isAthleteRole()) || !!(store && store.clientShell && store.accountToken);
+  const week = (typeof currentWeek !== 'undefined' ? currentWeek : 1);
+  const day = (typeof currentDay !== 'undefined' ? currentDay : 0);
   const w = DATA && DATA.weeks && DATA.weeks[week - 1];
   const sess = w && (w.sessions || w.days || [])[day];
   const row = ((sess && (sess.exercises || sess.rows)) || [])[idx] || {};
-  const prevSets = (typeof collectPrevWeekSetLogs === ‘function’) ? collectPrevWeekSetLogs(idx, row) : [];
-  const policy = (typeof workoutProgressionPolicy === ‘function’) ? workoutProgressionPolicy(prevSets, row) : { advice: ‘’, addKg: 0 };
-  let sheet = document.getElementById(‘ex-info-sheet’);
+  const prevSets = (typeof collectPrevWeekSetLogs === 'function') ? collectPrevWeekSetLogs(idx, row) : [];
+  const policy = (typeof workoutProgressionPolicy === 'function') ? workoutProgressionPolicy(prevSets, row) : { advice: '', addKg: 0 };
+  let sheet = document.getElementById('ex-info-sheet');
   if (!sheet) {
-    sheet = document.createElement(‘div’);
-    sheet.id = ‘ex-info-sheet’;
-    sheet.style.cssText = ‘display:none;position:fixed;inset:0;z-index:10150;background:#0a0a0a;padding:0;box-sizing:border-box;overflow:auto;flex-direction:column;’;
+    sheet = document.createElement('div');
+    sheet.id = 'ex-info-sheet';
+    sheet.style.cssText = 'display:none;position:fixed;inset:0;z-index:10150;background:rgba(0,0,0,.88);align-items:flex-end;justify-content:center;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));box-sizing:border-box;';
     sheet.onclick = function (ev) { if (ev.target === sheet) closeExerciseInfoSheet(); };
     document.body.appendChild(sheet);
   }
   const title = explained.title || name;
   const body = opts.loading
-    ? ‘Cerco l’esecuzione corretta…’
-    : (explained.body || ‘Tieni la tecnica pulita e il RIR della scheda.’);
-  const mistakes = !opts.loading && explained.mistakes ? (‘<p style="font-size:12px;color:#f0c0c0;line-height:1.4;"><b>Errori comuni:</b> ‘ + esc(explained.mistakes) + ‘</p>’) : ‘’;
-  const cue = !opts.loading && explained.cue ? (‘<p style="font-size:12px;color:var(--gold);">’ + esc(explained.cue) + ‘</p>’) : ‘’;
-  const muscle = explained.muscle ? (‘ · ‘ + explained.muscle) : ‘’;
+    ? 'Cerco l’esecuzione corretta…'
+    : (explained.body || 'Tieni la tecnica pulita e il RIR della scheda.');
+  const mistakes = !opts.loading && explained.mistakes ? ('<p style="font-size:12px;color:#f0c0c0;line-height:1.4;"><b>Errori comuni:</b> ' + esc(explained.mistakes) + '</p>') : '';
+  const cue = !opts.loading && explained.cue ? ('<p style="font-size:12px;color:var(--gold);">' + esc(explained.cue) + '</p>') : '';
+  const muscle = explained.muscle ? (' · ' + explained.muscle) : '';
   const unknown = !!(opts.unknown && !opts.loading);
-  const mediaHtml = renderMediaPlaceholder(media && media.hasMedia, media && media.media && media.media.master, title);
-  sheet.innerHTML = ‘<div style="display:flex;flex-direction:column;height:100%;background:#0a0a0a;">’ +
-    ‘<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #222;background:#0d0d0d;flex-shrink:0;">’ +
-    ‘<div style="font-size:10px;color:var(--gold);font-weight:800;">CHIEDI INFO’ + esc(muscle) + ‘</div>’ +
-    ‘<button type="button" class="btn btn-outline" style="padding:4px 8px;font-size:9px;" onclick="closeExerciseInfoSheet()">✕ CHIUDI</button>’ +
-    ‘</div>’ +
-    ‘<div style="flex:1;overflow-y:auto;padding:16px;box-sizing:border-box;">’ +
-    mediaHtml +
-    ‘<h2 style="color:#fff;font-size:18px;margin:0 0 12px;">’ + esc(title) + ‘</h2>’ +
-    ‘<p style="font-size:13px;color:#ccc;line-height:1.45;margin:0 0 12px;">’ + esc(body) + ‘</p>’ +
+  sheet.innerHTML = '<div style="width:100%;max-width:520px;max-height:88vh;overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px 16px 12px 12px;padding:16px;color:#eee;box-sizing:border-box;" onclick="event.stopPropagation()">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">CHIEDI INFO' + esc(muscle) + '</div>' +
+    '<h2 style="color:#fff;font-size:18px;margin:6px 0 8px;">' + esc(title) + '</h2>' +
+    '<p style="font-size:13px;color:#ccc;line-height:1.45;">' + esc(body) + '</p>' +
     mistakes + cue +
-    (unknown ? ‘<p style="font-size:12px;color:#f6c;margin:12px 0;">Non risulta un esercizio standard. Puoi aggiungerlo all’enciclopedia con la tua spiegazione.</p>’ : ‘’) +
-    ‘<div style="margin:16px 0;padding:12px;background:#141414;border:1px solid #333;border-radius:10px;">’ +
-    ‘<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:4px;">RIR / CARICO</div>’ +
-    ‘<p style="font-size:12px;color:#ccc;line-height:1.4;margin:0;">’ + esc(policy.advice || ‘RIR 2 = due reps in canna. Se chiudi le serie, la settimana dopo +2,5 kg (o +1 kg se i pesi sono già bassi).’) + ‘</p></div>’ +
-    ‘<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" data-q="’ + encodeURIComponent(name) + ‘" onclick="openKnowledgeFor(decodeURIComponent(this.getAttribute(\’data-q\’)||\’\’))">APRI ENCICLOPEDIA</button>’ +
-    (unknown ? ‘<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="’ + encodeURIComponent(name) + ‘" onclick="closeExerciseInfoSheet();openAddEncyclopediaExercise(decodeURIComponent(this.getAttribute(\’data-q\’)||\’\’))">AGGIUNGI ALL’ENCICLOPEDIA</button>’ : ‘’) +
+    (unknown ? '<p style="font-size:12px;color:#f6c;">Non risulta un esercizio standard. Puoi aggiungerlo all’enciclopedia con la tua spiegazione.</p>' : '') +
+    '<div style="margin:10px 0;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:4px;">RIR / CARICO</div>' +
+    '<p style="font-size:12px;color:#ccc;line-height:1.4;margin:0;">' + esc(policy.advice || 'RIR 2 = due reps in canna. Se chiudi le serie, la settimana dopo +2,5 kg (o +1 kg se i pesi sono già bassi).') + '</p></div>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="openKnowledgeFor(decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">APRI ENCICLOPEDIA</button>' +
+    (unknown ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="closeExerciseInfoSheet();openAddEncyclopediaExercise(decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">AGGIUNGI ALL’ENCICLOPEDIA</button>' : '') +
     (athlete
-      ? ‘<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="’ + encodeURIComponent(name) + ‘" onclick="closeExerciseInfoSheet();askHumanCoachAboutExercise(‘ + Number(idx) + ‘, decodeURIComponent(this.getAttribute(\’data-q\’)||\’\’))">CHIEDI AL COACH</button>’
-      : ‘<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="’ + encodeURIComponent(name) + ‘" onclick="askCoachAiFromInfoSheet(‘ + Number(idx) + ‘, decodeURIComponent(this.getAttribute(\’data-q\’)||\’\’))">CHIEDI A COACH AI</button>’) +
-    ‘</div>’ +
-    ‘</div>’;
-  sheet.style.display = ‘flex’;
+      ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="closeExerciseInfoSheet();askHumanCoachAboutExercise(' + Number(idx) + ', decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">CHIEDI AL COACH</button>'
+      : '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="askCoachAiFromInfoSheet(' + Number(idx) + ', decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">CHIEDI A COACH AI</button>') +
+    '<button type="button" class="btn btn-outline" style="width:100%;" onclick="closeExerciseInfoSheet()">CHIUDI</button></div>';
+  sheet.style.display = 'flex';
 }
 
 function openExerciseInfoSheet(idx, exerciseName) {
@@ -26435,32 +26366,17 @@ function openExerciseInfoSheet(idx, exerciseName) {
   const lookup = window.lookupTrainingKnowledge || (window.NURVAN_TRAINING_KNOWLEDGE && window.NURVAN_TRAINING_KNOWLEDGE.lookupAny);
   const explained = typeof lookup === 'function' ? lookup(name) : (typeof explainExercise === 'function' ? explainExercise(name) : null);
   const matched = !!(explained && explained.matched && explained.body);
-
-  // Load media (master image) on-demand
-  let mediaData = { hasMedia: false };
-  if (typeof NurvanExerciseMedia !== 'undefined' && NurvanExerciseMedia.resolve) {
-    const canonicalId = (typeof NurvanExerciseMedia !== 'undefined' && NurvanExerciseMedia.canonicalExerciseId)
-      ? NurvanExerciseMedia.canonicalExerciseId(name)
-      : name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-    NurvanExerciseMedia.resolve('exercise', canonicalId, { canonicalName: name }).then(function (m) {
-      if (m && m.hasMedia && m.media && m.media.master) {
-        mediaData = m;
-        paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: !matched, media: mediaData });
-      }
-    }).catch(function () {});
-  }
-
-  paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: !matched, media: mediaData });
+  paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: !matched });
   if (matched) return;
   Promise.resolve(researchExerciseKnowledge(name)).then(function (found) {
     if (found && found.matched && !found.unknown && found.body) {
       persistKnowledgeExtra({ name: found.title || name, muscle: found.muscle, how: found.body, mistakes: found.mistakes, cue: found.cue });
-      paintExerciseInfoSheet({ idx: idx, name: name, explained: found, loading: false, media: mediaData });
+      paintExerciseInfoSheet({ idx: idx, name: name, explained: found, loading: false });
     } else {
-      paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: false, unknown: true, media: mediaData });
+      paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: false, unknown: true });
     }
   }).catch(function () {
-    paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: false, unknown: true, media: mediaData });
+    paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: false, unknown: true });
   });
 }
 
@@ -26599,13 +26515,9 @@ function askHumanCoachAboutExercise(idx, exerciseName) {
   if (typeof applyChatPrefill === 'function') applyChatPrefill(prefill);
 }
 
-function askExerciseInfoToCoach(idx, exerciseName) {
-  openExerciseInfoSheet(idx, exerciseName);
-}
 window.openExerciseInfoSheet = openExerciseInfoSheet;
 window.closeExerciseInfoSheet = closeExerciseInfoSheet;
 window.paintExerciseInfoSheet = paintExerciseInfoSheet;
-window.askExerciseInfoToCoach = askExerciseInfoToCoach;
 window.askCoachAiFromInfoSheet = askCoachAiFromInfoSheet;
 window.askHumanCoachAboutExercise = askHumanCoachAboutExercise;
 window.renderTrainingKnowledge = renderTrainingKnowledge;
