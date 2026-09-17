@@ -40498,7 +40498,7 @@ function formatCoachError(err) {
       ? 'Coach AI non configurato: backend raggiungibile ma manca GEMINI_API_KEY sul server.'
       : 'Coach AI non configurato: configurare il backend e GEMINI_API_KEY.';
   }
-  if (code === 'AI_TIMEOUT' || err?.name === 'AbortError' || /Timeout della richiesta AI|AI_TIMEOUT/i.test(msg)) {
+  if (code === 'AI_TIMEOUT' || code === 'REQUEST_TIMEOUT' || err?.name === 'AbortError' || /Timeout della richiesta AI|AI_TIMEOUT/i.test(msg)) {
     return 'Timeout della richiesta AI: riprova tra qualche secondo.';
   }
   if (code === 'AI_PROVIDER_UNAVAILABLE' || code === 'AI_CIRCUIT_OPEN') {
@@ -40529,7 +40529,16 @@ async function apiFetch(url, options, timeoutMs=90000) {
     return response;
   } catch(err) {
     console.error('[Coach AI] network error', err);
-    if(err.name === 'AbortError') throw new Error('Timeout della richiesta AI.');
+    // apiFetch wraps every request, not just Coach AI ones, so this message has
+    // to be true of all of them. Calling a timed-out client creation an "AI
+    // timeout" sent a real diagnosis off in the wrong direction for an hour.
+    // AI callers still get their own wording through friendlyAiError, which
+    // matches on the code below.
+    if (err.name === 'AbortError') {
+      const timeout = new Error('Il server non ha risposto in tempo. Potrebbe essersi appena riavviato: riprova fra qualche secondo.');
+      timeout.code = 'REQUEST_TIMEOUT';
+      throw timeout;
+    }
     throw err;
   } finally {
     clearTimeout(timer);
@@ -49205,24 +49214,50 @@ function suggestProgramsForProfile(profile) {
   // Same audience convention as mapIntakeToCatalogFilters/rankCatalogPrograms:
   // an untagged/"unisex" program is always fine, a mismatched explicit tag
   // (male vs female) is excluded outright, not just de-prioritized.
-  const sexRaw = String((profile && profile.sex) || '').toLowerCase();
+  const inCoachClientContext = !!(typeof store !== 'undefined' && store && (store.coachAssigning || store.coachViewingClient));
+  const intake = (inCoachClientContext && store.coachWorkspace && store.coachWorkspace.intake) || null;
+  const sexRaw = String((intake && intake.sex) || (profile && profile.sex) || '').toLowerCase();
   let audience = null;
-  if (/femmin/.test(sexRaw)) audience = 'female';
-  else if (/masch|uomo/.test(sexRaw)) audience = 'male';
+  if (/femmin|donna|female/.test(sexRaw)) audience = 'female';
+  else if (/masch|uomo|male/.test(sexRaw)) audience = 'male';
+
+  // Same mapping mapIntakeToCatalogFilters uses, so the questionnaire's wording
+  // and the catalog's tags agree on what "casa" or "palestra" mean.
+  let equipment = '';
+  const eqRaw = String((intake && intake.equipment) || (profile && profile.equipment) || '');
+  if (/corpo\s*libero/i.test(eqRaw)) equipment = 'bodyweight';
+  else if (/casa/i.test(eqRaw)) equipment = 'casa';
+  else if (/palestra|macchine|pesi|panca/i.test(eqRaw)) equipment = 'palestra';
   // Day count used to always read store.prefs.frequency - a leftover/default
   // (often literally 4) from whichever program was last being edited in this
   // session, completely unrelated to a brand new client. While setting up a
   // client (coachAssigning/coachViewingClient), the day count that client
   // actually specified in their own intake is what must be used instead.
-  const inCoachClientContext = !!(typeof store !== 'undefined' && store && (store.coachAssigning || store.coachViewingClient));
-  const clientIntakeSessions = inCoachClientContext && store.coachWorkspace && store.coachWorkspace.intake
-    ? parseInt(store.coachWorkspace.intake.sessionsPerWeek, 10)
-    : NaN;
+  const clientIntakeSessions = intake ? parseInt(intake.sessionsPerWeek, 10) : NaN;
   const freq = Number.isFinite(clientIntakeSessions) && clientIntakeSessions > 0
     ? clientIntakeSessions
     : (inCoachClientContext ? 0 : (parseInt(store.prefs && store.prefs.frequency, 10) || 0));
+
+  // Setting up a client who has not filled the questionnaire in yet: there is
+  // nothing here to suggest FROM. An unfiltered list is worse than no list,
+  // because it reads as an answer - it put a page of women's 4-day full-gym
+  // programs in front of a coach setting up a man who had told us nothing yet.
+  // The caller hides the whole card on an empty result.
+  if (inCoachClientContext && !audience && !freq && !equipment) return [];
+
+  // A program needing more equipment than the person has cannot be run at all,
+  // so ranking it lower is not enough. The reverse is fine: a home program
+  // works in a full gym.
+  const EQUIPMENT_RANK = { bodyweight: 1, casa: 2, palestra: 3 };
+  const availableEquipment = EQUIPMENT_RANK[equipment] || 0;
+
   return list
     .filter((p) => !audience || !p.audience || p.audience === audience)
+    // Asked for two sessions a week, do not offer three. This was a +2 scoring
+    // nudge before, which a strong goal match easily outweighed.
+    .filter((p) => !freq || !p.days_per_week || p.days_per_week <= freq)
+    .filter((p) => !availableEquipment || !EQUIPMENT_RANK[p.equipment]
+      || EQUIPMENT_RANK[p.equipment] <= availableEquipment)
     .map((p) => {
       let score = 0;
       (p.goals || []).forEach((g) => { if (want.has(g)) score += 3; });
@@ -64630,13 +64665,15 @@ async function submitAddClient() {
       return;
     }
   }
-  if (status) status.textContent = 'Creazione…';
+  if (status) status.textContent = 'Creazione… (se il server era fermo puo metterci qualche secondo)';
   try {
     const payload = await practiceFetch('/api/coach/clients', {
       method: 'POST',
       headers: practiceHeaders(true),
       body: JSON.stringify({ firstName: firstName, lastName: lastName, password: password, intakeMode: intakeMode, intake: intake })
-    }, 25000);
+      // 25s was below the 20-30s this host can take to wake from idle, so the
+      // first client created after a quiet spell timed out almost by rule.
+    }, 45000);
     if (!payload || !payload.ok) throw new Error((payload && payload.error) || 'Cliente non creato.');
     showOverlay('cp-add', false);
     const url = payload.inviteUrl || '';

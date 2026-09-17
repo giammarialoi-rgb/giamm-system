@@ -3208,13 +3208,15 @@ async function submitAddClient() {
       return;
     }
   }
-  if (status) status.textContent = 'Creazione…';
+  if (status) status.textContent = 'Creazione… (se il server era fermo puo metterci qualche secondo)';
   try {
     const payload = await practiceFetch('/api/coach/clients', {
       method: 'POST',
       headers: practiceHeaders(true),
       body: JSON.stringify({ firstName: firstName, lastName: lastName, password: password, intakeMode: intakeMode, intake: intake })
-    }, 25000);
+      // 25s was below the 20-30s this host can take to wake from idle, so the
+      // first client created after a quiet spell timed out almost by rule.
+    }, 45000);
     if (!payload || !payload.ok) throw new Error((payload && payload.error) || 'Cliente non creato.');
     showOverlay('cp-add', false);
     const url = payload.inviteUrl || '';

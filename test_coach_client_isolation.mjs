@@ -88,10 +88,19 @@ for (const src of [html, built]) {
   ok(/femmin/.test(fnBody) && /masch\|uomo/.test(fnBody), '4b. gender is derived from profile.sex using the same convention as the rest of the app (mapIntakeToCatalogFilters)');
   ok(fnBody.includes(".filter((p) => !audience || !p.audience || p.audience === audience)"),
     '4c. programs tagged for the other gender are excluded from suggestions outright, not just de-prioritized');
-  ok(fnBody.includes('store.coachWorkspace.intake.sessionsPerWeek'),
+  ok(/intake\s*\?\s*parseInt\(intake\.sessionsPerWeek, 10\)/.test(fnBody),
     '4d. while setting up a client, the day count comes from that client\'s own intake, not the coach\'s leftover session state');
   ok(fnBody.includes('inCoachClientContext ? 0 :'),
     '4e. outside a coach/client context (the personal profile), store.prefs.frequency is still used as before - this only changes the client-assignment case');
+  // The day count and the equipment were only scoring nudges, which a strong
+  // goal match outweighed: a client who said two sessions a week in a home gym
+  // was still offered four-day full-gym programs.
+  ok(fnBody.includes('.filter((p) => !freq || !p.days_per_week || p.days_per_week <= freq)'),
+    '4f. more sessions per week than the client asked for are excluded, not merely ranked lower');
+  ok(/EQUIPMENT_RANK\[p\.equipment\] <= availableEquipment/.test(fnBody),
+    '4g. a program needing more equipment than the client has is excluded (the reverse stays allowed)');
+  ok(/if \(inCoachClientContext && !audience && !freq && !equipment\) return \[\];/.test(fnBody),
+    '4h. a client whose questionnaire is not filled in yet gets no suggestions at all, rather than an unfiltered list');
 }
 
 console.log('\nAll coach/client isolation tests passed.');
