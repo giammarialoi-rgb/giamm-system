@@ -95,11 +95,29 @@ function loadCatalogues() {
 
 /* ---------- scan + map ------------------------------------------------- */
 
+// A thumbnail supplied alongside the master is ignored rather than treated as
+// its own asset: the thumbnail is derived here so every one comes out at the
+// same size the list slot expects. Left in, these would each be reported as an
+// unresolved exercise called "..._thumb", which is noise, not a problem.
+const THUMB_SUFFIX = /[-_]thumb$/i;
+
+function isSuppliedThumbnail(file) {
+  return THUMB_SUFFIX.test(path.basename(file, path.extname(file)));
+}
+
 function scanFolder(dir) {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir)
     .filter((f) => IMAGE_EXT.has(path.extname(f).toLowerCase()))
     .map((f) => path.join(dir, f));
+}
+
+function scanMasters(dir) {
+  const all = scanFolder(dir);
+  return {
+    masters: all.filter((f) => !isSuppliedThumbnail(f)),
+    ignoredThumbs: all.filter(isSuppliedThumbnail).length
+  };
 }
 
 // Edit distance, used only to name a likely intended target in the report. It
@@ -136,8 +154,11 @@ function nearestId(id, candidates) {
 function mapFiles(catalogues) {
   const candidates = [];
   const unresolved = [];
+  let ignoredThumbs = 0;
 
-  scanFolder(path.join(SOURCE, 'exercises')).forEach((file) => {
+  const exScan = scanMasters(path.join(SOURCE, 'exercises'));
+  ignoredThumbs += exScan.ignoredThumbs;
+  exScan.masters.forEach((file) => {
     const stem = path.basename(file, path.extname(file));
     const id = canonicalExerciseId(stem);
     if (catalogues.byExerciseId.has(id)) {
@@ -155,7 +176,9 @@ function mapFiles(catalogues) {
     });
   });
 
-  scanFolder(path.join(SOURCE, 'warmups')).forEach((file) => {
+  const wuScan = scanMasters(path.join(SOURCE, 'warmups'));
+  ignoredThumbs += wuScan.ignoredThumbs;
+  wuScan.masters.forEach((file) => {
     const id = path.basename(file, path.extname(file));
     if (catalogues.warmupIds.has(id)) {
       candidates.push({ ownerType: 'warmup', ownerId: id, label: catalogues.warmupIds.get(id), file });
@@ -196,7 +219,7 @@ function mapFiles(catalogues) {
     });
   });
 
-  return { matched, unresolved };
+  return { matched, unresolved, ignoredThumbs };
 }
 
 /* ---------- validate + transform --------------------------------------- */
@@ -377,7 +400,7 @@ async function main() {
   const catalogues = loadCatalogues();
   console.log(c.dim(`  catalogue: ${catalogues.byExerciseId.size} exercises, ${catalogues.warmupIds.size} warm-ups`));
 
-  let { matched, unresolved } = mapFiles(catalogues);
+  let { matched, unresolved, ignoredThumbs } = mapFiles(catalogues);
   if (ONLY) matched = matched.filter((m) => ONLY.includes(m.ownerId));
 
   if (unresolved.length) {
