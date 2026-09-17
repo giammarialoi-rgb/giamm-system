@@ -62,6 +62,7 @@
 <script src="warmup-exercise-library.js"></script>
 <script src="warmup-engine.js"></script>
 <script src="exercise-media-client.js"></script>
+<script src="exercise-media-ui.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -51859,16 +51860,18 @@ function renderWarmupPlayer() {
   if (existing) existing.remove();
   var overlay = document.createElement('div');
   overlay.id = 'warmup-player-modal';
-  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:#0a0a0a;z-index:10200;flex-direction:column;padding:16px;box-sizing:border-box;overflow:auto;';
+  overlay.className = 'nurvan-sheet is-open';
+  overlay.style.zIndex = '10200';
 
   if (st.idx >= warmup.items.length) {
     persistWarmupPlayerProgress('completed');
     overlay.innerHTML =
-      '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;">' +
+      '<div class="nurvan-sheet-panel">' +
+      '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;padding:16px;">' +
       '<div style="font-size:40px;">✓</div>' +
       '<div style="font-size:16px;font-weight:900;color:#4caf50;">WARM-UP COMPLETATO</div>' +
       '<button class="btn btn-primary" type="button" style="font-size:13px;padding:12px 24px;" onclick="closeWarmupPlayer()">INIZIA ALLENAMENTO</button>' +
-      '</div>';
+      '</div></div>';
     document.body.appendChild(overlay);
     return;
   }
@@ -51882,12 +51885,17 @@ function renderWarmupPlayer() {
       it.rampUp.map(function (s) { return '<div style="display:flex;justify-content:space-between;background:#141414;padding:8px 12px;border-radius:8px;"><span style="color:#ccc;font-size:13px;">' + s.load + ' kg</span><span style="color:#888;font-size:13px;">× ' + s.reps + '</span></div>'; }).join('') +
       '</div>';
   }
+  var warmupMediaHtml = (window.NurvanMediaUI && window.NurvanMediaUI.mediaPanel)
+    ? window.NurvanMediaUI.mediaPanel(window.__warmupItemMedia, it.name)
+    : '';
   overlay.innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+    '<div class="nurvan-sheet-panel">' +
+    '<div class="nurvan-sheet-head">' +
     '<div style="font-size:11px;color:#888;font-weight:800;">' + (st.idx + 1) + ' / ' + n + '</div>' +
-    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="closeWarmupPlayer()">CHIUDI</button>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="exitWarmupPlayer()">ESCI</button>' +
     '</div>' +
-    '<div style="flex:1;display:flex;flex-direction:column;justify-content:center;">' +
+    '<div class="nurvan-sheet-body">' +
+    warmupMediaHtml +
     '<div style="font-size:9px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:6px;">' + esc(WARMUP_CATEGORY_LABELS[it.category] || it.category || '') + '</div>' +
     '<div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:10px;">' + esc(it.name) + '</div>' +
     (ex ? '<div style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:10px;">' + esc(ex.description) + '</div>' +
@@ -51897,12 +51905,44 @@ function renderWarmupPlayer() {
     rampHtml +
     (it.notes && !(ex && ex.cautions) ? '<div style="font-size:11px;color:#888;">' + esc(it.notes) + '</div>' : '') +
     '</div>' +
-    '<div style="display:flex;gap:8px;margin-top:16px;">' +
+    '<div class="nurvan-sheet-foot">' +
     '<button class="btn btn-outline" type="button" style="flex:1;font-size:12px;padding:12px;" onclick="warmupPlayerSkipItem()">SALTA</button>' +
     '<button class="btn btn-primary" type="button" style="flex:2;font-size:12px;padding:12px;" onclick="warmupPlayerCompleteItem()">COMPLETATO</button>' +
-    '</div>';
+    '</div></div>';
   document.body.appendChild(overlay);
+  loadWarmupItemMedia(it);
 }
+
+// Warm-up items carry a real, stable library id, so no canonical-id
+// derivation is needed here. Fetched per item as it comes up, never for the
+// whole warm-up at once.
+function loadWarmupItemMedia(item) {
+  if (!item || !window.NurvanMediaUI) return;
+  var seq = (window.__warmupMediaSeq = (window.__warmupMediaSeq || 0) + 1);
+  window.__warmupItemMedia = null;
+  window.NurvanMediaUI.loadMedia('warmup', item.exerciseId, item.name).then(function (manifest) {
+    if (seq !== window.__warmupMediaSeq) return;
+    if (!manifest || !manifest.hasMedia) return;
+    var slot = document.querySelector('#warmup-player-modal [data-nurvan-media-slot]');
+    if (!slot) return;
+    window.__warmupItemMedia = manifest;
+    slot.outerHTML = window.NurvanMediaUI.mediaPanel(manifest, item.name);
+  });
+}
+
+// SALTA advances one item; COMPLETATO finishes the warm-up. This is the third
+// case: leave without either. Progress made so far is kept as 'partial', which
+// is what the card and the coach sync already understand - the warm-up is not
+// recorded as completed and keeps no completion timestamp.
+function exitWarmupPlayer() {
+  // à keeps this source line pure ASCII while still rendering "verra'"
+  // with its accent, so no stray encoding can creep into the bundle.
+  var proceed = confirm('Uscire dal warm-up?\n\nIl warm-up non verrà completato.');
+  if (!proceed) return;
+  try { persistWarmupPlayerProgress('partial'); } catch (_) {}
+  closeWarmupPlayer();
+}
+window.exitWarmupPlayer = exitWarmupPlayer;
 
 function warmupPlayerAdvance(status) {
   var st = window.__warmupPlayerState;
@@ -59554,7 +59594,7 @@ function renderTrainingKnowledge(c) {
 
 function closeExerciseInfoSheet() {
   const el = document.getElementById('ex-info-sheet');
-  if (el) el.style.display = 'none';
+  if (el) el.classList.remove('is-open');
 }
 
 function paintExerciseInfoSheet(opts) {
@@ -59574,7 +59614,7 @@ function paintExerciseInfoSheet(opts) {
   if (!sheet) {
     sheet = document.createElement('div');
     sheet.id = 'ex-info-sheet';
-    sheet.style.cssText = 'display:none;position:fixed;inset:0;z-index:10150;background:rgba(0,0,0,.88);align-items:flex-end;justify-content:center;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));box-sizing:border-box;';
+    sheet.className = 'nurvan-sheet';
     sheet.onclick = function (ev) { if (ev.target === sheet) closeExerciseInfoSheet(); };
     document.body.appendChild(sheet);
   }
@@ -59586,8 +59626,20 @@ function paintExerciseInfoSheet(opts) {
   const cue = !opts.loading && explained.cue ? ('<p style="font-size:12px;color:var(--gold);">' + esc(explained.cue) + '</p>') : '';
   const muscle = explained.muscle ? (' · ' + explained.muscle) : '';
   const unknown = !!(opts.unknown && !opts.loading);
-  sheet.innerHTML = '<div style="width:100%;max-width:520px;max-height:88vh;overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px 16px 12px 12px;padding:16px;color:#eee;box-sizing:border-box;" onclick="event.stopPropagation()">' +
+  // The knowledge lookup repaints this sheet a second time once it resolves,
+  // and the media lookup resolves independently. Both read the last painted
+  // options so neither one erases the other's result.
+  window.__exInfoLastPaint = opts;
+  const mediaHtml = (window.NurvanMediaUI && window.NurvanMediaUI.mediaPanel)
+    ? window.NurvanMediaUI.mediaPanel(opts.media || window.__exInfoMedia, title)
+    : '';
+  sheet.innerHTML = '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;">CHIEDI INFO' + esc(muscle) + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 10px;flex:0 0 auto;" onclick="closeExerciseInfoSheet()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    mediaHtml +
     '<h2 style="color:#fff;font-size:18px;margin:6px 0 8px;">' + esc(title) + '</h2>' +
     '<p style="font-size:13px;color:#ccc;line-height:1.45;">' + esc(body) + '</p>' +
     mistakes + cue +
@@ -59600,8 +59652,8 @@ function paintExerciseInfoSheet(opts) {
     (athlete
       ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="closeExerciseInfoSheet();askHumanCoachAboutExercise(' + Number(idx) + ', decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">CHIEDI AL COACH</button>'
       : '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="askCoachAiFromInfoSheet(' + Number(idx) + ', decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">CHIEDI A COACH AI</button>') +
-    '<button type="button" class="btn btn-outline" style="width:100%;" onclick="closeExerciseInfoSheet()">CHIUDI</button></div>';
-  sheet.style.display = 'flex';
+    '</div></div>';
+  sheet.classList.add('is-open');
 }
 
 function openExerciseInfoSheet(idx, exerciseName) {
@@ -59612,6 +59664,23 @@ function openExerciseInfoSheet(idx, exerciseName) {
   const lookup = window.lookupTrainingKnowledge || (window.NURVAN_TRAINING_KNOWLEDGE && window.NURVAN_TRAINING_KNOWLEDGE.lookupAny);
   const explained = typeof lookup === 'function' ? lookup(name) : (typeof explainExercise === 'function' ? explainExercise(name) : null);
   const matched = !!(explained && explained.matched && explained.body);
+  // Master image is fetched only here, when the sheet actually opens - never
+  // while the workout list renders. The sheet paints its placeholder first and
+  // swaps the image in if one arrives.
+  window.__exInfoMedia = null;
+  const mediaSeq = (window.__exInfoSeq = (window.__exInfoSeq || 0) + 1);
+  if (window.NurvanMediaUI) {
+    window.NurvanMediaUI
+      .loadMedia('exercise', window.NurvanMediaUI.exerciseIdFor(name), name)
+      .then(function (manifest) {
+        if (mediaSeq !== window.__exInfoSeq) return;
+        if (!manifest || !manifest.hasMedia) return;
+        const el = document.getElementById('ex-info-sheet');
+        if (!el || !el.classList.contains('is-open')) return;
+        window.__exInfoMedia = manifest;
+        if (window.__exInfoLastPaint) paintExerciseInfoSheet(window.__exInfoLastPaint);
+      });
+  }
   paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: !matched });
   if (matched) return;
   Promise.resolve(researchExerciseKnowledge(name)).then(function (found) {
