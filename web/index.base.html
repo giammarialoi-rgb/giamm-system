@@ -19554,6 +19554,27 @@ function closeWorkoutPdfExportModal() {
   if (modal) modal.style.display = 'none';
 }
 
+// Whose name belongs on an exported program. Inside a coach session this is
+// the client's, never the coach's: openCoachClient deliberately restores the
+// coach's own store.profile while showing the client's data, and store.account
+// is always the logged-in user, so both of those name the coach here.
+function workoutPdfAthleteName() {
+  const s = (typeof store !== 'undefined' && store) || {};
+  if (s.coachViewingClient || s.coachAssigning) {
+    const ws = s.coachWorkspace || {};
+    const client = ws.client || {};
+    return (typeof coachClientDisplayName === 'function' ? coachClientDisplayName() : '')
+      || (s.coachAssigning && s.coachAssigning.name)
+      || ws.assignName
+      || client.displayName
+      || client.username
+      || '';
+  }
+  return (s.account && s.account.name)
+    || (s.profile && (s.profile.first_name || s.profile.name))
+    || '';
+}
+
 function buildWorkoutPdfHtml(opts) {
   opts = opts || {};
   const weeksList = DATA.weeks || [];
@@ -19562,7 +19583,7 @@ function buildWorkoutPdfHtml(opts) {
   const endW = bounds.endW;
   const scope = bounds.scope;
 
-  const athlete = (store.account && store.account.name) || (store.profile && (store.profile.first_name || store.profile.name)) || '';
+  const athlete = workoutPdfAthleteName();
   let body = '';
   for (let wi = startW; wi <= endW; wi++) {
     const week = weeksList[wi - 1];
@@ -19713,7 +19734,7 @@ function buildWorkoutPdfBytes(opts) {
   var bounds = workoutPdfScopeBounds(opts);
   var startW = bounds.startW, endW = bounds.endW;
   var scope = bounds.scope;
-  var athlete = (store.account && store.account.name) || (store.profile && (store.profile.first_name || store.profile.name)) || '';
+  var athlete = workoutPdfAthleteName();
 
   var pages = [];
   var cmds = [];
