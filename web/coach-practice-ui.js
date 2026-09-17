@@ -2503,6 +2503,10 @@ function preferFilledExams(a, b) {
 
 function applyClientPayloadToLocal(payload) {
   payload = payload || {};
+  // Switch to the client's own memory area before writing anything. Every
+  // store.x assignment below is an accessor onto that area, so the coach's copy
+  // is never touched and there is nothing to undo when the session ends.
+  if (typeof nurvanEnterClientArea === 'function') nurvanEnterClientArea();
   const prog = payload.activeProgram || payload;
   try {
     DATA = (typeof normalizeProgram === 'function' && prog && prog.weeks)
@@ -3950,62 +3954,30 @@ function toggleCoachWsSection(key) {
 //
 // Switching client to client deliberately keeps the existing backup: the live
 // store holds the previous client's data there, so snapshotting would poison it.
+// A marker, not a copy. The coach's data lives in its own memory area now and
+// a client session never writes to it, so there is nothing to snapshot. The
+// cold-start guards still read this to tell a live session from a stale flag.
 function captureCoachMasterForClientView() {
   const inClientSession = !!(store && (store.coachViewingClient || store.coachAssigning));
-  if (!inClientSession) {
-    window.__cpCoachViewBackup = snapshotCoachMaster();
+  if (!inClientSession) window.__cpCoachViewBackup = { area: 'client', at: Date.now() };
+}
+
+
+// Empties the sandbox so an assignment starts from the client's own data and
+// not from whatever the coach happens to have logged. The list below has to
+// stay equal to the domain fields: a field left off it keeps the coach's value
+// visible inside the sandbox as though it belonged to the client, which is how
+// the coach's own body weight once turned up in a new client's setup.
+function resetSandboxSessionState() {
+  // Every field below is an accessor onto whichever memory area is active, so
+  // running this outside a client area would empty the coach's own copy rather
+  // than the sandbox's. The three call sites each enter the area first; this
+  // refuses anyway, because a stale coachAssigning flag would otherwise be
+  // enough to wipe the coach's training data.
+  if (typeof nurvanClientAreaActive === 'function' && !nurvanClientAreaActive()) {
+    console.warn('[SANDBOX] refused to clear: no client area is active');
     return;
   }
-  // Already inside a session with no backup: the live store is a client's, so
-  // there is no coach master to capture. Leave it null - the cold-start guards
-  // treat a missing backup as "not a real session" rather than adopting it.
-}
-
-function snapshotCoachMaster() {
-  return {
-    DATA: typeof DATA !== 'undefined' ? JSON.parse(JSON.stringify(DATA || {})) : {},
-    nutrition: store.nutrition ? JSON.parse(JSON.stringify(store.nutrition)) : null,
-    supplementation: store.supplementation ? JSON.parse(JSON.stringify(store.supplementation)) : null,
-    therapy: store.therapy ? JSON.parse(JSON.stringify(store.therapy)) : null,
-    exams: store.exams ? JSON.parse(JSON.stringify(store.exams)) : null,
-    activeProgramId: store.activeProgramId || null,
-    activeProgram: store.activeProgram ? JSON.parse(JSON.stringify(store.activeProgram)) : null,
-    currentWeek: typeof currentWeek !== 'undefined' ? currentWeek : 1,
-    currentDay: typeof currentDay !== 'undefined' ? currentDay : 0,
-    data: store.data ? JSON.parse(JSON.stringify(store.data)) : {},
-    customSets: store.customSets ? JSON.parse(JSON.stringify(store.customSets)) : {},
-    subs: store.subs ? JSON.parse(JSON.stringify(store.subs)) : {},
-    skips: store.skips ? JSON.parse(JSON.stringify(store.skips)) : {},
-    logs: Array.isArray(store.logs) ? JSON.parse(JSON.stringify(store.logs)) : [],
-    intelTargets: store.intelTargets ? JSON.parse(JSON.stringify(store.intelTargets)) : {},
-    bodyChecks: Array.isArray(store.bodyChecks) ? JSON.parse(JSON.stringify(store.bodyChecks)) : [],
-    nutritionDaily: store.nutritionDaily ? JSON.parse(JSON.stringify(store.nutritionDaily)) : {},
-    profile: store.profile ? JSON.parse(JSON.stringify(store.profile)) : {},
-    bw: store.bw ? JSON.parse(JSON.stringify(store.bw)) : {},
-    exMuscle: store.exMuscle ? JSON.parse(JSON.stringify(store.exMuscle)) : {},
-    loadTypes: store.loadTypes ? JSON.parse(JSON.stringify(store.loadTypes)) : {},
-    tempos: store.tempos ? JSON.parse(JSON.stringify(store.tempos)) : {},
-    bonus: store.bonus ? JSON.parse(JSON.stringify(store.bonus)) : {},
-    warmups: store.warmups ? JSON.parse(JSON.stringify(store.warmups)) : {},
-    warmupProgress: store.warmupProgress ? JSON.parse(JSON.stringify(store.warmupProgress)) : {},
-    warmupAssignment: store.warmupAssignment ? JSON.parse(JSON.stringify(store.warmupAssignment)) : null
-  };
-}
-
-// snapshotCoachMaster()/restoreCoachMaster() back up and restore the coach's
-// OWN personal data around every coachAssigning sandbox session (never
-// touched - it comes back exactly as it was on cancel/exit), but this reset
-// used to only clear data/customSets/subs/skips/logs/intelTargets. bw,
-// bodyChecks, nutritionDaily, exMuscle, loadTypes, tempos and bonus were
-// left completely untouched in the live store while assigning/importing a
-// plan for a client - so the coach's own logged body weight (and these
-// other personal fields) leaked straight into the client-assignment
-// sandbox, visible as if it belonged to the client being set up. Only
-// called from the coachAssigning sandbox flows (never from the separate,
-// already-correct coachViewingClient live-session path, which populates
-// all of these from the client's own synced data via applyClientPayloadToLocal
-// instead) - clearing them here is always safe.
-function resetSandboxSessionState() {
   store.data = {};
   store.customSets = {};
   store.subs = {};
@@ -4067,40 +4039,21 @@ function emptyClientAssignDraft() {
 }
 
 async function restoreCoachMaster(backup) {
-  if (!backup) return;
-  try { DATA = backup.DATA || { title: 'Nessun Programma Attivo', weeks: [] }; } catch (_) {}
-  store.nutrition = backup.nutrition;
-  store.supplementation = backup.supplementation;
-  store.therapy = backup.therapy;
-  store.exams = backup.exams;
-  store.activeProgramId = backup.activeProgramId;
-  store.activeProgram = backup.activeProgram;
-  store.data = backup.data || {};
-  store.customSets = backup.customSets || {};
-  store.subs = backup.subs || {};
-  store.skips = backup.skips || {};
-  store.logs = backup.logs || [];
-  store.intelTargets = backup.intelTargets || {};
-  store.bodyChecks = backup.bodyChecks || [];
-  store.nutritionDaily = backup.nutritionDaily || {};
-  store.profile = (backup.profile != null && typeof backup.profile === 'object')
-    ? backup.profile
-    : (store.profile && !store.__cpClientViewProfile ? store.profile : {});
+  // Switching back to the personal area is the entire restore. The coach's data
+  // was never written to during the session, so there is no copy to put back -
+  // which is exactly why a session that never reaches this function no longer
+  // leaves the client's data behind in the coach's record.
+  //
+  // `backup` is now only a marker and is ignored. The parameter stays so the
+  // four call sites (leave client view, exit session, assign send, assign
+  // cancel) need no change.
+  const left = (typeof nurvanLeaveClientArea === 'function') && nurvanLeaveClientArea();
   if (store.__cpClientViewProfile) delete store.__cpClientViewProfile;
-  store.bw = backup.bw || {};
-  store.exMuscle = backup.exMuscle || {};
-  store.loadTypes = backup.loadTypes || {};
-  store.tempos = backup.tempos || {};
-  store.bonus = backup.bonus || {};
-  store.warmups = backup.warmups || {};
-  store.warmupProgress = backup.warmupProgress || {};
-  store.warmupAssignment = backup.warmupAssignment || null;
-  if (typeof currentWeek !== 'undefined') currentWeek = backup.currentWeek || 1;
-  if (typeof currentDay !== 'undefined') currentDay = backup.currentDay || 0;
+  if (!left) return;
   if (typeof persist === 'function') persist();
   try {
-    if (backup.DATA && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
-      await GiammariaPersistence.activateCanonicalProgram(backup.DATA);
+    if (DATA && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
+      await GiammariaPersistence.activateCanonicalProgram(DATA);
     }
   } catch (err) {
     console.warn('[ASSIGN_RESTORE_IDB]', err);
@@ -4395,7 +4348,13 @@ function beginAssignSandbox(clientId, name, mode) {
   // a client's draft rather than the coach's own program is a small chip, which
   // is not enough to tell the two apart.
   store.__cpAssignBarExpanded = true;
-  window.__cpAssignBackup = snapshotCoachMaster();
+  // Order matters: enter the client area first. resetSandboxSessionState()
+  // below clears the domain fields, and those are accessors onto whichever area
+  // is active - run it a moment too early and it would clear the coach's own.
+  if (typeof nurvanEnterClientArea === 'function') nurvanEnterClientArea();
+  // A marker, not a copy. The coach's data no longer needs backing up, but the
+  // cold-start guards still read this to tell a live session from a stale flag.
+  window.__cpAssignBackup = { area: 'client', at: Date.now() };
   resetSandboxSessionState();
   if (typeof persist === 'function') persist();
   // copy: struttura della scheda personale, senza kg/serie fatte. import/programs/mylib: merge sezioni cliente.
@@ -5998,8 +5957,13 @@ async function applyCoachLibraryToAssign(clientId, name, entryId) {
 
   if (!store.coachAssigning) {
     store.coachAssigning = { clientId: clientId, name: name, mode: 'mylib' };
-    store.__cpAssignBarExpanded = false;
-    window.__cpAssignBackup = snapshotCoachMaster();
+    store.__cpAssignBarExpanded = true;
+    // Second way into the sandbox, and it has the same ordering requirement as
+    // beginAssignSandbox: seedAssignSandboxFromClient() below reaches
+    // resetSandboxSessionState(), which clears domain fields on whichever area
+    // is active. Enter the client area first or it clears the coach's own.
+    if (typeof nurvanEnterClientArea === 'function') nurvanEnterClientArea();
+    window.__cpAssignBackup = { area: 'client', at: Date.now() };
     seedAssignSandboxFromClient(clientId);
   }
   try {

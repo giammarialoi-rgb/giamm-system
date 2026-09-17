@@ -86,13 +86,19 @@ for (const src of [html, built]) {
   const resetStart = uiSrc.indexOf('function resetSandboxSessionState()');
   const resetBody = uiSrc.slice(resetStart, uiSrc.indexOf('\n}', resetStart) + 2);
   ok(resetBody.includes('store.warmups = ') && resetBody.includes('store.warmupProgress = '), '4a. resetSandboxSessionState clears both new fields');
-  const snapStart = uiSrc.indexOf('function snapshotCoachMaster()');
-  const snapBody = uiSrc.slice(snapStart, uiSrc.indexOf('\n}', snapStart) + 2);
-  ok(snapBody.includes('warmups:') && snapBody.includes('warmupProgress:'), '4b. snapshotCoachMaster backs up both new fields');
+  // There is no snapshot to back these up into any more: the coach's copy lives
+  // in its own memory area that a client session never writes to. What has to
+  // hold instead is that both fields are domain fields, so store.warmups inside
+  // a session reaches the client's area and not the coach's.
+  const baseSrc = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
+  const listStart = baseSrc.indexOf('var NURVAN_DOMAIN_FIELDS');
+  const domainList = baseSrc.slice(listStart, baseSrc.indexOf('];', listStart));
+  ok(/'warmups'/.test(domainList) && /'warmupProgress'/.test(domainList),
+    '4b. both new fields are domain fields, so they follow the active memory area');
   const restoreStart = uiSrc.indexOf('function restoreCoachMaster(backup)');
   const restoreBody = uiSrc.slice(restoreStart, uiSrc.indexOf('\n}', restoreStart) + 2);
-  ok(restoreBody.includes('store.warmups = backup.warmups') && restoreBody.includes('store.warmupProgress = backup.warmupProgress'),
-    '4c. restoreCoachMaster restores both new fields from the backup');
+  ok(restoreBody.includes('nurvanLeaveClientArea()'),
+    '4c. ending a session switches back to the personal area rather than copying fields back');
   const applyClientStart = uiSrc.indexOf('function applyClientPayloadToLocal(payload)');
   const applyClientBody = uiSrc.slice(applyClientStart, uiSrc.indexOf('\nfunction ', applyClientStart + 20));
   ok(applyClientBody.includes('store.warmups = payload.warmups'), '4d. the live coach-viewing-client path sources warmups from the client\'s own synced payload');

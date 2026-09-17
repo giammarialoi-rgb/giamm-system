@@ -16,10 +16,11 @@ function ok(value, message) {
 // picking a training-program suggestion for a new client ignored both the
 // client's gender and the training-days-per-week they were just given,
 // surfacing e.g. women's 4-day programs for a man who trains 3 days.
-// Standing rule reaffirmed explicitly: none of this may touch the coach's
-// own personal training data - snapshotCoachMaster()/restoreCoachMaster()
-// already back it up and restore it around every sandbox session untouched;
-// this only closes a gap in what gets cleared while the sandbox is active.
+// Standing rule reaffirmed explicitly: none of this may touch the coach's own
+// personal training data. That used to rest on snapshotCoachMaster() /
+// restoreCoachMaster() backing it up and putting it back around each sandbox
+// session; it now rests on the coach's data living in its own memory area that
+// a sandbox never writes to at all.
 console.log('--- Running Coach/Client Isolation Tests ---');
 
 const html = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
@@ -38,19 +39,26 @@ const uiSrc = fs.readFileSync(path.join(root, 'web/coach-practice-ui.js'), 'utf8
   }
 }
 
-// 2. snapshotCoachMaster/restoreCoachMaster remain the source of truth for
-// what "the coach's personal data" even means here - the reset list above
-// must be a subset of what gets backed up and restored, never diverging
-// (never clearing something that isn't safely restorable on cancel/exit).
+// 2. There is no snapshot to diverge from any more. What matters instead is
+// that every field resetSandboxSessionState() clears is a DOMAIN field.
+// Domain fields are accessors onto whichever memory area is active, so
+// clearing one during an assignment empties the client's copy. A field that is
+// not in the domain list lives on the shared identity object, and clearing it
+// there would take it away from the coach as well.
 {
-  const snapStart = uiSrc.indexOf('function snapshotCoachMaster()');
-  const snapBody = uiSrc.slice(snapStart, uiSrc.indexOf('\n}', snapStart) + 2);
-  const restoreStart = uiSrc.indexOf('function restoreCoachMaster(backup)');
-  const restoreBody = uiSrc.slice(restoreStart, uiSrc.indexOf('\n}', restoreStart) + 2);
-  for (const field of ['bw', 'bodyChecks', 'nutritionDaily', 'exMuscle', 'loadTypes', 'tempos', 'bonus', 'warmups', 'warmupProgress', 'warmupAssignment']) {
-    ok(snapBody.includes('bw: store.bw' === field ? '' : field) || snapBody.includes(field + ':'), `2a. snapshotCoachMaster backs up ${field}`);
-    ok(restoreBody.includes('store.' + field + ' = backup.' + field), `2b. restoreCoachMaster restores ${field} from the backup`);
+  const listStart = html.indexOf('var NURVAN_DOMAIN_FIELDS');
+  ok(listStart >= 0, '2a. the domain field list is declared');
+  const domainList = html.slice(listStart, html.indexOf('];', listStart));
+  const fnStart = uiSrc.indexOf('function resetSandboxSessionState()');
+  const fnBody = uiSrc.slice(fnStart, uiSrc.indexOf('\n}', fnStart) + 2);
+  const cleared = [...fnBody.matchAll(/store\.(\w+)\s*=/g)].map(m => m[1]);
+  ok(cleared.length >= 15, `2b. resetSandboxSessionState clears ${cleared.length} fields`);
+  for (const field of cleared) {
+    ok(new RegExp("'" + field + "'").test(domainList),
+      `2c. "${field}" is a domain field, so clearing it cannot reach the coach's copy`);
   }
+  ok(/const left = \(typeof nurvanLeaveClientArea === 'function'\) && nurvanLeaveClientArea\(\)/.test(uiSrc),
+    '2d. leaving a client session is a switch back to the personal area, not a copy-back');
 }
 
 // 3. resetSandboxSessionState is only ever called from the coachAssigning

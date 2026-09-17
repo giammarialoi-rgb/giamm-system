@@ -1,8 +1,15 @@
-// Executes the real captureCoachMasterForClientView from web/coach-practice-ui.js.
-// Guards the case that silently reverted a coach's own program: a backup left
-// behind by a session that did not exit cleanly used to be kept instead of
-// refreshed, so the next exit restored that stale snapshot over edits the coach
-// had made to their personal program in between.
+// Executes the real memory-area code out of web/index.base.html.
+//
+// The coach area and the personal app used to share one `store`, mutated on the
+// way into a client session and put back from an in-memory snapshot on the way
+// out. Four separate data losses came out of that, all of them the same shape:
+// something interrupted the way out, and the client's data was left sitting in
+// the coach's record.
+//
+// There is no snapshot now. The domain fields are accessors onto whichever area
+// is active, and the personal area is never written to during a client session,
+// so there is nothing to put back and nothing that can fail to be put back.
+// These assertions run that code rather than searching its text.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -16,120 +23,154 @@ function ok(value, message) {
   console.log('OK  ', message);
 }
 
-const target = process.argv[2] || 'web/coach-practice-ui.js';
-const source = fs.readFileSync(path.resolve(root, target), 'utf8');
+const src = fs.readFileSync(
+  path.resolve(root, process.argv[2] || 'web/index.base.html'),
+  'utf8'
+);
 
-function loadHarness() {
+// The memory-area block is self-contained apart from the four bindings it
+// swaps, which the sandbox supplies.
+const from = src.indexOf('var NURVAN_DOMAIN_FIELDS');
+assert.ok(from !== -1, 'NURVAN_DOMAIN_FIELDS not found in web/index.base.html');
+const to = src.indexOf('window.NURVAN_DOMAIN_FIELDS = NURVAN_DOMAIN_FIELDS;', from);
+assert.ok(to !== -1, 'end of the memory-area block not found');
+const block = src.slice(from, to);
+
+function boot(personalSeed) {
   const sandbox = {
-    store: null,
-    DATA: null,
-    currentWeek: 1,
-    currentDay: 0,
     console,
-    setTimeout,
-    clearTimeout,
-    setInterval,
-    clearInterval,
-    // The file touches browser globals at load time; these only need to exist.
-    localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
-    document: { querySelector: () => null, addEventListener() {}, getElementById: () => null },
-    location: { pathname: '/', search: '' },
-    navigator: {}
+    store: Object.assign({
+      // identity: shared, must survive an area switch untouched
+      accountToken: 'coach-token',
+      accountUser: { id: 'coach-1', name: 'Coach' },
+      coachWorkspace: { clientId: null },
+      prefs: { intensityType: 'RIR' }
+    }, personalSeed),
+    DATA: { title: 'Scheda COACH', weeks: [{ week: 1 }] },
+    currentWeek: 3,
+    currentDay: 2
   };
   sandbox.window = sandbox;
-  sandbox.self = sandbox;
   vm.createContext(sandbox);
-  // Top-level function declarations are hoisted, so they exist even though
-  // running this file outside a browser throws partway through.
-  try {
-    vm.runInContext(source, sandbox);
-  } catch (_) {
-    /* expected: the module does browser work at load time */
-  }
+  vm.runInContext(block + '\nwindow.__ready = true;', sandbox);
   return sandbox;
 }
 
-const sb = loadHarness();
-ok(typeof sb.captureCoachMasterForClientView === 'function', 'captureCoachMasterForClientView is defined');
-ok(typeof sb.snapshotCoachMaster === 'function', 'snapshotCoachMaster is defined');
+const COACH_DIARY = { '2026-09-17': { meals: ['Colazione COACH'] } };
+const sb = boot({
+  nutritionDaily: COACH_DIARY,
+  activeProgram: { id: 'personale', title: 'Scheda COACH' },
+  bodyChecks: [{ id: 'check-coach' }],
+  bw: { '2026-09-17': 80 }
+});
 
-function coachStore(programTitle) {
-  return {
-    coachViewingClient: false,
-    coachAssigning: null,
-    activeProgramId: 'personal',
-    activeProgram: { id: 'personal', title: programTitle, weeks: [{ week: 1 }] },
-    profile: { name: 'Coach' },
-    data: {}, customSets: {}, subs: {}, skips: {}, logs: [], intelTargets: {},
-    bodyChecks: [], nutritionDaily: {}, bw: {}, exMuscle: {}, loadTypes: {},
-    tempos: {}, bonus: {}, warmups: {}, warmupProgress: {}, warmupAssignment: null
-  };
+// --- the field list ---
+ok(Array.isArray(sb.NURVAN_DOMAIN_FIELDS), 'NURVAN_DOMAIN_FIELDS is declared');
+for (const field of ['nutritionDaily', 'activeProgram', 'bodyChecks', 'bw', 'logs', 'data', 'warmups', 'profile']) {
+  ok(sb.NURVAN_DOMAIN_FIELDS.includes(field), `"${field}" is a domain field`);
 }
 
-// --- A. entering a client from the personal app: snapshot must be taken ---
+// --- boot: the personal area took the values that were on store ---
+ok(sb.NurvanMemory.active === 'personal', 'the personal area is active at boot');
+ok(sb.personalDomain().nutritionDaily === COACH_DIARY, 'boot harvested the coach data into the personal area');
+ok(typeof Object.getOwnPropertyDescriptor(sb.store, 'nutritionDaily').get === 'function',
+  'domain fields became accessors on store');
+ok(sb.store.nutritionDaily === COACH_DIARY, 'reading store still gives the coach data');
+
+// --- entering a client area ---
+sb.nurvanEnterClientArea();
+ok(sb.NurvanMemory.active === 'client', 'entering switches the active area');
+ok(sb.nurvanClientAreaActive() === true, 'the client area reports itself active');
+ok(sb.store.nutritionDaily === undefined, 'the client area starts empty, not seeded from the coach');
+ok(sb.store.profile === sb.personalDomain().profile, 'the client view keeps showing the coach profile');
+
+// --- writing a whole client session ---
+const CLIENT_DIARY = { '2026-09-17': { meals: ['Pasto DEL CLIENTE'] } };
+sb.store.nutritionDaily = CLIENT_DIARY;
+sb.store.activeProgram = { id: 'cliente', title: 'Scheda CLIENTE' };
+sb.store.bodyChecks = [{ id: 'check-cliente' }];
+sb.store.bw = { '2026-09-17': 65 };
+sb.DATA = { title: 'Scheda CLIENTE', weeks: [] };
+sb.currentWeek = 1;
+sb.currentDay = 0;
+
+ok(sb.store.nutritionDaily === CLIENT_DIARY, 'store shows the client data inside the session');
+ok(sb.personalDomain().nutritionDaily === COACH_DIARY, 'the coach diary is untouched while the session runs');
+ok(sb.personalDomain().activeProgram.title === 'Scheda COACH', 'the coach program is untouched');
+ok(sb.personalDomain().bodyChecks[0].id === 'check-coach', 'the coach body checks are untouched');
+ok(sb.personalDomain().bw['2026-09-17'] === 80, 'the coach body weight is untouched');
+
+// --- identity is shared, not duplicated ---
+sb.store.coachWorkspace.clientId = '42';
+sb.store.coachSeenEventId = 99;
+ok(sb.store.accountToken === 'coach-token', 'identity still reads through inside a client session');
+
+// --- the case that cost a day and a half of food diary: no clean exit ---
+ok(sb.personalDomain().nutritionDaily['2026-09-17'].meals[0] === 'Colazione COACH',
+  'if the session never exits, the coach copy is still the coach data');
+ok(JSON.stringify(sb.personalDomain()).indexOf('DEL CLIENTE') === -1,
+  'no client value has reached the personal area by any route');
+
+// --- leaving ---
+ok(sb.nurvanLeaveClientArea() === true, 'leaving reports success');
+ok(sb.NurvanMemory.active === 'personal', 'the personal area is active again');
+ok(sb.NurvanMemory.client === null, 'the client area is discarded');
+ok(sb.store.nutritionDaily === COACH_DIARY, 'the coach diary is back on store');
+ok(sb.DATA.title === 'Scheda COACH', 'DATA came back with the area');
+ok(sb.currentWeek === 3 && sb.currentDay === 2, 'the week/day cursor came back with the area');
+ok(sb.store.coachWorkspace.clientId === '42', 'identity written during the session survived the switch');
+ok(sb.store.coachSeenEventId === 99, 'identity assigned during the session survived the switch');
+
+// --- leaving when not in a client area is a no-op ---
+ok(sb.nurvanLeaveClientArea() === false, 'leaving twice does nothing');
+ok(sb.store.nutritionDaily === COACH_DIARY, 'and does not disturb the coach data');
+
+// --- a rebuilt store must get its accessors back ---
 {
-  sb.store = coachStore('Personale v1');
-  sb.DATA = sb.store.activeProgram;
-  sb.window.__cpCoachViewBackup = null;
-  sb.captureCoachMasterForClientView();
-  ok(!!sb.window.__cpCoachViewBackup, 'A: entering from personal takes a snapshot');
-  ok(sb.window.__cpCoachViewBackup.activeProgram.title === 'Personale v1', 'A: snapshot captures the coach program');
+  const sb2 = boot({ nutritionDaily: COACH_DIARY });
+  sb2.store = { nutritionDaily: { fresh: true }, accountToken: 'coach-token' };
+  sb2.nurvanInstallDomainAccessors();
+  ok(typeof Object.getOwnPropertyDescriptor(sb2.store, 'nutritionDaily').get === 'function',
+    'reinstalling gives a rebuilt store its accessors back');
+  sb2.nurvanEnterClientArea();
+  sb2.store.nutritionDaily = { client: true };
+  ok(sb2.personalDomain().nutritionDaily.fresh === true,
+    'and the rebuilt store is still isolated from a client session');
 }
 
-// --- B. the regression: stale backup must be refreshed, not reused ---
+// --- the wiring in the coach flow ---
 {
-  sb.store = coachStore('Personale v1');
-  sb.DATA = sb.store.activeProgram;
-  sb.window.__cpCoachViewBackup = null;
-  sb.captureCoachMasterForClientView();          // first client session
+  const ui = fs.readFileSync(path.join(root, 'web/coach-practice-ui.js'), 'utf8');
 
-  // session ends badly: the backup is left behind in memory
-  sb.store.coachViewingClient = false;
-  sb.store.coachAssigning = null;
+  // Order is checked on statements, not prose: these functions carry comments
+  // that name the very calls being ordered.
+  const code = (body) => body.split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
 
-  // coach goes back to the personal app and renames exercises
-  sb.store.activeProgram = { id: 'personal', title: 'Personale v2 (rinominati)', weeks: [{ week: 1 }] };
-  sb.DATA = sb.store.activeProgram;
+  const applyAt = ui.indexOf('function applyClientPayloadToLocal(payload)');
+  const applyBody = code(ui.slice(applyAt, ui.indexOf('\nfunction ', applyAt + 20)));
+  ok(applyBody.indexOf('nurvanEnterClientArea()') !== -1
+    && applyBody.indexOf('nurvanEnterClientArea()') < applyBody.indexOf('store.activeProgram ='),
+    'applyClientPayloadToLocal enters the client area before it writes anything');
 
-  sb.captureCoachMasterForClientView();          // opens another client
-  ok(
-    sb.window.__cpCoachViewBackup.activeProgram.title === 'Personale v2 (rinominati)',
-    'B: a stale backup is refreshed, so later personal edits survive the next exit'
-  );
+  const beginAt = ui.indexOf('function beginAssignSandbox');
+  const beginBody = code(ui.slice(beginAt, ui.indexOf('\nfunction ', beginAt + 20)));
+  ok(beginBody.indexOf('nurvanEnterClientArea()') !== -1
+    && beginBody.indexOf('nurvanEnterClientArea()') < beginBody.indexOf('resetSandboxSessionState()'),
+    'beginAssignSandbox enters the client area BEFORE clearing - the other order would clear the coach copy');
+
+  const restoreAt = ui.indexOf('async function restoreCoachMaster(backup)');
+  const restoreBody = ui.slice(restoreAt, ui.indexOf('\n}', restoreAt) + 2);
+  ok(restoreBody.includes('nurvanLeaveClientArea()'), 'ending a session switches back rather than copying fields');
+  ok(!/store\.\w+ = backup\./.test(restoreBody), 'nothing is copied back out of a backup any more');
 }
 
-// --- C. switching client to client: existing backup must NOT be overwritten ---
+// --- persistence takes the coach copy, not the active one ---
 {
-  sb.store = coachStore('Personale v1');
-  sb.DATA = sb.store.activeProgram;
-  sb.window.__cpCoachViewBackup = null;
-  sb.captureCoachMasterForClientView();
-
-  // now inside a client session, the live store holds the client's program
-  sb.store.coachViewingClient = true;
-  sb.store.activeProgram = { id: 'client-a', title: 'Scheda di Marco', weeks: [{ week: 1 }] };
-  sb.DATA = sb.store.activeProgram;
-
-  sb.captureCoachMasterForClientView();          // switch to another client
-  ok(
-    sb.window.__cpCoachViewBackup.activeProgram.title === 'Personale v1',
-    'C: switching client to client keeps the coach master, never the previous client'
-  );
+  const base = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
+  ok(base.includes('Object.assign({}, sanitized, personalDomain())'),
+    'persist writes the personal area over whatever the active one holds');
+  ok(base.includes('const own = personalDomain();'),
+    'the emergency quota write also takes the coach copy');
 }
 
-// --- D. orphaned session with no backup: must not adopt client data ---
-{
-  sb.store = coachStore('irrelevant');
-  sb.store.coachViewingClient = true;
-  sb.store.activeProgram = { id: 'client-b', title: 'Scheda di Luca', weeks: [{ week: 1 }] };
-  sb.DATA = sb.store.activeProgram;
-  sb.window.__cpCoachViewBackup = null;
-
-  sb.captureCoachMasterForClientView();
-  ok(
-    !sb.window.__cpCoachViewBackup,
-    'D: an orphaned session captures nothing rather than making client data the coach master'
-  );
-}
-
-console.log('\nAll coach master snapshot tests passed.');
+console.log('\nAll memory-area tests passed.');

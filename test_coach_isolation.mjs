@@ -137,7 +137,11 @@ assert(!/body:\s*JSON\.stringify\(\{[\s\S]{0,400}store\.data/.test(ui), "assign 
 assert(ui.includes("assignmentId: 'asg_'") && ui.includes("stripProgramSessionPerformance(payload.activeProgram)"), "assign payload has new assignmentId and stripped weeks");
 assert(ui.includes("resetSandboxSessionState") && ui.includes("store.data = {}"), "sandbox clears store.data");
 assert(ui.includes("window.__cpAssignBackup") && ui.includes("window.__cpCoachViewBackup"), "master backups exist");
-assert(base.includes("bak.data || {}") && base.includes("scheduleWorkoutLogsIdbSync") && base.includes("coachAssigning || store.coachViewingClient"), "persist writes backup not sandbox map");
+// Was: persist() rebuilt the coach's fields from an in-memory snapshot while a
+// client session was open. The coach's data now lives in its own memory area
+// that a client session never writes to, so persist() takes it from there - the
+// same guarantee, with nothing that can be stale or missing.
+assert(base.includes("Object.assign({}, sanitized, personalDomain())") && base.includes("scheduleWorkoutLogsIdbSync"), "persist writes the coach's own memory area, not whichever one is active");
 assert(!ui.includes("clearWorkoutLogsForNewProgram") || !/restoreCoachMaster[\s\S]{0,400}clearWorkoutLogsForNewProgram/.test(ui), "restore master does not wipe coach logs");
 
 const pdf = sanitizeChatAttachment({
