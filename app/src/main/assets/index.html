@@ -36250,6 +36250,70 @@ function restoreClientShellSync() {
 }
 var store = loadStore();
 ensureStoreIntegrity();
+
+// Two memory areas instead of one shared one.
+//
+// The personal area is the coach's own app; it holds the object loadStore()
+// just returned, so nothing about the personal app changes. A client session
+// gets its own area, built from that client's payload, and the bindings below
+// (store, DATA, currentWeek, currentDay) are pointed at it for the duration.
+//
+// The personal area is never written to while a client area is active, so
+// there is nothing to restore on the way out. That is the whole point: the old
+// design mutated one shared store and relied on an in-memory snapshot to undo
+// it, so any session that did not exit cleanly - a reload, a crash, the app
+// being killed - left the client's data sitting in the coach's record. Four
+// separate data losses came out of that. Here the coach's data is never in the
+// path to begin with.
+var NurvanMemory = {
+  personal: null,
+  client: null,
+  active: 'personal'
+};
+
+function nurvanAreaSnapshotBindings() {
+  return { store: store, DATA: DATA, currentWeek: currentWeek, currentDay: currentDay };
+}
+
+// DATA is reassigned in dozens of places and currentWeek/currentDay move as the
+// user navigates, so the area being left has to take its current values with it
+// rather than keep the ones it was created with.
+function nurvanCaptureActiveArea() {
+  const area = NurvanMemory[NurvanMemory.active];
+  if (!area) return;
+  area.store = store;
+  area.DATA = DATA;
+  area.currentWeek = currentWeek;
+  area.currentDay = currentDay;
+}
+
+function nurvanActivateArea(name) {
+  const area = NurvanMemory[name];
+  if (!area) return false;
+  if (NurvanMemory.active !== name) nurvanCaptureActiveArea();
+  NurvanMemory.active = name;
+  store = area.store;
+  DATA = area.DATA;
+  currentWeek = area.currentWeek;
+  currentDay = area.currentDay;
+  return true;
+}
+
+// The coach's own store, whichever area happens to be active. Everything that
+// writes the coach's record - persistence, account sync, IndexedDB - must read
+// through this rather than through whatever `store` currently points at.
+function personalStore() {
+  return (NurvanMemory.personal && NurvanMemory.personal.store) || store;
+}
+
+function nurvanClientAreaActive() {
+  return NurvanMemory.active === 'client' && !!NurvanMemory.client;
+}
+
+NurvanMemory.personal = nurvanAreaSnapshotBindings();
+window.NurvanMemory = NurvanMemory;
+window.personalStore = personalStore;
+window.nurvanClientAreaActive = nurvanClientAreaActive;
 restoreClientShellSync();
 try {
   if (typeof isClientStorageContext === 'function' && isClientStorageContext()) {
