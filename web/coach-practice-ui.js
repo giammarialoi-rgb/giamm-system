@@ -2618,7 +2618,7 @@ async function enterCoachClientView(domain, opts) {
   try { currentWeek = 1; currentDay = 0; } catch (_) {}
   if (typeof withBusy === 'function') {
     await withBusy(async function () {
-      if (!window.__cpCoachViewBackup) window.__cpCoachViewBackup = snapshotCoachMaster();
+      captureCoachMasterForClientView();
       let data = store.coachWorkspace.data;
       const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 25000);
       data = snap.data || data || {};
@@ -2631,7 +2631,7 @@ async function enterCoachClientView(domain, opts) {
       }
     }, 'Carico dati cliente…', { immediate: true });
   } else {
-    if (!window.__cpCoachViewBackup) window.__cpCoachViewBackup = snapshotCoachMaster();
+    captureCoachMasterForClientView();
     try {
       const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 25000);
       store.coachWorkspace.data = snap.data || {};
@@ -3932,6 +3932,33 @@ function toggleCoachWsSection(key) {
   const on = !!store.__cpWsCollapse[key];
   if (body) body.style.display = on ? 'none' : '';
   if (arrow) arrow.textContent = on ? '▸' : '▾';
+}
+
+// Take the coach's master snapshot only when the live store still holds the
+// coach's own data - that is, when we are entering a client from the personal
+// app rather than switching between clients.
+//
+// This used to be `if (!window.__cpCoachViewBackup) ... = snapshotCoachMaster()`,
+// which got both halves wrong. An existing backup was never refreshed, so a
+// backup left behind by a session that did not exit cleanly stayed in memory
+// while the coach went back and edited their own program; the next exit then
+// restored that stale snapshot over those edits and silently reverted them
+// (reported as renamed exercises reappearing under their original names). And
+// when no backup existed but a client session was already live, it snapshotted
+// the *client's* data as the coach's master, which on exit wrote the client's
+// program into the coach's personal one.
+//
+// Switching client to client deliberately keeps the existing backup: the live
+// store holds the previous client's data there, so snapshotting would poison it.
+function captureCoachMasterForClientView() {
+  const inClientSession = !!(store && (store.coachViewingClient || store.coachAssigning));
+  if (!inClientSession) {
+    window.__cpCoachViewBackup = snapshotCoachMaster();
+    return;
+  }
+  // Already inside a session with no backup: the live store is a client's, so
+  // there is no coach master to capture. Leave it null - the cold-start guards
+  // treat a missing backup as "not a real session" rather than adopting it.
 }
 
 function snapshotCoachMaster() {
