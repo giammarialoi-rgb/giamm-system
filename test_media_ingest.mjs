@@ -60,13 +60,20 @@ fs.writeFileSync(path.join(tmp, 'exercises', 'Panca piana bilanciere.png'), awai
 fs.writeFileSync(path.join(tmp, 'exercises', 'squat-bilanciere.png'), await png(1600, 1200));
 fs.writeFileSync(path.join(tmp, 'exercises', 'Salto della quaglia.png'), await png(600, 600));
 fs.writeFileSync(path.join(tmp, 'exercises', 'troppo-piccola-panca-declinata.png'), await png(100, 100));
+// A near miss: one character away from a real catalogue entry.
+fs.writeFileSync(path.join(tmp, 'exercises', 'Panca piana manubrii.png'), await png(700, 700));
+// Two files landing on the same exercise: a match, but not a unique one.
+fs.writeFileSync(path.join(tmp, 'exercises', 'Croci ai cavi.png'), await png(700, 700));
+fs.writeFileSync(path.join(tmp, 'exercises', 'croci-ai-cavi.png'), await png(700, 700));
 fs.writeFileSync(path.join(tmp, 'warmups', firstWarmupId + '.png'), await png(800, 800));
 fs.writeFileSync(path.join(tmp, 'warmups', 'non_esiste_questo_id.png'), await png(800, 800));
+// Warm-ups match on an exact id, so one extra character must not resolve.
+fs.writeFileSync(path.join(tmp, 'warmups', firstWarmupId + 'x.png'), await png(800, 800));
 
 // mapFiles reads the module-level SOURCE, so point the process at the fixtures.
 process.argv = [process.argv[0], process.argv[1], '--source', tmp];
 const remapped = await import('./ingest_exercise_media.mjs?fixtures=1');
-const { matched, unmatched } = remapped.mapFiles(catalogues);
+const { matched, unresolved } = remapped.mapFiles(catalogues);
 
 // --- mapping -------------------------------------------------------------
 {
@@ -74,12 +81,41 @@ const { matched, unmatched } = remapped.mapFiles(catalogues);
   ok(ids.includes('exercise:panca_piana_bilanciere'), 'a filename with spaces and capitals maps to its canonical id');
   ok(ids.includes('exercise:squat_bilanciere'), 'a hyphenated lowercase filename maps to the same id form');
   ok(ids.includes('warmup:' + firstWarmupId), 'a warm-up file maps on the library id, with no derivation');
+}
 
-  const unmatchedIds = unmatched.map((u) => u.derived);
-  ok(unmatchedIds.includes('salto_della_quaglia'),
-    'a file naming an exercise that is not in the catalogue is reported, not attached to something else');
-  ok(unmatchedIds.includes('non_esiste_questo_id'), 'an unknown warm-up id is reported too');
-  ok(!matched.some((m) => m.ownerId === 'salto_della_quaglia'), 'and it is never ingested');
+// --- nothing ambiguous is ever imported ----------------------------------
+{
+  const byFile = (name) => unresolved.find((u) => path.basename(u.file) === name);
+
+  ok(byFile('Salto della quaglia.png'),
+    'a file naming an exercise that is not in the catalogue is unresolved, not attached to something else');
+  ok(!matched.some((m) => m.ownerId === 'salto_della_quaglia'), 'and it is never imported');
+
+  const typo = byFile('Panca piana manubrii.png');
+  ok(typo, 'a filename one character off a real exercise stays unresolved');
+  ok(/panca_piana_manubri/.test(typo.suggestion || ''),
+    'the report names the likely intended exercise, as a hint only');
+  ok(!matched.some((m) => m.ownerId === 'panca_piana_manubri'),
+    'and the near miss is NOT auto-associated with it');
+
+  ok(byFile('non_esiste_questo_id.png'), 'an unknown warm-up id is unresolved');
+  ok(byFile(firstWarmupId + 'x.png'),
+    'a warm-up id with one extra character does not resolve - warm-ups need an exact id');
+  ok(!matched.some((m) => m.ownerType === 'warmup' && m.ownerId === firstWarmupId + 'x'),
+    'and it is not imported under a made-up id');
+
+  // The unique part: two files on one exercise is a question, not a match.
+  const dupA = byFile('Croci ai cavi.png');
+  const dupB = byFile('croci-ai-cavi.png');
+  ok(dupA && dupB, 'when two files map to the same exercise, BOTH are unresolved');
+  ok(!matched.some((m) => m.ownerId === 'croci_ai_cavi'),
+    'and neither is imported, so one cannot silently overwrite the other');
+  ok(/not unique/.test(dupA.reason) && /competing files/.test(dupA.suggestion || ''),
+    'the report says why, and names the files competing for that exercise');
+
+  unresolved.forEach((u) => {
+    ok(!!u.reason, `unresolved entry "${path.basename(u.file)}" carries a cause`);
+  });
 }
 
 // --- validation ----------------------------------------------------------

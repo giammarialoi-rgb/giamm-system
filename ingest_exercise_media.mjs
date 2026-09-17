@@ -102,30 +102,101 @@ function scanFolder(dir) {
     .map((f) => path.join(dir, f));
 }
 
+// Edit distance, used only to name a likely intended target in the report. It
+// never selects anything: a near miss is still unresolved, because quietly
+// attaching one exercise's artwork to another reads as a content mistake rather
+// than an ingest one, and nobody would go looking for it here.
+function editDistance(a, b) {
+  const rows = Array.from({ length: b.length + 1 }, (_, i) => [i, ...Array(a.length).fill(0)]);
+  for (let j = 0; j <= a.length; j++) rows[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      rows[i][j] = Math.min(
+        rows[i - 1][j] + 1,
+        rows[i][j - 1] + 1,
+        rows[i - 1][j - 1] + (a[j - 1] === b[i - 1] ? 0 : 1)
+      );
+    }
+  }
+  return rows[b.length][a.length];
+}
+
+function nearestId(id, candidates) {
+  let best = null;
+  let bestScore = Infinity;
+  for (const candidate of candidates) {
+    const d = editDistance(id, candidate);
+    if (d < bestScore) { bestScore = d; best = candidate; }
+  }
+  // Only worth mentioning when it is genuinely close to the filename given.
+  if (best && bestScore <= Math.max(3, Math.floor(id.length * 0.34))) return { id: best, distance: bestScore };
+  return null;
+}
+
 function mapFiles(catalogues) {
-  const matched = [];
-  const unmatched = [];
+  const candidates = [];
+  const unresolved = [];
 
   scanFolder(path.join(SOURCE, 'exercises')).forEach((file) => {
     const stem = path.basename(file, path.extname(file));
     const id = canonicalExerciseId(stem);
     if (catalogues.byExerciseId.has(id)) {
-      matched.push({ ownerType: 'exercise', ownerId: id, label: catalogues.byExerciseId.get(id), file });
-    } else {
-      unmatched.push({ file, derived: id, reason: 'no exercise in the catalogue derives to this id' });
+      candidates.push({ ownerType: 'exercise', ownerId: id, label: catalogues.byExerciseId.get(id), file });
+      return;
     }
+    const near = nearestId(id, catalogues.byExerciseId.keys());
+    unresolved.push({
+      file,
+      derived: id,
+      reason: 'the filename derives to an id no exercise in the catalogue has',
+      suggestion: near
+        ? `closest catalogue id is "${near.id}" (${catalogues.byExerciseId.get(near.id)}) - rename the file if that is the one meant`
+        : 'no catalogue id is close to it; check the exercise name, or the exercise may not be in the catalogue at all'
+    });
   });
 
   scanFolder(path.join(SOURCE, 'warmups')).forEach((file) => {
     const id = path.basename(file, path.extname(file));
     if (catalogues.warmupIds.has(id)) {
-      matched.push({ ownerType: 'warmup', ownerId: id, label: catalogues.warmupIds.get(id), file });
-    } else {
-      unmatched.push({ file, derived: id, reason: 'no warm-up in the library has this id' });
+      candidates.push({ ownerType: 'warmup', ownerId: id, label: catalogues.warmupIds.get(id), file });
+      return;
     }
+    const near = nearestId(id, catalogues.warmupIds.keys());
+    unresolved.push({
+      file,
+      derived: id,
+      reason: 'a warm-up filename must be exactly a library id, and this is not one',
+      suggestion: near
+        ? `closest library id is "${near.id}" (${catalogues.warmupIds.get(near.id)})`
+        : 'no library id is close to it'
+    });
   });
 
-  return { matched, unmatched };
+  // "Unique" is the part that matters. Two files landing on the same owner is
+  // not a match, it is a question about which one was meant - and left alone
+  // the second would silently replace the first.
+  const byOwner = new Map();
+  candidates.forEach((entry) => {
+    const key = `${entry.ownerType}:${entry.ownerId}`;
+    if (!byOwner.has(key)) byOwner.set(key, []);
+    byOwner.get(key).push(entry);
+  });
+
+  const matched = [];
+  byOwner.forEach((entries, key) => {
+    if (entries.length === 1) { matched.push(entries[0]); return; }
+    const names = entries.map((e) => path.basename(e.file)).join(', ');
+    entries.forEach((entry) => {
+      unresolved.push({
+        file: entry.file,
+        derived: entry.ownerId,
+        reason: `${entries.length} files map to ${key}, so the match is not unique`,
+        suggestion: `competing files: ${names} - keep one and remove or rename the others`
+      });
+    });
+  });
+
+  return { matched, unresolved };
 }
 
 /* ---------- validate + transform --------------------------------------- */
@@ -222,6 +293,35 @@ async function ingestOne(entry, provider, pool) {
 
 /* ---------- report ------------------------------------------------------ */
 
+// Written next to the source folder so the list can be worked through file by
+// file, rather than scrolled back to in a terminal.
+const UNRESOLVED_REPORT = 'media-ingest-unresolved.txt';
+
+function writeUnresolvedReport(unresolved) {
+  const lines = [
+    'UNRESOLVED - files that were NOT imported',
+    new Date().toISOString(),
+    '',
+    'None of these were attached to any exercise. A filename that does not',
+    'resolve to exactly one catalogue entry is left alone on purpose: guessing',
+    'would put one exercise\'s artwork on another, and that reads as a content',
+    'mistake rather than an ingest one.',
+    ''
+  ];
+  unresolved.forEach((u) => {
+    lines.push(path.basename(u.file));
+    lines.push('  derives to: ' + u.derived);
+    lines.push('  cause:      ' + u.reason);
+    if (u.suggestion) lines.push('  hint:       ' + u.suggestion);
+    lines.push('');
+  });
+  const target = path.join(SOURCE, UNRESOLVED_REPORT);
+  try {
+    fs.writeFileSync(target, lines.join('\n'), 'utf8');
+    console.log(c.dim(`\n  written to ${target}`));
+  } catch (_) {}
+}
+
 function reportCoverage(catalogues, matched) {
   const have = new Set(matched.map((m) => `${m.ownerType}:${m.ownerId}`));
   const missingExercises = [...catalogues.byExerciseId.entries()]
@@ -277,20 +377,24 @@ async function main() {
   const catalogues = loadCatalogues();
   console.log(c.dim(`  catalogue: ${catalogues.byExerciseId.size} exercises, ${catalogues.warmupIds.size} warm-ups`));
 
-  let { matched, unmatched } = mapFiles(catalogues);
+  let { matched, unresolved } = mapFiles(catalogues);
   if (ONLY) matched = matched.filter((m) => ONLY.includes(m.ownerId));
 
-  if (unmatched.length) {
-    console.log(c.bold(c.yellow(`\n${unmatched.length} file(s) matched nothing`)));
-    unmatched.forEach((u) => {
-      console.log(c.yellow(`  ${path.basename(u.file)}`) + c.dim(`  -> ${u.derived}  (${u.reason})`));
+  if (unresolved.length) {
+    console.log(c.bold(c.yellow(`\nUNRESOLVED - ${unresolved.length} file(s), none of them imported`)));
+    unresolved.forEach((u) => {
+      console.log(c.yellow(`  ${path.basename(u.file)}`));
+      console.log(c.dim(`      derives to: ${u.derived}`));
+      console.log(c.dim(`      cause:      ${u.reason}`));
+      if (u.suggestion) console.log(c.dim(`      hint:       ${u.suggestion}`));
     });
+    writeUnresolvedReport(unresolved);
   }
 
   if (!matched.length) {
     console.log(c.yellow('\nNothing to ingest.'));
     reportCoverage(catalogues, []);
-    process.exit(unmatched.length ? 1 : 0);
+    process.exit(unresolved.length ? 1 : 0);
   }
 
   console.log(c.bold(`\nValidating ${matched.length} file(s)`));
