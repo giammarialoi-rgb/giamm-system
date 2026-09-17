@@ -78,13 +78,41 @@ function loadBrowserGlobal(relPath, globalName) {
   return sandbox[globalName] || [];
 }
 
+// The in-app substitution picker and the import fuzzy-matcher both draw on a
+// second, older list (EXERCISE_DICTIONARY, 66 entries) that pre-dates
+// exercise-catalog-extra.js and was never folded into it. An exercise that
+// lives only there - e.g. "Leg Curl Unilaterale", "Nordic Curl Assistito" -
+// is real and selectable in the app, but was invisible to the catalogue
+// below: any photo supplied for it came back UNRESOLVED with no way to fix
+// it short of hand-editing this file. Extracted from its source rather than
+// duplicated, since it is generated code, not hand-maintained data.
+function loadBaseExerciseDictionary() {
+  try {
+    const src = fs.readFileSync(path.join(root, 'prepare_task20_import_engine.mjs'), 'utf8');
+    const m = src.match(/var EXERCISE_DICTIONARY = (\[[\s\S]*?\n\]);/);
+    if (!m) return [];
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext('var EXERCISE_DICTIONARY = ' + m[1] + ';', sandbox);
+    return sandbox.EXERCISE_DICTIONARY || [];
+  } catch (_) {
+    return [];
+  }
+}
+
 function loadCatalogues() {
   const exercises = loadBrowserGlobal('web/exercise-catalog-extra.js', 'WEB_EXERCISE_CATALOG');
   const warmups = loadBrowserGlobal('web/warmup-exercise-library.js', 'WARMUP_EXERCISE_LIBRARY');
+  const baseDictionary = loadBaseExerciseDictionary();
   const byExerciseId = new Map();
   exercises.forEach((ex) => {
     if (!ex || !ex.name) return;
     byExerciseId.set(canonicalExerciseId(ex.name), ex.name);
+  });
+  baseDictionary.forEach((ex) => {
+    if (!ex || !ex.normalized) return;
+    const id = canonicalExerciseId(ex.normalized);
+    if (!byExerciseId.has(id)) byExerciseId.set(id, ex.normalized);
   });
   const warmupIds = new Map();
   warmups.forEach((w) => {

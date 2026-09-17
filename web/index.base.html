@@ -2165,6 +2165,17 @@ body.focus-mode [data-rewards-only] {
     </div>
     <div id="replace-library-block">
       <input id="replace-search" type="search" placeholder="Cerca alternativa..." oninput="window.renderReplacementOptions && window.renderReplacementOptions(this.value)">
+      <style>
+        #replace-options details{margin-bottom:8px;border:1px solid #262626;border-radius:8px;overflow:hidden;background:#111;}
+        #replace-options summary{cursor:pointer;list-style:none;padding:10px 12px;font-size:11px;color:var(--gold);font-weight:800;background:#141414;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+        #replace-options summary::-webkit-details-marker{display:none;}
+        #replace-options summary .replace-group-count{font-size:9px;color:#777;font-weight:600;}
+        #replace-options summary .replace-group-chev{color:#777;font-weight:400;font-size:14px;flex:0 0 auto;}
+        #replace-options summary .replace-group-chev::before{content:'+';}
+        #replace-options details[open] summary .replace-group-chev::before{content:'\2212';}
+        #replace-options details[open] summary{border-bottom:1px solid #262626;}
+        #replace-options .replace-group-body{padding:8px;}
+      </style>
       <div id="replace-options" style="margin-top:12px;"></div>
     </div>
     <div style="display:flex;gap:10px;margin-top:20px;">
@@ -10286,8 +10297,19 @@ function finishInit() {
 
       const canPull = !!(store && store.accountToken && typeof syncAccountData === 'function' && !store.coachViewingClient && !store.coachAssigning);
       if (canPull) {
+        // This download can legitimately replace what render() just drew - e.g. it
+        // picks up a rename made on another device, or made here before the API
+        // (which sleeps on Render's free tier) woke back up. Without a visible cue
+        // that a screen change 30-60s after opening the app is nothing to worry
+        // about, it reads as data randomly reverting.
+        let indicatorTimer = setTimeout(function () { try { showBackgroundSyncIndicator(); } catch (_) {} }, 800);
+        const pull = Promise.resolve(syncAccountData(true));
+        pull.catch(function () {}).finally(function () {
+          clearTimeout(indicatorTimer);
+          try { hideBackgroundSyncIndicator(); } catch (_) {}
+        });
         Promise.race([
-          Promise.resolve(syncAccountData(true)),
+          pull,
           new Promise(res => setTimeout(res, 5000))
         ]).catch(function (err) {
           console.warn('[NURVAN_BOOT] background syncAccountData notice', err && (err.message || err));
@@ -20621,10 +20643,22 @@ function renderReplacementOptions(query){
 
   const box = $('replace-options');
   if (!box) return;
+  // Collapsed by default: with 150+ exercises across all groups, showing every
+  // group open at once was the "enorme menu" the search field was supposed to
+  // fix. A group opens itself when the search matches something inside it, or
+  // when it holds the already-selected exercise, so neither search nor the
+  // current pick ever hides behind a closed group.
   box.innerHTML = groups.length ? groups.map(([group, items]) => `
-    <div style="margin-bottom:10px;"><b style="font-size:10px;color:var(--gold);">${esc(group)}</b>
-      ${items.map(name => `<button type="button" class="btn btn-outline" data-ex-name="${encodeURIComponent(name)}" style="display:block;width:100%;margin-top:5px;text-align:left;font-size:11px;padding:8px;${replacementDraft.selected===name?'border-color:var(--success);color:var(--success);':''}">${esc(name)}</button>`).join('')}
-    </div>
+    <details ${(q || items.includes(replacementDraft.selected)) ? 'open' : ''}>
+      <summary>
+        <span>${esc(group)}</span>
+        <span class="replace-group-count">${items.length}</span>
+        <span class="replace-group-chev" aria-hidden="true"></span>
+      </summary>
+      <div class="replace-group-body">
+        ${items.map(name => `<button type="button" class="btn btn-outline" data-ex-name="${encodeURIComponent(name)}" style="display:block;width:100%;margin-top:5px;text-align:left;font-size:11px;padding:8px;${replacementDraft.selected===name?'border-color:var(--success);color:var(--success);':''}">${esc(name)}</button>`).join('')}
+      </div>
+    </details>
   `).join('') : '<div style="font-size:11px;color:#777;">Nessuna alternativa trovata. Prova un altro termine di ricerca.</div>';
   box.onclick = function (ev) {
     const btn = ev.target && ev.target.closest ? ev.target.closest('[data-ex-name]') : null;
@@ -21176,6 +21210,25 @@ function maybeShowIosInstallHint() {
   sheet.classList.add('visible');
 }
 
+function showBackgroundSyncIndicator() {
+  if (document.getElementById('nurvan-sync-indicator')) return;
+  if (!document.getElementById('nurvan-sync-indicator-style')) {
+    const style = document.createElement('style');
+    style.id = 'nurvan-sync-indicator-style';
+    style.textContent = '@keyframes nurvan-sync-pulse{0%,100%{opacity:.35;}50%{opacity:1;}}';
+    document.head.appendChild(style);
+  }
+  const b = document.createElement('div');
+  b.id = 'nurvan-sync-indicator';
+  b.style.cssText = 'position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top, 0px));transform:translateX(-50%);z-index:10600;background:#181818;border:1px solid #333;border-radius:20px;padding:7px 14px;display:flex;align-items:center;gap:8px;box-shadow:0 4px 14px rgba(0,0,0,0.4);pointer-events:none;';
+  b.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:var(--gold);animation:nurvan-sync-pulse 1s ease-in-out infinite;"></span>' +
+    '<span style="font-size:11px;color:#ccc;">Aggiornamento dati dal cloud…</span>';
+  document.body.appendChild(b);
+}
+function hideBackgroundSyncIndicator() {
+  const b = document.getElementById('nurvan-sync-indicator');
+  if (b) b.remove();
+}
 function showUpdateAvailableBanner() {
   if (document.getElementById('nurvan-update-banner')) return;
   const b = document.createElement('div');
