@@ -61,6 +61,7 @@
 <script src="training-analytics-engine.js"></script>
 <script src="warmup-exercise-library.js"></script>
 <script src="warmup-engine.js"></script>
+<script src="exercise-media-client.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -26095,16 +26096,43 @@ function renderKnowledgeCard(item) {
       (custom ? '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px;border-color:var(--accent-red);color:var(--accent-red);" data-n="' + encodeURIComponent(item.title || '') + '" onclick="deleteEncyclopediaExercise(decodeURIComponent(this.getAttribute(\'data-n\')||\'\'))">ELIMINA</button>' : '') +
       '</div>'
     : '';
-  return '<div class="card" style="padding:12px;margin-bottom:10px;border:1px solid #222;">' +
-    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:.6px;">' + esc(knowledgeCatLabel(item.cat)) + esc(muscle) + '</div>' +
+  // Media thumbnail: only for real exercise/warm-up entries (not
+  // tecniche/scale/progressioni/split/glossario, where an image makes no
+  // sense). The slot renders a stable placeholder immediately and swaps in
+  // a real thumbnail asynchronously via refreshKnowledgeMediaSlots() - it
+  // is never blocking and never shows a broken image if none exists yet
+  // (the vast majority of exercises today have no media at all, by design).
+  const isMediaCat = item.cat === 'esercizi' || item.cat === 'warmup';
+  const mediaType = item.cat === 'warmup' ? 'warmup' : 'exercise';
+  const mediaId = item.cat === 'warmup' ? String(item.id || '').replace(/^wu-/, '') : '';
+  const media = isMediaCat
+    ? '<div class="nurvan-media-slot" data-media-pending="1" data-media-type="' + esc(mediaType) + '" data-media-id="' + esc(mediaId) + '" data-media-name="' + esc(item.title || '') + '" style="width:52px;height:52px;flex:0 0 52px;"></div>'
+    : '';
+  const headHtml = '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:.6px;">' + esc(knowledgeCatLabel(item.cat)) + esc(muscle) + '</div>' +
     '<div style="font-size:15px;font-weight:800;color:#fff;margin:4px 0 6px;">' + esc(item.title) + '</div>' +
-    (item.en ? '<div style="font-size:11px;color:#888;margin-bottom:6px;">' + esc(item.en) + '</div>' : '') +
+    (item.en ? '<div style="font-size:11px;color:#888;margin-bottom:6px;">' + esc(item.en) + '</div>' : '');
+  return '<div class="card" style="padding:12px;margin-bottom:10px;border:1px solid #222;">' +
+    (media ? '<div style="display:flex;gap:10px;align-items:flex-start;">' + media + '<div style="flex:1;min-width:0;">' + headHtml + '</div></div>' : headHtml) +
     '<p style="font-size:12px;color:#ccc;line-height:1.45;margin:0 0 8px;">' + esc(how) + '</p>' +
     (mistakes ? '<p style="font-size:11px;color:#aaa;line-height:1.4;margin:0 0 6px;"><b style="color:#f88;">Errori:</b> ' + esc(mistakes) + '</p>' : '') +
     (cue ? '<p style="font-size:11px;color:var(--gold);margin:0;">Cue: ' + esc(cue) + '</p>' : '') +
     btns +
     '</div>';
 }
+
+function refreshKnowledgeMediaSlots() {
+  if (typeof NurvanExerciseMedia === 'undefined' || !NurvanExerciseMedia.renderInto) return;
+  document.querySelectorAll('.nurvan-media-slot[data-media-pending="1"]').forEach(function (el) {
+    el.removeAttribute('data-media-pending');
+    NurvanExerciseMedia.renderInto(el, {
+      entityType: el.getAttribute('data-media-type'),
+      entityId: el.getAttribute('data-media-id') || null,
+      canonicalName: el.getAttribute('data-media-name') || '',
+      size: 'thumb'
+    });
+  });
+}
+window.refreshKnowledgeMediaSlots = refreshKnowledgeMediaSlots;
 
 function knowledgeGuideHtml(id) {
   const K = window.NURVAN_TRAINING_KNOWLEDGE || {};
@@ -26220,6 +26248,7 @@ function toggleKnowledgeMuscle(muscle) {
   window.__knowledgeCollapsed[muscle] = !collapsed;
   const host = document.getElementById('knowledge-results');
   if (host) host.innerHTML = knowledgeResultsHtml();
+  refreshKnowledgeMediaSlots();
 }
 
 function filterTrainingKnowledge(val) {
@@ -26228,6 +26257,7 @@ function filterTrainingKnowledge(val) {
   if (x) x.style.display = String(val || '').trim() ? 'inline-flex' : 'none';
   const host = document.getElementById('knowledge-results');
   if (host) host.innerHTML = knowledgeResultsHtml();
+  refreshKnowledgeMediaSlots();
 }
 
 function clearKnowledgeSearch() {
@@ -26273,6 +26303,7 @@ function renderTrainingKnowledge(c) {
     '<div id="knowledge-results">' + knowledgeResultsHtml() + '</div>' +
     '</div><div style="height:80px;"></div>';
   try { encyclopedizeProgramExercises(); } catch (_) {}
+  refreshKnowledgeMediaSlots();
 }
 
 function closeExerciseInfoSheet() {

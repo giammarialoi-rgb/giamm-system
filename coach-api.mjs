@@ -18,6 +18,7 @@ import { extractExcelStructuredForApi, detectFormat, DI_MAX_BYTES } from "./docu
 import { ensureCoachPracticeTables, mountCoachPractice } from "./coach-practice.mjs";
 import { mountProgramGenerateRoutes } from "./server/program/generator.mjs";
 import { mountFoodRoutes } from "./server/food/index.mjs";
+import { mountMediaRoutes } from "./server/media/media-routes.mjs";
 import { mergeAccountDataBlobs } from "./server/account/index.mjs";
 import { runMigrations } from "./server/db/migrate.mjs";
 import {
@@ -2015,6 +2016,8 @@ mountCoachPractice(app, {
 mountProgramGenerateRoutes(app, {
   requireAuth: async (req) => accountFromBearer(req.headers.authorization)
 });
+
+mountMediaRoutes(app, { pool });
 
 async function generateMealPhotoVision({ prompt, image, images, schema }) {
   if (!process.env.GEMINI_API_KEY) {

@@ -22,7 +22,8 @@ export const COACH_OS_FEATURE_DEFAULTS = Object.freeze({
   athleteBrainV1: true,
   mealAiV1: true,
   videoFormV1: true,
-  warmupEngineV1: true
+  warmupEngineV1: true,
+  exerciseMediaV1: true
 });
 
 export const COACH_OS_FEATURE_NAMES = Object.freeze(Object.keys(COACH_OS_FEATURE_DEFAULTS));
