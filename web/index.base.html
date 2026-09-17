@@ -2641,7 +2641,10 @@ function emptyClientTrainingState() {
   store.supplementation = null;
   store.therapy = null;
   store.exams = null;
-  store.nutritionDaily = {};
+  // The food diary deliberately survives. This clears training state after a
+  // program was detected as not really assigned to this athlete; what they
+  // logged eating has nothing to do with that, and unlike a program it cannot
+  // be re-fetched from anywhere.
   store.bodyChecks = [];
   store.clientAssignedAt = '';
   store.models = [];
@@ -3127,11 +3130,55 @@ function nurvanLeaveClientArea() {
   return true;
 }
 
+// The food diary gets its own storage key.
+//
+// It used to exist only inside the one big GS_STORE blob, so anything that
+// rewrote that blob wrongly took the diary with it - and the quota fallback
+// rewrites it without the diary at all, which loses every logged meal the
+// moment local storage fills up. A day's meals are typed once and cannot be
+// reconstructed, so they do not belong in a blob shared with everything else.
+//
+// This copy is written before the blob and is not subject to the blob's size
+// trimming, so losing one cannot lose the other.
+var NURVAN_FOOD_DIARY_KEY = 'NURVAN_FOOD_DIARY';
+
+function persistFoodDiary() {
+  try {
+    // The coach's own diary, never whichever area is on screen.
+    const diary = personalDomain().nutritionDaily;
+    if (!diary || typeof diary !== 'object') return;
+    if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
+    localStorage.setItem(NURVAN_FOOD_DIARY_KEY, JSON.stringify({
+      at: new Date().toISOString(),
+      days: diary
+    }));
+  } catch (_) {}
+}
+
+// Union on load. A day held by either copy is kept; where both hold the same
+// day the blob wins, because that is the copy the app has been writing to.
+function mergeStoredFoodDiary(current) {
+  try {
+    const raw = localStorage.getItem(NURVAN_FOOD_DIARY_KEY);
+    if (!raw) return current;
+    const saved = JSON.parse(raw);
+    if (!saved || !saved.days || typeof saved.days !== 'object') return current;
+    return Object.assign({}, saved.days, current || {});
+  } catch (_) {
+    return current;
+  }
+}
+
 NurvanMemory.personal = nurvanEmptyArea();
 nurvanInstallDomainAccessors();
 NurvanMemory.personal.DATA = DATA;
 NurvanMemory.personal.currentWeek = currentWeek;
 NurvanMemory.personal.currentDay = currentDay;
+
+// Bring back any day the blob lost - after a quota fallback rewrote it without
+// the diary, or after the blob's 21-day trim dropped days this copy still has.
+NurvanMemory.personal.domain.nutritionDaily =
+  mergeStoredFoodDiary(NurvanMemory.personal.domain.nutritionDaily);
 
 window.NurvanMemory = NurvanMemory;
 window.personalDomain = personalDomain;
@@ -3140,6 +3187,9 @@ window.nurvanInstallDomainAccessors = nurvanInstallDomainAccessors;
 window.nurvanEnterClientArea = nurvanEnterClientArea;
 window.nurvanLeaveClientArea = nurvanLeaveClientArea;
 window.NURVAN_DOMAIN_FIELDS = NURVAN_DOMAIN_FIELDS;
+window.persistFoodDiary = persistFoodDiary;
+window.mergeStoredFoodDiary = mergeStoredFoodDiary;
+window.NURVAN_FOOD_DIARY_KEY = NURVAN_FOOD_DIARY_KEY;
 restoreClientShellSync();
 try {
   if (typeof isClientStorageContext === 'function' && isClientStorageContext()) {
@@ -10253,8 +10303,12 @@ function persist() {
   } catch (_) {}
   try { upsertLiveCoachArchive(); } catch (_) {}
   try {
-    let sanitized = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.sanitizeStoreForLocalStorage) 
-      ? GiammariaPersistence.sanitizeStoreForLocalStorage(store) 
+    // Before the blob, and independently of whether the blob write succeeds: if
+    // localStorage is full, the fallback below writes a reduced record with no
+    // diary in it at all, and this is what keeps the meals.
+    persistFoodDiary();
+    let sanitized = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.sanitizeStoreForLocalStorage)
+      ? GiammariaPersistence.sanitizeStoreForLocalStorage(store)
       : store;
     // sanitized read the domain through `store`, which follows whichever memory
     // area is active, so during a client session it holds the client's data.
