@@ -770,7 +770,9 @@
     { re: /hip thrust|glute bridge|glute kickback|abduct|adductor|glutei|\bglute\b/i, primary: ['GAMBE'] },
     // Kickback rows (see kickbackMuscle) only name the muscle: they are skipped once
     // the row's own choice has decided it, so a kickback never counts for both.
+    // They come before the bench rows, so "Kickback tricipiti su panca" is triceps.
     { kickback: true, primary: ['GAMBE'] },
+    { kickback: true, primary: ['BRACCIA'] },
     { re: /stacco rumeno|romanian|\brdl\b|good morning|\bleg curl\b|femoral|nordic/i, primary: ['GAMBE'] },
     { re: /squat|hack squat|leg press|pressa 45|\bpressa\b|affondi|lunge|leg extension|bulgarian|step.?up|sissy|pistol squat/i, primary: ['GAMBE'] },
     { re: /\bstacco\b|deadlift/i, primary: ['GAMBE'], secondary: ['DORSO'] },
@@ -784,7 +786,6 @@
     { re: /military|lento avanti|lento dietro|shoulder press|overhead press|alzate later|lateral raise|alzate front|front raise|rear delt|deltoid|face pull|alzate posteriori|\blento\b|spinta.*(spalle|alto)|distensioni.*(spalle|alto)/i, primary: ['SPALLE'], secondary: ['BRACCIA'] },
     { re: /curl|bicip|hammer curl|preacher|spider curl|bayesian|concentration/i, primary: ['BRACCIA'] },
     { re: /french|skull|pushdown|tricip|tricep|estensioni.*(tricip|gomito)/i, primary: ['BRACCIA'] },
-    { kickback: true, primary: ['BRACCIA'] },
     { re: /\bdips?\b|parallele/i, primary: ['PETTO'], secondary: ['BRACCIA'] },
     { re: /crunch|plancia|plank|ab wheel|ab roller|addom|sit.?up|leg raise|knee raise|hollow|situp|woodchop|wood chop|pallof|\babs\b|\bcore\b|vacuum|bicycle|alzate gambe|sollevamento gambe|ruota addom|dead bug|bird dog|russian twist|hanging|macchina addom|torso (machine|rotation)|roman chair|air bike|heel tap|v[\s-]?up|jackknife/i, primary: ['ADDOME'] }
   ];

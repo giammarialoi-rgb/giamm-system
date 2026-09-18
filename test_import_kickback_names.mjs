@@ -132,7 +132,8 @@ for (const raw of ['Kickback tricipiti', 'Triceps kickback', 'Kickback manubri',
   'Kickback tricipiti ai cavi', 'Kickback', 'Kickback cavo', 'Kickback al Cavo', 'Kickback ai cavi', 'Kickback elastico', 'Cable kickback',
   'Glute kickback', 'Glute kickback con manubrio', 'Kickback un braccio', 'Single arm kickback', 'Kickback in quadrupedia (braccia tese) 3x15',
   'Kickback gluteo con manubrio', 'Glutes kickback with dumbbell', 'Glutes DB kickback', 'Donkey kickback sugli avambracci',
-  'Kickback in quadrupedia (appoggio sugli avambracci)']) {
+  'Kickback in quadrupedia (appoggio sugli avambracci)', 'Kickback tricipiti su panca', 'Kickback manubrio su panca',
+  'Kickback con manubri su panca inclinata', 'Kickback su panca']) {
   const imported = normalizeExerciseName(raw);
   const stats = TAE.muscleContributionForExercise(raw, {}).primary[0];
   assert.equal(stats, MACRO[imported.muscle], JSON.stringify(raw) + ': importer says ' + imported.muscle + ', stats say ' + stats);

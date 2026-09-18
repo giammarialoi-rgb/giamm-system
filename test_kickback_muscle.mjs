@@ -99,6 +99,12 @@ function expectTriceps(name, meta) {
 // The dumbbell kickback is the triceps exercise (confirmed by the product owner).
 ['Kickback manubri', 'Dumbbell kickback'].forEach((n) => expectTriceps(n));
 
+// A kickback on a bench is still the kickback it names, not a chest exercise.
+['Kickback tricipiti su panca', 'Kickback tricipiti su panca inclinata', 'Kickback manubrio su panca',
+  'Kickback con manubri su panca inclinata'].forEach((n) => expectTriceps(n));
+// (the general bench rule still adds its usual secondaries, as for any exercise naming a bench)
+assert.deepEqual(contribution('Kickback su panca').primary, ['GAMBE'], '"Kickback su panca" is the glute kickback');
+
 // Arm words don't make a kickback the triceps one: glute kickbacks use them too.
 ['Kickback braccia', 'Kickback un braccio', 'Single arm kickback', 'Kickback in quadrupedia (braccia tese) 3x15',
   'Donkey kickback a braccia distese', 'Quadruped kickback, straight arms', 'Donkey kickback (arms extended)'].forEach((n) => expectGlute(n));
