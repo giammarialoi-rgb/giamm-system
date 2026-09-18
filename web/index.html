@@ -27212,6 +27212,8 @@ var EXERCISE_DICTIONARY = [
   { keywords: ["pushdown corda", "pushdown", "pushdown ai cavi", "triceps pushdown", "corda tricipiti", "push down con corda"], normalized: "Pushdown ai Cavi con Corda", muscle: "TRICIPITI", muscles: ["TRICIPITI"] },
   { keywords: ["overhead extension unilaterale", "ext tricipiti overhead manubrio", "single arm overhead tricep"], normalized: "Estensione Overhead Unilaterale", muscle: "TRICIPITI", muscles: ["TRICIPITI"] },
   { keywords: ["french press", "skull crusher", "estensioni tricipiti", "french press con bilanciere"], normalized: "French Press con Bilanciere EZ", muscle: "TRICIPITI", muscles: ["TRICIPITI"] },
+  { keywords: ["kickback tricipiti", "kickback manubri", "kickback manubrio", "kickback con manubri", "kickback con manubrio", "triceps kickback", "tricep kickback", "dumbbell kickback"], normalized: "Kickback tricipiti", muscle: "TRICIPITI", muscles: ["TRICIPITI"] },
+  { keywords: ["kickback cavo tricipiti", "kickback tricipiti al cavo", "kickback tricipiti ai cavi", "cable triceps kickback", "cable tricep kickback"], normalized: "Kickback cavo tricipiti", muscle: "TRICIPITI", muscles: ["TRICIPITI"] },
   { keywords: ["dip alle parallele", "dip", "dips", "parallele"], normalized: "Dip alle Parallele", muscle: "PETTO", muscles: ["PETTO", "TRICIPITI", "DELTOIDI"] },
   { keywords: ["calf raise", "calf in piedi", "calf seduto", "calves", "calf raise smith in piedi", "smith calf raise in piedi", "calf smith", "calf machine in piedi", "calf machine"], normalized: "Calf Raise in Piedi", muscle: "POLPACCI", muscles: ["POLPACCI"] },
   { keywords: ["calf raise unilaterale", "single leg calf raise", "calf monopodalico"], normalized: "Calf Raise Unilaterale", muscle: "POLPACCI", muscles: ["POLPACCI"] },
@@ -27226,6 +27228,18 @@ var EXERCISE_DICTIONARY = [
   { keywords: ["turkish get-up", "tgu", "turkish get up"], normalized: "Turkish Get-Up", muscle: "CORE", muscles: ["CORE", "DELTOIDI"] },
   { keywords: ["gorilla row", "kettlebell row", "rematore kettlebell"], normalized: "Kettlebell Row", muscle: "DORSALI", muscles: ["DORSALI"] }
 ];
+
+// Keywords alone can't separate the kickbacks in every word order, and a bare
+// "kickback" is the glute cable lift. Same rule as the stats engine: a name that
+// says glutes is the glute lift; one that says triceps or dumbbells is the
+// triceps kickback, the cable one when it says cable.
+function kickbackDictionaryEntry(lower) {
+  let normalized = "Kickback al Cavo";
+  if (!/glut/.test(lower) && /tricip|tricep|manubri|dumbbell|\bdb\b/.test(lower)) {
+    normalized = /cav[oi]|cable/.test(lower) && !/manubri|dumbbell|\bdb\b/.test(lower) ? "Kickback cavo tricipiti" : "Kickback tricipiti";
+  }
+  return EXERCISE_DICTIONARY.find((e) => e.normalized === normalized) || null;
+}
 
 function normalizeExerciseName(rawName) {
   if (!rawName) return { name_original: "Esercizio", name_normalized: "Esercizio", muscle: "TOTAL", muscles: ["TOTAL"], confidence: 0.5 };
@@ -27243,6 +27257,7 @@ function normalizeExerciseName(rawName) {
       }
     }
   }
+  if (best && /kickback/i.test(best.normalized)) best = kickbackDictionaryEntry(lower) || best;
   if (best) {
     return {
       name_original: cleaned,
