@@ -73,9 +73,12 @@ expect('Kickback cavo tricipiti', CABLE, 'TRICIPITI', 'catalogue name, cable and
 expect('Kickback tricipiti ai cavi', CABLE, 'TRICIPITI', 'cable and triceps, other word order');
 expect('Kickback al cavo per tricipiti', CABLE, 'TRICIPITI', 'cable and triceps, in a word order no keyword covers');
 expect('Cable triceps kickback', CABLE, 'TRICIPITI', 'English catalogue name');
-expect('Kickback un braccio', DUMBBELL, 'TRICIPITI', 'names the arm');
-expect('Single arm kickback', DUMBBELL, 'TRICIPITI', 'names the arm');
-expect('Kickback braccio al cavo', CABLE, 'TRICIPITI', 'names the arm and the cable');
+// Arm words don't make a kickback the triceps one: glute kickbacks use them too.
+expect('Kickback un braccio', GLUTE, 'GLUTEI', 'an arm word alone is not triceps');
+expect('Single arm kickback', GLUTE, 'GLUTEI', 'an arm word alone is not triceps');
+expect('Kickback in quadrupedia (braccia tese) 3x15', GLUTE, 'GLUTEI', 'quadruped glute kickback on straight arms');
+expect('Quadruped kickback, straight arms', GLUTE, 'GLUTEI', 'quadruped glute kickback on straight arms');
+expect('Donkey kickback (arms extended)', GLUTE, 'GLUTEI', 'quadruped glute kickback on straight arms');
 
 // --- glute kickbacks stay the glute lift --------------------------------------
 expect('Kickback', GLUTE, 'GLUTEI', 'bare kickback is the glute lift');
@@ -127,7 +130,7 @@ const TAE = engine.TrainingAnalyticsEngine;
 const MACRO = { TRICIPITI: 'BRACCIA', GLUTEI: 'GAMBE' };
 for (const raw of ['Kickback tricipiti', 'Triceps kickback', 'Kickback manubri', 'Dumbbell kickback', 'Kickback cavo tricipiti',
   'Kickback tricipiti ai cavi', 'Kickback', 'Kickback cavo', 'Kickback al Cavo', 'Kickback ai cavi', 'Kickback elastico', 'Cable kickback',
-  'Glute kickback', 'Glute kickback con manubrio', 'Kickback un braccio', 'Single arm kickback', 'Kickback braccio al cavo',
+  'Glute kickback', 'Glute kickback con manubrio', 'Kickback un braccio', 'Single arm kickback', 'Kickback in quadrupedia (braccia tese) 3x15',
   'Kickback gluteo con manubrio', 'Glutes kickback with dumbbell', 'Glutes DB kickback', 'Donkey kickback sugli avambracci',
   'Kickback in quadrupedia (appoggio sugli avambracci)']) {
   const imported = normalizeExerciseName(raw);

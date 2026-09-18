@@ -99,12 +99,15 @@ function expectTriceps(name, meta) {
 // The dumbbell kickback is the triceps exercise (confirmed by the product owner).
 ['Kickback manubri', 'Dumbbell kickback'].forEach((n) => expectTriceps(n));
 
-// Kickbacks worded with arms were triceps before and stay so.
-['Kickback braccia', 'Kickback un braccio', 'Single arm kickback'].forEach((n) => expectTriceps(n));
+// Arm words don't make a kickback the triceps one: glute kickbacks use them too.
+['Kickback braccia', 'Kickback un braccio', 'Single arm kickback', 'Kickback in quadrupedia (braccia tese) 3x15',
+  'Donkey kickback a braccia distese', 'Quadruped kickback, straight arms', 'Donkey kickback (arms extended)'].forEach((n) => expectGlute(n));
 
 // The row's own movement or muscle groups decide, and a kickback never counts for both.
 expectTriceps('Kickback', { movement: 'Tricipiti' });
 expectTriceps('Kickback', { movement: 'BRACCIA' });
+expectTriceps('Kickback', { movement: 'Braccia' });
+expectGlute('Kickback', { movement: 'Braccia tese' });
 expectTriceps('Kickback', { movement: 'BRACCIA', muscle_groups: ['BRACCIA'] });
 expectTriceps('Kickback cavo', { movement: 'TRICIPITI', muscle_groups: ['TRICIPITI'] });
 expectTriceps('Kickback', { muscle_groups: ['TRICIPITI'] });
