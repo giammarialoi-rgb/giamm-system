@@ -29,6 +29,82 @@
       .slice(0, 120);
   }
 
+  // Resolves the exercise the WRITTEN name refers to, for media only - never
+  // for the text explanation. Used to key off the wording the encyclopedia
+  // is written under rather than a program's free text (so "Stacco da terra
+  // con bilanciere" finds the same picture as "Stacco da terra"), but the
+  // encyclopedia's own fuzzy matcher (training-knowledge.js explainExercise)
+  // was built to always show *some* helpful text, and scores a match on a
+  // single shared generic word - "Smith squat quad-biased" and "Squat
+  // bilanciere" both contain "squat", so it confidently returned the
+  // barbell squat's picture for a Smith-machine exercise. A photo is a much
+  // stronger claim than a paragraph of generic advice, so this asks a
+  // stricter, independent question: after dropping filler words, do the
+  // WRITTEN name and a catalogue name have the exact same significant
+  // words (just reordered or missing a filler)? "Squat" alone is not
+  // enough; "squat" + "bilanciere" with nothing else differing, is. If more
+  // than one catalogue exercise ties, or none does, this returns null and
+  // the caller keeps the written name (safe fallback: no picture, not a
+  // possibly-wrong one).
+  var MEDIA_MATCH_FILLER = { con: 1, al: 1, alla: 1, a: 1, in: 1, di: 1, da: 1, il: 1, la: 1, le: 1, su: 1, e: 1 };
+  function mediaMatchTokens(s) {
+    var parts = String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ').split(' ').filter(Boolean);
+    var out = [];
+    for (var i = 0; i < parts.length; i++) {
+      if (!MEDIA_MATCH_FILLER[parts[i]]) out.push(parts[i]);
+    }
+    out.sort();
+    return out;
+  }
+  function mediaMatchKey(tokens) { return tokens.join(' '); }
+
+  var mediaCatalogueNames = null; // built lazily, since the catalogue scripts load after this one
+  function mediaCatalogueByKey() {
+    if (mediaCatalogueNames) return mediaCatalogueNames;
+    var names = [];
+    try {
+      if (typeof window !== 'undefined' && Array.isArray(window.WEB_EXERCISE_CATALOG)) {
+        window.WEB_EXERCISE_CATALOG.forEach(function (ex) { if (ex && ex.name) names.push(ex.name); });
+      }
+    } catch (_) {}
+    try {
+      if (typeof window !== 'undefined' && window.ExerciseDatabaseService && typeof window.ExerciseDatabaseService.getAllExercises === 'function') {
+        window.ExerciseDatabaseService.getAllExercises().forEach(function (ex) {
+          var n = ex && (ex.name || ex.normalized);
+          if (n) names.push(n);
+        });
+      }
+    } catch (_) {}
+    var byKey = {};
+    names.forEach(function (n) {
+      var key = mediaMatchKey(mediaMatchTokens(n));
+      if (!key) return;
+      if (!byKey[key]) byKey[key] = [];
+      if (byKey[key].indexOf(n) < 0) byKey[key].push(n);
+    });
+    // Only cache once both catalogue sources have actually had a chance to
+    // load - an empty read this early would otherwise cache "no catalogue"
+    // forever for the rest of the session.
+    if (names.length) mediaCatalogueNames = byKey;
+    return byKey;
+  }
+
+  function resolveCanonicalMediaName(writtenName) {
+    var written = String(writtenName || '').trim();
+    if (!written) return null;
+    var tokens = mediaMatchTokens(written);
+    if (!tokens.length) return null;
+    var key = mediaMatchKey(tokens);
+    var candidates = mediaCatalogueByKey()[key];
+    if (!candidates || candidates.length !== 1) return null; // none, or ambiguous - never guess
+    var match = candidates[0];
+    return fold(match) === fold(written) ? null : match; // already exact - nothing to resolve
+  }
+  function fold(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  }
+
   function apiBase() {
     try {
       if (typeof window !== 'undefined' && typeof window.COACH_API_URL === 'string' && /^https?:\/\//i.test(window.COACH_API_URL)) {
@@ -173,6 +249,7 @@
     getThumbnail: getThumbnail,
     hasMedia: hasMedia,
     renderInto: renderInto,
-    placeholderHtml: placeholderHtml
+    placeholderHtml: placeholderHtml,
+    resolveCanonicalMediaName: resolveCanonicalMediaName
   };
 })(typeof window !== 'undefined' ? window : self);

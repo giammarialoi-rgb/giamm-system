@@ -95,20 +95,66 @@ for (const [label, input] of [
 // A canonical id derived from free text makes "Stacco da terra con bilanciere"
 // a different exercise from "Stacco da terra", so the library showed a picture
 // and the workout showed a placeholder for the same lift. Programs are written
-// in free text, so this affects most of them. The encyclopedia already resolves
-// those wordings; the sheet has to ask it rather than use the raw string.
+// in free text, so this affects most of them.
 {
   const base = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
   const at = base.indexOf('function openExerciseInfoSheet');
   assert.ok(at !== -1, 'openExerciseInfoSheet not found');
   const body = base.slice(at, base.indexOf('\nfunction ', at + 20));
 
-  ok(/const mediaName = \(explained && explained\.matched && explained\.title\) \|\| name;/.test(body),
-    'the sheet resolves the exercise name before deriving the media id');
+  ok(body.includes('resolveCanonicalMediaName(name)'),
+    'the sheet resolves the exercise name through the media client before deriving the media id');
   ok(body.includes('exerciseIdFor(mediaName)'),
     'and the lookup uses that resolved name, not the one written in the program');
-  ok(/\|\| name;/.test(body),
-    'an exercise the encyclopedia does not recognise falls back to the written name, so custom exercises are unchanged');
+  ok(/const mediaName = resolvedMediaName \|\| name;/.test(body),
+    'an unresolved exercise falls back to the written name, so custom exercises are unchanged');
+}
+
+// --- resolveCanonicalMediaName: real wording variants resolve, ------------
+// --- unrelated exercises sharing one word never do -------------------------
+//
+// explainExercise (training-knowledge.js) is built to always show *some*
+// helpful text, so it scores a match on a single shared generic word -
+// "Smith squat quad-biased" and "Squat bilanciere" both contain "squat", and
+// it confidently returns the barbell squat's picture for a Smith-machine
+// exercise. A photo is a much stronger claim than a paragraph of generic
+// advice, so media resolution does not trust that match at all: it asks its
+// own stricter question, exercised for real here against a realistic
+// catalogue, not string-matched against the source.
+{
+  const sandbox = { window: null, document: undefined };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  sandbox.WEB_EXERCISE_CATALOG = [
+    { name: 'Squat goblet', muscle: 'QUADRICIPITI' },
+    { name: 'Kickback cavo', muscle: 'GLUTEI' },
+    { name: 'Squat bilanciere', muscle: 'QUADRICIPITI' },
+    { name: 'Front squat bilanciere', muscle: 'QUADRICIPITI' },
+    { name: 'Panca piana bilanciere', muscle: 'PETTO' },
+    { name: 'Panca piana manubri', muscle: 'PETTO' }
+  ];
+  sandbox.ExerciseDatabaseService = { getAllExercises() { return []; } };
+  vm.runInContext(fs.readFileSync(path.join(root, 'web/exercise-media-client.js'), 'utf8'), sandbox);
+  const resolve = sandbox.NurvanExerciseMedia.resolveCanonicalMediaName;
+
+  ok(resolve('Goblet Squat') === 'Squat goblet',
+    'the exact same words in a different order resolve');
+  ok(resolve('Kickback al Cavo') === 'Kickback cavo',
+    'a pure filler-word difference (al) resolves');
+  ok(resolve('Front Squat con Bilanciere') === 'Front squat bilanciere',
+    'a written name matching a MORE specific catalogue entry resolves to that one, not a shorter relative');
+  ok(resolve('Smith squat quad-biased') === null,
+    'sharing just the word "squat" with a catalogue entry is NOT enough - a wrong picture is worse than none. '
+    + 'This is the exact case that shipped wrong: explainExercise\'s general-purpose text matcher scored this a '
+    + 'match against "Squat bilanciere" on that single shared word and the sheet showed the barbell squat\'s photo '
+    + 'for what is actually a Smith-machine exercise');
+  ok(resolve('Panca piana') === null,
+    'a bare name that is short for two different catalogue entries (bilanciere vs manubri) is not an exact match '
+    + 'for either, so no equipment is guessed');
+  ok(resolve('Esercizio inventato XYZ') === null,
+    'an exercise with no catalogue match at all resolves to nothing, same as before');
+  ok(resolve('Squat bilanciere') === null,
+    'an already-exact name has nothing to resolve, so the raw lookup is used unchanged');
 }
 
 console.log('\nAll media UI component tests passed.');
