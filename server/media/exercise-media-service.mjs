@@ -123,9 +123,27 @@ export async function fetchMediaRows(pool, ownerType, ownerId) {
   return (q.rows || []).map(mediaRow);
 }
 
+// Catalogue entries that are the same exercise under a second name, each one
+// confirmed by the user. Deliberately an explicit list rather than a rule:
+// "Kickback al Cavo" and "Kickback cavo" share every word yet the user treats
+// them as different lifts, so matching on wording alone would show the wrong one.
+export const EXERCISE_MEDIA_ALIASES = Object.freeze({
+  panca_piana_con_bilanciere: 'panca_piana_bilanciere',
+  panca_inclinata_con_manubri: 'panca_inclinata_manubri',
+  squat_con_bilanciere: 'squat_bilanciere',
+  goblet_squat: 'squat_goblet',
+  rematore_con_bilanciere: 'rematore_bilanciere'
+});
+
 export async function getMediaManifest(pool, ownerType, ownerId, canonicalName) {
   const rows = await fetchMediaRows(pool, ownerType, ownerId);
-  return buildManifest({ ownerType, ownerId, canonicalName, rows });
+  const own = buildManifest({ ownerType, ownerId, canonicalName, rows });
+  const twin = ownerType === 'exercise' ? EXERCISE_MEDIA_ALIASES[ownerId] : null;
+  if (own.hasMedia || !twin) return own;
+  // Own media always wins, so a dedicated asset uploaded later replaces this.
+  const twinRows = await fetchMediaRows(pool, ownerType, twin);
+  const shared = buildManifest({ ownerType, ownerId, canonicalName, rows: twinRows });
+  return shared.hasMedia ? shared : own;
 }
 
 export async function getMediaById(pool, id) {

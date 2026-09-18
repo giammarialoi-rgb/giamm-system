@@ -218,6 +218,41 @@ function mountedRoutes() {
 }
 
 // =======================================================================
+// 7b. user-approved catalogue synonyms share their twin's media.
+// =======================================================================
+{
+  const twinRow = { owner_type: 'exercise', owner_id: 'squat_bilanciere', media_type: 'image', variant: 'master', status: 'active', match_type: 'exact', public_url: 'https://cdn/exercises/squat_bilanciere/master.webp', version: 1, source: 'nurvan' };
+  const pool = makeFakePool([twinRow]);
+  const manifest = await getMediaManifest(pool, 'exercise', 'squat_con_bilanciere', 'Squat con Bilanciere');
+  ok(manifest.hasMedia === true && manifest.media.master === twinRow.public_url,
+    '7b. an approved synonym with no media of its own shows its twin\'s picture');
+  ok(manifest.entityId === 'squat_con_bilanciere', '7c. the manifest still answers for the id that was asked for');
+
+  const ownPool = makeFakePool([
+    twinRow,
+    { owner_type: 'exercise', owner_id: 'squat_con_bilanciere', media_type: 'image', variant: 'master', status: 'active', match_type: 'exact', public_url: 'https://cdn/own.webp', version: 1, source: 'nurvan' }
+  ]);
+  const own = await getMediaManifest(ownPool, 'exercise', 'squat_con_bilanciere');
+  ok(own.media.master === 'https://cdn/own.webp', '7d. a dedicated asset always wins over the shared one');
+
+  const kickPool = makeFakePool([
+    { owner_type: 'exercise', owner_id: 'kickback_cavo', media_type: 'image', variant: 'master', status: 'active', match_type: 'exact', public_url: 'https://cdn/kickback_cavo.webp', version: 1, source: 'nurvan' }
+  ]);
+  const kick = await getMediaManifest(kickPool, 'exercise', 'kickback_al_cavo', 'Kickback al Cavo');
+  ok(kick.hasMedia === false, '7e. same wording is not enough: kickback_al_cavo is not an approved alias and stays on the placeholder');
+
+  const wuPool = makeFakePool([
+    { owner_type: 'warmup', owner_id: 'squat_goblet', media_type: 'image', variant: 'master', status: 'active', match_type: 'exact', public_url: 'https://cdn/x.webp', version: 1, source: 'nurvan' }
+  ]);
+  const wu = await getMediaManifest(wuPool, 'warmup', 'goblet_squat');
+  ok(wu.hasMedia === false, '7f. aliases apply to exercises only, never to warm-ups');
+
+  const emptyPool = makeFakePool([]);
+  const none = await getMediaManifest(emptyPool, 'exercise', 'goblet_squat');
+  ok(none.hasMedia === false && none.status === 'missing', '7g. an alias whose twin has no media falls back to the placeholder cleanly');
+}
+
+// =======================================================================
 // 8. media URL errato -> frontend shows fallback. Verified as a source
 // contract: web/exercise-media-client.js attaches a real onerror handler
 // that swaps in placeholderHtml() rather than leaving a broken <img>.
