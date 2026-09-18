@@ -2803,6 +2803,7 @@ function ensureStoreIntegrity() {
   if (!store.subs) store.subs = {};
   if (!store.exMuscle) store.exMuscle = {};
   if (!store.exMuscleByName || typeof store.exMuscleByName !== 'object') store.exMuscleByName = {};
+  correctRememberedKickbackMuscles();
   if (!store.bw) store.bw = {};
   if (!store.prefs) store.prefs = { intensityType: 'RIR', duration: 16, frequency: 4 };
   if (!store.loadTypes) store.loadTypes = {};
@@ -9761,6 +9762,23 @@ function rememberExerciseMuscle(name, muscle, source) {
   if (prev && prev.muscle === macro && prev.source === src) return macro;
   store.exMuscleByName[key] = { muscle: macro, source: src, at: Date.now() };
   return macro;
+}
+
+// Glute kickbacks were once read as triceps by the name heuristics, and that
+// guess was remembered per name, where it keeps outranking the fixed heuristics
+// in the page and in stats. Re-derive only those remembered guesses; what the
+// user picked ('manual') or assigned to a slot is never touched.
+function correctRememberedKickbackMuscles() {
+  const map = store && store.exMuscleByName;
+  const TAE = window.TrainingAnalyticsEngine;
+  if (!map || !TAE || typeof TAE.muscleContributionForExercise !== 'function') return;
+  Object.keys(map).forEach(function (key) {
+    const rec = map[key];
+    if (!rec || rec.muscle !== 'BRACCIA' || (rec.source !== 'triangulated' && rec.source !== 'name')) return;
+    if (key.indexOf('kickback') < 0) return;
+    if (TAE.muscleContributionForExercise(key, {}).primary[0] !== 'GAMBE') return;
+    map[key] = { muscle: 'GAMBE', source: rec.source, at: Date.now() };
+  });
 }
 
 function lookupCatalogExerciseMuscle(name) {
