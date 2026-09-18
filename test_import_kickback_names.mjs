@@ -73,6 +73,9 @@ expect('Kickback cavo tricipiti', CABLE, 'TRICIPITI', 'catalogue name, cable and
 expect('Kickback tricipiti ai cavi', CABLE, 'TRICIPITI', 'cable and triceps, other word order');
 expect('Kickback al cavo per tricipiti', CABLE, 'TRICIPITI', 'cable and triceps, in a word order no keyword covers');
 expect('Cable triceps kickback', CABLE, 'TRICIPITI', 'English catalogue name');
+expect('Kickback un braccio', DUMBBELL, 'TRICIPITI', 'names the arm');
+expect('Single arm kickback', DUMBBELL, 'TRICIPITI', 'names the arm');
+expect('Kickback braccio al cavo', CABLE, 'TRICIPITI', 'names the arm and the cable');
 
 // --- glute kickbacks stay the glute lift --------------------------------------
 expect('Kickback', GLUTE, 'GLUTEI', 'bare kickback is the glute lift');
@@ -120,7 +123,7 @@ const TAE = engine.TrainingAnalyticsEngine;
 const MACRO = { TRICIPITI: 'BRACCIA', GLUTEI: 'GAMBE' };
 for (const raw of ['Kickback tricipiti', 'Triceps kickback', 'Kickback manubri', 'Dumbbell kickback', 'Kickback cavo tricipiti',
   'Kickback tricipiti ai cavi', 'Kickback', 'Kickback cavo', 'Kickback al Cavo', 'Kickback ai cavi', 'Kickback elastico', 'Cable kickback',
-  'Glute kickback', 'Glute kickback con manubrio']) {
+  'Glute kickback', 'Glute kickback con manubrio', 'Kickback un braccio', 'Single arm kickback', 'Kickback braccio al cavo']) {
   const imported = normalizeExerciseName(raw);
   const stats = TAE.muscleContributionForExercise(raw, {}).primary[0];
   assert.equal(stats, MACRO[imported.muscle], JSON.stringify(raw) + ': importer says ' + imported.muscle + ', stats say ' + stats);

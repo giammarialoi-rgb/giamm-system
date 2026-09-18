@@ -23135,11 +23135,11 @@ var EXERCISE_DICTIONARY = [
 
 // Keywords alone can't separate the kickbacks in every word order, and a bare
 // "kickback" is the glute cable lift. Same rule as the stats engine: a name that
-// says glutes is the glute lift; one that says triceps or dumbbells is the
+// says glutes is the glute lift; one that says triceps, arms or dumbbells is the
 // triceps kickback, the cable one when it says cable.
 function kickbackDictionaryEntry(lower) {
   let normalized = "Kickback al Cavo";
-  if (!/glut/.test(lower) && /tricip|tricep|manubri|dumbbell|\bdb\b/.test(lower)) {
+  if (!/glut/.test(lower) && /tricip|tricep|manubri|dumbbell|\bdb\b|bracci|\barms?\b/.test(lower)) {
     normalized = /cav[oi]|cable/.test(lower) && !/manubri|dumbbell|\bdb\b/.test(lower) ? "Kickback cavo tricipiti" : "Kickback tricipiti";
   }
   return EXERCISE_DICTIONARY.find((e) => e.normalized === normalized) || null;

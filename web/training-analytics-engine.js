@@ -768,9 +768,9 @@
   const MUSCLE_HINTS = [
     { re: /calf raise|seated calf|standing calf|donkey calf|polpac/i, primary: ['GAMBE'] },
     { re: /hip thrust|glute bridge|glute kickback|abduct|adductor|glutei|\bglute\b/i, primary: ['GAMBE'] },
-    // A kickback is the glute lift unless the name says triceps, or says dumbbells
-    // (the dumbbell kickback is the triceps exercise, handled in the triceps row).
-    { re: /^(?!.*(tricip|tricep|manubri|dumbbell|\bdb\b)).*kickback/i, primary: ['GAMBE'] },
+    // A kickback is the glute lift unless the name or movement says triceps, arms
+    // or dumbbells (those are the triceps exercise, handled in the triceps row).
+    { re: /^(?!.*(tricip|tricep|manubri|dumbbell|\bdb\b|bracci|\barms?\b)).*kickback/i, primary: ['GAMBE'] },
     { re: /stacco rumeno|romanian|\brdl\b|good morning|\bleg curl\b|femoral|nordic/i, primary: ['GAMBE'] },
     { re: /squat|hack squat|leg press|pressa 45|\bpressa\b|affondi|lunge|leg extension|bulgarian|step.?up|sissy|pistol squat/i, primary: ['GAMBE'] },
     { re: /\bstacco\b|deadlift/i, primary: ['GAMBE'], secondary: ['DORSO'] },
@@ -783,7 +783,7 @@
     { re: /\brow\b|remat/i, primary: ['DORSO'], secondary: ['BRACCIA'] },
     { re: /military|lento avanti|lento dietro|shoulder press|overhead press|alzate later|lateral raise|alzate front|front raise|rear delt|deltoid|face pull|alzate posteriori|\blento\b|spinta.*(spalle|alto)|distensioni.*(spalle|alto)/i, primary: ['SPALLE'], secondary: ['BRACCIA'] },
     { re: /curl|bicip|hammer curl|preacher|spider curl|bayesian|concentration/i, primary: ['BRACCIA'] },
-    { re: /french|skull|pushdown|tricip|tricep|estensioni.*(tricip|gomito)|^(?!.*glut)(?=.*(manubri|dumbbell|\bdb\b)).*kickback/i, primary: ['BRACCIA'] },
+    { re: /french|skull|pushdown|tricip|tricep|estensioni.*(tricip|gomito)|^(?!.*glut)(?=.*(manubri|dumbbell|\bdb\b|bracci|\barms?\b)).*kickback/i, primary: ['BRACCIA'] },
     { re: /\bdips?\b|parallele/i, primary: ['PETTO'], secondary: ['BRACCIA'] },
     { re: /crunch|plancia|plank|ab wheel|ab roller|addom|sit.?up|leg raise|knee raise|hollow|situp|woodchop|wood chop|pallof|\babs\b|\bcore\b|vacuum|bicycle|alzate gambe|sollevamento gambe|ruota addom|dead bug|bird dog|russian twist|hanging|macchina addom|torso (machine|rotation)|roman chair|air bike|heel tap|v[\s-]?up|jackknife/i, primary: ['ADDOME'] }
   ];
@@ -838,6 +838,15 @@
     return rec ? rec.muscle : null;
   }
 
+  // Which muscle a kickback works depends on its wording and on the row's movement
+  // and muscle groups, so a muscle the app remembered by itself for the name (not
+  // one the user picked or set on a slot) is not trusted for it; a bare "kickback"
+  // also used to be remembered as triceps. The name, movement and groups decide.
+  function ignoresRememberedMuscle(name, storedSource) {
+    const src = String(storedSource || 'triangulated').toLowerCase();
+    return (src === 'triangulated' || src === 'name') && /kickback/i.test(String(name || ''));
+  }
+
   function muscleContributionForExercise(name, meta) {
     const primary = [];
     const secondary = [];
@@ -850,7 +859,9 @@
       arr.push(n);
     }
     const storedSource = String((meta && meta.storedSource) || '').toLowerCase();
-    const stored = meta && (meta.storedMuscle || meta.muscle_group || meta.muscleGroup);
+    const remembered = meta && meta.storedMuscle;
+    const trusted = remembered && !ignoresRememberedMuscle(name, storedSource) ? remembered : null;
+    const stored = trusted || (meta && (meta.muscle_group || meta.muscleGroup));
     const locked = nameLockedMuscle(name, meta && meta.movement);
     if (storedSource === 'manual' && stored) {
       add(primary, stored);
@@ -3116,6 +3127,7 @@
     rawFingerprint: rawFingerprint,
     isWeekComplete: isWeekComplete,
     muscleContributionForExercise: muscleContributionForExercise,
+    ignoresRememberedMuscle: ignoresRememberedMuscle,
     storedMuscleFrom: storedMuscleFrom,
     storedMuscleRecord: storedMuscleRecord,
     nameLockedMuscle: nameLockedMuscle,
