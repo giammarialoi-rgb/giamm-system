@@ -75,6 +75,7 @@ self.WEB_EXERCISE_CATALOG = [
   { name: "French press manubri", en: "Dumbbell Skull Crusher", muscle: "TRICIPITI", eq: "manubri" },
   { name: "Pushdown cavo", en: "Triceps Pushdown", muscle: "TRICIPITI", eq: "cavi" },
   { name: "Kickback tricipiti", en: "Triceps Kickback", muscle: "TRICIPITI", eq: "manubri" },
+  { name: "Kickback cavo tricipiti", en: "Cable Triceps Kickback", muscle: "TRICIPITI", eq: "cavi" },
   { name: "Overhead extension", en: "Overhead Triceps Extension", muscle: "TRICIPITI", eq: "manubri" },
   { name: "Close-grip bench", en: "Close-Grip Bench Press", muscle: "TRICIPITI", eq: "bilanciere" },
   { name: "Crunch", en: "Crunch", muscle: "ADDOME", eq: "corpo libero" },

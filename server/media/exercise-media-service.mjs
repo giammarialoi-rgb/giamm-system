@@ -124,15 +124,16 @@ export async function fetchMediaRows(pool, ownerType, ownerId) {
 }
 
 // Catalogue entries that are the same exercise under a second name, each one
-// confirmed by the user. Deliberately an explicit list rather than a rule:
-// "Kickback al Cavo" and "Kickback cavo" share every word yet the user treats
-// them as different lifts, so matching on wording alone would show the wrong one.
+// confirmed by the user. Deliberately an explicit list rather than a wording
+// rule: "Kickback cavo tricipiti" shares its words with the glute "Kickback
+// cavo", and a rule would hand the triceps lift a glute picture.
 export const EXERCISE_MEDIA_ALIASES = Object.freeze({
   panca_piana_con_bilanciere: 'panca_piana_bilanciere',
   panca_inclinata_con_manubri: 'panca_inclinata_manubri',
   squat_con_bilanciere: 'squat_bilanciere',
   goblet_squat: 'squat_goblet',
-  rematore_con_bilanciere: 'rematore_bilanciere'
+  rematore_con_bilanciere: 'rematore_bilanciere',
+  kickback_al_cavo: 'kickback_cavo'
 });
 
 export async function getMediaManifest(pool, ownerType, ownerId, canonicalName) {

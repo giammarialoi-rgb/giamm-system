@@ -238,8 +238,10 @@ function mountedRoutes() {
   const kickPool = makeFakePool([
     { owner_type: 'exercise', owner_id: 'kickback_cavo', media_type: 'image', variant: 'master', status: 'active', match_type: 'exact', public_url: 'https://cdn/kickback_cavo.webp', version: 1, source: 'nurvan' }
   ]);
-  const kick = await getMediaManifest(kickPool, 'exercise', 'kickback_al_cavo', 'Kickback al Cavo');
-  ok(kick.hasMedia === false, '7e. same wording is not enough: kickback_al_cavo is not an approved alias and stays on the placeholder');
+  const tri = await getMediaManifest(kickPool, 'exercise', 'kickback_cavo_tricipiti', 'Kickback cavo tricipiti');
+  ok(tri.hasMedia === false, '7e. shared wording is not enough: the triceps cable kickback never inherits the glute kickback picture');
+  const glute = await getMediaManifest(kickPool, 'exercise', 'kickback_al_cavo', 'Kickback al Cavo');
+  ok(glute.media.master === 'https://cdn/kickback_cavo.webp', '7e2. the approved glute alias does share it');
 
   const wuPool = makeFakePool([
     { owner_type: 'warmup', owner_id: 'squat_goblet', media_type: 'image', variant: 'master', status: 'active', match_type: 'exact', public_url: 'https://cdn/x.webp', version: 1, source: 'nurvan' }
