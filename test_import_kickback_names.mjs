@@ -88,6 +88,10 @@ expect('Glute kickback', GLUTE, 'GLUTEI', 'names the glutes');
 expect('Kickback glutei', GLUTE, 'GLUTEI', 'names the glutes');
 expect('Glute kickback con manubrio', GLUTE, 'GLUTEI', 'names the glutes, so the dumbbell does not make it triceps');
 expect('Donkey kickback', GLUTE, 'GLUTEI', 'glute lift');
+expect('Kickback gluteo con manubrio', GLUTE, 'GLUTEI', 'names the glutes');
+expect('Glutes kickback with dumbbell', GLUTE, 'GLUTEI', 'names the glutes');
+expect('Donkey kickback sugli avambracci', GLUTE, 'GLUTEI', '"avambracci" (forearms) is not an arm word');
+expect('Kickback in quadrupedia (appoggio sugli avambracci)', GLUTE, 'GLUTEI', '"avambracci" (forearms) is not an arm word');
 
 // --- neighbours are untouched --------------------------------------------------
 expect('French press', 'French Press con Bilanciere EZ', 'TRICIPITI', 'unrelated triceps exercise');
@@ -123,7 +127,9 @@ const TAE = engine.TrainingAnalyticsEngine;
 const MACRO = { TRICIPITI: 'BRACCIA', GLUTEI: 'GAMBE' };
 for (const raw of ['Kickback tricipiti', 'Triceps kickback', 'Kickback manubri', 'Dumbbell kickback', 'Kickback cavo tricipiti',
   'Kickback tricipiti ai cavi', 'Kickback', 'Kickback cavo', 'Kickback al Cavo', 'Kickback ai cavi', 'Kickback elastico', 'Cable kickback',
-  'Glute kickback', 'Glute kickback con manubrio', 'Kickback un braccio', 'Single arm kickback', 'Kickback braccio al cavo']) {
+  'Glute kickback', 'Glute kickback con manubrio', 'Kickback un braccio', 'Single arm kickback', 'Kickback braccio al cavo',
+  'Kickback gluteo con manubrio', 'Glutes kickback with dumbbell', 'Glutes DB kickback', 'Donkey kickback sugli avambracci',
+  'Kickback in quadrupedia (appoggio sugli avambracci)']) {
   const imported = normalizeExerciseName(raw);
   const stats = TAE.muscleContributionForExercise(raw, {}).primary[0];
   assert.equal(stats, MACRO[imported.muscle], JSON.stringify(raw) + ': importer says ' + imported.muscle + ', stats say ' + stats);

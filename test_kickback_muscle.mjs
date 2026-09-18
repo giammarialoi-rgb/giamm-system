@@ -1,11 +1,13 @@
-// Runs the real muscle heuristics (web/training-analytics-engine.js) and the real
-// page functions that remember an exercise's muscle (cut out of
-// web/index.base.html), and asserts what they return. Nothing here
-// string-matches the source.
+// Runs the real muscle heuristics and stats pipeline (web/training-analytics-engine.js)
+// and the real page functions that resolve and remember an exercise's muscle (cut out
+// of web/index.base.html), and asserts what they return. Nothing here string-matches
+// the source.
 //
-// Guards the kickback mix-up: a bare "kickback" hint sat in the triceps row, so
-// glute kickbacks ("Kickback cavo", "Kickback al Cavo", "Kickback elastico"...)
-// were counted as BRACCIA in stats, and the page remembered that guess per name.
+// Guards the kickback mix-up: a bare "kickback" hint sat in the triceps row, so glute
+// kickbacks ("Kickback cavo", "Kickback al Cavo", "Kickback elastico"...) were counted
+// as BRACCIA in stats, and the page remembered that guess per name. A kickback's muscle
+// now comes from its own row: that slot's choice, its movement and muscle groups, then
+// its wording. A muscle remembered for the name counts only if the user set it by hand.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -49,6 +51,8 @@ vm.runInContext([
   sourceOf('lookupCatalogExerciseMuscle'),
   sourceOf('lookupKnowledgeExerciseMuscle'),
   sourceOf('storedExerciseMuscleRecord'),
+  sourceOf('primaryExerciseMuscle'),
+  sourceOf('resolveExerciseMacroGroups'),
   sourceOf('getExerciseMuscleGroups'),
   'function setStore(s) { store = s; }',
   'function getStore() { return store; }'
@@ -64,22 +68,30 @@ function contribution(name, meta) {
 }
 
 // --- engine heuristics ----------------------------------------------------
+function label(name, meta) { return JSON.stringify(name) + (meta ? ' ' + JSON.stringify(meta) : ''); }
 function expectGlute(name, meta) {
   const c = contribution(name, meta);
-  assert.deepEqual(c.primary, ['GAMBE'], JSON.stringify(name) + ' primary');
-  assert.ok(!c.secondary.includes('BRACCIA'), JSON.stringify(name) + ' must not pick up BRACCIA as secondary');
-  console.log('OK  ', JSON.stringify(name).padEnd(30), 'GAMBE');
+  assert.deepEqual(c.primary, ['GAMBE'], label(name, meta) + ' primary');
+  assert.ok(!c.secondary.includes('BRACCIA'), label(name, meta) + ' must not pick up BRACCIA as secondary');
+  console.log('OK  ', label(name, meta).padEnd(30), 'GAMBE');
 }
 function expectTriceps(name, meta) {
   const c = contribution(name, meta);
-  assert.deepEqual(c.primary, ['BRACCIA'], JSON.stringify(name) + ' ' + JSON.stringify(meta || {}) + ' primary');
-  assert.ok(!c.secondary.includes('GAMBE'), JSON.stringify(name) + ' ' + JSON.stringify(meta || {}) + ' must not pick up GAMBE as secondary');
-  console.log('OK  ', (JSON.stringify(name) + (meta ? ' ' + JSON.stringify(meta) : '')).padEnd(30), 'BRACCIA');
+  assert.deepEqual(c.primary, ['BRACCIA'], label(name, meta) + ' primary');
+  assert.ok(!c.secondary.includes('GAMBE'), label(name, meta) + ' must not pick up GAMBE as secondary');
+  console.log('OK  ', label(name, meta).padEnd(30), 'BRACCIA');
 }
 
 ['Kickback cavo', 'Kickback al Cavo', 'Kickback', 'Kickback ai cavi', 'Kickback elastico',
   'Cable kickback', 'Cable Kickback', 'Glute kickback', 'Kickback glutei', 'Kickback cavo glutei',
   'kickback cavo'].forEach((n) => expectGlute(n));
+
+// A name that says glutes stays glutes, whatever equipment or arm position it names.
+['Glute kickback con manubrio', 'Kickback gluteo con manubrio', 'Glutes kickback with dumbbell', 'Glutes DB kickback',
+  'Gluteus kickback dumbbell', 'Kickback gluteo braccio teso'].forEach((n) => expectGlute(n));
+
+// "avambracci" (forearms, the donkey kickback's support) is not an arm word.
+['Donkey kickback sugli avambracci', 'Kickback sugli avambracci', 'Kickback in quadrupedia (appoggio sugli avambracci)'].forEach((n) => expectGlute(n));
 
 ['Kickback tricipiti', 'Kickback cavo tricipiti', 'Triceps kickback', 'Cable triceps kickback',
   'Kickback tricipiti ai cavi', 'Tricep kickback'].forEach((n) => expectTriceps(n));
@@ -90,15 +102,20 @@ function expectTriceps(name, meta) {
 // Kickbacks worded with arms were triceps before and stay so.
 ['Kickback braccia', 'Kickback un braccio', 'Single arm kickback'].forEach((n) => expectTriceps(n));
 
-// A movement or muscle group naming the triceps or arms keeps a bare kickback on the arms,
-// without a GAMBE secondary (the bonus-exercise shape is movement + muscle_groups = macro).
+// The row's own movement or muscle groups decide, and a kickback never counts for both.
 expectTriceps('Kickback', { movement: 'Tricipiti' });
 expectTriceps('Kickback', { movement: 'BRACCIA' });
 expectTriceps('Kickback', { movement: 'BRACCIA', muscle_groups: ['BRACCIA'] });
 expectTriceps('Kickback cavo', { movement: 'TRICIPITI', muscle_groups: ['TRICIPITI'] });
+expectTriceps('Kickback', { muscle_groups: ['TRICIPITI'] });
+expectTriceps('Kickback', { muscle_group: 'TRICIPITI', muscle_groups: ['TRICIPITI'], movement: 'Isolamento' });
+expectTriceps('Kickback', { storedMuscle: 'BRACCIA', storedSource: 'manual' });
+expectTriceps('Kickback', { storedMuscle: 'BRACCIA', storedSource: 'slot' });
+expectGlute('Kickback manubri', { muscle_groups: ['GLUTEI'] });
 
 // Neighbours of the rows that changed stay as they were.
 assert.deepEqual(contribution('French press').primary, ['BRACCIA']);
+assert.deepEqual(contribution('French press', { muscle_groups: ['PETTO'] }), { primary: ['PETTO'], secondary: ['BRACCIA'] });
 assert.deepEqual(contribution('Pushdown al cavo').primary, ['BRACCIA']);
 assert.deepEqual(contribution('Hip thrust').primary, ['GAMBE']);
 assert.deepEqual(contribution('Donkey calf raise').primary, ['GAMBE']);
@@ -111,60 +128,70 @@ assert.deepEqual(byMuscle.map((m) => m.id), ['GAMBE'], 'glute kickback sets coun
 assert.equal(byMuscle[0].directSets, 1);
 console.log('OK   buildByMuscle counts "Kickback cavo" as GAMBE only');
 
-// --- a remembered arms guess for a glute kickback is not trusted ------------
-// Stats pass the remembered record straight into the engine.
-const guess = (muscle, source) => ({ storedMuscle: muscle, storedSource: source });
-expectGlute('Kickback cavo', guess('BRACCIA', 'triangulated'));
-expectGlute('Kickback', guess('BRACCIA', 'name'));
-assert.deepEqual(contribution('Kickback cavo', { storedMuscle: 'BRACCIA' }).primary, ['GAMBE'], 'a record without a source counts as a guess');
-for (const source of ['manual', 'slot', 'research', 'encyclopedia']) {
-  assert.deepEqual(contribution('Kickback cavo', guess('BRACCIA', source)).primary, ['BRACCIA'], 'a ' + source + ' choice is kept');
+// --- remembered muscles, as the stats read them ---------------------------
+const rec = (s, name, eK) => plain(TAE.storedMuscleRecord(s, name, eK));
+const named = (muscle, source) => ({ exMuscle: {}, exMuscleByName: { kickback: { muscle, source, at: 1 } } });
+for (const source of ['triangulated', 'name', 'slot', 'research', 'encyclopedia', 'bonus', 'replace', undefined]) {
+  assert.equal(rec(named('BRACCIA', source), 'Kickback', 'w1_d0_e0'), null, 'a by-name ' + source + ' record is not used for a kickback');
 }
-assert.deepEqual(contribution('Kickback tricipiti', guess('BRACCIA', 'triangulated')).primary, ['BRACCIA'], 'a triceps kickback keeps its arms record');
-assert.deepEqual(contribution('Kickback manubri', guess('BRACCIA', 'triangulated')).primary, ['BRACCIA'], 'a dumbbell kickback keeps its arms record');
-assert.deepEqual(contribution('French press', guess('GAMBE', 'triangulated')).primary, ['GAMBE'], 'records for other exercises are trusted as before');
-assert.deepEqual(contribution('Kickback', Object.assign(guess('BRACCIA', 'triangulated'), { movement: 'BRACCIA', muscle_groups: ['BRACCIA'] })).primary, ['BRACCIA'],
-  'an ignored guess falls back to the row\'s own movement and groups');
-assert.deepEqual(contribution('Kickback', Object.assign(guess('GAMBE', 'triangulated'), { movement: 'BRACCIA', muscle_groups: ['BRACCIA'] })).primary, ['BRACCIA'],
-  'a remembered GAMBE guess does not override a row that says arms either');
-console.log('OK   engine ignores app-made guesses for kickbacks, keeps choices');
+assert.equal(rec({ exMuscle: {}, exMuscleByName: { kickback: 'BRACCIA' } }, 'Kickback', 'w1_d0_e0'), null, 'a legacy string record is not used for a kickback');
+assert.deepEqual(rec(named('BRACCIA', 'manual'), 'Kickback', 'w1_d0_e0'), { muscle: 'BRACCIA', source: 'manual' }, 'a manual record is used');
+assert.deepEqual(rec({ exMuscle: { w1_d0_e0: 'BRACCIA' }, exMuscleByName: {} }, 'Kickback', 'w1_d0_e0'), { muscle: 'BRACCIA', source: 'slot' }, 'the slot\'s own choice is used');
+assert.deepEqual(rec({ exMuscle: {}, exMuscleByName: { 'french press': { muscle: 'PETTO', source: 'triangulated' } } }, 'French press', 'w1_d0_e0'),
+  { muscle: 'PETTO', source: 'triangulated' }, 'records for other exercises are used as before');
+console.log('OK   stats use only manual by-name records and the slot\'s own choice for kickbacks');
 
-// --- page: lookups, remembering, and the review's flip scenarios -----------
-function page(stale) {
-  sandbox.setStore({ exMuscleByName: JSON.parse(JSON.stringify(stale || {})), exMuscle: {} });
+// --- the stats pipeline end to end ----------------------------------------
+function logged(sets) {
+  const data = {};
+  sets.forEach(([eK, n]) => { for (let s = 1; s <= n; s++) { data[eK + '_s' + s + '_load'] = 10; data[eK + '_s' + s + '_reps'] = 12; } });
+  return data;
+}
+function statsByMuscle(storeState, program) {
+  const s = Object.assign({ subs: {}, skips: {}, prefs: { intensityType: 'RIR' } }, storeState);
+  return plain(TAE.buildByMuscle(TAE.normalizeSets(s, program, {}))).map((m) => [m.id, m.directSets, m.indirectSets]).sort();
+}
+// Two rows called "Kickback": the first set to arms on its slot, the second a glute row.
+// A stale by-name record left from the old rules must not matter either.
+const twoKickbacks = { weeks: [{ sessions: [{ exercises: [{ name: 'Kickback' }] }, { exercises: [{ name: 'Kickback' }] }] }] };
+for (const byName of [{}, { kickback: { muscle: 'BRACCIA', source: 'slot', at: 1 } }, { kickback: { muscle: 'BRACCIA', source: 'triangulated', at: 1 } }]) {
+  assert.deepEqual(statsByMuscle({ data: logged([['w1_d0_e0', 3], ['w1_d1_e0', 3]]), exMuscle: { w1_d0_e0: 'BRACCIA' }, exMuscleByName: byName }, twoKickbacks),
+    [['BRACCIA', 3, 0], ['GAMBE', 3, 0]], 'slot row counts arms, glute row counts legs, with by-name record ' + JSON.stringify(byName));
+}
+// A slot replaced by "Kickback" and set to arms keeps the original row's movement.
+const pushdownRow = { weeks: [{ sessions: [{ exercises: [{ name: 'Pushdown corda', movement: 'Pushdown corda' }] }] }] };
+assert.deepEqual(statsByMuscle({ data: logged([['w1_d0_e0', 2]]), subs: { w1_d0_e0: 'Kickback' }, exMuscle: { w1_d0_e0: 'BRACCIA' },
+  exMuscleByName: { kickback: { muscle: 'BRACCIA', source: 'manual', at: 1 } }, skips: {}, prefs: { intensityType: 'RIR' } }, pushdownRow),
+[['BRACCIA', 2, 0]], 'an arms choice counts no half set to legs');
+console.log('OK   normalizeSets + buildByMuscle: each kickback row counts for its own muscle only');
+
+// --- page: lookups and remembering -----------------------------------------
+function page(byName, exMuscle) {
+  sandbox.setStore({ exMuscleByName: JSON.parse(JSON.stringify(byName || {})), exMuscle: exMuscle || {} });
   return {
     groups: (name, movement, groups) => plain(sandbox.getExerciseMuscleGroups(name, movement || '', groups || [])),
+    slot: (name, eK) => plain(sandbox.resolveExerciseMacroGroups(name, '', [], eK)),
     record: (key) => plain(sandbox.getStore().exMuscleByName[key] || null)
   };
 }
 
 let p = page();
 assert.deepEqual(p.groups('Kickback al Cavo'), ['GAMBE']);
-assert.equal(p.record('kickback al cavo').muscle, 'GAMBE');
-console.log('OK   getExerciseMuscleGroups("Kickback al Cavo") -> GAMBE, remembered as GAMBE');
+console.log('OK   getExerciseMuscleGroups("Kickback al Cavo") -> GAMBE');
 
-// A stale guess is replaced by the re-derived result the first time the page looks.
-p = page({
-  'kickback cavo': { muscle: 'BRACCIA', source: 'triangulated', at: 1 },
-  'kickback': { muscle: 'BRACCIA', source: 'name', at: 1 }
-});
-assert.deepEqual(p.groups('Kickback cavo'), ['GAMBE']);
-assert.equal(p.record('kickback cavo').muscle, 'GAMBE', 'stale guess replaced in the store');
-assert.deepEqual(p.groups('Kickback'), ['GAMBE']);
-assert.equal(p.record('kickback').muscle, 'GAMBE');
-console.log('OK   stale triangulated/name BRACCIA guesses are re-derived and replaced on lookup');
+// Old or relabelled by-name records never decide a kickback, however many lookups run.
+for (const source of ['triangulated', 'name', 'slot', 'research', 'encyclopedia', 'bonus']) {
+  p = page({ 'kickback cavo': { muscle: 'BRACCIA', source, at: 1 } });
+  for (let round = 0; round < 3; round++) assert.deepEqual(p.groups('Kickback cavo'), ['GAMBE'], source + ' record, lookup ' + (round + 1));
+}
+console.log('OK   by-name triangulated/name/slot/research/encyclopedia/bonus records never decide a kickback');
 
-// Choices are never overridden.
-p = page({
-  'kickback al cavo': { muscle: 'BRACCIA', source: 'manual', at: 1 },
-  'kickback ai cavi': { muscle: 'BRACCIA', source: 'research', at: 1 }
-});
-assert.deepEqual(p.groups('Kickback al Cavo'), ['BRACCIA'], 'a manual choice still wins');
-assert.deepEqual(p.record('kickback al cavo'), { muscle: 'BRACCIA', source: 'manual', at: 1 });
-assert.deepEqual(p.groups('Kickback ai cavi'), ['BRACCIA'], 'a research record is not a name guess');
-console.log('OK   manual and research records are kept');
+p = page({ 'kickback al cavo': { muscle: 'BRACCIA', source: 'manual', at: 1 } });
+for (let round = 0; round < 3; round++) assert.deepEqual(p.groups('Kickback al Cavo'), ['BRACCIA'], 'a manual choice wins, lookup ' + (round + 1));
+assert.deepEqual(p.record('kickback al cavo'), { muscle: 'BRACCIA', source: 'manual', at: 1 }, 'and is never rewritten');
+console.log('OK   a manual choice for the name wins and is kept');
 
-// Review scenarios: an explicit arms choice must survive every later lookup, not flip to GAMBE.
+// An explicit arms row never flips, however often it is looked up.
 for (const [name, movement, groups] of [
   ['Kickback', 'BRACCIA', ['BRACCIA']],          // bonus exercise saved with the "Braccia" macro
   ['Kickback', 'TRICIPITI', ['TRICIPITI']],      // program row with muscle group TRICIPITI
@@ -175,29 +202,19 @@ for (const [name, movement, groups] of [
   for (let round = 0; round < 4; round++) {
     assert.deepEqual(p.groups(name, movement, groups), ['BRACCIA'], name + ' / ' + movement + ' lookup ' + (round + 1));
   }
-  const rec = p.record(sandbox.foldExerciseMuscleName(name));
-  assert.equal(rec.muscle, 'BRACCIA', name + ' / ' + movement + ' stays remembered as BRACCIA');
-  const stats = contribution(name, { movement, muscle_groups: groups, storedMuscle: rec.muscle, storedSource: rec.source });
-  assert.deepEqual(stats.primary, ['BRACCIA'], name + ' / ' + movement + ' stats primary');
-  assert.ok(!stats.secondary.includes('GAMBE'), name + ' / ' + movement + ' stats secondary');
-  console.log('OK  ', (name + ' / ' + movement).padEnd(30), 'stays BRACCIA across lookups and in stats');
+  console.log('OK  ', (name + ' / ' + movement).padEnd(30), 'stays BRACCIA across lookups');
 }
 
-// Name-only lookups of the same glute kickback stay GAMBE across repeated lookups too.
-p = page();
-for (let round = 0; round < 4; round++) assert.deepEqual(p.groups('Kickback cavo'), ['GAMBE']);
-console.log('OK   "Kickback cavo" stays GAMBE across lookups');
-
-// One name, two contexts: a bonus "Kickback" saved as Braccia and a name-only lookup of
-// "Kickback" elsewhere. Whatever order they run in, each keeps its own answer.
-p = page();
-for (let round = 0; round < 3; round++) {
-  assert.deepEqual(p.groups('Kickback', 'BRACCIA', ['BRACCIA']), ['BRACCIA'], 'arms row, round ' + (round + 1));
-  assert.deepEqual(p.groups('Kickback'), ['GAMBE'], 'name only, round ' + (round + 1));
+// One name, several rows, any order: a slot set to arms, a glute row, a bonus row saved as
+// Braccia and name-only lookups never change each other's answer.
+p = page({}, { w1_d0_e0: 'BRACCIA' });
+const order = ['slotA', 'rowB', 'rowB', 'bonus', 'rowB', 'slotA', 'nameOnly', 'slotA', 'rowB', 'bonus', 'nameOnly', 'rowB'];
+for (const step of order) {
+  if (step === 'slotA') assert.deepEqual(p.slot('Kickback', 'w1_d0_e0'), ['BRACCIA'], 'slot set to arms');
+  if (step === 'rowB') assert.deepEqual(p.slot('Kickback', 'w1_d1_e0'), ['GAMBE'], 'glute row without a slot choice');
+  if (step === 'bonus') assert.deepEqual(p.groups('Kickback', 'BRACCIA', ['BRACCIA']), ['BRACCIA'], 'bonus row saved as Braccia');
+  if (step === 'nameOnly') assert.deepEqual(p.groups('Kickback'), ['GAMBE'], 'name-only lookup');
 }
-const last = p.record('kickback');
-assert.deepEqual(contribution('Kickback', { movement: 'BRACCIA', muscle_groups: ['BRACCIA'], storedMuscle: last.muscle, storedSource: last.source }).primary, ['BRACCIA']);
-assert.deepEqual(contribution('Kickback', { storedMuscle: last.muscle, storedSource: last.source }).primary, ['GAMBE']);
-console.log('OK   interleaved arms-row and name-only lookups of "Kickback" never flip each other');
+console.log('OK   interleaved slot, glute, bonus and name-only lookups of "Kickback" never flip each other');
 
 console.log('\nKickback muscle tests passed.');

@@ -27235,7 +27235,7 @@ var EXERCISE_DICTIONARY = [
 // triceps kickback, the cable one when it says cable.
 function kickbackDictionaryEntry(lower) {
   let normalized = "Kickback al Cavo";
-  if (!/glut/.test(lower) && /tricip|tricep|manubri|dumbbell|\bdb\b|bracci|\barms?\b/.test(lower)) {
+  if (!/glut/.test(lower) && /tricip|tricep|manubri|dumbbell|\bdb\b|\bbracci|\barms?\b/.test(lower)) {
     normalized = /cav[oi]|cable/.test(lower) && !/manubri|dumbbell|\bdb\b/.test(lower) ? "Kickback cavo tricipiti" : "Kickback tricipiti";
   }
   return EXERCISE_DICTIONARY.find((e) => e.normalized === normalized) || null;
@@ -43109,8 +43109,8 @@ function getExerciseMuscleGroups(exerciseName, movement, explicitGroups) {
   }
   const TAE = window.TrainingAnalyticsEngine;
   let stored = storedExerciseMuscleRecord(exerciseName);
-  // A kickback's muscle comes from its name, movement and groups, not from a
-  // muscle the app remembered for the name (see TAE.ignoresRememberedMuscle).
+  // A kickback's muscle comes from its own row, not from a muscle remembered for
+  // the name unless the user set that by hand (see TAE.ignoresRememberedMuscle).
   if (stored && TAE && typeof TAE.ignoresRememberedMuscle === 'function' && TAE.ignoresRememberedMuscle(exerciseName, stored.source)) stored = null;
   const locked = TAE && typeof TAE.nameLockedMuscle === 'function' ? TAE.nameLockedMuscle(exerciseName, movement) : null;
   if (stored && stored.source === 'manual' && stored.muscle) addMacro(stored.muscle);

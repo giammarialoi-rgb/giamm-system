@@ -23139,7 +23139,7 @@ var EXERCISE_DICTIONARY = [
 // triceps kickback, the cable one when it says cable.
 function kickbackDictionaryEntry(lower) {
   let normalized = "Kickback al Cavo";
-  if (!/glut/.test(lower) && /tricip|tricep|manubri|dumbbell|\bdb\b|bracci|\barms?\b/.test(lower)) {
+  if (!/glut/.test(lower) && /tricip|tricep|manubri|dumbbell|\bdb\b|\bbracci|\barms?\b/.test(lower)) {
     normalized = /cav[oi]|cable/.test(lower) && !/manubri|dumbbell|\bdb\b/.test(lower) ? "Kickback cavo tricipiti" : "Kickback tricipiti";
   }
   return EXERCISE_DICTIONARY.find((e) => e.normalized === normalized) || null;

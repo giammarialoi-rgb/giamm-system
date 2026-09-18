@@ -768,9 +768,11 @@
   const MUSCLE_HINTS = [
     { re: /calf raise|seated calf|standing calf|donkey calf|polpac/i, primary: ['GAMBE'] },
     { re: /hip thrust|glute bridge|glute kickback|abduct|adductor|glutei|\bglute\b/i, primary: ['GAMBE'] },
-    // A kickback is the glute lift unless the name or movement says triceps, arms
-    // or dumbbells (those are the triceps exercise, handled in the triceps row).
-    { re: /^(?!.*(tricip|tricep|manubri|dumbbell|\bdb\b|bracci|\barms?\b)).*kickback/i, primary: ['GAMBE'] },
+    // A kickback is the glute lift when the name or movement says glutes, or says
+    // none of triceps, arms or dumbbells (those are the triceps kickback, below).
+    // Kickback rows only name the muscle: they are skipped once the row's own
+    // choice has decided it, so a kickback never counts for both.
+    { re: /glut.*kickback|kickback.*glut|^(?!.*(tricip|tricep|manubri|dumbbell|\bdb\b|\bbracci|\barms?\b)).*kickback/i, primary: ['GAMBE'], kickback: true },
     { re: /stacco rumeno|romanian|\brdl\b|good morning|\bleg curl\b|femoral|nordic/i, primary: ['GAMBE'] },
     { re: /squat|hack squat|leg press|pressa 45|\bpressa\b|affondi|lunge|leg extension|bulgarian|step.?up|sissy|pistol squat/i, primary: ['GAMBE'] },
     { re: /\bstacco\b|deadlift/i, primary: ['GAMBE'], secondary: ['DORSO'] },
@@ -783,7 +785,8 @@
     { re: /\brow\b|remat/i, primary: ['DORSO'], secondary: ['BRACCIA'] },
     { re: /military|lento avanti|lento dietro|shoulder press|overhead press|alzate later|lateral raise|alzate front|front raise|rear delt|deltoid|face pull|alzate posteriori|\blento\b|spinta.*(spalle|alto)|distensioni.*(spalle|alto)/i, primary: ['SPALLE'], secondary: ['BRACCIA'] },
     { re: /curl|bicip|hammer curl|preacher|spider curl|bayesian|concentration/i, primary: ['BRACCIA'] },
-    { re: /french|skull|pushdown|tricip|tricep|estensioni.*(tricip|gomito)|^(?!.*glut)(?=.*(manubri|dumbbell|\bdb\b|bracci|\barms?\b)).*kickback/i, primary: ['BRACCIA'] },
+    { re: /french|skull|pushdown|tricip|tricep|estensioni.*(tricip|gomito)/i, primary: ['BRACCIA'] },
+    { re: /^(?!.*glut)(?=.*(manubri|dumbbell|\bdb\b|\bbracci|\barms?\b)).*kickback/i, primary: ['BRACCIA'], kickback: true },
     { re: /\bdips?\b|parallele/i, primary: ['PETTO'], secondary: ['BRACCIA'] },
     { re: /crunch|plancia|plank|ab wheel|ab roller|addom|sit.?up|leg raise|knee raise|hollow|situp|woodchop|wood chop|pallof|\babs\b|\bcore\b|vacuum|bicycle|alzate gambe|sollevamento gambe|ruota addom|dead bug|bird dog|russian twist|hanging|macchina addom|torso (machine|rotation)|roman chair|air bike|heel tap|v[\s-]?up|jackknife/i, primary: ['ADDOME'] }
   ];
@@ -829,8 +832,10 @@
     if (!map || typeof map !== 'object') return null;
     const hit = map[foldName(name)] || map[String(name || '').toLowerCase()];
     if (!hit) return null;
-    if (typeof hit === 'string') return { muscle: hit, source: 'triangulated' };
-    return { muscle: hit.muscle || hit.id || null, source: hit.source || 'triangulated' };
+    const rec = typeof hit === 'string'
+      ? { muscle: hit, source: 'triangulated' }
+      : { muscle: hit.muscle || hit.id || null, source: hit.source || 'triangulated' };
+    return ignoresRememberedMuscle(name, rec.source) ? null : rec;
   }
 
   function storedMuscleFrom(store, name, eK) {
@@ -838,13 +843,14 @@
     return rec ? rec.muscle : null;
   }
 
-  // Which muscle a kickback works depends on its wording and on the row's movement
-  // and muscle groups, so a muscle the app remembered by itself for the name (not
-  // one the user picked or set on a slot) is not trusted for it; a bare "kickback"
-  // also used to be remembered as triceps. The name, movement and groups decide.
+  // Which muscle a kickback works depends on its wording and on its own row (the
+  // movement, the muscle groups, a choice set on that slot). So a muscle remembered
+  // for the name is trusted only when the user set it for the name by hand:
+  // the app's own guesses, copies of another slot's choice and research results
+  // are ignored, whatever they were relabelled to since (a bare "kickback" also
+  // used to be remembered as triceps).
   function ignoresRememberedMuscle(name, storedSource) {
-    const src = String(storedSource || 'triangulated').toLowerCase();
-    return (src === 'triangulated' || src === 'name') && /kickback/i.test(String(name || ''));
+    return String(storedSource || '').toLowerCase() !== 'manual' && /kickback/i.test(String(name || ''));
   }
 
   function muscleContributionForExercise(name, meta) {
@@ -859,9 +865,7 @@
       arr.push(n);
     }
     const storedSource = String((meta && meta.storedSource) || '').toLowerCase();
-    const remembered = meta && meta.storedMuscle;
-    const trusted = remembered && !ignoresRememberedMuscle(name, storedSource) ? remembered : null;
-    const stored = trusted || (meta && (meta.muscle_group || meta.muscleGroup));
+    const stored = meta && (meta.storedMuscle || meta.muscle_group || meta.muscleGroup);
     const locked = nameLockedMuscle(name, meta && meta.movement);
     if (storedSource === 'manual' && stored) {
       add(primary, stored);
@@ -876,8 +880,10 @@
       else add(secondary, explicit[0]);
       explicit.slice(1).forEach(function (g) { add(secondary, g); });
     }
+    const decided = primary.length > 0;
     const text = String(name || '') + ' ' + String((meta && meta.movement) || '');
     MUSCLE_HINTS.forEach(function (h) {
+      if (h.kickback && decided) return;
       if (!h.re.test(text)) return;
       (h.primary || []).forEach(function (g) {
         if (locked && normalizeMuscleId(g) !== locked) return;
