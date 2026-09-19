@@ -63,6 +63,7 @@
 <script src="warmup-engine.js"></script>
 <script src="exercise-media-client.js"></script>
 <script src="exercise-media-ui.js"></script>
+<script src="nutrition-merge.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -36442,6 +36443,133 @@ function mergeStoredFoodDiary(current) {
   }
 }
 
+// The nutrition plan - which is also the food diary - exists in several copies:
+// the localStorage blob, the IndexedDB nutrition record, the copy saved inside
+// the program, the cloud record, other phones. Each used to replace the others
+// whole, so a stale copy loaded or synced last silently took every meal logged
+// since it was made. Now every day, meal and food carries an id and an
+// updatedAt, deletions leave a tombstone, and copies are combined item by item
+// (web/nutrition-merge.js, the same code the server runs).
+//
+// persist() records what the user changed by comparing the plan with the
+// snapshot taken the last time it was saved or loaded. A plan that arrives
+// from storage or the cloud is installed with installPersonalNutrition(), which
+// moves the snapshot along with it, so a loaded copy is never mistaken for an
+// edit - and in particular never turns into deletions of what it lacks.
+//
+// Swapping the whole plan object for another is only a deliberate "the plan is
+// now this" when it comes from something the user asked for (generate, clear,
+// import, restore a backup), which marks the new plan with
+// userReplacesNutrition(). Any other swap - a program switch or recovery
+// carrying an empty or old plan inside it, say - is combined with the plan it
+// replaced, so it can add to the diary but never take anything out of it.
+var __nutritionSnapshot = null;
+var __nutritionSnapshotPlan = null;
+var __nutritionStampedJson = '';
+
+function nutritionMergeApi() {
+  return (typeof window !== 'undefined' && window.NurvanNutritionMerge) || null;
+}
+
+function userReplacesNutrition(plan) {
+  if (plan && typeof plan === 'object') {
+    try { Object.defineProperty(plan, '__replacesPlan', { value: true, configurable: true, enumerable: false, writable: true }); } catch (_) {}
+  }
+  return plan;
+}
+
+function nutritionHasContent(n) {
+  if (!n || typeof n !== 'object') return false;
+  return !!(n.cleared || n.isCleared || n.present
+    || (Array.isArray(n.days) && n.days.length)
+    || (Array.isArray(n.customFoods) && n.customFoods.length)
+    || n.daily_calories_target != null);
+}
+
+function stampPersonalNutrition() {
+  const M = nutritionMergeApi();
+  if (!M) return;
+  let n = personalDomain().nutrition;
+  if (!n || typeof n !== 'object') return;
+  try {
+    const previous = __nutritionSnapshotPlan;
+    if (__nutritionSnapshot && previous && previous !== n) {
+      if (n.__replacesPlan) {
+        delete n.__replacesPlan;
+      } else {
+        n = M.merge(previous, n);
+        personalDomain().nutrition = n;
+        if (NurvanMemory.active === 'personal' && typeof DATA !== 'undefined' && DATA) DATA.nutrition = n;
+      }
+    } else if (n.__replacesPlan) {
+      delete n.__replacesPlan;
+    }
+    const json = JSON.stringify(n);
+    if (__nutritionSnapshot && previous === n && json === __nutritionStampedJson) return;
+    __nutritionSnapshot = M.stamp(n, __nutritionSnapshot, Date.now());
+    __nutritionSnapshotPlan = n;
+    __nutritionStampedJson = JSON.stringify(n);
+  } catch (err) {
+    console.warn('[NUTRITION_STAMP]', err);
+  }
+}
+
+// Puts a plan that came from storage or the cloud in place as the user's own.
+function installPersonalNutrition(n) {
+  const M = nutritionMergeApi();
+  if (M && n && typeof n === 'object') {
+    __nutritionSnapshot = M.stamp(n, null);
+    __nutritionSnapshotPlan = n;
+    __nutritionStampedJson = JSON.stringify(n);
+  }
+  personalDomain().nutrition = n;
+  if (NurvanMemory.active === 'personal' && typeof DATA !== 'undefined' && DATA) DATA.nutrition = n;
+  return n;
+}
+
+// Combines copies of the plan. `copies` goes from oldest to freshest: the
+// fresher one wins where both changed the same thing. Copies made before item
+// ids existed are only used when no other copy has them, and then the freshest
+// one with anything in it is taken as it is, as before.
+function combineNutritionCopies(copies) {
+  const M = nutritionMergeApi();
+  const list = (copies || []).filter(function (n) { return n && typeof n === 'object'; });
+  if (M) {
+    const aware = list.filter(M.isMergeAware);
+    if (aware.length) {
+      return aware.reduce(function (acc, n) { return acc ? M.merge(acc, n) : M.merge(n, n); }, null);
+    }
+  }
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (nutritionHasContent(list[i])) return list[i];
+  }
+  return null;
+}
+
+// Boot used to take the plan from the copy saved inside the program, which is
+// only rewritten when the program itself is saved - so every meal logged since
+// then vanished on the next reload, and the stale copy was then written back
+// over the fresh ones. All local copies are combined instead: the program's
+// (oldest), the IndexedDB nutrition record, and the localStorage blob that
+// persist() writes on every change (freshest).
+async function restorePersonalNutritionOnBoot(fromProgram) {
+  let fromIdb = null;
+  try {
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.getNutrition) {
+      fromIdb = await GiammariaPersistence.getNutrition();
+    }
+  } catch (err) {
+    console.warn('[NURVAN_BOOT] nutrition record unavailable', err);
+  }
+  const fromLocal = personalDomain().nutrition;
+  let plan = combineNutritionCopies([fromProgram, fromIdb, fromLocal]);
+  if (plan && !nutritionHasContent(plan)) plan = null;
+  if (plan && !(plan.cleared || plan.isCleared) && typeof enrichImportedFoods === 'function') {
+    plan = enrichImportedFoods(plan) || plan;
+  }
+  return installPersonalNutrition(plan);
+}
+
 NurvanMemory.personal = nurvanEmptyArea();
 nurvanInstallDomainAccessors();
 NurvanMemory.personal.DATA = DATA;
@@ -37750,6 +37878,9 @@ function nativeAuthError(message){
 function accountPayload(opts){
   opts = opts || {};
   const includeProgram = opts.includeProgram !== false;
+  if (!store.coachViewingClient && !store.coachAssigning) {
+    try { stampPersonalNutrition(); } catch (_) {}
+  }
   // While viewing/assigning a client, RAM holds client DATA — always prefer personal backup.
   const bak = (store.coachViewingClient || store.coachAssigning)
     ? (window.__cpCoachViewBackup || window.__cpAssignBackup)
@@ -38031,19 +38162,27 @@ function applyRemoteAccountData(remote, preferLocal) {
   } else if (athlete && !takeRemote && DATA && typeof looksLikePersonalUpperLower16 === 'function' && looksLikePersonalUpperLower16(DATA)) {
     emptyClientTrainingState();
   }
+  // The user's own plan is combined with the cloud copy item by item, so neither
+  // side's meals can be dropped. An athlete's plan is the coach's to replace and
+  // keeps the rules below.
+  const mergeNutrition = !athlete && nutritionMergeApi() && remote.nutrition && typeof remote.nutrition === 'object';
+  if (mergeNutrition) stampPersonalNutrition();
+  const localNutrNow = (DATA && DATA.nutrition) || store.nutrition || null;
   if (takeRemote) {
     try {
       window.__cpProgramLock = true;
       const keepNutr = !!(store.__cpKeepLocalNutrition || store.__cpNutritionDirty);
       const keepSupp = !!(store.__cpKeepLocalSupplements || store.__cpSupplementsDirty);
-      const localNutr = keepNutr ? ((DATA && DATA.nutrition) || store.nutrition) : null;
+      const localNutr = keepNutr ? localNutrNow : null;
       const localSupp = keepSupp ? ((DATA && DATA.supplementation) || store.supplementation) : null;
       DATA = typeof normalizeProgram === 'function' ? normalizeProgram(remoteProg) : remoteProg;
       store.activeProgram = DATA;
       store.activeProgramId = DATA.id || remote.activeProgramId || store.activeProgramId;
       if (athlete) store.clientAssignedAt = remoteAssigned || new Date().toISOString();
-      if (keepNutr && localNutr) {
-        store.nutrition = localNutr;
+      if (mergeNutrition) {
+        installPersonalNutrition(localNutrNow && typeof localNutrNow === 'object' ? nutritionMergeApi().merge(localNutrNow, remote.nutrition) : remote.nutrition);
+      } else if (keepNutr && localNutr) {
+        installPersonalNutrition(localNutr);
       } else if (remote.nutrition) {
         // Durable safety net: back up whatever local nutrition is about to be
         // replaced (across reloads, unlike the in-memory-only workoutUndo) so
@@ -38051,7 +38190,7 @@ function applyRemoteAccountData(remote, preferLocal) {
         if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.backupNutrition && store.nutrition) {
           GiammariaPersistence.backupNutrition(store.nutrition).catch(function () {});
         }
-        store.nutrition = remote.nutrition;
+        installPersonalNutrition(remote.nutrition);
       }
       if (keepSupp && localSupp) {
         store.supplementation = localSupp;
@@ -38074,12 +38213,13 @@ function applyRemoteAccountData(remote, preferLocal) {
     }
   } else {
     // Domain-only remote fields without replacing the whole program
-    if (!store.__cpKeepLocalNutrition && !store.__cpNutritionDirty && remote.nutrition) {
+    if (mergeNutrition) {
+      installPersonalNutrition(localNutrNow && typeof localNutrNow === 'object' ? nutritionMergeApi().merge(localNutrNow, remote.nutrition) : remote.nutrition);
+    } else if (!store.__cpKeepLocalNutrition && !store.__cpNutritionDirty && remote.nutrition) {
       if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.backupNutrition && store.nutrition) {
         GiammariaPersistence.backupNutrition(store.nutrition).catch(function () {});
       }
-      store.nutrition = remote.nutrition;
-      if (DATA) DATA.nutrition = remote.nutrition;
+      installPersonalNutrition(remote.nutrition);
     }
     if (!store.__cpKeepLocalSupplements && !store.__cpSupplementsDirty && remote.supplementation) {
       store.supplementation = remote.supplementation;
@@ -41012,7 +41152,7 @@ function applyOperationsToProgram(program, operations) {
         if (!DATA || typeof DATA !== 'object') {
           DATA = { title: 'Nurvan', weeks: [], nutrition: null, supplementation: null, therapy: null, exams: null };
         }
-        DATA.nutrition = nutr;
+        DATA.nutrition = userReplacesNutrition(nutr);
         store.nutrition = nutr;
         cloned.nutrition = nutr;
         appliedCount++;
@@ -43336,16 +43476,7 @@ async function init() {
         const supp = activeProg.supplementation || null;
         const ther = activeProg.therapy || null;
         const exams = activeProg.exams || null;
-        if (nutr && (nutr.cleared || nutr.isCleared)) {
-          DATA.nutrition = nutr;
-          store.nutrition = nutr;
-        } else if (nutr && (nutr.present || (nutr.days && nutr.days.length))) {
-          DATA.nutrition = (typeof enrichImportedFoods === 'function') ? enrichImportedFoods(nutr) : nutr;
-          store.nutrition = DATA.nutrition;
-        } else {
-          DATA.nutrition = null;
-          store.nutrition = null;
-        }
+        await restorePersonalNutritionOnBoot(nutr);
         if (supp && (supp.present || (supp.items && supp.items.length))) {
           DATA.supplementation = supp; store.supplementation = supp;
         } else {
@@ -43364,20 +43495,9 @@ async function init() {
       } catch (domErr) {
         console.warn('[NURVAN_BOOT] Domain restore warning:', domErr);
       }
-      // Coach-applied nutrition may live in dedicated IDB store (guarded against cleared nutrition)
+      // Supplements may live in their own IDB store. (Nutrition: every local
+      // copy, that record included, was already combined above.)
       try {
-        const isNutrCleared = Boolean(
-          (DATA && DATA.nutrition && (DATA.nutrition.cleared || DATA.nutrition.isCleared)) ||
-          (store && store.nutrition && (store.nutrition.cleared || store.nutrition.isCleared)) ||
-          (typeof localStorage !== 'undefined' && localStorage.getItem('nurvan_nutrition_cleared_at'))
-        );
-        if (!isNutrCleared && (!DATA.nutrition || !(DATA.nutrition.days && DATA.nutrition.days.length)) && GiammariaPersistence.getNutrition) {
-          const orphanNutr = await GiammariaPersistence.getNutrition();
-          if (orphanNutr && !orphanNutr.cleared && !orphanNutr.isCleared && (orphanNutr.present || (orphanNutr.days && orphanNutr.days.length))) {
-            DATA.nutrition = (typeof enrichImportedFoods === 'function') ? enrichImportedFoods(orphanNutr) : orphanNutr;
-            store.nutrition = DATA.nutrition;
-          }
-        }
         if ((!DATA.supplementation || !(DATA.supplementation.items && DATA.supplementation.items.length)) && GiammariaPersistence.getSupplements) {
           const orphanSupp = await GiammariaPersistence.getSupplements();
           if (orphanSupp && (orphanSupp.present || (orphanSupp.items && orphanSupp.items.length))) {
@@ -43400,6 +43520,7 @@ async function init() {
     if (store && store.activeProgram && Array.isArray(store.activeProgram.weeks) && store.activeProgram.weeks.length > 0) {
       console.log('[NURVAN_BOOT] Loaded active program from legacy store');
       DATA = normalizeProgram(store.activeProgram);
+      await restorePersonalNutritionOnBoot(DATA.nutrition || null);
       if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
         GiammariaPersistence.saveProgram(DATA, true).catch(console.warn);
       }
@@ -43459,6 +43580,7 @@ async function init() {
 
     if (loadedFromDataJson && DATA) {
       console.log('[NURVAN_BOOT] Loaded default program from data.json');
+      await restorePersonalNutritionOnBoot(null);
       clearTimeout(splashTimer);
       finishInit();
       return;
@@ -43469,11 +43591,11 @@ async function init() {
       console.log('[NURVAN_BOOT] No active program found, initializing empty program shell');
       DATA = { title: "Nessun Programma Attivo", weeks: [], nutrition: null, supplementation: null, therapy: null, exams: null };
     }
-    DATA.nutrition = null;
+    // No program is no reason to drop the food diary: it lives on its own.
+    await restorePersonalNutritionOnBoot(null);
     DATA.supplementation = null;
     DATA.therapy = null;
     DATA.exams = null;
-    store.nutrition = null;
     store.supplementation = null;
     store.therapy = null;
     store.exams = null;
@@ -43598,6 +43720,9 @@ function persist() {
     store.trainingDay = typeof currentDay !== 'undefined' ? currentDay : store.trainingDay;
   } catch (_) {}
   try { upsertLiveCoachArchive(); } catch (_) {}
+  // Record what the user changed in the nutrition plan since the last save,
+  // before any copy of it is written anywhere.
+  try { stampPersonalNutrition(); } catch (_) {}
   try {
     // Before the blob, and independently of whether the blob write succeeds: if
     // localStorage is full, the fallback below writes a reduced record with no
@@ -44355,11 +44480,16 @@ function normalizeNutritionMeals(nutrition) {
     if (!Array.isArray(day.meals)) day.meals = [];
     day.meals.forEach(function (meal) {
       if (!meal || typeof meal !== 'object') return;
-      if ((!meal.foods || !meal.foods.length) && Array.isArray(meal.items) && meal.items.length) {
+      // items is an old alias of foods. Once stored they come back as two
+      // separate lists, so an emptied meal's stale items used to refill it. A
+      // plan that tracks its items (__v) keeps foods as the one real list;
+      // older plans and imports may still carry their foods only in items.
+      const foodsMissing = nutrition.__v ? !Array.isArray(meal.foods) : (!meal.foods || !meal.foods.length);
+      if (foodsMissing && Array.isArray(meal.items) && meal.items.length) {
         meal.foods = meal.items;
       }
       if (!Array.isArray(meal.foods)) meal.foods = [];
-      if (!meal.items) meal.items = meal.foods;
+      meal.items = meal.foods;
     });
   });
   if (nutrition.present == null && nutrition.days.length) nutrition.present = true;
@@ -44658,6 +44788,7 @@ function applyPersonalNutritionClear(ctx) {
   empty.cleared = true;
   empty.isCleared = true;
   empty.clearedAt = nowIso;
+  if (typeof userReplacesNutrition === 'function') userReplacesNutrition(empty);
   if (data) data.nutrition = empty;
   if (storeObj) {
     storeObj.nutrition = empty;
@@ -44717,6 +44848,7 @@ async function restoreNutritionBackup(backupId) {
   delete restored.clearedAt;
   restored.present = true;
 
+  userReplacesNutrition(restored);
   if (typeof DATA !== 'undefined') DATA.nutrition = restored;
   if (typeof store !== 'undefined') {
     store.nutrition = restored;
@@ -44841,14 +44973,14 @@ function renderNutrition(c) {
       if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.backupNutrition) {
         GiammariaPersistence.backupNutrition(DATA.nutrition).catch(function () {});
       }
-      DATA.nutrition = { plan_name: '', present: false, days: [], customFoods: (DATA.nutrition.customFoods || []), daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
+      DATA.nutrition = userReplacesNutrition({ plan_name: '', present: false, days: [], customFoods: (DATA.nutrition.customFoods || []), daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null });
       store.nutrition = DATA.nutrition;
       persist();
     } else if (!protect && looksLegacyDemo && DATA.nutrition.plan_name === 'Piano Nutrizionale Personalizzato') {
       if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.backupNutrition) {
         GiammariaPersistence.backupNutrition(DATA.nutrition).catch(function () {});
       }
-      DATA.nutrition = { plan_name: '', present: false, days: [], customFoods: (DATA.nutrition.customFoods || []), daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null };
+      DATA.nutrition = userReplacesNutrition({ plan_name: '', present: false, days: [], customFoods: (DATA.nutrition.customFoods || []), daily_calories_target: null, daily_protein_target: null, daily_carbs_target: null, daily_fats_target: null });
       store.nutrition = DATA.nutrition;
       persist();
     }
@@ -46608,7 +46740,7 @@ function confirmGenerateNutritionPlan() {
     planName: (st.mode === 'precise' ? 'Piano preciso' : 'Piano automatico') + ' · ' + dayCount + ' gg · ' + comboCount + ' comb.'
   });
   if (!DATA) window.DATA = {};
-  DATA.nutrition = plan;
+  DATA.nutrition = userReplacesNutrition(plan);
   if (typeof store !== 'undefined' && store) {
     store.nutrition = plan;
     store.__cpNutritionDirty = true;
@@ -46666,7 +46798,7 @@ function confirmGenerateBudgetNutritionPlan(st, restrictions) {
     restrictions: restrictions
   };
   if (!DATA) window.DATA = {};
-  DATA.nutrition = plan;
+  DATA.nutrition = userReplacesNutrition(plan);
   if (typeof store !== 'undefined' && store) {
     store.nutrition = plan;
     store.__cpNutritionDirty = true;
@@ -47160,7 +47292,7 @@ function maybeOfferNutritionFromProfile() {
   if (!profile.weight && !profile.goal) return;
   const ok = confirm('Vuoi creare un\'alimentazione in base al profilo e alla programmazione?\n\nVerranno impostati i giorni della settimana e i target calorici; potrai compilare i pasti oppure importare una scheda.');
   if (!ok) return;
-  DATA.nutrition = buildSuggestedNutritionFromProfile();
+  DATA.nutrition = userReplacesNutrition(buildSuggestedNutritionFromProfile());
   persist();
   if (typeof showToast === 'function') showToast('Piano alimentare creato dai dati profilo', 'success');
   navigate('nutrition');
@@ -49429,13 +49561,14 @@ async function activateCatalogProgramInner(programId) {
       await GiammariaPersistence.saveActiveProgram(prog);
     }
     DATA = prog;
-    DATA.nutrition = null;
+    // A catalogue program is training only. The food diary is the user's own
+    // record and switching training programs is no reason to drop it.
+    DATA.nutrition = store.nutrition || null;
     DATA.supplementation = null;
     DATA.therapy = null;
     DATA.exams = null;
     store.activeProgram = DATA;
     store.activeProgramId = newId;
-    store.nutrition = null;
     store.supplementation = null;
     store.therapy = null;
     store.exams = null;
@@ -51013,7 +51146,7 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
       const allow = function (d) { return !selected.length || selected.indexOf(d) >= 0; };
       const sandbox = isCoachClientSandbox();
       if (prog.nutrition && allow('nutrition')) {
-        DATA.nutrition = (typeof enrichImportedFoods === 'function') ? enrichImportedFoods(prog.nutrition) : prog.nutrition;
+        DATA.nutrition = userReplacesNutrition((typeof enrichImportedFoods === 'function') ? enrichImportedFoods(prog.nutrition) : prog.nutrition);
         if (typeof normalizeNutritionMeals === 'function') DATA.nutrition = normalizeNutritionMeals(DATA.nutrition);
         store.nutrition = DATA.nutrition;
         store.__cpNutritionDirty = true;
@@ -51206,7 +51339,7 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
     }
     }
 
-    if (prog.nutrition && allowDom('nutrition')) store.nutrition = prog.nutrition;
+    if (prog.nutrition && allowDom('nutrition')) store.nutrition = userReplacesNutrition(prog.nutrition);
     if (prog.supplementation && allowDom('supplements')) store.supplementation = prog.supplementation;
     if (prog.therapy && allowDom('therapy')) store.therapy = prog.therapy;
     if (prog.exams && allowDom('exams')) store.exams = prog.exams;
@@ -53891,7 +54024,7 @@ async function restoreNutritionBackup(id) {
     if (DATA && DATA.nutrition && GiammariaPersistence.backupNutrition) {
       await GiammariaPersistence.backupNutrition(DATA.nutrition).catch(function () {});
     }
-    DATA.nutrition = plan;
+    DATA.nutrition = userReplacesNutrition(plan);
     store.nutrition = plan;
     markNutritionDirty();
     persist();

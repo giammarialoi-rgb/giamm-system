@@ -28,6 +28,7 @@ export const ANDROID_STATIC_ASSETS = [
   'warmup-engine.js',
   'exercise-media-client.js',
   'exercise-media-ui.js',
+  'nutrition-merge.js',
   'personal-recovery-16w.json',
   'apple-touch-icon.png',
   'icon-180.png',

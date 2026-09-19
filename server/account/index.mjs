@@ -4,6 +4,33 @@
  * server entrypoint itself (which binds a port as a side effect of import).
  */
 
+import fs from "node:fs";
+import vm from "node:vm";
+
+// The app's own nutrition merge (web/nutrition-merge.js), run here unchanged so
+// the phone and the server combine two copies of a plan the same way.
+function loadNutritionMerge() {
+  const sandbox = {};
+  sandbox.self = sandbox;
+  vm.runInNewContext(fs.readFileSync(new URL("../../web/nutrition-merge.js", import.meta.url), "utf8"), sandbox);
+  return sandbox.NurvanNutritionMerge;
+}
+export const NutritionMerge = loadNutritionMerge();
+
+// An app that tracks item ids (nutrition.__v) never loses a meal to a stale
+// copy: both sides are combined item by item. Copies from an app that predates
+// that keep the old rules, including its explicit clear.
+function mergeNutritionField(cur, inc, key) {
+  const curVal = cur[key];
+  const incVal = inc[key];
+  const aware = NutritionMerge.isMergeAware(curVal) || NutritionMerge.isMergeAware(incVal);
+  if (!aware) return mergeDomainField(cur, inc, key);
+  if (incVal && !NutritionMerge.isMergeAware(incVal) && (incVal.cleared || incVal.isCleared)) return incVal;
+  if (!incVal || typeof incVal !== "object") return curVal !== undefined ? curVal : incVal;
+  if (!curVal || typeof curVal !== "object") return incVal;
+  return NutritionMerge.merge(curVal, incVal);
+}
+
 // Whether a nutrition/supplementation/therapy/exams blob actually holds real
 // entries (as opposed to an empty shell that just happens to be the value in
 // RAM at the moment some unrelated sync fired - e.g. before boot finished
@@ -81,15 +108,16 @@ export function mergeAccountDataBlobs(current, incoming) {
   // real logged meals/supplements/therapy/exams with nothing. Protect all four
   // domains the same way activeProgram's own weeks are already protected above.
   const domainKeys = ["nutrition", "supplementation", "therapy", "exams"];
+  const mergeField = (a, b, key) => (key === "nutrition" ? mergeNutritionField(a, b, key) : mergeDomainField(a, b, key));
   for (const key of domainKeys) {
-    merged[key] = mergeDomainField(cur, inc, key);
+    merged[key] = mergeField(cur, inc, key);
   }
   if (merged.activeProgram) {
     const curProg = cur.activeProgram || {};
     const incProg = inc.activeProgram || {};
     const progPatch = {};
     for (const key of domainKeys) {
-      progPatch[key] = mergeDomainField(curProg, incProg, key);
+      progPatch[key] = mergeField(curProg, incProg, key);
     }
     merged.activeProgram = { ...merged.activeProgram, ...progPatch };
   }

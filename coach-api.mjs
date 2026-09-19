@@ -1513,22 +1513,41 @@ app.get("/api/account/me", async (req, res) => {
   }
 });
 
+// Read, merge and write one user's record as a single locked step. Two
+// uploads from the same user arrive together all the time (a background sync
+// and a SALVA tap, or two devices); read-merge-write without the lock let the
+// second write drop whatever the first had just merged in.
+async function mergeIntoAccountData(userId, incoming) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      "INSERT INTO app_account_data(user_id, data, updated_at) VALUES($1, '{}'::jsonb, NOW()) ON CONFLICT (user_id) DO NOTHING",
+      [userId]
+    );
+    const existing = await client.query("SELECT data FROM app_account_data WHERE user_id = $1 FOR UPDATE", [userId]);
+    const merged = mergeAccountDataBlobs(existing.rows[0]?.data || {}, incoming);
+    await client.query(
+      "UPDATE app_account_data SET data = $2, revision = revision + 1, updated_at = NOW() WHERE user_id = $1",
+      [userId, JSON.stringify(merged)]
+    );
+    await client.query("COMMIT");
+    return merged;
+  } catch (err) {
+    try { await client.query("ROLLBACK"); } catch (_) {}
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 app.post("/api/account/sync", async (req, res) => {
   const auth = await accountFromBearer(req.headers.authorization);
   if (!auth) return res.status(401).json({ error: "Unauthorized." });
   try {
     const clientData = req.body?.data || req.body || {};
     if (clientData && clientData.activeProgram == null) delete clientData.activeProgram;
-    const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
-    const current = existing.rows[0]?.data || {};
-    const merged = mergeAccountDataBlobs(current, clientData);
-    await pool.query(
-      `INSERT INTO app_account_data(user_id, data, updated_at)
-       VALUES($1, $2, NOW())
-       ON CONFLICT (user_id) DO UPDATE SET
-         data = EXCLUDED.data, revision = app_account_data.revision + 1, updated_at = NOW()`,
-      [auth.id, JSON.stringify(merged)]
-    );
+    const merged = await mergeIntoAccountData(auth.id, clientData);
     return res.json({ ok: true, data: merged });
   } catch (error) {
     console.error("ACCOUNT_SYNC_ERROR", error);
@@ -1571,15 +1590,7 @@ app.post("/api/account/data", async (req, res) => {
   if (!auth) return res.status(401).json({ error: "Sessione scaduta o non autorizzata." });
   try {
     const incoming = req.body?.data || {};
-    const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
-    const dataPayload = mergeAccountDataBlobs(existing.rows[0]?.data || {}, incoming);
-    await pool.query(
-      `INSERT INTO app_account_data (user_id, data, updated_at)
-       VALUES ($1, $2, NOW())
-       ON CONFLICT (user_id)
-       DO UPDATE SET data = $2, revision = app_account_data.revision + 1, updated_at = NOW()`,
-      [auth.id, JSON.stringify(dataPayload)]
-    );
+    await mergeIntoAccountData(auth.id, incoming);
     return res.json({ ok: true, saved_at: new Date().toISOString() });
   } catch (err) {
     return res.status(500).json({ error: "Impossibile salvare i dati sul cloud." });
