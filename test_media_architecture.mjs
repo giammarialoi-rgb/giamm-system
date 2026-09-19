@@ -147,7 +147,16 @@ function mountedRoutes() {
   const manifest = await getMediaManifest(pool, 'exercise', 'squat_bilanciere');
   ok(manifest.hasMedia === true, '2a. exact media resolves hasMedia:true');
   ok(manifest.primary.matchType === 'exact', '2b. primary.matchType is exact');
-  ok(manifest.media.master === 'https://cdn/exercises/squat_bilanciere/master.webp', '2c. master url is the exact row');
+  ok(manifest.media.master === 'https://cdn/exercises/squat_bilanciere/master.webp?v=1', '2c. master url is the exact row');
+
+  // Re-uploads reuse the storage key and are cached as immutable for a year,
+  // so the URL itself has to change or devices keep the old picture.
+  const reuploaded = makeFakePool([
+    { owner_type: 'exercise', owner_id: 'squat_bilanciere', media_type: 'image', variant: 'master', status: 'active', match_type: 'exact', public_url: 'https://cdn/exercises/squat_bilanciere/master.webp', version: 4, source: 'nurvan' }
+  ]);
+  const next = await getMediaManifest(reuploaded, 'exercise', 'squat_bilanciere');
+  ok(next.media.master !== manifest.media.master && next.media.master.endsWith('?v=4'),
+    '2d. a re-upload under the same storage key gets a new URL, so cached copies are not reused');
 }
 
 // =======================================================================
@@ -182,7 +191,7 @@ function mountedRoutes() {
     { owner_type: 'exercise', owner_id: 'x', media_type: 'image', variant: 'master', status: 'active', match_type: 'exact', public_url: 'exact', version: 1, source: 'nurvan' }
   ]);
   const manifest = await getMediaManifest(pool, 'exercise', 'x');
-  ok(manifest.primary.matchType === 'exact' && manifest.media.master === 'exact', '4c. exact always wins over variant/reference regardless of row order');
+  ok(manifest.primary.matchType === 'exact' && manifest.media.master === 'exact?v=1', '4c. exact always wins over variant/reference regardless of row order');
 }
 
 // =======================================================================
@@ -205,7 +214,7 @@ function mountedRoutes() {
   ]);
   const manifest = await getMediaManifest(pool, 'warmup', 'raise_bike_easy');
   ok(manifest.hasMedia === true, '6a. warmup media resolves hasMedia:true');
-  ok(manifest.media.thumbnail === 'https://cdn/warmups/raise_bike_easy/thumb.webp', '6b. warmup thumbnail resolves independently of master');
+  ok(manifest.media.thumbnail === 'https://cdn/warmups/raise_bike_easy/thumb.webp?v=1', '6b. warmup thumbnail resolves independently of master');
 }
 
 // =======================================================================
@@ -224,7 +233,7 @@ function mountedRoutes() {
   const twinRow = { owner_type: 'exercise', owner_id: 'squat_bilanciere', media_type: 'image', variant: 'master', status: 'active', match_type: 'exact', public_url: 'https://cdn/exercises/squat_bilanciere/master.webp', version: 1, source: 'nurvan' };
   const pool = makeFakePool([twinRow]);
   const manifest = await getMediaManifest(pool, 'exercise', 'squat_con_bilanciere', 'Squat con Bilanciere');
-  ok(manifest.hasMedia === true && manifest.media.master === twinRow.public_url,
+  ok(manifest.hasMedia === true && manifest.media.master === twinRow.public_url + '?v=1',
     '7b. an approved synonym with no media of its own shows its twin\'s picture');
   ok(manifest.entityId === 'squat_con_bilanciere', '7c. the manifest still answers for the id that was asked for');
 
@@ -233,7 +242,7 @@ function mountedRoutes() {
     { owner_type: 'exercise', owner_id: 'squat_con_bilanciere', media_type: 'image', variant: 'master', status: 'active', match_type: 'exact', public_url: 'https://cdn/own.webp', version: 1, source: 'nurvan' }
   ]);
   const own = await getMediaManifest(ownPool, 'exercise', 'squat_con_bilanciere');
-  ok(own.media.master === 'https://cdn/own.webp', '7d. a dedicated asset always wins over the shared one');
+  ok(own.media.master === 'https://cdn/own.webp?v=1', '7d. a dedicated asset always wins over the shared one');
 
   const kickPool = makeFakePool([
     { owner_type: 'exercise', owner_id: 'kickback_cavo', media_type: 'image', variant: 'master', status: 'active', match_type: 'exact', public_url: 'https://cdn/kickback_cavo.webp', version: 1, source: 'nurvan' }
@@ -241,7 +250,7 @@ function mountedRoutes() {
   const tri = await getMediaManifest(kickPool, 'exercise', 'kickback_cavo_tricipiti', 'Kickback cavo tricipiti');
   ok(tri.hasMedia === false, '7e. shared wording is not enough: the triceps cable kickback never inherits the glute kickback picture');
   const glute = await getMediaManifest(kickPool, 'exercise', 'kickback_al_cavo', 'Kickback al Cavo');
-  ok(glute.media.master === 'https://cdn/kickback_cavo.webp', '7e2. the approved glute alias does share it');
+  ok(glute.media.master === 'https://cdn/kickback_cavo.webp?v=1', '7e2. the approved glute alias does share it');
 
   const wuPool = makeFakePool([
     { owner_type: 'warmup', owner_id: 'squat_goblet', media_type: 'image', variant: 'master', status: 'active', match_type: 'exact', public_url: 'https://cdn/x.webp', version: 1, source: 'nurvan' }
@@ -335,7 +344,7 @@ function mountedRoutes() {
   });
   ok(v2.version === 2, '13b. replacing the same slot increments the version');
   const manifest = await getMediaManifest(pool, 'exercise', 'z');
-  ok(manifest.primary.version === 2 && manifest.media.master === 'https://cdn/z/master.v2.webp', '13c. resolution only ever returns the new active version');
+  ok(manifest.primary.version === 2 && manifest.media.master === 'https://cdn/z/master.v2.webp?v=2', '13c. resolution only ever returns the new active version');
   const oldRow = await getMediaById(pool, v1.id);
   ok(oldRow.status === 'inactive', '13d. the old version was deactivated, not left active alongside the new one (uq_exercise_media_active_slot)');
 }
@@ -363,7 +372,7 @@ function mountedRoutes() {
   {
     const { req, res } = fakeReqRes({ exerciseId: 'Squat bilanciere' });
     await routes['/api/exercises/:exerciseId/media'](req, res);
-    ok(res.body.hasMedia === true && res.body.primary.url === 'https://cdn/squat.webp',
+    ok(res.body.hasMedia === true && res.body.primary.url === 'https://cdn/squat.webp?v=1',
       'R4. requesting by display name derives the same canonical id as the stored owner_id ("Squat bilanciere" -> squat_bilanciere)');
   }
   {

@@ -285,14 +285,37 @@ async function inspect(entry) {
   return { ...entry, bytes: stat.size, meta, problems };
 }
 
+// Many sources are a 1280px canvas with the exercise in a small patch in the
+// middle and flat background everywhere else; shown whole, the exercise ends
+// up a few percent of the panel. Crop to the content (plus a margin in the
+// same background colour) before sizing. The source file is left untouched.
+async function cropToContent(lib, file) {
+  const meta = await lib(file).metadata();
+  let trimmed;
+  try {
+    trimmed = await lib(file).trim({ threshold: 25 }).toBuffer({ resolveWithObject: true });
+  } catch (_err) {
+    return lib(file).toBuffer(); // a uniform image has nothing to crop to
+  }
+  const { data, info } = trimmed;
+  const keptArea = (info.width * info.height) / (meta.width * meta.height);
+  if (keptArea > 0.85 || Math.max(info.width, info.height) < 64) return lib(file).toBuffer();
+  const px = await lib(file).extract({ left: 0, top: 0, width: 1, height: 1 }).removeAlpha().raw().toBuffer();
+  const margin = Math.round(Math.max(info.width, info.height) * 0.04);
+  return lib(data)
+    .extend({ top: margin, bottom: margin, left: margin, right: margin, background: { r: px[0], g: px[1], b: px[2] } })
+    .toBuffer();
+}
+
 async function renderVariants(entry) {
   const lib = await loadSharp();
   if (!lib) throw new Error('sharp is required to produce thumbnails: npm i -D sharp');
-  const master = await lib(entry.file)
+  const content = await cropToContent(lib, entry.file);
+  const master = await lib(content)
     .resize({ width: MASTER_MAX_EDGE, height: MASTER_MAX_EDGE, fit: 'inside', withoutEnlargement: true })
     .webp({ quality: 88 })
     .toBuffer({ resolveWithObject: true });
-  const thumb = await lib(entry.file)
+  const thumb = await lib(content)
     .resize({ width: THUMB_EDGE, height: THUMB_EDGE, fit: 'inside', withoutEnlargement: true })
     .webp({ quality: 82 })
     .toBuffer();

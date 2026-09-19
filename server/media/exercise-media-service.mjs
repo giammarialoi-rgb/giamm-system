@@ -14,7 +14,17 @@
 
 const MATCH_PRIORITY = { exact: 0, variant: 1, reference: 2 };
 
+// Objects are re-uploaded under the same storage key and served with a
+// one-year immutable cache, so a replaced image would never reach a device
+// that already has the old one. The row version changes on every upload;
+// putting it in the URL makes each upload a new URL.
+function versionedUrl(url, version) {
+  if (!url) return null;
+  return url + (url.includes('?') ? '&' : '?') + 'v=' + version;
+}
+
 function mediaRow(row) {
+  const version = Number(row.version) || 1;
   return {
     id: String(row.id),
     ownerType: row.owner_type,
@@ -23,14 +33,14 @@ function mediaRow(row) {
     variant: row.variant,
     storageProvider: row.storage_provider,
     storageKey: row.storage_key,
-    url: row.public_url || null,
+    url: versionedUrl(row.public_url, version),
     thumbnailKey: row.thumbnail_key || null,
-    thumbnailUrl: row.thumbnail_url || null,
+    thumbnailUrl: versionedUrl(row.thumbnail_url, version),
     mimeType: row.mime_type || null,
     width: row.width == null ? null : Number(row.width),
     height: row.height == null ? null : Number(row.height),
     fileSizeBytes: row.file_size_bytes == null ? null : Number(row.file_size_bytes),
-    version: Number(row.version) || 1,
+    version,
     status: row.status,
     matchType: row.match_type,
     confidence: row.confidence == null ? null : Number(row.confidence),

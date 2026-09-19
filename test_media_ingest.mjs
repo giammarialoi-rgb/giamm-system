@@ -149,5 +149,26 @@ const { matched, unresolved } = remapped.mapFiles(catalogues);
   ok(kept.width === 900 && kept.height === 900, 'an image below the cap is not enlarged');
 }
 
+// --- a small exercise lost in a big empty canvas is cropped to it --------
+{
+  const figure = await sharp({ create: { width: 200, height: 160, channels: 3, background: { r: 200, g: 120, b: 60 } } }).png().toBuffer();
+  const padded = path.join(tmp, 'padded.png');
+  await sharp({ create: { width: 1280, height: 1280, channels: 3, background: { r: 10, g: 10, b: 10 } } })
+    .composite([{ input: figure, left: 540, top: 560 }]).png().toFile(padded);
+  const out = await remapped.renderVariants({ ownerType: 'exercise', ownerId: 'x', file: padded });
+  ok(out.width < 260 && out.height < 220,
+    `the empty canvas around the exercise is cropped away (${out.width}x${out.height} instead of 1280x1280)`);
+  ok(out.width >= 200 && out.height >= 160, 'and the exercise itself is kept whole');
+  const corner = await sharp(out.masterBuffer).extract({ left: 0, top: 0, width: 1, height: 1 }).raw().toBuffer();
+  ok(corner[0] < 30 && corner[1] < 30 && corner[2] < 30, 'the margin left around it uses the original background colour');
+
+  const full = path.join(tmp, 'full.png');
+  await sharp({ create: { width: 900, height: 700, channels: 3, background: { r: 255, g: 255, b: 255 } } })
+    .composite([{ input: await sharp({ create: { width: 880, height: 680, channels: 3, background: { r: 90, g: 90, b: 90 } } }).png().toBuffer(), left: 10, top: 10 }])
+    .png().toFile(full);
+  const same = await remapped.renderVariants({ ownerType: 'exercise', ownerId: 'y', file: full });
+  ok(same.width === 900 && same.height === 700, 'an image that already fills its canvas is left as it is');
+}
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('\nMedia ingest tests passed.');
