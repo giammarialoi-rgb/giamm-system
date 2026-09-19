@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { updateAccountData, landDomainValue, DomainMerge } from "./server/account/index.mjs";
 import path from "node:path";
 import fs from "node:fs";
 import webpush from "web-push";
@@ -344,6 +345,24 @@ export function sanitizeChatAttachment(raw) {
   return { kind, name, mime, data: dataCandidate };
 }
 
+const RECORD_DOMAINS = ["nutrition", "supplementation", "therapy", "exams"];
+
+// An athlete's edited copy of their record (a change approved by the coach, or
+// made freely): each domain it carries is combined with what the record holds,
+// so nothing the athlete or the coach added meanwhile is lost.
+export function applyAthleteEditedDomains(current, data, extra) {
+  const merged = { ...current, ...(extra || {}) };
+  for (const key of RECORD_DOMAINS) {
+    merged[key] = data[key] ? landDomainValue(current[key], data[key], key, "edit") : current[key];
+  }
+  if (Array.isArray(data.weeks)) {
+    const prev = current.activeProgram && typeof current.activeProgram === "object" ? current.activeProgram : {};
+    merged.activeProgram = { ...prev, weeks: data.weeks };
+    for (const key of RECORD_DOMAINS) merged.activeProgram[key] = merged[key];
+  }
+  return merged;
+}
+
 export function mergeAssignClientData(current, patch, kinds) {
   const now = new Date().toISOString();
   const unique = Array.isArray(kinds) && kinds.length ? [...new Set(kinds)] : ["training"];
@@ -377,31 +396,24 @@ export function mergeAssignClientData(current, patch, kinds) {
     merged.logs = [];
     merged.intelTargets = {};
   } else if (patchProg) {
-    merged.activeProgram = {
-      ...curProg,
-      nutrition: unique.includes("nutrition")
-        ? (src.nutrition || patchProg.nutrition || curProg.nutrition)
-        : curProg.nutrition,
-      supplementation: unique.includes("supplements")
-        ? (src.supplementation || patchProg.supplementation || curProg.supplementation)
-        : curProg.supplementation,
-      therapy: unique.includes("therapy")
-        ? (src.therapy || patchProg.therapy || curProg.therapy)
-        : curProg.therapy,
-      exams: unique.includes("exams")
-        ? (src.exams || patchProg.exams || curProg.exams)
-        : curProg.exams
-    };
+    merged.activeProgram = { ...curProg };
+    for (const [key, kind] of [["nutrition", "nutrition"], ["supplementation", "supplements"], ["therapy", "therapy"], ["exams", "exams"]]) {
+      const sent = unique.includes(kind) ? (src[key] || patchProg[key]) : null;
+      merged.activeProgram[key] = sent ? landDomainValue(curProg[key], sent, key, "assign") : curProg[key];
+    }
     if (!Array.isArray(merged.activeProgram.weeks) || !merged.activeProgram.weeks.length) {
       if (Array.isArray(curProg.weeks) && curProg.weeks.length) merged.activeProgram.weeks = curProg.weeks;
     }
   } else if (curProg && Object.keys(curProg).length) {
     merged.activeProgram = curProg;
   }
-  if (unique.includes("nutrition") && src.nutrition) merged.nutrition = src.nutrition;
-  if (unique.includes("supplements") && src.supplementation) merged.supplementation = src.supplementation;
-  if (unique.includes("therapy") && src.therapy) merged.therapy = src.therapy;
-  if (unique.includes("exams") && src.exams) merged.exams = src.exams;
+  // A plan the coach sends lands as an assignment (see landDomainValue): an
+  // edit of the athlete's own plan is merged, a different plan replaces the
+  // old one without the old one coming back from the athlete's phone.
+  if (unique.includes("nutrition") && src.nutrition) merged.nutrition = landDomainValue(cur.nutrition, src.nutrition, "nutrition", "assign");
+  if (unique.includes("supplements") && src.supplementation) merged.supplementation = landDomainValue(cur.supplementation, src.supplementation, "supplementation", "assign");
+  if (unique.includes("therapy") && src.therapy) merged.therapy = landDomainValue(cur.therapy, src.therapy, "therapy", "assign");
+  if (unique.includes("exams") && src.exams) merged.exams = landDomainValue(cur.exams, src.exams, "exams", "assign");
   return merged;
 }
 
@@ -1359,34 +1371,8 @@ export function mountCoachPractice(app, deps) {
     const summary = String(req.body?.summary || "modifica programma").slice(0, 200);
     const data = req.body?.data && typeof req.body.data === "object" ? req.body.data : null;
     if (data && ctx.client.athlete_user_id) {
-      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [ctx.client.athlete_user_id]);
-      const current = existing.rows[0]?.data || {};
-      const merged = {
-        ...current,
-        nutrition: data.nutrition || current.nutrition,
-        supplementation: data.supplementation || current.supplementation,
-        therapy: data.therapy || current.therapy,
-        exams: data.exams || current.exams,
-        lastAthleteEditAt: new Date().toISOString()
-      };
-      if (Array.isArray(data.weeks)) {
-        const prev = current.activeProgram && typeof current.activeProgram === "object" ? current.activeProgram : {};
-        merged.activeProgram = {
-          ...prev,
-          weeks: data.weeks,
-          nutrition: data.nutrition,
-          supplementation: data.supplementation,
-          therapy: data.therapy,
-          exams: data.exams
-        };
-      }
-      await pool.query(
-        `INSERT INTO app_account_data(user_id, data, updated_at)
-         VALUES($1,$2,NOW())
-         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
-           revision = app_account_data.revision + 1, updated_at = NOW()`,
-        [ctx.client.athlete_user_id, JSON.stringify(merged)]
-      );
+      await updateAccountData(pool, ctx.client.athlete_user_id, (current) =>
+        applyAthleteEditedDomains(current, data, { lastAthleteEditAt: new Date().toISOString() }));
     }
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'change_notice',$2)",
@@ -1567,20 +1553,14 @@ export function mountCoachPractice(app, deps) {
       "UPDATE coach_clients SET display_name = $2, intake = $3, intake_completed_at = NOW(), pending_intake = NULL WHERE id = $1",
       [ctx.client.id, profile.name || ctx.client.display_name, JSON.stringify(intake)]
     );
-    const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [ctx.auth.id]);
-    const current = existing.rows[0]?.data || {};
-    const merged = {
-      ...current,
-      profile: { ...(current.profile || {}), ...profile },
-      intakeCompletedAt: new Date().toISOString()
-    };
-    await pool.query(
-      `INSERT INTO app_account_data(user_id, data, updated_at)
-       VALUES($1,$2,NOW())
-       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
-         revision = app_account_data.revision + 1, updated_at = NOW()`,
-      [ctx.auth.id, JSON.stringify(merged)]
-    );
+    await updateAccountData(pool, ctx.auth.id, (current) => {
+      const merged = {
+        ...current,
+        profile: { ...(current.profile || {}), ...profile },
+        intakeCompletedAt: new Date().toISOString()
+      };
+      return merged;
+    });
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'intake_completed',$2)",
       [ctx.client.id, JSON.stringify({ name: profile.name, goal: intake.goal })]
@@ -1612,43 +1592,35 @@ export function mountCoachPractice(app, deps) {
       );
       // Mark anchor in athlete data so we only do this once
       if (ctx.client.athlete_user_id) {
-        const existingA = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [ctx.client.athlete_user_id]);
-        const curA = existingA.rows[0]?.data || {};
-        const ap = curA.activeProgram && typeof curA.activeProgram === "object" ? { ...curA.activeProgram } : {};
-        ap.programExpiryAnchor = "first_workout";
-        ap.programWeeksPlanned = weeks;
-        await pool.query(
-          `INSERT INTO app_account_data(user_id, data, updated_at)
-           VALUES($1,$2,NOW())
-           ON CONFLICT (user_id) DO UPDATE SET data = app_account_data.data || EXCLUDED.data,
-             revision = app_account_data.revision + 1, updated_at = NOW()`,
-          [ctx.client.athlete_user_id, JSON.stringify({ activeProgram: ap, programExpiryAnchor: "first_workout" })]
-        );
+        await updateAccountData(pool, ctx.client.athlete_user_id, (curA) => {
+          const ap = curA.activeProgram && typeof curA.activeProgram === "object" ? { ...curA.activeProgram } : {};
+          ap.programExpiryAnchor = "first_workout";
+          ap.programWeeksPlanned = weeks;
+          return { ...curA, activeProgram: ap, programExpiryAnchor: "first_workout" };
+        });
       }
     }
     // Push workout snapshot so coach sees finalized session immediately
     if (patch && ctx.client.athlete_user_id) {
-      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [ctx.client.athlete_user_id]);
-      const current = existing.rows[0]?.data || {};
-      const merged = { ...current };
-      Object.keys(patch).forEach((k) => {
-        if (patch[k] === undefined) return;
-        if (k === "logs" && Array.isArray(patch.logs)) {
-          // Prefer longer/newer athlete logs
-          const curLogs = Array.isArray(current.logs) ? current.logs : [];
-          merged.logs = patch.logs.length >= curLogs.length ? patch.logs : curLogs;
-          return;
-        }
-        merged[k] = patch[k];
+      await updateAccountData(pool, ctx.client.athlete_user_id, (current) => {
+        const merged = { ...current };
+        Object.keys(patch).forEach((k) => {
+          if (patch[k] === undefined) return;
+          if (k === "logs" && Array.isArray(patch.logs)) {
+            // Prefer longer/newer athlete logs
+            const curLogs = Array.isArray(current.logs) ? current.logs : [];
+            merged.logs = patch.logs.length >= curLogs.length ? patch.logs : curLogs;
+            return;
+          }
+          if (RECORD_DOMAINS.includes(k)) {
+            merged[k] = landDomainValue(current[k], patch[k], k, "edit");
+            return;
+          }
+          merged[k] = patch[k];
+        });
+        merged.lastWorkoutSyncedAt = new Date().toISOString();
+        return merged;
       });
-      merged.lastWorkoutSyncedAt = new Date().toISOString();
-      await pool.query(
-        `INSERT INTO app_account_data(user_id, data, updated_at)
-         VALUES($1,$2,NOW())
-         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
-           revision = app_account_data.revision + 1, updated_at = NOW()`,
-        [ctx.client.athlete_user_id, JSON.stringify(merged)]
-      );
     }
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'workout_done',$2)",
@@ -1685,22 +1657,20 @@ export function mountCoachPractice(app, deps) {
       [ctx.client.id]
     );
     if (ctx.client.athlete_user_id) {
-      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [ctx.client.athlete_user_id]);
-      const current = existing.rows[0]?.data || {};
-      const merged = { ...current };
-      Object.keys(patch).forEach((k) => {
-        if (patch[k] === undefined) return;
-        if (k === "logs") return; // live sync must not finalize/replace logs mid-workout
-        merged[k] = patch[k];
+      await updateAccountData(pool, ctx.client.athlete_user_id, (current) => {
+        const merged = { ...current };
+        Object.keys(patch).forEach((k) => {
+          if (patch[k] === undefined) return;
+          if (k === "logs") return; // live sync must not finalize/replace logs mid-workout
+          if (RECORD_DOMAINS.includes(k)) {
+            merged[k] = landDomainValue(current[k], patch[k], k, "edit");
+            return;
+          }
+          merged[k] = patch[k];
+        });
+        merged.liveWorkoutSyncedAt = new Date().toISOString();
+        return merged;
       });
-      merged.liveWorkoutSyncedAt = new Date().toISOString();
-      await pool.query(
-        `INSERT INTO app_account_data(user_id, data, updated_at)
-         VALUES($1,$2,NOW())
-         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
-           revision = app_account_data.revision + 1, updated_at = NOW()`,
-        [ctx.client.athlete_user_id, JSON.stringify(merged)]
-      );
     }
     return res.json({ ok: true, workoutLive: true });
   });
@@ -2488,35 +2458,8 @@ export function mountCoachPractice(app, deps) {
     const data = pending.data && typeof pending.data === "object" ? pending.data : null;
     if (!data) return res.status(400).json({ error: "Nessuna modifica in attesa." });
     if (row.athlete_user_id) {
-      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
-      const current = existing.rows[0]?.data || {};
-      const prev = current.activeProgram && typeof current.activeProgram === "object" ? current.activeProgram : {};
-      const merged = {
-        ...current,
-        nutrition: data.nutrition || current.nutrition,
-        supplementation: data.supplementation || current.supplementation,
-        therapy: data.therapy || current.therapy,
-        exams: data.exams || current.exams,
-        assignedAt: new Date().toISOString(),
-        assignedByCoach: true
-      };
-      if (Array.isArray(data.weeks)) {
-        merged.activeProgram = {
-          ...prev,
-          weeks: data.weeks,
-          nutrition: data.nutrition,
-          supplementation: data.supplementation,
-          therapy: data.therapy,
-          exams: data.exams
-        };
-      }
-      await pool.query(
-        `INSERT INTO app_account_data(user_id, data, updated_at)
-         VALUES($1,$2,NOW())
-         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
-           revision = app_account_data.revision + 1, updated_at = NOW()`,
-        [row.athlete_user_id, JSON.stringify(merged)]
-      );
+      await updateAccountData(pool, row.athlete_user_id, (current) =>
+        applyAthleteEditedDomains(current, data, { assignedAt: new Date().toISOString(), assignedByCoach: true }));
     }
     await pool.query("UPDATE coach_clients SET pending_change = NULL WHERE id = $1", [row.id]);
     await pool.query(
@@ -2563,16 +2506,10 @@ export function mountCoachPractice(app, deps) {
       [row.id, profile.name || row.display_name, JSON.stringify(intake)]
     );
     if (row.athlete_user_id) {
-      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
-      const current = existing.rows[0]?.data || {};
-      const merged = { ...current, profile: { ...(current.profile || {}), ...profile } };
-      await pool.query(
-        `INSERT INTO app_account_data(user_id, data, updated_at)
-         VALUES($1,$2,NOW())
-         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
-           revision = app_account_data.revision + 1, updated_at = NOW()`,
-        [row.athlete_user_id, JSON.stringify(merged)]
-      );
+      await updateAccountData(pool, row.athlete_user_id, (current) => {
+        const merged = { ...current, profile: { ...(current.profile || {}), ...profile } };
+        return merged;
+      });
     }
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'intake_filled_by_coach',$2)",
@@ -2597,16 +2534,10 @@ export function mountCoachPractice(app, deps) {
       [row.id, profile.name || row.display_name, JSON.stringify(intake)]
     );
     if (row.athlete_user_id) {
-      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
-      const current = existing.rows[0]?.data || {};
-      const merged = { ...current, profile: { ...(current.profile || {}), ...profile } };
-      await pool.query(
-        `INSERT INTO app_account_data(user_id, data, updated_at)
-         VALUES($1,$2,NOW())
-         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
-           revision = app_account_data.revision + 1, updated_at = NOW()`,
-        [row.athlete_user_id, JSON.stringify(merged)]
-      );
+      await updateAccountData(pool, row.athlete_user_id, (current) => {
+        const merged = { ...current, profile: { ...(current.profile || {}), ...profile } };
+        return merged;
+      });
     }
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'intake_update_approved',$2)",
@@ -2692,20 +2623,11 @@ export function mountCoachPractice(app, deps) {
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
     const patch = req.body?.data && typeof req.body.data === "object" ? req.body.data : {};
-    const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
-    const current = existing.rows[0]?.data || {};
     const kinds = Array.isArray(req.body?.kinds) && req.body.kinds.length
       ? req.body.kinds.map((k) => String(k)).filter((k) => KIND_EVENTS[k] || k === "exams_request")
       : detectAssignKinds(patch);
     const unique = [...new Set(kinds.length ? kinds : ["training"])];
-    const merged = mergeAssignClientData(current, patch, unique);
-    await pool.query(
-      `INSERT INTO app_account_data(user_id, data, updated_at)
-       VALUES($1,$2,NOW())
-       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
-         revision = app_account_data.revision + 1, updated_at = NOW()`,
-      [row.athlete_user_id, JSON.stringify(merged)]
-    );
+    const merged = await updateAccountData(pool, row.athlete_user_id, (current) => mergeAssignClientData(current, patch, unique));
     const scheduleBits = [];
     const scheduleVals = [row.id];
     if (req.body?.programExpiresAt) {
@@ -2746,113 +2668,106 @@ export function mountCoachPractice(app, deps) {
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
     const patch = req.body?.data && typeof req.body.data === "object" ? req.body.data : {};
-    const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
-    const current = existing.rows[0]?.data || {};
-    const merged = { ...current };
-    const CLEARABLE = new Set(["nutrition", "supplementation", "therapy", "exams"]);
-    const emptyCleared = (k) => {
-      const at = new Date().toISOString();
-      if (k === "nutrition") {
-        return {
-          plan_name: "",
-          present: false,
-          days: [],
-          daily_calories_target: null,
-          daily_protein_target: null,
-          daily_carbs_target: null,
-          daily_fats_target: null,
-          cleared: true,
-          clearedAt: at
-        };
-      }
-      if (k === "supplementation") return { protocol_name: "", items: [], present: false, cleared: true, clearedAt: at };
-      if (k === "therapy") return { present: false, medications: [], protocols: [], entries: [], cleared: true, clearedAt: at };
-      if (k === "exams") return { patient_name: "", records: [], present: false, reminders: [], cleared: true, clearedAt: at };
-      return { present: false, cleared: true, clearedAt: at };
-    };
-    const isCleared = (obj, kind) => {
-      if (obj == null) return true;
-      if (typeof obj !== "object") return false;
-      if (obj.cleared === true) return true;
-      if (obj.present === false) {
-        if (kind === "nutrition") return !(Array.isArray(obj.days) && obj.days.length);
-        if (kind === "supplementation") return !(Array.isArray(obj.items) && obj.items.length);
-        if (kind === "therapy") {
-          return !(Array.isArray(obj.medications) && obj.medications.length) &&
-            !(Array.isArray(obj.entries) && obj.entries.length);
+    const merged = await updateAccountData(pool, row.athlete_user_id, (current) => {
+      const merged = { ...current };
+      const CLEARABLE = new Set(["nutrition", "supplementation", "therapy", "exams"]);
+      const emptyCleared = (k) => {
+        const at = new Date().toISOString();
+        if (k === "nutrition") {
+          return {
+            plan_name: "",
+            present: false,
+            days: [],
+            daily_calories_target: null,
+            daily_protein_target: null,
+            daily_carbs_target: null,
+            daily_fats_target: null,
+            cleared: true,
+            clearedAt: at
+          };
         }
-        if (kind === "exams") return !(Array.isArray(obj.records) && obj.records.length);
-      }
-      return false;
-    };
-    const applyDomainToProgram = (key, value) => {
-      if (!merged.activeProgram || typeof merged.activeProgram !== "object") return;
-      merged.activeProgram = { ...merged.activeProgram, [key]: value };
-    };
-    Object.keys(patch).forEach((k) => {
-      if (patch[k] === undefined) return;
-      // Explicit null clears for domain payloads (CANCELLA toolbar)
-      if (patch[k] === null && CLEARABLE.has(k)) {
-        merged[k] = emptyCleared(k);
-        applyDomainToProgram(k, merged[k]);
-        return;
-      }
-      if (patch[k] === null) return;
-      // Never wipe athlete workout history with empty coach-side logs
-      if (k === "logs") {
-        const next = Array.isArray(patch.logs) ? patch.logs : null;
-        const cur = Array.isArray(current.logs) ? current.logs : [];
-        if (!next || !next.length) return;
-        merged.logs = next.length >= cur.length ? next : cur;
-        return;
-      }
-      if (k === "activeProgram" && patch.activeProgram && typeof patch.activeProgram === "object") {
-        const curProg = current.activeProgram && typeof current.activeProgram === "object" ? current.activeProgram : {};
-        merged.activeProgram = { ...curProg, ...patch.activeProgram };
-        const forceClearWeeks = !!(patch.activeProgram.clearedTraining || patch.activeProgram.__clearedWeeks);
-        if (forceClearWeeks) {
-          merged.activeProgram.weeks = [];
-          if (patch.activeProgram.title != null) merged.activeProgram.title = patch.activeProgram.title;
-        } else if ((!Array.isArray(merged.activeProgram.weeks) || !merged.activeProgram.weeks.length) && Array.isArray(curProg.weeks)) {
-          merged.activeProgram.weeks = curProg.weeks;
+        if (k === "supplementation") return { protocol_name: "", items: [], present: false, cleared: true, clearedAt: at };
+        if (k === "therapy") return { present: false, medications: [], protocols: [], entries: [], cleared: true, clearedAt: at };
+        if (k === "exams") return { patient_name: "", records: [], present: false, reminders: [], cleared: true, clearedAt: at };
+        return { present: false, cleared: true, clearedAt: at };
+      };
+      const isCleared = (obj, kind) => {
+        if (obj == null) return true;
+        if (typeof obj !== "object") return false;
+        if (obj.cleared === true) return true;
+        if (obj.present === false) {
+          if (kind === "nutrition") return !(Array.isArray(obj.days) && obj.days.length);
+          if (kind === "supplementation") return !(Array.isArray(obj.items) && obj.items.length);
+          if (kind === "therapy") {
+            return !(Array.isArray(obj.medications) && obj.medications.length) &&
+              !(Array.isArray(obj.entries) && obj.entries.length);
+          }
+          if (kind === "exams") return !(Array.isArray(obj.records) && obj.records.length);
         }
-        return;
+        return false;
+      };
+      const applyDomainToProgram = (key, value) => {
+        if (!merged.activeProgram || typeof merged.activeProgram !== "object") return;
+        merged.activeProgram = { ...merged.activeProgram, [key]: value };
+      };
+      Object.keys(patch).forEach((k) => {
+        if (patch[k] === undefined) return;
+        // Explicit null clears for domain payloads (CANCELLA toolbar)
+        if (patch[k] === null && CLEARABLE.has(k)) {
+          merged[k] = emptyCleared(k);
+          applyDomainToProgram(k, merged[k]);
+          return;
+        }
+        if (patch[k] === null) return;
+        // Never wipe athlete workout history with empty coach-side logs
+        if (k === "logs") {
+          const next = Array.isArray(patch.logs) ? patch.logs : null;
+          const cur = Array.isArray(current.logs) ? current.logs : [];
+          if (!next || !next.length) return;
+          merged.logs = next.length >= cur.length ? next : cur;
+          return;
+        }
+        if (k === "activeProgram" && patch.activeProgram && typeof patch.activeProgram === "object") {
+          const curProg = current.activeProgram && typeof current.activeProgram === "object" ? current.activeProgram : {};
+          merged.activeProgram = { ...curProg, ...patch.activeProgram };
+          const forceClearWeeks = !!(patch.activeProgram.clearedTraining || patch.activeProgram.__clearedWeeks);
+          if (forceClearWeeks) {
+            merged.activeProgram.weeks = [];
+            if (patch.activeProgram.title != null) merged.activeProgram.title = patch.activeProgram.title;
+          } else if ((!Array.isArray(merged.activeProgram.weeks) || !merged.activeProgram.weeks.length) && Array.isArray(curProg.weeks)) {
+            merged.activeProgram.weeks = curProg.weeks;
+          }
+          return;
+        }
+        merged[k] = patch[k];
+      });
+      // Each section the coach sends lands on what the athlete's record holds now:
+      // an edit is merged, so whatever the athlete logged while the coach was
+      // editing stays; an emptied section is cleared on purpose. A section the
+      // coach did not send keeps the athlete's copy, also inside the program.
+      const curProg = current.activeProgram && typeof current.activeProgram === "object" ? current.activeProgram : {};
+      for (const key of CLEARABLE) {
+        if (!Object.prototype.hasOwnProperty.call(patch, key)) {
+          if (merged.activeProgram && typeof merged.activeProgram === "object" && Object.prototype.hasOwnProperty.call(curProg, key)) {
+            merged.activeProgram = { ...merged.activeProgram, [key]: curProg[key] };
+          }
+          continue;
+        }
+        const sent = patch[key];
+        let value;
+        if (isCleared(sent, key)) {
+          const shell = sent && typeof sent === "object" ? sent : emptyCleared(key);
+          value = landDomainValue(current[key], shell, key, DomainMerge.isMergeAware(shell) ? "edit" : "clear");
+        } else {
+          value = landDomainValue(current[key], sent, key, "edit");
+        }
+        merged[key] = value;
+        applyDomainToProgram(key, value);
       }
-      merged[k] = patch[k];
+      merged.coachPatchedAt = new Date().toISOString();
+      merged.assignedByCoach = true;
+      return merged;
     });
-    if (Object.prototype.hasOwnProperty.call(patch, "nutrition")) {
-      merged.nutrition = isCleared(patch.nutrition, "nutrition")
-        ? (patch.nutrition && typeof patch.nutrition === "object" ? patch.nutrition : emptyCleared("nutrition"))
-        : patch.nutrition;
-      applyDomainToProgram("nutrition", merged.nutrition);
-    }
-    if (Object.prototype.hasOwnProperty.call(patch, "supplementation")) {
-      merged.supplementation = isCleared(patch.supplementation, "supplementation")
-        ? (patch.supplementation && typeof patch.supplementation === "object" ? patch.supplementation : emptyCleared("supplementation"))
-        : patch.supplementation;
-      applyDomainToProgram("supplementation", merged.supplementation);
-    }
-    if (Object.prototype.hasOwnProperty.call(patch, "therapy")) {
-      merged.therapy = isCleared(patch.therapy, "therapy")
-        ? (patch.therapy && typeof patch.therapy === "object" ? patch.therapy : emptyCleared("therapy"))
-        : patch.therapy;
-      applyDomainToProgram("therapy", merged.therapy);
-    }
-    if (Object.prototype.hasOwnProperty.call(patch, "exams")) {
-      merged.exams = isCleared(patch.exams, "exams")
-        ? (patch.exams && typeof patch.exams === "object" ? patch.exams : emptyCleared("exams"))
-        : patch.exams;
-      applyDomainToProgram("exams", merged.exams);
-    }
-    merged.coachPatchedAt = new Date().toISOString();
-    merged.assignedByCoach = true;
-    await pool.query(
-      `INSERT INTO app_account_data(user_id, data, updated_at)
-       VALUES($1,$2,NOW())
-       ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
-         revision = app_account_data.revision + 1, updated_at = NOW()`,
-      [row.athlete_user_id, JSON.stringify(merged)]
-    );
     if (req.body?.notify !== false) {
       await pool.query(
         "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'coach_modified',$2)",
@@ -2988,24 +2903,20 @@ export function mountCoachPractice(app, deps) {
       [row.id, JSON.stringify(requestPayload)]
     );
     if (row.athlete_user_id) {
-      const existing = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [row.athlete_user_id]);
-      const current = existing.rows[0]?.data || {};
-      const examsBlock = current.exams && typeof current.exams === "object" ? { ...current.exams } : { records: [], present: false, reminders: [] };
-      if (!Array.isArray(examsBlock.records)) examsBlock.records = [];
-      if (!Array.isArray(examsBlock.reminders)) examsBlock.reminders = [];
-      const hist = Array.isArray(examsBlock.coachRequests) ? examsBlock.coachRequests.slice(0, 9) : [];
-      hist.unshift(requestPayload);
-      examsBlock.coachRequest = requestPayload;
-      examsBlock.coachRequests = hist;
-      examsBlock.present = true;
-      const merged = { ...current, exams: examsBlock };
-      await pool.query(
-        `INSERT INTO app_account_data(user_id, data, updated_at)
-         VALUES($1,$2,NOW())
-         ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
-           revision = app_account_data.revision + 1, updated_at = NOW()`,
-        [row.athlete_user_id, JSON.stringify(merged)]
-      );
+      await updateAccountData(pool, row.athlete_user_id, (current) => {
+        const examsBlock = current.exams && typeof current.exams === "object" ? { ...current.exams } : { records: [], present: false, reminders: [] };
+        if (!Array.isArray(examsBlock.records)) examsBlock.records = [];
+        if (!Array.isArray(examsBlock.reminders)) examsBlock.reminders = [];
+        const hist = Array.isArray(examsBlock.coachRequests) ? examsBlock.coachRequests.slice(0, 9) : [];
+        hist.unshift(requestPayload);
+        examsBlock.coachRequest = requestPayload;
+        examsBlock.coachRequests = hist;
+        examsBlock.present = true;
+        // Plan-level change: stamped so the athlete's copy does not win it back.
+        examsBlock.metaUpdatedAt = Date.now();
+        const merged = { ...current, exams: examsBlock };
+        return merged;
+      });
     }
     notifyAthletePush(
       row,
@@ -3359,21 +3270,9 @@ export function mountCoachPractice(app, deps) {
           [clientId]
         );
         if (!row.rows[0]) throw new Error("Client not found.");
-        const existing = await pool.query(
-          "SELECT data FROM app_account_data WHERE user_id = $1",
-          [row.rows[0].athlete_user_id]
-        );
-        const current = existing.rows[0]?.data || {};
         const patch = payload.data && typeof payload.data === "object" ? payload.data : {};
         const kinds = Array.isArray(payload.kinds) ? payload.kinds : ["training"];
-        const merged = mergeAssignClientData(current, patch, kinds);
-        await pool.query(
-          `INSERT INTO app_account_data(user_id, data, updated_at)
-           VALUES($1,$2,NOW())
-           ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data,
-             revision = app_account_data.revision + 1, updated_at = NOW()`,
-          [row.rows[0].athlete_user_id, JSON.stringify(merged)]
-        );
+        await updateAccountData(pool, row.rows[0].athlete_user_id, (current) => mergeAssignClientData(current, patch, kinds));
         return { ok: true, kinds };
       },
       restoreClientData: async (clientId, data) => {

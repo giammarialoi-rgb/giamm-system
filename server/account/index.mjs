@@ -7,28 +7,59 @@
 import fs from "node:fs";
 import vm from "node:vm";
 
-// The app's own nutrition merge (web/nutrition-merge.js), run here unchanged so
-// the phone and the server combine two copies of a plan the same way.
-function loadNutritionMerge() {
+// The app's own merge (web/domain-merge.js), run here unchanged so the phone
+// and the server combine two copies of a record the same way.
+function loadDomainMerge() {
   const sandbox = {};
   sandbox.self = sandbox;
-  vm.runInNewContext(fs.readFileSync(new URL("../../web/nutrition-merge.js", import.meta.url), "utf8"), sandbox);
-  return sandbox.NurvanNutritionMerge;
+  vm.runInNewContext(fs.readFileSync(new URL("../../web/domain-merge.js", import.meta.url), "utf8"), sandbox);
+  return sandbox.NurvanDomainMerge;
 }
-export const NutritionMerge = loadNutritionMerge();
+export const DomainMerge = loadDomainMerge();
+export const NutritionMerge = DomainMerge.forDomain("nutrition");
+export const MERGED_DOMAINS = ["nutrition", "supplementation", "therapy", "exams"];
 
-// An app that tracks item ids (nutrition.__v) never loses a meal to a stale
-// copy: both sides are combined item by item. Copies from an app that predates
-// that keep the old rules, including its explicit clear.
-function mergeNutritionField(cur, inc, key) {
+const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+
+// A sync from an app that tracks item ids (__v) never loses an entry to a
+// stale copy: both sides are combined item by item. Copies from an app that
+// predates that keep the old rules, including its explicit clear.
+function mergeSyncedDomain(cur, inc, key) {
   const curVal = cur[key];
   const incVal = inc[key];
-  const aware = NutritionMerge.isMergeAware(curVal) || NutritionMerge.isMergeAware(incVal);
+  const aware = DomainMerge.isMergeAware(curVal) || DomainMerge.isMergeAware(incVal);
   if (!aware) return mergeDomainField(cur, inc, key);
-  if (incVal && !NutritionMerge.isMergeAware(incVal) && (incVal.cleared || incVal.isCleared)) return incVal;
-  if (!incVal || typeof incVal !== "object") return curVal !== undefined ? curVal : incVal;
-  if (!curVal || typeof curVal !== "object") return incVal;
-  return NutritionMerge.merge(curVal, incVal);
+  if (incVal && !DomainMerge.isMergeAware(incVal) && (incVal.cleared || incVal.isCleared)) return incVal;
+  if (!isObj(incVal)) return curVal !== undefined ? curVal : incVal;
+  if (!isObj(curVal)) return incVal;
+  return DomainMerge.merge(curVal, incVal, key);
+}
+
+// What a coach or athlete sends for one domain of an athlete's record, and
+// how it lands on what the record holds now (current):
+//
+// - "assign": the coach assigns a plan. It takes the old one's place, as it
+//   always did, and the old one's entries are recorded as deleted so no
+//   device brings them back. (Two plans can hold the same day - a Monday, a
+//   breakfast - so what they share says nothing about one being an edit of
+//   the other; a coach editing the athlete's plan goes through "edit".)
+// - "edit": an edited copy of the record (coach editing a client, an
+//   athlete's approved or free change). A copy that tracks ids carries its own
+//   deletions and is merged, so whatever the athlete added meanwhile stays; an
+//   older app's copy replaces the record, as it always did.
+// - "clear": the section is emptied on purpose.
+//
+// Entries added on a device the server has not heard from yet are never in
+// current, so none of these can delete them.
+export function landDomainValue(current, next, key, how) {
+  if (!MERGED_DOMAINS.includes(key)) return next;
+  if (how === "clear") return DomainMerge.replace(current, next, Date.now(), key);
+  if (!isObj(next)) return next;
+  if (!isObj(current)) return DomainMerge.merge(null, next, key);
+  if (how === "assign") return DomainMerge.replace(current, next, Date.now(), key);
+  return DomainMerge.isMergeAware(next)
+    ? DomainMerge.merge(current, next, key)
+    : DomainMerge.replace(current, next, Date.now(), key);
 }
 
 // Whether a nutrition/supplementation/therapy/exams blob actually holds real
@@ -108,7 +139,7 @@ export function mergeAccountDataBlobs(current, incoming) {
   // real logged meals/supplements/therapy/exams with nothing. Protect all four
   // domains the same way activeProgram's own weeks are already protected above.
   const domainKeys = ["nutrition", "supplementation", "therapy", "exams"];
-  const mergeField = (a, b, key) => (key === "nutrition" ? mergeNutritionField(a, b, key) : mergeDomainField(a, b, key));
+  const mergeField = (a, b, key) => mergeSyncedDomain(a, b, key);
   for (const key of domainKeys) {
     merged[key] = mergeField(cur, inc, key);
   }
@@ -122,4 +153,38 @@ export function mergeAccountDataBlobs(current, incoming) {
     merged.activeProgram = { ...merged.activeProgram, ...progPatch };
   }
   return merged;
+}
+
+// Reads, rebuilds and writes one user's record as a single locked step.
+// Every writer of app_account_data reads the whole record, changes part of
+// it and writes the whole record back; without the row lock, two of them
+// running together (an athlete's sync and a coach's edit, a finished workout
+// and a background sync) let the second write put back what it read before
+// the first one merged anything in. build(current) returns the new record,
+// or null to leave it as it is.
+export async function updateAccountData(pool, userId, build) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      "INSERT INTO app_account_data(user_id, data, updated_at) VALUES($1, '{}'::jsonb, NOW()) ON CONFLICT (user_id) DO NOTHING",
+      [userId]
+    );
+    const existing = await client.query("SELECT data FROM app_account_data WHERE user_id = $1 FOR UPDATE", [userId]);
+    const current = existing.rows[0]?.data || {};
+    const next = await build(current);
+    if (next && typeof next === "object") {
+      await client.query(
+        "UPDATE app_account_data SET data = $2, revision = revision + 1, updated_at = NOW() WHERE user_id = $1",
+        [userId, JSON.stringify(next)]
+      );
+    }
+    await client.query("COMMIT");
+    return next;
+  } catch (err) {
+    try { await client.query("ROLLBACK"); } catch (_) {}
+    throw err;
+  } finally {
+    client.release();
+  }
 }

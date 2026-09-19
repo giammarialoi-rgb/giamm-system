@@ -3538,6 +3538,9 @@ async function pushCoachClientEdits(opts) {
   if (!id || !store.coachViewingClient) return;
   const domains = Array.isArray(opts.domains) ? opts.domains : null;
   const silentToast = !!opts.cleared;
+  // Record what was changed and deleted in the record domains, so the server
+  // can combine this copy with the athlete's instead of replacing it.
+  if (typeof window.stampRecordDomains === 'function') { try { window.stampRecordDomains(); } catch (_) {} }
   if (typeof DATA !== 'undefined' && DATA) {
     if (store.nutrition != null) DATA.nutrition = store.nutrition;
     if (store.supplementation != null) DATA.supplementation = store.supplementation;
@@ -4656,6 +4659,8 @@ async function confirmAssignSandboxSend() {
     return;
   }
   const run = async function () {
+    // Give the plan being assigned its ids before it leaves.
+    if (typeof window.stampRecordDomains === 'function') { try { window.stampRecordDomains(); } catch (_) {} }
     const payload = {
       assignmentId: 'asg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       activeProgram: (typeof DATA !== 'undefined' && DATA) ? JSON.parse(JSON.stringify(DATA)) : null
@@ -6262,6 +6267,9 @@ function queueAthleteProgramChange(kind, summary, data) {
     const pending = window.__cpPendingChange;
     window.__cpPendingChange = null;
     if (!pending) return;
+    // Record what was changed and deleted in the record domains, so the server
+    // can combine this copy with the athlete's instead of replacing it.
+    if (typeof window.stampRecordDomains === 'function') { try { window.stampRecordDomains(); } catch (_) {} }
     const operationId = (typeof OutboxCore !== 'undefined' && OutboxCore.makeOperationId)
       ? OutboxCore.makeOperationId(pending.kind === 'notice' ? 'chnot' : 'chreq')
       : ('chg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));

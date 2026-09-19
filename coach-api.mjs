@@ -19,7 +19,7 @@ import { ensureCoachPracticeTables, mountCoachPractice } from "./coach-practice.
 import { mountProgramGenerateRoutes } from "./server/program/generator.mjs";
 import { mountFoodRoutes } from "./server/food/index.mjs";
 import { mountMediaRoutes } from "./server/media/media-routes.mjs";
-import { mergeAccountDataBlobs } from "./server/account/index.mjs";
+import { mergeAccountDataBlobs, updateAccountData } from "./server/account/index.mjs";
 import { runMigrations } from "./server/db/migrate.mjs";
 import {
   buildCorsOriginValidator,
@@ -1518,27 +1518,7 @@ app.get("/api/account/me", async (req, res) => {
 // and a SALVA tap, or two devices); read-merge-write without the lock let the
 // second write drop whatever the first had just merged in.
 async function mergeIntoAccountData(userId, incoming) {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    await client.query(
-      "INSERT INTO app_account_data(user_id, data, updated_at) VALUES($1, '{}'::jsonb, NOW()) ON CONFLICT (user_id) DO NOTHING",
-      [userId]
-    );
-    const existing = await client.query("SELECT data FROM app_account_data WHERE user_id = $1 FOR UPDATE", [userId]);
-    const merged = mergeAccountDataBlobs(existing.rows[0]?.data || {}, incoming);
-    await client.query(
-      "UPDATE app_account_data SET data = $2, revision = revision + 1, updated_at = NOW() WHERE user_id = $1",
-      [userId, JSON.stringify(merged)]
-    );
-    await client.query("COMMIT");
-    return merged;
-  } catch (err) {
-    try { await client.query("ROLLBACK"); } catch (_) {}
-    throw err;
-  } finally {
-    client.release();
-  }
+  return updateAccountData(pool, userId, (current) => mergeAccountDataBlobs(current, incoming));
 }
 
 app.post("/api/account/sync", async (req, res) => {

@@ -63,7 +63,7 @@
 <script src="warmup-engine.js"></script>
 <script src="exercise-media-client.js"></script>
 <script src="exercise-media-ui.js"></script>
-<script src="nutrition-merge.js"></script>
+<script src="domain-merge.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -36443,40 +36443,47 @@ function mergeStoredFoodDiary(current) {
   }
 }
 
-// The nutrition plan - which is also the food diary - exists in several copies:
-// the localStorage blob, the IndexedDB nutrition record, the copy saved inside
-// the program, the cloud record, other phones. Each used to replace the others
-// whole, so a stale copy loaded or synced last silently took every meal logged
-// since it was made. Now every day, meal and food carries an id and an
-// updatedAt, deletions leave a tombstone, and copies are combined item by item
-// (web/nutrition-merge.js, the same code the server runs).
+// The user's record - nutrition plan and food diary, supplementation,
+// therapy, exams - exists in several copies: the localStorage blob, each
+// domain's IndexedDB record, the copy saved inside the program, the cloud
+// record, other phones, the coach's copy of an athlete's record. Each used to
+// replace the others whole, so a stale copy loaded or synced last silently
+// took everything recorded since it was made. Now every item carries an id
+// and an updatedAt, deletions leave a tombstone, and copies are combined item
+// by item (web/domain-merge.js, the same code the server runs).
 //
-// persist() records what the user changed by comparing the plan with the
-// snapshot taken the last time it was saved or loaded. A plan that arrives
-// from storage or the cloud is installed with installPersonalNutrition(), which
+// persist() records what was changed by comparing each domain with the
+// snapshot taken the last time it was saved or loaded. A value that arrives
+// from storage or the cloud is installed with installPersonalDomain(), which
 // moves the snapshot along with it, so a loaded copy is never mistaken for an
 // edit - and in particular never turns into deletions of what it lacks.
 //
-// Swapping the whole plan object for another is only a deliberate "the plan is
-// now this" when it comes from something the user asked for (generate, clear,
-// import, restore a backup), which marks the new plan with
-// userReplacesNutrition(). Any other swap - a program switch or recovery
-// carrying an empty or old plan inside it, say - is combined with the plan it
-// replaced, so it can add to the diary but never take anything out of it.
-var __nutritionSnapshot = null;
-var __nutritionSnapshotPlan = null;
-var __nutritionStampedJson = '';
+// Swapping a whole domain object for another is only a deliberate "it is now
+// this" when it comes from something the user asked for (generate, clear,
+// import, restore a backup), which marks the new value with
+// userReplacesRecord(). Any other swap of the user's own record - a program
+// switch or recovery carrying an empty or old plan inside it, say - is
+// combined with the value it replaced, so it can add to the record but never
+// take anything out of it.
+//
+// While a coach works on a client, the client's area is tracked the same way
+// but on its own snapshots, so the coach's deletions travel to the athlete as
+// deletions. There a swapped object is a freshly loaded copy of the client
+// and simply starts a new snapshot: it is never combined with anything.
+var RECORD_DOMAINS = ['nutrition', 'supplementation', 'therapy', 'exams'];
+var __recordTrack = { personal: {}, client: {}, clientArea: null };
 
-function nutritionMergeApi() {
-  return (typeof window !== 'undefined' && window.NurvanNutritionMerge) || null;
+function recordMergeApi() {
+  return (typeof window !== 'undefined' && window.NurvanDomainMerge) || null;
 }
 
-function userReplacesNutrition(plan) {
-  if (plan && typeof plan === 'object') {
-    try { Object.defineProperty(plan, '__replacesPlan', { value: true, configurable: true, enumerable: false, writable: true }); } catch (_) {}
+function userReplacesRecord(value) {
+  if (value && typeof value === 'object') {
+    try { Object.defineProperty(value, '__replacesPlan', { value: true, configurable: true, enumerable: false, writable: true }); } catch (_) {}
   }
-  return plan;
+  return value;
 }
+var userReplacesNutrition = userReplacesRecord;
 
 function nutritionHasContent(n) {
   if (!n || typeof n !== 'object') return false;
@@ -36486,88 +36493,132 @@ function nutritionHasContent(n) {
     || n.daily_calories_target != null);
 }
 
-function stampPersonalNutrition() {
-  const M = nutritionMergeApi();
+function recordHasContent(domain, v) {
+  if (domain === 'nutrition') return nutritionHasContent(v);
+  if (!v || typeof v !== 'object') return false;
+  if (v.cleared || v.isCleared || v.present) return true;
+  return ['items', 'medications', 'protocols', 'entries', 'records', 'reminders'].some(function (k) {
+    return Array.isArray(v[k]) && v[k].length;
+  });
+}
+
+function recordAreaDomain(which) {
+  if (which === 'client') return (NurvanMemory.client && NurvanMemory.client.domain) || null;
+  return personalDomain();
+}
+
+// Records what changed in one domain of one area since its last snapshot.
+function stampRecordDomain(which, domain) {
+  const M = recordMergeApi();
   if (!M) return;
-  let n = personalDomain().nutrition;
-  if (!n || typeof n !== 'object') return;
+  const area = recordAreaDomain(which);
+  if (!area) return;
+  let value = area[domain];
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+  const track = __recordTrack[which][domain] || (__recordTrack[which][domain] = { snap: null, value: null, json: '' });
   try {
-    const previous = __nutritionSnapshotPlan;
-    if (__nutritionSnapshot && previous && previous !== n) {
-      if (n.__replacesPlan) {
-        delete n.__replacesPlan;
+    const previous = track.value;
+    if (track.snap && previous && previous !== value) {
+      if (value.__replacesPlan) {
+        delete value.__replacesPlan;
+      } else if (which === 'client') {
+        track.snap = null; // a freshly loaded copy of the client: start over
       } else {
-        n = M.merge(previous, n);
-        personalDomain().nutrition = n;
-        if (NurvanMemory.active === 'personal' && typeof DATA !== 'undefined' && DATA) DATA.nutrition = n;
+        value = M.merge(previous, value, domain);
+        area[domain] = value;
+        if (NurvanMemory.active === 'personal' && typeof DATA !== 'undefined' && DATA) DATA[domain] = value;
       }
-    } else if (n.__replacesPlan) {
-      delete n.__replacesPlan;
+    } else if (value.__replacesPlan) {
+      delete value.__replacesPlan;
     }
-    const json = JSON.stringify(n);
-    if (__nutritionSnapshot && previous === n && json === __nutritionStampedJson) return;
-    __nutritionSnapshot = M.stamp(n, __nutritionSnapshot, Date.now());
-    __nutritionSnapshotPlan = n;
-    __nutritionStampedJson = JSON.stringify(n);
+    const json = JSON.stringify(value);
+    if (track.snap && previous === value && json === track.json) return;
+    track.snap = M.stamp(value, track.snap, Date.now(), domain);
+    track.value = value;
+    track.json = JSON.stringify(value);
   } catch (err) {
-    console.warn('[NUTRITION_STAMP]', err);
+    console.warn('[RECORD_STAMP]', domain, err);
   }
 }
 
-// Puts a plan that came from storage or the cloud in place as the user's own.
-function installPersonalNutrition(n) {
-  const M = nutritionMergeApi();
-  if (M && n && typeof n === 'object') {
-    __nutritionSnapshot = M.stamp(n, null);
-    __nutritionSnapshotPlan = n;
-    __nutritionStampedJson = JSON.stringify(n);
+// The user's own record, and the client being worked on if there is one.
+function stampRecordDomains() {
+  if (!recordMergeApi()) return;
+  if (NurvanMemory.client !== __recordTrack.clientArea) {
+    __recordTrack.client = {};
+    __recordTrack.clientArea = NurvanMemory.client;
   }
-  personalDomain().nutrition = n;
-  if (NurvanMemory.active === 'personal' && typeof DATA !== 'undefined' && DATA) DATA.nutrition = n;
-  return n;
+  RECORD_DOMAINS.forEach(function (domain) {
+    stampRecordDomain('personal', domain);
+    if (NurvanMemory.client) stampRecordDomain('client', domain);
+  });
 }
 
-// Combines copies of the plan. `copies` goes from oldest to freshest: the
+// Puts a value that came from storage or the cloud in place as the user's own.
+function installPersonalDomain(domain, value) {
+  const M = recordMergeApi();
+  const track = __recordTrack.personal[domain] || (__recordTrack.personal[domain] = { snap: null, value: null, json: '' });
+  if (M && value && typeof value === 'object' && !Array.isArray(value)) {
+    track.snap = M.stamp(value, null, Date.now(), domain);
+    track.value = value;
+    track.json = JSON.stringify(value);
+  }
+  personalDomain()[domain] = value;
+  if (NurvanMemory.active === 'personal' && typeof DATA !== 'undefined' && DATA) DATA[domain] = value;
+  return value;
+}
+
+// Combines copies of one domain. `copies` goes from oldest to freshest: the
 // fresher one wins where both changed the same thing. Copies made before item
-// ids existed are only used when no other copy has them, and then the freshest
-// one with anything in it is taken as it is, as before.
-function combineNutritionCopies(copies) {
-  const M = nutritionMergeApi();
-  const list = (copies || []).filter(function (n) { return n && typeof n === 'object'; });
+// ids existed are only used when no other copy has them, and then the
+// freshest one with anything in it is taken as it is, as before.
+function combineRecordCopies(domain, copies) {
+  const M = recordMergeApi();
+  const list = (copies || []).filter(function (v) { return v && typeof v === 'object' && !Array.isArray(v); });
   if (M) {
     const aware = list.filter(M.isMergeAware);
     if (aware.length) {
-      return aware.reduce(function (acc, n) { return acc ? M.merge(acc, n) : M.merge(n, n); }, null);
+      return aware.reduce(function (acc, v) { return acc ? M.merge(acc, v, domain) : M.merge(v, v, domain); }, null);
     }
   }
   for (let i = list.length - 1; i >= 0; i--) {
-    if (nutritionHasContent(list[i])) return list[i];
+    if (recordHasContent(domain, list[i])) return list[i];
   }
   return null;
 }
 
-// Boot used to take the plan from the copy saved inside the program, which is
-// only rewritten when the program itself is saved - so every meal logged since
-// then vanished on the next reload, and the stale copy was then written back
-// over the fresh ones. All local copies are combined instead: the program's
-// (oldest), the IndexedDB nutrition record, and the localStorage blob that
-// persist() writes on every change (freshest).
-async function restorePersonalNutritionOnBoot(fromProgram) {
+var RECORD_IDB_GETTERS = { nutrition: 'getNutrition', supplementation: 'getSupplements', therapy: 'getTherapy', exams: 'getExams' };
+
+// Boot used to take each domain from the copy saved inside the program, which
+// is only rewritten when the program itself is saved - so everything recorded
+// since then vanished on the next reload, and the stale copy was then written
+// back over the fresh ones. All local copies are combined instead: the
+// program's (oldest), the domain's IndexedDB record, and the localStorage blob
+// that persist() writes on every change (freshest).
+async function restorePersonalDomainOnBoot(domain, fromProgram) {
   let fromIdb = null;
   try {
-    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.getNutrition) {
-      fromIdb = await GiammariaPersistence.getNutrition();
+    const getter = RECORD_IDB_GETTERS[domain];
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence[getter]) {
+      fromIdb = await GiammariaPersistence[getter]();
     }
   } catch (err) {
-    console.warn('[NURVAN_BOOT] nutrition record unavailable', err);
+    console.warn('[NURVAN_BOOT] ' + domain + ' record unavailable', err);
   }
-  const fromLocal = personalDomain().nutrition;
-  let plan = combineNutritionCopies([fromProgram, fromIdb, fromLocal]);
-  if (plan && !nutritionHasContent(plan)) plan = null;
-  if (plan && !(plan.cleared || plan.isCleared) && typeof enrichImportedFoods === 'function') {
-    plan = enrichImportedFoods(plan) || plan;
+  const fromLocal = personalDomain()[domain];
+  let value = combineRecordCopies(domain, [fromProgram, fromIdb, fromLocal]);
+  if (value && !recordHasContent(domain, value)) value = null;
+  if (value && domain === 'nutrition' && !(value.cleared || value.isCleared) && typeof enrichImportedFoods === 'function') {
+    value = enrichImportedFoods(value) || value;
   }
-  return installPersonalNutrition(plan);
+  return installPersonalDomain(domain, value);
+}
+
+async function restorePersonalRecordOnBoot(program) {
+  const src = program || {};
+  for (const domain of RECORD_DOMAINS) {
+    await restorePersonalDomainOnBoot(domain, src[domain] || null);
+  }
 }
 
 NurvanMemory.personal = nurvanEmptyArea();
@@ -36589,6 +36640,8 @@ window.nurvanEnterClientArea = nurvanEnterClientArea;
 window.nurvanLeaveClientArea = nurvanLeaveClientArea;
 window.NURVAN_DOMAIN_FIELDS = NURVAN_DOMAIN_FIELDS;
 window.persistFoodDiary = persistFoodDiary;
+window.stampRecordDomains = stampRecordDomains;
+window.userReplacesRecord = userReplacesRecord;
 window.mergeStoredFoodDiary = mergeStoredFoodDiary;
 window.NURVAN_FOOD_DIARY_KEY = NURVAN_FOOD_DIARY_KEY;
 restoreClientShellSync();
@@ -37879,7 +37932,7 @@ function accountPayload(opts){
   opts = opts || {};
   const includeProgram = opts.includeProgram !== false;
   if (!store.coachViewingClient && !store.coachAssigning) {
-    try { stampPersonalNutrition(); } catch (_) {}
+    try { stampRecordDomains(); } catch (_) {}
   }
   // While viewing/assigning a client, RAM holds client DATA — always prefer personal backup.
   const bak = (store.coachViewingClient || store.coachAssigning)
@@ -38162,27 +38215,41 @@ function applyRemoteAccountData(remote, preferLocal) {
   } else if (athlete && !takeRemote && DATA && typeof looksLikePersonalUpperLower16 === 'function' && looksLikePersonalUpperLower16(DATA)) {
     emptyClientTrainingState();
   }
-  // The user's own plan is combined with the cloud copy item by item, so neither
-  // side's meals can be dropped. An athlete's plan is the coach's to replace and
-  // keeps the rules below.
-  const mergeNutrition = !athlete && nutritionMergeApi() && remote.nutrition && typeof remote.nutrition === 'object';
-  if (mergeNutrition) stampPersonalNutrition();
-  const localNutrNow = (DATA && DATA.nutrition) || store.nutrition || null;
+  // Record domains (nutrition, supplementation, therapy, exams) are combined
+  // with the cloud copy item by item, so neither side's entries can be
+  // dropped. That holds for an athlete too: a plan the coach assigns reaches
+  // the cloud with the old plan's entries marked deleted, so combining still
+  // replaces it. Only a cloud copy from before item ids existed, arriving on
+  // an athlete's phone, keeps the old replace rules below.
+  const recordM = recordMergeApi();
+  if (recordM) stampRecordDomains();
+  const localRecord = {};
+  RECORD_DOMAINS.forEach(function (domain) {
+    localRecord[domain] = (DATA && DATA[domain]) || store[domain] || null;
+  });
+  function landRemoteDomain(domain) {
+    const incoming = remote[domain];
+    if (!recordM || !incoming || typeof incoming !== 'object' || Array.isArray(incoming)) return false;
+    if (athlete && !recordM.isMergeAware(incoming)) return false;
+    const local = localRecord[domain];
+    installPersonalDomain(domain, local && typeof local === 'object' ? recordM.merge(local, incoming, domain) : incoming);
+    return true;
+  }
   if (takeRemote) {
     try {
       window.__cpProgramLock = true;
       const keepNutr = !!(store.__cpKeepLocalNutrition || store.__cpNutritionDirty);
       const keepSupp = !!(store.__cpKeepLocalSupplements || store.__cpSupplementsDirty);
-      const localNutr = keepNutr ? localNutrNow : null;
-      const localSupp = keepSupp ? ((DATA && DATA.supplementation) || store.supplementation) : null;
+      const localNutr = keepNutr ? localRecord.nutrition : null;
+      const localSupp = keepSupp ? localRecord.supplementation : null;
       DATA = typeof normalizeProgram === 'function' ? normalizeProgram(remoteProg) : remoteProg;
       store.activeProgram = DATA;
       store.activeProgramId = DATA.id || remote.activeProgramId || store.activeProgramId;
       if (athlete) store.clientAssignedAt = remoteAssigned || new Date().toISOString();
-      if (mergeNutrition) {
-        installPersonalNutrition(localNutrNow && typeof localNutrNow === 'object' ? nutritionMergeApi().merge(localNutrNow, remote.nutrition) : remote.nutrition);
+      if (landRemoteDomain('nutrition')) {
+        // combined above
       } else if (keepNutr && localNutr) {
-        installPersonalNutrition(localNutr);
+        installPersonalDomain('nutrition', localNutr);
       } else if (remote.nutrition) {
         // Durable safety net: back up whatever local nutrition is about to be
         // replaced (across reloads, unlike the in-memory-only workoutUndo) so
@@ -38190,15 +38257,17 @@ function applyRemoteAccountData(remote, preferLocal) {
         if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.backupNutrition && store.nutrition) {
           GiammariaPersistence.backupNutrition(store.nutrition).catch(function () {});
         }
-        installPersonalNutrition(remote.nutrition);
+        installPersonalDomain('nutrition', remote.nutrition);
       }
-      if (keepSupp && localSupp) {
-        store.supplementation = localSupp;
+      if (landRemoteDomain('supplementation')) {
+        // combined above
+      } else if (keepSupp && localSupp) {
+        installPersonalDomain('supplementation', localSupp);
       } else if (remote.supplementation) {
-        store.supplementation = remote.supplementation;
+        installPersonalDomain('supplementation', remote.supplementation);
       }
-      if (remote.therapy) store.therapy = remote.therapy;
-      if (remote.exams) store.exams = remote.exams;
+      if (!landRemoteDomain('therapy') && remote.therapy) installPersonalDomain('therapy', remote.therapy);
+      if (!landRemoteDomain('exams') && remote.exams) installPersonalDomain('exams', remote.exams);
       if (DATA) {
         if (store.nutrition) DATA.nutrition = store.nutrition;
         if (store.supplementation) DATA.supplementation = store.supplementation;
@@ -38213,18 +38282,21 @@ function applyRemoteAccountData(remote, preferLocal) {
     }
   } else {
     // Domain-only remote fields without replacing the whole program
-    if (mergeNutrition) {
-      installPersonalNutrition(localNutrNow && typeof localNutrNow === 'object' ? nutritionMergeApi().merge(localNutrNow, remote.nutrition) : remote.nutrition);
+    if (landRemoteDomain('nutrition')) {
+      // combined above
     } else if (!store.__cpKeepLocalNutrition && !store.__cpNutritionDirty && remote.nutrition) {
       if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.backupNutrition && store.nutrition) {
         GiammariaPersistence.backupNutrition(store.nutrition).catch(function () {});
       }
-      installPersonalNutrition(remote.nutrition);
+      installPersonalDomain('nutrition', remote.nutrition);
     }
-    if (!store.__cpKeepLocalSupplements && !store.__cpSupplementsDirty && remote.supplementation) {
-      store.supplementation = remote.supplementation;
-      if (DATA) DATA.supplementation = remote.supplementation;
+    if (landRemoteDomain('supplementation')) {
+      // combined above
+    } else if (!store.__cpKeepLocalSupplements && !store.__cpSupplementsDirty && remote.supplementation) {
+      installPersonalDomain('supplementation', remote.supplementation);
     }
+    landRemoteDomain('therapy');
+    landRemoteDomain('exams');
   }
   store.accountToken = token;
   store.accountUser = user;
@@ -39743,7 +39815,7 @@ function confirmGenerateSupplementation() {
     planName: (st.mode === 'precise' ? 'Integrazione precisa' : 'Integrazione automatica') + ' · ' + keys.join('+')
   });
   if (!DATA) window.DATA = {};
-  DATA.supplementation = plan;
+  DATA.supplementation = userReplacesRecord(plan);
   if (typeof store !== 'undefined' && store) {
     store.supplementation = plan;
     store.__cpSupplementsDirty = true;
@@ -41166,7 +41238,7 @@ function applyOperationsToProgram(program, operations) {
       if (supp && typeof supp === 'object') {
         if (!supp.present) supp.present = true;
         if (!Array.isArray(supp.items) && Array.isArray(changes.items)) supp.items = changes.items;
-        DATA.supplementation = supp;
+        DATA.supplementation = userReplacesRecord(supp);
         store.supplementation = supp;
         cloned.supplementation = supp;
         appliedCount++;
@@ -41180,7 +41252,7 @@ function applyOperationsToProgram(program, operations) {
       if (therapy && typeof therapy === 'object') {
         if (!therapy.present) therapy.present = true;
         if (!Array.isArray(therapy.medications) && Array.isArray(changes.medications)) therapy.medications = changes.medications;
-        DATA.therapy = therapy;
+        DATA.therapy = userReplacesRecord(therapy);
         store.therapy = therapy;
         cloned.therapy = therapy;
         appliedCount++;
@@ -43470,43 +43542,12 @@ async function init() {
       console.log('[NURVAN_BOOT] Successfully loaded active program from IndexedDB:', activeProg.title);
       const trainingPayload = activeProg.training || activeProg;
       DATA = normalizeProgram(trainingPayload);
-      // Restore multi-domain data ONLY from the active program envelope (never orphan IDB leftovers)
+      // Every record domain: the program's copy combined with the fresher
+      // local ones (see restorePersonalDomainOnBoot).
       try {
-        const nutr = activeProg.nutrition || null;
-        const supp = activeProg.supplementation || null;
-        const ther = activeProg.therapy || null;
-        const exams = activeProg.exams || null;
-        await restorePersonalNutritionOnBoot(nutr);
-        if (supp && (supp.present || (supp.items && supp.items.length))) {
-          DATA.supplementation = supp; store.supplementation = supp;
-        } else {
-          DATA.supplementation = null; store.supplementation = null;
-        }
-        if (ther && (ther.present || (ther.medications && ther.medications.length))) {
-          DATA.therapy = ther; store.therapy = ther;
-        } else {
-          DATA.therapy = null; store.therapy = null;
-        }
-        if (exams && (exams.present || ((exams.records || exams.items || []).length))) {
-          DATA.exams = exams; store.exams = exams;
-        } else {
-          DATA.exams = null; store.exams = null;
-        }
+        await restorePersonalRecordOnBoot(activeProg);
       } catch (domErr) {
         console.warn('[NURVAN_BOOT] Domain restore warning:', domErr);
-      }
-      // Supplements may live in their own IDB store. (Nutrition: every local
-      // copy, that record included, was already combined above.)
-      try {
-        if ((!DATA.supplementation || !(DATA.supplementation.items && DATA.supplementation.items.length)) && GiammariaPersistence.getSupplements) {
-          const orphanSupp = await GiammariaPersistence.getSupplements();
-          if (orphanSupp && (orphanSupp.present || (orphanSupp.items && orphanSupp.items.length))) {
-            DATA.supplementation = orphanSupp;
-            store.supplementation = orphanSupp;
-          }
-        }
-      } catch (orphanErr) {
-        console.warn('[NURVAN_BOOT] Orphan domain restore:', orphanErr);
       }
       store.activeProgram = DATA;
       store.activeProgramId = activeProg.id || store.activeProgramId;
@@ -43520,7 +43561,7 @@ async function init() {
     if (store && store.activeProgram && Array.isArray(store.activeProgram.weeks) && store.activeProgram.weeks.length > 0) {
       console.log('[NURVAN_BOOT] Loaded active program from legacy store');
       DATA = normalizeProgram(store.activeProgram);
-      await restorePersonalNutritionOnBoot(DATA.nutrition || null);
+      await restorePersonalRecordOnBoot(DATA);
       if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
         GiammariaPersistence.saveProgram(DATA, true).catch(console.warn);
       }
@@ -43580,7 +43621,7 @@ async function init() {
 
     if (loadedFromDataJson && DATA) {
       console.log('[NURVAN_BOOT] Loaded default program from data.json');
-      await restorePersonalNutritionOnBoot(null);
+      await restorePersonalRecordOnBoot(null);
       clearTimeout(splashTimer);
       finishInit();
       return;
@@ -43591,14 +43632,8 @@ async function init() {
       console.log('[NURVAN_BOOT] No active program found, initializing empty program shell');
       DATA = { title: "Nessun Programma Attivo", weeks: [], nutrition: null, supplementation: null, therapy: null, exams: null };
     }
-    // No program is no reason to drop the food diary: it lives on its own.
-    await restorePersonalNutritionOnBoot(null);
-    DATA.supplementation = null;
-    DATA.therapy = null;
-    DATA.exams = null;
-    store.supplementation = null;
-    store.therapy = null;
-    store.exams = null;
+    // No program is no reason to drop the user's record: it lives on its own.
+    await restorePersonalRecordOnBoot(null);
 
     clearTimeout(splashTimer);
     finishInit();
@@ -43720,9 +43755,9 @@ function persist() {
     store.trainingDay = typeof currentDay !== 'undefined' ? currentDay : store.trainingDay;
   } catch (_) {}
   try { upsertLiveCoachArchive(); } catch (_) {}
-  // Record what the user changed in the nutrition plan since the last save,
-  // before any copy of it is written anywhere.
-  try { stampPersonalNutrition(); } catch (_) {}
+  // Record what was changed in the record domains since the last save,
+  // before any copy of them is written anywhere.
+  try { stampRecordDomains(); } catch (_) {}
   try {
     // Before the blob, and independently of whether the blob write succeeds: if
     // localStorage is full, the fallback below writes a reduced record with no
@@ -49561,17 +49596,15 @@ async function activateCatalogProgramInner(programId) {
       await GiammariaPersistence.saveActiveProgram(prog);
     }
     DATA = prog;
-    // A catalogue program is training only. The food diary is the user's own
-    // record and switching training programs is no reason to drop it.
+    // A catalogue program is training only. Nutrition, supplementation, therapy
+    // and exams are the user's own record and switching training programs is
+    // no reason to drop them.
     DATA.nutrition = store.nutrition || null;
-    DATA.supplementation = null;
-    DATA.therapy = null;
-    DATA.exams = null;
+    DATA.supplementation = store.supplementation || null;
+    DATA.therapy = store.therapy || null;
+    DATA.exams = store.exams || null;
     store.activeProgram = DATA;
     store.activeProgramId = newId;
-    store.supplementation = null;
-    store.therapy = null;
-    store.exams = null;
     currentWeek = 1;
     currentDay = 0;
     if (DATA.weeks?.length) store.prefs.duration = DATA.weeks.length;
@@ -51158,21 +51191,21 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
         }
       }
       if (prog.supplementation && allow('supplements')) {
-        DATA.supplementation = prog.supplementation;
+        DATA.supplementation = userReplacesRecord(prog.supplementation);
         store.supplementation = prog.supplementation;
         if (!sandbox && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveSupplements) {
           await GiammariaPersistence.saveSupplements(DATA.supplementation);
         }
       }
       if (prog.therapy && allow('therapy')) {
-        DATA.therapy = (typeof enrichTherapyMedications === 'function') ? enrichTherapyMedications(prog.therapy) : prog.therapy;
+        DATA.therapy = userReplacesRecord((typeof enrichTherapyMedications === 'function') ? enrichTherapyMedications(prog.therapy) : prog.therapy);
         store.therapy = DATA.therapy;
         if (!sandbox && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveTherapy) {
           await GiammariaPersistence.saveTherapy(DATA.therapy);
         }
       }
       if (prog.exams && allow('exams')) {
-        DATA.exams = prog.exams;
+        DATA.exams = userReplacesRecord(prog.exams);
         store.exams = prog.exams;
         if (!sandbox && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveExams) {
           await GiammariaPersistence.saveExams(DATA.exams);
@@ -51300,16 +51333,16 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
     // Attach multi-domain payload onto DATA before persist (respect domain picker)
     const selDom = (pState.selectedDomains || []).slice();
     const allowDom = function (d) { return !selDom.length || selDom.indexOf(d) >= 0; };
-    if (prog.nutrition && allowDom('nutrition')) { DATA.nutrition = enrichImportedFoods(prog.nutrition); store.nutrition = DATA.nutrition; }
+    if (prog.nutrition && allowDom('nutrition')) { DATA.nutrition = userReplacesRecord(enrichImportedFoods(prog.nutrition)); store.nutrition = DATA.nutrition; }
     else if (selDom.length && selDom.indexOf('nutrition') < 0) { /* skip */ }
-    if (prog.supplementation && allowDom('supplements')) { DATA.supplementation = prog.supplementation; store.supplementation = prog.supplementation; }
+    if (prog.supplementation && allowDom('supplements')) { DATA.supplementation = userReplacesRecord(prog.supplementation); store.supplementation = prog.supplementation; }
     if (prog.therapy && allowDom('therapy')) {
-      DATA.therapy = (typeof enrichTherapyMedications === 'function')
+      DATA.therapy = userReplacesRecord((typeof enrichTherapyMedications === 'function')
         ? enrichTherapyMedications(prog.therapy)
-        : prog.therapy;
+        : prog.therapy);
       store.therapy = DATA.therapy;
     }
-    if (prog.exams && allowDom('exams')) { DATA.exams = prog.exams; store.exams = prog.exams; }
+    if (prog.exams && allowDom('exams')) { DATA.exams = userReplacesRecord(prog.exams); store.exams = prog.exams; }
     if (prog.spreadsheet) DATA.spreadsheet = prog.spreadsheet;
 
     // Atomic IDB persist + domain read-back verify (offline, no AI)
@@ -51340,9 +51373,9 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
     }
 
     if (prog.nutrition && allowDom('nutrition')) store.nutrition = userReplacesNutrition(prog.nutrition);
-    if (prog.supplementation && allowDom('supplements')) store.supplementation = prog.supplementation;
-    if (prog.therapy && allowDom('therapy')) store.therapy = prog.therapy;
-    if (prog.exams && allowDom('exams')) store.exams = prog.exams;
+    if (prog.supplementation && allowDom('supplements')) store.supplementation = userReplacesRecord(prog.supplementation);
+    if (prog.therapy && allowDom('therapy')) store.therapy = userReplacesRecord(prog.therapy);
+    if (prog.exams && allowDom('exams')) store.exams = userReplacesRecord(prog.exams);
 
     if (prog.duration_weeks || DATA.duration_weeks) {
       store.prefs.duration = prog.duration_weeks || DATA.duration_weeks;
@@ -65378,6 +65411,9 @@ async function pushCoachClientEdits(opts) {
   if (!id || !store.coachViewingClient) return;
   const domains = Array.isArray(opts.domains) ? opts.domains : null;
   const silentToast = !!opts.cleared;
+  // Record what was changed and deleted in the record domains, so the server
+  // can combine this copy with the athlete's instead of replacing it.
+  if (typeof window.stampRecordDomains === 'function') { try { window.stampRecordDomains(); } catch (_) {} }
   if (typeof DATA !== 'undefined' && DATA) {
     if (store.nutrition != null) DATA.nutrition = store.nutrition;
     if (store.supplementation != null) DATA.supplementation = store.supplementation;
@@ -66496,6 +66532,8 @@ async function confirmAssignSandboxSend() {
     return;
   }
   const run = async function () {
+    // Give the plan being assigned its ids before it leaves.
+    if (typeof window.stampRecordDomains === 'function') { try { window.stampRecordDomains(); } catch (_) {} }
     const payload = {
       assignmentId: 'asg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       activeProgram: (typeof DATA !== 'undefined' && DATA) ? JSON.parse(JSON.stringify(DATA)) : null
@@ -68102,6 +68140,9 @@ function queueAthleteProgramChange(kind, summary, data) {
     const pending = window.__cpPendingChange;
     window.__cpPendingChange = null;
     if (!pending) return;
+    // Record what was changed and deleted in the record domains, so the server
+    // can combine this copy with the athlete's instead of replacing it.
+    if (typeof window.stampRecordDomains === 'function') { try { window.stampRecordDomains(); } catch (_) {} }
     const operationId = (typeof OutboxCore !== 'undefined' && OutboxCore.makeOperationId)
       ? OutboxCore.makeOperationId(pending.kind === 'notice' ? 'chnot' : 'chreq')
       : ('chg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));

@@ -15,7 +15,7 @@ import { mergeAccountDataBlobs } from './server/account/index.mjs';
 const root = path.dirname(fileURLToPath(import.meta.url));
 const sandbox = {};
 sandbox.self = sandbox;
-vm.runInNewContext(fs.readFileSync(path.join(root, 'web/nutrition-merge.js'), 'utf8'), sandbox);
+vm.runInNewContext(fs.readFileSync(path.join(root, 'web/domain-merge.js'), 'utf8'), sandbox);
 const M = sandbox.NurvanNutritionMerge;
 
 function ok(value, message) {
