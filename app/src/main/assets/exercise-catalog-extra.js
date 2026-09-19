@@ -36,6 +36,7 @@ self.WEB_EXERCISE_CATALOG = [
   { name: "Hack squat", en: "Hack Squat", muscle: "QUADRICIPITI", eq: "macchina" },
   { name: "Leg press", en: "Leg Press", muscle: "QUADRICIPITI", eq: "macchina" },
   { name: "Affondi camminati", en: "Walking Lunge", muscle: "QUADRICIPITI", eq: "manubri", aliases: ["lunges", "affondi"] },
+  { name: "Affondi", en: "Dumbbell Lunge", muscle: "QUADRICIPITI", eq: "manubri" },
   { name: "Affondo bulgaro", en: "Bulgarian Split Squat", muscle: "QUADRICIPITI", eq: "manubri" },
   { name: "Step-up", en: "Step-Up", muscle: "QUADRICIPITI", eq: "manubri" },
   { name: "Sissy squat", en: "Sissy Squat", muscle: "QUADRICIPITI", eq: "corpo libero" },
@@ -75,6 +76,7 @@ self.WEB_EXERCISE_CATALOG = [
   { name: "French press manubri", en: "Dumbbell Skull Crusher", muscle: "TRICIPITI", eq: "manubri" },
   { name: "Pushdown cavo", en: "Triceps Pushdown", muscle: "TRICIPITI", eq: "cavi" },
   { name: "Kickback tricipiti", en: "Triceps Kickback", muscle: "TRICIPITI", eq: "manubri" },
+  { name: "Kickback cavo tricipiti", en: "Cable Triceps Kickback", muscle: "TRICIPITI", eq: "cavi" },
   { name: "Overhead extension", en: "Overhead Triceps Extension", muscle: "TRICIPITI", eq: "manubri" },
   { name: "Close-grip bench", en: "Close-Grip Bench Press", muscle: "TRICIPITI", eq: "bilanciere" },
   { name: "Crunch", en: "Crunch", muscle: "ADDOME", eq: "corpo libero" },
@@ -165,3 +167,42 @@ self.WEB_EXERCISE_CATALOG = [
   { name: "Zercher squat", en: "Zercher Squat", muscle: "QUADRICIPITI", eq: "bilanciere" },
   { name: "Overhead squat", en: "Overhead Squat", muscle: "QUADRICIPITI", eq: "bilanciere" }
 ];
+
+/* Names used in workouts that refer to an existing catalogue exercise under
+   another wording, keyed by canonical id. Each one was approved by the
+   product owner: never extend this from wording alone, because identical
+   words can name a different exercise ("Kickback cavo tricipiti" is not the
+   glute "Kickback cavo"). The info sheet shows the linked exercise's guide
+   and picture under the name written in the workout. */
+self.WEB_EXERCISE_NAME_LINKS = {
+  panca_piana_con_bilanciere: "Panca piana bilanciere",
+  panca_inclinata_con_manubri: "Panca inclinata manubri",
+  squat_con_bilanciere: "Squat bilanciere",
+  goblet_squat: "Squat goblet",
+  rematore_con_bilanciere: "Rematore bilanciere",
+  kickback_al_cavo: "Kickback cavo",
+  trazioni: "Trazioni presa prona",
+  hip_thrust_a_terra: "Glute bridge",
+  panca_manubri: "Panca piana manubri",
+  military_press_manubri: "Lento Avanti con Manubri",
+  diamond_push_up: "Push-up diamante",
+  pistol_assistito: "Pistol Squat Assistito",
+  ext_tricipiti_overhead: "Overhead extension",
+  ext_tricipiti: "Overhead extension",
+  kettlebell_squat: "Squat goblet",
+  chin_up: "Trazioni presa supina",
+  panca_piana: "Panca piana bilanciere",
+  dip: "Dips parallele",
+  panca_inclinata: "Panca inclinata bilanciere",
+  spinte_manubri_spalle: "Shoulder press manubri",
+  lento_avanti: "Military press",
+  single_arm_kb_row: "Kettlebell Row",
+  squat: "Squat bilanciere",
+  stacco: "Stacco da terra",
+  lat_machine: "Lat machine avanti",
+  rear_delt_fly: "Alzate posteriori",
+  skull_crusher: "French press",
+  calf_raise: "Calf raise in piedi",
+  abductor: "Abductor machine",
+  leg_curl: "Leg curl sdraiato"
+};

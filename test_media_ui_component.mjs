@@ -102,12 +102,60 @@ for (const [label, input] of [
   assert.ok(at !== -1, 'openExerciseInfoSheet not found');
   const body = base.slice(at, base.indexOf('\nfunction ', at + 20));
 
-  ok(body.includes('resolveCanonicalMediaName(name)'),
-    'the sheet resolves the exercise name through the media client before deriving the media id');
-  ok(body.includes('exerciseIdFor(mediaName)'),
-    'and the lookup uses that resolved name, not the one written in the program');
-  ok(/const mediaName = resolvedMediaName \|\| name;/.test(body),
-    'an unresolved exercise falls back to the written name, so custom exercises are unchanged');
+  ok(body.includes('catalogueExerciseFor(name)'),
+    'the sheet asks the media client which catalogue exercise the written name certainly is');
+  ok(body.includes('exerciseIdFor(mediaName)') && /const mediaName = catalogueName \|\| name;/.test(body),
+    'the image is looked up under that exercise, falling back to the written name for custom exercises');
+  ok(body.includes('isSameExercise(name, title)') && body.includes("guide.kind === 'exercise'"),
+    'the guide text is kept only when it describes this same exercise');
+  ok((body.match(/\{ title: name \}/g) || []).length >= 2,
+    'and the sheet is always titled with the name written in the workout, guide or researched text alike');
+  ok(body.includes('persistKnowledgeExtra({ name: name,'),
+    'researched text is remembered under the workout name, so the next open finds it exactly');
+}
+
+// --- workout names -> catalogue exercise, run for real on the real catalogue ---
+//
+// Measured on the published programs: 69% of workout rows opened "Chiedi info"
+// on another exercise's page, because the guide's matcher accepts one shared
+// word ("Kettlebell press" -> Leg press, "Ext tricipiti" -> Leg extension).
+{
+  const sandbox = { window: null, self: null, document: undefined };
+  sandbox.window = sandbox;
+  sandbox.self = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(path.join(root, 'web/exercise-catalog-extra.js'), 'utf8'), sandbox);
+  const built = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
+  const at = built.indexOf('var EXERCISE_DICTIONARY');
+  let depth = 0, end = -1;
+  const open = built.indexOf('[', at);
+  for (let p = open; p < built.length; p++) {
+    if (built[p] === '[') depth++;
+    else if (built[p] === ']') { depth--; if (!depth) { end = p; break; } }
+  }
+  const dictionary = vm.runInContext('(' + built.slice(open, end + 1) + ')', sandbox);
+  sandbox.ExerciseDatabaseService = { getAllExercises() { return dictionary.map((e) => ({ name: e.normalized })); } };
+  vm.runInContext(fs.readFileSync(path.join(root, 'web/exercise-media-client.js'), 'utf8'), sandbox);
+  const M = sandbox.NurvanExerciseMedia;
+
+  ok(M.catalogueExerciseFor('Panca manubri') === 'Panca piana manubri', 'an approved workout name links to its catalogue exercise');
+  ok(M.catalogueExerciseFor('Kettlebell press') === null, 'an exercise with no catalogue entry links to nothing');
+  ok(M.catalogueExerciseFor('Kickback cavo tricipiti') === null, 'shared words are not a link: the triceps kickback is not the glute one');
+
+  ok(!M.isSameExercise('Kettlebell press', 'Leg press'), '"Kettlebell press" is not shown as Leg press');
+  ok(!M.isSameExercise('Ext tricipiti', 'Leg extension'), '"Ext tricipiti" is not shown as Leg extension');
+  ok(!M.isSameExercise('Pushdown ai Cavi con Corda', 'Croci ai cavi'), '"Pushdown ai Cavi con Corda" is not shown as Croci ai cavi');
+  ok(!M.isSameExercise('RDL monopodalico', 'Stacco rumeno'), 'a variant with its own entry is not shown as the base lift');
+  ok(M.isSameExercise('Diamond push-up', 'Push-up diamante'), 'an approved link is the same exercise');
+  ok(M.isSameExercise('Chest Press Convergente', 'chest press convergente'), 'the same name in another case is the same exercise');
+
+  const catalogue = new Set([
+    ...sandbox.WEB_EXERCISE_CATALOG.map((e) => M.canonicalExerciseId(e.name)),
+    ...dictionary.map((e) => M.canonicalExerciseId(e.normalized))
+  ]);
+  const broken = Object.entries(sandbox.WEB_EXERCISE_NAME_LINKS)
+    .filter(([id, target]) => !catalogue.has(M.canonicalExerciseId(target)) || id !== M.canonicalExerciseId(id));
+  ok(broken.length === 0, `every workout-name link points at a real catalogue exercise (${broken.map((b) => b[0]).join(', ') || 'all ok'})`);
 }
 
 // --- resolveCanonicalMediaName: real wording variants resolve, ------------

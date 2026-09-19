@@ -60117,7 +60117,23 @@ function openExerciseInfoSheet(idx, exerciseName) {
     ? resolveExerciseNameForAsk(idx, exerciseName)
     : (exerciseName || 'esercizio');
   const lookup = window.lookupTrainingKnowledge || (window.NURVAN_TRAINING_KNOWLEDGE && window.NURVAN_TRAINING_KNOWLEDGE.lookupAny);
-  const explained = typeof lookup === 'function' ? lookup(name) : (typeof explainExercise === 'function' ? explainExercise(name) : null);
+  const MediaApi = window.NurvanExerciseMedia;
+  // The catalogue exercise this name certainly is (an approved link, or the
+  // same words in another order) - null for anything less certain.
+  const catalogueName = (MediaApi && MediaApi.catalogueExerciseFor) ? MediaApi.catalogueExerciseFor(name) : null;
+  const guide = typeof lookup === 'function' ? lookup(catalogueName || name) : (typeof explainExercise === 'function' ? explainExercise(catalogueName || name) : null);
+  // The guide answers with its closest entry even when that is another
+  // exercise (one shared word is enough), and the sheet used to show that
+  // exercise's title and text. Keep it only when it is this exercise; anything
+  // else goes to the exact-name research below.
+  const sameExercise = function (title) {
+    return (MediaApi && MediaApi.isSameExercise)
+      ? MediaApi.isSameExercise(name, title)
+      : String(title || '').trim().toLowerCase() === String(name).trim().toLowerCase();
+  };
+  const explained = (guide && guide.kind === 'exercise' && sameExercise(guide.title))
+    ? Object.assign({}, guide, { title: name })
+    : null;
   const matched = !!(explained && explained.matched && explained.body);
   // Master image is fetched only here, when the sheet actually opens - never
   // while the workout list renders. The sheet paints its placeholder first and
@@ -60136,10 +60152,7 @@ function openExerciseInfoSheet(idx, exerciseName) {
     // in exercise-media-client.js. An exercise it does not recognise, or
     // that ties between catalogue entries, keeps the written name - same as
     // a custom exercise today.
-    const resolvedMediaName = (window.NurvanExerciseMedia && window.NurvanExerciseMedia.resolveCanonicalMediaName)
-      ? window.NurvanExerciseMedia.resolveCanonicalMediaName(name)
-      : null;
-    const mediaName = resolvedMediaName || name;
+    const mediaName = catalogueName || name;
     window.NurvanMediaUI
       .loadMedia('exercise', window.NurvanMediaUI.exerciseIdFor(mediaName), mediaName)
       .then(function (manifest) {
@@ -60155,13 +60168,15 @@ function openExerciseInfoSheet(idx, exerciseName) {
   if (matched) return;
   Promise.resolve(researchExerciseKnowledge(name)).then(function (found) {
     if (found && found.matched && !found.unknown && found.body) {
-      persistKnowledgeExtra({ name: found.title || name, muscle: found.muscle, how: found.body, mistakes: found.mistakes, cue: found.cue });
-      paintExerciseInfoSheet({ idx: idx, name: name, explained: found, loading: false });
+      persistKnowledgeExtra({ name: name, muscle: found.muscle, how: found.body, mistakes: found.mistakes, cue: found.cue });
+      paintExerciseInfoSheet({ idx: idx, name: name, explained: Object.assign({}, found, { title: name }), loading: false });
     } else {
       paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: false, unknown: true });
     }
   }).catch(function () {
-    paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: false, unknown: true });
+    // A failed lookup (offline, timeout) says nothing about the exercise itself,
+    // so do not tell the athlete it is not a standard one.
+    paintExerciseInfoSheet({ idx: idx, name: name, explained: explained || { title: name }, loading: false });
   });
 }
 

@@ -12,6 +12,10 @@
  *     MUST stay that way for custom, user-typed exercises forever.
  */
 
+import fs from 'node:fs';
+import vm from 'node:vm';
+import { canonicalExerciseId } from './canonical-id.mjs';
+
 const MATCH_PRIORITY = { exact: 0, variant: 1, reference: 2 };
 
 // Objects are re-uploaded under the same storage key and served with a
@@ -133,18 +137,27 @@ export async function fetchMediaRows(pool, ownerType, ownerId) {
   return (q.rows || []).map(mediaRow);
 }
 
-// Catalogue entries that are the same exercise under a second name, each one
-// confirmed by the user. Deliberately an explicit list rather than a wording
-// rule: "Kickback cavo tricipiti" shares its words with the glute "Kickback
-// cavo", and a rule would hand the triceps lift a glute picture.
-export const EXERCISE_MEDIA_ALIASES = Object.freeze({
-  panca_piana_con_bilanciere: 'panca_piana_bilanciere',
-  panca_inclinata_con_manubri: 'panca_inclinata_manubri',
-  squat_con_bilanciere: 'squat_bilanciere',
-  goblet_squat: 'squat_goblet',
-  rematore_con_bilanciere: 'rematore_bilanciere',
-  kickback_al_cavo: 'kickback_cavo'
-});
+// Workout names that are the same exercise as a catalogue entry, approved one
+// by one. The list lives next to the catalogue (WEB_EXERCISE_NAME_LINKS) so the
+// app and the server read the same one; here it becomes owner id -> owner id.
+function loadExerciseMediaAliases() {
+  try {
+    const src = fs.readFileSync(new URL('../../web/exercise-catalog-extra.js', import.meta.url), 'utf8');
+    const sandbox = {};
+    sandbox.self = sandbox;
+    vm.runInNewContext(src, sandbox);
+    const out = {};
+    for (const [id, name] of Object.entries(sandbox.WEB_EXERCISE_NAME_LINKS || {})) {
+      const target = canonicalExerciseId(name);
+      if (target && target !== id) out[id] = target;
+    }
+    return Object.freeze(out);
+  } catch (err) {
+    console.warn('[media] exercise name links unavailable:', err && err.message);
+    return Object.freeze({});
+  }
+}
+export const EXERCISE_MEDIA_ALIASES = loadExerciseMediaAliases();
 
 export async function getMediaManifest(pool, ownerType, ownerId, canonicalName) {
   const rows = await fetchMediaRows(pool, ownerType, ownerId);

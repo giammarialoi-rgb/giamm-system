@@ -105,6 +105,30 @@
     return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
   }
 
+  // A workout name approved as the same exercise as a catalogue entry
+  // (WEB_EXERCISE_NAME_LINKS, next to the catalogue). Never guessed.
+  function linkedCatalogueName(writtenName) {
+    var links = (typeof window !== 'undefined' && window.WEB_EXERCISE_NAME_LINKS) || null;
+    if (!links) return null;
+    var target = links[canonicalExerciseId(writtenName)];
+    return target && fold(target) !== fold(writtenName) ? target : null;
+  }
+
+  // The catalogue exercise a written name certainly refers to, or null.
+  function catalogueExerciseFor(writtenName) {
+    return linkedCatalogueName(writtenName) || resolveCanonicalMediaName(writtenName);
+  }
+
+  // Whether a title the guide came back with is this exercise and not merely
+  // a similar one: the guide's matcher accepts a single shared word.
+  function isSameExercise(writtenName, shownTitle) {
+    var shown = fold(shownTitle);
+    if (!shown) return false;
+    if (shown === fold(writtenName)) return true;
+    var target = catalogueExerciseFor(writtenName);
+    return !!target && fold(target) === shown;
+  }
+
   function apiBase() {
     try {
       if (typeof window !== 'undefined' && typeof window.COACH_API_URL === 'string' && /^https?:\/\//i.test(window.COACH_API_URL)) {
@@ -250,6 +274,8 @@
     hasMedia: hasMedia,
     renderInto: renderInto,
     placeholderHtml: placeholderHtml,
-    resolveCanonicalMediaName: resolveCanonicalMediaName
+    resolveCanonicalMediaName: resolveCanonicalMediaName,
+    catalogueExerciseFor: catalogueExerciseFor,
+    isSameExercise: isSameExercise
   };
 })(typeof window !== 'undefined' ? window : self);
