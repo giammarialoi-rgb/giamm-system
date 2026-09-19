@@ -16865,6 +16865,13 @@ function confirmExerciseMapping(wIdx, sIdx, exIdx) {
   } catch (_) {}
 }
 
+// A name as the review compares it: case, accents and punctuation ignored, letters of any
+// alphabet kept ("Kickback трицепс" is not "Kickback"; normalizeExerciseKey keeps only a-z
+// and 0-9, which suits its other uses but would make those two the same name).
+function reviewExerciseNameKey(name) {
+  return String(name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
 // Muscles of a known exercise, by its exact name (case, accents and punctuation
 // ignored): the import dictionary (an entry's name or one of its keywords), then
 // the exercise catalogue, then the user's own library, in the shape the importer
@@ -16874,7 +16881,7 @@ function confirmExerciseMapping(wIdx, sIdx, exIdx) {
 // wins, and the chip's muscle is used when none has it. null when the name is not
 // a known exercise with a known muscle.
 function knownExerciseMuscles(name, preferred) {
-  const key = normalizeExerciseKey(name);
+  const key = reviewExerciseNameKey(name);
   if (!key) return null;
   function known(m) {
     const u = String(m || '').trim().toUpperCase();
@@ -16888,12 +16895,12 @@ function knownExerciseMuscles(name, preferred) {
     hits.push({ muscle_group: m, muscle_groups: list.length ? list : [m] });
   }
   (typeof EXERCISE_DICTIONARY !== 'undefined' && Array.isArray(EXERCISE_DICTIONARY) ? EXERCISE_DICTIONARY : []).forEach(function (e) {
-    if (e && [e.normalized].concat(e.keywords || []).some(function (k) { return k && normalizeExerciseKey(k) === key; })) add(e.muscle, e.muscles);
+    if (e && [e.normalized].concat(e.keywords || []).some(function (k) { return k && reviewExerciseNameKey(k) === key; })) add(e.muscle, e.muscles);
   });
   let imported = null;
   try { imported = (typeof normalizeExerciseName === 'function') ? normalizeExerciseName(name) : null; } catch (_) {}
   (typeof WEB_EXERCISE_CATALOG !== 'undefined' && Array.isArray(WEB_EXERCISE_CATALOG) ? WEB_EXERCISE_CATALOG : []).forEach(function (r) {
-    if (!r || ![r.name, r.en].concat(r.aliases || []).some(function (k) { return k && normalizeExerciseKey(k) === key; })) return;
+    if (!r || ![r.name, r.en].concat(r.aliases || []).some(function (k) { return k && reviewExerciseNameKey(k) === key; })) return;
     const same = imported && known(imported.muscle) && known(r.muscle) && Array.isArray(imported.muscles)
       && typeof normalizeMacroMuscleGroup === 'function'
       && normalizeMacroMuscleGroup(imported.muscle) === normalizeMacroMuscleGroup(r.muscle);
@@ -16901,7 +16908,7 @@ function knownExerciseMuscles(name, preferred) {
     else add(r.muscle);
   });
   ((typeof store !== 'undefined' && store && Array.isArray(store.customEx)) ? store.customEx : []).forEach(function (c) {
-    if (c && normalizeExerciseKey(c.name || c) === key) add(c.muscle_group || c.macro_group);
+    if (c && reviewExerciseNameKey(c.name || c) === key) add(c.muscle_group || c.macro_group);
   });
   const pref = known(preferred);
   if (pref) return hits.find(function (h) { return h.muscle_group === pref; }) || { muscle_group: pref, muscle_groups: [pref] };
@@ -16959,11 +16966,11 @@ function syncReviewExerciseMuscles(ex, name, suggestedMuscle) {
   if (!ex || typeof ex !== 'object') return;
   rememberReviewExerciseBaseline(ex);
   const state = REVIEW_EXERCISE_BASE_MUSCLES.get(ex);
-  const key = normalizeExerciseKey(name);
+  const key = reviewExerciseNameKey(name);
   const shown = String(suggestedMuscle || '').trim().toUpperCase();
   function isKnown(m) { const u = String(m || '').trim().toUpperCase(); return !!u && u !== 'ALTRO' && u !== 'TOTAL'; }
   function sameAs(fields) {
-    return !!key && (key === normalizeExerciseKey(fields.name) || (!!fields.original && key === normalizeExerciseKey(fields.original)))
+    return !!key && (key === reviewExerciseNameKey(fields.name) || (!!fields.original && key === reviewExerciseNameKey(fields.original)))
       && (!isKnown(shown) || shown === String(fields.muscle_group || '').toUpperCase());
   }
   function macro(m) { return typeof normalizeMacroMuscleGroup === 'function' ? normalizeMacroMuscleGroup(m) : String(m || '').toUpperCase(); }

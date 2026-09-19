@@ -61,6 +61,7 @@ function loadPage(customEx) {
     fn('confirmExerciseMapping'),
     constBlock('const MACRO_MUSCLE_GROUPS = ', '];'),
     fn('normalizeMacroMuscleGroup'),
+    fn('reviewExerciseNameKey'),
     fn('knownExerciseMuscles'),
     line('const REVIEW_EXERCISE_BASE_MUSCLES = '),
     fn('reviewExerciseMuscleFields'),
@@ -242,14 +243,34 @@ assert.equal(JSON.stringify(r.storedProgram().weeks[0].sessions[0].exercises[0])
 assert.equal(JSON.stringify(r.stats(0)), remataStats, 'and its stats');
 console.log('OK  ', 'misclicked chip on "Remata con elastico", name typed back: row and stats as imported');
 
-// Names in another alphabet fold to nothing comparable, so they never count as "the imported
-// name": a free rename after a confirmed exercise keeps it.
+// Names are compared in any alphabet: a Cyrillic free rename is a free name, the sheet's own
+// Cyrillic name undoes, and a name that only shares its Latin or digit part with another
+// ("Kickback трицепс", "Жим 1" / "Тяга 1") is not that other name.
 r = review(['Жим лёжа']);
 r.type(0, 'Panca piana');
-assert.equal(r.stats(0)[0].join(','), 'PETTO,3,0');
+assert.deepEqual(r.stats(0)[0], ['PETTO', 3, 0]);
 r.type(0, 'Жим лёжа широким хватом');
 assert.deepEqual(r.stats(0)[0], ['PETTO', 3, 0], 'a Cyrillic free name keeps the confirmed chest press');
-console.log('OK  ', 'Cyrillic sheet row: a free Cyrillic rename keeps the confirmed "Panca piana" (PETTO)');
+r.type(0, 'Жим лёжа');
+assert.equal(r.muscles(0).split(' | ')[1], 'TOTAL', 'typing the Cyrillic sheet name back restores the import');
+console.log('OK  ', 'Cyrillic sheet row: a free Cyrillic rename keeps the confirmed PETTO; the sheet name undoes');
+r = review(['French press']);
+r.type(0, 'Kickback трицепс');
+assert.equal(r.muscles(0).split(' | ')[1], 'TRICIPITI', '"Kickback трицепс" is not the glute "Kickback"');
+r = review(['Kickback']);
+r.pick(0, 'Kickback tricipiti · TRICIPITI');
+r.type(0, 'Kickback трицепс');
+assert.equal(r.muscles(0).split(' | ')[1], 'TRICIPITI', 'nor the sheet\'s own "Kickback"');
+r = review(['Тяга 1']);
+r.type(0, 'Panca piana');
+r.type(0, 'Жим 1');
+assert.deepEqual(r.stats(0)[0], ['PETTO', 3, 0], '"Жим 1" is not the sheet\'s "Тяга 1"');
+console.log('OK  ', 'mixed-alphabet names never match their Latin/digit part alone');
+r = review(['Panca piana Разгибания'], [{ name: 'Разгибания', muscle_group: 'BRACCIA' }]);
+assert.ok(r.chips(0).includes('Разгибания · BRACCIA'), 'the Cyrillic library exercise is offered');
+r.pick(0, 'Разгибания · BRACCIA');
+assert.equal(r.muscles(0), 'Разгибания | BRACCIA | BRACCIA', 'a Cyrillic library chip gives its muscle');
+console.log('OK  ', 'a picked Cyrillic library exercise ("Разгибания · BRACCIA") gives its muscle');
 
 // A row the importer could not map gets the catalogue's muscle when its name is typed exactly.
 r = review(['cuban press']);
@@ -285,7 +306,7 @@ for (const sheet of ['Pull-ups', 'Kickback', 'Chest press']) {
 // where those rules lock the name itself to another muscle ("Jefferson curl").
 const page0 = loadPage();
 const engine = page0.TrainingAnalyticsEngine;
-const foldKey = page0.normalizeExerciseKey;
+const foldKey = page0.reviewExerciseNameKey;
 const macroOf = (m) => engine.muscleContributionForExercise('', { muscle_groups: [m] }).primary[0];
 const targets = [];
 const owned = new Set();
