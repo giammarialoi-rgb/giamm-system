@@ -16740,7 +16740,7 @@ function renderReviewTraining(prog) {
               const suggestHtml = suggestions.length
                 ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin:0 0 8px 8px;">` +
                   suggestions.map(function (sg) {
-                    return `<button type="button" class="btn btn-outline" style="font-size:9px;padding:3px 7px;" onclick="pickSuggestedExerciseMapping(${wIdx},${sIdx},${exIdx}, this.getAttribute('data-name'))" data-name="${esc(sg.name)}">${esc(sg.name)}${sg.muscle ? ' · ' + esc(sg.muscle) : ''}</button>`;
+                    return `<button type="button" class="btn btn-outline" style="font-size:9px;padding:3px 7px;" onclick="pickSuggestedExerciseMapping(${wIdx},${sIdx},${exIdx}, this.getAttribute('data-name'), this.getAttribute('data-muscle'))" data-name="${esc(sg.name)}" data-muscle="${esc(sg.muscle || '')}">${esc(sg.name)}${sg.muscle ? ' · ' + esc(sg.muscle) : ''}</button>`;
                   }).join('') + `</div>`
                 : '';
               if (locked && !inferred) {
@@ -16860,31 +16860,166 @@ function confirmExerciseMapping(wIdx, sIdx, exIdx) {
     if (!ex) return;
     ex.mappingConfidence = 0.95;
     ex.mappingSource = 'user_confirmed';
+    reviewExerciseRowsAt(wIdx, sIdx, exIdx).forEach(commitReviewExerciseMuscles);
     if (typeof render === 'function' && currentView === 'import') render();
   } catch (_) {}
 }
 
-function pickSuggestedExerciseMapping(wIdx, sIdx, exIdx, name) {
+// Muscles of a known exercise, by its exact name (case, accents and punctuation
+// ignored): the import dictionary (an entry's name or one of its keywords), then
+// the exercise catalogue, then the user's own library, in the shape the importer
+// writes. A catalogue name gets the importer's full muscle list for that name when
+// the importer reads it as the same main muscle, so it counts like a direct import.
+// `preferred` is the muscle a suggestion chip showed: the entry with that muscle
+// wins, and the chip's muscle is used when none has it. null when the name is not
+// a known exercise with a known muscle.
+function knownExerciseMuscles(name, preferred) {
+  const key = normalizeExerciseKey(name);
+  if (!key) return null;
+  function known(m) {
+    const u = String(m || '').trim().toUpperCase();
+    return u && u !== 'ALTRO' && u !== 'TOTAL' ? u : null;
+  }
+  const hits = [];
+  function add(muscle, muscles) {
+    const m = known(muscle);
+    if (!m) return;
+    const list = (Array.isArray(muscles) ? muscles : []).map(known).filter(Boolean);
+    hits.push({ muscle_group: m, muscle_groups: list.length ? list : [m] });
+  }
+  (typeof EXERCISE_DICTIONARY !== 'undefined' && Array.isArray(EXERCISE_DICTIONARY) ? EXERCISE_DICTIONARY : []).forEach(function (e) {
+    if (e && [e.normalized].concat(e.keywords || []).some(function (k) { return k && normalizeExerciseKey(k) === key; })) add(e.muscle, e.muscles);
+  });
+  let imported = null;
+  try { imported = (typeof normalizeExerciseName === 'function') ? normalizeExerciseName(name) : null; } catch (_) {}
+  (typeof WEB_EXERCISE_CATALOG !== 'undefined' && Array.isArray(WEB_EXERCISE_CATALOG) ? WEB_EXERCISE_CATALOG : []).forEach(function (r) {
+    if (!r || ![r.name, r.en].concat(r.aliases || []).some(function (k) { return k && normalizeExerciseKey(k) === key; })) return;
+    const same = imported && known(imported.muscle) && known(r.muscle) && Array.isArray(imported.muscles)
+      && typeof normalizeMacroMuscleGroup === 'function'
+      && normalizeMacroMuscleGroup(imported.muscle) === normalizeMacroMuscleGroup(r.muscle);
+    if (same) add(imported.muscle, imported.muscles);
+    else add(r.muscle);
+  });
+  ((typeof store !== 'undefined' && store && Array.isArray(store.customEx)) ? store.customEx : []).forEach(function (c) {
+    if (c && normalizeExerciseKey(c.name || c) === key) add(c.muscle_group || c.macro_group);
+  });
+  const pref = known(preferred);
+  if (pref) return hits.find(function (h) { return h.muscle_group === pref; }) || { muscle_group: pref, muscle_groups: [pref] };
+  return hits[0] || null;
+}
+
+// Keeps an import-review row's muscles in step with its name. Each row remembers
+// two states: as imported, and as last confirmed (a picked suggestion or a
+// committed name edit). For a name, in order:
+//   - the last confirmed name gets that confirmed state back;
+//   - the imported name, or the sheet's own name for the row, gets the imported
+//     state back, unless it is the exact name of a known exercise with another
+//     main muscle (an exact exercise name means the same on every row);
+//   - any other exact name of a known exercise takes that exercise's muscles;
+//   - anything else keeps the last confirmed state.
+// The first two apply only when a picked suggestion shows that same muscle, and
+// never to names with nothing comparable left (e.g. written in another alphabet).
+// Keystrokes never move the confirmed state, so names typed on the way to the final
+// one leave nothing behind. `movement` moves with the muscles: the importer stores
+// the sheet's own name there and the stats read it alongside the name, so an old
+// "Plank" would keep a renamed row on the abs.
+const REVIEW_EXERCISE_BASE_MUSCLES = new WeakMap();
+function reviewExerciseMuscleFields(ex) {
+  return {
+    name: ex.name_normalized || ex.name || ex.exercise,
+    muscle_group: ex.muscle_group,
+    muscle_groups: Array.isArray(ex.muscle_groups) ? ex.muscle_groups.slice() : ex.muscle_groups,
+    movement: ex.movement
+  };
+}
+// Call before a row's name is changed, so "as imported" is the row as it was. The
+// imported state also answers to the sheet's own name for the row ("Pull-ups" for
+// a row the importer called "Trazioni alla Sbarra").
+function rememberReviewExerciseBaseline(ex) {
+  if (!ex || typeof ex !== 'object' || REVIEW_EXERCISE_BASE_MUSCLES.has(ex)) return;
+  const fields = reviewExerciseMuscleFields(ex);
+  REVIEW_EXERCISE_BASE_MUSCLES.set(ex, { imported: Object.assign({ original: ex.name_original }, fields), confirmed: fields });
+}
+// The movement for a row renamed to a known exercise: its own name, as a direct import
+// of it would store, unless words in that name make the stats count it for another
+// muscle than the exercise's own ("Nordic curl" is a hamstring exercise); then its
+// muscle, as a manual muscle fix stores. The stats rules themselves stay as they are.
+function reviewExerciseMovementFor(name, found) {
+  const own = String(name || '').trim();
+  const TAE = (typeof window !== 'undefined') ? window.TrainingAnalyticsEngine : null;
+  if (!TAE || typeof TAE.muscleContributionForExercise !== 'function') return own;
+  function counts(movement, groups) {
+    return TAE.muscleContributionForExercise(own, { movement: movement, muscle_group: found.muscle_group, muscle_groups: groups }).primary[0];
+  }
+  const want = TAE.muscleContributionForExercise('', { muscle_groups: [found.muscle_group] }).primary[0];
+  if (!want || counts(own, found.muscle_groups) === want) return own;
+  return counts(found.muscle_group, found.muscle_groups) === want ? found.muscle_group : own;
+}
+function syncReviewExerciseMuscles(ex, name, suggestedMuscle) {
+  if (!ex || typeof ex !== 'object') return;
+  rememberReviewExerciseBaseline(ex);
+  const state = REVIEW_EXERCISE_BASE_MUSCLES.get(ex);
+  const key = normalizeExerciseKey(name);
+  const shown = String(suggestedMuscle || '').trim().toUpperCase();
+  function isKnown(m) { const u = String(m || '').trim().toUpperCase(); return !!u && u !== 'ALTRO' && u !== 'TOTAL'; }
+  function sameAs(fields) {
+    return !!key && (key === normalizeExerciseKey(fields.name) || (!!fields.original && key === normalizeExerciseKey(fields.original)))
+      && (!isKnown(shown) || shown === String(fields.muscle_group || '').toUpperCase());
+  }
+  function macro(m) { return typeof normalizeMacroMuscleGroup === 'function' ? normalizeMacroMuscleGroup(m) : String(m || '').toUpperCase(); }
+  const found = knownExerciseMuscles(name, suggestedMuscle);
+  let next = null;
+  if (sameAs(state.confirmed) && isKnown(state.confirmed.muscle_group)) next = state.confirmed;
+  else if (sameAs(state.imported) && isKnown(state.imported.muscle_group)
+    && (!found || macro(found.muscle_group) === macro(state.imported.muscle_group))) next = state.imported;
+  if (!next && found) next = Object.assign({ movement: reviewExerciseMovementFor(name, found) }, found);
+  if (!next) next = sameAs(state.imported) ? state.imported : state.confirmed;
+  ['muscle_group', 'muscle_groups', 'movement'].forEach(function (k) {
+    if (next[k] === undefined) delete ex[k];
+    else ex[k] = Array.isArray(next[k]) ? next[k].slice() : next[k];
+  });
+}
+function commitReviewExerciseMuscles(ex) {
+  if (!ex || typeof ex !== 'object') return;
+  rememberReviewExerciseBaseline(ex);
+  REVIEW_EXERCISE_BASE_MUSCLES.get(ex).confirmed = reviewExerciseMuscleFields(ex);
+}
+
+// The review screen shows canonicalProgram.weeks, while edits and the stored program
+// use canonicalProgram.training when there is one; after some imports (the Coach AI
+// "open in review" path) the two are separate copies. Every copy of the row at a
+// position, so a rename and its muscles land on all of them.
+function reviewExerciseRowsAt(wIdx, sIdx, exIdx) {
+  const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : null;
+  const prog = pState && pState.canonicalProgram;
+  const rows = [];
+  [prog, prog && prog.training].forEach(function (p) {
+    const w = p && Array.isArray(p.weeks) ? p.weeks[wIdx] : null;
+    const days = w && (w.sessions || w.days);
+    const s = days && days[sIdx];
+    const list = s && (s.exercises || s.rows);
+    const ex = list && list[exIdx];
+    if (ex && typeof ex === 'object' && rows.indexOf(ex) < 0) rows.push(ex);
+  });
+  return rows;
+}
+
+function pickSuggestedExerciseMapping(wIdx, sIdx, exIdx, name, muscle) {
   try {
     const chosen = String(name || '').trim();
     if (!chosen) return;
     if (typeof updateReviewExerciseField === 'function') {
       updateReviewExerciseField(wIdx, sIdx, exIdx, 'name', chosen);
     }
-    const pState = window.programImportState;
-    const prog = pState && pState.canonicalProgram;
-    if (prog) {
-      const w = prog.weeks[wIdx];
-      const s = (w.sessions || w.days)[sIdx];
-      const ex = (s.exercises || s.rows)[exIdx];
-      if (ex) {
-        ex.name = chosen;
-        ex.name_normalized = chosen;
-        ex.exercise = chosen;
-        ex.mappingConfidence = 0.95;
-        ex.mappingSource = 'user_suggestion';
-      }
-    }
+    reviewExerciseRowsAt(wIdx, sIdx, exIdx).forEach(function (ex) {
+      rememberReviewExerciseBaseline(ex);
+      ex.name = chosen;
+      ex.name_normalized = chosen;
+      ex.exercise = chosen;
+      ex.mappingConfidence = 0.95;
+      ex.mappingSource = 'user_suggestion';
+      syncReviewExerciseMuscles(ex, chosen, muscle);
+    });
     confirmExerciseMapping(wIdx, sIdx, exIdx);
   } catch (_) {}
 }
@@ -17031,9 +17166,15 @@ function updateReviewExerciseField(wIdx, sIdx, exIdx, field, val) {
   const ex = prog?.weeks?.[wIdx]?.sessions?.[sIdx]?.exercises?.[exIdx];
   if (!ex) return;
   if (field === 'name') {
-    ex.name_normalized = val;
-    ex.name = val;
-    ex.exercise = val;
+    const rows = reviewExerciseRowsAt(wIdx, sIdx, exIdx);
+    if (rows.indexOf(ex) < 0) rows.push(ex);
+    rows.forEach(function (row) {
+      rememberReviewExerciseBaseline(row);
+      row.name_normalized = val;
+      row.name = val;
+      row.exercise = val;
+      syncReviewExerciseMuscles(row, val);
+    });
   } else if (field === 'sets') {
     const n = Math.max(1, Math.min(15, parseInt(val, 10) || 1));
     const reps = (ex.prescription && ex.prescription.reps) || ex.reps_target || ex.reps || '10';
