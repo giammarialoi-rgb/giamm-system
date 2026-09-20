@@ -1492,6 +1492,28 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+// The owner's own program backup, kept out of the web root.
+//
+// It used to ship with the app as web/personal-recovery-16w.json, so anyone
+// with the app's URL could download the program, the name and the bodyweight
+// in it - and a brand new phone, with nobody logged in, was offered it as
+// "restore your training". It now lives in private/ and is served only to the
+// account named by PERSONAL_BACKUP_EMAIL; with that unset, to nobody.
+app.get("/api/account/personal-backup", async (req, res) => {
+  const auth = await accountFromBearer(req.headers.authorization);
+  if (!auth) return res.status(401).json({ error: "Unauthorized." });
+  const owner = String(process.env.PERSONAL_BACKUP_EMAIL || "").trim().toLowerCase();
+  const who = String(auth.email || "").trim().toLowerCase();
+  if (!owner || !who || who !== owner) return res.status(404).json({ error: "Nessun backup personale per questo account." });
+  try {
+    const file = path.join(__dirname, "private", "personal-recovery-16w.json");
+    const raw = await fs.readFile(file, "utf8");
+    res.type("application/json").send(raw);
+  } catch (err) {
+    return res.status(404).json({ error: "Nessun backup personale disponibile." });
+  }
+});
+
 app.get("/api/account/me", async (req, res) => {
   const auth = await accountFromBearer(req.headers.authorization);
   if (!auth) return res.status(401).json({ error: "Unauthorized." });

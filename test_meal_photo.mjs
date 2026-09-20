@@ -193,9 +193,13 @@ ok(api.includes('mountFoodRoutes') && api.includes('/api/food/analyze-photo'), '
 ok(api.includes('mealPhoto: true'), 'health surface advertises mealPhoto');
 ok(!/GEMINI_API_KEY\s*=/.test(api) || api.includes('process.env.GEMINI_API_KEY'), 'Gemini key stays server-side');
 
-const recovery = path.join(root, 'web/personal-recovery-16w.json');
-const status = execSync('git status --porcelain -- web/personal-recovery-16w.json app/src/main/assets/personal-recovery-16w.json', { cwd: root }).toString().trim();
-ok(!status, 'personal-recovery-16w.json was not modified');
+const recovery = path.join(root, 'private/personal-recovery-16w.json');
+// The owner's own program backup: kept out of the app (anyone with the app's
+// URL could download it) and out of every code path that could rewrite it.
+const status = execSync('git status --porcelain -- private/personal-recovery-16w.json', { cwd: root }).toString().trim();
+// Moving it out of the web app (A/R) is fine; a content change is not.
+ok(!status || /^[AR]/.test(status), 'personal-recovery-16w.json was not modified: ' + status);
+ok(!fs.existsSync(path.join(root, 'web/personal-recovery-16w.json')), 'and is not served with the app');
 ok(fs.existsSync(recovery) && JSON.parse(fs.readFileSync(recovery, 'utf8')).id === 'personal_16w_giammaria', 'personal 16w glass box file still present and untouched');
 
 
@@ -639,9 +643,9 @@ ok(webBuiltV6.includes('window.openMealTargetModal = openMealTargetModal;'), 'V6
 ok(webBuiltV6.includes('window.openMealAcquisitionModal = openMealAcquisitionModal;'), 'V6.7: openMealAcquisitionModal exported to window');
 
 // V6.8: Training and Recovery Isolation
-ok(fs.existsSync(path.join(root, 'web/personal-recovery-16w.json')), 'V6.8: personal-recovery-16w.json is intact');
-ok(fs.existsSync(path.join(root, 'app/src/main/assets/personal-recovery-16w.json')), 'V6.8: android personal-recovery-16w.json is intact');
-const prJson = JSON.parse(fs.readFileSync(path.join(root, 'web/personal-recovery-16w.json'), 'utf8'));
+ok(fs.existsSync(path.join(root, 'private/personal-recovery-16w.json')), 'V6.8: personal-recovery-16w.json is intact, in private/');
+ok(!fs.existsSync(path.join(root, 'app/src/main/assets/personal-recovery-16w.json')), 'V6.8: it does not ship inside the app package');
+const prJson = JSON.parse(fs.readFileSync(path.join(root, 'private/personal-recovery-16w.json'), 'utf8'));
 ok(prJson && typeof prJson === 'object', 'V6.8: recovery json is valid');
 
 
@@ -965,7 +969,7 @@ console.log('\n--- Running Food Intelligence V7 Multi-Vision & Anti-Double Count
 
 // V7.17 Glass box file personal-recovery-16w.json untouched and identical
 {
-  const recJson = fs.readFileSync(path.join(root, 'web/personal-recovery-16w.json'), 'utf-8');
+  const recJson = fs.readFileSync(path.join(root, 'private/personal-recovery-16w.json'), 'utf-8');
   assert(recJson.length > 500, 'V7.17: recovery json is intact');
   const parsed = JSON.parse(recJson);
   assert(parsed.title != null && Array.isArray(parsed.weeks), 'V7.17: recovery json title and weeks intact');

@@ -153,7 +153,30 @@ class GiammariaPersistenceEngine {
     this._db = null;
     this._openPromise = null;
     this._memStore = null;
+    // Which account's data this connection holds. One database per account, so
+    // two people using the same phone never see each other's programs, loads
+    // or medical sections. The account that was already using this device
+    // keeps the original database (setDatabaseName is not called for it).
+    this._dbName = DB_NAME;
   }
+
+  /**
+   * Points the engine at one account's database. Called before anything is
+   * read or written, at boot and when the account changes; an open connection
+   * to another account's database is dropped rather than reused.
+   */
+  setDatabaseName(name) {
+    const next = String(name || '').trim() || DB_NAME;
+    if (next === this._dbName) return this._dbName;
+    this._dbName = next;
+    try { if (this._db && typeof this._db.close === 'function') this._db.close(); } catch (_) {}
+    this._db = null;
+    this._openPromise = null;
+    this._memStore = null;
+    return this._dbName;
+  }
+
+  databaseName() { return this._dbName; }
 
   isAvailable() {
     return Boolean(this._db) || Boolean(this._customIdb) || (typeof indexedDB !== 'undefined') || Boolean(this._memStore);
@@ -176,7 +199,7 @@ class GiammariaPersistenceEngine {
       }
 
       try {
-        const req = idb.open(DB_NAME, DB_VERSION);
+        const req = idb.open(this._dbName || DB_NAME, DB_VERSION);
 
         req.onupgradeneeded = (e) => {
           const db = req.result || e.target?.result;

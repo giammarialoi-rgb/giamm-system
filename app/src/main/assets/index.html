@@ -907,6 +907,13 @@ input[type="checkbox"], input[type="radio"] {
   z-index: 4000;
 }
 
+/* Signed out: only the account card is on screen. The app behind it belongs
+   to whoever signs in, and on a device nobody has signed in on there is
+   nothing to show at all. */
+body.nurvan-locked > *:not(#account-modal):not(#splash) { display: none !important; }
+body.nurvan-locked #account-modal { display: flex !important; }
+body.nurvan-locked { background: var(--bg, #000); }
+
 .modal, .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -2040,7 +2047,7 @@ body.focus-mode [data-rewards-only] {
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="togglePasswordRecovery()" id="account-forgot">PASSWORD DIMENTICATA</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="logoutAccount()" id="account-logout">ESCI</button>
     <button class="btn btn-primary" style="width:100%;margin-top:8px;display:none;" onclick="syncAccountData(true)" id="account-sync">SINCRONIZZA DATI</button>
-    <button class="btn btn-outline" style="width:100%;margin-top:8px;border-color:#c66;color:#c66;" onclick="recoverPersonalTrainingEmergency()">RIPRISTINA ALLENAMENTO (CLOUD/IDB)</button>
+    <button id="account-recover-training" class="btn btn-outline" style="width:100%;margin-top:8px;border-color:#c66;color:#c66;" onclick="recoverPersonalTrainingEmergency()">RIPRISTINA ALLENAMENTO (CLOUD/IDB)</button>
     <div id="account-status" class="msg ai" style="margin-top:10px;"></div>
   </div>
 </div>
@@ -3172,7 +3179,30 @@ class GiammariaPersistenceEngine {
     this._db = null;
     this._openPromise = null;
     this._memStore = null;
+    // Which account's data this connection holds. One database per account, so
+    // two people using the same phone never see each other's programs, loads
+    // or medical sections. The account that was already using this device
+    // keeps the original database (setDatabaseName is not called for it).
+    this._dbName = DB_NAME;
   }
+
+  /**
+   * Points the engine at one account's database. Called before anything is
+   * read or written, at boot and when the account changes; an open connection
+   * to another account's database is dropped rather than reused.
+   */
+  setDatabaseName(name) {
+    const next = String(name || '').trim() || DB_NAME;
+    if (next === this._dbName) return this._dbName;
+    this._dbName = next;
+    try { if (this._db && typeof this._db.close === 'function') this._db.close(); } catch (_) {}
+    this._db = null;
+    this._openPromise = null;
+    this._memStore = null;
+    return this._dbName;
+  }
+
+  databaseName() { return this._dbName; }
 
   isAvailable() {
     return Boolean(this._db) || Boolean(this._customIdb) || (typeof indexedDB !== 'undefined') || Boolean(this._memStore);
@@ -3195,7 +3225,7 @@ class GiammariaPersistenceEngine {
       }
 
       try {
-        const req = idb.open(DB_NAME, DB_VERSION);
+        const req = idb.open(this._dbName || DB_NAME, DB_VERSION);
 
         req.onupgradeneeded = (e) => {
           const db = req.result || e.target?.result;
@@ -35871,6 +35901,100 @@ const DEFAULT_STORE = {
 var GS_STORE_PERSONAL_KEY = 'GS_STORE';
 var GS_STORE_CLIENT_PENDING_KEY = 'GS_STORE_CLIENT';
 
+// One space per account, on the device as well as in the cloud.
+//
+// There used to be a single personal space, GS_STORE, plus one shared
+// IndexedDB database. Whoever opened the app on a device got whatever was in
+// them - so a brand new phone, with nobody logged in, showed the owner's own
+// training and was offered his program to "restore". Now each account has its
+// own localStorage key and its own database, and which one is active is
+// decided by who is logged in. The account already using this device keeps the
+// original key and database: nothing of theirs moves or is rewritten.
+var NURVAN_ACTIVE_ACCOUNT_KEY = 'NURVAN_ACTIVE_ACCOUNT';
+var NURVAN_SPACE_MAP_KEY = 'NURVAN_SPACE_MAP';
+var NURVAN_PERSONAL_DB_NAME = 'GIAMMARIA_SYSTEM_DB';
+
+function accountSpaceId(user) {
+  if (!user || typeof user !== 'object') return '';
+  const uid = user.id != null && user.id !== '' ? user.id : (user.email || user.username || '');
+  return uid ? String(uid) : '';
+}
+
+function readActiveAccount() {
+  try { return JSON.parse(localStorage.getItem(NURVAN_ACTIVE_ACCOUNT_KEY) || 'null'); } catch (_) { return null; }
+}
+
+function writeActiveAccount(user) {
+  try {
+    const id = accountSpaceId(user);
+    if (!id) localStorage.removeItem(NURVAN_ACTIVE_ACCOUNT_KEY);
+    else localStorage.setItem(NURVAN_ACTIVE_ACCOUNT_KEY, JSON.stringify({ id: id, email: (user && user.email) || '', name: (user && user.name) || '' }));
+  } catch (_) {}
+}
+
+function readSpaceMap() {
+  try {
+    const m = JSON.parse(localStorage.getItem(NURVAN_SPACE_MAP_KEY) || '{}');
+    return m && typeof m === 'object' ? m : {};
+  } catch (_) { return {}; }
+}
+
+function writeSpaceMap(map) {
+  try { localStorage.setItem(NURVAN_SPACE_MAP_KEY, JSON.stringify(map || {})); } catch (_) {}
+}
+
+// Whoever was using this device before spaces existed: their account is the
+// one named inside the old GS_STORE, and they keep it.
+function legacySpaceOwnerId() {
+  try {
+    const raw = localStorage.getItem(GS_STORE_PERSONAL_KEY);
+    if (!raw) return '';
+    const parsed = JSON.parse(raw);
+    return accountSpaceId(parsed && parsed.accountUser);
+  } catch (_) { return ''; }
+}
+
+function personalStoreKeyFor(user) {
+  const id = accountSpaceId(user);
+  if (!id) return 'GS_STORE_guest';
+  const map = readSpaceMap();
+  if (map[id]) return map[id];
+  const taken = Object.keys(map).map(function (k) { return map[k]; });
+  let key;
+  if (taken.indexOf(GS_STORE_PERSONAL_KEY) < 0 && legacySpaceOwnerId() === id) key = GS_STORE_PERSONAL_KEY;
+  else key = 'GS_STORE_u_' + id.replace(/[^a-zA-Z0-9._@-]/g, '_').slice(0, 80);
+  map[id] = key;
+  writeSpaceMap(map);
+  return key;
+}
+
+// The other keys this device keeps for the personal side belong to one
+// account as well: the food diary, the locked program backup, the "nutrition
+// was cleared" marker. On the device that was already in use they keep their
+// original names, so nothing of that account's has to move.
+function personalScopedKey(name) {
+  const key = personalStoreKeyFor((typeof store !== 'undefined' && store && store.accountUser) || readActiveAccount());
+  if (key === GS_STORE_PERSONAL_KEY) return name;
+  return name + '__' + key.replace(/^GS_STORE_?/, '');
+}
+
+function personalDbNameFor(user) {
+  const key = personalStoreKeyFor(user);
+  if (key === GS_STORE_PERSONAL_KEY) return NURVAN_PERSONAL_DB_NAME;
+  return NURVAN_PERSONAL_DB_NAME + '__' + key.replace(/^GS_STORE_?/, '');
+}
+
+// Points the local database at the active account before anything reads it.
+function applyPersonalStorageNamespace(user) {
+  try {
+    if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
+    if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.setDatabaseName) return;
+    GiammariaPersistence.setDatabaseName(personalDbNameFor(user || readActiveAccount()));
+  } catch (err) {
+    console.warn('[SPACE] database namespace', err);
+  }
+}
+
 function detectClientBootContext() {
   try {
     const pathName = (typeof location !== 'undefined' && location.pathname) || '';
@@ -35970,7 +36094,7 @@ function parseStoredStore(raw) {
 
 function activeGsStoreKey() {
   if (isClientStorageContext()) return clientStoreKeyForUser(store && store.accountUser);
-  return GS_STORE_PERSONAL_KEY;
+  return personalStoreKeyFor((store && store.accountUser) || readActiveAccount());
 }
 
 function hydrateRuntimeFromStoreObject(parsed) {
@@ -35995,7 +36119,7 @@ function hydrateRuntimeFromStoreObject(parsed) {
 
 function restorePersonalStoreFromNamespace() {
   try {
-    const raw = localStorage.getItem(GS_STORE_PERSONAL_KEY);
+    const raw = localStorage.getItem(personalStoreKeyFor(readActiveAccount()));
     const parsed = parseStoredStore(raw);
     if (parsed.role === 'athlete' || (parsed.accountUser && (parsed.accountUser.role === 'athlete' || parsed.accountUser.provider === 'coach_client'))) {
       // Contaminated personal key from a previous shared-store bug: keep training, drop athlete identity.
@@ -36066,8 +36190,22 @@ function loadStore(){
       }
       return merged;
     }
-    const raw = localStorage.getItem(GS_STORE_PERSONAL_KEY);
-    return parseStoredStore(raw);
+    // Personal side: the space of whoever is logged in on this device. With
+    // nobody logged in there is no personal space to open, and the app stays
+    // empty until an account signs in.
+    let active = readActiveAccount();
+    if (!active) {
+      const legacyRaw = localStorage.getItem(GS_STORE_PERSONAL_KEY);
+      const legacy = legacyRaw ? parseStoredStore(legacyRaw) : null;
+      if (legacy && legacy.accountToken && legacy.accountUser) {
+        // The session that was already running here: it keeps this space.
+        writeActiveAccount(legacy.accountUser);
+        personalStoreKeyFor(legacy.accountUser);
+        return legacy;
+      }
+      return JSON.parse(JSON.stringify(DEFAULT_STORE));
+    }
+    return parseStoredStore(localStorage.getItem(personalStoreKeyFor(active)));
   } catch(err) {
     console.error('Invalid saved app data', err);
     return JSON.parse(JSON.stringify(DEFAULT_STORE));
@@ -36430,7 +36568,9 @@ function nurvanLeaveClientArea() {
 //
 // This copy is written before the blob and is not subject to the blob's size
 // trimming, so losing one cannot lose the other.
-var NURVAN_FOOD_DIARY_KEY = 'NURVAN_FOOD_DIARY';
+var NURVAN_FOOD_DIARY_BASE_KEY = 'NURVAN_FOOD_DIARY';
+var NURVAN_FOOD_DIARY_KEY = NURVAN_FOOD_DIARY_BASE_KEY;
+function foodDiaryKey() { return personalScopedKey(NURVAN_FOOD_DIARY_BASE_KEY); }
 
 function persistFoodDiary() {
   try {
@@ -36438,7 +36578,7 @@ function persistFoodDiary() {
     const diary = personalDomain().nutritionDaily;
     if (!diary || typeof diary !== 'object') return;
     if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
-    localStorage.setItem(NURVAN_FOOD_DIARY_KEY, JSON.stringify({
+    localStorage.setItem(foodDiaryKey(), JSON.stringify({
       at: new Date().toISOString(),
       days: diary
     }));
@@ -36449,7 +36589,7 @@ function persistFoodDiary() {
 // day the blob wins, because that is the copy the app has been writing to.
 function mergeStoredFoodDiary(current) {
   try {
-    const raw = localStorage.getItem(NURVAN_FOOD_DIARY_KEY);
+    const raw = localStorage.getItem(foodDiaryKey());
     if (!raw) return current;
     const saved = JSON.parse(raw);
     if (!saved || !saved.days || typeof saved.days !== 'object') return current;
@@ -37543,7 +37683,70 @@ function openAccount(){
   }
   $('account-status').textContent = logged ? 'Dati account pronti.' : 'Accedi o crea un account per sincronizzare i tuoi dati sul web e sull’app.';
 }
-function closeAccount(){ const modal = $('account-modal'); if(modal) modal.style.display = 'none'; }
+// Signing in means entering that account's space on this device. When it is a
+// different account than the one the app is holding, the app starts again on
+// that space instead of carrying the previous account's data across.
+function enterAccountSession(token, user) {
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) {
+    store.accountToken = token;
+    store.accountUser = user;
+    if (typeof persist === 'function') persist();
+    return false;
+  }
+  const current = readActiveAccount();
+  if (current && accountSpaceId(current) === accountSpaceId(user)) {
+    store.accountToken = token;
+    store.accountUser = user;
+    if (typeof persist === 'function') persist();
+    applyPersonalStorageNamespace(user);
+    return false;
+  }
+  const key = personalStoreKeyFor(user);
+  let blob;
+  try { blob = parseStoredStore(localStorage.getItem(key)); } catch (_) { blob = JSON.parse(JSON.stringify(DEFAULT_STORE)); }
+  blob.accountToken = token;
+  blob.accountUser = user;
+  blob.clientShell = false;
+  blob.__cpClientScoped = false;
+  try { localStorage.setItem(key, JSON.stringify(blob)); } catch (_) {}
+  writeActiveAccount(user);
+  try { location.reload(); } catch (_) {}
+  return true;
+}
+
+// Nothing personal is shown until somebody has signed in: an account's data
+// belongs to that account, and a device nobody has signed in on has none.
+function loginGateRequired() {
+  try {
+    if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return false;
+    if (typeof detectClientBootContext === 'function' && detectClientBootContext()) return false;
+  } catch (_) {}
+  return !(store && store.accountToken);
+}
+
+function applyLoginGate() {
+  const locked = loginGateRequired();
+  try { document.body.classList.toggle('nurvan-locked', locked); } catch (_) {}
+  const closeBtn = document.querySelector('#account-modal .card-header .btn');
+  if (closeBtn) closeBtn.style.display = locked ? 'none' : '';
+  // Restoring training is restoring somebody's own: not on offer to nobody.
+  const recoverBtn = $('account-recover-training');
+  if (recoverBtn) recoverBtn.style.display = locked ? 'none' : '';
+  if (locked) {
+    try { openAccount(); } catch (_) {}
+    const status = $('account-status');
+    if (status && !status.textContent) status.textContent = 'Accedi o crea un account per usare Nurvan.';
+  }
+  return locked;
+}
+window.applyLoginGate = applyLoginGate;
+window.enterAccountSession = enterAccountSession;
+window.readActiveAccount = readActiveAccount;
+window.personalStoreKeyFor = personalStoreKeyFor;
+window.activeGsStoreKey = activeGsStoreKey;
+window.loginGateRequired = loginGateRequired;
+
+function closeAccount(){ if (loginGateRequired()) return; const modal = $('account-modal'); if(modal) modal.style.display = 'none'; }
 function logoutAccount(){
   const wasClient = typeof isClientStorageContext === 'function' && isClientStorageContext();
   clearTimeout(accountSyncTimer);
@@ -37569,7 +37772,11 @@ function logoutAccount(){
     try { if (typeof navigate === 'function') navigate('home'); } catch (_) { try { render(); } catch (__) {} }
     return;
   }
-  persist(); updateAccountButton(); openAccount();
+  persist();
+  // The data stays in that account's space; what goes is the way back in.
+  writeActiveAccount(null);
+  try { location.reload(); return; } catch (_) {}
+  updateAccountButton(); applyLoginGate();
 }
 function syncAccountFormMode(){
   const nameEl = $('account-name');
@@ -37672,7 +37879,7 @@ async function submitAccount(event){
         body: JSON.stringify({ email, code, password })
       });
       const payload = await readApiJson(response);
-      store.accountToken = payload.token; store.accountUser = payload.user; persist();
+      if (enterAccountSession(payload.token, payload.user)) return;
       accountRecoveryMode = false;
       syncAccountFormMode();
       await syncAccountData(true);
@@ -37687,7 +37894,7 @@ async function submitAccount(event){
     if (!body.password || body.password.length < 8) throw new Error('La password deve avere almeno 8 caratteri.');
     const response = await apiFetch(coachEndpoint(path), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const payload = await readApiJson(response);
-    store.accountToken = payload.token; store.accountUser = payload.user; persist();
+    if (enterAccountSession(payload.token, payload.user)) return;
     if(!accountRegisterMode) await syncAccountData(true); else await syncAccountData(false);
     updateAccountButton(); closeAccount();
     if (typeof showToast === 'function') showToast(`Benvenuto, ${store.accountUser.name}`, 'success');
@@ -37704,7 +37911,7 @@ async function submitAccount(event){
 }
 async function finishOAuthLogin(payload){
   if(!payload?.token || !payload?.user) throw new Error('Risposta provider non valida.');
-  store.accountToken = payload.token; store.accountUser = payload.user; persist();
+  if (enterAccountSession(payload.token, payload.user)) return;
   updateAccountButton();
   setGoogleAuthLoading(false);
   closeAccount();
@@ -38451,6 +38658,10 @@ function programRecoveryScore(prog, hintWeeks) {
 }
 
 function personalSchedaNeedsRestore() {
+  // Recovery restores somebody's own training. With nobody logged in there is
+  // nobody whose training it could be, and a device that has just been opened
+  // for the first time must stay empty.
+  if (!store || !store.accountToken) return false;
   if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return false;
   if (store && (store.coachViewingClient || store.coachAssigning || store.coachSessionActive)) return false;
   if (typeof isAthleteRole === 'function' && isAthleteRole()) return false;
@@ -38640,9 +38851,14 @@ async function collectRecoverSchedaCandidates() {
     }
   } catch (e) { console.warn('[RECOVER_CLOUD]', e); }
 
-  // Bundled personal master (16 settimane) — always offer as first-class restore.
+  // The owner's own program backup. It used to ship inside the app, which made
+  // it downloadable by anyone with the app's URL and offered it as "restore
+  // your training" on a phone where nobody had logged in. It now comes from
+  // the server, only for the account it belongs to.
   try {
-    const resp = await fetch('personal-recovery-16w.json', { cache: 'no-store' });
+    const resp = store.accountToken
+      ? await accountRequest('/api/account/personal-backup', { method: 'GET' })
+      : null;
     if (resp && resp.ok) {
       const bundled = await resp.json();
       if (bundled && Array.isArray(bundled.weeks) && bundled.weeks.length) {
@@ -38654,7 +38870,7 @@ async function collectRecoverSchedaCandidates() {
   } catch (e) { console.warn('[RECOVER_BUNDLED_16W]', e); }
 
   try {
-    const raw = localStorage.getItem('nurvan_personal_program_lock');
+    const raw = localStorage.getItem(personalScopedKey('nurvan_personal_program_lock'));
     if (raw) {
       const locked = JSON.parse(raw);
       if (locked && locked.program) addCandidate(locked.program, 'Backup locale bloccato');
@@ -42105,7 +42321,7 @@ function lockPersonalProgramBackup(prog) {
       weeks: copy.weeks.length,
       program: copy
     };
-    try { localStorage.setItem('nurvan_personal_program_lock', JSON.stringify(payload)); } catch (_) {}
+    try { localStorage.setItem(personalScopedKey('nurvan_personal_program_lock'), JSON.stringify(payload)); } catch (_) {}
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
       const locked = Object.assign({}, copy, { id: 'personal_locked_backup', title: copy.title || 'Backup personale bloccato' });
       GiammariaPersistence.saveProgram(locked, false).catch(function () {});
@@ -43419,6 +43635,9 @@ function exerciseMatchesMuscleGroup(exerciseName, movement, explicitGroups, sele
 async function init() {
   console.log('[NURVAN_BOOT] Starting local-first bootstrap...');
   setSplashProgress(20, 'Bootstrap…');
+  // Before a single record is read: this device holds one database per
+  // account, and the one to open is the account that is signed in here.
+  try { applyPersonalStorageNamespace(readActiveAccount()); } catch (_) {}
   try {
     if (!window.__nurvanPressFeedbackBound) {
       window.__nurvanPressFeedbackBound = true;
@@ -43682,6 +43901,7 @@ function finishInit() {
   }
 
   setSplashProgress(90, 'Avvio interfaccia…');
+  try { applyPersonalStorageNamespace(readActiveAccount()); } catch (_) {}
   try { seedExerciseDatabase(); } catch (_) {}
   try { updateAccountButton(); } catch (_) {}
   try { hydrateGoogleClientId(); } catch (_) {}
@@ -43702,6 +43922,7 @@ function finishInit() {
       try { classifyActiveProgramMuscles(); } catch (_) {}
       render();
       applyChromeI18n();
+      try { applyLoginGate(); } catch (_) {}
       try { applyFocusUi(); } catch (_) {}
       try { maybeShowRewardsOnboarding(); } catch (_) {}
       try { maybeShowIosInstallHint(); } catch (_) {}
@@ -43804,7 +44025,7 @@ function persist() {
       try { delete sanitized.workoutUndo; } catch (_) {}
       try { delete sanitized.trainingKnowledgeExtra; } catch (_) {}
     }
-    const persistKey = isClientStorageContext() ? clientStoreKeyForUser(store.accountUser) : GS_STORE_PERSONAL_KEY;
+    const persistKey = activeGsStoreKey();
     if (isClientStorageContext() && persistKey === GS_STORE_PERSONAL_KEY) {
       console.warn('[PERSIST] refused to write personal GS_STORE from client context');
       return;
@@ -43841,7 +44062,7 @@ function persist() {
         coachUnlocked: !!store.coachUnlocked,
         clientProfile: store.clientProfile || null
       };
-      const persistKey = isClientStorageContext() ? clientStoreKeyForUser(store.accountUser) : GS_STORE_PERSONAL_KEY;
+      const persistKey = activeGsStoreKey();
       if (isClientStorageContext() && persistKey === GS_STORE_PERSONAL_KEY) {
         console.warn('[PERSIST] refused to write personal GS_STORE from client context');
         return;
@@ -44816,7 +45037,7 @@ function applyPersonalNutritionClear(ctx) {
       }
     }
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('nurvan_nutrition_cleared_at', nowIso);
+      localStorage.setItem(personalScopedKey('nurvan_nutrition_cleared_at'), nowIso);
     }
   } catch (bakErr) {
     console.warn('[CLEAR_NUTRITION] backup snapshot error', bakErr);
@@ -44908,7 +45129,7 @@ async function restoreNutritionBackup(backupId) {
     store.__cpKeepLocalNutrition = true;
   }
   if (typeof localStorage !== 'undefined') {
-    localStorage.removeItem('nurvan_nutrition_cleared_at');
+    localStorage.removeItem(personalScopedKey('nurvan_nutrition_cleared_at'));
   }
 
   if (typeof persist === 'function') persist();

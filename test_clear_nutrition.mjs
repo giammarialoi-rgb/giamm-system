@@ -95,9 +95,13 @@ ok(JSON.stringify(ctx.DATA.exams) === examsBefore, 'does not mutate exams');
 ok(i18n.includes('clearNutrition: "Azzera alimentazione"'), 'Italian label matches Azzera style');
 ok(i18n.includes('clearNutritionConfirm:') && i18n.includes('clearNutritionDone:'), 'confirm and done strings exist');
 
-const recovery = path.join(root, 'web/personal-recovery-16w.json');
-const status = execSync('git status --porcelain -- web/personal-recovery-16w.json app/src/main/assets/personal-recovery-16w.json', { cwd: root }).toString().trim();
-ok(!status, 'personal-recovery-16w.json was not modified');
+const recovery = path.join(root, 'private/personal-recovery-16w.json');
+// The owner's own program backup: kept out of the app (anyone with the app's
+// URL could download it) and out of every code path that could rewrite it.
+const status = execSync('git status --porcelain -- private/personal-recovery-16w.json', { cwd: root }).toString().trim();
+// Moving it out of the web app (A/R) is fine; a content change is not.
+ok(!status || /^[AR]/.test(status), 'personal-recovery-16w.json was not modified: ' + status);
+ok(!fs.existsSync(path.join(root, 'web/personal-recovery-16w.json')), 'and is not served with the app');
 ok(fs.existsSync(recovery) && JSON.parse(fs.readFileSync(recovery, 'utf8')).id === 'personal_16w_giammaria', 'personal 16w glass box file still present and untouched');
 
 console.log('\nAll personal nutrition clear tests passed.');

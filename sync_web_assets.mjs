@@ -32,7 +32,6 @@ export const ANDROID_STATIC_ASSETS = [
   'exercise-taxonomy.js',
   'program-builder.js',
   'program-catalog.js',
-  'personal-recovery-16w.json',
   'apple-touch-icon.png',
   'icon-180.png',
   'icon-192.png',
