@@ -79,6 +79,34 @@ ok(!/\/XObject/.test(bare) && !/Do Q/.test(bare), 'an export without pictures ca
 // An exercise with no picture must still be written, just without one.
 ok(pdf.includes('Rematore bilanciere') || pdf.includes('Rematore'), 'an exercise with no picture is still in the program');
 
+// Nothing may be written across a picture. The column names used to share the
+// strip with it, so "SERIE" landed on top of the image.
+{
+  // The fixture is a single page, so every drawing command below belongs to
+  // the same coordinate space.
+  const boxes = [];
+  const imgRe = /q (\d+(?:\.\d+)?) 0 0 \1 (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?) cm \/(Im\d+) Do Q/g;
+  for (let m; (m = imgRe.exec(pdf));) {
+    const side = Number(m[1]), x = Number(m[2]), yy = Number(m[3]);
+    boxes.push({ res: m[4], x0: x, x1: x + side, y0: yy, y1: yy + side });
+  }
+  ok(boxes.length === 1, 'the picture is drawn once, as a square');
+
+  const texts = [];
+  const txtRe = /BT \/(F\d) (\d+(?:\.\d+)?) Tf [^\n]*?1 0 0 1 (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?) Tm \(([^)]*)\) Tj ET/g;
+  for (let m; (m = txtRe.exec(pdf));) {
+    const size = Number(m[2]), x = Number(m[3]), yy = Number(m[4]), s = m[5];
+    texts.push({ s, x0: x, x1: x + size * 0.6 * s.length, y0: yy - size * 0.25, y1: yy + size * 0.75 });
+  }
+  ok(texts.some((t) => t.s === 'SERIE'), 'the column names are written');
+
+  const over = [];
+  boxes.forEach((b) => texts.forEach((t) => {
+    if (t.x0 < b.x1 && t.x1 > b.x0 && t.y0 < b.y1 && t.y1 > b.y0) over.push(t.s);
+  }));
+  ok(over.length === 0, 'and no text is written across the picture' + (over.length ? ': ' + over.join(', ') : ''));
+}
+
 // The cross-reference table has to keep pointing at the right objects once
 // binary image data sits between them, or the file will not open at all.
 {

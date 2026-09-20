@@ -20772,10 +20772,15 @@ function buildWorkoutPdfBytes(opts) {
           ? (function () { var pW = currentWeek, pD = currentDay; currentWeek = wi; currentDay = di; var n = getExerciseSetCount(ei); currentWeek = pW; currentDay = pD; return n; })()
           : (scheme.setCount || 3);
         var rowH = 14;
-        // A taller strip when the exercise has a picture, so it is big enough to
-        // recognise the movement at a glance on paper.
+        // The strip is two bands: the name (and the picture, when there is one,
+        // big enough to recognise the movement at a glance on paper) on top, the
+        // column names underneath. They have to be separate bands or the column
+        // names are written across the picture.
         var pic = imageFor(name);
-        var barH = pic ? 52 : 36;
+        var picSide = 44;
+        var nameH = pic ? 52 : 24;
+        var headH = 14;
+        var barH = nameH + headH;
         var tableH = barH + setCount * rowH + 6;
         needSpace(tableH + 10);
 
@@ -20798,15 +20803,15 @@ function buildWorkoutPdfBytes(opts) {
         rct(ML, y - barH, 4, barH, GOLD);
         var nameX = ML + 12;
         if (pic) {
-          var picSide = barH - 8;
-          rct(ML + 8, y - barH + 4, picSide, picSide, '1 1 1');
-          cmds.push('q ' + picSide + ' 0 0 ' + picSide + ' ' + (ML + 8) + ' ' + (y - barH + 4) + ' cm /' + pic.res + ' Do Q');
+          rct(ML + 8, y - nameH + 4, picSide, picSide, '1 1 1');
+          cmds.push('q ' + picSide + ' 0 0 ' + picSide + ' ' + (ML + 8) + ' ' + (y - nameH + 4) + ' cm /' + pic.res + ' Do Q');
           nameX = ML + 12 + picSide + 4;
         }
-        txt('F1', 12, GOLD, nameX, y - (pic ? 18 : 12), clipFit(name, CW - (nameX - ML) - (meta.length ? 180 : 20), 12));
-        if (meta.length) txt('F2', 7, '0.75 0.65 0.35', ML + 300, y - (pic ? 18 : 12), clipFit(meta.join('  ·  '), 210, 7));
+        var nameBase = y - (pic ? 30 : 16);
+        txt('F1', 12, GOLD, nameX, nameBase, clipFit(name, CW - (nameX - ML) - (meta.length ? 180 : 20), 12));
+        if (meta.length) txt('F2', 7, '0.75 0.65 0.35', ML + 300, nameBase, clipFit(meta.join('  ·  '), 210, 7));
         cols.forEach(function (c) {
-          txt('F1', 6.5, GOLD, c.x + 4, y - (pic ? 42 : 28), c.label);
+          txt('F1', 6.5, GOLD, c.x + 4, y - barH + 5, c.label);
         });
         y -= barH + 4;
 
