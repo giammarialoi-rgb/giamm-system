@@ -64,6 +64,9 @@
 <script src="exercise-media-client.js"></script>
 <script src="exercise-media-ui.js"></script>
 <script src="domain-merge.js"></script>
+<script src="exercise-taxonomy.js"></script>
+<script src="program-builder.js"></script>
+<script src="program-catalog.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -26965,6 +26968,18 @@ function applyDupSession(ex, sessionIndex) {
   return { ...ex, reps_target: '12-15', rir: 3, rest_sec: 60, tempo: '3010', sets_count: Math.max(2, (ex.sets_count || 3) - 1) };
 }
 
+// Accessory slots carry the exercises the next blocks rotate to (alts). The
+// main lifts have none: a program progresses by adding load to the same lift,
+// and swapping it costs strength (Baz-Valle 2019), while varying the
+// assistance work spreads the stimulus across a muscle's regions
+// (Fonseca 2014; Kassiano 2022). A block is the deload cycle, so the exercise
+// changes when the cycle restarts and stays put inside it.
+function exerciseForBlock(ex, block) {
+  const alts = Array.isArray(ex.alts) ? ex.alts.filter(Boolean) : [];
+  if (!alts.length || block <= 0) return ex.name;
+  return alts[(block - 1) % alts.length] || ex.name;
+}
+
 function expandScienceProgramWeeks(entry) {
   const duration = Number(entry.duration_weeks) || ((entry.weeks && entry.weeks.length) || 8);
   const stored = Array.isArray(entry.weeks) ? entry.weeks : [];
@@ -26975,6 +26990,7 @@ function expandScienceProgramWeeks(entry) {
   const weeks = [];
   for (let w = 1; w <= duration; w++) {
     const isDeload = deloadEvery > 0 && w % deloadEvery === 0 && w !== 1;
+    const block = deloadEvery > 0 ? Math.floor((w - 1) / deloadEvery) : 0;
     const t = weekProgress(w, duration, model, isDeload);
     weeks.push({
       week_number: w,
@@ -26986,7 +27002,7 @@ function expandScienceProgramWeeks(entry) {
           let sets = Math.max(1, Math.round((e.sets_count || 3) * t.volumeMul));
           if (isDeload) sets = Math.max(1, Math.round((e.sets_count || 3) * 0.6));
           return {
-            name: e.name,
+            name: exerciseForBlock(e, block),
             sets_count: sets,
             reps_target: bumpReps(e.reps_target, t.repsDelta),
             rir: clamp((e.rir != null ? e.rir : 2) + t.rirDelta, 0, 4),
@@ -49343,7 +49359,33 @@ async function fetchJsonAsset(name) {
   });
 }
 
+// The catalogue used to be two files of 60 MB downloaded before the library
+// could be shown: every program written out, and every week-1 template. A
+// program is a point in a grid of training variables and everything about it
+// follows from that point, so the grid ships instead (program-catalog.js) and
+// a program is built when it is listed or opened.
+function catalogGenerator() {
+  return (typeof window !== 'undefined' && window.NurvanProgramCatalog) || null;
+}
+
+function catalogTotalCount() {
+  const gen = catalogGenerator();
+  if (gen) return gen.total();
+  return ((window.__programCatalogIndex && window.__programCatalogIndex.programs) || []).length;
+}
+
+function catalogRowById(id) {
+  const gen = catalogGenerator();
+  const built = gen && gen.rowById(id);
+  if (built) return built;
+  return ((window.__programCatalogIndex && window.__programCatalogIndex.programs) || []).find((p) => p.id === id) || null;
+}
+
 async function loadProgramCatalogIndex() {
+  if (catalogGenerator()) {
+    if (!window.__programCatalogIndex) window.__programCatalogIndex = { programs: [], generated: true };
+    return window.__programCatalogIndex.programs;
+  }
   if (window.__programCatalogIndex && Array.isArray(window.__programCatalogIndex.programs)) {
     return window.__programCatalogIndex.programs;
   }
@@ -49381,6 +49423,17 @@ function catalogSplitLabel(s) {
 
 function filterProgramCatalog(list) {
   const f = window.__catalogFilters || {};
+  const gen = catalogGenerator();
+  if (gen) {
+    // Ask the grid only for what the filters allow, and only as many as the
+    // screen shows.
+    const parsed = (typeof parseCatalogQuery === 'function') ? parseCatalogQuery(f.q || '') : {};
+    const merged = {};
+    ['days', 'split', 'goal', 'equipment', 'experience', 'duration', 'progression', 'audience'].forEach((k) => {
+      merged[k] = f[k] || parsed[k] || '';
+    });
+    return gen.search(merged, 150).rows;
+  }
   let ranked = [];
   if (typeof rankCatalogPrograms === 'function') {
     ranked = rankCatalogPrograms(list, f);
@@ -49527,9 +49580,11 @@ async function activateCatalogProgram(programId) {
 }
 async function activateCatalogProgramInner(programId) {
   try {
-    const bodyMap = await loadProgramCatalogBody();
-    const meta = ((window.__programCatalogIndex && window.__programCatalogIndex.programs) || []).find((p) => p.id === programId) || null;
-    const raw = bodyMap[programId] || (meta && meta.body_ref ? bodyMap[meta.body_ref] : null);
+    const gen = catalogGenerator();
+    const built = gen && gen.bodyFor(programId);
+    const bodyMap = built ? {} : await loadProgramCatalogBody();
+    const meta = catalogRowById(programId);
+    const raw = built || bodyMap[programId] || (meta && meta.body_ref ? bodyMap[meta.body_ref] : null);
     if (!raw || !Array.isArray(raw.weeks) || !raw.weeks.length) {
       alert('Scheda non trovata nel database.');
       return;
@@ -49644,7 +49699,8 @@ function updateCatalogFiltersFromUi() {
   const allCat = (window.__programCatalogIndex && window.__programCatalogIndex.programs) || [];
   const ranked = filterProgramCatalog(allCat);
   const filtered = ranked.slice(0, 150);
-  if (countEl) countEl.textContent = filtered.length + (ranked.length > filtered.length ? '+' : '') + ' / ' + allCat.length;
+  const totalCat = catalogTotalCount();
+  if (countEl) countEl.textContent = filtered.length + (totalCat > filtered.length ? '+' : '') + ' / ' + totalCat.toLocaleString('it-IT');
   if (!listEl) {
     if (currentView === 'programs') render();
     return;
@@ -49677,7 +49733,7 @@ function catalogCardHtml(p) {
 }
 
 async function openCatalogPreview(programId) {
-  const meta = ((window.__programCatalogIndex && window.__programCatalogIndex.programs) || []).find((p) => p.id === programId);
+  const meta = catalogRowById(programId);
   if (!meta) {
     if (typeof showToast === 'function') showToast('Scheda non trovata', 'error');
     return;
@@ -49706,8 +49762,10 @@ async function openCatalogPreview(programId) {
   if (bodyEl) bodyEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">Caricamento preview…</div>';
   modal.style.display = 'flex';
   try {
-    const bodyMap = await loadProgramCatalogBody();
-    const raw = bodyMap[meta.body_ref] || bodyMap[programId] || {};
+    const gen = catalogGenerator();
+    const built = gen && gen.bodyFor(programId);
+    const bodyMap = built ? {} : await loadProgramCatalogBody();
+    const raw = built || bodyMap[meta.body_ref] || bodyMap[programId] || {};
     const week1 = (raw.weeks && raw.weeks[0]) || {};
     const sessions = (week1.sessions || []).map((s) => ({
       name: s.name,
@@ -49763,12 +49821,13 @@ function renderPrograms(c){
   const hasTherapy = DATA?.therapy?.present && (DATA.therapy.medications?.length > 0);
   const hasExams = DATA?.exams?.present && ((DATA.exams.records || DATA.exams.items || []).length > 0);
   const f = window.__catalogFilters || { q: '', days: '', split: '', goal: '', equipment: '', experience: '', duration: '', progression: '', audience: '' };
-  const catalogReady = !!(window.__programCatalogIndex && Array.isArray(window.__programCatalogIndex.programs));
-  const allCat = catalogReady ? window.__programCatalogIndex.programs : [];
+  const catalogReady = !!catalogGenerator() || !!(window.__programCatalogIndex && Array.isArray(window.__programCatalogIndex.programs));
+  const allCat = (window.__programCatalogIndex && window.__programCatalogIndex.programs) || [];
   const ranked = filterProgramCatalog(allCat);
   const filtered = ranked.slice(0, 150);
-  const suggestedIds = new Set(store.prefs.suggestedProgramIds || []);
-  const suggested = allCat.filter((p) => suggestedIds.has(p.id)).slice(0, 6);
+  const totalCat = catalogTotalCount();
+  const suggestedIds = Array.from(new Set(store.prefs.suggestedProgramIds || []));
+  const suggested = suggestedIds.map((id) => catalogRowById(id)).filter(Boolean).slice(0, 6);
   const splits = ['fullbody', 'monofrequency', 'upper_lower'];
   const goals = ['ipertrofia', 'forza', 'powerbuilding', 'recomp', 'cut', 'glutei', 'petto', 'dorso', 'spalle', 'braccia', 'gambe'];
   const audiences = [
@@ -49782,7 +49841,7 @@ function renderPrograms(c){
       <div>
         <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">PROGRAM DATABASE</span>
         <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">LIBRERIA PROGRAMMI</h2>
-        <div style="font-size:11px;color:#888;margin-top:4px;">${catalogReady ? (allCat.length + ' schede · copertura completa filtri · sezione Donna inclusa') : 'Caricamento database…'}</div>
+        <div style="font-size:11px;color:#888;margin-top:4px;">${catalogReady ? (totalCat.toLocaleString('it-IT') + ' schede · copertura completa filtri · sezione Donna inclusa') : 'Caricamento database…'}</div>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-outline" style="font-size:11px; padding:6px 12px; border-color:var(--gold); color:var(--gold);" onclick="navigate('import')">IMPORTA FILE</button>
@@ -49874,7 +49933,7 @@ function renderPrograms(c){
     <div class="card" style="margin-bottom:16px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
         <h3 style="font-size:14px; color:var(--gold); font-weight:800;margin:0;">DATABASE SCHEDE</h3>
-        <span id="catalog-count" style="font-size:10px; color:#666;">${filtered.length}${catalogReady ? ' / ' + allCat.length : ''}</span>
+        <span id="catalog-count" style="font-size:10px; color:#666;">${filtered.length}${catalogReady ? ' / ' + totalCat.toLocaleString('it-IT') : ''}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px;">
         <input id="catalog-q" type="search" placeholder="Es. 4 giorni upper lower ipertrofia donna casa doppia progressione" value="${esc(f.q || '')}" oninput="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()" style="padding:10px;font-size:13px;">

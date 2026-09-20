@@ -22868,6 +22868,18 @@ function applyDupSession(ex, sessionIndex) {
   return { ...ex, reps_target: '12-15', rir: 3, rest_sec: 60, tempo: '3010', sets_count: Math.max(2, (ex.sets_count || 3) - 1) };
 }
 
+// Accessory slots carry the exercises the next blocks rotate to (alts). The
+// main lifts have none: a program progresses by adding load to the same lift,
+// and swapping it costs strength (Baz-Valle 2019), while varying the
+// assistance work spreads the stimulus across a muscle's regions
+// (Fonseca 2014; Kassiano 2022). A block is the deload cycle, so the exercise
+// changes when the cycle restarts and stays put inside it.
+function exerciseForBlock(ex, block) {
+  const alts = Array.isArray(ex.alts) ? ex.alts.filter(Boolean) : [];
+  if (!alts.length || block <= 0) return ex.name;
+  return alts[(block - 1) % alts.length] || ex.name;
+}
+
 function expandScienceProgramWeeks(entry) {
   const duration = Number(entry.duration_weeks) || ((entry.weeks && entry.weeks.length) || 8);
   const stored = Array.isArray(entry.weeks) ? entry.weeks : [];
@@ -22878,6 +22890,7 @@ function expandScienceProgramWeeks(entry) {
   const weeks = [];
   for (let w = 1; w <= duration; w++) {
     const isDeload = deloadEvery > 0 && w % deloadEvery === 0 && w !== 1;
+    const block = deloadEvery > 0 ? Math.floor((w - 1) / deloadEvery) : 0;
     const t = weekProgress(w, duration, model, isDeload);
     weeks.push({
       week_number: w,
@@ -22889,7 +22902,7 @@ function expandScienceProgramWeeks(entry) {
           let sets = Math.max(1, Math.round((e.sets_count || 3) * t.volumeMul));
           if (isDeload) sets = Math.max(1, Math.round((e.sets_count || 3) * 0.6));
           return {
-            name: e.name,
+            name: exerciseForBlock(e, block),
             sets_count: sets,
             reps_target: bumpReps(e.reps_target, t.repsDelta),
             rir: clamp((e.rir != null ? e.rir : 2) + t.rirDelta, 0, 4),

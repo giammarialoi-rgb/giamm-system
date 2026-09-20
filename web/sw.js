@@ -16,6 +16,9 @@ const PRECACHE = [
   './training-knowledge.js',
   './training-analytics-engine.js',
   './domain-merge.js',
+  './exercise-taxonomy.js',
+  './program-builder.js',
+  './program-catalog.js',
   './personal-recovery-16w.json'
 ];
 
