@@ -165,7 +165,28 @@ self.WEB_EXERCISE_CATALOG = [
   { name: "High-bar squat", en: "High-Bar Squat", muscle: "QUADRICIPITI", eq: "bilanciere" },
   { name: "Low-bar squat", en: "Low-Bar Squat", muscle: "QUADRICIPITI", eq: "bilanciere" },
   { name: "Zercher squat", en: "Zercher Squat", muscle: "QUADRICIPITI", eq: "bilanciere" },
-  { name: "Overhead squat", en: "Overhead Squat", muscle: "QUADRICIPITI", eq: "bilanciere" }
+  { name: "Overhead squat", en: "Overhead Squat", muscle: "QUADRICIPITI", eq: "bilanciere" },
+
+  /* Exercises the generated programs already prescribe - kettlebell, band and
+     bodyweight work for training at home - which had no catalogue entry, so
+     the app had no picture and no guide for them. Added as their pictures
+     arrived. */
+  { name: "Squat a corpo libero", en: "Bodyweight Squat", muscle: "QUADRICIPITI", eq: "corpo libero" },
+  { name: "Hip hinge", en: "Hip Hinge", muscle: "FEMORALI", eq: "corpo libero" },
+  { name: "Pike push-up", en: "Pike Push-Up", muscle: "SPALLE", eq: "corpo libero" },
+  { name: "Archer push-up", en: "Archer Push-Up", muscle: "PETTO", eq: "corpo libero" },
+  { name: "Handstand hold", en: "Handstand Hold", muscle: "SPALLE", eq: "corpo libero" },
+  { name: "Stacco manubri", en: "Dumbbell Deadlift", muscle: "SCHIENA", eq: "manubri" },
+  { name: "Rematore elastico", en: "Band Row", muscle: "DORSALI", eq: "elastici" },
+  { name: "Pulldown elastico", en: "Band Lat Pulldown", muscle: "DORSALI", eq: "elastici" },
+  { name: "Face pull elastico", en: "Band Face Pull", muscle: "SPALLE", eq: "elastici" },
+  { name: "Good morning elastico", en: "Band Good Morning", muscle: "FEMORALI", eq: "elastici" },
+  { name: "Kettlebell deadlift", en: "Kettlebell Deadlift", muscle: "SCHIENA", eq: "kettlebell" },
+  { name: "Kettlebell floor press", en: "Kettlebell Floor Press", muscle: "PETTO", eq: "kettlebell" },
+  { name: "Kettlebell press", en: "Kettlebell Overhead Press", muscle: "SPALLE", eq: "kettlebell" },
+  { name: "Kettlebell clean & press", en: "Kettlebell Clean and Press", muscle: "SPALLE", eq: "kettlebell" },
+  { name: "Kettlebell curl", en: "Kettlebell Curl", muscle: "BICIPITI", eq: "kettlebell" },
+  { name: "Gorilla row", en: "Kettlebell Gorilla Row", muscle: "DORSALI", eq: "kettlebell" }
 ];
 
 /* Names used in workouts that refer to an existing catalogue exercise under

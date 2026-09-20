@@ -41,6 +41,7 @@ const MIME = {
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
   '.map': 'application/json',
+  '.pdf': 'application/pdf',
   '.webmanifest': 'application/manifest+json; charset=utf-8'
 };
 

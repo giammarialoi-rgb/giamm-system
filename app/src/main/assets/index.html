@@ -2079,28 +2079,11 @@ body.focus-mode [data-rewards-only] {
 </div>
 
 <!-- NURVAN Rewards: onboarding + workout complete -->
-<div id="rewards-onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="rewards-onboard-title">
-  <div class="rewards-panel">
-    <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:var(--silver);margin-bottom:8px;">NURVAN</div>
-    <h2 id="rewards-onboard-title">ESPERIENZA ATLETA</h2>
-    <p>Scegli come vivere NURVAN. Rewards aggiunge XP, livelli e badge. Focus nasconde la gamification — l’allenamento resta completo.</p>
-    <p style="font-size:10px;color:#666;margin-top:-8px;">Terapia ed esami restano privati: mai in ranking o share.</p>
-    <button class="btn btn-primary" style="width:100%;margin-bottom:8px;height:48px;font-weight:900;" onclick="joinRewardsMode()">JOIN REWARDS</button>
-    <button class="btn btn-outline" style="width:100%;height:48px;font-weight:800;" onclick="stayFocusMode()">STAY IN FOCUS</button>
-  </div>
-</div>
-
 <div id="workout-complete-overlay" role="dialog" aria-modal="true" aria-labelledby="wco-title">
   <div class="rewards-panel">
     <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:var(--silver);">SESSIONE COMPLETATA</div>
     <h2 id="wco-title">WORKOUT COMPLETE</h2>
     <div id="wco-summary" style="font-size:12px;color:#aaa;margin-bottom:10px;"></div>
-    <div id="wco-xp-block" data-rewards-only style="display:none;">
-      <div class="wco-xp" id="wco-xp">+0 XP</div>
-      <div style="font-size:11px;color:var(--silver);" id="wco-level-line">Livello 1</div>
-      <div class="wco-bar"><span id="wco-xp-fill"></span></div>
-      <div id="wco-achievements" style="font-size:11px;color:var(--gold);margin-bottom:8px;"></div>
-    </div>
     <div style="display:flex;flex-direction:column;gap:8px;">
       <button class="btn btn-outline" style="width:100%;" onclick="closeWorkoutCompleteOverlay('stats')">VIEW STATS</button>
       <button class="btn btn-outline" style="width:100%;" id="wco-share-btn" onclick="shareWorkoutCardFromOverlay()">SHARE</button>
@@ -44525,10 +44508,6 @@ function closeTopUiOverlay() {
     closeWorkoutCompleteOverlay();
     return true;
   }
-  if (id === 'rewards-onboarding-modal') {
-    stayFocusMode();
-    return true;
-  }
   const el = document.getElementById(id);
   if (el && el.style.display !== 'none') {
     el.style.display = 'none';
@@ -49129,11 +49108,6 @@ function renderSettings(c) {
 
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
       <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">Esperienza</div>
-      <p style="font-size:11px;color:#aaa;margin:0 0 10px;line-height:1.4;">Focus nasconde XP/badge/ranking. Passare a Focus non cancella il ledger Rewards.</p>
-      <div style="display:flex;gap:8px;margin-bottom:10px;">
-        <button class="btn ${(store.rewards&&store.rewards.mode==='focus')?'btn-primary':'btn-outline'}" style="flex:1;font-size:11px;" onclick="setRewardsModeFromSettings('focus')">Focus</button>
-        <button class="btn ${(store.rewards&&store.rewards.mode==='rewards')?'btn-primary':'btn-outline'}" style="flex:1;font-size:11px;" onclick="setRewardsModeFromSettings('rewards')">Rewards</button>
-      </div>
       <button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="navigate('profile')">Profilo</button>
       ${(typeof isAthleteRole === 'function' && isAthleteRole()) ? '' : `
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin:10px 0 6px;gap:10px;">Condividi terapia/esami con Coach AI <input type="checkbox" ${store.prefs.shareMedicalWithCoach?'checked':''} onchange="store.prefs.shareMedicalWithCoach=this.checked;persist()"></label>
@@ -53858,6 +53832,62 @@ function pdfEsc(s) {
   return pdfWinAnsi(s).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 }
 
+// The exported program shows each exercise's picture next to its name, the
+// same one the app shows. The pictures live in a bucket that answers without
+// CORS headers - fine for an <img>, not for reading pixels - so they come
+// through the app's own /api/exercises/:id/image, are flattened onto white and
+// turned into JPEG, which is what a PDF can carry directly.
+async function loadWorkoutPdfImages(names) {
+  const out = {};
+  if (typeof document === 'undefined' || !Array.isArray(names) || !names.length) return out;
+  const media = (typeof window !== 'undefined' && window.NurvanExerciseMedia) || null;
+  const seen = {};
+  for (const name of names.slice(0, 80)) {
+    const clean = String(name || '').trim();
+    if (!clean || seen[clean]) continue;
+    seen[clean] = true;
+    let id = clean;
+    try {
+      if (media && typeof media.catalogueExerciseFor === 'function') id = media.catalogueExerciseFor(clean) || clean;
+      if (media && typeof media.canonicalExerciseId === 'function') id = media.canonicalExerciseId(id);
+    } catch (_) {}
+    if (!id) continue;
+    try {
+      const resp = await fetch(coachEndpoint('/api/exercises/' + encodeURIComponent(id) + '/image'), { cache: 'force-cache' });
+      if (!resp || !resp.ok) continue;
+      const bitmap = await createImageBitmap(await resp.blob());
+      const side = 150;
+      const canvas = document.createElement('canvas');
+      canvas.width = side; canvas.height = side;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, side, side);
+      const scale = Math.min(side / bitmap.width, side / bitmap.height);
+      const w = Math.round(bitmap.width * scale), h = Math.round(bitmap.height * scale);
+      ctx.drawImage(bitmap, Math.round((side - w) / 2), Math.round((side - h) / 2), w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+      const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+      out[clean] = { jpeg: atob(b64), width: side, height: side };
+    } catch (err) {
+      console.warn('[PDF image]', clean, err && err.message);
+    }
+  }
+  return out;
+}
+
+function workoutPdfExerciseNames() {
+  const names = [];
+  ((DATA && DATA.weeks) || []).forEach(function (w) {
+    ((w && (w.sessions || w.days)) || []).forEach(function (d) {
+      ((d && (d.exercises || d.rows)) || []).forEach(function (row) {
+        const n = row && (row.name || row.exercise || row.title);
+        if (n && names.indexOf(n) < 0) names.push(n);
+      });
+    });
+  });
+  return names;
+}
+
 function buildWorkoutPdfBytes(opts) {
   opts = opts || {};
   var W = 595, H = 842;
@@ -53868,6 +53898,28 @@ function buildWorkoutPdfBytes(opts) {
   var DARK = '0.15 0.15 0.15';
   var GRAY = '0.45 0.45 0.45';
   var LGRAY = '0.92 0.92 0.92';
+
+  // Pictures collected before the build (loadWorkoutPdfImages); each becomes a
+  // PDF image object, referenced from every page's resources.
+  var imagesIn = (opts.images && typeof opts.images === 'object') ? opts.images : {};
+  var imageRes = {};
+  var imageStreams = [];
+  Object.keys(imagesIn).forEach(function (key, i) {
+    var img = imagesIn[key];
+    if (!img || !img.jpeg) return;
+    var res = 'Im' + (i + 1);
+    imageRes[key] = { res: res, img: img };
+    imageStreams.push({ res: res, img: img });
+  });
+  function imageFor(name) {
+    var direct = imageRes[name];
+    if (direct) return direct;
+    var keys = Object.keys(imageRes);
+    for (var i = 0; i < keys.length; i++) {
+      if (String(keys[i]).toLowerCase() === String(name || '').toLowerCase()) return imageRes[keys[i]];
+    }
+    return null;
+  }
 
   var weeksList = DATA.weeks || [];
   var bounds = workoutPdfScopeBounds(opts);
@@ -54018,7 +54070,10 @@ function buildWorkoutPdfBytes(opts) {
           ? (function () { var pW = currentWeek, pD = currentDay; currentWeek = wi; currentDay = di; var n = getExerciseSetCount(ei); currentWeek = pW; currentDay = pD; return n; })()
           : (scheme.setCount || 3);
         var rowH = 14;
-        var barH = 36;
+        // A taller strip when the exercise has a picture, so it is big enough to
+        // recognise the movement at a glance on paper.
+        var pic = imageFor(name);
+        var barH = pic ? 52 : 36;
         var tableH = barH + setCount * rowH + 6;
         needSpace(tableH + 10);
 
@@ -54039,10 +54094,17 @@ function buildWorkoutPdfBytes(opts) {
         y -= 6;
         rct(ML, y - barH, CW, barH, '0.08 0.08 0.08');
         rct(ML, y - barH, 4, barH, GOLD);
-        txt('F1', 12, GOLD, ML + 12, y - 12, clipFit(name, CW - (meta.length ? 180 : 20), 12));
-        if (meta.length) txt('F2', 7, '0.75 0.65 0.35', ML + 300, y - 12, clipFit(meta.join('  ·  '), 210, 7));
+        var nameX = ML + 12;
+        if (pic) {
+          var picSide = barH - 8;
+          rct(ML + 8, y - barH + 4, picSide, picSide, '1 1 1');
+          cmds.push('q ' + picSide + ' 0 0 ' + picSide + ' ' + (ML + 8) + ' ' + (y - barH + 4) + ' cm /' + pic.res + ' Do Q');
+          nameX = ML + 12 + picSide + 4;
+        }
+        txt('F1', 12, GOLD, nameX, y - (pic ? 18 : 12), clipFit(name, CW - (nameX - ML) - (meta.length ? 180 : 20), 12));
+        if (meta.length) txt('F2', 7, '0.75 0.65 0.35', ML + 300, y - (pic ? 18 : 12), clipFit(meta.join('  ·  '), 210, 7));
         cols.forEach(function (c) {
-          txt('F1', 6.5, GOLD, c.x + 4, y - 28, c.label);
+          txt('F1', 6.5, GOLD, c.x + 4, y - (pic ? 42 : 28), c.label);
         });
         y -= barH + 4;
 
@@ -54210,10 +54272,17 @@ function buildWorkoutPdfBytes(opts) {
   pages.forEach(function (stream) {
     contentIds.push(addObj('<< /Length ' + stream.length + ' >>\nstream\n' + stream + '\nendstream'));
   });
+  var xobjectEntries = [];
+  imageStreams.forEach(function (entry) {
+    var id = addObj('<< /Type /XObject /Subtype /Image /Width ' + entry.img.width + ' /Height ' + entry.img.height +
+      ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + entry.img.jpeg.length + ' >>\nstream\n' + entry.img.jpeg + '\nendstream');
+    xobjectEntries.push('/' + entry.res + ' ' + id + ' 0 R');
+  });
+  var xobjectDict = xobjectEntries.length ? (' /XObject << ' + xobjectEntries.join(' ') + ' >>') : '';
   var pageObjIds = [];
   var pagesId = addObj('');
   pages.forEach(function (_, i) {
-    pageObjIds.push(addObj('<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Contents ' + contentIds[i] + ' 0 R /Resources << /Font << /F1 ' + f1 + ' 0 R /F2 ' + f2 + ' 0 R >> /ExtGState << /GS0 << /Type /ExtGState /ca 0.08 /CA 0.08 >> >> >> >>'));
+    pageObjIds.push(addObj('<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Contents ' + contentIds[i] + ' 0 R /Resources << /Font << /F1 ' + f1 + ' 0 R /F2 ' + f2 + ' 0 R >>' + xobjectDict + ' /ExtGState << /GS0 << /Type /ExtGState /ca 0.08 /CA 0.08 >> >> >> >>'));
   });
   objs[pagesId - 1] = '<< /Type /Pages /Kids [' + pageObjIds.map(function (id) { return id + ' 0 R'; }).join(' ') + '] /Count ' + pageObjIds.length + ' >>';
   var catalogId = addObj('<< /Type /Catalog /Pages ' + pagesId + ' 0 R >>');
@@ -54267,7 +54336,7 @@ function shareOrSavePdfBlob(blob, filename, shareText) {
   };
   reader.readAsDataURL(blob);
 }
-function exportWorkoutPdf() {
+async function exportWorkoutPdf() {
   const opts = collectWorkoutPdfExportOpts();
   if (!opts.loadMode) {
     alert('Scegli cosa includere nei carichi: già registrati, previsti, entrambi o solo schema.');
@@ -54279,6 +54348,14 @@ function exportWorkoutPdf() {
   }
   closeWorkoutPdfExportModal();
   try {
+    if (!opts.skipTraining) {
+      try {
+        opts.images = await withBusy(function () { return loadWorkoutPdfImages(workoutPdfExerciseNames()); },
+          'Preparo le immagini…', { immediate: true, maxMs: 30000 });
+      } catch (imgErr) {
+        console.warn('[exportWorkoutPdf] immagini non disponibili', imgErr);
+      }
+    }
     const bytes = buildWorkoutPdfBytes(opts);
     const blob = new Blob([bytes], { type: 'application/pdf' });
     const stamp = new Date().toISOString().slice(0, 10);
@@ -55046,9 +55123,11 @@ function ensureRewardsReady() {
   return store.rewards;
 }
 
+// Gamification is off. XP, levels, badges and the experience choice at first
+// launch are not part of the app right now; what the engine recorded is left
+// untouched in store.rewards, so turning it back on is one line here.
 function isRewardsMode() {
-  ensureRewardsReady();
-  return store.rewards && store.rewards.mode === 'rewards';
+  return false;
 }
 
 function applyFocusUi() {
@@ -55097,11 +55176,6 @@ function maybeShowIosInstallHint() {
   } catch (_) {}
   try { if (localStorage.getItem('NURVAN_IOS_INSTALL_DISMISSED') === '1') return; } catch (_) {}
   if (!isIosDevice()) return;
-  const rewards = document.getElementById('rewards-onboarding-modal');
-  if (rewards && (rewards.style.display === 'flex' || getComputedStyle(rewards).display === 'flex')) {
-    setTimeout(maybeShowIosInstallHint, 1800);
-    return;
-  }
   const sheet = document.getElementById('ios-install-sheet');
   if (!sheet) return;
   const copy = document.getElementById('ios-install-copy');
@@ -55174,20 +55248,9 @@ function registerNurvanServiceWorker() {
 }
 
 function maybeShowRewardsOnboarding() {
+  // Nothing to choose any more: the app starts straight on training.
   ensureRewardsReady();
-  try {
-    if (localStorage.getItem('NURVAN_REWARDS_ONBOARD_DONE') === '1') {
-      store.rewards.onboardingDone = true;
-    }
-  } catch (_) {}
-  if (store.rewards.onboardingDone) {
-    applyFocusUi();
-    return;
-  }
-  const modal = $('rewards-onboarding-modal');
-  if (!modal) return;
-  modal.style.display = 'flex';
-  pushUiOverlay('rewards-onboarding-modal');
+  applyFocusUi();
 }
 
 function closeRewardsOnboarding() {
@@ -55502,8 +55565,6 @@ function renderAthleteProfile(container) {
       (r.xp || 0) + ' XP · streak ' + (r.streakDays || 0) + 'g · ' + (r.workoutCount || 0) + ' WO' +
       (r.prCount ? (' · ' + r.prCount + ' PR') : '') +
       (r.topPercent != null ? (' · Top ' + r.topPercent + '%') : '') + '</div>';
-  } else {
-    html += '<div style="font-size:12px;color:#888;">Focus Mode — gamification nascosta</div>';
   }
   html += '</div>';
 
