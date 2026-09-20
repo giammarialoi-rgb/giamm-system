@@ -119,8 +119,40 @@ export function mergeAccountDataBlobs(current, incoming) {
     byId[row.id || row.at] = row;
   });
   const logs = Object.keys(byId).map((k) => byId[k]).sort((a, b) => String(a.at || "").localeCompare(String(b.at || "")));
-  if (logs.length) merged.logs = logs.slice(-80);
+  // A year and more of sessions. At eighty, a person training four times a
+  // week lost the older ones from the record - and with them everything a new
+  // phone could have shown.
+  if (logs.length) merged.logs = logs.slice(-400);
   else if (Array.isArray(cur.logs) && cur.logs.length) merged.logs = cur.logs;
+  // Saved programs are the person's own: kept by id from both sides.
+  {
+    const byModel = {};
+    (Array.isArray(cur.models) ? cur.models : []).concat(Array.isArray(inc.models) ? inc.models : []).forEach((m) => {
+      if (m && m.id) byModel[m.id] = m;
+    });
+    const models = Object.keys(byModel).map((k) => byModel[k]);
+    if (models.length) merged.models = models.slice(-12);
+  }
+  // Histories: whichever side has more of it, rather than the one that
+  // happened to sync last.
+  for (const key of ["chatHistory", "actionHistory"]) {
+    const a = Array.isArray(cur[key]) ? cur[key] : [];
+    const b = Array.isArray(inc[key]) ? inc[key] : [];
+    merged[key] = b.length >= a.length ? b : a;
+  }
+  // Something switched on stays on: unlocking the coach hub or finishing the
+  // tutorial on one device is true everywhere.
+  for (const key of ["coachUnlocked", "clientTutorialDone"]) {
+    merged[key] = !!(cur[key] || inc[key]);
+  }
+  for (const key of ["intelligence", "bodyComposition", "nutritionLoop", "seasonBoard"]) {
+    if (inc[key] == null && cur[key] != null) merged[key] = cur[key];
+  }
+  {
+    const a = cur.intelTargets && typeof cur.intelTargets === "object" ? cur.intelTargets : {};
+    const b = inc.intelTargets && typeof inc.intelTargets === "object" ? inc.intelTargets : {};
+    if (Object.keys(a).length || Object.keys(b).length) merged.intelTargets = { ...a, ...b };
+  }
   // Never let an empty/sandbox program wipe a richer cloud scheda
   const curWeeks = cur.activeProgram && Array.isArray(cur.activeProgram.weeks) ? cur.activeProgram.weeks.length : 0;
   const incWeeks = inc.activeProgram && Array.isArray(inc.activeProgram.weeks) ? inc.activeProgram.weeks.length : 0;

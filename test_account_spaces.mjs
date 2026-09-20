@@ -174,6 +174,48 @@ function spaceSandbox(initial) {
   ok(built.includes('nurvan-locked') && built.includes('personalStoreKeyFor'), 'the built app carries all of it');
 }
 
+// --- everything the account owns travels with the account ------------------
+{
+  const at = base.indexOf('function accountPayload(opts)');
+  const payload = base.slice(at, base.indexOf('\nfunction accountDataScore', at));
+  ['models', 'chatHistory', 'actionHistory', 'intelligence', 'intelTargets', 'bodyComposition', 'nutritionLoop', 'seasonBoard', 'coachUnlocked', 'clientTutorialDone']
+    .forEach((k) => ok(new RegExp('\\n\\s*' + k + ':').test(payload), 'the cloud record carries ' + k + ', which used to stay on one device'));
+  ok(/logs: Array\.isArray\(logsSrc\) \? logsSrc\.slice\(-400\)/.test(payload),
+    'and a year and more of sessions instead of the last eighty');
+  ok(/bodyChecks\.slice\(-100\)|bodyChecksSrc\.slice\(-100\)/.test(payload), 'and a hundred body checks instead of sixteen');
+  ok(/models\.slice\(-8\)|modelsSrc\.slice\(-8\)/.test(payload) && /delete data\.exerciseDb/.test(payload),
+    'saved programs travel too, without the exercise database each import drags along');
+
+  const apply = base.slice(base.indexOf('function applyRemoteAccountData'), base.indexOf('function looksLikeClientAssignDraft'));
+  ['remote.models', 'remote.chatHistory', 'remote.actionHistory', 'remote.intelTargets', 'remote.coachUnlocked']
+    .forEach((k) => ok(apply.includes(k), 'a device coming back picks up ' + k.replace('remote.', '')));
+}
+{
+  const { mergeAccountDataBlobs } = await import('./server/account/index.mjs');
+  const a = {
+    models: [{ id: 'm1', name: 'uno' }],
+    chatHistory: [{ text: 'a' }, { text: 'b' }],
+    logs: Array.from({ length: 300 }, (_, i) => ({ id: 'l' + i, at: '2026-01-' + String((i % 28) + 1).padStart(2, '0') })),
+    coachUnlocked: true,
+    intelTargets: { petto: 12 }
+  };
+  const b = {
+    models: [{ id: 'm2', name: 'due' }],
+    chatHistory: [{ text: 'a' }],
+    logs: [{ id: 'l999', at: '2026-02-01' }],
+    coachUnlocked: false,
+    intelTargets: { dorso: 14 }
+  };
+  const merged = mergeAccountDataBlobs(a, b);
+  ok(merged.models.length === 2, 'the server keeps saved programs from both devices');
+  ok(merged.chatHistory.length === 2, 'and the longer conversation, not the one that synced last');
+  ok(merged.logs.length === 301, 'sessions from both sides are kept');
+  ok(merged.coachUnlocked === true, 'something unlocked on one device stays unlocked');
+  ok(merged.intelTargets.petto === 12 && merged.intelTargets.dorso === 14, 'and targets set on either device survive');
+  const many = mergeAccountDataBlobs({ logs: Array.from({ length: 500 }, (_, i) => ({ id: 'x' + i, at: '2026-03-01' })) }, {});
+  ok(many.logs.length === 400, 'with a ceiling of 400 sessions rather than 80');
+}
+
 // --- the database really is per account ------------------------------------
 {
   const engine = new GiammariaPersistenceEngine();

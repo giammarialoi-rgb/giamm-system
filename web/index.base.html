@@ -4910,10 +4910,14 @@ function accountPayload(opts){
   const dayOut = bak
     ? (typeof bak.currentDay === 'number' ? bak.currentDay : 0)
     : (typeof currentDay !== 'undefined' ? currentDay : (typeof store.trainingDay === 'number' ? store.trainingDay : 0));
+  const modelsSrc = bak ? bak.models : store.models;
   const payload = {
     prefs: store.prefs || {},
     profile: profileOut,
-    logs: Array.isArray(logsSrc) ? logsSrc.slice(-80) : [],
+    // A year and more of sessions, not the last eighty: what the cloud keeps
+    // is what a new phone can show, and history that never left the old phone
+    // was history lost the moment it was replaced.
+    logs: Array.isArray(logsSrc) ? logsSrc.slice(-400) : [],
     data: dataSrc || {},
     customSets: customSetsSrc || {},
     bw: bwSrc || {},
@@ -4939,14 +4943,33 @@ function accountPayload(opts){
     nutritionDaily: nutritionDailySrc || {},
     warmups: warmupsSrc || {},
     warmupProgress: warmupProgressSrc || {},
-    calendarEvents: Array.isArray(store.calendarEvents) ? store.calendarEvents.slice(-80) : [],
+    calendarEvents: Array.isArray(store.calendarEvents) ? store.calendarEvents.slice(-400) : [],
+    // The rest of what the app remembers about the person, which used to stay
+    // on whichever device happened to produce it.
+    chatHistory: Array.isArray(store.chatHistory) ? store.chatHistory.slice(-120) : [],
+    actionHistory: Array.isArray(store.actionHistory) ? store.actionHistory.slice(-200) : [],
+    intelligence: store.intelligence || null,
+    intelTargets: store.intelTargets || {},
+    bodyComposition: store.bodyComposition || null,
+    nutritionLoop: store.nutritionLoop || null,
+    seasonBoard: store.seasonBoard || null,
+    coachUnlocked: !!store.coachUnlocked,
+    clientTutorialDone: !!store.clientTutorialDone,
+    // Saved programs: the program itself, without the exercise database each
+    // import drags along, which is rebuilt on any device anyway.
+    models: Array.isArray(modelsSrc) ? modelsSrc.slice(-8).map(function (m) {
+      if (!m || typeof m !== 'object') return null;
+      const data = m.data && typeof m.data === 'object' ? Object.assign({}, m.data) : m.data;
+      if (data && typeof data === 'object') { delete data.exerciseDb; delete data.exerciseAliases; }
+      return { id: m.id, name: m.name, sourceDocument: m.sourceDocument, date: m.date, data: data };
+    }).filter(Boolean) : [],
     coachArchives: Array.isArray(store.coachArchives) ? store.coachArchives.slice(0, 24).map(function (a) {
       return {
         id: a && a.id, at: a && a.at, preview: a && a.preview,
         messages: Array.isArray(a.messages) ? a.messages.slice(-12) : []
       };
     }) : [],
-    bodyChecks: Array.isArray(bodyChecksSrc) ? bodyChecksSrc.slice(-16).map(function (c) {
+    bodyChecks: Array.isArray(bodyChecksSrc) ? bodyChecksSrc.slice(-100).map(function (c) {
       return {
         id: c && c.id, at: c && c.at, weight: c && c.weight, period: c && c.period,
         notes: c && c.notes, hasFront: !!(c && c.hasFront), hasBack: !!(c && c.hasBack),
@@ -4963,7 +4986,7 @@ function accountPayload(opts){
         payload: e && e.payload
       };
     }) : [],
-    customEx: Array.isArray(store.customEx) ? store.customEx.slice(0, 200).map(function (e) {
+    customEx: Array.isArray(store.customEx) ? store.customEx.slice(0, 500).map(function (e) {
       return {
         name: e && e.name,
         muscle_group: e && e.muscle_group,
@@ -5035,7 +5058,28 @@ function applyRemoteAccountData(remote, preferLocal) {
     currentDay = Math.max(0, Number(remote.currentDay) || 0);
     store.trainingDay = currentDay;
   }
-  if (Array.isArray(remote.logs) && remote.logs.length) {
+  // Same rule for everything the account remembers: the two sides are put
+  // together, and a device that has been away for a while adds to what is
+  // there rather than replacing it.
+  if (Array.isArray(remote.chatHistory) && remote.chatHistory.length > (store.chatHistory || []).length) {
+    store.chatHistory = remote.chatHistory.slice(-120);
+  }
+  if (Array.isArray(remote.actionHistory) && remote.actionHistory.length > (store.actionHistory || []).length) {
+    store.actionHistory = remote.actionHistory.slice(-200);
+  }
+  if (Array.isArray(remote.models) && remote.models.length) {
+    const byModel = {};
+    (store.models || []).concat(remote.models).forEach(function (m) { if (m && m.id) byModel[m.id] = m; });
+    store.models = Object.keys(byModel).map(function (k) { return byModel[k]; }).slice(-12);
+  }
+  if (remote.intelligence && !store.intelligence) store.intelligence = remote.intelligence;
+  if (remote.intelTargets) store.intelTargets = Object.assign({}, remote.intelTargets, store.intelTargets || {});
+  if (remote.bodyComposition && !store.bodyComposition) store.bodyComposition = remote.bodyComposition;
+  if (remote.nutritionLoop && !store.nutritionLoop) store.nutritionLoop = remote.nutritionLoop;
+  if (remote.seasonBoard && !store.seasonBoard) store.seasonBoard = remote.seasonBoard;
+  if (remote.coachUnlocked) store.coachUnlocked = true;
+  if (remote.clientTutorialDone) store.clientTutorialDone = true;
+    if (Array.isArray(remote.logs) && remote.logs.length) {
     const byId = {};
     (store.logs || []).concat(remote.logs).forEach(function (row) {
       if (!row) return;
@@ -5043,7 +5087,7 @@ function applyRemoteAccountData(remote, preferLocal) {
     });
     store.logs = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
       return String(a.at || '').localeCompare(String(b.at || ''));
-    }).slice(-80);
+    }).slice(-400);
   }
   if (!preferLocal) {
     store.prefs = Object.assign({}, remote.prefs || {}, store.prefs || {});
@@ -5070,7 +5114,7 @@ function applyRemoteAccountData(remote, preferLocal) {
       });
       store.bodyChecks = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
         return String(a.at || '').localeCompare(String(b.at || ''));
-      }).slice(-16);
+      }).slice(-100);
     }
     if (remote.health) store.health = Object.assign({}, store.health || {}, remote.health);
     if (remote.activeProgramId) store.activeProgramId = store.activeProgramId || remote.activeProgramId;
@@ -21510,7 +21554,7 @@ function finalizeWorkout(){
     prCount: prCount
   };
   store.logs.push(logEntry);
-  if (store.logs.length > 60) store.logs = store.logs.slice(-60);
+  if (store.logs.length > 400) store.logs = store.logs.slice(-400);
   try {
     ensureIntelligenceStore();
     const TAE = window.TrainingAnalyticsEngine;
