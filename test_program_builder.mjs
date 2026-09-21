@@ -282,6 +282,105 @@ function programOf(days) {
     '3ai. duplicating again lands next to the original with a free name');
 }
 
+/* ---------- 3quater. effort running past the prescription ---------- */
+function loggedProgram() {
+  return {
+    id: 'p1',
+    duration_weeks: 4,
+    weeks: [1, 2, 3, 4].map((w) => ({
+      week: w,
+      label: 'Settimana ' + w,
+      sessions: [
+        {
+          name: 'Upper',
+          exercises: [
+            { name: 'Panca piana bilanciere', rirTarget: 2, setCount: 3, repsTarget: '5', sets: [{ reps: '5', target_load: 100 }, { reps: '5', target_load: 100 }, { reps: '5', target_load: 100, technique: 'drop_set' }] },
+            { name: 'Curl bilanciere', rirTarget: 2, setCount: 2, repsTarget: '10', sets: [{ reps: '10' }, { reps: '10' }] }
+          ]
+        }
+      ]
+    }))
+  };
+}
+{
+  ctx.DATA = loggedProgram();
+  ctx.currentWeek = 2;
+  ctx.currentDay = 0;
+  ctx.store.prefs = {};
+  ctx.store.logs = [{ week: 1, day: 0 }, { week: 2, day: 0 }];
+  ctx.store.data = {};
+  // Prescribed RIR 2, logged RIR 0 all over: effort is running past the plan.
+  [1, 2].forEach((w) => {
+    for (let s = 1; s <= 3; s++) ctx.store.data['w' + w + '_d0_e0_s' + s + '_rir'] = 0;
+    for (let s = 1; s <= 2; s++) ctx.store.data['w' + w + '_d0_e1_s' + s + '_rir'] = 1;
+  });
+  const hot = ctx.effortOvershootReport();
+  ok(hot.sets === 10 && hot.sessions === 2, '3aj. the report reads the sets that were actually logged');
+  ok(hot.mean >= 1 && hot.ready === true, '3ak. and flags a block that keeps overshooting its own prescription');
+
+  // Training as prescribed must never raise it.
+  ctx.store.data = {};
+  [1, 2].forEach((w) => {
+    for (let s = 1; s <= 3; s++) ctx.store.data['w' + w + '_d0_e0_s' + s + '_rir'] = 2;
+    for (let s = 1; s <= 2; s++) ctx.store.data['w' + w + '_d0_e1_s' + s + '_rir'] = 3;
+  });
+  ok(ctx.effortOvershootReport().ready === false, '3al. training as written raises nothing');
+
+  // Two hard sets are a hard day, not a pattern.
+  ctx.store.data = { 'w2_d0_e0_s1_rir': 0, 'w2_d0_e0_s2_rir': 0 };
+  ok(ctx.effortOvershootReport().ready === false, '3am. and a couple of hard sets is a hard day, not a pattern');
+}
+
+/* ---------- 3quinquies. dropping a lighter week in ---------- */
+{
+  ctx.DATA = loggedProgram();
+  ctx.currentWeek = 2;
+  ctx.currentDay = 0;
+  ctx.store.prefs = {};
+  ctx.store.data = { 'w1_d0_e0_s1_load': 100, 'w2_d0_e0_s1_load': 102, 'w3_d0_e0_s1_load': 104, 'w4_d0_e0_s1_load': 106 };
+  ctx.store.subs = { 'w3_d0_e0': 'Panca presa stretta' };
+  ctx.store.bw = { 1: 80, 2: 80.5, 3: 81 };
+  ctx.store.warmups = { w1_d0: { items: [1] }, w3_d0: { items: [3] } };
+  ctx.store.bonus = { w3_d0: [{ name: 'Curl' }] };
+  ctx.store.customSets = {}; ctx.store.tempos = {}; ctx.store.skips = {};
+  ctx.store.loadTypes = {}; ctx.store.exMuscle = {}; ctx.store.exIntensity = {}; ctx.store.intelTargets = {};
+  ctx.store.warmupProgress = {};
+
+  ctx.insertDeloadWeek('volume');
+  ok(ctx.DATA.weeks.length === 5, '3an. the week is inserted, the program gets one longer');
+  ok(/Scarico volume/i.test(ctx.DATA.weeks[2].label), '3ao. right after the week being trained, and it says what it is');
+  ok(ctx.DATA.weeks.map((w) => w.week).join(',') === '1,2,3,4,5', '3ap. the weeks are renumbered in order');
+  ok(ctx.DATA.duration_weeks === 5, '3aq. and the program knows its new length');
+
+  const deloadRows = ctx.DATA.weeks[2].sessions[0].exercises;
+  ok(deloadRows[0].sets.length === 2 && deloadRows[0].setCount === 2, '3ar. half the sets, rounded up');
+  ok(deloadRows[0].sets.every((s) => s.target_load === 100), '3as. at the same loads - it is a volume deload');
+  ok(deloadRows[0].rirTarget === 3, '3at. one RIR further from failure');
+  ok(!deloadRows[0].sets.some((s) => s.technique), '3au. and no intensity technique survives into a deload');
+
+  ok(ctx.store.data['w1_d0_e0_s1_load'] === 100 && ctx.store.data['w2_d0_e0_s1_load'] === 102,
+    '3av. what was already trained keeps its place');
+  ok(ctx.store.data['w4_d0_e0_s1_load'] === 104 && ctx.store.data['w5_d0_e0_s1_load'] === 106,
+    '3aw. and every later week, with its records, slides down one');
+  ok(ctx.store.subs['w4_d0_e0'] === 'Panca presa stretta' && !('w3_d0_e0' in ctx.store.subs),
+    '3ax. substitutions slide with their week');
+  ok(ctx.store.bw[4] === 81 && ctx.store.bw[1] === 80, '3ay. so does the bodyweight logged per week');
+  ok(ctx.store.warmups.w4_d0 && ctx.store.warmups.w4_d0.items[0] === 3 && !ctx.store.warmups.w3_d0,
+    '3az. so does the warm-up written for that week');
+  ok(ctx.store.bonus.w4_d0 && !ctx.store.bonus.w3_d0, '3ba. and the bonus of that day');
+
+  // An intensity deload keeps the work and lowers the load.
+  ctx.DATA = loggedProgram();
+  ctx.currentWeek = 1;
+  ctx.store.data = {}; ctx.store.subs = {}; ctx.store.bw = {}; ctx.store.warmups = {}; ctx.store.bonus = {};
+  ctx.insertDeloadWeek('intensity');
+  const int = ctx.DATA.weeks[1].sessions[0].exercises[0];
+  ok(int.sets.length === 3, '3bb. an intensity deload keeps every set');
+  ok(int.sets.every((s) => s.target_load === 90), '3bc. and takes ten per cent off the bar');
+  ok(int.rirTarget === 4, '3bd. two RIR further from failure');
+  ok(/intensità/i.test(int.notes), '3be. with the reason written on it');
+}
+
 /* ---------- 4. how it is reached ---------- */
 {
   ok(/onclick="openProgramBuilder\(\)"/.test(html), '4a. PROGRAMMI has a way into the builder');
@@ -304,7 +403,9 @@ function programOf(days) {
     'addProgramDraftExercise', 'removeProgramDraftExercise', 'moveProgramDraftExercise',
     'openExercisePicker', 'closeExercisePicker', 'renderExercisePickerResults', 'pickExerciseFromPicker',
     'openAddExerciseToProgram', 'openAddToProgramConfig', 'closeAddToProgramConfig', 'confirmAddExerciseToProgram',
-    'duplicateProgramDraftDay', 'moveWorkoutExercise'
+    'duplicateProgramDraftDay', 'moveWorkoutExercise',
+    'setProgramDraftModel', 'setProgramDraftLoadDisplay', 'setProgramDraftMax',
+    'insertDeloadWeek', 'closeDeloadSuggestion'
   ];
   for (const fn of exported) {
     ok(html.includes('window.' + fn + ' = ' + fn + ';'), '4f. ' + fn + ' is reachable from an onclick');

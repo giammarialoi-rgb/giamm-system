@@ -18,7 +18,8 @@ const PRECACHE = [
   './domain-merge.js',
   './exercise-taxonomy.js',
   './program-builder.js',
-  './program-catalog.js'
+  './program-catalog.js',
+  './progression-models.js'
 ];
 
 self.addEventListener('install', (event) => {

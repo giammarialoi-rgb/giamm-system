@@ -67,6 +67,7 @@
 <script src="exercise-taxonomy.js"></script>
 <script src="program-builder.js"></script>
 <script src="program-catalog.js"></script>
+<script src="progression-models.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -22206,6 +22207,12 @@ function closeWorkoutCompleteOverlay(goto) {
   popUiOverlay('workout-complete-overlay');
   if (goto === 'stats') navigate('stats');
   maybeAskCoachAfterComplete();
+  // Asked here rather than during the session: the effort is measured over
+  // the last sessions, and the moment to decide about next week is when this
+  // one is closed.
+  if (typeof maybeSuggestDeloadWeek === 'function') {
+    setTimeout(function () { maybeSuggestDeloadWeek(); }, 400);
+  }
 }
 
 function shareWorkoutCardFromOverlay() {
@@ -28798,19 +28805,136 @@ function renderProgramBuilder() {
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeProgramBuilder()">CHIUDI</button>' +
     '</div>' +
     '<div class="nurvan-sheet-body">' +
-    '<div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:12px;">' +
-    '<label style="font-size:9px;color:#888;">Nome della scheda<input type="text" value="' + esc(d.title || '') + '" placeholder="Es. Upper/Lower autunno" oninput="updateProgramDraftField(\'title\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
-    '<label style="font-size:9px;color:#888;">Settimane<input type="number" min="1" max="52" value="' + (Number(d.weeks) || 8) + '" oninput="updateProgramDraftField(\'weeks\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
-    '</div>' +
-    '<p style="font-size:11px;color:#888;margin:0 0 12px;line-height:1.45;">I giorni che scrivi qui sono una settimana di allenamento: vengono ripetuti per tutte le settimane, e da lì in poi modifichi quello che vuoi settimana per settimana.</p>' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:12px;">Nome della scheda<input type="text" value="' + esc(d.title || '') + '" placeholder="Es. Upper/Lower autunno" oninput="updateProgramDraftField(\'title\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '<p style="font-size:11px;color:#888;margin:0 0 12px;line-height:1.45;">Scrivi una settimana di allenamento. Sotto decidi quanto dura la scheda e come deve progredire.</p>' +
     daysHtml +
-    '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;padding:10px;margin-bottom:10px;" onclick="addProgramDraftDay()">+ AGGIUNGI GIORNO</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;padding:10px;margin-bottom:14px;" onclick="addProgramDraftDay()">+ AGGIUNGI GIORNO</button>' +
+    programDraftProgressionHtml(d, inputStyle) +
     '<button type="button" class="btn btn-outline" style="width:100%;font-size:10px;padding:8px;color:#c66;border-color:#c66;" onclick="discardProgramDraft()">SVUOTA LA BOZZA</button>' +
     '</div>' +
     '<div class="nurvan-sheet-foot">' +
     '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="createProgramFromDraft()">CREA E ATTIVA</button>' +
     '</div></div>';
   document.body.appendChild(sheet);
+}
+
+// How long it lasts and how it progresses: the second half of writing a
+// program, and the part that turns one written week into a block.
+function programDraftProgressionHtml(d, inputStyle) {
+  var engine = (typeof window !== 'undefined' && window.NurvanProgressions) || null;
+  if (!engine) return '';
+  var modelId = d.modelId || 'none';
+  var model = engine.get(modelId);
+  var groups = [
+    { family: 'none', label: '' },
+    { family: 'bodybuilding', label: 'Bodybuilding / ipertrofia' },
+    { family: 'powerlifting', label: 'Powerlifting / streetlifting' }
+  ];
+  var options = groups.map(function (g) {
+    var items = engine.list(g.family).map(function (m) {
+      return '<option value="' + esc(m.id) + '"' + (m.id === modelId ? ' selected' : '') + '>' + esc(m.label) + '</option>';
+    }).join('');
+    return g.label ? ('<optgroup label="' + esc(g.label) + '">' + items + '</optgroup>') : items;
+  }).join('');
+
+  var html = '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(212,175,55,0.35);">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:10px;">DURATA E PROGRESSIONE</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:10px;">' +
+    '<label style="font-size:9px;color:#888;">Settimane<input type="number" min="1" max="52" value="' + (Number(d.weeks) || 8) + '" oninput="updateProgramDraftField(\'weeks\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '<label style="font-size:9px;color:#888;">Progressione<select onchange="setProgramDraftModel(this.value)" style="width:100%;margin-top:2px;' + inputStyle + '">' + options + '</select></label>' +
+    '</div>' +
+    '<div style="font-size:11px;color:#ccc;line-height:1.45;">' + esc(model.summary || '') + '</div>' +
+    (model.detail ? '<div style="font-size:11px;color:#888;line-height:1.45;margin-top:6px;">' + esc(model.detail) + '</div>' : '') +
+    (model.evidence ? '<div style="font-size:10px;color:#666;margin-top:6px;">' + esc(model.evidence) + '</div>' : '') +
+    (model.deloadEvery ? '<div style="font-size:10px;color:#81c784;margin-top:6px;">Scarico automatico ogni ' + model.deloadEvery + ' settimane</div>' : '');
+
+  if (model.family === 'powerlifting') {
+    var lifts = engine.competitionLiftsIn(draftSessionsForProgression(d));
+    var display = d.loadDisplay || 'percent';
+    html += '<div style="margin-top:12px;border-top:1px solid #262626;padding-top:10px;">' +
+      '<label style="font-size:9px;color:#888;display:block;">Come scrivo i carichi delle alzate' +
+      '<select onchange="setProgramDraftLoadDisplay(this.value)" style="width:100%;margin-top:2px;' + inputStyle + '">' +
+      '<option value="percent"' + (display === 'percent' ? ' selected' : '') + '>Solo percentuali del massimale</option>' +
+      '<option value="kg"' + (display === 'kg' ? ' selected' : '') + '>Chilogrammi (serve il massimale)</option>' +
+      '<option value="rir"' + (display === 'rir' ? ' selected' : '') + '>RPE / RIR (se non hai massimali)</option>' +
+      '</select></label>';
+    if (!lifts.length) {
+      html += '<div style="font-size:11px;color:#e0b040;margin-top:8px;line-height:1.45;">Nessuna alzata di gara riconosciuta tra i tuoi esercizi. La progressione agirà solo sugli accessori: aggiungi squat, panca, stacco, military, trazioni o dip per vederla lavorare sulle alzate.</div>';
+    } else if (display === 'kg') {
+      html += '<div style="font-size:10px;color:#888;margin-top:10px;">MASSIMALI (lascia vuoto quello che non conosci: lì la scheda scrive percentuale e RPE)</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">' +
+        lifts.map(function (id) {
+          var isBw = engine.isBodyweightLift(id);
+          return '<label style="font-size:9px;color:#888;">' + esc(engine.liftLabel(id)) + (isBw ? ' (zavorra)' : '') +
+            '<input type="number" step="0.5" min="0" value="' + esc(((d.maxes || {})[id] != null) ? String(d.maxes[id]) : '') + '" placeholder="kg" oninput="setProgramDraftMax(\'' + esc(id) + '\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>';
+        }).join('') +
+        '</div>' +
+        '<div style="font-size:10px;color:#666;margin-top:6px;line-height:1.4;">Per trazioni e dip il massimale è la zavorra: le percentuali sono calcolate su peso corporeo + zavorra, e la scheda scrive quanto appendere.</div>';
+    } else {
+      html += '<div style="font-size:11px;color:#888;margin-top:8px;line-height:1.45;">' +
+        (display === 'percent'
+          ? 'La scheda scriverà 5×3 @80%: stessa scheda utilizzabile da atleti con massimali diversi.'
+          : 'La scheda scriverà lo sforzo bersaglio (RPE 8 / RIR 2): il carico lo scegli in giornata.') + '</div>';
+    }
+    html += '<div style="font-size:11px;color:#81c784;margin-top:8px;">L\'ultima settimana è il test del massimale. Le tecniche di intensità restano sugli accessori, mai sulle alzate di gara.</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// The week the progression will be given, in the shape it expects.
+function draftSessionsForProgression(d) {
+  return (d.days || []).filter(function (day) { return (day.exercises || []).length; }).map(function (day, di) {
+    var dayName = String(day.name || '').trim() || ('Giorno ' + (di + 1));
+    return {
+      name: dayName,
+      title: dayName,
+      exercises: (day.exercises || []).map(function (ex) { return programExerciseRow(ex); })
+    };
+  });
+}
+
+function setProgramDraftModel(id) {
+  var d = programDraft();
+  d.modelId = id || 'none';
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.setProgramDraftModel = setProgramDraftModel;
+
+function setProgramDraftLoadDisplay(mode) {
+  var d = programDraft();
+  d.loadDisplay = (mode === 'kg' || mode === 'rir') ? mode : 'percent';
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.setProgramDraftLoadDisplay = setProgramDraftLoadDisplay;
+
+function setProgramDraftMax(liftId, value) {
+  var d = programDraft();
+  if (!d.maxes) d.maxes = {};
+  var n = parseFloat(value);
+  if (!(n > 0)) delete d.maxes[liftId];
+  else d.maxes[liftId] = n;
+}
+window.setProgramDraftMax = setProgramDraftMax;
+
+// Bodyweight matters for pull-ups and dips: a percentage of a weighted
+// chin-up max is a percentage of the whole system, not of the belt.
+function currentBodyweightKg() {
+  try {
+    if (store.bw && typeof store.bw === 'object') {
+      var weeks = Object.keys(store.bw).map(Number).filter(function (n) { return !isNaN(n); }).sort(function (a, b) { return b - a; });
+      for (var i = 0; i < weeks.length; i++) {
+        var v = Number(store.bw[weeks[i]]);
+        if (v > 0) return v;
+      }
+    }
+    var p = store.profile && (store.profile.weight || store.profile.bodyweight);
+    if (Number(p) > 0) return Number(p);
+  } catch (_) {}
+  return 0;
 }
 
 // Typing does not redraw the sheet: it would take the cursor out of the field
@@ -28932,32 +29056,40 @@ window.discardProgramDraft = discardProgramDraft;
 function programFromDraft(draft) {
   var weekCount = Math.min(52, Math.max(1, Number(draft.weeks) || 8));
   var days = (draft.days || []).filter(function (day) { return (day.exercises || []).length; });
-  var weeks = [];
-  for (var w = 1; w <= weekCount; w++) {
-    weeks.push({
-      week: w,
-      weekNumber: w,
-      week_number: w,
-      label: 'Settimana ' + w,
-      sessions: days.map(function (day, di) {
-        var dayName = String(day.name || '').trim() || ('Giorno ' + (di + 1));
-        return {
-          name: dayName,
-          title: dayName,
-          exercises: (day.exercises || []).map(function (ex) {
-            return programExerciseRow(ex);
-          })
-        };
-      })
+  var template = draftSessionsForProgression(draft);
+  var engine = (typeof window !== 'undefined' && window.NurvanProgressions) || null;
+  var modelId = draft.modelId || 'none';
+  var model = engine ? engine.get(modelId) : null;
+  var weeks;
+  if (engine) {
+    weeks = engine.weeksFromTemplate(template, {
+      weeks: weekCount,
+      modelId: modelId,
+      loadDisplay: draft.loadDisplay || 'percent',
+      maxes: draft.maxes || {},
+      bodyweight: currentBodyweightKg(),
+      techniques: draft.techniques || 'model'
     });
+  } else {
+    weeks = [];
+    for (var w = 1; w <= weekCount; w++) {
+      weeks.push({
+        week: w, weekNumber: w, week_number: w, label: 'Settimana ' + w,
+        sessions: JSON.parse(JSON.stringify(template))
+      });
+    }
   }
+  var summary = 'Scheda scritta a mano · ' + days.length + ' giorni · ' + weekCount + ' settimane';
+  if (model && model.id !== 'none') summary += ' · ' + model.label;
   return {
     id: 'custom_' + Date.now(),
     title: String(draft.title || '').trim() || 'Scheda personale',
     weeks: weeks,
     duration_weeks: weekCount,
     author: 'Scritta da te',
-    source_summary: 'Scheda scritta a mano · ' + days.length + ' giorni · ' + weekCount + ' settimane'
+    progression_model: modelId,
+    progression: { model: modelId, load_display: draft.loadDisplay || 'percent', maxes: draft.maxes || {} },
+    source_summary: summary
   };
 }
 
@@ -28992,8 +29124,11 @@ async function createProgramFromDraft() {
     return;
   }
   var skipped = (d.days || []).length - withExercises.length;
+  var engineForMsg = (typeof window !== 'undefined' && window.NurvanProgressions) || null;
+  var modelForMsg = engineForMsg ? engineForMsg.get(d.modelId || 'none') : null;
   var msg = 'Creare e attivare "' + String(d.title).trim() + '"?\n\n' +
     withExercises.length + ' giorni · ' + (Number(d.weeks) || 8) + ' settimane' +
+    (modelForMsg ? '\nProgressione: ' + modelForMsg.label : '') +
     (skipped ? '\n' + skipped + ' giorno/i vuoto/i non verranno inclusi.' : '') +
     '\n\nIl programma attivo verrà sostituito.';
   if (!confirm(msg)) return;
@@ -29219,6 +29354,220 @@ function moveWorkoutExercise(idx, dir) {
   if (typeof render === 'function') render();
 }
 window.moveWorkoutExercise = moveWorkoutExercise;
+
+/* ---------- when the effort keeps running past the prescription ---------- */
+//
+// The program asks for RIR 2 and the athlete keeps logging RIR 0. That is not
+// one hard session, it is a block that has outrun its own recovery, and it
+// shows in the numbers before it shows as a missed lift. It is measured over
+// the last finalized sessions, and then the athlete is asked - not told -
+// whether to drop a lighter week in. Both offered weeks are active: you still
+// train, you just stop digging.
+
+var DELOAD_LOOKBACK_SESSIONS = 3;
+var DELOAD_MIN_SETS = 10;
+
+function prescribedRirFor(row, set) {
+  if (set && set.rir != null) return Number(set.rir);
+  if (row && row.rirTarget != null) return Number(row.rirTarget);
+  if (row && row.rir != null) return Number(row.rir);
+  return 2;
+}
+
+function effortOvershootReport() {
+  var out = { sets: 0, over: 0, mean: 0, sessions: 0, ready: false };
+  if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks)) return out;
+  var logs = (store.logs || []).filter(function (l) { return l && l.week != null && l.day != null; });
+  var recent = logs.slice(-DELOAD_LOOKBACK_SESSIONS);
+  var total = 0;
+  recent.forEach(function (log) {
+    var week = Number(log.week) || 1;
+    var day = Number(log.day) || 0;
+    var list = sessionExercisesFor(week, day);
+    if (!list) return;
+    out.sessions += 1;
+    list.forEach(function (row, ei) {
+      var sets = Array.isArray(row.sets) && row.sets.length ? row.sets : [null, null, null];
+      for (var s = 1; s <= sets.length; s++) {
+        var logged = store.data['w' + week + '_d' + day + '_e' + ei + '_s' + s + '_rir'];
+        if (logged === undefined || logged === null || logged === '') continue;
+        var target = prescribedRirFor(row, sets[s - 1]);
+        var diff = target - Number(logged);
+        out.sets += 1;
+        if (diff >= 1) out.over += 1;
+        total += Math.max(0, diff);
+      }
+    });
+  });
+  out.mean = out.sets ? (total / out.sets) : 0;
+  out.ready = out.sets >= DELOAD_MIN_SETS && out.mean >= 1 && (out.over / out.sets) >= 0.6;
+  return out;
+}
+
+function maybeSuggestDeloadWeek() {
+  try {
+    if (!store || store.coachViewingClient) return;
+    if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return;
+    if (!store.prefs) store.prefs = {};
+    // Asked at most once per week of the program, and never again once the
+    // athlete has said no for that week.
+    if (Number(store.prefs.deloadPromptWeek) === Number(currentWeek)) return;
+    var report = effortOvershootReport();
+    if (!report.ready) return;
+    store.prefs.deloadPromptWeek = currentWeek;
+    try { persist(); } catch (_) {}
+    openDeloadSuggestionSheet(report);
+  } catch (err) {
+    console.warn('[DELOAD SUGGEST]', err);
+  }
+}
+window.maybeSuggestDeloadWeek = maybeSuggestDeloadWeek;
+
+function closeDeloadSuggestion() {
+  var el = document.getElementById('deload-suggestion-sheet');
+  if (el) el.remove();
+}
+window.closeDeloadSuggestion = closeDeloadSuggestion;
+
+function openDeloadSuggestionSheet(report) {
+  closeDeloadSuggestion();
+  var pct = Math.round((report.over / Math.max(1, report.sets)) * 100);
+  var sheet = document.createElement('div');
+  sheet.id = 'deload-suggestion-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10260';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeDeloadSuggestion(); };
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:#e0b040;font-weight:800;letter-spacing:1px;">SFORZO OLTRE LA PRESCRIZIONE</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeDeloadSuggestion()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<p style="font-size:13px;color:#eee;line-height:1.5;margin:4px 0 10px;">Nelle ultime ' + report.sessions + ' sedute il <b>' + pct + '%</b> delle serie è finito più vicino al cedimento di quanto chiedesse la scheda, in media <b>' + report.mean.toFixed(1) + ' RIR</b> sotto il bersaglio.</p>' +
+    '<p style="font-size:12px;color:#888;line-height:1.5;margin:0 0 14px;">Non è una brutta sessione: è fatica che si accumula più in fretta di quanto rientri. Vuoi inserire una settimana di scarico attivo subito dopo questa? Ti alleni comunque — le settimane successive scalano di una.</p>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;padding:12px;" onclick="insertDeloadWeek(\'volume\')">SCARICO DI VOLUME</button>' +
+    '<p style="font-size:11px;color:#888;margin:0 0 14px;line-height:1.45;">Metà delle serie, stessi carichi, stessa tecnica. La scelta giusta quando è il numero di serie ad averti sfinito.</p>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;padding:12px;" onclick="insertDeloadWeek(\'intensity\')">SCARICO DI INTENSITÀ</button>' +
+    '<p style="font-size:11px;color:#888;margin:0 0 14px;line-height:1.45;">Stesse serie, carichi al 90%, RIR più alto di due. La scelta giusta quando sono i carichi vicini al massimo ad averti sfinito.</p>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;padding:10px;" onclick="closeDeloadSuggestion()">NO, CONTINUO COSÌ</button>' +
+    '</div></div>';
+  document.body.appendChild(sheet);
+}
+
+// Inserting a week renumbers every week after it, and every record those
+// weeks hold - the same rule as moving an exercise: a record is addressed by
+// where it sits, so when the position moves the record moves with it.
+var WEEK_KEYED_STORES = ['data', 'customSets', 'subs', 'tempos', 'skips', 'loadTypes', 'exMuscle', 'exIntensity', 'intelTargets', 'bonus', 'warmups', 'warmupProgress'];
+
+function shiftWeekKeyedRecords(fromWeek) {
+  WEEK_KEYED_STORES.forEach(function (bagName) {
+    var bag = store[bagName];
+    if (!bag || typeof bag !== 'object') return;
+    var moves = [];
+    Object.keys(bag).forEach(function (key) {
+      var m = /^w(\d+)(_[\s\S]*)$/.exec(key);
+      if (!m) return;
+      var week = Number(m[1]);
+      if (week < fromWeek) return;
+      moves.push({ from: key, to: 'w' + (week + 1) + m[2], value: bag[key] });
+    });
+    moves.sort(function (a, b) { return b.from.localeCompare(a.from); });
+    moves.forEach(function (mv) { delete bag[mv.from]; });
+    moves.forEach(function (mv) { bag[mv.to] = mv.value; });
+  });
+  // Bodyweight is kept per week under a bare number.
+  if (store.bw && typeof store.bw === 'object') {
+    var bwMoves = [];
+    Object.keys(store.bw).forEach(function (key) {
+      var week = Number(key);
+      if (!isNaN(week) && week >= fromWeek) bwMoves.push({ from: key, to: String(week + 1), value: store.bw[key] });
+    });
+    bwMoves.forEach(function (mv) { delete store.bw[mv.from]; });
+    bwMoves.forEach(function (mv) { store.bw[mv.to] = mv.value; });
+  }
+}
+
+function deloadSessionsFrom(sourceWeek, kind) {
+  var sessions = (sourceWeek && (sourceWeek.sessions || sourceWeek.days)) || [];
+  return sessions.map(function (session) {
+    var rows = (session.exercises || session.rows || []).map(function (row) {
+      var copy = JSON.parse(JSON.stringify(row));
+      var sets = Array.isArray(copy.sets) && copy.sets.length ? copy.sets : [];
+      var baseRir = prescribedRirFor(copy, sets[0]);
+      if (kind === 'intensity') {
+        copy.sets = sets.map(function (s) {
+          var next = Object.assign({}, s);
+          delete next.technique;
+          if (next.target_load != null) next.target_load = Math.round((Number(next.target_load) * 0.9) / 2.5) * 2.5;
+          return next;
+        });
+        copy.rirTarget = Math.min(5, baseRir + 2);
+        copy.notes = 'Scarico attivo di intensità: carichi al 90%, due RIR in più';
+      } else {
+        var keep = Math.max(1, Math.round((sets.length || Number(copy.setCount) || 3) / 2));
+        copy.sets = (sets.length ? sets : []).slice(0, keep).map(function (s) {
+          var next = Object.assign({}, s);
+          delete next.technique;
+          return next;
+        });
+        if (!copy.sets.length) copy.sets = [{ reps: copy.repsTarget || '8-10', target_load: null }];
+        copy.setCount = copy.sets.length;
+        copy.rirTarget = Math.min(5, baseRir + 1);
+        copy.notes = 'Scarico attivo di volume: metà delle serie, stessi carichi';
+      }
+      copy.setCount = copy.sets.length;
+      return copy;
+    });
+    return {
+      name: session.name || session.title,
+      title: session.title || session.name,
+      exercises: rows
+    };
+  });
+}
+
+function insertDeloadWeek(kind) {
+  var mode = kind === 'intensity' ? 'intensity' : 'volume';
+  var at = (typeof currentWeek !== 'undefined' ? currentWeek : 1);
+  var source = DATA && DATA.weeks && DATA.weeks[at - 1];
+  if (!source) {
+    if (typeof showToast === 'function') showToast('Non trovo la settimana da cui partire.', 'warning');
+    return;
+  }
+  closeDeloadSuggestion();
+  var week = {
+    week: at + 1,
+    weekNumber: at + 1,
+    week_number: at + 1,
+    label: 'Settimana ' + (at + 1) + ' · Scarico ' + (mode === 'intensity' ? 'intensità' : 'volume'),
+    phase: 'deload',
+    deload: mode,
+    sessions: deloadSessionsFrom(source, mode)
+  };
+  shiftWeekKeyedRecords(at + 1);
+  DATA.weeks.splice(at, 0, week);
+  DATA.weeks.forEach(function (w, i) {
+    w.week = i + 1;
+    w.weekNumber = i + 1;
+    w.week_number = i + 1;
+    if (!/Scarico/.test(w.label || '')) w.label = 'Settimana ' + (i + 1);
+    else w.label = w.label.replace(/^Settimana\s+\d+/, 'Settimana ' + (i + 1));
+  });
+  DATA.duration_weeks = DATA.weeks.length;
+  if (store.prefs) store.prefs.duration = DATA.weeks.length;
+  persistActiveProgramStructure();
+  recordManualAction({
+    action_type: 'ADD_WEEK',
+    week: at + 1,
+    changes: { deload: mode }
+  }, { reason: 'insertDeloadWeek-' + mode });
+  if (typeof showToast === 'function') {
+    showToast('Settimana ' + (at + 1) + ': scarico di ' + (mode === 'intensity' ? 'intensità' : 'volume') + ' inserita', 'success');
+  }
+  if (typeof render === 'function') render();
+}
+window.insertDeloadWeek = insertDeloadWeek;
 
 // Appended, never inserted: an exercise dropped into the middle would take a
 // slot that already has someone's loads in it. Once it is in, the arrows
