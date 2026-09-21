@@ -21,6 +21,9 @@ function ok(value, message) {
 
 const ctx = { self: {}, console };
 vm.createContext(ctx);
+// The real library, so the rotation is checked against exercises that exist
+// rather than against a fixture that flatters it.
+vm.runInContext(fs.readFileSync(path.join(root, 'web/exercise-taxonomy.js'), 'utf8'), ctx);
 vm.runInContext(src, ctx);
 const P = ctx.self.NurvanProgressions;
 
@@ -221,6 +224,137 @@ const allRows = (weeks) => weeks.flatMap((w) => w.sessions.flatMap((s) => s.exer
   ok(allRows(P.weeksFromTemplate(template(), { weeks: 12, modelId: 'block_pl', loadDisplay: 'percent' }))
     .every((e) => e.sets.length >= 1 && Number(e.setCount) === e.sets.length),
     '8d. set count and the sets themselves never disagree');
+}
+
+/* ---------- 9. changing the exercises partway through ---------- */
+{
+  ok(P.parseRotationWeeks('5, 13, 25', 40).join(',') === '5,13,25', '9a. the weeks to change at are read as written');
+  ok(P.parseRotationWeeks('5,5,13', 40).join(',') === '5,13', '9b. repeated ones are folded');
+  ok(P.parseRotationWeeks('0, 1, 60, 13', 40).join(',') === '13', '9c. and week 1 or past the end is not a change point');
+  ok(P.parseRotationWeeks('', 40).length === 0, '9d. nothing written means it never changes');
+  ok(P.rotationBlockFor(4, [5, 13]) === 0 && P.rotationBlockFor(5, [5, 13]) === 1 && P.rotationBlockFor(30, [5, 13]) === 2,
+    '9e. each week knows which block of exercises it belongs to');
+
+  const long = [{
+    name: 'Full body',
+    exercises: [
+      { name: 'Low-bar squat', sets: [{ reps: '5' }], setCount: 1, repsTarget: '5' },
+      { name: 'Curl manubri', sets: [{ reps: '10' }], setCount: 1, repsTarget: '10' }
+    ]
+  }];
+
+  // Accessories only: the main lift is left exactly where it was.
+  const acc = P.weeksFromTemplate(long, { weeks: 40, modelId: 'linear_rir', rotateWeeks: [11, 21, 31], rotateScope: 'accessories' });
+  ok(acc.length === 40, '9f. forty weeks is a program the builder can write');
+  const squatNames = new Set(acc.map((w) => w.sessions[0].exercises[0].name));
+  ok(squatNames.size === 1 && squatNames.has('Low-bar squat'),
+    '9g. with accessories only, the main lift is the same lift for all forty weeks');
+  const curlNames = acc.map((w) => w.sessions[0].exercises[1].name);
+  ok(new Set(curlNames).size === 4, '9h. while the accessory changes once per block');
+  ok(curlNames[0] === 'Curl manubri', '9i. starting from the one that was written');
+  ok(curlNames.slice(0, 10).every((n) => n === 'Curl manubri'), '9j. and not before the week asked for');
+  ok(curlNames[10] !== curlNames[0], '9k. changing exactly at that week');
+
+  // Variants allowed: a squat becomes another squat, done with a barbell.
+  const all = P.weeksFromTemplate(long, { weeks: 40, modelId: 'linear_rir', rotateWeeks: [11, 21, 31], rotateScope: 'all' });
+  const mains = all.map((w) => w.sessions[0].exercises[0].name);
+  const variants = [...new Set(mains)];
+  ok(variants.length === 4, '9l. with variants allowed, the main lift changes each block too');
+  const tax = ctx.self.NURVAN_EXERCISE_TAXONOMY.EXERCISES;
+  const entryFor = (n) => tax.find((e) => e.name === n);
+  ok(variants.every((n) => entryFor(n) && entryFor(n).pattern === 'squat'),
+    '9m. and every one of them is still a squat');
+  ok(variants.every((n) => entryFor(n).equip === 'barbell'),
+    '9n. still done with a barbell - no leg press standing in for a squat');
+  ok(variants.every((n) => entryFor(n).role === 'main'),
+    '9o. and still a lift that can carry the heaviest slot');
+
+  // In a peaking block the lift being tested comes back for the run-in.
+  const peak = P.weeksFromTemplate(long, { weeks: 16, modelId: 'peaking_classic', rotateWeeks: [5, 9, 13], rotateScope: 'all', loadDisplay: 'percent' });
+  ok(peak[5].sessions[0].exercises[0].name !== 'Low-bar squat', '9p. a peaking block can still use variations early');
+  ok(peak[15].sessions[0].exercises[0].name === 'Low-bar squat',
+    '9q. but the last block returns to the lift that will be tested');
+  ok(peak[12].sessions[0].exercises[0].name === 'Low-bar squat', '9r. for the whole of that last block, not only test day');
+
+  // Nothing is ever invented.
+  const unknown = P.weeksFromTemplate([{ name: 'D', exercises: [{ name: 'Esercizio che non esiste', sets: [{ reps: '8' }] }] }],
+    { weeks: 12, modelId: 'linear_rir', rotateWeeks: [5], rotateScope: 'all' });
+  ok(unknown.every((w) => w.sessions[0].exercises[0].name === 'Esercizio che non esiste'),
+    '9s. an exercise the library does not know is never swapped for a guess');
+
+  const rotated = all[11].sessions[0].exercises[1];
+  ok(rotated.rotated_from === 'Curl manubri', '9t. a swapped exercise remembers what it replaced');
+  ok(/Esercizi B/.test(all[11].label), '9u. and the week says which block of exercises it is running');
+
+  const two = P.weeksFromTemplate([{
+    name: 'D', exercises: [
+      { name: 'Curl manubri', sets: [{ reps: '10' }] },
+      { name: 'Curl cavi', sets: [{ reps: '10' }] }
+    ]
+  }], { weeks: 12, modelId: 'linear_rir', rotateWeeks: [5], rotateScope: 'accessories' });
+  const day = two[6].sessions[0].exercises.map((e) => e.name);
+  ok(day[0] !== day[1], '9v. two exercises in a day never rotate onto the same replacement');
+}
+
+/* ---------- 10. a test inside the program ---------- */
+{
+  const tpl = [{
+    name: 'Full body',
+    exercises: [
+      { name: 'Low-bar squat', sets: [{ reps: '5' }], setCount: 1, repsTarget: '5' },
+      { name: 'Panca piana bilanciere', sets: [{ reps: '5' }], setCount: 1, repsTarget: '5' },
+      { name: 'Curl manubri', sets: [{ reps: '10' }, { reps: '10' }, { reps: '10' }], setCount: 3, repsTarget: '10' }
+    ]
+  }];
+  const opts = { weeks: 20, modelId: 'peaking_classic', loadDisplay: 'kg', maxes: { squat: 200, bench: 140 }, testWeeks: [15] };
+  const weeks = P.weeksFromTemplate(tpl, opts);
+
+  ok(weeks[14].test_week === true && /Test massimali/.test(weeks[14].label),
+    '10a. week 15 is a test week and says so');
+  ok(weeks[13].test_week !== true && weeks[15].test_week !== true, '10b. and only that week');
+  const testSquat = weeks[14].sessions[0].exercises[0];
+  ok(testSquat.sets.length === 1 && testSquat.repsTarget === '1', '10c. the lift is taken to a single');
+  ok(/100%/.test(testSquat.notes) && /nuovo massimale/i.test(testSquat.notes), '10d. at the max, and it says what it is for');
+  ok(weeks[14].sessions[0].exercises[2].sets.length < 3, '10e. accessories are cut back that week');
+  ok(weeks[19].sessions[0].exercises[0].repsTarget === '1', '10f. the final week is still the attempt it always was');
+  ok(weeks[7].sessions[0].exercises[0].sets.length > 1, '10g. and the weeks around it are ordinary work');
+
+  const before = weeks[17].sessions[0].exercises[0].sets[0].target_load;
+  ok(before === 200 * weeks[17].sessions[0].exercises[0].target_pct
+    || Math.abs(before - 200 * weeks[17].sessions[0].exercises[0].target_pct) <= 2.5,
+    '10h. every competition lift remembers the percentage it was written at');
+
+  // The test came in higher: everything after it moves up.
+  const res = P.recalibrateWeeks(weeks, { fromWeek: 15, maxes: { squat: 215, bench: 145 }, loadDisplay: 'kg' });
+  ok(res.weeks === 5 && res.lifts === 10, '10i. recalibration touches the five weeks left, and only them');
+  const after = weeks[17].sessions[0].exercises[0].sets[0].target_load;
+  ok(after > before, '10j. a better test means heavier work for what is left');
+  ok(Math.abs(after - 215 * weeks[17].sessions[0].exercises[0].target_pct) <= 2.5,
+    '10k. at the same percentage of the new max');
+  ok(/215|kg/.test(weeks[19].sessions[0].exercises[0].notes), '10l. and the final attempt is rewritten too');
+  ok(weeks[10].sessions[0].exercises[0].sets[0].target_load === 200 * weeks[10].sessions[0].exercises[0].target_pct
+    || Math.abs(weeks[10].sessions[0].exercises[0].sets[0].target_load - 200 * weeks[10].sessions[0].exercises[0].target_pct) <= 2.5,
+    '10m. what was already trained is left alone');
+
+  // A test that went backwards, with the accessory trim asked for.
+  const weeks2 = P.weeksFromTemplate(tpl, opts);
+  const accBefore = weeks2[17].sessions[0].exercises[2].sets.length;
+  const res2 = P.recalibrateWeeks(weeks2, { fromWeek: 15, maxes: { squat: 185, bench: 140 }, loadDisplay: 'kg', trimAccessorySets: true });
+  ok(weeks2[17].sessions[0].exercises[0].sets[0].target_load < before, '10n. a worse test means lighter work, not a pretence');
+  ok(weeks2[17].sessions[0].exercises[2].sets.length === accBefore - 1, '10o. and a set comes off the accessories when asked');
+  ok(res2.setsRemoved > 0, '10p. which is reported back');
+
+  const weeks3 = P.weeksFromTemplate(tpl, opts);
+  P.recalibrateWeeks(weeks3, { fromWeek: 15, maxes: { squat: 185 }, loadDisplay: 'kg' });
+  ok(weeks3[17].sessions[0].exercises[2].sets.length === accBefore, '10q. and stays on unless it is');
+  ok(weeks3[17].sessions[0].exercises[1].sets[0].target_load === weeks[17].sessions[0].exercises[1].sets[0].target_load
+    || weeks3[17].sessions[0].exercises[1].competition_lift === 'bench',
+    '10r. a lift left out of the test keeps the numbers it had');
+
+  const noTest = P.weeksFromTemplate(tpl, Object.assign({}, opts, { testWeeks: [] }));
+  ok(noTest.every((w) => !w.test_week), '10s. no test asked for, no test week written');
+  const bb = P.weeksFromTemplate(tpl, { weeks: 12, modelId: 'linear_rir', testWeeks: [6] });
+  ok(bb.every((w) => !w.test_week), '10t. and a hypertrophy block is not given a max test it never asked for');
 }
 
 console.log('\nAll progression model tests passed.');

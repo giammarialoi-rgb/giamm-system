@@ -474,6 +474,86 @@
     return roundLoad(max * pct, 2.5);
   }
 
+  /* ---------------- changing the exercises along the way ---------------- */
+  //
+  // A forty-week program run on the same eight exercises is not one program,
+  // it is the same one five times. Rotating the assistance work spreads the
+  // stimulus across a muscle's regions (Fonseca 2014; Kassiano 2022) and gives
+  // the joints a break from one line of pull. The main lifts are a different
+  // matter: swapping them costs strength (Baz-Valle 2019), so they are only
+  // rotated when the athlete asks for it, and then only within their own
+  // family - a low-bar squat becomes a box squat or a pause squat, never a
+  // leg press - which is how a long block uses variations without losing the
+  // lift it is built on.
+  //
+  // Nothing is ever invented: a replacement has to be an exercise the library
+  // already describes, or the written one stays.
+
+  function taxonomy() {
+    return (root.NURVAN_EXERCISE_TAXONOMY && root.NURVAN_EXERCISE_TAXONOMY.EXERCISES) ? root.NURVAN_EXERCISE_TAXONOMY : null;
+  }
+
+  function foldName(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  function taxonomyEntry(name) {
+    var tax = taxonomy();
+    if (!tax) return null;
+    var want = foldName(name);
+    if (!want) return null;
+    var same = tax.SAME_AS && tax.SAME_AS[name];
+    if (same) want = foldName(same);
+    for (var i = 0; i < tax.EXERCISES.length; i++) {
+      if (foldName(tax.EXERCISES[i].name) === want) return tax.EXERCISES[i];
+    }
+    return null;
+  }
+
+  function rotationBlockFor(week, rotateWeeks) {
+    if (!Array.isArray(rotateWeeks) || !rotateWeeks.length) return 0;
+    var block = 0;
+    for (var i = 0; i < rotateWeeks.length; i++) {
+      if (week >= Number(rotateWeeks[i])) block += 1;
+    }
+    return block;
+  }
+
+  function rotationCandidates(entry) {
+    var tax = taxonomy();
+    if (!tax || !entry) return [];
+    var cap = Math.max(entry.level, 1);
+    return tax.EXERCISES.filter(function (e) {
+      if (e.name === entry.name) return false;
+      if (e.pattern !== entry.pattern) return false;
+      if (e.role !== entry.role) return false;
+      if (e.level > cap) return false;
+      // A main lift only ever becomes a variation of itself: same pattern,
+      // same implement. That is what keeps "squat" a squat.
+      if (entry.role === 'main' && e.equip !== entry.equip) return false;
+      return true;
+    }).sort(function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
+  }
+
+  function rotatedName(name, block, opts, used, isFinalBlockOfMeet) {
+    if (!block) return name;
+    var scope = opts.rotateScope === 'all' ? 'all' : 'accessories';
+    var entry = taxonomyEntry(name);
+    if (!entry) return name;
+    if (entry.role === 'main') {
+      if (scope !== 'all') return name;
+      // The lift you are going to test is the lift you peak on.
+      if (isFinalBlockOfMeet && competitionLiftFor(name)) return name;
+    }
+    var pool = rotationCandidates(entry);
+    if (!pool.length) return name;
+    for (var attempt = 0; attempt < pool.length; attempt++) {
+      var pick = pool[(block - 1 + attempt) % pool.length];
+      if (used.indexOf(pick.name) < 0) return pick.name;
+    }
+    return name;
+  }
+
   function baseSetCount(ex) {
     if (Array.isArray(ex.sets) && ex.sets.length) return ex.sets.length;
     return Math.max(1, Number(ex.setCount) || 3);
@@ -523,20 +603,37 @@
       if (model.family === 'powerlifting') label += w === duration ? ' · Gara / massimale' : (isDeload ? ' · Scarico' : '');
       else if (plan) label += isDeload ? ' · Deload' : (plan.phase ? ' · ' + plan.phase : '');
 
+      var block = rotationBlockFor(w, opts.rotateWeeks);
+      var lastBlock = rotationBlockFor(duration, opts.rotateWeeks);
+      var finalBlockOfMeet = model.family === 'powerlifting' && block === lastBlock;
+      if (block) label += ' · Esercizi ' + String.fromCharCode(65 + Math.min(25, block));
+      // A test inside the program, not only at the end of it: the weeks after
+      // it are meant to be rewritten on what was actually lifted.
+      var isTestWeek = model.family === 'powerlifting' && w !== duration
+        && Array.isArray(opts.testWeeks) && opts.testWeeks.map(Number).indexOf(w) >= 0;
+      if (isTestWeek) label = 'Settimana ' + w + ' · Test massimali';
+
       out.push({
         week: w,
         weekNumber: w,
         week_number: w,
         label: label,
-        phase: isDeload ? 'deload' : (plan && plan.phase) || (model.family === 'powerlifting' ? 'forza' : ''),
+        phase: isTestWeek ? 'test' : (isDeload ? 'deload' : (plan && plan.phase) || (model.family === 'powerlifting' ? 'forza' : '')),
+        rotation_block: block,
+        test_week: !!isTestWeek,
         sessions: (sessions || []).map(function (session, si) {
+          var used = [];
           return {
             name: session.name,
             title: session.title || session.name,
             exercises: (session.exercises || []).map(function (ex) {
-              return progressExercise(ex, {
+              var written = ex.name || ex.exercise || '';
+              var name = rotatedName(written, block, opts, used, finalBlockOfMeet);
+              used.push(name);
+              var source = (name === written) ? ex : Object.assign({}, ex, { name: name, name_original: ex.name_original || written, rotated_from: written });
+              return progressExercise(source, {
                 model: model, week: w, duration: duration, sessionIndex: si,
-                isDeload: isDeload, plan: plan, opts: opts
+                isDeload: isDeload, isTestWeek: isTestWeek, plan: plan, opts: opts
               });
             })
           };
@@ -556,7 +653,8 @@
     if (model.id === 'none') return copy;
 
     if (liftId && typeof model.main === 'function') {
-      var main = model.main(ctx.week, ctx.duration, ctx.sessionIndex);
+      var main = ctx.isTestWeek ? testWeek(1.0) : model.main(ctx.week, ctx.duration, ctx.sessionIndex);
+      if (ctx.isTestWeek) main = Object.assign({}, main, { note: 'Test di metà programma: nuovo massimale' });
       var load = targetLoadFor(opts, liftId, main.pct);
       copy.sets = makeSets(main.sets, main.reps, load, null);
       copy.setCount = main.sets;
@@ -566,6 +664,9 @@
       else copy.rirTarget = rirForPercent(main.pct, main.reps);
       copy.notes = [main.note, loadTextFor(opts, liftId, main.pct, main.reps)].filter(Boolean).join(' · ');
       copy.competition_lift = liftId;
+      // Kept so the weeks after a mid-program test can be rewritten from the
+      // max that was actually hit, rather than the one it was planned on.
+      copy.target_pct = main.pct;
       if (load != null) copy.load = load;
       return copy;
     }
@@ -579,7 +680,9 @@
     var noteBits = [];
 
     if (model.family === 'powerlifting' && typeof model.accessory === 'function') {
-      var acc = model.accessory(ctx.week, ctx.duration);
+      var acc = ctx.isTestWeek
+        ? { volumeMul: 0.5, rirDelta: 2, technique: null, note: 'Settimana di test: accessori ridotti' }
+        : model.accessory(ctx.week, ctx.duration);
       setsCount = Math.max(1, Math.round(setsCount * (acc.volumeMul != null ? acc.volumeMul : 1)));
       rir = clamp(rir + (acc.rirDelta || 0), 0, 5);
       technique = acc.technique || null;
@@ -636,6 +739,51 @@
   };
   function techniqueLabel(id) { return TECHNIQUE_LABELS[id] || id; }
 
+  /**
+   * After a test inside the program: rewrite what is left of it on the maxes
+   * that were actually hit.
+   *
+   * Only the weeks after the test are touched - what is already trained is
+   * history - and only the competition lifts, whose percentage was written
+   * down when the program was built. If the test came in low the athlete can
+   * also ask for a set to come off the accessories, because a max that went
+   * backwards usually means fatigue, not a lack of assistance work.
+   */
+  function recalibrateWeeks(weeks, opts) {
+    opts = opts || {};
+    var fromWeek = Number(opts.fromWeek) || 1;
+    var maxes = opts.maxes || {};
+    var display = opts.loadDisplay || 'percent';
+    var out = { weeks: 0, lifts: 0, setsRemoved: 0 };
+    (weeks || []).forEach(function (week, wi) {
+      var number = Number(week.week || week.weekNumber || week.week_number || (wi + 1));
+      if (number <= fromWeek) return;
+      var touched = false;
+      (week.sessions || week.days || []).forEach(function (session) {
+        (session.exercises || session.rows || []).forEach(function (row) {
+          if (row.competition_lift && row.target_pct != null && maxes[row.competition_lift] > 0) {
+            var pct = Number(row.target_pct);
+            var load = targetLoadFor({ loadDisplay: display, maxes: maxes, bodyweight: opts.bodyweight }, row.competition_lift, pct);
+            (row.sets || []).forEach(function (s) { s.target_load = load; });
+            if (load != null) row.load = load;
+            var head = String(row.notes || '').split(' · ')[0];
+            row.notes = [head, loadTextFor({ loadDisplay: display, maxes: maxes, bodyweight: opts.bodyweight }, row.competition_lift, pct, row.repsTarget)]
+              .filter(Boolean).join(' · ');
+            out.lifts += 1;
+            touched = true;
+          } else if (opts.trimAccessorySets && !row.competition_lift && Array.isArray(row.sets) && row.sets.length > 1) {
+            row.sets.pop();
+            row.setCount = row.sets.length;
+            out.setsRemoved += 1;
+            touched = true;
+          }
+        });
+      });
+      if (touched) out.weeks += 1;
+    });
+    return out;
+  }
+
   // Which competition lifts a written week actually contains, so the builder
   // only asks for the maxes it will use.
   function competitionLiftsIn(sessions) {
@@ -658,6 +806,26 @@
     list: function (family) { return listModels(family).map(publicModel); },
     get: function (id) { return publicModel(modelById(id)); },
     weeksFromTemplate: weeksFromTemplate,
+    recalibrateWeeks: recalibrateWeeks,
+    rotationBlockFor: rotationBlockFor,
+    rotationOptionsFor: function (name) {
+      var entry = taxonomyEntry(name);
+      if (!entry) return { known: false, role: null, candidates: [] };
+      return { known: true, role: entry.role, candidates: rotationCandidates(entry).map(function (e) { return e.name; }) };
+    },
+    parseRotationWeeks: function (raw, duration) {
+      var max = clamp(Math.round(Number(duration) || 52), 1, 52);
+      var seen = {};
+      return String(raw || '').split(/[^\d]+/)
+        .map(function (n) { return parseInt(n, 10); })
+        .filter(function (n) {
+          if (!(n >= 2 && n <= max)) return false;
+          if (seen[n]) return false;
+          seen[n] = true;
+          return true;
+        })
+        .sort(function (a, b) { return a - b; });
+    },
     competitionLiftFor: competitionLiftFor,
     competitionLiftsIn: competitionLiftsIn,
     liftLabel: liftLabel,

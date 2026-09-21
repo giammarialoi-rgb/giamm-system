@@ -22209,10 +22209,12 @@ function closeWorkoutCompleteOverlay(goto) {
   maybeAskCoachAfterComplete();
   // Asked here rather than during the session: the effort is measured over
   // the last sessions, and the moment to decide about next week is when this
-  // one is closed.
-  if (typeof maybeSuggestDeloadWeek === 'function') {
-    setTimeout(function () { maybeSuggestDeloadWeek(); }, 400);
-  }
+  // one is closed. A finished test week comes first - the rest of the program
+  // is waiting on those numbers.
+  setTimeout(function () {
+    if (typeof maybeAskTestResults === 'function' && maybeAskTestResults()) return;
+    if (typeof maybeSuggestDeloadWeek === 'function') maybeSuggestDeloadWeek();
+  }, 400);
 }
 
 function shareWorkoutCardFromOverlay() {
@@ -28760,6 +28762,8 @@ function closeProgramBuilder() {
 }
 window.closeProgramBuilder = closeProgramBuilder;
 
+window.renderProgramBuilder = function () { return renderProgramBuilder(); };
+
 function renderProgramBuilder() {
   var d = programDraft();
   var existing = document.getElementById('program-builder-sheet');
@@ -28823,6 +28827,7 @@ function renderProgramBuilder() {
 function programDraftProgressionHtml(d, inputStyle) {
   var engine = (typeof window !== 'undefined' && window.NurvanProgressions) || null;
   if (!engine) return '';
+  var weeks = Number(d.weeks) || 8;
   var modelId = d.modelId || 'none';
   var model = engine.get(modelId);
   var groups = [
@@ -28839,14 +28844,26 @@ function programDraftProgressionHtml(d, inputStyle) {
 
   var html = '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(212,175,55,0.35);">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:10px;">DURATA E PROGRESSIONE</div>' +
-    '<div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:10px;">' +
+    '<div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:8px;">' +
     '<label style="font-size:9px;color:#888;">Settimane<input type="number" min="1" max="52" value="' + (Number(d.weeks) || 8) + '" oninput="updateProgramDraftField(\'weeks\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
     '<label style="font-size:9px;color:#888;">Progressione<select onchange="setProgramDraftModel(this.value)" style="width:100%;margin-top:2px;' + inputStyle + '">' + options + '</select></label>' +
+    '</div>' +
+    // A mesocycle and a whole season are both programs: 4 weeks and 40 are
+    // one tap apart, and anything in between can still be typed.
+    '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">' +
+    [4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 52].map(function (n) {
+      var on = Number(d.weeks) === n;
+      return '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:4px 9px;' +
+        (on ? 'border-color:var(--gold);color:var(--gold);background:rgba(212,175,55,0.12);' : '') +
+        '" onclick="setProgramDraftWeeks(' + n + ')">' + n + '</button>';
+    }).join('') +
     '</div>' +
     '<div style="font-size:11px;color:#ccc;line-height:1.45;">' + esc(model.summary || '') + '</div>' +
     (model.detail ? '<div style="font-size:11px;color:#888;line-height:1.45;margin-top:6px;">' + esc(model.detail) + '</div>' : '') +
     (model.evidence ? '<div style="font-size:10px;color:#666;margin-top:6px;">' + esc(model.evidence) + '</div>' : '') +
     (model.deloadEvery ? '<div style="font-size:10px;color:#81c784;margin-top:6px;">Scarico automatico ogni ' + model.deloadEvery + ' settimane</div>' : '');
+
+  html += programDraftRotationHtml(d, inputStyle, engine);
 
   if (model.family === 'powerlifting') {
     var lifts = engine.competitionLiftsIn(draftSessionsForProgression(d));
@@ -28877,11 +28894,140 @@ function programDraftProgressionHtml(d, inputStyle) {
           : 'La scheda scriverà lo sforzo bersaglio (RPE 8 / RIR 2): il carico lo scegli in giornata.') + '</div>';
     }
     html += '<div style="font-size:11px;color:#81c784;margin-top:8px;">L\'ultima settimana è il test del massimale. Le tecniche di intensità restano sugli accessori, mai sulle alzate di gara.</div>';
+    // A test inside the program, so a long block is not run for twenty weeks
+    // on numbers that were true at the start.
+    var testWeeks = engine.parseRotationWeeks(d.testWeeks || '', weeks);
+    html += '<div style="margin-top:12px;border-top:1px solid #262626;padding-top:10px;">' +
+      '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:6px;">TEST INTERMEDI</div>' +
+      '<label style="font-size:9px;color:#888;display:block;">Settimane in cui testare i massimali' +
+      '<input type="text" value="' + esc(d.testWeeks || '') + '" placeholder="es. 15 — vuoto = solo alla fine" oninput="setProgramDraftTestWeeks(this.value)" onchange="renderProgramBuilder()" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+      (weeks >= 8 ? '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">' +
+        '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:4px 9px;" onclick="setProgramDraftTestWeeksQuick(\'half\')">a metà (' + Math.round(weeks / 2) + ')</button>' +
+        '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:4px 9px;" onclick="setProgramDraftTestWeeksQuick(\'before\')">5 prima della fine (' + Math.max(2, weeks - 5) + ')</button>' +
+        '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:4px 9px;" onclick="setProgramDraftTestWeeksQuick(\'none\')">nessuno</button>' +
+        '</div>' : '') +
+      '<div style="font-size:11px;color:#888;margin-top:8px;line-height:1.45;">' +
+      (testWeeks.length
+        ? ('In quelle settimane si sale a singole fino al massimo e gli accessori si dimezzano. Quando finisci la settimana ' + testWeeks.join(' e la ') + ', l\'app ti chiede i risultati e riscrive i carichi delle settimane successive su quei numeri.')
+        : 'Senza test intermedi un blocco lungo gira per tutte le settimane sui massimali di partenza. In un blocco di 16 settimane o più, metterne uno a metà è quasi sempre la scelta giusta.') +
+      '</div></div>';
     html += '</div>';
   }
   html += '</div>';
   return html;
 }
+
+// Changing the exercises partway through: which weeks, and how far the change
+// is allowed to go.
+function programDraftRotationHtml(d, inputStyle, engine) {
+  var weeks = Number(d.weeks) || 8;
+  if (weeks < 3) return '';
+  var picked = engine.parseRotationWeeks(d.rotateWeeks || '', weeks);
+  var scope = d.rotateScope === 'all' ? 'all' : 'accessories';
+  var preview = '';
+  if (picked.length) {
+    var sessions = draftSessionsForProgression(d);
+    var sample = engine.weeksFromTemplate(sessions, {
+      weeks: weeks, modelId: d.modelId || 'none',
+      rotateWeeks: picked, rotateScope: scope, loadDisplay: d.loadDisplay || 'percent'
+    });
+    var changed = [];
+    (sample[weeks - 1] && sample[weeks - 1].sessions || []).forEach(function (s, si) {
+      (s.exercises || []).forEach(function (ex, ei) {
+        var written = ((sessions[si] || {}).exercises || [])[ei];
+        if (written && ex.name !== written.name) changed.push(esc(written.name) + ' → <b style="color:#fff;">' + esc(ex.name) + '</b>');
+      });
+    });
+    preview = changed.length
+      ? '<div style="font-size:11px;color:#888;line-height:1.5;margin-top:8px;">Nell\'ultimo blocco: ' + changed.slice(0, 6).join(' · ') + (changed.length > 6 ? ' · …' : '') + '</div>'
+      : '<div style="font-size:11px;color:#e0b040;line-height:1.45;margin-top:8px;">Con questa impostazione non cambia nulla: la libreria non ha alternative dello stesso tipo per questi esercizi.</div>';
+  }
+
+  return '<div style="margin-top:12px;border-top:1px solid #262626;padding-top:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:6px;">CAMBIO ESERCIZI</div>' +
+    '<label style="font-size:9px;color:#888;display:block;">Cambia esercizi a partire dalle settimane' +
+    '<input type="text" value="' + esc(d.rotateWeeks || '') + '" placeholder="es. 5, 13, 25 — vuoto = mai" oninput="setProgramDraftRotationWeeks(this.value)" onchange="renderProgramBuilder()" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">' +
+    [4, 6, 8, 12].map(function (n) {
+      return '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:4px 9px;" onclick="setProgramDraftRotationEvery(' + n + ')">ogni ' + n + '</button>';
+    }).join('') +
+    '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:4px 9px;" onclick="setProgramDraftRotationEvery(0)">mai</button>' +
+    '</div>' +
+    (picked.length ? '<div style="font-size:11px;color:#ccc;margin-top:8px;">Blocchi: settimane ' + rotationBlockLabels(picked, weeks).join(' · ') + '</div>' : '') +
+    (picked.length ? (
+      '<div style="margin-top:10px;">' +
+      '<label style="display:flex;gap:8px;align-items:flex-start;padding:9px;border:1px solid #333;border-radius:8px;margin-bottom:6px;cursor:pointer;">' +
+      '<input type="radio" name="rot-scope" value="accessories"' + (scope === 'accessories' ? ' checked' : '') + ' onchange="setProgramDraftRotationScope(\'accessories\')" style="margin-top:2px;">' +
+      '<span><b style="color:#fff;font-size:12px;">Solo accessori</b><br><span style="font-size:11px;color:#888;">I fondamentali restano quelli che hai scritto: il carico progredisce sullo stesso gesto.</span></span></label>' +
+      '<label style="display:flex;gap:8px;align-items:flex-start;padding:9px;border:1px solid #333;border-radius:8px;cursor:pointer;">' +
+      '<input type="radio" name="rot-scope" value="all"' + (scope === 'all' ? ' checked' : '') + ' onchange="setProgramDraftRotationScope(\'all\')" style="margin-top:2px;">' +
+      '<span><b style="color:#fff;font-size:12px;">Accessori + varianti dei fondamentali</b><br><span style="font-size:11px;color:#888;">Low-bar squat diventa box squat o pause squat, non una leg press: stesso schema motorio, stesso attrezzo. Nel peaking l\'ultimo blocco torna sempre all\'alzata che testerai.</span></span></label>' +
+      '</div>'
+    ) : '') +
+    preview +
+    '</div>';
+}
+
+function rotationBlockLabels(picked, weeks) {
+  var bounds = [1].concat(picked, [weeks + 1]);
+  var out = [];
+  for (var i = 0; i < bounds.length - 1; i++) {
+    var from = bounds[i];
+    var to = bounds[i + 1] - 1;
+    if (to < from) continue;
+    out.push(String.fromCharCode(65 + Math.min(25, i)) + ': ' + (from === to ? from : (from + '-' + to)));
+  }
+  return out;
+}
+
+function setProgramDraftWeeks(n) {
+  updateProgramDraftField('weeks', n);
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.setProgramDraftWeeks = setProgramDraftWeeks;
+
+function setProgramDraftRotationWeeks(raw) {
+  programDraft().rotateWeeks = String(raw || '');
+}
+window.setProgramDraftRotationWeeks = setProgramDraftRotationWeeks;
+
+function setProgramDraftRotationEvery(n) {
+  var d = programDraft();
+  var weeks = Number(d.weeks) || 8;
+  if (!n) d.rotateWeeks = '';
+  else {
+    var list = [];
+    for (var w = n + 1; w <= weeks; w += n) list.push(w);
+    d.rotateWeeks = list.join(', ');
+  }
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.setProgramDraftRotationEvery = setProgramDraftRotationEvery;
+
+function setProgramDraftRotationScope(scope) {
+  programDraft().rotateScope = scope === 'all' ? 'all' : 'accessories';
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.setProgramDraftRotationScope = setProgramDraftRotationScope;
+
+function setProgramDraftTestWeeks(raw) {
+  programDraft().testWeeks = String(raw || '');
+}
+window.setProgramDraftTestWeeks = setProgramDraftTestWeeks;
+
+function setProgramDraftTestWeeksQuick(kind) {
+  var d = programDraft();
+  var weeks = Number(d.weeks) || 8;
+  if (kind === 'none') d.testWeeks = '';
+  else if (kind === 'before') d.testWeeks = String(Math.max(2, weeks - 5));
+  else d.testWeeks = String(Math.max(2, Math.round(weeks / 2)));
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.setProgramDraftTestWeeksQuick = setProgramDraftTestWeeksQuick;
 
 // The week the progression will be given, in the shape it expects.
 function draftSessionsForProgression(d) {
@@ -29068,7 +29214,10 @@ function programFromDraft(draft) {
       loadDisplay: draft.loadDisplay || 'percent',
       maxes: draft.maxes || {},
       bodyweight: currentBodyweightKg(),
-      techniques: draft.techniques || 'model'
+      techniques: draft.techniques || 'model',
+      rotateWeeks: engine.parseRotationWeeks(draft.rotateWeeks || '', weekCount),
+      rotateScope: draft.rotateScope === 'all' ? 'all' : 'accessories',
+      testWeeks: engine.parseRotationWeeks(draft.testWeeks || '', weekCount)
     });
   } else {
     weeks = [];
@@ -29081,6 +29230,11 @@ function programFromDraft(draft) {
   }
   var summary = 'Scheda scritta a mano · ' + days.length + ' giorni · ' + weekCount + ' settimane';
   if (model && model.id !== 'none') summary += ' · ' + model.label;
+  var rotate = engine ? engine.parseRotationWeeks(draft.rotateWeeks || '', weekCount) : [];
+  if (rotate.length) {
+    summary += ' · cambio esercizi alle settimane ' + rotate.join(', ') +
+      (draft.rotateScope === 'all' ? ' (accessori e varianti dei fondamentali)' : ' (solo accessori)');
+  }
   return {
     id: 'custom_' + Date.now(),
     title: String(draft.title || '').trim() || 'Scheda personale',
@@ -29568,6 +29722,171 @@ function insertDeloadWeek(kind) {
   if (typeof render === 'function') render();
 }
 window.insertDeloadWeek = insertDeloadWeek;
+
+/* ---------- a test inside the program, and what follows from it ---------- */
+//
+// A twenty-week block written on January's maxes is, by week fifteen, a block
+// written on numbers that are no longer true. A test week puts a real number
+// back in the middle of it, and everything after is rewritten on what was
+// actually lifted - upwards or downwards, whichever it turns out to be.
+
+function programTestWeekNumber(week) {
+  var w = DATA && DATA.weeks && DATA.weeks[week - 1];
+  return (w && (w.test_week || w.phase === 'test')) ? week : 0;
+}
+
+function weekFullyFinalized(week) {
+  var w = DATA && DATA.weeks && DATA.weeks[week - 1];
+  var sessions = (w && (w.sessions || w.days)) || [];
+  if (!sessions.length) return false;
+  for (var i = 0; i < sessions.length; i++) {
+    if (!sessionWasFinalized(week, i)) return false;
+  }
+  return true;
+}
+
+// What the athlete actually hit in the test week, read from the logs: the
+// heaviest completed single of each competition lift.
+function testedMaxFor(week, liftId) {
+  var best = 0;
+  var sessions = (DATA.weeks[week - 1] && (DATA.weeks[week - 1].sessions || DATA.weeks[week - 1].days)) || [];
+  sessions.forEach(function (session, di) {
+    (session.exercises || session.rows || []).forEach(function (row, ei) {
+      if (row.competition_lift !== liftId) return;
+      for (var s = 1; s <= 12; s++) {
+        var k = 'w' + week + '_d' + di + '_e' + ei + '_s' + s;
+        var load = parseFloat(store.data[k + '_load']);
+        var reps = parseInt(store.data[k + '_reps'], 10);
+        if (load > 0 && reps >= 1 && reps <= 3) {
+          // A double or a triple is not a max; Epley brings it back to one.
+          var est = reps === 1 ? load : load * (1 + reps / 30);
+          if (est > best) best = Math.round(est * 2) / 2;
+        }
+      }
+    });
+  });
+  return best;
+}
+
+function maybeAskTestResults() {
+  try {
+    if (!store || store.coachViewingClient) return false;
+    if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks)) return false;
+    var week = programTestWeekNumber(currentWeek);
+    if (!week || !weekFullyFinalized(week)) return false;
+    if (!store.prefs) store.prefs = {};
+    if (Number(store.prefs.testResultsAskedWeek) === Number(week)) return false;
+    var engine = window.NurvanProgressions;
+    if (!engine) return false;
+    var lifts = [];
+    (DATA.weeks[week - 1].sessions || []).forEach(function (s) {
+      (s.exercises || []).forEach(function (ex) {
+        if (ex.competition_lift && lifts.indexOf(ex.competition_lift) < 0) lifts.push(ex.competition_lift);
+      });
+    });
+    if (!lifts.length) return false;
+    store.prefs.testResultsAskedWeek = week;
+    try { persist(); } catch (_) {}
+    openTestResultsSheet(week, lifts);
+    return true;
+  } catch (err) {
+    console.warn('[TEST RESULTS]', err);
+    return false;
+  }
+}
+window.maybeAskTestResults = maybeAskTestResults;
+
+function closeTestResultsSheet() {
+  var el = document.getElementById('test-results-sheet');
+  if (el) el.remove();
+}
+window.closeTestResultsSheet = closeTestResultsSheet;
+
+function openTestResultsSheet(week, lifts) {
+  closeTestResultsSheet();
+  var engine = window.NurvanProgressions;
+  var planned = (DATA.progression && DATA.progression.maxes) || {};
+  var inputStyle = 'padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;box-sizing:border-box;';
+  var remaining = DATA.weeks.length - week;
+  var rows = lifts.map(function (id) {
+    var logged = testedMaxFor(week, id);
+    var before = Number(planned[id]) || 0;
+    var hint = before ? ('prima: ' + before + ' kg') : 'nessun massimale di partenza';
+    return '<label style="font-size:9px;color:#888;display:block;margin-bottom:8px;">' +
+      esc(engine.liftLabel(id)) + (engine.isBodyweightLift(id) ? ' (zavorra)' : '') + ' · ' + esc(hint) +
+      '<input id="tr-' + esc(id) + '" type="number" step="0.5" min="0" value="' + (logged || before || '') + '" placeholder="kg" style="width:100%;margin-top:2px;' + inputStyle + '"></label>';
+  }).join('');
+  var sheet = document.createElement('div');
+  sheet.id = 'test-results-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10260';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeTestResultsSheet(); };
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">TEST SETTIMANA ' + week + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeTestResultsSheet()">DOPO</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<p style="font-size:13px;color:#eee;line-height:1.5;margin:4px 0 12px;">Hai chiuso la settimana di test. Con questi numeri riscrivo i carichi delle <b>' + remaining + ' settimane</b> che restano.</p>' +
+    '<p style="font-size:11px;color:#888;margin:0 0 12px;line-height:1.45;">Sono precompilati con il singolo più pesante che hai registrato (doppie e triple riportate a uno). Correggili se il massimale vero è un altro.</p>' +
+    rows +
+    '<label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid #333;border-radius:8px;margin:10px 0 4px;cursor:pointer;">' +
+    '<input type="checkbox" id="tr-trim" style="margin-top:2px;">' +
+    '<span><b style="color:#fff;font-size:12px;">Togli una serie agli accessori</b><br><span style="font-size:11px;color:#888;">Da spuntare se il test è andato sotto le attese: quasi sempre è fatica accumulata, non lavoro complementare mancante.</span></span></label>' +
+    '</div>' +
+    '<div class="nurvan-sheet-foot">' +
+    '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="applyTestResults(' + week + ')">RICALIBRA LE SETTIMANE RIMANENTI</button>' +
+    '</div></div>';
+  document.body.appendChild(sheet);
+  window.__testResultLifts = lifts;
+}
+window.openTestResultsSheet = openTestResultsSheet;
+
+function applyTestResults(week) {
+  var engine = window.NurvanProgressions;
+  var lifts = window.__testResultLifts || [];
+  if (!engine || !lifts.length) { closeTestResultsSheet(); return; }
+  var maxes = Object.assign({}, (DATA.progression && DATA.progression.maxes) || {});
+  var changes = [];
+  lifts.forEach(function (id) {
+    var el = document.getElementById('tr-' + id);
+    var v = el ? parseFloat(el.value) : NaN;
+    if (!(v > 0)) return;
+    var before = Number(maxes[id]) || 0;
+    maxes[id] = v;
+    if (before) changes.push(engine.liftLabel(id) + ' ' + before + ' → ' + v + ' kg');
+    else changes.push(engine.liftLabel(id) + ' ' + v + ' kg');
+  });
+  var trimEl = document.getElementById('tr-trim');
+  var trim = !!(trimEl && trimEl.checked);
+  closeTestResultsSheet();
+  if (!changes.length) {
+    if (typeof showToast === 'function') showToast('Nessun massimale inserito: non ho cambiato nulla.', 'warning');
+    return;
+  }
+  var res = engine.recalibrateWeeks(DATA.weeks, {
+    fromWeek: week,
+    maxes: maxes,
+    bodyweight: currentBodyweightKg(),
+    loadDisplay: (DATA.progression && DATA.progression.load_display) || 'kg',
+    trimAccessorySets: trim
+  });
+  if (!DATA.progression) DATA.progression = {};
+  DATA.progression.maxes = maxes;
+  DATA.progression.retested_at_week = week;
+  persistActiveProgramStructure();
+  recordManualAction({
+    action_type: 'RECALIBRATE',
+    week: week,
+    changes: { maxes: maxes, trimAccessorySets: trim }
+  }, { reason: 'applyTestResults' });
+  if (typeof showToast === 'function') {
+    showToast('Ricalibrate ' + res.weeks + ' settimane · ' + changes.join(' · '), 'success');
+  }
+  if (typeof render === 'function') render();
+}
+window.applyTestResults = applyTestResults;
 
 // Appended, never inserted: an exercise dropped into the middle would take a
 // slot that already has someone's loads in it. Once it is in, the arrows

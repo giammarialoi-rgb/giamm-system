@@ -381,6 +381,53 @@ function loggedProgram() {
   ok(/intensità/i.test(int.notes), '3be. with the reason written on it');
 }
 
+/* ---------- 3sexies. the builder's own panels actually render ---------- */
+//
+// These build HTML out of the progression module; a typo in one of them is a
+// blank sheet in front of somebody writing a program, and no amount of
+// checking the model alone would catch it.
+{
+  // Both modules attach to the same global the browser gives them.
+  ctx.self = ctx.window;
+  vm.runInContext(fs.readFileSync(path.join(root, 'web/exercise-taxonomy.js'), 'utf8'), ctx);
+  vm.runInContext(fs.readFileSync(path.join(root, 'web/progression-models.js'), 'utf8'), ctx);
+  ctx.NURVAN_EXERCISE_TAXONOMY = ctx.window.NURVAN_EXERCISE_TAXONOMY;
+
+  const draft = {
+    title: 'Stagione', weeks: 20, modelId: 'peaking_classic', loadDisplay: 'kg',
+    maxes: { squat: 200 }, rotateWeeks: '6, 11, 16', rotateScope: 'all', testWeeks: '15',
+    days: [{
+      name: 'A', exercises: [
+        { name: 'Low-bar squat', muscle: 'QUADRICIPITI', sets: 5, reps: '5', rest: '240s' },
+        { name: 'Curl manubri', muscle: 'BICIPITI', sets: 3, reps: '10', rest: '60s' }
+      ]
+    }]
+  };
+  ctx.store.programDraft = draft;
+  const html = ctx.programDraftProgressionHtml(draft, '');
+  ok(typeof html === 'string' && html.length > 500, '3bf. the progression panel renders');
+  ok(/DURATA E PROGRESSIONE/.test(html), '3bg. with the duration and the model on it');
+  ok(/Peaking classico/.test(html), '3bh. naming the model that is selected');
+  ok(/CAMBIO ESERCIZI/.test(html) && /Blocchi: settimane/.test(html), '3bi. the exercise-change blocks');
+  ok(/TEST INTERMEDI/.test(html) && /settimana 15/.test(html), '3bj. and the mid-program test');
+  ok(/MASSIMALI/.test(html) && /Squat/.test(html), '3bk. asking only for the maxes of the lifts that are in it');
+  ok(/40/.test(ctx.programDraftProgressionHtml(Object.assign({}, draft, { weeks: 40 }), '')),
+    '3bl. forty weeks is one of the durations offered, not something to type around');
+
+  const plain = ctx.programDraftProgressionHtml({ weeks: 8, modelId: 'linear_rir', days: draft.days }, '');
+  ok(!/TEST INTERMEDI/.test(plain) && !/MASSIMALI/.test(plain),
+    '3bm. a hypertrophy block is not asked for maxes or a meet test');
+
+  // And the whole program comes out of the draft with all of it applied.
+  const prog = ctx.programFromDraft(draft);
+  ok(prog.weeks.length === 20, '3bn. twenty weeks written from one');
+  ok(prog.weeks[14].test_week === true, '3bo. with the test where it was asked for');
+  ok(prog.weeks[10].sessions[0].exercises[0].name !== 'Low-bar squat', '3bp. and the variations in their blocks');
+  ok(prog.weeks[19].sessions[0].exercises[0].name === 'Low-bar squat', '3bq. coming back to the lift for the meet');
+  ok(/cambio esercizi/.test(prog.source_summary) && /Peaking/.test(prog.source_summary),
+    '3br. the program says how it was built');
+}
+
 /* ---------- 4. how it is reached ---------- */
 {
   ok(/onclick="openProgramBuilder\(\)"/.test(html), '4a. PROGRAMMI has a way into the builder');
@@ -405,7 +452,10 @@ function loggedProgram() {
     'openAddExerciseToProgram', 'openAddToProgramConfig', 'closeAddToProgramConfig', 'confirmAddExerciseToProgram',
     'duplicateProgramDraftDay', 'moveWorkoutExercise',
     'setProgramDraftModel', 'setProgramDraftLoadDisplay', 'setProgramDraftMax',
-    'insertDeloadWeek', 'closeDeloadSuggestion'
+    'insertDeloadWeek', 'closeDeloadSuggestion',
+    'setProgramDraftWeeks', 'setProgramDraftRotationWeeks', 'setProgramDraftRotationEvery', 'setProgramDraftRotationScope',
+    'setProgramDraftTestWeeks', 'setProgramDraftTestWeeksQuick',
+    'maybeAskTestResults', 'openTestResultsSheet', 'closeTestResultsSheet', 'applyTestResults'
   ];
   for (const fn of exported) {
     ok(html.includes('window.' + fn + ' = ' + fn + ';'), '4f. ' + fn + ' is reachable from an onclick');
