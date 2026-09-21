@@ -187,12 +187,111 @@ function freshProgram() {
     '3l. a week without that day is skipped, not given a new one');
 }
 
+/* ---------- 3bis. reordering, with the records following ---------- */
+function programOf(days) {
+  return {
+    id: 'p1',
+    weeks: [1, 2, 3].map((w) => ({
+      week: w,
+      sessions: [
+        { name: 'Upper', exercises: days.map((n) => ({ name: n, sets: [{ reps: '8' }] })) },
+        { name: 'Lower', exercises: [{ name: 'Squat bilanciere', sets: [{ reps: '5' }] }] }
+      ]
+    }))
+  };
+}
+{
+  ctx.DATA = programOf(['Panca piana bilanciere', 'Rematore bilanciere', 'Curl bilanciere']);
+  ctx.currentWeek = 1;
+  ctx.currentDay = 0;
+  ctx.store.data = {
+    'w1_d0_e0_s1_load': 100, 'w1_d0_e0_s1_reps': 8,
+    'w1_d0_e1_s1_load': 70,
+    'w1_d0_e2_s1_load': 30,
+    'w2_d0_e2_s1_load': 32,
+    'w1_d0_e900_s1_load': 12,
+    'w1_d1_e0_s1_load': 140
+  };
+  ctx.store.subs = { 'w1_d0_e2': 'Curl EZ' };
+  ctx.store.customSets = { 'w1_d0_e2': 4 };
+  ctx.store.tempos = {};
+  ctx.store.skips = {};
+  ctx.store.loadTypes = {};
+  ctx.store.exMuscle = {};
+  ctx.store.exIntensity = {};
+  ctx.store.intelTargets = {};
+
+  const res = ctx.moveProgramExercise(1, 0, 2, 0);
+  ok(res.moved === 3, '3m. moving an exercise moves it in every week that has the same order');
+  ok(ctx.DATA.weeks[0].sessions[0].exercises.map((e) => e.name).join('|')
+    === 'Curl bilanciere|Panca piana bilanciere|Rematore bilanciere', '3n. it really is in its new place');
+  ok(ctx.DATA.weeks[2].sessions[0].exercises[0].name === 'Curl bilanciere', '3o. in week 3 as well');
+
+  ok(ctx.store.data['w1_d0_e0_s1_load'] === 30, '3p. its own 30 kg travelled with it to slot 0');
+  ok(ctx.store.data['w1_d0_e1_s1_load'] === 100 && ctx.store.data['w1_d0_e1_s1_reps'] === 8,
+    '3q. and the 100 kg bench moved down to slot 1 instead of being inherited');
+  ok(ctx.store.data['w1_d0_e2_s1_load'] === 70, '3r. the row is a permutation, nothing lost and nothing duplicated');
+  ok(ctx.store.data['w2_d0_e0_s1_load'] === 32, '3s. every week it touched moved its own records too');
+  ok(ctx.store.subs['w1_d0_e0'] === 'Curl EZ' && !('w1_d0_e2' in ctx.store.subs),
+    '3t. the substitution follows the exercise, not the slot number');
+  ok(ctx.store.customSets['w1_d0_e0'] === 4, '3u. and so do the sets that were added by hand');
+  ok(ctx.store.data['w1_d0_e900_s1_load'] === 12, '3v. a bonus is not part of the day and is not renumbered');
+  ok(ctx.store.data['w1_d1_e0_s1_load'] === 140, '3w. the other day of the week is untouched');
+
+  // A week edited on its own must not be quietly shuffled to match.
+  ctx.DATA = programOf(['Panca piana bilanciere', 'Rematore bilanciere', 'Curl bilanciere']);
+  ctx.DATA.weeks[1].sessions[0].exercises[2] = { name: 'Face pull al cavo', sets: [{ reps: '12' }] };
+  ctx.store.data = { 'w2_d0_e2_s1_load': 25 };
+  const partial = ctx.moveProgramExercise(1, 0, 2, 0);
+  ok(partial.moved === 2, '3x. a week with something else in that place is left alone');
+  ok(ctx.DATA.weeks[1].sessions[0].exercises[2].name === 'Face pull al cavo'
+    && ctx.store.data['w2_d0_e2_s1_load'] === 25, '3y. with its own exercise and its own load where they were');
+
+  // The new exercise has nothing recorded: moving it up must not hand it
+  // anything of the exercise it displaces.
+  ctx.DATA = programOf(['Panca piana bilanciere', 'Rematore bilanciere']);
+  ctx.store.data = { 'w1_d0_e0_s1_load': 100, 'w1_d0_e1_s1_load': 70 };
+  ctx.addExerciseToProgram('Curl bilanciere', 'BICIPITI', { scope: 'all' });
+  ctx.moveProgramExercise(1, 0, 2, 0);
+  ok(ctx.store.data['w1_d0_e0_s1_load'] === undefined,
+    '3z. an exercise just added carries no loads into the slot it takes');
+  ok(ctx.store.data['w1_d0_e1_s1_load'] === 100 && ctx.store.data['w1_d0_e2_s1_load'] === 70,
+    '3aa. the two that were there kept theirs');
+
+  ok(ctx.moveProgramExercise(1, 0, 0, -1).moved === 0, '3ab. nothing moves off the top');
+  ok(ctx.moveProgramExercise(1, 0, 2, 9).moved === 0, '3ac. or past the bottom');
+  ok(ctx.moveProgramExercise(1, 0, 1, 1).moved === 0, '3ad. and moving onto itself does nothing');
+}
+
+/* ---------- 3ter. duplicating a day ---------- */
+{
+  ctx.store.programDraft = {
+    title: 'PPL', weeks: 4,
+    days: [{ name: 'Push', exercises: [{ name: 'Panca piana bilanciere', muscle: 'PETTO', sets: 4, reps: '6-8', rest: '120s' }] }]
+  };
+  ctx.duplicateProgramDraftDay(0);
+  const d = ctx.store.programDraft;
+  ok(d.days.length === 2, '3ae. a day can be duplicated');
+  ok(d.days[1].name === 'Push (2)', '3af. the copy is named so it can be told apart');
+  ok(d.days[1].exercises[0].name === 'Panca piana bilanciere' && d.days[1].exercises[0].sets === 4,
+    '3ag. with the same exercises and the same prescription');
+  d.days[1].exercises[0].sets = 8;
+  ok(d.days[0].exercises[0].sets === 4, '3ah. editing the copy does not edit the original');
+  ctx.duplicateProgramDraftDay(0);
+  ok(d.days[1].name === 'Push (3)' && d.days[2].name === 'Push (2)',
+    '3ai. duplicating again lands next to the original with a free name');
+}
+
 /* ---------- 4. how it is reached ---------- */
 {
   ok(/onclick="openProgramBuilder\(\)"/.test(html), '4a. PROGRAMMI has a way into the builder');
   ok(/CREA UNA SCHEDA DA ZERO/.test(html), '4b. named for what it does');
   ok(/RIPRENDI LA BOZZA/.test(html), '4c. and it says so when a draft is waiting');
   ok(/onclick="openAddExerciseToProgram\(\)"/.test(html), '4d. the workout screen can add to the program');
+  ok(/moveWorkoutExercise\(\$\{fIdx\},-1\)/.test(html) && /moveWorkoutExercise\(\$\{fIdx\},1\)/.test(html),
+    '4d1. and every exercise in it has an arrow each way');
+  ok(/onclick="duplicateProgramDraftDay\(/.test(html) && />DUPLICA</.test(html),
+    '4d2. every day in the builder can be duplicated');
   ok(/\+ AGGIUNGI ALLA SCHEDA/.test(html) && /\+ BONUS DI OGGI/.test(html),
     '4e. next to the bonus, which stays for what it is good at');
 
@@ -204,7 +303,8 @@ function freshProgram() {
     'addProgramDraftDay', 'removeProgramDraftDay',
     'addProgramDraftExercise', 'removeProgramDraftExercise', 'moveProgramDraftExercise',
     'openExercisePicker', 'closeExercisePicker', 'renderExercisePickerResults', 'pickExerciseFromPicker',
-    'openAddExerciseToProgram', 'openAddToProgramConfig', 'closeAddToProgramConfig', 'confirmAddExerciseToProgram'
+    'openAddExerciseToProgram', 'openAddToProgramConfig', 'closeAddToProgramConfig', 'confirmAddExerciseToProgram',
+    'duplicateProgramDraftDay', 'moveWorkoutExercise'
   ];
   for (const fn of exported) {
     ok(html.includes('window.' + fn + ' = ' + fn + ';'), '4f. ' + fn + ' is reachable from an onclick');

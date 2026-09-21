@@ -19879,6 +19879,8 @@ function renderTraining(c){
 
         h += showLiveSetIntelHtml(fIdx);
         h += `<div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid #222;padding-top:10px;flex-wrap:wrap;">
+          <button class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:6px 9px;" title="Sposta su" ${ri === 0 ? 'disabled' : ''} onclick="event.stopPropagation();moveWorkoutExercise(${fIdx},-1)">↑</button>
+          <button class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:6px 9px;" title="Sposta giù" ${ri === exerciseList.length - 1 ? 'disabled' : ''} onclick="event.stopPropagation();moveWorkoutExercise(${fIdx},1)">↓</button>
           <button class="btn btn-outline" style="flex:1;font-size:10px;padding:6px 8px;" onclick="addSetToExercise(${fIdx})">+ SERIE</button>
           <button class="btn btn-outline" style="flex:2;font-size:10px;padding:6px 8px;" data-ex="${encodeURIComponent(curEx)}" onclick="window.openReplacementModal(${fIdx}, this.getAttribute('data-ex'))">SOSTITUISCI</button>
           <button class="btn btn-outline" style="flex:2;font-size:10px;padding:6px 8px;border-color:var(--gold);color:var(--gold);" data-ex="${encodeURIComponent(curEx)}" onclick="event.stopPropagation();askExerciseInfoToCoach(${fIdx}, decodeURIComponent(this.getAttribute('data-ex')||''))">CHIEDI INFO</button>
@@ -28781,6 +28783,7 @@ function renderProgramBuilder() {
     return '<div class="card" style="padding:12px;margin-bottom:10px;border:1px solid #333;">' +
       '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">' +
       '<input type="text" value="' + esc(day.name || ('Giorno ' + (di + 1))) + '" placeholder="Nome del giorno" oninput="updateProgramDraftDay(' + di + ',this.value)" style="flex:1;font-weight:800;' + inputStyle + '">' +
+      '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;flex:0 0 auto;" title="Duplica questo giorno" onclick="duplicateProgramDraftDay(' + di + ')">DUPLICA</button>' +
       '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#c66;border-color:#c66;flex:0 0 auto;" onclick="removeProgramDraftDay(' + di + ')">ELIMINA</button>' +
       '</div>' +
       (exHtml || '<div style="font-size:11px;color:#777;padding:6px 0 10px;">Nessun esercizio in questo giorno.</div>') +
@@ -28841,6 +28844,32 @@ function addProgramDraftDay() {
   renderProgramBuilder();
 }
 window.addProgramDraftDay = addProgramDraftDay;
+
+// Four days that differ by two exercises are four days you would otherwise
+// type out four times. The copy lands right under the original, named so the
+// two can be told apart before either is edited.
+function duplicateProgramDraftDay(dayIdx) {
+  var d = programDraft();
+  var day = d.days[dayIdx];
+  if (!day) return;
+  var copy = JSON.parse(JSON.stringify(day));
+  copy.name = nextDraftDayName(d, day.name || ('Giorno ' + (dayIdx + 1)));
+  d.days.splice(dayIdx + 1, 0, copy);
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.duplicateProgramDraftDay = duplicateProgramDraftDay;
+
+function nextDraftDayName(draft, name) {
+  var base = String(name || 'Giorno').replace(/\s*\((\d+)\)\s*$/, '').trim() || 'Giorno';
+  var taken = {};
+  (draft.days || []).forEach(function (day) { taken[String(day.name || '').trim()] = true; });
+  for (var n = 2; n < 100; n++) {
+    var candidate = base + ' (' + n + ')';
+    if (!taken[candidate]) return candidate;
+  }
+  return base + ' copia';
+}
 
 function removeProgramDraftDay(dayIdx) {
   var d = programDraft();
@@ -29065,6 +29094,7 @@ function openAddToProgramConfig(name, muscle) {
     '<input type="radio" name="atp-scope" value="week" style="margin-top:2px;">' +
     '<span><b style="color:#fff;font-size:12px;">Solo nella settimana ' + currentWeek + '</b>' +
     '<br><span style="font-size:11px;color:#888;">Resta nella scheda, ma solo in questa settimana.</span></span></label>' +
+    '<p style="font-size:11px;color:#777;line-height:1.45;margin:12px 0 0;">Entra in fondo al giorno. Con le frecce ↑↓ sulla scheda lo sposti dove vuoi: i carichi seguono sempre il loro esercizio.</p>' +
     '</div>' +
     '<div class="nurvan-sheet-foot">' +
     '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="confirmAddExerciseToProgram()">AGGIUNGI</button>' +
@@ -29093,9 +29123,106 @@ function confirmAddExerciseToProgram() {
 }
 window.confirmAddExerciseToProgram = confirmAddExerciseToProgram;
 
-// Appended, never inserted: every logged set is addressed by its position in
-// the day (w1_d0_e2_s1...), so putting a new exercise in the middle would
-// move somebody else's loads onto the wrong exercise.
+/* ---------- moving an exercise, and taking its record with it ---------- */
+
+// Everything an athlete records is addressed by where the exercise sits in
+// the day: w2_d0_e3_s1_load, the substitution, the tempo, the extra sets, the
+// skip. That position is the only name those records have. So an exercise can
+// be moved - it just has to carry them along, or the loads stay behind and
+// land on whatever takes its place.
+var EXERCISE_SLOT_STORES = ['data', 'customSets', 'subs', 'tempos', 'skips', 'loadTypes', 'exMuscle', 'exIntensity', 'intelTargets'];
+
+function remapExerciseSlotRecords(week, day, mapping) {
+  var prefix = 'w' + week + '_d' + day + '_e';
+  EXERCISE_SLOT_STORES.forEach(function (bagName) {
+    var bag = store[bagName];
+    if (!bag || typeof bag !== 'object') return;
+    var moves = [];
+    Object.keys(bag).forEach(function (key) {
+      if (key.indexOf(prefix) !== 0) return;
+      var m = /^(\d+)([\s\S]*)$/.exec(key.slice(prefix.length));
+      if (!m) return;
+      var from = Number(m[1]);
+      if (!Object.prototype.hasOwnProperty.call(mapping, from)) return;
+      moves.push({ from: key, to: prefix + mapping[from] + m[2], value: bag[key] });
+    });
+    // Two passes: a slot's new key can be another slot's old key.
+    moves.forEach(function (mv) { delete bag[mv.from]; });
+    moves.forEach(function (mv) { bag[mv.to] = mv.value; });
+  });
+}
+
+function exerciseMoveMapping(length, from, to) {
+  var order = [];
+  for (var i = 0; i < length; i++) order.push(i);
+  order.splice(to, 0, order.splice(from, 1)[0]);
+  var mapping = {};
+  order.forEach(function (oldIdx, newIdx) { if (oldIdx !== newIdx) mapping[oldIdx] = newIdx; });
+  return mapping;
+}
+
+function sessionExercisesFor(week, day) {
+  if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks)) return null;
+  var wk = DATA.weeks[week - 1];
+  var sessions = wk && (wk.sessions || wk.days);
+  var sess = sessions && sessions[day];
+  if (!sess) return null;
+  if (!sess.exercises) sess.exercises = sess.rows || [];
+  return sess.exercises;
+}
+
+function programRowName(row) {
+  return String((row && (row.name || row.exercise || row.title)) || '').trim();
+}
+
+// The order is the program's, not one week's, so the move is applied to every
+// week where that same exercise sits in that same place. A week that was
+// changed on its own is left alone rather than shuffled to match.
+function moveProgramExercise(week, day, from, to) {
+  var base = sessionExercisesFor(week, day);
+  if (!base) return { moved: 0 };
+  var len = base.length;
+  if (from === to || from < 0 || to < 0 || from >= len || to >= len) return { moved: 0 };
+  var movedName = programRowName(base[from]);
+  var mapping = exerciseMoveMapping(len, from, to);
+  var targets = [];
+  DATA.weeks.forEach(function (_wk, wi) {
+    var weekNo = wi + 1;
+    var list = sessionExercisesFor(weekNo, day);
+    if (!list || list.length !== len) return;
+    if (programRowName(list[from]) !== movedName) return;
+    targets.push({ weekNo: weekNo, list: list });
+  });
+  if (!targets.length) return { moved: 0 };
+  targets.forEach(function (target) {
+    target.list.splice(to, 0, target.list.splice(from, 1)[0]);
+    remapExerciseSlotRecords(target.weekNo, day, mapping);
+  });
+  persistActiveProgramStructure();
+  return { moved: targets.length };
+}
+window.moveProgramExercise = moveProgramExercise;
+
+function moveWorkoutExercise(idx, dir) {
+  var res = moveProgramExercise(
+    (typeof currentWeek !== 'undefined' ? currentWeek : 1),
+    (typeof currentDay !== 'undefined' ? currentDay : 0),
+    idx, idx + dir
+  );
+  if (!res.moved) {
+    if (typeof showToast === 'function') showToast('Non posso spostarlo qui.', 'warning');
+    return;
+  }
+  if (typeof showToast === 'function') {
+    showToast(res.moved > 1 ? ('Spostato in tutte le ' + res.moved + ' settimane') : 'Spostato in questa settimana', 'success');
+  }
+  if (typeof render === 'function') render();
+}
+window.moveWorkoutExercise = moveWorkoutExercise;
+
+// Appended, never inserted: an exercise dropped into the middle would take a
+// slot that already has someone's loads in it. Once it is in, the arrows
+// above move it wherever it belongs, records and all.
 function addExerciseToProgram(name, muscle, cfg) {
   cfg = cfg || {};
   var clean = String(name || '').trim();
