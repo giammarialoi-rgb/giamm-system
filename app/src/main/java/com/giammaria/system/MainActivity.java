@@ -98,6 +98,27 @@ public class MainActivity extends Activity {
                 }
             }
 
+            // A link meant for somewhere else. The app itself only ever loads
+            // its local asset, so any http(s) navigation is a link the athlete
+            // tapped - the YouTube search on an exercise, for instance. Handed
+            // to the system it opens the YouTube app, or the browser; left
+            // alone it would load inside this WebView with no way back out.
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request) {
+                if (request == null || request.getUrl() == null) return false;
+                String scheme = request.getUrl().getScheme();
+                if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) return false;
+                try {
+                    Intent open = new Intent(Intent.ACTION_VIEW, request.getUrl());
+                    open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(open);
+                    return true;
+                } catch (Exception e) {
+                    Log.e("NURVAN_BOOT", "External link not opened: " + e.getMessage());
+                    return false;
+                }
+            }
+
             @Override
             public void onReceivedError(WebView view, android.webkit.WebResourceRequest request, android.webkit.WebResourceError error) {
                 super.onReceivedError(view, request, error);

@@ -3131,8 +3131,18 @@ async function clearCoachClientDomain(domain) {
     } else {
       return;
     }
-    if (typeof persist === 'function') persist();
-    await pushCoachClientEdits({ domains: [pushDomain], cleared: true });
+    // Same reason as the athlete's own reset: this ends with a push to the
+    // client, so the screen stays blocked until the clearing has actually
+    // travelled, not only until the local store is empty.
+    const sendClear = function () {
+      if (typeof persist === 'function') persist();
+      return pushCoachClientEdits({ domains: [pushDomain], cleared: true });
+    };
+    if (typeof withBusy === 'function') {
+      await withBusy(sendClear, 'Cancello ' + label + '…', { immediate: true, maxMs: 60000 });
+    } else {
+      await sendClear();
+    }
     practiceToast(label.charAt(0).toUpperCase() + label.slice(1) + ' cancellata', 'success');
     if (typeof render === 'function') render();
   } catch (err) {

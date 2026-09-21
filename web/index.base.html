@@ -2384,6 +2384,48 @@ async function withBusy(fn, label, opts) {
   }
 }
 
+// "Cerca su YouTube" is a search link, not an embed.
+//
+// YouTube only lets a page embed one known video, and knowing which video to
+// embed for 231 exercises and 33 warm-ups would mean a Data API key, a daily
+// quota and a curated pick per exercise - and a wrong video is the same
+// problem as a wrong picture. A plain youtube.com search link costs nothing,
+// always shows current results, and on a phone the YouTube app claims the
+// link itself (App Links on Android, Universal Links on iOS), so it opens in
+// the app when it is installed and in the browser when it is not. It is a
+// real <a target="_blank">, not window.open, so nothing can block it.
+function youtubeSearchUrl(query) {
+  return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(String(query || '').trim());
+}
+window.youtubeSearchUrl = youtubeSearchUrl;
+
+function youtubeGlyphHtml(size) {
+  var w = size || 18;
+  var h = Math.round(w * 0.7);
+  return '<svg viewBox="0 0 28 20" width="' + w + '" height="' + h + '" aria-hidden="true" focusable="false" style="flex:0 0 auto;">' +
+    '<rect width="28" height="20" rx="5" ry="5" fill="#ff0000"></rect>' +
+    '<path d="M11 5.4 L20 10 L11 14.6 Z" fill="#ffffff"></path></svg>';
+}
+
+function youtubeSearchButtonHtml(query, opts) {
+  opts = opts || {};
+  var clean = String(query || '').trim();
+  if (!clean) return '';
+  var href = esc(youtubeSearchUrl(clean));
+  var title = 'Cerca "' + clean + '" su YouTube';
+  if (opts.compact) {
+    return '<a class="btn btn-outline" href="' + href + '" target="_blank" rel="noopener noreferrer" ' +
+      'title="' + esc(title) + '" aria-label="' + esc(title) + '" onclick="event.stopPropagation();" ' +
+      'style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;padding:6px 9px;text-decoration:none;">' +
+      youtubeGlyphHtml(16) + '</a>';
+  }
+  return '<a class="btn btn-outline" href="' + href + '" target="_blank" rel="noopener noreferrer" ' +
+    'title="' + esc(title) + '" onclick="event.stopPropagation();" ' +
+    'style="width:100%;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;">' +
+    youtubeGlyphHtml(18) + '<span>' + esc(opts.label || 'CERCA SU YOUTUBE') + '</span></a>';
+}
+window.youtubeSearchButtonHtml = youtubeSearchButtonHtml;
+
 function snapshotAppSurface() {
   try {
     sessionStorage.setItem('NURVAN_SURFACE', JSON.stringify({
@@ -11893,7 +11935,12 @@ async function clearPersonalNutrition() {
     ? t('clearNutritionConfirm')
     : 'Azzerare l’alimentazione? Il piano e i cibi verranno cancellati. Allenamento, integrazione, terapia ed esami restano intatti.';
   if (!confirm(confirmMsg)) return;
-  try {
+  // Emptying the diary is not one write: it clears the store, the local
+  // database and then the account on the server. Until that last step lands,
+  // pressing the button looked like it had done nothing, and a second press
+  // on a half-finished reset is exactly how food used to come back. Hold a
+  // blocking overlay over the whole thing instead.
+  const clearWork = async function () {
     const empty = applyPersonalNutritionClear({
       DATA: (typeof DATA !== 'undefined') ? DATA : null,
       store: (typeof store !== 'undefined') ? store : null
@@ -11912,6 +11959,13 @@ async function clearPersonalNutrition() {
     }
     if (typeof syncAccountData === 'function' && store && store.accountToken) {
       await syncAccountData(false);
+    }
+  };
+  try {
+    if (typeof withBusy === 'function') {
+      await withBusy(clearWork, 'Azzero l’alimentazione…', { immediate: true, maxMs: 60000 });
+    } else {
+      await clearWork();
     }
     if (typeof render === 'function') render();
     if (typeof showToast === 'function') {
@@ -19120,6 +19174,9 @@ function warmupSessionCardHtml(week, day, exerciseList) {
   html += '<div style="font-size:11px;color:#ccc;margin-bottom:10px;">' + esc(sourceLabel) + (warmup.mainLift ? ' · per ' + esc(warmup.mainLift) : '') + '<br><span style="color:#888;">' + warmup.items.length + ' esercizi · ~' + totalMin + ' min</span></div>';
   html += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
   html += '<button class="btn btn-primary" type="button" style="flex:1;min-width:140px;font-size:11px;padding:9px 10px;" onclick="openWarmupPlayer(' + week + ',' + day + ')">' + startLabel + '</button>';
+  // Reading what the warm-up is before starting it: the player shows one
+  // exercise at a time, so there was no way to see the whole thing first.
+  html += '<button class="btn btn-outline" type="button" style="font-size:11px;padding:9px 10px;" onclick="openWarmupOverview(' + week + ',' + day + ')">VISUALIZZA</button>';
   if (!isLocked) {
     html += '<button class="btn btn-outline" type="button" style="font-size:11px;padding:9px 10px;" onclick="openWarmupEditor(' + week + ',' + day + ')">MODIFICA</button>';
     html += '<button class="btn btn-outline" type="button" style="font-size:11px;padding:9px 10px;" onclick="regenerateWarmup(' + week + ',' + day + ')">RICREA</button>';
@@ -19136,6 +19193,72 @@ function warmupSessionCardHtml(week, day, exerciseList) {
   return html;
 }
 window.warmupSessionCardHtml = warmupSessionCardHtml;
+
+// The whole warm-up on one screen, read-only: what you are about to do, in
+// order, with the scheme and how long it takes. The player walks you through
+// one exercise at a time and the editor is for changing things - neither
+// answers "what am I in for?".
+function openWarmupOverview(week, day) {
+  var key = warmupSessionKey(week, day);
+  var warmup = (store.warmupAssignment && store.warmupAssignment.active)
+    ? store.warmupAssignment
+    : (store.warmups && store.warmups[key]);
+  if (!warmup || !warmup.items || !warmup.items.length) {
+    if (typeof showToast === 'function') showToast('Nessun esercizio nel warm-up di questa sessione.', 'warning');
+    return;
+  }
+  var existing = document.getElementById('warmup-overview-modal');
+  if (existing) existing.remove();
+  var totalMin = Math.max(1, Math.round(estimateWarmupTotalSeconds(warmup.items) / 60));
+  var progress = warmupProgressForKey(key);
+  var doneIdx = (progress && typeof progress.idx === 'number' && progress.status !== 'completed') ? progress.idx : -1;
+  var rows = warmup.items.map(function (it, idx) {
+    var lib = warmupLibraryExercise(it.exerciseId);
+    var scheme = warmupSchemeText(it);
+    var secs = warmupItemDurationEstimateSeconds(it);
+    var state = (progress && progress.status === 'completed') ? 'done'
+      : (doneIdx > idx ? 'done' : (doneIdx === idx ? 'now' : ''));
+    var dot = state === 'done' ? '<span style="color:#4caf50;">✓</span>'
+      : state === 'now' ? '<span style="color:var(--gold);">▸</span>'
+      : '<span style="color:#555;">' + (idx + 1) + '</span>';
+    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #1e1e1e;">' +
+      '<div style="width:16px;text-align:center;font-size:12px;font-weight:800;flex:0 0 auto;padding-top:1px;">' + dot + '</div>' +
+      '<div style="flex:1;min-width:0;">' +
+      '<div style="font-size:13px;font-weight:800;color:' + (state === 'done' ? '#888' : '#fff') + ';">' + esc(it.name) + '</div>' +
+      '<div style="font-size:10px;color:#888;margin-top:2px;">' +
+      esc(WARMUP_CATEGORY_LABELS[it.category] || it.category || '') +
+      (scheme ? ' · <span style="color:var(--gold);">' + esc(scheme) + '</span>' : '') +
+      (secs ? ' · ~' + Math.max(1, Math.round(secs / 60)) + ' min' : '') +
+      '</div>' +
+      (lib && lib.description ? '<div style="font-size:11px;color:#aaa;line-height:1.4;margin-top:4px;">' + esc(lib.description) + '</div>' : '') +
+      '</div>' +
+      youtubeSearchButtonHtml(it.name, { compact: true }) +
+      '</div>';
+  }).join('');
+  var overlay = document.createElement('div');
+  overlay.id = 'warmup-overview-modal';
+  overlay.className = 'nurvan-sheet is-open';
+  overlay.style.zIndex = '10200';
+  overlay.onclick = function (ev) { if (ev.target === overlay) closeWarmupOverview(); };
+  overlay.innerHTML =
+    '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:#81c784;font-weight:800;letter-spacing:1px;">WARM-UP · ' + warmup.items.length + ' esercizi · ~' + totalMin + ' min</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeWarmupOverview()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' + rows + '</div>' +
+    '<div class="nurvan-sheet-foot">' +
+    '<button class="btn btn-primary" type="button" style="flex:1;font-size:12px;padding:12px;" onclick="closeWarmupOverview();openWarmupPlayer(' + week + ',' + day + ')">AVVIA WARM-UP</button>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+}
+window.openWarmupOverview = openWarmupOverview;
+
+function closeWarmupOverview() {
+  var el = document.getElementById('warmup-overview-modal');
+  if (el) el.remove();
+}
+window.closeWarmupOverview = closeWarmupOverview;
 
 function skipWarmup(week, day) {
   var key = warmupSessionKey(week, day);
@@ -19472,7 +19595,8 @@ function renderWarmupPlayer() {
     (ex && ex.cautions ? '<div style="font-size:11px;color:#e0b040;background:rgba(224,176,64,0.1);padding:8px 10px;border-radius:8px;margin-bottom:10px;">⚠ ' + esc(ex.cautions) + '</div>' : '') +
     '<div style="font-size:16px;font-weight:800;color:var(--gold);margin-bottom:6px;">' + esc(warmupSchemeText(it)) + '</div>' +
     rampHtml +
-    (it.notes && !(ex && ex.cautions) ? '<div style="font-size:11px;color:#888;">' + esc(it.notes) + '</div>' : '') +
+    (it.notes && !(ex && ex.cautions) ? '<div style="font-size:11px;color:#888;margin-bottom:8px;">' + esc(it.notes) + '</div>' : '') +
+    youtubeSearchButtonHtml(it.name) +
     '</div>' +
     '<div class="nurvan-sheet-foot">' +
     '<button class="btn btn-outline" type="button" style="flex:1;font-size:12px;padding:12px;" onclick="warmupPlayerSkipItem()">SALTA</button>' +
@@ -27360,6 +27484,7 @@ function paintExerciseInfoSheet(opts) {
     '<div style="margin:10px 0;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:4px;">RIR / CARICO</div>' +
     '<p style="font-size:12px;color:#ccc;line-height:1.4;margin:0;">' + esc(policy.advice || 'RIR 2 = due reps in canna. Se chiudi le serie, la settimana dopo +2,5 kg (o +1 kg se i pesi sono già bassi).') + '</p></div>' +
+    youtubeSearchButtonHtml(title) +
     '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="openKnowledgeFor(decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">APRI ENCICLOPEDIA</button>' +
     (unknown ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="closeExerciseInfoSheet();openAddEncyclopediaExercise(decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">AGGIUNGI ALL’ENCICLOPEDIA</button>' : '') +
     (athlete
