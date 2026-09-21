@@ -16857,6 +16857,19 @@ function renderPrograms(c){
       <button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="promptCatalogFromIntakeThenOpen('${esc(store.coachAssigning.clientId)}','${esc(store.coachAssigning.name || '')}')">FILTRA CON ANAGRAFICA CLIENTE</button>
     </div>` : '')}
 
+    <div class="card" id="program-create-scratch" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
+      <div class="card-header"><h3 style="font-size:13px;color:var(--gold);font-weight:800;margin:0;">CREA UNA SCHEDA DA ZERO</h3></div>
+      <p style="font-size:11px;color:#888;margin:0 0 10px;">Parte vuota: scegli tu i giorni e gli esercizi, uno per uno, con serie, ripetizioni e recupero.</p>
+      ${(() => {
+        const d = store.programDraft;
+        const exCount = programDraftExerciseCount(d);
+        if (!d || !exCount) return '';
+        return `<div style="font-size:11px;color:#ccc;background:#141414;border:1px solid #2a2a2a;border-radius:8px;padding:9px 10px;margin-bottom:10px;">
+          Bozza in corso: <b style="color:#fff;">${esc(d.title || 'senza nome')}</b> · ${(d.days || []).length} giorni · ${exCount} esercizi</div>`;
+      })()}
+      <button class="btn btn-primary" style="width:100%;font-size:12px;" onclick="openProgramBuilder()">${(store.programDraft && programDraftExerciseCount(store.programDraft)) ? 'RIPRENDI LA BOZZA' : 'APRI IL COSTRUTTORE'}</button>
+    </div>
+
     <div class="card" id="program-create-template" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
       <div class="card-header"><h3 style="font-size:13px;color:var(--gold);font-weight:800;margin:0;">GENERA PROGRAMMA (rules-based)</h3></div>
       <p style="font-size:11px;color:#888;margin:0 0 10px;">Template strutturati (non AI random). Puoi attivare e modificare dopo.</p>
@@ -19945,7 +19958,12 @@ function renderTraining(c){
     console.info(`DOC_RENDER_EXERCISES=${renderedCount}`);
     console.info(`DOC_WORKOUT_RENDERED_EXERCISES=${renderedCount}`);
 
-    h += `<div style="padding:15px; text-align:center;"><button class="btn btn-outline" style="width:100%; font-size:12px;" onclick="openBonusModal()">+ AGGIUNGI ESERCIZIO BONUS</button></div>`;
+    // Two different things, side by side: the bonus is an extra for today
+    // only, the other one really goes into the program.
+    h += `<div style="padding:15px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" style="flex:1;min-width:150px;font-size:12px;" onclick="openAddExerciseToProgram()">+ AGGIUNGI ALLA SCHEDA</button>
+      <button class="btn btn-outline" style="flex:1;min-width:150px;font-size:12px;" onclick="openBonusModal()">+ BONUS DI OGGI</button>
+    </div>`;
     h += `</div></div>
       <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;background:rgba(255,255,255,0.02);border-radius:12px;">
         <div style="text-align:center;"><b id="d-vol" style="color:var(--gold);font-size:18px;">0</b><br><span style="font-size:9px;color:#666;">VOLUME</span></div>
@@ -28585,6 +28603,533 @@ function addExerciseFromDb(encodedName, encodedMuscle) {
   if (typeof showToast === 'function') showToast('Esercizio salvato nel database personalizzato', 'success');
 }
 window.addExerciseFromDb = addExerciseFromDb;
+
+/* ===================================================================
+   Building a program yourself
+   ===================================================================
+   Until now a program could only arrive: imported from a file, taken from
+   the catalogue, or generated from a template. There was no way to write
+   one, and the only thing that could be added to a day was a "bonus" -
+   an extra for that one day that is not part of the program at all.
+
+   Below: one exercise picker shared by both, a builder that composes a
+   program day by day, and an add that really goes into the program, for
+   this week or for every week - the athlete chooses, because both are
+   legitimate (an accessory tried once, a lift that belongs in the plan).
+   =================================================================== */
+
+// The picker searches the same library substitutions use, so whatever comes
+// out of it is an exercise the app already knows: it has a muscle group, and
+// a picture when one exists.
+function openExercisePicker(opts) {
+  opts = opts || {};
+  window.__exPickerPick = (typeof opts.onPick === 'function') ? opts.onPick : null;
+  closeExercisePicker();
+  var sheet = document.createElement('div');
+  sheet.id = 'ex-picker-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10250';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeExercisePicker(); };
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">' + esc(opts.title || 'SCEGLI ESERCIZIO') + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeExercisePicker()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<input id="ex-picker-q" type="text" placeholder="Cerca: panca, squat, rematore…" autocomplete="off" ' +
+    'oninput="renderExercisePickerResults(this.value)" ' +
+    'style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;margin-bottom:10px;box-sizing:border-box;">' +
+    '<div id="ex-picker-results"></div>' +
+    '</div></div>';
+  document.body.appendChild(sheet);
+  renderExercisePickerResults('');
+}
+window.openExercisePicker = openExercisePicker;
+
+function closeExercisePicker() {
+  var el = document.getElementById('ex-picker-sheet');
+  if (el) el.remove();
+}
+window.closeExercisePicker = closeExercisePicker;
+
+function exercisePickerRows(q) {
+  var out = [];
+  var seen = {};
+  function push(name, muscle) {
+    var clean = String(name || '').trim();
+    var key = clean.toLowerCase();
+    if (!clean || seen[key]) return;
+    seen[key] = true;
+    out.push({ name: clean, muscle: String(muscle || '').trim() });
+  }
+  var query = String(q || '').trim().toLowerCase();
+  if (query.length >= 2 && typeof ExerciseDatabaseService !== 'undefined' && ExerciseDatabaseService.search) {
+    try {
+      (ExerciseDatabaseService.search(query, 80) || []).forEach(function (ex) {
+        push(ex && (ex.name || ex), ex && ex.muscle_group);
+      });
+    } catch (_) {}
+  }
+  var catalogue = (typeof WEB_EXERCISE_CATALOG !== 'undefined' && Array.isArray(WEB_EXERCISE_CATALOG)) ? WEB_EXERCISE_CATALOG : [];
+  catalogue.forEach(function (row) {
+    if (!row || !row.name) return;
+    if (query.length >= 2) {
+      var hay = (row.name + ' ' + (row.en || '') + ' ' + (row.aliases || []).join(' ')).toLowerCase();
+      if (hay.indexOf(query) < 0) return;
+    }
+    push(row.name, row.muscle);
+  });
+  (store.customEx || []).forEach(function (c) {
+    var name = c && (c.name || c);
+    if (!name) return;
+    if (query.length >= 2 && String(name).toLowerCase().indexOf(query) < 0) return;
+    push(name, c && c.muscle_group);
+  });
+  return out.slice(0, 140);
+}
+
+function renderExercisePickerResults(q) {
+  var box = document.getElementById('ex-picker-results');
+  if (!box) return;
+  var rows = exercisePickerRows(q);
+  if (!rows.length) {
+    box.innerHTML = '<div style="font-size:11px;color:#666;text-align:center;padding:16px;">Nessun esercizio trovato. Puoi scriverne uno nuovo dal database esercizi.</div>';
+    return;
+  }
+  box.innerHTML = rows.map(function (r) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #1e1e1e;">' +
+      '<div style="min-width:0;"><div style="font-size:13px;color:#fff;font-weight:700;">' + esc(r.name) + '</div>' +
+      (r.muscle ? '<div style="font-size:10px;color:var(--gold);margin-top:2px;">' + esc(r.muscle) + '</div>' : '') + '</div>' +
+      '<button type="button" class="btn btn-primary" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" ' +
+      'onclick="pickExerciseFromPicker(\'' + encodeURIComponent(r.name) + '\',\'' + encodeURIComponent(r.muscle) + '\')">SCEGLI</button>' +
+      '</div>';
+  }).join('');
+}
+window.renderExercisePickerResults = renderExercisePickerResults;
+
+function pickExerciseFromPicker(encodedName, encodedMuscle) {
+  var name = decodeURIComponent(encodedName || '');
+  var muscle = decodeURIComponent(encodedMuscle || '');
+  var cb = window.__exPickerPick;
+  closeExercisePicker();
+  if (cb) cb(name, muscle);
+}
+window.pickExerciseFromPicker = pickExerciseFromPicker;
+
+/* ---------- the builder ---------- */
+
+function emptyProgramDraft() {
+  return { title: '', weeks: 8, days: [{ name: 'Giorno 1', exercises: [] }] };
+}
+
+// The draft lives in the store, so closing the sheet - or the app - does not
+// throw away a half-written program.
+function programDraft() {
+  if (!store.programDraft || !Array.isArray(store.programDraft.days) || !store.programDraft.days.length) {
+    store.programDraft = emptyProgramDraft();
+  }
+  return store.programDraft;
+}
+window.programDraft = programDraft;
+
+function programDraftExerciseCount(d) {
+  return (d && d.days || []).reduce(function (n, day) { return n + ((day.exercises || []).length); }, 0);
+}
+
+function openProgramBuilder() {
+  programDraft();
+  renderProgramBuilder();
+}
+window.openProgramBuilder = openProgramBuilder;
+
+function closeProgramBuilder() {
+  var el = document.getElementById('program-builder-sheet');
+  if (el) el.remove();
+  try { persist(); } catch (_) {}
+  if (typeof currentView !== 'undefined' && currentView === 'programs' && typeof render === 'function') render();
+}
+window.closeProgramBuilder = closeProgramBuilder;
+
+function renderProgramBuilder() {
+  var d = programDraft();
+  var existing = document.getElementById('program-builder-sheet');
+  if (existing) existing.remove();
+  var sheet = document.createElement('div');
+  sheet.id = 'program-builder-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10240';
+  var inputStyle = 'padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;box-sizing:border-box;';
+
+  var daysHtml = (d.days || []).map(function (day, di) {
+    var exHtml = (day.exercises || []).map(function (ex, ei) {
+      return '<div style="padding:8px;border:1px solid #262626;border-radius:8px;margin-bottom:6px;background:#0d0d0d;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">' +
+        '<div style="font-size:12px;font-weight:800;color:#fff;min-width:0;">' + esc(ex.name) +
+        (ex.muscle ? '<span style="font-size:9px;color:var(--gold);margin-left:6px;">' + esc(ex.muscle) + '</span>' : '') + '</div>' +
+        '<div style="display:flex;gap:4px;flex:0 0 auto;">' +
+        '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 7px;" ' + (ei === 0 ? 'disabled' : '') + ' onclick="moveProgramDraftExercise(' + di + ',' + ei + ',-1)">↑</button>' +
+        '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 7px;" ' + (ei === day.exercises.length - 1 ? 'disabled' : '') + ' onclick="moveProgramDraftExercise(' + di + ',' + ei + ',1)">↓</button>' +
+        '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 7px;color:#c66;border-color:#c66;" onclick="removeProgramDraftExercise(' + di + ',' + ei + ')">✕</button>' +
+        '</div></div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1.2fr 1.2fr;gap:6px;margin-top:8px;">' +
+        '<label style="font-size:9px;color:#888;">Serie<input type="number" min="1" max="10" value="' + (Number(ex.sets) || 3) + '" oninput="updateProgramDraftExercise(' + di + ',' + ei + ',\'sets\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+        '<label style="font-size:9px;color:#888;">Reps<input type="text" value="' + esc(ex.reps || '8-10') + '" oninput="updateProgramDraftExercise(' + di + ',' + ei + ',\'reps\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+        '<label style="font-size:9px;color:#888;">Recupero<input type="text" value="' + esc(ex.rest || '90s') + '" oninput="updateProgramDraftExercise(' + di + ',' + ei + ',\'rest\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+        '</div></div>';
+    }).join('');
+    return '<div class="card" style="padding:12px;margin-bottom:10px;border:1px solid #333;">' +
+      '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">' +
+      '<input type="text" value="' + esc(day.name || ('Giorno ' + (di + 1))) + '" placeholder="Nome del giorno" oninput="updateProgramDraftDay(' + di + ',this.value)" style="flex:1;font-weight:800;' + inputStyle + '">' +
+      '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#c66;border-color:#c66;flex:0 0 auto;" onclick="removeProgramDraftDay(' + di + ')">ELIMINA</button>' +
+      '</div>' +
+      (exHtml || '<div style="font-size:11px;color:#777;padding:6px 0 10px;">Nessun esercizio in questo giorno.</div>') +
+      '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;padding:8px;" onclick="addProgramDraftExercise(' + di + ')">+ AGGIUNGI ESERCIZIO</button>' +
+      '</div>';
+  }).join('');
+
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">CREA UNA SCHEDA</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeProgramBuilder()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:12px;">' +
+    '<label style="font-size:9px;color:#888;">Nome della scheda<input type="text" value="' + esc(d.title || '') + '" placeholder="Es. Upper/Lower autunno" oninput="updateProgramDraftField(\'title\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '<label style="font-size:9px;color:#888;">Settimane<input type="number" min="1" max="52" value="' + (Number(d.weeks) || 8) + '" oninput="updateProgramDraftField(\'weeks\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '</div>' +
+    '<p style="font-size:11px;color:#888;margin:0 0 12px;line-height:1.45;">I giorni che scrivi qui sono una settimana di allenamento: vengono ripetuti per tutte le settimane, e da lì in poi modifichi quello che vuoi settimana per settimana.</p>' +
+    daysHtml +
+    '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;padding:10px;margin-bottom:10px;" onclick="addProgramDraftDay()">+ AGGIUNGI GIORNO</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;font-size:10px;padding:8px;color:#c66;border-color:#c66;" onclick="discardProgramDraft()">SVUOTA LA BOZZA</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-foot">' +
+    '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="createProgramFromDraft()">CREA E ATTIVA</button>' +
+    '</div></div>';
+  document.body.appendChild(sheet);
+}
+
+// Typing does not redraw the sheet: it would take the cursor out of the field
+// being typed in. Only structural changes redraw.
+function updateProgramDraftField(field, value) {
+  var d = programDraft();
+  if (field === 'weeks') d.weeks = Math.min(52, Math.max(1, parseInt(value, 10) || 1));
+  else d[field] = value;
+}
+window.updateProgramDraftField = updateProgramDraftField;
+
+function updateProgramDraftDay(dayIdx, value) {
+  var day = programDraft().days[dayIdx];
+  if (day) day.name = value;
+}
+window.updateProgramDraftDay = updateProgramDraftDay;
+
+function updateProgramDraftExercise(dayIdx, exIdx, field, value) {
+  var day = programDraft().days[dayIdx];
+  var ex = day && day.exercises[exIdx];
+  if (!ex) return;
+  if (field === 'sets') ex.sets = Math.min(10, Math.max(1, parseInt(value, 10) || 1));
+  else ex[field] = value;
+}
+window.updateProgramDraftExercise = updateProgramDraftExercise;
+
+function addProgramDraftDay() {
+  var d = programDraft();
+  d.days.push({ name: 'Giorno ' + (d.days.length + 1), exercises: [] });
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.addProgramDraftDay = addProgramDraftDay;
+
+function removeProgramDraftDay(dayIdx) {
+  var d = programDraft();
+  var day = d.days[dayIdx];
+  if (!day) return;
+  if ((day.exercises || []).length && !confirm('Eliminare "' + (day.name || 'questo giorno') + '" e i suoi esercizi?')) return;
+  d.days.splice(dayIdx, 1);
+  if (!d.days.length) d.days.push({ name: 'Giorno 1', exercises: [] });
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.removeProgramDraftDay = removeProgramDraftDay;
+
+function addProgramDraftExercise(dayIdx) {
+  openExercisePicker({
+    title: 'AGGIUNGI AL GIORNO',
+    onPick: function (name, muscle) {
+      var day = programDraft().days[dayIdx];
+      if (!day) return;
+      day.exercises.push({ name: name, muscle: muscle, sets: 3, reps: '8-10', rest: '90s' });
+      try { persist(); } catch (_) {}
+      renderProgramBuilder();
+    }
+  });
+}
+window.addProgramDraftExercise = addProgramDraftExercise;
+
+function removeProgramDraftExercise(dayIdx, exIdx) {
+  var day = programDraft().days[dayIdx];
+  if (!day) return;
+  day.exercises.splice(exIdx, 1);
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.removeProgramDraftExercise = removeProgramDraftExercise;
+
+function moveProgramDraftExercise(dayIdx, exIdx, dir) {
+  var day = programDraft().days[dayIdx];
+  if (!day) return;
+  var target = exIdx + dir;
+  if (target < 0 || target >= day.exercises.length) return;
+  var tmp = day.exercises[exIdx];
+  day.exercises[exIdx] = day.exercises[target];
+  day.exercises[target] = tmp;
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.moveProgramDraftExercise = moveProgramDraftExercise;
+
+function discardProgramDraft() {
+  if (!confirm('Svuotare la bozza? Quello che hai scritto qui va perso.')) return;
+  store.programDraft = emptyProgramDraft();
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.discardProgramDraft = discardProgramDraft;
+
+// A day written once becomes the same day in every week: that is what a
+// program is. Week-by-week changes happen afterwards, on the real thing.
+function programFromDraft(draft) {
+  var weekCount = Math.min(52, Math.max(1, Number(draft.weeks) || 8));
+  var days = (draft.days || []).filter(function (day) { return (day.exercises || []).length; });
+  var weeks = [];
+  for (var w = 1; w <= weekCount; w++) {
+    weeks.push({
+      week: w,
+      weekNumber: w,
+      week_number: w,
+      label: 'Settimana ' + w,
+      sessions: days.map(function (day, di) {
+        var dayName = String(day.name || '').trim() || ('Giorno ' + (di + 1));
+        return {
+          name: dayName,
+          title: dayName,
+          exercises: (day.exercises || []).map(function (ex) {
+            return programExerciseRow(ex);
+          })
+        };
+      })
+    });
+  }
+  return {
+    id: 'custom_' + Date.now(),
+    title: String(draft.title || '').trim() || 'Scheda personale',
+    weeks: weeks,
+    duration_weeks: weekCount,
+    author: 'Scritta da te',
+    source_summary: 'Scheda scritta a mano · ' + days.length + ' giorni · ' + weekCount + ' settimane'
+  };
+}
+
+// The one shape a hand-written exercise takes, used by the builder and by the
+// add-to-program below, so an exercise added later is the same kind of thing
+// as one written at the start.
+function programExerciseRow(ex) {
+  var setCount = Math.min(10, Math.max(1, Number(ex.sets) || 3));
+  var reps = String(ex.reps || '8-10').trim() || '8-10';
+  var sets = [];
+  for (var s = 0; s < setCount; s++) sets.push({ reps: reps, target_load: null });
+  return {
+    name: ex.name,
+    name_original: ex.name,
+    muscle_groups: ex.muscle ? [ex.muscle] : [],
+    sets: sets,
+    setCount: setCount,
+    repsTarget: reps,
+    rest: String(ex.rest || '90s').trim() || '90s'
+  };
+}
+
+async function createProgramFromDraft() {
+  var d = programDraft();
+  if (!String(d.title || '').trim()) {
+    if (typeof showToast === 'function') showToast('Dai un nome alla scheda', 'warning');
+    return;
+  }
+  var withExercises = (d.days || []).filter(function (day) { return (day.exercises || []).length; });
+  if (!withExercises.length) {
+    if (typeof showToast === 'function') showToast('Aggiungi almeno un esercizio a un giorno', 'warning');
+    return;
+  }
+  var skipped = (d.days || []).length - withExercises.length;
+  var msg = 'Creare e attivare "' + String(d.title).trim() + '"?\n\n' +
+    withExercises.length + ' giorni · ' + (Number(d.weeks) || 8) + ' settimane' +
+    (skipped ? '\n' + skipped + ' giorno/i vuoto/i non verranno inclusi.' : '') +
+    '\n\nIl programma attivo verrà sostituito.';
+  if (!confirm(msg)) return;
+  try {
+    var built = programFromDraft(d);
+    var prog = normalizeProgram(built);
+    await withBusy(async function () {
+      await maybeClearLogsOnProgramSwitch(prog.id);
+      if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
+        await GiammariaPersistence.activateCanonicalProgram(prog);
+      } else if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveActiveProgram) {
+        await GiammariaPersistence.saveActiveProgram(prog);
+      }
+      DATA = prog;
+      // Training only: food, supplements, therapy and exams are the athlete's
+      // own record and have nothing to do with which program is active.
+      DATA.nutrition = store.nutrition || null;
+      DATA.supplementation = store.supplementation || null;
+      DATA.therapy = store.therapy || null;
+      DATA.exams = store.exams || null;
+      store.activeProgram = DATA;
+      store.activeProgramId = prog.id;
+      currentWeek = 1;
+      currentDay = 0;
+      if (DATA.weeks && DATA.weeks.length) store.prefs.duration = DATA.weeks.length;
+      store.programDraft = emptyProgramDraft();
+      persist();
+      persistActiveProgramStructure();
+      try { await syncProgramLibraryFromIdb(); } catch (_) {}
+    }, 'Creo la scheda…', { immediate: true, maxMs: 60000 });
+    closeProgramBuilder();
+    if (typeof showToast === 'function') showToast('Scheda creata e attivata: ' + prog.title, 'success');
+    afterProgramActivatedNavigate();
+    render();
+  } catch (e) {
+    console.error('[PROGRAM BUILDER]', e);
+    if (typeof showToast === 'function') showToast('Creazione non riuscita: ' + (e && e.message || e), 'danger');
+  }
+}
+window.createProgramFromDraft = createProgramFromDraft;
+
+/* ---------- adding an exercise to the program, not just to today ---------- */
+
+function openAddExerciseToProgram() {
+  if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
+    if (typeof showToast === 'function') showToast('Nessuna scheda attiva a cui aggiungere l’esercizio.', 'warning');
+    return;
+  }
+  openExercisePicker({
+    title: 'AGGIUNGI ALLA SCHEDA',
+    onPick: function (name, muscle) { openAddToProgramConfig(name, muscle); }
+  });
+}
+window.openAddExerciseToProgram = openAddExerciseToProgram;
+
+function closeAddToProgramConfig() {
+  var el = document.getElementById('add-to-program-sheet');
+  if (el) el.remove();
+}
+window.closeAddToProgramConfig = closeAddToProgramConfig;
+
+function openAddToProgramConfig(name, muscle) {
+  closeAddToProgramConfig();
+  var weeksTotal = (DATA.weeks || []).length;
+  var dayName = '';
+  try {
+    var w = DATA.weeks[currentWeek - 1];
+    var sess = w && (w.sessions || w.days || [])[currentDay];
+    dayName = (sess && (sess.name || sess.title)) || ('Giorno ' + ((currentDay || 0) + 1));
+  } catch (_) {}
+  var inputStyle = 'padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;box-sizing:border-box;';
+  var sheet = document.createElement('div');
+  sheet.id = 'add-to-program-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10250';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeAddToProgramConfig(); };
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">AGGIUNGI ALLA SCHEDA</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeAddToProgramConfig()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<h2 style="color:#fff;font-size:18px;margin:4px 0 2px;">' + esc(name) + '</h2>' +
+    '<div style="font-size:11px;color:#888;margin-bottom:12px;">' + esc(muscle || 'Esercizio') + ' · va in <b style="color:#ccc;">' + esc(dayName) + '</b></div>' +
+    '<input type="hidden" id="atp-name" value="' + esc(name) + '"><input type="hidden" id="atp-muscle" value="' + esc(muscle || '') + '">' +
+    '<div style="display:grid;grid-template-columns:1fr 1.2fr 1.2fr;gap:8px;margin-bottom:14px;">' +
+    '<label style="font-size:9px;color:#888;">Serie<input id="atp-sets" type="number" min="1" max="10" value="3" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '<label style="font-size:9px;color:#888;">Reps<input id="atp-reps" type="text" value="8-10" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '<label style="font-size:9px;color:#888;">Recupero<input id="atp-rest" type="text" value="90s" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '</div>' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:6px;">DOVE LO METTO</div>' +
+    '<label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid #333;border-radius:8px;margin-bottom:8px;cursor:pointer;">' +
+    '<input type="radio" name="atp-scope" value="all" checked style="margin-top:2px;">' +
+    '<span><b style="color:#fff;font-size:12px;">In tutte le ' + weeksTotal + ' settimane</b>' +
+    '<br><span style="font-size:11px;color:#888;">Entra nello stesso giorno di ogni settimana: fa parte della scheda.</span></span></label>' +
+    '<label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid #333;border-radius:8px;cursor:pointer;">' +
+    '<input type="radio" name="atp-scope" value="week" style="margin-top:2px;">' +
+    '<span><b style="color:#fff;font-size:12px;">Solo nella settimana ' + currentWeek + '</b>' +
+    '<br><span style="font-size:11px;color:#888;">Resta nella scheda, ma solo in questa settimana.</span></span></label>' +
+    '</div>' +
+    '<div class="nurvan-sheet-foot">' +
+    '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="confirmAddExerciseToProgram()">AGGIUNGI</button>' +
+    '</div></div>';
+  document.body.appendChild(sheet);
+}
+window.openAddToProgramConfig = openAddToProgramConfig;
+
+function confirmAddExerciseToProgram() {
+  var name = ($('atp-name') && $('atp-name').value) || '';
+  if (!name) return;
+  var scopeEl = document.querySelector('input[name="atp-scope"]:checked');
+  var res = addExerciseToProgram(name, ($('atp-muscle') && $('atp-muscle').value) || '', {
+    sets: ($('atp-sets') && $('atp-sets').value) || 3,
+    reps: ($('atp-reps') && $('atp-reps').value) || '8-10',
+    rest: ($('atp-rest') && $('atp-rest').value) || '90s',
+    scope: (scopeEl && scopeEl.value) === 'week' ? 'week' : 'all'
+  });
+  closeAddToProgramConfig();
+  if (typeof showToast === 'function') {
+    showToast(res.added
+      ? (name + ' aggiunto a ' + (res.added === 1 ? 'questa settimana' : ('tutte le ' + res.added + ' settimane')))
+      : 'Non sono riuscito ad aggiungerlo a questo giorno.', res.added ? 'success' : 'warning');
+  }
+  if (typeof render === 'function') render();
+}
+window.confirmAddExerciseToProgram = confirmAddExerciseToProgram;
+
+// Appended, never inserted: every logged set is addressed by its position in
+// the day (w1_d0_e2_s1...), so putting a new exercise in the middle would
+// move somebody else's loads onto the wrong exercise.
+function addExerciseToProgram(name, muscle, cfg) {
+  cfg = cfg || {};
+  var clean = String(name || '').trim();
+  if (!clean || typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
+    return { added: 0 };
+  }
+  var dayIdx = (typeof currentDay !== 'undefined' ? currentDay : 0) || 0;
+  var onlyWeek = cfg.scope === 'week' ? (typeof currentWeek !== 'undefined' ? currentWeek : 1) : null;
+  var added = 0;
+  DATA.weeks.forEach(function (week, wi) {
+    if (onlyWeek != null && (wi + 1) !== onlyWeek) return;
+    var sessions = week.sessions || week.days;
+    var sess = sessions && sessions[dayIdx];
+    if (!sess) return;
+    if (!sess.exercises) sess.exercises = sess.rows || [];
+    sess.exercises.push(programExerciseRow({ name: clean, muscle: muscle, sets: cfg.sets, reps: cfg.reps, rest: cfg.rest }));
+    added += 1;
+  });
+  if (!added) return { added: 0 };
+  if (typeof addExerciseToLibrary === 'function') {
+    try { addExerciseToLibrary(clean, muscle || 'ALTRO', 'program'); } catch (_) {}
+  }
+  persistActiveProgramStructure();
+  recordManualAction({
+    action_type: 'ADD_EXERCISE',
+    week: onlyWeek || 1,
+    session: dayIdx + 1,
+    exercise: clean,
+    target_exercise: clean,
+    changes: { name: clean, sets: Number(cfg.sets) || 3, reps: cfg.reps || '8-10', muscle_group: muscle || '' }
+  }, { reason: onlyWeek ? 'addExerciseToProgram-week' : 'addExerciseToProgram-all' });
+  return { added: added };
+}
+window.addExerciseToProgram = addExerciseToProgram;
 
 function saveAll(){ persist(); alert("Salvataggio completato."); }
 async function clearWorkoutLogsForNewProgram() {
