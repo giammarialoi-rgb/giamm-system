@@ -1580,6 +1580,10 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">🔔</span>
         <span style="font-size:11px;font-weight:800;">Notifiche</span>
       </button>
+      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openMyGym()">
+        <span style="font-size:20px;">📍</span>
+        <span style="font-size:11px;font-weight:800;">Dove mi alleno</span>
+      </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('settings')">
         <span style="font-size:20px;">⚙️</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="settings">Impostazioni</span>
@@ -38297,6 +38301,9 @@ function accountPayload(opts){
     seasonBoard: store.seasonBoard || null,
     coachUnlocked: !!store.coachUnlocked,
     clientTutorialDone: !!store.clientTutorialDone,
+    // Where this person trains. An athlete fills it in once and the coach
+    // writing their program needs it as much as they do.
+    trainingSpaces: Array.isArray(store.trainingSpaces) ? store.trainingSpaces.slice(0, 12) : [],
     // Saved programs: the program itself, without the exercise database each
     // import drags along, which is rebuilt on any device anyway.
     models: Array.isArray(modelsSrc) ? modelsSrc.slice(-8).map(function (m) {
@@ -38421,6 +38428,15 @@ function applyRemoteAccountData(remote, preferLocal) {
   if (remote.seasonBoard && !store.seasonBoard) store.seasonBoard = remote.seasonBoard;
   if (remote.coachUnlocked) store.coachUnlocked = true;
   if (remote.clientTutorialDone) store.clientTutorialDone = true;
+  // Places are merged by id: an athlete adding a gym on their phone and a
+  // coach correcting it on theirs must not overwrite each other wholesale.
+  if (Array.isArray(remote.trainingSpaces) && remote.trainingSpaces.length) {
+    const byId = {};
+    (remote.trainingSpaces || []).concat(store.trainingSpaces || []).forEach(function (sp) {
+      if (sp && sp.id) byId[sp.id] = sp;
+    });
+    store.trainingSpaces = Object.keys(byId).map(function (k) { return byId[k]; });
+  }
     if (Array.isArray(remote.logs) && remote.logs.length) {
     const byId = {};
     (store.logs || []).concat(remote.logs).forEach(function (row) {
@@ -50501,7 +50517,11 @@ function renderPrograms(c){
         return `<div style="font-size:11px;color:#ccc;background:#141414;border:1px solid #2a2a2a;border-radius:8px;padding:9px 10px;margin-bottom:10px;">` +
           list.map((sp) => esc(sp.name) + ' <span style="color:#666;">· ' + ((sp.equip || []).length) + ' attrezzature</span>').join('<br>') + '</div>';
       })()}
-      <button class="btn btn-outline" style="width:100%;font-size:12px;" onclick="openTrainingSpaces()">${(store.trainingSpaces || []).length ? 'GESTISCI GLI SPAZI' : 'AGGIUNGI UNO SPAZIO'}</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline" style="flex:1;min-width:150px;font-size:12px;" onclick="openMyGym()">MODO SEMPLICE</button>
+        <button class="btn btn-outline" style="flex:1;min-width:150px;font-size:12px;" onclick="openTrainingSpaces()">${(store.trainingSpaces || []).length ? 'GESTISCI GLI SPAZI' : 'AGGIUNGI UNO SPAZIO'}</button>
+      </div>
+      <div style="font-size:10px;color:#666;margin-top:6px;line-height:1.4;">Il modo semplice chiede i macchinari che vedi; l'altro entra nel singolo esercizio. Sono la stessa cosa scritta in due modi: quello che segni in uno compare nell'altro.</div>
     </div>
 
     <div class="card" id="program-create-template" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
@@ -62354,6 +62374,103 @@ var SPACE_LIMITS = [
   { id: 'kettlebell', label: 'Kettlebell più pesante', unit: 'kg', equip: 'kettlebell' }
 ];
 
+/* ---------- the same place, described two ways ---------- */
+//
+// A coach can answer "do you have a chest press" exercise by exercise. An
+// athlete cannot be asked which of thirty movements their lat machine allows
+// - they know they have a lat machine. So the simple view asks about kit
+// people can see, and each machine stands for the exercises it makes
+// possible.
+//
+// The two views are not two data sets. A machine is a query over the library,
+// and switching it writes the same per-exercise decisions the detailed view
+// shows - which is why they can never drift apart.
+var GYM_MACHINES = [
+  { id: 'lat_machine', label: 'Lat machine', match: /lat machine|pulldown/i },
+  { id: 'pulley', label: 'Pulley / rematore ai cavi', match: /pulley|seated row|low row|rematore (al |ai )?cav/i },
+  { id: 'chest_press', label: 'Chest press', match: /chest press/i },
+  { id: 'pec_deck', label: 'Pec deck / croci macchina', match: /pec deck|pec fly/i },
+  { id: 'shoulder_press', label: 'Shoulder press machine', match: /machine shoulder press|shoulder press macchina/i },
+  { id: 'rematore_macchina', label: 'Rematore macchina', match: /rematore macchina|dorsey machine|hammer row/i },
+  { id: 'leg_press', label: 'Leg press', match: /leg press/i },
+  { id: 'hack_squat', label: 'Hack squat', match: /hack squat/i },
+  { id: 'leg_extension', label: 'Leg extension', match: /leg extension/i },
+  { id: 'leg_curl', label: 'Leg curl', match: /leg curl/i },
+  { id: 'calf_machine', label: 'Macchina polpacci', match: /calf/i },
+  { id: 'abductor', label: 'Abductor / adductor', match: /abductor|adductor|abduzione|adduzione/i },
+  { id: 'hip_thrust_machine', label: 'Macchina hip thrust', match: /machine hip thrust|smith hip thrust/i },
+  { id: 'glute_machine', label: 'Glute machine / kickback ai cavi', match: /kickback|glute machine/i },
+  { id: 'assisted', label: 'Macchina trazioni/dip assistite', match: /assistit/i },
+  { id: 'back_extension', label: 'Panca lombare', match: /hyperextension|iperestension|back extension|lombare/i },
+  { id: 'preacher', label: 'Panca Scott', match: /predicator|scott|preacher/i },
+  { id: 'crunch_machine', label: 'Macchina addominali', match: /crunch (ai cavi|macchina)|ab machine/i },
+  { id: 'cable_station', label: 'Cavi / poliercolina', match: /\bcav[oi]\b|cable|croci ai cavi|face pull al cavo/i },
+  { id: 'smith_machine', label: 'Smith machine', match: /smith/i }
+];
+
+// Which exercises a machine covers, out of the library as it is today.
+function machineExercises(machineId) {
+  var machine = null;
+  for (var i = 0; i < GYM_MACHINES.length; i++) if (GYM_MACHINES[i].id === machineId) machine = GYM_MACHINES[i];
+  if (!machine) return [];
+  return exercisePickerRows('', null)
+    .filter(function (r) { return machine.match.test(r.name); })
+    .map(function (r) { return r.name; });
+}
+window.machineExercises = machineExercises;
+
+// Available for a reason, not for lack of one. An exercise the app cannot
+// place is shown in the picker - hiding what somebody wrote is worse - but it
+// must not make a machine look half-present in an empty room.
+function exerciseConfirmedIn(space, name) {
+  if (!space) return true;
+  var decided = spaceExerciseState(space, name);
+  if (decided) return decided === 'on';
+  var row = { name: name, muscle: '', eq: '' };
+  if (!exerciseFitsSpace(row, space)) return false;
+  var tokens = equipTokensFor(row);
+  if (!tokens.length) return false;
+  if (!Array.isArray(space.equip) || !space.equip.length) return true;
+  for (var i = 0; i < tokens.length; i++) {
+    if (space.equip.indexOf(tokens[i]) >= 0) return true;
+  }
+  return false;
+}
+window.exerciseConfirmedIn = exerciseConfirmedIn;
+
+// on / off / partial, read from the very decisions the detailed view edits.
+function machineStateIn(space, machineId) {
+  var names = machineExercises(machineId);
+  if (!names.length) return 'off';
+  var on = 0;
+  names.forEach(function (n) {
+    if (exerciseConfirmedIn(space, n)) on += 1;
+  });
+  if (on === 0) return 'off';
+  if (on === names.length) return 'on';
+  return 'partial';
+}
+window.machineStateIn = machineStateIn;
+
+// Saying "I have a lat machine" turns on every exercise it allows, and saying
+// the opposite turns them all off. Written the only way the app stores such a
+// thing, so the coach's list shows exactly what the athlete answered.
+function setMachineInSpace(spaceId, machineId, wanted) {
+  var space = spaceById(spaceId);
+  if (!space) return;
+  if (!Array.isArray(space.exclude)) space.exclude = [];
+  if (!Array.isArray(space.include)) space.include = [];
+  machineExercises(machineId).forEach(function (name) {
+    var key = spaceKey(name);
+    space.exclude = space.exclude.filter(function (k) { return k !== key; });
+    space.include = space.include.filter(function (k) { return k !== key; });
+    if (wanted) space.include.push(key);
+    else space.exclude.push(key);
+  });
+  try { persist(); } catch (_) {}
+}
+window.setMachineInSpace = setMachineInSpace;
+
 function barNeededFor(name) {
   var clean = String(name || '');
   for (var i = 0; i < SPACE_BARS.length; i++) {
@@ -62666,6 +62783,120 @@ function openTrainingSpaces() {
   renderTrainingSpaces();
 }
 window.openTrainingSpaces = openTrainingSpaces;
+
+/* ---------- the simple way: what you can see in the room ---------- */
+
+function closeMyGym() {
+  var el = document.getElementById('my-gym-sheet');
+  if (el) el.remove();
+}
+window.closeMyGym = closeMyGym;
+
+// An athlete's own place, asked about in things they can point at. Same
+// object, same two lists, no second copy of the truth.
+function openMyGym(spaceId) {
+  var space = spaceId ? spaceById(spaceId) : (trainingSpaces()[0] || null);
+  if (!space) {
+    saveTrainingSpace({ name: 'La mia palestra', equip: ['bodyweight'] });
+    space = trainingSpaces()[trainingSpaces().length - 1];
+  }
+  renderMyGym(space.id);
+}
+window.openMyGym = openMyGym;
+
+var MY_GYM_BASICS = [
+  { id: 'dumbbell', label: 'Manubri' },
+  { id: 'barbell', label: 'Bilanciere e dischi' },
+  { id: 'bench', label: 'Panca' },
+  { id: 'bar', label: 'Sbarra o parallele' },
+  { id: 'kettlebell', label: 'Kettlebell' },
+  { id: 'band', label: 'Elastici' },
+  { id: 'cardio', label: 'Macchine cardio' },
+  { id: 'bodyweight', label: 'Spazio per il corpo libero' }
+];
+
+function renderMyGym(spaceId) {
+  var space = spaceById(spaceId);
+  if (!space) return;
+  var existing = document.getElementById('my-gym-sheet');
+  if (existing) existing.remove();
+  var inputStyle = 'padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;box-sizing:border-box;';
+  var sheet = document.createElement('div');
+  sheet.id = 'my-gym-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10250';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeMyGym(); };
+
+  function pill(on, label, onclick, partial) {
+    return '<button type="button" class="btn btn-outline" data-my-gym style="flex:0 0 auto;font-size:11px;padding:8px 12px;margin:0 5px 5px 0;' +
+      (on ? 'border-color:#4caf50;color:#4caf50;background:rgba(76,175,80,0.10);'
+        : (partial ? 'border-color:var(--gold);color:var(--gold);' : 'color:#777;')) +
+      '" onclick="' + onclick + '">' + (on ? '✓ ' : (partial ? '– ' : '')) + esc(label) + '</button>';
+  }
+
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">DOVE TI ALLENI</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeMyGym()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<p style="font-size:12px;color:#ccc;line-height:1.5;margin:4px 0 12px;">Segna quello che vedi dove ti alleni. Serve a chi ti scrive la scheda: senza, può finire dentro un esercizio che lì non puoi fare.</p>' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:14px;">Come si chiama' +
+    '<input type="text" value="' + esc(space.name) + '" oninput="updateSpaceField(\'' + esc(space.id) + '\',\'name\',this.value)" style="width:100%;margin-top:3px;' + inputStyle + '"></label>' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:6px;">CHE COSA C’È</div>' +
+    '<div style="display:flex;flex-wrap:wrap;">' +
+    MY_GYM_BASICS.map(function (b) {
+      var on = (space.equip || []).indexOf(b.id) >= 0;
+      return pill(on, b.label, 'toggleSpaceEquip(\'' + esc(space.id) + '\',\'' + b.id + '\');renderMyGym(\'' + esc(space.id) + '\')');
+    }).join('') +
+    '</div>' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;margin:16px 0 6px;">MACCHINARI</div>' +
+    '<p style="font-size:11px;color:#888;margin:0 0 8px;line-height:1.45;">Tocca quelli che ci sono. Non serve sapere cosa ci si fa: a quello pensa l\'app.</p>' +
+    '<div style="display:flex;flex-wrap:wrap;">' +
+    GYM_MACHINES.map(function (m) {
+      if (!machineExercises(m.id).length) return '';
+      var state = machineStateIn(space, m.id);
+      return pill(state === 'on', m.label,
+        'setMachineInSpace(\'' + esc(space.id) + '\',\'' + m.id + '\',' + (state === 'on' ? 'false' : 'true') + ');renderMyGym(\'' + esc(space.id) + '\')',
+        state === 'partial');
+    }).join('') +
+    '</div>' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;margin:16px 0 6px;">FINO A QUANTO ARRIVANO I PESI</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+    '<label style="font-size:9px;color:#888;">Manubrio più pesante (kg)<input type="number" step="0.5" min="0" value="' + esc((space.limits || {}).dumbbell || '') + '" oninput="updateSpaceLimit(\'' + esc(space.id) + '\',\'dumbbell\',this.value)" style="width:100%;margin-top:3px;' + inputStyle + '"></label>' +
+    '<label style="font-size:9px;color:#888;">Pacco pesi più alto (kg)<input type="number" step="1" min="0" value="' + esc((space.limits || {}).machine || '') + '" oninput="updateSpaceLimit(\'' + esc(space.id) + '\',\'machine\',this.value)" style="width:100%;margin-top:3px;' + inputStyle + '"></label>' +
+    '</div>' +
+    '<div style="font-size:11px;color:#888;margin-top:16px;line-height:1.45;">Con quello che hai segnato qui si possono fare <b style="color:#fff;">' + spaceExerciseCount(space) + ' esercizi</b>.</div>' +
+    '</div>' +
+    '<div class="nurvan-sheet-foot">' +
+    '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="saveMyGym(\'' + esc(space.id) + '\')">' +
+    (store.accountToken ? 'SALVA E MANDA AL COACH' : 'SALVA') + '</button>' +
+    '</div></div>';
+  document.body.appendChild(sheet);
+}
+window.renderMyGym = renderMyGym;
+
+async function saveMyGym(spaceId) {
+  var space = spaceById(spaceId);
+  if (!space) { closeMyGym(); return; }
+  if (!String(space.name || '').trim()) space.name = 'La mia palestra';
+  try { persist(); } catch (_) {}
+  closeMyGym();
+  // It is the coach who writes the program: the place has to reach them.
+  if (store.accountToken && typeof syncAccountData === 'function') {
+    try {
+      await withBusy(function () { return syncAccountData(false); }, 'Mando il posto al coach…', { immediate: true, maxMs: 20000 });
+      if (typeof showToast === 'function') showToast(space.name + ' inviato al coach', 'success');
+    } catch (_) {
+      if (typeof showToast === 'function') showToast('Salvato qui: arriverà al coach appena torni online', 'warning');
+    }
+  } else if (typeof showToast === 'function') {
+    showToast(space.name + ' salvato', 'success');
+  }
+  if (typeof render === 'function') render();
+}
+window.saveMyGym = saveMyGym;
 
 function renderTrainingSpaces() {
   var existing = document.getElementById('spaces-sheet');
@@ -67509,6 +67740,15 @@ async function submitCoachClientIntake() {
     clearIntakeDraft();
     showOverlay('cp-intake', false);
     practiceToast('Anagrafica salvata per il cliente', 'success');
+    // The questionnaire says who trains; this says where. Offered once,
+    // never forced - and reachable from the menu whenever the coach asks.
+    if (typeof openMyGym === 'function' && !(store.trainingSpaces || []).length) {
+      setTimeout(function () {
+        if (window.confirm('Vuoi dire anche dove ti alleni?\n\nBastano due tocchi: serve a chi ti scrive la scheda per non metterci dentro esercizi che li non puoi fare. Puoi farlo anche dopo, dal menu.')) {
+          openMyGym();
+        }
+      }, 600);
+    }
     if (typeof renderCoachWorkspace === 'function') {
       renderCoachWorkspace(document.getElementById('view-container'));
     } else if (typeof render === 'function') render();

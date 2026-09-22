@@ -148,6 +148,18 @@ export function mergeAccountDataBlobs(current, incoming) {
   for (const key of ["intelligence", "bodyComposition", "nutritionLoop", "seasonBoard"]) {
     if (inc[key] == null && cur[key] != null) merged[key] = cur[key];
   }
+  // Where the person trains, merged by id: an athlete adding a gym on their
+  // phone and a coach correcting it on theirs must both survive.
+  {
+    const a = Array.isArray(cur.trainingSpaces) ? cur.trainingSpaces : [];
+    const b = Array.isArray(inc.trainingSpaces) ? inc.trainingSpaces : [];
+    if (a.length || b.length) {
+      const byId = new Map();
+      for (const sp of a) if (sp && sp.id) byId.set(sp.id, sp);
+      for (const sp of b) if (sp && sp.id) byId.set(sp.id, sp);
+      merged.trainingSpaces = [...byId.values()].slice(0, 12);
+    }
+  }
   {
     const a = cur.intelTargets && typeof cur.intelTargets === "object" ? cur.intelTargets : {};
     const b = inc.intelTargets && typeof inc.intelTargets === "object" ? inc.intelTargets : {};

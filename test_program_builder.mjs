@@ -660,6 +660,52 @@ function loggedProgram() {
     ctx.store.trainingSpaces = [];
   }
 
+  // The same place described two ways: the athlete points at machines, the
+  // coach reads exercises, and neither can drift from the other because the
+  // machine view writes exactly what the exercise view reads.
+  {
+    ctx.store.trainingSpaces = [];
+    ctx.saveTrainingSpace({ name: 'La mia palestra', equip: ['bodyweight'] });
+    const mine = ctx.trainingSpaces()[0];
+
+    const latExercises = ctx.machineExercises('lat_machine');
+    ok(latExercises.length > 1, '3ci1. a machine stands for the exercises it makes possible (' + latExercises.length + ' for the lat machine)');
+    ok(latExercises.every((n) => /lat machine|pulldown/i.test(n)), '3ci2. and only for those');
+    ok(ctx.machineExercises('non_esiste').length === 0, '3ci3. an unknown machine stands for nothing');
+
+    ok(ctx.machineStateIn(mine, 'lat_machine') === 'off', '3ci4. a room with nothing in it has no lat machine');
+    ctx.setMachineInSpace(mine.id, 'lat_machine', true);
+    ok(ctx.machineStateIn(ctx.trainingSpaces()[0], 'lat_machine') === 'on', '3ci5. saying you have one turns it on');
+
+    // The coach's view must now show exactly that, exercise by exercise.
+    const space = ctx.trainingSpaces()[0];
+    ok(latExercises.every((n) => ctx.exerciseFitsSpace({ name: n, muscle: '', eq: '' }, space)),
+      '3ci6. and every exercise it allows is available in the detailed list');
+    ok(latExercises.every((n) => ctx.spaceExerciseState(space, n) === 'on'),
+      '3ci7. each one marked as decided, not merely implied by a category');
+
+    // And back: the coach switching one off shows as "partial" to the athlete.
+    ctx.toggleSpaceExercise(space.id, encodeURIComponent(latExercises[0]));
+    ok(ctx.machineStateIn(ctx.trainingSpaces()[0], 'lat_machine') === 'partial',
+      '3ci8. the coach turning one exercise off is visible in the simple view as a half-tick');
+    ctx.setMachineInSpace(space.id, 'lat_machine', true);
+    ok(ctx.machineStateIn(ctx.trainingSpaces()[0], 'lat_machine') === 'on',
+      '3ci9. and tapping the machine again settles the whole of it');
+
+    ctx.setMachineInSpace(space.id, 'lat_machine', false);
+    const off = ctx.trainingSpaces()[0];
+    ok(latExercises.every((n) => !ctx.exerciseFitsSpace({ name: n, muscle: '', eq: '' }, off)),
+      '3ci10. saying you do not have it removes all of them');
+    ok(ctx.exercisePickerRows('', off).every((r) => !/lat machine/i.test(r.name)),
+      '3ci11. so the picker stops offering them');
+
+    // Machines are defined by what the library actually contains.
+    const empty = ctx.GYM_MACHINES ? ctx.GYM_MACHINES.filter((m) => !ctx.machineExercises(m.id).length) : [];
+    ok(empty.length <= 3,
+      '3ci12. almost every machine in the simple list maps onto real exercises (' + empty.map((m) => m.id).join(', ') + ')');
+    ctx.store.trainingSpaces = [];
+  }
+
   // The grouped picker: a library is read a group at a time.
   ok(ctx.pickerGroupOf('PETTO') === 'PETTO' && ctx.pickerGroupOf('') === 'ALTRO',
     '3cf. every exercise lands in a macro group, and the unlabelled ones in ALTRO');
@@ -722,7 +768,8 @@ function loggedProgram() {
     'openSpaceExercises', 'closeSpaceExercises', 'renderSpaceExercises', 'toggleSpaceExercise',
     'toggleSpaceBar', 'updateSpaceLimit',
     'openCreateExerciseSheet', 'closeCreateExerciseSheet', 'confirmCreateExercise',
-    'openAdaptSpaceSheet', 'closeAdaptSpaceSheet', 'applySpaceToProgram'
+    'openAdaptSpaceSheet', 'closeAdaptSpaceSheet', 'applySpaceToProgram',
+    'openMyGym', 'closeMyGym', 'renderMyGym', 'saveMyGym', 'setMachineInSpace'
   ];
   for (const fn of exported) {
     ok(html.includes('window.' + fn + ' = ' + fn + ';'), '4f. ' + fn + ' is reachable from an onclick');

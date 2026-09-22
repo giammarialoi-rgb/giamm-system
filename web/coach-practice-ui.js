@@ -2119,6 +2119,15 @@ async function submitCoachClientIntake() {
     clearIntakeDraft();
     showOverlay('cp-intake', false);
     practiceToast('Anagrafica salvata per il cliente', 'success');
+    // The questionnaire says who trains; this says where. Offered once,
+    // never forced - and reachable from the menu whenever the coach asks.
+    if (typeof openMyGym === 'function' && !(store.trainingSpaces || []).length) {
+      setTimeout(function () {
+        if (window.confirm('Vuoi dire anche dove ti alleni?\n\nBastano due tocchi: serve a chi ti scrive la scheda per non metterci dentro esercizi che li non puoi fare. Puoi farlo anche dopo, dal menu.')) {
+          openMyGym();
+        }
+      }, 600);
+    }
     if (typeof renderCoachWorkspace === 'function') {
       renderCoachWorkspace(document.getElementById('view-container'));
     } else if (typeof render === 'function') render();
