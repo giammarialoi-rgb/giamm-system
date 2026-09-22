@@ -29050,8 +29050,29 @@ function equipTokensFor(row) {
   return out;
 }
 
+function spaceKey(name) {
+  return String(name || '').trim().toLowerCase();
+}
+
+// The equipment toggles say what kind of kit a place has; these two lists say
+// what it actually has on the floor. A gym can tick "macchinari" and still
+// not own a chest press, and own a standing calf raise but not a donkey
+// calf - so a single exercise can be switched off, or switched back on
+// against the equipment rule.
+function spaceExerciseState(space, name) {
+  if (!space) return 'on';
+  var key = spaceKey(name);
+  if ((space.exclude || []).indexOf(key) >= 0) return 'off';
+  if ((space.include || []).indexOf(key) >= 0) return 'on';
+  return null;
+}
+
 function exerciseFitsSpace(row, space) {
-  if (!space || !Array.isArray(space.equip) || !space.equip.length) return true;
+  if (!space) return true;
+  var decided = spaceExerciseState(space, row.name);
+  if (decided === 'off') return false;
+  if (decided === 'on') return true;
+  if (!Array.isArray(space.equip) || !space.equip.length) return true;
   var tokens = equipTokensFor(row);
   // An exercise the app cannot place is never hidden: a filter that silently
   // drops things a coach wrote is worse than one that lets a few through.
@@ -29061,6 +29082,119 @@ function exerciseFitsSpace(row, space) {
   }
   return false;
 }
+
+// Turning one exercise on or off for a place. Whichever way it goes, the
+// decision is remembered as a decision - not as a tick on a whole category -
+// so changing the equipment later does not silently undo it.
+function toggleSpaceExercise(spaceId, encodedName) {
+  var space = spaceById(spaceId);
+  if (!space) return;
+  var name = decodeURIComponent(encodedName || '');
+  var key = spaceKey(name);
+  if (!Array.isArray(space.exclude)) space.exclude = [];
+  if (!Array.isArray(space.include)) space.include = [];
+  var wasOn = exerciseFitsSpace({ name: name, muscle: '', eq: '' }, space);
+  space.exclude = space.exclude.filter(function (k) { return k !== key; });
+  space.include = space.include.filter(function (k) { return k !== key; });
+  if (wasOn) space.exclude.push(key);
+  else space.include.push(key);
+  try { persist(); } catch (_) {}
+  renderSpaceExercises(spaceId, (document.getElementById('space-ex-q') || {}).value || '');
+}
+window.toggleSpaceExercise = toggleSpaceExercise;
+
+function closeSpaceExercises() {
+  var el = document.getElementById('space-exercises-sheet');
+  if (el) el.remove();
+  renderTrainingSpaces();
+}
+window.closeSpaceExercises = closeSpaceExercises;
+
+function openSpaceExercises(spaceId) {
+  renderSpaceExercises(spaceId, '');
+}
+window.openSpaceExercises = openSpaceExercises;
+
+function renderSpaceExercises(spaceId, q) {
+  var space = spaceById(spaceId);
+  if (!space) return;
+  var existing = document.getElementById('space-exercises-sheet');
+  if (existing) existing.remove();
+  var query = String(q || '').trim();
+  // Every exercise the app knows, with what this place has decided about it.
+  var all = exercisePickerRows(query, null);
+  var on = 0;
+  var rows = all.map(function (r) {
+    var isOn = exerciseFitsSpace(r, space);
+    if (isOn) on += 1;
+    return { row: r, on: isOn, decided: spaceExerciseState(space, r.name) };
+  });
+  var sheet = document.createElement('div');
+  sheet.id = 'space-exercises-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10250';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeSpaceExercises(); };
+
+  function rowHtml(item) {
+    var r = item.row;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1e1e1e;">' +
+      '<div style="min-width:0;"><div style="font-size:12px;color:' + (item.on ? '#fff' : '#666') + ';font-weight:700;">' + esc(r.name) + '</div>' +
+      '<div style="font-size:9px;color:#777;margin-top:2px;">' + esc(r.muscle || '') +
+      (item.decided ? ' · <span style="color:var(--gold);">deciso a mano</span>' : '') + '</div></div>' +
+      '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:5px 10px;' +
+      (item.on ? 'border-color:#4caf50;color:#4caf50;' : 'color:#666;') + '" ' +
+      'onclick="toggleSpaceExercise(\'' + esc(spaceId) + '\',\'' + encodeURIComponent(r.name) + '\')">' +
+      (item.on ? 'C’È' : 'NON C’È') + '</button></div>';
+  }
+
+  var body;
+  if (query.length >= 2) {
+    body = rows.map(rowHtml).join('') || '<div style="font-size:11px;color:#666;padding:16px;text-align:center;">Nessun esercizio trovato.</div>';
+  } else {
+    var groups = {};
+    rows.forEach(function (item) {
+      var g = pickerGroupOf(item.row.muscle);
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(item);
+    });
+    var rank = function (g) {
+      if (g === 'ALTRO') return 999;
+      var at = PICKER_GROUP_ORDER.indexOf(g);
+      return at < 0 ? 500 : at;
+    };
+    body = Object.keys(groups).sort(function (a, b) {
+      var d = rank(a) - rank(b);
+      return d !== 0 ? d : (a < b ? -1 : 1);
+    }).map(function (g) {
+      var items = groups[g];
+      var onHere = items.filter(function (i) { return i.on; }).length;
+      return '<details style="border:1px solid #262626;border-radius:8px;margin-bottom:6px;background:#0d0d0d;">' +
+        '<summary style="cursor:pointer;padding:10px 12px;font-size:12px;font-weight:800;color:var(--gold);list-style:none;">' +
+        esc(g) + '<span style="float:right;color:#666;font-weight:600;">' + onHere + '/' + items.length + '</span></summary>' +
+        '<div style="padding:0 12px 8px;">' + items.map(rowHtml).join('') + '</div></details>';
+    }).join('');
+  }
+
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">' + esc(space.name).toUpperCase() + ' · ' + on + '/' + all.length + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeSpaceExercises()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<p style="font-size:11px;color:#888;line-height:1.45;margin:4px 0 10px;">Le spunte dell\'attrezzatura decidono in blocco; qui decidi il singolo. Se la palestra ha la pec deck ma non la chest press, spegni la chest press: resta spenta anche se cambi le spunte.</p>' +
+    '<input id="space-ex-q" type="text" value="' + esc(query) + '" placeholder="Cerca: chest press, calf…" autocomplete="off" ' +
+    'oninput="renderSpaceExercises(\'' + esc(spaceId) + '\', this.value)" ' +
+    'style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;margin-bottom:10px;box-sizing:border-box;">' +
+    body +
+    '</div></div>';
+  document.body.appendChild(sheet);
+  var input = document.getElementById('space-ex-q');
+  if (input && query) {
+    try { input.focus(); input.setSelectionRange(query.length, query.length); } catch (_) {}
+  }
+}
+window.renderSpaceExercises = renderSpaceExercises;
 
 function saveTrainingSpace(space) {
   var list = trainingSpaces();
@@ -29130,7 +29264,14 @@ function renderTrainingSpaces() {
           '" onclick="toggleSpaceEquip(\'' + esc(sp.id) + '\',\'' + e.id + '\')">' + esc(e.label) + '</button>';
       }).join('') +
       '</div>' +
-      '<div style="font-size:10px;color:#888;margin-top:8px;">' + ((sp.equip || []).length) + ' attrezzature · ' + spaceExerciseCount(sp) + ' esercizi disponibili</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
+      '<div style="font-size:10px;color:#888;">' + ((sp.equip || []).length) + ' attrezzature · ' + spaceExerciseCount(sp) + ' esercizi' +
+      (((sp.exclude || []).length + (sp.include || []).length)
+        ? (' · ' + ((sp.exclude || []).length + (sp.include || []).length) + ' decisi a mano')
+        : '') +
+      '</div>' +
+      '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 10px;flex:0 0 auto;" onclick="openSpaceExercises(\'' + esc(sp.id) + '\')">ESERCIZIO PER ESERCIZIO</button>' +
+      '</div>' +
       '</div>';
   }).join('');
   sheet.innerHTML =

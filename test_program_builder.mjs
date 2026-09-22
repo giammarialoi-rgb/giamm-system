@@ -507,6 +507,38 @@ function loggedProgram() {
   ok(ctx.trainingSpaces().length === 1 && ctx.trainingSpaces()[0].name === 'Palestra Fitness X',
     '3ce. a space can be deleted without touching the others');
 
+  // A gym can tick "macchinari" and still not own a chest press. The
+  // equipment decides in bulk; single exercises can be decided by hand.
+  {
+    ctx.store.trainingSpaces = [];
+    ctx.saveTrainingSpace({ name: 'Palestra Olimpica', equip: ['machine', 'barbell'] });
+    const gymSpace = ctx.trainingSpaces()[0];
+    const before = ctx.exercisePickerRows('', gymSpace).map((r) => r.name);
+    ok(before.includes('Lat machine avanti'), '3cf1. a machine gym offers its machines');
+
+    ctx.toggleSpaceExercise(gymSpace.id, encodeURIComponent('Lat machine avanti'));
+    const after = ctx.exercisePickerRows('', ctx.trainingSpaces()[0]).map((r) => r.name);
+    ok(!after.includes('Lat machine avanti'),
+      '3cf2. one it does not actually own can be switched off on its own');
+    ok(after.includes('Panca piana bilanciere'), '3cf3. without touching anything else');
+    ok(ctx.trainingSpaces()[0].exclude.length === 1, '3cf4. remembered as a decision, not as a category');
+
+    // Turning the equipment tick off and on again must not undo it.
+    ctx.toggleSpaceEquip(gymSpace.id, 'machine');
+    ctx.toggleSpaceEquip(gymSpace.id, 'machine');
+    ok(!ctx.exercisePickerRows('', ctx.trainingSpaces()[0]).some((r) => r.name === 'Lat machine avanti'),
+      '3cf5. and it survives the equipment being ticked off and on again');
+
+    // And the other way: something the equipment excludes can be added back.
+    ctx.toggleSpaceExercise(gymSpace.id, encodeURIComponent('Curl manubri'));
+    ok(ctx.exercisePickerRows('', ctx.trainingSpaces()[0]).some((r) => r.name === 'Curl manubri'),
+      '3cf6. a single dumbbell exercise can be added to a gym with no dumbbells ticked');
+    ctx.toggleSpaceExercise(gymSpace.id, encodeURIComponent('Curl manubri'));
+    ok(!ctx.exercisePickerRows('', ctx.trainingSpaces()[0]).some((r) => r.name === 'Curl manubri'),
+      '3cf7. and taken away again');
+    ctx.store.trainingSpaces = [];
+  }
+
   // The grouped picker: a library is read a group at a time.
   ok(ctx.pickerGroupOf('PETTO') === 'PETTO' && ctx.pickerGroupOf('') === 'ALTRO',
     '3cf. every exercise lands in a macro group, and the unlabelled ones in ALTRO');
@@ -565,7 +597,8 @@ function loggedProgram() {
     'setProgramDraftTestWeeks', 'setProgramDraftTestWeeksQuick',
     'maybeAskTestResults', 'openTestResultsSheet', 'closeTestResultsSheet', 'applyTestResults',
     'openTrainingSpaces', 'closeTrainingSpaces', 'removeTrainingSpace', 'addSpaceFromPreset',
-    'updateSpaceField', 'toggleSpaceEquip', 'setPickerSpace'
+    'updateSpaceField', 'toggleSpaceEquip', 'setPickerSpace',
+    'openSpaceExercises', 'closeSpaceExercises', 'renderSpaceExercises', 'toggleSpaceExercise'
   ];
   for (const fn of exported) {
     ok(html.includes('window.' + fn + ' = ' + fn + ';'), '4f. ' + fn + ' is reachable from an onclick');
