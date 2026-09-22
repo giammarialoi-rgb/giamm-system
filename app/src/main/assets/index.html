@@ -69,6 +69,7 @@
 <script src="program-catalog.js"></script>
 <script src="progression-models.js"></script>
 <script src="cardio-library.js"></script>
+<script src="program-generator.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -41430,6 +41431,11 @@ function normalizeProgram(payload) {
             rir: s.rir != null ? Number(s.rir) : rirTarget,
             rest_seconds: s.rest_seconds || parseInt(rest, 10) || 90,
             tempo: s.tempo || tempo,
+            // A hold is seconds and a cardio block is minutes. Rebuilding a
+            // set from a fixed list of fields used to drop both, and a plank
+            // came out of here as "45 reps".
+            seconds: s.seconds != null ? Number(s.seconds) : undefined,
+            minutes: s.minutes != null ? Number(s.minutes) : undefined,
             done: Boolean(s.done)
           };
         }
@@ -41506,6 +41512,19 @@ function normalizeProgram(payload) {
           plannedLoad: plannedLoad,
           name_formula: exercise.name_formula || null,
           tempo: tempo,
+          // What kind of exercise this is, which the fields above do not say.
+          // Without them a circuit normalizes into a one-set exercise, a
+          // rower into reps, and the lift a peaking block is built on stops
+          // being recognised as a competition lift.
+          unit: exercise.unit || undefined,
+          circuit: exercise.circuit ? JSON.parse(JSON.stringify(exercise.circuit)) : undefined,
+          technique: exercise.technique || undefined,
+          competition_lift: exercise.competition_lift || undefined,
+          target_pct: exercise.target_pct != null ? Number(exercise.target_pct) : undefined,
+          progressed: exercise.progressed || undefined,
+          name_original: exercise.name_original || undefined,
+          rotated_from: exercise.rotated_from || undefined,
+          substituted_from: exercise.substituted_from || undefined,
           setRows: Array.from({ length: Math.max(0, canonicalSets.length - 1) }, (_, i) => i + 2)
         };
       });
@@ -41531,6 +41550,13 @@ function normalizeProgram(payload) {
       week: wNum,
       title: week.title || `SETTIMANA ${String(wNum).padStart(2, '0')}`,
       label: week.label || '',
+      // What the week is for: a deload, a test, which rotation block it
+      // belongs to. The label says it in words; these say it in data, and
+      // the recalibration after a test week reads the data.
+      week_number: wNum,
+      phase: week.phase || undefined,
+      test_week: week.test_week || undefined,
+      rotation_block: week.rotation_block != null ? week.rotation_block : undefined,
       sessions: normalizedSessions,
       days: normalizedSessions
     };
@@ -50252,40 +50278,6 @@ function openProgramTemplateCreate() {
 }
 window.openProgramTemplateCreate = openProgramTemplateCreate;
 
-async function generateAndActivateProgram() {
-  const days = parseInt(($('gen-days') && $('gen-days').value) || '4', 10);
-  const goal = ($('gen-goal') && $('gen-goal').value) || 'hypertrophy';
-  const level = ($('gen-level') && $('gen-level').value) || 'intermediate';
-  const weeks = parseInt(($('gen-weeks') && $('gen-weeks').value) || '8', 10);
-  if (!confirm('Generare e attivare un nuovo programma? Il programma attivo verrà sostituito.')) return;
-  try {
-    if (typeof showToast === 'function') showToast('Generazione in corso…', 'info');
-    const result = await ProgramGeneratorService.generate({ days: days, goal: goal, level: level, weeks: weeks });
-    const prog = normalizeProgram(result.program);
-    prog.source_summary = 'Generato da template strutturato (' + (result.source || 'local') + ') · modificabile';
-    if (!prog.id) prog.id = 'gen_' + Date.now();
-    await maybeClearLogsOnProgramSwitch(prog.id);
-    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
-      await GiammariaPersistence.activateCanonicalProgram(prog);
-    } else if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveActiveProgram) {
-      await GiammariaPersistence.saveActiveProgram(prog);
-    }
-    DATA = prog;
-    store.activeProgram = DATA;
-    store.activeProgramId = prog.id;
-    currentWeek = 1;
-    currentDay = 0;
-    if (DATA.weeks && DATA.weeks.length) store.prefs.duration = DATA.weeks.length;
-    persist();
-    if (typeof showToast === 'function') showToast('Programma attivato: ' + (prog.title || ''), 'success');
-    afterProgramActivatedNavigate();
-    render();
-  } catch (e) {
-    console.error('[PROGRAM GENERATE]', e);
-    alert('Errore generazione: ' + (e.message || e));
-  }
-}
-
 async function activateCatalogProgram(programId) {
   return withBusy(function () { return activateCatalogProgramInner(programId); }, 'Attivazione scheda…', { immediate: true });
 }
@@ -50631,35 +50623,23 @@ function renderPrograms(c){
     </div>
     `, false)}
 
-    ${homeCollapsibleCard('GENERA PROGRAMMA (rules-based)', `
+    ${homeCollapsibleCard('GENERA PROGRAMMA', `
     <div class="card" id="program-create-template" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
-      <p style="font-size:11px;color:#888;margin:0 0 10px;">Template strutturati (non AI random). Puoi attivare e modificare dopo.</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-        <select id="gen-days" style="padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
-          <option value="3">3 giorni · Full Body</option>
-          <option value="4" selected>4 giorni · Upper/Lower</option>
-          <option value="6">6 giorni · PPL</option>
-        </select>
-        <select id="gen-goal" style="padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
-          <option value="hypertrophy" selected>Ipertrofia</option>
-          <option value="strength">Forza</option>
-          <option value="fat_loss">Dimagrimento</option>
-        </select>
-        <select id="gen-level" style="padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
-          <option value="beginner">Beginner</option>
-          <option value="intermediate" selected>Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
-        <select id="gen-weeks" style="padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
-          <option value="4">4 settimane</option>
-          <option value="8" selected>8 settimane</option>
-          <option value="12">12 settimane</option>
-        </select>
-      </div>
+      <p style="font-size:11px;color:#888;margin:0 0 10px;line-height:1.5;">Le stesse scelte del costruttore, fatte dall'app: giorni, luogo di allenamento,
+      durata fino a un anno, modello di progressione, cambio esercizi, settimana di test, tecniche e cardio. Vedi l'anteprima prima di decidere.</p>
+      ${(() => {
+        const g = (store.programGenerator && typeof store.programGenerator === 'object') ? store.programGenerator : null;
+        const api = (typeof window !== 'undefined' && window.NurvanProgramGenerator) || null;
+        if (!g || !api) return '';
+        try {
+          return `<div style="font-size:10px;color:#888;background:#111;border:1px solid #262626;border-radius:8px;padding:8px;margin-bottom:10px;line-height:1.5;">
+            Ultima impostazione: ${esc(api.describe(generatorOptions(generatorDraft())))}</div>`;
+        } catch (_) { return ''; }
+      })()}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
         <button class="btn btn-outline" style="font-size:11px;padding:6px 12px;" onclick="openAiProgramWizard()">AI CREATE</button>
       </div>
-      <button class="btn btn-primary" style="width:100%;font-size:12px;" onclick="generateAndActivateProgram()">GENERA E ATTIVA</button>
+      <button class="btn btn-primary" style="width:100%;font-size:12px;" onclick="openProgramGenerator('active')">APRI IL GENERATORE</button>
     </div>
     `, false)}
 
@@ -64534,96 +64514,535 @@ async function createProgramFromDraft(how) {
   if (!confirm(msg)) return;
   try {
     var built = programFromDraft(d);
-    var prog = normalizeProgram(built);
-
-    // Into the coach's own library: saved, not activated, and nobody's active
-    // program is touched.
-    if (target === 'library') {
-      if (typeof saveCanonicalToCoachLibrary !== 'function') {
-        if (typeof showToast === 'function') showToast('Database coach non disponibile qui.', 'warning');
-        return;
-      }
-      await saveCanonicalToCoachLibrary(prog, 'scritta a mano');
-      store.programDraft = emptyProgramDraft();
-      persist();
-      closeProgramBuilder();
-      if (typeof navigate === 'function') navigate('coachLibrary');
-      return;
-    }
-
-    // Written now, started whenever: saved to the program library and left
-    // there. Nothing about the active program changes.
-    if (target === 'save') {
-      await withBusy(async function () {
-        if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
-          await GiammariaPersistence.saveProgram(prog, false);
-        }
+    await deliverProgram(normalizeProgram(built), target, {
+      what: 'scritta a mano',
+      cleanup: function () {
         store.programDraft = emptyProgramDraft();
         persist();
-        try { await syncProgramLibraryFromIdb(); } catch (_) {}
-      }, 'Salvo la scheda…', { immediate: true, maxMs: 60000 });
-      closeProgramBuilder();
-      if (typeof showToast === 'function') {
-        showToast('Salvata: la trovi in «Programmi Salvati», da attivare quando vuoi', 'success');
+        closeProgramBuilder();
       }
-      if (typeof render === 'function') render();
-      return;
-    }
-
-    // Into the client sandbox: it becomes the draft ASSEGNA is holding, and
-    // nothing is written to the coach's own storage or to the cloud.
-    if (target === 'assign' || (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox())) {
-      DATA = prog;
-      DATA.nutrition = null;
-      DATA.supplementation = null;
-      DATA.therapy = null;
-      DATA.exams = null;
-      store.activeProgram = DATA;
-      store.activeProgramId = prog.id;
-      currentWeek = 1;
-      currentDay = 0;
-      if (DATA.weeks && DATA.weeks.length) store.prefs.duration = DATA.weeks.length;
-      store.programDraft = emptyProgramDraft();
-      persist();
-      closeProgramBuilder();
-      if (typeof showToast === 'function') showToast('Bozza cliente: ' + prog.title + ' — modifica e poi INVIA', 'success');
-      if (typeof navigate === 'function') navigate('training');
-      if (typeof render === 'function') render();
-      return;
-    }
-    await withBusy(async function () {
-      await maybeClearLogsOnProgramSwitch(prog.id);
-      if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
-        await GiammariaPersistence.activateCanonicalProgram(prog);
-      } else if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveActiveProgram) {
-        await GiammariaPersistence.saveActiveProgram(prog);
-      }
-      DATA = prog;
-      // Training only: food, supplements, therapy and exams are the athlete's
-      // own record and have nothing to do with which program is active.
-      DATA.nutrition = store.nutrition || null;
-      DATA.supplementation = store.supplementation || null;
-      DATA.therapy = store.therapy || null;
-      DATA.exams = store.exams || null;
-      store.activeProgram = DATA;
-      store.activeProgramId = prog.id;
-      currentWeek = 1;
-      currentDay = 0;
-      if (DATA.weeks && DATA.weeks.length) store.prefs.duration = DATA.weeks.length;
-      store.programDraft = emptyProgramDraft();
-      persist();
-      persistActiveProgramStructure();
-      try { await syncProgramLibraryFromIdb(); } catch (_) {}
-    }, 'Creo la scheda…', { immediate: true, maxMs: 60000 });
-    closeProgramBuilder();
-    if (typeof showToast === 'function') showToast('Scheda creata e attivata: ' + prog.title, 'success');
-    afterProgramActivatedNavigate();
-    render();
+    });
   } catch (e) {
     console.error('[PROGRAM BUILDER]', e);
     if (typeof showToast === 'function') showToast('Creazione non riuscita: ' + (e && e.message || e), 'danger');
   }
 }
+
+/*
+ * What happens to a finished program, whoever wrote it.
+ *
+ * A program can be written by hand in the builder or generated whole; from
+ * the moment it exists the four things that can be done with it are the same
+ * - activated now, saved to start later, filed in the coach database, or
+ * handed to the client being assigned - so they are decided here once. The
+ * builder used to hold this code and the generator only knew how to activate,
+ * which is why generating a program you were not ready to start meant
+ * overwriting the one you were running.
+ *
+ * `cleanup` is what the caller has to put away afterwards: its draft, its
+ * sheet. Everything else - storage, the active program, the navigation - is
+ * the same for both.
+ */
+async function deliverProgram(prog, target, hooks) {
+  hooks = hooks || {};
+  var cleanup = hooks.cleanup || function () {};
+  var what = hooks.what || 'scheda';
+
+  // Into the coach's own library: saved, not activated, and nobody's active
+  // program is touched.
+  if (target === 'library') {
+    if (typeof saveCanonicalToCoachLibrary !== 'function') {
+      if (typeof showToast === 'function') showToast('Database coach non disponibile qui.', 'warning');
+      return;
+    }
+    await saveCanonicalToCoachLibrary(prog, what);
+    cleanup();
+    if (typeof navigate === 'function') navigate('coachLibrary');
+    return;
+  }
+
+  // Written now, started whenever: saved to the program library and left
+  // there. Nothing about the active program changes.
+  if (target === 'save') {
+    await withBusy(async function () {
+      if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
+        await GiammariaPersistence.saveProgram(prog, false);
+      }
+      cleanup();
+      try { await syncProgramLibraryFromIdb(); } catch (_) {}
+    }, 'Salvo la scheda…', { immediate: true, maxMs: 60000 });
+    if (typeof showToast === 'function') {
+      showToast('Salvata: la trovi in «Programmi Salvati», da attivare quando vuoi', 'success');
+    }
+    if (typeof render === 'function') render();
+    return;
+  }
+
+  // Into the client sandbox: it becomes the draft ASSEGNA is holding, and
+  // nothing is written to the coach's own storage or to the cloud.
+  if (target === 'assign' || (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox())) {
+    DATA = prog;
+    DATA.nutrition = null;
+    DATA.supplementation = null;
+    DATA.therapy = null;
+    DATA.exams = null;
+    store.activeProgram = DATA;
+    store.activeProgramId = prog.id;
+    currentWeek = 1;
+    currentDay = 0;
+    if (DATA.weeks && DATA.weeks.length) store.prefs.duration = DATA.weeks.length;
+    cleanup();
+    persist();
+    if (typeof showToast === 'function') showToast('Bozza cliente: ' + prog.title + ' — modifica e poi INVIA', 'success');
+    if (typeof navigate === 'function') navigate('training');
+    if (typeof render === 'function') render();
+    return;
+  }
+
+  await withBusy(async function () {
+    await maybeClearLogsOnProgramSwitch(prog.id);
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
+      await GiammariaPersistence.activateCanonicalProgram(prog);
+    } else if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveActiveProgram) {
+      await GiammariaPersistence.saveActiveProgram(prog);
+    }
+    DATA = prog;
+    // Training only: food, supplements, therapy and exams are the athlete's
+    // own record and have nothing to do with which program is active.
+    DATA.nutrition = store.nutrition || null;
+    DATA.supplementation = store.supplementation || null;
+    DATA.therapy = store.therapy || null;
+    DATA.exams = store.exams || null;
+    store.activeProgram = DATA;
+    store.activeProgramId = prog.id;
+    currentWeek = 1;
+    currentDay = 0;
+    if (DATA.weeks && DATA.weeks.length) store.prefs.duration = DATA.weeks.length;
+    cleanup();
+    persist();
+    persistActiveProgramStructure();
+    try { await syncProgramLibraryFromIdb(); } catch (_) {}
+  }, 'Creo la scheda…', { immediate: true, maxMs: 60000 });
+  if (typeof showToast === 'function') showToast('Scheda attivata: ' + prog.title, 'success');
+  afterProgramActivatedNavigate();
+  render();
+}
+window.deliverProgram = deliverProgram;
+
+/*
+ * The generator: the same decisions the builder asks for, answered by the app.
+ *
+ * Someone who knows what they want types it into the builder. Someone who
+ * wants a program that holds together should not have to. This asks the few
+ * things only the athlete knows - how many days, where they train, what for,
+ * how long - decides the rest with the same engines the builder uses, and
+ * shows what it decided in a sentence before anything is saved. Every default
+ * it picks is also a field: nothing here is beyond argument.
+ *
+ * It ends where the builder ends, in deliverProgram(): generated is not the
+ * same as started, and a program can be generated to be saved, filed in the
+ * coach database or handed to a client.
+ */
+function emptyGeneratorDraft() {
+  return {
+    title: '',
+    days: 4,
+    split: 'upper_lower',
+    goal: 'ipertrofia',
+    experience: 'intermedio',
+    audience: 'unisex',
+    weeks: 8,
+    spaceId: '',
+    equipment: 'palestra',
+    modelId: 'auto',
+    rotateEvery: 'auto',
+    rotateScope: 'accessories',
+    testMode: 'auto',
+    testWeek: '',
+    technique: '',
+    cardioMode: 'none',
+    cardioMinutes: 15,
+    cardioSessions: 2,
+    cardioMachine: '',
+    cardioFormat: 'tabata',
+    variant: 0,
+    target: 'active'
+  };
+}
+
+function generatorDraft() {
+  if (!store.programGenerator || typeof store.programGenerator !== 'object') {
+    store.programGenerator = emptyGeneratorDraft();
+  }
+  var base = emptyGeneratorDraft();
+  Object.keys(base).forEach(function (k) {
+    if (store.programGenerator[k] === undefined) store.programGenerator[k] = base[k];
+  });
+  return store.programGenerator;
+}
+window.generatorDraft = generatorDraft;
+
+function generatorApi() {
+  return (typeof window !== 'undefined' && window.NurvanProgramGenerator) || null;
+}
+
+// A saved place says what it has; the generator picks exercises from a family
+// of equipment. This is the translation, and it reads the place's own list
+// rather than its name: "Palestra Olimpica" could be a garage.
+function equipmentFromSpace(space) {
+  if (!space) return null;
+  var has = {};
+  (space.equip || []).forEach(function (id) { has[id] = true; });
+  if (has.barbell) return 'palestra';
+  if (has.dumbbell && (has.bench || has.bar || has.machine)) return 'casa';
+  if (has.dumbbell || has.band) return 'minimal';
+  if (has.kettlebell) return 'kettlebell';
+  return 'bodyweight';
+}
+window.equipmentFromSpace = equipmentFromSpace;
+
+function generatorSpace(g) {
+  return g.spaceId ? spaceById(g.spaceId) : null;
+}
+
+function generatorOptions(g) {
+  var space = generatorSpace(g);
+  var testWeeks = 'auto';
+  if (g.testMode === 'none') testWeeks = [];
+  else if (g.testMode === 'custom') {
+    var n = parseInt(g.testWeek, 10);
+    testWeeks = n > 1 ? [n] : [];
+  }
+  return {
+    title: g.title,
+    days: Number(g.days) || 4,
+    split: g.split,
+    goal: g.goal,
+    experience: g.experience,
+    audience: g.audience,
+    equipment: space ? (equipmentFromSpace(space) || g.equipment) : g.equipment,
+    weeks: Number(g.weeks) || 8,
+    variant: Number(g.variant) || 0,
+    modelId: g.modelId,
+    rotateEvery: g.rotateEvery,
+    rotateScope: g.rotateScope,
+    testWeeks: testWeeks,
+    technique: g.technique || '',
+    bodyweight: (typeof currentBodyweightKg === 'function') ? currentBodyweightKg() : 0,
+    cardio: g.cardioMode === 'none' ? { mode: 'none' } : {
+      mode: g.cardioMode,
+      minutes: Number(g.cardioMinutes) || 15,
+      sessions: Number(g.cardioSessions) || 2,
+      machine: g.cardioMachine || '',
+      format: g.cardioFormat || 'tabata'
+    }
+  };
+}
+window.generatorOptions = generatorOptions;
+
+function setGeneratorField(key, value) {
+  var g = generatorDraft();
+  g[key] = value;
+  // Days and split constrain each other: five days of full body is not full
+  // body, so the split follows rather than breaking the program.
+  if (key === 'days' || key === 'split') {
+    var api = generatorApi();
+    if (api) g.split = api.normalizeSplit(g.split, g.days);
+  }
+  if (key === 'spaceId' && value) {
+    var eq = equipmentFromSpace(spaceById(value));
+    if (eq) g.equipment = eq;
+  }
+  try { persist(); } catch (_) {}
+  renderProgramGenerator();
+}
+window.setGeneratorField = setGeneratorField;
+
+function setGeneratorNumber(key, value, lo, hi) {
+  var n = Math.round(Number(value));
+  if (!isFinite(n)) return;
+  setGeneratorField(key, Math.min(hi, Math.max(lo, n)));
+}
+window.setGeneratorNumber = setGeneratorNumber;
+
+function openProgramGenerator(target) {
+  var g = generatorDraft();
+  if (target === 'library' || target === 'assign') g.target = target;
+  else if (!g.target) g.target = 'active';
+  renderProgramGenerator();
+}
+window.openProgramGenerator = openProgramGenerator;
+
+function closeProgramGenerator() {
+  var el = document.getElementById('program-generator-sheet');
+  if (el) el.remove();
+  try { persist(); } catch (_) {}
+  if (typeof currentView !== 'undefined' && currentView === 'programs' && typeof render === 'function') render();
+}
+window.closeProgramGenerator = closeProgramGenerator;
+
+function generatorChips(field, values, current, labelFor) {
+  return '<div style="display:flex;gap:5px;flex-wrap:wrap;">' +
+    values.map(function (v) {
+      var on = String(current) === String(v);
+      var arg = (typeof v === 'number') ? String(v) : ("'" + v + "'");
+      return '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:5px 10px;' +
+        (on ? 'border-color:var(--gold);color:var(--gold);background:rgba(212,175,55,0.12);' : '') +
+        '" onclick="setGeneratorField(\'' + field + '\',' + arg + ')">' +
+        esc(labelFor ? labelFor(v) : String(v)) + '</button>';
+    }).join('') + '</div>';
+}
+
+function generatorSelect(field, items, current, inputStyle) {
+  return '<select onchange="setGeneratorField(\'' + field + '\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '">' +
+    items.map(function (it) {
+      return '<option value="' + esc(it.id) + '"' + (String(it.id) === String(current) ? ' selected' : '') + '>' + esc(it.label) + '</option>';
+    }).join('') + '</select>';
+}
+
+// What the generator is about to write, before it writes it: the first week,
+// exercise by exercise, so a wrong answer upstream is visible here and not
+// three taps later inside an activated program.
+function generatorPreviewHtml(g) {
+  var api = generatorApi();
+  if (!api) return '<div style="font-size:11px;color:#c66;">Motore di generazione non disponibile.</div>';
+  var opts = generatorOptions(g);
+  var sessions;
+  try {
+    sessions = api.templateFor(opts);
+  } catch (e) {
+    return '<div style="font-size:11px;color:#c66;">Anteprima non riuscita: ' + esc(e.message || String(e)) + '</div>';
+  }
+  var space = generatorSpace(g);
+  var totalSets = 0;
+  sessions.forEach(function (s) {
+    s.exercises.forEach(function (e) { totalSets += (e.sets || []).length; });
+  });
+  return '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(212,175,55,0.35);">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:8px;">ANTEPRIMA · SETTIMANA 1</div>' +
+    '<div style="font-size:11px;color:#aaa;line-height:1.5;margin-bottom:10px;">' + esc(api.describe(opts)) + '</div>' +
+    sessions.map(function (s) {
+      return '<div style="margin-bottom:8px;">' +
+        '<div style="font-size:11px;font-weight:800;color:#fff;margin-bottom:4px;">' + esc(s.name) + '</div>' +
+        s.exercises.map(function (e) {
+          var howMuch = (e.unit === 'circuit' && e.circuit)
+            ? (e.circuit.rounds + ' round · ' + e.circuit.work + '"/' + e.circuit.rest + '"')
+            : ((e.sets || []).length + ' × ' + e.repsTarget);
+          return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;color:#bbb;padding:2px 0;">' +
+            '<span style="min-width:0;">' + esc(e.name) + '</span>' +
+            '<span style="flex:0 0 auto;color:#888;">' + esc(howMuch) + '</span></div>';
+        }).join('') +
+        '</div>';
+    }).join('') +
+    '<div style="font-size:10px;color:#777;border-top:1px solid #222;padding-top:8px;margin-top:4px;">' +
+    sessions.length + ' sedute · ' + totalSets + ' serie nella prima settimana' +
+    (space ? ' · adattata a ' + esc(space.name) + ' dopo la generazione' : '') +
+    '</div></div>';
+}
+
+function renderProgramGenerator() {
+  var g = generatorDraft();
+  var api = generatorApi();
+  var existing = document.getElementById('program-generator-sheet');
+  if (existing) existing.remove();
+  if (!api) {
+    if (typeof showToast === 'function') showToast('Motore di generazione non caricato', 'warning');
+    return;
+  }
+  var engine = (typeof window !== 'undefined' && window.NurvanProgressions) || null;
+  var inputStyle = 'padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;box-sizing:border-box;';
+  var sheet = document.createElement('div');
+  sheet.id = 'program-generator-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10240';
+
+  var spaces = trainingSpaces();
+  var splitItems = api.splitsFor(g.days).map(function (s) { return { id: s.id, label: s.label }; });
+  var resolved = api.resolve(generatorOptions(g));
+  var autoModelLabel = engine ? engine.get(resolved.modelId).label : resolved.modelId;
+  var modelItems = [{ id: 'auto', label: 'Auto · ' + autoModelLabel }];
+  if (engine) {
+    ['bodybuilding', 'powerlifting', 'none'].forEach(function (family) {
+      engine.list(family).forEach(function (m) { modelItems.push({ id: m.id, label: m.label }); });
+    });
+  }
+  var isPl = !!engine && engine.get(resolved.modelId).family === 'powerlifting';
+  var cardioApi = (typeof window !== 'undefined' && window.NurvanCardio) || null;
+  var maxDays = Number(g.days) || 4;
+
+  var structure = '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid #333;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:10px;">STRUTTURA</div>' +
+    '<div style="font-size:9px;color:#888;margin-bottom:4px;">Giorni a settimana</div>' +
+    generatorChips('days', api.DAYS, g.days) +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">' +
+    '<label style="font-size:9px;color:#888;">Split' + generatorSelect('split', splitItems, g.split, inputStyle) + '</label>' +
+    '<label style="font-size:9px;color:#888;">Obiettivo' + generatorSelect('goal', api.GOALS, g.goal, inputStyle) + '</label>' +
+    '<label style="font-size:9px;color:#888;">Esperienza' + generatorSelect('experience', api.EXPERIENCE, g.experience, inputStyle) + '</label>' +
+    '<label style="font-size:9px;color:#888;">Focus' + generatorSelect('audience', api.AUDIENCE, g.audience, inputStyle) + '</label>' +
+    '</div></div>';
+
+  var place = '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid #333;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:10px;">DOVE SI ALLENA</div>' +
+    (spaces.length
+      ? '<label style="font-size:9px;color:#888;display:block;">Luogo salvato' +
+        generatorSelect('spaceId', [{ id: '', label: 'Nessuno · scelgo l\'attrezzatura' }].concat(
+          spaces.map(function (s) { return { id: s.id, label: s.name }; })), g.spaceId, inputStyle) + '</label>'
+      : '<div style="font-size:11px;color:#777;">Nessun luogo salvato. ' +
+        '<span style="color:var(--gold);cursor:pointer;text-decoration:underline;" onclick="openTrainingSpaces()">Creane uno</span>' +
+        ' e la scheda userà solo quello che c\'è davvero.</div>') +
+    (g.spaceId
+      ? '<div style="font-size:10px;color:#888;margin-top:8px;line-height:1.5;">Gli esercizi vengono scelti tra quelli possibili lì; ' +
+        'quelli che mancano vengono <b style="color:#ccc;">sostituiti</b>, non cancellati, e i carichi rispettano i limiti del posto.</div>'
+      : '<label style="font-size:9px;color:#888;display:block;margin-top:8px;">Attrezzatura' +
+        generatorSelect('equipment', api.EQUIPMENT, g.equipment, inputStyle) + '</label>') +
+    '<div style="margin-top:8px;"><span style="font-size:10px;color:var(--gold);cursor:pointer;text-decoration:underline;" onclick="openTrainingSpaces()">gestisci i luoghi</span></div>' +
+    '</div>';
+
+  var duration = '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(212,175,55,0.35);">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:10px;">DURATA E PROGRESSIONE</div>' +
+    '<label style="font-size:9px;color:#888;display:block;max-width:130px;">Settimane<input type="number" min="1" max="52" value="' + (Number(g.weeks) || 8) +
+    '" onchange="setGeneratorNumber(\'weeks\',this.value,1,52)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '<div style="margin:8px 0 10px;">' + generatorChips('weeks', api.WEEK_PRESETS, g.weeks) + '</div>' +
+    // A select is only as wide as its box, and these names are long: the
+    // progression gets a line of its own rather than half of one.
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:8px;">Progressione' +
+    generatorSelect('modelId', modelItems, g.modelId, inputStyle) + '</label>' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:8px;">Cambio esercizi' +
+    generatorSelect('rotateEvery', [
+      { id: 'auto', label: 'Automatico (' + (resolved.rotateWeeks.length ? 'settimane ' + resolved.rotateWeeks.join(', ') : 'mai') + ')' },
+      { id: '0', label: 'Mai: stessi esercizi per tutto il programma' },
+      { id: '3', label: 'Ogni 3 settimane' },
+      { id: '4', label: 'Ogni 4 settimane' },
+      { id: '5', label: 'Ogni 5 settimane' },
+      { id: '6', label: 'Ogni 6 settimane' },
+      { id: '8', label: 'Ogni 8 settimane' }
+    ], g.rotateEvery, inputStyle) + '</label>' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:8px;">Cosa cambia' +
+    generatorSelect('rotateScope', [
+      { id: 'accessories', label: 'Solo accessori' },
+      { id: 'all', label: 'Anche i fondamentali' }
+    ], g.rotateScope, inputStyle) + '</label>' +
+    '<div style="font-size:10px;color:#777;margin:-4px 0 10px;line-height:1.45;">' +
+    (g.rotateScope === 'all'
+      ? 'Il fondamentale cambia variante a ogni blocco (es. low bar squat in box squat).'
+      : 'Il fondamentale resta lo stesso, così il carico resta confrontabile.') + '</div>' +
+    (isPl
+      ? '<div style="font-size:9px;color:#888;margin-bottom:4px;">Settimana di test</div>' +
+        generatorSelect('testMode', [
+          { id: 'auto', label: 'Automatica (' + (resolved.testWeeks.length ? 'settimana ' + resolved.testWeeks.join(', ') : 'nessuna') + ')' },
+          { id: 'none', label: 'Nessun test dentro il programma' },
+          { id: 'custom', label: 'Scelgo io la settimana' }
+        ], g.testMode, inputStyle) +
+        (g.testMode === 'custom'
+          ? '<input type="number" min="2" max="' + Math.max(2, (Number(g.weeks) || 8) - 1) + '" value="' + esc(g.testWeek || '') +
+            '" placeholder="es. 15" onchange="setGeneratorField(\'testWeek\',this.value)" style="width:100%;margin-top:6px;' + inputStyle + '">'
+          : '') +
+        '<div style="font-size:10px;color:#777;margin-top:6px;line-height:1.45;">Dopo il test le settimane che restano si ricalibrano sui massimali veri.</div>'
+      : '') +
+    '</div>';
+
+  var extras = '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid #333;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:10px;">TECNICHE E CARDIO</div>' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:4px;">Tecnica di intensità' +
+    generatorSelect('technique', [{ id: '', label: 'Lascia decidere al modello' }].concat(
+      (typeof getIntensityTechniqueOptions === 'function' ? getIntensityTechniqueOptions() : []).map(function (t) {
+        return { id: t.id, label: t.label };
+      })), g.technique, inputStyle) + '</label>' +
+    '<div style="font-size:10px;color:#777;margin-bottom:10px;">Va sull\'ultimo esercizio di isolamento di ogni seduta, mai sul fondamentale.</div>' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:8px;">Cardio' +
+    generatorSelect('cardioMode', api.CARDIO_MODES, g.cardioMode, inputStyle) + '</label>' +
+    (g.cardioMode === 'finisher'
+      ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+        '<label style="font-size:9px;color:#888;">Minuti<input type="number" min="1" max="120" value="' + (Number(g.cardioMinutes) || 15) +
+        '" onchange="setGeneratorNumber(\'cardioMinutes\',this.value,1,120)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+        '<label style="font-size:9px;color:#888;">Sedute a settimana<input type="number" min="1" max="' + maxDays + '" value="' +
+        Math.min(Number(g.cardioSessions) || 2, maxDays) +
+        '" onchange="setGeneratorNumber(\'cardioSessions\',this.value,1,' + maxDays + ')" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+        '<label style="font-size:9px;color:#888;grid-column:1 / -1;">Macchina' +
+        generatorSelect('cardioMachine', [{ id: '', label: 'La prima disponibile' }].concat(
+          (cardioApi ? cardioApi.LIST : []).map(function (c) { return { id: c.name, label: c.name }; })), g.cardioMachine, inputStyle) + '</label>' +
+        '</div>'
+      : '') +
+    (g.cardioMode === 'circuit'
+      ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+        '<label style="font-size:9px;color:#888;">Formato' +
+        generatorSelect('cardioFormat', (cardioApi ? cardioApi.FORMATS : []).map(function (f) { return { id: f.id, label: f.label }; }), g.cardioFormat, inputStyle) + '</label>' +
+        '<label style="font-size:9px;color:#888;">Sedute a settimana<input type="number" min="1" max="' + maxDays + '" value="' +
+        Math.min(Number(g.cardioSessions) || 2, maxDays) +
+        '" onchange="setGeneratorNumber(\'cardioSessions\',this.value,1,' + maxDays + ')" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+        '</div>'
+      : '') +
+    '<div style="margin-top:10px;"><div style="font-size:9px;color:#888;margin-bottom:4px;">Selezione esercizi</div>' +
+    generatorChips('variant', [0, 1, 2, 3, 4, 5], g.variant, function (v) { return 'Variante ' + (v + 1); }) +
+    '<div style="font-size:10px;color:#777;margin-top:4px;">Stessa struttura, altri esercizi: cambia se qualcosa non ti va.</div></div>' +
+    '</div>';
+
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">GENERA UNA SCHEDA</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeProgramGenerator()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:12px;">Nome della scheda (facoltativo)' +
+    '<input type="text" value="' + esc(g.title || '') + '" placeholder="Lo scrive lui se lo lasci vuoto" ' +
+    'onchange="setGeneratorField(\'title\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    structure + place + duration + extras + generatorPreviewHtml(g) +
+    '</div>' +
+    '<div class="nurvan-sheet-foot">' +
+    (g.target === 'active'
+      ? '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;padding:12px;" onclick="createGeneratedProgram(\'save\')">SALVA SENZA ATTIVARE</button>' +
+        '<button type="button" class="btn btn-primary" style="flex:1;font-size:11px;padding:12px;" onclick="createGeneratedProgram(\'active\')">GENERA E ATTIVA</button>'
+      : '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="createGeneratedProgram(\'' + g.target + '\')">' +
+        (g.target === 'library' ? 'GENERA E SALVA NEL DATABASE' : 'GENERA PER IL CLIENTE') + '</button>') +
+    '</div></div>';
+  document.body.appendChild(sheet);
+}
+window.renderProgramGenerator = renderProgramGenerator;
+
+async function createGeneratedProgram(target) {
+  var g = generatorDraft();
+  var api = generatorApi();
+  if (!api) {
+    if (typeof showToast === 'function') showToast('Motore di generazione non caricato', 'warning');
+    return;
+  }
+  var opts = generatorOptions(g);
+  var head = target === 'save' ? 'Generare e salvare senza attivare?'
+    : (target === 'library' ? 'Generare e mettere nel tuo database?'
+      : (target === 'assign' ? 'Generare come bozza per il cliente?' : 'Generare e attivare questa scheda?'));
+  var tail = target === 'active'
+    ? '\n\nIl programma attivo verrà sostituito.'
+    : (target === 'save' ? '\n\nLa trovi in «Programmi Salvati» e la attivi quando vuoi.'
+      : (target === 'library' ? '\n\nFinisce nel tuo database schede.' : '\n\nDiventa la bozza da rivedere e inviare.'));
+  if (!confirm(head + '\n\n' + api.describe(opts) + tail)) return;
+  try {
+    var prog = null;
+    var report = null;
+    await withBusy(function () {
+      prog = api.plan(opts);
+      // The place has the last word: what it does not have is replaced by
+      // something it does, and its ceilings are applied to the loads.
+      var space = generatorSpace(g);
+      if (space) report = adaptProgramToSpace(prog, space);
+      prog = normalizeProgram(prog);
+      return Promise.resolve();
+    }, 'Scrivo la scheda…', { immediate: true, maxMs: 60000 });
+    await deliverProgram(prog, target, {
+      what: 'generata',
+      cleanup: function () {
+        try { persist(); } catch (_) {}
+        closeProgramGenerator();
+      }
+    });
+    if (report && report.swaps.length && typeof showAdaptReport === 'function') showAdaptReport(report);
+  } catch (e) {
+    console.error('[PROGRAM GENERATOR]', e);
+    if (typeof showToast === 'function') showToast('Generazione non riuscita: ' + (e && e.message || e), 'danger');
+  }
+}
+window.createGeneratedProgram = createGeneratedProgram;
+
 window.createProgramFromDraft = createProgramFromDraft;
 
 /* ---------- adding an exercise to the program, not just to today ---------- */
@@ -65705,7 +66124,6 @@ if (typeof window !== 'undefined') {
   window.archiveCurrentCoachChat = archiveCurrentCoachChat;
   window.scheduleAllItemAlerts = scheduleAllItemAlerts;
   window.removeCalendarEvent = removeCalendarEvent;
-  window.generateAndActivateProgram = generateAndActivateProgram;
   window.syncHealthSamplesAndRefresh = syncHealthSamplesAndRefresh;
   window.confirmExerciseMapping = confirmExerciseMapping;
   window.isAthleteRole = isAthleteRole;
@@ -70093,6 +70511,7 @@ function openAssignChooser(clientId, name) {
     '<p class="cp-help">Si apre uno <b style="color:#fff;">spazio cliente separato</b> dal tuo allenamento. Importa o scegli, modifica, poi INVIA. Solo «usa scheda attiva» parte dalla tua come base.</p>' +
     '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'import\')">IMPORTA PDF / EXCEL / WORD</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'build\')">SCRIVI UNA SCHEDA DA ZERO</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'generate\')">GENERA UNA SCHEDA</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'mylib\')">DAL MIO DATABASE</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'programs\')">DATABASE PROGRAMMI (NURVAN)</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'copy\')">USA SCHEDA ATTIVA COME BASE</button>' +
@@ -70138,6 +70557,10 @@ function beginAssignSandbox(clientId, name, mode) {
     navigate('training');
     if (typeof openProgramBuilder === 'function') openProgramBuilder('assign');
     practiceToast('Spazio cliente: scrivi la scheda, poi la modifichi e la invii.', 'success');
+  } else if (mode === 'generate') {
+    navigate('training');
+    if (typeof openProgramGenerator === 'function') openProgramGenerator('assign');
+    practiceToast('Spazio cliente: rispondi alle domande, la scheda la scrive l\'app. Poi la modifichi e la invii.', 'success');
   } else if (mode === 'mylib') {
     openCoachLibraryAssignPicker(clientId, name);
   } else if (mode === 'programs') {
@@ -71589,6 +72012,7 @@ function renderCoachLibrary(c) {
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">HUB</button></div>' +
     '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' +
     '<button class="btn btn-primary" style="flex:1;min-width:150px;" onclick="openProgramBuilder(\'library\')">CREA UNA SCHEDA</button>' +
+    '<button class="btn btn-outline" style="flex:1;min-width:150px;" onclick="openProgramGenerator(\'library\')">GENERA UNA SCHEDA</button>' +
     '<button class="btn btn-outline" style="flex:1;min-width:150px;" onclick="beginCoachLibraryImport()">IMPORTA</button>' +
     '</div>' +
     (rows.length
@@ -71673,6 +72097,7 @@ function openCoachLibraryAssignPicker(clientId, name) {
   if (!rows.length) {
     p.innerHTML = '<h2>Database vuoto</h2><p class="cp-help">Non hai ancora schede salvate: scrivine una adesso, oppure importala.</p>' +
       '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'build\')">SCRIVI UNA SCHEDA DA ZERO</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'generate\')">GENERA UNA SCHEDA</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);navigate(\'coachLibrary\')">APRI IL MIO DATABASE</button>' +
       '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\', false)">CHIUDI</button>';
     showOverlay('cp-assign', true);
@@ -76473,7 +76898,9 @@ window.syncWorkoutSessionToCloud = typeof syncWorkoutSessionToCloud !== 'undefin
 window.sendCoachQuickPrompt = typeof sendCoachQuickPrompt !== 'undefined' ? sendCoachQuickPrompt : (() => {});
 window.addCalendarEventFromForm = typeof addCalendarEventFromForm !== 'undefined' ? addCalendarEventFromForm : (() => {});
 window.removeCalendarEvent = typeof removeCalendarEvent !== 'undefined' ? removeCalendarEvent : (() => {});
-window.generateAndActivateProgram = typeof generateAndActivateProgram !== 'undefined' ? generateAndActivateProgram : (() => {});
+window.openProgramGenerator = typeof openProgramGenerator !== 'undefined' ? openProgramGenerator : (() => {});
+window.createGeneratedProgram = typeof createGeneratedProgram !== 'undefined' ? createGeneratedProgram : (async () => {});
+window.deliverProgram = typeof deliverProgram !== 'undefined' ? deliverProgram : (async () => {});
 window.syncHealthSamplesAndRefresh = typeof syncHealthSamplesAndRefresh !== 'undefined' ? syncHealthSamplesAndRefresh : (async () => ({}));
 window.sanitizeCoachDisplayText = typeof sanitizeCoachDisplayText !== 'undefined' ? sanitizeCoachDisplayText : ((t) => String(t || ''));
 window.setImportReviewMode = typeof setImportReviewMode !== 'undefined' ? setImportReviewMode : (() => {});

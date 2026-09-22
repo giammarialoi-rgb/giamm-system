@@ -20,7 +20,8 @@ const PRECACHE = [
   './program-builder.js',
   './program-catalog.js',
   './progression-models.js',
-  './cardio-library.js'
+  './cardio-library.js',
+  './program-generator.js'
 ];
 
 self.addEventListener('install', (event) => {

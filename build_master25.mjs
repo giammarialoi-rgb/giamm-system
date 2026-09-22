@@ -1048,7 +1048,9 @@ window.syncWorkoutSessionToCloud = typeof syncWorkoutSessionToCloud !== 'undefin
 window.sendCoachQuickPrompt = typeof sendCoachQuickPrompt !== 'undefined' ? sendCoachQuickPrompt : (() => {});
 window.addCalendarEventFromForm = typeof addCalendarEventFromForm !== 'undefined' ? addCalendarEventFromForm : (() => {});
 window.removeCalendarEvent = typeof removeCalendarEvent !== 'undefined' ? removeCalendarEvent : (() => {});
-window.generateAndActivateProgram = typeof generateAndActivateProgram !== 'undefined' ? generateAndActivateProgram : (() => {});
+window.openProgramGenerator = typeof openProgramGenerator !== 'undefined' ? openProgramGenerator : (() => {});
+window.createGeneratedProgram = typeof createGeneratedProgram !== 'undefined' ? createGeneratedProgram : (async () => {});
+window.deliverProgram = typeof deliverProgram !== 'undefined' ? deliverProgram : (async () => {});
 window.syncHealthSamplesAndRefresh = typeof syncHealthSamplesAndRefresh !== 'undefined' ? syncHealthSamplesAndRefresh : (async () => ({}));
 window.sanitizeCoachDisplayText = typeof sanitizeCoachDisplayText !== 'undefined' ? sanitizeCoachDisplayText : ((t) => String(t || ''));
 window.setImportReviewMode = typeof setImportReviewMode !== 'undefined' ? setImportReviewMode : (() => {});

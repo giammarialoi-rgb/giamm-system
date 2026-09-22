@@ -136,7 +136,17 @@
       evidence: 'Sovraccarico progressivo su reps e carico · Schoenfeld 2016',
       deloadEvery: 5,
       week: function (w) {
-        var top = w % 2 === 1;
+        // Week one is the week that was written. Shifting the range on it
+        // handed back a program that did not match the one just accepted:
+        // 8-10 typed in, 9-11 printed out. The cycle starts after it.
+        if (w === 1) {
+          return {
+            phase: 'base',
+            volumeMul: 1, repsDelta: 0, rirDelta: 0, restDelta: 0, tempo: '3010',
+            note: 'Parti dal range scritto e chiudi le serie vicino al limite alto'
+          };
+        }
+        var top = w % 2 === 0;
         return {
           phase: top ? 'reps' : 'carico',
           volumeMul: 1,
@@ -729,6 +739,19 @@
     if (ex.tempo && !tempo) tempo = ex.tempo;
 
     copy.sets = makeSets(setsCount, reps, null, technique);
+    // A hold and a cardio block carry their number twice: in the text the
+    // athlete reads and in the field the timer runs on. A progression that
+    // changes one has to change the other, or week six asks for 45 seconds
+    // and starts a 30-second clock.
+    if (copy.unit === 'time' || copy.unit === 'cardio') {
+      var amount = parseInt(String(reps).replace(/[^\d].*$/, ''), 10);
+      if (amount > 0) {
+        copy.sets.forEach(function (set) {
+          if (copy.unit === 'time') set.seconds = amount;
+          else set.minutes = amount;
+        });
+      }
+    }
     copy.setCount = setsCount;
     copy.repsTarget = String(reps);
     copy.rirTarget = rir;

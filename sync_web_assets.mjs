@@ -34,6 +34,7 @@ export const ANDROID_STATIC_ASSETS = [
   'program-catalog.js',
   'progression-models.js',
   'cardio-library.js',
+  'program-generator.js',
   'apple-touch-icon.png',
   'icon-180.png',
   'icon-192.png',

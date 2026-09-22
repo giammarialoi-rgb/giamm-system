@@ -4361,6 +4361,7 @@ function openAssignChooser(clientId, name) {
     '<p class="cp-help">Si apre uno <b style="color:#fff;">spazio cliente separato</b> dal tuo allenamento. Importa o scegli, modifica, poi INVIA. Solo «usa scheda attiva» parte dalla tua come base.</p>' +
     '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'import\')">IMPORTA PDF / EXCEL / WORD</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'build\')">SCRIVI UNA SCHEDA DA ZERO</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'generate\')">GENERA UNA SCHEDA</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'mylib\')">DAL MIO DATABASE</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'programs\')">DATABASE PROGRAMMI (NURVAN)</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'copy\')">USA SCHEDA ATTIVA COME BASE</button>' +
@@ -4406,6 +4407,10 @@ function beginAssignSandbox(clientId, name, mode) {
     navigate('training');
     if (typeof openProgramBuilder === 'function') openProgramBuilder('assign');
     practiceToast('Spazio cliente: scrivi la scheda, poi la modifichi e la invii.', 'success');
+  } else if (mode === 'generate') {
+    navigate('training');
+    if (typeof openProgramGenerator === 'function') openProgramGenerator('assign');
+    practiceToast('Spazio cliente: rispondi alle domande, la scheda la scrive l\'app. Poi la modifichi e la invii.', 'success');
   } else if (mode === 'mylib') {
     openCoachLibraryAssignPicker(clientId, name);
   } else if (mode === 'programs') {
@@ -5857,6 +5862,7 @@ function renderCoachLibrary(c) {
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">HUB</button></div>' +
     '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' +
     '<button class="btn btn-primary" style="flex:1;min-width:150px;" onclick="openProgramBuilder(\'library\')">CREA UNA SCHEDA</button>' +
+    '<button class="btn btn-outline" style="flex:1;min-width:150px;" onclick="openProgramGenerator(\'library\')">GENERA UNA SCHEDA</button>' +
     '<button class="btn btn-outline" style="flex:1;min-width:150px;" onclick="beginCoachLibraryImport()">IMPORTA</button>' +
     '</div>' +
     (rows.length
@@ -5941,6 +5947,7 @@ function openCoachLibraryAssignPicker(clientId, name) {
   if (!rows.length) {
     p.innerHTML = '<h2>Database vuoto</h2><p class="cp-help">Non hai ancora schede salvate: scrivine una adesso, oppure importala.</p>' +
       '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'build\')">SCRIVI UNA SCHEDA DA ZERO</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'generate\')">GENERA UNA SCHEDA</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);navigate(\'coachLibrary\')">APRI IL MIO DATABASE</button>' +
       '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\', false)">CHIUDI</button>';
     showOverlay('cp-assign', true);

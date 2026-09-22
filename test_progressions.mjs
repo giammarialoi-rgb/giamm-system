@@ -368,4 +368,40 @@ const allRows = (weeks) => weeks.flatMap((w) => w.sessions.flatMap((s) => s.exer
   ok(bb.every((w) => !w.test_week), '10t. and a hypertrophy block is not given a max test it never asked for');
 }
 
+// 11. Week one is the week that was written.
+//
+// A model expands a written week into a block; it does not get to rewrite the
+// week it was handed. An athlete who accepts "3 x 8-10 at RIR 2" and opens
+// week 1 on "3 x 9-11" is reading a different program from the one they
+// agreed to. Three models legitimately open differently and say so: DUP
+// rotates a heavy lane into session one, a powerlifting accumulation block
+// opens with more accessory volume, and a meet taper opens by cutting it.
+{
+  const written = [{
+    name: 'Full body',
+    exercises: [{
+      name: 'Curl bilanciere',
+      sets: [{ reps: '8-10' }, { reps: '8-10' }, { reps: '8-10' }],
+      setCount: 3, repsTarget: '8-10', rest: '90s', rirTarget: 2
+    }]
+  }];
+  const allowedToDiffer = { dup: 1, block_pl: 1, meet_taper: 1 };
+  const offenders = [];
+  ['bodybuilding', 'powerlifting', 'none'].forEach(function (family) {
+    P.list(family).forEach(function (model) {
+      if (allowedToDiffer[model.id]) return;
+      const week1 = P.weeksFromTemplate(written, { weeks: 8, modelId: model.id })[0].sessions[0].exercises[0];
+      if (week1.repsTarget !== '8-10' || week1.sets.length !== 3 || Number(week1.rirTarget) !== 2) {
+        offenders.push(model.id + ' -> ' + week1.sets.length + 'x' + week1.repsTarget + ' RIR ' + week1.rirTarget);
+      }
+    });
+  });
+  ok(offenders.length === 0, '11a. every model opens on the week it was given' +
+    (offenders.length ? ' (' + offenders.join('; ') + ')' : ''));
+
+  const dp = P.weeksFromTemplate(written, { weeks: 8, modelId: 'double_progression' });
+  ok(dp[1].sessions[0].exercises[0].repsTarget !== '8-10' || dp[1].sessions[0].exercises[0].rirTarget !== 2,
+    '11b. and double progression still moves from week two on');
+}
+
 console.log('\nAll progression model tests passed.');
