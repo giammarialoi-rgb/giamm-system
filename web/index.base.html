@@ -17184,7 +17184,6 @@ function renderPrograms(c){
         <button class="btn btn-primary" style="font-size:11px; padding:6px 12px;" onclick="exportActiveProgram()">ESPORTA JSON</button>
       </div>
     </div>
-
     ${window.__cpCatalogFromIntake ? `<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid rgba(212,175,55,.45);">
       <div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:4px;">FILTRO ANAGRAFICA CLIENTE</div>
       <div style="font-size:12px;color:#eee;line-height:1.4;">${esc(window.__cpCatalogFromIntake.summary || '')}</div>
@@ -17196,22 +17195,33 @@ function renderPrograms(c){
       <div style="font-size:11px;color:#ccc;">Stai scegliendo una scheda per <b style="color:#fff;">${esc(store.coachAssigning.name || 'cliente')}</b>.</div>
       <button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="promptCatalogFromIntakeThenOpen('${esc(store.coachAssigning.clientId)}','${esc(store.coachAssigning.name || '')}')">FILTRA CON ANAGRAFICA CLIENTE</button>
     </div>` : '')}
-
-    <div class="card" id="program-create-scratch" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
-      <div class="card-header"><h3 style="font-size:13px;color:var(--gold);font-weight:800;margin:0;">CREA UNA SCHEDA DA ZERO</h3></div>
-      <p style="font-size:11px;color:#888;margin:0 0 10px;">Parte vuota: scegli tu i giorni e gli esercizi, uno per uno, con serie, ripetizioni e recupero.</p>
-      ${(() => {
-        const d = store.programDraft;
-        const exCount = programDraftExerciseCount(d);
-        if (!d || !exCount) return '';
-        return `<div style="font-size:11px;color:#ccc;background:#141414;border:1px solid #2a2a2a;border-radius:8px;padding:9px 10px;margin-bottom:10px;">
-          Bozza in corso: <b style="color:#fff;">${esc(d.title || 'senza nome')}</b> · ${(d.days || []).length} giorni · ${exCount} esercizi</div>`;
-      })()}
-      <button class="btn btn-primary" style="width:100%;font-size:12px;" onclick="openProgramBuilder()">${(store.programDraft && programDraftExerciseCount(store.programDraft)) ? 'RIPRENDI LA BOZZA' : 'APRI IL COSTRUTTORE'}</button>
+    ${homeCollapsibleCard('PROGRAMMA ATTIVO', `
+    <div class="card" style="margin-bottom:16px; border:2px solid ${(weeks.length ? 'var(--gold)' : '#333')}; position:relative; overflow:hidden;">
+      <div style="position:absolute; top:0; right:0; background:${weeks.length ? 'var(--gold)' : '#444'}; color:${weeks.length ? '#000' : '#fff'}; font-size:9px; font-weight:900; padding:3px 10px; border-bottom-left-radius:6px; letter-spacing:1px;">${weeks.length ? 'ATTIVO' : 'VUOTO'}</div>
+      <div class="card-header" style="padding-bottom:8px;">
+        <span style="font-size:11px; color:var(--gold); font-weight:800; text-transform:uppercase;">Programma Attivo</span>
+        <h3 style="font-size:13px; margin:4px 0 0; color:#fff; font-weight:700; line-height:1.35; word-break:break-word; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${esc(weeks.length ? (DATA?.title || 'Programma Senza Titolo') : 'Nessun programma caricato')}</h3>
+        <p style="font-size:11px; color:#888; margin:2px 0 0;">${weeks.length ? ('Durata: ' + duration + ' settimane · ' + sessionsCount + ' sedute') : 'Scegli una scheda dal database o importa un file.'}</p>
+      </div>
+      ${weeks.length ? `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); gap:8px; margin:12px 0;">
+        <div class="card" style="padding:10px; text-align:center;"><div style="font-size:18px; font-weight:900; color:var(--gold);">${duration}</div><div style="font-size:9px; color:#888;">SETT</div></div>
+        <div class="card" style="padding:10px; text-align:center;"><div style="font-size:18px; font-weight:900; color:var(--gold);">${sessionsCount}</div><div style="font-size:9px; color:#888;">SEDUTE</div></div>
+        <div class="card" style="padding:10px; text-align:center;"><div style="font-size:18px; font-weight:900; color:var(--gold);">${totalExercises}</div><div style="font-size:9px; color:#888;">ESERCIZI</div></div>
+        <div class="card" style="padding:10px; text-align:center;"><div style="font-size:18px; font-weight:900; color:var(--gold);">${totalSets}</div><div style="font-size:9px; color:#888;">SERIE</div></div>
+      </div>
+      <div style="border-top:1px solid #222; padding-top:10px; margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
+        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; background:rgba(212,175,55,0.15); color:var(--gold); border-color:rgba(212,175,55,0.35);" onclick="navigate('training')">ALLENAMENTO</button>
+        ${(store.trainingSpaces || []).length ? `<button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; color:#81c784; border-color:#2a4a2a;" onclick="openAdaptSpaceSheet()">${DATA && DATA.space ? ('ADATTATA A ' + esc(String(DATA.space.name).toUpperCase())) : 'ADATTA A UNO SPAZIO'}</button>` : ''}
+        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasNutr ? 'color:#4caf50;border-color:#2a4a2a;' : 'color:#555;border-color:#333;'}" onclick="navigate('nutrition')">ALIMENTAZIONE</button>
+        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasSupp ? 'color:#2196f3;border-color:#1a3a4a;' : 'color:#555;border-color:#333;'}" onclick="navigate('supplements')">INTEGRAZIONE</button>
+        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasTherapy ? 'color:#ab47bc;border-color:#3a2a4a;' : 'color:#555;border-color:#333;'}" onclick="navigate('therapy')">TERAPIA</button>
+        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasExams ? 'color:#26c6da;border-color:#1a3a3a;' : 'color:#555;border-color:#333;'}" onclick="navigate('exams')">ESAMI</button>
+      </div>` : ''}
     </div>
+    `, false)}
 
+    ${homeCollapsibleCard('SPAZI DI ALLENAMENTO', `
     <div class="card" id="training-spaces-card" style="margin-bottom:16px;border:1px solid #333;">
-      <div class="card-header"><h3 style="font-size:13px;color:var(--gold);font-weight:800;margin:0;">SPAZI DI ALLENAMENTO</h3></div>
       <p style="font-size:11px;color:#888;margin:0 0 10px;">Palestra, sala di casa, parco: segna cosa c'è in ognuno e il selettore esercizi mostrerà solo quello che si può fare lì.</p>
       ${(() => {
         const list = (store.trainingSpaces || []);
@@ -17225,9 +17235,24 @@ function renderPrograms(c){
       </div>
       <div style="font-size:10px;color:#666;margin-top:6px;line-height:1.4;">Il modo semplice chiede i macchinari che vedi; l'altro entra nel singolo esercizio. Sono la stessa cosa scritta in due modi: quello che segni in uno compare nell'altro.</div>
     </div>
+    `, false)}
 
+    ${homeCollapsibleCard('CREA UNA SCHEDA DA ZERO', `
+    <div class="card" id="program-create-scratch" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
+      <p style="font-size:11px;color:#888;margin:0 0 10px;">Parte vuota: scegli tu i giorni e gli esercizi, uno per uno, con serie, ripetizioni e recupero.</p>
+      ${(() => {
+        const d = store.programDraft;
+        const exCount = programDraftExerciseCount(d);
+        if (!d || !exCount) return '';
+        return `<div style="font-size:11px;color:#ccc;background:#141414;border:1px solid #2a2a2a;border-radius:8px;padding:9px 10px;margin-bottom:10px;">
+          Bozza in corso: <b style="color:#fff;">${esc(d.title || 'senza nome')}</b> · ${(d.days || []).length} giorni · ${exCount} esercizi</div>`;
+      })()}
+      <button class="btn btn-primary" style="width:100%;font-size:12px;" onclick="openProgramBuilder()">${(store.programDraft && programDraftExerciseCount(store.programDraft)) ? 'RIPRENDI LA BOZZA' : 'APRI IL COSTRUTTORE'}</button>
+    </div>
+    `, false)}
+
+    ${homeCollapsibleCard('GENERA PROGRAMMA (rules-based)', `
     <div class="card" id="program-create-template" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
-      <div class="card-header"><h3 style="font-size:13px;color:var(--gold);font-weight:800;margin:0;">GENERA PROGRAMMA (rules-based)</h3></div>
       <p style="font-size:11px;color:#888;margin:0 0 10px;">Template strutturati (non AI random). Puoi attivare e modificare dopo.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
         <select id="gen-days" style="padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
@@ -17256,30 +17281,11 @@ function renderPrograms(c){
       </div>
       <button class="btn btn-primary" style="width:100%;font-size:12px;" onclick="generateAndActivateProgram()">GENERA E ATTIVA</button>
     </div>
+    `, false)}
 
-    <div class="card" style="margin-bottom:16px; border:2px solid ${(weeks.length ? 'var(--gold)' : '#333')}; position:relative; overflow:hidden;">
-      <div style="position:absolute; top:0; right:0; background:${weeks.length ? 'var(--gold)' : '#444'}; color:${weeks.length ? '#000' : '#fff'}; font-size:9px; font-weight:900; padding:3px 10px; border-bottom-left-radius:6px; letter-spacing:1px;">${weeks.length ? 'ATTIVO' : 'VUOTO'}</div>
-      <div class="card-header" style="padding-bottom:8px;">
-        <span style="font-size:11px; color:var(--gold); font-weight:800; text-transform:uppercase;">Programma Attivo</span>
-        <h3 style="font-size:13px; margin:4px 0 0; color:#fff; font-weight:700; line-height:1.35; word-break:break-word; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${esc(weeks.length ? (DATA?.title || 'Programma Senza Titolo') : 'Nessun programma caricato')}</h3>
-        <p style="font-size:11px; color:#888; margin:2px 0 0;">${weeks.length ? ('Durata: ' + duration + ' settimane · ' + sessionsCount + ' sedute') : 'Scegli una scheda dal database o importa un file.'}</p>
-      </div>
-      ${weeks.length ? `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); gap:8px; margin:12px 0;">
-        <div class="card" style="padding:10px; text-align:center;"><div style="font-size:18px; font-weight:900; color:var(--gold);">${duration}</div><div style="font-size:9px; color:#888;">SETT</div></div>
-        <div class="card" style="padding:10px; text-align:center;"><div style="font-size:18px; font-weight:900; color:var(--gold);">${sessionsCount}</div><div style="font-size:9px; color:#888;">SEDUTE</div></div>
-        <div class="card" style="padding:10px; text-align:center;"><div style="font-size:18px; font-weight:900; color:var(--gold);">${totalExercises}</div><div style="font-size:9px; color:#888;">ESERCIZI</div></div>
-        <div class="card" style="padding:10px; text-align:center;"><div style="font-size:18px; font-weight:900; color:var(--gold);">${totalSets}</div><div style="font-size:9px; color:#888;">SERIE</div></div>
-      </div>
-      <div style="border-top:1px solid #222; padding-top:10px; margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
-        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; background:rgba(212,175,55,0.15); color:var(--gold); border-color:rgba(212,175,55,0.35);" onclick="navigate('training')">ALLENAMENTO</button>
-        ${(store.trainingSpaces || []).length ? `<button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; color:#81c784; border-color:#2a4a2a;" onclick="openAdaptSpaceSheet()">${DATA && DATA.space ? ('ADATTATA A ' + esc(String(DATA.space.name).toUpperCase())) : 'ADATTA A UNO SPAZIO'}</button>` : ''}
-        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasNutr ? 'color:#4caf50;border-color:#2a4a2a;' : 'color:#555;border-color:#333;'}" onclick="navigate('nutrition')">ALIMENTAZIONE</button>
-        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasSupp ? 'color:#2196f3;border-color:#1a3a4a;' : 'color:#555;border-color:#333;'}" onclick="navigate('supplements')">INTEGRAZIONE</button>
-        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasTherapy ? 'color:#ab47bc;border-color:#3a2a4a;' : 'color:#555;border-color:#333;'}" onclick="navigate('therapy')">TERAPIA</button>
-        <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasExams ? 'color:#26c6da;border-color:#1a3a3a;' : 'color:#555;border-color:#333;'}" onclick="navigate('exams')">ESAMI</button>
-      </div>` : ''}
-    </div>
+    ${homeCollapsibleCard('PROGRAMMI CREATI', builtProgramsHtml(), false)}
 
+    ${homeCollapsibleCard('DATABASE SCHEDE', `
     ${suggested.length ? `<div class="card" style="margin-bottom:16px;border:1px solid var(--gold);">
       <div class="card-header"><h3 style="font-size:13px;color:var(--gold);font-weight:800;margin:0;">SUGGERITE PER IL TUO PROFILO</h3></div>
       <div style="display:flex;flex-direction:column;gap:8px;">
@@ -17294,10 +17300,8 @@ function renderPrograms(c){
           </div>`).join('')}
       </div>
     </div>` : ''}
-
     <div class="card" style="margin-bottom:16px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-        <h3 style="font-size:14px; color:var(--gold); font-weight:800;margin:0;">DATABASE SCHEDE</h3>
         <span id="catalog-count" style="font-size:10px; color:#666;">${filtered.length}${catalogReady ? ' / ' + totalCat.toLocaleString('it-IT') : ''}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px;">
@@ -17319,12 +17323,11 @@ function renderPrograms(c){
         ${!catalogReady ? '<div style="padding:20px;text-align:center;color:#888;font-size:12px;">Caricamento indice schede…</div>' : (filtered.length ? filtered.map((p) => catalogCardHtml(p)).join('') : '<div style="padding:16px;text-align:center;color:#666;font-size:12px;">Nessuna scheda. Prova “3 giorni full body”.</div>')}
       </div>
     </div>
+    `, false)}
 
+    ${homeCollapsibleCard('IMPORT SALVATI', `
     <div class="card">
-      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-        <h3 style="font-size:14px; color:var(--gold); font-weight:800;">ARCHIVIO PERSONALE (import salvati)</h3>
-        <span style="font-size:10px; color:#666;">${(store.models || []).length}</span>
-      </div>
+      <div style="font-size:10px;color:#666;text-align:right;">${(store.models || []).length} salvate</div>
       <div style="margin-top:10px;">
         ${(store.models && store.models.length > 0) ? store.models.map((m, idx) => `
           <div style="padding:10px; margin-bottom:8px; background:rgba(255,255,255,0.02); border:1px solid #222; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
@@ -17332,11 +17335,15 @@ function renderPrograms(c){
               <div style="font-size:13px; font-weight:800; color:#eee;">${esc(m.title || m.name || 'Modello ' + (idx+1))}</div>
               <div style="font-size:10px; color:#777;">${esc(m.createdAt || m.date || 'N/D')}</div>
             </div>
-            <button class="btn btn-outline" style="font-size:10px; padding:4px 8px;" onclick="loadModelAsActive(${idx})">Carica</button>
+            <div style="display:flex;gap:6px;flex:0 0 auto;">
+              <button class="btn btn-outline" style="font-size:10px; padding:4px 8px;" onclick="loadModelAsActive(${idx})">CARICA</button>
+              <button class="btn btn-outline" style="font-size:10px; padding:4px 8px;color:#c66;border-color:#c66;" data-id="${esc(m.id || '')}" data-idx="${idx}" data-name="${esc(m.name || m.title || '')}" onclick="deleteSavedProgramFromList(this)" title="Toglilo da qui">✕</button>
+            </div>
           </div>
         `).join('') : '<div style="font-size:12px; color:#666; text-align:center; padding:16px;">Nessun import personale salvato.</div>'}
       </div>
     </div>
+    `, false)}
   `;
 
   if (!catalogReady) {
@@ -18944,6 +18951,28 @@ function formatFileSize(bytes) {
 }
 
 
+
+// Programs written here and saved without being started. They live in the
+// same library as the imported ones - the difference is only where they came
+// from - so they are told apart by the id the builder gives them.
+function builtProgramsHtml() {
+  const rows = (store.models || []).filter(function (m) { return m && /^custom_/.test(String(m.id || '')); });
+  if (!rows.length) {
+    return '<div style="font-size:12px;color:#666;padding:12px 0;">Nessuna scheda scritta e messa da parte. Quelle che crei con SALVA SENZA ATTIVARE finiscono qui.</div>';
+  }
+  return rows.map(function (m) {
+    const idx = (store.models || []).indexOf(m);
+    return '<div style="padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.02);border:1px solid #222;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+      '<div style="min-width:0;"><div style="font-size:13px;font-weight:800;color:#eee;">' + esc(m.name || 'Scheda') + '</div>' +
+      '<div style="font-size:10px;color:#777;">' + esc(m.date ? new Date(m.date).toLocaleDateString('it-IT') : '') +
+      (m.isActive ? ' · <span style="color:var(--gold);">attiva</span>' : '') + '</div></div>' +
+      '<div style="display:flex;gap:6px;flex:0 0 auto;">' +
+      '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="activateSavedProgram(' + JSON.stringify(m.id || '') + ', ' + idx + ')">ATTIVA</button>' +
+      '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;color:#c66;border-color:#c66;" data-id="' + esc(m.id || '') + '" data-idx="' + idx + '" data-name="' + esc(m.name || '') + '" onclick="deleteSavedProgramFromList(this)" title="Toglila da qui">✕</button>' +
+      '</div></div>';
+  }).join('');
+}
+window.builtProgramsHtml = builtProgramsHtml;
 
 function homeCollapsibleCard(title, bodyHtml, openByDefault) {
   const openAttr = openByDefault === false ? '' : ' open';
