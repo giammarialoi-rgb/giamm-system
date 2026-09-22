@@ -37285,8 +37285,25 @@ function suggestedLoadForSet(exerciseIndex, setNum, row) {
   const prevSame = prevSets.find(function (ps) { return Number(ps.set) === Number(setNum); });
   if (!prevSame || prevSame.load === '' || prevSame.load == null) return null;
   const policy = workoutProgressionPolicy(prevSets, row || {});
-  return applyProgressionToLoad(prevSame.load, policy.addKg);
+  const next = applyProgressionToLoad(prevSame.load, policy.addKg);
+  // A gym whose dumbbells stop at 40 kg cannot be asked for 42.5. The
+  // suggestion stops at the ceiling; what the athlete logs is never touched.
+  const ceiling = programLoadCeiling(row && (row.name || row.exercise));
+  if (ceiling && Number(next) > ceiling.kg) return ceiling.kg;
+  return next;
 }
+
+// The ceiling of the place this program was written for, if it was written
+// for one. Read from the program itself, not from whatever space the picker
+// happens to be filtering by right now.
+function programLoadCeiling(name) {
+  try {
+    const space = (typeof DATA !== 'undefined' && DATA && DATA.space) || null;
+    if (!space) return null;
+    return spaceLoadCeiling(space, name);
+  } catch (_) { return null; }
+}
+window.programLoadCeiling = programLoadCeiling;
 function suggestedRepsForSet(exerciseIndex, setNum, row) {
   if (currentWeek <= 1) return null;
   const prevSets = collectPrevWeekSetLogs(exerciseIndex, row || {});
@@ -53434,6 +53451,12 @@ function renderTraining(c){
       if (!skipReason && exLogUnit === 'circuit') {
         h += circuitBlockHtml(fIdx, row);
       } else if(!skipReason) {
+        // What this gym can actually load, said under the exercise it applies
+        // to: a prescription above it would be fiction.
+        const exCeiling = (typeof programLoadCeiling === 'function') ? programLoadCeiling(curEx) : null;
+        if (exCeiling) {
+          h += `<div style="font-size:10px;color:#e0b040;margin-bottom:8px;">${esc((DATA.space && DATA.space.name) || 'Qui')}: ${esc(String(exCeiling.label).toLowerCase())} ${exCeiling.kg} kg</div>`;
+        }
         h += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;background:#151515;padding:8px;border-radius:8px;border:1px solid #222;">
           <div style="font-size:10px;color:#aaa;">Schema: <b style="color:#fff;">${esc(schemeInfo.scheme)}</b></div>
           <div style="font-size:10px;color:#aaa;">${exIntens}: <b style="color:#fff;">${esc(row.rirTarget ?? row.rpeTarget ?? 2)}</b></div>
@@ -62304,6 +62327,49 @@ var SPACE_EQUIPMENT = [
   { id: 'outdoor', label: 'Esterno / piscina', eq: ['outdoor', 'piscina'] }
 ];
 
+// Special bars are equipment too, and the exercises that need them are named
+// after them. A gym with a rack full of plates still cannot do a safety bar
+// squat without a safety bar.
+var SPACE_BARS = [
+  { id: 'bar_ez', label: 'Bilanciere EZ', match: /\bez\b|curl\s*bar/i },
+  { id: 'bar_safety', label: 'Safety squat bar', match: /safety\s*(squat\s*)?bar/i },
+  { id: 'bar_trap', label: 'Trap / hex bar', match: /trap\s*bar|hex\s*bar/i },
+  { id: 'bar_swiss', label: 'Multipresa / Swiss bar', match: /swiss\s*bar|multipresa/i },
+  { id: 'bar_camber', label: 'Cambered bar', match: /camber/i },
+  { id: 'bar_landmine', label: 'Landmine', match: /landmine/i }
+];
+
+// What a place can actually load, which is not the same as owning the kit.
+// Dumbbells that stop at 40 kg make a prescription of 45 a piece of fiction.
+var SPACE_LIMITS = [
+  { id: 'dumbbell', label: 'Manubrio più pesante', unit: 'kg', equip: 'dumbbell' },
+  { id: 'barbell', label: 'Carico massimo bilanciere', unit: 'kg', equip: 'barbell' },
+  { id: 'machine', label: 'Pacco pesi più alto', unit: 'kg', equip: 'machine' },
+  { id: 'kettlebell', label: 'Kettlebell più pesante', unit: 'kg', equip: 'kettlebell' }
+];
+
+function barNeededFor(name) {
+  var clean = String(name || '');
+  for (var i = 0; i < SPACE_BARS.length; i++) {
+    if (SPACE_BARS[i].match.test(clean)) return SPACE_BARS[i].id;
+  }
+  return null;
+}
+
+// The heaviest this place can go for that exercise, or null when it does not
+// know. Used to say so, never to rewrite what an athlete logged.
+function spaceLoadCeiling(space, name) {
+  if (!space || !space.limits) return null;
+  var tokens = equipTokensFor({ name: name, muscle: '', eq: '' });
+  for (var i = 0; i < SPACE_LIMITS.length; i++) {
+    var lim = SPACE_LIMITS[i];
+    var value = Number(space.limits[lim.id]);
+    if (value > 0 && tokens.indexOf(lim.equip) >= 0) return { kg: value, label: lim.label };
+  }
+  return null;
+}
+window.spaceLoadCeiling = spaceLoadCeiling;
+
 var SPACE_PRESETS = [
   { name: 'Casa a corpo libero', equip: ['bodyweight', 'band'] },
   { name: 'Casa con manubri', equip: ['bodyweight', 'dumbbell', 'band', 'bench'] },
@@ -62370,6 +62436,10 @@ function exerciseFitsSpace(row, space) {
   var decided = spaceExerciseState(space, row.name);
   if (decided === 'off') return false;
   if (decided === 'on') return true;
+  // A bar this place does not have settles it before the equipment does.
+  var bar = barNeededFor(row.name);
+  if (bar && Array.isArray(space.bars) && space.bars.indexOf(bar) < 0) return false;
+  if (bar && !Array.isArray(space.bars)) return false;
   if (!Array.isArray(space.equip) || !space.equip.length) return true;
   var tokens = equipTokensFor(row);
   // An exercise the app cannot place is never hidden: a filter that silently
@@ -62562,6 +62632,24 @@ function renderTrainingSpaces() {
           '" onclick="toggleSpaceEquip(\'' + esc(sp.id) + '\',\'' + e.id + '\')">' + esc(e.label) + '</button>';
       }).join('') +
       '</div>' +
+      '<div style="font-size:9px;color:#888;margin-top:10px;">BILANCIERI SPECIALI</div>' +
+      '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;">' +
+      SPACE_BARS.map(function (b) {
+        var on = (sp.bars || []).indexOf(b.id) >= 0;
+        return '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:5px 9px;' +
+          (on ? 'border-color:var(--gold);color:var(--gold);background:rgba(212,175,55,0.12);' : 'color:#777;') +
+          '" onclick="toggleSpaceBar(\'' + esc(sp.id) + '\',\'' + b.id + '\')">' + esc(b.label) + '</button>';
+      }).join('') +
+      '</div>' +
+      '<div style="font-size:9px;color:#888;margin-top:10px;">FINO A QUANTO SI CARICA</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:5px;">' +
+      SPACE_LIMITS.map(function (lim) {
+        var v = (sp.limits || {})[lim.id];
+        return '<label style="font-size:9px;color:#888;">' + esc(lim.label) +
+          '<input type="number" step="0.5" min="0" value="' + esc(v == null ? '' : v) + '" placeholder="' + esc(lim.unit) + '" ' +
+          'oninput="updateSpaceLimit(\'' + esc(sp.id) + '\',\'' + lim.id + '\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>';
+      }).join('') +
+      '</div>' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
       '<div style="font-size:10px;color:#888;">' + ((sp.equip || []).length) + ' attrezzature · ' + spaceExerciseCount(sp) + ' esercizi' +
       (((sp.exclude || []).length + (sp.include || []).length)
@@ -62615,6 +62703,29 @@ function updateSpaceField(id, field, value) {
   try { persist(); } catch (_) {}
 }
 window.updateSpaceField = updateSpaceField;
+
+function toggleSpaceBar(id, barId) {
+  var sp = spaceById(id);
+  if (!sp) return;
+  if (!Array.isArray(sp.bars)) sp.bars = [];
+  var at = sp.bars.indexOf(barId);
+  if (at >= 0) sp.bars.splice(at, 1);
+  else sp.bars.push(barId);
+  try { persist(); } catch (_) {}
+  renderTrainingSpaces();
+}
+window.toggleSpaceBar = toggleSpaceBar;
+
+function updateSpaceLimit(id, limitId, value) {
+  var sp = spaceById(id);
+  if (!sp) return;
+  if (!sp.limits) sp.limits = {};
+  var n = parseFloat(value);
+  if (!(n > 0)) delete sp.limits[limitId];
+  else sp.limits[limitId] = n;
+  try { persist(); } catch (_) {}
+}
+window.updateSpaceLimit = updateSpaceLimit;
 
 function toggleSpaceEquip(id, equipId) {
   var sp = spaceById(id);
@@ -62779,7 +62890,7 @@ function exercisePickerRows(q, space) {
     var name = c && (c.name || c);
     if (!name) return;
     if (query.length >= 2 && String(name).toLowerCase().indexOf(query) < 0) return;
-    push(name, c && c.muscle_group);
+    push(name, c && (c.muscle_group || c.macro_group), c && c.equip);
   });
   return out;
 }
@@ -62828,13 +62939,17 @@ function renderExercisePickerResults(q) {
   if (!box) return;
   var query = String(q || '').trim();
   var rows = exercisePickerRows(q);
+  // Whatever was typed is the name of the exercise that does not exist yet.
+  var createHtml = '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;padding:10px;margin:8px 0;border-color:var(--gold);color:var(--gold);" ' +
+    'onclick="openCreateExerciseSheet(\'' + encodeURIComponent(query) + '\')">+ CREA ' +
+    (query ? ('«' + esc(query) + '»') : 'UN ESERCIZIO NUOVO') + '</button>';
   if (!rows.length) {
-    box.innerHTML = '<div style="font-size:11px;color:#666;text-align:center;padding:16px;">Nessun esercizio trovato. Puoi scriverne uno nuovo dal database esercizi.</div>';
+    box.innerHTML = '<div style="font-size:11px;color:#666;text-align:center;padding:12px 0;">Nessun esercizio trovato.</div>' + createHtml;
     return;
   }
   if (query.length >= 2) {
     box.innerHTML = '<div style="font-size:10px;color:#888;margin-bottom:6px;">' + rows.length + ' risultati</div>' +
-      rows.map(pickerRowHtml).join('');
+      rows.map(pickerRowHtml).join('') + createHtml;
     return;
   }
   var groups = {};
@@ -62860,9 +62975,98 @@ function renderExercisePickerResults(q) {
       esc(g) + '<span style="float:right;color:#666;font-weight:600;">' + groups[g].length + '</span></summary>' +
       '<div style="padding:0 12px 8px;">' + groups[g].map(pickerRowHtml).join('') + '</div>' +
       '</details>';
-  }).join('');
+  }).join('') + createHtml;
 }
 window.renderExercisePickerResults = renderExercisePickerResults;
+
+/* ---------- when the library does not have it yet ---------- */
+//
+// Two hundred and sixty-six exercises is not all of them, and a coach in the
+// middle of writing a day should not have to leave to add one. The name is
+// carried over from whatever was typed in the search, so the exercise is
+// created, filed and picked in one go.
+
+function openCreateExerciseSheet(encodedName) {
+  var suggested = decodeURIComponent(encodedName || '');
+  var existing = document.getElementById('create-exercise-sheet');
+  if (existing) existing.remove();
+  var inputStyle = 'padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;box-sizing:border-box;';
+  var sheet = document.createElement('div');
+  sheet.id = 'create-exercise-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10260';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeCreateExerciseSheet(); };
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">NUOVO ESERCIZIO</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeCreateExerciseSheet()">ANNULLA</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<p style="font-size:11px;color:#888;line-height:1.45;margin:4px 0 12px;">Entra nella tua libreria: lo ritrovi ogni volta che scrivi una scheda, e puoi aggiungergli una foto più avanti.</p>' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:10px;">Nome' +
+    '<input id="new-ex-name" type="text" value="' + esc(suggested) + '" placeholder="Es. Pulley basso presa stretta" style="width:100%;margin-top:3px;' + inputStyle + '"></label>' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:10px;">Gruppo muscolare' +
+    '<select id="new-ex-muscle" style="width:100%;margin-top:3px;' + inputStyle + '">' +
+    PICKER_GROUP_ORDER.map(function (g) {
+      return '<option value="' + esc(g) + '">' + esc(g.charAt(0) + g.slice(1).toLowerCase()) + '</option>';
+    }).join('') +
+    '</select></label>' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:10px;">Attrezzatura' +
+    '<select id="new-ex-equip" style="width:100%;margin-top:3px;' + inputStyle + '">' +
+    '<option value="">Non specificata</option>' +
+    SPACE_EQUIPMENT.map(function (e) {
+      return '<option value="' + esc(e.id) + '">' + esc(e.label) + '</option>';
+    }).join('') +
+    '</select>' +
+    '<span style="font-size:10px;color:#666;display:block;margin-top:4px;">Serve agli spazi di allenamento per sapere dove si può fare.</span></label>' +
+    '</div>' +
+    '<div class="nurvan-sheet-foot">' +
+    '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="confirmCreateExercise()">CREA E AGGIUNGI</button>' +
+    '</div></div>';
+  document.body.appendChild(sheet);
+  var input = document.getElementById('new-ex-name');
+  if (input) setTimeout(function () { try { input.focus(); } catch (_) {} }, 50);
+}
+window.openCreateExerciseSheet = openCreateExerciseSheet;
+
+function closeCreateExerciseSheet() {
+  var el = document.getElementById('create-exercise-sheet');
+  if (el) el.remove();
+}
+window.closeCreateExerciseSheet = closeCreateExerciseSheet;
+
+function confirmCreateExercise() {
+  var nameEl = document.getElementById('new-ex-name');
+  var name = String((nameEl && nameEl.value) || '').trim();
+  if (!name) {
+    if (typeof showToast === 'function') showToast('Dai un nome all’esercizio', 'warning');
+    return;
+  }
+  var muscle = (document.getElementById('new-ex-muscle') || {}).value || 'ALTRO';
+  var equip = (document.getElementById('new-ex-equip') || {}).value || '';
+  var added = false;
+  try {
+    if (typeof addExerciseToLibrary === 'function') added = addExerciseToLibrary(name, muscle, 'manual');
+  } catch (_) {}
+  // The equipment is ours to keep: the library helper does not carry it, and
+  // without it the training spaces cannot place the exercise.
+  if (equip) {
+    try {
+      var lib = (typeof ensureCustomExerciseLibrary === 'function') ? ensureCustomExerciseLibrary() : (store.customEx || []);
+      var row = lib.filter(function (e) { return String(e.name || '').toLowerCase() === name.toLowerCase(); })[0];
+      if (row) { row.equip = equip; persist(); }
+    } catch (_) {}
+  }
+  closeCreateExerciseSheet();
+  if (typeof showToast === 'function') {
+    showToast(added ? (name + ' aggiunto alla libreria') : (name + ' era già in libreria'), 'success');
+  }
+  var cb = window.__exPickerPick;
+  closeExercisePicker();
+  if (cb) cb(name, muscle);
+}
+window.confirmCreateExercise = confirmCreateExercise;
 
 function pickExerciseFromPicker(encodedName, encodedMuscle) {
   var name = decodeURIComponent(encodedName || '');
@@ -63558,7 +63762,11 @@ function programFromDraft(draft) {
       });
     }
   }
+  // The place it was written for travels with the program: the workout
+  // screen needs the ceiling, not the picker's current filter.
+  var writtenFor = spaceById(store.pickerSpaceId);
   var summary = 'Scheda scritta a mano · ' + days.length + ' giorni · ' + weekCount + ' settimane';
+  if (writtenFor) summary += ' · per ' + writtenFor.name;
   if (model && model.id !== 'none') summary += ' · ' + model.label;
   var rotate = engine ? engine.parseRotationWeeks(draft.rotateWeeks || '', weekCount) : [];
   if (rotate.length) {
@@ -63571,6 +63779,12 @@ function programFromDraft(draft) {
     weeks: weeks,
     duration_weeks: weekCount,
     author: 'Scritta da te',
+    space: writtenFor ? {
+      id: writtenFor.id,
+      name: writtenFor.name,
+      limits: JSON.parse(JSON.stringify(writtenFor.limits || {})),
+      bars: (writtenFor.bars || []).slice()
+    } : null,
     progression_model: modelId,
     progression: { model: modelId, load_display: draft.loadDisplay || 'percent', maxes: draft.maxes || {} },
     source_summary: summary

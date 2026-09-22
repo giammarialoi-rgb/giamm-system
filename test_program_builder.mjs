@@ -539,6 +539,38 @@ function loggedProgram() {
     ctx.store.trainingSpaces = [];
   }
 
+  // Special bars, and what a place can actually load.
+  {
+    ctx.store.trainingSpaces = [];
+    ctx.WEB_EXERCISE_CATALOG = ctx.WEB_EXERCISE_CATALOG.concat([
+      { name: 'Safety bar squat', muscle: 'QUADRICIPITI', eq: 'bilanciere' },
+      { name: 'Trap bar deadlift', muscle: 'FEMORALI', eq: 'bilanciere' },
+      { name: 'Curl bilanciere EZ', muscle: 'BICIPITI', eq: 'bilanciere' }
+    ]);
+    ctx.saveTrainingSpace({ name: 'Sala pesi', equip: ['barbell', 'dumbbell'] });
+    const room = ctx.trainingSpaces()[0];
+    const plain = ctx.exercisePickerRows('', room).map((r) => r.name);
+    ok(!plain.includes('Safety bar squat') && !plain.includes('Trap bar deadlift') && !plain.includes('Curl bilanciere EZ'),
+      '3cg1. a rack full of plates is still not a safety bar, a trap bar or an EZ');
+    ok(plain.includes('Panca piana bilanciere'), '3cg2. while the ordinary barbell work is there');
+
+    ctx.toggleSpaceBar(room.id, 'bar_safety');
+    const withSafety = ctx.exercisePickerRows('', ctx.trainingSpaces()[0]).map((r) => r.name);
+    ok(withSafety.includes('Safety bar squat') && !withSafety.includes('Trap bar deadlift'),
+      '3cg3. ticking the safety bar brings back its exercise and nothing else');
+
+    ctx.updateSpaceLimit(room.id, 'dumbbell', '40');
+    const space = ctx.trainingSpaces()[0];
+    ok(space.limits.dumbbell === 40, '3cg4. a place can say how heavy its dumbbells go');
+    const cap = ctx.spaceLoadCeiling(space, 'Curl manubri');
+    ok(cap && cap.kg === 40, '3cg5. and that ceiling applies to a dumbbell exercise');
+    ok(!ctx.spaceLoadCeiling(space, 'Panca piana bilanciere'),
+      '3cg6. but not to the barbell, which has no ceiling set');
+    ctx.updateSpaceLimit(room.id, 'dumbbell', '');
+    ok(!ctx.spaceLoadCeiling(ctx.trainingSpaces()[0], 'Curl manubri'), '3cg7. and it can be cleared again');
+    ctx.store.trainingSpaces = [];
+  }
+
   // The grouped picker: a library is read a group at a time.
   ok(ctx.pickerGroupOf('PETTO') === 'PETTO' && ctx.pickerGroupOf('') === 'ALTRO',
     '3cf. every exercise lands in a macro group, and the unlabelled ones in ALTRO');
@@ -598,7 +630,9 @@ function loggedProgram() {
     'maybeAskTestResults', 'openTestResultsSheet', 'closeTestResultsSheet', 'applyTestResults',
     'openTrainingSpaces', 'closeTrainingSpaces', 'removeTrainingSpace', 'addSpaceFromPreset',
     'updateSpaceField', 'toggleSpaceEquip', 'setPickerSpace',
-    'openSpaceExercises', 'closeSpaceExercises', 'renderSpaceExercises', 'toggleSpaceExercise'
+    'openSpaceExercises', 'closeSpaceExercises', 'renderSpaceExercises', 'toggleSpaceExercise',
+    'toggleSpaceBar', 'updateSpaceLimit',
+    'openCreateExerciseSheet', 'closeCreateExerciseSheet', 'confirmCreateExercise'
   ];
   for (const fn of exported) {
     ok(html.includes('window.' + fn + ' = ' + fn + ';'), '4f. ' + fn + ' is reachable from an onclick');
