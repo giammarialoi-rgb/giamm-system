@@ -121,12 +121,24 @@ console.log('\n--- 7. the builder day keeps its name on one line of its own ---'
   ok('7d. and the buttons sit at the right end of the next line', /margin-left:auto/.test(row));
 }
 
-console.log('\n--- 8. all of it ships ---');
+console.log('\n--- 8. a hub tile is shown as the tile it is ---');
 {
-  ok('8a. the built app carries the header fix', /\.header-actions::before/.test(BUILT));
-  ok('8b. the collapsible fix', /\.collapsible-body > \.card:last-child/.test(BUILT));
-  ok('8c. the badge fix', /padding-right:76px/.test(BUILT));
-  ok('8d. and the builder day row', /flex:1 1 100%;min-width:0;font-weight:800;/.test(BUILT));
+  const UI = fs.readFileSync('web/coach-practice-ui.js', 'utf8').replace(/\r\n/g, '\n');
+  const hubBlocks = UI.match(/\[data-hub="[a-z-]+"\][\s\S]{0,140}?\}\);/g) || [];
+  ok('8a. every data-hub branch is still there', hubBlocks.length >= 5, hubBlocks.length + ' found');
+  const restoresEmpty = hubBlocks.filter(function (b) { return /style\.display = [^;]*: ''/.test(b) || /style\.display = '';/.test(b); });
+  ok('8b. none of them restores a tile with an empty string', restoresEmpty.length === 0,
+    "'' erases the inline display:flex the markup carries, and the icon falls back onto the label's line");
+  ok('8c. the markup still carries that display:flex',
+    (SRC.match(/data-hub="[a-z-]+" style="[^"]*flex-direction:column/g) || []).length >= 5);
+}
+
+console.log('\n--- 9. all of it ships ---');
+{
+  ok('9a. the built app carries the header fix', /\.header-actions::before/.test(BUILT));
+  ok('9b. the collapsible fix', /\.collapsible-body > \.card:last-child/.test(BUILT));
+  ok('9c. the badge fix', /padding-right:76px/.test(BUILT));
+  ok('9d. and the builder day row', /flex:1 1 100%;min-width:0;font-weight:800;/.test(BUILT));
 }
 
 console.log('');

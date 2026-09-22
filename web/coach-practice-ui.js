@@ -313,11 +313,14 @@ function applyClientChrome() {
         else ai.style.display = '';
       }
     }
+    // '' does not restore the tile, it erases the inline display:flex the
+    // markup carries, and the icon drops back onto the label's line. Every
+    // [data-hub] element is a hub tile, so showing one means 'flex'.
     document.querySelectorAll('[data-hub="full"]').forEach(function (el) {
-      el.style.display = (athlete || coachSession) ? 'none' : '';
+      el.style.display = (athlete || coachSession) ? 'none' : 'flex';
     });
     document.querySelectorAll('[data-hub="personal-ai"]').forEach(function (el) {
-      el.style.display = athlete ? 'none' : '';
+      el.style.display = athlete ? 'none' : 'flex';
     });
     document.querySelectorAll('[data-hub="coach"]').forEach(function (el) {
       el.style.display = athlete ? 'none' : 'flex';
@@ -367,7 +370,7 @@ function applyClientChrome() {
       el.style.display = athlete ? 'flex' : 'none';
     });
     document.querySelectorAll('[data-hub="programs"]').forEach(function (el) {
-      el.style.display = (athlete || coachSession) ? 'none' : '';
+      el.style.display = (athlete || coachSession) ? 'none' : 'flex';
     });
     document.querySelectorAll('[data-athlete-ai]').forEach(function (el) {
       el.style.display = athleteCanUseNurvanAi() ? '' : 'none';
