@@ -476,6 +476,18 @@ nav.bottom-nav {
 
 .card-header h2 { margin: 0; font-size: 13px; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
 
+/* A section taller than a screen and a half is a section you have to scroll
+   past to reach anything under it. Those get a header you can tap to fold
+   them away; the rest of the card is untouched. */
+.card-header.is-foldable { cursor: pointer; user-select: none; }
+.card-header .fold-mark {
+  flex: 0 0 auto; color: #888; font-size: 12px; transition: transform .15s ease;
+  margin-left: 8px;
+}
+.card.is-folded .card-header .fold-mark { transform: rotate(-90deg); }
+.card.is-folded > .card-fold { display: none; }
+.card.is-folded > .card-header { border-bottom: 0; }
+
 /* A section opens onto a card inside a card: two borders, two backgrounds,
    and - because .card carries no padding of its own, only its header does -
    text sitting flat against the inner border. Inside a collapsible the
@@ -9899,7 +9911,7 @@ function completeSetQuick(exIdx, setNum, restText) {
       changes: { done: false },
       previous_values: { done: true }
     }, { reason: 'uncompleteSet', scope: 'SESSION_ADJUSTMENT' });
-    render();
+    renderKeepingExercise(exIdx);
     return;
   }
   markSessionClockIfNeeded();
@@ -9968,8 +9980,15 @@ function completeSetQuick(exIdx, setNum, restText) {
   const rest = restText || '90s';
   try { startTimer(rest); } catch (_) {}
   try { queueLiveSetIntel(exIdx, setNum); } catch (_) {}
-  render();
+  renderKeepingExercise(exIdx);
 }
+
+// Closing a set opens an analysis under it and can collapse the card above:
+// either way the exercise being worked on must not move on the screen.
+function renderKeepingExercise(exIdx) {
+  return keepScrollDuring(render, 'exercise-item-' + exIdx);
+}
+window.renderKeepingExercise = renderKeepingExercise;
 function ensureIntelligenceStore() {
   if (!store.intelligence) store.intelligence = { recommendations: [], applied: [], dismissed: [] };
   if (!store.intelTargets) store.intelTargets = {};
@@ -10480,7 +10499,9 @@ function toggleSetDone(key) {
   pushWorkoutUndoSnapshot('toggle serie');
   store.data[key] = !store.data[key];
   persist();
-  render();
+  var m = String(key).match(/_e(\d+)_/);
+  if (m) renderKeepingExercise(Number(m[1]));
+  else render();
 }
 
 function getExerciseSetCount(exerciseIndex) {
@@ -11743,7 +11764,202 @@ window.handleNativeBack = handleNativeBack;
 window.onNativeBack = handleNativeBack;
 
 
+
+/*
+ * A re-render that leaves you where you were.
+ *
+ * Almost every tap in this app ends in render(), which rebuilds
+ * #view-container from scratch. The browser has nothing to keep the scroll
+ * position against - the nodes it was measured on no longer exist - so the
+ * page snapped back to the top on every single selection: tick an exercise in
+ * a training space and you were thrown out of the list; close the first set of
+ * an exercise and the workout jumped somewhere else entirely.
+ *
+ * So: before rebuilding, write down where the window is and where every inner
+ * scroller is, and put it all back afterwards. Elements are identified by a
+ * key that survives being rebuilt (the nearest id plus the element's own
+ * classes and tag), because the nodes themselves do not. The restore runs
+ * three times - now, on the next frame, and once more after layout - since
+ * images and late content can change the height under us.
+ *
+ * Navigating to a DIFFERENT screen still starts at the top, which is what
+ * arriving somewhere new should do.
+ */
+function scrollMemoryKey(el) {
+  var host = el.closest ? el.closest('[id]') : null;
+  return [host && host.id ? host.id : '', el.tagName, el.className || '', el.id || ''].join('|');
+}
+
+
+/*
+ * The long sections fold.
+ *
+ * Some cards are lists as long as the data behind them - every exercise of a
+ * session, every day of a plan, every setting - and everything under such a
+ * card is a long scroll away. Rather than rewriting each screen, this runs
+ * after a render: any top-level card taller than a screen and a half gets its
+ * header turned into a fold control, and what the athlete folded stays folded
+ * the next time they come back.
+ *
+ * It only moves nodes, never rebuilds them, so the handlers already attached
+ * inside a card keep working.
+ */
+var FOLD_MIN_HEIGHT = 560;
+
+function foldKeyFor(title) {
+  return String(currentView || '') + '::' + String(title || '').trim().toLowerCase().slice(0, 48);
+}
+
+function foldedSections() {
+  if (!store.foldedSections || typeof store.foldedSections !== 'object') store.foldedSections = {};
+  return store.foldedSections;
+}
+
+function toggleSectionFold(key, cardEl) {
+  var folded = foldedSections();
+  folded[key] = !folded[key];
+  if (cardEl) cardEl.classList.toggle('is-folded', !!folded[key]);
+  try { persist(); } catch (_) {}
+}
+window.toggleSectionFold = toggleSectionFold;
+
+function makeLongSectionsFoldable(root) {
+  root = root || document.getElementById('view-container');
+  if (!root) return;
+  var cards = root.querySelectorAll('.card');
+  for (var i = 0; i < cards.length; i++) {
+    var card = cards[i];
+    if (card.getAttribute('data-foldable')) continue;
+    // A card inside another card is not a section of the page.
+    if (card.parentElement && card.parentElement.closest && card.parentElement.closest('.card')) continue;
+    var header = card.querySelector(':scope > .card-header');
+    var title = header && header.querySelector('h2, h3');
+    if (!header || !title) continue;
+    if (card.getBoundingClientRect().height < FOLD_MIN_HEIGHT) continue;
+
+    var fold = document.createElement('div');
+    fold.className = 'card-fold';
+    var node = header.nextSibling;
+    while (node) {
+      var next = node.nextSibling;
+      fold.appendChild(node);
+      node = next;
+    }
+    if (!fold.childNodes.length) continue;
+    card.appendChild(fold);
+    card.setAttribute('data-foldable', '1');
+    header.classList.add('is-foldable');
+    if (!header.querySelector('.fold-mark')) {
+      var mark = document.createElement('span');
+      mark.className = 'fold-mark';
+      mark.setAttribute('aria-hidden', 'true');
+      mark.textContent = '▾';
+      header.appendChild(mark);
+    }
+    var key = foldKeyFor(title.textContent);
+    if (foldedSections()[key]) card.classList.add('is-folded');
+    (function (cardEl, k, headerEl) {
+      headerEl.addEventListener('click', function (ev) {
+        // A button or a field inside the header is still a button.
+        if (ev.target.closest('button, a, input, select, textarea, label')) return;
+        toggleSectionFold(k, cardEl);
+      });
+    })(card, key, header);
+  }
+}
+window.makeLongSectionsFoldable = makeLongSectionsFoldable;
+
+function scrollerOf(el) {
+  var p = el && el.parentElement;
+  while (p && p !== document.body) {
+    var st = getComputedStyle(p);
+    if (/auto|scroll/.test(st.overflowY) && p.scrollHeight > p.clientHeight + 2) return p;
+    p = p.parentElement;
+  }
+  return document.scrollingElement || document.documentElement;
+}
+
+/**
+ * keepScrollDuring(fn, anchorId)
+ *
+ * Without an anchor it puts the scroll offsets back. With one it does better:
+ * it keeps that element at the same height on the screen, which is what you
+ * actually want when the thing you just touched changes size - closing a set
+ * opens the analysis under it, and the exercise you are working on should not
+ * move a pixel because of it.
+ */
+function keepScrollDuring(fn, anchorId) {
+  var y = 0;
+  try { y = window.scrollY || window.pageYOffset || 0; } catch (_) {}
+  var marks = [];
+  try {
+    var all = document.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].scrollTop > 0) marks.push({ key: scrollMemoryKey(all[i]), top: all[i].scrollTop });
+    }
+  } catch (_) {}
+  var anchorTop = null;
+  if (anchorId) {
+    var a0 = document.getElementById(anchorId);
+    if (a0) anchorTop = a0.getBoundingClientRect().top;
+  }
+  var out;
+  try {
+    out = fn();
+  } finally {
+    var restore = function () {
+      try { if (y) window.scrollTo(0, y); } catch (_) {}
+      if (!marks.length) return;
+      try {
+        var nodes = document.querySelectorAll('*');
+        var used = {};
+        for (var j = 0; j < nodes.length; j++) {
+          var key = scrollMemoryKey(nodes[j]);
+          for (var m = 0; m < marks.length; m++) {
+            if (used[m] || marks[m].key !== key) continue;
+            if (nodes[j].scrollHeight > nodes[j].clientHeight) {
+              nodes[j].scrollTop = marks[m].top;
+              used[m] = true;
+            }
+            break;
+          }
+        }
+      } catch (_) {}
+      if (anchorTop == null) return;
+      try {
+        var a1 = document.getElementById(anchorId);
+        if (!a1) return;
+        var delta = a1.getBoundingClientRect().top - anchorTop;
+        if (Math.abs(delta) < 1) return;
+        var sc = scrollerOf(a1);
+        if (sc === document.scrollingElement || sc === document.documentElement) window.scrollBy(0, delta);
+        else sc.scrollTop += delta;
+      } catch (_) {}
+    };
+    restore();
+    try { requestAnimationFrame(restore); } catch (_) {}
+    setTimeout(restore, 0);
+    setTimeout(restore, 60);
+  }
+  return out;
+}
+window.keepScrollDuring = keepScrollDuring;
+
+// Re-rendering the screen you are already on keeps your place; arriving on a
+// new one does not.
 function render() {
+  var sameScreen = (window.__lastRenderedView === currentView);
+  window.__lastRenderedView = currentView;
+  var draw = function () {
+    var out = renderCurrentView();
+    try { makeLongSectionsFoldable(); } catch (_) {}
+    return out;
+  };
+  if (!sameScreen) return draw();
+  return keepScrollDuring(draw);
+}
+
+function renderCurrentView() {
   ensureStoreIntegrity();
   const c = $('view-container');
   if (!c) return;
@@ -20242,7 +20458,7 @@ function renderTraining(c){
       if (ri < 3) {
       }
 
-      h += `<div class="exercise-item ${skipReason?'exercise-skipped':''}" style="padding:15px;border-bottom:1px solid var(--border); position:relative; ${row.superset_id ? 'border-left:3px solid var(--gold);' : ''}">
+      h += `<div id="exercise-item-${fIdx}" class="exercise-item ${skipReason?'exercise-skipped':''}" style="padding:15px;border-bottom:1px solid var(--border); position:relative; ${row.superset_id ? 'border-left:3px solid var(--gold);' : ''}">
         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
           <div style="font-size:10px;color:var(--gold);font-weight:800;opacity:0.8;text-transform:uppercase;">${esc(row.movement || 'ESERCIZIO')} ${row.is_bonus || row.isBonus ? '<span style="color:var(--gold-glow)">[BONUS]</span>' : ''} ${supersetTag}</div>
           <div style="display:flex; gap:8px; align-items:center;">
@@ -29446,7 +29662,15 @@ function openSpaceExercises(spaceId) {
 }
 window.openSpaceExercises = openSpaceExercises;
 
+// Rebuilding this sheet used to throw away where you were reading:
+// every tick sent you back to the top of the list.
 function renderSpaceExercises(spaceId, q) {
+  // The helper lives in the page; the tests load this block on its own.
+  if (typeof keepScrollDuring !== 'function') return renderSpaceExercisesInner(spaceId, q);
+  return keepScrollDuring(function () { return renderSpaceExercisesInner(spaceId, q); });
+}
+
+function renderSpaceExercisesInner(spaceId, q) {
   var space = spaceById(spaceId);
   if (!space) return;
   var existing = document.getElementById('space-exercises-sheet');
@@ -29608,7 +29832,15 @@ var MY_GYM_BASICS = [
   { id: 'bodyweight', label: 'Spazio per il corpo libero' }
 ];
 
+// Rebuilding this sheet used to throw away where you were reading:
+// every tick sent you back to the top of the list.
 function renderMyGym(spaceId) {
+  // The helper lives in the page; the tests load this block on its own.
+  if (typeof keepScrollDuring !== 'function') return renderMyGymInner(spaceId);
+  return keepScrollDuring(function () { return renderMyGymInner(spaceId); });
+}
+
+function renderMyGymInner(spaceId) {
   var space = spaceById(spaceId);
   if (!space) return;
   var existing = document.getElementById('my-gym-sheet');
@@ -29664,7 +29896,9 @@ function renderMyGym(spaceId) {
     '</div>' +
     '<div class="nurvan-sheet-foot">' +
     '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="saveMyGym(\'' + esc(space.id) + '\')">' +
-    (store.accountToken ? 'SALVA E MANDA AL COACH' : 'SALVA') + '</button>' +
+    // "Manda al coach" only when there is a coach: an account is not a coach,
+    // and offering to send a gym to nobody is a button that lies.
+    ((typeof isClientAthleteView === 'function' && isClientAthleteView()) ? 'SALVA E MANDA AL COACH' : 'SALVA') + '</button>' +
     '</div></div>';
   document.body.appendChild(sheet);
 }
@@ -29676,13 +29910,21 @@ async function saveMyGym(spaceId) {
   if (!String(space.name || '').trim()) space.name = 'La mia palestra';
   try { persist(); } catch (_) {}
   closeMyGym();
-  // It is the coach who writes the program: the place has to reach them.
+  var toCoach = (typeof isClientAthleteView === 'function') && isClientAthleteView();
+  // It is the coach who writes the program, so the place has to reach them -
+  // but only if there is one. For everybody else this is just a save, and it
+  // should not claim to have sent anything to anyone.
   if (store.accountToken && typeof syncAccountData === 'function') {
     try {
-      await withBusy(function () { return syncAccountData(false); }, 'Mando il posto al coach…', { immediate: true, maxMs: 20000 });
-      if (typeof showToast === 'function') showToast(space.name + ' inviato al coach', 'success');
+      await withBusy(function () { return syncAccountData(false); },
+        toCoach ? 'Mando il posto al coach…' : 'Salvo il posto…', { immediate: true, maxMs: 20000 });
+      if (typeof showToast === 'function') {
+        showToast(space.name + (toCoach ? ' inviato al coach' : ' salvato'), 'success');
+      }
     } catch (_) {
-      if (typeof showToast === 'function') showToast('Salvato qui: arriverà al coach appena torni online', 'warning');
+      if (typeof showToast === 'function') {
+        showToast(toCoach ? 'Salvato qui: arriverà al coach appena torni online' : 'Salvato su questo dispositivo', 'warning');
+      }
     }
   } else if (typeof showToast === 'function') {
     showToast(space.name + ' salvato', 'success');
@@ -29691,7 +29933,15 @@ async function saveMyGym(spaceId) {
 }
 window.saveMyGym = saveMyGym;
 
+// Rebuilding this sheet used to throw away where you were reading:
+// every tick sent you back to the top of the list.
 function renderTrainingSpaces() {
+  // The helper lives in the page; the tests load this block on its own.
+  if (typeof keepScrollDuring !== 'function') return renderTrainingSpacesInner();
+  return keepScrollDuring(function () { return renderTrainingSpacesInner(); });
+}
+
+function renderTrainingSpacesInner() {
   var existing = document.getElementById('spaces-sheet');
   if (existing) existing.remove();
   var list = trainingSpaces();
@@ -30254,7 +30504,15 @@ function pickerRowHtml(r) {
 // search the picker shows the muscle groups closed, so the library is read a
 // group at a time; a search flattens them again, because hiding what somebody
 // just searched for behind a heading helps nobody.
+// Rebuilding this sheet used to throw away where you were reading:
+// every tick sent you back to the top of the list.
 function renderExercisePickerResults(q) {
+  // The helper lives in the page; the tests load this block on its own.
+  if (typeof keepScrollDuring !== 'function') return renderExercisePickerResultsInner(q);
+  return keepScrollDuring(function () { return renderExercisePickerResultsInner(q); });
+}
+
+function renderExercisePickerResultsInner(q) {
   var box = document.getElementById('ex-picker-results');
   if (!box) return;
   var query = String(q || '').trim();
@@ -30454,7 +30712,15 @@ window.closeProgramBuilder = closeProgramBuilder;
 
 window.renderProgramBuilder = function () { return renderProgramBuilder(); };
 
+// Rebuilding this sheet used to throw away where you were reading:
+// every tick sent you back to the top of the list.
 function renderProgramBuilder() {
+  // The helper lives in the page; the tests load this block on its own.
+  if (typeof keepScrollDuring !== 'function') return renderProgramBuilderInner();
+  return keepScrollDuring(function () { return renderProgramBuilderInner(); });
+}
+
+function renderProgramBuilderInner() {
   var d = programDraft();
   var existing = document.getElementById('program-builder-sheet');
   if (existing) existing.remove();
@@ -31542,7 +31808,15 @@ function generatorPreviewHtml(g) {
     '</div></div>';
 }
 
+// Rebuilding this sheet used to throw away where you were reading:
+// every tick sent you back to the top of the list.
 function renderProgramGenerator() {
+  // The helper lives in the page; the tests load this block on its own.
+  if (typeof keepScrollDuring !== 'function') return renderProgramGeneratorInner();
+  return keepScrollDuring(function () { return renderProgramGeneratorInner(); });
+}
+
+function renderProgramGeneratorInner() {
   var g = generatorDraft();
   var api = generatorApi();
   var existing = document.getElementById('program-generator-sheet');
@@ -31710,14 +31984,6 @@ async function createGeneratedProgram(target) {
     return;
   }
   var opts = generatorOptions(g);
-  var head = target === 'save' ? 'Generare e salvare senza attivare?'
-    : (target === 'library' ? 'Generare e mettere nel tuo database?'
-      : (target === 'assign' ? 'Generare come bozza per il cliente?' : 'Generare e attivare questa scheda?'));
-  var tail = target === 'active'
-    ? '\n\nIl programma attivo verrà sostituito.'
-    : (target === 'save' ? '\n\nLa trovi in «Programmi Salvati» e la attivi quando vuoi.'
-      : (target === 'library' ? '\n\nFinisce nel tuo database schede.' : '\n\nDiventa la bozza da rivedere e inviare.'));
-  if (!confirm(head + '\n\n' + api.describe(opts) + tail)) return;
   try {
     var prog = null;
     var report = null;
@@ -31730,20 +31996,280 @@ async function createGeneratedProgram(target) {
       prog = normalizeProgram(prog);
       return Promise.resolve();
     }, 'Scrivo la scheda…', { immediate: true, maxMs: 60000 });
-    await deliverProgram(prog, target, {
-      what: 'generata',
-      cleanup: function () {
-        try { persist(); } catch (_) {}
-        closeProgramGenerator();
-      }
-    });
-    if (report && report.swaps.length && typeof showAdaptReport === 'function') showAdaptReport(report);
+    // Nothing is saved yet: the whole program opens for reading and editing,
+    // week by week, and it is from there that it gets activated or filed.
+    openGeneratedReview(prog, target, report);
   } catch (e) {
     console.error('[PROGRAM GENERATOR]', e);
     if (typeof showToast === 'function') showToast('Generazione non riuscita: ' + (e && e.message || e), 'danger');
   }
 }
 window.createGeneratedProgram = createGeneratedProgram;
+
+/*
+ * What was generated, all of it, before anything is saved.
+ *
+ * Generating used to end in a question - activate this? - answered on the
+ * strength of one sentence and a preview of week 1. A twenty-week program is
+ * not a sentence: the athlete wants to read week 14, notice that Thursday has
+ * an exercise they cannot stand, change it, and only then decide.
+ *
+ * So the generated program stops here first. Every week can be opened, every
+ * exercise can be given other sets, other reps, another rest, another name, or
+ * be taken out - for that week alone or for the whole program - and the four
+ * ways out (activate, save, file, hand to a client) are the same ones the
+ * builder ends with. Nothing is written until one of them is pressed.
+ */
+var generatedReview = null;   // { prog, target, week, report }
+
+function openGeneratedReview(prog, target, report) {
+  generatedReview = { prog: prog, target: target || 'active', week: 1, report: report || null };
+  renderGeneratedReview();
+}
+window.openGeneratedReview = openGeneratedReview;
+
+function closeGeneratedReview() {
+  var el = document.getElementById('generated-review-sheet');
+  if (el) el.remove();
+  generatedReview = null;
+}
+window.closeGeneratedReview = closeGeneratedReview;
+
+function reviewWeeks() {
+  return (generatedReview && generatedReview.prog && generatedReview.prog.weeks) || [];
+}
+
+function reviewSessionsOf(weekIdx) {
+  var w = reviewWeeks()[weekIdx];
+  return (w && (w.sessions || w.days)) || [];
+}
+
+function setReviewWeek(n) {
+  if (!generatedReview) return;
+  generatedReview.week = Math.min(reviewWeeks().length, Math.max(1, Number(n) || 1));
+  renderGeneratedReview();
+}
+window.setReviewWeek = setReviewWeek;
+
+// One exercise, in one week - or the same exercise in every week, which is
+// what "for the whole program" means: same position, same day.
+function reviewEachOccurrence(si, ei, allWeeks, fn) {
+  var weeks = reviewWeeks();
+  var from = allWeeks ? 0 : generatedReview.week - 1;
+  var to = allWeeks ? weeks.length - 1 : generatedReview.week - 1;
+  for (var w = from; w <= to; w++) {
+    var sessions = (weeks[w] && (weeks[w].sessions || weeks[w].days)) || [];
+    var rows = sessions[si] && (sessions[si].exercises || sessions[si].rows);
+    if (rows && rows[ei]) fn(rows[ei], rows, ei, w);
+  }
+}
+
+function updateReviewExercise(si, ei, field, value, allWeeks) {
+  if (!generatedReview) return;
+  reviewEachOccurrence(si, ei, allWeeks, function (row) {
+    if (field === 'sets') {
+      var n = Math.min(12, Math.max(1, Math.round(Number(value) || 1)));
+      var reps = row.repsTarget || row.reps_target || '8-10';
+      var model = (row.sets && row.sets[0]) ? JSON.parse(JSON.stringify(row.sets[0])) : { reps: reps };
+      var out = [];
+      for (var i = 0; i < n; i++) out.push(i < (row.sets || []).length ? row.sets[i] : JSON.parse(JSON.stringify(model)));
+      row.sets = out;
+      row.sets_count = n;
+      row.setCount = n;
+      if (row.prescription) row.prescription.sets = n;
+    } else if (field === 'reps') {
+      var r = String(value || '').trim() || '8-10';
+      row.repsTarget = r;
+      row.reps_target = r;
+      (row.sets || []).forEach(function (set) { set.reps = r; });
+      if (row.prescription) { row.prescription.reps = r; row.prescription.raw = (row.sets || []).length + 'x' + r; }
+    } else if (field === 'rest') {
+      row.rest = String(value || '').trim() || '90s';
+    } else if (field === 'name') {
+      var name = String(value || '').trim();
+      if (!name) return;
+      row.name = name;
+      row.exercise = name;
+      row.name_original = name;
+    }
+  });
+  renderGeneratedReview();
+}
+window.updateReviewExercise = updateReviewExercise;
+
+function removeReviewExercise(si, ei) {
+  if (!generatedReview) return;
+  var sessions = reviewSessionsOf(generatedReview.week - 1);
+  var rows = sessions[si] && (sessions[si].exercises || sessions[si].rows);
+  var name = (rows && rows[ei] && (rows[ei].name || rows[ei].exercise)) || 'questo esercizio';
+  var everywhere = confirm('Togliere "' + name + '"?\n\nOK = da tutte le settimane\nAnnulla = solo dalla settimana ' + generatedReview.week);
+  var weeks = reviewWeeks();
+  var from = everywhere ? 0 : generatedReview.week - 1;
+  var to = everywhere ? weeks.length - 1 : generatedReview.week - 1;
+  for (var w = from; w <= to; w++) {
+    var ss = (weeks[w] && (weeks[w].sessions || weeks[w].days)) || [];
+    var list = ss[si] && (ss[si].exercises || ss[si].rows);
+    if (list && list[ei]) {
+      list.splice(ei, 1);
+      if (ss[si].rows && ss[si].rows !== list) ss[si].rows = list;
+      if (ss[si].exercises && ss[si].exercises !== list) ss[si].exercises = list;
+    }
+  }
+  renderGeneratedReview();
+}
+window.removeReviewExercise = removeReviewExercise;
+
+function replaceReviewExercise(si, ei) {
+  if (!generatedReview) return;
+  var week = generatedReview.week;
+  openExercisePicker({
+    title: 'SOSTITUISCI ESERCIZIO',
+    onPick: function (name) {
+      var everywhere = confirm('Mettere "' + name + '" in tutte le settimane?\n\nOK = tutte\nAnnulla = solo la settimana ' + week);
+      updateReviewExercise(si, ei, 'name', name, everywhere);
+    }
+  });
+}
+window.replaceReviewExercise = replaceReviewExercise;
+
+function reviewWeekLabel(w, i) {
+  var label = w.label || ('Settimana ' + (i + 1));
+  return label;
+}
+
+function renderGeneratedReview() {
+  if (!generatedReview) return;
+  var existing = document.getElementById('generated-review-sheet');
+  if (existing) existing.remove();
+  var prog = generatedReview.prog;
+  var weeks = reviewWeeks();
+  var wi = generatedReview.week - 1;
+  var inputStyle = 'padding:7px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;box-sizing:border-box;font-size:12px;';
+  var sheet = document.createElement('div');
+  sheet.id = 'generated-review-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10260';
+
+  var weekChips = '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">' +
+    weeks.map(function (w, i) {
+      var on = (i === wi);
+      var phase = w.test_week ? ' ·T' : (w.phase === 'deload' ? ' ·S' : '');
+      return '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:5px 9px;' +
+        (on ? 'border-color:var(--gold);color:var(--gold);background:rgba(212,175,55,0.12);' : '') +
+        '" onclick="setReviewWeek(' + (i + 1) + ')">' + (i + 1) + phase + '</button>';
+    }).join('') + '</div>';
+
+  var sessions = reviewSessionsOf(wi);
+  var body = sessions.map(function (session, si) {
+    var rows = session.exercises || session.rows || [];
+    return '<div class="card" style="padding:12px;margin-bottom:10px;border:1px solid #333;">' +
+      '<div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:8px;">' +
+      esc(session.title || session.name || ('Giorno ' + (si + 1))) + '</div>' +
+      (rows.length ? rows.map(function (ex, ei) {
+        var name = ex.name || ex.exercise || '';
+        var sets = (ex.sets && ex.sets.length) || ex.sets_count || 3;
+        var reps = ex.repsTarget || ex.reps_target || '';
+        var rest = ex.rest || '';
+        var note = ex.notes || '';
+        if (ex.unit === 'circuit' && ex.circuit) {
+          return '<div style="padding:8px;border:1px solid #262626;border-radius:8px;margin-bottom:6px;background:#0d0d0d;">' +
+            '<div style="font-size:12px;font-weight:800;color:#fff;">' + esc(name) + '</div>' +
+            '<div style="font-size:10px;color:#888;margin-top:4px;">' + ex.circuit.rounds + ' round · ' +
+            ex.circuit.work + '"/' + ex.circuit.rest + '" · ' + (ex.circuit.items || []).length + ' stazioni</div>' +
+            '</div>';
+        }
+        return '<div style="padding:8px;border:1px solid #262626;border-radius:8px;margin-bottom:6px;background:#0d0d0d;">' +
+          '<div style="display:flex;gap:6px;align-items:flex-start;">' +
+          '<div style="flex:1;min-width:0;font-size:12px;font-weight:800;color:#fff;">' + esc(name) + '</div>' +
+          '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:9px;padding:4px 7px;" onclick="replaceReviewExercise(' + si + ',' + ei + ')">CAMBIA</button>' +
+          '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:9px;padding:4px 7px;color:#c66;border-color:#c66;" onclick="removeReviewExercise(' + si + ',' + ei + ')">✕</button>' +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:0.8fr 1.1fr 1.1fr;gap:6px;margin-top:6px;">' +
+          '<label style="font-size:9px;color:#888;">Serie<input type="number" min="1" max="12" value="' + sets +
+          '" onchange="updateReviewExercise(' + si + ',' + ei + ',\'sets\',this.value,false)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+          '<label style="font-size:9px;color:#888;">Reps<input type="text" value="' + esc(reps) +
+          '" onchange="updateReviewExercise(' + si + ',' + ei + ',\'reps\',this.value,false)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+          '<label style="font-size:9px;color:#888;">Recupero<input type="text" value="' + esc(rest) +
+          '" onchange="updateReviewExercise(' + si + ',' + ei + ',\'rest\',this.value,false)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+          '</div>' +
+          (note ? '<div style="font-size:9px;color:#666;margin-top:5px;">' + esc(note) + '</div>' : '') +
+          '</div>';
+      }).join('') : '<div style="font-size:11px;color:#777;">Nessun esercizio in questo giorno.</div>') +
+      '</div>';
+  }).join('');
+
+  var wk = weeks[wi] || {};
+  var totalSets = sessions.reduce(function (n, s) {
+    return n + (s.exercises || s.rows || []).reduce(function (m, e) { return m + ((e.sets && e.sets.length) || 0); }, 0);
+  }, 0);
+
+  var target = generatedReview.target;
+  var foot = (target === 'active')
+    ? '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;padding:12px;" onclick="deliverGeneratedReview(\'save\')">SALVA SENZA ATTIVARE</button>' +
+      '<button type="button" class="btn btn-primary" style="flex:1;font-size:11px;padding:12px;" onclick="deliverGeneratedReview(\'active\')">ATTIVA</button>'
+    : '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="deliverGeneratedReview(\'' + target + '\')">' +
+      (target === 'library' ? 'SALVA NEL DATABASE' : 'USA PER IL CLIENTE') + '</button>';
+
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">CONTROLLA E MODIFICA</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeGeneratedReview()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:10px;">Nome della scheda' +
+    '<input type="text" value="' + esc(prog.title || '') + '" onchange="renameGeneratedReview(this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '<div style="font-size:11px;color:#aaa;line-height:1.5;margin-bottom:10px;">' + esc(prog.source_summary || '') + '</div>' +
+    '<div style="font-size:10px;color:#888;margin-bottom:4px;">Settimana (T = test · S = scarico)</div>' +
+    weekChips +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
+    '<div style="font-size:12px;font-weight:800;color:var(--gold);min-width:0;">' + esc(reviewWeekLabel(wk, wi)) + '</div>' +
+    '<div style="font-size:10px;color:#888;flex:0 0 auto;">' + sessions.length + ' sedute · ' + totalSets + ' serie</div>' +
+    '</div>' +
+    body +
+    '<div style="font-size:10px;color:#777;line-height:1.45;margin-top:4px;">Le modifiche qui valgono per la settimana aperta. ' +
+    'Togliendo o cambiando un esercizio ti viene chiesto se farlo in tutte le settimane. Niente è salvato finché non scegli sotto.</div>' +
+    '</div>' +
+    '<div class="nurvan-sheet-foot">' + foot + '</div></div>';
+  document.body.appendChild(sheet);
+}
+window.renderGeneratedReview = renderGeneratedReview;
+
+function renameGeneratedReview(title) {
+  if (!generatedReview) return;
+  var t = String(title || '').trim();
+  if (t) generatedReview.prog.title = t;
+}
+window.renameGeneratedReview = renameGeneratedReview;
+
+async function deliverGeneratedReview(target) {
+  if (!generatedReview) return;
+  var prog = generatedReview.prog;
+  var report = generatedReview.report;
+  var head = target === 'save' ? 'Salvare senza attivare?'
+    : (target === 'library' ? 'Mettere nel tuo database?'
+      : (target === 'assign' ? 'Usare come bozza per il cliente?' : 'Attivare questa scheda?'));
+  var tail = target === 'active'
+    ? '\n\nIl programma attivo verrà sostituito.'
+    : (target === 'save' ? '\n\nLa trovi in «Programmi Salvati» e la attivi quando vuoi.'
+      : (target === 'library' ? '\n\nFinisce nel tuo database schede.' : '\n\nDiventa la bozza da rivedere e inviare.'));
+  if (!confirm(head + '\n\n' + (prog.title || '') + '\n' + (prog.weeks || []).length + ' settimane' + tail)) return;
+  try {
+    await deliverProgram(normalizeProgram(prog), target, {
+      what: 'generata',
+      cleanup: function () {
+        closeGeneratedReview();
+        try { persist(); } catch (_) {}
+        closeProgramGenerator();
+      }
+    });
+    if (report && report.swaps && report.swaps.length && typeof showAdaptReport === 'function') showAdaptReport(report);
+  } catch (e) {
+    console.error('[PROGRAM REVIEW]', e);
+    if (typeof showToast === 'function') showToast('Non riuscito: ' + (e && e.message || e), 'danger');
+  }
+}
+window.deliverGeneratedReview = deliverGeneratedReview;
 
 window.createProgramFromDraft = createProgramFromDraft;
 

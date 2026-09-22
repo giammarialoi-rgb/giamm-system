@@ -121,7 +121,11 @@
       return out;
     }
 
-    if (/torso/.test(n) && /gambe/.test(n)) {
+    // A torso day, however it is written: the two-day split calls it
+    // "Torso", and the condition used to ask for the word "gambe" as well, so
+    // the session fell through to the mixed recipe at the bottom and opened
+    // on a squat.
+    if (/torso/.test(n) && !/gambe \+ braccia/.test(n)) {
       return [
         slot('pushH', 'main'), slot('pullH', 'main'), slot('pushV', 'secondary'),
         slot('pullV', 'main'), slot('deltLat', 'iso'), slot(['biceps', 'triceps'], 'iso')
@@ -233,7 +237,20 @@
     ];
   }
 
-  var PREHAB = ['rotator', 'forearm', 'tibialis', 'adductor', 'neck', 'mobility'];
+  // The small stuff that keeps a body working and that no session is about.
+  // It still belongs to the half of the body the session trains: an adductor
+  // machine or a tibialis raise in an upper day is somebody else's session,
+  // and a shoulder external rotation in a leg day is the same mistake.
+  var PREHAB_UPPER = ['rotator', 'forearm', 'neck', 'mobility'];
+  var PREHAB_LOWER = ['tibialis', 'adductor', 'mobility'];
+  var PREHAB_ANY = ['rotator', 'forearm', 'tibialis', 'adductor', 'neck', 'mobility'];
+
+  function prehabFor(sessionName, isFullBody) {
+    var n = String(sessionName).toLowerCase();
+    if (isFullBody || /full body/.test(n)) return PREHAB_ANY;
+    if (/lower|gambe|legs|quad|posteriore|catena|glutei/.test(n)) return PREHAB_LOWER;
+    return PREHAB_UPPER;
+  }
 
   // What the person's history and goal add to a session, on top of the
   // movements the session is about.
@@ -257,7 +274,7 @@
     if (params.goal === 'cut') {
       out.push(slot('conditioning', 'secondary'));
     } else if (params.experience === 'avanzato' && (pick % 3 === 0 || /spalle|braccia|upper|full body/.test(n))) {
-      out.push(slot(PREHAB, 'iso'));
+      out.push(slot(prehabFor(sessionName, isFullBody), 'iso'));
     }
     if (out.length > maxSlots + 1) out.length = maxSlots + 1;
     return out;

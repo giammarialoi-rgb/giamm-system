@@ -141,6 +141,64 @@ console.log('\n--- 9. all of it ships ---');
   ok('9d. and the builder day row', /flex:1 1 100%;min-width:0;font-weight:800;/.test(BUILT));
 }
 
+console.log('\n--- 10. una selezione non ti riporta in cima ---');
+{
+  // Every tap ends in render(), which rebuilds the screen from scratch: the
+  // scroll position had nothing left to hold on to and the page snapped back
+  // to the top. Ticking a machine in a training space threw you out of the
+  // list; closing a set threw you out of the workout.
+  ok('10a. esiste un render che si ricorda dove eri', /function keepScrollDuring\(fn, anchorId\)/.test(SRC));
+  ok('10b. e render() ci passa attraverso quando la schermata e la stessa',
+    /function render\(\) \{[\s\S]{0,500}?keepScrollDuring\(draw\)/.test(SRC));
+  ok('10c. cambiando schermata si riparte dall alto, come e giusto',
+    /var sameScreen = \(window\.__lastRenderedView === currentView\)/.test(SRC));
+  ['renderSpaceExercises', 'renderMyGym', 'renderTrainingSpaces', 'renderExercisePickerResults',
+    'renderProgramBuilder', 'renderProgramGenerator'].forEach(function (fn) {
+    const re = new RegExp('function ' + fn + '\\([^)]*\\) \\{[\\s\\S]{0,400}?keepScrollDuring');
+    ok('10d. anche ' + fn + ' rispetta la posizione nel foglio', re.test(SRC));
+  });
+  ok('10e. chiudendo una serie l esercizio resta fermo sullo schermo',
+    /function renderKeepingExercise\(exIdx\)/.test(SRC) &&
+    /keepScrollDuring\(render, 'exercise-item-' \+ exIdx\)/.test(SRC));
+  ok('10f. ogni esercizio ha un id a cui agganciarsi', /id="exercise-item-\$\{fIdx\}"/.test(SRC));
+  ok('10g. e completeSetQuick non chiama piu il render nudo',
+    /queueLiveSetIntel\(exIdx, setNum\); \} catch \(_\) \{\}\n  renderKeepingExercise\(exIdx\);/.test(SRC));
+}
+
+console.log('\n--- 11. le sezioni lunghe si chiudono a tendina ---');
+{
+  ok('11a. esiste il passaggio che le rende richiudibili', /function makeLongSectionsFoldable\(root\)/.test(SRC));
+  ok('11b. con una soglia dichiarata, non un numero sparso nel codice', /var FOLD_MIN_HEIGHT = \d+;/.test(SRC));
+  ok('11c. e il CSS che le chiude', /\.card\.is-folded > \.card-fold \{ display: none; \}/.test(SRC));
+  ok('11d. quello che chiudi resta chiuso anche dopo',
+    /function toggleSectionFold\(key, cardEl\)/.test(SRC) && /store\.foldedSections/.test(SRC));
+  ok('11e. e il controllo gira a ogni render', /makeLongSectionsFoldable\(\);/.test(SRC));
+}
+
+console.log('\n--- 12. non si manda niente a un coach che non ce ---');
+{
+  const at = SRC.indexOf('SALVA E MANDA AL COACH');
+  ok('12a. il bottone esiste ancora', at > 0);
+  const around = SRC.slice(Math.max(0, at - 260), at + 80);
+  ok('12b. ma solo per chi un coach ce l ha davvero', /isClientAthleteView/.test(around));
+  ok('12c. e il messaggio dopo il salvataggio dice la verita',
+    /var toCoach = \(typeof isClientAthleteView === 'function'\) && isClientAthleteView\(\);/.test(SRC));
+}
+
+console.log('\n--- 13. la scheda generata si legge e si corregge prima di salvarla ---');
+{
+  ok('13a. generare apre una revisione, non un salvataggio',
+    /function openGeneratedReview\(prog, target, report\)/.test(SRC));
+  ok('13b. ed e li che finisce createGeneratedProgram', /openGeneratedReview\(prog, target, report\);/.test(SRC));
+  ok('13c. si puo aprire qualsiasi settimana, non solo la prima', /function setReviewWeek\(n\)/.test(SRC));
+  ok('13d. serie, ripetizioni, recupero e nome si cambiano',
+    /function updateReviewExercise\(si, ei, field, value, allWeeks\)/.test(SRC));
+  ok('13e. per una settimana sola o per tutte, a scelta', /allWeeks \? 0 : generatedReview\.week - 1/.test(SRC));
+  ok('13f. e da li esce con le stesse quattro strade del costruttore',
+    /function deliverGeneratedReview\(target\)/.test(SRC) &&
+    /deliverProgram\(normalizeProgram\(prog\), target/.test(SRC));
+}
+
 console.log('');
 if (failed) { console.log(failed + ' UI layout rule(s) broken.'); process.exit(1); }
 console.log('All UI layout rules hold.');

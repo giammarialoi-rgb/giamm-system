@@ -301,6 +301,64 @@ console.log('\n--- 13. quello che sopravvive a normalizeProgram ---');
   }
 }
 
+console.log('\n--- 14. ogni seduta allena la sua metà del corpo ---');
+{
+  // An Upper day with an adductor machine in it is somebody else's session.
+  // It happened for real: advanced lifters get one extra slot for the small
+  // prehab work, and the list it was picked from held ankles and adductors
+  // next to shoulders and forearms, whatever the session was about. The
+  // whole grid is walked here, not a sample: the combination that produced
+  // it was 4 days, upper/lower, advanced, gym, selection 2.
+  const byName = {};
+  TAX.EXERCISES.forEach((e) => { byName[e.name] = e; });
+  const LOWER = ['squat', 'hinge', 'lunge', 'glute', 'quadIso', 'hamIso', 'calf', 'adductor', 'tibialis'];
+  const UPPER = ['pushH', 'pushV', 'chestIso', 'pullV', 'pullH', 'pullIso', 'deltLat', 'deltFront',
+    'deltRear', 'rotator', 'traps', 'biceps', 'triceps', 'forearm'];
+  const offenders = [];
+  let rows = 0;
+  [1, 2, 3, 4, 5, 6, 7].forEach((days) => {
+    ['upper_lower', 'monofrequency', 'fullbody'].forEach((split) => {
+      if (!G.splitsFor(days).some((s) => s.id === split)) return;
+      ['ipertrofia', 'forza', 'powerbuilding', 'cut'].forEach((goal) => {
+        ['unisex', 'female', 'male'].forEach((audience) => {
+          ['principiante', 'intermedio', 'avanzato'].forEach((experience) => {
+            ['palestra', 'casa', 'bodyweight'].forEach((equipment) => {
+              [0, 1, 2].forEach((variant) => {
+                G.templateFor({ days, split, goal, audience, experience, equipment, variant, weeks: 8 })
+                  .forEach((session) => {
+                    const n = session.name.toLowerCase();
+                    const isUpper = /^upper|push|pull|petto|dorso|spalle|^torso/.test(n);
+                    const isLower = /^lower|legs|^gambe|quadricipiti|catena posteriore/.test(n);
+                    const hasArms = /braccia/.test(n);
+                    session.exercises.forEach((ex) => {
+                      const entry = byName[ex.name];
+                      if (!entry) return;
+                      rows++;
+                      if (isUpper && !isLower && LOWER.indexOf(entry.pattern) >= 0) {
+                        offenders.push(session.name + ' (' + days + 'gg ' + split + ' ' + experience + ' ' + equipment + ') -> ' + ex.name);
+                      }
+                      if (isLower && !isUpper && !hasArms && UPPER.indexOf(entry.pattern) >= 0) {
+                        offenders.push(session.name + ' (' + days + 'gg ' + split + ' ' + experience + ' ' + equipment + ') -> ' + ex.name);
+                      }
+                    });
+                  });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+  ok(rows > 50000, '14a. il controllo gira su tutta la griglia (' + rows + ' righe)');
+  ok(offenders.length === 0, '14b. nessuna seduta alta contiene lavoro per le gambe, e viceversa' +
+    (offenders.length ? ' (' + offenders.length + ', es. ' + offenders.slice(0, 3).join(' | ') + ')' : ''));
+
+  const torso = G.templateFor({ days: 2, split: 'monofrequency', goal: 'ipertrofia', equipment: 'palestra' })[0];
+  ok(/torso/i.test(torso.name), '14c. due giorni a settimana aprono con il Torso');
+  ok(torso.exercises.every((e) => !byName[e.name] || LOWER.indexOf(byName[e.name].pattern) < 0),
+    '14d. e il Torso non è una seduta mista con dentro uno squat');
+}
+
 console.log('');
 if (failed) { console.log(failed + ' test del generatore falliti.'); process.exit(1); }
 console.log('Tutti i test del generatore di programmi passano.');
