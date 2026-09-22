@@ -188,6 +188,9 @@
     ['Meadows row', 'pullH', 'secondary', 'barbell', 2],
     ['Rematore T-bar', 'pullH', 'main', 'barbell', 1],
     ['Rematore manubrio', 'pullH', 'main', 'dumbbell', 0],
+    // Petto appoggiato alla panca inclinata, non un rematore a un braccio con
+    // il ginocchio sulla panca: quello e 'Rematore con Manubrio'. Il dizionario
+    // import mappa gia 'chest supported row' su questo nome.
     ['Rematore su Panca', 'pullH', 'secondary', 'bench', 0],
     ['Seal row', 'pullH', 'secondary', 'bench', 1],
     ['Rematore macchina', 'pullH', 'main', 'machine', 0],
