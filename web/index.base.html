@@ -68,6 +68,7 @@
 <script src="program-builder.js"></script>
 <script src="program-catalog.js"></script>
 <script src="progression-models.js"></script>
+<script src="cardio-library.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -9443,6 +9444,129 @@ function formatLastSessionChip(exIdx, row) {
  * 1-tap complete: conferma kg/reps/RIR dal campo (scelta atleta), marca done, avvia riposo.
  * Il suggerimento riempie solo i campi vuoti — non sovrascrive mai ciò che hai scritto.
  */
+/* ---------- exercises that are not measured in repetitions ---------- */
+//
+// A plank is seconds. Ten minutes on the rower is minutes, and maybe a
+// distance and a heart rate if the athlete cares - and nothing else if they
+// do not. Writing either of those as "reps" was asking people to lie to the
+// app, so a row carries the unit it is actually measured in.
+
+function exerciseLogUnit(row, name) {
+  var explicit = row && (row.unit || row.log_unit);
+  if (explicit === 'time' || explicit === 'cardio' || explicit === 'reps') return explicit;
+  var api = (typeof window !== 'undefined') ? window.NurvanCardio : null;
+  if (api && api.defaultUnitFor) return api.defaultUnitFor(name || (row && (row.name || row.exercise)) || '');
+  return 'reps';
+}
+window.exerciseLogUnit = exerciseLogUnit;
+
+function prescribedSecondsFor(row, setObj) {
+  var v = (setObj && (setObj.seconds != null ? setObj.seconds : setObj.durationSeconds));
+  if (v == null) v = row && (row.seconds != null ? row.seconds : row.durationSeconds);
+  if (v == null) {
+    // "45s" or "30-45s" written in the reps field is still a duration.
+    var raw = String((setObj && setObj.reps) || (row && row.repsTarget) || '');
+    var m = raw.match(/(\d+)\s*(?:-\s*(\d+))?\s*s/i);
+    if (m) v = parseInt(m[2] || m[1], 10);
+  }
+  return Number(v) > 0 ? Math.round(Number(v)) : 30;
+}
+
+function prescribedMinutesFor(row, setObj) {
+  var v = (setObj && setObj.minutes) != null ? setObj.minutes : (row && row.minutes);
+  if (v == null) {
+    var secs = (setObj && setObj.seconds) || (row && row.seconds);
+    if (secs) v = Math.round(Number(secs) / 60);
+  }
+  if (v == null) {
+    var api = (typeof window !== 'undefined') ? window.NurvanCardio : null;
+    var entry = api && api.find ? api.find(row && (row.name || row.exercise)) : null;
+    v = entry ? entry.minutes : 20;
+  }
+  return Number(v) > 0 ? Math.round(Number(v)) : 20;
+}
+
+function setTimerState() {
+  if (!window.__setTimer) window.__setTimer = { key: null, endsAt: 0, iv: null, total: 0 };
+  return window.__setTimer;
+}
+
+function stopSetTimer() {
+  var st = setTimerState();
+  if (st.iv) clearInterval(st.iv);
+  st.iv = null;
+  st.key = null;
+  st.endsAt = 0;
+}
+window.stopSetTimer = stopSetTimer;
+
+// The hold itself, counted down. Tapping again before the end stops it and
+// records what was actually held, because a plank that broke at 38 seconds
+// was 38 seconds and writing 45 would be a lie the next session inherits.
+function toggleSetTimer(exIdx, setNum, seconds, restText) {
+  var key = 'w' + currentWeek + '_d' + currentDay + '_e' + exIdx + '_s' + setNum;
+  var st = setTimerState();
+  var btn = document.getElementById(key + '_timerbtn');
+  if (st.key === key) {
+    var held = Math.max(0, st.total - Math.max(0, Math.round((st.endsAt - Date.now()) / 1000)));
+    stopSetTimer();
+    if (held > 0) {
+      store.data[key + '_sec'] = held;
+      try { persist(); } catch (_) {}
+    }
+    if (typeof render === 'function') render();
+    return;
+  }
+  stopSetTimer();
+  var total = Math.max(1, Math.round(Number(seconds) || 30));
+  st.key = key;
+  st.total = total;
+  st.endsAt = Date.now() + total * 1000;
+  function paint() {
+    var left = Math.max(0, Math.round((st.endsAt - Date.now()) / 1000));
+    var el = document.getElementById(key + '_timerbtn');
+    if (el) el.textContent = left + 's';
+    if (left <= 0) {
+      stopSetTimer();
+      store.data[key + '_sec'] = total;
+      try { if (typeof NativeConfig !== 'undefined' && NativeConfig.vibrate) NativeConfig.vibrate(600); } catch (_) {}
+      try { if (typeof showToast === 'function') showToast('Serie completata: ' + total + 's', 'success'); } catch (_) {}
+      try { completeSetQuick(exIdx, setNum, restText || '60s'); } catch (_) { if (typeof render === 'function') render(); }
+    }
+  }
+  if (btn) btn.textContent = total + 's';
+  st.iv = setInterval(paint, 250);
+  paint();
+}
+window.toggleSetTimer = toggleSetTimer;
+
+function toggleCardioExtras(key) {
+  var el = document.getElementById(key + '_extras');
+  if (!el) return;
+  var open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  var btn = document.getElementById(key + '_extrabtn');
+  if (btn) btn.textContent = open ? '+ DATI' : '− DATI';
+}
+window.toggleCardioExtras = toggleCardioExtras;
+
+function cardioExtrasHtml(key, name) {
+  var api = (typeof window !== 'undefined') ? window.NurvanCardio : null;
+  if (!api) return '';
+  var fields = api.logFieldsFor(name);
+  var anyFilled = fields.some(function (f) { return store.data[key + '_cd_' + f] != null && store.data[key + '_cd_' + f] !== ''; });
+  return '<div id="' + key + '_extras" style="display:' + (anyFilled ? 'block' : 'none') + ';margin:4px 0 8px 34px;">' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;">' +
+    fields.map(function (f) {
+      var v = store.data[key + '_cd_' + f];
+      return '<label style="font-size:9px;color:#888;">' + esc(api.fieldLabel(f)) + (api.fieldUnit(f) ? ' (' + esc(api.fieldUnit(f)) + ')' : '') +
+        '<input type="number" step="' + esc(api.fieldStep(f)) + '" value="' + esc(v == null ? '' : v) + '" ' +
+        'oninput="updateData(\'' + key + '_cd_' + f + '\',this.value)" ' +
+        'style="width:100%;margin-top:2px;padding:6px;background:#151515;border:1px solid #333;color:#fff;border-radius:6px;box-sizing:border-box;text-align:center;font-size:12px;"></label>';
+    }).join('') +
+    '</div></div>';
+}
+
 function completeSetQuick(exIdx, setNum, restText) {
   const k = `w${currentWeek}_d${currentDay}_e${exIdx}_s${setNum}`;
   const doneKey = k + '_done';
@@ -19785,6 +19909,8 @@ function renderTraining(c){
       const tempo = store.tempos[`w${currentWeek}_d${currentDay}_e${fIdx}`] || row.tempo || '';
       const exIntens = store.exIntensity[`w${currentWeek}_d${currentDay}_e${fIdx}`] || intensType;
       const totalSets = getExerciseSetCount(fIdx);
+      // Reps, a hold in seconds, or minutes of cardio: the row says which.
+      const exLogUnit = exerciseLogUnit(row, curEx);
       const schemeInfo = formatSetRepScheme(row);
       const ssLetter = row.superset_id ? sessionSupersetLetter(row.superset_id, exerciseList) : '';
       const ssOrd = row.superset_id ? sessionSupersetOrder(row.superset_id, exerciseList, ri) : 0;
@@ -19825,7 +19951,11 @@ function renderTraining(c){
           <div style="font-size:10px;color:#aaa; cursor:pointer;" onclick="startTimer('${esc(row.rest || '90s')}');">Rest: <b style="color:var(--gold); text-decoration:underline;">${esc(row.rest || '90s')}</b></div>
         </div>
         <div style="display:grid;grid-template-columns:28px 1fr 1fr 1fr 34px 26px;gap:6px;align-items:center;margin-bottom:6px;font-size:9px;color:#666;text-align:center;font-weight:800;">
-          <div>#</div><div>KG</div><div>REPS</div><div>${exIntens}</div><div>OK</div><div>✕</div>
+          ${exLogUnit === 'cardio'
+            ? '<div>#</div><div>MINUTI</div><div>DATI</div><div>' + exIntens + '</div><div>OK</div><div>&#10005;</div>'
+            : (exLogUnit === 'time'
+              ? '<div>#</div><div>KG</div><div>SECONDI</div><div>TIMER</div><div>OK</div><div>&#10005;</div>'
+              : '<div>#</div><div>KG</div><div>REPS</div><div>' + exIntens + '</div><div>OK</div><div>&#10005;</div>')}
         </div>`;
 
         for(let s = 1; s <= totalSets; s++) {
@@ -19862,6 +19992,30 @@ function renderTraining(c){
             return '<option value="' + esc(t.id) + '" ' + (techVal === t.id ? 'selected' : '') + '>' + esc(t.label) + '</option>';
           }).join('');
 
+          if (exLogUnit === 'cardio') {
+            const shownMin = store.data[k + '_min'] != null && store.data[k + '_min'] !== ''
+              ? store.data[k + '_min'] : '';
+            h += `<div class="set-row">
+            <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
+            <input type="number" id="${k}_min" step="1" min="0" placeholder="${prescribedMinutesFor(row, setObj)}" value="${shownMin}" oninput="updateData('${k}_min',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
+            <button type="button" id="${k}_extrabtn" class="btn btn-outline" style="font-size:10px;padding:8px 2px;" onclick="toggleCardioExtras('${k}')">+ DATI</button>
+            <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${shownRir==i?'selected':''}>${i}</option>`).join('')}</select>
+            <button class="set-done-btn ${isDone?'active':''}" title="Segna fatto" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
+            <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
+          </div>` + cardioExtrasHtml(k, curEx);
+          } else if (exLogUnit === 'time') {
+            const targetSec = prescribedSecondsFor(row, setObj);
+            const shownSec = store.data[k + '_sec'] != null && store.data[k + '_sec'] !== '' ? store.data[k + '_sec'] : '';
+            const running = window.__setTimer && window.__setTimer.key === k;
+            h += `<div class="set-row">
+            <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
+            <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
+            <input type="number" id="${k}_sec" step="1" min="0" placeholder="${targetSec}" value="${shownSec}" oninput="updateData('${k}_sec',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;background:#1a1a1a;">
+            <button type="button" id="${k}_timerbtn" class="btn btn-outline" style="font-size:11px;padding:8px 2px;${running ? 'border-color:var(--gold);color:var(--gold);' : ''}" title="Avvia il conto alla rovescia" onclick="toggleSetTimer(${fIdx}, ${s}, ${targetSec}, '${restForSet}')">${running ? '■' : '▶ ' + targetSec + 's'}</button>
+            <button class="set-done-btn ${isDone?'active':''}" title="Segna fatto" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
+            <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
+          </div>`;
+          } else {
           h += `<div class="set-row">
             <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
             <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" onfocus="showPrevLoad(event, '${k}_load')" onblur="hidePrevLoad()" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
@@ -19869,13 +20023,18 @@ function renderTraining(c){
             <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${shownRir==i?'selected':''}>${i}</option>`).join('')}</select>
             <button class="set-done-btn ${isDone?'active':''}" title="1 tap: conferma kg/reps e avvia riposo" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
             <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
-          </div>
-          <div style="margin:-2px 0 8px 34px;">
+          </div>`;
+          }
+          // An intensity technique is a way of taking a set of repetitions
+          // further; it has nothing to say about ten minutes on a bike.
+          if (exLogUnit !== 'cardio') {
+            h += `<div style="margin:-2px 0 8px 34px;">
             <select onchange="updateSetTechnique(${fIdx},${s},this.value)" style="width:100%;font-size:10px;padding:4px 6px;background:#151515;border:1px solid #333;color:#ccc;border-radius:6px;" title="Tecnica di intensità">
               <option value="">Tecnica: normale</option>
               ${techOpts}
             </select>
           </div>`;
+          }
         }
 
         h += showLiveSetIntelHtml(fIdx);
@@ -28776,6 +28935,7 @@ function renderProgramBuilder() {
 
   var daysHtml = (d.days || []).map(function (day, di) {
     var exHtml = (day.exercises || []).map(function (ex, ei) {
+      var exUnit = (ex.unit === 'time' || ex.unit === 'cardio') ? ex.unit : 'reps';
       return '<div style="padding:8px;border:1px solid #262626;border-radius:8px;margin-bottom:6px;background:#0d0d0d;">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">' +
         '<div style="font-size:12px;font-weight:800;color:#fff;min-width:0;">' + esc(ex.name) +
@@ -28785,10 +28945,16 @@ function renderProgramBuilder() {
         '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 7px;" ' + (ei === day.exercises.length - 1 ? 'disabled' : '') + ' onclick="moveProgramDraftExercise(' + di + ',' + ei + ',1)">↓</button>' +
         '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 7px;color:#c66;border-color:#c66;" onclick="removeProgramDraftExercise(' + di + ',' + ei + ')">✕</button>' +
         '</div></div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1.2fr 1.2fr;gap:6px;margin-top:8px;">' +
+        '<div style="display:grid;grid-template-columns:0.9fr 1.1fr 1.1fr 1.1fr;gap:6px;margin-top:8px;">' +
         '<label style="font-size:9px;color:#888;">Serie<input type="number" min="1" max="10" value="' + (Number(ex.sets) || 3) + '" oninput="updateProgramDraftExercise(' + di + ',' + ei + ',\'sets\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
-        '<label style="font-size:9px;color:#888;">Reps<input type="text" value="' + esc(ex.reps || '8-10') + '" oninput="updateProgramDraftExercise(' + di + ',' + ei + ',\'reps\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
-        '<label style="font-size:9px;color:#888;">Recupero<input type="text" value="' + esc(ex.rest || '90s') + '" oninput="updateProgramDraftExercise(' + di + ',' + ei + ',\'rest\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+        '<label style="font-size:9px;color:#888;">Unità<select onchange="setProgramDraftExerciseUnit(' + di + ',' + ei + ',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '">' +
+        ['reps', 'time', 'cardio'].map(function (u) {
+          var label = u === 'reps' ? 'Reps' : (u === 'time' ? 'Secondi' : 'Minuti');
+          return '<option value="' + u + '"' + ((exUnit === u) ? ' selected' : '') + '>' + label + '</option>';
+        }).join('') + '</select></label>' +
+        '<label style="font-size:9px;color:#888;">' + (exUnit === 'time' ? 'Secondi' : (exUnit === 'cardio' ? 'Minuti' : 'Reps')) +
+        '<input type="text" value="' + esc(ex.reps || (exUnit === 'time' ? '30' : (exUnit === 'cardio' ? '20' : '8-10'))) + '" oninput="updateProgramDraftExercise(' + di + ',' + ei + ',\'reps\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+        '<label style="font-size:9px;color:#888;">Recupero<input type="text" value="' + esc(ex.rest || (exUnit === 'cardio' ? '2 min' : '90s')) + '" oninput="updateProgramDraftExercise(' + di + ',' + ei + ',\'rest\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
         '</div></div>';
     }).join('');
     return '<div class="card" style="padding:12px;margin-bottom:10px;border:1px solid #333;">' +
@@ -29159,13 +29325,42 @@ function addProgramDraftExercise(dayIdx) {
     onPick: function (name, muscle) {
       var day = programDraft().days[dayIdx];
       if (!day) return;
-      day.exercises.push({ name: name, muscle: muscle, sets: 3, reps: '8-10', rest: '90s' });
+      var api = window.NurvanCardio;
+      var unit = (api && api.defaultUnitFor) ? api.defaultUnitFor(name) : 'reps';
+      var entry = (api && api.find) ? api.find(name) : null;
+      day.exercises.push(unit === 'cardio'
+        ? { name: name, muscle: muscle || 'CARDIO', unit: 'cardio', sets: 1, reps: String((entry && entry.minutes) || 20), rest: '2 min' }
+        : (unit === 'time'
+          ? { name: name, muscle: muscle, unit: 'time', sets: 3, reps: '30', rest: '60s' }
+          : { name: name, muscle: muscle, unit: 'reps', sets: 3, reps: '8-10', rest: '90s' }));
       try { persist(); } catch (_) {}
       renderProgramBuilder();
     }
   });
 }
 window.addProgramDraftExercise = addProgramDraftExercise;
+
+// Changing the unit rewrites the value with a sensible default for it:
+// "8-10" means nothing as seconds, and 30 seconds of a rower is not cardio.
+function setProgramDraftExerciseUnit(dayIdx, exIdx, unit) {
+  var day = programDraft().days[dayIdx];
+  var ex = day && day.exercises[exIdx];
+  if (!ex) return;
+  var next = (unit === 'time' || unit === 'cardio') ? unit : 'reps';
+  if (ex.unit === next) return;
+  ex.unit = next;
+  if (next === 'time') { ex.reps = '30'; ex.rest = '60s'; }
+  else if (next === 'cardio') {
+    var api = window.NurvanCardio;
+    var entry = (api && api.find) ? api.find(ex.name) : null;
+    ex.reps = String((entry && entry.minutes) || 20);
+    ex.rest = '2 min';
+    ex.sets = 1;
+  } else { ex.reps = '8-10'; ex.rest = '90s'; }
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.setProgramDraftExerciseUnit = setProgramDraftExerciseUnit;
 
 function removeProgramDraftExercise(dayIdx, exIdx) {
   var day = programDraft().days[dayIdx];
@@ -29251,18 +29446,32 @@ function programFromDraft(draft) {
 // add-to-program below, so an exercise added later is the same kind of thing
 // as one written at the start.
 function programExerciseRow(ex) {
-  var setCount = Math.min(10, Math.max(1, Number(ex.sets) || 3));
-  var reps = String(ex.reps || '8-10').trim() || '8-10';
+  var unit = (ex.unit === 'time' || ex.unit === 'cardio') ? ex.unit : 'reps';
+  var setCount = Math.min(10, Math.max(1, Number(ex.sets) || (unit === 'cardio' ? 1 : 3)));
   var sets = [];
-  for (var s = 0; s < setCount; s++) sets.push({ reps: reps, target_load: null });
+  var reps;
+  var s;
+  if (unit === 'time') {
+    var seconds = Math.max(1, parseInt(ex.reps, 10) || 30);
+    reps = seconds + 's';
+    for (s = 0; s < setCount; s++) sets.push({ reps: reps, seconds: seconds, target_load: null });
+  } else if (unit === 'cardio') {
+    var minutes = Math.max(1, parseInt(ex.reps, 10) || 20);
+    reps = minutes + ' min';
+    for (s = 0; s < setCount; s++) sets.push({ reps: reps, minutes: minutes, target_load: null });
+  } else {
+    reps = String(ex.reps || '8-10').trim() || '8-10';
+    for (s = 0; s < setCount; s++) sets.push({ reps: reps, target_load: null });
+  }
   return {
     name: ex.name,
     name_original: ex.name,
     muscle_groups: ex.muscle ? [ex.muscle] : [],
+    unit: unit,
     sets: sets,
     setCount: setCount,
     repsTarget: reps,
-    rest: String(ex.rest || '90s').trim() || '90s'
+    rest: String(ex.rest || (unit === 'cardio' ? '2 min' : '90s')).trim() || '90s'
   };
 }
 

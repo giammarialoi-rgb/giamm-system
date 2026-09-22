@@ -86,14 +86,21 @@
     return clamp(10 - rirForPercent(pct, reps), 4, 10);
   }
 
+  // "8-10" are repetitions, "45s" is a hold and "20 min" is cardio. A
+  // progression that turned 45s into 46 would be writing nonsense, so the
+  // unit is kept and a duration moves by a step that means something.
   function bumpReps(raw, delta) {
     var text = String(raw == null ? '' : raw).trim();
     if (!delta || !text) return text || '8-10';
-    var m = text.match(/^(\d+)\s*(?:-\s*(\d+))?/);
+    var m = text.match(/^(\d+)\s*(?:-\s*(\d+))?\s*(s|sec|secondi|min|minuti)?\b/i);
     if (!m) return text;
-    var lo = Math.max(1, parseInt(m[1], 10) + delta);
-    var hi = m[2] ? Math.max(lo + 1, parseInt(m[2], 10) + delta) : null;
-    return hi ? (lo + '-' + hi) : String(lo);
+    var unit = (m[3] || '').toLowerCase();
+    var step = delta;
+    if (unit) step = delta * (/^min/.test(unit) ? 2 : 5);
+    var lo = Math.max(1, parseInt(m[1], 10) + step);
+    var hi = m[2] ? Math.max(lo + 1, parseInt(m[2], 10) + step) : null;
+    var suffix = m[3] ? (/^min/.test(unit) ? ' min' : 's') : '';
+    return (hi ? (lo + '-' + hi) : String(lo)) + suffix;
   }
 
   /* ---------------- bodybuilding models ---------------- */
