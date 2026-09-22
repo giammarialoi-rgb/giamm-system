@@ -6054,6 +6054,13 @@ async function applyCoachLibraryToAssign(clientId, name, entryId) {
           : (selected.indexOf('exams') >= 0 ? 'exams' : 'training'))));
   navigate(go);
   practiceToast('Sezioni selezionate caricate nello spazio cliente. Modifica e INVIA.', 'success');
+  // A program from the database was written somewhere else. Ask where this
+  // client trains, and fit it to that place before it is sent.
+  if (selected.indexOf('training') >= 0 && typeof openAdaptSpaceSheet === 'function') {
+    setTimeout(function () {
+      openAdaptSpaceSheet('Scheda per ' + (name || 'il cliente') + ': dove si allena?');
+    }, 500);
+  }
 }
 
 async function refreshAthleteMe() {

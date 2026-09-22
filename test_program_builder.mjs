@@ -571,6 +571,95 @@ function loggedProgram() {
     ctx.store.trainingSpaces = [];
   }
 
+  // Fitting a program written elsewhere to the place it will be done in.
+  {
+    ctx.store.trainingSpaces = [];
+    // The real taxonomy is in this context (loaded by 3sexies), so the
+    // substitutions are chosen out of the actual library.
+    ctx.saveTrainingSpace({ name: 'Olimpia Dorgali', equip: ['machine', 'cable', 'bodyweight', 'bench', 'dumbbell'], limits: { dumbbell: 40 } });
+    const gym = ctx.trainingSpaces()[0];
+    ctx.toggleSpaceExercise(gym.id, encodeURIComponent('Chest press macchina'));
+    ctx.toggleSpaceExercise(gym.id, encodeURIComponent('Chest Press Convergente'));
+
+    const prog = {
+      id: 'p9',
+      title: 'Scheda del database',
+      weeks: [1, 2].map((w) => ({
+        week: w,
+        sessions: [{
+          name: 'Upper',
+          exercises: [
+            { name: 'Chest press macchina', sets: [{ reps: '10', target_load: 60 }] },
+            { name: 'Panca piana bilanciere', sets: [{ reps: '8' }] },
+            { name: 'Curl manubri', sets: [{ reps: '12', target_load: 45 }] }
+          ]
+        }]
+      }))
+    };
+    const res = ctx.adaptProgramToSpace(prog, ctx.trainingSpaces()[0]);
+    const row = (w, i) => prog.weeks[w].sessions[0].exercises[i];
+
+    ok(row(0, 0).name !== 'Chest press macchina', '3ch1. an exercise the gym does not have is replaced');
+    ok(row(0, 0).substituted_from === 'Chest press macchina', '3ch2. and remembers what it replaced');
+    ok(/Al posto di Chest press macchina/.test(row(0, 0).notes), '3ch3. with the reason written on the row');
+    ok(row(0, 0).name === row(1, 0).name,
+      '3ch4. the same exercise gets the same replacement in every week, or it is a different program each week');
+    ok(res.swaps.length >= 1 && res.swaps[0].from === 'Chest press macchina', '3ch5. and the change is reported back');
+
+    const replacement = ctx.trainingSpaces()[0];
+    ok(ctx.exercisePickerRows('', replacement).some((r) => r.name === row(0, 0).name),
+      '3ch6. the replacement is something the gym actually has');
+    const tax = ctx.window.NURVAN_EXERCISE_TAXONOMY.EXERCISES;
+    const chestMuscles = ['PETTO'];
+    const entry = tax.find((e) => e.name === row(0, 0).name);
+    ok(!entry || chestMuscles.includes(ctx.PATTERN_GROUP ? ctx.PATTERN_GROUP[entry.pattern] : 'PETTO')
+      || entry.pattern === 'pushH' || entry.pattern === 'chestIso',
+      '3ch7. and it trains the same thing - a chest press does not become a leg curl');
+
+    ok(row(0, 1).name === 'Panca piana bilanciere' || row(0, 1).substituted_from === 'Panca piana bilanciere',
+      '3ch8. exercises are never dropped, only kept or swapped');
+    ok(prog.weeks[0].sessions[0].exercises.length === 3, '3ch9. the session keeps its shape');
+
+    ok(row(0, 2).sets[0].target_load === 40,
+      '3ch10. a load above what the gym can put in your hand is brought down to it');
+    ok(res.capped.length >= 1, '3ch11. and that is reported too');
+    ok(prog.space && prog.space.name === 'Olimpia Dorgali', '3ch12. the program remembers where it was fitted for');
+
+    // A replacement has to be a different exercise, and one the place is
+    // known to have - not one the app merely failed to place.
+    {
+      ctx.store.trainingSpaces = [];
+      ctx.saveTrainingSpace({ name: 'Solo macchine', equip: ['machine', 'cable', 'bodyweight'] });
+      const machines = ctx.trainingSpaces()[0];
+      const p = {
+        id: 'p11',
+        weeks: [{ week: 1, sessions: [{ name: 'A', exercises: [
+          { name: 'Squat bilanciere', sets: [{ reps: '5' }] },
+          { name: 'Curl manubri', sets: [{ reps: '10' }] }
+        ] }] }]
+      };
+      const r = ctx.adaptProgramToSpace(p, machines);
+      const got = p.weeks[0].sessions[0].exercises.map((e) => e.name);
+      ok(!/squat con bilanciere/i.test(got[0]),
+        '3ch14. a squat is not "replaced" by the same squat under another name');
+      ok(!/curl alternato con manubri/i.test(got[1]),
+        '3ch15. nor a dumbbell curl by another dumbbell curl in a gym with no dumbbells');
+      r.swaps.forEach((s) => {
+        const still = ctx.exercisePickerRows('', machines).some((row) => row.name === s.to);
+        ok(still, '3ch16. every replacement offered (' + s.to + ') is available in that gym');
+      });
+    }
+    ctx.store.trainingSpaces = [];
+    ctx.saveTrainingSpace({ name: 'Olimpia Dorgali', equip: ['machine', 'cable', 'bodyweight', 'bench', 'dumbbell'], limits: { dumbbell: 40 } });
+
+    // Nothing to fix is not an error.
+    const easy = { id: 'p10', weeks: [{ week: 1, sessions: [{ name: 'A', exercises: [{ name: 'Push-up', sets: [{ reps: '10' }] }] }] }] };
+    const res2 = ctx.adaptProgramToSpace(easy, ctx.trainingSpaces()[0]);
+    ok(res2.swaps.length === 0 && easy.weeks[0].sessions[0].exercises[0].name === 'Push-up',
+      '3ch13. a program that already fits is left alone');
+    ctx.store.trainingSpaces = [];
+  }
+
   // The grouped picker: a library is read a group at a time.
   ok(ctx.pickerGroupOf('PETTO') === 'PETTO' && ctx.pickerGroupOf('') === 'ALTRO',
     '3cf. every exercise lands in a macro group, and the unlabelled ones in ALTRO');
@@ -632,7 +721,8 @@ function loggedProgram() {
     'updateSpaceField', 'toggleSpaceEquip', 'setPickerSpace',
     'openSpaceExercises', 'closeSpaceExercises', 'renderSpaceExercises', 'toggleSpaceExercise',
     'toggleSpaceBar', 'updateSpaceLimit',
-    'openCreateExerciseSheet', 'closeCreateExerciseSheet', 'confirmCreateExercise'
+    'openCreateExerciseSheet', 'closeCreateExerciseSheet', 'confirmCreateExercise',
+    'openAdaptSpaceSheet', 'closeAdaptSpaceSheet', 'applySpaceToProgram'
   ];
   for (const fn of exported) {
     ok(html.includes('window.' + fn + ' = ' + fn + ';'), '4f. ' + fn + ' is reachable from an onclick');

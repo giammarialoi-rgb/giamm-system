@@ -16939,6 +16939,11 @@ async function activateCatalogProgramInner(programId) {
     });
     const newId = prog.id || ('catalog_' + Date.now());
     if (isCoachClientSandbox()) {
+      // A catalogue program was written for nobody in particular. Once it is
+      // in the client's sandbox, ask where they train and fit it to that.
+      if (typeof openAdaptSpaceSheet === 'function') {
+        setTimeout(function () { openAdaptSpaceSheet('Dove si allena il cliente?'); }, 600);
+      }
       store.activeProgramId = newId || ('assign_draft_' + Date.now());
       DATA = prog;
       DATA.nutrition = null;
@@ -17247,6 +17252,7 @@ function renderPrograms(c){
       </div>
       <div style="border-top:1px solid #222; padding-top:10px; margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
         <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; background:rgba(212,175,55,0.15); color:var(--gold); border-color:rgba(212,175,55,0.35);" onclick="navigate('training')">ALLENAMENTO</button>
+        ${(store.trainingSpaces || []).length ? `<button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; color:#81c784; border-color:#2a4a2a;" onclick="openAdaptSpaceSheet()">${DATA && DATA.space ? ('ADATTATA A ' + esc(String(DATA.space.name).toUpperCase())) : 'ADATTA A UNO SPAZIO'}</button>` : ''}
         <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasNutr ? 'color:#4caf50;border-color:#2a4a2a;' : 'color:#555;border-color:#333;'}" onclick="navigate('nutrition')">ALIMENTAZIONE</button>
         <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasSupp ? 'color:#2196f3;border-color:#1a3a4a;' : 'color:#555;border-color:#333;'}" onclick="navigate('supplements')">INTEGRAZIONE</button>
         <button type="button" class="btn btn-outline" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; ${hasTherapy ? 'color:#ab47bc;border-color:#3a2a4a;' : 'color:#555;border-color:#333;'}" onclick="navigate('therapy')">TERAPIA</button>
@@ -29271,13 +29277,19 @@ function saveTrainingSpace(space) {
   var existing = space.id ? spaceById(space.id) : null;
   if (existing) {
     existing.name = space.name;
-    existing.equip = space.equip.slice();
+    existing.equip = (space.equip || []).slice();
+    if (space.bars) existing.bars = space.bars.slice();
+    if (space.limits) existing.limits = JSON.parse(JSON.stringify(space.limits));
     existing.note = space.note || '';
   } else {
     list.push({
       id: 'sp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
       name: space.name,
       equip: (space.equip || []).slice(),
+      bars: (space.bars || []).slice(),
+      limits: JSON.parse(JSON.stringify(space.limits || {})),
+      exclude: [],
+      include: [],
       note: space.note || ''
     });
   }
@@ -29440,6 +29452,243 @@ function toggleSpaceEquip(id, equipId) {
   renderTrainingSpaces();
 }
 window.toggleSpaceEquip = toggleSpaceEquip;
+
+/* ---------- fitting a program to a place ---------- */
+//
+// A program written somewhere else arrives with exercises this gym does not
+// have. Deleting them would leave a hole in the session - the chest press was
+// there for a reason - so each one is swapped for the nearest thing the place
+// actually owns: same movement first, then same role, then same muscle. A
+// chest press becomes a pec deck rather than nothing at all.
+//
+// Nothing is ever swapped silently: every change is listed, and an exercise
+// with no honest replacement is left exactly where it is.
+
+function taxonomyEntryFor(name) {
+  var tax = (typeof window !== 'undefined' && window.NURVAN_EXERCISE_TAXONOMY) || null;
+  if (!tax || !tax.EXERCISES) return null;
+  var want = String(name || '').trim().toLowerCase();
+  var same = tax.SAME_AS && tax.SAME_AS[name];
+  if (same) want = String(same).toLowerCase();
+  for (var i = 0; i < tax.EXERCISES.length; i++) {
+    if (String(tax.EXERCISES[i].name).toLowerCase() === want) return tax.EXERCISES[i];
+  }
+  return null;
+}
+
+function muscleOfName(name) {
+  var entry = taxonomyEntryFor(name);
+  if (entry) return PATTERN_GROUP[entry.pattern] || '';
+  var rows = exercisePickerRows(String(name || '').slice(0, 20), null);
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].name.toLowerCase() === String(name || '').toLowerCase()) return pickerGroupOf(rows[i].muscle);
+  }
+  return '';
+}
+
+// The best stand-in this place can offer, or null when there is none worth
+// making. `taken` keeps a session from getting the same replacement twice.
+// "Squat bilanciere" and "Squat con Bilanciere" are the same exercise with
+// two names in the catalogue. Swapping one for the other is not a
+// replacement, it is a rename.
+function sameExerciseWords(a, b) {
+  var filler = { con: 1, a: 1, al: 1, ai: 1, alla: 1, alle: 1, da: 1, di: 1, in: 1, su: 1, sul: 1, la: 1, il: 1, lo: 1, e: 1 };
+  function words(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .split(/[^a-z0-9]+/).filter(function (w) { return w && !filler[w]; }).sort().join(' ');
+  }
+  return words(a) === words(b);
+}
+
+function substituteInSpace(name, space, taken) {
+  var entry = taxonomyEntryFor(name);
+  var muscle = muscleOfName(name);
+  var pool = exercisePickerRows('', space);
+  var best = null;
+  var bestScore = 0;
+  pool.forEach(function (row) {
+    if (String(row.name).toLowerCase() === String(name).toLowerCase()) return;
+    if (sameExerciseWords(row.name, name)) return;
+    if (taken && taken.indexOf(row.name) >= 0) return;
+    // Only propose what this place is known to have. An exercise the app
+    // cannot place is shown in the picker - hiding somebody's own writing is
+    // worse - but it is never put forward as a replacement: "available
+    // because we do not know" is not available.
+    var tokens = equipTokensFor(row);
+    if (!tokens.length) return;
+    if (Array.isArray(space.equip) && space.equip.length) {
+      var confirmed = false;
+      for (var t = 0; t < tokens.length; t++) {
+        if (space.equip.indexOf(tokens[t]) >= 0) confirmed = true;
+      }
+      if (!confirmed && spaceExerciseState(space, row.name) !== 'on') return;
+    }
+    var cand = taxonomyEntryFor(row.name);
+    var score = 0;
+    if (entry && cand) {
+      if (cand.pattern === entry.pattern) score += 100;
+      if (cand.role === entry.role) score += 40;
+      if (cand.equip === entry.equip) score += 45;
+      if (cand.level <= entry.level) score += 10;
+      // Replacing something loadable with something that is not takes away
+      // the ability to add weight, which is most of what a program does over
+      // ten weeks. A machine chest press becomes a pec deck, not a push-up.
+      var LOADABLE = { barbell: 1, dumbbell: 1, kettlebell: 1, machine: 1, cable: 1, smith: 1, plate: 1, sled: 1 };
+      if (LOADABLE[entry.equip] && !LOADABLE[cand.equip]) score -= 120;
+    }
+    var candMuscle = cand ? (PATTERN_GROUP[cand.pattern] || '') : pickerGroupOf(row.muscle);
+    if (muscle && candMuscle === muscle) score += 60;
+    if (!score) return;
+    if (score > bestScore) { bestScore = score; best = row; }
+  });
+  // Below this a "replacement" is a different exercise wearing the same label.
+  return bestScore >= 60 ? best : null;
+}
+
+/**
+ * adaptProgramToSpace(prog, space) -> { swaps, kept, capped }
+ *
+ * Rewrites a program so it can be done in `space`. Exercises stay where they
+ * are in the session; only their names change, and only when the place has
+ * something that does the same job.
+ */
+function adaptProgramToSpace(prog, space) {
+  var out = { swaps: [], kept: [], capped: [] };
+  if (!prog || !Array.isArray(prog.weeks) || !space) return out;
+  var decided = {};
+  prog.weeks.forEach(function (week, wi) {
+    (week.sessions || week.days || []).forEach(function (session, si) {
+      var taken = (session.exercises || session.rows || []).map(function (r) { return r.name; });
+      (session.exercises || session.rows || []).forEach(function (row) {
+        var name = row.name || row.exercise || '';
+        if (!name) return;
+        var key = name.toLowerCase();
+        if (!exerciseFitsSpace({ name: name, muscle: '', eq: '' }, space)) {
+          // The same exercise gets the same replacement everywhere, or a
+          // program turns into a different one every week.
+          if (decided[key] === undefined) {
+            var pick = substituteInSpace(name, space, taken);
+            decided[key] = pick ? pick.name : null;
+            if (pick) out.swaps.push({ from: name, to: pick.name });
+            else out.kept.push(name);
+          }
+          if (decided[key]) {
+            row.substituted_from = row.substituted_from || name;
+            row.name = decided[key];
+            row.name_original = decided[key];
+            row.notes = [(row.notes || ''), 'Al posto di ' + name + ' (non disponibile in ' + space.name + ')']
+              .filter(Boolean).join(' · ');
+          }
+        }
+        // What the place can load, applied to what the program asks for.
+        var ceiling = spaceLoadCeiling(space, row.name);
+        if (ceiling) {
+          var hit = false;
+          (row.sets || []).forEach(function (s) {
+            if (s && Number(s.target_load) > ceiling.kg) { s.target_load = ceiling.kg; hit = true; }
+          });
+          if (row.load != null && Number(row.load) > ceiling.kg) { row.load = ceiling.kg; hit = true; }
+          if (hit && out.capped.indexOf(row.name) < 0) out.capped.push(row.name);
+        }
+      });
+    });
+  });
+  prog.space = { id: space.id, name: space.name, limits: JSON.parse(JSON.stringify(space.limits || {})), bars: (space.bars || []).slice() };
+  return out;
+}
+window.adaptProgramToSpace = adaptProgramToSpace;
+
+function closeAdaptSpaceSheet() {
+  var el = document.getElementById('adapt-space-sheet');
+  if (el) el.remove();
+}
+window.closeAdaptSpaceSheet = closeAdaptSpaceSheet;
+
+// Asked when a program lands somewhere it was not written for.
+function openAdaptSpaceSheet(title) {
+  var list = trainingSpaces();
+  if (!list.length || typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return false;
+  closeAdaptSpaceSheet();
+  var sheet = document.createElement('div');
+  sheet.id = 'adapt-space-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10260';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeAdaptSpaceSheet(); };
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">DOVE SI ALLENA</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeAdaptSpaceSheet()">NON ADATTARE</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<p style="font-size:13px;color:#eee;line-height:1.5;margin:4px 0 8px;">' + esc(title || (DATA.title || 'Questa scheda')) + '</p>' +
+    '<p style="font-size:11px;color:#888;line-height:1.5;margin:0 0 14px;">Scegli il posto: gli esercizi che lì non ci sono vengono sostituiti con l\'equivalente disponibile — una chest press diventa una pec deck, non sparisce — e i carichi si fermano a quanto quella palestra può caricare.</p>' +
+    list.map(function (sp) {
+      return '<button type="button" class="btn btn-outline" style="width:100%;text-align:left;margin-bottom:8px;padding:12px;" onclick="applySpaceToProgram(\'' + esc(sp.id) + '\')">' +
+        '<b style="color:#fff;font-size:13px;">' + esc(sp.name) + '</b>' +
+        '<br><span style="font-size:11px;color:#888;">' + spaceExerciseCount(sp) + ' esercizi disponibili' +
+        ((sp.limits && sp.limits.dumbbell) ? (' · manubri fino a ' + sp.limits.dumbbell + ' kg') : '') + '</span></button>';
+    }).join('') +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:6px;font-size:11px;" onclick="closeAdaptSpaceSheet();openTrainingSpaces()">GESTISCI GLI SPAZI</button>' +
+    '</div></div>';
+  document.body.appendChild(sheet);
+  return true;
+}
+window.openAdaptSpaceSheet = openAdaptSpaceSheet;
+
+function applySpaceToProgram(spaceId) {
+  var space = spaceById(spaceId);
+  if (!space || typeof DATA === 'undefined' || !DATA) return;
+  closeAdaptSpaceSheet();
+  var res = adaptProgramToSpace(DATA, space);
+  store.activeProgram = DATA;
+  try {
+    if (typeof persistActiveProgramStructure === 'function') persistActiveProgramStructure();
+    else persist();
+  } catch (_) { try { persist(); } catch (__) {} }
+  if (typeof recordManualAction === 'function') {
+    recordManualAction({ action_type: 'ADAPT_TO_SPACE', changes: { space: space.name, swaps: res.swaps.length } },
+      { reason: 'applySpaceToProgram' });
+  }
+  showAdaptReport(space, res);
+  if (typeof render === 'function') render();
+}
+window.applySpaceToProgram = applySpaceToProgram;
+
+function showAdaptReport(space, res) {
+  closeAdaptSpaceSheet();
+  var sheet = document.createElement('div');
+  sheet.id = 'adapt-space-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10260';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeAdaptSpaceSheet(); };
+  var body = '';
+  if (res.swaps.length) {
+    body += '<div style="font-size:10px;color:var(--gold);font-weight:800;margin:4px 0 6px;">SOSTITUITI (' + res.swaps.length + ')</div>' +
+      res.swaps.map(function (s) {
+        return '<div style="font-size:12px;color:#ccc;padding:6px 0;border-bottom:1px solid #1e1e1e;">' +
+          esc(s.from) + ' <span style="color:var(--gold);">→</span> <b style="color:#fff;">' + esc(s.to) + '</b></div>';
+      }).join('');
+  }
+  if (res.capped.length) {
+    body += '<div style="font-size:10px;color:var(--gold);font-weight:800;margin:14px 0 6px;">CARICHI RIPORTATI AL MASSIMO DISPONIBILE (' + res.capped.length + ')</div>' +
+      '<div style="font-size:12px;color:#ccc;">' + res.capped.map(esc).join(' · ') + '</div>';
+  }
+  if (res.kept.length) {
+    body += '<div style="font-size:10px;color:#e0b040;font-weight:800;margin:14px 0 6px;">LASCIATI COM’ERANO (' + res.kept.length + ')</div>' +
+      '<div style="font-size:11px;color:#888;line-height:1.5;">Per questi la palestra non ha niente che faccia lo stesso lavoro, quindi restano scritti: meglio un esercizio da cambiare a mano che uno sbagliato messo al suo posto.<br><br>' +
+      res.kept.map(esc).join(' · ') + '</div>';
+  }
+  if (!body) body = '<div style="font-size:12px;color:#ccc;">Nessuna modifica: la scheda si può fare tutta in ' + esc(space.name) + '.</div>';
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">ADATTATA A ' + esc(String(space.name).toUpperCase()) + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeAdaptSpaceSheet()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' + body + '</div></div>';
+  document.body.appendChild(sheet);
+}
 
 // The picker searches the same library substitutions use, so whatever comes
 // out of it is an exercise the app already knows: it has a muscle group, and
