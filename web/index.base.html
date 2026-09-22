@@ -29175,9 +29175,56 @@ function toggleSpaceExercise(spaceId, encodedName) {
   if (wasOn) space.exclude.push(key);
   else space.include.push(key);
   try { persist(); } catch (_) {}
-  renderSpaceExercises(spaceId, (document.getElementById('space-ex-q') || {}).value || '');
+  // Only the row that was touched is redrawn. Rebuilding the whole sheet
+  // threw the scroll position and the open groups away on every tap, which
+  // made going through a gym's machines one by one impossible.
+  refreshSpaceExerciseRow(spaceId, name);
 }
 window.toggleSpaceExercise = toggleSpaceExercise;
+
+function refreshSpaceExerciseRow(spaceId, name) {
+  var space = spaceById(spaceId);
+  var row = document.querySelector('#space-exercises-sheet [data-ex-row="' + encodeURIComponent(name) + '"]');
+  if (!space || !row) return;
+  var isOn = exerciseFitsSpace({ name: name, muscle: '', eq: '' }, space);
+  var decided = spaceExerciseState(space, name);
+  var btn = row.querySelector('button');
+  if (btn) {
+    btn.textContent = isOn ? 'C’È' : 'NON C’È';
+    btn.style.borderColor = isOn ? '#4caf50' : '';
+    btn.style.color = isOn ? '#4caf50' : '#666';
+    btn.setAttribute('data-on', isOn ? '1' : '0');
+  }
+  var title = row.querySelector('[data-ex-name]');
+  if (title) title.style.color = isOn ? '#fff' : '#666';
+  var sub = row.querySelector('[data-ex-sub]');
+  if (sub) {
+    var muscle = sub.getAttribute('data-muscle') || '';
+    sub.innerHTML = esc(muscle) + (decided ? ' · <span style="color:var(--gold);">deciso a mano</span>' : '');
+  }
+  updateSpaceExerciseCounts(row);
+}
+
+// The counters follow the row that changed, without redrawing anything else.
+function updateSpaceExerciseCounts(row) {
+  var sheet = document.getElementById('space-exercises-sheet');
+  if (!sheet) return;
+  var group = row && row.closest ? row.closest('details') : null;
+  if (group) {
+    var tally = group.querySelector('[data-group-count]');
+    if (tally) {
+      var all = group.querySelectorAll('[data-ex-row]').length;
+      var on = group.querySelectorAll('[data-ex-row] button[data-on="1"]').length;
+      tally.textContent = on + '/' + all;
+    }
+  }
+  var head = sheet.querySelector('[data-space-count]');
+  if (head) {
+    var total = sheet.querySelectorAll('[data-ex-row]').length;
+    var onAll = sheet.querySelectorAll('[data-ex-row] button[data-on="1"]').length;
+    head.textContent = onAll + '/' + total;
+  }
+}
 
 function closeSpaceExercises() {
   var el = document.getElementById('space-exercises-sheet');
@@ -29213,11 +29260,11 @@ function renderSpaceExercises(spaceId, q) {
 
   function rowHtml(item) {
     var r = item.row;
-    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1e1e1e;">' +
-      '<div style="min-width:0;"><div style="font-size:12px;color:' + (item.on ? '#fff' : '#666') + ';font-weight:700;">' + esc(r.name) + '</div>' +
-      '<div style="font-size:9px;color:#777;margin-top:2px;">' + esc(r.muscle || '') +
+    return '<div data-ex-row="' + encodeURIComponent(r.name) + '" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1e1e1e;">' +
+      '<div style="min-width:0;"><div data-ex-name style="font-size:12px;color:' + (item.on ? '#fff' : '#666') + ';font-weight:700;">' + esc(r.name) + '</div>' +
+      '<div data-ex-sub data-muscle="' + esc(r.muscle || '') + '" style="font-size:9px;color:#777;margin-top:2px;">' + esc(r.muscle || '') +
       (item.decided ? ' · <span style="color:var(--gold);">deciso a mano</span>' : '') + '</div></div>' +
-      '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:5px 10px;' +
+      '<button type="button" class="btn btn-outline" data-on="' + (item.on ? '1' : '0') + '" style="flex:0 0 auto;font-size:10px;padding:5px 10px;' +
       (item.on ? 'border-color:#4caf50;color:#4caf50;' : 'color:#666;') + '" ' +
       'onclick="toggleSpaceExercise(\'' + esc(spaceId) + '\',\'' + encodeURIComponent(r.name) + '\')">' +
       (item.on ? 'C’È' : 'NON C’È') + '</button></div>';
@@ -29246,7 +29293,7 @@ function renderSpaceExercises(spaceId, q) {
       var onHere = items.filter(function (i) { return i.on; }).length;
       return '<details style="border:1px solid #262626;border-radius:8px;margin-bottom:6px;background:#0d0d0d;">' +
         '<summary style="cursor:pointer;padding:10px 12px;font-size:12px;font-weight:800;color:var(--gold);list-style:none;">' +
-        esc(g) + '<span style="float:right;color:#666;font-weight:600;">' + onHere + '/' + items.length + '</span></summary>' +
+        esc(g) + '<span data-group-count style="float:right;color:#666;font-weight:600;">' + onHere + '/' + items.length + '</span></summary>' +
         '<div style="padding:0 12px 8px;">' + items.map(rowHtml).join('') + '</div></details>';
     }).join('');
   }
@@ -29254,7 +29301,7 @@ function renderSpaceExercises(spaceId, q) {
   sheet.innerHTML =
     '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
     '<div class="nurvan-sheet-head">' +
-    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">' + esc(space.name).toUpperCase() + ' · ' + on + '/' + all.length + '</div>' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">' + esc(space.name).toUpperCase() + ' · <span data-space-count>' + on + '/' + all.length + '</span></div>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeSpaceExercises()">CHIUDI</button>' +
     '</div>' +
     '<div class="nurvan-sheet-body">' +
