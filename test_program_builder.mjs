@@ -134,6 +134,28 @@ vm.runInContext(slice('function emptyProgramDraft()', 'function saveAll()'), ctx
   ok(blankReps.repsTarget === '8-10', '2k. and blank fields do not become blank prescriptions');
 }
 
+/* ---------- 2bis. technique and tempo, chosen when writing ---------- */
+//
+// A progression model may add a technique in week six; that is no reason the
+// athlete cannot ask for one in week one, or say how long the pause on a
+// pause bench should be.
+{
+  const withTech = ctx.programExerciseRow({ name: 'Panca piana bilanciere', sets: 3, reps: '5', technique: 'rest_pause', tempo: '3-2-1-0' });
+  ok(withTech.technique === 'rest_pause', '2l. a technique chosen by hand is on the exercise');
+  ok(withTech.sets[2].technique === 'rest_pause' && !withTech.sets[0].technique,
+    '2m. and on the last set, the one it is actually done on');
+  ok(withTech.tempo === '3-2-1-0', '2n. the tempo is kept as written');
+  ok(/2s di pausa in basso/.test(withTech.notes), '2o. and spelled out, so "3-2-1-0" means something to read');
+
+  ok(ctx.tempoExplanation('3-2-1-0') === '3s in discesa · 2s di pausa in basso · 1s in salita',
+    '2p. a zero pause is not mentioned');
+  ok(/esplosiva/.test(ctx.tempoExplanation('4-0-X-0')), '2q. and X is read as an explosive lift');
+  ok(ctx.tempoExplanation('boh') === '', '2r. anything that is not a tempo is left alone');
+
+  const plain = ctx.programExerciseRow({ name: 'Curl manubri', sets: 3 });
+  ok(!plain.technique && !plain.sets.some((s) => s.technique), '2s2. and nothing is added when nothing was asked for');
+}
+
 /* ---------- 3. adding to the program, not to today ---------- */
 function freshProgram() {
   return {
@@ -514,6 +536,14 @@ function loggedProgram() {
     && /openProgramBuilder\('assign'\)/.test(coachUi),
     '4d4. and assigning to a client can start from a blank program, in the client sandbox');
   ok(/onclick="openTrainingSpaces\(\)"/.test(html), '4d5. the training spaces are reachable');
+  ok(/createProgramFromDraft\(\\?'save\\?'\)/.test(html) && /SALVA SENZA ATTIVARE/.test(html),
+    '4d6. a program can be written now and started later, without replacing the active one');
+  ok(/saveProgram\(prog, false\)/.test(html),
+    '4d7. which saves it as not-active rather than quietly switching it on');
+  ok(/Tecnica<select/.test(html) && /Tempo \/ pausa/.test(html),
+    '4d8. and every exercise can be given a technique and a tempo while it is written');
+  ok(/non ha l’attrezzatura per/.test(html) && /mostra tutto/.test(html),
+    '4d9. and a space that hides exercises says so, with a way out of the filter');
   ok(/onclick="duplicateProgramDraftDay\(/.test(html) && />DUPLICA</.test(html),
     '4d2. every day in the builder can be duplicated');
   ok(/\+ AGGIUNGI ALLA SCHEDA/.test(html) && /\+ BONUS DI OGGI/.test(html),
@@ -554,7 +584,26 @@ function loggedProgram() {
   ok(rows.some((r) => r.name === 'Curl bilanciere'), '5a. searching finds the exercise');
   ok(rows.every((r, i) => rows.findIndex((x) => x.name.toLowerCase() === r.name.toLowerCase()) === i),
     '5b. and never offers the same one twice');
-  ok(ctx.exercisePickerRows('').length === 3, '5c. with no search it offers the whole library');
+  // The picker reads every place the app keeps exercises, not only the extra
+  // catalogue: that is how a name could be in the library and missing here.
+  // The real taxonomy is loaded into this context by an earlier section, so
+  // what comes out is the whole library, not the three fixtures.
+  const everything = ctx.exercisePickerRows('');
+  ok(everything.length > 200, '5c. with no search it offers the whole library (' + everything.length + ')');
+  ok(['Panca piana bilanciere', 'Curl bilanciere', 'Squat bilanciere'].every((n) => everything.some((r) => r.name === n)),
+    '5c1. including the extra catalogue');
+  ok(everything.some((r) => r.name === 'Pause bench') && everything.some((r) => r.name === 'Low-bar squat'),
+    '5c2. and the movement taxonomy, which it used to ignore');
+  ctx.EXERCISE_DICTIONARY = [{ normalized: 'Alzate laterali con manubri', muscle: 'SPALLE' }];
+  ctx.window.NURVAN_EXERCISE_TAXONOMY = { EXERCISES: [{ name: 'Pause bench', pattern: 'pushH', role: 'main', equip: 'barbell', level: 1, also: [] }] };
+  const wide = ctx.exercisePickerRows('');
+  ok(wide.some((r) => r.name === 'Alzate laterali con manubri'),
+    '5f. a name that only the import dictionary knows is offered too');
+  ok(wide.some((r) => r.name === 'Pause bench' && r.muscle === 'PETTO'),
+    '5g. and one that only the movement taxonomy knows, filed under its muscle');
+  ok(ctx.exercisePickerRows('pause').some((r) => r.name === 'Pause bench'), '5h. and it is searchable');
+  ctx.EXERCISE_DICTIONARY = [];
+  ctx.window.NURVAN_EXERCISE_TAXONOMY = null;
   ok(ctx.exercisePickerRows('zzzz').length === 0, '5d. and nothing when nothing matches');
   ok(ctx.exercisePickerRows('barbell curl').length === 0 || ctx.exercisePickerRows('barbell').some((r) => r.name === 'Curl bilanciere'),
     '5e. the English name finds it too');

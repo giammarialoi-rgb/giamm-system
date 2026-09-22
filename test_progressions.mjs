@@ -110,6 +110,17 @@ const allRows = (weeks) => weeks.flatMap((w) => w.sessions.flatMap((s) => s.exer
 
   const off = P.weeksFromTemplate(template(), { weeks: 8, modelId: 'technique_intensifier', techniques: 'off' });
   ok(allRows(off).every((e) => !e.sets.some((s) => s.technique)), '4e. and they can be switched off entirely');
+
+  // One the athlete asked for when writing the program outranks the model's.
+  const chosen = template();
+  chosen[0].exercises[2].technique = 'cluster';
+  const kept = P.weeksFromTemplate(chosen, { weeks: 8, modelId: 'volume_wave' });
+  const curls = kept.map((w) => w.sessions[0].exercises[2]);
+  ok(curls[0].sets[curls[0].sets.length - 1].technique === 'cluster',
+    '4f. a technique chosen by hand is there from week one, even under a model that adds none');
+  ok(curls.filter((e, i) => !/Deload/.test(kept[i].label)).every((e) => e.sets.some((s) => s.technique === 'cluster')),
+    '4g. and stays for the whole block');
+  ok(curls[3].sets.every((s) => !s.technique), '4h. except in the deload, which is what a deload is');
 }
 
 /* ---------- 5. which lifts are competition lifts ---------- */

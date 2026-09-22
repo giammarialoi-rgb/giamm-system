@@ -720,8 +720,13 @@
       }
     }
 
+    // A technique the athlete chose by hand outranks the model's: they asked
+    // for it from week one, and a progression is not entitled to drop it.
+    // A deload still clears it - that is what a deload is.
+    if (ex.technique && !ctx.isDeload) technique = ex.technique;
     if (technique && !techniqueAllowed(false, opts)) technique = null;
     if (technique) noteBits.push('Ultima serie: ' + techniqueLabel(technique));
+    if (ex.tempo && !tempo) tempo = ex.tempo;
 
     copy.sets = makeSets(setsCount, reps, null, technique);
     copy.setCount = setsCount;

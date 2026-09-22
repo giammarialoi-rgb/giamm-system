@@ -28990,13 +28990,13 @@ window.addExerciseFromDb = addExerciseFromDb;
 var SPACE_EQUIPMENT = [
   { id: 'bodyweight', label: 'Corpo libero', eq: ['corpo libero', 'bodyweight'] },
   { id: 'bar', label: 'Sbarra / parallele', eq: ['sbarra', 'parallele'] },
-  { id: 'dumbbell', label: 'Manubri', eq: ['manubri'] },
-  { id: 'barbell', label: 'Bilanciere', eq: ['bilanciere'] },
+  { id: 'dumbbell', label: 'Manubri', eq: ['manubri', 'dumbbell'] },
+  { id: 'barbell', label: 'Bilanciere', eq: ['bilanciere', 'barbell'] },
   { id: 'kettlebell', label: 'Kettlebell', eq: ['kettlebell'] },
-  { id: 'band', label: 'Elastici', eq: ['elastici', 'elastico'] },
-  { id: 'bench', label: 'Panca', eq: ['panca'] },
-  { id: 'machine', label: 'Macchinari', eq: ['macchina', 'macchinari'] },
-  { id: 'cable', label: 'Cavi', eq: ['cavi', 'cavo'] },
+  { id: 'band', label: 'Elastici', eq: ['elastici', 'elastico', 'band'] },
+  { id: 'bench', label: 'Panca', eq: ['panca', 'bench'] },
+  { id: 'machine', label: 'Macchinari', eq: ['macchina', 'macchinari', 'machine'] },
+  { id: 'cable', label: 'Cavi', eq: ['cavi', 'cavo', 'cable'] },
   { id: 'smith', label: 'Smith machine', eq: ['smith'] },
   { id: 'cardio', label: 'Cardio (tapis, bike, vogatore…)', eq: [] },
   { id: 'sled', label: 'Slitta', eq: ['sled', 'slitta'] },
@@ -29227,7 +29227,9 @@ function pickerSpaceBarHtml() {
       'Tutta la libreria. <span style="color:var(--gold);cursor:pointer;text-decoration:underline;" onclick="closeExercisePicker();openTrainingSpaces()">Salva uno spazio</span> per vedere solo quello che una palestra ha davvero.</div>';
   }
   var current = store.pickerSpaceId || '';
-  return '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">' +
+  var space = spaceById(current);
+  var hidden = space ? pickerHiddenCount('') : 0;
+  return '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;align-items:center;">' +
     '<span style="font-size:10px;color:#888;margin-right:2px;">Dove:</span>' +
     [{ id: '', name: 'Ovunque' }].concat(list).map(function (sp) {
       var on = current === sp.id;
@@ -29235,7 +29237,15 @@ function pickerSpaceBarHtml() {
         (on ? 'border-color:var(--gold);color:var(--gold);background:rgba(212,175,55,0.12);' : 'color:#888;') +
         '" onclick="setPickerSpace(\'' + esc(sp.id) + '\')">' + esc(sp.name) + '</button>';
     }).join('') +
-    '</div>';
+    '</div>' +
+    // Say what the filter is doing. A shorter list with no explanation reads
+    // as a library with holes in it, which is what it was taken for.
+    (hidden
+      ? ('<div style="font-size:10px;color:#e0b040;margin-bottom:8px;line-height:1.4;">' +
+        esc(space.name) + ' non ha l’attrezzatura per ' + hidden + ' esercizi, quindi qui non compaiono. ' +
+        '<span style="color:var(--gold);cursor:pointer;text-decoration:underline;" onclick="setPickerSpace(\'\')">mostra tutto</span>' +
+        ' · <span style="color:var(--gold);cursor:pointer;text-decoration:underline;" onclick="closeExercisePicker();openTrainingSpaces()">aggiungi attrezzatura</span></div>')
+      : '');
 }
 
 function setPickerSpace(id) {
@@ -29261,6 +29271,25 @@ function closeExercisePicker() {
 }
 window.closeExercisePicker = closeExercisePicker;
 
+// A movement pattern is not a muscle group, but it says which one an
+// exercise belongs to well enough to file it under a heading.
+var PATTERN_GROUP = {
+  squat: 'QUADRICIPITI', lunge: 'QUADRICIPITI', quadIso: 'QUADRICIPITI',
+  hinge: 'FEMORALI', hamIso: 'FEMORALI', glute: 'GLUTEI',
+  calf: 'POLPACCI', tibialis: 'POLPACCI', adductor: 'ADDUTTORI',
+  pushH: 'PETTO', chestIso: 'PETTO',
+  pushV: 'SPALLE', deltLat: 'SPALLE', deltFront: 'SPALLE', deltRear: 'SPALLE', rotator: 'SPALLE',
+  pullV: 'DORSALI', pullH: 'DORSALI', pullIso: 'DORSALI', traps: 'TRAPEZIO',
+  biceps: 'BICIPITI', triceps: 'TRICIPITI', forearm: 'AVAMBRACCI',
+  core: 'CORE', carry: 'CORE', neck: 'COLLO',
+  power: 'CARDIO', conditioning: 'CARDIO', mobility: 'MOBILITÀ'
+};
+
+// Every exercise the app knows, from all four places it keeps them: the extra
+// catalogue, the import dictionary, the movement taxonomy the program
+// generator uses, and whatever the athlete has added. Reading only the first
+// of those is how "Alzate laterali con manubri" could be missing from a
+// picker while sitting in the library the whole time.
 function exercisePickerRows(q, space) {
   var out = [];
   var seen = {};
@@ -29291,13 +29320,39 @@ function exercisePickerRows(q, space) {
     }
     push(row.name, row.muscle, row.eq);
   });
+  // The import dictionary: every name the app can read out of a document.
+  var dict = (typeof EXERCISE_DICTIONARY !== 'undefined' && Array.isArray(EXERCISE_DICTIONARY)) ? EXERCISE_DICTIONARY : [];
+  dict.forEach(function (e) {
+    if (!e || !e.normalized) return;
+    if (query.length >= 2 && String(e.normalized).toLowerCase().indexOf(query) < 0) return;
+    push(e.normalized, e.muscle);
+  });
+  // The movement taxonomy: what the program generator builds sessions from.
+  var tax = (typeof window !== 'undefined' && window.NURVAN_EXERCISE_TAXONOMY) || null;
+  if (tax && tax.EXERCISES) {
+    tax.EXERCISES.forEach(function (e) {
+      if (!e || !e.name) return;
+      if (query.length >= 2 && String(e.name).toLowerCase().indexOf(query) < 0) return;
+      push(e.name, PATTERN_GROUP[e.pattern] || '', e.equip);
+    });
+  }
   (store.customEx || []).forEach(function (c) {
     var name = c && (c.name || c);
     if (!name) return;
     if (query.length >= 2 && String(name).toLowerCase().indexOf(query) < 0) return;
     push(name, c && c.muscle_group);
   });
-  return out.slice(0, 140);
+  return out;
+}
+
+// How much a space is hiding, so the filter can say so instead of looking
+// like a library with holes in it.
+function pickerHiddenCount(q) {
+  try {
+    var all = exercisePickerRows(q, null).length;
+    var shown = exercisePickerRows(q).length;
+    return Math.max(0, all - shown);
+  } catch (_) { return 0; }
 }
 
 // The order a coach thinks in, so the groups are always where they were last
@@ -29469,7 +29524,21 @@ function renderProgramBuilder() {
         '<label style="font-size:9px;color:#888;">' + (exUnit === 'time' ? 'Secondi' : (exUnit === 'cardio' ? 'Minuti' : 'Reps')) +
         '<input type="text" value="' + esc(ex.reps || (exUnit === 'time' ? '30' : (exUnit === 'cardio' ? '20' : '8-10'))) + '" oninput="updateProgramDraftExercise(' + di + ',' + ei + ',\'reps\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
         '<label style="font-size:9px;color:#888;">Recupero<input type="text" value="' + esc(ex.rest || (exUnit === 'cardio' ? '2 min' : '90s')) + '" oninput="updateProgramDraftExercise(' + di + ',' + ei + ',\'rest\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
-        '</div></div>';
+        '</div>' +
+        // Technique and tempo from the first week, decided here rather than
+        // left to whatever a progression model does later.
+        (exUnit === 'cardio' ? '' :
+          '<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:6px;margin-top:6px;">' +
+          '<label style="font-size:9px;color:#888;">Tecnica<select onchange="updateProgramDraftExercise(' + di + ',' + ei + ',\'technique\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '">' +
+          '<option value="">Nessuna</option>' +
+          (typeof getIntensityTechniqueOptions === 'function' ? getIntensityTechniqueOptions() : []).map(function (t) {
+            return '<option value="' + esc(t.id) + '"' + (ex.technique === t.id ? ' selected' : '') + '>' + esc(t.label) + '</option>';
+          }).join('') +
+          '</select></label>' +
+          '<label style="font-size:9px;color:#888;">Tempo / pausa<input type="text" value="' + esc(ex.tempo || '') + '" placeholder="' + (exUnit === 'time' ? 'es. isometria' : 'es. 3-2-1-0') + '" oninput="updateProgramDraftExercise(' + di + ',' + ei + ',\'tempo\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+          '</div>' +
+          (ex.tempo ? '<div style="font-size:9px;color:#666;margin-top:4px;">' + esc(tempoExplanation(ex.tempo)) + '</div>' : '')) +
+        '</div>';
     }).join('');
     return '<div class="card" style="padding:12px;margin-bottom:10px;border:1px solid #333;">' +
       '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">' +
@@ -29501,9 +29570,14 @@ function renderProgramBuilder() {
     '<button type="button" class="btn btn-outline" style="width:100%;font-size:10px;padding:8px;color:#c66;border-color:#c66;" onclick="discardProgramDraft()">SVUOTA LA BOZZA</button>' +
     '</div>' +
     '<div class="nurvan-sheet-foot">' +
-    '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="createProgramFromDraft()">' +
-    (d.target === 'library' ? 'SALVA NEL MIO DATABASE' : (d.target === 'assign' ? 'USA PER IL CLIENTE' : 'CREA E ATTIVA')) +
-    '</button></div></div>';
+    // Creating and using are two different decisions: a program can be
+    // written today and started in three weeks.
+    (d.target === 'active'
+      ? '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;padding:12px;" onclick="createProgramFromDraft(\'save\')">SALVA SENZA ATTIVARE</button>' +
+        '<button type="button" class="btn btn-primary" style="flex:1;font-size:11px;padding:12px;" onclick="createProgramFromDraft()">CREA E ATTIVA</button>'
+      : '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="createProgramFromDraft()">' +
+        (d.target === 'library' ? 'SALVA NEL MIO DATABASE' : 'USA PER IL CLIENTE') + '</button>') +
+    '</div></div>';
   document.body.appendChild(sheet);
 }
 
@@ -30067,6 +30141,21 @@ function programFromDraft(draft) {
 // The one shape a hand-written exercise takes, used by the builder and by the
 // add-to-program below, so an exercise added later is the same kind of thing
 // as one written at the start.
+// "3-2-1-0" is four numbers until somebody says what they are: eccentric,
+// pause at the bottom, concentric, pause at the top. A pause bench written
+// 3-2-1-0 is two seconds on the chest, and the app can say so.
+function tempoExplanation(raw) {
+  var m = String(raw || '').match(/^(\d+)\s*[-\/]\s*(\d+)\s*[-\/]\s*([\dxX]+)(?:\s*[-\/]\s*(\d+))?$/);
+  if (!m) return '';
+  var bits = [];
+  bits.push(m[1] + 's in discesa');
+  if (Number(m[2]) > 0) bits.push(m[2] + 's di pausa in basso');
+  bits.push(/^[xX]$/.test(m[3]) ? 'salita esplosiva' : (m[3] + 's in salita'));
+  if (m[4] && Number(m[4]) > 0) bits.push(m[4] + 's di pausa in alto');
+  return bits.join(' · ');
+}
+window.tempoExplanation = tempoExplanation;
+
 function programExerciseRow(ex) {
   if (ex.unit === 'circuit' && ex.circuit) {
     // A circuit is its own thing: stations and a clock, not sets and reps.
@@ -30099,7 +30188,10 @@ function programExerciseRow(ex) {
     reps = String(ex.reps || '8-10').trim() || '8-10';
     for (s = 0; s < setCount; s++) sets.push({ reps: reps, target_load: null });
   }
-  return {
+  // A technique chosen by hand belongs to the exercise from week one, and is
+  // written onto the last set - the set it is actually done on.
+  if (ex.technique && sets.length) sets[sets.length - 1].technique = ex.technique;
+  var row = {
     name: ex.name,
     name_original: ex.name,
     muscle_groups: ex.muscle ? [ex.muscle] : [],
@@ -30109,10 +30201,18 @@ function programExerciseRow(ex) {
     repsTarget: reps,
     rest: String(ex.rest || (unit === 'cardio' ? '2 min' : '90s')).trim() || '90s'
   };
+  if (ex.technique) row.technique = ex.technique;
+  if (ex.tempo) {
+    row.tempo = String(ex.tempo).trim();
+    var says = tempoExplanation(row.tempo);
+    if (says) row.notes = says;
+  }
+  return row;
 }
 
-async function createProgramFromDraft() {
+async function createProgramFromDraft(how) {
   var d = programDraft();
+  var saveOnly = how === 'save';
   if (!String(d.title || '').trim()) {
     if (typeof showToast === 'function') showToast('Dai un nome alla scheda', 'warning');
     return;
@@ -30126,12 +30226,15 @@ async function createProgramFromDraft() {
   var engineForMsg = (typeof window !== 'undefined' && window.NurvanProgressions) || null;
   var modelForMsg = engineForMsg ? engineForMsg.get(d.modelId || 'none') : null;
   var target = d.target || 'active';
-  var head = target === 'library' ? 'Salvare "' : (target === 'assign' ? 'Usare "' : 'Creare e attivare "');
+  if (saveOnly) target = 'save';
+  var head = (target === 'library' || target === 'save') ? 'Salvare "' : (target === 'assign' ? 'Usare "' : 'Creare e attivare "');
   var tail = target === 'library'
     ? '\n\nFinisce nel tuo database schede. Non tocca la tua scheda attiva né quella di un cliente.'
-    : (target === 'assign'
-      ? '\n\nDiventa la bozza per il cliente: la modifichi e poi la invii con INVIA.'
-      : '\n\nIl programma attivo verrà sostituito.');
+    : (target === 'save'
+      ? '\n\nLa trovi in «Programmi Salvati» e la attivi quando vuoi. La tua scheda attiva non cambia.'
+      : (target === 'assign'
+        ? '\n\nDiventa la bozza per il cliente: la modifichi e poi la invii con INVIA.'
+        : '\n\nIl programma attivo verrà sostituito.'));
   var msg = head + String(d.title).trim() + '"?\n\n' +
     withExercises.length + ' giorni · ' + (Number(d.weeks) || 8) + ' settimane' +
     (modelForMsg ? '\nProgressione: ' + modelForMsg.label : '') +
@@ -30154,6 +30257,25 @@ async function createProgramFromDraft() {
       persist();
       closeProgramBuilder();
       if (typeof navigate === 'function') navigate('coachLibrary');
+      return;
+    }
+
+    // Written now, started whenever: saved to the program library and left
+    // there. Nothing about the active program changes.
+    if (target === 'save') {
+      await withBusy(async function () {
+        if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
+          await GiammariaPersistence.saveProgram(prog, false);
+        }
+        store.programDraft = emptyProgramDraft();
+        persist();
+        try { await syncProgramLibraryFromIdb(); } catch (_) {}
+      }, 'Salvo la scheda…', { immediate: true, maxMs: 60000 });
+      closeProgramBuilder();
+      if (typeof showToast === 'function') {
+        showToast('Salvata: la trovi in «Programmi Salvati», da attivare quando vuoi', 'success');
+      }
+      if (typeof render === 'function') render();
       return;
     }
 
