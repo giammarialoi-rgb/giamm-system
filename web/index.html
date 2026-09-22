@@ -50470,6 +50470,18 @@ function renderPrograms(c){
       <button class="btn btn-primary" style="width:100%;font-size:12px;" onclick="openProgramBuilder()">${(store.programDraft && programDraftExerciseCount(store.programDraft)) ? 'RIPRENDI LA BOZZA' : 'APRI IL COSTRUTTORE'}</button>
     </div>
 
+    <div class="card" id="training-spaces-card" style="margin-bottom:16px;border:1px solid #333;">
+      <div class="card-header"><h3 style="font-size:13px;color:var(--gold);font-weight:800;margin:0;">SPAZI DI ALLENAMENTO</h3></div>
+      <p style="font-size:11px;color:#888;margin:0 0 10px;">Palestra, sala di casa, parco: segna cosa c'è in ognuno e il selettore esercizi mostrerà solo quello che si può fare lì.</p>
+      ${(() => {
+        const list = (store.trainingSpaces || []);
+        if (!list.length) return '';
+        return `<div style="font-size:11px;color:#ccc;background:#141414;border:1px solid #2a2a2a;border-radius:8px;padding:9px 10px;margin-bottom:10px;">` +
+          list.map((sp) => esc(sp.name) + ' <span style="color:#666;">· ' + ((sp.equip || []).length) + ' attrezzature</span>').join('<br>') + '</div>';
+      })()}
+      <button class="btn btn-outline" style="width:100%;font-size:12px;" onclick="openTrainingSpaces()">${(store.trainingSpaces || []).length ? 'GESTISCI GLI SPAZI' : 'AGGIUNGI UNO SPAZIO'}</button>
+    </div>
+
     <div class="card" id="program-create-template" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
       <div class="card-header"><h3 style="font-size:13px;color:var(--gold);font-weight:800;margin:0;">GENERA PROGRAMMA (rules-based)</h3></div>
       <p style="font-size:11px;color:#888;margin:0 0 10px;">Template strutturati (non AI random). Puoi attivare e modificare dopo.</p>
@@ -62265,6 +62277,216 @@ window.addExerciseFromDb = addExerciseFromDb;
    legitimate (an accessory tried once, a lift that belongs in the plan).
    =================================================================== */
 
+/* ---------- where the training actually happens ---------- */
+//
+// "Palestra Fitness X has ten machines and no cables" is something a coach
+// knows and the app did not. A space is a name and the kit that is in it;
+// once one is chosen, the picker stops offering exercises that cannot be
+// done there. Nothing is deleted and nothing is hidden for good - the filter
+// is a choice, and "Ovunque" turns it off.
+
+var SPACE_EQUIPMENT = [
+  { id: 'bodyweight', label: 'Corpo libero', eq: ['corpo libero', 'bodyweight'] },
+  { id: 'bar', label: 'Sbarra / parallele', eq: ['sbarra', 'parallele'] },
+  { id: 'dumbbell', label: 'Manubri', eq: ['manubri'] },
+  { id: 'barbell', label: 'Bilanciere', eq: ['bilanciere'] },
+  { id: 'kettlebell', label: 'Kettlebell', eq: ['kettlebell'] },
+  { id: 'band', label: 'Elastici', eq: ['elastici', 'elastico'] },
+  { id: 'bench', label: 'Panca', eq: ['panca'] },
+  { id: 'machine', label: 'Macchinari', eq: ['macchina', 'macchinari'] },
+  { id: 'cable', label: 'Cavi', eq: ['cavi', 'cavo'] },
+  { id: 'smith', label: 'Smith machine', eq: ['smith'] },
+  { id: 'cardio', label: 'Cardio (tapis, bike, vogatore…)', eq: [] },
+  { id: 'sled', label: 'Slitta', eq: ['sled', 'slitta'] },
+  { id: 'rope', label: 'Funi / corda', eq: ['funi', 'corda'] },
+  { id: 'plate', label: 'Dischi', eq: ['disco', 'dischi', 'plate'] },
+  { id: 'box', label: 'Plyo box', eq: ['plyo box', 'box'] },
+  { id: 'outdoor', label: 'Esterno / piscina', eq: ['outdoor', 'piscina'] }
+];
+
+var SPACE_PRESETS = [
+  { name: 'Casa a corpo libero', equip: ['bodyweight', 'band'] },
+  { name: 'Casa con manubri', equip: ['bodyweight', 'dumbbell', 'band', 'bench'] },
+  { name: 'Palestra completa', equip: SPACE_EQUIPMENT.map(function (e) { return e.id; }) }
+];
+
+function trainingSpaces() {
+  if (!Array.isArray(store.trainingSpaces)) store.trainingSpaces = [];
+  return store.trainingSpaces;
+}
+window.trainingSpaces = trainingSpaces;
+
+function spaceById(id) {
+  if (!id) return null;
+  return trainingSpaces().filter(function (s) { return s.id === id; })[0] || null;
+}
+
+// An exercise belongs to a space when the space has the kit it needs. The
+// taxonomy is the first source - it says what an exercise is done with - and
+// the catalogue's own wording is the fallback.
+function equipTokensFor(row) {
+  var out = [];
+  var tax = (typeof window !== 'undefined' && window.NURVAN_EXERCISE_TAXONOMY) || null;
+  if (tax && tax.EXERCISES) {
+    var want = String(row.name || '').toLowerCase();
+    for (var i = 0; i < tax.EXERCISES.length; i++) {
+      var e = tax.EXERCISES[i];
+      if (String(e.name).toLowerCase() !== want) continue;
+      out.push(e.equip);
+      (e.also || []).forEach(function (a) { out.push(a); });
+      break;
+    }
+  }
+  var api = (typeof window !== 'undefined') ? window.NurvanCardio : null;
+  if (api && api.isCardio && api.isCardio(row.name)) out.push('cardio');
+  var eq = String(row.eq || '').toLowerCase();
+  if (eq) {
+    SPACE_EQUIPMENT.forEach(function (slot) {
+      slot.eq.forEach(function (word) { if (eq.indexOf(word) >= 0 && out.indexOf(slot.id) < 0) out.push(slot.id); });
+    });
+  }
+  return out;
+}
+
+function exerciseFitsSpace(row, space) {
+  if (!space || !Array.isArray(space.equip) || !space.equip.length) return true;
+  var tokens = equipTokensFor(row);
+  // An exercise the app cannot place is never hidden: a filter that silently
+  // drops things a coach wrote is worse than one that lets a few through.
+  if (!tokens.length) return true;
+  for (var i = 0; i < tokens.length; i++) {
+    if (space.equip.indexOf(tokens[i]) >= 0) return true;
+  }
+  return false;
+}
+
+function saveTrainingSpace(space) {
+  var list = trainingSpaces();
+  var existing = space.id ? spaceById(space.id) : null;
+  if (existing) {
+    existing.name = space.name;
+    existing.equip = space.equip.slice();
+    existing.note = space.note || '';
+  } else {
+    list.push({
+      id: 'sp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      name: space.name,
+      equip: (space.equip || []).slice(),
+      note: space.note || ''
+    });
+  }
+  try { persist(); } catch (_) {}
+  return list;
+}
+window.saveTrainingSpace = saveTrainingSpace;
+
+function removeTrainingSpace(id) {
+  var space = spaceById(id);
+  if (!space) return;
+  if (!confirm('Eliminare "' + space.name + '"? Le schede già create non cambiano.')) return;
+  store.trainingSpaces = trainingSpaces().filter(function (s) { return s.id !== id; });
+  if (store.activeSpaceId === id) store.activeSpaceId = '';
+  try { persist(); } catch (_) {}
+  renderTrainingSpaces();
+  if (typeof currentView !== 'undefined' && currentView === 'programs' && typeof render === 'function') render();
+}
+window.removeTrainingSpace = removeTrainingSpace;
+
+function closeTrainingSpaces() {
+  var el = document.getElementById('spaces-sheet');
+  if (el) el.remove();
+  if (typeof currentView !== 'undefined' && currentView === 'programs' && typeof render === 'function') render();
+}
+window.closeTrainingSpaces = closeTrainingSpaces;
+
+function openTrainingSpaces() {
+  renderTrainingSpaces();
+}
+window.openTrainingSpaces = openTrainingSpaces;
+
+function renderTrainingSpaces() {
+  var existing = document.getElementById('spaces-sheet');
+  if (existing) existing.remove();
+  var list = trainingSpaces();
+  var inputStyle = 'padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;box-sizing:border-box;';
+  var sheet = document.createElement('div');
+  sheet.id = 'spaces-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10240';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeTrainingSpaces(); };
+  var rows = list.map(function (sp) {
+    return '<div class="card" style="padding:12px;margin-bottom:8px;border:1px solid #333;">' +
+      '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">' +
+      '<input type="text" value="' + esc(sp.name) + '" oninput="updateSpaceField(\'' + esc(sp.id) + '\',\'name\',this.value)" style="flex:1;font-weight:800;' + inputStyle + '">' +
+      '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#c66;border-color:#c66;flex:0 0 auto;" onclick="removeTrainingSpace(\'' + esc(sp.id) + '\')">ELIMINA</button>' +
+      '</div>' +
+      '<div style="display:flex;gap:5px;flex-wrap:wrap;">' +
+      SPACE_EQUIPMENT.map(function (e) {
+        var on = (sp.equip || []).indexOf(e.id) >= 0;
+        return '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:5px 9px;' +
+          (on ? 'border-color:var(--gold);color:var(--gold);background:rgba(212,175,55,0.12);' : 'color:#777;') +
+          '" onclick="toggleSpaceEquip(\'' + esc(sp.id) + '\',\'' + e.id + '\')">' + esc(e.label) + '</button>';
+      }).join('') +
+      '</div>' +
+      '<div style="font-size:10px;color:#888;margin-top:8px;">' + ((sp.equip || []).length) + ' attrezzature · ' + spaceExerciseCount(sp) + ' esercizi disponibili</div>' +
+      '</div>';
+  }).join('');
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">SPAZI DI ALLENAMENTO</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeTrainingSpaces()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<p style="font-size:11px;color:#888;line-height:1.45;margin:4px 0 12px;">Una palestra, una sala pesi di casa, un parco. Segna cosa c\'è: quando scrivi una scheda per quel posto, il selettore esercizi mostra solo quello che si può davvero fare lì.</p>' +
+    (rows || '<div style="font-size:11px;color:#777;padding:6px 0 12px;">Nessuno spazio salvato.</div>') +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;margin:12px 0 6px;">AGGIUNGI</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+    SPACE_PRESETS.map(function (p, i) {
+      return '<button type="button" class="btn btn-outline" style="flex:1;min-width:130px;font-size:11px;padding:8px;" onclick="addSpaceFromPreset(' + i + ')">' + esc(p.name) + '</button>';
+    }).join('') +
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:130px;font-size:11px;padding:8px;" onclick="addSpaceFromPreset(-1)">Vuoto</button>' +
+    '</div>' +
+    '</div></div>';
+  document.body.appendChild(sheet);
+}
+window.renderTrainingSpaces = renderTrainingSpaces;
+
+function spaceExerciseCount(sp) {
+  try {
+    return exercisePickerRows('', sp).length;
+  } catch (_) { return 0; }
+}
+
+function addSpaceFromPreset(idx) {
+  var preset = idx >= 0 ? SPACE_PRESETS[idx] : { name: 'Nuovo spazio', equip: [] };
+  var name = prompt('Nome dello spazio', preset.name === 'Nuovo spazio' ? '' : preset.name);
+  if (name === null) return;
+  saveTrainingSpace({ name: String(name).trim() || preset.name, equip: preset.equip.slice() });
+  renderTrainingSpaces();
+}
+window.addSpaceFromPreset = addSpaceFromPreset;
+
+function updateSpaceField(id, field, value) {
+  var sp = spaceById(id);
+  if (!sp) return;
+  sp[field] = value;
+  try { persist(); } catch (_) {}
+}
+window.updateSpaceField = updateSpaceField;
+
+function toggleSpaceEquip(id, equipId) {
+  var sp = spaceById(id);
+  if (!sp) return;
+  if (!Array.isArray(sp.equip)) sp.equip = [];
+  var at = sp.equip.indexOf(equipId);
+  if (at >= 0) sp.equip.splice(at, 1);
+  else sp.equip.push(equipId);
+  try { persist(); } catch (_) {}
+  renderTrainingSpaces();
+}
+window.toggleSpaceEquip = toggleSpaceEquip;
+
 // The picker searches the same library substitutions use, so whatever comes
 // out of it is an exercise the app already knows: it has a muscle group, and
 // a picture when one exists.
@@ -62286,7 +62508,8 @@ function openExercisePicker(opts) {
     '<div class="nurvan-sheet-body">' +
     '<input id="ex-picker-q" type="text" placeholder="Cerca: panca, squat, rematore…" autocomplete="off" ' +
     'oninput="renderExercisePickerResults(this.value)" ' +
-    'style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;margin-bottom:10px;box-sizing:border-box;">' +
+    'style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;margin-bottom:8px;box-sizing:border-box;">' +
+    pickerSpaceBarHtml() +
     '<div id="ex-picker-results"></div>' +
     '</div></div>';
   document.body.appendChild(sheet);
@@ -62294,21 +62517,60 @@ function openExercisePicker(opts) {
 }
 window.openExercisePicker = openExercisePicker;
 
+// Which space the picker is filtering by, changeable without leaving it.
+function pickerSpaceBarHtml() {
+  var list = trainingSpaces();
+  if (!list.length) {
+    return '<div style="font-size:10px;color:#666;margin-bottom:8px;">' +
+      'Tutta la libreria. <span style="color:var(--gold);cursor:pointer;text-decoration:underline;" onclick="closeExercisePicker();openTrainingSpaces()">Salva uno spazio</span> per vedere solo quello che una palestra ha davvero.</div>';
+  }
+  var current = store.pickerSpaceId || '';
+  return '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">' +
+    '<span style="font-size:10px;color:#888;margin-right:2px;">Dove:</span>' +
+    [{ id: '', name: 'Ovunque' }].concat(list).map(function (sp) {
+      var on = current === sp.id;
+      return '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:10px;padding:4px 9px;' +
+        (on ? 'border-color:var(--gold);color:var(--gold);background:rgba(212,175,55,0.12);' : 'color:#888;') +
+        '" onclick="setPickerSpace(\'' + esc(sp.id) + '\')">' + esc(sp.name) + '</button>';
+    }).join('') +
+    '</div>';
+}
+
+function setPickerSpace(id) {
+  store.pickerSpaceId = id || '';
+  try { persist(); } catch (_) {}
+  var bar = document.querySelector('#ex-picker-sheet .nurvan-sheet-body');
+  var input = document.getElementById('ex-picker-q');
+  var q = input ? input.value : '';
+  if (bar) {
+    var holder = bar.querySelector('div[style*="Dove"]');
+    // Redraw the bar and the list together: the counts change with the space.
+    bar.innerHTML = (input ? input.outerHTML : '') + pickerSpaceBarHtml() + '<div id="ex-picker-results"></div>';
+    var again = document.getElementById('ex-picker-q');
+    if (again) { again.value = q; again.oninput = function () { renderExercisePickerResults(this.value); }; }
+  }
+  renderExercisePickerResults(q);
+}
+window.setPickerSpace = setPickerSpace;
+
 function closeExercisePicker() {
   var el = document.getElementById('ex-picker-sheet');
   if (el) el.remove();
 }
 window.closeExercisePicker = closeExercisePicker;
 
-function exercisePickerRows(q) {
+function exercisePickerRows(q, space) {
   var out = [];
   var seen = {};
-  function push(name, muscle) {
+  var where = (space === undefined) ? spaceById(store.pickerSpaceId) : space;
+  function push(name, muscle, eq) {
     var clean = String(name || '').trim();
     var key = clean.toLowerCase();
     if (!clean || seen[key]) return;
     seen[key] = true;
-    out.push({ name: clean, muscle: String(muscle || '').trim() });
+    var row = { name: clean, muscle: String(muscle || '').trim(), eq: String(eq || '').trim() };
+    if (!exerciseFitsSpace(row, where)) return;
+    out.push(row);
   }
   var query = String(q || '').trim().toLowerCase();
   if (query.length >= 2 && typeof ExerciseDatabaseService !== 'undefined' && ExerciseDatabaseService.search) {
@@ -62325,7 +62587,7 @@ function exercisePickerRows(q) {
       var hay = (row.name + ' ' + (row.en || '') + ' ' + (row.aliases || []).join(' ')).toLowerCase();
       if (hay.indexOf(query) < 0) return;
     }
-    push(row.name, row.muscle);
+    push(row.name, row.muscle, row.eq);
   });
   (store.customEx || []).forEach(function (c) {
     var name = c && (c.name || c);
@@ -62336,21 +62598,72 @@ function exercisePickerRows(q) {
   return out.slice(0, 140);
 }
 
+// The order a coach thinks in, so the groups are always where they were last
+// time rather than wherever the library happened to list them.
+var PICKER_GROUP_ORDER = ['PETTO', 'PETTORALI', 'DORSALI', 'SCHIENA', 'TRAPEZIO', 'SPALLE', 'DELTOIDI',
+  'BICIPITI', 'TRICIPITI', 'BRACCIA', 'AVAMBRACCI',
+  'QUADRICIPITI', 'FEMORALI', 'GLUTEI', 'ADDUTTORI', 'POLPACCI', 'GAMBE',
+  'ADDOME', 'OBLIQUI', 'CORE', 'COLLO', 'CARDIO'];
+
+function pickerGroupOf(muscle) {
+  var m = String(muscle || '').trim().toUpperCase();
+  if (!m) return 'ALTRO';
+  for (var i = 0; i < PICKER_GROUP_ORDER.length; i++) {
+    if (m === PICKER_GROUP_ORDER[i]) return PICKER_GROUP_ORDER[i];
+  }
+  return m;
+}
+
+function pickerRowHtml(r) {
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #1e1e1e;">' +
+    '<div style="min-width:0;"><div style="font-size:13px;color:#fff;font-weight:700;">' + esc(r.name) + '</div>' +
+    (r.muscle ? '<div style="font-size:10px;color:var(--gold);margin-top:2px;">' + esc(r.muscle) + '</div>' : '') + '</div>' +
+    '<button type="button" class="btn btn-primary" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" ' +
+    'onclick="pickExerciseFromPicker(\'' + encodeURIComponent(r.name) + '\',\'' + encodeURIComponent(r.muscle) + '\')">SCEGLI</button>' +
+    '</div>';
+}
+
+// Two hundred names in one column is not a list, it is a scroll. Without a
+// search the picker shows the muscle groups closed, so the library is read a
+// group at a time; a search flattens them again, because hiding what somebody
+// just searched for behind a heading helps nobody.
 function renderExercisePickerResults(q) {
   var box = document.getElementById('ex-picker-results');
   if (!box) return;
+  var query = String(q || '').trim();
   var rows = exercisePickerRows(q);
   if (!rows.length) {
     box.innerHTML = '<div style="font-size:11px;color:#666;text-align:center;padding:16px;">Nessun esercizio trovato. Puoi scriverne uno nuovo dal database esercizi.</div>';
     return;
   }
-  box.innerHTML = rows.map(function (r) {
-    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #1e1e1e;">' +
-      '<div style="min-width:0;"><div style="font-size:13px;color:#fff;font-weight:700;">' + esc(r.name) + '</div>' +
-      (r.muscle ? '<div style="font-size:10px;color:var(--gold);margin-top:2px;">' + esc(r.muscle) + '</div>' : '') + '</div>' +
-      '<button type="button" class="btn btn-primary" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" ' +
-      'onclick="pickExerciseFromPicker(\'' + encodeURIComponent(r.name) + '\',\'' + encodeURIComponent(r.muscle) + '\')">SCEGLI</button>' +
-      '</div>';
+  if (query.length >= 2) {
+    box.innerHTML = '<div style="font-size:10px;color:#888;margin-bottom:6px;">' + rows.length + ' risultati</div>' +
+      rows.map(pickerRowHtml).join('');
+    return;
+  }
+  var groups = {};
+  rows.forEach(function (r) {
+    var g = pickerGroupOf(r.muscle);
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(r);
+  });
+  // Known groups in a coach's own order, anything else after them, and the
+  // catch-all last of all - a group called ALTRO at the top would be absurd.
+  var rank = function (g) {
+    if (g === 'ALTRO') return 999;
+    var at = PICKER_GROUP_ORDER.indexOf(g);
+    return at < 0 ? 500 : at;
+  };
+  var names = Object.keys(groups).sort(function (a, b) {
+    var d = rank(a) - rank(b);
+    return d !== 0 ? d : (a < b ? -1 : 1);
+  });
+  box.innerHTML = names.map(function (g) {
+    return '<details style="border:1px solid #262626;border-radius:8px;margin-bottom:6px;background:#0d0d0d;">' +
+      '<summary style="cursor:pointer;padding:10px 12px;font-size:12px;font-weight:800;color:var(--gold);letter-spacing:0.5px;list-style:none;">' +
+      esc(g) + '<span style="float:right;color:#666;font-weight:600;">' + groups[g].length + '</span></summary>' +
+      '<div style="padding:0 12px 8px;">' + groups[g].map(pickerRowHtml).join('') + '</div>' +
+      '</details>';
   }).join('');
 }
 window.renderExercisePickerResults = renderExercisePickerResults;
@@ -62384,8 +62697,29 @@ function programDraftExerciseCount(d) {
   return (d && d.days || []).reduce(function (n, day) { return n + ((day.exercises || []).length); }, 0);
 }
 
-function openProgramBuilder() {
-  programDraft();
+// Which space this program is being written for, shown where it is being
+// written rather than only inside the picker.
+function builderSpaceLineHtml() {
+  var list = trainingSpaces();
+  if (!list.length) {
+    return '<div style="font-size:11px;color:#777;margin:0 0 12px;">Nessuno spazio salvato: il selettore mostra tutta la libreria. ' +
+      '<span style="color:var(--gold);cursor:pointer;text-decoration:underline;" onclick="openTrainingSpaces()">Aggiungine uno</span></div>';
+  }
+  var current = spaceById(store.pickerSpaceId);
+  return '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 12px;">' +
+    '<span style="font-size:10px;color:#888;">Esercizi di:</span>' +
+    '<b style="font-size:12px;color:' + (current ? 'var(--gold)' : '#ccc') + ';">' + esc(current ? current.name : 'tutta la libreria') + '</b>' +
+    '<span style="font-size:10px;color:var(--gold);cursor:pointer;text-decoration:underline;" onclick="openTrainingSpaces()">gestisci</span>' +
+    '</div>';
+}
+
+// Where the finished program goes: the athlete's own active program, the
+// coach's personal library, or the client sandbox that ASSEGNA opens. The
+// builder is the same in all three; only the last step differs.
+function openProgramBuilder(target) {
+  var d = programDraft();
+  if (target === 'library' || target === 'assign') d.target = target;
+  else if (!d.target) d.target = 'active';
   renderProgramBuilder();
 }
 window.openProgramBuilder = openProgramBuilder;
@@ -62457,15 +62791,17 @@ function renderProgramBuilder() {
     '</div>' +
     '<div class="nurvan-sheet-body">' +
     '<label style="font-size:9px;color:#888;display:block;margin-bottom:12px;">Nome della scheda<input type="text" value="' + esc(d.title || '') + '" placeholder="Es. Upper/Lower autunno" oninput="updateProgramDraftField(\'title\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
-    '<p style="font-size:11px;color:#888;margin:0 0 12px;line-height:1.45;">Scrivi una settimana di allenamento. Sotto decidi quanto dura la scheda e come deve progredire.</p>' +
+    '<p style="font-size:11px;color:#888;margin:0 0 10px;line-height:1.45;">Scrivi una settimana di allenamento. Sotto decidi quanto dura la scheda e come deve progredire.</p>' +
+    builderSpaceLineHtml() +
     daysHtml +
     '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;padding:10px;margin-bottom:14px;" onclick="addProgramDraftDay()">+ AGGIUNGI GIORNO</button>' +
     programDraftProgressionHtml(d, inputStyle) +
     '<button type="button" class="btn btn-outline" style="width:100%;font-size:10px;padding:8px;color:#c66;border-color:#c66;" onclick="discardProgramDraft()">SVUOTA LA BOZZA</button>' +
     '</div>' +
     '<div class="nurvan-sheet-foot">' +
-    '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="createProgramFromDraft()">CREA E ATTIVA</button>' +
-    '</div></div>';
+    '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="createProgramFromDraft()">' +
+    (d.target === 'library' ? 'SALVA NEL MIO DATABASE' : (d.target === 'assign' ? 'USA PER IL CLIENTE' : 'CREA E ATTIVA')) +
+    '</button></div></div>';
   document.body.appendChild(sheet);
 }
 
@@ -63087,15 +63423,59 @@ async function createProgramFromDraft() {
   var skipped = (d.days || []).length - withExercises.length;
   var engineForMsg = (typeof window !== 'undefined' && window.NurvanProgressions) || null;
   var modelForMsg = engineForMsg ? engineForMsg.get(d.modelId || 'none') : null;
-  var msg = 'Creare e attivare "' + String(d.title).trim() + '"?\n\n' +
+  var target = d.target || 'active';
+  var head = target === 'library' ? 'Salvare "' : (target === 'assign' ? 'Usare "' : 'Creare e attivare "');
+  var tail = target === 'library'
+    ? '\n\nFinisce nel tuo database schede. Non tocca la tua scheda attiva né quella di un cliente.'
+    : (target === 'assign'
+      ? '\n\nDiventa la bozza per il cliente: la modifichi e poi la invii con INVIA.'
+      : '\n\nIl programma attivo verrà sostituito.');
+  var msg = head + String(d.title).trim() + '"?\n\n' +
     withExercises.length + ' giorni · ' + (Number(d.weeks) || 8) + ' settimane' +
     (modelForMsg ? '\nProgressione: ' + modelForMsg.label : '') +
     (skipped ? '\n' + skipped + ' giorno/i vuoto/i non verranno inclusi.' : '') +
-    '\n\nIl programma attivo verrà sostituito.';
+    tail;
   if (!confirm(msg)) return;
   try {
     var built = programFromDraft(d);
     var prog = normalizeProgram(built);
+
+    // Into the coach's own library: saved, not activated, and nobody's active
+    // program is touched.
+    if (target === 'library') {
+      if (typeof saveCanonicalToCoachLibrary !== 'function') {
+        if (typeof showToast === 'function') showToast('Database coach non disponibile qui.', 'warning');
+        return;
+      }
+      await saveCanonicalToCoachLibrary(prog, 'scritta a mano');
+      store.programDraft = emptyProgramDraft();
+      persist();
+      closeProgramBuilder();
+      if (typeof navigate === 'function') navigate('coachLibrary');
+      return;
+    }
+
+    // Into the client sandbox: it becomes the draft ASSEGNA is holding, and
+    // nothing is written to the coach's own storage or to the cloud.
+    if (target === 'assign' || (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox())) {
+      DATA = prog;
+      DATA.nutrition = null;
+      DATA.supplementation = null;
+      DATA.therapy = null;
+      DATA.exams = null;
+      store.activeProgram = DATA;
+      store.activeProgramId = prog.id;
+      currentWeek = 1;
+      currentDay = 0;
+      if (DATA.weeks && DATA.weeks.length) store.prefs.duration = DATA.weeks.length;
+      store.programDraft = emptyProgramDraft();
+      persist();
+      closeProgramBuilder();
+      if (typeof showToast === 'function') showToast('Bozza cliente: ' + prog.title + ' — modifica e poi INVIA', 'success');
+      if (typeof navigate === 'function') navigate('training');
+      if (typeof render === 'function') render();
+      return;
+    }
     await withBusy(async function () {
       await maybeClearLogsOnProgramSwitch(prog.id);
       if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
@@ -68585,6 +68965,7 @@ function openAssignChooser(clientId, name) {
     '<h2>Cosa vuoi assegnare a ' + esc(name || 'cliente') + '?</h2>' +
     '<p class="cp-help">Si apre uno <b style="color:#fff;">spazio cliente separato</b> dal tuo allenamento. Importa o scegli, modifica, poi INVIA. Solo «usa scheda attiva» parte dalla tua come base.</p>' +
     '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'import\')">IMPORTA PDF / EXCEL / WORD</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'build\')">SCRIVI UNA SCHEDA DA ZERO</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'mylib\')">DAL MIO DATABASE</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'programs\')">DATABASE PROGRAMMI (NURVAN)</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'copy\')">USA SCHEDA ATTIVA COME BASE</button>' +
@@ -68626,6 +69007,10 @@ function beginAssignSandbox(clientId, name, mode) {
   if (mode === 'import') {
     navigate('import');
     practiceToast('Spazio cliente: parti dai dati già assegnati. Importi solo le sezioni che scegli — le altre restano.', 'success');
+  } else if (mode === 'build') {
+    navigate('training');
+    if (typeof openProgramBuilder === 'function') openProgramBuilder('assign');
+    practiceToast('Spazio cliente: scrivi la scheda, poi la modifichi e la invii.', 'success');
   } else if (mode === 'mylib') {
     openCoachLibraryAssignPicker(clientId, name);
   } else if (mode === 'programs') {
@@ -70075,7 +70460,10 @@ function renderCoachLibrary(c) {
     '<h1 style="color:#fff;margin:2px 0 0;font-size:20px;">Il mio database schede</h1>' +
     '<p class="cp-help" style="margin-top:6px;">Personale: importi qui senza toccare la scheda attiva né i clienti. Poi assegni dal flusso ASSEGNA.</p></div>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">HUB</button></div>' +
-    '<button class="btn btn-primary" style="width:100%;margin-bottom:12px;" onclick="beginCoachLibraryImport()">IMPORTA NEL MIO DATABASE</button>' +
+    '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' +
+    '<button class="btn btn-primary" style="flex:1;min-width:150px;" onclick="openProgramBuilder(\'library\')">CREA UNA SCHEDA</button>' +
+    '<button class="btn btn-outline" style="flex:1;min-width:150px;" onclick="beginCoachLibraryImport()">IMPORTA</button>' +
+    '</div>' +
     (rows.length
       ? rows.map(function (e, i) {
         const meta = e.meta || {};
@@ -70156,8 +70544,9 @@ function openCoachLibraryAssignPicker(clientId, name) {
   if (!p) return;
   const rows = coachLibraryList();
   if (!rows.length) {
-    p.innerHTML = '<h2>Database vuoto</h2><p class="cp-help">Importa prima una scheda in «Il mio database».</p>' +
-      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);navigate(\'coachLibrary\')">APRI IL MIO DATABASE</button>' +
+    p.innerHTML = '<h2>Database vuoto</h2><p class="cp-help">Non hai ancora schede salvate: scrivine una adesso, oppure importala.</p>' +
+      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'build\')">SCRIVI UNA SCHEDA DA ZERO</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);navigate(\'coachLibrary\')">APRI IL MIO DATABASE</button>' +
       '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\', false)">CHIUDI</button>';
     showOverlay('cp-assign', true);
     return;

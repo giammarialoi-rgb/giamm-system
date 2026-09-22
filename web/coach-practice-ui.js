@@ -4348,6 +4348,7 @@ function openAssignChooser(clientId, name) {
     '<h2>Cosa vuoi assegnare a ' + esc(name || 'cliente') + '?</h2>' +
     '<p class="cp-help">Si apre uno <b style="color:#fff;">spazio cliente separato</b> dal tuo allenamento. Importa o scegli, modifica, poi INVIA. Solo «usa scheda attiva» parte dalla tua come base.</p>' +
     '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'import\')">IMPORTA PDF / EXCEL / WORD</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'build\')">SCRIVI UNA SCHEDA DA ZERO</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'mylib\')">DAL MIO DATABASE</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'programs\')">DATABASE PROGRAMMI (NURVAN)</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'copy\')">USA SCHEDA ATTIVA COME BASE</button>' +
@@ -4389,6 +4390,10 @@ function beginAssignSandbox(clientId, name, mode) {
   if (mode === 'import') {
     navigate('import');
     practiceToast('Spazio cliente: parti dai dati già assegnati. Importi solo le sezioni che scegli — le altre restano.', 'success');
+  } else if (mode === 'build') {
+    navigate('training');
+    if (typeof openProgramBuilder === 'function') openProgramBuilder('assign');
+    practiceToast('Spazio cliente: scrivi la scheda, poi la modifichi e la invii.', 'success');
   } else if (mode === 'mylib') {
     openCoachLibraryAssignPicker(clientId, name);
   } else if (mode === 'programs') {
@@ -5838,7 +5843,10 @@ function renderCoachLibrary(c) {
     '<h1 style="color:#fff;margin:2px 0 0;font-size:20px;">Il mio database schede</h1>' +
     '<p class="cp-help" style="margin-top:6px;">Personale: importi qui senza toccare la scheda attiva né i clienti. Poi assegni dal flusso ASSEGNA.</p></div>' +
     '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'coachHub\')">HUB</button></div>' +
-    '<button class="btn btn-primary" style="width:100%;margin-bottom:12px;" onclick="beginCoachLibraryImport()">IMPORTA NEL MIO DATABASE</button>' +
+    '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' +
+    '<button class="btn btn-primary" style="flex:1;min-width:150px;" onclick="openProgramBuilder(\'library\')">CREA UNA SCHEDA</button>' +
+    '<button class="btn btn-outline" style="flex:1;min-width:150px;" onclick="beginCoachLibraryImport()">IMPORTA</button>' +
+    '</div>' +
     (rows.length
       ? rows.map(function (e, i) {
         const meta = e.meta || {};
@@ -5919,8 +5927,9 @@ function openCoachLibraryAssignPicker(clientId, name) {
   if (!p) return;
   const rows = coachLibraryList();
   if (!rows.length) {
-    p.innerHTML = '<h2>Database vuoto</h2><p class="cp-help">Importa prima una scheda in «Il mio database».</p>' +
-      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);navigate(\'coachLibrary\')">APRI IL MIO DATABASE</button>' +
+    p.innerHTML = '<h2>Database vuoto</h2><p class="cp-help">Non hai ancora schede salvate: scrivine una adesso, oppure importala.</p>' +
+      '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'build\')">SCRIVI UNA SCHEDA DA ZERO</button>' +
+      '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);navigate(\'coachLibrary\')">APRI IL MIO DATABASE</button>' +
       '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\', false)">CHIUDI</button>';
     showOverlay('cp-assign', true);
     return;

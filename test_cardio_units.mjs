@@ -114,7 +114,7 @@ vm.runInContext(slice('function exerciseLogUnit(row, name)', 'function completeS
   vm.runInContext(html.match(/const esc = x => [^\n]+/)[0], bctx);
   vm.runInContext(fs.readFileSync(path.join(root, 'web/exercise-taxonomy.js'), 'utf8'), bctx);
   vm.runInContext(fs.readFileSync(path.join(root, 'web/progression-models.js'), 'utf8'), bctx);
-  vm.runInContext(slice('function openExercisePicker(opts)', 'function emptyProgramDraft()'), bctx);
+  vm.runInContext(slice('var SPACE_EQUIPMENT = [', 'function emptyProgramDraft()'), bctx);
   vm.runInContext(slice('function emptyProgramDraft()', 'function saveAll()'), bctx);
 
   const plank = bctx.programExerciseRow({ name: 'Plank addominale', unit: 'time', sets: 3, reps: '45' });
@@ -183,7 +183,7 @@ vm.runInContext(slice('function exerciseLogUnit(row, name)', 'function completeS
   vm.runInContext(html.match(/const esc = x => [^\n]+/)[0], cctx);
   vm.runInContext(fs.readFileSync(path.join(root, 'web/exercise-taxonomy.js'), 'utf8'), cctx);
   vm.runInContext(fs.readFileSync(path.join(root, 'web/progression-models.js'), 'utf8'), cctx);
-  vm.runInContext(slice('function openExercisePicker(opts)', 'function emptyProgramDraft()'), cctx);
+  vm.runInContext(slice('var SPACE_EQUIPMENT = [', 'function emptyProgramDraft()'), cctx);
   vm.runInContext(slice('function emptyProgramDraft()', 'function saveAll()'), cctx);
   vm.runInContext(slice('function exerciseLogUnit(row, name)', 'function completeSetQuick(exIdx'), cctx);
 

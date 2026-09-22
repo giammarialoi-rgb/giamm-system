@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.dirname(fileURLToPath(import.meta.url));
 const html = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
 const built = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
+const coachUi = fs.readFileSync(path.join(root, 'web/coach-practice-ui.js'), 'utf8');
 
 function ok(value, message) {
   assert.ok(value, message);
@@ -62,7 +63,7 @@ const ctx = {
 };
 vm.createContext(ctx);
 vm.runInContext(html.match(/const esc = x => [^\n]+/)[0], ctx);
-vm.runInContext(slice('function openExercisePicker(opts)', 'function emptyProgramDraft()'), ctx);
+vm.runInContext(slice('var SPACE_EQUIPMENT = [', 'function emptyProgramDraft()'), ctx);
 vm.runInContext(slice('function emptyProgramDraft()', 'function saveAll()'), ctx);
 
 /* ---------- 1. the draft ---------- */
@@ -428,6 +429,77 @@ function loggedProgram() {
     '3br. the program says how it was built');
 }
 
+/* ---------- 3septies. where the training happens ---------- */
+//
+// "Palestra Fitness X has ten machines and no cables" is something a coach
+// knows and the app did not. A space is a name and the kit in it, and it
+// narrows the picker to what can actually be done there.
+{
+  ctx.store.trainingSpaces = [];
+  ctx.store.pickerSpaceId = '';
+  ctx.WEB_EXERCISE_CATALOG = [
+    { name: 'Panca piana bilanciere', muscle: 'PETTO', eq: 'bilanciere' },
+    { name: 'Curl manubri', muscle: 'BICIPITI', eq: 'manubri' },
+    { name: 'Lat machine avanti', muscle: 'DORSALI', eq: 'macchina' },
+    { name: 'Push-up', muscle: 'PETTO', eq: 'corpo libero' },
+    { name: 'Vogatore', muscle: 'CARDIO', eq: 'macchina' },
+    { name: 'Esercizio senza attrezzo dichiarato', muscle: 'ALTRO' }
+  ];
+
+  ctx.saveTrainingSpace({ name: 'Casa', equip: ['bodyweight', 'dumbbell'] });
+  const spaces = ctx.trainingSpaces();
+  ok(spaces.length === 1 && spaces[0].id, '3bs. a space is saved with an id of its own');
+  ok(spaces[0].name === 'Casa' && spaces[0].equip.length === 2, '3bt. with its name and its kit');
+
+  const all = ctx.exercisePickerRows('', null).map((r) => r.name);
+  ok(all.includes('Panca piana bilanciere') && all.includes('Lat machine avanti'),
+    '3bu. with no space chosen the picker offers the whole library');
+
+  const home = ctx.exercisePickerRows('', spaces[0]).map((r) => r.name);
+  ok(home.includes('Curl manubri') && home.includes('Push-up'),
+    '3bv. in a room with dumbbells, dumbbells and bodyweight are offered');
+  ok(!home.includes('Panca piana bilanciere') && !home.includes('Lat machine avanti'),
+    '3bw. and a barbell bench or a lat machine are not, because they are not there');
+  ok(home.includes('Esercizio senza attrezzo dichiarato'),
+    '3bx. an exercise the app cannot place is never hidden - silently dropping what a coach wrote is worse');
+
+  ctx.store.pickerSpaceId = spaces[0].id;
+  ok(ctx.exercisePickerRows('').length === home.length, '3by. the chosen space is what the picker uses');
+  ctx.store.pickerSpaceId = '';
+
+  ctx.saveTrainingSpace({ name: 'Palestra Fitness X', equip: ['machine', 'cardio', 'bodyweight'] });
+  const gym = ctx.exercisePickerRows('', ctx.trainingSpaces()[1]).map((r) => r.name);
+  ok(gym.includes('Lat machine avanti') && gym.includes('Vogatore'), '3bz. a machine-only gym offers its machines');
+  ok(!gym.includes('Curl manubri'), '3ca. and not the dumbbells it does not have');
+
+  const first = ctx.trainingSpaces()[0];
+  ctx.toggleSpaceEquip(first.id, 'barbell');
+  ok(first.equip.includes('barbell'), '3cb. kit can be added to a space');
+  ctx.toggleSpaceEquip(first.id, 'barbell');
+  ok(!first.equip.includes('barbell'), '3cc. and taken away again');
+  ctx.updateSpaceField(first.id, 'name', 'Garage');
+  ok(ctx.trainingSpaces()[0].name === 'Garage', '3cd. and it can be renamed');
+
+  ctx.confirm = () => true;
+  ctx.removeTrainingSpace(first.id);
+  ok(ctx.trainingSpaces().length === 1 && ctx.trainingSpaces()[0].name === 'Palestra Fitness X',
+    '3ce. a space can be deleted without touching the others');
+
+  // The grouped picker: a library is read a group at a time.
+  ok(ctx.pickerGroupOf('PETTO') === 'PETTO' && ctx.pickerGroupOf('') === 'ALTRO',
+    '3cf. every exercise lands in a macro group, and the unlabelled ones in ALTRO');
+  ok(/<details/.test(html) && /pickerGroupOf/.test(html), '3cg. and the groups are collapsible sections');
+
+  // Put the fixtures back as the later sections expect them.
+  ctx.store.trainingSpaces = [];
+  ctx.store.pickerSpaceId = '';
+  ctx.WEB_EXERCISE_CATALOG = [
+    { name: 'Panca piana bilanciere', muscle: 'PETTO' },
+    { name: 'Curl bilanciere', muscle: 'BICIPITI', en: 'Barbell curl' },
+    { name: 'Squat bilanciere', muscle: 'QUADRICIPITI' }
+  ];
+}
+
 /* ---------- 4. how it is reached ---------- */
 {
   ok(/onclick="openProgramBuilder\(\)"/.test(html), '4a. PROGRAMMI has a way into the builder');
@@ -436,6 +508,12 @@ function loggedProgram() {
   ok(/onclick="openAddExerciseToProgram\(\)"/.test(html), '4d. the workout screen can add to the program');
   ok(/moveWorkoutExercise\(\$\{fIdx\},-1\)/.test(html) && /moveWorkoutExercise\(\$\{fIdx\},1\)/.test(html),
     '4d1. and every exercise in it has an arrow each way');
+  ok(/openProgramBuilder\(\\?'library/.test(coachUi) && /CREA UNA SCHEDA/.test(coachUi),
+    '4d3. the coach database can be written to, not only imported into');
+  ok(/SCRIVI UNA SCHEDA DA ZERO/.test(coachUi) && /mode === 'build'/.test(coachUi)
+    && /openProgramBuilder\('assign'\)/.test(coachUi),
+    '4d4. and assigning to a client can start from a blank program, in the client sandbox');
+  ok(/onclick="openTrainingSpaces\(\)"/.test(html), '4d5. the training spaces are reachable');
   ok(/onclick="duplicateProgramDraftDay\(/.test(html) && />DUPLICA</.test(html),
     '4d2. every day in the builder can be duplicated');
   ok(/\+ AGGIUNGI ALLA SCHEDA/.test(html) && /\+ BONUS DI OGGI/.test(html),
@@ -455,7 +533,9 @@ function loggedProgram() {
     'insertDeloadWeek', 'closeDeloadSuggestion',
     'setProgramDraftWeeks', 'setProgramDraftRotationWeeks', 'setProgramDraftRotationEvery', 'setProgramDraftRotationScope',
     'setProgramDraftTestWeeks', 'setProgramDraftTestWeeksQuick',
-    'maybeAskTestResults', 'openTestResultsSheet', 'closeTestResultsSheet', 'applyTestResults'
+    'maybeAskTestResults', 'openTestResultsSheet', 'closeTestResultsSheet', 'applyTestResults',
+    'openTrainingSpaces', 'closeTrainingSpaces', 'removeTrainingSpace', 'addSpaceFromPreset',
+    'updateSpaceField', 'toggleSpaceEquip', 'setPickerSpace'
   ];
   for (const fn of exported) {
     ok(html.includes('window.' + fn + ' = ' + fn + ';'), '4f. ' + fn + ' is reachable from an onclick');
