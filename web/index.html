@@ -284,7 +284,11 @@ header .logo-container {
   flex: 1 1 auto;
   min-width: 0;
   align-items: center;
-  justify-content: flex-end;
+  /* flex-end plus overflow-x hides the first buttons past the start edge,
+     where no amount of scrolling reaches them - which is why INDIETRO was
+     sliced in half on a phone. Start-aligned, with a spacer that pushes the
+     group right only while there is room for it. */
+  justify-content: flex-start;
   gap: 8px;
   position: relative;
   z-index: 1102;
@@ -294,6 +298,7 @@ header .logo-container {
   scrollbar-width: none;
   padding-bottom: 1px;
 }
+.header-actions::before { content: ''; margin-left: auto; flex: 0 0 auto; }
 .header-actions::-webkit-scrollbar { display: none; }
 .header-actions > .btn,
 .header-actions > #cp-notify-btn,
@@ -313,6 +318,36 @@ header .logo-container {
   z-index: 1102;
   white-space: nowrap;
   border-radius: 8px;
+}
+/* Five buttons and a logo do not fit a phone at the desktop size, and a row
+   you have to scroll to reach MENU is a row with half its buttons hidden.
+   Below 560px they shrink until they all fit. */
+@media (max-width: 560px) {
+  .header-actions { gap: 5px; }
+  #menu-hub-button,
+  #profile-button,
+  #cp-notify-btn,
+  #coach-unlock-button,
+  #personal-back-button {
+    font-size: 9px;
+    padding: 6px 8px;
+    letter-spacing: 0.2px;
+  }
+}
+
+/* At 375px the five of them still came to 328px against 319px of room, and
+   the last one - MENU - was sliced by the edge. Nine pixels; taken from the
+   gaps and the letter spacing, so the row fits without scrolling. */
+@media (max-width: 400px) {
+  .header-actions { gap: 4px; }
+  #menu-hub-button,
+  #profile-button,
+  #cp-notify-btn,
+  #coach-unlock-button,
+  #personal-back-button {
+    padding: 6px 6px;
+    letter-spacing: 0;
+  }
 }
 
 header .logo-container img {
@@ -439,6 +474,28 @@ nav.bottom-nav {
 }
 
 .card-header h2 { margin: 0; font-size: 13px; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
+
+/* A section opens onto a card inside a card: two borders, two backgrounds,
+   and - because .card carries no padding of its own, only its header does -
+   text sitting flat against the inner border. Inside a collapsible the
+   section IS the card, so what is in it gives up its frame and lives on the
+   16px the body already provides. */
+.collapsible-body > .card,
+.collapsible-body > div > .card {
+  border: 0 !important;
+  background: transparent !important;
+  margin: 0 0 12px;
+  overflow: visible;
+}
+.collapsible-body > .card:last-child { margin-bottom: 0; }
+/* and its header stops being a side-by-side flex row, which is what made a
+   title and its subtitle overlap once the section carried the name. */
+.collapsible-body .card-header {
+  display: block;
+  background: transparent;
+  border-bottom: 0;
+  padding: 0 0 8px;
+}
 
 .btn {
   padding: 12px 20px;
@@ -704,6 +761,29 @@ input[type="checkbox"], input[type="radio"] {
 }
 
 .fab-save svg { width: 28px; height: 28px; fill: currentColor; }
+
+/* A save button floating over every screen covers whatever is under it, and
+   on most screens there is nothing to save by hand - the app writes as you
+   go. It stays where a session is being logged. */
+.fab-save { display: none; }
+body[data-view="training"] .fab-save { display: flex; }
+
+/* Nothing should be able to push text out of its box: a flex child that
+   refuses to shrink is how a label ends up sliced, and a long word with
+   nowhere to break is how it ends up under the next column. */
+#view-container .card,
+#view-container .card * { min-width: 0; }
+#view-container { overflow-wrap: break-word; }
+/* A label is not prose: breaking it mid-word printed "PROGRAM MI" on two
+   lines. Buttons break between words or not at all, and on a narrow screen
+   they give up padding instead of giving up a word. */
+#view-container .btn,
+#view-container button { overflow-wrap: normal; word-break: normal; hyphens: none; }
+@media (max-width: 420px) {
+  #view-container .btn { padding-left: 12px; padding-right: 12px; }
+}
+/* Room under the last card for the bottom bar, so nothing hides behind it. */
+#view-container { padding-bottom: 96px; }
 
 #timer-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -44939,6 +45019,9 @@ function render() {
   ensureStoreIntegrity();
   const c = $('view-container');
   if (!c) return;
+  // Which screen is on, so the stylesheet can answer questions like "is
+  // there anything here worth a floating save button".
+  try { document.body.setAttribute('data-view', String(currentView || '')); } catch (_) {}
   applyChromeI18n();
 
   if (currentView === 'import') {
@@ -50497,8 +50580,7 @@ function renderPrograms(c){
     <div class="card" style="margin-bottom:16px; border:2px solid ${(weeks.length ? 'var(--gold)' : '#333')}; position:relative; overflow:hidden;">
       <div style="position:absolute; top:0; right:0; background:${weeks.length ? 'var(--gold)' : '#444'}; color:${weeks.length ? '#000' : '#fff'}; font-size:9px; font-weight:900; padding:3px 10px; border-bottom-left-radius:6px; letter-spacing:1px;">${weeks.length ? 'ATTIVO' : 'VUOTO'}</div>
       <div class="card-header" style="padding-bottom:8px;">
-        <span style="font-size:11px; color:var(--gold); font-weight:800; text-transform:uppercase;">Programma Attivo</span>
-        <h3 style="font-size:13px; margin:4px 0 0; color:#fff; font-weight:700; line-height:1.35; word-break:break-word; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${esc(weeks.length ? (DATA?.title || 'Programma Senza Titolo') : 'Nessun programma caricato')}</h3>
+        <h3 style="font-size:13px; margin:4px 0 0; padding-right:76px; color:#fff; font-weight:700; line-height:1.35; word-break:break-word; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${esc(weeks.length ? (DATA?.title || 'Programma Senza Titolo') : 'Nessun programma caricato')}</h3>
         <p style="font-size:11px; color:#888; margin:2px 0 0;">${weeks.length ? ('Durata: ' + duration + ' settimane · ' + sessionsCount + ' sedute') : 'Scegli una scheda dal database o importa un file.'}</p>
       </div>
       ${weeks.length ? `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); gap:8px; margin:12px 0;">
@@ -52278,7 +52360,7 @@ function homeCollapsibleCard(title, bodyHtml, openByDefault) {
     '<summary style="list-style:none;cursor:pointer;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;user-select:none;">' +
     '<h2 style="margin:0;font-size:14px;color:var(--gold);">' + title + '</h2>' +
     '<span style="color:#888;font-size:12px;">▾</span></summary>' +
-    '<div style="padding:0 16px 16px;">' + bodyHtml + '</div></details>';
+    '<div class="collapsible-body" style="padding:0 16px 16px;">' + bodyHtml + '</div></details>';
 }
 
 function personalRestoreBannerHtml() {
@@ -63740,9 +63822,9 @@ function renderProgramBuilder() {
         '</div>';
     }).join('');
     return '<div class="card" style="padding:12px;margin-bottom:10px;border:1px solid #333;">' +
-      '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">' +
-      '<input type="text" value="' + esc(day.name || ('Giorno ' + (di + 1))) + '" placeholder="Nome del giorno" oninput="updateProgramDraftDay(' + di + ',this.value)" style="flex:1;font-weight:800;' + inputStyle + '">' +
-      '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;flex:0 0 auto;" title="Duplica questo giorno" onclick="duplicateProgramDraftDay(' + di + ')">DUPLICA</button>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">' +
+      '<input type="text" value="' + esc(day.name || ('Giorno ' + (di + 1))) + '" placeholder="Nome del giorno" oninput="updateProgramDraftDay(' + di + ',this.value)" style="flex:1 1 100%;min-width:0;font-weight:800;' + inputStyle + '">' +
+      '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;flex:0 0 auto;margin-left:auto;" title="Duplica questo giorno" onclick="duplicateProgramDraftDay(' + di + ')">DUPLICA</button>' +
       '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#c66;border-color:#c66;flex:0 0 auto;" onclick="removeProgramDraftDay(' + di + ')">ELIMINA</button>' +
       '</div>' +
       (exHtml || '<div style="font-size:11px;color:#777;padding:6px 0 10px;">Nessun esercizio in questo giorno.</div>') +
