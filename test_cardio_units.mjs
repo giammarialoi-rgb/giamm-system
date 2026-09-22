@@ -169,4 +169,65 @@ vm.runInContext(slice('function exerciseLogUnit(row, name)', 'function completeS
   ok(sw.includes('cardio-library.js'), '5i. and is cached offline like the rest of the app');
 }
 
+/* ---------- 6. circuits ---------- */
+{
+  const cctx = {
+    console, Math, String, Number, Array, Object, JSON, Date, parseInt, parseFloat, isNaN, Boolean,
+    encodeURIComponent, decodeURIComponent,
+    window: { NurvanCardio: C }, document: { getElementById: () => null, createElement: () => ({ style: {}, classList: { add() {} } }), body: { appendChild() {} } },
+    store: { data: {} }, DATA: null, currentWeek: 1, currentDay: 0,
+    WEB_EXERCISE_CATALOG: [], persist() {}, showToast() {}, persistActiveProgramStructure() {}, recordManualAction() {}
+  };
+  vm.createContext(cctx);
+  cctx.self = cctx.window;
+  vm.runInContext(html.match(/const esc = x => [^\n]+/)[0], cctx);
+  vm.runInContext(fs.readFileSync(path.join(root, 'web/exercise-taxonomy.js'), 'utf8'), cctx);
+  vm.runInContext(fs.readFileSync(path.join(root, 'web/progression-models.js'), 'utf8'), cctx);
+  vm.runInContext(slice('function openExercisePicker(opts)', 'function emptyProgramDraft()'), cctx);
+  vm.runInContext(slice('function emptyProgramDraft()', 'function saveAll()'), cctx);
+  vm.runInContext(slice('function exerciseLogUnit(row, name)', 'function completeSetQuick(exIdx'), cctx);
+
+  // Built in the draft, the way the builder builds it.
+  cctx.store.programDraft = { title: 'HIIT', weeks: 4, days: [{ name: 'A', exercises: [] }] };
+  cctx.openCircuitBuilder(0);
+  const draftCircuit = cctx.store.programDraft.days[0].exercises[0];
+  ok(draftCircuit.unit === 'circuit' && draftCircuit.circuit.format === 'tabata',
+    '6a. a new circuit starts as a Tabata');
+  ok(draftCircuit.circuit.work === 20 && draftCircuit.circuit.rest === 10 && draftCircuit.circuit.rounds === 8,
+    '6b. with twenty on, ten off, eight rounds');
+  cctx.setCircuitFormat(0, 0, 'hiit_40_20');
+  ok(draftCircuit.circuit.work === 40 && draftCircuit.circuit.rest === 20, '6c. changing the format changes the clock');
+  cctx.updateCircuitField(0, 0, 'rounds', '6');
+  ok(draftCircuit.circuit.rounds === 6 && draftCircuit.circuit.format === 'custom',
+    '6d. and touching a number by hand makes it a custom one, not a mislabelled Tabata');
+  cctx.updateCircuitField(0, 0, 'work', '9000');
+  ok(draftCircuit.circuit.work === 600, '6e. a typo cannot make a ninety-minute interval');
+  cctx.updateCircuitField(0, 0, 'work', '40');
+
+  draftCircuit.circuit.items.push({ name: 'Burpees' }, { name: 'Air bike' }, { name: 'Salto della corda' });
+  const row = cctx.programExerciseRow(draftCircuit);
+  ok(row.unit === 'circuit' && row.circuit.items.length === 3, '6f. it reaches the program with its stations');
+  ok(row.setCount === 1 && /round/.test(row.repsTarget), '6g. counted in rounds, not in sets');
+
+  const c = cctx.circuitOf(row);
+  ok(c.rounds === 6 && c.items.length === 3, '6h. and is read back whole');
+  ok(cctx.circuitTotalSeconds(c) === 6 * 3 * (40 + 20), '6i. its length is arithmetic, not a guess');
+  ok(cctx.circuitOf({ circuit: { items: [] } }) === null && cctx.circuitOf({}) === null,
+    '6j. a circuit with no stations is not a circuit');
+
+  ok(cctx.exerciseLogUnit(row, row.name) === 'circuit', '6k. the workout screen knows to draw it as one');
+  const block = cctx.circuitBlockHtml(0, row);
+  ok(/Burpees/.test(block) && /Air bike/.test(block), '6l. the card lists the stations');
+  ok(/40" lavoro/.test(block) && /6 round/.test(block), '6m. and the clock it will run');
+  ok(/AVVIA CIRCUITO/.test(block), '6n. with a way to start it');
+
+  // A progression has nothing to say to a clock.
+  const weeks = cctx.window.NurvanProgressions.weeksFromTemplate([{ name: 'A', exercises: [row] }],
+    { weeks: 6, modelId: 'volume_wave' });
+  ok(weeks.every((w) => w.sessions[0].exercises[0].circuit.rounds === 6),
+    '6o. six weeks of a volume wave leave the circuit exactly as written');
+  ok(weeks.every((w) => w.sessions[0].exercises[0].sets.length === 1),
+    '6p. and never turn its rounds into sets');
+}
+
 console.log('\nAll cardio / time-unit tests passed.');

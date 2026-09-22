@@ -658,6 +658,9 @@
     var copy = JSON.parse(JSON.stringify(ex));
 
     if (model.id === 'none') return copy;
+    // A circuit is a clock, not a prescription of sets: a progression has
+    // nothing to add to it, and rewriting its rounds as "sets" would break it.
+    if (copy.unit === 'circuit' || copy.circuit) return copy;
 
     if (liftId && typeof model.main === 'function') {
       var main = ctx.isTestWeek ? testWeek(1.0) : model.main(ctx.week, ctx.duration, ctx.sessionIndex);

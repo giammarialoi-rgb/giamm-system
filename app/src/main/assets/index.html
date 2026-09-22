@@ -42750,6 +42750,7 @@ function formatLastSessionChip(exIdx, row) {
 // app, so a row carries the unit it is actually measured in.
 
 function exerciseLogUnit(row, name) {
+  if (row && (row.circuit || row.unit === 'circuit')) return 'circuit';
   var explicit = row && (row.unit || row.log_unit);
   if (explicit === 'time' || explicit === 'cardio' || explicit === 'reps') return explicit;
   var api = (typeof window !== 'undefined') ? window.NurvanCardio : null;
@@ -42863,6 +42864,182 @@ function cardioExtrasHtml(key, name) {
         'style="width:100%;margin-top:2px;padding:6px;background:#151515;border:1px solid #333;color:#fff;border-radius:6px;box-sizing:border-box;text-align:center;font-size:12px;"></label>';
     }).join('') +
     '</div></div>';
+}
+
+/* ---------- circuits: Tabata, EMOM, HIIT ---------- */
+//
+// A circuit is not a list of sets, it is a clock: twenty seconds of work,
+// ten of rest, eight times round. Written as sets and reps it becomes
+// unreadable, so it is one row that holds its own stations and its own
+// timing, and it is trained by a player that runs the clock.
+
+function circuitOf(row) {
+  var c = row && (row.circuit || row.interval);
+  if (!c || !Array.isArray(c.items) || !c.items.length) return null;
+  return {
+    format: c.format || 'custom',
+    work: Math.max(5, Number(c.work) || 20),
+    rest: Math.max(0, Number(c.rest) || 10),
+    rounds: Math.max(1, Number(c.rounds) || 8),
+    roundRest: Math.max(0, Number(c.roundRest) || 0),
+    items: c.items.map(function (it) { return typeof it === 'string' ? { name: it } : it; })
+  };
+}
+
+function circuitTotalSeconds(c) {
+  var perRound = c.items.length * (c.work + c.rest);
+  return c.rounds * perRound + Math.max(0, c.rounds - 1) * c.roundRest;
+}
+
+function circuitBlockHtml(exIdx, row) {
+  var c = circuitOf(row);
+  if (!c) return '<div style="font-size:11px;color:#e0b040;padding:8px 0;">Circuito senza stazioni: modificalo dal costruttore scheda.</div>';
+  var k = 'w' + currentWeek + '_d' + currentDay + '_e' + exIdx + '_s1';
+  var done = !!store.data[k + '_done'];
+  var mins = Math.max(1, Math.round(circuitTotalSeconds(c) / 60));
+  var stations = c.items.map(function (it, i) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #1e1e1e;">' +
+      '<div style="font-size:12px;color:#fff;"><span style="color:#555;font-weight:800;margin-right:8px;">' + (i + 1) + '</span>' + esc(it.name) + '</div>' +
+      ((typeof youtubeSearchButtonHtml === 'function') ? youtubeSearchButtonHtml(it.name, { compact: true }) : '') +
+      '</div>';
+  }).join('');
+  return '<div style="background:#151515;border:1px solid #222;border-radius:8px;padding:10px;margin-bottom:8px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">' +
+    '<div style="font-size:11px;color:var(--gold);font-weight:800;">' + c.work + '" lavoro · ' + c.rest + '" recupero · ' + c.rounds + ' round</div>' +
+    '<div style="font-size:10px;color:#888;">' + c.items.length + ' stazioni · ~' + mins + ' min</div>' +
+    '</div>' + stations +
+    '<button type="button" class="btn ' + (done ? 'btn-outline' : 'btn-primary') + '" style="width:100%;margin-top:10px;font-size:12px;padding:10px;" onclick="openCircuitPlayer(' + exIdx + ')">' +
+    (done ? 'RIFAI IL CIRCUITO' : 'AVVIA CIRCUITO') + '</button>' +
+    (done ? '<div style="font-size:10px;color:#4caf50;text-align:center;margin-top:6px;">Completato' + (store.data[k + '_min'] ? ' · ' + store.data[k + '_min'] + ' min' : '') + '</div>' : '') +
+    '</div>';
+}
+
+function closeCircuitPlayer() {
+  var st = window.__circuitPlayer;
+  if (st && st.iv) clearInterval(st.iv);
+  window.__circuitPlayer = null;
+  var el = document.getElementById('circuit-player');
+  if (el) el.remove();
+}
+window.closeCircuitPlayer = closeCircuitPlayer;
+
+function openCircuitPlayer(exIdx) {
+  var list = sessionExercisesFor(currentWeek, currentDay) || [];
+  var row = list[exIdx];
+  var c = circuitOf(row);
+  if (!c) return;
+  closeCircuitPlayer();
+  window.__circuitPlayer = {
+    exIdx: exIdx, c: c, round: 1, station: 0, phase: 'work',
+    endsAt: Date.now() + c.work * 1000, startedAt: Date.now(), paused: false, iv: null
+  };
+  var sheet = document.createElement('div');
+  sheet.id = 'circuit-player';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10300';
+  document.body.appendChild(sheet);
+  paintCircuitPlayer();
+  window.__circuitPlayer.iv = setInterval(tickCircuitPlayer, 200);
+}
+window.openCircuitPlayer = openCircuitPlayer;
+
+function tickCircuitPlayer() {
+  var st = window.__circuitPlayer;
+  if (!st || st.paused) return;
+  if (Date.now() < st.endsAt) { paintCircuitPlayer(); return; }
+  var c = st.c;
+  try { if (typeof NativeConfig !== 'undefined' && NativeConfig.vibrate) NativeConfig.vibrate(st.phase === 'work' ? 400 : 200); } catch (_) {}
+  if (st.phase === 'work' && c.rest > 0) {
+    st.phase = 'rest';
+    st.endsAt = Date.now() + c.rest * 1000;
+  } else {
+    st.station += 1;
+    if (st.station >= c.items.length) {
+      st.station = 0;
+      st.round += 1;
+      if (st.round > c.rounds) { finishCircuit(); return; }
+      if (c.roundRest > 0) {
+        st.phase = 'roundRest';
+        st.endsAt = Date.now() + c.roundRest * 1000;
+        paintCircuitPlayer();
+        return;
+      }
+    }
+    st.phase = 'work';
+    st.endsAt = Date.now() + c.work * 1000;
+  }
+  paintCircuitPlayer();
+}
+
+function toggleCircuitPause() {
+  var st = window.__circuitPlayer;
+  if (!st) return;
+  if (st.paused) {
+    st.endsAt = Date.now() + st.leftMs;
+    st.paused = false;
+  } else {
+    st.leftMs = Math.max(0, st.endsAt - Date.now());
+    st.paused = true;
+  }
+  paintCircuitPlayer();
+}
+window.toggleCircuitPause = toggleCircuitPause;
+
+function skipCircuitPhase() {
+  var st = window.__circuitPlayer;
+  if (!st) return;
+  st.endsAt = Date.now();
+  st.paused = false;
+  tickCircuitPlayer();
+}
+window.skipCircuitPhase = skipCircuitPhase;
+
+function paintCircuitPlayer() {
+  var st = window.__circuitPlayer;
+  var el = document.getElementById('circuit-player');
+  if (!st || !el) return;
+  var c = st.c;
+  var left = st.paused ? Math.round((st.leftMs || 0) / 1000) : Math.max(0, Math.round((st.endsAt - Date.now()) / 1000));
+  var working = st.phase === 'work';
+  var label = working ? 'LAVORO' : (st.phase === 'rest' ? 'RECUPERO' : 'RECUPERO TRA I ROUND');
+  var colour = working ? 'var(--gold)' : '#4caf50';
+  var station = c.items[st.station] || { name: '' };
+  // During a rest the useful name is what comes next, not what just ended;
+  // between rounds the station counter has already gone back to the start.
+  var next = (st.phase === 'roundRest')
+    ? (c.items[0] || { name: '' })
+    : (c.items[st.station + 1] || c.items[0] || { name: '' });
+  el.innerHTML =
+    '<div class="nurvan-sheet-panel">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:11px;color:#888;font-weight:800;">ROUND ' + st.round + ' / ' + c.rounds + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeCircuitPlayer()">ESCI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">' +
+    '<div style="font-size:11px;font-weight:900;letter-spacing:2px;color:' + colour + ';margin-bottom:6px;">' + label + '</div>' +
+    '<div style="font-size:64px;font-weight:900;color:' + colour + ';line-height:1;">' + left + '</div>' +
+    '<div style="font-size:22px;font-weight:900;color:#fff;margin:14px 0 4px;">' + esc(working ? station.name : ('Poi: ' + next.name)) + '</div>' +
+    '<div style="font-size:11px;color:#888;">Stazione ' + (st.station + 1) + ' di ' + c.items.length + '</div>' +
+    '</div>' +
+    '<div class="nurvan-sheet-foot">' +
+    '<button type="button" class="btn btn-outline" style="flex:1;font-size:12px;padding:12px;" onclick="toggleCircuitPause()">' + (st.paused ? 'RIPRENDI' : 'PAUSA') + '</button>' +
+    '<button type="button" class="btn btn-outline" style="flex:1;font-size:12px;padding:12px;" onclick="skipCircuitPhase()">SALTA</button>' +
+    '</div></div>';
+}
+
+function finishCircuit() {
+  var st = window.__circuitPlayer;
+  if (!st) return;
+  var exIdx = st.exIdx;
+  var minutes = Math.max(1, Math.round((Date.now() - st.startedAt) / 60000));
+  var k = 'w' + currentWeek + '_d' + currentDay + '_e' + exIdx + '_s1';
+  closeCircuitPlayer();
+  store.data[k + '_min'] = minutes;
+  store.data[k + '_done'] = true;
+  try { persist(); } catch (_) {}
+  try { if (typeof NativeConfig !== 'undefined' && NativeConfig.vibrate) NativeConfig.vibrate(900); } catch (_) {}
+  if (typeof showToast === 'function') showToast('Circuito completato · ' + minutes + ' min', 'success');
+  if (typeof render === 'function') render();
 }
 
 function completeSetQuick(exIdx, setNum, restText) {
@@ -53242,7 +53419,9 @@ function renderTraining(c){
           <button class="btn btn-outline" type="button" title="Pianifica test massimale" style="font-size:9px;padding:4px 6px;height:26px;" onclick="openMaxTestPlannerModal(${fIdx})">1RM</button>
         </div>`;
 
-      if(!skipReason) {
+      if (!skipReason && exLogUnit === 'circuit') {
+        h += circuitBlockHtml(fIdx, row);
+      } else if(!skipReason) {
         h += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;background:#151515;padding:8px;border-radius:8px;border:1px solid #222;">
           <div style="font-size:10px;color:#aaa;">Schema: <b style="color:#fff;">${esc(schemeInfo.scheme)}</b></div>
           <div style="font-size:10px;color:#aaa;">${exIntens}: <b style="color:#fff;">${esc(row.rirTarget ?? row.rpeTarget ?? 2)}</b></div>
@@ -62233,6 +62412,7 @@ function renderProgramBuilder() {
 
   var daysHtml = (d.days || []).map(function (day, di) {
     var exHtml = (day.exercises || []).map(function (ex, ei) {
+      if (ex.unit === 'circuit' && ex.circuit) return draftCircuitHtml(di, ei, ex, inputStyle);
       var exUnit = (ex.unit === 'time' || ex.unit === 'cardio') ? ex.unit : 'reps';
       return '<div style="padding:8px;border:1px solid #262626;border-radius:8px;margin-bottom:6px;background:#0d0d0d;">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">' +
@@ -62262,7 +62442,10 @@ function renderProgramBuilder() {
       '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#c66;border-color:#c66;flex:0 0 auto;" onclick="removeProgramDraftDay(' + di + ')">ELIMINA</button>' +
       '</div>' +
       (exHtml || '<div style="font-size:11px;color:#777;padding:6px 0 10px;">Nessun esercizio in questo giorno.</div>') +
-      '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;padding:8px;" onclick="addProgramDraftExercise(' + di + ')">+ AGGIUNGI ESERCIZIO</button>' +
+      '<div style="display:flex;gap:6px;">' +
+      '<button type="button" class="btn btn-outline" style="flex:2;font-size:11px;padding:8px;" onclick="addProgramDraftExercise(' + di + ')">+ ESERCIZIO</button>' +
+      '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;padding:8px;" onclick="openCircuitBuilder(' + di + ')">+ CIRCUITO</button>' +
+      '</div>' +
       '</div>';
   }).join('');
 
@@ -62617,6 +62800,109 @@ function removeProgramDraftDay(dayIdx) {
 }
 window.removeProgramDraftDay = removeProgramDraftDay;
 
+// A circuit inside the builder: a format, and the stations that go in it.
+function draftCircuitHtml(di, ei, ex, inputStyle) {
+  var c = ex.circuit || {};
+  var api = (typeof window !== 'undefined') ? window.NurvanCardio : null;
+  var items = (c.items || []).map(function (it, ii) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #1e1e1e;">' +
+      '<div style="font-size:12px;color:#fff;"><span style="color:#555;font-weight:800;margin-right:8px;">' + (ii + 1) + '</span>' + esc(it.name) + '</div>' +
+      '<button type="button" class="btn btn-outline" style="font-size:10px;padding:3px 7px;color:#c66;border-color:#c66;flex:0 0 auto;" onclick="removeCircuitStation(' + di + ',' + ei + ',' + ii + ')">✕</button>' +
+      '</div>';
+  }).join('');
+  var formats = api ? api.FORMATS : [];
+  return '<div style="padding:8px;border:1px solid rgba(76,175,80,0.45);border-radius:8px;margin-bottom:6px;background:#0d0d0d;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:8px;">' +
+    '<div style="font-size:12px;font-weight:800;color:#81c784;">' + esc(ex.name || 'Circuito') + '</div>' +
+    '<div style="display:flex;gap:4px;">' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 7px;" ' + (ei === 0 ? 'disabled' : '') + ' onclick="moveProgramDraftExercise(' + di + ',' + ei + ',-1)">↑</button>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 7px;color:#c66;border-color:#c66;" onclick="removeProgramDraftExercise(' + di + ',' + ei + ')">✕</button>' +
+    '</div></div>' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:8px;">Formato<select onchange="setCircuitFormat(' + di + ',' + ei + ',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '">' +
+    formats.map(function (f) {
+      return '<option value="' + esc(f.id) + '"' + (c.format === f.id ? ' selected' : '') + '>' + esc(f.label) + ' — ' + f.work + '"/' + f.rest + '" ×' + f.rounds + '</option>';
+    }).join('') +
+    '<option value="custom"' + (c.format === 'custom' ? ' selected' : '') + '>Personalizzato</option>' +
+    '</select></label>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px;">' +
+    '<label style="font-size:9px;color:#888;">Lavoro (s)<input type="number" min="5" max="600" value="' + (Number(c.work) || 20) + '" oninput="updateCircuitField(' + di + ',' + ei + ',\'work\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '<label style="font-size:9px;color:#888;">Rec. (s)<input type="number" min="0" max="600" value="' + (Number(c.rest) || 10) + '" oninput="updateCircuitField(' + di + ',' + ei + ',\'rest\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '<label style="font-size:9px;color:#888;">Round<input type="number" min="1" max="60" value="' + (Number(c.rounds) || 8) + '" oninput="updateCircuitField(' + di + ',' + ei + ',\'rounds\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '<label style="font-size:9px;color:#888;">Tra round (s)<input type="number" min="0" max="600" value="' + (Number(c.roundRest) || 0) + '" oninput="updateCircuitField(' + di + ',' + ei + ',\'roundRest\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '</div>' +
+    (items || '<div style="font-size:11px;color:#777;padding:4px 0 8px;">Nessuna stazione: aggiungine almeno una.</div>') +
+    '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;padding:8px;margin-top:8px;" onclick="addCircuitStation(' + di + ',' + ei + ')">+ STAZIONE</button>' +
+    '</div>';
+}
+
+function openCircuitBuilder(dayIdx) {
+  var day = programDraft().days[dayIdx];
+  if (!day) return;
+  var api = (typeof window !== 'undefined') ? window.NurvanCardio : null;
+  var fmt = api ? api.formatById('tabata') : { id: 'tabata', work: 20, rest: 10, rounds: 8 };
+  day.exercises.push({
+    name: 'Circuito ' + (api ? api.formatById('tabata').label : 'Tabata'),
+    unit: 'circuit',
+    muscle: 'CARDIO',
+    circuit: { format: fmt.id, work: fmt.work, rest: fmt.rest, rounds: fmt.rounds, roundRest: 0, items: [] }
+  });
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.openCircuitBuilder = openCircuitBuilder;
+
+function setCircuitFormat(di, ei, id) {
+  var ex = programDraft().days[di].exercises[ei];
+  if (!ex || !ex.circuit) return;
+  var api = (typeof window !== 'undefined') ? window.NurvanCardio : null;
+  ex.circuit.format = id;
+  if (id !== 'custom' && api) {
+    var f = api.formatById(id);
+    ex.circuit.work = f.work;
+    ex.circuit.rest = f.rest;
+    ex.circuit.rounds = f.rounds;
+    ex.name = 'Circuito ' + f.label;
+  }
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.setCircuitFormat = setCircuitFormat;
+
+function updateCircuitField(di, ei, field, value) {
+  var ex = programDraft().days[di].exercises[ei];
+  if (!ex || !ex.circuit) return;
+  var n = parseInt(value, 10);
+  if (isNaN(n)) return;
+  var caps = { work: [5, 600], rest: [0, 600], rounds: [1, 60], roundRest: [0, 600] };
+  var cap = caps[field] || [0, 600];
+  ex.circuit[field] = Math.min(cap[1], Math.max(cap[0], n));
+  ex.circuit.format = 'custom';
+}
+window.updateCircuitField = updateCircuitField;
+
+function addCircuitStation(di, ei) {
+  openExercisePicker({
+    title: 'AGGIUNGI STAZIONE',
+    onPick: function (name, muscle) {
+      var ex = programDraft().days[di].exercises[ei];
+      if (!ex || !ex.circuit) return;
+      ex.circuit.items.push({ name: name, muscle: muscle || '' });
+      try { persist(); } catch (_) {}
+      renderProgramBuilder();
+    }
+  });
+}
+window.addCircuitStation = addCircuitStation;
+
+function removeCircuitStation(di, ei, ii) {
+  var ex = programDraft().days[di].exercises[ei];
+  if (!ex || !ex.circuit) return;
+  ex.circuit.items.splice(ii, 1);
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+}
+window.removeCircuitStation = removeCircuitStation;
+
 function addProgramDraftExercise(dayIdx) {
   openExercisePicker({
     title: 'AGGIUNGI AL GIORNO',
@@ -62744,6 +63030,20 @@ function programFromDraft(draft) {
 // add-to-program below, so an exercise added later is the same kind of thing
 // as one written at the start.
 function programExerciseRow(ex) {
+  if (ex.unit === 'circuit' && ex.circuit) {
+    // A circuit is its own thing: stations and a clock, not sets and reps.
+    return {
+      name: ex.name || 'Circuito',
+      name_original: ex.name || 'Circuito',
+      muscle_groups: ['CARDIO'],
+      unit: 'circuit',
+      circuit: JSON.parse(JSON.stringify(ex.circuit)),
+      sets: [{ reps: (ex.circuit.rounds || 8) + ' round', target_load: null }],
+      setCount: 1,
+      repsTarget: (ex.circuit.rounds || 8) + ' round',
+      rest: String(ex.rest || '2 min')
+    };
+  }
   var unit = (ex.unit === 'time' || ex.unit === 'cardio') ? ex.unit : 'reps';
   var setCount = Math.min(10, Math.max(1, Number(ex.sets) || (unit === 'cardio' ? 1 : 3)));
   var sets = [];
