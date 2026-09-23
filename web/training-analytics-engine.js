@@ -510,7 +510,11 @@
     return (weeks || []).reduce(function (s, w) { return s + (Number(w[field]) || 0); }, 0);
   }
 
-  function detectPRs(sets) {
+  // Every record in the log, in order, each one stamped with the session it
+  // happened in. detectPRs() below keeps the last sixteen for the stats
+  // screen; the session card needs the ones of a single day, whichever
+  // position they hold in the whole history.
+  function detectPRsAll(sets) {
     const best = {};
     const sessionVol = {};
     const events = [];
@@ -518,18 +522,18 @@
       if (!best[s.name]) best[s.name] = { load: 0, repsAtLoad: {}, e1rm: 0, volume: 0 };
       const b = best[s.name];
       if (s.loadRaw > b.load) {
-        events.push({ type: 'weight', name: s.name, value: s.loadRaw, week: s.week, kind: 'derived' });
+        events.push({ type: 'weight', name: s.name, value: s.loadRaw, week: s.week, day: s.day, kind: 'derived' });
         b.load = s.loadRaw;
       }
       const key = String(s.loadRaw);
       if (!b.repsAtLoad[key] || s.reps > b.repsAtLoad[key]) {
         if (b.repsAtLoad[key]) {
-          events.push({ type: 'reps', name: s.name, value: s.reps, load: s.loadRaw, week: s.week, kind: 'derived' });
+          events.push({ type: 'reps', name: s.name, value: s.reps, load: s.loadRaw, week: s.week, day: s.day, kind: 'derived' });
         }
         b.repsAtLoad[key] = s.reps;
       }
       if (s.e1rm != null && s.e1rm > b.e1rm) {
-        if (b.e1rm > 0) events.push({ type: 'e1rm', name: s.name, value: s.e1rm, prev: b.e1rm, week: s.week, kind: 'estimated' });
+        if (b.e1rm > 0) events.push({ type: 'e1rm', name: s.name, value: s.e1rm, prev: b.e1rm, week: s.week, day: s.day, kind: 'estimated' });
         b.e1rm = s.e1rm;
       }
       const sk = s.name + '|' + s.week + '_' + s.day;
@@ -538,15 +542,27 @@
     Object.keys(sessionVol).forEach(function (sk) {
       const name = sk.split('|')[0];
       const week = Number(String(sk.split('|')[1] || '').split('_')[0]);
+      const day = Number(String(sk.split('|')[1] || '').split('_')[1]);
       if (!best[name]) best[name] = { load: 0, repsAtLoad: {}, e1rm: 0, volume: 0 };
       if (sessionVol[sk] > (best[name].volume || 0)) {
         if (best[name].volume > 0) {
-          events.push({ type: 'volume', name: name, value: Math.round(sessionVol[sk]), week: week, kind: 'derived' });
+          events.push({ type: 'volume', name: name, value: Math.round(sessionVol[sk]), week: week, day: day, kind: 'derived' });
         }
         best[name].volume = sessionVol[sk];
       }
     });
-    return events.slice(-16);
+    return events;
+  }
+
+  function detectPRs(sets) {
+    return detectPRsAll(sets).slice(-16);
+  }
+
+  // The records set in one session, by week and day.
+  function sessionPRs(sets, week, day) {
+    const w = Number(week);
+    const d = Number(day);
+    return detectPRsAll(sets).filter(function (e) { return Number(e.week) === w && Number(e.day) === d; });
   }
 
   function comparePeriods(curWeeks, prevWeeks) {
@@ -3115,6 +3131,8 @@
     normalizeMuscleId: normalizeMuscleId,
     normalizeSets: normalizeSets,
     detectPRs: detectPRs,
+    detectPRsAll: detectPRsAll,
+    sessionPRs: sessionPRs,
     comparePeriods: comparePeriods,
     applyZoom: applyZoom,
     landmarksFor: landmarksFor,

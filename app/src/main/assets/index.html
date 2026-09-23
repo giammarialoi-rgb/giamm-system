@@ -1384,6 +1384,17 @@ body.nurvan-locked { background: var(--bg, #000); }
   color: var(--silver);
   line-height: 1.45;
 }
+#workout-complete-overlay .rewards-panel { max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+/* La card di fine seduta: tre numeri grandi, poi le sezioni che ci sono. */
+.sc-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 4px; }
+.sc-num { background: #0f0f0f; border: 1px solid #262626; border-radius: 10px; padding: 10px 4px; min-width: 0; }
+.sc-num-v { font-size: 18px; font-weight: 900; color: var(--gold); line-height: 1.1; overflow-wrap: anywhere; }
+.sc-num-l { font-size: 9px; font-weight: 800; letter-spacing: 1px; color: #888; margin-top: 4px; text-transform: uppercase; }
+.sc-section { margin-top: 14px; text-align: left; }
+.sc-section-t { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; color: #888; margin-bottom: 6px; }
+.sc-pr { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: #ddd; padding: 5px 0; border-bottom: 1px solid #1c1c1c; }
+.sc-pr > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 340px) { .sc-num-v { font-size: 15px; } }
 #workout-complete-overlay .wco-xp {
   font-size: 28px;
   font-weight: 900;
@@ -2202,7 +2213,7 @@ body.focus-mode [data-rewards-only] {
   </div>
 </div>
 
-<canvas id="social-card-canvas" width="1080" height="1350" style="display:none;position:absolute;left:-9999px;" aria-hidden="true"></canvas>
+<canvas id="social-card-canvas" width="1080" height="1920" style="display:none;position:absolute;left:-9999px;" aria-hidden="true"></canvas>
 <div id="view-athlete" style="display:none;" aria-hidden="true"></div>
 
 <!-- Timer Overlay -->
@@ -56252,59 +56263,218 @@ function setRewardsModeFromSettings(mode) {
   render();
 }
 
+// La card di fine seduta.
+//
+// Chi si allena vuole mostrare la seduta, non un badge. Qui c'e' solo la
+// seduta: nome, data, durata, volume, serie chiuse, i record se ci sono, la
+// mappa dei muscoli se c'e'. Niente streak, punti, livelli. E niente dati di
+// salute: peso corporeo, misure, esami non entrano, ne' sullo schermo ne'
+// nell'immagine. La card legge la seduta gia' salvata in store.logs e nel
+// diario; non salva niente e non tocca la finalizzazione.
+
+var SESSION_CARD_PR_LABEL = {
+  weight: 'Carico', reps: 'Ripetizioni', e1rm: 'e1RM stimato', volume: 'Volume seduta'
+};
+
+function formatKgIt(n) {
+  const v = Math.round(Number(n) || 0);
+  return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function formatDurationIt(sec) {
+  const s = Math.max(0, Math.round(Number(sec) || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.round((s % 3600) / 60);
+  if (h > 0) return h + ' h ' + String(m).padStart(2, '0') + ' min';
+  return Math.max(1, m) + ' min';
+}
+
+function formatSessionCardDate(iso) {
+  const d = new Date(iso || '');
+  if (isNaN(d.getTime())) return String(iso || '').slice(0, 10);
+  const days = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+  const months = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+  return days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+function formatSessionCardPr(pr) {
+  const type = pr && pr.type;
+  const v = Number(pr && pr.value);
+  if (type === 'reps') return v + ' rip' + (pr.load != null ? (' × ' + formatKgIt(pr.load) + ' kg') : '');
+  if (type === 'weight' || type === 'e1rm' || type === 'volume') return formatKgIt(v) + ' kg';
+  return String(pr && pr.value != null ? pr.value : '');
+}
+
+// Cosa va sulla card, e solo quello. Un campo che qui non c'e' non puo'
+// finire nell'immagine per sbaglio: la lista e' chiusa.
+function buildSessionCardData(input) {
+  const i = input || {};
+  const log = i.log || {};
+  // Un record per esercizio e tipo: dentro una seduta il motore segna ogni
+  // serie che supera la precedente, ma sulla card conta l'ultimo, il piu' alto.
+  const byKey = {};
+  const order = [];
+  (Array.isArray(i.prs) ? i.prs : [])
+    .filter(function (p) { return p && p.name && p.type && SESSION_CARD_PR_LABEL[p.type]; })
+    .forEach(function (p) {
+      const key = String(p.name) + '|' + p.type;
+      if (!byKey[key]) order.push(key);
+      byKey[key] = p;
+    });
+  const prs = order.slice(0, 6).map(function (key) {
+    const p = byKey[key];
+    return { name: String(p.name), type: p.type, label: SESSION_CARD_PR_LABEL[p.type], value: formatSessionCardPr(p) };
+  });
+  const musclesIn = (log.muscles && typeof log.muscles === 'object') ? log.muscles : null;
+  let muscles = null;
+  if (musclesIn) {
+    const kept = {};
+    Object.keys(musclesIn).forEach(function (k) { if (Number(musclesIn[k]) > 0) kept[k] = Number(musclesIn[k]); });
+    if (Object.keys(kept).length) muscles = kept;
+  }
+  const at = log.finalizedAt || log.at || '';
+  const athlete = String(i.athleteName || '').trim();
+  return {
+    title: String(i.sessionName || ('Seduta ' + ((Number(log.day) || 0) + 1))),
+    weekDay: 'W' + (Number(log.week) || 1) + ' · S' + ((Number(log.day) || 0) + 1),
+    at: at,
+    dateText: formatSessionCardDate(at),
+    durationSec: Math.max(0, Number(log.durationSec) || 0),
+    durationText: formatDurationIt(log.durationSec),
+    tonnage: Math.max(0, Math.round(Number(log.tonnage) || 0)),
+    tonnageText: formatKgIt(log.tonnage) + ' kg',
+    sets: Math.max(0, Number(log.sets) || 0),
+    exercises: Math.max(0, Number(log.exercises) || 0),
+    prs: prs,
+    muscles: muscles,
+    athleteName: athlete || null
+  };
+}
+
+function findSessionLog(week, day) {
+  const w = Number(week) || 1;
+  const d = Number(day) || 0;
+  const logs = (store && store.logs) || [];
+  for (let k = logs.length - 1; k >= 0; k--) {
+    const l = logs[k];
+    if (l && Number(l.week) === w && Number(l.day) === d) return l;
+  }
+  return null;
+}
+
+function sessionPrsFor(week, day) {
+  try {
+    const TAE = window.TrainingAnalyticsEngine;
+    if (!TAE || !TAE.normalizeSets || !TAE.sessionPRs) return [];
+    return TAE.sessionPRs(TAE.normalizeSets(store, DATA), week, day) || [];
+  } catch (_) { return []; }
+}
+
+function sessionCardFor(week, day, log) {
+  const entry = log || findSessionLog(week, day);
+  if (!entry) return null;
+  const w = Number(entry.week) || 1;
+  const d = Number(entry.day) || 0;
+  let sessionName = '';
+  try {
+    const wk = DATA && DATA.weeks && DATA.weeks[w - 1];
+    const sess = wk && (wk.sessions || wk.days || [])[d];
+    if (sess && typeof sessionDisplayName === 'function') sessionName = sessionDisplayName(sess, d);
+    else if (sess) sessionName = sess.name || sess.title || sess.day || '';
+  } catch (_) {}
+  return buildSessionCardData({
+    log: entry,
+    sessionName: sessionName || ('Seduta ' + (d + 1)),
+    athleteName: (store && store.profile && store.profile.name) || '',
+    prs: sessionPrsFor(w, d)
+  });
+}
+
+// Le due figure della mappa, come nelle statistiche ma senza bottoni: qui
+// non c'e' niente da selezionare.
+function sessionMuscleFigureHtml(view, muscles) {
+  const spots = statsHotspots(view).map(function (h) {
+    const n = statsMuscleVolume(muscles, h.id);
+    const cls = 'stats-hotspot' + (n >= 8 ? ' is-fat' : (n >= 1 ? ' is-work' : ''));
+    return '<span class="' + cls + '" style="top:' + h.top + ';left:' + h.left + ';width:' + h.width + ';height:' + h.height + ';pointer-events:none;"></span>';
+  }).join('');
+  return '<div class="stats-body-col"><div class="stats-body-frame">' +
+    '<img src="' + statsBodySrc(view) + '" alt="">' + spots + '</div>' +
+    '<div class="stats-body-viewlabel">' + (view === 'back' ? 'Retro' : 'Fronte') + '</div></div>';
+}
+
+function sessionCardOverlayHtml(card, mode) {
+  const kicker = mode === 'history' ? 'SEDUTA' : 'SEDUTA COMPLETATA';
+  const num = function (label, value) {
+    return '<div class="sc-num"><div class="sc-num-v">' + esc(value) + '</div><div class="sc-num-l">' + esc(label) + '</div></div>';
+  };
+  let h = '<div style="font-size:10px;font-weight:800;letter-spacing:2px;color:var(--silver);">' + kicker + '</div>' +
+    '<h2 id="wco-title" style="margin-top:6px;">' + esc(card.title) + '</h2>' +
+    '<div style="font-size:11px;color:#888;margin-bottom:14px;">' + esc(card.dateText) + ' · ' + esc(card.weekDay) + '</div>' +
+    '<div class="sc-nums">' + num('Durata', card.durationText) + num('Volume', card.tonnageText) + num('Serie', String(card.sets)) + '</div>' +
+    (card.exercises ? '<div style="font-size:11px;color:#888;margin:8px 0 0;">' + card.exercises + ' esercizi</div>' : '');
+  if (card.prs.length) {
+    h += '<div class="sc-section"><div class="sc-section-t">RECORD PERSONALI</div>' +
+      card.prs.map(function (p) {
+        return '<div class="sc-pr"><span>' + esc(p.name) + '</span><span style="color:var(--gold);font-weight:800;white-space:nowrap;">' + esc(p.label) + ' · ' + esc(p.value) + '</span></div>';
+      }).join('') + '</div>';
+  }
+  if (card.muscles) {
+    h += '<div class="sc-section"><div class="sc-section-t">MUSCOLI DELLA SEDUTA</div>' +
+      '<div class="stats-body-duo" style="padding-top:4px;">' + sessionMuscleFigureHtml('front', card.muscles) + sessionMuscleFigureHtml('back', card.muscles) + '</div></div>';
+  }
+  h += '<div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;">' +
+    '<button type="button" class="btn btn-outline" style="width:100%;" id="wco-share-btn" onclick="shareWorkoutCardFromOverlay()">CONDIVIDI</button>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;height:48px;font-weight:900;" onclick="closeWorkoutCompleteOverlay()">CHIUDI</button>' +
+    '</div>';
+  return h;
+}
+
+function renderSessionCardOverlay(card, mode) {
+  const ov = $('workout-complete-overlay');
+  if (!ov || !card) return false;
+  window.__sessionCard = card;
+  window.__sessionCardMode = mode || 'finalize';
+  const panel = ov.querySelector('.rewards-panel') || ov;
+  panel.innerHTML = sessionCardOverlayHtml(card, window.__sessionCardMode);
+  panel.scrollTop = 0;
+  ov.style.display = 'flex';
+  pushUiOverlay('workout-complete-overlay');
+  return true;
+}
+
+// Dopo la finalizzazione: la card della seduta appena salvata.
 function showWorkoutCompleteOverlay(logEntry, awarded) {
   window.__lastCompletedLog = logEntry || null;
   window.__lastAwarded = awarded || null;
-  const ov = $('workout-complete-overlay');
-  if (!ov) {
+  const card = logEntry ? sessionCardFor(logEntry.week, logEntry.day, logEntry) : null;
+  if (!card || !renderSessionCardOverlay(card, 'finalize')) {
     navigate('stats');
     maybeAskCoachAfterComplete();
     return;
   }
-  const durM = Math.floor((logEntry.durationSec || 0) / 60);
-  const sum = $('wco-summary');
-  if (sum) {
-    sum.innerHTML = durM + ' min · ' + (logEntry.kcal || 0) + ' kcal · ' + (logEntry.tonnage || 0) + ' kg · intensità ' +
-      (logEntry.intensity || 0) + ' pts' +
-      ((logEntry.prCount > 0) ? (' · ' + logEntry.prCount + ' PR') : '');
-  }
-  const xpBlock = $('wco-xp-block');
-  if (xpBlock) {
-    if (isRewardsMode() && awarded) {
-      xpBlock.style.display = 'block';
-      const xpEl = $('wco-xp');
-      if (xpEl) xpEl.textContent = '+' + (awarded.xp || 0) + ' XP';
-      const lvl = $('wco-level-line');
-      if (lvl) {
-        lvl.textContent = 'Livello ' + (awarded.level || store.rewards.level || 1) +
-          ' · ' + String(awarded.tier || store.rewards.tier || 'bronze').toUpperCase() +
-          ' · streak ' + (awarded.streakDays != null ? awarded.streakDays : (store.rewards.streakDays || 0)) + 'g';
-      }
-      const fill = $('wco-xp-fill');
-      if (fill) {
-        const pct = awarded.need ? Math.min(100, Math.round(((awarded.xpIntoLevel || 0) / awarded.need) * 100)) : 0;
-        fill.style.width = '0%';
-        requestAnimationFrame(function () { fill.style.width = pct + '%'; });
-      }
-      const ach = $('wco-achievements');
-      if (ach) {
-        const news = awarded.newAchievements || [];
-        ach.textContent = news.length ? ('Badge: ' + news.map(function (a) { return a.name || a.id || a; }).join(', ')) : '';
-      }
-    } else {
-      xpBlock.style.display = 'none';
-    }
-  }
   applyFocusUi();
-  ov.style.display = 'flex';
-  pushUiOverlay('workout-complete-overlay');
+}
+
+// Dallo storico: la stessa card per una seduta passata qualunque.
+function openSessionCard(week, day) {
+  const card = sessionCardFor(week, day);
+  if (!card) {
+    if (typeof showToast === 'function') showToast('Nessuna seduta finalizzata per questo giorno', 'warning');
+    return;
+  }
+  try { if (typeof closeSavedRecordOverlay === 'function') closeSavedRecordOverlay(); } catch (_) {}
+  renderSessionCardOverlay(card, 'history');
 }
 
 function closeWorkoutCompleteOverlay(goto) {
   const ov = $('workout-complete-overlay');
   if (ov) ov.style.display = 'none';
   popUiOverlay('workout-complete-overlay');
+  const fromFinalize = window.__sessionCardMode !== 'history';
+  window.__sessionCardMode = null;
   if (goto === 'stats') navigate('stats');
+  if (!fromFinalize) return;
   maybeAskCoachAfterComplete();
   // Asked here rather than during the session: the effort is measured over
   // the last sessions, and the moment to decide about next week is when this
@@ -56317,128 +56487,256 @@ function closeWorkoutCompleteOverlay(goto) {
 }
 
 function shareWorkoutCardFromOverlay() {
-  shareWorkoutCard(window.__lastCompletedLog || null);
+  shareSessionCard(window.__sessionCard || null);
 }
 
-function drawSocialCard(canvas, payload, templateId) {
-  if (!canvas || !canvas.getContext) return;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width || 1080;
-  const H = canvas.height || 1350;
-  const p = payload || {};
-  const tpl = templateId || 'minimal';
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, W, H);
-  if (tpl === 'elite') {
-    const g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, '#1a1508');
-    g.addColorStop(1, '#000');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-  }
-  ctx.strokeStyle = '#d4af37';
-  ctx.lineWidth = 6;
-  ctx.strokeRect(40, 40, W - 80, H - 80);
-  ctx.fillStyle = '#c0c0c0';
-  ctx.font = '700 36px Montserrat, sans-serif';
-  ctx.fillText('NURVAN', 80, 120);
-  ctx.fillStyle = '#d4af37';
-  ctx.font = '900 64px Montserrat, sans-serif';
-  ctx.fillText(p.title || 'WORKOUT COMPLETE', 80, 220);
-  ctx.fillStyle = '#e8e8e8';
-  ctx.font = '600 42px Montserrat, sans-serif';
-  let y = 320;
-  function line(label, val) {
-    if (val == null || val === '') return;
-    ctx.fillStyle = '#888';
-    ctx.font = '700 28px Montserrat, sans-serif';
-    ctx.fillText(String(label).toUpperCase(), 80, y);
-    ctx.fillStyle = '#fff';
-    ctx.font = '800 40px Montserrat, sans-serif';
-    ctx.fillText(String(val), 80, y + 48);
-    y += 110;
-  }
-  if (p.durationSec != null) line('Durata', Math.floor(p.durationSec / 60) + ' min');
-  if (p.tonnage != null) line('Tonnellaggio', Math.round(p.tonnage) + ' kg');
-  if (p.sets != null) line('Serie', p.sets);
-  if (p.prCount) line('PR', p.prCount);
-  if (p.level != null) line('Livello', p.level + (p.tier ? ' · ' + String(p.tier).toUpperCase() : ''));
-  if (p.topPercent != null) line('Top', p.topPercent + '%');
-  if (p.streakDays != null) line('Streak', p.streakDays + ' giorni');
-  ctx.fillStyle = '#666';
-  ctx.font = '500 24px Montserrat, sans-serif';
-  ctx.fillText(p.date || '', 80, H - 80);
-  ctx.fillStyle = '#d4af37';
-  ctx.fillText('Train. Fuel. Recover. Track. Evolve.', 80, H - 120);
-}
-
-async function shareWorkoutCard(logEntry) {
+// Compat: chi chiama ancora con un log entry.
+function shareWorkoutCard(logEntry) {
   const entry = logEntry || window.__lastCompletedLog;
-  if (!entry) {
-    if (typeof showToast === 'function') showToast('Nessuna sessione da condividere', 'warning');
-    return;
+  const card = entry ? sessionCardFor(entry.week, entry.day, entry) : null;
+  return shareSessionCard(card);
+}
+
+function loadCardImage(src, timeoutMs) {
+  return new Promise(function (resolve) {
+    try {
+      const img = new Image();
+      let done = false;
+      const finish = function (v) { if (!done) { done = true; resolve(v); } };
+      img.onload = function () { finish(img); };
+      img.onerror = function () { finish(null); };
+      setTimeout(function () { finish(null); }, timeoutMs || 2500);
+      img.src = src;
+    } catch (_) { resolve(null); }
+  });
+}
+
+function cardWrapLines(ctx, text, maxWidth, maxLines) {
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines = [];
+  let cur = '';
+  words.forEach(function (w) {
+    const trial = cur ? cur + ' ' + w : w;
+    if (ctx.measureText(trial).width <= maxWidth || !cur) cur = trial;
+    else { lines.push(cur); cur = w; }
+  });
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) {
+    const kept = lines.slice(0, maxLines);
+    let last = kept[maxLines - 1];
+    while (last && ctx.measureText(last + '…').width > maxWidth) last = last.slice(0, -1);
+    kept[maxLines - 1] = last + '…';
+    return kept;
   }
-  ensureRewardsReady();
-  let payload = {
-    brand: 'NURVAN',
-    title: 'WORKOUT COMPLETE',
-    date: String(entry.at || '').slice(0, 10),
-    durationSec: entry.durationSec || 0,
-    tonnage: entry.tonnage || 0,
-    sets: entry.sets || 0,
-    exercises: entry.exercises || 0,
-    prCount: entry.prCount || 0
+  return lines;
+}
+
+// L'immagine: 1080×1920, formato storia. Le sezioni si accodano una sotto
+// l'altra; quello che manca non lascia un buco, semplicemente non c'e'.
+async function drawSessionCard(canvas, card) {
+  if (!canvas || !canvas.getContext || !card) return false;
+  canvas.width = 1080;
+  canvas.height = 1920;
+  const ctx = canvas.getContext('2d');
+  const W = 1080, H = 1920, PAD = 84;
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#111111');
+  bg.addColorStop(1, '#050505');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  const glow = ctx.createRadialGradient(W / 2, 260, 40, W / 2, 260, 700);
+  glow.addColorStop(0, 'rgba(212,175,55,0.16)');
+  glow.addColorStop(1, 'rgba(212,175,55,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#d4af37';
+  ctx.lineWidth = 5;
+  ctx.strokeRect(36, 36, W - 72, H - 72);
+
+  let y = 150;
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#9a9a9a';
+  ctx.font = '700 34px Montserrat, sans-serif';
+  ctx.fillText('NURVAN', PAD, y);
+  ctx.textAlign = 'right';
+  ctx.fillText(card.weekDay, W - PAD, y);
+  ctx.textAlign = 'left';
+  y += 70;
+
+  if (card.athleteName) {
+    ctx.fillStyle = '#d4af37';
+    ctx.font = '800 44px Montserrat, sans-serif';
+    ctx.fillText(cardWrapLines(ctx, card.athleteName, W - PAD * 2, 1)[0], PAD, y);
+    y += 70;
+  }
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 78px Montserrat, sans-serif';
+  cardWrapLines(ctx, card.title, W - PAD * 2, 2).forEach(function (line) {
+    ctx.fillText(line, PAD, y + 60);
+    y += 92;
+  });
+  y += 10;
+  ctx.fillStyle = '#8a8a8a';
+  ctx.font = '600 36px Montserrat, sans-serif';
+  ctx.fillText(card.dateText, PAD, y + 30);
+  y += 110;
+
+  const big = function (label, value) {
+    ctx.fillStyle = '#8a8a8a';
+    ctx.font = '700 32px Montserrat, sans-serif';
+    ctx.fillText(label.toUpperCase(), PAD, y);
+    ctx.fillStyle = '#d4af37';
+    ctx.font = '900 118px Montserrat, sans-serif';
+    ctx.fillText(value, PAD, y + 122);
+    y += 200;
   };
-  try {
-    if (window.NurvanRewards && typeof NurvanRewards.buildSharePayload === 'function') {
-      payload = NurvanRewards.buildSharePayload(entry, store.rewards, store.rewards.shareDefaults || {});
-    } else if (isRewardsMode()) {
-      payload.level = store.rewards.level;
-      payload.tier = store.rewards.tier;
-      payload.topPercent = store.rewards.topPercent;
-      payload.streakDays = store.rewards.streakDays;
-    }
-  } catch (_) {}
+  big('Durata', card.durationText);
+  big('Volume', card.tonnageText);
+  big('Serie chiuse', String(card.sets) + (card.exercises ? ('  ·  ' + card.exercises + ' esercizi') : ''));
+  if (card.exercises) {
+    // The exercise count rides on the sets line in a smaller size: redraw it.
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(PAD - 4, y - 200 + 30, W - PAD * 2 + 8, 150);
+    ctx.fillStyle = '#d4af37';
+    ctx.font = '900 118px Montserrat, sans-serif';
+    ctx.fillText(String(card.sets), PAD, y - 200 + 122);
+    const wSets = ctx.measureText(String(card.sets)).width;
+    ctx.fillStyle = '#8a8a8a';
+    ctx.font = '700 40px Montserrat, sans-serif';
+    ctx.fillText(card.exercises + ' esercizi', PAD + wSets + 30, y - 200 + 122);
+  }
 
-  const canvas = $('social-card-canvas') || document.createElement('canvas');
-  if (!canvas.width) { canvas.width = 1080; canvas.height = 1350; }
-  const tpl = (isRewardsMode() && store.rewards.avatar && store.rewards.avatar.frame === 'frame_gold') ? 'elite' : 'minimal';
-  drawSocialCard(canvas, payload, tpl);
+  const footerTop = H - 250;
 
-  const text = 'NURVAN · ' + (payload.title || 'Workout') + ' · ' +
-    Math.floor((payload.durationSec || 0) / 60) + ' min · ' + Math.round(payload.tonnage || 0) + ' kg' +
-    (payload.level ? (' · Lv ' + payload.level) : '');
+  if (card.prs.length) {
+    ctx.fillStyle = '#8a8a8a';
+    ctx.font = '700 30px Montserrat, sans-serif';
+    ctx.fillText('RECORD PERSONALI', PAD, y);
+    y += 22;
+    card.prs.slice(0, 5).forEach(function (p) {
+      if (y + 60 > footerTop - 40) return;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 38px Montserrat, sans-serif';
+      const name = cardWrapLines(ctx, p.name, W - PAD * 2 - 380, 1)[0];
+      ctx.fillText(name, PAD, y + 46);
+      ctx.fillStyle = '#d4af37';
+      ctx.textAlign = 'right';
+      ctx.font = '800 38px Montserrat, sans-serif';
+      ctx.fillText(p.label + ' · ' + p.value, W - PAD, y + 46);
+      ctx.textAlign = 'left';
+      y += 62;
+    });
+    y += 30;
+  }
 
-  try {
-    const blob = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/png'); });
-    if (blob && navigator.share && navigator.canShare) {
-      const file = new File([blob], 'nurvan-workout.png', { type: 'image/png' });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'NURVAN', text: text });
-        return;
+  if (card.muscles) {
+    const room = footerTop - y - 40;
+    const figH = Math.min(560, room);
+    if (figH >= 260) {
+      const front = await loadCardImage(statsBodySrc('front'));
+      const back = await loadCardImage(statsBodySrc('back'));
+      const drawFig = function (img, view, x0) {
+        if (!img || !img.naturalWidth) return;
+        const scale = figH / img.naturalHeight;
+        const fw = img.naturalWidth * scale;
+        const x = x0 - fw / 2;
+        ctx.drawImage(img, x, y, fw, figH);
+        statsHotspots(view).forEach(function (h) {
+          const n = statsMuscleVolume(card.muscles, h.id);
+          if (n < 1) return;
+          ctx.fillStyle = n >= 8 ? 'rgba(255,77,77,0.30)' : 'rgba(212,175,55,0.24)';
+          const rx = x + parseFloat(h.left) / 100 * fw;
+          const ry = y + parseFloat(h.top) / 100 * figH;
+          const rw = parseFloat(h.width) / 100 * fw;
+          const rh = parseFloat(h.height) / 100 * figH;
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(rx, ry, rw, rh, 22); else ctx.rect(rx, ry, rw, rh);
+          ctx.fill();
+        });
+      };
+      if (front || back) {
+        ctx.fillStyle = '#8a8a8a';
+        ctx.font = '700 30px Montserrat, sans-serif';
+        ctx.fillText('MUSCOLI DELLA SEDUTA', PAD, y);
+        y += 30;
+        drawFig(front, 'front', W / 2 - 200);
+        drawFig(back, 'back', W / 2 + 200);
+        y += figH + 20;
       }
     }
-    if (blob) {
+  }
+
+  // Footer: logo e nome dell'app. Nessun dato.
+  const logo = await loadCardImage('nurvan_logo.png');
+  ctx.fillStyle = '#d4af37';
+  ctx.font = '600 28px Montserrat, sans-serif';
+  ctx.textAlign = 'center';
+  if (logo && logo.naturalWidth) {
+    const lh = 84;
+    const lw = logo.naturalWidth * (lh / logo.naturalHeight);
+    ctx.drawImage(logo, W / 2 - lw / 2, H - 230, lw, lh);
+    ctx.fillText('Train. Fuel. Recover. Track. Evolve.', W / 2, H - 110);
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 56px Montserrat, sans-serif';
+    ctx.fillText('NURVAN', W / 2, H - 170);
+    ctx.fillStyle = '#d4af37';
+    ctx.font = '600 28px Montserrat, sans-serif';
+    ctx.fillText('Train. Fuel. Recover. Track. Evolve.', W / 2, H - 110);
+  }
+  ctx.textAlign = 'left';
+  return true;
+}
+
+async function shareSessionCard(card) {
+  if (!card) {
+    if (typeof showToast === 'function') showToast('Nessuna seduta da condividere', 'warning');
+    return false;
+  }
+  const canvas = $('social-card-canvas') || document.createElement('canvas');
+  const drawn = await drawSessionCard(canvas, card);
+  if (!drawn) return false;
+  const filename = 'nurvan-seduta-' + String(card.at || '').slice(0, 10) + '.png';
+  const text = 'NURVAN · ' + card.title + ' · ' + card.durationText + ' · ' + card.tonnageText + ' · ' + card.sets + ' serie';
+  let blob = null;
+  try {
+    blob = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/png'); });
+  } catch (_) { blob = null; }
+  if (!blob) {
+    if (typeof showToast === 'function') showToast('Immagine non generata', 'danger');
+    return false;
+  }
+  try {
+    if (navigator.share && navigator.canShare) {
+      const file = new File([blob], filename, { type: 'image/png' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'NURVAN', text: text });
+        return true;
+      }
+    }
+  } catch (err) {
+    // Chiusura del foglio di condivisione: non e' un errore da mostrare.
+    if (err && err.name === 'AbortError') return false;
+    console.warn('[SHARE_CARD]', err);
+  }
+  try {
+    if (typeof NativeConfig !== 'undefined' && NativeConfig.shareImageFile) {
       const reader = new FileReader();
       const b64 = await new Promise(function (resolve, reject) {
         reader.onload = function () { resolve(String(reader.result || '').split(',')[1] || ''); };
         reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
-      if (typeof NativeConfig !== 'undefined' && NativeConfig.shareImageFile) {
-        NativeConfig.shareImageFile(b64, 'image/png', text);
-        return;
-      }
+      NativeConfig.shareImageFile(b64, 'image/png', text);
+      return true;
     }
-  } catch (err) {
-    console.warn('[SHARE_CARD]', err);
-  }
-  try {
-    if (navigator.share) await navigator.share({ title: 'NURVAN', text: text });
-    else if (navigator.clipboard) await navigator.clipboard.writeText(text);
-  } catch (_) {}
-  if (typeof showToast === 'function') showToast('Scheda workout pronta', 'success');
+  } catch (err) { console.warn('[SHARE_CARD_NATIVE]', err); }
+  downloadBlobHelper(blob, filename);
+  if (typeof showToast === 'function') showToast('Immagine della seduta scaricata (1080×1920)', 'success');
+  return true;
 }
+
 
 function athleteAvatarSvg(avatar) {
   const av = avatar || { frame: 'frame_standard', outfit: 'outfit_charcoal' };
@@ -58294,6 +58592,7 @@ function renderStats(c){
       '<button type="button" style="flex:1;text-align:left;background:none;border:0;color:inherit;padding:0;cursor:pointer;" onclick="openLoggedSessionReview(' + hw + ',' + hd + ')">' +
       '<span>W' + (row.week || '?') + ' · S' + (hd + 1) + (stampPretty ? (' · Finalizzato il ' + esc(stampPretty)) : '') + '</span>' +
       '<div style="color:var(--gold);font-weight:800;margin-top:2px;">' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg</div></button>' +
+      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="openSessionCard(' + hw + ',' + hd + ')">CARD</button>' +
       '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="startEditFinalizedWorkout(' + hw + ',' + hd + ')">MODIFICA</button></div>';
   }).join('');
   const lastStampPretty = last ? formatFinalizedDateTime(last.finalizedAt || last.at) : '';
@@ -58307,7 +58606,8 @@ function renderStats(c){
       <div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:6px;">ULTIMA SESSIONE FINALIZZATA</div>
       <div style="font-size:11px;color:#aaa;">W${last.week} · Seduta ${(last.day||0)+1}${lastStampPretty ? (' · Finalizzato il ' + esc(lastStampPretty)) : ''}</div>
       </div>
-      <button type="button" class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="startEditFinalizedWorkout(${Number(last.week)||1},${Number(last.day)||0})">MODIFICA ALLENAMENTO FINALIZZATO</button>
+      <button type="button" class="btn btn-outline" style="width:100%;margin-top:10px;font-size:11px;" onclick="openSessionCard(${Number(last.week)||1},${Number(last.day)||0})">CARD DELLA SEDUTA</button>
+      <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px;" onclick="startEditFinalizedWorkout(${Number(last.week)||1},${Number(last.day)||0})">MODIFICA ALLENAMENTO FINALIZZATO</button>
     </div>` : ''}
     ${renderMuscleMap(snap.muscles)}
     ${renderCheckFisicoCardHtml()}
@@ -59114,6 +59414,7 @@ function openLoggedSessionReview(week, day) {
     (log && (log.finalizedAt || log.at)
       ? ('<div style="font-size:12px;color:var(--gold);font-weight:800;margin-bottom:12px;">Finalizzato il ' + esc(formatFinalizedDateTime(log.finalizedAt || log.at)) + '</div>')
       : '') +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="openSessionCard(' + week + ',' + day + ')">CARD DELLA SEDUTA</button>' +
     '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="startEditFinalizedWorkout(' + week + ',' + day + ')">MODIFICA ALLENAMENTO FINALIZZATO</button>' +
     body + '</div>';
   document.body.appendChild(overlay);
@@ -66914,7 +67215,12 @@ if (typeof window !== 'undefined') {
   window.closeWorkoutCompleteOverlay = closeWorkoutCompleteOverlay;
   window.shareWorkoutCard = shareWorkoutCard;
   window.shareWorkoutCardFromOverlay = shareWorkoutCardFromOverlay;
-  window.drawSocialCard = drawSocialCard;
+  window.drawSessionCard = drawSessionCard;
+  window.shareSessionCard = shareSessionCard;
+  window.openSessionCard = openSessionCard;
+  window.sessionCardFor = sessionCardFor;
+  window.buildSessionCardData = buildSessionCardData;
+  window.renderSessionCardOverlay = renderSessionCardOverlay;
   window.renderAthleteProfile = renderAthleteProfile;
   window.acceptAdaptiveDeload = acceptAdaptiveDeload;
   window.rejectAdaptiveDeload = rejectAdaptiveDeload;
