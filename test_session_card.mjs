@@ -177,5 +177,50 @@ console.log("--- 6. tre stili: scuro, su foto, vetro ---");
 }
 
 console.log("");
+console.log("--- 7. un record ha bisogno di qualcosa da battere ---");
+{
+  // Il primo valore in assoluto e' la base, non un record; e dentro una
+  // seduta ci si misura con le sedute precedenti, non con la serie di un
+  // minuto prima. Qui gira il motore vero.
+  global.self = global; global.window = global;
+  await import('./web/training-analytics-engine.js');
+  const E = global.TrainingAnalyticsEngine;
+  const first = [
+    { name: 'Panca', week: 1, day: 0, exIdx: 0, set: 1, loadRaw: 80, reps: 8, e1rm: 101, volume: 640 },
+    { name: 'Panca', week: 1, day: 0, exIdx: 0, set: 3, loadRaw: 82.5, reps: 8, e1rm: 104, volume: 660 },
+    { name: 'Squat', week: 1, day: 0, exIdx: 1, set: 1, loadRaw: 100, reps: 5, e1rm: 117, volume: 500 }
+  ];
+  eq(E.sessionPRs(first, 1, 0), [], '7a. prima seduta di un programma nuovo: nessun record, anche se la serie 3 batte la 1');
+  const firstCard = run('buildSessionCardData({ log: LOG, prs: [] })');
+  eq(firstCard.prs, [], '7b. e la card non ha la sezione record');
+  const second = first.concat([
+    { name: 'Panca', week: 1, day: 2, exIdx: 0, set: 1, loadRaw: 85, reps: 8, e1rm: 107, volume: 680 },
+    { name: 'Squat', week: 1, day: 2, exIdx: 1, set: 1, loadRaw: 100, reps: 5, e1rm: 117, volume: 500 }
+  ]);
+  const prs2 = E.sessionPRs(second, 1, 2);
+  eq(prs2.map(function (e) { return e.type + ':' + e.name; }), ['weight:Panca', 'e1rm:Panca'], '7c. seconda seduta con un carico piu alto: record solo su quello');
+  eq(E.sessionPRs(second, 1, 0), [], '7d. e la prima seduta resta senza, anche riletta dopo');
+  const reps = first.concat([{ name: 'Panca', week: 1, day: 2, exIdx: 0, set: 1, loadRaw: 80, reps: 10, e1rm: 106, volume: 800 }]);
+  ok('7e. piu ripetizioni allo stesso carico di una seduta prima: record di ripetizioni', E.sessionPRs(reps, 1, 2).some(function (e) { return e.type === 'reps' && e.value === 10; }));
+  const same = first.concat([{ name: 'Panca', week: 1, day: 2, exIdx: 0, set: 1, loadRaw: 82.5, reps: 8, e1rm: 104, volume: 660 }]);
+  eq(E.sessionPRs(same, 1, 2).filter(function (e) { return e.type !== 'volume'; }), [], '7f. ripetere il proprio massimo non e un record');
+  ok('7g. detectPRs delle statistiche segue la stessa regola', E.detectPRs(first).length === 0 && E.detectPRs(second).length === 2);
+  const shuffled = second.slice().reverse();
+  eq(E.sessionPRs(shuffled, 1, 2).length, 2, '7h. e l ordine in cui arrivano le serie non conta');
+}
+
+console.log("");
+console.log("--- 8. un esercizio senza gruppo non finisce negli addominali ---");
+{
+  const nm = grab('normalizeMacroMuscleGroup');
+  ok('8a. la pagina non piega piu ALTRO in ADDOME', !/'ALTRO'\]\.includes\(g\)\) return 'ADDOME'/.test(nm) && /\['ADDOME', 'CORE', 'ABS', 'ABDOMINAL'\]\.includes\(g\)\) return 'ADDOME'/.test(nm));
+  const eng = fs.readFileSync(path.join(root, 'web/training-analytics-engine.js'), 'utf8');
+  ok('8b. e nemmeno il motore', !/'ABDOMINAL', 'ALTRO'\]\.includes\(g\)\) return 'ADDOME'/.test(eng));
+  ok('8c. il volume degli addominali nelle statistiche non somma piu ALTRO', !/\(m\.ADDOME \|\| 0\) \+ \(m\.CORE \|\| 0\) \+ \(m\.ALTRO \|\| 0\)/.test(SRC));
+  ok('8d. i muscoli ricordati come ADDOME dal vecchio ripiego vengono ricontrollati una volta', /function purgeAltroMuscleMemory\(\)/.test(SRC) && /__muscleAltroPurgeV1/.test(SRC));
+  ok('8e. e c e uno script che elenca gli esercizi del database senza gruppo', fs.existsSync(path.join(root, 'tools/list_unclassified_exercises.mjs')));
+}
+
+console.log("");
 if (failed) { console.log(failed + ' test della card falliti.'); process.exit(1); }
 console.log('Tutti i test della card passano.');

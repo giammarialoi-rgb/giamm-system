@@ -515,42 +515,67 @@
   // screen; the session card needs the ones of a single day, whichever
   // position they hold in the whole history.
   function detectPRsAll(sets) {
-    const best = {};
-    const sessionVol = {};
+    // A record needs something to beat. The first value ever logged for an
+    // exercise is the baseline, not a record; and within one session a set
+    // is measured against what came before that session, never against the
+    // set closed a minute earlier. Sessions are walked in order, and what a
+    // session adds becomes the baseline only once the session is over.
+    const sorted = (sets || []).slice().sort(function (a, b) {
+      return (a.week - b.week) || (a.day - b.day) || ((a.exIdx || 0) - (b.exIdx || 0)) || ((a.set || 0) - (b.set || 0));
+    });
+    const prior = {};
     const events = [];
-    sets.forEach(function (s) {
-      if (!best[s.name]) best[s.name] = { load: 0, repsAtLoad: {}, e1rm: 0, volume: 0 };
-      const b = best[s.name];
-      if (s.loadRaw > b.load) {
-        events.push({ type: 'weight', name: s.name, value: s.loadRaw, week: s.week, day: s.day, kind: 'derived' });
-        b.load = s.loadRaw;
+    let cur = null;
+    let curKey = null;
+    function ensure(map, name) {
+      if (!map[name]) map[name] = { load: 0, repsAtLoad: {}, e1rm: 0, volume: 0, sessionVolume: 0 };
+      return map[name];
+    }
+    function closeSession() {
+      if (!cur) return;
+      Object.keys(cur).forEach(function (name) {
+        const c = cur[name];
+        const p = ensure(prior, name);
+        if (c.load > p.load) p.load = c.load;
+        Object.keys(c.repsAtLoad).forEach(function (k) {
+          if (!p.repsAtLoad[k] || c.repsAtLoad[k] > p.repsAtLoad[k]) p.repsAtLoad[k] = c.repsAtLoad[k];
+        });
+        if (c.e1rm > p.e1rm) p.e1rm = c.e1rm;
+        if (c.sessionVolume > p.volume) {
+          if (p.volume > 0 && c.volumeEvent) events.push(c.volumeEvent);
+          p.volume = c.sessionVolume;
+        }
+      });
+      cur = null;
+    }
+    sorted.forEach(function (s) {
+      const key = s.week + '_' + s.day;
+      if (key !== curKey) { closeSession(); curKey = key; cur = {}; }
+      const p = ensure(prior, s.name);
+      const c = ensure(cur, s.name);
+      if (s.loadRaw > c.load) {
+        if (p.load > 0 && s.loadRaw > p.load) {
+          events.push({ type: 'weight', name: s.name, value: s.loadRaw, week: s.week, day: s.day, kind: 'derived' });
+        }
+        c.load = s.loadRaw;
       }
-      const key = String(s.loadRaw);
-      if (!b.repsAtLoad[key] || s.reps > b.repsAtLoad[key]) {
-        if (b.repsAtLoad[key]) {
+      const lk = String(s.loadRaw);
+      if (!c.repsAtLoad[lk] || s.reps > c.repsAtLoad[lk]) {
+        if (p.repsAtLoad[lk] && s.reps > p.repsAtLoad[lk]) {
           events.push({ type: 'reps', name: s.name, value: s.reps, load: s.loadRaw, week: s.week, day: s.day, kind: 'derived' });
         }
-        b.repsAtLoad[key] = s.reps;
+        c.repsAtLoad[lk] = s.reps;
       }
-      if (s.e1rm != null && s.e1rm > b.e1rm) {
-        if (b.e1rm > 0) events.push({ type: 'e1rm', name: s.name, value: s.e1rm, prev: b.e1rm, week: s.week, day: s.day, kind: 'estimated' });
-        b.e1rm = s.e1rm;
-      }
-      const sk = s.name + '|' + s.week + '_' + s.day;
-      sessionVol[sk] = (sessionVol[sk] || 0) + s.volume;
-    });
-    Object.keys(sessionVol).forEach(function (sk) {
-      const name = sk.split('|')[0];
-      const week = Number(String(sk.split('|')[1] || '').split('_')[0]);
-      const day = Number(String(sk.split('|')[1] || '').split('_')[1]);
-      if (!best[name]) best[name] = { load: 0, repsAtLoad: {}, e1rm: 0, volume: 0 };
-      if (sessionVol[sk] > (best[name].volume || 0)) {
-        if (best[name].volume > 0) {
-          events.push({ type: 'volume', name: name, value: Math.round(sessionVol[sk]), week: week, day: day, kind: 'derived' });
+      if (s.e1rm != null && s.e1rm > c.e1rm) {
+        if (p.e1rm > 0 && s.e1rm > p.e1rm) {
+          events.push({ type: 'e1rm', name: s.name, value: s.e1rm, prev: p.e1rm, week: s.week, day: s.day, kind: 'estimated' });
         }
-        best[name].volume = sessionVol[sk];
+        c.e1rm = s.e1rm;
       }
+      c.sessionVolume += (Number(s.volume) || 0);
+      c.volumeEvent = { type: 'volume', name: s.name, value: Math.round(c.sessionVolume), week: s.week, day: s.day, kind: 'derived' };
     });
+    closeSession();
     return events;
   }
 
@@ -834,7 +859,8 @@
     if (['SPALLE', 'DELTOIDI', 'SHOULDERS', 'DELTS'].includes(g)) return 'SPALLE';
     if (['BICIPITI', 'TRICIPITI', 'BRACCIA', 'ARMS', 'BICEPS', 'TRICEPS'].includes(g)) return 'BRACCIA';
     if (['PETTO', 'CHEST', 'PECS', 'PETTORALE', 'PETTORALE_MAGGIORE', 'PETTORALE_CLAVICOLARE'].includes(g)) return 'PETTO';
-    if (['ADDOME', 'CORE', 'ABS', 'ABDOMINAL', 'ALTRO'].includes(g)) return 'ADDOME';
+    // 'ALTRO' is not a muscle: an unclassified exercise stays unclassified.
+    if (['ADDOME', 'CORE', 'ABS', 'ABDOMINAL'].includes(g)) return 'ADDOME';
     if (['GAMBE', 'LEGS', 'QUADRICIPITI', 'QUADS', 'QUAD', 'FEMORALI', 'HAMSTRINGS', 'HAM', 'GLUTEI', 'GLUTES', 'GLUTE', 'POLPACCI', 'CALVES', 'CALF', 'GAMBE_POLPACCI'].includes(g)) return 'GAMBE';
     return FINE_TO_MACRO[g] || g;
   }
