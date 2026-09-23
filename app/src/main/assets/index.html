@@ -43917,7 +43917,9 @@ function normalizeMacroMuscleGroup(raw) {
   if (['SPALLE', 'DELTOIDI', 'SHOULDERS', 'DELTS'].includes(g)) return 'SPALLE';
   if (['BICIPITI', 'TRICIPITI', 'BRACCIA', 'ARMS', 'BICEPS', 'TRICEPS'].includes(g)) return 'BRACCIA';
   if (['PETTO', 'CHEST', 'PECS', 'PETTORALE'].includes(g)) return 'PETTO';
-  if (['ADDOME', 'CORE', 'ABS', 'ABDOMINAL', 'ALTRO'].includes(g)) return 'ADDOME';
+  // 'ALTRO' non e' un muscolo: un esercizio senza classificazione resta senza,
+  // e la mappa non lo colora. Fino a ieri finiva negli addominali.
+  if (['ADDOME', 'CORE', 'ABS', 'ABDOMINAL'].includes(g)) return 'ADDOME';
   if (['GAMBE_POLPACCI', 'GAMBE', 'LEGS', 'QUADRICIPITI', 'QUADS', 'QUAD', 'FEMORALI', 'HAMSTRINGS', 'HAM', 'GLUTEI', 'GLUTES', 'GLUTE', 'POLPACCI', 'CALVES', 'CALF'].includes(g)) return 'GAMBE';
   return g;
 }
@@ -44093,6 +44095,30 @@ function getExerciseMuscleGroups(exerciseName, movement, explicitGroups) {
     }
   } catch (_) {}
 })();
+
+// Fino a ieri un esercizio senza classificazione finiva negli addominali
+// (ALTRO -> ADDOME), e quel ripiego veniva anche ricordato per nome. Una volta
+// sola, le memorie non manuali che dicono ADDOME vengono dimenticate: se
+// l'esercizio e' davvero core, la prossima lettura lo ritrova da sola; se
+// non lo era, la mappa smette di colorare un muscolo che non ha lavorato.
+function purgeAltroMuscleMemory() {
+  try {
+    if (!store || store.__muscleAltroPurgeV1) return 0;
+    const map = store.exMuscleByName;
+    let removed = 0;
+    if (map && typeof map === 'object') {
+      Object.keys(map).forEach(function (k) {
+        const rec = map[k];
+        const muscle = typeof rec === 'string' ? rec : (rec && rec.muscle);
+        const source = typeof rec === 'string' ? 'triangulated' : (rec && rec.source);
+        if (muscle === 'ADDOME' && source !== 'manual' && source !== 'slot') { delete map[k]; removed++; }
+      });
+    }
+    store.__muscleAltroPurgeV1 = true;
+    return removed;
+  } catch (_) { return 0; }
+}
+(function () { try { purgeAltroMuscleMemory(); } catch (_) {} })();
 
 const STATS_MUSCLE_CHIPS = [{ id: 'GENERALE', label: 'Generale' }].concat(MACRO_MUSCLE_GROUPS);
 
@@ -58607,7 +58633,7 @@ function statsMuscleVolume(muscles, groupId) {
   if (id === 'SPALLE') return (m.SPALLE || 0) + (m.DELTOIDI || 0);
   if (id === 'BRACCIA') return (m.BRACCIA || 0) + (m.BICIPITI || 0) + (m.TRICIPITI || 0);
   if (id === 'DORSO') return (m.DORSO || 0) + (m.SCHIENA || 0) + (m.DORSALI || 0) + (m.TRAPEZIO || 0);
-  if (id === 'ADDOME') return (m.ADDOME || 0) + (m.CORE || 0) + (m.ALTRO || 0);
+  if (id === 'ADDOME') return (m.ADDOME || 0) + (m.CORE || 0);
   if (id === 'GAMBE') {
     return (m.GAMBE || 0) + (m.GAMBE_POLPACCI || 0) + (m.QUADRICIPITI || 0) + (m.FEMORALI || 0) + (m.POLPACCI || 0) + (m.GLUTEI || 0);
   }
