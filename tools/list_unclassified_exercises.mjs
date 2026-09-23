@@ -46,6 +46,7 @@ const TAX = (ctx.self.NURVAN_EXERCISE_TAXONOMY && ctx.self.NURVAN_EXERCISE_TAXON
 
 const known = new Set();
 const noGroup = [];
+const cardio = [];
 EXERCISE_DICTIONARY.forEach(function (e) {
   known.add(fold(e.normalized));
   (e.keywords || []).forEach(function (k) { known.add(fold(k)); });
@@ -55,7 +56,8 @@ CATALOG.forEach(function (e) {
   known.add(fold(e.name));
   if (e.en) known.add(fold(e.en));
   (e.aliases || []).forEach(function (k) { known.add(fold(k)); });
-  if (!macroOf(e.muscle)) noGroup.push({ fonte: 'catalogo', nome: e.name, muscle: e.muscle || '(vuoto)' });
+  if (String(e.muscle || '').toUpperCase() === 'CARDIO') cardio.push(e.name);
+  else if (!macroOf(e.muscle)) noGroup.push({ fonte: 'catalogo', nome: e.name, muscle: e.muscle || '(vuoto)' });
 });
 const notInSources = TAX.filter(function (e) { return !known.has(fold(e.name)); })
   .map(function (e) { return { nome: e.name, pattern: e.pattern, equip: e.equip }; });
@@ -65,12 +67,15 @@ console.log('  dizionario import: ' + EXERCISE_DICTIONARY.length + ' voci');
 console.log('  catalogo web:      ' + CATALOG.length + ' voci');
 console.log('  libreria movimenti: ' + TAX.length + ' voci');
 console.log('');
+console.log('0) Cardio (categoria a parte: minuti, non kg ne\' mappa): ' + cardio.length);
+console.log('   ' + cardio.join(', '));
+console.log('');
 console.log('1) Voci con campo muscle vuoto o ALTRO: ' + noGroup.length);
 noGroup.forEach(function (r) { console.log('   - [' + r.fonte + '] ' + r.nome + '  (muscle: ' + r.muscle + ')'); });
 console.log('');
 console.log('2) Esercizi della libreria movimenti senza voce nel dizionario o nel catalogo: ' + notInSources.length);
 notInSources.forEach(function (r) { console.log('   - ' + r.nome + '  (' + r.pattern + ', ' + r.equip + ')'); });
 console.log('');
-console.log('TOTALE senza gruppo dichiarato: ' + (noGroup.length + notInSources.length));
+console.log('TOTALE senza gruppo dichiarato (cardio escluso): ' + (noGroup.length + notInSources.length));
 
-export default { noGroup, notInSources };
+export default { noGroup, notInSources, cardio };

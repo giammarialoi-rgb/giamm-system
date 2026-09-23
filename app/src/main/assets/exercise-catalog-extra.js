@@ -133,7 +133,7 @@ self.WEB_EXERCISE_CATALOG = [
   { name: "Hanging knee raise", en: "Hanging Knee Raise", muscle: "ADDOME", eq: "sbarra" },
   { name: "Decline sit-up", en: "Decline Sit-Up", muscle: "ADDOME", eq: "panca" },
   { name: "Cable twist", en: "Cable Twist", muscle: "ADDOME", eq: "cavi" },
-  { name: "Neck curl", en: "Neck Curl", muscle: "ALTRO", eq: "macchina" },
+  { name: "Neck curl", en: "Neck Curl", muscle: "DORSO", eq: "macchina" },
   { name: "Tibialis raise", en: "Tibialis Raise", muscle: "GAMBE", eq: "corpo libero" },
   { name: "Wrist roller", en: "Wrist Roller", muscle: "BRACCIA", eq: "attrezzo" },
   { name: "Zottman curl", en: "Zottman Curl", muscle: "BICIPITI", eq: "manubri" },
@@ -209,7 +209,21 @@ self.WEB_EXERCISE_CATALOG = [
   { name: "Camminata veloce", en: "Brisk Walking", muscle: "CARDIO", eq: "outdoor" },
   { name: "Bici", en: "Cycling", muscle: "CARDIO", eq: "outdoor" },
   { name: "Nuoto", en: "Swimming", muscle: "CARDIO", eq: "piscina" },
-  { name: "Gorilla row", en: "Kettlebell Gorilla Row", muscle: "DORSALI", eq: "kettlebell" }
+  { name: "Gorilla row", en: "Kettlebell Gorilla Row", muscle: "DORSALI", eq: "kettlebell" },
+  /* Movimenti della libreria del costruttore che non avevano una voce qui: il
+     muscolo esplicito, cosi' una scheda generata non dipende dall'euristica sul nome. */
+  { name: "Kettlebell lunge", en: "Kettlebell Lunge", muscle: "GAMBE", eq: "kettlebell", aliases: ["affondi kettlebell", "kb lunge"] },
+  { name: "Hip thrust KB", en: "Kettlebell Hip Thrust", muscle: "GAMBE", eq: "kettlebell", aliases: ["hip thrust kettlebell"] },
+  { name: "Single-leg bridge", en: "Single-Leg Glute Bridge", muscle: "GAMBE", eq: "corpo libero", aliases: ["ponte glutei monopodalico", "glute bridge una gamba"] },
+  { name: "Alzate laterali KB", en: "Kettlebell Lateral Raise", muscle: "SPALLE", eq: "kettlebell", aliases: ["alzate laterali kettlebell"] },
+  { name: "Y raise a terra", en: "Prone Y Raise", muscle: "SPALLE", eq: "corpo libero", aliases: ["y raise prono", "y-raise"] },
+  { name: "Kettlebell halo", en: "Kettlebell Halo", muscle: "SPALLE", eq: "kettlebell", aliases: ["halo kettlebell", "kb halo"] },
+  { name: "Pulldown neutro", en: "Neutral Grip Pulldown", muscle: "DORSO", eq: "macchina", aliases: ["lat pulldown presa neutra", "pulldown presa neutra"] },
+  { name: "Towel row", en: "Towel Row", muscle: "DORSO", eq: "corpo libero", aliases: ["rematore con asciugamano"] },
+  { name: "Kettlebell pullover", en: "Kettlebell Pullover", muscle: "PETTO", eq: "kettlebell", aliases: ["pullover kettlebell", "kb pullover"] },
+  { name: "Kettlebell tricep press", en: "Kettlebell Triceps Press", muscle: "BRACCIA", eq: "kettlebell", aliases: ["kb tricep press", "estensioni tricipiti kettlebell"] },
+  { name: "Hollow rock", en: "Hollow Rock", muscle: "ADDOME", eq: "corpo libero", aliases: ["hollow body rock"] },
+  { name: "Jump squat", en: "Jump Squat", muscle: "GAMBE", eq: "corpo libero", aliases: ["squat con salto"] }
 ];
 
 /* Names used in workouts that refer to an existing catalogue exercise under

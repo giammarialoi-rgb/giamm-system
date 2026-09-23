@@ -232,5 +232,24 @@ console.log("--- 9. retroattiva: ogni seduta passata si riapre e si condivide --
 }
 
 console.log("");
+console.log("--- 10. il cardio: minuti, non kg, nessun muscolo acceso ---");
+{
+  const c = run('buildSessionCardData({ log: Object.assign({}, LOG, { cardioMinutes: 10, muscles: {} }), sessionName: "Full body" })');
+  eq(c.cardioMinutes, 10, '10a. i minuti di cardio arrivano sulla card');
+  eq(c.muscles, null, '10b. e non accendono nessun gruppo');
+  const c0 = run('buildSessionCardData({ log: LOG })');
+  eq(c0.cardioMinutes, 0, '10c. senza dati di durata la voce non c\'e\'');
+  ok('10d. la schermata la mostra solo se c\'e\'', grab('sessionCardOverlayHtml').indexOf("if (card.cardioMinutes > 0) {") >= 0);
+  ok('10e. il PNG pure, negli stili completi e su foto', grab('drawSessionCard').indexOf("ctx.fillText('CARDIO', PAD, y);") >= 0 && grab('drawSessionCardFlat').indexOf("rows.push([['Cardio', card.cardioMinutes + ' min']])") >= 0);
+  const stats = grab('collectSessionStats');
+  ok('10f. il diario conta i minuti dalla serie tracciata o dalla durata prescritta', stats.indexOf("const tracked = Number(store.data[`${k}_min`]);") >= 0 && stats.indexOf('prescribedMinutesFor(row, setObj)') >= 0);
+  ok('10g. e un esercizio cardio non entra nei kg ne\' nella mappa', stats.indexOf('if (isCardioEx) {') >= 0 && stats.indexOf('if (!isCardioEx) {') >= 0);
+  ok('10h. il log della seduta porta i minuti', SRC.indexOf('cardioMinutes: snap.cardioMinutes || 0,') >= 0);
+  ok('10i. e le statistiche hanno la voce Cardio', SRC.indexOf('Math.round(Number(extras.cardioMinutes))') >= 0 && SRC.indexOf('renderMuscleMap(muscles, extras)') >= 0);
+  const cat = fs.readFileSync(path.join(root, 'web/exercise-catalog-extra.js'), 'utf8');
+  ok('10j. Neck curl e\' DORSO, e i dodici movimenti hanno un muscolo', /name: "Neck curl"[^\n]*muscle: "DORSO"/.test(cat) && ['Kettlebell lunge','Hip thrust KB','Single-leg bridge','Alzate laterali KB','Y raise a terra','Kettlebell halo','Pulldown neutro','Towel row','Kettlebell pullover','Kettlebell tricep press','Hollow rock','Jump squat'].every(function (n) { return cat.indexOf('name: "' + n + '"') >= 0; }));
+}
+
+console.log("");
 if (failed) { console.log(failed + ' test della card falliti.'); process.exit(1); }
 console.log('Tutti i test della card passano.');

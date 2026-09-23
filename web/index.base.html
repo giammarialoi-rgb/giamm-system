@@ -9858,10 +9858,15 @@ function formatLastSessionChip(exIdx, row) {
 
 function exerciseLogUnit(row, name) {
   if (row && (row.circuit || row.unit === 'circuit')) return 'circuit';
+  var api = (typeof window !== 'undefined') ? window.NurvanCardio : null;
+  // Un esercizio sostituito con un cardio si registra in minuti, anche se la
+  // riga della scheda era nata a ripetizioni: la riga parlava di un altro
+  // esercizio.
+  var original = row && (row.name || row.exercise) || '';
+  if (name && original && String(name) !== String(original) && api && api.defaultUnitFor && api.defaultUnitFor(name) === 'cardio') return 'cardio';
   var explicit = row && (row.unit || row.log_unit);
   if (explicit === 'time' || explicit === 'cardio' || explicit === 'reps') return explicit;
-  var api = (typeof window !== 'undefined') ? window.NurvanCardio : null;
-  if (api && api.defaultUnitFor) return api.defaultUnitFor(name || (row && (row.name || row.exercise)) || '');
+  if (api && api.defaultUnitFor) return api.defaultUnitFor(name || original);
   return 'reps';
 }
 window.exerciseLogUnit = exerciseLogUnit;
@@ -22938,6 +22943,7 @@ function finalizeWorkout(){
     exercises: snap.exercises || 0,
     reps: snap.reps || 0,
     muscles: snap.muscles || {},
+    cardioMinutes: snap.cardioMinutes || 0,
     prCount: prCount
   };
   store.logs.push(logEntry);
@@ -23403,6 +23409,8 @@ function buildSessionCardData(input) {
     exercises: Math.max(0, Number(log.exercises) || 0),
     prs: prs,
     muscles: muscles,
+    // Il cardio e' una voce a parte, in minuti: mai kg, mai un muscolo acceso.
+    cardioMinutes: Math.max(0, Math.round(Number(log.cardioMinutes) || 0)),
     athleteName: athlete || null
   };
 }
@@ -23470,7 +23478,7 @@ function lastSessionHomeCardHtml() {
       '<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;text-transform:uppercase;">Ultima seduta</div>' +
       '<div style="font-size:10px;color:#888;">' + esc(ago) + '</div></div>' +
       '<div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:4px;">' + esc(card.title) + '</div>' +
-      '<div style="font-size:12px;color:#aaa;margin-bottom:10px;">' + esc(card.durationText) + ' · ' + esc(card.tonnageText) + ' · ' + card.sets + ' serie' + (card.prs.length ? (' · ' + card.prs.length + ' record') : '') + '</div>' +
+      '<div style="font-size:12px;color:#aaa;margin-bottom:10px;">' + esc(card.durationText) + ' · ' + esc(card.tonnageText) + ' · ' + card.sets + ' serie' + (card.cardioMinutes > 0 ? (' · cardio ' + card.cardioMinutes + ' min') : '') + (card.prs.length ? (' · ' + card.prs.length + ' record') : '') + '</div>' +
       '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;" onclick="openSessionCard(' + (Number(log.week) || 1) + ',' + (Number(log.day) || 0) + ')">CARD DELLA SEDUTA · CONDIVIDI</button>' +
       '</div>';
   } catch (_) { return ''; }
@@ -23510,6 +23518,9 @@ function sessionCardOverlayHtml(card, mode) {
   if (card.muscles) {
     h += '<div class="sc-section"><div class="sc-section-t">MUSCOLI DELLA SEDUTA</div>' +
       '<div class="stats-body-duo" style="padding-top:4px;">' + sessionMuscleFigureHtml('front', card.muscles) + sessionMuscleFigureHtml('back', card.muscles) + '</div></div>';
+  }
+  if (card.cardioMinutes > 0) {
+    h += '<div class="sc-section"><div class="sc-pr" style="border-bottom:0;"><span>Cardio</span><span style="color:var(--gold);font-weight:800;">' + card.cardioMinutes + ' min</span></div></div>';
   }
   // Condividi in tre stili: l'immagine completa, oppure una versione
   // trasparente da appoggiare sopra una foto, minimale o con pannello.
@@ -23653,6 +23664,7 @@ function drawSessionCardFlat(ctx, card, logo) {
   const second = [['Durata', card.durationText]];
   if (card.exercises) second.push(['Esercizi', String(card.exercises)]);
   rows.push(second);
+  if (card.cardioMinutes > 0) rows.push([['Cardio', card.cardioMinutes + ' min']]);
   const iconH = 72;
   const titleLines = fitCardText(ctx, card.title, W - PAD * 2, 2, '800', 74, 48);
   const blockH = iconH + 34 + (card.athleteName ? 54 : 0) + titleLines.lines.length * Math.round(titleLines.size * 1.2) + 16 + rows.length * 150;
@@ -23955,6 +23967,18 @@ async function drawSessionCard(canvas, card, style) {
       y += figH + 20;
       shadowOn();
     }
+  }
+
+  if (card.cardioMinutes > 0 && y + 70 < footerTop) {
+    ctx.fillStyle = cLabel;
+    ctx.font = '700 30px Montserrat, sans-serif';
+    ctx.fillText('CARDIO', PAD, y);
+    ctx.fillStyle = cGold;
+    ctx.textAlign = 'right';
+    ctx.font = '800 38px Montserrat, sans-serif';
+    ctx.fillText(card.cardioMinutes + ' min', W - PAD, y);
+    ctx.textAlign = 'left';
+    y += 50;
   }
 
   // Footer: logo e nome dell'app. Nessun dato.
@@ -25677,7 +25701,7 @@ async function runWeeklyCheckIn() {
 
 function collectSessionStats(opts) {
   opts = opts || {};
-  const out = { durationSec: 0, kcal: 0, exercises: 0, sets: 0, reps: 0, weight: 0, intensity: 0, muscles: {} };
+  const out = { durationSec: 0, kcal: 0, exercises: 0, sets: 0, reps: 0, weight: 0, intensity: 0, muscles: {}, cardioMinutes: 0 };
   if (!DATA || !DATA.weeks) return out;
   const onlyCurrent = !!opts.currentSessionOnly;
   const weeks = DATA.weeks;
@@ -25694,10 +25718,23 @@ function collectSessionStats(opts) {
         const isPart = store.loadTypes && store.loadTypes[eK] === 'part';
         const multiplier = isPart ? 2 : 1;
         const exIntens = (store.exIntensity && store.exIntensity[eK]) || (store.prefs && store.prefs.intensityType) || 'RIR';
+        // Il cardio non entra nei chilogrammi ne' nella mappa: si conta in
+        // minuti, dalla durata scritta per la serie o, se manca, da quella
+        // prescritta.
+        const exNameForUnit = (store.subs && store.subs[eK]) || row.name || row.exercise || '';
+        const isCardioEx = (typeof exerciseLogUnit === 'function') && exerciseLogUnit(row, exNameForUnit) === 'cardio';
         for (let s = 1; s <= 20; s++) {
           const k = `${eK}_s${s}`;
           if (!store.data[`${k}_done`]) continue;
           doneSets++;
+          if (isCardioEx) {
+            const tracked = Number(store.data[`${k}_min`]);
+            const setObj = Array.isArray(row.sets) ? row.sets[s - 1] : null;
+            const mins = tracked > 0 ? tracked : ((typeof prescribedMinutesFor === 'function') ? prescribedMinutesFor(row, setObj) : 0);
+            out.cardioMinutes += Math.max(0, Math.round(Number(mins) || 0));
+            out.sets++;
+            continue;
+          }
           const load = (parseFloat(store.data[`${k}_load`] || 0) || 0) * multiplier;
           const rp = parseInt(store.data[`${k}_reps`] || 0, 10) || 0;
           out.sets++;
@@ -25709,10 +25746,12 @@ function collectSessionStats(opts) {
         }
         if (doneSets) {
           out.exercises++;
-          const exName = (store.subs && store.subs[eK]) || row.name || row.exercise || '';
-          resolveExerciseMacroGroups(exName, row.movement, row.muscle_groups || row.muscleGroups, eK).forEach(function (g) {
-            out.muscles[g] = (out.muscles[g] || 0) + doneSets;
-          });
+          if (!isCardioEx) {
+            const exName = exNameForUnit;
+            resolveExerciseMacroGroups(exName, row.movement, row.muscle_groups || row.muscleGroups, eK).forEach(function (g) {
+              out.muscles[g] = (out.muscles[g] || 0) + doneSets;
+            });
+          }
         }
       });
     });
@@ -25840,7 +25879,7 @@ function renderMuscleFigure(view, muscles) {
     '<div class="stats-body-viewlabel">' + label + '</div>' +
     '</div>';
 }
-function renderMuscleMap(muscles) {
+function renderMuscleMap(muscles, extras) {
   const selected = (store.prefs && store.prefs.statsMuscle) || 'GENERALE';
   const selectedLabel = (STATS_MUSCLE_CHIPS.find(function (g) { return g.id === selected; }) || {}).label || 'Generale';
   const chips = STATS_MUSCLE_CHIPS.map(function (g) {
@@ -25854,7 +25893,11 @@ function renderMuscleMap(muscles) {
   return '<div class="card stats-anatomy">' +
     '<div class="stats-anatomy-head"><h2>Muscoli</h2><div class="stats-anatomy-hint" id="stats-selected-muscle">' + esc(selectedLabel) + '</div></div>' +
     '<div class="stats-body-duo">' + renderMuscleFigure('front', muscles) + renderMuscleFigure('back', muscles) + '</div>' +
-    '<div class="stats-muscle-chips">' + chips + '</div>' +
+    '<div class="stats-muscle-chips">' + chips +
+    ((extras && Number(extras.cardioMinutes) > 0)
+      ? '<span class="stats-chip" style="cursor:default;" title="Minuti di cardio: fuori dai chilogrammi e dalla mappa">Cardio · ' + Math.round(Number(extras.cardioMinutes)) + ' min</span>'
+      : '') +
+    '</div>' +
     '<div id="stats-drill-detail" class="stats-anatomy-detail"></div>' +
     renderProgramMuscleAssignHtml() +
     '</div>';
@@ -25928,7 +25971,7 @@ function renderStats(c){
       <button type="button" class="btn btn-outline" style="width:100%;margin-top:10px;font-size:11px;" onclick="openSessionCard(${Number(last.week)||1},${Number(last.day)||0})">CARD DELLA SEDUTA</button>
       <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px;" onclick="startEditFinalizedWorkout(${Number(last.week)||1},${Number(last.day)||0})">MODIFICA ALLENAMENTO FINALIZZATO</button>
     </div>` : ''}
-    ${renderMuscleMap(snap.muscles)}
+    ${renderMuscleMap(snap.muscles, { cardioMinutes: (last && last.cardioMinutes) || live.cardioMinutes || 0 })}
     ${renderCheckFisicoCardHtml()}
     ${hist ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:11px;font-weight:800;color:var(--gold);">CRONOLOGIA SESSIONI <span style="color:#666;font-weight:600;">· ' + histAll.length + '</span></div><button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;" onclick="toggleStatsHistory()">' + (store.prefs && store.prefs.statsHistoryOpen === false ? '▸' : '✕') + '</button></div>' + ((store.prefs && store.prefs.statsHistoryOpen === false) ? '' : (hist + (histAll.length > 12 ? '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="toggleStatsHistoryAll()">' + (showAllHist ? 'MOSTRA SOLO LE ULTIME 12' : 'MOSTRA TUTTE LE ' + histAll.length + ' SEDUTE') + '</button>' : ''))) + '</div>' : ''}
     <div class="card" style="margin-bottom:12px;">
