@@ -134,7 +134,7 @@ console.log('--- 4. formato e condivisione ---');
   ok('4b. navigator.share con il file se c\'e\'', /navigator\.canShare\(\{ files: \[file\] \}\)/.test(share) && /navigator\.share\(\{ files: \[file\]/.test(share));
   ok('4c. altrimenti si scarica il PNG', /downloadBlobHelper\(blob, filename\)/.test(share));
   ok('4d. il nome del file dice di che giorno e\'', /'nurvan-seduta-' \+ String\(card\.at \|\| ''\)\.slice\(0, 10\) \+ '\.png'/.test(share));
-  ok('4e. il logo in basso, con un ripiego a testo se non carica', /loadCardImage\('nurvan_logo\.png'\)/.test(grab('drawSessionCard')) && /fillText\('NURVAN', W \/ 2, H - 170\)/.test(grab('drawSessionCard')));
+  ok('4e. il logo in basso, con un ripiego a testo se non carica', /loadCardImage\('nurvan_logo\.png'(, \d+)?\)/.test(grab('drawSessionCard')) && /fillText\('NURVAN', W \/ 2, H - 170\)/.test(grab('drawSessionCard')));
 }
 
 console.log("");

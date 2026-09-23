@@ -56535,6 +56535,15 @@ function cardWrapLines(ctx, text, maxWidth, maxLines) {
 // l'altra; quello che manca non lascia un buco, semplicemente non c'e'.
 async function drawSessionCard(canvas, card) {
   if (!canvas || !canvas.getContext || !card) return false;
+  // Le immagini prima di tutto, insieme: le figure anatomiche pesano, e
+  // caricate una dopo l'altra dentro il disegno non arrivavano in tempo.
+  const wantFigures = !!card.muscles;
+  const imgs = await Promise.all([
+    loadCardImage('nurvan_logo.png', 6000),
+    wantFigures ? loadCardImage(statsBodySrc('front'), 8000) : Promise.resolve(null),
+    wantFigures ? loadCardImage(statsBodySrc('back'), 8000) : Promise.resolve(null)
+  ]);
+  const logo = imgs[0], frontImg = imgs[1], backImg = imgs[2];
   canvas.width = 1080;
   canvas.height = 1920;
   const ctx = canvas.getContext('2d');
@@ -56582,29 +56591,39 @@ async function drawSessionCard(canvas, card) {
   ctx.fillText(card.dateText, PAD, y + 30);
   y += 110;
 
-  const big = function (label, value) {
+  // I tre numeri su una riga, a tre colonne: impilati prendevano 600 px e
+  // con sei record la mappa muscolare non entrava piu'.
+  const cols = [['Durata', card.durationText], ['Volume', card.tonnageText], ['Serie', String(card.sets)]];
+  const colW = (W - PAD * 2) / 3;
+  cols.forEach(function (c, i) {
+    const x0 = PAD + colW * i;
+    ctx.fillStyle = '#121212';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x0 + 6, y - 10, colW - 12, 190, 22); else ctx.rect(x0 + 6, y - 10, colW - 12, 190);
+    ctx.fill();
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#d4af37';
+    let size = 76;
+    ctx.font = '900 ' + size + 'px Montserrat, sans-serif';
+    while (ctx.measureText(c[1]).width > colW - 40 && size > 44) {
+      size -= 4;
+      ctx.font = '900 ' + size + 'px Montserrat, sans-serif';
+    }
+    ctx.fillText(c[1], x0 + colW / 2, y + 96);
+    ctx.fillStyle = '#8a8a8a';
+    ctx.font = '700 28px Montserrat, sans-serif';
+    ctx.fillText(c[0].toUpperCase(), x0 + colW / 2, y + 148);
+  });
+  ctx.textAlign = 'left';
+  y += 210;
+  if (card.exercises) {
     ctx.fillStyle = '#8a8a8a';
     ctx.font = '700 32px Montserrat, sans-serif';
-    ctx.fillText(label.toUpperCase(), PAD, y);
-    ctx.fillStyle = '#d4af37';
-    ctx.font = '900 118px Montserrat, sans-serif';
-    ctx.fillText(value, PAD, y + 122);
-    y += 200;
-  };
-  big('Durata', card.durationText);
-  big('Volume', card.tonnageText);
-  big('Serie chiuse', String(card.sets) + (card.exercises ? ('  ·  ' + card.exercises + ' esercizi') : ''));
-  if (card.exercises) {
-    // The exercise count rides on the sets line in a smaller size: redraw it.
-    ctx.fillStyle = '#050505';
-    ctx.fillRect(PAD - 4, y - 200 + 30, W - PAD * 2 + 8, 150);
-    ctx.fillStyle = '#d4af37';
-    ctx.font = '900 118px Montserrat, sans-serif';
-    ctx.fillText(String(card.sets), PAD, y - 200 + 122);
-    const wSets = ctx.measureText(String(card.sets)).width;
-    ctx.fillStyle = '#8a8a8a';
-    ctx.font = '700 40px Montserrat, sans-serif';
-    ctx.fillText(card.exercises + ' esercizi', PAD + wSets + 30, y - 200 + 122);
+    ctx.fillText(card.exercises + ' esercizi', PAD, y);
+    y += 60;
   }
 
   const footerTop = H - 250;
@@ -56614,7 +56633,7 @@ async function drawSessionCard(canvas, card) {
     ctx.font = '700 30px Montserrat, sans-serif';
     ctx.fillText('RECORD PERSONALI', PAD, y);
     y += 22;
-    card.prs.slice(0, 5).forEach(function (p) {
+    card.prs.slice(0, 6).forEach(function (p) {
       if (y + 60 > footerTop - 40) return;
       ctx.fillStyle = '#ffffff';
       ctx.font = '700 38px Montserrat, sans-serif';
@@ -56634,8 +56653,8 @@ async function drawSessionCard(canvas, card) {
     const room = footerTop - y - 40;
     const figH = Math.min(560, room);
     if (figH >= 260) {
-      const front = await loadCardImage(statsBodySrc('front'));
-      const back = await loadCardImage(statsBodySrc('back'));
+      const front = frontImg;
+      const back = backImg;
       const drawFig = function (img, view, x0) {
         if (!img || !img.naturalWidth) return;
         const scale = figH / img.naturalHeight;
@@ -56668,7 +56687,6 @@ async function drawSessionCard(canvas, card) {
   }
 
   // Footer: logo e nome dell'app. Nessun dato.
-  const logo = await loadCardImage('nurvan_logo.png');
   ctx.fillStyle = '#d4af37';
   ctx.font = '600 28px Montserrat, sans-serif';
   ctx.textAlign = 'center';
