@@ -71,6 +71,15 @@
     { id: 'male', label: 'Uomo · upper e petto' }
   ];
 
+  // The app's six macro groups, the ones the muscle map and the athlete
+  // profile already speak. Glutes live inside GAMBE here as they do
+  // everywhere else in the app.
+  var FOCUS_GROUPS = ['PETTO', 'DORSO', 'SPALLE', 'BRACCIA', 'GAMBE', 'ADDOME'];
+  var FOCUS_LABELS = {
+    PETTO: 'petto', DORSO: 'dorso', SPALLE: 'spalle',
+    BRACCIA: 'braccia', GAMBE: 'gambe', ADDOME: 'addome'
+  };
+
   var CARDIO_MODES = [
     { id: 'none', label: 'Nessun cardio' },
     { id: 'finisher', label: 'Cardio a fine seduta' },
@@ -205,6 +214,14 @@
       experience: experience,
       equipment: equipment,
       audience: audience,
+      // The muscles to give a slot more to, by the app's own macro ids. The
+      // builder is the one that knows what that means for a session; here it
+      // is only carried through and written into the program, so a scheda
+      // says what it was built for.
+      focus: Array.isArray(o.focus)
+        ? o.focus.map(function (m) { return String(m || '').toUpperCase(); })
+          .filter(function (m, i, a) { return FOCUS_GROUPS.indexOf(m) >= 0 && a.indexOf(m) === i; })
+        : [],
       variant: clamp(Math.round(Number(o.variant) || 0), 0, 5),
       modelId: modelId,
       loadDisplay: o.loadDisplay || (familyOf(modelId) === 'powerlifting' ? 'percent' : 'rir'),
@@ -333,7 +350,8 @@
     if (!BUILDER) return [];
     var built = BUILDER.buildTemplateSessions({
       days: r.days, split: r.split, goal: r.goal, equipment: r.equipment,
-      experience: r.experience, audience: r.audience, variant: r.variant
+      experience: r.experience, audience: r.audience, variant: r.variant,
+      focus: r.focus
     });
     var sessions = built.map(function (s) {
       return {
@@ -364,6 +382,9 @@
     bits.push(r.weeks + ' settimane');
     bits.push('Obiettivo ' + byId(GOALS, r.goal).label.toLowerCase());
     bits.push('Attrezzatura: ' + byId(EQUIPMENT, r.equipment).label.toLowerCase());
+    if (r.focus.length) {
+      bits.push('Priorità su ' + r.focus.map(function (m) { return FOCUS_LABELS[m] || m.toLowerCase(); }).join(', '));
+    }
     if (r.modelId && r.modelId !== 'none') bits.push('Progressione ' + modelLabel(r.modelId));
     if (r.rotateWeeks.length) {
       bits.push('Cambio esercizi alle settimane ' + r.rotateWeeks.join(', ') +
@@ -431,6 +452,7 @@
       equipment: r.equipment,
       experience: r.experience,
       audience: r.audience,
+      focus: r.focus.slice(),
       author: 'Generata da Nurvan',
       source: 'generator_v2',
       progression_model: r.modelId,
@@ -462,6 +484,8 @@
     EQUIPMENT: EQUIPMENT,
     EXPERIENCE: EXPERIENCE,
     AUDIENCE: AUDIENCE,
+    FOCUS_GROUPS: FOCUS_GROUPS,
+    FOCUS_LABELS: FOCUS_LABELS,
     CARDIO_MODES: CARDIO_MODES,
     splitsFor: splitsFor,
     normalizeSplit: normalizeSplit,

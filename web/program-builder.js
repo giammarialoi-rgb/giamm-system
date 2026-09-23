@@ -237,6 +237,115 @@
     ];
   }
 
+  /*
+   * Muscle priority.
+   *
+   * The movements each macro group is trained by - the whole list, compounds
+   * included, which is how a session is recognised as training that muscle at
+   * all - and the single-joint ones, which are what an extra slot can be.
+   *
+   * The group ids are the app's own six (PETTO, DORSO, SPALLE, BRACCIA,
+   * GAMBE, ADDOME), the same ones the muscle map and the athlete profile use.
+   * There is deliberately no GLUTEI here: the app folds glutes into GAMBE
+   * everywhere else, and a chip that says one thing while the program does
+   * another is worse than no chip.
+   */
+  var FOCUS_TRAINED_BY = {
+    PETTO: ['pushH', 'chestIso'],
+    DORSO: ['pullH', 'pullV', 'pullIso', 'traps'],
+    SPALLE: ['pushV', 'deltLat', 'deltRear', 'deltFront', 'rotator'],
+    BRACCIA: ['biceps', 'triceps', 'forearm'],
+    GAMBE: ['squat', 'hinge', 'glute', 'lunge', 'quadIso', 'hamIso', 'calf', 'adductor'],
+    ADDOME: ['core', 'carry']
+  };
+
+  var FOCUS_EXTRA_SLOT = {
+    PETTO: ['chestIso'],
+    DORSO: ['pullIso', 'traps'],
+    SPALLE: ['deltLat', 'deltRear'],
+    BRACCIA: ['biceps', 'triceps'],
+    GAMBE: ['quadIso', 'hamIso', 'glute'],
+    ADDOME: ['core']
+  };
+
+  function focusList(focus) {
+    if (!Array.isArray(focus)) return [];
+    var out = [];
+    focus.forEach(function (raw) {
+      var id = String(raw || '').toUpperCase();
+      if (FOCUS_TRAINED_BY[id] && out.indexOf(id) < 0) out.push(id);
+    });
+    return out;
+  }
+
+  function slotTrains(s, group) {
+    var want = FOCUS_TRAINED_BY[group] || [];
+    return (s.pattern || []).some(function (p) { return want.indexOf(p) >= 0; });
+  }
+
+  /*
+   * Gives the chosen muscles a slot more per session and the others a slot
+   * less. It is a swap, not an addition: the session keeps the length the
+   * goal and the split decided for it.
+   *
+   * Two things it will not do. It never touches a `main` slot, because that
+   * is the lift the whole program progresses on. And it never puts a muscle
+   * into a session that was not already training it - a leg day does not grow
+   * a curl because somebody picked Braccia. A focus that a session has no
+   * business with simply does nothing there, and lands where it belongs.
+   */
+  function applyFocus(slots, sessionName, params, maxSlots) {
+    var focus = focusList(params.focus);
+    if (!focus.length) return slots;
+    var out = slots.slice();
+    var seed = [params.days, params.split, params.goal, params.equipment,
+      params.experience, params.audience, params.variant || 0, sessionName].join('|');
+    // A session grows by at most one exercise however many muscles were
+    // picked: a priority is not a licence to make every day longer. Which of
+    // the picked muscles gets that one slot rotates from session to session,
+    // so three priorities over three days get one each instead of the first
+    // one taking all of them.
+    var grown = false;
+    var order = focus.slice();
+    if (order.length > 1) {
+      var turn = hash(seed) % order.length;
+      order = order.slice(turn).concat(order.slice(0, turn));
+    }
+
+    order.forEach(function (group, fi) {
+      // Only where the session already trains it - except the core, which is
+      // the one group that belongs to every session whatever it is about.
+      // Without this exception "Addominali" would do nothing at all on an
+      // Upper/Lower or a PPL split, whose recipes have no core slot: the
+      // person ticks a chip and the program comes out identical.
+      if (group !== 'ADDOME' && !out.some(function (s) { return slotTrains(s, group); })) return;
+      var patterns = FOCUS_EXTRA_SLOT[group] || [];
+      if (!patterns.length) return;
+      var at = hash(seed + '#focus#' + group + '#' + fi) % patterns.length;
+      var extra = slot(patterns[at], 'iso', { focus: group });
+
+      // What can give up a slot: single-joint work for a muscle nobody asked
+      // for. Taken from the end, where the least important work sits.
+      for (var i = out.length - 1; i >= 0; i--) {
+        var s = out[i];
+        if (s.role !== 'iso') continue;
+        if (focus.some(function (g) { return slotTrains(s, g); })) continue;
+        out[i] = extra;
+        return;
+      }
+
+      // Nothing to take from: a leg day is already all legs, and a full body
+      // day is compounds from start to finish. Here the slot is added rather
+      // than swapped, because the alternative is a chip that does nothing.
+      // Never onto a session that is already over its own length.
+      if (!grown && out.length <= maxSlots) {
+        out.push(extra);
+        grown = true;
+      }
+    });
+    return out;
+  }
+
   // The small stuff that keeps a body working and that no session is about.
   // It still belongs to the half of the body the session trains: an adductor
   // machine or a tibialis raise in an upper day is somebody else's session,
@@ -382,7 +491,7 @@
       recipeFor(sessionName, params.split, params.days, params.audience, params.goal),
       params.goal, params.days, params.split, params.experience
     );
-    var slots = addForProfile(base, sessionName, params, base.length);
+    var slots = applyFocus(addForProfile(base, sessionName, params, base.length), sessionName, params, base.length);
     var seed = [params.days, params.split, params.goal, params.equipment, params.experience, params.audience, params.variant || 0].join('|');
     var used = {};
     var exercises = [];

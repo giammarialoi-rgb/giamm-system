@@ -44181,6 +44181,7 @@ function finishInit() {
       try { applyLoginGate(); } catch (_) {}
       try { applyFocusUi(); } catch (_) {}
       try { maybeShowRewardsOnboarding(); } catch (_) {}
+      try { maybeShowOnboarding(); } catch (_) {}
       try { maybeShowIosInstallHint(); } catch (_) {}
       try { scheduleAllItemAlerts(); } catch (_) {}
       try { registerNurvanServiceWorker(); } catch (_) {}
@@ -49747,6 +49748,14 @@ function saveAthleteProfile() {
     focusMuscles: hasFocus
       ? Array.from(document.querySelectorAll('.profile-focus:checked')).map(function (el) { return normalizeMacroMuscleGroup(el.value); }).filter(function (m, i, a) { return MACRO_MUSCLE_GROUPS.some(function (g) { return g.id === m; }) && a.indexOf(m) === i; })
       : (prev.focusMuscles || store.prefs.focusMuscles || []).map(normalizeMacroMuscleGroup),
+    // Le due risposte del primo avvio che non sono il focus. Un campo assente
+    // dalla schermata non le cancella: la vista cliente non le disegna.
+    trainingDays: $('profile-training-days')
+      ? (parseInt($('profile-training-days').value, 10) || null)
+      : (prev.trainingDays || null),
+    equipment: $('profile-equipment')
+      ? ($('profile-equipment').value || null)
+      : (prev.equipment || null),
     activeSplit: prev.activeSplit || null,
     currentPhase: prev.currentPhase || null,
     coachName: prev.coachName || 'Nurvan AI',
@@ -49758,6 +49767,9 @@ function saveAthleteProfile() {
   };
   store.profile = profile;
   store.prefs.focusMuscles = profile.focusMuscles || [];
+  // Cambiare qui cambia da cosa parte il generatore: i default sono letti dal
+  // profilo, non tenuti in una seconda copia che poi diverge.
+  try { if (typeof applyProfileDefaultsToGenerator === 'function') applyProfileDefaultsToGenerator(); } catch (_) {}
   store.profileClearedAt = null;
   store.__cpProfileOwnedCleared = false;
   if (DATA) DATA.profile = profile;
@@ -55896,6 +55908,10 @@ function maybeShowIosInstallHint() {
 
 function showBackgroundSyncIndicator() {
   if (document.getElementById('nurvan-sync-indicator')) return;
+  // Serve a spiegare una schermata che cambia da sola sotto gli occhi. Sopra
+  // le tre domande del primo avvio non spiega niente - lì non cambia niente -
+  // e si siede proprio sulla barra di avanzamento.
+  if (document.getElementById('onboarding-sheet')) return;
   if (!document.getElementById('nurvan-sync-indicator-style')) {
     const style = document.createElement('style');
     style.id = 'nurvan-sync-indicator-style';
@@ -56313,7 +56329,22 @@ function renderAthleteProfile(container) {
       const on = focusNow.indexOf(g.id) >= 0;
       return '<label style="font-size:10px;border:1px solid ' + (on ? 'var(--gold)' : '#333') + ';color:' + (on ? 'var(--gold)' : '#aaa') + ';padding:6px 8px;border-radius:6px;"><input type="checkbox" class="profile-focus" value="' + g.id + '"' + (on ? ' checked' : '') + ' style="margin-right:4px;">' + g.label + '</label>';
     }).join('') +
+    '<p style="font-size:10px;color:#777;margin:8px 0 0;width:100%;">Chi scegli prende un esercizio in più per seduta, gli altri uno in meno.</p>' +
     '</div></div>' +
+    // Le altre due risposte delle tre domande del primo avvio. Stanno qui
+    // perché è qui che si cambiano, e da qui il generatore le rilegge.
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">Giorni a settimana</label>' +
+    '<select id="profile-training-days" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">' +
+    '<option value="">—</option>' +
+    (typeof ONBOARDING_MAX_DAYS_LIST !== 'undefined' ? ONBOARDING_MAX_DAYS_LIST : [1, 2, 3, 4, 5, 6]).map(function (n) {
+      return '<option value="' + n + '"' + (Number(profile.trainingDays) === n ? ' selected' : '') + '>' + n + '</option>';
+    }).join('') + '</select></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">Attrezzatura</label>' +
+    '<select id="profile-equipment" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">' +
+    '<option value="">—</option>' +
+    (typeof ONBOARDING_EQUIPMENT !== 'undefined' ? ONBOARDING_EQUIPMENT : []).map(function (e) {
+      return '<option value="' + e.id + '"' + (profile.equipment === e.id ? ' selected' : '') + '>' + esc(e.label) + '</option>';
+    }).join('') + '</select></div>' +
     '</div>' +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="saveAthleteProfile()">' + t('saveProfile') + '</button>' +
     (store.clientProfile
@@ -64828,6 +64859,269 @@ window.deliverProgram = deliverProgram;
  * same as started, and a program can be generated to be saved, filed in the
  * coach database or handed to a client.
  */
+/*
+ * Le tre domande del primo avvio.
+ *
+ * L'app portava un profilo nuovo dritto nell'hub, dove ogni schermata è vuota
+ * e niente dice da dove si comincia. Qui si chiede il minimo che serve a far
+ * uscire una scheda sensata al primo colpo - su cosa vuoi lavorare, quanti
+ * giorni, che attrezzi hai - e si smette.
+ *
+ * Le risposte vanno nel profilo atleta, che è dominio personale e non entra
+ * nel blob del programma, e restano modificabili da Impostazioni. Da lì il
+ * generatore le legge come default: non decidono niente da sole, riempiono
+ * solo la prima schermata al posto di chi non sa ancora cosa scegliere.
+ *
+ * Salta è sempre a schermo. Chi salta arriva nell'hub come prima, e non gli
+ * viene più richiesto.
+ */
+// Da uno a sei. Non sette: con sette giorni il costruttore scrive comunque
+// sei sedute (sessionNames() ha una sola lista per il sesto e il settimo
+// giorno), e una schermata che promette sette allenamenti e ne consegna sei
+// e' una bugia. La domanda si ferma dove la risposta e' vera.
+var ONBOARDING_MAX_DAYS_LIST = [1, 2, 3, 4, 5, 6];
+
+var ONBOARDING_EQUIPMENT = [
+  { id: 'palestra', label: 'Palestra completa', note: 'Bilancieri, macchine, cavi' },
+  { id: 'casa', label: 'Casa attrezzata', note: 'Manubri, kettlebell, panca, sbarra' },
+  { id: 'minimal', label: 'Manubri ed elastici', note: 'Il minimo indispensabile' },
+  { id: 'kettlebell', label: 'Solo kettlebell', note: 'Una o due kettlebell' },
+  { id: 'bodyweight', label: 'Corpo libero', note: 'Nessun attrezzo' }
+];
+
+function onboardingDraft() {
+  if (!window.__onboardingDraft) {
+    var profile = (store && store.profile) || {};
+    window.__onboardingDraft = {
+      step: 1,
+      focus: ((profile.focusMuscles || (store.prefs && store.prefs.focusMuscles) || [])
+        .map(normalizeMacroMuscleGroup)
+        .filter(function (m) { return MACRO_MUSCLE_GROUPS.some(function (g) { return g.id === m; }); })),
+      days: Number(profile.trainingDays) > 0 ? Math.min(7, Math.round(Number(profile.trainingDays))) : 3,
+      equipment: ONBOARDING_EQUIPMENT.some(function (e) { return e.id === profile.equipment; })
+        ? profile.equipment
+        : 'palestra'
+    };
+  }
+  return window.__onboardingDraft;
+}
+
+// Chi non la vede mai: chi una scheda ce l'ha già o se l'è importata, chi ha
+// già segnato un allenamento, un atleta dentro lo spazio del suo coach, un
+// coach che sta guardando un cliente, e chiunque abbia già risposto o saltato.
+function shouldShowOnboarding() {
+  try {
+    if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return false;
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) return false;
+    if (store && (store.coachViewingClient || store.coachAssigning)) return false;
+    if (!store || !store.accountToken) return false;
+    if (store.prefs && store.prefs.onboardingAt) return false;
+    if (typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length) return false;
+    if (store.activeProgramId) return false;
+    if (Array.isArray(store.models) && store.models.length) return false;
+    if (store.data && Object.keys(store.data).length) return false;
+    if (Array.isArray(store.logs) && store.logs.length) return false;
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function maybeShowOnboarding() {
+  if (!shouldShowOnboarding()) return false;
+  openOnboarding();
+  return true;
+}
+
+function openOnboarding() {
+  window.__onboardingDraft = null;
+  onboardingDraft();
+  renderOnboarding();
+}
+
+function closeOnboarding() {
+  var sheet = document.getElementById('onboarding-sheet');
+  if (sheet) sheet.remove();
+  window.__onboardingDraft = null;
+  try { popUiOverlay('onboarding-sheet'); } catch (_) {}
+}
+
+function setOnboardingStep(n) {
+  var d = onboardingDraft();
+  d.step = Math.max(1, Math.min(3, Math.round(Number(n) || 1)));
+  renderOnboarding();
+}
+
+function toggleOnboardingFocus(id) {
+  var d = onboardingDraft();
+  var at = d.focus.indexOf(id);
+  if (at >= 0) d.focus.splice(at, 1);
+  else d.focus.push(id);
+  renderOnboarding();
+}
+
+function setOnboardingDays(n) {
+  var d = onboardingDraft();
+  d.days = Math.max(1, Math.min(6, Math.round(Number(n) || 3)));
+  renderOnboarding();
+}
+
+function setOnboardingEquipment(id) {
+  var d = onboardingDraft();
+  if (ONBOARDING_EQUIPMENT.some(function (e) { return e.id === id; })) d.equipment = id;
+  renderOnboarding();
+}
+
+function onboardingStepHtml(d) {
+  if (d.step === 1) {
+    return '<h1 style="font-size:21px;font-weight:900;color:#fff;margin:0 0 6px;line-height:1.25;">Su cosa vuoi concentrarti?</h1>' +
+      '<p style="font-size:12px;color:#888;margin:0 0 18px;line-height:1.5;">Quelli che scegli prendono un esercizio in più per seduta, gli altri uno in meno. Puoi anche non sceglierne nessuno.</p>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+      MACRO_MUSCLE_GROUPS.map(function (g) {
+        var on = d.focus.indexOf(g.id) >= 0;
+        return '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:12px;padding:10px 16px;text-transform:none;' +
+          (on ? 'border-color:var(--gold);background:rgba(212,175,55,0.12);' : 'opacity:0.5;') +
+          '" onclick="toggleOnboardingFocus(\'' + g.id + '\')">' + (on ? '✓ ' : '') + esc(g.label) + '</button>';
+      }).join('') +
+      '</div>';
+  }
+  if (d.step === 2) {
+    return '<h1 style="font-size:21px;font-weight:900;color:#fff;margin:0 0 6px;line-height:1.25;">Quanti giorni a settimana?</h1>' +
+      '<p style="font-size:12px;color:#888;margin:0 0 18px;line-height:1.5;">Quante sedute scrive la scheda. Quando farle lo decidi allenandoti: la seduta dopo si apre quando arrivi, non a calendario.</p>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+      ONBOARDING_MAX_DAYS_LIST.map(function (n) {
+        var on = d.days === n;
+        return '<button type="button" class="btn btn-outline" style="flex:1 1 60px;min-width:54px;font-size:15px;font-weight:800;padding:14px 0;text-transform:none;' +
+          (on ? 'border-color:var(--gold);background:rgba(212,175,55,0.12);' : 'opacity:0.5;') +
+          '" onclick="setOnboardingDays(' + n + ')">' + n + '</button>';
+      }).join('') +
+      '</div>';
+  }
+  return '<h1 style="font-size:21px;font-weight:900;color:#fff;margin:0 0 6px;line-height:1.25;">Che attrezzatura hai?</h1>' +
+    '<p style="font-size:12px;color:#888;margin:0 0 18px;line-height:1.5;">La scheda userà solo esercizi che puoi fare davvero. Si cambia quando vuoi.</p>' +
+    '<div style="display:flex;flex-direction:column;gap:8px;">' +
+    ONBOARDING_EQUIPMENT.map(function (e) {
+      var on = d.equipment === e.id;
+      return '<button type="button" class="btn btn-outline" style="width:100%;text-align:left;padding:13px 14px;text-transform:none;' +
+        (on ? 'border-color:var(--gold);background:rgba(212,175,55,0.12);' : 'opacity:0.5;') +
+        '" onclick="setOnboardingEquipment(\'' + e.id + '\')">' +
+        '<span style="display:block;font-size:13px;font-weight:800;color:' + (on ? 'var(--gold)' : '#fff') + ';">' + (on ? '✓ ' : '') + esc(e.label) + '</span>' +
+        '<span style="display:block;font-size:11px;color:#888;margin-top:2px;">' + esc(e.note) + '</span>' +
+        '</button>';
+    }).join('') +
+    '</div>';
+}
+
+function renderOnboarding() {
+  var d = onboardingDraft();
+  var sheet = document.getElementById('onboarding-sheet');
+  if (!sheet) {
+    sheet = document.createElement('div');
+    sheet.id = 'onboarding-sheet';
+    sheet.className = 'nurvan-sheet is-open';
+    sheet.style.zIndex = '10400';
+    document.body.appendChild(sheet);
+    try { pushUiOverlay('onboarding-sheet'); } catch (_) {}
+  }
+  var bars = [1, 2, 3].map(function (n) {
+    return '<span style="flex:1 1 0;height:3px;border-radius:2px;background:' +
+      (n <= d.step ? 'var(--gold)' : '#2a2a2a') + ';"></span>';
+  }).join('');
+  var last = d.step === 3;
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel">' +
+    '<div class="nurvan-sheet-head" style="gap:10px;">' +
+    (d.step > 1
+      ? '<button type="button" class="btn btn-outline" aria-label="Indietro" style="flex:0 0 auto;font-size:15px;padding:6px 12px;min-width:40px;" onclick="setOnboardingStep(' + (d.step - 1) + ')">‹</button>'
+      : '<span style="flex:0 0 auto;width:40px;"></span>') +
+    '<div style="flex:1 1 auto;display:flex;gap:5px;align-items:center;">' + bars + '</div>' +
+    '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:11px;padding:6px 12px;color:#888;" onclick="skipOnboarding()">SALTA</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' + onboardingStepHtml(d) + '</div>' +
+    '<div class="nurvan-sheet-foot">' +
+    '<button type="button" class="btn btn-primary" style="width:100%;font-size:13px;padding:14px;" onclick="' +
+    (last ? 'finishOnboarding()' : 'setOnboardingStep(' + (d.step + 1) + ')') + '">' +
+    (last ? 'FATTO' : 'CONTINUA') + '</button>' +
+    '</div>' +
+    '</div>';
+}
+
+// Quello che l'onboarding lascia scritto: le tre risposte nel profilo atleta,
+// più la data, che è anche il motivo per cui non si ripresenta.
+function saveOnboardingAnswers(answers) {
+  var prev = (store && store.profile) || {};
+  var profile = Object.assign({}, prev);
+  if (answers && Array.isArray(answers.focus)) {
+    profile.focusMuscles = answers.focus
+      .map(normalizeMacroMuscleGroup)
+      .filter(function (m, i, a) {
+        return MACRO_MUSCLE_GROUPS.some(function (g) { return g.id === m; }) && a.indexOf(m) === i;
+      });
+    if (!store.prefs) store.prefs = {};
+    store.prefs.focusMuscles = profile.focusMuscles.slice();
+  }
+  if (answers && Number(answers.days) > 0) {
+    profile.trainingDays = Math.max(1, Math.min(7, Math.round(Number(answers.days))));
+  }
+  if (answers && answers.equipment && ONBOARDING_EQUIPMENT.some(function (e) { return e.id === answers.equipment; })) {
+    profile.equipment = answers.equipment;
+  }
+  profile.updatedAt = new Date().toISOString();
+  store.profile = profile;
+  if (typeof DATA !== 'undefined' && DATA) DATA.profile = profile;
+  if (!store.prefs) store.prefs = {};
+  store.prefs.onboardingAt = new Date().toISOString();
+  // Il generatore parte da qui la prossima volta che si apre.
+  applyProfileDefaultsToGenerator();
+  persist();
+  try {
+    if (!(store.coachViewingClient || store.coachAssigning) && typeof scheduleAccountSync === 'function') {
+      scheduleAccountSync();
+    }
+  } catch (_) {}
+  return profile;
+}
+
+// I default del generatore vengono dal profilo, non da una seconda copia delle
+// stesse risposte: cambiarle in Impostazioni cambia anche questi.
+function applyProfileDefaultsToGenerator() {
+  try {
+    var profile = (store && store.profile) || {};
+    var g = (store && store.programGenerator) || null;
+    if (!g) {
+      g = emptyGeneratorDraft();
+      store.programGenerator = g;
+    }
+    if (Number(profile.trainingDays) > 0) {
+      g.days = Math.max(1, Math.min(7, Math.round(Number(profile.trainingDays))));
+      var api = (typeof window !== 'undefined' && window.NurvanProgramGenerator) || null;
+      if (api && typeof api.normalizeSplit === 'function') {
+        g.split = api.normalizeSplit(g.split, g.days);
+      }
+    }
+    if (profile.equipment && ONBOARDING_EQUIPMENT.some(function (e) { return e.id === profile.equipment; })) {
+      g.equipment = profile.equipment;
+    }
+  } catch (_) {}
+}
+
+function finishOnboarding() {
+  var d = onboardingDraft();
+  saveOnboardingAnswers({ focus: d.focus.slice(), days: d.days, equipment: d.equipment });
+  closeOnboarding();
+  if (typeof showToast === 'function') showToast('Fatto. Trovi e cambi queste risposte in Profilo Atleta.', 'success');
+  if (typeof render === 'function') render();
+}
+
+function skipOnboarding() {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.onboardingAt = new Date().toISOString();
+  store.prefs.onboardingSkipped = true;
+  persist();
+  closeOnboarding();
+  if (typeof render === 'function') render();
+}
+
 function emptyGeneratorDraft() {
   return {
     title: '',
@@ -64851,6 +65145,7 @@ function emptyGeneratorDraft() {
     cardioMachine: '',
     cardioFormat: 'tabata',
     variant: 0,
+    touched: false,
     target: 'active'
   };
 }
@@ -64906,6 +65201,14 @@ function generatorOptions(g) {
     experience: g.experience,
     audience: g.audience,
     equipment: space ? (equipmentFromSpace(space) || g.equipment) : g.equipment,
+    // La priorità muscolare vive nel profilo atleta, non nella bozza del
+    // generatore: è una cosa dell'atleta, non di questa scheda, e si cambia
+    // da Profilo Atleta come tutto il resto del profilo.
+    focus: ((store.profile && store.profile.focusMuscles) || (store.prefs && store.prefs.focusMuscles) || [])
+      .map(normalizeMacroMuscleGroup)
+      .filter(function (m, i, a) {
+        return MACRO_MUSCLE_GROUPS.some(function (x) { return x.id === m; }) && a.indexOf(m) === i;
+      }),
     weeks: Number(g.weeks) || 8,
     variant: Number(g.variant) || 0,
     modelId: g.modelId,
@@ -64928,6 +65231,9 @@ window.generatorOptions = generatorOptions;
 function setGeneratorField(key, value) {
   var g = generatorDraft();
   g[key] = value;
+  // Da qui in avanti la bozza è sua: riaprire il generatore non gliela
+  // riporta ai valori del profilo.
+  if (key === 'days' || key === 'equipment' || key === 'spaceId' || key === 'split') g.touched = true;
   // Days and split constrain each other: five days of full body is not full
   // body, so the split follows rather than breaking the program.
   if (key === 'days' || key === 'split') {
@@ -64952,6 +65258,9 @@ window.setGeneratorNumber = setGeneratorNumber;
 
 function openProgramGenerator(target) {
   var g = generatorDraft();
+  // Giorni e attrezzatura partono da quello che l'atleta ha risposto, finché
+  // non li cambia qui dentro: una bozza già toccata resta com'è.
+  if (!g.touched) { try { applyProfileDefaultsToGenerator(); } catch (_) {} }
   if (target === 'library' || target === 'assign') g.target = target;
   else if (!g.target) g.target = 'active';
   renderProgramGenerator();
@@ -66300,6 +66609,20 @@ if (typeof window !== 'undefined') {
   window.deleteBodyCheck = deleteBodyCheck;
   window.retryCheckInSend = retryCheckInSend;
   window.markCheckInSyncState = markCheckInSyncState;
+  window.maybeShowOnboarding = maybeShowOnboarding;
+  window.shouldShowOnboarding = shouldShowOnboarding;
+  window.openOnboarding = openOnboarding;
+  window.closeOnboarding = closeOnboarding;
+  window.setOnboardingStep = setOnboardingStep;
+  window.toggleOnboardingFocus = toggleOnboardingFocus;
+  window.setOnboardingDays = setOnboardingDays;
+  window.setOnboardingEquipment = setOnboardingEquipment;
+  window.finishOnboarding = finishOnboarding;
+  window.skipOnboarding = skipOnboarding;
+  window.saveOnboardingAnswers = saveOnboardingAnswers;
+  window.applyProfileDefaultsToGenerator = applyProfileDefaultsToGenerator;
+  window.ONBOARDING_EQUIPMENT = ONBOARDING_EQUIPMENT;
+  window.ONBOARDING_MAX_DAYS_LIST = ONBOARDING_MAX_DAYS_LIST;
   window.toggleSupersetMode = toggleSupersetMode;
   window.applySelectedSuperset = applySelectedSuperset;
   window.unlinkSuperset = unlinkSuperset;
