@@ -19848,6 +19848,7 @@ function renderHome(c) {
         <button class="btn btn-outline" style="flex:1;font-size:12px;height:55px;border-color:var(--gold);color:var(--gold);" onclick="navigate('${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'clientChat' : 'programs'}')">${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'CHAT COACH' : 'PROGRAMMI'}</button>
       </div></div></div>
 
+    ${lastSessionHomeCardHtml()}
     ${computeHomeReadinessHtml()}
     ${nutritionConfirmCardHtml()}
 
@@ -20827,6 +20828,7 @@ function renderTraining(c){
         <div style="font-size:10px;font-weight:800;color:#888;letter-spacing:.6px;margin-bottom:8px;">W${currentWeek} · S${currentDay + 1}</div>
         ${finalizedBadgeHtml(currentWeek, currentDay, { big: true })}
         <p style="font-size:12px;color:#aaa;margin:8px 0 10px;">Puoi correggere BW, kg o reps: la data di finalizzazione non cambia.</p>
+        <button type="button" class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="openSessionCard(${currentWeek},${currentDay})">CARD DELLA SEDUTA · CONDIVIDI</button>
         ${editingFinalized
           ? '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;" onclick="cancelEditFinalizedWorkout()">CHIUDI MODIFICA</button>'
           : '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;" onclick="startEditFinalizedWorkout()">MODIFICA ALLENAMENTO FINALIZZATO</button>'}
@@ -23444,6 +23446,36 @@ function sessionCardFor(week, day, log) {
   });
 }
 
+// In Home: l'ultima seduta finalizzata, con la strada piu' corta per la sua
+// card. Condividere un allenamento di un'ora fa non deve passare per le
+// statistiche.
+function lastSessionHomeCardHtml() {
+  try {
+    if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return '';
+    if (store && (store.coachViewingClient || store.coachAssigning)) return '';
+    const logs = (store && store.logs) || [];
+    if (!logs.length) return '';
+    const log = logs[logs.length - 1];
+    const card = sessionCardFor(log.week, log.day, log);
+    if (!card) return '';
+    const when = new Date(log.finalizedAt || log.at || 0).getTime();
+    const mins = Math.max(0, Math.round((Date.now() - when) / 60000));
+    let ago = '';
+    if (!isFinite(when) || when <= 0) ago = '';
+    else if (mins < 60) ago = mins <= 1 ? 'un minuto fa' : mins + ' minuti fa';
+    else if (mins < 60 * 36) { const h = Math.round(mins / 60); ago = h === 1 ? "un’ora fa" : h + ' ore fa'; }
+    else ago = card.dateText;
+    return '<div class="card" style="border:1px solid rgba(212,175,55,0.35);margin-bottom:12px;padding:14px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">' +
+      '<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;text-transform:uppercase;">Ultima seduta</div>' +
+      '<div style="font-size:10px;color:#888;">' + esc(ago) + '</div></div>' +
+      '<div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:4px;">' + esc(card.title) + '</div>' +
+      '<div style="font-size:12px;color:#aaa;margin-bottom:10px;">' + esc(card.durationText) + ' · ' + esc(card.tonnageText) + ' · ' + card.sets + ' serie' + (card.prs.length ? (' · ' + card.prs.length + ' record') : '') + '</div>' +
+      '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;" onclick="openSessionCard(' + (Number(log.week) || 1) + ',' + (Number(log.day) || 0) + ')">CARD DELLA SEDUTA · CONDIVIDI</button>' +
+      '</div>';
+  } catch (_) { return ''; }
+}
+
 // Le due figure della mappa, come nelle statistiche ma senza bottoni: qui
 // non c'e' niente da selezionare.
 function sessionMuscleFigureHtml(view, muscles) {
@@ -25791,7 +25823,12 @@ function renderStats(c){
   } : live;
   const durM = Math.floor(snap.durationSec / 60);
   const durS = snap.durationSec % 60;
-  const hist = (store.logs || []).slice().reverse().slice(0, 12).map(function (row) {
+  // Retroattivo davvero: ogni seduta finalizzata si riapre e si condivide,
+  // non solo le ultime dodici. Di default la lista e' corta; MOSTRA TUTTE la
+  // allunga fino alla prima.
+  const histAll = (store.logs || []).slice().reverse();
+  const showAllHist = !!(store.prefs && store.prefs.statsHistoryAll);
+  const hist = (showAllHist ? histAll : histAll.slice(0, 12)).map(function (row) {
     const hw = Number(row.week) || 1;
     const hd = Number(row.day) || 0;
     const stampPretty = formatFinalizedDateTime(row.finalizedAt || row.at);
@@ -25818,7 +25855,7 @@ function renderStats(c){
     </div>` : ''}
     ${renderMuscleMap(snap.muscles)}
     ${renderCheckFisicoCardHtml()}
-    ${hist ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:11px;font-weight:800;color:var(--gold);">CRONOLOGIA SESSIONI</div><button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;" onclick="toggleStatsHistory()">' + (store.prefs && store.prefs.statsHistoryOpen === false ? '▸' : '✕') + '</button></div>' + ((store.prefs && store.prefs.statsHistoryOpen === false) ? '' : hist) + '</div>' : ''}
+    ${hist ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:11px;font-weight:800;color:var(--gold);">CRONOLOGIA SESSIONI <span style="color:#666;font-weight:600;">· ' + histAll.length + '</span></div><button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;" onclick="toggleStatsHistory()">' + (store.prefs && store.prefs.statsHistoryOpen === false ? '▸' : '✕') + '</button></div>' + ((store.prefs && store.prefs.statsHistoryOpen === false) ? '' : (hist + (histAll.length > 12 ? '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="toggleStatsHistoryAll()">' + (showAllHist ? 'MOSTRA SOLO LE ULTIME 12' : 'MOSTRA TUTTE LE ' + histAll.length + ' SEDUTE') + '</button>' : ''))) + '</div>' : ''}
     <div class="card" style="margin-bottom:12px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;"><h2>Statistiche</h2><button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="exportStatsCsv()">Esporta</button></div>
       <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -27243,6 +27280,12 @@ function renderSimpleChart(canvasId, data, color, type='line', labelOffset) {
   }
 }
 
+function toggleStatsHistoryAll() {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.statsHistoryAll = !store.prefs.statsHistoryAll;
+  persist();
+  render();
+}
 function toggleStatsHistory() {
   if (!store.prefs) store.prefs = {};
   store.prefs.statsHistoryOpen = store.prefs.statsHistoryOpen === false;
@@ -34427,6 +34470,8 @@ if (typeof window !== 'undefined') {
   window.normalizeSessionCardStyle = normalizeSessionCardStyle;
   window.shareSessionCard = shareSessionCard;
   window.openSessionCard = openSessionCard;
+  window.lastSessionHomeCardHtml = lastSessionHomeCardHtml;
+  window.toggleStatsHistoryAll = toggleStatsHistoryAll;
   window.sessionCardFor = sessionCardFor;
   window.buildSessionCardData = buildSessionCardData;
   window.renderSessionCardOverlay = renderSessionCardOverlay;
