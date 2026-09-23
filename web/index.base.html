@@ -9243,6 +9243,17 @@ function persistActiveProgramStructure() {
   }
 }
 
+// Quanto può pesare in locale la copia bloccata della scheda. Sopra questa
+// soglia in localStorage resta solo il riferimento, e la scheda sta in
+// IndexedDB — dove il recupero d'emergenza la cerca già come secondo
+// candidato («IndexedDB · backup bloccato»).
+//
+// Il motivo è il tetto di localStorage su iOS, circa 5 MB: una
+// programmazione da 52 settimane pesa 9 MB da sola, e una rete di sicurezza
+// che non entra non è una rete. Sotto la soglia la copia intera resta dov'era,
+// perché è quella che serve se IndexedDB viene svuotato.
+var NURVAN_PROGRAM_LOCK_MAX_BYTES = 1024 * 1024;
+
 function lockPersonalProgramBackup(prog) {
   try {
     if (!prog || !Array.isArray(prog.weeks) || prog.weeks.length < 4) return;
@@ -9250,18 +9261,44 @@ function lockPersonalProgramBackup(prog) {
     if (store && (store.coachAssigning || store.coachViewingClient)) return;
     if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
     const copy = JSON.parse(JSON.stringify(prog));
-    const payload = {
+    const key = personalScopedKey('nurvan_personal_program_lock');
+    const head = {
       at: new Date().toISOString(),
       id: copy.id || 'personal_locked_backup',
       title: copy.title || '',
-      weeks: copy.weeks.length,
-      program: copy
+      weeks: copy.weeks.length
     };
-    try { localStorage.setItem(personalScopedKey('nurvan_personal_program_lock'), JSON.stringify(payload)); } catch (_) {}
-    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram) {
-      const locked = Object.assign({}, copy, { id: 'personal_locked_backup', title: copy.title || 'Backup personale bloccato' });
-      GiammariaPersistence.saveProgram(locked, false).catch(function () {});
+    const whole = JSON.stringify(Object.assign({}, head, { program: copy }));
+    // Solo il riferimento: chi legge controlla `.program`, e senza quello
+    // passa al candidato di IndexedDB.
+    const reference = JSON.stringify(Object.assign({}, head, { program: null, inIdb: true }));
+    const idbSave = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.saveProgram)
+      ? GiammariaPersistence.saveProgram(
+          Object.assign({}, copy, { id: 'personal_locked_backup', title: copy.title || 'Backup personale bloccato' }),
+          false
+        )
+      : Promise.reject(new Error('IndexedDB non disponibile'));
+
+    if (whole.length <= NURVAN_PROGRAM_LOCK_MAX_BYTES) {
+      try {
+        localStorage.setItem(key, whole);
+        idbSave.catch(function () {});
+        return;
+      } catch (_) {
+        // localStorage pieno: sotto si riprova col solo riferimento, ma solo
+        // dopo che IndexedDB ha confermato.
+      }
     }
+
+    // Niente copia intera in locale. Prima si accerta che IndexedDB ce l'abbia,
+    // e solo allora la vecchia copia locale viene sostituita dal riferimento:
+    // fra le due scritture non deve mai esistere un istante senza copie.
+    idbSave.then(function () {
+      try { localStorage.setItem(key, reference); } catch (_) {}
+    }).catch(function (err) {
+      console.warn('[LOCK_PROGRAM] IndexedDB non ha preso il backup, tengo quello che c\'è in locale', err);
+      try { localStorage.setItem(key, whole); } catch (_) {}
+    });
   } catch (e) {
     console.warn('[LOCK_PROGRAM]', e);
   }

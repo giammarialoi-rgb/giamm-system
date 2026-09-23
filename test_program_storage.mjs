@@ -195,29 +195,116 @@ console.log('\n--- 4. un salvataggio fallito non viene dato per fatto ---');
   eq(ctx.saves.length, 2, '4b. e al tocco successivo si riprova, invece di credere che ci sia');
 }
 
+console.log('\n--- 5. la scheda non è più nel blob, ma solo dove ne esiste un altra copia ---');
 {
-  console.log('\n--- 5. la scheda non è più nel blob, ma solo dove ne esiste un altra copia ---');
-  {
-    ok('5a. persist() la toglie dal blob',
-      /if \(!isClientStorageContext\(\)\) source\.activeProgram = null;/.test(SRC));
-    ok('5b. e la toglie prima del sanitizer, non dopo: il clone non deve nemmeno vederla',
-      SRC.indexOf('source.activeProgram = null;') < SRC.indexOf('GiammariaPersistence.sanitizeStoreForLocalStorage(source)'));
-    ok('5c. l avvio la rilegge da IndexedDB', /GiammariaPersistence\.loadActiveProgram\(\)/.test(SRC));
-    ok('5d. e lo spazio cliente la rilegge dal blob, come prima',
-      /DATA = normalizeProgram\(store\.activeProgram \|\| \{ title: 'Programma Atleta', weeks: \[\] \}\)/.test(SRC));
-    ok('5e. il mirror gira a ogni persist', /\n  scheduleActiveProgramIdbSync\(\);\n  scheduleWorkoutLogsIdbSync\(\);/.test(SRC));
-    ok('5f. e anche quando la pagina sta per sparire',
-      /try \{ scheduleActiveProgramIdbSync\(true\); \} catch \(_\) \{\}/.test(SRC));
-    ok('5g. il diario allenamenti resta dov era, intatto',
-      /function scheduleWorkoutLogsIdbSync\(immediate\)/.test(SRC) &&
-      /saveWorkoutLogsSnapshot\(\{\s*\n\s*data: store\.data \|\| \{\}/.test(SRC));
-    ok('5h. e il backup bloccato della scheda personale resta la rete di sicurezza',
-      /localStorage\.setItem\(personalScopedKey\('nurvan_personal_program_lock'\)/.test(SRC));
-    ok('5i. tutto questo è anche nella pagina costruita',
-      /function scheduleActiveProgramIdbSync\(immediate\)/.test(BUILT));
+  ok('5a. persist() la toglie dal blob',
+    /if \(!isClientStorageContext\(\)\) source\.activeProgram = null;/.test(SRC));
+  ok('5b. e la toglie prima del sanitizer, non dopo: il clone non deve nemmeno vederla',
+    SRC.indexOf('source.activeProgram = null;') < SRC.indexOf('GiammariaPersistence.sanitizeStoreForLocalStorage(source)'));
+  ok('5c. l avvio la rilegge da IndexedDB', /GiammariaPersistence\.loadActiveProgram\(\)/.test(SRC));
+  ok('5d. e lo spazio cliente la rilegge dal blob, come prima',
+    /DATA = normalizeProgram\(store\.activeProgram \|\| \{ title: 'Programma Atleta', weeks: \[\] \}\)/.test(SRC));
+  ok('5e. il mirror gira a ogni persist', /\n  scheduleActiveProgramIdbSync\(\);\n  scheduleWorkoutLogsIdbSync\(\);/.test(SRC));
+  ok('5f. e anche quando la pagina sta per sparire',
+    /try \{ scheduleActiveProgramIdbSync\(true\); \} catch \(_\) \{\}/.test(SRC));
+  ok('5g. il diario allenamenti resta dov era, intatto',
+    /function scheduleWorkoutLogsIdbSync\(immediate\)/.test(SRC) &&
+    /saveWorkoutLogsSnapshot\(\{\s*\n\s*data: store\.data \|\| \{\}/.test(SRC));
+  ok('5h. e il backup bloccato della scheda personale resta la rete di sicurezza',
+    /personalScopedKey\('nurvan_personal_program_lock'\)/.test(SRC) &&
+    /function lockPersonalProgramBackup\(prog\)/.test(SRC));
+  ok('5i. tutto questo è anche nella pagina costruita',
+    /function scheduleActiveProgramIdbSync\(immediate\)/.test(BUILT));
+}
+
+console.log('');
+console.log('--- 6. la copia bloccata non prova a stare dove non ci sta ---');
+// Il backup bloccato teneva una copia intera della scheda in localStorage. Con
+// 52 settimane sono 9 MB contro un tetto di circa 5 MB su iOS: una rete che
+// non entra non è una rete. Sopra la soglia in locale resta il riferimento e
+// la scheda sta in IndexedDB, dove il recupero d'emergenza la cerca già.
+{
+  const lockSlice = 'var NURVAN_PROGRAM_LOCK_MAX_BYTES = ' +
+    (SRC.match(/var NURVAN_PROGRAM_LOCK_MAX_BYTES = ([^;]+);/) || [0, '1024 * 1024'])[1] + ';' + String.fromCharCode(10) +
+    grab('lockPersonalProgramBackup');
+  const KEY = 'nurvan_personal_program_lock__test';
+
+  function lockCtx(idbOutcome) {
+    const ctx = {
+      console: { warn: function () {} },
+      store: {},
+      ls: {},
+      idbSaves: [],
+      personalScopedKey: function (name) { return name + '__test'; },
+      isClientStorageContext: function () { return false; },
+      looksLikeClientAssignDraft: function () { return false; }
+    };
+    ctx.localStorage = {
+      setItem: function (k, v) { ctx.ls[k] = v; },
+      getItem: function (k) { return Object.prototype.hasOwnProperty.call(ctx.ls, k) ? ctx.ls[k] : null; }
+    };
+    ctx.GiammariaPersistence = {
+      saveProgram: function (prog) {
+        ctx.idbSaves.push({ id: prog.id, weeks: (prog.weeks || []).length });
+        return idbOutcome === 'fail'
+          ? Promise.reject(new Error('IndexedDB non disponibile'))
+          : Promise.resolve({ success: true });
+      }
+    };
+    vm.createContext(ctx);
+    vm.runInContext(lockSlice, ctx);
+    return ctx;
   }
 
-  console.log('');
-  if (failed) { console.log(failed + ' test di archiviazione scheda falliti.'); process.exit(1); }
-  console.log('Tutti i test di archiviazione della scheda passano.');
+  function program(weeks, exPerSession) {
+    const ex = () => ({ name: 'Esercizio con un nome lungo come quelli veri', muscle: 'Petto',
+      reps_target: '8', rest_seconds: 120, load: 80, technique: '', notes: '',
+      sets: [1, 2, 3, 4].map(n => ({ set_number: n, target_reps: '8', reps: '8', set_type: 'working', rest_seconds: 120 })) });
+    return { id: 'p', title: 'Scheda', weeks: Array.from({ length: weeks }, (_, w) => ({
+      week: w + 1, label: 'Settimana ' + (w + 1),
+      sessions: Array.from({ length: 6 }, () => ({ name: 'Seduta', exercises: Array.from({ length: exPerSession }, ex) })) })) };
+  }
+
+  const small = lockCtx('ok');
+  small.prog = program(6, 4);
+  vm.runInContext('lockPersonalProgramBackup(prog);', small);
+  const smallRec = JSON.parse(small.ls[KEY]);
+  ok('6a. una scheda corta tiene la copia intera in locale, come prima',
+    !!(smallRec.program && smallRec.program.weeks.length === 6));
+  eq(small.idbSaves.length, 1, '6b. e ne va comunque una copia in IndexedDB');
+  eq(small.idbSaves[0].id, 'personal_locked_backup', '6c. col nome che il recupero cerca');
+
+  const big = lockCtx('ok');
+  big.prog = program(52, 8);
+  ok('6d. la scheda di prova è davvero grossa (oltre 1 MB)', JSON.stringify(big.prog).length > 1024 * 1024);
+  vm.runInContext('lockPersonalProgramBackup(prog);', big);
+  eq(big.ls[KEY], undefined, '6e. prima che IndexedDB confermi, in locale non si tocca niente');
+  await Promise.resolve();
+  const bigRec = JSON.parse(big.ls[KEY]);
+  ok('6f. dopo la conferma in locale resta solo il riferimento', bigRec.program === null && bigRec.inIdb === true);
+  eq(bigRec.weeks, 52, '6g. che dice comunque quante settimane erano');
+  ok('6h. e pesa qualche centinaio di byte invece di nove megabyte', big.ls[KEY].length < 400);
+  eq(big.idbSaves.length, 1, '6i. la scheda intera è in IndexedDB');
+  eq(big.idbSaves[0].weeks, 52, '6j. tutte e 52 le settimane');
+
+  // Se IndexedDB non prende il backup, la copia locale è l'unica rete rimasta:
+  // non la si sostituisce con un riferimento a niente.
+  const broken = lockCtx('fail');
+  broken.prog = program(52, 8);
+  vm.runInContext('lockPersonalProgramBackup(prog);', broken);
+  await Promise.resolve();
+  await Promise.resolve();
+  const brokenRec = JSON.parse(broken.ls[KEY] || 'null');
+  ok('6k. se IndexedDB fallisce si tiene la copia intera in locale',
+    !!(brokenRec && brokenRec.program && brokenRec.program.weeks.length === 52));
+
+  ok('6l. il recupero salta un record senza scheda dentro',
+    /if \(locked && locked\.program\) addCandidate\(locked\.program, 'Backup locale bloccato'\)/.test(SRC));
+  ok('6m. e il backup di IndexedDB è già fra i candidati',
+    /loadProgram\('personal_locked_backup'\)[\s\S]{0,120}addCandidate\(lockedProg, 'IndexedDB · backup bloccato'\)/.test(SRC));
+  ok('6n. tutto questo è anche nella pagina costruita', /var NURVAN_PROGRAM_LOCK_MAX_BYTES = /.test(BUILT));
 }
+
+console.log('');
+if (failed) { console.log(failed + ' test di archiviazione scheda falliti.'); process.exit(1); }
+console.log('Tutti i test di archiviazione della scheda passano.');
