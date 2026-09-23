@@ -50,7 +50,7 @@ const run = (code) => vm.runInContext(code, ctx);
 console.log("");
 console.log('--- 0. il blocco si ritaglia dal sorgente ---');
 ok('0a. c\'e\' tutto', slice.length > 1500);
-ok('0b. ed e\' nella pagina costruita', /function buildSessionCardData\(input\)/.test(BUILT) && /async function drawSessionCard\(canvas, card\)/.test(BUILT));
+ok('0b. ed e\' nella pagina costruita', /function buildSessionCardData\(input\)/.test(BUILT) && /async function drawSessionCard\(canvas, card, style\)/.test(BUILT));
 
 // Una seduta come la salva finalizeWorkout, con dentro anche cose che sulla
 // card non devono arrivare (kcal, intensita', peso corporeo).
@@ -129,12 +129,12 @@ console.log('--- 3. mai dati di salute ---');
 console.log("");
 console.log('--- 4. formato e condivisione ---');
 {
-  ok('4a. l\'immagine e\' 1080×1920', /canvas\.width = 1080;\s*\n\s*canvas\.height = 1920;/.test(grab('drawSessionCard')) && /id="social-card-canvas" width="1080" height="1920"/.test(SRC));
+  ok("4a. l'immagine e' 1080x1920", grab('drawSessionCard').indexOf('canvas.width = W;') >= 0 && grab('drawSessionCard').indexOf('canvas.height = H;') >= 0 && grab('drawSessionCard').indexOf('const W = 1080, H = 1920') >= 0 && SRC.indexOf('id="social-card-canvas" width="1080" height="1920"') >= 0);
   const share = grab('shareSessionCard');
   ok('4b. navigator.share con il file se c\'e\'', /navigator\.canShare\(\{ files: \[file\] \}\)/.test(share) && /navigator\.share\(\{ files: \[file\]/.test(share));
   ok('4c. altrimenti si scarica il PNG', /downloadBlobHelper\(blob, filename\)/.test(share));
-  ok('4d. il nome del file dice di che giorno e\'', /'nurvan-seduta-' \+ String\(card\.at \|\| ''\)\.slice\(0, 10\) \+ '\.png'/.test(share));
-  ok('4e. il logo in basso, con un ripiego a testo se non carica', /loadCardImage\('nurvan_logo\.png'(, \d+)?\)/.test(grab('drawSessionCard')) && /fillText\('NURVAN', W \/ 2, H - 170\)/.test(grab('drawSessionCard')));
+  ok('4d. il nome del file dice di che giorno e\'', /'nurvan-seduta-' \+ String\(card\.at \|\| ''\)\.slice\(0, 10\) \+ suffix \+ '\.png'/.test(share));
+  ok('4e. il logo in basso, con un ripiego a testo se non carica', /loadCardImage\('nurvan_logo\.png'(, \d+)?\)/.test(grab('drawSessionCard')) && /fillText\('NURVAN', W \/ 2, footerY \+ 60\)/.test(grab('drawSessionCard')));
 }
 
 console.log("");
@@ -150,6 +150,30 @@ console.log('--- 5. quando compare e da dove si riapre ---');
   ok('5h. i record vengono dal motore, per seduta', /TAE\.sessionPRs\(TAE\.normalizeSets\(store, DATA\), week, day\)/.test(SRC));
   const eng = fs.readFileSync(path.join(root, 'web/training-analytics-engine.js'), 'utf8');
   ok('5i. e il motore li timbra con il giorno', /function sessionPRs\(sets, week, day\)/.test(eng) && /day: s\.day, kind: 'derived'/.test(eng));
+}
+
+console.log("");
+console.log("--- 6. tre stili: scuro, su foto, vetro ---");
+{
+  const draw = grab('drawSessionCard');
+  const flat = grab('drawSessionCardFlat');
+  ok("6a. gli stili esistono e dark e' il ripiego",
+    /var SESSION_CARD_STYLES = \[/.test(SRC) && /function normalizeSessionCardStyle\(style\)/.test(SRC) && /: 'dark';/.test(grab('normalizeSessionCardStyle')));
+  ok("6b. negli stili trasparenti la tela parte vuota, niente sfondo",
+    /main\.clearRect\(0, 0, W, H\)/.test(draw) && /if \(isDark\) \{\s*\n\s*const bg = ctx\.createLinearGradient/.test(draw));
+  ok("6c. su foto: blocco in basso a sinistra, testo con ombra, niente record ne figure",
+    /if \(isFlat\) return drawSessionCardFlat\(main, card, logo\);/.test(draw) && /shadowColor = 'rgba\(0,0,0,0\.75\)'/.test(flat) && /let y = H - 190 - blockH;/.test(flat) && !/prs|statsHotspots/.test(flat));
+  ok("6d. vetro: pannello scuro semitrasparente dietro al blocco",
+    /if \(isGlass\) \{\s*\n\s*main\.fillStyle = 'rgba\(8,8,8,0\.62\)'/.test(draw));
+  ok("6e. il blocco del vetro si centra in verticale, cosi si sposta sulla foto senza tagli",
+    /const offset = Math\.round\(\(H - blockH\) \/ 2 - blockTop\);/.test(draw) && /main\.drawImage\(work, 0, offset\)/.test(draw));
+  ok("6f. la schermata offre i tre stili",
+    /SESSION_CARD_STYLES\.map\(function \(st\)/.test(grab('sessionCardOverlayHtml')) && /shareWorkoutCardFromOverlay\(&#39;' \+ st\.id \+ '&#39;\)/.test(grab('sessionCardOverlayHtml')));
+  const share = grab('shareSessionCard');
+  ok("6g. e il nome del file dice quale",
+    /'-' \+ \(style === 'glass' \? 'vetro' : 'trasparente'\)/.test(share));
+  ok("6h. anche negli stili trasparenti niente dati di salute",
+    !/\b(bw|kcal|intensity|bodyweight|waist|exams|therapy)\b/.test(draw + flat));
 }
 
 console.log("");

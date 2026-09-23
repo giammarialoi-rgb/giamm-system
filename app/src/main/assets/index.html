@@ -1394,6 +1394,8 @@ body.nurvan-locked { background: var(--bg, #000); }
 .sc-section-t { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; color: #888; margin-bottom: 6px; }
 .sc-pr { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: #ddd; padding: 5px 0; border-bottom: 1px solid #1c1c1c; }
 .sc-pr > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.sc-share-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.sc-share-btn { font-size: 10px; padding: 10px 4px; min-width: 0; text-transform: none; }
 @media (max-width: 340px) { .sc-num-v { font-size: 15px; } }
 #workout-complete-overlay .wco-xp {
   font-size: 28px;
@@ -56423,10 +56425,14 @@ function sessionCardOverlayHtml(card, mode) {
     h += '<div class="sc-section"><div class="sc-section-t">MUSCOLI DELLA SEDUTA</div>' +
       '<div class="stats-body-duo" style="padding-top:4px;">' + sessionMuscleFigureHtml('front', card.muscles) + sessionMuscleFigureHtml('back', card.muscles) + '</div></div>';
   }
-  h += '<div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;">' +
-    '<button type="button" class="btn btn-outline" style="width:100%;" id="wco-share-btn" onclick="shareWorkoutCardFromOverlay()">CONDIVIDI</button>' +
-    '<button type="button" class="btn btn-primary" style="width:100%;height:48px;font-weight:900;" onclick="closeWorkoutCompleteOverlay()">CHIUDI</button>' +
-    '</div>';
+  // Condividi in tre stili: l'immagine completa, oppure una versione
+  // trasparente da appoggiare sopra una foto, minimale o con pannello.
+  h += '<div class="sc-section" style="text-align:center;"><div class="sc-section-t" style="text-align:center;">CONDIVIDI</div>' +
+    '<div class="sc-share-row">' +
+    SESSION_CARD_STYLES.map(function (st) {
+      return '<button type="button" class="btn btn-outline sc-share-btn" title="' + esc(st.note) + '" onclick="shareWorkoutCardFromOverlay(&#39;' + st.id + '&#39;)">' + esc(st.label) + '</button>';
+    }).join('') + '</div></div>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;height:48px;font-weight:900;margin-top:12px;" onclick="closeWorkoutCompleteOverlay()">CHIUDI</button>';
   return h;
 }
 
@@ -56486,8 +56492,8 @@ function closeWorkoutCompleteOverlay(goto) {
   }, 400);
 }
 
-function shareWorkoutCardFromOverlay() {
-  shareSessionCard(window.__sessionCard || null);
+function shareWorkoutCardFromOverlay(style) {
+  shareSessionCard(window.__sessionCard || null, style);
 }
 
 // Compat: chi chiama ancora con un log entry.
@@ -56531,40 +56537,142 @@ function cardWrapLines(ctx, text, maxWidth, maxLines) {
   return lines;
 }
 
+// I tre stili dell'immagine.
+//   dark        sfondo scuro, cornice oro, footer in basso: si condivide da sola.
+//   transparent sfondo trasparente e testo con ombra: si appoggia sopra una
+//               foto, alla Strava. Niente figure, niente pannelli: il minimo.
+//   glass       sfondo trasparente con un pannello scuro semitrasparente che
+//               tiene tutto, figure comprese, alla Lyfta.
+// Nei due stili trasparenti il blocco e' compatto e centrato in verticale,
+// cosi' si puo' spostare e ridimensionare sopra la foto senza tagliare niente.
+var SESSION_CARD_STYLES = [
+  { id: 'dark', label: 'Scuro', note: 'Immagine completa, sfondo scuro' },
+  { id: 'transparent', label: 'Su foto', note: 'Trasparente, solo i numeri: da mettere sopra una foto' },
+  { id: 'glass', label: 'Vetro', note: 'Trasparente, con un pannello scuro dietro' }
+];
+
+function normalizeSessionCardStyle(style) {
+  return SESSION_CARD_STYLES.some(function (s) { return s.id === style; }) ? style : 'dark';
+}
+
+// Lo stile "su foto": il blocco in basso a sinistra, come uno sticker. Icona,
+// titolo, poi coppie etichetta/valore piccole. Niente record, niente figure:
+// sopra una foto conta che si legga in un colpo d'occhio.
+function drawSessionCardFlat(ctx, card, logo) {
+  const W = 1080, H = 1920, PAD = 84;
+  ctx.shadowColor = 'rgba(0,0,0,0.75)';
+  ctx.shadowBlur = 16;
+  ctx.shadowOffsetY = 3;
+  const rows = [[['Volume', card.tonnageText], ['Serie', String(card.sets)]]];
+  const second = [['Durata', card.durationText]];
+  if (card.exercises) second.push(['Esercizi', String(card.exercises)]);
+  rows.push(second);
+  const iconH = 72;
+  const blockH = iconH + 34 + (card.athleteName ? 54 : 0) + 96 + 16 + rows.length * 150;
+  let y = H - 190 - blockH;
+  if (logo && logo.naturalWidth) {
+    const lw = logo.naturalWidth * (iconH / logo.naturalHeight);
+    ctx.drawImage(logo, PAD, y, lw, iconH);
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 60px Montserrat, sans-serif';
+    ctx.fillText('N', PAD, y + 60);
+  }
+  y += iconH + 34;
+  if (card.athleteName) {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = '700 36px Montserrat, sans-serif';
+    ctx.fillText(cardWrapLines(ctx, card.athleteName, W - PAD * 2, 1)[0], PAD, y + 36);
+    y += 54;
+  }
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '800 74px Montserrat, sans-serif';
+  ctx.fillText(cardWrapLines(ctx, card.title, W - PAD * 2, 1)[0], PAD, y + 74);
+  y += 96 + 16;
+  rows.forEach(function (row) {
+    row.forEach(function (cell, i) {
+      const x = PAD + i * 440;
+      ctx.fillStyle = 'rgba(255,255,255,0.82)';
+      ctx.font = '600 34px Montserrat, sans-serif';
+      ctx.fillText(cell[0], x, y + 34);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 70px Montserrat, sans-serif';
+      ctx.fillText(cell[1], x, y + 114);
+    });
+    y += 150;
+  });
+  ctx.shadowColor = 'rgba(0,0,0,0)';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+  return true;
+}
+
 // L'immagine: 1080×1920, formato storia. Le sezioni si accodano una sotto
 // l'altra; quello che manca non lascia un buco, semplicemente non c'e'.
-async function drawSessionCard(canvas, card) {
+async function drawSessionCard(canvas, card, style) {
   if (!canvas || !canvas.getContext || !card) return false;
+  style = normalizeSessionCardStyle(style);
+  const isDark = style === 'dark';
+  const isGlass = style === 'glass';
+  const isFlat = style === 'transparent';
   // Le immagini prima di tutto, insieme: le figure anatomiche pesano, e
   // caricate una dopo l'altra dentro il disegno non arrivavano in tempo.
-  const wantFigures = !!card.muscles;
+  const wantFigures = !!card.muscles && !isFlat;
   const imgs = await Promise.all([
     loadCardImage('nurvan_logo.png', 6000),
     wantFigures ? loadCardImage(statsBodySrc('front'), 8000) : Promise.resolve(null),
     wantFigures ? loadCardImage(statsBodySrc('back'), 8000) : Promise.resolve(null)
   ]);
   const logo = imgs[0], frontImg = imgs[1], backImg = imgs[2];
-  canvas.width = 1080;
-  canvas.height = 1920;
-  const ctx = canvas.getContext('2d');
   const W = 1080, H = 1920, PAD = 84;
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#111111');
-  bg.addColorStop(1, '#050505');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-  const glow = ctx.createRadialGradient(W / 2, 260, 40, W / 2, 260, 700);
-  glow.addColorStop(0, 'rgba(212,175,55,0.16)');
-  glow.addColorStop(1, 'rgba(212,175,55,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = '#d4af37';
-  ctx.lineWidth = 5;
-  ctx.strokeRect(36, 36, W - 72, H - 72);
+  canvas.width = W;
+  canvas.height = H;
+  const main = canvas.getContext('2d');
+  main.clearRect(0, 0, W, H);
+  if (isFlat) return drawSessionCardFlat(main, card, logo);
+  // Negli stili trasparenti il contenuto si disegna a parte, per poterlo poi
+  // centrare e, nel vetro, mettergli il pannello dietro.
+  const work = isDark ? canvas : document.createElement('canvas');
+  if (!isDark) { work.width = W; work.height = H; }
+  const ctx = work.getContext('2d');
+  if (!isDark) ctx.clearRect(0, 0, W, H);
 
-  let y = 150;
+  const cLabel = isFlat ? 'rgba(255,255,255,0.82)' : '#8a8a8a';
+  const cText = '#ffffff';
+  const cGold = '#d4af37';
+  const shadowOn = function () {
+    if (!isFlat) return;
+    ctx.shadowColor = 'rgba(0,0,0,0.75)';
+    ctx.shadowBlur = 16;
+    ctx.shadowOffsetY = 3;
+  };
+  const shadowOff = function () {
+    ctx.shadowColor = 'rgba(0,0,0,0)';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+  };
+
+  if (isDark) {
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#111111');
+    bg.addColorStop(1, '#050505');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    const glow = ctx.createRadialGradient(W / 2, 260, 40, W / 2, 260, 700);
+    glow.addColorStop(0, 'rgba(212,175,55,0.16)');
+    glow.addColorStop(1, 'rgba(212,175,55,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = cGold;
+    ctx.lineWidth = 5;
+    ctx.strokeRect(36, 36, W - 72, H - 72);
+  }
+
+  const top = 150;
+  let y = top;
+  shadowOn();
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = '#9a9a9a';
+  ctx.fillStyle = cLabel;
   ctx.font = '700 34px Montserrat, sans-serif';
   ctx.fillText('NURVAN', PAD, y);
   ctx.textAlign = 'right';
@@ -56573,20 +56681,20 @@ async function drawSessionCard(canvas, card) {
   y += 70;
 
   if (card.athleteName) {
-    ctx.fillStyle = '#d4af37';
+    ctx.fillStyle = cGold;
     ctx.font = '800 44px Montserrat, sans-serif';
     ctx.fillText(cardWrapLines(ctx, card.athleteName, W - PAD * 2, 1)[0], PAD, y);
     y += 70;
   }
 
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = cText;
   ctx.font = '900 78px Montserrat, sans-serif';
   cardWrapLines(ctx, card.title, W - PAD * 2, 2).forEach(function (line) {
     ctx.fillText(line, PAD, y + 60);
     y += 92;
   });
   y += 10;
-  ctx.fillStyle = '#8a8a8a';
+  ctx.fillStyle = cLabel;
   ctx.font = '600 36px Montserrat, sans-serif';
   ctx.fillText(card.dateText, PAD, y + 30);
   y += 110;
@@ -56597,15 +56705,19 @@ async function drawSessionCard(canvas, card) {
   const colW = (W - PAD * 2) / 3;
   cols.forEach(function (c, i) {
     const x0 = PAD + colW * i;
-    ctx.fillStyle = '#121212';
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(x0 + 6, y - 10, colW - 12, 190, 22); else ctx.rect(x0 + 6, y - 10, colW - 12, 190);
-    ctx.fill();
-    ctx.strokeStyle = '#2a2a2a';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    if (!isFlat) {
+      shadowOff();
+      ctx.fillStyle = isGlass ? 'rgba(0,0,0,0.42)' : '#121212';
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x0 + 6, y - 10, colW - 12, 190, 22); else ctx.rect(x0 + 6, y - 10, colW - 12, 190);
+      ctx.fill();
+      ctx.strokeStyle = isGlass ? 'rgba(255,255,255,0.14)' : '#2a2a2a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      shadowOn();
+    }
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#d4af37';
+    ctx.fillStyle = cGold;
     let size = 76;
     ctx.font = '900 ' + size + 'px Montserrat, sans-serif';
     while (ctx.measureText(c[1]).width > colW - 40 && size > 44) {
@@ -56613,33 +56725,35 @@ async function drawSessionCard(canvas, card) {
       ctx.font = '900 ' + size + 'px Montserrat, sans-serif';
     }
     ctx.fillText(c[1], x0 + colW / 2, y + 96);
-    ctx.fillStyle = '#8a8a8a';
+    ctx.fillStyle = cLabel;
     ctx.font = '700 28px Montserrat, sans-serif';
     ctx.fillText(c[0].toUpperCase(), x0 + colW / 2, y + 148);
   });
   ctx.textAlign = 'left';
   y += 210;
   if (card.exercises) {
-    ctx.fillStyle = '#8a8a8a';
+    ctx.fillStyle = cLabel;
     ctx.font = '700 32px Montserrat, sans-serif';
     ctx.fillText(card.exercises + ' esercizi', PAD, y);
     y += 60;
   }
 
-  const footerTop = H - 250;
+  // Nello stile scuro il footer sta in fondo e il resto non deve arrivarci;
+  // negli altri due il footer segue il contenuto, quindi il limite e' la tela.
+  const footerTop = isDark ? H - 250 : H - 260;
 
   if (card.prs.length) {
-    ctx.fillStyle = '#8a8a8a';
+    ctx.fillStyle = cLabel;
     ctx.font = '700 30px Montserrat, sans-serif';
     ctx.fillText('RECORD PERSONALI', PAD, y);
     y += 22;
     card.prs.slice(0, 6).forEach(function (p) {
       if (y + 60 > footerTop - 40) return;
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = cText;
       ctx.font = '700 38px Montserrat, sans-serif';
       const name = cardWrapLines(ctx, p.name, W - PAD * 2 - 380, 1)[0];
       ctx.fillText(name, PAD, y + 46);
-      ctx.fillStyle = '#d4af37';
+      ctx.fillStyle = cGold;
       ctx.textAlign = 'right';
       ctx.font = '800 38px Montserrat, sans-serif';
       ctx.fillText(p.label + ' · ' + p.value, W - PAD, y + 46);
@@ -56649,12 +56763,11 @@ async function drawSessionCard(canvas, card) {
     y += 30;
   }
 
-  if (card.muscles) {
+  if (wantFigures && (frontImg || backImg)) {
     const room = footerTop - y - 40;
     const figH = Math.min(560, room);
     if (figH >= 260) {
-      const front = frontImg;
-      const back = backImg;
+      shadowOff();
       const drawFig = function (img, view, x0) {
         if (!img || !img.naturalWidth) return;
         const scale = figH / img.naturalHeight;
@@ -56674,48 +56787,72 @@ async function drawSessionCard(canvas, card) {
           ctx.fill();
         });
       };
-      if (front || back) {
-        ctx.fillStyle = '#8a8a8a';
-        ctx.font = '700 30px Montserrat, sans-serif';
-        ctx.fillText('MUSCOLI DELLA SEDUTA', PAD, y);
-        y += 30;
-        drawFig(front, 'front', W / 2 - 200);
-        drawFig(back, 'back', W / 2 + 200);
-        y += figH + 20;
-      }
+      ctx.fillStyle = cLabel;
+      ctx.font = '700 30px Montserrat, sans-serif';
+      ctx.fillText('MUSCOLI DELLA SEDUTA', PAD, y);
+      y += 30;
+      drawFig(frontImg, 'front', W / 2 - 200);
+      drawFig(backImg, 'back', W / 2 + 200);
+      y += figH + 20;
+      shadowOn();
     }
   }
 
   // Footer: logo e nome dell'app. Nessun dato.
-  ctx.fillStyle = '#d4af37';
+  const footerY = isDark ? H - 230 : y + 30;
+  ctx.fillStyle = cGold;
   ctx.font = '600 28px Montserrat, sans-serif';
   ctx.textAlign = 'center';
   if (logo && logo.naturalWidth) {
     const lh = 84;
     const lw = logo.naturalWidth * (lh / logo.naturalHeight);
-    ctx.drawImage(logo, W / 2 - lw / 2, H - 230, lw, lh);
-    ctx.fillText('Train. Fuel. Recover. Track. Evolve.', W / 2, H - 110);
+    shadowOff();
+    ctx.drawImage(logo, W / 2 - lw / 2, footerY, lw, lh);
+    shadowOn();
+    ctx.fillText('Train. Fuel. Recover. Track. Evolve.', W / 2, footerY + 120);
   } else {
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = cText;
     ctx.font = '900 56px Montserrat, sans-serif';
-    ctx.fillText('NURVAN', W / 2, H - 170);
-    ctx.fillStyle = '#d4af37';
+    ctx.fillText('NURVAN', W / 2, footerY + 60);
+    ctx.fillStyle = cGold;
     ctx.font = '600 28px Montserrat, sans-serif';
-    ctx.fillText('Train. Fuel. Recover. Track. Evolve.', W / 2, H - 110);
+    ctx.fillText('Train. Fuel. Recover. Track. Evolve.', W / 2, footerY + 120);
   }
   ctx.textAlign = 'left';
+  shadowOff();
+  y = footerY + 150;
+
+  if (!isDark) {
+    // Il blocco disegnato va da `top` a `y`: lo si centra nella tela, e nel
+    // vetro gli si mette dietro il pannello.
+    const blockTop = top - 60;
+    const blockH = (y + 30) - blockTop;
+    const offset = Math.round((H - blockH) / 2 - blockTop);
+    if (isGlass) {
+      main.fillStyle = 'rgba(8,8,8,0.62)';
+      main.beginPath();
+      if (main.roundRect) main.roundRect(44, blockTop + offset, W - 88, blockH, 44); else main.rect(44, blockTop + offset, W - 88, blockH);
+      main.fill();
+      main.strokeStyle = 'rgba(255,255,255,0.16)';
+      main.lineWidth = 2;
+      main.stroke();
+    }
+    main.drawImage(work, 0, offset);
+  }
   return true;
 }
 
-async function shareSessionCard(card) {
+async function shareSessionCard(card, style) {
   if (!card) {
     if (typeof showToast === 'function') showToast('Nessuna seduta da condividere', 'warning');
     return false;
   }
+  style = normalizeSessionCardStyle(style);
   const canvas = $('social-card-canvas') || document.createElement('canvas');
-  const drawn = await drawSessionCard(canvas, card);
+  const drawn = await drawSessionCard(canvas, card, style);
   if (!drawn) return false;
-  const filename = 'nurvan-seduta-' + String(card.at || '').slice(0, 10) + '.png';
+  const suffix = style === 'dark' ? '' : ('-' + (style === 'glass' ? 'vetro' : 'trasparente'));
+  const filename = 'nurvan-seduta-' + String(card.at || '').slice(0, 10) + suffix + '.png';
   const text = 'NURVAN · ' + card.title + ' · ' + card.durationText + ' · ' + card.tonnageText + ' · ' + card.sets + ' serie';
   let blob = null;
   try {
@@ -67234,6 +67371,8 @@ if (typeof window !== 'undefined') {
   window.shareWorkoutCard = shareWorkoutCard;
   window.shareWorkoutCardFromOverlay = shareWorkoutCardFromOverlay;
   window.drawSessionCard = drawSessionCard;
+  window.SESSION_CARD_STYLES = SESSION_CARD_STYLES;
+  window.normalizeSessionCardStyle = normalizeSessionCardStyle;
   window.shareSessionCard = shareSessionCard;
   window.openSessionCard = openSessionCard;
   window.sessionCardFor = sessionCardFor;
