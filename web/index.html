@@ -816,6 +816,17 @@ body[data-view="training"] .fab-save { display: flex; }
 }
 #timer-display { font-size: 80px; font-weight: 900; color: var(--gold); margin-bottom: 20px; }
 .timer-btn { padding: 15px 40px; border-radius: 30px; font-weight: 800; border: none; font-size: 18px; cursor: pointer; }
+/* Quattro comandi sotto il numero: entrano in una riga sui telefoni larghi e
+   in due su quelli stretti, senza mai uscire dal pannello. */
+.timer-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.timer-actions .timer-btn { padding: 12px 18px; font-size: 14px; flex: 1 1 auto; min-width: 72px; }
+.timer-actions .btn-outline { background: transparent; border: 1px solid #444; color: #ddd; }
+@media (max-width: 420px) {
+  #timer-overlay { padding-top: 6vh; }
+  #timer-overlay .timer-panel { padding: 16px 14px; width: calc(100% - 24px); box-sizing: border-box; }
+  #timer-display { font-size: 56px; margin-bottom: 14px; }
+  .timer-actions .timer-btn { padding: 11px 10px; font-size: 13px; min-width: 60px; flex: 1 1 40%; }
+}
 
 #import-progress-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 9800;
@@ -2199,7 +2210,13 @@ body.focus-mode [data-rewards-only] {
   <div class="timer-panel">
     <div id="timer-phase" style="font-size:11px;font-weight:800;letter-spacing:1px;color:#888;margin-bottom:6px;">RIPOSO</div>
     <div id="timer-display">00:00</div>
-    <button class="timer-btn btn-primary" onclick="stopTimer()">CHIUDI</button>
+    <div id="timer-note" style="font-size:11px;color:#888;margin:-10px 0 14px;"></div>
+    <div class="timer-actions">
+      <button type="button" class="timer-btn btn-outline" onclick="nudgeRestTimer(-10)" aria-label="Dieci secondi in meno">&minus;10</button>
+      <button type="button" class="timer-btn btn-outline" onclick="nudgeRestTimer(10)" aria-label="Dieci secondi in pi&ugrave;">+10</button>
+      <button type="button" class="timer-btn btn-outline" onclick="skipRestTimer()">SALTA</button>
+      <button type="button" class="timer-btn btn-primary" onclick="stopTimer()">CHIUDI</button>
+    </div>
   </div>
 </div>
 
@@ -41099,7 +41116,18 @@ function normalizeProgram(payload) {
         const setInfo = resolveImportSetCount(exercise);
         const setsCount = (exercise.prescription && exercise.prescription.sets) || setInfo.target;
         const techniqueId = detectExTechnique(exercise) || (setInfo.hasDrop ? 'drop_set' : null);
-        const rest = exercise.rest_seconds != null ? `${exercise.rest_seconds} s` : (exercise.rest || '90s');
+        // Il testo scritto nella scheda ("2 min") vince sul numero derivato: fino a
+        // ieri il numero veniva da parseInt("2 min") = 2, e al passaggio dopo il
+        // testo diventava "2 s". Dove il testo c'e' ancora, la scheda si guarisce.
+        // La lettura del recupero e' quella del timer (parseRestSeconds). L'alias
+        // serve ai test che ritagliano questa funzione da sola dalla pagina.
+        const restSecondsOf = (typeof parseRestSeconds === 'function') ? parseRestSeconds : function (txt, fb) {
+          const m = String(txt == null ? '' : txt).toLowerCase().match(/\d+(?:\.\d+)?/g) || [];
+          const n = parseFloat(m[m.length - 1] || 0) * (/min/.test(String(txt).toLowerCase()) ? 60 : 1);
+          return (isNaN(n) || n <= 0) ? (fb === undefined ? 90 : fb) : Math.round(n);
+        };
+        const restTextOk = typeof exercise.rest === 'string' && restSecondsOf(exercise.rest, 0) > 0;
+        const rest = restTextOk ? exercise.rest : (exercise.rest_seconds != null ? `${exercise.rest_seconds} s` : (exercise.rest || '90s'));
         const isBonusEx = Boolean(exercise.is_bonus || exercise.isBonus || isBonusSession);
         const exId = exercise.id || `w${wNum}_s${si + 1}_e${ei + 1}`;
         const exName = exercise.name || exercise.exercise || `Esercizio ${ei + 1}`;
@@ -41129,7 +41157,9 @@ function normalizeProgram(payload) {
             percentage_1rm: s.percentage_1rm != null ? Number(s.percentage_1rm) : null,
             rpe: s.rpe != null ? Number(s.rpe) : rpeTarget,
             rir: s.rir != null ? Number(s.rir) : rirTarget,
-            rest_seconds: s.rest_seconds || parseInt(rest, 10) || 90,
+            // "2 min" letto con parseInt faceva 2: due secondi di recupero su ogni serie,
+            // e al reload successivo la scheda diceva "2 s". Si legge come la legge il timer.
+            rest_seconds: restTextOk ? restSecondsOf(rest, 90) : (s.rest_seconds || restSecondsOf(rest, 90)),
             tempo: s.tempo || tempo,
             // A hold is seconds and a cardio block is minutes. Rebuilding a
             // set from a fixed list of fields used to drop both, and a plank
@@ -41208,7 +41238,7 @@ function normalizeProgram(payload) {
           rpeTarget: rpeTarget,
           rirTarget: rirTarget,
           rest: rest,
-          rest_seconds: exercise.rest_seconds != null ? exercise.rest_seconds : (parseInt(rest, 10) || null),
+          rest_seconds: restTextOk ? restSecondsOf(rest, null) : (exercise.rest_seconds != null ? exercise.rest_seconds : restSecondsOf(rest, null)),
           plannedLoad: plannedLoad,
           name_formula: exercise.name_formula || null,
           tempo: tempo,
@@ -42457,7 +42487,110 @@ function nativeBeep(text) {
     }
   } catch (_) {}
 }
-function startTimer(secondsText) {
+// Il recupero: quello scritto, quello scelto in seduta, quello passato davvero.
+//
+// La scheda resta la fonte di verita' del recupero. Quello che manca e' il
+// resto della storia: l'atleta che oggi ha bisogno di dieci secondi in piu'
+// senza per questo riscrivere la programmazione; il tempo che e' passato sul
+// serio fra una serie e l'altra, che non e' mai lo stesso del timer; e un
+// timer che, tornando dallo sfondo, sappia che ora e' invece di riprendere a
+// contare da dove si era addormentato.
+
+// "90s", "2 min", "60-90s", "1.5 min": il numero che conta e' l'ultimo.
+function parseRestSeconds(secondsText, fallback) {
+  const text = String(secondsText == null ? '' : secondsText).toLowerCase().replace('–', '-');
+  const parts = text.match(/\d+(?:\.\d+)?/g) || [];
+  let restSec = 0;
+  if (text.includes('min')) restSec = parseFloat(parts[parts.length - 1] || 0) * 60;
+  else if (text.includes('s')) restSec = parseFloat(parts[parts.length - 1] || 0);
+  else if (parts.length) restSec = parseFloat(parts[parts.length - 1] || 0);
+  if (isNaN(restSec) || restSec <= 0) return fallback === undefined ? 90 : fallback;
+  return Math.round(restSec);
+}
+
+// Quanto manca, letto dall'orologio e non da un contatore: quaranta secondi
+// in background sono quaranta secondi anche se nessun tick e' arrivato.
+function timerRemainingSeconds(endsAt, now) {
+  const t = Number(now == null ? Date.now() : now);
+  const e = Number(endsAt);
+  if (!isFinite(e)) return 0;
+  return Math.max(0, Math.ceil((e - t) / 1000));
+}
+
+// Il recupero passato davvero fra due chiusure. Nessun valore se manca una
+// delle due o se l'ordine non torna.
+function actualRestSeconds(prevDoneAt, doneAt) {
+  const a = Number(prevDoneAt);
+  const b = Number(doneAt);
+  if (!isFinite(a) || !isFinite(b) || a <= 0 || b <= 0 || b < a) return null;
+  return Math.round((b - a) / 1000);
+}
+
+function formatRestClock(sec) {
+  const s = Math.max(0, Math.round(Number(sec) || 0));
+  const m = Math.floor(s / 60);
+  return String(m).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+}
+
+// L'etichetta per il coach. Si accende solo se, in almeno meta' delle serie
+// con un recupero reale registrato, lo scarto dal prescritto supera la
+// soglia; il numero e' la media degli scarti su tutte quelle serie.
+// Indicazione, non giudizio: nessun colore.
+var REST_DEVIATION_THRESHOLD_SEC = 20;
+function restDeviationSummary(prescribedSec, actuals, thresholdSec) {
+  const p = Number(prescribedSec);
+  const th = Number(thresholdSec == null ? REST_DEVIATION_THRESHOLD_SEC : thresholdSec);
+  const list = (Array.isArray(actuals) ? actuals : [])
+    .map(Number).filter(function (n) { return isFinite(n) && n >= 0; });
+  if (!isFinite(p) || p <= 0 || !list.length) return null;
+  const deltas = list.map(function (a) { return a - p; });
+  const off = deltas.filter(function (d) { return Math.abs(d) > th; }).length;
+  if (off * 2 < list.length) return null;
+  const avg = Math.round(deltas.reduce(function (s, d) { return s + d; }, 0) / deltas.length);
+  if (avg === 0) return null;
+  return {
+    avgDelta: avg,
+    sets: list.length,
+    offSets: off,
+    label: 'recupero ' + (avg > 0 ? '+' : '−') + Math.abs(avg) + ' s medio'
+  };
+}
+
+// L'override vale per l'esercizio di questa seduta e vive in RAM: niente
+// store, niente scheda. La volta dopo torna il prescritto perche' non c'e'
+// niente da cui possa tornare altro.
+function restOverrides() {
+  if (!window.__restOverrides) window.__restOverrides = {};
+  return window.__restOverrides;
+}
+function restOverrideFor(exKey) {
+  return exKey ? (Number(restOverrides()[exKey]) || 0) : 0;
+}
+function adjustRestOverride(exKey, deltaSec, prescribedSec) {
+  if (!exKey) return 0;
+  const o = restOverrides();
+  const next = (Number(o[exKey]) || 0) + (Number(deltaSec) || 0);
+  // Il recupero effettivo non scende sotto i dieci secondi.
+  const floor = 10 - (Number(prescribedSec) || 0);
+  o[exKey] = Math.max(floor, next);
+  return o[exKey];
+}
+function clearRestOverrides() {
+  window.__restOverrides = {};
+}
+
+// Quanto dura il recupero dell'esercizio in questa seduta: il prescritto,
+// piu' quello che l'atleta ha spostato oggi.
+function effectiveRestSeconds(restText, exKey) {
+  const base = parseRestSeconds(restText);
+  return Math.max(10, base + restOverrideFor(exKey));
+}
+
+function restTimerState() {
+  return window.__restTimer || null;
+}
+
+function startTimer(secondsText, exKey) {
   const overlay = $('timer-overlay');
   const display = $('timer-display');
   const phaseEl = $('timer-phase');
@@ -42470,57 +42603,116 @@ function startTimer(secondsText) {
     timerInterval = null;
   }
   acquireTimerWakeLock();
-  const text = String(secondsText || '').toLowerCase().replace('–', '-');
-  const parts = text.match(/\d+(?:\.\d+)?/g) || [];
-  let restSec = 0;
-  if(text.includes('min')) restSec = parseFloat(parts[parts.length - 1] || 0) * 60;
-  else if(text.includes('s')) restSec = parseFloat(parts[parts.length - 1] || 0);
-  else if(parts.length) restSec = parseFloat(parts[parts.length - 1] || 0);
-  if(isNaN(restSec) || restSec <= 0) restSec = 90;
+  const prescribed = parseRestSeconds(secondsText);
+  const restSec = exKey ? effectiveRestSeconds(secondsText, exKey) : prescribed;
   const prep = Math.max(0, parseInt((store.prefs && store.prefs.prepSeconds) || 0, 10) || 0);
-  let phase = prep > 0 ? 'prep' : 'rest';
-  let sec = phase === 'prep' ? prep : restSec;
-
+  const now = Date.now();
+  window.__restTimer = {
+    exKey: exKey || '',
+    prescribed: prescribed,
+    restSec: restSec,
+    startedAt: now,
+    prepEndsAt: now + prep * 1000,
+    endsAt: now + (prep + restSec) * 1000,
+    finished: false
+  };
   display.style.color = 'var(--gold)';
   overlay.style.display = 'flex';
-  const tick = () => {
-    if (phaseEl) phaseEl.textContent = phase === 'prep' ? 'PREPARAZIONE' : 'RIPOSO';
-    const m = Math.floor(Math.max(0, sec) / 60);
-    const s = Math.max(0, sec) % 60;
-    display.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    if(sec <= 0) {
-      if (phase === 'prep') {
-        phase = 'rest';
-        sec = restSec;
-        if (store.prefs && store.prefs.timerVibrate !== false) nativeVibrate(200);
-        tick();
-        return;
-      }
-      clearInterval(timerInterval);
-      timerInterval = null;
-      display.style.color = 'var(--accent-red)';
-      if (store.prefs && store.prefs.timerVibrate !== false) nativeVibrate(500);
-      nativeBeep('Riposo terminato');
-      releaseTimerWakeLock();
-      if (store.prefs && store.prefs.timerAutoAdvance) stopTimer();
-      return;
-    }
-    sec--;
-  };
-  tick();
-  timerInterval = setInterval(tick, 1000);
+  renderRestTimer();
+  timerInterval = setInterval(renderRestTimer, 250);
 }
+
+// Disegna il timer dallo stato. Chiamata dal tick e al ritorno in primo
+// piano: in entrambi i casi il numero viene dall'orologio.
+function renderRestTimer() {
+  const st = restTimerState();
+  const display = $('timer-display');
+  const phaseEl = $('timer-phase');
+  const noteEl = $('timer-note');
+  if (!st || !display) return;
+  const now = Date.now();
+  const inPrep = now < st.prepEndsAt;
+  const remaining = timerRemainingSeconds(inPrep ? st.prepEndsAt : st.endsAt, now);
+  if (phaseEl) phaseEl.textContent = inPrep ? 'PREPARAZIONE' : 'RIPOSO';
+  display.innerText = formatRestClock(remaining);
+  if (noteEl) {
+    const delta = st.exKey ? restOverrideFor(st.exKey) : 0;
+    noteEl.textContent = delta
+      ? ('Prescritto ' + formatRestClock(st.prescribed) + ' · in seduta ' + formatRestClock(st.restSec))
+      : ('Prescritto ' + formatRestClock(st.prescribed));
+  }
+  if (inPrep) {
+    if (remaining <= 0 && !st.prepDone) {
+      st.prepDone = true;
+      if (store.prefs && store.prefs.timerVibrate !== false) nativeVibrate(200);
+    }
+    return;
+  }
+  if (remaining <= 0 && !st.finished) {
+    st.finished = true;
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    display.style.color = 'var(--accent-red)';
+    if (store.prefs && store.prefs.timerVibrate !== false) nativeVibrate(500);
+    nativeBeep('Riposo terminato');
+    releaseTimerWakeLock();
+    if (store.prefs && store.prefs.timerAutoAdvance) stopTimer();
+  }
+}
+
+// +10 / -10 dal timer: sposta la fine di questo recupero e ricorda lo
+// scostamento per l'esercizio, cosi' la serie dopo parte gia' da li'.
+function nudgeRestTimer(deltaSec) {
+  const st = restTimerState();
+  if (!st) return;
+  const d = Number(deltaSec) || 0;
+  if (st.exKey) {
+    const before = restOverrideFor(st.exKey);
+    const after = adjustRestOverride(st.exKey, d, st.prescribed);
+    const applied = after - before;
+    st.endsAt += applied * 1000;
+    st.restSec = Math.max(10, st.prescribed + after);
+  } else {
+    st.endsAt = Math.max(Date.now(), st.endsAt + d * 1000);
+    st.restSec = Math.max(0, st.restSec + d);
+  }
+  if (st.finished && st.endsAt > Date.now()) {
+    st.finished = false;
+    const display = $('timer-display');
+    if (display) display.style.color = 'var(--gold)';
+    if (!timerInterval) timerInterval = setInterval(renderRestTimer, 250);
+    acquireTimerWakeLock();
+  }
+  renderRestTimer();
+}
+
+// Saltare il recupero chiude questo timer e basta: non e' un'opinione sul
+// recupero dell'esercizio, quindi l'override resta dov'e'.
+function skipRestTimer() {
+  stopTimer();
+}
+
 function stopTimer() {
   if (timerInterval) {
     clearInterval(timerInterval);
     timerInterval = null;
   }
+  window.__restTimer = null;
   releaseTimerWakeLock();
   const overlay = $('timer-overlay');
   const display = $('timer-display');
   if (overlay) overlay.style.display = 'none';
   if (display) display.style.color = 'var(--gold)';
 }
+
+// Al ritorno in primo piano il timer ridisegna subito dall'orologio: il
+// browser puo' aver rallentato o sospeso i tick, ma non l'ora.
+try {
+  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && restTimerState()) renderRestTimer();
+    });
+  }
+} catch (_) {}
 
 // Skip Modal Logic
 let activeSkipIdx = null;
@@ -42924,6 +43116,10 @@ function completeSetQuick(exIdx, setNum, restText) {
   pushWorkoutUndoSnapshot(store.data[doneKey] ? 'deseleziona serie' : 'completa serie');
   if (store.data[doneKey]) {
     store.data[doneKey] = false;
+    // Una serie riaperta non ha piu' un'ora di chiusura, ne' un recupero
+    // che la precede: quello si ricalcola quando la si chiude di nuovo.
+    delete store.data[k + '_done_at'];
+    delete store.data[k + '_rest_actual'];
     window.__liveSetIntel = null;
     window.__liveExerciseReport = null;
     window.__liveRecommendation = null;
@@ -42990,6 +43186,16 @@ function completeSetQuick(exIdx, setNum, restText) {
   }
 
   store.data[doneKey] = true;
+  // L'ora di chiusura, e da quella il recupero passato davvero dalla serie
+  // precedente dello stesso esercizio. Alla prima serie non c'e' niente da
+  // misurare; se la precedente non e' chiusa, nemmeno.
+  const doneAt = Date.now();
+  store.data[k + '_done_at'] = doneAt;
+  delete store.data[k + '_rest_actual'];
+  if (prevSetKey && store.data[prevSetKey + '_done'] && store.data[prevSetKey + '_done_at']) {
+    const actual = actualRestSeconds(store.data[prevSetKey + '_done_at'], doneAt);
+    if (actual != null) store.data[k + '_rest_actual'] = actual;
+  }
   persist();
   recordManualAction({
     action_type: 'LOG_SET',
@@ -43001,7 +43207,7 @@ function completeSetQuick(exIdx, setNum, restText) {
     previous_values: { done: false }
   }, { reason: 'completeSetQuick', scope: 'SESSION_ADJUSTMENT' });
   const rest = restText || '90s';
-  try { startTimer(rest); } catch (_) {}
+  try { startTimer(rest, `w${currentWeek}_d${currentDay}_e${exIdx}`); } catch (_) {}
   try { queueLiveSetIntel(exIdx, setNum); } catch (_) {}
   renderKeepingExercise(exIdx);
 }
@@ -53574,6 +53780,20 @@ function renderTraining(c){
       const tempo = store.tempos[`w${currentWeek}_d${currentDay}_e${fIdx}`] || row.tempo || '';
       const exIntens = store.exIntensity[`w${currentWeek}_d${currentDay}_e${fIdx}`] || intensType;
       const totalSets = getExerciseSetCount(fIdx);
+      // Il recupero di questo esercizio: quello scritto nella scheda, quello
+      // spostato oggi in seduta (RAM, mai salvato), e per il coach quanto e'
+      // passato davvero fra le serie chiuse.
+      const exKeyRest = `w${currentWeek}_d${currentDay}_e${fIdx}`;
+      const restPrescribedSec = parseRestSeconds(row.rest || '90s');
+      const restDelta = restOverrideFor(exKeyRest);
+      const restActuals = [];
+      for (let rs = 1; rs <= totalSets; rs++) {
+        const ra = store.data[`${exKeyRest}_s${rs}_rest_actual`];
+        if (ra != null && ra !== '' && isFinite(Number(ra))) restActuals.push(Number(ra));
+      }
+      const coachRestNote = (store && store.coachViewingClient)
+        ? restDeviationSummary(restPrescribedSec, restActuals)
+        : null;
       // Reps, a hold in seconds, or minutes of cardio: the row says which.
       const exLogUnit = exerciseLogUnit(row, curEx);
       const schemeInfo = formatSetRepScheme(row);
@@ -53621,8 +53841,9 @@ function renderTraining(c){
         h += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;background:#151515;padding:8px;border-radius:8px;border:1px solid #222;">
           <div style="font-size:10px;color:#aaa;">Schema: <b style="color:#fff;">${esc(schemeInfo.scheme)}</b></div>
           <div style="font-size:10px;color:#aaa;">${exIntens}: <b style="color:#fff;">${esc(row.rirTarget ?? row.rpeTarget ?? 2)}</b></div>
-          <div style="font-size:10px;color:#aaa; cursor:pointer;" onclick="startTimer('${esc(row.rest || '90s')}');">Rest: <b style="color:var(--gold); text-decoration:underline;">${esc(row.rest || '90s')}</b></div>
+          <div style="font-size:10px;color:#aaa; cursor:pointer;" onclick="startTimer('${esc(row.rest || '90s')}', '${exKeyRest}');">Rest: <b style="color:var(--gold); text-decoration:underline;">${esc(row.rest || '90s')}</b>${restDelta ? ` <span style="color:#ddd;">· in seduta ${formatRestClock(restPrescribedSec + restDelta)}</span>` : ''}</div>
         </div>
+        ${coachRestNote ? `<div style="font-size:10px;color:#aaa;margin:-4px 0 8px;">⏱ ${esc(coachRestNote.label)} <span style="color:#666;">· ${coachRestNote.offSets}/${coachRestNote.sets} serie oltre ±${REST_DEVIATION_THRESHOLD_SEC} s</span></div>` : ''}
         <div style="display:grid;grid-template-columns:28px 1fr 1fr 1fr 34px 26px;gap:6px;align-items:center;margin-bottom:6px;font-size:9px;color:#666;text-align:center;font-weight:800;">
           ${exLogUnit === 'cardio'
             ? '<div>#</div><div>MINUTI</div><div>DATI</div><div>' + exIntens + '</div><div>OK</div><div>&#10005;</div>'
@@ -53701,8 +53922,13 @@ function renderTraining(c){
           // An intensity technique is a way of taking a set of repetitions
           // further; it has nothing to say about ten minutes on a bike.
           if (exLogUnit !== 'cardio') {
-            h += `<div style="margin:-2px 0 8px 34px;">
-            <select onchange="updateSetTechnique(${fIdx},${s},this.value)" style="width:100%;font-size:10px;padding:4px 6px;background:#151515;border:1px solid #333;color:#ccc;border-radius:6px;" title="Tecnica di intensità">
+            const restActual = store.data[k + '_rest_actual'];
+            const restActualChip = (restActual != null && restActual !== '' && isFinite(Number(restActual)))
+              ? `<span title="Recupero passato davvero prima di questa serie" style="flex:0 0 auto;font-size:10px;color:#999;border:1px solid #2a2a2a;border-radius:6px;padding:4px 7px;white-space:nowrap;">⏱ ${formatRestClock(restActual)}</span>`
+              : '';
+            h += `<div style="margin:-2px 0 8px 34px;display:flex;gap:6px;align-items:center;">
+            ${restActualChip}
+            <select onchange="updateSetTechnique(${fIdx},${s},this.value)" style="flex:1 1 auto;min-width:0;font-size:10px;padding:4px 6px;background:#151515;border:1px solid #333;color:#ccc;border-radius:6px;" title="Tecnica di intensità">
               <option value="">Tecnica: normale</option>
               ${techOpts}
             </select>
@@ -55663,6 +55889,8 @@ function finalizeWorkout(){
   store.sessionPausedMs = 0;
   store.sessionPausedAt = null;
   store.sessionClockRunning = false;
+  try { stopTimer(); } catch (_) {}
+  try { clearRestOverrides(); } catch (_) {}
   if (window.__workoutSessionTimerIv) {
     clearInterval(window.__workoutSessionTimerIv);
     window.__workoutSessionTimerIv = null;
@@ -57674,6 +57902,8 @@ function stopWorkoutSessionTimer() {
   store.sessionPausedMs = 0;
   store.sessionPausedAt = null;
   store.sessionClockRunning = false;
+  try { stopTimer(); } catch (_) {}
+  try { clearRestOverrides(); } catch (_) {}
   if (window.__workoutSessionTimerIv) {
     clearInterval(window.__workoutSessionTimerIv);
     window.__workoutSessionTimerIv = null;
@@ -66760,6 +66990,19 @@ if (typeof window !== 'undefined') {
   window.shareAthleteCard = shareAthleteCard;
   window.startTimer = startTimer;
   window.stopTimer = stopTimer;
+  window.nudgeRestTimer = nudgeRestTimer;
+  window.skipRestTimer = skipRestTimer;
+  window.renderRestTimer = renderRestTimer;
+  window.restTimerState = restTimerState;
+  window.parseRestSeconds = parseRestSeconds;
+  window.timerRemainingSeconds = timerRemainingSeconds;
+  window.actualRestSeconds = actualRestSeconds;
+  window.restDeviationSummary = restDeviationSummary;
+  window.restOverrideFor = restOverrideFor;
+  window.adjustRestOverride = adjustRestOverride;
+  window.clearRestOverrides = clearRestOverrides;
+  window.effectiveRestSeconds = effectiveRestSeconds;
+  window.formatRestClock = formatRestClock;
   window.closeExamineModal = closeExamineEvidenceModal;
   window.closeExamineEvidenceModal = closeExamineEvidenceModal;
   window.openExamineEvidenceModal = openExamineEvidenceModal;
