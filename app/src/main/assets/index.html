@@ -41043,9 +41043,32 @@ function deriveRepsTarget(exercise) {
   if (raw != null && String(raw).trim() !== '') return String(raw).trim();
   return '8-10';
 }
+// Le serie di riscaldamento: stesse righe delle altre, con il flag `warmup`.
+// Si compilano e si chiudono come le altre, ma non contano: niente volume,
+// niente record, niente recupero reale, niente contatore. Le regole della
+// rampa vivono nel modulo delle progressioni (NurvanProgressions).
+function isWarmupSet(s) {
+  return Boolean(s && typeof s === 'object' && s.warmup);
+}
+function countWarmupSets(sets) {
+  return Array.isArray(sets) ? sets.filter(isWarmupSet).length : 0;
+}
+function showWarmupSets() {
+  return !(typeof store !== 'undefined' && store && store.prefs && store.prefs.showWarmup === false);
+}
+// Il recupero fra due riscaldamenti, come testo per il timer: meta' del
+// prescritto, a 5 s, mai sotto i 30.
+function warmupRestTextFor(restText) {
+  const prescribed = (typeof parseRestSeconds === 'function') ? parseRestSeconds(restText || '90s') : 90;
+  const P = (typeof window !== 'undefined') ? window.NurvanProgressions : null;
+  const sec = (P && P.warmupRestSeconds) ? P.warmupRestSeconds(prescribed) : prescribed;
+  return sec + 's';
+}
 function formatSetRepScheme(row) {
   const locked = row && row.prescription && row.prescription.sets;
-  const setsArr = Array.isArray(row && row.sets) ? row.sets.filter((s) => s && typeof s === 'object') : [];
+  // Le serie di riscaldamento non entrano nello schema: "3x8" resta 3x8.
+  const setsArr = Array.isArray(row && row.sets) ? row.sets.filter((s) => s && typeof s === 'object' && !isWarmupSet(s)) : [];
+  const warmups = countWarmupSets(row && row.sets);
   // Prescription / sets_count ALWAYS beat a shorter array (Gemini 3-row habit)
   let n = locked || null;
   if (n == null && row && row.sets_count != null) n = setCount(row.sets_count);
@@ -41056,7 +41079,7 @@ function formatSetRepScheme(row) {
     || (row && row.repsTarget)
     || deriveRepsTarget(row || {});
   const scheme = (row && row.prescription && row.prescription.raw) || (n + '\u00d7' + reps);
-  return { setCount: n, reps: reps, scheme: scheme };
+  return { setCount: n, reps: reps, scheme: scheme, warmups: warmups };
 }
 function repsChoiceValue(raw) {
   if (raw == null || raw === '') return '';
@@ -41119,6 +41142,16 @@ function normalizeProgram(payload) {
       const rawExercises = session.exercises || session.rows || [];
 
       const exercises = rawExercises.map((exercise, ei) => {
+        // Il conto dichiarato ("3x8") e' di serie allenanti: i riscaldamenti
+        // si tolgono prima che la prescrizione venga bloccata (il blocco
+        // riscrive le serie sul suo conto) e si rimettono davanti dopo.
+        const stripWarm = (arr) => Array.isArray(arr) ? arr.filter((s) => !isWarmupSet(s)) : arr;
+        const warmupRows = Array.isArray(exercise.sets) ? exercise.sets.filter(isWarmupSet) : [];
+        const warmupN = warmupRows.length;
+        if (warmupN) {
+          exercise.sets = stripWarm(exercise.sets);
+          if (Array.isArray(exercise.sets_data)) exercise.sets_data = stripWarm(exercise.sets_data);
+        }
         // Lock literal NxM before any array-length logic
         try {
           if (typeof enforceExercisePrescription === 'function') enforceExercisePrescription(exercise);
@@ -41126,8 +41159,14 @@ function normalizeProgram(payload) {
             window.NurvanPrescription.enforceExercisePrescription(exercise);
           }
         } catch (_) {}
-        const setInfo = resolveImportSetCount(exercise);
-        const setsCount = (exercise.prescription && exercise.prescription.sets) || setInfo.target;
+        const exForCount = warmupN ? Object.assign({}, exercise) : exercise;
+        if (warmupN) {
+          exercise.sets = warmupRows.concat(Array.isArray(exercise.sets) ? exercise.sets : []);
+          if (Array.isArray(exercise.sets_data)) exercise.sets_data = warmupRows.concat(exercise.sets_data);
+        }
+        const setInfo = resolveImportSetCount(exForCount);
+        const workingCount = (exercise.prescription && exercise.prescription.sets) || setInfo.target;
+        const setsCount = workingCount + warmupN;
         const techniqueId = detectExTechnique(exercise) || (setInfo.hasDrop ? 'drop_set' : null);
         // Il testo scritto nella scheda ("2 min") vince sul numero derivato: fino a
         // ieri il numero veniva da parseInt("2 min") = 2, e al passaggio dopo il
@@ -41145,8 +41184,9 @@ function normalizeProgram(payload) {
         const exId = exercise.id || `w${wNum}_s${si + 1}_e${ei + 1}`;
         const exName = exercise.name || exercise.exercise || `Esercizio ${ei + 1}`;
         const repsTarget = deriveRepsTarget(exercise);
-        const firstSetLoad = Array.isArray(exercise.sets) && exercise.sets[0]
-          ? (exercise.sets[0].load != null ? Number(exercise.sets[0].load) : (exercise.sets[0].target_load != null ? Number(exercise.sets[0].target_load) : null))
+        const firstWorkingSet = Array.isArray(exercise.sets) ? exercise.sets.find((s) => s && typeof s === 'object' && !isWarmupSet(s)) : null;
+        const firstSetLoad = firstWorkingSet
+          ? (firstWorkingSet.load != null ? Number(firstWorkingSet.load) : (firstWorkingSet.target_load != null ? Number(firstWorkingSet.target_load) : null))
           : null;
         const plannedLoad = exercise.load != null ? Number(exercise.load) : (exercise.plannedLoad != null ? Number(exercise.plannedLoad) : (exercise.load_value != null ? Number(exercise.load_value) : firstSetLoad));
         const rirTarget = exercise.rir != null ? Number(exercise.rir) : (exercise.rirTarget != null ? Number(exercise.rirTarget) : (exercise.rir_target != null ? Number(exercise.rir_target) : 1));
@@ -41156,14 +41196,16 @@ function normalizeProgram(payload) {
         function mapSetRow(s, sIdx, total) {
           const isLast = sIdx === total - 1;
           const drop = (techniqueId === 'drop_set' || String(s.set_type || '').toLowerCase().includes('drop')) && isLast;
+          const warm = isWarmupSet(s);
           return {
             id: s.id || `${exId}_s${sIdx + 1}`,
             order: s.order || sIdx + 1,
             reps: s.reps ?? s.target_reps ?? repsTarget,
-            load: s.load != null ? Number(s.load) : (s.target_load != null ? Number(s.target_load) : (sIdx === 0 ? plannedLoad : null)),
+            load: s.load != null ? Number(s.load) : (s.target_load != null ? Number(s.target_load) : (sIdx === 0 && !warm ? plannedLoad : null)),
             load_formula: s.load_formula || null,
             sets_formula: s.sets_formula || null,
-            set_type: drop ? 'dropset' : (s.set_type || 'working'),
+            set_type: drop ? 'dropset' : (warm ? 'warmup' : (s.set_type || 'working')),
+            warmup: warm || undefined,
             technique: drop ? 'drop_set' : (s.technique || null),
             target_load: s.target_load != null ? Number(s.target_load) : (s.load != null ? Number(s.load) : null),
             load_unit: s.load_unit || 'kg',
@@ -41189,7 +41231,7 @@ function normalizeProgram(payload) {
           ? exercise.sets_data
           : (Array.isArray(exercise.sets) && exercise.sets.length && typeof exercise.sets[0] === 'object' ? exercise.sets : null);
         if (rawSource) {
-          const template = rawSource[0] || {};
+          const template = rawSource.find((s) => s && !isWarmupSet(s)) || rawSource[0] || {};
           for (let sIdx = 0; sIdx < setsCount; sIdx++) {
             if (rawSource[sIdx]) {
               canonicalSets.push(mapSetRow(rawSource[sIdx], sIdx, setsCount));
@@ -41210,9 +41252,10 @@ function normalizeProgram(payload) {
         }
         if (canonicalSets.length) {
           const firstKg = canonicalSets.map((s) => Number(s.load != null && s.load !== '' ? s.load : s.target_load)).find((n) => Number.isFinite(n) && n > 0);
-          if (firstKg && !(Number(canonicalSets[0].load) > 0) && !(Number(canonicalSets[0].target_load) > 0)) {
-            canonicalSets[0].load = firstKg;
-            canonicalSets[0].target_load = firstKg;
+          const firstWork = canonicalSets.find((s) => !isWarmupSet(s)) || canonicalSets[0];
+          if (firstKg && !(Number(firstWork.load) > 0) && !(Number(firstWork.target_load) > 0)) {
+            firstWork.load = firstKg;
+            firstWork.target_load = firstKg;
           }
           canonicalSets.forEach((s, i) => { s.order = i + 1; });
         }
@@ -41235,15 +41278,16 @@ function normalizeProgram(payload) {
           is_bonus: isBonusEx,
           isBonus: isBonusEx,
           sets: canonicalSets,
-          sets_count: canonicalSets.length,
+          sets_count: canonicalSets.length - warmupN,
+          warmup_auto: exercise.warmup_auto ? true : undefined,
           prescription: rx || {
-            sets: canonicalSets.length,
+            sets: canonicalSets.length - warmupN,
             reps: repsTarget,
-            raw: canonicalSets.length + 'x' + repsTarget,
+            raw: (canonicalSets.length - warmupN) + 'x' + repsTarget,
             locked: true,
             source: 'normalize'
           },
-          scheme: (rx && rx.raw) || exercise.scheme || (canonicalSets.length + '\u00d7' + repsTarget),
+          scheme: (rx && rx.raw) || exercise.scheme || ((canonicalSets.length - warmupN) + '\u00d7' + repsTarget),
           intensity_technique: techniqueId,
           repsTarget: (rx && rx.reps) || repsTarget,
           reps_target: (rx && rx.reps) || repsTarget,
@@ -43154,7 +43198,10 @@ function completeSetQuick(exIdx, setNum, restText) {
   markSessionClockIfNeeded();
   const prev = getPrevSessionSetValues(exIdx, setNum);
   const prevSetKey = setNum > 1 ? `w${currentWeek}_d${currentDay}_e${exIdx}_s${setNum - 1}` : null;
-  const prevSet = prevSetKey ? {
+  // La serie prima, come ripiego per i campi vuoti: mai un riscaldamento,
+  // altrimenti la prima allenante partirebbe dal carico della rampa.
+  const prevSetIsWarm = Boolean(prevSetKey) && isWarmupSet((((exerciseRowAt(currentWeek, currentDay, exIdx) || {}).sets) || [])[setNum - 2]);
+  const prevSet = (prevSetKey && !prevSetIsWarm) ? {
     load: store.data[prevSetKey + '_load'],
     reps: store.data[prevSetKey + '_reps'],
     rir: store.data[prevSetKey + '_rir']
@@ -43165,6 +43212,12 @@ function completeSetQuick(exIdx, setNum, restText) {
   const rirEl = $(k + '_rir');
   const rowForSugg = exerciseRowAt(currentWeek, currentDay, exIdx) || {};
   const planned = plannedRepsRirFromRow(rowForSugg, setNum);
+  // Un riscaldamento si chiude come le altre serie, ma il recupero reale si
+  // misura solo fra due serie allenanti: la prima allenante dopo la rampa
+  // non ha niente da misurare.
+  const setObjHere = Array.isArray(rowForSugg.sets) ? rowForSugg.sets[setNum - 1] : null;
+  const isWarm = isWarmupSet(setObjHere);
+  const prevWarm = setNum > 1 && Array.isArray(rowForSugg.sets) && isWarmupSet(rowForSugg.sets[setNum - 2]);
 
   function fieldVal(el, stored) {
     if (el && el.value !== undefined && el.value !== null && String(el.value).trim() !== '') return el.value;
@@ -43176,8 +43229,12 @@ function completeSetQuick(exIdx, setNum, restText) {
   let load = fieldVal(loadEl, store.data[k + '_load']);
   if (load === '') {
     const sugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(exIdx, setNum, rowForSugg) : null;
-    load = (Number(sugg) > 0 ? sugg : '') || prev.load || prevSet.load || '';
+    load = (Number(sugg) > 0 ? sugg : '') || '';
   }
+  // Il carico scritto sulla serie (rampa o allenante), prima di copiare
+  // quello della serie precedente.
+  if (load === '' && setObjHere && Number(setObjHere.target_load) > 0) load = setObjHere.target_load;
+  if (load === '') load = prev.load || prevSet.load || '';
   if (load !== '') {
     store.data[k + '_load'] = load;
     store.data[k + '_load_user'] = 1; // confermato dall’atleta col ✓
@@ -43210,7 +43267,7 @@ function completeSetQuick(exIdx, setNum, restText) {
   const doneAt = Date.now();
   store.data[k + '_done_at'] = doneAt;
   delete store.data[k + '_rest_actual'];
-  if (prevSetKey && store.data[prevSetKey + '_done'] && store.data[prevSetKey + '_done_at']) {
+  if (!isWarm && !prevWarm && prevSetKey && store.data[prevSetKey + '_done'] && store.data[prevSetKey + '_done_at']) {
     const actual = actualRestSeconds(store.data[prevSetKey + '_done_at'], doneAt);
     if (actual != null) store.data[k + '_rest_actual'] = actual;
   }
@@ -43768,8 +43825,11 @@ function getExerciseSetCount(exerciseIndex) {
   }
   const row = (d.exercises || d.rows)?.[exerciseIndex];
   if(!row) return 3;
-  if (row.prescription && row.prescription.sets) return row.prescription.sets;
-  if (row.sets_count != null && Number(row.sets_count) > 0) return Math.round(Number(row.sets_count));
+  // Il conto dichiarato e' di serie allenanti; le righe da mostrare sono
+  // quelle piu' i riscaldamenti, che stanno davanti.
+  const warm = countWarmupSets(row.sets);
+  if (row.prescription && row.prescription.sets) return row.prescription.sets + warm;
+  if (row.sets_count != null && Number(row.sets_count) > 0) return Math.round(Number(row.sets_count)) + warm;
   if(typeof row.sets === 'number') return row.sets;
   if(Array.isArray(row.sets) && row.sets.length) return row.sets.length;
   return Math.max(1, (row.setRows ? row.setRows.length : 0) + 1);
@@ -49881,6 +49941,8 @@ function renderSettings(c) {
       <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">Impostazioni allenamento</div>
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:10px;">Allenamento continuo <input type="checkbox" id="pref-auto-advance" ${store.prefs.timerAutoAdvance?'checked':''} onchange="store.prefs.timerAutoAdvance=this.checked;persist()"></label>
       <div style="font-size:10px;color:#666;margin:-6px 0 10px;">A timer scaduto chiude il riposo e avvisa.</div>
+      <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:10px;">Mostra riscaldamento <input type="checkbox" id="pref-show-warmup" ${store.prefs.showWarmup!==false?'checked':''} onchange="store.prefs.showWarmup=this.checked;persist();render()"></label>
+      <div style="font-size:10px;color:#666;margin:-6px 0 10px;">Le serie di riscaldamento della scheda si vedono e si spuntano. Spento: la seduta parte dalla prima serie allenante; la rampa resta nella scheda.</div>
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:10px;">Avviso sonoro <input type="checkbox" id="pref-timer-sound" ${store.prefs.timerSound!==false?'checked':''} onchange="store.prefs.timerSound=this.checked;persist()"></label>
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:10px;">Vibrazione <input type="checkbox" id="pref-timer-vib" ${store.prefs.timerVibrate!==false?'checked':''} onchange="store.prefs.timerVibrate=this.checked;persist()"></label>
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;gap:10px;">Tempo di preparazione (s) <input type="number" id="pref-prep" value="${esc(String(store.prefs.prepSeconds||0))}" style="width:80px;padding:6px;background:#111;border:1px solid #333;color:#fff;" onchange="store.prefs.prepSeconds=parseInt(this.value,10)||0;persist()"></label>
@@ -53863,7 +53925,7 @@ function renderTraining(c){
         </div>
         <div class="exercise-name-heading"><span class="ex-mark" aria-hidden="true">▸</span><span>${esc(curEx)}</span></div>
         ${exerciseIntelPanelHtml(fIdx)}
-        <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px;">${esc(schemeInfo.scheme)} <span style="font-size:10px;font-weight:600;color:#aaa;">${schemeInfo.setCount} serie · ${esc(schemeInfo.reps)} rip</span></div>
+        <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px;">${esc(schemeInfo.scheme)} <span style="font-size:10px;font-weight:600;color:#aaa;">${schemeInfo.setCount} serie · ${esc(schemeInfo.reps)} rip${schemeInfo.warmups && showWarmupSets() ? ' · ' + schemeInfo.warmups + ' risc.' : ''}</span></div>
         ${formatLastSessionChip(fIdx, row)}
         ${formatMaxTestChip(fIdx, curEx)}
         ${skipReason ? `<div class="skip-reason">Causa: ${skipReason}</div>` : ''}
@@ -53898,16 +53960,23 @@ function renderTraining(c){
               : '<div>#</div><div>KG</div><div>REPS</div><div>' + exIntens + '</div><div>OK</div><div>&#10005;</div>')}
         </div>`;
 
+        const warmCount = countWarmupSets(row.sets);
+        const warmVisible = showWarmupSets();
         for(let s = 1; s <= totalSets; s++) {
           const k = `w${currentWeek}_d${currentDay}_e${fIdx}_s${s}`;
           const setObj = Array.isArray(row.sets) ? row.sets[s - 1] : null;
+          // Un riscaldamento nascosto resta nella scheda ma non chiede niente:
+          // la seduta parte dalla prima serie allenante.
+          const isWarm = isWarmupSet(setObj);
+          if (isWarm && !warmVisible) continue;
+          const setLabel = isWarm ? ('R' + s) : String(s - warmCount);
           const isDone = Boolean(store.data[k + '_done']);
           const prevStored = store.data[k + '_load'];
-          const sugg = (typeof suggestedLoadForSet === 'function') ? (suggestedLoadForSet(fIdx, s, row) || '') : '';
+          const sugg = (typeof suggestedLoadForSet === 'function') ? (suggestedLoadForSet(fIdx, s, row) || '') : (isWarm && Number(setObj.target_load) > 0 ? setObj.target_load : '');
           // Mostra il carico salvato; se vuoto mostra il suggerimento SOLO in UI (placeholder/value), senza riscriverlo nello store.
           const shownLoad = (prevStored !== undefined && prevStored !== '' && prevStored != null)
             ? prevStored
-            : (sugg || '');
+            : (sugg || (isWarm && Number(setObj.target_load) > 0 ? setObj.target_load : ''));
           if (!isDone && !sessionWasFinalized(currentWeek, currentDay)) {
             const staleCopy = (typeof isStaleCopiedSetPrefill === 'function') && isStaleCopiedSetPrefill(prevStored, fIdx, s, row);
             // Rimuovi solo prefill automatici stale — mai toccare carichi confermati dall’atleta.
@@ -53926,7 +53995,7 @@ function renderTraining(c){
           const shownRir = (store.data[k + '_rir'] !== undefined && store.data[k + '_rir'] !== '' && store.data[k + '_rir'] != null)
             ? store.data[k + '_rir']
             : (setObj && (setObj.rir ?? setObj.target_rir) != null ? setObj.rir ?? setObj.target_rir : (row.rirTarget != null ? row.rirTarget : ''));
-          const restForSet = esc(row.rest || '90s');
+          const restForSet = isWarm ? warmupRestTextFor(row.rest || '90s') : esc(row.rest || '90s');
           const techVal = store.data[k + '_tech'] || (setObj && setObj.technique) || '';
           const techOpts = (typeof getIntensityTechniqueOptions === 'function' ? getIntensityTechniqueOptions() : []).map(function (t) {
             return '<option value="' + esc(t.id) + '" ' + (techVal === t.id ? 'selected' : '') + '>' + esc(t.label) + '</option>';
@@ -53956,9 +54025,9 @@ function renderTraining(c){
             <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
           </div>`;
           } else {
-          h += `<div class="set-row">
-            <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
-            <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" onfocus="showPrevLoad(event, '${k}_load')" onblur="hidePrevLoad()" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
+          h += `<div class="set-row${isWarm ? ' set-row-warmup' : ''}" ${isWarm ? 'style="opacity:0.72;" title="Serie di riscaldamento: non conta nel volume ne\u2019 nei record"' : ''}>
+            <div style="font-size:${isWarm ? '11px' : '13px'};font-weight:bold;color:${isWarm ? '#8a8a8a' : 'var(--gold)'};text-align:center;">${setLabel}</div>
+            <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" onfocus="showPrevLoad(event, '${k}_load')" onblur="hidePrevLoad()" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid ${isWarm ? '#555' : 'var(--gold)'};background:#1a1a1a;">
             <select id="${k}_reps" onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${shownReps==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
             <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${shownRir==i?'selected':''}>${i}</option>`).join('')}</select>
             <button class="set-done-btn ${isDone?'active':''}" title="1 tap: conferma kg/reps e avvia riposo" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
@@ -58548,6 +58617,7 @@ function buildSessionPayloadForSync() {
       if (!store.data[k + '_done']) continue;
       sets.push({
         set_number: s,
+        warmup: isWarmupSet(Array.isArray(row.sets) ? row.sets[s - 1] : null) || undefined,
         actual_load: parseFloat(store.data[k + '_load']) || null,
         actual_reps: parseInt(store.data[k + '_reps'], 10) || null,
         actual_rir: store.data[k + '_rir'] !== undefined && store.data[k + '_rir'] !== '' ? parseInt(store.data[k + '_rir'], 10) : null,
@@ -58700,6 +58770,9 @@ function collectSessionStats(opts) {
         for (let s = 1; s <= 20; s++) {
           const k = `${eK}_s${s}`;
           if (!store.data[`${k}_done`]) continue;
+          // Un riscaldamento chiuso non e' volume: non conta ne' in serie,
+          // ne' in chili, ne' sulla mappa.
+          if (isWarmupSet(Array.isArray(row.sets) ? row.sets[s - 1] : null)) continue;
           doneSets++;
           if (isCardioEx) {
             const tracked = Number(store.data[`${k}_min`]);
@@ -66466,13 +66539,15 @@ function reviewEachOccurrence(si, ei, allWeeks, fn) {
 function updateReviewExercise(si, ei, field, value, allWeeks) {
   if (!generatedReview) return;
   reviewEachOccurrence(si, ei, allWeeks, function (row) {
+    var warm = (row.sets || []).filter(isWarmupSet);
+    var working = (row.sets || []).filter(function (s) { return s && !isWarmupSet(s); });
     if (field === 'sets') {
       var n = Math.min(12, Math.max(1, Math.round(Number(value) || 1)));
       var reps = row.repsTarget || row.reps_target || '8-10';
-      var model = (row.sets && row.sets[0]) ? JSON.parse(JSON.stringify(row.sets[0])) : { reps: reps };
+      var model = working[0] ? JSON.parse(JSON.stringify(working[0])) : { reps: reps };
       var out = [];
-      for (var i = 0; i < n; i++) out.push(i < (row.sets || []).length ? row.sets[i] : JSON.parse(JSON.stringify(model)));
-      row.sets = out;
+      for (var i = 0; i < n; i++) out.push(i < working.length ? working[i] : JSON.parse(JSON.stringify(model)));
+      row.sets = warm.concat(out);
       row.sets_count = n;
       row.setCount = n;
       if (row.prescription) row.prescription.sets = n;
@@ -66480,8 +66555,16 @@ function updateReviewExercise(si, ei, field, value, allWeeks) {
       var r = String(value || '').trim() || '8-10';
       row.repsTarget = r;
       row.reps_target = r;
-      (row.sets || []).forEach(function (set) { set.reps = r; });
-      if (row.prescription) { row.prescription.reps = r; row.prescription.raw = (row.sets || []).length + 'x' + r; }
+      working.forEach(function (set) { set.reps = r; });
+      if (row.prescription) { row.prescription.reps = r; row.prescription.raw = working.length + 'x' + r; }
+    } else if (field === 'load') {
+      // Il carico allenante: su tutte le serie allenanti. Con il
+      // riscaldamento automatico acceso, la rampa si riscrive da qui.
+      var kg = parseFloat(String(value == null ? '' : value).replace(',', '.'));
+      var load = (Number.isFinite(kg) && kg > 0) ? kg : null;
+      working.forEach(function (set) { set.target_load = load; set.load = load; });
+      if (load != null) row.load = load; else delete row.load;
+      if (row.warmup_auto) reviewApplyWarmupRamp(row);
     } else if (field === 'rest') {
       row.rest = String(value || '').trim() || '90s';
     } else if (field === 'name') {
@@ -66495,6 +66578,111 @@ function updateReviewExercise(si, ei, field, value, allWeeks) {
   renderGeneratedReview();
 }
 window.updateReviewExercise = updateReviewExercise;
+
+// Le serie di riscaldamento nella revisione: distinte dalle allenanti, si
+// tolgono con un tap o si ritoccano una a una. Il toggle "automatico" le
+// ricalcola quando cambia il carico; qualsiasi ritocco a mano lo spegne,
+// perche' una rampa scritta dal coach non va riscritta dall'app.
+function reviewApplyWarmupRamp(row) {
+  var P = window.NurvanProgressions;
+  if (!P || !P.applyWarmupRamp) return row;
+  return P.applyWarmupRamp(row);
+}
+function reviewWarmupHtml(si, ei, ex, warmSets, inputStyle) {
+  var auto = !!ex.warmup_auto;
+  var small = inputStyle + 'padding:5px;font-size:11px;';
+  var items = warmSets.map(function (w, wi) {
+    return '<span style="display:inline-flex;align-items:center;gap:3px;">' +
+      '<span style="font-size:9px;color:#8a8a8a;">R' + (wi + 1) + '</span>' +
+      '<input type="number" step="0.5" min="0" value="' + esc(String(w.target_load == null ? '' : w.target_load)) + '" placeholder="kg" onchange="updateReviewWarmup(' + si + ',' + ei + ',' + wi + ',&#39;load&#39;,this.value)" style="width:54px;' + small + '">' +
+      '<span style="font-size:10px;color:#666;">×</span>' +
+      '<input type="number" step="1" min="1" value="' + esc(String(w.reps == null ? '' : w.reps)) + '" placeholder="rip" onchange="updateReviewWarmup(' + si + ',' + ei + ',' + wi + ',&#39;reps&#39;,this.value)" style="width:44px;' + small + '">' +
+      '<button type="button" class="btn btn-outline" title="Togli questa serie di riscaldamento" style="font-size:9px;padding:3px 6px;color:#c66;border-color:#c66;" onclick="removeReviewWarmup(' + si + ',' + ei + ',' + wi + ')">✕</button>' +
+      '</span>';
+  }).join('');
+  return '<div style="margin-top:6px;padding:6px 8px;border:1px dashed #333;border-radius:6px;background:#0a0a0a;">' +
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+    '<span style="font-size:9px;color:#8a8a8a;font-weight:800;letter-spacing:0.5px;">RISCALDAMENTO</span>' +
+    '<label style="display:inline-flex;align-items:center;gap:4px;font-size:9px;color:' + (auto ? 'var(--gold)' : '#888') + ';cursor:pointer;" title="Ricalcola la rampa quando cambia il carico allenante">' +
+    '<input type="checkbox" ' + (auto ? 'checked' : '') + ' onchange="toggleReviewWarmupAuto(' + si + ',' + ei + ',this.checked)"> automatico</label>' +
+    '<span style="flex:1;"></span>' +
+    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:3px 7px;" onclick="addReviewWarmup(' + si + ',' + ei + ')">+ risc.</button>' +
+    (warmSets.length ? '<button type="button" class="btn btn-outline" style="font-size:9px;padding:3px 7px;color:#c66;border-color:#c66;" onclick="removeReviewWarmups(' + si + ',' + ei + ')">Togli tutte</button>' : '') +
+    '</div>' +
+    (warmSets.length ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">' + items + '</div>'
+      : '<div style="font-size:9px;color:#666;margin-top:4px;">' + (auto ? 'Nessuna rampa: serve un carico allenante (Kg).' : 'Nessuna serie di riscaldamento.') + '</div>') +
+    '</div>';
+}
+function updateReviewWarmup(si, ei, wi, field, value) {
+  if (!generatedReview) return;
+  reviewEachOccurrence(si, ei, false, function (row) {
+    var warm = (row.sets || []).filter(isWarmupSet);
+    var set = warm[wi];
+    if (!set) return;
+    if (field === 'load') {
+      var kg = parseFloat(String(value == null ? '' : value).replace(',', '.'));
+      set.target_load = (Number.isFinite(kg) && kg > 0) ? kg : null;
+    } else if (field === 'reps') {
+      var n = Math.round(Number(value));
+      if (Number.isFinite(n) && n > 0) set.reps = String(n);
+    }
+    row.warmup_auto = false;
+  });
+  renderGeneratedReview();
+}
+window.updateReviewWarmup = updateReviewWarmup;
+function removeReviewWarmup(si, ei, wi) {
+  if (!generatedReview) return;
+  reviewEachOccurrence(si, ei, false, function (row) {
+    var warm = (row.sets || []).filter(isWarmupSet);
+    var target = warm[wi];
+    if (!target) return;
+    row.sets = (row.sets || []).filter(function (s) { return s !== target; });
+    row.warmup_auto = false;
+  });
+  renderGeneratedReview();
+}
+window.removeReviewWarmup = removeReviewWarmup;
+function removeReviewWarmups(si, ei) {
+  if (!generatedReview) return;
+  var everywhere = confirm('Togliere il riscaldamento?' + String.fromCharCode(10, 10) + 'OK = da tutte le settimane' + String.fromCharCode(10) + 'Annulla = solo dalla settimana ' + generatedReview.week);
+  reviewEachOccurrence(si, ei, everywhere, function (row) {
+    row.sets = (row.sets || []).filter(function (s) { return !isWarmupSet(s); });
+    row.warmup_auto = false;
+  });
+  renderGeneratedReview();
+}
+window.removeReviewWarmups = removeReviewWarmups;
+function addReviewWarmup(si, ei) {
+  if (!generatedReview) return;
+  reviewEachOccurrence(si, ei, false, function (row) {
+    var warm = (row.sets || []).filter(isWarmupSet);
+    var working = (row.sets || []).filter(function (s) { return s && !isWarmupSet(s); });
+    var last = warm[warm.length - 1];
+    var P = window.NurvanProgressions;
+    var load = P && P.firstWorkingLoad ? P.firstWorkingLoad(row) : null;
+    var next = { reps: last ? String(last.reps) : '5', target_load: last ? last.target_load : (load ? Math.round(load * 0.5 / 2.5) * 2.5 : null), warmup: true, set_type: 'warmup' };
+    row.sets = warm.concat([next], working);
+    row.warmup_auto = false;
+  });
+  renderGeneratedReview();
+}
+window.addReviewWarmup = addReviewWarmup;
+function toggleReviewWarmupAuto(si, ei, on) {
+  if (!generatedReview) return;
+  var missing = false;
+  reviewEachOccurrence(si, ei, true, function (row) {
+    row.warmup_auto = !!on;
+    if (on) {
+      var P = window.NurvanProgressions;
+      if (!P || !P.firstWorkingLoad(row)) { missing = true; return; }
+      reviewApplyWarmupRamp(row);
+    }
+  });
+  if (on && missing && typeof showToast === 'function') showToast('Per la rampa serve un carico allenante: scrivi i Kg.', 'info');
+  renderGeneratedReview();
+}
+window.toggleReviewWarmupAuto = toggleReviewWarmupAuto;
 
 function removeReviewExercise(si, ei) {
   if (!generatedReview) return;
@@ -66566,10 +66754,15 @@ function renderGeneratedReview() {
       esc(session.title || session.name || ('Giorno ' + (si + 1))) + '</div>' +
       (rows.length ? rows.map(function (ex, ei) {
         var name = ex.name || ex.exercise || '';
-        var sets = (ex.sets && ex.sets.length) || ex.sets_count || 3;
+        var workingSets = (ex.sets || []).filter(function (s) { return s && !isWarmupSet(s); });
+        var warmSets = (ex.sets || []).filter(isWarmupSet);
+        var sets = workingSets.length || ex.sets_count || 3;
         var reps = ex.repsTarget || ex.reps_target || '';
         var rest = ex.rest || '';
         var note = ex.notes || '';
+        var loadKg = (workingSets[0] && (workingSets[0].target_load != null ? workingSets[0].target_load : workingSets[0].load));
+        if (!(Number(loadKg) > 0)) loadKg = (Number(ex.load) > 0) ? ex.load : '';
+        var isRepsRow = !ex.unit || ex.unit === 'reps';
         if (ex.unit === 'circuit' && ex.circuit) {
           return '<div style="padding:8px;border:1px solid #262626;border-radius:8px;margin-bottom:6px;background:#0d0d0d;">' +
             '<div style="font-size:12px;font-weight:800;color:#fff;">' + esc(name) + '</div>' +
@@ -66583,14 +66776,17 @@ function renderGeneratedReview() {
           '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:9px;padding:4px 7px;" onclick="replaceReviewExercise(' + si + ',' + ei + ')">CAMBIA</button>' +
           '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:9px;padding:4px 7px;color:#c66;border-color:#c66;" onclick="removeReviewExercise(' + si + ',' + ei + ')">✕</button>' +
           '</div>' +
-          '<div style="display:grid;grid-template-columns:0.8fr 1.1fr 1.1fr;gap:6px;margin-top:6px;">' +
+          '<div style="display:grid;grid-template-columns:0.7fr 1fr 1fr ' + (isRepsRow ? '0.9fr' : '') + ';gap:6px;margin-top:6px;">' +
           '<label style="font-size:9px;color:#888;">Serie<input type="number" min="1" max="12" value="' + sets +
           '" onchange="updateReviewExercise(' + si + ',' + ei + ',\'sets\',this.value,false)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
           '<label style="font-size:9px;color:#888;">Reps<input type="text" value="' + esc(reps) +
           '" onchange="updateReviewExercise(' + si + ',' + ei + ',\'reps\',this.value,false)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
           '<label style="font-size:9px;color:#888;">Recupero<input type="text" value="' + esc(rest) +
           '" onchange="updateReviewExercise(' + si + ',' + ei + ',\'rest\',this.value,false)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+          (isRepsRow ? '<label style="font-size:9px;color:#888;">Kg<input type="number" step="0.5" min="0" value="' + esc(String(loadKg == null ? '' : loadKg)) +
+          '" placeholder="—" onchange="updateReviewExercise(' + si + ',' + ei + ',\'load\',this.value,false)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' : '') +
           '</div>' +
+          (isRepsRow ? reviewWarmupHtml(si, ei, ex, warmSets, inputStyle) : '') +
           (note ? '<div style="font-size:9px;color:#666;margin-top:5px;">' + esc(note) + '</div>' : '') +
           '</div>';
       }).join('') : '<div style="font-size:11px;color:#777;">Nessun esercizio in questo giorno.</div>') +
@@ -66599,7 +66795,7 @@ function renderGeneratedReview() {
 
   var wk = weeks[wi] || {};
   var totalSets = sessions.reduce(function (n, s) {
-    return n + (s.exercises || s.rows || []).reduce(function (m, e) { return m + ((e.sets && e.sets.length) || 0); }, 0);
+    return n + (s.exercises || s.rows || []).reduce(function (m, e) { return m + (e.sets || []).filter(function (x) { return x && !isWarmupSet(x); }).length; }, 0);
   }, 0);
 
   var target = generatedReview.target;

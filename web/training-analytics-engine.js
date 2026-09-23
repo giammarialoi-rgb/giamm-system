@@ -269,6 +269,9 @@
       const reps = int(row.reps);
       if (loadRaw == null || loadRaw <= 0 || reps == null || reps <= 0) return;
       const meta = exerciseMeta(data, store, row.week, row.day, row.exIdx);
+      // A warm-up set is not a lift: no volume, no record, no trend.
+      const metaSet = Array.isArray(meta.sets) ? meta.sets[row.set - 1] : null;
+      if (metaSet && metaSet.warmup) return;
       const name = (store && store.subs && store.subs[eK]) || resolveExerciseName(data, store, row.week, row.day, row.exIdx);
       if (row.week > 1) {
         const doneK = !!(store && store.data && store.data[id + '_done']);

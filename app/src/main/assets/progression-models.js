@@ -491,6 +491,65 @@
     return roundLoad(max * pct, 2.5);
   }
 
+  /* ---------------- warm-up sets ---------------- */
+  //
+  // A ramp up to the first working load, so the first heavy set is not the
+  // first time the bar moves. Three bands: a light load needs one touch, a
+  // medium one two, a heavy one three, each shorter than the last. Loads are
+  // rounded UP to the plate step (2.5 kg): 48 becomes 50, not 47.5, because a
+  // warm-up that lands under the plan is a warm-up nobody loads.
+  function warmupRampFor(load) {
+    var L = Number(load) || 0;
+    if (L <= 0) return [];
+    if (L <= 40) return [{ pct: 0.5, reps: 8 }];
+    if (L <= 100) return [{ pct: 0.5, reps: 6 }, { pct: 0.75, reps: 3 }];
+    return [{ pct: 0.4, reps: 6 }, { pct: 0.6, reps: 4 }, { pct: 0.8, reps: 2 }];
+  }
+
+  function roundUpLoad(kg, step) {
+    var s = step || 2.5;
+    return Math.round(Math.ceil(Number(kg) / s - 1e-9) * s * 100) / 100;
+  }
+
+  function isWarmupSet(s) {
+    return Boolean(s && typeof s === 'object' && s.warmup);
+  }
+
+  function warmupSetsFor(load) {
+    return warmupRampFor(load).map(function (b) {
+      return { reps: String(b.reps), target_load: roundUpLoad(Number(load) * b.pct, 2.5), warmup: true, set_type: 'warmup' };
+    });
+  }
+
+  function workingSetsOf(sets) {
+    return (Array.isArray(sets) ? sets : []).filter(function (s) { return s && !isWarmupSet(s); });
+  }
+
+  // The load the ramp climbs to: the first working set's, or the row's.
+  function firstWorkingLoad(row) {
+    var working = workingSetsOf(row && row.sets);
+    var s = working[0];
+    var l = s ? (s.target_load != null ? s.target_load : s.load) : null;
+    if (!(Number(l) > 0) && row && row.load != null) l = row.load;
+    return Number(l) > 0 ? Number(l) : null;
+  }
+
+  // Rewrites the row's warm-ups from its working load. Without a load there
+  // is nothing to climb to, and the row is left with its working sets only.
+  function applyWarmupRamp(row) {
+    if (!row) return row;
+    var working = workingSetsOf(row.sets);
+    var load = firstWorkingLoad(row);
+    row.sets = (load ? warmupSetsFor(load) : []).concat(working);
+    return row;
+  }
+
+  // Between warm-ups: half the prescribed rest, to the 5 s, never under 30.
+  function warmupRestSeconds(prescribedSec) {
+    var p = Number(prescribedSec) || 0;
+    return Math.max(30, Math.round(p / 2 / 5) * 5);
+  }
+
   /* ---------------- changing the exercises along the way ---------------- */
   //
   // A forty-week program run on the same eight exercises is not one program,
@@ -869,6 +928,13 @@
     liftLabel: liftLabel,
     rpeForPercent: rpeForPercent,
     rirForPercent: rirForPercent,
-    isBodyweightLift: function (id) { return !!BODYWEIGHT_LIFTS[id]; }
+    isBodyweightLift: function (id) { return !!BODYWEIGHT_LIFTS[id]; },
+    warmupRampFor: warmupRampFor,
+    warmupSetsFor: warmupSetsFor,
+    isWarmupSet: isWarmupSet,
+    workingSetsOf: workingSetsOf,
+    firstWorkingLoad: firstWorkingLoad,
+    applyWarmupRamp: applyWarmupRamp,
+    warmupRestSeconds: warmupRestSeconds
   };
 })(typeof self !== 'undefined' ? self : this);

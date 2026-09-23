@@ -73,6 +73,8 @@ function loadPage(customEx) {
     fn('pickSuggestedExerciseMapping'),
     fn('updateReviewExerciseField'),
     fn('normalizeProgram'),
+    fn('isWarmupSet'),
+    fn('countWarmupSets'),
     fn('resolveImportSetCount'),
     fn('detectExTechnique'),
     fn('deriveRepsTarget'),

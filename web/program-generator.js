@@ -434,6 +434,22 @@
         });
       }
     }
+    // Warm-ups on the main lift of each session, when the program knows the
+    // load it is climbing to. Percent programs, bodyweight lifts and the
+    // accessories get none: there is no load, or no need.
+    if (PROG && PROG.applyWarmupRamp) {
+      weeks.forEach(function (wk) {
+        (wk.sessions || wk.days || []).forEach(function (s) {
+          (s.exercises || s.rows || []).forEach(function (row) {
+            if (!row.progressed) return;
+            if (row.unit && row.unit !== 'reps') return;
+            if (!PROG.firstWorkingLoad(row)) return;
+            PROG.applyWarmupRamp(row);
+            row.warmup_auto = true;
+          });
+        });
+      });
+    }
     var exercises = 0;
     var sets = 0;
     template.forEach(function (s) {

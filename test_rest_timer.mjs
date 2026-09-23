@@ -85,7 +85,7 @@ console.log('\n--- 3. il recupero passato davvero ---');
   eq(run(`actualRestSeconds(null, ${a})`), null, '3c. senza la chiusura precedente non c\'e\' niente da misurare');
   eq(run(`actualRestSeconds(${a + 5000}, ${a})`), null, '3d. e se l\'ordine non torna, nemmeno');
   ok('3e. la prima serie non riceve mai un valore: si misura solo da prevSetKey',
-    /if \(prevSetKey && store\.data\[prevSetKey \+ '_done'\] && store\.data\[prevSetKey \+ '_done_at'\]\)/.test(SRC));
+    /if \(!isWarm && !prevWarm && prevSetKey && store\.data\[prevSetKey \+ '_done'\] && store\.data\[prevSetKey \+ '_done_at'\]\)/.test(SRC));
   ok('3f. e riaprire una serie cancella la sua ora e il suo recupero',
     /delete store\.data\[k \+ '_done_at'\];\s*\n\s*delete store\.data\[k \+ '_rest_actual'\];/.test(SRC));
   ok('3g. il valore entra nel diario col meccanismo di sempre: store.data e poi persist()',
