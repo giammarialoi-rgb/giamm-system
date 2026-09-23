@@ -56456,10 +56456,12 @@ function sessionMuscleFigureHtml(view, muscles) {
   const spots = statsHotspots(view).map(function (h) {
     const n = statsMuscleVolume(muscles, h.id);
     const cls = 'stats-hotspot' + (n >= 8 ? ' is-fat' : (n >= 1 ? ' is-work' : ''));
-    return '<span class="' + cls + '" style="top:' + h.top + ';left:' + h.left + ';width:' + h.width + ';height:' + h.height + ';pointer-events:none;"></span>';
+    // Sulla figura in grigio i muscoli allenati devono vedersi: tinta piena e bordo.
+    const lit = n >= 1 ? ('background:' + (n >= 8 ? 'rgba(255,77,77,0.45)' : 'rgba(212,175,55,0.42)') + ';box-shadow:inset 0 0 0 2px ' + (n >= 8 ? 'rgba(255,77,77,0.9)' : 'rgba(212,175,55,0.9)') + ';') : '';
+    return '<span class="' + cls + '" style="top:' + h.top + ';left:' + h.left + ';width:' + h.width + ';height:' + h.height + ';pointer-events:none;' + lit + '"></span>';
   }).join('');
   return '<div class="stats-body-col"><div class="stats-body-frame">' +
-    '<img src="' + statsBodySrc(view) + '" alt="">' + spots + '</div>' +
+    '<img src="' + statsBodySrc(view) + '" alt="" style="filter:grayscale(1) brightness(0.75);">' + spots + '</div>' +
     '<div class="stats-body-viewlabel">' + (view === 'back' ? 'Retro' : 'Fronte') + '</div></div>';
 }
 
@@ -56626,7 +56628,8 @@ function drawSessionCardFlat(ctx, card, logo) {
   if (card.exercises) second.push(['Esercizi', String(card.exercises)]);
   rows.push(second);
   const iconH = 72;
-  const blockH = iconH + 34 + (card.athleteName ? 54 : 0) + 96 + 16 + rows.length * 150;
+  const titleLines = fitCardText(ctx, card.title, W - PAD * 2, 2, '800', 74, 48);
+  const blockH = iconH + 34 + (card.athleteName ? 54 : 0) + titleLines.lines.length * Math.round(titleLines.size * 1.2) + 16 + rows.length * 150;
   let y = H - 190 - blockH;
   if (logo && logo.naturalWidth) {
     const lw = logo.naturalWidth * (iconH / logo.naturalHeight);
@@ -56644,9 +56647,12 @@ function drawSessionCardFlat(ctx, card, logo) {
     y += 54;
   }
   ctx.fillStyle = '#ffffff';
-  ctx.font = '800 74px Montserrat, sans-serif';
-  ctx.fillText(cardWrapLines(ctx, card.title, W - PAD * 2, 1)[0], PAD, y + 74);
-  y += 96 + 16;
+  const tf = fitCardText(ctx, card.title, W - PAD * 2, 2, '800', 74, 48);
+  tf.lines.forEach(function (line) {
+    ctx.fillText(line, PAD, y + Math.round(tf.size * 0.95));
+    y += Math.round(tf.size * 1.2);
+  });
+  y += 16;
   rows.forEach(function (row) {
     row.forEach(function (cell, i) {
       const x = PAD + i * 440;
@@ -56663,6 +56669,75 @@ function drawSessionCardFlat(ctx, card, logo) {
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 0;
   return true;
+}
+
+// Un testo lungo prima si rimpicciolisce, poi va su piu' righe, e solo alla
+// fine si tronca: un nome di seduta come "Giorno 3 - Upper B - Dorso + Spalle"
+// deve leggersi intero.
+function fitCardText(ctx, text, maxWidth, maxLines, weight, startSize, minSize) {
+  let size = startSize;
+  let lines = [];
+  while (size >= minSize) {
+    ctx.font = weight + ' ' + size + 'px Montserrat, sans-serif';
+    lines = cardWrapLines(ctx, text, maxWidth, maxLines);
+    const last = lines[lines.length - 1] || '';
+    const fits = lines.length <= maxLines && last.charAt(last.length - 1) !== '…';
+    if (fits) break;
+    size -= 4;
+  }
+  if (size < minSize) {
+    size = minSize;
+    ctx.font = weight + ' ' + size + 'px Montserrat, sans-serif';
+    lines = cardWrapLines(ctx, text, maxWidth, maxLines);
+  }
+  return { size: size, lines: lines };
+}
+
+// La figura neutra: l'illustrazione in grigio, e a colori solo i muscoli che
+// la seduta ha allenato. Cosi' la mappa dice qualcosa; l'illustrazione
+// colorata per intero accendeva tutto.
+function drawNeutralFigure(ctx, img, view, muscles, x, y, fw, fh) {
+  if (!img || !img.naturalWidth) return;
+  const off = document.createElement('canvas');
+  off.width = Math.max(1, Math.round(fw));
+  off.height = Math.max(1, Math.round(fh));
+  const o = off.getContext('2d');
+  o.drawImage(img, 0, 0, off.width, off.height);
+  try {
+    const px = o.getImageData(0, 0, off.width, off.height);
+    const d = px.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const g = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+      const v = Math.round(40 + g * 0.55);
+      d[i] = v; d[i + 1] = v; d[i + 2] = v;
+    }
+    o.putImageData(px, 0, 0);
+  } catch (_) {}
+  ctx.drawImage(off, x, y, fw, fh);
+  // I muscoli allenati: l'illustrazione originale, ritagliata sulle zone.
+  const spots = statsHotspots(view).filter(function (h) { return statsMuscleVolume(muscles, h.id) >= 1; });
+  if (!spots.length) return;
+  function rectOf(h) {
+    return [x + parseFloat(h.left) / 100 * fw, y + parseFloat(h.top) / 100 * fh, parseFloat(h.width) / 100 * fw, parseFloat(h.height) / 100 * fh];
+  }
+  ctx.save();
+  ctx.beginPath();
+  spots.forEach(function (h) {
+    const r = rectOf(h);
+    if (ctx.roundRect) ctx.roundRect(r[0], r[1], r[2], r[3], 18); else ctx.rect(r[0], r[1], r[2], r[3]);
+  });
+  ctx.clip();
+  ctx.drawImage(img, x, y, fw, fh);
+  ctx.restore();
+  spots.forEach(function (h) {
+    const n = statsMuscleVolume(muscles, h.id);
+    const r = rectOf(h);
+    ctx.strokeStyle = n >= 8 ? 'rgba(255,77,77,0.85)' : 'rgba(212,175,55,0.85)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(r[0], r[1], r[2], r[3], 18); else ctx.rect(r[0], r[1], r[2], r[3]);
+    ctx.stroke();
+  });
 }
 
 // L'immagine: 1080×1920, formato storia. Le sezioni si accodano una sotto
@@ -56746,10 +56821,10 @@ async function drawSessionCard(canvas, card, style) {
   }
 
   ctx.fillStyle = cText;
-  ctx.font = '900 78px Montserrat, sans-serif';
-  cardWrapLines(ctx, card.title, W - PAD * 2, 2).forEach(function (line) {
-    ctx.fillText(line, PAD, y + 60);
-    y += 92;
+  const titleFit = fitCardText(ctx, card.title, W - PAD * 2, 2, '900', 78, 50);
+  titleFit.lines.forEach(function (line) {
+    ctx.fillText(line, PAD, y + Math.round(titleFit.size * 0.78));
+    y += Math.round(titleFit.size * 1.18);
   });
   y += 10;
   ctx.fillStyle = cLabel;
@@ -56805,17 +56880,29 @@ async function drawSessionCard(canvas, card, style) {
     ctx.font = '700 30px Montserrat, sans-serif';
     ctx.fillText('RECORD PERSONALI', PAD, y);
     y += 22;
-    card.prs.slice(0, 6).forEach(function (p) {
+    // Una misura sola per tutti i nomi: quella che fa stare il nome piu'
+    // lungo accanto al valore piu' largo. Righe di misura diversa si leggono
+    // come un errore.
+    const shown = card.prs.slice(0, 6);
+    ctx.font = '800 38px Montserrat, sans-serif';
+    let widestValue = 0;
+    shown.forEach(function (p) { widestValue = Math.max(widestValue, ctx.measureText(p.label + ' · ' + p.value).width); });
+    const nameRoom = W - PAD * 2 - widestValue - 36;
+    let nameSize = 38;
+    shown.forEach(function (p) {
+      const f = fitCardText(ctx, p.name, nameRoom, 1, '700', nameSize, 26);
+      nameSize = Math.min(nameSize, f.size);
+    });
+    shown.forEach(function (p) {
       if (y + 60 > footerTop - 40) return;
-      ctx.fillStyle = cText;
-      ctx.font = '700 38px Montserrat, sans-serif';
-      const name = cardWrapLines(ctx, p.name, W - PAD * 2 - 380, 1)[0];
-      ctx.fillText(name, PAD, y + 46);
       ctx.fillStyle = cGold;
       ctx.textAlign = 'right';
       ctx.font = '800 38px Montserrat, sans-serif';
       ctx.fillText(p.label + ' · ' + p.value, W - PAD, y + 46);
       ctx.textAlign = 'left';
+      ctx.fillStyle = cText;
+      ctx.font = '700 ' + nameSize + 'px Montserrat, sans-serif';
+      ctx.fillText(cardWrapLines(ctx, p.name, nameRoom, 1)[0] || '', PAD, y + 46);
       y += 62;
     });
     y += 30;
@@ -56831,19 +56918,7 @@ async function drawSessionCard(canvas, card, style) {
         const scale = figH / img.naturalHeight;
         const fw = img.naturalWidth * scale;
         const x = x0 - fw / 2;
-        ctx.drawImage(img, x, y, fw, figH);
-        statsHotspots(view).forEach(function (h) {
-          const n = statsMuscleVolume(card.muscles, h.id);
-          if (n < 1) return;
-          ctx.fillStyle = n >= 8 ? 'rgba(255,77,77,0.30)' : 'rgba(212,175,55,0.24)';
-          const rx = x + parseFloat(h.left) / 100 * fw;
-          const ry = y + parseFloat(h.top) / 100 * figH;
-          const rw = parseFloat(h.width) / 100 * fw;
-          const rh = parseFloat(h.height) / 100 * figH;
-          ctx.beginPath();
-          if (ctx.roundRect) ctx.roundRect(rx, ry, rw, rh, 22); else ctx.rect(rx, ry, rw, rh);
-          ctx.fill();
-        });
+        drawNeutralFigure(ctx, img, view, card.muscles, x, y, fw, figH);
       };
       ctx.fillStyle = cLabel;
       ctx.font = '700 30px Montserrat, sans-serif';
