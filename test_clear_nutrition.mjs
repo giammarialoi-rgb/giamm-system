@@ -33,8 +33,11 @@ ok(html.includes('if (!confirm(confirmMsg)) return;'), 'clear requires confirmat
 ok(html.includes("clearCoachClientDomain('nutrition')"), 'coach client view reuses CANCELLA path');
 ok(html.includes('function canClearPersonalNutrition') && html.includes('athleteCanSelfGeneratePlans()'), 'athlete freedom gate is respected');
 
+// From the declaration to the brace that closes it at column 0 - not to
+// whatever function happened to be written next, which stops being a boundary
+// the moment that function moves or goes away.
 const applyStart = html.indexOf('function applyPersonalNutritionClear');
-const applyEnd = html.indexOf('function openNutritionBackupsModal');
+const applyEnd = applyStart >= 0 ? (html.indexOf('\n}\n', applyStart) + 2) : -1;
 ok(applyStart >= 0 && applyEnd > applyStart, 'apply helper is extractable');
 const applySrc = html.slice(applyStart, applyEnd);
 ok(!/DATA\.weeks|store\.data|customSets|store\.logs|supplementation|therapy|exams|personal-recovery-16w/.test(applySrc),

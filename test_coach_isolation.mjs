@@ -141,7 +141,7 @@ assert(ui.includes("window.__cpAssignBackup") && ui.includes("window.__cpCoachVi
 // client session was open. The coach's data now lives in its own memory area
 // that a client session never writes to, so persist() takes it from there - the
 // same guarantee, with nothing that can be stale or missing.
-assert(base.includes("Object.assign({}, sanitized, personalDomain())") && base.includes("scheduleWorkoutLogsIdbSync"), "persist writes the coach's own memory area, not whichever one is active");
+assert(base.includes("Object.assign({}, store, personalDomain())") && base.includes("scheduleWorkoutLogsIdbSync"), "persist writes the coach's own memory area, not whichever one is active");
 assert(!ui.includes("clearWorkoutLogsForNewProgram") || !/restoreCoachMaster[\s\S]{0,400}clearWorkoutLogsForNewProgram/.test(ui), "restore master does not wipe coach logs");
 
 const pdf = sanitizeChatAttachment({

@@ -4016,7 +4016,19 @@ function effectiveSetLoad(exIdx, setNum, row) {
   }
   return hasStored ? stored : '';
 }
+// Il massimale stimato lo calcola training-analytics-engine.js, ed è quello
+// che l'app mostra ovunque. Questa è la firma più vecchia, rimasta senza
+// chiamanti: teneva una seconda copia della formula che rispondeva numeri
+// diversi dall'engine (niente arrotondamento, niente regola del singolo,
+// nessun limite sopra le 12 ripetizioni). Ora delega, così se qualcuno la
+// richiama non può ottenere un numero che contraddice il resto.
 function epleyE1rm(load, reps) {
+  const engine = (typeof NurvanTrainingAnalytics !== 'undefined' && NurvanTrainingAnalytics)
+    || (typeof window !== 'undefined' && window.NurvanTrainingAnalytics);
+  if (engine && typeof engine.epley1rm === 'function') {
+    const viaEngine = engine.epley1rm(load, reps);
+    if (viaEngine != null) return viaEngine;
+  }
   const L = parseFloat(load);
   const R = parseFloat(String(reps).replace(/[^\d.].*/, ''));
   if (!Number.isFinite(L) || L <= 0) return 0;
@@ -11233,18 +11245,31 @@ function persist() {
     // localStorage is full, the fallback below writes a reduced record with no
     // diary in it at all, and this is what keeps the meals.
     persistFoodDiary();
+    // What goes to the sanitizer, in this order and for these reasons:
+    //
+    // `store` follows whichever memory area is active, so during a client
+    // session it holds the client's data. The personal area is overlaid
+    // explicitly; it is the coach's by construction - a client session never
+    // writes to it - so there is no version of this that can be stale.
+    //
+    // Then the programming comes out, before the sanitizer and not after.
+    // sanitizeStoreForLocalStorage drops it anyway (it lives in IndexedDB, and
+    // boot reads it from there), but it drops it from a deep clone it has
+    // already made: handing it nine megabytes only to throw them away cost
+    // 42 ms on a 52-week programming, on every single tap. Out first, and the
+    // clone never sees it.
+    //
+    // Only for the personal area. A client or invite session has no IndexedDB
+    // copy of its own: its program is read back out of this very blob at boot,
+    // so there it stays.
+    let source = store;
+    try {
+      source = Object.assign({}, store, personalDomain());
+      if (!isClientStorageContext()) source.activeProgram = null;
+    } catch (_) { source = store; }
     let sanitized = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.sanitizeStoreForLocalStorage)
-      ? GiammariaPersistence.sanitizeStoreForLocalStorage(store)
-      : store;
-    // sanitized read the domain through `store`, which follows whichever memory
-    // area is active, so during a client session it holds the client's data.
-    // Overlay the personal area explicitly. It is the coach's by construction -
-    // a client session never writes to it - so unlike the snapshot this replaced
-    // there is no version of this that can be stale, and none that can be
-    // missing.
-    if (sanitized && typeof sanitized === 'object') {
-      sanitized = Object.assign({}, sanitized, personalDomain());
-    }
+      ? GiammariaPersistence.sanitizeStoreForLocalStorage(source)
+      : source;
     if (sanitized && typeof sanitized === 'object') {
       sanitized.coachAssigning = null;
       sanitized.coachViewingClient = false;
@@ -11305,6 +11330,7 @@ function persist() {
       console.error('[PERSIST_CRITICAL] Failed to persist even minimal store:', criticalErr);
     }
   }
+  scheduleActiveProgramIdbSync();
   scheduleWorkoutLogsIdbSync();
   scheduleRewardsIdbSync();
   scheduleNutritionIdbSync();
@@ -11313,6 +11339,88 @@ function persist() {
   scheduleExamsIdbSync();
   scheduleAccountSync();
   updateAccountButton();
+}
+
+// Every record domain already mirrors itself into IndexedDB after each save -
+// logs, rewards, nutrition, supplements, therapy, exams. The programming was
+// the one that did not, and got by because persist() kept a whole copy of it
+// in the local-storage blob. It no longer does, so it mirrors like the others.
+//
+// A full JSON of a 40-week programming is megabytes, far too much to serialize
+// on every tap just to find out whether anything changed. This fingerprint
+// walks the fields a program edit can touch and costs about a millisecond;
+// the heartbeat below covers anything it cannot see.
+var NURVAN_PROGRAM_IDB_HEARTBEAT_MS = 30000;
+function activeProgramFingerprint(prog) {
+  if (!prog || !Array.isArray(prog.weeks) || !prog.weeks.length) return '';
+  var h = 2166136261;
+  function mix(value) {
+    var s = value == null ? '\u0000' : String(value);
+    for (var i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = (h * 16777619) >>> 0;
+    }
+    h = (h ^ 31) >>> 0;
+  }
+  mix(prog.id);
+  mix(prog.title);
+  mix(prog.weeks.length);
+  for (var w = 0; w < prog.weeks.length; w++) {
+    var week = prog.weeks[w] || {};
+    mix(week.label);
+    mix(week.phase);
+    mix(week.test_week);
+    var sessions = week.sessions || week.days || [];
+    mix(sessions.length);
+    for (var s = 0; s < sessions.length; s++) {
+      var session = sessions[s] || {};
+      mix(session.name || session.title);
+      var rows = session.exercises || session.rows || [];
+      mix(rows.length);
+      for (var e = 0; e < rows.length; e++) {
+        var row = rows[e] || {};
+        mix(row.name || row.exercise || row.name_normalized);
+        mix(Array.isArray(row.sets) ? row.sets.length : row.sets_count);
+        mix(row.reps_target != null ? row.reps_target : row.reps);
+        mix(row.load);
+        mix(row.rest_seconds);
+        mix(row.technique);
+        mix(row.superset_id);
+        mix(row.muscle);
+      }
+    }
+  }
+  return String(h);
+}
+
+let __programIdbSyncTimer = null;
+let __programIdbLastFingerprint = null;
+let __programIdbLastSavedAt = 0;
+function scheduleActiveProgramIdbSync(immediate) {
+  if (store && (store.coachAssigning || store.coachViewingClient)) return;
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
+  if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveProgram) return;
+  if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return;
+  let fingerprint;
+  try { fingerprint = activeProgramFingerprint(DATA); } catch (_) { fingerprint = null; }
+  const stale = (Date.now() - __programIdbLastSavedAt) > NURVAN_PROGRAM_IDB_HEARTBEAT_MS;
+  if (fingerprint && fingerprint === __programIdbLastFingerprint && !stale && !immediate) return;
+  clearTimeout(__programIdbSyncTimer);
+  const run = function () {
+    if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return;
+    const snapshot = DATA;
+    __programIdbLastFingerprint = fingerprint;
+    __programIdbLastSavedAt = Date.now();
+    GiammariaPersistence.saveProgram(snapshot, true).catch(function (err) {
+      // Not saved means not mirrored: forget the fingerprint so the next save
+      // tries again instead of assuming IndexedDB already has this program.
+      __programIdbLastFingerprint = null;
+      __programIdbLastSavedAt = 0;
+      console.warn('[PROGRAM_IDB_SYNC]', err);
+    });
+  };
+  if (immediate) { run(); return; }
+  __programIdbSyncTimer = setTimeout(run, 900);
 }
 
 let __workoutIdbSyncTimer = null;
@@ -11436,6 +11544,7 @@ function scheduleExamsIdbSync(immediate) {
 // skips entirely) right as the tab is about to be suspended, so every pending
 // debounced save is flushed immediately instead of waiting out its timeout.
 function flushPendingPersistSyncs() {
+  try { scheduleActiveProgramIdbSync(true); } catch (_) {}
   try { scheduleWorkoutLogsIdbSync(true); } catch (_) {}
   try { scheduleRewardsIdbSync(true); } catch (_) {}
   try { scheduleNutritionIdbSync(true); } catch (_) {}
@@ -12524,6 +12633,13 @@ function applyPersonalNutritionClear(ctx) {
         if (storeObj.nutritionBackups.length > 10) storeObj.nutritionBackups.length = 10;
         try { localStorage.setItem('nurvan_nutrition_backups', JSON.stringify(storeObj.nutritionBackups)); } catch (_) {}
       }
+      // Same snapshot in IndexedDB, where the backup modal reads from: local
+      // storage is the copy that gets trimmed when space runs out.
+      try {
+        if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.backupNutrition) {
+          GiammariaPersistence.backupNutrition(JSON.parse(JSON.stringify(prevNutr))).catch(function () {});
+        }
+      } catch (_) {}
     }
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(personalScopedKey('nurvan_nutrition_cleared_at'), nowIso);
@@ -12562,86 +12678,10 @@ function applyPersonalNutritionClear(ctx) {
 }
 
 
-function openNutritionBackupsModal() {
-  const backups = (typeof store !== 'undefined' && store.nutritionBackups) || JSON.parse(localStorage.getItem('nurvan_nutrition_backups') || '[]');
-  if (!backups.length) {
-    if (typeof showToast === 'function') showToast('Nessun backup precedente dell\'alimentazione trovato.', 'info');
-    return;
-  }
-  const modal = document.createElement('div');
-  modal.id = 'nutrition-backups-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;';
-  modal.innerHTML = '' +
-    '<div style="background:#181818;border:1px solid #333;border-radius:12px;padding:20px;max-width:440px;width:100%;max-height:85vh;overflow-y:auto;">' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
-    '<div style="font-size:16px;font-weight:700;color:#fff;">\u{1F4E6} Backup Alimentazione</div>' +
-    '<button class="btn btn-outline" style="font-size:11px;padding:4px 8px;color:#888;" onclick="this.closest(\'#nutrition-backups-modal\').remove()">Chiudi</button>' +
-    '</div>' +
-    '<div style="font-size:12px;color:#aaa;margin-bottom:12px;">I backup vengono salvati automaticamente prima di ogni azzeramento. Puoi ripristinarne uno manualmente:</div>' +
-    '<div style="display:flex;flex-direction:column;gap:8px;">' +
-    backups.map(function (b, idx) {
-      const dateStr = b.createdAt ? new Date(b.createdAt).toLocaleString('it-IT') : 'Data sconosciuta';
-      return '<div style="padding:10px;background:#222;border:1px solid #333;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">' +
-        '<div>' +
-        '<div style="font-size:13px;font-weight:700;color:#00e5ff;">' + esc(b.planName || 'Piano Alimentare') + '</div>' +
-        '<div style="font-size:11px;color:#888;">' + dateStr + ' \u00B7 ' + (b.dayCount || 0) + ' giorni</div>' +
-        '</div>' +
-        '<button class="btn btn-primary" style="font-size:11px;padding:6px 10px;" onclick="restoreNutritionBackup(\'' + b.id + '\')">Ripristina</button>' +
-        '</div>';
-    }).join('') +
-    '</div></div>';
-  document.body.appendChild(modal);
-}
-window.openNutritionBackupsModal = openNutritionBackupsModal;
-
-async function restoreNutritionBackup(backupId) {
-  const backups = (typeof store !== 'undefined' && store.nutritionBackups) || JSON.parse(localStorage.getItem('nurvan_nutrition_backups') || '[]');
-  const targetBak = backups.find(b => b.id === backupId);
-  if (!targetBak || !targetBak.nutritionSnapshot) {
-    if (typeof showToast === 'function') showToast('Backup non valido o non trovato', 'danger');
-    return;
-  }
-  if (!confirm('Ripristinare il backup del ' + new Date(targetBak.createdAt).toLocaleString('it-IT') + '? Il piano attuale verra sovrascritto.')) return;
-  
-  const restored = JSON.parse(JSON.stringify(targetBak.nutritionSnapshot));
-  delete restored.cleared;
-  delete restored.isCleared;
-  delete restored.clearedAt;
-  restored.present = true;
-
-  userReplacesNutrition(restored);
-  if (typeof DATA !== 'undefined') DATA.nutrition = restored;
-  if (typeof store !== 'undefined') {
-    store.nutrition = restored;
-    delete store.nutritionClearedAt;
-    store.__cpNutritionDirty = true;
-    store.__cpKeepLocalNutrition = true;
-  }
-  if (typeof localStorage !== 'undefined') {
-    localStorage.removeItem(personalScopedKey('nurvan_nutrition_cleared_at'));
-  }
-
-  if (typeof persist === 'function') persist();
-  if (typeof GiammariaPersistence !== 'undefined') {
-    try {
-      if (GiammariaPersistence.saveNutrition) await GiammariaPersistence.saveNutrition(restored);
-      if (DATA && GiammariaPersistence.saveProgram) await GiammariaPersistence.saveProgram(DATA, true);
-    } catch (_) {}
-  }
-  if (typeof persistActiveProgramStructure === 'function') {
-    try { persistActiveProgramStructure(); } catch (_) {}
-  }
-  if (typeof syncAccountData === 'function' && store && store.accountToken) {
-    await syncAccountData(false);
-  }
-  if (typeof render === 'function') render();
-  
-  const modal = document.getElementById('nutrition-backups-modal');
-  if (modal) modal.remove();
-  
-  if (typeof showToast === 'function') showToast('Backup alimentazione ripristinato con successo!', 'success');
-}
-window.restoreNutritionBackup = restoreNutritionBackup;
+// The older pair of openNutritionBackupsModal / restoreNutritionBackup lived
+// here and was overridden by the copies further down, which read the
+// IndexedDB backups. Those copies now also list the snapshots this one used
+// to show, so nothing lost a reader when this went away.
 
 async function clearPersonalNutrition() {
   if (typeof store !== 'undefined' && store && store.coachViewingClient && typeof clearCoachClientDomain === 'function') {
@@ -16646,6 +16686,7 @@ function renderSettings(c) {
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-primary" style="flex:1;min-width:120px;font-size:10px;padding:8px;" onclick="exportFullDatabaseBackup()">${t('exportBackup')}</button>
         <button class="btn btn-outline" style="flex:1;min-width:120px;font-size:10px;padding:8px;" onclick="exportStatsCsv()">${t('exportHistoryCsv')}</button>
+        <button class="btn btn-outline" style="flex:1;min-width:120px;font-size:10px;padding:8px;" onclick="exportWorkoutHistory()">STORICO SERIE (CSV)</button>
         <button class="btn btn-outline" style="flex:1;min-width:120px;font-size:10px;padding:8px;" onclick="triggerImportBackupFile()">${t('importBackup')}</button>
       </div>
       <input type="file" id="import-backup-input" accept=".json" style="display:none;" onchange="importFullDatabaseBackup(this)">
@@ -22024,6 +22065,21 @@ function nutritionBackupRelativeTime(iso) {
   const diffD = Math.round(diffH / 24);
   return diffD + ' ' + (diffD === 1 ? 'giorno' : 'giorni') + ' fa';
 }
+// Azzera alimentazione has always kept a snapshot under store.nutritionBackups
+// before wiping the plan, but the only screen that listed those snapshots was a
+// second, dead copy of this modal. They were written and never shown again.
+// They are read here, next to the IndexedDB ones, so nothing already saved
+// stays out of reach.
+function legacyNutritionBackups() {
+  try {
+    const inStore = (typeof store !== 'undefined' && Array.isArray(store.nutritionBackups)) ? store.nutritionBackups : null;
+    if (inStore && inStore.length) return inStore;
+    return JSON.parse(localStorage.getItem('nurvan_nutrition_backups') || '[]') || [];
+  } catch (_) {
+    return [];
+  }
+}
+
 async function openNutritionBackupsModal() {
   let modal = document.getElementById('nutrition-backups-modal');
   if (!modal) {
@@ -22046,6 +22102,10 @@ async function openNutritionBackupsModal() {
     const backups = (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.listNutritionBackups)
       ? await GiammariaPersistence.listNutritionBackups()
       : [];
+    legacyNutritionBackups().forEach(function (b) {
+      backups.push({ id: b.id, updatedAt: b.createdAt, dayCount: b.dayCount || 0 });
+    });
+    backups.sort(function (a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); });
     if (!backups.length) {
       list.innerHTML = '<div style="padding:12px 0;color:#666;">Nessun backup disponibile ancora.</div>';
       return;
@@ -22070,7 +22130,19 @@ window.closeNutritionBackupsModal = closeNutritionBackupsModal;
 async function restoreNutritionBackup(id) {
   if (!confirm('Ripristinare questo backup? Sostituirà l\'alimentazione attuale (che verrà anch\'essa salvata come backup prima di essere sostituita).')) return;
   try {
-    const plan = await GiammariaPersistence.getNutritionBackup(id);
+    let plan = null;
+    if (String(id || '').indexOf('nutr_bak_') === 0) {
+      const legacy = legacyNutritionBackups().find(function (b) { return b && b.id === id; });
+      plan = legacy && legacy.nutritionSnapshot ? JSON.parse(JSON.stringify(legacy.nutritionSnapshot)) : null;
+      if (plan) {
+        delete plan.cleared;
+        delete plan.isCleared;
+        delete plan.clearedAt;
+        plan.present = true;
+      }
+    } else {
+      plan = await GiammariaPersistence.getNutritionBackup(id);
+    }
     if (!plan) {
       if (typeof showToast === 'function') showToast('Backup non trovato', 'danger');
       return;
@@ -22080,6 +22152,10 @@ async function restoreNutritionBackup(id) {
     }
     DATA.nutrition = userReplacesNutrition(plan);
     store.nutrition = plan;
+    // A restore undoes an azzeramento: without clearing its marker the plan
+    // comes back and is wiped again at the next boot.
+    try { delete store.nutritionClearedAt; } catch (_) {}
+    try { localStorage.removeItem(personalScopedKey('nurvan_nutrition_cleared_at')); } catch (_) {}
     markNutritionDirty();
     persist();
     closeNutritionBackupsModal();
@@ -23241,6 +23317,7 @@ function renderAthleteProfile(container) {
     '<div style="display:flex;flex-direction:column;gap:8px;">' +
     '<button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="exportFullDatabaseBackup()">' + t('exportBackup') + '</button>' +
     '<button class="btn btn-outline" style="width:100%;font-size:11px;" onclick="exportStatsCsv()">' + t('exportHistoryCsv') + '</button>' +
+    '<button class="btn btn-outline" style="width:100%;font-size:11px;" onclick="exportWorkoutHistory()">STORICO SERIE (CSV)</button>' +
     '<button class="btn btn-outline" style="width:100%;font-size:11px;" onclick="triggerImportBackupFile()">' + t('importBackup') + '</button>' +
     '</div>' +
     '<input type="file" id="import-backup-input" accept=".json" style="display:none;" onchange="importFullDatabaseBackup(this)">' +
@@ -24951,6 +25028,7 @@ function renderStats(c){
   c.innerHTML = `
     <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">PERFORMANCE LAB</h1>
     <div style="font-size:10px; color:#777; margin-bottom:15px; font-weight:700; letter-spacing:1px;">${store && store.coachViewingClient ? 'VISTA MASTER · DATI CLIENTE' : 'ATTIVITÀ · CRONOLOGIA · FATICA'}</div>
+    ${store && store.coachViewingClient ? '' : '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:12px;font-size:11px;" onclick="showProgressCenter()">📈 PROGRESS CENTER — SETTIMANA, 4, 12, SEMPRE</button>'}
     ${store && store.coachViewingClient ? '' : renderAdaptiveDeloadCardHtml()}
     ${last ? `<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid rgba(212,175,55,0.35);">
       <div role="button" tabindex="0" onclick="openLoggedSessionReview(${Number(last.week)||1},${Number(last.day)||0})" style="cursor:pointer;">
@@ -25225,16 +25303,18 @@ function renderCheckFisicoCardHtml() {
     const syncState = c.checkInSyncState || (c.serverCheckInId ? 'SYNCED' : '');
     const syncLabel = (typeof checkInStatusLabel === 'function' && syncState)
       ? checkInStatusLabel(syncState)
-      : (syncState === 'QUEUED' || syncState === 'SYNCING'
-        ? 'In attesa di connessione'
-        : (syncState === 'SYNCED' ? 'Inviato' : (syncState === 'FAILED' ? 'Errore — riprova' : '')));
+      : (syncState === 'SYNCING'
+        ? 'Invio in corso…'
+        : (syncState === 'QUEUED'
+          ? 'In attesa di connessione'
+          : (syncState === 'SYNCED' ? 'Inviato' : (syncState === 'FAILED' ? 'Errore — riprova' : ''))));
     return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1c1c1c;font-size:11px;">' +
       '<div role="button" tabindex="0" onclick="openSavedCheckFisico(\'' + esc(String(c.id || '')) + '\')" style="flex:1;display:flex;justify-content:space-between;gap:8px;cursor:pointer;">' +
       '<span>' + esc(String(c.at || '').replace('T', ' ').slice(0, 16)) + ' · ' + esc(checkFisicoPeriodMeta(c.period).label) +
       (syncLabel ? ' · ' + esc(syncLabel) : '') + '</span>' +
       '<span style="color:var(--gold);font-weight:800;">' + (c.weight != null && c.weight !== '' ? (c.weight + ' kg') : '—') + '</span></div>' +
       '<button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;border-color:var(--accent-red);color:var(--accent-red);font-size:11px;" onclick="event.stopPropagation();deleteBodyCheck(\'' + esc(String(c.id || '')) + '\')">X</button></div>' +
-      (syncState === 'FAILED' ? '<button type="button" class="btn btn-outline" style="width:100%;margin:4px 0 8px;font-size:10px;" onclick="event.stopPropagation();retryCheckInSend(\'' + esc(String(c.id || '')) + '\')">RIPROVA</button>' : '');
+      ((syncState === 'FAILED' || syncState === 'QUEUED') ? '<button type="button" class="btn btn-outline" style="width:100%;margin:4px 0 8px;font-size:10px;" onclick="event.stopPropagation();retryCheckInSend(\'' + esc(String(c.id || '')) + '\')">RIPROVA</button>' : '');
   }).join('') : '<div style="font-size:11px;color:#666;">Nessun check salvato.</div>';
   return '<div class="card stats-anatomy" style="margin-bottom:12px;">' +
     '<div class="stats-anatomy-head" style="cursor:pointer;" onclick="toggleStatsFold(\'statsCheckFisicoOpen\')"><h2>Check fisici</h2><div style="display:flex;align-items:center;gap:8px;"><div class="stats-anatomy-hint">Foto · peso · resoconto</div>' + statsFoldChevron('statsCheckFisicoOpen') + '</div></div>' +
@@ -25420,6 +25500,76 @@ async function deleteBodyCheck(id) {
   try { if (typeof removeDocumentFile === 'function') await removeDocumentFile('bodycheck_front_' + checkId); } catch (_) {}
   try { if (typeof removeDocumentFile === 'function') await removeDocumentFile('bodycheck_back_' + checkId); } catch (_) {}
   if (typeof showToast === 'function') showToast('Check rimosso', 'info');
+  if (typeof currentView !== 'undefined' && currentView === 'stats') render();
+}
+
+// Whether a check reached the coach is the only thing that tells the athlete
+// there is something left to do. It was never written down: the send set
+// serverCheckInId on success and nothing at all on failure, so the card stayed
+// silent and the RIPROVA button below - which the list already knew how to
+// draw - had no state that could bring it on screen.
+function markCheckInSyncState(entry, state) {
+  if (!entry) return;
+  entry.checkInSyncState = state;
+  if (state === 'SYNCED') entry.checkInFailedAt = null;
+  else if (state === 'FAILED') entry.checkInFailedAt = new Date().toISOString();
+  try {
+    const saved = (store.bodyChecks || []).find(function (c) { return c && c.id === entry.id; });
+    if (saved && saved !== entry) {
+      saved.checkInSyncState = entry.checkInSyncState;
+      saved.checkInFailedAt = entry.checkInFailedAt;
+      saved.serverCheckInId = entry.serverCheckInId || saved.serverCheckInId;
+    }
+  } catch (_) {}
+  persist();
+}
+
+// The one way out of «Errore — riprova». Sends the same check again, photos
+// included: they live in IndexedDB under the check id, not in the entry.
+async function retryCheckInSend(id) {
+  const checkId = String(id || '');
+  if (!checkId) return;
+  const entry = (store.bodyChecks || []).find(function (c) { return c && String(c.id) === checkId; });
+  if (!entry) {
+    if (typeof showToast === 'function') showToast('Check non trovato', 'danger');
+    return;
+  }
+  if (entry.serverCheckInId) {
+    markCheckInSyncState(entry, 'SYNCED');
+    if (typeof showToast === 'function') showToast('Questo check era già arrivato al coach', 'info');
+    if (typeof currentView !== 'undefined' && currentView === 'stats') render();
+    return;
+  }
+  if (typeof submitClientCheckInToCoach !== 'function') {
+    if (typeof showToast === 'function') showToast('Invio al coach non disponibile in questa modalità', 'warning');
+    return;
+  }
+  markCheckInSyncState(entry, 'SYNCING');
+  if (typeof currentView !== 'undefined' && currentView === 'stats') render();
+  let front = null;
+  let back = null;
+  try {
+    if (entry.hasFront) front = await getDocumentFile('bodycheck_front_' + checkId);
+    if (entry.hasBack) back = await getDocumentFile('bodycheck_back_' + checkId);
+  } catch (_) {}
+  try {
+    const sent = await submitClientCheckInToCoach(entry, front, back);
+    if ((sent && sent.checkIn) || entry.serverCheckInId) {
+      markCheckInSyncState(entry, 'SYNCED');
+      if (typeof showToast === 'function') showToast('Inviato', 'success');
+    } else if (sent && sent.queued) {
+      markCheckInSyncState(entry, 'QUEUED');
+      if (typeof showToast === 'function') showToast('In attesa di connessione', 'warning');
+    } else {
+      markCheckInSyncState(entry, 'FAILED');
+      if (typeof showToast === 'function') showToast('Non è passato. Riprova quando hai linea.', 'danger');
+    }
+  } catch (error) {
+    markCheckInSyncState(entry, 'FAILED');
+    if (typeof showToast === 'function') {
+      showToast((error && error.message) || 'Non è passato. Riprova quando hai linea.', 'danger');
+    }
+  }
   if (typeof currentView !== 'undefined' && currentView === 'stats') render();
 }
 async function saveCheckFisico() {
@@ -25749,17 +25899,22 @@ async function confirmCheckFisicoPdfExport() {
       const sent = await submitClientCheckInToCoach(entry, front, back);
       if (sent && sent.queued) {
         sentToCoachOs = true;
+        markCheckInSyncState(entry, 'QUEUED');
         if (typeof showToast === 'function') showToast('In attesa di connessione', 'warning');
       } else if (sent && sent.checkIn) {
         sentToCoachOs = true;
+        markCheckInSyncState(entry, 'SYNCED');
         if (typeof showToast === 'function') showToast('Inviato', 'success');
       } else if (entry.serverCheckInId) {
         sentToCoachOs = true;
+        markCheckInSyncState(entry, 'SYNCED');
         if (typeof showToast === 'function') showToast('Inviato', 'success');
       } else {
+        markCheckInSyncState(entry, 'FAILED');
         if (typeof showToast === 'function') showToast('Errore — riprova', 'danger');
       }
     } catch (error) {
+      markCheckInSyncState(entry, 'FAILED');
       if (typeof showToast === 'function') {
         showToast('Errore — riprova', 'danger');
       }
@@ -28986,22 +29141,11 @@ function renderDb(c){
   searchDb('');
 }
 
-async function handleFileUpload(e) {
-  const file = e.target.files[0]; if(!file) return;
-  if(!/\.(pdf|doc|docx|txt|xlsx|xls)$/i.test(file.name)) { alert('Seleziona PDF, DOC, DOCX, TXT, XLSX o XLS.'); return; }
-  if(file.size > MAX_DOCUMENT_BYTES) { alert('Il documento supera il limite di 12 MB.'); return; }
-  try {
-    const base64 = await fileToBase64(file);
-    const sizeText = (file.size / 1024).toFixed(1) + ' KB';
-    const mime = file.type || documentMime(file.name, 'application/octet-stream');
-    await persistDocumentMetadata(file.name, sizeText, mime, base64);
-    persist();
-    render();
-    alert("Documento '" + file.name + "' caricato nel Database.");
-  } catch(err) {
-    alert('Impossibile salvare il documento: ' + err.message);
-  }
-}
+// handleFileUpload lives once, further up, next to the other file-pick
+// handlers: it sets the DATABASE_DOC intent and hands the file to the universal
+// pipeline. A second copy used to sit here and, being the later declaration,
+// was the one that actually ran - a documents-only version that turned away
+// csv, json, png, jpg and webp from an input that lists them as accepted.
 
 async function deleteDoc(idx) {
   if(!confirm('Rimuovere questo documento dal Database?')) return;
@@ -33143,6 +33287,8 @@ if (typeof window !== 'undefined') {
   window.pinTrainingDay = pinTrainingDay;
   window.shouldStayOnPinnedTraining = shouldStayOnPinnedTraining;
   window.deleteBodyCheck = deleteBodyCheck;
+  window.retryCheckInSend = retryCheckInSend;
+  window.markCheckInSyncState = markCheckInSyncState;
   window.toggleSupersetMode = toggleSupersetMode;
   window.applySelectedSuperset = applySelectedSuperset;
   window.unlinkSuperset = unlinkSuperset;

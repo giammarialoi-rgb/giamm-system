@@ -70,7 +70,7 @@ const SESSION_FIELDS = new Set([
 
 // Persistence must read the coach's area explicitly, never whatever is active.
 {
-  ok(base.includes('Object.assign({}, sanitized, personalDomain())'),
+  ok(base.includes('Object.assign({}, store, personalDomain())'),
     'persist overlays the personal area onto what it writes');
   ok(base.includes('const own = personalDomain();'),
     'the emergency quota path reads the personal area too');

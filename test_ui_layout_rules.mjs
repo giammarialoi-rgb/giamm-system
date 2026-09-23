@@ -199,6 +199,67 @@ console.log('\n--- 13. la scheda generata si legge e si corregge prima di salvar
     /deliverProgram\(normalizeProgram\(prog\), target/.test(SRC));
 }
 
+console.log('\n--- 14. quello che l app dichiara, l app lo fa ---');
+{
+  // Every one of these was a button on screen that led nowhere, or a screen
+  // with no door. Found by the audit of 23 settembre, fixed together.
+  ok('14a. RIPROVA chiama una funzione che esiste davvero',
+    /(async )?function retryCheckInSend\(id\)/.test(SRC) &&
+    /onclick="event\.stopPropagation\(\);retryCheckInSend\(/.test(SRC));
+  ok('14b. ed e la stessa nella pagina costruita', /function retryCheckInSend\(id\)/.test(BUILT));
+  ok('14c. un invio fallito lascia scritto che e fallito',
+    /markCheckInSyncState\(entry, 'FAILED'\)/.test(SRC) &&
+    /markCheckInSyncState\(entry, 'SYNCED'\)/.test(SRC));
+  ok('14d. e il rinvio porta anche le foto, che stanno in IndexedDB',
+    /getDocumentFile\('bodycheck_front_' \+ checkId\)/.test(SRC));
+
+  const dbInput = (SRC.match(/<input[^>]*id="db-file-input"[^>]*>/) || [''])[0];
+  ok('14e. il selettore del database dichiara csv, json e immagini',
+    /\.csv/.test(dbInput) && /\.json/.test(dbInput) && /\.png/.test(dbInput));
+  ok('14f. e li accetta, perche passa dal router universale e non dal vecchio filtro',
+    !/Seleziona PDF, DOC, DOCX, TXT, XLSX o XLS/.test(SRC) &&
+    !/Seleziona PDF, DOC, DOCX, TXT, XLSX o XLS/.test(BUILT));
+  ok('14g. handleFileUpload esiste una volta sola',
+    (SRC.match(/^(?:async )?function handleFileUpload\(/gm) || []).length === 1);
+
+  ok('14h. il Centro Progressi ha una porta d ingresso', /onclick="showProgressCenter\(\)"/.test(SRC));
+  ok('14i. e lo storico serie si puo esportare da Impostazioni',
+    (SRC.match(/onclick="exportWorkoutHistory\(\)"/g) || []).length >= 2);
+
+  // In one script, the last declaration of a name is the one that runs. Two
+  // bodies under one name means the copy you read may not be the copy that
+  // answers - which is how a documents-only handleFileUpload kept winning.
+  const decls = {};
+  const re = /^(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(/gm;
+  let m;
+  while ((m = re.exec(BUILT))) decls[m[1]] = (decls[m[1]] || 0) + 1;
+  const dupes = Object.keys(decls).filter(function (k) { return decls[k] > 1; });
+  ok('14j. nella pagina costruita nessun nome e dichiarato due volte', dupes.length === 0,
+    dupes.join(', '));
+}
+
+console.log('\n--- 15. la scheda non passa per intero da ogni tocco ---');
+{
+  // persist() runs on every tap. The sanitizer takes the programming out of
+  // the local-storage blob because it lives in IndexedDB; the personal-area
+  // overlay right after it put the programming straight back, so every tap
+  // re-serialized it - 784 KB at 6 weeks, 6,2 MB at 40, against a 5 MB
+  // ceiling on iOS.
+  ok('15a. il blob non si riporta dietro la programmazione',
+    /if \(!isClientStorageContext\(\)\) source\.activeProgram = null;/.test(SRC));
+  ok('15b. in cambio la scheda si rispecchia in IndexedDB come ogni altro dominio',
+    /function scheduleActiveProgramIdbSync\(immediate\)/.test(SRC) &&
+    /\n  scheduleActiveProgramIdbSync\(\);\n  scheduleWorkoutLogsIdbSync\(\);/.test(SRC));
+  ok('15c. e viene scaricata prima che la pagina sparisca',
+    /try \{ scheduleActiveProgramIdbSync\(true\); \} catch \(_\) \{\}/.test(SRC));
+  ok('15d. senza serializzare megabyte per capire se e cambiata',
+    /function activeProgramFingerprint\(prog\)/.test(SRC));
+  ok('15e. e se il salvataggio fallisce non si finge che sia andato',
+    /__programIdbLastFingerprint = null;\s*\n\s*__programIdbLastSavedAt = 0;/.test(SRC));
+  ok('15f. lo spazio cliente tiene la sua copia, perche altra non ne ha',
+    /A client or invite session has no IndexedDB/.test(SRC));
+}
+
 console.log('');
 if (failed) { console.log(failed + ' UI layout rule(s) broken.'); process.exit(1); }
 console.log('All UI layout rules hold.');

@@ -167,8 +167,13 @@ ok(sb.store.nutritionDaily === COACH_DIARY, 'and does not disturb the coach data
 // --- persistence takes the coach copy, not the active one ---
 {
   const base = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
-  ok(base.includes('Object.assign({}, sanitized, personalDomain())'),
+  // The overlay now happens before the sanitizer rather than after it (the
+  // programming must not reach the deep clone at all), but it is the same
+  // overlay: the personal area over whatever the active one holds.
+  ok(base.includes('Object.assign({}, store, personalDomain())'),
     'persist writes the personal area over whatever the active one holds');
+  ok(base.indexOf('Object.assign({}, store, personalDomain())') < base.indexOf('sanitizeStoreForLocalStorage(source)'),
+    'and it happens before the blob is built, not after');
   ok(base.includes('const own = personalDomain();'),
     'the emergency quota write also takes the coach copy');
 }
