@@ -85,7 +85,7 @@ console.log('\n--- 2. il generatore la scrive solo sul fondamentale con un caric
   const rows = kg.weeks.flatMap((w) => w.sessions.flatMap((s) => s.exercises));
   const bench = rows.filter((r) => r.competition_lift === 'bench' && r.progressed);
   ok('2a. la panca piana e\' un fondamentale con carico', bench.length > 0 && bench.every((r) => P.firstWorkingLoad(r) > 0));
-  ok('2b. e porta la rampa di quel carico, in ogni settimana', bench.every((r) => ramp(r.sets) === ramp(P.warmupSetsFor(P.firstWorkingLoad(r)))));
+  ok('2b. e porta la rampa di quel carico, in ogni settimana', bench.every((r) => ramp(r.sets) === ramp(P.warmupSetsFor(P.firstWorkingLoad(r), { test: !!r.test_attempt }))));
   ok('2c. con il riscaldamento automatico acceso', bench.every((r) => r.warmup_auto === true));
   const iso = rows.filter((r) => !r.progressed);
   ok('2d. gli accessori non ne hanno nessuna', iso.length > 0 && iso.every((r) => !(r.sets || []).some((s) => s.warmup)));
@@ -217,7 +217,7 @@ console.log('\n--- 6. in seduta: la serie si chiude come le altre, ma non misura
   ok('6c2. e la prima allenante non eredita mai il carico dell\'ultimo riscaldamento', /const prevSet = \(prevSetKey && !prevSetIsWarm\) \? \{/.test(fn) && fn.indexOf('if (load === \'\' && setObjHere && Number(setObjHere.target_load) > 0)') < fn.indexOf('if (load === \'\') load = prev.load || prevSet.load || \'\';'));
   const render = SRC.slice(SRC.indexOf('const warmCount = countWarmupSets(row.sets);'), SRC.indexOf('const warmCount = countWarmupSets(row.sets);') + 14000);
   ok('6d. nascosto, il riscaldamento non chiede niente: la riga si salta', /if \(isWarm && !warmVisible\) continue;/.test(render));
-  ok('6e. il timer di un riscaldamento e\' quello dimezzato, quello della prima allenante e\' pieno', /const restForSet = isWarm \? warmupRestTextFor\(row\.rest \|\| '90s'\) : esc\(row\.rest \|\| '90s'\);/.test(render));
+  ok('6e. il timer di un riscaldamento e\' quello dimezzato, quello della prima allenante e\' pieno', /const restForSet = \(isWarm && !\(setObj && setObj\.rest_full\)\) \? warmupRestTextFor\(row\.rest \|\| '90s'\) : esc\(row\.rest \|\| '90s'\);/.test(render));
   ok('6f. la riga e\' segnata leggera e numerata a parte', /set-row-warmup/.test(render) && /const setLabel = isWarm \? \('R' \+ s\) : String\(s - warmCount\);/.test(render));
   ok('6g. la preferenza sta nelle impostazioni allenamento', /id="pref-show-warmup"/.test(SRC) && /store\.prefs\.showWarmup=this\.checked;persist\(\);render\(\)/.test(SRC));
   ok('6h. la sincronizzazione col coach marca i riscaldamenti', /warmup: isWarmupSet\(Array\.isArray\(row\.sets\) \? row\.sets\[s - 1\] : null\) \|\| undefined,/.test(grab('buildSessionPayloadForSync')));

@@ -8232,6 +8232,8 @@ function normalizeProgram(payload) {
             sets_formula: s.sets_formula || null,
             set_type: drop ? 'dropset' : (warm ? 'warmup' : (s.set_type || 'working')),
             warmup: warm || undefined,
+            warmup_pct: warm && s.warmup_pct != null ? Number(s.warmup_pct) : undefined,
+            rest_full: warm && s.rest_full ? true : undefined,
             technique: drop ? 'drop_set' : (s.technique || null),
             target_load: s.target_load != null ? Number(s.target_load) : (s.load != null ? Number(s.load) : null),
             load_unit: s.load_unit || 'kg',
@@ -8306,6 +8308,7 @@ function normalizeProgram(payload) {
           sets: canonicalSets,
           sets_count: canonicalSets.length - warmupN,
           warmup_auto: exercise.warmup_auto ? true : undefined,
+          test_attempt: exercise.test_attempt ? true : undefined,
           prescription: rx || {
             sets: canonicalSets.length - warmupN,
             reps: repsTarget,
@@ -21138,7 +21141,9 @@ function renderTraining(c){
           const shownRir = (store.data[k + '_rir'] !== undefined && store.data[k + '_rir'] !== '' && store.data[k + '_rir'] != null)
             ? store.data[k + '_rir']
             : (setObj && (setObj.rir ?? setObj.target_rir) != null ? setObj.rir ?? setObj.target_rir : (row.rirTarget != null ? row.rirTarget : ''));
-          const restForSet = isWarm ? warmupRestTextFor(row.rest || '90s') : esc(row.rest || '90s');
+          // Fra riscaldamenti meta' recupero; pieno dove la rampa lo chiede
+          // (le salite pesanti prima di un massimale).
+          const restForSet = (isWarm && !(setObj && setObj.rest_full)) ? warmupRestTextFor(row.rest || '90s') : esc(row.rest || '90s');
           const techVal = store.data[k + '_tech'] || (setObj && setObj.technique) || '';
           const techOpts = (typeof getIntensityTechniqueOptions === 'function' ? getIntensityTechniqueOptions() : []).map(function (t) {
             return '<option value="' + esc(t.id) + '" ' + (techVal === t.id ? 'selected' : '') + '>' + esc(t.label) + '</option>';
@@ -34510,6 +34515,8 @@ function testedMaxFor(week, liftId) {
     (session.exercises || session.rows || []).forEach(function (row, ei) {
       if (row.competition_lift !== liftId) return;
       for (var s = 1; s <= 12; s++) {
+        // Una salita di riscaldamento al 90% non e' il massimale.
+        if (isWarmupSet(Array.isArray(row.sets) ? row.sets[s - 1] : null)) continue;
         var k = 'w' + week + '_d' + di + '_e' + ei + '_s' + s;
         var load = parseFloat(store.data[k + '_load']);
         var reps = parseInt(store.data[k + '_reps'], 10);

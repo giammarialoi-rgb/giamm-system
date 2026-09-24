@@ -35,30 +35,84 @@
 (function (root) {
   'use strict';
 
+  // The lifts a strength program is built on, and how a name is read as one.
+  //
+  // A name is a fundamental when it IS the lift, not when it mentions it:
+  // "Croci panca piana" is a fly done on a flat bench, "Rematore su panca" a
+  // row, "Scapular pull-up" a shrug on a bar. So the lift has to be the head
+  // of the name - the first thing it says, after the qualifiers that only
+  // name a barbell variant (front, incline, romanian, tempo...) - and nothing
+  // in the name may say it is done with something other than a barbell or the
+  // body itself.
+  //
+  // Two answers come out of it:
+  //   fundamentalFor(name)     -> { lift, variant } : the lift or a barbell
+  //                               variant of it (incline bench, front squat,
+  //                               romanian deadlift) - a fundamental;
+  //   competitionLiftFor(name) -> the lift itself only. Percentages of a max
+  //                               are percentages of THIS lift: an incline
+  //                               bench at 85% of the flat bench max is not a
+  //                               prescription, it is a guess.
   var COMP_LIFTS = [
-    { id: 'squat', label: 'Squat', match: /\bsquat\b/i, exclude: /(split|bulgar|goblet|pistol|hack|sissy|overhead|front|zercher|box|pause|pin|anderson|belt|smith|cossack|jump)/i },
-    // "Bench dip" carries the word bench and is not a bench press: the
-    // exclusions are what keep a name from being read as the wrong lift.
-    { id: 'bench', label: 'Panca piana', match: /(panca\s*piana|bench\s*press|\bbench\b)/i, exclude: /(inclinat|declinat|incline|decline|manubri|dumbbell|presa stretta|close|smith|floor|pause|spinte|\bdip\b|\brow\b|rematore|press\s*up)/i },
-    { id: 'deadlift', label: 'Stacco da terra', match: /(stacco|deadlift)/i, exclude: /(rumeno|romanian|\brdl\b|sumo|deficit|rack|block|trap|manubri|dumbbell|monopodalic|single)/i },
-    { id: 'press', label: 'Military press', match: /(military\s*press|overhead\s*press|lento\s*avanti|\bohp\b)/i, exclude: /(manubri|dumbbell|macchina|machine|arnold|push\s*press|seduto|seated)/i },
-    { id: 'pullup', label: 'Trazioni zavorrate', match: /(trazion|pull[\s-]*up|chin[\s-]*up)/i, exclude: /(lat\s*machine|assistit|elastic|negative|australian|inverse)/i },
-    { id: 'dip', label: 'Dip zavorrati', match: /(\bdip\b|dips|parallele)/i, exclude: /(assistit|macchina|machine|bench\s*dip|panca)/i }
+    { id: 'squat', label: 'Squat', head: /^squat\b/, notAfter: null, barbell: true },
+    { id: 'bench', label: 'Panca piana', head: /^(?:panca|bench)\b/, notAfter: /^(?:panca|bench)\s+(?:dips?|row|rematore|crunch|step|jump|hop)/, barbell: true },
+    { id: 'deadlift', label: 'Stacco da terra', head: /^(?:stacco|deadlift)\b/, notAfter: null, barbell: true },
+    { id: 'press', label: 'Military press', head: /^(?:military\s*press|overhead\s*press|lento\s*avanti|ohp)\b/, notAfter: null, barbell: true },
+    { id: 'pullup', label: 'Trazioni zavorrate', head: /^(?:trazion\w*|pull[\s-]*ups?|chin[\s-]*ups?)\b/, notAfter: null, barbell: false },
+    { id: 'dip', label: 'Dip zavorrati', head: /^(?:dips?|dip\s+alle\s+parallele)\b/, notAfter: null, barbell: false }
   ];
+
+  // Words in front of the lift that only say which barbell variant it is.
+  // "Back", "high-bar", "low-bar", "barbell" and "competition" are the lift
+  // itself; the rest make it a variant.
+  var EXACT_LEAD = /^(?:barbell|back|high[\s-]*bar|low[\s-]*bar|competition|conventional|strict|standing|weighted)\s+/;
+  var VARIANT_LEAD = /^(?:front|box|pause[d]?|tempo|pin|zercher|anderson|safety[\s-]*bar|ssb|incline|decline|close[\s-]*grip|wide[\s-]*grip|spoto|larsen|sumo|romanian|stiff[\s-]*leg(?:ged)?|deficit|rack|block|floor|overhead(?=\s+squat))\s+/;
+  // Words after the lift that are still the lift itself.
+  var EXACT_TAIL = /\b(?:bilanciere|con|il|la|al|alla|alle|da|terra|barbell|press|piana|flat|back|gara|competition|alla\s+sbarra|sbarra|parallele|zavorrat\w*|weighted|presa|prona|supina|neutra|pronated|supinated|neutral|grip|high[\s-]*bar|low[\s-]*bar|conventional)\b/g;
+  // Anything that says the movement is not done with a barbell (or, for
+  // pull-ups and dips, with the body): a dumbbell bench is a good exercise,
+  // it is not the bench press.
+  var NOT_BARBELL = /(croci|fly|flye|apertur|alzat|pullover|kickback|curl|scott|estension|extension|crunch|french|skull|multipower|manubri|dumbbell|\bdb\b|kettlebell|\bkb\b|macchina|machine|smith|cavo|cavi|cable|elastic|band|landmine|trap[\s-]*bar|hex[\s-]*bar|corpo\s*libero|bodyweight|a\s+vuoto|goblet|pistol|sissy|bulgar|split|hack|cossack|jump|salto|monopodalic|single[\s-]*leg|unilateral|assistit|negativ|australian|inverse|scapular)/;
+  var NOT_BODY = /(lat\s*machine|macchina|machine|assistit|elastic|band|negativ|australian|inverse|scapular|bench\s*dips?|panca|anelli|rings|jump)/;
+
+  function foldName(name) {
+    return String(name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function fundamentalFor(name) {
+    var clean = foldName(name);
+    if (!clean) return null;
+    var variant = false;
+    var rest = clean;
+    for (var guard = 0; guard < 4; guard++) {
+      if (EXACT_LEAD.test(rest)) { rest = rest.replace(EXACT_LEAD, ''); continue; }
+      if (VARIANT_LEAD.test(rest)) { rest = rest.replace(VARIANT_LEAD, ''); variant = true; continue; }
+      break;
+    }
+    for (var i = 0; i < COMP_LIFTS.length; i++) {
+      var lift = COMP_LIFTS[i];
+      if (!lift.head.test(rest)) continue;
+      if (lift.notAfter && lift.notAfter.test(rest)) return null;
+      if ((lift.barbell ? NOT_BARBELL : NOT_BODY).test(clean)) return null;
+      // Whatever is left after the lift and the words that only restate it
+      // names a variant: "panca inclinata", "stacco rumeno", "squat al box".
+      var tail = rest.replace(lift.head, '').replace(EXACT_TAIL, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+      if (tail) variant = true;
+      return { lift: lift.id, variant: variant };
+    }
+    return null;
+  }
+
+  function competitionLiftFor(name) {
+    var f = fundamentalFor(name);
+    return f && !f.variant ? f.lift : null;
+  }
 
   // Weighted calisthenics load the whole system: a percentage of a pull-up max
   // is a percentage of bodyweight plus belt, and what goes on the belt is the
   // difference. Treating the added kilos as the 1RM would make 70% meaningless.
   var BODYWEIGHT_LIFTS = { pullup: true, dip: true };
-
-  function competitionLiftFor(name) {
-    var clean = String(name || '');
-    for (var i = 0; i < COMP_LIFTS.length; i++) {
-      var lift = COMP_LIFTS[i];
-      if (lift.match.test(clean) && !(lift.exclude && lift.exclude.test(clean))) return lift.id;
-    }
-    return null;
-  }
 
   function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 
@@ -498,9 +552,17 @@
   // medium one two, a heavy one three, each shorter than the last. Loads are
   // rounded UP to the plate step (2.5 kg): 48 becomes 50, not 47.5, because a
   // warm-up that lands under the plan is a warm-up nobody loads.
-  function warmupRampFor(load) {
+  // Before a max: five climbs, the last two singles, rest in full once the
+  // bar is heavy (from 80%). Only the day of the attempt gets this ramp.
+  var TEST_RAMP = [
+    { pct: 0.4, reps: 5 }, { pct: 0.55, reps: 3 }, { pct: 0.7, reps: 2 },
+    { pct: 0.8, reps: 1, fullRest: true }, { pct: 0.9, reps: 1, fullRest: true }
+  ];
+
+  function warmupRampFor(load, opts) {
     var L = Number(load) || 0;
     if (L <= 0) return [];
+    if (opts && opts.test) return TEST_RAMP.map(function (b) { return Object.assign({}, b); });
     if (L <= 40) return [{ pct: 0.5, reps: 8 }];
     if (L <= 100) return [{ pct: 0.5, reps: 6 }, { pct: 0.75, reps: 3 }];
     return [{ pct: 0.4, reps: 6 }, { pct: 0.6, reps: 4 }, { pct: 0.8, reps: 2 }];
@@ -515,9 +577,11 @@
     return Boolean(s && typeof s === 'object' && s.warmup);
   }
 
-  function warmupSetsFor(load) {
-    return warmupRampFor(load).map(function (b) {
-      return { reps: String(b.reps), target_load: roundUpLoad(Number(load) * b.pct, 2.5), warmup: true, set_type: 'warmup' };
+  function warmupSetsFor(load, opts) {
+    return warmupRampFor(load, opts).map(function (b) {
+      var s = { reps: String(b.reps), target_load: roundUpLoad(Number(load) * b.pct, 2.5), warmup: true, set_type: 'warmup', warmup_pct: b.pct };
+      if (b.fullRest) s.rest_full = true;
+      return s;
     });
   }
 
@@ -540,7 +604,8 @@
     if (!row) return row;
     var working = workingSetsOf(row.sets);
     var load = firstWorkingLoad(row);
-    row.sets = (load ? warmupSetsFor(load) : []).concat(working);
+    // A test row climbs to a max: its own ramp, recomputed the same way.
+    row.sets = (load ? warmupSetsFor(load, { test: !!row.test_attempt }) : []).concat(working);
     return row;
   }
 
@@ -743,6 +808,8 @@
       else copy.rirTarget = rirForPercent(main.pct, main.reps);
       copy.notes = [main.note, loadTextFor(opts, liftId, main.pct, main.reps)].filter(Boolean).join(' · ');
       copy.competition_lift = liftId;
+      // The day of the max: the warm-up before it is the test ramp.
+      if (ctx.isTestWeek || main.attempt) copy.test_attempt = true;
       // Kept so the weeks after a mid-program test can be rewritten from the
       // max that was actually hit, rather than the one it was planned on.
       copy.target_pct = main.pct;
@@ -924,6 +991,7 @@
         .sort(function (a, b) { return a - b; });
     },
     competitionLiftFor: competitionLiftFor,
+    fundamentalFor: fundamentalFor,
     competitionLiftsIn: competitionLiftsIn,
     liftLabel: liftLabel,
     rpeForPercent: rpeForPercent,

@@ -444,7 +444,9 @@
       weeks.forEach(function (wk) {
         (wk.sessions || wk.days || []).forEach(function (s) {
           (s.exercises || s.rows || []).forEach(function (row) {
-            if (!row.progressed) return;
+            // The main lift of the session, and the lift being tested on the
+            // day of a max.
+            if (!(row.progressed || row.test_attempt)) return;
             if (row.unit && row.unit !== 'reps') return;
             if (!PROG.firstWorkingLoad(row)) return;
             PROG.applyWarmupRamp(row);
