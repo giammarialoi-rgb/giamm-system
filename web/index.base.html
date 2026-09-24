@@ -68,6 +68,7 @@
 <script src="program-builder.js"></script>
 <script src="program-catalog.js"></script>
 <script src="progression-models.js"></script>
+<script src="food-search.js"></script>
 <script src="cardio-library.js"></script>
 <script src="program-generator.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
@@ -13578,74 +13579,132 @@ function updateFoodRestrictionWarn(foodName) {
   host.parentElement.insertAdjacentHTML('afterend', html);
 }
 
+// How often the athlete has used each food: the plan/diary meals and the
+// dated daily confirmations. A use with a date in the last 30 days is a
+// recent use; one without a date still counts as used.
+function foodUsageEntries() {
+  const out = [];
+  try {
+    const days = (DATA && DATA.nutrition && Array.isArray(DATA.nutrition.days)) ? DATA.nutrition.days : [];
+    days.forEach(function (day) {
+      const dayAt = day && day.date ? String(day.date).slice(0, 10) : null;
+      ((day && day.meals) || []).forEach(function (meal) {
+        ((meal && (meal.foods || meal.items)) || []).forEach(function (f) {
+          const name = f && (f.name || f.food);
+          if (name) out.push({ name: name, at: dayAt || (f.updatedAt || f.at || null) });
+        });
+      });
+    });
+    const daily = (store && store.nutritionDaily) || {};
+    Object.keys(daily).forEach(function (key) {
+      const entry = daily[key];
+      if (!entry || typeof entry !== 'object') return;
+      ((entry.foods) || []).forEach(function (f) {
+        const name = f && (f.name || f.food);
+        if (name) out.push({ name: name, at: /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : (entry.at || null) });
+      });
+    });
+  } catch (_) {}
+  return out;
+}
+
+function foodSearchDelayMs() {
+  return (window.NurvanFoodSearch && window.NurvanFoodSearch.SEARCH_DELAY_MS) || 150;
+}
+
+// Three lists, three places: the athlete's own foods on top (outside any
+// limit), the local catalog by relevance (at most 8), and - from 3 letters,
+// under their own «Prodotti» row - products from the network with their
+// brand (at most 6). The network list arrives later and only if it arrives
+// within 2 s; a query typed since then never gets an older answer.
+let __foodSearchSeq = 0;
+let __foodSearchState = null;
 async function filterFoodDb(query) {
   const box = $('food-db-suggestions');
-  if (!query || query.length < 1) {
+  const q = String(query || '').trim();
+  clearTimeout(__foodSearchTimer);
+  const seq = ++__foodSearchSeq;
+  if (!q) {
     box.style.display = 'none';
     __foodSearchHits = [];
+    __foodSearchState = null;
     return;
   }
-  clearTimeout(__foodSearchTimer);
-  __foodSearchTimer = setTimeout(async function () {
-    let foods = [];
-    let source = 'local';
-    try {
-      if (FoodDatabaseService.searchLocalThenRemote) {
-        const res = await FoodDatabaseService.searchLocalThenRemote(query, { allowRemote: query.length >= 2 });
-        foods = res.items || [];
-        source = res.source || 'local';
-      } else {
-        foods = await FoodDatabaseService.searchFoods(query);
-      }
-    } catch (_) {
-      foods = FoodDatabaseService.searchFoods(query) || [];
-    }
+  __foodSearchTimer = setTimeout(function () {
+    if (seq !== __foodSearchSeq) return;
+    const S = window.NurvanFoodSearch || null;
+    const usage = (S && S.usageIndex) ? S.usageIndex(foodUsageEntries()).get : null;
+    let local = [];
+    try { local = FoodDatabaseService.searchFoods(q, { usage: usage }) || []; } catch (_) { local = []; }
 
     // Foods the user has typed by hand before (e.g. a regional product not in
     // any catalog, like a specific Sardinian cheese) - shown first since these
     // are exactly what the user chose to remember.
     const customFoods = (DATA && DATA.nutrition && Array.isArray(DATA.nutrition.customFoods)) ? DATA.nutrition.customFoods : [];
-    if (customFoods.length) {
-      const foldQ = String(query || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
-      const customHits = customFoods.filter(function (f) {
-        const n = String(f.name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-        return n.includes(foldQ);
-      });
-      if (customHits.length) foods = [...customHits, ...foods];
-    }
+    const foldQ = S ? S.fold(q) : q.toLowerCase();
+    const customHits = customFoods.filter(function (f) {
+      const n = S ? S.fold(f.name) : String(f.name || '').toLowerCase();
+      return foldQ && n.indexOf(foldQ) >= 0;
+    });
 
-    if (!foods || foods.length === 0) {
-      box.style.display = 'none';
-      __foodSearchHits = [];
-      return;
+    __foodSearchState = { query: q, custom: customHits, local: local, remote: [] };
+    renderFoodSuggestions();
+
+    FoodDatabaseService.searchRemote(q).then(function (remote) {
+      if (seq !== __foodSearchSeq || !__foodSearchState || __foodSearchState.query !== q) return;
+      if (!remote || !remote.length) return;
+      __foodSearchState.remote = remote;
+      renderFoodSuggestions();
+    }).catch(function () {});
+  }, foodSearchDelayMs());
+}
+
+function renderFoodSuggestions() {
+  const box = $('food-db-suggestions');
+  const st = __foodSearchState;
+  if (!box || !st) return;
+  const hits = [];
+  let html = '';
+  const restrIds = currentNutritionRestrictionIds();
+  function row(f, opts) {
+    const idx = hits.length;
+    hits.push(f);
+    const kcal = f.kcalPer100 != null ? f.kcalPer100 : f.kcal;
+    let warn = '';
+    if (restrIds.length) {
+      const tip = foodRestrictionWarnHtml(f.name || '');
+      if (tip) warn = '<div style="font-size:9px;color:#f88;margin-top:2px;">⚠ possibile allergene/intolleranza</div>';
     }
-    __foodSearchHits = foods.slice(0, 8);
-    const restrIds = currentNutritionRestrictionIds();
-    box.innerHTML = __foodSearchHits.map(function (f, idx) {
-      const kcal = f.kcalPer100 != null ? f.kcalPer100 : f.kcal;
-      const prov = f.provenance ? (typeof DataProvenance !== 'undefined' ? DataProvenance.label(f.provenance) : (f.provenance.kind || '')) : '';
-      let warn = '';
-      if (restrIds.length) {
-        const tip = foodRestrictionWarnHtml(f.name || '');
-        if (tip) warn = '<div style="font-size:9px;color:#f88;margin-top:2px;">⚠ possibile allergene/intolleranza</div>';
-      }
-      return '<button type="button" data-food-idx="' + idx + '" style="display:block;width:100%;text-align:left;padding:10px;border:0;border-bottom:1px solid #222;background:#111;cursor:pointer;-webkit-tap-highlight-color:rgba(212,175,55,.25);">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span style="font-size:12px;font-weight:700;color:#fff;">' + esc(f.name) + '</span>' +
-        '<span style="font-size:10px;color:var(--gold);flex-shrink:0;">' + Math.round(kcal || 0) + ' kcal/100g</span></div>' +
-        (prov ? '<div style="font-size:9px;color:#666;margin-top:2px;">' + esc(prov) + (source !== 'local' ? ' · ' + source : '') + '</div>' : '') +
-        warn +
-        '</button>';
-    }).join('');
-    box.style.display = 'block';
-    box.onclick = function (ev) {
-      const btn = ev.target && ev.target.closest ? ev.target.closest('[data-food-idx]') : null;
-      if (!btn) return;
-      try { ev.preventDefault(); ev.stopPropagation(); } catch (_) {}
-      const idx = parseInt(btn.getAttribute('data-food-idx'), 10);
-      if (!Number.isFinite(idx) || !__foodSearchHits[idx]) return;
-      selectFoodFromDb(__foodSearchHits[idx]);
-    };
-  }, 180);
+    const sub = opts.brand
+      ? '<div style="font-size:10px;color:#bbb;margin-top:2px;">' + esc(f.brand || 'Marca non indicata') + '</div>'
+      : (opts.mine ? '<div style="font-size:9px;color:#666;margin-top:2px;">I tuoi alimenti</div>' : '');
+    return '<button type="button" data-food-idx="' + idx + '" style="display:block;width:100%;text-align:left;padding:10px;border:0;border-bottom:1px solid #222;background:#111;cursor:pointer;-webkit-tap-highlight-color:rgba(212,175,55,.25);">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span style="font-size:12px;font-weight:700;color:#fff;min-width:0;overflow-wrap:anywhere;">' + esc(f.name) + '</span>' +
+      '<span style="font-size:10px;color:var(--gold);flex-shrink:0;">' + Math.round(kcal || 0) + ' kcal/100g</span></div>' +
+      sub + warn +
+      '</button>';
+  }
+  st.custom.forEach(function (f) { html += row(f, { mine: true }); });
+  st.local.forEach(function (f) { html += row(f, {}); });
+  if (st.remote.length) {
+    html += '<div data-food-section="prodotti" style="padding:6px 10px;font-size:10px;font-weight:800;letter-spacing:1px;color:var(--gold);background:#0b0b0b;border-bottom:1px solid #222;">PRODOTTI</div>';
+    st.remote.forEach(function (f) { html += row(f, { brand: true }); });
+  }
+  __foodSearchHits = hits;
+  if (!hits.length) {
+    box.style.display = 'none';
+    return;
+  }
+  box.innerHTML = html;
+  box.style.display = 'block';
+  box.onclick = function (ev) {
+    const btn = ev.target && ev.target.closest ? ev.target.closest('[data-food-idx]') : null;
+    if (!btn) return;
+    try { ev.preventDefault(); ev.stopPropagation(); } catch (_) {}
+    const idx = parseInt(btn.getAttribute('data-food-idx'), 10);
+    if (!Number.isFinite(idx) || !__foodSearchHits[idx]) return;
+    selectFoodFromDb(__foodSearchHits[idx]);
+  };
 }
 
 let activeSelectedFoodRef = null;

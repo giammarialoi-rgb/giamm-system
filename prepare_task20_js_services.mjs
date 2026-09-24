@@ -1053,6 +1053,7 @@ const FoodDatabaseService = {
   get catalog() {
     if (typeof FOOD_CATALOG !== 'undefined' && Array.isArray(FOOD_CATALOG) && FOOD_CATALOG.length) {
       return FOOD_CATALOG.map((f) => ({
+        id: f.id || null,
         name: f.name,
         name_en: f.name_en || '',
         brand: f.brand || '',
@@ -1064,110 +1065,118 @@ const FoodDatabaseService = {
         serving: f.serving || '100g',
         unit: f.unit || 'g',
         aliases: f.aliases || [],
+        rank: f.rank != null ? f.rank : 999,
         barcode: f.barcode || null,
         source: f.source || 'local'
       }));
     }
     return [
-      { name: "Petto di Pollo crudo", category: "Proteine", kcal: 110, pro: 23.0, carb: 0.0, fat: 1.2, serving: "100g" },
-      { name: "Avena in fiocchi", category: "Carboidrati", kcal: 389, pro: 16.9, carb: 66.3, fat: 6.9, serving: "100g" },
-      { name: "Riso Basmati", category: "Carboidrati", kcal: 360, pro: 7.0, carb: 79.0, fat: 0.6, serving: "100g" },
-      { name: "Olio EVO", category: "Grassi", kcal: 884, pro: 0.0, carb: 0.0, fat: 100.0, serving: "100g" }
+      { name: "Petto di pollo", category: "Proteine", kcal: 110, pro: 23.0, carb: 0.0, fat: 1.2, serving: "100g", rank: 0 },
+      { name: "Avena in fiocchi", category: "Carboidrati", kcal: 389, pro: 16.9, carb: 66.3, fat: 6.9, serving: "100g", rank: 0 },
+      { name: "Riso basmati", category: "Carboidrati", kcal: 360, pro: 7.0, carb: 79.0, fat: 0.6, serving: "100g", rank: 1 },
+      { name: "Olio EVO", category: "Grassi", kcal: 884, pro: 0.0, carb: 0.0, fat: 100.0, serving: "100g", rank: 0 }
     ];
   },
-  search(query) {
-    if (typeof searchFoodCatalog === 'function') {
-      return searchFoodCatalog(query, 40).map((f) => ({
-        name: f.name,
-        name_en: f.name_en || '',
-        brand: f.brand || '',
-        category: f.category || 'Altro',
-        kcal: f.kcal || 0,
-        pro: f.pro || 0,
-        carb: f.carb || 0,
-        fat: f.fat || 0,
-        serving: f.serving || '100g',
-        unit: f.unit || 'g',
-        aliases: f.aliases || []
-      }));
-    }
-    if (!query) return this.catalog.slice(0, 40);
-    const q = String(query).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-    return this.catalog.filter((f) => {
-      const blob = [f.name, f.name_en, f.brand, f.category, ...(f.aliases || [])].filter(Boolean).join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      return blob.includes(q) || blob.split(/\s+/).some((w) => w.startsWith(q));
-    }).slice(0, 40);
+  // Local foods by relevance (web/food-search.js): at most 8, the athlete's
+  // own history counted through opts.usage.
+  search(query, opts = {}) {
+    const S = (typeof self !== 'undefined' && self.NurvanFoodSearch) ? self.NurvanFoodSearch : null;
+    const limit = opts.limit != null ? opts.limit : (S ? S.LOCAL_LIMIT : 8);
+    if (S) return S.rank(this.catalog, query, { limit: limit, usage: opts.usage || null });
+    const q = String(query || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    if (!q) return [];
+    return this.catalog.filter((f) => String(f.name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q)).slice(0, limit);
   },
-  searchFoods(query) {
-    return this.search(query);
+  searchFoods(query, opts) {
+    return this.search(query, opts);
   },
-  async searchLocalThenRemote(query, opts = {}) {
-    const local = this.search(query) || [];
-    if (!opts.allowRemote || !query || String(query).trim().length < 2) {
-      return { items: local, source: 'local' };
-    }
-    const remote = [];
-    try {
-      if (typeof coachEndpoint === 'function' && typeof apiFetch === 'function' && typeof store !== 'undefined' && store.accountToken) {
-        const lang = (typeof I18nService !== 'undefined' && I18nService.getLanguage) ? I18nService.getLanguage() : 'it';
-        const res = await apiFetch(coachEndpoint('/api/food/search?q=' + encodeURIComponent(query) + '&lang=' + encodeURIComponent(lang)), {
-          headers: { Authorization: 'Bearer ' + store.accountToken }
-        });
-        if (res && res.ok) {
-          const j = await (typeof readApiJson === 'function' ? readApiJson(res) : res.json());
-          (j.items || j.products || []).forEach((p) => {
+  // Products from the network (Open Food Facts, FatSecret, USDA through our
+  // server; Open Food Facts directly when there is no account). A separate
+  // list: never mixed with the local foods, never cut by their limit. From 3
+  // characters, at most 6, and whatever has not answered within the timeout
+  // (2 s) is dropped - the caller shows nothing, no error.
+  async searchRemote(query, opts = {}) {
+    const S = (typeof self !== 'undefined' && self.NurvanFoodSearch) ? self.NurvanFoodSearch : null;
+    const minChars = S ? S.REMOTE_MIN_CHARS : 3;
+    const limit = opts.limit != null ? opts.limit : (S ? S.REMOTE_LIMIT : 6);
+    const timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : (S ? S.REMOTE_TIMEOUT_MS : 2000);
+    const q = String(query || '').trim();
+    if (q.length < minChars) return [];
+    const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    let timer = null;
+    const deadline = new Promise((resolve) => { timer = setTimeout(() => { try { if (ctrl) ctrl.abort(); } catch (_) {} resolve(null); }, timeoutMs); });
+    const work = (async () => {
+      const remote = [];
+      try {
+        // Our server needs no account for this: it asks Open Food Facts,
+        // FatSecret and USDA and answers with CORS headers, which Open Food
+        // Facts' own search does not send (a browser blocks a direct call).
+        if (typeof coachEndpoint === 'function' && typeof fetch !== 'undefined') {
+          const lang = (typeof I18nService !== 'undefined' && I18nService.getLanguage) ? I18nService.getLanguage() : 'it';
+          const token = (typeof store !== 'undefined' && store && store.accountToken) ? store.accountToken : '';
+          const res = await fetch(coachEndpoint('/api/food/search?q=' + encodeURIComponent(q) + '&lang=' + encodeURIComponent(lang)), {
+            headers: token ? { Authorization: 'Bearer ' + token } : {},
+            signal: ctrl ? ctrl.signal : undefined
+          });
+          if (res && res.ok) {
+            const j = await (typeof readApiJson === 'function' ? readApiJson(res) : res.json());
+            (j.items || j.products || []).forEach((p) => {
+              remote.push({
+                name: p.name || p.product_name || 'Alimento',
+                brand: p.brand || '',
+                category: p.category || 'Prodotti',
+                kcal: p.kcalPer100 || p.kcal || 0,
+                pro: p.proPer100 || p.pro || 0,
+                carb: p.carbPer100 || p.carb || 0,
+                fat: p.fatPer100 || p.fat || 0,
+                serving: '100g',
+                unit: 'g',
+                barcode: p.barcode || null,
+                provenance: p.provenance || null,
+                source: (p.provenance && p.provenance.source) || 'remote'
+              });
+            });
+          }
+        }
+      } catch (_) {}
+      try {
+        // Open Food Facts retired the legacy cgi/search.pl endpoint used here
+        // before (it now returns 503) in favor of this search-a-licious service;
+        // its hits carry brands as an array instead of a joined string.
+        if (!remote.length && typeof fetch !== 'undefined') {
+          const url = 'https://search.openfoodfacts.org/search?q=' + encodeURIComponent(q) + '&page_size=12&fields=product_name,product_name_it,generic_name,brands,nutriments,code';
+          const res = await fetch(url, ctrl ? { signal: ctrl.signal } : undefined);
+          const j = await res.json();
+          (j.hits || []).forEach((p) => {
+            const n = p.nutriments || {};
             remote.push({
-              name: p.name || p.product_name || 'Alimento',
-              brand: p.brand || '',
-              category: p.category || 'Remote',
-              kcal: p.kcalPer100 || p.kcal || 0,
-              pro: p.proPer100 || p.pro || 0,
-              carb: p.carbPer100 || p.carb || 0,
-              fat: p.fatPer100 || p.fat || 0,
+              name: p.product_name_it || p.product_name || p.generic_name || 'Prodotto',
+              brand: Array.isArray(p.brands) ? p.brands.join(', ') : (p.brands || ''),
+              category: 'Prodotti',
+              kcal: Number(n['energy-kcal_100g'] || n.energy_kcal_100g || 0) || 0,
+              pro: Number(n.proteins_100g || 0) || 0,
+              carb: Number(n.carbohydrates_100g || 0) || 0,
+              fat: Number(n.fat_100g || 0) || 0,
               serving: '100g',
               unit: 'g',
-              barcode: p.barcode || null,
-              source: (p.provenance && p.provenance.source) || 'remote'
+              barcode: p.code || null,
+              source: 'open_food_facts'
             });
           });
         }
-      }
-    } catch (_) {}
-    try {
-      // Open Food Facts retired the legacy cgi/search.pl endpoint used here
-      // before (it now returns 503) in favor of this search-a-licious service;
-      // its hits carry brands as an array instead of a joined string.
-      if (!remote.length && typeof fetch !== 'undefined') {
-        const url = 'https://search.openfoodfacts.org/search?q=' + encodeURIComponent(query) + '&page_size=12&fields=product_name,product_name_it,generic_name,brands,nutriments,code';
-        const res = await fetch(url);
-        const j = await res.json();
-        (j.hits || []).forEach((p) => {
-          const n = p.nutriments || {};
-          remote.push({
-            name: p.product_name || p.product_name_it || p.generic_name || 'OFF',
-            brand: Array.isArray(p.brands) ? p.brands.join(', ') : (p.brands || ''),
-            category: 'Open Food Facts',
-            kcal: Number(n['energy-kcal_100g'] || n.energy_kcal_100g || 0) || 0,
-            pro: Number(n.proteins_100g || 0) || 0,
-            carb: Number(n.carbohydrates_100g || 0) || 0,
-            fat: Number(n.fat_100g || 0) || 0,
-            serving: '100g',
-            unit: 'g',
-            barcode: p.code || null,
-            source: 'open_food_facts'
-          });
-        });
-      }
-    } catch (_) {}
-    const merged = [...local];
-    const seen = new Set(local.map((x) => String(x.name || '').toLowerCase()));
-    remote.forEach((r) => {
-      const k = String(r.name || '').toLowerCase();
-      if (!k || seen.has(k)) return;
+      } catch (_) {}
+      return remote;
+    })();
+    const got = await Promise.race([work, deadline]);
+    clearTimeout(timer);
+    if (!Array.isArray(got)) return [];
+    const seen = new Set();
+    return got.filter((r) => {
+      const k = String(r.name || '').toLowerCase() + '|' + String(r.brand || '').toLowerCase();
+      if (!r.name || seen.has(k)) return false;
       seen.add(k);
-      merged.push(r);
-    });
-    return { items: merged.slice(0, 40), source: remote.length ? 'local+remote' : 'local' };
+      return true;
+    }).slice(0, limit);
   },
   matchFood(name) {
     const q = String(name || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
