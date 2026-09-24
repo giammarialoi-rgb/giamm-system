@@ -31,7 +31,10 @@
   var PROG = root.NurvanProgressions;
   var CARDIO = root.NurvanCardio;
 
-  var DAYS = [1, 2, 3, 4, 5, 6, 7];
+  // Six at most: every split writes six distinct sessions, and a seventh
+  // would be an invented copy of one of them.
+  var MAX_DAYS = 6;
+  var DAYS = [1, 2, 3, 4, 5, 6];
 
   // The weeks a program is actually written for. Longer than a year is not a
   // program, it is a career, so the ceiling is the engine's own 52.
@@ -41,7 +44,7 @@
   var SPLITS = [
     { id: 'fullbody', label: 'Full body', minDays: 1, maxDays: 4, note: 'Tutto il corpo a ogni seduta' },
     { id: 'upper_lower', label: 'Upper / Lower', minDays: 2, maxDays: 6, note: 'Alto e basso alternati' },
-    { id: 'monofrequency', label: 'Monofrequenza / PPL', minDays: 2, maxDays: 7, note: 'Un distretto per seduta' }
+    { id: 'monofrequency', label: 'Monofrequenza / PPL', minDays: 2, maxDays: 6, note: 'Un distretto per seduta' }
   ];
 
   var GOALS = [
@@ -96,7 +99,7 @@
   // A split has a number of days it makes sense over: full body six times a
   // week is not full body, and a one-day week cannot be upper/lower.
   function splitsFor(days) {
-    var d = clamp(Math.round(Number(days) || 3), 1, 7);
+    var d = clamp(Math.round(Number(days) || 3), 1, MAX_DAYS);
     return SPLITS.filter(function (s) { return d >= s.minDays && d <= s.maxDays; });
   }
 
@@ -177,7 +180,7 @@
   // sentence shown to the person are reading the same numbers.
   function resolve(opts) {
     var o = opts || {};
-    var days = clamp(Math.round(Number(o.days) || 4), 1, 7);
+    var days = clamp(Math.round(Number(o.days) || 4), 1, MAX_DAYS);
     var weeks = clamp(Math.round(Number(o.weeks) || 8), 1, MAX_WEEKS);
     var goal = byId(GOALS, o.goal, GOALS[0]).id;
     var experience = byId(EXPERIENCE, o.experience, EXPERIENCE[1]).id;
@@ -493,6 +496,7 @@
 
   root.NurvanProgramGenerator = {
     DAYS: DAYS,
+    MAX_DAYS: MAX_DAYS,
     WEEK_PRESETS: WEEK_PRESETS,
     MAX_WEEKS: MAX_WEEKS,
     SPLITS: SPLITS,

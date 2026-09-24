@@ -44185,6 +44185,124 @@ function purgeAltroMuscleMemory() {
 }
 (function () { try { purgeAltroMuscleMemory(); } catch (_) {} })();
 
+// I recuperi di "2 s". Fino al 2026-09-22 normalizeProgram leggeva "2 min" con
+// parseInt e scriveva 2: al passaggio dopo la scheda diceva "2 s". Il codice e'
+// corretto, ma le schede salvate in quei giorni portano ancora il valore
+// sbagliato. Qui si riconoscono (testo "N s" con N fino a 5 E rest_seconds
+// fino a 5) e si riportano a N minuti. Un recupero sopra i 5 s non si tocca:
+// 10 s o 30 s possono essere voluti, 2 s fra due serie no.
+var REST_SECONDS_FIX_MAX = 5;
+function secondRestTextValue(text) {
+  const m = String(text == null ? '' : text).match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:s|sec|secs|secondi|secondo|")\s*$/i);
+  if (!m) return null;
+  const n = parseFloat(m[1].replace(',', '.'));
+  return (n > 0 && n <= REST_SECONDS_FIX_MAX) ? n : null;
+}
+function fixSecondRestsInProgram(program) {
+  const changes = [];
+  if (!program || !Array.isArray(program.weeks)) return changes;
+  const title = program.title || program.name || 'Programma';
+  program.weeks.forEach(function (week, wi) {
+    (week.sessions || week.days || []).forEach(function (session, si) {
+      (session.exercises || session.rows || []).forEach(function (row) {
+        if (!row || typeof row !== 'object') return;
+        const n = secondRestTextValue(row.rest);
+        if (n == null) return;
+        const rowSec = Number(row.rest_seconds);
+        const setsLow = (Array.isArray(row.sets) ? row.sets : []).some(function (st) {
+          return st && typeof st === 'object' && st.rest_seconds != null && Number(st.rest_seconds) <= REST_SECONDS_FIX_MAX;
+        });
+        const rowLow = row.rest_seconds != null && Number.isFinite(rowSec) && rowSec <= REST_SECONDS_FIX_MAX;
+        if (!rowLow && !setsLow) return;
+        const before = String(row.rest);
+        const sec = Math.round(n * 60);
+        row.rest = String(n) + ' min';
+        if (row.rest_seconds != null) row.rest_seconds = sec;
+        (Array.isArray(row.sets) ? row.sets : []).forEach(function (st) {
+          if (st && typeof st === 'object' && st.rest_seconds != null && Number(st.rest_seconds) <= REST_SECONDS_FIX_MAX) st.rest_seconds = sec;
+        });
+        changes.push({
+          program: title,
+          week: wi + 1,
+          session: si + 1,
+          exercise: row.name || row.exercise || '',
+          before: before,
+          after: row.rest
+        });
+      });
+    });
+  });
+  return changes;
+}
+// Una volta per spazio: la scheda attiva e quelle della libreria. Il
+// flag si scrive solo a lavoro finito, cosi' un avvio interrotto riprova.
+async function migrateSecondRestsOnce() {
+  if (!store || store.__restSecondsFixV1) return 0;
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return 0;
+  if (store.coachViewingClient) return 0;
+  const log = [];
+  const P = (typeof GiammariaPersistence !== 'undefined') ? GiammariaPersistence : null;
+  const activeId = DATA && DATA.id ? String(DATA.id) : '';
+  if (DATA && Array.isArray(DATA.weeks)) {
+    const ch = fixSecondRestsInProgram(DATA);
+    if (ch.length) {
+      log.push.apply(log, ch);
+      if (P && P.saveProgram) await P.saveProgram(DATA, true);
+    }
+  }
+  if (P && P.listPrograms && P.loadProgram && P.saveProgram) {
+    const list = await P.listPrograms();
+    for (const meta of list) {
+      if (!meta || !meta.id || String(meta.id) === activeId) continue;
+      const prog = await P.loadProgram(meta.id);
+      if (!prog) continue;
+      const ch = fixSecondRestsInProgram(prog);
+      if (!ch.length) continue;
+      if (!prog.id) prog.id = meta.id;
+      await P.saveProgram(prog, !!meta.isActive, { id: meta.id, createdAt: meta.createdAt, version: meta.version });
+      log.push.apply(log, ch);
+    }
+  }
+  store.__restSecondsFixV1 = new Date().toISOString();
+  if (log.length) {
+    store.restSecondsFixLog = log.slice(0, 500);
+    try { console.info('[REST_FIX] recuperi corretti', log.length); console.table(log); } catch (_) {}
+  }
+  persist();
+  if (log.length) {
+    showRestFixNotice('Ho corretto ' + log.length + ' recuperi che risultavano di pochi secondi: erano probabilmente minuti. Controlla in Programmi.');
+    try { render(); } catch (_) {}
+  }
+  return log.length;
+}
+// L'avviso resta finche' non lo si chiude: un toast sparirebbe durante
+// l'avvio, prima che qualcuno lo legga.
+function showRestFixNotice(msg) {
+  if (typeof document === 'undefined' || document.getElementById('nurvan-rest-fix-banner')) return;
+  const b = document.createElement('div');
+  b.id = 'nurvan-rest-fix-banner';
+  b.setAttribute('role', 'status');
+  b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom, 0px));z-index:10590;background:#181818;border:1px solid var(--gold);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 4px 18px rgba(0,0,0,0.5);';
+  const text = document.createElement('div');
+  text.style.cssText = 'flex:1 1 200px;min-width:0;font-size:12px;color:#eee;line-height:1.35;';
+  text.textContent = msg;
+  const open = document.createElement('button');
+  open.className = 'btn btn-primary';
+  open.style.cssText = 'font-size:11px;padding:8px 12px;white-space:nowrap;';
+  open.textContent = 'Apri Programmi';
+  open.onclick = function () { b.remove(); try { navigate('programs'); } catch (_) {} };
+  const close = document.createElement('button');
+  close.className = 'btn btn-outline';
+  close.style.cssText = 'font-size:11px;padding:8px 10px;';
+  close.setAttribute('aria-label', 'Chiudi');
+  close.textContent = '✕';
+  close.onclick = function () { b.remove(); };
+  b.appendChild(text);
+  b.appendChild(open);
+  b.appendChild(close);
+  document.body.appendChild(b);
+}
+
 const STATS_MUSCLE_CHIPS = [{ id: 'GENERALE', label: 'Generale' }].concat(MACRO_MUSCLE_GROUPS);
 
 function exerciseMatchesMuscleGroup(exerciseName, movement, explicitGroups, selectedGroup, subsKey) {
@@ -44492,6 +44610,7 @@ function finishInit() {
       try { applyFocusUi(); } catch (_) {}
       try { maybeShowRewardsOnboarding(); } catch (_) {}
       try { maybeShowOnboarding(); } catch (_) {}
+      try { Promise.resolve(migrateSecondRestsOnce()).catch(function (e) { console.warn('[REST_FIX]', e); }); } catch (_) {}
       try { maybeShowIosInstallHint(); } catch (_) {}
       try { scheduleAllItemAlerts(); } catch (_) {}
       try { registerNurvanServiceWorker(); } catch (_) {}
@@ -66039,7 +66158,7 @@ function applyProfileDefaultsToGenerator() {
       store.programGenerator = g;
     }
     if (Number(profile.trainingDays) > 0) {
-      g.days = Math.max(1, Math.min(7, Math.round(Number(profile.trainingDays))));
+      g.days = Math.max(1, Math.min(6, Math.round(Number(profile.trainingDays))));
       var api = (typeof window !== 'undefined' && window.NurvanProgramGenerator) || null;
       if (api && typeof api.normalizeSplit === 'function') {
         g.split = api.normalizeSplit(g.split, g.days);
@@ -66104,6 +66223,13 @@ function generatorDraft() {
   Object.keys(base).forEach(function (k) {
     if (store.programGenerator[k] === undefined) store.programGenerator[k] = base[k];
   });
+  // Una bozza salvata quando il generatore offriva 7 giorni: il massimo e' 6.
+  var api = (typeof window !== 'undefined' && window.NurvanProgramGenerator) || null;
+  var maxDays = (api && api.MAX_DAYS) || 6;
+  if (Number(store.programGenerator.days) > maxDays) {
+    store.programGenerator.days = maxDays;
+    if (api && typeof api.normalizeSplit === 'function') store.programGenerator.split = api.normalizeSplit(store.programGenerator.split, maxDays);
+  }
   return store.programGenerator;
 }
 window.generatorDraft = generatorDraft;
