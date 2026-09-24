@@ -91,7 +91,7 @@ async function refreshCoachFeatureFlags() {
 }
 
 function practiceToast(msg, kind) {
-  if (typeof showToast === 'function') showToast(msg, kind || 'success');
+  if (typeof showToast === 'function') showToast(msg, kind || 'ok');
   else try { console.log('[PRACTICE]', msg); } catch (_) {}
 }
 
@@ -1121,7 +1121,7 @@ function ensureOfflineSyncListeners() {
       flushAllOfflineQueues().catch(function () {});
     });
     window.addEventListener('offline', function () {
-      if (typeof showToast === 'function') showToast('Offline: i dati restano salvati in locale', 'warning');
+      if (typeof showToast === 'function') showToast('Offline: i dati restano salvati in locale', 'info');
     });
   } catch (_) {}
 }
@@ -7229,7 +7229,7 @@ window.ensureAssignBanner = ensureAssignBanner;
 async function openCoachWarmupAssignModal() {
   const clientId = store.coachWorkspace && store.coachWorkspace.clientId;
   if (!clientId) {
-    if (typeof showToast === 'function') showToast('Nessun cliente selezionato.', 'warning');
+    if (typeof showToast === 'function') showToast('Nessun cliente selezionato.', 'error');
     return;
   }
   window.__coachWarmupModalClientId = clientId;
@@ -7384,7 +7384,7 @@ function generateCoachWarmupDraftFromClientSession() {
   const dayObj = weekObj ? ((weekObj.sessions || weekObj.days || [])[d]) : null;
   const exerciseList = dayObj ? (dayObj.exercises || dayObj.rows || []) : [];
   if (!exerciseList.length) {
-    if (typeof showToast === 'function') showToast('Nessun esercizio nella sessione corrente del cliente.', 'warning');
+    if (typeof showToast === 'function') showToast('Nessun esercizio nella sessione corrente del cliente.', 'error');
     return;
   }
   const generated = WarmUpEngine.generate({ exercises: exerciseList }, { athleteLevel: 'intermediate' });
@@ -7480,7 +7480,7 @@ window.addCoachDraftLibraryExercise = addCoachDraftLibraryExercise;
 async function saveCoachWarmupAsTemplate() {
   const draft = window.__coachWarmupDraft;
   if (!draft || !draft.items.length) {
-    if (typeof showToast === 'function') showToast('Aggiungi almeno un esercizio.', 'warning');
+    if (typeof showToast === 'function') showToast('Aggiungi almeno un esercizio.', 'error');
     return;
   }
   try {
@@ -7490,10 +7490,10 @@ async function saveCoachWarmupAsTemplate() {
     });
     if (res && res.template) {
       window.__coachWarmupTemplates = [res.template].concat(window.__coachWarmupTemplates || []);
-      if (typeof showToast === 'function') showToast('Template salvato.', 'success');
+      if (typeof showToast === 'function') showToast('Template salvato.', 'ok');
     }
   } catch (err) {
-    if (typeof showToast === 'function') showToast('Salvataggio template non riuscito.', 'danger');
+    if (typeof showToast === 'function') showToast('Salvataggio template non riuscito.', 'error');
   }
 }
 window.saveCoachWarmupAsTemplate = saveCoachWarmupAsTemplate;
@@ -7503,7 +7503,7 @@ async function assignCoachWarmupToClient() {
   const draft = window.__coachWarmupDraft;
   if (!clientId || !draft) return;
   if (!draft.items.length) {
-    if (typeof showToast === 'function') showToast('Aggiungi almeno un esercizio prima di assegnare.', 'warning');
+    if (typeof showToast === 'function') showToast('Aggiungi almeno un esercizio prima di assegnare.', 'error');
     return;
   }
   try {
@@ -7512,13 +7512,13 @@ async function assignCoachWarmupToClient() {
       body: JSON.stringify({ name: draft.name, items: draft.items, assignmentType: draft.assignmentType, templateId: window.__coachWarmupDraftTemplateId || null })
     });
     if (res && res.assignment) {
-      if (typeof showToast === 'function') showToast('Warm-up assegnato al cliente.', 'success');
+      if (typeof showToast === 'function') showToast('Warm-up assegnato al cliente.', 'ok');
       const modal = document.getElementById('coach-warmup-assign-modal');
       if (modal) modal.remove();
       if (typeof render === 'function') render();
     }
   } catch (err) {
-    if (typeof showToast === 'function') showToast((err && err.message) || 'Assegnazione non riuscita.', 'danger');
+    if (typeof showToast === 'function') showToast((err && err.message) || 'Assegnazione non riuscita.', 'error');
   }
 }
 window.assignCoachWarmupToClient = assignCoachWarmupToClient;
@@ -7528,12 +7528,12 @@ async function deactivateCoachWarmupAssignment() {
   if (!clientId) return;
   try {
     await practiceFetch('/api/coach/clients/' + clientId + '/warmup-deactivate', { method: 'POST', headers: practiceHeaders(true) });
-    if (typeof showToast === 'function') showToast('Assegnazione rimossa.', 'success');
+    if (typeof showToast === 'function') showToast('Assegnazione rimossa.', 'ok');
     const modal = document.getElementById('coach-warmup-assign-modal');
     if (modal) modal.remove();
     if (typeof render === 'function') render();
   } catch (err) {
-    if (typeof showToast === 'function') showToast('Rimozione non riuscita.', 'danger');
+    if (typeof showToast === 'function') showToast('Rimozione non riuscita.', 'error');
   }
 }
 window.deactivateCoachWarmupAssignment = deactivateCoachWarmupAssignment;

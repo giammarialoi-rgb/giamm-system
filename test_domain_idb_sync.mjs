@@ -131,7 +131,8 @@ for (const src of [html, built]) {
       `${fnName} checks whether the upload actually succeeded instead of assuming it did`);
     ok(/if \(cloudSynced\) \{\s*store\.__cpNutritionDirty = false;|if \(cloudSynced\) \{\s*store\.__cpSupplementsDirty = false;/.test(fnBody) || fnBody.includes('if (cloudSynced) {'),
       `${fnName} only clears its dirty/unsynced-changes flag when the upload actually succeeded`);
-    ok(fnBody.includes("'warning'"), `${fnName} warns the user instead of claiming success when the cloud upload failed`);
+    // showToast kinds are info | ok | error: a failed cloud upload is an error.
+    ok(/showToast\('Salvato sul dispositivo, ma la sincronizzazione col cloud è fallita[^']*', 'error'\)/.test(fnBody), `${fnName} warns the user instead of claiming success when the cloud upload failed`);
   }
 }
 
