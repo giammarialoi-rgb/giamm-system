@@ -72,9 +72,11 @@ for (const src of [html, built]) {
   ok(payloadBody.includes('warmups: warmupsSrc || {}'), '3a. accountPayload uploads store.warmups');
   ok(payloadBody.includes('warmupProgress: warmupProgressSrc || {}'), '3b. accountPayload uploads store.warmupProgress');
   const applyStart = html.indexOf('function applyRemoteAccountData(remote, preferLocal)');
-  const applyBody = html.slice(applyStart, applyStart + 3000);
-  ok(applyBody.includes("store.warmups = Object.assign({}, remote.warmups || {}, store.warmups || {})"), '3c. applyRemoteAccountData merges remote.warmups, local wins on conflict (same pattern as bw/skips/etc.)');
-  ok(applyBody.includes("store.warmupProgress = Object.assign({}, remote.warmupProgress || {}, store.warmupProgress || {})"), '3d. applyRemoteAccountData merges remote.warmupProgress');
+  const applyBody = html.slice(applyStart, applyStart + 5000);
+  // Key by key with the other maps: the most recent edit wins (mapStamps);
+  // without times on either side, as before, the cloud only fills what is missing.
+  ok(/\['bw', 'skips', 'subs', 'loadTypes', 'tempos', 'exIntensity', 'maxTests', 'bonus', 'exMuscle', 'warmups', 'warmupProgress'\]\s+\.forEach\(function \(f\) \{ mergeStampedMap\(f, remote\); \}\);/.test(applyBody), '3c. applyRemoteAccountData merges remote.warmups key by key, like bw/skips/etc.');
+  ok(/'warmups', 'warmupProgress'\]/.test(applyBody), '3d. applyRemoteAccountData merges remote.warmupProgress');
 }
 
 // 4. Coach/client isolation triad: warmups/warmupProgress must be in the

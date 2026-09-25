@@ -32,7 +32,7 @@ console.log('--- 1. cambio programma ---');
 {
   const ctx = { console, Date };
   vm.createContext(ctx);
-  vm.runInContext(grabVar('TRAINING_SLOT_FIELDS') + NL + ['activeProgramKey', 'logIsOfActiveProgram', 'logsOfActiveProgram', 'findLogById', 'sessionWasFinalized', 'markTrainingDataEpoch', 'clearWorkoutLogsForNewProgram'].map(grab).join(NL), ctx);
+  vm.runInContext(grabVar('TRAINING_SLOT_FIELDS') + NL + grabVar('STAMPED_MAP_FIELDS') + NL + ['mapValueSig', 'mapSnapshot', 'resetMapStampsFor', 'activeProgramKey', 'logIsOfActiveProgram', 'logsOfActiveProgram', 'findLogById', 'sessionWasFinalized', 'markTrainingDataEpoch', 'clearWorkoutLogsForNewProgram'].map(grab).join(NL), ctx);
   ctx.DATA = { id: 'progA' };
   ctx.store = {
     activeProgramId: 'progA',
@@ -41,12 +41,13 @@ console.log('--- 1. cambio programma ---');
     subs: { w1_d0_e2: 'Panca inclinata' }, skips: { w1_d0_e3: true }, warmups: { w1_d0: { items: [1] } }, bonus: { w1_d0: [{ name: 'Curl' }] }
   };
   ok('1a. prima del cambio W1 S1 risulta finalizzata', vm.runInContext('sessionWasFinalized(1, 0)', ctx) === true);
-  vm.runInContext('ctx_p = clearWorkoutLogsForNewProgram("progA")', Object.assign(ctx, { ctx_p: null }));
+  await vm.runInContext('clearWorkoutLogsForNewProgram("progA")', ctx);
   ctx.store.activeProgramId = 'progB'; ctx.DATA = { id: 'progB' };
   ok('1b. le sedute fatte restano, marcate col programma vecchio', ctx.store.logs.length === 2 && ctx.store.logs.every((l) => l.programId === 'progA'));
   ok('1c. W1 S1 del programma nuovo NON risulta finalizzata', vm.runInContext('sessionWasFinalized(1, 0)', ctx) === false);
   ok('1d. sostituzioni, esercizi saltati, riscaldamenti, bonus del vecchio programma azzerati', ['data', 'customSets', 'subs', 'skips', 'warmups', 'bonus'].every((k) => Object.keys(ctx.store[k]).length === 0));
   ok('1e. e l\'epoca dei dati di allenamento e\' segnata', !!(ctx.store.trainingDataEpoch && ctx.store.trainingDataEpoch.at));
+  ok('1e2. e le ore delle modifiche di quei campi ripartono da zero', ['data', 'subs', 'skips'].every((k) => Object.keys(ctx.store.mapStamps[k]).length === 0 && Object.keys(ctx.store.mapDeletes[k]).length === 0));
   ok('1f. la seduta vecchia si ritrova per id', vm.runInContext('findLogById("s1")', ctx).id === 's1');
   ok('1g. alla finalizzazione la seduta porta programma e record', /programId: activeProgramKey\(\) \|\| null,\s*\n\s*prs: frozenSessionPrs\(currentWeek \|\| 1, currentDay \|\| 0\)/.test(SRC));
   ok('1h. le righe dello storico aprono la loro seduta per id, e MODIFICA solo per il programma attivo',

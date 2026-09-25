@@ -116,16 +116,63 @@ export function mergeAccountDataBlobs(current, incoming) {
   const epochMs = (e) => { const t = e && e.at ? new Date(e.at).getTime() : 0; return Number.isFinite(t) ? t : 0; };
   const curEpoch = epochMs(cur.trainingDataEpoch);
   const incEpoch = epochMs(inc.trainingDataEpoch);
-  for (const key of mapKeys) {
-    const a = cur[key] && typeof cur[key] === "object" && !Array.isArray(cur[key]) ? cur[key] : {};
-    const b = inc[key] && typeof inc[key] === "object" && !Array.isArray(inc[key]) ? inc[key] : {};
-    if (epochKeys.includes(key) && incEpoch > curEpoch) merged[key] = b;
-    else if (epochKeys.includes(key) && curEpoch > incEpoch) merged[key] = a;
-    else merged[key] = Object.keys(b).length ? { ...a, ...b } : (Object.keys(a).length ? a : (merged[key] || {}));
-  }
-  for (const key of ["intelTargets", "warmups", "warmupProgress"]) {
-    if (incEpoch > curEpoch) merged[key] = inc[key] && typeof inc[key] === "object" ? inc[key] : {};
-    else if (curEpoch > incEpoch) merged[key] = cur[key] && typeof cur[key] === "object" ? cur[key] : {};
+  // Within the same epoch, key by key: the most recent edit wins
+  // (mapStamps: when a key last changed; mapDeletes: when it was removed).
+  // The uploader used to win every key, so a phone with an old value undid an
+  // edit made on the web. Keys with no time on either side keep the old rule.
+  const stampKeys = [...mapKeys, "intelTargets", "warmups", "warmupProgress"];
+  merged.mapStamps = {};
+  merged.mapDeletes = {};
+  const mapOf = (side, key) => side[key] && typeof side[key] === "object" && !Array.isArray(side[key]) ? side[key] : {};
+  const timesOf = (side, bag, key) => (side[bag] && side[bag][key] && typeof side[bag][key] === "object") ? side[bag][key] : {};
+  const nowMs = Date.now();
+  for (const key of stampKeys) {
+    const a = mapOf(cur, key);
+    const b = mapOf(inc, key);
+    const sa = timesOf(cur, "mapStamps", key), sb = timesOf(inc, "mapStamps", key);
+    const da = timesOf(cur, "mapDeletes", key), db = timesOf(inc, "mapDeletes", key);
+    if (epochKeys.includes(key) && incEpoch > curEpoch) {
+      merged[key] = b; merged.mapStamps[key] = sb; merged.mapDeletes[key] = db;
+      continue;
+    }
+    if (epochKeys.includes(key) && curEpoch > incEpoch) {
+      merged[key] = a; merged.mapStamps[key] = sa; merged.mapDeletes[key] = da;
+      continue;
+    }
+    const out = {};
+    const outStamps = {};
+    const outDeletes = {};
+    const keys = new Set([...Object.keys(a), ...Object.keys(b), ...Object.keys(da), ...Object.keys(db)]);
+    const anyTimes = Object.keys(sa).length || Object.keys(sb).length || Object.keys(da).length || Object.keys(db).length;
+    if (!anyTimes) {
+      // The old rule, unchanged: the uploader's keys over the stored ones,
+      // and an empty upload never wipes the stored map.
+      merged[key] = Object.keys(b).length ? { ...a, ...b } : (Object.keys(a).length ? a : (merged[key] || {}));
+      continue;
+    }
+    for (const k of keys) {
+      const ta = Math.max(Number(sa[k]) || 0, Number(da[k]) || 0);
+      const tb = Math.max(Number(sb[k]) || 0, Number(db[k]) || 0);
+      if (!ta && !tb) {
+        if (k in b) out[k] = b[k];
+        else if (k in a) out[k] = a[k];
+        continue;
+      }
+      const fromB = tb >= ta;
+      const s = fromB ? sb : sa, d = fromB ? db : da, m = fromB ? b : a;
+      const other = fromB ? a : b;
+      if ((Number(d[k]) || 0) > (Number(s[k]) || 0)) {
+        if (nowMs - Number(d[k]) <= 90 * 86400000) outDeletes[k] = d[k];
+      } else if (k in m) {
+        out[k] = m[k];
+        if (s[k]) outStamps[k] = s[k];
+      } else if (k in other) {
+        out[k] = other[k];
+      }
+    }
+    merged[key] = out;
+    merged.mapStamps[key] = outStamps;
+    merged.mapDeletes[key] = outDeletes;
   }
   if (incEpoch || curEpoch) merged.trainingDataEpoch = incEpoch >= curEpoch ? inc.trainingDataEpoch : cur.trainingDataEpoch;
   const byId = {};
@@ -224,14 +271,7 @@ export function mergeAccountDataBlobs(current, incoming) {
       merged.trainingSpaces = [...byId.values()].slice(0, 12);
     }
   }
-  {
-    const a = cur.intelTargets && typeof cur.intelTargets === "object" ? cur.intelTargets : {};
-    const b = inc.intelTargets && typeof inc.intelTargets === "object" ? inc.intelTargets : {};
-    // Per slot like the loads: the side cleared more recently wins whole.
-    if (incEpoch > curEpoch) merged.intelTargets = b;
-    else if (curEpoch > incEpoch) merged.intelTargets = a;
-    else if (Object.keys(a).length || Object.keys(b).length) merged.intelTargets = { ...a, ...b };
-  }
+  // intelTargets, warmups, warmupProgress: merged above with the other maps.
   // Never let an empty/sandbox program wipe a richer cloud scheda
   const curWeeks = cur.activeProgram && Array.isArray(cur.activeProgram.weeks) ? cur.activeProgram.weeks.length : 0;
   const incWeeks = inc.activeProgram && Array.isArray(inc.activeProgram.weeks) ? inc.activeProgram.weeks.length : 0;

@@ -76,5 +76,19 @@ console.log('--- 2. dati salute del telefono e account diversi ---');
 }
 
 console.log('');
+console.log('--- 3. l\'atleta con "Resta connesso" non viene disconnesso a ogni ricarica ---');
+{
+  const login = UI.slice(UI.indexOf("store.stayLoggedIn = !(stayEl && stayEl.checked === false);"), UI.indexOf("store.stayLoggedIn = !(stayEl && stayEl.checked === false);") + 2500);
+  ok('3a. al login con "Resta connesso" il dispositivo ricorda quale atleta riaprire (e per quale invito)',
+    /if \(store\.stayLoggedIn\) localStorage\.setItem\('GS_CLIENT_ACTIVE', JSON\.stringify\(\{ user: payload\.user, inviteToken: store\.inviteToken \|\| '' \}\)\);/.test(login));
+  const boot = grab(SRC, 'loadStore');
+  ok('3b. all\'avvio del link riapre il suo spazio, solo se il link e\' lo stesso invito',
+    /const active = JSON\.parse\(localStorage\.getItem\('GS_CLIENT_ACTIVE'\) \|\| 'null'\);/.test(boot) &&
+    /\(!urlToken \|\| !active\.inviteToken \|\| urlToken === active\.inviteToken\)/.test(boot) &&
+    boot.indexOf("GS_CLIENT_ACTIVE") < boot.indexOf('clientRaw = localStorage.getItem(GS_STORE_CLIENT_PENDING_KEY)'));
+  ok('3c. uscendo, il dispositivo lo dimentica', /try \{ localStorage\.removeItem\('GS_CLIENT_ACTIVE'\); \} catch \(_\) \{\}/.test(UI));
+}
+
+console.log('');
 if (failed) { console.log(failed + ' controlli del livello 2 (coach, salute) falliti.'); process.exit(1); }
 console.log('Tutti i controlli del livello 2 (coach, salute) passano.');

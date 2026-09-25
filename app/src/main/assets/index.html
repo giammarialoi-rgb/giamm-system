@@ -35962,6 +35962,19 @@ function loadStore(){
         const sess = JSON.parse(sessionStorage.getItem('GS_SESSION_AUTH') || 'null');
         if (sess && sess.user) clientRaw = localStorage.getItem(clientStoreKeyForUser(sess.user));
       } catch (_) {}
+      // The athlete who stayed signed in on this device, for this same invite
+      // link: their own space. Another invite opened here does not get it.
+      if (!clientRaw) {
+        try {
+          const active = JSON.parse(localStorage.getItem('GS_CLIENT_ACTIVE') || 'null');
+          const pathName = (typeof location !== 'undefined' && location.pathname) || '';
+          const m = String(pathName).match(/^\/c\/([^/?#]+)/);
+          const urlToken = m && m[1] ? decodeURIComponent(m[1]) : '';
+          if (active && active.user && (!urlToken || !active.inviteToken || urlToken === active.inviteToken)) {
+            clientRaw = localStorage.getItem(clientStoreKeyForUser(active.user));
+          }
+        } catch (_) {}
+      }
       if (!clientRaw) clientRaw = localStorage.getItem(GS_STORE_CLIENT_PENDING_KEY);
       const merged = parseStoredStore(clientRaw);
       merged.clientShell = true;
@@ -36258,7 +36271,8 @@ var NURVAN_DOMAIN_FIELDS = [
   'activeProgram', 'activeProgramId', 'nutrition', 'supplementation', 'therapy', 'exams',
   'data', 'customSets', 'subs', 'skips', 'logs', 'intelTargets', 'bodyChecks', 'bodyChecksDeleted',
   'nutritionDaily', 'profile', 'bw', 'exMuscle', 'loadTypes', 'tempos', 'bonus',
-  'warmups', 'warmupProgress', 'warmupAssignment', 'trainingDataEpoch'
+  'warmups', 'warmupProgress', 'warmupAssignment', 'trainingDataEpoch',
+  'mapStamps', 'mapDeletes', 'mapSyncBase'
 ];
 
 var NurvanMemory = {
@@ -38312,6 +38326,8 @@ function accountPayload(opts){
   const warmupsSrc = bak ? bak.warmups : store.warmups;
   const warmupProgressSrc = bak ? bak.warmupProgress : store.warmupProgress;
   const trainingEpochSrc = bak ? bak.trainingDataEpoch : store.trainingDataEpoch;
+  // Edits since the last look get their time; the times travel with the maps.
+  if (!bak) { try { stampLocalMapChanges(); } catch (_) {} }
   const activeProgramIdOut = bak
     ? (bak.activeProgramId || (srcProg && srcProg.id) || null)
     : (store.activeProgramId || (DATA && DATA.id) || null);
@@ -38330,6 +38346,8 @@ function accountPayload(opts){
     // was history lost the moment it was replaced.
     logs: Array.isArray(logsSrc) ? logsSrc.slice(-400) : [],
     trainingDataEpoch: trainingEpochSrc || null,
+    mapStamps: (!bak && store.mapStamps) ? store.mapStamps : {},
+    mapDeletes: (!bak && store.mapDeletes) ? store.mapDeletes : {},
     data: dataSrc || {},
     customSets: customSetsSrc || {},
     bw: bwSrc || {},
@@ -38459,6 +38477,95 @@ function trainingEpochMs(e) {
   return Number.isFinite(t) ? t : 0;
 }
 
+// Value by value, the most recent edit wins. The maps below (loads, sets,
+// substitutions, body weight, daily notes...) were merged with a fixed side
+// winning - this device on download, the uploader on the server - so an edit
+// made on the web was undone by a phone that still had the old value and
+// uploaded it back. Each key now carries when it last changed, and a
+// removed key when it was removed. The time is noticed by comparing the maps
+// with how they were at the last sync (so nothing hooks into the saves), and
+// keys without a time - older app versions, data from before - follow the
+// old rules.
+var STAMPED_MAP_FIELDS = ['data', 'customSets', 'bw', 'skips', 'subs', 'loadTypes', 'tempos', 'exIntensity', 'maxTests', 'bonus', 'exMuscle', 'nutritionDaily', 'intelTargets', 'warmups', 'warmupProgress'];
+var MAP_DELETES_KEEP_MS = 90 * 86400000;
+
+function mapValueSig(v) {
+  if (v === undefined) return 'u';
+  return (v !== null && typeof v === 'object') ? 'o' + JSON.stringify(v) : 's' + String(v);
+}
+function mapSnapshot(fields) {
+  const out = {};
+  (fields || STAMPED_MAP_FIELDS).forEach(function (f) {
+    const m = store[f] && typeof store[f] === 'object' ? store[f] : {};
+    const o = {};
+    Object.keys(m).forEach(function (k) { o[k] = mapValueSig(m[k]); });
+    out[f] = o;
+  });
+  return out;
+}
+// Local edits since the last look get their time. The first time there is no
+// earlier look: what is here counts as synced, with no time.
+function stampLocalMapChanges(now) {
+  now = now || Date.now();
+  if (!store.mapSyncBase || typeof store.mapSyncBase !== 'object') { store.mapSyncBase = mapSnapshot(); return; }
+  store.mapStamps = store.mapStamps || {};
+  store.mapDeletes = store.mapDeletes || {};
+  STAMPED_MAP_FIELDS.forEach(function (f) {
+    const cur = store[f] && typeof store[f] === 'object' ? store[f] : {};
+    const base = store.mapSyncBase[f] || {};
+    const st = store.mapStamps[f] = store.mapStamps[f] || {};
+    const dl = store.mapDeletes[f] = store.mapDeletes[f] || {};
+    Object.keys(cur).forEach(function (k) {
+      if (base[k] !== mapValueSig(cur[k])) { st[k] = now; delete dl[k]; }
+    });
+    Object.keys(base).forEach(function (k) {
+      if (!Object.prototype.hasOwnProperty.call(cur, k)) { dl[k] = now; delete st[k]; }
+    });
+    Object.keys(dl).forEach(function (k) { if (now - dl[k] > MAP_DELETES_KEEP_MS) delete dl[k]; });
+  });
+  store.mapSyncBase = mapSnapshot();
+}
+// A field cleared whole (program switch, "Azzera carichi"): its times start
+// over - the epoch, not the keys, says which side wins.
+function resetMapStampsFor(fields) {
+  store.mapStamps = store.mapStamps || {};
+  store.mapDeletes = store.mapDeletes || {};
+  const snap = mapSnapshot(fields);
+  store.mapSyncBase = store.mapSyncBase || {};
+  (fields || []).forEach(function (f) {
+    store.mapStamps[f] = {};
+    store.mapDeletes[f] = {};
+    store.mapSyncBase[f] = snap[f];
+  });
+}
+// One map, local and remote, key by key.
+function mergeStampedMap(field, remote) {
+  const local = store[field] && typeof store[field] === 'object' ? store[field] : {};
+  const remoteMap = remote[field] && typeof remote[field] === 'object' && !Array.isArray(remote[field]) ? remote[field] : {};
+  const rs = (remote.mapStamps && remote.mapStamps[field]) || {};
+  const rd = (remote.mapDeletes && remote.mapDeletes[field]) || {};
+  store.mapStamps = store.mapStamps || {};
+  store.mapDeletes = store.mapDeletes || {};
+  const ls = store.mapStamps[field] = store.mapStamps[field] || {};
+  const ld = store.mapDeletes[field] = store.mapDeletes[field] || {};
+  const out = Object.assign({}, local);
+  const keys = {};
+  Object.keys(remoteMap).forEach(function (k) { keys[k] = 1; });
+  Object.keys(rd).forEach(function (k) { keys[k] = 1; });
+  Object.keys(keys).forEach(function (k) {
+    const lt = Math.max(Number(ls[k]) || 0, Number(ld[k]) || 0);
+    const rt = Math.max(Number(rs[k]) || 0, Number(rd[k]) || 0);
+    if (rt > lt) {
+      if ((Number(rd[k]) || 0) > (Number(rs[k]) || 0)) { delete out[k]; delete ls[k]; ld[k] = rd[k]; }
+      else if (Object.prototype.hasOwnProperty.call(remoteMap, k)) { out[k] = remoteMap[k]; ls[k] = rs[k]; delete ld[k]; }
+    } else if (!rt && !lt && !Object.prototype.hasOwnProperty.call(out, k) && Object.prototype.hasOwnProperty.call(remoteMap, k)) {
+      // No times on either side: as before, the cloud fills what is missing here.
+      out[k] = remoteMap[k];
+    }
+  });
+  store[field] = out;
+}
+
 function applyRemoteAccountData(remote, preferLocal) {
   if (!remote || typeof remote !== 'object') return;
   // Read before the epochs below are aligned: the program was switched on
@@ -38467,6 +38574,9 @@ function applyRemoteAccountData(remote, preferLocal) {
   const token = store.accountToken, user = store.accountUser;
   const athlete = typeof isAthleteRole === 'function' && isAthleteRole()
     || (typeof isClientStorageContext === 'function' && isClientStorageContext());
+  // This device's edits since the last sync get their time before anything
+  // from the cloud is compared with them.
+  try { stampLocalMapChanges(); } catch (_) {}
   // Always union workout maps so a phone with empty local data cannot drop cloud loads.
   // Athlete/client RAM is namespaced: never keep personal local loads over an empty client cloud.
   if (athlete) {
@@ -38476,6 +38586,13 @@ function applyRemoteAccountData(remote, preferLocal) {
     // Cleared on another device after this one's last clear: that side's maps.
     TRAINING_SLOT_FIELDS.forEach(function (k) { store[k] = Object.assign({}, remote[k] || {}); });
     store.trainingDataEpoch = remote.trainingDataEpoch;
+    // Their times too.
+    store.mapStamps = store.mapStamps || {};
+    store.mapDeletes = store.mapDeletes || {};
+    TRAINING_SLOT_FIELDS.forEach(function (k) {
+      store.mapStamps[k] = Object.assign({}, (remote.mapStamps && remote.mapStamps[k]) || {});
+      store.mapDeletes[k] = Object.assign({}, (remote.mapDeletes && remote.mapDeletes[k]) || {});
+    });
     remote = Object.assign({}, remote);
     TRAINING_SLOT_FIELDS.forEach(function (k) { delete remote[k]; });
   } else if (trainingEpochMs(store.trainingDataEpoch) > trainingEpochMs(remote.trainingDataEpoch)) {
@@ -38484,21 +38601,12 @@ function applyRemoteAccountData(remote, preferLocal) {
     remote = Object.assign({}, remote);
     TRAINING_SLOT_FIELDS.forEach(function (k) { delete remote[k]; });
   } else {
-    store.data = Object.assign({}, remote.data || {}, store.data || {});
-    store.customSets = Object.assign({}, remote.customSets || {}, store.customSets || {});
+    mergeStampedMap('data', remote);
+    mergeStampedMap('customSets', remote);
   }
-  store.bw = Object.assign({}, remote.bw || {}, store.bw || {});
-  store.skips = Object.assign({}, remote.skips || {}, store.skips || {});
-  store.subs = Object.assign({}, remote.subs || {}, store.subs || {});
-  store.loadTypes = Object.assign({}, remote.loadTypes || {}, store.loadTypes || {});
-  store.tempos = Object.assign({}, remote.tempos || {}, store.tempos || {});
-  store.exIntensity = Object.assign({}, remote.exIntensity || {}, store.exIntensity || {});
-  store.maxTests = Object.assign({}, remote.maxTests || {}, store.maxTests || {});
-  store.bonus = Object.assign({}, remote.bonus || {}, store.bonus || {});
-  store.exMuscle = Object.assign({}, remote.exMuscle || {}, store.exMuscle || {});
+  ['bw', 'skips', 'subs', 'loadTypes', 'tempos', 'exIntensity', 'maxTests', 'bonus', 'exMuscle', 'warmups', 'warmupProgress']
+    .forEach(function (f) { mergeStampedMap(f, remote); });
   store.exMuscleByName = Object.assign({}, remote.exMuscleByName || {}, store.exMuscleByName || {});
-  store.warmups = Object.assign({}, remote.warmups || {}, store.warmups || {});
-  store.warmupProgress = Object.assign({}, remote.warmupProgress || {}, store.warmupProgress || {});
   if (remote.currentWeek) {
     currentWeek = Math.max(1, Number(remote.currentWeek) || currentWeek);
     store.trainingWeek = currentWeek;
@@ -38547,7 +38655,7 @@ function applyRemoteAccountData(remote, preferLocal) {
       .slice(-40);
   }
   if (remote.intelligence && !store.intelligence) store.intelligence = remote.intelligence;
-  if (remote.intelTargets) store.intelTargets = Object.assign({}, remote.intelTargets, store.intelTargets || {});
+  if (remote.intelTargets) mergeStampedMap('intelTargets', remote);
   if (remote.bodyComposition && !store.bodyComposition) store.bodyComposition = remote.bodyComposition;
   if (remote.nutritionLoop && !store.nutritionLoop) store.nutritionLoop = remote.nutritionLoop;
   if (remote.seasonBoard && !store.seasonBoard) store.seasonBoard = remote.seasonBoard;
@@ -38608,7 +38716,7 @@ function applyRemoteAccountData(remote, preferLocal) {
     if (Array.isArray(store.bodyChecks)) store.bodyChecks = store.bodyChecks.filter(function (c) { return !(c && c.id && deletedChecks[c.id]); });
     if (remote.health) store.health = Object.assign({}, store.health || {}, remote.health);
     if (remote.activeProgramId) store.activeProgramId = store.activeProgramId || remote.activeProgramId;
-    if (remote.nutritionDaily) store.nutritionDaily = Object.assign({}, remote.nutritionDaily, store.nutritionDaily || {});
+    if (remote.nutritionDaily) mergeStampedMap('nutritionDaily', remote);
     if (remote.calendarEventsDeleted && typeof remote.calendarEventsDeleted === 'object') {
       store.calendarEventsDeleted = Object.assign({}, remote.calendarEventsDeleted, store.calendarEventsDeleted || {});
     }
@@ -38780,6 +38888,9 @@ function applyRemoteAccountData(remote, preferLocal) {
   }
   store.accountToken = token;
   store.accountUser = user;
+  // What came from the cloud is now the synced state: taken in without a new
+  // time, or the next upload would present it as an edit made here.
+  try { store.mapSyncBase = mapSnapshot(); } catch (_) {}
 }
 function looksLikeClientAssignDraft(prog) {
   if (!prog || typeof prog !== 'object') return true;
@@ -69068,6 +69179,7 @@ async function clearWorkoutLogsForNewProgram(previousProgramId) {
   // slot 1 would otherwise rename, hide or change the new program's slot 1.
   TRAINING_SLOT_FIELDS.forEach(function (k) { store[k] = {}; });
   markTrainingDataEpoch();
+  resetMapStampsFor(TRAINING_SLOT_FIELDS);
   if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.clearWorkoutLogs) {
     try { await GiammariaPersistence.clearWorkoutLogs(); } catch (e) { console.error(e); }
   }
@@ -69089,6 +69201,7 @@ async function resetWorkoutData(){
     store.logs = [];
     // The next sync must not bring the cleared loads back from the cloud.
     markTrainingDataEpoch();
+    resetMapStampsFor(TRAINING_SLOT_FIELDS);
     // Preserve: activeProgram, nutrition, therapy, supplementation, profile, prefs
     if(typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.clearWorkoutLogs){
       try { await GiammariaPersistence.clearWorkoutLogs(); } catch(e){ console.error(e); }
@@ -71528,6 +71641,14 @@ async function submitClientInviteLogin() {
       else sessionStorage.setItem('GS_SESSION_AUTH', JSON.stringify({
         token: payload.token, user: payload.user, role: 'athlete', inviteToken: store.inviteToken, clientShell: true
       }));
+    } catch (_) {}
+    // "Resta connesso": which athlete's space this device reopens. The boot
+    // looked only in the browser session (set when the box is unticked), so
+    // with the box ticked - the default - every reload opened the shared
+    // pre-login copy, without the session: logged out each time.
+    try {
+      if (store.stayLoggedIn) localStorage.setItem('GS_CLIENT_ACTIVE', JSON.stringify({ user: payload.user, inviteToken: store.inviteToken || '' }));
+      else localStorage.removeItem('GS_CLIENT_ACTIVE');
     } catch (_) {}
     if (typeof persist === 'function') persist();
     showOverlay('cp-invite', false);
@@ -76185,6 +76306,7 @@ function wrapPracticeHooks() {
       const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
       const shell = !!(store.clientShell || athlete);
       try { sessionStorage.removeItem('GS_SESSION_AUTH'); } catch (_) {}
+      try { localStorage.removeItem('GS_CLIENT_ACTIVE'); } catch (_) {}
       store.coachInboxReady = false;
       store.coachSeenEventId = 0;
       store.coachInboxByAccount = {};

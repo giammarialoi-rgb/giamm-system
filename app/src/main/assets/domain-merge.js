@@ -92,13 +92,20 @@
     get: mealFoods,
     set: function (meal, list) { meal.foods = list; meal.items = list; }
   };
+  // A new day with a date, and a new meal, get the id their key gives rather
+  // than a random one (stableFresh): two phones that each open the diary on
+  // 25/09 before syncing create the same day, not two "25/09" days with the
+  // meals split between them. Foods stay random: two identical foods logged
+  // on two phones are two foods.
   var MEAL = {
     field: 'meals', prefix: 'm', children: [FOOD], skip: { foods: 1, items: 1 },
-    key: function (m) { return fold(m.name || m.title || m.meal); }
+    key: function (m) { return fold(m.name || m.title || m.meal); },
+    stableFresh: function () { return true; }
   };
   var DAY = {
     field: 'days', prefix: 'd', children: [MEAL], skip: { meals: 1 }, parentId: 'plan',
-    key: function (d) { return d.date ? 'date:' + String(d.date).slice(0, 10) : 'name:' + fold(d.day || d.name || d.title); }
+    key: function (d) { return d.date ? 'date:' + String(d.date).slice(0, 10) : 'name:' + fold(d.day || d.name || d.title); },
+    stableFresh: function (d) { return !!(d && d.date); }
   };
   var CUSTOM_FOOD = {
     field: 'customFoods', prefix: 'cf', children: [],
@@ -186,7 +193,7 @@
         var key = spec.key(item);
         var k = seen[key] = (seen[key] || 0) + 1;
         if (!hasId(item)) {
-          if (fresh) item.id = randomId(spec.prefix);
+          if (fresh && !(spec.stableFresh && spec.stableFresh(item))) item.id = randomId(spec.prefix);
           else item.id = spec.legacyId ? spec.legacyId(item) : spec.prefix + hash(parentId + '|' + key + '#' + k);
         } else {
           item.id = String(item.id);

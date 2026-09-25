@@ -72,5 +72,65 @@ console.log('--- 3. calendario ---');
 }
 
 console.log('');
+console.log('--- 4. la modifica piu\' recente vince, valore per valore ---');
+{
+  const T2 = Date.now() - 1000;
+  const cloud = mergeAccountDataBlobs({}, { data: { k: '90', o: 'x' } });
+  const web = mergeAccountDataBlobs(cloud, { data: { k: '100' }, mapStamps: { data: { k: T2 } } });
+  ok('4a. server: la correzione fatta dal web entra', web.data.k === '100');
+  const stale = mergeAccountDataBlobs(web, { data: { k: '90', o: 'x' } });
+  ok('4b. server: un telefono con il valore vecchio (senza ora) non la annulla', stale.data.k === '100' && stale.data.o === 'x');
+  const del = mergeAccountDataBlobs(stale, { data: {}, mapDeletes: { data: { o: Date.now() } } });
+  const back = mergeAccountDataBlobs(del, { data: { o: 'x' } });
+  ok('4c. server: una chiave cancellata resta cancellata, anche se un altro la rimanda', !('o' in del.data) && !('o' in back.data));
+  const newer = mergeAccountDataBlobs(back, { data: { k: '110' }, mapStamps: { data: { k: Date.now() } } });
+  ok('4d. server: una modifica piu\' recente vince sulla precedente', newer.data.k === '110');
+  const legacy = mergeAccountDataBlobs({ subs: { a: 1 } }, { subs: { a: 2, b: 3 } });
+  ok('4e. server: senza ore da nessuna parte, come prima (vince chi carica)', legacy.subs.a === 2 && legacy.subs.b === 3);
+
+  const vm = await import('node:vm');
+  const NL = '\n';
+  const grab = (name) => { const at = SRC.indexOf('function ' + name + '('); const end = SRC.indexOf(NL + '}', at); return SRC.slice(at, end + 2) + NL; };
+  const grabVar = (name) => { const at = SRC.indexOf('var ' + name + ' = '); return SRC.slice(at, SRC.indexOf(';' + NL, at) + 2); };
+  const ctx = { console, Date };
+  vm.createContext(ctx);
+  vm.runInContext(grabVar('STAMPED_MAP_FIELDS') + NL + grabVar('MAP_DELETES_KEEP_MS') + NL + ['mapValueSig', 'mapSnapshot', 'stampLocalMapChanges', 'mergeStampedMap'].map(grab).join(NL), ctx);
+  ctx.store = { data: { a: '80', b: '6', c: 'old' } };
+  vm.runInContext('stampLocalMapChanges(1000)', ctx);
+  ok('4f. pagina: la prima volta cio\' che c\'e\' conta come sincronizzato, senza ore', !ctx.store.mapStamps && !!ctx.store.mapSyncBase);
+  ctx.store.data.a = '85'; delete ctx.store.data.c;
+  vm.runInContext('stampLocalMapChanges(2000)', ctx);
+  ok('4g. pagina: una modifica e una cancellazione locali prendono la loro ora', ctx.store.mapStamps.data.a === 2000 && ctx.store.mapDeletes.data.c === 2000);
+  ctx.remote = { data: { a: '82', b: '8', d: 'new' }, mapStamps: { data: { a: 1500, b: 3000 } } };
+  vm.runInContext('mergeStampedMap("data", remote)', ctx);
+  ok('4h. pagina: vince la modifica piu\' recente di ciascun lato (a locale 2000 > 1500; b remoto 3000)', ctx.store.data.a === '85' && ctx.store.data.b === '8');
+  ok('4i. pagina: senza ore, il cloud riempie solo cio\' che manca', ctx.store.data.d === 'new');
+  ctx.remote = { data: {}, mapDeletes: { data: { b: 4000 } } };
+  vm.runInContext('mergeStampedMap("data", remote)', ctx);
+  ok('4j. pagina: una cancellazione piu\' recente dall\'altro dispositivo si applica', !('b' in ctx.store.data));
+  const apply = SRC.slice(SRC.indexOf('function applyRemoteAccountData('), SRC.indexOf('function applyRemoteAccountData(') + 60000);
+  ok('4k. il download segna prima le modifiche locali e alla fine assorbe il cloud senza segnarlo come modifica locale',
+    /try \{ stampLocalMapChanges\(\); \} catch \(_\) \{\}/.test(apply) && /try \{ store\.mapSyncBase = mapSnapshot\(\); \} catch \(_\) \{\}\s*\n\}/.test(apply));
+  ok('4l. l\'upload porta le ore', /mapStamps: \(!bak && store\.mapStamps\) \? store\.mapStamps : \{\},/.test(SRC));
+}
+
+console.log('');
+console.log('--- 5. lo stesso giorno aperto su due telefoni ---');
+{
+  const vm = await import('node:vm');
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(read('web/domain-merge.js'), ctx);
+  const N = ctx.NurvanNutritionMerge;
+  const mk = (food) => ({ mergeVersion: 1, present: true, days: [{ day: 'Giovedi', date: '2026-09-25', meals: [{ name: 'Pasti liberi', foods: [{ name: food, quantity: 100, unit: 'g' }] }] }] });
+  const a = mk('Yogurt'), b = mk('Mela');
+  N.ensureIds(a, true); N.ensureIds(b, true);
+  N.stamp(a, null, 1000); N.stamp(b, null, 2000);
+  const m = N.merge(a, b);
+  ok('5a. un solo giorno 25/09, con i cibi di entrambi i telefoni', m.days.length === 1 && m.days[0].meals.length === 1 && m.days[0].meals[0].foods.length === 2);
+  ok('5b. gli alimenti restano distinti (id casuali)', a.days[0].meals[0].foods[0].id !== b.days[0].meals[0].foods[0].id);
+}
+
+console.log('');
 if (failed) { console.log(failed + ' controlli del livello 2 (sincronizzazione) falliti.'); process.exit(1); }
 console.log('Tutti i controlli del livello 2 (sincronizzazione) passano.');

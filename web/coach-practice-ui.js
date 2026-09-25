@@ -1913,6 +1913,14 @@ async function submitClientInviteLogin() {
         token: payload.token, user: payload.user, role: 'athlete', inviteToken: store.inviteToken, clientShell: true
       }));
     } catch (_) {}
+    // "Resta connesso": which athlete's space this device reopens. The boot
+    // looked only in the browser session (set when the box is unticked), so
+    // with the box ticked - the default - every reload opened the shared
+    // pre-login copy, without the session: logged out each time.
+    try {
+      if (store.stayLoggedIn) localStorage.setItem('GS_CLIENT_ACTIVE', JSON.stringify({ user: payload.user, inviteToken: store.inviteToken || '' }));
+      else localStorage.removeItem('GS_CLIENT_ACTIVE');
+    } catch (_) {}
     if (typeof persist === 'function') persist();
     showOverlay('cp-invite', false);
     try {
@@ -6569,6 +6577,7 @@ function wrapPracticeHooks() {
       const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
       const shell = !!(store.clientShell || athlete);
       try { sessionStorage.removeItem('GS_SESSION_AUTH'); } catch (_) {}
+      try { localStorage.removeItem('GS_CLIENT_ACTIVE'); } catch (_) {}
       store.coachInboxReady = false;
       store.coachSeenEventId = 0;
       store.coachInboxByAccount = {};
