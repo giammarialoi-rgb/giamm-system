@@ -35,6 +35,7 @@ import {
   sanitizeCheckInTemplate,
   submitClientCheckIn
 } from "./server/coach-os/checkins.mjs";
+import { Entitlements, accountEntitlement, coachSeatState, loadAccount } from "./server/account/plans.mjs";
 import {
   buildDeterministicIntelligence,
   interpretAthleteBrain,
@@ -1121,9 +1122,12 @@ export function mountCoachPractice(app, deps) {
         "SELECT id, kind, payload, created_at, read_at FROM coach_events WHERE client_id = $1 ORDER BY created_at DESC LIMIT 20",
         [ctx.client.id]
       );
+      let entitlement = null;
+      try { entitlement = await accountEntitlement(pool, ctx.auth); } catch (err) { console.warn("CLIENT_PLAN", err && err.message); }
       return res.json({
         ok: true,
         client: clientRow(ctx.client, { includeIntake: true }),
+        entitlement,
         coachName: coach.rows[0]?.name || "Coach",
         coachOnline: !hide && isOnlineAt(coachLastSeen),
         coachLastSeen,
@@ -1691,10 +1695,13 @@ export function mountCoachPractice(app, deps) {
     if (unlocked && !hide) {
       await pool.query("UPDATE coach_licenses SET last_seen_at = NOW() WHERE user_id = $1", [auth.id]);
     }
+    let entitlement = null;
+    try { entitlement = await accountEntitlement(pool, auth); } catch (err) { console.warn("COACH_PLAN", err && err.message); }
     return res.json({
       ok: true,
       unlocked,
       role: "coach",
+      entitlement,
       license: lic.rows[0] || null,
       hidePresence: hide,
       allowVideocall: lic.rows[0] ? lic.rows[0].allow_videocall !== false : true,
@@ -1980,9 +1987,17 @@ export function mountCoachPractice(app, deps) {
       countParams
     );
     const total = count.rows[0]?.n || 0;
+    // Seats: the most recent links beyond the plan wait, nothing is blocked.
+    let seatState = null;
+    try { seatState = await coachSeatState(pool, coach.id); } catch (err) { console.warn("COACH_SEATS", err && err.message); }
     return res.json({
       ok: true,
-      clients: rows.rows.map(clientRow),
+      clients: rows.rows.map((r) => {
+        const row = clientRow(r);
+        row.seatInactive = !!(seatState && seatState.inactive.includes(String(r.id)));
+        return row;
+      }),
+      seats: seatState ? { limit: seatState.seats, active: seatState.active.length, waiting: seatState.inactive.length } : null,
       total,
       filter,
       sort,
@@ -2194,9 +2209,18 @@ export function mountCoachPractice(app, deps) {
   // Scheduled check-ins: the model lives on the coach-athlete relationship.
   // Saving it from the athlete's page marks it customized; "Applica a tutti"
   // copies it to the others that are not customized.
+  async function requireCoachFeature(coach, feature, res) {
+    const account = await loadAccount(pool, coach.id);
+    const why = Entitlements.explain(account, feature);
+    if (why.allowed) return true;
+    res.status(403).json({ error: "Disponibile con il piano " + Entitlements.planName(why.minPlan) + ".", code: "PLAN_REQUIRED", minPlan: why.minPlan, feature });
+    return false;
+  }
+
   app.put("/api/coach/clients/:id/check-in-template", async (req, res) => {
     const coach = await requireCoach(req, res);
     if (!coach) return;
+    if (!(req.body && req.body.off) && !(await requireCoachFeature(coach, "scheduled_checkins", res))) return;
     const client = await loadOwnedClient(coach, req.params.id, res);
     if (!client) return;
     const off = !!(req.body && req.body.off);
@@ -2221,6 +2245,7 @@ export function mountCoachPractice(app, deps) {
   app.post("/api/coach/clients/:id/check-in-template/apply-all", async (req, res) => {
     const coach = await requireCoach(req, res);
     if (!coach) return;
+    if (!(await requireCoachFeature(coach, "scheduled_checkins", res))) return;
     const client = await loadOwnedClient(coach, req.params.id, res);
     if (!client) return;
     if (!client.checkin_template) return res.status(400).json({ error: "Salva prima il modello di questo atleta." });

@@ -2627,6 +2627,8 @@ function applyClientPayloadToLocal(payload) {
 async function enterCoachClientView(domain, opts) {
   const id = store.coachWorkspace && store.coachWorkspace.clientId;
   if (!id) return;
+  // Therapy and exams on the coach side belong to Coach Pro.
+  if ((domain === 'therapy' || domain === 'exams') && !requirePlan('coach_therapy_exams')) return;
   // Isolate from personal training surface before loading client payload.
   try { window.__pinnedTraining = null; } catch (_) {}
   try { window.__editFinalizedKey = ''; } catch (_) {}
@@ -2951,6 +2953,7 @@ function athleteHomeHtml() {
     coachStatus +
     '<button class="btn btn-outline" style="margin-top:10px;font-size:11px;" onclick="reloadClientHome()">⟳ AGGIORNA</button>' +
     '</div>' +
+    planNoticesHtml() +
     scheduledCheckInHomeHtml() +
     athleteWaitingHomeHtml() +
     athleteHomeModulesHtml();
@@ -3003,6 +3006,7 @@ function renderCoachHub(c) {
     '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button></div>' +
     '<div id="cp-checkin-counter"></div>' +
+    '<div id="cp-seats-summary"></div>' +
     '<div id="cp-client-list"><div class="cp-help">Caricamento…</div></div>';
   loadCoachClientList();
   applyClientChrome();
@@ -3035,6 +3039,14 @@ async function loadCoachClientList() {
     store.__cpOrigin = payload.origin || '';
     const rows = payload.clients || [];
     store.__cpClientList = rows;
+    const seatsBox = document.getElementById('cp-seats-summary');
+    if (seatsBox) {
+      const s = payload.seats;
+      seatsBox.innerHTML = s
+        ? '<div class="cp-help" style="margin:0 0 10px;">Atleti: ' + s.active + (s.limit == null ? '' : ' su ' + s.limit) + ' posti del piano ' + esc(planDisplayName(currentPlanEffective().ownPlan)) +
+          (s.waiting ? ' · ' + s.waiting + ' in attesa di un posto' : '') + '</div>'
+        : '';
+    }
     ensureCoachHeaderControls(!!(store && store.coachSessionActive));
     if (!rows.length) {
       box.innerHTML = '<div class="cp-help">Nessun cliente. Aggiungine uno: nuovo (compilerà il questionario) o transizione (compili tu le info).</div>';
@@ -3050,7 +3062,8 @@ async function loadCoachClientList() {
         '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">' +
         '<div><div style="font-size:15px;font-weight:900;color:#fff;">' + esc(cl.displayName) +
         (cl.leaveRequested ? ' <span class="cp-badge" style="color:#c66;border-color:#c66;">FINE RICHIESTA</span>' : '') +
-        (cl.workoutLive ? ' <span class="cp-badge" style="color:#6c6;border-color:#6c6;">IN WORKOUT</span>' : '') + '</div>' +
+        (cl.workoutLive ? ' <span class="cp-badge" style="color:#6c6;border-color:#6c6;">IN WORKOUT</span>' : '') +
+        (cl.seatInactive ? ' <span class="cp-badge cp-seat-inactive" style="color:#aaa;border-color:#666;">OLTRE I POSTI</span>' : '') + '</div>' +
         '<div style="font-size:11px;color:#888;">@' + esc(cl.username) + ' · ' + esc(badge) + ' · ' + esc(paid) +
         (cl.unreadCount ? ' · ' + cl.unreadCount + ' nuovi' : '') +
         (cl.hasPendingChange ? ' · modifica da approvare' : '') + '</div>' +
@@ -4979,6 +4992,7 @@ async function loadExamCatalog() {
 }
 
 async function requestExamsFromClient(id) {
+  if (!requirePlan('coach_therapy_exams')) return;
   const cat = await loadExamCatalog();
   const def = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
   const catsHtml = (cat.categories || []).map(function (c) {
@@ -6094,6 +6108,7 @@ async function refreshAthleteMe() {
     const prevCheckInTemplate = JSON.stringify((store.clientProfile && store.clientProfile.checkInTemplate) || null);
     store.clientProfile = me.client || store.clientProfile;
     store.clientEvents = me.events || [];
+    onEntitlementReceived(me.entitlement);
     store.coachOnline = !!me.coachOnline;
     store.coachLastSeen = me.coachLastSeen || null;
     store.role = 'athlete';
@@ -6109,6 +6124,7 @@ async function refreshCoachStatus() {
   try {
     const s = await practiceFetch('/api/coach/status', { method: 'GET', headers: practiceHeaders(false) }, 12000);
     store.coachUnlocked = !!(s && s.unlocked);
+    onEntitlementReceived(s && s.entitlement);
     store.coachHidePresence = !!(s && s.hidePresence);
     store.coachAllowVideocall = s && s.allowVideocall !== false;
     if (s && s.featureFlags && typeof s.featureFlags === 'object') {

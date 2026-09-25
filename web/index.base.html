@@ -71,6 +71,8 @@
 <script src="food-search.js"></script>
 <script src="nutrition-targets.js"></script>
 <script src="checkin-schedule.js"></script>
+<script src="features.js"></script>
+<script src="entitlements.js"></script>
 <script src="cardio-library.js"></script>
 <script src="program-generator.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
@@ -4639,6 +4641,7 @@ function logoutAccount(){
   const wasClient = typeof isClientStorageContext === 'function' && isClientStorageContext();
   clearTimeout(accountSyncTimer);
   store.accountToken = null; store.accountUser = null;
+  try { clearAccountEntitlement(); } catch (_) {}
   if (wasClient) {
     try { persist(); } catch (_) {}
     try { if (typeof clearClientShellLock === 'function') clearClientShellLock(); } catch (_) {}
@@ -5962,6 +5965,7 @@ async function syncAccountData(download=false){
     try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
     const response = await accountRequest('/api/account/me', { method: 'GET' });
     const payload = await readApiJson(response);
+    try { onEntitlementReceived(payload.entitlement); } catch (_) {}
     const remote = payload.data || {};
     const localScore = accountDataScore(store, DATA);
     const remoteScore = accountDataScore(remote, remote.activeProgram);
@@ -6240,7 +6244,7 @@ function currentNutritionTarget(day) {
     prescribed: nutritionPrescribed(),
     own: nutritionOwnTarget(),
     plan: nutritionPlanTarget(),
-    proposed: nutritionProposed(),
+    proposed: planCan('proposed_target') ? nutritionProposed() : null,
     dayType: nutritionDayType(day)
   });
 }
@@ -7813,6 +7817,8 @@ function hideImportProgress() {
 }
 
 async function processUniversalFile(source, actionIntent = 'IMPORT') {
+  // Imports per month come from the plan (web/features.json).
+  if (actionIntent === 'IMPORT' && !requireImportAllowed()) { hideImportProgress(); return; }
   return withBusy(function () {
     return processUniversalFileInner(source, actionIntent);
   }, actionIntent === 'IMPORT' ? 'Analisi scheda…' : 'Caricamento…', { immediate: true });
@@ -10946,6 +10952,7 @@ function preWorkoutIntelHtml() {
 }
 
 function exportWorkoutHistory() {
+  if (!requirePlan('export')) return;
   const rows = [['data', 'settimana', 'sessione', 'esercizio', 'serie', 'reps', 'carico', 'note']];
   const data = (store && store.data) || {};
   const re = /^w(\d+)_d(\d+)_e(\d+)_s(\d+)_(load|reps|rir|done)$/;
@@ -15566,7 +15573,9 @@ function openEditNutritionTargetsModal() {
   overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10120;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
   overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
   let body = '';
-  if (coach) {
+  if (coach && !planCan('prescribed_target')) {
+    body = '<div style="font-size:10px;color:var(--gold);font-weight:800;">PRESCRIZIONE</div>' + planLockedHtml('prescribed_target');
+  } else if (coach) {
     // The coach or nutritionist prescribes: from then on the athlete sees only this.
     const p = pres || {};
     const prop = nutritionProposed();
@@ -15596,7 +15605,7 @@ function openEditNutritionTargetsModal() {
       '<div style="font-size:10px;color:#888;margin-top:10px;">Per cambiarlo, parlane con ' + esc(pres.by || 'il tuo coach') + '.</div>';
   } else {
     // No prescription: the athlete accepts the proposal or writes their own.
-    const prop = nutritionProposed();
+    const prop = planCan('proposed_target') ? nutritionProposed() : null;
     const own = nutritionOwnTarget();
     const start = own || (prop && prop.target) || nutritionPlanTarget() || {};
     const inputs = nutritionProfileInputs();
@@ -15611,7 +15620,7 @@ function openEditNutritionTargetsModal() {
           '<div style="font-size:9px;color:#777;margin-top:4px;line-height:1.4;">' + esc(N ? N.DISCLAIMER : '') + '</div>' +
           '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="acceptProposedNutritionTarget()">' + (own ? 'TORNA AL PROPOSTO' : 'USA IL PROPOSTO') + '</button>' +
           '</div>'
-        : '<div style="font-size:10px;color:#888;margin:8px 0 10px;line-height:1.4;">Per una proposta servono ' + esc((prop && prop.missing || []).join(', ')) + ' nel <a href="#" onclick="document.getElementById(\'edit-nutr-targets-modal\').remove();navigate(\'profile\');return false;" style="color:var(--gold);">profilo</a>.</div>') +
+        : !planCan('proposed_target') ? planLockedHtml('proposed_target') : '<div style="font-size:10px;color:#888;margin:8px 0 10px;line-height:1.4;">Per una proposta servono ' + esc((prop && prop.missing || []).join(', ')) + ' nel <a href="#" onclick="document.getElementById(\'edit-nutr-targets-modal\').remove();navigate(\'profile\');return false;" style="color:var(--gold);">profilo</a>.</div>') +
       '<div style="font-size:10px;color:#ccc;margin-bottom:6px;">Oppure scrivi il tuo</div>' +
       baseFields({ kcal: start.kcal, pro: start.pro, carb: start.carb, fat: start.fat }, false) +
       '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="saveEditNutritionTargets()">SALVA COME MIO</button>' +
@@ -15727,6 +15736,7 @@ function readTargetFields(prefix) {
 function saveEditNutritionTargets() {
   const base = readTargetFields('edit-nutr-target');
   if (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox()) {
+    if (!requirePlan('prescribed_target')) return;
     if (!(base.kcal > 0)) { showToast('Scrivi almeno le kcal', 'error'); return; }
     const variants = document.getElementById('edit-nutr-variants');
     const withVariants = !!(variants && variants.checked);
@@ -17544,10 +17554,10 @@ if (typeof window !== 'undefined') {
 }
 
 function renderSettings(c) {
-  const currentPlan = EntitlementService.getPlan();
-  const planId = String(currentPlan || 'free').toLowerCase();
-  const planLabel = t(planId);
-  const planDesc = t('planDesc_' + planId);
+  // The plan, from the one place that knows it (web/entitlements.js).
+  const planEff = currentPlanEffective();
+  const planLabel = planDisplayName(planEff.plan) + (planEff.inherited ? ' · dal tuo coach' : '') + (planEff.trialActive ? ' · prova' : '') + (planEff.status === 'grace' ? ' · scaduto, in tolleranza' : '');
+  const planDesc = (planLib() ? planLib().planInfo(planEff.plan).tagline : '') || '';
   const currentLang = I18nService.getLanguage();
   const languages = I18nService.getAvailableLanguages();
 
@@ -17822,49 +17832,10 @@ function importFullDatabaseBackup(input) {
 // TASK 20: PRICING SCREEN RENDERER
 // ====================================================
 function renderPricing(c) {
-  const plans = PricingService.getPlans();
-  const currentPlan = EntitlementService.getPlan();
-
-  let html = `
-    <div style="margin-bottom:14px;text-align:center;">
-      <span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">NURVAN PRO</span>
-      <h1 style="color:#fff;margin:4px 0 0;font-size:22px;">Piani & Abbonamenti</h1>
-      <p style="font-size:11px;color:#aaa;margin-top:4px;">I piani a pagamento non sono disponibili in questa versione. Nessun checkout e nessun addebito.</p>
-    </div>
-    <div class="card" style="margin-bottom:14px;text-align:center;border:1px solid #444;">
-      <div style="font-size:12px;color:#ccc;">Pagamenti</div>
-      <div style="font-size:18px;font-weight:900;color:var(--gold);margin:4px 0;">Non disponibile</div>
-      <div style="font-size:11px;color:#888;margin-bottom:8px;">Stripe e i piani Pro non sono attivi. L'app resta usabile con il piano attuale, senza pagamento finto.</div>
-    </div>
-
-    <div class="pricing-grid">
-      ${plans.map(p => {
-        const isCurrent = p.name.toUpperCase() === currentPlan.toUpperCase();
-        return `
-          <div class="pricing-card ${p.popular ? 'popular' : ''}">
-            ${p.popular ? '<div style="position:absolute;top:10px;right:10px;background:var(--gold);color:#000;font-size:9px;font-weight:900;padding:2px 8px;border-radius:10px;">PIÙ POPOLARE</div>' : ''}
-            <div>
-              <span style="font-size:16px;font-weight:900;color:${p.popular ? 'var(--gold)' : '#fff'};">${p.name}</span>
-              <div style="margin:10px 0;">
-                <span style="font-size:26px;font-weight:900;color:#fff;">${pricingConfig.symbol}${p.price}</span>
-                <span style="font-size:11px;color:#888;"> / ${p.period === 'month' ? 'mese' : (p.period === 'once' ? 'per sempre' : 'base')}</span>
-              </div>
-              <p style="font-size:11px;color:#ccc;margin-bottom:12px;line-height:1.4;">${p.description}</p>
-            </div>
-            <div>
-              <button class="btn btn-outline" style="width:100%;font-size:11px;padding:10px;" disabled aria-disabled="true" title="Pagamenti non disponibili">
-                ${isCurrent ? 'PIANO ATTUALE' : 'NON DISPONIBILE'}
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('')}
-    </div>
-  `;
-
-  c.innerHTML = html;
+  // The four plans from web/features.json, the current one highlighted,
+  // "Contattaci" instead of a purchase. See web/plans-ui.js.
+  return renderPlansPricing(c);
 }
-
 function switchPlan(planName) {
   if (typeof showToast === 'function') {
     showToast('Pagamenti non disponibili. Il piano non è stato cambiato' + (planName ? (' (' + planName + ')') : '') + '.', 'error');
@@ -17983,6 +17954,7 @@ function computeHomeReadinessHtml() {
   } catch (_) { return ''; }
 }
 function exportStatsCsv() {
+  if (!requirePlan('export')) return;
   return withBusy(function () {
     const rows = [['data', 'settimana', 'sessione', 'esercizio', 'serie', 'reps', 'carico', 'note']];
     const logs = (store && Array.isArray(store.logs)) ? store.logs : [];
@@ -18708,6 +18680,7 @@ function renderPrograms(c){
 }
 
 function exportActiveProgram() {
+  if (!requirePlan('export')) return;
   if (!DATA) {
     if (typeof showToast === 'function') showToast("Nessun programma attivo da esportare", "error");
     return;
@@ -19870,8 +19843,10 @@ async function confirmImportAndActivate() {
   const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : (typeof programImportState !== 'undefined' ? programImportState : null);
   if (!pState || !pState.canonicalProgram) return;
   if (pState.isConfirming) return;
+  if (!requireImportAllowed()) return;
   const nativeCoachImport = !!(store && store.__coachOsNativeImport);
   if (store && store.__cpCoachLibraryImport && !nativeCoachImport && typeof saveCanonicalToCoachLibrary === 'function') {
+    recordImportUse();
     return withBusy(function () { return saveCanonicalToCoachLibrary(pState.canonicalProgram, pState.filename || ''); }, 'Salvo nel mio database…', { immediate: true });
   }
   const peek = pState.canonicalProgram;
@@ -19910,6 +19885,7 @@ async function confirmImportAndActivate() {
       if (!loadChoice) return;
       if (!loadChoice.presumed && !loadChoice.marked) stripPresumedLoads(selectedProgram);
     }
+    recordImportUse();
     return withBusy(
       function () { return saveCanonicalToCoachLibrary(selectedProgram, pState.filename || ''); },
       'Salvo nel Coach Database…',
@@ -19929,6 +19905,7 @@ async function confirmImportAndActivate() {
     choices.importPresumed = !!loadChoice.presumed;
     choices.importMarked = !!loadChoice.marked;
   }
+  recordImportUse();
   return withBusy(function () { return confirmImportAndActivateInner(choices, domainOnly); }, domainOnly ? 'Salvataggio…' : 'Attivazione scheda…', { immediate: true });
 }
 
@@ -20269,6 +20246,7 @@ function switchImportInputMode(mode) {
 }
 
 function handleImportTextSubmit() {
+  if (!requireImportAllowed()) return;
   const txt = $('import-raw-text')?.value;
   if (!txt || !txt.trim()) {
     if (typeof showToast === 'function') showToast('Inserisci del testo prima di analizzare', 'error');
@@ -20529,6 +20507,7 @@ function renderHome(c) {
         <button class="btn btn-outline" style="flex:1;font-size:12px;height:55px;border-color:var(--gold);color:var(--gold);" onclick="navigate('${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'clientChat' : 'programs'}')">${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'CHAT COACH' : 'PROGRAMMI'}</button>
       </div></div></div>
 
+    ${planNoticesHtml()}
     ${scheduledCheckInHomeHtml()}
     ${lastSessionHomeCardHtml()}
     ${computeHomeReadinessHtml()}
@@ -23005,6 +22984,7 @@ function shareOrSavePdfBlob(blob, filename, shareText) {
   reader.readAsDataURL(blob);
 }
 async function exportWorkoutPdf() {
+  if (!requirePlan('export')) return;
   const opts = collectWorkoutPdfExportOpts();
   if (!opts.loadMode) {
     alert('Scegli cosa includere nei carichi: già registrati, previsti, entrambi o solo schema.');
@@ -23040,6 +23020,7 @@ async function exportWorkoutPdf() {
 // PDF) with skipTraining:true so it renders on its own instead of requiring
 // a training program / going through the workout export modal.
 function exportNutritionPdf() {
+  if (!requirePlan('export')) return;
   if (!DATA || !DATA.nutrition || !Array.isArray(DATA.nutrition.days) || !DATA.nutrition.days.length) {
     alert('Nessuna alimentazione da esportare.');
     return;
@@ -23609,11 +23590,7 @@ function finalizeWorkout(){
   } catch (_) { prCount = 0; }
 
   let hasGold = false;
-  try {
-    if (typeof EntitlementService !== 'undefined' && EntitlementService.getPlan) {
-      hasGold = String(EntitlementService.getPlan() || '').toLowerCase() === 'gold';
-    }
-  } catch (_) {}
+  try { hasGold = planCan('gold_frame'); } catch (_) {}
 
   const logEntry = {
     id: 'sess_' + Date.now(),
@@ -25193,7 +25170,7 @@ function renderProgressCenter(container) {
   const lastBw = snap.bodyWeight && snap.bodyWeight.length ? snap.bodyWeight[snap.bodyWeight.length - 1] : null;
   const range = window.__progressRange || 'all';
   const from = progressRangeStart(range);
-  const logs = (store.logs || (DATA && DATA.logs) || []).filter(function (row) {
+  const logs = historyVisibleLogs(store.logs || (DATA && DATA.logs) || []).filter(function (row) {
     const at = new Date(row.at || row.date || 0).getTime();
     return at >= from;
   });
@@ -26698,7 +26675,10 @@ function renderStats(c){
   // Retroattivo davvero: ogni seduta finalizzata si riapre e si condivide,
   // non solo le ultime dodici. Di default la lista e' corta; MOSTRA TUTTE la
   // allunga fino alla prima.
-  const histAll = (store.logs || []).slice().reverse();
+  // The plan decides how far back the list goes; older sessions stay saved.
+  const histVisible = historyVisibleLogs(store.logs || []);
+  const histHiddenNote = historyHiddenNoteHtml(store.logs || [], histVisible);
+  const histAll = histVisible.slice().reverse();
   const showAllHist = !!(store.prefs && store.prefs.statsHistoryAll);
   const hist = (showAllHist ? histAll : histAll.slice(0, 12)).map(function (row) {
     const hw = Number(row.week) || 1;
@@ -26727,7 +26707,7 @@ function renderStats(c){
     </div>` : ''}
     ${renderMuscleMap(snap.muscles, { cardioMinutes: (last && last.cardioMinutes) || live.cardioMinutes || 0 })}
     ${renderCheckFisicoCardHtml()}
-    ${hist ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:11px;font-weight:800;color:var(--gold);">CRONOLOGIA SESSIONI <span style="color:#666;font-weight:600;">· ' + histAll.length + '</span></div><button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;" onclick="toggleStatsHistory()">' + (store.prefs && store.prefs.statsHistoryOpen === false ? '▸' : '✕') + '</button></div>' + ((store.prefs && store.prefs.statsHistoryOpen === false) ? '' : (hist + (histAll.length > 12 ? '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="toggleStatsHistoryAll()">' + (showAllHist ? 'MOSTRA SOLO LE ULTIME 12' : 'MOSTRA TUTTE LE ' + histAll.length + ' SEDUTE') + '</button>' : ''))) + '</div>' : ''}
+    ${(hist || histHiddenNote) ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:11px;font-weight:800;color:var(--gold);">CRONOLOGIA SESSIONI <span style="color:#666;font-weight:600;">· ' + histAll.length + '</span></div><button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;" onclick="toggleStatsHistory()">' + (store.prefs && store.prefs.statsHistoryOpen === false ? '▸' : '✕') + '</button></div>' + ((store.prefs && store.prefs.statsHistoryOpen === false) ? '' : (hist + histHiddenNote + (histAll.length > 12 ? '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="toggleStatsHistoryAll()">' + (showAllHist ? 'MOSTRA SOLO LE ULTIME 12' : 'MOSTRA TUTTE LE ' + histAll.length + ' SEDUTE') + '</button>' : ''))) + '</div>' : ''}
     <div class="card" style="margin-bottom:12px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;"><h2>Statistiche</h2><button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="exportStatsCsv()">Esporta</button></div>
       <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -27453,6 +27433,7 @@ function openCheckFisicoPdfModal(mode) {
   m.style.display = 'flex';
 }
 function exportCheckFisicoPdf() {
+  if (!requirePlan('export')) return;
   openCheckFisicoPdfModal('export');
 }
 function sendCheckFisicoToCoach() {
@@ -27503,6 +27484,7 @@ async function openSavedCheckFisico(id) {
   document.body.appendChild(overlay);
 }
 function exportSavedCheckFisico(id) {
+  if (!requirePlan('export')) return;
   window.__checkFisicoFocusId = id;
   closeSavedRecordOverlay();
   openCheckFisicoPdfModal('export');

@@ -71,6 +71,8 @@
 <script src="food-search.js"></script>
 <script src="nutrition-targets.js"></script>
 <script src="checkin-schedule.js"></script>
+<script src="features.js"></script>
+<script src="entitlements.js"></script>
 <script src="cardio-library.js"></script>
 <script src="program-generator.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
@@ -3050,7 +3052,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MEAL-PHOTO-V1",
-        schemaTarget: "0014",
+        schemaTarget: "0015",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -33159,40 +33161,9 @@ if (typeof window !== 'undefined') {
 // ====================================================
 
 const pricingConfig = {
+  // Prices and plans are in web/features.json.
   currency: "EUR",
-  symbol: "€",
-  plans: {
-    FREE: {
-      id: "free",
-      name: "Free",
-      price: 0,
-      period: "Sempre gratuito",
-      features: ["Tracciamento base workout", "Statistiche e tonnellaggio", "14 giorni di Prova Gratuita Silver"]
-    },
-    BRONZE: {
-      id: "bronze",
-      name: "Bronze Athlete",
-      price: 4.99,
-      period: "/mese",
-      lifetimePrice: 49.99,
-      features: ["Nessuna pubblicità", "Calendario e timeline giornaliera", "Rest timer avanzato"]
-    },
-    SILVER: {
-      id: "silver",
-      name: "Silver Pro",
-      price: 9.99,
-      period: "/mese",
-      lifetimePrice: 99.99,
-      features: ["Importazione illimitata Excel / PDF / Word", "Coach AI & Proposte strutturate con 1-click", "Database Alimentare, Integratori ed Examine.com"]
-    },
-    GOLD: {
-      id: "gold",
-      name: "Gold Lifetime Master",
-      price: 199.99,
-      period: "Una tantum per sempre",
-      features: ["Accesso a vita a tutte le funzionalità Pro", "Aggiornamenti a vita inclusi", "Supporto prioritario e accesso anticipato alle novità"]
-    }
-  }
+  symbol: "€"
 };
 
 const I18nService = {
@@ -34869,149 +34840,52 @@ const CoachAIService = {
   }
 };
 
+// Plans live on the server and are read through web/entitlements.js
+// (NurvanEntitlements.can). This object only forwards to it, for the older
+// callers: there is no client-side plan switch and no client-side trial any
+// more, so no page can grant itself a plan.
 const EntitlementService = {
-  plans: {
-    free: {
-      id: "free",
-      name: "Free Tier",
-      priceMonthly: 0,
-      priceLifetime: 0,
-      features: ["basic_training", "basic_stats", "local_storage"]
-    },
-    bronze: {
-      id: "bronze",
-      name: "Bronze Athlete",
-      priceMonthly: 4.99,
-      priceLifetime: 49.99,
-      features: ["basic_training", "basic_stats", "local_storage", "ads_free", "calendar", "rest_timer"]
-    },
-    silver: {
-      id: "silver",
-      name: "Silver Pro",
-      priceMonthly: 9.99,
-      priceLifetime: 99.99,
-      features: ["basic_training", "basic_stats", "local_storage", "ads_free", "calendar", "rest_timer", "universal_import_full", "advanced_ai", "food_db", "supplement_db", "therapy_manager", "exam_tracker", "full_cloud_backup"]
-    },
-    gold: {
-      id: "gold",
-      name: "Gold Lifetime Master",
-      priceMonthly: 0,
-      priceLifetime: 199.99,
-      features: ["basic_training", "basic_stats", "local_storage", "ads_free", "calendar", "rest_timer", "universal_import_full", "advanced_ai", "food_db", "supplement_db", "therapy_manager", "exam_tracker", "full_cloud_backup", "priority_support", "beta_access", "lifetime_updates"]
-    }
+  account() {
+    try {
+      if (typeof currentAccountEntitlement === 'function') return currentAccountEntitlement();
+    } catch (e) {}
+    return { plan: 'free' };
   },
-
-  currentPlan: "free",
-  trialActive: false,
-  trialEnd: null,
-
+  lib() {
+    return (typeof self !== 'undefined' && self.NurvanEntitlements) || null;
+  },
   getPlan() {
-    if (typeof store !== 'undefined' && store && store.accountPlan) {
-      const sp = store.accountPlan.toLowerCase();
-      if (this.isTrialActive()) return "silver";
-      return sp;
-    }
-    if (this.isTrialActive()) {
-      return "silver";
-    }
-    return this.currentPlan;
+    const E = this.lib();
+    return E ? E.effective(this.account()).plan : 'free';
   },
-
-  setPlan(planId) {
-    const key = (planId || "").toLowerCase().trim();
-    if (this.plans[key]) {
-      this.currentPlan = key;
-      this.trialActive = false;
-      this.trialEnd = null;
-      if (typeof store !== 'undefined' && store) {
-        store.accountPlan = key.toUpperCase();
-      }
-      try {
-        localStorage.setItem("GS_PLAN", key);
-      } catch(e) {}
-    }
-  },
-
-  startTrial() {
-    return this.start14DayTrial();
-  },
-
-  start14DayTrial() {
-    this.trialActive = true;
-    this.trialEnd = Date.now() + (14 * 24 * 60 * 60 * 1000);
-    if (typeof store !== 'undefined' && store) {
-      store.accountTrialStart = Date.now();
-    }
-    try {
-      localStorage.setItem("GS_TRIAL_END", this.trialEnd.toString());
-    } catch(e) {}
-    return { ok: true, trialEnd: this.trialEnd };
-  },
-
   isTrialActive() {
-    if (typeof store !== 'undefined' && store && store.accountTrialStart !== undefined && store.accountTrialStart !== null) {
-      const trialStart = parseInt(store.accountTrialStart, 10);
-      return (Date.now() - trialStart) < (14 * 24 * 60 * 60 * 1000);
-    }
-    return Boolean(this.trialActive && this.trialEnd && Date.now() < this.trialEnd);
+    const E = this.lib();
+    return E ? !!E.effective(this.account()).trialActive : false;
   },
-
+  can(featureName, usage) {
+    const E = this.lib();
+    return E ? E.can(this.account(), featureName, usage) : false;
+  },
+  explain(featureName, usage) {
+    const E = this.lib();
+    return E ? E.explain(this.account(), featureName, usage) : { allowed: false, reason: 'unknown' };
+  },
   hasFeature(featureName) {
-    const activePlanId = this.getPlan();
-    const plan = this.plans[activePlanId] || this.plans.free;
-    return (plan.features || []).includes(featureName);
-  },
-
-  init() {
-    try {
-      const savedPlan = localStorage.getItem("GS_PLAN");
-      if (savedPlan && this.plans[savedPlan.toLowerCase()]) this.currentPlan = savedPlan.toLowerCase();
-      const savedTrial = localStorage.getItem("GS_TRIAL_END");
-      if (savedTrial) {
-        const trialTime = parseInt(savedTrial, 10);
-        if (Date.now() < trialTime) {
-          this.trialActive = true;
-          this.trialEnd = trialTime;
-        }
-      }
-    } catch(e) {}
+    return this.can(featureName);
   }
 };
 
 const PricingService = {
-  getPlans() { return Object.values(EntitlementService.plans); },
+  getPlans() {
+    const reg = (typeof self !== 'undefined' && self.NURVAN_FEATURES) || { plans: [] };
+    return reg.plans.slice();
+  },
   getCurrentPlan() { return EntitlementService.getPlan(); }
 };
 
+// The app shows no advertising; nothing to decide per plan.
 const AdsService = {
-  shouldShowAd(placement) {
-    let activePlan = EntitlementService.getPlan();
-    if (typeof store !== 'undefined' && store && store.accountPlan) {
-      const storePlan = store.accountPlan.toLowerCase();
-      if (storePlan === 'free') {
-        const isTrialActive = EntitlementService.isTrialActive();
-        if (!isTrialActive) activePlan = 'free';
-        else activePlan = 'silver';
-      } else {
-        activePlan = storePlan;
-      }
-    }
-    if (activePlan !== 'free') return false;
-    if (EntitlementService.hasFeature("ads_free")) return false;
-    const protectedPlacements = [
-      "workout",
-      "workout_logger",
-      "logger",
-      "rest_timer",
-      "timer",
-      "therapy",
-      "medical",
-      "import",
-      "universal_import"
-    ];
-    if (protectedPlacements.includes((placement || '').toLowerCase())) return false;
-    return true;
-  }
+  shouldShowAd() { return false; }
 };
 
 const BackupService = {
@@ -37639,6 +37513,7 @@ function logoutAccount(){
   const wasClient = typeof isClientStorageContext === 'function' && isClientStorageContext();
   clearTimeout(accountSyncTimer);
   store.accountToken = null; store.accountUser = null;
+  try { clearAccountEntitlement(); } catch (_) {}
   if (wasClient) {
     try { persist(); } catch (_) {}
     try { if (typeof clearClientShellLock === 'function') clearClientShellLock(); } catch (_) {}
@@ -38962,6 +38837,7 @@ async function syncAccountData(download=false){
     try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
     const response = await accountRequest('/api/account/me', { method: 'GET' });
     const payload = await readApiJson(response);
+    try { onEntitlementReceived(payload.entitlement); } catch (_) {}
     const remote = payload.data || {};
     const localScore = accountDataScore(store, DATA);
     const remoteScore = accountDataScore(remote, remote.activeProgram);
@@ -39240,7 +39116,7 @@ function currentNutritionTarget(day) {
     prescribed: nutritionPrescribed(),
     own: nutritionOwnTarget(),
     plan: nutritionPlanTarget(),
-    proposed: nutritionProposed(),
+    proposed: planCan('proposed_target') ? nutritionProposed() : null,
     dayType: nutritionDayType(day)
   });
 }
@@ -40813,6 +40689,8 @@ function hideImportProgress() {
 }
 
 async function processUniversalFile(source, actionIntent = 'IMPORT') {
+  // Imports per month come from the plan (web/features.json).
+  if (actionIntent === 'IMPORT' && !requireImportAllowed()) { hideImportProgress(); return; }
   return withBusy(function () {
     return processUniversalFileInner(source, actionIntent);
   }, actionIntent === 'IMPORT' ? 'Analisi scheda…' : 'Caricamento…', { immediate: true });
@@ -43946,6 +43824,7 @@ function preWorkoutIntelHtml() {
 }
 
 function exportWorkoutHistory() {
+  if (!requirePlan('export')) return;
   const rows = [['data', 'settimana', 'sessione', 'esercizio', 'serie', 'reps', 'carico', 'note']];
   const data = (store && store.data) || {};
   const re = /^w(\d+)_d(\d+)_e(\d+)_s(\d+)_(load|reps|rir|done)$/;
@@ -48566,7 +48445,9 @@ function openEditNutritionTargetsModal() {
   overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10120;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
   overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
   let body = '';
-  if (coach) {
+  if (coach && !planCan('prescribed_target')) {
+    body = '<div style="font-size:10px;color:var(--gold);font-weight:800;">PRESCRIZIONE</div>' + planLockedHtml('prescribed_target');
+  } else if (coach) {
     // The coach or nutritionist prescribes: from then on the athlete sees only this.
     const p = pres || {};
     const prop = nutritionProposed();
@@ -48596,7 +48477,7 @@ function openEditNutritionTargetsModal() {
       '<div style="font-size:10px;color:#888;margin-top:10px;">Per cambiarlo, parlane con ' + esc(pres.by || 'il tuo coach') + '.</div>';
   } else {
     // No prescription: the athlete accepts the proposal or writes their own.
-    const prop = nutritionProposed();
+    const prop = planCan('proposed_target') ? nutritionProposed() : null;
     const own = nutritionOwnTarget();
     const start = own || (prop && prop.target) || nutritionPlanTarget() || {};
     const inputs = nutritionProfileInputs();
@@ -48611,7 +48492,7 @@ function openEditNutritionTargetsModal() {
           '<div style="font-size:9px;color:#777;margin-top:4px;line-height:1.4;">' + esc(N ? N.DISCLAIMER : '') + '</div>' +
           '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="acceptProposedNutritionTarget()">' + (own ? 'TORNA AL PROPOSTO' : 'USA IL PROPOSTO') + '</button>' +
           '</div>'
-        : '<div style="font-size:10px;color:#888;margin:8px 0 10px;line-height:1.4;">Per una proposta servono ' + esc((prop && prop.missing || []).join(', ')) + ' nel <a href="#" onclick="document.getElementById(\'edit-nutr-targets-modal\').remove();navigate(\'profile\');return false;" style="color:var(--gold);">profilo</a>.</div>') +
+        : !planCan('proposed_target') ? planLockedHtml('proposed_target') : '<div style="font-size:10px;color:#888;margin:8px 0 10px;line-height:1.4;">Per una proposta servono ' + esc((prop && prop.missing || []).join(', ')) + ' nel <a href="#" onclick="document.getElementById(\'edit-nutr-targets-modal\').remove();navigate(\'profile\');return false;" style="color:var(--gold);">profilo</a>.</div>') +
       '<div style="font-size:10px;color:#ccc;margin-bottom:6px;">Oppure scrivi il tuo</div>' +
       baseFields({ kcal: start.kcal, pro: start.pro, carb: start.carb, fat: start.fat }, false) +
       '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="saveEditNutritionTargets()">SALVA COME MIO</button>' +
@@ -48727,6 +48608,7 @@ function readTargetFields(prefix) {
 function saveEditNutritionTargets() {
   const base = readTargetFields('edit-nutr-target');
   if (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox()) {
+    if (!requirePlan('prescribed_target')) return;
     if (!(base.kcal > 0)) { showToast('Scrivi almeno le kcal', 'error'); return; }
     const variants = document.getElementById('edit-nutr-variants');
     const withVariants = !!(variants && variants.checked);
@@ -50544,10 +50426,10 @@ if (typeof window !== 'undefined') {
 }
 
 function renderSettings(c) {
-  const currentPlan = EntitlementService.getPlan();
-  const planId = String(currentPlan || 'free').toLowerCase();
-  const planLabel = t(planId);
-  const planDesc = t('planDesc_' + planId);
+  // The plan, from the one place that knows it (web/entitlements.js).
+  const planEff = currentPlanEffective();
+  const planLabel = planDisplayName(planEff.plan) + (planEff.inherited ? ' · dal tuo coach' : '') + (planEff.trialActive ? ' · prova' : '') + (planEff.status === 'grace' ? ' · scaduto, in tolleranza' : '');
+  const planDesc = (planLib() ? planLib().planInfo(planEff.plan).tagline : '') || '';
   const currentLang = I18nService.getLanguage();
   const languages = I18nService.getAvailableLanguages();
 
@@ -50822,49 +50704,10 @@ function importFullDatabaseBackup(input) {
 // TASK 20: PRICING SCREEN RENDERER
 // ====================================================
 function renderPricing(c) {
-  const plans = PricingService.getPlans();
-  const currentPlan = EntitlementService.getPlan();
-
-  let html = `
-    <div style="margin-bottom:14px;text-align:center;">
-      <span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">NURVAN PRO</span>
-      <h1 style="color:#fff;margin:4px 0 0;font-size:22px;">Piani & Abbonamenti</h1>
-      <p style="font-size:11px;color:#aaa;margin-top:4px;">I piani a pagamento non sono disponibili in questa versione. Nessun checkout e nessun addebito.</p>
-    </div>
-    <div class="card" style="margin-bottom:14px;text-align:center;border:1px solid #444;">
-      <div style="font-size:12px;color:#ccc;">Pagamenti</div>
-      <div style="font-size:18px;font-weight:900;color:var(--gold);margin:4px 0;">Non disponibile</div>
-      <div style="font-size:11px;color:#888;margin-bottom:8px;">Stripe e i piani Pro non sono attivi. L'app resta usabile con il piano attuale, senza pagamento finto.</div>
-    </div>
-
-    <div class="pricing-grid">
-      ${plans.map(p => {
-        const isCurrent = p.name.toUpperCase() === currentPlan.toUpperCase();
-        return `
-          <div class="pricing-card ${p.popular ? 'popular' : ''}">
-            ${p.popular ? '<div style="position:absolute;top:10px;right:10px;background:var(--gold);color:#000;font-size:9px;font-weight:900;padding:2px 8px;border-radius:10px;">PIÙ POPOLARE</div>' : ''}
-            <div>
-              <span style="font-size:16px;font-weight:900;color:${p.popular ? 'var(--gold)' : '#fff'};">${p.name}</span>
-              <div style="margin:10px 0;">
-                <span style="font-size:26px;font-weight:900;color:#fff;">${pricingConfig.symbol}${p.price}</span>
-                <span style="font-size:11px;color:#888;"> / ${p.period === 'month' ? 'mese' : (p.period === 'once' ? 'per sempre' : 'base')}</span>
-              </div>
-              <p style="font-size:11px;color:#ccc;margin-bottom:12px;line-height:1.4;">${p.description}</p>
-            </div>
-            <div>
-              <button class="btn btn-outline" style="width:100%;font-size:11px;padding:10px;" disabled aria-disabled="true" title="Pagamenti non disponibili">
-                ${isCurrent ? 'PIANO ATTUALE' : 'NON DISPONIBILE'}
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('')}
-    </div>
-  `;
-
-  c.innerHTML = html;
+  // The four plans from web/features.json, the current one highlighted,
+  // "Contattaci" instead of a purchase. See web/plans-ui.js.
+  return renderPlansPricing(c);
 }
-
 function switchPlan(planName) {
   if (typeof showToast === 'function') {
     showToast('Pagamenti non disponibili. Il piano non è stato cambiato' + (planName ? (' (' + planName + ')') : '') + '.', 'error');
@@ -50983,6 +50826,7 @@ function computeHomeReadinessHtml() {
   } catch (_) { return ''; }
 }
 function exportStatsCsv() {
+  if (!requirePlan('export')) return;
   return withBusy(function () {
     const rows = [['data', 'settimana', 'sessione', 'esercizio', 'serie', 'reps', 'carico', 'note']];
     const logs = (store && Array.isArray(store.logs)) ? store.logs : [];
@@ -51708,6 +51552,7 @@ function renderPrograms(c){
 }
 
 function exportActiveProgram() {
+  if (!requirePlan('export')) return;
   if (!DATA) {
     if (typeof showToast === 'function') showToast("Nessun programma attivo da esportare", "error");
     return;
@@ -52870,8 +52715,10 @@ async function confirmImportAndActivate() {
   const pState = (typeof window !== 'undefined' && window.programImportState) ? window.programImportState : (typeof programImportState !== 'undefined' ? programImportState : null);
   if (!pState || !pState.canonicalProgram) return;
   if (pState.isConfirming) return;
+  if (!requireImportAllowed()) return;
   const nativeCoachImport = !!(store && store.__coachOsNativeImport);
   if (store && store.__cpCoachLibraryImport && !nativeCoachImport && typeof saveCanonicalToCoachLibrary === 'function') {
+    recordImportUse();
     return withBusy(function () { return saveCanonicalToCoachLibrary(pState.canonicalProgram, pState.filename || ''); }, 'Salvo nel mio database…', { immediate: true });
   }
   const peek = pState.canonicalProgram;
@@ -52910,6 +52757,7 @@ async function confirmImportAndActivate() {
       if (!loadChoice) return;
       if (!loadChoice.presumed && !loadChoice.marked) stripPresumedLoads(selectedProgram);
     }
+    recordImportUse();
     return withBusy(
       function () { return saveCanonicalToCoachLibrary(selectedProgram, pState.filename || ''); },
       'Salvo nel Coach Database…',
@@ -52929,6 +52777,7 @@ async function confirmImportAndActivate() {
     choices.importPresumed = !!loadChoice.presumed;
     choices.importMarked = !!loadChoice.marked;
   }
+  recordImportUse();
   return withBusy(function () { return confirmImportAndActivateInner(choices, domainOnly); }, domainOnly ? 'Salvataggio…' : 'Attivazione scheda…', { immediate: true });
 }
 
@@ -53269,6 +53118,7 @@ function switchImportInputMode(mode) {
 }
 
 function handleImportTextSubmit() {
+  if (!requireImportAllowed()) return;
   const txt = $('import-raw-text')?.value;
   if (!txt || !txt.trim()) {
     if (typeof showToast === 'function') showToast('Inserisci del testo prima di analizzare', 'error');
@@ -53529,6 +53379,7 @@ function renderHome(c) {
         <button class="btn btn-outline" style="flex:1;font-size:12px;height:55px;border-color:var(--gold);color:var(--gold);" onclick="navigate('${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'clientChat' : 'programs'}')">${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'CHAT COACH' : 'PROGRAMMI'}</button>
       </div></div></div>
 
+    ${planNoticesHtml()}
     ${scheduledCheckInHomeHtml()}
     ${lastSessionHomeCardHtml()}
     ${computeHomeReadinessHtml()}
@@ -56005,6 +55856,7 @@ function shareOrSavePdfBlob(blob, filename, shareText) {
   reader.readAsDataURL(blob);
 }
 async function exportWorkoutPdf() {
+  if (!requirePlan('export')) return;
   const opts = collectWorkoutPdfExportOpts();
   if (!opts.loadMode) {
     alert('Scegli cosa includere nei carichi: già registrati, previsti, entrambi o solo schema.');
@@ -56040,6 +55892,7 @@ async function exportWorkoutPdf() {
 // PDF) with skipTraining:true so it renders on its own instead of requiring
 // a training program / going through the workout export modal.
 function exportNutritionPdf() {
+  if (!requirePlan('export')) return;
   if (!DATA || !DATA.nutrition || !Array.isArray(DATA.nutrition.days) || !DATA.nutrition.days.length) {
     alert('Nessuna alimentazione da esportare.');
     return;
@@ -56609,11 +56462,7 @@ function finalizeWorkout(){
   } catch (_) { prCount = 0; }
 
   let hasGold = false;
-  try {
-    if (typeof EntitlementService !== 'undefined' && EntitlementService.getPlan) {
-      hasGold = String(EntitlementService.getPlan() || '').toLowerCase() === 'gold';
-    }
-  } catch (_) {}
+  try { hasGold = planCan('gold_frame'); } catch (_) {}
 
   const logEntry = {
     id: 'sess_' + Date.now(),
@@ -58193,7 +58042,7 @@ function renderProgressCenter(container) {
   const lastBw = snap.bodyWeight && snap.bodyWeight.length ? snap.bodyWeight[snap.bodyWeight.length - 1] : null;
   const range = window.__progressRange || 'all';
   const from = progressRangeStart(range);
-  const logs = (store.logs || (DATA && DATA.logs) || []).filter(function (row) {
+  const logs = historyVisibleLogs(store.logs || (DATA && DATA.logs) || []).filter(function (row) {
     const at = new Date(row.at || row.date || 0).getTime();
     return at >= from;
   });
@@ -59698,7 +59547,10 @@ function renderStats(c){
   // Retroattivo davvero: ogni seduta finalizzata si riapre e si condivide,
   // non solo le ultime dodici. Di default la lista e' corta; MOSTRA TUTTE la
   // allunga fino alla prima.
-  const histAll = (store.logs || []).slice().reverse();
+  // The plan decides how far back the list goes; older sessions stay saved.
+  const histVisible = historyVisibleLogs(store.logs || []);
+  const histHiddenNote = historyHiddenNoteHtml(store.logs || [], histVisible);
+  const histAll = histVisible.slice().reverse();
   const showAllHist = !!(store.prefs && store.prefs.statsHistoryAll);
   const hist = (showAllHist ? histAll : histAll.slice(0, 12)).map(function (row) {
     const hw = Number(row.week) || 1;
@@ -59727,7 +59579,7 @@ function renderStats(c){
     </div>` : ''}
     ${renderMuscleMap(snap.muscles, { cardioMinutes: (last && last.cardioMinutes) || live.cardioMinutes || 0 })}
     ${renderCheckFisicoCardHtml()}
-    ${hist ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:11px;font-weight:800;color:var(--gold);">CRONOLOGIA SESSIONI <span style="color:#666;font-weight:600;">· ' + histAll.length + '</span></div><button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;" onclick="toggleStatsHistory()">' + (store.prefs && store.prefs.statsHistoryOpen === false ? '▸' : '✕') + '</button></div>' + ((store.prefs && store.prefs.statsHistoryOpen === false) ? '' : (hist + (histAll.length > 12 ? '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="toggleStatsHistoryAll()">' + (showAllHist ? 'MOSTRA SOLO LE ULTIME 12' : 'MOSTRA TUTTE LE ' + histAll.length + ' SEDUTE') + '</button>' : ''))) + '</div>' : ''}
+    ${(hist || histHiddenNote) ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:11px;font-weight:800;color:var(--gold);">CRONOLOGIA SESSIONI <span style="color:#666;font-weight:600;">· ' + histAll.length + '</span></div><button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;" onclick="toggleStatsHistory()">' + (store.prefs && store.prefs.statsHistoryOpen === false ? '▸' : '✕') + '</button></div>' + ((store.prefs && store.prefs.statsHistoryOpen === false) ? '' : (hist + histHiddenNote + (histAll.length > 12 ? '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="toggleStatsHistoryAll()">' + (showAllHist ? 'MOSTRA SOLO LE ULTIME 12' : 'MOSTRA TUTTE LE ' + histAll.length + ' SEDUTE') + '</button>' : ''))) + '</div>' : ''}
     <div class="card" style="margin-bottom:12px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;"><h2>Statistiche</h2><button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="exportStatsCsv()">Esporta</button></div>
       <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -60453,6 +60305,7 @@ function openCheckFisicoPdfModal(mode) {
   m.style.display = 'flex';
 }
 function exportCheckFisicoPdf() {
+  if (!requirePlan('export')) return;
   openCheckFisicoPdfModal('export');
 }
 function sendCheckFisicoToCoach() {
@@ -60503,6 +60356,7 @@ async function openSavedCheckFisico(id) {
   document.body.appendChild(overlay);
 }
 function exportSavedCheckFisico(id) {
+  if (!requirePlan('export')) return;
   window.__checkFisicoFocusId = id;
   closeSavedRecordOverlay();
   openCheckFisicoPdfModal('export');
@@ -71374,6 +71228,8 @@ function applyClientPayloadToLocal(payload) {
 async function enterCoachClientView(domain, opts) {
   const id = store.coachWorkspace && store.coachWorkspace.clientId;
   if (!id) return;
+  // Therapy and exams on the coach side belong to Coach Pro.
+  if ((domain === 'therapy' || domain === 'exams') && !requirePlan('coach_therapy_exams')) return;
   // Isolate from personal training surface before loading client payload.
   try { window.__pinnedTraining = null; } catch (_) {}
   try { window.__editFinalizedKey = ''; } catch (_) {}
@@ -71698,6 +71554,7 @@ function athleteHomeHtml() {
     coachStatus +
     '<button class="btn btn-outline" style="margin-top:10px;font-size:11px;" onclick="reloadClientHome()">⟳ AGGIORNA</button>' +
     '</div>' +
+    planNoticesHtml() +
     scheduledCheckInHomeHtml() +
     athleteWaitingHomeHtml() +
     athleteHomeModulesHtml();
@@ -71750,6 +71607,7 @@ function renderCoachHub(c) {
     '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button></div>' +
     '<div id="cp-checkin-counter"></div>' +
+    '<div id="cp-seats-summary"></div>' +
     '<div id="cp-client-list"><div class="cp-help">Caricamento…</div></div>';
   loadCoachClientList();
   applyClientChrome();
@@ -71782,6 +71640,14 @@ async function loadCoachClientList() {
     store.__cpOrigin = payload.origin || '';
     const rows = payload.clients || [];
     store.__cpClientList = rows;
+    const seatsBox = document.getElementById('cp-seats-summary');
+    if (seatsBox) {
+      const s = payload.seats;
+      seatsBox.innerHTML = s
+        ? '<div class="cp-help" style="margin:0 0 10px;">Atleti: ' + s.active + (s.limit == null ? '' : ' su ' + s.limit) + ' posti del piano ' + esc(planDisplayName(currentPlanEffective().ownPlan)) +
+          (s.waiting ? ' · ' + s.waiting + ' in attesa di un posto' : '') + '</div>'
+        : '';
+    }
     ensureCoachHeaderControls(!!(store && store.coachSessionActive));
     if (!rows.length) {
       box.innerHTML = '<div class="cp-help">Nessun cliente. Aggiungine uno: nuovo (compilerà il questionario) o transizione (compili tu le info).</div>';
@@ -71797,7 +71663,8 @@ async function loadCoachClientList() {
         '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">' +
         '<div><div style="font-size:15px;font-weight:900;color:#fff;">' + esc(cl.displayName) +
         (cl.leaveRequested ? ' <span class="cp-badge" style="color:#c66;border-color:#c66;">FINE RICHIESTA</span>' : '') +
-        (cl.workoutLive ? ' <span class="cp-badge" style="color:#6c6;border-color:#6c6;">IN WORKOUT</span>' : '') + '</div>' +
+        (cl.workoutLive ? ' <span class="cp-badge" style="color:#6c6;border-color:#6c6;">IN WORKOUT</span>' : '') +
+        (cl.seatInactive ? ' <span class="cp-badge cp-seat-inactive" style="color:#aaa;border-color:#666;">OLTRE I POSTI</span>' : '') + '</div>' +
         '<div style="font-size:11px;color:#888;">@' + esc(cl.username) + ' · ' + esc(badge) + ' · ' + esc(paid) +
         (cl.unreadCount ? ' · ' + cl.unreadCount + ' nuovi' : '') +
         (cl.hasPendingChange ? ' · modifica da approvare' : '') + '</div>' +
@@ -73726,6 +73593,7 @@ async function loadExamCatalog() {
 }
 
 async function requestExamsFromClient(id) {
+  if (!requirePlan('coach_therapy_exams')) return;
   const cat = await loadExamCatalog();
   const def = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
   const catsHtml = (cat.categories || []).map(function (c) {
@@ -74841,6 +74709,7 @@ async function refreshAthleteMe() {
     const prevCheckInTemplate = JSON.stringify((store.clientProfile && store.clientProfile.checkInTemplate) || null);
     store.clientProfile = me.client || store.clientProfile;
     store.clientEvents = me.events || [];
+    onEntitlementReceived(me.entitlement);
     store.coachOnline = !!me.coachOnline;
     store.coachLastSeen = me.coachLastSeen || null;
     store.role = 'athlete';
@@ -74856,6 +74725,7 @@ async function refreshCoachStatus() {
   try {
     const s = await practiceFetch('/api/coach/status', { method: 'GET', headers: practiceHeaders(false) }, 12000);
     store.coachUnlocked = !!(s && s.unlocked);
+    onEntitlementReceived(s && s.entitlement);
     store.coachHidePresence = !!(s && s.hidePresence);
     store.coachAllowVideocall = s && s.allowVideocall !== false;
     if (s && s.featureFlags && typeof s.featureFlags === 'object') {
@@ -77922,6 +77792,9 @@ function athleteCheckInTemplate() {
   const K = scheduledCheckInLib();
   if (!K || !store || typeof isAthleteRole !== 'function' || !isAthleteRole()) return null;
   if (store.coachViewingClient || store.coachAssigning) return null;
+  // A link waiting for a seat: no reminders until it is active again.
+  const link = currentAccountEntitlement().coachLink;
+  if (link && link.seatInactive) return null;
   const t = store.clientProfile && store.clientProfile.checkInTemplate;
   return t ? K.normalizeTemplate(t) : null;
 }
@@ -78447,16 +78320,19 @@ function drawCoachScheduledCheckIns() {
       ? '<div style="font-size:12px;color:#ddd;margin-top:4px;">' + esc(SCHED_CHECKIN_CADENCE_LABELS[t.cadence]) + ' · ' + esc(SCHED_CHECKIN_DAY_NAMES[t.weekday]) + ' · ' + esc(t.time) + '</div>' +
         '<div style="font-size:10px;color:#888;margin-top:2px;">' + (t.customized ? 'Modello personalizzato per questo atleta' : 'Modello applicato a tutti') + ' · prossimo: ' + esc(schedCheckInWhen(K.nextDue(t, Date.now()))) + '</div>'
       : '<div class="cp-help" style="margin:4px 0 0;">Nessun check-in programmato: l\'atleta non riceve promemoria.</div>') +
-    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">' +
-    '<button type="button" class="btn btn-outline" style="font-size:10px;flex:1 1 auto;" onclick="editCoachCheckInTemplate()">' + (t ? 'MODIFICA MODELLO' : 'IMPOSTA CHECK-IN') + '</button>' +
-    (t ? '<button type="button" class="btn btn-outline" style="font-size:10px;flex:1 1 auto;" onclick="applyCoachCheckInTemplateToAll()">APPLICA A TUTTI</button>' : '') +
-    '</div>' +
+    (planCan('scheduled_checkins')
+      ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">' +
+        '<button type="button" class="btn btn-outline" style="font-size:10px;flex:1 1 auto;" onclick="editCoachCheckInTemplate()">' + (t ? 'MODIFICA MODELLO' : 'IMPOSTA CHECK-IN') + '</button>' +
+        (t ? '<button type="button" class="btn btn-outline" style="font-size:10px;flex:1 1 auto;" onclick="applyCoachCheckInTemplateToAll()">APPLICA A TUTTI</button>' : '') +
+        '</div>'
+      : planLockedHtml('scheduled_checkins')) +
     '<div style="margin-top:10px;">' + rowsHtml + '</div></div>';
 }
 
 window.drawCoachScheduledCheckIns = drawCoachScheduledCheckIns;
 
 function editCoachCheckInTemplate() {
+  if (!requirePlan('scheduled_checkins')) return;
   const st = window.__cpSchedCI;
   const K = scheduledCheckInLib();
   if (!st || !K) return;
@@ -78550,6 +78426,7 @@ async function saveCoachCheckInTemplate(off) {
 window.saveCoachCheckInTemplate = saveCoachCheckInTemplate;
 
 async function applyCoachCheckInTemplateToAll() {
+  if (!requirePlan('scheduled_checkins')) return;
   const st = window.__cpSchedCI;
   if (!st || !st.template) return;
   const base = '/api/coach/clients/' + encodeURIComponent(st.clientId) + '/check-in-template/apply-all';
@@ -78649,6 +78526,278 @@ async function replyScheduledCheckIn(readOnly) {
   }
 }
 window.replyScheduledCheckIn = replyScheduledCheckIn;
+
+// ===================== Piani: il solo punto di controllo =====================
+//
+// Ogni schermata che chiude o apre qualcosa per piano chiede qui, e qui si
+// chiede a web/entitlements.js (NurvanEntitlements.can), con le funzioni e i
+// piani minimi di web/features.json. Nessuna schermata decide da se'.
+//
+// Il piano arriva dal server con /api/account/me, /api/client/me e
+// /api/coach/status. Si tiene fuori dallo store: durante la vista di un
+// cliente lo store del coach cambia area, il piano del coach no. Offline vale
+// l'ultimo piano noto, salvato in localStorage; il logout lo cancella.
+
+var PLAN_ENTITLEMENT_KEY = 'nurvan.entitlement.v1';
+
+function planLib() {
+  return (typeof self !== 'undefined' && self.NurvanEntitlements) || null;
+}
+function planFeatures() {
+  return (typeof self !== 'undefined' && self.NURVAN_FEATURES) || null;
+}
+
+// What the server said last: the account's fields, with the coach link.
+function currentAccountEntitlement() {
+  if (window.__nurvanEntitlement) return window.__nurvanEntitlement;
+  try {
+    const raw = localStorage.getItem(PLAN_ENTITLEMENT_KEY);
+    if (raw) window.__nurvanEntitlement = JSON.parse(raw);
+  } catch (_) {}
+  return window.__nurvanEntitlement || { plan: 'free' };
+}
+
+function onEntitlementReceived(ent) {
+  if (!ent || typeof ent !== 'object') return;
+  const keep = {
+    plan: ent.plan || 'free',
+    planSource: ent.planSource || 'manual',
+    planUntil: ent.planUntil || null,
+    seats: ent.seats === undefined ? null : ent.seats,
+    trialUntil: ent.trialUntil || null,
+    trialUsedAt: ent.trialUsedAt || null,
+    coachLink: ent.coachLink || null,
+    at: ent.at || new Date().toISOString()
+  };
+  const before = JSON.stringify(window.__nurvanEntitlement || null);
+  window.__nurvanEntitlement = keep;
+  try { localStorage.setItem(PLAN_ENTITLEMENT_KEY, JSON.stringify(keep)); } catch (_) {}
+  if (before !== JSON.stringify(keep) && typeof render === 'function') {
+    try { render(); } catch (_) {}
+  }
+}
+window.onEntitlementReceived = onEntitlementReceived;
+
+function clearAccountEntitlement() {
+  window.__nurvanEntitlement = null;
+  try { localStorage.removeItem(PLAN_ENTITLEMENT_KEY); } catch (_) {}
+}
+
+function currentPlanEffective() {
+  const E = planLib();
+  return E ? E.effective(currentAccountEntitlement()) : { plan: 'free', status: 'active', notices: [], seats: 0 };
+}
+
+function planExplain(feature, usage) {
+  const E = planLib();
+  if (!E) return { allowed: true, reason: 'ok', minPlan: null };
+  return E.explain(currentAccountEntitlement(), feature, usage);
+}
+function planCan(feature, usage) {
+  return planExplain(feature, usage).allowed;
+}
+function planDisplayName(plan) {
+  const E = planLib();
+  return E ? E.planName(plan) : String(plan || '');
+}
+
+// The sentence the athlete or coach reads when something is closed.
+function planLockMessage(why) {
+  if (!why || why.allowed) return '';
+  if (why.reason === 'limit') {
+    const unit = ((planFeatures() || {}).features || {})[why.feature || ''] || {};
+    return 'Hai raggiunto il limite del piano ' + planDisplayName(why.plan) + ' (' + why.limit + (unit.unit ? ' ' + unit.unit : '') + ')' +
+      (why.minPlan ? '. Con ' + planDisplayName(why.minPlan) + ' puoi andare oltre.' : '.');
+  }
+  return (why.label ? why.label + ': disponibile' : 'Disponibile') + ' con il piano ' + planDisplayName(why.minPlan) + '.';
+}
+
+// true, or a message and false. Nothing is deleted, nothing is hidden for good.
+function requirePlan(feature, usage) {
+  const why = planExplain(feature, usage);
+  if (why.allowed) return true;
+  why.feature = feature;
+  if (typeof showToast === 'function') showToast(planLockMessage(why), 'error');
+  return false;
+}
+window.requirePlan = requirePlan;
+
+function planLockedHtml(feature, usage) {
+  const why = planExplain(feature, usage);
+  if (why.allowed) return '';
+  why.feature = feature;
+  return '<div class="plan-locked" style="border:1px dashed #555;border-radius:10px;padding:10px 12px;margin:8px 0;">' +
+    '<div style="font-size:12px;color:#ddd;">' + esc(planLockMessage(why)) + '</div>' +
+    '<button type="button" class="btn btn-outline" style="margin-top:8px;font-size:10px;padding:6px 10px;" onclick="navigate(\'pricing\')">VEDI I PIANI</button></div>';
+}
+
+/* ------------------------------ imports this month ------------------------------ */
+
+function importUseLog() {
+  const prefs = (store && store.prefs) || {};
+  return Array.isArray(prefs.importLog) ? prefs.importLog : [];
+}
+function importsThisMonth(now) {
+  const d = new Date(now == null ? Date.now() : now);
+  const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  return importUseLog().filter(function (iso) { return String(iso || '').slice(0, 7) === key; }).length;
+}
+// Counted when an import is applied, not when a file is only read.
+function recordImportUse() {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.importLog = importUseLog().concat([new Date().toISOString()]).slice(-40);
+  persist();
+}
+function requireImportAllowed() {
+  return requirePlan('import', { count: importsThisMonth() });
+}
+
+/* ------------------------------ history ------------------------------ */
+
+// Sessions the plan shows. Older ones stay in store.logs, untouched.
+function historyVisibleLogs(logs) {
+  const E = planLib();
+  const list = Array.isArray(logs) ? logs : [];
+  if (!E) return list;
+  const days = E.historyDays(currentAccountEntitlement());
+  if (days == null) return list;
+  const since = Date.now() - days * 86400000;
+  return list.filter(function (row) {
+    const t = Date.parse((row && (row.finalizedAt || row.at || row.date)) || '');
+    return !isFinite(t) || t >= since;
+  });
+}
+function historyHiddenNoteHtml(all, visible) {
+  const hidden = (all || []).length - (visible || []).length;
+  if (hidden <= 0) return '';
+  return '<div class="plan-history-note" style="font-size:11px;color:#aaa;padding:8px 0;">' + hidden +
+    (hidden === 1 ? ' seduta più vecchia' : ' sedute più vecchie') + ' di 90 giorni: sono salvate, le vedi con il piano ' +
+    esc(planDisplayName((planExplain('history_full') || {}).minPlan || 'standard')) + '.</div>';
+}
+
+/* ------------------------------ notices ------------------------------ */
+
+function planDate(ms) {
+  if (ms == null) return '';
+  const d = new Date(ms);
+  return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+}
+
+// Grace period, trial, coach at the limit: said plainly, blaming nobody.
+function planNoticesHtml() {
+  const eff = currentPlanEffective();
+  const out = [];
+  (eff.notices || []).forEach(function (n) {
+    if (n.kind === 'grace') {
+      out.push('Il piano ' + esc(planDisplayName(n.plan)) + ' è scaduto il ' + planDate(n.until) + '. Tutto funziona fino al ' + planDate(n.graceUntil) + ', poi torna Free. Nessun dato viene cancellato.');
+    } else if (n.kind === 'coach_limit') {
+      out.push('Il tuo coach ha raggiunto il limite di atleti del suo piano: il collegamento tornerà attivo appena si libera un posto. Scheda e dati restano tutti qui.');
+    }
+  });
+  if (eff.trialActive) {
+    const left = Math.max(1, Math.ceil((eff.trialUntil - Date.now()) / 86400000));
+    out.push('Prova Coach: ' + left + (left === 1 ? ' giorno rimasto' : ' giorni rimasti') + '.');
+  }
+  return out.map(function (text) {
+    return '<div class="card plan-notice" style="padding:10px 12px;margin-bottom:12px;border:1px solid #444;font-size:12px;color:#ddd;line-height:1.4;">' + text + '</div>';
+  }).join('');
+}
+
+/* ------------------------------ pricing ------------------------------ */
+
+function planIsAndroidApp() {
+  try { if (typeof NativeConfig !== 'undefined') return true; } catch (_) {}
+  try { return typeof isAndroidWebViewNative === 'function' && isAndroidWebViewNative(); } catch (_) { return false; }
+}
+
+function renderPlansPricing(c) {
+  const reg = planFeatures();
+  if (!reg) { c.innerHTML = '<div class="cp-help">Piani non disponibili.</div>'; return; }
+  const eff = currentPlanEffective();
+  const android = planIsAndroidApp();
+  const period = { month: 'mese', year: 'anno' };
+  const featuresOf = function (planId) {
+    return Object.keys(reg.features).filter(function (k) { return reg.features[k].min === planId; }).map(function (k) {
+      const f = reg.features[k];
+      let label = f.label;
+      if (f.limit && f.limit[planId] != null) label += ': ' + f.limit[planId] + (f.unit ? ' ' + f.unit : '');
+      return label;
+    });
+  };
+  const seatsLine = function (p) {
+    if (!p.seats && p.seats !== null) return '';
+    return p.seats === null ? 'Atleti illimitati' : ('Fino a ' + p.seats + ' atleti');
+  };
+  const cards = reg.plans.map(function (p) {
+    const current = p.id === eff.plan;
+    const price = p.prices && p.prices.length
+      ? p.prices.map(function (x) { return x.amount + ' €/' + period[x.period]; }).join(' · ')
+      : 'Gratis';
+    const coachTier = p.id === 'coach' || p.id === 'coach_pro';
+    let action = '';
+    if (current) {
+      action = '<div class="plan-current-label" style="font-size:11px;font-weight:900;color:var(--gold);">IL TUO PIANO' + (eff.inherited ? ' (DAL TUO COACH)' : '') + (eff.trialActive && p.id === 'coach' ? ' (PROVA)' : '') + '</div>';
+    } else if (p.id !== 'free' && !(android && coachTier)) {
+      // No purchase in this version: contact, never a checkout. On the Android
+      // app, Coach and Pro show no purchase button at all.
+      action = '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;" onclick="contactAboutPlan(\'' + p.id + '\')">CONTATTACI</button>';
+    }
+    const trial = p.id === 'coach' && !current && canStartCoachTrial()
+      ? '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;margin-top:6px;" onclick="startCoachTrialFromApp()">PROVA COACH ' + (reg.trialDays || 14) + ' GIORNI</button>'
+      : '';
+    return '<div class="card plan-card' + (current ? ' plan-card-current' : '') + '" data-plan="' + p.id + '" style="padding:14px;margin-bottom:12px;border:' + (current ? '2px solid var(--gold)' : '1px solid #333') + ';">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;">' +
+      '<div style="font-size:17px;font-weight:900;color:' + (current ? 'var(--gold)' : '#fff') + ';">' + esc(p.name) + '</div>' +
+      '<div style="font-size:14px;font-weight:800;color:#fff;">' + esc(price) + '</div></div>' +
+      '<div style="font-size:11px;color:#aaa;margin:4px 0 8px;">' + esc(p.tagline || '') + '</div>' +
+      '<ul style="margin:0 0 10px 16px;padding:0;font-size:12px;color:#ddd;line-height:1.5;">' +
+      (p.id !== 'free' ? '<li>Tutto quello del piano precedente</li>' : '') +
+      (seatsLine(p) && p.id !== 'free' ? '<li>' + esc(seatsLine(p)) + '</li>' : '') +
+      featuresOf(p.id).map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') +
+      '</ul>' + action + trial + '</div>';
+  }).join('');
+  c.innerHTML =
+    '<div style="margin-bottom:12px;">' +
+    '<span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">PIANI</span>' +
+    '<h1 style="color:#fff;margin:2px 0 4px;font-size:22px;">Piani Nurvan</h1>' +
+    '<p style="font-size:11px;color:#aaa;margin:0;">Nessun pagamento nell\'app in questa versione: il piano lo attiviamo noi su richiesta.</p></div>' +
+    planNoticesHtml() + cards;
+}
+window.renderPlansPricing = renderPlansPricing;
+
+function contactAboutPlan(planId) {
+  const reg = planFeatures() || {};
+  const email = String(reg.contactEmail || '').trim();
+  if (email) {
+    try { window.location.href = 'mailto:' + email + '?subject=' + encodeURIComponent('Piano ' + planDisplayName(planId)); return; } catch (_) {}
+  }
+  if (typeof showToast === 'function') showToast('Per attivare ' + planDisplayName(planId) + ' scrivi al supporto Nurvan: il piano lo attiviamo noi.', 'info');
+}
+window.contactAboutPlan = contactAboutPlan;
+
+// The trial is for coaches, once per account; the server has the last word.
+function canStartCoachTrial() {
+  const a = currentAccountEntitlement();
+  if (a.trialUsedAt) return false;
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) return false;
+  return typeof isCoachUnlocked === 'function' && isCoachUnlocked();
+}
+
+async function startCoachTrialFromApp() {
+  if (!canStartCoachTrial()) {
+    if (typeof showToast === 'function') showToast('La prova Coach si usa una volta sola, da un account coach.', 'error');
+    return;
+  }
+  try {
+    const payload = await practiceFetch('/api/account/trial', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 15000);
+    onEntitlementReceived(payload.entitlement);
+    if (typeof showToast === 'function') showToast('Prova Coach attiva per 14 giorni', 'ok');
+    render();
+  } catch (err) {
+    if (typeof showToast === 'function') showToast((err && err.message) || 'Prova non attivata', 'error');
+  }
+}
+window.startCoachTrialFromApp = startCoachTrialFromApp;
 
 (function () {
   'use strict';
@@ -79110,6 +79259,11 @@ window.replyScheduledCheckIn = replyScheduledCheckIn;
   }
 
   CoachOS.views.coachBusiness = async function (container) {
+    // Billing clients belongs to the Coach plan (web/features.json).
+    if (typeof planCan === 'function' && !planCan('client_billing')) {
+      container.innerHTML = '<div class="coach-os-page">' + planLockedHtml('client_billing') + '</div>';
+      return;
+    }
     container.innerHTML = '<div class="coach-os-skeleton">' + escText(tx('coLoadingLedger')) + '</div>';
     let summary = {};
     try {
@@ -80201,7 +80355,8 @@ window.changeAppLanguage = typeof changeAppLanguage !== 'undefined' ? changeAppL
 window.nativeGoogleResult = typeof nativeGoogleResult !== 'undefined' ? nativeGoogleResult : window.nativeGoogleResult;
 window.nativeAppleResult = typeof nativeAppleResult !== 'undefined' ? nativeAppleResult : window.nativeAppleResult;
 window.nativeAuthError = typeof nativeAuthError !== 'undefined' ? nativeAuthError : window.nativeAuthError;
-window.switchPlan = (planId) => EntitlementService.setPlan(planId);
+// The page's switchPlan only says there is no in-app purchase; plans come from the server.
+window.switchPlan = typeof switchPlan !== 'undefined' ? switchPlan : (() => {});
 window.openAccount = typeof openAccount !== 'undefined' ? openAccount : window.openAccount;
 window.closeAccount = typeof closeAccount !== 'undefined' ? closeAccount : window.closeAccount;
 window.submitAccount = typeof submitAccount !== 'undefined' ? submitAccount : window.submitAccount;

@@ -10,40 +10,9 @@ export const JS_PRODUCT_SERVICES = `
 // ====================================================
 
 const pricingConfig = {
+  // Prices and plans are in web/features.json.
   currency: "EUR",
-  symbol: "€",
-  plans: {
-    FREE: {
-      id: "free",
-      name: "Free",
-      price: 0,
-      period: "Sempre gratuito",
-      features: ["Tracciamento base workout", "Statistiche e tonnellaggio", "14 giorni di Prova Gratuita Silver"]
-    },
-    BRONZE: {
-      id: "bronze",
-      name: "Bronze Athlete",
-      price: 4.99,
-      period: "/mese",
-      lifetimePrice: 49.99,
-      features: ["Nessuna pubblicità", "Calendario e timeline giornaliera", "Rest timer avanzato"]
-    },
-    SILVER: {
-      id: "silver",
-      name: "Silver Pro",
-      price: 9.99,
-      period: "/mese",
-      lifetimePrice: 99.99,
-      features: ["Importazione illimitata Excel / PDF / Word", "Coach AI & Proposte strutturate con 1-click", "Database Alimentare, Integratori ed Examine.com"]
-    },
-    GOLD: {
-      id: "gold",
-      name: "Gold Lifetime Master",
-      price: 199.99,
-      period: "Una tantum per sempre",
-      features: ["Accesso a vita a tutte le funzionalità Pro", "Aggiornamenti a vita inclusi", "Supporto prioritario e accesso anticipato alle novità"]
-    }
-  }
+  symbol: "€"
 };
 
 const I18nService = {
@@ -1720,149 +1689,52 @@ const CoachAIService = {
   }
 };
 
+// Plans live on the server and are read through web/entitlements.js
+// (NurvanEntitlements.can). This object only forwards to it, for the older
+// callers: there is no client-side plan switch and no client-side trial any
+// more, so no page can grant itself a plan.
 const EntitlementService = {
-  plans: {
-    free: {
-      id: "free",
-      name: "Free Tier",
-      priceMonthly: 0,
-      priceLifetime: 0,
-      features: ["basic_training", "basic_stats", "local_storage"]
-    },
-    bronze: {
-      id: "bronze",
-      name: "Bronze Athlete",
-      priceMonthly: 4.99,
-      priceLifetime: 49.99,
-      features: ["basic_training", "basic_stats", "local_storage", "ads_free", "calendar", "rest_timer"]
-    },
-    silver: {
-      id: "silver",
-      name: "Silver Pro",
-      priceMonthly: 9.99,
-      priceLifetime: 99.99,
-      features: ["basic_training", "basic_stats", "local_storage", "ads_free", "calendar", "rest_timer", "universal_import_full", "advanced_ai", "food_db", "supplement_db", "therapy_manager", "exam_tracker", "full_cloud_backup"]
-    },
-    gold: {
-      id: "gold",
-      name: "Gold Lifetime Master",
-      priceMonthly: 0,
-      priceLifetime: 199.99,
-      features: ["basic_training", "basic_stats", "local_storage", "ads_free", "calendar", "rest_timer", "universal_import_full", "advanced_ai", "food_db", "supplement_db", "therapy_manager", "exam_tracker", "full_cloud_backup", "priority_support", "beta_access", "lifetime_updates"]
-    }
+  account() {
+    try {
+      if (typeof currentAccountEntitlement === 'function') return currentAccountEntitlement();
+    } catch (e) {}
+    return { plan: 'free' };
   },
-
-  currentPlan: "free",
-  trialActive: false,
-  trialEnd: null,
-
+  lib() {
+    return (typeof self !== 'undefined' && self.NurvanEntitlements) || null;
+  },
   getPlan() {
-    if (typeof store !== 'undefined' && store && store.accountPlan) {
-      const sp = store.accountPlan.toLowerCase();
-      if (this.isTrialActive()) return "silver";
-      return sp;
-    }
-    if (this.isTrialActive()) {
-      return "silver";
-    }
-    return this.currentPlan;
+    const E = this.lib();
+    return E ? E.effective(this.account()).plan : 'free';
   },
-
-  setPlan(planId) {
-    const key = (planId || "").toLowerCase().trim();
-    if (this.plans[key]) {
-      this.currentPlan = key;
-      this.trialActive = false;
-      this.trialEnd = null;
-      if (typeof store !== 'undefined' && store) {
-        store.accountPlan = key.toUpperCase();
-      }
-      try {
-        localStorage.setItem("GS_PLAN", key);
-      } catch(e) {}
-    }
-  },
-
-  startTrial() {
-    return this.start14DayTrial();
-  },
-
-  start14DayTrial() {
-    this.trialActive = true;
-    this.trialEnd = Date.now() + (14 * 24 * 60 * 60 * 1000);
-    if (typeof store !== 'undefined' && store) {
-      store.accountTrialStart = Date.now();
-    }
-    try {
-      localStorage.setItem("GS_TRIAL_END", this.trialEnd.toString());
-    } catch(e) {}
-    return { ok: true, trialEnd: this.trialEnd };
-  },
-
   isTrialActive() {
-    if (typeof store !== 'undefined' && store && store.accountTrialStart !== undefined && store.accountTrialStart !== null) {
-      const trialStart = parseInt(store.accountTrialStart, 10);
-      return (Date.now() - trialStart) < (14 * 24 * 60 * 60 * 1000);
-    }
-    return Boolean(this.trialActive && this.trialEnd && Date.now() < this.trialEnd);
+    const E = this.lib();
+    return E ? !!E.effective(this.account()).trialActive : false;
   },
-
+  can(featureName, usage) {
+    const E = this.lib();
+    return E ? E.can(this.account(), featureName, usage) : false;
+  },
+  explain(featureName, usage) {
+    const E = this.lib();
+    return E ? E.explain(this.account(), featureName, usage) : { allowed: false, reason: 'unknown' };
+  },
   hasFeature(featureName) {
-    const activePlanId = this.getPlan();
-    const plan = this.plans[activePlanId] || this.plans.free;
-    return (plan.features || []).includes(featureName);
-  },
-
-  init() {
-    try {
-      const savedPlan = localStorage.getItem("GS_PLAN");
-      if (savedPlan && this.plans[savedPlan.toLowerCase()]) this.currentPlan = savedPlan.toLowerCase();
-      const savedTrial = localStorage.getItem("GS_TRIAL_END");
-      if (savedTrial) {
-        const trialTime = parseInt(savedTrial, 10);
-        if (Date.now() < trialTime) {
-          this.trialActive = true;
-          this.trialEnd = trialTime;
-        }
-      }
-    } catch(e) {}
+    return this.can(featureName);
   }
 };
 
 const PricingService = {
-  getPlans() { return Object.values(EntitlementService.plans); },
+  getPlans() {
+    const reg = (typeof self !== 'undefined' && self.NURVAN_FEATURES) || { plans: [] };
+    return reg.plans.slice();
+  },
   getCurrentPlan() { return EntitlementService.getPlan(); }
 };
 
+// The app shows no advertising; nothing to decide per plan.
 const AdsService = {
-  shouldShowAd(placement) {
-    let activePlan = EntitlementService.getPlan();
-    if (typeof store !== 'undefined' && store && store.accountPlan) {
-      const storePlan = store.accountPlan.toLowerCase();
-      if (storePlan === 'free') {
-        const isTrialActive = EntitlementService.isTrialActive();
-        if (!isTrialActive) activePlan = 'free';
-        else activePlan = 'silver';
-      } else {
-        activePlan = storePlan;
-      }
-    }
-    if (activePlan !== 'free') return false;
-    if (EntitlementService.hasFeature("ads_free")) return false;
-    const protectedPlacements = [
-      "workout",
-      "workout_logger",
-      "logger",
-      "rest_timer",
-      "timer",
-      "therapy",
-      "medical",
-      "import",
-      "universal_import"
-    ];
-    if (protectedPlacements.includes((placement || '').toLowerCase())) return false;
-    return true;
-  }
+  shouldShowAd() { return false; }
 };
 
 const BackupService = {

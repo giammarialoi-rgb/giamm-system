@@ -631,55 +631,23 @@ async function runTestSuite() {
   assert(Boolean(PricingService), 'PricingService is defined');
   assert(typeof EntitlementService.hasFeature === 'function', 'EntitlementService.hasFeature is function');
 
-  // Test Free tier entitlements
-  EntitlementService.setPlan('FREE');
-  assertEquals(EntitlementService.hasFeature('basic_training'), true, 'Free plan has basic_training');
-  assertEquals(EntitlementService.hasFeature('universal_import_full'), false, 'Free plan does NOT have universal_import_full');
-  assertEquals(EntitlementService.hasFeature('advanced_ai'), false, 'Free plan does NOT have advanced_ai');
-
-  // Test Bronze tier entitlements
-  EntitlementService.setPlan('BRONZE');
-  assertEquals(EntitlementService.hasFeature('ads_free'), true, 'Bronze plan has ads_free');
-  assertEquals(EntitlementService.hasFeature('calendar'), true, 'Bronze plan has calendar');
-  assertEquals(EntitlementService.hasFeature('universal_import_full'), false, 'Bronze plan does NOT have universal_import_full');
-
-  // Test Silver tier entitlements
-  EntitlementService.setPlan('SILVER');
-  assertEquals(EntitlementService.hasFeature('universal_import_full'), true, 'Silver plan has universal_import_full');
-  assertEquals(EntitlementService.hasFeature('advanced_ai'), true, 'Silver plan has advanced_ai');
-  assertEquals(EntitlementService.hasFeature('food_db'), true, 'Silver plan has food_db');
-
-  // Test Gold Lifetime tier entitlements
-  EntitlementService.setPlan('GOLD');
-  assertEquals(EntitlementService.hasFeature('lifetime_updates'), true, 'Gold Lifetime plan has lifetime_updates');
-  assertEquals(EntitlementService.hasFeature('priority_support'), true, 'Gold Lifetime plan has priority_support');
-
-  // Test Trial activation
-  EntitlementService.setPlan('FREE');
-  EntitlementService.startTrial();
-  assert(EntitlementService.isTrialActive() === true, '14-Day Trial is active upon starting');
-  assertEquals(EntitlementService.hasFeature('universal_import_full'), true, 'Active trial grants Silver features');
+  // Plans come from the server through web/entitlements.js (see
+  // test_entitlements.mjs). The client can no longer grant itself a plan or
+  // a trial: the old setPlan / startTrial are gone.
+  assert(typeof EntitlementService.setPlan === 'undefined', 'No client-side plan switch');
+  assert(typeof EntitlementService.startTrial === 'undefined', 'No client-side trial');
+  assertEquals(EntitlementService.getPlan(), 'free', 'Without a plan from the server the account is free');
+  assertEquals(EntitlementService.hasFeature('export'), false, 'Free (or no entitlement module) does not export');
 
   // ---------------------------------------------------------
-  // 18. NON-INVASIVE AD PLACEMENT POLICY
+  // 18. NO ADVERTISING
   // ---------------------------------------------------------
-  console.log('\n[Module 18] Non-Invasive Ad Placement Policy...');
+  console.log('\n[Module 18] No advertising...');
   const AdsService = ctx.GS?.Services?.AdsService || ctx.AdsService;
   assert(Boolean(AdsService), 'AdsService is defined');
-  assert(typeof AdsService.shouldShowAd === 'function', 'AdsService.shouldShowAd is function');
-
-  // On Free plan with trial expired
-  ctx.store.accountPlan = 'FREE';
-  ctx.store.accountTrialStart = Date.now() - (20 * 24 * 60 * 60 * 1000); // 20 days ago
-  assertEquals(AdsService.shouldShowAd('dashboard'), true, 'Free user shows ad on dashboard');
-  assertEquals(AdsService.shouldShowAd('workout'), false, 'Workout logger is 100% ad-free protected');
-  assertEquals(AdsService.shouldShowAd('timer'), false, 'Rest timer is 100% ad-free protected');
-  assertEquals(AdsService.shouldShowAd('therapy'), false, 'Medical therapy is 100% ad-free protected');
-  assertEquals(AdsService.shouldShowAd('import'), false, 'Import workflow is 100% ad-free protected');
-
-  // On Bronze / Silver / Gold
-  ctx.store.accountPlan = 'BRONZE';
-  assertEquals(AdsService.shouldShowAd('dashboard'), false, 'Bronze user has no ads on dashboard');
+  ['dashboard', 'workout', 'timer', 'therapy', 'import'].forEach(function (placement) {
+    assertEquals(AdsService.shouldShowAd(placement), false, 'No ad on ' + placement);
+  });
 
   // ---------------------------------------------------------
   // 19. HEALTH DATA PROVIDER

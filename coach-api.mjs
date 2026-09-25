@@ -20,6 +20,7 @@ import { mountProgramGenerateRoutes } from "./server/program/generator.mjs";
 import { mountFoodRoutes } from "./server/food/index.mjs";
 import { mountMediaRoutes } from "./server/media/media-routes.mjs";
 import { mergeAccountDataBlobs, updateAccountData } from "./server/account/index.mjs";
+import { accountEntitlement, mountPlanRoutes } from "./server/account/plans.mjs";
 import { runMigrations } from "./server/db/migrate.mjs";
 import {
   buildCorsOriginValidator,
@@ -1525,9 +1526,14 @@ app.get("/api/account/me", async (req, res) => {
     const user = userRes.rows[0];
     if (!user) return res.status(401).json({ error: "User not found." });
     const dataRes = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
+    // The plan travels with the account, like the rest. A failure here never
+    // blocks the account: the app keeps the last plan it knew.
+    let entitlement = null;
+    try { entitlement = await accountEntitlement(pool, auth); } catch (err) { console.warn("ACCOUNT_PLAN", err && err.message); }
     return res.json({
       user: { id: user.id, email: user.email, name: user.name, provider: user.provider || "email", avatarUrl: user.avatar_url || null },
-      data: dataRes.rows[0]?.data || {}
+      data: dataRes.rows[0]?.data || {},
+      entitlement
     });
   } catch (error) {
     console.error("ACCOUNT_ME_ERROR", error);
@@ -2025,6 +2031,8 @@ mountCoachPractice(app, {
   webDir: path.join(__dirname, "web"),
   mediaSigningSecret: process.env.MEDIA_SIGNING_SECRET || JWT_SECRET
 });
+
+mountPlanRoutes(app, { pool, initDb, accountFromBearer });
 
 mountProgramGenerateRoutes(app, {
   requireAuth: async (req) => accountFromBearer(req.headers.authorization)

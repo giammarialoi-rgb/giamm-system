@@ -44,6 +44,9 @@ function athleteCheckInTemplate() {
   const K = scheduledCheckInLib();
   if (!K || !store || typeof isAthleteRole !== 'function' || !isAthleteRole()) return null;
   if (store.coachViewingClient || store.coachAssigning) return null;
+  // A link waiting for a seat: no reminders until it is active again.
+  const link = currentAccountEntitlement().coachLink;
+  if (link && link.seatInactive) return null;
   const t = store.clientProfile && store.clientProfile.checkInTemplate;
   return t ? K.normalizeTemplate(t) : null;
 }
@@ -569,16 +572,19 @@ function drawCoachScheduledCheckIns() {
       ? '<div style="font-size:12px;color:#ddd;margin-top:4px;">' + esc(SCHED_CHECKIN_CADENCE_LABELS[t.cadence]) + ' · ' + esc(SCHED_CHECKIN_DAY_NAMES[t.weekday]) + ' · ' + esc(t.time) + '</div>' +
         '<div style="font-size:10px;color:#888;margin-top:2px;">' + (t.customized ? 'Modello personalizzato per questo atleta' : 'Modello applicato a tutti') + ' · prossimo: ' + esc(schedCheckInWhen(K.nextDue(t, Date.now()))) + '</div>'
       : '<div class="cp-help" style="margin:4px 0 0;">Nessun check-in programmato: l\'atleta non riceve promemoria.</div>') +
-    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">' +
-    '<button type="button" class="btn btn-outline" style="font-size:10px;flex:1 1 auto;" onclick="editCoachCheckInTemplate()">' + (t ? 'MODIFICA MODELLO' : 'IMPOSTA CHECK-IN') + '</button>' +
-    (t ? '<button type="button" class="btn btn-outline" style="font-size:10px;flex:1 1 auto;" onclick="applyCoachCheckInTemplateToAll()">APPLICA A TUTTI</button>' : '') +
-    '</div>' +
+    (planCan('scheduled_checkins')
+      ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">' +
+        '<button type="button" class="btn btn-outline" style="font-size:10px;flex:1 1 auto;" onclick="editCoachCheckInTemplate()">' + (t ? 'MODIFICA MODELLO' : 'IMPOSTA CHECK-IN') + '</button>' +
+        (t ? '<button type="button" class="btn btn-outline" style="font-size:10px;flex:1 1 auto;" onclick="applyCoachCheckInTemplateToAll()">APPLICA A TUTTI</button>' : '') +
+        '</div>'
+      : planLockedHtml('scheduled_checkins')) +
     '<div style="margin-top:10px;">' + rowsHtml + '</div></div>';
 }
 
 window.drawCoachScheduledCheckIns = drawCoachScheduledCheckIns;
 
 function editCoachCheckInTemplate() {
+  if (!requirePlan('scheduled_checkins')) return;
   const st = window.__cpSchedCI;
   const K = scheduledCheckInLib();
   if (!st || !K) return;
@@ -672,6 +678,7 @@ async function saveCoachCheckInTemplate(off) {
 window.saveCoachCheckInTemplate = saveCoachCheckInTemplate;
 
 async function applyCoachCheckInTemplateToAll() {
+  if (!requirePlan('scheduled_checkins')) return;
   const st = window.__cpSchedCI;
   if (!st || !st.template) return;
   const base = '/api/coach/clients/' + encodeURIComponent(st.clientId) + '/check-in-template/apply-all';

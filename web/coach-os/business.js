@@ -17,6 +17,11 @@
   }
 
   CoachOS.views.coachBusiness = async function (container) {
+    // Billing clients belongs to the Coach plan (web/features.json).
+    if (typeof planCan === 'function' && !planCan('client_billing')) {
+      container.innerHTML = '<div class="coach-os-page">' + planLockedHtml('client_billing') + '</div>';
+      return;
+    }
     container.innerHTML = '<div class="coach-os-skeleton">' + escText(tx('coLoadingLedger')) + '</div>';
     let summary = {};
     try {

@@ -158,6 +158,7 @@ const fmt = (ms) => { const d = new Date(ms); return d.getFullYear() + '-' + Str
         clientCheckIns: opts.server || []
       },
       isAthleteRole: () => true,
+      currentAccountEntitlement: () => ({ plan: 'free', coachLink: { active: true, seatInactive: !!opts.seatInactive } }),
       esc: (s) => String(s),
       checkInStatusLabel: (s) => ({ FAILED: 'Non inviato — riprova', SYNCED: 'Inviato al coach' })[s] || ''
     });
@@ -169,6 +170,7 @@ const fmt = (ms) => { const d = new Date(ms); return d.getFullYear() + '-' + Str
   ok('Saturday: no banner, the next date and CHECK-IN EXTRA', !/COMPILA/.test(home(at(2026, 9, 26, 12))) && /CHECK-IN EXTRA/.test(home(at(2026, 9, 26, 12))) && /domenica 27\/09 alle 18:00/.test(home(at(2026, 9, 26, 12))));
   ok('Tuesday 18:00: expired, the banner is gone', !/COMPILA/.test(home(at(2026, 9, 29, 18))));
   ok('athlete without a coach: nothing at all', home(sunday, { noCoach: true }) === '');
+  ok('link waiting for a coach seat: no banner, no reminder', home(sunday, { seatInactive: true }) === '');
   const due = new Date(at(2026, 9, 27, 18)).toISOString();
   const failedFill = { id: 'chk_1', kind: 'scheduled', scheduledFor: due, at: new Date(sunday).toISOString(), checkInSyncState: 'FAILED' };
   ok('failed send: the banner says so and offers RIPROVA', /Non inviato/.test(home(sunday + 60000, { bodyChecks: [failedFill] })) && /retryScheduledCheckIn\('chk_1'\)/.test(home(sunday + 60000, { bodyChecks: [failedFill] })));

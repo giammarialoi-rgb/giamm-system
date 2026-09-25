@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "graceDays": 7,
+  "trialDays": 14,
+  "trialPlan": "coach",
+  "inheritedPlan": "standard",
+  "contactEmail": "",
+  "plans": [
+    { "id": "free", "name": "Free", "seats": 0, "prices": [], "tagline": "Per allenarti e registrare tutto" },
+    { "id": "standard", "name": "Standard", "seats": 3, "prices": [{ "amount": 24, "period": "year" }], "tagline": "Storico completo, export, target proposto" },
+    { "id": "coach", "name": "Coach", "seats": 20, "prices": [{ "amount": 19, "period": "month" }, { "amount": 190, "period": "year" }], "tagline": "Fino a 20 atleti, check-in programmati" },
+    { "id": "coach_pro", "name": "Coach Pro", "seats": null, "prices": [{ "amount": 39, "period": "month" }, { "amount": 390, "period": "year" }], "tagline": "Atleti illimitati, terapia ed esami" }
+  ],
+  "features": {
+    "logging": { "min": "free", "label": "Registrazione degli allenamenti" },
+    "active_program": { "min": "free", "label": "Programma attivo", "limit": { "free": 1, "standard": 1, "coach": 1, "coach_pro": 1 }, "unit": "programmi" },
+    "history": { "min": "free", "label": "Storico degli ultimi 90 giorni", "days": { "free": 90, "standard": null, "coach": null, "coach_pro": null } },
+    "import": { "min": "free", "label": "Import di programmi", "limit": { "free": 1, "standard": 5, "coach": null, "coach_pro": null }, "unit": "import al mese" },
+    "food_catalog": { "min": "free", "label": "Catalogo alimenti completo" },
+    "session_card": { "min": "free", "label": "Card di fine seduta" },
+
+    "gold_frame": { "min": "standard", "label": "Cornice oro dell'avatar" },
+
+    "history_full": { "min": "standard", "label": "Storico illimitato" },
+    "export": { "min": "standard", "label": "Export (CSV, PDF, programma)" },
+    "proposed_target": { "min": "standard", "label": "Target kcal e macro proposto" },
+    "coach_clients": { "min": "standard", "label": "Seguire atleti", "seats": true, "unit": "atleti" },
+
+    "scheduled_checkins": { "min": "coach", "label": "Check-in programmati" },
+    "prescribed_target": { "min": "coach", "label": "Prescrizione del target nutrizionale" },
+    "import_unlimited": { "min": "coach", "label": "Import illimitato" },
+    "client_billing": { "min": "coach", "label": "Incasso dai clienti" },
+
+    "branding": { "min": "coach_pro", "label": "Branding personale" },
+    "coach_therapy_exams": { "min": "coach_pro", "label": "Terapia ed esami degli atleti" },
+    "export_athletes": { "min": "coach_pro", "label": "Export dei dati degli atleti" }
+  }
+}

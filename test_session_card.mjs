@@ -226,7 +226,7 @@ console.log("--- 9. retroattiva: ogni seduta passata si riapre e si condivide --
 {
   ok("9a. in Home c'e' la card dell'ultima seduta, con la strada per condividerla", SRC.indexOf('function lastSessionHomeCardHtml()') >= 0 && SRC.indexOf('${lastSessionHomeCardHtml()}') >= 0 && grab('lastSessionHomeCardHtml').indexOf('onclick="openSessionCard(') >= 0);
   ok("9b. non nello spazio cliente ne' mentre il coach guarda un cliente", grab('lastSessionHomeCardHtml').indexOf('isClientStorageContext()') >= 0 && grab('lastSessionHomeCardHtml').indexOf('coachViewingClient') >= 0);
-  ok("9c. lo storico in Statistiche arriva alla prima seduta, non si ferma a dodici", SRC.indexOf('const histAll = (store.logs || []).slice().reverse();') >= 0 && SRC.indexOf("MOSTRA TUTTE LE ' + histAll.length + ' SEDUTE") >= 0 && SRC.indexOf('function toggleStatsHistoryAll()') >= 0);
+  ok("9c. lo storico in Statistiche arriva alla prima seduta che il piano mostra, non si ferma a dodici", SRC.indexOf('const histVisible = historyVisibleLogs(store.logs || []);') >= 0 && SRC.indexOf('const histAll = histVisible.slice().reverse();') >= 0 && SRC.indexOf("MOSTRA TUTTE LE ' + histAll.length + ' SEDUTE") >= 0 && SRC.indexOf('function toggleStatsHistoryAll()') >= 0);
   ok("9d. e una giornata finalizzata, riaperta in Allenamento, ha la sua card", SRC.indexOf('onclick="openSessionCard(${currentWeek},${currentDay})">CARD DELLA SEDUTA') >= 0);
   ok("9e. tutto nella pagina costruita", BUILT.indexOf('function lastSessionHomeCardHtml()') >= 0 && BUILT.indexOf('function toggleStatsHistoryAll()') >= 0);
 }

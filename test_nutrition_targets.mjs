@@ -144,7 +144,12 @@ console.log('\n--- 6. nella pagina: con un prescritto il proposto non compare --
       foodQtyToGrams: (q) => q,
       store: Object.assign({ profile: { sex: 'm', age: 30, height: 180, weight: 80, nutritionActivity: 3, nutritionGoal: 'maintain' }, bodyChecks: [], logs: [] }, opts.store || {}),
       DATA: { nutrition: Object.assign({ days: [] }, opts.nutrition || {}) },
-      isCoachClientSandbox: () => !!opts.coach
+      isCoachClientSandbox: () => !!opts.coach,
+      // Plans (test_entitlements.mjs): here an account that sees the proposal
+      // and may prescribe, as in the scenario of this test.
+      planCan: () => true,
+      planLockedHtml: () => '',
+      requirePlan: () => true
     };
     vm.createContext(ctx);
     vm.runInContext(['nutritionTargetsLib', 'nutritionSubjectProfile', 'latestCheckWeight', 'nutritionProfileInputs', 'nutritionProposed', 'nutritionPrescribed', 'nutritionPlanTarget',
