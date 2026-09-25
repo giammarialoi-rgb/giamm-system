@@ -35046,6 +35046,21 @@ const ReadinessService = {
 
 const HealthSyncService = {
   async syncFromNative() {
+    // The figures the phone keeps belong to the account they were first read
+    // for. Another account signing in on the same phone used to get the
+    // previous person's steps, sleep and heart rate merged into its own and
+    // uploaded with it. A different account clears them and starts empty.
+    let owner = '';
+    try { owner = (typeof accountSpaceId === 'function' && typeof store !== 'undefined' && store && store.accountUser) ? accountSpaceId(store.accountUser) : ''; } catch (_) { owner = ''; }
+    if (!owner) return null;
+    let claimed = '';
+    try { claimed = localStorage.getItem('NURVAN_HEALTH_OWNER') || ''; } catch (_) {}
+    if (claimed && claimed !== owner) {
+      try { if (typeof NativeConfig !== 'undefined' && NativeConfig.clearHealthData) NativeConfig.clearHealthData(); } catch (_) {}
+      try { localStorage.setItem('NURVAN_HEALTH_OWNER', owner); } catch (_) {}
+      return null;
+    }
+    if (!claimed) { try { localStorage.setItem('NURVAN_HEALTH_OWNER', owner); } catch (_) {} }
     let raw = {};
     try {
       if (typeof NativeConfig !== 'undefined' && NativeConfig.getHealthTotals) {
@@ -37460,8 +37475,27 @@ function applyChromeI18n(){
   document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
   updateAccountButton();
 }
+// True while store holds an athlete's data rather than the coach's own: the
+// view/assign flags, or the memory area itself - a flag switched off without
+// the coach's area being put back (the Home button during a client view did
+// that) left the athlete's data looking like the coach's.
+function coachHoldsClientData() {
+  if (store && (store.coachViewingClient || store.coachAssigning)) return true;
+  try {
+    if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return false;
+    return typeof nurvanClientAreaActive === 'function' && nurvanClientAreaActive();
+  } catch (_) { return false; }
+}
+
 function accountRequest(path, options={}){
   if(!store.accountToken) throw new Error('Accedi per sincronizzare i dati.');
+  // One door for every upload of the account's data (six callers, a timer
+  // among them that did not look again before firing): never while an
+  // athlete's data is what is loaded, or it lands in the coach's own record.
+  const method = String((options && options.method) || 'GET').toUpperCase();
+  if (method !== 'GET' && (path === '/api/account/sync' || path === '/api/account/data') && coachHoldsClientData()) {
+    return Promise.reject(new Error('Sincronizzazione in pausa mentre guardi i dati di un atleta.'));
+  }
   return apiFetch(coachEndpoint(path),{...options, headers:{'Content-Type':'application/json', Authorization:`Bearer ${store.accountToken}`, ...(options.headers||{})}});
 }
 function openAccount(){
@@ -75919,6 +75953,19 @@ function wrapPracticeHooks() {
           return;
         }
         if (raw === 'home' || raw === 'settings') {
+          // Viewing an athlete: back to the coach's own area first, the way
+          // ESCI does. Switching the flags off here left the athlete's data
+          // loaded as if it were the coach's - and the next sync uploaded it
+          // into the coach's own cloud record, merged beyond undoing.
+          if (store.coachViewingClient) {
+            const go = function () {
+              store.coachSessionActive = false;
+              store.coachViewingClient = false;
+              navigate(raw, e);
+            };
+            Promise.resolve(leaveCoachClientView(true)).then(go, go);
+            return;
+          }
           store.coachSessionActive = false;
           store.coachViewingClient = false;
         }

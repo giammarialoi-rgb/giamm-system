@@ -1871,6 +1871,21 @@ const ReadinessService = {
 
 const HealthSyncService = {
   async syncFromNative() {
+    // The figures the phone keeps belong to the account they were first read
+    // for. Another account signing in on the same phone used to get the
+    // previous person's steps, sleep and heart rate merged into its own and
+    // uploaded with it. A different account clears them and starts empty.
+    let owner = '';
+    try { owner = (typeof accountSpaceId === 'function' && typeof store !== 'undefined' && store && store.accountUser) ? accountSpaceId(store.accountUser) : ''; } catch (_) { owner = ''; }
+    if (!owner) return null;
+    let claimed = '';
+    try { claimed = localStorage.getItem('NURVAN_HEALTH_OWNER') || ''; } catch (_) {}
+    if (claimed && claimed !== owner) {
+      try { if (typeof NativeConfig !== 'undefined' && NativeConfig.clearHealthData) NativeConfig.clearHealthData(); } catch (_) {}
+      try { localStorage.setItem('NURVAN_HEALTH_OWNER', owner); } catch (_) {}
+      return null;
+    }
+    if (!claimed) { try { localStorage.setItem('NURVAN_HEALTH_OWNER', owner); } catch (_) {} }
     let raw = {};
     try {
       if (typeof NativeConfig !== 'undefined' && NativeConfig.getHealthTotals) {

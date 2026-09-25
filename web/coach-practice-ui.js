@@ -6438,6 +6438,19 @@ function wrapPracticeHooks() {
           return;
         }
         if (raw === 'home' || raw === 'settings') {
+          // Viewing an athlete: back to the coach's own area first, the way
+          // ESCI does. Switching the flags off here left the athlete's data
+          // loaded as if it were the coach's - and the next sync uploaded it
+          // into the coach's own cloud record, merged beyond undoing.
+          if (store.coachViewingClient) {
+            const go = function () {
+              store.coachSessionActive = false;
+              store.coachViewingClient = false;
+              navigate(raw, e);
+            };
+            Promise.resolve(leaveCoachClientView(true)).then(go, go);
+            return;
+          }
           store.coachSessionActive = false;
           store.coachViewingClient = false;
         }

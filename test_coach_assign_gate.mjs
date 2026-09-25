@@ -77,10 +77,14 @@ function bodyOf(needle, chars) {
 
 // --- outside an assignment, leaving still works ---
 {
-  const gate = bodyOf('navigate = function (v, e) {', 4600);
+  const gate = bodyOf('navigate = function (v, e) {', 7000);
   ok(
-    /if \(raw === 'home' \|\| raw === 'settings'\) \{\s*store\.coachSessionActive = false;/.test(gate),
+    /if \(raw === 'home' \|\| raw === 'settings'\) \{[\s\S]{0,1200}?\n\s*store\.coachSessionActive = false;\s*\n\s*store\.coachViewingClient = false;\s*\n\s*\}/.test(gate),
     'without an assignment open, home/settings still exits coach mode'
+  );
+  ok(
+    /if \(store\.coachViewingClient\) \{[\s\S]{0,400}?Promise\.resolve\(leaveCoachClientView\(true\)\)\.then\(go, go\);/.test(gate),
+    'and from an athlete view it puts the coach\'s own area back first'
   );
 }
 

@@ -628,6 +628,18 @@ public class MainActivity extends Activity {
             });
         }
 
+        // The health figures kept on this device belong to the account that
+        // was signed in when they were read. When another account signs in on
+        // the same phone the page clears them, instead of merging the previous
+        // person's steps, sleep and heart rate into the new account.
+        @JavascriptInterface
+        public void clearHealthData() {
+            try {
+                getSharedPreferences("gs_health", MODE_PRIVATE).edit().clear().apply();
+            } catch (Exception ignored) {}
+            lastHealthTotals = null;
+        }
+
         @JavascriptInterface
         public String getHealthTotals() {
             try {
