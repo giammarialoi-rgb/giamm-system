@@ -272,5 +272,17 @@ console.log('\n--- 9. dalla rete solo cibo plausibile ---');
   ok('9h. e il filtro e\' applicato alla ricerca vera del server: ' + JSON.stringify(got), got.includes('Pet milk') && !got.includes('Pet toothbrush'));
 }
 
+console.log('\n--- 10. dalla rete solo cio\' che il testo nomina ---');
+{
+  const { isRelevantFoodResult: rel } = await import('./server/food/index.mjs');
+  ok('10a. «ris» non porta «Kinder Tricky» ne\' le costine', !rel({ name: 'Kinder Tricky', brand: 'Kinder' }, 'ris') && !rel({ name: 'Costine Montgomery Inn', originalName: 'Montgomery Inn Ribs', brand: 'Montgomery Inn' }, 'ris'));
+  ok('10b. «big mac» non porta «Guinea Pig» ne\' «Big Red»: tutte le parole devono esserci', !rel({ name: 'Guinea Pig' }, 'big mac') && !rel({ name: 'Big Red (Bottle)', brand: 'Big Red' }, 'big mac'));
+  ok('10c. restano Riso Rema, Big Mac, Pet milk, Nutella & GO!', rel({ name: 'Riso Rema', brand: 'Rema' }, 'ris') && rel({ name: 'Big Mac', brand: "McDonald's" }, 'big mac') && rel({ name: 'Pet milk', brand: 'Pet' }, 'pet') && rel({ name: 'Nutella & GO!', brand: 'Nutella' }, 'nutella'));
+  ok('10d. conta anche il nome tradotto: «Jasmine rice» diventato «Riso jasmine» resta per «riso»', rel({ name: 'Riso jasmine', originalName: 'Jasmine rice' }, 'riso'));
+  ok('10e. e la marca: «mcdo» → Big Mac di McDonald\'s', rel({ name: 'Big Mac', brand: "McDonald's" }, 'mcdo'));
+  ok('10f. accenti e punteggiatura non contano', rel({ name: 'Caffè d\'orzo' }, 'caffe orz') && rel({ name: 'Yogurt greco 0%' }, 'greco'));
+  ok('10g. la route filtra dopo la traduzione', /background: true \}\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*result\.items = result\.items\.filter\(\(it\) => isRelevantFoodResult\(it, q\)\);/.test(fs.readFileSync(path.join(root, 'server/food/index.mjs'), 'utf8').replace(/\r\n/g, '\n')));
+}
+
 console.log('\n' + (failed ? failed + ' controlli falliti' : 'tutti i controlli passano'));
 process.exit(failed ? 1 : 0);

@@ -319,6 +319,20 @@ function withDeadline(promise, ms, label) {
 // substring match on the restaurant menus turns "ris" into "Crispy McBacon".
 // So: an energy value between 1 and 900 kcal per 100 g, and a chain menu item
 // only when its name or its chain starts with what was typed.
+// The sources search loosely: "ris" brings back ribs and a Kinder, "big mac"
+// a guinea pig. A product stays only if every word typed starts a word of its
+// name - the original one, the translated one - or of its brand.
+function foodWords(text) {
+  return fold(text).replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+}
+export function isRelevantFoodResult(it, query) {
+  const wanted = foodWords(query);
+  if (!wanted.length) return false;
+  const words = []
+    .concat(foodWords(it && it.name), foodWords(it && it.originalName), foodWords(it && it.brand));
+  return wanted.every((w) => words.some((x) => x.indexOf(w) === 0));
+}
+
 export const FOOD_KCAL_MAX_PER_100 = 900;
 export function isPlausibleFoodResult(it, foldedQuery) {
   if (!it || !it.name) return false;
@@ -2186,6 +2200,9 @@ export function mountFoodRoutes(app, opts = {}) {
       if (result.items && result.items.length) {
         // Cached translations now, new ones after the response (background).
         await localizeFoodSearchResults(result.items, lang, { pool, translateFoodNames, background: true });
+        // After the translation, so an English name whose Italian one matches
+        // ("Jasmine rice" -> "Riso jasmine" for "riso") is kept.
+        result.items = result.items.filter((it) => isRelevantFoodResult(it, q));
       }
       res.json(result);
     } catch (err) {
