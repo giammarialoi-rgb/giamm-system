@@ -313,6 +313,26 @@ function withDeadline(promise, ms, label) {
   return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
 }
 
+// What the network returns is not all food, and not all of it is right:
+// "pet" brings a toothbrush and a dog food at 0 kcal, "ris" a rice at 2362
+// kcal per 100 g (nothing edible passes 900: pure fat is about 900), and a
+// substring match on the restaurant menus turns "ris" into "Crispy McBacon".
+// So: an energy value between 1 and 900 kcal per 100 g, and a chain menu item
+// only when its name or its chain starts with what was typed.
+export const FOOD_KCAL_MAX_PER_100 = 900;
+export function isPlausibleFoodResult(it, foldedQuery) {
+  if (!it || !it.name) return false;
+  const kcal = Number(it.kcalPer100);
+  if (!Number.isFinite(kcal) || kcal <= 0 || kcal > FOOD_KCAL_MAX_PER_100) return false;
+  const source = it.provenance && it.provenance.source;
+  if (source === 'official_restaurant_data') {
+    const q = fold(foldedQuery);
+    const startsWord = (text) => { const f = fold(text); return f.indexOf(q) === 0 || f.indexOf(' ' + q) >= 0; };
+    if (!(fold(it.name).indexOf(q) === 0 || startsWord(it.brand || ''))) return false;
+  }
+  return true;
+}
+
 export async function searchFoodMulti(query, env = process.env, { lang = 'it' } = {}) {
   const q = fold(query);
   if (!q || q.length < 2) return { items: [], source: 'empty' };
@@ -346,7 +366,7 @@ export async function searchFoodMulti(query, env = process.env, { lang = 'it' } 
   // Rank by how well the name actually matches before deduping, so which
   // near-duplicate survives is the best-matching (and highest-confidence)
   // one, not just whichever source happened to be pushed into the array first.
-  const scored = items.map((it) => ({
+  const scored = items.filter((it) => isPlausibleFoodResult(it, q)).map((it) => ({
     it,
     score: nameMatchScore(it.name, q) + ((it.provenance && it.provenance.confidence) || 0) * 10
   }));

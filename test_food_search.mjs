@@ -246,5 +246,31 @@ console.log('\n--- 8. il server risponde subito anche se una fonte e\' lenta ---
   ok('8d. il tempo limite predefinito per fonte e\' 800 ms', /const FOOD_SOURCE_DEADLINE_MS = 800;/.test(fs.readFileSync(path.join(root, 'server/food/index.mjs'), 'utf8')));
 }
 
+console.log('\n--- 9. dalla rete solo cibo plausibile ---');
+{
+  const { isPlausibleFoodResult: keep, FOOD_KCAL_MAX_PER_100, searchFoodMulti } = await import('./server/food/index.mjs');
+  const off = (name, kcal) => ({ name, kcalPer100: kcal, provenance: { source: 'open_food_facts' } });
+  const chain = (name, brand) => ({ name, brand, kcalPer100: 250, provenance: { source: 'official_restaurant_data' } });
+  ok('9a. 0 kcal non e\' cibo: «Pet toothbrush», «Himalaya Pet Food» fuori', !keep(off('Pet toothbrush', 0), 'pet') && !keep(off('Himalaya Pet Food', 0), 'pet'));
+  ok('9b. sopra 900 kcal/100 g e\' un dato sbagliato: «Riso Freyja» a 2362 fuori', !keep(off('Riso Freyja', 2362), 'ris'));
+  ok('9c. l\'olio a 884 e i 900 esatti restano', keep(off('Olio EVO', 884), 'oli') && keep(off('Burro chiarificato', FOOD_KCAL_MAX_PER_100), 'bur'));
+  ok('9d. un valore mancante non passa', !keep(off('Senza valori', undefined), 'sen') && !keep(off('Testo', 'abc'), 'tes'));
+  ok('9e. «ris» non porta piu\' «Crispy McBacon» ne\' i «Crispy Tenders»', !keep(chain('Crispy McBacon', "McDonald's"), 'ris') && !keep(chain('Colonel Crispy Tenders (3 pz)', 'KFC'), 'ris'));
+  ok('9f. il menu resta per chi lo cerca: «big» → Big Mac, «mcdo» → i prodotti McDonald\'s', keep(chain('Big Mac', "McDonald's"), 'big') && keep(chain('Big Mac', "McDonald's"), 'mcdo'));
+  ok('9g. un prodotto vero con la marca nel nome resta: «Pet milk» 110 kcal', keep(off('Pet milk', 110), 'pet'));
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => ({
+    ok: true, status: 200,
+    json: async () => ({ hits: [
+      { product_name: 'Pet toothbrush', brands: ['Charles pet'], nutriments: { 'energy-kcal_100g': 0 }, code: '1' },
+      { product_name: 'Pet milk', brands: ['Pet'], nutriments: { 'energy-kcal_100g': 110 }, code: '2' }
+    ] })
+  });
+  const res = await searchFoodMulti('pet', { FOOD_SOURCE_DEADLINE_MS: '500' }, { lang: 'it' });
+  globalThis.fetch = realFetch;
+  const got = res.items.map((i) => i.name);
+  ok('9h. e il filtro e\' applicato alla ricerca vera del server: ' + JSON.stringify(got), got.includes('Pet milk') && !got.includes('Pet toothbrush'));
+}
+
 console.log('\n' + (failed ? failed + ' controlli falliti' : 'tutti i controlli passano'));
 process.exit(failed ? 1 : 0);
