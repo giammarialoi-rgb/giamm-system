@@ -41,7 +41,7 @@ function grabVar(name) {
 }
 
 const slice = grabVar('SESSION_CARD_PR_LABEL') +
-  ['formatKgIt', 'formatDurationIt', 'formatSessionCardDate', 'formatSessionCardPr', 'buildSessionCardData'].map(grab).join(String.fromCharCode(10));
+  ['formatKgIt', 'formatDurationIt', 'formatSessionCardDate', 'formatSessionCardPr', 'buildSessionCardData', 'sessionCardExercises'].map(grab).join(String.fromCharCode(10));
 const ctx = { console };
 vm.createContext(ctx);
 vm.runInContext(slice, ctx);

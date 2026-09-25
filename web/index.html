@@ -3052,7 +3052,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MEAL-PHOTO-V1",
-        schemaTarget: "0015",
+        schemaTarget: "0016",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -57010,8 +57010,132 @@ function buildSessionCardData(input) {
     muscles: muscles,
     // Il cardio e' una voce a parte, in minuti: mai kg, mai un muscolo acceso.
     cardioMinutes: Math.max(0, Math.round(Number(log.cardioMinutes) || 0)),
-    athleteName: athlete || null
+    athleteName: athlete || null,
+    // Per il testo da copiare: esercizio per esercizio, solo carico e
+    // ripetizioni delle serie allenanti, o i minuti del cardio.
+    exerciseLines: sessionCardExercises(i.exercises),
+    notes: (typeof log.notes === 'string' && log.notes.trim()) ? log.notes.replace(/\s+/g, ' ').trim() : null
   };
+}
+
+// Anche qui la lista e' chiusa: nome, carico, ripetizioni, recupero, minuti.
+// I riscaldamenti non passano.
+function sessionCardExercises(list) {
+  return (Array.isArray(list) ? list : []).map(function (e) {
+    if (!e || !String(e.name || '').trim()) return null;
+    const name = String(e.name).trim();
+    if (e.cardio) return { name: name, cardio: true, minutes: Math.max(0, Math.round(Number(e.minutes) || 0)) };
+    const sets = (Array.isArray(e.sets) ? e.sets : [])
+      .filter(function (s) { return s && !s.warmup; })
+      .map(function (s) { return { load: Math.max(0, Number(s.load) || 0), reps: Math.max(0, Math.round(Number(s.reps) || 0)) }; });
+    if (!sets.length) return null;
+    return { name: name, cardio: false, sets: sets, restSec: Math.max(0, Math.round(Number(e.restSec) || 0)) || null };
+  }).filter(Boolean);
+}
+
+// Il log della seduta come testo, da incollare in una nota o in chat.
+// Legge solo la card: quello che la card non ha, qui non c'e'.
+function formatSessionTextDate(iso) {
+  const d = new Date(iso || '');
+  if (isNaN(d.getTime())) return String(iso || '').slice(0, 10);
+  return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+}
+
+function formatSessionTextLoad(n) {
+  const v = Math.round((Number(n) || 0) * 100) / 100;
+  return String(v).replace('.', ',');
+}
+
+function formatSessionTextRest(sec) {
+  const s = Math.max(0, Math.round(Number(sec) || 0));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+function sessionTextPrLabel(p) {
+  if (p.type === 'weight' || p.type === 'reps') return 'PR ' + p.value;
+  if (p.type === 'e1rm') return 'PR e1RM ' + p.value;
+  return 'PR volume ' + p.value;
+}
+
+// Le serie che il testo conta: quelle con carico e ripetizioni, non il cardio.
+function sessionTextSetCount(card) {
+  const list = (card && card.exerciseLines) || [];
+  if (!list.length) return Math.max(0, Number(card && card.sets) || 0);
+  return list.reduce(function (n, e) { return n + (e.cardio ? 0 : e.sets.length); }, 0);
+}
+
+function sessionTextCardioMinutes(card) {
+  const list = ((card && card.exerciseLines) || []).filter(function (e) { return e.cardio; });
+  if (!list.length) return Math.max(0, Number(card && card.cardioMinutes) || 0);
+  return list.reduce(function (n, e) { return n + e.minutes; }, 0);
+}
+
+function sessionTextLines(card) {
+  const c = card || {};
+  const setCount = sessionTextSetCount(c);
+  const head = [c.durationText || formatDurationIt(c.durationSec)];
+  if (Number(c.tonnage) > 0) head.push(c.tonnageText || (formatKgIt(c.tonnage) + ' kg'));
+  if (setCount > 0) head.push(setCount + ' serie');
+  const lines = ['**' + String(c.title || 'Seduta') + ' — ' + formatSessionTextDate(c.at) + '** (' + head.join(' · ') + ')'];
+  const prs = Array.isArray(c.prs) ? c.prs : [];
+  const prsOf = function (name) {
+    const key = String(name || '').trim().toLowerCase();
+    return prs.filter(function (p) { return String(p.name || '').trim().toLowerCase() === key; });
+  };
+  const listed = {};
+  const exercises = Array.isArray(c.exerciseLines) ? c.exerciseLines : [];
+  exercises.forEach(function (e) {
+    if (e.cardio) {
+      lines.push('- Cardio: ' + e.name + (e.minutes > 0 ? (' ' + e.minutes + ' min') : ''));
+      return;
+    }
+    const sets = e.sets.map(function (s) {
+      return s.load > 0 ? (formatSessionTextLoad(s.load) + '×' + s.reps) : (s.reps + ' rip');
+    }).join(' · ');
+    const mine = prsOf(e.name);
+    mine.forEach(function (p) { listed[p.name + '|' + p.type] = true; });
+    lines.push('- ' + e.name + ': ' + sets +
+      (e.restSec ? (' (rec. ' + formatSessionTextRest(e.restSec) + ')') : '') +
+      (mine.length ? (' — ' + mine.map(sessionTextPrLabel).join(', ')) : ''));
+  });
+  // Un record il cui esercizio non ha serie da elencare resta comunque scritto.
+  prs.forEach(function (p) {
+    if (listed[p.name + '|' + p.type]) return;
+    lines.push('- ' + p.name + ' — ' + sessionTextPrLabel(p));
+  });
+  if (!exercises.some(function (e) { return e.cardio; }) && Number(c.cardioMinutes) > 0) {
+    lines.push('- Cardio: ' + Math.round(Number(c.cardioMinutes)) + ' min');
+  }
+  if (c.notes) lines.push('Note: ' + c.notes);
+  return lines;
+}
+
+function formatSessionCardText(card) {
+  return sessionTextLines(card).concat(['via Nurvan']).join('\n');
+}
+
+// Piu' sedute in fila, con il totale in cima: quelle che lo storico mostra.
+function formatSessionPeriodText(cards) {
+  const list = (Array.isArray(cards) ? cards : []).filter(Boolean);
+  if (!list.length) return '';
+  const times = list.map(function (c) { return new Date(c.at || '').getTime(); }).filter(function (t) { return isFinite(t); });
+  const dur = list.reduce(function (n, c) { return n + (Number(c.durationSec) || 0); }, 0);
+  const kg = list.reduce(function (n, c) { return n + (Number(c.tonnage) || 0); }, 0);
+  const sets = list.reduce(function (n, c) { return n + sessionTextSetCount(c); }, 0);
+  const cardio = list.reduce(function (n, c) { return n + sessionTextCardioMinutes(c); }, 0);
+  const head = [];
+  if (times.length) {
+    const from = formatSessionTextDate(new Date(Math.min.apply(null, times)).toISOString());
+    const to = formatSessionTextDate(new Date(Math.max.apply(null, times)).toISOString());
+    head.push(from === to ? from : (from + ' – ' + to));
+  }
+  head.push(formatDurationIt(dur));
+  if (kg > 0) head.push(formatKgIt(kg) + ' kg');
+  if (sets > 0) head.push(sets + ' serie');
+  if (cardio > 0) head.push('cardio ' + cardio + ' min');
+  const blocks = ['**Totale: ' + list.length + (list.length === 1 ? ' seduta' : ' sedute') + '** (' + head.join(' · ') + ')'];
+  list.forEach(function (c) { blocks.push(sessionTextLines(c).join('\n')); });
+  return blocks.join('\n\n') + '\n\nvia Nurvan';
 }
 
 function findSessionLog(week, day) {
@@ -57049,8 +57173,116 @@ function sessionCardFor(week, day, log) {
     log: entry,
     sessionName: sessionName || ('Seduta ' + (d + 1)),
     athleteName: (store && store.profile && store.profile.name) || '',
-    prs: sessionPrsFor(w, d)
+    prs: sessionPrsFor(w, d),
+    exercises: sessionExerciseDetailsFor(w, d)
   });
+}
+
+// Le serie chiuse della seduta, esercizio per esercizio, come le conta
+// collectSessionStats: saltati fuori, riscaldamenti segnati (li toglie
+// buildSessionCardData), cardio in minuti.
+function sessionExerciseDetailsFor(week, day) {
+  try {
+    const wk = DATA && DATA.weeks && DATA.weeks[week - 1];
+    const sess = wk && (wk.sessions || wk.days || [])[day];
+    const rows = (sess && (sess.exercises || sess.rows)) || [];
+    const data = (store && store.data) || {};
+    const out = [];
+    rows.forEach(function (row, eIdx) {
+      const eK = 'w' + week + '_d' + day + '_e' + eIdx;
+      if (store.skips && store.skips[eK]) return;
+      const name = (store.subs && store.subs[eK]) || row.name || row.exercise || '';
+      const isCardio = (typeof exerciseLogUnit === 'function') && exerciseLogUnit(row, name) === 'cardio';
+      const sets = [];
+      let minutes = 0;
+      let cardioDone = 0;
+      for (let s = 1; s <= 20; s++) {
+        const k = eK + '_s' + s;
+        if (!data[k + '_done']) continue;
+        const setObj = Array.isArray(row.sets) ? row.sets[s - 1] : null;
+        const warm = isWarmupSet(setObj);
+        if (isCardio) {
+          if (warm) continue;
+          cardioDone++;
+          const tracked = Number(data[k + '_min']);
+          const mins = tracked > 0 ? tracked : ((typeof prescribedMinutesFor === 'function') ? prescribedMinutesFor(row, setObj) : 0);
+          minutes += Math.max(0, Math.round(Number(mins) || 0));
+          continue;
+        }
+        sets.push({ load: parseFloat(data[k + '_load']) || 0, reps: parseInt(data[k + '_reps'], 10) || 0, warmup: warm });
+      }
+      if (isCardio) {
+        if (cardioDone) out.push({ name: name, cardio: true, minutes: minutes });
+        return;
+      }
+      if (!sets.length) return;
+      const restSec = row.rest ? parseRestSeconds(row.rest, 0) : (Number(row.rest_seconds) || 0);
+      out.push({ name: name, cardio: false, sets: sets, restSec: restSec });
+    });
+    return out;
+  } catch (_) { return []; }
+}
+
+// Copia negli appunti; se il browser non lo permette, il testo si apre
+// gia' selezionato in una finestra, da copiare a mano.
+function copySessionTextToClipboard(text) {
+  if (!text) return;
+  const manual = function () { openManualCopyOverlay(text); };
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(text).then(function () {
+        if (typeof showToast === 'function') showToast('Copiato', 'info');
+      }, manual);
+      return;
+    }
+  } catch (_) {}
+  manual();
+}
+
+function openManualCopyOverlay(text) {
+  const old = document.getElementById('manual-copy-overlay');
+  if (old) old.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'manual-copy-overlay';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10200;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
+  overlay.innerHTML =
+    '<div class="card" style="max-width:460px;width:100%;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:6px;">COPIA IL TESTO</div>' +
+    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Gli appunti non sono disponibili qui: il testo è già selezionato, copialo a mano.</div>' +
+    '<textarea id="manual-copy-text" readonly style="width:100%;height:240px;box-sizing:border-box;background:#111;color:#fff;border:1px solid #333;border-radius:8px;padding:8px;font:12px/1.45 monospace;"></textarea>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="document.getElementById(&#39;manual-copy-overlay&#39;).remove()">CHIUDI</button></div>';
+  document.body.appendChild(overlay);
+  const ta = document.getElementById('manual-copy-text');
+  if (ta) { ta.value = text; ta.focus(); ta.select(); }
+}
+
+function copySessionText(week, day) {
+  const card = sessionCardFor(week, day);
+  if (!card) {
+    if (typeof showToast === 'function') showToast('Nessuna seduta finalizzata per questo giorno', 'error');
+    return;
+  }
+  copySessionTextToClipboard(formatSessionCardText(card));
+}
+
+function copySessionTextFromOverlay() {
+  if (window.__sessionCard) copySessionTextToClipboard(formatSessionCardText(window.__sessionCard));
+}
+
+// Le sedute che lo storico mostra adesso, nello stesso ordine: il piano, e
+// le ultime dodici o tutte.
+function statsHistoryShownLogs() {
+  const all = historyVisibleLogs(store.logs || []).slice().reverse();
+  return (store.prefs && store.prefs.statsHistoryAll) ? all : all.slice(0, 12);
+}
+
+function copyStatsPeriodText() {
+  const cards = statsHistoryShownLogs().map(function (row) {
+    return sessionCardFor(Number(row.week) || 1, Number(row.day) || 0, row);
+  }).filter(Boolean);
+  if (!cards.length) return;
+  copySessionTextToClipboard(formatSessionPeriodText(cards));
 }
 
 // In Home: l'ultima seduta finalizzata, con la strada piu' corta per la sua
@@ -57128,6 +57360,7 @@ function sessionCardOverlayHtml(card, mode) {
     SESSION_CARD_STYLES.map(function (st) {
       return '<button type="button" class="btn btn-outline sc-share-btn" title="' + esc(st.note) + '" onclick="shareWorkoutCardFromOverlay(&#39;' + st.id + '&#39;)">' + esc(st.label) + '</button>';
     }).join('') + '</div></div>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:12px;font-size:11px;" onclick="copySessionTextFromOverlay()">Copia testo</button>' +
     '<button type="button" class="btn btn-primary" style="width:100%;height:48px;font-weight:900;margin-top:12px;" onclick="closeWorkoutCompleteOverlay()">CHIUDI</button>';
   return h;
 }
@@ -59561,6 +59794,7 @@ function renderStats(c){
       '<span>W' + (row.week || '?') + ' · S' + (hd + 1) + (stampPretty ? (' · Finalizzato il ' + esc(stampPretty)) : '') + '</span>' +
       '<div style="color:var(--gold);font-weight:800;margin-top:2px;">' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg</div></button>' +
       '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="openSessionCard(' + hw + ',' + hd + ')">CARD</button>' +
+      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="copySessionText(' + hw + ',' + hd + ')">Copia testo</button>' +
       '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="startEditFinalizedWorkout(' + hw + ',' + hd + ')">MODIFICA</button></div>';
   }).join('');
   const lastStampPretty = last ? formatFinalizedDateTime(last.finalizedAt || last.at) : '';
@@ -59579,7 +59813,7 @@ function renderStats(c){
     </div>` : ''}
     ${renderMuscleMap(snap.muscles, { cardioMinutes: (last && last.cardioMinutes) || live.cardioMinutes || 0 })}
     ${renderCheckFisicoCardHtml()}
-    ${(hist || histHiddenNote) ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:11px;font-weight:800;color:var(--gold);">CRONOLOGIA SESSIONI <span style="color:#666;font-weight:600;">· ' + histAll.length + '</span></div><button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;" onclick="toggleStatsHistory()">' + (store.prefs && store.prefs.statsHistoryOpen === false ? '▸' : '✕') + '</button></div>' + ((store.prefs && store.prefs.statsHistoryOpen === false) ? '' : (hist + histHiddenNote + (histAll.length > 12 ? '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="toggleStatsHistoryAll()">' + (showAllHist ? 'MOSTRA SOLO LE ULTIME 12' : 'MOSTRA TUTTE LE ' + histAll.length + ' SEDUTE') + '</button>' : ''))) + '</div>' : ''}
+    ${(hist || histHiddenNote) ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:11px;font-weight:800;color:var(--gold);">CRONOLOGIA SESSIONI <span style="color:#666;font-weight:600;">· ' + histAll.length + '</span></div><div style="display:flex;gap:6px;align-items:center;">' + (hist ? '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="copyStatsPeriodText()">Copia periodo</button>' : '') + '<button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;" onclick="toggleStatsHistory()">' + (store.prefs && store.prefs.statsHistoryOpen === false ? '▸' : '✕') + '</button></div></div>' + ((store.prefs && store.prefs.statsHistoryOpen === false) ? '' : (hist + histHiddenNote + (histAll.length > 12 ? '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="toggleStatsHistoryAll()">' + (showAllHist ? 'MOSTRA SOLO LE ULTIME 12' : 'MOSTRA TUTTE LE ' + histAll.length + ' SEDUTE') + '</button>' : ''))) + '</div>' : ''}
     <div class="card" style="margin-bottom:12px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;"><h2>Statistiche</h2><button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="exportStatsCsv()">Esporta</button></div>
       <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -60406,6 +60640,7 @@ function openLoggedSessionReview(week, day) {
       ? ('<div style="font-size:12px;color:var(--gold);font-weight:800;margin-bottom:12px;">Finalizzato il ' + esc(formatFinalizedDateTime(log.finalizedAt || log.at)) + '</div>')
       : '') +
     '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="openSessionCard(' + week + ',' + day + ')">CARD DELLA SEDUTA</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="copySessionText(' + week + ',' + day + ')">Copia testo</button>' +
     '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="startEditFinalizedWorkout(' + week + ',' + day + ')">MODIFICA ALLENAMENTO FINALIZZATO</button>' +
     body + '</div>';
   document.body.appendChild(overlay);
@@ -68352,6 +68587,11 @@ if (typeof window !== 'undefined') {
   window.toggleStatsHistoryAll = toggleStatsHistoryAll;
   window.sessionCardFor = sessionCardFor;
   window.buildSessionCardData = buildSessionCardData;
+  window.formatSessionCardText = formatSessionCardText;
+  window.formatSessionPeriodText = formatSessionPeriodText;
+  window.copySessionText = copySessionText;
+  window.copySessionTextFromOverlay = copySessionTextFromOverlay;
+  window.copyStatsPeriodText = copyStatsPeriodText;
   window.renderSessionCardOverlay = renderSessionCardOverlay;
   window.renderAthleteProfile = renderAthleteProfile;
   window.acceptAdaptiveDeload = acceptAdaptiveDeload;
