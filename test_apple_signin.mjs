@@ -303,6 +303,11 @@ await withServer({}, async ({ base }) => {
   const page = read('web/index.base.html');
   const sync = page.slice(page.indexOf('function syncAppleAuthButton('), page.indexOf('function loadAppleIdScript('));
   ok('6e. la pagina mostra il bottone solo con appleEnabled', /!!window\.__appleEnabled/.test(sync) && /window\.__appleEnabled = !!\(cfg && cfg\.appleEnabled\)/.test(page));
+  const open = page.slice(page.indexOf('function openAccount()'), page.indexOf('function enterAccountSession('));
+  const hydrateApple = page.slice(page.indexOf('function hydrateAppleEnabled()'), page.indexOf('function syncAppleAuthButton('));
+  ok('6e2. appleEnabled si chiede al server a parte, anche con l\'id Google gia\' nel build (in produzione CONFIG.googleClientId c\'e\')',
+    /hydrateAppleEnabled\(\)\.then\(function \(\) \{ syncAppleAuthButton\(!!store\.accountToken\); \}\);/.test(open) &&
+    /fetch\(coachEndpoint\('\/api\/auth\/public-config'\)/.test(hydrateApple) && /window\.__appleEnabled = !!\(cfg && cfg\.appleEnabled\)/.test(hydrateApple));
   ok('6f. e di partenza il bottone e\' nascosto', /\.apple-signin-btn \{\s*\n\s*display: none;/.test(page) && !/\$\('apple-auth'\)\.style\.display = 'block'/.test(page));
 });
 

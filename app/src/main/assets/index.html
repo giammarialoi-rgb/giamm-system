@@ -37462,8 +37462,8 @@ function openAccount(){
   if (!logged) {
     accountRecoveryMode = false;
     syncAccountFormMode();
+    hydrateAppleEnabled().then(function () { syncAppleAuthButton(!!store.accountToken); });
     hydrateGoogleClientId().then(function (id) {
-      syncAppleAuthButton(!!store.accountToken);
       if (!id || store.accountToken) return;
       loadGoogleIdentityScript().then(function () {
         if (!store.accountToken) renderGoogleSignInButton(id);
@@ -37920,6 +37920,23 @@ async function startGoogleAuthWeb(preferredClientId) {
 // no button and nothing to fail. On the web: Apple's JS in a popup. In the
 // Android app: the browser, then back through giammaria://oauth/apple with a
 // one-time ticket (nativeAppleResult). No native SDK.
+// Asked of the server on its own: the Google id can come baked into the
+// build, and then the Google path never calls public-config at all.
+function hydrateAppleEnabled() {
+  if (window.__appleConfigAsk) return window.__appleConfigAsk;
+  window.__appleConfigAsk = fetch(coachEndpoint('/api/auth/public-config'), { method: 'GET', cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (cfg) {
+      window.__appleEnabled = !!(cfg && cfg.appleEnabled);
+      return window.__appleEnabled;
+    })
+    .catch(function () {
+      window.__appleConfigAsk = null;
+      return !!window.__appleEnabled;
+    });
+  return window.__appleConfigAsk;
+}
+
 function syncAppleAuthButton(logged) {
   const btn = $('apple-auth');
   if (!btn) return;
