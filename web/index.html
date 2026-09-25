@@ -51791,7 +51791,7 @@ function exportActiveProgram() {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DATA, null, 2));
   const dlAnchorElem = document.createElement('a');
   dlAnchorElem.setAttribute("href", dataStr);
-  const title = (DATA.title || DATA.programTitle || 'giammaria_system_program').replace(/[^a-z0-9_]/gi, '_').toLowerCase();
+  const title = (DATA.title || DATA.programTitle || 'nurvan_programma').replace(/[^a-z0-9_]/gi, '_').toLowerCase();
   dlAnchorElem.setAttribute("download", title + ".json");
   dlAnchorElem.click();
   if (typeof showToast === 'function') showToast("Programma esportato", "ok");
@@ -71923,10 +71923,12 @@ function showDemoUnlock() {
   ensurePracticeStyle();
   ensurePracticeOverlays();
   const p = document.getElementById('cp-demo-panel');
+  // The holder is whoever is signed in: the demo card is theirs, not anybody else's.
+  const holder = String((store.accountUser && (store.accountUser.name || store.accountUser.email)) || '').trim();
   p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">SBLOCCO DEMO</div>' +
     '<h2>Modalità Coach</h2>' +
     '<p class="cp-help">Per provare l’hub Coach completa il checkout demo (carta finta, addebito 0,00 €). Lo stesso tasto servirà dopo per il pagamento vero.</p>' +
-    '<div class="cp-field"><label>Intestatario</label><input value="Giammaria Loi" readonly></div>' +
+    '<div class="cp-field"><label>Intestatario</label><input value="' + esc(holder) + '" readonly></div>' +
     '<div class="cp-field"><label>Carta</label><input value="4242 4242 4242 4242" readonly></div>' +
     '<div style="display:flex;gap:8px;"><div class="cp-field" style="flex:1;"><label>Scadenza</label><input value="12/29" readonly></div>' +
     '<div class="cp-field" style="flex:1;"><label>CVC</label><input value="123" readonly></div></div>' +

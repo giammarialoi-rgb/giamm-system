@@ -147,7 +147,7 @@ export async function searchOpenFoodFacts(query, { pageSize = 8 } = {}) {
   const res = await fetch(url, {
     headers: {
       Accept: 'application/json',
-      'User-Agent': 'GiammariaSystem/1.0 (fitness-app; contact@giammaria.system)'
+      'User-Agent': 'Nurvan/1.0 (fitness-app)'
     }
   });
   if (!res.ok) throw new Error('OFF_HTTP_' + res.status);
@@ -161,7 +161,7 @@ export async function lookupOffBarcode(code) {
   const res = await fetch(url, {
     headers: {
       Accept: 'application/json',
-      'User-Agent': 'GiammariaSystem/1.0 (fitness-app; contact@giammaria.system)'
+      'User-Agent': 'Nurvan/1.0 (fitness-app)'
     }
   });
   if (!res.ok) return null;
@@ -204,7 +204,7 @@ async function fatSecretRequest(method, extraParams, env) {
   if (!signed) return null;
   const qs = Object.keys(signed).map((k) => rfc3986Encode(k) + '=' + rfc3986Encode(signed[k])).join('&');
   const res = await fetch(`${FATSECRET_BASE}?${qs}`, {
-    headers: { Accept: 'application/json', 'User-Agent': 'GiammariaSystem/1.0 (fitness-app; contact@giammaria.system)' }
+    headers: { Accept: 'application/json', 'User-Agent': 'Nurvan/1.0 (fitness-app)' }
   });
   if (!res.ok) throw new Error('FATSECRET_HTTP_' + res.status);
   const data = await res.json();

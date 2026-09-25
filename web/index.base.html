@@ -18919,7 +18919,7 @@ function exportActiveProgram() {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DATA, null, 2));
   const dlAnchorElem = document.createElement('a');
   dlAnchorElem.setAttribute("href", dataStr);
-  const title = (DATA.title || DATA.programTitle || 'giammaria_system_program').replace(/[^a-z0-9_]/gi, '_').toLowerCase();
+  const title = (DATA.title || DATA.programTitle || 'nurvan_programma').replace(/[^a-z0-9_]/gi, '_').toLowerCase();
   dlAnchorElem.setAttribute("download", title + ".json");
   dlAnchorElem.click();
   if (typeof showToast === 'function') showToast("Programma esportato", "ok");

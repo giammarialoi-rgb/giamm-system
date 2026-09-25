@@ -1800,7 +1800,7 @@ ${context && context.checkFisico ? `Analizza le foto del check fisico (struttura
 `;
 
     const system = athleteLocked ? athleteSystem : `
-Sei Coach AI, l'assistente scientifico di allenamento di élite all'interno dell'applicazione Giammaria System.
+Sei Coach AI, l'assistente scientifico di allenamento di élite all'interno dell'app Nurvan.
 Rispondi sempre in italiano in modo chiaro, autorevole, motivante e rigorosamente evidence-based.
 Non tenere memoria di conversazioni precedenti: ogni domanda è autonoma. Ignora qualsiasi cronologia chat.
 
