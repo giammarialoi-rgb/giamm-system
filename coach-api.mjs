@@ -23,6 +23,7 @@ import { accountEntitlement, mountPlanRoutes } from "./server/account/plans.mjs"
 import { publicUser, resolveIdentityUser, mountAccountDeletion } from "./server/account/identity.mjs";
 import { createSessionGate, revocationMoment } from "./server/account/sessions.mjs";
 import { appleCallbackRoute, appleConfig, mountAppleAuth } from "./server/account/apple.mjs";
+import { loadLegal, validMainConsent, recordMainConsent, readConsentRow, aiConsentWithdrawn, mountConsentRoutes } from "./server/account/consent.mjs";
 import { mountAdminDashboard } from "./server/admin/index.mjs";
 import { touchLastSeen, recordEvent, fileFormat } from "./server/admin/activity.mjs";
 import { runMigrations } from "./server/db/migrate.mjs";
@@ -64,6 +65,15 @@ appleCallbackRoute(app, [
 app.use(cors({ origin: buildCorsOriginValidator(process.env), credentials: true }));
 app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  // The app had none of these (only /admin did): not framed by other sites,
+  // no content sniffing, no referrer with paths to others, HTTPS remembered,
+  // camera and microphone only for the app itself.
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (!res.getHeader("X-Frame-Options")) res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  if (!res.getHeader("Content-Security-Policy")) res.setHeader("Content-Security-Policy", "frame-ancestors 'self'");
+  res.setHeader("Permissions-Policy", "camera=(self), microphone=(self), geolocation=(), payment=(), usb=()");
+  if (isProduction(process.env)) res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   next();
 });
 // Raw body must be captured before the JSON parser so webhook HMAC validation
@@ -104,6 +114,18 @@ app.post(AI_ROUTES, async (req, res, next) => {
   const auth = await accountFromBearer(req.headers.authorization);
   if (!auth) return res.status(401).json({ error: "Accedi al tuo account per usare Coach AI.", code: "AI_AUTH_REQUIRED" });
   req.aiAccount = auth;
+  // Withdrawn in Privacy e dati: nothing more goes to the AI provider for
+  // this account, whatever the app asks. A database hiccup does not decide it.
+  if (process.env.DATABASE_URL) {
+    try {
+      const row = await readConsentRow(pool, auth.id);
+      if (aiConsentWithdrawn(row)) {
+        return res.status(403).json({ error: "Hai revocato il consenso alle funzioni AI. Puoi riattivarlo da Impostazioni > Privacy e dati.", code: "AI_CONSENT_WITHDRAWN" });
+      }
+    } catch (err) {
+      console.warn("AI_CONSENT_CHECK", err && err.message);
+    }
+  }
   return next();
 }, createFixedWindowRateLimiter({
   // Per account on top of the per-IP limits: the label OCR had none.
@@ -157,6 +179,8 @@ const barcodeAiRateLimiter = distributedRateLimiter({
 import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// Plans, and the legal block (version of the notice in force, minimum age).
+const FEATURES_PATH = path.join(__dirname, "web", "features.json");
 
 function renderPostgresRegions() {
   const preferred = process.env.RENDER_POSTGRES_REGION || process.env.DATABASE_REGION || "";
@@ -488,7 +512,9 @@ async function verifyGoogleCredential(idToken) {
   }
   const payload = await response.json();
   const allowed = allowedGoogleAudiences();
-  if (allowed.length && !allowed.includes(String(payload.aud || ""))) {
+  // No configured client id: no Google login at all. It used to skip the
+  // check, so a Google token issued for any other app was accepted.
+  if (!allowed.length || !allowed.includes(String(payload.aud || ""))) {
     throw Object.assign(new Error("Google token client ID does not match the configured web client ID."), { statusCode: 401 });
   }
   if (!payload.email) {
@@ -1296,9 +1322,9 @@ app.get("/health", (req, res) => {
     appVersion: RELEASE_META.versionName,
     build: RELEASE_META.webBuild,
     schemaVersion: dbSchemaVersion,
-    dbReady: dbInitialized,
-    dbHost: dbHost || null,
-    dbError: dbInitError
+    dbReady: dbInitialized
+    // dbHost and dbError used to be here: the database hostname and error
+    // text, to anyone. They stay in the server log.
   });
 });
 
@@ -1454,9 +1480,15 @@ app.post("/api/auth/register", async (req, res) => {
       );
       const user = result.rows[0];
       await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb) ON CONFLICT (user_id) DO NOTHING", [user.id]);
+      // The boxes ticked on the sign-up form (age, notice and terms, health
+      // data). Without them the account exists but the app asks before use.
+      const legalVersion = loadLegal(FEATURES_PATH).version;
+      const consented = validMainConsent(req.body && req.body.consent, legalVersion);
+      if (consented) await recordMainConsent(client, user.id, legalVersion);
       await client.query("COMMIT");
       client.release();
       return res.status(201).json({
+        consentOk: consented,
         token: issueAccountToken(user),
         user: { id: user.id, email: user.email, name: user.name, provider: user.provider || "email", avatarUrl: user.avatar_url || null }
       });
@@ -1728,8 +1760,7 @@ app.post(["/api/analyze-file", "/api/analyze", "/analyze"], async (req, res) => 
     console.error(`[FILE_ANALYZE_ERROR] filename="${filename}" parser="${parser}" error_name="${error?.name}" error_message="${error?.message}"`);
     const status = error?.statusCode || (/Payload too large/i.test(error?.message) ? 413 : 500);
     return res.status(status).json({
-      error: "Document analysis failed.",
-      details: error.message
+      error: status === 413 ? "File troppo grande." : "Document analysis failed."
     });
   }
 });
@@ -1761,8 +1792,7 @@ app.post("/api/ingest/document", upload.single("file"), async (req, res) => {
       recordEvent(pool, "import_failed", auth && auth.id, { route: "/api/ingest/document", status: 500, format: fileFormat(filename, mimeType), message: error?.message })
     ).catch(() => {});
     return res.status(500).json({
-      error: "Document ingestion failed.",
-      details: error.message
+      error: "Document ingestion failed."
     });
   }
 });
@@ -2032,8 +2062,7 @@ Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico
       });
     }
     return res.status(error?.statusCode || 500).json({
-      error: "Coach interaction failed.",
-      details: error?.message
+      error: "Coach interaction failed."
     });
   }
 });
@@ -2053,6 +2082,7 @@ mountPlanRoutes(app, { pool, initDb, accountFromBearer });
 const appleAuth = mountAppleAuth(app, { pool, initDb, secret: JWT_SECRET, accountFromBearer, issueAccountToken });
 appleCallbackTarget.handle = appleAuth.callbackHandler;
 mountAccountDeletion(app, { pool, initDb, accountFromBearer, onDeleted: (gone) => appleAuth.revokeIdentities(gone.identities) });
+mountConsentRoutes(app, { pool, initDb, accountFromBearer, featuresPath: FEATURES_PATH });
 
 mountAdminDashboard(app, { pool, initDb, sendEmail, secret: JWT_SECRET });
 
@@ -2203,6 +2233,11 @@ app.use(function (req, res, next) {
   }
   next();
 });
+const LEGAL_PAGES = { "/privacy": "privacy.html", "/termini": "termini.html", "/elimina-account": "elimina-account.html" };
+app.get(Object.keys(LEGAL_PAGES), (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  res.sendFile(path.join(__dirname, "web", LEGAL_PAGES[req.path]));
+});
 app.use(express.static(path.join(__dirname, "web")));
 
 // No global error handler existed before this, so any error passed to
@@ -2220,7 +2255,11 @@ app.use(function (err, req, res, next) {
   } else {
     console.error("[UNHANDLED_ERROR]", req.method, req.path, err && err.message);
   }
-  res.status(status).json({ ok: false, error: (err && err.message) || "Internal server error" });
+  // A deliberate error (with its status) keeps its message; anything else is
+  // a server fault and its text (a Postgres error, a stack detail) stays in
+  // the log.
+  const expose = status < 500 && err && err.statusCode;
+  res.status(status).json({ ok: false, error: expose ? err.message : "Errore interno del server." });
 });
 
 const server = app.listen(port, () => {

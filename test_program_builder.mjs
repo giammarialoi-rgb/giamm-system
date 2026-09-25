@@ -65,6 +65,8 @@ vm.createContext(ctx);
 vm.runInContext(html.match(/const esc = x => [^\n]+/)[0], ctx);
 vm.runInContext(slice('var SPACE_EQUIPMENT = [', 'function emptyProgramDraft()'), ctx);
 vm.runInContext(slice('function emptyProgramDraft()', 'function saveAll()'), ctx);
+vm.runInContext(slice('function activeProgramKey()', 'function findLogById('), ctx);
+vm.runInContext(slice('function isWarmupSet(s)', 'function countWarmupSets('), ctx);
 
 /* ---------- 1. the draft ---------- */
 {
@@ -334,8 +336,8 @@ function loggedProgram() {
   ctx.store.data = {};
   // Prescribed RIR 2, logged RIR 0 all over: effort is running past the plan.
   [1, 2].forEach((w) => {
-    for (let s = 1; s <= 3; s++) ctx.store.data['w' + w + '_d0_e0_s' + s + '_rir'] = 0;
-    for (let s = 1; s <= 2; s++) ctx.store.data['w' + w + '_d0_e1_s' + s + '_rir'] = 1;
+    for (let s = 1; s <= 3; s++) { ctx.store.data['w' + w + '_d0_e0_s' + s + '_rir'] = 0; ctx.store.data['w' + w + '_d0_e0_s' + s + '_done'] = true; }
+    for (let s = 1; s <= 2; s++) { ctx.store.data['w' + w + '_d0_e1_s' + s + '_rir'] = 1; ctx.store.data['w' + w + '_d0_e1_s' + s + '_done'] = true; }
   });
   const hot = ctx.effortOvershootReport();
   ok(hot.sets === 10 && hot.sessions === 2, '3aj. the report reads the sets that were actually logged');
@@ -344,14 +346,31 @@ function loggedProgram() {
   // Training as prescribed must never raise it.
   ctx.store.data = {};
   [1, 2].forEach((w) => {
-    for (let s = 1; s <= 3; s++) ctx.store.data['w' + w + '_d0_e0_s' + s + '_rir'] = 2;
-    for (let s = 1; s <= 2; s++) ctx.store.data['w' + w + '_d0_e1_s' + s + '_rir'] = 3;
+    for (let s = 1; s <= 3; s++) { ctx.store.data['w' + w + '_d0_e0_s' + s + '_rir'] = 2; ctx.store.data['w' + w + '_d0_e0_s' + s + '_done'] = true; }
+    for (let s = 1; s <= 2; s++) { ctx.store.data['w' + w + '_d0_e1_s' + s + '_rir'] = 3; ctx.store.data['w' + w + '_d0_e1_s' + s + '_done'] = true; }
   });
   ok(ctx.effortOvershootReport().ready === false, '3al. training as written raises nothing');
 
   // Two hard sets are a hard day, not a pattern.
-  ctx.store.data = { 'w2_d0_e0_s1_rir': 0, 'w2_d0_e0_s2_rir': 0 };
+  ctx.store.data = { 'w2_d0_e0_s1_rir': 0, 'w2_d0_e0_s2_rir': 0, 'w2_d0_e0_s1_done': true, 'w2_d0_e0_s2_done': true };
   ok(ctx.effortOvershootReport().ready === false, '3am. and a couple of hard sets is a hard day, not a pattern');
+
+  // Only closed working sets count: RIR typed ahead, never done, is not effort.
+  ctx.store.data = {};
+  [1, 2].forEach((w) => {
+    for (let s = 1; s <= 3; s++) ctx.store.data['w' + w + '_d0_e0_s' + s + '_rir'] = 0;
+    for (let s = 1; s <= 2; s++) ctx.store.data['w' + w + '_d0_e1_s' + s + '_rir'] = 1;
+  });
+  ok(ctx.effortOvershootReport().sets === 0, '3am2. RIR typed on sets never closed is not read as effort');
+
+  // RPE athletes: RPE 8 is RIR 2, right on a RIR 2 prescription.
+  ctx.store.prefs = { intensityType: 'RPE' };
+  [1, 2].forEach((w) => {
+    for (let s = 1; s <= 3; s++) { ctx.store.data['w' + w + '_d0_e0_s' + s + '_rir'] = 8; ctx.store.data['w' + w + '_d0_e0_s' + s + '_done'] = true; }
+    for (let s = 1; s <= 2; s++) { ctx.store.data['w' + w + '_d0_e1_s' + s + '_rir'] = 8; ctx.store.data['w' + w + '_d0_e1_s' + s + '_done'] = true; }
+  });
+  ok(ctx.effortOvershootReport().ready === false, '3am3. an RPE 8 log is read as RIR 2, not as an overshoot');
+  ctx.store.prefs = {};
 }
 
 /* ---------- 3quinquies. dropping a lighter week in ---------- */

@@ -1529,7 +1529,8 @@ const CalendarService = {
     const dayNames = ["DOMENICA", "LUNEDI", "MARTEDI", "MERCOLEDI", "GIOVEDI", "VENERDI", "SABATO"];
     const currentDayName = dayNames[dayOfWeek];
     const weekdayIt = this._weekdayIt(date);
-    const iso = dateStr || date.toISOString().split('T')[0];
+    // The local day: in UTC, between midnight and 2 in Italy, it was yesterday.
+    const iso = dateStr || (function (x) { return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); })(date);
 
     const schedule = {
       date: iso,
@@ -1567,7 +1568,7 @@ const CalendarService = {
   },
 
   getEventsForDate(dateStr = null, d = (typeof DATA !== 'undefined' ? DATA : null), s = (typeof store !== 'undefined' ? store : null)) {
-    const iso = dateStr ? String(dateStr).slice(0, 10) : new Date().toISOString().slice(0, 10);
+    const iso = dateStr ? String(dateStr).slice(0, 10) : (function (x) { return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); })(new Date());
     const date = new Date(iso + 'T12:00:00');
     const weekdayIt = this._weekdayIt(date);
     const weekNum = this._programWeekNumber(iso, s, d);
@@ -1789,7 +1790,7 @@ const BackupService = {
 const HealthDataProvider = {
   isSupported: true,
   async fetchMetrics() {
-    // Prefer live Health Connect / NativeConfig samples when present
+    // Prefer the app's own local samples (NativeConfig) when present
     try {
       if (typeof NativeConfig !== 'undefined' && NativeConfig.getHealthTotals) {
         const raw = JSON.parse(NativeConfig.getHealthTotals() || '{}') || {};
@@ -1804,7 +1805,7 @@ const HealthDataProvider = {
             restingHeartRate: Number.isFinite(restingHeartRate) ? restingHeartRate : null,
             hrvMs: Number.isFinite(hrvMs) ? hrvMs : null,
             hydrationLiters: Number(raw.hydrationLiters) || null,
-            source: 'health_connect'
+            source: 'device_estimate'
           };
         }
       }
@@ -1844,7 +1845,7 @@ const ReadinessService = {
     const hasSteps = typeof samples.steps === 'number' && samples.steps > 0;
     const hasHrv = typeof samples.hrvMs === 'number';
     if (!hasHr && !hasSleep && !trainingLoad && !hasSteps) {
-      return { level: 'unknown', label: 'Dati insufficienti', advice: 'Collega Health Connect o registra sonno/HR per una stima.', kind: 'estimate', confidence: 0.2 };
+      return { level: 'unknown', label: 'Dati insufficienti', advice: 'Registra sonno e battito a riposo per una stima.', kind: 'estimate', confidence: 0.2 };
     }
     let score = 70;
     if (hasSleep) {
@@ -1913,7 +1914,7 @@ const HealthSyncService = {
       avgHr: Number(raw.avgHr) || null,
       hrvMs: Number(raw.hrvMs) || null,
       kcal: Number(raw.kcal) || null,
-      source: raw.source || 'health_connect_bridge',
+      source: raw.source || 'local_estimate',
       kind: raw.kind || 'estimate',
       confidence: raw.confidence != null ? raw.confidence : 0.4,
       updatedAt: new Date().toISOString()

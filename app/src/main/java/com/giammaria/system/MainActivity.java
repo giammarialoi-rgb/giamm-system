@@ -52,8 +52,6 @@ import androidx.credentials.CredentialManagerCallback;
 import androidx.credentials.GetCredentialRequest;
 import androidx.credentials.GetCredentialResponse;
 import androidx.credentials.exceptions.GetCredentialException;
-import androidx.health.connect.client.HealthConnectClient;
-import androidx.health.connect.client.PermissionController;
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
@@ -68,7 +66,6 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> uploadMessage;
     private final static int FILECHOOSER_RESULTCODE = 1;
     private final static int CAMERA_CAPTURE_RESULTCODE = 2;
-    private final static int HC_PERMISSION_REQ = 42;
     private static final String TAG_EXCEL = "GiammariaExcel";
     private static final String TAG_HC = "GiammariaHealth";
     private Uri cameraCaptureUri = null;
@@ -80,6 +77,7 @@ public class MainActivity extends Activity {
     // was open): handed to the page once the page has loaded.
     private String pendingAppleTicket = null;
     private static final int WEB_MEDIA_PERMISSION_REQ = 22;
+    private static final int VOICE_PERMISSION_REQ = 23;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override public void onCreate(Bundle state) {
@@ -316,22 +314,13 @@ public class MainActivity extends Activity {
         });
 
         web.setBackgroundColor(0xFF090909);
-        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
-                || checkSelfPermission(android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            java.util.ArrayList<String> perms = new java.util.ArrayList<>();
-            if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                perms.add(android.Manifest.permission.RECORD_AUDIO);
-            }
-            if (checkSelfPermission(android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                perms.add(android.Manifest.permission.CAMERA);
-            }
-            requestPermissions(perms.toArray(new String[0]), 20);
-        }
+        // Microphone and camera are asked for when a feature needs them (voice
+        // input, a photo), never at launch: the stores want the request tied
+        // to the action the person just took.
         web.clearCache(true);
         web.loadUrl("file:///android_asset/index.html");
         setContentView(web);
         applyReadableViewport(web.getSettings());
-        maybeShowHealthRationale(getIntent());
 
         Intent intent = getIntent();
         if (intent != null) {
@@ -511,9 +500,13 @@ public class MainActivity extends Activity {
             } catch (Exception ignored) {}
         }
 
+        // Health Connect is not used: the app declared 18 read/write
+        // permissions it never exercised (the health figures are local
+        // estimates), which Google Play rejects. Kept as a no-op for pages
+        // that still call it.
         @JavascriptInterface
         public void openHealthConnect() {
-            runOnUiThread(() -> requestHealthConnectAccess());
+            runOnUiThread(() -> Toast.makeText(MainActivity.this, "Collegamento a Connessione Salute non disponibile in questa versione", Toast.LENGTH_LONG).show());
         }
 
         @JavascriptInterface
@@ -593,37 +586,27 @@ public class MainActivity extends Activity {
                     .putLong("updated_at", System.currentTimeMillis())
                     .apply();
             } catch (Exception ignored) {}
-            // Attempt Health Connect write on background thread when SDK available
+            // A local estimate from the session, kept for the page to read
+            // back (no Health Connect involved, and labelled as what it is).
             final String payload = json;
             Executors.newSingleThreadExecutor().execute(() -> {
                 try {
-                    int status = HealthConnectClient.getSdkStatus(MainActivity.this);
-                    if (status != HealthConnectClient.SDK_AVAILABLE) {
-                        Log.i(TAG_HC, "HC_WRITE skipped status=" + status);
-                        return;
-                    }
                     JSONObject o = new JSONObject(payload != null ? payload : "{}");
-                    double kcal = o.optDouble("kcal", 0);
-                    long durationSec = o.optLong("durationSec", 0);
-                    String title = o.optString("title", "Allenamento");
-                    // Store enriched totals for JS readback (real HC insertRecords requires Kotlin record builders;
-                    // we persist a structured sample with provenance for the readiness engine).
                     JSONObject enriched = new JSONObject();
-                    enriched.put("kcal", kcal);
-                    enriched.put("durationSec", durationSec);
-                    enriched.put("title", title);
-                    enriched.put("source", "health_connect_bridge");
+                    enriched.put("kcal", o.optDouble("kcal", 0));
+                    enriched.put("durationSec", o.optLong("durationSec", 0));
+                    enriched.put("title", o.optString("title", "Allenamento"));
+                    enriched.put("source", "local_estimate");
                     enriched.put("kind", "estimate");
-                    enriched.put("confidence", 0.5);
+                    enriched.put("confidence", 0.3);
                     enriched.put("updatedAt", System.currentTimeMillis());
                     lastHealthTotals = enriched.toString();
                     getSharedPreferences("gs_health", MODE_PRIVATE)
                         .edit()
                         .putString("last_session", lastHealthTotals)
                         .apply();
-                    Log.i(TAG_HC, "HC_WRITE persisted local sample kcal=" + kcal);
                 } catch (Exception error) {
-                    Log.w(TAG_HC, "HC_WRITE enrich failed", error);
+                    Log.w(TAG_HC, "local health estimate failed", error);
                 }
             });
         }
@@ -678,24 +661,21 @@ public class MainActivity extends Activity {
         public void refreshHealthSample() {
             Executors.newSingleThreadExecutor().execute(() -> {
                 try {
-                    int status = HealthConnectClient.getSdkStatus(MainActivity.this);
                     JSONObject o = new JSONObject();
                     try {
                         String prev = getSharedPreferences("gs_health", MODE_PRIVATE).getString("last_session", "{}");
                         o = new JSONObject(prev != null ? prev : "{}");
                     } catch (Exception ignored) {}
-                    o.put("hcSdkStatus", status);
-                    o.put("source", status == HealthConnectClient.SDK_AVAILABLE ? "health_connect_bridge" : "local_estimate");
+                    o.put("source", "local_estimate");
                     o.put("kind", "estimate");
-                    o.put("confidence", status == HealthConnectClient.SDK_AVAILABLE ? 0.45 : 0.3);
+                    o.put("confidence", 0.3);
                     o.put("updatedAt", System.currentTimeMillis());
-                    o.put("note", "Aggregate read richiede SDK Kotlin; sample arricchito da sessione/permessi");
                     lastHealthTotals = o.toString();
                     getSharedPreferences("gs_health", MODE_PRIVATE)
                         .edit()
                         .putString("last_session", lastHealthTotals)
                         .apply();
-                    Log.i(TAG_HC, "HC_REFRESH status=" + status);
+                    Log.i(TAG_HC, "local health estimate refreshed");
                     if (web != null) {
                         web.post(() -> {
                             try {
@@ -908,6 +888,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void startVoiceInput() {
             runOnUiThread(() -> {
+                if (!askMicrophone()) return;
                 if (!SpeechRecognizer.isRecognitionAvailable(MainActivity.this)) {
                     notifyVoiceStatus("error", "Riconoscimento vocale non disponibile");
                     return;
@@ -927,6 +908,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void startVoiceInputWithLang(String lang) {
             runOnUiThread(() -> {
+                if (!askMicrophone()) return;
                 if (!SpeechRecognizer.isRecognitionAvailable(MainActivity.this)) {
                     notifyVoiceStatus("error", "Riconoscimento vocale non disponibile");
                     return;
@@ -1079,10 +1061,11 @@ public class MainActivity extends Activity {
                     String name = (filename == null || filename.isEmpty()) ? "Nurvan.pdf" : filename;
                     String type = (mime == null || mime.isEmpty()) ? "application/pdf" : mime;
                     boolean ok = saveToDownloads(bytes, name, type);
-                    Toast.makeText(MainActivity.this, ok ? ("PDF salvato in Download: " + name) : "Impossibile salvare il PDF", Toast.LENGTH_LONG).show();
+                    // Any file (backups, CSV, PDF): the message names it, not "PDF".
+                    Toast.makeText(MainActivity.this, ok ? ("File salvato in Download: " + name) : "Impossibile salvare il file", Toast.LENGTH_LONG).show();
                 } catch (Exception e) {
                     Log.e("GiammariaWebView", "downloadFile failed", e);
-                    Toast.makeText(MainActivity.this, "Errore salvataggio PDF", Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this, "Errore nel salvataggio del file", Toast.LENGTH_LONG).show();
                 }
             });
         }
@@ -1234,42 +1217,6 @@ public class MainActivity extends Activity {
         dispatchNurvanRoute(intent);
     }
 
-    private void maybeShowHealthRationale(Intent intent) {
-        if (intent == null) return;
-        String action = intent.getAction();
-        if ("androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE".equals(action)
-            || Intent.ACTION_VIEW_PERMISSION_USAGE.equals(action)) {
-            new AlertDialog.Builder(this)
-                .setTitle("Connessione Salute")
-                .setMessage("Nurvan usa Connessione Salute per leggere e scrivere allenamenti, frequenza cardiaca, calorie, passi e peso.")
-                .setPositiveButton("OK", null)
-                .show();
-        }
-    }
-
-    private Set<String> healthConnectPermissionSet() {
-        return new HashSet<>(Arrays.asList(
-            "android.permission.health.READ_EXERCISE",
-            "android.permission.health.WRITE_EXERCISE",
-            "android.permission.health.READ_HEART_RATE",
-            "android.permission.health.WRITE_HEART_RATE",
-            "android.permission.health.READ_RESTING_HEART_RATE",
-            "android.permission.health.WRITE_RESTING_HEART_RATE",
-            "android.permission.health.READ_TOTAL_CALORIES_BURNED",
-            "android.permission.health.WRITE_TOTAL_CALORIES_BURNED",
-            "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
-            "android.permission.health.WRITE_ACTIVE_CALORIES_BURNED",
-            "android.permission.health.READ_WEIGHT",
-            "android.permission.health.WRITE_WEIGHT",
-            "android.permission.health.READ_STEPS",
-            "android.permission.health.WRITE_STEPS",
-            "android.permission.health.READ_DISTANCE",
-            "android.permission.health.WRITE_DISTANCE",
-            "android.permission.health.READ_SLEEP",
-            "android.permission.health.WRITE_SLEEP"
-        ));
-    }
-
     private void debugJs(String hypothesisId, String location, String message, String dataJson) {
         if (web == null) return;
         final String js = "(function(){try{if(typeof __gsDebug34Log==='function')__gsDebug34Log('"
@@ -1290,52 +1237,12 @@ public class MainActivity extends Activity {
         });
     }
 
-    private void openHealthConnectSettings() {
-        try {
-            Intent hc = new Intent("androidx.health.ACTION_HEALTH_CONNECT_SETTINGS");
-            hc.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(hc);
-        } catch (Exception e1) {
-            try {
-                Intent play = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.apps.healthdata"));
-                play.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(play);
-            } catch (Exception e2) {
-                Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata"));
-                webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(webIntent);
-            }
-        }
-    }
-
-    private void requestHealthConnectAccess() {
-        try {
-            int status = HealthConnectClient.getSdkStatus(this);
-            Log.i(TAG_HC, "HC_STATUS=" + status);
-            debugJs("H3", "MainActivity:requestHealthConnectAccess", "hc status", "{\"status\":" + status + "}");
-            if (status == HealthConnectClient.SDK_UNAVAILABLE) {
-                openHealthConnectSettings();
-                return;
-            }
-            if (status == HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED) {
-                try {
-                    Intent play = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.apps.healthdata"));
-                    play.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(play);
-                } catch (Exception e) {
-                    openHealthConnectSettings();
-                }
-                return;
-            }
-            ActivityResultContract<Set<String>, Set<String>> contract =
-                PermissionController.createRequestPermissionResultContract();
-            Intent intent = contract.createIntent(this, healthConnectPermissionSet());
-            startActivityForResult(intent, HC_PERMISSION_REQ);
-        } catch (Exception error) {
-            Log.e(TAG_HC, "HC request failed", error);
-            debugJs("H3", "MainActivity:requestHealthConnectAccess", "hc error", "{\"err\":\"" + String.valueOf(error.getMessage()).replace("\"", "'") + "\"}");
-            openHealthConnectSettings();
-        }
+    // True when the microphone may be used now; otherwise asks for it and the
+    // person taps the voice button again once granted.
+    private boolean askMicrophone() {
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) return true;
+        requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, VOICE_PERMISSION_REQ);
+        return false;
     }
 
     @Override
@@ -1364,30 +1271,6 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
-        if (requestCode == HC_PERMISSION_REQ) {
-            int granted = 0;
-            try {
-                ActivityResultContract<Set<String>, Set<String>> contract =
-                    PermissionController.createRequestPermissionResultContract();
-                Set<String> perms = contract.parseResult(resultCode, intent);
-                granted = perms != null ? perms.size() : 0;
-            } catch (Exception error) {
-                Log.w(TAG_HC, "HC parseResult", error);
-            }
-            Log.i(TAG_HC, "HC_PERMS resultCode=" + resultCode + " granted=" + granted);
-            debugJs("H3", "MainActivity:onActivityResult", "hc perms", "{\"granted\":" + granted + ",\"resultCode\":" + resultCode + "}");
-            if (web != null) {
-                web.post(() -> {
-                    try {
-                        web.evaluateJavascript(
-                            "(function(){try{if(window.NativeConfig&&NativeConfig.refreshHealthSample)NativeConfig.refreshHealthSample();else if(window.syncHealthSamplesAndRefresh)window.syncHealthSamplesAndRefresh();}catch(e){}})();",
-                            null);
-                    } catch (Exception ignored) {}
-                });
-            }
-            openHealthConnectSettings();
-            return;
-        }
         if (requestCode == CAMERA_CAPTURE_RESULTCODE) {
             if (resultCode == RESULT_OK && cameraCaptureUri != null) {
                 boolean toWebView = uploadMessage != null;

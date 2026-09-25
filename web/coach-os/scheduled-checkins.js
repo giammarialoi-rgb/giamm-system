@@ -409,6 +409,10 @@ async function sendScheduledCheckIn() {
     kind: d.kind,
     scheduledFor: d.scheduledFor,
     answers: answers,
+    // The questions as shown: the coach may change the model before it is sent.
+    answerRows: t.rows.filter(function (r) { return r && r.type !== 'photos'; }).map(function (r) {
+      return { id: r.id, type: r.type, label: r.label, unit: r.unit || undefined };
+    }),
     attachment: d.attachment
   };
   try {
@@ -418,7 +422,9 @@ async function sendScheduledCheckIn() {
   } catch (_) {}
   if (!Array.isArray(store.bodyChecks)) store.bodyChecks = [];
   store.bodyChecks.push(entry);
-  if (store.bodyChecks.length > 16) store.bodyChecks = store.bodyChecks.slice(-16);
+  // As for every body check: years of them, not sixteen.
+  const keep = typeof BODY_CHECKS_KEEP === 'number' ? BODY_CHECKS_KEEP : 400;
+  if (store.bodyChecks.length > keep) store.bodyChecks = store.bodyChecks.slice(-keep);
   if (entry.weight) {
     if (!store.profile) store.profile = {};
     store.profile.weight = entry.weight;
@@ -713,7 +719,12 @@ async function openScheduledCheckInDetail(checkInId) {
   const K = scheduledCheckInLib();
   const st = window.__cpSchedCI;
   const tpl = st && String(st.clientId) === String(row.clientId) && st.template ? K.normalizeTemplate(st.template) : null;
-  const rows = (tpl && tpl.rows) || (K ? K.defaultRows() : []);
+  // The model's questions, plus the ones the athlete saw that are no longer
+  // in it (a question removed after the form was opened keeps its answer).
+  const rows = ((tpl && tpl.rows) || (K ? K.defaultRows() : [])).slice();
+  (Array.isArray(row.answerRows) ? row.answerRows : []).forEach(function (r) {
+    if (r && r.id && !rows.some(function (x) { return x && x.id === r.id; })) rows.push(r);
+  });
   const prev = row.previous ? { weight: row.previous.weight, answers: row.previous.answers || {} } : null;
   const media = (row.media || []).filter(function (m) { return /^image\//.test(m.contentType || ''); });
   const order = { front: 0, side: 1, back: 2 };

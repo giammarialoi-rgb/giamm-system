@@ -71,11 +71,15 @@ export async function startLogin(pool, { email, env, secret, sendEmail, now = Da
     return { ok: false, status: 429, error: "Aspetta un minuto prima di chiedere un altro codice." };
   }
   const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+  // Wrong guesses count across codes for an hour: a new code used to come with
+  // 5 fresh tries, so asking for codes over and over was a slow brute force.
   await pool.query(
     `INSERT INTO admin_login_codes(email, code_hash, expires_at, attempts, created_at)
      VALUES($1,$2,$3,0,$4)
-     ON CONFLICT (email) DO UPDATE SET code_hash = EXCLUDED.code_hash, expires_at = EXCLUDED.expires_at, attempts = 0, created_at = EXCLUDED.created_at`,
-    [addr, codeHash(secret, addr, code), new Date(now + CODE_MINUTES * 60000).toISOString(), new Date(now).toISOString()]
+     ON CONFLICT (email) DO UPDATE SET code_hash = EXCLUDED.code_hash, expires_at = EXCLUDED.expires_at,
+       attempts = CASE WHEN admin_login_codes.created_at > $5 THEN admin_login_codes.attempts ELSE 0 END,
+       created_at = EXCLUDED.created_at`,
+    [addr, codeHash(secret, addr, code), new Date(now + CODE_MINUTES * 60000).toISOString(), new Date(now).toISOString(), new Date(now - HOUR).toISOString()]
   );
   const sent = await sendEmail(addr, "NURVAN - codice di accesso amministrazione",
     "Il tuo codice di accesso alla dashboard NURVAN e': " + code + "\n\nScade tra " + CODE_MINUTES + " minuti. Se non l'hai chiesto tu, ignora questa email.");

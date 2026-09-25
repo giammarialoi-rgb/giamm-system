@@ -25,7 +25,9 @@ export function analyzeExerciseTrend(historyRows) {
 
 export function proposeDeload(ctx) {
   const recovery = Number(ctx && ctx.recoveryScore);
-  const declining = !!(ctx && ctx.decliningCount);
+  // How many exercises are declining (a count: as a boolean, "< 2" was always
+  // true and the performance path never fired).
+  const declining = Number(ctx && ctx.decliningCount) || 0;
   const highFatigue = recovery > 0 && recovery < 45;
   if (!highFatigue && declining < 2) {
     return { needed: false };

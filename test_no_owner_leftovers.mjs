@@ -45,7 +45,7 @@ function leftovers(file) {
 const shipped = [
   'web/index.base.html',
   ...fs.readdirSync(path.join(root, 'web'))
-    .filter((f) => /\.(js|json|webmanifest)$/.test(f))
+    .filter((f) => /\.(js|json|webmanifest|html|css)$/.test(f) && f !== 'index.html')
     .map((f) => 'web/' + f),
   'admin/index.html',
   'admin/admin.js',

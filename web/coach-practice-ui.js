@@ -1893,6 +1893,8 @@ async function submitClientInviteLogin() {
     store.accountToken = payload.token;
     store.accountUser = payload.user;
     store.role = 'athlete';
+    // The athlete accepts the notice and the health-data consent too.
+    setTimeout(function () { try { if (typeof ensurePrivacyConsent === 'function') ensurePrivacyConsent(); } catch (_) {} }, 1200);
     store.clientShell = true;
     store.__cpClientScoped = true;
     store.clientProfile = payload.client || null;

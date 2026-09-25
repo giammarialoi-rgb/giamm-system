@@ -213,7 +213,8 @@
       '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">Coach OS</div>' +
       '<h1 class="coach-os-title">' + escText(tx('coToday')) + '</h1></div></div><div class="coach-os-skeleton">' + escText(tx('coLoadingPriorities')) + '</div></div>';
     try {
-      const date = new Date().toISOString().slice(0, 10);
+      // The coach's local day (with the time zone sent alongside).
+      const date = (function (x) { return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); })(new Date());
       const payload = await window.practiceFetch(
         '/api/coach/today?date=' + encodeURIComponent(date) + '&timezone=' + encodeURIComponent(timeZone()),
         { method: 'GET', headers: window.practiceHeaders(false) },

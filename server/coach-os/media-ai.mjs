@@ -39,6 +39,10 @@ export async function confirmMealLog(pool, id, owner, confirmed = {}) {
   const existing = await pool.query("SELECT * FROM meal_logs WHERE id = $1", [id]);
   const row = existing.rows[0];
   if (!row) return null;
+  // A coach confirms only their own meal logs. Only user and client were
+  // compared, and a coach passes neither: any coach could overwrite (and read
+  // back) any meal log by its number.
+  if (owner.coachUserId && String(row.coach_user_id || "") !== String(owner.coachUserId)) return null;
   if (owner.userId && row.user_id && String(row.user_id) !== String(owner.userId)) return null;
   if (owner.clientId && row.client_id && String(row.client_id) !== String(owner.clientId)) return null;
   const payload = {

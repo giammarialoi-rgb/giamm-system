@@ -1177,6 +1177,8 @@ export function mountCoachPractice(app, deps) {
         account.rows[0]?.data || {},
         req.body || {}
       );
+      // Already received: no second unread mark, no second notification.
+      if (result && result.duplicate) return res.status(200).json({ ok: true, ...result });
       await pool.query(
         "UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1",
         [ctx.client.id]
@@ -1503,13 +1505,25 @@ export function mountCoachPractice(app, deps) {
         client = q.rows[0] || null;
       }
       if (!client) {
+        // Without the invite, only a name that belongs to one athlete: the
+        // newest of any coach's athletes with that name used to get the
+        // notification (and a coach could be flooded with them).
         const q2 = await pool.query(
-          "SELECT * FROM coach_clients WHERE username = $1 AND status = 'active' ORDER BY id DESC LIMIT 1",
+          "SELECT * FROM coach_clients WHERE username = $1 AND status = 'active' ORDER BY id DESC LIMIT 2",
           [username]
         );
-        client = q2.rows[0] || null;
+        client = q2.rows.length === 1 ? q2.rows[0] : null;
       }
-      if (!client) return res.status(404).json({ error: "Dati non trovati. Controlla il nome utente (o chiedi al coach il link aggiornato)." });
+      // The same answer whether the name exists or not: it used to say "not
+      // found", which told anyone which usernames exist.
+      const sent = { ok: true, message: "Se il nome e' corretto, il tuo coach ricevera' la richiesta." };
+      if (!client) return res.json(sent);
+      // One request an hour per athlete reaches the coach.
+      const recent = await pool.query(
+        "SELECT 1 FROM coach_events WHERE client_id = $1 AND kind = 'password_help' AND created_at > NOW() - INTERVAL '1 hour' LIMIT 1",
+        [client.id]
+      );
+      if (recent.rows.length) return res.json(sent);
       await pool.query(
         "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'password_help',$2)",
         [client.id, JSON.stringify({ username })]
@@ -1521,7 +1535,7 @@ export function mountCoachPractice(app, deps) {
         (client.display_name || username) + " chiede aiuto con la password",
         { view: "message", clientId: String(client.id) }
       ).catch(() => {});
-      return res.json({ ok: true });
+      return res.json(sent);
     } catch (err) {
       console.error("PASSWORD_HELP", err && err.message);
       return res.status(500).json({ error: "Richiesta non inviata." });
@@ -2409,6 +2423,9 @@ export function mountCoachPractice(app, deps) {
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
     await pool.query("UPDATE coach_clients SET status = 'revoked' WHERE id = $1", [row.id]);
+    // A revoked athlete's sessions end too: the token also opened the account
+    // routes, not only the ones that check the client status.
+    if (row.athlete_user_id) await pool.query("UPDATE app_users SET tokens_valid_after = $2 WHERE id = $1", [row.athlete_user_id, new Date().toISOString()]);
     return res.json({ ok: true });
   });
 
@@ -3158,7 +3175,8 @@ export function mountCoachPractice(app, deps) {
     if (password.length < 4) return res.status(400).json({ error: "Password minimo 4 caratteri." });
     const hash = await hashPassword(password);
     if (row.athlete_user_id) {
-      await pool.query("UPDATE app_users SET password_hash = $2, updated_at = NOW() WHERE id = $1", [row.athlete_user_id, hash]);
+      // A new password ends the athlete's open sessions (a leaked one no longer works).
+      await pool.query("UPDATE app_users SET password_hash = $2, tokens_valid_after = $3, updated_at = NOW() WHERE id = $1", [row.athlete_user_id, hash, new Date().toISOString()]);
     }
     await pool.query(
       `UPDATE coach_clients
@@ -3194,8 +3212,8 @@ export function mountCoachPractice(app, deps) {
       );
       if (row.athlete_user_id) {
         await db.query(
-          "UPDATE app_users SET email = $2, password_hash = $3, updated_at = NOW() WHERE id = $1",
-          [row.athlete_user_id, email, passwordHash]
+          "UPDATE app_users SET email = $2, password_hash = $3, tokens_valid_after = $4, updated_at = NOW() WHERE id = $1",
+          [row.athlete_user_id, email, passwordHash, new Date().toISOString()]
         );
       }
       await db.query("COMMIT");
@@ -3232,6 +3250,9 @@ export function mountCoachPractice(app, deps) {
     if (!row) return;
     if (!row.leave_requested_at) return res.status(400).json({ error: "Nessuna richiesta di fine collaborazione." });
     await pool.query("UPDATE coach_clients SET status = 'revoked', leave_requested_at = NULL WHERE id = $1", [row.id]);
+    // A revoked athlete's sessions end too: the token also opened the account
+    // routes, not only the ones that check the client status.
+    if (row.athlete_user_id) await pool.query("UPDATE app_users SET tokens_valid_after = $2 WHERE id = $1", [row.athlete_user_id, new Date().toISOString()]);
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'leave_confirmed',$2)",
       [row.id, JSON.stringify({ name: row.display_name })]
@@ -3373,14 +3394,50 @@ export function mountCoachPractice(app, deps) {
         await updateAccountData(pool, row.rows[0].athlete_user_id, (current) => mergeAssignClientData(current, patch, kinds));
         return { ok: true, kinds };
       },
+      // Undo of a program assignment or modification (the only reversible
+      // actions on an athlete): the training part goes back as it was. It
+      // used to write the whole record back, so every session, meal, check
+      // and note the athlete recorded after the action was lost; and it wrote
+      // without the row lock the other writers take.
       restoreClientData: async (clientId, data) => {
         const row = await pool.query("SELECT athlete_user_id FROM coach_clients WHERE id = $1", [clientId]);
         if (!row.rows[0]?.athlete_user_id) return;
-        await pool.query(
-          `UPDATE app_account_data SET data = $2, revision = revision + 1, updated_at = NOW()
-           WHERE user_id = $1`,
-          [row.rows[0].athlete_user_id, JSON.stringify(data || {})]
-        );
+        const before = data && typeof data === "object" ? data : {};
+        const TRAINING_KEYS = ["activeProgramId", "assignmentId", "assignedAt", "assignedByCoach", "data", "customSets", "subs", "skips", "logs", "intelTargets", "programHistory"];
+        const RECORD_DOMAINS = ["nutrition", "supplementation", "therapy", "exams"];
+        await updateAccountData(pool, row.rows[0].athlete_user_id, (current) => {
+          const cur = current && typeof current === "object" ? current : {};
+          const next = { ...cur };
+          const didWork = (Array.isArray(cur.logs) && cur.logs.length) || (cur.data && Object.keys(cur.data).length);
+          for (const k of TRAINING_KEYS) {
+            if (Object.prototype.hasOwnProperty.call(before, k)) next[k] = before[k];
+            else delete next[k];
+          }
+          // The program as it was, but the diary and plans inside it as they are now.
+          const curProg = cur.activeProgram && typeof cur.activeProgram === "object" ? cur.activeProgram : {};
+          if (before.activeProgram && typeof before.activeProgram === "object") {
+            next.activeProgram = { ...before.activeProgram };
+            for (const d of RECORD_DOMAINS) if (curProg[d] !== undefined) next.activeProgram[d] = curProg[d];
+          } else {
+            delete next.activeProgram;
+          }
+          // What the athlete did on the program being undone stays, archived.
+          if (didWork) {
+            const history = Array.isArray(next.programHistory) ? next.programHistory.slice() : [];
+            history.push({
+              archivedAt: new Date().toISOString(),
+              reason: "undo",
+              assignmentId: cur.assignmentId || cur.activeProgramId || null,
+              activeProgram: cur.activeProgram || null,
+              data: cur.data || {},
+              logs: Array.isArray(cur.logs) ? cur.logs : [],
+              customSets: cur.customSets || {},
+              subs: cur.subs || {}
+            });
+            next.programHistory = history;
+          }
+          return next;
+        });
       }
     };
   }
@@ -3707,7 +3764,14 @@ export function mountCoachPractice(app, deps) {
   app.post("/api/coach/meals/estimate", async (req, res) => {
     const coach = await requireCoach(req, res);
     if (!coach) return;
-    const meal = await createMealEstimate(pool, { coachUserId: coach.id, clientId: req.body?.clientId }, req.body || {});
+    // Only for one of this coach's athletes (the client id came unchecked).
+    let clientId = null;
+    if (req.body && req.body.clientId != null && req.body.clientId !== "") {
+      const owned = await pool.query("SELECT id FROM coach_clients WHERE id = $1 AND coach_user_id = $2", [req.body.clientId, coach.id]);
+      if (!owned.rows.length) return res.status(404).json({ error: "Client not found." });
+      clientId = owned.rows[0].id;
+    }
+    const meal = await createMealEstimate(pool, { coachUserId: coach.id, clientId }, req.body || {});
     return res.status(201).json({ ok: true, meal });
   });
 

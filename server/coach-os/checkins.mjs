@@ -19,6 +19,8 @@ function checkInRow(row) {
     coachResponse: row.coach_response || "",
     previousCheckInId: row.previous_check_in_id == null ? null : String(row.previous_check_in_id),
     answers: row.answers || {},
+    // The questions the athlete saw, with the answers (null for older ones).
+    answerRows: Array.isArray(row.answer_rows) ? row.answer_rows : null,
     attachment: row.attachment || null,
     kind: row.kind || "scheduled",
     scheduledFor: row.scheduled_for || null,
@@ -72,12 +74,36 @@ export function sanitizeCheckInTemplate(input, { customized = true, previous = n
   return template;
 }
 
-// What the athlete answered: only the rows of the model, of the right type.
-export function sanitizeCheckInAnswers(input, template) {
+const ANSWER_TYPES = new Set(["scale", "number", "yesno", "text"]);
+
+// The questions the athlete's phone says it showed: id, type, label. Only
+// well-formed rows, a bounded number of them.
+export function sanitizeAnswerRows(input) {
+  if (!Array.isArray(input)) return [];
+  const out = [];
+  const seen = new Set();
+  for (const r of input.slice(0, 40)) {
+    if (!r || typeof r !== "object") continue;
+    const id = String(r.id || "").trim().slice(0, 60);
+    const type = String(r.type || "");
+    if (!id || seen.has(id) || !ANSWER_TYPES.has(type)) continue;
+    seen.add(id);
+    const row = { id, type, label: cleanText(r.label || id, 200) || id };
+    if (r.unit) row.unit = cleanText(r.unit, 20);
+    out.push(row);
+  }
+  return out;
+}
+
+// What the athlete answered: the rows of the model, and the rows the athlete
+// saw (a question the coach removed after the form was opened still counts),
+// each of the right type.
+export function sanitizeCheckInAnswers(input, template, shownRows) {
   const out = {};
   if (!input || typeof input !== "object") return out;
-  const rows = template && Array.isArray(template.rows) ? template.rows : [];
-  const byId = new Map(rows.map((row) => [row.id, row]));
+  const rows = (template && Array.isArray(template.rows) ? template.rows : []).concat(sanitizeAnswerRows(shownRows));
+  const byId = new Map();
+  for (const row of rows) if (row && row.id && !byId.has(row.id)) byId.set(row.id, row);
   for (const [key, value] of Object.entries(input).slice(0, 40)) {
     const row = byId.get(key);
     const type = row ? row.type : (/^(sleep|energy|hunger|pain|adh_nutrition|adh_training)$/.test(key) ? "scale" : (key === "question" ? "text" : null));
@@ -203,6 +229,16 @@ export async function createCheckInRequest(pool, coachId, clientId, input = {}) 
 }
 
 export async function submitClientCheckIn(pool, client, accountData, input = {}) {
+  // The same check-in sent again (a retry after a timeout): the one already
+  // saved, not a second one.
+  const operationId = String(input.operationId || "").trim().slice(0, 80) || null;
+  if (operationId) {
+    const again = await pool.query(
+      "SELECT * FROM coach_check_ins WHERE client_id = $1 AND client_operation_id = $2 LIMIT 1",
+      [client.id, operationId]
+    );
+    if (again.rows[0]) return { checkIn: checkInRow(again.rows[0]), duplicate: true };
+  }
   const db = await pool.connect();
   try {
     await db.query("BEGIN");
@@ -227,11 +263,11 @@ export async function submitClientCheckIn(pool, client, accountData, input = {})
          coach_user_id, client_id, status, requested_at, received_at,
          weight, notes, training_adherence, nutrition_adherence,
          deterministic_summary, previous_check_in_id,
-         answers, attachment, kind, scheduled_for
+         answers, attachment, kind, scheduled_for, answer_rows, client_operation_id
        ) VALUES(
          $1,$2,'received',
          COALESCE((SELECT requested_at FROM coach_check_ins WHERE id = $3), NOW()),
-         NOW(),$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
+         NOW(),$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15
        )
        RETURNING *`,
       [
@@ -249,10 +285,12 @@ export async function submitClientCheckIn(pool, client, accountData, input = {})
           provenance: deterministic.provenance
         }),
         previous.rows[0]?.id || null,
-        JSON.stringify(sanitizeCheckInAnswers(input.answers, client.checkin_template)),
+        JSON.stringify(sanitizeCheckInAnswers(input.answers, client.checkin_template, input.answerRows)),
         attachment ? JSON.stringify(attachment) : null,
         input.kind === "extra" ? "extra" : (input.kind === "scheduled" ? "scheduled" : null),
-        scheduledFor
+        scheduledFor,
+        (function () { const r = sanitizeAnswerRows(input.answerRows); return r.length ? JSON.stringify(r) : null; })(),
+        operationId
       ]
     );
     const checkIn = result.rows[0];

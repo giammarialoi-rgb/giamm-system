@@ -235,6 +235,9 @@
         kind: scheduled ? entry.kind : undefined,
         scheduledFor: scheduled ? entry.scheduledFor || null : undefined,
         answers: scheduled ? entry.answers || {} : undefined,
+        answerRows: scheduled ? entry.answerRows || undefined : undefined,
+        // One id per check-in, the same on every retry: the server keeps one.
+        operationId: entry && entry.id ? 'bc_' + entry.id : undefined,
         attachment: scheduled ? entry.attachment || null : undefined
       })
     }, 30000);

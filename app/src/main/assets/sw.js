@@ -1,6 +1,9 @@
 /* Nurvan shell SW — cache UI only, never the 10k catalog. */
 importScripts('./release-meta.js');
-const CACHE = 'nurvan-shell-v' + String((self.NURVAN_RELEASE && self.NURVAN_RELEASE.androidVersionCode) || 'dev') + '-userLoadFirst1';
+// The web build is part of the name too: a web-only release (same Android
+// version code) used to keep the old cache, and the old page with it.
+const CACHE = 'nurvan-shell-v' + String((self.NURVAN_RELEASE && self.NURVAN_RELEASE.androidVersionCode) || 'dev') +
+  '-' + String((self.NURVAN_RELEASE && self.NURVAN_RELEASE.webBuild) || 'web') + '-userLoadFirst2';
 const PRECACHE = [
   './release-meta.js',
   './apple-touch-icon.png',
@@ -63,8 +66,20 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(fetch(req, { cache: 'no-store' }).catch(() => caches.match(req)));
     return;
   }
+  // The privacy notice, terms and deletion page are always read live: a
+  // cached copy would show an outdated notice.
+  if (/^\/(privacy|termini|elimina-account)(\.html)?$/.test(url.pathname) || /^\/legal(-pages)?\.(css|js)$/.test(url.pathname)) return;
   const isClientDoc = /^\/c\/[^/]+\/?$/.test(url.pathname);
-  const isHtml = req.mode === 'navigate' || url.pathname === '/' || /index\.html$/i.test(url.pathname) || isClientDoc;
+  // An invite page carries its token in the HTML and the server sends it
+  // no-store: it is not kept here. Offline, the app shell opens it (the boot
+  // reads the token from the address).
+  if (isClientDoc) {
+    event.respondWith(
+      fetch(req, { cache: 'no-store' }).catch(() => caches.open(CACHE).then((cache) => cache.match('/')).then((res) => res || fetch(req)))
+    );
+    return;
+  }
+  const isHtml = req.mode === 'navigate' || url.pathname === '/' || /index\.html$/i.test(url.pathname);
   if (isHtml) {
     // Stale-while-revalidate: a returning visitor gets the cached app shell
     // instantly instead of waiting on the network - critical on a free host
@@ -86,6 +101,26 @@ self.addEventListener('fetch', (event) => {
           return cached;
         }
         return network.then((res) => res || caches.match(req)).then((res) => res || fetch(req));
+      }))
+    );
+    return;
+  }
+  // The app's own scripts follow the page: from this release's cache, with
+  // the refresh in the background. Served fresh while the page came from the
+  // cache, the first launch after a deploy ran the old page's code against the
+  // new scripts.
+  if (/\.js$/i.test(url.pathname)) {
+    event.respondWith(
+      caches.open(CACHE).then((cache) => cache.match(req).then((cached) => {
+        const network = fetch(req).then((res) => {
+          if (res && res.ok && res.type === 'basic') cache.put(req, res.clone()).catch(() => {});
+          return res;
+        }).catch(() => null);
+        if (cached) {
+          event.waitUntil(network);
+          return cached;
+        }
+        return network.then((res) => res || fetch(req));
       }))
     );
     return;

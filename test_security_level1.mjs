@@ -135,7 +135,7 @@ console.log('--- 2. Android: nessuno script e nessun file da un intent ---');
   ok('2a. nessuno script letto dagli extra di un intent (evalJs rimosso)', !/getStringExtra\("evalJs"\)/.test(main));
   ok('2b. evaluateJavascript solo con stringhe costruite dall\'app (ticket Apple quotato, route quotata, documento scelto)', !/getStringExtra\([^)]*\)\s*\)?\s*;?\s*\n?[^\n]*evaluateJavascript/.test(main));
   const onCreateIntent = main.slice(main.indexOf('Intent intent = getIntent();'), main.indexOf('dispatchNurvanRoute(intent);', main.indexOf('Intent intent = getIntent();')));
-  const onNew = main.slice(main.indexOf('protected void onNewIntent('), main.indexOf('private void maybeShowHealthRationale('));
+  const onNew = main.slice(main.indexOf('protected void onNewIntent('), main.indexOf('private void debugJs('));
   ok('2c. un intent esterno non apre file (content:// o file://) nell\'import', !/handlePickedDocument/.test(onCreateIntent) && !/handlePickedDocument/.test(onNew));
   ok('2d. il selettore di file dell\'app funziona ancora (onActivityResult)', /handlePickedDocument\(result\)/.test(main));
 }

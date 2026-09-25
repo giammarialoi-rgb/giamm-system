@@ -2180,6 +2180,11 @@ body.focus-mode [data-rewards-only] {
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
         </button>
       </div>
+      <div id="account-consents" style="display:none;margin:6px 0 10px;">
+        <label style="display:flex;gap:10px;align-items:flex-start;font-size:11px;color:#ccc;line-height:1.45;margin-bottom:8px;"><input type="checkbox" id="consent-age" style="width:18px;height:18px;flex:0 0 auto;margin:0;"><span id="consent-age-text">Ho almeno 16 anni.</span></label>
+        <label style="display:flex;gap:10px;align-items:flex-start;font-size:11px;color:#ccc;line-height:1.45;margin-bottom:8px;"><input type="checkbox" id="consent-terms" style="width:18px;height:18px;flex:0 0 auto;margin:0;"><span>Ho letto l’<a data-legal-link="privacy" href="#" style="color:var(--gold);">informativa privacy</a> e accetto i <a data-legal-link="termini" href="#" style="color:var(--gold);">termini di servizio</a>.</span></label>
+        <label style="display:flex;gap:10px;align-items:flex-start;font-size:11px;color:#ccc;line-height:1.45;"><input type="checkbox" id="consent-health" style="width:18px;height:18px;flex:0 0 auto;margin:0;"><span id="consent-health-text">Acconsento al trattamento dei miei dati sulla salute (peso, misure, foto dei check fisici, alimentazione, integratori, terapie, esami) per le funzioni dell’app e, se ho un coach, per condividerli con lui (art. 9 GDPR).</span></label>
+      </div>
       <div id="account-reset-fields" style="display:none;margin-bottom:8px;">
         <input id="account-reset-code" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Codice a 6 cifre" maxlength="6" style="margin-bottom:8px;width:100%;">
         <div class="pw-field">
@@ -2201,6 +2206,10 @@ body.focus-mode [data-rewards-only] {
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;border-color:#442222;color:var(--accent-red);" onclick="openDeleteAccount()" id="account-delete">ELIMINA ACCOUNT</button>
     <button id="account-recover-training" class="btn btn-outline" style="width:100%;margin-top:8px;border-color:#c66;color:#c66;" onclick="recoverPersonalTrainingEmergency()">RIPRISTINA ALLENAMENTO (CLOUD/IDB)</button>
     <div id="account-status" class="msg ai" style="margin-top:10px;"></div>
+    <div id="account-legal-links" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:11px;margin-top:12px;">
+      <a data-legal-link="privacy" href="#" style="color:#999;">Informativa privacy</a>
+      <a data-legal-link="termini" href="#" style="color:#999;">Termini di servizio</a>
+    </div>
   </div>
 </div>
 
@@ -2671,6 +2680,34 @@ function downloadBlobHelper(blob, filename) {
     openPdfStayInApp(blob, filename);
     return true;
   }
+  // Inside the Android app a download link does nothing (the WebView has no
+  // download handler) and throws nothing either, so the native path below was
+  // never reached: backups and CSV exports silently saved nothing. The app
+  // saves through its own bridge.
+  try {
+    const ncApp = (typeof window !== 'undefined' && window.NativeConfig) ? window.NativeConfig : null;
+    if (ncApp && typeof isAndroidWebViewNative === 'function' && isAndroidWebViewNative()
+        && (typeof ncApp.downloadFile === 'function' || typeof ncApp.saveFile === 'function' || typeof ncApp.shareFile === 'function')) {
+      const reader = new FileReader();
+      reader.onloadend = function () {
+        const dataUrl = String(reader.result || '');
+        const b64 = dataUrl.indexOf(',') >= 0 ? dataUrl.split(',')[1] : dataUrl;
+        const mime = blob.type || 'application/octet-stream';
+        try {
+          if (typeof ncApp.downloadFile === 'function') ncApp.downloadFile(b64, filename, mime);
+          else if (typeof ncApp.saveFile === 'function') ncApp.saveFile(b64, filename, mime);
+          else ncApp.shareFile(b64, mime, filename, '');
+        } catch (err) {
+          console.warn('[downloadBlobHelper] native save failed', err);
+          if (typeof showToast === 'function') showToast('Salvataggio del file non riuscito.', 'error');
+        }
+      };
+      reader.readAsDataURL(blob);
+      return true;
+    }
+  } catch (eNative) {
+    console.warn('[downloadBlobHelper] native path failed', eNative);
+  }
   try {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2698,7 +2735,7 @@ function downloadBlobHelper(blob, filename) {
         const b64 = dataUrl.indexOf(',') >= 0 ? dataUrl.split(',')[1] : dataUrl;
         if (typeof nc.downloadFile === 'function') nc.downloadFile(b64, filename, blob.type || 'application/octet-stream');
         else if (typeof nc.saveFile === 'function') nc.saveFile(b64, filename, blob.type || 'application/octet-stream');
-        else if (typeof nc.shareFile === 'function') nc.shareFile(b64, blob.type || 'application/octet-stream', filename);
+        else if (typeof nc.shareFile === 'function') nc.shareFile(b64, blob.type || 'application/octet-stream', filename, '');
         else if (typeof nc.shareImageFile === 'function') nc.shareImageFile(b64, blob.type || 'application/octet-stream', filename);
         else throw new Error('no NativeConfig download');
       };
@@ -4771,6 +4808,7 @@ function syncAccountFormMode(){
     if (passWrap) passWrap.style.display = 'none';
     if (passEl) { passEl.required = false; }
     if (resetBox) resetBox.style.display = 'block';
+    if ($('account-consents')) $('account-consents').style.display = 'none';
     if (submit) submit.textContent = 'IMPOSTA NUOVA PASSWORD';
     if (modeBtn) modeBtn.textContent = 'TORNA AL LOGIN';
     if (forgotBtn) forgotBtn.textContent = 'INVIA CODICE DI RECUPERO';
@@ -4788,6 +4826,9 @@ function syncAccountFormMode(){
     nameEl.style.display = accountRegisterMode ? 'block' : 'none';
     nameEl.required = !!accountRegisterMode;
   }
+  const consents = $('account-consents');
+  if (consents) consents.style.display = accountRegisterMode ? 'block' : 'none';
+  try { fillLegalLinks(); } catch (_) {}
   if (submit) submit.textContent = accountRegisterMode ? 'REGISTRATI' : 'ACCEDI';
   if (modeBtn) modeBtn.textContent = accountRegisterMode ? 'HO GIÀ UN ACCOUNT' : 'CREA UN ACCOUNT';
   if (forgotBtn) forgotBtn.textContent = 'PASSWORD DIMENTICATA';
@@ -4863,6 +4904,7 @@ async function submitAccount(event){
       syncAccountFormMode();
       await syncAccountData(true);
       updateAccountButton(); closeAccount();
+      try { ensurePrivacyConsent(); } catch (_) {}
       if (typeof showToast === 'function') showToast('Password aggiornata. Bentornato, ' + store.accountUser.name, 'ok');
       return;
     }
@@ -4871,11 +4913,21 @@ async function submitAccount(event){
     if(accountRegisterMode) body.name = $('account-name').value.trim();
     if (accountRegisterMode && (!body.name || body.name.length < 2)) throw new Error('Inserisci nome e cognome.');
     if (!body.password || body.password.length < 8) throw new Error('La password deve avere almeno 8 caratteri.');
+    if (accountRegisterMode) {
+      const ticked = ['consent-age', 'consent-terms', 'consent-health'].every(function (id) { const el = $(id); return el && el.checked; });
+      if (!ticked) throw new Error('Per registrarti conferma l’età, accetta informativa e termini e il trattamento dei dati sulla salute.');
+      body.consent = { version: legalConfig().version, age: true, terms: true, health: true };
+    }
     const response = await apiFetch(coachEndpoint(path), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const payload = await readApiJson(response);
     if (enterAccountSession(payload.token, payload.user)) return;
+    if (accountRegisterMode && payload.consentOk) {
+      store.privacyConsent = { version: body.consent.version, at: new Date().toISOString(), synced: true };
+      persist();
+    }
     if(!accountRegisterMode) await syncAccountData(true); else await syncAccountData(false);
     updateAccountButton(); closeAccount();
+    try { ensurePrivacyConsent(); } catch (_) {}
     if (typeof showToast === 'function') showToast(`Benvenuto, ${store.accountUser.name}`, 'ok');
   } catch(error) {
     console.error('ACCOUNT_UI_ERROR', error);
@@ -4899,6 +4951,7 @@ async function finishOAuthLogin(payload){
   updateAccountButton();
   setGoogleAuthLoading(false);
   closeAccount();
+  try { ensurePrivacyConsent(); } catch (_) {}
   if (typeof showToast === 'function') showToast(`Benvenuto, ${store.accountUser.name}`, 'ok');
   // Sync in background — do not block perceived login latency
   Promise.race([
@@ -5258,6 +5311,278 @@ async function appleSignInRequest(body) {
     setGoogleAuthLoading(false);
     if (status) status.textContent = (error && error.message) || 'Accesso con Apple non riuscito.';
   }
+}
+
+// ---- Privacy: the notice and terms in force, the consents, the AI notice ----
+// The version and the minimum age come from web/features.json "legal", like
+// the public pages /privacy, /termini and /elimina-account. The account's
+// consents live on the server (/api/account/consent); the copy here lets the
+// app go on offline and sends what was given here when it can.
+function legalConfig() {
+  const f = (typeof self !== 'undefined' && self.NURVAN_FEATURES) || {};
+  const l = (f && f.legal) || {};
+  return {
+    version: String(l.version || ''),
+    minAge: Number(l.minAge) || 16,
+    privacyEmail: String(l.privacyEmail || (f && f.contactEmail) || '')
+  };
+}
+// On Android an http(s) link leaves the WebView for the browser.
+function legalPageUrl(slug) {
+  try { return coachEndpoint('/' + slug); } catch (_) { return '/' + slug; }
+}
+function legalLinkHtml(slug, label) {
+  return '<a href="' + esc(legalPageUrl(slug)) + '" target="_blank" rel="noopener" style="color:var(--gold);">' + esc(label) + '</a>';
+}
+function fillLegalLinks() {
+  document.querySelectorAll('[data-legal-link]').forEach(function (a) {
+    a.setAttribute('href', legalPageUrl(a.getAttribute('data-legal-link')));
+    a.setAttribute('target', '_blank');
+    a.setAttribute('rel', 'noopener');
+  });
+  const age = $('consent-age-text');
+  if (age) age.textContent = 'Ho almeno ' + legalConfig().minAge + ' anni.';
+}
+const HEALTH_CONSENT_TEXT = 'Acconsento al trattamento dei miei dati sulla salute (peso, misure, foto dei check fisici, alimentazione, integratori, terapie, esami) per le funzioni dell’app e, se ho un coach, per condividerli con lui (art. 9 GDPR).';
+const NOT_MEDICAL_TEXT = 'Nurvan non è un dispositivo medico: stime, statistiche e suggerimenti non sostituiscono il parere di un medico.';
+
+function privacyConsentCurrent() {
+  const c = store && store.privacyConsent;
+  const v = legalConfig().version;
+  return Boolean(v && c && c.version === v);
+}
+function consentBlocked() {
+  try { if (typeof coachHoldsClientData === 'function' && coachHoldsClientData()) return true; } catch (_) {}
+  return !(store && store.accountToken);
+}
+function applyServerConsent(state) {
+  if (!state || !store) return;
+  if (state.ok) store.privacyConsent = { version: state.version, at: state.acceptedAt || new Date().toISOString(), synced: true };
+  const local = store.aiConsent;
+  // A choice made here and not yet sent wins; otherwise the server's.
+  if (!(local && local.synced === false)) {
+    const ai = state.ai || {};
+    store.aiConsent = { granted: !!ai.granted, withdrawn: !ai.granted && !!ai.withdrawnAt, at: ai.granted ? ai.at : (ai.withdrawnAt || null), synced: true };
+  }
+  if (typeof persist === 'function') persist();
+}
+async function postConsent(body) {
+  const res = await accountRequest('/api/account/consent', { method: 'POST', body: JSON.stringify(body) });
+  const data = await readApiJson(res);
+  if (data && data.consent) applyServerConsent(data.consent);
+  return data;
+}
+async function sendPendingConsents() {
+  if (consentBlocked()) return;
+  const c = store.privacyConsent;
+  if (c && c.synced === false && c.version === legalConfig().version) {
+    try {
+      await postConsent({ version: c.version, age: true, terms: true, health: true });
+      store.privacyConsent.synced = true;
+      persist();
+    } catch (_) {}
+  }
+  const ai = store.aiConsent;
+  if (ai && ai.synced === false) {
+    try {
+      await postConsent({ ai: !!ai.granted });
+      store.aiConsent.synced = true;
+      persist();
+    } catch (_) {}
+  }
+}
+
+// After every sign-in and at start: an account that has not accepted the
+// notice in force (new, or the text changed) is asked before going on.
+let privacyConsentCheck = null;
+let privacyConsentReadThisSession = false;
+function ensurePrivacyConsent() {
+  if (privacyConsentCheck) return privacyConsentCheck;
+  privacyConsentCheck = (async function () {
+    if (consentBlocked() || !legalConfig().version) return;
+    await sendPendingConsents();
+    if (privacyConsentCurrent() && privacyConsentReadThisSession) return;
+    let state = null;
+    try {
+      const res = await accountRequest('/api/account/consent');
+      const data = await readApiJson(res);
+      state = data && data.consent;
+    } catch (_) {}
+    if (state) {
+      privacyConsentReadThisSession = true;
+      applyServerConsent(state);
+      if (state.ok) return;
+      // Accepted on this device for this version: the server just has not
+      // heard it yet.
+      if (privacyConsentCurrent() && store.privacyConsent.synced === false) { await sendPendingConsents(); return; }
+      store.privacyConsent = null;
+    } else if (privacyConsentCurrent()) {
+      return;
+    }
+    if (consentBlocked()) return;
+    showPrivacyConsentSheet();
+  })().finally(function () { privacyConsentCheck = null; });
+  return privacyConsentCheck;
+}
+window.ensurePrivacyConsent = ensurePrivacyConsent;
+
+function showPrivacyConsentSheet() {
+  if (document.getElementById('privacy-consent-overlay')) return;
+  const cfg = legalConfig();
+  const overlay = document.createElement('div');
+  overlay.id = 'privacy-consent-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:10300;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  const row = function (id, text) {
+    return '<label style="display:flex;gap:10px;align-items:flex-start;font-size:12px;color:#ddd;line-height:1.45;margin-bottom:10px;cursor:pointer;">' +
+      '<input type="checkbox" id="' + id + '" style="width:18px;height:18px;flex:0 0 auto;margin-top:1px;" onchange="syncPrivacyConsentButton()">' +
+      '<span>' + text + '</span></label>';
+  };
+  overlay.innerHTML =
+    '<div class="card" style="max-width:440px;width:100%;max-height:92vh;overflow:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;">' +
+    '<div style="font-size:12px;font-weight:900;color:var(--gold);letter-spacing:1px;margin-bottom:8px;">PRIVACY E CONSENSI</div>' +
+    '<div style="font-size:12px;color:#bbb;line-height:1.5;margin-bottom:12px;">Per usare Nurvan ci servono queste conferme. Leggi l’' + legalLinkHtml('privacy', 'informativa privacy') + ' e i ' + legalLinkHtml('termini', 'termini di servizio') + '.</div>' +
+    row('pc-age', 'Ho almeno ' + cfg.minAge + ' anni.') +
+    row('pc-terms', 'Ho letto l’informativa privacy e accetto i termini di servizio.') +
+    row('pc-health', esc(HEALTH_CONSENT_TEXT)) +
+    '<div style="font-size:11px;color:#888;line-height:1.45;margin:4px 0 12px;">' + esc(NOT_MEDICAL_TEXT) + '</div>' +
+    '<div id="pc-msg" style="font-size:11px;color:var(--accent-red);min-height:14px;margin-bottom:6px;"></div>' +
+    '<button type="button" class="btn btn-primary" id="pc-accept" style="width:100%;height:44px;font-weight:800;opacity:0.45;" disabled onclick="acceptPrivacyConsent()">ACCETTO E CONTINUO</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="declinePrivacyConsent()">NON ACCETTO: ESCI</button>' +
+    '<div style="font-size:10px;color:#777;line-height:1.4;margin-top:10px;">Senza il consenso ai dati sulla salute l’app non può conservare allenamenti, alimentazione e check. Puoi eliminare l’account in qualsiasi momento da Impostazioni › Privacy e dati.</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+function syncPrivacyConsentButton() {
+  const all = ['pc-age', 'pc-terms', 'pc-health'].every(function (id) { const el = document.getElementById(id); return el && el.checked; });
+  const btn = document.getElementById('pc-accept');
+  if (btn) { btn.disabled = !all; btn.style.opacity = all ? '1' : '0.45'; }
+}
+async function acceptPrivacyConsent() {
+  const all = ['pc-age', 'pc-terms', 'pc-health'].every(function (id) { const el = document.getElementById(id); return el && el.checked; });
+  if (!all) return;
+  store.privacyConsent = { version: legalConfig().version, at: new Date().toISOString(), synced: false };
+  persist();
+  const overlay = document.getElementById('privacy-consent-overlay');
+  if (overlay) overlay.remove();
+  await sendPendingConsents();
+}
+function declinePrivacyConsent() {
+  const overlay = document.getElementById('privacy-consent-overlay');
+  if (overlay) overlay.remove();
+  try { logoutAccount(); } catch (_) {}
+  if (typeof showToast === 'function') showToast('Sei uscito. Senza consenso l’account non viene usato su questo dispositivo.', 'info');
+}
+
+// The AI features send data to Google (Gemini): asked once, before the first
+// use, and revocable in Privacy e dati. Exact paths, as on the server.
+const AI_REQUEST_PATHS = [
+  /^\/api\/chat$/, /^\/coach$/, /^\/api\/coach$/,
+  /^\/api\/analyze-file$/, /^\/api\/analyze$/, /^\/analyze$/, /^\/api\/ingest\/document$/,
+  /^\/api\/food\/analyze-photo$/, /^\/api\/food\/ocr-label$/, /^\/api\/food\/barcode\/[^/]+\/ai-lookup$/
+];
+function isAiRequest(url, options) {
+  const method = String((options && options.method) || 'GET').toUpperCase();
+  if (method !== 'POST') return false;
+  let base = '';
+  try { base = coachEndpoint(''); } catch (_) { return false; }
+  const u = String(url || '');
+  if (u.indexOf(base) !== 0) return false;
+  const p = u.slice(base.length).split('?')[0].split('#')[0];
+  return AI_REQUEST_PATHS.some(function (re) { return re.test(p); });
+}
+function aiConsentGranted() {
+  return Boolean(store && store.aiConsent && store.aiConsent.granted);
+}
+let aiConsentAsk = null;
+function ensureAiConsent() {
+  if (aiConsentGranted() || !(store && store.accountToken)) return Promise.resolve(true);
+  if (aiConsentAsk) return aiConsentAsk;
+  aiConsentAsk = new Promise(function (resolve) {
+    showAiConsentSheet(resolve);
+  }).finally(function () { aiConsentAsk = null; });
+  return aiConsentAsk;
+}
+function showAiConsentSheet(done) {
+  const old = document.getElementById('ai-consent-overlay');
+  if (old) old.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'ai-consent-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10250;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  overlay.innerHTML =
+    '<div class="card" style="max-width:440px;width:100%;max-height:92vh;overflow:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;">' +
+    '<div style="font-size:12px;font-weight:900;color:var(--gold);letter-spacing:1px;margin-bottom:8px;">FUNZIONI AI</div>' +
+    '<div style="font-size:12px;color:#ccc;line-height:1.55;">Coach AI, l’import dei programmi da file e il riconoscimento di pasti, etichette e codici a barre usano <b style="color:#fff;">Google Gemini</b>. Per rispondere inviamo a Google il testo della richiesta, il file o la foto e il contesto necessario (per esempio il programma attivo o i tuoi obiettivi), che possono contenere dati sulla salute. Google li tratta per conto di Nurvan, come indicato nell’' + legalLinkHtml('privacy', 'informativa privacy') + '.</div>' +
+    '<div style="font-size:11px;color:#999;line-height:1.5;margin-top:10px;">Le risposte dell’AI possono essere sbagliate e non sono un parere medico. Puoi revocare il consenso in ogni momento da Impostazioni › Privacy e dati.</div>' +
+    '<button type="button" class="btn btn-primary" id="ai-consent-yes" style="width:100%;height:44px;font-weight:800;margin-top:14px;">ATTIVA LE FUNZIONI AI</button>' +
+    '<button type="button" class="btn btn-outline" id="ai-consent-no" style="width:100%;margin-top:8px;">NON ORA</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  const close = function (granted) {
+    overlay.remove();
+    if (granted) {
+      store.aiConsent = { granted: true, withdrawn: false, at: new Date().toISOString(), synced: false };
+      persist();
+      sendPendingConsents();
+    }
+    done(granted);
+  };
+  document.getElementById('ai-consent-yes').onclick = function () { close(true); };
+  document.getElementById('ai-consent-no').onclick = function () { close(false); };
+}
+function aiConsentDeclinedError() {
+  const err = new Error('Funzioni AI non attive. Puoi attivarle da Impostazioni › Privacy e dati.');
+  err.code = 'AI_CONSENT_DECLINED';
+  return err;
+}
+async function setAiConsent(on) {
+  if (!store.accountToken) return;
+  if (on) {
+    await ensureAiConsent();
+  } else {
+    if (!confirm('Revocare il consenso alle funzioni AI? Coach AI, import da file e riconoscimento di foto ed etichette non saranno più disponibili finché non lo riattivi.')) return;
+    store.aiConsent = { granted: false, withdrawn: true, at: new Date().toISOString(), synced: false };
+    persist();
+    await sendPendingConsents();
+    if (typeof showToast === 'function') showToast('Consenso alle funzioni AI revocato', 'ok');
+  }
+  if (typeof render === 'function' && currentView === 'settings') render();
+}
+window.setAiConsent = setAiConsent;
+
+// Settings: what was accepted, the AI switch, the pages, export and deletion.
+function renderPrivacySettingsCard() {
+  const cfg = legalConfig();
+  const logged = !!(store && store.accountToken && store.accountUser);
+  const c = store && store.privacyConsent;
+  const when = function (iso) { try { return new Date(iso).toLocaleDateString('it-IT'); } catch (_) { return ''; } };
+  const accepted = c && c.version
+    ? ('Informativa e termini accettati (versione ' + esc(c.version) + (c.at ? ', ' + esc(when(c.at)) : '') + ').' + (c.version !== cfg.version ? ' <b style="color:var(--gold);">È disponibile una versione aggiornata.</b>' : ''))
+    : (logged ? 'Consensi non ancora dati su questo account.' : 'Accedi per gestire i consensi del tuo account.');
+  const ai = aiConsentGranted();
+  const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+  return '<div class="card" id="privacy-settings-card" style="border:1px solid var(--border);margin-bottom:14px;">' +
+    '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">🔒 Privacy e dati</div>' +
+    '<div style="font-size:11px;color:#aaa;line-height:1.5;margin-bottom:10px;">' + accepted + '</div>' +
+    '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-bottom:12px;">' +
+    legalLinkHtml('privacy', 'Informativa privacy') + legalLinkHtml('termini', 'Termini di servizio') + legalLinkHtml('elimina-account', 'Eliminare l’account') +
+    '</div>' +
+    (logged ? (
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #222;border-bottom:1px solid #222;margin-bottom:12px;">' +
+      '<div style="font-size:11px;color:#ccc;line-height:1.4;"><b>Funzioni AI (Google Gemini)</b><br><span style="color:' + (ai ? '#4caf50' : '#888') + ';">' + (ai ? 'Attive' : 'Non attive') + '</span></div>' +
+      '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 10px;flex:0 0 auto;" onclick="setAiConsent(' + (ai ? 'false' : 'true') + ')">' + (ai ? 'REVOCA' : 'ATTIVA') + '</button>' +
+      '</div>') : '') +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:10px;padding:8px;" onclick="exportFullDatabaseBackup()">ESPORTA I MIEI DATI</button>' +
+    ((logged && !athlete) ? '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:10px;padding:8px;border-color:#442222;color:var(--accent-red);" onclick="openDeleteAccount()">ELIMINA ACCOUNT</button>' : '') +
+    '</div>' +
+    (athlete ? '<div style="font-size:10px;color:#888;line-height:1.4;margin-top:8px;">Il tuo account è gestito dal coach: per eliminarlo chiediglielo, oppure scrivi al contatto privacy.</div>' : '') +
+    (cfg.privacyEmail ? '<div style="font-size:10px;color:#888;margin-top:10px;">Contatto privacy: <a href="mailto:' + esc(cfg.privacyEmail) + '" style="color:var(--gold);">' + esc(cfg.privacyEmail) + '</a></div>' : '') +
+    '<div style="font-size:10px;color:#777;line-height:1.4;margin-top:8px;">' + esc(NOT_MEDICAL_TEXT) + '</div>' +
+    '</div>';
 }
 
 // Deleting the account: on the server first (everything of the account goes,
@@ -8466,7 +8791,7 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
         name: name,
         mime: mime,
         size: sizeText,
-        date: new Date().toISOString().slice(0, 10)
+        date: isoDateOnly(new Date())
       });
       DATA.exams.present = true;
       persist();
@@ -8777,6 +9102,7 @@ function withAccountAuth(url, options) {
 }
 
 async function apiFetch(url, options, timeoutMs=90000) {
+  if (isAiRequest(url, options) && !(await ensureAiConsent())) throw aiConsentDeclinedError();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   console.debug('[Coach AI] request', url);
@@ -10158,7 +10484,7 @@ function persistActiveProgramStructure() {
     if (DATA.id && !store.activeProgramId) store.activeProgramId = DATA.id;
     DATA.duration_weeks = DATA.weeks.length;
     if (!store.prefs) store.prefs = {};
-    if (!store.prefs.programStartDate) store.prefs.programStartDate = new Date().toISOString().slice(0, 10);
+    if (!store.prefs.programStartDate) store.prefs.programStartDate = isoDateOnly(new Date());
     store.activeProgram = DATA;
     persist();
     if (typeof lockPersonalProgramBackup === 'function') lockPersonalProgramBackup(DATA);
@@ -11573,7 +11899,7 @@ function exportWorkoutHistory() {
       if (ex && (ex.name || ex.exercise)) exName = ex.name || ex.exercise;
     } catch (_) {}
     rows.push([
-      new Date().toISOString().slice(0, 10),
+      isoDateOnly(new Date()),
       r.w,
       Number(r.d) + 1,
       exName,
@@ -12510,6 +12836,8 @@ function finishInit() {
       render();
       applyChromeI18n();
       try { applyLoginGate(); } catch (_) {}
+      try { fillLegalLinks(); } catch (_) {}
+      try { ensurePrivacyConsent(); } catch (_) {}
       try { applyFocusUi(); } catch (_) {}
       try { maybeShowRewardsOnboarding(); } catch (_) {}
       try { maybeShowOnboarding(); } catch (_) {}
@@ -17809,7 +18137,7 @@ function exportExamRequestPdf() {
   try {
     const bytes = buildExamRequestPdfBytes(req);
     const blob = new Blob([bytes], { type: 'application/pdf' });
-    const stamp = new Date().toISOString().slice(0, 10);
+    const stamp = isoDateOnly(new Date());
     shareOrSavePdfBlob(blob, 'Nurvan_Richiesta_Esami_' + stamp + '.pdf', 'Richiesta esami NURVAN');
   } catch (err) {
     alert('Impossibile creare il PDF: ' + (err && err.message ? err.message : err));
@@ -17891,7 +18219,7 @@ function openAddExamModal() {
   if (v) v.value = '';
   if (u) u.value = '';
   if (r) r.value = '';
-  if (d) d.value = new Date().toISOString().slice(0, 10);
+  if (d) d.value = isoDateOnly(new Date());
   if (n) n.value = '';
   const modal = $('add-exam-modal');
   if (modal) modal.style.display = 'flex';
@@ -17929,7 +18257,7 @@ function saveExamRecord() {
     value: parseFloat(val) || val,
     unit: (($('exam-unit-input') || {}).value || '').trim() || '',
     range: (($('exam-ref-input') || {}).value || '').trim() || '',
-    date: (($('exam-date-input') || {}).value || '') || new Date().toISOString().slice(0, 10),
+    date: (($('exam-date-input') || {}).value || '') || isoDateOnly(new Date()),
     notes: (($('exam-notes-input') || {}).value || '').trim()
   };
 
@@ -18002,7 +18330,7 @@ function deleteExamReminder(idx) {
 function maybeNotifyExamReminders() {
   const list = (DATA.exams && DATA.exams.reminders) || [];
   if (!list.length) return;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = isoDateOnly(new Date());
   list.forEach((rm) => {
     if (rm.notifyDate === today && !rm._notifiedToday) {
       rm._notifiedToday = true;
@@ -18021,7 +18349,7 @@ function explainExamParameterAI(param, val, unit) {
 // ====================================================
 // TASK 20: UNIFIED CALENDAR CONTROLLER & RENDERER
 // ====================================================
-let calendarSelectedDate = new Date().toISOString().slice(0, 10);
+let calendarSelectedDate = isoDateOnly(new Date());
 let calendarCurrentMonth = new Date().getMonth();
 let calendarCurrentYear = new Date().getFullYear();
 
@@ -18072,7 +18400,7 @@ function renderCalendar(c) {
           const dayNum = i + 1;
           const dateStr = calendarCurrentYear + '-' + String(calendarCurrentMonth + 1).padStart(2, '0') + '-' + String(dayNum).padStart(2, '0');
           const isSelected = dateStr === calendarSelectedDate;
-          const isToday = dateStr === new Date().toISOString().slice(0, 10);
+          const isToday = dateStr === isoDateOnly(new Date());
           const dayEv = eventDates[dateStr] || [];
           const badges = [];
           if (dayEv.some(e => e.type === 'workout')) badges.push('🏋️');
@@ -18157,7 +18485,7 @@ async function openAthleteBooking() {
   const box = document.getElementById('athlete-booking-box');
   if (box) box.textContent = 'Carico slot…';
   try {
-    const date = calendarSelectedDate || new Date().toISOString().slice(0, 10);
+    const date = calendarSelectedDate || isoDateOnly(new Date());
     const payload = await practiceFetch('/api/client/availability/slots?date=' + encodeURIComponent(date), {
       method: 'GET',
       headers: practiceHeaders(false)
@@ -18321,11 +18649,6 @@ function renderSettings(c) {
     </div>
     `}
 
-    <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">Connessione Salute</div>
-      <p style="font-size:11px;color:#aaa;margin-bottom:10px;">Health Connect è disponibile solo sull'app Android. Nel browser non c'è sincronizzazione salute.</p>
-      <button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="openHealthConnect()">Apri Connessione Salute</button>
-    </div>
 
     <!-- Language Switcher Card -->
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
@@ -18354,6 +18677,8 @@ function renderSettings(c) {
       </div>
     </div>
     `}
+
+    ${renderPrivacySettingsCard()}
 
     <!-- Full Database JSON Backup & Restore -->
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
@@ -18496,16 +18821,20 @@ function saveAthleteProfile() {
 
 function exportFullDatabaseBackup() {
   return withBusy(function () {
+    // The session token opens the account: it is not the person's data and
+    // must not end up in a file that gets shared.
+    const exported = Object.assign({}, store);
+    delete exported.accountToken;
     const fullBackup = {
       appName: "NURVAN",
       exportDate: new Date().toISOString(),
       version: "Master Task 20",
-      store: store,
+      store: exported,
       DATA: DATA
     };
     const str = JSON.stringify(fullBackup, null, 2);
     const blob = new Blob([str], { type: "application/json" });
-    const fname = "nurvan_backup_" + new Date().toISOString().slice(0, 10) + ".json";
+    const fname = "nurvan_backup_" + isoDateOnly(new Date()) + ".json";
     downloadBlobHelper(blob, fname);
     if (typeof showToast === 'function') showToast("Backup esportato", "ok");
   }, 'Esportazione backup…', { immediate: true });
@@ -18527,7 +18856,9 @@ function importFullDatabaseBackup(input) {
     try {
       const parsed = JSON.parse(e.target.result);
       if (parsed.store) {
-        store = { ...DEFAULT_STORE, ...parsed.store };
+        // The account signed in here stays the one signed in.
+        const keep = { accountToken: store.accountToken, accountUser: store.accountUser };
+        store = { ...DEFAULT_STORE, ...parsed.store, ...keep };
         if (typeof nurvanInstallDomainAccessors === 'function') nurvanInstallDomainAccessors();
       }
       if (parsed.DATA) {
@@ -18588,7 +18919,6 @@ function renderCommunity(c) {
       <div style="font-size:14px;font-weight:800;margin-bottom:6px;">Condividi il profilo</div>
       <p style="font-size:12px;color:#888;margin-bottom:12px;">Link ufficiali e condivisione testo. Non è una community Nurvan.</p>
       <button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="shareAthleteCard()">Condividi il mio profilo</button>
-      <button class="btn btn-outline" style="width:100%;" onclick="openHealthConnect()">Connessione Salute</button>
     </div>
     <div class="card" style="padding:12px;margin-bottom:12px;">
       <div style="font-size:11px;color:#888;">PROFILO</div>
@@ -18604,22 +18934,11 @@ function shareAthleteCard() {
   else if (navigator.clipboard) navigator.clipboard.writeText(text);
   if (typeof showToast === 'function') showToast('Scheda atleta pronta da condividere', 'ok');
 }
+// Nurvan does not read Health Connect or other apps: the recovery figures are
+// a local estimate from what is logged here. The name stays for the buttons
+// that call it.
 function openHealthConnect() {
-  try {
-    if (typeof NativeConfig !== 'undefined' && NativeConfig.openHealthConnect) {
-      NativeConfig.openHealthConnect();
-      if (typeof showToast === 'function') showToast('Richiesta permessi Connessione Salute…', 'info');
-    } else {
-      navigate('settings');
-      if (typeof showToast === 'function') showToast('Connessione Salute è disponibile solo sull\'app Android. Nel browser non c\'è sincronizzazione.', 'error');
-    }
-  } catch (e) {
-    navigate('settings');
-    if (typeof showToast === 'function') showToast('Connessione Salute non disponibile qui. Cosa puoi fare: apri l\'app Android.', 'error');
-  }
-  setTimeout(function () {
-    syncHealthSamplesAndRefresh().catch(function () {});
-  }, 1500);
+  syncHealthSamplesAndRefresh().catch(function () {});
 }
 
 async function syncHealthSamplesAndRefresh() {
@@ -18632,8 +18951,8 @@ async function syncHealthSamplesAndRefresh() {
     if (sample.steps) bits.push(sample.steps + ' passi');
     if (sample.sleepHours) bits.push(sample.sleepHours + 'h sonno');
     if (sample.restingHr) bits.push('RHR ' + sample.restingHr);
-    if (bits.length) showToast('Salute aggiornata: ' + bits.join(' · '), 'ok');
-    else showToast('Dati salute di esempio salvati (stima locale). Concedi i permessi di Connessione Salute per dati più completi.', 'info');
+    if (bits.length) showToast('Stima aggiornata: ' + bits.join(' · '), 'ok');
+    else showToast('Stima di recupero aggiornata dai tuoi allenamenti. Nurvan non legge dati da altre app.', 'info');
   }
   if (currentView === 'community' || currentView === 'home' || currentView === 'settings') render();
   return sample;
@@ -21430,16 +21749,22 @@ function applySsttStartInputs() {
     let updated = 0;
     if (typeof recalcFn === 'function') updated = recalcFn(DATA.weeks, sheet.cells, prevCells) || 0;
     (DATA.weeks || []).forEach((w, wi) => {
-      const wNum = w.weekNumber || w.week || w.week_number || (wi + 1);
+      // The position, as everywhere else keys are made: an imported program
+      // numbered its weeks 1, 2, 5... and the loads went to the wrong week.
+      const wNum = wi + 1;
       (w.sessions || w.days || []).forEach((sess, di) => {
         (sess.exercises || []).forEach((ex, ei) => {
           if (ex.sets && ex.sets[0] && ex.sets[0].load != null) ex.plannedLoad = ex.sets[0].load;
           if (ex.name_original) { ex.name = ex.name_original; ex.exercise = ex.name_original; }
           (ex.sets || []).forEach((st, si) => {
             if (st.load == null && st.target_load == null) return;
-            const k = 'w' + wNum + '_d' + di + '_e' + ei + '_s' + (si + 1) + '_load';
+            // The set's own keys: k already ends in _load, and the guards read
+            // "..._load_done" / "..._load_load_user", which never exist - only
+            // sets 1-12 were protected, by weekExerciseWasLogged.
+            const base = 'w' + wNum + '_d' + di + '_e' + ei + '_s' + (si + 1);
+            const k = base + '_load';
             if (!store || !store.data) return;
-            if (store.data[k + '_done'] || store.data[k + '_load_user']) return;
+            if (store.data[base + '_done'] || store.data[base + '_load_user']) return;
             if (typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(wNum, di, ei)) return;
             if (wNum > 1 && typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(wNum - 1, di, ei)) return;
             store.data[k] = st.load != null ? st.load : st.target_load;
@@ -21973,7 +22298,7 @@ function syncWarmupCompletionToCoach(assignmentId, record, totalItems, completed
       completedCount: completedCount,
       startedAt: record.startedAt,
       completedAt: record.completedAt,
-      sessionDate: new Date().toISOString().slice(0, 10)
+      sessionDate: isoDateOnly(new Date())
     })
   }).catch(function (err) { console.warn('[WARMUP_COMPLETE_SYNC]', err && err.message); });
 }
@@ -23725,7 +24050,7 @@ async function exportWorkoutPdf() {
     }
     const bytes = buildWorkoutPdfBytes(opts);
     const blob = new Blob([bytes], { type: 'application/pdf' });
-    const stamp = new Date().toISOString().slice(0, 10);
+    const stamp = isoDateOnly(new Date());
     const filename = 'Nurvan_Allenamento_' + stamp + '.pdf';
     shareOrSavePdfBlob(blob, filename);
   } catch (err) {
@@ -23747,7 +24072,7 @@ function exportNutritionPdf() {
   try {
     const bytes = buildWorkoutPdfBytes({ nutrition: true, skipTraining: true, scope: 'all' });
     const blob = new Blob([bytes], { type: 'application/pdf' });
-    const stamp = new Date().toISOString().slice(0, 10);
+    const stamp = isoDateOnly(new Date());
     const filename = 'Nurvan_Alimentazione_' + stamp + '.pdf';
     shareOrSavePdfBlob(blob, filename);
   } catch (err) {
@@ -24357,7 +24682,7 @@ function finalizeWorkout(){
   }
   try {
     if (typeof CalendarService !== 'undefined' && CalendarService.addEvent) {
-      const dayIso = new Date().toISOString().slice(0, 10);
+      const dayIso = isoDateOnly(new Date());
       const sessTitle = (function () {
         try {
           const w = DATA && DATA.weeks && DATA.weeks[(currentWeek || 1) - 1];
@@ -27188,7 +27513,7 @@ function fuseBarcodeWithDraftRow(rowEl, product) {
 function markSessionClockIfNeeded() {
   if (!store.sessionStartedAt) {
     store.sessionStartedAt = Date.now();
-    store.sessionStartedDate = new Date().toISOString().slice(0, 10);
+    store.sessionStartedDate = isoDateOnly(new Date());
     store.sessionPausedMs = 0;
     store.sessionPausedAt = null;
     store.sessionClockRunning = true;
@@ -27270,7 +27595,7 @@ function workoutSessionTimerHtml() {
 
 function startWorkoutSessionTimer() {
   store.sessionStartedAt = Date.now();
-  store.sessionStartedDate = new Date().toISOString().slice(0, 10);
+  store.sessionStartedDate = isoDateOnly(new Date());
   store.sessionPausedMs = 0;
   store.sessionPausedAt = null;
   store.sessionClockRunning = true;
@@ -30401,7 +30726,8 @@ function seedProgramLoadsIntoStore(program) {
   if (!store.data) store.data = {};
   let n = 0;
   (prog.weeks || []).forEach(function (w, wi) {
-    const wNum = w.weekNumber || w.week || w.week_number || (wi + 1);
+    // The position, as everywhere else keys are made (not the week's own number).
+    const wNum = wi + 1;
     (w.sessions || w.days || []).forEach(function (sess, di) {
       (sess.exercises || sess.rows || []).forEach(function (ex, ei) {
         const planned = ex.plannedLoad != null ? Number(ex.plannedLoad) : (ex.load != null ? Number(ex.load) : null);
@@ -30410,8 +30736,10 @@ function seedProgramLoadsIntoStore(program) {
           const own = st && (st.load != null && st.load !== '') ? st.load : (st && st.target_load != null && st.target_load !== '' ? st.target_load : null);
           const val = own != null ? own : (si === 0 ? planned : null);
           if (val == null || val === '' || !Number.isFinite(Number(val))) return;
-          const k = 'w' + wNum + '_d' + di + '_e' + ei + '_s' + (si + 1) + '_load';
-          if (store.data[k + '_done'] || store.data[k + '_load_user']) return;
+          // The set's own keys (see the same guard above).
+          const base = 'w' + wNum + '_d' + di + '_e' + ei + '_s' + (si + 1);
+          const k = base + '_load';
+          if (store.data[base + '_done'] || store.data[base + '_load_user']) return;
           if (typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(wNum, di, ei)) return;
           if (wNum > 1 && typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(wNum - 1, di, ei)) return;
           store.data[k] = Number(val);
@@ -35869,7 +36197,7 @@ function prescribedRirFor(row, set) {
 function effortOvershootReport() {
   var out = { sets: 0, over: 0, mean: 0, sessions: 0, ready: false };
   if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks)) return out;
-  var logs = (store.logs || []).filter(function (l) { return l && l.week != null && l.day != null; });
+  var logs = logsOfActiveProgram().filter(function (l) { return l && l.week != null && l.day != null; });
   var recent = logs.slice(-DELOAD_LOOKBACK_SESSIONS);
   var total = 0;
   recent.forEach(function (log) {
@@ -35880,11 +36208,20 @@ function effortOvershootReport() {
     out.sessions += 1;
     list.forEach(function (row, ei) {
       var sets = Array.isArray(row.sets) && row.sets.length ? row.sets : [null, null, null];
+      var eK = 'w' + week + '_d' + day + '_e' + ei;
+      // The value is written in the athlete's scale: RPE 8 is RIR 2. Read as
+      // RIR, every RPE log looked far below target and the deload never came.
+      var scale = (store.exIntensity && store.exIntensity[eK]) || (store.prefs && store.prefs.intensityType) || 'RIR';
       for (var s = 1; s <= sets.length; s++) {
-        var logged = store.data['w' + week + '_d' + day + '_e' + ei + '_s' + s + '_rir'];
+        // Working sets that were closed: not warm-ups, not a set only typed in.
+        if (isWarmupSet(sets[s - 1])) continue;
+        if (!store.data[eK + '_s' + s + '_done']) continue;
+        var logged = store.data[eK + '_s' + s + '_rir'];
         if (logged === undefined || logged === null || logged === '') continue;
+        var loggedRir = String(scale).toUpperCase() === 'RPE' ? Math.max(0, 10 - Number(logged)) : Number(logged);
+        if (!isFinite(loggedRir)) continue;
         var target = prescribedRirFor(row, sets[s - 1]);
-        var diff = target - Number(logged);
+        var diff = target - loggedRir;
         out.sets += 1;
         if (diff >= 1) out.over += 1;
         total += Math.max(0, diff);
@@ -35978,6 +36315,14 @@ function shiftWeekKeyedRecords(fromWeek) {
     bwMoves.forEach(function (mv) { delete store.bw[mv.from]; });
     bwMoves.forEach(function (mv) { store.bw[mv.to] = mv.value; });
   }
+  // The finalized sessions of this program move with their loads: left at
+  // their old week number, every badge and card after the inserted week
+  // pointed one week off.
+  logsOfActiveProgram().forEach(function (l) {
+    if (l && Number(l.week) >= fromWeek) l.week = Number(l.week) + 1;
+  });
+  var sums = store.intelligence && Array.isArray(store.intelligence.sessionSummaries) ? store.intelligence.sessionSummaries : [];
+  sums.forEach(function (x) { if (x && Number(x.week) >= fromWeek) x.week = Number(x.week) + 1; });
 }
 
 function deloadSessionsFrom(sourceWeek, kind) {
@@ -36520,6 +36865,9 @@ if (typeof window !== 'undefined') {
   window.startAppleAuth = startAppleAuth;
   window.openDeleteAccount = openDeleteAccount;
   window.confirmDeleteAccount = confirmDeleteAccount;
+  window.syncPrivacyConsentButton = syncPrivacyConsentButton;
+  window.acceptPrivacyConsent = acceptPrivacyConsent;
+  window.declinePrivacyConsent = declinePrivacyConsent;
   window.startVoiceInput = startVoiceInput;
   window.startVoiceInputFor = startVoiceInputFor;
   window.applyNativeVoiceResult = applyNativeVoiceResult;
