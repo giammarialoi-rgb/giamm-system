@@ -74,7 +74,7 @@ ok(/const \[usdaResult, offResult, fatSecretResult\] = await Promise\.allSettled
   '5a. USDA, Open Food Facts and FatSecret are fetched in parallel (Promise.allSettled), not one after another');
 ok(serverSrc.includes("sources.push('fatsecret')"), '5b. FatSecret results contribute to the reported source list');
 ok(serverSrc.includes("fold(it.name) + '|' + fold(it.brand || '')"), '5c. dedup keys on name+brand, not a source-specific id, so the same generic food from two sources actually collapses into one suggestion');
-ok(serverSrc.includes('scored.sort((a, b) => b.score - a.score)'), '5d. results are sorted by relevance before deduping/truncating, so the best match survives and sorts first');
+ok(serverSrc.includes('scored.sort(compareFoodResults)') && serverSrc.includes('(b.match - a.match) || (b.italy - a.italy) || (b.confidence - a.confidence)'), '5d. results are sorted by relevance before deduping/truncating, so the best match survives and sorts first');
 ok(serverSrc.includes("const usdaKey ? Boolean") === false && serverSrc.includes('usdaKey ? withDeadline(searchUsda('), '5e. USDA is still skipped cleanly (not attempted) when no API key is configured');
 // Confirmed live against a real account: foods.search.v3 answers error code
 // 10 "Unknown method" (Premier-tier only) - foods.search (v1) is what's

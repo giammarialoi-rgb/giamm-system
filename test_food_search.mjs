@@ -284,5 +284,30 @@ console.log('\n--- 10. dalla rete solo cio\' che il testo nomina ---');
   ok('10g. la route filtra dopo la traduzione', /background: true \}\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*result\.items = result\.items\.filter\(\(it\) => isRelevantFoodResult\(it, q\)\);/.test(fs.readFileSync(path.join(root, 'server/food/index.mjs'), 'utf8').replace(/\r\n/g, '\n')));
 }
 
+console.log('\n--- 11. venduto in Italia prima, senza togliere il resto ---');
+{
+  const { searchFoodMulti, mapOffProduct, compareFoodResults } = await import('./server/food/index.mjs');
+  eq([mapOffProduct({ product_name: 'A', countries_tags: ['en:italy', 'en:france'] }).soldInItaly, mapOffProduct({ product_name: 'B', countries_tags: ['en:united-states'] }).soldInItaly, mapOffProduct({ product_name: 'C' }).soldInItaly], [true, false, null], '11a. Open Food Facts dice dove si vende: si, no, non si sa');
+  const hit = (name, brand, countries, kcal) => ({ product_name: name, brands: [brand], countries_tags: countries, nutriments: { 'energy-kcal_100g': kcal }, code: name.length + brand });
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ hits: [
+    hit('Riso basmati', 'Uncle Sam', ['en:united-states'], 350),
+    hit('Riso basmati', 'Scotti', ['en:italy'], 355),
+    hit('Riso carnaroli', 'Gallo', ['en:italy'], 350),
+    hit('Latte evaporato riso', 'Pet', ['en:united-states'], 110)
+  ] }) });
+  const res = await searchFoodMulti('riso', { FOOD_SOURCE_DEADLINE_MS: '500' }, { lang: 'it' });
+  globalThis.fetch = realFetch;
+  const got = res.items.map((i) => i.name + ' · ' + i.brand);
+  ok('11b. a pari pertinenza, venduto in Italia prima: ' + JSON.stringify(got), got.indexOf('Riso basmati · Scotti') < got.indexOf('Riso basmati · Uncle Sam') && got.indexOf('Riso carnaroli · Gallo') < got.indexOf('Riso basmati · Uncle Sam'));
+  ok('11c. il prodotto americano non sparisce: e\' dopo', got.includes('Riso basmati · Uncle Sam') && got.includes('Latte evaporato riso · Pet'));
+  ok('11d. e la pertinenza resta il primo criterio: «riso» come prima parola batte «riso» in mezzo al nome', got.indexOf('Latte evaporato riso · Pet') === got.length - 1);
+  const a = { match: 85, italy: 0, confidence: 0.9 };
+  const b = { match: 70, italy: 1, confidence: 0.9 };
+  const c = { match: 85, italy: 1, confidence: 0.6 };
+  eq([a, b, c].sort(compareFoodResults).map((x) => x.match + '/' + x.italy), ['85/1', '85/0', '70/1'], '11e. ordine: pertinenza, poi Italia, poi fiducia nella fonte');
+  ok('11f. i menu delle catene sono quelli italiani', /soldInItaly: true,\s*\n\s*provenance: item\.provenance/.test(fs.readFileSync(path.join(root, 'server/food/index.mjs'), 'utf8').replace(/\r\n/g, '\n')));
+}
+
 console.log('\n' + (failed ? failed + ' controlli falliti' : 'tutti i controlli passano'));
 process.exit(failed ? 1 : 0);

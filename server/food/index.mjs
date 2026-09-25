@@ -118,6 +118,9 @@ export function mapOffProduct(raw) {
     servingGrams: num(raw.serving_quantity) || (raw.serving_size ? parseFloat(String(raw.serving_size).replace(',', '.')) : 100) || 100,
     unit: inferProductUnit(raw),
     nutriscore: raw.nutriscore_grade || null,
+    // Where Open Food Facts says the product is sold: true / false, or null
+    // when the product carries no countries at all.
+    soldInItaly: Array.isArray(raw.countries_tags) && raw.countries_tags.length ? raw.countries_tags.includes('en:italy') : null,
     hasCompleteNutrition: hasComplete,
     provenance: {
       source: 'open_food_facts',
@@ -139,7 +142,7 @@ export async function searchUsda(query, { apiKey, pageSize = 8 } = {}) {
 
 export async function searchOpenFoodFacts(query, { pageSize = 8 } = {}) {
   if (!query || query.trim().length < 2) return [];
-  const fields = 'product_name,product_name_it,generic_name,generic_name_it,brands,nutriments,code,serving_size,serving_quantity,nutriscore_grade,quantity';
+  const fields = 'product_name,product_name_it,generic_name,generic_name_it,brands,nutriments,code,serving_size,serving_quantity,nutriscore_grade,quantity,countries_tags';
   const url = `${OFF_SEARCH_BASE}/search?q=${encodeURIComponent(query)}&page_size=${pageSize}&fields=${fields}`;
   const res = await fetch(url, {
     headers: {
@@ -333,6 +336,10 @@ export function isRelevantFoodResult(it, query) {
   return wanted.every((w) => words.some((x) => x.indexOf(w) === 0));
 }
 
+export function compareFoodResults(a, b) {
+  return (b.match - a.match) || (b.italy - a.italy) || (b.confidence - a.confidence);
+}
+
 export const FOOD_KCAL_MAX_PER_100 = 900;
 export function isPlausibleFoodResult(it, foldedQuery) {
   if (!it || !it.name) return false;
@@ -380,11 +387,17 @@ export async function searchFoodMulti(query, env = process.env, { lang = 'it' } 
   // Rank by how well the name actually matches before deduping, so which
   // near-duplicate survives is the best-matching (and highest-confidence)
   // one, not just whichever source happened to be pushed into the array first.
+  // First how well the name matches (in steps: whole name, first word, a
+  // word...), then whether it is sold in Italy - the rice from the shop
+  // round the corner before an American evaporated milk, nothing dropped -
+  // then how much the source is trusted.
   const scored = items.filter((it) => isPlausibleFoodResult(it, q)).map((it) => ({
     it,
-    score: nameMatchScore(it.name, q) + ((it.provenance && it.provenance.confidence) || 0) * 10
+    match: nameMatchScore(it.name, q),
+    italy: it.soldInItaly === true ? 1 : 0,
+    confidence: (it.provenance && it.provenance.confidence) || 0
   }));
-  scored.sort((a, b) => b.score - a.score);
+  scored.sort(compareFoodResults);
 
   // Dedup on name+brand only (dropping the source-specific id that used to be
   // part of the key) - the same generic food showing up from two sources
@@ -676,6 +689,8 @@ export function searchChainCatalog(query) {
         fatPer100: Math.round((item.fat / grams) * 1000) / 10,
         serving: item.serving,
         servingGrams: grams,
+        // The menu catalog is written from the Italian menus.
+        soldInItaly: true,
         provenance: item.provenance
       });
     }
