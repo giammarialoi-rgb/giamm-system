@@ -143,8 +143,8 @@ console.log('--- 5. quando compare e da dove si riapre ---');
   ok('5a. dopo la finalizzazione, la card della seduta salvata', /function showWorkoutCompleteOverlay\(logEntry, awarded\) \{[\s\S]{0,400}sessionCardFor\(logEntry\.week, logEntry\.day, logEntry\)/.test(SRC));
   ok('5b. la card legge il log gia\' salvato, non ricalcola la seduta', /function findSessionLog\(week, day\)/.test(SRC) && /const entry = log \|\| findSessionLog\(week, day\);/.test(SRC));
   ok('5c. persist() e finalizeWorkout non sono stati toccati', /function persist\(\) \{\s*\n\s*ensureStoreIntegrity\(\);/.test(SRC) && /store\.logs\.push\(logEntry\);\s*\n\s*if \(store\.logs\.length > 400\)/.test(SRC));
-  ok('5d. dallo storico: bottone CARD su ogni seduta', /onclick="openSessionCard\(' \+ hw \+ ',' \+ hd \+ '\)">CARD</.test(SRC));
-  ok('5e. e dal riepilogo della seduta salvata', /onclick="openSessionCard\(' \+ week \+ ',' \+ day \+ '\)">CARD DELLA SEDUTA</.test(SRC));
+  ok('5d. dallo storico: bottone CARD su ogni seduta, per id', /onclick="openSessionCardForLog\(' \+ hid \+ '\)">CARD</.test(SRC));
+  ok('5e. e dal riepilogo della seduta salvata', /onclick="' \+ cardCall \+ '">CARD DELLA SEDUTA</.test(SRC) && /openSessionCardForLog\(/.test(SRC));
   ok('5f. dallo storico, CHIUDI non fa partire le domande di fine seduta', /const fromFinalize = window\.__sessionCardMode !== 'history';[\s\S]{0,200}if \(!fromFinalize\) return;/.test(grab('closeWorkoutCompleteOverlay')));
   ok('5g. la mappa sulla schermata e\' quella delle statistiche, senza bottoni', /function sessionMuscleFigureHtml\(view, muscles\)/.test(SRC) && /pointer-events:none/.test(grab('sessionMuscleFigureHtml')));
   ok('5h. i record vengono dal motore, per seduta', /TAE\.sessionPRs\(TAE\.normalizeSets\(store, DATA\), week, day\)/.test(SRC));
@@ -224,7 +224,7 @@ console.log("--- 8. un esercizio senza gruppo non finisce negli addominali ---")
 console.log("");
 console.log("--- 9. retroattiva: ogni seduta passata si riapre e si condivide ---");
 {
-  ok("9a. in Home c'e' la card dell'ultima seduta, con la strada per condividerla", SRC.indexOf('function lastSessionHomeCardHtml()') >= 0 && SRC.indexOf('${lastSessionHomeCardHtml()}') >= 0 && grab('lastSessionHomeCardHtml').indexOf('onclick="openSessionCard(') >= 0);
+  ok("9a. in Home c'e' la card dell'ultima seduta, con la strada per condividerla", SRC.indexOf('function lastSessionHomeCardHtml()') >= 0 && SRC.indexOf('${lastSessionHomeCardHtml()}') >= 0 && grab('lastSessionHomeCardHtml').indexOf('onclick="openSessionCardForLog(') >= 0);
   ok("9b. non nello spazio cliente ne' mentre il coach guarda un cliente", grab('lastSessionHomeCardHtml').indexOf('isClientStorageContext()') >= 0 && grab('lastSessionHomeCardHtml').indexOf('coachViewingClient') >= 0);
   ok("9c. lo storico in Statistiche arriva alla prima seduta che il piano mostra, non si ferma a dodici", SRC.indexOf('const histVisible = historyVisibleLogs(store.logs || []);') >= 0 && SRC.indexOf('const histAll = histVisible.slice().reverse();') >= 0 && SRC.indexOf("MOSTRA TUTTE LE ' + histAll.length + ' SEDUTE") >= 0 && SRC.indexOf('function toggleStatsHistoryAll()') >= 0);
   ok("9d. e una giornata finalizzata, riaperta in Allenamento, ha la sua card", SRC.indexOf('onclick="openSessionCard(${currentWeek},${currentDay})">CARD DELLA SEDUTA') >= 0);

@@ -31,7 +31,8 @@ const end = html.indexOf("function pdfSessionKey");
 assert.ok(start >= 0 && end > start, "max-test helpers exist");
 const extraStart = html.indexOf("function sortLogsChronological");
 const extraEnd = html.indexOf("function summarizeCheckLogs");
-const loggedStart = html.indexOf("function weekExerciseWasLogged");
+// From the helpers that say which program a session belongs to, just above.
+const loggedStart = html.indexOf("function activeProgramKey");
 const loggedEnd = html.indexOf("function collectSetLogsAtWeek");
 const finStart = html.indexOf("function isTrainingDayFinalized");
 const finEnd = html.indexOf("function advanceToNextOpenTrainingDay");

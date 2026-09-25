@@ -175,6 +175,7 @@ console.log('\n--- 4. un riscaldamento chiuso non e\' volume, ne\' contatore ---
   const ctx = pageContext({ store: { prefs: {}, data: data, skips: {}, subs: {}, loadTypes: {}, exIntensity: {}, sessionStartedAt: 0 }, DATA: { weeks: [{ sessions: [{ exercises: [row] }] }] } });
   vm.runInContext(helpers + '\n' +
     "function exerciseLogUnit() { return 'reps'; }\nfunction prescribedMinutesFor() { return 0; }\nfunction resolveExerciseMacroGroups() { return ['PETTO']; }\nfunction sessionElapsedMs() { return 0; }\n" +
+    grab('withBonusRows') + grab('sessionSetTimes') + grab('sessionDurationSec') +
     grab('collectSessionStats'), ctx);
   const out = vm.runInContext('collectSessionStats({ currentSessionOnly: true })', ctx);
   eq(out.sets, 6, '4a. due riscaldamenti e sei allenanti chiuse: «6 serie»');

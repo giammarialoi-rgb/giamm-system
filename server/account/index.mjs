@@ -108,11 +108,26 @@ export function mergeAccountDataBlobs(current, incoming) {
     "data", "customSets", "bw", "skips", "subs", "loadTypes", "tempos",
     "exIntensity", "maxTests", "bonus", "exMuscle", "nutritionDaily"
   ];
+  // The per-slot training maps are cleared when the program changes (or the
+  // loads are reset); a key-by-key merge can only add, so the old program's
+  // loads came back from here. trainingDataEpoch says when they were last
+  // cleared: the newer side's maps win whole.
+  const epochKeys = ["data", "customSets", "subs", "skips", "loadTypes", "tempos", "exIntensity", "bonus", "intelTargets", "warmups", "warmupProgress"];
+  const epochMs = (e) => { const t = e && e.at ? new Date(e.at).getTime() : 0; return Number.isFinite(t) ? t : 0; };
+  const curEpoch = epochMs(cur.trainingDataEpoch);
+  const incEpoch = epochMs(inc.trainingDataEpoch);
   for (const key of mapKeys) {
     const a = cur[key] && typeof cur[key] === "object" && !Array.isArray(cur[key]) ? cur[key] : {};
     const b = inc[key] && typeof inc[key] === "object" && !Array.isArray(inc[key]) ? inc[key] : {};
-    merged[key] = Object.keys(b).length ? { ...a, ...b } : (Object.keys(a).length ? a : (merged[key] || {}));
+    if (epochKeys.includes(key) && incEpoch > curEpoch) merged[key] = b;
+    else if (epochKeys.includes(key) && curEpoch > incEpoch) merged[key] = a;
+    else merged[key] = Object.keys(b).length ? { ...a, ...b } : (Object.keys(a).length ? a : (merged[key] || {}));
   }
+  for (const key of ["intelTargets", "warmups", "warmupProgress"]) {
+    if (incEpoch > curEpoch) merged[key] = inc[key] && typeof inc[key] === "object" ? inc[key] : {};
+    else if (curEpoch > incEpoch) merged[key] = cur[key] && typeof cur[key] === "object" ? cur[key] : {};
+  }
+  if (incEpoch || curEpoch) merged.trainingDataEpoch = incEpoch >= curEpoch ? inc.trainingDataEpoch : cur.trainingDataEpoch;
   const byId = {};
   (Array.isArray(cur.logs) ? cur.logs : []).concat(Array.isArray(inc.logs) ? inc.logs : []).forEach((row) => {
     if (!row) return;

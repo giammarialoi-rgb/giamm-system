@@ -268,6 +268,9 @@
       const loadRaw = num(row.load);
       const reps = int(row.reps);
       if (loadRaw == null || loadRaw <= 0 || reps == null || reps <= 0) return;
+      // A set ticked and then reopened keeps its load and reps, but it was not
+      // lifted: no volume, no record.
+      if (row.done === false || row.done === 'false') return;
       const meta = exerciseMeta(data, store, row.week, row.day, row.exIdx);
       // A warm-up set is not a lift: no volume, no record, no trend.
       const metaSet = Array.isArray(meta.sets) ? meta.sets[row.set - 1] : null;

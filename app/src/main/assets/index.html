@@ -36230,7 +36230,7 @@ var NURVAN_DOMAIN_FIELDS = [
   'activeProgram', 'activeProgramId', 'nutrition', 'supplementation', 'therapy', 'exams',
   'data', 'customSets', 'subs', 'skips', 'logs', 'intelTargets', 'bodyChecks', 'bodyChecksDeleted',
   'nutritionDaily', 'profile', 'bw', 'exMuscle', 'loadTypes', 'tempos', 'bonus',
-  'warmups', 'warmupProgress', 'warmupAssignment'
+  'warmups', 'warmupProgress', 'warmupAssignment', 'trainingDataEpoch'
 ];
 
 var NurvanMemory = {
@@ -36811,13 +36811,36 @@ function plannedRepsRirFromRow(row, setNum) {
   }
   return { reps: reps == null ? '' : reps, rir: rir == null ? '' : rir };
 }
+// Which program a finalized session belongs to. Sessions are found by week
+// and day, and week 1 day 1 of a new program is not week 1 day 1 of the old
+// one: without this, switching program made the new program's first days
+// look finalized, and editing one overwrote the old session's log. Each
+// session is stamped with its program; the ones from before the stamp are
+// stamped with the previous program when the program changes.
+function activeProgramKey() {
+  return String((store && store.activeProgramId) || (typeof DATA !== 'undefined' && DATA && DATA.id) || '');
+}
+function logIsOfActiveProgram(l) {
+  if (!l) return false;
+  const key = activeProgramKey();
+  return !l.programId || !key || String(l.programId) === key;
+}
+function logsOfActiveProgram() {
+  return ((store && store.logs) || []).filter(logIsOfActiveProgram);
+}
+function findLogById(id) {
+  const want = String(id || '');
+  if (!want) return null;
+  return ((store && store.logs) || []).find(function (l) { return l && String(l.id || l.at || '') === want; }) || null;
+}
+
 function weekExerciseWasLogged(week, day, exIdx) {
   if (!store || !store.data) return false;
   for (let s = 1; s <= 12; s++) {
     const base = 'w' + week + '_d' + day + '_e' + exIdx + '_s' + s;
     if (store.data[base + '_done'] || store.data[base + '_load_user']) return true;
   }
-  return (store.logs || []).some(function (row) {
+  return logsOfActiveProgram().some(function (row) {
     return row && Number(row.week) === Number(week) && Number(row.day) === Number(day);
   });
 }
@@ -36868,7 +36891,7 @@ function collectPrevWeekSetLogs(exIdx, row) {
   return [];
 }
 function sessionWasFinalized(week, day) {
-  return (store.logs || []).some(function (row) {
+  return logsOfActiveProgram().some(function (row) {
     return row && Number(row.week) === Number(week) && Number(row.day) === Number(day);
   });
 }
@@ -38241,6 +38264,7 @@ function accountPayload(opts){
   const nutritionDailySrc = bak ? bak.nutritionDaily : store.nutritionDaily;
   const warmupsSrc = bak ? bak.warmups : store.warmups;
   const warmupProgressSrc = bak ? bak.warmupProgress : store.warmupProgress;
+  const trainingEpochSrc = bak ? bak.trainingDataEpoch : store.trainingDataEpoch;
   const activeProgramIdOut = bak
     ? (bak.activeProgramId || (srcProg && srcProg.id) || null)
     : (store.activeProgramId || (DATA && DATA.id) || null);
@@ -38258,6 +38282,7 @@ function accountPayload(opts){
     // is what a new phone can show, and history that never left the old phone
     // was history lost the moment it was replaced.
     logs: Array.isArray(logsSrc) ? logsSrc.slice(-400) : [],
+    trainingDataEpoch: trainingEpochSrc || null,
     data: dataSrc || {},
     customSets: customSetsSrc || {},
     bw: bwSrc || {},
@@ -38371,6 +38396,18 @@ function accountDataScore(src, prog) {
   if (src && src.customSets) n += Object.keys(src.customSets).length * 4;
   return n;
 }
+// Clearing the loads (program switch, "Azzera carichi") has to reach the
+// cloud as a clearing: the slot maps are merged key by key, and a merge can
+// only add - the old program's loads came back on the next sync. The epoch
+// says when the maps were last cleared; the newer side's maps win whole.
+function markTrainingDataEpoch() {
+  store.trainingDataEpoch = { at: new Date().toISOString(), program: activeProgramKey() || null };
+}
+function trainingEpochMs(e) {
+  const t = e && e.at ? new Date(e.at).getTime() : 0;
+  return Number.isFinite(t) ? t : 0;
+}
+
 function applyRemoteAccountData(remote, preferLocal) {
   if (!remote || typeof remote !== 'object') return;
   const token = store.accountToken, user = store.accountUser;
@@ -38381,6 +38418,17 @@ function applyRemoteAccountData(remote, preferLocal) {
   if (athlete) {
     store.data = Object.assign({}, store.__cpClientScoped ? (store.data || {}) : {}, remote.data || {});
     store.customSets = Object.assign({}, store.__cpClientScoped ? (store.customSets || {}) : {}, remote.customSets || {});
+  } else if (trainingEpochMs(remote.trainingDataEpoch) > trainingEpochMs(store.trainingDataEpoch)) {
+    // Cleared on another device after this one's last clear: that side's maps.
+    TRAINING_SLOT_FIELDS.forEach(function (k) { store[k] = Object.assign({}, remote[k] || {}); });
+    store.trainingDataEpoch = remote.trainingDataEpoch;
+    remote = Object.assign({}, remote);
+    TRAINING_SLOT_FIELDS.forEach(function (k) { delete remote[k]; });
+  } else if (trainingEpochMs(store.trainingDataEpoch) > trainingEpochMs(remote.trainingDataEpoch)) {
+    // Cleared here after the cloud's copy was written: the cloud's maps are
+    // the old program's, not to be merged back.
+    remote = Object.assign({}, remote);
+    TRAINING_SLOT_FIELDS.forEach(function (k) { delete remote[k]; });
   } else {
     store.data = Object.assign({}, remote.data || {}, store.data || {});
     store.customSets = Object.assign({}, remote.customSets || {}, store.customSets || {});
@@ -38686,7 +38734,7 @@ function personalTrainingHistoryExists() {
 function trainingDayHasProgress(week, day) {
   const w = Number(week) || 1;
   const d = Number(day) || 0;
-  if ((store.logs || []).some(function (l) {
+  if (logsOfActiveProgram().some(function (l) {
     return l && Number(l.week) === w && Number(l.day) === d;
   })) return true;
   const prefix = 'w' + w + '_d' + d + '_';
@@ -43722,7 +43770,13 @@ function completeSetQuick(exIdx, setNum, restText) {
   }
 
   let reps = fieldVal(repsEl, store.data[k + '_reps']);
-  if (reps === '') {
+  // A set by time (plank, hold) or in minutes has no repetitions: its "45s"
+  // was read as 45 reps, and a 20 kg plank added 900 kg of volume (and could
+  // make a record). Only reps someone typed count there.
+  const unitHere = (typeof exerciseLogUnit === 'function')
+    ? exerciseLogUnit(rowForSugg, (store.subs && store.subs[`w${currentWeek}_d${currentDay}_e${exIdx}`]) || rowForSugg.name || rowForSugg.exercise || '')
+    : 'reps';
+  if (reps === '' && unitHere !== 'time' && unitHere !== 'cardio') {
     reps = prev.reps || prevSet.reps || planned.reps || '';
   }
   if (reps !== '') {
@@ -44247,17 +44301,40 @@ function removeSetFromExercise(exerciseIndex, setNumber) {
     alert('Ogni esercizio deve avere almeno 1 serie.');
     return;
   }
-  for(let s = setNumber; s < currentSets; s++) {
-    const nextS = s + 1;
-    store.data[`${key}_s${s}_load`] = store.data[`${key}_s${nextS}_load`] || '';
-    store.data[`${key}_s${s}_reps`] = store.data[`${key}_s${nextS}_reps`] || '';
-    store.data[`${key}_s${s}_rir`] = store.data[`${key}_s${nextS}_rir`] || '';
-    store.data[`${key}_s${s}_done`] = store.data[`${key}_s${nextS}_done`] || false;
+  // Everything a set has moves up with it - load, reps, RIR, done, and also
+  // minutes, seconds, time closed, measured rest, technique, the "typed by
+  // hand" marks. Only four moved before: cardio minutes stayed on the wrong
+  // set and came back when a set was added again.
+  const setKeys = function (n) {
+    const prefix = key + '_s' + n + '_';
+    return Object.keys(store.data).filter(function (k) { return k.indexOf(prefix) === 0; }).map(function (k) { return k.slice(prefix.length); });
+  };
+  for (let s = setNumber; s <= currentSets; s++) {
+    setKeys(s).forEach(function (suffix) { delete store.data[key + '_s' + s + '_' + suffix]; });
+    if (s < currentSets) {
+      const nextS = s + 1;
+      setKeys(nextS).forEach(function (suffix) { store.data[key + '_s' + s + '_' + suffix] = store.data[key + '_s' + nextS + '_' + suffix]; });
+    }
   }
-  delete store.data[`${key}_s${currentSets}_load`];
-  delete store.data[`${key}_s${currentSets}_reps`];
-  delete store.data[`${key}_s${currentSets}_rir`];
-  delete store.data[`${key}_s${currentSets}_done`];
+  // Whether a row is a warm-up is written in the session's structure by
+  // position (row.sets). Removing a row moves the data up, so the structure
+  // loses the same row: otherwise, deleting the warm-up R1 put work set 1's
+  // numbers in a slot still marked warm-up - out of volume, records, card.
+  try {
+    const wk = DATA && DATA.weeks && DATA.weeks[currentWeek - 1];
+    const dd = wk && (wk.sessions || wk.days) && (wk.sessions || wk.days)[currentDay];
+    const row = dd && (dd.exercises || dd.rows) && (dd.exercises || dd.rows)[exerciseIndex];
+    const shared = row && (DATA.weeks || []).some(function (w2, wi) {
+      if (wi === currentWeek - 1) return false;
+      const d2 = w2 && (w2.sessions || w2.days) && (w2.sessions || w2.days)[currentDay];
+      const r2 = d2 && (d2.exercises || d2.rows) && (d2.exercises || d2.rows)[exerciseIndex];
+      return r2 === row;
+    });
+    if (row && !shared && Array.isArray(row.sets) && row.sets.length >= setNumber) {
+      row.sets.splice(setNumber - 1, 1);
+      try { if (typeof persistActiveProgramStructure === 'function') persistActiveProgramStructure(); } catch (_) {}
+    }
+  } catch (_) {}
 
   store.customSets[key] = currentSets - 1;
   persist();
@@ -56657,31 +56734,12 @@ function confirmReplacement(){
 }
 
 function calcStats(){
-  let v = 0, r = 0, s = 0;
-  Object.keys(store.data).forEach(k => {
-    if(k.startsWith(`w${currentWeek}_d${currentDay}_`) && k.endsWith('_load')){
-      const p = k.split('_');
-      const eK = `${p[0]}_${p[1]}_${p[2]}`;
-      if(store.skips[eK]) return;
-      const isPart = store.loadTypes[eK] === 'part';
-      const multiplier = isPart ? 2 : 1;
-      const b = k.replace('_load', '');
-      const l = parseFloat(store.data[k] || 0) * multiplier;
-      const rp = parseInt(store.data[b + '_reps'] || 0, 10);
-      if(l > 0 && rp > 0){
-        v += l * rp;
-        const intensVal = parseInt(store.data[b + '_rir'] || 0, 10);
-        const exIntens = store.exIntensity[eK] || store.prefs.intensityType || 'RIR';
-        if(exIntens === 'RIR') {
-          r += l * (rp + intensVal);
-        } else {
-          const approxRir = Math.max(0, 10 - intensVal);
-          r += l * (rp + approxRir);
-        }
-        s++;
-      }
-    }
-  });
+  // The same count the finalized session will have: sets ticked done, no
+  // warm-ups, cardio out of the kg, bonus exercises in. It used to count any
+  // row with a load and reps - warm-ups and sets never ticked included - and
+  // then disagreed with the saved session.
+  const snap = collectSessionStats({ currentSessionOnly: true });
+  const v = snap.weight || 0, r = snap.intensity || 0, s = snap.sets || 0;
   if($('d-vol')) $('d-vol').innerText = `${Math.round(v)} kg`;
   if($('d-rir')) $('d-rir').innerText = `${Math.round(r)} pts`;
   if($('d-sets')) $('d-sets').innerText = s;
@@ -56758,7 +56816,7 @@ function updateSessionBodyWeight(val) {
 function refreshFinalizedLogInPlace(recompute) {
   const week = currentWeek || 1;
   const day = currentDay || 0;
-  const logs = store.logs || [];
+  const logs = logsOfActiveProgram();
   let hit = null;
   for (let i = logs.length - 1; i >= 0; i--) {
     const l = logs[i];
@@ -56771,15 +56829,21 @@ function refreshFinalizedLogInPlace(recompute) {
   hit.editedAt = new Date().toISOString();
   if (recompute && typeof collectSessionStats === 'function') {
     const snap = collectSessionStats({ currentSessionOnly: true });
+    // All of it, as the edit left it: an edit that brings the sets to 0 is 0
+    // (it used to keep the old number), and reps and cardio minutes follow the
+    // edit too. The duration stays the session's own.
     hit.tonnage = Math.round(snap.weight || 0);
     hit.intensity = Math.round(snap.intensity || 0);
-    hit.sets = snap.sets || hit.sets;
-    hit.exercises = snap.exercises || hit.exercises;
+    hit.sets = snap.sets || 0;
+    hit.exercises = snap.exercises || 0;
+    hit.reps = snap.reps || 0;
+    hit.cardioMinutes = snap.cardioMinutes || 0;
     hit.kcal = snap.kcal || hit.kcal;
-    hit.muscles = snap.muscles || hit.muscles;
+    hit.muscles = snap.muscles || {};
     // Editing a finalized session happens on the same program: refreeze it.
     hit.exerciseLines = sessionExerciseDetailsFor(week, day);
     hit.sessionName = sessionNameFor(week, day);
+    hit.prs = frozenSessionPrs(week, day);
   }
   return hit;
 }
@@ -56787,7 +56851,7 @@ function refreshFinalizedLogInPlace(recompute) {
 function getFinalizedSessionLog(week, day) {
   const w = Number(week) || 1;
   const d = Number(day) || 0;
-  const logs = (store && store.logs) || [];
+  const logs = logsOfActiveProgram();
   for (let i = logs.length - 1; i >= 0; i--) {
     const l = logs[i];
     if (l && Number(l.week) === w && Number(l.day) === d) return l;
@@ -56838,6 +56902,12 @@ function saveFinalizedWorkoutEdits() {
     return;
   }
   window.__editFinalizedKey = '';
+  // Ticking a set while editing starts the session clock; the edit is not a
+  // session, and the clock must not run on into the next one.
+  store.sessionStartedAt = null;
+  store.sessionPausedMs = 0;
+  store.sessionPausedAt = null;
+  store.sessionClockRunning = false;
   pinTrainingDay(currentWeek, currentDay);
   persist();
   try { persistActiveProgramStructure(); } catch (_) {}
@@ -56911,7 +56981,11 @@ function finalizeWorkout(){
     // program can change later, and the sets in store.data are keyed only by
     // week/day/slot, not by exercise.
     exerciseLines: sessionExerciseDetailsFor(currentWeek || 1, currentDay || 0),
-    sessionName: sessionNameFor(currentWeek || 1, currentDay || 0)
+    sessionName: sessionNameFor(currentWeek || 1, currentDay || 0),
+    // The program this session belongs to, and its records as found now:
+    // recomputed later they would come from another program's sets.
+    programId: activeProgramKey() || null,
+    prs: frozenSessionPrs(currentWeek || 1, currentDay || 0)
   };
   store.logs.push(logEntry);
   if (store.logs.length > 400) store.logs = store.logs.slice(-400);
@@ -57573,12 +57647,19 @@ function formatSessionPeriodText(cards) {
 function findSessionLog(week, day) {
   const w = Number(week) || 1;
   const d = Number(day) || 0;
-  const logs = (store && store.logs) || [];
+  const logs = logsOfActiveProgram();
   for (let k = logs.length - 1; k >= 0; k--) {
     const l = logs[k];
     if (l && Number(l.week) === w && Number(l.day) === d) return l;
   }
   return null;
+}
+
+// The records of a session, kept with it: only what the card reads.
+function frozenSessionPrs(week, day) {
+  return (sessionPrsFor(week, day) || []).filter(function (p) { return p && p.name && p.type; }).map(function (p) {
+    return { type: String(p.type), name: String(p.name), value: Number(p.value) || 0, load: p.load != null ? Number(p.load) : null };
+  }).slice(0, 24);
 }
 
 function sessionPrsFor(week, day) {
@@ -57607,12 +57688,15 @@ function sessionCardFor(week, day, log) {
   const d = Number(entry.day) || 0;
   // The name saved with the session; sessions from before it was saved fall
   // back to the program's name for that day, as the card always did.
-  const sessionName = String(entry.sessionName || '') || sessionNameFor(w, d);
+  const ofActive = logIsOfActiveProgram(entry);
+  const sessionName = String(entry.sessionName || '') || (ofActive ? sessionNameFor(w, d) : '');
   return buildSessionCardData({
     log: entry,
     sessionName: sessionName || ('Seduta ' + (d + 1)),
     athleteName: (store && store.profile && store.profile.name) || '',
-    prs: sessionPrsFor(w, d),
+    // Records saved with the session; for an older session of this program,
+    // found now; for another program's session, none rather than wrong ones.
+    prs: Array.isArray(entry.prs) ? entry.prs : (ofActive ? sessionPrsFor(w, d) : []),
     // Only what the session saved with itself. A session finalized before
     // the list was saved has totals only: reading today's program for it
     // could put another program's exercises on an old session.
@@ -57623,6 +57707,16 @@ function sessionCardFor(week, day, log) {
 // Le serie chiuse della seduta, esercizio per esercizio, come le conta
 // collectSessionStats: saltati fuori, riscaldamenti segnati (li toglie
 // buildSessionCardData), cardio in minuti.
+// The day's exercises and, after them, the BONUS ones added during the
+// session (store.bonus, slots 900+). The live counter counted the bonus sets;
+// the saved session, its card and its text left them out.
+function withBonusRows(rows, week, day) {
+  const out = (rows || []).map(function (row, eIdx) { return { row: row, eIdx: eIdx }; });
+  const bonus = (store && store.bonus && store.bonus['w' + week + '_d' + day]) || [];
+  bonus.forEach(function (b, bIdx) { if (b) out.push({ row: b, eIdx: 900 + bIdx }); });
+  return out;
+}
+
 function sessionExerciseDetailsFor(week, day) {
   try {
     const wk = DATA && DATA.weeks && DATA.weeks[week - 1];
@@ -57630,7 +57724,9 @@ function sessionExerciseDetailsFor(week, day) {
     const rows = (sess && (sess.exercises || sess.rows)) || [];
     const data = (store && store.data) || {};
     const out = [];
-    rows.forEach(function (row, eIdx) {
+    withBonusRows(rows, week, day).forEach(function (item) {
+      const row = item.row;
+      const eIdx = item.eIdx;
       const eK = 'w' + week + '_d' + day + '_e' + eIdx;
       if (store.skips && store.skips[eK]) return;
       const name = (store.subs && store.subs[eK]) || row.name || row.exercise || '';
@@ -57708,6 +57804,21 @@ function copySessionText(week, day) {
   copySessionTextToClipboard(formatSessionCardText(card));
 }
 
+function openSessionCardForLog(id) {
+  const log = findLogById(id);
+  const card = log ? sessionCardFor(Number(log.week) || 1, Number(log.day) || 0, log) : null;
+  if (!card) { if (typeof showToast === 'function') showToast('Seduta non trovata', 'error'); return; }
+  try { if (typeof closeSavedRecordOverlay === 'function') closeSavedRecordOverlay(); } catch (_) {}
+  renderSessionCardOverlay(card, 'history');
+}
+
+function copySessionTextForLog(id) {
+  const log = findLogById(id);
+  const card = log ? sessionCardFor(Number(log.week) || 1, Number(log.day) || 0, log) : null;
+  if (!card) { if (typeof showToast === 'function') showToast('Seduta non trovata', 'error'); return; }
+  copySessionTextToClipboard(formatSessionCardText(card));
+}
+
 function copySessionTextFromOverlay() {
   if (window.__sessionCard) copySessionTextToClipboard(formatSessionCardText(window.__sessionCard));
 }
@@ -57752,7 +57863,7 @@ function lastSessionHomeCardHtml() {
       '<div style="font-size:10px;color:#888;">' + esc(ago) + '</div></div>' +
       '<div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:4px;">' + esc(card.title) + '</div>' +
       '<div style="font-size:12px;color:#aaa;margin-bottom:10px;">' + esc(card.durationText) + ' · ' + esc(card.tonnageText) + ' · ' + card.sets + ' serie' + (card.cardioMinutes > 0 ? (' · cardio ' + card.cardioMinutes + ' min') : '') + (card.prs.length ? (' · ' + card.prs.length + ' record') : '') + '</div>' +
-      '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;" onclick="openSessionCard(' + (Number(log.week) || 1) + ',' + (Number(log.day) || 0) + ')">CARD DELLA SEDUTA · CONDIVIDI</button>' +
+      '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;" onclick="openSessionCardForLog(' + esc(JSON.stringify(String(log.id || log.at || ''))) + ')">CARD DELLA SEDUTA · CONDIVIDI</button>' +
       '</div>';
   } catch (_) { return ''; }
 }
@@ -59751,6 +59862,39 @@ function sessionElapsedMs() {
   return Math.max(0, Date.now() - Number(store.sessionStartedAt) - pausedExtra);
 }
 
+// How long a session took. The clock alone was not a measure: it is one for
+// the whole app and is rarely reset - a set ticked on Monday and a session
+// finalized on Wednesday said 48 h; STOP then FINALIZZA said 1 min; an edit of
+// a finalized session left it running into the next one. Every closed set
+// has its time (_done_at): from the first to the last, plus a couple of
+// minutes around them. The clock counts only when it agrees with those times.
+function sessionSetTimes(week, day) {
+  const prefix = 'w' + week + '_d' + day + '_e';
+  const data = (store && store.data) || {};
+  const times = [];
+  Object.keys(data).forEach(function (k) {
+    if (k.indexOf(prefix) !== 0 || !/_s\d+_done_at$/.test(k)) return;
+    if (!data[k.replace(/_at$/, '')]) return;
+    const t = Number(data[k]);
+    if (Number.isFinite(t) && t > 0) times.push(t);
+  });
+  return times.sort(function (a, b) { return a - b; });
+}
+function sessionDurationSec(week, day, setCount) {
+  const times = sessionSetTimes(week, day);
+  const clockSec = store && store.sessionStartedAt ? Math.round(sessionElapsedMs() / 1000) : 0;
+  const LIMIT = 5 * 3600;
+  if (times.length >= 2) {
+    const spanSec = Math.round((times[times.length - 1] - times[0]) / 1000);
+    // The clock started before the first set and stopped after the last one,
+    // within a reasonable margin: it is the better measure.
+    if (clockSec >= spanSec && clockSec <= spanSec + 90 * 60 && clockSec <= LIMIT) return Math.max(60, clockSec);
+    if (spanSec <= LIMIT) return Math.max(60, spanSec + 120);
+  }
+  if (clockSec > 0 && clockSec <= LIMIT) return Math.max(60, clockSec);
+  return Math.max(60, (Number(setCount) || 0) * 90);
+}
+
 function formatSessionClock(ms) {
   const total = Math.floor(Math.max(0, ms) / 1000);
   const h = Math.floor(total / 3600);
@@ -59839,7 +59983,9 @@ function buildSessionPayloadForSync() {
   const dayObj = weekObj && (weekObj.sessions || weekObj.days) && (weekObj.sessions || weekObj.days)[dIdx];
   if (!dayObj) return null;
   const exercises = [];
-  (dayObj.exercises || dayObj.rows || []).forEach(function (row, eIdx) {
+  withBonusRows(dayObj.exercises || dayObj.rows || [], wNum, dIdx).forEach(function (item) {
+    const row = item.row;
+    const eIdx = item.eIdx;
     const eK = 'w' + wNum + '_d' + dIdx + '_e' + eIdx;
     if (store.skips && store.skips[eK]) return;
     const sets = [];
@@ -59986,7 +60132,7 @@ function collectSessionStats(opts) {
     sessions.forEach((dayObj, dIdx) => {
       if (onlyCurrent && dIdx !== (currentDay || 0)) return;
       const exerciseList = dayObj.exercises || dayObj.rows || [];
-      exerciseList.forEach((row, eIdx) => {
+      withBonusRows(exerciseList, wi + 1, dIdx).forEach(({ row, eIdx }) => {
         const eK = `w${wi + 1}_d${dIdx}_e${eIdx}`;
         if (store.skips && store.skips[eK]) return;
         let doneSets = 0;
@@ -60035,10 +60181,10 @@ function collectSessionStats(opts) {
     });
   });
   out.kcal = Math.round(out.sets * 6.5 + out.weight * 0.02);
-  if (store.sessionStartedAt) {
+  if (onlyCurrent) {
+    out.durationSec = sessionDurationSec(currentWeek || 1, currentDay || 0, out.sets);
+  } else if (store.sessionStartedAt) {
     out.durationSec = Math.max(60, Math.round(sessionElapsedMs() / 1000));
-  } else if (store.health && store.health.durationSec && onlyCurrent) {
-    out.durationSec = Number(store.health.durationSec) || 0;
   } else {
     out.durationSec = out.sets * 90;
   }
@@ -60207,15 +60353,18 @@ window.selectStatsMuscle = selectStatsMuscle;
 
 function renderStats(c){
   const last = (Array.isArray(store.logs) && store.logs.length) ? store.logs[store.logs.length - 1] : null;
-  const live = collectSessionStats();
+  // The last session's own numbers. A field at 0 is 0 (a cardio-only session
+  // has no kg): it used to fall back to the whole program's totals, and the
+  // muscle map mixed every week's sets into one leg day.
+  const live = collectSessionStats({ currentSessionOnly: true });
   const snap = last ? {
-    durationSec: last.durationSec || live.durationSec || 0,
-    kcal: last.kcal || live.kcal || 0,
-    exercises: last.exercises || live.exercises || 0,
-    sets: last.sets || live.sets || 0,
-    weight: last.tonnage || live.weight || 0,
-    intensity: last.intensity || live.intensity || 0,
-    muscles: Object.assign({}, live.muscles || {}, last.muscles || {})
+    durationSec: Number(last.durationSec) || 0,
+    kcal: Number(last.kcal) || 0,
+    exercises: Number(last.exercises) || 0,
+    sets: Number(last.sets) || 0,
+    weight: Number(last.tonnage) || 0,
+    intensity: Number(last.intensity) || 0,
+    muscles: Object.assign({}, last.muscles || {})
   } : live;
   const durM = Math.floor(snap.durationSec / 60);
   const durS = snap.durationSec % 60;
@@ -60230,30 +60379,37 @@ function renderStats(c){
   const hist = (showAllHist ? histAll : histAll.slice(0, 12)).map(function (row) {
     const hw = Number(row.week) || 1;
     const hd = Number(row.day) || 0;
+    // The row opens its own session, by id: two sessions can share week and day.
+    const hid = esc(JSON.stringify(String(row.id || row.at || '')));
     const stampPretty = formatFinalizedDateTime(row.finalizedAt || row.at);
     return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #222;font-size:11px;">' +
-      '<button type="button" style="flex:1;text-align:left;background:none;border:0;color:inherit;padding:0;cursor:pointer;" onclick="openLoggedSessionReview(' + hw + ',' + hd + ')">' +
+      '<button type="button" style="flex:1;text-align:left;background:none;border:0;color:inherit;padding:0;cursor:pointer;" onclick="openLoggedSessionReview(' + hw + ',' + hd + ',' + hid + ')">' +
       '<span>W' + (row.week || '?') + ' · S' + (hd + 1) + (stampPretty ? (' · Finalizzato il ' + esc(stampPretty)) : '') + '</span>' +
       '<div style="color:var(--gold);font-weight:800;margin-top:2px;">' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg</div></button>' +
-      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="openSessionCard(' + hw + ',' + hd + ')">CARD</button>' +
-      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="copySessionText(' + hw + ',' + hd + ')">Copia testo</button>' +
-      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="startEditFinalizedWorkout(' + hw + ',' + hd + ')">MODIFICA</button></div>';
+      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="openSessionCardForLog(' + hid + ')">CARD</button>' +
+      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="copySessionTextForLog(' + hid + ')">Copia testo</button>' +
+      // A session of another program is history: it can be read, not edited
+      // through today's program.
+      (logIsOfActiveProgram(row) ? '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="startEditFinalizedWorkout(' + hw + ',' + hd + ')">MODIFICA</button>' : '') + '</div>';
   }).join('');
   const lastStampPretty = last ? formatFinalizedDateTime(last.finalizedAt || last.at) : '';
+  // The last session is opened by its id; it is edited only if it belongs to
+  // the active program (another program's session is history).
+  const lastIdAttr = last ? esc(JSON.stringify(String(last.id || last.at || ''))) : '""';
   c.innerHTML = `
     <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">PERFORMANCE LAB</h1>
     <div style="font-size:10px; color:#777; margin-bottom:15px; font-weight:700; letter-spacing:1px;">${store && store.coachViewingClient ? 'VISTA MASTER · DATI CLIENTE' : 'ATTIVITÀ · CRONOLOGIA · FATICA'}</div>
     ${store && store.coachViewingClient ? '' : '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:12px;font-size:11px;" onclick="showProgressCenter()">📈 PROGRESS CENTER — SETTIMANA, 4, 12, SEMPRE</button>'}
     ${store && store.coachViewingClient ? '' : renderAdaptiveDeloadCardHtml()}
     ${last ? `<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid rgba(212,175,55,0.35);">
-      <div role="button" tabindex="0" onclick="openLoggedSessionReview(${Number(last.week)||1},${Number(last.day)||0})" style="cursor:pointer;">
+      <div role="button" tabindex="0" onclick="openLoggedSessionReview(${Number(last.week)||1},${Number(last.day)||0},${lastIdAttr})" style="cursor:pointer;">
       <div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:6px;">ULTIMA SESSIONE FINALIZZATA</div>
       <div style="font-size:11px;color:#aaa;">W${last.week} · Seduta ${(last.day||0)+1}${lastStampPretty ? (' · Finalizzato il ' + esc(lastStampPretty)) : ''}</div>
       </div>
-      <button type="button" class="btn btn-outline" style="width:100%;margin-top:10px;font-size:11px;" onclick="openSessionCard(${Number(last.week)||1},${Number(last.day)||0})">CARD DELLA SEDUTA</button>
-      <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px;" onclick="startEditFinalizedWorkout(${Number(last.week)||1},${Number(last.day)||0})">MODIFICA ALLENAMENTO FINALIZZATO</button>
+      <button type="button" class="btn btn-outline" style="width:100%;margin-top:10px;font-size:11px;" onclick="openSessionCardForLog(${lastIdAttr})">CARD DELLA SEDUTA</button>
+      ${logIsOfActiveProgram(last) ? `<button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px;" onclick="startEditFinalizedWorkout(${Number(last.week)||1},${Number(last.day)||0})">MODIFICA ALLENAMENTO FINALIZZATO</button>` : ''}
     </div>` : ''}
-    ${renderMuscleMap(snap.muscles, { cardioMinutes: (last && last.cardioMinutes) || live.cardioMinutes || 0 })}
+    ${renderMuscleMap(snap.muscles, { cardioMinutes: last ? (Number(last.cardioMinutes) || 0) : (live.cardioMinutes || 0) })}
     ${renderCheckFisicoCardHtml()}
     ${(hist || histHiddenNote) ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:11px;font-weight:800;color:var(--gold);">CRONOLOGIA SESSIONI <span style="color:#666;font-weight:600;">· ' + histAll.length + '</span></div><div style="display:flex;gap:6px;align-items:center;">' + (hist ? '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="copyStatsPeriodText()">Copia periodo</button>' : '') + '<button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;" onclick="toggleStatsHistory()">' + (store.prefs && store.prefs.statsHistoryOpen === false ? '▸' : '✕') + '</button></div></div>' + ((store.prefs && store.prefs.statsHistoryOpen === false) ? '' : (hist + histHiddenNote + (histAll.length > 12 ? '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="toggleStatsHistoryAll()">' + (showAllHist ? 'MOSTRA SOLO LE ULTIME 12' : 'MOSTRA TUTTE LE ' + histAll.length + ' SEDUTE') + '</button>' : ''))) + '</div>' : ''}
     <div class="card" style="margin-bottom:12px;">
@@ -61046,21 +61202,30 @@ function sendSavedCheckFisico(id) {
   closeSavedRecordOverlay();
   openCheckFisicoPdfModal('send');
 }
-function openLoggedSessionReview(week, day) {
+function openLoggedSessionReview(week, day, logId) {
   week = Number(week) || 1;
   day = Number(day) || 0;
-  pinTrainingDay(week, day);
-  const log = (store.logs || []).find(function (row) {
-    return row && Number(row.week) === week && Number(row.day) === day;
-  });
+  // The row's own session when it says which (two sessions can share week and
+  // day); otherwise the latest of the active program for that day.
+  const log = (logId ? findLogById(logId) : null) || findSessionLog(week, day);
+  const ofActive = !log || logIsOfActiveProgram(log);
+  // Only a session of the active program takes the training view to its day.
+  if (ofActive) pinTrainingDay(week, day);
   const w = DATA && DATA.weeks && DATA.weeks[week - 1];
   const sess = w && (w.sessions || w.days || [])[day];
-  const title = (typeof sessionDisplayName === 'function' && sess)
-    ? sessionDisplayName(sess, day)
-    : ((sess && (sess.name || sess.title || sess.day)) || ('Seduta ' + (day + 1)));
-  const lines = (typeof collectLoggedSessionDetailLines === 'function')
-    ? collectLoggedSessionDetailLines(week, day)
-    : [];
+  const title = (log && log.sessionName) || (ofActive
+    ? ((typeof sessionDisplayName === 'function' && sess)
+      ? sessionDisplayName(sess, day)
+      : ((sess && (sess.name || sess.title || sess.day)) || ('Seduta ' + (day + 1))))
+    : ('Seduta ' + (day + 1)));
+  // The sets saved with the session when it has them; the live sets only for
+  // a session of the active program (another program's would be read in
+  // today's slots).
+  const lines = (log && Array.isArray(log.exerciseLines) && log.exerciseLines.length)
+    ? loggedSessionLinesFromLog(log)
+    : (ofActive && typeof collectLoggedSessionDetailLines === 'function' ? collectLoggedSessionDetailLines(week, day) : []);
+  const cardCall = log ? ('openSessionCardForLog(' + esc(JSON.stringify(String(log.id || log.at || ''))) + ')') : ('openSessionCard(' + week + ',' + day + ')');
+  const copyCall = log ? ('copySessionTextForLog(' + esc(JSON.stringify(String(log.id || log.at || ''))) + ')') : ('copySessionText(' + week + ',' + day + ')');
   const date = log ? String(log.at || '').replace('T', ' ').slice(0, 16) : '';
   closeSavedRecordOverlay();
   const overlay = document.createElement('div');
@@ -61072,7 +61237,7 @@ function openLoggedSessionReview(week, day) {
       const isEx = l && l.indexOf('  ') !== 0;
       return '<div style="font-size:' + (isEx ? '13px;color:#fff;font-weight:800;margin-top:10px;' : '12px;color:#bbb;padding-left:10px;') + '">' + esc(l) + '</div>';
     }).join('')
-    : '<div style="font-size:12px;color:#888;">Nessuna serie registrata in store.data per questa seduta.</div>';
+    : '<div style="font-size:12px;color:#888;">' + (ofActive ? 'Nessuna serie registrata per questa seduta.' : 'Seduta di un altro programma: il dettaglio delle serie non e\' stato salvato con lei.') + '</div>';
   overlay.innerHTML =
     '<div class="card" style="max-width:460px;width:100%;max-height:min(88vh,720px);overflow:auto;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
@@ -61085,9 +61250,9 @@ function openLoggedSessionReview(week, day) {
     (log && (log.finalizedAt || log.at)
       ? ('<div style="font-size:12px;color:var(--gold);font-weight:800;margin-bottom:12px;">Finalizzato il ' + esc(formatFinalizedDateTime(log.finalizedAt || log.at)) + '</div>')
       : '') +
-    '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="openSessionCard(' + week + ',' + day + ')">CARD DELLA SEDUTA</button>' +
-    '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="copySessionText(' + week + ',' + day + ')">Copia testo</button>' +
-    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="startEditFinalizedWorkout(' + week + ',' + day + ')">MODIFICA ALLENAMENTO FINALIZZATO</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="' + cardCall + '">CARD DELLA SEDUTA</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="' + copyCall + '">Copia testo</button>' +
+    (ofActive ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="startEditFinalizedWorkout(' + week + ',' + day + ')">MODIFICA ALLENAMENTO FINALIZZATO</button>' : '') +
     body + '</div>';
   document.body.appendChild(overlay);
 }
@@ -61272,6 +61437,20 @@ function collectStructuredNutritionPlanLines() {
   });
   return lines;
 }
+// The review lines from what the session saved with itself.
+function loggedSessionLinesFromLog(log) {
+  const lines = [];
+  (log.exerciseLines || []).forEach(function (e) {
+    if (!e || !e.name) return;
+    if (e.cardio) { lines.push(e.name); lines.push('  ' + (Number(e.minutes) || 0) + ' min'); return; }
+    const sets = (e.sets || []).filter(function (x) { return x && !x.warmup; });
+    if (!sets.length) return;
+    lines.push(e.name);
+    sets.forEach(function (x, i) { lines.push('  S' + (i + 1) + '  ' + (Number(x.load) > 0 ? (x.load + ' kg') : '—') + '  x ' + (Number(x.reps) || 0)); });
+  });
+  return lines;
+}
+
 function collectLoggedSessionDetailLines(week, day) {
   const w = DATA && DATA.weeks && DATA.weeks[week - 1];
   const sess = w && (w.sessions || w.days) && (w.sessions || w.days)[day];
@@ -68742,9 +68921,18 @@ function addExerciseToProgram(name, muscle, cfg) {
 window.addExerciseToProgram = addExerciseToProgram;
 
 function saveAll(){ persist(); showToast('Salvato', 'ok'); }
-async function clearWorkoutLogsForNewProgram() {
-  store.data = {};
-  store.customSets = {};
+// Everything kept per slot (week/day/exercise position) belongs to the program
+// it was written for. The finalized sessions stay, as history.
+var TRAINING_SLOT_FIELDS = ['data', 'customSets', 'subs', 'skips', 'loadTypes', 'tempos', 'exIntensity', 'bonus', 'intelTargets', 'warmups', 'warmupProgress'];
+
+async function clearWorkoutLogsForNewProgram(previousProgramId) {
+  // The sessions finalized so far belong to the program they were done on.
+  const prev = String(previousProgramId || activeProgramKey() || ('program_before_' + Date.now()));
+  (store.logs || []).forEach(function (l) { if (l && !l.programId) l.programId = prev; });
+  // A substitution, a skip, a warm-up plan written for the old program's
+  // slot 1 would otherwise rename, hide or change the new program's slot 1.
+  TRAINING_SLOT_FIELDS.forEach(function (k) { store[k] = {}; });
+  markTrainingDataEpoch();
   if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.clearWorkoutLogs) {
     try { await GiammariaPersistence.clearWorkoutLogs(); } catch (e) { console.error(e); }
   }
@@ -68754,7 +68942,7 @@ async function maybeClearLogsOnProgramSwitch(newProgramId) {
   const prev = store && store.activeProgramId != null ? String(store.activeProgramId) : '';
   const next = newProgramId != null ? String(newProgramId) : '';
   if (!next || (prev && prev === next)) return false;
-  await clearWorkoutLogsForNewProgram();
+  await clearWorkoutLogsForNewProgram(prev);
   return true;
 }
 
@@ -68764,6 +68952,8 @@ async function resetWorkoutData(){
     store.data = {};
     store.customSets = {};
     store.logs = [];
+    // The next sync must not bring the cleared loads back from the cloud.
+    markTrainingDataEpoch();
     // Preserve: activeProgram, nutrition, therapy, supplementation, profile, prefs
     if(typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.clearWorkoutLogs){
       try { await GiammariaPersistence.clearWorkoutLogs(); } catch(e){ console.error(e); }
@@ -69039,6 +69229,8 @@ if (typeof window !== 'undefined') {
   window.formatSessionPeriodText = formatSessionPeriodText;
   window.copySessionText = copySessionText;
   window.copySessionTextFromOverlay = copySessionTextFromOverlay;
+  window.openSessionCardForLog = openSessionCardForLog;
+  window.copySessionTextForLog = copySessionTextForLog;
   window.copyStatsPeriodText = copyStatsPeriodText;
   window.renderSessionCardOverlay = renderSessionCardOverlay;
   window.renderAthleteProfile = renderAthleteProfile;

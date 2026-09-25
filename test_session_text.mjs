@@ -42,7 +42,7 @@ function grabVar(name) {
 const FNS = ['formatKgIt', 'formatDurationIt', 'formatSessionCardDate', 'formatSessionCardPr', 'buildSessionCardData',
   'sessionCardExercises', 'formatSessionTextDate', 'formatSessionTextLoad', 'formatSessionTextRest', 'sessionTextPrLabel',
   'sessionTextSetCount', 'sessionTextCardioMinutes', 'sessionTextLines', 'formatSessionCardText', 'formatSessionPeriodText',
-  'isWarmupSet', 'parseRestSeconds', 'sessionExerciseDetailsFor'];
+  'isWarmupSet', 'parseRestSeconds', 'withBonusRows', 'sessionExerciseDetailsFor'];
 const slice = grabVar('SESSION_CARD_PR_LABEL') + FNS.map(grab).join(NL);
 const ctx = { console };
 vm.createContext(ctx);
@@ -211,14 +211,20 @@ console.log('--- 7. dalle serie salvate: saltati, riscaldamenti, cardio ---');
     '- Cardio: tapis roulant 10 min'
   ], '7f. dalle serie salvate al testo: 6 serie, cardio in minuti, niente riscaldamenti');
   ok('7g. 6 serie contate', /· 6 serie\)/.test(text));
+  // A BONUS exercise added during the session (store.bonus, slot 900) is part of it.
+  ctx.store.bonus = { w1_d0: [{ exercise: 'Curl', name: 'Curl', sets: 2 }] };
+  ctx.store.data.w1_d0_e900_s1_done = true; ctx.store.data.w1_d0_e900_s1_load = '12'; ctx.store.data.w1_d0_e900_s1_reps = '10';
+  const withBonus = run('sessionExerciseDetailsFor(1, 0)');
+  ok('7h. gli esercizi BONUS entrano nella seduta', withBonus.some(function (e) { return e.name === 'Curl' && e.sets.length === 1 && e.sets[0].load === 12; }));
 }
 
 console.log('');
 console.log('--- 8. dove sono i bottoni ---');
 {
   ok('8a. sulla card di fine seduta (e da storico)', /onclick="copySessionTextFromOverlay\(\)">Copia testo</.test(grab('sessionCardOverlayHtml')));
-  ok('8b. nel riepilogo della seduta salvata', /onclick="copySessionText\(' \+ week \+ ',' \+ day \+ '\)">Copia testo</.test(grab('openLoggedSessionReview')));
-  ok('8c. su ogni riga dello storico', /onclick="copySessionText\(' \+ hw \+ ',' \+ hd \+ '\)">Copia testo</.test(SRC));
+  const review = grab('openLoggedSessionReview');
+  ok('8b. nel riepilogo della seduta salvata (la seduta per id, se c\'e\')', /onclick="' \+ copyCall \+ '">Copia testo</.test(review) && /copySessionTextForLog\(/.test(review));
+  ok('8c. su ogni riga dello storico, per id della seduta', /onclick="copySessionTextForLog\(' \+ hid \+ '\)">Copia testo</.test(SRC));
   ok('8d. e "Copia periodo" in testa allo storico', /onclick="copyStatsPeriodText\(\)">Copia periodo</.test(SRC));
   const shown = grab('statsHistoryShownLogs');
   ok('8e. il periodo sono le sedute che lo storico mostra: piano, poi 12 o tutte', /historyVisibleLogs\(store\.logs \|\| \[\]\)\.slice\(\)\.reverse\(\)/.test(shown) && /statsHistoryAll\) \? all : all\.slice\(0, 12\)/.test(shown));
@@ -234,7 +240,7 @@ console.log('--- 8. dove sono i bottoni ---');
   ok('8k. il testo usa solo gli esercizi salvati con la seduta, mai il programma di oggi', /exercises: Array\.isArray\(entry\.exerciseLines\) \? entry\.exerciseLines : \[\]/.test(scf) && !/sessionExerciseDetailsFor/.test(scf));
   ok('8k2. anche il nome della seduta si fissa nel log, e la card lo preferisce', /sessionName: sessionNameFor\(currentWeek \|\| 1, currentDay \|\| 0\)/.test(fin) &&
     /hit\.sessionName = sessionNameFor\(week, day\);/.test(grab('refreshFinalizedLogInPlace')) &&
-    /const sessionName = String\(entry\.sessionName \|\| ''\) \|\| sessionNameFor\(w, d\);/.test(scf));
+    /const sessionName = String\(entry\.sessionName \|\| ''\) \|\| \(ofActive \? sessionNameFor\(w, d\) : ''\);/.test(scf));
   const oldLog = run('formatSessionCardText(buildSessionCardData({ log: Object.assign({}, LOG, { cardioMinutes: 0 }), sessionName: "Vecchia", exercises: [] }))');
   eq(oldLog, ['**Vecchia — 25/09/2026** (48 min · 2.245 kg · 7 serie)', 'via Nurvan'].join(NL), '8l. una seduta di prima, senza esercizi salvati: solo i totali, nessun esercizio inventato');
   ok('8h. persist() e finalizeWorkout non sono stati toccati', /function persist\(\) \{\s*\n\s*ensureStoreIntegrity\(\);/.test(SRC) && /store\.logs\.push\(logEntry\);\s*\n\s*if \(store\.logs\.length > 400\)/.test(SRC));
