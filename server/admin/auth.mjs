@@ -45,7 +45,9 @@ export function parseCookies(header) {
   return out;
 }
 export function clientIp(req) {
-  return String((req.headers["x-forwarded-for"] || "").split(",")[0] || req.socket?.remoteAddress || "").trim().slice(0, 64);
+  // req.ip, resolved by Express from the trusted proxy: the first
+  // X-Forwarded-For entry is written by the client and can be anything.
+  return String(req.ip || req.socket?.remoteAddress || "").trim().slice(0, 64);
 }
 function isHttps(req) {
   return req.secure || String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim() === "https";

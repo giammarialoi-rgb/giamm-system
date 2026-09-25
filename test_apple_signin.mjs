@@ -96,7 +96,12 @@ function fakeDb() {
       Object.assign(u, { name: p[1], provider: p[2], provider_id: p[3], avatar_url: u.avatar_url || p[4] });
       return rows([u]);
     }
-    if (/^INSERT INTO app_login_tickets/.test(s)) { db.tickets.set(p[0], { user_id: p[1], expires_at: p[2] }); return rows([]); }
+    if (/^INSERT INTO app_login_tickets/.test(s)) { db.tickets.set(p[0], { user_id: p[1], expires_at: p[2], verifier_hash: p[3] || null }); return rows([]); }
+    if (/^UPDATE app_users SET password_hash = NULL, tokens_valid_after = \$2 WHERE id = \$1 AND password_hash IS NOT NULL RETURNING id$/.test(s)) {
+      const u = byId(p[0]);
+      if (u && u.password_hash) { u.password_hash = null; u.tokens_valid_after = p[1]; return rows([{ id: u.id }]); }
+      return rows([]);
+    }
     if (/^DELETE FROM app_login_tickets WHERE ticket_hash = \$1 RETURNING/.test(s)) {
       const t = db.tickets.get(p[0]); db.tickets.delete(p[0]); return rows(t ? [t] : []);
     }
@@ -182,7 +187,8 @@ console.log('--- 3. l\'account: crea, collega, non duplicare ---');
   const anna = await resolveIdentityUser(pool, { provider: 'apple', sub: 'sub-B', email: 'anna@example.com', emailVerified: true, name: 'Anna Bianchi' });
   const annaRow = db.users.find((u) => u.email === 'anna@example.com');
   ok('3d. email gia\' registrata con password: stesso account, nessun duplicato', !anna.created && anna.user.id === annaRow.id && db.users.filter((u) => u.email === 'anna@example.com').length === 1);
-  ok('3e. la password resta, e il nome scelto non viene sovrascritto', annaRow.password_hash === '$2a$10$hash' && annaRow.name === 'Anna B.');
+  ok('3e. la password messa alla registrazione (email mai verificata) viene tolta, le sue sessioni chiuse; il nome resta',
+    anna.passwordCleared === true && annaRow.password_hash === null && !!annaRow.tokens_valid_after && annaRow.name === 'Anna B.');
 
   const relay = await resolveIdentityUser(pool, { provider: 'apple', sub: 'sub-C', email: 'x7k2p9@privaterelay.appleid.com', emailVerified: true, name: 'Luca' });
   ok('3f. email relay: account creato con quell\'indirizzo', relay.created && relay.user.email === 'x7k2p9@privaterelay.appleid.com');
@@ -298,7 +304,22 @@ await withServer(ENV, async ({ base, db, calls }) => {
 console.log('');
 console.log('--- 5. Android: browser, callback di Apple, ticket nell\'app ---');
 await withServer(ENV, async ({ base, db }) => {
-  const start = await fetch(base + '/api/auth/apple/start', { redirect: 'manual' });
+  // The app keeps a secret and sends only its hash; the ticket is swapped only
+  // with the secret.
+  const makeVerifier = () => { const v = crypto.randomBytes(32).toString('base64url'); return { v, vh: crypto.createHash('sha256').update(v).digest('base64url') }; };
+  async function androidLogin(sub, email, name) {
+    const { v, vh } = makeVerifier();
+    const st = await fetch(base + '/api/auth/apple/start?vh=' + vh, { redirect: 'manual' });
+    const l = new URL(st.headers.get('location'));
+    const tok = await appleToken({ nonce: l.searchParams.get('nonce'), email }, { sub });
+    const f = new URLSearchParams({ state: l.searchParams.get('state'), code: 'c-' + sub, id_token: tok });
+    if (name) f.set('user', JSON.stringify({ name }));
+    const r = await fetch(base + '/api/auth/apple/callback', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Origin: 'https://appleid.apple.com' }, body: f });
+    const mm = (await r.text()).match(/giammaria:\/\/oauth\/apple\?code=([A-Za-z0-9_-]+)/);
+    return { ticket: mm && mm[1], verifier: v };
+  }
+  const { v: verifier, vh } = makeVerifier();
+  const start = await fetch(base + '/api/auth/apple/start?vh=' + vh, { redirect: 'manual' });
   const loc = new URL(start.headers.get('location'));
   ok('5a. /start manda ad Apple con form_post, state e nonce', start.status === 302 && loc.origin === 'https://appleid.apple.com' && loc.searchParams.get('response_mode') === 'form_post' && loc.searchParams.get('client_id') === CLIENT_ID && loc.searchParams.get('state') && loc.searchParams.get('nonce'));
   const state = loc.searchParams.get('state');
@@ -309,12 +330,23 @@ await withServer(ENV, async ({ base, db }) => {
   const m = html.match(/giammaria:\/\/oauth\/apple\?code=([A-Za-z0-9_-]+)/);
   ok('5b. il callback risponde con il ritorno all\'app e un ticket', cb.status === 200 && !!m && /Torna a Nurvan/.test(html));
   ok('5c. la pagina di ritorno non esegue script', /default-src 'none'/.test(cb.headers.get('content-security-policy') || '') && !/<script/i.test(html));
-  const swap = await postJson(base + '/api/auth/apple', { ticket: m && m[1] });
+  const swap = await postJson(base + '/api/auth/apple', { ticket: m && m[1], verifier });
   const out = await swap.json();
-  ok('5d. l\'app scambia il ticket con la sessione: account creato, nome salvato', swap.status === 200 && jwt.verify(out.token, SECRET).sub === String(out.user.id) && out.user.name === 'Paolo Neri');
-  const again = await postJson(base + '/api/auth/apple', { ticket: m && m[1] });
+  ok('5d. l\'app che ha avviato il login scambia il ticket con la sessione: account creato, nome salvato', swap.status === 200 && jwt.verify(out.token, SECRET).sub === String(out.user.id) && out.user.name === 'Paolo Neri');
+  const again = await postJson(base + '/api/auth/apple', { ticket: m && m[1], verifier });
   ok('5e. il ticket vale una volta sola', again.status === 401);
   ok('5f. nel database solo l\'hash del ticket', ![...db.tickets.keys()].includes(m && m[1]));
+
+  const stolen = await androidLogin('sub-victim', 'vittima@example.com');
+  const thief = await postJson(base + '/api/auth/apple', { ticket: stolen.ticket, verifier: makeVerifier().v });
+  ok('5f2. un ticket intercettato da un\'altra app (verifier diverso): rifiutato', thief.status === 401);
+  const late = await postJson(base + '/api/auth/apple', { ticket: stolen.ticket, verifier: stolen.verifier });
+  ok('5f3. e bruciato: nemmeno il legittimo lo riusa dopo il tentativo', late.status === 401);
+  const forced = await androidLogin('sub-attacker', 'attaccante@example.com');
+  const noVerifier = await postJson(base + '/api/auth/apple', { ticket: forced.ticket });
+  ok('5f4. un link con il ticket di un altro, su un\'app che non ha avviato nulla: rifiutato', noVerifier.status === 401);
+  const old = await fetch(base + '/api/auth/apple/start', { redirect: 'manual' });
+  ok('5f5. /start senza verifier (app vecchia): nessun giro su Apple, chiede di aggiornare', old.status === 200 && /error=update/.test(await old.text()));
   const webState = issueAppleState(SECRET, 'web');
   const cb2 = await fetch(base + '/api/auth/apple/callback', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ state: webState.state, id_token: await appleToken({ nonce: webState.nonce }, { sub: 'sub-z' }) }) });
   ok('5g. uno state del web non passa dal callback dell\'app', /error=failed/.test(await cb2.text()));
@@ -387,7 +419,14 @@ console.log('--- 8. il resto del cablaggio ---');
   ok('8e. il bottone: logo Apple e testo esatto "Accedi con Apple"', /id="apple-auth" aria-label="Accedi con Apple"><svg viewBox="0 0 814 1000"[^>]*><path d="M788\.1 340\.9/.test(page) && /<span>Accedi con Apple<\/span><\/button>/.test(page));
   ok('8f. bianco su fondo scuro, 40px e angoli 4px come il bottone Google', /\.apple-signin-btn \{[\s\S]*?height: 40px;[\s\S]*?background: #fff;[\s\S]*?color: #000;[\s\S]*?border-radius: 4px;/.test(page) && /theme: 'filled_black',\s*\n\s*size: 'large'/.test(page));
   ok('8g. web: Sign in with Apple JS in popup, con state e nonce del server', /appleid\.cdn-apple\.com\/appleauth\/static\/jsapi\/appleid\/1\/it_IT\/appleid\.auth\.js/.test(page) && /usePopup: true/.test(page) && /\/api\/auth\/apple\/web-config/.test(page));
-  ok('8h. Android: il bridge apre il browser, il ritorno porta un ticket', /native\.startAppleAuth\(\)/.test(page) && /appleSignInRequest\(\{ ticket: String\(ticket\) \}\)/.test(page));
+  const inBrowser = page.slice(page.indexOf('async function startAppleAuthInBrowser()'), page.indexOf('function takeAppleVerifier()'));
+  ok('8h. Android: la pagina crea un segreto, tiene il segreto e manda solo il suo hash, poi apre il browser',
+    /crypto\.getRandomValues\(raw\)/.test(inBrowser) && /crypto\.subtle\.digest\('SHA-256'/.test(inBrowser) &&
+    /localStorage\.setItem\(APPLE_VERIFIER_KEY/.test(inBrowser) && /coachEndpoint\('\/api\/auth\/apple\/start\?vh=' \+ encodeURIComponent\(hash\)\)/.test(inBrowser));
+  const nar = page.slice(page.indexOf('async function nativeAppleResult('), page.indexOf('async function nativeAppleResult(') + 700);
+  ok('8h2. il ritorno si completa solo se questa app ha avviato il login, con il suo segreto',
+    /const verifier = takeAppleVerifier\(\);\s*\n\s*if \(!verifier\) \{/.test(nar) && /appleSignInRequest\(\{ ticket: String\(ticket\), verifier: verifier \}\)/.test(nar));
+  ok('8h3. l\'account ripreso per email lo dice a chi entra', /if \(payload\.passwordCleared\) \{/.test(page));
   const main = read('app/src/main/java/com/giammaria/system/MainActivity.java');
   ok('8i. e l\'app Android apre proprio /api/auth/apple/start (nessun SDK nativo)', /COACH_API_URL \+ "\/api\/auth\/apple\/start"/.test(main) && !/appleid|AuthenticationServices/i.test(read('app/build.gradle')));
   const mig = read('server/db/migrations/0017_login_identities.sql');

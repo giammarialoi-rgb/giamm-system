@@ -60,9 +60,11 @@ export function buildCorsOriginValidator(env = process.env) {
   };
 }
 
+// The address the proxy in front of us saw, not the first X-Forwarded-For
+// entry: that one is whatever the client wrote, and a new value per request
+// used to get past every limit. Express resolves req.ip from the trusted
+// hops ("trust proxy" in coach-api.mjs).
 function requestIp(req) {
-  const forwarded = req && req.headers && req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded) return forwarded.split(",")[0].trim();
   return (req && (req.ip || (req.socket && req.socket.remoteAddress))) || "unknown";
 }
 

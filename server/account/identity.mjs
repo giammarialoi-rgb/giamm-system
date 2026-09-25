@@ -8,6 +8,8 @@
 // overwritten (it used to replace the account's address with the provider's,
 // which for Apple can be a relay address).
 
+import { revocationMoment } from "./sessions.mjs";
+
 export function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
@@ -51,9 +53,10 @@ export async function resolveIdentityUser(pool, identity) {
     const linking = await pool.query("SELECT id FROM app_users WHERE id = $1", [linkingUserId]);
     if (linking.rows.length) userId = String(linking.rows[0].id);
   }
+  let matchedByEmail = false;
   if (!userId && email && identity.emailVerified) {
     const byEmail = await pool.query("SELECT id FROM app_users WHERE email = $1", [email]);
-    if (byEmail.rows.length) userId = String(byEmail.rows[0].id);
+    if (byEmail.rows.length) { userId = String(byEmail.rows[0].id); matchedByEmail = true; }
   }
 
   let created = false;
@@ -106,6 +109,21 @@ export async function resolveIdentityUser(pool, identity) {
     [provider, sub, userId, email || null, identity.refreshTokenEnc || null]
   );
 
+  // Registering with a password never proved the address: anyone could have
+  // registered someone else's email first, and the real owner's Google/Apple
+  // login would then land in an account the other person can open. The
+  // provider has verified the address, so its owner is now the one logging in:
+  // the password set before is dropped and every session opened with it ends.
+  // The owner can set a new password from their inbox at any time.
+  let passwordCleared = false;
+  if (matchedByEmail) {
+    const cleared = await pool.query(
+      "UPDATE app_users SET password_hash = NULL, tokens_valid_after = $2 WHERE id = $1 AND password_hash IS NOT NULL RETURNING id",
+      [userId, revocationMoment()]
+    );
+    passwordCleared = cleared.rows.length > 0;
+  }
+
   const current = await pool.query("SELECT id, email, name, provider, avatar_url FROM app_users WHERE id = $1", [userId]);
   const row = current.rows[0];
   if (!row) throw httpError(401, "Account non trovato.");
@@ -120,7 +138,7 @@ export async function resolveIdentityUser(pool, identity) {
      RETURNING id, email, name, provider, avatar_url`,
     [userId, name, kind, sub, identity.avatarUrl || null]
   );
-  return { user: updated.rows[0], created };
+  return { user: updated.rows[0], created, passwordCleared };
 }
 
 // Deleting an account removes the user row; every table that belongs to it

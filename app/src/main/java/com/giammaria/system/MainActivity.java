@@ -335,21 +335,15 @@ public class MainActivity extends Activity {
 
         Intent intent = getIntent();
         if (intent != null) {
-            if (intent.getData() != null) {
-                Uri data = intent.getData();
-                if (isAppleReturn(data)) {
-                    pendingAppleTicket = data.getQueryParameter("code");
-                } else if ("content".equals(data.getScheme()) || "file".equals(data.getScheme())) {
-                    handlePickedDocument(data);
-                }
-            }
-            if (intent.getStringExtra("evalJs") != null) {
-                String script = intent.getStringExtra("evalJs").trim();
-                if (script.startsWith("'") && script.endsWith("'") && script.length() >= 2) {
-                    script = script.substring(1, script.length() - 1);
-                }
-                final String finalScript = script;
-                web.postDelayed(() -> web.evaluateJavascript(finalScript, null), 800);
+            // Only the Apple return is accepted from outside. Files come in
+            // through the app's own picker (onActivityResult), never from
+            // another app's intent: a file:// URI could point at this app's
+            // private files and send them into the import. And no script is
+            // ever taken from an intent (the old evalJs hook let any app, or
+            // a web link, run code inside the app).
+            Uri data = intent.getData();
+            if (isAppleReturn(data)) {
+                pendingAppleTicket = data.getQueryParameter("code");
             }
             dispatchNurvanRoute(intent);
         }
@@ -1221,23 +1215,9 @@ public class MainActivity extends Activity {
         super.onNewIntent(intent);
         setIntent(intent);
         Uri data = intent == null ? null : intent.getData();
+        // As in onCreate: the Apple return only; no files, no scripts.
         if (isAppleReturn(data)) {
             deliverAppleTicket(data.getQueryParameter("code"));
-        } else if (data != null && ("content".equals(data.getScheme()) || "file".equals(data.getScheme()))) {
-            handlePickedDocument(data);
-        }
-        if (intent != null && intent.getStringExtra("evalJs") != null) {
-            String script = intent.getStringExtra("evalJs").trim();
-            if (script.startsWith("'") && script.endsWith("'") && script.length() >= 2) {
-                script = script.substring(1, script.length() - 1);
-            }
-            final String finalScript = script;
-            Log.i("GiammariaWebView", "Executing evalJs: " + finalScript);
-            if (web != null) {
-                web.post(() -> web.evaluateJavascript(finalScript, (res) -> {
-                    Log.i("GiammariaWebView", "evalJs result: " + res);
-                }));
-            }
         }
         dispatchNurvanRoute(intent);
     }

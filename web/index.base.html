@@ -4830,6 +4830,11 @@ async function submitAccount(event){
 }
 async function finishOAuthLogin(payload){
   if(!payload?.token || !payload?.user) throw new Error('Risposta provider non valida.');
+  // The account had a password set when it was registered; the provider has
+  // now proved this address is yours, so that password no longer opens it.
+  if (payload.passwordCleared) {
+    try { alert('Questo account aveva una password impostata alla registrazione: ora è disattivata e le sessioni aperte con essa sono chiuse. Entra con lo stesso metodo di adesso, oppure imposta una nuova password con «Password dimenticata».'); } catch (_) {}
+  }
   if (enterAccountSession(payload.token, payload.user)) return;
   updateAccountButton();
   setGoogleAuthLoading(false);
@@ -5118,8 +5123,7 @@ function prepareAppleWebSignIn() {
 function startAppleAuth(){
   const status = $('account-status');
   if (status) status.textContent = 'Apertura account Apple…';
-  const native = nativeBridge();
-  if (native && typeof native.startAppleAuth === 'function' && isAndroidWebViewNative()) { native.startAppleAuth(); return; }
+  if (isAndroidWebViewNative()) { startAppleAuthInBrowser(); return; }
   if (!window.__appleWeb || !window.AppleID || !AppleID.auth) {
     prepareAppleWebSignIn().then(function () {
       if (status) status.textContent = 'Tocca di nuovo «Accedi con Apple».';
@@ -5141,6 +5145,45 @@ function startAppleAuth(){
     // A fresh state and nonce for the next attempt.
     if (!store.accountToken) prepareAppleWebSignIn();
   });
+}
+
+// Android: the login runs in the browser and comes back through a
+// giammaria:// link with a one-time ticket. The ticket is bound to a secret
+// this app makes now and keeps: the server gets only its hash, and swaps the
+// ticket only for the secret. A ticket caught by another app, or a link sent
+// to push someone into a stranger's account, opens nothing here.
+var APPLE_VERIFIER_KEY = 'NURVAN_APPLE_VERIFIER';
+
+function appleB64url(bytes) {
+  let bin = '';
+  const arr = new Uint8Array(bytes);
+  for (let i = 0; i < arr.length; i++) bin += String.fromCharCode(arr[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function startAppleAuthInBrowser() {
+  const status = $('account-status');
+  try {
+    if (!window.crypto || !crypto.getRandomValues || !crypto.subtle) throw new Error('Accesso con Apple non disponibile su questo dispositivo.');
+    const raw = new Uint8Array(32);
+    crypto.getRandomValues(raw);
+    const verifier = appleB64url(raw);
+    const hash = appleB64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+    localStorage.setItem(APPLE_VERIFIER_KEY, JSON.stringify({ v: verifier, at: Date.now() }));
+    // An http(s) navigation from the app opens the system browser.
+    window.location.href = coachEndpoint('/api/auth/apple/start?vh=' + encodeURIComponent(hash));
+  } catch (err) {
+    if (status) status.textContent = (err && err.message) || 'Accesso con Apple non disponibile.';
+  }
+}
+
+function takeAppleVerifier() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(APPLE_VERIFIER_KEY) || 'null'); } catch (_) {}
+  try { localStorage.removeItem(APPLE_VERIFIER_KEY); } catch (_) {}
+  // Apple's page, the login and the way back fit in a few minutes.
+  if (!saved || !saved.v || !(Date.now() - Number(saved.at) < 15 * 60 * 1000)) return '';
+  return String(saved.v);
 }
 
 async function appleSignInRequest(body) {
@@ -5261,7 +5304,14 @@ async function nativeGoogleResult(credential){
 // giammaria://oauth/apple link, swapped here for a session.
 async function nativeAppleResult(ticket){
   if (!ticket) return;
-  await appleSignInRequest({ ticket: String(ticket) });
+  // Only a login this app started: no verifier, nothing to finish.
+  const verifier = takeAppleVerifier();
+  if (!verifier) {
+    const status = $('account-status');
+    if (status) status.textContent = 'Accesso con Apple non avviato da questa app: riprova dal bottone «Accedi con Apple».';
+    return;
+  }
+  await appleSignInRequest({ ticket: String(ticket), verifier: verifier });
 }
 function nativeAuthError(message){
   setGoogleAuthLoading(false);
@@ -8423,12 +8473,35 @@ function coachEndpoint(path) {
   }
   return base.replace(/\/$/, '') + path;
 }
+// Requests to our own server carry the account's session, unless the caller
+// set one: the AI routes (chat, meal photo, label, barcode lookup) answer
+// signed-in accounts only.
+function withAccountAuth(url, options) {
+  const opts = Object.assign({}, options || {});
+  try {
+    const token = typeof store !== 'undefined' && store && store.accountToken;
+    if (!token) return opts;
+    const base = coachEndpoint('');
+    if (String(url || '').indexOf(base) !== 0) return opts;
+    const h = opts.headers;
+    if (typeof Headers !== 'undefined' && h instanceof Headers) {
+      if (!h.has('Authorization')) h.set('Authorization', 'Bearer ' + token);
+      return opts;
+    }
+    const plain = Object.assign({}, h || {});
+    const has = Object.keys(plain).some(function (k) { return k.toLowerCase() === 'authorization'; });
+    if (!has) plain.Authorization = 'Bearer ' + token;
+    opts.headers = plain;
+  } catch (_) {}
+  return opts;
+}
+
 async function apiFetch(url, options, timeoutMs=90000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   console.debug('[Coach AI] request', url);
   try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
+    const response = await fetch(url, { ...withAccountAuth(url, options), signal: controller.signal });
     console.debug('[Coach AI] response', response.status, url);
     return response;
   } catch(err) {
@@ -14887,7 +14960,7 @@ function analyzeMealPhotoPayload(photos) {
   const endpoint = (typeof coachEndpoint === 'function') ? coachEndpoint('/api/food/analyze-photo') : '/api/food/analyze-photo';
   const imagesPayload = photos.map(p => ({ role: p.role, data: p.dataUrl }));
 
-  fetch(endpoint, {
+  apiFetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

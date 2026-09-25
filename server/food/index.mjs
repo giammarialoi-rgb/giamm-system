@@ -2210,7 +2210,10 @@ export function mountFoodRoutes(app, opts = {}) {
   app.get('/api/food/search', async (req, res) => {
     try {
       const q = String(req.query.q || '').trim();
-      const lang = String(req.query.lang || 'it').trim().toLowerCase();
+      // Only the languages the app has: any other value missed the cache on
+      // every call, started a paid translation and stored another cache row.
+      const asked = String(req.query.lang || 'it').trim().toLowerCase();
+      const lang = Object.prototype.hasOwnProperty.call(FOOD_LANG_LABELS, asked) ? asked : 'it';
       const result = await searchFoodMulti(q, env, { lang });
       if (result.items && result.items.length) {
         // Cached translations now, new ones after the response (background).

@@ -21,6 +21,7 @@ import { mountMediaRoutes } from "./server/media/media-routes.mjs";
 import { mergeAccountDataBlobs, updateAccountData } from "./server/account/index.mjs";
 import { accountEntitlement, mountPlanRoutes } from "./server/account/plans.mjs";
 import { publicUser, resolveIdentityUser, mountAccountDeletion } from "./server/account/identity.mjs";
+import { createSessionGate, revocationMoment } from "./server/account/sessions.mjs";
 import { appleCallbackRoute, appleConfig, mountAppleAuth } from "./server/account/apple.mjs";
 import { mountAdminDashboard } from "./server/admin/index.mjs";
 import { touchLastSeen, recordEvent, fileFormat } from "./server/admin/activity.mjs";
@@ -44,7 +45,9 @@ const RELEASE_META = JSON.parse(
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.set("trust proxy", 1);
+// How many proxies sit in front of the server (Render: one). req.ip is the
+// address the outermost trusted one saw; the rate limits key on it.
+app.set("trust proxy", Math.max(0, Number(process.env.TRUST_PROXY_HOPS || 1)));
 // Apple posts its answer from appleid.apple.com (form_post), so the route sits
 // before the CORS allowlist, like the webhook below. What makes it safe is the
 // state it carries back, signed by this server (server/account/apple.mjs).
@@ -83,6 +86,36 @@ app.use("/api/auth", distributedRateLimiter({
   windowMs: 15 * 60_000,
   max: Number(process.env.AUTH_RATE_LIMIT_MAX || 40),
   keyPrefix: "auth"
+}));
+// The AI routes spend the Gemini budget (and the barcode lookup pays for
+// Google Search grounding): signed-in accounts only. They used to answer
+// anyone. Exact paths, registered before the handlers - an app.use on
+// "/api/coach" would also catch every coach route under it.
+const AI_ROUTES = [
+  "/api/chat", "/coach", "/api/coach",
+  "/api/analyze-file", "/api/analyze", "/analyze",
+  "/api/ingest/document",
+  "/api/food/analyze-photo", "/api/food/ocr-label", "/api/food/barcode/:code/ai-lookup"
+];
+app.post(AI_ROUTES, async (req, res, next) => {
+  const auth = await accountFromBearer(req.headers.authorization);
+  if (!auth) return res.status(401).json({ error: "Accedi al tuo account per usare Coach AI.", code: "AI_AUTH_REQUIRED" });
+  req.aiAccount = auth;
+  return next();
+}, createFixedWindowRateLimiter({
+  // Per account on top of the per-IP limits: the label OCR had none.
+  windowMs: 10 * 60_000,
+  max: Number(process.env.AI_ACCOUNT_RATE_LIMIT_MAX || 120),
+  keyPrefix: "ai-account",
+  key: (req) => "u" + String(req.aiAccount && req.aiAccount.id)
+}));
+
+// The athletes' login sits outside /api/auth: it had no limit at all, with
+// coach-chosen passwords of 4 characters and every try a bcrypt compare.
+app.use(["/api/client/login", "/api/client/password-help"], distributedRateLimiter({
+  windowMs: 15 * 60_000,
+  max: Number(process.env.CLIENT_AUTH_RATE_LIMIT_MAX || 20),
+  keyPrefix: "client-auth"
 }));
 app.use(
   ["/api/analyze-file", "/analyze", "/api/analyze", "/api/ingest/document"],
@@ -417,12 +450,18 @@ function issueAccountToken(user) {
   );
 }
 
+// Tokens of a deleted account, or issued before the account's sessions were
+// ended (password reset, account taken back by its verified email), are
+// refused: see server/account/sessions.mjs.
+const sessionGate = createSessionGate({ getPool: () => pool, enabled: () => Boolean(process.env.DATABASE_URL) && dbInitialized });
+
 async function accountFromBearer(authHeader) {
   if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7).trim();
   try {
     const payload = jwt.verify(token, JWT_SECRET);
     if (!payload || !payload.sub) return null;
+    if (!(await sessionGate.allows(payload))) return null;
     const provider = payload.provider;
     const role = payload.role || (provider === "coach_client" ? "athlete" : "user");
     return {
@@ -469,8 +508,9 @@ async function verifyGoogleCredential(idToken) {
 // A signed-in account that adds Google links it; the account keeps its email.
 async function issueOAuthResponse(req, res, identity) {
   const auth = await accountFromBearer(req.headers.authorization);
-  const { user } = await resolveIdentityUser(pool, { ...identity, linkingUserId: auth && auth.role === "user" ? auth.id : null });
-  return res.json({ token: issueAccountToken(user), user: publicUser(user) });
+  const { user, passwordCleared } = await resolveIdentityUser(pool, { ...identity, linkingUserId: auth && auth.role === "user" ? auth.id : null });
+  if (passwordCleared) sessionGate.forget(user.id);
+  return res.json({ token: issueAccountToken(user), user: publicUser(user), passwordCleared: Boolean(passwordCleared) });
 }
 
 const upload = multer({
@@ -1242,6 +1282,9 @@ app.get("/health", (req, res) => {
     apiKeyConfigured: AI_STATUS.configured,
     accountStorageConfigured: Boolean(process.env.DATABASE_URL),
     googleOAuthConfigured: allowedGoogleAudiences().length > 0,
+    // How many X-Forwarded-For entries reached us (a count, no addresses):
+    // to check that TRUST_PROXY_HOPS matches the proxies really in front.
+    forwardedHops: String(req.headers["x-forwarded-for"] || "").split(",").filter((s) => s.trim()).length,
     chatVision: true,
     mealPhoto: true,
     chatStateless: true,
@@ -1287,13 +1330,23 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     if (!userRes.rows.length) {
       return res.json(generic);
     }
+    // One code a minute per address, and the wrong guesses are not wiped by
+    // asking for a new code: they count until the codes stop coming for an
+    // hour. It used to reset to 0 on every request - 8 fresh guesses each
+    // time, enough to walk the whole 6-digit space.
+    const recent = await pool.query("SELECT created_at FROM app_password_resets WHERE email = $1", [email]);
+    if (recent.rows[0] && Date.now() - new Date(recent.rows[0].created_at).getTime() < 60 * 1000) {
+      return res.json({ ...generic, message: "Ti abbiamo appena inviato un codice: controlla la posta, o riprova tra un minuto." });
+    }
     const code = String(crypto.randomInt(100000, 1000000));
     const codeHash = await hashPassword(code);
     const expires = new Date(Date.now() + 60 * 60 * 1000);
     await pool.query(
       `INSERT INTO app_password_resets(email, code_hash, expires_at, attempts, created_at)
        VALUES($1, $2, $3, 0, NOW())
-       ON CONFLICT (email) DO UPDATE SET code_hash = $2, expires_at = $3, attempts = 0, created_at = NOW()`,
+       ON CONFLICT (email) DO UPDATE SET code_hash = $2, expires_at = $3,
+         attempts = CASE WHEN app_password_resets.expires_at > NOW() THEN app_password_resets.attempts ELSE 0 END,
+         created_at = NOW()`,
       [email, codeHash, expires.toISOString()]
     );
     const mailed = await sendPasswordResetEmail(email, code);
@@ -1332,31 +1385,38 @@ app.post("/api/auth/reset-password", async (req, res) => {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || !/^\d{6}$/.test(code) || password.length < 8) {
       return res.status(400).json({ error: "Email, codice a 6 cifre e nuova password (min. 8) sono obbligatori." });
     }
-    const resetRes = await pool.query(
-      "SELECT email, code_hash, expires_at, attempts FROM app_password_resets WHERE email = $1",
+    // The attempt is counted before the (slow) check, in one statement: many
+    // guesses sent at once used to all read "under 8" before any was counted.
+    // At 8 the row stays, locked, until it expires: deleting it handed out a
+    // fresh budget with the next code.
+    const counted = await pool.query(
+      `UPDATE app_password_resets SET attempts = attempts + 1
+       WHERE email = $1 AND attempts < 8 AND expires_at > NOW()
+       RETURNING code_hash`,
       [email]
     );
-    const row = resetRes.rows[0];
-    if (!row) return res.status(400).json({ error: "Codice non valido o scaduto. Richiedine uno nuovo." });
-    if (new Date(row.expires_at).getTime() < Date.now()) {
-      await pool.query("DELETE FROM app_password_resets WHERE email = $1", [email]);
-      return res.status(400).json({ error: "Codice scaduto. Richiedine uno nuovo." });
-    }
-    if (Number(row.attempts) >= 8) {
-      await pool.query("DELETE FROM app_password_resets WHERE email = $1", [email]);
-      return res.status(429).json({ error: "Troppi tentativi. Richiedi un nuovo codice." });
+    const row = counted.rows[0];
+    if (!row) {
+      const left = await pool.query("SELECT attempts, expires_at FROM app_password_resets WHERE email = $1", [email]);
+      const r = left.rows[0];
+      if (r && new Date(r.expires_at).getTime() > Date.now() && Number(r.attempts) >= 8) {
+        return res.status(429).json({ error: "Troppi tentativi. Riprova tra un'ora." });
+      }
+      return res.status(400).json({ error: "Codice non valido o scaduto. Richiedine uno nuovo." });
     }
     const ok = await verifyPassword(code, row.code_hash);
     if (!ok) {
-      await pool.query("UPDATE app_password_resets SET attempts = attempts + 1 WHERE email = $1", [email]);
       return res.status(400).json({ error: "Codice non valido." });
     }
     const passwordHash = await hashPassword(password);
+    // A new password ends every session opened before it: a reset is what
+    // someone does when the account may be in the wrong hands.
     const updated = await pool.query(
-      `UPDATE app_users SET password_hash = $1, updated_at = NOW() WHERE email = $2
+      `UPDATE app_users SET password_hash = $1, tokens_valid_after = $3, updated_at = NOW() WHERE email = $2
        RETURNING id, email, name, provider, avatar_url`,
-      [passwordHash, email]
+      [passwordHash, email, revocationMoment()]
     );
+    if (updated.rows[0]) sessionGate.forget(updated.rows[0].id);
     if (!updated.rows.length) return res.status(400).json({ error: "Account non trovato." });
     await pool.query("DELETE FROM app_password_resets WHERE email = $1", [email]);
     const user = updated.rows[0];

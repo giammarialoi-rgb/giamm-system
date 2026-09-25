@@ -558,7 +558,10 @@ function injectClientPwaHtml(html, token) {
     /<link\s+rel=["']manifest["'][^>]*>/i,
     '<link rel="manifest" href="' + start + '/manifest.webmanifest">'
   );
-  const boot = "<script>window.__NURVAN_CLIENT_BOOT=" + JSON.stringify({ token, mode: "client" }) + ";</script>";
+  // Inside a <script>: "<" is escaped so no value can close the tag. The
+  // route only lets safe tokens through anyway (isSafeInviteToken).
+  const bootJson = JSON.stringify({ token, mode: "client" }).replace(/</g, "\\u003c");
+  const boot = "<script>window.__NURVAN_CLIENT_BOOT=" + bootJson + ";</script>";
   if (/<head[^>]*>/i.test(out)) {
     out = out.replace(/<head[^>]*>/i, (open) => open + "\n" + boot);
   } else {
@@ -922,6 +925,10 @@ export function mountCoachPractice(app, deps) {
     if (/\.(png|jpe?g|gif|webp|svg|ico|js|css|json|map|webmanifest|html|txt|woff2?)$/i.test(tok)) {
       return next();
     }
+    // An invite token is letters, digits and ._~- only. Anything else is not
+    // a token: it would otherwise be written into the page and the cookies
+    // (a link with </script> in it ran code on the app's origin).
+    if (!isSafeInviteToken(tok)) return res.status(404).send("Invito non valido");
     if (!fs.existsSync(indexHtml)) return res.status(404).send("App non disponibile");
     const html = injectClientPwaHtml(fs.readFileSync(indexHtml, "utf8"), tok);
     res.cookie("nurvan_client_ctx", tok, clientCookieOptions(req));
@@ -933,7 +940,7 @@ export function mountCoachPractice(app, deps) {
 
   app.get("/c/:token/manifest.webmanifest", (req, res) => {
     const tok = String(req.params.token || "").trim();
-    if (!tok || /\.\.|[\\/]/.test(tok)) return res.status(400).json({ error: "token non valido" });
+    if (!isSafeInviteToken(tok)) return res.status(400).json({ error: "token non valido" });
     const start = "/c/" + encodeURIComponent(tok);
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("Content-Type", "application/manifest+json");
@@ -1057,18 +1064,25 @@ export function mountCoachPractice(app, deps) {
         }
       }
 
-      // Link vecchio/rigenerato: risolvi per username + password
+      // Link vecchio/rigenerato: risolvi per username + password - ma solo se
+      // quel nome e' di un atleta solo. Gli username sono unici per coach, non
+      // in assoluto: con due "marco" di due coach diversi e la stessa password,
+      // il login portava nell'account dell'altro. Con piu' atleti dello stesso
+      // nome serve il link del proprio coach.
       if (!client) {
         const q2 = await pool.query(
-          "SELECT * FROM coach_clients WHERE username = $1 AND status = 'active' ORDER BY id DESC LIMIT 12",
+          "SELECT * FROM coach_clients WHERE username = $1 AND status = 'active' ORDER BY id DESC LIMIT 2",
           [username]
         );
-        for (const row of q2.rows) {
+        if (q2.rows.length > 1) {
+          return res.status(401).json({ error: "Accesso non riuscito. Apri il link di invito che ti ha mandato il tuo coach e accedi da li'." });
+        }
+        const row = q2.rows[0];
+        if (row) {
           const u = await userForClient(row);
           if (u && (await verifyPassword(password, u.password_hash))) {
             client = row;
             user = u;
-            break;
           }
         }
       }

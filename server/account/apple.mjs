@@ -59,8 +59,17 @@ function hmac(secret, text) {
   return crypto.createHmac("sha256", String(secret)).update(text).digest("base64url");
 }
 
-export function issueAppleState(secret, mode, now = Date.now()) {
-  const body = b64url(JSON.stringify({ n: crypto.randomBytes(16).toString("base64url"), m: mode === "app" ? "app" : "web", exp: now + STATE_TTL_MS }));
+// The app's verifier: SHA-256 of a secret the app keeps, base64url.
+export function isVerifierHash(v) {
+  return /^[A-Za-z0-9_-]{43}$/.test(String(v || ""));
+}
+
+export function verifierHashOf(verifier) {
+  return crypto.createHash("sha256").update(String(verifier || "")).digest("base64url");
+}
+
+export function issueAppleState(secret, mode, now = Date.now(), verifierHash = "") {
+  const body = b64url(JSON.stringify({ n: crypto.randomBytes(16).toString("base64url"), m: mode === "app" ? "app" : "web", exp: now + STATE_TTL_MS, v: verifierHash || undefined }));
   const state = body + "." + hmac(secret, "apple-state:" + body);
   return { state, nonce: hmac(secret, "apple-nonce:" + body) };
 }
@@ -75,7 +84,7 @@ export function readAppleState(secret, state, now = Date.now()) {
   let data;
   try { data = JSON.parse(Buffer.from(body, "base64url").toString("utf8")); } catch (_) { throw httpError(400, "Richiesta Apple non valida. Riprova."); }
   if (!data || !(Number(data.exp) > now)) throw httpError(400, "Richiesta Apple scaduta. Riprova.");
-  return { mode: data.m === "app" ? "app" : "web", nonce: hmac(secret, "apple-nonce:" + body) };
+  return { mode: data.m === "app" ? "app" : "web", nonce: hmac(secret, "apple-nonce:" + body), verifierHash: isVerifierHash(data.v) ? data.v : "" };
 }
 
 // --- the identity token ----------------------------------------------------
@@ -194,22 +203,31 @@ function ticketHash(ticket) {
   return crypto.createHash("sha256").update(String(ticket)).digest("hex");
 }
 
-export async function issueLoginTicket(pool, userId, now = Date.now()) {
+export async function issueLoginTicket(pool, userId, verifierHash, now = Date.now()) {
+  if (!isVerifierHash(verifierHash)) throw httpError(400, "Richiesta Apple non valida. Riprova.");
   const ticket = crypto.randomBytes(32).toString("base64url");
   await pool.query(
-    "INSERT INTO app_login_tickets(ticket_hash, user_id, expires_at) VALUES($1, $2, $3)",
-    [ticketHash(ticket), userId, new Date(now + TICKET_TTL_MS).toISOString()]
+    "INSERT INTO app_login_tickets(ticket_hash, user_id, expires_at, verifier_hash) VALUES($1, $2, $3, $4)",
+    [ticketHash(ticket), userId, new Date(now + TICKET_TTL_MS).toISOString(), verifierHash]
   );
   return ticket;
 }
 
-export async function consumeLoginTicket(pool, ticket, now = Date.now()) {
+// Swapped only with the verifier of the app that started the login. The
+// ticket is used up either way: one caught by another app and tried with a
+// wrong verifier is gone, not left for a second guess.
+export async function consumeLoginTicket(pool, ticket, verifier, now = Date.now()) {
   const gone = await pool.query(
-    "DELETE FROM app_login_tickets WHERE ticket_hash = $1 RETURNING user_id, expires_at",
+    "DELETE FROM app_login_tickets WHERE ticket_hash = $1 RETURNING user_id, expires_at, verifier_hash",
     [ticketHash(ticket)]
   );
   const row = gone.rows[0];
   if (!row || new Date(row.expires_at).getTime() <= now) throw httpError(401, "Accesso scaduto: riprova con Apple.");
+  const want = Buffer.from(String(row.verifier_hash || ""));
+  const got = Buffer.from(verifierHashOf(verifier));
+  if (!row.verifier_hash || !verifier || want.length !== got.length || !crypto.timingSafeEqual(want, got)) {
+    throw httpError(401, "Accesso con Apple non avviato da questo dispositivo.");
+  }
   const user = await pool.query("SELECT id, email, name, provider, avatar_url FROM app_users WHERE id = $1", [row.user_id]);
   if (!user.rows.length) throw httpError(401, "Account non trovato.");
   return user.rows[0];
@@ -271,7 +289,7 @@ export function mountAppleAuth(app, deps) {
       provider: "apple", sub: id.sub, email: id.email, emailVerified: id.emailVerified,
       name: appleUserName(user), linkingUserId, refreshTokenEnc
     });
-    return { ...resolved, mode: st.mode };
+    return { ...resolved, mode: st.mode, verifierHash: st.verifierHash };
   }
 
   app.get("/api/auth/apple/web-config", (req, res) => {
@@ -287,7 +305,7 @@ export function mountAppleAuth(app, deps) {
       const body = req.body || {};
       if (body.ticket) {
         if (initDb) await initDb();
-        const user = await consumeLoginTicket(pool, body.ticket);
+        const user = await consumeLoginTicket(pool, body.ticket, body.verifier);
         return res.json({ token: issueAccountToken(user), user: publicUser(user) });
       }
       const auth = await accountFromBearer(req.headers.authorization);
@@ -299,7 +317,7 @@ export function mountAppleAuth(app, deps) {
         redirect: redirectUri(req),
         linkingUserId: auth && auth.role === "user" ? auth.id : null
       });
-      return res.json({ token: issueAccountToken(out.user), user: publicUser(out.user), created: out.created });
+      return res.json({ token: issueAccountToken(out.user), user: publicUser(out.user), created: out.created, passwordCleared: Boolean(out.passwordCleared) });
     } catch (err) {
       if (!err.statusCode) console.error("APPLE_AUTH_ERROR", err);
       return res.status(err.statusCode || 500).json({ error: err.statusCode ? err.message : "Accesso con Apple non riuscito." });
@@ -310,7 +328,11 @@ export function mountAppleAuth(app, deps) {
   app.get("/api/auth/apple/start", (req, res) => {
     const c = cfg();
     if (!c.enabled) return returnPage(res, APP_RETURN + "?error=not_configured", "Accesso con Apple non disponibile.");
-    const { state, nonce } = issueAppleState(secret, "app");
+    // The app sends the hash of a secret it keeps; the ticket at the end is
+    // bound to it. Without one (an older app) there is no safe way back.
+    const vh = String(req.query.vh || "");
+    if (!isVerifierHash(vh)) return returnPage(res, APP_RETURN + "?error=update", "Aggiorna l'app Nurvan per accedere con Apple.");
+    const { state, nonce } = issueAppleState(secret, "app", Date.now(), vh);
     const q = new URLSearchParams({
       response_type: "code id_token",
       response_mode: "form_post",
@@ -333,7 +355,7 @@ export function mountAppleAuth(app, deps) {
     try {
       const out = await signIn({ idToken: body.id_token, code: body.code, user: body.user, state: body.state, redirect: redirectUri(req), linkingUserId: null });
       if (out.mode !== "app") throw httpError(400, "Richiesta Apple non valida. Riprova.");
-      const ticket = await issueLoginTicket(pool, out.user.id);
+      const ticket = await issueLoginTicket(pool, out.user.id, out.verifierHash);
       return returnPage(res, APP_RETURN + "?code=" + encodeURIComponent(ticket), "Accesso riuscito. Torna a Nurvan.");
     } catch (err) {
       if (!err.statusCode) console.error("APPLE_CALLBACK_ERROR", err);
