@@ -44,8 +44,8 @@ const names = (list) => list.map((f) => f.name);
 
 console.log('\n--- 1. il catalogo: una voce per alimento ---');
 {
-  eq(FOOD_CATALOG.length, 148, '1a. 148 voci (erano 1300: 762 con un\'etichetta davanti, 390 varianti di cottura)');
-  eq(FOOD_CATALOG.filter((f) => /lessat|grigliat|al forno|al vapore|in padella/i.test(f.name)).length, 0, '1a2. nessun alimento «lessato», «grigliato», «al forno», «al vapore», «in padella»');
+  eq(FOOD_CATALOG.filter((f) => f.rank < 1000).length, 142, '1a. 142 voci nostre (erano 1300: 762 con un\'etichetta davanti, 390 varianti di cottura inventate, 6 generiche doppie)');
+  eq(FOOD_CATALOG.filter((f) => /lessat|grigliat|al forno|al vapore|in padella/i.test(f.name) && !(f.source === 'crea' && f.crea_url)).length, 0, '1a2. nessuna cottura inventata: «al forno», «in padella»... solo dove il CREA l\'ha misurata, con la sua scheda');
   const LABELS = ['Bio', 'Convenience', 'Generico', 'Premium', 'Sport', 'Supermarket'];
   eq(FOOD_CATALOG.filter((f) => f.brand || LABELS.some((l) => f.name.startsWith(l + ' '))).length, 0, '1b. nessuna etichetta finta, nessun brand negli alimenti base');
   eq(FOOD_CATALOG.filter((f) => /(^|\s)(d|l|all|dell|dall|nell|sull|un|quest)\s+[aeiouh]/i.test(f.name)).length, 0, '1c. nessun apostrofo mancante');
@@ -94,8 +94,8 @@ console.log('\n--- 3. il punteggio ---');
 console.log('\n--- 4. ordinamento e limite sul catalogo vero ---');
 {
   const pet = names(S.rank(FOOD_CATALOG, 'pet'));
-  eq(pet.slice(0, 3), ['Petto di pollo', 'Petto di tacchino', "Petto d'anatra"], '4a. «pet» → pollo, tacchino, anatra');
-  ok('4b. poi solo altri petti', pet.slice(3).every((n) => /^Petto/.test(n)));
+  ok('4a. «pet» → prima Petto di pollo, poi tacchino, poi anatra: ' + pet.slice(0, 4).join(', '), pet[0] === 'Petto di pollo' && pet.indexOf('Petto di tacchino') > 0 && pet.indexOf('Petto di tacchino') < pet.indexOf("Petto d'anatra"));
+  ok('4b. e le nostre voci prima dei petti aggiunti dal CREA', pet.indexOf("Petto d'anatra") < pet.findIndex((n) => /faraona/i.test(n)));
   eq(pet.filter((n) => /^(Bio|Convenience|Generico|Premium|Sport|Supermarket) /.test(n)).length, 0, '4c. niente doppioni con etichette');
   eq(S.rank(FOOD_CATALOG, 'lat').length, 8, '4d. al massimo 8 anche quando ce ne sono di piu\'');
   const ris = names(S.rank(FOOD_CATALOG, 'ris'));

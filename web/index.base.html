@@ -13432,9 +13432,10 @@ function renderNutrition(c) {
             <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
               ${(m.foods || []).map((f, fIdx) => `
                 <div style="display:flex;justify-content:space-between;align-items:center;background:#121212;padding:8px 10px;border-radius:6px;font-size:12px;">
-                  <div style="flex:1;">
+                  <div style="flex:1;min-width:0;">
                     <span style="font-weight:700;color:#eee;">${safeDisplayValue(f.name, 'Alimento')}</span>
                     <span style="color:var(--gold);font-weight:800;margin-left:6px;">${safeDisplayValue(f.quantity, '')} ${safeDisplayValue(f.unit, 'g')}</span>
+                    ${foodSourceLabelHtml(f)}
                   </div>
                   <div style="display:flex;align-items:center;gap:8px;">
                     <div style="font-size:10px;color:#aaa;text-align:right;">
@@ -13803,6 +13804,37 @@ function recalcFoodMacrosFromDb() {
 }
 window.recalcFoodMacrosFromDb = recalcFoodMacrosFromDb;
 
+// Where a food's values come from, recorded when it is picked: the CREA
+// tables (with the link to the food's page), our own catalog, a product from
+// the network (its brand), or the person who typed it.
+function foodProvenanceFor(ref) {
+  if (!ref) return { source: 'user', kind: 'user', confidence: 1 };
+  if (ref.provenance && ref.provenance.source) return ref.provenance;
+  if (ref.source === 'crea') return { source: 'crea', kind: 'CREA 2019', url: ref.crea_url || null, crea_name: ref.crea_name || null, confidence: 1 };
+  if (ref.source === 'nurvan' || /^nurvan_staple/.test(String(ref.source || ''))) return { source: 'nurvan', kind: 'Nurvan', confidence: 0.9 };
+  if (ref.source === 'user_custom') return { source: 'user_custom', kind: 'I tuoi alimenti', confidence: 1 };
+  return { source: ref.source || 'remote', kind: 'Prodotto', confidence: 0.8 };
+}
+function creaPageUrl(url) {
+  const u = String(url || '');
+  return /^https:\/\/(www\.)?alimentinutrizione\.it\//.test(u) ? u : '';
+}
+// The small line under a food in the plan and the diary.
+function foodSourceLabelHtml(f) {
+  const p = (f && f.provenance) || {};
+  const style = 'display:block;font-size:9px;color:#777;margin-top:2px;';
+  if (p.source === 'crea') {
+    const url = creaPageUrl(p.url);
+    return url
+      ? '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="' + style + 'color:#8aa;text-decoration:underline;" onclick="event.stopPropagation()">Fonte: CREA 2019</a>'
+      : '<span style="' + style + '">Fonte: CREA 2019</span>';
+  }
+  if (p.source === 'nurvan') return '<span style="' + style + '">Fonte: Nurvan</span>';
+  if (f && f.brand) return '<span style="' + style + '">' + esc(f.brand) + '</span>';
+  if (p.source === 'open_food_facts' || p.source === 'fatsecret' || p.source === 'usda' || p.source === 'remote') return '<span style="' + style + '">Prodotto</span>';
+  return '';
+}
+
 function saveFoodItem() {
   const dayIdx = parseInt($('food-target-day').value, 10);
   const mealIdx = parseInt($('food-target-meal').value, 10);
@@ -13835,8 +13867,9 @@ function saveFoodItem() {
     kcal, pro, carb, fat,
     kcalPer100, proPer100, carbPer100, fatPer100,
     notes: $('food-note-input').value.trim(),
-    provenance: activeSelectedFoodRef && activeSelectedFoodRef.provenance ? activeSelectedFoodRef.provenance : { source: 'user', kind: 'user', confidence: 1 }
+    provenance: foodProvenanceFor(activeSelectedFoodRef)
   };
+  if (activeSelectedFoodRef && activeSelectedFoodRef.brand) foodObj.brand = activeSelectedFoodRef.brand;
 
   // Remember any food typed by hand (not picked from the DB/barcode search,
   // e.g. a regional product FatSecret has and our catalog doesn't) so it can

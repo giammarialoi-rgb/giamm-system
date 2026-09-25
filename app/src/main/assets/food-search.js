@@ -13,9 +13,11 @@
  *                                                      alimento supera 30
  *
  * piu' l'uso dell'atleta: +50 se l'ha gia' usato, +10 per ogni uso negli
- * ultimi 30 giorni (fino a +30). A parita': l'ordine del curatore (`rank`,
- * il piu' comune prima), poi il nome piu' corto, poi l'alfabeto. Al massimo 8
- * risultati.
+ * ultimi 30 giorni (fino a +30). Gli alimenti CREA aggiunti al nostro elenco
+ * (rank da 1000 in su) perdono 25 punti: vengono dopo le nostre voci.
+ * A parita': i valori CREA prima dei nostri,
+ * poi l'ordine del curatore (`rank`, il piu' comune prima), poi il nome piu'
+ * corto, poi l'alfabeto. Al massimo 8 risultati.
  *
  * Il testo e il nome si confrontano minuscoli, senza accenti, senza apostrofi
  * ("d'anatra" = "d anatra") e con un singolare semplice per le parole di
@@ -37,6 +39,11 @@
   var RECENT_DAYS = 30;
 
   var SCORE = { start: 100, word: 80, alias: 60, substring: 30, fallback: 10 };
+  // Foods added from the CREA tables that none of our entries uses: they rank
+  // from ADDED_RANK up and lose ADDED_PENALTY points, so they come after our
+  // curated list (a word match of ours beats them) and before weak matches.
+  var ADDED_RANK = 1000;
+  var ADDED_PENALTY = 25;
   var BONUS = { used: 50, recentEach: 10, recentMax: 30 };
 
   function fold(s) {
@@ -131,13 +138,14 @@
     });
     if (best <= SCORE.substring) hits = hits.concat(fallbacks);
     hits.forEach(function (h) {
-      h.total = h.base + usageBonus(opts.usage ? opts.usage(h.food) : null);
+      h.total = h.base - (Number(h.food.rank) >= ADDED_RANK ? ADDED_PENALTY : 0) + usageBonus(opts.usage ? opts.usage(h.food) : null);
       h.len = String(h.food.name).length;
+      h.crea = h.food.source === 'crea' ? 1 : 0;
       h.rank = Number(h.food.rank);
       if (!Number.isFinite(h.rank)) h.rank = 999;
     });
     hits.sort(function (a, b) {
-      return (b.total - a.total) || (a.rank - b.rank) || (a.len - b.len) ||
+      return (b.total - a.total) || (b.crea - a.crea) || (a.rank - b.rank) || (a.len - b.len) ||
         String(a.food.name).localeCompare(String(b.food.name), 'it');
     });
     return hits.slice(0, limit).map(function (h) {
@@ -173,6 +181,8 @@
     SEARCH_DELAY_MS: SEARCH_DELAY_MS,
     RECENT_DAYS: RECENT_DAYS,
     SCORE: SCORE,
+    ADDED_RANK: ADDED_RANK,
+    ADDED_PENALTY: ADDED_PENALTY,
     BONUS: BONUS,
     fold: fold,
     singular: singular,

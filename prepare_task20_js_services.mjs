@@ -1067,7 +1067,9 @@ const FoodDatabaseService = {
         aliases: f.aliases || [],
         rank: f.rank != null ? f.rank : 999,
         barcode: f.barcode || null,
-        source: f.source || 'local'
+        source: f.source || 'local',
+        crea_url: f.crea_url || null,
+        crea_name: f.crea_name || null
       }));
     }
     return [
