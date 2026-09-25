@@ -115,7 +115,8 @@ ok(!practice.includes("password: row.invite_password"), "snapshot never returns 
 ok(practice.includes("24 hours"), "call signal retention cleanup is configured");
 
 const api = fs.readFileSync(path.join(root, "coach-api.mjs"), "utf8");
-ok(api.includes("jwtVerify") && api.includes("APPLE_JWKS"), "Apple identity token uses JWKS verification");
+const appleAuth = fs.readFileSync(path.join(root, "server/account/apple.mjs"), "utf8");
+ok(appleAuth.includes("jwtVerify") && appleAuth.includes("createRemoteJWKSet") && api.includes("mountAppleAuth"), "Apple identity token uses JWKS verification");
 ok(api.includes("buildCorsOriginValidator"), "API uses CORS allowlist validator");
 // No global error handler existed before - any error passed to next(err)
 // anywhere (the CORS validator included) fell through to Express's own

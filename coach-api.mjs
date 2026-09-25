@@ -13,7 +13,6 @@ import * as XLSX from "xlsx";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { createRemoteJWKSet, jwtVerify } from "jose";
 import { extractExcelStructuredForApi, detectFormat, DI_MAX_BYTES } from "./document-intelligence-core.mjs";
 import { ensureCoachPracticeTables, mountCoachPractice } from "./coach-practice.mjs";
 import { mountProgramGenerateRoutes } from "./server/program/generator.mjs";
@@ -21,6 +20,8 @@ import { mountFoodRoutes } from "./server/food/index.mjs";
 import { mountMediaRoutes } from "./server/media/media-routes.mjs";
 import { mergeAccountDataBlobs, updateAccountData } from "./server/account/index.mjs";
 import { accountEntitlement, mountPlanRoutes } from "./server/account/plans.mjs";
+import { publicUser, resolveIdentityUser, mountAccountDeletion } from "./server/account/identity.mjs";
+import { appleCallbackRoute, appleConfig, mountAppleAuth } from "./server/account/apple.mjs";
 import { mountAdminDashboard } from "./server/admin/index.mjs";
 import { touchLastSeen, recordEvent, fileFormat } from "./server/admin/activity.mjs";
 import { runMigrations } from "./server/db/migrate.mjs";
@@ -43,6 +44,11 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.set("trust proxy", 1);
+// Apple posts its answer from appleid.apple.com (form_post), so the route sits
+// before the CORS allowlist, like the webhook below. What makes it safe is the
+// state it carries back, signed by this server (server/account/apple.mjs).
+const appleCallbackTarget = { handle: null };
+appleCallbackRoute(app, express.urlencoded({ extended: false, limit: "64kb" }), appleCallbackTarget);
 app.use(cors({ origin: buildCorsOriginValidator(process.env), credentials: true }));
 app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
@@ -325,8 +331,6 @@ function normalizeEmail(email) {
 
 const JWT_SECRET = resolveJwtSecret(process.env);
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
-const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || "com.giammaria.system";
-const APPLE_JWKS = createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
 
 function sanitizeGoogleClientId(raw) {
   const stripped = String(raw || "")
@@ -428,57 +432,6 @@ async function accountFromBearer(authHeader) {
   }
 }
 
-async function resolveOAuthUser({ email, name, provider, providerId, avatarUrl, linkingUser }) {
-  const normalized = normalizeEmail(email);
-  if (!normalized) throw Object.assign(new Error("Missing user email from identity provider."), { statusCode: 400 });
-
-  if (linkingUser && linkingUser.id) {
-    const updated = await pool.query(
-      `UPDATE app_users
-       SET email = $1, name = COALESCE($2, name), provider = $3, provider_id = $4, avatar_url = COALESCE($5, avatar_url), updated_at = NOW()
-       WHERE id = $6
-       RETURNING id, email, name, provider, avatar_url`,
-      [normalized, name, provider, providerId, avatarUrl || null, linkingUser.id]
-    );
-    if (updated.rows.length) return updated.rows[0];
-  }
-
-  const existing = await pool.query(
-    "SELECT id, email, name, provider, avatar_url FROM app_users WHERE email = $1",
-    [normalized]
-  );
-  if (existing.rows.length) {
-    const updated = await pool.query(
-      `UPDATE app_users
-       SET name = COALESCE($1, name), provider = $2, provider_id = $3, avatar_url = COALESCE($4, avatar_url), updated_at = NOW()
-       WHERE id = $5
-       RETURNING id, email, name, provider, avatar_url`,
-      [name, provider, providerId, avatarUrl || null, existing.rows[0].id]
-    );
-    return updated.rows[0];
-  }
-
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    const created = await client.query(
-      `INSERT INTO app_users(email, name, provider, provider_id, avatar_url)
-       VALUES($1, $2, $3, $4, $5)
-       RETURNING id, email, name, provider, avatar_url`,
-      [normalized, name || normalized.split("@")[0], provider, providerId, avatarUrl || null]
-    );
-    const user = created.rows[0];
-    await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb) ON CONFLICT (user_id) DO NOTHING", [user.id]);
-    await client.query("COMMIT");
-    return user;
-  } catch (error) {
-    try { await client.query("ROLLBACK"); } catch (_) {}
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-
 async function verifyGoogleCredential(idToken) {
   if (!idToken) throw Object.assign(new Error("Missing Google ID token."), { statusCode: 400 });
   const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
@@ -498,45 +451,20 @@ async function verifyGoogleCredential(idToken) {
     throw Object.assign(new Error("Email Google non verificata."), { statusCode: 401 });
   }
   return {
-    email: payload.email,
-    name: payload.name || payload.email,
     provider: "google",
-    providerId: payload.sub,
+    sub: payload.sub,
+    email: payload.email,
+    emailVerified: verified,
+    name: payload.name || "",
     avatarUrl: payload.picture || null
   };
 }
 
-async function verifyAppleCredential(idToken, userPayload) {
-  if (!idToken) throw Object.assign(new Error("Missing Apple identity token."), { statusCode: 400 });
-  let payload;
-  try {
-    const verified = await jwtVerify(idToken, APPLE_JWKS, {
-      issuer: "https://appleid.apple.com",
-      audience: APPLE_BUNDLE_ID
-    });
-    payload = verified.payload;
-  } catch (_) {
-    throw Object.assign(new Error("Apple identity token verification failed."), { statusCode: 401 });
-  }
-  if (!payload || !payload.sub || !payload.email) {
-    throw Object.assign(new Error("Malformed Apple identity token."), { statusCode: 400 });
-  }
-  let name = "";
-  if (userPayload?.name) {
-    name = [userPayload.name.firstName, userPayload.name.lastName].filter(Boolean).join(" ");
-  }
-  return {
-    email: payload.email,
-    name: name || payload.email,
-    provider: "apple",
-    providerId: payload.sub,
-    avatarUrl: null
-  };
-}
-
+// A signed-in account that adds Google links it; the account keeps its email.
 async function issueOAuthResponse(req, res, identity) {
-  const user = await resolveOAuthUser({ ...identity, linkingUser: await accountFromBearer(req.headers.authorization) });
-  return res.json({ token: issueAccountToken(user), user: { id: user.id, email: user.email, name: user.name, provider: user.provider, avatarUrl: user.avatar_url || null } });
+  const auth = await accountFromBearer(req.headers.authorization);
+  const { user } = await resolveIdentityUser(pool, { ...identity, linkingUserId: auth && auth.role === "user" ? auth.id : null });
+  return res.json({ token: issueAccountToken(user), user: publicUser(user) });
 }
 
 const upload = multer({
@@ -1332,6 +1260,8 @@ app.get("/api/auth/public-config", (req, res) => {
   res.json({
     googleClientId: googleClientId || "",
     googleEnabled: Boolean(googleClientId),
+    // The Apple button shows only with all four APPLE_* variables set.
+    appleEnabled: appleConfig(process.env).enabled,
     passwordResetEmail: Boolean(process.env.RESEND_API_KEY && (process.env.MAIL_FROM || process.env.RESEND_FROM))
   });
 });
@@ -1578,15 +1508,6 @@ app.post("/api/account/sync", async (req, res) => {
 app.post("/api/auth/google", async (req, res) => {
   try {
     const identity = await verifyGoogleCredential(req.body?.credential);
-    return await issueOAuthResponse(req, res, identity);
-  } catch (err) {
-    return res.status(err.statusCode || 401).json({ error: err.message });
-  }
-});
-
-app.post("/api/auth/apple", async (req, res) => {
-  try {
-    const identity = await verifyAppleCredential(req.body?.code || req.body?.id_token || req.body?.identityToken, req.body?.user);
     return await issueOAuthResponse(req, res, identity);
   } catch (err) {
     return res.status(err.statusCode || 401).json({ error: err.message });
@@ -2050,6 +1971,9 @@ mountCoachPractice(app, {
 });
 
 mountPlanRoutes(app, { pool, initDb, accountFromBearer });
+const appleAuth = mountAppleAuth(app, { pool, initDb, secret: JWT_SECRET, accountFromBearer, issueAccountToken });
+appleCallbackTarget.handle = appleAuth.callbackHandler;
+mountAccountDeletion(app, { pool, initDb, accountFromBearer, onDeleted: (gone) => appleAuth.revokeIdentities(gone.identities) });
 
 mountAdminDashboard(app, { pool, initDb, sendEmail, secret: JWT_SECRET });
 
