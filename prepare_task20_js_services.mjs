@@ -1933,6 +1933,22 @@ const HealthDataProvider = {
   }
 };
 
+// Where a value comes from, in the shape the engines attach to what they
+// return: ReadinessService marks its estimate with it. It was called and
+// never written, so on Android with Health Connect data the readiness card
+// threw and disappeared.
+const DataProvenance = {
+  make(source, at, kind, confidence, method) {
+    return {
+      source: String(source || 'unknown'),
+      at: at || new Date().toISOString(),
+      kind: kind || 'estimate',
+      confidence: typeof confidence === 'number' && isFinite(confidence) ? confidence : null,
+      method: method || null
+    };
+  }
+};
+
 const ReadinessService = {
   assess(health, trainingLoad) {
     const samples = health || {};

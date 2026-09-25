@@ -260,6 +260,54 @@ console.log('\n--- 15. la scheda non passa per intero da ogni tocco ---');
     /A client or invite session has no IndexedDB/.test(SRC));
 }
 
+console.log('\n--- 16. nessun nome chiamato e mai definito ---');
+{
+  // showToast, normalizeFoodRecord, DataProvenance: chiamati, protetti da
+  // typeof, mai definiti. tools/list_undefined_calls.mjs li cerca tutti; qui
+  // prima si controlla che lo strumento veda giusto, poi che l'elenco sia vuoto.
+  const U = await import('./tools/list_undefined_calls.mjs');
+  const usesOf = (code) => U.collectUses(U.tokenize(code)).map((u) => u.name);
+  const tricky = 'var a = "http://x.it/y"; var r = /[\'"]\\/x/g.test(a); var t = `x ${`y ${chiamataNelTemplate()} z`} w`; /* chiamataNelCommento() */ // chiamataInRiga()\n';
+  ok('16a. il tokenizer non si perde fra stringhe con //, regex con virgolette e template annidati',
+    JSON.stringify(usesOf(tricky)) === JSON.stringify(['chiamataNelTemplate']));
+  ok('16b. una proprieta\' o un metodo definito non sono chiamate da cercare',
+    JSON.stringify(usesOf('altro.obj.metodo(); const o = { breve() { return 1; }, lungo: function () {} }; class C { m(x) { return x; } static s() {} }')) === JSON.stringify(['altro']));
+  const probe = U.analyse({ extra: [{ file: 'prova.js', text:
+    'function definitaQui() {}\ndefinitaQui();\nnonEsisteQuesta(1);\nFantasmaService.go();\nvar html = \'<button onclick="fantasmaClick()">x</button>\';\nconst { destrutturata } = {}; destrutturata();\n(a, b) => a(b);\n' }] });
+  const probeNames = probe.filter((f) => f.file === 'prova.js').map((f) => f.name).sort();
+  ok('16c. trova una chiamata, un oggetto e un gestore on*="…" mai definiti, e solo quelli: ' + probeNames.join(', '),
+    JSON.stringify(probeNames) === JSON.stringify(['FantasmaService', 'fantasmaClick', 'nonEsisteQuesta']));
+  const real = U.analyse();
+  const names = [...new Set(real.map((f) => f.name))].sort();
+  ok('16d. nella pagina e nei moduli ogni nome chiamato e\' definito', real.length === 0,
+    names.map((n) => n + ' (' + real.filter((f) => f.name === n).map((f) => f.source || (f.file + ':' + f.line)).join(', ') + ')').join('; '));
+}
+
+console.log('\n--- 17. i nomi scritti fanno quello che la pagina si aspettava ---');
+{
+  const grab = (name) => { const a = SRC.indexOf('function ' + name + '('); const b = SRC.indexOf('\n}', a); return SRC.slice(a, b + 2); };
+  const grabBlock = (start, end) => { const a = SRC.indexOf(start); const b = SRC.indexOf(end, a); return SRC.slice(a, b + end.length); };
+  const vmod = await import('node:vm');
+  const { JS_PRODUCT_SERVICES } = await import('./prepare_task20_js_services.mjs');
+  const pick = (src, start, end) => { const a = src.indexOf(start); const b = src.indexOf(end, a); return src.slice(a, b + end.length); };
+  const ctx = {};
+  vmod.createContext(ctx);
+  vmod.runInContext(pick(JS_PRODUCT_SERVICES, 'const DataProvenance = {', '\n};') + '\n' + pick(JS_PRODUCT_SERVICES, 'const ReadinessService = {', '\n};') + '\nthis.R = ReadinessService;', ctx);
+  let r = null;
+  let err = null;
+  try { r = ctx.R.assess({ restingHr: 55, baselineRhr: 58, sleepHours: 7.5 }, null); } catch (e) { err = e.message; }
+  ok('17a. la prontezza con battito e sonno (Android con Connessione Salute) risponde invece di lanciare un errore', !err && r && r.label, err || '');
+  ok('17b. e porta la sua provenienza', r && r.provenance && r.provenance.source === 'readiness_engine' && r.provenance.kind === 'estimate' && typeof r.provenance.confidence === 'number');
+  const page = {};
+  vmod.createContext(page);
+  vmod.runInContext(grabBlock('var CHECK_IN_STATUS_LABELS = {', '};') + '\n' + grab('checkInStatusLabel') + '\n' + grab('normalizeFoodRecord'), page);
+  ok('17c. lo stato del check si legge per tutti e cinque gli stati, e la bozza non tace piu\'',
+    ['DRAFT', 'SYNCING', 'QUEUED', 'SYNCED', 'FAILED'].every((s) => page.checkInStatusLabel(s)) && page.checkInStatusLabel('DRAFT') === 'Non inviato al coach' && page.checkInStatusLabel('') === '');
+  const nf = page.normalizeFoodRecord({ name: ' Nutella ', kcalPer100: 539, proPer100: 6.3, brand: 'Ferrero', provenance: { source: 'open_food_facts' } });
+  ok('17d. un prodotto della rete prende la forma che scaleMacros legge', nf.name === 'Nutella' && nf.kcal === 539 && nf.pro === 6.3 && nf.carb === 0 && nf.brand === 'Ferrero' && nf.source === 'open_food_facts');
+  ok('17e. la pagina Community non chiama piu\' CommunityCatalog', !/CommunityCatalog/.test(SRC));
+}
+
 console.log('');
 if (failed) { console.log(failed + ' UI layout rule(s) broken.'); process.exit(1); }
 console.log('All UI layout rules hold.');

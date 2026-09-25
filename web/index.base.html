@@ -13709,8 +13709,30 @@ function renderFoodSuggestions() {
 
 let activeSelectedFoodRef = null;
 
+// A food picked from any list - the catalog, the athlete's own foods, a
+// product from the network - in one shape: the per-100 g values under the
+// names scaleMacros reads (kcal/pro/carb/fat), whichever names the source
+// used, plus where the values come from.
+function normalizeFoodRecord(food) {
+  const f = food || {};
+  const num = function (a, b) {
+    const v = Number(a != null && a !== '' ? a : b);
+    return Number.isFinite(v) && v >= 0 ? v : 0;
+  };
+  return Object.assign({}, f, {
+    name: String(f.name || f.food || '').trim(),
+    kcal: num(f.kcal, f.kcalPer100),
+    pro: num(f.pro, f.proPer100),
+    carb: num(f.carb, f.carbPer100),
+    fat: num(f.fat, f.fatPer100),
+    unit: f.unit || 'g',
+    brand: f.brand || '',
+    source: f.source || (f.provenance && f.provenance.source) || 'unknown'
+  });
+}
+
 function selectFoodFromDb(food) {
-  const n = (typeof normalizeFoodRecord === 'function') ? normalizeFoodRecord(food) : food;
+  const n = normalizeFoodRecord(food);
   activeSelectedFoodRef = n;
   const nameEl = $('food-name-input');
   const unitEl = $('food-unit-input');
@@ -17424,8 +17446,6 @@ function switchPlan(planName) {
 function renderCommunity(c) {
   const name = (store.profile && store.profile.name) || 'Atleta';
   const title = (DATA && (DATA.title || DATA.original_title)) || 'Nessun programma';
-  const reddit = (typeof CommunityCatalog !== 'undefined' && CommunityCatalog.redditLinks) ? CommunityCatalog.redditLinks : [];
-  const lv = (typeof CommunityCatalog !== 'undefined' && CommunityCatalog.liftVaultPrograms) ? CommunityCatalog.liftVaultPrograms : [];
   let readinessHtml = '';
   try {
     let health = {};
@@ -17459,19 +17479,6 @@ function renderCommunity(c) {
       <div style="font-size:11px;color:#888;">PROFILO</div>
       <div style="font-size:16px;font-weight:800;">${esc(name)}</div>
       <div style="font-size:12px;color:#aaa;margin-top:4px;">${esc(String(title))}</div>
-    </div>
-    <div class="card" style="padding:12px;margin-bottom:12px;">
-      <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:8px;">Forum fitness (link-out Reddit)</div>
-      ${reddit.map(function (r) {
-        return '<a href="' + esc(r.url) + '" target="_blank" rel="noopener" style="display:block;padding:8px 0;border-bottom:1px solid #222;color:#fff;font-size:13px;text-decoration:none;">' + esc(r.name) + ' ↗</a>';
-      }).join('') || '<div style="font-size:11px;color:#666;">Link non disponibili</div>'}
-    </div>
-    <div class="card" style="padding:12px;margin-bottom:12px;">
-      <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:8px;">Programmi (Lift Vault — solo link)</div>
-      <p style="font-size:10px;color:#666;margin-bottom:8px;">Nessuno scraping. Apri la fonte originale su Lift Vault.</p>
-      ${lv.map(function (p) {
-        return '<a href="' + esc(p.url) + '" target="_blank" rel="noopener" style="display:block;padding:8px 0;border-bottom:1px solid #222;color:#fff;font-size:13px;text-decoration:none;">' + esc(p.title) + ' · ' + (p.days || '?') + ' gg ↗</a>';
-      }).join('')}
     </div>
   `;
 }
@@ -26552,13 +26559,7 @@ function renderCheckFisicoCardHtml() {
   }).join('');
   const histHtml = hist.length ? hist.slice(0, 5).map(function (c) {
     const syncState = c.checkInSyncState || (c.serverCheckInId ? 'SYNCED' : '');
-    const syncLabel = (typeof checkInStatusLabel === 'function' && syncState)
-      ? checkInStatusLabel(syncState)
-      : (syncState === 'SYNCING'
-        ? 'Invio in corso…'
-        : (syncState === 'QUEUED'
-          ? 'In attesa di connessione'
-          : (syncState === 'SYNCED' ? 'Inviato' : (syncState === 'FAILED' ? 'Errore — riprova' : ''))));
+    const syncLabel = checkInStatusLabel(syncState);
     return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1c1c1c;font-size:11px;">' +
       '<div role="button" tabindex="0" onclick="openSavedCheckFisico(\'' + esc(String(c.id || '')) + '\')" style="flex:1;display:flex;justify-content:space-between;gap:8px;cursor:pointer;">' +
       '<span>' + esc(String(c.at || '').replace('T', ' ').slice(0, 16)) + ' · ' + esc(checkFisicoPeriodMeta(c.period).label) +
@@ -26759,6 +26760,19 @@ async function deleteBodyCheck(id) {
 // serverCheckInId on success and nothing at all on failure, so the card stayed
 // silent and the RIPROVA button below - which the list already knew how to
 // draw - had no state that could bring it on screen.
+// What the athlete reads next to a check: whether it reached the coach. A
+// draft said nothing at all, so a check never sent looked like one that was.
+var CHECK_IN_STATUS_LABELS = {
+  DRAFT: 'Non inviato al coach',
+  SYNCING: 'Invio in corso…',
+  QUEUED: 'In attesa di connessione',
+  SYNCED: 'Inviato al coach',
+  FAILED: 'Non inviato — riprova'
+};
+function checkInStatusLabel(state) {
+  return CHECK_IN_STATUS_LABELS[String(state || '').toUpperCase()] || '';
+}
+
 function markCheckInSyncState(entry, state) {
   if (!entry) return;
   entry.checkInSyncState = state;
