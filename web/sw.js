@@ -21,6 +21,7 @@ const PRECACHE = [
   './program-catalog.js',
   './progression-models.js',
   './food-search.js',
+  './nutrition-targets.js',
   './cardio-library.js',
   './program-generator.js'
 ];

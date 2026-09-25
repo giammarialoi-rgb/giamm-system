@@ -69,6 +69,7 @@
 <script src="program-catalog.js"></script>
 <script src="progression-models.js"></script>
 <script src="food-search.js"></script>
+<script src="nutrition-targets.js"></script>
 <script src="cardio-library.js"></script>
 <script src="program-generator.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
@@ -6155,6 +6156,250 @@ function nextDateForWeekday(weekdayName) {
     d.setDate(d.getDate() + 1);
   }
   return isoDateOnly(d);
+}
+
+// ---------------------------------------------------------------------------
+// Target nutrizionale: l'app propone, chi segue l'atleta decide.
+// Le formule sono in web/nutrition-targets.js (NurvanNutritionTargets); qui
+// solo da dove arrivano i dati e come si mostrano. Precedenza: prescritto dal
+// coach o dal nutrizionista (DATA.nutrition.prescribed_target, viaggia con il
+// piano come la scheda) > impostato dall'atleta (profilo) > target del piano
+// (daily_*) > proposto. Con un prescritto il proposto non si mostra mai.
+// ---------------------------------------------------------------------------
+function nutritionTargetsLib() {
+  return (typeof window !== 'undefined' && window.NurvanNutritionTargets) || null;
+}
+// Whose target: in the coach's view of a client, the client's profile.
+function nutritionSubjectProfile() {
+  if (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox() && store.__cpClientViewProfile) return store.__cpClientViewProfile;
+  return (store && store.profile) || {};
+}
+// The weight the target uses: the last body check with a weight, if any.
+function latestCheckWeight() {
+  let best = null;
+  ((store && store.bodyChecks) || []).forEach(function (c) {
+    const w = parseFloat(c && c.weight);
+    const t = Date.parse((c && c.at) || '');
+    if (w > 0 && t && (!best || t > best.t)) best = { kg: w, t: t, at: c.at };
+  });
+  return best;
+}
+function nutritionProfileInputs() {
+  const p = nutritionSubjectProfile();
+  const chk = latestCheckWeight();
+  return {
+    sex: String(p.sex || '').toLowerCase().charAt(0),
+    age: p.age,
+    height: p.height,
+    weight: chk ? chk.kg : p.weight,
+    weightFrom: chk ? 'check' : 'profile',
+    weightAt: chk ? chk.at : null,
+    activity: p.nutritionActivity,
+    goal: p.nutritionGoal,
+    pace: p.nutritionPace
+  };
+}
+function nutritionProposed() {
+  const N = nutritionTargetsLib();
+  return N ? N.propose(nutritionProfileInputs()) : null;
+}
+function nutritionPrescribed() {
+  const n = (DATA && DATA.nutrition) || {};
+  const p = n.prescribed_target;
+  return p && Number(p.kcal) > 0 ? p : null;
+}
+function nutritionPlanTarget() {
+  const n = (DATA && DATA.nutrition) || {};
+  return Number(n.daily_calories_target) > 0
+    ? { kcal: n.daily_calories_target, pro: n.daily_protein_target, carb: n.daily_carbs_target, fat: n.daily_fats_target }
+    : null;
+}
+function nutritionOwnTarget() {
+  const p = nutritionSubjectProfile();
+  return p.nutritionTargetMode === 'own' && p.nutritionTarget && Number(p.nutritionTarget.kcal) > 0 ? p.nutritionTarget : null;
+}
+// Training or rest: a diary day is a training day when a session was closed
+// on that date; a plan day says it itself (dayType, set by who writes the plan).
+function nutritionDayType(day) {
+  if (!day) return null;
+  if (day.date) {
+    const d = String(day.date).slice(0, 10);
+    const trained = ((store && store.logs) || []).some(function (l) {
+      const at = l && (l.finalizedAt || l.at);
+      return at && isoDateOnly(new Date(at)) === d;
+    });
+    return trained ? 'training' : 'rest';
+  }
+  return (day.dayType === 'training' || day.dayType === 'rest') ? day.dayType : null;
+}
+function currentNutritionTarget(day) {
+  const N = nutritionTargetsLib();
+  if (!N) return { source: null };
+  return N.resolve({
+    prescribed: nutritionPrescribed(),
+    own: nutritionOwnTarget(),
+    plan: nutritionPlanTarget(),
+    proposed: nutritionProposed(),
+    dayType: nutritionDayType(day)
+  });
+}
+// Grams of a food as written (g, ml, portions, pieces...).
+function nutritionGramsOf(f) {
+  const q = parseFloat(f && f.quantity);
+  if (!(q > 0)) return 100;
+  return foodQtyToGrams(q, (f && f.unit) || 'g', (f && f.name) || '');
+}
+function nutritionSums(foods) {
+  const N = nutritionTargetsLib();
+  if (!N) return { kcal: 0, pro: 0, carb: 0, fat: 0, partial: false, missing: [] };
+  return N.sumFoods(foods || [], nutritionGramsOf);
+}
+// One food's kcal as the row shows it: by grams from the values per 100 g,
+// or a dash when it has no values (then the meal's sum is partial).
+function nutritionFoodKcalText(f) {
+  const N = nutritionTargetsLib();
+  if (!N) return String(Math.round(foodMacroVal(f, 'kcal')));
+  const v = N.foodValues(f, nutritionGramsOf(f));
+  return v.missing ? '—' : String(Math.round(v.kcal));
+}
+function nutritionDaySums(day) {
+  let all = [];
+  ((day && day.meals) || []).forEach(function (m) { all = all.concat((m && m.foods) || []); });
+  return nutritionSums(all);
+}
+function nutritionPrescriberName() {
+  return (store && store.accountUser && store.accountUser.name) || (store && store.profile && store.profile.name) || 'il coach';
+}
+// The line that says whose target this is.
+function nutritionTargetSourceHtml(t) {
+  if (!t || !t.source) return '<div style="font-size:10px;color:#888;margin-top:6px;">Nessun target. Tocca ✎ per impostarlo.</div>';
+  if (t.source === 'prescribed') {
+    const variant = t.variant === 'training' ? ' · giorno di allenamento' : (t.variant === 'rest' ? ' · giorno di riposo' : '');
+    return '<div style="font-size:10px;color:#ccc;margin-top:6px;">Prescritto da <b>' + esc(t.by || 'il coach') + '</b>' + variant + '</div>' +
+      (t.note ? '<div style="font-size:10px;color:#999;margin-top:3px;line-height:1.35;">' + esc(t.note) + '</div>' : '');
+  }
+  if (t.source === 'own') return '<div style="font-size:10px;color:#aaa;margin-top:6px;">Impostato da te</div>';
+  if (t.source === 'plan') return '<div style="font-size:10px;color:#aaa;margin-top:6px;">Target del piano</div>';
+  const N = nutritionTargetsLib();
+  return '<div style="font-size:10px;color:#aaa;margin-top:6px;">Proposto dall\'app' + (t.fiber ? ' · fibra di riferimento ' + t.fiber + ' g' : '') + '</div>' +
+    '<div style="font-size:9px;color:#777;margin-top:3px;line-height:1.35;">' + esc(N ? N.DISCLAIMER : '') + '</div>';
+}
+function nutritionNumber(n) {
+  return Math.round(Number(n) || 0).toLocaleString('it-IT');
+}
+// Total, target, difference and a bar, for the four quantities. Grey within
+// 5 %, amber beyond: a number and a colour, never a verdict.
+function nutritionSummaryHtml(totals, target, label) {
+  const N = nutritionTargetsLib();
+  if (!N) return '';
+  const cmp = N.compare(totals, target);
+  const rows = [['kcal', 'Kcal', ''], ['pro', 'Proteine', ' g'], ['carb', 'Carboidrati', ' g'], ['fat', 'Grassi', ' g']];
+  const star = totals.partial ? '*' : '';
+  const body = rows.map(function (r) {
+    const c = cmp[r[0]];
+    const toneColor = c.tone === 'amber' ? '#e0a030' : '#9a9a9a';
+    const diffText = c.diff == null ? '' : ((c.diff > 0 ? '+' : c.diff < 0 ? '−' : '±') + nutritionNumber(Math.abs(c.diff)) + r[2]);
+    const fill = c.fill == null ? 0 : Math.round(c.fill * 100);
+    return '<div class="nutr-sum-row" style="margin-top:8px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;">' +
+      '<span style="font-size:11px;color:#ccc;font-weight:700;">' + r[1] + '</span>' +
+      '<span style="font-size:12px;color:#fff;font-weight:800;white-space:nowrap;">' + nutritionNumber(c.total) + star + r[2] +
+      (c.target != null ? ' <span style="color:#777;font-weight:600;">/ ' + nutritionNumber(c.target) + r[2] + '</span>' : '') +
+      (diffText ? ' <span class="nutr-diff nutr-tone-' + c.tone + '" style="color:' + toneColor + ';font-weight:700;margin-left:4px;">' + diffText + '</span>' : '') +
+      '</span></div>' +
+      (c.target != null ? '<div style="height:6px;background:#1e1e1e;border-radius:3px;margin-top:4px;overflow:hidden;"><div class="nutr-bar" style="height:100%;width:' + fill + '%;background:' + (c.tone === 'amber' ? '#e0a030' : '#8a8a8a') + ';"></div></div>' : '') +
+      '</div>';
+  }).join('');
+  return '<div class="card nutr-day-summary" style="border:1px solid var(--border);margin-top:14px;padding:12px;">' +
+    '<div style="font-size:11px;font-weight:800;color:var(--gold);">Totale della giornata</div>' +
+    (label ? '<div style="font-size:10px;color:#888;margin-top:2px;">' + esc(label) + '</div>' : '') +
+    body +
+    (totals.partial ? '<div style="font-size:9px;color:#888;margin-top:8px;">* somma parziale: ' + totals.missing.length + ' aliment' + (totals.missing.length === 1 ? 'o' : 'i') + ' senza valori (' + esc(totals.missing.slice(0, 3).join(', ')) + (totals.missing.length > 3 ? '…' : '') + ')</div>' : '') +
+    '</div>';
+}
+// For a diary day: the plan of the same weekday, if there is one.
+function nutritionPlanDayFor(day, days) {
+  if (!day || !day.date || typeof weekdayNameForDate !== 'function') return null;
+  const wd = String(weekdayNameForDate(String(day.date).slice(0, 10)) || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (!wd) return null;
+  return (days || []).find(function (d) {
+    if (!d || d.date) return false;
+    const name = String(d.day || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return name.indexOf(wd.slice(0, 4)) === 0 && (d.meals || []).some(function (m) { return (m.foods || []).length; });
+  }) || null;
+}
+// The coach's view: the last 7 days of the client's diary against the target.
+// Days without a diary are counted apart, never averaged in as zero.
+function nutritionDiaryDaysForAverage(days) {
+  const out = {};
+  (days || []).forEach(function (d) {
+    if (!d || !d.date) return;
+    const foods = [];
+    (d.meals || []).forEach(function (m) { (m.foods || []).forEach(function (f) { foods.push(f); }); });
+    if (foods.length) out[String(d.date).slice(0, 10)] = nutritionSums(foods);
+  });
+  // A day confirmed as "ate the plan" counts with the plan of that weekday.
+  const daily = (store && store.nutritionDaily) || {};
+  Object.keys(daily).forEach(function (key) {
+    if (out[key] || !/^\d{4}-\d{2}-\d{2}$/.test(key) || !daily[key] || daily[key].confirmed !== true) return;
+    const plan = nutritionPlanDayFor({ date: key }, days);
+    if (plan) out[key] = nutritionDaySums(plan);
+  });
+  return Object.keys(out).map(function (date) { return { date: date, total: out[date] }; });
+}
+function nutritionCoachWeekHtml(days) {
+  const N = nutritionTargetsLib();
+  if (!N) return '';
+  const target = currentNutritionTarget(null);
+  const week = N.weekAverage({ days: nutritionDiaryDaysForAverage(days), today: isoDateOnly(new Date()), target: target.source ? target : null });
+  const head = '<div style="font-size:11px;font-weight:800;color:var(--gold);">Diario · ultimi 7 giorni</div>' +
+    '<div style="font-size:10px;color:#888;margin-top:2px;">Media sui ' + week.logged + ' giorni con diario' +
+    (target.source ? ', contro il target (' + (target.source === 'prescribed' ? 'prescritto' : (target.source === 'own' ? 'impostato dall\'atleta' : (target.source === 'plan' ? 'del piano' : 'proposto'))) + ')' : '') + '</div>';
+  const empty = week.empty ? '<div class="nutr-empty-days" style="font-size:11px;color:#ccc;margin-top:8px;">' + week.empty + (week.empty === 1 ? ' giorno' : ' giorni') + ' senza diario</div>' : '';
+  if (!week.average) {
+    return '<div class="card nutr-coach-week" style="border:1px solid var(--border);margin-bottom:12px;padding:12px;">' + head + empty + '</div>';
+  }
+  const summary = nutritionSummaryHtml(week.average, target.source ? target : null, '')
+    .replace('Totale della giornata', 'Media giornaliera')
+    .replace('class="card nutr-day-summary" style="border:1px solid var(--border);margin-top:14px;padding:12px;"', 'style="margin-top:4px;"');
+  return '<div class="card nutr-coach-week" style="border:1px solid var(--border);margin-bottom:12px;padding:12px;">' + head + summary + empty + '</div>';
+}
+// Training / rest, for a plan day, when the prescription has the two variants.
+function nutritionDayTypeHtml(day, dayIdx) {
+  const pres = nutritionPrescribed();
+  if (!pres || !(pres.training || pres.rest)) return '';
+  if (day && day.date) {
+    const dt = nutritionDayType(day);
+    return '<div style="font-size:10px;color:#888;margin:-6px 0 10px;">' + (dt === 'training' ? 'Giorno di allenamento: vale il target di allenamento' : 'Giorno di riposo: vale il target di riposo') + '</div>';
+  }
+  const editable = typeof isCoachClientSandbox === 'function' && isCoachClientSandbox();
+  const cur = nutritionDayType(day);
+  const opt = function (id, label) {
+    const on = cur === id;
+    return editable
+      ? '<button type="button" class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" style="font-size:10px;padding:4px 8px;" onclick="setNutritionDayType(' + dayIdx + ',&#39;' + (id || '') + '&#39;)">' + label + '</button>'
+      : (on ? '<span style="font-size:10px;color:#ccc;">' + label + '</span>' : '');
+  };
+  return '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:-6px 0 10px;"><span style="font-size:10px;color:#888;">Tipo di giorno:</span>' +
+    opt('training', 'Allenamento') + opt('rest', 'Riposo') + opt('', 'Base') + '</div>';
+}
+function setNutritionDayType(dayIdx, type) {
+  const day = DATA && DATA.nutrition && DATA.nutrition.days && DATA.nutrition.days[dayIdx];
+  if (!day) return;
+  if (type === 'training' || type === 'rest') day.dayType = type; else delete day.dayType;
+  store.nutrition = DATA.nutrition;
+  store.__cpNutritionDirty = true;
+  store.__cpKeepLocalNutrition = true;
+  persist();
+  render();
+}
+window.setNutritionDayType = setNutritionDayType;
+// What the plan generator starts from: the prescription if there is one, then
+// the athlete's own, then the proposal; the older formula only as a last resort.
+function nutritionGeneratorBase() {
+  const t = currentNutritionTarget(null);
+  if (t && t.source && Number(t.kcal) > 0) return { tdee: t.kcal, protein: t.pro, carbs: t.carb, fat: t.fat };
+  return computeNutritionTargetsFromProfile({});
 }
 
 function computeNutritionTargetsFromProfile(overrides) {
@@ -13286,20 +13531,21 @@ function renderNutrition(c) {
   if (currentNutritionDayIndex >= days.length) currentNutritionDayIndex = Math.max(0, days.length - 1);
   const activeDay = days[currentNutritionDayIndex] || { day: '', meals: [] };
 
-  let dayKcal = 0, dayPro = 0, dayCarb = 0, dayFat = 0;
-  (activeDay.meals || []).forEach(m => {
-    (m.foods || []).forEach(f => {
-      dayKcal += foodMacroVal(f, 'kcal');
-      dayPro += foodMacroVal(f, 'pro');
-      dayCarb += foodMacroVal(f, 'carb');
-      dayFat += foodMacroVal(f, 'fat');
-    });
-  });
-
-  const targetKcal = DATA.nutrition.daily_calories_target || 0;
-  const targetPro = DATA.nutrition.daily_protein_target || 0;
-  const targetCarb = DATA.nutrition.daily_carbs_target || 0;
-  const targetFat = DATA.nutrition.daily_fats_target || 0;
+  // Sums by grams from the values per 100 g; the target is whichever one
+  // decides (prescribed > own > plan > proposed).
+  const dayTotals = nutritionDaySums(activeDay);
+  const dayTarget = currentNutritionTarget(activeDay);
+  const dayKcal = dayTotals.kcal, dayPro = dayTotals.pro, dayCarb = dayTotals.carb, dayFat = dayTotals.fat;
+  const targetKcal = dayTarget.kcal || 0;
+  const targetPro = dayTarget.pro || 0;
+  const targetCarb = dayTarget.carb || 0;
+  const targetFat = dayTarget.fat || 0;
+  const dayStar = dayTotals.partial ? '*' : '';
+  const planForDiary = activeDay.date ? nutritionPlanDayFor(activeDay, days) : null;
+  const cmpTarget = planForDiary ? nutritionDaySums(planForDiary) : (dayTarget.source ? dayTarget : null);
+  const cmpLabel = planForDiary
+    ? ('Diario: confronto con il piano di ' + safeDisplayValue(planForDiary.day, ''))
+    : (dayTarget.source ? ((activeDay.date ? 'Diario' : 'Piano') + ': confronto con il target') : 'Nessun target: tocca ✎ in alto per impostarlo');
   const nutrDirty = !!(typeof store !== 'undefined' && store && store.__cpNutritionDirty);
 
   let html = `
@@ -13326,6 +13572,7 @@ function renderNutrition(c) {
       </div>
       <div style="font-size:9px;color:#666;margin-top:4px;">Valgono per il giorno aperto qui sopra. Quelli di oggi finiscono anche nella stima di recupero in home.</div>
     </div>
+    ${(typeof isCoachClientSandbox === 'function' && isCoachClientSandbox()) ? nutritionCoachWeekHtml(days) : ''}
     ${nutritionConfirmCardHtml()}
 
     <div class="card" style="border:1px solid var(--border);margin-bottom:12px;padding:12px;">
@@ -13368,7 +13615,7 @@ function renderNutrition(c) {
     <div class="card" style="border:1px solid var(--border);background:linear-gradient(135deg, #16140d 0%, #0c0c0c 100%);margin-bottom:16px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <span style="font-size:11px;font-weight:800;color:var(--gold);">${t('dailyTotals')} • ${safeDisplayValue(activeDay.day, t('today'))}</span>
-        <span style="font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;gap:6px;">${Math.round(dayKcal)} <span style="font-size:10px;color:#888;">${targetKcal ? ('/ ' + targetKcal + ' kcal') : 'kcal'}</span>
+        <span style="font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;gap:6px;white-space:nowrap;">${Math.round(dayKcal)}${dayStar} <span style="font-size:10px;color:#888;">${targetKcal ? ('/ ' + targetKcal + ' kcal') : 'kcal'}</span>
           <button type="button" onclick="openEditNutritionTargetsModal()" title="Modifica o rimuovi il target kcal/macro" style="background:none;border:none;color:#888;font-size:12px;padding:2px 4px;cursor:pointer;line-height:1;">✎</button>
         </span>
       </div>
@@ -13386,7 +13633,9 @@ function renderNutrition(c) {
           <div style="font-size:14px;font-weight:900;color:#ff9800;">${Math.round(dayFat)}g ${targetFat ? `<span style="font-size:9px;color:#666;">(${targetFat}g)</span>` : ''}</div>
         </div>
       </div>
+      ${nutritionTargetSourceHtml(dayTarget)}
     </div>
+    ${nutritionDayTypeHtml(activeDay, currentNutritionDayIndex)}
 
     <div class="pill-tabs">
       ${days.map((d, idx) => {
@@ -13408,13 +13657,9 @@ function renderNutrition(c) {
 
     <div style="display:flex;flex-direction:column;gap:14px;">
       ${(activeDay.meals || []).map((m, mIdx) => {
-        let mKcal = 0, mPro = 0, mCarb = 0, mFat = 0;
-        (m.foods || []).forEach(f => {
-          mKcal += foodMacroVal(f, 'kcal');
-          mPro += foodMacroVal(f, 'pro');
-          mCarb += foodMacroVal(f, 'carb');
-          mFat += foodMacroVal(f, 'fat');
-        });
+        const mSums = nutritionSums(m.foods);
+        const mKcal = mSums.kcal, mPro = mSums.pro, mCarb = mSums.carb, mFat = mSums.fat;
+        const mStar = mSums.partial ? '*' : '';
         return `
           <div class="card" style="padding:14px;margin-bottom:0;border:1px solid var(--border);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid #1c1c1c;padding-bottom:8px;">
@@ -13422,8 +13667,8 @@ function renderNutrition(c) {
                 <span style="font-size:14px;font-weight:900;color:#fff;">${safeDisplayValue(m.name, 'Pasto')}</span>
                 ${m.time ? `<span style="font-size:11px;color:#888;margin-left:6px;">• ${m.time}</span>` : ''}
               </div>
-              <div style="display:flex;gap:4px;align-items:center;">
-                <span class="macro-badge macro-kcal">${Math.round(mKcal)} kcal</span>
+              <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+                <span class="macro-badge macro-kcal" ${mStar ? 'title="Somma parziale: un alimento non ha valori"' : ''}>${Math.round(mKcal)}${mStar} kcal</span>
                 <span class="macro-badge macro-pro">${Math.round(mPro)}P</span>
                 <span class="macro-badge macro-carb">${Math.round(mCarb)}C</span>
                 <span class="macro-badge macro-fat">${Math.round(mFat)}F</span>
@@ -13439,7 +13684,7 @@ function renderNutrition(c) {
                   </div>
                   <div style="display:flex;align-items:center;gap:8px;">
                     <div style="font-size:10px;color:#aaa;text-align:right;">
-                      <div>${Math.round(foodMacroVal(f, 'kcal'))} kcal</div>
+                      <div ${nutritionFoodKcalText(f) === '—' ? 'title="Senza valori: la somma del pasto è parziale"' : ''}>${nutritionFoodKcalText(f)} kcal</div>
                     </div>
                     <button class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:var(--gold);border-color:#333;" onclick="editFoodItem(${currentNutritionDayIndex}, ${mIdx}, ${fIdx})">✎</button>
                     <button class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:var(--accent-red);border-color:#333;" onclick="deleteFoodItem(${currentNutritionDayIndex}, ${mIdx}, ${fIdx})">✕</button>
@@ -13458,6 +13703,7 @@ function renderNutrition(c) {
     </div>
 
     <button class="btn btn-outline" style="width:100%;margin-top:14px;font-size:11px;padding:10px;" onclick="addNutritionMeal(${currentNutritionDayIndex})">${t('addMeal')}</button>
+    ${nutritionSummaryHtml(dayTotals, cmpTarget, cmpLabel)}
     <div style="font-size:9px;color:#666;line-height:1.4;margin:12px 0 8px;padding:8px;border:1px solid #222;border-radius:6px;">${(typeof NUTRITION_DISCLAIMER !== 'undefined') ? NUTRITION_DISCLAIMER : 'Informazioni nutrizionali a scopo informativo, non consulenza medica.'}</div>
   `;
 
@@ -14935,7 +15181,7 @@ async function openGenerateNutritionPlanWizard() {
   const existing = document.getElementById('gen-nutrition-plan-modal');
   if (existing) existing.remove();
   await ensureAllergenIntoleranceCatalog();
-  const base = computeNutritionTargetsFromProfile({});
+  const base = nutritionGeneratorBase();
   const profileRestr = (function () {
     if (store && store.coachViewingClient) {
       const cp = store.__cpClientViewProfile || (store.coachWorkspace && store.coachWorkspace.clientProfile) || {};
@@ -15292,41 +15538,101 @@ function openEditNutritionTargetsModal() {
   if (existing) existing.remove();
   if (!DATA) window.DATA = {};
   if (!DATA.nutrition) DATA.nutrition = { plan_name: '', present: false, days: [] };
-  const n = DATA.nutrition;
+  const coach = typeof isCoachClientSandbox === 'function' && isCoachClientSandbox();
+  const pres = nutritionPrescribed();
+  const N = nutritionTargetsLib();
+  const inStyle = 'width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;box-sizing:border-box;';
+  const field = function (id, label, value, extra) {
+    return '<label style="font-size:10px;color:#ccc;min-width:0;">' + label + '<input id="' + id + '" type="number" inputmode="numeric" value="' + (value == null ? '' : esc(String(value))) + '"' + (extra || '') + ' style="' + inStyle + '"></label>';
+  };
+  const baseFields = function (v, fatPlaceholder) {
+    return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">' +
+      field('edit-nutr-target-kcal', 'Kcal', v.kcal, ' oninput="onEditNutritionKcalInput()"') +
+      field('edit-nutr-target-pro', 'Proteine (g)', v.pro, ' oninput="onEditNutritionMacroInput(\'p\')"') +
+      field('edit-nutr-target-carb', 'Carbo (g)', v.carb, ' oninput="onEditNutritionMacroInput(\'c\')"') +
+      field('edit-nutr-target-fat', 'Grassi (g)', v.fat, ' oninput="onEditNutritionMacroInput(\'f\')"' + (fatPlaceholder ? ' placeholder="a saldo"' : '')) +
+      '</div>';
+  };
+  const variantFields = function (prefix, title, v) {
+    v = v || {};
+    return '<div style="font-size:10px;color:var(--gold);font-weight:800;margin:6px 0 4px;">' + title + '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:8px;">' +
+      field(prefix + '-kcal', 'Kcal', v.kcal) + field(prefix + '-pro', 'P (g)', v.pro) + field(prefix + '-carb', 'C (g)', v.carb) + field(prefix + '-fat', 'G (g)', v.fat, ' placeholder="saldo"') +
+      '</div>';
+  };
   const overlay = document.createElement('div');
   overlay.id = 'edit-nutr-targets-modal';
   overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10120;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
   overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
+  let body = '';
+  if (coach) {
+    // The coach or nutritionist prescribes: from then on the athlete sees only this.
+    const p = pres || {};
+    const prop = nutritionProposed();
+    const hasVariants = !!(p.training || p.rest);
+    body =
+      '<div style="font-size:10px;color:var(--gold);font-weight:800;">PRESCRIZIONE</div>' +
+      '<div style="font-size:11px;color:#888;margin:4px 0 10px;line-height:1.4;">L\'atleta vedrà solo questo target, con il tuo nome. I grassi si possono lasciare a saldo: sono le kcal che restano dopo proteine e carboidrati.</div>' +
+      baseFields(pres ? { kcal: p.kcal, pro: p.pro, carb: p.carb, fat: p.fat } : { kcal: '', pro: '', carb: '', fat: '' }, true) +
+      '<label style="display:flex;gap:6px;align-items:center;font-size:11px;color:#ccc;margin-bottom:6px;"><input id="edit-nutr-variants" type="checkbox"' + (hasVariants ? ' checked' : '') + ' onchange="document.getElementById(\'edit-nutr-variant-box\').style.display=this.checked?\'block\':\'none\'"> Target diverso per giorni di allenamento e di riposo</label>' +
+      '<div id="edit-nutr-variant-box" style="display:' + (hasVariants ? 'block' : 'none') + ';">' +
+      variantFields('edit-nutr-training', 'Giorni di allenamento', p.training) +
+      variantFields('edit-nutr-rest', 'Giorni di riposo', p.rest) +
+      '</div>' +
+      '<label style="font-size:10px;color:#ccc;display:block;margin-bottom:10px;">Nota per l\'atleta<textarea id="edit-nutr-note" rows="2" style="' + inStyle + 'resize:vertical;">' + esc(p.note || '') + '</textarea></label>' +
+      (prop && prop.target ? '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;font-size:11px;" onclick="recalcEditNutritionTargetsFromProfile()">PARTI DALLA STIMA DEL PROFILO (' + prop.target.kcal + ' kcal)</button>' : '') +
+      '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="saveEditNutritionTargets()">SALVA PRESCRIZIONE</button>' +
+      (pres ? '<button type="button" class="btn btn-outline" style="width:100%;color:#c66;border-color:#c66;" onclick="clearEditNutritionTargets()">RIMUOVI PRESCRIZIONE</button>' : '');
+  } else if (pres) {
+    // The athlete with a prescription: only the prescription, and who wrote it.
+    const t = currentNutritionTarget(null);
+    body =
+      '<div style="font-size:10px;color:var(--gold);font-weight:800;">IL TUO TARGET</div>' +
+      '<div style="font-size:22px;font-weight:900;color:#fff;margin:8px 0 2px;">' + nutritionNumber(t.kcal) + ' kcal</div>' +
+      '<div style="font-size:12px;color:#ccc;">P ' + nutritionNumber(t.pro) + ' g · C ' + nutritionNumber(t.carb) + ' g · G ' + nutritionNumber(t.fat) + ' g' + (t.fatBalanced ? ' (a saldo)' : '') + '</div>' +
+      nutritionTargetSourceHtml(t) +
+      (pres.training || pres.rest ? '<div style="font-size:10px;color:#888;margin-top:8px;">Nei giorni di allenamento e di riposo valgono i target indicati da ' + esc(pres.by || 'il coach') + '.</div>' : '') +
+      '<div style="font-size:10px;color:#888;margin-top:10px;">Per cambiarlo, parlane con ' + esc(pres.by || 'il tuo coach') + '.</div>';
+  } else {
+    // No prescription: the athlete accepts the proposal or writes their own.
+    const prop = nutritionProposed();
+    const own = nutritionOwnTarget();
+    const start = own || (prop && prop.target) || nutritionPlanTarget() || {};
+    const inputs = nutritionProfileInputs();
+    body =
+      '<div style="font-size:10px;color:var(--gold);font-weight:800;">TARGET KCAL/MACRO</div>' +
+      (prop && prop.target
+        ? '<div style="border:1px solid #333;border-radius:8px;padding:10px;margin:8px 0 10px;">' +
+          '<div style="font-size:10px;color:#aaa;">Proposto dall\'app</div>' +
+          '<div style="font-size:16px;font-weight:900;color:#fff;margin-top:2px;">' + nutritionNumber(prop.target.kcal) + ' kcal · P ' + prop.target.pro + ' · C ' + prop.target.carb + ' · G ' + prop.target.fat + '</div>' +
+          '<div style="font-size:9px;color:#777;margin-top:4px;line-height:1.4;">Mifflin-St Jeor ' + nutritionNumber(prop.bmr) + ' kcal × attività ' + String(prop.factor).replace('.', ',') + (prop.share ? ' × obiettivo ' + (prop.share > 0 ? '+' : '') + Math.round(prop.share * 100) + '%' : '') +
+          ' · peso ' + esc(String(inputs.weight)) + ' kg' + (inputs.weightFrom === 'check' ? ' (ultimo check fisico)' : ' (profilo)') + ' · fibra di riferimento ' + prop.target.fiber + ' g</div>' +
+          '<div style="font-size:9px;color:#777;margin-top:4px;line-height:1.4;">' + esc(N ? N.DISCLAIMER : '') + '</div>' +
+          '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="acceptProposedNutritionTarget()">' + (own ? 'TORNA AL PROPOSTO' : 'USA IL PROPOSTO') + '</button>' +
+          '</div>'
+        : '<div style="font-size:10px;color:#888;margin:8px 0 10px;line-height:1.4;">Per una proposta servono ' + esc((prop && prop.missing || []).join(', ')) + ' nel <a href="#" onclick="document.getElementById(\'edit-nutr-targets-modal\').remove();navigate(\'profile\');return false;" style="color:var(--gold);">profilo</a>.</div>') +
+      '<div style="font-size:10px;color:#ccc;margin-bottom:6px;">Oppure scrivi il tuo</div>' +
+      baseFields({ kcal: start.kcal, pro: start.pro, carb: start.carb, fat: start.fat }, false) +
+      '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="saveEditNutritionTargets()">SALVA COME MIO</button>' +
+      (own ? '<button type="button" class="btn btn-outline" style="width:100%;color:#c66;border-color:#c66;" onclick="clearEditNutritionTargets()">RIMUOVI IL MIO TARGET</button>' : '');
+  }
   overlay.innerHTML =
-    '<div class="card" style="max-width:400px;width:100%;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
-    '<div style="font-size:10px;color:var(--gold);font-weight:800;">TARGET KCAL/MACRO</div>' +
-    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'edit-nutr-targets-modal\').remove()">CHIUDI</button></div>' +
-    '<div style="font-size:11px;color:#888;margin-bottom:10px;line-height:1.4;">Il numero dopo lo slash nei totali giornalieri: da qui lo cambi, lo ricalcoli dal profilo, o lo rimuovi del tutto se non ti serve. Cambiando le kcal, i macro si aggiornano mantenendo le proporzioni; cambiando un macro, gli altri due si adattano per restare dentro le kcal impostate.</div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">' +
-    '<label style="font-size:10px;color:#ccc;">Kcal<input id="edit-nutr-target-kcal" type="number" value="' + (n.daily_calories_target || '') + '" oninput="onEditNutritionKcalInput()" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
-    '<label style="font-size:10px;color:#ccc;">Proteine (g)<input id="edit-nutr-target-pro" type="number" value="' + (n.daily_protein_target || '') + '" oninput="onEditNutritionMacroInput(\'p\')" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
-    '<label style="font-size:10px;color:#ccc;">Carbo (g)<input id="edit-nutr-target-carb" type="number" value="' + (n.daily_carbs_target || '') + '" oninput="onEditNutritionMacroInput(\'c\')" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
-    '<label style="font-size:10px;color:#ccc;">Grassi (g)<input id="edit-nutr-target-fat" type="number" value="' + (n.daily_fats_target || '') + '" oninput="onEditNutritionMacroInput(\'f\')" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;"></label>' +
-    '</div>' +
-    '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;font-size:11px;" onclick="recalcEditNutritionTargetsFromProfile()">RICALCOLA DAL PROFILO</button>' +
-    '<div style="font-size:9px;color:#666;margin-bottom:10px;line-height:1.5;">Come si calcola dal profilo: BMR (Mifflin-St Jeor da peso/altezza/età/sesso) × 1.55 (attività moderata) = mantenimento; -15% se obiettivo dimagrimento, +10% se massa. Proteine: 2.0 g/kg (massa/forza) o 1.8 g/kg (altri obiettivi). Grassi: 0.8 g/kg. Carbo: il resto delle kcal.</div>' +
-    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="saveEditNutritionTargets()">SALVA TARGET</button>' +
-    '<button type="button" class="btn btn-outline" style="width:100%;color:#c66;border-color:#c66;" onclick="clearEditNutritionTargets()">RIMUOVI TARGET</button>' +
+    '<div class="card" style="max-width:420px;width:100%;max-height:92vh;overflow-y:auto;border:1px solid var(--gold);padding:14px;box-sizing:border-box;">' +
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:4px;"><button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'edit-nutr-targets-modal\').remove()">CHIUDI</button></div>' +
+    body +
     '</div>';
   document.body.appendChild(overlay);
 }
 
 function recalcEditNutritionTargetsFromProfile() {
-  const t = computeNutritionTargetsFromProfile({});
-  const kcalEl = document.getElementById('edit-nutr-target-kcal');
-  const proEl = document.getElementById('edit-nutr-target-pro');
-  const carbEl = document.getElementById('edit-nutr-target-carb');
-  const fatEl = document.getElementById('edit-nutr-target-fat');
-  if (kcalEl) kcalEl.value = t.tdee;
-  if (proEl) proEl.value = t.protein;
-  if (carbEl) carbEl.value = t.carbs;
-  if (fatEl) fatEl.value = t.fat;
+  const prop = nutritionProposed();
+  if (!prop || !prop.target) return;
+  const t = prop.target;
+  const set = function (id, v) { const el = document.getElementById(id); if (el) el.value = v; };
+  set('edit-nutr-target-kcal', t.kcal);
+  set('edit-nutr-target-pro', t.pro);
+  set('edit-nutr-target-carb', t.carb);
+  set('edit-nutr-target-fat', t.fat);
 }
 
 // Editing kcal rescales the 3 macros keeping their current calorie split, so
@@ -15407,21 +15713,73 @@ function applyNutritionTargets(kcal, pro, carb, fat) {
   }
 }
 
+function readTargetFields(prefix) {
+  const v = function (id) {
+    const el = document.getElementById(prefix + '-' + id);
+    if (!el || el.value === '') return null;
+    const n = parseInt(el.value, 10);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
+  return { kcal: v('kcal'), pro: v('pro'), carb: v('carb'), fat: v('fat') };
+}
+
 function saveEditNutritionTargets() {
-  const kcalEl = document.getElementById('edit-nutr-target-kcal');
-  const proEl = document.getElementById('edit-nutr-target-pro');
-  const carbEl = document.getElementById('edit-nutr-target-carb');
-  const fatEl = document.getElementById('edit-nutr-target-fat');
-  const kcal = kcalEl && kcalEl.value !== '' ? parseInt(kcalEl.value, 10) || 0 : null;
-  const pro = proEl && proEl.value !== '' ? parseInt(proEl.value, 10) || 0 : null;
-  const carb = carbEl && carbEl.value !== '' ? parseInt(carbEl.value, 10) || 0 : null;
-  const fat = fatEl && fatEl.value !== '' ? parseInt(fatEl.value, 10) || 0 : null;
-  applyNutritionTargets(kcal, pro, carb, fat);
+  const base = readTargetFields('edit-nutr-target');
+  if (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox()) {
+    if (!(base.kcal > 0)) { showToast('Scrivi almeno le kcal', 'error'); return; }
+    const variants = document.getElementById('edit-nutr-variants');
+    const withVariants = !!(variants && variants.checked);
+    const training = withVariants ? readTargetFields('edit-nutr-training') : null;
+    const rest = withVariants ? readTargetFields('edit-nutr-rest') : null;
+    const noteEl = document.getElementById('edit-nutr-note');
+    DATA.nutrition.prescribed_target = {
+      kcal: base.kcal, pro: base.pro, carb: base.carb, fat: base.fat,
+      training: training && training.kcal > 0 ? training : null,
+      rest: rest && rest.kcal > 0 ? rest : null,
+      note: noteEl ? noteEl.value.trim() : '',
+      by: nutritionPrescriberName(),
+      at: new Date().toISOString()
+    };
+    // The plan's own fields follow the prescription: the PDF, the Coach AI and
+    // the older screens read those.
+    const full = nutritionTargetsLib() ? nutritionTargetsLib().completeTarget(base) : base;
+    applyNutritionTargets(base.kcal, base.pro, base.carb, full && full.fat != null ? full.fat : base.fat);
+    return;
+  }
+  // The athlete: their own target, in their profile.
+  if (!(base.kcal > 0)) { showToast('Scrivi almeno le kcal', 'error'); return; }
+  store.profile = Object.assign({}, store.profile || {}, { nutritionTarget: base, nutritionTargetMode: 'own', nutritionTargetAt: new Date().toISOString() });
+  persist();
+  const modal = document.getElementById('edit-nutr-targets-modal');
+  if (modal) modal.remove();
+  render();
+  showToast('Target salvato: impostato da te', 'ok');
 }
 
 function clearEditNutritionTargets() {
-  applyNutritionTargets(null, null, null, null);
+  if (typeof isCoachClientSandbox === 'function' && isCoachClientSandbox()) {
+    // Removing the prescription: the athlete goes back to the proposal.
+    DATA.nutrition.prescribed_target = null;
+    applyNutritionTargets(null, null, null, null);
+    return;
+  }
+  store.profile = Object.assign({}, store.profile || {}, { nutritionTarget: null, nutritionTargetMode: 'proposed' });
+  persist();
+  const modal = document.getElementById('edit-nutr-targets-modal');
+  if (modal) modal.remove();
+  render();
+  showToast('Target rimosso: torna il proposto', 'info');
 }
+
+function acceptProposedNutritionTarget() {
+  store.profile = Object.assign({}, store.profile || {}, { nutritionTarget: null, nutritionTargetMode: 'proposed', nutritionTargetAt: new Date().toISOString() });
+  persist();
+  const modal = document.getElementById('edit-nutr-targets-modal');
+  if (modal) modal.remove();
+  render();
+  showToast('Usi il target proposto: si aggiorna quando cambia il peso', 'ok');
+}
+window.acceptProposedNutritionTarget = acceptProposedNutritionTarget;
 window.openEditNutritionTargetsModal = openEditNutritionTargetsModal;
 window.recalcEditNutritionTargetsFromProfile = recalcEditNutritionTargetsFromProfile;
 window.onEditNutritionKcalInput = onEditNutritionKcalInput;
@@ -17303,6 +17661,27 @@ function changeAppLanguage(lang) {
   if (typeof showToast === 'function') showToast(t('language') + ': ' + (I18nService.LANG_META[lang] ? I18nService.LANG_META[lang].name : lang), "ok");
 }
 
+// Alimentazione: livello di attivita' e obiettivo, per il target proposto.
+function profileNutritionFieldsHtml(profile) {
+  const N = nutritionTargetsLib();
+  const sel = 'width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;';
+  const chk = latestCheckWeight();
+  const opt = function (value, label, cur) { return '<option value="' + value + '"' + (String(cur || '') === String(value) ? ' selected' : '') + '>' + esc(label) + '</option>'; };
+  return '<div style="grid-column:1/-1;margin-top:6px;font-size:11px;color:var(--gold);font-weight:800;">Alimentazione</div>' +
+    '<div style="grid-column:1/-1;"><label style="font-size:10px;color:#666;font-weight:800;">Livello di attività</label>' +
+    '<select id="profile-nutr-activity" style="' + sel + '"><option value="">—</option>' +
+    ((N && N.ACTIVITY) || []).map(function (a) { return opt(a.level, a.label + ' (' + a.hint + ')', profile.nutritionActivity); }).join('') + '</select></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">Obiettivo</label>' +
+    '<select id="profile-nutr-goal" style="' + sel + '"><option value="">—</option>' +
+    opt('loss', 'Perdita di peso', profile.nutritionGoal) + opt('maintain', 'Mantenimento', profile.nutritionGoal) + opt('gain', 'Aumento di peso', profile.nutritionGoal) + '</select></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">Ritmo</label>' +
+    '<select id="profile-nutr-pace" style="' + sel + '">' +
+    opt('slow', 'Lento', profile.nutritionPace || 'moderate') + opt('moderate', 'Moderato', profile.nutritionPace || 'moderate') + '</select></div>' +
+    '<div style="grid-column:1/-1;font-size:10px;color:#777;">' + (chk
+      ? 'Per il target si usa il peso dell\'ultimo check fisico: ' + chk.kg + ' kg.'
+      : 'Per il target si usa il peso qui sopra; con un check fisico si usa quello, più recente.') + '</div>';
+}
+
 function saveAthleteProfile() {
   const prev = store.profile || (DATA && DATA.profile) || {};
   const hasSquat = !!$('profile-squat');
@@ -17328,6 +17707,14 @@ function saveAthleteProfile() {
     equipment: $('profile-equipment')
       ? ($('profile-equipment').value || null)
       : (prev.equipment || null),
+    // Per il target proposto. Un campo assente dalla schermata non lo cancella.
+    nutritionActivity: $('profile-nutr-activity') ? (parseInt($('profile-nutr-activity').value, 10) || null) : (prev.nutritionActivity || null),
+    nutritionGoal: $('profile-nutr-goal') ? ($('profile-nutr-goal').value || null) : (prev.nutritionGoal || null),
+    nutritionPace: $('profile-nutr-pace') ? ($('profile-nutr-pace').value || null) : (prev.nutritionPace || null),
+    // Il target impostato dall'atleta vive qui e non si tocca da questo form.
+    nutritionTarget: prev.nutritionTarget || null,
+    nutritionTargetMode: prev.nutritionTargetMode || null,
+    nutritionTargetAt: prev.nutritionTargetAt || null,
     activeSplit: prev.activeSplit || null,
     currentPhase: prev.currentPhase || null,
     coachName: prev.coachName || 'Nurvan AI',
@@ -24563,6 +24950,7 @@ function renderAthleteProfile(container) {
     (typeof ONBOARDING_EQUIPMENT !== 'undefined' ? ONBOARDING_EQUIPMENT : []).map(function (e) {
       return '<option value="' + e.id + '"' + (profile.equipment === e.id ? ' selected' : '') + '>' + esc(e.label) + '</option>';
     }).join('') + '</select></div>' +
+    profileNutritionFieldsHtml(profile) +
     '</div>' +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="saveAthleteProfile()">' + t('saveProfile') + '</button>' +
     (store.clientProfile
