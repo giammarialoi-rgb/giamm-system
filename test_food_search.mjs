@@ -44,7 +44,8 @@ const names = (list) => list.map((f) => f.name);
 
 console.log('\n--- 1. il catalogo: una voce per alimento ---');
 {
-  eq(FOOD_CATALOG.length, 538, '1a. 538 voci (erano 1300: 762 erano le stesse con un\'etichetta davanti)');
+  eq(FOOD_CATALOG.length, 148, '1a. 148 voci (erano 1300: 762 con un\'etichetta davanti, 390 varianti di cottura)');
+  eq(FOOD_CATALOG.filter((f) => /lessat|grigliat|al forno|al vapore|in padella/i.test(f.name)).length, 0, '1a2. nessun alimento «lessato», «grigliato», «al forno», «al vapore», «in padella»');
   const LABELS = ['Bio', 'Convenience', 'Generico', 'Premium', 'Sport', 'Supermarket'];
   eq(FOOD_CATALOG.filter((f) => f.brand || LABELS.some((l) => f.name.startsWith(l + ' '))).length, 0, '1b. nessuna etichetta finta, nessun brand negli alimenti base');
   eq(FOOD_CATALOG.filter((f) => /(^|\s)(d|l|all|dell|dall|nell|sull|un|quest)\s+[aeiouh]/i.test(f.name)).length, 0, '1c. nessun apostrofo mancante');
@@ -59,6 +60,9 @@ console.log('\n--- 1. il catalogo: una voce per alimento ---');
   let refused = '';
   try { buildFoodCatalog([{ id: 'x', name: 'Bio Riso', category: 'Carboidrati', kcal: 1, pro: 1, carb: 1, fat: 1, rank: 0 }, { id: 'y', name: 'Petto d anatra', category: 'Proteine', kcal: 1, pro: 1, carb: 1, fat: 1, rank: 0 }]); } catch (e) { refused = e.message; }
   ok('1i. lo script rifiuta un\'etichetta finta o un apostrofo mancante nella fonte', /etichetta finta/.test(refused) && /apostrofo mancante/.test(refused));
+  let refusedCooking = '';
+  try { buildFoodCatalog([{ id: 'food_Carboidrati_0_v2', name: 'Riso basmati lessato', category: 'Carboidrati', kcal: 1, pro: 1, carb: 1, fat: 1, rank: 0 }]); } catch (e) { refusedCooking = e.message; }
+  ok('1j. e una variante di cottura, se ricompare', /variante di cottura/.test(refusedCooking));
 }
 
 console.log('\n--- 2. normalizzazione ---');
@@ -90,18 +94,20 @@ console.log('\n--- 3. il punteggio ---');
 console.log('\n--- 4. ordinamento e limite sul catalogo vero ---');
 {
   const pet = names(S.rank(FOOD_CATALOG, 'pet'));
-  eq(pet[0], 'Petto di pollo', '4a. «pet» → primo Petto di pollo');
-  ok('4b. poi petto d\'anatra e di tacchino, fra i primi tre', pet.slice(0, 3).includes("Petto d'anatra") && pet.slice(0, 3).includes('Petto di tacchino'));
+  eq(pet.slice(0, 3), ['Petto di pollo', 'Petto di tacchino', "Petto d'anatra"], '4a. «pet» → pollo, tacchino, anatra');
+  ok('4b. poi solo altri petti', pet.slice(3).every((n) => /^Petto/.test(n)));
   eq(pet.filter((n) => /^(Bio|Convenience|Generico|Premium|Sport|Supermarket) /.test(n)).length, 0, '4c. niente doppioni con etichette');
-  eq(pet.length, 8, '4d. al massimo 8');
-  const risAll = names(S.rank(FOOD_CATALOG, 'ris', { limit: 100 }));
-  ok('4e. «ris» → i risi prima del latte e delle gallette di riso',
-    risAll.indexOf('Riso') === 0 && risAll.indexOf('Riso basmati') < risAll.indexOf('Latte di riso') && risAll.indexOf('Riso integrale') < risAll.indexOf('Gallette di riso'));
+  eq(S.rank(FOOD_CATALOG, 'lat').length, 8, '4d. al massimo 8 anche quando ce ne sono di piu\'');
+  const ris = names(S.rank(FOOD_CATALOG, 'ris'));
+  ok('4e. «ris» → Riso, basmati, integrale, jasmine, Latte di riso, Gallette di riso, tutti negli 8',
+    ['Riso', 'Riso basmati', 'Riso integrale', 'Riso jasmine', 'Latte di riso', 'Gallette di riso'].every((n) => ris.includes(n)));
+  ok('4e2. e i risi prima del latte e delle gallette', ['Riso', 'Riso basmati', 'Riso integrale', 'Riso jasmine'].every((n) => ris.indexOf(n) < ris.indexOf('Latte di riso') && ris.indexOf(n) < ris.indexOf('Gallette di riso')));
   const oli = names(S.rank(FOOD_CATALOG, 'oli'));
   ok('4f. «oli» → Olio EVO, Olio di cocco, Olive fra i primi quattro, nessuna pasta',
     ['Olio EVO', 'Olio di cocco', 'Olive nere'].every((n) => oli.slice(0, 4).includes(n)) && !oli.some((n) => /pasta/i.test(n)));
   const tie = S.rank([{ name: 'Petto d\'anatra', rank: 21 }, { name: 'Petto di pollo', rank: 0 }, { name: 'Petto di tacchino', rank: 1 }, { name: 'Pett', rank: 50 }], 'pet');
-  eq(names(tie), ['Pett', 'Petto di pollo', "Petto d'anatra", 'Petto di tacchino'], '4g. a parita\' di punteggio il nome piu\' corto, poi l\'ordine del curatore');
+  eq(names(tie), ['Petto di pollo', 'Petto di tacchino', "Petto d'anatra", 'Pett'], '4g. a parita\' di punteggio l\'ordine del curatore');
+  eq(names(S.rank([{ name: 'Riso basmati', rank: 3 }, { name: 'Riso', rank: 3 }], 'ris')), ['Riso', 'Riso basmati'], '4g2. poi il nome piu\' corto');
   eq(S.rank(FOOD_CATALOG, '').length + S.rank(FOOD_CATALOG, '   ').length, 0, '4h. testo vuoto: niente');
 }
 
@@ -162,7 +168,7 @@ console.log('\n--- 6. la rete: una sezione a parte ---');
   eq(S.REMOTE_TIMEOUT_MS, 2000, '6g. il tempo di attesa e\' 2 s');
   const failing = service(() => Promise.reject(new Error('offline')), true);
   eq(await failing.searchRemote('nutella'), [], '6h. rete spenta: lista vuota, nessuna eccezione');
-  eq(svc.search('pet').length, 8, '6i. la ricerca locale non passa dalla rete e tiene il suo limite');
+  eq(svc.search('lat').length, 8, '6i. la ricerca locale non passa dalla rete e tiene il suo limite');
   const urls = [];
   const viaServer = service((url, opts) => { urls.push({ url, auth: !!(opts && opts.headers && opts.headers.Authorization) }); return Promise.resolve({ ok: true, json: () => Promise.resolve({ items: [{ name: 'Nutella', brand: 'Ferrero', kcalPer100: 539 }] }) }); }, true);
   const got = await viaServer.searchRemote('nutella');
@@ -222,6 +228,22 @@ console.log('\n--- 7. la pagina: tre liste, nell\'ordine giusto ---');
   ok('7i. il modulo e\' caricato dalla pagina, in cache e nell\'app', /<script src="food-search\.js"><\/script>/.test(SRC) &&
     fs.readFileSync(path.join(root, 'web/sw.js'), 'utf8').includes("'./food-search.js'") &&
     fs.readFileSync(path.join(root, 'sync_web_assets.mjs'), 'utf8').includes("'food-search.js'"));
+}
+
+console.log('\n--- 8. il server risponde subito anche se una fonte e\' lenta ---');
+{
+  const { searchFoodMulti } = await import('./server/food/index.mjs');
+  const realFetch = globalThis.fetch;
+  let started = 0;
+  globalThis.fetch = () => { started++; return new Promise(() => {}); };
+  const t0 = Date.now();
+  const res = await searchFoodMulti('nutella', { FOOD_SOURCE_DEADLINE_MS: '120', FATSECRET_CLIENT_ID: 'x', FATSECRET_CLIENT_SECRET: 'y' }, { lang: 'it' });
+  const ms = Date.now() - t0;
+  globalThis.fetch = realFetch;
+  ok('8a. le fonti sono partite', started >= 1);
+  ok('8b. e la risposta arriva al tempo limite, non quando le fonti si svegliano (' + ms + ' ms)', ms < 600);
+  ok('8c. senza errori: una lista, magari vuota', Array.isArray(res.items));
+  ok('8d. il tempo limite predefinito per fonte e\' 800 ms', /const FOOD_SOURCE_DEADLINE_MS = 800;/.test(fs.readFileSync(path.join(root, 'server/food/index.mjs'), 'utf8')));
 }
 
 console.log('\n' + (failed ? failed + ' controlli falliti' : 'tutti i controlli passano'));

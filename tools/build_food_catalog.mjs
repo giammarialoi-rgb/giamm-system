@@ -2,14 +2,15 @@
 //
 // food-staples.json e' la fonte: un alimento per voce, nome italiano e
 // inglese, categoria, macro per 100 g e `rank`, l'ordine del curatore dentro
-// la categoria (0 = il piu' comune), che la ricerca usa come ultimo criterio
-// a parita' di punteggio e lunghezza. food-catalog.mjs e' l'uscita: non si
-// modifica a mano, si rigenera.
+// la categoria (0 = il piu' comune), che la ricerca usa come primo criterio
+// a parita' di punteggio, prima della lunghezza del nome. food-catalog.mjs e'
+// l'uscita: non si modifica a mano, si rigenera.
 //
 // Qui si controlla anche che i dati siano puliti: nessuna etichetta finta
 // davanti al nome (Bio, Convenience, Generico, Premium, Sport, Supermarket:
 // ripetevano lo stesso alimento con gli stessi valori), nessun apostrofo
-// mancante ("Petto d anatra"), nessun doppione, macro numeriche. Il campo
+// mancante ("Petto d anatra"), nessuna variante di cottura generata,
+// nessun doppione, macro numeriche. Il campo
 // `brand` resta nello schema per i prodotti veri (Open Food Facts), che
 // arrivano dalla rete e non passano di qui.
 //
@@ -25,6 +26,9 @@ const OUTPUT = path.join(root, 'food-catalog.mjs');
 
 const FAKE_LABELS = ['Bio', 'Convenience', 'Generico', 'Premium', 'Sport', 'Supermarket'];
 const MISSING_APOSTROPHE = /(^|\s)(d|l|all|dell|dall|nell|sull|un|quest)\s+[aeiouh]/i;
+// Le "varianti di cottura" generate (riso basmati grigliato, mela lessato)
+// avevano macro inventate e riempivano i risultati: non tornano.
+const COOKING_VARIANT = / (al forno|al vapore|grigliat[oa]|in padella|lessat[oa])$/i;
 
 export function buildFoodCatalog(staples) {
   const errors = [];
@@ -41,6 +45,7 @@ export function buildFoodCatalog(staples) {
     if (FAKE_LABELS.some((l) => f.name.startsWith(l + ' '))) errors.push(where + ': etichetta finta davanti al nome');
     if (f.brand) errors.push(where + ': brand in un alimento base');
     if (MISSING_APOSTROPHE.test(f.name)) errors.push(where + ': apostrofo mancante');
+    if (COOKING_VARIANT.test(f.name) || /_v\d+$/.test(f.id)) errors.push(where + ': variante di cottura');
     ['kcal', 'pro', 'carb', 'fat', 'rank'].forEach((k) => {
       if (typeof f[k] !== 'number' || !Number.isFinite(f[k])) errors.push(where + ': ' + k + ' non numerico');
     });

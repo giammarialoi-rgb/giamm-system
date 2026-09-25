@@ -300,6 +300,19 @@ export function nameMatchScore(name, foldedQuery) {
 // the seam for adding more languages later without restructuring anything.
 const LANG_TO_FATSECRET_REGION = { it: ['IT', 'it'], en: ['US', 'en'], es: ['ES', 'es'], fr: ['FR', 'fr'], de: ['DE', 'de'] };
 
+// Each network source gets this long, then the search answers with what it
+// has. A source that answers late is dropped from this response, not waited
+// for: the person typing wants suggestions now, and the next keystroke asks
+// again anyway.
+const FOOD_SOURCE_DEADLINE_MS = 800;
+function withDeadline(promise, ms, label) {
+  let timer = null;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(label + ' over ' + ms + 'ms')), ms);
+  });
+  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
+}
+
 export async function searchFoodMulti(query, env = process.env, { lang = 'it' } = {}) {
   const q = fold(query);
   if (!q || q.length < 2) return { items: [], source: 'empty' };
@@ -311,13 +324,14 @@ export async function searchFoodMulti(query, env = process.env, { lang = 'it' } 
   // best-effort: one failing (or not being configured) never blocks the rest.
   const chainHits = searchChainCatalog(query);
   const usdaKey = env.USDA_FDC_API_KEY || env.FDC_API_KEY || '';
+  const deadlineMs = Number(env.FOOD_SOURCE_DEADLINE_MS) > 0 ? Number(env.FOOD_SOURCE_DEADLINE_MS) : FOOD_SOURCE_DEADLINE_MS;
   const [usdaResult, offResult, fatSecretResult] = await Promise.allSettled([
-    usdaKey ? searchUsda(query, { apiKey: usdaKey, pageSize: 6 }) : Promise.resolve([]),
-    searchOpenFoodFacts(query, { pageSize: 6 }),
-    (function () {
+    usdaKey ? withDeadline(searchUsda(query, { apiKey: usdaKey, pageSize: 6 }), deadlineMs, 'USDA') : Promise.resolve([]),
+    withDeadline(searchOpenFoodFacts(query, { pageSize: 6 }), deadlineMs, 'OFF'),
+    withDeadline((function () {
       const [region, language] = LANG_TO_FATSECRET_REGION[lang] || LANG_TO_FATSECRET_REGION.it;
       return searchFatSecret(query, { pageSize: 6, region, language }, env);
-    })()
+    })(), deadlineMs, 'FatSecret')
   ]);
 
   const items = [...chainHits];
@@ -2063,7 +2077,15 @@ async function saveCachedFoodTranslations(pool, entries, lang) {
   }
 }
 
-export async function localizeFoodSearchResults(items, lang, { pool, translateFoodNames } = {}) {
+// Names being translated right now, so a person typing "nut", "nute",
+// "nutel", "nutella" does not start four AI calls for the same products.
+const FOOD_TRANSLATIONS_IN_FLIGHT = new Set();
+
+// Cached names are applied right away. The rest: with `background`, the
+// response goes out with the original names and the translation runs after,
+// landing in the cache for the next search; without it (tests, callers that
+// can wait), the translation is awaited, bounded at 5 s, as before.
+export async function localizeFoodSearchResults(items, lang, { pool, translateFoodNames, background = false } = {}) {
   const candidates = items.filter((it) => LOCALIZABLE_SOURCES.has(it.provenance && it.provenance.source));
   if (!candidates.length) return;
   const keys = candidates.map((it) => foodTranslationKey(it.name, it.brand));
@@ -2080,6 +2102,21 @@ export async function localizeFoodSearchResults(items, lang, { pool, translateFo
   });
   if (!uncached.length || typeof translateFoodNames !== 'function') return;
   const langLabel = FOOD_LANG_LABELS[lang] || lang;
+  if (background) {
+    const pending = uncached.filter((i) => !FOOD_TRANSLATIONS_IN_FLIGHT.has(lang + '|' + keys[i]));
+    if (!pending.length) return;
+    // Copies: the response objects go out now and must not change under it.
+    const copies = candidates.map((c) => ({ name: c.name, brand: c.brand }));
+    pending.forEach((i) => FOOD_TRANSLATIONS_IN_FLIGHT.add(lang + '|' + keys[i]));
+    translateAndCache(copies, pending, keys, lang, langLabel, { pool, translateFoodNames })
+      .catch(() => {})
+      .finally(() => pending.forEach((i) => FOOD_TRANSLATIONS_IN_FLIGHT.delete(lang + '|' + keys[i])));
+    return;
+  }
+  await translateAndCache(candidates, uncached, keys, lang, langLabel, { pool, translateFoodNames });
+}
+
+async function translateAndCache(candidates, uncached, keys, lang, langLabel, { pool, translateFoodNames } = {}) {
   const toTranslate = uncached.map((i) => ({ name: candidates[i].name, brand: candidates[i].brand }));
   try {
     // generateContentWithRetry's own retry delays (700ms, then 1800ms on top
@@ -2127,7 +2164,8 @@ export function mountFoodRoutes(app, opts = {}) {
       const lang = String(req.query.lang || 'it').trim().toLowerCase();
       const result = await searchFoodMulti(q, env, { lang });
       if (result.items && result.items.length) {
-        await localizeFoodSearchResults(result.items, lang, { pool, translateFoodNames });
+        // Cached translations now, new ones after the response (background).
+        await localizeFoodSearchResults(result.items, lang, { pool, translateFoodNames, background: true });
       }
       res.json(result);
     } catch (err) {

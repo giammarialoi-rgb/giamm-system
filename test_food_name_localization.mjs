@@ -108,7 +108,32 @@ ok(/setTimeout\(\(\) => resolve\(TIMED_OUT\), 5000\)/.test(serverSrc) && serverS
   '5a. the AI call is bounded by a timeout so a slow response never blocks the search itself');
 ok(serverSrc.includes('saveCachedFoodTranslations(pool, toSave, lang).catch(() => {})'),
   '5b. persisting the new translations is fire-and-forget, never able to fail or delay the response');
-ok(serverSrc.includes("await localizeFoodSearchResults(result.items, lang, { pool, translateFoodNames });"),
-  '5c. the /api/food/search route actually wires localization into every search');
+ok(serverSrc.includes("await localizeFoodSearchResults(result.items, lang, { pool, translateFoodNames, background: true });"),
+  '5c. the /api/food/search route wires localization into every search, with new translations in the background');
+
+// 6. The search answers now: cached names are applied, new names are
+// translated after the response and land in the cache for the next search.
+{
+  const items = [
+    { name: 'Nutella', brand: 'Ferrero', provenance: { source: 'open_food_facts' } },
+    { name: 'Hazelnut spread', brand: 'Brand', provenance: { source: 'open_food_facts' } }
+  ];
+  const pool = makeMockPool([{ original_key: 'nutella|ferrero', target_lang: 'it', translated_name: 'Nutella' }]);
+  let release = null;
+  let calls = 0;
+  const translateFoodNames = (list) => { calls++; return new Promise((r) => { release = () => r(list.map((x, i) => ({ index: i, localized_name: 'Crema di nocciole' }))); }); };
+  const t0 = Date.now();
+  await localizeFoodSearchResults(items, 'it', { pool, translateFoodNames, background: true });
+  ok(Date.now() - t0 < 200, '6a. with background: the call returns without waiting for the AI');
+  ok(items[1].name === 'Hazelnut spread' && !items[1].originalName, '6b. the uncached product goes out with its original name');
+  ok(calls === 1, '6c. and the AI is asked once, after');
+  // Typing on: the same product while its translation is still running.
+  await localizeFoodSearchResults([{ name: 'Hazelnut spread', brand: 'Brand', provenance: { source: 'open_food_facts' } }], 'it', { pool, translateFoodNames, background: true });
+  ok(calls === 1, '6d. a second search for the same product does not start a second translation');
+  release();
+  await new Promise((r) => setTimeout(r, 20));
+  ok(pool.inserted.length === 1 && pool.inserted[0].name === 'Crema di nocciole', '6e. the translation lands in the cache');
+  ok(items[1].name === 'Hazelnut spread', '6f. and the response already sent is not changed under it');
+}
 
 console.log('\nAll food name localization tests passed.');

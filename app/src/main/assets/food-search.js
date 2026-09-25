@@ -13,8 +13,9 @@
  *                                                      alimento supera 30
  *
  * piu' l'uso dell'atleta: +50 se l'ha gia' usato, +10 per ogni uso negli
- * ultimi 30 giorni (fino a +30). A parita': il nome piu' corto, poi l'ordine
- * del curatore (`rank`), poi l'alfabeto. Al massimo 8 risultati.
+ * ultimi 30 giorni (fino a +30). A parita': l'ordine del curatore (`rank`,
+ * il piu' comune prima), poi il nome piu' corto, poi l'alfabeto. Al massimo 8
+ * risultati.
  *
  * Il testo e il nome si confrontano minuscoli, senza accenti, senza apostrofi
  * ("d'anatra" = "d anatra") e con un singolare semplice per le parole di
@@ -41,8 +42,8 @@
   function fold(s) {
     return String(s == null ? '' : s)
       .toLowerCase()
-      .normalize('NFD').replace(/[̀-ͯ]/g, '')
-      .replace(/['’‘`´]/g, ' ')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/['\u2019\u2018`\u00b4]/g, ' ')
       .replace(/[^a-z0-9]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
@@ -136,7 +137,7 @@
       if (!Number.isFinite(h.rank)) h.rank = 999;
     });
     hits.sort(function (a, b) {
-      return (b.total - a.total) || (a.len - b.len) || (a.rank - b.rank) ||
+      return (b.total - a.total) || (a.rank - b.rank) || (a.len - b.len) ||
         String(a.food.name).localeCompare(String(b.food.name), 'it');
     });
     return hits.slice(0, limit).map(function (h) {
