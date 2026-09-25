@@ -394,7 +394,9 @@ export async function projectClientTimeline(pool, coachId, clientRow, accountDat
     });
   }
 
-  for (const check of (Array.isArray(accountData.bodyChecks) ? accountData.bodyChecks.slice(-40) : [])) {
+  // Only the checks the athlete sent: one saved as "non inviato al coach"
+  // stays theirs (it used to show up here with its weight all the same).
+  for (const check of sentBodyChecks(accountData).slice(-40)) {
     const sourceId = String(check.id || check.at || "");
     if (!sourceId || !check.at) continue;
     await insertTimeline(pool, {
@@ -448,8 +450,13 @@ export async function listClientTimeline(pool, coachId, clientId, options = {}) 
   };
 }
 
+export function sentBodyChecks(accountData) {
+  const checks = accountData && Array.isArray(accountData.bodyChecks) ? accountData.bodyChecks : [];
+  return checks.filter((c) => c && c.sentToCoach === true);
+}
+
 function latestWeight(accountData) {
-  const checks = Array.isArray(accountData.bodyChecks) ? accountData.bodyChecks : [];
+  const checks = sentBodyChecks(accountData);
   const weighted = checks.filter((row) => Number(row && row.weight) > 0);
   const latest = weighted.length ? weighted[weighted.length - 1] : null;
   const previous = weighted.length > 1 ? weighted[weighted.length - 2] : null;

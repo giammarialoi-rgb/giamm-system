@@ -228,7 +228,7 @@ function spaceSandbox(initial) {
     .forEach((k) => ok(new RegExp('\\n\\s*' + k + ':').test(payload), 'the cloud record carries ' + k + ', which used to stay on one device'));
   ok(/logs: Array\.isArray\(logsSrc\) \? logsSrc\.slice\(-400\)/.test(payload),
     'and a year and more of sessions instead of the last eighty');
-  ok(/bodyChecks\.slice\(-100\)|bodyChecksSrc\.slice\(-100\)/.test(payload), 'and a hundred body checks instead of sixteen');
+  ok(/bodyChecksSrc\.slice\(-BODY_CHECKS_KEEP\)/.test(payload) && /var BODY_CHECKS_KEEP = 400;/.test(base), 'and four hundred body checks instead of sixteen (years of weekly checks)');
   ok(/models\.slice\(-8\)|modelsSrc\.slice\(-8\)/.test(payload) && /delete data\.exerciseDb/.test(payload),
     'saved programs travel too, without the exercise database each import drags along');
 

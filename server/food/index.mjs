@@ -41,7 +41,10 @@ function mapUsdaFood(raw) {
     const id = n.nutrientId || n.nutrientNumber;
     const name = fold(n.nutrientName);
     const v = num(n.value || n.amount);
-    if (id === 1008 || name.includes('energy') && !name.includes('kj')) kcal = v;
+    // Energy comes twice, in kcal (1008) and in kJ (1062), both named
+    // "Energy": the unit tells them apart. A kJ value read as kcal was 4.18x.
+    const unit = fold(n.unitName || n.unit || '');
+    if (id === 1008 || (name.includes('energy') && !name.includes('kj') && unit !== 'kj' && id !== 1062)) kcal = v;
     else if (id === 1003 || name === 'protein') pro = v;
     else if (id === 1005 || name.includes('carbohydrate')) carb = v;
     else if (id === 1004 || name.includes('total lipid') || name === 'fat') fat = v;

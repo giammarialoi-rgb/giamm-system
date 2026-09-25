@@ -36222,9 +36222,13 @@ ensureStoreIntegrity();
 // area is active, so all ~2800 existing `store.x` call sites keep working
 // untouched while the personal area's copy is simply never written to during a
 // client session.
+// How many body checks (weight, period, notes; photos apart) are kept, on the
+// device and in the cloud: years of weekly checks.
+var BODY_CHECKS_KEEP = 400;
+
 var NURVAN_DOMAIN_FIELDS = [
   'activeProgram', 'activeProgramId', 'nutrition', 'supplementation', 'therapy', 'exams',
-  'data', 'customSets', 'subs', 'skips', 'logs', 'intelTargets', 'bodyChecks',
+  'data', 'customSets', 'subs', 'skips', 'logs', 'intelTargets', 'bodyChecks', 'bodyChecksDeleted',
   'nutritionDaily', 'profile', 'bw', 'exMuscle', 'loadTypes', 'tempos', 'bonus',
   'warmups', 'warmupProgress', 'warmupAssignment'
 ];
@@ -38308,13 +38312,17 @@ function accountPayload(opts){
         messages: Array.isArray(a.messages) ? a.messages.slice(-12) : []
       };
     }) : [],
-    bodyChecks: Array.isArray(bodyChecksSrc) ? bodyChecksSrc.slice(-100).map(function (c) {
+    bodyChecks: Array.isArray(bodyChecksSrc) ? bodyChecksSrc.slice(-BODY_CHECKS_KEEP).map(function (c) {
       return {
         id: c && c.id, at: c && c.at, weight: c && c.weight, period: c && c.period,
         notes: c && c.notes, hasFront: !!(c && c.hasFront), hasBack: !!(c && c.hasBack),
-        analysis: c && c.analysis ? String(c.analysis).slice(0, 800) : ''
+        analysis: c && c.analysis ? String(c.analysis).slice(0, 800) : '',
+        // The coach sees a check only once it has really been sent to them;
+        // one saved as "non inviato al coach" stays the athlete's own.
+        sentToCoach: !!(c && (c.checkInSyncState === 'SYNCED' || c.serverCheckInId))
       };
     }) : [],
+    bodyChecksDeleted: (!bak && store.bodyChecksDeleted && typeof store.bodyChecksDeleted === 'object') ? store.bodyChecksDeleted : {},
     coachProgramLibrary: Array.isArray(store.coachProgramLibrary) ? store.coachProgramLibrary.slice(0, 40).map(function (e) {
       return {
         id: e && e.id,
@@ -38455,6 +38463,12 @@ function applyRemoteAccountData(remote, preferLocal) {
         store.profile = seedCoachProfileFromAccount(store.profile);
       }
     }
+    // A deleted check stays deleted: the deletions travel with the data and
+    // are applied to both sides, or the other copy brought it back.
+    if (remote.bodyChecksDeleted && typeof remote.bodyChecksDeleted === 'object') {
+      store.bodyChecksDeleted = Object.assign({}, remote.bodyChecksDeleted, store.bodyChecksDeleted || {});
+    }
+    const deletedChecks = store.bodyChecksDeleted || {};
     if (Array.isArray(remote.bodyChecks) && remote.bodyChecks.length) {
       const byId = {};
       (store.bodyChecks || []).concat(remote.bodyChecks).forEach(function (row) {
@@ -38462,8 +38476,9 @@ function applyRemoteAccountData(remote, preferLocal) {
       });
       store.bodyChecks = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
         return String(a.at || '').localeCompare(String(b.at || ''));
-      }).slice(-100);
+      }).slice(-BODY_CHECKS_KEEP);
     }
+    if (Array.isArray(store.bodyChecks)) store.bodyChecks = store.bodyChecks.filter(function (c) { return !(c && c.id && deletedChecks[c.id]); });
     if (remote.health) store.health = Object.assign({}, store.health || {}, remote.health);
     if (remote.activeProgramId) store.activeProgramId = store.activeProgramId || remote.activeProgramId;
     if (remote.nutritionDaily) store.nutritionDaily = Object.assign({}, remote.nutritionDaily, store.nutritionDaily || {});
@@ -46131,7 +46146,8 @@ function foodMacroVal(f, key) {
     kcal: ['kcal', 'calories'],
     pro: ['pro', 'protein_g', 'protein'],
     carb: ['carb', 'carbs_g', 'carbs'],
-    fat: ['fat', 'fat_g']
+    // "fats": what photographed meals used to save.
+    fat: ['fat', 'fat_g', 'fats']
   };
   const keys = aliases[key] || [key];
   for (let i = 0; i < keys.length; i++) {
@@ -46158,6 +46174,12 @@ function enrichImportedFoods(nutrition) {
   nutrition.days.forEach(function (day) {
     (day.meals || []).forEach(function (meal) {
       (meal.foods || []).forEach(function (f) {
+        // A food that already has its values keeps them. This runs on every
+        // render, and it used to replace any food without protein by the
+        // closest name in a small table: a photographed "pasta al pomodoro,
+        // 450 kcal" became "pomodoro", 54 kcal; olive oil in spoons went from
+        // 265 to 18 kcal. Only a food with no calories at all is filled in.
+        if (foodMacroVal(f, 'kcal') > 0 || f.kcalPer100 != null || f.macro_source) return;
         if (engineEnrich) {
           engineEnrich(f);
           if (foodMacroVal(f, 'kcal') || foodMacroVal(f, 'pro')) return;
@@ -46332,7 +46354,8 @@ function confirmNutritionDay(ok) {
   if (!store.nutritionDaily) store.nutritionDaily = {};
   const key = nutritionTodayKey();
   if (ok) {
-    store.nutritionDaily[key] = { confirmed: true, at: new Date().toISOString(), foods: plannedFoodsFromDay(nutritionPlanForToday()) };
+    // Merged into the day's record: the steps saved for the same date live there too.
+    store.nutritionDaily[key] = Object.assign({}, store.nutritionDaily[key], { confirmed: true, at: new Date().toISOString(), foods: plannedFoodsFromDay(nutritionPlanForToday()) });
     persist();
     try {
       if (store.accountToken) {
@@ -46351,7 +46374,7 @@ function confirmNutritionDay(ok) {
   const actual = prompt('Inserisci gli alimenti effettivamente mangiati (uno per riga):', planned);
   if (actual == null) return;
   const foods = String(actual).split('\n').map(function (line) { return { name: line.trim() }; }).filter(function (f) { return f.name; });
-  store.nutritionDaily[key] = { confirmed: false, at: new Date().toISOString(), foods: foods };
+  store.nutritionDaily[key] = Object.assign({}, store.nutritionDaily[key], { confirmed: false, at: new Date().toISOString(), foods: foods });
   persist();
   try {
     if (store.accountToken) {
@@ -46942,25 +46965,37 @@ function editFoodItem(dayIdx, mealIdx, foodIdx) {
   if (!food) return;
   openAddFoodModal(dayIdx, mealIdx);
   window.__foodEditTarget = { dayIdx: dayIdx, mealIdx: mealIdx, foodIdx: foodIdx };
-  const qty = food.quantity != null ? food.quantity : (food.qty != null ? food.qty : 100);
-  const unit = food.unit || 'g';
+  const rawQty = food.quantity != null ? food.quantity : (food.qty != null ? food.qty : 100);
+  const shown = selectableFoodUnit(rawQty, food.unit || 'g');
+  const qty = shown.qty;
+  const unit = shown.unit;
+  const unitSel = $('food-unit-input');
+  // A unit the menu does not know stays as it is, instead of turning into grams.
+  if (unitSel && !Array.prototype.some.call(unitSel.options, function (o) { return o.value === unit; })) {
+    const opt = document.createElement('option');
+    opt.value = unit;
+    opt.textContent = unit;
+    unitSel.appendChild(opt);
+  }
   $('food-name-input').value = food.name || '';
   $('food-qty-input').value = qty;
   $('food-unit-input').value = unit;
-  $('food-kcal-input').value = food.kcal || 0;
-  $('food-pro-input').value = food.pro || 0;
-  $('food-carb-input').value = food.carb || 0;
-  $('food-fat-input').value = food.fat || 0;
+  // Any of the names a food may carry its values under (older photo entries
+  // saved protein/carbs/fats).
+  $('food-kcal-input').value = foodMacroVal(food, 'kcal') || 0;
+  $('food-pro-input').value = foodMacroVal(food, 'pro') || 0;
+  $('food-carb-input').value = foodMacroVal(food, 'carb') || 0;
+  $('food-fat-input').value = foodMacroVal(food, 'fat') || 0;
   $('food-note-input').value = food.notes || '';
 
   let k100 = food.kcalPer100, p100 = food.proPer100, c100 = food.carbPer100, f100 = food.fatPer100;
   if (k100 == null) {
     const grams = foodQtyToGrams(qty, unit, food.name) || 100;
     const ratio100 = grams > 0 ? 100 / grams : 1;
-    k100 = Math.round((food.kcal || 0) * ratio100);
-    p100 = Math.round((food.pro || 0) * ratio100 * 10) / 10;
-    c100 = Math.round((food.carb || 0) * ratio100 * 10) / 10;
-    f100 = Math.round((food.fat || 0) * ratio100 * 10) / 10;
+    k100 = Math.round(foodMacroVal(food, 'kcal') * ratio100);
+    p100 = Math.round(foodMacroVal(food, 'pro') * ratio100 * 10) / 10;
+    c100 = Math.round(foodMacroVal(food, 'carb') * ratio100 * 10) / 10;
+    f100 = Math.round(foodMacroVal(food, 'fat') * ratio100 * 10) / 10;
   }
   activeSelectedFoodRef = { name: food.name, kcal: k100, pro: p100, carb: c100, fat: f100, provenance: food.provenance };
 
@@ -47207,11 +47242,29 @@ function guessPortionGrams(foodName) {
 function foodQtyToGrams(qty, unit, foodName) {
   const q = Number(qty) || 0;
   const u = String(unit || 'g').toLowerCase();
+  if (u === 'kg' || u === 'l' || u === 'lt' || u === 'litri' || u === 'litro') return q * 1000;
   if (u === 'porzioni' || u === 'porzione') return q * guessPortionGrams(foodName);
-  if (u === 'pezzi' || u === 'pezzo' || u === 'fetta' || u === 'fette') return q * guessPortionGrams(foodName);
+  if (u === 'pezzi' || u === 'pezzo' || u === 'pz' || u === 'fetta' || u === 'fette') return q * guessPortionGrams(foodName);
   if (u === 'cucchiai' || u === 'cucchiaio') return q * 15;
   if (u === 'misurini' || u === 'misurino') return q * 30;
   return q; // g, ml, or unrecognized unit: treat the number as already-converted
+}
+
+// The unit menu has g, ml, pezzi, porzioni, cucchiai, misurini. A food saved
+// in another unit (an import in kg, a "2 pz") used to land on an empty menu
+// and be saved back as grams: "0.2 kg" became "0.2 g". It is translated into
+// the menu's units, with the same amount.
+function selectableFoodUnit(qty, unit) {
+  const q = Number(qty);
+  const u = String(unit || 'g').trim().toLowerCase();
+  if (u === 'kg') return { qty: Math.round(q * 1000 * 100) / 100, unit: 'g' };
+  if (u === 'l' || u === 'lt' || u === 'litri' || u === 'litro') return { qty: Math.round(q * 1000 * 100) / 100, unit: 'ml' };
+  if (u === 'gr' || u === 'grammi' || u === 'grammo') return { qty: q, unit: 'g' };
+  if (u === 'pz' || u === 'pezzo' || u === 'fetta' || u === 'fette') return { qty: q, unit: 'pezzi' };
+  if (u === 'porzione') return { qty: q, unit: 'porzioni' };
+  if (u === 'cucchiaio') return { qty: q, unit: 'cucchiai' };
+  if (u === 'misurino') return { qty: q, unit: 'misurini' };
+  return { qty: q, unit: u || 'g' };
 }
 
 function recalcFoodMacrosFromDb() {
@@ -47293,10 +47346,22 @@ function saveFoodItem() {
   // just stayed stuck at whatever kcal was typed for the original quantity.
   const grams = foodQtyToGrams(qty, unit, name) || 100;
   const ratio100 = grams > 0 ? 100 / grams : 1;
-  const kcalPer100 = activeSelectedFoodRef && activeSelectedFoodRef.kcal != null ? activeSelectedFoodRef.kcal : Math.round(kcal * ratio100);
-  const proPer100 = activeSelectedFoodRef && activeSelectedFoodRef.pro != null ? activeSelectedFoodRef.pro : Math.round(pro * ratio100 * 10) / 10;
-  const carbPer100 = activeSelectedFoodRef && activeSelectedFoodRef.carb != null ? activeSelectedFoodRef.carb : Math.round(carb * ratio100 * 10) / 10;
-  const fatPer100 = activeSelectedFoodRef && activeSelectedFoodRef.fat != null ? activeSelectedFoodRef.fat : Math.round(fat * ratio100 * 10) / 10;
+  // The per-100 g rate comes from the picked food only while the values on
+  // screen are still the ones it gives for this quantity. A kcal or macro
+  // typed over them (a correction, a label) wins: it used to be saved and
+  // then ignored, because the totals are computed from the per-100 g rate.
+  const ref = activeSelectedFoodRef;
+  const refGives = function (per100) { return (Number(per100) || 0) * grams / 100; };
+  const typedOver = !!ref && (
+    Math.abs(kcal - refGives(ref.kcal)) > 1 ||
+    Math.abs(pro - refGives(ref.pro)) > 0.2 ||
+    Math.abs(carb - refGives(ref.carb)) > 0.2 ||
+    Math.abs(fat - refGives(ref.fat)) > 0.2);
+  const fromRef = !!ref && !typedOver;
+  const kcalPer100 = fromRef && ref.kcal != null ? ref.kcal : Math.round(kcal * ratio100 * 10) / 10;
+  const proPer100 = fromRef && ref.pro != null ? ref.pro : Math.round(pro * ratio100 * 10) / 10;
+  const carbPer100 = fromRef && ref.carb != null ? ref.carb : Math.round(carb * ratio100 * 10) / 10;
+  const fatPer100 = fromRef && ref.fat != null ? ref.fat : Math.round(fat * ratio100 * 10) / 10;
 
   const foodObj = {
     name,
@@ -47305,7 +47370,8 @@ function saveFoodItem() {
     kcal, pro, carb, fat,
     kcalPer100, proPer100, carbPer100, fatPer100,
     notes: $('food-note-input').value.trim(),
-    provenance: foodProvenanceFor(activeSelectedFoodRef)
+    // Values typed over the catalog's are the user's, not the catalog's.
+    provenance: foodProvenanceFor(typedOver ? null : activeSelectedFoodRef)
   };
   if (activeSelectedFoodRef && activeSelectedFoodRef.brand) foodObj.brand = activeSelectedFoodRef.brand;
 
@@ -47849,31 +47915,15 @@ function analyzeMealPhotoPayload(photos) {
     showMealPhotoConfirm(result);
   })
   .catch(function (err) {
-    console.warn('[food] Vision error, fallback to mock', err);
-    showMealPhotoConfirm({
-      representationMode: 'COMPONENTS',
-      overallConfidence: 0.5,
-      uncertain: true,
-      notes: 'Stima automatica (offline / fallback)',
-      compositeDish: {
-        name: targetMealName + ' completo',
-        quantity: 500,
-        unit: 'g',
-        kcal: 600,
-        pro: 40,
-        carb: 60,
-        fat: 20,
-        confidence: 0.5,
-        foodConfidence: 0.8,
-        quantityConfidence: 0.5
-      },
-      components: [
-        { name: 'Piatto stimato', quantity: 350, unit: 'g', kcal: 450, pro: 30, carb: 50, fat: 12, confidence: 0.5, foodConfidence: 0.8, quantityConfidence: 0.5 }
-      ],
-      items: [
-        { name: 'Piatto stimato', quantity: 350, unit: 'g', kcal: 450, pro: 30, carb: 50, fat: 12, confidence: 0.5, foodConfidence: 0.8, quantityConfidence: 0.5 }
-      ]
-    });
+    // No analysis, no numbers. It used to show a made-up "Piatto stimato
+    // 350 g / 450 kcal" that looked like a real result, one tap away from the
+    // diary.
+    console.warn('[food] Vision error', err);
+    closeMealPhotoModal();
+    const msg = /401|AI_AUTH_REQUIRED/.test(String((err && err.message) || ''))
+      ? 'Accedi al tuo account per analizzare la foto.'
+      : 'Analisi della foto non riuscita. Riprova, oppure aggiungi gli alimenti a mano.';
+    if (typeof showToast === 'function') showToast(msg, 'error');
   });
 }
 
@@ -48178,16 +48228,30 @@ function mealPhotoFoodsFromDraft() {
     if (isChain && chainName) notesParts.push('Fonte: Catalogo ' + chainName);
     if (barcode) notesParts.push('Barcode verificato: ' + barcode);
 
-    foods.push({
+    // The keys every sum reads (pro/carb/fat). It used to write "fats", which
+    // nothing read: fat from a photographed meal counted as 0 everywhere.
+    const q = Number.isFinite(qty) ? qty : 100;
+    const food = {
       name: String(name).trim(),
-      quantity: Number.isFinite(qty) ? qty : 100,
+      quantity: q,
       unit: unit,
       kcal: Number.isFinite(kcal) ? kcal : 0,
-      protein: Number.isFinite(pro) ? pro : 0,
-      carbs: Number.isFinite(carb) ? carb : 0,
-      fats: Number.isFinite(fat) ? fat : 0,
-      notes: notesParts.join(' · ')
-    });
+      pro: Number.isFinite(pro) ? pro : 0,
+      carb: Number.isFinite(carb) ? carb : 0,
+      fat: Number.isFinite(fat) ? fat : 0,
+      notes: notesParts.join(' · '),
+      macro_source: 'meal_photo'
+    };
+    // In grams or ml the estimate is also kept per 100 g, as for foods from
+    // the catalog: changing the quantity later rescales it instead of
+    // leaving the old totals.
+    if ((unit === 'g' || unit === 'ml') && q > 0) {
+      food.kcalPer100 = Math.round(food.kcal / q * 1000) / 10;
+      food.proPer100 = Math.round(food.pro / q * 1000) / 10;
+      food.carbPer100 = Math.round(food.carb / q * 1000) / 10;
+      food.fatPer100 = Math.round(food.fat / q * 1000) / 10;
+    }
+    foods.push(food);
   });
   return foods;
 }
@@ -48335,7 +48399,14 @@ function finishDuplicateMeal(mealName) {
 
   const targetSlot = ensureTargetMealSlot(targetDayIdx, mealName);
   if (!targetSlot) return;
-  const clonedFoods = JSON.parse(JSON.stringify(sourceMeal.foods || []));
+  // A copy is a new food: without the original's merge id and timestamp.
+  // Carrying them over made the copy the same record as the original, so a
+  // deleted copy left no deletion behind (the id still lived on the first
+  // day) and the next sync brought it back. The next save gives new ids.
+  const clonedFoods = JSON.parse(JSON.stringify(sourceMeal.foods || [])).map(function (f) {
+    if (f && typeof f === 'object') { delete f.id; delete f.updatedAt; }
+    return f;
+  });
   if (!Array.isArray(targetSlot.meal.foods)) targetSlot.meal.foods = [];
   targetSlot.meal.foods = targetSlot.meal.foods.concat(clonedFoods);
   DATA.nutrition.present = true;
@@ -49914,8 +49985,14 @@ function renderTherapy(c) {
           </div>
           <div style="display:flex;flex-direction:column;gap:10px;">
             ${(proto.medications || []).map((m, idx) => {
-              const globalIdx = medsRaw.indexOf(m);
-              const delIdx = globalIdx >= 0 ? globalIdx : idx;
+              // Which medication of the list this row is: the same object, or
+              // the same id, or the same content. The row's position inside its
+              // block is not an answer - it used to be the fallback, and after a
+              // reload EDIT and ✕ hit another block's drug. When the list shown
+              // is not the one EDIT/✕ change (store.therapy as a fallback), or
+              // no match is found, the row has no buttons.
+              const globalIdx = therapyData === DATA.therapy ? therapyMedIndexOf(medsRaw, m) : -1;
+              const delIdx = globalIdx;
               const blurb = getMoleculeBlurb(m);
               return `
                 <div class="card-compact" style="border:1px solid var(--border);background:var(--surface);">
@@ -49929,10 +50006,10 @@ function renderTherapy(c) {
                       </div>
                       ${itemAlertHtml('therapy', delIdx, m)}
                     </div>
-                    <div style="display:flex;gap:4px;">
+                    ${delIdx >= 0 ? `<div style="display:flex;gap:4px;">
                       <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;" onclick="editTherapyItem(${delIdx})">EDIT</button>
                       <button class="btn btn-outline" style="font-size:9px;padding:3px 6px;color:var(--accent-red);" onclick="deleteTherapyItem(${delIdx})">✕</button>
-                    </div>
+                    </div>` : ''}
                   </div>
                   <div style="font-size:11px;color:#aaa;line-height:1.45;margin-top:6px;padding:8px;background:#111;border-radius:6px;border-left:3px solid var(--gold);">${esc(blurb)}</div>
                   ${m.notes ? `<div style="font-size:11px;color:#888;margin-top:6px;border-top:1px dashed #222;padding-top:4px;">📝 ${safeDisplayValue(m.notes, '')}</div>` : ''}
@@ -50125,7 +50202,12 @@ function saveTherapyItem() {
   if (!DATA.therapy) DATA.therapy = { medications: [], present: true };
   if (!DATA.therapy.medications) DATA.therapy.medications = [];
   if (window.__therapyEditIndex != null && window.__therapyEditIndex >= 0) {
+    const before = DATA.therapy.medications[window.__therapyEditIndex];
     DATA.therapy.medications[window.__therapyEditIndex] = med;
+    // The block that lists this medication shows the edited one too.
+    if (before) (DATA.therapy.protocols || DATA.therapy.cycles || []).forEach(function (p) {
+      if (p && Array.isArray(p.medications)) p.medications = p.medications.map(function (x) { return sameTherapyMed(x, before) ? med : x; });
+    });
     window.__therapyEditIndex = null;
   } else {
     DATA.therapy.medications.push(med);
@@ -50143,9 +50225,37 @@ function saveTherapyItem() {
   if (typeof showToast === 'function') showToast('Farmaco salvato', 'ok');
 }
 
+// Same medication: the same object, the same id, or the same content once
+// the merge bookkeeping (id, updatedAt) is left out. Never "about the same".
+function sameTherapyMed(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.id != null && b.id != null) return String(a.id) === String(b.id);
+  const strip = function (m) {
+    const o = {};
+    Object.keys(m).sort().forEach(function (k) { if (k !== 'id' && k !== 'updatedAt') o[k] = m[k]; });
+    return JSON.stringify(o);
+  };
+  return strip(a) === strip(b);
+}
+function therapyMedIndexOf(list, m) {
+  const arr = Array.isArray(list) ? list : [];
+  const direct = arr.indexOf(m);
+  if (direct >= 0) return direct;
+  for (let i = 0; i < arr.length; i++) if (sameTherapyMed(arr[i], m)) return i;
+  return -1;
+}
+
 function deleteTherapyItem(idx) {
+  const meds = DATA.therapy && Array.isArray(DATA.therapy.medications) ? DATA.therapy.medications : null;
+  const med = meds && meds[idx];
+  if (!med) return;
   if (confirm("Rimuovere questo farmaco dalla terapia?")) {
-    DATA.therapy.medications.splice(idx, 1);
+    meds.splice(idx, 1);
+    // And from the blocks that list it, or its card stays on screen.
+    (DATA.therapy.protocols || DATA.therapy.cycles || []).forEach(function (p) {
+      if (p && Array.isArray(p.medications)) p.medications = p.medications.filter(function (x) { return !sameTherapyMed(x, med); });
+    });
     persist();
     render();
     if (typeof showToast === 'function') showToast("Farmaco rimosso", "info");
@@ -55842,6 +55952,13 @@ function buildWorkoutPdfBytes(opts) {
     y -= barH + 12;
   }
   function nutritionDayMacros(nd) {
+    // The same sum the screen shows (values per 100 g x grams). A day with
+    // nothing logged stays at 0: it used to print the target as if it had been
+    // eaten.
+    if (typeof nutritionDaySums === 'function') {
+      var sums = nutritionDaySums({ meals: (nd.meals || []).map(function (m) { return { foods: m.foods || m.items || [] }; }) });
+      return { kcal: Math.round(sums.kcal || 0), p: Math.round(sums.pro || 0), c: Math.round(sums.carb || 0), f: Math.round(sums.fat || 0) };
+    }
     var kcal = 0, p = 0, c = 0, f = 0;
     (nd.meals || []).forEach(function (meal) {
       (meal.foods || meal.items || []).forEach(function (food) {
@@ -55858,12 +55975,6 @@ function buildWorkoutPdfBytes(opts) {
         }
       });
     });
-    if (!kcal && DATA.nutrition) {
-      kcal = Number(DATA.nutrition.daily_calories_target) || 0;
-      p = Number(DATA.nutrition.daily_protein_target) || 0;
-      c = Number(DATA.nutrition.daily_carbs_target) || 0;
-      f = Number(DATA.nutrition.daily_fats_target) || 0;
-    }
     return { kcal: Math.round(kcal), p: Math.round(p), c: Math.round(c), f: Math.round(f) };
   }
 
@@ -60603,6 +60714,8 @@ async function deleteBodyCheck(id) {
   if (!checkId) return;
   if (!confirm('Eliminare questo check?')) return;
   store.bodyChecks = (store.bodyChecks || []).filter(function (c) { return String(c && c.id) !== checkId; });
+  store.bodyChecksDeleted = Object.assign({}, store.bodyChecksDeleted || {});
+  store.bodyChecksDeleted[checkId] = new Date().toISOString();
   persist();
   try { if (typeof removeDocumentFile === 'function') await removeDocumentFile('bodycheck_front_' + checkId); } catch (_) {}
   try { if (typeof removeDocumentFile === 'function') await removeDocumentFile('bodycheck_back_' + checkId); } catch (_) {}
@@ -60716,7 +60829,9 @@ async function saveCheckFisico() {
   if (draft.back) await saveDocumentFile('bodycheck_back_' + id, draft.back);
   if (!Array.isArray(store.bodyChecks)) store.bodyChecks = [];
   store.bodyChecks.push(entry);
-  if (store.bodyChecks.length > 16) store.bodyChecks = store.bodyChecks.slice(-16);
+  // The weight history is the checks: at 16 the oldest went, in the cloud as
+  // well (the upload replaced the list). The photos live apart, in IndexedDB.
+  if (store.bodyChecks.length > BODY_CHECKS_KEEP) store.bodyChecks = store.bodyChecks.slice(-BODY_CHECKS_KEEP);
   if (!store.profile) store.profile = {};
   store.profile.weight = entry.weight;
   if (!store.bw) store.bw = {};

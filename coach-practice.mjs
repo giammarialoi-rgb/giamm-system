@@ -21,7 +21,8 @@ import {
   reorderCoachTasks,
   syncCoachAttention,
   updateCoachAttention,
-  updateCoachTask
+  updateCoachTask,
+  sentBodyChecks
 } from "./server/coach-os/workspace.mjs";
 import {
   applyCheckInTemplateToAll,
@@ -2896,7 +2897,9 @@ export function mountCoachPractice(app, deps) {
       }),
       credentials: { username: row.username, password: "", oneTime: true, requiresReset: true },
       intake: row.intake || {},
-      data: data.rows[0]?.data || {},
+      // The athlete's data, but body checks only once sent to the coach: one
+      // saved as "non inviato al coach" is theirs alone.
+      data: (function (d) { return d && Array.isArray(d.bodyChecks) ? { ...d, bodyChecks: sentBodyChecks(d) } : d; })(data.rows[0]?.data || {}),
       pendingChange: row.pending_change ? { summary: row.pending_change.summary || "modifica", at: row.pending_change.at } : null,
       pendingUnlock: row.pending_unlock && row.pending_unlock.feature
         ? {

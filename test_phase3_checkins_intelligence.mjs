@@ -44,8 +44,11 @@ const accountData = {
   },
   logs,
   bodyChecks: [
-    { id: "b1", at: new Date(now - 42 * 86400000).toISOString(), weight: 80 },
-    { id: "b2", at: new Date(now - 86400000).toISOString(), weight: 76.5 }
+    // Checks the athlete sent to the coach; one kept "non inviato" is not the
+    // coach's to see (and would change the trend here if it were read).
+    { id: "b1", at: new Date(now - 42 * 86400000).toISOString(), weight: 80, sentToCoach: true },
+    { id: "b2", at: new Date(now - 86400000).toISOString(), weight: 76.5, sentToCoach: true },
+    { id: "b3", at: new Date(now - 3600000).toISOString(), weight: 90, sentToCoach: false }
   ]
 };
 

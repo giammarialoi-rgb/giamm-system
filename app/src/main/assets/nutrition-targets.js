@@ -153,7 +153,8 @@
   /* ------------------------------ sums ------------------------------ */
 
   var PER100 = { kcal: ['kcalPer100'], pro: ['proPer100'], carb: ['carbPer100'], fat: ['fatPer100'] };
-  var TOTAL = { kcal: ['kcal', 'calories'], pro: ['pro', 'protein_g', 'protein'], carb: ['carb', 'carbs_g', 'carbs'], fat: ['fat', 'fat_g'] };
+  // "fats": what photographed meals used to save (the sums read 0 fat for them).
+  var TOTAL = { kcal: ['kcal', 'calories'], pro: ['pro', 'protein_g', 'protein'], carb: ['carb', 'carbs_g', 'carbs'], fat: ['fat', 'fat_g', 'fats'] };
   function first(f, keys) {
     for (var i = 0; i < keys.length; i++) {
       var v = num(f[keys[i]]);

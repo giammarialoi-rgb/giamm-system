@@ -124,6 +124,23 @@ export function mergeAccountDataBlobs(current, incoming) {
   // phone could have shown.
   if (logs.length) merged.logs = logs.slice(-400);
   else if (Array.isArray(cur.logs) && cur.logs.length) merged.logs = cur.logs;
+  // Body checks: by id from both sides, minus the deleted ones (the
+  // deletions travel as bodyChecksDeleted). The list used to be replaced
+  // whole by whichever device uploaded last - a phone with an older list
+  // wiped a check added on the web, and a deleted one came back.
+  {
+    const deleted = Object.assign({},
+      cur.bodyChecksDeleted && typeof cur.bodyChecksDeleted === "object" ? cur.bodyChecksDeleted : {},
+      inc.bodyChecksDeleted && typeof inc.bodyChecksDeleted === "object" ? inc.bodyChecksDeleted : {});
+    const byCheck = {};
+    (Array.isArray(cur.bodyChecks) ? cur.bodyChecks : []).concat(Array.isArray(inc.bodyChecks) ? inc.bodyChecks : []).forEach((c) => {
+      if (c && c.id) byCheck[c.id] = { ...(byCheck[c.id] || {}), ...c };
+    });
+    const checks = Object.keys(byCheck).filter((id) => !deleted[id]).map((id) => byCheck[id])
+      .sort((a, b) => String(a.at || "").localeCompare(String(b.at || "")));
+    merged.bodyChecks = checks.slice(-400);
+    merged.bodyChecksDeleted = deleted;
+  }
   // Saved programs are the person's own: kept by id from both sides.
   {
     const byModel = {};

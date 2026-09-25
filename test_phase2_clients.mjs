@@ -85,11 +85,12 @@ const timelineSpec = WorkspaceTestHelpers.timelineSpec("program_assigned", {});
 ok(timelineSpec[0] === "program_assignment" && timelineSpec[1] === "program", "timeline maps assignment to source domain");
 const weight = WorkspaceTestHelpers.latestWeight({
   bodyChecks: [
-    { weight: 80, at: "2026-08-01" },
-    { weight: 78.5, at: "2026-09-01" }
+    { weight: 80, at: "2026-08-01", sentToCoach: true },
+    { weight: 78.5, at: "2026-09-01", sentToCoach: true },
+    { weight: 77, at: "2026-09-20", sentToCoach: false }
   ]
 });
-ok(weight.current === 78.5 && weight.delta === -1.5, "snapshot derives latest weight delta");
+ok(weight.current === 78.5 && weight.delta === -1.5, "snapshot derives latest weight delta, from checks sent to the coach only");
 
 const migration = fs.readFileSync(path.join(root, "server/db/migrations/0002_clients_tasks_timeline.sql"), "utf8");
 for (const table of ["coach_attention_items", "coach_tasks", "coach_saved_views", "coach_timeline_events"]) {

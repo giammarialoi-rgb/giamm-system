@@ -58,7 +58,7 @@ ok(html.includes('GiammariaPersistence.saveNutrition(DATA.nutrition)'), 'existin
 // (1 uovo, 4 fette) so users are not limited to grams or a generic "porzione",
 // and the portion-size guess distinguishes egg white/yolk/whole egg.
 ok(html.includes('id="food-unit-input"') && html.includes('value="pezzi">Pezzo/i'), 'manual food entry offers a Pezzo/i unit (e.g. 1 uovo, 4 fette)');
-ok(html.includes("u === 'pezzi' || u === 'pezzo' || u === 'fetta' || u === 'fette'"), 'foodQtyToGrams converts the pezzi/fetta unit using the food-aware portion guess');
+ok(html.includes("u === 'pezzi' || u === 'pezzo' || u === 'pz' || u === 'fetta' || u === 'fette'"), 'foodQtyToGrams converts the pezzi/pz/fetta unit using the food-aware portion guess');
 ok(html.includes("if (/albume/.test(n)) return 33") && html.includes("if (/tuorlo/.test(n)) return 18"), 'guessPortionGrams distinguishes egg white/yolk from a whole egg (uovo)');
 
 // ============================================================

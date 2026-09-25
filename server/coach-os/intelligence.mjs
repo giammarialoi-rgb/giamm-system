@@ -1,3 +1,4 @@
+import { sentBodyChecks } from "./workspace.mjs";
 import crypto from "node:crypto";
 
 export const INTELLIGENCE_FORMULA_VERSION = "deterministic-v1";
@@ -76,7 +77,8 @@ export function buildDeterministicIntelligence(client, accountData = {}, now = D
   const lastWorkoutAt = (lastLog && lastLog.at) || client.last_workout_at || null;
   const lastWorkoutDate = asDate(lastWorkoutAt);
   const inactiveDays = lastWorkoutDate ? Math.floor((now - lastWorkoutDate.getTime()) / 86400000) : null;
-  const weights = weightTrend(accountData.bodyChecks);
+  // Only checks sent to the coach (see sentBodyChecks in workspace.mjs).
+  const weights = weightTrend(sentBodyChecks(accountData));
   const intake = client.intake || {};
   const sleepLow = /meno di 6|<\s*6/i.test(String(intake.sleepHours || ""));
   const stressHigh = /alto|high/i.test(String(intake.stress || ""));
@@ -185,7 +187,7 @@ export function buildDeterministicIntelligence(client, accountData = {}, now = D
 
   const sourceFingerprint = fingerprint({
     logs: logs.slice(-120),
-    bodyChecks: (accountData.bodyChecks || []).slice(-40),
+    bodyChecks: sentBodyChecks(accountData).slice(-40),
     programId: program.id || null,
     programExpiresAt: client.program_expires_at || null,
     nextCheckAt: client.next_check_at || null,
