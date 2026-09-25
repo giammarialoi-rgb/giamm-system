@@ -37398,7 +37398,7 @@ function openProfileHub() {
     '<div style="display:grid;gap:8px;">' +
     '<button type="button" class="btn btn-primary" style="width:100%;height:44px;font-weight:800;" onclick="closeProfileHub();openAthleteProfile()">Profilo atleta</button>' +
     '<button type="button" class="btn btn-outline" style="width:100%;height:44px;font-weight:800;" onclick="closeProfileHub();openAccount()">' + (logged ? 'Account / Sync' : 'Accedi / Registrati') + '</button>' +
-    '<button type="button" class="btn btn-outline" style="width:100%;height:44px;font-weight:800;border-color:#555;color:#ccc;" onclick="closeProfileHub();recoverPersonalTrainingEmergency()">Ripristina scheda (backup)</button>' +
+    ((logged && personalTrainingHistoryExists()) ? '<button type="button" class="btn btn-outline" style="width:100%;height:44px;font-weight:800;border-color:#555;color:#ccc;" onclick="closeProfileHub();recoverPersonalTrainingEmergency()">Ripristina scheda (backup)</button>' : '') +
     (logged ? '<button type="button" class="btn btn-outline" style="width:100%;height:44px;font-weight:800;border-color:#442222;color:var(--accent-red);" onclick="closeProfileHub();logoutAccount()">Esci</button>' : '') +
     '</div></div>';
   el.style.display = 'flex';
@@ -37520,7 +37520,8 @@ function applyLoginGate() {
   if (closeBtn) closeBtn.style.display = locked ? 'none' : '';
   // Restoring training is restoring somebody's own: not on offer to nobody.
   const recoverBtn = $('account-recover-training');
-  if (recoverBtn) recoverBtn.style.display = locked ? 'none' : '';
+  // And only to an account that has training of its own on record.
+  if (recoverBtn) recoverBtn.style.display = (locked || !personalTrainingHistoryExists()) ? 'none' : '';
   if (locked) {
     try { openAccount(); } catch (_) {}
     const status = $('account-status');
@@ -38596,6 +38597,19 @@ function maxWeekFromLoadKeys(dataMap) {
   return maxW;
 }
 
+// Whether this account has any training of its own to restore: a set closed,
+// a session finalized, or a program this device locked as a backup. A new
+// account has none, and is not offered a restore of something it never had.
+// Loads alone do not count: a program can prefill them.
+function personalTrainingHistoryExists() {
+  if (!store) return false;
+  if (Array.isArray(store.logs) && store.logs.length) return true;
+  const data = store.data || {};
+  if (Object.keys(data).some(function (k) { return /^w\d+_d\d+_e\d+_s\d+_done$/.test(k) && data[k]; })) return true;
+  try { if (localStorage.getItem(personalScopedKey('nurvan_personal_program_lock'))) return true; } catch (_) {}
+  return false;
+}
+
 function trainingDayHasProgress(week, day) {
   const w = Number(week) || 1;
   const d = Number(day) || 0;
@@ -38700,6 +38714,7 @@ function personalSchedaNeedsRestore() {
   if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return false;
   if (store && (store.coachViewingClient || store.coachAssigning || store.coachSessionActive)) return false;
   if (typeof isAthleteRole === 'function' && isAthleteRole()) return false;
+  if (!personalTrainingHistoryExists()) return false;
   if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return true;
   if (looksLikeClientAssignDraft(DATA)) return true;
   const loadWeeks = maxWeekFromLoadKeys(store.data);
@@ -38936,7 +38951,7 @@ async function recoverPersonalTrainingEmergency() {
   const candidates = pack.candidates || [];
   const hintWeeks = pack.hintWeeks || 16;
   if (!candidates.length) {
-    const msg = 'Nessuna scheda di backup trovata su questo telefono/cloud. Serve il database Render o una copia della scheda a 16 settimane.';
+    const msg = 'Nessuna scheda salvata da ripristinare per questo account.';
     if (typeof showToast === 'function') showToast(msg, 'error');
     try { alert(msg); } catch (_) {}
     return { candidates: [] };
@@ -38974,7 +38989,7 @@ async function recoverPersonalTrainingEmergency() {
     const dayLabel = cursor.day + 1;
     const sess = ((DATA.weeks[cursor.week - 1] || {}).sessions || (DATA.weeks[cursor.week - 1] || {}).days || [])[cursor.day];
     const sessName = (sess && (sess.name || sess.title || sess.day)) || ('Giorno ' + dayLabel);
-    const msg = 'Ripristinata Upper/Lower 16 sett. · Settimana ' + cursor.week + ' · Giorno ' + dayLabel +
+    const msg = 'Ripristinata «' + String(DATA.title || DATA.name || 'la tua scheda') + '» · Settimana ' + cursor.week + ' · Giorno ' + dayLabel +
       ' (' + sessName + ') · carichi conservati';
     if (typeof showToast === 'function') showToast(msg, 'ok');
     try { alert(msg + '\nSe non è quella giusta, scegli dalla lista.'); } catch (_) {}
@@ -53408,13 +53423,14 @@ function homeCollapsibleCard(title, bodyHtml, openByDefault) {
 function personalRestoreBannerHtml() {
   if (store && (store.coachViewingClient || store.coachAssigning || store.coachSessionActive)) return '';
   if (typeof isAthleteRole === 'function' && isAthleteRole()) return '';
+  // Only when this account has training of its own that the active program
+  // does not match: never for a new account, never because the program is
+  // not one particular 16-week plan.
   const needs = typeof personalSchedaNeedsRestore === 'function' && personalSchedaNeedsRestore();
-  const isUL = typeof looksLikePersonalUpperLower16 === 'function' && looksLikePersonalUpperLower16(DATA);
-  if (!needs && isUL) return '';
+  if (!needs) return '';
   return '<div class="card" style="border:2px solid var(--gold);margin-bottom:12px;padding:14px;">' +
     '<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">RIPRISTINO SCHEDA PERSONALE</div>' +
-    '<div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:6px;">Upper / Lower · 16 settimane</div>' +
-    '<p style="font-size:12px;color:#aaa;margin:0 0 12px;line-height:1.45;">Ripristina la scheda che hai inserito tu, con i carichi già fatti. Ti porta al prossimo giorno libero (es. settimana 3 giorno 3).</p>' +
+    '<p style="font-size:12px;color:#aaa;margin:0 0 12px;line-height:1.45;">Hai allenamenti registrati che non corrispondono al programma attivo. Ripristina la scheda che stavi seguendo, con i carichi già fatti: ti porta al prossimo giorno libero.</p>' +
     '<button type="button" class="btn btn-primary" style="width:100%;min-height:48px;font-weight:900;" onclick="recoverPersonalTrainingEmergency()">RIPRISTINA LA MIA SCHEDA</button></div>';
 }
 
@@ -53531,12 +53547,12 @@ function renderHome(c) {
         <div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">CREA IL TUO PROGRAMMA</div>
         <div style="font-size:18px;font-weight:900;color:var(--gold);margin-bottom:8px;">${t('noActiveProgram')}</div>
         <p style="font-size:12px;color:#aaa;line-height:1.5;margin-bottom:16px;">
-          Se avevi già la Upper/Lower a 16 settimane, usa prima il ripristino. Altrimenti scegli un percorso qui sotto.
+          ${personalTrainingHistoryExists() ? 'Hai già allenamenti registrati: puoi ripristinare la tua scheda, oppure scegliere un percorso qui sotto.' : 'Scegli come iniziare.'}
         </p>
         <div style="display:flex;flex-direction:column;gap:10px;">
-          <button class="btn btn-primary" style="min-height:52px;font-size:13px;font-weight:900;text-align:left;padding:10px 14px;" onclick="recoverPersonalTrainingEmergency()">
-            RIPRISTINA LA MIA SCHEDA<br><span style="font-size:10px;font-weight:600;opacity:.85;">Upper/Lower 16 sett. · carichi conservati</span>
-          </button>
+          ${personalTrainingHistoryExists() ? `<button class="btn btn-primary" style="min-height:52px;font-size:13px;font-weight:900;text-align:left;padding:10px 14px;" onclick="recoverPersonalTrainingEmergency()">
+            RIPRISTINA LA MIA SCHEDA<br><span style="font-size:10px;font-weight:600;opacity:.85;">Carichi conservati</span>
+          </button>` : ''}
           <button class="btn btn-outline" style="min-height:52px;font-size:13px;font-weight:900;text-align:left;padding:10px 14px;" onclick="navigate('import')">
             IMPORTA FILE<br><span style="font-size:10px;font-weight:600;opacity:.85;">PDF / Excel / Word del coach</span>
           </button>

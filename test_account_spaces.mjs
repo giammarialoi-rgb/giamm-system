@@ -164,6 +164,52 @@ function spaceSandbox(initial) {
   sandbox.store = { accountToken: null, clientShell: true };
   ok(sandbox.loginGateRequired() === false, 'an athlete opening their coach\'s invite link is not locked out');
 }
+
+// --- a restore is offered only to an account with training of its own -------
+// A new account (e.g. first Sign in with Apple) was asked to restore the
+// owner's 16-week plan and told none was found.
+{
+  const storage = {};
+  const sandbox = { console, localStorage: { getItem: (k) => (k in storage ? storage[k] : null) } };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext([
+    'var store = null; var DATA = null;',
+    'function isClientStorageContext() { return false; }',
+    'function isAthleteRole() { return false; }',
+    'function personalScopedKey(n) { return n; }',
+    'function looksLikeClientAssignDraft() { return false; }',
+    'function programSessionNamesBlob(p) { return JSON.stringify(p || {}); }',
+    sourceOf('looksLikePersonalUpperLower16'),
+    sourceOf('maxWeekFromLoadKeys'),
+    sourceOf('personalTrainingHistoryExists'),
+    sourceOf('personalSchedaNeedsRestore'),
+    sourceOf('personalRestoreBannerHtml')
+  ].join('\n'), sandbox);
+  const run = (code) => vm.runInContext(code, sandbox);
+
+  run('store = { accountToken: "tok", data: {}, logs: [] }; DATA = { weeks: [] };');
+  ok(run('personalSchedaNeedsRestore()') === false, 'a new account with no program is not asked to restore anything');
+  ok(run('personalRestoreBannerHtml()') === '', 'and the Home shows no restore banner');
+  run('DATA = { title: "Full body 4 sett.", weeks: [{ sessions: [{ name: "A" }] }, {}, {}, {}] }; store.data = { w1_d0_e0_s1_load: "40", w4_d0_e0_s1_load: "50" };');
+  ok(run('personalSchedaNeedsRestore()') === false && run('personalRestoreBannerHtml()') === '',
+    'nor one with its own program that is not a 16-week plan, even with prefilled loads');
+  run('store.data.w3_d0_e0_s1_done = true; store.logs = [{ week: 3, day: 0 }]; DATA = { weeks: [] };');
+  ok(run('personalTrainingHistoryExists()') === true && run('personalSchedaNeedsRestore()') === true,
+    'an account with closed sets and no program is offered its restore');
+  ok(/RIPRISTINA LA MIA SCHEDA/.test(run('personalRestoreBannerHtml()')) && !/16 settimane|Upper \/ Lower/.test(run('personalRestoreBannerHtml()')),
+    'and the banner talks about its own training, not one particular plan');
+  run('store = { accountToken: "tok", data: {}, logs: [] };');
+  storage.nurvan_personal_program_lock = '{}';
+  ok(run('personalTrainingHistoryExists()') === true, 'a program locked as a backup on this device counts too');
+  const home = sourceOf('renderHome');
+  ok(/\$\{personalTrainingHistoryExists\(\) \? `<button class="btn btn-primary"[^`]*recoverPersonalTrainingEmergency\(\)/.test(home) && !/Upper\/Lower a 16 settimane/.test(home),
+    'the empty Home offers the restore button only with training on record');
+  ok(/\(logged && personalTrainingHistoryExists\(\)\) \? '<button[^']*recoverPersonalTrainingEmergency\(\)/.test(sourceOf('openProfileHub')) &&
+    /recoverBtn\.style\.display = \(locked \|\| !personalTrainingHistoryExists\(\)\) \? 'none' : ''/.test(sourceOf('applyLoginGate')),
+    'so do the profile menu and the account card');
+  ok(!/scheda a 16 settimane/.test(sourceOf('recoverPersonalTrainingEmergency')), 'and "nothing found" no longer mentions a 16-week plan');
+}
 {
   ok(/body\.nurvan-locked > \*:not\(#account-modal\)/.test(base), 'while locked, only the account card is on screen');
   ok(/function closeAccount\(\)\{ if \(loginGateRequired\(\)\) return;/.test(base), 'and it cannot be dismissed');
