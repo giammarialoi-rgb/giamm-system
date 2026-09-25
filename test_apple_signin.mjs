@@ -343,6 +343,10 @@ console.log('--- 8. il resto del cablaggio ---');
   const api = read('coach-api.mjs');
   ok('8a. il callback di Apple e\' registrato prima del CORS (Apple posta da appleid.apple.com)', api.indexOf('appleCallbackRoute(app,') > 0 && api.indexOf('appleCallbackRoute(app,') < api.indexOf('app.use(cors('));
   ok('8b. Google passa dallo stesso collegamento: per identita\', email verificata, niente email sovrascritta', /resolveIdentityUser\(pool, \{ \.\.\.identity, linkingUserId:/.test(api) && /emailVerified: verified/.test(api) && !/SET email = \$1/.test(api) && !/function resolveOAuthUser/.test(api));
+  ok('8a2. e ha un suo limite di richieste per IP, prima del parser', /appleCallbackRoute\(app, \[\s*\n\s*createFixedWindowRateLimiter\(\{[^\n]*keyPrefix: "apple-callback" \}\),\s*\n\s*express\.urlencoded/.test(api));
+  ok('8a3. un account eliminato che scrive ancora con un vecchio token: 401, non un 500 sulla dashboard',
+    /function isDeletedAccountWrite\(err\) \{\s*\n\s*return Boolean\(err && err\.code === "23503"\);/.test(api) &&
+    (api.match(/if \(isDeletedAccountWrite\((error|err)\)\) return res\.status\(401\)\.json\(DELETED_ACCOUNT\);/g) || []).length === 2);
   ok('8c. il vecchio verificatore con APPLE_BUNDLE_ID non c\'e\' piu\'', !/APPLE_BUNDLE_ID|verifyAppleCredential/.test(api));
   const relay = 'x7k2p9@privaterelay.appleid.com';
   ok('8d. le regex email del server (reset, registrazione) accettano un relay', /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(relay) && (api.match(/\/\^\[\^@\\s\]\+@\[\^@\\s\]\+\\\.\[\^@\\s\]\+\$\//g) || []).length === 3);

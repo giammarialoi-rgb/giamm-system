@@ -225,6 +225,18 @@ console.log('--- 8. dove sono i bottoni ---');
   const copy = grab('copySessionTextToClipboard');
   ok('8f. navigator.clipboard, con toast "Copiato" info', /navigator\.clipboard\.writeText\(text\)/.test(copy) && /showToast\('Copiato', 'info'\)/.test(copy));
   ok('8g. senza permesso: finestra con il testo gia\' selezionato', /openManualCopyOverlay\(text\)/.test(copy) && /ta\.select\(\)/.test(grab('openManualCopyOverlay')));
+  // Il programma puo' cambiare dopo la seduta, e store.data e' indicizzato
+  // solo per settimana/giorno/posto: gli esercizi si fissano nel log.
+  const fin = SRC.slice(SRC.indexOf('function finalizeWorkout('), SRC.indexOf('store.logs.push(logEntry);'));
+  ok('8i. alla finalizzazione il log salva gli esercizi fatti', /exerciseLines: sessionExerciseDetailsFor\(currentWeek \|\| 1, currentDay \|\| 0\)/.test(fin));
+  ok('8j. e li rifissa quando si modifica una seduta finalizzata', /hit\.exerciseLines = sessionExerciseDetailsFor\(week, day\);/.test(grab('refreshFinalizedLogInPlace')));
+  const scf = grab('sessionCardFor');
+  ok('8k. il testo usa solo gli esercizi salvati con la seduta, mai il programma di oggi', /exercises: Array\.isArray\(entry\.exerciseLines\) \? entry\.exerciseLines : \[\]/.test(scf) && !/sessionExerciseDetailsFor/.test(scf));
+  ok('8k2. anche il nome della seduta si fissa nel log, e la card lo preferisce', /sessionName: sessionNameFor\(currentWeek \|\| 1, currentDay \|\| 0\)/.test(fin) &&
+    /hit\.sessionName = sessionNameFor\(week, day\);/.test(grab('refreshFinalizedLogInPlace')) &&
+    /const sessionName = String\(entry\.sessionName \|\| ''\) \|\| sessionNameFor\(w, d\);/.test(scf));
+  const oldLog = run('formatSessionCardText(buildSessionCardData({ log: Object.assign({}, LOG, { cardioMinutes: 0 }), sessionName: "Vecchia", exercises: [] }))');
+  eq(oldLog, ['**Vecchia — 25/09/2026** (48 min · 2.245 kg · 7 serie)', 'via Nurvan'].join(NL), '8l. una seduta di prima, senza esercizi salvati: solo i totali, nessun esercizio inventato');
   ok('8h. persist() e finalizeWorkout non sono stati toccati', /function persist\(\) \{\s*\n\s*ensureStoreIntegrity\(\);/.test(SRC) && /store\.logs\.push\(logEntry\);\s*\n\s*if \(store\.logs\.length > 400\)/.test(SRC));
 }
 

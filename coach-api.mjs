@@ -27,6 +27,7 @@ import { touchLastSeen, recordEvent, fileFormat } from "./server/admin/activity.
 import { runMigrations } from "./server/db/migrate.mjs";
 import {
   buildCorsOriginValidator,
+  createFixedWindowRateLimiter,
   createPostgresFixedWindowRateLimiter,
   isProduction,
   resolveJwtSecret
@@ -48,7 +49,12 @@ app.set("trust proxy", 1);
 // before the CORS allowlist, like the webhook below. What makes it safe is the
 // state it carries back, signed by this server (server/account/apple.mjs).
 const appleCallbackTarget = { handle: null };
-appleCallbackRoute(app, express.urlencoded({ extended: false, limit: "64kb" }), appleCallbackTarget);
+// It also sits before the /api/auth limiter (that one needs the database):
+// an in-memory limit of its own, per IP.
+appleCallbackRoute(app, [
+  createFixedWindowRateLimiter({ windowMs: 15 * 60_000, max: Number(process.env.AUTH_RATE_LIMIT_MAX || 40), keyPrefix: "apple-callback" }),
+  express.urlencoded({ extended: false, limit: "64kb" })
+], appleCallbackTarget);
 app.use(cors({ origin: buildCorsOriginValidator(process.env), credentials: true }));
 app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
@@ -1489,6 +1495,14 @@ async function mergeIntoAccountData(userId, incoming) {
   return updateAccountData(pool, userId, (current) => mergeAccountDataBlobs(current, incoming));
 }
 
+// A session token outlives an account deleted from another device (it is
+// stateless, 90 days). Its writes then hit the foreign key: that is "this
+// account is gone", not a server failure to log on the dashboard.
+function isDeletedAccountWrite(err) {
+  return Boolean(err && err.code === "23503");
+}
+const DELETED_ACCOUNT = { error: "Questo account è stato eliminato.", accountDeleted: true };
+
 app.post("/api/account/sync", async (req, res) => {
   const auth = await accountFromBearer(req.headers.authorization);
   if (!auth) return res.status(401).json({ error: "Unauthorized." });
@@ -1499,6 +1513,7 @@ app.post("/api/account/sync", async (req, res) => {
     touchLastSeen(pool, auth.id);
     return res.json({ ok: true, data: merged });
   } catch (error) {
+    if (isDeletedAccountWrite(error)) return res.status(401).json(DELETED_ACCOUNT);
     console.error("ACCOUNT_SYNC_ERROR", error);
     recordEvent(pool, "sync_failed", auth.id, { route: "/api/account/sync", status: 500, message: error && error.message });
     return res.status(500).json({ error: "Failed to sync account data." });
@@ -1534,6 +1549,7 @@ app.post("/api/account/data", async (req, res) => {
     await mergeIntoAccountData(auth.id, incoming);
     return res.json({ ok: true, saved_at: new Date().toISOString() });
   } catch (err) {
+    if (isDeletedAccountWrite(err)) return res.status(401).json(DELETED_ACCOUNT);
     recordEvent(pool, "sync_failed", auth.id, { route: "/api/account/data", status: 500, message: err && err.message });
     return res.status(500).json({ error: "Impossibile salvare i dati sul cloud." });
   }

@@ -56585,6 +56585,9 @@ function refreshFinalizedLogInPlace(recompute) {
     hit.exercises = snap.exercises || hit.exercises;
     hit.kcal = snap.kcal || hit.kcal;
     hit.muscles = snap.muscles || hit.muscles;
+    // Editing a finalized session happens on the same program: refreeze it.
+    hit.exerciseLines = sessionExerciseDetailsFor(week, day);
+    hit.sessionName = sessionNameFor(week, day);
   }
   return hit;
 }
@@ -56711,7 +56714,12 @@ function finalizeWorkout(){
     reps: snap.reps || 0,
     muscles: snap.muscles || {},
     cardioMinutes: snap.cardioMinutes || 0,
-    prCount: prCount
+    prCount: prCount,
+    // What was done, exercise by exercise, frozen with the session: the
+    // program can change later, and the sets in store.data are keyed only by
+    // week/day/slot, not by exercise.
+    exerciseLines: sessionExerciseDetailsFor(currentWeek || 1, currentDay || 0),
+    sessionName: sessionNameFor(currentWeek || 1, currentDay || 0)
   };
   store.logs.push(logEntry);
   if (store.logs.length > 400) store.logs = store.logs.slice(-400);
@@ -57389,24 +57397,34 @@ function sessionPrsFor(week, day) {
   } catch (_) { return []; }
 }
 
+function sessionNameFor(week, day) {
+  try {
+    const wk = DATA && DATA.weeks && DATA.weeks[(Number(week) || 1) - 1];
+    const d = Number(day) || 0;
+    const sess = wk && (wk.sessions || wk.days || [])[d];
+    if (sess && typeof sessionDisplayName === 'function') return sessionDisplayName(sess, d) || '';
+    if (sess) return sess.name || sess.title || sess.day || '';
+  } catch (_) {}
+  return '';
+}
+
 function sessionCardFor(week, day, log) {
   const entry = log || findSessionLog(week, day);
   if (!entry) return null;
   const w = Number(entry.week) || 1;
   const d = Number(entry.day) || 0;
-  let sessionName = '';
-  try {
-    const wk = DATA && DATA.weeks && DATA.weeks[w - 1];
-    const sess = wk && (wk.sessions || wk.days || [])[d];
-    if (sess && typeof sessionDisplayName === 'function') sessionName = sessionDisplayName(sess, d);
-    else if (sess) sessionName = sess.name || sess.title || sess.day || '';
-  } catch (_) {}
+  // The name saved with the session; sessions from before it was saved fall
+  // back to the program's name for that day, as the card always did.
+  const sessionName = String(entry.sessionName || '') || sessionNameFor(w, d);
   return buildSessionCardData({
     log: entry,
     sessionName: sessionName || ('Seduta ' + (d + 1)),
     athleteName: (store && store.profile && store.profile.name) || '',
     prs: sessionPrsFor(w, d),
-    exercises: sessionExerciseDetailsFor(w, d)
+    // Only what the session saved with itself. A session finalized before
+    // the list was saved has totals only: reading today's program for it
+    // could put another program's exercises on an old session.
+    exercises: Array.isArray(entry.exerciseLines) ? entry.exerciseLines : []
   });
 }
 

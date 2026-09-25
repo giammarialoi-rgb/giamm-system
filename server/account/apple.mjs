@@ -236,10 +236,11 @@ function returnPage(res, href, message) {
   );
 }
 
-// The form post from Apple, with its own small body parser. `target` is filled
-// by mountAppleAuth later: the server registers this route first, before CORS.
-export function appleCallbackRoute(app, urlencoded, target) {
-  app.post("/api/auth/apple/callback", urlencoded, (req, res, next) => {
+// The form post from Apple. `middleware` brings its own body parser (and the
+// server adds a rate limit); `target` is filled by mountAppleAuth later: the
+// server registers this route first, before CORS.
+export function appleCallbackRoute(app, middleware, target) {
+  app.post("/api/auth/apple/callback", middleware, (req, res, next) => {
     if (target.handle) return target.handle(req, res, next);
     return res.status(503).type("text").send("Non pronto.");
   });

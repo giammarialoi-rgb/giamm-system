@@ -46,7 +46,6 @@ const shipped = [
   'web/index.base.html',
   ...fs.readdirSync(path.join(root, 'web'))
     .filter((f) => /\.(js|json|webmanifest)$/.test(f))
-    .filter((f) => !/^(program-catalog-body|program-catalog-index)\.json$/.test(f) || true)
     .map((f) => 'web/' + f),
   'admin/index.html',
   'admin/admin.js',
