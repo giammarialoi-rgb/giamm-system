@@ -2951,6 +2951,7 @@ function athleteHomeHtml() {
     coachStatus +
     '<button class="btn btn-outline" style="margin-top:10px;font-size:11px;" onclick="reloadClientHome()">⟳ AGGIORNA</button>' +
     '</div>' +
+    scheduledCheckInHomeHtml() +
     athleteWaitingHomeHtml() +
     athleteHomeModulesHtml();
 }
@@ -3001,6 +3002,7 @@ function renderCoachHub(c) {
     '<span style="flex:1;min-width:0;color:#eee !important;-webkit-text-fill-color:#eee !important;line-height:1.35;">Consenti videocall interne con i clienti</span></label>' +
     '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button></div>' +
+    '<div id="cp-checkin-counter"></div>' +
     '<div id="cp-client-list"><div class="cp-help">Caricamento…</div></div>';
   loadCoachClientList();
   applyClientChrome();
@@ -3026,6 +3028,7 @@ function friendlyApiError(err) {
 async function loadCoachClientList() {
   const box = document.getElementById('cp-client-list');
   if (!box) return;
+  loadCoachCheckInCounter();
   try {
     const q = window.__cpClientQ || '';
     const payload = await practiceFetch('/api/coach/clients?limit=30&offset=0&q=' + encodeURIComponent(q), { method: 'GET', headers: practiceHeaders(false) }, 20000);
@@ -3872,6 +3875,7 @@ async function renderCoachWorkspace(c) {
           '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="openClientWorkoutReport(' + realIdx + ')">VEDI REPORT</button></div>';
       }).join('') + '</div>') : '') +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="enterCoachClientView(\'stats\')">APRI STATS / CRONOLOGIA</button></div>' +
+      '<div id="cp-ws-checkins"></div>' +
       (cl.leaveRequested ? '<div class="card" style="padding:12px;margin-bottom:12px;border-color:#c66;"><div style="font-weight:900;color:#c66;">Richiesta fine collaborazione</div>' +
         '<button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="confirmLeaveClient(\'' + esc(id) + '\')">CONFERMA FINE COLLABORAZIONE</button></div>' : '') +
       ((snap.pendingChange || cl.hasPendingChange) ? '<div class="card" style="padding:12px;margin-bottom:12px;border-color:var(--gold);"><div style="font-weight:900;color:var(--gold);">Modifica richiesta dall’atleta</div>' +
@@ -3947,6 +3951,7 @@ async function renderCoachWorkspace(c) {
       '<div id="cp-events-body" style="margin-top:8px;' + (collapsed.events ? 'display:none;' : '') + '">' +
       (eventsHtml || '<div class="cp-help">Nessuna attività recente.</div>') +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="openNotificationsCenter(\'' + esc(id) + '\')">VEDI TUTTE</button></div></div>';
+    loadCoachScheduledCheckIns(id);
     // Chat solo in navigate('coachChat') — niente composer inline qui
   } catch (err) {
     c.innerHTML = '<div class="cp-help">' + esc((err && err.message) || 'Snapshot non disponibile.') + '</div>';
@@ -6086,6 +6091,7 @@ async function refreshAthleteMe() {
   if (!store.accountToken || typeof isAthleteRole !== 'function' || !isAthleteRole()) return;
   try {
     const me = await practiceFetch('/api/client/me', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+    const prevCheckInTemplate = JSON.stringify((store.clientProfile && store.clientProfile.checkInTemplate) || null);
     store.clientProfile = me.client || store.clientProfile;
     store.clientEvents = me.events || [];
     store.coachOnline = !!me.coachOnline;
@@ -6094,6 +6100,7 @@ async function refreshAthleteMe() {
     store.clientShell = true;
     if (typeof persist === 'function') persist();
     if (me.client && me.client.needIntake && !isClientIntakeVisible()) showClientIntake(me.client.intake || {});
+    onAthleteMeRefreshed(prevCheckInTemplate, me.events || []);
   } catch (_) {}
 }
 

@@ -35,6 +35,7 @@ export const ANDROID_STATIC_ASSETS = [
   'progression-models.js',
   'food-search.js',
   'nutrition-targets.js',
+  'checkin-schedule.js',
   'cardio-library.js',
   'program-generator.js',
   'apple-touch-icon.png',

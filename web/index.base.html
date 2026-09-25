@@ -70,6 +70,7 @@
 <script src="progression-models.js"></script>
 <script src="food-search.js"></script>
 <script src="nutrition-targets.js"></script>
+<script src="checkin-schedule.js"></script>
 <script src="cardio-library.js"></script>
 <script src="program-generator.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
@@ -16606,6 +16607,13 @@ function scheduleAllItemAlerts() {
       repeatEveryMs: 86400000
     });
   }
+  // The scheduled check-in, when a coach set one; otherwise its reminder goes.
+  let checkInJob = null;
+  try { checkInJob = scheduledCheckInReminderJob(); } catch (_) {}
+  if (checkInJob) jobs.push(checkInJob);
+  else {
+    try { if (typeof NativeConfig !== 'undefined' && NativeConfig.cancelReminder) NativeConfig.cancelReminder('checkin_sched'); } catch (_) {}
+  }
   try {
     if (typeof NativeConfig !== 'undefined' && NativeConfig.scheduleReminder) {
       jobs.forEach(function (j) {
@@ -20521,6 +20529,7 @@ function renderHome(c) {
         <button class="btn btn-outline" style="flex:1;font-size:12px;height:55px;border-color:var(--gold);color:var(--gold);" onclick="navigate('${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'clientChat' : 'programs'}')">${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'CHAT COACH' : 'PROGRAMMI'}</button>
       </div></div></div>
 
+    ${scheduledCheckInHomeHtml()}
     ${lastSessionHomeCardHtml()}
     ${computeHomeReadinessHtml()}
     ${nutritionConfirmCardHtml()}
@@ -26983,7 +26992,7 @@ function renderCheckFisicoCardHtml() {
     const syncLabel = checkInStatusLabel(syncState);
     return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1c1c1c;font-size:11px;">' +
       '<div role="button" tabindex="0" onclick="openSavedCheckFisico(\'' + esc(String(c.id || '')) + '\')" style="flex:1;display:flex;justify-content:space-between;gap:8px;cursor:pointer;">' +
-      '<span>' + esc(String(c.at || '').replace('T', ' ').slice(0, 16)) + ' · ' + esc(checkFisicoPeriodMeta(c.period).label) +
+      '<span>' + esc(String(c.at || '').replace('T', ' ').slice(0, 16)) + ' · ' + esc(c.kind === 'extra' ? 'Check-in extra' : (c.kind === 'scheduled' ? 'Check-in' : checkFisicoPeriodMeta(c.period).label)) +
       (syncLabel ? ' · ' + esc(syncLabel) : '') + '</span>' +
       '<span style="color:var(--gold);font-weight:800;">' + (c.weight != null && c.weight !== '' ? (c.weight + ' kg') : '—') + '</span></div>' +
       '<button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;border-color:var(--accent-red);color:var(--accent-red);font-size:11px;" onclick="event.stopPropagation();deleteBodyCheck(\'' + esc(String(c.id || '')) + '\')">X</button></div>' +
@@ -27094,6 +27103,13 @@ function compressPhotoFile(file, maxW, quality) {
   });
 }
 function applyCheckFisicoDataUrl(side, dataUrl) {
+  // A photo picked from the scheduled check-in form goes back to that form.
+  if (window.__checkInFormSide) {
+    const formSide = window.__checkInFormSide;
+    window.__checkInFormSide = null;
+    applySchedCheckInPhoto(formSide, dataUrl);
+    return;
+  }
   const draft = checkFisicoDraft();
   draft[side === 'back' ? 'back' : 'front'] = dataUrl;
   const key = side === 'back' ? 'back' : 'front';
@@ -27126,6 +27142,7 @@ function onCheckPhotoInput(event) {
   if (event && event.target) event.target.value = '';
   if (!file) {
     window.__checkFisicoPickSide = null;
+    window.__checkInFormSide = null;
     clearFilePickIntent();
     return;
   }
@@ -27172,6 +27189,7 @@ async function deleteBodyCheck(id) {
   persist();
   try { if (typeof removeDocumentFile === 'function') await removeDocumentFile('bodycheck_front_' + checkId); } catch (_) {}
   try { if (typeof removeDocumentFile === 'function') await removeDocumentFile('bodycheck_back_' + checkId); } catch (_) {}
+  try { if (typeof removeDocumentFile === 'function') await removeDocumentFile('bodycheck_side_' + checkId); } catch (_) {}
   if (typeof showToast === 'function') showToast('Check rimosso', 'info');
   if (typeof currentView !== 'undefined' && currentView === 'stats') render();
 }
@@ -27448,6 +27466,11 @@ async function openSavedCheckFisico(id) {
   const entry = (store.bodyChecks || []).find(function (c) { return c && String(c.id) === String(id); });
   if (!entry) {
     if (typeof showToast === 'function') showToast('Check non trovato', 'error');
+    return;
+  }
+  // A scheduled check-in opens read only: once sent it cannot change.
+  if (entry.kind === 'scheduled' || entry.kind === 'extra') {
+    openSentScheduledCheckIn(entry.id);
     return;
   }
   closeSavedRecordOverlay();

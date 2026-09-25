@@ -217,13 +217,25 @@
     const media = [];
     if (front && /^data:image\//.test(front)) media.push({ kind: 'front', data: front });
     if (back && /^data:image\//.test(back)) media.push({ kind: 'back', data: back });
+    // A scheduled check-in also has a side photo, in IndexedDB like the others.
+    if (entry && entry.hasSide && typeof getDocumentFile === 'function') {
+      try {
+        const side = await getDocumentFile('bodycheck_side_' + entry.id);
+        if (side && /^data:image\//.test(side)) media.splice(1, 0, { kind: 'side', data: side });
+      } catch (_) {}
+    }
+    const scheduled = !!(entry && (entry.kind === 'scheduled' || entry.kind === 'extra'));
     const payload = await practiceFetch('/api/client/check-ins', {
       method: 'POST',
       headers: practiceHeaders(true),
       body: JSON.stringify({
         weight: entry && entry.weight,
         notes: entry && entry.notes || '',
-        media: media
+        media: media,
+        kind: scheduled ? entry.kind : undefined,
+        scheduledFor: scheduled ? entry.scheduledFor || null : undefined,
+        answers: scheduled ? entry.answers || {} : undefined,
+        attachment: scheduled ? entry.attachment || null : undefined
       })
     }, 30000);
     if (entry && payload && payload.checkIn) {

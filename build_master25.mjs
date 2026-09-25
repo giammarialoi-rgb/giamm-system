@@ -26,6 +26,7 @@ const coachOsCode = [
   'web/coach-os/programs.js',
   'web/coach-os/clients.js',
   'web/coach-os/checkins.js',
+  'web/coach-os/scheduled-checkins.js',
   'web/coach-os/agent.js',
   'web/coach-os/calendar.js',
   'web/coach-os/analytics.js',

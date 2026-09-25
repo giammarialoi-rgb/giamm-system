@@ -24,11 +24,15 @@ import {
   updateCoachTask
 } from "./server/coach-os/workspace.mjs";
 import {
+  applyCheckInTemplateToAll,
+  countApplyCheckInTemplate,
   createCheckInRequest,
   getCoachCheckIn,
   listClientCheckIns,
   listCoachCheckIns,
+  listCoachClientCheckIns,
   reviewCoachCheckIn,
+  sanitizeCheckInTemplate,
   submitClientCheckIn
 } from "./server/coach-os/checkins.mjs";
 import {
@@ -257,6 +261,7 @@ function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
     workoutStartedAt: r.workout_started_at || null,
     programExpiresAt: r.program_expires_at || null,
     nextCheckAt: r.next_check_at || null,
+    checkInTemplate: r.checkin_template || null,
     unreadCount: Number(r.unread_count || 0),
     inviteToken: r.invite_token,
     createdAt: r.created_at,
@@ -1957,6 +1962,7 @@ export function mountCoachPractice(app, deps) {
               c.last_workout_at, c.last_seen_at, c.workout_started_at, c.program_expires_at, c.next_check_at,
               c.unread_count, c.invite_token, c.created_at, c.intake_mode, c.intake, c.intake_completed_at,
               c.leave_requested_at, c.chat_thread, c.allow_max_freedom, c.allow_nurvan_ai, c.pending_change, c.pending_unlock,
+              c.checkin_template,
               d.data->'profile'->>'photoThumb' AS photo_thumb,
               d.data->'profile'->>'photoUrl' AS photo_url
        FROM coach_clients c
@@ -2183,6 +2189,52 @@ export function mountCoachPractice(app, deps) {
       { view: "stats", checkInId: checkIn.id }
     ).catch(() => {});
     return res.status(201).json({ ok: true, checkIn });
+  });
+
+  // Scheduled check-ins: the model lives on the coach-athlete relationship.
+  // Saving it from the athlete's page marks it customized; "Applica a tutti"
+  // copies it to the others that are not customized.
+  app.put("/api/coach/clients/:id/check-in-template", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const client = await loadOwnedClient(coach, req.params.id, res);
+    if (!client) return;
+    const off = !!(req.body && req.body.off);
+    const template = off ? null : sanitizeCheckInTemplate(req.body && req.body.template, { customized: true, previous: client.checkin_template });
+    if (!off && !template) return res.status(400).json({ error: "Modello di check-in non valido." });
+    await pool.query(
+      "UPDATE coach_clients SET checkin_template = $2 WHERE id = $1 AND coach_user_id = $3",
+      [client.id, template ? JSON.stringify(template) : null, coach.id]
+    );
+    return res.json({ ok: true, template });
+  });
+
+  app.get("/api/coach/clients/:id/check-in-template/apply-all", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const client = await loadOwnedClient(coach, req.params.id, res);
+    if (!client) return;
+    const counts = await countApplyCheckInTemplate(pool, coach.id, client.id);
+    return res.json({ ok: true, ...counts });
+  });
+
+  app.post("/api/coach/clients/:id/check-in-template/apply-all", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const client = await loadOwnedClient(coach, req.params.id, res);
+    if (!client) return;
+    if (!client.checkin_template) return res.status(400).json({ error: "Salva prima il modello di questo atleta." });
+    const result = await applyCheckInTemplateToAll(pool, coach.id, client.id, client.checkin_template);
+    return res.json({ ok: true, ...result });
+  });
+
+  app.get("/api/coach/clients/:id/check-ins", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const client = await loadOwnedClient(coach, req.params.id, res);
+    if (!client) return;
+    const checkIns = await listCoachClientCheckIns(pool, coach.id, client.id, { limit: req.query.limit });
+    return res.json({ ok: true, template: client.checkin_template || null, checkIns });
   });
 
   app.get("/api/coach/check-ins/:id", async (req, res) => {

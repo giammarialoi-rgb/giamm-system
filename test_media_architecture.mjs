@@ -423,7 +423,7 @@ function mountedRoutes() {
   ok(/CREATE UNIQUE INDEX IF NOT EXISTS uq_exercise_media_active_slot/.test(migration), 'W3. a unique partial index prevents two active rows in the same slot');
 
   const release = JSON.parse(fs.readFileSync(path.join(root, 'release.json'), 'utf8'));
-  ok(release.schemaTarget === '0013', 'W4. release.json schemaTarget advanced to 0013');
+  ok(Number(release.schemaTarget) >= 13, 'W4. release.json schemaTarget includes 0013');
 
   const flags = fs.readFileSync(path.join(root, 'feature-flags.mjs'), 'utf8');
   ok(/exerciseMediaV1: true/.test(flags), 'W5. exerciseMediaV1 feature flag is declared (default on)');
