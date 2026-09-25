@@ -36,6 +36,7 @@ import {
   submitClientCheckIn
 } from "./server/coach-os/checkins.mjs";
 import { Entitlements, accountEntitlement, coachSeatState, loadAccount } from "./server/account/plans.mjs";
+import { touchLastSeen, recordEvent } from "./server/admin/activity.mjs";
 import {
   buildDeterministicIntelligence,
   interpretAthleteBrain,
@@ -1124,6 +1125,7 @@ export function mountCoachPractice(app, deps) {
       );
       let entitlement = null;
       try { entitlement = await accountEntitlement(pool, ctx.auth); } catch (err) { console.warn("CLIENT_PLAN", err && err.message); }
+      touchLastSeen(pool, ctx.auth.id);
       return res.json({
         ok: true,
         client: clientRow(ctx.client, { includeIntake: true }),
@@ -1173,6 +1175,7 @@ export function mountCoachPractice(app, deps) {
       return res.status(201).json({ ok: true, ...result });
     } catch (error) {
       console.error("CLIENT_CHECK_IN", error && error.message ? error.message : error);
+      recordEvent(pool, "checkin_failed", ctx.auth.id, { route: "/api/client/check-ins", status: 400, message: error && error.message });
       return res.status(400).json({ error: error.message || "Check-in non salvato." });
     }
   });
@@ -1697,6 +1700,7 @@ export function mountCoachPractice(app, deps) {
     }
     let entitlement = null;
     try { entitlement = await accountEntitlement(pool, auth); } catch (err) { console.warn("COACH_PLAN", err && err.message); }
+    touchLastSeen(pool, auth.id);
     return res.json({
       ok: true,
       unlocked,

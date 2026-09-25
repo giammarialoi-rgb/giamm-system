@@ -7,8 +7,7 @@
 // Qui: leggere il piano di un account, i posti di un coach (i collegamenti
 // piu' recenti oltre il limite restano inattivi finche' non si libera un
 // posto), il collegamento di un atleta, i cambi di piano con storico, il trial
-// coach (14 giorni, una volta) e le route di amministrazione.
-import crypto from "node:crypto";
+// coach (14 giorni, una volta). L'amministrazione e' in server/admin/.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -183,38 +182,9 @@ export async function startCoachTrial(pool, userId, now = Date.now()) {
   return loadAccount(pool, userId);
 }
 
-function safeEqual(a, b) {
-  const x = Buffer.from(String(a || ""));
-  const y = Buffer.from(String(b || ""));
-  return x.length === y.length && crypto.timingSafeEqual(x, y);
-}
-
-/**
- * Who may administer plans: a request carrying X-Admin-Token equal to
- * NURVAN_ADMIN_TOKEN (at least 24 characters), or a logged-in user whose email
- * is in ADMIN_EMAILS. Neither set: nobody.
- */
-export function isAdmin(req, auth, env = process.env) {
-  const token = String(env.NURVAN_ADMIN_TOKEN || "");
-  if (token.length >= 24 && safeEqual(req.headers["x-admin-token"], token)) return "token";
-  const emails = String(env.ADMIN_EMAILS || "").split(/[\s,;]+/).map((e) => e.trim().toLowerCase()).filter(Boolean);
-  if (auth && auth.email && auth.role !== "athlete" && emails.includes(String(auth.email).toLowerCase())) return "email:" + String(auth.email).toLowerCase();
-  return null;
-}
-
-export function mountPlanRoutes(app, { pool, initDb, accountFromBearer, env = process.env }) {
+export function mountPlanRoutes(app, { pool, initDb, accountFromBearer }) {
   async function user(req) {
     return accountFromBearer(req.headers.authorization);
-  }
-  async function admin(req, res) {
-    const auth = await user(req);
-    const who = isAdmin(req, auth, env);
-    if (!who) {
-      res.status(403).json({ error: "Riservato all'amministrazione." });
-      return null;
-    }
-    await initDb();
-    return who;
   }
 
   app.get("/api/account/plan", async (req, res) => {
@@ -238,52 +208,6 @@ export function mountPlanRoutes(app, { pool, initDb, accountFromBearer, env = pr
       return res.status(error.statusCode || 500).json({ error: error.message, code: error.code || null });
     }
   });
-
-  app.get("/api/admin/accounts", async (req, res) => {
-    if (!(await admin(req, res))) return;
-    const q = String(req.query.q || "").trim().toLowerCase();
-    const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 100));
-    const rows = await pool.query(
-      `SELECT u.id, u.email, u.name, u.plan, u.plan_source, u.plan_until, u.seats, u.trial_until, u.trial_used_at,
-              EXISTS(SELECT 1 FROM coach_licenses l WHERE l.user_id = u.id AND l.status = 'active') AS is_coach,
-              (SELECT COUNT(*)::int FROM coach_clients c WHERE c.coach_user_id = u.id AND c.status = 'active') AS athletes
-       FROM app_users u
-       WHERE ($1 = '' OR LOWER(u.email) LIKE $2 OR LOWER(COALESCE(u.name,'')) LIKE $2)
-       ORDER BY u.id ASC
-       LIMIT $3`,
-      [q, "%" + q + "%", limit]
-    );
-    const now = Date.now();
-    return res.json({
-      ok: true,
-      accounts: rows.rows.map((r) => {
-        const account = accountFromRow(r);
-        const eff = Entitlements.effective(account, now);
-        return {
-          id: String(r.id), email: r.email, name: r.name || "", isCoach: !!r.is_coach, athletes: r.athletes,
-          ...account, effectivePlan: eff.plan, status: eff.status, seatsEffective: eff.seats === Infinity ? null : eff.seats
-        };
-      })
-    });
-  });
-
-  app.get("/api/admin/accounts/:id/history", async (req, res) => {
-    if (!(await admin(req, res))) return;
-    const rows = await pool.query(
-      "SELECT changed_at, from_plan, to_plan, source, plan_until, seats, note, actor FROM app_plan_history WHERE user_id = $1 ORDER BY changed_at DESC, id DESC LIMIT 200",
-      [req.params.id]
-    );
-    return res.json({ ok: true, history: rows.rows });
-  });
-
-  app.post("/api/admin/accounts/:id/plan", async (req, res) => {
-    const who = await admin(req, res);
-    if (!who) return;
-    try {
-      const account = await setAccountPlan(pool, req.params.id, req.body || {}, { actor: who });
-      return res.json({ ok: true, account, entitlement: entitlementPayload(account) });
-    } catch (error) {
-      return res.status(error.statusCode || 500).json({ error: error.message });
-    }
-  });
+  // The /api/admin/* routes are in server/admin/index.mjs, behind the
+  // dashboard login or the CLI token.
 }

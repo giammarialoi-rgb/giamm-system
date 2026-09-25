@@ -16,7 +16,6 @@ import {
   accountFromRow,
   coachLinkForClient,
   coachSeatState,
-  isAdmin,
   sanitizePlanChange,
   setAccountPlan,
   startCoachTrial
@@ -178,17 +177,6 @@ const iso = (ms) => new Date(ms).toISOString();
   eq(writes.map((w) => w[0]), ['UPDATE', 'INSERT'], 'plan change: account updated and history written in one transaction');
   eq(writes[1][1].slice(1, 4).concat([writes[1][1][6], writes[1][1][7]]), ['free', 'coach', 'manual', 'gratis ai primi coach', 'token'], 'history: from, to, origin, note, who');
 
-  const req = (h) => ({ headers: h });
-  const env = { NURVAN_ADMIN_TOKEN: 'x'.repeat(32), ADMIN_EMAILS: 'Owner@Example.com' };
-  eq([
-    isAdmin(req({ 'x-admin-token': 'x'.repeat(32) }), null, env),
-    isAdmin(req({ 'x-admin-token': 'wrong' }), null, env),
-    isAdmin(req({}), { email: 'owner@example.com', role: 'user' }, env),
-    isAdmin(req({}), { email: 'owner@example.com', role: 'athlete' }, env),
-    isAdmin(req({ 'x-admin-token': 'short' }), null, { NURVAN_ADMIN_TOKEN: 'short' }),
-    isAdmin(req({}), { email: 'x@y.z' }, {})
-  ], ['token', null, 'email:owner@example.com', null, null, null], 'admin: token or listed email only; short tokens and athletes never');
-
   // Seats on the server, from the same module.
   const clientRows = Array.from({ length: 21 }, (_, i) => ({ id: i + 1, created_at: iso(NOW - (30 - i) * DAY), status: 'active' }));
   let coachPlan = { plan: 'coach', plan_source: 'manual', seats: null };
@@ -333,7 +321,7 @@ function pageContext(entitlement, extra = {}) {
   ok('offline and Android: both files cached and copied', ['./features.js', './entitlements.js'].every((f) => read('web/sw.js').includes("'" + f + "'")) && ['features.js', 'entitlements.js'].every((f) => read('sync_web_assets.mjs').includes("'" + f + "'")));
   const mig = read('server/db/migrations/0015_plans_entitlements.sql');
   ok('migration: plan fields on the account, history table, existing coaches kept', ['plan TEXT', 'plan_source TEXT', 'plan_until TIMESTAMPTZ', 'seats INTEGER', 'trial_until TIMESTAMPTZ', 'trial_used_at TIMESTAMPTZ'].every((c) => mig.includes('ADD COLUMN IF NOT EXISTS ' + c)) && mig.includes('CREATE TABLE IF NOT EXISTS app_plan_history') && /SET plan = 'coach'/.test(mig));
-  ok('admin routes and trial route mounted', ['app.get("/api/admin/accounts"', 'app.post("/api/admin/accounts/:id/plan"', 'app.get("/api/admin/accounts/:id/history"', 'app.post("/api/account/trial"'].every((r) => read('server/account/plans.mjs').includes(r)) && read('coach-api.mjs').includes('mountPlanRoutes(app, { pool, initDb, accountFromBearer });'));
+  ok('trial route here, admin routes in the dashboard module (test_admin_dashboard.mjs)', read('server/account/plans.mjs').includes('app.post("/api/account/trial"') && ['app.get("/api/admin/accounts"', 'app.post("/api/admin/accounts/:id/plan"', 'app.get("/api/admin/accounts/:id/history"'].every((r) => read('server/admin/index.mjs').includes(r)) && read('coach-api.mjs').includes('mountPlanRoutes(app, { pool, initDb, accountFromBearer });'));
 }
 
 if (failed) {

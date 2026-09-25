@@ -21,6 +21,8 @@ import { mountFoodRoutes } from "./server/food/index.mjs";
 import { mountMediaRoutes } from "./server/media/media-routes.mjs";
 import { mergeAccountDataBlobs, updateAccountData } from "./server/account/index.mjs";
 import { accountEntitlement, mountPlanRoutes } from "./server/account/plans.mjs";
+import { mountAdminDashboard } from "./server/admin/index.mjs";
+import { touchLastSeen, recordEvent, fileFormat } from "./server/admin/activity.mjs";
 import { runMigrations } from "./server/db/migrate.mjs";
 import {
   buildCorsOriginValidator,
@@ -352,7 +354,8 @@ function publicGoogleClientId() {
   return sanitizeGoogleClientId(GOOGLE_CLIENT_ID);
 }
 
-async function sendPasswordResetEmail(email, code) {
+// The server's one email channel (Resend): reset codes and dashboard codes.
+async function sendEmail(to, subject, text) {
   const from = process.env.MAIL_FROM || process.env.RESEND_FROM || "";
   const key = process.env.RESEND_API_KEY || "";
   if (!key || !from) return { sent: false, reason: "mail_not_configured" };
@@ -363,23 +366,29 @@ async function sendPasswordResetEmail(email, code) {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        from,
-        to: email,
-        subject: "NURVAN — codice di recupero password",
-        text: `Il tuo codice di recupero NURVAN è: ${code}\n\nScade tra 60 minuti. Se non hai richiesto il reset, ignora questa email.`
-      })
+      body: JSON.stringify({ from, to, subject, text })
     });
     if (!res.ok) {
       const t = await res.text().catch(() => "");
-      console.warn("PASSWORD_RESET_MAIL_FAIL", res.status, t.slice(0, 200));
+      console.warn("MAIL_FAIL", res.status, t.slice(0, 200));
       return { sent: false, reason: "mail_failed" };
     }
     return { sent: true };
   } catch (err) {
-    console.warn("PASSWORD_RESET_MAIL_ERROR", err?.message || err);
+    console.warn("MAIL_ERROR", err?.message || err);
     return { sent: false, reason: "mail_failed" };
   }
+}
+Object.defineProperty(sendEmail, "configured", {
+  get: () => Boolean(process.env.RESEND_API_KEY && (process.env.MAIL_FROM || process.env.RESEND_FROM))
+});
+
+async function sendPasswordResetEmail(email, code) {
+  return sendEmail(
+    email,
+    "NURVAN — codice di recupero password",
+    `Il tuo codice di recupero NURVAN è: ${code}\n\nScade tra 60 minuti. Se non hai richiesto il reset, ignora questa email.`
+  );
 }
 
 function issueAccountToken(user) {
@@ -1526,6 +1535,7 @@ app.get("/api/account/me", async (req, res) => {
     const user = userRes.rows[0];
     if (!user) return res.status(401).json({ error: "User not found." });
     const dataRes = await pool.query("SELECT data FROM app_account_data WHERE user_id = $1", [auth.id]);
+    touchLastSeen(pool, auth.id);
     // The plan travels with the account, like the rest. A failure here never
     // blocks the account: the app keeps the last plan it knew.
     let entitlement = null;
@@ -1556,9 +1566,11 @@ app.post("/api/account/sync", async (req, res) => {
     const clientData = req.body?.data || req.body || {};
     if (clientData && clientData.activeProgram == null) delete clientData.activeProgram;
     const merged = await mergeIntoAccountData(auth.id, clientData);
+    touchLastSeen(pool, auth.id);
     return res.json({ ok: true, data: merged });
   } catch (error) {
     console.error("ACCOUNT_SYNC_ERROR", error);
+    recordEvent(pool, "sync_failed", auth.id, { route: "/api/account/sync", status: 500, message: error && error.message });
     return res.status(500).json({ error: "Failed to sync account data." });
   }
 });
@@ -1601,6 +1613,7 @@ app.post("/api/account/data", async (req, res) => {
     await mergeIntoAccountData(auth.id, incoming);
     return res.json({ ok: true, saved_at: new Date().toISOString() });
   } catch (err) {
+    recordEvent(pool, "sync_failed", auth.id, { route: "/api/account/data", status: 500, message: err && err.message });
     return res.status(500).json({ error: "Impossibile salvare i dati sul cloud." });
   }
 });
@@ -1743,6 +1756,10 @@ app.post("/api/ingest/document", upload.single("file"), async (req, res) => {
     return res.json(structuredWorkout);
   } catch (error) {
     console.error(`[FILE_ANALYZE_ERROR] filename="${filename}" parser="${parser}" error_name="${error?.name}" error_message="${error?.message}"`);
+    // For the dashboard: the format and the message, never the file name or content.
+    accountFromBearer(req.headers.authorization).then((auth) =>
+      recordEvent(pool, "import_failed", auth && auth.id, { route: "/api/ingest/document", status: 500, format: fileFormat(filename, mimeType), message: error?.message })
+    ).catch(() => {});
     return res.status(500).json({
       error: "Document ingestion failed.",
       details: error.message
@@ -2033,6 +2050,8 @@ mountCoachPractice(app, {
 });
 
 mountPlanRoutes(app, { pool, initDb, accountFromBearer });
+
+mountAdminDashboard(app, { pool, initDb, sendEmail, secret: JWT_SECRET });
 
 mountProgramGenerateRoutes(app, {
   requireAuth: async (req) => accountFromBearer(req.headers.authorization)
