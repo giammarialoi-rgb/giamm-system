@@ -57,6 +57,7 @@ export async function resolveIdentityUser(pool, identity) {
   }
 
   let created = false;
+  let lostRace = false;
   const givenName = String(identity.name || "").trim();
   if (!userId) {
     if (!email) throw httpError(400, label + " non ha fornito un’email. Consenti la condivisione dell’email e riprova.");
@@ -75,14 +76,24 @@ export async function resolveIdentityUser(pool, identity) {
       created = true;
     } catch (error) {
       try { await client.query("ROLLBACK"); } catch (_) {}
-      if (error && error.code === "23505") {
+      if (error && error.code === "23505" && identity.emailVerified) {
+        // Two first logins at once (a double tap): the other one created the
+        // account a moment ago. Same verified address: that is the account.
+        lostRace = true;
+      } else if (error && error.code === "23505") {
         // Same address, but the provider did not verify it: no silent merge.
         throw httpError(409, "Esiste già un account con questa email. Accedi con la password e collega " + label + " dal profilo.");
+      } else {
+        throw error;
       }
-      throw error;
     } finally {
       client.release();
     }
+  }
+  if (lostRace) {
+    const winner = await pool.query("SELECT id FROM app_users WHERE email = $1", [email]);
+    if (!winner.rows.length) throw httpError(409, "Accesso non riuscito, riprova.");
+    userId = String(winner.rows[0].id);
   }
 
   await pool.query(
@@ -124,10 +135,23 @@ export async function deleteAccount(pool, userId) {
     "SELECT provider, refresh_token_enc FROM app_user_identities WHERE user_id = $1",
     [userId]
   );
+  let athletesRemoved = 0;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     await client.query("DELETE FROM app_password_resets WHERE email = $1", [user.email]);
+    // A coach's athletes created by invite exist only inside that practice:
+    // once the coach's client records cascade away, nothing can log them in
+    // or reach them. They go with the coach. An athlete's own account (any
+    // other kind) is not touched: it only loses the link.
+    const athletes = await client.query(
+      `DELETE FROM app_users
+       WHERE provider = 'coach_client'
+         AND id IN (SELECT athlete_user_id FROM coach_clients WHERE coach_user_id = $1 AND athlete_user_id IS NOT NULL)
+       RETURNING id`,
+      [userId]
+    );
+    athletesRemoved = athletes.rows.length;
     await client.query("DELETE FROM app_users WHERE id = $1", [userId]);
     await client.query("COMMIT");
   } catch (error) {
@@ -136,7 +160,7 @@ export async function deleteAccount(pool, userId) {
   } finally {
     client.release();
   }
-  return { email: user.email, identities: identities.rows };
+  return { email: user.email, identities: identities.rows, athletesRemoved };
 }
 
 // DELETE /api/account, confirmed by typing ELIMINA. It works the same for

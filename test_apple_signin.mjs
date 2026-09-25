@@ -64,7 +64,7 @@ const ENV = { APPLE_CLIENT_ID: CLIENT_ID, APPLE_TEAM_ID: 'TEAM123456', APPLE_KEY
 
 // --- a fake database ------------------------------------------------------
 function fakeDb() {
-  const db = { users: [], identities: [], data: new Set(), tickets: new Map(), resets: new Set(), nextId: 1, log: [] };
+  const db = { users: [], identities: [], data: new Set(), tickets: new Map(), resets: new Set(), clients: [], nextId: 1, log: [] };
   const rows = (r) => ({ rows: r, rowCount: r.length });
   const byId = (id) => db.users.find((u) => String(u.id) === String(id));
   function q(sql, p = []) {
@@ -105,11 +105,20 @@ function fakeDb() {
       return rows(db.identities.filter((x) => String(x.user_id) === String(p[0])));
     }
     if (/^DELETE FROM app_password_resets WHERE email = \$1$/.test(s)) { db.resets.delete(p[0]); return rows([]); }
+    if (/^DELETE FROM app_users WHERE provider = 'coach_client' AND id IN \(SELECT athlete_user_id FROM coach_clients WHERE coach_user_id = \$1 AND athlete_user_id IS NOT NULL\) RETURNING id$/.test(s)) {
+      const ids = db.clients.filter((c) => String(c.coach_user_id) === String(p[0]) && c.athlete_user_id != null).map((c) => String(c.athlete_user_id));
+      const gone = db.users.filter((u) => u.provider === 'coach_client' && ids.includes(String(u.id)));
+      db.users = db.users.filter((u) => !gone.includes(u));
+      db.clients.forEach((c) => { if (gone.some((u) => String(u.id) === String(c.athlete_user_id))) c.athlete_user_id = null; });
+      return rows(gone.map((u) => ({ id: u.id })));
+    }
     if (/^DELETE FROM app_users WHERE id = \$1$/.test(s)) {
       // The foreign keys cascade.
       db.users = db.users.filter((x) => String(x.id) !== String(p[0]));
       db.identities = db.identities.filter((x) => String(x.user_id) !== String(p[0]));
       db.data.delete(String(p[0]));
+      db.clients = db.clients.filter((c) => String(c.coach_user_id) !== String(p[0]));
+      db.clients.forEach((c) => { if (String(c.athlete_user_id) === String(p[0])) c.athlete_user_id = null; });
       return rows([]);
     }
     throw new Error('query non prevista dal fake: ' + s.slice(0, 120));
@@ -196,6 +205,30 @@ console.log('--- 3. l\'account: crea, collega, non duplicare ---');
   const ath = db.users[db.users.length - 1];
   const athLinked = await resolveIdentityUser(pool, { provider: 'google', sub: 'g-ath', email: 'atleta@gmail.com', emailVerified: true, linkingUserId: ath.id });
   ok('3l. un account atleta resta atleta (il ruolo viene da provider)', athLinked.user.provider === 'coach_client');
+
+  const [r1, r2] = await Promise.all([
+    resolveIdentityUser(pool, { provider: 'apple', sub: 'sub-twice', email: 'doppio@example.com', emailVerified: true, name: 'Doppio' }),
+    resolveIdentityUser(pool, { provider: 'apple', sub: 'sub-twice', email: 'doppio@example.com', emailVerified: true, name: 'Doppio' })
+  ]);
+  ok('3m. due primi accessi nello stesso istante (doppio tocco): un solo account, entrambi entrano',
+    r1.user.id === r2.user.id && db.users.filter((u) => u.email === 'doppio@example.com').length === 1 && db.identities.filter((i) => i.provider_sub === 'sub-twice').length === 1);
+}
+
+console.log('');
+console.log("--- 3b. un coach che elimina l'account ---");
+{
+  const { db, pool } = fakeDb();
+  db.users.push({ id: 1, email: 'coach@example.com', name: 'Coach', provider: 'apple', password_hash: null });
+  db.users.push({ id: 2, email: 'c.a@client.nurvan.internal', name: 'Atleta invitato', provider: 'coach_client', password_hash: 'h' });
+  db.users.push({ id: 3, email: 'propria@example.com', name: 'Atleta con account suo', provider: 'google', password_hash: null });
+  db.users.push({ id: 4, email: 'c.b@client.nurvan.internal', name: 'Atleta di un altro coach', provider: 'coach_client', password_hash: 'h' });
+  db.users.push({ id: 5, email: 'altro@example.com', name: 'Altro coach', provider: 'email', password_hash: 'h' });
+  db.nextId = 6;
+  db.clients.push({ coach_user_id: 1, athlete_user_id: 2 }, { coach_user_id: 1, athlete_user_id: 3 }, { coach_user_id: 1, athlete_user_id: null }, { coach_user_id: 5, athlete_user_id: 4 });
+  const gone = await deleteAccount(pool, 1);
+  ok('3b-a. il coach e gli atleti creati con i suoi inviti spariscono', !db.users.some((u) => u.id === 1 || u.id === 2) && gone.athletesRemoved === 1);
+  ok("3b-b. l'atleta con un account suo resta, senza piu' il legame", db.users.some((u) => u.id === 3));
+  ok('3b-c. gli atleti di un altro coach non si toccano', db.users.some((u) => u.id === 4) && db.clients.some((c) => c.coach_user_id === 5 && c.athlete_user_id === 4));
 }
 
 // --- the routes, on a real express app -------------------------------------
@@ -358,6 +391,13 @@ console.log('--- 8. il resto del cablaggio ---');
   const main = read('app/src/main/java/com/giammaria/system/MainActivity.java');
   ok('8i. e l\'app Android apre proprio /api/auth/apple/start (nessun SDK nativo)', /COACH_API_URL \+ "\/api\/auth\/apple\/start"/.test(main) && !/appleid|AuthenticationServices/i.test(read('app/build.gradle')));
   const mig = read('server/db/migrations/0017_login_identities.sql');
+  ok('8i2. Android chiuso durante il browser: il ticket arriva in onCreate e si consegna a pagina caricata',
+    /if \(isAppleReturn\(data\)\) \{\s+pendingAppleTicket = data\.getQueryParameter\("code"\);/.test(main) &&
+    /if \(pendingAppleTicket != null\) \{[\s\S]{0,160}deliverAppleTicket\(ticket\);/.test(main) &&
+    /if \(isAppleReturn\(data\)\) \{\s+deliverAppleTicket\(data\.getQueryParameter\("code"\)\);/.test(main));
+  const forget = page.slice(page.indexOf('async function forgetDeletedAccountOnDevice('), page.indexOf('async function forgetDeletedAccountOnDevice(') + 2500);
+  ok("8i3. eliminando, anche le chiavi locali per nome (diario, backup, marcatore), pure sull'account originale del telefono",
+    /\['nurvan_personal_program_lock', 'nurvan_nutrition_cleared_at', NURVAN_FOOD_DIARY_BASE_KEY\]\.map/.test(forget) && /scoped\.forEach\(function \(k\) \{ localStorage\.removeItem\(k\); \}\);/.test(forget));
   ok('8j. migrazione 0017: identita\' per (provider, sub), ticket, e i login Google/Apple di prima', /PRIMARY KEY \(provider, provider_sub\)/.test(mig) && /CREATE TABLE IF NOT EXISTS app_login_tickets/.test(mig) && /INSERT INTO app_user_identities \(provider, provider_sub, user_id, email\)\s*\nSELECT provider, provider_id, id, email/.test(mig));
   ok('8k. il README delle quattro variabili c\'e\', dieci righe', (() => { const t = read('server/account/APPLE_SIGNIN.md').trim().split('\n'); return t.length === 10 && ['APPLE_TEAM_ID', 'APPLE_CLIENT_ID', 'APPLE_KEY_ID', 'APPLE_PRIVATE_KEY'].every((k) => t.join('\n').includes(k)); })());
   const pkg = JSON.parse(read('package.json'));

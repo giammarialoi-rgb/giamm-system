@@ -38043,7 +38043,9 @@ function openDeleteAccount() {
   overlay.innerHTML =
     '<div class="card" style="max-width:420px;width:100%;border:1px solid var(--accent-red);padding:16px;box-sizing:border-box;">' +
     '<div style="font-size:12px;font-weight:900;color:var(--accent-red);margin-bottom:8px;">ELIMINA ACCOUNT</div>' +
-    '<div style="font-size:12px;color:#ccc;line-height:1.5;margin-bottom:10px;">Si cancellano l’account <b style="color:#fff;">' + esc(store.accountUser.email || '') + '</b> e tutti i suoi dati sul server, e la copia su questo dispositivo. Non si può annullare.</div>' +
+    '<div style="font-size:12px;color:#ccc;line-height:1.5;margin-bottom:10px;">Si cancellano l’account <b style="color:#fff;">' + esc(store.accountUser.email || '') + '</b> e tutti i suoi dati sul server, e la copia su questo dispositivo.' +
+    ((typeof isCoachUnlocked === 'function' && isCoachUnlocked()) ? ' Anche gli account degli atleti che hai creato con gli inviti vengono eliminati.' : '') +
+    ' Non si può annullare.</div>' +
     '<label for="delete-account-confirm" style="font-size:11px;color:#aaa;">Scrivi ELIMINA per confermare</label>' +
     '<input id="delete-account-confirm" type="text" autocomplete="off" autocapitalize="characters" style="width:100%;margin:6px 0 10px;box-sizing:border-box;">' +
     '<div id="delete-account-msg" style="font-size:11px;color:var(--accent-red);min-height:14px;margin-bottom:8px;"></div>' +
@@ -38082,6 +38084,11 @@ async function forgetDeletedAccountOnDevice(user) {
   const key = personalStoreKeyFor(user);
   const dbName = personalDbNameFor(user);
   const suffix = key === GS_STORE_PERSONAL_KEY ? '' : '__' + key.replace(/^GS_STORE_?/, '');
+  // The account's other keys, by name: on the device's original account they
+  // carry no suffix, so the sweep below would not find them.
+  const scoped = ['nurvan_personal_program_lock', 'nurvan_nutrition_cleared_at', NURVAN_FOOD_DIARY_BASE_KEY].map(function (n) {
+    try { return personalScopedKey(n); } catch (_) { return ''; }
+  }).filter(Boolean);
   clearTimeout(accountSyncTimer);
   try { hydrateRuntimeFromStoreObject(JSON.parse(JSON.stringify(DEFAULT_STORE))); } catch (_) {}
   store.accountToken = null;
@@ -38090,6 +38097,7 @@ async function forgetDeletedAccountOnDevice(user) {
   writeActiveAccount(null);
   try {
     localStorage.removeItem(key);
+    scoped.forEach(function (k) { localStorage.removeItem(k); });
     if (suffix) {
       const drop = [];
       for (let i = 0; i < localStorage.length; i++) {

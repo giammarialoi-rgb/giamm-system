@@ -75,6 +75,10 @@ public class MainActivity extends Activity {
     private volatile JSONObject lastPickedDocument = null;
     private volatile String lastHealthTotals = "{\"kcal\":0}";
     private PermissionRequest pendingWebPermissionRequest = null;
+    // The Sign in with Apple ticket from giammaria://oauth/apple, when it
+    // arrives while the app is starting (Android closed it while the browser
+    // was open): handed to the page once the page has loaded.
+    private String pendingAppleTicket = null;
     private static final int WEB_MEDIA_PERMISSION_REQ = 22;
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -95,6 +99,11 @@ public class MainActivity extends Activity {
                 Log.i("NURVAN_BOOT", "Page finished: " + url);
                 if (lastPickedDocument != null) {
                     dispatchPickedDocumentToWeb();
+                }
+                if (pendingAppleTicket != null) {
+                    final String ticket = pendingAppleTicket;
+                    pendingAppleTicket = null;
+                    deliverAppleTicket(ticket);
                 }
             }
 
@@ -328,7 +337,9 @@ public class MainActivity extends Activity {
         if (intent != null) {
             if (intent.getData() != null) {
                 Uri data = intent.getData();
-                if ("content".equals(data.getScheme()) || "file".equals(data.getScheme())) {
+                if (isAppleReturn(data)) {
+                    pendingAppleTicket = data.getQueryParameter("code");
+                } else if ("content".equals(data.getScheme()) || "file".equals(data.getScheme())) {
                     handlePickedDocument(data);
                 }
             }
@@ -1194,17 +1205,24 @@ public class MainActivity extends Activity {
         }
     }
 
+    private static boolean isAppleReturn(Uri data) {
+        return data != null && "giammaria".equals(data.getScheme()) && "oauth".equals(data.getHost())
+                && "apple".equals(data.getPathSegments().isEmpty() ? "" : data.getPathSegments().get(0));
+    }
+
+    // A cancelled or failed attempt comes back without a code: nothing to send.
+    private void deliverAppleTicket(String code) {
+        if (code == null || code.isEmpty() || web == null) return;
+        web.post(() -> web.evaluateJavascript("window.nativeAppleResult && window.nativeAppleResult(" + JSONObject.quote(code) + ")", null));
+    }
+
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
         Uri data = intent == null ? null : intent.getData();
-        if (data != null && "giammaria".equals(data.getScheme()) && "oauth".equals(data.getHost())
-                && "apple".equals(data.getPathSegments().isEmpty() ? "" : data.getPathSegments().get(0))) {
-            String code = data.getQueryParameter("code");
-            if (code != null && web != null) {
-                web.post(() -> web.evaluateJavascript("window.nativeAppleResult && window.nativeAppleResult(" + JSONObject.quote(code) + ")", null));
-            }
+        if (isAppleReturn(data)) {
+            deliverAppleTicket(data.getQueryParameter("code"));
         } else if (data != null && ("content".equals(data.getScheme()) || "file".equals(data.getScheme()))) {
             handlePickedDocument(data);
         }
