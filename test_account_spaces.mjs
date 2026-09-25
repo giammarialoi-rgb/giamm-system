@@ -229,8 +229,8 @@ function spaceSandbox(initial) {
   ok(/logs: Array\.isArray\(logsSrc\) \? logsSrc\.slice\(-400\)/.test(payload),
     'and a year and more of sessions instead of the last eighty');
   ok(/bodyChecksSrc\.slice\(-BODY_CHECKS_KEEP\)/.test(payload) && /var BODY_CHECKS_KEEP = 400;/.test(base), 'and four hundred body checks instead of sixteen (years of weekly checks)');
-  ok(/models\.slice\(-8\)|modelsSrc\.slice\(-8\)/.test(payload) && /delete data\.exerciseDb/.test(payload),
-    'saved programs travel too, without the exercise database each import drags along');
+  ok(/modelsSrc\.slice\(\)\.sort\([^\n]*\)\.slice\(-8\)/.test(payload) && /delete data\.exerciseDb/.test(payload) && /window\.__programDataCache && window\.__programDataCache\[m\.id\]/.test(payload),
+    'saved programs travel too - the eight latest, with their content, without the exercise database each import drags along');
 
   const apply = base.slice(base.indexOf('function applyRemoteAccountData'), base.indexOf('function looksLikeClientAssignDraft'));
   ['remote.models', 'remote.chatHistory', 'remote.actionHistory', 'remote.intelTargets', 'remote.coachUnlocked']

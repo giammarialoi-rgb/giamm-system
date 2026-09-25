@@ -1419,6 +1419,13 @@ if (typeof window !== 'undefined') {
 const CalendarService = {
   _customCache: null,
   loadCustomEvents() {
+    // The account's list itself, read every time: a copy taken once went
+    // stale after a sync merged events in, and the next add wrote the old
+    // copy back over them.
+    if (typeof store !== 'undefined' && store && Array.isArray(store.calendarEvents)) {
+      this._customCache = store.calendarEvents;
+      return Promise.resolve(this._customCache);
+    }
     if (this._customCache) return Promise.resolve(this._customCache);
     let list = [];
     try {
@@ -1454,6 +1461,12 @@ const CalendarService = {
   async removeEvent(id) {
     await this.loadCustomEvents();
     this._customCache = (this._customCache || []).filter(function (e) { return e.id !== id; });
+    // The deletion travels with the data, or another device's copy brings the
+    // event back.
+    if (typeof store !== 'undefined' && store && id != null) {
+      store.calendarEventsDeleted = Object.assign({}, store.calendarEventsDeleted || {});
+      store.calendarEventsDeleted[String(id)] = new Date().toISOString();
+    }
     this._saveCustom();
   },
   _weekdayIt(date) {

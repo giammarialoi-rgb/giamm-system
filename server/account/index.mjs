@@ -156,14 +156,46 @@ export function mergeAccountDataBlobs(current, incoming) {
     merged.bodyChecks = checks.slice(-400);
     merged.bodyChecksDeleted = deleted;
   }
-  // Saved programs are the person's own: kept by id from both sides.
+  // Calendar events: the same as body checks - by id from both sides, minus
+  // the deleted ones. The list used to be replaced whole by whichever device
+  // uploaded last (an event added on the web was lost to the phone's older
+  // list; a deleted one came back).
   {
+    const deleted = Object.assign({},
+      cur.calendarEventsDeleted && typeof cur.calendarEventsDeleted === "object" ? cur.calendarEventsDeleted : {},
+      inc.calendarEventsDeleted && typeof inc.calendarEventsDeleted === "object" ? inc.calendarEventsDeleted : {});
+    const byEvent = {};
+    (Array.isArray(cur.calendarEvents) ? cur.calendarEvents : []).concat(Array.isArray(inc.calendarEvents) ? inc.calendarEvents : []).forEach((e) => {
+      if (e && e.id != null) byEvent[String(e.id)] = { ...(byEvent[String(e.id)] || {}), ...e };
+    });
+    const events = Object.keys(byEvent).filter((id) => !deleted[id]).map((id) => byEvent[id]);
+    if (events.length || Object.keys(deleted).length || Array.isArray(cur.calendarEvents) || Array.isArray(inc.calendarEvents)) {
+      merged.calendarEvents = events.slice(-400);
+      merged.calendarEventsDeleted = deleted;
+    }
+  }
+  // Saved programs are the person's own: kept by id from both sides.
+  // By id; a side that has only a program's name does not erase the content
+  // the other side sent; the ones removed from the library stay removed
+  // (hiddenProgramIds); and a device that uploads its eight latest no longer
+  // pushes the others out (it was slice(-12) of whatever came in last).
+  {
+    const hidden = new Set([]
+      .concat(Array.isArray(cur.hiddenProgramIds) ? cur.hiddenProgramIds : [])
+      .concat(Array.isArray(inc.hiddenProgramIds) ? inc.hiddenProgramIds : [])
+      .map(String));
+    merged.hiddenProgramIds = [...hidden].slice(-200);
     const byModel = {};
     (Array.isArray(cur.models) ? cur.models : []).concat(Array.isArray(inc.models) ? inc.models : []).forEach((m) => {
-      if (m && m.id) byModel[m.id] = m;
+      if (!m || !m.id) return;
+      const prev = byModel[m.id];
+      byModel[m.id] = { ...(prev || {}), ...m, data: (m && m.data) || (prev && prev.data) || undefined };
     });
-    const models = Object.keys(byModel).map((k) => byModel[k]);
-    if (models.length) merged.models = models.slice(-12);
+    const models = Object.keys(byModel).map((k) => byModel[k])
+      .filter((m) => !hidden.has(String(m.id)) && !hidden.has(String(m.name || "")) && !hidden.has("name:" + String(m.name || "")))
+      .sort((a, b) => (Number(a.date) || 0) - (Number(b.date) || 0));
+    if (models.length) merged.models = models.slice(-24);
+    else if (hidden.size) merged.models = [];
   }
   // Histories: whichever side has more of it, rather than the one that
   // happened to sync last.
@@ -195,14 +227,21 @@ export function mergeAccountDataBlobs(current, incoming) {
   {
     const a = cur.intelTargets && typeof cur.intelTargets === "object" ? cur.intelTargets : {};
     const b = inc.intelTargets && typeof inc.intelTargets === "object" ? inc.intelTargets : {};
-    if (Object.keys(a).length || Object.keys(b).length) merged.intelTargets = { ...a, ...b };
+    // Per slot like the loads: the side cleared more recently wins whole.
+    if (incEpoch > curEpoch) merged.intelTargets = b;
+    else if (curEpoch > incEpoch) merged.intelTargets = a;
+    else if (Object.keys(a).length || Object.keys(b).length) merged.intelTargets = { ...a, ...b };
   }
   // Never let an empty/sandbox program wipe a richer cloud scheda
   const curWeeks = cur.activeProgram && Array.isArray(cur.activeProgram.weeks) ? cur.activeProgram.weeks.length : 0;
   const incWeeks = inc.activeProgram && Array.isArray(inc.activeProgram.weeks) ? inc.activeProgram.weeks.length : 0;
   if (inc.activeProgram == null || incWeeks < 1) {
     if (cur.activeProgram) merged.activeProgram = cur.activeProgram;
-  } else if (curWeeks > incWeeks) {
+  } else if (curWeeks > incWeeks && !(incEpoch > curEpoch)) {
+    // A longer program is kept over a shorter one only when the shorter one
+    // is not a deliberate switch: a device that changed program more recently
+    // (newer trainingDataEpoch) brings its program even if it is shorter.
+    // Before, going from 16 weeks to 8 never reached the cloud.
     merged.activeProgram = cur.activeProgram;
   } else if (!merged.activeProgram && cur.activeProgram) {
     merged.activeProgram = cur.activeProgram;

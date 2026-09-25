@@ -34594,6 +34594,13 @@ if (typeof window !== 'undefined') {
 const CalendarService = {
   _customCache: null,
   loadCustomEvents() {
+    // The account's list itself, read every time: a copy taken once went
+    // stale after a sync merged events in, and the next add wrote the old
+    // copy back over them.
+    if (typeof store !== 'undefined' && store && Array.isArray(store.calendarEvents)) {
+      this._customCache = store.calendarEvents;
+      return Promise.resolve(this._customCache);
+    }
     if (this._customCache) return Promise.resolve(this._customCache);
     let list = [];
     try {
@@ -34629,6 +34636,12 @@ const CalendarService = {
   async removeEvent(id) {
     await this.loadCustomEvents();
     this._customCache = (this._customCache || []).filter(function (e) { return e.id !== id; });
+    // The deletion travels with the data, or another device's copy brings the
+    // event back.
+    if (typeof store !== 'undefined' && store && id != null) {
+      store.calendarEventsDeleted = Object.assign({}, store.calendarEventsDeleted || {});
+      store.calendarEventsDeleted[String(id)] = new Date().toISOString();
+    }
     this._saveCustom();
   },
   _weekdayIt(date) {
@@ -38343,6 +38356,7 @@ function accountPayload(opts){
     warmups: warmupsSrc || {},
     warmupProgress: warmupProgressSrc || {},
     calendarEvents: Array.isArray(store.calendarEvents) ? store.calendarEvents.slice(-400) : [],
+    calendarEventsDeleted: (store.calendarEventsDeleted && typeof store.calendarEventsDeleted === 'object') ? store.calendarEventsDeleted : {},
     // The rest of what the app remembers about the person, which used to stay
     // on whichever device happened to produce it.
     chatHistory: Array.isArray(store.chatHistory) ? store.chatHistory.slice(-120) : [],
@@ -38359,9 +38373,12 @@ function accountPayload(opts){
     trainingSpaces: Array.isArray(store.trainingSpaces) ? store.trainingSpaces.slice(0, 12) : [],
     // Saved programs: the program itself, without the exercise database each
     // import drags along, which is rebuilt on any device anyway.
-    models: Array.isArray(modelsSrc) ? modelsSrc.slice(-8).map(function (m) {
+    // Programs removed from the library: travels so they do not come back.
+    hiddenProgramIds: (!bak && Array.isArray(store.hiddenProgramIds)) ? store.hiddenProgramIds.slice(-200) : [],
+    models: Array.isArray(modelsSrc) ? modelsSrc.slice().sort(function (a, b) { return ((a && a.date) || 0) - ((b && b.date) || 0); }).slice(-8).map(function (m) {
       if (!m || typeof m !== 'object') return null;
-      const data = m.data && typeof m.data === 'object' ? Object.assign({}, m.data) : m.data;
+      const content = m.data || (window.__programDataCache && window.__programDataCache[m.id]) || null;
+      const data = content && typeof content === 'object' ? Object.assign({}, content) : content;
       if (data && typeof data === 'object') { delete data.exerciseDb; delete data.exerciseAliases; }
       return { id: m.id, name: m.name, sourceDocument: m.sourceDocument, date: m.date, data: data };
     }).filter(Boolean) : [],
@@ -38444,6 +38461,9 @@ function trainingEpochMs(e) {
 
 function applyRemoteAccountData(remote, preferLocal) {
   if (!remote || typeof remote !== 'object') return;
+  // Read before the epochs below are aligned: the program was switched on
+  // another device after this one's last switch.
+  const remoteSwitchedProgram = trainingEpochMs(remote.trainingDataEpoch) > trainingEpochMs(store.trainingDataEpoch);
   const token = store.accountToken, user = store.accountUser;
   const athlete = typeof isAthleteRole === 'function' && isAthleteRole()
     || (typeof isClientStorageContext === 'function' && isClientStorageContext());
@@ -38498,8 +38518,33 @@ function applyRemoteAccountData(remote, preferLocal) {
   }
   if (Array.isArray(remote.models) && remote.models.length) {
     const byModel = {};
-    (store.models || []).concat(remote.models).forEach(function (m) { if (m && m.id) byModel[m.id] = m; });
-    store.models = Object.keys(byModel).map(function (k) { return byModel[k]; }).slice(-12);
+    // By id, keeping a program's content when one side has only its name;
+    // and without the ones removed on either device.
+    if (Array.isArray(remote.hiddenProgramIds)) {
+      const hid = (store.hiddenProgramIds || []).slice();
+      remote.hiddenProgramIds.forEach(function (h) { if (h != null && hid.indexOf(String(h)) < 0) hid.push(String(h)); });
+      store.hiddenProgramIds = hid.slice(-200);
+    }
+    const hiddenIds = (store.hiddenProgramIds || []).map(String);
+    (store.models || []).concat(remote.models).forEach(function (m) {
+      if (!m || !m.id) return;
+      // The content goes to this device's library (IndexedDB) and to the
+      // upload cache, not into the store (copied on every save).
+      if (m.data && Array.isArray(m.data.weeks) && m.data.weeks.length) {
+        window.__programDataCache = window.__programDataCache || {};
+        if (!window.__programDataCache[m.id]) {
+          window.__programDataCache[m.id] = m.data;
+          storeRemoteProgramLocally(m);
+        }
+      }
+      const meta = Object.assign({}, byModel[m.id] || {}, m);
+      delete meta.data;
+      byModel[m.id] = meta;
+    });
+    store.models = Object.keys(byModel).map(function (k) { return byModel[k]; })
+      .filter(function (m) { return hiddenIds.indexOf(String(m.id)) < 0 && hiddenIds.indexOf(String(m.name || '')) < 0 && hiddenIds.indexOf('name:' + String(m.name || '')) < 0; })
+      .sort(function (a, b) { return (a.date || 0) - (b.date || 0); })
+      .slice(-40);
   }
   if (remote.intelligence && !store.intelligence) store.intelligence = remote.intelligence;
   if (remote.intelTargets) store.intelTargets = Object.assign({}, remote.intelTargets, store.intelTargets || {});
@@ -38564,6 +38609,9 @@ function applyRemoteAccountData(remote, preferLocal) {
     if (remote.health) store.health = Object.assign({}, store.health || {}, remote.health);
     if (remote.activeProgramId) store.activeProgramId = store.activeProgramId || remote.activeProgramId;
     if (remote.nutritionDaily) store.nutritionDaily = Object.assign({}, remote.nutritionDaily, store.nutritionDaily || {});
+    if (remote.calendarEventsDeleted && typeof remote.calendarEventsDeleted === 'object') {
+      store.calendarEventsDeleted = Object.assign({}, remote.calendarEventsDeleted, store.calendarEventsDeleted || {});
+    }
     if (Array.isArray(remote.calendarEvents) && remote.calendarEvents.length) {
       const byId = {};
       (store.calendarEvents || []).concat(remote.calendarEvents).forEach(function (row) {
@@ -38571,6 +38619,14 @@ function applyRemoteAccountData(remote, preferLocal) {
       });
       store.calendarEvents = Object.keys(byId).map(function (k) { return byId[k]; });
     }
+    // Deleted events stay deleted; the calendar service reads the list again
+    // (its copy is dropped below).
+    if (Array.isArray(store.calendarEvents) && store.calendarEventsDeleted) {
+      const gone = store.calendarEventsDeleted;
+      const kept = store.calendarEvents.filter(function (e) { return !(e && e.id != null && gone[String(e.id)]); });
+      if (kept.length !== store.calendarEvents.length) store.calendarEvents = kept;
+    }
+    try { if (typeof CalendarService !== 'undefined') CalendarService._customCache = null; } catch (_) {}
     if (Array.isArray(remote.coachArchives) && remote.coachArchives.length && !(store.coachArchives || []).length) {
       store.coachArchives = remote.coachArchives.slice(0, 24);
     }
@@ -38598,6 +38654,10 @@ function applyRemoteAccountData(remote, preferLocal) {
   const localAssigned = String(store.clientAssignedAt || '');
   let takeRemote = (!localWeeks || localWeeks < 1) && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length;
   if (window.__cpForceRemoteProgram && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length) {
+    takeRemote = true;
+  }
+  // Switched on another device more recently: that program, even if shorter.
+  if (!athlete && remoteSwitchedProgram && remoteProg && Array.isArray(remoteProg.weeks) && remoteProg.weeks.length) {
     takeRemote = true;
   }
   if (typeof looksLikeClientAssignDraft === 'function' && looksLikeClientAssignDraft(DATA)
@@ -38656,9 +38716,15 @@ function applyRemoteAccountData(remote, preferLocal) {
       const keepSupp = !!(store.__cpKeepLocalSupplements || store.__cpSupplementsDirty);
       const localNutr = keepNutr ? localRecord.nutrition : null;
       const localSupp = keepSupp ? localRecord.supplementation : null;
+      const prevProgramKey = activeProgramKey();
       DATA = typeof normalizeProgram === 'function' ? normalizeProgram(remoteProg) : remoteProg;
       store.activeProgram = DATA;
       store.activeProgramId = DATA.id || remote.activeProgramId || store.activeProgramId;
+      // As when the switch happens here: this device's sessions still without
+      // a program belong to the one being replaced.
+      if (!athlete && remoteSwitchedProgram && prevProgramKey && prevProgramKey !== activeProgramKey()) {
+        (store.logs || []).forEach(function (l) { if (l && !l.programId) l.programId = prevProgramKey; });
+      }
       if (athlete) store.clientAssignedAt = remoteAssigned || new Date().toISOString();
       if (landRemoteDomain('nutrition')) {
         // combined above
@@ -39227,7 +39293,11 @@ async function syncAccountData(download=false){
     const remote = payload.data || {};
     const localScore = accountDataScore(store, DATA);
     const remoteScore = accountDataScore(remote, remote.activeProgram);
-    applyRemoteAccountData(remote, localScore > remoteScore && !window.__cpForceRemoteProgram);
+    // A program switched on another device (newer epoch) is taken even when it
+    // scores lower (a shorter program); one switched here is kept and uploaded.
+    const remoteSwitchedLater = trainingEpochMs(remote.trainingDataEpoch) > trainingEpochMs(store.trainingDataEpoch);
+    const localSwitchedLater = trainingEpochMs(store.trainingDataEpoch) > trainingEpochMs(remote.trainingDataEpoch);
+    applyRemoteAccountData(remote, !remoteSwitchedLater && (localSwitchedLater || localScore > remoteScore) && !window.__cpForceRemoteProgram);
     try { purgeCoachProfileLeakIfNeeded(); } catch (_) {}
     const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
     const localWeeks = (DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
@@ -39235,7 +39305,7 @@ async function syncAccountData(download=false){
     const skipProgUpload = (athlete && !!(remote.assignedByCoach || window.__cpForceRemoteProgram))
       || (athlete && typeof looksLikePersonalUpperLower16 === 'function' && looksLikePersonalUpperLower16(DATA) && !remote.assignedByCoach)
       || localWeeks < 1
-      || (remoteWeeks > localWeeks);
+      || (remoteWeeks > localWeeks && !localSwitchedLater);
     const localHasLoads = !!(store.data && Object.keys(store.data).length) || (Array.isArray(store.logs) && store.logs.length);
     const remoteHasLoads = !!(remote.data && Object.keys(remote.data).length) || (Array.isArray(remote.logs) && remote.logs.length);
     if (download || localHasLoads || remoteHasLoads || localScore > 0 || remoteScore > 0) {
@@ -40741,6 +40811,19 @@ async function persistDocumentMetadata(name, sizeText, mime, base64String) {
   return docId;
 }
 
+// A saved program that arrives from the cloud and is not in this device's
+// library yet is put there, not active: a new phone then finds it.
+function storeRemoteProgramLocally(model) {
+  try {
+    if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.loadProgram || !GiammariaPersistence.saveProgram) return;
+    GiammariaPersistence.loadProgram(model.id).then(function (have) {
+      if (have) return;
+      const prog = Object.assign({}, model.data, { id: model.id, title: model.data.title || model.name || 'Programma' });
+      return GiammariaPersistence.saveProgram(prog, false, { id: model.id });
+    }).catch(function () {});
+  } catch (_) {}
+}
+
 async function syncProgramLibraryFromIdb() {
   if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.listPrograms) return;
   try {
@@ -40757,6 +40840,23 @@ async function syncProgramLibraryFromIdb() {
       const name = String(m.name || '');
       return hidden.indexOf(id) < 0 && hidden.indexOf(name) < 0 && hidden.indexOf('name:' + name) < 0;
     });
+    // The cloud copy of the library carries the programs themselves, not only
+    // their names: rebuilt from this list, it used to hold metadata alone, and
+    // a new phone found "Programma non trovato in archivio". The content of
+    // the most recent ones (the upload sends eight) is read here into a cache
+    // outside the store - the store is copied on every save, and programs
+    // are big; they live in IndexedDB.
+    if (GiammariaPersistence.loadProgram) {
+      window.__programDataCache = window.__programDataCache || {};
+      const recent = store.models.slice().sort(function (a, b) { return (b.date || 0) - (a.date || 0); }).slice(0, 8);
+      for (const m of recent) {
+        if (window.__programDataCache[m.id]) continue;
+        try {
+          const full = await GiammariaPersistence.loadProgram(m.id);
+          if (full && Array.isArray(full.weeks) && full.weeks.length) window.__programDataCache[m.id] = full;
+        } catch (_) {}
+      }
+    }
   } catch (e) {
     console.warn('[LIBRARY SYNC]', e);
   }
@@ -53986,6 +54086,7 @@ async function activateSavedProgram(programId, idx) {
       try { programData = await GiammariaPersistence.loadProgram(programId); } catch (_) { programData = null; }
     }
     if (!programData && model && model.data) programData = model.data;
+    if (!programData && programId && window.__programDataCache && window.__programDataCache[programId]) programData = window.__programDataCache[programId];
     if (!programData && typeof idx === 'number' && store.models[idx] && store.models[idx].data) {
       programData = store.models[idx].data;
     }
