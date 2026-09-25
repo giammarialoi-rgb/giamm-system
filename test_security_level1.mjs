@@ -85,7 +85,7 @@ console.log('--- 4. i limiti non si aggirano con X-Forwarded-For ---');
   }
   ok('4b. un X-Forwarded-For diverso a ogni richiesta non azzera il limite (7 bloccate su 10)', blocked === 7);
   ok('4c. l\'admin legge req.ip, non il primo X-Forwarded-For', clientIp({ ip: '203.0.113.9', headers: { 'x-forwarded-for': '6.6.6.6' }, socket: {} }) === '203.0.113.9');
-  ok('4d. trust proxy configurabile, 1 di default (Render)', /app\.set\("trust proxy", Math\.max\(0, Number\(process\.env\.TRUST_PROXY_HOPS \|\| 1\)\)\);/.test(api));
+  ok('4d. trust proxy configurabile, 2 di default (Render: Cloudflare + bilanciatore, misurato)', /app\.set\("trust proxy", Math\.max\(0, Number\(process\.env\.TRUST_PROXY_HOPS \|\| 2\)\)\);/.test(api));
   const forgot = api.slice(api.indexOf('app.post("/api/auth/forgot-password"'), api.indexOf('app.post("/api/auth/reset-password"'));
   const reset = api.slice(api.indexOf('app.post("/api/auth/reset-password"'), api.indexOf('app.post("/api/auth/register"'));
   ok('4e. reset: un codice al minuto per indirizzo', /Date\.now\(\) - new Date\(recent\.rows\[0\]\.created_at\)\.getTime\(\) < 60 \* 1000/.test(forgot));

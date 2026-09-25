@@ -45,9 +45,12 @@ const RELEASE_META = JSON.parse(
 const app = express();
 const port = process.env.PORT || 3000;
 
-// How many proxies sit in front of the server (Render: one). req.ip is the
-// address the outermost trusted one saw; the rate limits key on it.
-app.set("trust proxy", Math.max(0, Number(process.env.TRUST_PROXY_HOPS || 1)));
+// How many proxies sit in front of the server. On Render there are two:
+// Cloudflare (writes the client's address) and Render's load balancer (adds
+// Cloudflare's). Measured on 25/09: /health reports forwardedHops 2 with no
+// header from the client, 3 with one. req.ip is then the address Cloudflare
+// saw; with 1, it was Cloudflare's own, shared by many users.
+app.set("trust proxy", Math.max(0, Number(process.env.TRUST_PROXY_HOPS || 2)));
 // Apple posts its answer from appleid.apple.com (form_post), so the route sits
 // before the CORS allowlist, like the webhook below. What makes it safe is the
 // state it carries back, signed by this server (server/account/apple.mjs).
