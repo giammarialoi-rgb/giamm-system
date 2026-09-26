@@ -29,7 +29,12 @@ const ALLOWED = [
   /personal_16w_giammaria/g,
   /\/personalizzat\|giammaria\|personale\|master\|mia scheda\/i/g, // scoring of restore candidates by title
   /Giada→Giammaria leak/g, // a comment about a past bug
-  /giammaria-doc-/g // temp folder name on the server
+  /giammaria-doc-/g, // temp folder name on the server
+  // The importer drops cover/title rows of the reference workbook that carry
+  // its name ("giammaria", "master xlsx", "GIAMMARIA SYSTEM"): filters, never shown.
+  /\/giammaria\|master xlsx\|/g,
+  /\/indice\|foglio\|pagina\|conversione\|giammaria\|master xlsx\|/g,
+  /\|Carattere di numerazione\|GIAMMARIA SYSTEM\)/g
 ];
 
 function leftovers(file) {
@@ -60,6 +65,36 @@ shipped.forEach((file) => {
   const hits = leftovers(file);
   ok(file + (hits.length ? ' -- ' + hits.slice(0, 3).join(' | ') : ''), hits.length === 0);
 });
+
+// The Android app ships everything under app/src/main/assets: a file there
+// reaches whoever installs the APK, whatever the code does with it. The
+// owner's 8 MB workbook sat there, loaded by nothing.
+function listFiles(dir) {
+  const out = [];
+  if (!fs.existsSync(dir)) return out;
+  fs.readdirSync(dir, { withFileTypes: true }).forEach((d) => {
+    const full = path.join(dir, d.name);
+    if (d.isDirectory()) out.push(...listFiles(full));
+    else out.push(full);
+  });
+  return out;
+}
+const ASSETS = path.join(root, 'app', 'src', 'main', 'assets');
+const assetFiles = listFiles(ASSETS).map((f) => path.relative(root, f).split(path.sep).join('/'));
+
+console.log('');
+console.log('--- nell\'APK: nessun file del proprietario ---');
+{
+  const named = assetFiles.filter((f) => /giammaria|gianmaria|\bloi\b/i.test(path.basename(f).replace(/[_\-.()]/g, ' ')));
+  ok('nessun asset con il nome del proprietario nel nome del file' + (named.length ? ' -- ' + named.join(' | ') : ''), named.length === 0);
+  ok('gli asset si leggono (' + assetFiles.length + ' file)', assetFiles.length > 0);
+  assetFiles
+    .filter((f) => /\.(js|json|webmanifest|html|css|txt|csv)$/i.test(f))
+    .forEach((file) => {
+      const hits = leftovers(file);
+      ok(file + (hits.length ? ' -- ' + hits.slice(0, 3).join(' | ') : ''), hits.length === 0);
+    });
+}
 
 console.log('');
 console.log('--- i casi trovati, uno per uno ---');

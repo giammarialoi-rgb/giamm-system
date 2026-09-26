@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * GIAMMARIA SYSTEM — HIGH-RELIABILITY PERSISTENCE CORE 2.0
+ * NURVAN — HIGH-RELIABILITY PERSISTENCE CORE 2.0
  * Architecture Layer 4: Enterprise-grade IndexedDB + LocalStorage Sync
  * ============================================================
  */

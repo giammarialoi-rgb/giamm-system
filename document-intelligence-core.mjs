@@ -1,5 +1,5 @@
 /**
- * GIAMMARIA SYSTEM — UNIVERSAL DOCUMENT INTELLIGENCE CORE
+ * NURVAN — UNIVERSAL DOCUMENT INTELLIGENCE CORE
  * Format detection, DocumentIR, table reconstruction, source refs,
  * validation helpers, OCR bridge, search & provenance.
  * Deterministic first — LLM only for ambiguous semantic mapping.

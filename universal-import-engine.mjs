@@ -5,7 +5,7 @@ function getExtName(filename) {
 }
 
 /**
- * GIAMMARIA SYSTEM — UNIVERSAL IMPORT ENGINE 3.0 (Master Task 22 & 25)
+ * NURVAN — UNIVERSAL IMPORT ENGINE 3.0 (Master Task 22 & 25)
  * Robust Multi-Layout Semantic Extraction Matrix, Domain Extractors for Training,
  * Nutrition (Vertical + Horizontal Multi-Day Matrix), Supplementation, Therapy,
  * Clinical Exams, Text/DOC/DOCX parsers & Unrecognised Elements Diagnostics.
