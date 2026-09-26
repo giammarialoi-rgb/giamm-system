@@ -8712,15 +8712,18 @@ function hideImportProgress() {
 
 // The photo's green channel, twice the size, for a second OCR pass: red text
 // on an orange box and black on yellow come apart there. Bounded to 4000 px.
-async function greenChannelCanvasForOcr(url) {
+// createImageBitmap, not <img>.decode(): the latter can wait for the page to
+// paint (a hidden page never does) and the import stood still at "OCR".
+async function greenChannelCanvasForOcr(blob) {
   try {
-    const img = new Image();
-    img.src = url;
-    await img.decode();
-    const scale = Math.min(2, 4000 / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+    if (typeof createImageBitmap !== 'function' || !blob) return null;
+    const img = await createImageBitmap(blob);
+    const w = img.width;
+    const h = img.height;
+    const scale = Math.min(2, 4000 / Math.max(w || 1, h || 1));
     const c = document.createElement('canvas');
-    c.width = Math.round(img.naturalWidth * scale);
-    c.height = Math.round(img.naturalHeight * scale);
+    c.width = Math.round(w * scale);
+    c.height = Math.round(h * scale);
     const g = c.getContext('2d');
     g.drawImage(img, 0, 0, c.width, c.height);
     const d = g.getImageData(0, 0, c.width, c.height);
@@ -8873,10 +8876,12 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       // channel reads them, and they are put back where they stand.
       let ocrWords = ocr.words || [];
       try {
-        if (blobUrl && ocrWords.length && typeof mergeOcrHeadings === 'function') {
-          const channel = await greenChannelCanvasForOcr(blobUrl);
+        if (ocrWords.length && typeof mergeOcrHeadings === 'function') {
+          // Bounded: the second pass only adds headings, it never holds the import up.
+          const withinSeconds = (promise, sec) => Promise.race([promise, new Promise((res) => setTimeout(() => res(null), sec * 1000))]);
+          const channel = await withinSeconds(greenChannelCanvasForOcr(new Blob([bytes], { type: mime || 'image/jpeg' })), 8);
           if (channel) {
-            const second = await runLocalOcr(channel);
+            const second = await withinSeconds(runLocalOcr(channel), 40);
             if (second && second.ok && Array.isArray(second.words)) ocrWords = mergeOcrHeadings(ocrWords, second.words, channel.__ocrScale || 1);
           }
         }
@@ -8910,9 +8915,22 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
         parsed = parseCanonicalProgramFromText(text, name);
       }
     } else if (isPdf) {
-      const pdfText = (typeof extractPdfPlainTextAsync === 'function')
-        ? await extractPdfPlainTextAsync(bytes)
-        : ((typeof extractPdfPlainText === 'function') ? extractPdfPlainText(bytes) : text);
+      // The layout reader (pdf-layout.mjs): every string with its own font,
+      // table cells as weeks and days. The old extractor only when it finds nothing.
+      let pdfText = '';
+      let pdfWarnings = [];
+      try {
+        if (typeof readPdfLayout === 'function' && typeof pdfLayoutToText === 'function') {
+          const lay = await readPdfLayout(bytes);
+          const res = pdfLayoutToText(lay);
+          if (res && res.text && res.text.trim().length > 40) { pdfText = res.text; pdfWarnings = res.warnings || []; }
+        }
+      } catch (layoutErr) { console.warn('[PDF_LAYOUT]', layoutErr); }
+      if (!pdfText) {
+        pdfText = (typeof extractPdfPlainTextAsync === 'function')
+          ? await extractPdfPlainTextAsync(bytes)
+          : ((typeof extractPdfPlainText === 'function') ? extractPdfPlainText(bytes) : text);
+      }
       if (typeof pdfNeedsOcr === 'function' && pdfNeedsOcr(pdfText, 1)) {
         stage('ocr', 'OCR');
         await yieldImportPaint();
@@ -8920,6 +8938,10 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       stage('structure', 'Detecting structure');
       await yieldImportPaint();
       parsed = parseCanonicalProgramFromText(pdfText || text, name);
+      if (pdfWarnings.length && parsed && parsed.canonicalProgram) {
+        if (!Array.isArray(parsed.canonicalProgram.unrecognised_elements)) parsed.canonicalProgram.unrecognised_elements = [];
+        pdfWarnings.forEach((w) => parsed.canonicalProgram.unrecognised_elements.push({ type: 'training', reason: 'pdf_layout_note', message: w }));
+      }
       if (parsed.canonicalProgram) {
         documentIR = parsed.canonicalProgram.documentIR || null;
         if (!documentIR && typeof createEmptyDocumentIR === 'function') {

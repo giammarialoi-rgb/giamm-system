@@ -3,6 +3,7 @@
 // extractor for that format, the parser, the prescription lock. Used by the
 // corpus runner to measure what a real file becomes in the app.
 import fs from 'node:fs';
+import zlib from 'node:zlib';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +17,7 @@ const engine = await import(pathToUrl(path.join(root, 'universal-import-engine.m
 const di = await import(pathToUrl(path.join(root, 'document-intelligence-core.mjs')));
 const rx = await import(pathToUrl(path.join(root, 'prescription-engine.mjs')));
 const tables = await import(pathToUrl(path.join(root, 'import-tables.mjs')));
+const pdf = await import(pathToUrl(path.join(root, 'pdf-layout.mjs')));
 
 function pathToUrl(p) {
   return 'file:///' + p.replace(/\\/g, '/');
@@ -52,8 +54,17 @@ export async function importFile(filePath) {
       }).join('\n\n');
     }
   } else if (r.isPdf) {
-    text = await engine.extractPdfPlainTextAsync(bytes);
+    // As the app: the layout reader (fonts one by one, table cells), the
+    // old extractor only when it finds nothing.
+    let warnings = [];
+    try {
+      const lay = await pdf.readPdfLayout(bytes, { inflate: async (u8) => new Uint8Array(zlib.inflateSync(u8)) });
+      const res = pdf.pdfLayoutToText(lay);
+      if (res.text.trim().length > 40) { text = res.text; warnings = res.warnings; }
+    } catch (_) {}
+    if (!text) text = await engine.extractPdfPlainTextAsync(bytes);
     parsed = engine.parseCanonicalProgramFromText(text, name);
+    if (warnings.length && parsed) (parsed.canonicalProgram || parsed.program || parsed).pdf_warnings = warnings;
   } else if (r.isDocx) {
     parsed = await engine.extractDocxStructured(bytes, name);
   } else if (r.isDoc) {

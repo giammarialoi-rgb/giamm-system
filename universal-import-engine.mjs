@@ -3318,6 +3318,11 @@ function parseNutritionFromLooseText(rawText) {
 // ====================================================
 
 export function parseCanonicalProgramFromText(rawText, filename = "documento_importato") {
+  // The lines written as list items, before the text preparation strips the
+  // bullets: under a day, an item is an exercise even with no scheme.
+  const listItemLines = new Set(String(rawText || "").split(/\r?\n/)
+    .filter((l) => /^\s*[\*\u2022\-\u2013\u2014]+\s+\S/.test(l))
+    .map((l) => l.replace(/^\s*[\*\u2022\-\u2013\u2014]+\s+/, "").replace(/\s[\u2013\u2014]\s*/g, " - ").trim()));
   const normalizedText = prepareImportedPlainText(rawText)
     // Do NOT split mid-line on "week N" inside load notes (X WEEK 2 REP…)
     .replace(/\s+(?=(?:settimana|sett\.?)\s+\d+)/gi, "\n")
@@ -3414,6 +3419,9 @@ export function parseCanonicalProgramFromText(rawText, filename = "documento_imp
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
+    // A list item ("- Panca isocinetica") is an exercise even with no scheme:
+    // noted before the bullet is stripped.
+    const listItem = listItemLines.has(String(line || "").replace(/^\s*[\*\u2022\-\u2013\u2014]+\s+/, "").replace(/\s[\u2013\u2014]\s*/g, " - ").trim());
     // Strip markdown bullets / headings residual
     line = String(line || "").replace(/^\s*#{1,6}\s+/, "").replace(/^\s*[\*\u2022\-–—]+\s+/, "").replace(/\s[\u2013\u2014â]\s*/g, " - ").trim();
     if (!line) continue;
@@ -3559,6 +3567,12 @@ export function parseCanonicalProgramFromText(rawText, filename = "documento_imp
     if (currentSection === "training") {
       // Skip warmup lines (already captured on program.warmup)
       if (/^(?:riscaldamento|warm[\s-]?up)\b/i.test(line)) continue;
+      // Prose is a note, not an exercise: "__la progr media c'e' un volume
+      // medio da 3 4 set x 3 5 rip tra 67 e 76%" under a program table.
+      if (/^_/.test(line) || (line.split(/\s+/).length > 14 && !/:\s*\d/.test(line))) {
+        program.notes.push(line.replace(/^_+/, "").trim());
+        continue;
+      }
 
       const weekMatch = line.match(/^(?:settimana|week|sett\.?)\s*[:=\-]?\s*(\d+)(?:\s*[-–:]\s*(.*))?$/i);
       if (weekMatch) {
@@ -3664,6 +3678,9 @@ export function parseCanonicalProgramFromText(rawText, filename = "documento_imp
               rir: details.rir,
               target_rpe: details.rpe,
               rpe: details.rpe,
+              // The % of the line belongs to every set it prescribes (the app
+              // reads it per set: panel of maxes, kilos in the fields).
+              percentage_1rm: details.percentage_1rm != null ? details.percentage_1rm : null,
               rest_seconds: details.rest_seconds
             };
           })
@@ -3771,6 +3788,8 @@ export function parseCanonicalProgramFromText(rawText, filename = "documento_imp
 
       if (isExerciseLike(line) || isExerciseLike(workLine)) {
         pushTrainingExercise(workLine || line);
+      } else if (listItem && /[A-Za-z\u00c0-\u00ff]{3,}/.test(line) && line.length <= 80) {
+        pushTrainingExercise(line);
       }
     }
   }
@@ -4127,14 +4146,15 @@ function prepareImportedPlainText(raw) {
 export function inferProgramDurationFromText(text, filename = "") {
   const blob = `${filename || ""}\n${text || ""}`;
   let best = 0;
-  const slash = blob.match(/(\d{1,2})\s*[\/\-]\s*(\d{1,2})\s*settiman/i);
+  // On one line: "Stacco 3x3" then "SETTIMANA 2" on the next is not "3 settimane".
+  const slash = blob.match(/(\d{1,2})[ \t]*[\/\-][ \t]*(\d{1,2})[ \t]*settiman/i);
   if (slash) best = Math.max(best, parseInt(slash[1], 10) || 0, parseInt(slash[2], 10) || 0);
-  const single = blob.match(/(?:programmazione|programma|full\s*body|scheda|ciclo|mesociclo)?.{0,48}?(\d{1,2})\s*settiman/i);
+  const single = blob.match(/(?:programmazione|programma|full\s*body|scheda|ciclo|mesociclo)?.{0,48}?(\d{1,2})[ \t]*settiman/i);
   if (single) best = Math.max(best, parseInt(single[1], 10) || 0);
   // Duration forms only: "12 weeks" / "weeks: 12" — NOT "WEEK 2" headers or "X WEEK 2" load notes
-  const weeksAfterNum = blob.match(/\b(\d{1,2})\s*(?:weeks?|settimane?)\b/i);
+  const weeksAfterNum = blob.match(/\b(\d{1,2})[ \t]*(?:weeks?|settimane?)\b/i);
   if (weeksAfterNum) best = Math.max(best, parseInt(weeksAfterNum[1], 10) || 0);
-  const weeksAssigned = blob.match(/\b(?:weeks?|settimane?)\s*[:=\-]\s*(\d{1,2})\b/i);
+  const weeksAssigned = blob.match(/\b(?:weeks?|settimane?)[ \t]*[:=\-][ \t]*(\d{1,2})\b/i);
   if (weeksAssigned) best = Math.max(best, parseInt(weeksAssigned[1], 10) || 0);
   // Longest weekly NxM ladder in document
   String(text || "").split(/\r?\n/).forEach((line) => {
@@ -4154,8 +4174,19 @@ export function expandProgramToDeclaredDuration(program, targetWeeks) {
     return program;
   }
   const template = JSON.parse(JSON.stringify(program.weeks[0]));
+  const written = program.weeks.length;
   const out = [];
   for (let wi = 0; wi < target; wi++) {
+    // The weeks the document wrote stay as written; only the missing ones
+    // are the first week again (they were all replaced by week 1).
+    if (wi > 0 && wi < written) {
+      const own = program.weeks[wi];
+      own.week_number = wi + 1;
+      own.weekNumber = wi + 1;
+      own.week = wi + 1;
+      out.push(own);
+      continue;
+    }
     const copy = JSON.parse(JSON.stringify(template));
     const wNum = wi + 1;
     copy.week_number = wNum;

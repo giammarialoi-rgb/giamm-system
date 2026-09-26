@@ -175,6 +175,19 @@ if (fs.existsSync('import-tables.mjs')) {
   console.log('import-tables bundled');
 }
 
+// PDF text with positions and table cells (pdf-layout.mjs), used by the PDF import.
+let cleanPdfLayout = '';
+if (fs.existsSync('pdf-layout.mjs')) {
+  cleanPdfLayout = fs.readFileSync('pdf-layout.mjs', 'utf8')
+    .replace(/^import\s+.*?;?\s*$/gm, '')
+    .replace(/^export\s+async\s+function\s+/gm, 'async function ')
+    .replace(/^export\s+const\s+/gm, 'var ')
+    .replace(/^export\s+function\s+/gm, 'function ')
+    .replace(/^export\s+\{[\s\S]*?\};?\s*$/gm, '')
+    .replace(/^export\s+/gm, '');
+  console.log('pdf-layout bundled');
+}
+
 let cleanPrescription = '';
 if (fs.existsSync('prescription-engine.mjs')) {
   const rawRx = fs.readFileSync('prescription-engine.mjs', 'utf8');
@@ -321,6 +334,7 @@ cleanImport = (cleanDi ? ('// === DOCUMENT INTELLIGENCE CORE ===\n' + cleanDi + 
   + (cleanFidelity ? ('// === IMPORT FIDELITY ===\n' + cleanFidelity + '\n') : '')
   + (cleanPrescription ? ('// === PRESCRIPTION ENGINE ===\n' + cleanPrescription + '\n') : '')
   + (cleanTables ? ('// === IMPORT TABLES ===\n' + cleanTables + '\n') : '')
+  + (cleanPdfLayout ? ('// === PDF LAYOUT ===\n' + cleanPdfLayout + '\n') : '')
   + (cleanDrugCatalog ? ('// === DRUG CATALOG ===\n' + cleanDrugCatalog + '\n') : '')
   + (cleanSupplementCatalog ? ('// === SUPPLEMENT CATALOG ===\n' + cleanSupplementCatalog + '\n') : '')
   + (cleanFoodCatalog ? ('// === FOOD CATALOG ===\n' + cleanFoodCatalog + '\n') : '')
