@@ -8710,6 +8710,30 @@ function hideImportProgress() {
   if (ov) ov.style.display = 'none';
 }
 
+// The photo's green channel, twice the size, for a second OCR pass: red text
+// on an orange box and black on yellow come apart there. Bounded to 4000 px.
+async function greenChannelCanvasForOcr(url) {
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const scale = Math.min(2, 4000 / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.naturalWidth * scale);
+    c.height = Math.round(img.naturalHeight * scale);
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0, c.width, c.height);
+    const d = g.getImageData(0, 0, c.width, c.height);
+    const a = d.data;
+    for (let i = 0; i < a.length; i += 4) { const v = a[i + 1]; a[i] = v; a[i + 2] = v; }
+    g.putImageData(d, 0, 0);
+    c.__ocrScale = scale;
+    return c;
+  } catch (_) {
+    return null;
+  }
+}
+
 async function processUniversalFile(source, actionIntent = 'IMPORT') {
   // Imports per month come from the plan (web/features.json).
   if (actionIntent === 'IMPORT' && !requireImportAllowed()) { hideImportProgress(); return; }
@@ -8844,8 +8868,28 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       const ocr = (typeof runLocalOcr === 'function')
         ? await runLocalOcr(blobUrl || bytes)
         : { ok: false, text: '', warning: 'OCR non disponibile', fallback: true };
+      // Day headings in coloured boxes (red on orange, black on yellow) are
+      // often lost on the photo as it is: a second pass over the green
+      // channel reads them, and they are put back where they stand.
+      let ocrWords = ocr.words || [];
+      try {
+        if (blobUrl && ocrWords.length && typeof mergeOcrHeadings === 'function') {
+          const channel = await greenChannelCanvasForOcr(blobUrl);
+          if (channel) {
+            const second = await runLocalOcr(channel);
+            if (second && second.ok && Array.isArray(second.words)) ocrWords = mergeOcrHeadings(ocrWords, second.words, channel.__ocrScale || 1);
+          }
+        }
+      } catch (_) {}
       if (blobUrl) try { URL.revokeObjectURL(blobUrl); } catch (_) {}
-      text = ocr.text || '';
+      // A sheet in two columns is read across both: rebuild the columns from
+      // the word boxes, then clean what OCR does to lists (import-tables.mjs).
+      try {
+        const reflowed = (typeof reflowOcrColumns === 'function') ? reflowOcrColumns(ocrWords) : null;
+        text = (typeof cleanOcrText === 'function') ? cleanOcrText(reflowed || ocr.text || '') : (reflowed || ocr.text || '');
+      } catch (_) {
+        text = ocr.text || '';
+      }
       stage('semantic', 'Understanding content');
       await yieldImportPaint();
       parsed = parseCanonicalProgramFromText(text, name);

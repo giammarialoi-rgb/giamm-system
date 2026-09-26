@@ -4,7 +4,7 @@
 // way the app reads a picked file.
 import { createRequire } from 'node:module';
 import { parseStructuredWorkbook, parseCanonicalProgramFromText } from './universal-import-engine.mjs';
-import { parseWorkbookTables, parseSetLine } from './import-tables.mjs';
+import { parseWorkbookTables, parseSetLine, reflowOcrColumns, mergeOcrHeadings, cleanOcrText } from './import-tables.mjs';
 import { applyPrescriptionsToProgram, enforceAllPrescriptions } from './prescription-engine.mjs';
 
 const require = createRequire(import.meta.url);
@@ -217,6 +217,48 @@ console.log('--- 8. testo libero (Word, PDF): scale di carichi, gruppi, progress
   const sl = ex(w, 1, 2, 'PANCA SLINGSHOT');
   ok('8h. 160KG X 1 X 3: 3 singole a 160', sl && sl.sets.length === 3 && sl.sets[0].target_reps === '1' && sl.sets[0].target_load === 160);
   ok('8i. le righe da sole', parseSetLine('4X3 50% + 3X2 RPE 8').groups[1].rpe === 8 && parseSetLine('+2,5KG NELLA % A SETT ALTERNE').progression.unit === '%' && parseSetLine('ADDUTTORI 3X12') === null);
+}
+
+console.log('');
+console.log('--- 9. foto: due colonne, titoli in riquadri colorati, cosa fa l\'OCR agli elenchi ---');
+{
+  // Two columns of words laid out as Tesseract returns them (boxes in px).
+  const words = [];
+  const put = (text, x, y) => text.split(' ').forEach((t, i) => words.push({ text: t, bbox: { x0: x + i * 70, y0: y, x1: x + i * 70 + 60, y1: y + 20 } }));
+  put('Giorno 1', 40, 100);
+  put('squat: 5x5', 40, 140); put('pullover cavi: 3x12', 660, 140);
+  put('panca piana: 4x8', 40, 180); put('hack squat: 4x10', 660, 180);
+  put('rematore: 3x10', 40, 220); put('leg curl: 3x12', 660, 220);
+  put('curl: 3x12', 40, 260); put('calf: 4x20', 660, 260);
+  put('dips: 3x8', 40, 300); put('plank: 3x60s', 660, 300);
+  const reflowed = reflowOcrColumns(words);
+  ok('9a. le colonne si leggono una dopo l\'altra, non riga per riga attraverso la pagina', reflowed && reflowed.split('\n')[1] === 'squat: 5x5' && reflowed.indexOf('dips: 3x8') < reflowed.indexOf('pullover cavi: 3x12'));
+  // "Giorno 2" in a coloured box: lost on the first pass, read on the second (at 2x).
+  const second = [{ text: 'Giorno', bbox: { x0: 1320, y0: 200, x1: 1440, y1: 240 } }, { text: '2', bbox: { x0: 1460, y0: 200, x1: 1480, y1: 240 } }];
+  const merged = mergeOcrHeadings(words, second, 2);
+  const withHeading = reflowOcrColumns(merged);
+  ok('9b. il titolo letto nel secondo passaggio torna al suo posto, in testa alla colonna destra', withHeading && /dips: 3x8\nGIORNO 2\npullover cavi/.test(withHeading));
+  ok('9c. un titolo gia\' letto non viene duplicato', mergeOcrHeadings(words, [{ text: 'Giorno', bbox: { x0: 40, y0: 100, x1: 100, y1: 120 } }, { text: '1', bbox: { x0: 110, y0: 100, x1: 120, y1: 120 } }]).length === words.length);
+  const cleaned = cleanOcrText([
+    'Glomo2',
+    'ealzate laterali : 3x10-4x10-5x10-',
+    '3x12-4x12 1\'rec',
+    'e panca piana: 5x5 difficoltà 8',
+    'su 10 + 2,5kg x week',
+    '*LAT MACHINE PRESA PULLEY',
+    'LARGO 10-10-8-6',
+    '®pulley basso: 5xB',
+    'hip thrust machine 4x10'
+  ].join('\n')).split('\n');
+  ok('9d. "Glomo2" e\' GIORNO 2', cleaned[0] === 'GIORNO 2');
+  ok('9e. il pallino letto come "e" non fa parte del nome, e la scala spezzata si ricompone', cleaned[1] === 'alzate laterali : 3x10-4x10-5x10-3x12-4x12 1\'rec');
+  ok('9f. "difficolta\' 8" / "su 10" e\' una frase sola', cleaned[2] === 'panca piana: 5x5 difficoltà 8 su 10 + 2,5kg x week');
+  ok('9g. nome spezzato su due righe in maiuscolo: una riga', cleaned[3] === 'LAT MACHINE PRESA PULLEY LARGO 10-10-8-6');
+  ok('9h. "5xB" e\' 5x8, "®" e\' un pallino', cleaned[4] === 'pulley basso: 5x8');
+  ok('9i. un esercizio nuovo senza pallino resta un esercizio nuovo', cleaned[5] === 'hip thrust machine 4x10');
+  const lad = parseSetLine('PANCA PIANA (FERMO AL PETTO) 10-8-6 POI 3X3 BOARD @8');
+  ok('9j. "10-8-6 POI 3X3 @8": tre serie a scalare e 3x3 a RPE 8', lad && lad.groups.map((g) => g.sets + 'x' + g.reps + (g.rpe ? '@' + g.rpe : '')).join(' ') === '1x10 1x8 1x6 3x3@8');
+  ok('9k. "7x5 difficolta\' 8 su 10" e\' RPE 8; il tempo 3-0-1 non e\' una scala di ripetizioni', parseSetLine('Squat hack: 7x5 difficoltà 8 su 10').groups[0].rpe === 8 && parseSetLine('Tempo 3-0-1') === null);
 }
 
 console.log('');

@@ -15,6 +15,7 @@ globalThis.XLSX = XLSX;
 const engine = await import(pathToUrl(path.join(root, 'universal-import-engine.mjs')));
 const di = await import(pathToUrl(path.join(root, 'document-intelligence-core.mjs')));
 const rx = await import(pathToUrl(path.join(root, 'prescription-engine.mjs')));
+const tables = await import(pathToUrl(path.join(root, 'import-tables.mjs')));
 
 function pathToUrl(p) {
   return 'file:///' + p.replace(/\\/g, '/');
@@ -57,6 +58,21 @@ export async function importFile(filePath) {
     parsed = await engine.extractDocxStructured(bytes, name);
   } else if (r.isDoc) {
     text = engine.extractDocBinaryText(bytes);
+    parsed = engine.parseCanonicalProgramFromText(text, name);
+  } else if (r.isImage) {
+    // Tesseract runs in the browser (the app loads it there): its text for this
+    // image is saved next to the corpus, <corpus>/ocr/<file>.txt, and the
+    // parser is measured on that real OCR output.
+    // <file>.ocr.json holds { raw: { text, words }, prep: { text, words } }
+    // (prep: the image cleaned up before OCR); OCR_MODE picks one.
+    const ocrPath = path.join(path.dirname(filePath), '..', 'ocr', name + '.ocr.json');
+    if (!fs.existsSync(ocrPath)) throw new Error('OCR mancante (' + ocrPath + '): va letto nel browser');
+    const all = JSON.parse(fs.readFileSync(ocrPath, 'utf8'));
+    const ocr = all[process.env.OCR_MODE || 'raw'];
+    // The app's second pass (one colour channel) gives back day headings in coloured boxes.
+    const second = all[process.env.OCR_HEADINGS_FROM || 'greengray'] || all.green;
+    if (second && process.env.OCR_HEADINGS !== '0') ocr.words = tables.mergeOcrHeadings(ocr.words, second.words);
+    text = tables.cleanOcrText((process.env.OCR_REFLOW !== '0' && tables.reflowOcrColumns(ocr.words)) || ocr.text);
     parsed = engine.parseCanonicalProgramFromText(text, name);
   } else {
     throw new Error('Formato non gestito dal runner: ' + name);

@@ -3827,6 +3827,29 @@ export function parseCanonicalProgramFromText(rawText, filename = "documento_imp
     }];
   }
 
+  // What comes before "GIORNO 1" is not a training day: a warm-up or general
+  // notes written above the days ("RISCALDAMENTO: ... 3 X 15 LOMBARI"). As a
+  // "Sessione 1" it pushed every day one place on. It is kept, as the
+  // program's warm-up.
+  (function moveLeadInToWarmup() {
+    const first = program.weeks[0];
+    const sessions = (first && first.sessions) || [];
+    if (sessions.length < 2 || !/^Sessione 1$/i.test(String(sessions[0].name || ''))) return;
+    if (!sessions.slice(1).some((ss) => /^(?:giorno|day|seduta|sessione|allenamento|workout|tag)\s*[:=\-]?\s*(?:1|A|I)\b/i.test(String(ss.name || '')))) return;
+    const lead = sessions.shift();
+    sessions.forEach((ss, i) => { ss.session_number = i + 1; });
+    if (!program.warmup || !Array.isArray(program.warmup.items)) program.warmup = { present: true, label: "Riscaldamento", items: [], format: "lead_in_block" };
+    (lead.exercises || []).forEach((ex) => {
+      program.warmup.items.push({
+        name: ex.name_original || ex.name,
+        scheme: ex.sets_inferred ? null : (ex.scheme || ex.reps_raw || null),
+        sets_count: ex.sets_inferred ? null : (ex.sets_count || null),
+        reps_target: ex.sets_inferred ? null : (ex.reps_target || null),
+        notes: ex.notes || null
+      });
+    });
+  })();
+
   program.training = { weeks: program.weeks };
   program.duration_weeks = program.weeks.length;
   program.training_frequency = program.weeks[0]?.sessions?.length || 3;
@@ -4154,6 +4177,13 @@ export function expandProgramToDeclaredDuration(program, targetWeeks) {
             ex.prescription.reps = sch.reps;
             ex.prescription.raw = sch.raw;
           }
+          // The rows are rebuilt from sets_data, which still carried week 1's
+          // reps: every week of "3x10-4x10-5x10-3x12..." came out with 10 reps.
+          const tpl = (Array.isArray(ex.sets_data) && ex.sets_data[0]) || {};
+          const rows = Array.from({ length: sch.sets }, (_, i) => Object.assign({}, tpl, { set_number: i + 1, order: i + 1, reps: String(sch.reps), target_reps: String(sch.reps) }));
+          ex.sets_data = rows;
+          ex.reps_pattern = null;
+          if (ex.prescription) ex.prescription.reps_pattern = null;
           try { enforceExercisePrescription(ex); } catch (_) {}
         }
         applyLoadProgression(ex, wi);
