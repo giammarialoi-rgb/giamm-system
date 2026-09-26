@@ -128,7 +128,7 @@ console.log('--- 5. check fisici ---');
   ok('5g. il coach vede solo i check inviati', sentBodyChecks({ bodyChecks: [{ id: 'a', sentToCoach: true }, { id: 'b', sentToCoach: false }, { id: 'c' }] }).map((c) => c.id).join() === 'a');
   ok('5h. l\'upload dice quali sono stati inviati', /sentToCoach: !!\(c && \(c\.checkInSyncState === 'SYNCED' \|\| c\.serverCheckInId\)\)/.test(SRC));
   const practice = read('coach-practice.mjs');
-  ok('5i. lo snapshot per il coach toglie i check non inviati', /bodyChecks: sentBodyChecks\(d\)/.test(practice));
+  ok('5i. lo snapshot per il coach toglie i check non inviati', /data: coachVisibleAccountData\(/.test(practice) && /out\.bodyChecks = sentBodyChecks\(d\)/.test(fs.readFileSync('server/coach-os/workspace.mjs', 'utf8')));
   const intel = read('server/coach-os/intelligence.mjs');
   ok('5j. e anche l\'analisi per il coach', /weightTrend\(sentBodyChecks\(accountData\)\)/.test(intel) && /bodyChecks: sentBodyChecks\(accountData\)\.slice\(-40\)/.test(intel));
 }

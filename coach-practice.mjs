@@ -22,7 +22,9 @@ import {
   syncCoachAttention,
   updateCoachAttention,
   updateCoachTask,
-  sentBodyChecks
+  coachVisibleAccountData,
+  medicalHiddenFromCoach,
+  MEDICAL_COACH_DOMAINS
 } from "./server/coach-os/workspace.mjs";
 import {
   applyCheckInTemplateToAll,
@@ -2739,8 +2741,27 @@ export function mountCoachPractice(app, deps) {
     const kinds = Array.isArray(req.body?.kinds) && req.body.kinds.length
       ? req.body.kinds.map((k) => String(k)).filter((k) => KIND_EVENTS[k] || k === "exams_request")
       : detectAssignKinds(patch);
-    const unique = [...new Set(kinds.length ? kinds : ["training"])];
-    const merged = await updateAccountData(pool, row.athlete_user_id, (current) => mergeAssignClientData(current, patch, unique));
+    let unique = [...new Set(kinds.length ? kinds : ["training"])];
+    // Therapy or exams the athlete keeps private are not the coach's to replace.
+    let refused = [];
+    const merged = await updateAccountData(pool, row.athlete_user_id, (current) => {
+      const hidden = medicalHiddenFromCoach(current);
+      refused = unique.filter((k) => hidden[k]);
+      unique = unique.filter((k) => !hidden[k]);
+      if (!unique.length) return null;
+      const src = { ...patch };
+      refused.forEach((k) => {
+        delete src[k];
+        if (src.activeProgram && typeof src.activeProgram === "object") {
+          src.activeProgram = { ...src.activeProgram };
+          delete src.activeProgram[k];
+        }
+      });
+      return mergeAssignClientData(current, src, unique);
+    });
+    if (!unique.length) {
+      return res.status(403).json({ error: "L'atleta non condivide " + (refused.includes("therapy") ? "la terapia" : "gli esami") + " con il coach.", refused });
+    }
     const scheduleBits = [];
     const scheduleVals = [row.id];
     if (req.body?.programExpiresAt) {
@@ -2772,7 +2793,7 @@ export function mountCoachPractice(app, deps) {
       "Il coach ti ha inviato un aggiornamento",
       { view: unique.includes("training") ? "program_assigned" : (unique[0] || "home") }
     ).catch(() => {});
-    return res.json({ ok: true, kinds: unique });
+    return res.json({ ok: true, kinds: unique, refused });
   });
 
   app.post("/api/coach/clients/:id/patch-data", async (req, res) => {
@@ -2780,8 +2801,24 @@ export function mountCoachPractice(app, deps) {
     if (!coach) return;
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
-    const patch = req.body?.data && typeof req.body.data === "object" ? req.body.data : {};
+    const rawPatch = req.body?.data && typeof req.body.data === "object" ? req.body.data : {};
+    let refused = [];
     const merged = await updateAccountData(pool, row.athlete_user_id, (current) => {
+      // The athlete's own settings and consents are never the coach's to write,
+      // nor therapy and exams the athlete keeps private: the coach's copy of
+      // those is empty, and saving it would clear the athlete's.
+      const patch = { ...rawPatch };
+      ["prefs", "privacyConsent", "aiConsent", "medicalHidden"].forEach((k) => { delete patch[k]; });
+      const hidden = medicalHiddenFromCoach(current);
+      refused = MEDICAL_COACH_DOMAINS.filter((k) => hidden[k] && Object.prototype.hasOwnProperty.call(patch, k));
+      MEDICAL_COACH_DOMAINS.forEach((k) => {
+        if (!hidden[k]) return;
+        delete patch[k];
+        if (patch.activeProgram && typeof patch.activeProgram === "object") {
+          patch.activeProgram = { ...patch.activeProgram };
+          delete patch.activeProgram[k];
+        }
+      });
       const merged = { ...current };
       const CLEARABLE = new Set(["nutrition", "supplementation", "therapy", "exams"]);
       const emptyCleared = (k) => {
@@ -2887,7 +2924,7 @@ export function mountCoachPractice(app, deps) {
         [row.id, JSON.stringify({ at: merged.coachPatchedAt, summary: String(req.body?.summary || "Il coach ha aggiornato il tuo piano").slice(0, 200) })]
       );
     }
-    return res.json({ ok: true });
+    return res.json({ ok: true, refused });
   });
 
   app.get("/api/coach/clients/:id/snapshot", async (req, res) => {
@@ -2914,9 +2951,10 @@ export function mountCoachPractice(app, deps) {
       }),
       credentials: { username: row.username, password: "", oneTime: true, requiresReset: true },
       intake: row.intake || {},
-      // The athlete's data, but body checks only once sent to the coach: one
-      // saved as "non inviato al coach" is theirs alone.
-      data: (function (d) { return d && Array.isArray(d.bodyChecks) ? { ...d, bodyChecks: sentBodyChecks(d) } : d; })(data.rows[0]?.data || {}),
+      // The athlete's data, but body checks only once sent to the coach (one
+      // saved as "non inviato al coach" is theirs alone), and therapy and exams
+      // only when the athlete shares them.
+      data: coachVisibleAccountData(data.rows[0]?.data || {}),
       pendingChange: row.pending_change ? { summary: row.pending_change.summary || "modifica", at: row.pending_change.at } : null,
       pendingUnlock: row.pending_unlock && row.pending_unlock.feature
         ? {

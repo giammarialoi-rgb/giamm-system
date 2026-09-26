@@ -455,6 +455,35 @@ export function sentBodyChecks(accountData) {
   return checks.filter((c) => c && c.sentToCoach === true);
 }
 
+// Therapy and exams are health data the athlete can keep from the coach
+// (Terapia / Esami > Privacy): prefs.medicalPrivacy.therapyCoach or
+// examsCoach set to false. Not set means shared, as it always was.
+export const MEDICAL_COACH_DOMAINS = ["therapy", "exams"];
+export function medicalHiddenFromCoach(accountData) {
+  const prefs = accountData && accountData.prefs && typeof accountData.prefs === "object" ? accountData.prefs : {};
+  const mp = prefs.medicalPrivacy && typeof prefs.medicalPrivacy === "object" ? prefs.medicalPrivacy : {};
+  return { therapy: mp.therapyCoach === false, exams: mp.examsCoach === false };
+}
+
+// The athlete's record as the coach may see it: body checks only once sent,
+// therapy and exams only when shared (also the copies inside the program).
+// medicalHidden tells the coach's app what is kept back, and why it is empty.
+export function coachVisibleAccountData(accountData) {
+  const d = accountData && typeof accountData === "object" ? accountData : {};
+  const out = { ...d };
+  if (Array.isArray(d.bodyChecks)) out.bodyChecks = sentBodyChecks(d);
+  const hidden = medicalHiddenFromCoach(d);
+  const prog = d.activeProgram && typeof d.activeProgram === "object" ? { ...d.activeProgram } : null;
+  for (const key of MEDICAL_COACH_DOMAINS) {
+    if (!hidden[key]) continue;
+    delete out[key];
+    if (prog) delete prog[key];
+  }
+  if (prog) out.activeProgram = prog;
+  if (hidden.therapy || hidden.exams) out.medicalHidden = hidden;
+  return out;
+}
+
 function latestWeight(accountData) {
   const checks = sentBodyChecks(accountData);
   const weighted = checks.filter((row) => Number(row && row.weight) > 0);

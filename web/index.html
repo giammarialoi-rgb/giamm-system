@@ -52922,6 +52922,219 @@ function getMoleculeBlurb(med) {
   return 'Tracciamento personale della prescrizione. Consulta il foglietto illustrativo e il medico curante per meccanismo d\'azione e controindicazioni.';
 }
 
+// ====================================================
+// THERAPY AND EXAMS: HEALTH DATA, AND WHO SEES IT
+// ====================================================
+// Both sections hold health data (art. 9 GDPR). The person is told what
+// happens to it the first time they open one, and each section has its own
+// privacy card: whether the coach sees it (athletes; the server enforces it,
+// see coachVisibleAccountData), whether Coach AI may use it, and deleting it
+// all. store.prefs.medicalPrivacy = { noticeAt, therapyCoach, examsCoach }:
+// a coach flag not set means shared, as before. Coach AI keeps its old switch,
+// store.prefs.shareMedicalWithCoach (off unless turned on).
+function medicalPrivacy() {
+  if (!store.prefs || typeof store.prefs !== 'object') store.prefs = {};
+  if (!store.prefs.medicalPrivacy || typeof store.prefs.medicalPrivacy !== 'object') store.prefs.medicalPrivacy = {};
+  return store.prefs.medicalPrivacy;
+}
+function medicalSharedWithCoach(domain) {
+  return medicalPrivacy()[domain + 'Coach'] !== false;
+}
+function medicalAiAllowed() {
+  return !!(store.prefs && store.prefs.shareMedicalWithCoach);
+}
+// Coach AI is there for this person at all: a coach's athlete only when the coach allowed it.
+function medicalAiAvailable() {
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) return !!(store.clientProfile && store.clientProfile.allowNurvanAi);
+  return true;
+}
+// A coach looking at a client's sections: the client's choices apply, not the coach's own.
+function medicalCoachViewing() {
+  return !!(store && (store.coachViewingClient || store.coachAssigning));
+}
+function medicalDomainLabel(domain) {
+  return domain === 'therapy' ? 'la terapia' : 'gli esami';
+}
+function setMedicalCoachShare(domain, on) {
+  if (domain !== 'therapy' && domain !== 'exams') return;
+  medicalPrivacy()[domain + 'Coach'] = !!on;
+  persist();
+  if (typeof showToast === 'function') showToast(on ? ('Il coach vede ' + medicalDomainLabel(domain)) : ('Il coach non vede più ' + medicalDomainLabel(domain)), 'info');
+  if (typeof render === 'function') render();
+}
+function setMedicalAiShare(on) {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.shareMedicalWithCoach = !!on;
+  persist();
+  if (typeof render === 'function') render();
+}
+
+// What the coach's app shows in place of a section the client keeps private.
+function medicalHiddenBannerHtml(domain) {
+  const ws = store && store.coachWorkspace;
+  const hidden = ws && ws.data && ws.data.medicalHidden;
+  if (!medicalCoachViewing() || !hidden || !hidden[domain]) return '';
+  return '<div class="card" style="padding:12px;margin-bottom:12px;border-color:rgba(212,175,55,.55);font-size:12px;color:#ccc;line-height:1.45;">' +
+    '<b style="color:var(--gold);">🔒 Sezione privata</b><br>Il cliente ha scelto di non condividere ' + medicalDomainLabel(domain) + ' con te. Quello che vedi qui non è il suo e non viene salvato sul suo account.</div>';
+}
+
+function medicalPrivacyCardHtml(domain) {
+  if (medicalCoachViewing()) return medicalHiddenBannerHtml(domain);
+  const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+  const shared = medicalSharedWithCoach(domain);
+  const ai = medicalAiAllowed();
+  const status = [];
+  if (athlete) status.push(shared ? 'visibile al coach' : 'nascosta al coach');
+  if (medicalAiAvailable()) status.push(ai ? 'Coach AI: sì' : 'Coach AI: no');
+  const row = (label, hint, checked, onchange) =>
+    '<label style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:8px 0;border-top:1px solid #222;font-size:12px;color:#ddd;">' +
+    '<span>' + label + (hint ? '<br><span style="font-size:10px;color:#888;line-height:1.4;">' + hint + '</span>' : '') + '</span>' +
+    '<input type="checkbox" style="flex:0 0 auto;width:20px;height:20px;margin-top:2px;" ' + (checked ? 'checked' : '') + ' onchange="' + onchange + '"></label>';
+  let body = '<p style="font-size:11px;color:#aaa;line-height:1.5;margin:8px 0 6px;">' +
+    (domain === 'therapy' ? 'Farmaci e dosi' : 'Referti e valori') + ' sono dati sulla salute. Restano su questo dispositivo e nel tuo account Nurvan, per ritrovarli se cambi telefono. Non entrano mai in classifiche, XP o card da condividere.</p>';
+  if (athlete) {
+    body += row('Il mio coach vede ' + medicalDomainLabel(domain),
+      shared ? 'Il coach può leggerli e aggiornarli.' : 'Il coach non li riceve e non può modificarli.',
+      shared, 'setMedicalCoachShare(\'' + domain + '\', this.checked)');
+  }
+  if (medicalAiAvailable()) {
+    body += row('Coach AI può usare terapia ed esami',
+      'Solo quando fai una domanda. Senza, ogni richiesta su un valore ti chiede conferma prima di inviarlo.',
+      ai, 'setMedicalAiShare(this.checked)');
+  }
+  body += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:8px 10px;color:var(--accent-red);border-color:rgba(255,77,77,.5);" onclick="deleteAllMedicalDomain(\'' + domain + '\')">' +
+    (domain === 'therapy' ? 'ELIMINA TUTTA LA TERAPIA' : 'ELIMINA TUTTI GLI ESAMI E I FILE') + '</button>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:8px 10px;" onclick="showMedicalPrivacyNotice(\'' + domain + '\', true)">COME SONO TRATTATI</button></div>';
+  return '<details class="card" id="medical-privacy-card" style="padding:10px 12px;margin-bottom:12px;">' +
+    '<summary style="cursor:pointer;font-size:11px;font-weight:800;color:var(--gold);letter-spacing:.5px;list-style-position:inside;">🔒 PRIVACY · <span style="color:#aaa;font-weight:600;">' + esc(status.join(' · ') || 'dati sanitari') + '</span></summary>' +
+    body + '</details>';
+}
+
+// First time in therapy or exams: what happens to these data, and the choices.
+function maybeShowMedicalPrivacyNotice(domain) {
+  if (medicalCoachViewing()) return;
+  if (medicalPrivacy().noticeAt) return;
+  if (document.getElementById('medical-privacy-sheet')) return;
+  showMedicalPrivacyNotice(domain, false);
+}
+function showMedicalPrivacyNotice(domain, again) {
+  const old = document.getElementById('medical-privacy-sheet');
+  if (old) old.remove();
+  const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+  const mp = medicalPrivacy();
+  const check = (id, label, checked) =>
+    '<label style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #222;font-size:13px;color:#eee;">' +
+    '<span>' + label + '</span><input type="checkbox" id="' + id + '" style="width:22px;height:22px;flex:0 0 auto;" ' + (checked ? 'checked' : '') + '></label>';
+  const sheet = document.createElement('div');
+  sheet.id = 'medical-privacy-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10200';
+  sheet.innerHTML = '<div class="nurvan-sheet-panel">' +
+    '<div class="nurvan-sheet-head"><div style="font-size:12px;color:var(--gold);font-weight:900;letter-spacing:1px;">🔒 TERAPIA ED ESAMI · DATI SANITARI</div></div>' +
+    '<div class="nurvan-sheet-body" style="font-size:13px;color:#ccc;line-height:1.5;">' +
+    '<p style="margin:0 0 10px;">Farmaci, dosi, referti e valori degli esami sono <b style="color:#fff;">dati sulla salute</b>. Ecco cosa ne fa Nurvan:</p>' +
+    '<ul style="margin:0 0 12px;padding-left:18px;">' +
+    '<li>Li salva su questo dispositivo e nel tuo account, per sincronizzarli tra i tuoi dispositivi. Il collegamento è cifrato (HTTPS).</li>' +
+    (athlete ? '<li>Il tuo coach li vede solo se lo lasci attivo qui sotto. Puoi cambiarlo quando vuoi dal riquadro Privacy della sezione.</li>' : '<li>Nessun altro li vede: non li condividiamo e non li usiamo per pubblicità.</li>') +
+    '<li>Coach AI li usa solo se lo attivi, e solo per rispondere alle tue domande.</li>' +
+    '<li>Non entrano in classifiche, XP o card da condividere.</li>' +
+    '<li>Puoi eliminarli tutti in ogni momento. Nurvan non è un dispositivo medico: segui sempre il tuo medico.</li></ul>' +
+    (athlete ? check('mp-therapy-coach', 'Il mio coach vede la terapia', mp.therapyCoach !== false) + check('mp-exams-coach', 'Il mio coach vede gli esami', mp.examsCoach !== false) : '') +
+    (medicalAiAvailable() ? check('mp-ai', 'Coach AI può usare terapia ed esami', medicalAiAllowed()) : '') +
+    '<p style="font-size:11px;color:#888;margin:12px 0 0;">Dettagli nell\'' + legalLinkHtml('privacy', 'informativa privacy') + '.</p>' +
+    '</div>' +
+    '<div class="nurvan-sheet-foot"><button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="acceptMedicalPrivacyNotice()">' + (again ? 'SALVA' : 'HO CAPITO') + '</button></div>' +
+    '</div>';
+  document.body.appendChild(sheet);
+}
+function acceptMedicalPrivacyNotice() {
+  const mp = medicalPrivacy();
+  const val = (id) => { const el = document.getElementById(id); return el ? !!el.checked : null; };
+  const th = val('mp-therapy-coach');
+  const ex = val('mp-exams-coach');
+  const ai = val('mp-ai');
+  if (th !== null) mp.therapyCoach = th;
+  if (ex !== null) mp.examsCoach = ex;
+  if (ai !== null) store.prefs.shareMedicalWithCoach = ai;
+  if (!mp.noticeAt) mp.noticeAt = new Date().toISOString();
+  const sheet = document.getElementById('medical-privacy-sheet');
+  if (sheet) sheet.remove();
+  persist();
+  if (typeof render === 'function') render();
+}
+
+// Everything in the section, and for exams the files attached, on this
+// device and (through the usual sync, with each entry recorded as deleted)
+// in the account.
+async function deleteAllMedicalDomain(domain) {
+  const what = domain === 'therapy' ? 'tutta la terapia (farmaci, blocchi, cicli)' : 'tutti gli esami, i promemoria e i file allegati';
+  if (!confirm('Eliminare ' + what + '?\n\nLi elimina da questo dispositivo e dal tuo account. Non si può annullare.')) return;
+  if (domain === 'therapy') {
+    const th = DATA.therapy || (DATA.therapy = { medications: [] });
+    ['medications', 'protocols', 'cycles', 'entries'].forEach((k) => { if (Array.isArray(th[k])) th[k].length = 0; });
+    th.present = false;
+  } else {
+    const ex = DATA.exams || (DATA.exams = { records: [], reminders: [] });
+    const files = Array.isArray(ex.attachments) ? ex.attachments.slice() : [];
+    for (const a of files) {
+      if (a && a.id) { try { await removeDocumentFile(a.id); } catch (_) {} }
+      if (Array.isArray(store.docs) && a) store.docs = store.docs.filter((d) => d && d.id !== a.id);
+    }
+    ['records', 'items', 'reminders', 'attachments'].forEach((k) => { if (Array.isArray(ex[k])) ex[k].length = 0; });
+    ex.present = false;
+  }
+  persist();
+  if (typeof GiammariaPersistence !== 'undefined') {
+    try {
+      if (domain === 'therapy' && GiammariaPersistence.saveTherapy) await GiammariaPersistence.saveTherapy(DATA.therapy);
+      if (domain === 'exams' && GiammariaPersistence.saveExams) await GiammariaPersistence.saveExams(DATA.exams);
+    } catch (_) {}
+  }
+  if (typeof render === 'function') render();
+  if (typeof showToast === 'function') showToast(domain === 'therapy' ? 'Terapia eliminata' : 'Esami eliminati', 'info');
+}
+
+async function deleteExamAttachment(idx) {
+  const list = DATA.exams && Array.isArray(DATA.exams.attachments) ? DATA.exams.attachments : null;
+  const a = list && list[idx];
+  if (!a) return;
+  if (!confirm('Eliminare il file «' + (a.name || 'referto') + '»?')) return;
+  if (a.id) { try { await removeDocumentFile(a.id); } catch (_) {} }
+  if (Array.isArray(store.docs)) store.docs = store.docs.filter((d) => d && d.id !== a.id);
+  list.splice(idx, 1);
+  persist();
+  if (typeof render === 'function') render();
+  if (typeof showToast === 'function') showToast('File eliminato', 'info');
+}
+
+async function openExamAttachment(idx) {
+  const list = DATA.exams && Array.isArray(DATA.exams.attachments) ? DATA.exams.attachments : null;
+  const a = list && list[idx];
+  if (!a) return;
+  let b64 = null;
+  try { b64 = a.id ? await getDocumentFile(a.id) : null; } catch (_) {}
+  if (!b64) { if (typeof showToast === 'function') showToast('Il file non è su questo dispositivo', 'error'); return; }
+  try {
+    const bin = atob(String(b64).replace(/^data:[^,]*,/, ''));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: a.mime || 'application/octet-stream' });
+    if (typeof shareOrSavePdfBlob === 'function' && /pdf/i.test(a.mime || a.name || '')) shareOrSavePdfBlob(blob, a.name || 'referto.pdf', a.name || 'Referto');
+    else window.open(URL.createObjectURL(blob), '_blank');
+  } catch (_) {
+    if (typeof showToast === 'function') showToast('Impossibile aprire il file', 'error');
+  }
+}
+
+window.setMedicalCoachShare = setMedicalCoachShare;
+window.setMedicalAiShare = setMedicalAiShare;
+window.showMedicalPrivacyNotice = showMedicalPrivacyNotice;
+window.acceptMedicalPrivacyNotice = acceptMedicalPrivacyNotice;
+window.deleteAllMedicalDomain = deleteAllMedicalDomain;
+window.deleteExamAttachment = deleteExamAttachment;
+window.openExamAttachment = openExamAttachment;
+
 function renderTherapy(c) {
   if (!DATA.therapy && (!store.therapy || (!store.therapy.medications && !store.therapy.protocols))) {
     DATA.therapy = {
@@ -52954,7 +53167,7 @@ function renderTherapy(c) {
     <div style="background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.3);padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:10px;color:#ff8888;line-height:1.4;">
       ⚠️ <strong>Promemoria personale:</strong> cerca per nome o principio attivo, scegli la categoria e salva solo quanto prescritto. Non sostituisce il parere del medico.
     </div>
-  `;
+  ` + medicalPrivacyCardHtml('therapy');
 
   if (protocols.length > 0) {
     protocols.forEach((proto, pIdx) => {
@@ -53045,6 +53258,7 @@ function renderTherapy(c) {
   }
 
   c.innerHTML = html;
+  maybeShowMedicalPrivacyNotice('therapy');
 }
 
 function openAddTherapyModal() {
@@ -53282,7 +53496,7 @@ function renderExams(c) {
         <button class="btn btn-primary" style="font-size:10px;padding:6px 12px;" onclick="openAddExamModal()">+ AGGIUNGI REFERTO</button>
       </div>
     </div>
-  `;
+  ` + medicalPrivacyCardHtml('exams');
 
   if (coachReq && Array.isArray(coachReq.exams) && coachReq.exams.length) {
     html += '<div class="card" style="padding:14px;margin-bottom:12px;border-color:rgba(212,175,55,.55);">' +
@@ -53303,9 +53517,11 @@ function renderExams(c) {
 
   if (attachments.length) {
     html += '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:8px;">FILE ALLEGATI</div>' +
-      attachments.slice(0, 12).map(function (a) {
-        return '<div style="font-size:12px;color:#ddd;padding:4px 0;border-bottom:1px solid #222;">' + esc(a.name || 'referto') +
-          (a.date ? (' <span style="color:#888;font-size:10px;">· ' + esc(a.date) + '</span>') : '') + '</div>';
+      attachments.slice(0, 12).map(function (a, i) {
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:#ddd;padding:4px 0;border-bottom:1px solid #222;">' +
+          '<span style="cursor:pointer;flex:1;word-break:break-word;" onclick="openExamAttachment(' + i + ')">' + esc(a.name || 'referto') +
+          (a.date ? (' <span style="color:#888;font-size:10px;">· ' + esc(a.date) + '</span>') : '') + '</span>' +
+          '<button type="button" class="btn btn-outline" style="font-size:10px;padding:3px 6px;color:var(--accent-red);flex:0 0 auto;" onclick="deleteExamAttachment(' + i + ')" aria-label="Elimina file">✕</button></div>';
       }).join('') + '</div>';
   }
 
@@ -53357,6 +53573,7 @@ function renderExams(c) {
 
   c.innerHTML = html;
   maybeNotifyExamReminders();
+  maybeShowMedicalPrivacyNotice('exams');
 }
 
 function exportExamRequestPdf() {
@@ -53571,6 +53788,7 @@ function maybeNotifyExamReminders() {
 }
 
 function explainExamParameterAI(param, val, unit) {
+  if (!medicalAiAllowed() && !confirm('Invio a Coach AI questo esame: ' + param + ' ' + val + ' ' + (unit || '') + '.\n\nSolo questo valore, per la spiegazione. Continuare?')) return;
   navigate('ai');
   const inp = $('ai-input');
   if (inp) inp.value = "Spiegami in termini generali il significato clinico e sportivo del parametro " + param + " con valore di " + val + " " + unit;
@@ -53862,10 +54080,10 @@ function renderSettings(c) {
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
       <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">Esperienza</div>
       <button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="navigate('profile')">Profilo</button>
-      ${(typeof isAthleteRole === 'function' && isAthleteRole()) ? '' : `
-      <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin:10px 0 6px;gap:10px;">Condividi terapia/esami con Coach AI <input type="checkbox" ${store.prefs.shareMedicalWithCoach?'checked':''} onchange="store.prefs.shareMedicalWithCoach=this.checked;persist()"></label>
-      <div style="font-size:10px;color:#666;line-height:1.4;">Privacy: terapia ed esami non entrano mai in ranking, XP o share card. Al Coach solo con opt-in esplicito.</div>
-      `}
+      ${medicalAiAvailable() ? `
+      <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin:10px 0 6px;gap:10px;">Coach AI può usare terapia ed esami <input type="checkbox" ${store.prefs.shareMedicalWithCoach?'checked':''} onchange="setMedicalAiShare(this.checked)"></label>
+      <div style="font-size:10px;color:#666;line-height:1.4;">Privacy: terapia ed esami non entrano mai in ranking, XP o share card. A Coach AI solo con questa opzione attiva, o con la tua conferma per il singolo valore.${(typeof isAthleteRole === 'function' && isAthleteRole()) ? ' Cosa vede il tuo coach si sceglie in Terapia ed Esami › Privacy.' : ''}</div>
+      ` : ''}
     </div>
 
     ${(typeof isAthleteRole === 'function' && isAthleteRole()) ? '' : `
