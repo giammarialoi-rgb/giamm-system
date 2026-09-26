@@ -316,6 +316,11 @@ console.log('--- 10. una progressione settimanale scritta su una riga (Word, fot
   const pressWeeks = read({ [kR]: 'weekly' });
   ok('10o. scelta "una settimana per schema" su "5x5 + 2x8": la pressa cambia di settimana in settimana', series(pressWeeks.weeks, 'Pressa') === '5x5 2x8 5x5 2x8');
   ok('10p. la scelta resta scritta nell\'elenco', (read({ [kP]: 'session' }).scheme_choices || [])[0].choice === 'session');
+  // The declared length wins; the progression repeats (or stops) inside it.
+  ok('10r. "SCHEDA 4 SETTIMANE" con una progressione di 6: 4 settimane', series(weeksOf('SCHEDA 4 SETTIMANE\nGIORNO 1\nPanca: 3x10-4x10-5x10-3x8-4x8-5x8'), 'Panca') === '3x10 4x10 5x10 3x8');
+  ok('10s. "DURATA: 10 SETTIMANE" con una progressione di 4: 10 settimane, la progressione riparte', series(weeksOf('DURATA: 10 SETTIMANE\nGIORNO 1\nPanca: 3x10-4x10-5x10-3x8'), 'Panca') === '3x10 4x10 5x10 3x8 3x10 4x10 5x10 3x8 3x10 4x10');
+  ok('10t. la durata anche dal nome del file', weeksOf('GIORNO 1\nPanca: 3x10-4x10-5x10-3x8', 'PROGRAMMA 8 SETTIMANE.docx').length === 8);
+  ok('10u. una frase che nomina le settimane non e\' la durata ("ogni 2 settimane")', weeksOf('GIORNO 1\nPanca: 3x10-4x10-5x10-3x8\naumentare il carico ogni 2 settimane').length === 4);
   const page = fs.readFileSync(new URL('./web/index.base.html', import.meta.url), 'utf8');
   ok('10q. nella revisione dell\'import: la scheda delle scelte, e il testo del file tenuto per rileggerlo (Word, PDF, foto, testo)',
     /return schemeChoicesCardHtml\(prog\) \+ `/.test(page) && /pState\.importParseText = parseTextForChoices;/.test(page)
