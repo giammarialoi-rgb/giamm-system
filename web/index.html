@@ -6547,6 +6547,9 @@ function _itCanonicalExercise(ex, ids, maxes) {
     sets,
     sets_data: sets
   };
+  // The max this exercise's percentages are of, when its formulas all say the same one.
+  const liftsRead = [...new Set(sets.filter((s) => s.percent_of && s.percent_of.lift).map((s) => s.percent_of.lift))];
+  if (liftsRead.length === 1) out.percent_lift = liftsRead[0];
   if (sets.length) {
     out.prescription = {
       sets: sets.length,
@@ -6728,6 +6731,34 @@ function parseSetLine(src) {
     return out;
   }
   return null;
+}
+
+// Maxes written in a text: "MASSIMALI: SQ 105 B 60 DEAD 100", "1RM panca 100",
+// "Massimale squat: 150 kg". Targets ("OBIETTIVO: 115/67,5/130") are not maxes.
+// Returns { squat: { value, kind, label }, ... } or {}.
+function parseMaxesFromText(text) {
+  const out = {};
+  const lines = String(text || '').split(/\r?\n/);
+  const liftOf = (w) => {
+    const f = _itFold(w);
+    if (/^(sq|squat|accosciata|kniebeuge)$/.test(f)) return 'squat';
+    if (/^(b|bp|bench|panca|bankdrucken)$/.test(f)) return 'bench';
+    if (/^(dl|dead|deadlift|stacco|st|kreuzheben)$/.test(f)) return 'deadlift';
+    return null;
+  };
+  lines.forEach((line) => {
+    if (!/massimal|\b1\s*rm\b|\bmax(?:es|imal)?\b|bestleistung/i.test(line)) return;
+    if (/obiettiv|obbiettiv|target|goal|ziel/i.test(line) && !/massimal/i.test(line)) return;
+    const body = line.replace(/(\d),(\d)/g, '$1.$2');
+    const re = /\b([A-Za-z\u00c0-\u00ff]{1,12})\s*[:=]?\s*(\d{2,3}(?:\.\d)?)\s*(?:kg)?\b/g;
+    let m;
+    while ((m = re.exec(body))) {
+      const lift = liftOf(m[1]);
+      const v = Number(m[2]);
+      if (lift && v >= 20 && v <= 500 && !out[lift]) out[lift] = { value: v, kind: 'current', label: line.trim().slice(0, 60) };
+    }
+  });
+  return out;
 }
 
 // Replaces an exercise's sets with the groups a line prescribed.
@@ -32054,6 +32085,10 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
   program.duration_weeks = program.weeks.length;
   program.training_frequency = program.weeks[0]?.sessions?.length || 3;
 
+  // Maxes the text states ("MASSIMALI: SQ 105 B 60 DEAD 100"): the % it
+  // prescribes are of these, and the app computes the kilos from them.
+  try { program.percent_maxes = parseMaxesFromText(normalizedText); } catch (_) { program.percent_maxes = {}; }
+
   // Declared duration from title / weekly ladders (FULL BODY 10/12 → 12 weeks of the same 3 days)
   const inferredWeeks = inferProgramDurationFromText(normalizedText, filename);
   if (inferredWeeks && inferredWeeks > program.weeks.length) {
@@ -43236,7 +43271,9 @@ function normalizeProgram(payload) {
           ? (firstWorkingSet.load != null ? Number(firstWorkingSet.load) : (firstWorkingSet.target_load != null ? Number(firstWorkingSet.target_load) : null))
           : null;
         const plannedLoad = exercise.load != null ? Number(exercise.load) : (exercise.plannedLoad != null ? Number(exercise.plannedLoad) : (exercise.load_value != null ? Number(exercise.load_value) : firstSetLoad));
-        const rirTarget = exercise.rir != null ? Number(exercise.rir) : (exercise.rirTarget != null ? Number(exercise.rirTarget) : (exercise.rir_target != null ? Number(exercise.rir_target) : 1));
+        // No RIR in the source is no RIR in the program: a 1 put here showed
+        // as the coach's prescription on every imported exercise.
+        const rirTarget = exercise.rir != null ? Number(exercise.rir) : (exercise.rirTarget != null ? Number(exercise.rirTarget) : (exercise.rir_target != null ? Number(exercise.rir_target) : null));
         const rpeTarget = exercise.rpe != null ? Number(exercise.rpe) : (exercise.rpeTarget != null ? Number(exercise.rpeTarget) : (exercise.rpe_target != null ? Number(exercise.rpe_target) : null));
         const tempo = exercise.tempo || '';
 
@@ -43259,6 +43296,8 @@ function normalizeProgram(payload) {
             target_load: s.target_load != null ? Number(s.target_load) : (s.load != null ? Number(s.load) : null),
             load_unit: s.load_unit || 'kg',
             percentage_1rm: s.percentage_1rm != null ? Number(s.percentage_1rm) : null,
+            // Which max the % is of, as the file's formula said (import-tables.mjs).
+            percent_of: s.percent_of && s.percent_of.lift ? { lift: s.percent_of.lift, kind: s.percent_of.kind || null, value: s.percent_of.value != null ? Number(s.percent_of.value) : null } : null,
             rpe: s.rpe != null ? Number(s.rpe) : rpeTarget,
             rir: s.rir != null ? Number(s.rir) : rirTarget,
             // "2 min" letto con parseInt faceva 2: due secondi di recupero su ogni serie,
@@ -43358,6 +43397,7 @@ function normalizeProgram(payload) {
           technique: exercise.technique || undefined,
           competition_lift: exercise.competition_lift || undefined,
           target_pct: exercise.target_pct != null ? Number(exercise.target_pct) : undefined,
+          percent_lift: exercise.percent_lift || undefined,
           progressed: exercise.progressed || undefined,
           name_original: exercise.name_original || undefined,
           rotated_from: exercise.rotated_from || undefined,
@@ -54993,6 +55033,7 @@ async function confirmImportAndActivateInner(choices, domainOnly) {
     }
     if (prog.exams && allowDom('exams')) { DATA.exams = userReplacesRecord(prog.exams); store.exams = prog.exams; }
     if (prog.spreadsheet) DATA.spreadsheet = prog.spreadsheet;
+    try { initPercentModelFromImport(prog); } catch (pctErr) { console.warn('[PCT_MODEL]', pctErr); }
 
     // Atomic IDB persist + domain read-back verify (offline, no AI)
     // In coach→client assign sandbox: keep everything in-memory only so the coach master is untouched.
@@ -55564,6 +55605,252 @@ async function deleteSavedProgram(programId, idx, nameHint) {
 
 function deleteModel(idx) {
   deleteSavedProgram(store.models[idx]?.id, idx);
+}
+
+// ---- Loads as a percentage of a max ----
+// A coach's sheet asks for the maxes first and writes every load as a % of
+// one of them (=CEILING(max*75%;2.5)). The import keeps, per set, the % and
+// which max it is of (set.percent_of, row.percent_lift); the program keeps
+// the maxes (DATA.progression.maxes, from the file) and the rounding the
+// formulas used. Changing a max here recomputes the kilos the way the sheet
+// would, without touching a set the athlete already did or typed a load into.
+
+// The max a row's percentages are of: its formulas, else its own competition lift.
+function percentLiftOfRow(row) {
+  if (!row) return null;
+  if (row.percent_lift) return row.percent_lift;
+  const sets = Array.isArray(row.sets) ? row.sets : [];
+  const ref = sets.find(function (st) { return st && st.percent_of && st.percent_of.lift; });
+  if (ref) return ref.percent_of.lift;
+  return row.competition_lift || null;
+}
+function rowHasPercentSets(row) {
+  return Array.isArray(row && row.sets) && row.sets.some(function (st) { return st && st.percentage_1rm != null && st.percentage_1rm !== '' && Number(st.percentage_1rm) > 0; });
+}
+// The lifts whose maxes the active program's loads depend on.
+function programPercentLifts(program) {
+  const prog = program || (typeof DATA !== 'undefined' ? DATA : null);
+  const found = [];
+  ((prog && prog.weeks) || []).forEach(function (w) {
+    (w.sessions || w.days || []).forEach(function (sess) {
+      (sess.exercises || sess.rows || []).forEach(function (row) {
+        if (!rowHasPercentSets(row)) return;
+        (row.sets || []).forEach(function (st) {
+          const lift = (st && st.percent_of && st.percent_of.lift) || percentLiftOfRow(row);
+          if (lift && st && st.percentage_1rm != null && found.indexOf(lift) < 0) found.push(lift);
+        });
+      });
+    });
+  });
+  const order = ['squat', 'bench', 'deadlift', 'press', 'pullup', 'dip'];
+  return found.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
+}
+// How the file rounded its loads: CEILING / FLOOR / ROUND, to 2.5 unless it says otherwise.
+function detectPercentRounding(program) {
+  let mode = null;
+  let step = null;
+  ((program && program.weeks) || []).some(function (w) {
+    return (w.sessions || w.days || []).some(function (sess) {
+      return (sess.exercises || sess.rows || []).some(function (row) {
+        return (row.sets || []).some(function (st) {
+          const f = String((st && st.load_formula) || '');
+          if (!f) return false;
+          if (/CEILING/i.test(f)) mode = 'ceil';
+          else if (/FLOOR/i.test(f)) mode = 'floor';
+          else if (/ROUND/i.test(f)) mode = 'round';
+          const m = f.match(/(?:CEILING|FLOOR|MROUND)\s*\([^,;]+[,;]\s*(\d+(?:\.\d+)?)\s*\)/i);
+          if (m) step = Number(m[1]);
+          return !!mode;
+        });
+      });
+    });
+  });
+  return { mode: mode || 'round', step: step && step > 0 && step <= 10 ? step : 2.5 };
+}
+function roundPercentLoad(kg, rounding) {
+  const r = rounding || { mode: 'round', step: 2.5 };
+  const step = Number(r.step) || 2.5;
+  const q = kg / step;
+  const n = r.mode === 'ceil' ? Math.ceil(q - 1e-9) : (r.mode === 'floor' ? Math.floor(q + 1e-9) : Math.round(q));
+  return Math.round(n * step * 100) / 100;
+}
+// Kilos from maxes for every set written as a %. opts.onlyMissing: sets with
+// no load yet (a Word "5X5 60%"); opts.seed: also the load fields of the
+// workout, where the athlete has not done or typed anything.
+function applyPercentMaxes(maxes, opts) {
+  opts = opts || {};
+  if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks)) return 0;
+  const rounding = (DATA.progression && DATA.progression.rounding) || { mode: 'round', step: 2.5 };
+  let updated = 0;
+  DATA.weeks.forEach(function (w, wi) {
+    const wNum = wi + 1;
+    (w.sessions || w.days || []).forEach(function (sess, di) {
+      (sess.exercises || sess.rows || []).forEach(function (row, ei) {
+        if (!rowHasPercentSets(row)) return;
+        const rowLift = percentLiftOfRow(row);
+        (row.sets || []).forEach(function (st, si) {
+          if (!st || (typeof isWarmupSet === 'function' && isWarmupSet(st))) return;
+          const pct = Number(st.percentage_1rm);
+          const lift = (st.percent_of && st.percent_of.lift) || rowLift;
+          const max = lift ? Number((maxes || {})[lift]) : 0;
+          if (!(pct > 0) || !(max > 0)) return;
+          if (opts.onlyMissing && st.target_load != null && st.target_load !== '') return;
+          const kg = roundPercentLoad(max * pct / 100, rounding);
+          if (!(kg > 0)) return;
+          if (Number(st.target_load) !== kg) updated++;
+          st.target_load = kg;
+          st.load = kg;
+          if (!opts.seed || !store || !store.data) return;
+          const base = 'w' + wNum + '_d' + di + '_e' + ei + '_s' + (si + 1);
+          if (store.data[base + '_done'] || store.data[base + '_load_user']) return;
+          if (typeof weekExerciseWasLogged === 'function' && weekExerciseWasLogged(wNum, di, ei)) return;
+          store.data[base + '_load'] = kg;
+        });
+        const first = (row.sets || []).find(function (st) { return st && !(typeof isWarmupSet === 'function' && isWarmupSet(st)); });
+        if (first && first.target_load != null) row.plannedLoad = first.target_load;
+      });
+    });
+  });
+  return updated;
+}
+// After an import: the maxes the file stated become the program's, each row
+// with a % knows its max (the formula's, or the competition lift by name -
+// never guessed for a variant), and loads the file left blank are computed.
+function initPercentModelFromImport(prog) {
+  if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks)) return;
+  const eng = (typeof window !== 'undefined' && window.NurvanProgressions) || null;
+  let rowsWithPct = 0;
+  DATA.weeks.forEach(function (w) {
+    (w.sessions || w.days || []).forEach(function (sess) {
+      (sess.exercises || sess.rows || []).forEach(function (row) {
+        if (!rowHasPercentSets(row)) return;
+        rowsWithPct++;
+        if (!percentLiftOfRow(row) && eng && typeof eng.competitionLiftFor === 'function') {
+          const lift = eng.competitionLiftFor(row.name_original || row.name || row.exercise || '');
+          if (lift) row.percent_lift = lift;
+        }
+      });
+    });
+  });
+  if (!rowsWithPct) return;
+  const fileMaxes = (prog && prog.spreadsheet && prog.spreadsheet.maxes && Object.keys(prog.spreadsheet.maxes).length ? prog.spreadsheet.maxes : null)
+    || (prog && prog.percent_maxes) || {};
+  if (!DATA.progression) DATA.progression = {};
+  const maxes = Object.assign({}, DATA.progression.maxes || {});
+  Object.keys(fileMaxes).forEach(function (lift) {
+    const v = Number(fileMaxes[lift] && fileMaxes[lift].value);
+    if (v > 0 && !(Number(maxes[lift]) > 0)) maxes[lift] = v;
+  });
+  DATA.progression.maxes = maxes;
+  DATA.progression.maxes_from_file = fileMaxes;
+  DATA.progression.rounding = detectPercentRounding(DATA);
+  applyPercentMaxes(maxes, { onlyMissing: true });
+}
+function percentLiftLabel(lift) {
+  const eng = (typeof window !== 'undefined' && window.NurvanProgressions) || null;
+  if (eng && typeof eng.liftLabel === 'function') return eng.liftLabel(lift);
+  return ({ squat: 'Squat', bench: 'Panca piana', deadlift: 'Stacco da terra' })[lift] || lift;
+}
+const PROFILE_MAX_KEY = { squat: 'squatMax', bench: 'benchMax', deadlift: 'deadliftMax' };
+// The card over the workout: the maxes the loads are percentages of, and the button that recomputes them.
+function percentMaxesCardHtml() {
+  try {
+    if (typeof DATA === 'undefined' || !DATA || store.coachViewingClient) return '';
+    const lifts = programPercentLifts();
+    if (!lifts.length) return '';
+    const open = !(store.prefs && store.prefs.percentPanelOpen === false);
+    const maxes = (DATA.progression && DATA.progression.maxes) || {};
+    const fromFile = (DATA.progression && DATA.progression.maxes_from_file) || {};
+    const prof = (store && store.profile) || {};
+    let h = '<div class="card" id="percent-maxes-card" style="margin-bottom:12px;padding:12px;border:1px solid var(--gold);">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:' + (open ? '8px' : '0') + ';">' +
+      '<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;">MASSIMALI · I CARICHI SONO % DI QUESTI</div>' +
+      '<button class="btn btn-outline" type="button" style="font-size:9px;padding:4px 8px;" onclick="togglePercentMaxesCard()">' + (open ? 'CHIUDI' : 'APRI') + '</button></div>';
+    if (open) {
+      h += '<div style="display:grid;grid-template-columns:repeat(' + Math.min(3, lifts.length) + ',minmax(0,1fr));gap:8px;">';
+      lifts.forEach(function (lift) {
+        const v = Number(maxes[lift]) > 0 ? maxes[lift] : '';
+        const f = fromFile[lift];
+        const pk = PROFILE_MAX_KEY[lift];
+        const pv = pk && Number(prof[pk]) > 0 ? Number(prof[pk]) : null;
+        const hint = [f && f.value ? ('file: ' + f.value + (f.kind === 'projected' ? ' previsto' : '')) : '', pv && Number(v) !== pv ? ('profilo: ' + pv) : ''].filter(Boolean).join(' · ');
+        h += '<label style="display:flex;flex-direction:column;gap:4px;font-size:9px;color:#888;text-transform:uppercase;">' + esc(percentLiftLabel(lift)) +
+          '<input id="pct-max-' + esc(lift) + '" type="number" step="0.5" inputmode="decimal" value="' + esc(String(v)) + '" placeholder="kg" style="padding:8px;font-size:14px;font-weight:700;text-align:center;width:100%;">' +
+          (hint ? '<span style="font-size:9px;color:#666;text-transform:none;">' + esc(hint) + '</span>' : '') + '</label>';
+      });
+      h += '</div><button class="btn btn-primary" type="button" style="width:100%;margin-top:10px;font-size:12px;font-weight:800;" onclick="applyPercentMaxesFromPanel()">RICALCOLA CARICHI</button>' +
+        '<div style="font-size:9px;color:#666;margin-top:6px;">Ogni serie scritta in % prende i kg da qui. Le serie gia\' fatte o con un carico scritto da te restano come sono.</div>';
+    }
+    return h + '</div>';
+  } catch (_) {
+    return '';
+  }
+}
+function togglePercentMaxesCard() {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.percentPanelOpen = store.prefs.percentPanelOpen === false;
+  persist();
+  render();
+}
+function applyPercentMaxesFromPanel() {
+  try {
+    const lifts = programPercentLifts();
+    if (!DATA.progression) DATA.progression = {};
+    const maxes = Object.assign({}, DATA.progression.maxes || {});
+    const changes = [];
+    lifts.forEach(function (lift) {
+      const el = document.getElementById('pct-max-' + lift);
+      const v = parseFloat(String((el && el.value) || '').replace(',', '.'));
+      if (!(v > 0 && v < 1000)) return;
+      if (Number(maxes[lift]) !== v) changes.push(percentLiftLabel(lift) + ' ' + v + ' kg');
+      maxes[lift] = v;
+    });
+    if (!lifts.some(function (lift) { return Number(maxes[lift]) > 0; })) {
+      if (typeof showToast === 'function') showToast('Inserisci almeno un massimale.', 'error');
+      return;
+    }
+    DATA.progression.maxes = maxes;
+    const n = applyPercentMaxes(maxes, { seed: true });
+    if (typeof persist === 'function') persist();
+    if (typeof persistActiveProgramStructure === 'function') persistActiveProgramStructure();
+    try { recordManualAction({ action_type: 'RECALIBRATE', changes: { maxes: maxes } }, { reason: 'percentMaxes' }); } catch (_) {}
+    if (typeof showToast === 'function') {
+      if (n) showToast('Carichi ricalcolati: ' + n + (changes.length ? ' · ' + changes.join(' · ') : ''), 'ok');
+      else showToast('I carichi erano gia\' allineati a questi massimali.', 'info');
+    }
+    render();
+  } catch (err) {
+    if (typeof showToast === 'function') showToast('Ricalcolo non riuscito: ' + String((err && err.message) || err), 'error');
+  }
+}
+window.applyPercentMaxesFromPanel = applyPercentMaxesFromPanel;
+window.togglePercentMaxesCard = togglePercentMaxesCard;
+
+// What the exercise box says under the intensity label: the RIR or RPE the
+// coach wrote, else the % of the max, else nothing - never a default.
+function rowIntensityText(row) {
+  if (!row) return '\u2014';
+  if (row.rirTarget != null && row.rirTarget !== '') return String(row.rirTarget);
+  if (row.rpeTarget != null && row.rpeTarget !== '') return String(row.rpeTarget);
+  const st = (row.sets || []).find(function (x) { return x && !(typeof isWarmupSet === 'function' && isWarmupSet(x)) && x.percentage_1rm != null && x.percentage_1rm !== ''; });
+  if (st) return st.percentage_1rm + '%';
+  return '\u2014';
+}
+
+// An empty value selects the "-" option: in JS '' == 0 is true, and a set
+// with no RIR written showed "0" - a set to failure.
+function sameIntensityOption(value, option) {
+  if (value === undefined || value === null || value === '') return false;
+  return String(value) === String(option);
+}
+// The label that goes with rowIntensityText: a % of the max is not an RIR.
+// It names what the value is: an RPE 8 shown as "RIR: 8" read as a set to
+// failure minus eight.
+function rowIntensityLabel(row, scale) {
+  if (row && row.rirTarget != null && row.rirTarget !== '') return 'RIR';
+  if (row && row.rpeTarget != null && row.rpeTarget !== '') return 'RPE';
+  const t = rowIntensityText(row);
+  return /%$/.test(t) ? '%1RM' : (scale || 'RIR');
 }
 
 function applySsttStartInputs() {
@@ -56351,7 +56638,7 @@ function renderTraining(c){
       ssttCard += `</div>`;
     }
 
-    let h = ssttCard;
+    let h = ssttCard || percentMaxesCardHtml();
     h += `<div style="margin-bottom:10px;">${domainTitleTapHtml('WORKOUT', t('training') || 'Allenamento')}</div>`;
     h += workoutSessionTimerHtml();
     try { h += sessionSummaryCardHtml(); } catch (_) {}
@@ -56461,7 +56748,7 @@ function renderTraining(c){
         }
         h += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;background:#151515;padding:8px;border-radius:8px;border:1px solid #222;">
           <div style="font-size:10px;color:#aaa;">Schema: <b style="color:#fff;">${esc(schemeInfo.scheme)}</b></div>
-          <div style="font-size:10px;color:#aaa;">${exIntens}: <b style="color:#fff;">${esc(row.rirTarget ?? row.rpeTarget ?? 2)}</b></div>
+          <div style="font-size:10px;color:#aaa;">${esc(rowIntensityLabel(row, exIntens))}: <b style="color:#fff;">${esc(rowIntensityText(row))}</b></div>
           <div style="font-size:10px;color:#aaa; cursor:pointer;" onclick="startTimer('${esc(row.rest || '90s')}', '${exKeyRest}');">Rest: <b style="color:var(--gold); text-decoration:underline;">${esc(row.rest || '90s')}</b>${restDelta ? ` <span style="color:#ddd;">· in seduta ${formatRestClock(restPrescribedSec + restDelta)}</span>` : ''}</div>
         </div>
         ${coachRestNote ? `<div style="font-size:10px;color:#aaa;margin:-4px 0 8px;">⏱ ${esc(coachRestNote.label)} <span style="color:#666;">· ${coachRestNote.offSets}/${coachRestNote.sets} serie oltre ±${REST_DEVIATION_THRESHOLD_SEC} s</span></div>` : ''}
@@ -56486,6 +56773,9 @@ function renderTraining(c){
           const isDone = Boolean(store.data[k + '_done']);
           const prevStored = store.data[k + '_load'];
           const sugg = (typeof suggestedLoadForSet === 'function') ? (suggestedLoadForSet(fIdx, s, row) || '') : (isWarm && Number(setObj.target_load) > 0 ? setObj.target_load : '');
+          // A set written as a % of a max shows the kilos it comes to, as a
+          // hint in the empty field (not written into it).
+          const pctPlanLoad = (setObj && setObj.percentage_1rm != null && Number(setObj.target_load) > 0) ? setObj.target_load : '';
           // Mostra il carico salvato; se vuoto mostra il suggerimento SOLO in UI (placeholder/value), senza riscriverlo nello store.
           const shownLoad = (prevStored !== undefined && prevStored !== '' && prevStored != null)
             ? prevStored
@@ -56523,7 +56813,7 @@ function renderTraining(c){
             <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
             <input type="number" id="${k}_min" step="1" min="0" placeholder="${prescribedMinutesFor(row, setObj)}" value="${shownMin}" oninput="updateData('${k}_min',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
             <button type="button" id="${k}_extrabtn" class="btn btn-outline" style="font-size:10px;padding:8px 2px;" onclick="toggleCardioExtras('${k}')">+ DATI</button>
-            <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${shownRir==i?'selected':''}>${i}</option>`).join('')}</select>
+            <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${sameIntensityOption(shownRir, i)?'selected':''}>${i}</option>`).join('')}</select>
             <button class="set-done-btn ${isDone?'active':''}" title="Segna fatto" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
             <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
           </div>` + cardioExtrasHtml(k, curEx);
@@ -56533,7 +56823,7 @@ function renderTraining(c){
             const running = window.__setTimer && window.__setTimer.key === k;
             h += `<div class="set-row">
             <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
-            <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
+            <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || pctPlanLoad || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
             <input type="number" id="${k}_sec" step="1" min="0" placeholder="${targetSec}" value="${shownSec}" oninput="updateData('${k}_sec',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;background:#1a1a1a;">
             <button type="button" id="${k}_timerbtn" class="btn btn-outline" style="font-size:11px;padding:8px 2px;${running ? 'border-color:var(--gold);color:var(--gold);' : ''}" title="Avvia il conto alla rovescia" onclick="toggleSetTimer(${fIdx}, ${s}, ${targetSec}, '${restForSet}')">${running ? '■' : '▶ ' + targetSec + 's'}</button>
             <button class="set-done-btn ${isDone?'active':''}" title="Segna fatto" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
@@ -56542,9 +56832,9 @@ function renderTraining(c){
           } else {
           h += `<div class="set-row${isWarm ? ' set-row-warmup' : ''}" ${isWarm ? 'style="opacity:0.72;" title="Serie di riscaldamento: non conta nel volume ne\u2019 nei record"' : ''}>
             <div style="font-size:${isWarm ? '11px' : '13px'};font-weight:bold;color:${isWarm ? '#8a8a8a' : 'var(--gold)'};text-align:center;">${setLabel}</div>
-            <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" onfocus="showPrevLoad(event, '${k}_load')" onblur="hidePrevLoad()" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid ${isWarm ? '#555' : 'var(--gold)'};background:#1a1a1a;">
+            <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || pctPlanLoad || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" onfocus="showPrevLoad(event, '${k}_load')" onblur="hidePrevLoad()" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid ${isWarm ? '#555' : 'var(--gold)'};background:#1a1a1a;">
             <select id="${k}_reps" onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${shownReps==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
-            <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${shownRir==i?'selected':''}>${i}</option>`).join('')}</select>
+            <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${sameIntensityOption(shownRir, i)?'selected':''}>${i}</option>`).join('')}</select>
             <button class="set-done-btn ${isDone?'active':''}" title="1 tap: conferma kg/reps e avvia riposo" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
             <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
           </div>`;
@@ -56609,7 +56899,7 @@ function renderTraining(c){
 
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;background:#151515;padding:8px;border-radius:8px;border:1px solid #222;">
           <div style="font-size:10px;color:#aaa;">Schema: <b style="color:#fff;">${esc(bonusScheme.scheme)}</b></div>
-          <div style="font-size:10px;color:#aaa;">${exIntens}: <b style="color:#fff;">${esc(bEx.rirTarget ?? 1)}</b></div>
+          <div style="font-size:10px;color:#aaa;">${esc(rowIntensityLabel(bEx, exIntens))}: <b style="color:#fff;">${esc(rowIntensityText(bEx))}</b></div>
           <div style="font-size:10px;color:#aaa; cursor:pointer;" onclick="startTimer('${esc(bEx.rest || '60-90s')}');">Rest: <b style="color:var(--gold); text-decoration:underline;">${esc(bEx.rest || '60-90s')}</b></div>
         </div>
 
@@ -56631,7 +56921,7 @@ function renderTraining(c){
           <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
           <input type="number" id="${k}_load" step="0.5" placeholder="${bonusSugg || ''}" value="${bonusShown}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
           <select id="${k}_reps" onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${store.data[k+'_reps']==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
-          <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${store.data[k+'_rir']==i?'selected':''}>${i}</option>`).join('')}</select>
+          <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${sameIntensityOption(store.data[k+'_rir'], i)?'selected':''}>${i}</option>`).join('')}</select>
           <button class="set-done-btn ${isDone?'active':''}" onclick="completeSetQuick(${fIdx}, ${s}, '${restBonus}')">${isDone?'✓':'○'}</button>
           <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
         </div>`;

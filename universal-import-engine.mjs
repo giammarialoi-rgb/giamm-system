@@ -22,7 +22,7 @@ import { buildIRFromWorkbook, createSourceRef, createEmptyDocumentIR, detectForm
 import { detectTechniquesFromText, parseDeclaredSetCount, resolveTargetSetCount } from "./import-fidelity.mjs";
 import { enforceAllPrescriptions, applyPrescriptionsToProgram, parseLiteralScheme, enforceExercisePrescription, parseCompoundSchemes, parseSpaceLadder, parseWeeklySchemeLadder } from "./prescription-engine.mjs";
 import { DRUG_CATALOG, matchDrug, enrichTherapyMedications } from "./drug-catalog.mjs";
-import { parseWorkbookTables, countUsableTableExercises, countTableSetInformation, parseSetLine, applySetGroupsToExercise, applyLoadProgression } from "./import-tables.mjs";
+import { parseWorkbookTables, countUsableTableExercises, countTableSetInformation, parseSetLine, applySetGroupsToExercise, applyLoadProgression, parseMaxesFromText } from "./import-tables.mjs";
 
 export { DRUG_CATALOG, matchDrug, enrichTherapyMedications };
 export { parseWeeklySchemeLadder, parseLiteralScheme };
@@ -3830,6 +3830,10 @@ export function parseCanonicalProgramFromText(rawText, filename = "documento_imp
   program.training = { weeks: program.weeks };
   program.duration_weeks = program.weeks.length;
   program.training_frequency = program.weeks[0]?.sessions?.length || 3;
+
+  // Maxes the text states ("MASSIMALI: SQ 105 B 60 DEAD 100"): the % it
+  // prescribes are of these, and the app computes the kilos from them.
+  try { program.percent_maxes = parseMaxesFromText(normalizedText); } catch (_) { program.percent_maxes = {}; }
 
   // Declared duration from title / weekly ladders (FULL BODY 10/12 → 12 weeks of the same 3 days)
   const inferredWeeks = inferProgramDurationFromText(normalizedText, filename);

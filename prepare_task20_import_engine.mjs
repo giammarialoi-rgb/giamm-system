@@ -2267,6 +2267,9 @@ function _itCanonicalExercise(ex, ids, maxes) {
     sets,
     sets_data: sets
   };
+  // The max this exercise's percentages are of, when its formulas all say the same one.
+  const liftsRead = [...new Set(sets.filter((s) => s.percent_of && s.percent_of.lift).map((s) => s.percent_of.lift))];
+  if (liftsRead.length === 1) out.percent_lift = liftsRead[0];
   if (sets.length) {
     out.prescription = {
       sets: sets.length,
@@ -2448,6 +2451,34 @@ function parseSetLine(src) {
     return out;
   }
   return null;
+}
+
+// Maxes written in a text: "MASSIMALI: SQ 105 B 60 DEAD 100", "1RM panca 100",
+// "Massimale squat: 150 kg". Targets ("OBIETTIVO: 115/67,5/130") are not maxes.
+// Returns { squat: { value, kind, label }, ... } or {}.
+function parseMaxesFromText(text) {
+  const out = {};
+  const lines = String(text || '').split(/\r?\n/);
+  const liftOf = (w) => {
+    const f = _itFold(w);
+    if (/^(sq|squat|accosciata|kniebeuge)$/.test(f)) return 'squat';
+    if (/^(b|bp|bench|panca|bankdrucken)$/.test(f)) return 'bench';
+    if (/^(dl|dead|deadlift|stacco|st|kreuzheben)$/.test(f)) return 'deadlift';
+    return null;
+  };
+  lines.forEach((line) => {
+    if (!/massimal|\b1\s*rm\b|\bmax(?:es|imal)?\b|bestleistung/i.test(line)) return;
+    if (/obiettiv|obbiettiv|target|goal|ziel/i.test(line) && !/massimal/i.test(line)) return;
+    const body = line.replace(/(\d),(\d)/g, '$1.$2');
+    const re = /\b([A-Za-z\u00c0-\u00ff]{1,12})\s*[:=]?\s*(\d{2,3}(?:\.\d)?)\s*(?:kg)?\b/g;
+    let m;
+    while ((m = re.exec(body))) {
+      const lift = liftOf(m[1]);
+      const v = Number(m[2]);
+      if (lift && v >= 20 && v <= 500 && !out[lift]) out[lift] = { value: v, kind: 'current', label: line.trim().slice(0, 60) };
+    }
+  });
+  return out;
 }
 
 // Replaces an exercise's sets with the groups a line prescribed.
@@ -27773,6 +27804,10 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
   program.training = { weeks: program.weeks };
   program.duration_weeks = program.weeks.length;
   program.training_frequency = program.weeks[0]?.sessions?.length || 3;
+
+  // Maxes the text states ("MASSIMALI: SQ 105 B 60 DEAD 100"): the % it
+  // prescribes are of these, and the app computes the kilos from them.
+  try { program.percent_maxes = parseMaxesFromText(normalizedText); } catch (_) { program.percent_maxes = {}; }
 
   // Declared duration from title / weekly ladders (FULL BODY 10/12 → 12 weeks of the same 3 days)
   const inferredWeeks = inferProgramDurationFromText(normalizedText, filename);
