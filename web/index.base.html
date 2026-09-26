@@ -8947,20 +8947,84 @@ function isHeicBytes(bytes, name, mime) {
   for (let i = 4; i < 12; i++) tag += String.fromCharCode(bytes[i]);
   return /^ftyp(?:heic|heix|hevc|hevx|heim|heis|mif1|msf1)/.test(tag);
 }
-// The photo as JPEG bytes, decoded by the browser itself (no library), or
-// null when it cannot. Bounded, like the OCR's own decoding.
+// The decoder for browsers that cannot open HEIC themselves (Chrome on
+// Android and computers): libheif (libheif-js, LGPL, unmodified, WebAssembly
+// inside), pinned and checked by its hash, loaded from the CDN the OCR already
+// uses - only when a HEIC photo arrives, never at start.
+const LIBHEIF_SRC = 'https://cdn.jsdelivr.net/npm/libheif-js@1.23.2/libheif-wasm/libheif-bundle.js';
+const LIBHEIF_SRI = 'sha256-HjbiVxqDmAE8pLgUyHpMKCJ+NgMykoHw+j17Osr20/M=';
+let __libheifLoading = null;
+function loadLibheif() {
+  if (__libheifLoading) return __libheifLoading;
+  __libheifLoading = new Promise((resolve) => {
+    const finish = async () => {
+      try {
+        const f = window.libheif;
+        const mod = typeof f === 'function' ? f() : f;
+        resolve(mod && typeof mod.then === 'function' ? await mod : mod);
+      } catch (_) { resolve(null); }
+    };
+    if (typeof window.libheif !== 'undefined') { finish(); return; }
+    const el = document.createElement('script');
+    el.src = LIBHEIF_SRC;
+    el.integrity = LIBHEIF_SRI;
+    el.crossOrigin = 'anonymous';
+    el.async = true;
+    const timer = setTimeout(() => { __libheifLoading = null; resolve(null); }, 30000);
+    el.onload = () => { clearTimeout(timer); finish(); };
+    el.onerror = () => { clearTimeout(timer); __libheifLoading = null; resolve(null); };
+    document.head.appendChild(el);
+  });
+  return __libheifLoading;
+}
+function canvasToJpegBytes(canvas) {
+  return new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.92)).then((b) => (b ? b.arrayBuffer().then((a) => new Uint8Array(a)) : null));
+}
+// The photo as JPEG bytes: decoded by the browser when it can (Safari), else
+// by libheif; null when neither can. Bounded, like the OCR's own decoding.
 async function heicToJpegBytes(bytes, mime) {
+  const blob = new Blob([bytes], { type: /hei[cf]/i.test(String(mime || '')) ? mime : 'image/heic' });
+  let bmp = null;
   try {
-    const blob = new Blob([bytes], { type: /hei[cf]/i.test(String(mime || '')) ? mime : 'image/heic' });
-    const bmp = await Promise.race([createImageBitmap(blob), new Promise((res) => setTimeout(() => res(null), 8000))]);
-    if (!bmp || !bmp.width) return null;
-    const scale = Math.min(1, 4000 / Math.max(bmp.width, bmp.height));
+    bmp = await Promise.race([createImageBitmap(blob), new Promise((res) => setTimeout(() => res(null), 8000))]);
+  } catch (_) {
+    bmp = null;
+  }
+  try {
+    if (bmp && bmp.width) {
+      const scale = Math.min(1, 4000 / Math.max(bmp.width, bmp.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bmp.width * scale);
+      canvas.height = Math.round(bmp.height * scale);
+      canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      return await canvasToJpegBytes(canvas);
+    }
+    const lib = await loadLibheif();
+    if (!lib || typeof lib.HeifDecoder !== 'function') return null;
+    const images = new lib.HeifDecoder().decode(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
+    const image = images && images[0];
+    if (!image) return null;
+    const w = image.get_width();
+    const h = image.get_height();
+    const full = document.createElement('canvas');
+    full.width = w;
+    full.height = h;
+    const fctx = full.getContext('2d');
+    const data = fctx.createImageData(w, h);
+    const shown = await Promise.race([
+      new Promise((res) => image.display(data, (d) => res(!!d))),
+      new Promise((res) => setTimeout(() => res(false), 60000))
+    ]);
+    if (!shown) return null;
+    fctx.putImageData(data, 0, 0);
+    try { if (typeof image.free === 'function') image.free(); } catch (_) {}
+    const scale = Math.min(1, 4000 / Math.max(w, h));
+    if (scale >= 1) return await canvasToJpegBytes(full);
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(bmp.width * scale);
-    canvas.height = Math.round(bmp.height * scale);
-    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
-    const out = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.92));
-    return out ? new Uint8Array(await out.arrayBuffer()) : null;
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    canvas.getContext('2d').drawImage(full, 0, 0, canvas.width, canvas.height);
+    return await canvasToJpegBytes(canvas);
   } catch (_) {
     return null;
   }
@@ -9061,7 +9125,7 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       await yieldImportPaint();
       const jpg = await heicToJpegBytes(bytes, mime);
       if (!jpg) {
-        throw new Error('Foto in formato HEIC (iPhone): questo browser non la sa aprire. Importala dall\'app sull\'iPhone, oppure esportala in JPG (Foto › Condividi › Opzioni › Più compatibile) e riprova.');
+        throw new Error('Non riesco ad aprire questa foto HEIC (iPhone). La prima volta serve la connessione per il lettore HEIC: riprova online, oppure esportala in JPG (Foto › Condividi › Opzioni › Più compatibile).');
       }
       bytes = jpg;
       mime = 'image/jpeg';

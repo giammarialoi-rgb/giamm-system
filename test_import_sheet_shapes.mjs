@@ -179,5 +179,26 @@ console.log('--- 7. OCR di schede stampate ---');
 }
 
 console.log('');
+console.log('--- 8. foto HEIC dell\'iPhone ---');
+{
+  const fs = await import('node:fs');
+  const vm = await import('node:vm');
+  const SRC = fs.readFileSync('web/index.base.html', 'utf8');
+  const at = SRC.indexOf('function isHeicBytes(');
+  let d = 0; let end = -1;
+  for (let i = SRC.indexOf('{', at); i < SRC.length; i++) { if (SRC[i] === '{') d++; else if (SRC[i] === '}' && --d === 0) { end = i + 1; break; } }
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(SRC.slice(at, end), ctx);
+  const head = (tag) => { const b = new Uint8Array(16); const t = '\0\0\0\x18ftyp' + tag; for (let i = 0; i < t.length; i++) b[i] = t.charCodeAt(i); return b; };
+  ok('8a. riconosciuta dal contenuto ("ftypheic"), dal nome o dal tipo', ctx.isHeicBytes(head('heic'), 'x.jpg', '') && ctx.isHeicBytes(null, 'IMG_1.HEIC', '') && ctx.isHeicBytes(null, 'a', 'image/heif') && !ctx.isHeicBytes(head('isom'), 'v.mp4', 'video/mp4'));
+  ok('8b. convertita in JPEG prima di riconoscere il formato', SRC.indexOf('if (isHeicBytes(bytes, name, mime))') > 0 && SRC.indexOf('if (isHeicBytes(bytes, name, mime))') < SRC.indexOf("stage('detect', 'Detecting format');"));
+  ok('8c. il lettore HEIC: versione fissata e verificata col suo hash, caricato solo quando serve',
+    /const LIBHEIF_SRC = 'https:\/\/cdn\.jsdelivr\.net\/npm\/libheif-js@1\.23\.2\/libheif-wasm\/libheif-bundle\.js';/.test(SRC) && /const LIBHEIF_SRI = 'sha256-[A-Za-z0-9+\/=]{44}';/.test(SRC) && /el\.integrity = LIBHEIF_SRI;/.test(SRC) && !/<script[^>]+libheif/.test(SRC));
+  ok('8d. i selettori di file accettano .heic', /accept="[^"]*\.heic,\.heif/.test(SRC));
+  ok('8e. l\'informativa dice da dove arriva il lettore', /jsDelivr/.test(fs.readFileSync('web/privacy.html', 'utf8')));
+}
+
+console.log('');
 if (failed) { console.log(failed + ' controlli delle forme di scheda falliti.'); process.exit(1); }
 console.log('Tutti i controlli delle forme di scheda passano.');
