@@ -11905,9 +11905,74 @@ function completeSetQuick(exIdx, setNum, restText) {
     previous_values: { done: false }
   }, { reason: 'completeSetQuick', scope: 'SESSION_ADJUSTMENT' });
   const rest = restText || '90s';
-  try { startTimer(rest, `w${currentWeek}_d${currentDay}_e${exIdx}`); } catch (_) {}
+  const ssStep = isWarm ? null : supersetNextStep(exIdx, setNum);
+  if (ssStep && ssStep.next) {
+    // Superset: no rest yet, straight to the same set of the next exercise.
+    try { queueLiveSetIntel(exIdx, setNum); } catch (_) {}
+    renderKeepingExercise(exIdx);
+    focusSupersetSet(ssStep.next);
+    return;
+  }
+  if (ssStep && ssStep.restKey) {
+    // End of the round: one rest, the longest among the linked exercises.
+    try { startTimer(ssStep.restText, ssStep.restKey); } catch (_) {}
+  } else {
+    try { startTimer(rest, `w${currentWeek}_d${currentDay}_e${exIdx}`); } catch (_) {}
+  }
   try { queueLiveSetIntel(exIdx, setNum); } catch (_) {}
   renderKeepingExercise(exIdx);
+}
+
+// The working sets of an exercise today (warm-ups left out), by set number.
+function supersetWorkingSets(idx) {
+  const row = exerciseRowAt(currentWeek, currentDay, idx) || {};
+  const sets = Array.isArray(row.sets) ? row.sets : [];
+  const out = [];
+  for (let s = 1; s <= getExerciseSetCount(idx); s++) if (!isWarmupSet(sets[s - 1])) out.push(s);
+  return out;
+}
+
+// After a working set of an exercise in a superset: the same round's set of
+// the next linked exercise still open ({next}), or, when the round is over,
+// the rest to run — the longest prescribed among the linked exercises.
+// Null when the exercise is not in a superset.
+function supersetNextStep(exIdx, setNum) {
+  const row = exerciseRowAt(currentWeek, currentDay, exIdx) || {};
+  const ssId = row.superset_id;
+  if (!ssId) return null;
+  const w = DATA && DATA.weeks && DATA.weeks[currentWeek - 1];
+  const d = w && (w.sessions || w.days) && (w.sessions || w.days)[currentDay];
+  const list = (d && (d.exercises || d.rows)) || [];
+  const members = [];
+  list.forEach((ex, i) => {
+    if (ex && ex.superset_id === ssId && !store.skips[`w${currentWeek}_d${currentDay}_e${i}`]) members.push(i);
+  });
+  if (members.length < 2) return null;
+  const round = supersetWorkingSets(exIdx).indexOf(setNum);
+  if (round < 0) return null;
+  const at = members.indexOf(exIdx);
+  const order = members.slice(at + 1).concat(members.slice(0, at));
+  for (const i of order) {
+    const s = supersetWorkingSets(i)[round];
+    if (s && !store.data[`w${currentWeek}_d${currentDay}_e${i}_s${s}_done`]) return { next: { exIdx: i, setNum: s } };
+  }
+  let best = null;
+  members.forEach((i) => {
+    const r = (list[i] && list[i].rest) || '90s';
+    const key = `w${currentWeek}_d${currentDay}_e${i}`;
+    const sec = effectiveRestSeconds(r, key);
+    if (!best || sec > best.sec) best = { sec, restText: r, restKey: key };
+  });
+  return best;
+}
+
+function focusSupersetSet(target) {
+  const name = exerciseNameAt(currentWeek, currentDay, target.exIdx);
+  if (name && typeof showToast === 'function') showToast('Superset: ora ' + name + ' — serie ' + target.setNum, 'ok');
+  setTimeout(() => {
+    const el = $(`w${currentWeek}_d${currentDay}_e${target.exIdx}_s${target.setNum}_load`) || $('exercise-item-' + target.exIdx);
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 60);
 }
 
 // Closing a set opens an analysis under it and can collapse the card above:
