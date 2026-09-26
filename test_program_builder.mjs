@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { unitHelpersSource } from './test_unit_helpers.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const html = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8');
@@ -62,6 +63,7 @@ const ctx = {
   confirm: () => true
 };
 vm.createContext(ctx);
+vm.runInContext(unitHelpersSource(), ctx);
 vm.runInContext(html.match(/const esc = x => [^\n]+/)[0], ctx);
 vm.runInContext(slice('var SPACE_EQUIPMENT = [', 'function emptyProgramDraft()'), ctx);
 vm.runInContext(slice('function emptyProgramDraft()', 'function saveAll()'), ctx);

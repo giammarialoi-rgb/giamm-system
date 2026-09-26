@@ -23,7 +23,7 @@ const block = (start) => {
 };
 const ctx = { store: { prefs: {}, data: {} }, persist() { ctx.saved = (ctx.saved || 0) + 1; }, render() {}, window: {} };
 vm.createContext(ctx);
-vm.runInContext('const LB_PER_KG = 2.20462262;\n' + ['function wUnit(', 'function kgToDisp(', 'function dispToKg(', 'function setWeightUnit('].map(block).join('\n'), ctx);
+vm.runInContext('const LB_PER_KG = 2.20462262;\n' + ['function wUnit(', 'function kgToDisp(', 'function dispToKg(', 'function bwToDisp(', 'function keepKg(', 'function wFmt(', 'function wStep(', 'function setWeightUnit('].map(block).join('\n'), ctx);
 const run = (code) => vm.runInContext(code, ctx);
 
 ok('1a. senza scelta: kg, e i numeri restano come sono', run('wUnit()') === 'kg' && run('kgToDisp(100)') === 100 && run('dispToKg("100")') === '100');
@@ -33,14 +33,18 @@ ok('1c. 100 kg si vedono come 220.5 lb (al mezzo)', run('kgToDisp(100)') === 220
 ok('1d. 225 lb scritte diventano 102.06 kg da salvare', run('dispToKg("225")') === '102.06');
 ok('1e. andata e ritorno: 225 lb restano 225 lb', run('kgToDisp(dispToKg("225"))') === 225);
 ok('1f. vuoto resta vuoto, testo resta testo', run('kgToDisp("")') === '' && run('dispToKg("")') === '' && run('kgToDisp("BW")') === 'BW');
+ok('1h. un valore mostrato e salvato senza toccarlo resta quello di prima (nessuna deriva)', run('keepKg(String(kgToDisp(100)), 100)') === 100 && run('keepKg(String(bwToDisp(80)), 80, bwToDisp)') === 80);
+ok('1i. se lo cambi, si salva la conversione', run('keepKg("230", 100)') === '104.33');
+ok('1j. peso corporeo al decimo di libbra, carichi e passi nell\'unita\'', run('bwToDisp(80)') === 176.4 && run('wFmt(100)') === '220.5 lb' && run('wStep(2.5)') === '5 lb');
 run('setWeightUnit("qualcosa")');
+ok('1k. in kg tutto resta identico: niente viene riscritto', run('keepKg("100.02", 100)') === '100.02' && run('wStep(2.5)') === '2,5 kg' && run('wFmt(100)') === '100 kg');
 ok('1g. un valore strano torna a kg', ctx.store.prefs.weightUnit === 'kg');
 
 ok('2a. il carico scritto nel campo si salva in kg', /function updateData\(key, val\)\{\s*if \(\/_load\$\/\.test\(String\(key \|\| ''\)\)\) val = dispToKg\(val\);/.test(SRC));
 ok('2b. i campi della serie mostrano carico e suggerimento nell\'unita\'', (SRC.match(/value="\$\{kgToDisp\(shownLoad\)\}"/g) || []).length === 2 && /value="\$\{kgToDisp\(bonusShown\)\}"/.test(SRC));
-ok('2c. il ✓ legge il campo nell\'unita\' e scrive kg', /dispToKg\(loadEl\.value\)/.test(SRC) && /loadEl\.value = kgToDisp\(load\)/.test(SRC));
+ok('2c. il ✓ legge il campo nell\'unita\' e scrive kg', /keepKg\(loadEl\.value, store\.data\[k \+ '_load'\]\)/.test(SRC) && /loadEl\.value = kgToDisp\(load\)/.test(SRC));
 ok('2d. l\'intestazione della serie dice KG o LB', (SRC.match(/wUnit\(\)\.toUpperCase\(\)/g) || []).length >= 3);
-ok('2e. i massimali in % si leggono e si mostrano nell\'unita\'', /dispToKg\(\(el && el\.value\) \|\| ''\)/.test(SRC) && /kgToDisp\(maxes\[lift\]\)/.test(SRC));
+ok('2e. i massimali in % si leggono e si mostrano nell\'unita\'', /keepKg\(\(el && el\.value\) \|\| '', maxes\[lift\]\)/.test(SRC) && /kgToDisp\(maxes\[lift\]\)/.test(SRC));
 ok('2f. la scelta sta nelle impostazioni', /id="pref-weight-unit" onchange="setWeightUnit\(this\.value\)"/.test(SRC));
 ok('2g. e passa dalla sincronizzazione delle preferenze', /weightUnit: \(v\) => \(String\(v\)\.toLowerCase\(\)\.startsWith\('lb'\) \? 'lb' : 'kg'\)/.test(SRC));
 ok('2h. volumi e record nell\'unita\' scelta', /function formatStatsKg\(n\) \{\s*return Math\.round\(Number\(typeof kgToDisp === 'function' \? kgToDisp/.test(SRC));

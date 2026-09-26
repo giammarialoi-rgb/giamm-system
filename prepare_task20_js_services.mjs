@@ -3,6 +3,8 @@
 // PRODUCT DOMAIN SERVICES & CATALOG IMPLEMENTATIONS
 // ====================================================
 
+import { I18N_FILL_SNIPPET } from './i18n-fill.mjs';
+
 // Product services code string for injection into single bundle HTML
 export const JS_PRODUCT_SERVICES = `
 // ====================================================
@@ -2210,4 +2212,4 @@ const ErrorLogger = {
     return [...this.logs];
   }
 };
-`;
+` + I18N_FILL_SNIPPET;

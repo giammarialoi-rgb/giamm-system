@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { unitHelpersSource } from './test_unit_helpers.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const SRC = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8').replace(/\r\n/g, '\n');
@@ -30,11 +31,7 @@ const ctx = {
   recordManualAction() {},
   render() {},
   showToast(msg, type) { ctx.__toast = { msg, type }; },
-  document: { getElementById: (id) => (ctx.__inputs && ctx.__inputs[id]) || null },
-  // The weight unit (Impostazioni): kg here, the helpers as the page has them.
-  wUnit: () => (ctx.store.prefs.weightUnit === 'lb' ? 'lb' : 'kg'),
-  kgToDisp: (v) => (v === '' || v == null || ctx.store.prefs.weightUnit !== 'lb' ? v : Math.round(Number(v) * 2.20462262 * 2) / 2),
-  dispToKg: (v) => (v === '' || v == null || ctx.store.prefs.weightUnit !== 'lb' ? v : String(Math.round((Number(v) / 2.20462262) * 100) / 100))
+  document: { getElementById: (id) => (ctx.__inputs && ctx.__inputs[id]) || null }
 };
 // The competition lift of a name, as progression-models.js answers it (variants are not the lift).
 ctx.window.NurvanProgressions = {
@@ -42,6 +39,8 @@ ctx.window.NurvanProgressions = {
   liftLabel: (id) => ({ squat: 'Squat', bench: 'Panca piana', deadlift: 'Stacco da terra' }[id] || id)
 };
 vm.createContext(ctx);
+// The weight unit helpers, as the page has them (kg unless set).
+vm.runInContext(unitHelpersSource(), ctx);
 vm.runInContext(block, ctx);
 
 const set = (pct, load, extra) => Object.assign({ percentage_1rm: pct, target_load: load, load }, extra || {});
