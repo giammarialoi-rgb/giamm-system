@@ -25,6 +25,7 @@ export const ANDROID_STATIC_ASSETS = [
   'training-knowledge.js',
   'exercise-catalog-extra.js',
   'warmup-exercise-library.js',
+  'youtube-links.js',
   'warmup-engine.js',
   'exercise-media-client.js',
   'exercise-media-ui.js',

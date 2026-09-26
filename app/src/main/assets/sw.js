@@ -16,6 +16,7 @@ const PRECACHE = [
   './muscle-female-front.png',
   './muscle-female-back.png',
   './exercise-catalog-extra.js',
+  './youtube-links.js',
   './training-knowledge.js',
   './training-analytics-engine.js',
   './domain-merge.js',
