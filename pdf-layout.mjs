@@ -543,7 +543,7 @@ export async function readPdfLayout(bytes, options = {}) {
 // ---- layout to text ----
 
 // Text lines of a set of items, top to bottom, left to right.
-function _plLines(items) {
+function _plLines(items, opts = {}) {
   const sorted = items.slice().sort((a, b) => (b.y - a.y) || (a.x - b.x));
   const lines = [];
   sorted.forEach((it) => {
@@ -561,14 +561,17 @@ function _plLines(items) {
     let s = '';
     let end = null;
     let x0 = null;
-    const flush = () => { if (s.trim()) segs.push({ y: l.y, x: x0, text: s.replace(/\s+/g, ' ').trim() }); s = ''; x0 = null; };
+    const flush = () => { if (s.trim()) segs.push({ y: l.y, x: x0, text: opts.columns ? s.replace(/[ \r\n]+/g, ' ').replace(/ *\t */g, '\t').trim() : s.replace(/\s+/g, ' ').trim() }); s = ''; x0 = null; };
     l.items.forEach((it) => {
       const gap = end == null ? 0 : it.x - end;
       const em = it.size || 10;
       // ...and a day heading is not the page number printed next to it ("Giorno 3" "5").
-      if (s && gap > em * 0.8 && /^(settimana|week|sett\.?|woche|\d{1,2})$/i.test(s.trim())) flush();
-      else if (s && gap > em * 0.4 && /^(giorno|day|tag)\s*\d$/i.test(s.trim()) && /^\d/.test(it.text.trim())) flush();
-      if (s && gap > em * 0.12 && !/\s$/.test(s) && !/^\s/.test(it.text)) s += ' ';
+      if (!opts.columns && s && gap > em * 0.8 && /^(settimana|week|sett\.?|woche|\d{1,2})$/i.test(s.trim())) flush();
+      else if (!opts.columns && s && gap > em * 0.4 && /^(giorno|day|tag)\s*\d$/i.test(s.trim()) && /^\d/.test(it.text.trim())) flush();
+      // In columns mode a wide gap is a column boundary (a lab report's
+      // "Glucosio | 105 | mg/dL | 70 - 100"): a tab, not a space.
+      if (opts.columns && s && gap > em * 1.5) s = s.replace(/\s+$/, '') + '\t';
+      else if (s && gap > em * 0.12 && !/\s$/.test(s) && !/^\s/.test(it.text)) s += ' ';
       if (x0 == null) x0 = it.x;
       s += it.text;
       end = it.x1 != null ? it.x1 : it.x + it.text.length * em * 0.5;
@@ -706,7 +709,13 @@ function _plTables(rects) {
  * before, not more weeks: it is left out and reported.
  * Returns { text, warnings }.
  */
-export function pdfLayoutToText(layout) {
+const _PL_DATA_HEAD = /^(esame|esami|analisi|parametro|parametri|test|risultato|risultati|result|valore|valori|u\.?\s*m\.?|unit[aà'’]?(?:\s+di\s+misura)?|units?|valori\s+(?:di\s+)?riferimento|intervallo(?:\s+di\s+riferimento)?|range|reference(?:\s+range)?|rif\.?|riferimento|metodo|note)$/i;
+
+export function pdfLayoutToText(layout, opts = {}) {
+  // columns: the text of a report, not of a program. Every table row is one
+  // line with its cells split by tabs, and so is every line whose columns
+  // stand apart ("Glucosio   105   mg/dL   70 - 100"): what a lab report is.
+  const columns = !!opts.columns;
   const warnings = [];
   const out = [];
   let week = 0;
@@ -728,11 +737,13 @@ export function pdfLayoutToText(layout) {
     });
     const inTable = (it) => tables.find((t) => it.x >= t.left - 1 && it.x <= t.right + 1 && it.y <= t.top + 1 && it.y >= t.bottom - 1);
     // Blocks in reading order: free text lines and tables, by their top.
-    const free = _plSideWeekLabels(_plLines(items.filter((i) => !inTable(i)))).map((l) => ({ y: l.y, kind: 'line', text: l.text }));
+    const freeLines = _plLines(items.filter((i) => !inTable(i)), { columns });
+    const free = (columns ? freeLines : _plSideWeekLabels(freeLines)).map((l) => ({ y: l.y, kind: 'line', text: l.text }));
     const blocks = free.concat(tables.map((t) => ({ y: t.top, kind: 'table', t }))).sort((a, b) => b.y - a.y);
     let lastLine = '';
     blocks.forEach((b) => {
       if (b.kind === 'line') {
+        if (columns) { out.push(b.text); lastLine = b.text; return; }
         // Under a program table, text is the coach's explanation ("NB", "Con
         // accumulo e intensificazione tipo 6x3 75%-6x4 75%..."): a note, not
         // more exercises of the table's last day. A day or week heading, or a
@@ -743,23 +754,42 @@ export function pdfLayoutToText(layout) {
         lastLine = b.text;
         return;
       }
-      afterTable = true;
       const t = b.t;
+      const cellsOf = (r) => {
+        const yTop = t.ys[r];
+        const yBot = t.ys[r + 1];
+        const cells = [];
+        for (let c = 0; c + 1 < t.xs.length; c++) {
+          const cellItems = items.filter((i) => i.x >= t.xs[c] - 1 && i.x < t.xs[c + 1] - 1 && i.y <= yTop + 1 && i.y > yBot);
+          cells.push(_plLines(cellItems).map((l) => l.text));
+        }
+        return cells;
+      };
+      // A table whose head names its columns ("Esame | Risultato | Unita' |
+      // Valori di riferimento") holds records, one per row: never weeks and days.
+      let dataTable = columns;
+      if (!dataTable) {
+        for (let r = 0; r + 1 < t.ys.length && r < 2; r++) {
+          const heads = cellsOf(r).filter((c) => c.length && _PL_DATA_HEAD.test(c.join(' ').trim()));
+          if (heads.length >= 2) { dataTable = true; break; }
+        }
+      }
+      if (dataTable) {
+        for (let r = 0; r + 1 < t.ys.length; r++) {
+          const row = cellsOf(r).map((c) => c.join(' ').trim());
+          if (row.some(Boolean)) out.push(row.join('\t').replace(/\t+$/, ''));
+        }
+        lastLine = '';
+        return;
+      }
+      afterTable = true;
       if (/alternativ/i.test(lastLine)) {
         warnings.push('Tabella alternativa ("' + lastLine.slice(0, 40) + '") non importata: il programma e\' la prima.');
         lastLine = '';
         return;
       }
       for (let r = 0; r + 1 < t.ys.length; r++) {
-        const yTop = t.ys[r];
-        const yBot = t.ys[r + 1];
-        const cells = [];
-        for (let c = 0; c + 1 < t.xs.length; c++) {
-          const xL = t.xs[c];
-          const xR = t.xs[c + 1];
-          const cellItems = items.filter((i) => i.x >= xL - 1 && i.x < xR - 1 && i.y <= yTop + 1 && i.y > yBot);
-          cells.push(_plLines(cellItems).map((l) => l.text));
-        }
+        const cells = cellsOf(r);
         if (!cells.some((c) => c.length)) continue;
         week++;
         out.push('SETTIMANA ' + week);
@@ -776,5 +806,5 @@ export function pdfLayoutToText(layout) {
       lastLine = '';
     });
   });
-  return { text: expandDeclaredDotNotation(out.join('\n')), warnings };
+  return { text: columns ? out.join('\n') : expandDeclaredDotNotation(out.join('\n')), warnings };
 }

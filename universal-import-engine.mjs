@@ -2593,7 +2593,8 @@ export function parseExamLineRecord(rawLine) {
   }
   // tab or 2+ spaces columns: Name  value  unit  range
   if (/\t| {2,}/.test(line)) {
-    const cells = line.split(/\t+| {2,}/).map((c) => c.trim()).filter(Boolean);
+    // A cell that only flags the value as out of range ("H", "*", "↑") is not a unit.
+    const cells = line.split(/\t+| {2,}/).map((c) => c.trim()).filter(Boolean).filter((c, i) => i < 2 || !LAB_FLAG_CELL.test(c));
     if (cells.length >= 2 && !/^(parameter|parametro|esame|valore|value|unit|unità|range|intervallo)\b/i.test(cells[0])) {
       let value = cells[1];
       let unit = cells[2] || "";
@@ -2601,7 +2602,14 @@ export function parseExamLineRecord(rawLine) {
       const vu = String(value).match(/^([<>]=?\s*)?(\d+(?:[.,]\d+)?)\s*(.*)$/);
       if (vu) {
         value = (vu[1] || "") + vu[2];
-        if (!unit && vu[3]) unit = vu[3].replace(/[\(\[].*$/, "").trim();
+        const after = String(vu[3] || "").replace(LAB_FLAG_LEAD, "").trim();
+        if (!unit && after) unit = after.replace(/[\(\[].*$/, "").trim();
+      }
+      // Reports that print the range before the unit, or have no unit column.
+      if (unit && LAB_RANGE_RE.test(unit) && (!range || !LAB_RANGE_RE.test(range))) {
+        const r0 = range;
+        range = unit;
+        unit = r0 || "";
       }
       if (!range && cells.length >= 3) {
         const last = cells[cells.length - 1];
@@ -2629,7 +2637,7 @@ export function parseExamLineRecord(rawLine) {
   if (plain) {
     const parameter = String(plain[1] || "").replace(/[:：\-–—]+\s*$/, "").trim();
     const value = plain[2];
-    let rest = String(plain[3] || "").trim();
+    let rest = String(plain[3] || "").replace(LAB_FLAG_LEAD, "").trim();
     let unit = "";
     let range = null;
     const paren = rest.match(/^(\S+)?\s*[\(\[]([^)\]]+)[\)\]]\s*$/);
@@ -2637,7 +2645,7 @@ export function parseExamLineRecord(rawLine) {
       unit = String(paren[1] || "").trim();
       range = String(paren[2] || "").trim();
     } else {
-      const spaced = rest.match(/^(\S+)\s+(\d+(?:[.,]\d+)?\s*[-–]\s*\d+(?:[.,]\d+)?)\s*$/);
+      const spaced = rest.match(/^(\S+)\s+(\d+(?:[.,]\d+)?\s*[-–]\s*\d+(?:[.,]\d+)?|[<>≤≥]=?\s*\d+(?:[.,]\d+)?)\s*$/);
       if (spaced) {
         unit = spaced[1];
         range = spaced[2];
@@ -2660,7 +2668,7 @@ function isJunkExamRecord(rec, raw) {
   const line = String(raw || "").toLowerCase();
   if (!p || /^\d+$/.test(p)) return true;
   if (/^(pagina|page|referto|laboratorio|paziente|data\s*prelievo|sesso|et[aà]|nascita|codice|dottore|medico|note|metodo)\b/.test(p)) return true;
-  if (/\d+\s*(?:x|×|\*)\s*(?:\d+|amrap)/i.test(line)) return true;
+  if (/\d+\s*(?:x|×|\*)\s*(?:\d+|amrap)/i.test(line.replace(/[x×*]\s*10\s*(?:\^|e|\*\*)?\s*[-−]?\d+\s*\/?/gi, " "))) return true;
   if (/\b(?:rir|rpe|ripetizioni|serie da)\b/i.test(line)
     && !/\b(?:glicemia|colesterolo|emoglobina|tsh|ferritina|testosterone|creatinina|hdl|ldl|triglicerid|insulina|cortisolo|vitamina)\b/i.test(line)) {
     return true;
@@ -2668,6 +2676,23 @@ function isJunkExamRecord(rec, raw) {
   if (p.length > 80) return true;
   if (!/\d/.test(String(rec && rec.value || ""))) return true;
   return false;
+}
+
+// "H", "L", "*", "↑", "alto": the report marks the value out of range.
+const LAB_FLAG_CELL = /^(?:\*+|[HL]{1,2}|↑|↓|\+|alto|basso|high|low)$/i;
+const LAB_FLAG_LEAD = /^(?:\*+|[HL]{1,2}(?=\s|$)|↑|↓|alto\b|basso\b|high\b|low\b)\s*/i;
+const LAB_RANGE_RE = /^(?:\d+(?:[.,]\d+)?\s*[-–]\s*\d+(?:[.,]\d+)?|[<>≤≥]=?\s*\d+(?:[.,]\d+)?|(?:fino\s+a|inferiore\s+a|superiore\s+a)\s*\d+(?:[.,]\d+)?)$/i;
+
+// The date the sample was taken (or the report issued), as YYYY-MM-DD.
+function labReportDate(text) {
+  const m = String(text || "").match(/\b(?:data\s*(?:del\s*)?(?:prelievo|referto|accettazione|esame|campionamento|emissione)|prelievo\s*del|accettato\s*il|referto\s*del|data)\b\s*[:.]?\s*(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/i);
+  if (!m) return null;
+  const d = parseInt(m[1], 10);
+  const mo = parseInt(m[2], 10);
+  let y = parseInt(m[3], 10);
+  if (y < 100) y += 2000;
+  if (!(d >= 1 && d <= 31 && mo >= 1 && mo <= 12 && y >= 1990 && y <= 2100)) return null;
+  return y + "-" + String(mo).padStart(2, "0") + "-" + String(d).padStart(2, "0");
 }
 
 const LAB_ANALYTE_HINT = /\b(g\/dl|mg\/dl|mmol|uiu|µ?iu|ng\/ml|pg\/ml|u\/l|iu\/l|µ?g\/l|mcg|mm\/h|meq|nmol|pmol|10\s*\^\s*\d|glicemia|colesterolo|emoglobina|ematocrito|triglicerid|tsh|t3|t4|ft3|ft4|creatinina|got|gpt|alt|ast|bilirubina|leucocit|piastrin|testosterone|estradiolo|cortisolo|insulina|vitamina|psa|ves|pcr|omocisteina|acido urico|sodio|potassio|calcio|ferritina|transferrina|hba1c|glicata|urea|azotemia|gamma[\s-]?gt|fosfatasi|albumina|proteine totali|globuli|mchc|mch\b|mcv\b|rdw|neutrofil|linfocit|monocit|eosinofil|basofil)\b/i;
@@ -2687,7 +2712,38 @@ export function harvestLabExamRecords(text) {
     seen.add(key);
     out.push(rec);
   }
+  const date = out.length ? labReportDate(text) : null;
+  if (date) out.forEach((r) => { if (!r.date) r.date = date; });
   return out;
+}
+
+/**
+ * Exams read from a report laid out in columns (a PDF read in columns mode,
+ * cells split by tabs): they replace what the program reading found when
+ * they are more.
+ */
+export function mergeLabExamsFromText(program, text) {
+  if (!program) return 0;
+  mergeHarvestedExams(program, harvestLabExamRecords(text));
+  const records = (program.exams && program.exams.records) || [];
+  // The rows of a report are not exercises: "Glucosio 105 mg/dL" read as a
+  // training line leaves a "Glucosio" in a made-up session. Drop them, and
+  // the sessions and weeks they leave empty.
+  const params = records.map((r) => String(r.parameter || "").toLowerCase().trim()).filter((x) => x.length >= 2);
+  if (params.length && Array.isArray(program.weeks)) {
+    const isExam = (ex) => {
+      const n = String((ex && (ex.name_original || ex.name)) || "").split("\t")[0].toLowerCase().replace(/[\s,.:;]+$/, "").trim();
+      return !!n && params.some((pm) => pm === n || pm.startsWith(n + " ") || n.startsWith(pm));
+    };
+    program.weeks.forEach((w) => {
+      (w.sessions || []).forEach((sess) => {
+        if (Array.isArray(sess.exercises)) sess.exercises = sess.exercises.filter((ex) => !isExam(ex));
+      });
+      w.sessions = (w.sessions || []).filter((sess) => (sess.exercises || []).length);
+    });
+    program.weeks = program.weeks.filter((w) => (w.sessions || []).length);
+  }
+  return records.length;
 }
 
 function mergeHarvestedExams(program, harvested) {

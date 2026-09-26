@@ -8924,11 +8924,15 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       // table cells as weeks and days. The old extractor only when it finds nothing.
       let pdfText = '';
       let pdfWarnings = [];
+      // The same page read in columns (cells split by tabs): what a lab
+      // report needs, one exam per row with value, unit and range apart.
+      let pdfColumnsText = '';
       try {
         if (typeof readPdfLayout === 'function' && typeof pdfLayoutToText === 'function') {
           const lay = await readPdfLayout(bytes);
           const res = pdfLayoutToText(lay);
           if (res && res.text && res.text.trim().length > 40) { pdfText = res.text; pdfWarnings = res.warnings || []; }
+          try { pdfColumnsText = pdfLayoutToText(lay, { columns: true }).text || ''; } catch (_) {}
         }
       } catch (layoutErr) { console.warn('[PDF_LAYOUT]', layoutErr); }
       if (!pdfText) {
@@ -8944,6 +8948,9 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       await yieldImportPaint();
       parsed = parseCanonicalProgramFromText(pdfText || text, name);
       parseTextForChoices = pdfText || text;
+      if (pdfColumnsText && parsed && parsed.canonicalProgram && typeof mergeLabExamsFromText === 'function') {
+        mergeLabExamsFromText(parsed.canonicalProgram, pdfColumnsText);
+      }
       if (pdfWarnings.length && parsed && parsed.canonicalProgram) {
         if (!Array.isArray(parsed.canonicalProgram.unrecognised_elements)) parsed.canonicalProgram.unrecognised_elements = [];
         pdfWarnings.forEach((w) => parsed.canonicalProgram.unrecognised_elements.push({ type: 'training', reason: 'pdf_layout_note', message: w }));
