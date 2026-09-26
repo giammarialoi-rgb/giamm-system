@@ -163,6 +163,18 @@ if (fs.existsSync('import-fidelity.mjs')) {
   console.log('✅ import-fidelity bundled');
 }
 
+// Training tables in any language/layout (import-tables.mjs), used by parseStructuredWorkbook.
+let cleanTables = '';
+if (fs.existsSync('import-tables.mjs')) {
+  cleanTables = fs.readFileSync('import-tables.mjs', 'utf8')
+    .replace(/^import\s+.*?;?\s*$/gm, '')
+    .replace(/^export\s+const\s+/gm, 'var ')
+    .replace(/^export\s+function\s+/gm, 'function ')
+    .replace(/^export\s+\{[\s\S]*?\};?\s*$/gm, '')
+    .replace(/^export\s+/gm, '');
+  console.log('import-tables bundled');
+}
+
 let cleanPrescription = '';
 if (fs.existsSync('prescription-engine.mjs')) {
   const rawRx = fs.readFileSync('prescription-engine.mjs', 'utf8');
@@ -308,6 +320,7 @@ let cleanImport = rawImport
 cleanImport = (cleanDi ? ('// === DOCUMENT INTELLIGENCE CORE ===\n' + cleanDi + '\n') : '')
   + (cleanFidelity ? ('// === IMPORT FIDELITY ===\n' + cleanFidelity + '\n') : '')
   + (cleanPrescription ? ('// === PRESCRIPTION ENGINE ===\n' + cleanPrescription + '\n') : '')
+  + (cleanTables ? ('// === IMPORT TABLES ===\n' + cleanTables + '\n') : '')
   + (cleanDrugCatalog ? ('// === DRUG CATALOG ===\n' + cleanDrugCatalog + '\n') : '')
   + (cleanSupplementCatalog ? ('// === SUPPLEMENT CATALOG ===\n' + cleanSupplementCatalog + '\n') : '')
   + (cleanFoodCatalog ? ('// === FOOD CATALOG ===\n' + cleanFoodCatalog + '\n') : '')

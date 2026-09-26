@@ -22,6 +22,7 @@ import { buildIRFromWorkbook, createSourceRef, createEmptyDocumentIR, detectForm
 import { detectTechniquesFromText, parseDeclaredSetCount, resolveTargetSetCount } from "./import-fidelity.mjs";
 import { enforceAllPrescriptions, applyPrescriptionsToProgram, parseLiteralScheme, enforceExercisePrescription, parseCompoundSchemes, parseSpaceLadder, parseWeeklySchemeLadder } from "./prescription-engine.mjs";
 import { DRUG_CATALOG, matchDrug, enrichTherapyMedications } from "./drug-catalog.mjs";
+import { parseWorkbookTables, countUsableTableExercises, countTableSetInformation } from "./import-tables.mjs";
 
 export { DRUG_CATALOG, matchDrug, enrichTherapyMedications };
 export { parseWeeklySchemeLadder, parseLiteralScheme };
@@ -198,7 +199,9 @@ export function detectTherapyDaysOfWeek({ daysRaw = "", timing = "", frequency =
 }
 
 // Expands pattern strings like 4*10, 4*25-20-15-10, 4*EXHAUST, 4*24 PASSI, 4*21'S, DROP SET into full structured sets
-export function expandPatternToSets(patternStr, baseRest = 90, baseNotes = null, rir = 2, rpe = 8, loadVal = null) {
+// No intensity in the source means none in the program: an RIR 2 / RPE 8
+// filled in here showed as the coach's prescription on every exercise.
+export function expandPatternToSets(patternStr, baseRest = 90, baseNotes = null, rir = null, rpe = null, loadVal = null) {
   const str = String(patternStr || "").trim();
   const sets = [];
 
@@ -455,8 +458,8 @@ export function parseExerciseDetails(str) {
     reps,
     reps_raw,
     reps_pattern,
-    rir: rir !== null ? rir : 2,
-    rpe: rpe !== null ? rpe : 8,
+    rir: rir !== null ? rir : null,
+    rpe: rpe !== null ? rpe : null,
     percentage_1rm,
     rest_seconds,
     load,
@@ -667,7 +670,7 @@ function parseSsttProgramGrid(rawRows, sheetName, formulaMap = {}) {
       const rpeNum = parseFloat(String(rpeVal).replace(",", "."));
       const rpeOk = Number.isFinite(rpeNum) ? rpeNum : null;
       const setType = (isSetRow && setNum === 1 && rpeOk !== null && rpeOk <= 7.5) ? "topset" : (isSetRow && setNum > 1 ? "backoff" : "working");
-      const rirFromRpe = rpeOk !== null ? Math.max(0, 10 - rpeOk) : 2;
+      const rirFromRpe = rpeOk !== null ? Math.max(0, 10 - rpeOk) : null;
       if (lastEx && String(lastEx.name_original).toLowerCase() === name.toLowerCase() && isSetRow) {
         if (nameFormula) lastEx.name_formula = nameFormula;
         lastEx.sets.push({
@@ -678,7 +681,7 @@ function parseSsttProgramGrid(rawRows, sheetName, formulaMap = {}) {
           sets_formula: setsFormula,
           target_reps: repsVal || lastEx.reps_target,
           target_rir: rirFromRpe,
-          target_rpe: rpeOk !== null ? rpeOk : 8,
+          target_rpe: rpeOk !== null ? rpeOk : null,
           rest_seconds: 120,
           notes: tempoVal && tempoVal !== "-" ? tempoVal : null
         });
@@ -700,7 +703,7 @@ function parseSsttProgramGrid(rawRows, sheetName, formulaMap = {}) {
         reps_target: repsVal || "8",
         reps_raw: (isSetRow ? String(setNum) : (setsVal || "3")) + "*" + (repsVal || "8"),
         rir_target: rirFromRpe,
-        rpe_target: rpeOk !== null ? rpeOk : 8,
+        rpe_target: rpeOk !== null ? rpeOk : null,
         percentage_1rm: null,
         rest_seconds: 120,
         load_target: loadVal || null,
@@ -715,7 +718,7 @@ function parseSsttProgramGrid(rawRows, sheetName, formulaMap = {}) {
           sets_formula: setsFormula,
           target_reps: repsVal || "8",
           target_rir: rirFromRpe,
-          target_rpe: rpeOk !== null ? rpeOk : 8,
+          target_rpe: rpeOk !== null ? rpeOk : null,
           rest_seconds: 120,
           notes: tempoVal && tempoVal !== "-" ? tempoVal : null
         }]
@@ -1194,7 +1197,7 @@ function parseGiornoNameListSheet(rawRows, weekNumber, sheetName) {
     }
     const lit = parseLiteralScheme(exName);
     const pattern = lit ? (lit.sets + "*" + lit.reps) : null;
-    const expansion = expandPatternToSets(pattern || "3*10", 90, null, 2, 8);
+    const expansion = expandPatternToSets(pattern || "3*10", 90, null, null, null);
     const nameClean = lit
       ? exName.replace(/\d+\s*[xX*\u00d7]\s*\S+/g, " ").replace(/\s{2,}/g, " ").trim() || exName
       : exName;
@@ -1213,8 +1216,8 @@ function parseGiornoNameListSheet(rawRows, weekNumber, sheetName) {
       reps_target: (lit && lit.reps) || expansion.reps,
       reps_raw: (lit && lit.raw) || pattern || "3*10",
       scheme: (lit && lit.raw) || null,
-      rir_target: 2,
-      rpe_target: 8,
+      rir_target: null,
+      rpe_target: null,
       percentage_1rm: null,
       rest_seconds: 90,
       load_target: null,
@@ -1355,9 +1358,9 @@ export function parseTrainingSheet(sheet, weekIndex = 1) {
         if (minMatch) restSec = Math.round(parseFloat(minMatch[1]) * 60);
       }
 
-      // Parse RIR / RPE from notes
-      let rir = 2;
-      let rpe = 8;
+      // Parse RIR / RPE from notes (none written, none set)
+      let rir = null;
+      let rpe = null;
       const rirMatch = (notesRaw + " " + patternRaw).match(/RIR\s*[:=]?\s*(\d+(?:\.\d+)?)/i);
       if (rirMatch) {
         rir = parseFloat(rirMatch[1]);
@@ -1482,7 +1485,8 @@ export function parseTrainingSheet(sheet, weekIndex = 1) {
         else if (v.includes("recupero") || v.includes("rest") || v.includes("pausa")) {
           if (headerColMap.rest === undefined) headerColMap.rest = cIdx;
         }
-        else if ((v.includes("carico pianificato") || v === "carico" || v === "load" || v === "peso") && !v.includes("reale")) {
+        // "Carico (kg)", "Peso kg", "Weight": the unit in the header is not a different column.
+        else if ((v.includes("carico pianificato") || /^(carico|carichi|peso|load|weight|kg)\b/.test(v)) && !v.includes("reale")) {
           if (headerColMap.load === undefined) headerColMap.load = cIdx;
         }
         else if (v.includes("note")) {
@@ -1509,14 +1513,18 @@ export function parseTrainingSheet(sheet, weekIndex = 1) {
       };
     }
 
+    // With a header, a column it does not name is not there. Reading it by
+    // position (the template's layout) put "Carico (kg)" into RIR: a 105 kg
+    // squat came in as RIR 105. The fixed positions are only for header-less rows.
+    const colOr = (key, pos) => (headerColMap ? (headerColMap[key] !== undefined ? row[headerColMap[key]] : null) : pos);
     let rawExName = headerColMap?.exercise !== undefined ? row[headerColMap.exercise] : row[1] || row[0];
     let movement = headerColMap?.movement !== undefined ? row[headerColMap.movement] : row[0];
-    let setVal = headerColMap?.set !== undefined ? row[headerColMap.set] : row[2];
-    let repsVal = headerColMap?.reps !== undefined ? row[headerColMap.reps] : row[3];
-    let rirVal = headerColMap?.rir !== undefined ? row[headerColMap.rir] : row[4];
-    let restVal = headerColMap?.rest !== undefined ? row[headerColMap.rest] : row[5];
-    let loadVal = headerColMap?.load !== undefined ? row[headerColMap.load] : row[6];
-    let notesVal = headerColMap?.notes !== undefined ? row[headerColMap.notes] : row[10];
+    let setVal = colOr("set", row[2]);
+    let repsVal = colOr("reps", row[3]);
+    let rirVal = colOr("rir", row[4]);
+    let restVal = colOr("rest", row[5]);
+    let loadVal = colOr("load", row[6]);
+    let notesVal = colOr("notes", row[10]);
 
     rawExName = rawExName == null ? "" : String(rawExName).trim();
     movement = movement == null ? "" : String(movement).trim();
@@ -1537,8 +1545,8 @@ export function parseTrainingSheet(sheet, weekIndex = 1) {
       const parsedContLoad = loadVal ? parseFloat(loadVal.replace(/[^0-9.]/g, "")) : null;
       const targetLoadNum = (parsedContLoad !== null && !isNaN(parsedContLoad)) ? parsedContLoad : (currentExercise.sets[0]?.target_load || null);
       const targetRepsStr = repsVal || currentExercise.reps_target;
-      const targetRirNum = (rirVal && !isNaN(parseFloat(rirVal))) ? parseFloat(rirVal) : ((currentExercise.rir_target !== undefined && currentExercise.rir_target !== null && !isNaN(currentExercise.rir_target)) ? currentExercise.rir_target : 2);
-      const targetRpeNum = (targetRirNum !== null && !isNaN(targetRirNum)) ? rirToRpe(targetRirNum) : ((currentExercise.rpe_target !== undefined && currentExercise.rpe_target !== null && !isNaN(currentExercise.rpe_target)) ? currentExercise.rpe_target : 8);
+      const targetRirNum = (rirVal && !isNaN(parseFloat(rirVal))) ? parseFloat(rirVal) : ((currentExercise.rir_target !== undefined && currentExercise.rir_target !== null && !isNaN(currentExercise.rir_target)) ? currentExercise.rir_target : null);
+      const targetRpeNum = (targetRirNum !== null && !isNaN(targetRirNum)) ? rirToRpe(targetRirNum) : ((currentExercise.rpe_target !== undefined && currentExercise.rpe_target !== null && !isNaN(currentExercise.rpe_target)) ? currentExercise.rpe_target : null);
 
       let setType = "working";
       if (notesVal.toUpperCase().includes("TOP SET")) setType = "topset";
@@ -1589,8 +1597,8 @@ export function parseTrainingSheet(sheet, weekIndex = 1) {
 
       const parsedNewLoad = loadVal ? parseFloat(loadVal.replace(/[^0-9.]/g, "")) : null;
       const targetLoadNum = (parsedNewLoad !== null && !isNaN(parsedNewLoad)) ? parsedNewLoad : (details.load_value || null);
-      const targetRirNum = (rirVal && !isNaN(parseFloat(rirVal))) ? parseFloat(rirVal) : (details.rir !== null && details.rir !== undefined ? details.rir : 2);
-      const targetRpeNum = (targetRirNum !== null && !isNaN(targetRirNum)) ? rirToRpe(targetRirNum) : (details.rpe !== null && details.rpe !== undefined ? details.rpe : 8);
+      const targetRirNum = (rirVal && !isNaN(parseFloat(rirVal))) ? parseFloat(rirVal) : (details.rir !== null && details.rir !== undefined ? details.rir : null);
+      const targetRpeNum = (targetRirNum !== null && !isNaN(targetRirNum)) ? rirToRpe(targetRirNum) : (details.rpe !== null && details.rpe !== undefined ? details.rpe : null);
 
       let setType = "working";
       if (notesVal.toUpperCase().includes("TOP SET")) setType = "topset";
@@ -3078,11 +3086,42 @@ export function parseStructuredWorkbook(workbook, filename = "documento.xlsx") {
     });
   }
 
+  // Tables in any language and layout (import-tables.mjs): taken when the
+  // template parsers above found nothing, or much less than the tables hold -
+  // English and German sheets, weeks side by side, one row per set group.
+  let tableImport = null;
+  if (!ssttHit) {
+    try {
+      const tables = parseWorkbookTables(workbook, { XLSX: typeof XLSX !== "undefined" ? XLSX : null, normalizeName: normalizeExerciseName });
+      const tableCount = countUsableTableExercises(tables.weeks);
+      const legacyCount = countUsableTableExercises(weeks);
+      // Same exercises, but the tables also read the %, kg and RPE the legacy
+      // reading left out: the tables win too.
+      const richer = tableCount >= legacyCount && countTableSetInformation(tables.weeks) > countTableSetInformation(weeks);
+      if (tables.weeks.length && tableCount > 0 && (legacyCount === 0 || legacyCount * 2 < tableCount || richer)) {
+        weeks.length = 0;
+        tables.weeks.forEach((w) => weeks.push(w));
+        tableImport = tables;
+        emptyTrainingShell = false;
+        for (let i = unrecognisedElements.length - 1; i >= 0; i--) {
+          if (unrecognisedElements[i] && unrecognisedElements[i].reason === "no_training_weeks_detected") unrecognisedElements.splice(i, 1);
+        }
+        (tables.warnings || []).forEach((w) => unrecognisedElements.push({ type: "training", reason: "table_import_note", message: w }));
+      }
+    } catch (tableErr) {
+      unrecognisedElements.push({ type: "training", reason: "table_import_error", message: String(tableErr && tableErr.message || tableErr) });
+    }
+  }
+
   const startSheet = classifiedSheets.find((s) => /^START$/i.test(String(s.name || "").trim()));
   const spreadsheet = {
     inputs: startSheet ? parseSsttStartInputs(startSheet.rawRows) : [],
     cells: startSheet ? sheetToCellMap("Start", startSheet.rawRows) : {},
-    sourceSheets: sheetNames
+    sourceSheets: sheetNames,
+    // The maxes the table loads are percentages of (per lift), and every max stated.
+    maxes: tableImport ? (tableImport.primaryMaxes || {}) : {},
+    maxesFound: tableImport ? tableImport.maxes : [],
+    alternatives: tableImport ? tableImport.alternatives : []
   };
   if (ssttHit && spreadsheet.cells && Object.keys(spreadsheet.cells).length) {
     recalcTrainingLoadsFromCells(weeks, spreadsheet.cells);
