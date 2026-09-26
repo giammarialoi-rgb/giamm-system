@@ -118,6 +118,10 @@ Ogni esercizio può contenere:
 
 Il backend non inventa dati mancanti: li lascia null/assunzioni e segnala le ambiguità in `warnings`.
 
+## Link YouTube degli esercizi
+
+Ogni esercizio e riscaldamento apre il suo clip YouTube verificato a mano, se c'è, altrimenti la ricerca YouTube. I link stanno in `data/youtube-links.json`; come aggiungerne o correggerne uno: [docs/YOUTUBE_LINKS.md](docs/YOUTUBE_LINKS.md).
+
 ## Sicurezza
 
 NON mettere mai `GEMINI_API_KEY`:

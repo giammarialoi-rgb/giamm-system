@@ -2,6 +2,7 @@ import fs from 'fs';
 import { execSync } from 'child_process';
 import { JS_PRODUCT_SERVICES } from './prepare_task20_js_services.mjs';
 import { syncWebAssetsToAndroid } from './sync_web_assets.mjs';
+import { buildYoutubeLinksScript } from './build_youtube_links.mjs';
 import { resolveCoachOsFeatureFlags } from './feature-flags.mjs';
 
 console.log('=== MASTER BUILD 25: DATA FIDELITY & E2E RECOVERY ===');
@@ -15,6 +16,12 @@ const COACH_OS_FEATURE_LINES = Object.entries(COACH_OS_FEATURES)
 // 0. Ensure bundles are fresh
 console.log('Regenerating persistence and import bundles...');
 execSync('node generate_bundles.mjs', { stdio: 'inherit' });
+
+// The YouTube link of each exercise and warm-up, from data/youtube-links.json.
+const ytLinks = buildYoutubeLinksScript();
+console.log('YouTube links: exercises demo ' + ytLinks.exerciseDemo + ' / search ' + ytLinks.exerciseSearch +
+  ', warm-ups demo ' + ytLinks.warmupDemo + ' / search ' + ytLinks.warmupSearch +
+  (ytLinks.rejected.length ? ', left out ' + ytLinks.rejected.length + ': ' + JSON.stringify(ytLinks.rejected) : ''));
 
 const baseHtml = fs.readFileSync('web/index.base.html', 'utf8');
 const coachOsCss = fs.existsSync('web/coach-os/design-system.css')

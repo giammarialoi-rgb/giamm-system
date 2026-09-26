@@ -60,6 +60,7 @@
 <script src="training-knowledge.js"></script>
 <script src="training-analytics-engine.js"></script>
 <script src="warmup-exercise-library.js"></script>
+<script src="youtube-links.js"></script>
 <script src="warmup-engine.js"></script>
 <script src="exercise-media-client.js"></script>
 <script src="exercise-media-ui.js"></script>
@@ -38114,7 +38115,7 @@ function youtubeSearchButtonHtml(query, opts) {
   var clean = String(query || '').trim();
   if (!clean) return '';
   var href = esc(youtubeSearchUrl(clean));
-  var title = 'Cerca "' + clean + '" su YouTube';
+  var title = 'Cerca "' + String(opts.displayName || clean).trim() + '" su YouTube';
   if (opts.compact) {
     return '<a class="btn btn-outline" href="' + href + '" target="_blank" rel="noopener noreferrer" ' +
       'title="' + esc(title) + '" aria-label="' + esc(title) + '" onclick="event.stopPropagation();" ' +
@@ -38127,6 +38128,103 @@ function youtubeSearchButtonHtml(query, opts) {
     youtubeGlyphHtml(18) + '<span>' + esc(opts.label || 'CERCA SU YOUTUBE') + '</span></a>';
 }
 window.youtubeSearchButtonHtml = youtubeSearchButtonHtml;
+
+// A verified demo, or the search.
+//
+// data/youtube-links.json (built into youtube-links.js) gives each exercise of
+// the catalog - by its exact name - and each warm-up - by its id - a short
+// clip that shows only that movement, checked by hand, or nothing. The app
+// opens a video only when that clip is there and verified; for everything
+// else, an exercise it does not know included, it opens the YouTube search as
+// before. Nothing is guessed: no near names, no picking a result.
+// A program row can carry youtube_override_id (a coach's own choice of video
+// for that row): it goes first.
+var YOUTUBE_VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
+var __youtubeLinkIndex = null;
+function youtubeLinkIndex() {
+  var list = (typeof self !== 'undefined' && self.EXERCISE_YOUTUBE_LINKS) || (typeof window !== 'undefined' && window.EXERCISE_YOUTUBE_LINKS) || [];
+  if (__youtubeLinkIndex && __youtubeLinkIndex.list === list) return __youtubeLinkIndex;
+  var byName = Object.create(null);
+  var byWarmup = Object.create(null);
+  (Array.isArray(list) ? list : []).forEach(function (e) {
+    if (!e) return;
+    if (e.type === 'warmup' && e.id) byWarmup[e.id] = e;
+    else if (e.type === 'exercise' && e.name) byName[e.name] = e;
+  });
+  __youtubeLinkIndex = { list: list, byName: byName, byWarmup: byWarmup };
+  return __youtubeLinkIndex;
+}
+// The same rule as the build: verified, and exactly a Short or watch page of its own id.
+function youtubeVerifiedDemoUrl(demo) {
+  if (!demo || typeof demo !== 'object') return null;
+  if (demo.verified !== true) return null;
+  var url = String(demo.url || '');
+  var m = url.match(/^https:\/\/www\.youtube\.com\/(?:shorts\/|watch\?v=)([A-Za-z0-9_-]{11})$/);
+  if (!m) return null;
+  if (String(demo.id || '') !== m[1]) return null;
+  return url;
+}
+// key: the exercise name (exact), or { warmupId, name, overrideId }.
+// Returns { kind: 'demo' | 'search', url, label, channel?, query }.
+function getExerciseVideoLink(key) {
+  var opts = (key && typeof key === 'object') ? key : { name: key };
+  var name = String(opts.name || '').trim();
+  var override = String(opts.overrideId || '').trim();
+  if (YOUTUBE_VIDEO_ID.test(override)) {
+    return { kind: 'demo', url: 'https://www.youtube.com/watch?v=' + override, label: 'Vedi esecuzione', channel: 'scelto dal coach', query: name };
+  }
+  var idx = youtubeLinkIndex();
+  // A warm-up is looked up by its id only, never by a name that happens to match an exercise.
+  var isWarmup = !!(opts.warmup || opts.warmupId);
+  var entry = opts.warmupId ? (idx.byWarmup[String(opts.warmupId)] || null) : null;
+  if (!entry && !isWarmup) {
+    var names = [name].concat(Array.isArray(opts.names) ? opts.names : []);
+    for (var i = 0; i < names.length && !entry; i++) {
+      var n = String(names[i] || '').trim();
+      if (n && idx.byName[n]) entry = idx.byName[n];
+    }
+  }
+  var url = entry ? youtubeVerifiedDemoUrl(entry.demo) : null;
+  if (url) {
+    var secs = Number(entry.demo.duration_s) > 0 ? Math.round(Number(entry.demo.duration_s)) : 0;
+    return {
+      kind: 'demo', url: url,
+      label: 'Vedi esecuzione' + (secs ? ' (' + secs + ' s)' : ''),
+      channel: entry.demo.channel ? String(entry.demo.channel) : '',
+      query: name
+    };
+  }
+  var query = (entry && entry.youtube_query) || name;
+  return { kind: 'search', url: youtubeSearchUrl(query), label: 'Cerca su YouTube', query: query };
+}
+window.getExerciseVideoLink = getExerciseVideoLink;
+
+// The YouTube button of an exercise or warm-up: the verified clip when there
+// is one, the search otherwise. A link, never an embed.
+function youtubeButtonHtml(key, opts) {
+  opts = opts || {};
+  var k = (key && typeof key === 'object') ? key : { name: key };
+  var name = String(k.name || '').trim();
+  if (!name && !k.warmupId) return '';
+  var link = getExerciseVideoLink(k);
+  // The search the file suggests for it (youtube_query), named as the app names it.
+  if (link.kind !== 'demo') return youtubeSearchButtonHtml(link.query || name, Object.assign({}, opts, { displayName: name || link.query }));
+  var href = esc(link.url);
+  var title = 'Guarda l’esecuzione di "' + (name || 'esercizio') + '" su YouTube';
+  var source = link.channel ? link.channel : 'clip verificata';
+  if (opts.compact) {
+    return '<a class="btn btn-outline" href="' + href + '" target="_blank" rel="noopener noreferrer" ' +
+      'title="' + esc(title) + '" aria-label="' + esc(title) + '" data-yt="demo" onclick="event.stopPropagation();" ' +
+      'style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:6px 9px;text-decoration:none;">' +
+      youtubeGlyphHtml(16) + '<span style="font-size:9px;font-weight:800;">▶</span></a>';
+  }
+  return '<a class="btn btn-outline" href="' + href + '" target="_blank" rel="noopener noreferrer" ' +
+    'title="' + esc(title) + '" data-yt="demo" onclick="event.stopPropagation();" ' +
+    'style="width:100%;margin-bottom:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-decoration:none;">' +
+    '<span style="display:flex;align-items:center;gap:8px;">' + youtubeGlyphHtml(18) + '<span>' + esc(link.label.toUpperCase()) + '</span></span>' +
+    '<span style="font-size:9px;font-weight:600;color:#888;letter-spacing:0;">YouTube · ' + esc(source) + '</span></a>';
+}
+window.youtubeButtonHtml = youtubeButtonHtml;
 
 function snapshotAppSurface() {
   try {
@@ -47172,7 +47270,7 @@ function circuitBlockHtml(exIdx, row) {
   var stations = c.items.map(function (it, i) {
     return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #1e1e1e;">' +
       '<div style="font-size:12px;color:#fff;"><span style="color:#555;font-weight:800;margin-right:8px;">' + (i + 1) + '</span>' + esc(it.name) + '</div>' +
-      ((typeof youtubeSearchButtonHtml === 'function') ? youtubeSearchButtonHtml(it.name, { compact: true }) : '') +
+      ((typeof youtubeButtonHtml === 'function') ? youtubeButtonHtml(it.name, { compact: true }) : '') +
       '</div>';
   }).join('');
   return '<div style="background:#151515;border:1px solid #222;border-radius:8px;padding:10px;margin-bottom:8px;">' +
@@ -58555,7 +58653,7 @@ function openWarmupOverview(week, day) {
       '</div>' +
       (lib && lib.description ? '<div style="font-size:11px;color:#aaa;line-height:1.4;margin-top:4px;">' + esc(lib.description) + '</div>' : '') +
       '</div>' +
-      youtubeSearchButtonHtml(it.name, { compact: true }) +
+      youtubeButtonHtml({ warmup: true, warmupId: it.exerciseId, name: it.name }, { compact: true }) +
       '</div>';
   }).join('');
   var overlay = document.createElement('div');
@@ -58919,7 +59017,7 @@ function renderWarmupPlayer() {
     '<div style="font-size:16px;font-weight:800;color:var(--gold);margin-bottom:6px;">' + esc(warmupSchemeText(it)) + '</div>' +
     rampHtml +
     (it.notes && !(ex && ex.cautions) ? '<div style="font-size:11px;color:#888;margin-bottom:8px;">' + esc(it.notes) + '</div>' : '') +
-    youtubeSearchButtonHtml(it.name) +
+    youtubeButtonHtml({ warmup: true, warmupId: it.exerciseId, name: it.name }) +
     '</div>' +
     '<div class="nurvan-sheet-foot">' +
     '<button class="btn btn-outline" type="button" style="flex:1;font-size:12px;padding:12px;" onclick="warmupPlayerSkipItem()">SALTA</button>' +
@@ -68088,7 +68186,7 @@ function paintExerciseInfoSheet(opts) {
     '<div style="margin:10px 0;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:4px;">RIR / CARICO</div>' +
     '<p style="font-size:12px;color:#ccc;line-height:1.4;margin:0;">' + esc(policy.advice || 'RIR 2 = due reps in canna. Se chiudi le serie, la settimana dopo +' + wStep(2.5) + ' (o +' + wStep(1) + ' se i pesi sono già bassi).') + '</p></div>' +
-    youtubeSearchButtonHtml(title) +
+    youtubeButtonHtml({ name: title, names: [name, row.name, row.name_original], overrideId: row.youtube_override_id }) +
     '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="openKnowledgeFor(decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">APRI ENCICLOPEDIA</button>' +
     (unknown ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="closeExerciseInfoSheet();openAddEncyclopediaExercise(decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">AGGIUNGI ALL’ENCICLOPEDIA</button>' : '') +
     (athlete

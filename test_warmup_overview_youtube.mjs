@@ -8,11 +8,10 @@
 //      nowhere to see the whole list;
 //   3. every exercise and every warm-up exercise offers a YouTube search.
 //
-// The YouTube button is a link, not an embed: YouTube can only embed a known
-// video id, and picking one per exercise would need an API key, a quota and a
-// curated choice - a wrong video being as bad as a wrong picture. A
-// youtube.com search link is claimed by the YouTube app when it is installed
-// and opens in the browser when it is not.
+// The YouTube button is a link, not an embed. It opens the hand-verified clip
+// of the exercise when data/youtube-links.json has one (test_youtube_links.mjs)
+// and a youtube.com search otherwise; either link is claimed by the YouTube
+// app when it is installed and opens in the browser when it is not.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -93,14 +92,15 @@ vm.runInContext(slice('function youtubeSearchUrl(query)', 'function snapshotAppS
 /* ---------- 3. where the button appears ---------- */
 {
   const sheet = slice('function paintExerciseInfoSheet(opts)', 'function openExerciseInfoSheet(idx');
-  ok(/youtubeSearchButtonHtml\(title\)/.test(sheet), '3a. CHIEDI INFO on an exercise offers the YouTube search');
-  ok(sheet.indexOf('youtubeSearchButtonHtml(title)') < sheet.indexOf('APRI ENCICLOPEDIA'),
+  // The verified clip when the catalog has one, the search otherwise (test_youtube_links.mjs).
+  ok(/youtubeButtonHtml\(\{ name: title, names: \[name, row\.name, row\.name_original\], overrideId: row\.youtube_override_id \}\)/.test(sheet), '3a. CHIEDI INFO on an exercise offers its YouTube link');
+  ok(sheet.indexOf('youtubeButtonHtml(') < sheet.indexOf('APRI ENCICLOPEDIA'),
     '3b. above the encyclopedia, where the eye lands first');
 
   const player = slice('function renderWarmupPlayer()', 'function loadWarmupItemMedia');
-  ok(/youtubeSearchButtonHtml\(it\.name\)/.test(player), '3c. and so does every warm-up exercise in the player');
+  ok(/youtubeButtonHtml\(\{ warmup: true, warmupId: it\.exerciseId, name: it\.name \}\)/.test(player), '3c. and so does every warm-up exercise in the player, by its library id');
 
-  ok(built.includes('youtubeSearchButtonHtml'), '3d. all of it survives the build into web/index.html');
+  ok(built.includes('youtubeSearchButtonHtml') && built.includes('function youtubeButtonHtml('), '3d. all of it survives the build into web/index.html');
 
   // The Android build loads the app from a local asset, so without this an
   // external link would open inside the WebView with no way back out.
