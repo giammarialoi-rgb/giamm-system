@@ -68,10 +68,10 @@ export async function resolveIdentityUser(pool, identity) {
     try {
       await client.query("BEGIN");
       const inserted = await client.query(
-        `INSERT INTO app_users(email, name, provider, provider_id, avatar_url)
-         VALUES($1, $2, $3, $4, $5)
+        `INSERT INTO app_users(email, name, provider, provider_id, avatar_url, email_verified_at)
+         VALUES($1, $2, $3, $4, $5, CASE WHEN $6::boolean THEN NOW() ELSE NULL END)
          RETURNING id`,
-        [email, givenName || email.split("@")[0], provider, sub, identity.avatarUrl || null]
+        [email, givenName || email.split("@")[0], provider, sub, identity.avatarUrl || null, !!identity.emailVerified]
       );
       userId = String(inserted.rows[0].id);
       await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb) ON CONFLICT (user_id) DO NOTHING", [userId]);
@@ -115,13 +115,17 @@ export async function resolveIdentityUser(pool, identity) {
   // provider has verified the address, so its owner is now the one logging in:
   // the password set before is dropped and every session opened with it ends.
   // The owner can set a new password from their inbox at any time.
+  // A password account whose owner has confirmed the address (code or link
+  // from the verification email) was registered by that owner: it keeps its
+  // password, and the provider is simply one more way in.
   let passwordCleared = false;
   if (matchedByEmail) {
     const cleared = await pool.query(
-      "UPDATE app_users SET password_hash = NULL, tokens_valid_after = $2 WHERE id = $1 AND password_hash IS NOT NULL RETURNING id",
+      "UPDATE app_users SET password_hash = NULL, tokens_valid_after = $2 WHERE id = $1 AND password_hash IS NOT NULL AND email_verified_at IS NULL RETURNING id",
       [userId, revocationMoment()]
     );
     passwordCleared = cleared.rows.length > 0;
+    await pool.query("UPDATE app_users SET email_verified_at = COALESCE(email_verified_at, NOW()) WHERE id = $1", [userId]);
   }
 
   const current = await pool.query("SELECT id, email, name, provider, avatar_url FROM app_users WHERE id = $1", [userId]);

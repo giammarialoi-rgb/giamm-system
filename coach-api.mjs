@@ -22,6 +22,7 @@ import { mergeAccountDataBlobs, updateAccountData } from "./server/account/index
 import { accountEntitlement, mountPlanRoutes } from "./server/account/plans.mjs";
 import { publicUser, resolveIdentityUser, mountAccountDeletion } from "./server/account/identity.mjs";
 import { createSessionGate, revocationMoment } from "./server/account/sessions.mjs";
+import { mountEmailAuth, needsEmailVerification, loginLocked, noteLoginFailure, clearLoginFailures, resetEmail, isSyntheticEmail, linkTokenHash } from "./server/account/email-auth.mjs";
 import { appleCallbackRoute, appleConfig, mountAppleAuth } from "./server/account/apple.mjs";
 import { loadLegal, validMainConsent, recordMainConsent, readConsentRow, aiConsentWithdrawn, mountConsentRoutes } from "./server/account/consent.mjs";
 import { mountAdminDashboard } from "./server/admin/index.mjs";
@@ -424,8 +425,9 @@ function publicGoogleClientId() {
   return sanitizeGoogleClientId(GOOGLE_CLIENT_ID);
 }
 
-// The server's one email channel (Resend): reset codes and dashboard codes.
-async function sendEmail(to, subject, text) {
+// The server's one email channel (Resend): verification and reset emails,
+// dashboard codes. html is optional; the text version always goes too.
+async function sendEmail(to, subject, text, html) {
   const from = process.env.MAIL_FROM || process.env.RESEND_FROM || "";
   const key = process.env.RESEND_API_KEY || "";
   if (!key || !from) return { sent: false, reason: "mail_not_configured" };
@@ -436,7 +438,7 @@ async function sendEmail(to, subject, text) {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ from, to, subject, text })
+      body: JSON.stringify(html ? { from, to, subject, text, html } : { from, to, subject, text })
     });
     if (!res.ok) {
       const t = await res.text().catch(() => "");
@@ -453,11 +455,13 @@ Object.defineProperty(sendEmail, "configured", {
   get: () => Boolean(process.env.RESEND_API_KEY && (process.env.MAIL_FROM || process.env.RESEND_FROM))
 });
 
-async function sendPasswordResetEmail(email, code) {
+async function sendPasswordResetEmail(email, code, link) {
+  const mail = resetEmail(code, link);
   return sendEmail(
     email,
-    "NURVAN — codice di recupero password",
-    `Il tuo codice di recupero NURVAN è: ${code}\n\nScade tra 60 minuti. Se non hai richiesto il reset, ignora questa email.`
+    mail.subject,
+    mail.text,
+    mail.html
   );
 }
 
@@ -1344,6 +1348,17 @@ app.get("/api/auth/public-config", (req, res) => {
   });
 });
 
+// Verification, reset link, change password, sign out other devices:
+// server/account/email-auth.mjs.
+const emailAuth = mountEmailAuth(app, {
+  pool, initDb, sendEmail, hashPassword, verifyPassword, issueAccountToken, accountFromBearer,
+  sessionGate, revocationMoment, publicUser, isProduction
+});
+// Verification is asked for whenever an email can be sent (and in development,
+// where the code comes back in the answer); a production server without mail
+// cannot send it, and then does not ask.
+const emailVerificationOn = () => Boolean(sendEmail.configured) || !isProduction(process.env);
+
 app.post("/api/auth/forgot-password", async (req, res) => {
   if (!process.env.DATABASE_URL) {
     return res.status(503).json({ error: "Database not configured." });
@@ -1356,7 +1371,7 @@ app.post("/api/auth/forgot-password", async (req, res) => {
       return res.status(400).json({ error: "Inserisci un’email valida." });
     }
     const userRes = await pool.query("SELECT id, email, password_hash, provider FROM app_users WHERE email = $1", [email]);
-    if (!userRes.rows.length) {
+    if (!userRes.rows.length || isSyntheticEmail(email) || userRes.rows[0].provider === "coach_client") {
       return res.json(generic);
     }
     // One code a minute per address, and the wrong guesses are not wiped by
@@ -1369,16 +1384,17 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     }
     const code = String(crypto.randomInt(100000, 1000000));
     const codeHash = await hashPassword(code);
+    const linkToken = emailAuth.newLinkToken();
     const expires = new Date(Date.now() + 60 * 60 * 1000);
     await pool.query(
-      `INSERT INTO app_password_resets(email, code_hash, expires_at, attempts, created_at)
-       VALUES($1, $2, $3, 0, NOW())
-       ON CONFLICT (email) DO UPDATE SET code_hash = $2, expires_at = $3,
+      `INSERT INTO app_password_resets(email, code_hash, expires_at, attempts, created_at, link_hash)
+       VALUES($1, $2, $3, 0, NOW(), $4)
+       ON CONFLICT (email) DO UPDATE SET code_hash = $2, expires_at = $3, link_hash = $4,
          attempts = CASE WHEN app_password_resets.expires_at > NOW() THEN app_password_resets.attempts ELSE 0 END,
          created_at = NOW()`,
-      [email, codeHash, expires.toISOString()]
+      [email, codeHash, expires.toISOString(), linkTokenHash(linkToken)]
     );
-    const mailed = await sendPasswordResetEmail(email, code);
+    const mailed = await sendPasswordResetEmail(email, code, emailAuth.resetLink(req, linkToken));
     if (mailed.sent) {
       return res.json({ ...generic, delivery: "email", message: "Ti abbiamo inviato un codice a 6 cifre via email. Scade tra 60 minuti." });
     }
@@ -1441,11 +1457,12 @@ app.post("/api/auth/reset-password", async (req, res) => {
     // A new password ends every session opened before it: a reset is what
     // someone does when the account may be in the wrong hands.
     const updated = await pool.query(
-      `UPDATE app_users SET password_hash = $1, tokens_valid_after = $3, updated_at = NOW() WHERE email = $2
+      `UPDATE app_users SET password_hash = $1, tokens_valid_after = $3, email_verified_at = COALESCE(email_verified_at, NOW()), updated_at = NOW() WHERE email = $2
        RETURNING id, email, name, provider, avatar_url`,
       [passwordHash, email, revocationMoment()]
     );
     if (updated.rows[0]) sessionGate.forget(updated.rows[0].id);
+    await clearLoginFailures(pool, email);
     if (!updated.rows.length) return res.status(400).json({ error: "Account non trovato." });
     await pool.query("DELETE FROM app_password_resets WHERE email = $1", [email]);
     const user = updated.rows[0];
@@ -1470,13 +1487,18 @@ app.post("/api/auth/register", async (req, res) => {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || name.length < 2 || password.length < 8) {
       return res.status(400).json({ error: "Name, valid email and password of at least 8 characters are required." });
     }
+    if (isSyntheticEmail(email)) {
+      return res.status(400).json({ error: "Name, valid email and password of at least 8 characters are required." });
+    }
+    await initDb();
     const passwordHash = await hashPassword(password);
+    const verify = emailVerificationOn();
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
       const result = await client.query(
-        "INSERT INTO app_users(email, name, password_hash, provider) VALUES($1, $2, $3, 'email') RETURNING id, email, name, provider, avatar_url",
-        [email, name, passwordHash]
+        "INSERT INTO app_users(email, name, password_hash, provider, email_verify_required) VALUES($1, $2, $3, 'email', $4) RETURNING id, email, name, provider, avatar_url",
+        [email, name, passwordHash, verify]
       );
       const user = result.rows[0];
       await client.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb) ON CONFLICT (user_id) DO NOTHING", [user.id]);
@@ -1487,6 +1509,12 @@ app.post("/api/auth/register", async (req, res) => {
       if (consented) await recordMainConsent(client, user.id, legalVersion);
       await client.query("COMMIT");
       client.release();
+      // No session yet: the address is confirmed first, with the code or the
+      // link just sent to it. Until then the account does not open.
+      if (verify) {
+        const sent = await emailAuth.startVerification(req, user);
+        return res.status(201).json({ consentOk: consented, verificationRequired: true, email: user.email, ...emailAuth.deliveryAnswer(sent) });
+      }
       return res.status(201).json({
         consentOk: consented,
         token: issueAccountToken(user),
@@ -1515,13 +1543,26 @@ app.post("/api/auth/login", async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required." });
     }
+    await initDb();
+    // Too many wrong passwords for this address, from anywhere: it waits.
+    if (await loginLocked(pool, email)) {
+      return res.status(429).json({ error: "Troppi tentativi con password sbagliata. Riprova tra 15 minuti, oppure reimposta la password.", code: "login_locked" });
+    }
     const result = await pool.query(
-      "SELECT id, email, name, password_hash, provider, avatar_url FROM app_users WHERE email = $1",
+      "SELECT id, email, name, password_hash, provider, avatar_url, email_verified_at, email_verify_required FROM app_users WHERE email = $1",
       [email]
     );
     const user = result.rows[0];
     if (!user || !user.password_hash || !(await verifyPassword(password, user.password_hash))) {
+      await noteLoginFailure(pool, email);
       return res.status(401).json({ error: "Invalid email or password." });
+    }
+    await clearLoginFailures(pool, email);
+    // The right password, but the address was never confirmed: a new code
+    // (at most one a minute) and no session until it is used.
+    if (needsEmailVerification(user)) {
+      const sent = await emailAuth.startVerification(req, user);
+      return res.status(200).json({ verificationRequired: true, email: user.email, ...emailAuth.deliveryAnswer(sent) });
     }
     return res.status(200).json({
       token: issueAccountToken(user),
@@ -2233,7 +2274,14 @@ app.use(function (req, res, next) {
   }
   next();
 });
-const LEGAL_PAGES = { "/privacy": "privacy.html", "/termini": "termini.html", "/elimina-account": "elimina-account.html" };
+const LEGAL_PAGES = {
+  "/privacy": "privacy.html",
+  "/termini": "termini.html",
+  "/elimina-account": "elimina-account.html",
+  // The links in the verification and reset emails.
+  "/verifica-email": "verifica-email.html",
+  "/reimposta-password": "reimposta-password.html"
+};
 app.get(Object.keys(LEGAL_PAGES), (req, res) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
   res.sendFile(path.join(__dirname, "web", LEGAL_PAGES[req.path]));

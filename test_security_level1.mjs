@@ -120,10 +120,10 @@ console.log('--- 5. sessioni revocabili e account ripreso per email ---');
   broken = true;
   ok('5g. database non raggiungibile: decide la firma, come prima', await gate.allows({ sub: '9', iat: iatOld }));
   ok('5h. accountFromBearer passa dal controllo', /if \(!\(await sessionGate\.allows\(payload\)\)\) return null;/.test(api));
-  ok('5i. il reset della password chiude le sessioni precedenti', /UPDATE app_users SET password_hash = \$1, tokens_valid_after = \$3, updated_at = NOW\(\) WHERE email = \$2/.test(api));
+  ok('5i. il reset della password chiude le sessioni precedenti', /UPDATE app_users SET password_hash = \$1, tokens_valid_after = \$3, email_verified_at = COALESCE\(email_verified_at, NOW\(\)\), updated_at = NOW\(\) WHERE email = \$2/.test(api));
   const idn = read('server/account/identity.mjs');
   ok('5j. login Google/Apple che trova l\'account per email verificata: via la password di chi l\'aveva registrato, e le sue sessioni',
-    /UPDATE app_users SET password_hash = NULL, tokens_valid_after = \$2 WHERE id = \$1 AND password_hash IS NOT NULL RETURNING id/.test(idn) && /if \(matchedByEmail\) \{/.test(idn));
+    /UPDATE app_users SET password_hash = NULL, tokens_valid_after = \$2 WHERE id = \$1 AND password_hash IS NOT NULL AND email_verified_at IS NULL RETURNING id/.test(idn) && /if \(matchedByEmail\) \{/.test(idn));
   const mig = read('server/db/migrations/0018_session_revocation.sql');
   ok('5k. migrazione 0018: tokens_valid_after e verifier del ticket', /ADD COLUMN IF NOT EXISTS tokens_valid_after TIMESTAMPTZ/.test(mig) && /ADD COLUMN IF NOT EXISTS verifier_hash TEXT/.test(mig));
 }

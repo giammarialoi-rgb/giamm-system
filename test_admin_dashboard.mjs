@@ -264,7 +264,7 @@ try {
   ok('no inline handlers (the policy would block them)', !/ on[a-z]+="/.test(html));
   ok('375 px: the page never scrolls sideways, tables scroll in their box', /body \{ overflow-x: hidden; \}/.test(html) && /\.tbl \{ overflow-x: auto; max-width: 100%;/.test(html) && /table \{[^}]*min-width: 640px/.test(html));
   const api = read('coach-api.mjs');
-  ok('one email channel: reset codes and admin codes', /async function sendEmail\(to, subject, text\)/.test(api) && /return sendEmail\(\s*email,/.test(api) && api.includes('mountAdminDashboard(app, { pool, initDb, sendEmail, secret: JWT_SECRET });'));
+  ok('one email channel: reset codes and admin codes', /async function sendEmail\(to, subject, text, html\)/.test(api) && /return sendEmail\(\s*email,/.test(api) && api.includes('mountAdminDashboard(app, { pool, initDb, sendEmail, secret: JWT_SECRET });'));
   ok('last access stamped by the server on account read/sync, client/me, coach status', (api.match(/touchLastSeen\(pool, auth\.id\)/g) || []).length === 2 && read('coach-practice.mjs').includes('touchLastSeen(pool, ctx.auth.id)') && read('coach-practice.mjs').includes('touchLastSeen(pool, auth.id)'));
   ok('failures recorded: sync, check-in send, document import', /recordEvent\(pool, "sync_failed"/.test(api) && /recordEvent\(pool, "import_failed"/.test(api) && read('coach-practice.mjs').includes('recordEvent(pool, "checkin_failed"'));
   const mig = read('server/db/migrations/0016_admin_dashboard.sql');

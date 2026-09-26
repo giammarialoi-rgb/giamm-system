@@ -77,9 +77,9 @@ function fakeDb() {
     }
     if (/^SELECT id FROM app_users WHERE id = \$1$/.test(s)) { const u = byId(p[0]); return rows(u ? [{ id: u.id }] : []); }
     if (/^SELECT id FROM app_users WHERE email = \$1$/.test(s)) { const u = db.users.find((x) => x.email === p[0]); return rows(u ? [{ id: u.id }] : []); }
-    if (/^INSERT INTO app_users\(email, name, provider, provider_id, avatar_url\)/.test(s)) {
+    if (/^INSERT INTO app_users\(email, name, provider, provider_id, avatar_url, email_verified_at\)/.test(s)) {
       if (db.users.some((x) => x.email === p[0])) throw Object.assign(new Error('duplicate key'), { code: '23505' });
-      const u = { id: db.nextId++, email: p[0], name: p[1], provider: p[2], provider_id: p[3], avatar_url: p[4], password_hash: null };
+      const u = { id: db.nextId++, email: p[0], name: p[1], provider: p[2], provider_id: p[3], avatar_url: p[4], password_hash: null, email_verified_at: p[5] ? 'now' : null };
       db.users.push(u);
       return rows([{ id: u.id }]);
     }
@@ -97,9 +97,14 @@ function fakeDb() {
       return rows([u]);
     }
     if (/^INSERT INTO app_login_tickets/.test(s)) { db.tickets.set(p[0], { user_id: p[1], expires_at: p[2], verifier_hash: p[3] || null }); return rows([]); }
-    if (/^UPDATE app_users SET password_hash = NULL, tokens_valid_after = \$2 WHERE id = \$1 AND password_hash IS NOT NULL RETURNING id$/.test(s)) {
+    if (/^UPDATE app_users SET password_hash = NULL, tokens_valid_after = \$2 WHERE id = \$1 AND password_hash IS NOT NULL AND email_verified_at IS NULL RETURNING id$/.test(s)) {
       const u = byId(p[0]);
-      if (u && u.password_hash) { u.password_hash = null; u.tokens_valid_after = p[1]; return rows([{ id: u.id }]); }
+      if (u && u.password_hash && !u.email_verified_at) { u.password_hash = null; u.tokens_valid_after = p[1]; return rows([{ id: u.id }]); }
+      return rows([]);
+    }
+    if (/^UPDATE app_users SET email_verified_at = COALESCE\(email_verified_at, NOW\(\)\) WHERE id = \$1$/.test(s)) {
+      const u = byId(p[0]);
+      if (u && !u.email_verified_at) u.email_verified_at = 'now';
       return rows([]);
     }
     if (/^DELETE FROM app_login_tickets WHERE ticket_hash = \$1 RETURNING/.test(s)) {
@@ -189,6 +194,12 @@ console.log('--- 3. l\'account: crea, collega, non duplicare ---');
   ok('3d. email gia\' registrata con password: stesso account, nessun duplicato', !anna.created && anna.user.id === annaRow.id && db.users.filter((u) => u.email === 'anna@example.com').length === 1);
   ok('3e. la password messa alla registrazione (email mai verificata) viene tolta, le sue sessioni chiuse; il nome resta',
     anna.passwordCleared === true && annaRow.password_hash === null && !!annaRow.tokens_valid_after && annaRow.name === 'Anna B.');
+
+  ok('3e2. e ora l\'indirizzo risulta verificato', annaRow.email_verified_at === 'now');
+  db.users.push({ id: db.nextId++, email: 'vera@example.com', name: 'Vera', provider: 'email', provider_id: null, avatar_url: null, password_hash: '$2a$10$hash', email_verified_at: '2026-09-01' });
+  const vera = await resolveIdentityUser(pool, { provider: 'apple', sub: 'sub-V', email: 'vera@example.com', emailVerified: true, name: 'Vera' });
+  const veraRow = db.users.find((u) => u.email === 'vera@example.com');
+  ok('3e3. account con password ed email confermata: la password resta, Apple e\' un accesso in piu\'', vera.passwordCleared === false && veraRow.password_hash === '$2a$10$hash' && !veraRow.tokens_valid_after);
 
   const relay = await resolveIdentityUser(pool, { provider: 'apple', sub: 'sub-C', email: 'x7k2p9@privaterelay.appleid.com', emailVerified: true, name: 'Luca' });
   ok('3f. email relay: account creato con quell\'indirizzo', relay.created && relay.user.email === 'x7k2p9@privaterelay.appleid.com');

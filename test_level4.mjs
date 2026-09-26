@@ -38,7 +38,7 @@ console.log('--- 1. server: intestazioni, errori, accessi ---');
   const ci = read('server/coach-os/checkins.mjs');
   ok('1h. check-in: un solo invio per operationId (retry dopo timeout)', /client_operation_id = \$2/.test(ci));
   ok('1i. check-in: le domande viste restano con le risposte', /answer_rows/.test(ci) && /answerRows/.test(read('web/coach-os/checkins.js')));
-  ok('1j. migrazione 0019 e schemaTarget', fs.existsSync(path.join(root, 'server/db/migrations/0019_checkins_privacy.sql')) && JSON.parse(read('release.json')).schemaTarget === '0019');
+  ok('1j. migrazione 0019 e schemaTarget', fs.existsSync(path.join(root, 'server/db/migrations/0019_checkins_privacy.sql')) && Number(JSON.parse(read('release.json')).schemaTarget) >= 19);
 }
 
 console.log('');
