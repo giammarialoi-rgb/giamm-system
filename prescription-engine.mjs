@@ -59,36 +59,65 @@ export function parseCompoundSchemes(text) {
 }
 
 /**
- * Weekly progression ladder: 3x10-4x10-5x10-3x12-... (one NxM per week).
+ * Weekly progression ladder: one NxM per week, written on one line.
+ *   3x10-4x10-5x10-3x8   3x10 / 4x10 / 5x10   3x10, 4x10, 5x10   3x10 > 4x10 > 5x10
+ *   3x10 60kg - 4x10 62,5kg - 5x10 65kg     (a load or a % for each week)
+ *   settimana 1 3x10, settimana 2 4x10     (weeks named: two are enough)
+ * "+" joins groups of the same session ("5x5 + 2x8"), never weeks.
  * Must run BEFORE single NxM parse (otherwise 3x10-4 becomes reps "10-4").
  */
 export function parseWeeklySchemeLadder(text) {
-  const str = String(text || '');
-  // Require at least 3 NxM tokens joined only by hyphens (no + compound)
-  const re = /(\d{1,2})\s*[xX*\u00d7]\s*(\d{1,3}|AMRAP|MAX)/g;
+  let str = String(text || '');
+  // Named weeks: the label goes, and says these are weeks.
+  const labelRe = /\b(?:settimana|sett\.?|week|wk|w)\s*(\d{1,2})\s*[:.)=\-]?\s*(?=\d{1,2}\s*[xX*\u00d7])/gi;
+  const labelled = (str.match(labelRe) || []).length;
+  if (labelled) str = str.replace(labelRe, ' ');
+  const re = /(\d{1,2})\s*[xX*\u00d7]\s*(\d{1,3}(?:-\d{1,3}(?=\s*(?:[,;>\u2192|]|$)))?|AMRAP|MAX)/gi;
   const matches = [...str.matchAll(re)];
-  if (matches.length < 3) return null;
-  for (let i = 1; i < matches.length; i++) {
-    const prevEnd = matches[i - 1].index + matches[i - 1][0].length;
-    const between = str.slice(prevEnd, matches[i].index);
-    // Weekly ladders use - or – or / between schemes; compounds use +
-    if (!/^\s*[\-\u2013\/]\s*$/.test(between)) return null;
+  const minWeeks = labelled >= 2 ? 2 : 3;
+  if (matches.length < minWeeks) return null;
+  // What may stand after a week's scheme: its load or its % (and an "@").
+  const tailRe = /^\s*(?:@\s*)?(\d{1,3}(?:[.,]\d{1,2})?)\s*(kg|%)/i;
+  const weeks = [];
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i];
+    const endOf = m.index + m[0].length;
+    const nextStart = i + 1 < matches.length ? matches[i + 1].index : null;
+    let between = nextStart != null ? str.slice(endOf, nextStart) : '';
+    const tail = between.match(tailRe);
+    let load = null;
+    let pct = null;
+    if (tail) {
+      const v = Number(tail[1].replace(',', '.'));
+      if (/%/.test(tail[2])) pct = v; else load = v;
+      between = between.slice(tail[0].length);
+    } else if (nextStart == null) {
+      const last = str.slice(endOf).match(tailRe);
+      if (last) { const v = Number(last[1].replace(',', '.')); if (/%/.test(last[2])) pct = v; else load = v; }
+    }
+    // Weeks are separated by - \u2013 / , ; > \u2192 | only: "+" is the same session.
+    // Named weeks ("sett.1: 3x10 sett.2: 4x10") need no separator: the label was one.
+    const sepRe = labelled >= 2 ? /^\s*(?:[\-\u2013\u2014\/,;>|\u2192]|->|=>)?\s*$/ : /^\s*(?:[\-\u2013\u2014\/,;>|\u2192]|->|=>)\s*$/;
+    if (nextStart != null && !sepRe.test(between)) return null;
+    weeks.push({
+      sets: clampSets(m[1]) || parseInt(m[1], 10),
+      reps: String(m[2]).trim().toUpperCase() === 'MAX' ? 'MAX' : String(m[2]).trim(),
+      raw: m[1] + 'x' + m[2],
+      load,
+      pct
+    });
   }
-  const weeks = matches.map((m) => ({
-    sets: clampSets(m[1]) || parseInt(m[1], 10),
-    reps: String(m[2]).trim(),
-    raw: m[1] + 'x' + m[2]
-  })).filter((w) => w.sets >= 1 && w.sets <= MAX_SETS);
-  if (weeks.length < 3) return null;
+  const valid = weeks.filter((w) => w.sets >= 1 && w.sets <= MAX_SETS);
+  if (valid.length < minWeeks || valid.length !== weeks.length) return null;
   return {
-    week_count: weeks.length,
-    weeks,
-    sets: weeks[0].sets,
-    reps: weeks[0].reps,
-    raw: weeks.map((w) => w.raw).join('-'),
+    week_count: valid.length,
+    weeks: valid,
+    sets: valid[0].sets,
+    reps: valid[0].reps,
+    raw: valid.map((w) => w.raw).join('-'),
     technique: null,
     source: 'weekly_scheme_ladder',
-    weekly_schemes: weeks
+    weekly_schemes: valid
   };
 }
 

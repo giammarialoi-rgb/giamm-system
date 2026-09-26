@@ -1252,36 +1252,65 @@ function parseCompoundSchemes(text) {
 }
 
 /**
- * Weekly progression ladder: 3x10-4x10-5x10-3x12-... (one NxM per week).
+ * Weekly progression ladder: one NxM per week, written on one line.
+ *   3x10-4x10-5x10-3x8   3x10 / 4x10 / 5x10   3x10, 4x10, 5x10   3x10 > 4x10 > 5x10
+ *   3x10 60kg - 4x10 62,5kg - 5x10 65kg     (a load or a % for each week)
+ *   settimana 1 3x10, settimana 2 4x10     (weeks named: two are enough)
+ * "+" joins groups of the same session ("5x5 + 2x8"), never weeks.
  * Must run BEFORE single NxM parse (otherwise 3x10-4 becomes reps "10-4").
  */
 function parseWeeklySchemeLadder(text) {
-  const str = String(text || '');
-  // Require at least 3 NxM tokens joined only by hyphens (no + compound)
-  const re = /(\d{1,2})\s*[xX*\u00d7]\s*(\d{1,3}|AMRAP|MAX)/g;
+  let str = String(text || '');
+  // Named weeks: the label goes, and says these are weeks.
+  const labelRe = /\b(?:settimana|sett\.?|week|wk|w)\s*(\d{1,2})\s*[:.)=\-]?\s*(?=\d{1,2}\s*[xX*\u00d7])/gi;
+  const labelled = (str.match(labelRe) || []).length;
+  if (labelled) str = str.replace(labelRe, ' ');
+  const re = /(\d{1,2})\s*[xX*\u00d7]\s*(\d{1,3}(?:-\d{1,3}(?=\s*(?:[,;>\u2192|]|$)))?|AMRAP|MAX)/gi;
   const matches = [...str.matchAll(re)];
-  if (matches.length < 3) return null;
-  for (let i = 1; i < matches.length; i++) {
-    const prevEnd = matches[i - 1].index + matches[i - 1][0].length;
-    const between = str.slice(prevEnd, matches[i].index);
-    // Weekly ladders use - or – or / between schemes; compounds use +
-    if (!/^\s*[\-\u2013\/]\s*$/.test(between)) return null;
+  const minWeeks = labelled >= 2 ? 2 : 3;
+  if (matches.length < minWeeks) return null;
+  // What may stand after a week's scheme: its load or its % (and an "@").
+  const tailRe = /^\s*(?:@\s*)?(\d{1,3}(?:[.,]\d{1,2})?)\s*(kg|%)/i;
+  const weeks = [];
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i];
+    const endOf = m.index + m[0].length;
+    const nextStart = i + 1 < matches.length ? matches[i + 1].index : null;
+    let between = nextStart != null ? str.slice(endOf, nextStart) : '';
+    const tail = between.match(tailRe);
+    let load = null;
+    let pct = null;
+    if (tail) {
+      const v = Number(tail[1].replace(',', '.'));
+      if (/%/.test(tail[2])) pct = v; else load = v;
+      between = between.slice(tail[0].length);
+    } else if (nextStart == null) {
+      const last = str.slice(endOf).match(tailRe);
+      if (last) { const v = Number(last[1].replace(',', '.')); if (/%/.test(last[2])) pct = v; else load = v; }
+    }
+    // Weeks are separated by - \u2013 / , ; > \u2192 | only: "+" is the same session.
+    // Named weeks ("sett.1: 3x10 sett.2: 4x10") need no separator: the label was one.
+    const sepRe = labelled >= 2 ? /^\s*(?:[\-\u2013\u2014\/,;>|\u2192]|->|=>)?\s*$/ : /^\s*(?:[\-\u2013\u2014\/,;>|\u2192]|->|=>)\s*$/;
+    if (nextStart != null && !sepRe.test(between)) return null;
+    weeks.push({
+      sets: clampSets(m[1]) || parseInt(m[1], 10),
+      reps: String(m[2]).trim().toUpperCase() === 'MAX' ? 'MAX' : String(m[2]).trim(),
+      raw: m[1] + 'x' + m[2],
+      load,
+      pct
+    });
   }
-  const weeks = matches.map((m) => ({
-    sets: clampSets(m[1]) || parseInt(m[1], 10),
-    reps: String(m[2]).trim(),
-    raw: m[1] + 'x' + m[2]
-  })).filter((w) => w.sets >= 1 && w.sets <= MAX_SETS);
-  if (weeks.length < 3) return null;
+  const valid = weeks.filter((w) => w.sets >= 1 && w.sets <= MAX_SETS);
+  if (valid.length < minWeeks || valid.length !== weeks.length) return null;
   return {
-    week_count: weeks.length,
-    weeks,
-    sets: weeks[0].sets,
-    reps: weeks[0].reps,
-    raw: weeks.map((w) => w.raw).join('-'),
+    week_count: valid.length,
+    weeks: valid,
+    sets: valid[0].sets,
+    reps: valid[0].reps,
+    raw: valid.map((w) => w.raw).join('-'),
     technique: null,
     source: 'weekly_scheme_ladder',
-    weekly_schemes: weeks
+    weekly_schemes: valid
   };
 }
 
@@ -2407,7 +2436,10 @@ function parseSetLine(src) {
   if (ladder && !/[&]/.test(afterName.slice(0, ladder[0].length + 2))) {
     const first = Number(ladder[1]);
     const tokens = ladder[3].split('/').map((x) => x.trim()).filter(Boolean);
-    const loadFirst = /\./.test(ladder[1]) || first > 12 || tokens.some((tk) => /x/i.test(tk));
+    // "3x10/4x10/5x10" is a weekly progression (sets x reps every token),
+    // not loads: loads are big, decimal, or followed by bare reps.
+    const allSmallNxM = !/\./.test(ladder[1]) && first <= 12 && tokens.every((tk) => /^\d{1,2}\s*x\s*\d{1,3}$/i.test(tk) && Number(tk.split(/x/i)[0]) <= 12);
+    const loadFirst = !allSmallNxM && (/\./.test(ladder[1]) || first > 12 || tokens.some((tk) => /x/i.test(tk)));
     if (loadFirst) {
       let load = first;
       out.groups.push({ sets: 1, reps: ladder[2], load });
@@ -2649,6 +2681,57 @@ function parseMaxesFromText(text) {
     }
   });
   return out;
+}
+
+// ---- A line with several schemes: weeks, or one session? ----
+//
+// "3x10-4x10-5x10" is usually one scheme per week, "5x5 + 2x8" two blocks of
+// the same session, but "3x10, 4x10, 5x10" can be either, and only whoever
+// wrote the program knows. The importer proposes a reading and the person
+// chooses in the review; the choice is keyed by the line.
+
+// The same key for a line wherever it is met (bullets, day prefix, spacing aside).
+function schemeLineKey(line) {
+  return String(line || '')
+    .replace(/^\s*[\*•\-–—]+\s+/, '')
+    .replace(/^(?:giorno|day|seduta|sessione)\s*[:=\-]?\s*\d+\s*[-–:]\s*/i, '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * The two readings of a line with two or more "sets x reps" schemes, or null.
+ * { tokens: [{ sets, reps, raw, load, pct }], weeklyDefault, weeklyText, sessionText }
+ * Load ladders ("120x8/150x5") are not schemes: their first number is kilos.
+ */
+function schemeReadings(src, isWeeklyLadder) {
+  const raw = String(src || '').replace(/(\d),(\d)/g, '$1.$2');
+  const body = raw.includes(':') ? raw.slice(raw.indexOf(':') + 1) : raw;
+  const re = /(\d{1,3}(?:\.\d+)?)\s*[xX*×]\s*(\d{1,3}|max|amrap)\b(?:\s*(?:@\s*)?(\d{1,3}(?:\.\d{1,2})?)\s*(kg|%))?/gi;
+  const tokens = [];
+  let m;
+  while ((m = re.exec(body))) {
+    const sets = Number(m[1]);
+    if (!Number.isInteger(sets) || sets < 1 || sets > 12) return null; // a load, not a set count
+    tokens.push({
+      sets,
+      reps: /^\d/.test(m[2]) ? m[2] : m[2].toUpperCase(),
+      raw: m[1] + 'x' + m[2],
+      load: m[4] && /kg/i.test(m[4]) ? Number(m[3]) : null,
+      pct: m[4] === '%' ? Number(m[3]) : null
+    });
+  }
+  if (tokens.length < 2) return null;
+  const weeklyDefault = typeof isWeeklyLadder === 'function' ? !!isWeeklyLadder(src) : !/\+/.test(body);
+  const show = (t) => t.raw + (t.load != null ? ' ' + t.load + 'kg' : '') + (t.pct != null ? ' ' + t.pct + '%' : '');
+  return {
+    tokens,
+    weeklyDefault,
+    weeklyText: tokens.map(show).join(' → '),
+    sessionText: tokens.map(show).join(' + ')
+  };
 }
 
 // Replaces an exercise's sets with the groups a line prescribed.
@@ -28243,7 +28326,11 @@ function parseNutritionFromLooseText(rawText) {
 // 8. TEXT / CSV / DOCX FALLBACK RAW PARSER
 // ====================================================
 
-function parseCanonicalProgramFromText(rawText, filename = "documento_importato") {
+function parseCanonicalProgramFromText(rawText, filename = "documento_importato", options = {}) {
+  // How lines with several schemes are read, as chosen in the review:
+  // { [schemeLineKey(line)]: "weekly" | "session" }. Without a choice, the proposal.
+  const schemeChoices = (options && options.schemeChoices) || {};
+  const schemeChoiceLog = [];
   // The lines written as list items, before the text preparation strips the
   // bullets: under a day, an item is an exercise even with no scheme.
   const listItemLines = new Set(String(rawText || "").split(/\r?\n/)
@@ -28251,7 +28338,8 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
     .map((l) => l.replace(/^\s*[\*\u2022\-\u2013\u2014]+\s+/, "").replace(/\s[\u2013\u2014]\s*/g, " - ").trim()));
   const normalizedText = prepareImportedPlainText(rawText)
     // Do NOT split mid-line on "week N" inside load notes (X WEEK 2 REP…)
-    .replace(/\s+(?=(?:settimana|sett\.?)\s+\d+)/gi, "\n")
+    // ...nor "settimana 1 3x10, settimana 2 4x10": labels of a progression on one line.
+    .replace(/\s+(?=(?:settimana|sett\.?)\s+\d+(?!\s*[:.)=\-]?\s*\d{1,2}\s*[xX*\u00d7]\s*\d))/gi, "\n")
     .replace(/\s+(?=(?:sessione|seduta|giorno|day)\s*\d+)/gi, "\n");
   const lines = normalizedText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const warnings = [];
@@ -28495,7 +28583,11 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
       if (/^(?:riscaldamento|warm[\s-]?up)\b/i.test(line)) continue;
       // Prose is a note, not an exercise: "__la progr media c'e' un volume
       // medio da 3 4 set x 3 5 rip tra 67 e 76%" under a program table.
-      if (/^_/.test(line) || (line.split(/\s+/).length > 14 && !/:\s*\d/.test(line))) {
+      // A long line that is a weekly progression ("Squat: settimana 1 4x6,
+      // settimana 2 5x6, ... settimana 6 6x5") or has several schemes is program.
+      const longProse = line.split(/\s+/).length > 14 && !/:\s*\d/.test(line)
+        && !parseWeeklySchemeLadder(line) && (line.match(/\d\s*[xX×*]\s*\d/g) || []).length <= 1;
+      if (/^_/.test(line) || longProse) {
         program.notes.push(line.replace(/^_+/, "").trim());
         continue;
       }
@@ -28545,6 +28637,7 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
         const src = stripped || exLine;
         if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\uFFFD]/.test(src) || ((src.match(/[A-Za-zÀ-ÿ]/g) || []).length < 3)) return;
         const cleanExName = src
+          .replace(/[:\s]+(?:settimana|sett\.?|week|wk)\s*\d.*$/i, "")
           .replace(/:\s*[\d].*$/, "")
           .replace(/\d+\s*(?:x|X|\*|\u00d7)\s*[\S]+.*$/i, "")
           .replace(/\d+(?:\s*[\-\u2013\/]\s*\d+){2,}.*$/i, "")
@@ -28635,6 +28728,29 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
         const setLine = parseSetLine(src);
         if (setLine && setLine.groups.length) applySetGroupsToExercise(exObj, setLine.groups);
         if (setLine && setLine.progression) exObj.load_progression = setLine.progression;
+        // Two or more schemes on the line: one per week, or all in this session.
+        const readings = schemeReadings(src, parseWeeklySchemeLadder);
+        if (readings) {
+          const key = schemeLineKey(src);
+          const proposed = readings.weeklyDefault ? "weekly" : "session";
+          const choice = schemeChoices[key] === "weekly" || schemeChoices[key] === "session" ? schemeChoices[key] : proposed;
+          if (choice === "session" && exObj.weekly_schemes) {
+            exObj.weekly_schemes = null;
+            exObj.progression_weeks = null;
+            if (exObj.prescription) exObj.prescription.weekly_schemes = null;
+            applySetGroupsToExercise(exObj, readings.tokens);
+          } else if (choice === "weekly" && !exObj.weekly_schemes) {
+            const ws = readings.tokens.map((t) => ({ sets: t.sets, reps: t.reps, raw: t.raw, load: t.load, pct: t.pct }));
+            applySetGroupsToExercise(exObj, [readings.tokens[0]]);
+            exObj.weekly_schemes = ws;
+            exObj.progression_weeks = ws.length;
+            if (exObj.prescription) exObj.prescription.weekly_schemes = ws;
+          }
+          exObj.scheme_line_key = key;
+          if (!schemeChoiceLog.some((c) => c.key === key)) {
+            schemeChoiceLog.push({ key, line: src, name: cleanExName, day: currentSessionName, choice, proposed, weeklyText: readings.weeklyText, sessionText: readings.sessionText, weeks: readings.tokens.length });
+          }
+        }
         currentExercises.push(exObj);
       }
 
@@ -28695,6 +28811,12 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
       const multi = explodeMultiSchemeLine(workLine);
       if (multi.length > 1) {
         multi.forEach(pushTrainingExercise);
+        continue;
+      }
+      // A weekly progression is one exercise, commas and all
+      // ("Panca: settimana 1 3x10, settimana 2 4x10, settimana 3 5x10").
+      if (parseWeeklySchemeLadder(workLine)) {
+        pushTrainingExercise(workLine);
         continue;
       }
 
@@ -28804,7 +28926,8 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
   try { program.percent_maxes = parseMaxesFromText(normalizedText); } catch (_) { program.percent_maxes = {}; }
 
   // Declared duration from title / weekly ladders (FULL BODY 10/12 → 12 weeks of the same 3 days)
-  const inferredWeeks = inferProgramDurationFromText(normalizedText, filename);
+  const inferredWeeks = inferProgramDurationFromText(normalizedText, filename, schemeChoices);
+  program.scheme_choices = schemeChoiceLog;
   if (inferredWeeks && inferredWeeks > program.weeks.length) {
     expandProgramToDeclaredDuration(program, inferredWeeks);
   } else if (inferredWeeks) {
@@ -29055,7 +29178,7 @@ function prepareImportedPlainText(raw) {
     .replace(/(^|\n)\s*(?:\d+\.\s*)?(TERAPIA|ALIMENTAZIONE|NUTRIZIONE|INTEGRAZIONE|ALLENAMENTO)\b(?!\s*\/)/gi, "$1\n=== $2\n")
     .replace(/(^|\n)\s*#{1,6}\s*(TERAPIA|ALIMENTAZIONE|NUTRIZIONE|INTEGRAZIONE|ALLENAMENTO|TRAINING|WORKOUT|SCHEDA|DIETA|SUPPLEMENTS?)\b/gi, "$1\n=== $2\n")
     // Only split true week headers — NOT notes like "+2,5KG X WEEK 2 REP DI MARGINE"
-    .replace(/(^|[.\n;:])\s*((?:SETTIMANA|WEEK|SETT\.?)\s+\d+)\b/gi, "$1\n$2")
+    .replace(/(^|[.\n;:])\s*((?:SETTIMANA|WEEK|SETT\.?)\s+\d+)\b(?!\s*[:.)=\-]?\s*\d{1,2}\s*[xX*\u00d7]\s*\d)/gi, "$1\n$2")
     .split(/\n/)
     .map((line) => {
       let l = String(line || "").replace(/^\s*#{1,6}\s+/, "").replace(/^\s*[\*\u2022\-–—]+\s+/, "").trim();
@@ -29069,7 +29192,7 @@ function prepareImportedPlainText(raw) {
 }
 
 /** Infer declared program length from title/body/weekly ladders (e.g. FULL BODY 10/12 SETTIMANE → 12). */
-function inferProgramDurationFromText(text, filename = "") {
+function inferProgramDurationFromText(text, filename = "", schemeChoices = {}) {
   const blob = `${filename || ""}\n${text || ""}`;
   let best = 0;
   // On one line: "Stacco 3x3" then "SETTIMANA 2" on the next is not "3 settimane".
@@ -29084,8 +29207,19 @@ function inferProgramDurationFromText(text, filename = "") {
   if (weeksAssigned) best = Math.max(best, parseInt(weeksAssigned[1], 10) || 0);
   // Longest weekly NxM ladder in document
   String(text || "").split(/\r?\n/).forEach((line) => {
+    // A note ("_Con andamento ondulato 6x6 70%-4x4 80%-8x5 75%") shows examples, not the program.
+    if (/^\s*_/.test(line)) return;
+    // A line read as one session does not set the length; one read as weeks does.
+    const choice = schemeChoices && schemeChoices[schemeLineKey(line)];
+    if (choice === "session") return;
+    if (choice === "weekly") {
+      const rd = schemeReadings(line, parseWeeklySchemeLadder);
+      if (rd) best = Math.max(best, rd.tokens.length);
+    }
     const ladder = parseWeeklySchemeLadder(line);
-    if (ladder && ladder.week_count >= 4) best = Math.max(best, ladder.week_count);
+    // Any progression written on one line sets the length (it was only from 4 weeks up:
+    // "3x10-4x10-5x10" stayed one week).
+    if (ladder && ladder.week_count >= 2) best = Math.max(best, ladder.week_count);
   });
   if (!best || best < 1) return null;
   return Math.min(52, best);
@@ -29122,8 +29256,13 @@ function expandProgramToDeclaredDuration(program, targetWeeks) {
     (copy.sessions || copy.days || []).forEach((sess) => {
       (sess.exercises || sess.rows || []).forEach((ex) => {
         const schemes = ex.weekly_schemes || (ex.prescription && ex.prescription.weekly_schemes) || null;
-        if (Array.isArray(schemes) && schemes[wi]) {
-          const sch = schemes[wi];
+        // A program longer than the progression (a 4-week wave in an 8-week
+        // block) runs it again from the start; said on the exercise.
+        if (Array.isArray(schemes) && schemes.length && wi >= schemes.length) {
+          ex.notes = [ex.notes, 'Progressione di ' + schemes.length + ' settimane ripetuta (ciclo ' + (Math.floor(wi / schemes.length) + 1) + ')'].filter(Boolean).join(' \u00b7 ');
+        }
+        if (Array.isArray(schemes) && schemes.length && schemes[wi % schemes.length]) {
+          const sch = schemes[wi % schemes.length];
           ex.sets_count = sch.sets;
           ex.sets = sch.sets;
           ex.reps_target = sch.reps;
@@ -29137,7 +29276,10 @@ function expandProgramToDeclaredDuration(program, targetWeeks) {
           // The rows are rebuilt from sets_data, which still carried week 1's
           // reps: every week of "3x10-4x10-5x10-3x12..." came out with 10 reps.
           const tpl = (Array.isArray(ex.sets_data) && ex.sets_data[0]) || {};
-          const rows = Array.from({ length: sch.sets }, (_, i) => Object.assign({}, tpl, { set_number: i + 1, order: i + 1, reps: String(sch.reps), target_reps: String(sch.reps) }));
+          // The week's own load or % when the line gave one ("3x10 60kg - 4x10 62,5kg").
+          const weekLoad = sch.load != null ? { target_load: sch.load, load: sch.load } : {};
+          const weekPct = sch.pct != null ? { percentage_1rm: sch.pct } : {};
+          const rows = Array.from({ length: sch.sets }, (_, i) => Object.assign({}, tpl, { set_number: i + 1, order: i + 1, reps: String(sch.reps), target_reps: String(sch.reps) }, weekLoad, weekPct));
           ex.sets_data = rows;
           ex.reps_pattern = null;
           if (ex.prescription) ex.prescription.reps_pattern = null;

@@ -8849,6 +8849,9 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
 
     let parsed = null;
     let documentIR = null;
+    // The text the program was read from (Word, PDF, photo, plain text): the
+    // review reads it again when the person changes how a line is read.
+    let parseTextForChoices = null;
 
     if (isExcel) {
       const xlsxLib = typeof XLSX !== 'undefined' ? XLSX : (typeof window !== 'undefined' ? window.XLSX : null);
@@ -8898,6 +8901,7 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       stage('semantic', 'Understanding content');
       await yieldImportPaint();
       parsed = parseCanonicalProgramFromText(text, name);
+      parseTextForChoices = text;
       if (typeof createEmptyDocumentIR === 'function') {
         documentIR = createEmptyDocumentIR({ filename: name, magicType: detect.magicType || 'image', size: bytes.length });
         documentIR.originalText = text;
@@ -8913,6 +8917,7 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
         else parsed = { training: jsonObj };
       } catch (e) {
         parsed = parseCanonicalProgramFromText(text, name);
+        parseTextForChoices = text;
       }
     } else if (isPdf) {
       // The layout reader (pdf-layout.mjs): every string with its own font,
@@ -8938,6 +8943,7 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       stage('structure', 'Detecting structure');
       await yieldImportPaint();
       parsed = parseCanonicalProgramFromText(pdfText || text, name);
+      parseTextForChoices = pdfText || text;
       if (pdfWarnings.length && parsed && parsed.canonicalProgram) {
         if (!Array.isArray(parsed.canonicalProgram.unrecognised_elements)) parsed.canonicalProgram.unrecognised_elements = [];
         pdfWarnings.forEach((w) => parsed.canonicalProgram.unrecognised_elements.push({ type: 'training', reason: 'pdf_layout_note', message: w }));
@@ -8955,6 +8961,7 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       await yieldImportPaint();
       if (typeof extractDocxStructured === 'function') {
         parsed = await extractDocxStructured(bytes, name);
+        parseTextForChoices = parsed && parsed.rawText ? parsed.rawText : null;
         documentIR = parsed.documentIR || null;
       } else {
         let docxText = '';
@@ -8964,8 +8971,10 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
     } else if (isDoc) {
       const docText = (typeof extractDocBinaryText === 'function') ? extractDocBinaryText(bytes) : '';
       parsed = parseCanonicalProgramFromText(docText || '', name);
+      parseTextForChoices = docText || '';
     } else {
       parsed = parseCanonicalProgramFromText(text, name);
+      parseTextForChoices = text;
     }
 
     stage('semantic', 'Understanding content');
@@ -9062,6 +9071,8 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
         pState.filename = name;
         pState.rawText = text || '';
         pState.sourceText = text || '';
+        pState.importParseText = parseTextForChoices;
+        pState.schemeChoices = {};
       }
       navigate('import');
       if (typeof render === 'function') render();
@@ -19983,6 +19994,71 @@ function renderImport(c){
   `;
 }
 
+// ---- Lines with several schemes: weeks, or one session? ----
+// "3x10-4x10-5x10" is usually one scheme a week, "5x5 + 2x8" two blocks of one
+// session, and "3x10, 4x10, 5x10" can be either: the importer proposes, the
+// person decides here. A change reads the file's text again with the choices.
+function schemeChoicesCardHtml(prog) {
+  const ps = (typeof window !== 'undefined' && window.programImportState) || null;
+  const list = (prog && Array.isArray(prog.scheme_choices)) ? prog.scheme_choices : [];
+  if (!list.length || !ps || !ps.importParseText) return '';
+  const btn = (key, choice, current, label, detail) => {
+    const on = current === choice;
+    return '<button type="button" class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" style="flex:1;min-width:140px;font-size:10px;padding:6px 8px;text-align:left;line-height:1.3;" onclick="setImportSchemeChoice(\'' + encodeURIComponent(key) + '\',\'' + choice + '\')">' +
+      '<b>' + (on ? '\u2713 ' : '') + esc(label) + '</b><br><span style="font-weight:400;opacity:0.85;">' + esc(detail) + '</span></button>';
+  };
+  let h = '<div class="card" id="scheme-choices-card" style="margin-bottom:12px;border:1px solid var(--gold);">' +
+    '<div style="font-size:11px;font-weight:900;color:var(--gold);letter-spacing:1px;margin-bottom:4px;">RIGHE CON PI\u00d9 SCHEMI \u00b7 COME LE LEGGO?</div>' +
+    '<div style="font-size:11px;color:#aaa;line-height:1.4;margin-bottom:10px;">Una progressione (una settimana per schema) o una sola seduta con pi\u00f9 blocchi? Ho proposto una lettura: cambiala se non \u00e8 quella giusta. Cambiare ricrea l\u2019anteprima dal file.</div>';
+  if (list.length > 1) {
+    h += '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">' +
+      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:4px 8px;" onclick="setAllImportSchemeChoices(\'weekly\')">TUTTE COME SETTIMANE</button>' +
+      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:4px 8px;" onclick="setAllImportSchemeChoices(\'session\')">TUTTE NELLA STESSA SEDUTA</button></div>';
+  }
+  list.forEach((c) => {
+    h += '<div style="border-top:1px solid #222;padding:8px 0;">' +
+      '<div style="font-size:12px;font-weight:800;color:#ddd;">' + esc(c.name || '') + ' <span style="font-weight:400;color:#777;font-size:10px;">' + esc(c.day || '') + '</span></div>' +
+      '<div style="font-size:10px;color:#777;margin:2px 0 6px;word-break:break-word;">' + esc(c.line || '') + '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+      btn(c.key, 'weekly', c.choice, 'Una settimana per schema', c.weeklyText + ' (' + c.weeks + ' settimane)') +
+      btn(c.key, 'session', c.choice, 'Tutto nella stessa seduta', c.sessionText) +
+      '</div></div>';
+  });
+  return h + '</div>';
+}
+function reinterpretImportSchemes() {
+  const ps = window.programImportState;
+  if (!ps || !ps.importParseText || typeof parseCanonicalProgramFromText !== 'function') return;
+  const prev = ps.canonicalProgram || {};
+  const parsed = parseCanonicalProgramFromText(ps.importParseText, ps.filename || 'documento', { schemeChoices: ps.schemeChoices || {} });
+  const cp = (typeof buildCanonicalProgram === 'function') ? buildCanonicalProgram(parsed) : (parsed.canonicalProgram || parsed);
+  try {
+    if (typeof applyPrescriptionsToProgram === 'function') applyPrescriptionsToProgram(cp, ps.importParseText);
+    if (typeof enforceAllPrescriptions === 'function') enforceAllPrescriptions(cp);
+  } catch (_) {}
+  // What the first reading had beside the training (the document, notes on it) stays.
+  ['documentIR', 'unrecognised_elements', 'spreadsheet', 'title'].forEach((k) => { if (prev[k] != null && (cp[k] == null || (Array.isArray(cp[k]) && !cp[k].length))) cp[k] = prev[k]; });
+  ps.canonicalProgram = cp;
+  if (typeof render === 'function') render();
+}
+function setImportSchemeChoice(encodedKey, choice) {
+  const ps = window.programImportState;
+  if (!ps) return;
+  if (!ps.schemeChoices) ps.schemeChoices = {};
+  ps.schemeChoices[decodeURIComponent(encodedKey)] = choice === 'session' ? 'session' : 'weekly';
+  reinterpretImportSchemes();
+}
+function setAllImportSchemeChoices(choice) {
+  const ps = window.programImportState;
+  const list = (ps && ps.canonicalProgram && ps.canonicalProgram.scheme_choices) || [];
+  if (!ps) return;
+  if (!ps.schemeChoices) ps.schemeChoices = {};
+  list.forEach((c) => { ps.schemeChoices[c.key] = choice === 'session' ? 'session' : 'weekly'; });
+  reinterpretImportSchemes();
+}
+window.setImportSchemeChoice = setImportSchemeChoice;
+window.setAllImportSchemeChoices = setAllImportSchemeChoices;
+
 function renderReviewTraining(prog) {
   enrichProgramMappingConfidence(prog);
   const weeks = prog.weeks || [];
@@ -19999,7 +20075,7 @@ function renderReviewTraining(prog) {
     else if ((ex.prescription && ex.prescription.locked) || (ex.reps_raw && /\d+\s*[xX*\u00d7]/.test(String(ex.reps_raw))) || ex.scheme) lockedCount++;
   })));
   const autoOk = totalEx > 0 && inferredCount === 0 && lockedCount >= Math.max(1, totalEx - 1);
-  return `
+  return schemeChoicesCardHtml(prog) + `
     <div class="card" style="margin-bottom:12px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <label style="font-size:11px; font-weight:800; color:var(--gold);">TITOLO SCHEDA:</label>

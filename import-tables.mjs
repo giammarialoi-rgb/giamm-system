@@ -747,7 +747,10 @@ export function parseSetLine(src) {
   if (ladder && !/[&]/.test(afterName.slice(0, ladder[0].length + 2))) {
     const first = Number(ladder[1]);
     const tokens = ladder[3].split('/').map((x) => x.trim()).filter(Boolean);
-    const loadFirst = /\./.test(ladder[1]) || first > 12 || tokens.some((tk) => /x/i.test(tk));
+    // "3x10/4x10/5x10" is a weekly progression (sets x reps every token),
+    // not loads: loads are big, decimal, or followed by bare reps.
+    const allSmallNxM = !/\./.test(ladder[1]) && first <= 12 && tokens.every((tk) => /^\d{1,2}\s*x\s*\d{1,3}$/i.test(tk) && Number(tk.split(/x/i)[0]) <= 12);
+    const loadFirst = !allSmallNxM && (/\./.test(ladder[1]) || first > 12 || tokens.some((tk) => /x/i.test(tk)));
     if (loadFirst) {
       let load = first;
       out.groups.push({ sets: 1, reps: ladder[2], load });
@@ -989,6 +992,57 @@ export function parseMaxesFromText(text) {
     }
   });
   return out;
+}
+
+// ---- A line with several schemes: weeks, or one session? ----
+//
+// "3x10-4x10-5x10" is usually one scheme per week, "5x5 + 2x8" two blocks of
+// the same session, but "3x10, 4x10, 5x10" can be either, and only whoever
+// wrote the program knows. The importer proposes a reading and the person
+// chooses in the review; the choice is keyed by the line.
+
+// The same key for a line wherever it is met (bullets, day prefix, spacing aside).
+export function schemeLineKey(line) {
+  return String(line || '')
+    .replace(/^\s*[\*•\-–—]+\s+/, '')
+    .replace(/^(?:giorno|day|seduta|sessione)\s*[:=\-]?\s*\d+\s*[-–:]\s*/i, '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * The two readings of a line with two or more "sets x reps" schemes, or null.
+ * { tokens: [{ sets, reps, raw, load, pct }], weeklyDefault, weeklyText, sessionText }
+ * Load ladders ("120x8/150x5") are not schemes: their first number is kilos.
+ */
+export function schemeReadings(src, isWeeklyLadder) {
+  const raw = String(src || '').replace(/(\d),(\d)/g, '$1.$2');
+  const body = raw.includes(':') ? raw.slice(raw.indexOf(':') + 1) : raw;
+  const re = /(\d{1,3}(?:\.\d+)?)\s*[xX*×]\s*(\d{1,3}|max|amrap)\b(?:\s*(?:@\s*)?(\d{1,3}(?:\.\d{1,2})?)\s*(kg|%))?/gi;
+  const tokens = [];
+  let m;
+  while ((m = re.exec(body))) {
+    const sets = Number(m[1]);
+    if (!Number.isInteger(sets) || sets < 1 || sets > 12) return null; // a load, not a set count
+    tokens.push({
+      sets,
+      reps: /^\d/.test(m[2]) ? m[2] : m[2].toUpperCase(),
+      raw: m[1] + 'x' + m[2],
+      load: m[4] && /kg/i.test(m[4]) ? Number(m[3]) : null,
+      pct: m[4] === '%' ? Number(m[3]) : null
+    });
+  }
+  if (tokens.length < 2) return null;
+  const weeklyDefault = typeof isWeeklyLadder === 'function' ? !!isWeeklyLadder(src) : !/\+/.test(body);
+  const show = (t) => t.raw + (t.load != null ? ' ' + t.load + 'kg' : '') + (t.pct != null ? ' ' + t.pct + '%' : '');
+  return {
+    tokens,
+    weeklyDefault,
+    weeklyText: tokens.map(show).join(' → '),
+    sessionText: tokens.map(show).join(' + ')
+  };
 }
 
 // Replaces an exercise's sets with the groups a line prescribed.

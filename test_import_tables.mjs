@@ -2,9 +2,10 @@
 // numbers (the real files, measured with tools/import-corpus, stay out of git).
 // Each workbook goes through the real importer (parseStructuredWorkbook), the
 // way the app reads a picked file.
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { parseStructuredWorkbook, parseCanonicalProgramFromText } from './universal-import-engine.mjs';
-import { parseWorkbookTables, parseSetLine, reflowOcrColumns, mergeOcrHeadings, cleanOcrText } from './import-tables.mjs';
+import { parseWorkbookTables, parseSetLine, reflowOcrColumns, mergeOcrHeadings, cleanOcrText, schemeLineKey } from './import-tables.mjs';
 import { applyPrescriptionsToProgram, enforceAllPrescriptions } from './prescription-engine.mjs';
 
 const require = createRequire(import.meta.url);
@@ -259,6 +260,66 @@ console.log('--- 9. foto: due colonne, titoli in riquadri colorati, cosa fa l\'O
   const lad = parseSetLine('PANCA PIANA (FERMO AL PETTO) 10-8-6 POI 3X3 BOARD @8');
   ok('9j. "10-8-6 POI 3X3 @8": tre serie a scalare e 3x3 a RPE 8', lad && lad.groups.map((g) => g.sets + 'x' + g.reps + (g.rpe ? '@' + g.rpe : '')).join(' ') === '1x10 1x8 1x6 3x3@8');
   ok('9k. "7x5 difficolta\' 8 su 10" e\' RPE 8; il tempo 3-0-1 non e\' una scala di ripetizioni', parseSetLine('Squat hack: 7x5 difficoltà 8 su 10').groups[0].rpe === 8 && parseSetLine('Tempo 3-0-1') === null);
+}
+
+console.log('');
+console.log('--- 10. una progressione settimanale scritta su una riga (Word, foto) diventa le settimane ---');
+{
+  const weeksOf = (text, file = 'scheda.docx') => {
+    const parsed = parseCanonicalProgramFromText(text, file);
+    const p = parsed.canonicalProgram || parsed.program || parsed;
+    applyPrescriptionsToProgram(p, text);
+    enforceAllPrescriptions(p);
+    return p.weeks || [];
+  };
+  const series = (weeks, name, day = 1) => weeks.map((w) => {
+    const e = ((w.sessions[day - 1] || {}).exercises || []).find((x) => (x.name_original || '').toLowerCase().startsWith(name.toLowerCase()));
+    return e ? e.sets.length + 'x' + e.sets[0].target_reps + (e.sets[0].target_load != null ? '@' + e.sets[0].target_load : '') : '-';
+  }).join(' ');
+  const six = '3x10 4x10 5x10 3x8 4x8 5x8';
+  ok('10a. trattini: 3x10-4x10-5x10-3x8-4x8-5x8 = sei settimane, una per schema', series(weeksOf('GIORNO 1\nPanca: 3x10-4x10-5x10-3x8-4x8-5x8\nCurl: 3x12'), 'Panca') === six);
+  ok('10b. l\'esercizio senza progressione si ripete uguale ogni settimana', series(weeksOf('GIORNO 1\nPanca: 3x10-4x10-5x10-3x8-4x8-5x8\nCurl: 3x12'), 'Curl') === '3x12 3x12 3x12 3x12 3x12 3x12');
+  ok('10c. anche di sole tre settimane', series(weeksOf('GIORNO 1\nPanca: 3x10-4x10-5x10'), 'Panca') === '3x10 4x10 5x10');
+  ok('10d. con barre, virgole, frecce, spazi', ['3x10/4x10/5x10/3x8/4x8/5x8', '3x10, 4x10, 5x10, 3x8, 4x8, 5x8', '3x10 > 4x10 > 5x10 > 3x8 > 4x8 > 5x8', '3x10 - 4x10 - 5x10 - 3x8 - 4x8 - 5x8']
+    .every((l) => series(weeksOf('GIORNO 1\nPanca: ' + l), 'Panca') === six));
+  ok('10e. "3x10/4x10/..." non e\' una scala di carichi (niente "3 kg")', series(weeksOf('GIORNO 1\nPanca: 3x10/4x10/5x10'), 'Panca') === '3x10 4x10 5x10');
+  ok('10f. con il carico di ogni settimana', series(weeksOf('GIORNO 1\nPanca: 3x10 60kg - 4x10 62,5kg - 5x10 65kg - 3x8 70kg'), 'Panca') === '3x10@60 4x10@62.5 5x10@65 3x8@70');
+  const named = weeksOf('GIORNO 1\nPanca: settimana 1 3x10, settimana 2 4x10, settimana 3 5x10');
+  ok('10g. "settimana 1 3x10, settimana 2 4x10, ...": un esercizio "Panca", tre settimane', series(named, 'Panca') === '3x10 4x10 5x10' && named[0].sessions[0].exercises.length === 1 && named[0].sessions[0].exercises[0].name_original === 'Panca');
+  const two = weeksOf('GIORNO 1\nPanca: 3x10-4x10-5x10-3x8\nGIORNO 2\nSquat: 3x8-4x8-5x8-3x6\nLeg curl 3x12');
+  ok('10h. progressioni diverse in giorni diversi', series(two, 'Panca', 1) === '3x10 4x10 5x10 3x8' && series(two, 'Squat', 2) === '3x8 4x8 5x8 3x6');
+  const wave = weeksOf('SCHEDA 8 SETTIMANE\nGIORNO 1\nPanca: 3x10-4x10-5x10-3x8');
+  ok('10i. programma di 8 settimane con progressione di 4: la progressione riparte, e l\'esercizio lo dice', series(wave, 'Panca') === '3x10 4x10 5x10 3x8 3x10 4x10 5x10 3x8' && /ripetuta/.test(wave[5].sessions[0].exercises[0].notes || ''));
+  ok('10j. "5x5 + 2x8" resta la stessa seduta, non due settimane', weeksOf('GIORNO 1\nPressa: 5x5 + 2x8').length === 1);
+  const sixNamed = weeksOf('GIORNO 1\nPanca: 3x10\nGIORNO 2\nSquat: settimana 1 4x6, settimana 2 5x6, settimana 3 6x6, settimana 4 4x5, settimana 5 5x5, settimana 6 6x5');
+  ok('10k. sei settimane nominate su una riga lunga: non e\' una nota, il giorno 2 resta', series(sixNamed, 'Squat', 2) === '4x6 5x6 6x6 4x5 5x5 6x5');
+
+  // The person decides: weeks or one session, line by line.
+  const text = 'GIORNO 1\nPanca: 3x10, 4x10, 5x10, 3x8\nPressa: 5x5 + 2x8\nCurl: 3x12';
+  const read = (choices) => {
+    const parsed = parseCanonicalProgramFromText(text, 'scheda.docx', { schemeChoices: choices || {} });
+    const p = parsed.canonicalProgram || parsed.program || parsed;
+    applyPrescriptionsToProgram(p, text);
+    enforceAllPrescriptions(p);
+    return p;
+  };
+  const proposed = read();
+  const list = proposed.scheme_choices || [];
+  ok('10l. le righe con piu\' schemi sono elencate con la proposta: panca a settimane, pressa nella stessa seduta',
+    list.length === 2 && list[0].name === 'Panca' && list[0].choice === 'weekly' && list[1].name === 'Pressa' && list[1].choice === 'session'
+    && list[0].weeklyText === '3x10 → 4x10 → 5x10 → 3x8' && list[1].sessionText === '5x5 + 2x8');
+  const kP = schemeLineKey('Panca: 3x10, 4x10, 5x10, 3x8');
+  const kR = schemeLineKey('Pressa: 5x5 + 2x8');
+  ok('10m. la chiave di una riga non dipende da pallini e spazi', schemeLineKey('- Panca:  3x10, 4x10,  5x10, 3x8') === kP);
+  const oneSession = read({ [kP]: 'session' });
+  ok('10n. scelta "stessa seduta": una settimana, la panca con 3+4+5+3 serie', oneSession.weeks.length === 1 && series(oneSession.weeks, 'Panca') === '15x10' && oneSession.weeks[0].sessions[0].exercises[0].sets[14].target_reps === '8');
+  const pressWeeks = read({ [kR]: 'weekly' });
+  ok('10o. scelta "una settimana per schema" su "5x5 + 2x8": la pressa cambia di settimana in settimana', series(pressWeeks.weeks, 'Pressa') === '5x5 2x8 5x5 2x8');
+  ok('10p. la scelta resta scritta nell\'elenco', (read({ [kP]: 'session' }).scheme_choices || [])[0].choice === 'session');
+  const page = fs.readFileSync(new URL('./web/index.base.html', import.meta.url), 'utf8');
+  ok('10q. nella revisione dell\'import: la scheda delle scelte, e il testo del file tenuto per rileggerlo (Word, PDF, foto, testo)',
+    /return schemeChoicesCardHtml\(prog\) \+ `/.test(page) && /pState\.importParseText = parseTextForChoices;/.test(page)
+    && (page.match(/parseTextForChoices = /g) || []).length >= 6 && /parseCanonicalProgramFromText\(ps\.importParseText, ps\.filename \|\| 'documento', \{ schemeChoices: ps\.schemeChoices \|\| \{\} \}\)/.test(page));
 }
 
 console.log('');

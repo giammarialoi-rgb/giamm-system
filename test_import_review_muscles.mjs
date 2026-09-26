@@ -57,6 +57,7 @@ function loadPage(customEx) {
     fn('suggestExerciseMatches'),
     fn('enrichProgramMappingConfidence'),
     fn('countUncertainMappings'),
+    fn('schemeChoicesCardHtml'),
     fn('renderReviewTraining'),
     fn('confirmExerciseMapping'),
     constBlock('const MACRO_MUSCLE_GROUPS = ', '];'),
