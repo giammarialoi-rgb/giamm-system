@@ -2367,6 +2367,163 @@ function parseWorkbookTables(workbook, options = {}) {
   return out;
 }
 
+// ---- Free-text lines (Word, PDF): the set schemes coaches write by hand ----
+
+// A load increase written on the line: "+10KG X WEEK", "+ 2,5 X WEEK",
+// "+2,5KG NELLA % A SETT ALTERNE", "(AUMENTARE 2,5KG A SETTIMANE ALTERNATE)".
+function _itProgression(text) {
+  const t = String(text || '').replace(/(\d),(\d)/g, '$1.$2');
+  let m = t.match(/\+\s*(\d{1,3}(?:\.\d+)?)\s*(kg|%)?\s*(?:x|per|a|ogni|every|\/)?\s*(?:la\s+)?(?:week|settimana|sett\b|sett\.)/i)
+    || t.match(/\+\s*(\d{1,3}(?:\.\d+)?)\s*(kg|%)?\s*(?:nella\s*%)?\s*(?:a|ogni|per)\s*(?:sett(?:imane|\.)?|settimana)\s*altern/i)
+    || t.match(/aument\w*\s*(?:di\s*)?(\d{1,3}(?:\.\d+)?)\s*(kg|%)?\s*(?:nella\s*%)?\s*(?:a|ogni|per)\s*(?:sett(?:imane|\.)?|settimana|week)/i)
+    || t.match(/\+\s*(\d{1,3}(?:\.\d+)?)\s*(kg|%)?\s*nella\s*%/i);
+  if (!m) return null;
+  const step = Number(m[1]);
+  if (!Number.isFinite(step) || step <= 0 || step > 50) return null;
+  const unit = /nella\s*%/i.test(t.slice(m.index, m.index + m[0].length + 20)) || m[2] === '%' ? '%' : 'kg';
+  const every = /altern/i.test(t) ? 2 : 1;
+  return { step, unit, every, raw: m[0].trim() };
+}
+
+/**
+ * The sets a free-text line prescribes, when it says more than "NxM":
+ *   "120x8/150x5/180x4/200x3/210x3/3/3/3"  load x reps, then reps at the last load
+ *   "160KG X 1 X 3"                        load x reps x sets
+ *   "3X3 AL 60% + 5X1 80%"                 groups with their own % (or RPE)
+ * Returns { kind, groups: [{ sets, reps, load, pct, rpe }], progression, joinedByPlus } or null.
+ */
+function parseSetLine(src) {
+  const raw = String(src || '');
+  const body = raw.replace(/(\d),(\d)/g, '$1.$2').replace(/×/g, 'x');
+  const progression = _itProgression(raw);
+  const afterName = body.includes(':') ? body.slice(body.indexOf(':') + 1) : body;
+  const out = { kind: null, groups: [], progression, joinedByPlus: false };
+
+  // Load x reps ladder.
+  const ladder = afterName.match(/^\s*(\d{1,3}(?:\.\d+)?)\s*x\s*(\d{1,2})((?:\s*\/\s*(?:\d{1,3}(?:\.\d+)?\s*x\s*)?\d{1,2}(?![\d.]))+)/i);
+  if (ladder && !/[&]/.test(afterName.slice(0, ladder[0].length + 2))) {
+    const first = Number(ladder[1]);
+    const tokens = ladder[3].split('/').map((x) => x.trim()).filter(Boolean);
+    const loadFirst = /\./.test(ladder[1]) || first > 12 || tokens.some((tk) => /x/i.test(tk));
+    if (loadFirst) {
+      let load = first;
+      out.groups.push({ sets: 1, reps: ladder[2], load });
+      tokens.forEach((tk) => {
+        const lm = tk.match(/^(\d{1,3}(?:\.\d+)?)\s*x\s*(\d{1,2})$/i);
+        if (lm) { load = Number(lm[1]); out.groups.push({ sets: 1, reps: lm[2], load }); }
+        else out.groups.push({ sets: 1, reps: tk, load });
+      });
+      out.kind = 'ladder';
+      return out;
+    }
+  }
+  // Load x reps x sets.
+  const lrs = body.match(/(\d{2,3}(?:\.\d+)?)\s*kg\s*x\s*(\d{1,2})\s*x\s*(\d{1,2})\b/i);
+  if (lrs) {
+    out.groups.push({ sets: Number(lrs[3]), reps: lrs[2], load: Number(lrs[1]) });
+    out.kind = 'load_reps_sets';
+    return out;
+  }
+  // Groups joined by "+", each with its own intensity.
+  const parts = afterName.split(/\s\+\s*|\+\s(?=\d)/).map((p) => p.trim()).filter(Boolean);
+  const partRe = /(\d{1,2})\s*x\s*(\d{1,3}(?:-\d{1,3})?)(?![\d.%])/i;
+  const groups = [];
+  parts.forEach((p) => {
+    const m = p.match(partRe);
+    if (!m) return;
+    const tail = p.slice(m.index + m[0].length);
+    const pm = tail.match(/^\s*(?:al|at|@|a)?\s*(\d{1,3}(?:\.\d+)?)\s*%/i);
+    const rm = tail.match(/rpe\s*(\d{1,2}(?:\.5)?)/i);
+    const km = tail.match(/^\s*@?\s*(\d{2,3}(?:\.\d+)?)\s*kg/i) || tail.match(/^\s*@\s*(\d{2,3}(?:\.\d+)?)(?!\s*%)/);
+    groups.push({ sets: Number(m[1]), reps: m[2], pct: pm ? Number(pm[1]) : null, rpe: rm ? Number(rm[1]) : null, load: km ? Number(km[1]) : null });
+  });
+  if (groups.length >= 2) {
+    out.groups = groups;
+    out.kind = 'compound';
+    out.joinedByPlus = true;
+    return out;
+  }
+  if (progression) {
+    out.kind = 'progression_only';
+    return out;
+  }
+  return null;
+}
+
+// Replaces an exercise's sets with the groups a line prescribed.
+function applySetGroupsToExercise(ex, groups) {
+  if (!ex || !Array.isArray(groups) || !groups.length) return ex;
+  const sets = [];
+  groups.forEach((g) => {
+    for (let i = 0; i < (g.sets || 1); i++) {
+      sets.push({
+        set_number: sets.length + 1,
+        order: sets.length + 1,
+        set_type: 'working',
+        technique: null,
+        target_load: g.load != null ? g.load : null,
+        load: g.load != null ? g.load : null,
+        target_reps: g.reps != null ? String(g.reps) : null,
+        reps: g.reps != null ? String(g.reps) : null,
+        target_rir: null,
+        rir: null,
+        target_rpe: g.rpe != null ? g.rpe : null,
+        rpe: g.rpe != null ? g.rpe : null,
+        percentage_1rm: g.pct != null ? g.pct : null,
+        rest_seconds: ex.rest_seconds != null ? ex.rest_seconds : null
+      });
+    }
+  });
+  const first = sets[0];
+  const same = sets.every((s) => s.target_reps === first.target_reps);
+  const raw = same ? `${sets.length}x${first.target_reps}` : sets.map((s) => s.target_reps).join('/');
+  ex.sets = sets;
+  ex.sets_data = sets;
+  ex.sets_count = sets.length;
+  ex.reps_target = first.target_reps;
+  ex.reps = first.target_reps;
+  ex.repsTarget = first.target_reps;
+  ex.reps_raw = raw;
+  ex.scheme = raw;
+  ex.reps_pattern = same ? null : sets.map((s) => s.target_reps);
+  ex.load_target = first.target_load != null ? first.target_load + ' kg' : ex.load_target || null;
+  ex.load_value = first.target_load;
+  ex.percentage_1rm = first.percentage_1rm;
+  ex.rpe_target = first.target_rpe;
+  ex.rir_target = null;
+  ex.prescription = { sets: sets.length, reps: first.target_reps, reps_pattern: ex.reps_pattern, raw, technique: null, locked: true, source: 'locked' };
+  ex.setRows = Array.from({ length: Math.max(0, sets.length - 1) }, (_, i) => i + 2);
+  return ex;
+}
+
+// Week wi (0-based) of a program expanded from one written week: the load
+// increase the line declared, applied as many times as the weeks passed.
+function applyLoadProgression(ex, wi) {
+  const p = ex && ex.load_progression;
+  if (!p || !wi) return ex;
+  const bumps = Math.floor(wi / (p.every || 1));
+  if (!bumps) return ex;
+  const add = p.step * bumps;
+  // sets and sets_data are separate arrays after a week is copied; the
+  // prescription lock rebuilds sets from sets_data, so both move.
+  const rows = [];
+  [ex.sets, ex.sets_data].forEach((arr) => (Array.isArray(arr) ? arr : []).forEach((s) => { if (s && typeof s === 'object' && !rows.includes(s)) rows.push(s); }));
+  rows.forEach((s) => {
+    if (p.unit === '%') {
+      if (s.percentage_1rm != null) s.percentage_1rm = _itRound(Number(s.percentage_1rm) + add);
+    } else if (s.target_load != null && s.target_load !== '') {
+      s.target_load = _itRound(Number(s.target_load) + add);
+      s.load = s.target_load;
+    }
+  });
+  if (Array.isArray(ex.sets) && ex.sets[0]) {
+    ex.load_value = ex.sets[0].target_load;
+    if (ex.sets[0].target_load != null) ex.load_target = ex.sets[0].target_load + ' kg';
+    ex.percentage_1rm = ex.sets[0].percentage_1rm;
+  }
+  return ex;
+}
+
 // How much of what a set can carry was read: sets with a load, a % of 1RM,
 // an RPE or an RIR. Two readings of the same sheet are compared on it.
 function countTableSetInformation(weeks) {
@@ -27472,12 +27629,22 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
           reps_pattern: lit.reps_pattern || details.reps_pattern || null,
           weekly_schemes: weeklySchemes
         } : null);
+        // What "NxM" parsing leaves out: a load ladder (120x8/150x5/.../3/3),
+        // load x reps x sets, groups with their own % or RPE, and the weekly
+        // increase ("+10KG X WEEK") the program expansion applies.
+        const setLine = parseSetLine(src);
+        if (setLine && setLine.groups.length) applySetGroupsToExercise(exObj, setLine.groups);
+        if (setLine && setLine.progression) exObj.load_progression = setLine.progression;
         currentExercises.push(exObj);
       }
 
       function explodeMultiSchemeLine(src) {
         const s = String(src || "");
         if (parseWeeklySchemeLadder(s)) return [s];
+        // "PANCA: 3X3 AL 60% + 5X1 80%" is one exercise in two groups, and a
+        // load ladder is one exercise: splitting made "AL 60%" an exercise.
+        const setLine = parseSetLine(s);
+        if (setLine && (setLine.joinedByPlus || setLine.kind === "ladder" || setLine.kind === "load_reps_sets")) return [s];
         // Keep compound schemes intact: 2x15+1x10 / 2x12 + 1x8 / 3x10 e 1x8
         if (parseCompoundSchemes(s)) return [s];
         const re = /(\d{1,2})\s*[xX*\u00d7]\s*(?:\d+(?:[\-\u2013\/]\d+)*|AMRAP|MAX|EXHAUST)/gi;
@@ -27928,6 +28095,7 @@ function expandProgramToDeclaredDuration(program, targetWeeks) {
           }
           try { enforceExercisePrescription(ex); } catch (_) {}
         }
+        applyLoadProgression(ex, wi);
       });
     });
     out.push(copy);

@@ -3,8 +3,9 @@
 // Each workbook goes through the real importer (parseStructuredWorkbook), the
 // way the app reads a picked file.
 import { createRequire } from 'node:module';
-import { parseStructuredWorkbook } from './universal-import-engine.mjs';
-import { parseWorkbookTables } from './import-tables.mjs';
+import { parseStructuredWorkbook, parseCanonicalProgramFromText } from './universal-import-engine.mjs';
+import { parseWorkbookTables, parseSetLine } from './import-tables.mjs';
+import { applyPrescriptionsToProgram, enforceAllPrescriptions } from './prescription-engine.mjs';
 
 const require = createRequire(import.meta.url);
 const XLSX = require('xlsx');
@@ -182,6 +183,40 @@ console.log('--- 6. tedesco, e un file con due versioni alternative ---');
   ok('6a. la data sotto "Tag 1" non apre un altro giorno: 2 serie di squat', kb && kb.sets.length === 2 && kb.sets[1].percentage_1rm === 55);
   ok('6b. "keine Auswahl" (nessuna scelta) non e\' un esercizio', !ex(weeks, 1, 1, 'keine Auswahl'));
   ok('6c. importata la prima versione, la seconda segnalata', weeks[0].sessions.length === 2 && p.spreadsheet.alternatives.length === 1 && (p.unrecognised_elements || []).some((u) => /alternativi/.test(u.message || '')));
+}
+
+console.log('');
+console.log('--- 8. testo libero (Word, PDF): scale di carichi, gruppi, progressioni ---');
+{
+  const text = [
+    'GIORNO 1',
+    'STACCHI: 8X3 @150KG +10KG X WEEK',
+    'PANCA: 3X3 AL 60% DISCESA 8" +5X1 80% CON FERMO 1"',
+    'ADDUTTORI 3X12',
+    'GIORNO 2',
+    'stacco:120x8/150x5/180x4/200x3/210x3/3/3',
+    'alzate lat cavi: 13,5x12/12/12',
+    'PANCA SLINGSHOT: 160KG X 1 X 3'
+  ].join('\n');
+  const parsed = parseCanonicalProgramFromText(text, 'SCHEDA 3 SETTIMANE.doc');
+  const p = parsed.canonicalProgram || parsed.program || parsed;
+  applyPrescriptionsToProgram(p, text);
+  enforceAllPrescriptions(p);
+  const w = p.weeks;
+  ok('8a. "3 SETTIMANE" nel nome: 3 settimane da 2 giorni', w.length === 3 && w[0].sessions.length === 2);
+  const st = (wi) => ex(w, wi, 1, 'STACCHI');
+  ok('8b. +10 kg a settimana: 150, 160, 170', st(1) && st(1).sets[0].target_load === 150 && st(2).sets[0].target_load === 160 && st(3).sets.every((s) => s.target_load === 170));
+  const panca = ex(w, 1, 1, 'PANCA');
+  ok('8c. "3X3 AL 60% + 5X1 80%": un esercizio, 3 serie al 60% e 5 all\'80%', panca && panca.sets.length === 8 && panca.sets[0].percentage_1rm === 60 && panca.sets[7].percentage_1rm === 80 && panca.sets[7].target_reps === '1');
+  ok('8d. "AL 60%" non diventa un esercizio', !w[0].sessions[0].exercises.some((e) => /^AL 60/i.test(e.name_original || '')));
+  const add = ex(w, 1, 1, 'ADDUTTORI');
+  ok('8e. adduttori 3x12 senza RIR/RPE inventati', add && add.sets.length === 3 && add.sets.every((s) => s.target_rir == null && s.target_rpe == null));
+  const lad = ex(w, 1, 2, 'stacco');
+  ok('8f. scala 120x8/150x5/180x4/200x3/210x3/3/3: 7 serie, le ultime due a 210', lad && lad.sets.length === 7 && lad.sets[1].target_load === 150 && lad.sets[6].target_load === 210 && lad.sets[6].target_reps === '3');
+  ok('8g. 13,5x12/12/12: 3 serie da 12 a 13,5 kg', (ex(w, 1, 2, 'alzate lat cavi') || {}).sets.every((s) => s.target_load === 13.5 && s.target_reps === '12'));
+  const sl = ex(w, 1, 2, 'PANCA SLINGSHOT');
+  ok('8h. 160KG X 1 X 3: 3 singole a 160', sl && sl.sets.length === 3 && sl.sets[0].target_reps === '1' && sl.sets[0].target_load === 160);
+  ok('8i. le righe da sole', parseSetLine('4X3 50% + 3X2 RPE 8').groups[1].rpe === 8 && parseSetLine('+2,5KG NELLA % A SETT ALTERNE').progression.unit === '%' && parseSetLine('ADDUTTORI 3X12') === null);
 }
 
 console.log('');

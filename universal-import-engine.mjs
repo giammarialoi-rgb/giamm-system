@@ -22,7 +22,7 @@ import { buildIRFromWorkbook, createSourceRef, createEmptyDocumentIR, detectForm
 import { detectTechniquesFromText, parseDeclaredSetCount, resolveTargetSetCount } from "./import-fidelity.mjs";
 import { enforceAllPrescriptions, applyPrescriptionsToProgram, parseLiteralScheme, enforceExercisePrescription, parseCompoundSchemes, parseSpaceLadder, parseWeeklySchemeLadder } from "./prescription-engine.mjs";
 import { DRUG_CATALOG, matchDrug, enrichTherapyMedications } from "./drug-catalog.mjs";
-import { parseWorkbookTables, countUsableTableExercises, countTableSetInformation } from "./import-tables.mjs";
+import { parseWorkbookTables, countUsableTableExercises, countTableSetInformation, parseSetLine, applySetGroupsToExercise, applyLoadProgression } from "./import-tables.mjs";
 
 export { DRUG_CATALOG, matchDrug, enrichTherapyMedications };
 export { parseWeeklySchemeLadder, parseLiteralScheme };
@@ -3686,12 +3686,22 @@ export function parseCanonicalProgramFromText(rawText, filename = "documento_imp
           reps_pattern: lit.reps_pattern || details.reps_pattern || null,
           weekly_schemes: weeklySchemes
         } : null);
+        // What "NxM" parsing leaves out: a load ladder (120x8/150x5/.../3/3),
+        // load x reps x sets, groups with their own % or RPE, and the weekly
+        // increase ("+10KG X WEEK") the program expansion applies.
+        const setLine = parseSetLine(src);
+        if (setLine && setLine.groups.length) applySetGroupsToExercise(exObj, setLine.groups);
+        if (setLine && setLine.progression) exObj.load_progression = setLine.progression;
         currentExercises.push(exObj);
       }
 
       function explodeMultiSchemeLine(src) {
         const s = String(src || "");
         if (parseWeeklySchemeLadder(s)) return [s];
+        // "PANCA: 3X3 AL 60% + 5X1 80%" is one exercise in two groups, and a
+        // load ladder is one exercise: splitting made "AL 60%" an exercise.
+        const setLine = parseSetLine(s);
+        if (setLine && (setLine.joinedByPlus || setLine.kind === "ladder" || setLine.kind === "load_reps_sets")) return [s];
         // Keep compound schemes intact: 2x15+1x10 / 2x12 + 1x8 / 3x10 e 1x8
         if (parseCompoundSchemes(s)) return [s];
         const re = /(\d{1,2})\s*[xX*\u00d7]\s*(?:\d+(?:[\-\u2013\/]\d+)*|AMRAP|MAX|EXHAUST)/gi;
@@ -4142,6 +4152,7 @@ export function expandProgramToDeclaredDuration(program, targetWeeks) {
           }
           try { enforceExercisePrescription(ex); } catch (_) {}
         }
+        applyLoadProgression(ex, wi);
       });
     });
     out.push(copy);
