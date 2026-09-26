@@ -309,22 +309,23 @@ export function expandPatternToSets(patternStr, baseRest = 90, baseNotes = null,
     set_number: 1,
     set_type: "working",
     target_load: loadVal || null,
-    target_reps: str || "8-10",
+    target_reps: str || null,
     target_rir: rir,
     target_rpe: rpe,
     percentage_1rm: null,
     rest_seconds: baseRest,
     notes: baseNotes
   });
-  return { setCount: 1, reps: str || "8-10", sets };
+  return { setCount: 1, reps: str || null, sets };
 }
 
 // Parse detailed parameters from text line or table row
 export function parseExerciseDetails(str) {
   str = String(str || "");
   let sets = null;
-  let reps = "8-10";
-  let reps_raw = "8-10";
+  // Reps the text does not give stay empty: never a made-up "8-10".
+  let reps = null;
+  let reps_raw = null;
   let reps_pattern = null;
   let rir = null;
   let rpe = null;
@@ -1607,7 +1608,7 @@ export function parseTrainingSheet(sheet, weekIndex = 1) {
       else if (notesVal.toUpperCase().includes("WARM")) setType = "warmup";
 
       const finalRestSec = details.rest_seconds || 90;
-      const finalRepsTarget = (lit && lit.reps) || repsVal || details.reps || "8-10";
+      const finalRepsTarget = (lit && lit.reps) || repsVal || details.reps || null;
       const totalSets = (lit && lit.sets) || 1;
 
       currentExercise = {
@@ -1622,7 +1623,7 @@ export function parseTrainingSheet(sheet, weekIndex = 1) {
         mappingSource: normalized.confidence >= 0.9 ? 'dictionary' : 'raw',
         sets_count: totalSets,
         reps_target: finalRepsTarget,
-        reps_raw: (lit && lit.raw) || repsVal || details.reps_raw || "8-10",
+        reps_raw: (lit && lit.raw) || repsVal || details.reps_raw || null,
         scheme: lit ? lit.raw : null,
         rir_target: targetRirNum,
         rpe_target: targetRpeNum,
@@ -3950,6 +3951,17 @@ export function parseCanonicalProgramFromText(rawText, filename = "documento_imp
     const sessions = (first && first.sessions) || [];
     if (sessions.length < 2 || !/^Sessione 1$/i.test(String(sessions[0].name || ''))) return;
     if (!sessions.slice(1).some((ss) => /^(?:giorno|day|seduta|sessione|allenamento|workout|tag)\s*[:=\-]?\s*(?:1|A|I)\b/i.test(String(ss.name || '')))) return;
+    // Unless it is plainly training: two or more exercises with weekly
+    // progressions and nothing that says warm-up ("HIP THRUST: 5X10-5X12-6X10-6X12"
+    // above GIORNO 1 on a printed sheet). Then it stays, as a day of its own.
+    const leadEx = sessions[0].exercises || [];
+    const saysWarmup = leadEx.some((ex) => /riscald|warm|mobilit|attivaz|stretch/i.test(String(ex.name_original || ex.name || '') + ' ' + String(ex.notes || '')));
+    // Weekly progressions ("5X10-5X12-6X10-6X12") are training; a warm-up is a plain "3x15".
+    const withLadders = leadEx.filter((ex) => Array.isArray(ex.weekly_schemes) && ex.weekly_schemes.length >= 2).length;
+    if (!saysWarmup && withLadders >= 2) {
+      sessions[0].name = "Esercizi prima di Giorno 1";
+      return;
+    }
     const lead = sessions.shift();
     sessions.forEach((ss, i) => { ss.session_number = i + 1; });
     if (!program.warmup || !Array.isArray(program.warmup.items)) program.warmup = { present: true, label: "Riscaldamento", items: [], format: "lead_in_block" };

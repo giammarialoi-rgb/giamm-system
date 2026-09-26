@@ -30,7 +30,11 @@ const ctx = {
   recordManualAction() {},
   render() {},
   showToast(msg, type) { ctx.__toast = { msg, type }; },
-  document: { getElementById: (id) => (ctx.__inputs && ctx.__inputs[id]) || null }
+  document: { getElementById: (id) => (ctx.__inputs && ctx.__inputs[id]) || null },
+  // The weight unit (Impostazioni): kg here, the helpers as the page has them.
+  wUnit: () => (ctx.store.prefs.weightUnit === 'lb' ? 'lb' : 'kg'),
+  kgToDisp: (v) => (v === '' || v == null || ctx.store.prefs.weightUnit !== 'lb' ? v : Math.round(Number(v) * 2.20462262 * 2) / 2),
+  dispToKg: (v) => (v === '' || v == null || ctx.store.prefs.weightUnit !== 'lb' ? v : String(Math.round((Number(v) / 2.20462262) * 100) / 100))
 };
 // The competition lift of a name, as progression-models.js answers it (variants are not the lift).
 ctx.window.NurvanProgressions = {
@@ -126,7 +130,7 @@ console.log('--- 4. nella pagina ---');
   const same = (v, o) => { ctx.__v = v; ctx.__o = o; return vm.runInContext('sameIntensityOption(__v, __o)', ctx); };
   ok('4f. un RIR non scritto seleziona "-", non "0" (in JS \'\' == 0)', same('', 0) === false && same(undefined, 0) === false && same('0', 0) === true && same(2, 2) === true);
   ok('4g. le select del RIR usano quel confronto', !/shownRir==i\?/.test(SRC) && !/store\.data\[k\+'_rir'\]==i\?/.test(SRC) && (SRC.match(/sameIntensityOption\(/g) || []).length >= 4);
-  ok('4h. una serie in % mostra nel campo vuoto i kg a cui corrisponde', /placeholder="\$\{sugg \|\| pctPlanLoad \|\| ''\}"/.test(SRC));
+  ok('4h. una serie in % mostra nel campo vuoto i kg a cui corrisponde', /placeholder="\$\{kgToDisp\(sugg \|\| pctPlanLoad \|\| ''\)\}"/.test(SRC));
 }
 
 console.log('');

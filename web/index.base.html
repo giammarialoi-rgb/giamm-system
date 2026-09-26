@@ -2498,10 +2498,10 @@ body.focus-mode [data-rewards-only] {
   </div>
 </div>
 <!-- Static System File Inputs (Reliable cross-platform file picking for Browser & WebView) -->
-<input type="file" id="universal-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleImportFileSelected(event)">
+<input type="file" id="universal-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.heic,.heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleImportFileSelected(event)">
 <input type="file" id="camera-import-input" style="display:none;" accept="image/*" capture="environment" onchange="handleImportFileSelected(event)">
-<input type="file" id="coach-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleCoachFileInput(event)">
-<input type="file" id="db-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleFileUpload(event)">
+<input type="file" id="coach-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.heic,.heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleCoachFileInput(event)">
+<input type="file" id="db-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.heic,.heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleFileUpload(event)">
 
 <script>
 var DATA=null, currentView='home', currentWeek=1, currentDay=0, accountRegisterMode=false, accountRecoveryMode=false, accountVerifyMode=false, accountSyncTimer=null;
@@ -3825,6 +3825,31 @@ async function ensureFactoryCleanBoot() {
   return true;
 }
 if(typeof store.prefs.timerSound!=='boolean') store.prefs.timerSound = true;
+// Weight unit the person sees and types: kg or lb (Impostazioni). Every load
+// is stored, synced and computed in kg; only what is shown and typed changes.
+if (store.prefs.weightUnit !== 'lb') store.prefs.weightUnit = 'kg';
+const LB_PER_KG = 2.20462262;
+function wUnit() { return (typeof store !== 'undefined' && store && store.prefs && store.prefs.weightUnit === 'lb') ? 'lb' : 'kg'; }
+// kg -> the unit shown (lb to the half pound). Empty stays empty, text stays text.
+function kgToDisp(v) {
+  if (v === '' || v == null || wUnit() !== 'lb') return v;
+  const n = Number(String(v).replace(',', '.'));
+  if (!Number.isFinite(n)) return v;
+  return Math.round(n * LB_PER_KG * 2) / 2;
+}
+// What was typed, in the unit shown -> kg to store.
+function dispToKg(v) {
+  if (v === '' || v == null || wUnit() !== 'lb') return v;
+  const n = Number(String(v).replace(',', '.'));
+  if (!Number.isFinite(n)) return v;
+  return String(Math.round((n / LB_PER_KG) * 100) / 100);
+}
+function setWeightUnit(u) {
+  store.prefs.weightUnit = u === 'lb' ? 'lb' : 'kg';
+  persist();
+  if (typeof render === 'function') render();
+}
+window.setWeightUnit = setWeightUnit;
 if(typeof store.prefs.timerVibrate!=='boolean') store.prefs.timerVibrate = true;
 if(typeof store.prefs.timerAutoAdvance!=='boolean') store.prefs.timerAutoAdvance = false;
 if(store.prefs.prepSeconds==null) store.prefs.prepSeconds = 0;
@@ -8913,6 +8938,34 @@ async function processUniversalFile(source, actionIntent = 'IMPORT') {
     return processUniversalFileInner(source, actionIntent);
   }, actionIntent === 'IMPORT' ? 'Analisi scheda…' : 'Caricamento…', { immediate: true });
 }
+// HEIC/HEIF, the iPhone's own photo format: by its name, type, or the
+// "ftypheic" box at the start of the file.
+function isHeicBytes(bytes, name, mime) {
+  if (/\.hei[cf]$/i.test(String(name || '')) || /image\/hei[cf]/i.test(String(mime || ''))) return true;
+  if (!bytes || bytes.length < 12) return false;
+  let tag = '';
+  for (let i = 4; i < 12; i++) tag += String.fromCharCode(bytes[i]);
+  return /^ftyp(?:heic|heix|hevc|hevx|heim|heis|mif1|msf1)/.test(tag);
+}
+// The photo as JPEG bytes, decoded by the browser itself (no library), or
+// null when it cannot. Bounded, like the OCR's own decoding.
+async function heicToJpegBytes(bytes, mime) {
+  try {
+    const blob = new Blob([bytes], { type: /hei[cf]/i.test(String(mime || '')) ? mime : 'image/heic' });
+    const bmp = await Promise.race([createImageBitmap(blob), new Promise((res) => setTimeout(() => res(null), 8000))]);
+    if (!bmp || !bmp.width) return null;
+    const scale = Math.min(1, 4000 / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bmp.width * scale);
+    canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const out = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.92));
+    return out ? new Uint8Array(await out.arrayBuffer()) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
   if (actionIntent === 'CHECK_FISICO_PHOTO') {
     hideImportProgress();
@@ -8998,6 +9051,21 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       if (typeof render === 'function') render();
       if (typeof showToast === 'function') showToast('Referto allegato come file (senza trascrizione)', 'ok');
       return;
+    }
+
+    // An iPhone photo kept as HEIC (sent to a computer, saved in Files): the
+    // browser turns it into a JPEG when it can read it (Safari can), and
+    // otherwise says what to do instead of failing without a word.
+    if (isHeicBytes(bytes, name, mime)) {
+      stage('read', 'Reading document');
+      await yieldImportPaint();
+      const jpg = await heicToJpegBytes(bytes, mime);
+      if (!jpg) {
+        throw new Error('Foto in formato HEIC (iPhone): questo browser non la sa aprire. Importala dall\'app sull\'iPhone, oppure esportala in JPG (Foto › Condividi › Opzioni › Più compatibile) e riprova.');
+      }
+      bytes = jpg;
+      mime = 'image/jpeg';
+      name = String(name || 'foto').replace(/\.hei[cf]$/i, '') + '.jpg';
     }
 
     stage('detect', 'Detecting format');
@@ -9871,6 +9939,7 @@ function applyOperationsToProgram(program, operations) {
         duration: (v) => Math.min(52, Math.max(1, parseInt(v, 10) || store.prefs.duration || 16)),
         frequency: (v) => Math.min(7, Math.max(1, parseInt(v, 10) || store.prefs.frequency || 4)),
         timerSound: (v) => Boolean(v),
+        weightUnit: (v) => (String(v).toLowerCase().startsWith('lb') ? 'lb' : 'kg'),
         timerVibrate: (v) => Boolean(v),
         weekIntensity: (v) => String(v || '')
       };
@@ -11269,7 +11338,7 @@ function showPrevLoad(e, key) {
   if(prevVal) {
     const tt = $('prev-load-tooltip');
     if (!tt) return;
-    let tip = `SETT. PREC: ${prevVal}kg`;
+    let tip = `SETT. PREC: ${kgToDisp(prevVal)} ${wUnit()}`;
     try {
       const m = String(key).match(/_e(\d+)_s(\d+)/);
       const exIdx = m ? parseInt(m[1], 10) : null;
@@ -11280,8 +11349,8 @@ function showPrevLoad(e, key) {
           : getLoadSuggestion(exIdx, {});
         if (sugg != null) {
           const prevN = parseFloat(prevVal);
-          if (Number.isFinite(prevN) && sugg > prevN) tip += ` → prova ~${sugg}kg`;
-          else if (Number.isFinite(prevN) && sugg <= prevN) tip += ' → mantieni / +piccoli kg';
+          if (Number.isFinite(prevN) && sugg > prevN) tip += ` → prova ~${kgToDisp(sugg)} ${wUnit()}`;
+          else if (Number.isFinite(prevN) && sugg <= prevN) tip += ' → mantieni / +piccoli ' + wUnit();
         }
       }
     } catch (_) {}
@@ -11683,7 +11752,8 @@ function completeSetQuick(exIdx, setNum, restText) {
   }
 
   // 1) Valore nel campo / store  2) solo se vuoto: suggerimento / precedente / pianificato
-  let load = fieldVal(loadEl, store.data[k + '_load']);
+  // The field shows the unit chosen; the store keeps kg.
+  let load = (loadEl && String(loadEl.value || '').trim() !== '') ? dispToKg(loadEl.value) : fieldVal(null, store.data[k + '_load']);
   if (load === '') {
     const sugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(exIdx, setNum, rowForSugg) : null;
     load = (Number(sugg) > 0 ? sugg : '') || '';
@@ -11695,7 +11765,7 @@ function completeSetQuick(exIdx, setNum, restText) {
   if (load !== '') {
     store.data[k + '_load'] = load;
     store.data[k + '_load_user'] = 1; // confermato dall’atleta col ✓
-    if (loadEl) loadEl.value = load;
+    if (loadEl) loadEl.value = kgToDisp(load);
   }
 
   let reps = fieldVal(repsEl, store.data[k + '_reps']);
@@ -11822,13 +11892,13 @@ function showLiveSetIntelHtml(exIdx) {
     h += '<div class="stats-adv-row"><span>Intensità vs precedente</span><span>' + formatIntelPct(live.intensityDelta) + '</span></div>';
   }
   h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(live.volumeVsPrevious != null ? live.volumeVsPrevious : live.vsLastSessionVolume) + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(live.volumeToday) + ' kg</span></div>';
+  h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(live.volumeToday) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
   h += '<div class="stats-adv-row"><span>Fatica durante questa seduta</span><span>' + esc(H('fatigue', live.fatigue && live.fatigue.signal)) + '</span></div>';
   h += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato · non modifica i kg che hai scritto. ' + metricExplainBtn('e1rm', 'ⓘ Massimale stimato') + '</div>';
   const rep = window.__liveExerciseReport;
   if (rep && !rep.empty && Number(rep.exIdx) === Number(exIdx)) {
     h += '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-top:10px;">REPORT ESERCIZIO</div>';
-    h += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + formatStatsKg(rep.volumeToday) + ' kg</span></div>';
+    h += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + formatStatsKg(rep.volumeToday) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
     h += '<div class="stats-adv-row"><span>Miglior serie</span><span>' + esc(rep.bestSet || '—') + '</span></div>';
     h += '<div class="stats-adv-row"><span>Massimale stimato oggi</span><span>' + (rep.e1rmToday == null ? '—' : (rep.e1rmToday + ' kg')) + '</span></div>';
     h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(rep.snapshot ? rep.snapshot.performanceDelta : null) + '</span></div>';
@@ -11928,7 +11998,7 @@ function exerciseIntelBodyHtml(exIdx) {
         (live.rir != null ? ('RIR ' + live.rir) : '')
       : '—';
     h += '<div class="stats-adv-row"><span>Massimale stimato</span><span>' + (snap.currentE1RM == null ? '—' : (snap.currentE1RM + ' kg')) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(snap.currentVolume) + ' kg</span></div>';
+    h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(snap.currentVolume) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
     const intenBand = snap.intensityContext && snap.intensityContext.intensityBand;
     const relInt = snap.intensityContext && snap.intensityContext.relativeIntensity;
     h += '<div class="stats-adv-row"><span>Intensità</span><span>' +
@@ -11965,7 +12035,7 @@ function exerciseIntelBodyHtml(exIdx) {
     h += '<div class="stats-adv-row"><span>RIR</span><span>' + (snap.currentRIR == null ? '—' : snap.currentRIR) + '</span></div>';
     h += '<div style="color:var(--gold);font-weight:800;margin:12px 0 6px;font-size:10px;">DOSE DI LAVORO</div>';
     h += '<div class="stats-adv-row"><span>Serie</span><span>' + (cur.setCount || 0) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Volume load</span><span>' + formatStatsKg(snap.currentVolume) + ' kg</span></div>';
+    h += '<div class="stats-adv-row"><span>Volume load</span><span>' + formatStatsKg(snap.currentVolume) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
     h += '<div style="color:var(--gold);font-weight:800;margin:12px 0 6px;font-size:10px;">RISPOSTA</div>';
     h += '<div class="stats-adv-row"><span>Prestazione</span><span>' + esc(H('performance', snap.performanceState || snap.performanceDirection)) + '</span></div>';
     h += '<div class="stats-adv-row"><span>Intensità</span><span>' + esc(H('intensity', snap.intensityContext && snap.intensityContext.intensityTrend)) + '</span></div>';
@@ -12095,7 +12165,7 @@ function sessionSummaryCardHtml() {
   let h = '<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid var(--gold);">';
   h += '<div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:10px;color:var(--gold);font-weight:800;">RIEPILOGO ALLENAMENTO</div>';
   h += '<button type="button" class="btn btn-outline" style="font-size:9px;padding:3px 6px;" onclick="window.__lastSessionSummary=null;this.closest(\'.card\').remove()">Chiudi</button></div>';
-  h += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + (sum.volumeChange == null ? formatStatsKg(sum.volume) + ' kg' : ((sum.volumeChange >= 0 ? '+' : '') + sum.volumeChange + '%')) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + (sum.volumeChange == null ? formatStatsKg(sum.volume) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') : ((sum.volumeChange >= 0 ? '+' : '') + sum.volumeChange + '%')) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Serie</span><span>' + (sum.setsChange == null ? (sum.sets + ' serie') : ((sum.setsChange >= 0 ? '+' : '') + sum.setsChange + '%')) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(sum.performanceChange) + '</span></div>';
   h += '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(sum)) + '</div>';
@@ -12122,7 +12192,7 @@ function preWorkoutIntelHtml() {
   let h = '<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid #333;">';
   h += '<div style="font-size:10px;color:var(--gold);font-weight:800;">ALLENAMENTO DI OGGI</div>';
   h += '<div class="stats-adv-row"><span>Ultima esposizione</span><span>' + (last ? ('W' + last.week + ' · S' + ((last.day || 0) + 1) + (last.tonnage ? (' · ' + last.tonnage + ' kg') : '')) : '—') + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Volume recente</span><span>' + (ctx.recentVolume ? (formatStatsKg(ctx.recentVolume) + ' kg') : '—') + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Volume recente</span><span>' + (ctx.recentVolume ? (formatStatsKg(ctx.recentVolume) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')) : '—') + '</span></div>';
   h += '<div class="stats-adv-row"><span>Recupero recente</span><span>' + esc(H('recovery', ctx.recovery && (ctx.recovery.signal || ctx.recovery.estimate))) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Fatica recente (modello)</span><span>' + esc(H('fatigue', ctx.fatigue && ctx.fatigue.signal)) + '</span></div>';
   h += '<div style="font-size:9px;color:#777;margin-top:6px;">' + esc(ctx.note || '') + ' ' + metricExplainBtn('recovery', 'ⓘ Recupero') + '</div>';
@@ -19099,6 +19169,7 @@ function renderSettings(c) {
       <div style="font-size:10px;color:#666;margin:-6px 0 10px;">A timer scaduto chiude il riposo e avvisa.</div>
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:10px;">Mostra riscaldamento <input type="checkbox" id="pref-show-warmup" ${store.prefs.showWarmup!==false?'checked':''} onchange="store.prefs.showWarmup=this.checked;persist();render()"></label>
       <div style="font-size:10px;color:#666;margin:-6px 0 10px;">Le serie di riscaldamento della scheda si vedono e si spuntano. Spento: la seduta parte dalla prima serie allenante; la rampa resta nella scheda.</div>
+      <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:10px;gap:10px;">Unità dei pesi <select id="pref-weight-unit" onchange="setWeightUnit(this.value)" style="width:auto;padding:6px 10px;background:#111;border:1px solid #333;color:#fff;"><option value="kg" ${wUnit()==='kg'?'selected':''}>kg</option><option value="lb" ${wUnit()==='lb'?'selected':''}>lb (libbre)</option></select></label>
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:10px;">Avviso sonoro <input type="checkbox" id="pref-timer-sound" ${store.prefs.timerSound!==false?'checked':''} onchange="store.prefs.timerSound=this.checked;persist()"></label>
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:10px;">Vibrazione <input type="checkbox" id="pref-timer-vib" ${store.prefs.timerVibrate!==false?'checked':''} onchange="store.prefs.timerVibrate=this.checked;persist()"></label>
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;gap:10px;">Tempo di preparazione (s) <input type="number" id="pref-prep" value="${esc(String(store.prefs.prepSeconds||0))}" style="width:80px;padding:6px;background:#111;border:1px solid #333;color:#fff;" onchange="store.prefs.prepSeconds=parseInt(this.value,10)||0;persist()"></label>
@@ -22399,8 +22470,12 @@ function initPercentModelFromImport(prog) {
 }
 function percentLiftLabel(lift) {
   const eng = (typeof window !== 'undefined' && window.NurvanProgressions) || null;
-  if (eng && typeof eng.liftLabel === 'function') return eng.liftLabel(lift);
-  return ({ squat: 'Squat', bench: 'Panca piana', deadlift: 'Stacco da terra' })[lift] || lift;
+  const own = { squat: 'Squat', bench: 'Panca piana', deadlift: 'Stacco da terra', front_squat: 'Squat frontale', snatch: 'Strappo', clean_jerk: 'Slancio' };
+  if (eng && typeof eng.liftLabel === 'function') {
+    const l = eng.liftLabel(lift);
+    if (l && l !== lift) return l;
+  }
+  return own[lift] || lift;
 }
 const PROFILE_MAX_KEY = { squat: 'squatMax', bench: 'benchMax', deadlift: 'deadliftMax' };
 // The card over the workout: the maxes the loads are percentages of, and the button that recomputes them.
@@ -22420,13 +22495,13 @@ function percentMaxesCardHtml() {
     if (open) {
       h += '<div style="display:grid;grid-template-columns:repeat(' + Math.min(3, lifts.length) + ',minmax(0,1fr));gap:8px;">';
       lifts.forEach(function (lift) {
-        const v = Number(maxes[lift]) > 0 ? maxes[lift] : '';
+        const v = Number(maxes[lift]) > 0 ? kgToDisp(maxes[lift]) : '';
         const f = fromFile[lift];
         const pk = PROFILE_MAX_KEY[lift];
         const pv = pk && Number(prof[pk]) > 0 ? Number(prof[pk]) : null;
-        const hint = [f && f.value ? ('file: ' + f.value + (f.kind === 'projected' ? ' previsto' : '')) : '', pv && Number(v) !== pv ? ('profilo: ' + pv) : ''].filter(Boolean).join(' · ');
+        const hint = [f && f.value ? ('file: ' + f.value + (f.kind === 'projected' ? ' previsto' : (f.kind === 'training' ? ' training max' : ''))) : '', pv && Number(v) !== pv ? ('profilo: ' + pv) : ''].filter(Boolean).join(' · ');
         h += '<label style="display:flex;flex-direction:column;gap:4px;font-size:9px;color:#888;text-transform:uppercase;">' + esc(percentLiftLabel(lift)) +
-          '<input id="pct-max-' + esc(lift) + '" type="number" step="0.5" inputmode="decimal" value="' + esc(String(v)) + '" placeholder="kg" style="padding:8px;font-size:14px;font-weight:700;text-align:center;width:100%;">' +
+          '<input id="pct-max-' + esc(lift) + '" type="number" step="0.5" inputmode="decimal" value="' + esc(String(v)) + '" placeholder="' + wUnit() + '" style="padding:8px;font-size:14px;font-weight:700;text-align:center;width:100%;">' +
           (hint ? '<span style="font-size:9px;color:#666;text-transform:none;">' + esc(hint) + '</span>' : '') + '</label>';
       });
       h += '</div><button class="btn btn-primary" type="button" style="width:100%;margin-top:10px;font-size:12px;font-weight:800;" onclick="applyPercentMaxesFromPanel()">RICALCOLA CARICHI</button>' +
@@ -22451,9 +22526,9 @@ function applyPercentMaxesFromPanel() {
     const changes = [];
     lifts.forEach(function (lift) {
       const el = document.getElementById('pct-max-' + lift);
-      const v = parseFloat(String((el && el.value) || '').replace(',', '.'));
+      const v = parseFloat(String(dispToKg((el && el.value) || '')).replace(',', '.'));
       if (!(v > 0 && v < 1000)) return;
-      if (Number(maxes[lift]) !== v) changes.push(percentLiftLabel(lift) + ' ' + v + ' kg');
+      if (Number(maxes[lift]) !== v) changes.push(percentLiftLabel(lift) + ' ' + kgToDisp(v) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg'));
       maxes[lift] = v;
     });
     if (!lifts.some(function (lift) { return Number(maxes[lift]) > 0; })) {
@@ -23407,8 +23482,8 @@ function renderTraining(c){
           ${exLogUnit === 'cardio'
             ? '<div>#</div><div>MINUTI</div><div>DATI</div><div>' + exIntens + '</div><div>OK</div><div>&#10005;</div>'
             : (exLogUnit === 'time'
-              ? '<div>#</div><div>KG</div><div>SECONDI</div><div>TIMER</div><div>OK</div><div>&#10005;</div>'
-              : '<div>#</div><div>KG</div><div>REPS</div><div>' + exIntens + '</div><div>OK</div><div>&#10005;</div>')}
+              ? '<div>#</div><div>' + wUnit().toUpperCase() + '</div><div>SECONDI</div><div>TIMER</div><div>OK</div><div>&#10005;</div>'
+              : '<div>#</div><div>' + wUnit().toUpperCase() + '</div><div>REPS</div><div>' + exIntens + '</div><div>OK</div><div>&#10005;</div>')}
         </div>`;
 
         const warmCount = countWarmupSets(row.sets);
@@ -23474,7 +23549,7 @@ function renderTraining(c){
             const running = window.__setTimer && window.__setTimer.key === k;
             h += `<div class="set-row">
             <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
-            <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || pctPlanLoad || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
+            <input type="number" id="${k}_load" step="0.5" placeholder="${kgToDisp(sugg || pctPlanLoad || '')}" value="${kgToDisp(shownLoad)}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
             <input type="number" id="${k}_sec" step="1" min="0" placeholder="${targetSec}" value="${shownSec}" oninput="updateData('${k}_sec',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;background:#1a1a1a;">
             <button type="button" id="${k}_timerbtn" class="btn btn-outline" style="font-size:11px;padding:8px 2px;${running ? 'border-color:var(--gold);color:var(--gold);' : ''}" title="Avvia il conto alla rovescia" onclick="toggleSetTimer(${fIdx}, ${s}, ${targetSec}, '${restForSet}')">${running ? '■' : '▶ ' + targetSec + 's'}</button>
             <button class="set-done-btn ${isDone?'active':''}" title="Segna fatto" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
@@ -23483,7 +23558,7 @@ function renderTraining(c){
           } else {
           h += `<div class="set-row${isWarm ? ' set-row-warmup' : ''}" ${isWarm ? 'style="opacity:0.72;" title="Serie di riscaldamento: non conta nel volume ne\u2019 nei record"' : ''}>
             <div style="font-size:${isWarm ? '11px' : '13px'};font-weight:bold;color:${isWarm ? '#8a8a8a' : 'var(--gold)'};text-align:center;">${setLabel}</div>
-            <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || pctPlanLoad || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" onfocus="showPrevLoad(event, '${k}_load')" onblur="hidePrevLoad()" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid ${isWarm ? '#555' : 'var(--gold)'};background:#1a1a1a;">
+            <input type="number" id="${k}_load" step="0.5" placeholder="${kgToDisp(sugg || pctPlanLoad || '')}" value="${kgToDisp(shownLoad)}" oninput="updateData('${k}_load',this.value)" onfocus="showPrevLoad(event, '${k}_load')" onblur="hidePrevLoad()" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid ${isWarm ? '#555' : 'var(--gold)'};background:#1a1a1a;">
             <select id="${k}_reps" onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${shownReps==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
             <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${sameIntensityOption(shownRir, i)?'selected':''}>${i}</option>`).join('')}</select>
             <button class="set-done-btn ${isDone?'active':''}" title="1 tap: conferma kg/reps e avvia riposo" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
@@ -23555,7 +23630,7 @@ function renderTraining(c){
         </div>
 
         <div style="display:grid;grid-template-columns:28px 1fr 1fr 1fr 34px 26px;gap:6px;align-items:center;margin-bottom:6px;font-size:9px;color:#666;text-align:center;font-weight:800;">
-          <div>#</div><div>KG</div><div>REPS</div><div>${exIntens}</div><div>OK</div><div>✕</div>
+          <div>#</div><div>${wUnit().toUpperCase()}</div><div>REPS</div><div>${exIntens}</div><div>OK</div><div>✕</div>
         </div>`;
 
       for(let s = 1; s <= totalSets; s++) {
@@ -23570,7 +23645,7 @@ function renderTraining(c){
           : (bonusSugg || '');
         h += `<div class="set-row">
           <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
-          <input type="number" id="${k}_load" step="0.5" placeholder="${bonusSugg || ''}" value="${bonusShown}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
+          <input type="number" id="${k}_load" step="0.5" placeholder="${kgToDisp(bonusSugg || '')}" value="${kgToDisp(bonusShown)}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
           <select id="${k}_reps" onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${store.data[k+'_reps']==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
           <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${sameIntensityOption(store.data[k+'_rir'], i)?'selected':''}>${i}</option>`).join('')}</select>
           <button class="set-done-btn ${isDone?'active':''}" onclick="completeSetQuick(${fIdx}, ${s}, '${restBonus}')">${isDone?'✓':'○'}</button>
@@ -25054,6 +25129,7 @@ function unlinkSuperset(ssId) {
 }
 
 function updateData(key, val){
+  if (/_load$/.test(String(key || ''))) val = dispToKg(val);
   maybePushFieldUndo(/_load$/.test(String(key || '')) ? 'carico' : (/_reps$/.test(String(key || '')) ? 'reps' : 'serie'), key);
   store.data[key] = val;
   if (/_s\d+_load$/.test(String(key || ''))) store.data[String(key).replace(/_load$/, '_load_user')] = 1;
@@ -25906,7 +25982,7 @@ var SESSION_CARD_PR_LABEL = {
 };
 
 function formatKgIt(n) {
-  const v = Math.round(Number(n) || 0);
+  const v = Math.round(Number(typeof kgToDisp === 'function' ? kgToDisp(Number(n) || 0) : (Number(n) || 0)) || 0);
   return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
@@ -25929,8 +26005,8 @@ function formatSessionCardDate(iso) {
 function formatSessionCardPr(pr) {
   const type = pr && pr.type;
   const v = Number(pr && pr.value);
-  if (type === 'reps') return v + ' rip' + (pr.load != null ? (' × ' + formatKgIt(pr.load) + ' kg') : '');
-  if (type === 'weight' || type === 'e1rm' || type === 'volume') return formatKgIt(v) + ' kg';
+  if (type === 'reps') return v + ' rip' + (pr.load != null ? (' × ' + formatKgIt(pr.load) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')) : '');
+  if (type === 'weight' || type === 'e1rm' || type === 'volume') return formatKgIt(v) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg');
   return String(pr && pr.value != null ? pr.value : '');
 }
 
@@ -25971,7 +26047,7 @@ function buildSessionCardData(input) {
     durationSec: Math.max(0, Number(log.durationSec) || 0),
     durationText: formatDurationIt(log.durationSec),
     tonnage: Math.max(0, Math.round(Number(log.tonnage) || 0)),
-    tonnageText: formatKgIt(log.tonnage) + ' kg',
+    tonnageText: formatKgIt(log.tonnage) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg'),
     sets: Math.max(0, Number(log.sets) || 0),
     exercises: Math.max(0, Number(log.exercises) || 0),
     prs: prs,
@@ -26042,7 +26118,7 @@ function sessionTextLines(card) {
   const c = card || {};
   const setCount = sessionTextSetCount(c);
   const head = [c.durationText || formatDurationIt(c.durationSec)];
-  if (Number(c.tonnage) > 0) head.push(c.tonnageText || (formatKgIt(c.tonnage) + ' kg'));
+  if (Number(c.tonnage) > 0) head.push(c.tonnageText || (formatKgIt(c.tonnage) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')));
   if (setCount > 0) head.push(setCount + ' serie');
   const lines = ['**' + String(c.title || 'Seduta') + ' — ' + formatSessionTextDate(c.at) + '** (' + head.join(' · ') + ')'];
   const prs = Array.isArray(c.prs) ? c.prs : [];
@@ -26098,7 +26174,7 @@ function formatSessionPeriodText(cards) {
     head.push(from === to ? from : (from + ' – ' + to));
   }
   head.push(formatDurationIt(dur));
-  if (kg > 0) head.push(formatKgIt(kg) + ' kg');
+  if (kg > 0) head.push(formatKgIt(kg) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg'));
   if (sets > 0) head.push(sets + ' serie');
   if (cardio > 0) head.push('cardio ' + cardio + ' min');
   const blocks = ['**Totale: ' + list.length + (list.length === 1 ? ' seduta' : ' sedute') + '** (' + head.join(' · ') + ')'];
@@ -30545,7 +30621,7 @@ function setStatsZoomSlider(n) {
   });
 }
 function formatStatsKg(n) {
-  return Math.round(Number(n) || 0).toLocaleString('it-IT');
+  return Math.round(Number(typeof kgToDisp === 'function' ? kgToDisp(Number(n) || 0) : (Number(n) || 0)) || 0).toLocaleString('it-IT');
 }
 function buildTrainingAnalytics() {
   const TAE = window.TrainingAnalyticsEngine;
@@ -30699,7 +30775,7 @@ function fillStatsAdvancedPanel(analytics) {
     return '<div class="stats-adv-row"><span>' + esc(L(p.type)) + ' · ' + esc(p.name) + '</span><span>' + esc(String(p.value)) + (p.week ? (' · W' + p.week) : '') + '</span></div>';
   }).join('') || '<div>Nessun PR derivabile dai log.</div>';
   const exHtml = (analytics.byExercise || []).map(function (e) {
-    return '<div class="stats-adv-row is-click" onclick="setStatsExercise(\'' + String(e.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')"><span>' + esc(e.name) + '</span><span>' + formatStatsKg(e.volume) + ' kg · ' + e.sets + ' serie' + (mode === 'exercise' && e.e1rm != null ? (' · e1RM ' + e.e1rm) : '') + '</span></div>';
+    return '<div class="stats-adv-row is-click" onclick="setStatsExercise(\'' + String(e.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')"><span>' + esc(e.name) + '</span><span>' + formatStatsKg(e.volume) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + ' · ' + e.sets + ' serie' + (mode === 'exercise' && e.e1rm != null ? (' · e1RM ' + e.e1rm) : '') + '</span></div>';
   }).join('') || '<div>Nessun esercizio nel periodo.</div>';
   let focusHtml = '';
   if (mode === 'exercise' && store.prefs && store.prefs.statsExercise && TAE && TAE.analyzeExercise) {
@@ -30740,7 +30816,7 @@ function fillStatsAdvancedPanel(analytics) {
         '<div class="stats-adv-row"><span>Serie pesate (euristica)</span><span>' + mg.effectiveWeightedSets + ' serie</span></div>' +
         '<div class="stats-adv-row"><span>Dose interna ETD</span><span>' + mg.effectiveTrainingDose + '</span></div>' +
         '<div class="stats-adv-row"><span>Costo di fatica (modello)</span><span>' + esc(L(mg.fatigueCost)) + '</span></div>' +
-        '<div class="stats-adv-row"><span>Volume allenante</span><span>' + formatStatsKg(mg.volume) + ' kg</span></div>' +
+        '<div class="stats-adv-row"><span>Volume allenante</span><span>' + formatStatsKg(mg.volume) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>' +
         '<div class="stats-adv-row"><span>Frequenza</span><span>' + mg.frequency + ' sedute</span></div>' +
         '<div class="stats-adv-row"><span>Sforzo percepito medio</span><span>' + (mg.avgRpe == null ? '—' : (mg.avgRpe + '/10')) + '</span></div>' +
         '<div style="font-size:10px;color:#777;margin:6px 0 12px;">Nessun e1RM aggregato tra esercizi diversi. Diretto/indiretto è un modello, non una misura fisiologica.</div>';
@@ -30805,8 +30881,8 @@ function fillStatsAdvancedPanel(analytics) {
         : '') +
     '<div style="font-size:10px;color:#777;margin:6px 0 14px;">' + esc(ad.note || rec.note || '') + '</div>' +
     '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">TRAINING LOAD (modello adattato)</div>' +
-    '<div class="stats-adv-row"><span>Carico recente stimato (ATL)</span><span>' + (tl.atl == null ? '—' : formatStatsKg(tl.atl) + ' kg') + '</span></div>' +
-    '<div class="stats-adv-row"><span>Carico abituale stimato (CTL)</span><span>' + (tl.ctl == null ? '—' : formatStatsKg(tl.ctl) + ' kg') + '</span></div>' +
+    '<div class="stats-adv-row"><span>Carico recente stimato (ATL)</span><span>' + (tl.atl == null ? '—' : formatStatsKg(tl.atl) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')) + '</span></div>' +
+    '<div class="stats-adv-row"><span>Carico abituale stimato (CTL)</span><span>' + (tl.ctl == null ? '—' : formatStatsKg(tl.ctl) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')) + '</span></div>' +
     '<div class="stats-adv-row"><span>Bilancio del carico (TSB)</span><span>' + (tl.tsb == null ? '—' : tl.tsb) + '</span></div>' +
     '<div style="font-size:10px;color:#777;margin:6px 0 14px;">Modello adattato e dipendente dal contesto; non è una misura fisiologica diretta. ' + esc(tl.methodology || fat.note || '') + '</div>' +
     '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">PR RILEVATI</div>' + prHtml +
@@ -30903,9 +30979,9 @@ function renderStatsData(){
   if ($('summary-body')) $('summary-body').innerHTML = tH;
 
   const k = analytics.kpis;
-  if ($('stats-kpi-tot')) $('stats-kpi-tot').textContent = k.volumeTotal > 0 ? (formatStatsKg(k.volumeTotal) + ' kg') : '—';
+  if ($('stats-kpi-tot')) $('stats-kpi-tot').textContent = k.volumeTotal > 0 ? (formatStatsKg(k.volumeTotal) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')) : '—';
   if ($('stats-kpi-tot-d')) $('stats-kpi-tot-d').textContent = 'kg nel periodo zoomato · ' + analytics.window.weeks.length + ' ' + (statsAxis() === 'calendar' ? 'sett. calendario' : 'sett. scheda');
-  if ($('stats-kpi-week')) $('stats-kpi-week').textContent = k.volumeWeek > 0 ? (formatStatsKg(k.volumeWeek) + ' kg') : '—';
+  if ($('stats-kpi-week')) $('stats-kpi-week').textContent = k.volumeWeek > 0 ? (formatStatsKg(k.volumeWeek) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')) : '—';
   if ($('stats-kpi-week-d')) $('stats-kpi-week-d').textContent = k.weekLabel || 'ultima nel zoom';
   if ($('stats-kpi-var')) {
     $('stats-kpi-var').textContent = k.volumeVarWeek == null ? '—' : ((k.volumeVarWeek >= 0 ? '+' : '') + k.volumeVarWeek + '%');

@@ -1272,9 +1272,22 @@ function parseWeeklySchemeLadder(text) {
   // What may stand after a week's scheme: its load or its % (and an "@").
   const tailRe = /^\s*(?:@\s*)?(\d{1,3}(?:[.,]\d{1,2})?)\s*(kg|%)/i;
   const weeks = [];
+  let joinNext = false;
   for (let i = 0; i < matches.length; i++) {
     const m = matches[i];
     const endOf = m.index + m[0].length;
+    // "3X3+ 1XMAX" at the end of a ladder: one week, two blocks in the session.
+    if (joinNext && weeks.length) {
+      const w = weeks[weeks.length - 1];
+      const r = String(m[2]).trim().toUpperCase() === 'MAX' ? 'MAX' : String(m[2]).trim();
+      w.raw += '+' + m[1] + 'x' + r;
+      (w.plus = w.plus || []).push({ sets: parseInt(m[1], 10), reps: r });
+      const nextStartJ = i + 1 < matches.length ? matches[i + 1].index : null;
+      const betweenJ = nextStartJ != null ? str.slice(endOf, nextStartJ) : '';
+      joinNext = nextStartJ != null && /^\s*\+\s*$/.test(betweenJ);
+      if (nextStartJ != null && !joinNext && !/^\s*(?:[\-–—\/,;>|→]|->|=>)\s*$/.test(betweenJ)) return null;
+      continue;
+    }
     const nextStart = i + 1 < matches.length ? matches[i + 1].index : null;
     let between = nextStart != null ? str.slice(endOf, nextStart) : '';
     const tail = between.match(tailRe);
@@ -1291,7 +1304,11 @@ function parseWeeklySchemeLadder(text) {
     // Weeks are separated by - \u2013 / , ; > \u2192 | only: "+" is the same session.
     // Named weeks ("sett.1: 3x10 sett.2: 4x10") need no separator: the label was one.
     const sepRe = labelled >= 2 ? /^\s*(?:[\-\u2013\u2014\/,;>|\u2192]|->|=>)?\s*$/ : /^\s*(?:[\-\u2013\u2014\/,;>|\u2192]|->|=>)\s*$/;
-    if (nextStart != null && !sepRe.test(between)) return null;
+    // A "+" before the last step joins it to this week (see above); anywhere
+    // else it still says "same session", not a ladder.
+    joinNext = false;
+    if (nextStart != null && /^\s*\+\s*$/.test(between) && i + 1 === matches.length - 1 && weeks.length >= 2) joinNext = true;
+    else if (nextStart != null && !sepRe.test(between)) return null;
     weeks.push({
       sets: clampSets(m[1]) || parseInt(m[1], 10),
       reps: String(m[2]).trim().toUpperCase() === 'MAX' ? 'MAX' : String(m[2]).trim(),
@@ -1465,7 +1482,7 @@ function resolvePrescription(ex) {
   if (e.prescription && e.prescription.locked && e.prescription.sets) {
     return {
       sets: clampSets(e.prescription.sets),
-      reps: e.prescription.reps || e.reps || e.reps_target || '8-10',
+      reps: e.prescription.reps || e.reps || e.reps_target || null,
       raw: e.prescription.raw || null,
       technique: e.prescription.technique || null,
       source: 'locked'
@@ -1498,7 +1515,7 @@ function resolvePrescription(ex) {
   if (declared != null) {
     return {
       sets: declared,
-      reps: repsGuess != null ? String(repsGuess) : '8-10',
+      reps: repsGuess != null ? String(repsGuess) : null,
       raw: declared + 'x' + (repsGuess || '?'),
       technique: DROP_RE.test(blob) ? 'drop_set' : null,
       source: 'declared_int'
@@ -1507,7 +1524,7 @@ function resolvePrescription(ex) {
   if (dataSafe != null) {
     return {
       sets: dataSafe,
-      reps: repsGuess != null ? String(repsGuess) : '8-10',
+      reps: repsGuess != null ? String(repsGuess) : null,
       raw: dataSafe + 'x' + (repsGuess || '?'),
       technique: DROP_RE.test(blob) ? 'drop_set' : null,
       source: 'array_length'
@@ -1529,7 +1546,8 @@ function enforceExercisePrescription(ex, prescriptionOpt) {
   const pattern = Array.isArray(p.reps_pattern) && p.reps_pattern.length
     ? p.reps_pattern
     : (Array.isArray(e.reps_pattern) ? e.reps_pattern : null);
-  const reps = p.reps || e.reps || e.reps_target || template.reps || template.target_reps || '8-10';
+  // Reps the file does not give stay empty: never a made-up "8-10".
+  const reps = p.reps || e.reps || e.reps_target || template.reps || template.target_reps || null;
   const rows = [];
   for (let i = 0; i < p.sets; i++) {
     const src = rawRows[i] ? { ...rawRows[i] } : { ...template };
@@ -1713,9 +1731,15 @@ const _IT_COLUMN_WORDS = [
   ['rir', /^(rir|rir target)$/],
   ['rest', /^(recupero|rest|pausa|riposo|pause|rec\.?|rest sec|rest s)$/],
   ['tempo', /^(tempo|tut)$/],
-  ['notes', /^(note|notes|bemerkung|bemerkungen|commento|commenti|comments?)$/]
+  ['notes', /^(note|notes|bemerkung|bemerkungen|commento|commenti|comments?|technique|tecnica|coaching notes?|cues?|istruzioni)$/],
+  // A whole scheme in one cell: "Work-up (load × reps)" (95×3, 100×2...), "Sets x Reps".
+  ['scheme', /^(work ?-?up|scheme|schema|prescription|prescrizione|sets? ?[x×] ?reps?|serie ?[x×] ?rip\w*|load ?[x×] ?reps?|carico ?[x×] ?rip\w*|kg ?[x×] ?rip\w*)$/],
+  // Assistance work listed beside the main lift, names only (Juggernaut's "ACCESSORY").
+  ['accessory', /^(accessor(?:y|ies|i|io)|complementari|assistenza|assistance)$/],
+  // What the athlete fills in: never a prescription.
+  ['log', /^(log|weight used|reps done|done|fatto|eseguito|actual|achieved|carico usato|rip(?:etizioni)? fatte)$/]
 ];
-const _IT_METRICS = ['sets', 'reps', 'pct', 'load', 'rpe', 'rir'];
+const _IT_METRICS = ['sets', 'reps', 'pct', 'load', 'rpe', 'rir', 'scheme'];
 const _IT_WEEK_RE = /^(?:week|wk|settimana|sett\.?|woche)\s*\.?\s*(\d{1,2})\b/i;
 const _IT_WEEK_EXTRA_RE = /^(?:meet week|competition week|taper(?: week)?|settimana (?:di )?gara|wettkampfwoche|deload week)\b/i;
 // Day 2, Giorno 3, Tag 5 - and the lettered days of Italian sheets (GIORNO A, Day B).
@@ -1733,6 +1757,9 @@ function _itColumnKind(text) {
   let t = _itFold(text).replace(/[:.]+$/, '').trim();
   if (!t) return null;
   const bare = t.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+  // "Work-up (load × reps)": the words in brackets say what the cells hold.
+  const inBrackets = (t.match(/\(([^)]*)\)/) || [])[1] || '';
+  if (/\b(load|carico|kg|peso|weight|sets?|serie)\s*[x×]\s*(reps?|rip\w*)\b/.test(inBrackets)) return 'scheme';
   for (const [kind, re] of _IT_COLUMN_WORDS) {
     if (re.test(t) || (bare && re.test(bare))) return kind;
   }
@@ -1813,12 +1840,84 @@ function _itReps(cell) {
   let t = _itCellText(cell).toLowerCase();
   if (!t || /^x+$/.test(t) || t === '-') return null;
   t = t.replace(/^x\s*/, '');
-  t = t.replace(/\s*(?:bis|to|a|-|\u2013|\u2014)\s*/g, '-');
+  // "8 a 10", "8 to 10", "8 bis 10": a range - only between numbers ("amrap" has an "a" too).
+  t = t.replace(/(\d)\s*(?:bis|to|a|-|\u2013|\u2014)\s*(?=\d)/g, '$1-');
   if (/^\d{1,3}(?:-\d{1,3})?$/.test(t)) return t;
   if (/^(?:mr|amrap|max)\s*\d*$/.test(t)) return t.toUpperCase().replace(/\s+/g, '');
   if (/^\d{1,3}\s*(?:s|sec|")$/.test(t)) return t.replace(/\s+/g, '');
   if (/^\d{1,3}(?:\/\d{1,3})+$/.test(t)) return t;
+  // "5+": at least five, the last set of a wave.
+  if (/^\d{1,3}\s*\+$/.test(t)) return t.replace(/\s+/g, '');
+  if (/^(?:to )?(?:failure|cedimento|fallimento|muskelversagen)$/.test(t)) return 'MAX';
   return null;
+}
+
+// A reps cell that says more than a number: "12, 10, 12" (one per set),
+// "8 each" / "20 (10 each leg)" (the number, the rest a note), "superset"
+// (no number: a note). Returns { reps, list, note } or null.
+function _itRepsDetail(cell) {
+  if (!cell) return null;
+  const text = _itCellText(cell);
+  if (!text) return null;
+  const direct = _itReps(cell);
+  if (direct != null) return { reps: direct, list: null, note: null };
+  const t = text.toLowerCase().trim();
+  if (/^\d{1,3}(?:\s*[,;]\s*\d{1,3}){1,19}$/.test(t)) return { reps: null, list: t.split(/\s*[,;]\s*/), note: null };
+  const lead = t.match(/^(\d{1,3}(?:\s*[-–]\s*\d{1,3})?)\s+(?=[a-z(])(.+)$/i);
+  if (lead && !/^(?:x|sets?|serie|kg|lbs?|%)\b/i.test(lead[2])) return { reps: lead[1].replace(/\s*[-–]\s*/, '-'), list: null, note: text };
+  if (/^[a-z][a-z\s\-]{2,30}$/i.test(t)) return { reps: null, list: null, note: text };
+  return null;
+}
+
+// A scheme written in one cell, as a list of steps:
+//   "90×3, 90×3, 95×3"          load × reps, one set each (loadFirst)
+//   "70×3+3, 100×1+3"           load × a complex (3 of each movement)
+//   "2x20, 2-3x3-4, 1x6-8"      sets × reps
+//   "reps: 10, 10, 10"          reps, one set each
+// Returns [{ sets, setsNote, reps, load }] or null when a step does not read.
+function _itSchemeGroups(text, loadFirst) {
+  let t = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!t) return null;
+  const repsOnly = t.match(/^(?:reps?|rip(?:etizioni)?|wdh)\s*:\s*(.+)$/i);
+  if (repsOnly) {
+    const parts = repsOnly[1].split(/\s*[,;]\s*/).filter(Boolean);
+    if (!parts.every((p) => /^\d{1,3}(?:-\d{1,3})?$/.test(p) || /^max|amrap$/i.test(p))) return null;
+    return parts.map((p) => ({ sets: 1, setsNote: null, reps: /^\d/.test(p) ? p : p.toUpperCase(), load: null }));
+  }
+  const parts = t.split(/\s*[,;]\s*/).filter(Boolean);
+  const out = [];
+  for (const p of parts) {
+    const m = p.match(/^(\d{1,3}(?:[.,]\d{1,2})?(?:\s*-\s*\d{1,2})?)\s*[x×*]\s*(\d{1,3}(?:\s*[-+]\s*\d{1,3})*)\s*$/i);
+    if (!m) return null;
+    const a = m[1].replace(/\s+/g, '');
+    const reps = m[2].replace(/\s+/g, '');
+    if (loadFirst) {
+      const load = Number(a.replace(',', '.'));
+      if (!Number.isFinite(load) || /-/.test(a)) return null;
+      out.push({ sets: 1, setsNote: null, reps, load });
+    } else {
+      const range = a.match(/^(\d{1,2})-(\d{1,2})$/);
+      const sets = range ? Number(range[1]) : Number(a);
+      if (!Number.isInteger(sets) || sets < 1 || sets > 20) return null;
+      out.push({ sets, setsNote: range ? a + ' serie' : null, reps, load: null });
+    }
+  }
+  return out.length ? out : null;
+}
+
+// The steps of a scheme cell built by a formula from the maxes:
+// ROUND(Setup!$C$4*0.65/...)&"×3" -> [{ ref: 'Setup!C4', factor: 0.65 }, ...].
+function _itFormulaSteps(formula, sheetName) {
+  const f = String(formula || '');
+  const re = /(?:'([^']+)'|([A-Za-z_][\w.]*))?(!)?\$?([A-Z]{1,3})\$?(\d{1,5})\s*\*\s*(\d+(?:\.\d+)?)/g;
+  const steps = [];
+  let m;
+  while ((m = re.exec(f))) {
+    const sheet = m[3] ? (m[1] || m[2]) : sheetName;
+    if (!m[3] && (m[1] || m[2])) continue;
+    steps.push({ ref: sheet + '!' + m[4] + m[5], factor: Number(m[6]) });
+  }
+  return steps;
 }
 // "3", "1+2F" (a top set and two back-off sets), "5 serie".
 function _itSets(cell) {
@@ -1859,23 +1958,33 @@ function _itHeaderOf(row) {
     if (!text) return;
     if (_IT_SET_COL_RE.test(text)) { setCols++; return; }
     const kind = _itColumnKind(text);
-    if (kind) cols.push({ c, kind });
+    // Log columns (what the athlete writes in) are not part of the prescription.
+    if (kind && kind !== 'log') cols.push({ c, kind });
   });
   if (setCols >= 2) return { setColumns: true, cols: [] };
   const metrics = cols.filter((x) => _IT_METRICS.includes(x.kind));
   const kinds = new Set(cols.map((x) => x.kind));
-  if (metrics.length < 2 || kinds.size < 2) return null;
-  return { setColumns: false, cols };
+  // "Exercise | Work-up (load × reps)": one scheme column is a prescription on its own.
+  const schemeHeader = kinds.has('exercise') && kinds.has('scheme');
+  if ((metrics.length < 2 && !schemeHeader) || kinds.size < 2) return null;
+  return { setColumns: false, cols, texts: (row || []).map(_itCellText) };
 }
 
 // Column groups of a header: one group, or one per repetition (weeks side by side).
-function _itGroups(header) {
+// The columns repeat for weeks only when the sheet says so - week labels over
+// them, or an exercise column of their own each (Juggernaut's four phases).
+// "Sets | Reps | Weight | Reps" is one prescription and a log beside it: the
+// second Reps is the athlete's, not another week.
+function _itGroups(header, sideBySide) {
   const cols = header.cols.slice().sort((a, b) => a.c - b.c);
   const exerciseCols = cols.filter((x) => x.kind === 'exercise');
-  const rest = cols.filter((x) => x.kind !== 'exercise');
+  const accCol = (cols.find((x) => x.kind === 'accessory') || {}).c;
+  const rest = cols.filter((x) => x.kind !== 'exercise' && x.kind !== 'accessory');
   const counts = {};
   rest.forEach((x) => { counts[x.kind] = (counts[x.kind] || 0) + 1; });
-  const repeated = Object.keys(counts).filter((k) => counts[k] >= 2 && _IT_METRICS.includes(k));
+  const repeated = (sideBySide || exerciseCols.length >= 2)
+    ? Object.keys(counts).filter((k) => counts[k] >= 2 && _IT_METRICS.includes(k))
+    : [];
   const groups = [];
   if (repeated.length) {
     // Each group starts at the first repeated kind that comes back.
@@ -1896,13 +2005,26 @@ function _itGroups(header) {
     const firstMetric = Math.min(...rest.map((x) => x.c));
     exCol = Math.max(0, firstMetric - 1);
   }
-  return { exCol, groups };
+  // Each group reads its exercise from the exercise column that opens it, when there are several.
+  if (exerciseCols.length >= 2 && groups.length >= 2) {
+    groups.forEach((g) => {
+      const own = exerciseCols.filter((x) => x.c < g.start).pop();
+      if (own) g.exCol = own.c;
+    });
+  }
+  // A scheme column: its header says whether the steps are load × reps or sets × reps.
+  const schemeCol = rest.find((x) => x.kind === 'scheme');
+  const loadFirst = schemeCol ? /\b(load|carico|kg|peso|weight|work ?-?up)\b/i.test(_itFold(header.texts ? header.texts[schemeCol.c] : '')) : false;
+  return { exCol, groups, accCol, schemeLoadFirst: loadFirst };
 }
 
 function _itWeekLabel(text) {
   const t = String(text || '').trim();
   const m = t.match(_IT_WEEK_RE);
   if (m) return { n: Number(m[1]), label: t };
+  // "ACCUMULATION PHASE - WEEK 1", "Fase 2 · settimana 6": a heading that ends with its week.
+  const tail = t.length <= 50 ? t.match(/[-–—:·|,]\s*(?:week|wk|settimana|sett\.?|woche)\s*\.?\s*(\d{1,2})\s*$/i) : null;
+  if (tail) return { n: Number(tail[1]), label: t };
   if (_IT_WEEK_EXTRA_RE.test(t)) return { n: null, label: t };
   return null;
 }
@@ -1939,6 +2061,10 @@ function _itFormulaRefs(formula, sheetName) {
 }
 
 const _IT_LIFTS = [
+  // Before squat: "Front Squat 205" is not the squat max.
+  ['front_squat', /\b(front squat|squat frontale|frontkniebeuge)\b/],
+  ['snatch', /^(snatch|strappo|reissen|reißen)$/],
+  ['clean_jerk', /^(clean ?(?:&|and) ?jerk|c ?& ?j|slancio|stossen|stoßen)$/],
   ['squat', /\b(squat|kniebeuge|accosciata|sq)\b/],
   ['bench', /\b(bench(?: press)?|panca|bankdrucken|bankdruecken|bp|b)\b/],
   ['deadlift', /\b(deadlift|stacco|kreuzheben|dead|dl)\b/]
@@ -1951,7 +2077,7 @@ function _itFindMaxes(sheets) {
   const seen = new Set();
   sheets.forEach(({ name, grid }) => {
     // Statistics and lookup sheets list lifts next to counts, not maxes.
-    if (/volume|calc|statist|klassen|class|dropdown|catalog|katalog/i.test(name)) return;
+    if (/volume|calc|statist|\bstats?\b|klassen|class|dropdown|catalog|katalog/i.test(name)) return;
     grid.slice(0, 80).forEach((row, r) => {
       (row || []).slice(0, 14).forEach((cell, c) => {
         const text = _itFold(_itCellText(cell));
@@ -1964,7 +2090,14 @@ function _itFindMaxes(sheets) {
           // "Squat | Warm Up | 180" is a program row: a max sits right after its label.
           if (v == null) { if (_itCellText(row[k])) break; continue; }
           if (v < 20 || v > 500) break;
-          const kind = /projected|ziel|target|obiettivo|previst|goal|e1rm/.test(text) ? 'projected' : 'current';
+          // The column's header, a few rows up: "WAVE TRAINING MAX" is not a 1RM.
+          let colHead = '';
+          for (let u = r - 1; u >= Math.max(0, r - 60) && !colHead; u--) {
+            const h = _itFold(_itCellText((grid[u] || [])[k]));
+            if (h && !/^\d/.test(h)) colHead = h;
+          }
+          const kind = /training max|\btm\b|massimale allenante|trainingsmax/.test(text + ' ' + colHead) ? 'training'
+            : (/projected|ziel|target|obiettivo|previst|goal|e1rm/.test(text) ? 'projected' : 'current');
           const key = lift[0] + '|' + kind + '|' + v;
           const entry = { lift: lift[0], value: v, kind, sheet: name, addr: name + '!' + row[k].addr, label: _itCellText(cell) };
           if (seen.has(key)) entry.duplicate = true;
@@ -1976,6 +2109,39 @@ function _itFindMaxes(sheets) {
     });
   });
   return found;
+}
+
+// 'lb' when the workbook says its loads are pounds, else 'kg'.
+function _itWorkbookUnit(sheets) {
+  let mentionsLb = false;
+  let rounding5 = false;
+  for (const { grid } of sheets) {
+    for (let r = 0; r < Math.min(grid.length, 200); r++) {
+      const row = grid[r] || [];
+      for (let c = 0; c < Math.min(row.length, 30); c++) {
+        const t = _itFold(_itCellText(row[c]));
+        if (!t) continue;
+        // A load column headed in pounds.
+        if (t.length <= 30 && /^(weight|load|peso|carico)\s*\(?\s*(lbs?|pounds?)\s*\)?$/.test(t)) return 'lb';
+        if (t.length <= 30 && /^(weight|load|peso|carico)\s*\(\s*kg\s*\)$/.test(t)) return 'kg';
+        // "Do you track your weights in kilograms or pounds? | kg": the answer decides.
+        if (/(kilo(gram)?s? or pounds|kg or lbs?|pounds or kilo|unita di misura|units?\b.*\b(kg|lb))/.test(t)) {
+          const around = [row[c + 1], (grid[r + 1] || [])[c + 1], (grid[r + 1] || [])[c]].map((x) => _itFold(_itCellText(x)));
+          const ans = around.find((x) => /^(kg|kgs|kilo\w*|lbs?|pounds?)$/.test(x));
+          if (ans) return /^(lbs?|pounds?)$/.test(ans) ? 'lb' : 'kg';
+          continue;
+        }
+        if (/\b(lbs?|pounds?)\b/.test(t)) mentionsLb = true;
+        // "Rounding | 5": the plate step the loads are rounded to.
+        if (/^(rounding|arrotondamento|round to|rundung)$/.test(t)) {
+          for (let k = c + 1; k <= c + 2 && k < row.length; k++) {
+            if (row[k] && typeof row[k].v === 'number') { if (row[k].v === 5) rounding5 = true; break; }
+          }
+        }
+      }
+    }
+  }
+  return mentionsLb && rounding5 ? 'lb' : 'kg';
 }
 
 function _itNewExercise(name, normalizeName) {
@@ -2049,9 +2215,29 @@ function _itParseSheet(sheet, ctx) {
     const filled = texts.map((t, c) => (t ? c : -1)).filter((c) => c >= 0);
     if (!filled.length) continue;
 
+    // A title alone on its row, right over a header ("Push Workout", "Day 1 -
+    // Chest and Side Delts", "Monday - Run + Lower Body"): the day that table is.
+    if (filled.length === 1 && texts[filled[0]].length <= 70 && !/:$/.test(texts[filled[0]])) {
+      const lone = texts[filled[0]];
+      const pureWeek = _itWeekLabel(lone) && !_itDayLabel(lone);
+      let next = r + 1;
+      while (next < grid.length && !(grid[next] || []).some((c) => _itCellText(c))) next++;
+      const nh = next < grid.length ? _itHeaderOf(grid[next]) : null;
+      if (!pureWeek && nh && !nh.setColumns && nh.cols.some((x) => x.kind === 'exercise')) {
+        const dlLone = _itDayLabel(lone);
+        newDay(lone, !!(dlLone && dlLone.n != null), r);
+        continue;
+      }
+    }
+
     // Week labels side by side (WEEK 1 | WEEK 2 | ...): the next header takes them.
+    // On the header row itself ("Exercise | Sets | Reps | Wk1 | Wk2 ... Wk8") they
+    // are columns to log each week in: the program runs that many weeks.
     const weekCells = filled.map((c) => ({ c, wl: _itWeekLabel(texts[c]) })).filter((x) => x.wl && x.wl.n != null);
-    if (weekCells.length >= 2) {
+    const headerHere = weekCells.length >= 2 ? _itHeaderOf(row) : null;
+    if (headerHere && !headerHere.setColumns && headerHere.cols.some((x) => x.kind === 'exercise')) {
+      sheet._logWeeks = Math.max(sheet._logWeeks || 0, weekCells.length);
+    } else if (weekCells.length >= 2) {
       header = null;
       sheet._pendingWeekCols = weekCells;
       dayIndex = 0;
@@ -2067,7 +2253,10 @@ function _itParseSheet(sheet, ctx) {
       if (h.setColumns) {
         header = { setColumns: true, exCol: 0, groups: [{ start: 1, map: {} }] };
       } else {
-        const g = _itGroups(h);
+        // Side by side when week labels sit over it, or when it continues a block
+        // whose first header had them (Calgary's day 2, 3, 4).
+        const continuesWeeks = !!(header && !header.setColumns && header.groups.length >= 2 && header.groups[0].weekKey);
+        const g = _itGroups(h, !!sheet._pendingWeekCols || continuesWeeks);
         // Columns a header leaves unnamed keep the previous header's meaning (a week that dropped "%").
         if (header && !header.setColumns && header.groups.length === g.groups.length) {
           g.groups.forEach((gr, i) => {
@@ -2080,7 +2269,7 @@ function _itParseSheet(sheet, ctx) {
         if (header && !header.setColumns && header.groups.length === g.groups.length && header.groups.length >= 2 && header.groups[0].weekKey && !sheet._pendingWeekCols) {
           g.groups.forEach((gr, i) => { gr.weekKey = header.groups[i].weekKey; });
         }
-        header = { setColumns: false, exCol: g.exCol, groups: g.groups };
+        header = { setColumns: false, exCol: g.exCol, groups: g.groups, accCol: g.accCol, schemeLoadFirst: g.schemeLoadFirst };
       }
       if (sheet._pendingWeekCols && header.groups.length >= 2) {
         const labels = sheet._pendingWeekCols;
@@ -2119,7 +2308,8 @@ function _itParseSheet(sheet, ctx) {
     if (!header) continue;
 
     // A data row.
-    const leftLabel = filled.find((c) => c < header.exCol);
+    const leftCells = filled.filter((c) => c < header.exCol);
+    const leftLabel = leftCells.find((c) => _itDayLabel(texts[c])) ?? leftCells[0];
     if (leftLabel != null) {
       const t = texts[leftLabel];
       const isOrder = /^\d{1,2}$/.test(t);
@@ -2164,12 +2354,38 @@ function _itParseSheet(sheet, ctx) {
     }
 
     const groups = header.groups;
+    // Assistance work in its own column (names only, under a "SUPPLEMENTARY:"
+    // heading): kept for the end of the day, in every week of the block.
+    if (header.accCol != null) {
+      const acc = texts[header.accCol];
+      if (acc && !/:\s*$/.test(acc) && !_itIsPlaceholder(acc) && acc.length <= 60) {
+        const keys = [...new Set(groups.map((g) => g.weekKey || singleWeekKey || weekKeyFor(sheetWeek ? sheetWeek.n : null, name)))];
+        keys.forEach((k) => {
+          const d = dayOf(k);
+          if (!d.accessories) d.accessories = [];
+          if (!d.accessories.some((a) => _itFold(a) === _itFold(acc))) d.accessories.push(acc);
+        });
+      }
+    }
     // Long free text in the exercise column only: a note for the exercise above.
     const metricFilled = groups.some((g) => _IT_METRICS.some((k) => g.map[k] != null && texts[g.map[k]]));
     if (!metricFilled) {
       // Long free text: a note for the exercise above. A bare name with
-      // nothing prescribed ("Meet", a sign-off) is not an exercise.
-      if (exText && exText.length > 50 && lastExercise) lastExercise.forEach((e) => e && e.notes.push(exText));
+      // nothing prescribed ("Meet", a sign-off) is not an exercise - unless
+      // the row says what to do some other way ("Run | AM: 5-mile run") or
+      // the name carries it ("100 Push-Ups"): then it is one, without
+      // invented sets or reps.
+      if (exText && exText.length > 50 && lastExercise) { lastExercise.forEach((e) => e && e.notes.push(exText)); continue; }
+      const others = filled.filter((c) => c !== header.exCol && c > header.exCol).map((c) => texts[c]).filter(Boolean);
+      if (exText && groups.length === 1 && !/:\s*$/.test(exText) && !_itIsPlaceholder(exText) && !_itWeekLabel(exText) && !_itDayLabel(exText) &&
+          (others.length || /^\d{1,4}\s+[a-z]/i.test(exText))) {
+        const weekKey = groups[0].weekKey || singleWeekKey || weekKeyFor(sheetWeek ? sheetWeek.n : null, name);
+        const ex = _itNewExercise(exText, ctx.normalizeName);
+        others.forEach((t) => ex.notes.push(t));
+        dayOf(weekKey).exercises.push(ex);
+        lastExercise = [ex];
+        found++;
+      }
       continue;
     }
     // Totals under a day (Sheiko: "Squat | 74 lifts | 10195 kg"): not sets.
@@ -2185,8 +2401,65 @@ function _itParseSheet(sheet, ctx) {
       const m = g.map;
       const cell = (k) => (m[k] != null ? row[m[k]] : null);
       const txt = (k) => (m[k] != null ? texts[m[k]] : '');
+      // Each phase of a side-by-side block names its own exercise.
+      const gEx = g.exCol != null ? (texts[g.exCol] || '') : exText;
+      // "TARGET: | 10", "ACHIEVED: | 42.5": what the athlete is to beat or did, not a set.
+      if (_IT_METRICS.some((k) => m[k] != null && /^[a-z][a-z .]{2,20}:\s*$/i.test(texts[m[k]] || ''))) { perGroup[gi] = null; return; }
+      const weekKeyG = g.weekKey || singleWeekKey || weekKeyFor(sheetWeek ? sheetWeek.n : null, name);
+      const place = (list) => {
+        // A new exercise with these groups, or more sets of the one above.
+        const day = dayOf(weekKeyG);
+        const prev = lastExercise && lastExercise[gi];
+        const sameAsPrev = prev && gEx && _itFold(prev.name_original) === _itFold(gEx) && day.exercises[day.exercises.length - 1] === prev;
+        if ((!gEx && prev && day.exercises[day.exercises.length - 1] === prev) || sameAsPrev) {
+          list.forEach((x) => prev.groups.push(x));
+          perGroup[gi] = prev;
+          return;
+        }
+        if (!gEx) { perGroup[gi] = null; return; }
+        const ex = _itNewExercise(gEx, ctx.normalizeName);
+        list.forEach((x) => ex.groups.push(x));
+        day.exercises.push(ex);
+        perGroup[gi] = ex;
+        found++;
+      };
+      const base = { pct: null, load: null, rpe: null, rir: null, rest: _itRest(cell('rest')), tempo: txt('tempo') || null, note: txt('notes') || null, loadFormula: null, loadRefs: [], extra: null };
+      // A whole scheme in one cell: "95×3, 100×2, 110×1" or "reps: 10, 10, 10".
+      if (m.scheme != null && txt('scheme')) {
+        const steps = _itSchemeGroups(txt('scheme'), header.schemeLoadFirst);
+        if (steps) {
+          const f = cell('scheme') && cell('scheme').f ? String(cell('scheme').f) : null;
+          const fsteps = f ? _itFormulaSteps(f, name) : [];
+          const byFormula = fsteps.length === steps.length;
+          place(steps.map((st, i) => Object.assign({}, base, st, {
+            pct: byFormula ? _itRound(fsteps[i].factor * 100, 1) : null,
+            loadFormula: byFormula ? f : null,
+            loadRefs: byFormula ? [fsteps[i].ref] : []
+          })));
+          return;
+        }
+        if (gEx) {
+          const ex = _itNewExercise(gEx, ctx.normalizeName);
+          ex.notes.push(txt('scheme'));
+          dayOf(weekKeyG).exercises.push(ex);
+          perGroup[gi] = ex;
+          found++;
+        }
+        return;
+      }
       const setsInfo = _itSets(cell('sets'));
-      let reps = _itReps(cell('reps'));
+      const repsDetail = _itRepsDetail(cell('reps'));
+      let reps = repsDetail ? repsDetail.reps : null;
+      // "2x20, 2-3x3-4, 1x6-8" in the reps column: the groups themselves; the
+      // sets column ("5-6") is their total, kept as a note.
+      if (!repsDetail && txt('reps')) {
+        const steps = _itSchemeGroups(txt('reps'), false);
+        if (steps) {
+          const setsNote = txt('sets') && setsInfo.n == null ? txt('sets') + ' serie in tutto' : null;
+          place(steps.map((st, i) => Object.assign({}, base, st, { note: [i === 0 ? setsNote : null, base.note].filter(Boolean).join(' · ') || null })));
+          return;
+        }
+      }
       let pct = _itPct(cell('pct'), true);
       let rpe = _itRpe(txt('rpe')) ?? (_itNum(txt('rpe')) != null && _itNum(txt('rpe')) <= 10 ? _itNum(txt('rpe')) : null);
       let rir = _itRir(txt('rir')) ?? (_itNum(txt('rir')) != null && _itNum(txt('rir')) <= 6 ? _itNum(txt('rir')) : null);
@@ -2200,44 +2473,66 @@ function _itParseSheet(sheet, ctx) {
       const pctText = txt('pct');
       if (pct == null && pctText && rpe == null) rpe = _itRpe(pctText);
       const loadFormula = m.load != null && row[m.load] && row[m.load].f ? String(row[m.load].f) : null;
-      const anyValue = setsInfo.n != null || reps != null || pct != null || load != null || rpe != null;
-      if (!anyValue) { perGroup[gi] = null; return; }
+      // "12, 10, 12": one number a set. It sets the count when the sets column
+      // agrees or says nothing; otherwise it stays as written, in a note.
+      let repsList = null;
+      let listNote = null;
+      if (repsDetail && repsDetail.list) {
+        if (setsInfo.n == null || setsInfo.n === repsDetail.list.length) repsList = repsDetail.list;
+        else listNote = 'Ripetizioni: ' + txt('reps');
+      }
+      const anyValue = setsInfo.n != null || reps != null || repsList != null || pct != null || load != null || rpe != null;
+      if (!anyValue) {
+        // A name with words where the numbers go ("Run | AM: 5-mile run",
+        // "Superset"), nothing else: the exercise, unprescribed, with those words.
+        const words = filled.filter((c) => c > header.exCol).map((c) => texts[c]).filter(Boolean);
+        // "Rest | Foam rolling, stretching": a rest day, not an exercise.
+        const restDay = /^(rest|riposo|recovery|recupero|off|day off|ruhetag)$/i.test(gEx.trim());
+        if (gEx && words.length && groups.length === 1 && !restDay) {
+          const ex = _itNewExercise(gEx, ctx.normalizeName);
+          words.forEach((t) => ex.notes.push(t));
+          dayOf(weekKeyG).exercises.push(ex);
+          perGroup[gi] = ex;
+          found++;
+        } else perGroup[gi] = null;
+        return;
+      }
       const group = {
-        sets: setsInfo.n != null ? setsInfo.n : 1,
+        sets: setsInfo.n != null ? setsInfo.n : (repsList ? repsList.length : 1),
         setsNote: setsInfo.note,
         reps,
+        repsList,
         pct,
         load,
         rpe,
         rir,
         rest: _itRest(cell('rest')),
         tempo: txt('tempo') || null,
-        note: txt('notes') || null,
+        note: [txt('notes') || null, repsDetail && repsDetail.note, listNote].filter(Boolean).join(' · ') || null,
         loadFormula,
         loadRefs: loadFormula ? _itFormulaRefs(loadFormula, name) : [],
         extra: (/opener/i.test(pctText) || /opener/i.test(loadText)) ? 'Opener' : null
       };
-      const weekKey = g.weekKey || singleWeekKey || weekKeyFor(sheetWeek ? sheetWeek.n : null, name);
-      const day = dayOf(weekKey);
-      const prev = lastExercise && lastExercise[gi];
-      const sameAsPrev = prev && exText && _itFold(prev.name_original) === _itFold(exText) && day.exercises[day.exercises.length - 1] === prev;
-      if ((!exText && prev && day.exercises[day.exercises.length - 1] === prev) || sameAsPrev) {
-        prev.groups.push(group);
-        perGroup[gi] = prev;
-        return;
-      }
-      if (!exText) { perGroup[gi] = null; return; }
-      const ex = _itNewExercise(exText, ctx.normalizeName);
-      ex.groups.push(group);
-      day.exercises.push(ex);
-      perGroup[gi] = ex;
-      found++;
+      place([group]);
     });
     lastExercise = perGroup;
   }
-  // Groups of a side-by-side week that prescribe nothing (a blank week column) leave no exercise.
-  weeks.forEach((w) => w.days.forEach((d) => { d.exercises = d.exercises.filter((e) => e.groups.length || e.notes.length || true); }));
-  return { weeks: weeks.filter((w) => w.days.some((d) => d.exercises.length)), found };
+  // The assistance work of each day goes after its main lifts, names only.
+  weeks.forEach((w) => w.days.forEach((d) => {
+    (d.accessories || []).forEach((a) => d.exercises.push(_itNewExercise(a, ctx.normalizeName)));
+    delete d.accessories;
+  }));
+  // "Wk1 ... Wk8" columns to log in, one week written: the same week, that many times.
+  const kept = weeks.filter((w) => w.days.some((d) => d.exercises.length));
+  if (sheet._logWeeks >= 2 && kept.length === 1) {
+    const only = kept[0];
+    for (let i = 2; i <= sheet._logWeeks; i++) {
+      const copy = JSON.parse(JSON.stringify({ days: only.days }));
+      kept.push({ n: i, label: 'Settimana ' + i, days: copy.days });
+    }
+    if (only.n == null) { only.n = 1; only.label = only.label && only.label !== name ? only.label : 'Settimana 1'; }
+  }
+  return { weeks: kept, found };
 }
 
 // Canonical exercise, as the rest of the importer builds them.
@@ -2248,6 +2543,7 @@ function _itCanonicalExercise(ex, ids, maxes) {
   ex.groups.forEach((g) => {
     for (let i = 0; i < g.sets; i++) {
       const ref = _itLoadReference(g, maxes);
+      const setReps = g.repsList ? (g.repsList[i] != null ? String(g.repsList[i]) : null) : g.reps;
       sets.push({
         set_number: sets.length + 1,
         order: sets.length + 1,
@@ -2255,8 +2551,8 @@ function _itCanonicalExercise(ex, ids, maxes) {
         technique: null,
         target_load: g.load != null ? g.load : null,
         load: g.load != null ? g.load : null,
-        target_reps: g.reps,
-        reps: g.reps,
+        target_reps: setReps,
+        reps: setReps,
         target_rir: g.rir != null ? g.rir : null,
         target_rpe: g.rpe != null ? g.rpe : null,
         percentage_1rm: g.pct != null ? g.pct : null,
@@ -2382,6 +2678,23 @@ function parseWorkbookTables(workbook, options = {}) {
       days: sessions
     });
   });
+  // Loads in pounds: stated in a load header ("Weight (lbs)"), or by the
+  // rounding the loads are built with (5, where the sheet says "5 for lb
+  // plates"). The app counts in kg: loads and maxes are converted, the % stay.
+  out.unit = _itWorkbookUnit(sheets);
+  if (out.unit === 'lb') {
+    const kg = (lb) => Math.round((lb * 0.45359237) / 0.5) * 0.5;
+    out.weeks.forEach((w) => w.sessions.forEach((s) => s.exercises.forEach((e) => {
+      (e.sets || []).forEach((st) => {
+        if (typeof st.target_load === 'number') st.target_load = kg(st.target_load);
+        if (typeof st.load === 'number') st.load = kg(st.load);
+        if (st.percent_of && typeof st.percent_of.value === 'number') st.percent_of = Object.assign({}, st.percent_of, { value: kg(st.percent_of.value) });
+      });
+      if (typeof e.load_target === 'number') { e.load_target = kg(e.load_target); e.load_value = e.load_target; }
+    })));
+    out.maxes.forEach((m) => { m.value_lb = m.value; m.value = kg(m.value); });
+    out.warnings.push('Il file e\' in libbre (lb): carichi e massimali convertiti in kg; le percentuali restano quelle del file.');
+  }
   // The max each lift's loads are computed from: the one the formulas read
   // most, else the first stated.
   const uses = new Map();
@@ -2389,7 +2702,7 @@ function parseWorkbookTables(workbook, options = {}) {
     if (st.percent_of && st.percent_of.addr) uses.set(st.percent_of.addr, (uses.get(st.percent_of.addr) || 0) + 1);
   }))));
   out.primaryMaxes = {};
-  ['squat', 'bench', 'deadlift'].forEach((lift) => {
+  [...new Set(out.maxes.map((m) => m.lift))].forEach((lift) => {
     const cands = out.maxes.filter((m) => m.lift === lift);
     if (!cands.length) return;
     const used = cands.filter((m) => uses.get(m.addr)).sort((a, b) => uses.get(b.addr) - uses.get(a.addr));
@@ -2613,7 +2926,24 @@ function cleanOcrText(text) {
   const lines = String(text || '').split(/\r?\n/).map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
   const out = [];
   const heading = (s) => /^(giorno|day|settimana|week|tag|woche)\s*\d/i.test(String(s || ''));
-  lines.forEach((raw) => {
+  // A line that is only print around the program - a logo, a stamp, a
+  // letterhead read as "POLISPORTIV = _%", "-FITNESS-Ph. 4 ' /", "LS": no set
+  // scheme, and more symbols than words.
+  const noise = (s) => {
+    if (/\d\s*[xX×]\s*[\dBOlI]/.test(s) || heading(s)) return false;
+    const letters = (s.match(/[A-Za-zÀ-ÿ]/g) || []).length;
+    const words = (s.match(/[A-Za-zÀ-ÿ]{3,}/g) || []).length;
+    if (letters < 3) return true;
+    if (/[©®_%|\[\]“”’=]/.test(s) && words <= 3) return true;
+    if (/^-|-[,.]?\s*$|[-\s],$/.test(s) && words <= 3) return true;
+    return false;
+  };
+  lines.forEach((raw0) => {
+    // "i *LEG CURL", "wa © ABS": a bullet read as a letter or two and a glyph.
+    let raw = raw0.replace(/^[a-z]{1,3}\s+[*©®•«»~]\s*(?=[A-Z])/, '');
+    // (A line the one above is waiting for - after "12-" - is never print around it.)
+    const waiting = out.length && /(?:[-:+]|\b(?:su|di|da|a|al|x|per))$/i.test(out[out.length - 1]);
+    if (!waiting && noise(raw)) return;
     let line = raw;
     // Bullets read as glyphs, and a bullet glued to the name. A line that
     // had one starts a new item.
@@ -2627,6 +2957,19 @@ function cleanOcrText(text) {
     // Digits inside a scheme.
     line = line.replace(/(\d)\s*[xX]\s*B\b/g, '$1x8').replace(/(\d)\s*[xX]\s*[Oo]\b/g, '$1x0').replace(/(\d)\s*[xX]\s+(\d)/g, '$1x$2')
       .replace(/(\d)\s*[xX]\s*[lI](\d?)\b/g, '$1x1$2');
+    // In a ladder ("4X10-4X12-5X8"): "%" is an X, "4X1 5" one number, a dash
+    // read as a dot is a dash, and a 4 / 5 / 8 read as A / S / B at the start
+    // of a step is that digit.
+    if (/\d\s*[xX%]\s*\d/.test(line)) {
+      line = line.replace(/(\d)%(\d)/g, '$1X$2').replace(/-\s*[|!]\s*(?=-|$)/g, '-').replace(/\s+[|!]\s*$/, '')
+        .replace(/(\d[xX]\d) (\d)(?=[-.\s]|$)/g, '$1$2')
+        .replace(/(\d[xX]\d{1,2})\.(?=\s*\d{1,2}[xX])/g, '$1-')
+        .replace(/(^|[-\s:])A(?=[xX]\d)/g, '$14').replace(/(^|[-\s:])S(?=[xX]\d)/g, '$15').replace(/(^|[-\s:])B(?=[xX]\d)/g, '$18');
+    }
+    // "SLANCI Al CAVI": in a line written in capitals, "Al" is "AI".
+    if (/\bAl\b/.test(line) && (line.match(/[A-Z]/g) || []).length > (line.match(/[a-z]/g) || []).length * 3) line = line.replace(/\bAl\b/g, 'AI');
+    // "SALZATE", "SLAT MACHINE": a bullet read as an S glued to the name.
+    if (/^S[A-Z]{2,}/.test(line) && !_IT_EX_START.test(line) && _IT_EX_START.test(line.slice(1))) line = line.slice(1);
     // A day heading misread: a short word close to "giorno" and a number.
     const dm = line.match(/^([A-Za-z0-9]{4,7})\s*[:.]?\s*(\d)\s*[:.]?$/);
     if (dm) {
@@ -2646,7 +2989,23 @@ function cleanOcrText(text) {
     // "gamba", "discesa e salita esplosiva", "basso: 4x6" under a name: the item goes on.
     const lowerTail = prev && !hadBullet && /^[a-zà-ù(]/.test(line) && (!/\d\s*x\s*\d/i.test(line) || !/\d/.test(prev));
     const supersetTail = prev && /\b(?:ss|superset)$/i.test(prev);
-    if ((cutAtMark || cutMidSentence || nameThenScheme || continuationWord || lowerTail || supersetTail) && !heading(line) && !heading(prev)) {
+    // ": 1 SERIE A SETTIMANA", ":3X20-4X20 x gamba": what follows a colon
+    // goes on the line above; so does the rest of "15 CRUNCH + 20 SIT UP + 30".
+    const colonLead = prev && !hadBullet && /^:/.test(line);
+    // A line that is only more of a ladder ("4X12-5X8-4X12-5X10-4X8-3X10")
+    // is never an exercise: it ends the one above, dash or dot or not.
+    const ladderOnly = prev && /^\d{1,2}\s*[xX]\s*\d/.test(line) && !/[a-wyz]{3,}/i.test(line.replace(/max/ig, '')) && /\d\s*[xX]\s*\d/.test(prev);
+    if (ladderOnly && !heading(prev)) {
+      out[out.length - 1] = prev.replace(/[.\s]+$/, '') + (/[-–]$/.test(prev) ? '' : '-') + line;
+      return;
+    }
+    // "FRENCH PRESS MANUBRI SEDUTA SU" / "PANCA:4X12": a name cut after a preposition.
+    const cutAtWord = prev && !hadBullet && !/\d\s*[xX]\s*\d/.test(prev) && /\b(?:su|di|da|con|al|alla|in|per|e|ss)$/i.test(prev);
+    // "PANCA PIANA : 4X10-4X" / "...": a ladder cut after its X.
+    const cutAtX = prev && /\d[xX]$/.test(prev);
+    // (Not "5X15+15": that is a complete step, reps of two movements.)
+    const cutAtPlusNumber = prev && !hadBullet && /\+\s*\d{1,3}$/.test(prev) && !/[xX]\d{1,3}\+\d{1,3}$/.test(prev);
+    if ((cutAtMark || cutMidSentence || nameThenScheme || continuationWord || lowerTail || supersetTail || colonLead || cutAtPlusNumber || cutAtWord || cutAtX) && !heading(line) && !heading(prev)) {
       out[out.length - 1] = prev + (/[-–]$/.test(prev) ? '' : ' ') + line;
       return;
     }
@@ -2830,9 +3189,14 @@ function countUsableTableExercises(weeks) {
   (weeks || []).forEach((w) => (w.sessions || w.days || []).forEach((s) => (s.exercises || []).forEach((e) => {
     const name = e.name_original || e.name || '';
     if (!name || _itIsPlaceholder(name) || /^\d+$/.test(String(name).trim())) return;
+    // A header read as a row ("Exercise | Work-up (load × reps)") is not an exercise.
+    if (_itColumnKind(name) === 'exercise') return;
     const sets = Array.isArray(e.sets) ? e.sets : [];
     if (!sets.length) return;
-    if (!sets.some((s) => s && (s.target_reps || s.reps))) return;
+    // Reps that read as reps: "8", "8-10", "5+", "3+3", "AMRAP", "30s" - not a
+    // whole cell of "90×3, 90×3, 95×3" copied into one set.
+    const repsOk = (r) => /^(?:\d{1,3}(?:\s*[-+\/]\s*\d{1,3})*\+?|max|amrap|mr\s*\d*|\d{1,3}\s*(?:s|sec|")|failure)$/i.test(String(r == null ? '' : r).trim());
+    if (!sets.some((s) => s && repsOk(s.target_reps || s.reps))) return;
     n++;
   })));
   return n;
@@ -25348,22 +25712,23 @@ function expandPatternToSets(patternStr, baseRest = 90, baseNotes = null, rir = 
     set_number: 1,
     set_type: "working",
     target_load: loadVal || null,
-    target_reps: str || "8-10",
+    target_reps: str || null,
     target_rir: rir,
     target_rpe: rpe,
     percentage_1rm: null,
     rest_seconds: baseRest,
     notes: baseNotes
   });
-  return { setCount: 1, reps: str || "8-10", sets };
+  return { setCount: 1, reps: str || null, sets };
 }
 
 // Parse detailed parameters from text line or table row
 function parseExerciseDetails(str) {
   str = String(str || "");
   let sets = null;
-  let reps = "8-10";
-  let reps_raw = "8-10";
+  // Reps the text does not give stay empty: never a made-up "8-10".
+  let reps = null;
+  let reps_raw = null;
   let reps_pattern = null;
   let rir = null;
   let rpe = null;
@@ -26646,7 +27011,7 @@ function parseTrainingSheet(sheet, weekIndex = 1) {
       else if (notesVal.toUpperCase().includes("WARM")) setType = "warmup";
 
       const finalRestSec = details.rest_seconds || 90;
-      const finalRepsTarget = (lit && lit.reps) || repsVal || details.reps || "8-10";
+      const finalRepsTarget = (lit && lit.reps) || repsVal || details.reps || null;
       const totalSets = (lit && lit.sets) || 1;
 
       currentExercise = {
@@ -26661,7 +27026,7 @@ function parseTrainingSheet(sheet, weekIndex = 1) {
         mappingSource: normalized.confidence >= 0.9 ? 'dictionary' : 'raw',
         sets_count: totalSets,
         reps_target: finalRepsTarget,
-        reps_raw: (lit && lit.raw) || repsVal || details.reps_raw || "8-10",
+        reps_raw: (lit && lit.raw) || repsVal || details.reps_raw || null,
         scheme: lit ? lit.raw : null,
         rir_target: targetRirNum,
         rpe_target: targetRpeNum,
@@ -28989,6 +29354,17 @@ function parseCanonicalProgramFromText(rawText, filename = "documento_importato"
     const sessions = (first && first.sessions) || [];
     if (sessions.length < 2 || !/^Sessione 1$/i.test(String(sessions[0].name || ''))) return;
     if (!sessions.slice(1).some((ss) => /^(?:giorno|day|seduta|sessione|allenamento|workout|tag)\s*[:=\-]?\s*(?:1|A|I)\b/i.test(String(ss.name || '')))) return;
+    // Unless it is plainly training: two or more exercises with weekly
+    // progressions and nothing that says warm-up ("HIP THRUST: 5X10-5X12-6X10-6X12"
+    // above GIORNO 1 on a printed sheet). Then it stays, as a day of its own.
+    const leadEx = sessions[0].exercises || [];
+    const saysWarmup = leadEx.some((ex) => /riscald|warm|mobilit|attivaz|stretch/i.test(String(ex.name_original || ex.name || '') + ' ' + String(ex.notes || '')));
+    // Weekly progressions ("5X10-5X12-6X10-6X12") are training; a warm-up is a plain "3x15".
+    const withLadders = leadEx.filter((ex) => Array.isArray(ex.weekly_schemes) && ex.weekly_schemes.length >= 2).length;
+    if (!saysWarmup && withLadders >= 2) {
+      sessions[0].name = "Esercizi prima di Giorno 1";
+      return;
+    }
     const lead = sessions.shift();
     sessions.forEach((ss, i) => { ss.session_number = i + 1; });
     if (!program.warmup || !Array.isArray(program.warmup.items)) program.warmup = { present: true, label: "Riscaldamento", items: [], format: "lead_in_block" };
