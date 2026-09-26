@@ -1,0 +1,207 @@
+// Translations that complete I18nService's dictionaries (prepare_task20_js_services.mjs).
+// Only keys a language does not have yet are added: what is already
+// translated stays as it is. Italian is the source; every language the app
+// offers (LANG_META) has every key, so no screen falls back to another
+// language. Checked by test_i18n_complete.mjs.
+
+import pt from './i18n-packs/pt.mjs';
+import ru from './i18n-packs/ru.mjs';
+import zh from './i18n-packs/zh.mjs';
+import ar from './i18n-packs/ar.mjs';
+import hi from './i18n-packs/hi.mjs';
+
+// The keys, in the order of the Italian dictionary (for the full packs below).
+export const I18N_KEYS = [
+  'appName', 'appTitle', 'dashboard', 'home', 'activeSession', 'startWorkout', 'importProgram', 'programsLibrary', 'activeProgram', 'training',
+  'nutrition', 'supplementation', 'supplements', 'therapy', 'clinicalExams', 'exams', 'calendar', 'performance', 'coachAI', 'database',
+  'settings', 'pricing', 'set', 'load', 'reps', 'rest', 'addSet', 'duplicateSet', 'deleteSet', 'substitute',
+  'skip', 'bonusExercise', 'finalizeWorkout', 'chatPlaceholder', 'send', 'clearChat', 'offlineCoach', 'save', 'cancel', 'confirm',
+  'apply', 'delete', 'exportJson', 'importBackup', 'exportBackup', 'exportHistoryCsv', 'backupRestore', 'backupHint', 'athleteProfile', 'saveProfile',
+  'profilo', 'systemPreferences', 'selectLanguage', 'currentPlan', 'managePlans', 'architectureStatus', 'resetWorkoutLog', 'hardReset', 'hardResetApp', 'restoreLoads',
+  'coachWelcome', 'coachFileTitle', 'coachFileHint', 'analyzeCoachFile', 'checkAiServer', 'newQuestion', 'stopVoice', 'readReply', 'language', 'plan',
+  'free', 'bronze', 'silver', 'gold', 'trial', 'today', 'meals', 'foods', 'calories', 'protein',
+  'carbs', 'fats', 'addDay', 'addMeal', 'addFood', 'addItem', 'dailyTotals', 'importNutrition', 'importSupplements', 'importTherapy',
+  'emptyNutrition', 'scanBarcode', 'searchBarcode', 'photoMeal', 'photoMealHint', 'photoMealCapture', 'photoMealUpload', 'photoMealConfirm', 'clearNutrition', 'clearNutritionConfirm',
+  'clearNutritionDone', 'clearNutritionLocked', 'timing', 'dose', 'drug', 'parameter', 'value', 'range', 'date', 'close',
+  'hubTitle', 'navHome', 'navWorkout', 'navPerf', 'navCoach', 'menu', 'account', 'accedi', 'googleContinue', 'appleContinue',
+  'createAccount', 'labelName', 'labelAge', 'labelWeight', 'labelHeight', 'labelGoal', 'systemModules', 'weightUnit', 'weightUnitLb'
+];
+
+// Per language: the keys missing there, translated.
+export const I18N_FILL = {
+  it: {
+    weightUnit: 'Unità dei pesi',
+    weightUnitLb: 'lb (libbre)'
+  },
+  en: {
+    backupRestore: 'Backup and restore',
+    backupHint: 'Export all your data (profile, programs, workouts) to a JSON file, or import an earlier backup. The CSV history holds the logged sessions.',
+    athleteProfile: 'Athlete profile',
+    saveProfile: 'Save profile',
+    profilo: 'PROFILE',
+    systemPreferences: 'SYSTEM PREFERENCES',
+    selectLanguage: 'Select language',
+    currentPlan: 'Current plan',
+    managePlans: 'Manage plans',
+    architectureStatus: 'Architecture status',
+    resetWorkoutLog: 'Reset loads',
+    hardReset: 'Hard reset',
+    hardResetApp: 'Hard reset app',
+    restoreLoads: 'Restore loads',
+    coachWelcome: 'Hi! I am Nurvan AI, your training coach. Tell me how I can help.',
+    coachFileTitle: 'File analysis with Nurvan AI',
+    coachFileHint: 'Upload a program: Nurvan AI analyses it and suggests improvements.',
+    analyzeCoachFile: 'Analyse with Nurvan AI',
+    checkAiServer: 'Check AI server',
+    newQuestion: 'New question',
+    stopVoice: 'Stop voice',
+    readReply: 'Read reply',
+    account: 'Account',
+    accedi: 'SIGN IN',
+    googleContinue: 'CONTINUE WITH GOOGLE',
+    appleContinue: 'CONTINUE WITH APPLE',
+    createAccount: 'CREATE AN ACCOUNT',
+    labelName: 'Name',
+    labelAge: 'Age',
+    labelWeight: 'Weight (kg)',
+    labelHeight: 'Height (cm)',
+    labelGoal: 'Goal',
+    systemModules: 'System modules',
+    weightUnit: 'Weight unit',
+    weightUnitLb: 'lb (pounds)'
+  },
+  es: {
+    coachAI: 'NURVAN AI',
+    exportHistoryCsv: 'Exportar historial CSV',
+    backupRestore: 'Copia de seguridad y restauración',
+    backupHint: 'Exporta todos tus datos (perfil, programas, entrenamientos) a un archivo JSON, o importa una copia anterior. El historial CSV contiene las sesiones registradas.',
+    athleteProfile: 'Perfil del atleta',
+    saveProfile: 'Guardar perfil',
+    profilo: 'PERFIL',
+    systemPreferences: 'PREFERENCIAS DEL SISTEMA',
+    selectLanguage: 'Seleccionar idioma',
+    currentPlan: 'Plan actual',
+    managePlans: 'Gestionar planes',
+    architectureStatus: 'Estado de la arquitectura',
+    resetWorkoutLog: 'Restablecer cargas',
+    hardReset: 'Restablecimiento total',
+    hardResetApp: 'Restablecer la app',
+    restoreLoads: 'Recuperar cargas',
+    coachWelcome: '¡Hola! Soy Nurvan AI, tu coach de entrenamiento. Dime cómo puedo ayudarte.',
+    coachFileTitle: 'Análisis de archivo con Nurvan AI',
+    coachFileHint: 'Sube un programa: Nurvan AI lo analiza y te propone mejoras.',
+    analyzeCoachFile: 'Analizar con Nurvan AI',
+    checkAiServer: 'Comprobar servidor de IA',
+    newQuestion: 'Nueva pregunta',
+    stopVoice: 'Detener voz',
+    readReply: 'Leer respuesta',
+    account: 'Cuenta',
+    accedi: 'INICIAR SESIÓN',
+    googleContinue: 'CONTINUAR CON GOOGLE',
+    appleContinue: 'CONTINUAR CON APPLE',
+    createAccount: 'CREAR UNA CUENTA',
+    labelName: 'Nombre',
+    labelAge: 'Edad',
+    labelWeight: 'Peso (kg)',
+    labelHeight: 'Altura (cm)',
+    labelGoal: 'Objetivo',
+    systemModules: 'Módulos del sistema',
+    weightUnit: 'Unidad de peso',
+    weightUnitLb: 'lb (libras)'
+  },
+  fr: {
+    coachAI: 'NURVAN AI',
+    exportHistoryCsv: "Exporter l'historique CSV",
+    backupRestore: 'Sauvegarde et restauration',
+    backupHint: "Exporte toutes tes données (profil, programmes, séances) dans un fichier JSON, ou importe une sauvegarde précédente. L'historique CSV contient les séances enregistrées.",
+    athleteProfile: "Profil de l'athlète",
+    saveProfile: 'Enregistrer le profil',
+    profilo: 'PROFIL',
+    systemPreferences: 'PRÉFÉRENCES SYSTÈME',
+    selectLanguage: 'Choisir la langue',
+    currentPlan: 'Offre actuelle',
+    managePlans: 'Gérer les offres',
+    architectureStatus: "État de l'architecture",
+    resetWorkoutLog: 'Réinitialiser les charges',
+    hardReset: 'Réinitialisation complète',
+    hardResetApp: "Réinitialiser l'app",
+    restoreLoads: 'Restaurer les charges',
+    coachWelcome: "Salut ! Je suis Nurvan AI, ton coach d'entraînement. Dis-moi comment je peux t'aider.",
+    coachFileTitle: 'Analyse de fichier avec Nurvan AI',
+    coachFileHint: 'Charge un programme : Nurvan AI l’analyse et te propose des améliorations.',
+    analyzeCoachFile: 'Analyser avec Nurvan AI',
+    checkAiServer: 'Vérifier le serveur IA',
+    newQuestion: 'Nouvelle question',
+    stopVoice: 'Arrêter la voix',
+    readReply: 'Lire la réponse',
+    account: 'Compte',
+    accedi: 'SE CONNECTER',
+    googleContinue: 'CONTINUER AVEC GOOGLE',
+    appleContinue: 'CONTINUER AVEC APPLE',
+    createAccount: 'CRÉER UN COMPTE',
+    labelName: 'Nom',
+    labelAge: 'Âge',
+    labelWeight: 'Poids (kg)',
+    labelHeight: 'Taille (cm)',
+    labelGoal: 'Objectif',
+    systemModules: 'Modules système',
+    weightUnit: 'Unité de poids',
+    weightUnitLb: 'lb (livres)'
+  },
+  de: {
+    coachAI: 'NURVAN AI',
+    exportHistoryCsv: 'Verlauf als CSV exportieren',
+    backupRestore: 'Sicherung und Wiederherstellung',
+    backupHint: 'Exportiere alle deine Daten (Profil, Programme, Trainings) in eine JSON-Datei oder importiere eine frühere Sicherung. Der CSV-Verlauf enthält die erfassten Einheiten.',
+    athleteProfile: 'Athletenprofil',
+    saveProfile: 'Profil speichern',
+    profilo: 'PROFIL',
+    systemPreferences: 'SYSTEMEINSTELLUNGEN',
+    selectLanguage: 'Sprache wählen',
+    currentPlan: 'Aktueller Tarif',
+    managePlans: 'Tarife verwalten',
+    architectureStatus: 'Architekturstatus',
+    resetWorkoutLog: 'Gewichte zurücksetzen',
+    hardReset: 'Vollständiger Reset',
+    hardResetApp: 'App zurücksetzen',
+    restoreLoads: 'Gewichte wiederherstellen',
+    coachWelcome: 'Hallo! Ich bin Nurvan AI, dein Trainingscoach. Sag mir, wie ich helfen kann.',
+    coachFileTitle: 'Dateianalyse mit Nurvan AI',
+    coachFileHint: 'Lade ein Programm hoch: Nurvan AI analysiert es und schlägt Verbesserungen vor.',
+    analyzeCoachFile: 'Mit Nurvan AI analysieren',
+    checkAiServer: 'KI-Server prüfen',
+    newQuestion: 'Neue Frage',
+    stopVoice: 'Sprachausgabe stoppen',
+    readReply: 'Antwort vorlesen',
+    account: 'Konto',
+    accedi: 'ANMELDEN',
+    googleContinue: 'WEITER MIT GOOGLE',
+    appleContinue: 'WEITER MIT APPLE',
+    createAccount: 'KONTO ERSTELLEN',
+    labelName: 'Name',
+    labelAge: 'Alter',
+    labelWeight: 'Gewicht (kg)',
+    labelHeight: 'Größe (cm)',
+    labelGoal: 'Ziel',
+    systemModules: 'Systemmodule',
+    weightUnit: 'Gewichtseinheit',
+    weightUnitLb: 'lb (Pfund)'
+  }
+};
+
+// The languages that had only a handful of keys: complete packs.
+Object.assign(I18N_FILL, { pt, ru, zh, ar, hi });
+
+// The code that adds them to I18nService, appended to the page's services bundle.
+export const I18N_FILL_SNIPPET = [
+  '',
+  '(function (s) {',
+  '  var T = ' + JSON.stringify(I18N_FILL) + ';',
+  '  Object.keys(T).forEach(function (l) {',
+  '    var d = s.dictionaries[l] || (s.dictionaries[l] = {});',
+  '    Object.keys(T[l]).forEach(function (k) { if (!(k in d)) d[k] = T[l][k]; });',
+  '  });',
+  '})(I18nService);',
+  ''
+].join('\n');
+

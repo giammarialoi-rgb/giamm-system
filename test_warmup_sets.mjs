@@ -16,6 +16,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { enforceExercisePrescription } from './prescription-engine.mjs';
+import { unitHelpersSource } from './test_unit_helpers.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const SRC = fs.readFileSync(path.join(root, 'web/index.base.html'), 'utf8').replace(/\r\n/g, '\n');
@@ -104,6 +105,7 @@ function pageContext(extra) {
   ctx.window = ctx;
   ctx.window.NurvanProgressions = P;
   vm.createContext(ctx);
+  vm.runInContext(unitHelpersSource(), ctx);
   return ctx;
 }
 const helpers = ['isWarmupSet', 'countWarmupSets', 'showWarmupSets', 'warmupRestTextFor', 'parseRestSeconds', 'setCount', 'formatSetRepScheme', 'deriveRepsTarget', 'repsChoiceValue'].map(grab).join('\n');

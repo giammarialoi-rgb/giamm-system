@@ -79,9 +79,22 @@ export function parseWeeklySchemeLadder(text) {
   // What may stand after a week's scheme: its load or its % (and an "@").
   const tailRe = /^\s*(?:@\s*)?(\d{1,3}(?:[.,]\d{1,2})?)\s*(kg|%)/i;
   const weeks = [];
+  let joinNext = false;
   for (let i = 0; i < matches.length; i++) {
     const m = matches[i];
     const endOf = m.index + m[0].length;
+    // "3X3+ 1XMAX" at the end of a ladder: one week, two blocks in the session.
+    if (joinNext && weeks.length) {
+      const w = weeks[weeks.length - 1];
+      const r = String(m[2]).trim().toUpperCase() === 'MAX' ? 'MAX' : String(m[2]).trim();
+      w.raw += '+' + m[1] + 'x' + r;
+      (w.plus = w.plus || []).push({ sets: parseInt(m[1], 10), reps: r });
+      const nextStartJ = i + 1 < matches.length ? matches[i + 1].index : null;
+      const betweenJ = nextStartJ != null ? str.slice(endOf, nextStartJ) : '';
+      joinNext = nextStartJ != null && /^\s*\+\s*$/.test(betweenJ);
+      if (nextStartJ != null && !joinNext && !/^\s*(?:[\-–—\/,;>|→]|->|=>)\s*$/.test(betweenJ)) return null;
+      continue;
+    }
     const nextStart = i + 1 < matches.length ? matches[i + 1].index : null;
     let between = nextStart != null ? str.slice(endOf, nextStart) : '';
     const tail = between.match(tailRe);
@@ -98,7 +111,11 @@ export function parseWeeklySchemeLadder(text) {
     // Weeks are separated by - \u2013 / , ; > \u2192 | only: "+" is the same session.
     // Named weeks ("sett.1: 3x10 sett.2: 4x10") need no separator: the label was one.
     const sepRe = labelled >= 2 ? /^\s*(?:[\-\u2013\u2014\/,;>|\u2192]|->|=>)?\s*$/ : /^\s*(?:[\-\u2013\u2014\/,;>|\u2192]|->|=>)\s*$/;
-    if (nextStart != null && !sepRe.test(between)) return null;
+    // A "+" before the last step joins it to this week (see above); anywhere
+    // else it still says "same session", not a ladder.
+    joinNext = false;
+    if (nextStart != null && /^\s*\+\s*$/.test(between) && i + 1 === matches.length - 1 && weeks.length >= 2) joinNext = true;
+    else if (nextStart != null && !sepRe.test(between)) return null;
     weeks.push({
       sets: clampSets(m[1]) || parseInt(m[1], 10),
       reps: String(m[2]).trim().toUpperCase() === 'MAX' ? 'MAX' : String(m[2]).trim(),
@@ -272,7 +289,7 @@ export function resolvePrescription(ex) {
   if (e.prescription && e.prescription.locked && e.prescription.sets) {
     return {
       sets: clampSets(e.prescription.sets),
-      reps: e.prescription.reps || e.reps || e.reps_target || '8-10',
+      reps: e.prescription.reps || e.reps || e.reps_target || null,
       raw: e.prescription.raw || null,
       technique: e.prescription.technique || null,
       source: 'locked'
@@ -305,7 +322,7 @@ export function resolvePrescription(ex) {
   if (declared != null) {
     return {
       sets: declared,
-      reps: repsGuess != null ? String(repsGuess) : '8-10',
+      reps: repsGuess != null ? String(repsGuess) : null,
       raw: declared + 'x' + (repsGuess || '?'),
       technique: DROP_RE.test(blob) ? 'drop_set' : null,
       source: 'declared_int'
@@ -314,7 +331,7 @@ export function resolvePrescription(ex) {
   if (dataSafe != null) {
     return {
       sets: dataSafe,
-      reps: repsGuess != null ? String(repsGuess) : '8-10',
+      reps: repsGuess != null ? String(repsGuess) : null,
       raw: dataSafe + 'x' + (repsGuess || '?'),
       technique: DROP_RE.test(blob) ? 'drop_set' : null,
       source: 'array_length'
@@ -336,7 +353,8 @@ export function enforceExercisePrescription(ex, prescriptionOpt) {
   const pattern = Array.isArray(p.reps_pattern) && p.reps_pattern.length
     ? p.reps_pattern
     : (Array.isArray(e.reps_pattern) ? e.reps_pattern : null);
-  const reps = p.reps || e.reps || e.reps_target || template.reps || template.target_reps || '8-10';
+  // Reps the file does not give stay empty: never a made-up "8-10".
+  const reps = p.reps || e.reps || e.reps_target || template.reps || template.target_reps || null;
   const rows = [];
   for (let i = 0; i < p.sets; i++) {
     const src = rawRows[i] ? { ...rawRows[i] } : { ...template };

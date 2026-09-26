@@ -1643,8 +1643,8 @@ body.focus-mode [data-rewards-only] {
 <!-- ==================================================== -->
 <!-- TASK 20: NAVIGATION HUB & PRODUCT MODALS -->
 <!-- ==================================================== -->
-<div id="menu-hub-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-  <div class="card" style="max-width:540px;width:100%;max-height:90vh;overflow-y:auto;border:2px solid var(--gold);box-shadow:0 0 30px rgba(212,175,55,0.2);">
+<div id="menu-hub-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:9999;align-items:center;justify-content:center;box-sizing:border-box;padding:calc(env(safe-area-inset-top, 0px) + 12px) calc(env(safe-area-inset-right, 0px) + 16px) calc(env(safe-area-inset-bottom, 0px) + 12px) calc(env(safe-area-inset-left, 0px) + 16px);">
+  <div class="card" style="max-width:540px;width:100%;max-height:100%;box-sizing:border-box;overflow-y:auto;-webkit-overflow-scrolling:touch;border:2px solid var(--gold);box-shadow:0 0 30px rgba(212,175,55,0.2);">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
       <h2 style="font-size:18px;color:var(--gold);" data-i18n="hubTitle">NURVAN HUB</h2>
       <button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="closeMenuHub()" data-i18n="close">CHIUDI</button>
@@ -1740,7 +1740,7 @@ body.focus-mode [data-rewards-only] {
 
 <!-- Modal Aggiunta Alimento -->
 <div id="add-food-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-  <div class="card" style="max-width:440px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--gold);">
+  <div class="card" style="max-width:440px;width:100%;max-height:calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);overflow-y:auto;border:1px solid var(--gold);">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
       <h3 id="add-food-modal-title" style="font-size:14px;color:var(--gold);font-weight:800;">AGGIUNGI ALIMENTO</h3>
       <button class="btn btn-outline" style="font-size:10px;padding:2px 6px;" onclick="closeAddFoodModal()">✕</button>
@@ -1809,7 +1809,7 @@ body.focus-mode [data-rewards-only] {
 
 <!-- Modal Scelta Destinazione Pasto (Food Photo V6) -->
 <div id="meal-target-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:10015;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;">
-  <div class="card" style="max-width:440px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;border-radius:12px;background:#141414;">
+  <div class="card" style="max-width:440px;width:100%;max-height:calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;border-radius:12px;background:#141414;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <div style="display:flex;align-items:center;gap:6px;">
         <span id="meal-target-modal-icon" style="font-size:18px;">📸</span>
@@ -1838,7 +1838,7 @@ body.focus-mode [data-rewards-only] {
 
 <!-- Modal Scelta Giorno per Duplica Pasto -->
 <div id="duplicate-meal-day-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:10016;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;">
-  <div class="card" style="max-width:440px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;border-radius:12px;background:#141414;">
+  <div class="card" style="max-width:440px;width:100%;max-height:calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;border-radius:12px;background:#141414;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <div style="display:flex;align-items:center;gap:6px;">
         <span style="font-size:18px;">⧉</span>
@@ -2001,7 +2001,7 @@ body.focus-mode [data-rewards-only] {
 <input type="file" id="nutrition-meal-photo-file" accept="image/*" style="display:none;" onchange="handleMealPhotoSelected(event)">
 <!-- Modal Aggiunta Integratore -->
 <div id="add-supplement-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-  <div class="card" style="max-width:440px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--gold);">
+  <div class="card" style="max-width:440px;width:100%;max-height:calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);overflow-y:auto;border:1px solid var(--gold);">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
       <h3 style="font-size:14px;color:var(--gold);font-weight:800;">AGGIUNGI INTEGRATORE</h3>
       <button class="btn btn-outline" style="font-size:10px;padding:2px 6px;" onclick="closeAddSupplementModal()">✕</button>
@@ -2066,7 +2066,7 @@ body.focus-mode [data-rewards-only] {
 
 <!-- Modal Aggiunta Farmaco Terapia -->
 <div id="add-therapy-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-  <div class="card" style="max-width:440px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--accent-red);">
+  <div class="card" style="max-width:440px;width:100%;max-height:calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);overflow-y:auto;border:1px solid var(--accent-red);">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
       <h3 style="font-size:14px;color:var(--accent-red);font-weight:800;">REGISTRA FARMACO / TERAPIA</h3>
       <button class="btn btn-outline" style="font-size:10px;padding:2px 6px;" onclick="closeAddTherapyModal()">✕</button>
@@ -2125,7 +2125,7 @@ body.focus-mode [data-rewards-only] {
 
 <!-- Modal Aggiunta Esame Clinico -->
 <div id="add-exam-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-  <div class="card" style="max-width:440px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid #4caf50;">
+  <div class="card" style="max-width:440px;width:100%;max-height:calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);overflow-y:auto;border:1px solid #4caf50;">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
       <h3 style="font-size:14px;color:#4caf50;font-weight:800;">REGISTRA ESAME / ANALISI</h3>
       <button class="btn btn-outline" style="font-size:10px;padding:2px 6px;" onclick="closeAddExamModal()">✕</button>
@@ -2460,7 +2460,7 @@ body.focus-mode [data-rewards-only] {
 
 <input type="file" id="check-photo-input" style="display:none;" accept="image/*" onchange="onCheckPhotoInput(event)">
 <div id="check-fisico-pdf-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:10050;align-items:center;justify-content:center;padding:16px;">
-  <div class="card" style="max-width:460px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--gold);background:#111;color:#eee;">
+  <div class="card" style="max-width:460px;width:100%;max-height:calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);overflow:auto;border:1px solid var(--gold);background:#111;color:#eee;">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
       <h3 style="font-size:14px;color:var(--gold);font-weight:800;">PDF PER IL COACH</h3>
       <button class="btn btn-outline" style="font-size:10px;padding:2px 6px;" onclick="closeCheckFisicoPdfModal()">✕</button>
@@ -2499,10 +2499,10 @@ body.focus-mode [data-rewards-only] {
   </div>
 </div>
 <!-- Static System File Inputs (Reliable cross-platform file picking for Browser & WebView) -->
-<input type="file" id="universal-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleImportFileSelected(event)">
+<input type="file" id="universal-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.heic,.heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleImportFileSelected(event)">
 <input type="file" id="camera-import-input" style="display:none;" accept="image/*" capture="environment" onchange="handleImportFileSelected(event)">
-<input type="file" id="coach-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleCoachFileInput(event)">
-<input type="file" id="db-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleFileUpload(event)">
+<input type="file" id="coach-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.heic,.heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleCoachFileInput(event)">
+<input type="file" id="db-file-input" style="display:none;" accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.heic,.heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg,image/webp" onchange="handleFileUpload(event)">
 
 <script>
 var DATA=null, currentView='home', currentWeek=1, currentDay=0, accountRegisterMode=false, accountRecoveryMode=false, accountVerifyMode=false, accountSyncTimer=null;
@@ -3923,6 +3923,57 @@ async function ensureFactoryCleanBoot() {
   return true;
 }
 if(typeof store.prefs.timerSound!=='boolean') store.prefs.timerSound = true;
+// Weight unit the person sees and types: kg or lb (Impostazioni). Every load
+// is stored, synced and computed in kg; only what is shown and typed changes.
+if (store.prefs.weightUnit !== 'lb') store.prefs.weightUnit = 'kg';
+const LB_PER_KG = 2.20462262;
+function wUnit() { return (typeof store !== 'undefined' && store && store.prefs && store.prefs.weightUnit === 'lb') ? 'lb' : 'kg'; }
+// kg -> the unit shown (lb to the half pound). Empty stays empty, text stays text.
+function kgToDisp(v) {
+  if (v === '' || v == null || wUnit() !== 'lb') return v;
+  const n = Number(String(v).replace(',', '.'));
+  if (!Number.isFinite(n)) return v;
+  return Math.round(n * LB_PER_KG * 2) / 2;
+}
+// What was typed, in the unit shown -> kg to store.
+function dispToKg(v) {
+  if (v === '' || v == null || wUnit() !== 'lb') return v;
+  const n = Number(String(v).replace(',', '.'));
+  if (!Number.isFinite(n)) return v;
+  return String(Math.round((n / LB_PER_KG) * 100) / 100);
+}
+// Body weight, to the tenth of a pound.
+function bwToDisp(v) {
+  if (v === '' || v == null || wUnit() !== 'lb') return v;
+  const n = Number(String(v).replace(',', '.'));
+  if (!Number.isFinite(n)) return v;
+  return Math.round(n * LB_PER_KG * 10) / 10;
+}
+// What a field holds back to kg - and when it still shows exactly what was
+// stored, the stored kg itself: a value shown in lb and saved untouched never
+// drifts (100 kg -> 220.5 lb -> 100.02 kg).
+function keepKg(typed, prevKg, toDisp) {
+  if (wUnit() !== 'lb' || typed === '' || typed == null) return typed;
+  const shown = (toDisp || kgToDisp)(prevKg);
+  if (prevKg !== '' && prevKg != null && Number(String(typed).replace(',', '.')) === Number(shown)) return prevKg;
+  return dispToKg(typed);
+}
+// A load for reading: "100 kg" or "220.5 lb"; empty stays empty.
+function wFmt(v) {
+  if (v === '' || v == null) return v;
+  return kgToDisp(v) + ' ' + wUnit();
+}
+// The step a load goes up by, as said in the unit shown.
+function wStep(kg) {
+  if (wUnit() !== 'lb') return String(kg).replace('.', ',') + ' kg';
+  return ({ 1: '2,5 lb', 1.25: '2,5 lb', 2.5: '5 lb', 5: '10 lb' })[kg] || (kgToDisp(kg) + ' lb');
+}
+function setWeightUnit(u) {
+  store.prefs.weightUnit = u === 'lb' ? 'lb' : 'kg';
+  persist();
+  if (typeof render === 'function') render();
+}
+window.setWeightUnit = setWeightUnit;
 if(typeof store.prefs.timerVibrate!=='boolean') store.prefs.timerVibrate = true;
 if(typeof store.prefs.timerAutoAdvance!=='boolean') store.prefs.timerAutoAdvance = false;
 if(store.prefs.prepSeconds==null) store.prefs.prepSeconds = 0;
@@ -4315,7 +4366,7 @@ function workoutProgressionPolicy(prevSets, row) {
   let repBump = 0;
   let advice = '';
   const step = progressionAddKg(sets, row);
-  const stepTxt = step === 1 ? '+1 kg (carico già basso)' : '+2,5 kg';
+  const stepTxt = step === 1 ? '+' + wStep(1) + ' (carico già basso)' : '+' + wStep(2.5);
   if (!loads.length) {
     advice = 'Ripeti lo schema e registra i kg reali: senza carichi loggati non posso dirti se aumentare.';
   } else if (missed) {
@@ -4329,7 +4380,7 @@ function workoutProgressionPolicy(prevSets, row) {
     repBump = 0;
   } else {
     repBump = 1;
-    advice = 'Tieni il carico di ogni serie e prova +1 rep. Aumenta di 2,5 kg (1 kg se i pesi sono già bassi) solo se chiudi tutte le serie con RIR ≥ 2.';
+    advice = 'Tieni il carico di ogni serie e prova +1 rep. Aumenta di ' + wStep(2.5) + ' (' + wStep(1) + ' se i pesi sono già bassi) solo se chiudi tutte le serie con RIR ≥ 2.';
   }
   return { addKg: addKg, repBump: repBump, advice: advice, top: top, step: step };
 }
@@ -9011,6 +9062,98 @@ async function processUniversalFile(source, actionIntent = 'IMPORT') {
     return processUniversalFileInner(source, actionIntent);
   }, actionIntent === 'IMPORT' ? 'Analisi scheda…' : 'Caricamento…', { immediate: true });
 }
+// HEIC/HEIF, the iPhone's own photo format: by its name, type, or the
+// "ftypheic" box at the start of the file.
+function isHeicBytes(bytes, name, mime) {
+  if (/\.hei[cf]$/i.test(String(name || '')) || /image\/hei[cf]/i.test(String(mime || ''))) return true;
+  if (!bytes || bytes.length < 12) return false;
+  let tag = '';
+  for (let i = 4; i < 12; i++) tag += String.fromCharCode(bytes[i]);
+  return /^ftyp(?:heic|heix|hevc|hevx|heim|heis|mif1|msf1)/.test(tag);
+}
+// The decoder for browsers that cannot open HEIC themselves (Chrome on
+// Android and computers): libheif (libheif-js, LGPL, unmodified, WebAssembly
+// inside), pinned and checked by its hash, loaded from the CDN the OCR already
+// uses - only when a HEIC photo arrives, never at start.
+const LIBHEIF_SRC = 'https://cdn.jsdelivr.net/npm/libheif-js@1.23.2/libheif-wasm/libheif-bundle.js';
+const LIBHEIF_SRI = 'sha256-HjbiVxqDmAE8pLgUyHpMKCJ+NgMykoHw+j17Osr20/M=';
+let __libheifLoading = null;
+function loadLibheif() {
+  if (__libheifLoading) return __libheifLoading;
+  __libheifLoading = new Promise((resolve) => {
+    const finish = async () => {
+      try {
+        const f = window.libheif;
+        const mod = typeof f === 'function' ? f() : f;
+        resolve(mod && typeof mod.then === 'function' ? await mod : mod);
+      } catch (_) { resolve(null); }
+    };
+    if (typeof window.libheif !== 'undefined') { finish(); return; }
+    const el = document.createElement('script');
+    el.src = LIBHEIF_SRC;
+    el.integrity = LIBHEIF_SRI;
+    el.crossOrigin = 'anonymous';
+    el.async = true;
+    const timer = setTimeout(() => { __libheifLoading = null; resolve(null); }, 30000);
+    el.onload = () => { clearTimeout(timer); finish(); };
+    el.onerror = () => { clearTimeout(timer); __libheifLoading = null; resolve(null); };
+    document.head.appendChild(el);
+  });
+  return __libheifLoading;
+}
+function canvasToJpegBytes(canvas) {
+  return new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.92)).then((b) => (b ? b.arrayBuffer().then((a) => new Uint8Array(a)) : null));
+}
+// The photo as JPEG bytes: decoded by the browser when it can (Safari), else
+// by libheif; null when neither can. Bounded, like the OCR's own decoding.
+async function heicToJpegBytes(bytes, mime) {
+  const blob = new Blob([bytes], { type: /hei[cf]/i.test(String(mime || '')) ? mime : 'image/heic' });
+  let bmp = null;
+  try {
+    bmp = await Promise.race([createImageBitmap(blob), new Promise((res) => setTimeout(() => res(null), 8000))]);
+  } catch (_) {
+    bmp = null;
+  }
+  try {
+    if (bmp && bmp.width) {
+      const scale = Math.min(1, 4000 / Math.max(bmp.width, bmp.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bmp.width * scale);
+      canvas.height = Math.round(bmp.height * scale);
+      canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      return await canvasToJpegBytes(canvas);
+    }
+    const lib = await loadLibheif();
+    if (!lib || typeof lib.HeifDecoder !== 'function') return null;
+    const images = new lib.HeifDecoder().decode(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
+    const image = images && images[0];
+    if (!image) return null;
+    const w = image.get_width();
+    const h = image.get_height();
+    const full = document.createElement('canvas');
+    full.width = w;
+    full.height = h;
+    const fctx = full.getContext('2d');
+    const data = fctx.createImageData(w, h);
+    const shown = await Promise.race([
+      new Promise((res) => image.display(data, (d) => res(!!d))),
+      new Promise((res) => setTimeout(() => res(false), 60000))
+    ]);
+    if (!shown) return null;
+    fctx.putImageData(data, 0, 0);
+    try { if (typeof image.free === 'function') image.free(); } catch (_) {}
+    const scale = Math.min(1, 4000 / Math.max(w, h));
+    if (scale >= 1) return await canvasToJpegBytes(full);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    canvas.getContext('2d').drawImage(full, 0, 0, canvas.width, canvas.height);
+    return await canvasToJpegBytes(canvas);
+  } catch (_) {
+    return null;
+  }
+}
+
 async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
   if (actionIntent === 'CHECK_FISICO_PHOTO') {
     hideImportProgress();
@@ -9096,6 +9239,21 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       if (typeof render === 'function') render();
       if (typeof showToast === 'function') showToast('Referto allegato come file (senza trascrizione)', 'ok');
       return;
+    }
+
+    // An iPhone photo kept as HEIC (sent to a computer, saved in Files): the
+    // browser turns it into a JPEG when it can read it (Safari can), and
+    // otherwise says what to do instead of failing without a word.
+    if (isHeicBytes(bytes, name, mime)) {
+      stage('read', 'Reading document');
+      await yieldImportPaint();
+      const jpg = await heicToJpegBytes(bytes, mime);
+      if (!jpg) {
+        throw new Error('Non riesco ad aprire questa foto HEIC (iPhone). La prima volta serve la connessione per il lettore HEIC: riprova online, oppure esportala in JPG (Foto › Condividi › Opzioni › Più compatibile).');
+      }
+      bytes = jpg;
+      mime = 'image/jpeg';
+      name = String(name || 'foto').replace(/\.hei[cf]$/i, '') + '.jpg';
     }
 
     stage('detect', 'Detecting format');
@@ -9969,6 +10127,7 @@ function applyOperationsToProgram(program, operations) {
         duration: (v) => Math.min(52, Math.max(1, parseInt(v, 10) || store.prefs.duration || 16)),
         frequency: (v) => Math.min(7, Math.max(1, parseInt(v, 10) || store.prefs.frequency || 4)),
         timerSound: (v) => Boolean(v),
+        weightUnit: (v) => (String(v).toLowerCase().startsWith('lb') ? 'lb' : 'kg'),
         timerVibrate: (v) => Boolean(v),
         weekIntensity: (v) => String(v || '')
       };
@@ -11367,7 +11526,7 @@ function showPrevLoad(e, key) {
   if(prevVal) {
     const tt = $('prev-load-tooltip');
     if (!tt) return;
-    let tip = `SETT. PREC: ${prevVal}kg`;
+    let tip = `SETT. PREC: ${kgToDisp(prevVal)} ${wUnit()}`;
     try {
       const m = String(key).match(/_e(\d+)_s(\d+)/);
       const exIdx = m ? parseInt(m[1], 10) : null;
@@ -11378,8 +11537,8 @@ function showPrevLoad(e, key) {
           : getLoadSuggestion(exIdx, {});
         if (sugg != null) {
           const prevN = parseFloat(prevVal);
-          if (Number.isFinite(prevN) && sugg > prevN) tip += ` → prova ~${sugg}kg`;
-          else if (Number.isFinite(prevN) && sugg <= prevN) tip += ' → mantieni / +piccoli kg';
+          if (Number.isFinite(prevN) && sugg > prevN) tip += ` → prova ~${kgToDisp(sugg)} ${wUnit()}`;
+          else if (Number.isFinite(prevN) && sugg <= prevN) tip += ' → mantieni / +piccoli ' + wUnit();
         }
       }
     } catch (_) {}
@@ -11781,7 +11940,8 @@ function completeSetQuick(exIdx, setNum, restText) {
   }
 
   // 1) Valore nel campo / store  2) solo se vuoto: suggerimento / precedente / pianificato
-  let load = fieldVal(loadEl, store.data[k + '_load']);
+  // The field shows the unit chosen; the store keeps kg.
+  let load = (loadEl && String(loadEl.value || '').trim() !== '') ? keepKg(loadEl.value, store.data[k + '_load']) : fieldVal(null, store.data[k + '_load']);
   if (load === '') {
     const sugg = (typeof suggestedLoadForSet === 'function') ? suggestedLoadForSet(exIdx, setNum, rowForSugg) : null;
     load = (Number(sugg) > 0 ? sugg : '') || '';
@@ -11793,7 +11953,7 @@ function completeSetQuick(exIdx, setNum, restText) {
   if (load !== '') {
     store.data[k + '_load'] = load;
     store.data[k + '_load_user'] = 1; // confermato dall’atleta col ✓
-    if (loadEl) loadEl.value = load;
+    if (loadEl) loadEl.value = kgToDisp(load);
   }
 
   let reps = fieldVal(repsEl, store.data[k + '_reps']);
@@ -11901,8 +12061,8 @@ function showLiveSetIntelHtml(exIdx) {
   const H = function (d, k) { return (TAE && TAE.humanState) ? TAE.humanState(d, k) : L(k); };
   let h = '<div class="ex-intel-bubble">';
   h += '<div style="font-size:10px;color:var(--gold);font-weight:800;">SET ' + live.set + ' COMPLETATO ✓</div>';
-  h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + esc(String(live.load)) + ' kg × ' + esc(String(live.reps)) + ' rip</div>';
-  h += '<div class="stats-adv-row"><span>Massimale stimato (questa serie)</span><span>' + (live.lastSetE1RM == null ? '—' : (live.lastSetE1RM + ' kg')) + '</span></div>';
+  h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + esc(String(kgToDisp(live.load))) + ' ' + wUnit() + ' × ' + esc(String(live.reps)) + ' rip</div>';
+  h += '<div class="stats-adv-row"><span>Massimale stimato (questa serie)</span><span>' + (live.lastSetE1RM == null ? '—' : wFmt(live.lastSetE1RM)) + '</span></div>';
   h += '<div style="font-size:9px;color:#888;">e1RM della serie appena registrata — stima, non un massimale testato</div>';
   if (live.rpe != null || live.rir != null) {
     h += '<div class="stats-adv-row"><span>Sforzo</span><span>' +
@@ -11920,15 +12080,15 @@ function showLiveSetIntelHtml(exIdx) {
     h += '<div class="stats-adv-row"><span>Intensità vs precedente</span><span>' + formatIntelPct(live.intensityDelta) + '</span></div>';
   }
   h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(live.volumeVsPrevious != null ? live.volumeVsPrevious : live.vsLastSessionVolume) + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(live.volumeToday) + ' kg</span></div>';
+  h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(live.volumeToday) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
   h += '<div class="stats-adv-row"><span>Fatica durante questa seduta</span><span>' + esc(H('fatigue', live.fatigue && live.fatigue.signal)) + '</span></div>';
   h += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato · non modifica i kg che hai scritto. ' + metricExplainBtn('e1rm', 'ⓘ Massimale stimato') + '</div>';
   const rep = window.__liveExerciseReport;
   if (rep && !rep.empty && Number(rep.exIdx) === Number(exIdx)) {
     h += '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-top:10px;">REPORT ESERCIZIO</div>';
-    h += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + formatStatsKg(rep.volumeToday) + ' kg</span></div>';
+    h += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + formatStatsKg(rep.volumeToday) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
     h += '<div class="stats-adv-row"><span>Miglior serie</span><span>' + esc(rep.bestSet || '—') + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Massimale stimato oggi</span><span>' + (rep.e1rmToday == null ? '—' : (rep.e1rmToday + ' kg')) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Massimale stimato oggi</span><span>' + (rep.e1rmToday == null ? '—' : wFmt(rep.e1rmToday)) + '</span></div>';
     h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(rep.snapshot ? rep.snapshot.performanceDelta : null) + '</span></div>';
     h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(rep.volumeChange) + '</span></div>';
     if (rep.status) h += '<div style="font-size:11px;margin-top:6px;">' + esc(rep.status) + '</div>';
@@ -11958,14 +12118,14 @@ function intelRecoHtml(exIdx, reco, L) {
   const H = function (d, k) { return (TAE && TAE.humanState) ? TAE.humanState(d, k) : L(k); };
   let h = '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-top:10px;">PESO CONSIGLIATO</div>';
   const recoLine = reco.action === 'increase'
-    ? ('Peso consigliato ' + reco.suggestedLoad + ' kg (+' + reco.deltaKg + ' kg)')
+    ? ('Peso consigliato ' + wFmt(reco.suggestedLoad) + ' (+' + wFmt(reco.deltaKg) + ')')
     : (reco.action === 'reduce_volume'
       ? 'Riduci il volume — valuta −1–2 serie di lavoro'
       : (reco.action === 'reduce_load'
-        ? ('Riduci il carico' + (reco.suggestedLoad != null ? (' → ' + reco.suggestedLoad + ' kg') : ''))
+        ? ('Riduci il carico' + (reco.suggestedLoad != null ? (' → ' + wFmt(reco.suggestedLoad)) : ''))
         : (reco.action === 'monitor'
-          ? ('Mantieni e monitora' + (reco.suggestedLoad != null ? (' · ' + reco.suggestedLoad + ' kg') : ''))
-          : 'Mantieni il carico attuale' + (reco.suggestedLoad != null ? (' · ' + reco.suggestedLoad + ' kg') : ''))));
+          ? ('Mantieni e monitora' + (reco.suggestedLoad != null ? (' · ' + wFmt(reco.suggestedLoad)) : ''))
+          : 'Mantieni il carico attuale' + (reco.suggestedLoad != null ? (' · ' + wFmt(reco.suggestedLoad)) : ''))));
   h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + esc(recoLine) + '</div>';
   h += '<div style="font-size:10px;color:#aaa;">' + esc(reco.why) + '</div>';
   if (reco.mrvNote) h += '<div style="font-size:10px;color:#c9a227;margin-top:4px;">' + esc(reco.mrvNote) + '</div>';
@@ -12025,8 +12185,8 @@ function exerciseIntelBodyHtml(exIdx) {
         (live.rpe != null && live.rir != null ? ' / ' : '') +
         (live.rir != null ? ('RIR ' + live.rir) : '')
       : '—';
-    h += '<div class="stats-adv-row"><span>Massimale stimato</span><span>' + (snap.currentE1RM == null ? '—' : (snap.currentE1RM + ' kg')) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(snap.currentVolume) + ' kg</span></div>';
+    h += '<div class="stats-adv-row"><span>Massimale stimato</span><span>' + (snap.currentE1RM == null ? '—' : wFmt(snap.currentE1RM)) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(snap.currentVolume) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
     const intenBand = snap.intensityContext && snap.intensityContext.intensityBand;
     const relInt = snap.intensityContext && snap.intensityContext.relativeIntensity;
     h += '<div class="stats-adv-row"><span>Intensità</span><span>' +
@@ -12055,15 +12215,15 @@ function exerciseIntelBodyHtml(exIdx) {
     const cur = snap.currentExposure || {};
     const prev = snap.previousExposure || {};
     h += '<div style="color:var(--gold);font-weight:800;margin:12px 0 6px;font-size:10px;">PRESTAZIONE ESPRESSA</div>';
-    h += '<div class="stats-adv-row"><span>Carico (top set)</span><span>' + (cur.topLoad == null ? '—' : (cur.topLoad + ' kg')) + (prev.topLoad != null ? (' · prec. ' + prev.topLoad + ' kg') : '') + '</span></div>';
+    h += '<div class="stats-adv-row"><span>Carico (top set)</span><span>' + (cur.topLoad == null ? '—' : wFmt(cur.topLoad)) + (prev.topLoad != null ? (' · prec. ' + wFmt(prev.topLoad)) : '') + '</span></div>';
     h += '<div class="stats-adv-row"><span>Ripetizioni (top set)</span><span>' + (cur.topReps == null ? '—' : cur.topReps) + (prev.topReps != null ? (' · prec. ' + prev.topReps) : '') + '</span></div>';
-    h += '<div class="stats-adv-row"><span>e1RM stimato</span><span>' + (snap.currentE1RM == null ? '—' : (snap.currentE1RM + ' kg')) + '</span></div>';
+    h += '<div class="stats-adv-row"><span>e1RM stimato</span><span>' + (snap.currentE1RM == null ? '—' : wFmt(snap.currentE1RM)) + '</span></div>';
     h += '<div style="color:var(--gold);font-weight:800;margin:12px 0 6px;font-size:10px;">SFORZO</div>';
     h += '<div class="stats-adv-row"><span>RPE</span><span>' + (snap.currentRPE == null ? '—' : snap.currentRPE) + (snap.effortTrend ? (' · ' + esc(H('effort', snap.effortTrend))) : '') + '</span></div>';
     h += '<div class="stats-adv-row"><span>RIR</span><span>' + (snap.currentRIR == null ? '—' : snap.currentRIR) + '</span></div>';
     h += '<div style="color:var(--gold);font-weight:800;margin:12px 0 6px;font-size:10px;">DOSE DI LAVORO</div>';
     h += '<div class="stats-adv-row"><span>Serie</span><span>' + (cur.setCount || 0) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Volume load</span><span>' + formatStatsKg(snap.currentVolume) + ' kg</span></div>';
+    h += '<div class="stats-adv-row"><span>Volume load</span><span>' + formatStatsKg(snap.currentVolume) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
     h += '<div style="color:var(--gold);font-weight:800;margin:12px 0 6px;font-size:10px;">RISPOSTA</div>';
     h += '<div class="stats-adv-row"><span>Prestazione</span><span>' + esc(H('performance', snap.performanceState || snap.performanceDirection)) + '</span></div>';
     h += '<div class="stats-adv-row"><span>Intensità</span><span>' + esc(H('intensity', snap.intensityContext && snap.intensityContext.intensityTrend)) + '</span></div>';
@@ -12109,7 +12269,7 @@ function calculateSuggestedLoad(exIdx) {
     const why = reco.why || (reco.eligibility && reco.eligibility.reason) || 'Dati insufficienti: servono almeno due esposizioni comparabili.';
     if (typeof showToast === 'function') showToast(why, 'info');
   } else if (reco && reco.suggestedLoad != null && typeof showToast === 'function') {
-    showToast('Peso consigliato: ' + reco.suggestedLoad + ' kg', 'ok');
+    showToast('Peso consigliato: ' + wFmt(reco.suggestedLoad), 'ok');
   }
 }
 function explainIntelMetric(id) {
@@ -12193,7 +12353,7 @@ function sessionSummaryCardHtml() {
   let h = '<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid var(--gold);">';
   h += '<div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:10px;color:var(--gold);font-weight:800;">RIEPILOGO ALLENAMENTO</div>';
   h += '<button type="button" class="btn btn-outline" style="font-size:9px;padding:3px 6px;" onclick="window.__lastSessionSummary=null;this.closest(\'.card\').remove()">Chiudi</button></div>';
-  h += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + (sum.volumeChange == null ? formatStatsKg(sum.volume) + ' kg' : ((sum.volumeChange >= 0 ? '+' : '') + sum.volumeChange + '%')) + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + (sum.volumeChange == null ? formatStatsKg(sum.volume) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') : ((sum.volumeChange >= 0 ? '+' : '') + sum.volumeChange + '%')) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Serie</span><span>' + (sum.setsChange == null ? (sum.sets + ' serie') : ((sum.setsChange >= 0 ? '+' : '') + sum.setsChange + '%')) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(sum.performanceChange) + '</span></div>';
   h += '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(sum)) + '</div>';
@@ -12219,8 +12379,8 @@ function preWorkoutIntelHtml() {
   const H = function (d, k) { return TAE.humanState ? TAE.humanState(d, k) : L(k); };
   let h = '<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid #333;">';
   h += '<div style="font-size:10px;color:var(--gold);font-weight:800;">ALLENAMENTO DI OGGI</div>';
-  h += '<div class="stats-adv-row"><span>Ultima esposizione</span><span>' + (last ? ('W' + last.week + ' · S' + ((last.day || 0) + 1) + (last.tonnage ? (' · ' + last.tonnage + ' kg') : '')) : '—') + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Volume recente</span><span>' + (ctx.recentVolume ? (formatStatsKg(ctx.recentVolume) + ' kg') : '—') + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Ultima esposizione</span><span>' + (last ? ('W' + last.week + ' · S' + ((last.day || 0) + 1) + (last.tonnage ? (' · ' + formatStatsKg(last.tonnage) + ' ' + wUnit()) : '')) : '—') + '</span></div>';
+  h += '<div class="stats-adv-row"><span>Volume recente</span><span>' + (ctx.recentVolume ? (formatStatsKg(ctx.recentVolume) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')) : '—') + '</span></div>';
   h += '<div class="stats-adv-row"><span>Recupero recente</span><span>' + esc(H('recovery', ctx.recovery && (ctx.recovery.signal || ctx.recovery.estimate))) + '</span></div>';
   h += '<div class="stats-adv-row"><span>Fatica recente (modello)</span><span>' + esc(H('fatigue', ctx.fatigue && ctx.fatigue.signal)) + '</span></div>';
   h += '<div style="font-size:9px;color:#777;margin-top:6px;">' + esc(ctx.note || '') + ' ' + metricExplainBtn('recovery', 'ⓘ Recupero') + '</div>';
@@ -13677,7 +13837,7 @@ function buildLocalCoachInsightAnswer(promptText) {
   if (/progress|miglior|trend/.test(q) && perf) {
     const lines = (perf.exercises || []).slice(0, 8).map(function (e) {
       return '- ' + e.name + ': ' + (e.lastLoad || '?') + '×' + (e.lastReps || '?') + ' · ' + (e.trend || 'stable') +
-        (e.bestE1rm ? (' · e1RM ~' + e.bestE1rm + 'kg') : '');
+        (e.bestE1rm ? (' · e1RM ~' + wFmt(e.bestE1rm)) : '');
     });
     return '## Progressi (dai tuoi log)\n\n' + (insight ? insight + '\n\n' : '') +
       (lines.length ? lines.join('\n') : 'Ancora pochi set completati per un trend solido.') +
@@ -13691,7 +13851,7 @@ function buildLocalCoachInsightAnswer(promptText) {
       ? keys.map(function (k) { return '- ' + k + ': ' + muscles[k] + ' serie registrate'; }).join('\n')
       : '- Nessuna serie completata ancora.';
     return '## Volume muscolare (log locali)\n\n' + lines +
-      '\n\nTonnellaggio stimato totale: **' + Math.round(snap.weight || 0) + ' kg**.\n\n_Organizzativo, non consulenza medica._';
+      '\n\nTonnellaggio stimato totale: **' + formatStatsKg(snap.weight || 0) + ' ' + wUnit() + '**.\n\n_Organizzativo, non consulenza medica._';
   }
   if (/debol|weak|punto/.test(q) && perf) {
     const weak = (perf.exercises || []).filter(function (e) { return e.trend === 'declining'; });
@@ -19197,6 +19357,7 @@ function renderSettings(c) {
       <div style="font-size:10px;color:#666;margin:-6px 0 10px;">A timer scaduto chiude il riposo e avvisa.</div>
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:10px;">Mostra riscaldamento <input type="checkbox" id="pref-show-warmup" ${store.prefs.showWarmup!==false?'checked':''} onchange="store.prefs.showWarmup=this.checked;persist();render()"></label>
       <div style="font-size:10px;color:#666;margin:-6px 0 10px;">Le serie di riscaldamento della scheda si vedono e si spuntano. Spento: la seduta parte dalla prima serie allenante; la rampa resta nella scheda.</div>
+      <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:10px;gap:10px;">${t('weightUnit')} <select id="pref-weight-unit" onchange="setWeightUnit(this.value)" style="width:auto;padding:6px 10px;background:#111;border:1px solid #333;color:#fff;"><option value="kg" ${wUnit()==='kg'?'selected':''}>kg</option><option value="lb" ${wUnit()==='lb'?'selected':''}>${t('weightUnitLb')}</option></select></label>
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:10px;">Avviso sonoro <input type="checkbox" id="pref-timer-sound" ${store.prefs.timerSound!==false?'checked':''} onchange="store.prefs.timerSound=this.checked;persist()"></label>
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:10px;">Vibrazione <input type="checkbox" id="pref-timer-vib" ${store.prefs.timerVibrate!==false?'checked':''} onchange="store.prefs.timerVibrate=this.checked;persist()"></label>
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;gap:10px;">Tempo di preparazione (s) <input type="number" id="pref-prep" value="${esc(String(store.prefs.prepSeconds||0))}" style="width:80px;padding:6px;background:#111;border:1px solid #333;color:#fff;" onchange="store.prefs.prepSeconds=parseInt(this.value,10)||0;persist()"></label>
@@ -19311,7 +19472,7 @@ function profileNutritionFieldsHtml(profile) {
     '<select id="profile-nutr-pace" style="' + sel + '">' +
     opt('slow', 'Lento', profile.nutritionPace || 'moderate') + opt('moderate', 'Moderato', profile.nutritionPace || 'moderate') + '</select></div>' +
     '<div style="grid-column:1/-1;font-size:10px;color:#777;">' + (chk
-      ? 'Per il target si usa il peso dell\'ultimo check fisico: ' + chk.kg + ' kg.'
+      ? 'Per il target si usa il peso dell\'ultimo check fisico: ' + bwToDisp(chk.kg) + ' ' + wUnit() + '.'
       : 'Per il target si usa il peso qui sopra; con un check fisico si usa quello, più recente.') + '</div>';
 }
 
@@ -19323,11 +19484,11 @@ function saveAthleteProfile() {
     name: ($('profile-name')?.value || '').trim(),
     age: parseInt($('profile-age')?.value, 10) || null,
     sex: ($('profile-sex') && $('profile-sex').value) || prev.sex || 'm',
-    weight: parseFloat($('profile-weight')?.value) || null,
+    weight: parseFloat(keepKg($('profile-weight')?.value, prev.weight, bwToDisp)) || null,
     height: parseInt($('profile-height')?.value, 10) || null,
-    squatMax: hasSquat ? (parseFloat($('profile-squat')?.value) || null) : (prev.squatMax || null),
-    benchMax: hasSquat ? (parseFloat($('profile-bench')?.value) || null) : (prev.benchMax || null),
-    deadliftMax: hasSquat ? (parseFloat($('profile-deadlift')?.value) || null) : (prev.deadliftMax || null),
+    squatMax: hasSquat ? (parseFloat(keepKg($('profile-squat')?.value, prev.squatMax)) || null) : (prev.squatMax || null),
+    benchMax: hasSquat ? (parseFloat(keepKg($('profile-bench')?.value, prev.benchMax)) || null) : (prev.benchMax || null),
+    deadliftMax: hasSquat ? (parseFloat(keepKg($('profile-deadlift')?.value, prev.deadliftMax)) || null) : (prev.deadliftMax || null),
     goal: ($('profile-goal')?.value || '').trim(),
     focusMuscles: hasFocus
       ? Array.from(document.querySelectorAll('.profile-focus:checked')).map(function (el) { return normalizeMacroMuscleGroup(el.value); }).filter(function (m, i, a) { return MACRO_MUSCLE_GROUPS.some(function (g) { return g.id === m; }) && a.indexOf(m) === i; })
@@ -22497,8 +22658,12 @@ function initPercentModelFromImport(prog) {
 }
 function percentLiftLabel(lift) {
   const eng = (typeof window !== 'undefined' && window.NurvanProgressions) || null;
-  if (eng && typeof eng.liftLabel === 'function') return eng.liftLabel(lift);
-  return ({ squat: 'Squat', bench: 'Panca piana', deadlift: 'Stacco da terra' })[lift] || lift;
+  const own = { squat: 'Squat', bench: 'Panca piana', deadlift: 'Stacco da terra', front_squat: 'Squat frontale', snatch: 'Strappo', clean_jerk: 'Slancio' };
+  if (eng && typeof eng.liftLabel === 'function') {
+    const l = eng.liftLabel(lift);
+    if (l && l !== lift) return l;
+  }
+  return own[lift] || lift;
 }
 const PROFILE_MAX_KEY = { squat: 'squatMax', bench: 'benchMax', deadlift: 'deadliftMax' };
 // The card over the workout: the maxes the loads are percentages of, and the button that recomputes them.
@@ -22518,13 +22683,13 @@ function percentMaxesCardHtml() {
     if (open) {
       h += '<div style="display:grid;grid-template-columns:repeat(' + Math.min(3, lifts.length) + ',minmax(0,1fr));gap:8px;">';
       lifts.forEach(function (lift) {
-        const v = Number(maxes[lift]) > 0 ? maxes[lift] : '';
+        const v = Number(maxes[lift]) > 0 ? kgToDisp(maxes[lift]) : '';
         const f = fromFile[lift];
         const pk = PROFILE_MAX_KEY[lift];
         const pv = pk && Number(prof[pk]) > 0 ? Number(prof[pk]) : null;
-        const hint = [f && f.value ? ('file: ' + f.value + (f.kind === 'projected' ? ' previsto' : '')) : '', pv && Number(v) !== pv ? ('profilo: ' + pv) : ''].filter(Boolean).join(' · ');
+        const hint = [f && f.value ? ('file: ' + f.value + (f.kind === 'projected' ? ' previsto' : (f.kind === 'training' ? ' training max' : ''))) : '', pv && Number(v) !== pv ? ('profilo: ' + pv) : ''].filter(Boolean).join(' · ');
         h += '<label style="display:flex;flex-direction:column;gap:4px;font-size:9px;color:#888;text-transform:uppercase;">' + esc(percentLiftLabel(lift)) +
-          '<input id="pct-max-' + esc(lift) + '" type="number" step="0.5" inputmode="decimal" value="' + esc(String(v)) + '" placeholder="kg" style="padding:8px;font-size:14px;font-weight:700;text-align:center;width:100%;">' +
+          '<input id="pct-max-' + esc(lift) + '" type="number" step="0.5" inputmode="decimal" value="' + esc(String(v)) + '" placeholder="' + wUnit() + '" style="padding:8px;font-size:14px;font-weight:700;text-align:center;width:100%;">' +
           (hint ? '<span style="font-size:9px;color:#666;text-transform:none;">' + esc(hint) + '</span>' : '') + '</label>';
       });
       h += '</div><button class="btn btn-primary" type="button" style="width:100%;margin-top:10px;font-size:12px;font-weight:800;" onclick="applyPercentMaxesFromPanel()">RICALCOLA CARICHI</button>' +
@@ -22549,9 +22714,9 @@ function applyPercentMaxesFromPanel() {
     const changes = [];
     lifts.forEach(function (lift) {
       const el = document.getElementById('pct-max-' + lift);
-      const v = parseFloat(String((el && el.value) || '').replace(',', '.'));
+      const v = parseFloat(String(keepKg((el && el.value) || '', maxes[lift])).replace(',', '.'));
       if (!(v > 0 && v < 1000)) return;
-      if (Number(maxes[lift]) !== v) changes.push(percentLiftLabel(lift) + ' ' + v + ' kg');
+      if (Number(maxes[lift]) !== v) changes.push(percentLiftLabel(lift) + ' ' + kgToDisp(v) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg'));
       maxes[lift] = v;
     });
     if (!lifts.some(function (lift) { return Number(maxes[lift]) > 0; })) {
@@ -22785,7 +22950,7 @@ function warmupProgressForKey(key) {
 
 function warmupSchemeText(it) {
   if (it.rampUp && it.rampUp.length) {
-    return it.rampUp.map(function (s) { return s.load + 'kg×' + s.reps; }).join(' → ');
+    return it.rampUp.map(function (s) { return kgToDisp(s.load) + wUnit() + '×' + s.reps; }).join(' → ');
   }
   if (it.durationSeconds) return (it.sets > 1 ? it.sets + '×' : '') + it.durationSeconds + 's';
   if (it.reps != null) return (it.sets || 1) + '×' + it.reps;
@@ -23239,7 +23404,7 @@ function renderWarmupPlayer() {
   var rampHtml = '';
   if (it.rampUp && it.rampUp.length) {
     rampHtml = '<div style="display:flex;flex-direction:column;gap:6px;margin:14px 0;">' +
-      it.rampUp.map(function (s) { return '<div style="display:flex;justify-content:space-between;background:#141414;padding:8px 12px;border-radius:8px;"><span style="color:#ccc;font-size:13px;">' + s.load + ' kg</span><span style="color:#888;font-size:13px;">× ' + s.reps + '</span></div>'; }).join('') +
+      it.rampUp.map(function (s) { return '<div style="display:flex;justify-content:space-between;background:#141414;padding:8px 12px;border-radius:8px;"><span style="color:#ccc;font-size:13px;">' + wFmt(s.load) + '</span><span style="color:#888;font-size:13px;">× ' + s.reps + '</span></div>'; }).join('') +
       '</div>';
   }
   var warmupMediaHtml = (window.NurvanMediaUI && window.NurvanMediaUI.mediaPanel)
@@ -23493,7 +23658,7 @@ function renderTraining(c){
         // to: a prescription above it would be fiction.
         const exCeiling = (typeof programLoadCeiling === 'function') ? programLoadCeiling(curEx) : null;
         if (exCeiling) {
-          h += `<div style="font-size:10px;color:#e0b040;margin-bottom:8px;">${esc((DATA.space && DATA.space.name) || 'Qui')}: ${esc(String(exCeiling.label).toLowerCase())} ${exCeiling.kg} kg</div>`;
+          h += `<div style="font-size:10px;color:#e0b040;margin-bottom:8px;">${esc((DATA.space && DATA.space.name) || 'Qui')}: ${esc(String(exCeiling.label).toLowerCase())} ${wFmt(exCeiling.kg)}</div>`;
         }
         h += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;background:#151515;padding:8px;border-radius:8px;border:1px solid #222;">
           <div style="font-size:10px;color:#aaa;">Schema: <b style="color:#fff;">${esc(schemeInfo.scheme)}</b></div>
@@ -23505,8 +23670,8 @@ function renderTraining(c){
           ${exLogUnit === 'cardio'
             ? '<div>#</div><div>MINUTI</div><div>DATI</div><div>' + exIntens + '</div><div>OK</div><div>&#10005;</div>'
             : (exLogUnit === 'time'
-              ? '<div>#</div><div>KG</div><div>SECONDI</div><div>TIMER</div><div>OK</div><div>&#10005;</div>'
-              : '<div>#</div><div>KG</div><div>REPS</div><div>' + exIntens + '</div><div>OK</div><div>&#10005;</div>')}
+              ? '<div>#</div><div>' + wUnit().toUpperCase() + '</div><div>SECONDI</div><div>TIMER</div><div>OK</div><div>&#10005;</div>'
+              : '<div>#</div><div>' + wUnit().toUpperCase() + '</div><div>REPS</div><div>' + exIntens + '</div><div>OK</div><div>&#10005;</div>')}
         </div>`;
 
         const warmCount = countWarmupSets(row.sets);
@@ -23572,7 +23737,7 @@ function renderTraining(c){
             const running = window.__setTimer && window.__setTimer.key === k;
             h += `<div class="set-row">
             <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
-            <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || pctPlanLoad || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
+            <input type="number" id="${k}_load" step="0.5" placeholder="${kgToDisp(sugg || pctPlanLoad || '')}" value="${kgToDisp(shownLoad)}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
             <input type="number" id="${k}_sec" step="1" min="0" placeholder="${targetSec}" value="${shownSec}" oninput="updateData('${k}_sec',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;background:#1a1a1a;">
             <button type="button" id="${k}_timerbtn" class="btn btn-outline" style="font-size:11px;padding:8px 2px;${running ? 'border-color:var(--gold);color:var(--gold);' : ''}" title="Avvia il conto alla rovescia" onclick="toggleSetTimer(${fIdx}, ${s}, ${targetSec}, '${restForSet}')">${running ? '■' : '▶ ' + targetSec + 's'}</button>
             <button class="set-done-btn ${isDone?'active':''}" title="Segna fatto" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
@@ -23581,7 +23746,7 @@ function renderTraining(c){
           } else {
           h += `<div class="set-row${isWarm ? ' set-row-warmup' : ''}" ${isWarm ? 'style="opacity:0.72;" title="Serie di riscaldamento: non conta nel volume ne\u2019 nei record"' : ''}>
             <div style="font-size:${isWarm ? '11px' : '13px'};font-weight:bold;color:${isWarm ? '#8a8a8a' : 'var(--gold)'};text-align:center;">${setLabel}</div>
-            <input type="number" id="${k}_load" step="0.5" placeholder="${sugg || pctPlanLoad || ''}" value="${shownLoad}" oninput="updateData('${k}_load',this.value)" onfocus="showPrevLoad(event, '${k}_load')" onblur="hidePrevLoad()" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid ${isWarm ? '#555' : 'var(--gold)'};background:#1a1a1a;">
+            <input type="number" id="${k}_load" step="0.5" placeholder="${kgToDisp(sugg || pctPlanLoad || '')}" value="${kgToDisp(shownLoad)}" oninput="updateData('${k}_load',this.value)" onfocus="showPrevLoad(event, '${k}_load')" onblur="hidePrevLoad()" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid ${isWarm ? '#555' : 'var(--gold)'};background:#1a1a1a;">
             <select id="${k}_reps" onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${shownReps==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
             <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${sameIntensityOption(shownRir, i)?'selected':''}>${i}</option>`).join('')}</select>
             <button class="set-done-btn ${isDone?'active':''}" title="1 tap: conferma kg/reps e avvia riposo" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
@@ -23653,7 +23818,7 @@ function renderTraining(c){
         </div>
 
         <div style="display:grid;grid-template-columns:28px 1fr 1fr 1fr 34px 26px;gap:6px;align-items:center;margin-bottom:6px;font-size:9px;color:#666;text-align:center;font-weight:800;">
-          <div>#</div><div>KG</div><div>REPS</div><div>${exIntens}</div><div>OK</div><div>✕</div>
+          <div>#</div><div>${wUnit().toUpperCase()}</div><div>REPS</div><div>${exIntens}</div><div>OK</div><div>✕</div>
         </div>`;
 
       for(let s = 1; s <= totalSets; s++) {
@@ -23668,7 +23833,7 @@ function renderTraining(c){
           : (bonusSugg || '');
         h += `<div class="set-row">
           <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
-          <input type="number" id="${k}_load" step="0.5" placeholder="${bonusSugg || ''}" value="${bonusShown}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
+          <input type="number" id="${k}_load" step="0.5" placeholder="${kgToDisp(bonusSugg || '')}" value="${kgToDisp(bonusShown)}" oninput="updateData('${k}_load',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
           <select id="${k}_reps" onchange="updateData('${k}_reps',this.value)" style="padding:8px 2px;font-size:14px;background:#1a1a1a;"><option value="">-</option>${[...Array(50)].map((_,i)=>`<option value="${i+1}" ${store.data[k+'_reps']==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
           <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${sameIntensityOption(store.data[k+'_rir'], i)?'selected':''}>${i}</option>`).join('')}</select>
           <button class="set-done-btn ${isDone?'active':''}" onclick="completeSetQuick(${fIdx}, ${s}, '${restBonus}')">${isDone?'✓':'○'}</button>
@@ -23840,7 +24005,7 @@ function formatMaxTestChip(exIdx, exName) {
   else if (weeksLeft === 1) { msg = 'Prossima sett.: test 1RM — taper'; tone = '#ffb74d'; }
   else if (weeksLeft < 3) { msg = 'Test 1RM tra ' + weeksLeft + ' sett. (presto)'; tone = '#ffb74d'; }
   else { msg = 'Test 1RM tra ' + weeksLeft + ' settimane'; }
-  return `<div style="font-size:10px;color:${tone};font-weight:700;margin:0 0 8px;">${esc(msg)}${plan.estimated1rm ? (' · stimato ~' + esc(String(plan.estimated1rm)) + ' kg') : ''}</div>`;
+  return `<div style="font-size:10px;color:${tone};font-weight:700;margin:0 0 8px;">${esc(msg)}${plan.estimated1rm ? (' · stimato ~' + esc(String(wFmt(plan.estimated1rm)))) : ''}</div>`;
 }
 
 function openMaxTestPlannerModal(preselectExIdx) {
@@ -24302,7 +24467,7 @@ function buildWorkoutPdfHtml(opts) {
           const done = store.data[base + '_done'] ? '✓' : '';
           const loadShow = pdfSetLoadDisplay(opts, wi, di, ei, s, row);
           const repsShow = (reps !== undefined && reps !== '' && reps != null) ? reps : (row.repsTarget || '—');
-          setLines.push('S' + s + ': ' + loadShow + ' kg × ' + repsShow + (rir !== undefined && rir !== '' && rir != null ? (' @' + rir) : '') + (tech ? (' [' + tech + ']') : '') + (done ? ' ' + done : ''));
+          setLines.push('S' + s + ': ' + kgToDisp(loadShow) + ' ' + wUnit() + ' × ' + repsShow + (rir !== undefined && rir !== '' && rir != null ? (' @' + rir) : '') + (tech ? (' [' + tech + ']') : '') + (done ? ' ' + done : ''));
         }
         body += '<tr><td style="padding:6px;border:1px solid #333;vertical-align:top;font-weight:700;">' + esc(name) + '</td>'
           + '<td style="padding:6px;border:1px solid #333;vertical-align:top;">' + esc(scheme.scheme || '') + '</td>'
@@ -25152,6 +25317,7 @@ function unlinkSuperset(ssId) {
 }
 
 function updateData(key, val){
+  if (/_load$/.test(String(key || ''))) val = dispToKg(val);
   maybePushFieldUndo(/_load$/.test(String(key || '')) ? 'carico' : (/_reps$/.test(String(key || '')) ? 'reps' : 'serie'), key);
   store.data[key] = val;
   if (/_s\d+_load$/.test(String(key || ''))) store.data[String(key).replace(/_load$/, '_load_user')] = 1;
@@ -25300,7 +25466,7 @@ function calcStats(){
   // then disagreed with the saved session.
   const snap = collectSessionStats({ currentSessionOnly: true });
   const v = snap.weight || 0, r = snap.intensity || 0, s = snap.sets || 0;
-  if($('d-vol')) $('d-vol').innerText = `${Math.round(v)} kg`;
+  if($('d-vol')) $('d-vol').innerText = `${formatStatsKg(v)} ${wUnit()}`;
   if($('d-rir')) $('d-rir').innerText = `${Math.round(r)} pts`;
   if($('d-sets')) $('d-sets').innerText = s;
 }
@@ -25675,7 +25841,7 @@ function buildLocalSessionCoachReply(logEntry, snap) {
     '- Tonnellaggio: **' + tonnage + ' kg** · intensità **' + (le.intensity || 0) + ' pts** · **' + (le.kcal || 0) + ' kcal** stimate\n' +
     (muscleLines.length ? ('\n**Distribuzione muscolare**\n' + muscleLines.join('\n') + '\n') : '\n') +
     '\n' + verdict + '\n\n' +
-    'Prossimo allenamento: ripeti gli stessi esercizi e cerca +1 ripetizione o +1,25/2,5 kg dove hai chiuso tutte le serie con RIR ≥ 2. Non è una diagnosi medica.';
+    'Prossimo allenamento: ripeti gli stessi esercizi e cerca +1 ripetizione o +' + (wUnit() === 'lb' ? '2,5/5 lb' : '1,25/2,5 kg') + ' dove hai chiuso tutte le serie con RIR ≥ 2. Non è una diagnosi medica.';
 }
 
 function maybeAskCoachAfterComplete() {
@@ -26004,7 +26170,7 @@ var SESSION_CARD_PR_LABEL = {
 };
 
 function formatKgIt(n) {
-  const v = Math.round(Number(n) || 0);
+  const v = Math.round(Number(typeof kgToDisp === 'function' ? kgToDisp(Number(n) || 0) : (Number(n) || 0)) || 0);
   return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
@@ -26027,8 +26193,8 @@ function formatSessionCardDate(iso) {
 function formatSessionCardPr(pr) {
   const type = pr && pr.type;
   const v = Number(pr && pr.value);
-  if (type === 'reps') return v + ' rip' + (pr.load != null ? (' × ' + formatKgIt(pr.load) + ' kg') : '');
-  if (type === 'weight' || type === 'e1rm' || type === 'volume') return formatKgIt(v) + ' kg';
+  if (type === 'reps') return v + ' rip' + (pr.load != null ? (' × ' + formatKgIt(pr.load) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')) : '');
+  if (type === 'weight' || type === 'e1rm' || type === 'volume') return formatKgIt(v) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg');
   return String(pr && pr.value != null ? pr.value : '');
 }
 
@@ -26069,7 +26235,7 @@ function buildSessionCardData(input) {
     durationSec: Math.max(0, Number(log.durationSec) || 0),
     durationText: formatDurationIt(log.durationSec),
     tonnage: Math.max(0, Math.round(Number(log.tonnage) || 0)),
-    tonnageText: formatKgIt(log.tonnage) + ' kg',
+    tonnageText: formatKgIt(log.tonnage) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg'),
     sets: Math.max(0, Number(log.sets) || 0),
     exercises: Math.max(0, Number(log.exercises) || 0),
     prs: prs,
@@ -26140,7 +26306,7 @@ function sessionTextLines(card) {
   const c = card || {};
   const setCount = sessionTextSetCount(c);
   const head = [c.durationText || formatDurationIt(c.durationSec)];
-  if (Number(c.tonnage) > 0) head.push(c.tonnageText || (formatKgIt(c.tonnage) + ' kg'));
+  if (Number(c.tonnage) > 0) head.push(c.tonnageText || (formatKgIt(c.tonnage) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')));
   if (setCount > 0) head.push(setCount + ' serie');
   const lines = ['**' + String(c.title || 'Seduta') + ' — ' + formatSessionTextDate(c.at) + '** (' + head.join(' · ') + ')'];
   const prs = Array.isArray(c.prs) ? c.prs : [];
@@ -26196,7 +26362,7 @@ function formatSessionPeriodText(cards) {
     head.push(from === to ? from : (from + ' – ' + to));
   }
   head.push(formatDurationIt(dur));
-  if (kg > 0) head.push(formatKgIt(kg) + ' kg');
+  if (kg > 0) head.push(formatKgIt(kg) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg'));
   if (sets > 0) head.push(sets + ' serie');
   if (cardio > 0) head.push('cardio ' + cardio + ' min');
   const blocks = ['**Totale: ' + list.length + (list.length === 1 ? ' seduta' : ' sedute') + '** (' + head.join(' · ') + ')'];
@@ -27119,16 +27285,16 @@ function renderAthleteProfile(container) {
     '<option value="f"' + (String(profile.sex||'').toLowerCase().indexOf('f')===0?' selected':'') + '>Femmina</option></select></div>' +
     '<div><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelAge') + '</label>' +
     '<input id="profile-age" type="number" value="' + esc(String(profile.age || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
-    '<div><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelWeight') + '</label>' +
-    '<input id="profile-weight" type="number" step="0.1" value="' + esc(String(profile.weight || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelWeight').replace(/\s*\((?:kg|кг|كغ)\)/i, '') + ' (' + wUnit() + ')</label>' +
+    '<input id="profile-weight" type="number" step="0.1" value="' + esc(String(bwToDisp(profile.weight || ''))) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelHeight') + '</label>' +
     '<input id="profile-height" type="number" value="' + esc(String(profile.height || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
-    '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Squat (kg)</label>' +
-    '<input id="profile-squat" type="number" step="0.5" value="' + esc(String(profile.squatMax || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
-    '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Panca (kg)</label>' +
-    '<input id="profile-bench" type="number" step="0.5" value="' + esc(String(profile.benchMax || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
-    '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Stacco (kg)</label>' +
-    '<input id="profile-deadlift" type="number" step="0.5" value="' + esc(String(profile.deadliftMax || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Squat (' + wUnit() + ')</label>' +
+    '<input id="profile-squat" type="number" step="0.5" value="' + esc(String(kgToDisp(profile.squatMax || ''))) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Panca (' + wUnit() + ')</label>' +
+    '<input id="profile-bench" type="number" step="0.5" value="' + esc(String(kgToDisp(profile.benchMax || ''))) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Stacco (' + wUnit() + ')</label>' +
+    '<input id="profile-deadlift" type="number" step="0.5" value="' + esc(String(kgToDisp(profile.deadliftMax || ''))) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div style="grid-column:1/-1;"><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelGoal') + '</label>' +
     '<input id="profile-goal" type="text" value="' + esc(profile.goal || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div style="grid-column:1/-1;"><label style="font-size:10px;color:#666;font-weight:800;">Su quali parti vuoi concentrarti?</label>' +
@@ -27407,7 +27573,7 @@ function renderProgressCenter(container) {
     '<div class="card" style="margin-bottom:12px;"><div style="font-size:12px;font-weight:900;color:var(--gold);margin-bottom:8px;">Dati</div>' +
     '<div style="font-size:13px;color:#ddd;line-height:1.6;">Allenamenti: <b>' + logs.length + '</b><br>Ultimo WO: ' +
     esc(snap.lastWorkoutAt ? String(snap.lastWorkoutAt).slice(0, 16) : '—') +
-    '<br>Peso recente: ' + esc(lastBw ? (lastBw.kg + ' kg') : '—') + '</div></div>' +
+    '<br>Peso recente: ' + esc(lastBw ? (bwToDisp(lastBw.kg) + ' ' + wUnit()) : '—') + '</div></div>' +
     '<div class="card" style="margin-bottom:12px;"><div style="font-size:12px;font-weight:900;color:var(--gold);margin-bottom:8px;">Nota</div>' +
     '<p style="font-size:12px;color:#aaa;margin:0;line-height:1.4;">Questi numeri arrivano dal diario locale. Non sono una diagnosi. Il confronto coach è nella vista Progress del cliente.</p></div>' +
     '<button class="btn btn-outline" style="width:100%;" onclick="navigate(\'stats\')">Apri statistiche</button>';
@@ -28945,7 +29111,7 @@ function renderStats(c){
     return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #222;font-size:11px;">' +
       '<button type="button" style="flex:1;text-align:left;background:none;border:0;color:inherit;padding:0;cursor:pointer;" onclick="openLoggedSessionReview(' + hw + ',' + hd + ',' + hid + ')">' +
       '<span>W' + (row.week || '?') + ' · S' + (hd + 1) + (stampPretty ? (' · Finalizzato il ' + esc(stampPretty)) : '') + '</span>' +
-      '<div style="color:var(--gold);font-weight:800;margin-top:2px;">' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg</div></button>' +
+      '<div style="color:var(--gold);font-weight:800;margin-top:2px;">' + (row.sets || 0) + ' serie · ' + formatStatsKg(row.tonnage || 0) + ' ' + wUnit() + '</div></button>' +
       '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="openSessionCardForLog(' + hid + ')">CARD</button>' +
       '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="copySessionTextForLog(' + hid + ')">Copia testo</button>' +
       // A session of another program is history: it can be read, not edited
@@ -28977,7 +29143,7 @@ function renderStats(c){
       <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">DURATA</div><div style="font-size:18px;font-weight:900;">${durM}m ${durS}s</div></div>
         <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">CALORIE STIMATE</div><div style="font-size:18px;font-weight:900;">${snap.kcal} kcal</div></div>
-        <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">VOLUME SESSIONE</div><div style="font-size:18px;font-weight:900;">${Math.round(snap.weight || 0)} kg</div><div style="font-size:9px;color:#666;margin-top:4px;">Tonnellaggio alzato, non peso corporeo</div></div>
+        <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">VOLUME SESSIONE</div><div style="font-size:18px;font-weight:900;">${formatStatsKg(snap.weight || 0)} ${wUnit()}</div><div style="font-size:9px;color:#666;margin-top:4px;">Tonnellaggio alzato, non peso corporeo</div></div>
         <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">INTENSITÀ</div><div style="font-size:18px;font-weight:900;">${Math.round(snap.intensity || 0)} pts</div></div>
         <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">ESERCIZI</div><div style="font-size:18px;font-weight:900;">${snap.exercises}</div></div>
         <div style="background:#111;border:1px solid #222;border-radius:8px;padding:10px;"><div style="font-size:9px;color:#888;">SERIE</div><div style="font-size:18px;font-weight:900;">${snap.sets}</div></div>
@@ -29087,9 +29253,9 @@ function drillStatsMuscle(group) {
   const uniq = Array.from(new Set(exercises)).slice(0, 16);
   const vols = window.__statsMuscleVolumeByWeek || [];
   const totalVol = vols.reduce(function (s, n) { return s + (Number(n) || 0); }, 0);
-  const weekBits = vols.map(function (n, i) { return 'W' + (i + 1) + ' ' + Math.round(Number(n) || 0) + ' kg'; }).join(' · ');
+  const weekBits = vols.map(function (n, i) { return 'W' + (i + 1) + ' ' + formatStatsKg(Number(n) || 0) + ' ' + wUnit(); }).join(' · ');
   box.innerHTML = '<div style="color:#fff;font-weight:800;margin-bottom:4px;">Volume ' + esc(label) + '</div>' +
-    '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">' + Math.round(totalVol) + ' kg nel periodo</div>' +
+    '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">' + formatStatsKg(totalVol) + ' ' + wUnit() + ' nel periodo</div>' +
     (weekBits ? '<div style="margin-bottom:6px;color:#aaa;">' + esc(weekBits) + '</div>' : '') +
     '<div style="margin-bottom:6px;">Distretti: ' + list.map(function (x) { return esc(x); }).join(' · ') + '</div>' +
     (uniq.length ? '<div>Esercizi usati per questo calcolo: ' + uniq.map(esc).join(', ') + '</div>' : '<div>Nessun esercizio di questo gruppo nel programma/log.</div>');
@@ -29215,7 +29381,7 @@ function renderCheckFisicoCardHtml() {
       return '<div style="padding:10px 0;border-bottom:1px solid #1c1c1c;">' +
         '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;">' +
         '<span>' + esc(String(c.at || '').replace('T', ' ').slice(0, 16)) + ' · ' + esc(checkFisicoPeriodMeta(c.period).label) + '</span>' +
-        '<span style="color:var(--gold);font-weight:800;">' + (c.weight != null && c.weight !== '' ? (c.weight + ' kg') : '—') + '</span></div>' +
+        '<span style="color:var(--gold);font-weight:800;">' + (c.weight != null && c.weight !== '' ? (bwToDisp(c.weight) + ' ' + wUnit()) : '—') + '</span></div>' +
         (c.notes ? '<div style="font-size:11px;color:#aaa;margin-top:4px;">Nota cliente: ' + esc(c.notes) + '</div>' : '') +
         (c.coachComment ? '<div style="font-size:11px;color:var(--gold);margin-top:4px;">Tuo commento: ' + esc(c.coachComment) + '</div>' : '') +
         photos +
@@ -29238,7 +29404,7 @@ function renderCheckFisicoCardHtml() {
       '<div role="button" tabindex="0" onclick="openSavedCheckFisico(\'' + esc(String(c.id || '')) + '\')" style="flex:1;display:flex;justify-content:space-between;gap:8px;cursor:pointer;">' +
       '<span>' + esc(String(c.at || '').replace('T', ' ').slice(0, 16)) + ' · ' + esc(c.kind === 'extra' ? 'Check-in extra' : (c.kind === 'scheduled' ? 'Check-in' : checkFisicoPeriodMeta(c.period).label)) +
       (syncLabel ? ' · ' + esc(syncLabel) : '') + '</span>' +
-      '<span style="color:var(--gold);font-weight:800;">' + (c.weight != null && c.weight !== '' ? (c.weight + ' kg') : '—') + '</span></div>' +
+      '<span style="color:var(--gold);font-weight:800;">' + (c.weight != null && c.weight !== '' ? (bwToDisp(c.weight) + ' ' + wUnit()) : '—') + '</span></div>' +
       '<button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;border-color:var(--accent-red);color:var(--accent-red);font-size:11px;" onclick="event.stopPropagation();deleteBodyCheck(\'' + esc(String(c.id || '')) + '\')">X</button></div>' +
       ((syncState === 'FAILED' || syncState === 'QUEUED') ? '<button type="button" class="btn btn-outline" style="width:100%;margin:4px 0 8px;font-size:10px;" onclick="event.stopPropagation();retryCheckInSend(\'' + esc(String(c.id || '')) + '\')">RIPROVA</button>' : '');
   }).join('') : '<div style="font-size:11px;color:#666;">Nessun check salvato.</div>';
@@ -29259,8 +29425,8 @@ function renderCheckFisicoCardHtml() {
     '<button type="button" class="btn btn-outline" style="flex:1;font-size:10px;" onclick="pickCheckPhoto(\'front\', true)">Scatta fronte</button>' +
     '<button type="button" class="btn btn-outline" style="flex:1;font-size:10px;" onclick="pickCheckPhoto(\'back\', true)">Scatta retro</button>' +
     '</div>' +
-    '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">PESO CORPOREO (kg)</div>' +
-    '<input id="check-weight-input" type="number" step="0.1" inputmode="decimal" value="' + esc(String(draft.weight || '')) + '" oninput="onCheckFisicoWeight(this.value)" style="width:100%;padding:10px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:16px;font-weight:800;"></div>' +
+    '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">PESO CORPOREO (' + wUnit() + ')</div>' +
+    '<input id="check-weight-input" type="number" step="0.1" inputmode="decimal" value="' + esc(String(bwToDisp(draft.weight || ''))) + '" oninput="onCheckFisicoWeight(this.value)" style="width:100%;padding:10px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:8px;font-size:16px;font-weight:800;"></div>' +
     '<div style="margin-top:12px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:6px;">RESOCONTO ALLENAMENTI</div>' +
     '<div class="stats-period">' + periodBtns + '</div>' +
     '<div style="font-size:10px;color:#777;margin-top:6px;">Il volume del check è globale (serie e tonnellaggio di tutto il corpo). Per confrontarlo con MEV/MAV/MRV apri Analisi avanzata e seleziona un gruppo muscolare.</div></div>' +
@@ -29307,7 +29473,7 @@ async function saveCoachCheckComment(idxFromEnd) {
 }
 window.saveCoachCheckComment = saveCoachCheckComment;
 function onCheckFisicoWeight(v) {
-  checkFisicoDraft().weight = v;
+  checkFisicoDraft().weight = dispToKg(v);
 }
 function onCheckFisicoNotes(v) {
   checkFisicoDraft().notes = v;
@@ -29573,7 +29739,7 @@ function buildCheckFisicoTextReport(entry) {
     return n ? (g.label + ' ' + n) : null;
   }).filter(Boolean).join(', ');
   const sessions = sum.rows.map(function (row) {
-    return '- ' + String(row.at || '').replace('T', ' ').slice(0, 16) + ' · W' + (row.week || '?') + ' S' + ((row.day || 0) + 1) + ' · ' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg';
+    return '- ' + String(row.at || '').replace('T', ' ').slice(0, 16) + ' · W' + (row.week || '?') + ' S' + ((row.day || 0) + 1) + ' · ' + (row.sets || 0) + ' serie · ' + formatStatsKg(row.tonnage || 0) + ' ' + wUnit();
   }).join('\n');
   return 'CHECK FISICO NURVAN (non è un check-in settimanale)\nAtleta: ' + name + '\nPeso: ' + (weight || '—') + ' kg\nPeriodo: ' + meta.label + ' (' + meta.days + ' giorni)\nScala volume: globale (tutto il corpo), non MRV di un singolo muscolo\nSessioni: ' + sum.sessions + ' · Serie: ' + sum.sets + ' · Tonnellaggio: ' + sum.tonnage + ' kg · kcal: ' + sum.kcal + '\nMuscoli: ' + (muscleLine || 'n/d') + '\nFoto fronte: ' + ((entry && entry.hasFront) || checkFisicoDraft().front ? 'sì' : 'no') + '\nFoto retro: ' + ((entry && entry.hasBack) || checkFisicoDraft().back ? 'sì' : 'no') + '\n\nSessioni:\n' + (sessions || '- nessuna sessione nel periodo');
 }
@@ -29608,7 +29774,7 @@ function buildCheckFisicoCoachPrompt(entry, report) {
     if (d.ctxTherapy) msg += 'Contestualizza anche con la terapia in corso (solo a scopo di tracking, non consiglio medico).\n';
   }
   if (!photosOnly) msg += '\n' + report;
-  else msg += '\nAtleta: ' + ((store.profile && store.profile.name) || (store.account && store.account.name) || 'Atleta') + '\nPeso: ' + ((entry && entry.weight) || d.weight || '—') + ' kg';
+  else msg += '\nAtleta: ' + ((store.profile && store.profile.name) || (store.account && store.account.name) || 'Atleta') + '\nPeso: ' + (((entry && entry.weight) || d.weight) ? (bwToDisp((entry && entry.weight) || d.weight) + ' ' + wUnit()) : '—');
   const notes = (entry && entry.notes) || d.notes;
   if (notes) msg += '\n\nNOTE ATLETA: ' + notes;
   return msg;
@@ -29739,7 +29905,7 @@ async function openSavedCheckFisico(id) {
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;">CHECK SALVATO</div>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="closeSavedRecordOverlay()">CHIUDI</button></div>' +
-    '<div style="font-size:12px;color:#ccc;margin-bottom:10px;">' + esc(date) + ' · ' + esc(checkFisicoPeriodMeta(entry.period).label) + ' · <b style="color:var(--gold);">' + (entry.weight != null ? (entry.weight + ' kg') : '—') + '</b></div>' +
+    '<div style="font-size:12px;color:#ccc;margin-bottom:10px;">' + esc(date) + ' · ' + esc(checkFisicoPeriodMeta(entry.period).label) + ' · <b style="color:var(--gold);">' + (entry.weight != null ? (bwToDisp(entry.weight) + ' ' + wUnit()) : '—') + '</b></div>' +
     '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
     (front ? '<img src="' + front + '" alt="Fronte" style="width:48%;max-height:260px;object-fit:cover;border-radius:8px;">' : '<div style="flex:1;background:#111;border-radius:8px;padding:20px;color:#666;font-size:11px;text-align:center;">Nessuna foto fronte</div>') +
     (back ? '<img src="' + back + '" alt="Retro" style="width:48%;max-height:260px;object-fit:cover;border-radius:8px;">' : '<div style="flex:1;background:#111;border-radius:8px;padding:20px;color:#666;font-size:11px;text-align:center;">Nessuna foto retro</div>') +
@@ -29806,7 +29972,7 @@ function openLoggedSessionReview(week, day, logId) {
     '<div style="font-size:14px;color:#fff;font-weight:800;margin-bottom:4px;">' + esc(title) + '</div>' +
     '<div style="font-size:11px;color:#888;margin-bottom:6px;">W' + week + ' · S' + (day + 1) + (date ? (' · ' + esc(date)) : '') +
     (log && log.sets ? (' · ' + log.sets + ' serie') : '') +
-    (log && log.tonnage ? (' · ' + log.tonnage + ' kg') : '') + '</div>' +
+    (log && log.tonnage ? (' · ' + formatStatsKg(log.tonnage) + ' ' + wUnit()) : '') + '</div>' +
     (log && (log.finalizedAt || log.at)
       ? ('<div style="font-size:12px;color:var(--gold);font-weight:800;margin-bottom:12px;">Finalizzato il ' + esc(formatFinalizedDateTime(log.finalizedAt || log.at)) + '</div>')
       : '') +
@@ -30006,7 +30172,7 @@ function loggedSessionLinesFromLog(log) {
     const sets = (e.sets || []).filter(function (x) { return x && !x.warmup; });
     if (!sets.length) return;
     lines.push(e.name);
-    sets.forEach(function (x, i) { lines.push('  S' + (i + 1) + '  ' + (Number(x.load) > 0 ? (x.load + ' kg') : '—') + '  x ' + (Number(x.reps) || 0)); });
+    sets.forEach(function (x, i) { lines.push('  S' + (i + 1) + '  ' + (Number(x.load) > 0 ? wFmt(x.load) : '—') + '  x ' + (Number(x.reps) || 0)); });
   });
   return lines;
 }
@@ -30028,7 +30194,7 @@ function collectLoggedSessionDetailLines(week, day) {
       const hasLoad = load !== undefined && load !== '' && load != null;
       const hasReps = reps !== undefined && reps !== '' && reps != null;
       if (!hasLoad && !hasReps) continue;
-      sets.push('S' + s + '  ' + (hasLoad ? (load + ' kg') : '—') + (hasReps ? ('  x ' + reps) : '') + (rir !== undefined && rir !== '' && rir != null ? ('  @' + rir) : ''));
+      sets.push('S' + s + '  ' + (hasLoad ? wFmt(load) : '—') + (hasReps ? ('  x ' + reps) : '') + (rir !== undefined && rir !== '' && rir != null ? ('  @' + rir) : ''));
     }
     if (sets.length) {
       lines.push(name);
@@ -30061,7 +30227,7 @@ function collectCheckFisicoPdfExtraLines(entry, pack) {
       const dayName = (typeof sessionDisplayName === 'function' && sess) ? sessionDisplayName(sess, day) : (row.title || 'Allenamento');
       body.push('SETTIMANA ' + week);
       body.push('GIORNO ' + (day + 1) + '  ·  ' + dayName + (date ? ('  ·  ' + date) : ''));
-      if (row.tonnage) body.push((row.sets || 0) + ' serie   ' + (row.tonnage || 0) + ' kg  volume');
+      if (row.tonnage) body.push((row.sets || 0) + ' serie   ' + formatStatsKg(row.tonnage || 0) + ' ' + wUnit() + '  volume');
       body.push('Esercizio / Serie / Carico / Ripetizioni / Intensita');
       collectLoggedSessionDetailLines(week, day).forEach(function (l) { body.push(l); });
       body.push('--- fine seduta ---');
@@ -30184,7 +30350,7 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl, pack) {
     : ((pack && pack.rangeMode === 'dates' && (pack.fromDate || pack.toDate))
       ? ((pack.fromDate || '…') + ' – ' + (pack.toDate || '…'))
       : (period.label + ' (' + period.days + ' giorni)'));
-  txt('F1', 12, DARK, ML, y, 'Peso ' + entry.weight + ' kg   ·   ' + rangeLabel);
+  txt('F1', 12, DARK, ML, y, 'Peso ' + bwToDisp(entry.weight) + ' ' + wUnit() + '   ·   ' + rangeLabel);
   y -= 18;
   txt('F2', 9, GRAY, ML, y, 'Sessioni ' + sum.sessions + '   Serie ' + sum.sets + '   Tonnellaggio ' + sum.tonnage + ' kg   kcal ' + sum.kcal);
   y -= 16;
@@ -30227,7 +30393,7 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl, pack) {
   } else {
     sortLogsChronological(sum.rows).forEach(function (row) {
       if (y < 70) return;
-      const line = String(row.at || '').replace('T', ' ').slice(0, 16) + '   W' + (row.week || '?') + ' S' + ((row.day || 0) + 1) + '   ' + (row.sets || 0) + ' serie   ' + (row.tonnage || 0) + ' kg';
+      const line = String(row.at || '').replace('T', ' ').slice(0, 16) + '   W' + (row.week || '?') + ' S' + ((row.day || 0) + 1) + '   ' + (row.sets || 0) + ' serie   ' + formatStatsKg(row.tonnage || 0) + ' ' + wUnit();
       txt('F2', 8, DARK, ML, y, line);
       y -= 14;
     });
@@ -30643,7 +30809,7 @@ function setStatsZoomSlider(n) {
   });
 }
 function formatStatsKg(n) {
-  return Math.round(Number(n) || 0).toLocaleString('it-IT');
+  return Math.round(Number(typeof kgToDisp === 'function' ? kgToDisp(Number(n) || 0) : (Number(n) || 0)) || 0).toLocaleString('it-IT');
 }
 function buildTrainingAnalytics() {
   const TAE = window.TrainingAnalyticsEngine;
@@ -30797,7 +30963,7 @@ function fillStatsAdvancedPanel(analytics) {
     return '<div class="stats-adv-row"><span>' + esc(L(p.type)) + ' · ' + esc(p.name) + '</span><span>' + esc(String(p.value)) + (p.week ? (' · W' + p.week) : '') + '</span></div>';
   }).join('') || '<div>Nessun PR derivabile dai log.</div>';
   const exHtml = (analytics.byExercise || []).map(function (e) {
-    return '<div class="stats-adv-row is-click" onclick="setStatsExercise(\'' + String(e.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')"><span>' + esc(e.name) + '</span><span>' + formatStatsKg(e.volume) + ' kg · ' + e.sets + ' serie' + (mode === 'exercise' && e.e1rm != null ? (' · e1RM ' + e.e1rm) : '') + '</span></div>';
+    return '<div class="stats-adv-row is-click" onclick="setStatsExercise(\'' + String(e.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')"><span>' + esc(e.name) + '</span><span>' + formatStatsKg(e.volume) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + ' · ' + e.sets + ' serie' + (mode === 'exercise' && e.e1rm != null ? (' · e1RM ' + e.e1rm) : '') + '</span></div>';
   }).join('') || '<div>Nessun esercizio nel periodo.</div>';
   let focusHtml = '';
   if (mode === 'exercise' && store.prefs && store.prefs.statsExercise && TAE && TAE.analyzeExercise) {
@@ -30812,13 +30978,13 @@ function fillStatsAdvancedPanel(analytics) {
       const dist = ax.intensityDist && ax.intensityDist.bins;
       const fatSig = ax.fatigue || {};
       focusHtml = '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">' + esc(ax.name) + ' · esercizio</div>' +
-        '<div class="stats-adv-row"><span>Massimale stimato (e1RM)</span><span>' + (ax.e1rm == null ? '—' : (ax.e1rm + ' kg')) + '</span></div>' +
+        '<div class="stats-adv-row"><span>Massimale stimato (e1RM)</span><span>' + (ax.e1rm == null ? '—' : wFmt(ax.e1rm)) + '</span></div>' +
         '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(ax.trend) + '</span></div>' +
         '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(ax)) + (ax.confidence ? (' · ' + esc(H('confidence', ax.confidence))) : '') + '</div>' +
         '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(ax.volumeVsPrevious) + '</span></div>' +
-        '<div class="stats-adv-row"><span>Carico medio</span><span>' + (ax.avgLoad == null ? '—' : (Math.round(ax.avgLoad * 10) / 10 + ' kg')) + '</span></div>' +
-        '<div class="stats-adv-row"><span>Miglior e1RM stimato</span><span>' + (ax.e1rmBest == null ? '—' : (ax.e1rmBest + ' kg')) + '</span></div>' +
-        '<div class="stats-adv-row"><span>e5RM / e8RM / e10RM stimati</span><span>' + [ax.e5rm, ax.e8rm, ax.e10rm].map(function (n) { return n == null ? '—' : (n + ' kg'); }).join(' · ') + '</span></div>' +
+        '<div class="stats-adv-row"><span>Carico medio</span><span>' + (ax.avgLoad == null ? '—' : wFmt(Math.round(ax.avgLoad * 10) / 10)) + '</span></div>' +
+        '<div class="stats-adv-row"><span>Miglior e1RM stimato</span><span>' + (ax.e1rmBest == null ? '—' : wFmt(ax.e1rmBest)) + '</span></div>' +
+        '<div class="stats-adv-row"><span>e5RM / e8RM / e10RM stimati</span><span>' + [ax.e5rm, ax.e8rm, ax.e10rm].map(function (n) { return n == null ? '—' : wFmt(n); }).join(' · ') + '</span></div>' +
         '<div class="stats-adv-row"><span>Sforzo medio</span><span>' + (ax.avgRpe == null ? '—' : ('RPE ' + ax.avgRpe + '/10')) + (ax.avgRir == null ? '' : (' · RIR ' + ax.avgRir)) + '</span></div>' +
         '<div class="stats-adv-row"><span>Fatica intra-seduta</span><span>' + esc(H('fatigue', fatSig.signal)) + '</span></div>' +
         (ax.prStatus ? '<div style="margin:6px 0;">Nuovo PR stimato</div>' : '') +
@@ -30838,7 +31004,7 @@ function fillStatsAdvancedPanel(analytics) {
         '<div class="stats-adv-row"><span>Serie pesate (euristica)</span><span>' + mg.effectiveWeightedSets + ' serie</span></div>' +
         '<div class="stats-adv-row"><span>Dose interna ETD</span><span>' + mg.effectiveTrainingDose + '</span></div>' +
         '<div class="stats-adv-row"><span>Costo di fatica (modello)</span><span>' + esc(L(mg.fatigueCost)) + '</span></div>' +
-        '<div class="stats-adv-row"><span>Volume allenante</span><span>' + formatStatsKg(mg.volume) + ' kg</span></div>' +
+        '<div class="stats-adv-row"><span>Volume allenante</span><span>' + formatStatsKg(mg.volume) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>' +
         '<div class="stats-adv-row"><span>Frequenza</span><span>' + mg.frequency + ' sedute</span></div>' +
         '<div class="stats-adv-row"><span>Sforzo percepito medio</span><span>' + (mg.avgRpe == null ? '—' : (mg.avgRpe + '/10')) + '</span></div>' +
         '<div style="font-size:10px;color:#777;margin:6px 0 12px;">Nessun e1RM aggregato tra esercizi diversi. Diretto/indiretto è un modello, non una misura fisiologica.</div>';
@@ -30903,8 +31069,8 @@ function fillStatsAdvancedPanel(analytics) {
         : '') +
     '<div style="font-size:10px;color:#777;margin:6px 0 14px;">' + esc(ad.note || rec.note || '') + '</div>' +
     '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">TRAINING LOAD (modello adattato)</div>' +
-    '<div class="stats-adv-row"><span>Carico recente stimato (ATL)</span><span>' + (tl.atl == null ? '—' : formatStatsKg(tl.atl) + ' kg') + '</span></div>' +
-    '<div class="stats-adv-row"><span>Carico abituale stimato (CTL)</span><span>' + (tl.ctl == null ? '—' : formatStatsKg(tl.ctl) + ' kg') + '</span></div>' +
+    '<div class="stats-adv-row"><span>Carico recente stimato (ATL)</span><span>' + (tl.atl == null ? '—' : formatStatsKg(tl.atl) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')) + '</span></div>' +
+    '<div class="stats-adv-row"><span>Carico abituale stimato (CTL)</span><span>' + (tl.ctl == null ? '—' : formatStatsKg(tl.ctl) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')) + '</span></div>' +
     '<div class="stats-adv-row"><span>Bilancio del carico (TSB)</span><span>' + (tl.tsb == null ? '—' : tl.tsb) + '</span></div>' +
     '<div style="font-size:10px;color:#777;margin:6px 0 14px;">Modello adattato e dipendente dal contesto; non è una misura fisiologica diretta. ' + esc(tl.methodology || fat.note || '') + '</div>' +
     '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">PR RILEVATI</div>' + prHtml +
@@ -31001,9 +31167,9 @@ function renderStatsData(){
   if ($('summary-body')) $('summary-body').innerHTML = tH;
 
   const k = analytics.kpis;
-  if ($('stats-kpi-tot')) $('stats-kpi-tot').textContent = k.volumeTotal > 0 ? (formatStatsKg(k.volumeTotal) + ' kg') : '—';
-  if ($('stats-kpi-tot-d')) $('stats-kpi-tot-d').textContent = 'kg nel periodo zoomato · ' + analytics.window.weeks.length + ' ' + (statsAxis() === 'calendar' ? 'sett. calendario' : 'sett. scheda');
-  if ($('stats-kpi-week')) $('stats-kpi-week').textContent = k.volumeWeek > 0 ? (formatStatsKg(k.volumeWeek) + ' kg') : '—';
+  if ($('stats-kpi-tot')) $('stats-kpi-tot').textContent = k.volumeTotal > 0 ? (formatStatsKg(k.volumeTotal) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')) : '—';
+  if ($('stats-kpi-tot-d')) $('stats-kpi-tot-d').textContent = wUnit() + ' nel periodo zoomato · ' + analytics.window.weeks.length + ' ' + (statsAxis() === 'calendar' ? 'sett. calendario' : 'sett. scheda');
+  if ($('stats-kpi-week')) $('stats-kpi-week').textContent = k.volumeWeek > 0 ? (formatStatsKg(k.volumeWeek) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg')) : '—';
   if ($('stats-kpi-week-d')) $('stats-kpi-week-d').textContent = k.weekLabel || 'ultima nel zoom';
   if ($('stats-kpi-var')) {
     $('stats-kpi-var').textContent = k.volumeVarWeek == null ? '—' : ((k.volumeVarWeek >= 0 ? '+' : '') + k.volumeVarWeek + '%');
@@ -31204,7 +31370,7 @@ function formatOperationDescription(op) {
   if(type === 'replace_exercise') return `Sostituisci <b>${esc(ex)}</b> con <b>${esc(op.target_exercise)}</b> (${w} ${s})`;
   if(type === 'add_exercise') return `Aggiungi nuovo esercizio: <b>${esc(op.target_exercise || ex)}</b> (${w} ${s})`;
   if(type === 'remove_exercise') return `Rimuovi <b>${esc(ex)}</b> (${w} ${s})`;
-  if(type === 'modify_load') return `Modifica carico per <b>${esc(ex)}</b>: ${esc(op.changes?.load || '')} kg`;
+  if(type === 'modify_load') return `Modifica carico per <b>${esc(ex)}</b>: ${esc(String(op.changes?.load ? wFmt(op.changes.load) : ''))}`;
   if(type === 'modify_reps') return `Modifica ripetizioni per <b>${esc(ex)}</b>: ${esc(op.changes?.reps || '')}`;
   if(type === 'modify_rpe' || type === 'modify_rir') return `Modifica intensità per <b>${esc(ex)}</b>: ${esc(op.changes?.rpe || op.changes?.rir || '')}`;
   if(type === 'modify_rest') return `Modifica recupero per <b>${esc(ex)}</b>: ${esc(op.changes?.rest || '')}`;
@@ -32428,7 +32594,7 @@ function paintExerciseInfoSheet(opts) {
     (unknown ? '<p style="font-size:12px;color:#f6c;">Non risulta un esercizio standard. Puoi aggiungerlo all’enciclopedia con la tua spiegazione.</p>' : '') +
     '<div style="margin:10px 0;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:4px;">RIR / CARICO</div>' +
-    '<p style="font-size:12px;color:#ccc;line-height:1.4;margin:0;">' + esc(policy.advice || 'RIR 2 = due reps in canna. Se chiudi le serie, la settimana dopo +2,5 kg (o +1 kg se i pesi sono già bassi).') + '</p></div>' +
+    '<p style="font-size:12px;color:#ccc;line-height:1.4;margin:0;">' + esc(policy.advice || 'RIR 2 = due reps in canna. Se chiudi le serie, la settimana dopo +' + wStep(2.5) + ' (o +' + wStep(1) + ' se i pesi sono già bassi).') + '</p></div>' +
     youtubeButtonHtml({ name: title, names: [name, row.name, row.name_original], overrideId: row.youtube_override_id }) +
     '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="openKnowledgeFor(decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">APRI ENCICLOPEDIA</button>' +
     (unknown ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="closeExerciseInfoSheet();openAddEncyclopediaExercise(decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">AGGIUNGI ALL’ENCICLOPEDIA</button>' : '') +
@@ -32540,7 +32706,7 @@ function openAddEncyclopediaExercise(prefillName, draft) {
   const muscles = MACRO_MUSCLE_GROUPS.map(function (g) { return g.id; });
   const muscleVal = normalizeMacroMuscleGroup(draft.muscle || 'PETTO');
   const hasDraft = !!(draft.how || draft.mistakes || draft.cue);
-  box.innerHTML = '<div style="width:100%;max-width:520px;max-height:90vh;overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px;padding:16px;box-sizing:border-box;" onclick="event.stopPropagation()">' +
+  box.innerHTML = '<div style="width:100%;max-width:520px;max-height:calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px;padding:16px;box-sizing:border-box;" onclick="event.stopPropagation()">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;">ENCICLOPEDIA</div>' +
     '<h2 style="color:#fff;font-size:18px;margin:6px 0 10px;">' + (hasDraft || prefillName ? 'Modifica esercizio' : 'Aggiungi esercizio') + '</h2>' +
     '<label style="font-size:10px;color:#aaa;">Nome</label>' +
@@ -32686,7 +32852,7 @@ function buildPersonalExerciseInfoPrompt(idx, exerciseName) {
     const hasLoad = load !== undefined && load !== '' && load != null;
     const hasReps = reps !== undefined && reps !== '' && reps != null;
     if (!hasLoad && !hasReps) continue;
-    doneLines.push('S' + s + ': ' + (hasLoad ? (load + ' kg') : '—') + (hasReps ? (' × ' + reps) : '') + (rir !== undefined && rir !== '' && rir != null ? (' @RIR ' + rir) : ''));
+    doneLines.push('S' + s + ': ' + (hasLoad ? wFmt(load) : '—') + (hasReps ? (' × ' + reps) : '') + (rir !== undefined && rir !== '' && rir != null ? (' @RIR ' + rir) : ''));
   }
   const prevSets = (typeof collectPrevWeekSetLogs === 'function') ? collectPrevWeekSetLogs(idx, row) : [];
   const policy = (typeof workoutProgressionPolicy === 'function') ? workoutProgressionPolicy(prevSets, row) : { addKg: 0, advice: '' };
@@ -32702,7 +32868,7 @@ function buildPersonalExerciseInfoPrompt(idx, exerciseName) {
     'Settimana ' + week + ' · seduta ' + (day + 1),
     'Schema: ' + (scheme || 'n/d'),
     'Carichi già fatti: ' + (doneLines.length ? doneLines.join('; ') : 'nessuno registrato in questa seduta'),
-    'Nota increment/hold: ' + (policy.advice || 'n/d') + (policy.addKg ? (' (proposta +' + policy.addKg + ' kg)') : ' (resta o +1 rep)'),
+    'Nota increment/hold: ' + (policy.advice || 'n/d') + (policy.addKg ? (' (proposta +' + wFmt(policy.addKg) + ')') : ' (resta o +1 rep)'),
     (suggLines.length ? ('Carichi previsti da policy: ' + suggLines.join('; ')) : ''),
     '',
     'Spiegami in modo pratico: 1) perché in questo momento conviene aumentare oppure restare bassi; 2) come aumentare in sicurezza se c\'è margine; 3) i punti chiave di esecuzione.',
@@ -34444,7 +34610,7 @@ function openAdaptSpaceSheet(title) {
       return '<button type="button" class="btn btn-outline" style="width:100%;text-align:left;margin-bottom:8px;padding:12px;" onclick="applySpaceToProgram(\'' + esc(sp.id) + '\')">' +
         '<b style="color:#fff;font-size:13px;">' + esc(sp.name) + '</b>' +
         '<br><span style="font-size:11px;color:#888;">' + spaceExerciseCount(sp) + ' esercizi disponibili' +
-        ((sp.limits && sp.limits.dumbbell) ? (' · manubri fino a ' + sp.limits.dumbbell + ' kg') : '') + '</span></button>';
+        ((sp.limits && sp.limits.dumbbell) ? (' · manubri fino a ' + wFmt(sp.limits.dumbbell)) : '') + '</span></button>';
     }).join('') +
     '<button type="button" class="btn btn-outline" style="width:100%;margin-top:6px;font-size:11px;" onclick="closeAdaptSpaceSheet();openTrainingSpaces()">GESTISCI GLI SPAZI</button>' +
     '</div></div>';
@@ -35069,7 +35235,7 @@ function programDraftProgressionHtml(d, inputStyle) {
         lifts.map(function (id) {
           var isBw = engine.isBodyweightLift(id);
           return '<label style="font-size:9px;color:#888;">' + esc(engine.liftLabel(id)) + (isBw ? ' (zavorra)' : '') +
-            '<input type="number" step="0.5" min="0" value="' + esc(((d.maxes || {})[id] != null) ? String(d.maxes[id]) : '') + '" placeholder="kg" oninput="setProgramDraftMax(\'' + esc(id) + '\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>';
+            '<input type="number" step="0.5" min="0" value="' + esc(((d.maxes || {})[id] != null) ? String(kgToDisp(d.maxes[id])) : '') + '" placeholder="' + wUnit() + '" oninput="setProgramDraftMax(\'' + esc(id) + '\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>';
         }).join('') +
         '</div>' +
         '<div style="font-size:10px;color:#666;margin-top:6px;line-height:1.4;">Per trazioni e dip il massimale è la zavorra: le percentuali sono calcolate su peso corporeo + zavorra, e la scheda scrive quanto appendere.</div>';
@@ -35244,6 +35410,7 @@ function setProgramDraftLoadDisplay(mode) {
 window.setProgramDraftLoadDisplay = setProgramDraftLoadDisplay;
 
 function setProgramDraftMax(liftId, value) {
+  value = dispToKg(value);
   var d = programDraft();
   if (!d.maxes) d.maxes = {};
   var n = parseFloat(value);
@@ -36605,7 +36772,7 @@ function reviewWarmupHtml(si, ei, ex, warmSets, inputStyle) {
   var items = warmSets.map(function (w, wi) {
     return '<span style="display:inline-flex;align-items:center;gap:3px;">' +
       '<span style="font-size:9px;color:#8a8a8a;">R' + (wi + 1) + '</span>' +
-      '<input type="number" step="0.5" min="0" value="' + esc(String(w.target_load == null ? '' : w.target_load)) + '" placeholder="kg" onchange="updateReviewWarmup(' + si + ',' + ei + ',' + wi + ',&#39;load&#39;,this.value)" style="width:54px;' + small + '">' +
+      '<input type="number" step="0.5" min="0" value="' + esc(String(w.target_load == null ? '' : kgToDisp(w.target_load))) + '" placeholder="' + wUnit() + '" onchange="updateReviewWarmup(' + si + ',' + ei + ',' + wi + ',&#39;load&#39;,this.value)" style="width:54px;' + small + '">' +
       '<span style="font-size:10px;color:#666;">×</span>' +
       '<input type="number" step="1" min="1" value="' + esc(String(w.reps == null ? '' : w.reps)) + '" placeholder="rip" onchange="updateReviewWarmup(' + si + ',' + ei + ',' + wi + ',&#39;reps&#39;,this.value)" style="width:44px;' + small + '">' +
       '<button type="button" class="btn btn-outline" title="Togli questa serie di riscaldamento" style="font-size:9px;padding:3px 6px;color:#c66;border-color:#c66;" onclick="removeReviewWarmup(' + si + ',' + ei + ',' + wi + ')">✕</button>' +
@@ -36631,7 +36798,7 @@ function updateReviewWarmup(si, ei, wi, field, value) {
     var set = warm[wi];
     if (!set) return;
     if (field === 'load') {
-      var kg = parseFloat(String(value == null ? '' : value).replace(',', '.'));
+      var kg = parseFloat(String(dispToKg(value == null ? '' : value)).replace(',', '.'));
       set.target_load = (Number.isFinite(kg) && kg > 0) ? kg : null;
     } else if (field === 'reps') {
       var n = Math.round(Number(value));
@@ -37385,10 +37552,10 @@ function openTestResultsSheet(week, lifts) {
   var rows = lifts.map(function (id) {
     var logged = testedMaxFor(week, id);
     var before = Number(planned[id]) || 0;
-    var hint = before ? ('prima: ' + before + ' kg') : 'nessun massimale di partenza';
+    var hint = before ? ('prima: ' + wFmt(before)) : 'nessun massimale di partenza';
     return '<label style="font-size:9px;color:#888;display:block;margin-bottom:8px;">' +
       esc(engine.liftLabel(id)) + (engine.isBodyweightLift(id) ? ' (zavorra)' : '') + ' · ' + esc(hint) +
-      '<input id="tr-' + esc(id) + '" type="number" step="0.5" min="0" value="' + (logged || before || '') + '" placeholder="kg" style="width:100%;margin-top:2px;' + inputStyle + '"></label>';
+      '<input id="tr-' + esc(id) + '" data-kg="' + esc(String(logged || before || '')) + '" type="number" step="0.5" min="0" value="' + kgToDisp(logged || before || '') + '" placeholder="' + wUnit() + '" style="width:100%;margin-top:2px;' + inputStyle + '"></label>';
   }).join('');
   var sheet = document.createElement('div');
   sheet.id = 'test-results-sheet';
@@ -37425,7 +37592,7 @@ function applyTestResults(week) {
   var changes = [];
   lifts.forEach(function (id) {
     var el = document.getElementById('tr-' + id);
-    var v = el ? parseFloat(el.value) : NaN;
+    var v = el ? parseFloat(keepKg(el.value, el.getAttribute('data-kg'))) : NaN;
     if (!(v > 0)) return;
     var before = Number(maxes[id]) || 0;
     maxes[id] = v;
