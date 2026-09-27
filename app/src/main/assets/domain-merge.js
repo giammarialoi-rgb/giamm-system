@@ -112,6 +112,13 @@
     key: function (cf) { return fold(cf.name); },
     legacyId: function (cf) { return 'cf' + hash(fold(cf.name)); }
   };
+  // A recipe of the plan (the nutritionist's, or the athlete's own): one
+  // item, identified by its name; ingredients and steps travel with it.
+  var RECIPE = {
+    field: 'recipes', prefix: 'r', children: [],
+    key: function (r) { return fold(r.name); },
+    legacyId: function (r) { return 'r' + hash(fold(r.name)); }
+  };
   // A flat list: an item is identified by what it holds.
   function flat(field) {
     return {
@@ -121,7 +128,7 @@
   }
 
   var DOMAINS = {
-    nutrition: [DAY, CUSTOM_FOOD],
+    nutrition: [DAY, CUSTOM_FOOD, RECIPE],
     supplementation: [flat('items')],
     therapy: [flat('medications'), flat('protocols'), flat('entries')],
     exams: [flat('records'), flat('items'), flat('reminders')]
@@ -350,7 +357,7 @@
         return;
       }
       out[spec.field] = mergeLists(A[spec.field], B[spec.field], spec, ctx);
-      if (out[spec.field].length && spec.field !== 'customFoods') anyItems = true;
+      if (out[spec.field].length && spec.field !== 'customFoods' && spec.field !== 'recipes') anyItems = true;
     });
     out.deleted = trimTombstones(ctx.deleted);
     out.__v = VERSION;

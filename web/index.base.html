@@ -71,6 +71,7 @@
 <script src="progression-models.js"></script>
 <script src="food-search.js"></script>
 <script src="nutrition-targets.js"></script>
+<script src="nutrition-plan.js"></script>
 <script src="checkin-schedule.js"></script>
 <script src="features.js"></script>
 <script src="entitlements.js"></script>
@@ -9064,6 +9065,121 @@ async function processUniversalFile(source, actionIntent = 'IMPORT') {
 }
 // HEIC/HEIF, the iPhone's own photo format: by its name, type, or the
 // "ftypheic" box at the start of the file.
+// PDFs without text: the pages are drawn (text turned into shapes, as some
+// nutrition software exports them), so no reader finds a word. They are
+// rendered by pdf.js (Mozilla, Apache-2.0, pinned and checked by its hash,
+// loaded from the same CDN as the OCR only when such a PDF arrives), split
+// in columns where the page has them, and read by the OCR column by column.
+const PDFJS_SRC = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+const PDFJS_SRI = 'sha256-W1eZ5vjGgGYyB6xbQu4U7tKkBvp69I9QwVTwwLFWaUY=';
+const PDFJS_WORKER_SRC = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+const PDFJS_WORKER_SHA256 = '/qvfMJdw7SS7oxpUZ4Ns3Iz2OccFryfVK1hbBBu4Uns=';
+let __pdfjsLoading = null;
+function loadPdfJs() {
+  if (__pdfjsLoading) return __pdfjsLoading;
+  __pdfjsLoading = (async () => {
+    if (!window.pdfjsLib) {
+      const ok = await new Promise((resolve) => {
+        const el = document.createElement('script');
+        el.src = PDFJS_SRC;
+        el.integrity = PDFJS_SRI;
+        el.crossOrigin = 'anonymous';
+        el.async = true;
+        const timer = setTimeout(() => resolve(false), 30000);
+        el.onload = () => { clearTimeout(timer); resolve(true); };
+        el.onerror = () => { clearTimeout(timer); resolve(false); };
+        document.head.appendChild(el);
+      });
+      if (!ok || !window.pdfjsLib) { __pdfjsLoading = null; return null; }
+    }
+    // The worker has no integrity attribute of its own: it is fetched, its
+    // hash checked, and started from that checked copy.
+    const res = await fetch(PDFJS_WORKER_SRC, { mode: 'cors' });
+    const buf = await res.arrayBuffer();
+    const digest = await crypto.subtle.digest('SHA-256', buf);
+    const b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(digest)));
+    if (b64 !== PDFJS_WORKER_SHA256) { __pdfjsLoading = null; return null; }
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([buf], { type: 'text/javascript' }));
+    return window.pdfjsLib;
+  })().catch(() => { __pdfjsLoading = null; return null; });
+  return __pdfjsLoading;
+}
+// The ink of a rendered page: 1 where it is dark enough to be text.
+function canvasInk(canvas) {
+  const W = canvas.width, H = canvas.height;
+  const d = canvas.getContext('2d').getImageData(0, 0, W, H).data;
+  const ink = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) ink[i] = (d[i * 4] + d[i * 4 + 1] + d[i * 4 + 2] < 600) ? 1 : 0;
+  return ink;
+}
+function cropCanvas(canvas, x0, x1) {
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, x1 - x0);
+  c.height = canvas.height;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(canvas, x0, 0, c.width, c.height, 0, 0, c.width, c.height);
+  return c;
+}
+// { pages: [{ columns: [[lines]], slot? }], text } - text is every column
+// one after the other, for the parts of the import that read plain text.
+async function ocrPdfDocument(bytes, onPage) {
+  const lib = await loadPdfJs();
+  if (!lib || !window.Tesseract || typeof window.Tesseract.createWorker !== 'function') return null;
+  const pdf = await lib.getDocument({ data: bytes instanceof Uint8Array ? bytes.slice() : new Uint8Array(bytes) }).promise;
+  const worker = await window.Tesseract.createWorker('ita+eng');
+  const NP = window.NurvanNutritionPlan;
+  const pages = [];
+  let prevCols = null;
+  try {
+    for (let p = 1; p <= pdf.numPages; p++) {
+      if (typeof onPage === 'function') onPage(p, pdf.numPages);
+      const page = await pdf.getPage(p);
+      const vp = page.getViewport({ scale: 2.5 });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(vp.width);
+      canvas.height = Math.round(vp.height);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // "print": drawn without waiting for animation frames, so the reading
+      // goes on when the app is in the background.
+      await page.render({ canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
+      const ink = canvasInk(canvas);
+      const cols = NP ? NP.pageColumns(ink, canvas.width, canvas.height) : [{ x0: 0, x1: canvas.width }];
+      const read = async (c) => String(((await worker.recognize(c)).data || {}).text || '').split('\n');
+      if (cols.length > 1) {
+        const columns = [];
+        for (const col of cols) columns.push(await read(cropCanvas(canvas, col.x0, col.x1)));
+        pages.push({ columns: columns });
+        prevCols = cols;
+        continue;
+      }
+      // A page with one column that sits inside a column of the page before
+      // (the plan's first column going on alone) keeps that column's place.
+      let slot = null;
+      if (prevCols) {
+        let left = canvas.width, right = 0;
+        for (let y = 0; y < canvas.height; y += 2) {
+          for (let x = 0; x < canvas.width; x++) {
+            if (ink[y * canvas.width + x]) { if (x < left) left = x; if (x > right) right = x; }
+          }
+        }
+        const k = prevCols.findIndex((c) => left >= c.x0 - 4 && right <= c.x1 + 4);
+        if (k >= 0) slot = k;
+      }
+      pages.push(slot != null ? { columns: [await read(canvas)], slot: slot } : { columns: [await read(canvas)] });
+      if (slot == null) prevCols = null;
+    }
+  } finally {
+    try { await worker.terminate(); } catch (_) {}
+  }
+  const text = pages.map((pg) => pg.columns.map((c) => c.join('\n')).join('\n\n')).join('\n\n');
+  return { pages: pages, text: text };
+}
+window.ocrPdfDocument = ocrPdfDocument;
+
 function isHeicBytes(bytes, name, mime) {
   if (/\.hei[cf]$/i.test(String(name || '')) || /image\/hei[cf]/i.test(String(mime || ''))) return true;
   if (!bytes || bytes.length < 12) return false;
@@ -9352,27 +9468,58 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       // The same page read in columns (cells split by tabs): what a lab
       // report needs, one exam per row with value, unit and range apart.
       let pdfColumnsText = '';
+      // Pages that the layout reader opened and found no text on: drawn
+      // pages. The old extractor then returns the file's bytes as "text",
+      // so its length says nothing - this does.
+      let pdfDrawnPages = false;
       try {
         if (typeof readPdfLayout === 'function' && typeof pdfLayoutToText === 'function') {
           const lay = await readPdfLayout(bytes);
+          if (lay && lay.pages > 0 && !(lay.items || []).length) pdfDrawnPages = true;
           const res = pdfLayoutToText(lay);
           if (res && res.text && res.text.trim().length > 40) { pdfText = res.text; pdfWarnings = res.warnings || []; }
           try { pdfColumnsText = pdfLayoutToText(lay, { columns: true }).text || ''; } catch (_) {}
         }
       } catch (layoutErr) { console.warn('[PDF_LAYOUT]', layoutErr); }
-      if (!pdfText) {
+      // Drawn pages: the old extractor would only spend a minute turning the
+      // images into "text"; the OCR reads them.
+      if (!pdfText && !pdfDrawnPages) {
         pdfText = (typeof extractPdfPlainTextAsync === 'function')
           ? await extractPdfPlainTextAsync(bytes)
           : ((typeof extractPdfPlainText === 'function') ? extractPdfPlainText(bytes) : text);
       }
-      if (typeof pdfNeedsOcr === 'function' && pdfNeedsOcr(pdfText, 1)) {
+      let ocrDoc = null;
+      if (pdfDrawnPages || (typeof pdfNeedsOcr === 'function' && pdfNeedsOcr(pdfText, 1))) {
         stage('ocr', 'OCR');
         await yieldImportPaint();
+        // No text in the file: its pages are read by the OCR, column by column.
+        try {
+          // A page takes a few seconds: say which one is being read.
+          ocrDoc = await ocrPdfDocument(bytes, (p, n) => {
+            const msg = 'Lettura pagina ' + p + ' di ' + n;
+            if (pState) pState.pipelineStage = msg;
+            setImportProgress(22 + Math.round(38 * (p - 1) / n), name, msg);
+          });
+          if (ocrDoc && ocrDoc.text && ocrDoc.text.trim().length > 40) pdfText = ocrDoc.text;
+        } catch (ocrErr) { console.warn('[PDF_OCR]', ocrErr); }
       }
       stage('structure', 'Detecting structure');
       await yieldImportPaint();
       parsed = parseCanonicalProgramFromText(pdfText || text, name);
       parseTextForChoices = pdfText || text;
+      // A nutritionist's plan (day groups, timed meals, "o" alternatives,
+      // recipes): read by its own reader, and it is only a nutrition plan.
+      try {
+        const NP = window.NurvanNutritionPlan;
+        const planDoc = ocrDoc || { pages: [{ columns: [String(pdfText || '').split('\n')] }] };
+        const plan = NP ? NP.parsePlanDocument(planDoc) : null;
+        if (plan && parsed && parsed.canonicalProgram) {
+          enrichPlanAlternatives(plan);
+          parsed.canonicalProgram.nutrition = plan;
+          parsed.canonicalProgram.weeks = [];
+          parsed.canonicalProgram.training = { weeks: [] };
+        }
+      } catch (planErr) { console.warn('[NUTRITION_PLAN]', planErr); }
       if (pdfColumnsText && parsed && parsed.canonicalProgram && typeof mergeLabExamsFromText === 'function') {
         mergeLabExamsFromText(parsed.canonicalProgram, pdfColumnsText);
       }
@@ -14511,6 +14658,9 @@ function enrichImportedFoods(nutrition) {
         // 450 kcal" became "pomodoro", 54 kcal; olive oil in spoons went from
         // 265 to 18 kcal. Only a food with no calories at all is filled in.
         if (foodMacroVal(f, 'kcal') > 0 || f.kcalPer100 != null || f.macro_source) return;
+        // A row of a nutritionist's plan: its alternatives were looked up
+        // by exact name when it was imported; nothing close is taken here.
+        if (Array.isArray(f.alternatives) && f.alternatives.length) return;
         if (engineEnrich) {
           engineEnrich(f);
           if (foodMacroVal(f, 'kcal') || foodMacroVal(f, 'pro')) return;
@@ -14657,7 +14807,7 @@ function nutritionConfirmCardHtml() {
       (st.confirmed ? 'Cliente ha confermato i pasti' : 'Cliente ha segnalato pasti diversi') + '</div>' +
       '<div style="font-size:10px;color:#888;margin-top:4px;">' + esc(String(st.at || '').replace('T', ' ').slice(0, 16)) + '</div></div>';
   }
-  const day = nutritionPlanForToday();
+  const day = nutritionDayForDisplay(nutritionPlanForToday());
   if (!day || !plannedFoodsFromDay(day).length) return '';
   const hour = new Date().getHours();
   const st = nutritionConfirmStatus();
@@ -14686,7 +14836,7 @@ function confirmNutritionDay(ok) {
   const key = nutritionTodayKey();
   if (ok) {
     // Merged into the day's record: the steps saved for the same date live there too.
-    store.nutritionDaily[key] = Object.assign({}, store.nutritionDaily[key], { confirmed: true, at: new Date().toISOString(), foods: plannedFoodsFromDay(nutritionPlanForToday()) });
+    store.nutritionDaily[key] = Object.assign({}, store.nutritionDaily[key], { confirmed: true, at: new Date().toISOString(), foods: plannedFoodsFromDay(nutritionDayForDisplay(nutritionPlanForToday())) });
     persist();
     try {
       if (store.accountToken) {
@@ -15076,10 +15226,12 @@ function renderNutrition(c) {
   }
   if (currentNutritionDayIndex >= days.length) currentNutritionDayIndex = Math.max(0, days.length - 1);
   const activeDay = days[currentNutritionDayIndex] || { day: '', meals: [] };
+  // Today's plan day with what was changed only for today.
+  const shownDay = nutritionDayForDisplay(activeDay);
 
   // Sums by grams from the values per 100 g; the target is whichever one
   // decides (prescribed > own > plan > proposed).
-  const dayTotals = nutritionDaySums(activeDay);
+  const dayTotals = nutritionDaySums(shownDay);
   const dayTarget = currentNutritionTarget(activeDay);
   const dayKcal = dayTotals.kcal, dayPro = dayTotals.pro, dayCarb = dayTotals.carb, dayFat = dayTotals.fat;
   const targetKcal = dayTarget.kcal || 0;
@@ -15106,6 +15258,7 @@ function renderNutrition(c) {
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="addNutritionDay()">${t('addDay')}</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openAddNutritionWeekWizard()" title="Aggiungi 7 giorni in una volta, come un diario alimentare">📅 Aggiungi Settimana</button>
         ${days.some(function (d) { return d && !d.date && (d.meals || []).some(function (m) { return (m.foods || m.items || []).length; }); }) ? '<button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openShoppingList()">🛒 Lista della spesa</button>' : ''}
+        <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openRecipes()">📖 Ricette${nutritionRecipes().length ? ' (' + nutritionRecipes().length + ')' : ''}</button>
         ${days.length ? '<button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="exportNutritionPdf()">📄 Esporta Alimentazione</button>' : ''}
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openNutritionBackupsModal()" title="Ripristina una versione precedente dell'alimentazione">🕐 Backup</button>
         ${days.length ? personalNutritionClearButtonHtml({ compact: true }) : ''}
@@ -15121,6 +15274,7 @@ function renderNutrition(c) {
     </div>
     ${(typeof isCoachClientSandbox === 'function' && isCoachClientSandbox()) ? nutritionCoachWeekHtml(days) : ''}
     ${nutritionConfirmCardHtml()}
+    ${DATA.nutrition.notes ? `<details class="card" style="border:1px solid var(--border);margin-bottom:12px;padding:10px 12px;"><summary style="font-size:11px;font-weight:800;color:var(--gold);cursor:pointer;">Note e raccomandazioni del piano</summary><div style="font-size:11px;color:#bbb;line-height:1.5;white-space:pre-line;margin-top:8px;">${esc(DATA.nutrition.notes)}</div></details>` : ''}
 
     <div class="card" style="border:1px solid var(--border);margin-bottom:12px;padding:12px;">
       <div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:6px;">BARCODE / OPEN FOOD FACTS</div>
@@ -15203,7 +15357,7 @@ function renderNutrition(c) {
     </div>
 
     <div style="display:flex;flex-direction:column;gap:14px;">
-      ${(activeDay.meals || []).map((m, mIdx) => {
+      ${(shownDay.meals || []).map((m, mIdx) => {
         const mSums = nutritionSums(m.foods);
         const mKcal = mSums.kcal, mPro = mSums.pro, mCarb = mSums.carb, mFat = mSums.fat;
         const mStar = mSums.partial ? '*' : '';
@@ -15225,20 +15379,26 @@ function renderNutrition(c) {
               ${(m.foods || []).map((f, fIdx) => `
                 <div style="display:flex;justify-content:space-between;align-items:center;background:#121212;padding:8px 10px;border-radius:6px;font-size:12px;">
                   <div style="flex:1;min-width:0;">
+                    ${f.course && (fIdx === 0 || (m.foods[fIdx - 1] || {}).course !== f.course) ? `<div style="font-size:9px;color:#888;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:2px;">${esc(f.course)}</div>` : ''}
                     <span style="font-weight:700;color:#eee;">${safeDisplayValue(f.name, 'Alimento')}</span>
-                    <span style="color:var(--gold);font-weight:800;margin-left:6px;">${safeDisplayValue(f.quantity, '')} ${safeDisplayValue(f.unit, 'g')}</span>
+                    <span style="color:var(--gold);font-weight:800;margin-left:6px;">${f.qb ? 'q.b.' : (safeDisplayValue(f.quantity, '') + ' ' + safeDisplayValue(f.unit, 'g'))}</span>
+                    ${f.__swappedToday ? '<span style="font-size:9px;color:#4caf50;font-weight:800;margin-left:6px;">solo oggi</span>' : ''}
+                    ${f.recipeId && nutritionRecipeById(f.recipeId) ? `<span style="font-size:10px;color:var(--gold);margin-left:6px;cursor:pointer;" onclick="openRecipe('${esc(f.recipeId)}')">📖 ricetta</span>` : ''}
+                    ${Array.isArray(f.alternatives) && f.alternatives.length > 1 ? `<div style="font-size:9px;color:#777;margin-top:2px;">${f.alternatives.length - 1} alternativ${f.alternatives.length - 1 === 1 ? 'a' : 'e'} nel piano</div>` : ''}
                     ${foodSourceLabelHtml(f)}
                   </div>
                   <div style="display:flex;align-items:center;gap:8px;">
                     <div style="font-size:10px;color:#aaa;text-align:right;">
                       <div ${nutritionFoodKcalText(f) === '—' ? 'title="Senza valori: la somma del pasto è parziale"' : ''}>${nutritionFoodKcalText(f)} kcal</div>
                     </div>
+                    <button class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:var(--gold);border-color:#333;" title="Cambia combinazione" onclick="openFoodSwap(${currentNutritionDayIndex}, ${mIdx}, ${fIdx})">🔁</button>
                     <button class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:var(--gold);border-color:#333;" onclick="editFoodItem(${currentNutritionDayIndex}, ${mIdx}, ${fIdx})">✎</button>
                     <button class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:var(--accent-red);border-color:#333;" onclick="deleteFoodItem(${currentNutritionDayIndex}, ${mIdx}, ${fIdx})">✕</button>
                   </div>
                 </div>
               `).join('')}
             </div>
+            ${m.notes ? `<div style="font-size:10px;color:#aaa;line-height:1.4;background:#101010;border-left:2px solid var(--gold);padding:6px 8px;margin-bottom:10px;border-radius:4px;">${esc(m.notes)}</div>` : ''}
             <div style="display:flex;gap:6px;">
               <button class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;border-style:dashed;" onclick="openAddFoodModal(${currentNutritionDayIndex}, ${mIdx})">${t('addFood')}</button>
               <button class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;border-color:var(--gold);color:var(--gold);" onclick="openMealPhotoFlow(${currentNutritionDayIndex}, ${mIdx})">${typeof t === 'function' ? t('photoMeal') : 'Foto pasto'}</button>
@@ -15745,6 +15905,21 @@ function saveFoodItem() {
     && DATA.nutrition.days[editTarget.dayIdx].meals[editTarget.mealIdx]
     && DATA.nutrition.days[editTarget.dayIdx].meals[editTarget.mealIdx].foods;
   if (editedFoods && editedFoods[editTarget.foodIdx] !== undefined) {
+    // A row of the plan with alternatives keeps them: the edit is the
+    // alternative in use, the others stay as the nutritionist wrote them.
+    const old = editedFoods[editTarget.foodIdx] || {};
+    if (Array.isArray(old.alternatives) && old.alternatives.length) {
+      const ci = Math.max(0, Math.min(old.alternatives.length - 1, Number(old.choice) || 0));
+      foodObj.alternatives = old.alternatives.slice();
+      foodObj.alternatives[ci] = Object.assign({}, old.alternatives[ci], {
+        name: foodObj.name, quantity: foodObj.quantity, unit: foodObj.unit,
+        kcalPer100: foodObj.kcalPer100, proPer100: foodObj.proPer100, carbPer100: foodObj.carbPer100, fatPer100: foodObj.fatPer100
+      });
+      foodObj.choice = ci;
+    }
+    if (old.course != null && foodObj.course == null) foodObj.course = old.course;
+    if (old.recipeId != null && String(old.name || '').trim().toLowerCase() === String(foodObj.name || '').trim().toLowerCase()) foodObj.recipeId = old.recipeId;
+    if (old.id != null && foodObj.id == null) foodObj.id = old.id;
     editedFoods[editTarget.foodIdx] = foodObj;
     window.__foodEditTarget = null;
   } else {
@@ -21124,12 +21299,20 @@ window.pickSuggestedExerciseMapping = pickSuggestedExerciseMapping;
 function renderReviewNutrition(nutr) {
   if (!nutr || !nutr.days) return '<div class="card">Nessun dato nutrizione</div>';
   if (typeof enrichFoodMappingConfidence === 'function') enrichFoodMappingConfidence(nutr);
-  return nutr.days.map((d, dIdx) => `
+  // A nutritionist's plan: what else was read with it.
+  const recipes = Array.isArray(nutr.recipes) ? nutr.recipes : [];
+  const head = (nutr.source === 'nutritionist' || recipes.length) ? `
+    <div class="card" style="margin-bottom:12px;font-size:11px;color:#bbb;line-height:1.5;">
+      <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:4px;">Piano del nutrizionista</div>
+      Ogni riga tiene le alternative scritte nel piano (in uso la prima: si cambia poi con 🔁). ${recipes.length ? recipes.length + (recipes.length === 1 ? ' ricetta letta' : ' ricette lette') + ': ' + esc(recipes.map((r) => r.name).join(', ')) + '.' : ''}
+      ${nutr.notes ? '<div style="margin-top:4px;color:#888;">Con note e raccomandazioni.</div>' : ''}
+    </div>` : '';
+  return head + nutr.days.map((d, dIdx) => `
     <div class="card" style="margin-bottom:12px;">
       <h3 style="font-size:13px; color:var(--gold); font-weight:800; margin-bottom:8px;">${esc(d.day || d.day_name || 'Giorno ' + (dIdx+1))}</h3>
       ${(d.meals || []).map((m, mIdx) => `
         <div style="background:rgba(255,255,255,0.02); border:1px solid #222; border-radius:6px; padding:8px; margin-bottom:8px;">
-          <div style="font-size:11px; font-weight:800; color:#4caf50; margin-bottom:6px;">${esc(m.name || m.meal_name || 'Pasto')}</div>
+          <div style="font-size:11px; font-weight:800; color:#4caf50; margin-bottom:6px;">${esc(m.name || m.meal_name || 'Pasto')}${m.time ? ' <span style="color:#888;font-weight:600;">· ' + esc(m.time) + '</span>' : ''}</div>
           ${(m.foods || m.items || []).map((f, fIdx) => {
             const conf = Number(f.mappingConfidence != null ? f.mappingConfidence : 0.7);
             const low = conf < 0.85;
@@ -21140,7 +21323,8 @@ function renderReviewNutrition(nutr) {
               <input type="text" class="input" style="width:40px; font-size:11px; padding:4px; text-align:center;" value="${esc(f.unit || 'g')}" placeholder="Unit" oninput="updateReviewMealItem(${dIdx}, ${mIdx}, ${fIdx}, 'unit', this.value)" onchange="updateReviewMealItem(${dIdx}, ${mIdx}, ${fIdx}, 'unit', this.value)">
               <span style="font-size:9px;font-weight:800;color:${low ? '#ff9800' : '#4caf50'};min-width:32px;">${Math.round(conf * 100)}%</span>
               <button class="btn btn-outline" style="color:var(--accent-red); padding:4px 6px; font-size:10px;" onclick="removeReviewMealItem(${dIdx}, ${mIdx}, ${fIdx})">✕</button>
-            </div>`;
+            </div>
+            ${Array.isArray(f.alternatives) && f.alternatives.length > 1 ? `<div style="font-size:9px;color:#777;margin:-2px 0 6px 6px;">o: ${esc(f.alternatives.filter((a, ai) => ai !== (Number(f.choice) || 0)).map((a) => a.name + (a.quantity != null ? ' ' + a.quantity + ' ' + (a.unit || 'g') : '')).join(' · '))}</div>` : ''}`;
           }).join('')}
           <button class="btn btn-outline" style="font-size:9px; padding:3px 6px; margin-top:4px;" onclick="addReviewMealItem(${dIdx}, ${mIdx})">+ Alimento</button>
         </div>
@@ -21322,6 +21506,9 @@ function updateReviewMealItem(dIdx, mIdx, fIdx, field, val) {
   if (field === 'name') food.name = val;
   else if (field === 'quantity') food.quantity = val;
   else if (field === 'unit') food.unit = val;
+  // The alternative in use is what was corrected.
+  const alt = Array.isArray(food.alternatives) ? food.alternatives[Number(food.choice) || 0] : null;
+  if (alt && (field === 'name' || field === 'quantity' || field === 'unit')) alt[field] = val;
 }
 
 function removeReviewMealItem(dIdx, mIdx, fIdx) {
@@ -25208,7 +25395,8 @@ window.exportNutritionPdf = exportNutritionPdf;
 // when the name is the same, and quantities only when the unit is the same.
 const SHOP_WEEKDAYS = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
 function shopFold(s) {
-  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+  // Punctuation aside too: "(creme" and "[creme" read by the OCR are one food.
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9%]+/g, ' ').trim();
 }
 // Which plan day is eaten on each weekday (0 = Monday). A plan named by
 // weekday uses its names; one that is not (Giorno 1, ON/OFF...) is repeated
@@ -25225,16 +25413,28 @@ function shoppingPlanWeek(days) {
   if (!plan.length) return { week: SHOP_WEEKDAYS.map(function () { return null; }), cycled: false };
   return { week: SHOP_WEEKDAYS.map(function (_, i) { return plan[i % plan.length]; }), cycled: true };
 }
-function shoppingListFor(week, from, to) {
+function shoppingListFor(week, from, to, recipes) {
   const items = {};
+  const NP = (typeof self !== 'undefined' && self.NurvanNutritionPlan) || null;
+  const byId = {};
+  (recipes || []).forEach(function (r) { if (r && r.id) byId[r.id] = r; });
+  // A recipe on the plate is bought as its ingredients, in the amount eaten.
+  const expand = function (f) {
+    const r = f && f.recipeId ? byId[f.recipeId] : null;
+    if (!r || !NP) return [f];
+    const u = String(f.unit || 'g').toLowerCase();
+    const grams = (u === 'g' || u === 'ml') ? Number(f.quantity) : (u === 'porzioni' && r.portionGrams ? Number(f.quantity) * r.portionGrams : 0);
+    const ings = NP.recipeIngredientsFor(f, r, grams);
+    return ings && ings.length ? ings : [f];
+  };
   for (let i = from; i <= to; i++) {
     const day = week[i];
     if (!day) continue;
     (day.meals || []).forEach(function (meal) {
-      (meal.foods || meal.items || []).forEach(function (f) {
+      [].concat.apply([], (meal.foods || meal.items || []).map(expand)).forEach(function (f) {
         const name = String(f.name || f.food || '').trim();
         if (!name) return;
-        const rawQty = f.qty != null && f.qty !== '' ? f.qty : (f.quantity != null ? f.quantity : f.amount);
+        const rawQty = f.qb ? '' : (f.qty != null && f.qty !== '' ? f.qty : (f.quantity != null ? f.quantity : f.amount));
         const q = Number(String(rawQty == null ? '' : rawQty).replace(',', '.'));
         const hasQty = rawQty != null && rawQty !== '' && isFinite(q) && q > 0;
         const u = hasQty ? selectableFoodUnit(q, f.unit || 'g') : { qty: 0, unit: '' };
@@ -25279,7 +25479,7 @@ function openShoppingList() {
   const splitAfter = parts.length > 1 ? parts[0].to : 2;
   let body = '';
   parts.forEach(function (part, pi) {
-    const list = shoppingListFor(planWeek.week, part.from, part.to);
+    const list = shoppingListFor(planWeek.week, part.from, part.to, nutritionRecipes());
     body += '<div style="margin-top:12px;"><div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:6px;">' +
       (parts.length > 1 ? 'Spesa ' + (pi + 1) + ' · ' : '') + esc(shoppingPartLabel(part)) + '</div>';
     if (!list.length) body += '<div style="font-size:11px;color:#888;">Nessun alimento nel piano per questi giorni.</div>';
@@ -25337,7 +25537,7 @@ function clearShoppingChecks() {
 function shoppingListText() {
   const planWeek = shoppingPlanWeek((DATA && DATA.nutrition && DATA.nutrition.days) || []);
   return shoppingParts().map(function (part) {
-    const lines = shoppingListFor(planWeek.week, part.from, part.to).map(function (it) {
+    const lines = shoppingListFor(planWeek.week, part.from, part.to, nutritionRecipes()).map(function (it) {
       const q = shoppingQtyText(it);
       return '- ' + it.name + (q ? ' — ' + q : '');
     });
@@ -25362,6 +25562,442 @@ window.setShoppingSplit = setShoppingSplit;
 window.toggleShoppingItem = toggleShoppingItem;
 window.clearShoppingChecks = clearShoppingChecks;
 window.shareShoppingList = shareShoppingList;
+
+/* ---------- alternatives of a plan row, and changing combination ---------- */
+
+// The database food that is this food (same words; "crudo", "fresco", "di"
+// and word order aside) - or none. Close names are different foods: "frutta
+// (in media), fresca" is not "ricotta fresca", and a wrong value is worse
+// than none.
+function exactFoodMatch(name) {
+  const svc = (typeof FoodDatabaseService !== 'undefined') ? FoodDatabaseService : null;
+  const NP = window.NurvanNutritionPlan;
+  if (!svc || !NP || !name) return null;
+  return NP.sameFood(name, svc.catalog);
+}
+// The values per 100 g of each alternative of an imported plan: a recipe's
+// come from the recipe (the nutritionist's), the others from the food
+// database. A food not found stays without values (the sum says partial).
+function enrichPlanAlternatives(plan) {
+  const fill = function (a) {
+    if (!a || a.recipeId || a.kcalPer100 != null || a.qb) return;
+    const hit = exactFoodMatch(a.name);
+    if (!hit || !(hit.kcal > 0)) return;
+    a.kcalPer100 = hit.kcal;
+    a.proPer100 = hit.pro || 0;
+    a.carbPer100 = hit.carb || 0;
+    a.fatPer100 = hit.fat || 0;
+    a.macro_source = 'db';
+  };
+  const NP = window.NurvanNutritionPlan;
+  // Recipes first: a table read only in part is replaced by the values of
+  // the ingredients, when every one of them is known (the declared ones kept).
+  (plan.recipes || []).forEach(function (r) {
+    (r.ingredients || []).forEach(function (ing) { (ing.alternatives || []).forEach(fill); });
+    if (!(NP && NP.per100Complete(r.per100))) {
+      const v = recipeValuesFromIngredients(r);
+      if (v) {
+        if (r.per100 && Object.keys(r.per100).length) r.declared = r.per100;
+        r.per100 = v.per100;
+        r.valuesFrom = 'ingredients';
+        if (!r.portionGrams && v.portionGrams) r.portionGrams = v.portionGrams;
+      }
+    }
+  });
+  const byId = {};
+  (plan.recipes || []).forEach(function (r) { if (r && r.id) byId[r.id] = r; });
+  (plan.days || []).forEach(function (d) {
+    (d.meals || []).forEach(function (m) {
+      (m.foods || []).forEach(function (f) {
+        (f.alternatives || []).forEach(function (a) {
+          const r = a.recipeId ? byId[a.recipeId] : null;
+          if (r && a.kcalPer100 == null && NP && NP.per100Complete(r.per100)) { NP.setPer100(a, r.per100); a.macro_source = 'recipe'; }
+          else fill(a);
+        });
+        if (NP && f.alternatives && f.alternatives.length) NP.applyChoice(f, f.choice || 0);
+      });
+    });
+  });
+  return plan;
+}
+// A recipe's values from its ingredients (first alternative of each), only
+// when every weighed ingredient has values: otherwise none, never a guess.
+function recipeValuesFromIngredients(r) {
+  let grams = 0, kcal = 0, pro = 0, carb = 0, fat = 0;
+  const ings = (r && r.ingredients) || [];
+  for (const ing of ings) {
+    const a = (ing.alternatives || [])[ing.choice || 0];
+    if (!a || a.qb) continue;
+    const g = nutritionGramsOf({ quantity: a.quantity, unit: a.unit, name: a.name });
+    if (!(g > 0) || a.kcalPer100 == null) return null;
+    grams += g;
+    kcal += a.kcalPer100 * g / 100;
+    pro += (a.proPer100 || 0) * g / 100;
+    carb += (a.carbPer100 || 0) * g / 100;
+    fat += (a.fatPer100 || 0) * g / 100;
+  }
+  if (!(grams > 0)) return null;
+  const k = 100 / grams;
+  const portions = r.portions > 0 ? r.portions : 1;
+  return {
+    per100: { kcal: Math.round(kcal * k), pro: Math.round(pro * k * 10) / 10, carb: Math.round(carb * k * 10) / 10, fat: Math.round(fat * k * 10) / 10 },
+    portionGrams: Math.round(grams / portions)
+  };
+}
+function nutritionRecipes() {
+  return (DATA && DATA.nutrition && Array.isArray(DATA.nutrition.recipes)) ? DATA.nutrition.recipes : [];
+}
+function nutritionRecipeById(id) {
+  return nutritionRecipes().find(function (r) { return r && r.id === id; }) || null;
+}
+// Is this plan day the one eaten today (its weekday, or its date)?
+function nutritionDayIsToday(day) {
+  if (!day) return false;
+  if (day.date) return String(day.date).slice(0, 10) === isoDateOnly(new Date());
+  return nutritionPlanForToday() === day;
+}
+// Which food a change for today belongs to: its id, or where it stands.
+function nutritionFoodKey(food, dayIdx, mealIdx, foodIdx) {
+  return food && food.id != null ? String(food.id) : ('d' + dayIdx + 'm' + mealIdx + 'f' + foodIdx);
+}
+function nutritionTodaySwaps() {
+  const rec = (store && store.nutritionDaily && store.nutritionDaily[nutritionTodayKey()]) || null;
+  return (rec && rec.swaps) || {};
+}
+// The day as it is eaten: today's plan day with the changes made only for
+// today on it (the plan itself is not touched). Other days as they are.
+function nutritionDayForDisplay(day) {
+  if (!day || !nutritionDayIsToday(day)) return day;
+  const swaps = nutritionTodaySwaps();
+  if (!Object.keys(swaps).length) return day;
+  const dayIdx = ((DATA && DATA.nutrition && DATA.nutrition.days) || []).indexOf(day);
+  return Object.assign({}, day, {
+    meals: (day.meals || []).map(function (m, mi) {
+      return Object.assign({}, m, {
+        foods: (m.foods || []).map(function (f, fi) {
+          const s = f ? swaps[nutritionFoodKey(f, dayIdx, mi, fi)] : null;
+          if (!s) return f;
+          // The food of today only: nothing of the planned one stays on it
+          // (its values, its recipe), only where it sits.
+          const shown = Object.assign({}, f);
+          ['name', 'quantity', 'unit', 'label', 'amount', 'recipeId', 'kcalPer100', 'proPer100', 'carbPer100', 'fatPer100', 'macro_source', 'qb',
+            'kcal', 'pro', 'carb', 'fat', 'protein_g', 'carbs_g', 'fat_g', 'food', 'calories', 'protein', 'carbs', 'fats'].forEach(function (k) { delete shown[k]; });
+          return Object.assign(shown, s, { __swappedToday: true });
+        })
+      });
+    })
+  });
+}
+function nutritionOptionValuesText(o) {
+  const N = nutritionTargetsLib();
+  if (!N) return '';
+  const v = N.foodValues(o, nutritionGramsOf(o));
+  if (v.missing) return 'valori non trovati';
+  return Math.round(v.kcal) + ' kcal · ' + Math.round(v.pro) + 'P ' + Math.round(v.carb) + 'C ' + Math.round(v.fat) + 'F';
+}
+function nutritionOptionText(o) {
+  if (o.qb) return o.name + ' (q.b.)';
+  return o.name + (o.quantity != null && o.quantity !== '' ? ' — ' + o.quantity + ' ' + (o.unit || 'g') : '');
+}
+// The alternatives offered for a row: the plan's, or generated from the
+// database when the plan has none (kept only if one is chosen).
+function nutritionSwapOptions(food) {
+  const own = Array.isArray(food.alternatives) ? food.alternatives : [];
+  if (own.length > 1) return { options: own, generated: false };
+  const NP = window.NurvanNutritionPlan;
+  const svc = (typeof FoodDatabaseService !== 'undefined') ? FoodDatabaseService : null;
+  if (!NP || !svc) return { options: own, generated: false };
+  // Proposals only from a food the database really has: a close name could
+  // be another group of foods altogether.
+  const hit = exactFoodMatch(food.name);
+  const base = hit ? Object.assign({}, hit) : null;
+  if (base && food.kcalPer100 != null) { base.kcal = food.kcalPer100; base.pro = food.proPer100; base.carb = food.carbPer100; base.fat = food.fatPer100; }
+  const current = own[0] || { name: food.name, quantity: food.quantity, unit: food.unit || 'g', kcalPer100: food.kcalPer100, proPer100: food.proPer100, carbPer100: food.carbPer100, fatPer100: food.fatPer100 };
+  const gen = base ? NP.generateAlternatives(base, nutritionGramsOf(food), svc.catalog, { limit: 6 }) : [];
+  return { options: [current].concat(gen), generated: true };
+}
+function openFoodSwap(dayIdx, mealIdx, foodIdx) {
+  const day = DATA && DATA.nutrition && DATA.nutrition.days && DATA.nutrition.days[dayIdx];
+  const meal = day && day.meals && day.meals[mealIdx];
+  const food = meal && meal.foods && meal.foods[foodIdx];
+  if (!food) return;
+  const sw = nutritionSwapOptions(food);
+  window.__foodSwap = { dayIdx: dayIdx, mealIdx: mealIdx, foodIdx: foodIdx, options: sw.options, generated: sw.generated };
+  const today = nutritionDayIsToday(day);
+  const swapToday = nutritionTodaySwaps()[nutritionFoodKey(food, dayIdx, mealIdx, foodIdx)] || null;
+  const chosen = Number(food.choice) || 0;
+  let modal = document.getElementById('food-swap-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'food-swap-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px));';
+    document.body.appendChild(modal);
+  }
+  const dayName = safeDisplayValue(day.day, 'questo giorno');
+  const rows = sw.options.map(function (o, i) {
+    const isPlan = !sw.generated && i === chosen;
+    const isToday = swapToday && String(swapToday.name) === String(o.name) && String(swapToday.quantity) === String(o.quantity);
+    return '<div style="padding:8px 0;border-bottom:1px solid #262626;">' +
+      '<div style="font-size:12px;color:#eee;font-weight:700;">' + esc(nutritionOptionText(o)) +
+      (isPlan ? ' <span style="font-size:9px;color:var(--gold);">· nel piano</span>' : '') +
+      (isToday ? ' <span style="font-size:9px;color:#4caf50;">· oggi</span>' : '') +
+      (o.generated ? ' <span style="font-size:9px;color:#888;">· proposta (stesse kcal)</span>' : '') +
+      (o.recipeId ? ' <span style="font-size:9px;color:var(--gold);cursor:pointer;" onclick="openRecipe(\'' + esc(o.recipeId) + '\')">📖 ricetta</span>' : '') + '</div>' +
+      '<div style="font-size:10px;color:#999;margin-top:2px;">' + esc(nutritionOptionValuesText(o)) + '</div>' +
+      '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">' +
+      (today ? '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="chooseFoodSwap(' + i + ', \'today\')">Solo oggi</button>' : '') +
+      '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;border-color:var(--gold);color:var(--gold);" onclick="chooseFoodSwap(' + i + ', \'fixed\')">Fisso per ' + esc(dayName) + '</button>' +
+      '</div></div>';
+  }).join('');
+  modal.innerHTML = '<div style="background:#181818;border:1px solid #333;border-radius:12px;padding:18px;max-width:460px;width:100%;max-height:100%;overflow-y:auto;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+    '<div style="font-size:15px;font-weight:800;color:#fff;">🔁 Cambia combinazione</div>' +
+    '<button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="closeFoodSwap()">✕</button></div>' +
+    '<div style="font-size:10px;color:#888;margin-top:4px;">' + (sw.generated
+      ? 'Il piano non ha alternative per questo alimento: queste hanno le stesse calorie e macro vicini (dalla banca alimenti). Restano solo se ne scegli una.'
+      : 'Le alternative scritte nel piano per ' + esc(safeDisplayValue(meal.name, 'questo pasto')) + '.') + '</div>' +
+    (swapToday ? '<div style="margin-top:8px;font-size:11px;color:#4caf50;">Oggi: ' + esc(nutritionOptionText(swapToday)) + ' <button class="btn btn-outline" style="font-size:9px;padding:2px 6px;margin-left:6px;" onclick="clearFoodSwapToday()">Torna al piano</button></div>' : '') +
+    (rows || '<div style="font-size:11px;color:#888;margin-top:10px;">Nessuna alternativa trovata per questo alimento.</div>') +
+    '</div>';
+  modal.style.display = 'flex';
+}
+function closeFoodSwap() {
+  const m = document.getElementById('food-swap-modal');
+  if (m) m.style.display = 'none';
+}
+function foodSwapSnapshot(o) {
+  const out = {};
+  ['name', 'quantity', 'unit', 'label', 'amount', 'recipeId', 'kcalPer100', 'proPer100', 'carbPer100', 'fatPer100', 'macro_source', 'qb'].forEach(function (k) { if (o[k] != null && o[k] !== '') out[k] = o[k]; });
+  return out;
+}
+function chooseFoodSwap(idx, scope) {
+  const s = window.__foodSwap;
+  if (!s) return;
+  const food = DATA.nutrition.days[s.dayIdx].meals[s.mealIdx].foods[s.foodIdx];
+  const o = s.options[idx];
+  if (!food || !o) return;
+  if (scope === 'today') {
+    const fkey = nutritionFoodKey(food, s.dayIdx, s.mealIdx, s.foodIdx);
+    if (!store.nutritionDaily) store.nutritionDaily = {};
+    const key = nutritionTodayKey();
+    const rec = Object.assign({}, store.nutritionDaily[key]);
+    rec.swaps = Object.assign({}, rec.swaps);
+    const planChoice = (food.alternatives || [])[Number(food.choice) || 0];
+    if (!s.generated && planChoice === o) delete rec.swaps[fkey];
+    else rec.swaps[fkey] = foodSwapSnapshot(o);
+    store.nutritionDaily[key] = rec;
+    persist();
+    closeFoodSwap();
+    render();
+    if (typeof showToast === 'function') showToast('Cambiato solo per oggi', 'ok');
+    return;
+  }
+  // Fixed for this day: the plan's alternative becomes the one in use; a
+  // proposed one is added to the row's alternatives first, so it is kept.
+  if (!Array.isArray(food.alternatives) || !food.alternatives.length) {
+    food.alternatives = [foodSwapSnapshot(s.options[0])];
+  }
+  let at = s.generated ? food.alternatives.findIndex(function (a) { return a.name === o.name && String(a.quantity) === String(o.quantity); }) : idx;
+  if (at < 0) { food.alternatives.push(Object.assign(foodSwapSnapshot(o), { generated: true })); at = food.alternatives.length - 1; }
+  window.NurvanNutritionPlan.applyChoice(food, at);
+  markNutritionDirty();
+  persist();
+  closeFoodSwap();
+  render();
+  if (typeof showToast === 'function') showToast('Combinazione salvata per ' + safeDisplayValue(DATA.nutrition.days[s.dayIdx].day, 'questo giorno'), 'ok');
+}
+function clearFoodSwapToday() {
+  const s = window.__foodSwap;
+  if (!s) return;
+  const food = DATA.nutrition.days[s.dayIdx].meals[s.mealIdx].foods[s.foodIdx];
+  const key = nutritionTodayKey();
+  if (food && store.nutritionDaily && store.nutritionDaily[key] && store.nutritionDaily[key].swaps) {
+    const rec = Object.assign({}, store.nutritionDaily[key]);
+    rec.swaps = Object.assign({}, rec.swaps);
+    delete rec.swaps[nutritionFoodKey(food, s.dayIdx, s.mealIdx, s.foodIdx)];
+    store.nutritionDaily[key] = rec;
+    persist();
+  }
+  closeFoodSwap();
+  render();
+}
+
+/* ---------- recipes ---------- */
+
+function nutritionModal(id, inner) {
+  let modal = document.getElementById(id);
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = id;
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px));';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = '<div style="background:#181818;border:1px solid #333;border-radius:12px;padding:18px;max-width:520px;width:100%;max-height:100%;overflow-y:auto;">' + inner + '</div>';
+  modal.style.display = 'flex';
+  return modal;
+}
+function closeNutritionModal(id) {
+  const m = document.getElementById(id);
+  if (m) m.style.display = 'none';
+}
+function recipePortionValuesText(r, portions) {
+  if (!r || !r.per100 || r.per100.kcal == null || !(r.portionGrams > 0)) return '';
+  const g = r.portionGrams * (portions || 1);
+  const k = g / 100;
+  // A value the table did not give is a dash, never a zero.
+  const part = function (v, tag) { return v == null ? '—' + tag : Math.round(v * k) + tag; };
+  return Math.round(r.per100.kcal * k) + ' kcal · ' + part(r.per100.pro, 'P') + ' ' + part(r.per100.carb, 'C') + ' ' + part(r.per100.fat, 'F') + ' (' + Math.round(g) + ' g)';
+}
+function openRecipes() {
+  const list = nutritionRecipes();
+  const rows = list.map(function (r) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #262626;cursor:pointer;" onclick="openRecipe(\'' + esc(r.id) + '\')">' +
+      '<div><div style="font-size:12px;font-weight:800;color:#eee;">' + esc(r.name) + '</div>' +
+      '<div style="font-size:10px;color:#888;">' + esc([r.portions ? r.portions + (r.portions === 1 ? ' porzione' : ' porzioni') : '', recipePortionValuesText(r, 1)].filter(Boolean).join(' · ')) + '</div></div>' +
+      '<span style="color:var(--gold);">›</span></div>';
+  }).join('');
+  nutritionModal('recipes-modal',
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+    '<div style="font-size:15px;font-weight:800;color:#fff;">📖 Ricette</div>' +
+    '<button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="closeNutritionModal(\'recipes-modal\')">✕</button></div>' +
+    '<div style="font-size:10px;color:#888;margin-top:4px;">Quelle del piano del nutrizionista e le tue.</div>' +
+    (rows || '<div style="font-size:11px;color:#888;margin-top:10px;">Nessuna ricetta ancora.</div>') +
+    '<button class="btn btn-primary" style="width:100%;margin-top:12px;font-size:11px;" onclick="openRecipeEditor()">+ Nuova ricetta</button>');
+}
+function openRecipe(id, portions) {
+  const r = nutritionRecipeById(id);
+  if (!r) return;
+  closeFoodSwap();
+  const p = Math.max(1, Number(portions) || 1);
+  const perPortionFactor = p / (r.portions > 0 ? r.portions : 1);
+  const ing = (r.ingredients || []).map(function (i) {
+    const alts = (i.alternatives || []).map(function (a) {
+      if (a.qb) return esc(a.name) + ' q.b.';
+      const q = a.quantity != null ? Math.round(a.quantity * perPortionFactor * 10) / 10 : null;
+      return esc(a.name) + (q != null ? ' <span style="color:var(--gold);">' + q + ' ' + esc(a.unit || 'g') + '</span>' : '');
+    });
+    return '<li style="margin:4px 0;">' + (i.group ? '<span style="color:#888;">' + esc(i.group) + ': </span>' : '') + alts.join(' <span style="color:#888;">o</span> ') + '</li>';
+  }).join('');
+  const steps = (r.steps || []).map(function (s) { return '<li style="margin:4px 0;">' + esc(s) + '</li>'; }).join('');
+  const vals = recipePortionValuesText(r, p);
+  const dayOpts = ((DATA.nutrition && DATA.nutrition.days) || []).map(function (d, di) {
+    return (d.meals || []).map(function (m, mi) { return '<option value="' + di + ':' + mi + '">' + esc(safeDisplayValue(d.day, 'Giorno ' + (di + 1)) + ' · ' + safeDisplayValue(m.name, 'Pasto')) + '</option>'; }).join('');
+  }).join('');
+  nutritionModal('recipe-modal',
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+    '<div style="font-size:15px;font-weight:800;color:#fff;">' + esc(r.name) + '</div>' +
+    '<button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="closeNutritionModal(\'recipe-modal\')">✕</button></div>' +
+    (r.author ? '<div style="font-size:10px;color:#888;">da ' + esc(r.author) + '</div>' : '') +
+    (r.description ? '<div style="font-size:11px;color:#bbb;margin-top:6px;">' + esc(r.description) + '</div>' : '') +
+    '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:#ccc;">Porzioni ' +
+    '<button class="btn btn-outline" style="font-size:11px;padding:2px 8px;" onclick="openRecipe(\'' + esc(r.id) + '\',' + Math.max(1, p - 1) + ')">−</button><b>' + p + '</b>' +
+    '<button class="btn btn-outline" style="font-size:11px;padding:2px 8px;" onclick="openRecipe(\'' + esc(r.id) + '\',' + (p + 1) + ')">+</button>' +
+    (r.portions ? '<span style="color:#777;">(ricetta per ' + r.portions + ')</span>' : '') + '</div>' +
+    (vals ? '<div style="font-size:11px;color:var(--gold);margin-top:6px;">' + esc(vals) + (r.valuesFrom === 'ingredients' ? ' <span style="color:#777;">· calcolati dagli ingredienti</span>' : '') + '</div>' : '<div style="font-size:10px;color:#888;margin-top:6px;">Valori non disponibili.</div>') +
+    '<div style="font-size:12px;font-weight:800;color:var(--gold);margin-top:12px;">Ingredienti</div><ul style="font-size:11px;color:#ddd;padding-left:18px;margin:6px 0;">' + (ing || '<li>—</li>') + '</ul>' +
+    (steps ? '<div style="font-size:12px;font-weight:800;color:var(--gold);margin-top:8px;">Preparazione</div><ol style="font-size:11px;color:#ddd;padding-left:18px;margin:6px 0;">' + steps + '</ol>' : '') +
+    (dayOpts && r.portionGrams > 0 ? '<div style="font-size:12px;font-weight:800;color:var(--gold);margin-top:10px;">Aggiungi a un pasto</div>' +
+      '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;"><select id="recipe-add-target" style="flex:1;min-width:160px;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:11px;">' + dayOpts + '</select>' +
+      '<button class="btn btn-primary" style="font-size:11px;" onclick="addRecipeToMeal(\'' + esc(r.id) + '\',' + p + ')">Aggiungi ' + p + (p === 1 ? ' porzione' : ' porzioni') + '</button></div>' : '') +
+    '<div style="display:flex;gap:6px;margin-top:14px;">' +
+    '<button class="btn btn-outline" style="flex:1;font-size:11px;" onclick="openRecipeEditor(\'' + esc(r.id) + '\')">✎ Modifica</button>' +
+    '<button class="btn btn-outline" style="font-size:11px;color:var(--accent-red);" onclick="deleteRecipe(\'' + esc(r.id) + '\')">Elimina</button></div>');
+}
+function addRecipeToMeal(id, portions) {
+  const r = nutritionRecipeById(id);
+  const sel = document.getElementById('recipe-add-target');
+  if (!r || !sel || !(r.portionGrams > 0)) return;
+  const parts = String(sel.value).split(':');
+  const meal = DATA.nutrition.days[Number(parts[0])] && DATA.nutrition.days[Number(parts[0])].meals[Number(parts[1])];
+  if (!meal) return;
+  if (!Array.isArray(meal.foods)) meal.foods = [];
+  const f = { name: r.name, quantity: Math.round(r.portionGrams * portions), unit: 'g', recipeId: r.id, macro_source: 'recipe' };
+  if (window.NurvanNutritionPlan) window.NurvanNutritionPlan.setPer100(f, r.per100);
+  meal.foods.push(f);
+  meal.items = meal.foods;
+  markNutritionDirty();
+  persist();
+  closeNutritionModal('recipe-modal');
+  closeNutritionModal('recipes-modal');
+  render();
+  if (typeof showToast === 'function') showToast('Ricetta aggiunta al pasto', 'ok');
+}
+function openRecipeEditor(id) {
+  const r = id ? nutritionRecipeById(id) : null;
+  const ingText = r ? (r.ingredients || []).map(function (i) {
+    return (i.group ? i.group + ': ' : '') + (i.alternatives || []).map(function (a) { return a.label || nutritionOptionText(a).replace(' — ', ' '); }).join(' o ');
+  }).join('\n') : '';
+  const field = 'width:100%;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;margin-top:4px;box-sizing:border-box;';
+  nutritionModal('recipe-edit-modal',
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+    '<div style="font-size:15px;font-weight:800;color:#fff;">' + (r ? 'Modifica ricetta' : 'Nuova ricetta') + '</div>' +
+    '<button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="closeNutritionModal(\'recipe-edit-modal\')">✕</button></div>' +
+    '<input type="hidden" id="recipe-edit-id" value="' + esc(r ? r.id : '') + '">' +
+    '<div style="font-size:10px;color:#aaa;margin-top:10px;">Nome</div><input id="recipe-edit-name" style="' + field + '" value="' + esc(r ? r.name : '') + '">' +
+    '<div style="font-size:10px;color:#aaa;margin-top:8px;">Porzioni</div><input id="recipe-edit-portions" type="number" min="1" inputmode="numeric" style="' + field + '" value="' + esc(String(r && r.portions ? r.portions : 1)) + '">' +
+    '<div style="font-size:10px;color:#aaa;margin-top:8px;">Ingredienti, uno per riga (es. "100 grammi di riso basmati", alternative con " o ")</div><textarea id="recipe-edit-ingredients" rows="6" style="' + field + '">' + esc(ingText) + '</textarea>' +
+    '<div style="font-size:10px;color:#aaa;margin-top:8px;">Preparazione, un passo per riga</div><textarea id="recipe-edit-steps" rows="5" style="' + field + '">' + esc(r ? (r.steps || []).join('\n') : '') + '</textarea>' +
+    '<div style="font-size:9px;color:#777;margin-top:6px;">I valori si calcolano dagli ingredienti trovati nella banca alimenti; se uno manca restano vuoti. Quelli dichiarati dal nutrizionista restano i suoi finché non cambi gli ingredienti.</div>' +
+    '<button class="btn btn-primary" style="width:100%;margin-top:12px;font-size:11px;" onclick="saveRecipeEditor()">SALVA RICETTA</button>');
+}
+function saveRecipeEditor() {
+  const NP = window.NurvanNutritionPlan;
+  const id = (document.getElementById('recipe-edit-id') || {}).value || '';
+  const name = String((document.getElementById('recipe-edit-name') || {}).value || '').trim();
+  if (!name) { if (typeof showToast === 'function') showToast('Serve il nome della ricetta', 'error'); return; }
+  const portions = Math.max(1, parseInt((document.getElementById('recipe-edit-portions') || {}).value, 10) || 1);
+  const ingRaw = String((document.getElementById('recipe-edit-ingredients') || {}).value || '');
+  const stepsRaw = String((document.getElementById('recipe-edit-steps') || {}).value || '');
+  const ingredients = ingRaw.split('\n').map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
+    const g = /^([^:]{2,40}):\s+(.+)$/.exec(l);
+    const text = g && !/\d/.test(g[1]) ? g[2] : l;
+    const out = { alternatives: NP.splitOptions(text).map(NP.parseOption).filter(Boolean) };
+    if (g && !/\d/.test(g[1])) out.group = g[1];
+    return out;
+  }).filter(function (i) { return i.alternatives.length; });
+  const steps = stepsRaw.split('\n').map(function (l) { return l.replace(/^\d{1,2}\s*[°º.)]\s*/, '').trim(); }).filter(Boolean);
+  if (!DATA.nutrition) DATA.nutrition = { days: [], present: true };
+  if (!Array.isArray(DATA.nutrition.recipes)) DATA.nutrition.recipes = [];
+  const list = DATA.nutrition.recipes;
+  const old = id ? list.find(function (r) { return r.id === id; }) : null;
+  const sameIngredients = old && JSON.stringify((old.ingredients || []).map(function (i) { return (i.alternatives || []).map(function (a) { return [a.name, a.quantity, a.unit]; }); })) ===
+    JSON.stringify(ingredients.map(function (i) { return i.alternatives.map(function (a) { return [a.name, a.quantity, a.unit]; }); }));
+  const recipe = Object.assign({}, old || {}, { name: name, portions: portions, ingredients: ingredients, steps: steps });
+  if (!recipe.id) recipe.id = 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  if (!sameIngredients || (old && old.portions !== portions)) {
+    // New ingredients: the declared values no longer describe the recipe.
+    enrichPlanAlternatives({ days: [], recipes: [Object.assign(recipe, { per100: {}, perPortion: {}, portionGrams: null, valuesFrom: null })] });
+  }
+  if (old) list[list.indexOf(old)] = recipe;
+  else list.push(recipe);
+  markNutritionDirty();
+  persist();
+  closeNutritionModal('recipe-edit-modal');
+  openRecipe(recipe.id);
+  if (typeof showToast === 'function') showToast('Ricetta salvata', 'ok');
+}
+function deleteRecipe(id) {
+  const list = nutritionRecipes();
+  const at = list.findIndex(function (r) { return r.id === id; });
+  if (at < 0) return;
+  if (!confirm('Eliminare la ricetta "' + list[at].name + '"? I pasti che la usano restano, con i loro valori.')) return;
+  list.splice(at, 1);
+  markNutritionDirty();
+  persist();
+  closeNutritionModal('recipe-modal');
+  openRecipes();
+}
+window.openFoodSwap = openFoodSwap;
+window.closeFoodSwap = closeFoodSwap;
+window.chooseFoodSwap = chooseFoodSwap;
+window.clearFoodSwapToday = clearFoodSwapToday;
+window.openRecipes = openRecipes;
+window.openRecipe = openRecipe;
+window.addRecipeToMeal = addRecipeToMeal;
+window.openRecipeEditor = openRecipeEditor;
+window.saveRecipeEditor = saveRecipeEditor;
+window.deleteRecipe = deleteRecipe;
+window.closeNutritionModal = closeNutritionModal;
 
 // Durable recovery UI for the nutrition backup snapshots taken automatically
 // (backupNutrition) right before anything ever replaces local nutrition with
