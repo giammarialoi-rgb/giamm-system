@@ -9565,14 +9565,21 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       // A nutritionist's plan photographed: its own reader, as for a PDF.
       try {
         const NP = window.NurvanNutritionPlan;
-        const plan = NP ? NP.parsePlanDocument(window.__lastImageDoc || { pages: [{ columns: [String(text || '').split('\n')] }] }) : null;
+        const imageDoc = window.__lastImageDoc || { pages: [{ columns: [String(text || '').split('\n')] }] };
+        const plan = NP ? (NP.parsePlanDocument(imageDoc) || NP.parseGenericPlan(imageDoc)) : null;
         if (plan && parsed && parsed.canonicalProgram) {
           try { if (typeof FoodDatabaseService !== 'undefined' && FoodDatabaseService.loadExtra) await FoodDatabaseService.loadExtra(); } catch (_) {}
           enrichPlanAlternatives(plan);
           try { await resolvePlanFoodsWithAi(plan, (msg) => { if (pState) pState.pipelineStage = msg; setImportProgress(70, name, msg); }); } catch (_) {}
           parsed.canonicalProgram.nutrition = plan;
-          parsed.canonicalProgram.weeks = [];
-          parsed.canonicalProgram.training = { weeks: [] };
+          // A photographed training sheet with a meal or two written on it
+          // keeps its training.
+          const photoWeeks = ((parsed.canonicalProgram.training && parsed.canonicalProgram.training.weeks) || parsed.canonicalProgram.weeks || []);
+          const photoTraining = photoWeeks.some((w) => ((w.sessions || w.days || []).some((d) => (d.exercises || []).length)));
+          if (!photoTraining || plan.source === 'nutritionist' || (pState && pState.importDomain === 'nutrition')) {
+            parsed.canonicalProgram.weeks = [];
+            parsed.canonicalProgram.training = { weeks: [] };
+          }
         }
       } catch (planErr) { console.warn('[NUTRITION_PLAN]', planErr); }
       if (typeof createEmptyDocumentIR === 'function') {
@@ -9604,9 +9611,13 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       // pages. The old extractor then returns the file's bytes as "text",
       // so its length says nothing - this does.
       let pdfDrawnPages = false;
+      // The strings with their places, for the plan readers (grids, tables
+      // of substitutes, menus side by side).
+      let pdfLayout = null;
       try {
         if (typeof readPdfLayout === 'function' && typeof pdfLayoutToText === 'function') {
           const lay = await readPdfLayout(bytes);
+          pdfLayout = lay;
           if (lay && lay.pages > 0 && !(lay.items || []).length) pdfDrawnPages = true;
           const res = pdfLayoutToText(lay);
           if (res && res.text && res.text.trim().length > 40) { pdfText = res.text; pdfWarnings = res.warnings || []; }
@@ -9646,16 +9657,30 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       // recipes): read by its own reader, and it is only a nutrition plan.
       try {
         const NP = window.NurvanNutritionPlan;
-        const planDoc = ocrDoc || { pages: [{ columns: [String(pdfText || '').split('\n')] }] };
-        const plan = NP ? NP.parsePlanDocument(planDoc) : null;
+        const items = pdfLayout && Array.isArray(pdfLayout.items) && pdfLayout.items.length ? pdfLayout.items : null;
+        const planDoc = ocrDoc || (items && NP ? NP.layoutDocument(items) : null) || { pages: [{ columns: [String(pdfText || '').split('\n')] }] };
+        // The nutritionist's export first (day groups, "o" alternatives,
+        // recipes); then a week as a grid, a table of substitutes, a plan
+        // written as lists.
+        let plan = NP ? NP.parsePlanDocument(planDoc) : null;
+        let certain = !!plan;
+        if (!plan && NP && items) plan = NP.parseGridPlan(items, pdfLayout.rects || []) || NP.parseSubstitutionTable(items);
+        if (!plan && NP) plan = NP.parseGenericPlan(planDoc);
         if (plan && parsed && parsed.canonicalProgram) {
+          // A document with a training program too (a coach's booklet): the
+          // training stays; only a plan that is certainly nutrition clears it.
+          const trainingWeeks = ((parsed.canonicalProgram.training && parsed.canonicalProgram.training.weeks) || parsed.canonicalProgram.weeks || []);
+          const hasTraining = trainingWeeks.some((w) => ((w.sessions || w.days || []).some((d) => (d.exercises || []).length)));
+          const nutritionOnly = certain || !hasTraining || (pState && pState.importDomain === 'nutrition');
           // The larger food table first: most of a plan's foods are in it.
           try { if (typeof FoodDatabaseService !== 'undefined' && FoodDatabaseService.loadExtra) await FoodDatabaseService.loadExtra(); } catch (_) {}
           enrichPlanAlternatives(plan);
           try { await resolvePlanFoodsWithAi(plan, (msg) => { if (pState) pState.pipelineStage = msg; setImportProgress(70, name, msg); }); } catch (_) {}
           parsed.canonicalProgram.nutrition = plan;
-          parsed.canonicalProgram.weeks = [];
-          parsed.canonicalProgram.training = { weeks: [] };
+          if (nutritionOnly) {
+            parsed.canonicalProgram.weeks = [];
+            parsed.canonicalProgram.training = { weeks: [] };
+          }
         }
       } catch (planErr) { console.warn('[NUTRITION_PLAN]', planErr); }
       if (pdfColumnsText && parsed && parsed.canonicalProgram && typeof mergeLabExamsFromText === 'function') {

@@ -150,6 +150,53 @@ const twoCol = NP.parseRecipe([
 ok('4q. ingredienti su due colonne: il gruppo "Per la Farcitura" solo a destra', twoCol.ingredients.find((i) => /aglio/.test(i.alternatives[0].name)).group == null && twoCol.ingredients.find((i) => /broccoli/.test(i.alternatives[0].name)).group === 'Per la Farcitura (esempio)');
 ok('4r. l\'altra colonna dopo i passi: ingredienti, non testo del passo; righe della tabella tolte', twoCol.ingredients.some((i) => /bicarbonato/.test(i.alternatives[0].name)) && twoCol.steps[0] === 'Sciacquate le lenticchie.');
 
+// 4c. Plans written as lists (the most common: menus, hospital diets).
+const listPlan = NP.parseGenericPlan({ pages: [{ columns: [[
+  'DIETA 1500 kcal', 'Settimana 1',
+  'Lunedì Colazione: 150 gr. di latte parzialmente scremato; 1 yogurt magro e 4 fette biscottate integrali 30 gr.',
+  'Pranzo: 60 gr. di pasta con verdure; 100 gr. di vitello o pollo cucinato a piacere; verdura abbondante',
+  'Martedì', '● Colazione: Yogurt magro con muesli e frutta fresca', 'SPUNTINO (MATTINA)', 'Mela (200 gr)',
+  'CENA', 'Latte magro g 150 oppure g 100 latte parzialmente scremato o', 'g 125 yogurt magro',
+  'Settimana 2', 'Lunedì', 'Colazione: Porridge di avena'
+]] }] });
+const lday = listPlan && listPlan.days[0];
+ok('4s. liste: giorni, pasti e alimenti per ";"', listPlan && listPlan.days.length === 3 && lday.day === 'Lunedì' && lday.meals.map((m) => m.name).join('|') === 'Colazione|Pranzo');
+ok('4t. "150 gr. di latte" = 150 g; "1 yogurt e 4 fette 30 gr." = due alimenti, 30 g alle fette', lday.meals[0].foods[0].quantity === 150 && lday.meals[0].foods[1].name === 'yogurt magro' && lday.meals[0].foods[2].quantity === 30);
+ok('4u. "a piacere" con una quantita\' scritta: la quantita\' resta; "abbondante" senza: nessuna', lday.meals[1].foods[1].quantity === 100 && lday.meals[1].foods[2].quantity == null);
+const mday = listPlan.days[1];
+ok('4v. "SPUNTINO (MATTINA)" e "Mela (200 gr)"', mday.meals[1].name === 'Spuntino (mattina)' && mday.meals[1].foods[0].quantity === 200);
+ok('4w. tabella "g 150 oppure g 100 ... o g 125": tre alternative con le loro grammature', mday.meals[2].foods[0].alternatives.map((a) => a.quantity).join(',') === '150,100,125');
+ok('4x. la seconda settimana ha i suoi giorni', listPlan.days[2].day === 'Lunedì (settimana 2)');
+const pari = NP.parseOption(NP.normalizeFoodText('Yogurt magro alla frutta zuccherato 1 vasetti pari a 125 g 102'));
+ok('4y. "1 vasetti pari a 125 g 102" = 125 g (la colonna kcal lasciata fuori)', pari.quantity === 125 && pari.name === 'Yogurt magro alla frutta zuccherato');
+
+// 4d. A week as a grid (days across, meals down), from the strings' places.
+const gi = (x, y, text, x1) => ({ page: 1, x, y, x1: x1 || x + text.length * 5, size: 10, text });
+const gridItems = [
+  gi(170, 500, 'Luned' + String.fromCharCode(0x93)), gi(260, 500, 'Martedì'), gi(350, 500, 'Mercoledì'),
+  gi(70, 450, 'Colazione'), gi(70, 300, 'Pranzo'),
+  gi(152, 455, 'Latte e biscotti'), gi(245, 455, 'Yogurt greco'), gi(335, 455, 'Pane e miele'),
+  gi(152, 310, 'Risotto di orzo'), gi(223, 310, ' e '), gi(165, 298, 'asparagi'), gi(245, 305, 'Pasta al pomodoro'), gi(335, 305, 'Zuppa di farro')
+];
+const gridRects = [148, 239, 330, 421].map((x) => ({ page: 1, x0: x, x1: x, y0: 250, y1: 520 })).concat([520, 480, 380, 250].map((y) => ({ page: 1, x0: 57, x1: 421, y0: y, y1: y })));
+const grid = NP.parseGridPlan(gridItems, gridRects);
+ok('4z. griglia: tre giorni, "Luned" + carattere Mac = Lunedì', grid && grid.days.map((d) => d.day).join('|') === 'Lunedì|Martedì|Mercoledì');
+ok('4aa. le linee della tabella tengono la " e " nella sua cella: "Risotto di orzo e asparagi"', grid.days[0].meals[1].foods[0].name === 'Risotto di orzo e asparagi' && grid.days[1].meals[1].foods[0].name === 'Pasta al pomodoro');
+
+// 4e. The dietitian's table of substitutes.
+const si = (x, y, text) => ({ page: 1, x, y, x1: x + text.length * 5, size: 10, text });
+const subItems = [
+  si(57, 640, 'ALIMENTI'), si(226, 640, 'QUANTITA’'), si(289, 640, 'SOSTITUZIONI'), si(486, 640, 'QUANTITA’'),
+  si(57, 600, 'COLAZIONE'), si(119, 600, '(carboidrati 29 g)'),
+  si(57, 590, 'latte parzialmente scremato'), si(226, 590, '150'), si(289, 590, '►'), si(299, 590, 'yogurt intero naturale'), si(486, 590, '1'), si(491, 590, '25'),
+  si(57, 578, 'con caffè se gradito'), si(289, 578, 'Nota: è possibile una colazione salata'),
+  si(289, 566, '►'), si(299, 566, 'Ricotta'), si(486, 566, '50')
+];
+const subPlan = NP.parseSubstitutionTable(subItems);
+const latte = subPlan && subPlan.days[0].meals[0].foods[0];
+ok('4bb. tabella di sostituzioni: latte 150 g, yogurt 125 g, ricotta 50 g; la nota accanto non entra nei nomi', latte && latte.quantity === 150 && latte.alternatives.map((a) => a.name + ' ' + a.quantity).join('|') === 'latte parzialmente scremato 150|yogurt intero naturale 125|Ricotta 50');
+ok('4cc. "(carboidrati 29 g)" non fa parte del nome del pasto', subPlan.days[0].meals[0].name === 'Colazione');
+
 // 5. Choosing.
 const f = JSON.parse(JSON.stringify(first));
 NP.applyChoice(f, 1);
@@ -218,6 +265,7 @@ if (M) {
 const SRC = fs.readFileSync('web/index.base.html', 'utf8');
 ok('10a. lo script e\' caricato', /<script src="nutrition-plan\.js"><\/script>/.test(SRC));
 ok('10b. i PDF senza testo (pagine disegnate) passano dall\'OCR a colonne', /ocrDoc = await ocrPdfDocument\(bytes/.test(SRC) && /if \(pdfDrawnPages \|\| /.test(SRC));
+ok('10b2. PDF con testo: griglie, tabelle di sostituzioni e liste lette dalle posizioni; l\'allenamento nello stesso file resta', /NP\.parseGridPlan\(items, pdfLayout\.rects \|\| \[\]\) \|\| NP\.parseSubstitutionTable\(items\)/.test(SRC) && /if \(!plan && NP\) plan = NP\.parseGenericPlan\(planDoc\);/.test(SRC) && /const nutritionOnly = certain \|\| !hasTraining/.test(SRC));
 ok('10c. pdf.js fissato con il suo hash, e il worker controllato', /PDFJS_SRI = 'sha256-/.test(SRC) && /digest\('SHA-256', buf\)/.test(SRC));
 ok('10d. ogni riga ha "cambia combinazione"', /onclick="openFoodSwap\(\$\{currentNutritionDayIndex\}, \$\{mIdx\}, \$\{fIdx\}\)"/.test(SRC));
 ok('10e. "solo oggi" non tocca il piano: sta nel giorno di oggi', /rec\.swaps\[fkey\] = foodSwapSnapshot\(o\)/.test(SRC) && /nutritionDayForDisplay\(activeDay\)/.test(SRC));

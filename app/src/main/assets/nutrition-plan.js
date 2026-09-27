@@ -126,6 +126,99 @@
     return cols;
   }
 
+  /**
+   * A PDF with text: its strings with their place ({ page, x, x1, y, text },
+   * pdf-layout.mjs) -> the same document as the OCR gives: pages of columns
+   * of lines. A page is split where a vertical strip has no text and each
+   * side is a column (two menus side by side); lines are strings at the same
+   * height, joined in order.
+   */
+  // Old Mac fonts: "Lunedì" arrives as "Luned" + U+0093, "all'occhio" as
+  // "allÕocchio". The bytes of Mac Roman read as Latin-1, put back.
+  var MAC_ROMAN = { '': 'à', '': 'é', '': 'è', '': 'ê', '': 'ì', '': 'ò', '': 'ù', '': 'ú', '': 'í', '': 'ó', '': 'á', 'Õ': '’', 'Ô': '‘', 'Ò': '“', 'Ó': '”', 'É': '…', '¥': '•', 'Ð': '–', 'Ñ': '—' };
+  function fixMacRoman(text) {
+    var t = String(text == null ? '' : text);
+    if (!/[-]/.test(t) && !/[a-z]Õ[a-z]/i.test(t)) return t;
+    return t.replace(/[-¥ÉÐ-Õ]/g, function (c) { return MAC_ROMAN[c] || c; });
+  }
+  function cleanItems(items) {
+    return (items || []).filter(function (it) { return it && String(it.text || '').trim(); }).map(function (it) {
+      var t = fixMacRoman(it.text);
+      return t === it.text ? it : Object.assign({}, it, { text: t });
+    });
+  }
+  function layoutDocument(items) {
+    var byPage = {};
+    cleanItems(items).forEach(function (it) { (byPage[it.page] = byPage[it.page] || []).push(it); });
+    var pages = Object.keys(byPage).map(Number).sort(function (a, b) { return a - b; }).map(function (pg) {
+      var list = byPage[pg];
+      var left = Infinity, right = -Infinity;
+      list.forEach(function (i) { left = Math.min(left, i.x); right = Math.max(right, i.x1 != null ? i.x1 : i.x + 5); });
+      var W = Math.max(1, Math.ceil(right - left));
+      var cover = new Array(W + 2).fill(0);
+      list.forEach(function (i) {
+        var a = Math.floor(i.x - left), b = Math.ceil((i.x1 != null ? i.x1 : i.x + 5) - left);
+        for (var x = Math.max(0, a); x <= Math.min(W, b); x++) cover[x]++;
+      });
+      // Gutters: strips with no string across them, 8 pt at least, with
+      // enough text on both sides.
+      var cuts = [];
+      var s = -1;
+      for (var x = 0; x <= W; x++) {
+        if (!cover[x]) { if (s < 0) s = x; }
+        else { if (s >= 0 && x - s >= 8) cuts.push((s + x) / 2 + left); s = -1; }
+      }
+      var cols = [];
+      var start = -Infinity;
+      cuts.concat([Infinity]).forEach(function (c) {
+        var inside = list.filter(function (i) { return i.x >= start && i.x < c; });
+        if (inside.length) cols.push(inside);
+        start = c;
+      });
+      // Columns of one table (name | amount | kcal) are not side-by-side
+      // texts: most of their lines stand at the same heights. They go back
+      // together.
+      var merged = [];
+      cols.forEach(function (c) {
+        var prev = merged[merged.length - 1];
+        if (prev) {
+          var ys = {};
+          prev.forEach(function (i) { ys[Math.round(i.y)] = 1; });
+          var same = c.filter(function (i) { var y = Math.round(i.y); return ys[y] || ys[y - 1] || ys[y + 1]; }).length;
+          if (same >= c.length * 0.5) { Array.prototype.push.apply(prev, c); return; }
+        }
+        merged.push(c.slice());
+      });
+      cols = merged;
+      // A "column" that is a label or two beside the text is not a column.
+      var main = cols.filter(function (c) { return c.length >= Math.max(4, list.length * 0.12); });
+      if (main.length < 2) main = [list];
+      else cols.forEach(function (c) { if (main.indexOf(c) < 0) { var near = main.reduce(function (b, m) { return Math.abs(m[0].x - c[0].x) < Math.abs(b[0].x - c[0].x) ? m : b; }); Array.prototype.push.apply(near, c); } });
+      return { columns: main.map(function (col) { return linesOf(col); }) };
+    });
+    return { pages: pages, text: pages.map(function (p) { return p.columns.map(function (c) { return c.join('\n'); }).join('\n\n'); }).join('\n\n') };
+  }
+  function linesOf(items) {
+    var sorted = items.slice().sort(function (a, b) { return (b.y - a.y) || (a.x - b.x); });
+    var rows = [];
+    sorted.forEach(function (it) {
+      var row = rows.find(function (r) { return Math.abs(r.y - it.y) <= Math.max(2, (it.size || 8) * 0.35); });
+      if (!row) rows.push(row = { y: it.y, items: [] });
+      row.items.push(it);
+    });
+    rows.sort(function (a, b) { return b.y - a.y; });
+    return rows.map(function (r) {
+      r.items.sort(function (a, b) { return a.x - b.x; });
+      var out = '';
+      r.items.forEach(function (it, i) {
+        var prev = r.items[i - 1];
+        var gap = prev ? it.x - (prev.x1 != null ? prev.x1 : prev.x) : 0;
+        out += (prev && gap > (it.size || 8) * 0.15 && !/\s$/.test(out) && !/^\s/.test(it.text) ? ' ' : '') + it.text;
+      });
+      return out.replace(/\s+/g, ' ').trim();
+    }).filter(Boolean);
+  }
+
   /* ---------- one "o" alternative ---------------------------------------- */
 
   var MEASURE_WORDS = 'porzion[ei]|grammi|grammo|gr|g|ml|unit[aà]|fett[ae]|filett[io]|scatol[ae]|scatolett[ae]|cucchiai[oi]?|cucchiain[oi]|bicchier[ei]|pacchett[io]|quadrett[io]|scoop|tazz[ae]|vasett[io]|spicchi[o]?|pezz[io]|confezion[ei]|barrett[ae]|mestol[io]|manciat[ae]|pizzic[oh]i?';
@@ -664,6 +757,372 @@
     return plan;
   }
 
+  /* ---------- the other plans: lists by day, schemes with substitutes ------ */
+
+  var WEEKDAY_START = /^(luned[iì'`]?|marted[iì'`]?|mercoled[iì'`]?|gioved[iì'`]?|venerd[iì'`]?|sabato|domenica)(?![a-z])[\s:.\-–]*(.*)$/i;
+  var GEN_MEAL = /^(?:[●•▪◦*\-–]\s*)?(prima\s+colazione|colazione|spuntino(?:\s+(?:di\s+)?(?:met[aà]\s+)?(?:mattina|pomeriggio|mattutino|pomeridiano|serale|sera))?|merenda|pranzo|cena|dopo\s*cena|pre[\s-]?nanna)(\s*\([^)]{1,20}\))?\s*(?::|\.|-|–|$)\s*(.*)$/i;
+  var EXAMPLE = /^(?:dieta\s*[-–:]\s*)?(esempio|giorno|giornata|schema|men[uù])\s*(?:n[°.]?\s*)?(\d+)\b\s*[:.\-–]?\s*(.*)$/i;
+  var NO_AMOUNT = /\b(a piacere|abbondante|q\.?\s?b\.?|quanto basta|libera|liberamente)\b/i;
+
+  function weekdayName(w) {
+    var k = fold(w).slice(0, 3);
+    return WEEKDAYS[DAY_KEYS.indexOf(k)] || w;
+  }
+  // "Latte magro g 150", "g 100 latte", "150 gr. di latte", "4 fette 30 gr.",
+  // "Yogurt (125 gr)", "n 2 uova" -> the "<amount> di <food>" parseOption reads.
+  function normalizeFoodText(t) {
+    var s = String(t || '').replace(/\s+/g, ' ').replace(/^[●•▪◦*\-–]\s*/, '').replace(/[;,.]\s*$/, '').trim();
+    s = s.replace(/\b(gr|g|grammi|ml)\.(?=\s|$)/gi, '$1');
+    var m;
+    // "Yogurt ... 1 vasetti pari a 125 g 102": the grams "pari a"; the kcal
+    // column after them left out.
+    if ((m = /^(.+?)\s+pari\s+a\s+(\d+(?:[.,]\d+)?)\s*(g|ml)?\b.*$/i.exec(s))) {
+      var nm = m[1].replace(/\s+[\d½¼¾]+(?:\s+[\d½¼¾]+)?\s+[a-zà-ÿ.]+\.?\s*$/i, '').trim();
+      return m[2] + ' ' + (/ml/i.test(m[3] || '') ? 'ml' : 'g') + ' di ' + nm;
+    }
+    if ((m = /^(?:g|gr|grammi)\s*(\d+(?:[.,]\d+)?)\s+(.+)$/i.exec(s))) return m[1] + ' g di ' + m[2];
+    // A table "in grammi": the name, then the bare number ("Ricotta 50").
+    if ((m = /^([a-zà-ÿ][^\d]*?[a-zà-ÿ)'’])\s+(\d{1,4}(?:[.,]\d+)?)$/i.exec(s)) && Number(m[2].replace(',', '.')) >= 3) return m[2] + ' g di ' + m[1];
+    if ((m = /^ml\s*(\d+(?:[.,]\d+)?)\s+(.+)$/i.exec(s))) return m[1] + ' ml di ' + m[2];
+    if ((m = /^n[°.]?\s*(\d+)\s+(.+)$/i.exec(s))) return m[1] + ' ' + m[2];
+    if ((m = /^(.+?)\s+(?:g|gr|grammi)\s*(\d+(?:[.,]\d+)?)$/i.exec(s))) return m[2] + ' g di ' + m[1];
+    if ((m = /^(.+?)\s+(\d+(?:[.,]\d+)?)\s*(g|gr|grammi|ml)$/i.exec(s)) && !/^\d/.test(m[1])) return m[2] + ' ' + (/ml/i.test(m[3]) ? 'ml' : 'g') + ' di ' + m[1];
+    if ((m = /^\d+\s+(.+?)\s+(\d+(?:[.,]\d+)?)\s*(g|gr|grammi)$/i.exec(s))) return m[2] + ' g di ' + m[1];
+    return s;
+  }
+  // A line of a meal that goes on from the one before ("g 125 yogurt magro"
+  // after "... latte o"), rather than opening a new food.
+  function continuesLine(prev, line) {
+    if (!prev) return false;
+    if (/(?:\s(?:o|oppure|di|con|e|al|alla|allo|ai|alle|in|da)|[,(\-])$/i.test(prev)) return true;
+    if (/^(?:o|oppure)\s/i.test(line)) return true;
+    if (/^[a-zàèéìòù]/.test(line) && !/^(?:g|gr|n|ml)\s*\d/.test(line) && !/;\s*$/.test(prev) && !/\)\s*$/.test(prev)) return true;
+    return false;
+  }
+  function foodsOfText(lines) {
+    // Lines -> foods: a food per line (or per ";"), a line that goes on
+    // joined, "oppure"/"o" + an amount open an alternative.
+    var joined = [];
+    lines.forEach(function (l) {
+      var line = String(l || '').trim();
+      // The table's own lines: its header, the meal's total.
+      if (/^(?:ore\s*:?\s*\d|quantit[aà]\b|totale\b|kcal\b)/i.test(line)) return;
+      line = line.replace(/\s+quantit[aà]\s+kcal\s*$/i, '').trim();
+      if (!line) return;
+      if (joined.length && continuesLine(joined[joined.length - 1], line)) joined[joined.length - 1] += ' ' + line;
+      else joined.push(line);
+    });
+    var rows = [];
+    joined.forEach(function (j) {
+      // ";", "+" and "e" before an amount ("1 yogurt e 4 fette 30 g") part foods.
+      j.split(/\s*;\s*|\s+\+\s+|\s+e\s+(?=\d+\s)/).forEach(function (part) {
+        part = part.trim();
+        if (!part || part.length < 2) return;
+        // "o" + an amount, or "o" + a capital (a table's next dish), opens an
+        // alternative; "o" inside a name ("pollo o tacchino") does not.
+        var alts = part.split(/\s*[►▶➤→]\s*|\s+(?:oppure|o|or)\s+(?=(?:g|gr|ml|n)\s*\d|\d|[A-ZÀ-Ý])/).map(function (a) { return a.trim(); }).filter(Boolean);
+        var opts = alts.map(function (a) {
+          var o = parseOption(normalizeFoodText(a));
+          // "a piacere" with no amount: none. With one ("100 g di pollo
+          // cucinato a piacere") the amount stands.
+          if (o && NO_AMOUNT.test(a) && o.quantity == null) { o.quantity = null; o.unit = ''; o.name = o.name.replace(NO_AMOUNT, '').replace(/\s+/g, ' ').trim() || o.name; o.qb = true; }
+          return o;
+        }).filter(function (o) { return o && o.name && /[a-zà-ÿ]{2}/i.test(o.name); });
+        if (opts.length) rows.push({ alternatives: opts });
+      });
+    });
+    return rows;
+  }
+  /**
+   * A plan written as lists: days (weekday names, "Esempio 1", "Giorno 2",
+   * "Settimana 2" before its days) and meals ("Colazione:", "SPUNTINO
+   * (MATTINA)", "● Pranzo: ..."), foods one per line or per ";", alternatives
+   * after "oppure"/"o". A plan with meals but no days is one day, "Giorno
+   * tipo". Null when there are no meals.
+   */
+  function parseGenericPlan(doc) {
+    var lines = [];
+    ((doc && doc.pages) || []).forEach(function (p) { (p.columns || []).forEach(function (c) { c.forEach(function (l) { lines.push(String(l || '').replace(/\s+/g, ' ').trim()); }); }); });
+    var days = [];
+    var day = null, meal = null, week = 1, buffer = [];
+    var sawWeek = false;
+    function flush() {
+      if (meal && buffer.length) {
+        var notes = [];
+        var foodLines = buffer.filter(function (l) {
+          var words = l.split(' ').length;
+          if (words > 14 && !/\d/.test(l)) { notes.push(l); return false; }
+          return true;
+        });
+        foodsOfText(foodLines).forEach(function (r) { meal.rows.push(r); });
+        if (notes.length) meal.notes = (meal.notes ? meal.notes + ' ' : '') + notes.join(' ');
+      }
+      buffer = [];
+    }
+    function openDay(label) {
+      flush();
+      meal = null;
+      day = days.find(function (d) { return d.day === label; });
+      if (!day) { day = { day: label, meals: [] }; days.push(day); }
+    }
+    function openMeal(name) {
+      flush();
+      if (!day) openDay('Giorno tipo');
+      meal = { name: titleCase(name), time: '', rows: [], notes: '' };
+      day.meals.push(meal);
+    }
+    lines.forEach(function (line) {
+      if (!line) return;
+      var wk = /^settimana\s*(\d+)\b/i.exec(line);
+      if (wk) { flush(); week = Number(wk[1]); sawWeek = true; meal = null; return; }
+      var wd = WEEKDAY_START.exec(line);
+      if (wd && (wd[2] === '' || GEN_MEAL.test(wd[2]) || /^[:\-–]/.test(line.slice(wd[1].length)))) {
+        openDay(weekdayName(wd[1]) + (week > 1 ? ' (settimana ' + week + ')' : ''));
+        line = wd[2];
+        if (!line) return;
+      }
+      var ex = EXAMPLE.exec(line);
+      if (ex && (ex[3] === '' || GEN_MEAL.test(ex[3]))) {
+        openDay(titleCase(ex[1]) + ' ' + ex[2]);
+        line = ex[3];
+        if (!line) return;
+      }
+      var gm = GEN_MEAL.exec(line);
+      if (gm && (gm[3] !== '' || line.length < 40)) {
+        // "(mattina)" names the meal; "(carboidrati 29 g)" is a note about it.
+        var qual = /mattin|pomerig|sera|notte/i.test(gm[2] || '') ? (gm[2] || '').trim() : '';
+        openMeal(gm[1].replace(/\s+/g, ' ') + (qual ? ' ' + qual.toLowerCase() : ''));
+        if (gm[3]) buffer.push(gm[3]);
+        return;
+      }
+      if (meal) buffer.push(line);
+    });
+    flush();
+    var withFood = days.filter(function (d) { return d.meals.some(function (m) { return m.rows.length; }); });
+    if (!withFood.length) return null;
+    // Two weeks: the second week's days carry it in their name; if there was
+    // only one week, the label says nothing about weeks.
+    if (sawWeek && week === 1) withFood.forEach(function (d) { d.day = d.day.replace(/ \(settimana 1\)$/, ''); });
+    return {
+      present: true,
+      source: 'plan_text',
+      days: withFood.map(function (d) {
+        return { day: d.day, meals: d.meals.filter(function (m) { return m.rows.length; }).map(function (m) {
+          return { name: m.name, time: m.time, notes: m.notes || '', foods: m.rows.map(foodFromRow) };
+        }) };
+      }),
+      recipes: [],
+      notes: ''
+    };
+  }
+
+  /**
+   * A week as a grid (a PDF with text): weekday names across the top, meal
+   * names down the left, each dish in its cell. Read from the strings'
+   * places. The same week repeated on later pages is read once. Null when
+   * no page has such a grid.
+   */
+  function parseGridPlan(items, rects) {
+    var byPage = {};
+    cleanItems(items).forEach(function (it) { (byPage[it.page] = byPage[it.page] || []).push(it); });
+    var days = {};
+    var order = [];
+    var ROMAN = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6 };
+    var isDay = function (i) { return /^(luned|marted|mercoled|gioved|venerd|sabato|domenica)[a-zìí'’`]*\s*$/i.test(String(i.text).trim()); };
+    Object.keys(byPage).map(Number).sort(function (a, b) { return a - b; }).forEach(function (pg) {
+      var list = byPage[pg];
+      var heads = list.filter(isDay);
+      // Rows of weekday names: three at least at the same height. A page may
+      // hold several grids, one under the other (a week each).
+      var rowYs = [];
+      heads.forEach(function (h) {
+        if (heads.filter(function (o) { return Math.abs(o.y - h.y) < 4; }).length >= 3 && !rowYs.some(function (y) { return Math.abs(y - h.y) < 4; })) rowYs.push(h.y);
+      });
+      if (!rowYs.length) return;
+      rowYs.sort(function (a, b) { return b - a; });
+      // The meal of the whole page, from its title: "MENU' INVERNALE (pranzo)".
+      var pageMeal = '';
+      list.forEach(function (i) {
+        if (i.y <= rowYs[0]) return;
+        var m = /\b(colazione|pranzo|cena|merenda|spuntino)\b/i.exec(String(i.text));
+        if (m && String(i.text).length < 40 && !pageMeal) pageMeal = titleCase(m[1]);
+      });
+      rowYs.forEach(function (rowY, gi) {
+        var bottom = gi + 1 < rowYs.length ? rowYs[gi + 1] : -Infinity;
+        var cols = heads.filter(function (h) { return Math.abs(h.y - rowY) < 4; }).sort(function (a, b) { return a.x - b.x; });
+        var firstX = cols[0].x;
+        var band = list.filter(function (i) { return i.y < rowY - 2 && i.y > bottom + 2; });
+        var labels = band.filter(function (i) {
+          return i.x < firstX - 2 && /^(prima\s+colazione|colazione|spuntino|merenda|pranzo|cena|dopocena|spuntino\s+\w+)\b/i.test(String(i.text).trim()) && String(i.text).trim().length < 30;
+        }).sort(function (a, b) { return b.y - a.y; });
+        // "I settimana", "Settimana 2" beside the grid: its week.
+        var week = 1;
+        band.forEach(function (i) {
+          if (i.x >= firstX - 2) return;
+          var w = /^([ivx]+|\d+)\s*[°ª]?\s*settimana|^settimana\s*(\d+)/i.exec(String(i.text).trim());
+          if (w) week = ROMAN[String(w[1] || '').toLowerCase()] || Number(w[1] || w[2]) || 1;
+        });
+        if (!labels.length && !pageMeal) return;
+        var rows = labels.length ? labels : [{ text: pageMeal, y: (rowY + Math.max(bottom, rowY - 400)) / 2 }];
+        // The table's own lines, when the PDF draws them: the exact edges of
+        // its cells. Otherwise halfway between the weekday names' centres.
+        var pageRects = (rects || []).filter(function (r) { return r.page === pg; });
+        var right = cols[cols.length - 1].x1 != null ? cols[cols.length - 1].x1 : cols[cols.length - 1].x + 40;
+        var vLines = pageRects.filter(function (r) { return Math.abs(r.x1 - r.x0) < 2 && r.y1 - r.y0 > 20 && r.x0 > firstX - 120 && r.x0 < right + 60; })
+          .map(function (r) { return r.x0; }).sort(function (a, b) { return a - b; });
+        var center = function (h) { return (h.x + (h.x1 != null ? h.x1 : h.x + 30)) / 2; };
+        var bounds = cols.map(function (c, k) {
+          var lo = k === 0 ? firstX - 120 : center(cols[k - 1]);
+          var line = vLines.filter(function (x) { return x > lo && x < center(c); }).pop();
+          if (line != null) return line - 1;
+          return k === 0 ? firstX - 40 : (center(cols[k - 1]) + center(c)) / 2;
+        });
+        var hLines = pageRects.filter(function (r) { return Math.abs(r.y1 - r.y0) < 2 && r.x1 - r.x0 > 100 && r.y0 < rowY && r.y0 > bottom; })
+          .map(function (r) { return r.y0; }).sort(function (a, b) { return b - a; });
+        var bandOf = function (y) {
+          var top = Infinity, low = -Infinity;
+          hLines.forEach(function (ly) { if (ly >= y && ly < top) top = ly; if (ly < y && ly > low) low = ly; });
+          return [top, low];
+        };
+        var rowOf = function (y) {
+          if (labels.length && hLines.length >= 2) {
+            var b = bandOf(y);
+            var inBand = rows.findIndex(function (l) { return l.y <= b[0] && l.y > b[1]; });
+            if (inBand >= 0) return inBand;
+          }
+          var best = 0, d = Infinity;
+          rows.forEach(function (l, k) { var dd = Math.abs(l.y - y); if (dd < d) { d = dd; best = k; } });
+          return best;
+        };
+        var cells = cols.map(function () { return rows.map(function () { return []; }); });
+        band.forEach(function (i) {
+          if (i.x < bounds[0] || labels.indexOf(i) >= 0) return;
+          var c = -1;
+          for (var k = 0; k < bounds.length; k++) if (i.x >= bounds[k]) c = k;
+          if (c < 0) return;
+          cells[c][rowOf(i.y)].push(i);
+        });
+        cols.forEach(function (h, c) {
+          var name = weekdayName(String(h.text).trim()) + (week > 1 ? ' (settimana ' + week + ')' : '');
+          var meals = rows.map(function (l, r) {
+            return { name: titleCase(String(l.text).trim()), rows: foodsOfText(linesOf(cells[c][r])) };
+          }).filter(function (m) { return m.rows.length; });
+          if (!meals.length) return;
+          if (!days[name]) { days[name] = []; order.push(name); }
+          // The same meal already read for this day (the week repeated on a
+          // later page, or the summer menu after the winter one): kept.
+          meals.forEach(function (m) { if (!days[name].some(function (x) { return x.name === m.name; })) days[name].push(m); });
+        });
+      });
+    });
+    if (!order.length) return null;
+    var rank = function (n) { var w = /\(settimana (\d+)\)/.exec(n); return (w ? Number(w[1]) : 1) * 10 + WEEKDAYS.indexOf(n.replace(/ \(settimana \d+\)$/, '')); };
+    order.sort(function (a, b) { return rank(a) - rank(b); });
+    var MEAL_ORDER = ['colazione', 'spuntino', 'pranzo', 'merenda', 'cena'];
+    return {
+      present: true, source: 'plan_grid', recipes: [], notes: '',
+      days: order.map(function (name) {
+        var ms = days[name].slice().sort(function (a, b) { return MEAL_ORDER.indexOf(fold(a.name).split(' ')[0]) - MEAL_ORDER.indexOf(fold(b.name).split(' ')[0]); });
+        return { day: name, meals: ms.map(function (m) { return { name: m.name, time: '', notes: '', foods: m.rows.map(foodFromRow) }; }) };
+      })
+    };
+  }
+
+  /**
+   * The dietitian's table "ALIMENTI | QUANTITA' | SOSTITUZIONI | QUANTITA'"
+   * (a PDF with text): each food of the day with its grams, and the foods
+   * that can replace it (each after "►", with its own grams). Read from the
+   * columns of the header, row by row: a food starts where its grams stand.
+   * One day, "Giorno tipo". Null without such a header.
+   */
+  function parseSubstitutionTable(items) {
+    var all = cleanItems(items);
+    var pages = {};
+    all.forEach(function (it) { (pages[it.page] = pages[it.page] || []).push(it); });
+    var cols = null;
+    var meals = [];
+    var meal = null, row = null, sub = null;
+    Object.keys(pages).map(Number).sort(function (a, b) { return a - b; }).forEach(function (pg) {
+      var list = pages[pg].slice().sort(function (a, b) { return (b.y - a.y) || (a.x - b.x); });
+      var head = list.filter(function (i) { return /^(alimenti|sostituzioni|quantit)/i.test(String(i.text).trim()); });
+      var hy = null;
+      head.forEach(function (h) { if (head.filter(function (o) { return Math.abs(o.y - h.y) < 3; }).length >= 3 && hy == null) hy = h.y; });
+      if (hy != null) {
+        var hs = head.filter(function (h) { return Math.abs(h.y - hy) < 3; }).sort(function (a, b) { return a.x - b.x; });
+        var subAt = hs.findIndex(function (h) { return /^sostituz/i.test(String(h.text).trim()); });
+        if (subAt >= 1) cols = { qty: hs[subAt - 1].x - 4, sub: hs[subAt].x - 4, subQty: hs[subAt + 1] ? hs[subAt + 1].x - 4 : Infinity };
+      }
+      if (!cols) return;
+      var lines = {};
+      list.forEach(function (i) { if (hy == null || i.y < hy - 14) { var k = Math.round(i.y); (lines[k] = lines[k] || []).push(i); } });
+      Object.keys(lines).map(Number).sort(function (a, b) { return b - a; }).forEach(function (y) {
+        var its = lines[y].sort(function (a, b) { return a.x - b.x; });
+        var txt = function (f) { return its.filter(f).map(function (i) { return String(i.text); }).join(' ').replace(/\s+/g, ' ').trim(); };
+        var name = txt(function (i) { return i.x < cols.qty; });
+        var qty = txt(function (i) { return i.x >= cols.qty && i.x < cols.sub; });
+        // In the substitutes' column: "►" and the name after it; any other
+        // string on the line is a note written beside them.
+        var subIts = its.filter(function (i) { return i.x >= cols.sub && i.x < cols.subQty; });
+        var subTxt = '';
+        var arrow = false;
+        subIts.forEach(function (i) {
+          var t = String(i.text);
+          if (/►/.test(t)) { arrow = true; subTxt += ' ' + t; return; }
+          if (arrow) { subTxt += ' ' + t; arrow = /►\s*$/.test(t); return; }
+          if (!subTxt && sub && /^[a-zà-ÿ(]/.test(t.trim()) && sub.open) subTxt = ' ' + t;
+        });
+        subTxt = subTxt.replace(/\s+/g, ' ').trim();
+        var subQty = txt(function (i) { return i.x >= cols.subQty; }).replace(/\s+/g, '');
+        var gm = GEN_MEAL.exec(name);
+        if (gm && !qty) {
+          meal = { name: titleCase(gm[1]) + (/mattin|pomerig|sera/i.test(gm[2] || '') ? ' ' + gm[2].trim().toLowerCase() : ''), rows: [] };
+          meals.push(meal);
+          row = null; sub = null;
+          return;
+        }
+        if (!meal) return;
+        if (name && /^\d/.test(qty)) {
+          row = { name: name, qty: qty, subs: [] };
+          meal.rows.push(row);
+          sub = null;
+        } else if (name && row && row.open && !/^\(/.test(name)) {
+          // The food's name goes on under it ("... o in passato di / verdura").
+          row.name += ' ' + name;
+          row.open = /(?:\s(?:o|di|con|e|in|al|alla|per)|[,(])$/i.test(row.name);
+        }
+        if (row && name && /^\d/.test(qty)) row.open = /(?:\s(?:o|di|con|e|in|al|alla|per)|[,(])$/i.test(row.name);
+        if (row && subTxt) {
+          subTxt.split(/\s*►\s*/).forEach(function (part, k) {
+            if (k === 0) { if (sub && part) { sub.name += ' ' + part; sub.open = /(?:\s(?:o|di|con|e|in)|[,(])$/i.test(sub.name); } return; }
+            if (!part) return;
+            sub = { name: part, qty: '', open: /(?:\s(?:o|di|con|e|in)|[,(])$/i.test(part) };
+            row.subs.push(sub);
+          });
+          if (subQty && sub && /^\d+$/.test(subQty)) sub.qty = subQty;
+        } else if (row && subQty && sub && !sub.qty && /^\d+$/.test(subQty)) {
+          sub.qty = subQty;
+        }
+      });
+    });
+    var withFood = meals.filter(function (m) { return m.rows.length; });
+    if (!withFood.length) return null;
+    var toOpt = function (name, qty) {
+      // Brackets that explain ("(per esempio ...", "(tipo robiola)", "(1-2 volte
+      // alla settimana)") are not the food's name.
+      var n = String(name).replace(/\s*\((?:per\s+esempio|per\s+es|es\.?|tipo|\d[^)]*volt)[^)]*\)?/gi, ' ').replace(/\s*\([^)]*$/, '').replace(/\s+/g, ' ').replace(/[\s,:;]+$/, '').trim();
+      var q = /^\d+(?:[.,]\d+)?$/.test(qty) ? Number(String(qty).replace(',', '.')) : null;
+      return { name: n, quantity: q, unit: q != null ? 'g' : '', label: String(name).trim() + (q != null ? ' ' + q + ' g' : '') };
+    };
+    return {
+      present: true, source: 'plan_substitutions', recipes: [], notes: '',
+      days: [{ day: 'Giorno tipo', meals: withFood.map(function (m) {
+        return { name: m.name, time: '', notes: '', foods: m.rows.map(function (r) {
+          return foodFromRow({ alternatives: [toOpt(r.name, r.qty)].concat(r.subs.map(function (s) { return toOpt(s.name, s.qty); })) });
+        }) };
+      }) }]
+    };
+  }
+
   // A plan row -> a food of the app: the chosen alternative's fields on the
   // food itself (so sums, lists and edits work as for any food), all of them
   // kept in `alternatives`.
@@ -962,6 +1421,13 @@
     parseNutritionTable: parseNutritionTable,
     parseRecipe: parseRecipe,
     parsePlanDocument: parsePlanDocument,
+    parseGenericPlan: parseGenericPlan,
+    parseGridPlan: parseGridPlan,
+    parseSubstitutionTable: parseSubstitutionTable,
+    linesOf: linesOf,
+    foodsOfText: foodsOfText,
+    layoutDocument: layoutDocument,
+    normalizeFoodText: normalizeFoodText,
     applyChoice: applyChoice,
     linkRecipes: linkRecipes,
     setPer100: setPer100,
