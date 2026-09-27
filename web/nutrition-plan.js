@@ -744,10 +744,41 @@
   // Words that do not change what the food is: "riso basmati" is "Riso
   // Basmati, crudo" (a plan weighs raw), "pesca" is "pesca fresca". Cooked,
   // canned, dried do change it and stay.
-  var SAME_FOOD = { crudo: 1, cruda: 1, crudi: 1, crude: 1, fresco: 1, fresca: 1, freschi: 1, fresche: 1, di: 1, del: 1, della: 1, dello: 1, dei: 1, delle: 1 };
+  var SAME_FOOD = { crudo: 1, cruda: 1, crudi: 1, crude: 1, fresco: 1, fresca: 1, freschi: 1, fresche: 1, di: 1, del: 1, della: 1, dello: 1, dei: 1, delle: 1, da: 1, a: 1, al: 1, allo: 1, alla: 1, e: 1, in: 1, tipo: 1 };
+  // One word per food whatever the number: "uova" is "uovo", "filetti" is
+  // "filetto". A list, not a stemmer: "pesca" and "pesce" stay apart.
+  var SINGULAR = {
+    uova: 'uovo', filetti: 'filetto', fette: 'fetta', pomodori: 'pomodoro', cozze: 'cozza', vongole: 'vongola', fagioli: 'fagiolo',
+    piselli: 'pisello', patate: 'patata', carote: 'carota', cipolle: 'cipolla', porri: 'porro', mandorle: 'mandorla', noci: 'noce',
+    nocciole: 'nocciola', olive: 'oliva', zucchine: 'zucchina', melanzane: 'melanzana', spinaci: 'spinacio', funghi: 'fungo',
+    gamberi: 'gambero', albicocche: 'albicocca', fragole: 'fragola', mele: 'mela', pere: 'pera', arance: 'arancia', banane: 'banana',
+    lenticchie: 'lenticchia', biscotti: 'biscotto', crackers: 'cracker', legumi: 'legume', cereali: 'cereale', semi: 'seme', fiocchi: 'fiocco',
+    grissini: 'grissino', gallette: 'galletta', peperoni: 'peperone', broccoli: 'broccolo', carciofi: 'carciofo', asparagi: 'asparago',
+    finocchi: 'finocchio', cavolfiori: 'cavolfiore', ravanelli: 'ravanello', datteri: 'dattero', fichi: 'fico', prugne: 'prugna',
+    ciliegie: 'ciliegia', pesche: 'pesca', kiwi: 'kiwi', mirtilli: 'mirtillo', lamponi: 'lampone', albumi: 'albume', tuorli: 'tuorlo',
+    pistacchi: 'pistacchio', anacardi: 'anacardo', arachidi: 'arachide', lupini: 'lupino', fave: 'fava', ceci: 'ceci', gnocchi: 'gnocco',
+    wurstel: 'wurstel', calamari: 'calamaro', totani: 'totano', polpi: 'polpo', sgombri: 'sgombro', alici: 'alice', acciughe: 'acciuga',
+    sardine: 'sardina', crostacei: 'crostaceo', molluschi: 'mollusco', cetrioli: 'cetriolo', sedani: 'sedano', agrumi: 'agrume',
+    frutti: 'frutto', ortaggi: 'ortaggio', vegetali: 'vegetale', bovino: 'manzo', vitellone: 'manzo', suino: 'maiale',
+    selvatica: 'selvaggia', selvatico: 'selvaggio', verdure: 'verdura', strapazzate: 'strapazzato', strapazzata: 'strapazzato', couscous: 'couscous'
+  };
+  // What a food "is" when nothing else is said: plain yogurt is white and
+  // whole, milk is cow's, an egg is a hen's. Only these may be what the
+  // database says more than the plan - never "light", "0%", "cotto".
+  var DEFAULTS = {
+    bianco: 1, bianca: 1, naturale: 1, intero: 1, intera: 1, vaccino: 1, vacca: 1, gallina: 1, comune: 1, medio: 1, media: 1,
+    pastorizzato: 1, pastorizzata: 1, polpa: 1, buccia: 1, senza: 1, nocciolo: 1, torsolo: 1, semi: 1, pelle: 1, sgocciolato: 1,
+    sgocciolati: 1, sgocciolata: 1, fresco: 1, crudo: 1, preconfezionato: 1, preconfezionata: 1, sfuso: 1,
+    cucina: 1
+  };
+  // Words about the shop, not the food: "Esselunga", "Bio".
+  var SHOP_WORDS = { esselunga: 1, bio: 1, biologico: 1, biologica: 1, coop: 1, conad: 1, carrefour: 1, lidl: 1, eurospin: 1, pam: 1, despar: 1, iper: 1 };
+  function tokenList(name) {
+    var t = fold(name).replace(/extra\s+vergine/g, 'extravergine').replace(/cous\s+cous/g, 'couscous').replace(/[^a-z0-9%]+/g, ' ').trim();
+    return t ? t.split(' ').map(function (w) { return SINGULAR[w] || w; }).filter(function (w) { return !SAME_FOOD[w]; }) : [];
+  }
   function foodTokens(name) {
-    var t = fold(name).replace(/extra\s+vergine/g, 'extravergine').replace(/[^a-z0-9%]+/g, ' ').trim();
-    var out = t ? t.split(' ').filter(function (w) { return !SAME_FOOD[w]; }) : [];
+    var out = tokenList(name);
     out.sort();
     return out.join(' ');
   }
@@ -760,29 +791,93 @@
       var comma = String(n).indexOf(',');
       var head = comma >= 0 ? n.slice(0, comma) : n;
       var rest = comma >= 0 ? n.slice(comma) : '';
-      var parts = head.split(/\s+o\s+/i);
-      if (parts.length > 1) parts.forEach(function (p) { more.push(p + rest); });
+      // Only two one-word names ("Merluzzo o nasello"): "aromatizzato o
+      // alla frutta" is not a name for "frutta".
+      var parts = head.trim().split(/\s+o\s+/i);
+      if (parts.length === 2 && parts.every(function (p) { return /^\S+$/.test(p.trim()); })) parts.forEach(function (p) { more.push(p + rest); });
     });
     return names.concat(more);
   }
+  // The plan's words without what does not change the food: notes in
+  // brackets ("(pesato a crudo, consumato cotto)", "(tipo Alce Nero)"), the
+  // shop, "o altro ..." alternatives written inside the name.
+  function coreName(name) {
+    return String(name || '')
+      .replace(/\([^)]*\)|\[[^\]]*\)|\[[^\]]*\]/g, ' ')
+      .replace(/\s+o\s+(?:altr[oaie]|simil[ie]).*$/i, ' ')
+      .split(/\s+/).filter(function (w) { return !SHOP_WORDS[fold(w)]; }).join(' ')
+      .replace(/\s+/g, ' ').replace(/[\s,]+$/, '').trim();
+  }
   /**
-   * The catalog food that is this food: the same words, whatever their
-   * order, punctuation and accents, aside from "crudo"/"fresco" and "di".
-   * Several: the one ranked first. None: null - a close name is another
-   * food, and a wrong value is worse than none.
+   * The catalog food that is this food, or null. First the same words
+   * (order, punctuation, accents, singular/plural, "crudo"/"fresco" aside);
+   * then the same words plus only what a food is by default (white, whole,
+   * cow's, hen's...); then the same again without notes in brackets and shop
+   * names. Several: the fewest extra words, then the rank. Never a name that
+   * only looks close - a wrong value is worse than none.
    */
   function sameFood(name, catalog) {
-    var k = foodTokens(name);
-    if (!k) return null;
-    var best = null;
+    var tries = [name];
+    var core = coreName(name);
+    if (core && core !== name) tries.push(core);
+    for (var t = 0; t < tries.length; t++) {
+      var want = tokenList(tries[t]);
+      if (!want.length) continue;
+      var k = want.slice().sort().join(' ');
+      var best = null;
+      (catalog || []).forEach(function (f) {
+        if (!f || !f.name) return;
+        foodNames(f).forEach(function (n) {
+          var have = tokenList(n);
+          var extra;
+          if (have.slice().sort().join(' ') === k) extra = 0;
+          else {
+            // The words the two names share, and on either side only what
+            // a food is by default ("senza pelle" on a chicken breast).
+            var rest = have.slice();
+            var mine = [];
+            for (var i = 0; i < want.length; i++) {
+              var at = rest.indexOf(want[i]);
+              if (at < 0) mine.push(want[i]);
+              else rest.splice(at, 1);
+            }
+            if (mine.length === want.length) return;
+            if (!rest.every(function (w) { return DEFAULTS[w]; }) || !mine.every(function (w) { return DEFAULTS[w]; })) return;
+            // The food itself must be named on both sides, not only defaults.
+            if (!want.some(function (w) { return !DEFAULTS[w] && have.indexOf(w) >= 0; })) return;
+            extra = rest.length + mine.length;
+          }
+          var r = f.rank != null ? f.rank : 999;
+          if (!best || extra < best.extra || (extra === best.extra && (r < best.r || (r === best.r && String(f.name).length < String(best.f.name).length)))) {
+            best = { f: f, r: r, extra: extra };
+          }
+        });
+      });
+      if (best) return best.f;
+    }
+    return null;
+  }
+
+  /**
+   * The foods of the catalog closest to a name, for someone (or the AI) to
+   * pick the same food among them: those sharing its words, most shared
+   * first. Never used as a match by itself.
+   */
+  function closeFoods(name, catalog, limit) {
+    var want = tokenList(coreName(name) || name).filter(function (w) { return !DEFAULTS[w]; });
+    if (!want.length) return [];
+    var scored = [];
     (catalog || []).forEach(function (f) {
       if (!f || !f.name) return;
-      var hit = foodNames(f).some(function (n) { return foodTokens(n) === k; });
-      if (!hit) return;
-      var r = f.rank != null ? f.rank : 999;
-      if (!best || r < best.r || (r === best.r && String(f.name).length < String(best.f.name).length)) best = { f: f, r: r };
+      var have = tokenList(f.name);
+      var shared = 0;
+      want.forEach(function (w) { if (have.indexOf(w) >= 0) shared++; });
+      if (!shared) return;
+      var score = shared / (want.length + have.length - shared);
+      scored.push({ f: f, s: score, r: f.rank != null ? f.rank : 999 });
     });
-    return best ? best.f : null;
+    scored.sort(function (a, b) { return (b.s - a.s) || (a.r - b.r); });
+    return scored.slice(0, limit || 8).map(function (x) { return x.f; });
   }
 
   /* ---------- combinations ------------------------------------------------ */
@@ -819,7 +914,7 @@
       if (g < 5 || g > 800) return;
       var d = Math.abs(cs.pro - sh.pro) + Math.abs(cs.carb - sh.carb) + Math.abs(cs.fat - sh.fat);
       seen[key] = 1;
-      out.push({ d: d, rank: c.rank != null ? c.rank : 999, alt: {
+      out.push({ d: d, rank: c.rank != null ? c.rank : 999, group: c.group || '', alt: {
         name: c.name, quantity: g, unit: 'g', generated: true,
         kcalPer100: c.kcal, proPer100: c.pro || 0, carbPer100: c.carb || 0, fatPer100: c.fat || 0, macro_source: 'db'
       } });
@@ -829,7 +924,10 @@
     // them are close in macros, a whey shake is swapped for tuna or chicken,
     // not for frog legs with the same numbers.
     var common = out.filter(function (o) { return o.rank < 999 && o.d <= 0.3; });
-    var pool = common.length >= 3 ? common : out;
+    // Within the same kind when the table says it (fish for fish, fruit for
+    // fruit): "Proteine" alone puts cheese next to tuna.
+    var kin = base.group ? out.filter(function (o) { return o.group === base.group && o.d <= 0.35; }) : [];
+    var pool = kin.length >= 3 ? kin : (common.length >= 3 ? common : out);
     return pool.slice(0, limit).map(function (o) { return o.alt; });
   }
 
@@ -869,6 +967,8 @@
     setPer100: setPer100,
     per100Complete: per100Complete,
     sameFood: sameFood,
+    closeFoods: closeFoods,
+    coreName: coreName,
     foodTokens: foodTokens,
     generateAlternatives: generateAlternatives,
     recipeIngredientsFor: recipeIngredientsFor

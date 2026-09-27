@@ -109,7 +109,8 @@ const AI_ROUTES = [
   "/api/chat", "/coach", "/api/coach",
   "/api/analyze-file", "/api/analyze", "/analyze",
   "/api/ingest/document",
-  "/api/food/analyze-photo", "/api/food/ocr-label", "/api/food/barcode/:code/ai-lookup"
+  "/api/food/analyze-photo", "/api/food/ocr-label", "/api/food/barcode/:code/ai-lookup",
+  "/api/import/read-page", "/api/food/match"
 ];
 app.post(AI_ROUTES, async (req, res, next) => {
   const auth = await accountFromBearer(req.headers.authorization);
@@ -149,6 +150,15 @@ app.use(
     windowMs: 60_000,
     max: Number(process.env.IMPORT_RATE_LIMIT_MAX || 20),
     keyPrefix: "import"
+  })
+);
+// A document is read one page at a time: a 17-page plan is 17 calls.
+app.use(
+  "/api/import/read-page",
+  distributedRateLimiter({
+    windowMs: 60_000,
+    max: Number(process.env.IMPORT_PAGE_RATE_LIMIT_MAX || 80),
+    keyPrefix: "import-page"
   })
 );
 app.use(
@@ -1803,6 +1813,100 @@ app.post(["/api/analyze-file", "/api/analyze", "/analyze"], async (req, res) => 
     return res.status(status).json({
       error: status === 413 ? "File troppo grande." : "Document analysis failed."
     });
+  }
+});
+
+// Advanced reading of an imported document (the athlete chose it, with the AI
+// consent): one page image in, its text out, column by column, as written.
+// Nothing is interpreted here - the app's own readers turn the text into a
+// plan and check it, exactly as with the text the phone's OCR gives.
+const READ_PAGE_SCHEMA = {
+  type: "object",
+  properties: {
+    columns: { type: "array", items: { type: "array", items: { type: "string" } } }
+  },
+  required: ["columns"]
+};
+const READ_PAGE_PROMPT = `Trascrivi il testo di questa pagina (un piano alimentare, una scheda di allenamento o un documento simile) ESATTAMENTE come e' scritto.
+- Se la pagina e' divisa in colonne affiancate, restituisci una colonna per volta, da sinistra a destra: in "columns" un elenco di righe per ogni colonna. Una pagina a colonna unica ha una sola colonna.
+- Dentro una colonna, le righe dall'alto in basso. Un elenco puntato: una riga per voce, cominciando con "• ".
+- Una tabella: una riga per riga della tabella, celle separate da " | ".
+- Numeri, unita' (g, ml, kcal, kg, %), orari, lettere piccole come la "o" fra le alternative: copiali come sono. Non correggere, non completare, non riassumere, non tradurre.
+- Titoli e intestazioni restano righe a se', maiuscole come nella pagina.
+- Se un pezzo di testo non si legge, scrivi [illeggibile] al suo posto: mai inventare.`;
+app.post("/api/import/read-page", async (req, res) => {
+  try {
+    const img = (req.body && req.body.image) || {};
+    const data = String(img.data || "").replace(/^data:[^;]+;base64,/, "");
+    const mimeType = /^image\/(png|jpeg|webp)$/.test(String(img.mimeType || "")) ? img.mimeType : "image/jpeg";
+    if (!data) return res.status(400).json({ error: "Immagine della pagina mancante." });
+    if (data.length > 8 * 1024 * 1024) return res.status(413).json({ error: "Pagina troppo grande." });
+    if (!process.env.GEMINI_API_KEY && String(process.env.AI_PROVIDER || "gemini").toLowerCase() === "gemini") {
+      return res.status(503).json({ error: "Lettura avanzata non disponibile.", code: "AI_UNAVAILABLE" });
+    }
+    const ai = getClient();
+    const response = await generateContentWithRetry(ai, {
+      model: process.env.IMPORT_VISION_MODEL || MODEL,
+      partsAttempts: [[{ inlineData: { mimeType, data } }, { text: READ_PAGE_PROMPT }]],
+      label: "Gemini import read page",
+      config: { responseMimeType: "application/json", responseSchema: READ_PAGE_SCHEMA, temperature: 0, maxOutputTokens: 8192 }
+    });
+    let parsed = null;
+    try { parsed = JSON.parse(response.text || ""); } catch (_) { parsed = null; }
+    const columns = (parsed && Array.isArray(parsed.columns) ? parsed.columns : [])
+      .map((c) => (Array.isArray(c) ? c.map((l) => String(l == null ? "" : l)).slice(0, 400) : []))
+      .filter((c) => c.length)
+      .slice(0, 6);
+    return res.json({ ok: true, columns });
+  } catch (error) {
+    console.error(`[IMPORT_READ_PAGE] ${error?.message}`);
+    accountFromBearer(req.headers.authorization).then((auth) =>
+      recordEvent(pool, "import_failed", auth && auth.id, { route: "/api/import/read-page", status: 500, format: "page", message: error?.message })
+    ).catch(() => {});
+    return res.status(502).json({ error: "Lettura della pagina non riuscita." });
+  }
+});
+
+// Which database food is the food written in a plan: the app sends each
+// name with the closest foods of its own tables (and products of Open Food
+// Facts); the AI only picks the one that is the same food, or none. The
+// values stay the databases' - nothing is estimated here.
+const FOOD_MATCH_SCHEMA = {
+  type: "object",
+  properties: {
+    picks: { type: "array", items: { type: "object", properties: { i: { type: "integer" }, id: { type: "string", nullable: true } }, required: ["i"] } }
+  },
+  required: ["picks"]
+};
+app.post("/api/food/match", async (req, res) => {
+  try {
+    const items = Array.isArray(req.body && req.body.items) ? req.body.items.slice(0, 120) : [];
+    if (!items.length) return res.json({ ok: true, picks: [] });
+    const lines = items.map((it, i) => {
+      const cands = (Array.isArray(it.candidates) ? it.candidates : []).slice(0, 10)
+        .map((c) => `   - id=${String(c.id).slice(0, 40)}: ${String(c.name || "").slice(0, 120)}${c.brand ? " [" + String(c.brand).slice(0, 60) + "]" : ""} (${Math.round(Number(c.kcal) || 0)} kcal/100g)`);
+      return `${i}. "${String(it.name || "").slice(0, 160)}"\n${cands.join("\n") || "   (nessun candidato)"}`;
+    }).join("\n");
+    const prompt = `Per ogni alimento scritto in un piano alimentare scegli, fra i candidati, quello che e' LO STESSO alimento (stesso cibo, stesso stato: crudo/cotto, in scatola, secco, intero/scremato/light; per un prodotto di marca, lo stesso prodotto o la stessa ricetta). Se nessuno lo e', id null. Non scegliere un alimento solo simile o della stessa famiglia: un valore sbagliato e' peggio di nessuno. "In media" puo' essere la media di un gruppo. Rispondi con picks: [{ i, id }] per ogni riga.\n\n${lines}`;
+    const ai = getClient();
+    const response = await generateContentWithRetry(ai, {
+      model: MODEL,
+      partsAttempts: [[{ text: prompt }]],
+      label: "Gemini food match",
+      config: { responseMimeType: "application/json", responseSchema: FOOD_MATCH_SCHEMA, temperature: 0, maxOutputTokens: 4096 }
+    });
+    let parsed = null;
+    try { parsed = JSON.parse(response.text || ""); } catch (_) { parsed = null; }
+    // Only an id that was offered for that row.
+    const picks = (parsed && Array.isArray(parsed.picks) ? parsed.picks : []).map((p) => {
+      const it = items[Number(p.i)];
+      const ok = it && Array.isArray(it.candidates) && it.candidates.some((c) => String(c.id) === String(p.id));
+      return { i: Number(p.i), id: ok ? String(p.id) : null };
+    }).filter((p) => Number.isInteger(p.i) && p.i >= 0 && p.i < items.length);
+    return res.json({ ok: true, picks });
+  } catch (error) {
+    console.error(`[FOOD_MATCH] ${error?.message}`);
+    return res.status(502).json({ error: "Abbinamento non riuscito." });
   }
 });
 

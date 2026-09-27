@@ -36831,9 +36831,43 @@ const I18nService = {
 })(I18nService);
 
 const FoodDatabaseService = {
+  // The catalog in the page (staples + CREA), then the larger generic table
+  // loaded on first need (Anses Ciqual 2025, names in Italian): the same
+  // array while neither changes.
+  _extra: [],
+  _memo: null,
+  _memoKey: '',
   get catalog() {
-    if (typeof FOOD_CATALOG !== 'undefined' && Array.isArray(FOOD_CATALOG) && FOOD_CATALOG.length) {
-      return FOOD_CATALOG.map((f) => ({
+    const base = this.baseCatalog;
+    const key = base.length + '|' + this._extra.length;
+    if (this._memo && this._memoKey === key) return this._memo;
+    this._memo = this._extra.length ? base.concat(this._extra) : base;
+    this._memoKey = key;
+    return this._memo;
+  },
+  // web/food-ciqual.json: { source, items: [[code, name, aliases, category,
+  // group, kcal, pro, carb, fat, fiber, sugars]] }. Loaded once; a failure
+  // leaves the catalog as it was.
+  loadExtra() {
+    if (this._extraLoading) return this._extraLoading;
+    if (typeof fetch === 'undefined') return Promise.resolve(false);
+    this._extraLoading = fetch('food-ciqual.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
+      const rows = (j && Array.isArray(j.items)) ? j.items : [];
+      this._extra = rows.map((r, i) => ({
+        id: 'ciqual_' + r[0], name: r[1], name_en: '', brand: '', aliases: r[2] || [], category: r[3] || 'Altro', group: r[4] || '',
+        kcal: r[5] || 0, pro: r[6] || 0, carb: r[7] || 0, fat: r[8] || 0, fiber: r[9], sugars: r[10],
+        serving: '100g', unit: 'g', rank: 2000 + i, barcode: null, source: 'ciqual', ciqual_code: String(r[0])
+      }));
+      return this._extra.length > 0;
+    }).catch(() => { this._extraLoading = null; return false; });
+    return this._extraLoading;
+  },
+  get baseCatalog() {
+    const len = (typeof FOOD_CATALOG !== 'undefined' && Array.isArray(FOOD_CATALOG)) ? FOOD_CATALOG.length : 0;
+    if (this._baseMemo && this._baseMemoLen === len) return this._baseMemo;
+    if (len) {
+      this._baseMemoLen = len;
+      return (this._baseMemo = FOOD_CATALOG.map((f) => ({
         id: f.id || null,
         name: f.name,
         name_en: f.name_en || '',
@@ -36851,7 +36885,7 @@ const FoodDatabaseService = {
         source: f.source || 'local',
         crea_url: f.crea_url || null,
         crea_name: f.crea_name || null
-      }));
+      })));
     }
     return [
       { name: "Petto di pollo", category: "Proteine", kcal: 110, pro: 23.0, carb: 0.0, fat: 1.2, serving: "100g", rank: 0 },
@@ -41325,7 +41359,8 @@ function declinePrivacyConsent() {
 const AI_REQUEST_PATHS = [
   /^\/api\/chat$/, /^\/coach$/, /^\/api\/coach$/,
   /^\/api\/analyze-file$/, /^\/api\/analyze$/, /^\/analyze$/, /^\/api\/ingest\/document$/,
-  /^\/api\/food\/analyze-photo$/, /^\/api\/food\/ocr-label$/, /^\/api\/food\/barcode\/[^/]+\/ai-lookup$/
+  /^\/api\/food\/analyze-photo$/, /^\/api\/food\/ocr-label$/, /^\/api\/food\/barcode\/[^/]+\/ai-lookup$/,
+  /^\/api\/import\/read-page$/, /^\/api\/food\/match$/
 ];
 function isAiRequest(url, options) {
   const method = String((options && options.method) || 'GET').toUpperCase();
@@ -44648,19 +44683,97 @@ function cropCanvas(canvas, x0, x1) {
   ctx.drawImage(canvas, x0, 0, c.width, c.height, 0, 0, c.width, c.height);
   return c;
 }
+// One page image read by the AI (advanced reading, with the AI consent):
+// its columns of lines, or null (the page is then read on the device).
+async function aiReadPage(canvasOrBlob) {
+  try {
+    let blob = canvasOrBlob;
+    if (canvasOrBlob && typeof canvasOrBlob.toBlob === 'function') {
+      blob = await new Promise((res) => canvasOrBlob.toBlob(res, 'image/jpeg', 0.85));
+    }
+    if (!blob) return null;
+    const b64 = await new Promise((res) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result || '').replace(/^data:[^;]+;base64,/, ''));
+      fr.onerror = () => res('');
+      fr.readAsDataURL(blob);
+    });
+    if (!b64) return null;
+    const response = await accountRequest('/api/import/read-page', { method: 'POST', body: JSON.stringify({ image: { mimeType: 'image/jpeg', data: b64 } }) });
+    if (!response || !response.ok) return null;
+    const j = await readApiJson(response);
+    const cols = (j && Array.isArray(j.columns)) ? j.columns.filter((c) => Array.isArray(c) && c.length) : [];
+    // Table cells " | " read as the spaces the device's OCR would give.
+    return cols.length ? cols.map((c) => c.map((l) => String(l).replace(/\s+\|\s+/g, '   '))) : null;
+  } catch (_) {
+    return null;
+  }
+}
+// A photo for the advanced reading: at most 2400 px on its longer side, JPEG.
+async function imageBlobForReading(bytes, mime) {
+  const src = new Blob([bytes], { type: mime || 'image/jpeg' });
+  try {
+    const bmp = await createImageBitmap(src);
+    const k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * k);
+    c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.88));
+  } catch (_) {
+    return src;
+  }
+}
+// Advanced reading: only for a signed-in account, and only if the person
+// chooses it for this document (the AI consent is asked, as for any AI use).
+function chooseDocumentReader(pageCount) {
+  if (!(store && store.accountToken)) return Promise.resolve('local');
+  return new Promise((resolve) => {
+    const old = document.getElementById('reader-choice-overlay');
+    if (old) old.remove();
+    const o = document.createElement('div');
+    o.id = 'reader-choice-overlay';
+    o.setAttribute('role', 'dialog');
+    o.setAttribute('aria-modal', 'true');
+    o.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10600;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+    o.innerHTML = '<div class="card" style="max-width:420px;width:100%;border:1px solid var(--gold);padding:16px;box-sizing:border-box;">' +
+      '<div style="font-size:12px;font-weight:900;color:var(--gold);letter-spacing:1px;margin-bottom:8px;">COME LEGGO IL DOCUMENTO?</div>' +
+      '<div style="font-size:12px;color:#ccc;line-height:1.5;">Le pagine sono immagini' + (pageCount > 1 ? ' (' + pageCount + ')' : '') + ': vanno lette una per una.</div>' +
+      '<button type="button" class="btn btn-primary" id="reader-ai" style="width:100%;margin-top:12px;font-weight:800;">LETTURA AVANZATA (AI)</button>' +
+      '<div style="font-size:10px;color:#999;margin-top:4px;line-height:1.4;">La più precisa, anche per foto storte e tabelle. Le pagine vanno a Google Gemini per la lettura, come nelle altre funzioni AI.</div>' +
+      '<button type="button" class="btn btn-outline" id="reader-local" style="width:100%;margin-top:12px;">SUL DISPOSITIVO</button>' +
+      '<div style="font-size:10px;color:#999;margin-top:4px;line-height:1.4;">Il documento non lascia il telefono. Più lenta e meno precisa: controlla bene la revisione.</div>' +
+      '</div>';
+    document.body.appendChild(o);
+    const done = (v) => { o.remove(); resolve(v); };
+    document.getElementById('reader-ai').onclick = () => done('ai');
+    document.getElementById('reader-local').onclick = () => done('local');
+  });
+}
+window.chooseDocumentReader = chooseDocumentReader;
+
 // { pages: [{ columns: [[lines]], slot? }], text } - text is every column
 // one after the other, for the parts of the import that read plain text.
-async function ocrPdfDocument(bytes, onPage) {
+// opts.reader 'ai': each page read by the AI (4 at a time); a page it cannot
+// read is read on the device. Otherwise the device's OCR, column by column.
+async function ocrPdfDocument(bytes, onPage, opts) {
+  const useAi = !!(opts && opts.reader === 'ai');
   const lib = await loadPdfJs();
-  if (!lib || !window.Tesseract || typeof window.Tesseract.createWorker !== 'function') return null;
+  if (!lib) return null;
+  const hasOcr = !!(window.Tesseract && typeof window.Tesseract.createWorker === 'function');
+  if (!useAi && !hasOcr) return null;
   const pdf = await lib.getDocument({ data: bytes instanceof Uint8Array ? bytes.slice() : new Uint8Array(bytes) }).promise;
-  const worker = await window.Tesseract.createWorker('ita+eng');
+  let worker = null;
+  const ocr = async () => (worker || (worker = await window.Tesseract.createWorker('ita+eng')));
   const NP = window.NurvanNutritionPlan;
   const pages = [];
+  const aiJobs = [];
   let prevCols = null;
+  let done = 0;
+  const tick = () => { done++; if (typeof onPage === 'function') onPage(Math.min(done, pdf.numPages), pdf.numPages); };
   try {
     for (let p = 1; p <= pdf.numPages; p++) {
-      if (typeof onPage === 'function') onPage(p, pdf.numPages);
+      if (!useAi && typeof onPage === 'function') onPage(p, pdf.numPages);
       const page = await pdf.getPage(p);
       const vp = page.getViewport({ scale: 2.5 });
       const canvas = document.createElement('canvas');
@@ -44674,18 +44787,10 @@ async function ocrPdfDocument(bytes, onPage) {
       await page.render({ canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
       const ink = canvasInk(canvas);
       const cols = NP ? NP.pageColumns(ink, canvas.width, canvas.height) : [{ x0: 0, x1: canvas.width }];
-      const read = async (c) => String(((await worker.recognize(c)).data || {}).text || '').split('\n');
-      if (cols.length > 1) {
-        const columns = [];
-        for (const col of cols) columns.push(await read(cropCanvas(canvas, col.x0, col.x1)));
-        pages.push({ columns: columns });
-        prevCols = cols;
-        continue;
-      }
       // A page with one column that sits inside a column of the page before
       // (the plan's first column going on alone) keeps that column's place.
       let slot = null;
-      if (prevCols) {
+      if (cols.length === 1 && prevCols) {
         let left = canvas.width, right = 0;
         for (let y = 0; y < canvas.height; y += 2) {
           for (let x = 0; x < canvas.width; x++) {
@@ -44695,14 +44800,46 @@ async function ocrPdfDocument(bytes, onPage) {
         const k = prevCols.findIndex((c) => left >= c.x0 - 4 && right <= c.x1 + 4);
         if (k >= 0) slot = k;
       }
-      pages.push(slot != null ? { columns: [await read(canvas)], slot: slot } : { columns: [await read(canvas)] });
-      if (slot == null) prevCols = null;
+      const entry = slot != null ? { columns: [], slot: slot } : { columns: [] };
+      pages.push(entry);
+      const readLocal = async () => {
+        const w = await ocr();
+        const read = async (c) => String(((await w.recognize(c)).data || {}).text || '').split('\n');
+        if (cols.length > 1) {
+          for (const col of cols) entry.columns.push(await read(cropCanvas(canvas, col.x0, col.x1)));
+        } else {
+          entry.columns.push(await read(canvas));
+        }
+      };
+      if (useAi) {
+        const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.85));
+        aiJobs.push({ entry, blob, cols, fallback: readLocal });
+      } else {
+        await readLocal();
+      }
+      if (cols.length > 1) prevCols = cols;
+      else if (slot == null) prevCols = null;
+    }
+    if (useAi) {
+      let next = 0;
+      const lane = async () => {
+        while (next < aiJobs.length) {
+          const job = aiJobs[next++];
+          const got = await aiReadPage(job.blob);
+          // The AI keeps the page's columns; if it saw fewer than the page
+          // has, the device's split is trusted instead.
+          if (got && got.length >= Math.min(job.cols.length, 3)) { job.entry.columns = got; job.entry.reader = 'ai'; }
+          else if (hasOcr) { job.entry.columns = []; await job.fallback(); job.entry.reader = 'device'; }
+          tick();
+        }
+      };
+      await Promise.all([lane(), lane(), lane(), lane()]);
     }
   } finally {
-    try { await worker.terminate(); } catch (_) {}
+    if (worker) { try { await worker.terminate(); } catch (_) {} }
   }
   const text = pages.map((pg) => pg.columns.map((c) => c.join('\n')).join('\n\n')).join('\n\n');
-  return { pages: pages, text: text };
+  return { pages: pages, text: text, reader: useAi ? 'ai' : 'device' };
 }
 window.ocrPdfDocument = ocrPdfDocument;
 
@@ -44931,6 +45068,21 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       parsed = parseStructuredWorkbook(wb, name);
       documentIR = parsed.documentIR || null;
     } else if (isImage) {
+      // Advanced reading (AI) when chosen; the device's OCR otherwise, or
+      // when the AI could not read the photo.
+      const imageReader = await chooseDocumentReader(1);
+      let aiColumns = null;
+      if (imageReader === 'ai') {
+        stage('ocr', 'Lettura avanzata');
+        await yieldImportPaint();
+        try { aiColumns = await aiReadPage(await imageBlobForReading(bytes, mime)); } catch (_) { aiColumns = null; }
+      }
+      let ocr = { ok: true, text: '', words: [] };
+      if (aiColumns) {
+        text = aiColumns.map((c) => c.join('\n')).join('\n\n');
+        window.__lastImageDoc = { pages: [{ columns: aiColumns }] };
+      } else {
+      window.__lastImageDoc = null;
       stage('ocr', 'OCR');
       await yieldImportPaint();
       let blobUrl = null;
@@ -44938,7 +45090,7 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
         const blob = new Blob([bytes], { type: mime || 'image/png' });
         blobUrl = URL.createObjectURL(blob);
       } catch (_) {}
-      const ocr = (typeof runLocalOcr === 'function')
+      ocr = (typeof runLocalOcr === 'function')
         ? await runLocalOcr(blobUrl || bytes)
         : { ok: false, text: '', warning: 'OCR non disponibile', fallback: true };
       // Day headings in coloured boxes (red on orange, black on yellow) are
@@ -44965,10 +45117,24 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
       } catch (_) {
         text = ocr.text || '';
       }
+      }
       stage('semantic', 'Understanding content');
       await yieldImportPaint();
       parsed = parseCanonicalProgramFromText(text, name);
       parseTextForChoices = text;
+      // A nutritionist's plan photographed: its own reader, as for a PDF.
+      try {
+        const NP = window.NurvanNutritionPlan;
+        const plan = NP ? NP.parsePlanDocument(window.__lastImageDoc || { pages: [{ columns: [String(text || '').split('\n')] }] }) : null;
+        if (plan && parsed && parsed.canonicalProgram) {
+          try { if (typeof FoodDatabaseService !== 'undefined' && FoodDatabaseService.loadExtra) await FoodDatabaseService.loadExtra(); } catch (_) {}
+          enrichPlanAlternatives(plan);
+          try { await resolvePlanFoodsWithAi(plan, (msg) => { if (pState) pState.pipelineStage = msg; setImportProgress(70, name, msg); }); } catch (_) {}
+          parsed.canonicalProgram.nutrition = plan;
+          parsed.canonicalProgram.weeks = [];
+          parsed.canonicalProgram.training = { weeks: [] };
+        }
+      } catch (planErr) { console.warn('[NUTRITION_PLAN]', planErr); }
       if (typeof createEmptyDocumentIR === 'function') {
         documentIR = createEmptyDocumentIR({ filename: name, magicType: detect.magicType || 'image', size: bytes.length });
         documentIR.originalText = text;
@@ -45021,11 +45187,14 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
         // No text in the file: its pages are read by the OCR, column by column.
         try {
           // A page takes a few seconds: say which one is being read.
+          let pageCount = 0;
+          try { const lib0 = await loadPdfJs(); if (lib0) pageCount = (await lib0.getDocument({ data: bytes.slice() }).promise).numPages; } catch (_) {}
+          const reader = await chooseDocumentReader(pageCount);
           ocrDoc = await ocrPdfDocument(bytes, (p, n) => {
-            const msg = 'Lettura pagina ' + p + ' di ' + n;
+            const msg = (reader === 'ai' ? 'Lettura avanzata: pagina ' : 'Lettura pagina ') + p + ' di ' + n;
             if (pState) pState.pipelineStage = msg;
             setImportProgress(22 + Math.round(38 * (p - 1) / n), name, msg);
-          });
+          }, { reader });
           if (ocrDoc && ocrDoc.text && ocrDoc.text.trim().length > 40) pdfText = ocrDoc.text;
         } catch (ocrErr) { console.warn('[PDF_OCR]', ocrErr); }
       }
@@ -45040,7 +45209,10 @@ async function processUniversalFileInner(source, actionIntent = 'IMPORT') {
         const planDoc = ocrDoc || { pages: [{ columns: [String(pdfText || '').split('\n')] }] };
         const plan = NP ? NP.parsePlanDocument(planDoc) : null;
         if (plan && parsed && parsed.canonicalProgram) {
+          // The larger food table first: most of a plan's foods are in it.
+          try { if (typeof FoodDatabaseService !== 'undefined' && FoodDatabaseService.loadExtra) await FoodDatabaseService.loadExtra(); } catch (_) {}
           enrichPlanAlternatives(plan);
+          try { await resolvePlanFoodsWithAi(plan, (msg) => { if (pState) pState.pipelineStage = msg; setImportProgress(70, name, msg); }); } catch (_) {}
           parsed.canonicalProgram.nutrition = plan;
           parsed.canonicalProgram.weeks = [];
           parsed.canonicalProgram.training = { weeks: [] };
@@ -50966,6 +51138,8 @@ function openAddFoodModal(dayIdx, mealIdx) {
   if (warnEl) warnEl.remove();
   $('add-food-modal').style.display = 'flex';
   pushUiOverlay('add-food-modal');
+  // The larger food table, for the searches that follow.
+  try { if (typeof FoodDatabaseService !== 'undefined' && FoodDatabaseService.loadExtra) FoodDatabaseService.loadExtra(); } catch (_) {}
   if (typeof ensureAllergenIntoleranceCatalog === 'function') {
     ensureAllergenIntoleranceCatalog().catch(function () {});
   }
@@ -51320,6 +51494,7 @@ function foodProvenanceFor(ref) {
   if (!ref) return { source: 'user', kind: 'user', confidence: 1 };
   if (ref.provenance && ref.provenance.source) return ref.provenance;
   if (ref.source === 'crea') return { source: 'crea', kind: 'CREA 2019', url: ref.crea_url || null, crea_name: ref.crea_name || null, confidence: 1 };
+  if (ref.source === 'ciqual') return { source: 'ciqual', kind: 'Anses Ciqual 2025', code: ref.ciqual_code || null, confidence: 1 };
   if (ref.source === 'nurvan' || /^nurvan_staple/.test(String(ref.source || ''))) return { source: 'nurvan', kind: 'Nurvan', confidence: 0.9 };
   if (ref.source === 'user_custom') return { source: 'user_custom', kind: 'I tuoi alimenti', confidence: 1 };
   return { source: ref.source || 'remote', kind: 'Prodotto', confidence: 0.8 };
@@ -51339,6 +51514,8 @@ function foodSourceLabelHtml(f) {
       : '<span style="' + style + '">Fonte: CREA 2019</span>';
   }
   if (p.source === 'nurvan') return '<span style="' + style + '">Fonte: Nurvan</span>';
+  if (p.matched === 'ai') return '<span style="' + style + '" title="' + esc(p.matchedName || '') + '">Valori di: ' + esc(p.matchedName || 'banca alimenti') + '</span>';
+  if (p.source === 'ciqual') return '<span style="' + style + '">Fonte: Anses Ciqual 2025</span>';
   if (f && f.brand) return '<span style="' + style + '">' + esc(f.brand) + '</span>';
   if (p.source === 'open_food_facts' || p.source === 'fatsecret' || p.source === 'usda' || p.source === 'remote') return '<span style="' + style + '">Prodotto</span>';
   return '';
@@ -61101,6 +61278,76 @@ function exactFoodMatch(name) {
   if (!svc || !NP || !name) return null;
   return NP.sameFood(name, svc.catalog);
 }
+// The foods of an imported plan still without values, matched with the AI's
+// help (signed in, AI consent given): for each name the closest foods of our
+// tables and, for a branded product, of Open Food Facts; the AI picks the one
+// that is the same food, or none. Values come from the chosen food only.
+async function resolvePlanFoodsWithAi(plan, onStep) {
+  if (!(store && store.accountToken) || !aiConsentGranted()) return 0;
+  const NP = window.NurvanNutritionPlan;
+  const svc = (typeof FoodDatabaseService !== 'undefined') ? FoodDatabaseService : null;
+  if (!NP || !svc) return 0;
+  const byName = {};
+  const add = function (a) {
+    if (!a || a.recipeId || a.qb || a.kcalPer100 != null || !a.name) return;
+    const k = NP.fold(a.name);
+    (byName[k] = byName[k] || { name: a.name, alts: [] }).alts.push(a);
+  };
+  (plan.days || []).forEach(function (d) { (d.meals || []).forEach(function (m) { (m.foods || []).forEach(function (f) { (f.alternatives || []).forEach(add); }); }); });
+  (plan.recipes || []).forEach(function (r) { (r.ingredients || []).forEach(function (i) { (i.alternatives || []).forEach(add); }); });
+  const rows = Object.keys(byName).map(function (k) { return byName[k]; }).slice(0, 120);
+  if (!rows.length) return 0;
+  const catalog = svc.catalog;
+  // A word in capitals inside the name (Wasa, Philadelphia, Novi) is a brand:
+  // those names are also looked up among products.
+  const branded = function (n) { return /\s[A-Z][a-zA-Z]{2,}/.test(' ' + String(n).replace(/^\S+/, '')); };
+  const remote = {};
+  const brandRows = rows.filter(function (r) { return branded(r.name); }).slice(0, 20);
+  let ri = 0;
+  const lane = async function () {
+    while (ri < brandRows.length) {
+      const r = brandRows[ri++];
+      try {
+        const got = await svc.searchRemote(NP.coreName(r.name) || r.name, { limit: 4, timeoutMs: 4000 });
+        // FatSecret's values may not be kept beyond a day: never stored in a plan.
+        remote[NP.fold(r.name)] = (got || []).filter(function (p) { return p && p.kcal > 0 && p.source !== 'fatsecret'; });
+      } catch (_) {}
+    }
+  };
+  if (typeof onStep === 'function') onStep('Cerco i prodotti di marca');
+  await Promise.all([lane(), lane(), lane()]);
+  const pool = {};
+  const items = rows.map(function (r, i) {
+    const local = NP.closeFoods(r.name, catalog, 8);
+    const prods = remote[NP.fold(r.name)] || [];
+    const cands = local.map(function (f, j) { const id = 'l' + i + '_' + j; pool[id] = f; return { id: id, name: f.name, kcal: f.kcal }; })
+      .concat(prods.map(function (p, j) { const id = 'p' + i + '_' + j; pool[id] = p; return { id: id, name: p.name, brand: p.brand || '', kcal: p.kcal }; }));
+    return { name: r.name, candidates: cands };
+  });
+  if (typeof onStep === 'function') onStep('Abbino gli alimenti');
+  let picks = [];
+  try {
+    const response = await accountRequest('/api/food/match', { method: 'POST', body: JSON.stringify({ items: items }) });
+    if (response && response.ok) picks = ((await readApiJson(response)) || {}).picks || [];
+  } catch (_) { picks = []; }
+  let matched = 0;
+  picks.forEach(function (p) {
+    const hit = p && p.id ? pool[p.id] : null;
+    const row = rows[p.i];
+    if (!hit || !row || !(hit.kcal > 0)) return;
+    row.alts.forEach(function (a) {
+      a.kcalPer100 = hit.kcal;
+      a.proPer100 = hit.pro || 0;
+      a.carbPer100 = hit.carb || 0;
+      a.fatPer100 = hit.fat || 0;
+      a.macro_source = 'db';
+      a.provenance = Object.assign({}, foodProvenanceFor(hit), { matched: 'ai', matchedName: hit.name + (hit.brand ? ' (' + hit.brand + ')' : '') });
+    });
+    matched++;
+  });
+  (plan.days || []).forEach(function (d) { (d.meals || []).forEach(function (m) { (m.foods || []).forEach(function (f) { if (f.alternatives && f.alternatives.length) NP.applyChoice(f, f.choice || 0); }); }); });
+  return matched;
+}
 // The values per 100 g of each alternative of an imported plan: a recipe's
 // come from the recipe (the nutritionist's), the others from the food
 // database. A food not found stays without values (the sum says partial).
@@ -61114,6 +61361,7 @@ function enrichPlanAlternatives(plan) {
     a.carbPer100 = hit.carb || 0;
     a.fatPer100 = hit.fat || 0;
     a.macro_source = 'db';
+    a.provenance = foodProvenanceFor(hit);
   };
   const NP = window.NurvanNutritionPlan;
   // Recipes first: a table read only in part is replaced by the values of
@@ -61243,6 +61491,12 @@ function nutritionSwapOptions(food) {
   return { options: [current].concat(gen), generated: true };
 }
 function openFoodSwap(dayIdx, mealIdx, foodIdx) {
+  // Proposals come from the whole food table: loaded once, then shown.
+  if (typeof FoodDatabaseService !== 'undefined' && FoodDatabaseService.loadExtra && !FoodDatabaseService.__extraAsked) {
+    FoodDatabaseService.__extraAsked = true;
+    FoodDatabaseService.loadExtra().then(function () { openFoodSwap(dayIdx, mealIdx, foodIdx); });
+    return;
+  }
   const day = DATA && DATA.nutrition && DATA.nutrition.days && DATA.nutrition.days[dayIdx];
   const meal = day && day.meals && day.meals[mealIdx];
   const food = meal && meal.foods && meal.foods[foodIdx];

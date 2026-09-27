@@ -1021,9 +1021,43 @@ const I18nService = {
 })(I18nService);
 
 const FoodDatabaseService = {
+  // The catalog in the page (staples + CREA), then the larger generic table
+  // loaded on first need (Anses Ciqual 2025, names in Italian): the same
+  // array while neither changes.
+  _extra: [],
+  _memo: null,
+  _memoKey: '',
   get catalog() {
-    if (typeof FOOD_CATALOG !== 'undefined' && Array.isArray(FOOD_CATALOG) && FOOD_CATALOG.length) {
-      return FOOD_CATALOG.map((f) => ({
+    const base = this.baseCatalog;
+    const key = base.length + '|' + this._extra.length;
+    if (this._memo && this._memoKey === key) return this._memo;
+    this._memo = this._extra.length ? base.concat(this._extra) : base;
+    this._memoKey = key;
+    return this._memo;
+  },
+  // web/food-ciqual.json: { source, items: [[code, name, aliases, category,
+  // group, kcal, pro, carb, fat, fiber, sugars]] }. Loaded once; a failure
+  // leaves the catalog as it was.
+  loadExtra() {
+    if (this._extraLoading) return this._extraLoading;
+    if (typeof fetch === 'undefined') return Promise.resolve(false);
+    this._extraLoading = fetch('food-ciqual.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
+      const rows = (j && Array.isArray(j.items)) ? j.items : [];
+      this._extra = rows.map((r, i) => ({
+        id: 'ciqual_' + r[0], name: r[1], name_en: '', brand: '', aliases: r[2] || [], category: r[3] || 'Altro', group: r[4] || '',
+        kcal: r[5] || 0, pro: r[6] || 0, carb: r[7] || 0, fat: r[8] || 0, fiber: r[9], sugars: r[10],
+        serving: '100g', unit: 'g', rank: 2000 + i, barcode: null, source: 'ciqual', ciqual_code: String(r[0])
+      }));
+      return this._extra.length > 0;
+    }).catch(() => { this._extraLoading = null; return false; });
+    return this._extraLoading;
+  },
+  get baseCatalog() {
+    const len = (typeof FOOD_CATALOG !== 'undefined' && Array.isArray(FOOD_CATALOG)) ? FOOD_CATALOG.length : 0;
+    if (this._baseMemo && this._baseMemoLen === len) return this._baseMemo;
+    if (len) {
+      this._baseMemoLen = len;
+      return (this._baseMemo = FOOD_CATALOG.map((f) => ({
         id: f.id || null,
         name: f.name,
         name_en: f.name_en || '',
@@ -1041,7 +1075,7 @@ const FoodDatabaseService = {
         source: f.source || 'local',
         crea_url: f.crea_url || null,
         crea_name: f.crea_name || null
-      }));
+      })));
     }
     return [
       { name: "Petto di pollo", category: "Proteine", kcal: 110, pro: 23.0, carb: 0.0, fat: 1.2, serving: "100g", rank: 0 },
