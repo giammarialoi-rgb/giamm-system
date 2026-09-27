@@ -15105,6 +15105,7 @@ function renderNutrition(c) {
         ${athleteDomainActionButtonsHtml('nutrition', { compact: true })}
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="addNutritionDay()">${t('addDay')}</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openAddNutritionWeekWizard()" title="Aggiungi 7 giorni in una volta, come un diario alimentare">📅 Aggiungi Settimana</button>
+        ${days.some(function (d) { return d && !d.date && (d.meals || []).some(function (m) { return (m.foods || m.items || []).length; }); }) ? '<button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openShoppingList()">🛒 Lista della spesa</button>' : ''}
         ${days.length ? '<button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="exportNutritionPdf()">📄 Esporta Alimentazione</button>' : ''}
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openNutritionBackupsModal()" title="Ripristina una versione precedente dell'alimentazione">🕐 Backup</button>
         ${days.length ? personalNutritionClearButtonHtml({ compact: true }) : ''}
@@ -25200,6 +25201,167 @@ function exportNutritionPdf() {
   }
 }
 window.exportNutritionPdf = exportNutritionPdf;
+
+// Shopping list: the foods of the meal plan, added up over the days of the
+// week, as one list (Monday to Sunday) or two (e.g. Mon-Wed and Thu-Sun).
+// Only plan days count, never the diary; a food is merged with another only
+// when the name is the same, and quantities only when the unit is the same.
+const SHOP_WEEKDAYS = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+function shopFold(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+}
+// Which plan day is eaten on each weekday (0 = Monday). A plan named by
+// weekday uses its names; one that is not (Giorno 1, ON/OFF...) is repeated
+// in its order, and `cycled` says so.
+function shoppingPlanWeek(days) {
+  const plan = (days || []).filter(function (d) {
+    return d && !d.date && (d.meals || []).some(function (m) { return (m.foods || m.items || []).length; });
+  });
+  const byName = SHOP_WEEKDAYS.map(function (wd) {
+    const key = shopFold(wd).slice(0, 4);
+    return plan.find(function (d) { return shopFold(d.day).indexOf(key) === 0; }) || null;
+  });
+  if (byName.some(Boolean)) return { week: byName, cycled: false };
+  if (!plan.length) return { week: SHOP_WEEKDAYS.map(function () { return null; }), cycled: false };
+  return { week: SHOP_WEEKDAYS.map(function (_, i) { return plan[i % plan.length]; }), cycled: true };
+}
+function shoppingListFor(week, from, to) {
+  const items = {};
+  for (let i = from; i <= to; i++) {
+    const day = week[i];
+    if (!day) continue;
+    (day.meals || []).forEach(function (meal) {
+      (meal.foods || meal.items || []).forEach(function (f) {
+        const name = String(f.name || f.food || '').trim();
+        if (!name) return;
+        const rawQty = f.qty != null && f.qty !== '' ? f.qty : (f.quantity != null ? f.quantity : f.amount);
+        const q = Number(String(rawQty == null ? '' : rawQty).replace(',', '.'));
+        const hasQty = rawQty != null && rawQty !== '' && isFinite(q) && q > 0;
+        const u = hasQty ? selectableFoodUnit(q, f.unit || 'g') : { qty: 0, unit: '' };
+        const key = shopFold(name) + '|' + u.unit;
+        if (!items[key]) items[key] = { key: key, name: name, unit: u.unit, qty: 0, times: 0 };
+        items[key].qty += u.qty;
+        items[key].times += 1;
+      });
+    });
+  }
+  return Object.keys(items).map(function (k) { return items[k]; })
+    .sort(function (a, b) { return shopFold(a.name).localeCompare(shopFold(b.name)); });
+}
+function shoppingQtyText(it) {
+  if (!it.unit) return it.times > 1 ? '× ' + it.times : '';
+  let q = it.qty, u = it.unit;
+  if ((u === 'g' || u === 'ml') && q >= 1000) { q = q / 1000; u = u === 'g' ? 'kg' : 'l'; }
+  return (Math.round(q * 100) / 100).toString().replace('.', ',') + ' ' + u;
+}
+// The parts of the week: one, or two split after `splitAfter` (0 = Monday).
+function shoppingParts() {
+  const p = (store && store.prefs) || {};
+  if (p.shoppingSplit !== 'split') return [{ from: 0, to: 6 }];
+  const cut = Math.min(5, Math.max(0, parseInt(p.shoppingSplitAfter, 10) >= 0 ? parseInt(p.shoppingSplitAfter, 10) : 2));
+  return [{ from: 0, to: cut }, { from: cut + 1, to: 6 }];
+}
+function shoppingPartLabel(part) {
+  return part.from === part.to ? SHOP_WEEKDAYS[part.from] : SHOP_WEEKDAYS[part.from] + ' – ' + SHOP_WEEKDAYS[part.to];
+}
+function openShoppingList() {
+  let modal = document.getElementById('shopping-list-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'shopping-list-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px));';
+    document.body.appendChild(modal);
+  }
+  const p = (store && store.prefs) || {};
+  const checks = (store && store.shoppingChecks) || {};
+  const planWeek = shoppingPlanWeek((DATA && DATA.nutrition && DATA.nutrition.days) || []);
+  const parts = shoppingParts();
+  const splitAfter = parts.length > 1 ? parts[0].to : 2;
+  let body = '';
+  parts.forEach(function (part, pi) {
+    const list = shoppingListFor(planWeek.week, part.from, part.to);
+    body += '<div style="margin-top:12px;"><div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:6px;">' +
+      (parts.length > 1 ? 'Spesa ' + (pi + 1) + ' · ' : '') + esc(shoppingPartLabel(part)) + '</div>';
+    if (!list.length) body += '<div style="font-size:11px;color:#888;">Nessun alimento nel piano per questi giorni.</div>';
+    list.forEach(function (it) {
+      const ck = part.from + '-' + part.to + '|' + it.key;
+      body += '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #262626;font-size:12px;color:' + (checks[ck] ? '#666' : '#ddd') + ';' + (checks[ck] ? 'text-decoration:line-through;' : '') + '">' +
+        '<input type="checkbox" ' + (checks[ck] ? 'checked' : '') + ' onchange="toggleShoppingItem(\'' + esc(ck).replace(/'/g, '&#39;') + '\')">' +
+        '<span style="flex:1;">' + esc(it.name) + '</span><span style="color:#aaa;white-space:nowrap;">' + esc(shoppingQtyText(it)) + '</span></label>';
+    });
+    body += '</div>';
+  });
+  const dayOpts = SHOP_WEEKDAYS.slice(0, 6).map(function (wd, i) {
+    return '<option value="' + i + '"' + (i === splitAfter ? ' selected' : '') + '>' + esc(shoppingPartLabel({ from: 0, to: i })) + ' / ' + esc(shoppingPartLabel({ from: i + 1, to: 6 })) + '</option>';
+  }).join('');
+  modal.innerHTML = '<div style="background:#181818;border:1px solid #333;border-radius:12px;padding:18px;max-width:460px;width:100%;max-height:100%;overflow-y:auto;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+    '<div style="font-size:15px;font-weight:800;color:#fff;">🛒 Lista della spesa</div>' +
+    '<button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="closeShoppingList()">✕</button></div>' +
+    '<div style="font-size:10px;color:#888;margin-top:4px;">Dal piano alimentare: le quantità della settimana sommate per alimento.</div>' +
+    (planWeek.cycled ? '<div style="font-size:10px;color:#c9a227;margin-top:4px;">Il piano non indica i giorni della settimana: i suoi giorni sono ripetuti in ordine da lunedì.</div>' : '') +
+    '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">' +
+    '<button class="btn ' + (parts.length === 1 ? 'btn-primary' : 'btn-outline') + '" style="font-size:10px;padding:6px 10px;" onclick="setShoppingSplit(\'week\')">Unica (Lun – Dom)</button>' +
+    '<button class="btn ' + (parts.length > 1 ? 'btn-primary' : 'btn-outline') + '" style="font-size:10px;padding:6px 10px;" onclick="setShoppingSplit(\'split\')">Divisa in due</button></div>' +
+    (parts.length > 1 ? '<select style="margin-top:8px;width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:11px;" onchange="setShoppingSplit(\'split\', this.value)">' + dayOpts + '</select>' : '') +
+    body +
+    '<div style="display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;">' +
+    '<button class="btn btn-primary" style="flex:1;font-size:11px;" onclick="shareShoppingList()">Condividi / copia</button>' +
+    '<button class="btn btn-outline" style="font-size:11px;" onclick="clearShoppingChecks()">Togli le spunte</button></div>' +
+    '</div>';
+  modal.style.display = 'flex';
+}
+function closeShoppingList() {
+  const m = document.getElementById('shopping-list-modal');
+  if (m) m.style.display = 'none';
+}
+function setShoppingSplit(mode, after) {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.shoppingSplit = mode === 'split' ? 'split' : 'week';
+  if (after != null) store.prefs.shoppingSplitAfter = Math.min(5, Math.max(0, parseInt(after, 10) || 0));
+  persist();
+  openShoppingList();
+}
+function toggleShoppingItem(key) {
+  if (!store.shoppingChecks) store.shoppingChecks = {};
+  if (store.shoppingChecks[key]) delete store.shoppingChecks[key];
+  else store.shoppingChecks[key] = 1;
+  persist();
+  openShoppingList();
+}
+function clearShoppingChecks() {
+  store.shoppingChecks = {};
+  persist();
+  openShoppingList();
+}
+function shoppingListText() {
+  const planWeek = shoppingPlanWeek((DATA && DATA.nutrition && DATA.nutrition.days) || []);
+  return shoppingParts().map(function (part) {
+    const lines = shoppingListFor(planWeek.week, part.from, part.to).map(function (it) {
+      const q = shoppingQtyText(it);
+      return '- ' + it.name + (q ? ' — ' + q : '');
+    });
+    return 'Spesa ' + shoppingPartLabel(part) + '\n' + (lines.join('\n') || '(niente)');
+  }).join('\n\n');
+}
+function shareShoppingList() {
+  const text = shoppingListText();
+  if (navigator.share) {
+    navigator.share({ title: 'Lista della spesa', text: text }).catch(function () {});
+    return;
+  }
+  try {
+    navigator.clipboard.writeText(text).then(function () {
+      if (typeof showToast === 'function') showToast('Lista copiata', 'ok');
+    });
+  } catch (_) { prompt('Copia la lista:', text); }
+}
+window.openShoppingList = openShoppingList;
+window.closeShoppingList = closeShoppingList;
+window.setShoppingSplit = setShoppingSplit;
+window.toggleShoppingItem = toggleShoppingItem;
+window.clearShoppingChecks = clearShoppingChecks;
+window.shareShoppingList = shareShoppingList;
 
 // Durable recovery UI for the nutrition backup snapshots taken automatically
 // (backupNutrition) right before anything ever replaces local nutrition with
