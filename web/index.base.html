@@ -15407,6 +15407,11 @@ function diaryWaterHtml(iso, readOnly) {
     (goal ? '<div style="height:5px;background:#1e1e1e;border-radius:3px;margin-top:8px;overflow:hidden;"><div style="height:100%;width:' + fill + '%;background:#4fc3f7;"></div></div>' : '') +
     '</div>';
 }
+// Food names are shown one way, all lower case, whatever the import or the
+// user wrote ("PETTO DI POLLO", "Petto Di Pollo"). The saved name is kept.
+function foodNameShown(name) {
+  return String(name == null ? '' : name).toLocaleLowerCase('it-IT').replace(/\s+/g, ' ').trim();
+}
 function nutritionSubsection() {
   if (window.__nutritionSub) return window.__nutritionSub;
   try { window.__nutritionSub = localStorage.getItem('nurvan.nutritionSub') === 'diary' ? 'diary' : 'plan'; } catch (_) { window.__nutritionSub = 'plan'; }
@@ -15661,7 +15666,7 @@ function renderNutritionDiary(c) {
       const planned = plannedFoodsFromDay(planDay);
       const sums = nutritionDaySums(planDay);
       html += '<div style="font-size:11px;color:#aaa;margin-bottom:6px;">Dieta prevista · ' + esc(planDay.day || '') + ' · ' + Math.round(sums.kcal) + (sums.partial ? '*' : '') + ' kcal</div>' +
-        planned.slice(0, 10).map(function (f) { return '<div style="font-size:11px;color:#888;">• ' + esc(f.meal) + ': ' + esc(f.name) + '</div>'; }).join('') +
+        planned.slice(0, 10).map(function (f) { return '<div style="font-size:11px;color:#888;">• ' + esc(f.meal) + ': ' + esc(foodNameShown(f.name)) + '</div>'; }).join('') +
         (planned.length > 10 ? '<div style="font-size:11px;color:#666;">… e altri ' + (planned.length - 10) + '</div>' : '');
     }
     if (!readOnly) {
@@ -15684,7 +15689,7 @@ function renderNutritionDiary(c) {
         '<span class="macro-badge macro-kcal">' + Math.round(ms.kcal) + (ms.partial ? '*' : '') + ' kcal</span></div>' +
         (m.foods || []).map(function (f, fi) {
           return '<div style="display:flex;justify-content:space-between;align-items:center;background:#121212;padding:7px 10px;border-radius:6px;font-size:12px;margin-bottom:5px;gap:8px;">' +
-            '<div style="flex:1;min-width:0;"><span style="font-weight:700;color:#eee;">' + esc(f.name || 'Alimento') + '</span>' +
+            '<div style="flex:1;min-width:0;"><span style="font-weight:700;color:#eee;">' + esc(foodNameShown(f.name) || 'alimento') + '</span>' +
             '<span style="color:var(--gold);font-weight:800;margin-left:6px;">' + (f.qb ? 'q.b.' : esc(String(f.quantity != null ? f.quantity : '') + ' ' + (f.unit || 'g'))) + '</span></div>' +
             '<span style="font-size:10px;color:#aaa;white-space:nowrap;">' + nutritionFoodKcalText(f) + ' kcal</span>' +
             (readOnly ? '' : '<button class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:var(--gold);border-color:#333;" onclick="diaryEditFood(\'' + sel + '\',' + mi + ',' + fi + ')">✎</button>' +
@@ -15919,7 +15924,7 @@ function renderNutritionPlanView(c) {
                 <div style="display:flex;justify-content:space-between;align-items:center;background:#121212;padding:8px 10px;border-radius:6px;font-size:12px;">
                   <div style="flex:1;min-width:0;">
                     ${f.course && (fIdx === 0 || (m.foods[fIdx - 1] || {}).course !== f.course) ? `<div style="font-size:9px;color:#888;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:2px;">${esc(f.course)}</div>` : ''}
-                    <span style="font-weight:700;color:#eee;">${safeDisplayValue(f.name, 'Alimento')}</span>
+                    <span style="font-weight:700;color:#eee;">${esc(foodNameShown(f.name) || 'alimento')}</span>
                     <span style="color:var(--gold);font-weight:800;margin-left:6px;">${f.qb ? 'q.b.' : (safeDisplayValue(f.quantity, '') + ' ' + safeDisplayValue(f.unit, 'g'))}</span>
                     ${f.__swappedToday ? '<span style="font-size:9px;color:#4caf50;font-weight:800;margin-left:6px;">solo oggi</span>' : ''}
                     ${f.recipeId && nutritionRecipeById(f.recipeId) ? `<span style="font-size:10px;color:var(--gold);margin-left:6px;cursor:pointer;" onclick="openRecipe('${esc(f.recipeId)}')">📖 ricetta</span>` : ''}
@@ -26002,10 +26007,10 @@ function shoppingListFor(week, from, to, recipes) {
         const hasQty = rawQty != null && rawQty !== '' && isFinite(q) && q > 0;
         const u = hasQty ? selectableFoodUnit(q, f.unit || 'g') : { qty: 0, unit: '' };
         const key = shopFold(name) + '|' + u.unit;
-        // One way of writing for every row: "PETTO DI POLLO" and "petto di
-        // pollo" both become "Petto di pollo".
+        // One way of writing for every row: "PETTO DI POLLO" and "Petto di
+        // pollo" both become "petto di pollo".
         const shown = name.toLocaleLowerCase('it-IT').replace(/\s+/g, ' ');
-        if (!items[key]) items[key] = { key: key, name: shown.charAt(0).toLocaleUpperCase('it-IT') + shown.slice(1), unit: u.unit, qty: 0, times: 0 };
+        if (!items[key]) items[key] = { key: key, name: shown, unit: u.unit, qty: 0, times: 0 };
         items[key].qty += u.qty;
         items[key].times += 1;
       });
@@ -26500,7 +26505,7 @@ function openFoodSwap(dayIdx, mealIdx, foodIdx) {
     const isPlan = !sw.generated && i === chosen;
     const isToday = swapToday && String(swapToday.name) === String(o.name) && String(swapToday.quantity) === String(o.quantity);
     return '<div style="padding:8px 0;border-bottom:1px solid #262626;">' +
-      '<div style="font-size:12px;color:#eee;font-weight:700;">' + esc(nutritionOptionText(o)) +
+      '<div style="font-size:12px;color:#eee;font-weight:700;">' + esc(foodNameShown(nutritionOptionText(o))) +
       (isPlan ? ' <span style="font-size:9px;color:var(--gold);">· nel piano</span>' : '') +
       (isToday ? ' <span style="font-size:9px;color:#4caf50;">· oggi</span>' : '') +
       (o.generated ? ' <span style="font-size:9px;color:#888;">· proposta (stesse kcal)</span>' : '') +

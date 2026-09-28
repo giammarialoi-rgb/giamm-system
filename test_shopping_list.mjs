@@ -37,17 +37,18 @@ ctx.days = [
 run('var pw = shoppingPlanWeek(days)');
 ok('1a. giorni del piano per nome, il diario escluso', run('pw.week[0].day') === 'Lunedì' && run('pw.week[2]') === null && run('pw.cycled') === false);
 const all = run('shoppingListFor(pw.week, 0, 6)');
-const riso = all.find((i) => i.name === 'Riso');
+const riso = all.find((i) => i.name === 'riso');
 ok('1b. riso in g e in kg sommati: 1,1 kg', riso && run('shoppingQtyText(' + JSON.stringify(riso) + ')') === '1,1 kg');
 ok('1c. la pizza del diario non c\'e\'', !all.some((i) => /pizza/i.test(i.name)));
-const mela = all.find((i) => i.name === 'Mela');
+const mela = all.find((i) => i.name === 'mela');
 ok('1d. senza quantita\': quante volte', mela && run('shoppingQtyText(' + JSON.stringify(mela) + ')') === '× 2');
-ok('1e. uova in pezzi', run('shoppingQtyText(' + JSON.stringify(all.find((i) => i.name === 'Uova')) + ')') === '2 pezzi');
+ok('1f. nomi tutti minuscoli', all.every((i) => i.name === i.name.toLocaleLowerCase('it-IT')));
+ok('1e. uova in pezzi', run('shoppingQtyText(' + JSON.stringify(all.find((i) => i.name === 'uova')) + ')') === '2 pezzi');
 
 ctx.store.prefs = { shoppingSplit: 'split' };
 const parts = run('shoppingParts()');
 ok('2a. divisa in due: di default Lun–Mer e Gio–Dom', parts.length === 2 && parts[0].to === 2 && parts[1].from === 3 && run('shoppingPartLabel(shoppingParts()[1])') === 'Giovedì – Domenica');
-ok('2b. prima parte: 200 g di riso; seconda: 900 g', run('shoppingQtyText(shoppingListFor(pw.week, 0, 2).find(i => i.name === "Riso"))') === '200 g' && run('shoppingQtyText(shoppingListFor(pw.week, 3, 6)[1] || shoppingListFor(pw.week, 3, 6)[0])') !== '');
+ok('2b. prima parte: 200 g di riso; seconda: 900 g', run('shoppingQtyText(shoppingListFor(pw.week, 0, 2).find(i => i.name === "riso"))') === '200 g' && run('shoppingQtyText(shoppingListFor(pw.week, 3, 6)[1] || shoppingListFor(pw.week, 3, 6)[0])') !== '');
 ctx.store.prefs = { shoppingSplit: 'split', shoppingSplitAfter: 3 };
 ok('2c. divisione scelta: Lun–Gio e Ven–Dom', run('shoppingParts()[0].to') === 3 && run('shoppingParts()[1].from') === 4);
 ctx.store.prefs = {};
@@ -55,7 +56,7 @@ ok('2d. senza scelta: unica, lunedi\'–domenica', run('shoppingParts().length')
 
 ctx.days = [{ day: 'Giorno ON', meals: meals([{ name: 'Pasta', qty: 80, unit: 'g' }]) }, { day: 'Giorno OFF', meals: meals([{ name: 'Pane', qty: 50, unit: 'g' }]) }];
 run('pw = shoppingPlanWeek(days)');
-ok('3a. piano senza giorni della settimana: ripetuto in ordine, e lo dice', run('pw.cycled') === true && run('shoppingQtyText(shoppingListFor(pw.week, 0, 6).find(i => i.name === "Pasta"))') === '320 g');
+ok('3a. piano senza giorni della settimana: ripetuto in ordine, e lo dice', run('pw.cycled') === true && run('shoppingQtyText(shoppingListFor(pw.week, 0, 6).find(i => i.name === "pasta"))') === '320 g');
 ok('4a. il pulsante sta nell\'alimentazione', /onclick="openShoppingList\(\)">🛒 Lista della spesa/.test(SRC));
 
 console.log('');
