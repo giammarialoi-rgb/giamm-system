@@ -44,8 +44,9 @@ for (const src of sources) {
   const saveBody = src.slice(saveStart, src.indexOf('\nfunction ', saveStart + 10));
   ok(saveBody.includes('kcalPer100') && saveBody.includes('proPer100') && saveBody.includes('carbPer100') && saveBody.includes('fatPer100'),
     '3a. saveFoodItem computes and persists per-100g rates on every saved food');
-  const editStart = src.indexOf('function editFoodItem(dayIdx, mealIdx, foodIdx)');
-  const editBody = src.slice(editStart, src.indexOf('\nwindow.editFoodItem', editStart));
+  // The modal is filled by prefillFoodModal, shared by the plan and the diary.
+  const editStart = src.indexOf('function prefillFoodModal(food)');
+  const editBody = src.slice(editStart, src.indexOf('\n}\n', editStart));
   ok(editBody.includes('food.kcalPer100') && editBody.includes('foodQtyToGrams(qty, unit, food.name)'),
     '3b. editFoodItem falls back to deriving a per-100g rate for items saved before this field existed');
 }

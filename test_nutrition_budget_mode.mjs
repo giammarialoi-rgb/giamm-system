@@ -98,7 +98,7 @@ for (const src of [html, built]) {
   const fnBody = src.slice(fnStart, src.indexOf('\nfunction nutritionConfirmStatus', fnStart));
   ok(fnBody.includes("DATA.nutrition.mode !== 'budget'"), '7b. it only acts on budget-mode plans, never touching a normal prescribed plan');
   ok(fnBody.includes('meals: [{ name: \'Pasti liberi\', foods: [] }]'), '7c. the auto-created day starts with an empty free-logging meal, no fabricated foods');
-  const renderStart = src.indexOf('function renderNutrition(c)');
+  const renderStart = src.indexOf('function renderNutritionPlanView(c)');
   const renderBody = src.slice(renderStart, renderStart + 3000);
   ok(renderBody.includes('ensureBudgetNutritionToday()'), '7d. renderNutrition actually calls it, so a budget plan is never stuck on the generic empty-state screen');
 }

@@ -76,7 +76,7 @@ console.log('--- 2. modifica alimento e unita\' ---');
   ok('2e. kcal o macro scritte sopra quelle del catalogo prevalgono (i valori per 100 g si ricavano da quelle)',
     /const typedOver = !!ref && \(/.test(save) && /const fromRef = !!ref && !typedOver;/.test(save) && /const kcalPer100 = fromRef && ref\.kcal != null \? ref\.kcal : Math\.round\(kcal \* ratio100 \* 10\) \/ 10;/.test(save));
   ok('2f. e l\'alimento non dichiara piu\' la fonte del catalogo', /provenance: foodProvenanceFor\(typedOver \? null : activeSelectedFoodRef\)/.test(save));
-  const edit = grab(SRC, 'editFoodItem');
+  const edit = grab(SRC, 'prefillFoodModal');
   ok('2g. in modifica i macro si leggono con tutti i nomi (vecchie foto)', /\$\('food-fat-input'\)\.value = foodMacroVal\(food, 'fat'\) \|\| 0;/.test(edit) && /selectableFoodUnit\(rawQty, food\.unit \|\| 'g'\)/.test(edit));
 }
 

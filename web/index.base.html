@@ -15330,7 +15330,295 @@ function mealPhotoCaptureCardHtml(activeDay) {
     '</div>';
 }
 
+/*
+ * Nutrition has two parts: the plan (what is prescribed, every tool it had)
+ * and the diary (what was eaten, date by date, on a month calendar). The
+ * diary lives in store.nutritionDaily[date].diary - the per-date container
+ * that is already synced key by key - so it never touches the plan.
+ */
+function nutritionSubsection() {
+  if (window.__nutritionSub) return window.__nutritionSub;
+  try { window.__nutritionSub = localStorage.getItem('nurvan.nutritionSub') === 'diary' ? 'diary' : 'plan'; } catch (_) { window.__nutritionSub = 'plan'; }
+  return window.__nutritionSub;
+}
+function setNutritionSubsection(sub) {
+  window.__nutritionSub = sub === 'diary' ? 'diary' : 'plan';
+  try { localStorage.setItem('nurvan.nutritionSub', window.__nutritionSub); } catch (_) {}
+  render();
+}
+window.setNutritionSubsection = setNutritionSubsection;
+function nutritionSubTabsHtml() {
+  const sub = nutritionSubsection();
+  const tab = function (id, label) {
+    const on = sub === id;
+    return '<button type="button" onclick="setNutritionSubsection(\'' + id + '\')" style="flex:1;padding:9px 8px;border-radius:8px;border:1px solid ' + (on ? 'var(--gold)' : '#333') + ';background:' + (on ? 'var(--gold)' : '#111') + ';color:' + (on ? '#0a0a0a' : '#ccc') + ';font-size:12px;font-weight:800;cursor:pointer;">' + label + '</button>';
+  };
+  return '<div class="nutrition-subtabs" style="display:flex;gap:8px;margin-bottom:12px;">' + tab('plan', 'Piano alimentare') + tab('diary', 'Diario alimentare') + '</div>';
+}
 function renderNutrition(c) {
+  if (nutritionSubsection() === 'diary') {
+    if (!DATA.nutrition && store && store.nutrition) DATA.nutrition = store.nutrition;
+    renderNutritionDiary(c);
+  } else {
+    renderNutritionPlanView(c);
+  }
+  c.insertAdjacentHTML('afterbegin', nutritionSubTabsHtml());
+}
+
+// ---- Diary ----
+const DIARY_MONTHS = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+const DIARY_MEALS = ['Colazione', 'Spuntino', 'Pranzo', 'Merenda', 'Cena'];
+function diaryIso(y, m, d) {
+  return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
+function diarySelectedDate() {
+  if (!window.__diaryDate) window.__diaryDate = nutritionTodayKey();
+  return window.__diaryDate;
+}
+function diaryMonth() {
+  if (!window.__diaryMonth) window.__diaryMonth = diarySelectedDate().slice(0, 7);
+  return window.__diaryMonth;
+}
+function diaryEntry(iso) {
+  const e = store && store.nutritionDaily && store.nutritionDaily[iso];
+  return e && e.diary && Array.isArray(e.diary.meals) ? e.diary : null;
+}
+function diaryFoodsOf(diary) {
+  let all = [];
+  ((diary && diary.meals) || []).forEach(function (m) { all = all.concat((m && m.foods) || []); });
+  return all;
+}
+// The plan's day for a date: the same weekday, else the only day it has.
+function diaryPlanDay(iso) {
+  const days = (DATA && DATA.nutrition && DATA.nutrition.days) || [];
+  let day = nutritionPlanDayFor({ date: iso }, days);
+  if (!day) {
+    const undated = days.filter(function (d) { return d && !d.date && (d.meals || []).some(function (m) { return (m.foods || []).length; }); });
+    if (undated.length === 1) day = undated[0];
+  }
+  if (day && iso === nutritionTodayKey()) day = nutritionDayForDisplay(day);
+  return day || null;
+}
+function diaryTargetKcal(iso) {
+  try { return currentNutritionTarget(diaryPlanDay(iso) || {}).kcal || 0; } catch (_) { return 0; }
+}
+function writeDiary(iso, diary) {
+  if (!store.nutritionDaily) store.nutritionDaily = {};
+  const rec = Object.assign({}, store.nutritionDaily[iso]);
+  if (diary) rec.diary = Object.assign({}, diary, { at: new Date().toISOString() });
+  else delete rec.diary;
+  if (Object.keys(rec).length) store.nutritionDaily[iso] = rec;
+  else delete store.nutritionDaily[iso];
+  persist();
+  try {
+    if (store.accountToken && typeof uploadAccountDataFast === 'function') uploadAccountDataFast().catch(function () {});
+  } catch (_) {}
+}
+function diaryCopyFood(f) {
+  const out = JSON.parse(JSON.stringify(f || {}));
+  ['alternatives', 'choice', 'id', '__swappedToday', 'recipeId'].forEach(function (k) { delete out[k]; });
+  return out;
+}
+function diaryMonthStep(delta) {
+  const p = diaryMonth().split('-');
+  const d = new Date(Number(p[0]), Number(p[1]) - 1 + delta, 1);
+  window.__diaryMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  render();
+}
+window.diaryMonthStep = diaryMonthStep;
+function diaryPickDate(iso) {
+  window.__diaryDate = iso;
+  window.__diaryMonth = iso.slice(0, 7);
+  render();
+}
+window.diaryPickDate = diaryPickDate;
+function diaryToday() { diaryPickDate(nutritionTodayKey()); }
+window.diaryToday = diaryToday;
+// Swipe left / right on the calendar changes month.
+function diaryCalTouch(ev, end) {
+  const t = (ev.changedTouches && ev.changedTouches[0]) || null;
+  if (!t) return;
+  if (!end) { window.__diaryTouch = { x: t.clientX, y: t.clientY }; return; }
+  const s = window.__diaryTouch;
+  window.__diaryTouch = null;
+  if (!s) return;
+  const dx = t.clientX - s.x, dy = t.clientY - s.y;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) diaryMonthStep(dx < 0 ? 1 : -1);
+}
+window.diaryCalTouch = diaryCalTouch;
+function diaryUsePlan(iso) {
+  const day = diaryPlanDay(iso);
+  if (!day) return;
+  const had = diaryEntry(iso);
+  if (had && diaryFoodsOf(had).length && !confirm('Sostituire quello che hai segnato con la dieta prevista?')) return;
+  writeDiary(iso, {
+    source: 'plan',
+    planDay: day.day || '',
+    meals: (day.meals || []).map(function (m) {
+      return { name: m.name || 'Pasto', foods: ((m.foods || m.items) || []).map(diaryCopyFood) };
+    })
+  });
+  if (typeof showToast === 'function') showToast('Dieta prevista segnata: puoi modificarla', 'ok');
+  render();
+}
+window.diaryUsePlan = diaryUsePlan;
+function diaryStartEmpty(iso) {
+  writeDiary(iso, { source: 'manual', meals: DIARY_MEALS.map(function (n) { return { name: n, foods: [] }; }) });
+  render();
+}
+window.diaryStartEmpty = diaryStartEmpty;
+function diaryClear(iso) {
+  if (!confirm('Cancellare il diario di questo giorno?')) return;
+  writeDiary(iso, null);
+  render();
+}
+window.diaryClear = diaryClear;
+function diaryAddMeal(iso) {
+  const d = diaryEntry(iso);
+  if (!d) return;
+  const name = prompt('Nome del pasto:', 'Spuntino');
+  if (name == null || !String(name).trim()) return;
+  const meals = d.meals.slice();
+  meals.push({ name: String(name).trim(), foods: [] });
+  writeDiary(iso, Object.assign({}, d, { meals: meals }));
+  render();
+}
+window.diaryAddMeal = diaryAddMeal;
+function diaryAddFood(iso, mealIdx) {
+  openAddFoodModal(-1, -1);
+  window.__diaryFoodTarget = { iso: iso, mealIdx: mealIdx, foodIdx: null };
+}
+window.diaryAddFood = diaryAddFood;
+function diaryEditFood(iso, mealIdx, foodIdx) {
+  const d = diaryEntry(iso);
+  const food = d && d.meals[mealIdx] && (d.meals[mealIdx].foods || [])[foodIdx];
+  if (!food) return;
+  openAddFoodModal(-1, -1);
+  window.__diaryFoodTarget = { iso: iso, mealIdx: mealIdx, foodIdx: foodIdx };
+  prefillFoodModal(food);
+}
+window.diaryEditFood = diaryEditFood;
+function diaryDeleteFood(iso, mealIdx, foodIdx) {
+  const d = diaryEntry(iso);
+  if (!d || !d.meals[mealIdx]) return;
+  const meals = d.meals.map(function (m, i) {
+    return i === mealIdx ? Object.assign({}, m, { foods: (m.foods || []).filter(function (_, j) { return j !== foodIdx; }) }) : m;
+  });
+  writeDiary(iso, Object.assign({}, d, { meals: meals }));
+  render();
+}
+window.diaryDeleteFood = diaryDeleteFood;
+function saveDiaryFood(target, foodObj) {
+  const d = diaryEntry(target.iso) || { source: 'manual', meals: DIARY_MEALS.map(function (n) { return { name: n, foods: [] }; }) };
+  const meals = d.meals.map(function (m) { return Object.assign({}, m, { foods: (m.foods || []).slice() }); });
+  const meal = meals[target.mealIdx] || meals[0];
+  if (!meal) return;
+  if (target.foodIdx != null && meal.foods[target.foodIdx]) meal.foods[target.foodIdx] = foodObj;
+  else meal.foods.push(foodObj);
+  writeDiary(target.iso, Object.assign({}, d, { meals: meals, source: d.source === 'plan' ? 'plan_edited' : d.source }));
+}
+function renderNutritionDiary(c) {
+  const today = nutritionTodayKey();
+  const sel = diarySelectedDate();
+  const mp = diaryMonth().split('-');
+  const y = Number(mp[0]), mo = Number(mp[1]) - 1;
+  const first = new Date(y, mo, 1);
+  const lead = (first.getDay() + 6) % 7;
+  const nDays = new Date(y, mo + 1, 0).getDate();
+  const readOnly = !!(store && store.coachViewingClient);
+  let cells = '';
+  for (let i = 0; i < lead; i++) cells += '<div></div>';
+  let monthKcal = 0, monthDays = 0;
+  for (let d = 1; d <= nDays; d++) {
+    const iso = diaryIso(y, mo, d);
+    const diary = diaryEntry(iso);
+    const foods = diaryFoodsOf(diary);
+    const sums = foods.length ? nutritionSums(foods) : null;
+    const target = sums ? diaryTargetKcal(iso) : 0;
+    let tone = '#8a8a8a';
+    if (sums && target) tone = Math.abs(sums.kcal - target) <= target * 0.1 ? '#4caf50' : '#e0a030';
+    if (sums) { monthKcal += sums.kcal; monthDays++; }
+    const isSel = iso === sel, isToday = iso === today;
+    cells += '<button type="button" onclick="diaryPickDate(\'' + iso + '\')" style="min-height:48px;padding:4px 2px;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;' +
+      'background:' + (isSel ? '#2a2412' : (sums ? '#141414' : '#0e0e0e')) + ';border:1px solid ' + (isSel ? 'var(--gold)' : (isToday ? '#777' : '#222')) + ';color:' + (iso > today ? '#666' : '#ddd') + ';">' +
+      '<span style="font-size:12px;font-weight:' + (isToday ? '900' : '700') + ';">' + d + '</span>' +
+      (sums ? '<span style="font-size:9px;font-weight:800;color:' + tone + ';white-space:nowrap;">' + Math.round(sums.kcal) + (sums.partial ? '*' : '') + '</span>' : '') +
+      '</button>';
+  }
+  const heads = ['L', 'M', 'M', 'G', 'V', 'S', 'D'].map(function (h) { return '<div style="font-size:10px;color:#777;text-align:center;font-weight:800;">' + h + '</div>'; }).join('');
+  let html = '<div class="card" id="nutrition-diary-calendar" style="padding:12px;margin-bottom:12px;touch-action:pan-y;" ontouchstart="diaryCalTouch(event,0)" ontouchend="diaryCalTouch(event,1)">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">' +
+    '<button type="button" class="btn btn-outline" style="padding:4px 12px;font-size:14px;" onclick="diaryMonthStep(-1)" aria-label="Mese precedente">‹</button>' +
+    '<div style="text-align:center;"><div style="font-size:14px;font-weight:900;color:#fff;">' + DIARY_MONTHS[mo] + ' ' + y + '</div>' +
+    (monthDays ? '<div style="font-size:10px;color:#888;">' + monthDays + ' giorn' + (monthDays === 1 ? 'o' : 'i') + ' segnat' + (monthDays === 1 ? 'o' : 'i') + ' · media ' + nutritionNumber(monthKcal / monthDays) + ' kcal</div>' : '') + '</div>' +
+    '<button type="button" class="btn btn-outline" style="padding:4px 12px;font-size:14px;" onclick="diaryMonthStep(1)" aria-label="Mese successivo">›</button></div>' +
+    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">' + heads + cells + '</div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px;flex-wrap:wrap;">' +
+    '<div style="font-size:9px;color:#777;">kcal del giorno · <span style="color:#4caf50;">entro il 10% del target</span> · <span style="color:#e0a030;">fuori</span></div>' +
+    (sel !== today || diaryMonth() !== today.slice(0, 7) ? '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 10px;" onclick="diaryToday()">Oggi</button>' : '') +
+    '</div></div>';
+
+  // The chosen date.
+  const sp = sel.split('-');
+  const selDate = new Date(Number(sp[0]), Number(sp[1]) - 1, Number(sp[2]));
+  const title = weekdayNameForDate(sel) + ' ' + selDate.getDate() + ' ' + DIARY_MONTHS[selDate.getMonth()].toLowerCase() + (sel === today ? ' · oggi' : '');
+  const diary = diaryEntry(sel);
+  const planDay = diaryPlanDay(sel);
+  html += '<div style="font-size:13px;font-weight:900;color:#fff;margin:4px 0 10px;">' + esc(title) + '</div>';
+  if (!diary) {
+    const legacy = store && store.nutritionDaily && store.nutritionDaily[sel];
+    html += '<div class="card" style="padding:14px;">' +
+      '<div style="font-size:12px;color:#ccc;margin-bottom:10px;">Niente segnato per questo giorno.' + (legacy && legacy.confirmed === true ? ' Avevi confermato i pasti del piano.' : '') + '</div>';
+    if (planDay) {
+      const planned = plannedFoodsFromDay(planDay);
+      const sums = nutritionDaySums(planDay);
+      html += '<div style="font-size:11px;color:#aaa;margin-bottom:6px;">Dieta prevista · ' + esc(planDay.day || '') + ' · ' + Math.round(sums.kcal) + (sums.partial ? '*' : '') + ' kcal</div>' +
+        planned.slice(0, 10).map(function (f) { return '<div style="font-size:11px;color:#888;">• ' + esc(f.meal) + ': ' + esc(f.name) + '</div>'; }).join('') +
+        (planned.length > 10 ? '<div style="font-size:11px;color:#666;">… e altri ' + (planned.length - 10) + '</div>' : '');
+    }
+    if (!readOnly) {
+      html += '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">' +
+        (planDay ? '<button type="button" class="btn btn-primary" style="flex:1;font-size:11px;" onclick="diaryUsePlan(\'' + sel + '\')">Conferma la dieta prevista</button>' : '') +
+        '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;" onclick="diaryStartEmpty(\'' + sel + '\')">Segna da zero</button></div>';
+    }
+    html += '</div>';
+  } else {
+    const totals = nutritionSums(diaryFoodsOf(diary));
+    const target = currentNutritionTarget(planDay || {});
+    const cmp = planDay ? nutritionDaySums(planDay) : (target.source ? target : null);
+    const srcLabel = diary.source === 'plan' ? 'Dieta prevista confermata' : (diary.source === 'plan_edited' ? 'Dieta prevista, modificata' : 'Segnato da te');
+    html += '<div style="font-size:10px;color:#888;margin:-6px 0 10px;">' + srcLabel + '</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:12px;">' + diary.meals.map(function (m, mi) {
+      const ms = nutritionSums(m.foods || []);
+      return '<div class="card" style="padding:12px;margin-bottom:0;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+        '<span style="font-size:13px;font-weight:900;color:#fff;">' + esc(m.name || 'Pasto') + '</span>' +
+        '<span class="macro-badge macro-kcal">' + Math.round(ms.kcal) + (ms.partial ? '*' : '') + ' kcal</span></div>' +
+        (m.foods || []).map(function (f, fi) {
+          return '<div style="display:flex;justify-content:space-between;align-items:center;background:#121212;padding:7px 10px;border-radius:6px;font-size:12px;margin-bottom:5px;gap:8px;">' +
+            '<div style="flex:1;min-width:0;"><span style="font-weight:700;color:#eee;">' + esc(f.name || 'Alimento') + '</span>' +
+            '<span style="color:var(--gold);font-weight:800;margin-left:6px;">' + (f.qb ? 'q.b.' : esc(String(f.quantity != null ? f.quantity : '') + ' ' + (f.unit || 'g'))) + '</span></div>' +
+            '<span style="font-size:10px;color:#aaa;white-space:nowrap;">' + nutritionFoodKcalText(f) + ' kcal</span>' +
+            (readOnly ? '' : '<button class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:var(--gold);border-color:#333;" onclick="diaryEditFood(\'' + sel + '\',' + mi + ',' + fi + ')">✎</button>' +
+            '<button class="btn btn-outline" style="padding:2px 6px;font-size:10px;color:var(--accent-red);border-color:#333;" onclick="diaryDeleteFood(\'' + sel + '\',' + mi + ',' + fi + ')">✕</button>') +
+            '</div>';
+        }).join('') +
+        (readOnly ? '' : '<button class="btn btn-outline" style="width:100%;font-size:11px;padding:6px;border-style:dashed;margin-top:4px;" onclick="diaryAddFood(\'' + sel + '\',' + mi + ')">+ Alimento</button>') +
+        '</div>';
+    }).join('') + '</div>';
+    if (!readOnly) {
+      html += '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">' +
+        '<button class="btn btn-outline" style="flex:1;font-size:11px;" onclick="diaryAddMeal(\'' + sel + '\')">+ Pasto</button>' +
+        (planDay ? '<button class="btn btn-outline" style="flex:1;font-size:11px;" onclick="diaryUsePlan(\'' + sel + '\')">Usa la dieta prevista</button>' : '') +
+        '<button class="btn btn-outline" style="flex:1;font-size:11px;color:var(--accent-red);" onclick="diaryClear(\'' + sel + '\')">Cancella giorno</button></div>';
+    }
+    html += nutritionSummaryHtml(totals, cmp, planDay ? 'Confronto con la dieta prevista (' + (planDay.day || '') + ')' : (target.source ? 'Confronto con il target' : ''));
+  }
+  html += '<div style="font-size:9px;color:#666;line-height:1.4;margin:12px 0 8px;padding:8px;border:1px solid #222;border-radius:6px;">' + ((typeof NUTRITION_DISCLAIMER !== 'undefined') ? NUTRITION_DISCLAIMER : 'Informazioni nutrizionali a scopo informativo, non consulenza medica.') + '</div>';
+  c.innerHTML = html;
+}
+
+function renderNutritionPlanView(c) {
   // Never invent a fake Monday meal plan
   if (!DATA.nutrition && store && store.nutrition) DATA.nutrition = store.nutrition;
   if (!DATA.nutrition) {
@@ -15593,6 +15881,7 @@ function openAddFoodModal(dayIdx, mealIdx) {
   $('food-note-input').value = '';
   activeSelectedFoodRef = null;
   window.__foodEditTarget = null;
+  window.__diaryFoodTarget = null;
   const titleEl = $('add-food-modal-title');
   if (titleEl) titleEl.textContent = 'AGGIUNGI ALIMENTO';
   const saveBtn = $('add-food-modal-save-btn');
@@ -15622,6 +15911,11 @@ function editFoodItem(dayIdx, mealIdx, foodIdx) {
   if (!food) return;
   openAddFoodModal(dayIdx, mealIdx);
   window.__foodEditTarget = { dayIdx: dayIdx, mealIdx: mealIdx, foodIdx: foodIdx };
+  prefillFoodModal(food);
+}
+window.editFoodItem = editFoodItem;
+// The modal filled with a food already saved (plan or diary).
+function prefillFoodModal(food) {
   const rawQty = food.quantity != null ? food.quantity : (food.qty != null ? food.qty : 100);
   const shown = selectableFoodUnit(rawQty, food.unit || 'g');
   const qty = shown.qty;
@@ -15661,7 +15955,6 @@ function editFoodItem(dayIdx, mealIdx, foodIdx) {
   const saveBtn = $('add-food-modal-save-btn');
   if (saveBtn) saveBtn.textContent = 'SALVA MODIFICHE';
 }
-window.editFoodItem = editFoodItem;
 
 function closeAddFoodModal() {
   $('add-food-modal').style.display = 'none';
@@ -16066,6 +16359,17 @@ function saveFoodItem() {
     } else {
       DATA.nutrition.customFoods.push(customEntry);
     }
+  }
+
+  // A food of the diary: it goes to that date, the plan is not touched.
+  const diaryTarget = window.__diaryFoodTarget;
+  if (diaryTarget) {
+    window.__diaryFoodTarget = null;
+    saveDiaryFood(diaryTarget, foodObj);
+    closeAddFoodModal();
+    render();
+    if (typeof showToast === 'function') showToast(diaryTarget.foodIdx != null ? 'Alimento aggiornato' : 'Alimento aggiunto', 'ok');
+    return;
   }
 
   const editTarget = window.__foodEditTarget;
@@ -25607,7 +25911,10 @@ function shoppingListFor(week, from, to, recipes) {
         const hasQty = rawQty != null && rawQty !== '' && isFinite(q) && q > 0;
         const u = hasQty ? selectableFoodUnit(q, f.unit || 'g') : { qty: 0, unit: '' };
         const key = shopFold(name) + '|' + u.unit;
-        if (!items[key]) items[key] = { key: key, name: name, unit: u.unit, qty: 0, times: 0 };
+        // One way of writing for every row: "PETTO DI POLLO" and "petto di
+        // pollo" both become "Petto di pollo".
+        const shown = name.toLocaleLowerCase('it-IT').replace(/\s+/g, ' ');
+        if (!items[key]) items[key] = { key: key, name: shown.charAt(0).toLocaleUpperCase('it-IT') + shown.slice(1), unit: u.unit, qty: 0, times: 0 };
         items[key].qty += u.qty;
         items[key].times += 1;
       });
