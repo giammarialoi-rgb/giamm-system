@@ -14709,6 +14709,7 @@ function renderCurrentView() {
   else if (currentView === 'progress') renderProgressCenter(c);
   else if (currentView === 'knowledge') renderTrainingKnowledge(c);
   else renderHome(c);
+  if (currentView !== 'nutrition') window.__nutritionLastView = currentView;
   applyChromeI18n();
   try {
     if (typeof isClientTutorialVisible === 'function' && isClientTutorialVisible() && typeof drawClientTutorial === 'function') {
@@ -15336,6 +15337,76 @@ function mealPhotoCaptureCardHtml(activeDay) {
  * diary lives in store.nutritionDaily[date].diary - the per-date container
  * that is already synced key by key - so it never touches the plan.
  */
+// ---- Water ----
+// Daily litres belong to nutrition. A plan or a protocol that wrote them as a
+// supplement ("Acqua 2,5 L") is read from there; one set here wins.
+function isWaterSupplement(it) {
+  return !!it && /^\s*acqua\b/i.test(String(it.name || '')) && !/\b(ossigenat|micellar|tonica)/i.test(String(it.name || ''));
+}
+function waterLitresOf(text, unit) {
+  const nums = String(text || '').replace(/,/g, '.').match(/\d+(?:\.\d+)?/g);
+  if (!nums) return null;
+  const u = String(unit || text || '').toLowerCase();
+  const k = /\bml\b/.test(u) ? 0.001 : (/\bcl\b/.test(u) ? 0.01 : 1);
+  const vals = nums.map(function (n) { const v = Number(n) * k; return v > 20 ? v / 1000 : v; }).filter(function (v) { return v > 0 && v <= 10; });
+  if (!vals.length) return null;
+  return { min: Math.min.apply(null, vals), max: Math.max.apply(null, vals) };
+}
+function nutritionWaterTarget() {
+  const n = DATA && DATA.nutrition;
+  if (n && Number(n.water_liters) > 0) return { min: Number(n.water_liters), max: Number(n.water_liters), from: 'nutrition' };
+  const items = (DATA && DATA.supplementation && DATA.supplementation.items) || [];
+  const w = items.find(isWaterSupplement);
+  const r = w ? waterLitresOf(String(w.dose || '') + ' ' + String(w.unit || ''), w.unit) : null;
+  return r ? Object.assign(r, { from: 'supplement' }) : null;
+}
+function litresText(v) { return (Math.round(v * 100) / 100).toString().replace('.', ','); }
+function waterTargetText(t) { return t ? (t.min === t.max ? litresText(t.min) : litresText(t.min) + '–' + litresText(t.max)) + ' L' : ''; }
+function editWaterTarget() {
+  const t = nutritionWaterTarget();
+  const v = prompt('Litri di acqua al giorno (vuoto per toglierli):', t ? litresText(t.min === t.max ? t.min : t.max) : '');
+  if (v == null) return;
+  const r = waterLitresOf(v, 'l');
+  if (String(v).trim() && !r) { if (typeof showToast === 'function') showToast('Scrivi i litri, es. 2,5', 'error'); return; }
+  DATA.nutrition.water_liters = r ? r.max : null;
+  if (store) store.nutrition = DATA.nutrition;
+  if (typeof markNutritionDirty === 'function') markNutritionDirty();
+  persist();
+  render();
+}
+window.editWaterTarget = editWaterTarget;
+function waterPlanCardHtml() {
+  const t = nutritionWaterTarget();
+  const ro = false;
+  return '<div class="card" style="border:1px solid var(--border);margin-bottom:12px;padding:10px 12px;display:flex;align-items:center;gap:8px;">' +
+    '<div style="flex:1;font-size:12px;color:#ccc;">💧 Acqua: ' + (t ? '<b style="color:#4fc3f7;">' + esc(waterTargetText(t)) + '</b> al giorno' : '<span style="color:#777;">non indicata</span>') + '</div>' +
+    (ro ? '' : '<button class="btn btn-outline" style="font-size:10px;padding:4px 10px;" onclick="editWaterTarget()">' + (t ? '✎' : '+ Litri') + '</button>') + '</div>';
+}
+function diaryWaterStep(iso, delta) {
+  if (!store.nutritionDaily) store.nutritionDaily = {};
+  const rec = Object.assign({}, store.nutritionDaily[iso]);
+  const v = Math.max(0, Math.round(((Number(rec.water) || 0) + delta) * 100) / 100);
+  if (v > 0) rec.water = v; else delete rec.water;
+  if (Object.keys(rec).length) store.nutritionDaily[iso] = rec; else delete store.nutritionDaily[iso];
+  persist();
+  try { if (store.accountToken && typeof uploadAccountDataFast === 'function') uploadAccountDataFast().catch(function () {}); } catch (_) {}
+  render();
+}
+window.diaryWaterStep = diaryWaterStep;
+function diaryWaterHtml(iso, readOnly) {
+  const t = nutritionWaterTarget();
+  const had = Number((store && store.nutritionDaily && store.nutritionDaily[iso] || {}).water) || 0;
+  if (!t && !had && readOnly) return '';
+  const goal = t ? t.min : 0;
+  const fill = goal ? Math.min(100, Math.round(had / goal * 100)) : 0;
+  return '<div class="card" style="padding:10px 12px;margin-bottom:12px;">' +
+    '<div style="display:flex;align-items:center;gap:8px;">' +
+    '<div style="flex:1;font-size:12px;color:#ccc;">💧 Acqua bevuta: <b style="color:#4fc3f7;">' + litresText(had) + ' L</b>' + (t ? ' <span style="color:#777;">/ ' + esc(waterTargetText(t)) + '</span>' : '') + '</div>' +
+    (readOnly ? '' : '<button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="diaryWaterStep(\'' + iso + '\',-0.25)">−</button>' +
+    '<button class="btn btn-outline" style="font-size:11px;padding:4px 10px;color:#4fc3f7;" onclick="diaryWaterStep(\'' + iso + '\',0.25)">+ 0,25 L</button>') + '</div>' +
+    (goal ? '<div style="height:5px;background:#1e1e1e;border-radius:3px;margin-top:8px;overflow:hidden;"><div style="height:100%;width:' + fill + '%;background:#4fc3f7;"></div></div>' : '') +
+    '</div>';
+}
 function nutritionSubsection() {
   if (window.__nutritionSub) return window.__nutritionSub;
   try { window.__nutritionSub = localStorage.getItem('nurvan.nutritionSub') === 'diary' ? 'diary' : 'plan'; } catch (_) { window.__nutritionSub = 'plan'; }
@@ -15343,10 +15414,24 @@ function nutritionSubsection() {
 }
 function setNutritionSubsection(sub) {
   window.__nutritionSub = sub === 'diary' ? 'diary' : 'plan';
+  // Both open on today: the plan on today's weekday, the diary on today's date.
+  nutritionFollowToday();
   try { localStorage.setItem('nurvan.nutritionSub', window.__nutritionSub); } catch (_) {}
   render();
 }
 window.setNutritionSubsection = setNutritionSubsection;
+function nutritionFollowToday() {
+  window.__nutritionDayUserPicked = false;
+  window.__diaryDate = null;
+  window.__diaryMonth = null;
+}
+// Entering Alimentazione again (or a new day while the app stays open)
+// starts from today.
+function nutritionTodayCheck() {
+  const today = nutritionTodayKey();
+  if (window.__nutritionSeenDay !== today || window.__nutritionLastView !== 'nutrition') nutritionFollowToday();
+  window.__nutritionSeenDay = today;
+}
 function nutritionSubTabsHtml() {
   const sub = nutritionSubsection();
   const tab = function (id, label) {
@@ -15356,6 +15441,8 @@ function nutritionSubTabsHtml() {
   return '<div class="nutrition-subtabs" style="display:flex;gap:8px;margin-bottom:12px;">' + tab('plan', 'Piano alimentare') + tab('diary', 'Diario alimentare') + '</div>';
 }
 function renderNutrition(c) {
+  nutritionTodayCheck();
+  window.__nutritionLastView = 'nutrition';
   if (nutritionSubsection() === 'diary') {
     if (!DATA.nutrition && store && store.nutrition) DATA.nutrition = store.nutrition;
     renderNutritionDiary(c);
@@ -15565,6 +15652,7 @@ function renderNutritionDiary(c) {
   const diary = diaryEntry(sel);
   const planDay = diaryPlanDay(sel);
   html += '<div style="font-size:13px;font-weight:900;color:#fff;margin:4px 0 10px;">' + esc(title) + '</div>';
+  html += diaryWaterHtml(sel, readOnly);
   if (!diary) {
     const legacy = store && store.nutritionDaily && store.nutritionDaily[sel];
     html += '<div class="card" style="padding:14px;">' +
@@ -15724,7 +15812,7 @@ function renderNutritionPlanView(c) {
       <div style="font-size:9px;color:#666;margin-top:4px;">Valgono per il giorno aperto qui sopra. Quelli di oggi finiscono anche nella stima di recupero in home.</div>
     </div>
     ${(typeof isCoachClientSandbox === 'function' && isCoachClientSandbox()) ? nutritionCoachWeekHtml(days) : ''}
-    ${nutritionConfirmCardHtml()}
+    ${waterPlanCardHtml()}
     ${DATA.nutrition.notes ? `<details class="card" style="border:1px solid var(--border);margin-bottom:12px;padding:10px 12px;"><summary style="font-size:11px;font-weight:800;color:var(--gold);cursor:pointer;">Note e raccomandazioni del piano</summary><div style="font-size:11px;color:#bbb;line-height:1.5;white-space:pre-line;margin-top:8px;">${esc(DATA.nutrition.notes)}</div></details>` : ''}
 
     <div class="card" style="border:1px solid var(--border);margin-bottom:12px;padding:12px;">
@@ -18321,6 +18409,7 @@ function renderSupplements(c) {
   if (!Array.isArray(DATA.supplementation.items)) DATA.supplementation.items = [];
 
   const items = DATA.supplementation.items || [];
+  const visibleSupps = items.filter(function (it) { return !isWaterSupplement(it); });
   const suppDirty = !!(typeof store !== 'undefined' && store && store.__cpSupplementsDirty);
 
   let html = `
@@ -18347,7 +18436,10 @@ function renderSupplements(c) {
     </div>
   `;
 
-  if (!items.length) {
+  if (visibleSupps.length < items.length) {
+    html += '<div style="font-size:10px;color:#888;margin-bottom:10px;">💧 L’acqua giornaliera è in Alimentazione.</div>';
+  }
+  if (!visibleSupps.length) {
     html += `
       <div class="card" style="text-align:center;padding:30px 15px;color:#888;">
         <div style="font-size:24px;margin-bottom:8px;">🧴</div>
@@ -18366,7 +18458,7 @@ function renderSupplements(c) {
 
   html += `
     <div style="display:flex;flex-direction:column;gap:8px;">
-      ${items.map((it, idx) => `
+      ${items.map((it, idx) => isWaterSupplement(it) ? '' : `
         <div class="card-compact" style="border:1px solid var(--border);background:var(--surface);padding:12px;">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
             <div style="flex:1;min-width:0;">
@@ -23073,7 +23165,6 @@ function renderHome(c) {
     ${scheduledCheckInHomeHtml()}
     ${lastSessionHomeCardHtml()}
     ${computeHomeReadinessHtml()}
-    ${nutritionConfirmCardHtml()}
 
     <div class="card" style="border:1px solid rgba(212,175,55,0.35);margin-bottom:12px;">
       <div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Coach · Oggi</div>
@@ -25923,6 +26014,111 @@ function shoppingListFor(week, from, to, recipes) {
   return Object.keys(items).map(function (k) { return items[k]; })
     .sort(function (a, b) { return shopFold(a.name).localeCompare(shopFold(b.name)); });
 }
+/*
+ * An estimate of what the list costs: never a price, always a range.
+ * Italian supermarket prices per kg (or litre) by kind of food, from the
+ * usual ranges on the shelves of the big chains (store brand to branded),
+ * then scaled by the country's food price level against Italy (Eurostat
+ * price level indices, food and non-alcoholic beverages, rounded).
+ * A food that matches no kind gets the generic range and is counted as such.
+ */
+const SHOP_PRICE_KINDS = [
+  // [words, min €/kg, max €/kg]
+  [/\b(bresaola|prosciutto|speck|salame|mortadella|fesa|affettat)/, 18, 35],
+  [/\b(manzo|vitello|bovin|hamburger|macinat|bistecca|filetto|carne rossa)/, 13, 24],
+  [/\b(pollo|tacchino|petto)/, 8, 14],
+  [/\b(maiale|lonza|arista|salsicc)/, 7, 12],
+  [/\b(salmone|orata|branzino|spigola|pesce spada|gamber|polpo|seppi|calamar)/, 14, 28],
+  [/\b(merluzzo|nasello|platessa|sogliola|pesce)/, 10, 20],
+  [/\b(tonno|sgombro|sardin|acciug)/, 11, 20],
+  [/\buov/, 4.5, 7.5],
+  [/\b(parmigian|grana|pecorino|stagionat|emmental|provolone|asiago)/, 14, 26],
+  [/\b(mozzarell|ricotta|fiocchi di latte|stracchino|formaggio|quark|skyr|feta)/, 6, 13],
+  [/\b(yogurt|kefir)/, 2.5, 6],
+  [/\b(latte|bevanda)/, 1.1, 2],
+  [/\b(olio)/, 7, 14],
+  [/\b(noci|mandorl|nocciol|anacardi|pistacch|frutta secca|arachid|semi|burro di)/, 12, 28],
+  [/\b(pasta|spaghetti|penne|fusilli|gnocchi)/, 1.4, 3.5],
+  [/\b(riso|farro|orzo|quinoa|couscous|cous cous|miglio|grano saraceno)/, 2, 5],
+  [/\b(avena|fiocchi|muesli|cereali|corn flakes)/, 2.5, 6],
+  [/\b(pane|panino|piadina|focaccia)/, 2.5, 5.5],
+  [/\b(fette biscottate|gallette|crackers|grissini|biscott|wasa)/, 3.5, 8],
+  [/\b(fagioli|ceci|lenticchie|piselli|legum|soia|edamame|tofu|tempeh)/, 2.5, 6],
+  [/\b(patat)/, 1, 2.2],
+  [/\b(frutti di bosco|mirtill|lampon|fragol)/, 6, 14],
+  [/\b(mela|mele|pera|pere|banan|aranc|kiwi|frutta|pesc[ah]|albicocc|uva|ananas|mandarin|prugn|anguria|melone)/, 1.6, 3.5],
+  [/\b(zucchin|pomodor|insalata|lattuga|spinac|broccol|carot|verdur|finocch|peperon|melanzan|cavol|rucola|funghi|zucca|cetriol|fagiolini|asparag|carciof)/, 1.8, 4.5],
+  [/\b(miele|marmellata|confettura|cioccolat|cacao)/, 6, 14],
+  [/\b(proteine|whey|barretta)/, 20, 40]
+];
+const SHOP_GENERIC_PRICE = [3, 10];
+// Food price level against Italy (Eurostat PLI, food and non-alcoholic
+// beverages, EU = 100; Italy's level taken as 1).
+const SHOP_COUNTRIES = [
+  { id: 'IT', name: 'Italia', level: 1, cur: '€' },
+  { id: 'ES', name: 'Spagna', level: 0.9, cur: '€' },
+  { id: 'PT', name: 'Portogallo', level: 0.88, cur: '€' },
+  { id: 'FR', name: 'Francia', level: 1.1, cur: '€' },
+  { id: 'DE', name: 'Germania', level: 1.03, cur: '€' },
+  { id: 'AT', name: 'Austria', level: 1.17, cur: '€' },
+  { id: 'BE', name: 'Belgio', level: 1.09, cur: '€' },
+  { id: 'NL', name: 'Paesi Bassi', level: 0.98, cur: '€' },
+  { id: 'IE', name: 'Irlanda', level: 1.15, cur: '€' },
+  { id: 'GR', name: 'Grecia', level: 0.98, cur: '€' },
+  { id: 'SM', name: 'San Marino', level: 1, cur: '€' },
+  { id: 'CH', name: 'Svizzera', level: 1.6, cur: 'CHF' }
+];
+function shoppingCountry() {
+  const p = (store && store.prefs) || {};
+  let id = p.shoppingCountry;
+  if (!id) {
+    const lang = (typeof I18nService !== 'undefined' && I18nService.getLanguage) ? I18nService.getLanguage() : 'it';
+    id = { es: 'ES', pt: 'PT', fr: 'FR', de: 'DE', nl: 'NL', el: 'GR' }[lang] || 'IT';
+  }
+  return SHOP_COUNTRIES.find(function (c) { return c.id === id; }) || SHOP_COUNTRIES[0];
+}
+// The range for one row of the list, or null when its amount is unknown.
+function shoppingItemPrice(it) {
+  if (!it.unit || !(it.qty > 0)) return null;
+  const grams = typeof foodQtyToGrams === 'function' ? foodQtyToGrams(it.qty, it.unit, it.name) : (it.unit === 'g' || it.unit === 'ml' ? it.qty : 0);
+  if (!(grams > 0)) return null;
+  const name = shopFold(it.name);
+  const kind = SHOP_PRICE_KINDS.find(function (k) { return k[0].test(name); });
+  const r = kind ? [kind[1], kind[2]] : SHOP_GENERIC_PRICE;
+  const lv = shoppingCountry().level;
+  return { min: grams / 1000 * r[0] * lv, max: grams / 1000 * r[1] * lv, generic: !kind };
+}
+function shoppingPriceTotal(list) {
+  const t = { min: 0, max: 0, priced: 0, unpriced: 0, generic: 0 };
+  list.forEach(function (it) {
+    const p = shoppingItemPrice(it);
+    if (!p) { t.unpriced++; return; }
+    t.min += p.min; t.max += p.max; t.priced++;
+    if (p.generic) t.generic++;
+  });
+  return t;
+}
+function shoppingMoney(v, round) {
+  const cur = shoppingCountry().cur;
+  const n = round ? Math.max(round, Math.round(v / round) * round) : Math.round(v * 10) / 10;
+  return (round ? String(n) : n.toFixed(2).replace('.', ',')) + ' ' + cur;
+}
+// "da 180 a 220 €": the middle of the rows' ranges ±15 % (every row at its
+// cheapest, or at its dearest, is not a real basket), the ends rounded
+// outwards to 5, never a single number.
+function shoppingRangeText(t) {
+  if (!t.priced) return '';
+  const mid = (t.min + t.max) / 2;
+  const lo = Math.max(1, Math.floor(mid * 0.85 / 5) * 5), hi = Math.max(lo + 5, Math.ceil(mid * 1.15 / 5) * 5);
+  return 'da ' + lo + ' a ' + hi + ' ' + shoppingCountry().cur + ' circa';
+}
+function setShoppingCountry(id) {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.shoppingCountry = id;
+  persist();
+  openShoppingList();
+}
+window.setShoppingCountry = setShoppingCountry;
 function shoppingQtyText(it) {
   if (!it.unit) return it.times > 1 ? '× ' + it.times : '';
   let q = it.qty, u = it.unit;
@@ -25953,8 +26149,11 @@ function openShoppingList() {
   const parts = shoppingParts();
   const splitAfter = parts.length > 1 ? parts[0].to : 2;
   let body = '';
+  const week = { min: 0, max: 0, priced: 0, unpriced: 0, generic: 0 };
   parts.forEach(function (part, pi) {
     const list = shoppingListFor(planWeek.week, part.from, part.to, nutritionRecipes());
+    const tot = shoppingPriceTotal(list);
+    Object.keys(week).forEach(function (k) { week[k] += tot[k]; });
     body += '<div style="margin-top:12px;"><div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:6px;">' +
       (parts.length > 1 ? 'Spesa ' + (pi + 1) + ' · ' : '') + esc(shoppingPartLabel(part)) + '</div>';
     if (!list.length) body += '<div style="font-size:11px;color:#888;">Nessun alimento nel piano per questi giorni.</div>';
@@ -25962,8 +26161,10 @@ function openShoppingList() {
       const ck = part.from + '-' + part.to + '|' + it.key;
       body += '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #262626;font-size:12px;color:' + (checks[ck] ? '#666' : '#ddd') + ';' + (checks[ck] ? 'text-decoration:line-through;' : '') + '">' +
         '<input type="checkbox" ' + (checks[ck] ? 'checked' : '') + ' onchange="toggleShoppingItem(\'' + esc(ck).replace(/'/g, '&#39;') + '\')">' +
-        '<span style="flex:1;">' + esc(it.name) + '</span><span style="color:#aaa;white-space:nowrap;">' + esc(shoppingQtyText(it)) + '</span></label>';
+        '<span style="flex:1;">' + esc(it.name) + '</span><span style="color:#aaa;white-space:nowrap;text-align:right;">' + esc(shoppingQtyText(it)) +
+        (function () { const pr = shoppingItemPrice(it); return pr ? '<br><span style="font-size:9px;color:#777;">' + esc(shoppingMoney(pr.min) + ' – ' + shoppingMoney(pr.max)) + '</span>' : ''; })() + '</span></label>';
     });
+    if (parts.length > 1 && tot.priced) body += '<div style="font-size:11px;color:#ccc;margin-top:6px;text-align:right;">Stima: <b>' + esc(shoppingRangeText(tot)) + '</b></div>';
     body += '</div>';
   });
   const dayOpts = SHOP_WEEKDAYS.slice(0, 6).map(function (wd, i) {
@@ -25980,6 +26181,14 @@ function openShoppingList() {
     '<button class="btn ' + (parts.length > 1 ? 'btn-primary' : 'btn-outline') + '" style="font-size:10px;padding:6px 10px;" onclick="setShoppingSplit(\'split\')">Divisa in due</button></div>' +
     (parts.length > 1 ? '<select style="margin-top:8px;width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:11px;" onchange="setShoppingSplit(\'split\', this.value)">' + dayOpts + '</select>' : '') +
     body +
+    (week.priced ? '<div style="margin-top:14px;padding:10px;border:1px solid rgba(212,175,55,0.4);border-radius:8px;background:#141208;">' +
+      '<div style="font-size:12px;font-weight:800;color:var(--gold);">Spesa settimanale stimata: ' + esc(shoppingRangeText(week)) + '</div>' +
+      '<div style="font-size:9px;color:#888;margin-top:4px;line-height:1.4;">Prezzi medi da supermercato, dalla marca del negozio a quella nota, adattati al livello dei prezzi alimentari del paese. È una forbice indicativa, non un preventivo.' +
+      (week.generic ? ' ' + week.generic + ' aliment' + (week.generic === 1 ? 'o ha' : 'i hanno') + ' un prezzo generico.' : '') +
+      (week.unpriced ? ' ' + week.unpriced + ' senza quantità non sono nel totale.' : '') + '</div>' +
+      '<select style="margin-top:8px;width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:11px;" onchange="setShoppingCountry(this.value)">' +
+      SHOP_COUNTRIES.map(function (c) { return '<option value="' + c.id + '"' + (c.id === shoppingCountry().id ? ' selected' : '') + '>Prezzi: ' + esc(c.name) + '</option>'; }).join('') +
+      '</select></div>' : '') +
     '<div style="display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;">' +
     '<button class="btn btn-primary" style="flex:1;font-size:11px;" onclick="shareShoppingList()">Condividi / copia</button>' +
     '<button class="btn btn-outline" style="font-size:11px;" onclick="clearShoppingChecks()">Togli le spunte</button></div>' +
@@ -26016,7 +26225,8 @@ function shoppingListText() {
       const q = shoppingQtyText(it);
       return '- ' + it.name + (q ? ' — ' + q : '');
     });
-    return 'Spesa ' + shoppingPartLabel(part) + '\n' + (lines.join('\n') || '(niente)');
+    const tot = shoppingPriceTotal(shoppingListFor(planWeek.week, part.from, part.to, nutritionRecipes()));
+    return 'Spesa ' + shoppingPartLabel(part) + '\n' + (lines.join('\n') || '(niente)') + (tot.priced ? '\nStima: ' + shoppingRangeText(tot) : '');
   }).join('\n\n');
 }
 function shareShoppingList() {
