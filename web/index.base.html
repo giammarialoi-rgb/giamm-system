@@ -12479,6 +12479,12 @@ function completeSetQuick(exIdx, setNum, restText) {
   if (ssStep && ssStep.restKey) {
     // End of the round: one rest, the longest among the linked exercises.
     try { startTimer(ssStep.restText, ssStep.restKey); } catch (_) {}
+    try { queueLiveSetIntel(exIdx, setNum); } catch (_) {}
+    renderKeepingExercise(exIdx);
+    // Back up to the first exercise of the superset for the next round.
+    const first = supersetNextRoundStart(exIdx, setNum);
+    if (first) focusSupersetSet(first);
+    return;
   } else {
     try { startTimer(rest, `w${currentWeek}_d${currentDay}_e${exIdx}`); } catch (_) {}
   }
@@ -12527,6 +12533,27 @@ function supersetNextStep(exIdx, setNum) {
     if (!best || sec > best.sec) best = { sec, restText: r, restKey: key };
   });
   return best;
+}
+
+// The first open set of the next round, starting from the first linked
+// exercise: where to go once the rest after a round begins.
+function supersetNextRoundStart(exIdx, setNum) {
+  const row = exerciseRowAt(currentWeek, currentDay, exIdx) || {};
+  const ssId = row.superset_id;
+  if (!ssId) return null;
+  const w = DATA && DATA.weeks && DATA.weeks[currentWeek - 1];
+  const d = w && (w.sessions || w.days) && (w.sessions || w.days)[currentDay];
+  const list = (d && (d.exercises || d.rows)) || [];
+  const members = [];
+  list.forEach((ex, i) => {
+    if (ex && ex.superset_id === ssId && !store.skips[`w${currentWeek}_d${currentDay}_e${i}`]) members.push(i);
+  });
+  const round = supersetWorkingSets(exIdx).indexOf(setNum) + 1;
+  for (const i of members) {
+    const s = supersetWorkingSets(i)[round];
+    if (s && !store.data[`w${currentWeek}_d${currentDay}_e${i}_s${s}_done`]) return { exIdx: i, setNum: s };
+  }
+  return null;
 }
 
 function focusSupersetSet(target) {

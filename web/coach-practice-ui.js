@@ -3477,7 +3477,7 @@ function renderMessageHtml(m, mine) {
   const ticks = mine
     ? (m.read_at ? ' <span style="color:#4fc3f7;">✓✓</span>' : ' <span style="color:#888;">✓</span>')
     : '';
-  const lock = (m.e2e || (typeof m.body === 'string' && m.body.indexOf('E2E1:') === 0)) ? ' · e2e' : '';
+  const lock = '';
   const text = m._plain != null ? m._plain : (m.body || '');
   const showText = text && text !== '[allegato]';
   return '<div class="cp-msg ' + (mine ? 'me' : 'them') + '">' + (showText ? esc(text) + lock : '') + extra +
@@ -5180,7 +5180,7 @@ function renderClientChat(c) {
   if (document.body) document.body.classList.add('cp-chat-view');
   try { clearNurvanAppBadge(); } catch (_) {}
   c.innerHTML = '<div class="cp-chat-shell">' +
-    '<div style="flex-shrink:0;margin-bottom:6px;"><span style="font-size:10px;color:var(--gold);font-weight:800;">COACH · E2E</span>' +
+    '<div style="flex-shrink:0;margin-bottom:6px;"><span style="font-size:10px;color:var(--gold);font-weight:800;">COACH</span>' +
     '<h1 style="color:#fff;margin:2px 0 0;font-size:18px;">Chat con il coach</h1></div>' +
     '<div id="cp-client-chat" class="cp-chat-thread"></div>' +
     chatToolsHtml('cp-client-msg', 'sendAthleteHumanMessage()', 'clearChatForMe(null,\'athlete\')', 'newChatThread(null,\'athlete\')', {
@@ -5218,6 +5218,11 @@ async function loadHumanMessages(clientId, boxId, role, silent) {
     if (payload.e2e) store.__cpE2EPeer = payload.e2e;
     const msgs = payload.messages || [];
     const nearBottom = (box.scrollHeight - box.scrollTop - box.clientHeight) < 80;
+    // The poll runs every 2.5 s: rebuilding an unchanged thread re-lays out
+    // the whole chat (and its images) and makes it jump, so skip it.
+    const sig = msgs.length + '|' + msgs.map(function (m) { return (m.id || m.created_at || '') + ':' + (m.read_at ? 1 : 0); }).join(',');
+    if (silent && box.__cpSig === sig) return;
+    box.__cpSig = sig;
     if (!msgs.length) { box.innerHTML = '<div class="cp-help">Nessun messaggio. Chat cifrata end-to-end.</div>'; return; }
     const decrypted = [];
     for (let i = 0; i < msgs.length; i++) {
@@ -5237,7 +5242,15 @@ async function loadHumanMessages(clientId, boxId, role, silent) {
       const mine = (role === 'athlete' && m.from_role === 'athlete') || (role === 'coach' && m.from_role === 'coach');
       return renderMessageHtml(m, mine);
     }).join('');
-    if (!silent || nearBottom) box.scrollTop = box.scrollHeight;
+    if (!silent || nearBottom) {
+      const toBottom = function () { box.scrollTop = box.scrollHeight; };
+      toBottom();
+      // Images and videos grow the thread once loaded: stay on the last message.
+      box.querySelectorAll('img,video').forEach(function (el) {
+        if (!el.complete) { el.addEventListener('load', toBottom, { once: true }); el.addEventListener('loadedmetadata', toBottom, { once: true }); }
+      });
+      requestAnimationFrame(toBottom);
+    }
   } catch (err) {
     if (!silent) box.innerHTML = '<div class="cp-help">' + esc((err && err.message) || 'Chat non disponibile.') + '</div>';
   }
@@ -5865,7 +5878,7 @@ function renderCoachChatPage(c) {
   c.innerHTML = '<div class="cp-chat-shell">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-shrink:0;">' +
     '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachClient\')">← SCHEDA</button>' +
-    '<div style="text-align:center;flex:1;"><div style="font-size:10px;color:var(--gold);font-weight:800;">CHAT E2E</div>' +
+    '<div style="text-align:center;flex:1;"><div style="font-size:10px;color:var(--gold);font-weight:800;">CHAT</div>' +
     '<div style="font-size:15px;font-weight:900;color:#fff;">' + esc(name) + '</div></div>' +
     '<div style="width:64px;flex-shrink:0;"></div></div>' +
     '<div id="cp-wa-chat" class="cp-chat-thread"></div>' +
