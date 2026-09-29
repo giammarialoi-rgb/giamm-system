@@ -26714,12 +26714,15 @@ let __recipeCatalogLoading = null;
 function loadRecipeCatalog() {
   if (__recipeCatalog) return Promise.resolve(__recipeCatalog);
   if (!__recipeCatalogLoading) {
-    const extra = (typeof FoodDatabaseService !== 'undefined' && FoodDatabaseService.loadExtra) ? FoodDatabaseService.loadExtra() : Promise.resolve(false);
-    __recipeCatalogLoading = Promise.all([
-      fetch('recipe-catalog.json').then(function (r) { return r.ok ? r.json() : null; }),
-      Promise.resolve(extra).catch(function () { return false; })
-    ]).then(function (res) {
-      const j = res[0];
+    __recipeCatalogLoading = fetch('recipe-catalog.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      // Values come computed in the file; the larger table only for a file
+      // without them.
+      const computed = j && Array.isArray(j.recipes) && j.recipes.every(function (r) { return Array.isArray(r.parsed); });
+      if (!computed && typeof FoodDatabaseService !== 'undefined' && FoodDatabaseService.loadExtra) {
+        return Promise.resolve(FoodDatabaseService.loadExtra()).catch(function () { return false; }).then(function () { return j; });
+      }
+      return j;
+    }).then(function (j) {
       __recipeCatalogData = j || {};
       __recipeCatalog = (j && Array.isArray(j.recipes)) ? j.recipes : [];
       return __recipeCatalog;
@@ -26752,7 +26755,24 @@ function catalogRecipe(id) {
   if (__catalogRecipeCache[id]) return __catalogRecipeCache[id];
   const src = (__recipeCatalog || []).find(function (r) { return r.id === id; });
   const NP = window.NurvanNutritionPlan;
-  if (!src || !NP) return null;
+  if (!src) return null;
+  // Values computed once by tools/build_recipe_values.mjs: nothing to match
+  // on the phone.
+  if (Array.isArray(src.parsed)) {
+    const ready = {
+      id: src.id, name: src.name, portions: src.portions || 1, catalog: true,
+      category: src.category, minutes: src.minutes || null, description: src.tip || '',
+      author: 'Ricettario Nurvan',
+      ingredients: src.parsed.map(function (a) { return { alternatives: [Object.assign({}, a)] }; }),
+      steps: (src.steps || []).slice(),
+      per100: Object.assign({}, src.per100 || {}), portionGrams: src.portionGrams || null,
+      valuesFrom: src.portionGrams ? 'ingredients' : null
+    };
+    ready.cost = recipeCostRange(ready);
+    __catalogRecipeCache[id] = ready;
+    return ready;
+  }
+  if (!NP) return null;
   const recipe = {
     id: src.id, name: src.name, portions: src.portions || 1, catalog: true,
     category: src.category, minutes: src.minutes || null, description: src.tip || '',
@@ -26806,11 +26826,16 @@ function recipeWeighedIngredients(r) {
 // The foods of the plan (undated days: the diary is not the plan).
 function planFoodNames() {
   const out = [];
+  const seen = {};
   ((DATA && DATA.nutrition && DATA.nutrition.days) || []).forEach(function (d) {
     if (!d || d.date) return;
     (d.meals || []).forEach(function (m) {
       (m.foods || m.items || []).forEach(function (f) {
-        (Array.isArray(f.alternatives) && f.alternatives.length ? f.alternatives : [f]).forEach(function (a) { if (a && a.name) out.push({ name: a.name }); });
+        (Array.isArray(f.alternatives) && f.alternatives.length ? f.alternatives : [f]).forEach(function (a) {
+          // Once per name: a week repeats the same foods every day.
+          const k = a && a.name ? shopFold(a.name) : '';
+          if (k && !seen[k]) { seen[k] = 1; out.push({ name: a.name }); }
+        });
       });
     });
   });
