@@ -41844,9 +41844,44 @@ function accountPayload(opts){
       if (!Array.isArray(payload.activeProgram.weeks)) payload.activeProgram.weeks = [];
       delete payload.activeProgram.exerciseDb;
       delete payload.activeProgram.exerciseAliases;
+      // The program (~3 MB for a 16-week plan) only when it changed since the
+      // cloud last took it: the server keeps its copy when an upload has none,
+      // so an unchanged program does not travel again on every save.
+      const sig = programUploadSignature(payload.activeProgram);
+      payload.__programSig = sig;
+      if (sig && sig === programSigUploaded()) delete payload.activeProgram;
     }
   }
   return payload;
+}
+// A cheap fingerprint of the program as uploaded (FNV-1a over its JSON).
+function programUploadSignature(prog) {
+  try {
+    const text = JSON.stringify(prog);
+    let h = 0x811c9dc5;
+    for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return text.length + ':' + (h >>> 0).toString(36);
+  } catch (_) { return ''; }
+}
+// Per account and device: which program the cloud last confirmed receiving.
+function programSigKey() {
+  const u = store && store.accountUser;
+  return 'NURVAN_PROGRAM_SIG_' + String((u && (u.id || u.email)) || 'anon');
+}
+function programSigUploaded() {
+  try { return localStorage.getItem(programSigKey()) || ''; } catch (_) { return ''; }
+}
+// Called after the server answered OK to an upload that carried the program.
+function markProgramUploaded(payload) {
+  try {
+    if (payload && payload.activeProgram && payload.__programSig) localStorage.setItem(programSigKey(), payload.__programSig);
+  } catch (_) {}
+}
+// Serialized for the network without the bookkeeping field.
+function accountPayloadBody(payload) {
+  const out = Object.assign({}, payload);
+  delete out.__programSig;
+  return JSON.stringify({ data: out });
 }
 function accountDataScore(src, prog) {
   let n = 0;
@@ -42819,7 +42854,12 @@ async function syncAccountData(download=false){
     const remoteHasLoads = !!(remote.data && Object.keys(remote.data).length) || (Array.isArray(remote.logs) && remote.logs.length);
     if (download || localHasLoads || remoteHasLoads || localScore > 0 || remoteScore > 0) {
       try {
-        await accountRequest('/api/account/sync', { method: 'POST', body: JSON.stringify({ data: accountPayload({ includeProgram: !skipProgUpload }) }) });
+        const syncPayload = accountPayload({ includeProgram: !skipProgUpload });
+        const syncBody = accountPayloadBody(syncPayload);
+        warnIfUploadHeavy(Math.round(syncBody.length / 1024));
+        const syncRes = await accountRequest('/api/account/sync', { method: 'POST', body: syncBody });
+        if (syncRes && syncRes.ok === false) throw new Error('HTTP ' + syncRes.status);
+        markProgramUploaded(syncPayload);
         uploaded = true;
       } catch (uploadErr) {
         console.warn('[ACCOUNT_SYNC_UPLOAD_FAILED]', uploadErr);
@@ -42860,8 +42900,10 @@ async function uploadAccountDataFast() {
   if (store.coachAssigning || store.coachViewingClient) return { uploaded: false };
   let bodyKb = 0;
   try {
-    const body = JSON.stringify({ data: accountPayload({ includeProgram: true }) });
+    const payload = accountPayload({ includeProgram: true });
+    const body = accountPayloadBody(payload);
     bodyKb = Math.round(body.length / 1024);
+    warnIfUploadHeavy(bodyKb);
     const response = await accountRequest('/api/account/sync', { method: 'POST', body: body });
     // A refusal is a failure too: it used to count as uploaded.
     if (!response.ok) {
@@ -42870,6 +42912,7 @@ async function uploadAccountDataFast() {
       throw new Error('HTTP ' + response.status + (msg ? ' - ' + msg : ''));
     }
     window.__lastSyncError = null;
+    markProgramUploaded(payload);
     return { uploaded: true };
   } catch (uploadErr) {
     // Kept, with the size sent, so the message can say why.
@@ -42879,6 +42922,15 @@ async function uploadAccountDataFast() {
   }
 }
 
+// An upload of several MB does not make it from a phone in time (18 MB never
+// did): said once per session, with the size, instead of failing in silence.
+function warnIfUploadHeavy(kb) {
+  if (!(kb > 4 * 1024)) return;
+  console.warn('[ACCOUNT_UPLOAD_HEAVY]', kb + ' KB');
+  if (window.__heavyUploadWarned) return;
+  window.__heavyUploadWarned = true;
+  try { if (typeof showToast === 'function') showToast('I dati da sincronizzare sono molto pesanti (' + Math.round(kb / 1024) + ' MB): la sincronizzazione può essere lenta.', 'error'); } catch (_) {}
+}
 function scheduleAccountSync(immediate){
   if(!store.accountToken) return;
   if (store.coachAssigning || store.coachViewingClient) return;
@@ -42903,7 +42955,7 @@ function scheduleAccountSync(immediate){
     }
     accountRequest('/api/account/sync', {
       method: 'POST',
-      body: JSON.stringify({ data: accountPayload({ includeProgram: false }) })
+      body: accountPayloadBody(accountPayload({ includeProgram: false }))
     }).then(function (response) { return readApiJson(response); }).catch(function () {
       if (typeof enqueueClientOutbox === 'function') enqueueClientOutbox({ id: 'account-sync', type: 'account-sync', note: 'retry' });
     });
@@ -46988,7 +47040,7 @@ function persistActiveProgramStructure() {
     if (store.accountToken) {
       accountRequest('/api/account/sync', {
         method: 'POST',
-        body: JSON.stringify({ data: accountPayload({ includeProgram: true }) })
+        body: accountPayloadBody(accountPayload({ includeProgram: true }))
       }).then(function (response) { return readApiJson(response); }).catch(function () {});
     }
   } catch (e) {
@@ -50694,7 +50746,7 @@ function confirmNutritionDay(ok) {
       if (store.accountToken) {
         accountRequest('/api/account/sync', {
           method: 'POST',
-          body: JSON.stringify({ data: accountPayload({ includeProgram: true }) })
+          body: accountPayloadBody(accountPayload({ includeProgram: true }))
         }).then(function (response) { return readApiJson(response); }).catch(function () {});
       }
     } catch (_) {}
@@ -50713,7 +50765,7 @@ function confirmNutritionDay(ok) {
     if (store.accountToken) {
       accountRequest('/api/account/sync', {
         method: 'POST',
-        body: JSON.stringify({ data: accountPayload({ includeProgram: true }) })
+        body: accountPayloadBody(accountPayload({ includeProgram: true }))
       }).then(function (response) { return readApiJson(response); }).catch(function () {});
     }
   } catch (_) {}

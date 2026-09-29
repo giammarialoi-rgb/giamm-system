@@ -222,6 +222,18 @@ function spaceSandbox(initial) {
 
 // --- everything the account owns travels with the account ------------------
 {
+  const at = base.indexOf('function accountPayload(opts)');
+  const payload = base.slice(at, base.indexOf('\nfunction accountDataScore', at));
+  ok(/if \(sig && sig === programSigUploaded\(\)\) delete payload\.activeProgram;/.test(payload),
+    'the program travels only when it changed since the cloud last took it (3 MB on every save before)');
+  ok(/markProgramUploaded\(payload\);/.test(base) && /markProgramUploaded\(syncPayload\);/.test(base),
+    'and it counts as taken only after the server answered OK');
+  ok(!/JSON\.stringify\(\{ data: accountPayload\(/.test(base) && /delete out\.__programSig;/.test(base),
+    'the bookkeeping field never reaches the cloud');
+  const api = fs.readFileSync(path.join(root, 'coach-api.mjs'), 'utf8');
+  ok(/\[SLOW_OR_FAILED\]/.test(api) && /\[DROPPED\]/.test(api), 'the server logs slow, failed and dropped requests');
+}
+{
   const at = base.indexOf('function applyRemoteAccountData(');
   const body = base.slice(at, base.indexOf('\nfunction ', at + 10));
   ok(/const remoteAhead = rw > lw \|\| \(rw === lw && rd != null && rd > ld\);/.test(body) && /if \(rw && \(remoteSwitchedProgram \|\| remoteAhead\)\)/.test(body),

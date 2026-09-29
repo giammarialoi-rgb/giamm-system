@@ -57,6 +57,21 @@ app.set("trust proxy", Math.max(0, Number(process.env.TRUST_PROXY_HOPS || 2)));
 // Apple posts its answer from appleid.apple.com (form_post), so the route sits
 // before the CORS allowlist, like the webhook below. What makes it safe is the
 // state it carries back, signed by this server (server/account/apple.mjs).
+// One line in the log for every request that was slow (over 5 s), failed on
+// the server (5xx) or was dropped by the phone before an answer: what the
+// Render log showed of an 18 MB upload timing out was nothing at all.
+app.use((req, res, next) => {
+  const started = Date.now();
+  let done = false;
+  const size = Number(req.headers["content-length"]) || 0;
+  const line = (tag) => console.warn(tag, req.method, req.path, res.statusCode, (Date.now() - started) + "ms", Math.round(size / 1024) + "KB");
+  res.on("finish", () => {
+    done = true;
+    if (Date.now() - started > 5000 || res.statusCode >= 500) line("[SLOW_OR_FAILED]");
+  });
+  res.on("close", () => { if (!done) line("[DROPPED]"); });
+  next();
+});
 const appleCallbackTarget = { handle: null };
 // It also sits before the /api/auth limiter (that one needs the database):
 // an in-memory limit of its own, per IP.
