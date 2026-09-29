@@ -32,6 +32,8 @@ export function configuredCorsOrigins(env = process.env) {
 
 export function isCorsOriginAllowed(origin, env = process.env) {
   if (!origin || origin === "null" || origin === "file://") return true;
+  // The iOS app (Capacitor) serves the page from its own scheme.
+  if (origin === "capacitor://localhost") return true;
   const normalized = String(origin).trim().replace(/\/$/, "");
   if (configuredCorsOrigins(env).has(normalized)) return true;
   if (!isProduction(env)) {

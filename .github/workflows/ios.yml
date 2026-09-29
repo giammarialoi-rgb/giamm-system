@@ -1,0 +1,100 @@
+# iOS build on a GitHub macOS machine (no Mac needed): builds the web app,
+# wraps it with Capacitor, signs it with the App Store Connect API key and
+# uploads it to TestFlight. Started by hand from the Actions tab.
+#
+# Repository secrets (Settings > Secrets and variables > Actions):
+#   APPLE_TEAM_ID       10-character Team ID (developer.apple.com > Membership)
+#   ASC_KEY_ID          App Store Connect API key id
+#   ASC_ISSUER_ID       App Store Connect issuer id
+#   ASC_KEY_P8_BASE64   the .p8 key file, base64-encoded
+name: iOS TestFlight
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build web app
+        run: node build_master25.mjs
+
+      - name: Copy web app into the iOS project
+        run: npx cap sync ios
+
+      - name: API key
+        env:
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          mkdir -p ~/private_keys
+          echo "$ASC_KEY_P8_BASE64" | base64 --decode > ~/private_keys/AuthKey_${ASC_KEY_ID}.p8
+
+      - name: Version from release.json
+        run: |
+          VERSION=$(node -p "require('./release.json').versionName")
+          BUILD=$((1000 + ${{ github.run_number }}))
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "BUILD=$BUILD" >> $GITHUB_ENV
+
+      - name: Archive
+        working-directory: ios/App
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath $RUNNER_TEMP/App.xcarchive \
+            DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            archive
+
+      - name: Export IPA
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          cat > $RUNNER_TEMP/export.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>destination</key><string>export</string>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath $RUNNER_TEMP/App.xcarchive \
+            -exportOptionsPlist $RUNNER_TEMP/export.plist -exportPath $RUNNER_TEMP/ipa \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcrun altool --upload-app -f $RUNNER_TEMP/ipa/*.ipa -t ios \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nurvan-ios-${{ env.VERSION }}-${{ env.BUILD }}
+          path: ${{ runner.temp }}/ipa/*.ipa
