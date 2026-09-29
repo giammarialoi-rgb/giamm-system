@@ -42841,14 +42841,23 @@ async function syncAccountData(download=false){
 async function uploadAccountDataFast() {
   if (!store || !store.accountToken) return { uploaded: false };
   if (store.coachAssigning || store.coachViewingClient) return { uploaded: false };
+  let bodyKb = 0;
   try {
-    await accountRequest('/api/account/sync', {
-      method: 'POST',
-      body: JSON.stringify({ data: accountPayload({ includeProgram: true }) })
-    });
+    const body = JSON.stringify({ data: accountPayload({ includeProgram: true }) });
+    bodyKb = Math.round(body.length / 1024);
+    const response = await accountRequest('/api/account/sync', { method: 'POST', body: body });
+    // A refusal is a failure too: it used to count as uploaded.
+    if (!response.ok) {
+      let msg = '';
+      try { msg = ((await response.json()) || {}).error || ''; } catch (_) {}
+      throw new Error('HTTP ' + response.status + (msg ? ' - ' + msg : ''));
+    }
+    window.__lastSyncError = null;
     return { uploaded: true };
   } catch (uploadErr) {
-    console.warn('[ACCOUNT_UPLOAD_FAST_FAILED]', uploadErr);
+    // Kept, with the size sent, so the message can say why.
+    window.__lastSyncError = ((uploadErr && uploadErr.message) || String(uploadErr)) + (bodyKb ? ' (' + bodyKb + ' KB)' : '');
+    console.warn('[ACCOUNT_UPLOAD_FAST_FAILED]', window.__lastSyncError);
     return { uploaded: false };
   }
 }
@@ -53517,7 +53526,7 @@ async function saveNutritionPlanEdits() {
     alert('Alimentazione salvata correttamente.');
   } else {
     if (typeof showToast === 'function') showToast('Salvato sul dispositivo, ma la sincronizzazione col cloud è fallita: riprova quando hai connessione.', 'error');
-    alert('Salvato sul dispositivo, ma la sincronizzazione col cloud è fallita. Riprova quando hai connessione.');
+    alert('Salvato sul dispositivo, ma la sincronizzazione col cloud è fallita. Riprova quando hai connessione.' + (window.__lastSyncError ? ' Dettaglio: ' + window.__lastSyncError : ''));
   }
 }
 
