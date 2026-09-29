@@ -41658,6 +41658,8 @@ function nativeAuthError(message){
   setGoogleAuthLoading(false);
   $('account-status').textContent = String(message || 'Autenticazione non riuscita.');
 }
+// Largest saved program (as JSON) that still travels with its content.
+var MODEL_UPLOAD_MAX_CHARS = 400 * 1024;
 function accountPayload(opts){
   opts = opts || {};
   const includeProgram = opts.includeProgram !== false;
@@ -41779,7 +41781,16 @@ function accountPayload(opts){
       const content = m.data || (window.__programDataCache && window.__programDataCache[m.id]) || null;
       const data = content && typeof content === 'object' ? Object.assign({}, content) : content;
       if (data && typeof data === 'object') { delete data.exerciseDb; delete data.exerciseAliases; }
-      return { id: m.id, name: m.name, sourceDocument: m.sourceDocument, date: m.date, data: data };
+      // A saved program travels with its weeks only when small: a full
+      // 16-week program is 2-3 MB, and eight of them made an 18 MB upload
+      // that never reached the server from a phone. A large one travels as
+      // name and date; the cloud keeps whatever content it already has (a
+      // side with only the name does not erase it) and the phone keeps its
+      // copy. The active program always travels whole.
+      const small = data && JSON.stringify(data).length <= MODEL_UPLOAD_MAX_CHARS;
+      return small
+        ? { id: m.id, name: m.name, sourceDocument: m.sourceDocument, date: m.date, data: data }
+        : { id: m.id, name: m.name, sourceDocument: m.sourceDocument, date: m.date };
     }).filter(Boolean) : [],
     coachArchives: Array.isArray(store.coachArchives) ? store.coachArchives.slice(0, 24).map(function (a) {
       return {
@@ -41988,13 +41999,19 @@ function applyRemoteAccountData(remote, preferLocal) {
   ['bw', 'skips', 'subs', 'loadTypes', 'tempos', 'exIntensity', 'maxTests', 'bonus', 'exMuscle', 'warmups', 'warmupProgress']
     .forEach(function (f) { mergeStampedMap(f, remote); });
   store.exMuscleByName = Object.assign({}, remote.exMuscleByName || {}, store.exMuscleByName || {});
-  if (remote.currentWeek) {
-    currentWeek = Math.max(1, Number(remote.currentWeek) || currentWeek);
-    store.trainingWeek = currentWeek;
-  }
-  if (typeof remote.currentDay === 'number') {
-    currentDay = Math.max(0, Number(remote.currentDay) || 0);
-    store.trainingDay = currentDay;
+  // Where you are in the program: the furthest of the two sides, never the
+  // cloud's older position over this device's (it took a phone back a week).
+  // Only a program switched on another device moves it to that device's.
+  {
+    const rw = Number(remote.currentWeek) || 0;
+    const rd = typeof remote.currentDay === 'number' ? Math.max(0, Number(remote.currentDay) || 0) : null;
+    const lw = Number(currentWeek) || 1, ld = Number(currentDay) || 0;
+    const remoteAhead = rw > lw || (rw === lw && rd != null && rd > ld);
+    if (rw && (remoteSwitchedProgram || remoteAhead)) {
+      currentWeek = Math.max(1, rw);
+      store.trainingWeek = currentWeek;
+      if (rd != null) { currentDay = rd; store.trainingDay = currentDay; }
+    }
   }
   // Same rule for everything the account remembers: the two sides are put
   // together, and a device that has been away for a while adds to what is

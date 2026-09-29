@@ -222,6 +222,12 @@ function spaceSandbox(initial) {
 
 // --- everything the account owns travels with the account ------------------
 {
+  const at = base.indexOf('function applyRemoteAccountData(');
+  const body = base.slice(at, base.indexOf('\nfunction ', at + 10));
+  ok(/const remoteAhead = rw > lw \|\| \(rw === lw && rd != null && rd > ld\);/.test(body) && /if \(rw && \(remoteSwitchedProgram \|\| remoteAhead\)\)/.test(body),
+    'the week and day in the program: the furthest of the two sides, the cloud never takes a phone back (only a program switched elsewhere moves it)');
+}
+{
   const at = base.indexOf('function accountPayload(opts)');
   const payload = base.slice(at, base.indexOf('\nfunction accountDataScore', at));
   ['models', 'chatHistory', 'actionHistory', 'intelligence', 'intelTargets', 'bodyComposition', 'nutritionLoop', 'seasonBoard', 'coachUnlocked', 'clientTutorialDone']
@@ -229,8 +235,9 @@ function spaceSandbox(initial) {
   ok(/logs: Array\.isArray\(logsSrc\) \? logsSrc\.slice\(-400\)/.test(payload),
     'and a year and more of sessions instead of the last eighty');
   ok(/bodyChecksSrc\.slice\(-BODY_CHECKS_KEEP\)/.test(payload) && /var BODY_CHECKS_KEEP = 400;/.test(base), 'and four hundred body checks instead of sixteen (years of weekly checks)');
-  ok(/modelsSrc\.slice\(\)\.sort\([^\n]*\)\.slice\(-8\)/.test(payload) && /delete data\.exerciseDb/.test(payload) && /window\.__programDataCache && window\.__programDataCache\[m\.id\]/.test(payload),
-    'saved programs travel too - the eight latest, with their content, without the exercise database each import drags along');
+  ok(/modelsSrc\.slice\(\)\.sort\([^\n]*\)\.slice\(-8\)/.test(payload) && /delete data\.exerciseDb/.test(payload) && /window\.__programDataCache && window\.__programDataCache\[m\.id\]/.test(payload)
+    && /JSON\.stringify\(data\)\.length <= MODEL_UPLOAD_MAX_CHARS/.test(payload) && /var MODEL_UPLOAD_MAX_CHARS = 400 \* 1024;/.test(base),
+    'saved programs travel too - the eight latest, with their content when small (a full program as name and date: eight made an 18 MB upload), without the exercise database each import drags along');
 
   const apply = base.slice(base.indexOf('function applyRemoteAccountData'), base.indexOf('function looksLikeClientAssignDraft'));
   ['remote.models', 'remote.chatHistory', 'remote.actionHistory', 'remote.intelTargets', 'remote.coachUnlocked']
