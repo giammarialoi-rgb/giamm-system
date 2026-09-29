@@ -103,7 +103,7 @@ function newCtx(overrides) {
       activeProgramId: null
     }, (overrides && overrides.store) || {})
   };
-  ctx.window = { NurvanProgramGenerator: { normalizeSplit: function (split, days) { return days >= 5 ? 'monofrequency' : split; } } };
+  ctx.window = { __accountDownloadedOnce: true, NurvanProgramGenerator: { normalizeSplit: function (split, days) { return days >= 5 ? 'monofrequency' : split; } } };
   if (overrides && overrides.DATA) ctx.DATA = overrides.DATA;
   if (overrides && typeof overrides.isAthleteRole === 'function') ctx.isAthleteRole = overrides.isAthleteRole;
   if (overrides && typeof overrides.isClientStorageContext === 'function') ctx.isClientStorageContext = overrides.isClientStorageContext;
@@ -117,6 +117,8 @@ function shows(ctx) { return vm.runInContext('shouldShowOnboarding()', ctx); }
 console.log('\n--- 1. a chi viene chiesto, e a chi no ---');
 {
   eq(shows(newCtx()), true, '1a. un profilo appena fatto se le vede, le tre domande');
+  { const c = newCtx(); c.window.__accountDownloadedOnce = false;
+    eq(shows(c), false, '1a2. su un telefono nuovo, prima che i dati dell account siano scesi, nessuna domanda'); }
 
   eq(shows(newCtx({ DATA: { weeks: [{ sessions: [] }] } })), false,
     '1b. chi una scheda attiva ce l\'ha gia\', no');

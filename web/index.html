@@ -42811,9 +42811,14 @@ async function syncAccountData(download=false){
       uploaded = true; // nothing needed uploading - not a failure
     }
     persist();
+    if (download) {
+      window.__accountDownloadedOnce = true;
+      window.__accountDownloadedAt = Date.now();
+    }
     if (download && !window.__bootAligning) {
       try { render(); } catch (_) {}
     }
+    if (download) { try { maybeShowOnboarding(); } catch (_) {} }
     if(status) status.textContent = uploaded ? 'Dati sincronizzati correttamente.' : 'Scaricati i dati cloud, ma il caricamento delle modifiche locali è fallito.';
   } catch(error){
     console.error('ACCOUNT_SYNC_ERROR', error);
@@ -49752,11 +49757,32 @@ function flushPendingPersistSyncs() {
   try { scheduleExamsIdbSync(true); } catch (_) {}
   try { scheduleAccountSync(true); } catch (_) {}
 }
+// Coming back to the app (another device may have saved meanwhile): the
+// account's data comes down again, at most once a minute, and every five
+// minutes while it stays open. Before, only the start of the app downloaded.
+function refreshAccountFromCloud() {
+  try {
+    if (!store || !store.accountToken || store.coachViewingClient || store.coachAssigning) return;
+    if (typeof isAppOnline === 'function' && !isAppOnline()) return;
+    if (window.__accountRefreshing) return;
+    if (Date.now() - (window.__accountDownloadedAt || 0) < 60 * 1000) return;
+    // Never under the user's fingers: not while typing, not with a workout
+    // running (the redraw would move the screen mid-set).
+    const el = document.activeElement;
+    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+    if (store.sessionStartedAt && Date.now() - new Date(store.sessionStartedAt).getTime() < 4 * 3600 * 1000) return;
+    window.__accountRefreshing = true;
+    Promise.resolve(syncAccountData(true)).catch(function (e) { console.warn('[ACCOUNT_REFRESH]', e); })
+      .then(function () { window.__accountRefreshing = false; });
+  } catch (_) { window.__accountRefreshing = false; }
+}
 try {
   if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'hidden') flushPendingPersistSyncs();
+      else if (document.visibilityState === 'visible') refreshAccountFromCloud();
     });
+    setInterval(function () { if (document.visibilityState === 'visible') refreshAccountFromCloud(); }, 5 * 60 * 1000);
   }
   if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
     window.addEventListener('pagehide', flushPendingPersistSyncs);
@@ -63633,6 +63659,8 @@ function dismissIosInstallHint() {
 
 function maybeShowIosInstallHint() {
   if (typeof window !== 'undefined' && window.NativeConfig) return;
+  // Already an app (iOS, Capacitor): nothing to add to the Home screen.
+  if (typeof isIosApp === 'function' && isIosApp()) return;
   if (isStandalonePwa()) return;
   try {
     if (/^\/c\//i.test(location.pathname || '')) return;
@@ -73711,6 +73739,10 @@ function shouldShowOnboarding() {
     if (typeof isAthleteRole === 'function' && isAthleteRole()) return false;
     if (store && (store.coachViewingClient || store.coachAssigning)) return false;
     if (!store || !store.accountToken) return false;
+    // Not before the account's data has come down once on this device: a new
+    // phone looks empty until then, and an account with its history would be
+    // asked the first-run questions (asked again after the download).
+    if (!window.__accountDownloadedOnce) return false;
     if (store.prefs && store.prefs.onboardingAt) return false;
     if (typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length) return false;
     if (store.activeProgramId) return false;
