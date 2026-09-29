@@ -16367,6 +16367,7 @@ function foodSourceLabelHtml(f) {
   if (p.source === 'nurvan') return '<span style="' + style + '">Fonte: Nurvan</span>';
   if (p.matched === 'ai') return '<span style="' + style + '" title="' + esc(p.matchedName || '') + '">Valori di: ' + esc(p.matchedName || 'banca alimenti') + '</span>';
   if (p.source === 'ciqual') return '<span style="' + style + '">Fonte: Anses Ciqual 2025</span>';
+  if (p.source === 'usda') return '<span style="' + style + '" title="' + esc(p.ref || '') + '">Fonte: USDA FoodData Central</span>';
   if (f && f.brand) return '<span style="' + style + '">' + esc(f.brand) + '</span>';
   if (p.source === 'open_food_facts' || p.source === 'fatsecret' || p.source === 'usda' || p.source === 'remote') return '<span style="' + style + '">Prodotto</span>';
   return '';
@@ -26623,16 +26624,42 @@ function recipePortionValuesText(r, portions) {
  */
 const RECIPE_CATALOG_CATS = [['all', 'Tutte'], ['colazione', 'Colazione'], ['pranzo_cena', 'Pranzo e cena'], ['spuntino', 'Spuntini e dolci']];
 let __recipeCatalog = null;
+let __recipeCatalogData = null;
 let __recipeCatalogLoading = null;
+// The book and the larger food table together: the values need both.
 function loadRecipeCatalog() {
   if (__recipeCatalog) return Promise.resolve(__recipeCatalog);
   if (!__recipeCatalogLoading) {
-    __recipeCatalogLoading = fetch('recipe-catalog.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+    const extra = (typeof FoodDatabaseService !== 'undefined' && FoodDatabaseService.loadExtra) ? FoodDatabaseService.loadExtra() : Promise.resolve(false);
+    __recipeCatalogLoading = Promise.all([
+      fetch('recipe-catalog.json').then(function (r) { return r.ok ? r.json() : null; }),
+      Promise.resolve(extra).catch(function () { return false; })
+    ]).then(function (res) {
+      const j = res[0];
+      __recipeCatalogData = j || {};
       __recipeCatalog = (j && Array.isArray(j.recipes)) ? j.recipes : [];
       return __recipeCatalog;
     }).catch(function () { __recipeCatalogLoading = null; return []; });
   }
   return __recipeCatalogLoading;
+}
+// An ingredient named in the book's own table of sources: "refs" points to
+// the food table entry by its exact name (Ciqual), "foods" carries values
+// from USDA FoodData Central with the record they come from.
+function catalogIngredientValues(a) {
+  const data = __recipeCatalogData || {};
+  const key = String(a.name || '').toLowerCase().trim();
+  const food = data.foods && data.foods[key];
+  if (food) {
+    return { kcal: food.kcal, pro: food.pro, carb: food.carb, fat: food.fat,
+      provenance: { source: 'usda', kind: 'USDA FoodData Central', ref: food.ref || '', url: food.url || '', confidence: 1 } };
+  }
+  const ref = data.refs && data.refs[key];
+  if (ref && typeof FoodDatabaseService !== 'undefined') {
+    const hit = (FoodDatabaseService.catalog || []).find(function (f) { return f && f.name === ref; });
+    if (hit && hit.kcal > 0) return { kcal: hit.kcal, pro: hit.pro || 0, carb: hit.carb || 0, fat: hit.fat || 0, provenance: foodProvenanceFor(hit) };
+  }
+  return null;
 }
 // A catalogue entry as a recipe of the app (ingredients parsed, values filled).
 const __catalogRecipeCache = {};
@@ -26653,20 +26680,141 @@ function catalogRecipe(id) {
     steps: (src.steps || []).slice(),
     per100: {}, portionGrams: null, valuesFrom: null
   };
-  try { if (typeof FoodDatabaseService !== 'undefined' && FoodDatabaseService.loadExtra) FoodDatabaseService.loadExtra(); } catch (_) {}
+  recipe.ingredients.forEach(function (i) {
+    const a = i.alternatives[0];
+    const v = a && !a.qb ? catalogIngredientValues(a) : null;
+    if (!v) return;
+    a.kcalPer100 = v.kcal; a.proPer100 = v.pro; a.carbPer100 = v.carb; a.fatPer100 = v.fat;
+    a.macro_source = 'db';
+    a.provenance = v.provenance;
+  });
   enrichPlanAlternatives({ days: [], recipes: [recipe] });
+  recipe.cost = recipeCostRange(recipe);
   __catalogRecipeCache[id] = recipe;
   return recipe;
 }
-function openRecipeCatalog(cat, query) {
+// What one portion costs, as the shopping list prices it: the rows' ranges
+// summed; an ingredient without an amount (q.b.) is left out.
+function recipeCostRange(r) {
+  const t = { min: 0, max: 0, priced: 0, generic: 0 };
+  (r.ingredients || []).forEach(function (i) {
+    const a = (i.alternatives || [])[0];
+    if (!a || a.qb || !(a.quantity > 0)) return;
+    const p = shoppingItemPrice({ name: a.name, qty: a.quantity, unit: a.unit || 'g' });
+    if (!p) return;
+    t.min += p.min; t.max += p.max; t.priced++;
+    if (p.generic) t.generic++;
+  });
+  return t.priced ? t : null;
+}
+function recipeCostText(cost, portions) {
+  if (!cost) return '';
+  const k = portions || 1;
+  return shoppingMoney(cost.min * k) + ' – ' + shoppingMoney(cost.max * k);
+}
+
+// ---- Filters: with my weekly shopping, with my plan (foods or macros) ----
+const RECIPE_CATALOG_FILTERS = [['all', 'Nessun filtro'], ['shopping', '🛒 Con la mia spesa'], ['plan_foods', 'Alimenti del mio piano'], ['plan_macros', 'Macro del mio piano']];
+function recipeWeighedIngredients(r) {
+  return (r.ingredients || []).map(function (i) { return (i.alternatives || [])[0]; }).filter(function (a) { return a && !a.qb; });
+}
+// The foods of the plan (undated days: the diary is not the plan).
+function planFoodNames() {
+  const out = [];
+  ((DATA && DATA.nutrition && DATA.nutrition.days) || []).forEach(function (d) {
+    if (!d || d.date) return;
+    (d.meals || []).forEach(function (m) {
+      (m.foods || m.items || []).forEach(function (f) {
+        (Array.isArray(f.alternatives) && f.alternatives.length ? f.alternatives : [f]).forEach(function (a) { if (a && a.name) out.push({ name: a.name }); });
+      });
+    });
+  });
+  return out;
+}
+function recipeHasFoods(r, foods) {
+  const NP = window.NurvanNutritionPlan;
+  const ings = recipeWeighedIngredients(r);
+  if (!NP || !ings.length || !foods.length) return { ok: false, missing: ings.length };
+  const missing = ings.filter(function (a) { return !NP.sameFood(a.name, foods); });
+  // At most one ingredient to buy or to change: still a recipe you can make.
+  return { ok: missing.length <= 1, missing: missing.length, names: missing.map(function (a) { return a.name; }) };
+}
+// The meals of the plan of the same kind, and what they average.
+function planMealTarget(category) {
+  const want = category === 'colazione' ? /colazion/ : (category === 'pranzo_cena' ? /pranzo|cena/ : /spuntin|merend|snack/);
+  const sums = [];
+  ((DATA && DATA.nutrition && DATA.nutrition.days) || []).forEach(function (d) {
+    if (!d || d.date) return;
+    (d.meals || []).forEach(function (m) {
+      if (!want.test(shopFold(m.name))) return;
+      const s = nutritionSums(m.foods || []);
+      if (s.kcal > 0 && !s.partial) sums.push(s);
+    });
+  });
+  if (sums.length) {
+    const avg = function (k) { return sums.reduce(function (t, s) { return t + s[k]; }, 0) / sums.length; };
+    return { kcal: avg('kcal'), pro: avg('pro'), from: 'meals' };
+  }
+  // No such meal in the plan: the day's target split the usual way.
+  const t = currentNutritionTarget({});
+  if (!t || !t.kcal) return null;
+  const share = category === 'colazione' ? 0.25 : (category === 'pranzo_cena' ? 0.35 : 0.1);
+  return { kcal: t.kcal * share, pro: (t.pro || 0) * share, from: 'target' };
+}
+function recipeFitsMacros(r) {
+  if (!r.per100 || r.per100.kcal == null || !(r.portionGrams > 0)) return false;
+  const t = planMealTarget(r.category);
+  if (!t) return false;
+  const k = r.portionGrams / 100;
+  const kcal = r.per100.kcal * k, pro = (r.per100.pro || 0) * k;
+  return Math.abs(kcal - t.kcal) <= t.kcal * 0.2 && (!t.pro || pro >= t.pro * 0.75);
+}
+function recipePassesFilter(src, filter) {
+  if (filter === 'all') return true;
+  const r = catalogRecipe(src.id);
+  if (!r) return false;
+  if (filter === 'shopping') {
+    const planWeek = shoppingPlanWeek((DATA && DATA.nutrition && DATA.nutrition.days) || []);
+    if (!window.__recipeShopFoods) window.__recipeShopFoods = shoppingListFor(planWeek.week, 0, 6, nutritionRecipes()).map(function (it) { return { name: it.name }; });
+    const h = recipeHasFoods(r, window.__recipeShopFoods);
+    src.__missing = h.names;
+    return h.ok;
+  }
+  if (filter === 'plan_foods') {
+    if (!window.__recipePlanFoods) window.__recipePlanFoods = planFoodNames();
+    const h = recipeHasFoods(r, window.__recipePlanFoods);
+    src.__missing = h.names;
+    return h.ok;
+  }
+  if (filter === 'plan_macros') return recipeFitsMacros(r);
+  return true;
+}
+function openRecipeCatalog(cat, query, filter) {
+  if (filter) window.__recipeCatalogFilter = filter;
+  if (!window.__recipeCatalogFilter) window.__recipeCatalogFilter = 'all';
+  // Each opening reads the plan and the list as they are now.
+  if (cat == null && query == null && filter == null) { window.__recipeShopFoods = null; window.__recipePlanFoods = null; }
   window.__recipeCatalogCat = cat || window.__recipeCatalogCat || 'all';
   if (query != null) window.__recipeCatalogQuery = query;
   const q = shopFold(window.__recipeCatalogQuery || '');
   loadRecipeCatalog().then(function (all) {
     const list = all.filter(function (r) {
       if (window.__recipeCatalogCat !== 'all' && r.category !== window.__recipeCatalogCat) return false;
-      return !q || shopFold(r.name + ' ' + (r.ingredients || []).join(' ')).indexOf(q) >= 0;
+      if (q && shopFold(r.name + ' ' + (r.ingredients || []).join(' ')).indexOf(q) < 0) return false;
+      return recipePassesFilter(r, window.__recipeCatalogFilter);
     });
+    // Complete ones first.
+    if (/shopping|plan_foods/.test(window.__recipeCatalogFilter)) list.sort(function (a, b) { return (a.__missing || []).length - (b.__missing || []).length; });
+    const filters = RECIPE_CATALOG_FILTERS.map(function (f) {
+      const on = f[0] === window.__recipeCatalogFilter;
+      return '<button class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" style="font-size:10px;padding:4px 10px;" onclick="openRecipeCatalog(null,null,\'' + f[0] + '\')">' + f[1] + '</button>';
+    }).join('');
+    const filterNote = {
+      shopping: 'Ingredienti nella lista della spesa della settimana (q.b. esclusi): prima quelle con tutto, poi quelle a cui ne manca uno.',
+      plan_foods: 'Ingredienti che sono alimenti del tuo piano (q.b. esclusi): prima quelle con tutto, poi quelle a cui ne manca uno.',
+      plan_macros: (function () { const t = planMealTarget('pranzo_cena'); if (!t) return 'Serve un target kcal (✎ in Piano alimentare) oppure pasti del piano con tutti i valori.'; return t.from === 'meals' ? 'Kcal entro il 20% dei pasti dello stesso tipo nel piano, proteine almeno il 75%.' : 'Kcal entro il 20% della quota del target (colazione 25%, pasto 35%, spuntino 10%), proteine almeno il 75%.'; })()
+    }[window.__recipeCatalogFilter] || '';
+    const needsPlan = window.__recipeCatalogFilter !== 'all' && !((DATA && DATA.nutrition && DATA.nutrition.days) || []).some(function (d) { return d && !d.date && (d.meals || []).some(function (m) { return (m.foods || []).length; }); });
     const chips = RECIPE_CATALOG_CATS.map(function (c) {
       const on = c[0] === window.__recipeCatalogCat;
       return '<button class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" style="font-size:10px;padding:4px 10px;" onclick="openRecipeCatalog(\'' + c[0] + '\')">' + c[1] + '</button>';
@@ -26674,8 +26822,13 @@ function openRecipeCatalog(cat, query) {
     const rows = list.map(function (r) {
       return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #262626;cursor:pointer;" onclick="openCatalogRecipe(\'' + esc(r.id) + '\')">' +
         '<div><div style="font-size:12px;font-weight:800;color:#eee;">' + esc(r.name) + '</div>' +
-        '<div style="font-size:10px;color:#888;">' + esc([(RECIPE_CATALOG_CATS.find(function (c) { return c[0] === r.category; }) || [0, ''])[1], r.minutes ? r.minutes + ' min' : ''].filter(Boolean).join(' · ')) + '</div></div>' +
-        '<span style="color:var(--gold);">›</span></div>';
+        '<div style="font-size:10px;color:#888;">' + esc((function () {
+          const full = catalogRecipe(r.id);
+          return [(RECIPE_CATALOG_CATS.find(function (c) { return c[0] === r.category; }) || [0, ''])[1], r.minutes ? r.minutes + ' min' : '',
+            full ? recipePortionValuesText(full, 1).replace(/ \(\d+ g\)$/, '') : '', full && full.cost ? recipeCostText(full.cost) : ''].filter(Boolean).join(' · ');
+        })()) + '</div></div>' +
+        '<span style="color:var(--gold);">›</span></div>' +
+        (/shopping|plan_foods/.test(window.__recipeCatalogFilter) ? '<div style="font-size:9px;margin:-4px 0 4px;color:' + ((r.__missing || []).length ? '#e0a030' : '#4caf50') + ';">' + ((r.__missing || []).length ? 'manca: ' + esc(r.__missing.join(', ')) : '✓ hai tutto') + '</div>' : '');
     }).join('');
     nutritionModal('recipes-modal',
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
@@ -26684,7 +26837,10 @@ function openRecipeCatalog(cat, query) {
       recipeTabsHtml('catalog') +
       '<input id="recipe-catalog-search" type="search" placeholder="Cerca per nome o ingrediente" value="' + esc(window.__recipeCatalogQuery || '') + '" oninput="clearTimeout(window.__rcT);var v=this.value;window.__rcT=setTimeout(function(){openRecipeCatalog(null,v);var e=document.getElementById(\'recipe-catalog-search\');if(e){e.focus();e.setSelectionRange(v.length,v.length);}},250)" style="width:100%;margin-top:10px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;box-sizing:border-box;">' +
       '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">' + chips + '</div>' +
-      '<div style="font-size:10px;color:#888;margin-top:8px;">' + list.length + ' ricette · una porzione ciascuna</div>' +
+      '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">' + filters + '</div>' +
+      (filterNote ? '<div style="font-size:9px;color:#777;margin-top:6px;">' + esc(filterNote) + '</div>' : '') +
+      (needsPlan ? '<div style="font-size:11px;color:#e0a030;margin-top:6px;">Serve un piano alimentare con degli alimenti per questo filtro.</div>' : '') +
+      '<div style="font-size:10px;color:#888;margin-top:8px;">' + list.length + ' ricette · una porzione ciascuna · costo stimato (' + esc(shoppingCountry().name) + ')</div>' +
       (rows || '<div style="font-size:11px;color:#888;margin-top:10px;">Nessuna ricetta trovata.</div>'));
   });
 }
@@ -26717,7 +26873,9 @@ function openCatalogRecipe(id, portions) {
       '<button class="btn btn-outline" style="font-size:11px;padding:2px 8px;" onclick="openCatalogRecipe(\'' + esc(r.id) + '\',' + Math.max(1, p - 1) + ')">−</button><b>' + p + '</b>' +
       '<button class="btn btn-outline" style="font-size:11px;padding:2px 8px;" onclick="openCatalogRecipe(\'' + esc(r.id) + '\',' + (p + 1) + ')">+</button></div>' +
       (vals ? '<div style="font-size:11px;color:var(--gold);margin-top:6px;">' + esc(vals) + ' <span style="color:#777;">· calcolati dagli ingredienti</span></div>' : '<div style="font-size:10px;color:#888;margin-top:6px;">Valori non disponibili: non tutti gli ingredienti sono nella banca alimenti con quel nome.</div>') +
+      (r.cost ? '<div style="font-size:11px;color:#ccc;margin-top:4px;">Costo stimato: <b>' + esc(recipeCostText(r.cost, p)) + '</b> <span style="font-size:9px;color:#777;">prezzi medi ' + esc(shoppingCountry().name) + ', ingredienti q.b. esclusi</span></div>' : '') +
       '<div style="font-size:12px;font-weight:800;color:var(--gold);margin-top:12px;">Ingredienti</div><ul style="font-size:11px;color:#ddd;padding-left:18px;margin:6px 0;">' + ing + '</ul>' +
+      recipeSourcesHtml(r) +
       '<div style="font-size:12px;font-weight:800;color:var(--gold);margin-top:8px;">Preparazione</div><ol style="font-size:11px;color:#ddd;padding-left:18px;margin:6px 0;">' + r.steps.map(function (s) { return '<li style="margin:4px 0;">' + esc(s) + '</li>'; }).join('') + '</ol>' +
       (r.description ? '<div style="font-size:11px;color:#bbb;margin-top:8px;border-left:2px solid var(--gold);padding-left:8px;">' + esc(r.description) + '</div>' : '') +
       '<div style="display:flex;gap:6px;margin-top:14px;">' +
@@ -26726,6 +26884,18 @@ function openCatalogRecipe(id, portions) {
         : '<button class="btn btn-primary" style="flex:1;font-size:11px;" onclick="saveCatalogRecipe(\'' + esc(r.id) + '\')">Salva nelle mie ricette</button>') +
       '</div>');
   });
+}
+// Where the values come from, once per source.
+function recipeSourcesHtml(r) {
+  const seen = {};
+  (r.ingredients || []).forEach(function (i) {
+    const pv = ((i.alternatives || [])[0] || {}).provenance;
+    if (!pv || !pv.source) return;
+    const k = pv.source === 'crea' ? 'CREA 2019' : (pv.source === 'ciqual' ? 'Anses Ciqual 2025' : (pv.source === 'usda' ? 'USDA FoodData Central' : (pv.source === 'nurvan' ? 'Nurvan' : '')));
+    if (k) seen[k] = 1;
+  });
+  const list = Object.keys(seen);
+  return list.length ? '<div style="font-size:9px;color:#777;margin:2px 0 6px;">Valori: ' + esc(list.join(', ')) + '</div>' : '';
 }
 // A copy in the user's recipes: from there it can be edited and added to a meal.
 function saveCatalogRecipe(id) {
