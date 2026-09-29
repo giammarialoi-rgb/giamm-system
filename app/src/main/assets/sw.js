@@ -28,6 +28,7 @@ const PRECACHE = [
   './nutrition-targets.js',
   './nutrition-plan.js',
   './food-ciqual.json',
+  './recipe-catalog.json',
   './checkin-schedule.js',
   './features.js',
   './entitlements.js',

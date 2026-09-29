@@ -26615,6 +26615,138 @@ function recipePortionValuesText(r, portions) {
   const part = function (v, tag) { return v == null ? '—' + tag : Math.round(v * k) + tag; };
   return Math.round(r.per100.kcal * k) + ' kcal · ' + part(r.per100.pro, 'P') + ' ' + part(r.per100.carb, 'C') + ' ' + part(r.per100.fat, 'F') + ' (' + Math.round(g) + ' g)';
 }
+/*
+ * Nurvan's own recipe book (web/recipe-catalog.json): 150 recipes written
+ * for the app, one portion each. Loaded when first opened. Values are
+ * computed the same way as any recipe: from the ingredients, only when every
+ * weighed one is in the food table by its exact name - otherwise none.
+ */
+const RECIPE_CATALOG_CATS = [['all', 'Tutte'], ['colazione', 'Colazione'], ['pranzo_cena', 'Pranzo e cena'], ['spuntino', 'Spuntini e dolci']];
+let __recipeCatalog = null;
+let __recipeCatalogLoading = null;
+function loadRecipeCatalog() {
+  if (__recipeCatalog) return Promise.resolve(__recipeCatalog);
+  if (!__recipeCatalogLoading) {
+    __recipeCatalogLoading = fetch('recipe-catalog.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      __recipeCatalog = (j && Array.isArray(j.recipes)) ? j.recipes : [];
+      return __recipeCatalog;
+    }).catch(function () { __recipeCatalogLoading = null; return []; });
+  }
+  return __recipeCatalogLoading;
+}
+// A catalogue entry as a recipe of the app (ingredients parsed, values filled).
+const __catalogRecipeCache = {};
+function catalogRecipe(id) {
+  if (__catalogRecipeCache[id]) return __catalogRecipeCache[id];
+  const src = (__recipeCatalog || []).find(function (r) { return r.id === id; });
+  const NP = window.NurvanNutritionPlan;
+  if (!src || !NP) return null;
+  const recipe = {
+    id: src.id, name: src.name, portions: src.portions || 1, catalog: true,
+    category: src.category, minutes: src.minutes || null, description: src.tip || '',
+    author: 'Ricettario Nurvan',
+    ingredients: (src.ingredients || []).map(function (line) {
+      const qb = /\bq\.?\s?b\.?\s*$/i.test(line);
+      if (qb) return { alternatives: [{ label: line, name: line.replace(/\s*\bq\.?\s?b\.?\s*$/i, '').trim(), quantity: null, unit: '', qb: true }] };
+      return { alternatives: NP.splitOptions(line).map(NP.parseOption).filter(Boolean).slice(0, 1) };
+    }).filter(function (i) { return i.alternatives.length; }),
+    steps: (src.steps || []).slice(),
+    per100: {}, portionGrams: null, valuesFrom: null
+  };
+  try { if (typeof FoodDatabaseService !== 'undefined' && FoodDatabaseService.loadExtra) FoodDatabaseService.loadExtra(); } catch (_) {}
+  enrichPlanAlternatives({ days: [], recipes: [recipe] });
+  __catalogRecipeCache[id] = recipe;
+  return recipe;
+}
+function openRecipeCatalog(cat, query) {
+  window.__recipeCatalogCat = cat || window.__recipeCatalogCat || 'all';
+  if (query != null) window.__recipeCatalogQuery = query;
+  const q = shopFold(window.__recipeCatalogQuery || '');
+  loadRecipeCatalog().then(function (all) {
+    const list = all.filter(function (r) {
+      if (window.__recipeCatalogCat !== 'all' && r.category !== window.__recipeCatalogCat) return false;
+      return !q || shopFold(r.name + ' ' + (r.ingredients || []).join(' ')).indexOf(q) >= 0;
+    });
+    const chips = RECIPE_CATALOG_CATS.map(function (c) {
+      const on = c[0] === window.__recipeCatalogCat;
+      return '<button class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" style="font-size:10px;padding:4px 10px;" onclick="openRecipeCatalog(\'' + c[0] + '\')">' + c[1] + '</button>';
+    }).join('');
+    const rows = list.map(function (r) {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #262626;cursor:pointer;" onclick="openCatalogRecipe(\'' + esc(r.id) + '\')">' +
+        '<div><div style="font-size:12px;font-weight:800;color:#eee;">' + esc(r.name) + '</div>' +
+        '<div style="font-size:10px;color:#888;">' + esc([(RECIPE_CATALOG_CATS.find(function (c) { return c[0] === r.category; }) || [0, ''])[1], r.minutes ? r.minutes + ' min' : ''].filter(Boolean).join(' · ')) + '</div></div>' +
+        '<span style="color:var(--gold);">›</span></div>';
+    }).join('');
+    nutritionModal('recipes-modal',
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+      '<div style="font-size:15px;font-weight:800;color:#fff;">📖 Ricette</div>' +
+      '<button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="closeNutritionModal(\'recipes-modal\')">✕</button></div>' +
+      recipeTabsHtml('catalog') +
+      '<input id="recipe-catalog-search" type="search" placeholder="Cerca per nome o ingrediente" value="' + esc(window.__recipeCatalogQuery || '') + '" oninput="clearTimeout(window.__rcT);var v=this.value;window.__rcT=setTimeout(function(){openRecipeCatalog(null,v);var e=document.getElementById(\'recipe-catalog-search\');if(e){e.focus();e.setSelectionRange(v.length,v.length);}},250)" style="width:100%;margin-top:10px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:12px;box-sizing:border-box;">' +
+      '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">' + chips + '</div>' +
+      '<div style="font-size:10px;color:#888;margin-top:8px;">' + list.length + ' ricette · una porzione ciascuna</div>' +
+      (rows || '<div style="font-size:11px;color:#888;margin-top:10px;">Nessuna ricetta trovata.</div>'));
+  });
+}
+function recipeTabsHtml(active) {
+  const tab = function (id, label, fn) {
+    const on = id === active;
+    return '<button type="button" onclick="' + fn + '" style="flex:1;padding:7px;border-radius:8px;border:1px solid ' + (on ? 'var(--gold)' : '#333') + ';background:' + (on ? 'var(--gold)' : '#111') + ';color:' + (on ? '#0a0a0a' : '#ccc') + ';font-size:11px;font-weight:800;cursor:pointer;">' + label + '</button>';
+  };
+  return '<div style="display:flex;gap:6px;margin-top:10px;">' + tab('mine', 'Le mie' + (nutritionRecipes().length ? ' (' + nutritionRecipes().length + ')' : ''), 'openRecipes()') + tab('catalog', 'Ricettario Nurvan', 'openRecipeCatalog()') + '</div>';
+}
+function openCatalogRecipe(id, portions) {
+  loadRecipeCatalog().then(function () {
+    const r = catalogRecipe(id);
+    if (!r) return;
+    const p = Math.max(1, Number(portions) || 1);
+    const ing = (r.ingredients || []).map(function (i) {
+      const a = i.alternatives[0];
+      if (a.qb) return '<li style="margin:4px 0;">' + esc(a.name) + ' q.b.</li>';
+      const q = a.quantity != null ? Math.round(a.quantity * p * 10) / 10 : null;
+      return '<li style="margin:4px 0;">' + esc(a.name) + (q != null ? ' <span style="color:var(--gold);">' + q + ' ' + esc(a.unit || 'g') + '</span>' : '') + '</li>';
+    }).join('');
+    const vals = recipePortionValuesText(r, p);
+    const saved = nutritionRecipes().some(function (x) { return x.fromCatalog === r.id; });
+    nutritionModal('recipe-modal',
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+      '<div style="font-size:15px;font-weight:800;color:#fff;">' + esc(r.name) + '</div>' +
+      '<button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="closeNutritionModal(\'recipe-modal\')">✕</button></div>' +
+      '<div style="font-size:10px;color:#888;">Ricettario Nurvan' + (r.minutes ? ' · ' + r.minutes + ' min' : '') + '</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:#ccc;">Porzioni ' +
+      '<button class="btn btn-outline" style="font-size:11px;padding:2px 8px;" onclick="openCatalogRecipe(\'' + esc(r.id) + '\',' + Math.max(1, p - 1) + ')">−</button><b>' + p + '</b>' +
+      '<button class="btn btn-outline" style="font-size:11px;padding:2px 8px;" onclick="openCatalogRecipe(\'' + esc(r.id) + '\',' + (p + 1) + ')">+</button></div>' +
+      (vals ? '<div style="font-size:11px;color:var(--gold);margin-top:6px;">' + esc(vals) + ' <span style="color:#777;">· calcolati dagli ingredienti</span></div>' : '<div style="font-size:10px;color:#888;margin-top:6px;">Valori non disponibili: non tutti gli ingredienti sono nella banca alimenti con quel nome.</div>') +
+      '<div style="font-size:12px;font-weight:800;color:var(--gold);margin-top:12px;">Ingredienti</div><ul style="font-size:11px;color:#ddd;padding-left:18px;margin:6px 0;">' + ing + '</ul>' +
+      '<div style="font-size:12px;font-weight:800;color:var(--gold);margin-top:8px;">Preparazione</div><ol style="font-size:11px;color:#ddd;padding-left:18px;margin:6px 0;">' + r.steps.map(function (s) { return '<li style="margin:4px 0;">' + esc(s) + '</li>'; }).join('') + '</ol>' +
+      (r.description ? '<div style="font-size:11px;color:#bbb;margin-top:8px;border-left:2px solid var(--gold);padding-left:8px;">' + esc(r.description) + '</div>' : '') +
+      '<div style="display:flex;gap:6px;margin-top:14px;">' +
+      '<button class="btn btn-outline" style="font-size:11px;" onclick="openRecipeCatalog()">‹ Ricettario</button>' +
+      (saved ? '<div style="flex:1;font-size:11px;color:#4caf50;align-self:center;text-align:right;">Già nelle tue ricette</div>'
+        : '<button class="btn btn-primary" style="flex:1;font-size:11px;" onclick="saveCatalogRecipe(\'' + esc(r.id) + '\')">Salva nelle mie ricette</button>') +
+      '</div>');
+  });
+}
+// A copy in the user's recipes: from there it can be edited and added to a meal.
+function saveCatalogRecipe(id) {
+  const r = catalogRecipe(id);
+  if (!r) return;
+  if (!DATA.nutrition) DATA.nutrition = { days: [], present: true };
+  if (!Array.isArray(DATA.nutrition.recipes)) DATA.nutrition.recipes = [];
+  const copy = JSON.parse(JSON.stringify(r));
+  delete copy.catalog;
+  copy.fromCatalog = r.id;
+  copy.id = 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  DATA.nutrition.recipes.push(copy);
+  if (store) store.nutrition = DATA.nutrition;
+  markNutritionDirty();
+  persist();
+  if (typeof showToast === 'function') showToast('Ricetta salvata nelle tue', 'ok');
+  openRecipe(copy.id);
+}
+window.openRecipeCatalog = openRecipeCatalog;
+window.openCatalogRecipe = openCatalogRecipe;
+window.saveCatalogRecipe = saveCatalogRecipe;
 function openRecipes() {
   const list = nutritionRecipes();
   const rows = list.map(function (r) {
@@ -26627,7 +26759,8 @@ function openRecipes() {
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
     '<div style="font-size:15px;font-weight:800;color:#fff;">📖 Ricette</div>' +
     '<button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="closeNutritionModal(\'recipes-modal\')">✕</button></div>' +
-    '<div style="font-size:10px;color:#888;margin-top:4px;">Quelle del piano del nutrizionista e le tue.</div>' +
+    recipeTabsHtml('mine') +
+    '<div style="font-size:10px;color:#888;margin-top:8px;">Quelle del piano del nutrizionista e le tue.</div>' +
     (rows || '<div style="font-size:11px;color:#888;margin-top:10px;">Nessuna ricetta ancora.</div>') +
     '<button class="btn btn-primary" style="width:100%;margin-top:12px;font-size:11px;" onclick="openRecipeEditor()">+ Nuova ricetta</button>');
 }
