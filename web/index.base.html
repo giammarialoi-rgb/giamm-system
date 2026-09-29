@@ -20142,6 +20142,84 @@ if (typeof window !== 'undefined') {
   window.renderAiControlCenterHtml = renderAiControlCenterHtml;
 }
 
+/*
+ * Demo mode: a visible touch pointer for screen recordings. A circle where
+ * the finger lands, following it while it moves, and a ripple when it lifts.
+ * Drawn in a layer that takes no touches, so the app behaves the same.
+ * Per device (localStorage): it is about this screen, not the account.
+ */
+function demoTouchesOn() {
+  try { return localStorage.getItem('nurvan.demoTouches') === '1'; } catch (_) { return false; }
+}
+function setDemoTouches(on) {
+  try { if (on) localStorage.setItem('nurvan.demoTouches', '1'); else localStorage.removeItem('nurvan.demoTouches'); } catch (_) {}
+  installDemoTouches();
+  if (typeof showToast === 'function') showToast(on ? 'Modalità demo attiva: i tocchi si vedono' : 'Modalità demo spenta', 'ok');
+}
+window.setDemoTouches = setDemoTouches;
+function installDemoTouches() {
+  const on = demoTouchesOn();
+  if (!window.__demoTouchState) {
+    const st = window.__demoTouchState = { dots: {} };
+    const css = document.createElement('style');
+    css.textContent = '.nv-demo-dot{position:fixed;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;' +
+      'background:rgba(255,255,255,0.35);border:2px solid rgba(255,255,255,0.9);box-shadow:0 0 0 2px rgba(0,0,0,0.35),0 2px 10px rgba(0,0,0,0.4);' +
+      'pointer-events:none;z-index:2147483647;transform:scale(0.8);transition:transform .08s ease-out;}' +
+      '.nv-demo-dot.down{transform:scale(1);}' +
+      '.nv-demo-ripple{position:fixed;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;border:2px solid rgba(255,255,255,0.9);' +
+      'pointer-events:none;z-index:2147483647;animation:nvDemoRipple .45s ease-out forwards;}' +
+      '@keyframes nvDemoRipple{from{transform:scale(1);opacity:.9}to{transform:scale(2.2);opacity:0}}';
+    document.head.appendChild(css);
+    const place = function (el, x, y) { el.style.transform = ''; el.style.left = x + 'px'; el.style.top = y + 'px'; };
+    const down = function (e) {
+      if (!st.on || e.pointerType === 'touch') return;
+      const d = document.createElement('div');
+      d.className = 'nv-demo-dot';
+      place(d, e.clientX, e.clientY);
+      document.body.appendChild(d);
+      requestAnimationFrame(function () { d.classList.add('down'); });
+      st.dots[e.pointerId] = d;
+    };
+    const move = function (e) {
+      const d = st.dots[e.pointerId];
+      if (d) place(d, e.clientX, e.clientY);
+    };
+    const up = function (e) {
+      const d = st.dots[e.pointerId];
+      if (!d) return;
+      delete st.dots[e.pointerId];
+      const r = document.createElement('div');
+      r.className = 'nv-demo-ripple';
+      place(r, e.clientX, e.clientY);
+      document.body.appendChild(r);
+      setTimeout(function () { r.remove(); }, 500);
+      d.style.transition = 'opacity .15s';
+      d.style.opacity = '0';
+      setTimeout(function () { d.remove(); }, 160);
+    };
+    // Capture phase and passive: seen before the app handles the touch,
+    // never able to stop it.
+    window.addEventListener('pointerdown', down, { capture: true, passive: true });
+    window.addEventListener('pointermove', move, { capture: true, passive: true });
+    window.addEventListener('pointerup', up, { capture: true, passive: true });
+    window.addEventListener('pointercancel', up, { capture: true, passive: true });
+    // Fingers through touch events: unlike pointer events they keep coming
+    // while the page scrolls, so the circle follows the scroll too.
+    const each = function (fn) {
+      return function (ev) {
+        Array.prototype.forEach.call(ev.changedTouches || [], function (t) {
+          fn({ pointerId: 't' + t.identifier, clientX: t.clientX, clientY: t.clientY, pointerType: 'finger' });
+        });
+      };
+    };
+    window.addEventListener('touchstart', each(down), { capture: true, passive: true });
+    window.addEventListener('touchmove', each(move), { capture: true, passive: true });
+    window.addEventListener('touchend', each(up), { capture: true, passive: true });
+    window.addEventListener('touchcancel', each(up), { capture: true, passive: true });
+  }
+  window.__demoTouchState.on = on;
+}
+try { installDemoTouches(); } catch (_) {}
 function renderSettings(c) {
   // The plan, from the one place that knows it (web/entitlements.js).
   const planEff = currentPlanEffective();
@@ -20160,6 +20238,12 @@ function renderSettings(c) {
       <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Profilo</div>
       <p style="font-size:11px;color:#aaa;margin:0 0 10px;line-height:1.4;">Identità, foto, 1RM e muscoli focus si modificano nel Profilo. Qui restano preferenze e comportamento dell'app.</p>
       <button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="navigate('profile')">Apri profilo</button>
+    </div>
+
+    <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">Modalità demo</div>
+      <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px;">Mostra i tocchi sullo schermo <input type="checkbox" id="pref-demo-touches" ${demoTouchesOn()?'checked':''} onchange="setDemoTouches(this.checked)"></label>
+      <div style="font-size:10px;color:#666;line-height:1.4;">Ogni tocco disegna un cerchio dove appoggi il dito e lo segue quando scorri: utile per registrare lo schermo e mostrare l'app. Vale solo su questo dispositivo.</div>
     </div>
 
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
