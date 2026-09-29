@@ -1703,10 +1703,6 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">❤️</span>
         <span style="font-size:11px;font-weight:800;">Salute</span>
       </button>
-      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('community')">
-        <span style="font-size:20px;">👥</span>
-        <span style="font-size:11px;font-weight:800;">Community</span>
-      </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openAthleteProfile()">
         <span style="font-size:20px;">🏅</span>
         <span style="font-size:11px;font-weight:800;">Profilo Atleta</span>
@@ -46182,7 +46178,7 @@ function applyOperationsToProgram(program, operations) {
     }
     if (type === 'navigate' || type === 'set_view') {
       const view = changes.view || changes.tab || op.view;
-      const allowedViews = new Set(['home','training','stats','ai','programs','nutrition','supplements','therapy','exams','menu','athlete','settings','community']);
+      const allowedViews = new Set(['home','training','stats','ai','programs','nutrition','supplements','therapy','exams','menu','athlete','settings']);
       if (view && allowedViews.has(String(view))) {
         currentView = String(view);
         appliedCount++;
@@ -50442,7 +50438,6 @@ function renderCurrentView() {
   else if (currentView === 'therapy') renderTherapy(c);
   else if (currentView === 'exams') renderExams(c);
   else if (currentView === 'calendar') renderCalendar(c);
-  else if (currentView === 'community') renderCommunity(c);
   else if (currentView === 'athlete' || currentView === 'profile') renderProfile(c);
   else if (currentView === 'settings') renderSettings(c);
   else if (currentView === 'pricing') renderPricing(c);
