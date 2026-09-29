@@ -62549,7 +62549,7 @@ function openCatalogRecipe(id, portions) {
       '<div style="font-size:12px;font-weight:800;color:var(--gold);margin-top:8px;">Preparazione</div><ol style="font-size:11px;color:#ddd;padding-left:18px;margin:6px 0;">' + r.steps.map(function (s) { return '<li style="margin:4px 0;">' + esc(s) + '</li>'; }).join('') + '</ol>' +
       (r.description ? '<div style="font-size:11px;color:#bbb;margin-top:8px;border-left:2px solid var(--gold);padding-left:8px;">' + esc(r.description) + '</div>' : '') +
       '<div style="display:flex;gap:6px;margin-top:14px;">' +
-      '<button class="btn btn-outline" style="font-size:11px;" onclick="openRecipeCatalog()">‹ Ricettario</button>' +
+      '<button class="btn btn-outline" style="font-size:11px;" onclick="closeNutritionModal(\'recipe-modal\');openRecipeCatalog()">‹ Ricettario</button>' +
       (saved ? '<div style="flex:1;font-size:11px;color:#4caf50;align-self:center;text-align:right;">Già nelle tue ricette</div>'
         : '<button class="btn btn-primary" style="flex:1;font-size:11px;" onclick="saveCatalogRecipe(\'' + esc(r.id) + '\')">Salva nelle mie ricette</button>') +
       '</div>');
