@@ -222,11 +222,11 @@ export async function consumeLoginTicket(pool, ticket, verifier, now = Date.now(
     [ticketHash(ticket)]
   );
   const row = gone.rows[0];
-  if (!row || new Date(row.expires_at).getTime() <= now) throw httpError(401, "Accesso scaduto: riprova con Apple.");
+  if (!row || new Date(row.expires_at).getTime() <= now) throw httpError(401, "Accesso scaduto: riprova.");
   const want = Buffer.from(String(row.verifier_hash || ""));
   const got = Buffer.from(verifierHashOf(verifier));
   if (!row.verifier_hash || !verifier || want.length !== got.length || !crypto.timingSafeEqual(want, got)) {
-    throw httpError(401, "Accesso con Apple non avviato da questo dispositivo.");
+    throw httpError(401, "Accesso non avviato da questo dispositivo.");
   }
   const user = await pool.query("SELECT id, email, name, provider, avatar_url FROM app_users WHERE id = $1", [row.user_id]);
   if (!user.rows.length) throw httpError(401, "Account non trovato.");
@@ -240,7 +240,7 @@ function escHtml(s) {
 }
 
 // The page the browser shows after Apple, on the phone: back to the app.
-function returnPage(res, href, message) {
+export function returnPage(res, href, message) {
   res.set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'");
   res.set("Cache-Control", "no-store");
   res.set("Referrer-Policy", "no-referrer");

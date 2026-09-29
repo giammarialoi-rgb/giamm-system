@@ -5304,7 +5304,8 @@ function syncGoogleAuthButtons(logged) {
     if (host) host.style.display = 'none';
     return;
   }
-  if (isAndroidWebViewNative()) {
+  // The apps use their own button: Google's web button does not work inside an app.
+  if (isAndroidWebViewNative() || isIosApp()) {
     if (custom) custom.style.display = 'block';
     if (host) { host.style.display = 'none'; host.innerHTML = ''; }
     return;
@@ -5399,11 +5400,86 @@ function startGoogleAuth(){
       return;
     }
   }
+  if (isIosApp()) {
+    startGoogleAuthIos();
+    return;
+  }
   startGoogleAuthWeb().catch(function (err) {
     setGoogleAuthLoading(false);
     if (status) status.textContent = (err && err.message) ? err.message : 'Accesso Google non disponibile sul web.';
   });
 }
+
+/*
+ * The iOS app (Capacitor). Google refuses its sign-in inside an app's web
+ * view, so the login runs in the system browser (SFSafariViewController) and
+ * comes back through nurvan://oauth/google with a one-time ticket, bound to
+ * a secret this app keeps: the same scheme as Sign in with Apple on Android.
+ */
+var GOOGLE_VERIFIER_KEY = 'NURVAN_GOOGLE_VERIFIER';
+function isIosApp() {
+  try { return !!(window.Capacitor && typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'ios'); } catch (_) { return false; }
+}
+function capacitorPlugin(name) {
+  try { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[name]) || null; } catch (_) { return null; }
+}
+async function startGoogleAuthIos() {
+  const status = $('account-status');
+  try {
+    const browser = capacitorPlugin('Browser');
+    if (!browser || !window.crypto || !crypto.subtle) throw new Error('Accesso Google non disponibile su questo dispositivo.');
+    const raw = new Uint8Array(32);
+    crypto.getRandomValues(raw);
+    const verifier = appleB64url(raw);
+    const hash = appleB64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+    localStorage.setItem(GOOGLE_VERIFIER_KEY, JSON.stringify({ v: verifier, at: Date.now() }));
+    setGoogleAuthLoading(true, 'Apertura account Google…');
+    await browser.open({ url: coachEndpoint('/api/auth/google/start?vh=' + encodeURIComponent(hash)) });
+  } catch (err) {
+    setGoogleAuthLoading(false);
+    if (status) status.textContent = (err && err.message) || 'Accesso Google non disponibile.';
+  }
+}
+async function iosGoogleReturn(url) {
+  const browser = capacitorPlugin('Browser');
+  try { if (browser) await browser.close(); } catch (_) {}
+  const status = $('account-status');
+  let params;
+  try { params = new URL(url).searchParams; } catch (_) { params = new URLSearchParams(String(url).split('?')[1] || ''); }
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(GOOGLE_VERIFIER_KEY) || 'null'); } catch (_) {}
+  try { localStorage.removeItem(GOOGLE_VERIFIER_KEY); } catch (_) {}
+  const err = params.get('error');
+  const ticket = params.get('code');
+  if (err || !ticket) {
+    setGoogleAuthLoading(false);
+    if (status) status.textContent = err === 'cancelled' ? 'Accesso Google annullato.' : 'Accesso Google non riuscito. Riprova.';
+    return;
+  }
+  // Only a login this app started, in the last 15 minutes.
+  if (!saved || !saved.v || Date.now() - Number(saved.at || 0) > 15 * 60 * 1000) {
+    setGoogleAuthLoading(false);
+    if (status) status.textContent = 'Accesso Google non avviato da questa app: riprova dal pulsante Google.';
+    return;
+  }
+  try {
+    setGoogleAuthLoading(true, 'Verifica credenziali…');
+    const response = await apiFetch(coachEndpoint('/api/auth/google'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket: ticket, verifier: saved.v }) });
+    await finishOAuthLogin(await readApiJson(response));
+  } catch (error) {
+    setGoogleAuthLoading(false);
+    if (status) status.textContent = (error && error.message) || 'Accesso Google non riuscito.';
+  }
+}
+try {
+  const capApp = isIosApp() ? capacitorPlugin('App') : null;
+  if (capApp && capApp.addListener) {
+    capApp.addListener('appUrlOpen', function (e) {
+      const url = String((e && e.url) || '');
+      if (url.indexOf('nurvan://oauth/google') === 0) iosGoogleReturn(url);
+    });
+  }
+} catch (_) {}
 
 function loadGoogleIdentityScript() {
   return new Promise(function (resolve, reject) {

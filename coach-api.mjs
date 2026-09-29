@@ -23,7 +23,8 @@ import { accountEntitlement, mountPlanRoutes } from "./server/account/plans.mjs"
 import { publicUser, resolveIdentityUser, mountAccountDeletion } from "./server/account/identity.mjs";
 import { createSessionGate, revocationMoment } from "./server/account/sessions.mjs";
 import { mountEmailAuth, needsEmailVerification, loginLocked, noteLoginFailure, clearLoginFailures, resetEmail, isSyntheticEmail, linkTokenHash } from "./server/account/email-auth.mjs";
-import { appleCallbackRoute, appleConfig, mountAppleAuth } from "./server/account/apple.mjs";
+import { appleCallbackRoute, appleConfig, mountAppleAuth, consumeLoginTicket } from "./server/account/apple.mjs";
+import { mountGoogleAppAuth } from "./server/account/google-app.mjs";
 import { loadLegal, validMainConsent, recordMainConsent, readConsentRow, aiConsentWithdrawn, mountConsentRoutes } from "./server/account/consent.mjs";
 import { mountAdminDashboard } from "./server/admin/index.mjs";
 import { touchLastSeen, recordEvent, fileFormat } from "./server/admin/activity.mjs";
@@ -1668,6 +1669,13 @@ app.post("/api/account/sync", async (req, res) => {
 
 app.post("/api/auth/google", async (req, res) => {
   try {
+    // The iOS app: the one-time ticket from nurvan://oauth/google, swapped
+    // with the secret that started the login (server/account/google-app.mjs).
+    if (req.body && req.body.ticket) {
+      await initDb();
+      const user = await consumeLoginTicket(pool, req.body.ticket, req.body.verifier);
+      return res.json({ token: issueAccountToken(user), user: publicUser(user) });
+    }
     const identity = await verifyGoogleCredential(req.body?.credential);
     return await issueOAuthResponse(req, res, identity);
   } catch (err) {
@@ -2225,6 +2233,7 @@ mountCoachPractice(app, {
 
 mountPlanRoutes(app, { pool, initDb, accountFromBearer });
 const appleAuth = mountAppleAuth(app, { pool, initDb, secret: JWT_SECRET, accountFromBearer, issueAccountToken });
+mountGoogleAppAuth(app, { pool, initDb, secret: JWT_SECRET, verifyGoogleCredential, resolveIdentityUser, clientId: publicGoogleClientId });
 appleCallbackTarget.handle = appleAuth.callbackHandler;
 mountAccountDeletion(app, { pool, initDb, accountFromBearer, onDeleted: (gone) => appleAuth.revokeIdentities(gone.identities) });
 mountConsentRoutes(app, { pool, initDb, accountFromBearer, featuresPath: FEATURES_PATH });

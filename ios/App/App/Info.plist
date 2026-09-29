@@ -20,6 +20,17 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.nurvan.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>nurvan</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Nurvan usa la fotocamera per leggere i codici a barre degli alimenti e fotografare i pasti.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
