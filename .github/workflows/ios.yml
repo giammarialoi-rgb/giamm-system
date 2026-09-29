@@ -19,6 +19,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # App Store Connect accepts only builds made with the iOS 26 SDK (Xcode 26).
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26'
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
