@@ -16367,7 +16367,7 @@ function foodSourceLabelHtml(f) {
   if (p.source === 'nurvan') return '<span style="' + style + '">Fonte: Nurvan</span>';
   if (p.matched === 'ai') return '<span style="' + style + '" title="' + esc(p.matchedName || '') + '">Valori di: ' + esc(p.matchedName || 'banca alimenti') + '</span>';
   if (p.source === 'ciqual') return '<span style="' + style + '">Fonte: Anses Ciqual 2025</span>';
-  if (p.source === 'usda') return '<span style="' + style + '" title="' + esc(p.ref || '') + '">Fonte: USDA FoodData Central</span>';
+  if (p.source === 'usda' || p.source === 'off' || p.source === 'wikipedia') return '<span style="' + style + '" title="' + esc(p.ref || '') + '">Fonte: ' + esc(p.kind || 'USDA FoodData Central') + '</span>';
   if (f && f.brand) return '<span style="' + style + '">' + esc(f.brand) + '</span>';
   if (p.source === 'open_food_facts' || p.source === 'fatsecret' || p.source === 'usda' || p.source === 'remote') return '<span style="' + style + '">Prodotto</span>';
   return '';
@@ -26643,6 +26643,7 @@ function loadRecipeCatalog() {
   }
   return __recipeCatalogLoading;
 }
+const RECIPE_SOURCE_NAMES = { usda: 'USDA FoodData Central', off: 'Open Food Facts (etichetta)', wikipedia: 'Wikipedia' };
 // An ingredient named in the book's own table of sources: "refs" points to
 // the food table entry by its exact name (Ciqual), "foods" carries values
 // from USDA FoodData Central with the record they come from.
@@ -26652,7 +26653,7 @@ function catalogIngredientValues(a) {
   const food = data.foods && data.foods[key];
   if (food) {
     return { kcal: food.kcal, pro: food.pro, carb: food.carb, fat: food.fat,
-      provenance: { source: 'usda', kind: 'USDA FoodData Central', ref: food.ref || '', url: food.url || '', confidence: 1 } };
+      provenance: { source: food.source || 'usda', kind: RECIPE_SOURCE_NAMES[food.source] || 'USDA FoodData Central', ref: food.ref || '', url: food.url || '', confidence: 1 } };
   }
   const ref = data.refs && data.refs[key];
   if (ref && typeof FoodDatabaseService !== 'undefined') {
@@ -26891,7 +26892,7 @@ function recipeSourcesHtml(r) {
   (r.ingredients || []).forEach(function (i) {
     const pv = ((i.alternatives || [])[0] || {}).provenance;
     if (!pv || !pv.source) return;
-    const k = pv.source === 'crea' ? 'CREA 2019' : (pv.source === 'ciqual' ? 'Anses Ciqual 2025' : (pv.source === 'usda' ? 'USDA FoodData Central' : (pv.source === 'nurvan' ? 'Nurvan' : '')));
+    const k = pv.source === 'crea' ? 'CREA 2019' : (pv.source === 'ciqual' ? 'Anses Ciqual 2025' : (RECIPE_SOURCE_NAMES[pv.source] || (pv.source === 'nurvan' ? 'Nurvan' : '')));
     if (k) seen[k] = 1;
   });
   const list = Object.keys(seen);
