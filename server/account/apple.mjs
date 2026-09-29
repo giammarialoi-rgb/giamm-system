@@ -28,6 +28,8 @@ const APPLE_REVOKE = "https://appleid.apple.com/auth/revoke";
 const STATE_TTL_MS = 10 * 60 * 1000;
 const TICKET_TTL_MS = 2 * 60 * 1000;
 const APP_RETURN = "giammaria://oauth/apple";
+// The iOS app (Capacitor) comes back through its own scheme.
+const IOS_RETURN = "nurvan://oauth/apple";
 
 function httpError(statusCode, message) {
   return Object.assign(new Error(message), { statusCode });
@@ -68,8 +70,8 @@ export function verifierHashOf(verifier) {
   return crypto.createHash("sha256").update(String(verifier || "")).digest("base64url");
 }
 
-export function issueAppleState(secret, mode, now = Date.now(), verifierHash = "") {
-  const body = b64url(JSON.stringify({ n: crypto.randomBytes(16).toString("base64url"), m: mode === "app" ? "app" : "web", exp: now + STATE_TTL_MS, v: verifierHash || undefined }));
+export function issueAppleState(secret, mode, now = Date.now(), verifierHash = "", ret = "") {
+  const body = b64url(JSON.stringify({ n: crypto.randomBytes(16).toString("base64url"), m: mode === "app" ? "app" : "web", exp: now + STATE_TTL_MS, v: verifierHash || undefined, r: ret === "ios" ? "ios" : undefined }));
   const state = body + "." + hmac(secret, "apple-state:" + body);
   return { state, nonce: hmac(secret, "apple-nonce:" + body) };
 }
@@ -84,7 +86,17 @@ export function readAppleState(secret, state, now = Date.now()) {
   let data;
   try { data = JSON.parse(Buffer.from(body, "base64url").toString("utf8")); } catch (_) { throw httpError(400, "Richiesta Apple non valida. Riprova."); }
   if (!data || !(Number(data.exp) > now)) throw httpError(400, "Richiesta Apple scaduta. Riprova.");
-  return { mode: data.m === "app" ? "app" : "web", nonce: hmac(secret, "apple-nonce:" + body), verifierHash: isVerifierHash(data.v) ? data.v : "" };
+  return { mode: data.m === "app" ? "app" : "web", nonce: hmac(secret, "apple-nonce:" + body), verifierHash: isVerifierHash(data.v) ? data.v : "", ret: data.r === "ios" ? "ios" : "" };
+}
+
+// Where the browser goes back to, read from the state only to pick the app:
+// used also for an error, when the state is not checked.
+function appReturnFor(state) {
+  try {
+    const data = JSON.parse(Buffer.from(String(state || "").split(".")[0], "base64url").toString("utf8"));
+    if (data && data.r === "ios") return IOS_RETURN;
+  } catch (_) {}
+  return APP_RETURN;
 }
 
 // --- the identity token ----------------------------------------------------
@@ -289,7 +301,7 @@ export function mountAppleAuth(app, deps) {
       provider: "apple", sub: id.sub, email: id.email, emailVerified: id.emailVerified,
       name: appleUserName(user), linkingUserId, refreshTokenEnc
     });
-    return { ...resolved, mode: st.mode, verifierHash: st.verifierHash };
+    return { ...resolved, mode: st.mode, verifierHash: st.verifierHash, ret: st.ret };
   }
 
   app.get("/api/auth/apple/web-config", (req, res) => {
@@ -327,12 +339,14 @@ export function mountAppleAuth(app, deps) {
   // Android: the browser goes to Apple from here.
   app.get("/api/auth/apple/start", (req, res) => {
     const c = cfg();
-    if (!c.enabled) return returnPage(res, APP_RETURN + "?error=not_configured", "Accesso con Apple non disponibile.");
+    const ios = req.query.app === "ios";
+    const back = ios ? IOS_RETURN : APP_RETURN;
+    if (!c.enabled) return returnPage(res, back + "?error=not_configured", "Accesso con Apple non disponibile.");
     // The app sends the hash of a secret it keeps; the ticket at the end is
     // bound to it. Without one (an older app) there is no safe way back.
     const vh = String(req.query.vh || "");
-    if (!isVerifierHash(vh)) return returnPage(res, APP_RETURN + "?error=update", "Aggiorna l'app Nurvan per accedere con Apple.");
-    const { state, nonce } = issueAppleState(secret, "app", Date.now(), vh);
+    if (!isVerifierHash(vh)) return returnPage(res, back + "?error=update", "Aggiorna l'app Nurvan per accedere con Apple.");
+    const { state, nonce } = issueAppleState(secret, "app", Date.now(), vh, ios ? "ios" : "");
     const q = new URLSearchParams({
       response_type: "code id_token",
       response_mode: "form_post",
@@ -351,15 +365,16 @@ export function mountAppleAuth(app, deps) {
   // CORS allowlist, since the post comes from appleid.apple.com.
   const callbackHandler = async (req, res) => {
     const body = req.body || {};
-    if (body.error) return returnPage(res, APP_RETURN + "?error=cancelled", "Accesso con Apple annullato.");
+    const back = appReturnFor(body.state);
+    if (body.error) return returnPage(res, back + "?error=cancelled", "Accesso con Apple annullato.");
     try {
       const out = await signIn({ idToken: body.id_token, code: body.code, user: body.user, state: body.state, redirect: redirectUri(req), linkingUserId: null });
       if (out.mode !== "app") throw httpError(400, "Richiesta Apple non valida. Riprova.");
       const ticket = await issueLoginTicket(pool, out.user.id, out.verifierHash);
-      return returnPage(res, APP_RETURN + "?code=" + encodeURIComponent(ticket), "Accesso riuscito. Torna a Nurvan.");
+      return returnPage(res, back + "?code=" + encodeURIComponent(ticket), "Accesso riuscito. Torna a Nurvan.");
     } catch (err) {
       if (!err.statusCode) console.error("APPLE_CALLBACK_ERROR", err);
-      return returnPage(res, APP_RETURN + "?error=failed", err.statusCode ? err.message : "Accesso con Apple non riuscito.");
+      return returnPage(res, back + "?error=failed", err.statusCode ? err.message : "Accesso con Apple non riuscito.");
     }
   };
 

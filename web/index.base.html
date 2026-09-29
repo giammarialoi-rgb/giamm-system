@@ -5467,12 +5467,28 @@ async function iosGoogleReturn(url) {
     if (status) status.textContent = (error && error.message) || 'Accesso Google non riuscito.';
   }
 }
+async function iosAppleReturn(url) {
+  const browser = capacitorPlugin('Browser');
+  try { if (browser) await browser.close(); } catch (_) {}
+  let params;
+  try { params = new URL(url).searchParams; } catch (_) { params = new URLSearchParams(String(url).split('?')[1] || ''); }
+  const err = params.get('error');
+  const ticket = params.get('code');
+  if (err || !ticket) {
+    try { localStorage.removeItem(APPLE_VERIFIER_KEY); } catch (_) {}
+    const status = $('account-status');
+    if (status) status.textContent = err === 'cancelled' ? 'Accesso con Apple annullato.' : 'Accesso con Apple non riuscito. Riprova.';
+    return;
+  }
+  await nativeAppleResult(ticket);
+}
 try {
   const capApp = isIosApp() ? capacitorPlugin('App') : null;
   if (capApp && capApp.addListener) {
     capApp.addListener('appUrlOpen', function (e) {
       const url = String((e && e.url) || '');
       if (url.indexOf('nurvan://oauth/google') === 0) iosGoogleReturn(url);
+      if (url.indexOf('nurvan://oauth/apple') === 0) iosAppleReturn(url);
     });
   }
 } catch (_) {}
@@ -5627,7 +5643,7 @@ function prepareAppleWebSignIn() {
 function startAppleAuth(){
   const status = $('account-status');
   if (status) status.textContent = 'Apertura account Apple…';
-  if (isAndroidWebViewNative()) { startAppleAuthInBrowser(); return; }
+  if (isAndroidWebViewNative() || isIosApp()) { startAppleAuthInBrowser(); return; }
   if (!window.__appleWeb || !window.AppleID || !AppleID.auth) {
     prepareAppleWebSignIn().then(function () {
       if (status) status.textContent = 'Tocca di nuovo «Accedi con Apple».';
@@ -5674,6 +5690,14 @@ async function startAppleAuthInBrowser() {
     const verifier = appleB64url(raw);
     const hash = appleB64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
     localStorage.setItem(APPLE_VERIFIER_KEY, JSON.stringify({ v: verifier, at: Date.now() }));
+    if (isIosApp()) {
+      // Apple's popup does not work inside the iOS app: the system browser
+      // does, and comes back through nurvan://oauth/apple.
+      const browser = capacitorPlugin('Browser');
+      if (!browser) throw new Error('Accesso con Apple non disponibile su questo dispositivo.');
+      await browser.open({ url: coachEndpoint('/api/auth/apple/start?app=ios&vh=' + encodeURIComponent(hash)) });
+      return;
+    }
     // An http(s) navigation from the app opens the system browser.
     window.location.href = coachEndpoint('/api/auth/apple/start?vh=' + encodeURIComponent(hash));
   } catch (err) {
