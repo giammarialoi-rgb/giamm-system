@@ -11,6 +11,7 @@ const PRECACHE = [
   './icon-512.png',
   './favicon.png',
   './nurvan_logo.png',
+  './nurvan_wordmark.png',
   './muscle-male-front.png',
   './muscle-male-back.png',
   './muscle-female-front.png',

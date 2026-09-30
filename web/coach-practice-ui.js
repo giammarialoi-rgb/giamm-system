@@ -1142,6 +1142,7 @@ function queueAccountSyncIfOffline() {
 }
 
 function setNurvanAppBadge(n) {
+  if (typeof iosSetBadge === 'function' && iosSetBadge(n)) return;
   try {
     if (typeof window !== 'undefined' && window.NativeConfig) return;
     const count = Math.max(0, Number(n) || 0);
@@ -1154,6 +1155,7 @@ function setNurvanAppBadge(n) {
 }
 
 function clearNurvanAppBadge() {
+  if (typeof iosSetBadge === 'function' && iosSetBadge(0)) return;
   try {
     if (typeof window !== 'undefined' && window.NativeConfig) return;
     if (navigator.clearAppBadge) navigator.clearAppBadge().catch(function () {});
@@ -5563,6 +5565,13 @@ function notifyUser(title, body, route) {
     try { handleNotifyRoute(route); } catch (_) {}
   };
   showInAppNotify(title, body, route);
+  // iOS app: a real notification (sound, lock screen) when the app is not in front.
+  if (typeof isIosApp === 'function' && isIosApp()) {
+    if (document.visibilityState !== 'visible' && typeof iosScheduleNotification === 'function') {
+      iosScheduleNotification({ id: 'msg_' + Date.now(), title: title, body: body, at: Date.now() + 500, route: route || '' });
+    }
+    return;
+  }
   try {
     const native = typeof nativeBridge === 'function' ? nativeBridge() : (typeof NativeConfig !== 'undefined' ? NativeConfig : null);
     if (native && typeof native.notifyNow === 'function') {

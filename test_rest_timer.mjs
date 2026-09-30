@@ -63,7 +63,7 @@ console.log('\n--- 1. il tempo che manca viene dall\'orologio ---');
   eq(run(`timerRemainingSeconds(${endsAt}, ${t0 + 400})`), 90, '1e. si arrotonda verso l\'alto: a 0,4 s dalla partenza si legge ancora 90');
   ok('1f. il tick ridisegna dallo stato, non decrementa un contatore', !/sec--/.test(grab('renderRestTimer')) && /timerRemainingSeconds\(/.test(grab('renderRestTimer')));
   ok('1g. e al ritorno in primo piano si ridisegna subito',
-    /visibilityState === 'visible' && restTimerState\(\)\) renderRestTimer\(\)/.test(SRC));
+    /visibilityState === 'visible'\) \{[\s\S]{0,160}if \(st\) renderRestTimer\(\)/.test(SRC));
 }
 
 console.log('\n--- 2. il recupero scritto nella scheda si legge com\'e\' scritto ---');

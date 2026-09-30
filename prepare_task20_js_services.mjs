@@ -38,8 +38,8 @@ const I18nService = {
     it: {
       appName: "NURVAN",
       appTitle: "NURVAN",
-      dashboard: "SYSTEM DASHBOARD",
-      home: "SYSTEM DASHBOARD",
+      dashboard: "DASHBOARD",
+      home: "DASHBOARD",
       activeSession: "Sessione Attiva",
       startWorkout: "INIZIA WORKOUT",
       importProgram: "IMPORTA SCHEDA",
@@ -167,8 +167,8 @@ const I18nService = {
     en: {
       appName: "NURVAN",
       appTitle: "NURVAN",
-      dashboard: "SYSTEM DASHBOARD",
-      home: "SYSTEM DASHBOARD",
+      dashboard: "DASHBOARD",
+      home: "DASHBOARD",
       activeSession: "Active Session",
       startWorkout: "START WORKOUT",
       importProgram: "IMPORT PROGRAM",

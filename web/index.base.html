@@ -5451,6 +5451,88 @@ function isIosApp() {
 function capacitorPlugin(name) {
   try { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[name]) || null; } catch (_) { return null; }
 }
+
+/*
+ * iOS app: notifications, vibration and the number on the icon go through
+ * Capacitor plugins (LocalNotifications, Haptics, Badge); the web APIs the
+ * rest of the app uses do nothing inside an iOS web view. Local ones only:
+ * a message arriving while the app is closed needs push (APNs), not here.
+ */
+function iosNotifId(key) {
+  let h = 0;
+  const str = String(key || '');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+  return Math.abs(h % 2000000000) + 1;
+}
+function iosNotifications() { return isIosApp() ? capacitorPlugin('LocalNotifications') : null; }
+function iosAskNotificationPermission() {
+  const ln = iosNotifications();
+  if (!ln) return Promise.resolve(false);
+  return Promise.resolve(ln.requestPermissions())
+    .then(function (r) { return !!(r && r.display === 'granted'); })
+    .catch(function () { return false; });
+}
+// job: { id, title, body, at (epoch ms), daily (bool), route }
+function iosScheduleNotification(job) {
+  const ln = iosNotifications();
+  if (!ln || !job) return;
+  const when = new Date(Math.max(Date.now() + 1000, Number(job.at) || Date.now() + 1000));
+  const schedule = job.daily
+    ? { on: { hour: when.getHours(), minute: when.getMinutes() }, allowWhileIdle: true }
+    : { at: when, allowWhileIdle: true };
+  iosAskNotificationPermission().then(function (ok) {
+    if (!ok) return;
+    const id = iosNotifId(job.id);
+    Promise.resolve(ln.cancel({ notifications: [{ id: id }] })).catch(function () {}).then(function () {
+      return ln.schedule({ notifications: [{
+        id: id,
+        title: String(job.title || 'Nurvan'),
+        body: String(job.body || ''),
+        schedule: schedule,
+        sound: 'default',
+        extra: { route: job.route || '' }
+      }] });
+    }).catch(function (err) { console.warn('[IOS_NOTIFY]', err); });
+  });
+}
+function iosCancelNotification(key) {
+  const ln = iosNotifications();
+  if (!ln) return;
+  Promise.resolve(ln.cancel({ notifications: [{ id: iosNotifId(key) }] })).catch(function () {});
+}
+function iosVibrate(ms) {
+  const hp = isIosApp() ? capacitorPlugin('Haptics') : null;
+  if (!hp) return false;
+  try {
+    if (ms && ms >= 400 && hp.notification) hp.notification({ type: 'SUCCESS' });
+    else if (hp.vibrate) hp.vibrate({ duration: ms || 300 });
+  } catch (_) {}
+  return true;
+}
+function iosSetBadge(n) {
+  const b = isIosApp() ? capacitorPlugin('Badge') : null;
+  if (!b) return false;
+  const count = Math.max(0, Number(n) || 0);
+  try {
+    if (count > 0) {
+      Promise.resolve(b.requestPermissions && b.requestPermissions()).catch(function () {})
+        .then(function () { return b.set({ count: count }); }).catch(function () {});
+    } else {
+      Promise.resolve(b.clear()).catch(function () {});
+    }
+  } catch (_) {}
+  return true;
+}
+// A tap on a notification opens where it points.
+try {
+  const lnTap = iosNotifications();
+  if (lnTap && lnTap.addListener) {
+    lnTap.addListener('localNotificationActionPerformed', function (e) {
+      const route = e && e.notification && e.notification.extra && e.notification.extra.route;
+      if (route && typeof handleNotifyRoute === 'function') { try { handleNotifyRoute(route); } catch (_) {} }
+    });
+  }
+} catch (_) {}
 async function startGoogleAuthIos() {
   const status = $('account-status');
   try {
@@ -11758,6 +11840,7 @@ async function releaseTimerWakeLock() {
 function nativeVibrate(ms) {
   try {
     if (store.prefs && store.prefs.timerVibrate === false) return;
+    if (typeof iosVibrate === 'function' && iosVibrate(ms || 400)) return;
     if (typeof NativeConfig !== 'undefined' && NativeConfig.vibrate) NativeConfig.vibrate(ms || 400);
     else if (navigator.vibrate) navigator.vibrate(ms || 400);
   } catch (_) {}
@@ -12023,8 +12106,16 @@ function stopTimer() {
 // browser puo' aver rallentato o sospeso i tick, ma non l'ora.
 try {
   if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    // iOS app: leaving the app during a rest, its end arrives as a
+    // notification with sound; coming back removes it.
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible' && restTimerState()) renderRestTimer();
+      const st = restTimerState();
+      if (document.visibilityState === 'visible') {
+        if (typeof iosCancelNotification === 'function') iosCancelNotification('rest_timer');
+        if (st) renderRestTimer();
+      } else if (st && !st.finished && st.endsAt > Date.now() && typeof iosScheduleNotification === 'function') {
+        iosScheduleNotification({ id: 'rest_timer', title: 'Recupero finito', body: 'Tocca per la prossima serie.', at: st.endsAt, route: 'training' });
+      }
     });
   }
 } catch (_) {}
@@ -12697,35 +12788,37 @@ function showLiveSetIntelHtml(exIdx) {
   let h = '<div class="ex-intel-bubble">';
   h += '<div style="font-size:10px;color:var(--gold);font-weight:800;">SET ' + live.set + ' COMPLETATO ✓</div>';
   h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + esc(String(kgToDisp(live.load))) + ' ' + wUnit() + ' × ' + esc(String(live.reps)) + ' rip</div>';
-  h += '<div class="stats-adv-row"><span>Massimale stimato (questa serie)</span><span>' + (live.lastSetE1RM == null ? '—' : wFmt(live.lastSetE1RM)) + '</span></div>';
-  h += '<div style="font-size:9px;color:#888;">e1RM della serie appena registrata — stima, non un massimale testato</div>';
+  // Only the suggestion for next time is shown; the numbers open on request.
+  let d = '';
+  d += '<div class="stats-adv-row"><span>Massimale stimato (questa serie)</span><span>' + (live.lastSetE1RM == null ? '—' : wFmt(live.lastSetE1RM)) + '</span></div>';
+  d += '<div style="font-size:9px;color:#888;">e1RM della serie appena registrata — stima, non un massimale testato</div>';
   if (live.rpe != null || live.rir != null) {
-    h += '<div class="stats-adv-row"><span>Sforzo</span><span>' +
+    d += '<div class="stats-adv-row"><span>Sforzo</span><span>' +
       (live.rpe != null ? ('RPE ' + live.rpe + '/10') : '') +
       (live.rpe != null && live.rir != null ? ' · ' : '') +
       (live.rir != null ? ('RIR ' + live.rir) : '') + '</span></div>';
   }
   if (live.relativeIntensity != null) {
-    h += '<div class="stats-adv-row"><span>Intensità</span><span>' + live.relativeIntensity + '% 1RM stimato' +
+    d += '<div class="stats-adv-row"><span>Intensità</span><span>' + live.relativeIntensity + '% 1RM stimato' +
       (live.intensityBand ? (' · ' + esc(H('intensity', live.intensityBand))) : '') + '</span></div>';
   }
-  h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(live.snapshot && live.snapshot.performanceDelta != null ? live.snapshot.performanceDelta : live.vsPreviousExposure) + '</span></div>';
-  h += '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(live)) + (live.confidence ? (' · ' + esc(H('confidence', live.confidence))) : '') + '</div>';
+  d += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(live.snapshot && live.snapshot.performanceDelta != null ? live.snapshot.performanceDelta : live.vsPreviousExposure) + '</span></div>';
+  d += '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(live)) + (live.confidence ? (' · ' + esc(H('confidence', live.confidence))) : '') + '</div>';
   if (live.intensityDelta != null) {
-    h += '<div class="stats-adv-row"><span>Intensità vs precedente</span><span>' + formatIntelPct(live.intensityDelta) + '</span></div>';
+    d += '<div class="stats-adv-row"><span>Intensità vs precedente</span><span>' + formatIntelPct(live.intensityDelta) + '</span></div>';
   }
-  h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(live.volumeVsPrevious != null ? live.volumeVsPrevious : live.vsLastSessionVolume) + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(live.volumeToday) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Fatica durante questa seduta</span><span>' + esc(H('fatigue', live.fatigue && live.fatigue.signal)) + '</span></div>';
-  h += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato · non modifica i kg che hai scritto. ' + metricExplainBtn('e1rm', 'ⓘ Massimale stimato') + '</div>';
+  d += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(live.volumeVsPrevious != null ? live.volumeVsPrevious : live.vsLastSessionVolume) + '</span></div>';
+  d += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(live.volumeToday) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
+  d += '<div class="stats-adv-row"><span>Fatica durante questa seduta</span><span>' + esc(H('fatigue', live.fatigue && live.fatigue.signal)) + '</span></div>';
+  d += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato · non modifica i kg che hai scritto. ' + metricExplainBtn('e1rm', 'ⓘ Massimale stimato') + '</div>';
   const rep = window.__liveExerciseReport;
   if (rep && !rep.empty && Number(rep.exIdx) === Number(exIdx)) {
-    h += '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-top:10px;">REPORT ESERCIZIO</div>';
-    h += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + formatStatsKg(rep.volumeToday) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Miglior serie</span><span>' + esc(rep.bestSet || '—') + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Massimale stimato oggi</span><span>' + (rep.e1rmToday == null ? '—' : wFmt(rep.e1rmToday)) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(rep.snapshot ? rep.snapshot.performanceDelta : null) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(rep.volumeChange) + '</span></div>';
+    d += '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-top:10px;">REPORT ESERCIZIO</div>';
+    d += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + formatStatsKg(rep.volumeToday) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
+    d += '<div class="stats-adv-row"><span>Miglior serie</span><span>' + esc(rep.bestSet || '—') + '</span></div>';
+    d += '<div class="stats-adv-row"><span>Massimale stimato oggi</span><span>' + (rep.e1rmToday == null ? '—' : wFmt(rep.e1rmToday)) + '</span></div>';
+    d += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(rep.snapshot ? rep.snapshot.performanceDelta : null) + '</span></div>';
+    d += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(rep.volumeChange) + '</span></div>';
     if (rep.status) h += '<div style="font-size:11px;margin-top:6px;">' + esc(rep.status) + '</div>';
   }
   const liveSnap = live.snapshot || window.__exIntelSnap;
@@ -12744,6 +12837,7 @@ function showLiveSetIntelHtml(exIdx) {
     h += '<div style="font-size:11px;color:#ccc;margin-top:10px;">La prestazione è diminuita rispetto alle ultime esposizioni.</div>';
     h += '<button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px;" onclick="askHumanCoachAboutExercise(' + exIdx + ',\'esercizio\')">CHIEDI AL COACH</button>';
   }
+  h += '<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:10px;color:#aaa;font-weight:800;">Dettagli serie</summary>' + d + '</details>';
   h += '</div>';
   return h;
 }
@@ -12762,9 +12856,10 @@ function intelRecoHtml(exIdx, reco, L) {
           ? ('Mantieni e monitora' + (reco.suggestedLoad != null ? (' · ' + wFmt(reco.suggestedLoad)) : ''))
           : 'Mantieni il carico attuale' + (reco.suggestedLoad != null ? (' · ' + wFmt(reco.suggestedLoad)) : ''))));
   h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + esc(recoLine) + '</div>';
-  h += '<div style="font-size:10px;color:#aaa;">' + esc(reco.why) + '</div>';
-  if (reco.mrvNote) h += '<div style="font-size:10px;color:#c9a227;margin-top:4px;">' + esc(reco.mrvNote) + '</div>';
-  h += '<div style="font-size:9px;color:#777;margin:4px 0;">' + esc(H('confidence', reco.confidence)) + ' · ' + esc((reco.evidence || []).join(' · ')) + ' ' + metricExplainBtn('recommendation', 'ⓘ Perché?') + '</div>';
+  h += '<details style="margin:2px 0 4px;"><summary style="cursor:pointer;font-size:10px;color:#888;">Perché</summary>' +
+    '<div style="font-size:10px;color:#aaa;">' + esc(reco.why) + '</div>' +
+    (reco.mrvNote ? '<div style="font-size:10px;color:#c9a227;margin-top:4px;">' + esc(reco.mrvNote) + '</div>' : '') +
+    '<div style="font-size:9px;color:#777;margin:4px 0;">' + esc(H('confidence', reco.confidence)) + ' · ' + esc((reco.evidence || []).join(' · ')) + ' ' + metricExplainBtn('recommendation', 'ⓘ Perché?') + '</div></details>';
   h += '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">';
   if (clientMayApplyIntel()) {
     h += '<button type="button" class="btn btn-primary" style="font-size:10px;padding:6px 8px;" onclick="acceptIntelRecommendation(' + exIdx + ')">Accetta</button>';
@@ -19193,6 +19288,7 @@ function nextAlertEpoch(hhmm) {
   return d.getTime();
 }
 function requestAppNotificationPermission() {
+  if (typeof isIosApp === 'function' && isIosApp()) { iosAskNotificationPermission(); return; }
   try {
     if (typeof NativeConfig !== 'undefined' && NativeConfig.requestNotifications) {
       NativeConfig.requestNotifications();
@@ -19243,6 +19339,15 @@ function scheduleAllItemAlerts() {
   if (checkInJob) jobs.push(checkInJob);
   else {
     try { if (typeof NativeConfig !== 'undefined' && NativeConfig.cancelReminder) NativeConfig.cancelReminder('checkin_sched'); } catch (_) {}
+  }
+  if (typeof isIosApp === 'function' && isIosApp()) {
+    // Replace the whole set: the reminders scheduled last time go first.
+    let prev = [];
+    try { prev = JSON.parse(localStorage.getItem('NURVAN_IOS_REMINDERS') || '[]'); } catch (_) {}
+    prev.forEach(function (id) { iosCancelNotification(id); });
+    jobs.forEach(function (j) { iosScheduleNotification({ id: j.id, title: j.title, body: j.body, at: j.at, daily: j.repeatEveryMs === 86400000, route: j.route }); });
+    try { localStorage.setItem('NURVAN_IOS_REMINDERS', JSON.stringify(jobs.map(function (j) { return j.id; }))); } catch (_) {}
+    return;
   }
   try {
     if (typeof NativeConfig !== 'undefined' && NativeConfig.scheduleReminder) {
@@ -23465,7 +23570,7 @@ function renderHome(c) {
   if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
     c.innerHTML = `
       <div style="text-align:center;padding:20px 0;">
-        <img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:none;" onerror="this.onerror=null;this.src='icon-192.png'">
+        <img src="nurvan_wordmark.png" alt="Nurvan" style="width:min(300px,80%);height:auto;display:block;margin:0 auto 6px;" onerror="this.onerror=null;this.src='nurvan_logo.png'">
         <h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1>
       </div>
 
@@ -23530,7 +23635,7 @@ function renderHome(c) {
   const frequency = store.prefs.frequency || sessions.length;
 
   c.innerHTML = `
-    <div style="text-align:center;padding:20px 0;"><img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:none;" onerror="this.onerror=null;this.src='icon-192.png'"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
+    <div style="text-align:center;padding:20px 0;"><img src="nurvan_wordmark.png" alt="Nurvan" style="width:min(300px,80%);height:auto;display:block;margin:0 auto 6px;" onerror="this.onerror=null;this.src='nurvan_logo.png'"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
 
     ${personalRestoreBannerHtml()}
 
@@ -25121,19 +25226,7 @@ function setExIntensity(idx, type) {
   pushWorkoutUndoSnapshot('intensità ' + type);
   store.exIntensity[`w${currentWeek}_d${currentDay}_e${idx}`] = type;
   const total = getExerciseSetCount(idx);
-  if (total > 1 && confirm('Applicare la scala ' + type + ' a questo esercizio?\n\nVuoi anche copiare l’ultimo valore ' + type + ' inserito sulle serie ancora vuote?')) {
-    let lastVal = '';
-    for (let s = 1; s <= total; s++) {
-      const v = store.data[`w${currentWeek}_d${currentDay}_e${idx}_s${s}_rir`];
-      if (v !== undefined && v !== '' && v != null) lastVal = v;
-    }
-    if (lastVal !== '') {
-      for (let s = 1; s <= total; s++) {
-        const k = `w${currentWeek}_d${currentDay}_e${idx}_s${s}_rir`;
-        if (store.data[k] === undefined || store.data[k] === '' || store.data[k] == null) store.data[k] = lastVal;
-      }
-    }
-  }
+  void total; // RIR/RPE: no question about the other sets (user decision).
   persist();
   render();
 }
@@ -25147,18 +25240,8 @@ function updateSetIntensityValue(exIdx, setNum, val) {
   calcStats();
   refreshWorkoutUndoButton();
   const total = getExerciseSetCount(exIdx);
-  if (setNum < total && String(val).trim() !== '') {
-    const apply = confirm('Assegnare questo valore di intensità anche alle serie successive di questo esercizio?');
-    if (apply) {
-      pushWorkoutUndoSnapshot('intensità serie successive');
-      for (let s = setNum + 1; s <= total; s++) {
-        store.data[`w${currentWeek}_d${currentDay}_e${exIdx}_s${s}_rir`] = val;
-        store.data[`w${currentWeek}_d${currentDay}_e${exIdx}_s${s}_rir_user`] = 1;
-      }
-      persist();
-      render();
-    }
-  }
+  // Only this set: asking to copy it to the next ones got in the way.
+  void total;
 }
 
 function updateSetTechnique(exIdx, setNum, val) {
@@ -28204,6 +28287,7 @@ function maybeAskCoachAfterComplete() {
       }
       return;
     }
+    if (typeof planCan === 'function' && !planCan('ai_coach')) return;
     const analyze = confirm('Vuoi che Nurvan AI analizzi questa sessione?\n\n' +
       'Durata ' + Math.floor((snap.durationSec || logEntry.durationSec || 0) / 60) + 'm · ' + (snap.kcal || logEntry.kcal || 0) + ' kcal · ' +
       tonnage + ' kg tonnellaggio · intensità ' + intensityPts + ' pts');
@@ -29022,6 +29106,8 @@ function closeWorkoutCompleteOverlay(goto) {
   window.__sessionCardMode = null;
   if (goto === 'stats') navigate('stats');
   if (!fromFinalize) return;
+  // The session is closed: back home, not to the finished workout.
+  if (goto !== 'stats') navigate('home');
   maybeAskCoachAfterComplete();
   // Asked here rather than during the session: the effort is measured over
   // the last sessions, and the moment to decide about next week is when this
@@ -35219,6 +35305,12 @@ async function askAI(){
 }
 async function askAIInner(q0, opts){
   opts = opts || {};
+  // Free: the Coach AI is closed, except importing a program (its own path,
+  // not this one). An athlete's AI is the coach's to open (askAI).
+  if (!(typeof isAthleteRole === 'function' && isAthleteRole()) && typeof requirePlan === 'function' && !requirePlan('ai_coach')) {
+    if (typeof navigate === 'function') navigate('pricing');
+    return;
+  }
   let q = q0;
   if (store.pendingCoachAsk && store.pendingCoachAsk.needVoiceChoice) {
     const wantVoice = /\b(voc|ascolt|audio|listen|speak)\b/i.test(q);

@@ -44,7 +44,7 @@ const iso = (ms) => new Date(ms).toISOString();
 {
   const MIN = {
     logging: 'free', active_program: 'free', history: 'free', import: 'free', food_catalog: 'free', session_card: 'free',
-    gold_frame: 'standard', history_full: 'standard', export: 'standard', proposed_target: 'standard', coach_clients: 'standard',
+    gold_frame: 'standard', history_full: 'standard', export: 'standard', proposed_target: 'standard', coach_clients: 'standard', ai_coach: 'standard',
     scheduled_checkins: 'coach', prescribed_target: 'coach', import_unlimited: 'coach', client_billing: 'coach',
     branding: 'coach_pro', coach_therapy_exams: 'coach_pro', export_athletes: 'coach_pro'
   };

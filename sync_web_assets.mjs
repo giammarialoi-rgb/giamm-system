@@ -10,6 +10,7 @@ export const ANDROID_STATIC_ASSETS = [
   'index.html',
   'gs_logo.png',
   'nurvan_logo.png',
+  'nurvan_wordmark.png',
   'nurvan_app_icon.png',
   'xlsx.full.min.js',
   'peerjs.min.js',
@@ -76,6 +77,14 @@ export function syncWebAssetsToAndroid({ root = process.cwd(), required = true }
     fs.copyFileSync(src, dest);
     if (sha256(src) !== sha256(dest)) mismatched.push(file);
     else console.log('  ✓ Synced asset:', file);
+  }
+  // The exercise images shipped with the app (tools/bundle_exercise_media.mjs).
+  const mediaSrc = path.join(webDir, 'media');
+  if (fs.existsSync(mediaSrc)) {
+    const mediaDest = path.join(assetsDir, 'media');
+    fs.rmSync(mediaDest, { recursive: true, force: true });
+    fs.cpSync(mediaSrc, mediaDest, { recursive: true });
+    console.log('  ✓ Synced dir: media');
   }
   if (required && missing.length) {
     throw new Error('Web assets missing (Android cannot ship them): ' + missing.join(', '));
