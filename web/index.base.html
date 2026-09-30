@@ -11551,6 +11551,28 @@ function persistActiveProgramStructure() {
 // perché è quella che serve se IndexedDB viene svuotato.
 var NURVAN_PROGRAM_LOCK_MAX_BYTES = 1024 * 1024;
 
+// The biggest localStorage entries and, for the blob that did not fit, its
+// biggest fields, in KB: "chiave 1200 · ... | blob: data 900 · ...".
+function localStorageUsageReport(blob) {
+  const rows = [];
+  let total = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    const n = (k.length + String(localStorage.getItem(k) || '').length);
+    total += n;
+    rows.push([k, n]);
+  }
+  rows.sort(function (a, b) { return b[1] - a[1]; });
+  const kb = function (n) { return Math.round(n / 1024); };
+  let out = 'tot ' + kb(total) + ' KB; ' + rows.slice(0, 4).map(function (r) { return r[0].slice(0, 40) + ' ' + kb(r[1]); }).join(' · ');
+  if (blob && typeof blob === 'object') {
+    const f = Object.keys(blob).map(function (k) { let n = 0; try { n = JSON.stringify(blob[k]).length; } catch (_) {} return [k, n]; });
+    f.sort(function (a, b) { return b[1] - a[1]; });
+    out += ' | blob: ' + f.slice(0, 5).map(function (r) { return r[0] + ' ' + kb(r[1]); }).join(' · ');
+  }
+  return out;
+}
+
 function lockPersonalProgramBackup(prog) {
   try {
     if (!prog || !Array.isArray(prog.weeks) || prog.weeks.length < 4) return;
@@ -14092,12 +14114,20 @@ function persist() {
     if (sanitized && typeof sanitized === 'object') {
       sanitized.__cpClientScoped = !!isClientStorageContext();
     }
+    window.__lastPersistBlob = sanitized;
     localStorage.setItem(persistKey, JSON.stringify(sanitized));
+    window.__lastPersistBlob = null;
   } catch (quotaErr) {
     console.warn('[PERSIST_WARNING] localStorage quota exceeded, performing deep sanitize:', quotaErr);
     const isQuota = quotaErr && (quotaErr.name === 'QuotaExceededError' || /quota|spazio|storage/i.test(String(quotaErr.message || '')));
-    if (isQuota && typeof showToast === 'function') {
-      showToast('Memoria locale piena: i programmi restano in IndexedDB. Esegui pulizia documenti o Hard Reset se necessario.', 'error');
+    // iOS gives an app about 5 MB here whatever the free space on the phone.
+    // Once per launch, with what fills it, so the cause can be fixed.
+    if (isQuota && typeof showToast === 'function' && !window.__lsQuotaWarned) {
+      window.__lsQuotaWarned = true;
+      let detail = '';
+      try { detail = localStorageUsageReport(window.__lastPersistBlob); } catch (_) {}
+      window.__lsQuotaReport = detail;
+      showToast('Spazio interno dell’app pieno (non quello del telefono): i dati restano salvati e nel cloud. Dettaglio: ' + detail, 'error');
     }
     try {
       // Everything below reads the domain through `store`, which follows the
