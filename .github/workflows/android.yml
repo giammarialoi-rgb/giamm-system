@@ -38,7 +38,7 @@ jobs:
           java-version: 21
 
       # The runner already has the Android SDK: only the platform the app compiles against.
-      - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37" > /dev/null
+      - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" > /dev/null || true
 
       - name: Upload keystore
         env:
