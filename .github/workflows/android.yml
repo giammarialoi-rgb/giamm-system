@@ -37,8 +37,8 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
-      - run: sdkmanager "platforms;android-37" "build-tools;37.0.0" || sdkmanager "platforms;android-37"
+      # The runner already has the Android SDK: only the platform the app compiles against.
+      - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37" > /dev/null
 
       - name: Upload keystore
         env:
