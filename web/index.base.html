@@ -2207,6 +2207,7 @@ body.focus-mode [data-rewards-only] {
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="toggleAccountMode()" id="account-mode" data-i18n="createAccount">CREA UN ACCOUNT</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="togglePasswordRecovery()" id="account-forgot">PASSWORD DIMENTICATA</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="openChangePassword()" id="account-change-password">CAMBIA PASSWORD</button>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="editAccountName()" id="account-edit-name">MODIFICA NOME</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="logoutOtherDevices()" id="account-logout-others">ESCI DAGLI ALTRI DISPOSITIVI</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="logoutAccount()" id="account-logout">ESCI</button>
     <button class="btn btn-primary" style="width:100%;margin-top:8px;display:none;" onclick="syncAccountData(true)" id="account-sync">SINCRONIZZA DATI</button>
@@ -4838,6 +4839,7 @@ function openAccount(){
   // An athlete's password is the coach's to reset; signing out elsewhere is anyone's.
   const ownAccount = logged && store.accountUser.provider !== 'coach_client' && !(typeof isClientStorageContext === 'function' && isClientStorageContext());
   if ($('account-change-password')) $('account-change-password').style.display = ownAccount ? 'block' : 'none';
+  if ($('account-edit-name')) $('account-edit-name').style.display = ownAccount ? 'block' : 'none';
   if ($('account-logout-others')) $('account-logout-others').style.display = logged ? 'block' : 'none';
   // Deleting is for one's own account: an athlete's belongs to the coach.
   if ($('account-delete')) $('account-delete').style.display = (logged && store.accountUser.provider !== 'coach_client' && !(typeof isClientStorageContext === 'function' && isClientStorageContext())) ? 'block' : 'none';
@@ -5255,6 +5257,35 @@ async function logoutOtherDevices() {
   }
 }
 
+// Apple sends the name only at the first sign-in: with a hidden email the
+// account is left with the random part of the relay address as its name.
+function accountNameIsPlaceholder(user) {
+  if (!user || user.provider === 'coach_client') return false;
+  const n = String(user.name || '').trim().toLowerCase();
+  const e = String(user.email || '').trim().toLowerCase();
+  return !n || n === e || n === e.split('@')[0];
+}
+async function editAccountName(firstTime) {
+  if (!store.accountToken || !store.accountUser) return;
+  const current = accountNameIsPlaceholder(store.accountUser) ? '' : String(store.accountUser.name || '');
+  const ask = firstTime ? 'Come ti chiami? (il nome che vedrai nell’app e che vedrà il tuo coach)' : 'Il tuo nome';
+  let name;
+  try { name = window.prompt(ask, current); } catch (_) { return; }
+  if (name == null) return;
+  name = String(name).replace(/\s+/g, ' ').trim();
+  if (name.length < 2) { if (typeof showToast === 'function') showToast('Nome troppo corto.', 'error'); return; }
+  try {
+    const res = await accountRequest('/api/account/name', { method: 'PATCH', body: JSON.stringify({ name: name }) });
+    const data = await readApiJson(res);
+    if (!data || !data.user) throw new Error((data && data.error) || 'Nome non salvato.');
+    store.accountUser = Object.assign({}, store.accountUser, { name: data.user.name });
+    if (typeof persist === 'function') persist();
+    updateAccountButton();
+    if (typeof showToast === 'function') showToast('Benvenuto, ' + data.user.name, 'ok');
+  } catch (err) {
+    if (typeof showToast === 'function') showToast((err && err.message) || 'Nome non salvato.', 'error');
+  }
+}
 async function finishOAuthLogin(payload){
   if(!payload?.token || !payload?.user) throw new Error('Risposta provider non valida.');
   // The account had a password set when it was registered; the provider has
@@ -5267,7 +5298,8 @@ async function finishOAuthLogin(payload){
   setGoogleAuthLoading(false);
   closeAccount();
   try { ensurePrivacyConsent(); } catch (_) {}
-  if (typeof showToast === 'function') showToast(`Benvenuto, ${store.accountUser.name}`, 'ok');
+  if (accountNameIsPlaceholder(store.accountUser)) setTimeout(function () { editAccountName(true); }, 600);
+  else if (typeof showToast === 'function') showToast(`Benvenuto, ${store.accountUser.name}`, 'ok');
   // Sync in background — do not block perceived login latency
   Promise.race([
     syncAccountData(true),

@@ -190,6 +190,27 @@ export async function deleteAccount(pool, userId) {
 // session. Afterwards the Apple link is revoked on Apple's side, if there is
 // one; a failure there does not bring the account back.
 export function mountAccountDeletion(app, { pool, initDb, accountFromBearer, onDeleted }) {
+  // The name shown in the app. Apple sends it only at the first sign-in and
+  // a hidden-email account would otherwise show a random string.
+  app.patch("/api/account/name", async (req, res) => {
+    const auth = await accountFromBearer(req.headers.authorization);
+    if (!auth || auth.role !== "user") return res.status(401).json({ error: "Sessione scaduta o non autorizzata." });
+    const name = String((req.body && req.body.name) || "").replace(/[\u0000-\u001f\u007f<>]/g, "").replace(/\s+/g, " ").trim();
+    if (name.length < 2 || name.length > 60) return res.status(400).json({ error: "Il nome deve avere da 2 a 60 caratteri." });
+    try {
+      if (initDb) await initDb();
+      const r = await pool.query(
+        "UPDATE app_users SET name = $2, updated_at = NOW() WHERE id = $1 RETURNING id, email, name, provider, avatar_url",
+        [auth.id, name]
+      );
+      if (!r.rows[0]) return res.status(404).json({ error: "Account non trovato." });
+      return res.json({ ok: true, user: publicUser(r.rows[0]) });
+    } catch (err) {
+      console.error("ACCOUNT_NAME_ERROR", err);
+      return res.status(500).json({ error: "Nome non salvato." });
+    }
+  });
+
   app.delete("/api/account", async (req, res) => {
     const auth = await accountFromBearer(req.headers.authorization);
     if (!auth) return res.status(401).json({ error: "Sessione scaduta o non autorizzata." });
