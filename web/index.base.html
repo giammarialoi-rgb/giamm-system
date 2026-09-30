@@ -2511,7 +2511,8 @@ function ensureBusyOverlay() {
   if (el) return el;
   el = document.createElement('div');
   el.id = 'nurvan-busy-overlay';
-  el.innerHTML = '<div class="busy-card"><div class="busy-spin"></div><div class="busy-label" id="nurvan-busy-label">Caricamento…</div></div>';
+  el.innerHTML = '<div class="busy-card"><div class="busy-spin"></div><div class="busy-label" id="nurvan-busy-label">Caricamento…</div>' +
+    '<div id="nurvan-busy-eta" style="font-size:11px;color:#aaa;margin-top:6px;min-height:14px;"></div></div>';
   document.body.appendChild(el);
   return el;
 }
@@ -2531,8 +2532,41 @@ function hideBusyOverlay() {
     window.__nurvanBusySafetyTimer = null;
   }
 }
+// How long each kind of wait took the last times (moving average, per
+// label), so the overlay can say how much is left instead of spinning with
+// no end in sight.
+function busyDurations() {
+  try { return JSON.parse(localStorage.getItem('NURVAN_BUSY_DURATIONS') || '{}') || {}; } catch (_) { return {}; }
+}
+function rememberBusyDuration(label, ms) {
+  try {
+    const all = busyDurations();
+    const k = String(label || '').slice(0, 60);
+    const prev = Number(all[k]) || 0;
+    all[k] = prev ? Math.round(prev * 0.6 + ms * 0.4) : Math.round(ms);
+    localStorage.setItem('NURVAN_BUSY_DURATIONS', JSON.stringify(all));
+  } catch (_) {}
+}
+function startBusyEta(label, startedAt) {
+  const expected = Number(busyDurations()[String(label || '').slice(0, 60)]) || 0;
+  const tick = function () {
+    const el = document.getElementById('nurvan-busy-eta');
+    if (!el) return;
+    const sec = Math.floor((Date.now() - startedAt) / 1000);
+    if (expected >= 2000) {
+      const left = Math.ceil((expected - (Date.now() - startedAt)) / 1000);
+      el.textContent = left > 0 ? ('circa ' + left + ' s rimanenti') : ('quasi finito… (' + sec + ' s)');
+    } else {
+      el.textContent = sec >= 2 ? ('in corso da ' + sec + ' s') : '';
+    }
+  };
+  tick();
+  return setInterval(tick, 1000);
+}
 async function withBusy(fn, label, opts) {
   opts = opts || {};
+  const busyStart = Date.now();
+  let etaTimer = null;
   var delay = (opts.immediate === true || opts.delay === 0) ? 0 : (typeof opts.delay === 'number' ? opts.delay : 1000);
   var maxMs = typeof opts.maxMs === 'number' ? opts.maxMs : 90000;
   var shown = false;
@@ -2540,6 +2574,7 @@ async function withBusy(fn, label, opts) {
   function showNow() {
     shown = true;
     showBusyOverlay(label || 'Caricamento…');
+    etaTimer = startBusyEta(label, busyStart);
   }
   if (delay <= 0) showNow();
   else {
@@ -2555,6 +2590,9 @@ async function withBusy(fn, label, opts) {
   } finally {
     if (typeof store !== 'undefined' && store) store.__cpBusy = false;
     if (timer) clearTimeout(timer);
+    if (etaTimer) clearInterval(etaTimer);
+    const eta = document.getElementById('nurvan-busy-eta'); if (eta) eta.textContent = '';
+    rememberBusyDuration(label, Date.now() - busyStart);
     hideBusyOverlay();
   }
 }
@@ -7626,24 +7664,22 @@ function closeResetSession(){
   console.debug('OVERLAY_CLOSE:reset-session-modal');
   const modal = $('reset-session-modal'); if(modal) modal.style.display = 'none';
 }
-// Azzera cronologia: the archived chats too, on every device.
+// Azzera cronologia: the archive of past chats, on every device. The open
+// conversation stays (that one is AZZERA CHAT).
 function resetCoachHistory() {
-  if (!confirm('Azzerare tutta la cronologia del Coach AI?\n\nSpariscono la chat attuale e tutte le chat in archivio, su tutti i dispositivi. Programmi, progressi e impostazioni restano intatti.')) return;
-  coachRequestToken++;
-  store.chatHistory = [];
+  const n = (store.coachArchives || []).length;
+  if (!n) { if (typeof showToast === 'function') showToast('L’archivio delle chat è già vuoto', 'info'); return; }
+  if (!confirm('Cancellare l’archivio delle chat del Coach AI?\n\n' + n + (n === 1 ? ' chat salvata sparisce' : ' chat salvate spariscono') + ' su tutti i dispositivi. La conversazione aperta resta.')) return;
+  const liveId = store._liveArchiveId;
   store.coachArchives = [];
-  store._liveArchiveId = null;
-  store._liveArchiveAt = null;
+  // The open conversation is not in the archive any more: it goes back in
+  // only when it is closed.
+  if (liveId) { store._liveArchiveId = null; store._liveArchiveAt = null; }
   store._openArchiveId = null;
-  store.chatSessionId = null;
-  const now = Date.now();
-  store.chatClearedAt = now;
-  store.coachArchivesClearedAt = now;
-  window.pendingProgramImport = null;
-  window.activeCoachProposals = {};
+  store.coachArchivesClearedAt = Date.now();
   persist();
   render();
-  if (typeof showToast === 'function') showToast('Cronologia del Coach AI azzerata', 'ok');
+  if (typeof showToast === 'function') showToast('Archivio chat cancellato', 'ok');
   try { if (store.accountToken && typeof syncAccountData === 'function') syncAccountData(false); } catch (_) {}
 }
 function confirmResetSession(){
@@ -33843,7 +33879,7 @@ function renderAI(c){
         <div style="display:flex;gap:6px;">
           <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;" onclick="newCoachQuestion()">${t('newQuestion')}</button>
           <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="openResetSession()">AZZERA CHAT</button>
-          <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="resetCoachHistory()">AZZERA CRONOLOGIA</button>
+          <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="resetCoachHistory()">AZZERA ARCHIVIO</button>
         </div>
       </div>
       <div style="padding:12px;">
@@ -34884,7 +34920,12 @@ function renderKnowledgeCard(item) {
   const headHtml = '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:.6px;">' + esc(knowledgeCatLabel(item.cat)) + esc(muscle) + '</div>' +
     '<div style="font-size:15px;font-weight:800;color:#fff;margin:4px 0 6px;">' + esc(item.title) + '</div>' +
     (item.en ? '<div style="font-size:11px;color:#888;margin-bottom:6px;">' + esc(item.en) + '</div>' : '');
-  return '<div class="card" style="padding:12px;margin-bottom:10px;border:1px solid #222;">' +
+  // An exercise opens the same sheet as CHIEDI INFO (image, YouTube, RIR);
+  // the buttons inside the card keep their own job.
+  const open = item.cat === 'esercizi'
+    ? ' data-q="' + encodeURIComponent(item.title || '') + '" onclick="if(!event.target.closest(\'button,a\'))openExerciseInfoSheet(-1, decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))" role="button" style="padding:12px;margin-bottom:10px;border:1px solid #222;cursor:pointer;"'
+    : ' style="padding:12px;margin-bottom:10px;border:1px solid #222;"';
+  return '<div class="card"' + open + '>' +
     (media ? '<div style="display:flex;gap:10px;align-items:flex-start;">' + media + '<div style="flex:1;min-width:0;">' + headHtml + '</div></div>' : headHtml) +
     '<p style="font-size:12px;color:#ccc;line-height:1.45;margin:0 0 8px;">' + esc(how) + '</p>' +
     (mistakes ? '<p style="font-size:11px;color:#aaa;line-height:1.4;margin:0 0 6px;"><b style="color:#f88;">Errori:</b> ' + esc(mistakes) + '</p>' : '') +
@@ -34892,6 +34933,14 @@ function renderKnowledgeCard(item) {
     btns +
     '</div>';
 }
+
+function knowledgeScrollTop() {
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) { window.scrollTo(0, 0); }
+  const main = document.getElementById('content') || document.querySelector('main');
+  if (main && main.scrollTop) { try { main.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) { main.scrollTop = 0; } }
+  const s = document.getElementById('knowledge-search'); if (s) s.blur();
+}
+window.knowledgeScrollTop = knowledgeScrollTop;
 
 function refreshKnowledgeMediaSlots() {
   if (typeof NurvanExerciseMedia === 'undefined' || !NurvanExerciseMedia.renderInto) return;
@@ -35074,7 +35123,8 @@ function renderTrainingKnowledge(c) {
     '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="openAddEncyclopediaExercise()">+ AGGIUNGI ESERCIZIO</button>' +
     '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:12px;" onclick="toggleKnowledgeEditMode()">' + (window.__knowledgeEdit ? 'ESCI DA MODIFICA' : 'MODIFICA ENCICLOPEDIA') + '</button>' +
     '<div id="knowledge-results">' + knowledgeResultsHtml() + '</div>' +
-    '</div><div style="height:80px;"></div>';
+    '</div><div style="height:80px;"></div>' +
+    '<button type="button" id="knowledge-top-btn" class="btn btn-primary" aria-label="Torna su" onclick="knowledgeScrollTop()" style="position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:900;width:48px;height:48px;border-radius:50%;padding:0;font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,.5);">↑</button>';
   try { encyclopedizeProgramExercises(); } catch (_) {}
   refreshKnowledgeMediaSlots();
 }
@@ -35139,7 +35189,7 @@ function paintExerciseInfoSheet(opts) {
     (unknown ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="closeExerciseInfoSheet();openAddEncyclopediaExercise(decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">AGGIUNGI ALL’ENCICLOPEDIA</button>' : '') +
     (athlete
       ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="closeExerciseInfoSheet();askHumanCoachAboutExercise(' + Number(idx) + ', decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">CHIEDI AL COACH</button>'
-      : '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="askCoachAiFromInfoSheet(' + Number(idx) + ', decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">CHIEDI A COACH AI</button>') +
+      : '') +
     '</div></div>';
   sheet.classList.add('is-open');
 }
