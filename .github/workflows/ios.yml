@@ -1,6 +1,7 @@
 # iOS build on a GitHub macOS machine (no Mac needed): builds the web app,
 # wraps it with Capacitor, signs it with the App Store Connect API key and
-# uploads it to TestFlight. Started by hand from the Actions tab.
+# uploads it to TestFlight. Started by hand from the Actions tab, or with
+# Android by pushing a tag v*.
 #
 # Repository secrets (Settings > Secrets and variables > Actions):
 #   APPLE_TEAM_ID       10-character Team ID (developer.apple.com > Membership)
@@ -11,6 +12,9 @@ name: iOS TestFlight
 
 on:
   workflow_dispatch:
+  # A tag v* releases iOS and Android together (see android.yml).
+  push:
+    tags: ['v*']
 
 jobs:
   ios:

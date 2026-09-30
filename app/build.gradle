@@ -13,10 +13,12 @@ android {
     compileSdk 37
 
     defaultConfig {
-        applicationId "com.giammaria.system"
+        // The Play Store id, the same as iOS. The Java package stays com.giammaria.system.
+        applicationId "com.nurvan.app"
         minSdk 26
         targetSdk 35
-        versionCode (releaseMeta.androidVersionCode as Integer)
+        // CI passes -PversionCode (it must grow at every Play upload).
+        versionCode ((project.findProperty("versionCode") ?: releaseMeta.androidVersionCode) as Integer)
         versionName (releaseMeta.versionName as String)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // The production endpoint is public; it can be replaced at build time
@@ -40,6 +42,25 @@ android {
         androidTestImplementation "androidx.test:runner:1.5.2"
         androidTestImplementation "androidx.test:rules:1.5.0"
         androidTestImplementation "androidx.test.espresso:espresso-core:3.5.1"
+    }
+
+    // Play upload key, from CI secrets (see .github/workflows/android.yml).
+    // Without them the release build stays unsigned; debug builds are unaffected.
+    def uploadStore = System.getenv("ANDROID_KEYSTORE_PATH")
+    signingConfigs {
+        if (uploadStore) {
+            upload {
+                storeFile file(uploadStore)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (uploadStore) signingConfig signingConfigs.upload
+        }
     }
 
     buildFeatures {
