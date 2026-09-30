@@ -2358,7 +2358,7 @@ body.focus-mode [data-rewards-only] {
 <div id="reset-session-modal" class="modal">
   <div class="modal-content">
     <h2 style="color:var(--gold);margin-top:0;">Azzerare il Coach AI?</h2>
-    <p style="font-size:12px;color:#aaa;">Verranno rimossi domanda, risposta, cronologia e analisi non importate. Programmi, progressi e impostazioni resteranno intatti.</p>
+    <p style="font-size:12px;color:#aaa;">La conversazione aperta si chiude e va nell’archivio: la prossima volta il Coach AI riparte da zero. Programmi, progressi e impostazioni restano intatti.</p>
     <div style="display:flex;gap:10px;margin-top:20px;">
       <button class="btn btn-outline" style="flex:1;" onclick="closeResetSession()">Annulla</button>
       <button class="btn btn-primary" style="flex:1;" onclick="confirmResetSession()">Azzera</button>
@@ -4514,9 +4514,58 @@ function startVoiceInputFor(inputId) {
   window.__cpVoiceTarget = inputId || null;
   startVoiceInput();
 }
+// iOS app: the web view has no speech recognition, so the native one
+// (Capacitor SpeechRecognition). It gives the whole text heard so far at
+// every step; the last one is written into the field when dictation ends.
+function iosSpeech() { return (typeof isIosApp === 'function' && isIosApp()) ? capacitorPlugin('SpeechRecognition') : null; }
+async function startIosVoiceInput(sr, lang) {
+  const status = $('voice-status');
+  if (window.__cpDictating) { stopVoiceInput(); return; }
+  try {
+    const perm = await sr.requestPermissions();
+    if (perm && perm.speechRecognition && perm.speechRecognition !== 'granted') {
+      if (typeof showToast === 'function') showToast('Consenti microfono e riconoscimento vocale nelle impostazioni di iPhone.', 'error');
+      return;
+    }
+    window.__iosVoiceText = '';
+    if (!window.__iosVoiceListening) {
+      window.__iosVoiceListening = true;
+      sr.addListener('partialResults', function (data) {
+        const m = data && data.matches && data.matches[0];
+        if (m) {
+          window.__iosVoiceText = m;
+          const st = $('voice-status'); if (st) st.textContent = m;
+        }
+      });
+      sr.addListener('listeningState', function (data) {
+        if (data && data.status === 'stopped' && window.__cpDictating) finishIosVoiceInput();
+      });
+    }
+    window.__cpDictating = true;
+    if (typeof setDictateButtonState === 'function') setDictateButtonState(true);
+    if (status) status.textContent = t('listening');
+    await sr.start({ language: lang, partialResults: true, popup: false, maxResults: 1 });
+  } catch (err) {
+    console.warn('[IOS_VOICE]', err);
+    window.__cpDictating = false;
+    if (typeof setDictateButtonState === 'function') setDictateButtonState(false);
+    if (status) status.textContent = '';
+    if (typeof showToast === 'function') showToast('Dettatura non riuscita: riprova.', 'error');
+  }
+}
+function finishIosVoiceInput() {
+  window.__cpDictating = false;
+  if (typeof setDictateButtonState === 'function') setDictateButtonState(false);
+  const text = String(window.__iosVoiceText || '').trim();
+  window.__iosVoiceText = '';
+  const st = $('voice-status'); if (st) st.textContent = '';
+  if (text && typeof applyNativeVoiceResult === 'function') applyNativeVoiceResult(text);
+}
 function startVoiceInput(){
   const status = $('voice-status');
   const lang = coachSpeechLang();
+  const iosSr = iosSpeech();
+  if (iosSr) { startIosVoiceInput(iosSr, lang); return; }
   const native = nativeBridge();
   if (native && typeof native.startVoiceInputWithLang === 'function') {
     window.__cpDictating = true;
@@ -4588,6 +4637,11 @@ function startVoiceInput(){
   }
 }
 function stopVoiceInput(){
+  const iosSr = iosSpeech();
+  if (iosSr) {
+    Promise.resolve(iosSr.stop()).catch(function () {}).then(function () { finishIosVoiceInput(); });
+    return;
+  }
   window.__cpDictating = false;
   const native = nativeBridge();
   if (native && typeof native.stopVoiceInput === 'function') native.stopVoiceInput();
@@ -4686,6 +4740,9 @@ function clearCoachSession(){
   console.debug('COACH_SESSION_CLEAR');
   archiveCurrentCoachChat();
   store.chatHistory = [];
+  // The cloud copy is longer than an empty chat: without this mark the next
+  // download brought the old conversation back.
+  store.chatClearedAt = Date.now();
   window.pendingProgramImport = null;
   window.activeCoachProposals = {};
   const input = $('ai-input'); if(input) { input.value = ''; input.disabled = false; }
@@ -6335,6 +6392,8 @@ function accountPayload(opts){
     // The rest of what the app remembers about the person, which used to stay
     // on whichever device happened to produce it.
     chatHistory: Array.isArray(store.chatHistory) ? store.chatHistory.slice(-120) : [],
+    chatClearedAt: Number(store.chatClearedAt) || 0,
+    coachArchivesClearedAt: Number(store.coachArchivesClearedAt) || 0,
     actionHistory: Array.isArray(store.actionHistory) ? store.actionHistory.slice(-200) : [],
     intelligence: store.intelligence || null,
     intelTargets: store.intelTargets || {},
@@ -6625,7 +6684,14 @@ function applyRemoteAccountData(remote, preferLocal) {
   // Same rule for everything the account remembers: the two sides are put
   // together, and a device that has been away for a while adds to what is
   // there rather than replacing it.
-  if (Array.isArray(remote.chatHistory) && remote.chatHistory.length > (store.chatHistory || []).length) {
+  // A reset (here or elsewhere) is a moment: a copy from before it never
+  // brings the conversation back, one from after it replaces this one.
+  const remoteCleared = Number(remote.chatClearedAt) || 0;
+  const localCleared = Number(store.chatClearedAt) || 0;
+  if (remoteCleared > localCleared) {
+    store.chatHistory = Array.isArray(remote.chatHistory) ? remote.chatHistory.slice(-120) : [];
+    store.chatClearedAt = remoteCleared;
+  } else if (remoteCleared === localCleared && Array.isArray(remote.chatHistory) && remote.chatHistory.length > (store.chatHistory || []).length) {
     store.chatHistory = remote.chatHistory.slice(-120);
   }
   if (Array.isArray(remote.actionHistory) && remote.actionHistory.length > (store.actionHistory || []).length) {
@@ -6742,7 +6808,12 @@ function applyRemoteAccountData(remote, preferLocal) {
       if (kept.length !== store.calendarEvents.length) store.calendarEvents = kept;
     }
     try { if (typeof CalendarService !== 'undefined') CalendarService._customCache = null; } catch (_) {}
-    if (Array.isArray(remote.coachArchives) && remote.coachArchives.length && !(store.coachArchives || []).length) {
+    const remoteArcCleared = Number(remote.coachArchivesClearedAt) || 0;
+    const localArcCleared = Number(store.coachArchivesClearedAt) || 0;
+    if (remoteArcCleared > localArcCleared) {
+      store.coachArchives = Array.isArray(remote.coachArchives) ? remote.coachArchives.slice(0, 24) : [];
+      store.coachArchivesClearedAt = remoteArcCleared;
+    } else if (remoteArcCleared === localArcCleared && Array.isArray(remote.coachArchives) && remote.coachArchives.length && !(store.coachArchives || []).length) {
       store.coachArchives = remote.coachArchives.slice(0, 24);
     }
     if (Array.isArray(remote.coachProgramLibrary) && remote.coachProgramLibrary.length) {
@@ -7555,6 +7626,26 @@ function closeResetSession(){
   console.debug('OVERLAY_CLOSE:reset-session-modal');
   const modal = $('reset-session-modal'); if(modal) modal.style.display = 'none';
 }
+// Azzera cronologia: the archived chats too, on every device.
+function resetCoachHistory() {
+  if (!confirm('Azzerare tutta la cronologia del Coach AI?\n\nSpariscono la chat attuale e tutte le chat in archivio, su tutti i dispositivi. Programmi, progressi e impostazioni restano intatti.')) return;
+  coachRequestToken++;
+  store.chatHistory = [];
+  store.coachArchives = [];
+  store._liveArchiveId = null;
+  store._liveArchiveAt = null;
+  store._openArchiveId = null;
+  store.chatSessionId = null;
+  const now = Date.now();
+  store.chatClearedAt = now;
+  store.coachArchivesClearedAt = now;
+  window.pendingProgramImport = null;
+  window.activeCoachProposals = {};
+  persist();
+  render();
+  if (typeof showToast === 'function') showToast('Cronologia del Coach AI azzerata', 'ok');
+  try { if (store.accountToken && typeof syncAccountData === 'function') syncAccountData(false); } catch (_) {}
+}
 function confirmResetSession(){
   console.debug('RESET_CHAT_CONFIRM');
   coachRequestToken++;
@@ -7562,6 +7653,7 @@ function confirmResetSession(){
   store.chatSessionId = null;
   closeResetSession();
   render();
+  try { if (store.accountToken && typeof syncAccountData === 'function') syncAccountData(false); } catch (_) {}
 }
 function sanitizeCoachDisplayText(raw) {
   let text = String(raw || '');
@@ -29998,48 +30090,75 @@ function renderProgressCenter(container) {
     '<button class="btn btn-outline" style="width:100%;" onclick="navigate(\'stats\')">Apri statistiche</button>';
 }
 
-async function openAiProgramWizard() {
-  const goal = prompt('GOAL (hypertrophy / strength / fat_loss)', 'hypertrophy');
-  if (!goal) return;
-  const experience = prompt('EXPERIENCE (beginner / intermediate / advanced)', 'intermediate');
-  if (experience == null) return;
-  const days = prompt('DAYS', '4');
-  if (days == null) return;
-  const time = prompt('TIME minutes', '60');
-  if (time == null) return;
-  const equipment = prompt('EQUIPMENT', 'gym');
-  if (equipment == null) return;
-  const focus = prompt('FOCUS', '');
-  if (focus == null) return;
-  const limitations = prompt('LIMITATIONS', '');
-  if (limitations == null) return;
-  const preferences = prompt('EXERCISE PREFERENCES', '');
-  if (preferences == null) return;
-  if (!confirm('Generare anteprima AI? Nessun programma verrà attivato finché non confermi.')) return;
-  try {
-    if (typeof showToast === 'function') showToast('Creazione con AI in corso…', 'info');
-    const result = await ProgramGeneratorService.aiCreate({
-      goal: goal, experience: experience, days: Number(days) || 4, time: time,
-      equipment: equipment, focus: focus, limitations: limitations, preferences: preferences
-    });
-    if (!result || !result.program || !Array.isArray(result.program.weeks)) {
-      throw new Error('AI Create unavailable');
-    }
-    if (!confirm('Anteprima: ' + (result.program.title || 'programma') + ' · ' + result.program.weeks.length + ' settimane. Confermi e attivi?')) return;
-    const prog = normalizeProgram(result.program);
-    await maybeClearLogsOnProgramSwitch(prog.id);
-    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
-      await GiammariaPersistence.activateCanonicalProgram(prog);
-    }
-    DATA = prog;
-    store.activeProgram = DATA;
-    persist();
-    if (typeof showToast === 'function') showToast('Programma AI attivato', 'ok');
-    render();
-  } catch (e) {
-    if (typeof showToast === 'function') showToast((e && e.message) || 'Creazione con AI non disponibile. Cosa puoi fare: usa Crea da template.', 'error');
-  }
+// AI CREATE: the main choices from menus (the generator's own lists), then
+// an optional note. The generator builds the preview; the note, when there
+// is one, goes to the Coach AI once the program is active, as changes to
+// confirm. There was never an AI endpoint behind the old typed questions.
+function openAiProgramWizard() {
+  const api = generatorApi();
+  if (!api) { if (typeof showToast === 'function') showToast('Motore di generazione non caricato', 'error'); return; }
+  const g = generatorDraft();
+  if (!g.touched) { try { applyProfileDefaultsToGenerator(); } catch (_) {} }
+  const st = 'background:#141414;color:#fff;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;';
+  const sel = function (id, items, cur) {
+    return '<select id="aiw-' + id + '" style="width:100%;margin-top:3px;' + st + '">' + items.map(function (it) {
+      return '<option value="' + esc(it.id) + '"' + (String(it.id) === String(cur) ? ' selected' : '') + '>' + esc(it.label) + '</option>';
+    }).join('') + '</select>';
+  };
+  const days = (api.DAYS || [2, 3, 4, 5, 6]).map(function (d) { const v = (d && d.id != null) ? d.id : d; return { id: v, label: v + ' giorni' }; });
+  const weeks = (api.WEEK_PRESETS || [4, 8, 12, 16]).map(function (w) { const v = (w && w.id != null) ? w.id : w; return { id: v, label: v + ' settimane' }; });
+  const lab = function (t, inner) { return '<label style="display:block;font-size:10px;color:#aaa;font-weight:800;margin-top:10px;">' + t + inner + '</label>'; };
+  const noteAllowed = typeof planCan !== 'function' || planCan('ai_coach');
+  let el = document.getElementById('ai-program-wizard');
+  if (el) el.remove();
+  el = document.createElement('div');
+  el.id = 'ai-program-wizard';
+  el.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  el.innerHTML = '<div style="width:100%;max-width:460px;max-height:100%;overflow-y:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;padding:16px;box-sizing:border-box;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:900;letter-spacing:1px;">AI CREATE</div>' +
+    '<h2 style="color:#fff;font-size:17px;margin:4px 0 2px;">Crea la tua scheda</h2>' +
+    '<div style="font-size:11px;color:#888;">Scegli dai menu, poi vedi l’anteprima prima di attivarla.</div>' +
+    lab('Obiettivo', sel('goal', api.GOALS || [], g.goal)) +
+    lab('Esperienza', sel('experience', api.EXPERIENCE || [], g.experience)) +
+    lab('Giorni a settimana', sel('days', days, g.days)) +
+    lab('Durata del programma', sel('weeks', weeks, g.weeks)) +
+    lab('Dove ti alleni', sel('equipment', api.EQUIPMENT || [], g.equipment)) +
+    (noteAllowed
+      ? lab('Richieste per il Coach AI (facoltativo)', '<textarea id="aiw-notes" rows="3" placeholder="Es. più lavoro sulle spalle, niente stacchi, ho male al ginocchio" style="width:100%;margin-top:3px;box-sizing:border-box;' + st + '"></textarea>')
+      : '') +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="submitAiProgramWizard()">VEDI L’ANTEPRIMA</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="closeAiProgramWizard()">ANNULLA</button></div>';
+  el.onclick = function (ev) { if (ev.target === el) closeAiProgramWizard(); };
+  document.body.appendChild(el);
 }
+function closeAiProgramWizard() {
+  const el = document.getElementById('ai-program-wizard');
+  if (el) el.remove();
+}
+function submitAiProgramWizard() {
+  const g = generatorDraft();
+  const val = function (id) { const e = document.getElementById('aiw-' + id); return e ? e.value : ''; };
+  g.goal = val('goal') || g.goal;
+  g.experience = val('experience') || g.experience;
+  g.equipment = val('equipment') || g.equipment;
+  const d = Number(val('days'));
+  if (d) {
+    g.days = d;
+    const api = generatorApi();
+    if (api && typeof api.normalizeSplit === 'function') g.split = api.normalizeSplit(g.split, d);
+  }
+  const w = Number(val('weeks'));
+  if (w) g.weeks = w;
+  g.touched = true;
+  g.target = 'active';
+  window.__genAiNotes = String(val('notes') || '').trim();
+  closeAiProgramWizard();
+  try { persist(); } catch (_) {}
+  createGeneratedProgram('active');
+}
+window.openAiProgramWizard = openAiProgramWizard;
+window.closeAiProgramWizard = closeAiProgramWizard;
+window.submitAiProgramWizard = submitAiProgramWizard;
 
 function showProgressCenter() {
   navigate('progress');
@@ -33723,7 +33842,8 @@ function renderAI(c){
         <h2>${t('coachAI')}</h2>
         <div style="display:flex;gap:6px;">
           <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;" onclick="newCoachQuestion()">${t('newQuestion')}</button>
-          <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="openResetSession()">${t('clearChat')}</button>
+          <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="openResetSession()">AZZERA CHAT</button>
+          <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="resetCoachHistory()">AZZERA CRONOLOGIA</button>
         </div>
       </div>
       <div style="padding:12px;">
@@ -39466,6 +39586,14 @@ async function deliverGeneratedReview(target) {
       }
     });
     if (report && report.swaps && report.swaps.length && typeof showAdaptReport === 'function') showAdaptReport(report);
+    // The notes written in AI CREATE: the Coach AI proposes the changes to
+    // the program just activated, to confirm one by one.
+    const notes = window.__genAiNotes;
+    window.__genAiNotes = '';
+    if (notes && target === 'active' && typeof kickCoachAiPrompt === 'function') {
+      navigate('ai');
+      kickCoachAiPrompt('Ho appena attivato questa scheda generata. Adattala a queste mie richieste proponendo le modifiche da confermare: ' + notes, 'Nurvan AI adatta la scheda…');
+    }
   } catch (e) {
     console.error('[PROGRAM REVIEW]', e);
     if (typeof showToast === 'function') showToast('Non riuscito: ' + (e && e.message || e), 'error');
