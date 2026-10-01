@@ -1,0 +1,194 @@
+<title>Genetica e low responder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: blog Nurvan — header sito, colonna di lettura 680px, grafici a tutta colonna, footer app. Look unico scuro (brand). */
+:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.hero{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:radial-gradient(120% 90% at 80% 10%,#2a220a 0%,#0c0c0c 55%);padding:28px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end;min-height:240px}
+.hero .yr{font-family:var(--display);font-weight:700;color:var(--gold);font-size:clamp(48px,11vw,96px);line-height:.9}
+.hero .lab{font-family:var(--mono);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.hero .arrow{grid-column:1/-1;height:2px;background:linear-gradient(90deg,var(--line),var(--gold))}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-left:1.1em} .box li{margin-block:.35em}
+.quote{border-left:3px solid var(--gold);padding-left:18px;font-size:22px;font-style:italic;margin-block:28px}
+figure{margin:36px 0}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+.chart h4{font-family:var(--display);margin:0 0 4px;font-size:17px}
+.chart p.sub{margin:0 0 10px;font-size:14px;color:var(--muted);font-family:var(--body)}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-left:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-left:1.2em} .refs li{margin-block:.7em}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+@media (max-width:560px){body{font-size:17px}.hero{grid-template-columns:1fr}.site nav{display:none}}
+</style>
+
+<header class="site"><div class="in">
+  <a class="logo" href="#">NUR<b>VAN</b></a>
+  <nav><a href="#">Allenamento</a><a href="#">Nutrizione</a><a href="#">Integrazione</a><a class="on" href="#">Blog</a></nav>
+  <a class="cta" href="#">Scarica l'app</a>
+</div></header>
+
+<main class="wrap">
+  <div class="crumb">Blog · Allenamento · Ipertrofia</div>
+  <h1>Low responder: è davvero colpa della genetica?</h1>
+  <p class="lede">La genetica pesa sulla crescita muscolare, ma molto meno di quanto crediamo quando guardiamo un fisico finito. Cosa dicono gli studi sulle risposte individuali all'allenamento con i pesi.</p>
+  <div class="meta"><span>30 settembre 2026</span><span><b>7 min</b> di lettura</span><span><b>4</b> studi citati</span></div>
+
+  <div class="hero" role="img" aria-label="Illustrazione: una linea che va da 'anno 1' a 'anno 24' di allenamento">
+    <div><div class="lab">Quello che vedi</div><div class="yr">1 foto</div></div>
+    <div style="text-align:right"><div class="lab">Quello che non vedi</div><div class="yr">24 anni</div></div>
+    <div class="arrow"></div>
+  </div>
+  <p class="cap">Immagine di copertina provvisoria. In pubblicazione va sostituita con una foto con licenza libera (Unsplash o Pexels).</p>
+
+  <div class="box">
+    <h2>In breve</h2>
+    <ul>
+      <li>A parità di programma, la crescita muscolare varia moltissimo da persona a persona: in uno studio su 585 soggetti si va da −2% a +59%.</li>
+      <li>Una parte di questa differenza è biologica. Un'altra parte è rumore di misura, e un'altra ancora dipende dalla durata del programma.</li>
+      <li>Chi "non risponde" su un parametro spesso migliora su un altro. Negli anziani seguiti per 24 settimane nessuno è risultato un vero non-responder.</li>
+      <li>Prima di concludere di avere "cattiva genetica" servono anni di allenamento ben fatto, non qualche mese.</li>
+    </ul>
+  </div>
+
+  <h2>Il problema della fotografia</h2>
+  <p>Davanti a un fisico molto sviluppato la spiegazione arriva subito: "ha una genetica incredibile", oppure "usa sostanze". Il ragionamento parte dal risultato e salta il processo. Una foto non mostra gli anni di programmazione, gli errori corretti, il sonno, l'alimentazione e la costanza che l'hanno prodotta.</p>
+  <p>Lo spunto di questo articolo è un post del coach Valerio Acri, che ha confrontato una sua foto da ventenne con una scattata dopo 24 anni di pesi. Nella prima foto si allenava già da cinque anni, e nessuno avrebbe parlato di genetica eccezionale. Il suo messaggio è che la genetica conta, ma un contributo genetico non equivale a un destino.</p>
+  <p class="quote">La domanda utile non è "ho una buona genetica?", ma "mi sono allenato abbastanza bene e abbastanza a lungo per saperlo?"</p>
+
+  <h2>Quanto variano davvero le risposte</h2>
+  <p>La ricerca conferma che le differenze individuali sono enormi. Nello studio FAMuSS, 585 uomini e donne hanno allenato per 12 settimane i flessori del gomito di un solo braccio, con lo stesso protocollo. La sezione del bicipite misurata in risonanza magnetica è cambiata tra −2% e +59%. La forza massimale (1RM) è aumentata tra 0% e +250%.</p>
+  <p>Un'analisi finlandese su 287 adulti tra 19 e 78 anni ha trovato un aumento medio della massa muscolare del 4,8%, con valori tra −11% e +30%. Età e sesso non spiegavano le differenze.</p>
+
+  <figure>
+    <div class="chart">
+      <h4>Stesso programma, risultati molto diversi</h4>
+      <p class="sub">Variazione della dimensione muscolare dopo l'allenamento: minimo, massimo e media del gruppo</p>
+      <svg viewBox="0 0 600 190" role="img" aria-label="Grafico a intervalli: Hubal 2005 da -2% a +59%; Ahtiainen 2016 da -11% a +30% con media 4,8%">
+        <g font-family="JetBrains Mono, monospace" font-size="11" fill="#a0a0a0">
+          <line x1="150.7" y1="20" x2="150.7" y2="150" stroke="#1d1d1d"/><text x="150.7" y="168" text-anchor="middle">−10%</text>
+          <line x1="212" y1="20" x2="212" y2="150" stroke="#555"/><text x="212" y="168" text-anchor="middle">0%</text>
+          <line x1="334.7" y1="20" x2="334.7" y2="150" stroke="#1d1d1d"/><text x="334.7" y="168" text-anchor="middle">+20%</text>
+          <line x1="457.3" y1="20" x2="457.3" y2="150" stroke="#1d1d1d"/><text x="457.3" y="168" text-anchor="middle">+40%</text>
+          <line x1="580" y1="20" x2="580" y2="150" stroke="#1d1d1d"/><text x="580" y="168" text-anchor="end">+60%</text>
+        </g>
+        <g font-family="Bricolage Grotesque, sans-serif" font-size="13" fill="#f0f0f0">
+          <text x="0" y="56">Hubal 2005</text><text x="0" y="72" font-size="11" fill="#a0a0a0">n = 585 · 12 sett.</text>
+          <rect x="199.7" y="44" width="374.2" height="18" rx="9" fill="#d4af37"/>
+          <text x="199.7" y="38" font-size="11" fill="#a0a0a0" text-anchor="middle">−2%</text>
+          <text x="573.9" y="38" font-size="11" fill="#a0a0a0" text-anchor="end">+59%</text>
+          <text x="0" y="116">Ahtiainen 2016</text><text x="0" y="132" font-size="11" fill="#a0a0a0">n = 287 · 19–78 anni</text>
+          <rect x="144.5" y="104" width="251.5" height="18" rx="9" fill="#aa8a2e"/>
+          <circle cx="241.4" cy="113" r="6" fill="#000000" stroke="#f3e5ab" stroke-width="2"/>
+          <text x="144.5" y="98" font-size="11" fill="#a0a0a0" text-anchor="middle">−11%</text>
+          <text x="396" y="98" font-size="11" fill="#a0a0a0" text-anchor="middle">+30%</text>
+          <text x="248" y="146" font-size="11" fill="#f3e5ab">media +4,8%</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption class="cap">Fonti: Hubal et al., Med Sci Sports Exerc 2005 (bicipite, risonanza magnetica); Ahtiainen et al., Age 2016 (dimensione muscolare). Grafico Nurvan.</figcaption>
+  </figure>
+
+  <h2>Da dove nascono le differenze</h2>
+  <h3>La biologia individuale</h3>
+  <p>Uno studio brasiliano ha fatto allenare a 20 ragazzi già allenati una gamba con un programma progressivo classico e l'altra con un programma che cambiava carichi, volume, tipo di contrazione e recuperi. Le due gambe sono cresciute in modo quasi identico. La differenza tra una persona e l'altra, invece, era circa 40 volte più grande di quella tra le due gambe della stessa persona.</p>
+
+  <figure>
+    <div class="chart">
+      <h4>Conta più chi si allena del programma che segue</h4>
+      <p class="sub">Variabilità della crescita del quadricipite (sezione trasversa), in punti percentuali</p>
+      <svg viewBox="0 0 600 130" role="img" aria-label="Grafico a barre: variabilità tra persone 37,8%, tra le due gambe della stessa persona 0,9%">
+        <g font-family="Bricolage Grotesque, sans-serif" font-size="13" fill="#f0f0f0">
+          <text x="0" y="42">Tra persone diverse</text>
+          <rect x="160" y="28" width="415.8" height="22" rx="4" fill="#d4af37"/>
+          <text x="570" y="44" text-anchor="end" fill="#000000" font-weight="700">37,8%</text>
+          <text x="0" y="92">Tra le due gambe</text><text x="0" y="108" font-size="11" fill="#a0a0a0">stessa persona, programmi diversi</text>
+          <rect x="160" y="78" width="9.9" height="22" rx="3" fill="#aa8a2e"/>
+          <text x="178" y="94" fill="#f3e5ab">0,9%</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption class="cap">Fonte: Damas et al., J Appl Physiol 2019 (n = 20, 8 settimane). Grafico Nurvan.</figcaption>
+  </figure>
+
+  <p>Il dato va letto bene. Non dice che il programma non conta. Dice che tra due programmi ben costruiti la differenza è piccola, mentre le caratteristiche della persona pesano molto.</p>
+
+  <h3>La misura e la durata</h3>
+  <p>Parte di quello che sembra "nessuna risposta" è rumore: errori di misura, idratazione, variazioni giornaliere. Nello studio finlandese, confrontando i risultati con un gruppo di controllo che non si allenava, il 29% dei partecipanti rientrava tra i low responder per la massa. Solo il 7% lo era per la forza. La stessa persona può quindi rispondere poco su un parametro e bene su un altro.</p>
+
+  <h2>Cosa dice davvero la ricerca</h2>
+  <div class="verdict">
+    <div class="v"><span class="pill ok">Confermato</span><p><strong>"La genetica conta."</strong> La variabilità tra individui è ampia e ben documentata, anche con programmi identici e controllati.</p></div>
+    <div class="v"><span class="pill ok">Confermato</span><p><strong>"Una risposta in certe condizioni non è una caratteristica fissa."</strong> Negli anziani la quota di chi migliora cresce passando da 12 a 24 settimane, e nessuno è rimasto senza benefici.</p></div>
+    <div class="v"><span class="pill part">Da precisare</span><p><strong>"Dopo due o tre anni non si può ancora sapere."</strong> È un'osservazione ragionevole, ma gli studi durano settimane o mesi. Su orizzonti di anni non ci sono dati controllati.</p></div>
+  </div>
+  <p>Lo studio olandese di Churchward-Venne su 110 over 65 lo dice già nel titolo: non esistono non-responder all'allenamento contro resistenza. Ogni partecipante è migliorato in almeno uno tra massa magra, dimensione delle fibre, forza e funzionalità.</p>
+
+  <h2>Come applicarlo</h2>
+  <ol class="steps">
+    <li><strong>Misura più cose.</strong> Oltre al peso e allo specchio, segui carichi, ripetizioni, circonferenze e foto periodiche nelle stesse condizioni.</li>
+    <li><strong>Guarda i trend, non la settimana.</strong> Valuta i progressi su blocchi di 8–12 settimane, non su singole sedute.</li>
+    <li><strong>Controlla le basi prima della genetica.</strong> Progressione dei carichi, sedute vicine al cedimento, proteine e calorie sufficienti, sonno.</li>
+    <li><strong>Cambia una variabile alla volta.</strong> Se un muscolo non cresce, modifica volume o frequenza e osserva l'effetto per un blocco intero.</li>
+  </ol>
+
+  <div class="app">
+    <div><h3>Tieni traccia della tua risposta</h3><p>Nurvan registra carichi, RIR, misure e alimentazione in un unico posto, così vedi come rispondi davvero su mesi di allenamento e non su un'impressione.</p></div>
+    <a class="cta" href="#">Prova Nurvan</a>
+  </div>
+
+  <h2>Domande frequenti</h2>
+  <details><summary>Come faccio a sapere se sono un low responder?</summary><p>Non con certezza. Serve un programma ben strutturato, seguito con costanza per molti mesi e misurato su più parametri. Anche allora il risultato vale per quel programma e quel periodo della tua vita.</p></details>
+  <details><summary>Esiste un test genetico per l'ipertrofia?</summary><p>Esistono test commerciali, ma i singoli geni studiati spiegano una quota piccola delle differenze. Oggi non permettono di prevedere in modo affidabile quanto crescerai.</p></details>
+  <details><summary>Se cresco poco devo cambiare programma?</summary><p>Prima verifica progressione, intensità, alimentazione e sonno. Tra programmi validi le differenze sono piccole rispetto a quelle tra persone.</p></details>
+  <details><summary>L'età cambia la risposta all'allenamento?</summary><p>Negli studi citati età e sesso non spiegavano le differenze individuali, e anche gli over 65 hanno ottenuto benefici.</p></details>
+
+  <h2>Fonti</h2>
+  <ol class="refs">
+    <li>Hubal MJ et al., 2005. Variability in muscle size and strength gain after unilateral resistance training. <em>Med Sci Sports Exerc</em> 37(6):964–72. <a href="https://pubmed.ncbi.nlm.nih.gov/15947721/">PMID 15947721</a></li>
+    <li>Ahtiainen JP et al., 2016. Heterogeneity in resistance training-induced muscle strength and mass responses in men and women of different ages. <em>Age</em> 38(1):10. <a href="https://doi.org/10.1007/s11357-015-9870-1">DOI 10.1007/s11357-015-9870-1</a></li>
+    <li>Damas F et al., 2019. Myofibrillar protein synthesis and muscle hypertrophy individualized responses to systematically changing resistance training variables in trained young men. <em>J Appl Physiol</em> 127(3):806–815. <a href="https://doi.org/10.1152/japplphysiol.00350.2019">DOI 10.1152/japplphysiol.00350.2019</a></li>
+    <li>Churchward-Venne TA et al., 2015. There are no nonresponders to resistance-type exercise training in older men and women. <em>J Am Med Dir Assoc</em> 16(5):400–11. <a href="https://doi.org/10.1016/j.jamda.2015.01.071">DOI 10.1016/j.jamda.2015.01.071</a></li>
+  </ol>
+  <p class="cap">Articolo ispirato a un post di <a href="https://www.instagram.com/p/Ddf-0MRF7p0/">@valerio_acri</a>. Fonti consultate tramite PubMed.</p>
+
+  <p class="note">Contenuto informativo. Non sostituisce il parere di un medico o di un professionista qualificato.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>

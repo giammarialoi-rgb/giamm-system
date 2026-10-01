@@ -2434,6 +2434,8 @@ async function siteShell(req, page) {
   return html;
 }
 const siteBlog = mountBlog(app, {
+  contentDir: path.join(__dirname, "content", "articles"),
+  staticFiles: (dir) => express.static(dir, { maxAge: "1h" }),
   siteDir: SITE_DIR,
   shell: (req, page) => siteShell(req, Object.assign({ blog: true }, page))
 });

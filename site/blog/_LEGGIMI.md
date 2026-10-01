@@ -1,29 +1,13 @@
-# Come aggiungere un articolo al blog
+# Da dove arrivano gli articoli del blog
 
-Un file `.md` per articolo, in questa cartella. Il nome del file diventa
-l'indirizzo: `carico-giusto.md` -> `/blog/carico-giusto` (solo lettere
-minuscole, numeri e trattini).
+1. **`content/articles/<data>-<slug>/`** — la cartella che scrive la programmazione giornaliera.
+   Il blog legge `article.it.md` (intestazione tra due righe `---`: title, description, slug,
+   date, category, cover, cover_credit) e serve le immagini della sottocartella `images/`.
+   Se in una cartella c'e' solo `index.html`, viene mostrato il suo contenuto dentro la pagina del sito.
+2. **`site/blog/<slug>.md`** — un articolo scritto a mano, con la stessa intestazione.
 
-In cima al file, tra due righe `---`:
-
-    ---
-    title: Titolo dell'articolo
-    date: 2026-10-01
-    category: Allenamento
-    excerpt: Una frase che riassume l'articolo (compare nell'elenco e su Google).
-    cover: /site-assets/blog/nome-immagine.jpg
-    source: https://sito-da-cui-prende-spunto.it/articolo
-    ---
-
-- `title`, `date` e `category` servono sempre; `excerpt`, `cover` e `source` sono facoltativi.
-- La data decide l'ordine. Un articolo con data futura resta nascosto fino a quel giorno.
-- Categorie usate finora: Allenamento, Alimentazione, Recupero, Gare ed eventi, Coach e palestre.
-  Una categoria nuova si crea scrivendola: compare da sola tra i filtri.
-- Le immagini vanno in `site/assets/blog/`.
-
-Sotto l'intestazione, il testo in Markdown: `# Titolo di sezione`, `## Sottotitolo`,
-paragrafi separati da una riga vuota, elenchi con `-` o `1.`, `**grassetto**`,
-`*corsivo*`, `[testo del link](https://...)`, `![descrizione](/site-assets/blog/foto.jpg)`,
-`> citazione`. L'HTML scritto nel testo non viene eseguito: appare come testo.
-
-I file che iniziano con `_` (come questo) non vengono pubblicati.
+Per pubblicare basta che la cartella sia nel repository (commit + push): entro un minuto
+dal riavvio del sito l'articolo compare in `/blog`, nella sua categoria e in home.
+Un articolo con data futura resta nascosto fino a quel giorno. Cartelle e file che
+iniziano con `_` non vengono pubblicati. `source-notes.md`, `credits.md` e `inbox.md`
+restano nel repository ma non sono raggiungibili dal sito: sono pubbliche solo le immagini.

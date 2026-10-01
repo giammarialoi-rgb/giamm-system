@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proteine in definizione: quante ne servono davvero | Nurvan</title>
+<meta name="description" content="Quante proteine servono in definizione per non perdere muscolo? Cosa dicono meta-analisi e studi controllati, con esempi pratici in grammi al giorno.">
+<link rel="alternate" hreflang="it" href="index.it.html">
+<link rel="alternate" hreflang="en" href="index.en.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>/* Layout: blog Nurvan — header sito, colonna di lettura 680px, grafici a tutta colonna, footer app. Look unico scuro (brand). */
+:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.hero{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:radial-gradient(120% 90% at 80% 10%,#2a220a 0%,#0c0c0c 55%);padding:28px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end;min-height:240px}
+.hero .yr{font-family:var(--display);font-weight:700;color:var(--gold);font-size:clamp(48px,11vw,96px);line-height:.9}
+.hero .lab{font-family:var(--mono);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.hero .arrow{grid-column:1/-1;height:2px;background:linear-gradient(90deg,var(--line),var(--gold))}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-left:1.1em} .box li{margin-block:.35em}
+.quote{border-left:3px solid var(--gold);padding-left:18px;font-size:22px;font-style:italic;margin-block:28px}
+figure{margin:36px 0}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+.chart h4{font-family:var(--display);margin:0 0 4px;font-size:17px}
+.chart p.sub{margin:0 0 10px;font-size:14px;color:var(--muted);font-family:var(--body)}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-left:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-left:1.2em} .refs li{margin-block:.7em}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+@media (max-width:560px){body{font-size:17px}.hero{grid-template-columns:1fr}.site nav{display:none}}
+html{background:var(--bg)}
+.wrap{overflow-wrap:break-word}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:3/2;object-fit:cover}
+.box h2{margin-top:0}
+.nv{background:#1d1d1d;color:var(--muted)}
+.tbl{overflow-x:auto;margin-block:20px;border:1px solid var(--line);border-radius:12px}
+.tbl table{border-collapse:collapse;width:100%;font-size:15px;min-width:460px}
+.tbl th,.tbl td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
+.tbl th{font-family:var(--display);font-weight:500;color:var(--gold);background:var(--surface)}
+.tbl td:last-child{font-family:var(--mono);white-space:nowrap}
+.tbl tr:last-child td{border-bottom:0;color:var(--muted)}
+aside.app{margin-block:32px}
+.app .cta{white-space:nowrap}
+.refs a{word-break:break-all}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Allenamento</a><a href="#">Nutrizione</a><a href="#">Integrazione</a><a class="on" href="#">Blog</a></nav><a class="cta" href="https://nurvan.app">Scarica l'app</a></div></header>
+<main class="wrap" lang="it"><div class="crumb">Blog · Nutrizione · Definizione</div><h1>Proteine in definizione: quante ne servono davvero?</h1>
+<p class="lede">Quando tagli le calorie, il timore principale è perdere il muscolo costruito con fatica. Le proteine sono la leva alimentare più studiata per evitarlo, ma le cifre che girano vanno da 1,6 a oltre 4 grammi per chilo. Qui trovi cosa dicono le meta-analisi, perché i numeri cambiano tanto e come scegliere il tuo.</p><div class="meta"><span>1 ottobre 2026</span><span><b>10</b> min di lettura</span><span><b>8</b> studi citati</span></div><figure class="cover"><img alt="Pollo grigliato con riso e fagioli in un contenitore da asporto" height="1067" src="images/cover.jpg" width="1600"/><figcaption class="cap">Foto di Iara Melo su Pexels (Licenza Pexels).</figcaption></figure>
+<div class="box"><h2>In breve</h2><ul>
+<li>In deficit calorico, mangiare più proteine aiuta a proteggere la massa magra: su questo gli studi concordano.</li>
+<li>Senza deficit, oltre circa 1,6 g per kg di peso al giorno il beneficio medio si appiattisce. L'incertezza arriva fino a circa 2,2 g/kg.</li>
+<li>In definizione le indicazioni salgono: 2,3–3,1 g per kg di massa magra secondo la review di Helms e colleghi.</li>
+<li>I valori molto alti, oltre 3 g/kg di peso, non sono un minimo da rispettare. Sono la parte alta dei dati osservati, con risultati che gli stessi autori definiscono esplorativi.</li>
+<li>Conta anche da dove parti: chi mangia già molte proteine potrebbe guadagnare meno da ulteriori aumenti.</li>
+</ul></div>
+
+<h2>Perché in definizione il discorso cambia</h2>
+<p>Il muscolo si rinnova di continuo: ogni giorno ne costruisci e ne smonti una piccola parte. Quando mangi meno di quanto consumi, il corpo usa anche le proteine muscolari come riserva. Più il deficit è profondo e più sei magro, più questa spinta aumenta.</p>
+<p>Una meta-analisi della Purdue University su 18 studi controllati lo mostra bene. Mangiare più proteine della RDA (la dose raccomandata per la popolazione generale, 0,8 g/kg) ha ridotto la perdita di massa magra durante la dieta di circa 0,36 kg. In persone che non erano a dieta e non si allenavano, invece, non c'era differenza. Le proteine in più servono soprattutto quando il corpo è sotto stress: deficit calorico, allenamento o entrambi.</p>
+<p>Lo studio di Longland e colleghi, alla McMaster University, è l'esempio più netto. Quaranta giovani uomini hanno seguito per quattro settimane un deficit di circa il 40%, allenandosi sei giorni su sette con pesi e intervalli ad alta intensità. Metà mangiava 1,2 g/kg di proteine, metà 2,4 g/kg.</p>
+<figure><div class="chart"><h4>Stesso deficit, proteine diverse</h4><p class="sub">Longland 2016 · 4 settimane, deficit ~40%, pesi + HIIT 6 giorni/settimana</p><svg aria-label="Grafico a barre: massa magra +0,1 kg con 1,2 g/kg e +1,2 kg con 2,4 g/kg; massa grassa −3,5 kg con 1,2 g/kg e −4,8 kg con 2,4 g/kg" role="img" viewbox="0 0 600 210" xmlns="http://www.w3.org/2000/svg">
+<g fill="#a0a0a0" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11">
+<line stroke="#262626" x1="200.0" x2="200.0" y1="14" y2="160"></line>
+<text text-anchor="middle" x="200.0" y="178">−6 kg</text>
+<line stroke="#262626" x1="295.0" x2="295.0" y1="14" y2="160"></line>
+<text text-anchor="middle" x="295.0" y="178">−4 kg</text>
+<line stroke="#262626" x1="390.0" x2="390.0" y1="14" y2="160"></line>
+<text text-anchor="middle" x="390.0" y="178">−2 kg</text>
+<line stroke="#555" x1="485.0" x2="485.0" y1="14" y2="160"></line>
+<text text-anchor="middle" x="485.0" y="178">0 kg</text>
+<line stroke="#262626" x1="580.0" x2="580.0" y1="14" y2="160"></line>
+<text text-anchor="middle" x="580.0" y="178">+2 kg</text>
+</g>
+<g fill="#a0a0a0" font-family="Bricolage Grotesque, system-ui, sans-serif" font-size="12"><rect fill="#aa8a2e" height="12" opacity=".55" rx="2" width="12" x="200" y="192"></rect><text x="218" y="202">1,2 g/kg</text><rect fill="#d4af37" height="12" rx="2" width="12" x="300" y="192"></rect><text x="318" y="202">2,4 g/kg</text></g>
+<g fill="#f0f0f0" font-family="Bricolage Grotesque, system-ui, sans-serif" font-size="13">
+<text x="0" y="48">Massa magra</text>
+<rect fill="#aa8a2e" height="20" opacity=".55" rx="3" width="4.8" x="485.0" y="24"></rect>
+<text fill="#a0a0a0" font-size="12" text-anchor="start" x="497.8" y="39">+0,1 kg</text>
+<rect fill="#d4af37" height="20" opacity="1" rx="3" width="57.0" x="485.0" y="50"></rect>
+<text fill="#f3e5ab" font-size="12" text-anchor="start" x="550.0" y="65">+1,2 kg</text>
+<text x="0" y="120">Massa grassa</text>
+<rect fill="#aa8a2e" height="20" opacity=".55" rx="3" width="166.2" x="318.8" y="96"></rect>
+<text fill="#a0a0a0" font-size="12" text-anchor="end" x="310.8" y="111">−3,5 kg</text>
+<rect fill="#d4af37" height="20" opacity="1" rx="3" width="228.0" x="257.0" y="122"></rect>
+<text fill="#f3e5ab" font-size="12" text-anchor="end" x="249.0" y="137">−4,8 kg</text>
+</g></svg></div><figcaption class="cap"></figcaption></figure>
+<p>Il gruppo con più proteine ha guadagnato in media 1,2 kg di massa magra, contro 0,1 kg dell'altro gruppo, e ha perso più grasso. È un risultato su un periodo breve e con un protocollo molto duro, ma indica la direzione.</p>
+<h2>Quanto ne serve quando non sei in deficit</h2>
+<p>Per capire i numeri della definizione serve un punto di riferimento. La meta-analisi più citata è quella di Morton e colleghi (2018): 49 studi e 1.863 persone che si allenavano con i pesi, tutte a calorie normali o in surplus. Integrare le proteine ha aggiunto in media 0,30 kg di massa magra.</p>
+<p>Il dato più usato è il punto di plateau: oltre circa 1,62 g/kg al giorno, la massa magra non aumentava ulteriormente. L'intervallo di confidenza, cioè la fascia in cui probabilmente cade il valore vero, andava da 1,03 a 2,20 g/kg. Per questo gli autori suggeriscono, per prudenza, circa 2,2 g/kg a chi vuole massimizzare la crescita.</p>
+<p>Una seconda meta-analisi giapponese, su 105 studi e 5.402 persone, ha trovato un andamento simile. Ogni aumento di proteine porta benefici, ma sopra 1,3 g/kg il guadagno per ogni gradino è circa tre volte più piccolo. È il classico rendimento decrescente.</p>
+<h2>Quanto ne serve quando sei in deficit</h2>
+<p>Qui i numeri salgono. Nel 2014 Helms e colleghi hanno analizzato gli studi su atleti magri e allenati in deficit. La loro stima: 2,3–3,1 g per kg di massa magra, verso l'alto quanto più il deficit è aggressivo e la persona è magra. La posizione ufficiale della International Society of Sports Nutrition (ISSN) riprende lo stesso intervallo.</p>
+<figure><div class="chart"><h4>Quante proteine indicano gli studi</h4><p class="sub">Grammi di proteine per kg di peso corporeo al giorno</p><svg aria-label="Grafico a intervalli in g/kg di peso corporeo: RDA 0,8; Morton 2018 punto di plateau 1,62 (IC 95% 1,03–2,20); ISSN 2017 1,4–2,0 per chi si allena e 2,3–3,1 in deficit; Longland 2016 confronto tra 1,2 e 2,4 g/kg" role="img" viewbox="0 0 600 258" xmlns="http://www.w3.org/2000/svg">
+<g fill="#a0a0a0" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11">
+<line stroke="#555" x1="200.0" x2="200.0" y1="16" y2="224"></line>
+<text text-anchor="middle" x="200.0" y="242">0</text>
+<line stroke="#262626" x1="254.3" x2="254.3" y1="16" y2="224"></line>
+<text text-anchor="middle" x="254.3" y="242">0,5</text>
+<line stroke="#262626" x1="308.6" x2="308.6" y1="16" y2="224"></line>
+<text text-anchor="middle" x="308.6" y="242">1</text>
+<line stroke="#262626" x1="362.9" x2="362.9" y1="16" y2="224"></line>
+<text text-anchor="middle" x="362.9" y="242">1,5</text>
+<line stroke="#262626" x1="417.1" x2="417.1" y1="16" y2="224"></line>
+<text text-anchor="middle" x="417.1" y="242">2</text>
+<line stroke="#262626" x1="471.4" x2="471.4" y1="16" y2="224"></line>
+<text text-anchor="middle" x="471.4" y="242">2,5</text>
+<line stroke="#262626" x1="525.7" x2="525.7" y1="16" y2="224"></line>
+<text text-anchor="middle" x="525.7" y="242">3</text>
+<line stroke="#262626" x1="580.0" x2="580.0" y1="16" y2="224"></line>
+<text text-anchor="middle" x="580.0" y="242">3,5</text>
+</g>
+<g fill="#f0f0f0" font-family="Bricolage Grotesque, system-ui, sans-serif" font-size="13">
+<text x="0" y="42">RDA</text><text fill="#a0a0a0" font-size="11" x="0" y="57">popolazione generale</text>
+<circle cx="286.9" cy="44" fill="#a0a0a0" r="6"></circle>
+<text fill="#a0a0a0" font-size="11" x="298.9" y="48">0,8</text>
+<text x="0" y="82">Morton 2018</text><text fill="#a0a0a0" font-size="11" x="0" y="97">senza deficit · IC 95%</text>
+<line stroke="#aa8a2e" stroke-width="3" x1="311.8" x2="438.9" y1="84" y2="84"></line>
+<line stroke="#aa8a2e" stroke-width="2" x1="311.8" x2="311.8" y1="77" y2="91"></line>
+<line stroke="#aa8a2e" stroke-width="2" x1="438.9" x2="438.9" y1="77" y2="91"></line>
+<circle cx="375.9" cy="84" fill="#000" r="6" stroke="#f3e5ab" stroke-width="2"></circle>
+<text fill="#f3e5ab" font-size="11" x="448.9" y="88">plateau 1,62</text>
+<text x="0" y="122">ISSN 2017</text><text fill="#a0a0a0" font-size="11" x="0" y="137">chi si allena</text>
+<rect fill="#d4af37" height="18" rx="9" width="65.1" x="352.0" y="115"></rect>
+<text fill="#a0a0a0" font-size="11" x="425.1" y="128">1,4–2</text>
+<text x="0" y="162">ISSN 2017</text><text fill="#a0a0a0" font-size="11" x="0" y="177">allenati in deficit</text>
+<rect fill="#d4af37" height="18" rx="9" width="86.9" x="449.7" y="155"></rect>
+<text fill="#a0a0a0" font-size="11" x="544.6" y="168">2,3–3,1</text>
+<text x="0" y="202">Longland 2016</text><text fill="#a0a0a0" font-size="11" x="0" y="217">deficit ~40%: 1,2 vs 2,4</text>
+<line stroke="#262626" stroke-dasharray="3 3" stroke-width="2" x1="330.3" x2="460.6" y1="204" y2="204"></line>
+<circle cx="330.3" cy="204" fill="#000" r="6" stroke="#a0a0a0" stroke-width="2"></circle>
+<circle cx="460.6" cy="204" fill="#d4af37" r="7"></circle>
+</g></svg></div><figcaption class="cap"></figcaption></figure>
+<p>Nel 2025 lo stesso gruppo ha aggiornato l'analisi con una meta-regressione su 29 studi, selezionati tra 916. Il modello trova una probabilità superiore al 97% di una relazione lineare: più proteine, migliore conservazione della massa magra. La relazione era più forte quando le proteine erano calcolate sulla massa magra, negli interventi oltre le quattro settimane, negli uomini e nelle persone più magre.</p>
+<p>Due dettagli cambiano la lettura. Primo: una relazione lineare dentro i dati raccolti non dice dove si ferma. I valori più alti indicano solo fin dove arrivavano gli studi. Secondo: c'era molta eterogeneità tra gli studi e gli autori definiscono i risultati esplorativi, non conclusivi.</p>
+<h2>Il punto di partenza conta</h2>
+<p>Un commento pubblicato nel 2026 su Sports Medicine aggiunge un elemento spesso ignorato. Le meta-regressioni guardano la dose prescritta, ma i partecipanti partono da abitudini diverse. Secondo gli autori, chi mangia già molte proteine prima dello studio sembra ottenere meno da ulteriori aumenti. Lo presentano come evidenza esplorativa, da confermare. In pratica: passare da 1,2 a 2,2 g/kg probabilmente conta molto più che passare da 2,5 a 3,5.</p>
+<h2>Cosa dice davvero la ricerca</h2>
+<p>Lo spunto di questo articolo è un post di Stronger By Science che riassume la loro analisi interna e la meta-regressione del 2025. Ecco le affermazioni principali, confrontate con le fonti.</p>
+<div class="verdict"><div class="v"><span class="pill ok">Confermato</span><p><strong>"In definizione servono più proteine."</strong> Review, meta-analisi e studi controllati vanno tutti nella stessa direzione.</p></div><div class="v"><span class="pill ok">Confermato</span><p><strong>"Le raccomandazioni precedenti stavano tra 1,6 e 2,2 g/kg."</strong> Corrisponde al plateau di Morton 2018 e al suo intervallo di confidenza, che però riguarda chi non è in deficit.</p></div><div class="v"><span class="pill ok">Confermato</span><p><strong>"L'effetto è piccolo ma apprezzabile, con rendimenti decrescenti."</strong> Lo mostrano sia Morton 2018 (+0,30 kg in media) sia Tagawa 2020.</p></div><div class="v"><span class="pill part">Da precisare</span><p><strong>"Per la massima conservazione servono 3,2 g/kg di peso o 4,2 g/kg di massa magra."</strong> L'abstract descrive una relazione lineare senza un tetto. Questi valori sono la parte alta dei dati osservati, non una soglia dimostrata, e i risultati sono esplorativi.</p></div><div class="v"><span class="pill part">Da precisare</span><p><strong>"Ogni g/kg in più dà il 97–99% di probabilità di conservare più massa magra."</strong> Quella percentuale misura quanto è probabile che l'effetto vada nella direzione giusta, non quanto è grande.</p></div><div class="v"><span class="pill nv">Non verificabile</span><p><strong></strong> Gli intervalli per massa e ricomposizione (circa 2–2,35 g/kg) vengono da un'analisi interna pubblicata sul sito di Stronger By Science, non su una rivista indicizzata in PubMed.</p></div></div>
+<h2>Come applicarlo</h2>
+<p>Facciamo un esempio con una persona di 80 kg e il 15% di grasso corporeo. La sua massa magra è circa 68 kg.</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Riferimento</th>
+<th>Calcolo</th>
+<th>Proteine al giorno</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plateau Morton 2018 (senza deficit)</td>
+<td>1,6 g × 80 kg</td>
+<td>128 g</td>
+</tr>
+<tr>
+<td>Limite prudente Morton 2018</td>
+<td>2,2 g × 80 kg</td>
+<td>176 g</td>
+</tr>
+<tr>
+<td>Helms 2014 (in deficit)</td>
+<td>2,3–3,1 g × 68 kg</td>
+<td>156–211 g</td>
+</tr>
+<tr>
+<td>Valore alto citato nel post</td>
+<td>4,2 g × 68 kg</td>
+<td>286 g</td>
+</tr>
+</tbody>
+</table></div>
+<ol>
+<li><strong>Parti da una base solida.</strong> Se oggi mangi poche proteine, portarti verso 1,6–2,2 g/kg è il passo con il ritorno maggiore.</li>
+<li><strong>Sali in definizione, soprattutto se sei già magro.</strong> Più il deficit è aggressivo e più sei asciutto, più ha senso stare nella parte alta dell'intervallo di Helms.</li>
+<li><strong>Calcola sulla massa magra se hai molto grasso.</strong> Usare il peso totale gonfia il numero senza motivo.</li>
+<li><strong>Distribuisci la quota.</strong> L'ISSN indica pasti da circa 0,25 g/kg, o 20–40 g, ogni 3–4 ore.</li>
+<li><strong>Non dimenticare i pesi.</strong> Nella meta-analisi di Morton l'allenamento contro resistenza pesa molto più dell'integrazione proteica. Le proteine lo supportano, non lo sostituiscono.</li>
+</ol>
+<p>Se hai patologie renali o altre condizioni mediche, parla con il tuo medico prima di aumentare molto le proteine.</p>
+<aside class="app"><div><h3>Imposta il tuo obiettivo proteico in definizione</h3><p>Nurvan calcola il target di proteine in base al peso e all'obiettivo, alzandolo quando sei in fase di definizione, e puoi modificarlo a mano. Poi lo segui pasto per pasto nel diario e lo confronti con peso, misure e carichi, per vedere se stai davvero conservando il muscolo.</p></div><a class="cta" href="https://nurvan.app">Prova Nurvan</a></aside>
+<h2>Domande frequenti</h2>
+<details><summary>Devo calcolare le proteine sul peso attuale o sul peso obiettivo?</summary><p>Se sei abbastanza magro, il peso attuale va bene. Se hai molto grasso corporeo, è più sensato ragionare sulla massa magra, come fa la review di Helms 2014. Il peso totale porterebbe a numeri gonfiati.</p></details>
+
+<details><summary>Quante proteine per pasto?</summary><p>La posizione ISSN indica circa 0,25 g per kg di peso, o 20–40 g, per pasto, distribuiti ogni 3–4 ore. Conta comunque soprattutto il totale della giornata.</p></details>
+
+<details><summary>Le proteine in polvere servono?</summary><p>Non sono obbligatorie. Secondo l'ISSN sono un modo pratico per raggiungere la quota senza aggiungere troppe calorie, utile proprio in definizione. Il cibo intero resta la base.</p></details>
+
+<details><summary>Se non conosco la mia massa magra come faccio?</summary><p>Puoi stimarla da una misura della percentuale di grasso. In alternativa, usa il peso corporeo con le indicazioni espresse in g/kg di peso, come 1,6–2,2 g/kg, e sali gradualmente durante la definizione.</p></details>
+
+<h2>Fonti</h2>
+<ol class="refs">
+<li>Refalo MC, Trexler ET, Helms ER, 2025. Effect of Dietary Protein on Fat-Free Mass in Energy Restricted, Resistance-Trained Individuals: An Updated Systematic Review With Meta-Regression. <em>Strength Cond J</em> 48(4):398–412. <a href="https://doi.org/10.1519/SSC.0000000000000888" rel="noopener" target="_blank">DOI 10.1519/SSC.0000000000000888</a> (rivista non indicizzata in PubMed)</li>
+<li>Morton RW et al., 2018. A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults. <em>Br J Sports Med</em> 52(6):376–384. <a href="https://pubmed.ncbi.nlm.nih.gov/28698222/" rel="noopener" target="_blank">PMID 28698222</a> · <a href="https://doi.org/10.1136/bjsports-2017-097608" rel="noopener" target="_blank">DOI 10.1136/bjsports-2017-097608</a></li>
+<li>Helms ER et al., 2014. A systematic review of dietary protein during caloric restriction in resistance trained lean athletes: a case for higher intakes. <em>Int J Sport Nutr Exerc Metab</em> 24(2):127–38. <a href="https://pubmed.ncbi.nlm.nih.gov/24092765/" rel="noopener" target="_blank">PMID 24092765</a> · <a href="https://doi.org/10.1123/ijsnem.2013-0054" rel="noopener" target="_blank">DOI 10.1123/ijsnem.2013-0054</a></li>
+<li>Jäger R et al., 2017. International Society of Sports Nutrition Position Stand: protein and exercise. <em>J Int Soc Sports Nutr</em> 14:20. <a href="https://pubmed.ncbi.nlm.nih.gov/28642676/" rel="noopener" target="_blank">PMID 28642676</a> · <a href="https://doi.org/10.1186/s12970-017-0177-8" rel="noopener" target="_blank">DOI 10.1186/s12970-017-0177-8</a></li>
+<li>Longland TM et al., 2016. Higher compared with lower dietary protein during an energy deficit combined with intense exercise promotes greater lean mass gain and fat mass loss: a randomized trial. <em>Am J Clin Nutr</em> 103(3):738–46. <a href="https://pubmed.ncbi.nlm.nih.gov/26817506/" rel="noopener" target="_blank">PMID 26817506</a> · <a href="https://doi.org/10.3945/ajcn.115.119339" rel="noopener" target="_blank">DOI 10.3945/ajcn.115.119339</a></li>
+<li>Hudson JL et al., 2020. Protein Intake Greater than the RDA Differentially Influences Whole-Body Lean Mass Responses to Purposeful Catabolic and Anabolic Stressors: A Systematic Review and Meta-analysis. <em>Adv Nutr</em> 11(3):548–558. <a href="https://pubmed.ncbi.nlm.nih.gov/31794597/" rel="noopener" target="_blank">PMID 31794597</a> · <a href="https://doi.org/10.1093/advances/nmz106" rel="noopener" target="_blank">DOI 10.1093/advances/nmz106</a></li>
+<li>Tagawa R et al., 2020. Dose-response relationship between protein intake and muscle mass increase: a systematic review and meta-analysis of randomized controlled trials. <em>Nutr Rev</em> 79(1):66–75. <a href="https://pubmed.ncbi.nlm.nih.gov/33300582/" rel="noopener" target="_blank">PMID 33300582</a> · <a href="https://doi.org/10.1093/nutrit/nuaa104" rel="noopener" target="_blank">DOI 10.1093/nutrit/nuaa104</a></li>
+<li>López-Moreno M, Quesada G, López-Gil JF, 2026. Starting Point Matters: Baseline Protein Intake as a Moderator of the Protein-Fat-Free Mass Relationship in Energy-Restricted Athletes. <em>Sports Med</em>. <a href="https://pubmed.ncbi.nlm.nih.gov/42560437/" rel="noopener" target="_blank">PMID 42560437</a> · <a href="https://doi.org/10.1007/s40279-026-02494-5" rel="noopener" target="_blank">DOI 10.1007/s40279-026-02494-5</a></li>
+</ol>
+<p class="cap">Articolo ispirato a un post di <a href="https://www.instagram.com/p/Dd6ncPLF7mI/" rel="noopener" target="_blank">Stronger By Science (@strongerbyscience)</a>. Fonti consultate tramite PubMed.</p>
+<p class="note">Nota: contenuto informativo, non sostituisce il parere di un medico o di un professionista qualificato.</p></main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

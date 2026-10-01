@@ -1,25 +1,26 @@
-// The site's blog. One Markdown file per article in site/blog/, with a small
-// header between two "---" lines:
+// The site's blog.
 //
-//   ---
-//   title: Come scegliere il carico giusto
-//   date: 2026-10-01
-//   category: Allenamento
-//   excerpt: Una riga che riassume l'articolo.
-//   cover: /site-assets/blog/carico.jpg        (optional)
-//   source: https://example.org/original       (optional, shown as "Fonte")
-//   ---
+// Articles come from two places:
 //
-// The file name is the address: site/blog/carico-giusto.md -> /blog/carico-giusto.
-// Adding an article is adding a file; nothing else has to change. Articles
-// dated in the future stay hidden until that day.
+// 1. content/articles/<date>-<slug>/  - what the daily routine writes:
+//      article.it.md   the article (Markdown with a header between "---" lines)
+//      images/         its cover and charts (paths in the article are relative)
+//    An older folder may hold only index.html (a finished page): its <main> is
+//    shown inside the site's page, with its own styles kept to that article.
+//
+// 2. site/blog/<slug>.md - an article written by hand, same header.
+//
+// Header fields: title, date (YYYY-MM-DD), category, description (or excerpt),
+// slug, cover, cover_credit. Adding an article is adding a folder or a file;
+// nothing else has to change. Articles dated in the future stay hidden until
+// that day; files and folders starting with "_" are never published.
 import fs from "node:fs/promises";
 import path from "node:path";
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 export function slugify(s) {
-  return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return String(s || "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
 function safeUrl(u) {
@@ -28,40 +29,69 @@ function safeUrl(u) {
 }
 
 // Inline Markdown on already-escaped text: links, images, bold, italic, code.
-function inline(text) {
+// `media` is the address of the article's own folder, for relative paths.
+function inline(text, media) {
+  const abs = (url) => {
+    const u = url.replace(/&amp;/g, "&");
+    return media && !/^(https?:|\/|#|mailto:)/i.test(u) ? media + u.replace(/^\.\//, "") : safeUrl(u);
+  };
   let t = esc(text);
-  t = t.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_, alt, url) => `<img src="${esc(safeUrl(url.replace(/&amp;/g, "&")))}" alt="${alt}" loading="lazy">`);
+  t = t.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_, alt, url) => `<img src="${esc(abs(url))}" alt="${alt}" loading="lazy">`);
   t = t.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, url) => {
-    const href = safeUrl(url.replace(/&amp;/g, "&"));
+    const href = abs(url);
     const ext = /^https?:/i.test(href) ? ' target="_blank" rel="noopener nofollow"' : "";
     return `<a href="${esc(href)}"${ext}>${label}</a>`;
   });
   t = t.replace(/`([^`]+)`/g, "<code>$1</code>");
   t = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  t = t.replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
+  t = t.replace(/(^|[\s(>])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
   return t;
 }
 
-// A small Markdown subset, enough for articles: headings, paragraphs, lists,
-// quotes, rules. Raw HTML in the source is shown as text, never run.
-export function renderMarkdown(md) {
+// The Markdown the articles use: headings, paragraphs, lists, quotes, rules,
+// tables, images with a caption. With opts.html a block starting with a tag
+// (a box written in the article) passes through as it is: only for our own
+// files. Anything else written as HTML is shown as text.
+export function renderMarkdown(md, opts = {}) {
+  const media = opts.media || "";
+  const il = (t) => inline(t, media);
   const lines = String(md || "").replace(/\r\n/g, "\n").split("\n");
   const out = [];
   let para = [];
   let list = null; // { tag, items }
   let quote = [];
-  const flushPara = () => { if (para.length) { out.push("<p>" + inline(para.join(" ")) + "</p>"); para = []; } };
-  const flushList = () => { if (list) { out.push(`<${list.tag}>` + list.items.map((i) => "<li>" + inline(i) + "</li>").join("") + `</${list.tag}>`); list = null; } };
-  const flushQuote = () => { if (quote.length) { out.push("<blockquote><p>" + inline(quote.join(" ")) + "</p></blockquote>"); quote = []; } };
+  const flushPara = () => { if (para.length) { out.push("<p>" + il(para.join(" ")) + "</p>"); para = []; } };
+  const flushList = () => { if (list) { out.push(`<${list.tag}>` + list.items.map((i) => "<li>" + il(i) + "</li>").join("") + `</${list.tag}>`); list = null; } };
+  const flushQuote = () => { if (quote.length) { out.push("<blockquote><p>" + il(quote.join(" ")) + "</p></blockquote>"); quote = []; } };
   const flushAll = () => { flushPara(); flushList(); flushQuote(); };
-  for (const raw of lines) {
-    const line = raw.trimEnd();
+  const isRow = (l) => /^\|.*\|$/.test(String(l || "").trim());
+  const cells = (row) => row.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+  for (let n = 0; n < lines.length; n++) {
+    const line = lines[n].trimEnd();
     let m;
     if (!line.trim()) { flushAll(); continue; }
+    if (opts.html && /^<(div|figure|details|table|section|aside)\b/i.test(line)) {
+      flushAll();
+      const block = [];
+      while (n < lines.length && lines[n].trim()) { block.push(lines[n]); n++; }
+      out.push(block.join("\n"));
+      continue;
+    }
+    if (isRow(line) && /^\|[\s:|-]+\|$/.test(String(lines[n + 1] || "").trim())) {
+      flushAll();
+      const head = cells(line);
+      const rows = [];
+      n += 2;
+      while (n < lines.length && isRow(lines[n])) { rows.push(cells(lines[n])); n++; }
+      n--;
+      out.push('<div class="table-scroll"><table><thead><tr>' + head.map((c) => "<th>" + il(c) + "</th>").join("") + "</tr></thead><tbody>" +
+        rows.map((row) => "<tr>" + row.map((c) => "<td>" + il(c) + "</td>").join("") + "</tr>").join("") + "</tbody></table></div>");
+      continue;
+    }
     if ((m = /^(#{1,4})\s+(.*)$/.exec(line))) {
       flushAll();
-      const level = Math.min(4, m[1].length + 1); // "#" is h2: the page title is the h1
-      out.push(`<h${level} id="${esc(slugify(m[2]))}">${inline(m[2])}</h${level}>`);
+      const level = Math.min(4, Math.max(2, m[1].length)); // the page title is the only h1
+      out.push(`<h${level} id="${esc(slugify(m[2]))}">${il(m[2])}</h${level}>`);
       continue;
     }
     if (/^(-{3,}|\*{3,})$/.test(line.trim())) { flushAll(); out.push("<hr>"); continue; }
@@ -82,49 +112,129 @@ export function renderMarkdown(md) {
     para.push(line.trim());
   }
   flushAll();
-  return out.join("\n");
+  // An image followed by a line in italics is a figure with its caption.
+  return out.join("\n").replace(/<p>(<img [^>]+>)\s*<em>([\s\S]*?)<\/em><\/p>/g, "<figure>$1<figcaption>$2</figcaption></figure>");
 }
 
-export function parseArticle(file, text) {
-  const src = String(text || "").replace(/^﻿/, "").replace(/\r\n/g, "\n");
+function readHeader(text) {
+  let src = String(text || "").replace(/\r\n/g, "\n");
+  if (src.charCodeAt(0) === 0xfeff) src = src.slice(1);
   const m = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/.exec(src);
   const meta = {};
-  let body = src;
-  if (m) {
-    body = m[2];
-    m[1].split("\n").forEach((line) => {
-      const i = line.indexOf(":");
-      if (i > 0) meta[line.slice(0, i).trim().toLowerCase()] = line.slice(i + 1).trim().replace(/^["']|["']$/g, "");
-    });
-  }
-  const slug = slugify(path.basename(file).replace(/\.md$/i, ""));
-  const date = /^\d{4}-\d{2}-\d{2}/.test(meta.date || "") ? meta.date.slice(0, 10) : "";
-  const category = meta.category || meta.categoria || "Generale";
-  const plain = body.replace(/[#>*_`\[\]()!-]/g, " ").replace(/\s+/g, " ").trim();
+  if (!m) return { meta, body: src };
+  m[1].split("\n").forEach((line) => {
+    const i = line.indexOf(":");
+    if (i > 0) meta[line.slice(0, i).trim().toLowerCase()] = line.slice(i + 1).trim().replace(/^["']|["']$/g, "");
+  });
+  return { meta, body: m[2] };
+}
+
+const capital = (s) => { const t = String(s || "").trim(); return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; };
+const dirDate = (name) => (/^(\d{4}-\d{2}-\d{2})-/.exec(name) || [])[1] || "";
+const dirSlug = (name) => slugify(String(name).replace(/^\d{4}-\d{2}-\d{2}-/, "").replace(/\.md$/i, ""));
+
+function article(fields) {
+  const category = capital(fields.category || "Generale");
+  const plain = String(fields.plain || "").replace(/\s+/g, " ").trim();
   return {
-    slug,
-    title: meta.title || meta.titolo || slug,
-    date,
+    slug: fields.slug,
+    title: fields.title || fields.slug,
+    date: /^\d{4}-\d{2}-\d{2}/.test(fields.date || "") ? fields.date.slice(0, 10) : "",
     category,
     categorySlug: slugify(category),
-    excerpt: meta.excerpt || meta.riassunto || plain.slice(0, 180) + (plain.length > 180 ? "…" : ""),
-    cover: meta.cover ? safeUrl(meta.cover) : "",
-    source: meta.source || meta.fonte ? safeUrl(meta.source || meta.fonte) : "",
+    excerpt: fields.excerpt || plain.slice(0, 180) + (plain.length > 180 ? "…" : ""),
+    cover: fields.cover || "",
+    coverCredit: fields.coverCredit || "",
     minutes: Math.max(1, Math.round(plain.split(" ").length / 200)),
-    html: renderMarkdown(body)
+    html: fields.html || "",
+    style: fields.style || ""
   };
 }
 
-export async function loadArticles(dir, now = new Date()) {
-  let files = [];
-  try { files = (await fs.readdir(dir)).filter((f) => /\.md$/i.test(f) && !f.startsWith("_")); } catch (_) { return []; }
+// name: the file or folder name; media: where the article's own files are served.
+export function parseArticle(name, text, media = "") {
+  const { meta, body } = readHeader(text);
+  const title = meta.title || meta.titolo || "";
+  // The first heading repeats the title: the page already shows it.
+  const text2 = body.replace(/^\s*#\s+[^\n]*\n/, "");
+  const cover = meta.cover ? (/^(https?:|\/)/i.test(meta.cover) ? safeUrl(meta.cover) : (media ? media + meta.cover : "")) : "";
+  return article({
+    slug: slugify(meta.slug || "") || dirSlug(name),
+    title,
+    date: meta.date || dirDate(name),
+    category: meta.category || meta.categoria,
+    excerpt: meta.description || meta.excerpt || meta.riassunto || "",
+    cover,
+    coverCredit: meta.cover_credit || "",
+    plain: text2.replace(/<[^>]+>/g, " ").replace(/[#>*_`\[\]()!|-]/g, " "),
+    html: renderMarkdown(text2, { html: true, media })
+  });
+}
+
+// An article that exists only as a finished page: its <main>, without the
+// parts the site's page already has, and its styles limited to .legacy-post.
+export function parseHtmlArticle(name, html) {
+  const src = String(html || "");
+  const main = (/<main[^>]*>([\s\S]*?)<\/main>/i.exec(src) || [])[1] || "";
+  if (!main) return null;
+  const pick = (re) => { const m = re.exec(main); return m ? m[1].replace(/<[^>]+>/g, "").trim() : ""; };
+  const title = pick(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  const lede = pick(/<p class="lede">([\s\S]*?)<\/p>/i);
+  const crumb = pick(/<div class="crumb">([\s\S]*?)<\/div>/i).split("·").map((x) => x.trim()).filter(Boolean);
+  const body = main
+    .replace(/<div class="crumb">[\s\S]*?<\/div>/i, "")
+    .replace(/<h1[^>]*>[\s\S]*?<\/h1>/i, "")
+    .replace(/<div class="meta">[\s\S]*?<\/div>/i, "")
+    .replace(/<p class="lede">[\s\S]*?<\/p>/i, "")
+    .replace(/<p class="cap">[^<]*provvisori[^<]*<\/p>/i, "");
+  const css = (/<style[^>]*>([\s\S]*?)<\/style>/i.exec(src) || [])[1] || "";
+  const scoped = css
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|\})\s*([^@{}]+)\{/g, (all, close, sel) => {
+      const list = sel.split(",").map((one) => {
+        const x = one.trim();
+        if (!x) return "";
+        if (x === ":root" || x === "body" || x === "html") return ".legacy-post";
+        if (x === "*" || /^\.site\b/.test(x) || /^(header|footer|nav)\b/.test(x)) return "";
+        return ".legacy-post " + x;
+      }).filter(Boolean);
+      return close + (list.length ? list.join(",") : ".legacy-post .never") + "{";
+    });
+  return article({
+    slug: dirSlug(name),
+    title,
+    date: dirDate(name),
+    category: crumb[1] || "Generale",
+    excerpt: lede,
+    plain: body.replace(/<svg[\s\S]*?<\/svg>/g, " ").replace(/<[^>]+>/g, " "),
+    html: '<div class="legacy-post">' + body + "</div>",
+    style: scoped
+  });
+}
+
+export async function loadArticles({ contentDir, siteDir }, now = new Date()) {
   const today = now.toISOString().slice(0, 10);
   const list = [];
-  for (const f of files) {
+  const add = (a) => { if (a && a.slug && (!a.date || a.date <= today) && !list.some((x) => x.slug === a.slug)) list.push(a); };
+  const read = (file) => fs.readFile(file, "utf8").catch(() => null);
+
+  let folders = [];
+  try { folders = (await fs.readdir(contentDir, { withFileTypes: true })).filter((d) => d.isDirectory() && !d.name.startsWith("_")).map((d) => d.name); } catch (_) {}
+  for (const name of folders) {
     try {
-      const a = parseArticle(f, await fs.readFile(path.join(dir, f), "utf8"));
-      if (a.slug && (!a.date || a.date <= today)) list.push(a);
-    } catch (err) { console.warn("BLOG_ARTICLE", f, err && err.message); }
+      const dir = path.join(contentDir, name);
+      const md = (await read(path.join(dir, "article.it.md"))) || (await read(path.join(dir, "article.md")));
+      if (md) { add(parseArticle(name, md, "/blog-media/" + encodeURIComponent(name) + "/")); continue; }
+      const page = (await read(path.join(dir, "index.it.html"))) || (await read(path.join(dir, "index.html")));
+      if (page) add(parseHtmlArticle(name, page));
+    } catch (err) { console.warn("BLOG_ARTICLE", name, err && err.message); }
+  }
+
+  let files = [];
+  try { files = (await fs.readdir(siteDir)).filter((f) => /\.md$/i.test(f) && !f.startsWith("_")); } catch (_) {}
+  for (const f of files) {
+    try { add(parseArticle(f, await fs.readFile(path.join(siteDir, f), "utf8"))); }
+    catch (err) { console.warn("BLOG_ARTICLE", f, err && err.message); }
   }
   return list.sort((a, b) => (b.date || "").localeCompare(a.date || "") || a.title.localeCompare(b.title));
 }
@@ -151,13 +261,18 @@ function categoriesHtml(articles, active) {
     [...seen].sort((a, b) => a[1].localeCompare(b[1])).map(([slug, name]) => chip("/blog/categoria/" + slug, name, active === slug)).join("") + "</nav>";
 }
 
-// mountBlog(app, { siteDir, shell }) - shell(req, { title, description, main, ogImage }) returns the full page.
-export function mountBlog(app, { siteDir, shell }) {
-  const dir = path.join(siteDir, "blog");
+// mountBlog(app, { contentDir, siteDir, shell, staticFiles })
+// shell(req, { title, description, main, ogImage }) returns the full page;
+// staticFiles(dir) is express.static, passed in so this file needs no import of it.
+export function mountBlog(app, { contentDir, siteDir, shell, staticFiles }) {
   let cache = { at: 0, list: [] };
   async function articles() {
-    if (Date.now() - cache.at > 60 * 1000) cache = { at: Date.now(), list: await loadArticles(dir) };
+    if (Date.now() - cache.at > 60 * 1000) cache = { at: Date.now(), list: await loadArticles({ contentDir, siteDir: path.join(siteDir, "blog") }) };
     return cache.list;
+  }
+  // Only the images of an article are public, not its notes or drafts.
+  if (staticFiles) {
+    app.use("/blog-media", (req, res, next) => (/^\/[^/]+\/images\/[^/]+\.(jpe?g|png|webp|svg|gif)$/i.test(decodeURIComponent(req.path)) ? next() : res.status(404).end()), staticFiles(contentDir));
   }
   const send = async (req, res, page, status = 200) => {
     res.setHeader("Cache-Control", "public, max-age=300");
@@ -171,7 +286,7 @@ export function mountBlog(app, { siteDir, shell }) {
 
   app.get("/blog", async (req, res) => {
     const all = await articles();
-    return send(req, res, { title: "Blog — Nurvan", description: "Allenamento, alimentazione e recupero: gli articoli di Nurvan.", main: listPage(all, all, "", "Idee per allenarti meglio", "Allenamento, alimentazione, recupero e gare: articoli brevi, da mettere in pratica.") });
+    return send(req, res, { title: "Blog — Nurvan", description: "Allenamento, alimentazione e recupero: gli articoli di Nurvan.", main: listPage(all, all, "", "Idee per allenarti meglio", "Allenamento, alimentazione, recupero e gare: articoli da mettere in pratica, con le fonti.") });
   });
 
   app.get("/blog/categoria/:cat", async (req, res) => {
@@ -186,18 +301,19 @@ export function mountBlog(app, { siteDir, shell }) {
     const all = await articles();
     const a = all.find((x) => x.slug === slugify(req.params.slug));
     if (!a) return send(req, res, { title: "Articolo non trovato — Nurvan", description: "", main: listPage(all.slice(0, 6), all, "", "Articolo non trovato", "Forse cercavi uno di questi.") }, 404);
-    const more = all.filter((x) => x.slug !== a.slug && x.categorySlug === a.categorySlug).slice(0, 3);
-    const main = `<article class="post"><div class="wrap narrow">` +
+    const more = all.filter((x) => x.slug !== a.slug).sort((x, y) => (y.categorySlug === a.categorySlug) - (x.categorySlug === a.categorySlug)).slice(0, 3);
+    const main = (a.style ? `<style>${a.style}</style>` : "") +
+      `<article class="post"><div class="wrap narrow">` +
       `<a class="back" href="/blog">← Tutti gli articoli</a>` +
       `<a class="eyebrow" href="/blog/categoria/${esc(a.categorySlug)}">${esc(a.category)}</a>` +
       `<h1 class="blog-title">${esc(a.title)}</h1>` +
+      (a.excerpt ? `<p class="lead">${esc(a.excerpt)}</p>` : "") +
       `<div class="post-meta">${esc(dateIt(a.date))}${a.date ? " · " : ""}${a.minutes} min di lettura</div>` +
-      (a.cover ? `<img class="post-cover" src="${esc(a.cover)}" alt="">` : "") +
+      (a.cover ? `<figure class="post-cover"><img src="${esc(a.cover)}" alt="">${a.coverCredit ? `<figcaption>Foto: ${esc(a.coverCredit.replace(/\s*\(https?:[^)]*\)/g, ""))}</figcaption>` : ""}</figure>` : "") +
       `<div class="prose">${a.html}</div>` +
-      (a.source && a.source !== "#" ? `<p class="post-source">Fonte: <a href="${esc(a.source)}" target="_blank" rel="noopener nofollow">${esc(a.source.replace(/^https?:\/\/(www\.)?/, "").split("/")[0])}</a></p>` : "") +
       `<div class="post-cta"><strong>Mettilo in pratica con Nurvan.</strong><a class="btn primary" href="{{APP_URL}}">Apri l'app</a></div>` +
       `</div></article>` +
-      (more.length ? `<section class="blog"><div class="wrap"><div class="head"><h2>Altri articoli su ${esc(a.category.toLowerCase())}</h2></div><div class="posts">${more.map(cardHtml).join("")}</div></div></section>` : "");
+      (more.length ? `<section class="blog"><div class="wrap"><div class="head"><h2>Continua a leggere</h2></div><div class="posts">${more.map(cardHtml).join("")}</div></div></section>` : "");
     return send(req, res, { title: `${a.title} — Nurvan`, description: a.excerpt, main, ogImage: a.cover });
   });
 
