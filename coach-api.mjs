@@ -2402,6 +2402,23 @@ app.use(function (req, res, next) {
   }
   next();
 });
+// The public site (site/index.html). The same service answers for the site's
+// domain and for the app: on nurvan.app the home page is the site, on every
+// other host it is the app, and /sito shows the site anywhere (preview).
+// SITE_HOSTS, APP_PUBLIC_URL and SITE_CONTACT_EMAIL can be set on the host.
+const SITE_HOSTS = String(process.env.SITE_HOSTS || "nurvan.app,www.nurvan.app").split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);
+async function sitePage(req, res) {
+  let html;
+  try { html = await fs.readFile(path.join(__dirname, "site", "index.html"), "utf8"); }
+  catch (_) { return res.status(404).type("text").send("Sito non disponibile."); }
+  const appUrl = String(process.env.APP_PUBLIC_URL || "https://coach-api-gemini.onrender.com/").replace(/\/?$/, "/");
+  const mail = String(process.env.SITE_CONTACT_EMAIL || "info@nurvan.app");
+  res.setHeader("Cache-Control", "public, max-age=300");
+  return res.type("html").send(html.split("{{APP_URL}}").join(appUrl).split("{{CONTACT_EMAIL}}").join(mail));
+}
+app.get("/sito", sitePage);
+app.get("/", (req, res, next) => (SITE_HOSTS.includes(String(req.hostname || "").toLowerCase()) ? sitePage(req, res) : next()));
+
 const LEGAL_PAGES = {
   "/privacy": "privacy.html",
   "/termini": "termini.html",
