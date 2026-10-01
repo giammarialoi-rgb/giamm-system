@@ -20,8 +20,9 @@ import { SITE_LANGS, SITE_LOCALES, langPrefix, langOfPath, siteDict, st } from "
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+// Letters of any script are kept: a category written in Russian or Chinese has an address too.
 export function slugify(s) {
-  return String(s || "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return String(s || "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "");
 }
 
 function safeUrl(u) {
@@ -271,7 +272,7 @@ function categoriesHtml(articles, active, lang, dict) {
   const base = langPrefix(lang) + "/blog";
   const chip = (href, label, on) => `<a class="chip${on ? " on" : ""}" href="${href}">${esc(label)}</a>`;
   return '<nav class="chips" aria-label="Categorie">' + chip(base, st(dict, "Tutti"), !active) +
-    '<span data-notr>' + [...seen].sort((a, b) => a[1].localeCompare(b[1])).map(([slug, name]) => chip(base + "/categoria/" + slug, name, active === slug)).join("") + "</span><!--/notr--></nav>";
+    '<span data-notr>' + [...seen].sort((a, b) => a[1].localeCompare(b[1])).map(([slug, name]) => chip(base + "/categoria/" + encodeURIComponent(slug), name, active === slug)).join("") + "</span><!--/notr--></nav>";
 }
 
 // mountBlog(app, { contentDir, siteDir, shell, staticFiles })
@@ -341,7 +342,7 @@ export function mountBlog(app, { contentDir, siteDir, shell, staticFiles }) {
     const main = (a.style ? `<style>${a.style}</style>` : "") +
       `<article class="post"><div class="wrap narrow">` +
       `<a class="back" href="${base}">← Tutti gli articoli</a>` +
-      `<a class="eyebrow" href="${base}/categoria/${esc(a.categorySlug)}" data-notr>${esc(a.category)}</a><!--/notr-->` +
+      `<a class="eyebrow" href="${base}/categoria/${encodeURIComponent(a.categorySlug)}" data-notr>${esc(a.category)}</a><!--/notr-->` +
       `<div data-notr><h1 class="blog-title">${esc(a.title)}</h1>` +
       (a.excerpt ? `<p class="lead">${esc(a.excerpt)}</p>` : "") +
       `<div class="post-meta">${esc(dateText(a.date, lang))}${a.date ? " · " : ""}${esc(st(dict, "{0} min di lettura", a.minutes))}</div>` +

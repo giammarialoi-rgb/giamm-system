@@ -27,7 +27,8 @@ header.nav { position: sticky; top: 0; z-index: 20; background: rgba(10,10,10,.8
 .nav nav a:hover { color: var(--text); }
 .nav .btn { min-height: 40px; padding: 0 16px; font-size: 12px; }
 /* Language menu */
-.lang { position: relative; font-size: 12px; font-weight: 800; }
+.lang { position: relative; font-size: 12px; font-weight: 800; border: 0; padding: 0; background: none; border-radius: 0; flex: none; }
+.nav .btn { white-space: nowrap; }
 .lang summary { list-style: none; cursor: pointer; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 .lang summary::-webkit-details-marker { display: none; }
 .lang[open] summary, .lang summary:hover { color: var(--text); }
@@ -176,11 +177,11 @@ footer a:hover { color: var(--text); }
 
 /* HYROX race calendar */
 .race-group { font-size: 18px; margin: 32px 0 12px; }
-.races { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-.race { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.02); }
+.races { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.race { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.02); }
 .race:hover { border-color: var(--gold, #d4af37); }
 .race strong { display: block; font-size: 15px; }
 .race small { color: var(--muted); font-size: 12px; }
-.race .when { color: var(--muted); font-size: 12px; text-align: end; white-space: nowrap; }
+.race .when { color: var(--gold, #d4af37); font-size: 12px; font-weight: 600; }
 .race-left { color: var(--gold, #d4af37); font-weight: 800; margin: 0 0 18px; }
 .legal-note { color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 28px; }

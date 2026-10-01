@@ -4726,7 +4726,10 @@ function pickBestSpeechVoice(lang) {
   }).sort(function (a, b) { return b.score - a.score; });
   return scored[0] && scored[0].score > 0 ? scored[0].v : null;
 }
+// The Coach AI no longer reads its answers aloud (removed on request: the
+// synthetic voice was not good enough). Dictation to the Coach stays.
 function offerSpeakCoachReply(text, forceAsk) {
+  return;
   const mode = getCoachVoiceMode();
   if (mode === 'never' && !forceAsk) return;
   if (mode === 'auto' && !forceAsk) {
@@ -4746,6 +4749,7 @@ function offerSpeakCoachReply(text, forceAsk) {
   speakCoachReply(text);
 }
 function speakCoachReply(text){
+  return;
   if(!voiceOutputEnabled) return;
   const lang = coachSpeechLang();
   const spoken = sanitizeCoachDisplayText(text)
@@ -9439,10 +9443,16 @@ async function attachNativeDocToChat(docData) {
 }
 window.attachNativeDocToChat = attachNativeDocToChat;
 
+// A pause for the progress bar to be drawn. A frame is not guaranteed: with
+// the tab in the background (or the phone showing another app) the browser
+// stops giving frames, and the import stood still until the person came
+// back - a file "very slow to load". So the frame or 60 ms, whichever first.
 function yieldImportPaint() {
   return new Promise((res) => {
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => res());
-    else res();
+    let done = false;
+    const go = () => { if (!done) { done = true; res(); } };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(go);
+    setTimeout(go, 60);
   });
 }
 function setImportProgress(pct, fileName, msg) {
@@ -19330,7 +19340,7 @@ function askAiAboutSupplement(name) {
 }
 
 function chooseCoachReadMode(mode) {
-  voiceOutputEnabled = mode === 'voice';
+  voiceOutputEnabled = false;
   const pending = store.pendingCoachAsk;
   store.pendingCoachAsk = null;
   const name = pending && pending.name ? pending.name : '';
@@ -34040,7 +34050,6 @@ function renderAI(c){
     if (item.voiceChoice) {
       html += `<div style="display:flex;gap:8px;margin:8px 0 14px;">
         <button class="btn btn-outline" style="flex:1;font-size:10px;padding:8px;" onclick="chooseCoachReadMode('read')">${t('voiceChoiceRead')}</button>
-        <button class="btn btn-primary" style="flex:1;font-size:10px;padding:8px;" onclick="chooseCoachReadMode('voice')">${t('voiceChoiceListen')}</button>
       </div>`;
     }
     if (item.proposalId && item.proposedAction && window.activeCoachProposals[item.proposalId]) {
@@ -34139,7 +34148,6 @@ function renderAI(c){
         </div>
         <div style="display:flex;gap:8px;margin-top:8px;">
           <button class="btn btn-outline" onclick="stopVoiceInput()" style="font-size:9px;padding:6px 9px;">${t('stopVoice')}</button>
-          <button class="btn btn-outline" onclick="toggleVoiceOutput()" style="font-size:9px;padding:6px 9px;">${t('readReply')}</button>
           <span id="voice-status" style="font-size:10px;color:#777;align-self:center;"></span>
         </div>
         <div id="analysis-results" style="display:none;"></div>
@@ -36224,78 +36232,110 @@ async function executeCoachAiFileAnalysis({ name, sizeText, canonicalProgram, ra
   const ther = canonicalProgram?.therapy || {};
   const hasTher = ther.medications && ther.medications.length > 0;
 
-  // Try Remote Coach AI request if online and configured
+  // What the file says, written out: the AI analyses the program, not a
+  // count of it. Week 1 in full (every session, every exercise with its
+  // sets, reps, rest and notes), then how the other weeks differ in size.
+  const outline = (function () {
+    const lines = [];
+    const rowText = function (ex) {
+      const sets = Array.isArray(ex.sets) ? ex.sets : [];
+      const n = ex.setCount || sets.length || ex.sets_count || '';
+      const reps = ex.repsTarget || ex.reps_target || (sets[0] && sets[0].reps) || ex.reps || '';
+      const load = sets.map(function (s) { return s && (s.target_load || s.load || s.kg); }).filter(Boolean)[0];
+      return '- ' + (ex.name_original || ex.name || ex.exercise || 'esercizio') +
+        (n || reps ? ': ' + (n ? n + ' x ' : '') + reps : '') +
+        (load ? ' @ ' + load : '') +
+        (ex.rirTarget != null ? ' · RIR ' + ex.rirTarget : '') +
+        (ex.rest ? ' · rec ' + ex.rest : '') +
+        (ex.technique ? ' · ' + ex.technique : '') +
+        (ex.notes ? ' · ' + String(ex.notes).slice(0, 80) : '');
+    };
+    weeks.slice(0, 1).forEach(function (w) {
+      (w.sessions || w.days || []).forEach(function (s, si) {
+        lines.push('## ' + (s.name || s.title || ('Seduta ' + (si + 1))));
+        (s.exercises || s.rows || []).forEach(function (ex) { lines.push(rowText(ex)); });
+      });
+    });
+    if (weeks.length > 1) {
+      lines.push('## Altre settimane');
+      weeks.slice(1, 16).forEach(function (w, wi) {
+        const ss = w.sessions || w.days || [];
+        let setsTotal = 0;
+        ss.forEach(function (s) { (s.exercises || s.rows || []).forEach(function (ex) { setsTotal += Number(ex.setCount) || (Array.isArray(ex.sets) ? ex.sets.length : 0); }); });
+        lines.push('- Settimana ' + (wi + 2) + ': ' + ss.length + ' sedute, ' + setsTotal + ' serie' + (w.label ? ' (' + w.label + ')' : ''));
+      });
+    }
+    return lines.join('\n').slice(0, 9000);
+  })();
+  const sourceExcerpt = String(rawText || '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, totalExercises ? 2500 : 7000);
+
   let aiResponseText = '';
-  let coachConfigWarning = '';
+  let aiProblem = '';
 
   if (!navigator.onLine) {
-    coachConfigWarning = '⚠️ Sei offline: analisi locale generata da Nurvan AI (senza Gemini).';
+    aiProblem = 'Sei offline: per l’analisi del Coach AI serve la connessione.';
   } else if (typeof ConfigService === 'undefined' || !ConfigService.isConfigured()) {
-    coachConfigWarning = '⚠️ ' + (ConfigService?.describeMisconfiguration?.() || 'Nurvan AI non configurato: configurare il backend e GEMINI_API_KEY.');
+    aiProblem = (ConfigService && ConfigService.describeMisconfiguration && ConfigService.describeMisconfiguration()) || 'Coach AI non configurato.';
+  } else if (!totalExercises && sourceExcerpt.length < 80) {
+    aiProblem = 'Nel file non ho trovato una scheda di allenamento leggibile.';
   } else {
     try {
       const endpoint = coachEndpoint('/api/chat');
+      const asks = [
+        'Ho caricato il file "' + name + '". Analizza QUESTA scheda di allenamento nel merito, citando gli esercizi per nome.',
+        totalExercises
+          ? 'Struttura letta dal file: ' + weekCount + ' settimane, ' + sessionNames.length + ' sedute a settimana, ' + totalExercises + ' esercizi in tutto.'
+          : 'La struttura non è stata riconosciuta in automatico: ricavala tu dal testo del file qui sotto.',
+        outline ? 'SCHEDA (settimana 1 completa):\n' + outline : '',
+        sourceExcerpt ? 'TESTO DEL FILE (estratto):\n' + sourceExcerpt : '',
+        'Voglio, in quest’ordine e senza premesse:',
+        '1. Volume settimanale per gruppo muscolare (serie dirette), dicendo dove è basso, giusto o eccessivo.',
+        '2. Equilibrio tra spinta e tirata, tra parte alta e parte bassa, e frequenza di ogni gruppo.',
+        '3. Intensità e progressione: range di ripetizioni, RIR/RPE, recuperi, come cambia tra le settimane.',
+        '4. I 3 punti deboli più importanti e, per ciascuno, la modifica concreta (quale esercizio, quante serie).',
+        '5. Cosa terrei così com’è.',
+        'Non proporre modifiche in JSON e non parlare di alimentazione, integrazione o terapia: riguarda solo l’allenamento' +
+          (hasNutr || hasSupp ? ' (il file contiene anche ' + [hasNutr ? 'un piano alimentare' : '', hasSupp ? 'integratori' : ''].filter(Boolean).join(' e ') + ': citalo in una riga, senza analizzarlo).' : '.')
+      ].filter(Boolean).join('\n\n');
       const payload = {
-        message: `Ho caricato il file ${name}. Ecco la struttura estratta:\nSettimane: ${weekCount}, Sedute: ${sessionNames.join(', ')}, Esercizi totali: ${totalExercises}.\nFornisci un'analisi tecnica dettagliata su volumi, split e suggerimenti pratici.`,
+        message: asks,
         conversation_id: store.chatSessionId || ('session_' + Date.now()),
         context: {
           importedFile: { name, sizeText, weekCount, totalExercises, sessionNames, hasNutr, hasSupp, hasTher },
           programSummary: programSummaryForCoach(canonicalProgram || DATA),
+          language: (typeof I18nService !== 'undefined' && I18nService.getLanguage) ? I18nService.getLanguage() : 'it',
           user: store.accountUser
         },
         history: []
       };
+      // A whole program takes the model well over fifteen seconds.
       const resp = await apiFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }, 15000);
+      }, 90000);
       const resJson = await readApiJson(resp);
       if (resJson && (resJson.reply || resJson.message || resJson.response)) {
         aiResponseText = String(resJson.reply || resJson.message || resJson.response).trim();
       }
+      if (!aiResponseText) aiProblem = 'Il Coach AI non ha risposto.';
     } catch (e) {
-      console.warn('[Coach AI] Remote file analysis fell back to local intelligence:', e.message);
-      coachConfigWarning = '⚠️ ' + formatCoachError(e);
+      console.warn('[Coach AI] file analysis failed:', e && e.message);
+      aiProblem = formatCoachError(e);
     }
   }
 
-  // If remote did not respond, generate local high-precision Coach AI technical report
+  // No answer from the AI: say so, and show only what was actually read
+  // from the file. No judgement is invented in its place.
   if (!aiResponseText) {
-    const muscleBreakdown = Object.entries(muscleHits).map(([m, count]) => `• **${m}**: ${count} esercizi rilevati`).join('\n') || '• Distribuzione multi-articolare completa';
-    
-    aiResponseText = `${coachConfigWarning ? coachConfigWarning + '\n\n' : ''}### 📋 ANALISI TECNICA DI NURVAN AI — ${name}
-
-Ho esaminato la struttura completa del file caricato. Di seguito trovi la valutazione tecnica, il bilanciamento dei volumi e i consigli operativi:
-
----
-
-#### 1. 🏋️ ARCHITETTURA ALLENAMENTO
-- **Programmazione**: ${weekCount > 0 ? `${weekCount} Settimane` : 'Multi-settimanale'}
-- **Frequenza Settimanale**: ${sessionNames.length > 0 ? `${sessionNames.length} Sedute (${sessionNames.join(' • ')})` : 'Struttura modulare'}
-- **Volume Totale**: **${totalExercises} esercizi** complessivi mappati
-- **Distribuzione Muscolare**:
-${muscleBreakdown}
-
----
-
-#### 2. ⚡ VALUTAZIONE & PUNTI DI FORZA
-- **Split & Recupero**: La suddivisione delle sedute garantisce una frequenza ottimale con recuperi mirati tra catene cinetiche.
-- **Gestione Intensità**: La scheda presenta una progressione mirata su target di ripetizioni e gestione RIR/RPE per massimizzare il reclutamento ipertrofico senza accumulo eccessivo di fatica neurale.
-
----
-
-#### 3. 🥗 NUTRIZIONE & INTEGRAZIONE
-${hasNutr ? `- **Nutrizione**: Mappati ${nutr.days.length} giorni con ripartizione pasti ON/OFF.` : '- **Nutrizione**: Nessuna tabella dietetica specifica rilevata nel file.'}
-${hasSupp ? `- **Integrazione**: Rilevati **${supp.items.length} integratori** (${supp.items.map(s => s.name).slice(0, 4).join(', ')}) con timing di assunzione.` : '- **Integrazione**: Protocollo integrativo non presente nel file.'}
-${hasTher ? `- **Terapia & Salute**: ${ther.medications.length} elementi farmacologici/esami associati.` : ''}
-
----
-
-#### 💡 CONSIGLI OPERATIVI DEL COACH
-1. Mantieni 1-2 RIR di margine sui fondamentali nella prima settimana per calibrare i sovraccarichi.
-2. Monitora la velocità concentrica e registra regolarmente carichi e ripetizioni nel Workout Logger.
-3. Se desideri allenarti con questa scheda, puoi importarla ed attivarla con 1 clic nel sistema!`;
+    const muscleBreakdown = Object.entries(muscleHits).map(([m, count]) => `• **${m}**: ${count} esercizi`).join('\n');
+    aiResponseText = `⚠️ Analisi del Coach AI non riuscita: ${aiProblem} Riprova tra poco dal pulsante di analisi.\n\n` +
+      (totalExercises
+        ? `### Cosa ho letto nel file\n- **Settimane**: ${weekCount}\n- **Sedute a settimana**: ${sessionNames.length}${sessionNames.length ? ' (' + sessionNames.join(' • ') + ')' : ''}\n- **Esercizi in tutto**: ${totalExercises}\n` +
+          (muscleBreakdown ? `\n**Esercizi per zona**\n${muscleBreakdown}\n` : '') +
+          (hasNutr ? `\nIl file contiene anche un piano alimentare (${nutr.days.length} giorni).` : '') +
+          (hasSupp ? `\nIl file contiene anche ${supp.items.length} integratori.` : '')
+        : 'Nel file non ho riconosciuto una scheda di allenamento. Se è una foto o un PDF scansionato, prova con la lettura avanzata dall’import.');
   }
 
   // Append assistant message

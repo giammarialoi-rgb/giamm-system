@@ -4763,6 +4763,11 @@ function readZipCentralEntries(u8) {
 
 function xmlToPlainText(xmlStr) {
   return String(xmlStr || "")
+    // A table row is one line, its cells separated by a tab. Every cell is
+    // made of paragraphs: left as line breaks they put each cell on a line
+    // of its own ("Panca" / "4x8" / "90s"), and the exercise lost its sets,
+    // reps and rest. Inside a cell a paragraph end is a space.
+    .replace(/<w:tc\b[\s\S]*?<\/w:tc>/g, (cell) => cell.replace(/<\/w:p>/g, " ").replace(/<w:br\b[^>]*\/?>/g, " "))
     .replace(/<\/w:tc>/g, "\t")
     .replace(/<\/w:tr>/g, "\n")
     .replace(/<\/w:p>/g, "\n")
