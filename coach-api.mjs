@@ -2418,6 +2418,9 @@ const SITE_DIR = path.join(__dirname, "site");
 const SITE_HOSTS = String(process.env.SITE_HOSTS || "nurvan.app,www.nurvan.app").split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);
 const SITE_STARTED = Date.now().toString(36);
 const isSiteHost = (req) => SITE_HOSTS.includes(String(req.hostname || "").toLowerCase());
+const SITE_APP_OPEN = process.env.SITE_APP_OPEN === "1";
+// Until then search engines are asked to leave the app's own address alone.
+app.use((req, res, next) => { if (!SITE_APP_OPEN && !isSiteHost(req)) res.setHeader("X-Robots-Tag", "noindex, nofollow"); next(); });
 const siteEsc = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 async function siteShell(req, page) {
   const shell = await fs.readFile(path.join(SITE_DIR, "shell.html"), "utf8");
@@ -2459,6 +2462,15 @@ async function siteShell(req, page) {
   };
   // The page body first: it carries placeholders of its own (APP_URL...).
   let html = shell.split("{{MAIN}}").join(fill.MAIN);
+  // Before the launch the site does not send anyone into the app: every
+  // button that opens it reads "In arrivo" and is not a link. SITE_APP_OPEN=1
+  // on the host turns the buttons back on.
+  if (!SITE_APP_OPEN) {
+    html = html.replace(/<a\b([^>]*)href="\{\{APP_URL\}\}"([^>]*)>[\s\S]*?<\/a>/g, (all, before, after) => {
+      const cls = (/class="([^"]*)"/.exec(before + after) || [])[1] || "btn";
+      return '<span class="' + cls + ' soon" aria-disabled="true">In arrivo</span>';
+    });
+  }
   for (const k of Object.keys(text)) html = html.split("{{" + k + "}}").join(text[k]);
   return translateHtml(html, await siteDict(SITE_DIR, lang));
 }
