@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESCRIPTION}}">
+<meta name="theme-color" content="#0a0a0a">
+<meta property="og:title" content="{{TITLE}}">
+<meta property="og:description" content="{{DESCRIPTION}}">
+<meta property="og:image" content="{{OG_IMAGE}}">
+<meta property="og:type" content="website">
+<link rel="icon" href="/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site-assets/site.css?v={{V}}">
+
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a href="{{HOME}}" aria-label="Nurvan"><img src="/nurvan_wordmark.png" alt="Nurvan" width="160" height="24"></a>
+    <nav aria-label="Sezioni">
+      <a href="{{HOME}}#funzioni">Funzioni</a>
+      <a href="{{HOME}}#coach">Coach e palestre</a>
+      <a href="{{HOME}}#piani">Piani</a>
+      <a href="{{HOME}}#domande">Domande</a>
+      <a href="/blog"{{BLOG_ON}}>Blog</a>
+    </nav>
+    <a class="btn primary" href="{{APP_URL}}">Apri l'app</a>
+  </div>
+</header>
+
+{{MAIN}}
+
+
+<footer>
+  <div class="wrap">
+    <div>© <span id="y">2026</span> Nurvan</div>
+    <nav aria-label="Note legali">
+      <a href="/blog">Blog</a>
+      <a href="{{APP_URL}}privacy">Privacy</a>
+      <a href="{{APP_URL}}termini">Termini</a>
+      <a href="mailto:{{CONTACT_EMAIL}}">{{CONTACT_EMAIL}}</a>
+    </nav>
+  </div>
+</footer>
+<script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+</body>
+</html>

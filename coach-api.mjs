@@ -24,6 +24,7 @@ import { publicUser, resolveIdentityUser, mountAccountDeletion } from "./server/
 import { createSessionGate, revocationMoment } from "./server/account/sessions.mjs";
 import { mountEmailAuth, needsEmailVerification, loginLocked, noteLoginFailure, clearLoginFailures, resetEmail, isSyntheticEmail, linkTokenHash } from "./server/account/email-auth.mjs";
 import { appleCallbackRoute, appleConfig, mountAppleAuth, consumeLoginTicket } from "./server/account/apple.mjs";
+import { mountBlog } from "./server/site/blog.mjs";
 import { mountGoogleAppAuth } from "./server/account/google-app.mjs";
 import { loadLegal, validMainConsent, recordMainConsent, readConsentRow, aiConsentWithdrawn, mountConsentRoutes } from "./server/account/consent.mjs";
 import { mountAdminDashboard } from "./server/admin/index.mjs";
@@ -2402,22 +2403,73 @@ app.use(function (req, res, next) {
   }
   next();
 });
-// The public site (site/index.html). The same service answers for the site's
-// domain and for the app: on nurvan.app the home page is the site, on every
-// other host it is the app, and /sito shows the site anywhere (preview).
-// SITE_HOSTS, APP_PUBLIC_URL and SITE_CONTACT_EMAIL can be set on the host.
+// The public site (site/). The same service answers for the site's domain and
+// for the app: on nurvan.app the home page is the site, on every other host
+// it is the app, and /sito shows the site anywhere (preview). The blog lives
+// at /blog on both. SITE_HOSTS, APP_PUBLIC_URL and SITE_CONTACT_EMAIL can be
+// set on the host.
+const SITE_DIR = path.join(__dirname, "site");
 const SITE_HOSTS = String(process.env.SITE_HOSTS || "nurvan.app,www.nurvan.app").split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);
-async function sitePage(req, res) {
-  let html;
-  try { html = await fs.readFile(path.join(__dirname, "site", "index.html"), "utf8"); }
-  catch (_) { return res.status(404).type("text").send("Sito non disponibile."); }
+const SITE_STARTED = Date.now().toString(36);
+const isSiteHost = (req) => SITE_HOSTS.includes(String(req.hostname || "").toLowerCase());
+const siteEsc = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+async function siteShell(req, page) {
+  const shell = await fs.readFile(path.join(SITE_DIR, "shell.html"), "utf8");
   const appUrl = String(process.env.APP_PUBLIC_URL || "https://coach-api-gemini.onrender.com/").replace(/\/?$/, "/");
   const mail = String(process.env.SITE_CONTACT_EMAIL || "info@nurvan.app");
-  res.setHeader("Cache-Control", "public, max-age=300");
-  return res.type("html").send(html.split("{{APP_URL}}").join(appUrl).split("{{CONTACT_EMAIL}}").join(mail));
+  const fill = { MAIN: page.main || "" };
+  const text = {
+    TITLE: siteEsc(page.title || "Nurvan"),
+    DESCRIPTION: siteEsc(page.description || ""),
+    OG_IMAGE: siteEsc(page.ogImage || "/nurvan_wordmark.png"),
+    HOME: isSiteHost(req) ? "/" : "/sito",
+    BLOG_ON: page.blog ? ' class="on keep"' : ' class="keep"',
+    V: SITE_STARTED,
+    APP_URL: siteEsc(appUrl),
+    CONTACT_EMAIL: siteEsc(mail)
+  };
+  // The page body first: it carries placeholders of its own (APP_URL...).
+  let html = shell.split("{{MAIN}}").join(fill.MAIN);
+  for (const k of Object.keys(text)) html = html.split("{{" + k + "}}").join(text[k]);
+  return html;
 }
+const siteBlog = mountBlog(app, {
+  siteDir: SITE_DIR,
+  shell: (req, page) => siteShell(req, Object.assign({ blog: true }, page))
+});
+// The app's screens shown on the home page: site/shots.json lists them
+// ([{ "file": "allenamento.png", "title": "...", "text": "..." }]), the images
+// are in site/assets/shots/.
+async function siteShotsHtml() {
+  let shots = [];
+  try { shots = JSON.parse(await fs.readFile(path.join(SITE_DIR, "shots.json"), "utf8")); } catch (_) { return ""; }
+  if (!Array.isArray(shots) || !shots.length) return "";
+  return '<section id="schermate"><div class="wrap"><div class="head"><div class="eyebrow">L’app</div><h2>Guardala da vicino.</h2></div><div class="shots">' +
+    shots.map((sh) => '<figure class="shot"><img src="/site-assets/shots/' + siteEsc(sh.file) + '" alt="' + siteEsc(sh.title) + '" loading="lazy"><figcaption><strong>' + siteEsc(sh.title) + "</strong>" + siteEsc(sh.text || "") + "</figcaption></figure>").join("") +
+    "</div></div></section>";
+}
+async function sitePage(req, res) {
+  try {
+    const home = await fs.readFile(path.join(SITE_DIR, "home.html"), "utf8");
+    const latest = (await siteBlog.articles()).slice(0, 3);
+    const latestHtml = latest.length
+      ? '<section id="blog"><div class="wrap"><div class="head"><div class="eyebrow">Blog</div><h2>Dal blog</h2></div><div class="posts home-posts">' + latest.map(siteBlog.cardHtml).join("") + '</div><a class="more-link" href="/blog">Tutti gli articoli →</a></div></section>'
+      : "";
+    const main = home.split("{{SHOTS}}").join(await siteShotsHtml()).split("{{LATEST}}").join(latestHtml);
+    res.setHeader("Cache-Control", "public, max-age=300");
+    return res.type("html").send(await siteShell(req, {
+      title: "Nurvan — Allenamento, alimentazione e coaching in un’unica app",
+      description: "Nurvan è l’app per allenarti con metodo: schede, carichi e progressi, piano alimentare e diario, ricettario, Coach AI e area coach per seguire i tuoi atleti.",
+      main
+    }));
+  } catch (err) {
+    console.error("SITE_PAGE", err);
+    return res.status(500).type("text").send("Sito non disponibile.");
+  }
+}
+app.use("/site-assets", express.static(path.join(SITE_DIR, "assets"), { maxAge: "1h" }));
 app.get("/sito", sitePage);
-app.get("/", (req, res, next) => (SITE_HOSTS.includes(String(req.hostname || "").toLowerCase()) ? sitePage(req, res) : next()));
+app.get("/", (req, res, next) => (isSiteHost(req) ? sitePage(req, res) : next()));
 
 const LEGAL_PAGES = {
   "/privacy": "privacy.html",
