@@ -27,6 +27,8 @@ export function configuredCorsOrigins(env = process.env) {
   // Production web is served from this API today. Keep the canonical origin
   // while allowing operators to replace/extend it through CORS_ORIGINS.
   values.add("https://coach-api-gemini.onrender.com");
+  // The app and the site on their own domain.
+  ["https://app.nurvan.app", "https://nurvan.app", "https://www.nurvan.app"].forEach((value) => values.add(value));
   return values;
 }
 

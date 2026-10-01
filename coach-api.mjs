@@ -2415,7 +2415,7 @@ const isSiteHost = (req) => SITE_HOSTS.includes(String(req.hostname || "").toLow
 const siteEsc = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 async function siteShell(req, page) {
   const shell = await fs.readFile(path.join(SITE_DIR, "shell.html"), "utf8");
-  const appUrl = String(process.env.APP_PUBLIC_URL || "https://coach-api-gemini.onrender.com/").replace(/\/?$/, "/");
+  const appUrl = String(process.env.APP_PUBLIC_URL || "https://app.nurvan.app/").replace(/\/?$/, "/");
   const mail = String(process.env.SITE_CONTACT_EMAIL || "info@nurvan.app");
   const fill = { MAIN: page.main || "" };
   const text = {
