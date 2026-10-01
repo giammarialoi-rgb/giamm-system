@@ -304,7 +304,7 @@
   var BASE = base();
   function fetchPack(l) {
     if (loading[l]) return loading[l];
-    loading[l] = fetch(BASE + 'i18n/' + l + '.json').then(function (r) {
+    loading[l] = fetch((window.__NURVAN_LANG ? '/' : BASE) + 'i18n/' + l + '.json').then(function (r) {
       if (!r.ok) throw new Error('i18n ' + l + ': ' + r.status);
       return r.json();
     }).catch(function (e) { delete loading[l]; throw e; });
@@ -365,13 +365,15 @@
   // No choice made yet: the language of the device, when the app has it.
   var OFFERED = ['it', 'en', 'es', 'fr', 'de', 'pt', 'ru', 'zh', 'ar', 'hi'];
   var saved = null;
-  try { saved = localStorage.getItem('GS_LANG'); } catch (_) {}
+  // A page served already in one language (the legal pages) says which.
+  if (window.__NURVAN_LANG && OFFERED.indexOf(window.__NURVAN_LANG) !== -1) saved = window.__NURVAN_LANG;
+  else try { saved = localStorage.getItem('GS_LANG'); } catch (_) {}
   if (!saved) {
     var nav = [];
     try { nav = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || '']); } catch (_) {}
     for (var li = 0; li < nav.length && !saved; li++) { var code = String(nav[li] || '').slice(0, 2).toLowerCase(); if (OFFERED.indexOf(code) !== -1) saved = code; }
     saved = saved || SOURCE;
-    try { localStorage.setItem('GS_LANG', saved); } catch (_) {}
+    if (!window.__NURVAN_LANG) try { localStorage.setItem('GS_LANG', saved); } catch (_) {}
   }
   if (saved !== SOURCE) {
     setLang(saved);

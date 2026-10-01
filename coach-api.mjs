@@ -26,7 +26,7 @@ import { mountEmailAuth, needsEmailVerification, loginLocked, noteLoginFailure, 
 import { appleCallbackRoute, appleConfig, mountAppleAuth, consumeLoginTicket } from "./server/account/apple.mjs";
 import { mountBlog } from "./server/site/blog.mjs";
 import { mountHyrox } from "./server/site/hyrox.mjs";
-import { reqLang } from "./server/i18n.mjs";
+import { reqLang, SERVER_LANGS } from "./server/i18n.mjs";
 import { SITE_LANGS, SITE_LANG_NAMES, isSiteLang, langPrefix, langOfPath, siteDict, translateHtml } from "./server/site/i18n.mjs";
 import { mountGoogleAppAuth } from "./server/account/google-app.mjs";
 import { loadLegal, validMainConsent, recordMainConsent, readConsentRow, aiConsentWithdrawn, mountConsentRoutes } from "./server/account/consent.mjs";
@@ -2520,9 +2520,23 @@ const LEGAL_PAGES = {
   "/verifica-email": "verifica-email.html",
   "/reimposta-password": "reimposta-password.html"
 };
-app.get(Object.keys(LEGAL_PAGES), (req, res) => {
+// Each page exists in Italian (web/<page>.html, the text that counts) and
+// translated (web/legal/<lang>/<page>.html). The language is the one asked
+// for (?lang=), otherwise the browser's. A translated page also loads the
+// app's translations, for the messages its script writes.
+app.get(Object.keys(LEGAL_PAGES), async (req, res) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
-  res.sendFile(path.join(__dirname, "web", LEGAL_PAGES[req.path]));
+  const file = LEGAL_PAGES[req.path];
+  const asked = String(req.query.lang || "").slice(0, 2).toLowerCase();
+  const lang = SERVER_LANGS.includes(asked) ? asked : reqLang(req);
+  if (lang !== "it") {
+    try {
+      const html = await fs.readFile(path.join(__dirname, "web", "legal", lang, file), "utf8");
+      const boot = '<script>window.__NURVAN_LANG=' + JSON.stringify(lang) + ';</script><script src="/i18n-runtime.js"></script>';
+      return res.type("html").send(html.includes("</head>") ? html.replace("</head>", boot + "</head>") : boot + html);
+    } catch (_) { /* no translation: the Italian page */ }
+  }
+  res.sendFile(path.join(__dirname, "web", file));
 });
 app.use(express.static(path.join(__dirname, "web")));
 

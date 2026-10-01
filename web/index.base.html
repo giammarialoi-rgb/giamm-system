@@ -5959,7 +5959,10 @@ function legalConfig() {
 }
 // On Android an http(s) link leaves the WebView for the browser.
 function legalPageUrl(slug) {
-  try { return coachEndpoint('/' + slug); } catch (_) { return '/' + slug; }
+  // In the language of the app: the pages exist translated (?lang=).
+  const lang = (window.NurvanI18n && NurvanI18n.lang && NurvanI18n.lang()) || 'it';
+  const q = lang !== 'it' ? '?lang=' + lang : '';
+  try { return coachEndpoint('/' + slug) + q; } catch (_) { return '/' + slug + q; }
 }
 function legalLinkHtml(slug, label) {
   return '<a href="' + esc(legalPageUrl(slug)) + '" target="_blank" rel="noopener" style="color:var(--gold);">' + esc(label) + '</a>';
@@ -6250,7 +6253,11 @@ async function confirmDeleteAccount() {
   const msg = document.getElementById('delete-account-msg');
   const go = document.getElementById('delete-account-go');
   const typed = String((input && input.value) || '').trim().toUpperCase();
-  if (typed !== 'ELIMINA') { if (msg) msg.textContent = 'Scrivi ELIMINA per confermare.'; return; }
+  // The word asked for is the one the screen shows: in another language the
+  // prompt says LÖSCHEN, ELIMINAR... and that is what the person types.
+  const accepted = ['ELIMINA', String(trText('ELIMINA')).toUpperCase()]
+    .concat(String(trText('Scrivi ELIMINA per confermare.')).match(/\p{Lu}{4,}/gu) || []);
+  if (accepted.indexOf(typed) === -1) { if (msg) msg.textContent = 'Scrivi ELIMINA per confermare.'; return; }
   if (go) go.disabled = true;
   try {
     const res = await accountRequest('/api/account', { method: 'DELETE', body: JSON.stringify({ confirm: 'ELIMINA' }) });
@@ -23611,6 +23618,8 @@ function personalRestoreBannerHtml() {
  * generated program, so it is read and edited before it becomes active.
  */
 function hyroxApi() { return (typeof window !== 'undefined' && window.NurvanHyrox) || null; }
+// The client the coach is writing for (ASSEGNA), or null.
+function hyroxForClient() { return (store && store.coachAssigning && store.coachAssigning.clientId) ? store.coachAssigning : null; }
 function hyroxState() {
   if (!store.hyrox || typeof store.hyrox !== 'object') store.hyrox = {};
   const h = store.hyrox;
@@ -23689,7 +23698,8 @@ async function hyroxCreateProgram(preset) {
   try {
     let prog = null;
     await withBusy(function () { prog = normalizeProgram(api.plan(input)); return Promise.resolve(); }, 'Scrivo la preparazione…', { immediate: true, maxMs: 60000 });
-    openGeneratedReview(prog, 'active', null);
+    // A coach writing it for a client: it becomes the client's draft.
+    openGeneratedReview(prog, hyroxForClient() ? 'assign' : 'active', null);
   } catch (e) {
     console.error('[HYROX]', e);
     if (typeof showToast === 'function') showToast('Generazione non riuscita: ' + (e && e.message || e), 'error');
@@ -23796,7 +23806,7 @@ function renderHyrox(c) {
           return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #222;padding:10px 0;">' +
             '<div style="min-width:0;"><div style="font-size:13px;font-weight:800;color:#fff;">' + esc(ev.city) + '</div>' +
             '<div style="font-size:11px;color:#aaa;">' + esc(ev.countryName) + ' · ' + esc(hyroxDateText(ev)) + '</div></div>' +
-            '<button type="button" class="btn ' + (ev.id === h.raceId ? 'btn-primary' : 'btn-outline') + '" style="font-size:10px;padding:8px 10px;white-space:nowrap;" onclick="hyroxChooseRace(\'' + esc(ev.id) + '\')">' + (ev.id === h.raceId ? 'LA TUA GARA' : 'PREPARA') + '</button></div>';
+            '<button type="button" class="btn ' + (ev.id === h.raceId ? 'btn-primary' : 'btn-outline') + '" style="font-size:10px;padding:8px 10px;white-space:nowrap;" onclick="hyroxChooseRace(\'' + esc(ev.id) + '\')">' + (ev.id === h.raceId ? 'SCELTA' : 'PREPARA') + '</button></div>';
         }).join('') +
         (shown.length > 8 ? '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="hyroxSet(\'allEvents\', ' + (more ? 'false' : 'true') + ')">' + (more ? 'MOSTRA MENO' : 'TUTTE LE GARE') + '</button>' : ''))) +
     (data && data.updated ? '<div style="font-size:10px;color:#666;margin-top:10px;">Calendario della stagione ' + esc(data.season || '') + ', aggiornato il ' + esc(new Date(data.updated + 'T12:00:00').toLocaleDateString((typeof appLocale === 'function') ? appLocale() : 'it-IT')) + '. Date e iscrizioni: fa fede la pagina ufficiale della gara.</div>' : '');
@@ -23808,7 +23818,8 @@ function renderHyrox(c) {
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:1px;">HYROX</div>' +
     '<div style="font-size:11px;color:#888;">Preparazione gara, stazioni e calendario</div></div>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="navigate(\'home\')">CHIUDI</button></div>' +
-    card('LA TUA GARA', raceHtml) +
+    (hyroxForClient() ? '<div class="card" style="padding:12px 16px;margin-bottom:12px;border:1px solid var(--gold);"><div style="font-size:12px;color:#fff;font-weight:800;">Preparazione per ' + esc(hyroxForClient().name || 'il cliente') + '</div><div style="font-size:11px;color:#aaa;margin-top:2px;">Diventa la bozza del cliente: la rivedi e la invii.</div></div>' : '') +
+    card(hyroxForClient() ? 'LA GARA DEL CLIENTE' : 'LA TUA GARA', raceHtml) +
     card('CREA LA PREPARAZIONE', createHtml, 'hyrox-create') +
     card('PROGRAMMI PRONTI', '<div style="font-size:11px;color:#888;margin-bottom:8px;">Con tutta l’attrezzatura, per la categoria scelta sopra. Li leggi e li modifichi prima di attivarli.</div>' + presetsHtml) +
     card('PROSSIME GARE', eventsHtml) +

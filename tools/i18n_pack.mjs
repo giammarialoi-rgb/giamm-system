@@ -45,6 +45,33 @@ if (cmd === 'chunks') {
   Object.keys(out).forEach((k) => { if (!keys.includes(k)) bad.push('not a key of this chunk (keys must be copied exactly): ' + k.slice(0, 80)); });
   if (bad.length) { console.log('FAIL ' + bad.length + '\n' + bad.slice(0, 60).join('\n')); process.exit(1); }
   console.log('OK ' + lang + ' ' + nn + ': ' + keys.length + ' texts');
+} else if (cmd === 'review') {
+  // A second reading of a language: i18n/review/<lang>/NN.json holds the
+  // texts with their current translation; the reviewer writes only what
+  // changes into i18n/fix/<lang>/NN.json, and build applies it.
+  const lang = process.argv[3];
+  const keys = read(path.join(I18N, 'strings.json'), []);
+  const tm = read(path.join(I18N, 'tm', lang + '.json'), {});
+  const dir = path.join(I18N, 'review', lang);
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.mkdirSync(dir, { recursive: true });
+  let part = {}; let size = 0; let n = 0;
+  const flush = () => { if (!Object.keys(part).length) return; n++; fs.writeFileSync(path.join(dir, String(n).padStart(2, '0') + '.json'), JSON.stringify(part, null, 0).replace(/","/g, '",\n"') + '\n'); part = {}; size = 0; };
+  for (const k of keys) { if (!(k in tm)) continue; part[k] = tm[k]; size += k.length + tm[k].length; if (size > 36000) flush(); }
+  flush();
+  console.log(lang + ': ' + n + ' review chunks');
+} else if (cmd === 'checkfix') {
+  const lang = process.argv[3]; const nn = process.argv[4];
+  const src = read(path.join(I18N, 'review', lang, nn + '.json'), null);
+  const fix = read(path.join(I18N, 'fix', lang, nn + '.json'), null);
+  if (!src || !fix) { console.log('FAIL missing file'); process.exit(1); }
+  const bad = [];
+  for (const [k, v] of Object.entries(fix)) {
+    if (!(k in src)) bad.push('not a text of this chunk (keys must be copied exactly): ' + k.slice(0, 80));
+    else { const p = problems(k, v); if (p) bad.push(p + ' — ' + k.slice(0, 80)); }
+  }
+  if (bad.length) { console.log('FAIL ' + bad.length + '\n' + bad.slice(0, 40).join('\n')); process.exit(1); }
+  console.log('OK ' + lang + ' ' + nn + ': ' + Object.keys(fix).length + ' corrections of ' + Object.keys(src).length);
 } else if (cmd === 'build') {
   const keys = read(path.join(I18N, 'strings.json'), []);
   fs.mkdirSync(path.join(I18N, 'tm'), { recursive: true });
@@ -56,6 +83,12 @@ if (cmd === 'chunks') {
     if (fs.existsSync(outDir)) for (const f of fs.readdirSync(outDir).sort()) {
       const part = read(path.join(outDir, f), {});
       for (const [k, v] of Object.entries(part)) if (!problems(k, v)) tm[k] = v;
+    }
+    // Corrections from a review (i18n/fix/<lang>/NN.json) replace what is in the memory.
+    const fixDir = path.join(I18N, 'fix', lang);
+    if (fs.existsSync(fixDir)) for (const f of fs.readdirSync(fixDir).sort()) {
+      const part = read(path.join(fixDir, f), {});
+      for (const [k, v] of Object.entries(part)) if (k in tm && !problems(k, v)) tm[k] = v;
     }
     // Labels translated by hand (i18n/manual.json), one value per language in the order of LANGS.
     const manual = read(path.join(I18N, 'manual.json'), {});

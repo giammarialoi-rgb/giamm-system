@@ -117,7 +117,7 @@ export function passwordChangedEmail(origin, lang) {
     ...composeEmail({
       title: "La tua password è stata cambiata",
       intro: "La password del tuo account NURVAN è appena stata cambiata e gli altri dispositivi sono stati disconnessi.",
-      button: { label: "Non sono stato io: reimposta la password", href: origin + "/reimposta-password" },
+      button: { label: "Non sono stato io: reimposta la password", href: origin + "/reimposta-password" + (lang && lang !== "it" ? "?lang=" + lang : "") },
       outro: "Se sei stato tu, non devi fare nulla."
     }, lang)
   };
@@ -144,7 +144,7 @@ export async function startEmailVerification(pool, user, { sendEmail, origin, la
        created_at = $6`,
     [user.id, user.email, codeHash, linkTokenHash(token), new Date(now + VERIFY_TTL_MS).toISOString(), new Date(now).toISOString()]
   );
-  const mail = verificationEmail(code, origin + "/verifica-email?t=" + encodeURIComponent(token), lang);
+  const mail = verificationEmail(code, origin + "/verifica-email?t=" + encodeURIComponent(token) + (lang && lang !== "it" ? "&lang=" + lang : ""), lang);
   const res = await sendEmail(user.email, mail.subject, mail.text, mail.html);
   return { sent: !!(res && res.sent), reason: res && res.reason, code };
 }
@@ -326,7 +326,7 @@ export function mountEmailAuth(app, deps) {
     origin,
     deliveryAnswer,
     startVerification: (req, user) => startEmailVerification(pool, user, { sendEmail: mailer, origin: origin(req), lang: reqLang(req) }),
-    resetLink: (req, token) => origin(req) + "/reimposta-password?t=" + encodeURIComponent(token),
+    resetLink: (req, token) => origin(req) + "/reimposta-password?t=" + encodeURIComponent(token) + (reqLang(req) !== "it" ? "&lang=" + reqLang(req) : ""),
     newLinkToken
   };
 }

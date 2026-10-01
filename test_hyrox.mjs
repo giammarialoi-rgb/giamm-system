@@ -67,7 +67,9 @@ ok('6b. senza un tempo sensato nessuna stima', H.estimateFinish('', 'beginner') 
 // 7. Wired into the app and the site.
 const html = fs.readFileSync('web/index.base.html', 'utf8');
 ok('7a. la schermata è nell’app e si apre dalla Home', /currentView === 'hyrox'\) renderHyrox\(c\)/.test(html) && /navigate\(\\'hyrox\\'\)/.test(html) && /<script src="hyrox\.js"><\/script>/.test(html));
-ok('7b. la scheda passa dall’anteprima prima di essere attivata', /openGeneratedReview\(prog, 'active', null\)/.test(html));
+ok('7b. la scheda passa dall’anteprima prima di essere attivata; per un cliente diventa la sua bozza', /openGeneratedReview\(prog, hyroxForClient\(\) \? 'assign' : 'active', null\)/.test(html));
+const coachUi = fs.readFileSync('web/coach-practice-ui.js', 'utf8');
+ok('7b2. il coach la assegna dal menu di assegnazione del cliente', (coachUi.match(/\\'hyrox\\'\)">PREPARAZIONE HYROX/g) || []).length === 2 && /mode === 'hyrox'/.test(coachUi) && /navigate\('hyrox'\)/.test(coachUi));
 const sync = fs.readFileSync('sync_web_assets.mjs', 'utf8');
 ok('7c. motore e calendario copiati nelle app', /'hyrox\.js'/.test(sync) && /'hyrox-events\.json'/.test(sync));
 const api = fs.readFileSync('coach-api.mjs', 'utf8');
