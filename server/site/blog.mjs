@@ -16,6 +16,7 @@
 // that day; files and folders starting with "_" are never published.
 import fs from "node:fs/promises";
 import path from "node:path";
+import { SITE_LANGS, SITE_LOCALES, langPrefix, langOfPath, siteDict, st } from "./i18n.mjs";
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -147,7 +148,8 @@ function article(fields) {
     coverCredit: fields.coverCredit || "",
     minutes: Math.max(1, Math.round(plain.split(" ").length / 200)),
     html: fields.html || "",
-    style: fields.style || ""
+    style: fields.style || "",
+    dir: fields.dir || ""
   };
 }
 
@@ -212,10 +214,19 @@ export function parseHtmlArticle(name, html) {
   });
 }
 
-export async function loadArticles({ contentDir, siteDir }, now = new Date()) {
+// lang: the article in that language when the folder has it (article.<lang>.md),
+// otherwise the English one, otherwise the Italian one.
+export async function loadArticles({ contentDir, siteDir }, now = new Date(), lang = "it") {
   const today = now.toISOString().slice(0, 10);
   const list = [];
-  const add = (a) => { if (a && a.slug && (!a.date || a.date <= today) && !list.some((x) => x.slug === a.slug)) list.push(a); };
+  // written: the language the text is really in (the visitor's, or the one it fell back to).
+  const add = (a, dir, written) => { if (a && a.slug && (!a.date || a.date <= today) && !list.some((x) => x.slug === a.slug)) { a.dir = dir || a.slug; a.lang = written || "it"; list.push(a); } };
+  const order = [...new Set([lang, lang === "it" ? "it" : "en", "it"])];
+  const first = async (dir, stem, ext) => {
+    for (const l of order) { const t = await read(path.join(dir, stem + "." + l + "." + ext)); if (t) return { text: t, lang: l }; }
+    const t = await read(path.join(dir, stem + "." + ext));
+    return t ? { text: t, lang: "it" } : null;
+  };
   const read = (file) => fs.readFile(file, "utf8").catch(() => null);
 
   let folders = [];
@@ -223,52 +234,57 @@ export async function loadArticles({ contentDir, siteDir }, now = new Date()) {
   for (const name of folders) {
     try {
       const dir = path.join(contentDir, name);
-      const md = (await read(path.join(dir, "article.it.md"))) || (await read(path.join(dir, "article.md")));
-      if (md) { add(parseArticle(name, md, "/blog-media/" + encodeURIComponent(name) + "/")); continue; }
-      const page = (await read(path.join(dir, "index.it.html"))) || (await read(path.join(dir, "index.html")));
-      if (page) add(parseHtmlArticle(name, page));
+      const md = await first(dir, "article", "md");
+      if (md) { add(parseArticle(name, md.text, "/blog-media/" + encodeURIComponent(name) + "/"), name, md.lang); continue; }
+      const page = await first(dir, "index", "html");
+      if (page) add(parseHtmlArticle(name, page.text), name, page.lang);
     } catch (err) { console.warn("BLOG_ARTICLE", name, err && err.message); }
   }
 
   let files = [];
   try { files = (await fs.readdir(siteDir)).filter((f) => /\.md$/i.test(f) && !f.startsWith("_")); } catch (_) {}
   for (const f of files) {
-    try { add(parseArticle(f, await fs.readFile(path.join(siteDir, f), "utf8"))); }
+    try { add(parseArticle(f, await fs.readFile(path.join(siteDir, f), "utf8")), f); }
     catch (err) { console.warn("BLOG_ARTICLE", f, err && err.message); }
   }
   return list.sort((a, b) => (b.date || "").localeCompare(a.date || "") || a.title.localeCompare(b.title));
 }
 
-const MONTHS = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
-function dateIt(iso) {
+function dateText(iso, lang) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
-  return m ? `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]} ${m[1]}` : "";
+  if (!m) return "";
+  try { return new Intl.DateTimeFormat(SITE_LOCALES[lang] || "it-IT", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])))); }
+  catch (_) { return iso; }
 }
 
-function cardHtml(a) {
-  return `<a class="post-card" href="/blog/${esc(a.slug)}">` +
+function cardHtml(a, lang = "it", dict = null) {
+  return `<a class="post-card" href="${langPrefix(lang)}/blog/${esc(a.slug)}">` +
     (a.cover ? `<img src="${esc(a.cover)}" alt="" loading="lazy">` : `<div class="post-cover-empty" aria-hidden="true">${esc(a.category)}</div>`) +
-    `<div class="post-card-body"><div class="eyebrow">${esc(a.category)}</div><h3>${esc(a.title)}</h3><p>${esc(a.excerpt)}</p>` +
-    `<div class="post-meta">${esc(dateIt(a.date))}${a.date ? " · " : ""}${a.minutes} min di lettura</div></div></a>`;
+    `<div class="post-card-body" data-notr><div class="eyebrow">${esc(a.category)}</div><h3>${esc(a.title)}</h3><p>${esc(a.excerpt)}</p>` +
+    `<div class="post-meta">${esc(dateText(a.date, lang))}${a.date ? " · " : ""}${esc(st(dict, "{0} min di lettura", a.minutes))}</div></div><!--/notr--></a>`;
 }
 
-function categoriesHtml(articles, active) {
+function categoriesHtml(articles, active, lang, dict) {
   const seen = new Map();
   articles.forEach((a) => { if (!seen.has(a.categorySlug)) seen.set(a.categorySlug, a.category); });
   if (seen.size < 2) return "";
+  const base = langPrefix(lang) + "/blog";
   const chip = (href, label, on) => `<a class="chip${on ? " on" : ""}" href="${href}">${esc(label)}</a>`;
-  return '<nav class="chips" aria-label="Categorie">' + chip("/blog", "Tutti", !active) +
-    [...seen].sort((a, b) => a[1].localeCompare(b[1])).map(([slug, name]) => chip("/blog/categoria/" + slug, name, active === slug)).join("") + "</nav>";
+  return '<nav class="chips" aria-label="Categorie">' + chip(base, st(dict, "Tutti"), !active) +
+    '<span data-notr>' + [...seen].sort((a, b) => a[1].localeCompare(b[1])).map(([slug, name]) => chip(base + "/categoria/" + slug, name, active === slug)).join("") + "</span><!--/notr--></nav>";
 }
 
 // mountBlog(app, { contentDir, siteDir, shell, staticFiles })
 // shell(req, { title, description, main, ogImage }) returns the full page;
 // staticFiles(dir) is express.static, passed in so this file needs no import of it.
 export function mountBlog(app, { contentDir, siteDir, shell, staticFiles }) {
-  let cache = { at: 0, list: [] };
-  async function articles() {
-    if (Date.now() - cache.at > 60 * 1000) cache = { at: Date.now(), list: await loadArticles({ contentDir, siteDir: path.join(siteDir, "blog") }) };
-    return cache.list;
+  const cache = new Map(); // lang -> { at, list }
+  async function articles(lang = "it") {
+    const hit = cache.get(lang);
+    if (hit && Date.now() - hit.at < 60 * 1000) return hit.list;
+    const list = await loadArticles({ contentDir, siteDir: path.join(siteDir, "blog") }, new Date(), lang);
+    cache.set(lang, { at: Date.now(), list });
+    return list;
   }
   // Only the images of an article are public, not its notes or drafts.
   if (staticFiles) {
@@ -278,44 +294,69 @@ export function mountBlog(app, { contentDir, siteDir, shell, staticFiles }) {
     res.setHeader("Cache-Control", "public, max-age=300");
     res.status(status).type("html").send(await shell(req, page));
   };
-  const listPage = (list, all, active, heading, lead) =>
-    `<section class="blog"><div class="wrap"><div class="head"><div class="eyebrow">Blog</div><h1 class="blog-title">${esc(heading)}</h1><p class="lead">${esc(lead)}</p></div>` +
-    categoriesHtml(all, active) +
-    (list.length ? `<div class="posts">${list.map(cardHtml).join("")}</div>` : '<p class="lead">Ancora nessun articolo in questa sezione.</p>') +
+  const langOf = (req) => langOfPath(req.path);
+  // The same page in every language, for the language menu and for search engines.
+  const everyLang = (tail) => Object.fromEntries(SITE_LANGS.map((l) => [l, langPrefix(l) + tail]));
+  const listPage = (list, all, active, heading, lead, lang, dict, ownText) =>
+    `<section class="blog"><div class="wrap"><div class="head"><div class="eyebrow">Blog</div><h1 class="blog-title"${ownText ? " data-notr" : ""}>${esc(heading)}</h1>${ownText ? "<!--/notr-->" : ""}<p class="lead">${esc(lead)}</p></div>` +
+    categoriesHtml(all, active, lang, dict) +
+    (list.length ? `<div class="posts">${list.map((a) => cardHtml(a, lang, dict)).join("")}</div>` : '<p class="lead">Ancora nessun articolo in questa sezione.</p>') +
     "</div></section>";
 
-  app.get("/blog", async (req, res) => {
-    const all = await articles();
-    return send(req, res, { title: "Blog — Nurvan", description: "Allenamento, alimentazione e recupero: gli articoli di Nurvan.", main: listPage(all, all, "", "Idee per allenarti meglio", "Allenamento, alimentazione, recupero e gare: articoli da mettere in pratica, con le fonti.") });
-  });
-
-  app.get("/blog/categoria/:cat", async (req, res) => {
-    const all = await articles();
+  const index = async (req, res) => {
+    const lang = langOf(req);
+    const dict = await siteDict(siteDir, lang);
+    const all = await articles(lang);
+    return send(req, res, { lang, alternates: everyLang("/blog"), title: "Blog — Nurvan", description: "Allenamento, alimentazione e recupero: gli articoli di Nurvan.", main: listPage(all, all, "", "Idee per allenarti meglio", "Allenamento, alimentazione, recupero e gare: articoli da mettere in pratica, con le fonti.", lang, dict) });
+  };
+  const category = async (req, res) => {
+    const lang = langOf(req);
+    const dict = await siteDict(siteDir, lang);
+    const all = await articles(lang);
     const slug = slugify(req.params.cat);
     const list = all.filter((a) => a.categorySlug === slug);
-    if (!list.length) return send(req, res, { title: "Categoria non trovata — Nurvan", description: "", main: listPage([], all, slug, "Categoria non trovata", "Torna a tutti gli articoli.") }, 404);
-    return send(req, res, { title: `${list[0].category} — Blog Nurvan`, description: `Articoli su ${list[0].category}.`, main: listPage(list, all, slug, list[0].category, `Tutti gli articoli su ${list[0].category.toLowerCase()}.`) });
-  });
-
-  app.get("/blog/:slug", async (req, res) => {
-    const all = await articles();
+    if (!list.length) return send(req, res, { lang, title: "Categoria non trovata — Nurvan", description: "", main: listPage([], all, slug, "Categoria non trovata", "Torna a tutti gli articoli.", lang, dict) }, 404);
+    return send(req, res, { lang, ownTitle: true, title: st(dict, "{0} — Blog Nurvan", list[0].category), description: st(dict, "Articoli su {0}.", list[0].category), main: listPage(list, all, slug, list[0].category, st(dict, "Tutti gli articoli su {0}.", list[0].category.toLowerCase()), lang, dict, true) });
+  };
+  const one = async (req, res) => {
+    const lang = langOf(req);
+    const dict = await siteDict(siteDir, lang);
+    const all = await articles(lang);
     const a = all.find((x) => x.slug === slugify(req.params.slug));
-    if (!a) return send(req, res, { title: "Articolo non trovato — Nurvan", description: "", main: listPage(all.slice(0, 6), all, "", "Articolo non trovato", "Forse cercavi uno di questi.") }, 404);
+    if (!a) return send(req, res, { lang, title: "Articolo non trovato — Nurvan", description: "", main: listPage(all.slice(0, 6), all, "", "Articolo non trovato", "Forse cercavi uno di questi.", lang, dict) }, 404);
+    // The same article in the other languages: found by its folder.
+    // For search engines only the languages it is really written in; the
+    // language menu reaches it in every language (the text falls back to
+    // English, the page around it is in that language).
+    const alternates = {};
+    const menu = {};
+    for (const l of SITE_LANGS) {
+      const other = l === lang ? a : (await articles(l)).find((x) => x.dir === a.dir);
+      if (!other) continue;
+      menu[l] = langPrefix(l) + "/blog/" + other.slug;
+      if (other.lang === l) alternates[l] = menu[l];
+    }
+    const base = langPrefix(lang) + "/blog";
     const more = all.filter((x) => x.slug !== a.slug).sort((x, y) => (y.categorySlug === a.categorySlug) - (x.categorySlug === a.categorySlug)).slice(0, 3);
     const main = (a.style ? `<style>${a.style}</style>` : "") +
       `<article class="post"><div class="wrap narrow">` +
-      `<a class="back" href="/blog">← Tutti gli articoli</a>` +
-      `<a class="eyebrow" href="/blog/categoria/${esc(a.categorySlug)}">${esc(a.category)}</a>` +
-      `<h1 class="blog-title">${esc(a.title)}</h1>` +
+      `<a class="back" href="${base}">← Tutti gli articoli</a>` +
+      `<a class="eyebrow" href="${base}/categoria/${esc(a.categorySlug)}" data-notr>${esc(a.category)}</a><!--/notr-->` +
+      `<div data-notr><h1 class="blog-title">${esc(a.title)}</h1>` +
       (a.excerpt ? `<p class="lead">${esc(a.excerpt)}</p>` : "") +
-      `<div class="post-meta">${esc(dateIt(a.date))}${a.date ? " · " : ""}${a.minutes} min di lettura</div>` +
-      (a.cover ? `<figure class="post-cover"><img src="${esc(a.cover)}" alt="">${a.coverCredit ? `<figcaption>Foto: ${esc(a.coverCredit.replace(/\s*\(https?:[^)]*\)/g, ""))}</figcaption>` : ""}</figure>` : "") +
-      `<div class="prose">${a.html}</div>` +
+      `<div class="post-meta">${esc(dateText(a.date, lang))}${a.date ? " · " : ""}${esc(st(dict, "{0} min di lettura", a.minutes))}</div>` +
+      (a.cover ? `<figure class="post-cover"><img src="${esc(a.cover)}" alt="">${a.coverCredit ? `<figcaption>${esc(st(dict, "Foto: {0}", a.coverCredit.replace(/\s*\(https?:[^)]*\)/g, "")))}</figcaption>` : ""}</figure>` : "") +
+      `<div class="prose">${a.html}</div></div><!--/notr-->` +
       `<div class="post-cta"><strong>Mettilo in pratica con Nurvan.</strong><a class="btn primary" href="{{APP_URL}}">Apri l'app</a></div>` +
       `</div></article>` +
-      (more.length ? `<section class="blog"><div class="wrap"><div class="head"><h2>Continua a leggere</h2></div><div class="posts">${more.map(cardHtml).join("")}</div></div></section>` : "");
-    return send(req, res, { title: `${a.title} — Nurvan`, description: a.excerpt, main, ogImage: a.cover });
-  });
+      (more.length ? `<section class="blog"><div class="wrap"><div class="head"><h2>Continua a leggere</h2></div><div class="posts">${more.map((x) => cardHtml(x, lang, dict)).join("")}</div></div></section>` : "");
+    return send(req, res, { lang, alternates, menu, title: `${a.title} — Nurvan`, ownTitle: true, description: a.excerpt, main, ogImage: a.cover });
+  };
+  for (const base of SITE_LANGS.map(langPrefix)) {
+    app.get(base + "/blog", index);
+    app.get(base + "/blog/categoria/:cat", category);
+    app.get(base + "/blog/:slug", one);
+  }
 
   return { articles, cardHtml };
 }

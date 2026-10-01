@@ -217,7 +217,7 @@ try {
   ok('5b. login: blocco dopo troppi errori, errori contati, azzerati al successo', /loginLocked\(pool, email\)/.test(login) && /noteLoginFailure\(pool, email\)/.test(login) && /clearLoginFailures\(pool, email\)/.test(login));
   ok('5c. login di un account non confermato: nuovo codice e niente sessione', /if \(needsEmailVerification\(user\)\) \{[\s\S]*?verificationRequired: true/.test(login) && login.indexOf('needsEmailVerification') < login.indexOf('token: issueAccountToken(user)'));
   const forgot = between('app.post("/api/auth/forgot-password"', 'app.post("/api/auth/reset-password"');
-  ok('5d. recupero: niente per gli atleti del coach, link accanto al codice', /isSyntheticEmail\(email\)/.test(forgot) && /linkTokenHash\(linkToken\)/.test(forgot) && /sendPasswordResetEmail\(email, code, emailAuth\.resetLink\(req, linkToken\)\)/.test(forgot));
+  ok('5d. recupero: niente per gli atleti del coach, link accanto al codice', /isSyntheticEmail\(email\)/.test(forgot) && /linkTokenHash\(linkToken\)/.test(forgot) && /sendPasswordResetEmail\(email, code, emailAuth\.resetLink\(req, linkToken\), reqLang\(req\)\)/.test(forgot));
   ok('5e. le pagine dei link sono servite', /"\/verifica-email": "verifica-email\.html"/.test(api) && /"\/reimposta-password": "reimposta-password\.html"/.test(api) && fs.existsSync(path.join(root, 'web/verifica-email.html')) && fs.existsSync(path.join(root, 'web/reimposta-password.html')));
   const mig = read('server/db/migrations/0020_email_verification.sql');
   ok('5f. migrazione 0020: gli account di prima non devono confermare, Google/Apple risultano confermati', /email_verify_required BOOLEAN NOT NULL DEFAULT FALSE/.test(mig) && /WHERE email_verified_at IS NULL AND provider IN \('google', 'apple'\)/.test(mig));

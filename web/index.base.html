@@ -56,6 +56,7 @@
 })();
 </script>
 <link rel="manifest" href="manifest.webmanifest">
+<script src="i18n-runtime.js"></script>
 <script src="exercise-catalog-extra.js"></script>
 <script src="training-knowledge.js"></script>
 <script src="training-analytics-engine.js"></script>
@@ -77,6 +78,7 @@
 <script src="entitlements.js"></script>
 <script src="cardio-library.js"></script>
 <script src="program-generator.js"></script>
+<script src="hyrox.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -5543,6 +5545,9 @@ var GOOGLE_VERIFIER_KEY = 'NURVAN_GOOGLE_VERIFIER';
 function isIosApp() {
   try { return !!(window.Capacitor && typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'ios'); } catch (_) { return false; }
 }
+// A text that does not go through the page (notifications, speech): in the
+// language of the app. The page itself is translated by i18n-runtime.js.
+function trText(s) { return (typeof window !== 'undefined' && typeof window.tr === 'function') ? window.tr(s) : s; }
 function capacitorPlugin(name) {
   try { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[name]) || null; } catch (_) { return null; }
 }
@@ -5571,6 +5576,7 @@ function iosAskNotificationPermission() {
 function iosScheduleNotification(job) {
   const ln = iosNotifications();
   if (!ln || !job) return;
+  job = Object.assign({}, job, { title: trText(job.title), body: trText(job.body) });
   const when = new Date(Math.max(Date.now() + 1000, Number(job.at) || Date.now() + 1000));
   const schedule = job.daily
     ? { on: { hour: when.getHours(), minute: when.getMinutes() }, allowWhileIdle: true }
@@ -5750,7 +5756,7 @@ function renderGoogleSignInButton(clientId) {
     width: width,
     text: 'continue_with',
     shape: 'rectangular',
-    locale: 'it'
+    locale: (window.NurvanI18n ? NurvanI18n.lang() : 'it')
   });
   syncGoogleAuthButtons(!!store.accountToken);
 }
@@ -6183,7 +6189,7 @@ function renderPrivacySettingsCard() {
   const cfg = legalConfig();
   const logged = !!(store && store.accountToken && store.accountUser);
   const c = store && store.privacyConsent;
-  const when = function (iso) { try { return new Date(iso).toLocaleDateString('it-IT'); } catch (_) { return ''; } };
+  const when = function (iso) { try { return new Date(iso).toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT')); } catch (_) { return ''; } };
   const accepted = c && c.version
     ? ('Informativa e termini accettati (versione ' + esc(c.version) + (c.at ? ', ' + esc(when(c.at)) : '') + ').' + (c.version !== cfg.version ? ' <b style="color:var(--gold);">È disponibile una versione aggiornata.</b>' : ''))
     : (logged ? 'Consensi non ancora dati su questo account.' : 'Accedi per gestire i consensi del tuo account.');
@@ -7737,7 +7743,7 @@ function formatNutritionDayDate(dateIso) {
   if (!dateIso) return '';
   const dt = new Date(dateIso + 'T00:00:00');
   if (isNaN(dt.getTime())) return '';
-  return dt.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+  return dt.toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT'), { day: '2-digit', month: '2-digit' });
 }
 // The date to suggest for the next new day: the day right after the most
 // recently dated existing day, or today if nothing is dated yet.
@@ -7895,7 +7901,7 @@ function nutritionTargetSourceHtml(t) {
     '<div style="font-size:9px;color:#777;margin-top:3px;line-height:1.35;">' + esc(N ? N.DISCLAIMER : '') + '</div>';
 }
 function nutritionNumber(n) {
-  return Math.round(Number(n) || 0).toLocaleString('it-IT');
+  return Math.round(Number(n) || 0).toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'));
 }
 // Total, target, difference and a bar, for the four quantities. Grey within
 // 5 %, amber beyond: a number and a colour, never a verdict.
@@ -7924,7 +7930,7 @@ function nutritionSummaryHtml(totals, target, label) {
     '<div style="font-size:11px;font-weight:800;color:var(--gold);">Totale della giornata</div>' +
     (label ? '<div style="font-size:10px;color:#888;margin-top:2px;">' + esc(label) + '</div>' : '') +
     body +
-    (totals.partial ? '<div style="font-size:9px;color:#888;margin-top:8px;">* somma parziale: ' + totals.missing.length + ' aliment' + (totals.missing.length === 1 ? 'o' : 'i') + ' senza valori (' + esc(totals.missing.slice(0, 3).join(', ')) + (totals.missing.length > 3 ? '…' : '') + ')</div>' : '') +
+    (totals.partial ? '<div style="font-size:9px;color:#888;margin-top:8px;">* somma parziale: ' + (totals.missing.length === 1 ? '1 alimento senza valori' : totals.missing.length + ' alimenti senza valori') + ' (' + esc(totals.missing.slice(0, 3).join(', ')) + (totals.missing.length > 3 ? '…' : '') + ')</div>' : '') +
     '</div>';
 }
 // For a diary day: the plan of the same weekday, if there is one.
@@ -8362,7 +8368,7 @@ function refreshGenNutritionFreeDays() {
   st.freeCount = freeCount;
   const days = (typeof WEEKDAY_IT !== 'undefined' ? WEEKDAY_IT : ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica']).slice(0, dayCount);
   const selected = Array.isArray(st.freeDays) ? st.freeDays.slice() : [];
-  host.innerHTML = '<div style="font-size:10px;color:#aaa;margin-bottom:6px;">Seleziona ' + freeCount + ' giorn' + (freeCount === 1 ? 'o' : 'i') + ' con pasto libero</div>' +
+  host.innerHTML = '<div style="font-size:10px;color:#aaa;margin-bottom:6px;">Seleziona ' + (freeCount === 1 ? '1 giorno' : freeCount + ' giorni') + ' con pasto libero</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">' +
     days.map(function (d) {
       const on = selected.indexOf(d) >= 0;
@@ -12000,13 +12006,13 @@ function nativeBeep(text) {
   try {
     if (store.prefs && store.prefs.timerSound === false) return;
     if (typeof NativeConfig !== 'undefined' && NativeConfig.speak) {
-      NativeConfig.speak(text || 'Timer terminato');
+      NativeConfig.speak(trText(text || 'Timer terminato'));
       return;
     }
     if (playWebTimerTone()) return;
     if (window.speechSynthesis) {
-      const u = new SpeechSynthesisUtterance(text || 'Riposo terminato');
-      u.lang = 'it-IT';
+      const u = new SpeechSynthesisUtterance(trText(text || 'Riposo terminato'));
+      u.lang = (typeof coachSpeechLang === 'function') ? coachSpeechLang() : 'it-IT';
       u.rate = 1;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
@@ -15219,6 +15225,7 @@ function renderCurrentView() {
   else if (currentView === 'pricing') renderPricing(c);
   else if (currentView === 'progress') renderProgressCenter(c);
   else if (currentView === 'knowledge') renderTrainingKnowledge(c);
+  else if (currentView === 'hyrox') renderHyrox(c);
   else renderHome(c);
   if (currentView !== 'nutrition') window.__nutritionLastView = currentView;
   applyChromeI18n();
@@ -16153,7 +16160,7 @@ function renderNutritionDiary(c) {
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">' +
     '<button type="button" class="btn btn-outline" style="padding:4px 12px;font-size:14px;" onclick="diaryMonthStep(-1)" aria-label="Mese precedente">‹</button>' +
     '<div style="text-align:center;"><div style="font-size:14px;font-weight:900;color:#fff;">' + DIARY_MONTHS[mo] + ' ' + y + '</div>' +
-    (monthDays ? '<div style="font-size:10px;color:#888;">' + monthDays + ' giorn' + (monthDays === 1 ? 'o' : 'i') + ' segnat' + (monthDays === 1 ? 'o' : 'i') + ' · media ' + nutritionNumber(monthKcal / monthDays) + ' kcal</div>' : '') + '</div>' +
+    (monthDays ? '<div style="font-size:10px;color:#888;">' + (monthDays === 1 ? '1 giorno segnato' : monthDays + ' giorni segnati') + ' · media ' + nutritionNumber(monthKcal / monthDays) + ' kcal</div>' : '') + '</div>' +
     '<button type="button" class="btn btn-outline" style="padding:4px 12px;font-size:14px;" onclick="diaryMonthStep(1)" aria-label="Mese successivo">›</button></div>' +
     '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">' + heads + cells + '</div>' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px;flex-wrap:wrap;">' +
@@ -16439,7 +16446,7 @@ function renderNutritionPlanView(c) {
                     <span style="color:var(--gold);font-weight:800;margin-left:6px;">${f.qb ? 'q.b.' : (safeDisplayValue(f.quantity, '') + ' ' + safeDisplayValue(f.unit, 'g'))}</span>
                     ${f.__swappedToday ? '<span style="font-size:9px;color:#4caf50;font-weight:800;margin-left:6px;">solo oggi</span>' : ''}
                     ${f.recipeId && nutritionRecipeById(f.recipeId) ? `<span style="font-size:10px;color:var(--gold);margin-left:6px;cursor:pointer;" onclick="openRecipe('${esc(f.recipeId)}')">📖 ricetta</span>` : ''}
-                    ${Array.isArray(f.alternatives) && f.alternatives.length > 1 ? `<div style="font-size:9px;color:#777;margin-top:2px;">${f.alternatives.length - 1} alternativ${f.alternatives.length - 1 === 1 ? 'a' : 'e'} nel piano</div>` : ''}
+                    ${Array.isArray(f.alternatives) && f.alternatives.length > 1 ? `<div style="font-size:9px;color:#777;margin-top:2px;">${f.alternatives.length - 1 === 1 ? '1 alternativa nel piano' : (f.alternatives.length - 1) + ' alternative nel piano'}</div>` : ''}
                     ${foodSourceLabelHtml(f)}
                   </div>
                   <div style="display:flex;align-items:center;gap:8px;">
@@ -18210,7 +18217,7 @@ function confirmGenerateNutritionPlan() {
     freeDays = Array.isArray(st.freeDays) ? st.freeDays.slice() : [];
     if (freeDays.length !== need) {
       if (typeof showToast === 'function') {
-        showToast('Seleziona esattamente ' + need + ' giorn' + (need === 1 ? 'o' : 'i') + ' per i pasti liberi', 'error');
+        showToast('Seleziona esattamente ' + (need === 1 ? '1 giorno' : need + ' giorni') + ' per i pasti liberi', 'error');
       }
       return;
     }
@@ -19480,7 +19487,7 @@ function scheduleAllItemAlerts() {
   try {
     if (typeof NativeConfig !== 'undefined' && NativeConfig.scheduleReminder) {
       jobs.forEach(function (j) {
-        NativeConfig.scheduleReminder(JSON.stringify(j));
+        NativeConfig.scheduleReminder(JSON.stringify(Object.assign({}, j, { title: trText(j.title), body: trText(j.body) })));
       });
     } else if (typeof NotificationService !== 'undefined' && NotificationService.schedule) {
       jobs.forEach(function (j) { NotificationService.schedule(j); });
@@ -20864,6 +20871,8 @@ function renderSettings(c) {
 
 function changeAppLanguage(lang) {
   I18nService.setLanguage(lang);
+  // Everything written in Italian in the screens is translated by i18n-runtime.js.
+  if (window.NurvanI18n) NurvanI18n.setLang(lang);
   if (typeof persist === 'function') persist();
   applyChromeI18n();
   render();
@@ -21562,7 +21571,7 @@ function updateCatalogFiltersFromUi() {
   const ranked = filterProgramCatalog(allCat);
   const filtered = ranked.slice(0, 150);
   const totalCat = catalogTotalCount();
-  if (countEl) countEl.textContent = filtered.length + (totalCat > filtered.length ? '+' : '') + ' / ' + totalCat.toLocaleString('it-IT');
+  if (countEl) countEl.textContent = filtered.length + (totalCat > filtered.length ? '+' : '') + ' / ' + totalCat.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'));
   if (!listEl) {
     if (currentView === 'programs') render();
     return;
@@ -21703,7 +21712,7 @@ function renderPrograms(c){
       <div>
         <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">PROGRAM DATABASE</span>
         <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">LIBRERIA PROGRAMMI</h2>
-        <div style="font-size:11px;color:#888;margin-top:4px;">${catalogReady ? (totalCat.toLocaleString('it-IT') + ' schede · copertura completa filtri · sezione Donna inclusa') : 'Caricamento database…'}</div>
+        <div style="font-size:11px;color:#888;margin-top:4px;">${catalogReady ? (totalCat.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT')) + ' schede · copertura completa filtri · sezione Donna inclusa') : 'Caricamento database…'}</div>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-outline" style="font-size:11px; padding:6px 12px; border-color:var(--gold); color:var(--gold);" onclick="navigate('import')">IMPORTA FILE</button>
@@ -21816,7 +21825,7 @@ function renderPrograms(c){
     </div>` : ''}
     <div class="card" style="margin-bottom:16px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span id="catalog-count" style="font-size:10px; color:#666;">${filtered.length}${catalogReady ? ' / ' + totalCat.toLocaleString('it-IT') : ''}</span>
+        <span id="catalog-count" style="font-size:10px; color:#666;">${filtered.length}${catalogReady ? ' / ' + totalCat.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT')) : ''}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px;">
         <input id="catalog-q" type="search" placeholder="Es. 4 giorni upper lower ipertrofia donna casa doppia progressione" value="${esc(f.q || '')}" oninput="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()" style="padding:10px;font-size:13px;">
@@ -23562,7 +23571,7 @@ function builtProgramsHtml() {
     const idx = (store.models || []).indexOf(m);
     return '<div style="padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.02);border:1px solid #222;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
       '<div style="min-width:0;"><div style="font-size:13px;font-weight:800;color:#eee;">' + esc(m.name || 'Scheda') + '</div>' +
-      '<div style="font-size:10px;color:#777;">' + esc(m.date ? new Date(m.date).toLocaleDateString('it-IT') : '') +
+      '<div style="font-size:10px;color:#777;">' + esc(m.date ? new Date(m.date).toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT')) : '') +
       (m.isActive ? ' · <span style="color:var(--gold);">attiva</span>' : '') + '</div></div>' +
       '<div style="display:flex;gap:6px;flex:0 0 auto;">' +
       '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="activateSavedProgram(' + JSON.stringify(m.id || '') + ', ' + idx + ')">ATTIVA</button>' +
@@ -23595,6 +23604,230 @@ function personalRestoreBannerHtml() {
     '<button type="button" class="btn btn-primary" style="width:100%;min-height:48px;font-weight:900;" onclick="recoverPersonalTrainingEmergency()">RIPRISTINA LA MIA SCHEDA</button></div>';
 }
 
+/*
+ * HYROX: the race calendar, a preparation written for a race date and the
+ * eight stations (web/hyrox.js does the thinking, web/hyrox-events.json is
+ * the calendar). The program it writes goes through the same review as any
+ * generated program, so it is read and edited before it becomes active.
+ */
+function hyroxApi() { return (typeof window !== 'undefined' && window.NurvanHyrox) || null; }
+function hyroxState() {
+  if (!store.hyrox || typeof store.hyrox !== 'object') store.hyrox = {};
+  const h = store.hyrox;
+  if (!h.region) h.region = 'italy';
+  if (!h.division) h.division = 'open_m';
+  if (!h.level) h.level = 'intermediate';
+  if (!h.days) h.days = 4;
+  if (!h.weeks) h.weeks = 12;
+  if (!Array.isArray(h.gear)) h.gear = (hyroxApi() ? hyroxApi().GEAR.map(function (g) { return g.id; }) : []);
+  return h;
+}
+// The calendar: the server's copy (newer than the one shipped in the app), then the app's own.
+function loadHyroxEvents() {
+  if (window.__hyroxEvents) return Promise.resolve(window.__hyroxEvents);
+  if (window.__hyroxEventsLoading) return window.__hyroxEventsLoading;
+  const read = function (url) { return fetch(url).then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); }); };
+  const remote = (typeof coachEndpoint === 'function') ? coachEndpoint('/hyrox-events.json') : '';
+  window.__hyroxEventsLoading = (remote ? read(remote).catch(function () { return read('hyrox-events.json'); }) : read('hyrox-events.json'))
+    .then(function (data) { window.__hyroxEvents = (data && Array.isArray(data.events)) ? data : { events: [] }; return window.__hyroxEvents; })
+    .catch(function () { window.__hyroxEvents = { events: [], failed: true }; return window.__hyroxEvents; })
+    .then(function (data) { window.__hyroxEventsLoading = null; if (currentView === 'hyrox') render(); return data; });
+  return window.__hyroxEventsLoading;
+}
+function hyroxDateText(ev) {
+  if (!ev || !ev.start) return 'Data da annunciare';
+  const loc = (typeof appLocale === 'function') ? appLocale() : 'it-IT';
+  const fmt = function (iso, year) {
+    try { return new Date(iso + 'T12:00:00').toLocaleDateString(loc, year ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }); } catch (_) { return iso; }
+  };
+  return (ev.end && ev.end !== ev.start) ? fmt(ev.start, false) + ' – ' + fmt(ev.end, true) : fmt(ev.start, true);
+}
+function hyroxEventById(id) {
+  const list = (window.__hyroxEvents && window.__hyroxEvents.events) || [];
+  for (let i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+  return null;
+}
+function hyroxSet(field, value) {
+  const h = hyroxState();
+  h[field] = (field === 'days' || field === 'weeks') ? Number(value) : value;
+  try { persist(); } catch (_) {}
+  render();
+}
+function hyroxToggleGear(id) {
+  const h = hyroxState();
+  const i = h.gear.indexOf(id);
+  if (i === -1) h.gear.push(id); else h.gear.splice(i, 1);
+  try { persist(); } catch (_) {}
+  render();
+}
+function hyroxFullGear(yes) {
+  const h = hyroxState();
+  h.gear = yes ? hyroxApi().GEAR.map(function (g) { return g.id; }) : [];
+  h.gearAsked = true;
+  try { persist(); } catch (_) {}
+  render();
+}
+function hyroxChooseRace(id) {
+  const h = hyroxState();
+  h.raceId = id || '';
+  try { persist(); } catch (_) {}
+  render();
+  if (id) { const el = document.getElementById('hyrox-create'); if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+}
+async function hyroxCreateProgram(preset) {
+  const api = hyroxApi();
+  if (!api) { if (typeof showToast === 'function') showToast('Sezione HYROX non caricata', 'error'); return; }
+  const h = hyroxState();
+  const ev = hyroxEventById(h.raceId);
+  const input = preset
+    ? { weeks: preset.weeks, days: preset.days, level: preset.level, division: h.division, gear: api.GEAR.map(function (g) { return g.id; }) }
+    : { weeks: h.weeks, days: h.days, level: h.level, division: h.division, gear: h.gear.slice(), raceDate: ev && ev.start ? ev.start : '', raceName: ev ? ev.city : '' };
+  if (!preset && ev && ev.start) {
+    const left = api.weeksUntil(ev.start);
+    if (left != null && left < 4 && !confirm('Mancano meno di 4 settimane alla gara: la preparazione sarà di 4 settimane, più lunga del tempo che resta. Vuoi crearla lo stesso?')) return;
+  }
+  try {
+    let prog = null;
+    await withBusy(function () { prog = normalizeProgram(api.plan(input)); return Promise.resolve(); }, 'Scrivo la preparazione…', { immediate: true, maxMs: 60000 });
+    openGeneratedReview(prog, 'active', null);
+  } catch (e) {
+    console.error('[HYROX]', e);
+    if (typeof showToast === 'function') showToast('Generazione non riuscita: ' + (e && e.message || e), 'error');
+  }
+}
+function hyroxEstimate() {
+  const el = document.getElementById('hyrox-5k');
+  const out = document.getElementById('hyrox-estimate');
+  if (!el || !out) return;
+  const res = hyroxApi().estimateFinish(el.value, hyroxState().level);
+  const hm = function (m) { return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + '′'; };
+  out.textContent = res ? ('Tra ' + hm(res.low) + ' e ' + hm(res.high)) : 'Scrivi il tuo tempo sui 5 km in minuti (es. 27).';
+}
+function renderHyrox(c) {
+  const api = hyroxApi();
+  if (!api) { c.innerHTML = '<div class="card" style="padding:16px;">Sezione HYROX non caricata.</div>'; return; }
+  const h = hyroxState();
+  const data = window.__hyroxEvents;
+  if (!data) loadHyroxEvents();
+  const events = (data && data.events) || [];
+  const race = hyroxEventById(h.raceId);
+  const st = 'width:100%;margin-top:3px;background:#141414;color:#fff;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;';
+  const lab = function (text, inner) { return '<label style="display:block;font-size:10px;color:#aaa;font-weight:800;margin-top:10px;">' + text + inner + '</label>'; };
+  const sel = function (field, items, cur) {
+    return '<select style="' + st + '" onchange="hyroxSet(\'' + field + '\', this.value)">' + items.map(function (it) {
+      return '<option value="' + esc(it.id) + '"' + (String(it.id) === String(cur) ? ' selected' : '') + '>' + esc(it.label) + '</option>';
+    }).join('') + '</select>';
+  };
+  const div = api.DIVISIONS.filter(function (d) { return d.id === h.division; })[0] || api.DIVISIONS[0];
+  const fullGear = h.gear.length === api.GEAR.length;
+
+  // The race chosen, with the time left.
+  let raceHtml;
+  if (race) {
+    const left = race.start ? api.weeksUntil(race.start) : null;
+    raceHtml = '<div style="font-size:18px;font-weight:900;color:#fff;">' + esc(race.city) + '</div>' +
+      '<div style="font-size:12px;color:#aaa;margin-top:2px;">' + esc(race.countryName) + ' · ' + esc(hyroxDateText(race)) + '</div>' +
+      (left != null ? '<div style="font-size:13px;color:var(--gold);font-weight:800;margin-top:8px;">' + (left <= 0 ? 'È la settimana della gara' : ('Mancano ' + left + ' settimane')) + '</div>' : '') +
+      '<div style="display:flex;gap:8px;margin-top:12px;"><a class="btn btn-outline" style="flex:1;text-align:center;font-size:11px;" href="' + esc(race.url) + '" target="_blank" rel="noopener">PAGINA UFFICIALE</a>' +
+      '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;" onclick="hyroxChooseRace(\'\')">CAMBIA GARA</button></div>';
+  } else {
+    raceHtml = '<div style="font-size:12px;color:#aaa;line-height:1.5;">Scegli la tua gara dal calendario qui sotto: la preparazione viene scritta per arrivare pronto a quella data. Se non hai ancora una gara, scegli tu la durata.</div>';
+  }
+
+  const raceItems = [{ id: '', label: 'Nessuna gara: scelgo io la durata' }].concat(api.upcoming(events, 'all').map(function (ev) { return { id: ev.id, label: ev.city + ' · ' + hyroxDateText(ev) }; }));
+  const createHtml =
+    lab('Gara', '<select style="' + st + '" onchange="hyroxChooseRace(this.value)">' + raceItems.map(function (it) { return '<option value="' + esc(it.id) + '"' + (it.id === (h.raceId || '') ? ' selected' : '') + '>' + esc(it.label) + '</option>'; }).join('') + '</select>') +
+    (race && race.start ? '' : lab('Durata', sel('weeks', api.WEEKS.map(function (w) { return { id: w, label: w + ' settimane' }; }), h.weeks))) +
+    lab('Giorni a settimana', sel('days', api.DAYS.map(function (d) { return { id: d, label: d + ' giorni' }; }), h.days)) +
+    lab('Livello', sel('level', api.LEVELS, h.level)) +
+    lab('Categoria', sel('division', api.DIVISIONS, h.division)) +
+    lab('Hai tutta l’attrezzatura HYROX in palestra?', '<select style="' + st + '" onchange="hyroxFullGear(this.value === \'yes\')"><option value="yes"' + (fullGear ? ' selected' : '') + '>Sì, c’è tutto</option><option value="no"' + (fullGear ? '' : ' selected') + '>No, manca qualcosa</option></select>') +
+    (fullGear ? '' : '<div style="margin-top:10px;font-size:11px;color:#aaa;">Spunta quello che hai: per il resto la scheda usa un esercizio che allena lo stesso sforzo.</div>' +
+      '<div style="display:grid;gap:6px;margin-top:8px;">' + api.GEAR.map(function (g) {
+        const on = h.gear.indexOf(g.id) !== -1;
+        return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#ddd;"><input type="checkbox"' + (on ? ' checked' : '') + ' onchange="hyroxToggleGear(\'' + g.id + '\')"> ' + esc(g.label) + '</label>';
+      }).join('') + '</div>') +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;min-height:48px;font-weight:900;" onclick="hyroxCreateProgram()">VEDI L’ANTEPRIMA</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="navigate(\'import\')">IMPORTA UN PROGRAMMA HYROX</button>';
+
+  const presets = [
+    { weeks: 8, days: 3, level: 'beginner', title: 'Prima gara', text: '8 settimane · 3 giorni' },
+    { weeks: 12, days: 4, level: 'intermediate', title: 'Preparazione completa', text: '12 settimane · 4 giorni' },
+    { weeks: 12, days: 5, level: 'advanced', title: 'Punta al tempo', text: '12 settimane · 5 giorni' },
+    { weeks: 16, days: 4, level: 'beginner', title: 'Partenza da zero', text: '16 settimane · 4 giorni' }
+  ];
+  const presetsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">' + presets.map(function (p, i) {
+    return '<button type="button" class="btn btn-outline" style="min-height:64px;text-align:left;padding:10px 12px;" onclick="hyroxCreateProgram(window.__hyroxPresets[' + i + '])">' +
+      '<div style="font-size:12px;font-weight:900;color:#fff;">' + p.title + '</div><div style="font-size:10px;color:#aaa;margin-top:2px;">' + p.text + '</div></button>';
+  }).join('') + '</div>';
+  window.__hyroxPresets = presets;
+
+  const loadOf = function (s) {
+    switch (s.id) {
+      case 'sled_push': return div.sled_push + ' kg';
+      case 'sled_pull': return div.sled_pull + ' kg';
+      case 'farmers_carry': return div.farmers + ' kg';
+      case 'sandbag_lunges': return div.sandbag + ' kg';
+      case 'wall_balls': return div.wallball + ' kg';
+      default: return '';
+    }
+  };
+  const stationsHtml = '<div style="font-size:11px;color:#888;margin-bottom:8px;">8 volte: 1 km di corsa, poi una stazione. Carichi della categoria ' + esc(div.label) + '.</div>' +
+    api.STATIONS.map(function (s, i) {
+      const load = loadOf(s);
+      return '<details style="border-top:1px solid #222;padding:10px 0;"><summary style="list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:center;">' +
+        '<span style="font-size:13px;font-weight:800;color:#fff;"><span style="color:var(--gold);">' + (i + 1) + '</span> · ' + esc(s.name) + '</span>' +
+        '<span style="font-size:11px;color:#aaa;white-space:nowrap;">' + esc(s.amount) + (load ? ' · ' + esc(load) : '') + '</span></summary>' +
+        '<p style="font-size:12px;color:#ccc;line-height:1.5;margin:8px 0 0;">' + esc(s.cue) + '</p>' +
+        (s.alt && s.gear ? '<p style="font-size:11px;color:#888;line-height:1.5;margin:6px 0 0;">Senza attrezzo: ' + esc(s.alt.name) + '</p>' : '') +
+        '</details>';
+    }).join('');
+
+  const regions = [{ id: 'italy', label: 'Italia' }, { id: 'europe', label: 'Europa' }, { id: 'world', label: 'Mondo' }];
+  const shown = api.upcoming(events, h.region === 'world' ? 'all' : h.region);
+  const more = !!h.allEvents;
+  const eventsHtml =
+    '<div style="display:flex;gap:6px;margin-bottom:10px;">' + regions.map(function (rg) {
+      return '<button type="button" class="btn ' + (h.region === rg.id ? 'btn-primary' : 'btn-outline') + '" style="flex:1;font-size:11px;padding:8px 6px;" onclick="hyroxSet(\'region\', \'' + rg.id + '\')">' + rg.label + '</button>';
+    }).join('') + '</div>' +
+    (!data ? '<div style="font-size:12px;color:#888;">Carico il calendario…</div>'
+      : (!shown.length ? '<div style="font-size:12px;color:#888;">' + (data.failed ? 'Calendario non disponibile: riprova con la connessione attiva.' : 'Nessuna gara in programma in questa zona.') + '</div>'
+        : shown.slice(0, more ? 200 : 8).map(function (ev) {
+          return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #222;padding:10px 0;">' +
+            '<div style="min-width:0;"><div style="font-size:13px;font-weight:800;color:#fff;">' + esc(ev.city) + '</div>' +
+            '<div style="font-size:11px;color:#aaa;">' + esc(ev.countryName) + ' · ' + esc(hyroxDateText(ev)) + '</div></div>' +
+            '<button type="button" class="btn ' + (ev.id === h.raceId ? 'btn-primary' : 'btn-outline') + '" style="font-size:10px;padding:8px 10px;white-space:nowrap;" onclick="hyroxChooseRace(\'' + esc(ev.id) + '\')">' + (ev.id === h.raceId ? 'LA TUA GARA' : 'PREPARA') + '</button></div>';
+        }).join('') +
+        (shown.length > 8 ? '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="hyroxSet(\'allEvents\', ' + (more ? 'false' : 'true') + ')">' + (more ? 'MOSTRA MENO' : 'TUTTE LE GARE') + '</button>' : ''))) +
+    (data && data.updated ? '<div style="font-size:10px;color:#666;margin-top:10px;">Calendario della stagione ' + esc(data.season || '') + ', aggiornato il ' + esc(new Date(data.updated + 'T12:00:00').toLocaleDateString((typeof appLocale === 'function') ? appLocale() : 'it-IT')) + '. Date e iscrizioni: fa fede la pagina ufficiale della gara.</div>' : '');
+
+  const card = function (title, body, id) {
+    return '<div class="card" style="padding:16px;margin-bottom:12px;"' + (id ? ' id="' + id + '"' : '') + '><div style="font-size:10px;font-weight:900;color:var(--gold);letter-spacing:1px;margin-bottom:8px;">' + title + '</div>' + body + '</div>';
+  };
+  c.innerHTML = '<div style="max-width:720px;margin:0 auto;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:1px;">HYROX</div>' +
+    '<div style="font-size:11px;color:#888;">Preparazione gara, stazioni e calendario</div></div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="navigate(\'home\')">CHIUDI</button></div>' +
+    card('LA TUA GARA', raceHtml) +
+    card('CREA LA PREPARAZIONE', createHtml, 'hyrox-create') +
+    card('PROGRAMMI PRONTI', '<div style="font-size:11px;color:#888;margin-bottom:8px;">Con tutta l’attrezzatura, per la categoria scelta sopra. Li leggi e li modifichi prima di attivarli.</div>' + presetsHtml) +
+    card('PROSSIME GARE', eventsHtml) +
+    card('LE 8 STAZIONI', stationsHtml) +
+    card('STIMA DEL TEMPO', '<div style="font-size:11px;color:#888;margin-bottom:8px;">Dal tuo tempo sui 5 km e dal livello scelto. È una forchetta per orientarti, non una promessa.</div>' +
+      '<div style="display:flex;gap:8px;"><input id="hyrox-5k" type="number" inputmode="decimal" min="13" max="59" placeholder="Minuti sui 5 km" style="flex:1;' + st + 'margin-top:0;">' +
+      '<button type="button" class="btn btn-outline" style="font-size:11px;" onclick="hyroxEstimate()">CALCOLA</button></div>' +
+      '<div id="hyrox-estimate" style="font-size:14px;font-weight:800;color:var(--gold);margin-top:10px;min-height:18px;"></div>') +
+    '<p style="font-size:10px;color:#666;line-height:1.5;margin:4px 4px 0;">' + esc(api.DISCLAIMER) + '</p>' +
+    '</div><div style="height:80px;"></div>';
+}
+window.renderHyrox = renderHyrox;
+window.hyroxSet = hyroxSet;
+window.hyroxToggleGear = hyroxToggleGear;
+window.hyroxFullGear = hyroxFullGear;
+window.hyroxChooseRace = hyroxChooseRace;
+window.hyroxCreateProgram = hyroxCreateProgram;
+window.hyroxEstimate = hyroxEstimate;
+
 function homeDomainModulesHtml() {
   const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
   return homeCollapsibleCard(t('systemModules'),
@@ -23614,6 +23847,9 @@ function homeDomainModulesHtml() {
       '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'calendar\')">' +
         '<span style="font-size:18px;">📅</span>' +
         '<span style="font-size:11px;font-weight:800;">' + t('calendar') + '</span></button>' +
+      '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'hyrox\')">' +
+        '<span style="font-size:18px;">🏁</span>' +
+        '<span style="font-size:11px;font-weight:800;">HYROX</span></button>' +
       (athlete
         ? '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="startDomainImport(\'nutrition\')"><span style="font-size:18px;">📥</span><span style="font-size:11px;font-weight:800;">Importa file</span></button>'
         : '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'import\')"><span style="font-size:18px;">📥</span><span style="font-size:11px;font-weight:800;">' + t('importProgram') + '</span></button>') +
@@ -25955,7 +26191,7 @@ function buildWorkoutPdfHtml(opts) {
       <img src="${logoUrl}" alt="Nurvan" onerror="this.style.display='none'">
       <div>
         <div style="font-size:22px;font-weight:900;letter-spacing:2px;color:#c9a227;">NURVAN</div>
-        <div class="meta">Programma allenamento · ${esc(new Date().toLocaleDateString('it-IT'))}${athlete ? (' · ' + esc(athlete)) : ''}</div>
+        <div class="meta">Programma allenamento · ${esc(new Date().toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT')))}${athlete ? (' · ' + esc(athlete)) : ''}</div>
         <div class="meta">Ambito: ${esc(scope)} · settimane ${startW}–${endW}</div>
       </div>
     </div>
@@ -26124,7 +26360,7 @@ function buildWorkoutPdfBytes(opts) {
     txt('F1', 22, GOLD, ML, H - 45, 'NURVAN');
     txt('F2', 8, '0.7 0.7 0.7', ML + 110, H - 38, opts.skipTraining ? 'PIANO ALIMENTARE' : 'TRAINING PROGRAM');
     if (athlete) txt('F2', 8, '0.7 0.7 0.7', ML + 110, H - 50, 'Atleta: ' + athlete);
-    var dateStr = new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
+    var dateStr = new Date().toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT'), { day: '2-digit', month: 'long', year: 'numeric' });
     txt('F2', 7, '0.55 0.55 0.55', W - MR - 140, H - 45, dateStr + (DATA.title ? ('  |  ' + DATA.title) : ''));
     y = H - 80;
     if (headerWeek) {
@@ -26409,7 +26645,7 @@ function buildWorkoutPdfBytes(opts) {
   y -= 12;
   txt('F2', 6, GRAY, ML, y, 'Documento generato automaticamente da NURVAN  |  Non sostituisce il parere medico');
   y -= 10;
-  txt('F2', 6, GRAY, ML, y, (opts.skipTraining ? '' : ('Settimane ' + startW + '-' + endW + '  |  ')) + new Date().toLocaleDateString('it-IT') + (athlete ? ('  |  ' + athlete) : ''));
+  txt('F2', 6, GRAY, ML, y, (opts.skipTraining ? '' : ('Settimane ' + startW + '-' + endW + '  |  ')) + new Date().toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT')) + (athlete ? ('  |  ' + athlete) : ''));
 
   if (cmds.length) flushPage();
   if (!pages.length) pages.push('BT /F1 16 Tf ' + GOLD + ' rg 1 0 0 1 40 800 Tm (NURVAN) Tj ET');
@@ -26773,7 +27009,7 @@ function openShoppingList() {
     (week.priced ? '<div style="margin-top:14px;padding:10px;border:1px solid rgba(212,175,55,0.4);border-radius:8px;background:#141208;">' +
       '<div style="font-size:12px;font-weight:800;color:var(--gold);">Spesa settimanale stimata: ' + esc(shoppingRangeText(week)) + '</div>' +
       '<div style="font-size:9px;color:#888;margin-top:4px;line-height:1.4;">Prezzi medi da supermercato, dalla marca del negozio a quella nota, adattati al livello dei prezzi alimentari del paese. È una forbice indicativa, non un preventivo.' +
-      (week.generic ? ' ' + week.generic + ' aliment' + (week.generic === 1 ? 'o ha' : 'i hanno') + ' un prezzo generico.' : '') +
+      (week.generic ? ' ' + (week.generic === 1 ? '1 alimento ha un prezzo generico.' : week.generic + ' alimenti hanno un prezzo generico.') : '') +
       (week.unpriced ? ' ' + week.unpriced + ' senza quantità non sono nel totale.' : '') + '</div>' +
       '<select style="margin-top:8px;width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:11px;" onchange="setShoppingCountry(this.value)">' +
       SHOP_COUNTRIES.map(function (c) { return '<option value="' + c.id + '"' + (c.id === shoppingCountry().id ? ' selected' : '') + '>Prezzi: ' + esc(c.name) + '</option>'; }).join('') +
@@ -32907,7 +33143,7 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl, pack) {
   const period = checkFisicoPeriodMeta(entry.period);
   const sum = summarizeCheckLogs(entry.period, pack);
   const athlete = (store.profile && store.profile.name) || (store.account && store.account.name) || 'Atleta';
-  const dateStr = new Date(entry.at || Date.now()).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
+  const dateStr = new Date(entry.at || Date.now()).toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT'), { day: '2-digit', month: 'long', year: 'numeric' });
   const cmds = [];
   function txt(font, size, color, x, y, s) {
     cmds.push('BT /' + font + ' ' + size + ' Tf ' + color + ' rg 1 0 0 1 ' + x + ' ' + y + ' Tm (' + pdfEsc(s) + ') Tj ET');
@@ -33383,7 +33619,7 @@ function setStatsZoomSlider(n) {
   });
 }
 function formatStatsKg(n) {
-  return Math.round(Number(typeof kgToDisp === 'function' ? kgToDisp(Number(n) || 0) : (Number(n) || 0)) || 0).toLocaleString('it-IT');
+  return Math.round(Number(typeof kgToDisp === 'function' ? kgToDisp(Number(n) || 0) : (Number(n) || 0)) || 0).toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'));
 }
 function buildTrainingAnalytics() {
   const TAE = window.TrainingAnalyticsEngine;
@@ -33821,7 +34057,7 @@ function renderAI(c){
 
   c.innerHTML = `
     <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">${t('coachAI')}</h1>
-    <div style="font-size:10px; color:#777; margin-bottom:10px; font-weight:700; letter-spacing:1px;">${t('coachSubtitle')}</div>
+    <div style="font-size:10px; color:#777; margin-bottom:10px; font-weight:700; letter-spacing:1px;">Domande, analisi e modifiche alla scheda</div>
 
     <div class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(212,175,55,0.35);background:rgba(212,175,55,0.04);">
       <div style="font-size:10px;font-weight:800;color:var(--gold);margin-bottom:6px;">STATO ATLETA (dai tuoi log)</div>

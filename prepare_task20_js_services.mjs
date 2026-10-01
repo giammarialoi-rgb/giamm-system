@@ -610,7 +610,8 @@ const I18nService = {
     const lang = this.currentLang || "it";
     const dict = this.dictionaries[lang] || this.dictionaries.en || this.dictionaries.it;
     if (dict && dict[resolvedKey]) return dict[resolvedKey];
-    if (this.dictionaries.en && this.dictionaries.en[resolvedKey]) return this.dictionaries.en[resolvedKey];
+    // A key this language does not have: the Italian text, which the page
+    // layer (web/i18n-runtime.js) translates like every other text.
     if (this.dictionaries.it && this.dictionaries.it[resolvedKey]) return this.dictionaries.it[resolvedKey];
     if (dict && dict[key]) return dict[key];
     if (this.dictionaries.it && this.dictionaries.it[key]) return this.dictionaries.it[key];
@@ -655,7 +656,7 @@ const I18nService = {
     it: {
       coHome: "Oggi", coClients: "Clienti", coInbox: "Chat", coPrograms: "Programmi", coCalendar: "Calendario",
       coCheckIns: "Verifiche", coNutrition: "Alimentazione", coFormReview: "Revisione tecnica",
-      coAnalytics: "Analisi", coAgent: "Agente", coAutomations: "Automazioni", coBusiness: "Attività", coCrm: "Pipeline",
+      coAnalytics: "Analisi", coAgent: "Agente", coAgentAudit: "Registro agente", coAutomations: "Automazioni", coBusiness: "Attività", coCrm: "Pipeline",
       coMore: "Altro", coProfileSettings: "Profilo e impostazioni", coHelp: "Guida", coExitCoach: "Esci da Coach",
       coToday: "Oggi", coNeedsAttention: "Richiede attenzione", coMyTasks: "I miei task",
       coRecentActivity: "Attività recente", coPortfolio: "Portfolio", coSessionsToday: "Sessioni di oggi",
@@ -830,7 +831,7 @@ const I18nService = {
     en: {
       coHome: "Today", coClients: "Clients", coInbox: "Inbox", coPrograms: "Programs", coCalendar: "Calendar",
       coCheckIns: "Check-ins", coNutrition: "Nutrition", coFormReview: "Form review",
-      coAnalytics: "Analytics", coAgent: "Agent", coAutomations: "Automations", coBusiness: "Business", coCrm: "CRM",
+      coAnalytics: "Analytics", coAgent: "Agent", coAgentAudit: "Agent log", coAutomations: "Automations", coBusiness: "Business", coCrm: "CRM",
       coMore: "More", coProfileSettings: "Profile & Settings", coHelp: "Help", coExitCoach: "Exit Coach",
       coToday: "Today", coNeedsAttention: "Needs attention", coMyTasks: "My tasks",
       coRecentActivity: "Recent activity", coPortfolio: "Portfolio", coSessionsToday: "Today’s sessions",
@@ -1003,15 +1004,15 @@ const I18nService = {
       coStaleProposal: "This proposal is outdated because the data changed."
     }
   };
-  packs.es = Object.assign({}, packs.en, {
+  packs.es = Object.assign({}, {
     coHome: "Hoy", coClients: "Clientes", coInbox: "Bandeja", coPrograms: "Programas", coCalendar: "Calendario",
     coToday: "Hoy", coNeedsAttention: "Requiere atención", coMyTasks: "Mis tareas", coAddClient: "Añadir cliente"
   });
-  packs.fr = Object.assign({}, packs.en, {
+  packs.fr = Object.assign({}, {
     coHome: "Aujourd’hui", coClients: "Clients", coInbox: "Boîte", coPrograms: "Programmes", coCalendar: "Calendrier",
     coToday: "Aujourd’hui", coNeedsAttention: "À traiter", coMyTasks: "Mes tâches", coAddClient: "Ajouter un client"
   });
-  packs.de = Object.assign({}, packs.en, {
+  packs.de = Object.assign({}, {
     coHome: "Heute", coClients: "Klienten", coInbox: "Posteingang", coPrograms: "Programme", coCalendar: "Kalender",
     coToday: "Heute", coNeedsAttention: "Braucht Aufmerksamkeit", coMyTasks: "Meine Aufgaben", coAddClient: "Klient hinzufügen"
   });

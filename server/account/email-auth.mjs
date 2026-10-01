@@ -17,6 +17,7 @@
 // for the 256-bit link tokens). Accounts made by a coach for an athlete have
 // no real address (c.<token>@client.nurvan.internal) and are left out.
 import crypto from "node:crypto";
+import { serverTr, reqLang } from "../i18n.mjs";
 
 export const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 export const RESET_TTL_MS = 60 * 60 * 1000;
@@ -63,9 +64,14 @@ function escHtml(s) {
 
 // A plain branded email: the text version is what every client can show,
 // the HTML one the same words with the code and the button set apart.
-export function composeEmail({ title, intro, code, button, outro }) {
+// lang: the language of the person the email is for (Italian when not given).
+export function composeEmail({ title, intro, code, button, outro }, lang) {
+  const tr = serverTr(lang);
+  title = tr(title); intro = tr(intro);
+  if (outro) outro = tr(outro);
+  if (button) button = { label: tr(button.label), href: button.href };
   const lines = [title, "", intro];
-  if (code) lines.push("", "Codice: " + code);
+  if (code) lines.push("", tr("Codice") + ": " + code);
   if (button) lines.push("", button.label + ": " + button.href);
   if (outro) lines.push("", outro);
   lines.push("", "— NURVAN");
@@ -81,39 +87,39 @@ export function composeEmail({ title, intro, code, button, outro }) {
   return { text: lines.join("\n"), html };
 }
 
-export function verificationEmail(code, link) {
+export function verificationEmail(code, link, lang) {
   return {
-    subject: "NURVAN — conferma la tua email",
+    subject: serverTr(lang)("NURVAN — conferma la tua email"),
     ...composeEmail({
       title: "Conferma la tua email",
       intro: "Per attivare il tuo account NURVAN inserisci questo codice nell'app, oppure tocca il pulsante.",
       code,
       button: { label: "Conferma email", href: link },
       outro: "Il codice e il link valgono 24 ore. Se non hai creato tu l'account, ignora questa email: senza conferma l'account non si attiva."
-    })
+    }, lang)
   };
 }
-export function resetEmail(code, link) {
+export function resetEmail(code, link, lang) {
   return {
-    subject: "NURVAN — recupero password",
+    subject: serverTr(lang)("NURVAN — recupero password"),
     ...composeEmail({
       title: "Reimposta la password",
       intro: "Inserisci questo codice nell'app insieme alla nuova password, oppure tocca il pulsante per sceglierla nel browser.",
       code,
       button: { label: "Scegli una nuova password", href: link },
       outro: "Codice e link valgono 60 minuti. Se non hai chiesto tu il recupero, ignora questa email: la password resta quella di prima."
-    })
+    }, lang)
   };
 }
-export function passwordChangedEmail(origin) {
+export function passwordChangedEmail(origin, lang) {
   return {
-    subject: "NURVAN — password cambiata",
+    subject: serverTr(lang)("NURVAN — password cambiata"),
     ...composeEmail({
       title: "La tua password è stata cambiata",
       intro: "La password del tuo account NURVAN è appena stata cambiata e gli altri dispositivi sono stati disconnessi.",
       button: { label: "Non sono stato io: reimposta la password", href: origin + "/reimposta-password" },
       outro: "Se sei stato tu, non devi fare nulla."
-    })
+    }, lang)
   };
 }
 
@@ -122,7 +128,7 @@ export function passwordChangedEmail(origin) {
 // A new code and link for this account, sent by email. At most one a minute.
 // Returns { sent, throttled, reason, code } - code only for the caller to
 // show in development, when no email can be sent.
-export async function startEmailVerification(pool, user, { sendEmail, origin, now = Date.now() }) {
+export async function startEmailVerification(pool, user, { sendEmail, origin, lang, now = Date.now() }) {
   const recent = await pool.query("SELECT created_at FROM app_email_verifications WHERE user_id = $1", [user.id]);
   if (recent.rows[0] && now - new Date(recent.rows[0].created_at).getTime() < RESEND_GAP_MS) {
     return { sent: false, throttled: true };
@@ -138,7 +144,7 @@ export async function startEmailVerification(pool, user, { sendEmail, origin, no
        created_at = $6`,
     [user.id, user.email, codeHash, linkTokenHash(token), new Date(now + VERIFY_TTL_MS).toISOString(), new Date(now).toISOString()]
   );
-  const mail = verificationEmail(code, origin + "/verifica-email?t=" + encodeURIComponent(token));
+  const mail = verificationEmail(code, origin + "/verifica-email?t=" + encodeURIComponent(token), lang);
   const res = await sendEmail(user.email, mail.subject, mail.text, mail.html);
   return { sent: !!(res && res.sent), reason: res && res.reason, code };
 }
@@ -251,7 +257,7 @@ export function mountEmailAuth(app, deps) {
     const u = await pool.query("SELECT " + USER_COLS + " FROM app_users WHERE email = $1", [email]);
     const user = u.rows[0];
     if (!user || user.email_verified_at || isSyntheticEmail(email)) return res.json(generic);
-    const sent = await startEmailVerification(pool, user, { sendEmail: mailer, origin: origin(req) });
+    const sent = await startEmailVerification(pool, user, { sendEmail: mailer, origin: origin(req), lang: reqLang(req) });
     return res.json({ ok: true, ...deliveryAnswer(sent) });
   }));
 
@@ -298,7 +304,7 @@ export function mountEmailAuth(app, deps) {
     const hash = await hashPassword(password);
     await pool.query("UPDATE app_users SET password_hash = $1, tokens_valid_after = $3, updated_at = NOW() WHERE id = $2", [hash, user.id, revocationMoment()]);
     if (sessionGate) sessionGate.forget(user.id);
-    const mail = passwordChangedEmail(origin(req));
+    const mail = passwordChangedEmail(origin(req), reqLang(req));
     if (!isSyntheticEmail(user.email)) sendEmail(user.email, mail.subject, mail.text, mail.html).catch(() => {});
     return res.json({ ok: true, ...sessionFor(user), hadPassword });
   }));
@@ -319,7 +325,7 @@ export function mountEmailAuth(app, deps) {
   return {
     origin,
     deliveryAnswer,
-    startVerification: (req, user) => startEmailVerification(pool, user, { sendEmail: mailer, origin: origin(req) }),
+    startVerification: (req, user) => startEmailVerification(pool, user, { sendEmail: mailer, origin: origin(req), lang: reqLang(req) }),
     resetLink: (req, token) => origin(req) + "/reimposta-password?t=" + encodeURIComponent(token),
     newLinkToken
   };

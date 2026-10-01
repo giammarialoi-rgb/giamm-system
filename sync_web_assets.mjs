@@ -22,6 +22,7 @@ export const ANDROID_STATIC_ASSETS = [
   'manifest.webmanifest',
   'sw.js',
   'release-meta.js',
+  'i18n-runtime.js',
   'training-analytics-engine.js',
   'training-knowledge.js',
   'exercise-catalog-extra.js',
@@ -45,6 +46,8 @@ export const ANDROID_STATIC_ASSETS = [
   'entitlements.js',
   'cardio-library.js',
   'program-generator.js',
+  'hyrox.js',
+  'hyrox-events.json',
   'apple-touch-icon.png',
   'icon-180.png',
   'icon-192.png',
@@ -77,6 +80,14 @@ export function syncWebAssetsToAndroid({ root = process.cwd(), required = true }
     fs.copyFileSync(src, dest);
     if (sha256(src) !== sha256(dest)) mismatched.push(file);
     else console.log('  ✓ Synced asset:', file);
+  }
+  // The translations of the interface (i18n-runtime.js reads them).
+  const i18nSrc = path.join(webDir, 'i18n');
+  if (fs.existsSync(i18nSrc)) {
+    const i18nDest = path.join(assetsDir, 'i18n');
+    fs.rmSync(i18nDest, { recursive: true, force: true });
+    fs.cpSync(i18nSrc, i18nDest, { recursive: true });
+    console.log('  ✓ Synced dir: i18n');
   }
   // The exercise images shipped with the app (tools/bundle_exercise_media.mjs).
   const mediaSrc = path.join(webDir, 'media');

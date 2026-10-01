@@ -25,6 +25,9 @@ import { createSessionGate, revocationMoment } from "./server/account/sessions.m
 import { mountEmailAuth, needsEmailVerification, loginLocked, noteLoginFailure, clearLoginFailures, resetEmail, isSyntheticEmail, linkTokenHash } from "./server/account/email-auth.mjs";
 import { appleCallbackRoute, appleConfig, mountAppleAuth, consumeLoginTicket } from "./server/account/apple.mjs";
 import { mountBlog } from "./server/site/blog.mjs";
+import { mountHyrox } from "./server/site/hyrox.mjs";
+import { reqLang } from "./server/i18n.mjs";
+import { SITE_LANGS, SITE_LANG_NAMES, isSiteLang, langPrefix, langOfPath, siteDict, translateHtml } from "./server/site/i18n.mjs";
 import { mountGoogleAppAuth } from "./server/account/google-app.mjs";
 import { loadLegal, validMainConsent, recordMainConsent, readConsentRow, aiConsentWithdrawn, mountConsentRoutes } from "./server/account/consent.mjs";
 import { mountAdminDashboard } from "./server/admin/index.mjs";
@@ -482,8 +485,8 @@ Object.defineProperty(sendEmail, "configured", {
   get: () => Boolean(process.env.RESEND_API_KEY && (process.env.MAIL_FROM || process.env.RESEND_FROM))
 });
 
-async function sendPasswordResetEmail(email, code, link) {
-  const mail = resetEmail(code, link);
+async function sendPasswordResetEmail(email, code, link, lang) {
+  const mail = resetEmail(code, link, lang);
   return sendEmail(
     email,
     mail.subject,
@@ -1421,7 +1424,7 @@ app.post("/api/auth/forgot-password", async (req, res) => {
          created_at = NOW()`,
       [email, codeHash, expires.toISOString(), linkTokenHash(linkToken)]
     );
-    const mailed = await sendPasswordResetEmail(email, code, emailAuth.resetLink(req, linkToken));
+    const mailed = await sendPasswordResetEmail(email, code, emailAuth.resetLink(req, linkToken), reqLang(req));
     if (mailed.sent) {
       return res.json({ ...generic, delivery: "email", message: "Ti abbiamo inviato un codice a 6 cifre via email. Scade tra 60 minuti." });
     }
@@ -2067,8 +2070,11 @@ app.post(["/api/chat", "/coach", "/api/coach"], async (req, res) => {
     const currentD = Number(context.currentDay) >= 0 ? Number(context.currentDay) + 1 : 1;
     const athleteLocked = !!(authUser && (authUser.role === "athlete" || authUser.provider === "coach_client"));
 
+    // The language the app is set to (context.language): the reply follows it.
+    const REPLY_LANGUAGES = { it: 'italiano', en: 'inglese (English)', es: 'spagnolo (español)', fr: 'francese (français)', de: 'tedesco (Deutsch)', pt: 'portoghese del Brasile (português)', ru: 'russo (русский)', zh: 'cinese semplificato (简体中文)', ar: 'arabo (العربية)', hi: 'hindi (हिन्दी)' };
+    const replyLanguage = REPLY_LANGUAGES[String((context && context.language) || 'it').slice(0, 2).toLowerCase()] || 'italiano';
     const athleteSystem = `
-Sei Coach AI di Nurvan. Rispondi sempre in italiano, in modo chiaro e evidence-based.
+Sei Coach AI di Nurvan. Rispondi sempre in ${replyLanguage}, in modo chiaro e evidence-based.
 L'utente è un ATLETA seguito da un coach umano. NON puoi modificare il programma, i carichi, le serie o la nutrizione.
 NON includere JSON con action "modify_program". NON proporre operazioni di modifica.
 Puoi solo spiegare esercizi, tecnica, cibo, integrazione e terapia in modo informativo.
@@ -2079,7 +2085,7 @@ ${context && context.checkFisico ? `Analizza le foto del check fisico (struttura
 
     const system = athleteLocked ? athleteSystem : `
 Sei Coach AI, l'assistente scientifico di allenamento di élite all'interno dell'app Nurvan.
-Rispondi sempre in italiano in modo chiaro, autorevole, motivante e rigorosamente evidence-based.
+Rispondi sempre in ${replyLanguage} in modo chiaro, autorevole, motivante e rigorosamente evidence-based.
 Non tenere memoria di conversazioni precedenti: ogni domanda è autonoma. Ignora qualsiasi cronologia chat.
 
 ${context && context.checkFisico ? `ISTRUZIONE CHECK FISICO (non è un check-in settimanale):
@@ -2417,13 +2423,36 @@ async function siteShell(req, page) {
   const shell = await fs.readFile(path.join(SITE_DIR, "shell.html"), "utf8");
   const appUrl = String(process.env.APP_PUBLIC_URL || "https://app.nurvan.app/").replace(/\/?$/, "/");
   const mail = String(process.env.SITE_CONTACT_EMAIL || "info@nurvan.app");
+  const lang = isSiteLang(page.lang) ? page.lang : "it";
+  // On the site's own domain the home is "/", elsewhere (preview) "/sito".
+  const root = isSiteHost(req) ? "" : "/sito";
+  const homeOf = (l) => (root + langPrefix(l)) || "/";
+  const alternates = page.alternates || null;
+  const origin = "https://" + (SITE_HOSTS[0] || "nurvan.app");
+  const altHtml = alternates
+    ? Object.keys(alternates).map((l) => '<link rel="alternate" hreflang="' + l + '" href="' + siteEsc(origin + alternates[l]) + '">').join("\n") +
+      (alternates.it ? '\n<link rel="alternate" hreflang="x-default" href="' + siteEsc(origin + alternates.it) + '">' : "") +
+      (alternates[lang] ? '\n<link rel="canonical" href="' + siteEsc(origin + alternates[lang]) + '">' : "")
+    : "";
+  // The language menu: the same page in the other languages when it exists
+  // there, otherwise that language's home.
+  const menu = '<details class="lang" data-notr><summary aria-label="Lingua">' + lang + "</summary><div>" +
+    SITE_LANGS.map((l) => '<a href="' + siteEsc(page.home ? homeOf(l) : ((page.menu && page.menu[l]) || (alternates && alternates[l]) || homeOf(l))) + '" hreflang="' + l + '"' + (l === lang ? ' class="on"' : "") + ">" + siteEsc(SITE_LANG_NAMES[l]) + "</a>").join("") +
+    "</div></details><!--/notr-->";
   const fill = { MAIN: page.main || "" };
   const text = {
     TITLE: siteEsc(page.title || "Nurvan"),
     DESCRIPTION: siteEsc(page.description || ""),
     OG_IMAGE: siteEsc(page.ogImage || "/nurvan_wordmark.png"),
-    HOME: isSiteHost(req) ? "/" : "/sito",
+    LANG: lang,
+    DIR: lang === "ar" ? "rtl" : "ltr",
+    ALTERNATES: altHtml,
+    LANG_MENU: menu,
+    HOME: homeOf(lang),
+    BLOG: langPrefix(lang) + "/blog",
     BLOG_ON: page.blog ? ' class="on keep"' : ' class="keep"',
+    HYROX: langPrefix(lang) + "/hyrox",
+    HYROX_ON: page.hyrox ? ' class="on"' : "",
     V: SITE_STARTED,
     APP_URL: siteEsc(appUrl),
     CONTACT_EMAIL: siteEsc(mail)
@@ -2431,7 +2460,7 @@ async function siteShell(req, page) {
   // The page body first: it carries placeholders of its own (APP_URL...).
   let html = shell.split("{{MAIN}}").join(fill.MAIN);
   for (const k of Object.keys(text)) html = html.split("{{" + k + "}}").join(text[k]);
-  return html;
+  return translateHtml(html, await siteDict(SITE_DIR, lang));
 }
 const siteBlog = mountBlog(app, {
   contentDir: path.join(__dirname, "content", "articles"),
@@ -2439,6 +2468,8 @@ const siteBlog = mountBlog(app, {
   siteDir: SITE_DIR,
   shell: (req, page) => siteShell(req, Object.assign({ blog: true }, page))
 });
+// The HYROX race calendar: /hyrox and one page per race, from web/hyrox-events.json.
+mountHyrox(app, { webDir: path.join(__dirname, "web"), siteDir: SITE_DIR, shell: (req, page) => siteShell(req, Object.assign({ hyrox: true }, page)) });
 // The app's screens shown on the home page: site/shots.json lists them
 // ([{ "file": "allenamento.png", "title": "...", "text": "..." }]), the images
 // are in site/assets/shots/.
@@ -2452,14 +2483,19 @@ async function siteShotsHtml() {
 }
 async function sitePage(req, res) {
   try {
+    const lang = langOfPath(req.path);
+    const dict = await siteDict(SITE_DIR, lang);
     const home = await fs.readFile(path.join(SITE_DIR, "home.html"), "utf8");
-    const latest = (await siteBlog.articles()).slice(0, 3);
+    const latest = (await siteBlog.articles(lang)).slice(0, 3);
     const latestHtml = latest.length
-      ? '<section id="blog"><div class="wrap"><div class="head"><div class="eyebrow">Blog</div><h2>Dal blog</h2></div><div class="posts home-posts">' + latest.map(siteBlog.cardHtml).join("") + '</div><a class="more-link" href="/blog">Tutti gli articoli →</a></div></section>'
+      ? '<section id="blog"><div class="wrap"><div class="head"><div class="eyebrow">Blog</div><h2>Dal blog</h2></div><div class="posts home-posts">' + latest.map((a) => siteBlog.cardHtml(a, lang, dict)).join("") + '</div><a class="more-link" href="' + langPrefix(lang) + '/blog">Tutti gli articoli →</a></div></section>'
       : "";
     const main = home.split("{{SHOTS}}").join(await siteShotsHtml()).split("{{LATEST}}").join(latestHtml);
     res.setHeader("Cache-Control", "public, max-age=300");
     return res.type("html").send(await siteShell(req, {
+      lang,
+      home: true,
+      alternates: Object.fromEntries(SITE_LANGS.map((l) => [l, langPrefix(l) || "/"])),
       title: "Nurvan — Allenamento, alimentazione e coaching in un’unica app",
       description: "Nurvan è l’app per allenarti con metodo: schede, carichi e progressi, piano alimentare e diario, ricettario, Coach AI e area coach per seguire i tuoi atleti.",
       main
@@ -2470,8 +2506,11 @@ async function sitePage(req, res) {
   }
 }
 app.use("/site-assets", express.static(path.join(SITE_DIR, "assets"), { maxAge: "1h" }));
-app.get("/sito", sitePage);
-app.get("/", (req, res, next) => (isSiteHost(req) ? sitePage(req, res) : next()));
+// Italian at "/", every other language under "/<lang>" ("/sito/<lang>" in preview).
+for (const prefix of SITE_LANGS.map(langPrefix)) {
+  app.get("/sito" + prefix, sitePage);
+  app.get(prefix || "/", (req, res, next) => (isSiteHost(req) ? sitePage(req, res) : next()));
+}
 
 const LEGAL_PAGES = {
   "/privacy": "privacy.html",

@@ -16,6 +16,7 @@ const PRECACHE = [
   './muscle-male-back.png',
   './muscle-female-front.png',
   './muscle-female-back.png',
+  './i18n-runtime.js',
   './exercise-catalog-extra.js',
   './youtube-links.js',
   './training-knowledge.js',
@@ -34,7 +35,9 @@ const PRECACHE = [
   './features.js',
   './entitlements.js',
   './cardio-library.js',
-  './program-generator.js'
+  './program-generator.js',
+  './hyrox.js',
+  './hyrox-events.json'
 ];
 
 self.addEventListener('install', (event) => {

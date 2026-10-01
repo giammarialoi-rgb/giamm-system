@@ -20,15 +20,15 @@ const it = I.dictionaries.it;
 const keys = Object.keys(it);
 
 ok('1a. dieci lingue offerte', I.supportedLangs.length === 10);
-for (const l of I.supportedLangs) {
-  const d = I.dictionaries[l] || {};
-  const missing = keys.filter((k) => !(k in d) || !String(d[k] || '').trim());
-  ok('1b. ' + l + ': tutte le ' + keys.length + ' voci' + (missing.length ? ' (mancano: ' + missing.slice(0, 5).join(', ') + ')' : ''), missing.length === 0);
-}
+// A label a language's dictionary does not have comes out in Italian and is
+// translated on the page like every other text (test_i18n_coverage.mjs
+// checks that its translation exists).
+I.currentLang = 'pt';
+ok('1b. etichetta assente nella lingua: testo italiano, non inglese', I.t('coAgentAudit') === I.dictionaries.it.coAgentAudit);
 // Where a language already had a word, the fill did not change it.
 const src = fs.readFileSync('prepare_task20_js_services.mjs', 'utf8');
 ok('2a. le voci che esistevano restano le loro (en.save, de.load)', I.dictionaries.en.save === 'SAVE' && /de: \{/.test(src) && I.dictionaries.de.load && I.dictionaries.de.load !== I18N_FILL.pt.load);
-ok('2b. t() in ogni lingua: nessuna chiave grezza per le voci del dizionario', I.supportedLangs.every((l) => { I.currentLang = l; return keys.every((k) => { const v = I.t(k); return v && v !== k; }); }));
+ok('2b. t() in ogni lingua: nessuna chiave grezza per le voci del dizionario', I.supportedLangs.every((l) => { I.currentLang = l; return keys.every((k) => { const v = I.t(k); return v && (v !== k || it[k] === k); }); }));
 I.currentLang = 'ar';
 ok('2c. arabo: testo in arabo', /[؀-ۿ]/.test(I.t('settings')));
 I.currentLang = 'zh';

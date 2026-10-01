@@ -126,7 +126,7 @@ function fmtShortDate(v) {
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) return '—';
     const tz = (typeof deviceTimeZone === 'function') ? deviceTimeZone() : undefined;
-    return d.toLocaleString('it-IT', Object.assign({ day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }, tz ? { timeZone: tz } : {}));
+    return d.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'), Object.assign({ day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }, tz ? { timeZone: tz } : {}));
   } catch (_) { return '—'; }
 }
 
@@ -136,7 +136,7 @@ function fmtDay(v) {
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) return '—';
     const tz = (typeof deviceTimeZone === 'function') ? deviceTimeZone() : undefined;
-    return d.toLocaleDateString('it-IT', tz ? { timeZone: tz } : undefined);
+    return d.toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT'), tz ? { timeZone: tz } : undefined);
   } catch (_) { return '—'; }
 }
 
@@ -5559,6 +5559,7 @@ async function requestLeaveCoach() {
 }
 
 function notifyUser(title, body, route) {
+  if (typeof window.tr === 'function') { title = window.tr(title); body = window.tr(body); }
   requestNotifyPermission();
   const go = function () {
     if (!route) return;
