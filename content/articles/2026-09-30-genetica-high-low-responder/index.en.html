@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Low responders: how much do genetics limit muscle? | Nurvan</title>
+<meta name="description" content="Why do some people build muscle twice as fast on the same program? What research says about genetics, high and low responders, and how to find out yours.">
+<link rel="alternate" hreflang="en" href="index.en.html">
+<link rel="alternate" hreflang="it" href="index.it.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>/* Layout: blog Nurvan — header sito, colonna di lettura 680px, grafici a tutta colonna, footer app. Look unico scuro (brand). */
+:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.hero{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:radial-gradient(120% 90% at 80% 10%,#2a220a 0%,#0c0c0c 55%);padding:28px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end;min-height:240px}
+.hero .yr{font-family:var(--display);font-weight:700;color:var(--gold);font-size:clamp(48px,11vw,96px);line-height:.9}
+.hero .lab{font-family:var(--mono);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.hero .arrow{grid-column:1/-1;height:2px;background:linear-gradient(90deg,var(--line),var(--gold))}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-left:1.1em} .box li{margin-block:.35em}
+.quote{border-left:3px solid var(--gold);padding-left:18px;font-size:22px;font-style:italic;margin-block:28px}
+figure{margin:36px 0}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+.chart h4{font-family:var(--display);margin:0 0 4px;font-size:17px}
+.chart p.sub{margin:0 0 10px;font-size:14px;color:var(--muted);font-family:var(--body)}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-left:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-left:1.2em} .refs li{margin-block:.7em}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+@media (max-width:560px){body{font-size:17px}.hero{grid-template-columns:1fr}.site nav{display:none}}
+html{background:var(--bg)}
+.wrap{overflow-wrap:break-word}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:3/2;object-fit:cover}
+.box h2{margin-top:0}
+.nv{background:#1d1d1d;color:var(--muted)}
+.tbl{overflow-x:auto;margin-block:20px;border:1px solid var(--line);border-radius:12px}
+.tbl table{border-collapse:collapse;width:100%;font-size:15px;min-width:460px}
+.tbl th,.tbl td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
+.tbl th{font-family:var(--display);font-weight:500;color:var(--gold);background:var(--surface)}
+.tbl td:last-child{font-family:var(--mono);white-space:nowrap}
+.tbl tr:last-child td{border-bottom:0;color:var(--muted)}
+aside.app{margin-block:32px}
+.app .cta{white-space:nowrap}
+.refs a{word-break:break-all}
+.chart svg{display:block;width:100%;height:auto}
+figure{margin:28px 0}
+@media (max-width:560px){.v{grid-template-columns:1fr;gap:8px}.pill{justify-self:start}}
+.cap{font-size:14px;color:var(--muted);font-family:var(--body);margin-top:8px}
+.cover .cap{margin-top:8px}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Nutrition</a><a href="#">Supplements</a><a class="on" href="#">Blog</a></nav><a class="cta" href="https://nurvan.app">Get the app</a></div></header>
+<main class="wrap" lang="en"><div class="crumb">Blog · Training</div><h1>Low responders: how much do genetics really limit muscle growth?</h1>
+<p class="lede">You have been training for months, you follow the plan, and your gym partner still grows twice as fast. It is tempting to sum it up in one word: genetics. Here is what studies on "high responders" and "low responders" actually measure, how much your DNA matters, and why it is so hard to know how you respond.</p><div class="meta"><span>September 30, 2026</span><span><b>7</b> min read</span><span><b>10</b> studies cited</span></div><figure class="cover"><img alt="Muscular man doing dumbbell curls in a dimly lit gym" height="1067" src="images/cover.jpg" width="1600"/><figcaption class="cap">Photo by Tima Miroshnichenko on Pexels (Pexels License).</figcaption></figure>
+<div class="box"><h2>Key takeaways</h2><ul>
+<li>On the same program, muscle growth varies enormously: in a study of 585 people, biceps size changed anywhere from −2% to +59%.</li>
+<li>Genetics matter: roughly half of the differences in strength between untrained people can be attributed to inherited factors. The other half cannot.</li>
+<li>Part of what looks like "not responding" is noise: measurement error, day-to-day fluctuations and programs that are too short.</li>
+<li>People who respond poorly on one outcome often improve on another. In a study of 110 adults over 65, nobody was left without a benefit.</li>
+<li>More training volume helps some people, but not everyone. Check your program, its duration and how you measure before blaming genetics.</li>
+</ul></div>
+<h2>Why a finished physique tells you nothing about genetics</h2>
+<p>When we see a very muscular person, we reason backwards: we start from the result and guess the cause. But that result is the sum of years of training, nutrition, sleep, corrected mistakes and consistency. A photo cannot separate those factors.</p>
+<p>This article was inspired by a post from Italian coach Valerio Acri. He compares two of his photos, one in his early twenties and one after 24 years of lifting, and asks whether anyone would have called the first one "incredible genetics". His point holds up: genetics matter, but a genetic contribution is not destiny.</p>
+<h2>How much training responses really vary</h2>
+<p>The largest studies confirm that differences between people are huge, even with identical, supervised programs.</p>
+<p>In the FAMuSS study, 585 men and women trained the elbow flexors of one arm for 12 weeks. Biceps cross-sectional area, measured by MRI, changed by −2% to +59%. One-rep max (1RM) strength increased by 0% to +250%.</p>
+<p>A Finnish analysis of 287 adults aged 19 to 78, including 72 controls, found an average muscle size increase of 4.8%. Individual participants, however, ranged from −11% to +30%. For strength, the average was +21.1%, with values from −8% to +60%. Age and sex did not explain these differences.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 250" role="img" aria-label="Range chart: Hubal 2005 biceps size from −2% to +59%; Ahtiainen 2016 muscle size from −11% to +30% with a mean of +4.8%; strength from −8% to +60% with a mean of +21.1%">
+<rect width="600" height="250" fill="#0c0c0c"/>
+<g font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#a0a0a0">
+<line x1="190.0" y1="10" x2="190.0" y2="190" stroke="#262626"/>
+<text x="190.0" y="206" text-anchor="middle">−20%</text>
+<line x1="233.3" y1="10" x2="233.3" y2="190" stroke="#262626"/>
+<line x1="276.7" y1="10" x2="276.7" y2="190" stroke="#555"/>
+<text x="276.7" y="206" text-anchor="middle">0%</text>
+<line x1="320.0" y1="10" x2="320.0" y2="190" stroke="#262626"/>
+<line x1="363.3" y1="10" x2="363.3" y2="190" stroke="#262626"/>
+<text x="363.3" y="206" text-anchor="middle">+20%</text>
+<line x1="406.7" y1="10" x2="406.7" y2="190" stroke="#262626"/>
+<line x1="450.0" y1="10" x2="450.0" y2="190" stroke="#262626"/>
+<text x="450.0" y="206" text-anchor="middle">+40%</text>
+<line x1="493.3" y1="10" x2="493.3" y2="190" stroke="#262626"/>
+<line x1="536.7" y1="10" x2="536.7" y2="190" stroke="#262626"/>
+<text x="536.7" y="206" text-anchor="middle">+60%</text>
+<line x1="580.0" y1="10" x2="580.0" y2="190" stroke="#262626"/>
+</g>
+<g font-family="Bricolage Grotesque, system-ui, sans-serif">
+<text x="0" y="34" font-size="13" fill="#f0f0f0">Biceps size (MRI)</text>
+<text x="0" y="51" font-size="11" fill="#a0a0a0" font-family="JetBrains Mono, ui-monospace, monospace">Hubal 2005</text>
+<rect x="268.0" y="24" width="264.3" height="16" rx="8" fill="#aa8a2e" opacity=".55"/>
+<circle cx="268.0" cy="32" r="5" fill="#f3e5ab"/><circle cx="532.3" cy="32" r="5" fill="#f3e5ab"/>
+<text x="259.0" y="36" font-size="11" text-anchor="end" fill="#a0a0a0" font-family="JetBrains Mono, ui-monospace, monospace">−2%</text>
+<text x="541.3" y="36" font-size="11" text-anchor="start" fill="#f3e5ab" font-family="JetBrains Mono, ui-monospace, monospace">+59%</text>
+<text x="0" y="94" font-size="13" fill="#f0f0f0">Muscle size</text>
+<text x="0" y="111" font-size="11" fill="#a0a0a0" font-family="JetBrains Mono, ui-monospace, monospace">Ahtiainen 2016</text>
+<rect x="229.0" y="84" width="177.7" height="16" rx="8" fill="#aa8a2e" opacity=".55"/>
+<circle cx="229.0" cy="92" r="5" fill="#f3e5ab"/><circle cx="406.7" cy="92" r="5" fill="#f3e5ab"/>
+<text x="220.0" y="96" font-size="11" text-anchor="end" fill="#a0a0a0" font-family="JetBrains Mono, ui-monospace, monospace">−11%</text>
+<text x="415.7" y="96" font-size="11" text-anchor="start" fill="#f3e5ab" font-family="JetBrains Mono, ui-monospace, monospace">+30%</text>
+<rect x="295.5" y="80" width="4" height="24" rx="1" fill="#d4af37"/>
+<text x="297.5" y="119" font-size="11" text-anchor="middle" fill="#d4af37" font-family="JetBrains Mono, ui-monospace, monospace">+4.8%</text>
+<text x="0" y="154" font-size="13" fill="#f0f0f0">Strength</text>
+<text x="0" y="171" font-size="11" fill="#a0a0a0" font-family="JetBrains Mono, ui-monospace, monospace">Ahtiainen 2016</text>
+<rect x="242.0" y="144" width="294.7" height="16" rx="8" fill="#aa8a2e" opacity=".55"/>
+<circle cx="242.0" cy="152" r="5" fill="#f3e5ab"/><circle cx="536.7" cy="152" r="5" fill="#f3e5ab"/>
+<text x="233.0" y="156" font-size="11" text-anchor="end" fill="#a0a0a0" font-family="JetBrains Mono, ui-monospace, monospace">−8%</text>
+<text x="536.7" y="139" font-size="11" text-anchor="end" fill="#f3e5ab" font-family="JetBrains Mono, ui-monospace, monospace">+60%</text>
+<rect x="366.1" y="140" width="4" height="24" rx="1" fill="#d4af37"/>
+<text x="368.1" y="179" font-size="11" text-anchor="middle" fill="#d4af37" font-family="JetBrains Mono, ui-monospace, monospace">+21.1%</text>
+</g>
+<g font-family="Bricolage Grotesque, system-ui, sans-serif" font-size="12" fill="#a0a0a0"><rect x="0" y="226" width="24" height="10" rx="5" fill="#aa8a2e" opacity=".55"/><text x="30" y="235">From least to most improved participant</text><rect x="310" y="224" width="4" height="14" fill="#d4af37"/><text x="320" y="235">Group mean</text></g>
+</svg></div><figcaption class="cap">Sources: Hubal et al., Med Sci Sports Exerc 2005 (biceps, MRI); Ahtiainen et al., Age 2016 (muscle size and strength). Hubal does not report the mean in the abstract. Nurvan chart.</figcaption></figure>
+<h2>How much do genetics matter?</h2>
+<p>A Japanese meta-analysis pooled 24 studies on the heritability of strength, with 58 measurements. Average heritability, meaning the share of differences between people attributable to genetic factors, was 0.52. Put simply: genes and environment weigh roughly the same, and the role of environment grows with age.</p>
+<p>Read this carefully. It refers to baseline strength in untrained people, not to how much you improve with training. Still, it shows that individual biology is real, and that it does not explain everything.</p>
+<p>A Brazilian study makes the point clearly. Twenty trained young men spent 8 weeks training one leg on a classic progressive program and the other on a program that constantly changed load, volume, contraction type and rest. Both legs grew almost identically. The difference between one person and another, however, was about 40 times larger than the difference between the two legs of the same person.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 180" role="img" aria-label="Bar chart: variability in muscle growth between people 37.8%, between the two legs of the same person 0.9%, about 40 times less">
+<rect width="600" height="180" fill="#0c0c0c"/>
+<g font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#a0a0a0">
+<line x1="190.0" y1="10" x2="190.0" y2="130" stroke="#555"/>
+<text x="190.0" y="146" text-anchor="middle">0%</text>
+<line x1="282.5" y1="10" x2="282.5" y2="130" stroke="#262626"/>
+<text x="282.5" y="146" text-anchor="middle">10%</text>
+<line x1="375.0" y1="10" x2="375.0" y2="130" stroke="#262626"/>
+<text x="375.0" y="146" text-anchor="middle">20%</text>
+<line x1="467.5" y1="10" x2="467.5" y2="130" stroke="#262626"/>
+<text x="467.5" y="146" text-anchor="middle">30%</text>
+<line x1="560.0" y1="10" x2="560.0" y2="130" stroke="#262626"/>
+<text x="560.0" y="146" text-anchor="middle">40%</text>
+</g><text x="190" y="170" font-family="Bricolage Grotesque, system-ui, sans-serif" font-size="12" fill="#a0a0a0">Variability in quadriceps growth</text>
+<g font-family="Bricolage Grotesque, system-ui, sans-serif" font-size="13" fill="#f0f0f0">
+<text x="0" y="45">Between people</text><rect x="190" y="28" width="349.6" height="24" rx="3" fill="#d4af37"/>
+<text x="531.6" y="45" font-size="12" text-anchor="end" fill="#000" font-family="JetBrains Mono, ui-monospace, monospace">37.8%</text>
+<text x="0" y="96">Between the two legs</text><text x="0" y="112" font-size="12" fill="#a0a0a0">of the same person</text>
+<rect x="190" y="88" width="8.3" height="24" rx="2" fill="#aa8a2e"/>
+<text x="208.3" y="105" font-size="12" fill="#f3e5ab" font-family="JetBrains Mono, ui-monospace, monospace">0.9%</text>
+<text x="375.0" y="105" font-size="12" fill="#d4af37" font-family="JetBrains Mono, ui-monospace, monospace">≈ 40×</text>
+</g></svg></div><figcaption class="cap">Source: Damas et al., J Appl Physiol 2019 (n = 20, vastus lateralis cross-sectional area). Nurvan chart.</figcaption></figure>
+<p>This does not mean programming is irrelevant. It means that between two well-designed programs the difference is small, while individual characteristics matter a lot.</p>
+<h2>A low responder to what, exactly?</h2>
+<p>This is where it gets interesting. A "low responder" is only a low responder for a specific outcome, dose and duration. Change one of those, and the label can change too.</p>
+<p><strong>Volume.</strong> In a Norwegian study, 34 untrained people trained one leg with 1 set per exercise and the other with 3 sets for 12 weeks. With 3 sets, quadriceps cross-sectional area grew by 5.2% on average, versus 3.7% with one set. But only 13 of the 34 participants showed a clear hypertrophy benefit from the higher volume. For the rest, the difference was small or absent.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 230" role="img" aria-label="Chart: average quadriceps cross-sectional area growth +3.7% with 1 set and +5.2% with 3 sets; 13 of 34 participants clearly benefited from 3 sets, 21 did not">
+<rect width="600" height="230" fill="#0c0c0c"/>
+<text x="0" y="18" font-family="Bricolage Grotesque, system-ui, sans-serif" font-size="13" fill="#f0f0f0">Average quadriceps growth</text>
+<g font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#a0a0a0">
+<line x1="34" y1="185.0" x2="270" y2="185.0" stroke="#555"/><text x="26" y="189.0" text-anchor="end">0%</text>
+<line x1="34" y1="136.7" x2="270" y2="136.7" stroke="#262626"/><text x="26" y="140.7" text-anchor="end">2%</text>
+<line x1="34" y1="88.3" x2="270" y2="88.3" stroke="#262626"/><text x="26" y="92.3" text-anchor="end">4%</text>
+<line x1="34" y1="40.0" x2="270" y2="40.0" stroke="#262626"/><text x="26" y="44.0" text-anchor="end">6%</text>
+</g>
+<rect x="55" y="95.6" width="70" height="89.4" rx="3" fill="#aa8a2e" opacity=".55"/>
+<text x="90" y="87.6" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12" fill="#f3e5ab">+3.7%</text>
+<text x="90" y="205" text-anchor="middle" font-family="Bricolage Grotesque, system-ui, sans-serif" font-size="13" fill="#f0f0f0">1 set</text>
+<rect x="175" y="59.3" width="70" height="125.7" rx="3" fill="#d4af37" opacity="1"/>
+<text x="210" y="51.3" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12" fill="#f3e5ab">+5.2%</text>
+<text x="210" y="205" text-anchor="middle" font-family="Bricolage Grotesque, system-ui, sans-serif" font-size="13" fill="#f0f0f0">3 sets</text>
+<text x="320" y="18" font-family="Bricolage Grotesque, system-ui, sans-serif" font-size="13" fill="#f0f0f0">Who clearly benefited</text>
+<circle cx="332" cy="50" r="9" fill="#d4af37"/>
+<circle cx="358" cy="50" r="9" fill="#d4af37"/>
+<circle cx="384" cy="50" r="9" fill="#d4af37"/>
+<circle cx="410" cy="50" r="9" fill="#d4af37"/>
+<circle cx="436" cy="50" r="9" fill="#d4af37"/>
+<circle cx="462" cy="50" r="9" fill="#d4af37"/>
+<circle cx="488" cy="50" r="9" fill="#d4af37"/>
+<circle cx="514" cy="50" r="9" fill="#d4af37"/>
+<circle cx="540" cy="50" r="9" fill="#d4af37"/>
+<circle cx="332" cy="76" r="9" fill="#d4af37"/>
+<circle cx="358" cy="76" r="9" fill="#d4af37"/>
+<circle cx="384" cy="76" r="9" fill="#d4af37"/>
+<circle cx="410" cy="76" r="9" fill="#d4af37"/>
+<circle cx="436" cy="76" r="9" fill="#2a2a2a"/>
+<circle cx="462" cy="76" r="9" fill="#2a2a2a"/>
+<circle cx="488" cy="76" r="9" fill="#2a2a2a"/>
+<circle cx="514" cy="76" r="9" fill="#2a2a2a"/>
+<circle cx="540" cy="76" r="9" fill="#2a2a2a"/>
+<circle cx="332" cy="102" r="9" fill="#2a2a2a"/>
+<circle cx="358" cy="102" r="9" fill="#2a2a2a"/>
+<circle cx="384" cy="102" r="9" fill="#2a2a2a"/>
+<circle cx="410" cy="102" r="9" fill="#2a2a2a"/>
+<circle cx="436" cy="102" r="9" fill="#2a2a2a"/>
+<circle cx="462" cy="102" r="9" fill="#2a2a2a"/>
+<circle cx="488" cy="102" r="9" fill="#2a2a2a"/>
+<circle cx="514" cy="102" r="9" fill="#2a2a2a"/>
+<circle cx="540" cy="102" r="9" fill="#2a2a2a"/>
+<circle cx="332" cy="128" r="9" fill="#2a2a2a"/>
+<circle cx="358" cy="128" r="9" fill="#2a2a2a"/>
+<circle cx="384" cy="128" r="9" fill="#2a2a2a"/>
+<circle cx="410" cy="128" r="9" fill="#2a2a2a"/>
+<circle cx="436" cy="128" r="9" fill="#2a2a2a"/>
+<circle cx="462" cy="128" r="9" fill="#2a2a2a"/>
+<circle cx="488" cy="128" r="9" fill="#2a2a2a"/>
+<g font-family="Bricolage Grotesque, system-ui, sans-serif" font-size="12"><circle cx="326" cy="172" r="6" fill="#d4af37"/><text x="338" y="176" fill="#f0f0f0"><tspan font-weight="700" fill="#f3e5ab">13 of 34</tspan> from 3 sets</text><circle cx="326" cy="196" r="6" fill="#2a2a2a"/><text x="338" y="200" fill="#a0a0a0"><tspan font-weight="700">21 of 34</tspan> small or no difference</text></g>
+</svg></div><figcaption class="cap">Source: Hammarström et al., J Physiol 2020 (n = 34, 12 weeks, within-subject design). Nurvan chart.</figcaption></figure>
+<p>In trained lifters, a Brazilian study of 16 people compared a standard 22 sets per week with a volume equal to 1.2 times what each person was already doing. The individualized volume produced more growth: on average 1.08 cm² more cross-sectional area.</p>
+<p><strong>Load.</strong> Here the answer is different. In 27 women around 68 years old, training at 10-rep max or 15-rep max gave similar results. Three in four participants kept the same status, responder or non-responder, with both loads. Changing the load did not "unlock" those who responded poorly.</p>
+<p><strong>Duration and the outcome you measure.</strong> A Dutch study of 110 adults over 65 says it in the title: there are no non-responders to resistance training. Going from 12 to 24 weeks of training increased positive responses. And every participant improved in at least one of lean mass, muscle fiber size, strength and physical function.</p>
+<h2>Why it is so hard to know how you respond</h2>
+<p>Even with lab equipment, separating a true response from noise is difficult. A review in the Journal of Applied Physiology explains that measurement error and normal biological fluctuations inflate apparent variability. Separating them would require repeating the intervention on the same person. In 2025, Brazilian researchers proposed a design with one trained leg and one comparison leg for exactly this reason: many studies cannot isolate each person's true response.</p>
+<p>In the Finnish study, when results were compared with people who did not train, 29% of participants counted as low responders for muscle size, but only 7% for strength. Same people, different answers depending on what you measure.</p>
+<p>If it is that hard in a lab, it is even harder with a mirror and a bathroom scale.</p>
+<h2>What the research actually says</h2>
+<p>The starting point is Valerio Acri's post. Here are its main claims, checked against the sources.</p>
+<div class="verdict"><div class="v"><span class="pill ok">Confirmed</span><p><strong>"Genetics matter."</strong> Heritability of strength is about 0.52, and individual variability is wide even on identical programs.</p></div><div class="v"><span class="pill ok">Confirmed</span><p><strong>"Genetic contribution does not mean genetic determinism."</strong> In the same meta-analysis, genes and environment weigh about the same, and environment matters more with age.</p></div><div class="v"><span class="pill part">Needs nuance</span><p><strong>"A response observed under certain conditions is not a fixed trait."</strong> That holds for volume and duration: more sets and more weeks change the picture for some people. But changing the load or varying the program did not change the status of most participants.</p></div><div class="v"><span class="pill part">Needs nuance</span><p><strong>"If you are not growing, do you need more volume?"</strong> On average more volume means more growth, but a clear benefit shows up in about 4 in 10 people.</p></div><div class="v"><span class="pill nv">Not verifiable</span><p><strong>"You would not know even after two or three years."</strong> Plausible given measurement limits, but studies last 8 to 24 weeks. There is no controlled data over several years.</p></div></div>
+<h2>How to apply it</h2>
+<ol>
+<li><strong>Measure more than one thing.</strong> Loads and reps, body weight, circumferences and photos taken in the same conditions. One stalled number does not mean everything has stalled.</li>
+<li><strong>Think in blocks, not weeks.</strong> Judge progress over 8–12 weeks on a consistent program.</li>
+<li><strong>Check the basics before genetics.</strong> Load progression, sets close to failure, enough protein and calories, sleep.</li>
+<li><strong>Try increasing volume gradually.</strong> In the studies, starting from the volume you already do and building on it worked better than a standard number.</li>
+<li><strong>Change one variable at a time.</strong> If you change everything at once, you will never know what worked.</li>
+</ol>
+<aside class="app"><div><h3>Find out how you respond, with data</h3><p>Nurvan logs the load, reps and RIR of every set alongside body weight, measurements and nutrition. That lets you compare training blocks with different volumes and see your response across months of data, not a guess in the mirror.</p></div><a class="cta" href="https://nurvan.app">Try Nurvan</a></aside>
+
+<h2>Frequently asked questions</h2>
+<details><summary>How do I know if I am a low responder?</summary><p>You cannot know for sure. You need a well-designed program, followed consistently for many months and measured on more than one outcome. Even then, the result applies to that program, that volume and that stage of your life.</p></details>
+<details><summary>If I am not growing, should I do more sets?</summary><p>It may help: on average more volume means more growth, and individualized volume beat a standard prescription. But it does not work for everyone. First check load progression, effort, nutrition and sleep.</p></details>
+<details><summary>How much of muscle growth is genetic?</summary><p>For baseline strength, average heritability is estimated at about 50%. There is no precise figure for training response, and differences also depend on measurement, duration and programming.</p></details>
+<details><summary>Do you become a low responder as you age?</summary><p>In the studies cited here, age and sex did not explain individual differences. Among adults over 65 followed for 24 weeks, every participant improved on at least one outcome.</p></details>
+<h2>Sources</h2>
+<ol class="refs">
+<li>Hubal MJ et al., 2005. Variability in muscle size and strength gain after unilateral resistance training. <em>Med Sci Sports Exerc</em> 37(6):964–72. <a href="https://pubmed.ncbi.nlm.nih.gov/15947721/" rel="noopener" target="_blank">PMID 15947721</a></li>
+<li>Ahtiainen JP et al., 2016. Heterogeneity in resistance training-induced muscle strength and mass responses in men and women of different ages. <em>Age (Dordr)</em> 38(1):10. <a href="https://pubmed.ncbi.nlm.nih.gov/26767377/" rel="noopener" target="_blank">PMID 26767377</a> · <a href="https://doi.org/10.1007/s11357-015-9870-1" rel="noopener" target="_blank">DOI 10.1007/s11357-015-9870-1</a></li>
+<li>Zempo H et al., 2017. Heritability estimates of muscle strength-related phenotypes: A systematic review and meta-analysis. <em>Scand J Med Sci Sports</em> 27(12):1537–1546. <a href="https://pubmed.ncbi.nlm.nih.gov/27882617/" rel="noopener" target="_blank">PMID 27882617</a> · <a href="https://doi.org/10.1111/sms.12804" rel="noopener" target="_blank">DOI 10.1111/sms.12804</a></li>
+<li>Damas F et al., 2019. Myofibrillar protein synthesis and muscle hypertrophy individualized responses to systematically changing resistance training variables in trained young men. <em>J Appl Physiol</em> 127(3):806–815. <a href="https://pubmed.ncbi.nlm.nih.gov/31268828/" rel="noopener" target="_blank">PMID 31268828</a> · <a href="https://doi.org/10.1152/japplphysiol.00350.2019" rel="noopener" target="_blank">DOI 10.1152/japplphysiol.00350.2019</a></li>
+<li>Hammarström D et al., 2020. Benefits of higher resistance-training volume are related to ribosome biogenesis. <em>J Physiol</em> 598(3):543–565. <a href="https://pubmed.ncbi.nlm.nih.gov/31813190/" rel="noopener" target="_blank">PMID 31813190</a> · <a href="https://doi.org/10.1113/JP278455" rel="noopener" target="_blank">DOI 10.1113/JP278455</a></li>
+<li>Scarpelli MC et al., 2022. Muscle Hypertrophy Response Is Affected by Previous Resistance Training Volume in Trained Individuals. <em>J Strength Cond Res</em> 36(4):1153–1157. <a href="https://pubmed.ncbi.nlm.nih.gov/32108724/" rel="noopener" target="_blank">PMID 32108724</a> · <a href="https://doi.org/10.1519/JSC.0000000000003558" rel="noopener" target="_blank">DOI 10.1519/JSC.0000000000003558</a></li>
+<li>Ribeiro AS et al., 2026. Responsiveness of muscle mass gain to different load intensities of resistance training in older women: A randomized crossover study. <em>Exp Gerontol</em> 223:113261. <a href="https://pubmed.ncbi.nlm.nih.gov/42551773/" rel="noopener" target="_blank">PMID 42551773</a> · <a href="https://doi.org/10.1016/j.exger.2026.113261" rel="noopener" target="_blank">DOI 10.1016/j.exger.2026.113261</a></li>
+<li>Churchward-Venne TA et al., 2015. There Are No Nonresponders to Resistance-Type Exercise Training in Older Men and Women. <em>J Am Med Dir Assoc</em> 16(5):400–11. <a href="https://pubmed.ncbi.nlm.nih.gov/25717010/" rel="noopener" target="_blank">PMID 25717010</a> · <a href="https://doi.org/10.1016/j.jamda.2015.01.071" rel="noopener" target="_blank">DOI 10.1016/j.jamda.2015.01.071</a></li>
+<li>Hecksteden A et al., 2015. Individual response to exercise training - a statistical perspective. <em>J Appl Physiol</em> 118(12):1450–9. <a href="https://pubmed.ncbi.nlm.nih.gov/25663672/" rel="noopener" target="_blank">PMID 25663672</a> · <a href="https://doi.org/10.1152/japplphysiol.00714.2014" rel="noopener" target="_blank">DOI 10.1152/japplphysiol.00714.2014</a></li>
+<li>Chaves TS et al., 2025. Within-individual design for assessing true individual responses in resistance training-induced muscle hypertrophy. <em>Front Sports Act Living</em> 7:1517190. <a href="https://pubmed.ncbi.nlm.nih.gov/39958513/" rel="noopener" target="_blank">PMID 39958513</a> · <a href="https://doi.org/10.3389/fspor.2025.1517190" rel="noopener" target="_blank">DOI 10.3389/fspor.2025.1517190</a></li>
+</ol>
+<p class="cap">Inspired by a post from <a href="https://www.instagram.com/p/Ddf-0MRF7p0/" rel="noopener" target="_blank">Dott. &amp; Coach Valerio Acri (@valerio_acri)</a>. Sources reviewed via PubMed.</p>
+<p class="note">Note: this content is for information only and does not replace the advice of a doctor or qualified professional.</p></main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>
