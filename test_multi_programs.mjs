@@ -130,6 +130,24 @@ const prog = (id, weeks) => ({ id, title: 'Programma ' + id, weeks: Array.from({
   ok('4c. se il programma in attesa non c’è su questo dispositivo, non si cambia e non si perde nulla', (await c3.api.switchTo('A')) === false && c3.store.activeProgramId === 'B' && c3.api.parked().length === 1);
 }
 
+{
+  const c = world(3);
+  await c.activate(prog('A', 8));
+  c.store.data.w1_d0_e0_s1_load = 80;
+  c.window.__addProgramSlot = { at: 1 };
+  await c.activate(prog('B', 6));
+  ok('4d. "Aggiungi slot": il programma attivato dopo va nel nuovo slot, senza altre domande', c.asked === 0 && c.api.parked().length === 1 && c.api.parked()[0].fields.data.w1_d0_e0_s1_load === 80 && !c.window.__addProgramSlot);
+  c.window.__programSlotDecision = { id: 'C', choice: 'replace' };
+  c.store.data.w1_d0_e0_s1_load = 40;
+  await c.activate(prog('C', 4));
+  ok('4e. una scelta già fatta al momento di attivare non viene richiesta di nuovo', c.asked === 0 && c.store.activeProgramId === 'C' && c.api.parked().map((p) => p.id).join() === 'A' && Object.keys(c.store.data).length === 0);
+  c.window.__programSlotDecision = { id: 'ALTRO', choice: 'keep' };
+  await c.activate(prog('D', 4));
+  ok('4f. la scelta vale solo per il programma per cui è stata fatta', c.asked === 1);
+}
+ok('4g. attivando un programma salvato la domanda dice cosa succede davvero (nuovo slot o sostituzione), con ANNULLA', /const choice = await chooseProgramActivation\(/.test(html) && /IN UN NUOVO SLOT/.test(html) && /AL POSTO DI QUELLO IN USO/.test(html) && /id="program-slot-cancel"/.test(html) && !/Attivare «' \+ label \+ '»\?\n\nI carichi e le serie finalizzate del programma precedente verranno azzerati\.'\)\) return;/.test(html));
+ok('4h. "Aggiungi slot" è nella pagina di allenamento, e la home non elenca più i programmi salvati', /id="add-program-slot" onclick="startAddProgramSlot\(\)"/.test(html) && !/homeCollapsibleCard\('Programmi Salvati'/.test(html) && !/id="saved-models-list"/.test(html));
+
 // --- sync -------------------------------------------------------------------
 {
   const p = (id) => ({ id, title: id, fields: { data: { k: 1 } } });

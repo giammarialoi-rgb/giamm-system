@@ -51058,7 +51058,7 @@ var PAGE_TUTORIALS = {
     { t: 'Cambiare un esercizio', d: 'Dal menu dell’esercizio puoi sostituirlo (solo per questa seduta o per il resto del programma), saltarlo, aggiungere una serie o un esercizio extra. Con ANNULLA torni indietro di un passo.' },
     { t: 'Immagine, esecuzione e video', d: 'Tocca il nome dell’esercizio: trovi l’immagine, come si esegue, gli errori comuni e il video.' },
     { t: 'Chiudere la seduta', d: 'A fine allenamento tocca FINALIZZA: la seduta entra nello storico con volume e durata, e l’app passa al giorno successivo.' },
-    { t: 'Più programmi attivi', d: 'Con un piano a pagamento puoi tenere attivi fino a 3 programmi: in cima alla pagina passi dall’uno all’altro, e ognuno conserva i suoi carichi.' }
+    { t: 'Più programmi attivi', d: 'Con un piano a pagamento hai fino a 3 slot: in cima alla pagina tocca AGGIUNGI SLOT e scegli il programma. Passi dall’uno all’altro con un tocco, e ognuno conserva i suoi carichi.' }
   ] },
   programs: { label: 'Programmi', icon: '📚', who: 'self', steps: [
     { t: 'Da dove nasce un programma', d: 'Qui scegli come allenarti: scrivi una scheda da zero, la fai generare dall’app, la prendi dal database di schede pronte o la importi da un file.' },
@@ -58432,6 +58432,7 @@ function renderPrograms(c){
       <div style="font-size:11px;color:#ccc;">Stai scegliendo una scheda per <b style="color:#fff;">${esc(store.coachAssigning.name || 'cliente')}</b>.</div>
       <button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="promptCatalogFromIntakeThenOpen('${esc(store.coachAssigning.clientId)}','${esc(store.coachAssigning.name || '')}')">FILTRA CON ANAGRAFICA CLIENTE</button>
     </div>` : '')}
+    ${addProgramSlotBannerHtml()}
     ${activeProgramsSwitcherHtml({ always: true })}
     ${homeCollapsibleCard('PROGRAMMA ATTIVO', `
     <div class="card" style="margin-bottom:16px; border:2px solid ${(weeks.length ? 'var(--gold)' : '#333')}; position:relative; overflow:hidden;">
@@ -61354,23 +61355,6 @@ function renderHome(c) {
       </div>
     `, false)}
 
-    ${homeCollapsibleCard('Programmi Salvati', `
-       <div id="saved-models-list">
-          ${store.models && store.models.length ? store.models.map((m,i)=>`
-            <div style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #222;">
-              <div>
-                <b style="color:var(--gold); font-size:13px;">${esc(m.name)}</b>
-                <div style="font-size:9px; color:#666;">Creato il ${new Date(m.date).toLocaleDateString()}</div>
-              </div>
-              <div style="display:flex; gap:5px;">
-                <button type="button" class="btn btn-outline" style="font-size:9px; padding:4px 8px;" onclick="event.stopPropagation();activateSavedProgram(${JSON.stringify(m.id || '')}, ${i})">ATTIVA</button>
-                <button type="button" class="btn btn-outline saved-prog-x" data-id="${esc(m.id || '')}" data-idx="${i}" data-name="${esc(m.name || '')}" onclick="event.stopPropagation();deleteSavedProgramFromList(this)" aria-label="Togli dalla lista">✕</button>
-              </div>
-            </div>
-          `).join('') : '<div style="font-size:11px; color:#555; text-align:center;">Nessun modello salvato. Carica documenti nel DB per generarne uno.</div>'}
-       </div>
-    `, false)}
-
     ${homeCollapsibleCard('Razionale & Regole Operative', `<div style="font-size:11px;line-height:1.5;color:#ccc;">${buildOperationalRulesHtml(DATA)}</div>`, false)}
 
     ${homeCollapsibleCard(t('architectureStatus'), `<div style="display:flex;flex-direction:column;gap:10px;"><button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="resetWorkoutData()">${t('restoreLoads')}</button><button class="btn btn-outline" style="width:100%;border-color:var(--accent-red);color:var(--accent-red);font-size:10px;" onclick="resetAllData()">${t('hardResetApp')}</button></div>`, false)}
@@ -61384,7 +61368,11 @@ async function activateSavedProgram(programId, idx) {
     const model = (typeof idx === 'number' && store.models && store.models[idx]) ? store.models[idx]
       : (store.models || []).find(function (m) { return m && String(m.id) === String(programId); });
     const label = (model && model.name) || 'questo programma';
-    if (!confirm('Attivare «' + label + '»?\n\nI carichi e le serie finalizzate del programma precedente verranno azzerati.')) return;
+    // What activating does depends on the slots: asked once, here, in words
+    // that say it. (It used to warn that the loads would be cleared even when
+    // the program was going to be added beside the one in use.)
+    const choice = await chooseProgramActivation(programId || (model && model.id) || '', label);
+    if (choice === 'cancel') return;
     let programData = null;
     if (programId && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadProgram) {
       try { programData = await GiammariaPersistence.loadProgram(programId); } catch (_) { programData = null; }
@@ -76183,7 +76171,7 @@ async function createProgramFromDraft(how) {
   var tail = target === 'library'
     ? '\n\nFinisce nel tuo database schede. Non tocca la tua scheda attiva né quella di un cliente.'
     : (target === 'save'
-      ? '\n\nLa trovi in «Programmi Salvati» e la attivi quando vuoi. La tua scheda attiva non cambia.'
+      ? '\n\nLa trovi in «Programmi creati» e la attivi quando vuoi. La tua scheda attiva non cambia.'
       : (target === 'assign'
         ? '\n\nDiventa la bozza per il cliente: la modifichi e poi la invii con INVIA.'
         : '\n\nIl programma attivo verrà sostituito.'));
@@ -76254,7 +76242,7 @@ async function deliverProgram(prog, target, hooks) {
       try { await syncProgramLibraryFromIdb(); } catch (_) {}
     }, 'Salvo la scheda…', { immediate: true, maxMs: 60000 });
     if (typeof showToast === 'function') {
-      showToast('Salvata: la trovi in «Programmi Salvati», da attivare quando vuoi', 'ok');
+      showToast('Salvata: la trovi in «Programmi creati», da attivare quando vuoi', 'ok');
     }
     if (typeof render === 'function') render();
     return;
@@ -77532,7 +77520,7 @@ async function deliverGeneratedReview(target) {
       : (target === 'assign' ? 'Usare come bozza per il cliente?' : 'Attivare questa scheda?'));
   var tail = target === 'active'
     ? '\n\nIl programma attivo verrà sostituito.'
-    : (target === 'save' ? '\n\nLa trovi in «Programmi Salvati» e la attivi quando vuoi.'
+    : (target === 'save' ? '\n\nLa trovi in «Programmi creati» e la attivi quando vuoi.'
       : (target === 'library' ? '\n\nFinisce nel tuo database schede.' : '\n\nDiventa la bozza da rivedere e inviare.'));
   if (!confirm(head + '\n\n' + (prog.title || '') + '\n' + (prog.weeks || []).length + ' settimane' + tail)) return;
   try {
@@ -78279,9 +78267,77 @@ async function ensureActiveProgramInLibrary() {
   return !!(await loadProgramContentById(id));
 }
 
+/*
+ * Slots. A program is active in a slot; the plan says how many there are
+ * (activeProgramsLimit). "Aggiungi slot" in the workout page opens a new one:
+ * the next program activated goes into it and the one in use stays where it
+ * is, with its loads. Without that, activating a program asks what to do.
+ */
+function programSlotsUsed() {
+  const hasActive = typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length;
+  return parkedPrograms().length + (hasActive ? 1 : 0);
+}
+function startAddProgramSlot() {
+  if (multiProgramBlocked()) return;
+  const limit = activeProgramsLimit();
+  if (limit <= 1) {
+    if (typeof requirePlan === 'function') requirePlan('active_program', { count: programSlotsUsed() });
+    return;
+  }
+  if (programSlotsUsed() >= limit) {
+    if (typeof showToast === 'function') showToast('Hai già ' + limit + ' programmi attivi: togline uno per aggiungerne un altro.', 'error');
+    return;
+  }
+  window.__addProgramSlot = { at: Date.now() };
+  if (typeof navigate === 'function') navigate('programs');
+  if (typeof showToast === 'function') showToast('Nuovo slot: scegli il programma da attivare.', 'ok');
+}
+window.startAddProgramSlot = startAddProgramSlot;
+function cancelAddProgramSlot() {
+  window.__addProgramSlot = null;
+  if (typeof render === 'function') render();
+}
+window.cancelAddProgramSlot = cancelAddProgramSlot;
+// The banner shown in Programmi while a new slot is waiting for its program.
+function addProgramSlotBannerHtml() {
+  if (!window.__addProgramSlot || multiProgramBlocked()) return '';
+  return '<div class="card" id="add-slot-banner" style="border:2px solid var(--gold);padding:12px;margin-bottom:12px;">' +
+    '<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:4px;">' + esc(trText('NUOVO SLOT')) + ' · ' + (programSlotsUsed() + 1) + ' / ' + activeProgramsLimit() + '</div>' +
+    '<div style="font-size:12px;color:#ccc;line-height:1.45;margin-bottom:10px;">' + esc(trText('Scegli il programma per il nuovo slot: attivane uno da «Programmi creati» o dal database, oppure creane o generane uno. Quello che stai usando resta attivo, con i suoi carichi.')) + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:11px;" onclick="cancelAddProgramSlot()">' + esc(trText('ANNULLA')) + '</button></div>';
+}
+window.addProgramSlotBannerHtml = addProgramSlotBannerHtml;
+// Asked before a saved program is activated. Resolves 'keep' (a new slot),
+// 'replace', 'back' (it was parked: it comes back), 'cancel'. The answer is
+// left for the door (maybeClearLogsOnProgramSwitch), which does not ask again.
+async function chooseProgramActivation(programId, label) {
+  const id = String(programId || '');
+  const done = function (choice) { window.__programSlotDecision = { id: id, choice: choice }; return choice; };
+  if (multiProgramBlocked()) {
+    return confirm('Attivare «' + label + '»?') ? done('replace') : 'cancel';
+  }
+  if (id && id === activeProgramKey()) return done('replace');
+  if (parkedPrograms().some(function (p) { return p && String(p.id) === id; })) return done('back');
+  const hasActive = typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length;
+  if (!hasActive) return done('replace');
+  const limit = activeProgramsLimit();
+  const room = programSlotsUsed() < limit;
+  if (window.__addProgramSlot && room) return done('keep');
+  if (room) {
+    const answer = await askKeepOrReplaceProgram(label, true);
+    return answer === 'cancel' ? 'cancel' : done(answer);
+  }
+  const current = String((DATA && DATA.title) || 'quello in uso');
+  const text = limit > 1
+    ? 'Hai già ' + limit + ' programmi attivi.\n\nAttivare «' + label + '» al posto di «' + current + '»? I carichi segnati su «' + current + '» verranno azzerati; gli altri programmi attivi restano.'
+    : 'Attivare «' + label + '»?\n\nPrende il posto di «' + current + '»: i carichi e le serie finalizzate di quel programma verranno azzerati.';
+  return confirm(text) ? done('replace') : 'cancel';
+}
+window.chooseProgramActivation = chooseProgramActivation;
+
 // "Keep the one you have as well, or replace it?" - asked only when the plan
-// has room for another. Resolves 'keep' or 'replace'.
-function askKeepOrReplaceProgram() {
+// has room for another. Resolves 'keep' or 'replace' ('cancel' when allowed).
+function askKeepOrReplaceProgram(newLabel, canCancel) {
   return new Promise(function (resolve) {
     const old = document.getElementById('program-slot-choice');
     if (old) old.remove();
@@ -78290,19 +78346,21 @@ function askKeepOrReplaceProgram() {
     el.style.cssText = 'display:flex;position:fixed;inset:0;z-index:10200;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
     const used = parkedPrograms().length + 1;
     el.innerHTML = '<div class="card" style="max-width:420px;width:100%;border:1px solid var(--gold);padding:16px;box-sizing:border-box;">' +
-      '<div style="font-size:14px;font-weight:900;color:var(--gold);margin-bottom:8px;">Hai già un programma attivo</div>' +
-      '<div style="font-size:12px;color:#bbb;line-height:1.45;margin-bottom:14px;">' + esc(String((DATA && DATA.title) || 'Programma')) + '</div>' +
-      '<div style="font-size:11px;color:#888;margin-bottom:10px;">' + esc(trText('Programmi attivi') + ': ' + used + ' / ' + activeProgramsLimit()) + '</div>' +
+      '<div style="font-size:14px;font-weight:900;color:var(--gold);margin-bottom:8px;">' + esc(trText('Dove lo attivo?')) + '</div>' +
+      (newLabel ? '<div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:6px;">' + esc(String(newLabel)) + '</div>' : '') +
+      '<div style="font-size:11px;color:#888;margin-bottom:12px;">' + esc(trText('Slot occupati') + ': ' + used + ' / ' + activeProgramsLimit() + ' · ' + trText('in uso') + ': ' + String((DATA && DATA.title) || 'Programma')) + '</div>' +
       '<div style="display:grid;gap:8px;">' +
-      '<button type="button" id="program-slot-keep" class="btn btn-primary" style="width:100%;">TIENILO E AGGIUNGI QUESTO</button>' +
-      '<div style="font-size:10px;color:#888;margin:-2px 0 6px;">Restano attivi tutti e due, ognuno con i suoi carichi: passi da uno all’altro quando vuoi.</div>' +
-      '<button type="button" id="program-slot-replace" class="btn btn-outline" style="width:100%;">SOSTITUISCILO</button>' +
-      '<div style="font-size:10px;color:#888;margin-top:-2px;">Come prima: il nuovo prende il suo posto e i carichi ripartono da zero.</div>' +
+      '<button type="button" id="program-slot-keep" class="btn btn-primary" style="width:100%;">' + esc(trText('IN UN NUOVO SLOT')) + '</button>' +
+      '<div style="font-size:10px;color:#888;margin:-2px 0 6px;">' + esc(trText('Quello che stai usando resta attivo con i suoi carichi: passi da uno all’altro dalla pagina Allenamento.')) + '</div>' +
+      '<button type="button" id="program-slot-replace" class="btn btn-outline" style="width:100%;">' + esc(trText('AL POSTO DI QUELLO IN USO')) + '</button>' +
+      '<div style="font-size:10px;color:#888;margin-top:-2px;">' + esc(trText('Il nuovo prende il suo slot: i carichi segnati sul programma in uso vengono azzerati.')) + '</div>' +
+      (canCancel ? '<button type="button" id="program-slot-cancel" class="btn btn-outline" style="width:100%;margin-top:6px;">' + esc(trText('ANNULLA')) + '</button>' : '') +
       '</div></div>';
     document.body.appendChild(el);
     const done = function (v) { el.remove(); resolve(v); };
     document.getElementById('program-slot-keep').onclick = function () { done('keep'); };
     document.getElementById('program-slot-replace').onclick = function () { done('replace'); };
+    if (canCancel) document.getElementById('program-slot-cancel').onclick = function () { done('cancel'); };
   });
 }
 
@@ -78393,7 +78451,9 @@ function activeProgramsSwitcherHtml(opts) {
   const parked = parkedPrograms();
   const limit = activeProgramsLimit();
   const hasActive = typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length;
-  if (!parked.length && !(opts.always && hasActive)) return '';
+  if (!hasActive && !parked.length) return '';
+  // In the workout page, a plan with one slot and one program has nothing to choose.
+  if (!opts.always && limit <= 1 && !parked.length) return '';
   const chip = function (label, sub, on, action, removeId) {
     return '<div style="display:flex;align-items:stretch;flex:1 1 140px;min-width:0;border:1px solid ' + (on ? 'var(--gold)' : '#333') + ';border-radius:10px;background:' + (on ? 'rgba(212,175,55,0.12)' : '#111') + ';overflow:hidden;">' +
       '<button type="button" ' + (action ? 'onclick="' + action + '"' : 'disabled') + ' style="flex:1;min-width:0;text-align:left;background:none;border:0;color:inherit;padding:8px 10px;cursor:' + (action ? 'pointer' : 'default') + ';font:inherit;">' +
@@ -78410,11 +78470,13 @@ function activeProgramsSwitcherHtml(opts) {
   parked.forEach(function (p) {
     html += chip(p.title, pos(p.week || 1, p.day || 0), false, 'switchActiveProgram(' + esc(JSON.stringify(String(p.id))) + ')', String(p.id));
   });
+  const used = parked.length + (hasActive ? 1 : 0);
+  if (limit > 1 && used < limit) {
+    html += '<button type="button" id="add-program-slot" onclick="startAddProgramSlot()" style="flex:1 1 140px;min-width:0;border:1px dashed var(--gold);border-radius:10px;background:none;color:var(--gold);padding:8px 10px;cursor:pointer;font:inherit;font-size:12px;font-weight:800;">+ ' + esc(trText('AGGIUNGI SLOT')) + '</button>';
+  }
   html += '</div>';
-  if (opts.always && limit <= 1) {
+  if (limit <= 1) {
     html += '<div style="font-size:10px;color:#888;margin-top:8px;line-height:1.4;">' + esc(trText('Con un piano a pagamento puoi tenere attivi fino a 3 programmi insieme, ognuno con i suoi carichi.')) + ' <a href="#" onclick="navigate(\'pricing\');return false;" style="color:var(--gold);">' + esc(trText('Vedi i piani')) + '</a></div>';
-  } else if (opts.always && parked.length + 1 < limit) {
-    html += '<div style="font-size:10px;color:#888;margin-top:8px;line-height:1.4;">' + esc(trText('Per aggiungerne un altro attiva un programma: ti chiedo se tenere anche questo.')) + '</div>';
   }
   return html + '</div>';
 }
@@ -78532,7 +78594,19 @@ async function maybeClearLogsOnProgramSwitch(newProgramId) {
     back = parkedPrograms().find(function (p) { return p && String(p.id) === next; }) || null;
     const hasActive = prev && typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length;
     const room = parkedPrograms().length + 1 < activeProgramsLimit();
-    if (hasActive && (back || (room && (await askKeepOrReplaceProgram()) === 'keep'))) {
+    // Already answered where the activation was asked for, or a slot was
+    // opened for it: no second question.
+    const decided = (window.__programSlotDecision && window.__programSlotDecision.id === next) ? window.__programSlotDecision.choice : '';
+    window.__programSlotDecision = null;
+    const slotWaiting = !!window.__addProgramSlot;
+    window.__addProgramSlot = null;
+    let keep = false;
+    if (hasActive && !back && room) {
+      if (decided) keep = decided === 'keep';
+      else if (slotWaiting) keep = true;
+      else keep = (await askKeepOrReplaceProgram()) === 'keep';
+    }
+    if (hasActive && (back || keep)) {
       if (await ensureActiveProgramInLibrary()) parkCurrentProgram();
       else if (typeof showToast === 'function') showToast('Non riesco a tenere anche il programma di prima: viene sostituito.', 'error');
     }
