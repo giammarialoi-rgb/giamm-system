@@ -56,6 +56,7 @@
 })();
 </script>
 <link rel="manifest" href="manifest.webmanifest">
+<script src="i18n-runtime.js"></script>
 <script src="exercise-catalog-extra.js"></script>
 <script src="training-knowledge.js"></script>
 <script src="training-analytics-engine.js"></script>
@@ -77,6 +78,7 @@
 <script src="entitlements.js"></script>
 <script src="cardio-library.js"></script>
 <script src="program-generator.js"></script>
+<script src="hyrox.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -2207,6 +2209,7 @@ body.focus-mode [data-rewards-only] {
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="toggleAccountMode()" id="account-mode" data-i18n="createAccount">CREA UN ACCOUNT</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="togglePasswordRecovery()" id="account-forgot">PASSWORD DIMENTICATA</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="openChangePassword()" id="account-change-password">CAMBIA PASSWORD</button>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="editAccountName()" id="account-edit-name">MODIFICA NOME</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="logoutOtherDevices()" id="account-logout-others">ESCI DAGLI ALTRI DISPOSITIVI</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="logoutAccount()" id="account-logout">ESCI</button>
     <button class="btn btn-primary" style="width:100%;margin-top:8px;display:none;" onclick="syncAccountData(true)" id="account-sync">SINCRONIZZA DATI</button>
@@ -2357,7 +2360,7 @@ body.focus-mode [data-rewards-only] {
 <div id="reset-session-modal" class="modal">
   <div class="modal-content">
     <h2 style="color:var(--gold);margin-top:0;">Azzerare il Coach AI?</h2>
-    <p style="font-size:12px;color:#aaa;">Verranno rimossi domanda, risposta, cronologia e analisi non importate. Programmi, progressi e impostazioni resteranno intatti.</p>
+    <p style="font-size:12px;color:#aaa;">La conversazione aperta si chiude e va nell’archivio: la prossima volta il Coach AI riparte da zero. Programmi, progressi e impostazioni restano intatti.</p>
     <div style="display:flex;gap:10px;margin-top:20px;">
       <button class="btn btn-outline" style="flex:1;" onclick="closeResetSession()">Annulla</button>
       <button class="btn btn-primary" style="flex:1;" onclick="confirmResetSession()">Azzera</button>
@@ -34453,6 +34456,11 @@ function readZipCentralEntries(u8) {
 
 function xmlToPlainText(xmlStr) {
   return String(xmlStr || "")
+    // A table row is one line, its cells separated by a tab. Every cell is
+    // made of paragraphs: left as line breaks they put each cell on a line
+    // of its own ("Panca" / "4x8" / "90s"), and the exercise lost its sets,
+    // reps and rest. Inside a cell a paragraph end is a space.
+    .replace(/<w:tc\b[\s\S]*?<\/w:tc>/g, (cell) => cell.replace(/<\/w:p>/g, " ").replace(/<w:br\b[^>]*\/?>/g, " "))
     .replace(/<\/w:tc>/g, "\t")
     .replace(/<\/w:tr>/g, "\n")
     .replace(/<\/w:p>/g, "\n")
@@ -35844,8 +35852,8 @@ const I18nService = {
     it: {
       appName: "NURVAN",
       appTitle: "NURVAN",
-      dashboard: "SYSTEM DASHBOARD",
-      home: "SYSTEM DASHBOARD",
+      dashboard: "DASHBOARD",
+      home: "DASHBOARD",
       activeSession: "Sessione Attiva",
       startWorkout: "INIZIA WORKOUT",
       importProgram: "IMPORTA SCHEDA",
@@ -35973,8 +35981,8 @@ const I18nService = {
     en: {
       appName: "NURVAN",
       appTitle: "NURVAN",
-      dashboard: "SYSTEM DASHBOARD",
-      home: "SYSTEM DASHBOARD",
+      dashboard: "DASHBOARD",
+      home: "DASHBOARD",
       activeSession: "Active Session",
       startWorkout: "START WORKOUT",
       importProgram: "IMPORT PROGRAM",
@@ -36416,7 +36424,8 @@ const I18nService = {
     const lang = this.currentLang || "it";
     const dict = this.dictionaries[lang] || this.dictionaries.en || this.dictionaries.it;
     if (dict && dict[resolvedKey]) return dict[resolvedKey];
-    if (this.dictionaries.en && this.dictionaries.en[resolvedKey]) return this.dictionaries.en[resolvedKey];
+    // A key this language does not have: the Italian text, which the page
+    // layer (web/i18n-runtime.js) translates like every other text.
     if (this.dictionaries.it && this.dictionaries.it[resolvedKey]) return this.dictionaries.it[resolvedKey];
     if (dict && dict[key]) return dict[key];
     if (this.dictionaries.it && this.dictionaries.it[key]) return this.dictionaries.it[key];
@@ -36461,7 +36470,7 @@ const I18nService = {
     it: {
       coHome: "Oggi", coClients: "Clienti", coInbox: "Chat", coPrograms: "Programmi", coCalendar: "Calendario",
       coCheckIns: "Verifiche", coNutrition: "Alimentazione", coFormReview: "Revisione tecnica",
-      coAnalytics: "Analisi", coAgent: "Agente", coAutomations: "Automazioni", coBusiness: "Attività", coCrm: "Pipeline",
+      coAnalytics: "Analisi", coAgent: "Agente", coAgentAudit: "Registro agente", coAutomations: "Automazioni", coBusiness: "Attività", coCrm: "Pipeline",
       coMore: "Altro", coProfileSettings: "Profilo e impostazioni", coHelp: "Guida", coExitCoach: "Esci da Coach",
       coToday: "Oggi", coNeedsAttention: "Richiede attenzione", coMyTasks: "I miei task",
       coRecentActivity: "Attività recente", coPortfolio: "Portfolio", coSessionsToday: "Sessioni di oggi",
@@ -36636,7 +36645,7 @@ const I18nService = {
     en: {
       coHome: "Today", coClients: "Clients", coInbox: "Inbox", coPrograms: "Programs", coCalendar: "Calendar",
       coCheckIns: "Check-ins", coNutrition: "Nutrition", coFormReview: "Form review",
-      coAnalytics: "Analytics", coAgent: "Agent", coAutomations: "Automations", coBusiness: "Business", coCrm: "CRM",
+      coAnalytics: "Analytics", coAgent: "Agent", coAgentAudit: "Agent log", coAutomations: "Automations", coBusiness: "Business", coCrm: "CRM",
       coMore: "More", coProfileSettings: "Profile & Settings", coHelp: "Help", coExitCoach: "Exit Coach",
       coToday: "Today", coNeedsAttention: "Needs attention", coMyTasks: "My tasks",
       coRecentActivity: "Recent activity", coPortfolio: "Portfolio", coSessionsToday: "Today’s sessions",
@@ -36809,15 +36818,15 @@ const I18nService = {
       coStaleProposal: "This proposal is outdated because the data changed."
     }
   };
-  packs.es = Object.assign({}, packs.en, {
+  packs.es = Object.assign({}, {
     coHome: "Hoy", coClients: "Clientes", coInbox: "Bandeja", coPrograms: "Programas", coCalendar: "Calendario",
     coToday: "Hoy", coNeedsAttention: "Requiere atención", coMyTasks: "Mis tareas", coAddClient: "Añadir cliente"
   });
-  packs.fr = Object.assign({}, packs.en, {
+  packs.fr = Object.assign({}, {
     coHome: "Aujourd’hui", coClients: "Clients", coInbox: "Boîte", coPrograms: "Programmes", coCalendar: "Calendrier",
     coToday: "Aujourd’hui", coNeedsAttention: "À traiter", coMyTasks: "Mes tâches", coAddClient: "Ajouter un client"
   });
-  packs.de = Object.assign({}, packs.en, {
+  packs.de = Object.assign({}, {
     coHome: "Heute", coClients: "Klienten", coInbox: "Posteingang", coPrograms: "Programme", coCalendar: "Kalender",
     coToday: "Heute", coNeedsAttention: "Braucht Aufmerksamkeit", coMyTasks: "Meine Aufgaben", coAddClient: "Klient hinzufügen"
   });
@@ -38070,7 +38079,8 @@ function ensureBusyOverlay() {
   if (el) return el;
   el = document.createElement('div');
   el.id = 'nurvan-busy-overlay';
-  el.innerHTML = '<div class="busy-card"><div class="busy-spin"></div><div class="busy-label" id="nurvan-busy-label">Caricamento…</div></div>';
+  el.innerHTML = '<div class="busy-card"><div class="busy-spin"></div><div class="busy-label" id="nurvan-busy-label">Caricamento…</div>' +
+    '<div id="nurvan-busy-eta" style="font-size:11px;color:#aaa;margin-top:6px;min-height:14px;"></div></div>';
   document.body.appendChild(el);
   return el;
 }
@@ -38090,8 +38100,41 @@ function hideBusyOverlay() {
     window.__nurvanBusySafetyTimer = null;
   }
 }
+// How long each kind of wait took the last times (moving average, per
+// label), so the overlay can say how much is left instead of spinning with
+// no end in sight.
+function busyDurations() {
+  try { return JSON.parse(localStorage.getItem('NURVAN_BUSY_DURATIONS') || '{}') || {}; } catch (_) { return {}; }
+}
+function rememberBusyDuration(label, ms) {
+  try {
+    const all = busyDurations();
+    const k = String(label || '').slice(0, 60);
+    const prev = Number(all[k]) || 0;
+    all[k] = prev ? Math.round(prev * 0.6 + ms * 0.4) : Math.round(ms);
+    localStorage.setItem('NURVAN_BUSY_DURATIONS', JSON.stringify(all));
+  } catch (_) {}
+}
+function startBusyEta(label, startedAt) {
+  const expected = Number(busyDurations()[String(label || '').slice(0, 60)]) || 0;
+  const tick = function () {
+    const el = document.getElementById('nurvan-busy-eta');
+    if (!el) return;
+    const sec = Math.floor((Date.now() - startedAt) / 1000);
+    if (expected >= 2000) {
+      const left = Math.ceil((expected - (Date.now() - startedAt)) / 1000);
+      el.textContent = left > 0 ? ('circa ' + left + ' s rimanenti') : ('quasi finito… (' + sec + ' s)');
+    } else {
+      el.textContent = sec >= 2 ? ('in corso da ' + sec + ' s') : '';
+    }
+  };
+  tick();
+  return setInterval(tick, 1000);
+}
 async function withBusy(fn, label, opts) {
   opts = opts || {};
+  const busyStart = Date.now();
+  let etaTimer = null;
   var delay = (opts.immediate === true || opts.delay === 0) ? 0 : (typeof opts.delay === 'number' ? opts.delay : 1000);
   var maxMs = typeof opts.maxMs === 'number' ? opts.maxMs : 90000;
   var shown = false;
@@ -38099,6 +38142,7 @@ async function withBusy(fn, label, opts) {
   function showNow() {
     shown = true;
     showBusyOverlay(label || 'Caricamento…');
+    etaTimer = startBusyEta(label, busyStart);
   }
   if (delay <= 0) showNow();
   else {
@@ -38114,6 +38158,9 @@ async function withBusy(fn, label, opts) {
   } finally {
     if (typeof store !== 'undefined' && store) store.__cpBusy = false;
     if (timer) clearTimeout(timer);
+    if (etaTimer) clearInterval(etaTimer);
+    const eta = document.getElementById('nurvan-busy-eta'); if (eta) eta.textContent = '';
+    rememberBusyDuration(label, Date.now() - busyStart);
     hideBusyOverlay();
   }
 }
@@ -40073,9 +40120,58 @@ function startVoiceInputFor(inputId) {
   window.__cpVoiceTarget = inputId || null;
   startVoiceInput();
 }
+// iOS app: the web view has no speech recognition, so the native one
+// (Capacitor SpeechRecognition). It gives the whole text heard so far at
+// every step; the last one is written into the field when dictation ends.
+function iosSpeech() { return (typeof isIosApp === 'function' && isIosApp()) ? capacitorPlugin('SpeechRecognition') : null; }
+async function startIosVoiceInput(sr, lang) {
+  const status = $('voice-status');
+  if (window.__cpDictating) { stopVoiceInput(); return; }
+  try {
+    const perm = await sr.requestPermissions();
+    if (perm && perm.speechRecognition && perm.speechRecognition !== 'granted') {
+      if (typeof showToast === 'function') showToast('Consenti microfono e riconoscimento vocale nelle impostazioni di iPhone.', 'error');
+      return;
+    }
+    window.__iosVoiceText = '';
+    if (!window.__iosVoiceListening) {
+      window.__iosVoiceListening = true;
+      sr.addListener('partialResults', function (data) {
+        const m = data && data.matches && data.matches[0];
+        if (m) {
+          window.__iosVoiceText = m;
+          const st = $('voice-status'); if (st) st.textContent = m;
+        }
+      });
+      sr.addListener('listeningState', function (data) {
+        if (data && data.status === 'stopped' && window.__cpDictating) finishIosVoiceInput();
+      });
+    }
+    window.__cpDictating = true;
+    if (typeof setDictateButtonState === 'function') setDictateButtonState(true);
+    if (status) status.textContent = t('listening');
+    await sr.start({ language: lang, partialResults: true, popup: false, maxResults: 1 });
+  } catch (err) {
+    console.warn('[IOS_VOICE]', err);
+    window.__cpDictating = false;
+    if (typeof setDictateButtonState === 'function') setDictateButtonState(false);
+    if (status) status.textContent = '';
+    if (typeof showToast === 'function') showToast('Dettatura non riuscita: riprova.', 'error');
+  }
+}
+function finishIosVoiceInput() {
+  window.__cpDictating = false;
+  if (typeof setDictateButtonState === 'function') setDictateButtonState(false);
+  const text = String(window.__iosVoiceText || '').trim();
+  window.__iosVoiceText = '';
+  const st = $('voice-status'); if (st) st.textContent = '';
+  if (text && typeof applyNativeVoiceResult === 'function') applyNativeVoiceResult(text);
+}
 function startVoiceInput(){
   const status = $('voice-status');
   const lang = coachSpeechLang();
+  const iosSr = iosSpeech();
+  if (iosSr) { startIosVoiceInput(iosSr, lang); return; }
   const native = nativeBridge();
   if (native && typeof native.startVoiceInputWithLang === 'function') {
     window.__cpDictating = true;
@@ -40147,6 +40243,11 @@ function startVoiceInput(){
   }
 }
 function stopVoiceInput(){
+  const iosSr = iosSpeech();
+  if (iosSr) {
+    Promise.resolve(iosSr.stop()).catch(function () {}).then(function () { finishIosVoiceInput(); });
+    return;
+  }
   window.__cpDictating = false;
   const native = nativeBridge();
   if (native && typeof native.stopVoiceInput === 'function') native.stopVoiceInput();
@@ -40191,7 +40292,10 @@ function pickBestSpeechVoice(lang) {
   }).sort(function (a, b) { return b.score - a.score; });
   return scored[0] && scored[0].score > 0 ? scored[0].v : null;
 }
+// The Coach AI no longer reads its answers aloud (removed on request: the
+// synthetic voice was not good enough). Dictation to the Coach stays.
 function offerSpeakCoachReply(text, forceAsk) {
+  return;
   const mode = getCoachVoiceMode();
   if (mode === 'never' && !forceAsk) return;
   if (mode === 'auto' && !forceAsk) {
@@ -40211,6 +40315,7 @@ function offerSpeakCoachReply(text, forceAsk) {
   speakCoachReply(text);
 }
 function speakCoachReply(text){
+  return;
   if(!voiceOutputEnabled) return;
   const lang = coachSpeechLang();
   const spoken = sanitizeCoachDisplayText(text)
@@ -40245,6 +40350,9 @@ function clearCoachSession(){
   console.debug('COACH_SESSION_CLEAR');
   archiveCurrentCoachChat();
   store.chatHistory = [];
+  // The cloud copy is longer than an empty chat: without this mark the next
+  // download brought the old conversation back.
+  store.chatClearedAt = Date.now();
   window.pendingProgramImport = null;
   window.activeCoachProposals = {};
   const input = $('ai-input'); if(input) { input.value = ''; input.disabled = false; }
@@ -40398,6 +40506,7 @@ function openAccount(){
   // An athlete's password is the coach's to reset; signing out elsewhere is anyone's.
   const ownAccount = logged && store.accountUser.provider !== 'coach_client' && !(typeof isClientStorageContext === 'function' && isClientStorageContext());
   if ($('account-change-password')) $('account-change-password').style.display = ownAccount ? 'block' : 'none';
+  if ($('account-edit-name')) $('account-edit-name').style.display = ownAccount ? 'block' : 'none';
   if ($('account-logout-others')) $('account-logout-others').style.display = logged ? 'block' : 'none';
   // Deleting is for one's own account: an athlete's belongs to the coach.
   if ($('account-delete')) $('account-delete').style.display = (logged && store.accountUser.provider !== 'coach_client' && !(typeof isClientStorageContext === 'function' && isClientStorageContext())) ? 'block' : 'none';
@@ -40815,6 +40924,35 @@ async function logoutOtherDevices() {
   }
 }
 
+// Apple sends the name only at the first sign-in: with a hidden email the
+// account is left with the random part of the relay address as its name.
+function accountNameIsPlaceholder(user) {
+  if (!user || user.provider === 'coach_client') return false;
+  const n = String(user.name || '').trim().toLowerCase();
+  const e = String(user.email || '').trim().toLowerCase();
+  return !n || n === e || n === e.split('@')[0];
+}
+async function editAccountName(firstTime) {
+  if (!store.accountToken || !store.accountUser) return;
+  const current = accountNameIsPlaceholder(store.accountUser) ? '' : String(store.accountUser.name || '');
+  const ask = firstTime ? 'Come ti chiami? (il nome che vedrai nell’app e che vedrà il tuo coach)' : 'Il tuo nome';
+  let name;
+  try { name = window.prompt(ask, current); } catch (_) { return; }
+  if (name == null) return;
+  name = String(name).replace(/\s+/g, ' ').trim();
+  if (name.length < 2) { if (typeof showToast === 'function') showToast('Nome troppo corto.', 'error'); return; }
+  try {
+    const res = await accountRequest('/api/account/name', { method: 'PATCH', body: JSON.stringify({ name: name }) });
+    const data = await readApiJson(res);
+    if (!data || !data.user) throw new Error((data && data.error) || 'Nome non salvato.');
+    store.accountUser = Object.assign({}, store.accountUser, { name: data.user.name });
+    if (typeof persist === 'function') persist();
+    updateAccountButton();
+    if (typeof showToast === 'function') showToast('Benvenuto, ' + data.user.name, 'ok');
+  } catch (err) {
+    if (typeof showToast === 'function') showToast((err && err.message) || 'Nome non salvato.', 'error');
+  }
+}
 async function finishOAuthLogin(payload){
   if(!payload?.token || !payload?.user) throw new Error('Risposta provider non valida.');
   // The account had a password set when it was registered; the provider has
@@ -40827,7 +40965,8 @@ async function finishOAuthLogin(payload){
   setGoogleAuthLoading(false);
   closeAccount();
   try { ensurePrivacyConsent(); } catch (_) {}
-  if (typeof showToast === 'function') showToast(`Benvenuto, ${store.accountUser.name}`, 'ok');
+  if (accountNameIsPlaceholder(store.accountUser)) setTimeout(function () { editAccountName(true); }, 600);
+  else if (typeof showToast === 'function') showToast(`Benvenuto, ${store.accountUser.name}`, 'ok');
   // Sync in background — do not block perceived login latency
   Promise.race([
     syncAccountData(true),
@@ -40976,9 +41115,95 @@ var GOOGLE_VERIFIER_KEY = 'NURVAN_GOOGLE_VERIFIER';
 function isIosApp() {
   try { return !!(window.Capacitor && typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'ios'); } catch (_) { return false; }
 }
+// A text that does not go through the page (notifications, speech): in the
+// language of the app. The page itself is translated by i18n-runtime.js.
+function trText(s) { return (typeof window !== 'undefined' && typeof window.tr === 'function') ? window.tr(s) : s; }
 function capacitorPlugin(name) {
   try { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[name]) || null; } catch (_) { return null; }
 }
+
+/*
+ * iOS app: notifications, vibration and the number on the icon go through
+ * Capacitor plugins (LocalNotifications, Haptics, Badge); the web APIs the
+ * rest of the app uses do nothing inside an iOS web view. Local ones only:
+ * a message arriving while the app is closed needs push (APNs), not here.
+ */
+function iosNotifId(key) {
+  let h = 0;
+  const str = String(key || '');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+  return Math.abs(h % 2000000000) + 1;
+}
+function iosNotifications() { return isIosApp() ? capacitorPlugin('LocalNotifications') : null; }
+function iosAskNotificationPermission() {
+  const ln = iosNotifications();
+  if (!ln) return Promise.resolve(false);
+  return Promise.resolve(ln.requestPermissions())
+    .then(function (r) { return !!(r && r.display === 'granted'); })
+    .catch(function () { return false; });
+}
+// job: { id, title, body, at (epoch ms), daily (bool), route }
+function iosScheduleNotification(job) {
+  const ln = iosNotifications();
+  if (!ln || !job) return;
+  job = Object.assign({}, job, { title: trText(job.title), body: trText(job.body) });
+  const when = new Date(Math.max(Date.now() + 1000, Number(job.at) || Date.now() + 1000));
+  const schedule = job.daily
+    ? { on: { hour: when.getHours(), minute: when.getMinutes() }, allowWhileIdle: true }
+    : { at: when, allowWhileIdle: true };
+  iosAskNotificationPermission().then(function (ok) {
+    if (!ok) return;
+    const id = iosNotifId(job.id);
+    Promise.resolve(ln.cancel({ notifications: [{ id: id }] })).catch(function () {}).then(function () {
+      return ln.schedule({ notifications: [{
+        id: id,
+        title: String(job.title || 'Nurvan'),
+        body: String(job.body || ''),
+        schedule: schedule,
+        sound: 'default',
+        extra: { route: job.route || '' }
+      }] });
+    }).catch(function (err) { console.warn('[IOS_NOTIFY]', err); });
+  });
+}
+function iosCancelNotification(key) {
+  const ln = iosNotifications();
+  if (!ln) return;
+  Promise.resolve(ln.cancel({ notifications: [{ id: iosNotifId(key) }] })).catch(function () {});
+}
+function iosVibrate(ms) {
+  const hp = isIosApp() ? capacitorPlugin('Haptics') : null;
+  if (!hp) return false;
+  try {
+    if (ms && ms >= 400 && hp.notification) hp.notification({ type: 'SUCCESS' });
+    else if (hp.vibrate) hp.vibrate({ duration: ms || 300 });
+  } catch (_) {}
+  return true;
+}
+function iosSetBadge(n) {
+  const b = isIosApp() ? capacitorPlugin('Badge') : null;
+  if (!b) return false;
+  const count = Math.max(0, Number(n) || 0);
+  try {
+    if (count > 0) {
+      Promise.resolve(b.requestPermissions && b.requestPermissions()).catch(function () {})
+        .then(function () { return b.set({ count: count }); }).catch(function () {});
+    } else {
+      Promise.resolve(b.clear()).catch(function () {});
+    }
+  } catch (_) {}
+  return true;
+}
+// A tap on a notification opens where it points.
+try {
+  const lnTap = iosNotifications();
+  if (lnTap && lnTap.addListener) {
+    lnTap.addListener('localNotificationActionPerformed', function (e) {
+      const route = e && e.notification && e.notification.extra && e.notification.extra.route;
+      if (route && typeof handleNotifyRoute === 'function') { try { handleNotifyRoute(route); } catch (_) {} }
+    });
+  }
+} catch (_) {}
 async function startGoogleAuthIos() {
   const status = $('account-status');
   try {
@@ -41027,12 +41252,28 @@ async function iosGoogleReturn(url) {
     if (status) status.textContent = (error && error.message) || 'Accesso Google non riuscito.';
   }
 }
+async function iosAppleReturn(url) {
+  const browser = capacitorPlugin('Browser');
+  try { if (browser) await browser.close(); } catch (_) {}
+  let params;
+  try { params = new URL(url).searchParams; } catch (_) { params = new URLSearchParams(String(url).split('?')[1] || ''); }
+  const err = params.get('error');
+  const ticket = params.get('code');
+  if (err || !ticket) {
+    try { localStorage.removeItem(APPLE_VERIFIER_KEY); } catch (_) {}
+    const status = $('account-status');
+    if (status) status.textContent = err === 'cancelled' ? 'Accesso con Apple annullato.' : 'Accesso con Apple non riuscito. Riprova.';
+    return;
+  }
+  await nativeAppleResult(ticket);
+}
 try {
   const capApp = isIosApp() ? capacitorPlugin('App') : null;
   if (capApp && capApp.addListener) {
     capApp.addListener('appUrlOpen', function (e) {
       const url = String((e && e.url) || '');
       if (url.indexOf('nurvan://oauth/google') === 0) iosGoogleReturn(url);
+      if (url.indexOf('nurvan://oauth/apple') === 0) iosAppleReturn(url);
     });
   }
 } catch (_) {}
@@ -41085,7 +41326,7 @@ function renderGoogleSignInButton(clientId) {
     width: width,
     text: 'continue_with',
     shape: 'rectangular',
-    locale: 'it'
+    locale: (window.NurvanI18n ? NurvanI18n.lang() : 'it')
   });
   syncGoogleAuthButtons(!!store.accountToken);
 }
@@ -41187,7 +41428,7 @@ function prepareAppleWebSignIn() {
 function startAppleAuth(){
   const status = $('account-status');
   if (status) status.textContent = 'Apertura account Apple…';
-  if (isAndroidWebViewNative()) { startAppleAuthInBrowser(); return; }
+  if (isAndroidWebViewNative() || isIosApp()) { startAppleAuthInBrowser(); return; }
   if (!window.__appleWeb || !window.AppleID || !AppleID.auth) {
     prepareAppleWebSignIn().then(function () {
       if (status) status.textContent = 'Tocca di nuovo «Accedi con Apple».';
@@ -41234,6 +41475,14 @@ async function startAppleAuthInBrowser() {
     const verifier = appleB64url(raw);
     const hash = appleB64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
     localStorage.setItem(APPLE_VERIFIER_KEY, JSON.stringify({ v: verifier, at: Date.now() }));
+    if (isIosApp()) {
+      // Apple's popup does not work inside the iOS app: the system browser
+      // does, and comes back through nurvan://oauth/apple.
+      const browser = capacitorPlugin('Browser');
+      if (!browser) throw new Error('Accesso con Apple non disponibile su questo dispositivo.');
+      await browser.open({ url: coachEndpoint('/api/auth/apple/start?app=ios&vh=' + encodeURIComponent(hash)) });
+      return;
+    }
     // An http(s) navigation from the app opens the system browser.
     window.location.href = coachEndpoint('/api/auth/apple/start?vh=' + encodeURIComponent(hash));
   } catch (err) {
@@ -41280,7 +41529,10 @@ function legalConfig() {
 }
 // On Android an http(s) link leaves the WebView for the browser.
 function legalPageUrl(slug) {
-  try { return coachEndpoint('/' + slug); } catch (_) { return '/' + slug; }
+  // In the language of the app: the pages exist translated (?lang=).
+  const lang = (window.NurvanI18n && NurvanI18n.lang && NurvanI18n.lang()) || 'it';
+  const q = lang !== 'it' ? '?lang=' + lang : '';
+  try { return coachEndpoint('/' + slug) + q; } catch (_) { return '/' + slug + q; }
 }
 function legalLinkHtml(slug, label) {
   return '<a href="' + esc(legalPageUrl(slug)) + '" target="_blank" rel="noopener" style="color:var(--gold);">' + esc(label) + '</a>';
@@ -41510,7 +41762,7 @@ function renderPrivacySettingsCard() {
   const cfg = legalConfig();
   const logged = !!(store && store.accountToken && store.accountUser);
   const c = store && store.privacyConsent;
-  const when = function (iso) { try { return new Date(iso).toLocaleDateString('it-IT'); } catch (_) { return ''; } };
+  const when = function (iso) { try { return new Date(iso).toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT')); } catch (_) { return ''; } };
   const accepted = c && c.version
     ? ('Informativa e termini accettati (versione ' + esc(c.version) + (c.at ? ', ' + esc(when(c.at)) : '') + ').' + (c.version !== cfg.version ? ' <b style="color:var(--gold);">È disponibile una versione aggiornata.</b>' : ''))
     : (logged ? 'Consensi non ancora dati su questo account.' : 'Accedi per gestire i consensi del tuo account.');
@@ -41571,7 +41823,11 @@ async function confirmDeleteAccount() {
   const msg = document.getElementById('delete-account-msg');
   const go = document.getElementById('delete-account-go');
   const typed = String((input && input.value) || '').trim().toUpperCase();
-  if (typed !== 'ELIMINA') { if (msg) msg.textContent = 'Scrivi ELIMINA per confermare.'; return; }
+  // The word asked for is the one the screen shows: in another language the
+  // prompt says LÖSCHEN, ELIMINAR... and that is what the person types.
+  const accepted = ['ELIMINA', String(trText('ELIMINA')).toUpperCase()]
+    .concat(String(trText('Scrivi ELIMINA per confermare.')).match(/\p{Lu}{4,}/gu) || []);
+  if (accepted.indexOf(typed) === -1) { if (msg) msg.textContent = 'Scrivi ELIMINA per confermare.'; return; }
   if (go) go.disabled = true;
   try {
     const res = await accountRequest('/api/account', { method: 'DELETE', body: JSON.stringify({ confirm: 'ELIMINA' }) });
@@ -41757,6 +42013,8 @@ function accountPayload(opts){
     // The rest of what the app remembers about the person, which used to stay
     // on whichever device happened to produce it.
     chatHistory: Array.isArray(store.chatHistory) ? store.chatHistory.slice(-120) : [],
+    chatClearedAt: Number(store.chatClearedAt) || 0,
+    coachArchivesClearedAt: Number(store.coachArchivesClearedAt) || 0,
     actionHistory: Array.isArray(store.actionHistory) ? store.actionHistory.slice(-200) : [],
     intelligence: store.intelligence || null,
     intelTargets: store.intelTargets || {},
@@ -42047,7 +42305,14 @@ function applyRemoteAccountData(remote, preferLocal) {
   // Same rule for everything the account remembers: the two sides are put
   // together, and a device that has been away for a while adds to what is
   // there rather than replacing it.
-  if (Array.isArray(remote.chatHistory) && remote.chatHistory.length > (store.chatHistory || []).length) {
+  // A reset (here or elsewhere) is a moment: a copy from before it never
+  // brings the conversation back, one from after it replaces this one.
+  const remoteCleared = Number(remote.chatClearedAt) || 0;
+  const localCleared = Number(store.chatClearedAt) || 0;
+  if (remoteCleared > localCleared) {
+    store.chatHistory = Array.isArray(remote.chatHistory) ? remote.chatHistory.slice(-120) : [];
+    store.chatClearedAt = remoteCleared;
+  } else if (remoteCleared === localCleared && Array.isArray(remote.chatHistory) && remote.chatHistory.length > (store.chatHistory || []).length) {
     store.chatHistory = remote.chatHistory.slice(-120);
   }
   if (Array.isArray(remote.actionHistory) && remote.actionHistory.length > (store.actionHistory || []).length) {
@@ -42164,7 +42429,12 @@ function applyRemoteAccountData(remote, preferLocal) {
       if (kept.length !== store.calendarEvents.length) store.calendarEvents = kept;
     }
     try { if (typeof CalendarService !== 'undefined') CalendarService._customCache = null; } catch (_) {}
-    if (Array.isArray(remote.coachArchives) && remote.coachArchives.length && !(store.coachArchives || []).length) {
+    const remoteArcCleared = Number(remote.coachArchivesClearedAt) || 0;
+    const localArcCleared = Number(store.coachArchivesClearedAt) || 0;
+    if (remoteArcCleared > localArcCleared) {
+      store.coachArchives = Array.isArray(remote.coachArchives) ? remote.coachArchives.slice(0, 24) : [];
+      store.coachArchivesClearedAt = remoteArcCleared;
+    } else if (remoteArcCleared === localArcCleared && Array.isArray(remote.coachArchives) && remote.coachArchives.length && !(store.coachArchives || []).length) {
       store.coachArchives = remote.coachArchives.slice(0, 24);
     }
     if (Array.isArray(remote.coachProgramLibrary) && remote.coachProgramLibrary.length) {
@@ -42541,7 +42811,7 @@ function showRecoverSchedaPicker(candidates, hintWeeks) {
   if (!box) {
     box = document.createElement('div');
     box.id = 'recover-scheda-picker';
-    box.style.cssText = 'display:none;position:fixed;inset:0;z-index:10200;background:rgba(0,0,0,.92);align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;';
+    box.style.cssText = 'display:none;position:fixed;inset:0;z-index:10200;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;overflow:hidden;';
     document.body.appendChild(box);
   }
   window.__cpRecoverCandidates = candidates;
@@ -42558,7 +42828,7 @@ function showRecoverSchedaPicker(candidates, hintWeeks) {
       '<div style="font-size:13px;font-weight:800;">' + esc(c.prog.title || 'Senza titolo') + mark + '</div>' +
       '<div style="font-size:10px;color:#aaa;margin-top:4px;">' + w + ' settimane · ' + esc(c.source) + '</div></button>';
   }).join('');
-  box.innerHTML = '<div style="width:100%;max-width:460px;max-height:85vh;overflow:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;padding:14px;box-sizing:border-box;">' +
+  box.innerHTML = '<div style="width:100%;max-width:460px;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;padding:14px;box-sizing:border-box;">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">SCEGLI LA TUA SCHEDA</div>' +
     '<h2 style="color:#fff;font-size:16px;margin:6px 0 8px;">I carichi restano. Attiva la scheda giusta.</h2>' +
     '<p style="font-size:12px;color:#aaa;margin:0 0 12px;">Cerco in particolare programmi da <b style="color:#fff;">' + (hintWeeks || 16) + ' settimane</b> personalizzati.</p>' +
@@ -42977,6 +43247,24 @@ function closeResetSession(){
   console.debug('OVERLAY_CLOSE:reset-session-modal');
   const modal = $('reset-session-modal'); if(modal) modal.style.display = 'none';
 }
+// Azzera cronologia: the archive of past chats, on every device. The open
+// conversation stays (that one is AZZERA CHAT).
+function resetCoachHistory() {
+  const n = (store.coachArchives || []).length;
+  if (!n) { if (typeof showToast === 'function') showToast('L’archivio delle chat è già vuoto', 'info'); return; }
+  if (!confirm('Cancellare l’archivio delle chat del Coach AI?\n\n' + n + (n === 1 ? ' chat salvata sparisce' : ' chat salvate spariscono') + ' su tutti i dispositivi. La conversazione aperta resta.')) return;
+  const liveId = store._liveArchiveId;
+  store.coachArchives = [];
+  // The open conversation is not in the archive any more: it goes back in
+  // only when it is closed.
+  if (liveId) { store._liveArchiveId = null; store._liveArchiveAt = null; }
+  store._openArchiveId = null;
+  store.coachArchivesClearedAt = Date.now();
+  persist();
+  render();
+  if (typeof showToast === 'function') showToast('Archivio chat cancellato', 'ok');
+  try { if (store.accountToken && typeof syncAccountData === 'function') syncAccountData(false); } catch (_) {}
+}
 function confirmResetSession(){
   console.debug('RESET_CHAT_CONFIRM');
   coachRequestToken++;
@@ -42984,6 +43272,7 @@ function confirmResetSession(){
   store.chatSessionId = null;
   closeResetSession();
   render();
+  try { if (store.accountToken && typeof syncAccountData === 'function') syncAccountData(false); } catch (_) {}
 }
 function sanitizeCoachDisplayText(raw) {
   let text = String(raw || '');
@@ -43031,7 +43320,7 @@ function formatNutritionDayDate(dateIso) {
   if (!dateIso) return '';
   const dt = new Date(dateIso + 'T00:00:00');
   if (isNaN(dt.getTime())) return '';
-  return dt.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+  return dt.toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT'), { day: '2-digit', month: '2-digit' });
 }
 // The date to suggest for the next new day: the day right after the most
 // recently dated existing day, or today if nothing is dated yet.
@@ -43189,7 +43478,7 @@ function nutritionTargetSourceHtml(t) {
     '<div style="font-size:9px;color:#777;margin-top:3px;line-height:1.35;">' + esc(N ? N.DISCLAIMER : '') + '</div>';
 }
 function nutritionNumber(n) {
-  return Math.round(Number(n) || 0).toLocaleString('it-IT');
+  return Math.round(Number(n) || 0).toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'));
 }
 // Total, target, difference and a bar, for the four quantities. Grey within
 // 5 %, amber beyond: a number and a colour, never a verdict.
@@ -43218,7 +43507,7 @@ function nutritionSummaryHtml(totals, target, label) {
     '<div style="font-size:11px;font-weight:800;color:var(--gold);">Totale della giornata</div>' +
     (label ? '<div style="font-size:10px;color:#888;margin-top:2px;">' + esc(label) + '</div>' : '') +
     body +
-    (totals.partial ? '<div style="font-size:9px;color:#888;margin-top:8px;">* somma parziale: ' + totals.missing.length + ' aliment' + (totals.missing.length === 1 ? 'o' : 'i') + ' senza valori (' + esc(totals.missing.slice(0, 3).join(', ')) + (totals.missing.length > 3 ? '…' : '') + ')</div>' : '') +
+    (totals.partial ? '<div style="font-size:9px;color:#888;margin-top:8px;">* somma parziale: ' + (totals.missing.length === 1 ? '1 alimento senza valori' : totals.missing.length + ' alimenti senza valori') + ' (' + esc(totals.missing.slice(0, 3).join(', ')) + (totals.missing.length > 3 ? '…' : '') + ')</div>' : '') +
     '</div>';
 }
 // For a diary day: the plan of the same weekday, if there is one.
@@ -43656,7 +43945,7 @@ function refreshGenNutritionFreeDays() {
   st.freeCount = freeCount;
   const days = (typeof WEEKDAY_IT !== 'undefined' ? WEEKDAY_IT : ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica']).slice(0, dayCount);
   const selected = Array.isArray(st.freeDays) ? st.freeDays.slice() : [];
-  host.innerHTML = '<div style="font-size:10px;color:#aaa;margin-bottom:6px;">Seleziona ' + freeCount + ' giorn' + (freeCount === 1 ? 'o' : 'i') + ' con pasto libero</div>' +
+  host.innerHTML = '<div style="font-size:10px;color:#aaa;margin-bottom:6px;">Seleziona ' + (freeCount === 1 ? '1 giorno' : freeCount + ' giorni') + ' con pasto libero</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">' +
     days.map(function (d) {
       const on = selected.indexOf(d) >= 0;
@@ -44720,10 +45009,16 @@ async function attachNativeDocToChat(docData) {
 }
 window.attachNativeDocToChat = attachNativeDocToChat;
 
+// A pause for the progress bar to be drawn. A frame is not guaranteed: with
+// the tab in the background (or the phone showing another app) the browser
+// stops giving frames, and the import stood still until the person came
+// back - a file "very slow to load". So the frame or 60 ms, whichever first.
 function yieldImportPaint() {
   return new Promise((res) => {
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => res());
-    else res();
+    let done = false;
+    const go = () => { if (!done) { done = true; res(); } };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(go);
+    setTimeout(go, 60);
   });
 }
 function setImportProgress(pct, fileName, msg) {
@@ -46178,7 +46473,7 @@ function applyOperationsToProgram(program, operations) {
     }
     if (type === 'navigate' || type === 'set_view') {
       const view = changes.view || changes.tab || op.view;
-      const allowedViews = new Set(['home','training','stats','ai','programs','nutrition','supplements','therapy','exams','menu','athlete','settings']);
+      const allowedViews = new Set(['home','training','stats','ai','programs','nutrition','supplements','therapy','exams','menu','athlete','settings','hyrox']);
       if (view && allowedViews.has(String(view))) {
         currentView = String(view);
         appliedCount++;
@@ -46818,7 +47113,7 @@ function chooseProgramAdaptation(kind, desired){
   return false;
 }
 function openGoalDialog(kind, desired){
-  const goals = [['IPERTROFIA / MASSA','Volume e crescita muscolare'],['FORZA','Prestazione sui fondamentali'],['POTENZA / ESPLOSIVITÀ','Velocità e qualità della forza'],['RESISTENZA MUSCOLARE','Capacità di sostenere serie e densità'],['METABOLICO / CONDITIONING','Capacità di lavoro e conditioning'],['RICOMPOSIZIONE / FITNESS GENERALE','Equilibrio tra forza, massa e fitness'],['PERSONALIZZATO','Obiettivo definito dall’utente']];
+  const goals = [['IPERTROFIA / MASSA','Volume e crescita muscolare'],['FORZA','Prestazione sui fondamentali'],['POTENZA / ESPLOSIVITÀ','Velocità e qualità della forza'],['RESISTENZA MUSCOLARE','Capacità di sostenere serie e densità'],['METABOLICO / CONDITIONING','Capacità di lavoro e conditioning'],['RICOMPOSIZIONE / FITNESS GENERALE','Equilibrio tra forza, massa e fitness'],['HYROX / GARA IBRIDA','Corsa, stazioni e forza per la gara'],['PERSONALIZZATO','Obiettivo definito dall’utente']];
   const overlay = document.createElement('div'); overlay.className = 'modal'; overlay.style.display = 'flex'; overlay.style.zIndex = '2650';
   overlay.innerHTML = `<div class="modal-content"><h2 style="color:var(--gold);margin-top:0;">Qual è l'obiettivo principale?</h2><select id="goal-primary" style="margin-bottom:8px;">${goals.map(g=>`<option value="${esc(g[0])}">${esc(g[0])} — ${esc(g[1])}</option>`).join('')}</select><select id="goal-secondary"><option value="">Nessun obiettivo secondario</option>${goals.map(g=>`<option value="${esc(g[0])}">${esc(g[0])}</option>`).join('')}</select><input id="goal-constraints" placeholder="Vincoli opzionali (attrezzatura, giorni, infortuni)" style="margin-top:8px;"><div style="display:flex;gap:8px;margin-top:16px;"><button class="btn btn-outline" id="goal-cancel" style="flex:1;">ANNULLA</button><button class="btn btn-primary" id="goal-confirm" style="flex:1;">ANALIZZA</button></div><div id="goal-status" style="font-size:11px;color:#aaa;margin-top:10px;"></div></div>`;
   document.body.appendChild(overlay);
@@ -47055,6 +47350,28 @@ function persistActiveProgramStructure() {
 // perché è quella che serve se IndexedDB viene svuotato.
 var NURVAN_PROGRAM_LOCK_MAX_BYTES = 1024 * 1024;
 
+// The biggest localStorage entries and, for the blob that did not fit, its
+// biggest fields, in KB: "chiave 1200 · ... | blob: data 900 · ...".
+function localStorageUsageReport(blob) {
+  const rows = [];
+  let total = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    const n = (k.length + String(localStorage.getItem(k) || '').length);
+    total += n;
+    rows.push([k, n]);
+  }
+  rows.sort(function (a, b) { return b[1] - a[1]; });
+  const kb = function (n) { return Math.round(n / 1024); };
+  let out = 'tot ' + kb(total) + ' KB; ' + rows.slice(0, 4).map(function (r) { return r[0].slice(0, 40) + ' ' + kb(r[1]); }).join(' · ');
+  if (blob && typeof blob === 'object') {
+    const f = Object.keys(blob).map(function (k) { let n = 0; try { n = JSON.stringify(blob[k]).length; } catch (_) {} return [k, n]; });
+    f.sort(function (a, b) { return b[1] - a[1]; });
+    out += ' | blob: ' + f.slice(0, 5).map(function (r) { return r[0] + ' ' + kb(r[1]); }).join(' · ');
+  }
+  return out;
+}
+
 function lockPersonalProgramBackup(prog) {
   try {
     if (!prog || !Array.isArray(prog.weeks) || prog.weeks.length < 4) return;
@@ -47240,6 +47557,7 @@ async function releaseTimerWakeLock() {
 function nativeVibrate(ms) {
   try {
     if (store.prefs && store.prefs.timerVibrate === false) return;
+    if (typeof iosVibrate === 'function' && iosVibrate(ms || 400)) return;
     if (typeof NativeConfig !== 'undefined' && NativeConfig.vibrate) NativeConfig.vibrate(ms || 400);
     else if (navigator.vibrate) navigator.vibrate(ms || 400);
   } catch (_) {}
@@ -47271,13 +47589,13 @@ function nativeBeep(text) {
   try {
     if (store.prefs && store.prefs.timerSound === false) return;
     if (typeof NativeConfig !== 'undefined' && NativeConfig.speak) {
-      NativeConfig.speak(text || 'Timer terminato');
+      NativeConfig.speak(trText(text || 'Timer terminato'));
       return;
     }
     if (playWebTimerTone()) return;
     if (window.speechSynthesis) {
-      const u = new SpeechSynthesisUtterance(text || 'Riposo terminato');
-      u.lang = 'it-IT';
+      const u = new SpeechSynthesisUtterance(trText(text || 'Riposo terminato'));
+      u.lang = (typeof coachSpeechLang === 'function') ? coachSpeechLang() : 'it-IT';
       u.rate = 1;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
@@ -47505,8 +47823,16 @@ function stopTimer() {
 // browser puo' aver rallentato o sospeso i tick, ma non l'ora.
 try {
   if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    // iOS app: leaving the app during a rest, its end arrives as a
+    // notification with sound; coming back removes it.
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible' && restTimerState()) renderRestTimer();
+      const st = restTimerState();
+      if (document.visibilityState === 'visible') {
+        if (typeof iosCancelNotification === 'function') iosCancelNotification('rest_timer');
+        if (st) renderRestTimer();
+      } else if (st && !st.finished && st.endsAt > Date.now() && typeof iosScheduleNotification === 'function') {
+        iosScheduleNotification({ id: 'rest_timer', title: 'Recupero finito', body: 'Tocca per la prossima serie.', at: st.endsAt, route: 'training' });
+      }
     });
   }
 } catch (_) {}
@@ -48039,6 +48365,12 @@ function completeSetQuick(exIdx, setNum, restText) {
   if (ssStep && ssStep.restKey) {
     // End of the round: one rest, the longest among the linked exercises.
     try { startTimer(ssStep.restText, ssStep.restKey); } catch (_) {}
+    try { queueLiveSetIntel(exIdx, setNum); } catch (_) {}
+    renderKeepingExercise(exIdx);
+    // Back up to the first exercise of the superset for the next round.
+    const first = supersetNextRoundStart(exIdx, setNum);
+    if (first) focusSupersetSet(first);
+    return;
   } else {
     try { startTimer(rest, `w${currentWeek}_d${currentDay}_e${exIdx}`); } catch (_) {}
   }
@@ -48087,6 +48419,27 @@ function supersetNextStep(exIdx, setNum) {
     if (!best || sec > best.sec) best = { sec, restText: r, restKey: key };
   });
   return best;
+}
+
+// The first open set of the next round, starting from the first linked
+// exercise: where to go once the rest after a round begins.
+function supersetNextRoundStart(exIdx, setNum) {
+  const row = exerciseRowAt(currentWeek, currentDay, exIdx) || {};
+  const ssId = row.superset_id;
+  if (!ssId) return null;
+  const w = DATA && DATA.weeks && DATA.weeks[currentWeek - 1];
+  const d = w && (w.sessions || w.days) && (w.sessions || w.days)[currentDay];
+  const list = (d && (d.exercises || d.rows)) || [];
+  const members = [];
+  list.forEach((ex, i) => {
+    if (ex && ex.superset_id === ssId && !store.skips[`w${currentWeek}_d${currentDay}_e${i}`]) members.push(i);
+  });
+  const round = supersetWorkingSets(exIdx).indexOf(setNum) + 1;
+  for (const i of members) {
+    const s = supersetWorkingSets(i)[round];
+    if (s && !store.data[`w${currentWeek}_d${currentDay}_e${i}_s${s}_done`]) return { exIdx: i, setNum: s };
+  }
+  return null;
 }
 
 function focusSupersetSet(target) {
@@ -48152,35 +48505,37 @@ function showLiveSetIntelHtml(exIdx) {
   let h = '<div class="ex-intel-bubble">';
   h += '<div style="font-size:10px;color:var(--gold);font-weight:800;">SET ' + live.set + ' COMPLETATO ✓</div>';
   h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + esc(String(kgToDisp(live.load))) + ' ' + wUnit() + ' × ' + esc(String(live.reps)) + ' rip</div>';
-  h += '<div class="stats-adv-row"><span>Massimale stimato (questa serie)</span><span>' + (live.lastSetE1RM == null ? '—' : wFmt(live.lastSetE1RM)) + '</span></div>';
-  h += '<div style="font-size:9px;color:#888;">e1RM della serie appena registrata — stima, non un massimale testato</div>';
+  // Only the suggestion for next time is shown; the numbers open on request.
+  let d = '';
+  d += '<div class="stats-adv-row"><span>Massimale stimato (questa serie)</span><span>' + (live.lastSetE1RM == null ? '—' : wFmt(live.lastSetE1RM)) + '</span></div>';
+  d += '<div style="font-size:9px;color:#888;">e1RM della serie appena registrata — stima, non un massimale testato</div>';
   if (live.rpe != null || live.rir != null) {
-    h += '<div class="stats-adv-row"><span>Sforzo</span><span>' +
+    d += '<div class="stats-adv-row"><span>Sforzo</span><span>' +
       (live.rpe != null ? ('RPE ' + live.rpe + '/10') : '') +
       (live.rpe != null && live.rir != null ? ' · ' : '') +
       (live.rir != null ? ('RIR ' + live.rir) : '') + '</span></div>';
   }
   if (live.relativeIntensity != null) {
-    h += '<div class="stats-adv-row"><span>Intensità</span><span>' + live.relativeIntensity + '% 1RM stimato' +
+    d += '<div class="stats-adv-row"><span>Intensità</span><span>' + live.relativeIntensity + '% 1RM stimato' +
       (live.intensityBand ? (' · ' + esc(H('intensity', live.intensityBand))) : '') + '</span></div>';
   }
-  h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(live.snapshot && live.snapshot.performanceDelta != null ? live.snapshot.performanceDelta : live.vsPreviousExposure) + '</span></div>';
-  h += '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(live)) + (live.confidence ? (' · ' + esc(H('confidence', live.confidence))) : '') + '</div>';
+  d += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(live.snapshot && live.snapshot.performanceDelta != null ? live.snapshot.performanceDelta : live.vsPreviousExposure) + '</span></div>';
+  d += '<div style="font-size:11px;margin:2px 0 6px;">' + esc(intelDirectionLine(live)) + (live.confidence ? (' · ' + esc(H('confidence', live.confidence))) : '') + '</div>';
   if (live.intensityDelta != null) {
-    h += '<div class="stats-adv-row"><span>Intensità vs precedente</span><span>' + formatIntelPct(live.intensityDelta) + '</span></div>';
+    d += '<div class="stats-adv-row"><span>Intensità vs precedente</span><span>' + formatIntelPct(live.intensityDelta) + '</span></div>';
   }
-  h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(live.volumeVsPrevious != null ? live.volumeVsPrevious : live.vsLastSessionVolume) + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(live.volumeToday) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
-  h += '<div class="stats-adv-row"><span>Fatica durante questa seduta</span><span>' + esc(H('fatigue', live.fatigue && live.fatigue.signal)) + '</span></div>';
-  h += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato · non modifica i kg che hai scritto. ' + metricExplainBtn('e1rm', 'ⓘ Massimale stimato') + '</div>';
+  d += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(live.volumeVsPrevious != null ? live.volumeVsPrevious : live.vsLastSessionVolume) + '</span></div>';
+  d += '<div class="stats-adv-row"><span>Volume di oggi</span><span>' + formatStatsKg(live.volumeToday) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
+  d += '<div class="stats-adv-row"><span>Fatica durante questa seduta</span><span>' + esc(H('fatigue', live.fatigue && live.fatigue.signal)) + '</span></div>';
+  d += '<div style="font-size:9px;color:#777;margin-top:6px;">Derivato · non modifica i kg che hai scritto. ' + metricExplainBtn('e1rm', 'ⓘ Massimale stimato') + '</div>';
   const rep = window.__liveExerciseReport;
   if (rep && !rep.empty && Number(rep.exIdx) === Number(exIdx)) {
-    h += '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-top:10px;">REPORT ESERCIZIO</div>';
-    h += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + formatStatsKg(rep.volumeToday) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Miglior serie</span><span>' + esc(rep.bestSet || '—') + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Massimale stimato oggi</span><span>' + (rep.e1rmToday == null ? '—' : wFmt(rep.e1rmToday)) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(rep.snapshot ? rep.snapshot.performanceDelta : null) + '</span></div>';
-    h += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(rep.volumeChange) + '</span></div>';
+    d += '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-top:10px;">REPORT ESERCIZIO</div>';
+    d += '<div class="stats-adv-row"><span>Volume allenante</span><span>' + formatStatsKg(rep.volumeToday) + ' ' + (typeof wUnit === 'function' ? wUnit() : 'kg') + '</span></div>';
+    d += '<div class="stats-adv-row"><span>Miglior serie</span><span>' + esc(rep.bestSet || '—') + '</span></div>';
+    d += '<div class="stats-adv-row"><span>Massimale stimato oggi</span><span>' + (rep.e1rmToday == null ? '—' : wFmt(rep.e1rmToday)) + '</span></div>';
+    d += '<div class="stats-adv-row"><span>Prestazione vs precedente</span><span>' + formatIntelPct(rep.snapshot ? rep.snapshot.performanceDelta : null) + '</span></div>';
+    d += '<div class="stats-adv-row"><span>Volume vs precedente</span><span>' + formatIntelPct(rep.volumeChange) + '</span></div>';
     if (rep.status) h += '<div style="font-size:11px;margin-top:6px;">' + esc(rep.status) + '</div>';
   }
   const liveSnap = live.snapshot || window.__exIntelSnap;
@@ -48199,6 +48554,7 @@ function showLiveSetIntelHtml(exIdx) {
     h += '<div style="font-size:11px;color:#ccc;margin-top:10px;">La prestazione è diminuita rispetto alle ultime esposizioni.</div>';
     h += '<button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px;" onclick="askHumanCoachAboutExercise(' + exIdx + ',\'esercizio\')">CHIEDI AL COACH</button>';
   }
+  h += '<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:10px;color:#aaa;font-weight:800;">Dettagli serie</summary>' + d + '</details>';
   h += '</div>';
   return h;
 }
@@ -48217,9 +48573,10 @@ function intelRecoHtml(exIdx, reco, L) {
           ? ('Mantieni e monitora' + (reco.suggestedLoad != null ? (' · ' + wFmt(reco.suggestedLoad)) : ''))
           : 'Mantieni il carico attuale' + (reco.suggestedLoad != null ? (' · ' + wFmt(reco.suggestedLoad)) : ''))));
   h += '<div style="font-size:12px;color:#fff;margin:4px 0;">' + esc(recoLine) + '</div>';
-  h += '<div style="font-size:10px;color:#aaa;">' + esc(reco.why) + '</div>';
-  if (reco.mrvNote) h += '<div style="font-size:10px;color:#c9a227;margin-top:4px;">' + esc(reco.mrvNote) + '</div>';
-  h += '<div style="font-size:9px;color:#777;margin:4px 0;">' + esc(H('confidence', reco.confidence)) + ' · ' + esc((reco.evidence || []).join(' · ')) + ' ' + metricExplainBtn('recommendation', 'ⓘ Perché?') + '</div>';
+  h += '<details style="margin:2px 0 4px;"><summary style="cursor:pointer;font-size:10px;color:#888;">Perché</summary>' +
+    '<div style="font-size:10px;color:#aaa;">' + esc(reco.why) + '</div>' +
+    (reco.mrvNote ? '<div style="font-size:10px;color:#c9a227;margin-top:4px;">' + esc(reco.mrvNote) + '</div>' : '') +
+    '<div style="font-size:9px;color:#777;margin:4px 0;">' + esc(H('confidence', reco.confidence)) + ' · ' + esc((reco.evidence || []).join(' · ')) + ' ' + metricExplainBtn('recommendation', 'ⓘ Perché?') + '</div></details>';
   h += '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">';
   if (clientMayApplyIntel()) {
     h += '<button type="button" class="btn btn-primary" style="font-size:10px;padding:6px 8px;" onclick="acceptIntelRecommendation(' + exIdx + ')">Accetta</button>';
@@ -49569,12 +49926,20 @@ function persist() {
     if (sanitized && typeof sanitized === 'object') {
       sanitized.__cpClientScoped = !!isClientStorageContext();
     }
+    window.__lastPersistBlob = sanitized;
     localStorage.setItem(persistKey, JSON.stringify(sanitized));
+    window.__lastPersistBlob = null;
   } catch (quotaErr) {
     console.warn('[PERSIST_WARNING] localStorage quota exceeded, performing deep sanitize:', quotaErr);
     const isQuota = quotaErr && (quotaErr.name === 'QuotaExceededError' || /quota|spazio|storage/i.test(String(quotaErr.message || '')));
-    if (isQuota && typeof showToast === 'function') {
-      showToast('Memoria locale piena: i programmi restano in IndexedDB. Esegui pulizia documenti o Hard Reset se necessario.', 'error');
+    // iOS gives an app about 5 MB here whatever the free space on the phone.
+    // Once per launch, with what fills it, so the cause can be fixed.
+    if (isQuota && typeof showToast === 'function' && !window.__lsQuotaWarned) {
+      window.__lsQuotaWarned = true;
+      let detail = '';
+      try { detail = localStorageUsageReport(window.__lastPersistBlob); } catch (_) {}
+      window.__lsQuotaReport = detail;
+      showToast('Spazio interno dell’app pieno (non quello del telefono): i dati restano salvati e nel cloud. Dettaglio: ' + detail, 'error');
     }
     try {
       // Everything below reads the domain through `store`, which follows the
@@ -50443,6 +50808,7 @@ function renderCurrentView() {
   else if (currentView === 'pricing') renderPricing(c);
   else if (currentView === 'progress') renderProgressCenter(c);
   else if (currentView === 'knowledge') renderTrainingKnowledge(c);
+  else if (currentView === 'hyrox') renderHyrox(c);
   else renderHome(c);
   if (currentView !== 'nutrition') window.__nutritionLastView = currentView;
   applyChromeI18n();
@@ -51377,7 +51743,7 @@ function renderNutritionDiary(c) {
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">' +
     '<button type="button" class="btn btn-outline" style="padding:4px 12px;font-size:14px;" onclick="diaryMonthStep(-1)" aria-label="Mese precedente">‹</button>' +
     '<div style="text-align:center;"><div style="font-size:14px;font-weight:900;color:#fff;">' + DIARY_MONTHS[mo] + ' ' + y + '</div>' +
-    (monthDays ? '<div style="font-size:10px;color:#888;">' + monthDays + ' giorn' + (monthDays === 1 ? 'o' : 'i') + ' segnat' + (monthDays === 1 ? 'o' : 'i') + ' · media ' + nutritionNumber(monthKcal / monthDays) + ' kcal</div>' : '') + '</div>' +
+    (monthDays ? '<div style="font-size:10px;color:#888;">' + (monthDays === 1 ? '1 giorno segnato' : monthDays + ' giorni segnati') + ' · media ' + nutritionNumber(monthKcal / monthDays) + ' kcal</div>' : '') + '</div>' +
     '<button type="button" class="btn btn-outline" style="padding:4px 12px;font-size:14px;" onclick="diaryMonthStep(1)" aria-label="Mese successivo">›</button></div>' +
     '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">' + heads + cells + '</div>' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px;flex-wrap:wrap;">' +
@@ -51663,7 +52029,7 @@ function renderNutritionPlanView(c) {
                     <span style="color:var(--gold);font-weight:800;margin-left:6px;">${f.qb ? 'q.b.' : (safeDisplayValue(f.quantity, '') + ' ' + safeDisplayValue(f.unit, 'g'))}</span>
                     ${f.__swappedToday ? '<span style="font-size:9px;color:#4caf50;font-weight:800;margin-left:6px;">solo oggi</span>' : ''}
                     ${f.recipeId && nutritionRecipeById(f.recipeId) ? `<span style="font-size:10px;color:var(--gold);margin-left:6px;cursor:pointer;" onclick="openRecipe('${esc(f.recipeId)}')">📖 ricetta</span>` : ''}
-                    ${Array.isArray(f.alternatives) && f.alternatives.length > 1 ? `<div style="font-size:9px;color:#777;margin-top:2px;">${f.alternatives.length - 1} alternativ${f.alternatives.length - 1 === 1 ? 'a' : 'e'} nel piano</div>` : ''}
+                    ${Array.isArray(f.alternatives) && f.alternatives.length > 1 ? `<div style="font-size:9px;color:#777;margin-top:2px;">${f.alternatives.length - 1 === 1 ? '1 alternativa nel piano' : (f.alternatives.length - 1) + ' alternative nel piano'}</div>` : ''}
                     ${foodSourceLabelHtml(f)}
                   </div>
                   <div style="display:flex;align-items:center;gap:8px;">
@@ -53434,7 +53800,7 @@ function confirmGenerateNutritionPlan() {
     freeDays = Array.isArray(st.freeDays) ? st.freeDays.slice() : [];
     if (freeDays.length !== need) {
       if (typeof showToast === 'function') {
-        showToast('Seleziona esattamente ' + need + ' giorn' + (need === 1 ? 'o' : 'i') + ' per i pasti liberi', 'error');
+        showToast('Seleziona esattamente ' + (need === 1 ? '1 giorno' : need + ' giorni') + ' per i pasti liberi', 'error');
       }
       return;
     }
@@ -54540,7 +54906,7 @@ function askAiAboutSupplement(name) {
 }
 
 function chooseCoachReadMode(mode) {
-  voiceOutputEnabled = mode === 'voice';
+  voiceOutputEnabled = false;
   const pending = store.pendingCoachAsk;
   store.pendingCoachAsk = null;
   const name = pending && pending.name ? pending.name : '';
@@ -54640,6 +55006,7 @@ function nextAlertEpoch(hhmm) {
   return d.getTime();
 }
 function requestAppNotificationPermission() {
+  if (typeof isIosApp === 'function' && isIosApp()) { iosAskNotificationPermission(); return; }
   try {
     if (typeof NativeConfig !== 'undefined' && NativeConfig.requestNotifications) {
       NativeConfig.requestNotifications();
@@ -54691,10 +55058,19 @@ function scheduleAllItemAlerts() {
   else {
     try { if (typeof NativeConfig !== 'undefined' && NativeConfig.cancelReminder) NativeConfig.cancelReminder('checkin_sched'); } catch (_) {}
   }
+  if (typeof isIosApp === 'function' && isIosApp()) {
+    // Replace the whole set: the reminders scheduled last time go first.
+    let prev = [];
+    try { prev = JSON.parse(localStorage.getItem('NURVAN_IOS_REMINDERS') || '[]'); } catch (_) {}
+    prev.forEach(function (id) { iosCancelNotification(id); });
+    jobs.forEach(function (j) { iosScheduleNotification({ id: j.id, title: j.title, body: j.body, at: j.at, daily: j.repeatEveryMs === 86400000, route: j.route }); });
+    try { localStorage.setItem('NURVAN_IOS_REMINDERS', JSON.stringify(jobs.map(function (j) { return j.id; }))); } catch (_) {}
+    return;
+  }
   try {
     if (typeof NativeConfig !== 'undefined' && NativeConfig.scheduleReminder) {
       jobs.forEach(function (j) {
-        NativeConfig.scheduleReminder(JSON.stringify(j));
+        NativeConfig.scheduleReminder(JSON.stringify(Object.assign({}, j, { title: trText(j.title), body: trText(j.body) })));
       });
     } else if (typeof NotificationService !== 'undefined' && NotificationService.schedule) {
       jobs.forEach(function (j) { NotificationService.schedule(j); });
@@ -56078,6 +56454,8 @@ function renderSettings(c) {
 
 function changeAppLanguage(lang) {
   I18nService.setLanguage(lang);
+  // Everything written in Italian in the screens is translated by i18n-runtime.js.
+  if (window.NurvanI18n) NurvanI18n.setLang(lang);
   if (typeof persist === 'function') persist();
   applyChromeI18n();
   render();
@@ -56167,6 +56545,14 @@ function saveAthleteProfile() {
   if (typeof showToast === 'function') showToast('Profilo salvato', 'ok');
   else alert('Profilo salvato');
   maybeOfferNutritionFromProfile();
+  // Goal HYROX: the catalogue has no race preparation; the HYROX screen
+  // writes one (or, for an athlete with a coach, asks the coach for it).
+  if (typeof hyroxApi === 'function' && hyroxApi() && hyroxApi().wantsHyrox(profile.goal) &&
+      !(store.coachViewingClient || store.coachAssigning) && (!DATA || !(DATA.weeks || []).length)) {
+    if (typeof showToast === 'function') showToast('Obiettivo HYROX: scegli la gara e prepara la scheda.', 'info');
+    navigate('hyrox');
+    return;
+  }
   loadProgramCatalogIndex().then(() => {
     const tips = suggestProgramsForProfile(profile).slice(0, 5);
     store.prefs.suggestedProgramIds = tips.map((p) => p.id);
@@ -56776,7 +57162,7 @@ function updateCatalogFiltersFromUi() {
   const ranked = filterProgramCatalog(allCat);
   const filtered = ranked.slice(0, 150);
   const totalCat = catalogTotalCount();
-  if (countEl) countEl.textContent = filtered.length + (totalCat > filtered.length ? '+' : '') + ' / ' + totalCat.toLocaleString('it-IT');
+  if (countEl) countEl.textContent = filtered.length + (totalCat > filtered.length ? '+' : '') + ' / ' + totalCat.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'));
   if (!listEl) {
     if (currentView === 'programs') render();
     return;
@@ -56917,7 +57303,7 @@ function renderPrograms(c){
       <div>
         <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">PROGRAM DATABASE</span>
         <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">LIBRERIA PROGRAMMI</h2>
-        <div style="font-size:11px;color:#888;margin-top:4px;">${catalogReady ? (totalCat.toLocaleString('it-IT') + ' schede · copertura completa filtri · sezione Donna inclusa') : 'Caricamento database…'}</div>
+        <div style="font-size:11px;color:#888;margin-top:4px;">${catalogReady ? (totalCat.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT')) + ' schede · copertura completa filtri · sezione Donna inclusa') : 'Caricamento database…'}</div>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-outline" style="font-size:11px; padding:6px 12px; border-color:var(--gold); color:var(--gold);" onclick="navigate('import')">IMPORTA FILE</button>
@@ -57030,7 +57416,7 @@ function renderPrograms(c){
     </div>` : ''}
     <div class="card" style="margin-bottom:16px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span id="catalog-count" style="font-size:10px; color:#666;">${filtered.length}${catalogReady ? ' / ' + totalCat.toLocaleString('it-IT') : ''}</span>
+        <span id="catalog-count" style="font-size:10px; color:#666;">${filtered.length}${catalogReady ? ' / ' + totalCat.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT')) : ''}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px;">
         <input id="catalog-q" type="search" placeholder="Es. 4 giorni upper lower ipertrofia donna casa doppia progressione" value="${esc(f.q || '')}" oninput="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()" style="padding:10px;font-size:13px;">
@@ -58776,7 +59162,7 @@ function builtProgramsHtml() {
     const idx = (store.models || []).indexOf(m);
     return '<div style="padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.02);border:1px solid #222;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
       '<div style="min-width:0;"><div style="font-size:13px;font-weight:800;color:#eee;">' + esc(m.name || 'Scheda') + '</div>' +
-      '<div style="font-size:10px;color:#777;">' + esc(m.date ? new Date(m.date).toLocaleDateString('it-IT') : '') +
+      '<div style="font-size:10px;color:#777;">' + esc(m.date ? new Date(m.date).toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT')) : '') +
       (m.isActive ? ' · <span style="color:var(--gold);">attiva</span>' : '') + '</div></div>' +
       '<div style="display:flex;gap:6px;flex:0 0 auto;">' +
       '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="activateSavedProgram(' + JSON.stringify(m.id || '') + ', ' + idx + ')">ATTIVA</button>' +
@@ -58809,6 +59195,299 @@ function personalRestoreBannerHtml() {
     '<button type="button" class="btn btn-primary" style="width:100%;min-height:48px;font-weight:900;" onclick="recoverPersonalTrainingEmergency()">RIPRISTINA LA MIA SCHEDA</button></div>';
 }
 
+/*
+ * HYROX: the race calendar, a preparation written for a race date and the
+ * eight stations (web/hyrox.js does the thinking, web/hyrox-events.json is
+ * the calendar). The program it writes goes through the same review as any
+ * generated program, so it is read and edited before it becomes active.
+ */
+function hyroxApi() { return (typeof window !== 'undefined' && window.NurvanHyrox) || null; }
+// The client the coach is writing for (ASSEGNA), or null.
+function hyroxForClient() { return (store && store.coachAssigning && store.coachAssigning.clientId) ? store.coachAssigning : null; }
+function hyroxState() {
+  // The coach's own answers, set aside while a client's request was on screen.
+  if (window.__cpHyroxOwn && !hyroxForClient()) { store.hyrox = window.__cpHyroxOwn; window.__cpHyroxOwn = null; }
+  if (!store.hyrox || typeof store.hyrox !== 'object') store.hyrox = {};
+  const h = store.hyrox;
+  if (!h.region) h.region = 'italy';
+  if (!h.division) h.division = 'open_m';
+  if (!h.level) h.level = 'intermediate';
+  if (!h.days) h.days = 4;
+  if (!h.weeks) h.weeks = 12;
+  if (!Array.isArray(h.gear)) h.gear = (hyroxApi() ? hyroxApi().GEAR.map(function (g) { return g.id; }) : []);
+  return h;
+}
+// The calendar: the server's copy (newer than the one shipped in the app), then the app's own.
+function loadHyroxEvents() {
+  if (window.__hyroxEvents) return Promise.resolve(window.__hyroxEvents);
+  if (window.__hyroxEventsLoading) return window.__hyroxEventsLoading;
+  const read = function (url) { return fetch(url).then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); }); };
+  const remote = (typeof coachEndpoint === 'function') ? coachEndpoint('/hyrox-events.json') : '';
+  window.__hyroxEventsLoading = (remote ? read(remote).catch(function () { return read('hyrox-events.json'); }) : read('hyrox-events.json'))
+    .then(function (data) { window.__hyroxEvents = (data && Array.isArray(data.events)) ? data : { events: [] }; return window.__hyroxEvents; })
+    .catch(function () { window.__hyroxEvents = { events: [], failed: true }; return window.__hyroxEvents; })
+    .then(function (data) {
+      window.__hyroxEventsLoading = null;
+      if (document.getElementById('program-generator-sheet') && typeof renderProgramGenerator === 'function') renderProgramGenerator();
+      else if (currentView === 'hyrox') render();
+      return data;
+    });
+  return window.__hyroxEventsLoading;
+}
+function hyroxDateText(ev) {
+  if (!ev || !ev.start) return 'Data da annunciare';
+  const loc = (typeof appLocale === 'function') ? appLocale() : 'it-IT';
+  const fmt = function (iso, year) {
+    try { return new Date(iso + 'T12:00:00').toLocaleDateString(loc, year ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }); } catch (_) { return iso; }
+  };
+  return (ev.end && ev.end !== ev.start) ? fmt(ev.start, false) + ' – ' + fmt(ev.end, true) : fmt(ev.start, true);
+}
+function hyroxEventById(id) {
+  const list = (window.__hyroxEvents && window.__hyroxEvents.events) || [];
+  for (let i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+  return null;
+}
+// An answer changed: the screen is redrawn - or the generator's sheet, when
+// the answers are being given there.
+function hyroxRefresh() {
+  try { persist(); } catch (_) {}
+  if (document.getElementById('program-generator-sheet') && typeof renderProgramGenerator === 'function') { renderProgramGenerator(); return; }
+  render();
+}
+function hyroxSet(field, value) {
+  const h = hyroxState();
+  h[field] = (field === 'days' || field === 'weeks') ? Number(value) : value;
+  hyroxRefresh();
+}
+function hyroxToggleGear(id) {
+  const h = hyroxState();
+  const i = h.gear.indexOf(id);
+  if (i === -1) h.gear.push(id); else h.gear.splice(i, 1);
+  hyroxRefresh();
+}
+function hyroxFullGear(yes) {
+  const h = hyroxState();
+  h.gear = yes ? hyroxApi().GEAR.map(function (g) { return g.id; }) : [];
+  h.gearAsked = true;
+  hyroxRefresh();
+}
+function hyroxChooseRace(id) {
+  const h = hyroxState();
+  h.raceId = id || '';
+  hyroxRefresh();
+  if (id && currentView === 'hyrox') { const el = document.getElementById('hyrox-create'); if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+}
+// What the preparation is written from: the answers, and the race chosen.
+function hyroxPlanInput() {
+  const h = hyroxState();
+  const ev = hyroxEventById(h.raceId);
+  return { weeks: h.weeks, days: h.days, level: h.level, division: h.division, gear: h.gear.slice(), raceDate: ev && ev.start ? ev.start : '', raceName: ev ? ev.city : '' };
+}
+// An athlete followed by a coach does not write the program: they ask for it.
+function hyroxMustAsk() {
+  return typeof isAthleteRole === 'function' && isAthleteRole() && !(store.clientProfile && store.clientProfile.allowMaxFreedom);
+}
+// The request the coach receives: the race, the category, the days.
+function hyroxRequestCoach() {
+  if (typeof requestProgramFromCoach !== 'function') return;
+  const h = hyroxState();
+  const ev = hyroxEventById(h.raceId);
+  requestProgramFromCoach({ hyrox: {
+    raceId: h.raceId || '', raceName: ev ? ev.city : '', raceDate: ev && ev.start ? ev.start : '',
+    division: h.division, level: h.level, days: h.days, weeks: h.weeks, gear: h.gear.slice()
+  } });
+}
+// The questions of a preparation: the same on the HYROX screen and in the
+// generator's sheet when the goal is HYROX.
+function hyroxFieldsHtml() {
+  const api = hyroxApi();
+  const h = hyroxState();
+  const events = (window.__hyroxEvents && window.__hyroxEvents.events) || [];
+  const race = hyroxEventById(h.raceId);
+  const st = 'width:100%;margin-top:3px;background:#141414;color:#fff;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;';
+  const lab = function (text, inner) { return '<label style="display:block;font-size:10px;color:#aaa;font-weight:800;margin-top:10px;">' + text + inner + '</label>'; };
+  const sel = function (field, items, cur) {
+    return '<select style="' + st + '" onchange="hyroxSet(\'' + field + '\', this.value)">' + items.map(function (it) {
+      return '<option value="' + esc(it.id) + '"' + (String(it.id) === String(cur) ? ' selected' : '') + '>' + esc(it.label) + '</option>';
+    }).join('') + '</select>';
+  };
+  const fullGear = h.gear.length === api.GEAR.length;
+  const raceItems = [{ id: '', label: 'Nessuna gara: scelgo io la durata' }].concat(api.upcoming(events, 'all').map(function (ev) { return { id: ev.id, label: ev.city + ' · ' + hyroxDateText(ev) }; }));
+  return lab('Gara', '<select style="' + st + '" onchange="hyroxChooseRace(this.value)">' + raceItems.map(function (it) { return '<option value="' + esc(it.id) + '"' + (it.id === (h.raceId || '') ? ' selected' : '') + '>' + esc(it.label) + '</option>'; }).join('') + '</select>') +
+    (race && race.start ? '' : lab('Durata', sel('weeks', api.WEEKS.map(function (w) { return { id: w, label: w + ' settimane' }; }), h.weeks))) +
+    lab('Giorni a settimana', sel('days', api.DAYS.map(function (d) { return { id: d, label: d + ' giorni' }; }), h.days)) +
+    lab('Livello', sel('level', api.LEVELS, h.level)) +
+    lab('Categoria', sel('division', api.DIVISIONS, h.division)) +
+    lab('Hai tutta l’attrezzatura HYROX in palestra?', '<select style="' + st + '" onchange="hyroxFullGear(this.value === \'yes\')"><option value="yes"' + (fullGear ? ' selected' : '') + '>Sì, c’è tutto</option><option value="no"' + (fullGear ? '' : ' selected') + '>No, manca qualcosa</option></select>') +
+    (fullGear ? '' : '<div style="margin-top:10px;font-size:11px;color:#aaa;">Spunta quello che hai: per il resto la scheda usa un esercizio che allena lo stesso sforzo.</div>' +
+      '<div style="display:grid;gap:6px;margin-top:8px;">' + api.GEAR.map(function (g) {
+        const on = h.gear.indexOf(g.id) !== -1;
+        return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#ddd;"><input type="checkbox"' + (on ? ' checked' : '') + ' onchange="hyroxToggleGear(\'' + g.id + '\')"> ' + esc(g.label) + '</label>';
+      }).join('') + '</div>');
+}
+// Why the preparation is laid out this way: what was measured, what the plan
+// does about it, and the study, one tap away.
+function hyroxEvidenceHtml(limit) {
+  const list = (hyroxApi().EVIDENCE || []).slice(0, limit || 99);
+  return list.map(function (e) {
+    return '<div style="border-top:1px solid #222;padding:10px 0;">' +
+      '<div style="font-size:12px;color:#eee;line-height:1.5;">' + esc(e.fact) + '</div>' +
+      '<div style="font-size:12px;color:var(--gold);line-height:1.5;margin-top:4px;">' + esc(e.plan) + '</div>' +
+      '<a href="' + esc(e.url) + '" target="_blank" rel="noopener" style="display:block;font-size:10px;color:#888;margin-top:4px;text-decoration:underline;">' + esc(e.source) + '</a></div>';
+  }).join('');
+}
+async function hyroxCreateProgram(preset) {
+  const api = hyroxApi();
+  if (!api) { if (typeof showToast === 'function') showToast('Sezione HYROX non caricata', 'error'); return; }
+  const h = hyroxState();
+  const ev = hyroxEventById(h.raceId);
+  if (hyroxMustAsk()) { hyroxRequestCoach(); return; }
+  const input = preset
+    ? { weeks: preset.weeks, days: preset.days, level: preset.level, division: h.division, gear: api.GEAR.map(function (g) { return g.id; }) }
+    : hyroxPlanInput();
+  if (!preset && ev && ev.start) {
+    const left = api.weeksUntil(ev.start);
+    if (left != null && left < 4 && !confirm('Mancano meno di 4 settimane alla gara: la preparazione sarà di 4 settimane, più lunga del tempo che resta. Vuoi crearla lo stesso?')) return;
+  }
+  try {
+    let prog = null;
+    await withBusy(function () { prog = normalizeProgram(api.plan(input)); return Promise.resolve(); }, 'Scrivo la preparazione…', { immediate: true, maxMs: 60000 });
+    // A coach writing it for a client: it becomes the client's draft.
+    openGeneratedReview(prog, hyroxForClient() ? 'assign' : 'active', null);
+  } catch (e) {
+    console.error('[HYROX]', e);
+    if (typeof showToast === 'function') showToast('Generazione non riuscita: ' + (e && e.message || e), 'error');
+  }
+}
+function hyroxEstimate() {
+  const el = document.getElementById('hyrox-5k');
+  const out = document.getElementById('hyrox-estimate');
+  if (!el || !out) return;
+  const res = hyroxApi().estimateFinish(el.value, hyroxState().level);
+  const hm = function (m) { return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + '′'; };
+  out.textContent = res ? ('Tra ' + hm(res.low) + ' e ' + hm(res.high)) : 'Scrivi il tuo tempo sui 5 km in minuti (es. 27).';
+}
+function renderHyrox(c) {
+  const api = hyroxApi();
+  if (!api) { c.innerHTML = '<div class="card" style="padding:16px;">Sezione HYROX non caricata.</div>'; return; }
+  const h = hyroxState();
+  const data = window.__hyroxEvents;
+  if (!data) loadHyroxEvents();
+  const events = (data && data.events) || [];
+  const race = hyroxEventById(h.raceId);
+  const st = 'width:100%;margin-top:3px;background:#141414;color:#fff;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;';
+  const lab = function (text, inner) { return '<label style="display:block;font-size:10px;color:#aaa;font-weight:800;margin-top:10px;">' + text + inner + '</label>'; };
+  const sel = function (field, items, cur) {
+    return '<select style="' + st + '" onchange="hyroxSet(\'' + field + '\', this.value)">' + items.map(function (it) {
+      return '<option value="' + esc(it.id) + '"' + (String(it.id) === String(cur) ? ' selected' : '') + '>' + esc(it.label) + '</option>';
+    }).join('') + '</select>';
+  };
+  const div = api.DIVISIONS.filter(function (d) { return d.id === h.division; })[0] || api.DIVISIONS[0];
+  const fullGear = h.gear.length === api.GEAR.length;
+
+  // The race chosen, with the time left.
+  let raceHtml;
+  if (race) {
+    const left = race.start ? api.weeksUntil(race.start) : null;
+    raceHtml = '<div style="font-size:18px;font-weight:900;color:#fff;">' + esc(race.city) + '</div>' +
+      '<div style="font-size:12px;color:#aaa;margin-top:2px;">' + esc(race.countryName) + ' · ' + esc(hyroxDateText(race)) + '</div>' +
+      (left != null ? '<div style="font-size:13px;color:var(--gold);font-weight:800;margin-top:8px;">' + (left <= 0 ? 'È la settimana della gara' : ('Mancano ' + left + ' settimane')) + '</div>' : '') +
+      '<div style="display:flex;gap:8px;margin-top:12px;"><a class="btn btn-outline" style="flex:1;text-align:center;font-size:11px;" href="' + esc(race.url) + '" target="_blank" rel="noopener">PAGINA UFFICIALE</a>' +
+      '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;" onclick="hyroxChooseRace(\'\')">CAMBIA GARA</button></div>';
+  } else {
+    raceHtml = '<div style="font-size:12px;color:#aaa;line-height:1.5;">Scegli la tua gara dal calendario qui sotto: la preparazione viene scritta per arrivare pronto a quella data. Se non hai ancora una gara, scegli tu la durata.</div>';
+  }
+
+  const mustAsk = hyroxMustAsk();
+  const createHtml = hyroxFieldsHtml() +
+    (mustAsk
+      ? '<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;min-height:48px;font-weight:900;" onclick="hyroxRequestCoach()">CHIEDI AL COACH QUESTA PREPARAZIONE</button>' +
+        '<div style="font-size:11px;color:#888;line-height:1.5;margin-top:8px;">Il coach riceve gara, categoria e giorni che hai scelto, e ti assegna la preparazione.</div>'
+      : '<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;min-height:48px;font-weight:900;" onclick="hyroxCreateProgram()">VEDI L’ANTEPRIMA</button>' +
+        '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="navigate(\'import\')">IMPORTA UN PROGRAMMA HYROX</button>');
+
+  const presets = [
+    { weeks: 8, days: 3, level: 'beginner', title: 'Prima gara', text: '8 settimane · 3 giorni' },
+    { weeks: 12, days: 4, level: 'intermediate', title: 'Preparazione completa', text: '12 settimane · 4 giorni' },
+    { weeks: 12, days: 5, level: 'advanced', title: 'Punta al tempo', text: '12 settimane · 5 giorni' },
+    { weeks: 16, days: 4, level: 'beginner', title: 'Partenza da zero', text: '16 settimane · 4 giorni' }
+  ];
+  const presetsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">' + presets.map(function (p, i) {
+    return '<button type="button" class="btn btn-outline" style="min-height:64px;text-align:left;padding:10px 12px;" onclick="hyroxCreateProgram(window.__hyroxPresets[' + i + '])">' +
+      '<div style="font-size:12px;font-weight:900;color:#fff;">' + p.title + '</div><div style="font-size:10px;color:#aaa;margin-top:2px;">' + p.text + '</div></button>';
+  }).join('') + '</div>';
+  window.__hyroxPresets = presets;
+
+  const loadOf = function (s) {
+    switch (s.id) {
+      case 'sled_push': return div.sled_push + ' kg';
+      case 'sled_pull': return div.sled_pull + ' kg';
+      case 'farmers_carry': return div.farmers + ' kg';
+      case 'sandbag_lunges': return div.sandbag + ' kg';
+      case 'wall_balls': return div.wallball + ' kg';
+      default: return '';
+    }
+  };
+  const stationsHtml = '<div style="font-size:11px;color:#888;margin-bottom:8px;">8 volte: 1 km di corsa, poi una stazione. Carichi della categoria ' + esc(div.label) + '.</div>' +
+    api.STATIONS.map(function (s, i) {
+      const load = loadOf(s);
+      return '<details style="border-top:1px solid #222;padding:10px 0;"><summary style="list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:center;">' +
+        '<span style="font-size:13px;font-weight:800;color:#fff;"><span style="color:var(--gold);">' + (i + 1) + '</span> · ' + esc(s.name) + '</span>' +
+        '<span style="font-size:11px;color:#aaa;white-space:nowrap;">' + esc(s.amount) + (load ? ' · ' + esc(load) : '') + '</span></summary>' +
+        '<p style="font-size:12px;color:#ccc;line-height:1.5;margin:8px 0 0;">' + esc(s.cue) + '</p>' +
+        (s.alt && s.gear ? '<p style="font-size:11px;color:#888;line-height:1.5;margin:6px 0 0;">Senza attrezzo: ' + esc(s.alt.name) + '</p>' : '') +
+        (s.top ? '<p style="font-size:11px;color:#888;line-height:1.5;margin:6px 0 0;">Migliori 100 Pro, stagione 2024/25: ' + esc(s.top.m) + ' uomini · ' + esc(s.top.w) + ' donne</p>' : '') +
+        '</details>';
+    }).join('');
+
+  const regions = [{ id: 'italy', label: 'Italia' }, { id: 'europe', label: 'Europa' }, { id: 'world', label: 'Mondo' }];
+  const shown = api.upcoming(events, h.region === 'world' ? 'all' : h.region);
+  const more = !!h.allEvents;
+  const eventsHtml =
+    '<div style="display:flex;gap:6px;margin-bottom:10px;">' + regions.map(function (rg) {
+      return '<button type="button" class="btn ' + (h.region === rg.id ? 'btn-primary' : 'btn-outline') + '" style="flex:1;font-size:11px;padding:8px 6px;" onclick="hyroxSet(\'region\', \'' + rg.id + '\')">' + rg.label + '</button>';
+    }).join('') + '</div>' +
+    (!data ? '<div style="font-size:12px;color:#888;">Carico il calendario…</div>'
+      : (!shown.length ? '<div style="font-size:12px;color:#888;">' + (data.failed ? 'Calendario non disponibile: riprova con la connessione attiva.' : 'Nessuna gara in programma in questa zona.') + '</div>'
+        : shown.slice(0, more ? 200 : 8).map(function (ev) {
+          return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #222;padding:10px 0;">' +
+            '<div style="min-width:0;"><div style="font-size:13px;font-weight:800;color:#fff;">' + esc(ev.city) + '</div>' +
+            '<div style="font-size:11px;color:#aaa;">' + esc(ev.countryName) + ' · ' + esc(hyroxDateText(ev)) + '</div></div>' +
+            '<button type="button" class="btn ' + (ev.id === h.raceId ? 'btn-primary' : 'btn-outline') + '" style="font-size:10px;padding:8px 10px;white-space:nowrap;" onclick="hyroxChooseRace(\'' + esc(ev.id) + '\')">' + (ev.id === h.raceId ? 'SCELTA' : 'PREPARA') + '</button></div>';
+        }).join('') +
+        (shown.length > 8 ? '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="hyroxSet(\'allEvents\', ' + (more ? 'false' : 'true') + ')">' + (more ? 'MOSTRA MENO' : 'TUTTE LE GARE') + '</button>' : ''))) +
+    (data && data.updated ? '<div style="font-size:10px;color:#666;margin-top:10px;">Calendario della stagione ' + esc(data.season || '') + ', aggiornato il ' + esc(new Date(data.updated + 'T12:00:00').toLocaleDateString((typeof appLocale === 'function') ? appLocale() : 'it-IT')) + '. Date e iscrizioni: fa fede la pagina ufficiale della gara.</div>' : '');
+
+  const card = function (title, body, id) {
+    return '<div class="card" style="padding:16px;margin-bottom:12px;"' + (id ? ' id="' + id + '"' : '') + '><div style="font-size:10px;font-weight:900;color:var(--gold);letter-spacing:1px;margin-bottom:8px;">' + title + '</div>' + body + '</div>';
+  };
+  c.innerHTML = '<div style="max-width:720px;margin:0 auto;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:1px;">HYROX</div>' +
+    '<div style="font-size:11px;color:#888;">Preparazione gara, stazioni e calendario</div></div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="navigate(\'home\')">CHIUDI</button></div>' +
+    (hyroxForClient() ? '<div class="card" style="padding:12px 16px;margin-bottom:12px;border:1px solid var(--gold);"><div style="font-size:12px;color:#fff;font-weight:800;">Preparazione per ' + esc(hyroxForClient().name || 'il cliente') + '</div><div style="font-size:11px;color:#aaa;margin-top:2px;">Diventa la bozza del cliente: la rivedi e la invii.</div></div>' : '') +
+    card(hyroxForClient() ? 'LA GARA DEL CLIENTE' : 'LA TUA GARA', raceHtml) +
+    card(mustAsk ? 'CHIEDI LA PREPARAZIONE' : 'CREA LA PREPARAZIONE', createHtml, 'hyrox-create') +
+    (mustAsk ? '' : card('PROGRAMMI PRONTI', '<div style="font-size:11px;color:#888;margin-bottom:8px;">Con tutta l’attrezzatura, per la categoria scelta sopra. Li leggi e li modifichi prima di attivarli.</div>' + presetsHtml)) +
+    card('PERCHÉ È FATTA COSÌ', '<div style="font-size:11px;color:#888;margin-bottom:2px;line-height:1.5;">Cosa è stato misurato su chi ha gareggiato, e cosa fa la preparazione di conseguenza. Sono studi su campioni reali, non una promessa sul tuo tempo.</div>' + hyroxEvidenceHtml()) +
+    card('PROSSIME GARE', eventsHtml) +
+    card('LE 8 STAZIONI', stationsHtml) +
+    card('STIMA DEL TEMPO', '<div style="font-size:11px;color:#888;margin-bottom:8px;">Dal tuo tempo sui 5 km e dal livello scelto. È una forchetta per orientarti, non una promessa.</div>' +
+      '<div style="display:flex;gap:8px;"><input id="hyrox-5k" type="number" inputmode="decimal" min="13" max="59" placeholder="Minuti sui 5 km" style="flex:1;' + st + 'margin-top:0;">' +
+      '<button type="button" class="btn btn-outline" style="font-size:11px;" onclick="hyroxEstimate()">CALCOLA</button></div>' +
+      '<div id="hyrox-estimate" style="font-size:14px;font-weight:800;color:var(--gold);margin-top:10px;min-height:18px;"></div>') +
+    '<p style="font-size:10px;color:#666;line-height:1.5;margin:4px 4px 0;">' + esc(api.DISCLAIMER) + '</p>' +
+    '</div><div style="height:80px;"></div>';
+}
+window.renderHyrox = renderHyrox;
+window.hyroxSet = hyroxSet;
+window.hyroxToggleGear = hyroxToggleGear;
+window.hyroxFullGear = hyroxFullGear;
+window.hyroxChooseRace = hyroxChooseRace;
+window.hyroxCreateProgram = hyroxCreateProgram;
+window.hyroxEstimate = hyroxEstimate;
+window.hyroxRequestCoach = hyroxRequestCoach;
+
 function homeDomainModulesHtml() {
   const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
   return homeCollapsibleCard(t('systemModules'),
@@ -58828,6 +59507,9 @@ function homeDomainModulesHtml() {
       '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'calendar\')">' +
         '<span style="font-size:18px;">📅</span>' +
         '<span style="font-size:11px;font-weight:800;">' + t('calendar') + '</span></button>' +
+      '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'hyrox\')">' +
+        '<span style="font-size:18px;">🏁</span>' +
+        '<span style="font-size:11px;font-weight:800;">HYROX</span></button>' +
       (athlete
         ? '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="startDomainImport(\'nutrition\')"><span style="font-size:18px;">📥</span><span style="font-size:11px;font-weight:800;">Importa file</span></button>'
         : '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'import\')"><span style="font-size:18px;">📥</span><span style="font-size:11px;font-weight:800;">' + t('importProgram') + '</span></button>') +
@@ -58912,7 +59594,7 @@ function renderHome(c) {
   if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) {
     c.innerHTML = `
       <div style="text-align:center;padding:20px 0;">
-        <img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:none;" onerror="this.onerror=null;this.src='icon-192.png'">
+        <img src="nurvan_wordmark.png" alt="Nurvan" style="width:min(300px,80%);height:auto;display:block;margin:0 auto 6px;" onerror="this.onerror=null;this.src='nurvan_logo.png'">
         <h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1>
       </div>
 
@@ -58977,7 +59659,7 @@ function renderHome(c) {
   const frequency = store.prefs.frequency || sessions.length;
 
   c.innerHTML = `
-    <div style="text-align:center;padding:20px 0;"><img src="nurvan_logo.png" class="logo-blend" style="width:120px;filter:none;" onerror="this.onerror=null;this.src='icon-192.png'"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
+    <div style="text-align:center;padding:20px 0;"><img src="nurvan_wordmark.png" alt="Nurvan" style="width:min(300px,80%);height:auto;display:block;margin:0 auto 6px;" onerror="this.onerror=null;this.src='nurvan_logo.png'"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
 
     ${personalRestoreBannerHtml()}
 
@@ -60568,19 +61250,7 @@ function setExIntensity(idx, type) {
   pushWorkoutUndoSnapshot('intensità ' + type);
   store.exIntensity[`w${currentWeek}_d${currentDay}_e${idx}`] = type;
   const total = getExerciseSetCount(idx);
-  if (total > 1 && confirm('Applicare la scala ' + type + ' a questo esercizio?\n\nVuoi anche copiare l’ultimo valore ' + type + ' inserito sulle serie ancora vuote?')) {
-    let lastVal = '';
-    for (let s = 1; s <= total; s++) {
-      const v = store.data[`w${currentWeek}_d${currentDay}_e${idx}_s${s}_rir`];
-      if (v !== undefined && v !== '' && v != null) lastVal = v;
-    }
-    if (lastVal !== '') {
-      for (let s = 1; s <= total; s++) {
-        const k = `w${currentWeek}_d${currentDay}_e${idx}_s${s}_rir`;
-        if (store.data[k] === undefined || store.data[k] === '' || store.data[k] == null) store.data[k] = lastVal;
-      }
-    }
-  }
+  void total; // RIR/RPE: no question about the other sets (user decision).
   persist();
   render();
 }
@@ -60594,18 +61264,8 @@ function updateSetIntensityValue(exIdx, setNum, val) {
   calcStats();
   refreshWorkoutUndoButton();
   const total = getExerciseSetCount(exIdx);
-  if (setNum < total && String(val).trim() !== '') {
-    const apply = confirm('Assegnare questo valore di intensità anche alle serie successive di questo esercizio?');
-    if (apply) {
-      pushWorkoutUndoSnapshot('intensità serie successive');
-      for (let s = setNum + 1; s <= total; s++) {
-        store.data[`w${currentWeek}_d${currentDay}_e${exIdx}_s${s}_rir`] = val;
-        store.data[`w${currentWeek}_d${currentDay}_e${exIdx}_s${s}_rir_user`] = 1;
-      }
-      persist();
-      render();
-    }
-  }
+  // Only this set: asking to copy it to the next ones got in the way.
+  void total;
 }
 
 function updateSetTechnique(exIdx, setNum, val) {
@@ -61191,7 +61851,7 @@ function buildWorkoutPdfHtml(opts) {
       <img src="${logoUrl}" alt="Nurvan" onerror="this.style.display='none'">
       <div>
         <div style="font-size:22px;font-weight:900;letter-spacing:2px;color:#c9a227;">NURVAN</div>
-        <div class="meta">Programma allenamento · ${esc(new Date().toLocaleDateString('it-IT'))}${athlete ? (' · ' + esc(athlete)) : ''}</div>
+        <div class="meta">Programma allenamento · ${esc(new Date().toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT')))}${athlete ? (' · ' + esc(athlete)) : ''}</div>
         <div class="meta">Ambito: ${esc(scope)} · settimane ${startW}–${endW}</div>
       </div>
     </div>
@@ -61360,7 +62020,7 @@ function buildWorkoutPdfBytes(opts) {
     txt('F1', 22, GOLD, ML, H - 45, 'NURVAN');
     txt('F2', 8, '0.7 0.7 0.7', ML + 110, H - 38, opts.skipTraining ? 'PIANO ALIMENTARE' : 'TRAINING PROGRAM');
     if (athlete) txt('F2', 8, '0.7 0.7 0.7', ML + 110, H - 50, 'Atleta: ' + athlete);
-    var dateStr = new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
+    var dateStr = new Date().toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT'), { day: '2-digit', month: 'long', year: 'numeric' });
     txt('F2', 7, '0.55 0.55 0.55', W - MR - 140, H - 45, dateStr + (DATA.title ? ('  |  ' + DATA.title) : ''));
     y = H - 80;
     if (headerWeek) {
@@ -61645,7 +62305,7 @@ function buildWorkoutPdfBytes(opts) {
   y -= 12;
   txt('F2', 6, GRAY, ML, y, 'Documento generato automaticamente da NURVAN  |  Non sostituisce il parere medico');
   y -= 10;
-  txt('F2', 6, GRAY, ML, y, (opts.skipTraining ? '' : ('Settimane ' + startW + '-' + endW + '  |  ')) + new Date().toLocaleDateString('it-IT') + (athlete ? ('  |  ' + athlete) : ''));
+  txt('F2', 6, GRAY, ML, y, (opts.skipTraining ? '' : ('Settimane ' + startW + '-' + endW + '  |  ')) + new Date().toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT')) + (athlete ? ('  |  ' + athlete) : ''));
 
   if (cmds.length) flushPage();
   if (!pages.length) pages.push('BT /F1 16 Tf ' + GOLD + ' rg 1 0 0 1 40 800 Tm (NURVAN) Tj ET');
@@ -62009,7 +62669,7 @@ function openShoppingList() {
     (week.priced ? '<div style="margin-top:14px;padding:10px;border:1px solid rgba(212,175,55,0.4);border-radius:8px;background:#141208;">' +
       '<div style="font-size:12px;font-weight:800;color:var(--gold);">Spesa settimanale stimata: ' + esc(shoppingRangeText(week)) + '</div>' +
       '<div style="font-size:9px;color:#888;margin-top:4px;line-height:1.4;">Prezzi medi da supermercato, dalla marca del negozio a quella nota, adattati al livello dei prezzi alimentari del paese. È una forbice indicativa, non un preventivo.' +
-      (week.generic ? ' ' + week.generic + ' aliment' + (week.generic === 1 ? 'o ha' : 'i hanno') + ' un prezzo generico.' : '') +
+      (week.generic ? ' ' + (week.generic === 1 ? '1 alimento ha un prezzo generico.' : week.generic + ' alimenti hanno un prezzo generico.') : '') +
       (week.unpriced ? ' ' + week.unpriced + ' senza quantità non sono nel totale.' : '') + '</div>' +
       '<select style="margin-top:8px;width:100%;padding:6px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;font-size:11px;" onchange="setShoppingCountry(this.value)">' +
       SHOP_COUNTRIES.map(function (c) { return '<option value="' + c.id + '"' + (c.id === shoppingCountry().id ? ' selected' : '') + '>Prezzi: ' + esc(c.name) + '</option>'; }).join('') +
@@ -63651,6 +64311,7 @@ function maybeAskCoachAfterComplete() {
       }
       return;
     }
+    if (typeof planCan === 'function' && !planCan('ai_coach')) return;
     const analyze = confirm('Vuoi che Nurvan AI analizzi questa sessione?\n\n' +
       'Durata ' + Math.floor((snap.durationSec || logEntry.durationSec || 0) / 60) + 'm · ' + (snap.kcal || logEntry.kcal || 0) + ' kcal · ' +
       tonnage + ' kg tonnellaggio · intensità ' + intensityPts + ' pts');
@@ -64469,6 +65130,8 @@ function closeWorkoutCompleteOverlay(goto) {
   window.__sessionCardMode = null;
   if (goto === 'stats') navigate('stats');
   if (!fromFinalize) return;
+  // The session is closed: back home, not to the finished workout.
+  if (goto !== 'stats') navigate('home');
   maybeAskCoachAfterComplete();
   // Asked here rather than during the session: the effort is measured over
   // the last sessions, and the moment to decide about next week is when this
@@ -65076,7 +65739,7 @@ function renderAthleteProfile(container) {
     '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Stacco (' + wUnit() + ')</label>' +
     '<input id="profile-deadlift" type="number" step="0.5" value="' + esc(String(kgToDisp(profile.deadliftMax || ''))) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div style="grid-column:1/-1;"><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelGoal') + '</label>' +
-    '<input id="profile-goal" type="text" value="' + esc(profile.goal || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<input id="profile-goal" type="text" placeholder="Ipertrofia, forza, dimagrimento, HYROX…" value="' + esc(profile.goal || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div style="grid-column:1/-1;"><label style="font-size:10px;color:#666;font-weight:800;">Su quali parti vuoi concentrarti?</label>' +
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">' +
     MACRO_MUSCLE_GROUPS.map(function (g) {
@@ -65359,48 +66022,75 @@ function renderProgressCenter(container) {
     '<button class="btn btn-outline" style="width:100%;" onclick="navigate(\'stats\')">Apri statistiche</button>';
 }
 
-async function openAiProgramWizard() {
-  const goal = prompt('GOAL (hypertrophy / strength / fat_loss)', 'hypertrophy');
-  if (!goal) return;
-  const experience = prompt('EXPERIENCE (beginner / intermediate / advanced)', 'intermediate');
-  if (experience == null) return;
-  const days = prompt('DAYS', '4');
-  if (days == null) return;
-  const time = prompt('TIME minutes', '60');
-  if (time == null) return;
-  const equipment = prompt('EQUIPMENT', 'gym');
-  if (equipment == null) return;
-  const focus = prompt('FOCUS', '');
-  if (focus == null) return;
-  const limitations = prompt('LIMITATIONS', '');
-  if (limitations == null) return;
-  const preferences = prompt('EXERCISE PREFERENCES', '');
-  if (preferences == null) return;
-  if (!confirm('Generare anteprima AI? Nessun programma verrà attivato finché non confermi.')) return;
-  try {
-    if (typeof showToast === 'function') showToast('Creazione con AI in corso…', 'info');
-    const result = await ProgramGeneratorService.aiCreate({
-      goal: goal, experience: experience, days: Number(days) || 4, time: time,
-      equipment: equipment, focus: focus, limitations: limitations, preferences: preferences
-    });
-    if (!result || !result.program || !Array.isArray(result.program.weeks)) {
-      throw new Error('AI Create unavailable');
-    }
-    if (!confirm('Anteprima: ' + (result.program.title || 'programma') + ' · ' + result.program.weeks.length + ' settimane. Confermi e attivi?')) return;
-    const prog = normalizeProgram(result.program);
-    await maybeClearLogsOnProgramSwitch(prog.id);
-    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
-      await GiammariaPersistence.activateCanonicalProgram(prog);
-    }
-    DATA = prog;
-    store.activeProgram = DATA;
-    persist();
-    if (typeof showToast === 'function') showToast('Programma AI attivato', 'ok');
-    render();
-  } catch (e) {
-    if (typeof showToast === 'function') showToast((e && e.message) || 'Creazione con AI non disponibile. Cosa puoi fare: usa Crea da template.', 'error');
-  }
+// AI CREATE: the main choices from menus (the generator's own lists), then
+// an optional note. The generator builds the preview; the note, when there
+// is one, goes to the Coach AI once the program is active, as changes to
+// confirm. There was never an AI endpoint behind the old typed questions.
+function openAiProgramWizard() {
+  const api = generatorApi();
+  if (!api) { if (typeof showToast === 'function') showToast('Motore di generazione non caricato', 'error'); return; }
+  const g = generatorDraft();
+  if (!g.touched) { try { applyProfileDefaultsToGenerator(); } catch (_) {} }
+  const st = 'background:#141414;color:#fff;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;';
+  const sel = function (id, items, cur) {
+    return '<select id="aiw-' + id + '" style="width:100%;margin-top:3px;' + st + '">' + items.map(function (it) {
+      return '<option value="' + esc(it.id) + '"' + (String(it.id) === String(cur) ? ' selected' : '') + '>' + esc(it.label) + '</option>';
+    }).join('') + '</select>';
+  };
+  const days = (api.DAYS || [2, 3, 4, 5, 6]).map(function (d) { const v = (d && d.id != null) ? d.id : d; return { id: v, label: v + ' giorni' }; });
+  const weeks = (api.WEEK_PRESETS || [4, 8, 12, 16]).map(function (w) { const v = (w && w.id != null) ? w.id : w; return { id: v, label: v + ' settimane' }; });
+  const lab = function (t, inner) { return '<label style="display:block;font-size:10px;color:#aaa;font-weight:800;margin-top:10px;">' + t + inner + '</label>'; };
+  const noteAllowed = typeof planCan !== 'function' || planCan('ai_coach');
+  let el = document.getElementById('ai-program-wizard');
+  if (el) el.remove();
+  el = document.createElement('div');
+  el.id = 'ai-program-wizard';
+  el.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  el.innerHTML = '<div style="width:100%;max-width:460px;max-height:100%;overflow-y:auto;background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;padding:16px;box-sizing:border-box;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:900;letter-spacing:1px;">AI CREATE</div>' +
+    '<h2 style="color:#fff;font-size:17px;margin:4px 0 2px;">Crea la tua scheda</h2>' +
+    '<div style="font-size:11px;color:#888;">Scegli dai menu, poi vedi l’anteprima prima di attivarla.</div>' +
+    lab('Obiettivo', sel('goal', api.GOALS || [], g.goal)) +
+    lab('Esperienza', sel('experience', api.EXPERIENCE || [], g.experience)) +
+    lab('Giorni a settimana', sel('days', days, g.days)) +
+    lab('Durata del programma', sel('weeks', weeks, g.weeks)) +
+    lab('Dove ti alleni', sel('equipment', api.EQUIPMENT || [], g.equipment)) +
+    (noteAllowed
+      ? lab('Richieste per il Coach AI (facoltativo)', '<textarea id="aiw-notes" rows="3" placeholder="Es. più lavoro sulle spalle, niente stacchi, ho male al ginocchio" style="width:100%;margin-top:3px;box-sizing:border-box;' + st + '"></textarea>')
+      : '') +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="submitAiProgramWizard()">VEDI L’ANTEPRIMA</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="closeAiProgramWizard()">ANNULLA</button></div>';
+  el.onclick = function (ev) { if (ev.target === el) closeAiProgramWizard(); };
+  document.body.appendChild(el);
 }
+function closeAiProgramWizard() {
+  const el = document.getElementById('ai-program-wizard');
+  if (el) el.remove();
+}
+function submitAiProgramWizard() {
+  const g = generatorDraft();
+  const val = function (id) { const e = document.getElementById('aiw-' + id); return e ? e.value : ''; };
+  g.goal = val('goal') || g.goal;
+  g.experience = val('experience') || g.experience;
+  g.equipment = val('equipment') || g.equipment;
+  const d = Number(val('days'));
+  if (d) {
+    g.days = d;
+    const api = generatorApi();
+    if (api && typeof api.normalizeSplit === 'function') g.split = api.normalizeSplit(g.split, d);
+  }
+  const w = Number(val('weeks'));
+  if (w) g.weeks = w;
+  g.touched = true;
+  g.target = 'active';
+  window.__genAiNotes = String(val('notes') || '').trim();
+  closeAiProgramWizard();
+  try { persist(); } catch (_) {}
+  createGeneratedProgram('active');
+}
+window.openAiProgramWizard = openAiProgramWizard;
+window.closeAiProgramWizard = closeAiProgramWizard;
+window.submitAiProgramWizard = submitAiProgramWizard;
 
 function showProgressCenter() {
   navigate('progress');
@@ -68113,7 +68803,7 @@ function buildCheckFisicoPdfBytes(entry, frontUrl, backUrl, pack) {
   const period = checkFisicoPeriodMeta(entry.period);
   const sum = summarizeCheckLogs(entry.period, pack);
   const athlete = (store.profile && store.profile.name) || (store.account && store.account.name) || 'Atleta';
-  const dateStr = new Date(entry.at || Date.now()).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
+  const dateStr = new Date(entry.at || Date.now()).toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT'), { day: '2-digit', month: 'long', year: 'numeric' });
   const cmds = [];
   function txt(font, size, color, x, y, s) {
     cmds.push('BT /' + font + ' ' + size + ' Tf ' + color + ' rg 1 0 0 1 ' + x + ' ' + y + ' Tm (' + pdfEsc(s) + ') Tj ET');
@@ -68589,7 +69279,7 @@ function setStatsZoomSlider(n) {
   });
 }
 function formatStatsKg(n) {
-  return Math.round(Number(typeof kgToDisp === 'function' ? kgToDisp(Number(n) || 0) : (Number(n) || 0)) || 0).toLocaleString('it-IT');
+  return Math.round(Number(typeof kgToDisp === 'function' ? kgToDisp(Number(n) || 0) : (Number(n) || 0)) || 0).toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'));
 }
 function buildTrainingAnalytics() {
   const TAE = window.TrainingAnalyticsEngine;
@@ -68999,7 +69689,6 @@ function renderAI(c){
     if (item.voiceChoice) {
       html += `<div style="display:flex;gap:8px;margin:8px 0 14px;">
         <button class="btn btn-outline" style="flex:1;font-size:10px;padding:8px;" onclick="chooseCoachReadMode('read')">${t('voiceChoiceRead')}</button>
-        <button class="btn btn-primary" style="flex:1;font-size:10px;padding:8px;" onclick="chooseCoachReadMode('voice')">${t('voiceChoiceListen')}</button>
       </div>`;
     }
     if (item.proposalId && item.proposedAction && window.activeCoachProposals[item.proposalId]) {
@@ -69027,7 +69716,7 @@ function renderAI(c){
 
   c.innerHTML = `
     <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">${t('coachAI')}</h1>
-    <div style="font-size:10px; color:#777; margin-bottom:10px; font-weight:700; letter-spacing:1px;">${t('coachSubtitle')}</div>
+    <div style="font-size:10px; color:#777; margin-bottom:10px; font-weight:700; letter-spacing:1px;">Domande, analisi e modifiche alla scheda</div>
 
     <div class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(212,175,55,0.35);background:rgba(212,175,55,0.04);">
       <div style="font-size:10px;font-weight:800;color:var(--gold);margin-bottom:6px;">STATO ATLETA (dai tuoi log)</div>
@@ -69084,7 +69773,8 @@ function renderAI(c){
         <h2>${t('coachAI')}</h2>
         <div style="display:flex;gap:6px;">
           <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;" onclick="newCoachQuestion()">${t('newQuestion')}</button>
-          <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="openResetSession()">${t('clearChat')}</button>
+          <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="openResetSession()">AZZERA CHAT</button>
+          <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="resetCoachHistory()">AZZERA ARCHIVIO</button>
         </div>
       </div>
       <div style="padding:12px;">
@@ -69097,7 +69787,6 @@ function renderAI(c){
         </div>
         <div style="display:flex;gap:8px;margin-top:8px;">
           <button class="btn btn-outline" onclick="stopVoiceInput()" style="font-size:9px;padding:6px 9px;">${t('stopVoice')}</button>
-          <button class="btn btn-outline" onclick="toggleVoiceOutput()" style="font-size:9px;padding:6px 9px;">${t('readReply')}</button>
           <span id="voice-status" style="font-size:10px;color:#777;align-self:center;"></span>
         </div>
         <div id="analysis-results" style="display:none;"></div>
@@ -70125,7 +70814,12 @@ function renderKnowledgeCard(item) {
   const headHtml = '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:.6px;">' + esc(knowledgeCatLabel(item.cat)) + esc(muscle) + '</div>' +
     '<div style="font-size:15px;font-weight:800;color:#fff;margin:4px 0 6px;">' + esc(item.title) + '</div>' +
     (item.en ? '<div style="font-size:11px;color:#888;margin-bottom:6px;">' + esc(item.en) + '</div>' : '');
-  return '<div class="card" style="padding:12px;margin-bottom:10px;border:1px solid #222;">' +
+  // An exercise opens the same sheet as CHIEDI INFO (image, YouTube, RIR);
+  // the buttons inside the card keep their own job.
+  const open = item.cat === 'esercizi'
+    ? ' data-q="' + encodeURIComponent(item.title || '') + '" onclick="if(!event.target.closest(\'button,a\'))openExerciseInfoSheet(-1, decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))" role="button" style="padding:12px;margin-bottom:10px;border:1px solid #222;cursor:pointer;"'
+    : ' style="padding:12px;margin-bottom:10px;border:1px solid #222;"';
+  return '<div class="card"' + open + '>' +
     (media ? '<div style="display:flex;gap:10px;align-items:flex-start;">' + media + '<div style="flex:1;min-width:0;">' + headHtml + '</div></div>' : headHtml) +
     '<p style="font-size:12px;color:#ccc;line-height:1.45;margin:0 0 8px;">' + esc(how) + '</p>' +
     (mistakes ? '<p style="font-size:11px;color:#aaa;line-height:1.4;margin:0 0 6px;"><b style="color:#f88;">Errori:</b> ' + esc(mistakes) + '</p>' : '') +
@@ -70133,6 +70827,14 @@ function renderKnowledgeCard(item) {
     btns +
     '</div>';
 }
+
+function knowledgeScrollTop() {
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) { window.scrollTo(0, 0); }
+  const main = document.getElementById('content') || document.querySelector('main');
+  if (main && main.scrollTop) { try { main.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) { main.scrollTop = 0; } }
+  const s = document.getElementById('knowledge-search'); if (s) s.blur();
+}
+window.knowledgeScrollTop = knowledgeScrollTop;
 
 function refreshKnowledgeMediaSlots() {
   if (typeof NurvanExerciseMedia === 'undefined' || !NurvanExerciseMedia.renderInto) return;
@@ -70315,7 +71017,8 @@ function renderTrainingKnowledge(c) {
     '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="openAddEncyclopediaExercise()">+ AGGIUNGI ESERCIZIO</button>' +
     '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:12px;" onclick="toggleKnowledgeEditMode()">' + (window.__knowledgeEdit ? 'ESCI DA MODIFICA' : 'MODIFICA ENCICLOPEDIA') + '</button>' +
     '<div id="knowledge-results">' + knowledgeResultsHtml() + '</div>' +
-    '</div><div style="height:80px;"></div>';
+    '</div><div style="height:80px;"></div>' +
+    '<button type="button" id="knowledge-top-btn" class="btn btn-primary" aria-label="Torna su" onclick="knowledgeScrollTop()" style="position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:900;width:48px;height:48px;border-radius:50%;padding:0;font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,.5);">↑</button>';
   try { encyclopedizeProgramExercises(); } catch (_) {}
   refreshKnowledgeMediaSlots();
 }
@@ -70380,7 +71083,7 @@ function paintExerciseInfoSheet(opts) {
     (unknown ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="closeExerciseInfoSheet();openAddEncyclopediaExercise(decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">AGGIUNGI ALL’ENCICLOPEDIA</button>' : '') +
     (athlete
       ? '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="closeExerciseInfoSheet();askHumanCoachAboutExercise(' + Number(idx) + ', decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">CHIEDI AL COACH</button>'
-      : '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" data-q="' + encodeURIComponent(name) + '" onclick="askCoachAiFromInfoSheet(' + Number(idx) + ', decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))">CHIEDI A COACH AI</button>') +
+      : '') +
     '</div></div>';
   sheet.classList.add('is-open');
 }
@@ -70666,6 +71369,12 @@ async function askAI(){
 }
 async function askAIInner(q0, opts){
   opts = opts || {};
+  // Free: the Coach AI is closed, except importing a program (its own path,
+  // not this one). An athlete's AI is the coach's to open (askAI).
+  if (!(typeof isAthleteRole === 'function' && isAthleteRole()) && typeof requirePlan === 'function' && !requirePlan('ai_coach')) {
+    if (typeof navigate === 'function') navigate('pricing');
+    return;
+  }
   let q = q0;
   if (store.pendingCoachAsk && store.pendingCoachAsk.needVoiceChoice) {
     const wantVoice = /\b(voc|ascolt|audio|listen|speak)\b/i.test(q);
@@ -71162,78 +71871,110 @@ async function executeCoachAiFileAnalysis({ name, sizeText, canonicalProgram, ra
   const ther = canonicalProgram?.therapy || {};
   const hasTher = ther.medications && ther.medications.length > 0;
 
-  // Try Remote Coach AI request if online and configured
+  // What the file says, written out: the AI analyses the program, not a
+  // count of it. Week 1 in full (every session, every exercise with its
+  // sets, reps, rest and notes), then how the other weeks differ in size.
+  const outline = (function () {
+    const lines = [];
+    const rowText = function (ex) {
+      const sets = Array.isArray(ex.sets) ? ex.sets : [];
+      const n = ex.setCount || sets.length || ex.sets_count || '';
+      const reps = ex.repsTarget || ex.reps_target || (sets[0] && sets[0].reps) || ex.reps || '';
+      const load = sets.map(function (s) { return s && (s.target_load || s.load || s.kg); }).filter(Boolean)[0];
+      return '- ' + (ex.name_original || ex.name || ex.exercise || 'esercizio') +
+        (n || reps ? ': ' + (n ? n + ' x ' : '') + reps : '') +
+        (load ? ' @ ' + load : '') +
+        (ex.rirTarget != null ? ' · RIR ' + ex.rirTarget : '') +
+        (ex.rest ? ' · rec ' + ex.rest : '') +
+        (ex.technique ? ' · ' + ex.technique : '') +
+        (ex.notes ? ' · ' + String(ex.notes).slice(0, 80) : '');
+    };
+    weeks.slice(0, 1).forEach(function (w) {
+      (w.sessions || w.days || []).forEach(function (s, si) {
+        lines.push('## ' + (s.name || s.title || ('Seduta ' + (si + 1))));
+        (s.exercises || s.rows || []).forEach(function (ex) { lines.push(rowText(ex)); });
+      });
+    });
+    if (weeks.length > 1) {
+      lines.push('## Altre settimane');
+      weeks.slice(1, 16).forEach(function (w, wi) {
+        const ss = w.sessions || w.days || [];
+        let setsTotal = 0;
+        ss.forEach(function (s) { (s.exercises || s.rows || []).forEach(function (ex) { setsTotal += Number(ex.setCount) || (Array.isArray(ex.sets) ? ex.sets.length : 0); }); });
+        lines.push('- Settimana ' + (wi + 2) + ': ' + ss.length + ' sedute, ' + setsTotal + ' serie' + (w.label ? ' (' + w.label + ')' : ''));
+      });
+    }
+    return lines.join('\n').slice(0, 9000);
+  })();
+  const sourceExcerpt = String(rawText || '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, totalExercises ? 2500 : 7000);
+
   let aiResponseText = '';
-  let coachConfigWarning = '';
+  let aiProblem = '';
 
   if (!navigator.onLine) {
-    coachConfigWarning = '⚠️ Sei offline: analisi locale generata da Nurvan AI (senza Gemini).';
+    aiProblem = 'Sei offline: per l’analisi del Coach AI serve la connessione.';
   } else if (typeof ConfigService === 'undefined' || !ConfigService.isConfigured()) {
-    coachConfigWarning = '⚠️ ' + (ConfigService?.describeMisconfiguration?.() || 'Nurvan AI non configurato: configurare il backend e GEMINI_API_KEY.');
+    aiProblem = (ConfigService && ConfigService.describeMisconfiguration && ConfigService.describeMisconfiguration()) || 'Coach AI non configurato.';
+  } else if (!totalExercises && sourceExcerpt.length < 80) {
+    aiProblem = 'Nel file non ho trovato una scheda di allenamento leggibile.';
   } else {
     try {
       const endpoint = coachEndpoint('/api/chat');
+      const asks = [
+        'Ho caricato il file "' + name + '". Analizza QUESTA scheda di allenamento nel merito, citando gli esercizi per nome.',
+        totalExercises
+          ? 'Struttura letta dal file: ' + weekCount + ' settimane, ' + sessionNames.length + ' sedute a settimana, ' + totalExercises + ' esercizi in tutto.'
+          : 'La struttura non è stata riconosciuta in automatico: ricavala tu dal testo del file qui sotto.',
+        outline ? 'SCHEDA (settimana 1 completa):\n' + outline : '',
+        sourceExcerpt ? 'TESTO DEL FILE (estratto):\n' + sourceExcerpt : '',
+        'Voglio, in quest’ordine e senza premesse:',
+        '1. Volume settimanale per gruppo muscolare (serie dirette), dicendo dove è basso, giusto o eccessivo.',
+        '2. Equilibrio tra spinta e tirata, tra parte alta e parte bassa, e frequenza di ogni gruppo.',
+        '3. Intensità e progressione: range di ripetizioni, RIR/RPE, recuperi, come cambia tra le settimane.',
+        '4. I 3 punti deboli più importanti e, per ciascuno, la modifica concreta (quale esercizio, quante serie).',
+        '5. Cosa terrei così com’è.',
+        'Non proporre modifiche in JSON e non parlare di alimentazione, integrazione o terapia: riguarda solo l’allenamento' +
+          (hasNutr || hasSupp ? ' (il file contiene anche ' + [hasNutr ? 'un piano alimentare' : '', hasSupp ? 'integratori' : ''].filter(Boolean).join(' e ') + ': citalo in una riga, senza analizzarlo).' : '.')
+      ].filter(Boolean).join('\n\n');
       const payload = {
-        message: `Ho caricato il file ${name}. Ecco la struttura estratta:\nSettimane: ${weekCount}, Sedute: ${sessionNames.join(', ')}, Esercizi totali: ${totalExercises}.\nFornisci un'analisi tecnica dettagliata su volumi, split e suggerimenti pratici.`,
+        message: asks,
         conversation_id: store.chatSessionId || ('session_' + Date.now()),
         context: {
           importedFile: { name, sizeText, weekCount, totalExercises, sessionNames, hasNutr, hasSupp, hasTher },
           programSummary: programSummaryForCoach(canonicalProgram || DATA),
+          language: (typeof I18nService !== 'undefined' && I18nService.getLanguage) ? I18nService.getLanguage() : 'it',
           user: store.accountUser
         },
         history: []
       };
+      // A whole program takes the model well over fifteen seconds.
       const resp = await apiFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }, 15000);
+      }, 90000);
       const resJson = await readApiJson(resp);
       if (resJson && (resJson.reply || resJson.message || resJson.response)) {
         aiResponseText = String(resJson.reply || resJson.message || resJson.response).trim();
       }
+      if (!aiResponseText) aiProblem = 'Il Coach AI non ha risposto.';
     } catch (e) {
-      console.warn('[Coach AI] Remote file analysis fell back to local intelligence:', e.message);
-      coachConfigWarning = '⚠️ ' + formatCoachError(e);
+      console.warn('[Coach AI] file analysis failed:', e && e.message);
+      aiProblem = formatCoachError(e);
     }
   }
 
-  // If remote did not respond, generate local high-precision Coach AI technical report
+  // No answer from the AI: say so, and show only what was actually read
+  // from the file. No judgement is invented in its place.
   if (!aiResponseText) {
-    const muscleBreakdown = Object.entries(muscleHits).map(([m, count]) => `• **${m}**: ${count} esercizi rilevati`).join('\n') || '• Distribuzione multi-articolare completa';
-    
-    aiResponseText = `${coachConfigWarning ? coachConfigWarning + '\n\n' : ''}### 📋 ANALISI TECNICA DI NURVAN AI — ${name}
-
-Ho esaminato la struttura completa del file caricato. Di seguito trovi la valutazione tecnica, il bilanciamento dei volumi e i consigli operativi:
-
----
-
-#### 1. 🏋️ ARCHITETTURA ALLENAMENTO
-- **Programmazione**: ${weekCount > 0 ? `${weekCount} Settimane` : 'Multi-settimanale'}
-- **Frequenza Settimanale**: ${sessionNames.length > 0 ? `${sessionNames.length} Sedute (${sessionNames.join(' • ')})` : 'Struttura modulare'}
-- **Volume Totale**: **${totalExercises} esercizi** complessivi mappati
-- **Distribuzione Muscolare**:
-${muscleBreakdown}
-
----
-
-#### 2. ⚡ VALUTAZIONE & PUNTI DI FORZA
-- **Split & Recupero**: La suddivisione delle sedute garantisce una frequenza ottimale con recuperi mirati tra catene cinetiche.
-- **Gestione Intensità**: La scheda presenta una progressione mirata su target di ripetizioni e gestione RIR/RPE per massimizzare il reclutamento ipertrofico senza accumulo eccessivo di fatica neurale.
-
----
-
-#### 3. 🥗 NUTRIZIONE & INTEGRAZIONE
-${hasNutr ? `- **Nutrizione**: Mappati ${nutr.days.length} giorni con ripartizione pasti ON/OFF.` : '- **Nutrizione**: Nessuna tabella dietetica specifica rilevata nel file.'}
-${hasSupp ? `- **Integrazione**: Rilevati **${supp.items.length} integratori** (${supp.items.map(s => s.name).slice(0, 4).join(', ')}) con timing di assunzione.` : '- **Integrazione**: Protocollo integrativo non presente nel file.'}
-${hasTher ? `- **Terapia & Salute**: ${ther.medications.length} elementi farmacologici/esami associati.` : ''}
-
----
-
-#### 💡 CONSIGLI OPERATIVI DEL COACH
-1. Mantieni 1-2 RIR di margine sui fondamentali nella prima settimana per calibrare i sovraccarichi.
-2. Monitora la velocità concentrica e registra regolarmente carichi e ripetizioni nel Workout Logger.
-3. Se desideri allenarti con questa scheda, puoi importarla ed attivarla con 1 clic nel sistema!`;
+    const muscleBreakdown = Object.entries(muscleHits).map(([m, count]) => `• **${m}**: ${count} esercizi`).join('\n');
+    aiResponseText = `⚠️ Analisi del Coach AI non riuscita: ${aiProblem} Riprova tra poco dal pulsante di analisi.\n\n` +
+      (totalExercises
+        ? `### Cosa ho letto nel file\n- **Settimane**: ${weekCount}\n- **Sedute a settimana**: ${sessionNames.length}${sessionNames.length ? ' (' + sessionNames.join(' • ') + ')' : ''}\n- **Esercizi in tutto**: ${totalExercises}\n` +
+          (muscleBreakdown ? `\n**Esercizi per zona**\n${muscleBreakdown}\n` : '') +
+          (hasNutr ? `\nIl file contiene anche un piano alimentare (${nutr.days.length} giorni).` : '') +
+          (hasSupp ? `\nIl file contiene anche ${supp.items.length} integratori.` : '')
+        : 'Nel file non ho riconosciuto una scheda di allenamento. Se è una foto o un PDF scansionato, prova con la lettura avanzata dall’import.');
   }
 
   // Append assistant message
@@ -74202,6 +74943,85 @@ function generatorSelect(field, items, current, inputStyle) {
     }).join('') + '</select>';
 }
 
+// The goals the sheet offers: the generator's own, and the race preparation.
+function generatorGoalItems(api) {
+  var items = api.GOALS.slice();
+  if (typeof hyroxApi === 'function' && hyroxApi()) items.push({ id: 'hyrox', label: 'HYROX · preparazione gara' });
+  return items;
+}
+function generatorIsHyrox(g) {
+  return !!g && g.goal === 'hyrox' && typeof hyroxApi === 'function' && !!hyroxApi();
+}
+
+function generatorFootHtml(g) {
+  return '<div class="nurvan-sheet-foot">' +
+    (g.target === 'active'
+      ? '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;padding:12px;" onclick="createGeneratedProgram(\'save\')">SALVA SENZA ATTIVARE</button>' +
+        '<button type="button" class="btn btn-primary" style="flex:1;font-size:11px;padding:12px;" onclick="createGeneratedProgram(\'active\')">GENERA E ATTIVA</button>'
+      : '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="createGeneratedProgram(\'' + g.target + '\')">' +
+        (g.target === 'library' ? 'GENERA E SALVA NEL DATABASE' : 'GENERA PER IL CLIENTE') + '</button>') +
+    '</div>';
+}
+
+/*
+ * Goal HYROX. A race preparation is not a split with a progression model: it
+ * is running, stations and strength laid out towards a date, and web/hyrox.js
+ * writes it. So with this goal the sheet asks the race's questions (which
+ * race, how many days, level, category, equipment) instead of split, model
+ * and techniques, shows the first week and the phases, and says on what
+ * evidence the weeks are laid out that way.
+ */
+function renderGeneratorHyroxSheet(g, api, sheet, inputStyle) {
+  var hx = hyroxApi();
+  if (!window.__hyroxEvents) loadHyroxEvents();
+  var input = hyroxPlanInput();
+  var preview;
+  try {
+    var prog = hx.plan(input);
+    var counts = {};
+    prog.weeks.forEach(function (w) { counts[w.phase] = (counts[w.phase] || 0) + 1; });
+    var phases = ['base', 'build', 'peak', 'taper'].filter(function (ph) { return counts[ph]; });
+    preview = '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(212,175,55,0.35);">' +
+      '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:8px;">ANTEPRIMA · SETTIMANA 1</div>' +
+      '<div style="font-size:11px;color:#aaa;line-height:1.5;margin-bottom:6px;">' + esc(prog.source_summary) + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">' + phases.map(function (ph) {
+        return '<span style="font-size:10px;color:#ddd;border:1px solid #333;border-radius:6px;padding:4px 8px;">' + esc(hx.PHASE_LABELS[ph]) + ': ' + counts[ph] + ' settimane</span>';
+      }).join('') + '</div>' +
+      prog.weeks[0].sessions.map(function (s) {
+        return '<div style="margin-bottom:8px;">' +
+          '<div style="font-size:11px;font-weight:800;color:#fff;margin-bottom:4px;">' + esc(s.name) + '</div>' +
+          s.exercises.map(function (e) {
+            return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;color:#bbb;padding:2px 0;">' +
+              '<span style="min-width:0;">' + esc(e.name) + '</span>' +
+              '<span style="flex:0 0 auto;color:#888;">' + esc((e.sets || []).length + ' × ' + e.repsTarget) + '</span></div>';
+          }).join('') + '</div>';
+      }).join('') + '</div>';
+  } catch (e) {
+    preview = '<div style="font-size:11px;color:#c66;">Anteprima non riuscita: ' + esc(e.message || String(e)) + '</div>';
+  }
+  var cardOpen = '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid #333;">';
+  var cardTitle = function (text) { return '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:10px;">' + text + '</div>'; };
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">GENERA UNA SCHEDA</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeProgramGenerator()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:12px;">Nome della scheda (facoltativo)' +
+    '<input type="text" value="' + esc(g.title || '') + '" placeholder="Lo scrive lui se lo lasci vuoto" ' +
+    'onchange="setGeneratorField(\'title\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    cardOpen + cardTitle('STRUTTURA') +
+    '<label style="font-size:9px;color:#888;display:block;">Obiettivo' + generatorSelect('goal', generatorGoalItems(api), g.goal, inputStyle) + '</label>' +
+    '<div style="font-size:10px;color:#777;margin-top:8px;line-height:1.5;">Corsa, stazioni e forza nella stessa settimana, in quattro fasi fino alla gara: base, costruzione, picco e scarico.</div></div>' +
+    cardOpen + cardTitle('LA GARA') + hyroxFieldsHtml() + '</div>' +
+    preview +
+    cardOpen + cardTitle('PERCHÉ È FATTA COSÌ') + hyroxEvidenceHtml(3) +
+    '<div style="margin-top:8px;"><span style="font-size:10px;color:var(--gold);cursor:pointer;text-decoration:underline;" onclick="closeProgramGenerator();navigate(\'hyrox\')">tutti i dati, le stazioni e il calendario</span></div></div>' +
+    '</div>' + generatorFootHtml(g) + '</div>';
+  document.body.appendChild(sheet);
+}
+
 // What the generator is about to write, before it writes it: the first week,
 // exercise by exercise, so a wrong answer upstream is visible here and not
 // three taps later inside an activated program.
@@ -74265,6 +75085,7 @@ function renderProgramGeneratorInner() {
   sheet.id = 'program-generator-sheet';
   sheet.className = 'nurvan-sheet is-open';
   sheet.style.zIndex = '10240';
+  if (generatorIsHyrox(g)) { renderGeneratorHyroxSheet(g, api, sheet, inputStyle); return; }
 
   var spaces = trainingSpaces();
   var splitItems = api.splitsFor(g.days).map(function (s) { return { id: s.id, label: s.label }; });
@@ -74286,7 +75107,7 @@ function renderProgramGeneratorInner() {
     generatorChips('days', api.DAYS, g.days) +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">' +
     '<label style="font-size:9px;color:#888;">Split' + generatorSelect('split', splitItems, g.split, inputStyle) + '</label>' +
-    '<label style="font-size:9px;color:#888;">Obiettivo' + generatorSelect('goal', api.GOALS, g.goal, inputStyle) + '</label>' +
+    '<label style="font-size:9px;color:#888;">Obiettivo' + generatorSelect('goal', generatorGoalItems(api), g.goal, inputStyle) + '</label>' +
     '<label style="font-size:9px;color:#888;">Esperienza' + generatorSelect('experience', api.EXPERIENCE, g.experience, inputStyle) + '</label>' +
     '<label style="font-size:9px;color:#888;">Focus' + generatorSelect('audience', api.AUDIENCE, g.audience, inputStyle) + '</label>' +
     '</div></div>';
@@ -74399,13 +75220,7 @@ function renderProgramGeneratorInner() {
     'onchange="setGeneratorField(\'title\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
     structure + place + duration + extras + generatorPreviewHtml(g) +
     '</div>' +
-    '<div class="nurvan-sheet-foot">' +
-    (g.target === 'active'
-      ? '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;padding:12px;" onclick="createGeneratedProgram(\'save\')">SALVA SENZA ATTIVARE</button>' +
-        '<button type="button" class="btn btn-primary" style="flex:1;font-size:11px;padding:12px;" onclick="createGeneratedProgram(\'active\')">GENERA E ATTIVA</button>'
-      : '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="createGeneratedProgram(\'' + g.target + '\')">' +
-        (g.target === 'library' ? 'GENERA E SALVA NEL DATABASE' : 'GENERA PER IL CLIENTE') + '</button>') +
-    '</div></div>';
+    generatorFootHtml(g) + '</div>';
   document.body.appendChild(sheet);
 }
 window.renderProgramGenerator = renderProgramGenerator;
@@ -74415,6 +75230,28 @@ async function createGeneratedProgram(target) {
   var api = generatorApi();
   if (!api) {
     if (typeof showToast === 'function') showToast('Motore di generazione non caricato', 'error');
+    return;
+  }
+  if (generatorIsHyrox(g)) {
+    var hx = hyroxApi();
+    var input = hyroxPlanInput();
+    if (input.raceDate) {
+      var left = hx.weeksUntil(input.raceDate);
+      if (left != null && left < 4 && !confirm('Mancano meno di 4 settimane alla gara: la preparazione sarà di 4 settimane, più lunga del tempo che resta. Vuoi crearla lo stesso?')) return;
+    }
+    try {
+      var race = null;
+      await withBusy(function () {
+        race = hx.plan(input);
+        if (g.title) race.title = g.title;
+        race = normalizeProgram(race);
+        return Promise.resolve();
+      }, 'Scrivo la preparazione…', { immediate: true, maxMs: 60000 });
+      openGeneratedReview(race, target, null);
+    } catch (e) {
+      console.error('[HYROX]', e);
+      if (typeof showToast === 'function') showToast('Generazione non riuscita: ' + (e && e.message || e), 'error');
+    }
     return;
   }
   var opts = generatorOptions(g);
@@ -74821,6 +75658,14 @@ async function deliverGeneratedReview(target) {
       }
     });
     if (report && report.swaps && report.swaps.length && typeof showAdaptReport === 'function') showAdaptReport(report);
+    // The notes written in AI CREATE: the Coach AI proposes the changes to
+    // the program just activated, to confirm one by one.
+    const notes = window.__genAiNotes;
+    window.__genAiNotes = '';
+    if (notes && target === 'active' && typeof kickCoachAiPrompt === 'function') {
+      navigate('ai');
+      kickCoachAiPrompt('Ho appena attivato questa scheda generata. Adattala a queste mie richieste proponendo le modifiche da confermare: ' + notes, 'Nurvan AI adatta la scheda…');
+    }
   } catch (e) {
     console.error('[PROGRAM REVIEW]', e);
     if (typeof showToast === 'function') showToast('Non riuscito: ' + (e && e.message || e), 'error');
@@ -76034,7 +76879,7 @@ var CLIENT_INTAKE_FIELDS = [
   { key: 'weightBand', label: 'Peso', type: 'select', required: true, options: ['45-49 kg', '50-54 kg', '55-59 kg', '60-64 kg', '65-69 kg', '70-74 kg', '75-79 kg', '80-84 kg', '85-89 kg', '90-94 kg', '95-99 kg', '100-109 kg', '110-119 kg', '120-129 kg', '130-139 kg', '140+ kg'] },
   { key: 'trainingAge', label: 'Anzianità di allenamento', type: 'select', required: true, options: ['Mai allenato', 'Meno di 6 mesi', '6-12 mesi', '1-2 anni', '2-5 anni', 'Più di 5 anni'] },
   { key: 'level', label: 'Livello', type: 'select', required: true, options: ['Principiante', 'Intermedio', 'Avanzato', 'Agonista'] },
-  { key: 'goal', label: 'Obiettivo', type: 'select', required: true, options: ['Ipertrofia', 'Forza', 'Dimagrimento', 'Ricomposizione', 'Performance sportiva', 'Salute e postura', 'Preparazione gara'] },
+  { key: 'goal', label: 'Obiettivo', type: 'select', required: true, options: ['Ipertrofia', 'Forza', 'Dimagrimento', 'Ricomposizione', 'Performance sportiva', 'Salute e postura', 'Preparazione gara', 'HYROX'] },
   { key: 'sessionsPerWeek', label: 'Sessioni a settimana', type: 'select', required: true, options: ['2', '3', '4', '5', '6 o più'] },
   { key: 'sessionMinutes', label: 'Tempo a sessione', type: 'select', required: true, options: ['30 minuti', '45 minuti', '60 minuti', '75 minuti', '90 minuti o più'] },
   { key: 'equipment', label: 'Attrezzatura', type: 'select', required: true, options: ['Palestra completa', 'Pesi liberi + panca', 'Solo macchine', 'Casa (manubri/bande)', 'Corpo libero'] },
@@ -76148,7 +76993,7 @@ function fmtShortDate(v) {
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) return '—';
     const tz = (typeof deviceTimeZone === 'function') ? deviceTimeZone() : undefined;
-    return d.toLocaleString('it-IT', Object.assign({ day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }, tz ? { timeZone: tz } : {}));
+    return d.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'), Object.assign({ day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }, tz ? { timeZone: tz } : {}));
   } catch (_) { return '—'; }
 }
 
@@ -76158,7 +77003,7 @@ function fmtDay(v) {
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) return '—';
     const tz = (typeof deviceTimeZone === 'function') ? deviceTimeZone() : undefined;
-    return d.toLocaleDateString('it-IT', tz ? { timeZone: tz } : undefined);
+    return d.toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT'), tz ? { timeZone: tz } : undefined);
   } catch (_) { return '—'; }
 }
 
@@ -77080,7 +77925,7 @@ async function sendOutboxItem(it) {
   if (it.type === 'request-program') {
     return practiceFetch('/api/client/request-program', {
       method: 'POST', headers: practiceHeaders(true),
-      body: JSON.stringify({ note: it.note || '', operationId: operationId })
+      body: JSON.stringify({ note: it.note || '', hyrox: it.hyrox || null, operationId: operationId })
     });
   }
   if (it.type === 'ask-coach') {
@@ -77164,6 +78009,7 @@ function queueAccountSyncIfOffline() {
 }
 
 function setNurvanAppBadge(n) {
+  if (typeof iosSetBadge === 'function' && iosSetBadge(n)) return;
   try {
     if (typeof window !== 'undefined' && window.NativeConfig) return;
     const count = Math.max(0, Number(n) || 0);
@@ -77176,6 +78022,7 @@ function setNurvanAppBadge(n) {
 }
 
 function clearNurvanAppBadge() {
+  if (typeof iosSetBadge === 'function' && iosSetBadge(0)) return;
   try {
     if (typeof window !== 'undefined' && window.NativeConfig) return;
     if (navigator.clearAppBadge) navigator.clearAppBadge().catch(function () {});
@@ -77290,7 +78137,14 @@ function coachEventLabel(kind, name, payload) {
   if (kind === 'leave_request') return { title: 'Fine collaborazione', body: n + ' ha chiesto di chiudere', view: 'coachClient' };
   if (kind === 'change_request') return { title: 'Modifica da approvare', body: n + ' vuole cambiare il programma', view: 'coachClient' };
   if (kind === 'change_notice') return { title: 'Atleta ha modificato', body: n + ' ha cambiato il programma', view: 'coachClient' };
-  if (kind === 'request_program') return { title: 'Richiesta scheda', body: n + ' chiede la scheda', view: 'coachClient' };
+  if (kind === 'request_program') {
+    // A race preparation asked for by name: the coach reads which race.
+    if (p.hyrox && typeof p.hyrox === 'object') {
+      return { title: 'Richiesta HYROX', body: n + ' chiede la preparazione HYROX' + (p.hyrox.raceName ? ' · ' + String(p.hyrox.raceName).slice(0, 80) : ''), view: 'coachClient' };
+    }
+    const reqNote = String(p.note || '').trim();
+    return { title: 'Richiesta scheda', body: n + ' chiede la scheda' + (reqNote ? ': ' + reqNote.slice(0, 240) : ''), view: 'coachClient' };
+  }
   if (kind === 'intake_update_pending') return { title: 'Anagrafica da approvare', body: n + ' ha aggiornato i suoi dati', view: 'coachClient' };
   if (kind === 'intake_completed') return { title: 'Questionario ricevuto', body: n + ' ha compilato l’anagrafica', view: 'coachClient' };
   if (kind === 'unlock_approved') return { title: 'Sblocco approvato', body: 'Hai approvato una richiesta di ' + n, view: 'coachClient' };
@@ -78972,6 +79826,7 @@ function athleteHomeModulesHtml() {
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'exams\')"><span style="font-size:18px;">🧪</span><span style="font-size:11px;font-weight:800;">Esami</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="startDomainImport(\'nutrition\')"><span style="font-size:18px;">📥</span><span style="font-size:11px;font-weight:800;">Importa file</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'calendar\')"><span style="font-size:18px;">📅</span><span style="font-size:11px;font-weight:800;">Calendario</span></button>' +
+    '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'hyrox\')"><span style="font-size:18px;">🏁</span><span style="font-size:11px;font-weight:800;">HYROX</span></button>' +
     '</div></div>';
 }
 
@@ -79004,9 +79859,32 @@ async function reloadClientHome() {
   }
 }
 
-async function requestProgramFromCoach() {
+// "Chiedi la scheda": which one. A race preparation is asked for from the
+// HYROX screen, where the race is chosen, so the coach knows what to write.
+function requestProgramFromCoach(extra) {
+  if (extra && typeof extra === 'object') return sendProgramRequest(extra);
+  const hasHyrox = typeof window !== 'undefined' && !!window.NurvanHyrox;
+  if (!hasHyrox) return sendProgramRequest({});
+  openCpModal(
+    '<h2>Che scheda ti serve?</h2>' +
+    '<p class="cp-help">Il coach riceve la richiesta e ti assegna la scheda.</p>' +
+    '<textarea id="cp-reqprog-note" rows="2" maxlength="400" placeholder="Messaggio per il coach (facoltativo)" style="width:100%;margin-bottom:10px;padding:10px;background:#141414;border:1px solid #333;color:#fff;border-radius:8px;box-sizing:border-box;"></textarea>' +
+    '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="confirmProgramRequest()">SCHEDA DI ALLENAMENTO</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="closeCpModal();navigate(\'hyrox\')">PREPARAZIONE HYROX</button>' +
+    '<button class="btn btn-outline" style="width:100%;" onclick="closeCpModal()">ANNULLA</button>'
+  );
+}
+function confirmProgramRequest() {
+  const el = document.getElementById('cp-reqprog-note');
+  const note = el ? String(el.value || '').trim() : '';
+  closeCpModal();
+  return sendProgramRequest({ note: note });
+}
+window.confirmProgramRequest = confirmProgramRequest;
+
+async function sendProgramRequest(extra) {
   try {
-    enqueueClientOutbox({ type: 'request-program' });
+    enqueueClientOutbox(Object.assign({ type: 'request-program' }, extra || {}));
     const result = await flushClientOutbox();
     if (result && result.remaining > 0) {
       practiceToast('Richiesta salvata: partirà quando sei online.', 'warning');
@@ -79499,7 +80377,7 @@ function renderMessageHtml(m, mine) {
   const ticks = mine
     ? (m.read_at ? ' <span style="color:#4fc3f7;">✓✓</span>' : ' <span style="color:#888;">✓</span>')
     : '';
-  const lock = (m.e2e || (typeof m.body === 'string' && m.body.indexOf('E2E1:') === 0)) ? ' · e2e' : '';
+  const lock = '';
   const text = m._plain != null ? m._plain : (m.body || '');
   const showText = text && text !== '[allegato]';
   return '<div class="cp-msg ' + (mine ? 'me' : 'them') + '">' + (showText ? esc(text) + lock : '') + extra +
@@ -79880,7 +80758,9 @@ async function renderCoachWorkspace(c) {
           (it.when ? '<small>' + esc(it.when) + '</small>' : '') + '</button>';
       }).join('');
       window.__cpClientSheetNotifies = clientNotifyItems;
+      window.__cpHyroxRequest = latestHyroxRequest(ev.events || [], id);
     } catch (_) {}
+    const hyroxReqHtml = clientHyroxCardHtml(id, cl.displayName || '', intake);
     if (!store.__cpWsCollapse || typeof store.__cpWsCollapse !== 'object') {
       store.__cpWsCollapse = { intake: false, events: false };
     }
@@ -79954,6 +80834,7 @@ async function renderCoachWorkspace(c) {
           '<button class="btn btn-primary" style="width:100%;margin-top:6px;" onclick="approveUnlockRequest(\'' + esc(id) + '\',\'' + esc(feat) + '\')">APPROVA SBLOCCO</button>' +
           '<button class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="rejectUnlockRequest(\'' + esc(id) + '\',\'' + esc(feat) + '\')">NEGA (con messaggio)</button></div>';
       })() : '') +
+      hyroxReqHtml +
       '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;">Programma cliente</div>' +
       '<div style="font-size:12px;color:#ccc;">' + esc(prog.title || 'Nessuna scheda assegnata') + (weeks ? ' · ' + weeks + ' settimane' : '') + '</div>' +
       '<div style="font-size:11px;color:#aaa;margin-top:8px;">Scade: <b style="color:#fff;">' + esc(fmtDay(cl.programExpiresAt)) + '</b> · Prossimo check: <b style="color:#fff;">' + esc(fmtDay(cl.nextCheckAt)) + '</b></div>' +
@@ -80403,17 +81284,90 @@ function collapseAssignBannerForOverlay() {
   }
 }
 
+// The last race preparation the client asked for that no program has
+// answered yet: { clientId, hyrox, at } or null.
+function latestHyroxRequest(events, clientId) {
+  let req = null;
+  let assignedId = 0;
+  (events || []).forEach(function (e) {
+    if (!e) return;
+    const eid = Number(e.id || 0);
+    if (e.kind === 'program_assigned') { assignedId = Math.max(assignedId, eid); return; }
+    if (e.kind !== 'request_program') return;
+    const p = parseCoachEventPayload(e.payload);
+    if (!p.hyrox || typeof p.hyrox !== 'object') return;
+    if (!req || eid > req.id) req = { id: eid, clientId: String(clientId), hyrox: p.hyrox, at: e.created_at || '' };
+  });
+  return (req && req.id > assignedId) ? req : null;
+}
+function hyroxRequestFor(clientId) {
+  const req = (typeof window !== 'undefined') ? window.__cpHyroxRequest : null;
+  return (req && String(req.clientId) === String(clientId)) ? req.hyrox : null;
+}
+function clientWantsHyrox(clientId, intake) {
+  if (hyroxRequestFor(clientId)) return true;
+  const ws = store.coachWorkspace || {};
+  const data = intake || (String(ws.clientId || '') === String(clientId) ? ws.intake : null) || {};
+  return /hyrox/i.test(String(data.goal || ''));
+}
+// What the client asked for, in words the coach reads at a glance.
+function hyroxRequestSummary(hx) {
+  const api = (typeof window !== 'undefined' && window.NurvanHyrox) || null;
+  const bits = [];
+  if (hx.raceName) bits.push(String(hx.raceName) + (hx.raceDate ? ' · ' + fmtDay(hx.raceDate) : ''));
+  if (api) {
+    const div = api.DIVISIONS.filter(function (d) { return d.id === hx.division; })[0];
+    const lev = api.LEVELS.filter(function (l) { return l.id === hx.level; })[0];
+    if (div) bits.push(div.label);
+    if (lev) bits.push(lev.label);
+  }
+  if (hx.days) bits.push(hx.days + ' giorni');
+  return bits;
+}
+function clientHyroxCardHtml(clientId, name, intake) {
+  if (typeof window === 'undefined' || !window.NurvanHyrox) return '';
+  const hx = hyroxRequestFor(clientId);
+  if (!hx && !clientWantsHyrox(clientId, intake)) return '';
+  const rows = hx ? hyroxRequestSummary(hx) : [];
+  return '<div class="card" style="padding:12px;margin-bottom:12px;border-color:var(--gold);">' +
+    '<div style="font-weight:900;color:var(--gold);">' + (hx ? 'Richiesta: preparazione HYROX' : 'Obiettivo del cliente: HYROX') + '</div>' +
+    (rows.length ? rows.map(function (t) { return '<div style="font-size:12px;color:#ddd;margin-top:4px;">' + esc(t) + '</div>'; }).join('')
+      : '<p class="cp-help" style="margin:6px 0 0;">Scegli la gara e scrivi la preparazione: diventa la bozza del cliente.</p>') +
+    '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'hyrox\')">SCRIVI LA PREPARAZIONE HYROX</button></div>';
+}
+// The answers the HYROX screen starts from, when the client has given them.
+function prefillHyroxFromRequest(clientId) {
+  const hx = hyroxRequestFor(clientId);
+  const api = (typeof window !== 'undefined' && window.NurvanHyrox) || null;
+  if (!hx || !api) return;
+  // The coach's own answers come back when the client's draft is closed.
+  if (!window.__cpHyroxOwn) window.__cpHyroxOwn = JSON.parse(JSON.stringify(store.hyrox || {}));
+  const h = (store.hyrox && typeof store.hyrox === 'object') ? store.hyrox : (store.hyrox = {});
+  h.raceId = String(hx.raceId || '');
+  if (api.DIVISIONS.some(function (d) { return d.id === hx.division; })) h.division = hx.division;
+  if (api.LEVELS.some(function (l) { return l.id === hx.level; })) h.level = hx.level;
+  if (api.DAYS.indexOf(Number(hx.days)) !== -1) h.days = Number(hx.days);
+  if (Number(hx.weeks) >= 4) h.weeks = Number(hx.weeks);
+  if (Array.isArray(hx.gear)) h.gear = api.GEAR.map(function (g) { return g.id; }).filter(function (g) { return hx.gear.indexOf(g) !== -1; });
+}
+
 function openAssignChooser(clientId, name) {
   ensurePracticeStyle();
   ensurePracticeOverlays();
   const p = document.getElementById('cp-assign-panel');
   if (!p) return;
+  const hyroxFirst = clientWantsHyrox(clientId);
+  const hyroxBtn = function (cls) {
+    return '<button class="btn ' + cls + '" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'hyrox\')">PREPARAZIONE HYROX</button>';
+  };
   p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">ASSEGNA SCHEDA</div>' +
     '<h2>Cosa vuoi assegnare a ' + esc(name || 'cliente') + '?</h2>' +
     '<p class="cp-help">Si apre uno <b style="color:#fff;">spazio cliente separato</b> dal tuo allenamento. Importa o scegli, modifica, poi INVIA. Solo «usa scheda attiva» parte dalla tua come base.</p>' +
-    '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'import\')">IMPORTA PDF / EXCEL / WORD</button>' +
+    (hyroxFirst ? '<p class="cp-help" style="color:var(--gold);">Il cliente ha chiesto una preparazione HYROX.</p>' + hyroxBtn('btn-primary') : '') +
+    '<button class="btn ' + (hyroxFirst ? 'btn-outline' : 'btn-primary') + '" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'import\')">IMPORTA PDF / EXCEL / WORD</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'build\')">SCRIVI UNA SCHEDA DA ZERO</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'generate\')">GENERA UNA SCHEDA</button>' +
+    (hyroxFirst ? '' : hyroxBtn('btn-outline')) +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'mylib\')">DAL MIO DATABASE</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'programs\')">DATABASE PROGRAMMI (NURVAN)</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'copy\')">USA SCHEDA ATTIVA COME BASE</button>' +
@@ -80463,6 +81417,13 @@ function beginAssignSandbox(clientId, name, mode) {
     navigate('training');
     if (typeof openProgramGenerator === 'function') openProgramGenerator('assign');
     practiceToast('Spazio cliente: rispondi alle domande, la scheda la scrive l\'app. Poi la modifichi e la invii.', 'success');
+  } else if (mode === 'hyrox') {
+    // The race preparation, written for this client: gara, livello and
+    // attrezzatura are the client's, the draft is then edited and sent like
+    // any other. What the client asked for is already filled in.
+    try { prefillHyroxFromRequest(clientId); } catch (_) {}
+    navigate('hyrox');
+    practiceToast('Spazio cliente: scegli la gara e l\'attrezzatura del cliente. La preparazione diventa la bozza da inviare.', 'success');
   } else if (mode === 'mylib') {
     openCoachLibraryAssignPicker(clientId, name);
   } else if (mode === 'programs') {
@@ -81202,7 +82163,7 @@ function renderClientChat(c) {
   if (document.body) document.body.classList.add('cp-chat-view');
   try { clearNurvanAppBadge(); } catch (_) {}
   c.innerHTML = '<div class="cp-chat-shell">' +
-    '<div style="flex-shrink:0;margin-bottom:6px;"><span style="font-size:10px;color:var(--gold);font-weight:800;">COACH · E2E</span>' +
+    '<div style="flex-shrink:0;margin-bottom:6px;"><span style="font-size:10px;color:var(--gold);font-weight:800;">COACH</span>' +
     '<h1 style="color:#fff;margin:2px 0 0;font-size:18px;">Chat con il coach</h1></div>' +
     '<div id="cp-client-chat" class="cp-chat-thread"></div>' +
     chatToolsHtml('cp-client-msg', 'sendAthleteHumanMessage()', 'clearChatForMe(null,\'athlete\')', 'newChatThread(null,\'athlete\')', {
@@ -81240,6 +82201,11 @@ async function loadHumanMessages(clientId, boxId, role, silent) {
     if (payload.e2e) store.__cpE2EPeer = payload.e2e;
     const msgs = payload.messages || [];
     const nearBottom = (box.scrollHeight - box.scrollTop - box.clientHeight) < 80;
+    // The poll runs every 2.5 s: rebuilding an unchanged thread re-lays out
+    // the whole chat (and its images) and makes it jump, so skip it.
+    const sig = msgs.length + '|' + msgs.map(function (m) { return (m.id || m.created_at || '') + ':' + (m.read_at ? 1 : 0); }).join(',');
+    if (silent && box.__cpSig === sig) return;
+    box.__cpSig = sig;
     if (!msgs.length) { box.innerHTML = '<div class="cp-help">Nessun messaggio. Chat cifrata end-to-end.</div>'; return; }
     const decrypted = [];
     for (let i = 0; i < msgs.length; i++) {
@@ -81259,7 +82225,15 @@ async function loadHumanMessages(clientId, boxId, role, silent) {
       const mine = (role === 'athlete' && m.from_role === 'athlete') || (role === 'coach' && m.from_role === 'coach');
       return renderMessageHtml(m, mine);
     }).join('');
-    if (!silent || nearBottom) box.scrollTop = box.scrollHeight;
+    if (!silent || nearBottom) {
+      const toBottom = function () { box.scrollTop = box.scrollHeight; };
+      toBottom();
+      // Images and videos grow the thread once loaded: stay on the last message.
+      box.querySelectorAll('img,video').forEach(function (el) {
+        if (!el.complete) { el.addEventListener('load', toBottom, { once: true }); el.addEventListener('loadedmetadata', toBottom, { once: true }); }
+      });
+      requestAnimationFrame(toBottom);
+    }
   } catch (err) {
     if (!silent) box.innerHTML = '<div class="cp-help">' + esc((err && err.message) || 'Chat non disponibile.') + '</div>';
   }
@@ -81566,12 +82540,20 @@ async function requestLeaveCoach() {
 }
 
 function notifyUser(title, body, route) {
+  if (typeof window.tr === 'function') { title = window.tr(title); body = window.tr(body); }
   requestNotifyPermission();
   const go = function () {
     if (!route) return;
     try { handleNotifyRoute(route); } catch (_) {}
   };
   showInAppNotify(title, body, route);
+  // iOS app: a real notification (sound, lock screen) when the app is not in front.
+  if (typeof isIosApp === 'function' && isIosApp()) {
+    if (document.visibilityState !== 'visible' && typeof iosScheduleNotification === 'function') {
+      iosScheduleNotification({ id: 'msg_' + Date.now(), title: title, body: body, at: Date.now() + 500, route: route || '' });
+    }
+    return;
+  }
   try {
     const native = typeof nativeBridge === 'function' ? nativeBridge() : (typeof NativeConfig !== 'undefined' ? NativeConfig : null);
     if (native && typeof native.notifyNow === 'function') {
@@ -81837,7 +82819,10 @@ async function pollPracticeInbox() {
         else if (e.kind === 'leave_request') notifyUser('Fine collaborazione', (e.display_name || 'Atleta') + ' ha chiesto di chiudere', route);
         else if (e.kind === 'change_request') notifyUser('Modifica da approvare', (e.display_name || 'Atleta') + ' vuole cambiare il programma', route);
         else if (e.kind === 'change_notice') notifyUser('Atleta ha modificato', (e.display_name || 'Atleta') + ' ha cambiato il programma', route);
-        else if (e.kind === 'request_program') notifyUser('Richiesta scheda', (e.display_name || 'Atleta') + ' chiede la scheda', route);
+        else if (e.kind === 'request_program') {
+          const reqLab = coachEventLabel('request_program', e.display_name || 'Atleta', e.payload);
+          notifyUser(reqLab.title, reqLab.body, route);
+        }
         else if (e.kind === 'workout_started') notifyUser('In allenamento', (e.display_name || 'Atleta') + ' ha iniziato il workout', route);
         else if (e.kind === 'workout_done') notifyUser('Workout finito', (e.display_name || 'Atleta') + ' ha finalizzato', Object.assign({}, route, { view: 'workout_done' }));
       });
@@ -81887,7 +82872,7 @@ function renderCoachChatPage(c) {
   c.innerHTML = '<div class="cp-chat-shell">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-shrink:0;">' +
     '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="navigate(\'coachClient\')">← SCHEDA</button>' +
-    '<div style="text-align:center;flex:1;"><div style="font-size:10px;color:var(--gold);font-weight:800;">CHAT E2E</div>' +
+    '<div style="text-align:center;flex:1;"><div style="font-size:10px;color:var(--gold);font-weight:800;">CHAT</div>' +
     '<div style="font-size:15px;font-weight:900;color:#fff;">' + esc(name) + '</div></div>' +
     '<div style="width:64px;flex-shrink:0;"></div></div>' +
     '<div id="cp-wa-chat" class="cp-chat-thread"></div>' +
@@ -82001,6 +82986,7 @@ function openCoachLibraryAssignPicker(clientId, name) {
     p.innerHTML = '<h2>Database vuoto</h2><p class="cp-help">Non hai ancora schede salvate: scrivine una adesso, oppure importala.</p>' +
       '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'build\')">SCRIVI UNA SCHEDA DA ZERO</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'generate\')">GENERA UNA SCHEDA</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'hyrox\')">PREPARAZIONE HYROX</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);navigate(\'coachLibrary\')">APRI IL MIO DATABASE</button>' +
       '<button class="btn btn-outline" style="width:100%;" onclick="showOverlay(\'cp-assign\', false)">CHIUDI</button>';
     showOverlay('cp-assign', true);

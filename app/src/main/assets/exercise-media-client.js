@@ -152,6 +152,19 @@
 
   const cache = new Map(); // 'exercise:squat_bilanciere' -> manifest (or a resolved Promise while in flight)
 
+  // The images shipped with the app (tools/bundle_exercise_media.mjs): read
+  // once, then an exercise in it shows at once and offline. Anything missing
+  // from it still goes to the server below.
+  let bundled = null;
+  function bundledIndex() {
+    if (!bundled) {
+      bundled = fetch('media/index.json')
+        .then(function (res) { return res.ok ? res.json() : {}; })
+        .catch(function () { return {}; });
+    }
+    return bundled;
+  }
+
   /**
    * Resolves media metadata for one exercise or warm-up. Always resolves
    * (never rejects) - a network/parse/timeout failure resolves to the same
@@ -165,6 +178,16 @@
     const cacheKey = type + ':' + id;
     if (!opts.forceRefresh && cache.has(cacheKey)) return cache.get(cacheKey);
 
+    const local = bundledIndex().then(function (idx) {
+      const m = idx && idx[cacheKey];
+      return m && m.hasMedia ? m : null;
+    });
+    const promise = local.then(function (m) { return m || fromServer(); });
+    cache.set(cacheKey, promise);
+    promise.then(function (m) { if (!m || m.status === 'missing') cache.delete(cacheKey); });
+    return promise;
+
+    function fromServer() {
     const path = type === 'warmup'
       ? '/api/warmups/' + encodeURIComponent(id) + '/media'
       : '/api/exercises/' + encodeURIComponent(id) + '/media';
@@ -172,18 +195,15 @@
     const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     const timer = controller ? setTimeout(function () { controller.abort(); }, 8000) : null;
 
-    const promise = fetch(apiBase() + path + qs, { signal: controller ? controller.signal : undefined })
+    // Don't let a failed lookup poison the cache forever - only cache successes (above).
+    return fetch(apiBase() + path + qs, { signal: controller ? controller.signal : undefined })
       .then(function (res) { return res.ok ? res.json() : emptyManifest(type, id); })
       .then(function (manifest) {
         return manifest && typeof manifest === 'object' ? manifest : emptyManifest(type, id);
       })
       .catch(function () { return emptyManifest(type, id); })
       .finally(function () { if (timer) clearTimeout(timer); });
-
-    cache.set(cacheKey, promise);
-    // Don't let a failed lookup poison the cache forever - only cache successes.
-    promise.then(function (m) { if (!m || m.status === 'missing') cache.delete(cacheKey); });
-    return promise;
+    }
   }
 
   function resolveByExerciseName(name, opts) {
