@@ -26,6 +26,7 @@ import { mountEmailAuth, needsEmailVerification, loginLocked, noteLoginFailure, 
 import { appleCallbackRoute, appleConfig, mountAppleAuth, consumeLoginTicket } from "./server/account/apple.mjs";
 import { mountBlog } from "./server/site/blog.mjs";
 import { mountHyrox } from "./server/site/hyrox.mjs";
+import { mountSamples, sampleCardsHtml } from "./server/site/samples.mjs";
 import { reqLang, SERVER_LANGS } from "./server/i18n.mjs";
 import { SITE_LANGS, SITE_LANG_NAMES, isSiteLang, langPrefix, langOfPath, siteDict, translateHtml } from "./server/site/i18n.mjs";
 import { mountGoogleAppAuth } from "./server/account/google-app.mjs";
@@ -2472,6 +2473,8 @@ async function siteShell(req, page) {
     BLOG_ON: page.blog ? ' class="on keep"' : ' class="keep"',
     HYROX: langPrefix(lang) + "/hyrox",
     HYROX_ON: page.hyrox ? ' class="on"' : "",
+    SAMPLES: langPrefix(lang) + "/allenamenti",
+    SAMPLES_ON: page.samples ? ' class="on"' : "",
     V: SITE_STARTED,
     APP_URL: siteEsc(appUrl),
     CONTACT_EMAIL: siteEsc(mail)
@@ -2498,6 +2501,8 @@ const siteBlog = mountBlog(app, {
 });
 // The HYROX race calendar: /hyrox and one page per race, from web/hyrox-events.json.
 mountHyrox(app, { webDir: path.join(__dirname, "web"), siteDir: SITE_DIR, shell: (req, page) => siteShell(req, Object.assign({ hyrox: true }, page)) });
+// Example workouts: /allenamenti, one page each, the PDF sent by email.
+mountSamples(app, { siteDir: SITE_DIR, pool, initDb, sendEmail, shell: (req, page) => siteShell(req, Object.assign({ samples: true }, page)) });
 // The app's screens shown on the home page: site/shots.json lists them
 // ([{ "file": "allenamento.png", "title": "...", "text": "..." }]), the images
 // are in site/assets/shots/.
@@ -2518,7 +2523,7 @@ async function sitePage(req, res) {
     const latestHtml = latest.length
       ? '<section id="blog"><div class="wrap"><div class="head"><div class="eyebrow">Blog</div><h2>Dal blog</h2></div><div class="posts home-posts">' + latest.map((a) => siteBlog.cardHtml(a, lang, dict)).join("") + '</div><a class="more-link" href="' + langPrefix(lang) + '/blog">Tutti gli articoli →</a></div></section>'
       : "";
-    const main = home.split("{{SHOTS}}").join(await siteShotsHtml()).split("{{LATEST}}").join(latestHtml);
+    const main = home.split("{{SHOTS}}").join(await siteShotsHtml()).split("{{LATEST}}").join(latestHtml).split("{{SAMPLE_CARDS}}").join(sampleCardsHtml(lang));
     res.setHeader("Cache-Control", "public, max-age=300");
     return res.type("html").send(await siteShell(req, {
       lang,

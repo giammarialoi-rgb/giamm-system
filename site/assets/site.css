@@ -197,3 +197,44 @@ footer a:hover { color: var(--text); }
 .cards.two { grid-template-columns: 1fr 1fr; }
 @media (max-width: 600px) { .cards.two { grid-template-columns: 1fr; } }
 #hyrox .legal-note { margin-top: 16px; }
+
+/* Example workouts: the cards, the session as the app shows it, the form */
+.sample-card { display: flex; flex-direction: column; gap: 8px; transition: border-color .15s ease, transform .15s ease; }
+.sample-card:hover { border-color: rgba(212,175,55,.6); transform: translateY(-2px); }
+.sample-card h3 { margin: 0; }
+.sample-card .chips { margin: 6px 0 10px; }
+.sample-card .chip, .sample .chip { padding: 5px 10px; font-size: 12px; }
+.sample-card .more { margin-top: auto; color: var(--gold); font-weight: 800; font-size: 14px; }
+.sample .wrap { max-width: 1080px; }
+.sample-split { gap: 48px; margin-top: 6px; }
+.sample .chips { margin: 16px 0 4px; }
+.sample-form-card { margin-top: 28px; border-color: rgba(212,175,55,.5); }
+.sample-form-card form { display: grid; gap: 12px; margin-top: 14px; }
+.field span { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+.field input { width: 100%; min-height: 50px; border-radius: 12px; border: 1px solid #3a3a3a; background: #0d0d0d; color: var(--text); padding: 0 14px; font: inherit; font-size: 16px; }
+.field input:focus { outline: 2px solid var(--gold-soft); outline-offset: 1px; border-color: var(--gold); }
+.check { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; font-size: 13px; color: #ccc; line-height: 1.45; cursor: pointer; }
+.check input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--gold); }
+.sample-form-card button { width: 100%; cursor: pointer; font-family: inherit; }
+.sample-form-card button:disabled { opacity: .6; cursor: default; }
+.form-msg { font-size: 13px; min-height: 0; margin: 0; color: var(--muted); }
+.form-msg.ok { color: #7ed492; font-weight: 700; }
+.form-msg.err { color: #ff8a80; }
+.form-msg a { color: var(--gold); text-decoration: underline; }
+.form-legal { font-size: 11px; color: var(--muted); margin: 0; }
+.form-legal a { text-decoration: underline; }
+form.done .field, form.done .check, form.done button { display: none; }
+.sample-phone-col { display: grid; justify-items: center; gap: 12px; position: sticky; top: 90px; }
+.sample-phone { width: min(360px, 92vw); }
+.phone-caption { font-size: 12px; color: var(--muted); text-align: center; margin: 0; }
+.app-tabs { display: flex; gap: 6px; margin: 10px 0 12px; overflow-x: auto; scrollbar-width: none; }
+.app-tabs::-webkit-scrollbar { display: none; }
+.app-tabs button { flex: 1 0 auto; border: 1px solid #333; background: #141414; color: #bbb; border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.app-tabs button.on { background: var(--gold); border-color: var(--gold); color: #0a0a0a; }
+.app-ex { border: 1px solid #262626; background: #111; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+.app-ex-name { font-size: 14px; font-weight: 800; }
+.app-ex-name i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); margin-right: 7px; vertical-align: middle; }
+.app-ex-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 5px; font-size: 11px; color: var(--muted); align-items: baseline; }
+.app-ex-meta b { color: var(--gold); font-size: 13px; }
+.app-ex-note { font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.4; }
+@media (max-width: 900px) { .sample-split { grid-template-columns: 1fr; } .sample-phone-col { position: static; } }

@@ -1,6 +1,7 @@
 // Dashboard di amministrazione: la pagina in admin/ servita su /admin e le
 // route /api/admin/*. Nessun codice condiviso con l'app utenti, nessun accesso
 // diretto al database dalla pagina: tutto passa da qui, dietro adminGuard.
+import { listLeads, leadsCsv } from "../site/samples.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -133,6 +134,19 @@ export function mountAdminDashboard(app, { pool, initDb, sendEmail, secret, env 
   app.get("/api/admin/errors", async (req, res) => {
     if (!(await guard(req, res))) return;
     try { return res.json({ ok: true, ...(await recentErrors(pool)) }); } catch (e) { return fail(res, e); }
+  });
+
+  // Who asked for an example workout on the site, as a file for a mailing
+  // tool. "contattabile": said yes to marketing email, opened the link sent
+  // to the address, and has not unsubscribed.
+  app.get("/api/admin/leads.csv", async (req, res) => {
+    if (!(await guard(req, res))) return;
+    try {
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", 'attachment; filename="nurvan-contatti-sito.csv"');
+      return res.send("\ufeff" + leadsCsv(await listLeads(pool)));
+    } catch (e) { return fail(res, e); }
   });
 
   /* ---------------- catalog ---------------- */
