@@ -1019,6 +1019,74 @@ async function copyOrShare(text, label) {
   try { prompt(label || 'Copia', text); } catch (_) {}
 }
 
+/*
+ * The invite (link and credentials) shown in the page, with its own SHARE
+ * and COPY buttons.
+ *
+ * It used to open the phone's share sheet and, in the same breath, a system
+ * alert with the same text. On iPhone two system windows asked for at once
+ * close the app: the alert cannot be shown while the share sheet is coming
+ * up, and the web view is terminated for it. Here nothing of the system's
+ * opens until a button is tapped, and only one thing at a time.
+ */
+function showInviteSheet(title, text, note) {
+  const old = document.getElementById('cp-invite-sheet');
+  if (old) old.remove();
+  window.__cpInviteText = String(text || '');
+  const el = document.createElement('div');
+  el.id = 'cp-invite-sheet';
+  el.style.cssText = 'display:flex;position:fixed;inset:0;z-index:100020;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  el.onclick = function (ev) { if (ev.target === el) el.remove(); };
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  el.innerHTML = '<div class="card" style="max-width:440px;width:100%;max-height:100%;overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;margin:0;">' +
+    '<div style="font-size:14px;font-weight:900;color:var(--gold);margin-bottom:10px;">' + esc(title || 'Invito Nurvan') + '</div>' +
+    '<div id="cp-invite-text" style="white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5;color:#eee;background:#111;border:1px solid #333;border-radius:10px;padding:12px;user-select:text;-webkit-user-select:text;">' + esc(window.__cpInviteText) + '</div>' +
+    (note ? '<div style="font-size:11px;color:#888;line-height:1.45;margin-top:10px;">' + esc(note) + '</div>' : '') +
+    '<div style="display:grid;gap:8px;margin-top:14px;">' +
+    (canShare ? '<button type="button" class="btn btn-primary" onclick="shareInviteSheet()">CONDIVIDI</button>' : '') +
+    '<button type="button" class="btn ' + (canShare ? 'btn-outline' : 'btn-primary') + '" onclick="copyInviteSheet()">COPIA</button>' +
+    '<button type="button" class="btn btn-outline" onclick="document.getElementById(\'cp-invite-sheet\').remove()">CHIUDI</button>' +
+    '</div></div>';
+  document.body.appendChild(el);
+}
+// From the tap on the button: the share sheet, and nothing else with it.
+function shareInviteSheet() {
+  const text = String(window.__cpInviteText || '');
+  if (!text) return;
+  try {
+    if (navigator.share) {
+      Promise.resolve(navigator.share({ title: 'Nurvan', text: text })).catch(function () {});
+      return;
+    }
+  } catch (_) {}
+  copyInviteSheet();
+}
+function copyInviteSheet() {
+  const text = String(window.__cpInviteText || '');
+  if (!text) return;
+  const done = function () { practiceToast('Copiato', 'success'); };
+  const byHand = function () {
+    // No clipboard here: select the text, so it can be copied by hand.
+    try {
+      const node = document.getElementById('cp-invite-text');
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      if (document.execCommand && document.execCommand('copy')) { done(); return; }
+    } catch (_) {}
+    practiceToast('Tieni premuto sul testo per copiarlo', 'info');
+  };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, byHand); return; }
+  } catch (_) {}
+  byHand();
+}
+window.showInviteSheet = showInviteSheet;
+window.shareInviteSheet = shareInviteSheet;
+window.copyInviteSheet = copyInviteSheet;
+
 function enqueueClientOutbox(item) {
   const persistFn = typeof persist === 'function' ? persist : null;
   if (typeof OutboxCore !== 'undefined' && OutboxCore.enqueueOutbox) {
@@ -3319,9 +3387,8 @@ async function submitAddClient() {
       username: user,
       password: pass
     });
-    await copyOrShare(msg, 'Invito Nurvan');
     practiceToast('Creato ' + firstName + '. Utente ' + user, 'success');
-    try { alert('Invito pronto.\n\n' + msg + (intakeMode === 'new' ? '\n\nAl primo accesso compilerà il questionario.' : '\n\nTransizione: entra senza questionario.')); } catch (_) {}
+    showInviteSheet('Invito pronto', msg, intakeMode === 'new' ? 'Al primo accesso compilerà il questionario.' : 'Transizione: entra senza questionario.');
     if (currentView === 'coachHub') loadCoachClientList();
     else navigate('coachHub');
   } catch (err) {
@@ -3350,8 +3417,7 @@ async function copyClientInvite(id, token) {
     }
   }
   if (!text) { practiceToast('Link non disponibile', 'warning'); return; }
-  copyOrShare(text, 'Invito Nurvan');
-  try { alert('Invito univoco pronto.\n\n' + text); } catch (_) {}
+  showInviteSheet('Invito univoco pronto', text);
 }
 
 async function rotateClientInvite(id) {
@@ -3366,9 +3432,8 @@ async function rotateClientInvite(id) {
       username: res.credentials && res.credentials.username,
       password: res.credentials && res.credentials.password
     });
-    await copyOrShare(text, 'Nuovo invito Nurvan');
     practiceToast('Nuovo link univoco creato', 'success');
-    try { alert('Nuovo link univoco.\n\n' + text); } catch (_) {}
+    showInviteSheet('Nuovo link univoco', text, 'Il vecchio link non funziona più.');
     if (currentView === 'coachClient') renderPracticeView();
     else loadCoachClientList();
   } catch (err) {
@@ -5186,8 +5251,8 @@ async function resetClientPassword(id) {
     }, 15000);
     const user = res.credentials && res.credentials.username;
     const msg = 'Utente: ' + user + '\nPassword: ' + password;
-    await copyOrShare(msg, 'Nuove credenziali');
     practiceToast('Password aggiornata', 'success');
+    showInviteSheet('Nuove credenziali', msg);
   } catch (err) { practiceToast((err && err.message) || 'Reset fallito', 'danger'); }
 }
 
