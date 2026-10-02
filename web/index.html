@@ -2350,9 +2350,11 @@ body.focus-mode [data-rewards-only] {
       </style>
       <div id="replace-options" style="margin-top:12px;"></div>
     </div>
-    <div style="display:flex;gap:10px;margin-top:20px;">
-      <button class="btn btn-outline" style="flex:1;" onclick="closeReplaceModal()">ANNULLA</button>
-      <button class="btn btn-primary" style="flex:1;" onclick="confirmReplacement()">CONFERMA</button>
+    <div style="font-size:11px;color:#ccc;margin-top:18px;">Per quanto vale la sostituzione?</div>
+    <div style="display:grid;gap:8px;margin-top:8px;">
+      <button class="btn btn-primary" onclick="confirmReplacement('once')">SOLO QUESTA SEDUTA</button>
+      <button class="btn btn-primary" onclick="confirmReplacement('rest')">PER IL RESTO DEL PROGRAMMA</button>
+      <button class="btn btn-outline" onclick="closeReplaceModal()">ANNULLA</button>
     </div>
   </div>
 </div>
@@ -41197,8 +41199,10 @@ function iosVibrate(ms) {
   const hp = isIosApp() ? capacitorPlugin('Haptics') : null;
   if (!hp) return false;
   try {
-    if (ms && ms >= 400 && hp.notification) hp.notification({ type: 'SUCCESS' });
-    else if (hp.vibrate) hp.vibrate({ duration: ms || 300 });
+    // A real vibration for the long ones (the end of a rest): the "success"
+    // tick was too faint to notice with the phone on a bench.
+    if (hp.vibrate) hp.vibrate({ duration: ms || 300 });
+    else if (hp.notification) hp.notification({ type: 'SUCCESS' });
   } catch (_) {}
   return true;
 }
@@ -48077,37 +48081,69 @@ function nativeVibrate(ms) {
     else if (navigator.vibrate) navigator.vibrate(ms || 400);
   } catch (_) {}
 }
-function playWebTimerTone() {
+// The end-of-rest sound.
+//
+// A browser (and the phone apps are browsers inside) lets a page make sound
+// only from something the person did: a tone started by a timer, a minute
+// after the last tap, comes out of an audio context that is still asleep and
+// nothing is heard. So the context is opened and woken when the rest starts -
+// that is a tap - and kept for the whole session; the tone at the end plays
+// on it.
+function timerAudioContext() {
   try {
     const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return false;
-    const ctx = new Ctx();
-    const now = ctx.currentTime;
-    [0, 0.18, 0.36].forEach(function (offset, i) {
+    if (!Ctx) return null;
+    if (!window.__timerAudio || window.__timerAudio.state === 'closed') window.__timerAudio = new Ctx();
+    return window.__timerAudio;
+  } catch (_) { return null; }
+}
+// Called from a tap (starting a rest, a lesson, a circuit).
+function unlockTimerAudio() {
+  try {
+    if (store.prefs && store.prefs.timerSound === false) return;
+    const ctx = timerAudioContext();
+    if (!ctx) return;
+    if (ctx.state !== 'running' && ctx.resume) ctx.resume().catch(function () {});
+    // One silent sample: on iOS this is what actually opens the output.
+    const src = ctx.createBufferSource();
+    src.buffer = ctx.createBuffer(1, 1, 22050);
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch (_) {}
+}
+function playWebTimerTone() {
+  try {
+    const ctx = timerAudioContext();
+    if (!ctx) return false;
+    if (ctx.state !== 'running' && ctx.resume) ctx.resume().catch(function () {});
+    const now = ctx.currentTime + 0.03;
+    [0, 0.22, 0.44].forEach(function (offset, i) {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.value = i === 2 ? 880 : 660;
+      osc.frequency.value = i === 2 ? 1175 : 880;
+      const len = i === 2 ? 0.34 : 0.16;
       gain.gain.setValueAtTime(0.0001, now + offset);
-      gain.gain.exponentialRampToValueAtTime(0.22, now + offset + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.6, now + offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + len);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now + offset);
-      osc.stop(now + offset + 0.16);
+      osc.stop(now + offset + len + 0.02);
     });
-    setTimeout(function () { try { ctx.close(); } catch (_) {} }, 900);
-    return true;
+    // Whether anyone can hear it: a context that did not wake up is silent.
+    return ctx.state === 'running';
   } catch (_) { return false; }
 }
 function nativeBeep(text) {
   try {
     if (store.prefs && store.prefs.timerSound === false) return;
+    if (playWebTimerTone()) return;
+    // No tone could be played: the phone's voice says it instead.
     if (typeof NativeConfig !== 'undefined' && NativeConfig.speak) {
       NativeConfig.speak(trText(text || 'Timer terminato'));
       return;
     }
-    if (playWebTimerTone()) return;
     if (window.speechSynthesis) {
       const u = new SpeechSynthesisUtterance(trText(text || 'Riposo terminato'));
       u.lang = (typeof coachSpeechLang === 'function') ? coachSpeechLang() : 'it-IT';
@@ -48115,6 +48151,15 @@ function nativeBeep(text) {
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
     }
+  } catch (_) {}
+}
+// The end of a rest is felt as well as heard: two pulses, so it is not
+// mistaken for the tap that confirms a set.
+function timerEndVibrate() {
+  try {
+    if (store.prefs && store.prefs.timerVibrate === false) return;
+    nativeVibrate(500);
+    setTimeout(function () { try { nativeVibrate(500); } catch (_) {} }, 750);
   } catch (_) {}
 }
 // Il recupero: quello scritto, quello scelto in seduta, quello passato davvero.
@@ -48233,6 +48278,7 @@ function startTimer(secondsText, exKey) {
     timerInterval = null;
   }
   acquireTimerWakeLock();
+  unlockTimerAudio();
   const prescribed = parseRestSeconds(secondsText);
   const restSec = exKey ? effectiveRestSeconds(secondsText, exKey) : prescribed;
   const prep = Math.max(0, parseInt((store.prefs && store.prefs.prepSeconds) || 0, 10) || 0);
@@ -48282,7 +48328,7 @@ function renderRestTimer() {
     st.finished = true;
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
     display.style.color = 'var(--accent-red)';
-    if (store.prefs && store.prefs.timerVibrate !== false) nativeVibrate(500);
+    timerEndVibrate();
     nativeBeep('Riposo terminato');
     releaseTimerWakeLock();
     if (store.prefs && store.prefs.timerAutoAdvance) stopTimer();
@@ -48539,7 +48585,7 @@ function toggleSetTimer(exIdx, setNum, seconds, restText) {
     if (left <= 0) {
       stopSetTimer();
       store.data[key + '_sec'] = total;
-      try { if (typeof NativeConfig !== 'undefined' && NativeConfig.vibrate) NativeConfig.vibrate(600); } catch (_) {}
+      try { nativeVibrate(600); } catch (_) {}
       try { completeSetQuick(exIdx, setNum, restText || '60s'); } catch (_) { if (typeof render === 'function') render(); }
     }
   }
@@ -59766,24 +59812,74 @@ function formatFileSize(bytes) {
 
 
 
-// Programs written here and saved without being started. They live in the
-// same library as the imported ones - the difference is only where they came
-// from - so they are told apart by the id the builder gives them.
+// Every program saved in the library, whatever wrote it - the builder, a
+// generator, the database of ready programs, an import - under the kind of
+// training it is. It used to list only the ones written by hand (ids
+// starting with custom_), so a generated HYROX preparation saved for later
+// was nowhere to be seen here.
+const PROGRAM_KINDS = [
+  { id: 'pesi', label: 'Pesi e bodybuilding' },
+  { id: 'hyrox', label: 'HYROX' },
+  { id: 'pilates', label: 'Pilates' },
+  { id: 'mobilita', label: 'Mobilità e stretching' },
+  { id: 'calisthenics', label: 'Calisthenics' },
+  { id: 'hiit', label: 'HIIT e Tabata' },
+  { id: 'importati', label: 'Importati' }
+];
+// What kind of training a program is: from the program itself when it is at
+// hand, otherwise from what its id and its name say.
+function programKindOf(model, data) {
+  const m = model || {};
+  const d = data || m.data || (window.__programDataCache && m.id && window.__programDataCache[m.id]) || null;
+  const known = store.programKinds && m.id && store.programKinds[m.id];
+  if (known && !d) return known;
+  const id = String(m.id || (d && d.id) || '');
+  const text = (String(m.name || '') + ' ' + String((d && d.title) || '')).toLowerCase();
+  const disc = (d && d.discipline && d.discipline.id) || (/^dsc[-_]([a-z]+)/.exec(id) || [])[1] || '';
+  if (['pilates', 'mobilita', 'calisthenics', 'hiit'].indexOf(disc) >= 0) return disc;
+  if ((d && (/^hyrox/.test(String(d.source || '')) || d.split === 'hyrox' || d.hyrox)) || /^(hyrox_|hyx-)/.test(id) || /hyrox/.test(text)) return 'hyrox';
+  if (d && Array.isArray(d.weeks) && d.weeks.some(function (w) { return (w.sessions || w.days || []).some(function (s) { return (s.exercises || s.rows || []).some(function (e) { return e && e.hyrox_station; }); }); })) return 'hyrox';
+  if (/pilates|matwork/.test(text)) return 'pilates';
+  if (/mobilit|stretching/.test(text)) return 'mobilita';
+  if (/calisthenics/.test(text)) return 'calisthenics';
+  if (/\bhiit\b|tabata/.test(text)) return 'hiit';
+  if (known) return known;
+  if (m.sourceDocument || /^program-/.test(id) || /^originale:/.test(text) || (d && (d.source_document || d.sourceDocument))) return 'importati';
+  return 'pesi';
+}
+window.programKindOf = programKindOf;
+// Remembered when a program is delivered, while the whole program is at hand:
+// later the library keeps little more than its name.
+function rememberProgramKind(prog) {
+  try {
+    if (!prog || !prog.id) return;
+    if (!store.programKinds || typeof store.programKinds !== 'object') store.programKinds = {};
+    store.programKinds[prog.id] = programKindOf({ id: prog.id, name: prog.title }, prog);
+  } catch (_) {}
+}
 function builtProgramsHtml() {
-  const rows = (store.models || []).filter(function (m) { return m && /^custom_/.test(String(m.id || '')); });
+  const rows = (store.models || []).filter(function (m) { return m && m.id; });
   if (!rows.length) {
-    return '<div style="font-size:12px;color:#666;padding:12px 0;">Nessuna scheda scritta e messa da parte. Quelle che crei con SALVA SENZA ATTIVARE finiscono qui.</div>';
+    return '<div style="font-size:12px;color:#666;padding:12px 0;">Nessun programma salvato. Quelli che crei, generi o salvi con SALVA SENZA ATTIVARE finiscono qui, divisi per tipo.</div>';
   }
-  return rows.map(function (m) {
-    const idx = (store.models || []).indexOf(m);
-    return '<div style="padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.02);border:1px solid #222;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
-      '<div style="min-width:0;"><div style="font-size:13px;font-weight:800;color:#eee;">' + esc(m.name || 'Scheda') + '</div>' +
-      '<div style="font-size:10px;color:#777;">' + esc(m.date ? new Date(m.date).toLocaleDateString((typeof appLocale === 'function' ? appLocale() : 'it-IT')) : '') +
-      (m.isActive ? ' · <span style="color:var(--gold);">attiva</span>' : '') + '</div></div>' +
-      '<div style="display:flex;gap:6px;flex:0 0 auto;">' +
-      '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="activateSavedProgram(' + JSON.stringify(m.id || '') + ', ' + idx + ')">ATTIVA</button>' +
-      '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;color:#c66;border-color:#c66;" data-id="' + esc(m.id || '') + '" data-idx="' + idx + '" data-name="' + esc(m.name || '') + '" onclick="deleteSavedProgramFromList(this)" title="Toglila da qui">✕</button>' +
-      '</div></div>';
+  const groups = {};
+  rows.forEach(function (m) { const k = programKindOf(m); (groups[k] = groups[k] || []).push(m); });
+  const locale = (typeof appLocale === 'function' ? appLocale() : 'it-IT');
+  return PROGRAM_KINDS.filter(function (k) { return groups[k.id]; }).map(function (k) {
+    const list = groups[k.id].slice().sort(function (x, y) { return (y.date || 0) - (x.date || 0); });
+    return '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin:12px 0 6px;">' + esc(String(trText(k.label))).toUpperCase() + ' · ' + list.length + '</div>' +
+      list.map(function (m) {
+        const idx = (store.models || []).indexOf(m);
+        const active = m.isActive || String(store.activeProgramId || '') === String(m.id);
+        return '<div style="padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.02);border:1px solid #222;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+          '<div style="min-width:0;"><div style="font-size:13px;font-weight:800;color:#eee;">' + esc(m.name || 'Scheda') + '</div>' +
+          '<div style="font-size:10px;color:#777;">' + esc(m.date ? new Date(m.date).toLocaleDateString(locale) : '') +
+          (active ? ' · <span style="color:var(--gold);">attiva</span>' : '') + '</div></div>' +
+          '<div style="display:flex;gap:6px;flex:0 0 auto;">' +
+          (active ? '' : '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="activateSavedProgram(' + esc(JSON.stringify(String(m.id || ''))) + ', ' + idx + ')">ATTIVA</button>') +
+          '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;color:#c66;border-color:#c66;" data-id="' + esc(m.id || '') + '" data-idx="' + idx + '" data-name="' + esc(m.name || '') + '" onclick="deleteSavedProgramFromList(this)">ELIMINA</button>' +
+          '</div></div>';
+      }).join('');
   }).join('');
 }
 window.builtProgramsHtml = builtProgramsHtml;
@@ -64837,9 +64933,9 @@ function updateData(key, val){
   refreshWorkoutUndoButton();
   try { if (typeof scheduleAthleteLiveWorkoutSync === 'function') scheduleAthleteLiveWorkoutSync(); } catch (_) {}
 }
-function clearCopiedLoadsAfterSubstitution(idx) {
+function clearCopiedLoadsAfterSubstitution(idx, lastWeek) {
   if (!store.data) return;
-  const weeksN = (DATA && DATA.weeks && DATA.weeks.length) || 0;
+  const weeksN = lastWeek || (DATA && DATA.weeks && DATA.weeks.length) || 0;
   for (let w = currentWeek; w <= weeksN; w++) {
     const eK = 'w' + w + '_d' + currentDay + '_e' + idx;
     if (store.intelTargets && store.intelTargets[eK]) delete store.intelTargets[eK];
@@ -64851,10 +64947,14 @@ function clearCopiedLoadsAfterSubstitution(idx) {
     }
   }
 }
-function substituteEx(idx, val, muscleGroup){
+// scope 'once': this session only, the weeks after keep the exercise the
+// program has; 'rest' (and the calls that do not say): from this week to the
+// end of the program.
+function substituteEx(idx, val, muscleGroup, scope){
   if(!val) return;
   pushWorkoutUndoSnapshot('sostituzione esercizio');
-  for(let w = currentWeek; w <= DATA.weeks.length; w++) {
+  const lastWeek = scope === 'once' ? currentWeek : DATA.weeks.length;
+  for(let w = currentWeek; w <= lastWeek; w++) {
     const key = `w${w}_d${currentDay}_e${idx}`;
     store.subs[key] = val;
     if (!store.exMuscle) store.exMuscle = {};
@@ -64864,7 +64964,7 @@ function substituteEx(idx, val, muscleGroup){
     }
     else if (store.exMuscle[key]) delete store.exMuscle[key];
   }
-  clearCopiedLoadsAfterSubstitution(idx);
+  clearCopiedLoadsAfterSubstitution(idx, lastWeek);
   persist();
   render();
   try { queueExerciseKnowledgeAdapt(val, muscleGroup); } catch (_) {}
@@ -64947,27 +65047,30 @@ function selectReplacement(nameOrEncoded){
   replacementDraft.selected = name;
   renderReplacementOptions(($('replace-search') && $('replace-search').value) || '');
 }
-function confirmReplacement(){
+function confirmReplacement(scope){
+  scope = scope === 'once' ? 'once' : 'rest';
+  const scopeNote = scope === 'once' ? 'Sostituito solo per questa seduta' : 'Sostituito per il resto del programma';
   if(!replacementDraft){ alert('Sessione sostituzione non valida.'); return; }
   if (replacementDraft.manual) {
     const name = ($('replace-manual-name') && $('replace-manual-name').value || '').trim();
     const muscle = normalizeMacroMuscleGroup(($('replace-manual-muscle') && $('replace-manual-muscle').value) || 'PETTO');
     if (!name) { alert('Inserisci il nome dell\'esercizio.'); return; }
-    substituteEx(replacementDraft.idx, name, muscle);
+    substituteEx(replacementDraft.idx, name, muscle, scope);
     if ($('replace-save-library') && $('replace-save-library').checked) {
       addExerciseToLibrary(name, muscle, 'replace');
     }
     replacementDraft = null;
     const m = $('replace-modal');
     if (m) m.style.display = 'none';
-    if (typeof showToast === 'function') showToast('Esercizio manuale inserito · ' + muscle.replace('_', ' '), 'ok');
+    if (typeof showToast === 'function') showToast(scopeNote, 'ok');
     return;
   }
   if(!replacementDraft.selected){ alert('Seleziona prima un esercizio alternativo.'); return; }
-  substituteEx(replacementDraft.idx, replacementDraft.selected);
+  substituteEx(replacementDraft.idx, replacementDraft.selected, undefined, scope);
   replacementDraft = null;
   const m = $('replace-modal');
   if (m) m.style.display = 'none';
+  if (typeof showToast === 'function') showToast(scopeNote, 'ok');
 }
 
 function calcStats(){
@@ -75635,6 +75738,7 @@ async function createProgramFromDraft(how) {
  */
 async function deliverProgram(prog, target, hooks) {
   hooks = hooks || {};
+  rememberProgramKind(prog);
   var cleanup = hooks.cleanup || function () {};
   var what = hooks.what || 'scheda';
 
@@ -78053,6 +78157,12 @@ if (typeof window !== 'undefined') {
   window.closeMenuHub = closeMenuHub;
   window.navigate = navigate;
   window.openResetSession = openResetSession;
+  // Called by a button and never handed to the page: the tap did nothing.
+  window.resetCoachHistory = resetCoachHistory;
+  window.setGenNutritionDiet = setGenNutritionDiet;
+  window.editAccountName = editAccountName;
+  window.showPrevLoad = showPrevLoad;
+  window.hidePrevLoad = hidePrevLoad;
   window.closeSkipModal = closeSkipModal;
   window.closeReplaceModal = closeReplaceModal;
   window.toggleReplaceManual = toggleReplaceManual;
