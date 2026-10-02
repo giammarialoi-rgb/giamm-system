@@ -16,7 +16,9 @@
  *   - plan_until scaduto: 7 giorni in cui tutto funziona con un avviso, poi free;
  *   - trial (solo coach, 14 giorni, una volta): vale almeno "coach";
  *   - atleta collegato a un coach attivo, dentro i posti del coach: vale almeno
- *     "standard"; senza collegamento torna al proprio, nessun dato toccato.
+ *     "standard"; senza collegamento torna al proprio, nessun dato toccato;
+ *   - una funzione con inheritMin arriva all'atleta solo se il piano del coach
+ *     (coachLink.coachPlan) e' almeno quello: sotto, vale il piano dell'atleta.
  * Lo stesso file gira nella pagina e sul server (nessun import, nessun export).
  */
 (function (root) {
@@ -156,11 +158,18 @@
     var def = reg.features[featureId];
     var eff = opts.effective || effective(account, opts.now, opts.features);
     if (!def) return { allowed: false, reason: 'unknown', minPlan: null, plan: eff.plan, limit: null, used: null };
-    if (rank(eff.plan, reg) < rank(def.min, reg)) {
-      return { allowed: false, reason: 'plan', minPlan: def.min, plan: eff.plan, limit: null, used: null, label: def.label };
+    // A feature an athlete gets from the coach only when the coach's own plan
+    // is high enough (inheritMin): below that, the athlete's own plan counts.
+    var plan = eff.plan;
+    if (def.inheritMin && eff.inherited) {
+      var coachPlan = account && account.coachLink && account.coachLink.coachPlan;
+      if (!(coachPlan && rank(normalizePlan(coachPlan, reg), reg) >= rank(def.inheritMin, reg))) plan = eff.ownPlan;
+    }
+    if (rank(plan, reg) < rank(def.min, reg)) {
+      return { allowed: false, reason: 'plan', minPlan: def.min, plan: plan, limit: null, used: null, label: def.label };
     }
     var count = usage && usage.count != null ? Number(usage.count) : null;
-    var limit = def.seats ? eff.seats : limitFor(def, eff.plan);
+    var limit = def.seats ? eff.seats : limitFor(def, plan);
     if (limit === Infinity) limit = null;
     if (count != null && limit != null && count >= limit) {
       return { allowed: false, reason: 'limit', minPlan: planForCount(def, count, reg, !!def.seats), plan: eff.plan, limit: limit, used: count, label: def.label };

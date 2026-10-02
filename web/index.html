@@ -3098,7 +3098,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MEAL-PHOTO-V1",
-        schemaTarget: "0021",
+        schemaTarget: "0022",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -39123,7 +39123,10 @@ var NURVAN_DOMAIN_FIELDS = [
   'data', 'customSets', 'subs', 'skips', 'logs', 'intelTargets', 'bodyChecks', 'bodyChecksDeleted',
   'nutritionDaily', 'profile', 'bw', 'exMuscle', 'loadTypes', 'tempos', 'bonus',
   'warmups', 'warmupProgress', 'warmupAssignment', 'trainingDataEpoch',
-  'mapStamps', 'mapDeletes', 'mapSyncBase'
+  'mapStamps', 'mapDeletes', 'mapSyncBase',
+  // The other active programs (parked with their loads): the person's own,
+  // like the active one.
+  'parkedPrograms', 'parkedProgramsAt'
 ];
 
 var NurvanMemory = {
@@ -42057,6 +42060,10 @@ function accountPayload(opts){
     // import drags along, which is rebuilt on any device anyway.
     // Programs removed from the library: travels so they do not come back.
     hiddenProgramIds: (!bak && Array.isArray(store.hiddenProgramIds)) ? store.hiddenProgramIds.slice(-200) : [],
+    // The other active programs, each with what was written on it; the one
+    // that changed them last is the one that counts (parkedProgramsAt).
+    parkedPrograms: (!bak && Array.isArray(store.parkedPrograms)) ? store.parkedPrograms.slice(0, 4) : [],
+    parkedProgramsAt: (!bak && Number(store.parkedProgramsAt)) || 0,
     models: Array.isArray(modelsSrc) ? modelsSrc.slice().sort(function (a, b) { return ((a && a.date) || 0) - ((b && b.date) || 0); }).slice(-8).map(function (m) {
       if (!m || typeof m !== 'object') return null;
       const content = m.data || (window.__programDataCache && window.__programDataCache[m.id]) || null;
@@ -42456,6 +42463,10 @@ function applyRemoteAccountData(remote, preferLocal) {
       if (kept.length !== store.calendarEvents.length) store.calendarEvents = kept;
     }
     try { if (typeof CalendarService !== 'undefined') CalendarService._customCache = null; } catch (_) {}
+    if ((Number(remote.parkedProgramsAt) || 0) > (Number(store.parkedProgramsAt) || 0) && Array.isArray(remote.parkedPrograms)) {
+      store.parkedPrograms = remote.parkedPrograms.slice(0, 4);
+      store.parkedProgramsAt = Number(remote.parkedProgramsAt) || 0;
+    }
     const remoteArcCleared = Number(remote.coachArchivesClearedAt) || 0;
     const localArcCleared = Number(store.coachArchivesClearedAt) || 0;
     if (remoteArcCleared > localArcCleared) {
@@ -51356,7 +51367,7 @@ function renderCurrentView() {
 
   c.innerHTML = '';
   if (currentView === 'home') renderHome(c);
-  else if (currentView === 'training') renderTraining(c);
+  else if (currentView === 'training') { renderTraining(c); try { const sw = activeProgramsSwitcherHtml(); if (sw) c.insertAdjacentHTML('afterbegin', sw); } catch (_) {} }
   else if (currentView === 'stats') renderStats(c);
   else if (currentView === 'ai') renderAI(c);
   else if (currentView === 'db') renderDb(c);
@@ -57951,6 +57962,7 @@ function renderPrograms(c){
       <div style="font-size:11px;color:#ccc;">Stai scegliendo una scheda per <b style="color:#fff;">${esc(store.coachAssigning.name || 'cliente')}</b>.</div>
       <button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="promptCatalogFromIntakeThenOpen('${esc(store.coachAssigning.clientId)}','${esc(store.coachAssigning.name || '')}')">FILTRA CON ANAGRAFICA CLIENTE</button>
     </div>` : '')}
+    ${activeProgramsSwitcherHtml({ always: true })}
     ${homeCollapsibleCard('PROGRAMMA ATTIVO', `
     <div class="card" style="margin-bottom:16px; border:2px solid ${(weeks.length ? 'var(--gold)' : '#333')}; position:relative; overflow:hidden;">
       <div style="position:absolute; top:0; right:0; background:${weeks.length ? 'var(--gold)' : '#444'}; color:${weeks.length ? '#000' : '#fff'}; font-size:9px; font-weight:900; padding:3px 10px; border-bottom-left-radius:6px; letter-spacing:1px;">${weeks.length ? 'ATTIVO' : 'VUOTO'}</div>
@@ -58060,6 +58072,8 @@ function renderPrograms(c){
     `, false) : ''}
 
     ${homeCollapsibleCard('PROGRAMMI CREATI', builtProgramsHtml(), false)}
+
+    ${homeCollapsibleCard('CONDIVIDI PROGRAMMA', shareProgramCardHtml(), false)}
 
     ${homeCollapsibleCard('DATABASE SCHEDE', `
     ${suggested.length ? `<div class="card" style="margin-bottom:16px;border:1px solid var(--gold);">
@@ -59870,13 +59884,16 @@ function builtProgramsHtml() {
     return '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin:12px 0 6px;">' + esc(String(trText(k.label))).toUpperCase() + ' · ' + list.length + '</div>' +
       list.map(function (m) {
         const idx = (store.models || []).indexOf(m);
-        const active = m.isActive || String(store.activeProgramId || '') === String(m.id);
-        return '<div style="padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.02);border:1px solid #222;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+        const active = String(store.activeProgramId || '') === String(m.id) || (m.isActive && !store.activeProgramId);
+        const parked = !active && (store.parkedPrograms || []).some(function (p) { return p && String(p.id) === String(m.id); });
+        return '<div style="padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.02);border:1px solid #222;border-radius:6px;display:flex;flex-direction:column;gap:8px;">' +
           '<div style="min-width:0;"><div style="font-size:13px;font-weight:800;color:#eee;">' + esc(m.name || 'Scheda') + '</div>' +
           '<div style="font-size:10px;color:#777;">' + esc(m.date ? new Date(m.date).toLocaleDateString(locale) : '') +
-          (active ? ' · <span style="color:var(--gold);">attiva</span>' : '') + '</div></div>' +
-          '<div style="display:flex;gap:6px;flex:0 0 auto;">' +
-          (active ? '' : '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="activateSavedProgram(' + esc(JSON.stringify(String(m.id || ''))) + ', ' + idx + ')">ATTIVA</button>') +
+          (active ? ' · <span style="color:var(--gold);">attiva</span>' : (parked ? ' · <span style="color:var(--gold);">' + esc(trText('attiva, in attesa')) + '</span>' : '')) + '</div></div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+          (active || parked ? '' : '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="activateSavedProgram(' + esc(JSON.stringify(String(m.id || ''))) + ', ' + idx + ')">ATTIVA</button>') +
+          (parked ? '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="switchActiveProgram(' + esc(JSON.stringify(String(m.id || ''))) + ')">PASSA A QUESTO</button>' : '') +
+          '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="shareProgramById(' + esc(JSON.stringify(String(m.id || ''))) + ')">CONDIVIDI</button>' +
           '<button class="btn btn-outline" style="font-size:10px;padding:4px 8px;color:#c66;border-color:#c66;" data-id="' + esc(m.id || '') + '" data-idx="' + idx + '" data-name="' + esc(m.name || '') + '" onclick="deleteSavedProgramFromList(this)">ELIMINA</button>' +
           '</div></div>';
       }).join('');
@@ -60978,7 +60995,8 @@ async function deleteSavedProgram(programId, idx, nameHint) {
     [id, name, name ? ('name:' + name) : ''].forEach(function (k) {
       if (k && store.hiddenProgramIds.indexOf(k) < 0) store.hiddenProgramIds.push(k);
     });
-    const isActive = !!(id && String(store.activeProgramId) === id);
+    // A program on hold among the active ones is in use as much as the one on screen.
+    const isActive = !!(id && (String(store.activeProgramId) === id || (store.parkedPrograms || []).some(function (p) { return p && String(p.id) === id; })));
     if (!isActive && id && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.deleteProgram) {
       try { await GiammariaPersistence.deleteProgram(id); } catch (_) {}
     }
@@ -77714,11 +77732,354 @@ async function clearWorkoutLogsForNewProgram(previousProgramId) {
   }
 }
 
+/*
+ * More than one active program (paid plans: up to three).
+ *
+ * The app has one program "in the room": DATA, store.activeProgramId and the
+ * maps of what was done on it (TRAINING_SLOT_FIELDS), which are keyed by week,
+ * day and exercise and so belong to that program alone. Everything else in
+ * the app reads those and stays as it is. The other active programs wait
+ * outside, "parked": for each one its id, where the person had got to, and a
+ * copy of its maps. Switching swaps the two - the one in the room is parked
+ * with everything written on it, the chosen one comes back with its own -
+ * and nothing is cleared. The program contents stay in the library
+ * (IndexedDB), not in the store, which is copied on every save.
+ *
+ * Finalized sessions already carry the id of the program they were done on
+ * (store.logs[].programId), so each program finds its own when it returns.
+ */
+function parkedPrograms() {
+  if (!Array.isArray(store.parkedPrograms)) store.parkedPrograms = [];
+  return store.parkedPrograms;
+}
+function multiProgramBlocked() {
+  return !!(store && (store.coachAssigning || store.coachViewingClient)) || (typeof isClientStorageContext === 'function' && isClientStorageContext() && !(typeof isAthleteRole === 'function' && isAthleteRole()));
+}
+// How many programs the plan lets be active at once.
+function activeProgramsLimit() {
+  try {
+    const why = (typeof planExplain === 'function') ? planExplain('active_program') : null;
+    const n = why && why.limit != null ? Number(why.limit) : 1;
+    return Number.isFinite(n) && n >= 1 ? n : 1;
+  } catch (_) { return 1; }
+}
+function snapshotTrainingSlotFields() {
+  const out = {};
+  TRAINING_SLOT_FIELDS.forEach(function (k) { out[k] = JSON.parse(JSON.stringify(store[k] || {})); });
+  return out;
+}
+// The program in the room, set aside with what was done on it.
+function parkCurrentProgram() {
+  const id = activeProgramKey();
+  if (!id || typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return null;
+  const entry = {
+    id: id,
+    title: String(DATA.title || DATA.name || 'Programma').slice(0, 120),
+    kind: programKindOf({ id: id, name: DATA.title }, DATA),
+    week: currentWeek, day: currentDay,
+    weeks: DATA.weeks.length,
+    parkedAt: Date.now(),
+    fields: snapshotTrainingSlotFields()
+  };
+  store.parkedPrograms = parkedPrograms().filter(function (p) { return p && String(p.id) !== id; }).concat([entry]);
+  store.parkedProgramsAt = Date.now();
+  // Its sessions are its own, whichever program is in the room later.
+  (store.logs || []).forEach(function (l) { if (l && !l.programId) l.programId = id; });
+  return entry;
+}
+async function loadProgramContentById(id) {
+  let prog = null;
+  if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadProgram) {
+    try { prog = await GiammariaPersistence.loadProgram(id); } catch (_) { prog = null; }
+  }
+  if (!prog && window.__programDataCache && window.__programDataCache[id]) prog = window.__programDataCache[id];
+  if (!prog) { const m = (store.models || []).find(function (x) { return x && String(x.id) === String(id); }); if (m && m.data) prog = m.data; }
+  return (prog && Array.isArray((prog.training || prog).weeks) && (prog.training || prog).weeks.length) ? prog : null;
+}
+// The active program has to be in the library to come back from it.
+async function ensureActiveProgramInLibrary() {
+  const id = activeProgramKey();
+  if (!id || !DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return false;
+  if (await loadProgramContentById(id)) return true;
+  if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.saveProgram) return false;
+  const copy = JSON.parse(JSON.stringify(DATA));
+  copy.id = id;
+  delete copy.nutrition; delete copy.supplementation; delete copy.therapy; delete copy.exams;
+  try { await GiammariaPersistence.saveProgram(copy, true); } catch (e) { console.warn('[PARK_SAVE]', e); return false; }
+  return !!(await loadProgramContentById(id));
+}
+
+// "Keep the one you have as well, or replace it?" - asked only when the plan
+// has room for another. Resolves 'keep' or 'replace'.
+function askKeepOrReplaceProgram() {
+  return new Promise(function (resolve) {
+    const old = document.getElementById('program-slot-choice');
+    if (old) old.remove();
+    const el = document.createElement('div');
+    el.id = 'program-slot-choice';
+    el.style.cssText = 'display:flex;position:fixed;inset:0;z-index:10200;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+    const used = parkedPrograms().length + 1;
+    el.innerHTML = '<div class="card" style="max-width:420px;width:100%;border:1px solid var(--gold);padding:16px;box-sizing:border-box;">' +
+      '<div style="font-size:14px;font-weight:900;color:var(--gold);margin-bottom:8px;">Hai già un programma attivo</div>' +
+      '<div style="font-size:12px;color:#bbb;line-height:1.45;margin-bottom:14px;">' + esc(String((DATA && DATA.title) || 'Programma')) + '</div>' +
+      '<div style="font-size:11px;color:#888;margin-bottom:10px;">' + esc(trText('Programmi attivi') + ': ' + used + ' / ' + activeProgramsLimit()) + '</div>' +
+      '<div style="display:grid;gap:8px;">' +
+      '<button type="button" id="program-slot-keep" class="btn btn-primary" style="width:100%;">TIENILO E AGGIUNGI QUESTO</button>' +
+      '<div style="font-size:10px;color:#888;margin:-2px 0 6px;">Restano attivi tutti e due, ognuno con i suoi carichi: passi da uno all’altro quando vuoi.</div>' +
+      '<button type="button" id="program-slot-replace" class="btn btn-outline" style="width:100%;">SOSTITUISCILO</button>' +
+      '<div style="font-size:10px;color:#888;margin-top:-2px;">Come prima: il nuovo prende il suo posto e i carichi ripartono da zero.</div>' +
+      '</div></div>';
+    document.body.appendChild(el);
+    const done = function (v) { el.remove(); resolve(v); };
+    document.getElementById('program-slot-keep').onclick = function () { done('keep'); };
+    document.getElementById('program-slot-replace').onclick = function () { done('replace'); };
+  });
+}
+
+// Bring a parked program back into the room; the one that was there is parked.
+async function switchActiveProgram(id) {
+  id = String(id || '');
+  if (multiProgramBlocked()) return false;
+  const entry = parkedPrograms().find(function (p) { return p && String(p.id) === id; });
+  if (!entry) return false;
+  if (store.sessionClockRunning) {
+    if (typeof showToast === 'function') showToast('Chiudi o metti in pausa la seduta in corso prima di cambiare programma.', 'error');
+    return false;
+  }
+  const run = async function () {
+    const prog = await loadProgramContentById(id);
+    if (!prog) {
+      if (typeof showToast === 'function') showToast('Programma non trovato su questo dispositivo.', 'error');
+      return false;
+    }
+    if (!(await ensureActiveProgramInLibrary())) {
+      if (typeof showToast === 'function') showToast('Non riesco a mettere da parte il programma attuale: riprova.', 'error');
+      return false;
+    }
+    parkCurrentProgram();
+    store.parkedPrograms = parkedPrograms().filter(function (p) { return p && String(p.id) !== id; });
+    TRAINING_SLOT_FIELDS.forEach(function (k) { store[k] = JSON.parse(JSON.stringify((entry.fields && entry.fields[k]) || {})); });
+    store.activeProgramId = id;
+    // A swap is a moment for the sync as a program change is: this side's
+    // maps are the whole truth from now.
+    markTrainingDataEpoch();
+    resetMapStampsFor(TRAINING_SLOT_FIELDS);
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.clearWorkoutLogs) {
+      try { await GiammariaPersistence.clearWorkoutLogs(); } catch (_) {}
+    }
+    if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
+      await GiammariaPersistence.activateCanonicalProgram(prog);
+    }
+    DATA = normalizeProgram(prog.training || prog);
+    if (!DATA.id) DATA.id = id;
+    DATA.nutrition = store.nutrition || null;
+    DATA.supplementation = store.supplementation || null;
+    DATA.therapy = store.therapy || null;
+    DATA.exams = store.exams || null;
+    store.activeProgram = DATA;
+    store.activeProgramId = id;
+    currentWeek = Math.min(Math.max(1, Number(entry.week) || 1), DATA.weeks.length);
+    currentDay = Math.max(0, Number(entry.day) || 0);
+    store.trainingWeek = currentWeek;
+    store.trainingDay = currentDay;
+    if (DATA.weeks.length) store.prefs.duration = DATA.weeks.length;
+    store.parkedProgramsAt = Date.now();
+    try { clearRestOverrides(); } catch (_) {}
+    persist();
+    try { await syncProgramLibraryFromIdb(); } catch (_) {}
+    return true;
+  };
+  const ok = (typeof withBusy === 'function') ? await withBusy(run, 'Cambio programma…', { immediate: true, maxMs: 60000 }) : await run();
+  if (ok) {
+    if (typeof render === 'function') render();
+    if (typeof showToast === 'function') showToast(trText('Programma attivo') + ': ' + String(DATA.title || ''), 'ok');
+    try { if (store.accountToken && typeof syncAccountData === 'function') syncAccountData(false).catch(function () {}); } catch (_) {}
+  }
+  return ok;
+}
+window.switchActiveProgram = switchActiveProgram;
+window.activeProgramsLimit = activeProgramsLimit;
+window.parkedPrograms = parkedPrograms;
+
+// Stop following a parked program: it stays in the library, what was written
+// on it is dropped.
+function removeParkedProgram(id) {
+  id = String(id || '');
+  const entry = parkedPrograms().find(function (p) { return p && String(p.id) === id; });
+  if (!entry) return;
+  if (!confirm(trText('Togliere dai programmi attivi') + ' «' + entry.title + '»?\n\n' + trText('Resta tra i programmi salvati. I carichi segnati su questo programma vengono cancellati; le sedute chiuse restano nello storico.'))) return;
+  store.parkedPrograms = parkedPrograms().filter(function (p) { return p && String(p.id) !== id; });
+  store.parkedProgramsAt = Date.now();
+  persist();
+  render();
+  try { if (store.accountToken && typeof syncAccountData === 'function') syncAccountData(false).catch(function () {}); } catch (_) {}
+}
+window.removeParkedProgram = removeParkedProgram;
+
+// The row that shows which programs are active and switches between them.
+function activeProgramsSwitcherHtml(opts) {
+  opts = opts || {};
+  if (multiProgramBlocked()) return '';
+  const parked = parkedPrograms();
+  const limit = activeProgramsLimit();
+  const hasActive = typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length;
+  if (!parked.length && !(opts.always && hasActive)) return '';
+  const chip = function (label, sub, on, action, removeId) {
+    return '<div style="display:flex;align-items:stretch;flex:1 1 140px;min-width:0;border:1px solid ' + (on ? 'var(--gold)' : '#333') + ';border-radius:10px;background:' + (on ? 'rgba(212,175,55,0.12)' : '#111') + ';overflow:hidden;">' +
+      '<button type="button" ' + (action ? 'onclick="' + action + '"' : 'disabled') + ' style="flex:1;min-width:0;text-align:left;background:none;border:0;color:inherit;padding:8px 10px;cursor:' + (action ? 'pointer' : 'default') + ';font:inherit;">' +
+      '<div style="font-size:12px;font-weight:800;color:' + (on ? 'var(--gold)' : '#eee') + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(label) + '</div>' +
+      '<div style="font-size:10px;color:#888;">' + esc(sub) + '</div></button>' +
+      (removeId ? '<button type="button" aria-label="' + esc(trText('Togli dai programmi attivi')) + '" onclick="removeParkedProgram(' + esc(JSON.stringify(removeId)) + ')" style="background:none;border:0;border-left:1px solid #333;color:#888;padding:0 10px;cursor:pointer;font-size:14px;">×</button>' : '') +
+      '</div>';
+  };
+  const pos = function (w, d) { return trText('Settimana') + ' ' + w + ' · ' + trText('giorno') + ' ' + (Number(d) + 1); };
+  let html = '<div class="card" id="active-programs-switcher" style="padding:12px;margin-bottom:12px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;">' + esc(trText('PROGRAMMI ATTIVI')) + '</div>' +
+    '<div style="font-size:10px;color:#888;">' + (parked.length + (hasActive ? 1 : 0)) + ' / ' + limit + '</div></div><div style="display:flex;flex-wrap:wrap;gap:8px;">';
+  if (hasActive) html += chip(String(DATA.title || 'Programma'), trText('In uso') + ' · ' + pos(currentWeek, currentDay), true, '', '');
+  parked.forEach(function (p) {
+    html += chip(p.title, pos(p.week || 1, p.day || 0), false, 'switchActiveProgram(' + esc(JSON.stringify(String(p.id))) + ')', String(p.id));
+  });
+  html += '</div>';
+  if (opts.always && limit <= 1) {
+    html += '<div style="font-size:10px;color:#888;margin-top:8px;line-height:1.4;">' + esc(trText('Con un piano a pagamento puoi tenere attivi fino a 3 programmi insieme, ognuno con i suoi carichi.')) + ' <a href="#" onclick="navigate(\'pricing\');return false;" style="color:var(--gold);">' + esc(trText('Vedi i piani')) + '</a></div>';
+  } else if (opts.always && parked.length + 1 < limit) {
+    html += '<div style="font-size:10px;color:#888;margin-top:8px;line-height:1.4;">' + esc(trText('Per aggiungerne un altro attiva un programma: ti chiedo se tenere anche questo.')) + '</div>';
+  }
+  return html + '</div>';
+}
+window.activeProgramsSwitcherHtml = activeProgramsSwitcherHtml;
+
+/*
+ * Sharing a program with a code (server/program/share.mjs). Anyone sends;
+ * receiving needs a paid plan, checked again by the server.
+ */
+function shareableProgramCopy(prog) {
+  const copy = JSON.parse(JSON.stringify(prog.training || prog));
+  ['nutrition', 'supplementation', 'therapy', 'exams', 'space', 'exerciseDb', 'exerciseAliases', 'assignedByCoach', 'meta'].forEach(function (k) { delete copy[k]; });
+  if (copy.progression && typeof copy.progression === 'object') delete copy.progression.maxes;
+  return copy;
+}
+async function shareProgramById(id) {
+  if (!store.accountToken) { if (typeof showToast === 'function') showToast('Accedi per condividere un programma.', 'error'); return; }
+  if (multiProgramBlocked()) return;
+  const isActive = !id || String(id) === activeProgramKey();
+  let prog = isActive ? DATA : await loadProgramContentById(id);
+  if (!prog || !Array.isArray((prog.training || prog).weeks) || !(prog.training || prog).weeks.length) {
+    if (typeof showToast === 'function') showToast('Programma non trovato su questo dispositivo.', 'error');
+    return;
+  }
+  const copy = shareableProgramCopy(prog);
+  try {
+    const out = await withBusy(async function () {
+      const res = await accountRequest('/api/programs/share', { method: 'POST', body: JSON.stringify({ program: copy, kind: programKindOf({ id: copy.id, name: copy.title }, copy) }) });
+      return readApiJson(res);
+    }, 'Creo il codice…', { immediate: true, maxMs: 60000 });
+    if (out && out.code) openShareCodeModal(out.code, out.title || copy.title || '');
+  } catch (e) {
+    if (typeof showToast === 'function') showToast((e && e.message) || 'Condivisione non riuscita.', 'error');
+  }
+}
+window.shareProgramById = shareProgramById;
+function openShareCodeModal(code, title) {
+  const old = document.getElementById('share-code-modal');
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'share-code-modal';
+  el.style.cssText = 'display:flex;position:fixed;inset:0;z-index:10200;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  el.onclick = function (ev) { if (ev.target === el) el.remove(); };
+  el.innerHTML = '<div class="card" style="max-width:420px;width:100%;border:1px solid var(--gold);padding:18px;box-sizing:border-box;text-align:center;">' +
+    '<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;">CODICE DEL PROGRAMMA</div>' +
+    '<div style="font-size:12px;color:#bbb;margin:6px 0 14px;">' + esc(title) + '</div>' +
+    '<div id="share-code-value" style="font-size:30px;font-weight:900;letter-spacing:3px;color:#fff;background:#111;border:1px solid #333;border-radius:12px;padding:14px 8px;user-select:all;">' + esc(code) + '</div>' +
+    '<div style="font-size:11px;color:#888;line-height:1.45;margin:12px 0 14px;">Dallo a chi vuoi: lo scrive in Programmi → Condividi, e il programma arriva tra i suoi salvati. Vale 30 giorni. Viaggia solo la scheda, non i tuoi carichi.</div>' +
+    '<div style="display:grid;gap:8px;">' +
+    '<button type="button" class="btn btn-primary" onclick="copyShareCode()">COPIA IL CODICE</button>' +
+    '<button type="button" class="btn btn-outline" onclick="document.getElementById(\'share-code-modal\').remove()">CHIUDI</button>' +
+    '</div></div>';
+  document.body.appendChild(el);
+}
+function copyShareCode() {
+  const el = document.getElementById('share-code-value');
+  const code = el ? el.textContent : '';
+  const text = trText('Programma Nurvan, codice') + ' ' + code;
+  const done = function () { if (typeof showToast === 'function') showToast('Codice copiato', 'ok'); };
+  try {
+    if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '')) { navigator.share({ text: text }).catch(function () {}); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(code).then(done, done); return; }
+  } catch (_) {}
+  done();
+}
+window.copyShareCode = copyShareCode;
+async function receiveSharedProgram() {
+  const input = document.getElementById('share-code-input');
+  const code = String((input && input.value) || '').trim();
+  if (!code) { if (typeof showToast === 'function') showToast('Scrivi il codice che ti hanno dato.', 'error'); return; }
+  if (!store.accountToken) { if (typeof showToast === 'function') showToast('Accedi per caricare un programma condiviso.', 'error'); return; }
+  if (multiProgramBlocked()) return;
+  if (typeof requirePlan === 'function' && !requirePlan('program_share_receive')) return;
+  try {
+    const out = await withBusy(async function () {
+      const res = await accountRequest('/api/programs/shared/' + encodeURIComponent(code), { method: 'GET' });
+      return readApiJson(res);
+    }, 'Cerco il programma…', { immediate: true, maxMs: 60000 });
+    if (!out || !out.program) throw new Error('Programma non trovato.');
+    const prog = normalizeProgram(out.program);
+    // A copy of its own in this library, whatever id it had where it came from.
+    prog.id = 'shared_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    prog.title = String(out.title || prog.title || 'Programma condiviso');
+    prog.author = 'Condiviso con un codice';
+    if (input) input.value = '';
+    await deliverProgram(prog, 'save', { what: 'condivisa', cleanup: function () {} });
+  } catch (e) {
+    if (typeof showToast === 'function') showToast((e && e.message) || 'Codice non valido.', 'error');
+  }
+}
+window.receiveSharedProgram = receiveSharedProgram;
+function shareProgramCardHtml() {
+  if (multiProgramBlocked()) return '';
+  const hasActive = typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length;
+  const canReceive = (typeof planCan === 'function') ? planCan('program_share_receive') : true;
+  return '<div style="font-size:11px;color:#888;line-height:1.5;margin-bottom:10px;">Manda un programma a un amico con un codice, o carica quello che ti hanno mandato.</div>' +
+    (hasActive ? '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;margin-bottom:6px;" onclick="shareProgramById(\'\')">CONDIVIDI IL PROGRAMMA ATTIVO</button>' : '') +
+    '<div style="font-size:10px;color:#888;margin-bottom:14px;">Gli altri li condividi dal pulsante CONDIVIDI in «Programmi creati».</div>' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:6px;">HAI RICEVUTO UN CODICE?</div>' +
+    '<div style="display:flex;gap:8px;">' +
+    '<input id="share-code-input" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" placeholder="NV-XXXX-XXXX" style="flex:1;min-width:0;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:14px;letter-spacing:1px;">' +
+    '<button type="button" class="btn btn-primary" style="font-size:11px;" onclick="receiveSharedProgram()">CARICA</button></div>' +
+    (canReceive ? '' : (typeof planLockedHtml === 'function' ? planLockedHtml('program_share_receive') : ''));
+}
+window.shareProgramCardHtml = shareProgramCardHtml;
+
 async function maybeClearLogsOnProgramSwitch(newProgramId) {
   const prev = store && store.activeProgramId != null ? String(store.activeProgramId) : '';
   const next = newProgramId != null ? String(newProgramId) : '';
   if (!next || (prev && prev === next)) return false;
+  // More than one active program: the one in use can be kept beside the new
+  // one instead of being replaced.
+  let back = null;
+  if (!multiProgramBlocked()) {
+    back = parkedPrograms().find(function (p) { return p && String(p.id) === next; }) || null;
+    const hasActive = prev && typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length;
+    const room = parkedPrograms().length + 1 < activeProgramsLimit();
+    if (hasActive && (back || (room && (await askKeepOrReplaceProgram()) === 'keep'))) {
+      if (await ensureActiveProgramInLibrary()) parkCurrentProgram();
+      else if (typeof showToast === 'function') showToast('Non riesco a tenere anche il programma di prima: viene sostituito.', 'error');
+    }
+  }
+  const atLimit = !multiProgramBlocked() && !back && parkedPrograms().length > 0 && parkedPrograms().length + 1 >= activeProgramsLimit()
+    && !parkedPrograms().some(function (p) { return p && String(p.id) === prev; });
   await clearWorkoutLogsForNewProgram(prev);
+  if (atLimit && typeof showToast === 'function') {
+    setTimeout(function () { showToast('Hai già il massimo di programmi attivi: il nuovo ha preso il posto di quello in uso.', 'info'); }, 1200);
+  }
+  // Activating a program that was parked: it comes back with what was on it.
+  if (back) {
+    TRAINING_SLOT_FIELDS.forEach(function (k) { store[k] = JSON.parse(JSON.stringify((back.fields && back.fields[k]) || {})); });
+    store.parkedPrograms = parkedPrograms().filter(function (p) { return p && String(p.id) !== next; });
+    store.parkedProgramsAt = Date.now();
+    resetMapStampsFor(TRAINING_SLOT_FIELDS);
+  }
   return true;
 }
 

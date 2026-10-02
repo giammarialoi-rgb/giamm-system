@@ -44,7 +44,7 @@ const iso = (ms) => new Date(ms).toISOString();
 {
   const MIN = {
     logging: 'free', active_program: 'free', history: 'free', import: 'free', food_catalog: 'free', session_card: 'free',
-    gold_frame: 'standard', history_full: 'standard', export: 'standard', proposed_target: 'standard', coach_clients: 'standard', ai_coach: 'standard',
+    gold_frame: 'standard', history_full: 'standard', export: 'standard', proposed_target: 'standard', coach_clients: 'standard', ai_coach: 'standard', program_share_receive: 'standard',
     scheduled_checkins: 'coach', prescribed_target: 'coach', import_unlimited: 'coach', client_billing: 'coach',
     branding: 'coach_pro', coach_therapy_exams: 'coach_pro', export_athletes: 'coach_pro'
   };
@@ -192,7 +192,7 @@ const iso = (ms) => new Date(ms).toISOString();
   eq([st.seats, st.inactive], [20, ['21']], 'server: 21st link inactive on Coach');
   const link21 = await coachLinkForClient(seatPool, { id: 21, coach_user_id: 1, status: 'active' }, NOW);
   const link3 = await coachLinkForClient(seatPool, { id: 3, coach_user_id: 1, status: 'active' }, NOW);
-  eq([link21, link3], [{ active: true, seatInactive: true }, { active: true, seatInactive: false }], 'server: the athlete learns its link is waiting');
+  eq([link21, link3], [{ active: true, seatInactive: true, coachPlan: 'coach' }, { active: true, seatInactive: false, coachPlan: 'coach' }], 'server: the athlete learns its link is waiting, and the plan of the coach');
   coachPlan = { plan: 'coach_pro', plan_source: 'manual', seats: null };
   eq((await coachLinkForClient(seatPool, { id: 21, coach_user_id: 1, status: 'active' }, NOW)).seatInactive, false, 'coach moves to Pro: the 21st is active at the next read');
   eq(await coachLinkForClient(seatPool, { id: 3, coach_user_id: 1, status: 'revoked' }, NOW), { active: false, seatInactive: false }, 'revoked link: no inheritance');

@@ -27,6 +27,7 @@ import { appleCallbackRoute, appleConfig, mountAppleAuth, consumeLoginTicket } f
 import { mountBlog } from "./server/site/blog.mjs";
 import { mountHyrox } from "./server/site/hyrox.mjs";
 import { mountSamples, sampleCardsHtml } from "./server/site/samples.mjs";
+import { mountProgramShare } from "./server/program/share.mjs";
 import { reqLang, SERVER_LANGS } from "./server/i18n.mjs";
 import { SITE_LANGS, SITE_LANG_NAMES, isSiteLang, langPrefix, langOfPath, siteDict, translateHtml } from "./server/site/i18n.mjs";
 import { mountGoogleAppAuth } from "./server/account/google-app.mjs";
@@ -2278,6 +2279,8 @@ mountAccountDeletion(app, { pool, initDb, accountFromBearer, onDeleted: (gone) =
 mountConsentRoutes(app, { pool, initDb, accountFromBearer, featuresPath: FEATURES_PATH });
 
 mountAdminDashboard(app, { pool, initDb, sendEmail, secret: JWT_SECRET });
+// Programs shared with a code: anyone sends, a paid plan receives.
+mountProgramShare(app, { pool, initDb, accountFromBearer });
 
 mountProgramGenerateRoutes(app, {
   requireAuth: async (req) => accountFromBearer(req.headers.authorization)

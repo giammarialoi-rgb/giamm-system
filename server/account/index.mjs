@@ -262,6 +262,15 @@ export function mergeAccountDataBlobs(current, incoming) {
     else if (curAt > incAt) merged.chatHistory = Array.isArray(cur.chatHistory) ? cur.chatHistory : [];
     merged.chatClearedAt = Math.max(curAt, incAt);
   }
+  // The other active programs (parked, each with its own loads): the side
+  // that changed them last is taken whole, never a mix of the two.
+  {
+    const curAt = Number(cur.parkedProgramsAt) || 0;
+    const incAt = Number(inc.parkedProgramsAt) || 0;
+    if (curAt > incAt) merged.parkedPrograms = Array.isArray(cur.parkedPrograms) ? cur.parkedPrograms : [];
+    else if (!Array.isArray(inc.parkedPrograms)) merged.parkedPrograms = Array.isArray(cur.parkedPrograms) ? cur.parkedPrograms : [];
+    merged.parkedProgramsAt = Math.max(curAt, incAt);
+  }
   // Same for the archive of past chats: a device that has not seen the reset
   // yet must not put the old ones back, and single deleted chats stay deleted.
   {

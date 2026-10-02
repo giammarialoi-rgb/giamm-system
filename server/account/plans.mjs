@@ -87,7 +87,10 @@ export async function coachLinkForClient(pool, client, now = Date.now()) {
   );
   if (!lic.rows.length) return { active: false, seatInactive: false };
   const state = await coachSeatState(pool, client.coach_user_id, now);
-  return { active: true, seatInactive: state.inactive.includes(String(client.id)) };
+  // The coach's own plan: some features reach the athlete only from a coach
+  // on a higher plan (inheritMin in web/features.json).
+  const coachPlan = Entitlements.effective(await loadAccount(pool, client.coach_user_id), now).ownPlan;
+  return { active: true, seatInactive: state.inactive.includes(String(client.id)), coachPlan };
 }
 
 // The whole entitlement of the user behind a token (athletes with their link).
