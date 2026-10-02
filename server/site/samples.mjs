@@ -203,7 +203,7 @@ const SCRIPT = `<script>
     .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
     .then(function(r){
       if(!r.ok)throw new Error((r.j&&r.j.error)||form.getAttribute('data-fail'));
-      msg.className='form-msg ok';msg.textContent=r.j.message;form.classList.add('done');
+      msg.className='form-msg sent';msg.textContent=r.j.message;form.classList.add('done');
       if(r.j.link){var a=document.createElement('a');a.href=r.j.link;a.textContent=' PDF';msg.appendChild(a);}
     })
     .catch(function(e){msg.className='form-msg err';msg.textContent=e.message||form.getAttribute('data-fail');btn.disabled=false;});
