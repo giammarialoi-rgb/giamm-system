@@ -2361,7 +2361,7 @@ body.focus-mode [data-rewards-only] {
 <div id="reset-session-modal" class="modal">
   <div class="modal-content">
     <h2 style="color:var(--gold);margin-top:0;">Azzerare il Coach AI?</h2>
-    <p style="font-size:12px;color:#aaa;">La conversazione aperta si chiude e va nell’archivio: la prossima volta il Coach AI riparte da zero. Programmi, progressi e impostazioni restano intatti.</p>
+    <p style="font-size:12px;color:#aaa;">La conversazione aperta viene cancellata, anche dall’archivio e su tutti i dispositivi: il Coach AI riparte da zero. Programmi, progressi e impostazioni restano intatti.</p>
     <div style="display:flex;gap:10px;margin-top:20px;">
       <button class="btn btn-outline" style="flex:1;" onclick="closeResetSession()">Annulla</button>
       <button class="btn btn-primary" style="flex:1;" onclick="confirmResetSession()">Azzera</button>
@@ -40349,7 +40349,22 @@ function speakCoachReply(text){
 }
 function clearCoachSession(){
   console.debug('COACH_SESSION_CLEAR');
-  archiveCurrentCoachChat();
+  // Azzera means gone: the conversation is not moved to the archive (it used
+  // to be, so it was still there to read), and its archive entry goes too.
+  const liveId = store._liveArchiveId || store._openArchiveId;
+  if (liveId && Array.isArray(store.coachArchives)) {
+    const before = store.coachArchives.length;
+    store.coachArchives = store.coachArchives.filter(function (a) { return !(a && a.id === liveId); });
+    // An entry removed has to stay removed on the other devices as well.
+    if (store.coachArchives.length !== before) {
+      if (!store.coachArchivesDeleted || typeof store.coachArchivesDeleted !== 'object') store.coachArchivesDeleted = {};
+      store.coachArchivesDeleted[liveId] = Date.now();
+    }
+  }
+  store._liveArchiveId = null;
+  store._liveArchiveAt = null;
+  store._openArchiveId = null;
+  store._archiveSkipCount = 0;
   store.chatHistory = [];
   // The cloud copy is longer than an empty chat: without this mark the next
   // download brought the old conversation back.
@@ -40366,6 +40381,11 @@ function upsertLiveCoachArchive() {
     return m && !m.voiceChoice && String(m.text || '').trim();
   });
   if (msgs.length < 1) return;
+  // After "Azzera archivio" the open conversation stays on screen but is not
+  // written back into the archive (every save used to put it back at once,
+  // so the archive never looked empty) until something new is said in it.
+  if (!store._liveArchiveId && store._archiveSkipCount && msgs.length <= store._archiveSkipCount) return;
+  store._archiveSkipCount = 0;
   if (!Array.isArray(store.coachArchives)) store.coachArchives = [];
   const previewSrc = msgs.find(function (m) { return m.role === 'user'; }) || msgs[0];
   const payload = {
@@ -40385,6 +40405,7 @@ function upsertLiveCoachArchive() {
 }
 function archiveCurrentCoachChat() {
   upsertLiveCoachArchive();
+  store._archiveSkipCount = 0;
   store.chatHistory = [];
   store._liveArchiveId = null;
   store._liveArchiveAt = null;
@@ -42016,6 +42037,7 @@ function accountPayload(opts){
     chatHistory: Array.isArray(store.chatHistory) ? store.chatHistory.slice(-120) : [],
     chatClearedAt: Number(store.chatClearedAt) || 0,
     coachArchivesClearedAt: Number(store.coachArchivesClearedAt) || 0,
+    coachArchivesDeleted: (store.coachArchivesDeleted && typeof store.coachArchivesDeleted === 'object') ? store.coachArchivesDeleted : {},
     actionHistory: Array.isArray(store.actionHistory) ? store.actionHistory.slice(-200) : [],
     intelligence: store.intelligence || null,
     intelTargets: store.intelTargets || {},
@@ -42435,8 +42457,17 @@ function applyRemoteAccountData(remote, preferLocal) {
     if (remoteArcCleared > localArcCleared) {
       store.coachArchives = Array.isArray(remote.coachArchives) ? remote.coachArchives.slice(0, 24) : [];
       store.coachArchivesClearedAt = remoteArcCleared;
+      store.coachArchivesDeleted = (remote.coachArchivesDeleted && typeof remote.coachArchivesDeleted === 'object') ? remote.coachArchivesDeleted : {};
     } else if (remoteArcCleared === localArcCleared && Array.isArray(remote.coachArchives) && remote.coachArchives.length && !(store.coachArchives || []).length) {
       store.coachArchives = remote.coachArchives.slice(0, 24);
+    }
+    // Single conversations deleted (here or elsewhere) stay deleted.
+    if (remoteArcCleared >= localArcCleared && remote.coachArchivesDeleted && typeof remote.coachArchivesDeleted === 'object') {
+      store.coachArchivesDeleted = Object.assign({}, remote.coachArchivesDeleted, store.coachArchivesDeleted || {});
+    }
+    if (store.coachArchivesDeleted && Array.isArray(store.coachArchives)) {
+      const goneArc = store.coachArchivesDeleted;
+      store.coachArchives = store.coachArchives.filter(function (a) { return !(a && a.id && goneArc[a.id]); });
     }
     if (Array.isArray(remote.coachProgramLibrary) && remote.coachProgramLibrary.length) {
       const byId = {};
@@ -43260,11 +43291,25 @@ function resetCoachHistory() {
   // only when it is closed.
   if (liveId) { store._liveArchiveId = null; store._liveArchiveAt = null; }
   store._openArchiveId = null;
+  store._archiveSkipCount = (store.chatHistory || []).filter(function (m) { return m && !m.voiceChoice && String(m.text || '').trim(); }).length;
+  store.coachArchivesDeleted = {};
   store.coachArchivesClearedAt = Date.now();
   persist();
   render();
   if (typeof showToast === 'function') showToast('Archivio chat cancellato', 'ok');
-  try { if (store.accountToken && typeof syncAccountData === 'function') syncAccountData(false); } catch (_) {}
+  pushCoachResetToCloud();
+}
+// A reset is sent to the account at once, without waiting for the next
+// sync: closing the app right after must not leave the cloud with the old
+// conversations to hand back on the next opening.
+function pushCoachResetToCloud() {
+  if (!store.accountToken || typeof uploadAccountDataFast !== 'function') return Promise.resolve(false);
+  return uploadAccountDataFast().then(function (r) {
+    if (!(r && r.uploaded)) {
+      try { if (typeof enqueueClientOutbox === 'function') enqueueClientOutbox({ id: 'account-sync', type: 'account-sync', note: 'retry' }); } catch (_) {}
+    }
+    return !!(r && r.uploaded);
+  }).catch(function () { return false; });
 }
 function confirmResetSession(){
   console.debug('RESET_CHAT_CONFIRM');
@@ -43273,7 +43318,7 @@ function confirmResetSession(){
   store.chatSessionId = null;
   closeResetSession();
   render();
-  try { if (store.accountToken && typeof syncAccountData === 'function') syncAccountData(false); } catch (_) {}
+  pushCoachResetToCloud();
 }
 function sanitizeCoachDisplayText(raw) {
   let text = String(raw || '');

@@ -251,6 +251,38 @@ export function mergeAccountDataBlobs(current, incoming) {
     const b = Array.isArray(inc[key]) ? inc[key] : [];
     merged[key] = b.length >= a.length ? b : a;
   }
+  // A chat reset is a moment (chatClearedAt). "Whichever is longer" brought
+  // the conversation back: the device sent an empty chat with a new mark, the
+  // longer cloud copy was kept under that mark, and the next opening saw
+  // equal marks and took it back. The side that reset later wins whole.
+  {
+    const curAt = Number(cur.chatClearedAt) || 0;
+    const incAt = Number(inc.chatClearedAt) || 0;
+    if (incAt > curAt) merged.chatHistory = Array.isArray(inc.chatHistory) ? inc.chatHistory : [];
+    else if (curAt > incAt) merged.chatHistory = Array.isArray(cur.chatHistory) ? cur.chatHistory : [];
+    merged.chatClearedAt = Math.max(curAt, incAt);
+  }
+  // Same for the archive of past chats: a device that has not seen the reset
+  // yet must not put the old ones back, and single deleted chats stay deleted.
+  {
+    const curAt = Number(cur.coachArchivesClearedAt) || 0;
+    const incAt = Number(inc.coachArchivesClearedAt) || 0;
+    const obj = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
+    let gone = {};
+    if (curAt > incAt) {
+      merged.coachArchives = Array.isArray(cur.coachArchives) ? cur.coachArchives : [];
+      gone = obj(cur.coachArchivesDeleted);
+    } else if (incAt > curAt) {
+      merged.coachArchives = Array.isArray(inc.coachArchives) ? inc.coachArchives : [];
+      gone = obj(inc.coachArchivesDeleted);
+    } else {
+      if (!Array.isArray(inc.coachArchives)) merged.coachArchives = Array.isArray(cur.coachArchives) ? cur.coachArchives : [];
+      gone = { ...obj(cur.coachArchivesDeleted), ...obj(inc.coachArchivesDeleted) };
+    }
+    merged.coachArchivesClearedAt = Math.max(curAt, incAt);
+    merged.coachArchivesDeleted = Object.fromEntries(Object.entries(gone).slice(-100));
+    if (Array.isArray(merged.coachArchives)) merged.coachArchives = merged.coachArchives.filter((a) => !(a && a.id && gone[a.id]));
+  }
   // Something switched on stays on: unlocking the coach hub or finishing the
   // tutorial on one device is true everywhere.
   for (const key of ["coachUnlocked", "clientTutorialDone"]) {
