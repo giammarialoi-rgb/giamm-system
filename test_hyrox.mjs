@@ -93,7 +93,7 @@ ok('9b. il generatore di schede ha l’obiettivo HYROX e scrive la preparazione'
 ok('9c. le domande sono le stesse nella schermata HYROX e nel generatore', (html.match(/hyroxFieldsHtml\(\)/g) || []).length >= 3);
 ok('9d. profilo con obiettivo HYROX: si apre la preparazione', /wantsHyrox\(profile\.goal\)/.test(html));
 ok('9e. un atleta seguito non la scrive: la chiede al coach', /if \(hyroxMustAsk\(\)\) \{ hyroxRequestCoach\(\); return; \}/.test(html) && /CHIEDI AL COACH QUESTA PREPARAZIONE/.test(html));
-ok('9f. il questionario del cliente ha l’obiettivo HYROX', /'Preparazione gara', 'HYROX'\]/.test(coachUi));
+ok('9f. il questionario del cliente ha l’obiettivo HYROX', /'Preparazione gara', 'HYROX'/.test(coachUi));
 ok('9g. il Coach AI conosce la sezione e i dati', /HYROX_KNOWLEDGE/.test(api) && (api.match(/\$\{HYROX_KNOWLEDGE\}/g) || []).length === 2);
 const practice = fs.readFileSync('coach-practice.mjs', 'utf8');
 ok('9h. la richiesta arriva al coach con gara, categoria e giorni', /payload\.hyrox = \{/.test(practice) && /hyrox: it\.hyrox \|\| null/.test(coachUi));
@@ -137,7 +137,7 @@ ok('10i. dall’id si riscrive la stessa scheda, intera', (() => { const row = C
 ok('10j. gli id sono tutti diversi', (() => { const ids = C.search({ goal: 'hyrox' }, 2000).rows.map((x) => x.id); return ids.length === 1800 && new Set(ids).size === 1800; })());
 ok('10k. una settimana per il costruttore, nel posto scelto', H.sampleWeek({ profile: 'gym', days: 4 }).length === 4 && H.sampleWeek({ profile: 'bodyweight', days: 3 }).every((s) => s.exercises.length > 0));
 ok('10l. il costruttore parte da una settimana HYROX e la schermata Programmi lo offre', /function startHyroxDraft\(\)/.test(html) && /builderHyroxStartHtml\(d, inputStyle\) \+/.test(html) && /homeCollapsibleCard\('SCHEDA HYROX'/.test(html) && /onclick="openHyroxBuilder\(\)"/.test(html));
-ok('10m. una scheda HYROX del database si attiva intera, senza essere riscritta come le altre', /entry\.source !== 'hyrox_v1' && typeof expandScienceProgramWeeks/.test(html));
+ok('10m. una scheda HYROX del database si attiva intera, senza essere riscritta come le altre', /!catalogWholeSource\(entry\.source\) && typeof expandScienceProgramWeeks/.test(html) && /function catalogWholeSource\(src\) \{ return src === 'hyrox_v1'/.test(html));
 
 console.log('');
 if (failed) { console.log(failed + ' controlli HYROX falliti.'); process.exit(1); }

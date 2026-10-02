@@ -37,6 +37,7 @@ const PRECACHE = [
   './cardio-library.js',
   './program-generator.js',
   './hyrox.js',
+  './disciplines.js',
   './hyrox-events.json'
 ];
 

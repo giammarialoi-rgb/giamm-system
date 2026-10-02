@@ -12,7 +12,7 @@ var CLIENT_INTAKE_FIELDS = [
   { key: 'weightBand', label: 'Peso', type: 'select', required: true, options: ['45-49 kg', '50-54 kg', '55-59 kg', '60-64 kg', '65-69 kg', '70-74 kg', '75-79 kg', '80-84 kg', '85-89 kg', '90-94 kg', '95-99 kg', '100-109 kg', '110-119 kg', '120-129 kg', '130-139 kg', '140+ kg'] },
   { key: 'trainingAge', label: 'Anzianità di allenamento', type: 'select', required: true, options: ['Mai allenato', 'Meno di 6 mesi', '6-12 mesi', '1-2 anni', '2-5 anni', 'Più di 5 anni'] },
   { key: 'level', label: 'Livello', type: 'select', required: true, options: ['Principiante', 'Intermedio', 'Avanzato', 'Agonista'] },
-  { key: 'goal', label: 'Obiettivo', type: 'select', required: true, options: ['Ipertrofia', 'Forza', 'Dimagrimento', 'Ricomposizione', 'Performance sportiva', 'Salute e postura', 'Preparazione gara', 'HYROX'] },
+  { key: 'goal', label: 'Obiettivo', type: 'select', required: true, options: ['Ipertrofia', 'Forza', 'Dimagrimento', 'Ricomposizione', 'Performance sportiva', 'Salute e postura', 'Preparazione gara', 'HYROX', 'Pilates', 'Mobilità e stretching', 'Calisthenics', 'HIIT'] },
   { key: 'sessionsPerWeek', label: 'Sessioni a settimana', type: 'select', required: true, options: ['2', '3', '4', '5', '6 o più'] },
   { key: 'sessionMinutes', label: 'Tempo a sessione', type: 'select', required: true, options: ['30 minuti', '45 minuti', '60 minuti', '75 minuti', '90 minuti o più'] },
   { key: 'equipment', label: 'Attrezzatura', type: 'select', required: true, options: ['Palestra completa', 'Pesi liberi + panca', 'Solo macchine', 'Casa (manubri/bande)', 'Corpo libero'] },
@@ -2960,6 +2960,7 @@ function athleteHomeModulesHtml() {
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="startDomainImport(\'nutrition\')"><span style="font-size:18px;">📥</span><span style="font-size:11px;font-weight:800;">Importa file</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'calendar\')"><span style="font-size:18px;">📅</span><span style="font-size:11px;font-weight:800;">Calendario</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'hyrox\')"><span style="font-size:18px;">🏁</span><span style="font-size:11px;font-weight:800;">HYROX</span></button>' +
+    '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'disciplines\')"><span style="font-size:18px;">🧘</span><span style="font-size:11px;font-weight:800;">A casa</span></button>' +
     '</div></div>';
 }
 
@@ -4504,6 +4505,7 @@ function openAssignChooser(clientId, name) {
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'build\')">SCRIVI UNA SCHEDA DA ZERO</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'generate\')">GENERA UNA SCHEDA</button>' +
     (hyroxFirst ? '' : hyroxBtn('btn-outline')) +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'discipline\')">PILATES, MOBILITÀ, CALISTHENICS, HIIT</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'mylib\')">DAL MIO DATABASE</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'programs\')">DATABASE PROGRAMMI (NURVAN)</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'copy\')">USA SCHEDA ATTIVA COME BASE</button>' +
@@ -4560,6 +4562,15 @@ function beginAssignSandbox(clientId, name, mode) {
     try { prefillHyroxFromRequest(clientId); } catch (_) {}
     navigate('hyrox');
     practiceToast('Spazio cliente: scegli la gara e l\'attrezzatura del cliente. La preparazione diventa la bozza da inviare.', 'success');
+  } else if (mode === 'discipline') {
+    // A home discipline for this client: Pilates, mobility, calisthenics, HIIT.
+    try {
+      const goal = String(((store.coachWorkspace && String(store.coachWorkspace.clientId) === String(clientId) && store.coachWorkspace.intake) || {}).goal || '');
+      const wanted = /pilates/i.test(goal) ? 'pilates' : (/mobilit|stretch/i.test(goal) ? 'mobilita' : (/calisthen/i.test(goal) ? 'calisthenics' : (/hiit/i.test(goal) ? 'hiit' : '')));
+      if (wanted) { if (!store.disciplines || typeof store.disciplines !== 'object') store.disciplines = {}; store.disciplines.id = wanted; }
+    } catch (_) {}
+    navigate('disciplines');
+    practiceToast('Spazio cliente: scegli la disciplina e i giorni. Il programma diventa la bozza da inviare.', 'success');
   } else if (mode === 'mylib') {
     openCoachLibraryAssignPicker(clientId, name);
   } else if (mode === 'programs') {

@@ -2291,5 +2291,395 @@ self.EXERCISE_YOUTUBE_LINKS = [
   "type": "warmup",
   "youtube_query": "Foam Roll Colonna Toracica exercise how to",
   "id": "smr_foam_roll_tspine"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pelvic Curl exercise how to",
+  "name": "Pelvic curl"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Chest Lift exercise how to",
+  "name": "Chest lift"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Hundred exercise how to",
+  "name": "Hundred"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Roll Up exercise how to",
+  "name": "Roll up"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Roll Over exercise how to",
+  "name": "Roll over"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Single Leg Circles exercise how to",
+  "name": "Single leg circles"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Rolling Like a Ball exercise how to",
+  "name": "Rolling like a ball"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Single Leg Stretch exercise how to",
+  "name": "Single leg stretch"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Double Leg Stretch exercise how to",
+  "name": "Double leg stretch"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Single Straight Leg Stretch exercise how to",
+  "name": "Scissors"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Double Straight Leg Lower Lift exercise how to",
+  "name": "Lower lift"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Criss Cross exercise how to",
+  "name": "Criss cross"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Spine Stretch Forward exercise how to",
+  "name": "Spine stretch forward"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Open Leg Rocker exercise how to",
+  "name": "Open leg rocker"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Corkscrew exercise how to",
+  "name": "Corkscrew"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Saw exercise how to",
+  "name": "Saw"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Swan exercise how to",
+  "name": "Swan"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Single Leg Kick exercise how to",
+  "name": "Single leg kick"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Double Leg Kick exercise how to",
+  "name": "Double leg kick"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Neck Pull exercise how to",
+  "name": "Neck pull"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Jackknife exercise how to",
+  "name": "Jackknife"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Shoulder Bridge exercise how to",
+  "name": "Shoulder bridge"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Spine Twist exercise how to",
+  "name": "Spine twist"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Side Kick Series exercise how to",
+  "name": "Side kick series"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Teaser exercise how to",
+  "name": "Teaser"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Hip Circles exercise how to",
+  "name": "Hip circles"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Swimming exercise how to",
+  "name": "Swimming"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Leg Pull Front exercise how to",
+  "name": "Leg pull front"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Leg Pull exercise how to",
+  "name": "Leg pull back"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Kneeling Side Kick exercise how to",
+  "name": "Kneeling side kick"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Mermaid exercise how to",
+  "name": "Mermaid"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Boomerang exercise how to",
+  "name": "Boomerang"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Seal exercise how to",
+  "name": "Seal"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Control Balance exercise how to",
+  "name": "Control balance"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pilates Push Up exercise how to",
+  "name": "Pilates push-up"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Cat Cow Stretch exercise how to",
+  "name": "Cat-cow"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "World's Greatest Stretch exercise how to",
+  "name": "World’s greatest stretch"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "90/90 Hip Stretch exercise how to",
+  "name": "Stretch 90/90 anche"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Half Kneeling Hip Flexor Stretch exercise how to",
+  "name": "Stretch flessori dell’anca"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Child's Pose exercise how to",
+  "name": "Posizione del bambino"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Downward Dog exercise how to",
+  "name": "Cane a testa in giù"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Cobra Stretch exercise how to",
+  "name": "Cobra"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Quadruped Thoracic Rotation exercise how to",
+  "name": "Rotazioni toraciche in quadrupedia"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Thread the Needle Stretch exercise how to",
+  "name": "Thread the needle"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Deep Squat Hold exercise how to",
+  "name": "Squat profondo tenuto"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Supine Hamstring Stretch exercise how to",
+  "name": "Stretch ischiocrurali supino"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Pigeon Stretch exercise how to",
+  "name": "Stretch del piccione"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Frog Stretch exercise how to",
+  "name": "Stretch a rana"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Wall Calf Stretch exercise how to",
+  "name": "Stretch polpacci al muro"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Wall Pec Stretch exercise how to",
+  "name": "Stretch pettorali al muro"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Shoulder CARs exercise how to",
+  "name": "Cerchi controllati della spalla"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Hip CARs exercise how to",
+  "name": "Cerchi controllati dell’anca"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Standing Quad Stretch exercise how to",
+  "name": "Stretch quadricipite in piedi"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Supine Spinal Twist exercise how to",
+  "name": "Torsione supina"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Kneeling Lat Stretch exercise how to",
+  "name": "Stretch dorsali in ginocchio"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Butterfly Stretch exercise how to",
+  "name": "Stretch a farfalla"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Lateral Neck Stretch exercise how to",
+  "name": "Stretch laterale del collo"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Wall Slides exercise how to",
+  "name": "Scivolamenti al muro"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Thoracic Extension Stretch exercise how to",
+  "name": "Estensione toracica a terra"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Bodyweight Jefferson Curl exercise how to",
+  "name": "Jefferson curl a corpo libero"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Incline Push-Up exercise how to",
+  "name": "Push-up inclinato"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Wall Handstand Push-Up exercise how to",
+  "name": "Handstand push-up al muro"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Chair Dip exercise how to",
+  "name": "Dip su sedia"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Dead Hang exercise how to",
+  "name": "Dead hang"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Negative Pull-Up exercise how to",
+  "name": "Trazioni negative"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Reverse Snow Angel exercise how to",
+  "name": "Reverse snow angel"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Bodyweight Reverse Lunge exercise how to",
+  "name": "Affondi a corpo libero"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Assisted Pistol Squat exercise how to",
+  "name": "Pistol squat assistito"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Tuck L-Sit exercise how to",
+  "name": "L-sit raccolto"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Superman Arch Hold exercise how to",
+  "name": "Arch hold"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Wall Sit exercise how to",
+  "name": "Wall sit"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Bodyweight Calf Raise exercise how to",
+  "name": "Calf raise a corpo libero"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Jumping Lunge exercise how to",
+  "name": "Affondi saltati"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Plank Jack exercise how to",
+  "name": "Plank jack"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Bear Crawl exercise how to",
+  "name": "Bear crawl"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Banded Squat exercise how to",
+  "name": "Squat con elastico"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Band Chest Press exercise how to",
+  "name": "Chest press elastico"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Band Pull-Apart exercise how to",
+  "name": "Pull-apart elastico"
  }
 ];

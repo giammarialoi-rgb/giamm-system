@@ -47,6 +47,7 @@ export const ANDROID_STATIC_ASSETS = [
   'cardio-library.js',
   'program-generator.js',
   'hyrox.js',
+  'disciplines.js',
   'hyrox-events.json',
   'apple-touch-icon.png',
   'icon-180.png',

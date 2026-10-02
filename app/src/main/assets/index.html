@@ -79,6 +79,7 @@
 <script src="cardio-library.js"></script>
 <script src="program-generator.js"></script>
 <script src="hyrox.js"></script>
+<script src="disciplines.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -46346,6 +46347,9 @@ function normalizeProgram(payload) {
           name_original: exercise.name_original || undefined,
           rotated_from: exercise.rotated_from || undefined,
           substituted_from: exercise.substituted_from || undefined,
+          // Written with its own cue (a race station, a Pilates exercise).
+          cue: exercise.cue ? true : undefined,
+          hyrox_station: exercise.hyrox_station || undefined,
           setRows: Array.from({ length: Math.max(0, canonicalSets.length - 1) }, (_, i) => i + 2)
         };
       });
@@ -46473,7 +46477,7 @@ function applyOperationsToProgram(program, operations) {
     }
     if (type === 'navigate' || type === 'set_view') {
       const view = changes.view || changes.tab || op.view;
-      const allowedViews = new Set(['home','training','stats','ai','programs','nutrition','supplements','therapy','exams','menu','athlete','settings','hyrox']);
+      const allowedViews = new Set(['home','training','stats','ai','programs','nutrition','supplements','therapy','exams','menu','athlete','settings','hyrox','disciplines']);
       if (view && allowedViews.has(String(view))) {
         currentView = String(view);
         appliedCount++;
@@ -50809,6 +50813,7 @@ function renderCurrentView() {
   else if (currentView === 'progress') renderProgressCenter(c);
   else if (currentView === 'knowledge') renderTrainingKnowledge(c);
   else if (currentView === 'hyrox') renderHyrox(c);
+  else if (currentView === 'disciplines') renderDisciplines(c);
   else renderHome(c);
   if (currentView !== 'nutrition') window.__nutritionLastView = currentView;
   applyChromeI18n();
@@ -56553,6 +56558,11 @@ function saveAthleteProfile() {
     navigate('hyrox');
     return;
   }
+  if (typeof disciplinesApi === 'function' && disciplinesApi() && !(store.coachViewingClient || store.coachAssigning) && (!DATA || !(DATA.weeks || []).length)) {
+    const goalText = String(profile.goal || '');
+    const wanted = /pilates/i.test(goalText) ? 'pilates' : (/mobilit|stretch/i.test(goalText) ? 'mobilita' : (/calisthen/i.test(goalText) ? 'calisthenics' : (/hiit|tabata/i.test(goalText) ? 'hiit' : '')));
+    if (wanted) { disciplineState().id = wanted; navigate('disciplines'); return; }
+  }
   loadProgramCatalogIndex().then(() => {
     const tips = suggestProgramsForProfile(profile).slice(0, 5);
     store.prefs.suggestedProgramIds = tips.map((p) => p.id);
@@ -56899,6 +56909,7 @@ function catalogGoalLabel(g) {
     ipertrofia: 'Ipertrofia', forza: 'Forza', glutei_lower: 'Glutei/Lower', dimagrimento: 'Dimagrimento',
     casa_corpo_libero: 'Casa', prep_gara: 'Prep gara', spalle: 'Spalle', petto_panca: 'Petto/Panca',
     core: 'Core', powerbuilding: 'Powerbuilding', recomp: 'Ricomposizione', cut: 'Dimagrimento', hyrox: 'HYROX',
+    pilates: 'Pilates', mobilita: 'Mobilità', calisthenics: 'Calisthenics', hiit: 'HIIT',
     glutei: 'Glutei', petto: 'Petto', dorso: 'Dorso', braccia: 'Braccia', gambe: 'Gambe'
   };
   return map[g] || fallback[g] || g;
@@ -56907,10 +56918,19 @@ function catalogSplitLabel(s) {
   const map = (typeof SPLIT_LABELS !== 'undefined' && SPLIT_LABELS) ? SPLIT_LABELS : {};
   const fallback = {
     fullbody: 'Full body', full_body: 'Full body', monofrequency: 'Monofrequenza', upper_lower: 'Upper/Lower',
-    push_pull: 'Push/Pull', body_part: 'Distrettuale', hyrox: 'HYROX'
+    push_pull: 'Push/Pull', body_part: 'Distrettuale', hyrox: 'HYROX',
+    pilates: 'Pilates', mobilita: 'Mobilità', calisthenics: 'Calisthenics', hiit: 'HIIT'
   };
   return map[s] || fallback[s] || s;
 }
+
+// The goals whose programs come whole from their own writer (a race
+// preparation, a home discipline) instead of the science grid.
+function catalogWhole(goal) {
+  if (goal === 'hyrox') return !!hyroxApi();
+  return typeof disciplinesApi === 'function' && !!disciplinesApi() && disciplinesApi().isDiscipline(goal);
+}
+function catalogWholeSource(src) { return src === 'hyrox_v1' || src === 'discipline_v1'; }
 
 function filterProgramCatalog(list) {
   const f = window.__catalogFilters || {};
@@ -56926,6 +56946,10 @@ function filterProgramCatalog(list) {
     // "hyrox" typed in the search is the goal; the place it is trained in
     // may be typed too ("hyrox casa", "hyrox corpo libero").
     if (/hyrox/i.test(f.q || '')) { merged.goal = 'hyrox'; merged.split = ''; merged.progression = ''; }
+    // The same for the home disciplines.
+    const typed = /pilates/i.test(f.q || '') ? 'pilates' : (/mobilit|stretch|allungament/i.test(f.q || '') ? 'mobilita' : (/calisthen/i.test(f.q || '') ? 'calisthenics' : (/hiit|tabata/i.test(f.q || '') ? 'hiit' : '')));
+    if (typed && !f.goal) merged.goal = typed;
+    if (catalogWhole(merged.goal)) { merged.split = ''; merged.progression = ''; merged.audience = ''; }
     return gen.search(merged, 150).rows;
   }
   let ranked = [];
@@ -57067,7 +57091,7 @@ async function activateCatalogProgramInner(programId) {
       notes: (meta && meta.preview && meta.preview.notes) || raw.notes || []
     });
     // A race preparation comes whole, every week already written.
-    const weeks = (entry.source !== 'hyrox_v1' && typeof expandScienceProgramWeeks === 'function' && (entry.source === 'science_v2' || entry.progression))
+    const weeks = (!catalogWholeSource(entry.source) && typeof expandScienceProgramWeeks === 'function' && (entry.source === 'science_v2' || entry.progression))
       ? expandScienceProgramWeeks(entry)
       : entry.weeks;
     const prog = normalizeProgram({
@@ -57078,14 +57102,15 @@ async function activateCatalogProgramInner(programId) {
       depersonalized: true,
       loads_stripped: true,
       catalog: entry.catalog || null,
-      author: entry.source === 'hyrox_v1' ? 'Generata da Nurvan' : 'Nurvan Science',
+      author: catalogWholeSource(entry.source) ? 'Generata da Nurvan' : 'Nurvan Science',
       notes: entry.notes || [],
-      split: entry.source === 'hyrox_v1' ? 'hyrox' : undefined,
-      goals: entry.source === 'hyrox_v1' ? ['hyrox'] : undefined,
-      purpose: entry.source === 'hyrox_v1' ? 'hyrox' : undefined,
+      split: catalogWholeSource(entry.source) ? raw.split : undefined,
+      goals: catalogWholeSource(entry.source) ? raw.goals : undefined,
+      purpose: catalogWholeSource(entry.source) ? raw.purpose : undefined,
+      discipline: entry.source === 'discipline_v1' ? raw.discipline : undefined,
       race: entry.source === 'hyrox_v1' ? raw.race : undefined,
-      source: entry.source === 'hyrox_v1' ? 'hyrox_v1' : undefined,
-      source_summary: entry.source === 'hyrox_v1' ? raw.source_summary : (entry.source === 'science_v2'
+      source: catalogWholeSource(entry.source) ? entry.source : undefined,
+      source_summary: catalogWholeSource(entry.source) ? raw.source_summary : (entry.source === 'science_v2'
         ? ('Evidence-based · ' + (entry.progression && entry.progression.model || '') + ' · volume/RIR/tempo periodizzati · ACSM 2026 / Schoenfeld')
         : 'Provenienza: archivio palestra · scheda depersonalizzata · senza kg personali')
     });
@@ -57171,7 +57196,7 @@ function updateCatalogFiltersFromUi() {
   const ranked = filterProgramCatalog(allCat);
   const filtered = ranked.slice(0, 150);
   // Switching to or from HYROX changes what the equipment filter offers.
-  if ((window.__catalogFilters.goal === 'hyrox') !== !!window.__catalogHyroxShown && currentView === 'programs') { window.__catalogOpen = true; render(); return; }
+  if ((catalogWhole(window.__catalogFilters.goal) ? window.__catalogFilters.goal : '') !== (window.__catalogHyroxShown || '') && currentView === 'programs') { window.__catalogFilters.equipment = ''; window.__catalogOpen = true; render(); return; }
   const totalCat = catalogTotalCount();
   if (countEl) countEl.textContent = filtered.length + (totalCat > filtered.length ? '+' : '') + ' / ' + totalCat.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'));
   if (!listEl) {
@@ -57196,7 +57221,7 @@ function catalogCardHtml(p) {
       <div style="min-width:0;flex:1;">
         <div style="font-size:13px;font-weight:800;color:#eee;">${esc(p.title || p.name || 'Scheda')}</div>
         <div style="font-size:10px;color:#777;margin-top:3px;">${esc(catalogAudienceLabel(aud))} · ${esc(catalogGoalLabel(p.purpose || (p.goals||[])[0] || ''))} · ${p.days_per_week} gg · ${p.duration_weeks} sett · ${esc(catalogSplitLabel(p.split))} · ${esc(p.equipment || '')} · ${esc(p.experience || '')}</div>
-        <div style="font-size:9px;color:var(--gold);margin-top:4px;opacity:0.85;">${p.source === 'hyrox_v1' ? 'HYROX · base, costruzione, picco e scarico · ' + p.exercises + ' esercizi nella prima settimana' : 'Science · ' + esc(progL) + ' · volume/RIR/tempo'}</div>
+        <div style="font-size:9px;color:var(--gold);margin-top:4px;opacity:0.85;">${p.source === 'hyrox_v1' ? 'HYROX · base, costruzione, picco e scarico · ' + p.exercises + ' esercizi nella prima settimana' : (p.source === 'discipline_v1' ? p.minutes + ' minuti a seduta · ' + p.exercises + ' esercizi nella prima settimana' : 'Science · ' + esc(progL) + ' · volume/RIR/tempo')}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;">
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;white-space:nowrap;" onclick="window.openCatalogPreview('${p.id}')">PREVIEW</button>
@@ -57242,7 +57267,7 @@ async function openCatalogPreview(programId) {
     const week1 = (raw.weeks && raw.weeks[0]) || {};
     const sessions = (week1.sessions || []).map((s) => ({
       name: s.name,
-      exercises: (s.exercises || []).map((e) => (e.name || '') + ' · ' + (e.sets_count || e.setCount || 3) + '×' + (e.reps_target || e.repsTarget || '8-10'))
+      exercises: (s.exercises || []).map((e) => (e.name || '') + ' · ' + ((e.unit === 'circuit' && e.circuit) ? (e.circuit.items.map((it) => it.name).join(', ') + ' · ' + e.circuit.rounds + ' round') : ((e.sets_count || e.setCount || 3) + '×' + (e.reps_target || e.repsTarget || '8-10'))))
     }));
     const aud = meta.audience || (meta.sex_focus === 'female_glute' ? 'female' : (meta.sex_focus === 'male_upper' ? 'male' : 'unisex'));
     const progL = (typeof PROGRESSION_LABELS !== 'undefined' && PROGRESSION_LABELS[meta.progression_model]) ? PROGRESSION_LABELS[meta.progression_model] : (meta.progression_model || '');
@@ -57259,7 +57284,7 @@ async function openCatalogPreview(programId) {
             </ul>
           </div>`).join('') : '<div style="color:#666;font-size:12px;">Dettaglio sedute non disponibile.</div>'}
         <div style="font-size:12px;color:var(--gold);font-weight:800;margin:12px 0 6px;">PROGRESSIONE</div>
-        <p style="margin:0 0 10px;font-size:12px;color:#ccc;">${meta.source === 'hyrox_v1' ? 'Quattro fasi fino alla gara: base, costruzione, picco con le simulazioni e scarico. Le stazioni crescono da un quarto della distanza a quella di gara.' : esc(progL) + ': volume, RIR, tempo e riposi cambiano settimana per settimana; deload ogni 4ª.'}</p>
+        <p style="margin:0 0 10px;font-size:12px;color:#ccc;">${meta.source === 'hyrox_v1' ? 'Quattro fasi fino alla gara: base, costruzione, picco con le simulazioni e scarico. Le stazioni crescono da un quarto della distanza a quella di gara.' : meta.source === 'discipline_v1' ? 'Prima metà di base, poi la progressione: tenute più lunghe, più ripetizioni o la variante più difficile. Nei programmi da 8 settimane in su l’ultima è di scarico.' : esc(progL) + ': volume, RIR, tempo e riposi cambiano settimana per settimana; deload ogni 4ª.'}</p>
         ${notes.length ? `<div style="font-size:11px;color:#888;">${notes.map((n) => `<div style="margin-bottom:4px;">• ${esc(n)}</div>`).join('')}</div>` : ''}
       `;
     }
@@ -57302,13 +57327,15 @@ function renderPrograms(c){
   const suggestedIds = Array.from(new Set(store.prefs.suggestedProgramIds || []));
   const suggested = suggestedIds.map((id) => catalogRowById(id)).filter(Boolean).slice(0, 6);
   const splits = ['fullbody', 'monofrequency', 'upper_lower'];
-  const goals = ['ipertrofia', 'forza', 'powerbuilding', 'recomp', 'cut', 'glutei', 'petto', 'dorso', 'spalle', 'braccia', 'gambe'].concat(hyroxApi() ? ['hyrox'] : []);
+  const goals = ['ipertrofia', 'forza', 'powerbuilding', 'recomp', 'cut', 'glutei', 'petto', 'dorso', 'spalle', 'braccia', 'gambe'].concat(hyroxApi() ? ['hyrox'] : []).concat(disciplinesApi() ? disciplinesApi().DISCIPLINES.map((x) => x.id) : []);
   const hyroxCat = f.goal === 'hyrox' && !!hyroxApi();
-  window.__catalogHyroxShown = hyroxCat;
+  const disciplineCat = (f.goal !== 'hyrox' && catalogWhole(f.goal)) ? disciplinesApi().discipline(f.goal) : null;
+  window.__catalogHyroxShown = catalogWhole(f.goal) ? f.goal : '';
   const catalogOpen = !!window.__catalogOpen;
   window.__catalogOpen = false;
   const eqOptions = hyroxCat
     ? hyroxApi().PROFILES.map((pr) => ({ id: pr.id, label: pr.label }))
+    : disciplineCat ? disciplineCat.kits.map((k) => ({ id: k.id, label: k.label }))
     : ['palestra', 'casa', 'minimal', 'kettlebell', 'bodyweight'].map((x) => ({ id: x, label: x }));
   const audiences = [
     { id: 'female', label: 'Donna / Glutei' },
@@ -57428,6 +57455,22 @@ function renderPrograms(c){
         ${hyroxApi().PROFILES.map((pr) => `<button class="btn btn-outline" style="text-align:left;padding:10px 12px;" onclick="showHyroxCatalog('${pr.id}')">
           <div style="font-size:12px;font-weight:800;color:#fff;">${esc(pr.label)}</div>
           <div style="font-size:10px;color:#888;margin-top:2px;">${esc(pr.note)} · ${hyroxApi().catalogTotal({ equipment: pr.id })} schede</div></button>`).join('')}
+      </div>
+    </div>
+    `, false) : ''}
+
+    ${disciplinesApi() ? homeCollapsibleCard('ALLENARSI A CASA', `
+    <div class="card" id="program-create-home" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
+      <p style="font-size:11px;color:#888;margin:0 0 10px;line-height:1.5;">Pilates sul tappetino, mobilità e stretching, calisthenics, HIIT: senza palestra. Ogni scheda si può seguire anche come lezione a tempo.</p>
+      <div style="display:grid;gap:8px;">
+        ${disciplinesApi().DISCIPLINES.map((x) => `<div style="padding:10px 12px;background:#111;border:1px solid #292929;border-radius:8px;">
+          <div style="font-size:12px;font-weight:800;color:#fff;">${esc(x.label)}</div>
+          <div style="font-size:10px;color:#888;margin:2px 0 8px;line-height:1.4;">${esc(x.note)}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-primary" style="flex:1;min-width:90px;font-size:10px;padding:6px 8px;" onclick="openDisciplineGenerator('${x.id}')">GENERA</button>
+            <button class="btn btn-outline" style="flex:1;min-width:90px;font-size:10px;padding:6px 8px;" onclick="openDisciplineBuilder('${x.id}')">A MANO</button>
+            <button class="btn btn-outline" style="flex:1;min-width:90px;font-size:10px;padding:6px 8px;" onclick="showDisciplineCatalog('${x.id}')">${disciplinesApi().catalogTotal({ goal: x.id })} PRONTE</button>
+          </div></div>`).join('')}
       </div>
     </div>
     `, false) : ''}
@@ -59554,6 +59597,421 @@ window.hyroxEstimate = hyroxEstimate;
 window.hyroxRequestCoach = hyroxRequestCoach;
 window.hyroxSetProfile = hyroxSetProfile;
 
+/*
+ * Training at home: Pilates on the mat, mobility and stretching,
+ * calisthenics, HIIT (web/disciplines.js writes the programs). One screen
+ * to choose the discipline and answer its few questions; the program goes
+ * through the same review as every generated program. The same questions
+ * are asked by the generator's sheet and by the builder.
+ */
+function disciplinesApi() { return (typeof window !== 'undefined' && window.NurvanDisciplines) || null; }
+function disciplineState() {
+  if (!store.disciplines || typeof store.disciplines !== 'object') store.disciplines = {};
+  const s = store.disciplines;
+  const api = disciplinesApi();
+  if (!api) return s;
+  if (!api.discipline(s.id)) s.id = api.DISCIPLINES[0].id;
+  api.DISCIPLINES.forEach(function (d) {
+    if (!s[d.id] || typeof s[d.id] !== 'object') s[d.id] = {};
+    const a = s[d.id];
+    if (d.days.indexOf(Number(a.days)) === -1) a.days = d.days[Math.min(1, d.days.length - 1)];
+    if (!(Number(a.weeks) > 0)) a.weeks = 8;
+    if (api.MINUTES.indexOf(Number(a.minutes)) === -1) a.minutes = 30;
+    if (!api.LEVELS.some(function (l) { return l.id === a.level; })) a.level = 'principiante';
+    if (!d.kits.some(function (k) { return k.id === a.kit; })) a.kit = d.kits[0].id;
+  });
+  return s;
+}
+function disciplineInput(id) {
+  const s = disciplineState();
+  const did = id || s.id;
+  const a = s[did] || {};
+  return { discipline: did, days: Number(a.days), weeks: Number(a.weeks), minutes: Number(a.minutes), level: a.level, kit: a.kit };
+}
+function disciplineRefresh() {
+  try { persist(); } catch (_) {}
+  if (document.getElementById('program-generator-sheet') && typeof renderProgramGenerator === 'function') { renderProgramGenerator(); return; }
+  if (document.getElementById('program-builder-sheet') && typeof renderProgramBuilder === 'function') { renderProgramBuilder(); return; }
+  render();
+}
+function disciplineChoose(id) {
+  const s = disciplineState();
+  if (disciplinesApi().discipline(id)) s.id = id;
+  disciplineRefresh();
+}
+function disciplineSet(field, value) {
+  const s = disciplineState();
+  const a = s[s.id];
+  a[field] = (field === 'days' || field === 'weeks' || field === 'minutes') ? Number(value) : value;
+  disciplineRefresh();
+}
+// The few questions of a discipline: the same on its screen, in the
+// generator and in the builder.
+function disciplineFieldsHtml() {
+  const api = disciplinesApi();
+  const s = disciplineState();
+  const d = api.discipline(s.id);
+  const a = s[d.id];
+  const st = 'width:100%;margin-top:3px;background:#141414;color:#fff;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;';
+  const lab = function (text, inner) { return '<label style="display:block;font-size:10px;color:#aaa;font-weight:800;margin-top:10px;">' + text + inner + '</label>'; };
+  const sel = function (field, items, cur) {
+    return '<select style="' + st + '" onchange="disciplineSet(\'' + field + '\', this.value)">' + items.map(function (it) {
+      return '<option value="' + esc(it.id) + '"' + (String(it.id) === String(cur) ? ' selected' : '') + '>' + esc(it.label) + '</option>';
+    }).join('') + '</select>';
+  };
+  const kitTitle = d.id === 'mobilita' ? 'Zona' : 'Attrezzi';
+  return lab('Giorni a settimana', sel('days', d.days.map(function (n) { return { id: n, label: n + ' giorni' }; }), a.days)) +
+    lab('Minuti per seduta', sel('minutes', api.MINUTES.map(function (n) { return { id: n, label: n + ' minuti' }; }), a.minutes)) +
+    lab('Durata', sel('weeks', api.WEEKS.map(function (n) { return { id: n, label: n + ' settimane' }; }), a.weeks)) +
+    lab('Livello', sel('level', api.LEVELS, a.level)) +
+    (d.kits.length > 1 ? lab(kitTitle, sel('kit', d.kits, a.kit)) : '') +
+    '<div style="margin-top:8px;font-size:11px;color:#888;line-height:1.5;">Serve: ' + esc(d.needs) + '</div>';
+}
+function disciplineEvidenceHtml(id, limit) {
+  const list = ((disciplinesApi().EVIDENCE || {})[id] || []).slice(0, limit || 99);
+  return list.map(function (e) {
+    return '<div style="border-top:1px solid #222;padding:10px 0;">' +
+      '<div style="font-size:12px;color:#eee;line-height:1.5;">' + esc(e.fact) + '</div>' +
+      '<div style="font-size:12px;color:var(--gold);line-height:1.5;margin-top:4px;">' + esc(e.plan) + '</div>' +
+      '<a href="' + esc(e.url) + '" target="_blank" rel="noopener" style="display:block;font-size:10px;color:#888;margin-top:4px;text-decoration:underline;">' + esc(e.source) + '</a></div>';
+  }).join('');
+}
+// A week as a short list: session, exercises, how much of each.
+function disciplinePreviewHtml(prog) {
+  return prog.weeks[0].sessions.map(function (sess) {
+    return '<div style="margin-bottom:8px;">' +
+      '<div style="font-size:11px;font-weight:800;color:#fff;margin-bottom:4px;">' + esc(sess.name) + '</div>' +
+      sess.exercises.map(function (e) {
+        const much = (e.unit === 'circuit' && e.circuit)
+          ? (e.circuit.rounds + ' round · ' + e.circuit.work + '"/' + e.circuit.rest + '"')
+          : ((e.sets || []).length + ' × ' + e.repsTarget);
+        return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;color:#bbb;padding:2px 0;">' +
+          '<span style="min-width:0;">' + esc(e.name) + '</span>' +
+          '<span style="flex:0 0 auto;color:#888;">' + esc(much) + '</span></div>';
+      }).join('') + '</div>';
+  }).join('');
+}
+// An athlete followed by a coach asks for it; the coach reads what was chosen.
+function disciplineRequestCoach() {
+  if (typeof requestProgramFromCoach !== 'function') return;
+  const prog = disciplinesApi().plan(disciplineInput());
+  requestProgramFromCoach({ note: prog.source_summary });
+}
+async function disciplineCreateProgram() {
+  const api = disciplinesApi();
+  if (!api) { if (typeof showToast === 'function') showToast('Discipline non caricate', 'error'); return; }
+  if (hyroxMustAsk()) { disciplineRequestCoach(); return; }
+  try {
+    let prog = null;
+    await withBusy(function () { prog = normalizeProgram(api.plan(disciplineInput())); return Promise.resolve(); }, 'Scrivo il programma…', { immediate: true, maxMs: 60000 });
+    openGeneratedReview(prog, hyroxForClient() ? 'assign' : 'active', null);
+  } catch (e) {
+    console.error('[DISCIPLINES]', e);
+    if (typeof showToast === 'function') showToast('Generazione non riuscita: ' + (e && e.message || e), 'error');
+  }
+}
+// The ready-made programs of a discipline, in the database, already filtered.
+function showDisciplineCatalog(id) {
+  window.__catalogFilters = { q: '', days: '', split: '', goal: id, equipment: '', experience: '', duration: '', progression: '', audience: '' };
+  window.__catalogOpen = true;
+  if (currentView !== 'programs') { navigate('programs'); } else render();
+  setTimeout(function () {
+    const el = document.getElementById('catalog-list');
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 200);
+}
+function renderDisciplines(c) {
+  const api = disciplinesApi();
+  if (!api) { c.innerHTML = '<div class="card" style="padding:16px;">Discipline non caricate.</div>'; return; }
+  const s = disciplineState();
+  const d = api.discipline(s.id);
+  const mustAsk = hyroxMustAsk();
+  const client = hyroxForClient();
+  const card = function (title, body, id) {
+    return '<div class="card" style="padding:16px;margin-bottom:12px;"' + (id ? ' id="' + id + '"' : '') + '><div style="font-size:10px;font-weight:900;color:var(--gold);letter-spacing:1px;margin-bottom:8px;">' + title + '</div>' + body + '</div>';
+  };
+  const chooser = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px;">' + api.DISCIPLINES.map(function (x) {
+    const on = x.id === d.id;
+    return '<button type="button" class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" style="min-height:74px;text-align:left;padding:10px 12px;" onclick="disciplineChoose(\'' + x.id + '\')">' +
+      '<div style="font-size:12px;font-weight:900;">' + esc(x.label) + '</div>' +
+      '<div style="font-size:10px;margin-top:3px;opacity:.75;line-height:1.35;font-weight:400;">' + esc(x.note) + '</div></button>';
+  }).join('') + '</div>';
+  let preview = '';
+  try {
+    const prog = api.plan(disciplineInput());
+    preview = '<div style="font-size:11px;color:#aaa;line-height:1.5;margin-bottom:8px;">' + esc(prog.source_summary) + '</div>' + disciplinePreviewHtml(prog);
+  } catch (e) { preview = '<div style="font-size:11px;color:#c66;">Anteprima non riuscita.</div>'; }
+  const createHtml = disciplineFieldsHtml() +
+    (mustAsk
+      ? '<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;min-height:48px;font-weight:900;" onclick="disciplineRequestCoach()">CHIEDI AL COACH QUESTO PROGRAMMA</button>'
+      : '<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;min-height:48px;font-weight:900;" onclick="disciplineCreateProgram()">VEDI TUTTO IL PROGRAMMA</button>');
+  const total = api.catalogTotal({ goal: d.id });
+  const exercises = api.exercisesOf(d.id);
+  const levelName = ['Base', 'Intermedio', 'Avanzato'];
+  c.innerHTML = '<div style="max-width:720px;margin:0 auto;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:1px;">ALLENARSI A CASA</div>' +
+    '<div style="font-size:11px;color:#888;">Pilates, mobilità, calisthenics e HIIT, senza palestra</div></div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="navigate(\'home\')">CHIUDI</button></div>' +
+    (client ? '<div class="card" style="padding:12px 16px;margin-bottom:12px;border:1px solid var(--gold);"><div style="font-size:12px;color:#fff;font-weight:800;">Programma per ' + esc(client.name || 'il cliente') + '</div><div style="font-size:11px;color:#aaa;margin-top:2px;">Diventa la bozza del cliente: la rivedi e la invii.</div></div>' : '') +
+    chooser +
+    card(mustAsk ? 'CHIEDI IL PROGRAMMA' : 'CREA IL PROGRAMMA', createHtml, 'discipline-create') +
+    card('LA PRIMA SETTIMANA', preview) +
+    (mustAsk ? '' : card('PROGRAMMI PRONTI', '<div style="font-size:11px;color:#888;margin-bottom:8px;">' + total + ' schede di ' + esc(d.label) + ' già scritte, per giorni, durata, minuti e livello.</div>' +
+      '<button type="button" class="btn btn-outline" style="width:100%;" onclick="showDisciplineCatalog(\'' + d.id + '\')">APRI IL DATABASE</button>')) +
+    (((api.EVIDENCE || {})[d.id] || []).length ? card('PERCHÉ È FATTO COSÌ', '<div style="font-size:11px;color:#888;margin-bottom:2px;line-height:1.5;">Cosa dicono gli studi, e cosa fa il programma di conseguenza. Con dolore o una condizione medica, senti il medico prima di iniziare.</div>' + disciplineEvidenceHtml(d.id)) : '') +
+    card(d.id === 'hiit' ? 'I FORMATI' : 'GLI ESERCIZI', exercises.map(function (e) {
+      return '<details style="border-top:1px solid #222;padding:10px 0;"><summary style="list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:center;">' +
+        '<span style="font-size:13px;font-weight:800;color:#fff;">' + esc(e.name) + '</span>' +
+        '<span style="font-size:11px;color:#aaa;white-space:nowrap;">' + esc(e.amount) + (d.id === 'pilates' || d.id === 'calisthenics' ? ' · ' + levelName[e.level] : '') + '</span></summary>' +
+        '<p style="font-size:12px;color:#ccc;line-height:1.5;margin:8px 0 0;">' + esc(e.cue) + '</p></details>';
+    }).join('')) +
+    '</div><div style="height:80px;"></div>';
+}
+window.renderDisciplines = renderDisciplines;
+window.disciplineChoose = disciplineChoose;
+window.disciplineSet = disciplineSet;
+window.disciplineCreateProgram = disciplineCreateProgram;
+window.disciplineRequestCoach = disciplineRequestCoach;
+window.showDisciplineCatalog = showDisciplineCatalog;
+
+/*
+ * A session followed as a timed lesson.
+ *
+ * A Pilates sequence or twenty minutes of mobility are not trained by
+ * ticking sets on a list with the phone in one hand: they are followed.
+ * So any session can be run as a lesson - one exercise at a time on the
+ * screen, with what to do and how, the clock for what is held for time, a
+ * button for what is counted, the pause before the next one - and what was
+ * done is written in the log exactly as if the sets had been ticked.
+ */
+function lessonSteps(week, day) {
+  const list = sessionExercisesFor(week, day) || [];
+  const steps = [];
+  list.forEach(function (row, exIdx) {
+    if (!row) return;
+    const exKey = 'w' + week + '_d' + day + '_e' + exIdx;
+    if (store.skips && store.skips[exKey]) return;
+    const name = (store.subs && store.subs[exKey]) || row.name || row.exercise || '';
+    const unit = exerciseLogUnit(row, name);
+    if (unit === 'circuit') {
+      const c = circuitOf(row);
+      if (!c || store.data[exKey + '_s1_done']) return;
+      for (let rd = 1; rd <= c.rounds; rd++) {
+        c.items.forEach(function (it, ii) {
+          const lastOfRound = ii === c.items.length - 1;
+          const last = lastOfRound && rd === c.rounds;
+          steps.push({
+            kind: 'time', exIdx: exIdx, setNum: 1, name: it.name, seconds: c.work,
+            rest: last ? 30 : (c.rest + (lastOfRound ? c.roundRest : 0)),
+            label: name + ' · round ' + rd + ' / ' + c.rounds, closes: last, circuit: true
+          });
+        });
+      }
+      return;
+    }
+    const n = getExerciseSetCount(exIdx);
+    const rest = parseRestSeconds(row.rest, 30);
+    const note = String(row.notes || '');
+    const side = /^Per lato/.test(note);
+    for (let sNum = 1; sNum <= n; sNum++) {
+      if (store.data[exKey + '_s' + sNum + '_done']) continue;
+      const setObj = (Array.isArray(row.sets) && row.sets[sNum - 1]) || {};
+      const label = n > 1 ? ('Serie ' + sNum + ' di ' + n) : '';
+      if (unit === 'time' || unit === 'cardio') {
+        const seconds = unit === 'cardio'
+          ? Math.max(60, Math.round((Number(setObj.minutes) || parseInt(row.repsTarget, 10) || 5) * 60))
+          : Math.max(5, Math.round(Number(setObj.seconds) || parseInt(setObj.reps || row.repsTarget, 10) || 30));
+        if (side && unit === 'time') {
+          steps.push({ kind: 'time', exIdx: exIdx, setNum: sNum, name: name, seconds: seconds, rest: 5, label: label, note: note, sideText: 'Primo lato', closes: false });
+          steps.push({ kind: 'time', exIdx: exIdx, setNum: sNum, name: name, seconds: seconds, rest: rest, label: label, note: note, sideText: 'Secondo lato', closes: true });
+        } else {
+          steps.push({ kind: 'time', exIdx: exIdx, setNum: sNum, name: name, seconds: seconds, rest: rest, label: label, note: note, closes: true });
+        }
+      } else {
+        steps.push({ kind: 'reps', exIdx: exIdx, setNum: sNum, name: name, target: String(setObj.reps || row.repsTarget || ''), rest: rest, label: label, note: note, closes: true });
+      }
+    }
+  });
+  return steps;
+}
+// A lesson is worth offering when the session is made to be followed: a
+// program of a home discipline, or a session mostly by time.
+function lessonWorthOffering() {
+  const list = sessionExercisesFor(currentWeek, currentDay) || [];
+  if (!list.length) return false;
+  if (DATA && DATA.source === 'discipline_v1') return true;
+  if (list.some(function (row) { return row && row.cue && !row.hyrox_station; })) return true;
+  let timed = 0;
+  list.forEach(function (row) {
+    const unit = exerciseLogUnit(row, (row && (row.name || row.exercise)) || '');
+    if (unit === 'time' || unit === 'circuit') timed++;
+  });
+  return timed * 2 >= list.length;
+}
+function lessonButtonHtml() {
+  if (!lessonWorthOffering()) return '';
+  const left = lessonSteps(currentWeek, currentDay).length;
+  if (!left) return '';
+  return '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:12px;min-height:48px;font-weight:900;" onclick="openLesson()">SEGUI COME LEZIONE A TEMPO</button>';
+}
+function lessonBeep(high) {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ctx = window.__lessonAudio || (window.__lessonAudio = new AC());
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.value = high ? 880 : 520;
+    gain.gain.value = 0.08;
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + (high ? 0.35 : 0.12));
+  } catch (_) {}
+}
+function closeLesson() {
+  const st = window.__lesson;
+  if (st && st.iv) clearInterval(st.iv);
+  window.__lesson = null;
+  const el = document.getElementById('lesson-player');
+  if (el) el.remove();
+  if (typeof render === 'function') render();
+}
+function openLesson() {
+  const steps = lessonSteps(currentWeek, currentDay);
+  if (!steps.length) { if (typeof showToast === 'function') showToast('Questa seduta è già completata.', 'ok'); return; }
+  if (window.__lesson && window.__lesson.iv) clearInterval(window.__lesson.iv);
+  try { markSessionClockIfNeeded(); } catch (_) {}
+  window.__lesson = { steps: steps, i: 0, phase: 'prep', endsAt: Date.now() + 8000, paused: false, leftMs: 0, startedAt: Date.now(), week: currentWeek, day: currentDay, iv: null, lastBeep: -1 };
+  let sheet = document.getElementById('lesson-player');
+  if (!sheet) {
+    sheet = document.createElement('div');
+    sheet.id = 'lesson-player';
+    sheet.className = 'nurvan-sheet is-open';
+    sheet.style.zIndex = '10300';
+    document.body.appendChild(sheet);
+  }
+  paintLesson();
+  window.__lesson.iv = setInterval(tickLesson, 200);
+}
+// What was done goes in the log as if the set had been ticked by hand.
+function lessonCloseStep(st, step) {
+  if (!step.closes) return;
+  const k = 'w' + st.week + '_d' + st.day + '_e' + step.exIdx + '_s' + step.setNum;
+  store.data[k + '_done'] = true;
+  store.data[k + '_done_at'] = Date.now();
+  if (step.circuit) store.data[k + '_min'] = Math.max(1, Math.round((Date.now() - st.startedAt) / 60000));
+  else if (step.kind === 'time') store.data[k + '_sec'] = step.seconds;
+  else if (step.kind === 'reps' && (store.data[k + '_reps'] == null || store.data[k + '_reps'] === '')) {
+    const n = parseInt(step.target, 10);
+    if (n > 0) store.data[k + '_reps'] = n;
+  }
+  try { persist(); } catch (_) {}
+}
+function lessonAdvance(st) {
+  const step = st.steps[st.i];
+  if (st.phase === 'prep') { st.phase = 'work'; st.endsAt = Date.now() + (step.seconds || 0) * 1000; st.workStart = Date.now(); lessonBeep(true); return; }
+  if (st.phase === 'work') {
+    lessonCloseStep(st, step);
+    if (st.i >= st.steps.length - 1) { finishLesson(); return; }
+    try { if (typeof NativeConfig !== 'undefined' && NativeConfig.vibrate) NativeConfig.vibrate(300); } catch (_) {}
+    lessonBeep(false);
+    if (step.rest > 0) { st.phase = 'rest'; st.endsAt = Date.now() + step.rest * 1000; return; }
+  }
+  // After the rest (or with none): the next exercise.
+  st.i += 1;
+  st.phase = 'work';
+  st.endsAt = Date.now() + (st.steps[st.i].seconds || 0) * 1000;
+  st.workStart = Date.now();
+  try { if (typeof NativeConfig !== 'undefined' && NativeConfig.vibrate) NativeConfig.vibrate(500); } catch (_) {}
+  lessonBeep(true);
+}
+function tickLesson() {
+  const st = window.__lesson;
+  if (!st || st.paused) return;
+  const step = st.steps[st.i];
+  const counting = st.phase !== 'work' || step.kind === 'time';
+  if (counting) {
+    const left = Math.ceil((st.endsAt - Date.now()) / 1000);
+    if (left <= 3 && left >= 1 && st.lastBeep !== st.i + ':' + st.phase + ':' + left) { st.lastBeep = st.i + ':' + st.phase + ':' + left; lessonBeep(false); }
+    if (Date.now() >= st.endsAt) lessonAdvance(st);
+  }
+  if (window.__lesson) paintLesson();
+}
+function toggleLessonPause() {
+  const st = window.__lesson;
+  if (!st) return;
+  if (st.paused) { st.endsAt = Date.now() + st.leftMs; st.paused = false; }
+  else { st.leftMs = Math.max(0, st.endsAt - Date.now()); st.paused = true; }
+  paintLesson();
+}
+// "Fatto" on a counted exercise, "Salta" on anything: on to the next phase.
+function lessonNext() {
+  const st = window.__lesson;
+  if (!st) return;
+  st.paused = false;
+  lessonAdvance(st);
+  if (window.__lesson) paintLesson();
+}
+function lessonBack() {
+  const st = window.__lesson;
+  if (!st) return;
+  st.paused = false;
+  if (st.phase === 'work' && st.i > 0) st.i -= 1;
+  st.phase = 'work';
+  st.endsAt = Date.now() + (st.steps[st.i].seconds || 0) * 1000;
+  st.workStart = Date.now();
+  paintLesson();
+}
+function finishLesson() {
+  const st = window.__lesson;
+  if (!st) return;
+  const minutes = Math.max(1, Math.round((Date.now() - st.startedAt) / 60000));
+  try { if (typeof NativeConfig !== 'undefined' && NativeConfig.vibrate) NativeConfig.vibrate(900); } catch (_) {}
+  lessonBeep(true);
+  closeLesson();
+  if (typeof showToast === 'function') showToast('Lezione completata · ' + minutes + ' min', 'ok');
+}
+function paintLesson() {
+  const st = window.__lesson;
+  const el = document.getElementById('lesson-player');
+  if (!st || !el) return;
+  const step = st.steps[st.i];
+  const next = st.steps[st.i + 1] || null;
+  const left = st.paused ? Math.ceil((st.leftMs || 0) / 1000) : Math.max(0, Math.ceil((st.endsAt - Date.now()) / 1000));
+  const working = st.phase === 'work';
+  const colour = working ? 'var(--gold)' : '#4caf50';
+  const label = st.phase === 'prep' ? 'PREPARATI' : (working ? (step.kind === 'time' ? 'TIENI' : 'ESEGUI') : 'RECUPERO');
+  const shown = working ? step : (st.phase === 'prep' ? step : (next || step));
+  const big = working
+    ? (step.kind === 'time' ? String(left) : esc(step.target))
+    : String(left);
+  const sub = working && step.kind === 'reps' ? 'ripetizioni' : 'secondi';
+  el.innerHTML =
+    '<div class="nurvan-sheet-panel">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:11px;color:#888;font-weight:800;">' + (st.i + 1) + ' / ' + st.steps.length + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeLesson()">ESCI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">' +
+    '<div style="font-size:11px;font-weight:900;letter-spacing:2px;color:' + colour + ';margin-bottom:6px;">' + label + '</div>' +
+    '<div style="font-size:64px;font-weight:900;color:' + colour + ';line-height:1;">' + big + '</div>' +
+    '<div style="font-size:10px;color:#666;margin-top:4px;">' + sub + '</div>' +
+    '<div style="font-size:22px;font-weight:900;color:#fff;margin:14px 0 4px;">' + (working || st.phase === 'prep' ? '' : '<span style="font-size:11px;color:#888;display:block;font-weight:800;">POI</span>') + esc(shown.name) + '</div>' +
+    ((shown.sideText || shown.label) ? '<div style="font-size:11px;color:var(--gold);font-weight:800;">' + esc([shown.sideText, shown.label].filter(Boolean).join(' · ')) + '</div>' : '') +
+    (shown.note ? '<div style="font-size:12px;color:#bbb;line-height:1.5;margin-top:10px;max-width:420px;">' + esc(shown.note) + '</div>' : '') +
+    '</div>' +
+    '<div class="nurvan-sheet-foot">' +
+    '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:12px;padding:12px;" onclick="lessonBack()">◀</button>' +
+    '<button type="button" class="btn btn-outline" style="flex:1;font-size:12px;padding:12px;" onclick="toggleLessonPause()">' + (st.paused ? 'RIPRENDI' : 'PAUSA') + '</button>' +
+    '<button type="button" class="btn ' + (working && step.kind === 'reps' ? 'btn-primary' : 'btn-outline') + '" style="flex:1;font-size:12px;padding:12px;" onclick="lessonNext()">' + (working && step.kind === 'reps' ? 'FATTO' : 'SALTA') + '</button>' +
+    '</div></div>';
+}
+window.openLesson = openLesson;
+window.closeLesson = closeLesson;
+window.toggleLessonPause = toggleLessonPause;
+window.lessonNext = lessonNext;
+window.lessonBack = lessonBack;
+
 function homeDomainModulesHtml() {
   const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
   return homeCollapsibleCard(t('systemModules'),
@@ -59576,6 +60034,9 @@ function homeDomainModulesHtml() {
       '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'hyrox\')">' +
         '<span style="font-size:18px;">🏁</span>' +
         '<span style="font-size:11px;font-weight:800;">HYROX</span></button>' +
+      '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'disciplines\')">' +
+        '<span style="font-size:18px;">🧘</span>' +
+        '<span style="font-size:11px;font-weight:800;">A casa</span></button>' +
       (athlete
         ? '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="startDomainImport(\'nutrition\')"><span style="font-size:18px;">📥</span><span style="font-size:11px;font-weight:800;">Importa file</span></button>'
         : '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'import\')"><span style="font-size:18px;">📥</span><span style="font-size:11px;font-weight:800;">' + t('importProgram') + '</span></button>') +
@@ -60944,6 +61405,7 @@ function renderTraining(c){
     let h = ssttCard || percentMaxesCardHtml();
     h += `<div style="margin-bottom:10px;">${domainTitleTapHtml('WORKOUT', t('training') || 'Allenamento')}</div>`;
     h += workoutSessionTimerHtml();
+    try { h += lessonButtonHtml(); } catch (_) {}
     try { h += sessionSummaryCardHtml(); } catch (_) {}
     try { h += preWorkoutIntelHtml(); } catch (_) {}
     try { h += warmupSessionCardHtml(currentWeek, currentDay, exerciseList); } catch (warmupErr) { console.warn('[WARMUP_CARD]', warmupErr); }
@@ -61045,6 +61507,11 @@ function renderTraining(c){
       } else if(!skipReason) {
         // What this gym can actually load, said under the exercise it applies
         // to: a prescription above it would be fiction.
+        // How to do it, when the program was written with its cues (a race
+        // station, a Pilates exercise, a stretch).
+        if (row.notes && (row.cue || row.hyrox_station || (DATA && /^(hyrox_v1|discipline_v1)$/.test(String(DATA.source || ''))))) {
+          h += `<div style="font-size:11px;color:#aaa;line-height:1.45;margin-bottom:8px;">${esc(String(row.notes).slice(0, 260))}</div>`;
+        }
         const exCeiling = (typeof programLoadCeiling === 'function') ? programLoadCeiling(curEx) : null;
         if (exCeiling) {
           h += `<div style="font-size:10px;color:#e0b040;margin-bottom:8px;">${esc((DATA.space && DATA.space.name) || 'Qui')}: ${esc(String(exCeiling.label).toLowerCase())} ${wFmt(exCeiling.kg)}</div>`;
@@ -73670,6 +74137,62 @@ function builderHyroxStartHtml(d, inputStyle) {
     '</details>';
 }
 
+// The same for a home discipline: a week of Pilates, mobility, calisthenics
+// or HIIT loaded into the builder, to be changed by hand.
+function builderDisciplineStartHtml(d, inputStyle) {
+  var ds = (typeof disciplinesApi === 'function') ? disciplinesApi() : null;
+  if (!ds) return '';
+  var s = disciplineState();
+  var open = !!d.discipline;
+  return '<details class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(212,175,55,0.35);"' + (open ? ' open' : '') + '>' +
+    '<summary style="list-style:none;cursor:pointer;font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">PILATES, MOBILITÀ, CALISTHENICS, HIIT ▾</summary>' +
+    '<div style="font-size:11px;color:#888;line-height:1.45;margin:8px 0 2px;">Riempie il costruttore con una settimana della disciplina scelta. Poi la cambi come vuoi.</div>' +
+    '<label style="display:block;font-size:10px;color:#aaa;font-weight:800;margin-top:10px;">Disciplina<select onchange="disciplineChoose(this.value)" style="width:100%;margin-top:3px;background:#141414;color:#fff;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;">' +
+    ds.DISCIPLINES.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === s.id ? ' selected' : '') + '>' + esc(x.label) + '</option>'; }).join('') + '</select></label>' +
+    disciplineFieldsHtml() +
+    '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;padding:10px;margin-top:12px;" onclick="startDisciplineDraft()">' +
+    (programDraftExerciseCount(d) ? 'SOSTITUISCI CON QUESTA SETTIMANA' : 'CARICA QUESTA SETTIMANA') + '</button>' +
+    '</details>';
+}
+function startDisciplineDraft() {
+  var ds = disciplinesApi();
+  if (!ds) return;
+  var d = programDraft();
+  if (programDraftExerciseCount(d) && !confirm('Nel costruttore c’è già una bozza: la sostituisco con questa settimana?')) return;
+  var input = disciplineInput();
+  var r = ds.resolve(input);
+  store.programDraft = {
+    title: r.discipline.label,
+    weeks: r.weeks,
+    target: d.target || 'active',
+    modelId: 'none',
+    discipline: r.discipline.id,
+    days: ds.sampleWeek(input).map(function (sess) {
+      return { name: sess.name, exercises: sess.exercises.map(function (e) {
+        if (e.unit === 'circuit' && e.circuit) return { name: e.name, muscle: 'CARDIO', unit: 'circuit', circuit: JSON.parse(JSON.stringify(e.circuit)), sets: 1, reps: '', rest: e.rest || '2 min' };
+        return hyroxDraftExercise(e);
+      }) };
+    })
+  };
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+  if (typeof showToast === 'function') showToast('Settimana caricata: modificala come vuoi.', 'ok');
+}
+window.startDisciplineDraft = startDisciplineDraft;
+function openDisciplineBuilder(id) {
+  if (id) disciplineState().id = id;
+  openProgramBuilder();
+  var d = programDraft();
+  if (!programDraftExerciseCount(d)) { d.discipline = disciplineState().id; renderProgramBuilder(); }
+}
+window.openDisciplineBuilder = openDisciplineBuilder;
+function openDisciplineGenerator(id) {
+  var g = generatorDraft();
+  g.goal = id || disciplineState().id;
+  openProgramGenerator('active');
+}
+window.openDisciplineGenerator = openDisciplineGenerator;
+
 function hyroxDraftExercise(e) {
   var unit = (e.unit === 'time' || e.unit === 'cardio') ? e.unit : 'reps';
   var first = (e.sets && e.sets[0]) || {};
@@ -73840,6 +74363,7 @@ function renderProgramBuilderInner() {
     '<p style="font-size:11px;color:#888;margin:0 0 10px;line-height:1.45;">Scrivi una settimana di allenamento. Sotto decidi quanto dura la scheda e come deve progredire.</p>' +
     builderSpaceLineHtml() +
     builderHyroxStartHtml(d, inputStyle) +
+    builderDisciplineStartHtml(d, inputStyle) +
     daysHtml +
     '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;padding:10px;margin-bottom:14px;" onclick="addProgramDraftDay()">+ AGGIUNGI GIORNO</button>' +
     programDraftProgressionHtml(d, inputStyle) +
@@ -74489,7 +75013,7 @@ function programExerciseRow(ex) {
     rest: String(ex.rest || (unit === 'cardio' ? '2 min' : '90s')).trim() || '90s'
   };
   if (ex.technique) row.technique = ex.technique;
-  if (ex.notes) row.notes = String(ex.notes);
+  if (ex.notes) { row.notes = String(ex.notes); row.cue = true; }
   if (ex.hyrox_station) row.hyrox_station = ex.hyrox_station;
   if (ex.tempo) {
     row.tempo = String(ex.tempo).trim();
@@ -75111,7 +75635,49 @@ function generatorSelect(field, items, current, inputStyle) {
 function generatorGoalItems(api) {
   var items = api.GOALS.slice();
   if (typeof hyroxApi === 'function' && hyroxApi()) items.push({ id: 'hyrox', label: 'HYROX · preparazione gara' });
+  if (typeof disciplinesApi === 'function' && disciplinesApi()) disciplinesApi().DISCIPLINES.forEach(function (d) { items.push({ id: d.id, label: d.label }); });
   return items;
+}
+function generatorIsDiscipline(g) {
+  return !!g && typeof disciplinesApi === 'function' && !!disciplinesApi() && disciplinesApi().isDiscipline(g.goal);
+}
+// A home discipline as the goal: the sheet asks its questions, like HYROX.
+function renderGeneratorDisciplineSheet(g, api, sheet, inputStyle) {
+  var ds = disciplinesApi();
+  var s = disciplineState();
+  s.id = g.goal;
+  var d = ds.discipline(g.goal);
+  var preview;
+  try {
+    var prog = ds.plan(disciplineInput(d.id));
+    preview = '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(212,175,55,0.35);">' +
+      '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:8px;">ANTEPRIMA · SETTIMANA 1</div>' +
+      '<div style="font-size:11px;color:#aaa;line-height:1.5;margin-bottom:8px;">' + esc(prog.source_summary) + '</div>' +
+      disciplinePreviewHtml(prog) + '</div>';
+  } catch (e) {
+    preview = '<div style="font-size:11px;color:#c66;">Anteprima non riuscita: ' + esc(e.message || String(e)) + '</div>';
+  }
+  var cardOpen = '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid #333;">';
+  var cardTitle = function (text) { return '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:10px;">' + text + '</div>'; };
+  var evidence = disciplineEvidenceHtml(d.id, 3);
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">GENERA UNA SCHEDA</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeProgramGenerator()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:12px;">Nome della scheda (facoltativo)' +
+    '<input type="text" value="' + esc(g.title || '') + '" placeholder="Lo scrive lui se lo lasci vuoto" ' +
+    'onchange="setGeneratorField(\'title\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    cardOpen + cardTitle('STRUTTURA') +
+    '<label style="font-size:9px;color:#888;display:block;">Obiettivo' + generatorSelect('goal', generatorGoalItems(api), g.goal, inputStyle) + '</label>' +
+    '<div style="font-size:10px;color:#777;margin-top:8px;line-height:1.5;">' + esc(d.note) + '</div>' +
+    disciplineFieldsHtml() + '</div>' +
+    preview +
+    (evidence ? cardOpen + cardTitle('PERCHÉ È FATTO COSÌ') + evidence + '</div>' : '') +
+    '</div>' + generatorFootHtml(g) + '</div>';
+  document.body.appendChild(sheet);
 }
 function generatorIsHyrox(g) {
   return !!g && g.goal === 'hyrox' && typeof hyroxApi === 'function' && !!hyroxApi();
@@ -75250,6 +75816,7 @@ function renderProgramGeneratorInner() {
   sheet.className = 'nurvan-sheet is-open';
   sheet.style.zIndex = '10240';
   if (generatorIsHyrox(g)) { renderGeneratorHyroxSheet(g, api, sheet, inputStyle); return; }
+  if (generatorIsDiscipline(g)) { renderGeneratorDisciplineSheet(g, api, sheet, inputStyle); return; }
 
   var spaces = trainingSpaces();
   var splitItems = api.splitsFor(g.days).map(function (s) { return { id: s.id, label: s.label }; });
@@ -75414,6 +75981,22 @@ async function createGeneratedProgram(target) {
       openGeneratedReview(race, target, null);
     } catch (e) {
       console.error('[HYROX]', e);
+      if (typeof showToast === 'function') showToast('Generazione non riuscita: ' + (e && e.message || e), 'error');
+    }
+    return;
+  }
+  if (generatorIsDiscipline(g)) {
+    try {
+      var written = null;
+      await withBusy(function () {
+        written = disciplinesApi().plan(disciplineInput(g.goal));
+        if (g.title) written.title = g.title;
+        written = normalizeProgram(written);
+        return Promise.resolve();
+      }, 'Scrivo il programma…', { immediate: true, maxMs: 60000 });
+      openGeneratedReview(written, target, null);
+    } catch (e) {
+      console.error('[DISCIPLINES]', e);
       if (typeof showToast === 'function') showToast('Generazione non riuscita: ' + (e && e.message || e), 'error');
     }
     return;
@@ -77043,7 +77626,7 @@ var CLIENT_INTAKE_FIELDS = [
   { key: 'weightBand', label: 'Peso', type: 'select', required: true, options: ['45-49 kg', '50-54 kg', '55-59 kg', '60-64 kg', '65-69 kg', '70-74 kg', '75-79 kg', '80-84 kg', '85-89 kg', '90-94 kg', '95-99 kg', '100-109 kg', '110-119 kg', '120-129 kg', '130-139 kg', '140+ kg'] },
   { key: 'trainingAge', label: 'Anzianità di allenamento', type: 'select', required: true, options: ['Mai allenato', 'Meno di 6 mesi', '6-12 mesi', '1-2 anni', '2-5 anni', 'Più di 5 anni'] },
   { key: 'level', label: 'Livello', type: 'select', required: true, options: ['Principiante', 'Intermedio', 'Avanzato', 'Agonista'] },
-  { key: 'goal', label: 'Obiettivo', type: 'select', required: true, options: ['Ipertrofia', 'Forza', 'Dimagrimento', 'Ricomposizione', 'Performance sportiva', 'Salute e postura', 'Preparazione gara', 'HYROX'] },
+  { key: 'goal', label: 'Obiettivo', type: 'select', required: true, options: ['Ipertrofia', 'Forza', 'Dimagrimento', 'Ricomposizione', 'Performance sportiva', 'Salute e postura', 'Preparazione gara', 'HYROX', 'Pilates', 'Mobilità e stretching', 'Calisthenics', 'HIIT'] },
   { key: 'sessionsPerWeek', label: 'Sessioni a settimana', type: 'select', required: true, options: ['2', '3', '4', '5', '6 o più'] },
   { key: 'sessionMinutes', label: 'Tempo a sessione', type: 'select', required: true, options: ['30 minuti', '45 minuti', '60 minuti', '75 minuti', '90 minuti o più'] },
   { key: 'equipment', label: 'Attrezzatura', type: 'select', required: true, options: ['Palestra completa', 'Pesi liberi + panca', 'Solo macchine', 'Casa (manubri/bande)', 'Corpo libero'] },
@@ -79991,6 +80574,7 @@ function athleteHomeModulesHtml() {
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="startDomainImport(\'nutrition\')"><span style="font-size:18px;">📥</span><span style="font-size:11px;font-weight:800;">Importa file</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'calendar\')"><span style="font-size:18px;">📅</span><span style="font-size:11px;font-weight:800;">Calendario</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'hyrox\')"><span style="font-size:18px;">🏁</span><span style="font-size:11px;font-weight:800;">HYROX</span></button>' +
+    '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'disciplines\')"><span style="font-size:18px;">🧘</span><span style="font-size:11px;font-weight:800;">A casa</span></button>' +
     '</div></div>';
 }
 
@@ -81535,6 +82119,7 @@ function openAssignChooser(clientId, name) {
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'build\')">SCRIVI UNA SCHEDA DA ZERO</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'generate\')">GENERA UNA SCHEDA</button>' +
     (hyroxFirst ? '' : hyroxBtn('btn-outline')) +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'discipline\')">PILATES, MOBILITÀ, CALISTHENICS, HIIT</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'mylib\')">DAL MIO DATABASE</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'programs\')">DATABASE PROGRAMMI (NURVAN)</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'copy\')">USA SCHEDA ATTIVA COME BASE</button>' +
@@ -81591,6 +82176,15 @@ function beginAssignSandbox(clientId, name, mode) {
     try { prefillHyroxFromRequest(clientId); } catch (_) {}
     navigate('hyrox');
     practiceToast('Spazio cliente: scegli la gara e l\'attrezzatura del cliente. La preparazione diventa la bozza da inviare.', 'success');
+  } else if (mode === 'discipline') {
+    // A home discipline for this client: Pilates, mobility, calisthenics, HIIT.
+    try {
+      const goal = String(((store.coachWorkspace && String(store.coachWorkspace.clientId) === String(clientId) && store.coachWorkspace.intake) || {}).goal || '');
+      const wanted = /pilates/i.test(goal) ? 'pilates' : (/mobilit|stretch/i.test(goal) ? 'mobilita' : (/calisthen/i.test(goal) ? 'calisthenics' : (/hiit/i.test(goal) ? 'hiit' : '')));
+      if (wanted) { if (!store.disciplines || typeof store.disciplines !== 'object') store.disciplines = {}; store.disciplines.id = wanted; }
+    } catch (_) {}
+    navigate('disciplines');
+    practiceToast('Spazio cliente: scegli la disciplina e i giorni. Il programma diventa la bozza da inviare.', 'success');
   } else if (mode === 'mylib') {
     openCoachLibraryAssignPicker(clientId, name);
   } else if (mode === 'programs') {

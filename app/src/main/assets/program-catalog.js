@@ -129,6 +129,7 @@
   // expandScienceProgramWeeks, as before.
   function bodyFor(id) {
     if (typeof id === 'string' && id.indexOf('hyx-') === 0) return hyrox() ? hyrox().catalogBody(id) : null;
+    if (typeof id === 'string' && id.indexOf('dsc-') === 0) return home() ? home().catalogBody(id) : null;
     var p = typeof id === 'string' ? parseId(id) : id;
     if (!p) return null;
     var aud = audienceById(p.audience);
@@ -172,11 +173,16 @@
   // The race preparations are a grid of their own (web/hyrox.js).
   function hyrox() { return root.NurvanHyrox && root.NurvanHyrox.catalogSearch ? root.NurvanHyrox : null; }
   function isHyrox(filters) { return !!(filters && filters.goal === 'hyrox' && hyrox()); }
+  // ... and so are the home disciplines (web/disciplines.js).
+  function home() { return root.NurvanDisciplines && root.NurvanDisciplines.catalogSearch ? root.NurvanDisciplines : null; }
+  function isHome(filters) { return !!(filters && home() && home().isDiscipline(filters.goal)); }
 
   function total(filters) {
     if (isHyrox(filters)) return hyrox().catalogTotal(filters);
+    if (isHome(filters)) return home().catalogTotal(filters);
     // With no goal chosen the count is everything there is.
     var extra = (hyrox() && !(filters && filters.goal)) ? hyrox().catalogTotal({}) : 0;
+    if (home() && !(filters && filters.goal)) extra += home().catalogTotal({});
     return extra + ['days', 'split', 'goal', 'equipment', 'experience', 'audience', 'duration', 'progression', 'variant']
       .reduce(function (n, dim) { return n * valuesFor(dim, filters).length; }, 1);
   }
@@ -186,6 +192,7 @@
   function search(filters, limit) {
     var f = filters || {};
     if (isHyrox(f)) return hyrox().catalogSearch(f, limit || 150);
+    if (isHome(f)) return home().catalogSearch(f, limit || 150);
     var cap = limit || 150;
     var rows = [];
     var dims = {
@@ -225,6 +232,7 @@
 
   function rowById(id) {
     if (String(id || '').indexOf('hyx-') === 0) return hyrox() ? hyrox().catalogRow(id) : null;
+    if (String(id || '').indexOf('dsc-') === 0) return home() ? home().catalogRow(id) : null;
     var p = parseId(id);
     return p ? rowFor(p) : null;
   }
