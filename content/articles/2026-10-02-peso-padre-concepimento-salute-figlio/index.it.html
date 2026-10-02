@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peso del padre al concepimento: cosa arriva al figlio | Nurvan</title>
+<meta name="description" content="Il peso del padre prima del concepimento conta per la salute del figlio? Cosa ha mostrato lo studio su Nature del 2024, cosa no e cosa fare nei mesi prima.">
+<link rel="alternate" hreflang="it" href="index.it.html">
+<link rel="alternate" hreflang="en" href="index.en.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>/* Layout: blog Nurvan — header sito, colonna di lettura 680px, grafici a tutta colonna, footer app. Look unico scuro (brand). */
+:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.hero{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:radial-gradient(120% 90% at 80% 10%,#2a220a 0%,#0c0c0c 55%);padding:28px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end;min-height:240px}
+.hero .yr{font-family:var(--display);font-weight:700;color:var(--gold);font-size:clamp(48px,11vw,96px);line-height:.9}
+.hero .lab{font-family:var(--mono);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.hero .arrow{grid-column:1/-1;height:2px;background:linear-gradient(90deg,var(--line),var(--gold))}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-left:1.1em} .box li{margin-block:.35em}
+.quote{border-left:3px solid var(--gold);padding-left:18px;font-size:22px;font-style:italic;margin-block:28px}
+figure{margin:36px 0}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+.chart h4{font-family:var(--display);margin:0 0 4px;font-size:17px}
+.chart p.sub{margin:0 0 10px;font-size:14px;color:var(--muted);font-family:var(--body)}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-left:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-left:1.2em} .refs li{margin-block:.7em}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+@media (max-width:560px){body{font-size:17px}.hero{grid-template-columns:1fr}.site nav{display:none}}
+html{background:var(--bg)}
+.wrap{overflow-wrap:break-word}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:3/2;object-fit:cover}
+.box h2{margin-top:0}
+.nv{background:#1d1d1d;color:var(--muted)}
+.tbl{overflow-x:auto;margin-block:20px;border:1px solid var(--line);border-radius:12px}
+.tbl table{border-collapse:collapse;width:100%;font-size:15px;min-width:460px}
+.tbl th,.tbl td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
+.tbl th{font-family:var(--display);font-weight:500;color:var(--gold);background:var(--surface)}
+.tbl td:last-child{font-family:var(--mono);white-space:nowrap}
+.tbl tr:last-child td{border-bottom:0;color:var(--muted)}
+aside.app{margin-block:32px}
+.app .cta{white-space:nowrap}
+.refs a{word-break:break-all}
+.no{background:#3a1010;color:#ff8a8a}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Allenamento</a><a href="#">Nutrizione</a><a href="#">Integrazione</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Scarica l'app</a></div></header>
+<main class="wrap" lang="it"><div class="crumb">Blog · Salute · Fertilità</div><h1>Peso del padre al concepimento: cosa arriva davvero al figlio</h1><p class="lede">Quando si parla di salute prima del concepimento si pensa quasi sempre alla madre. Uno studio pubblicato su Nature nel 2024 ha spostato l&#x27;attenzione anche sul padre. Qui trovi cosa ha dimostrato davvero, cosa è stato aggiunto strada facendo e cosa ha senso fare nei mesi prima di cercare un figlio.</p><div class="meta"><span>2 ottobre 2026</span><span><b>11</b> min di lettura</span><span><b>8</b> studi citati</span></div><figure class="cover"><img alt="" src="images/cover.jpg" width="1600" height="1086"/><figcaption class="cap">Foto di Mikael Stenberg su Unsplash (Licenza Unsplash).</figcaption></figure><div class="box"><h2>In breve</h2><ul>
+<li>Nei topi, due settimane di dieta molto grassa prima dell'accoppiamento sono bastate a rendere intollerante al glucosio circa il 30% dei figli maschi, senza cambiarne il peso.</li>
+<li>Lo stesso effetto spariva se il padre tornava a una dieta normale per 4 settimane prima di concepire: nel topo il segnale è reversibile.</li>
+<li>Nell'uomo i dati sono associazioni: nelle coorti di Lipsia, con madre normopeso, un padre in sovrappeso si associa a un rischio di obesità del figlio circa doppio.</li>
+<li>Alcuni numeri che circolano sui social (il frammento "aumentato di 3,8 volte" che blocca l'enzima esochinasi 2) non compaiono nello studio originale.</li>
+<li>Nei mesi prima del concepimento contano peso, alimentazione e stile di vita. Un integratore di acido folico e zinco per l'uomo, testato su 2.370 coppie, non ha aumentato le nascite.</li>
+</ul></div><h2>Cosa ha fatto lo studio pubblicato su Nature</h2><p>Lo studio è di Anika Tomar e colleghi dell'Helmholtz Munich, guidati da Raffaele Teperino, ed è uscito su Nature a giugno 2024. La domanda era precisa: se la dieta del padre cambia qualcosa negli spermatozoi, succede mentre si formano nel testicolo o dopo, quando maturano nell'epididimo?</p>
+<p>L'epididimo è il tubulo, attaccato al testicolo, in cui gli spermatozoi finiscono di maturare. I ricercatori hanno dato a topi maschi giovani una dieta con il 60% delle calorie dai grassi per sole 2 settimane. Un gruppo si accoppiava subito con femmine mai esposte; un altro tornava prima alla dieta normale per 4 settimane, così i suoi figli nascevano da spermatozoi che non avevano mai incontrato la dieta grassa.</p>
+<ul>
+<li><strong>Il peso dei figli non cambiava</strong>, ma circa il 30% dei maschi del primo gruppo diventava intollerante al glucosio (gestiva peggio lo zucchero nel sangue) e meno sensibile all'insulina.</li>
+<li><strong>I figli del secondo gruppo erano normali</strong>: il segnale veniva dagli spermatozoi esposti alla dieta mentre maturavano, e spariva con un mese di alimentazione normale.</li>
+<li><strong>Negli spermatozoi aumentavano piccoli RNA dei mitocondri</strong>, gli mt-tRNA e i loro frammenti (mt-tsRNA). Su embrioni di due cellule gli autori hanno visto che gli mt-tRNA paterni passano all'embrione alla fecondazione.</li>
+</ul>
+<p>È una via di trasmissione che non passa per il DNA: non una mutazione, ma un segnale legato allo stato metabolico del padre in quel momento.</p><h2>E negli esseri umani?</h2><p>Lo stesso lavoro contiene due tipi di dati umani. Il primo riguarda gli spermatozoi: in 18 giovani volontari finlandesi, gli mt-tsRNA erano l'unico tipo di piccolo RNA che cresceva insieme all'indice di massa corporea (BMI). Gli autori stessi parlano di un campione piccolo.</p>
+<p>Il secondo riguarda i figli. In due studi pediatrici di Lipsia (Leipzig Childhood Obesity Cohort e LIFE Child) il BMI del padre si associava a quello del figlio anche tenendo conto della madre. Nelle famiglie con madre normopeso, avere un padre in sovrappeso si associava a un rischio di obesità del figlio circa doppio, e avere un padre obeso a un rischio oltre sei volte maggiore.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 250" role="img" aria-label="Grafico a barre: odds ratio di obesità del figlio 1 con padre normopeso, 2,26 con padre in sovrappeso, 6,44 con padre obeso, in famiglie con madre normopeso (Tomar et al. 2024)">
+<rect width="600" height="250" fill="#0c0c0c"/>
+<text x="16" y="28" font-family="Bricolage Grotesque, system-ui, 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', 'Noto Sans SC', sans-serif" font-size="16" font-weight="700" fill="#f0f0f0">Rischio di obesità del figlio secondo il peso del padre</text>
+<text x="16" y="48" font-family="Bricolage Grotesque, system-ui, 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', 'Noto Sans SC', sans-serif" font-size="12" fill="#a0a0a0">Famiglie con madre normopeso · odds ratio</text>
+<g font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#a0a0a0">
+<line x1="262.0" y1="64" x2="262.0" y2="200" stroke="#262626"/>
+<text x="262.0" y="216" text-anchor="middle">0</text>
+<line x1="304.6" y1="64" x2="304.6" y2="200" stroke="#555"/>
+<text x="304.6" y="216" text-anchor="middle">1</text>
+<line x1="347.1" y1="64" x2="347.1" y2="200" stroke="#262626"/>
+<text x="347.1" y="216" text-anchor="middle">2</text>
+<line x1="389.7" y1="64" x2="389.7" y2="200" stroke="#262626"/>
+<text x="389.7" y="216" text-anchor="middle">3</text>
+<line x1="432.3" y1="64" x2="432.3" y2="200" stroke="#262626"/>
+<text x="432.3" y="216" text-anchor="middle">4</text>
+<line x1="474.9" y1="64" x2="474.9" y2="200" stroke="#262626"/>
+<text x="474.9" y="216" text-anchor="middle">5</text>
+<line x1="517.4" y1="64" x2="517.4" y2="200" stroke="#262626"/>
+<text x="517.4" y="216" text-anchor="middle">6</text>
+<line x1="560.0" y1="64" x2="560.0" y2="200" stroke="#262626"/>
+<text x="560.0" y="216" text-anchor="middle">7</text>
+</g>
+<g font-family="Bricolage Grotesque, system-ui, 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', 'Noto Sans SC', sans-serif" font-size="13" fill="#f0f0f0">
+<text x="16" y="95">Padre normopeso (rif.)</text>
+<rect x="262" y="78" width="42.6" height="24" rx="3" fill="#aa8a2e" opacity="0.55"/>
+<text x="312.6" y="95" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12" fill="#a0a0a0">1 · riferimento</text>
+<text x="16" y="137">Padre in sovrappeso</text>
+<rect x="262" y="120" width="96.2" height="24" rx="3" fill="#d4af37" opacity="1"/>
+<text x="366.2" y="137" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12" fill="#f3e5ab">2,26</text>
+<text x="16" y="179">Padre con obesità</text>
+<rect x="262" y="162" width="274.2" height="24" rx="3" fill="#d4af37" opacity="1"/>
+<text x="544.2" y="179" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12" fill="#f3e5ab">6,44</text>
+<text x="262" y="238" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#a0a0a0">odds ratio (padre normopeso = 1)</text>
+</g></svg></div><figcaption class="cap">Fonte: Tomar et al., Nature 2024, coorti di Lipsia. Odds ratio riportati nel testo dello studio; padre normopeso = riferimento. Grafico Nurvan.</figcaption></figure>
+
+<p>Per proporzione, il peso della madre spiegava il 18% delle differenze di BMI tra i bambini, quello del padre un ulteriore 6%. Gli autori hanno corretto per parentela e rischio genetico stimato, ma uno studio osservazionale non può separare del tutto biologia e abitudini di famiglia: una casa in cui si mangia male tende a farlo per tutti.</p><h2>Non tutti gli studi vanno nella stessa direzione</h2><p>Sempre nel 2024 un gruppo di Barcellona ha pubblicato su Heliyon un esperimento simile, con una differenza: i topi maschi diventavano davvero obesi con una dieta di tipo occidentale. Negli spermatozoi dei padri obesi c'erano 450 regioni del DNA con un'accessibilità diversa (cioè più o meno "aperte" alla lettura). Eppure i figli, maschi e femmine, avevano solo lievi alterazioni metaboliche nei primi periodi di vita, poi scomparse. Nessuna predisposizione duratura a obesità o diabete.</p>
+<p>Gli autori parlano di resilienza dei figli: un cambiamento negli spermatozoi non equivale automaticamente a un effetto sul figlio.</p>
+<p>Due parole da non confondere: un effetto <strong>intergenerazionale</strong> riguarda i figli (F1) concepiti con spermatozoi esposti; uno <strong>transgenerazionale</strong> arriva ai nipoti e oltre (F2, F3) senza nuova esposizione. Lo studio su Nature riguarda solo i figli.</p><h2>Il dato che circola e quello che c&#x27;è nello studio</h2><p>Sui social questo studio circola con dettagli molto precisi: un frammento di RNA aumentato di 3,8 volte che entra nell'embrione e blocca l'mRNA dell'esochinasi 2 (un enzima chiave per usare il glucosio), figli intolleranti ottenuti con fecondazione in vitro, frammenti 2,3 volte più alti negli uomini con BMI sopra 30.</p>
+<p>Nel testo completo dello studio su PubMed Central questi dati non ci sono. Compaiono, attribuiti a Tomar e colleghi, in una review uscita su Clinical Epigenetics nel 2026. Nello studio originale invece:</p>
+<ul>
+<li>i figli intolleranti nascono da <strong>accoppiamento naturale</strong>; la fecondazione in vitro serviva solo a produrre embrioni di due cellule da analizzare;</li>
+<li>gli autori scrivono che i dati mostrano il passaggio degli mt-tRNA interi, <strong>non</strong> quello dei frammenti, che ritengono probabile ma non provato;</li>
+<li>l'analisi sugli spermatozoi umani tratta il BMI come variabile continua in 18 ragazzi, senza confrontare chi sta sopra e sotto 30.</li>
+</ul>
+<p>Il meccanismo raccontato con tanta sicurezza, oggi, è un'ipotesi plausibile.</p><h2>Il peso del padre si può cambiare, e lo sperma risponde</h2><p>Uno spermatozoo umano impiega circa due mesi per formarsi e arrivare all'eiaculato: in uno studio con acqua marcata su 11 uomini, i primi spermatozoi "nuovi" sono comparsi in media dopo 64 giorni (da 42 a 76). Da qui la finestra dei 2–3 mesi prima del concepimento. Nel topo, però, contavano soprattutto le ultime settimane di maturazione.</p>
+<p>E il seme migliora quando un uomo con obesità perde peso. In uno studio danese randomizzato, 56 uomini con BMI tra 32 e 43 hanno seguito per 8 settimane una dieta da 800 kcal al giorno sotto controllo medico, perdendo in media 16,5 kg. Concentrazione e conta degli spermatozoi sono aumentate di circa una volta e mezza. Il miglioramento restava a un anno in chi manteneva il peso, non in chi lo riprendeva.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 220" role="img" aria-label="Grafico a punti: dopo 8 settimane di dieta ipocalorica e 16,5 kg persi, concentrazione degli spermatozoi 1,49 volte (IC 95% 1,18–1,88) e conta totale 1,41 volte (IC 95% 1,07–1,87) rispetto all&#x27;inizio (Andersen et al. 2022)">
+<rect width="600" height="220" fill="#0c0c0c"/>
+<text x="16" y="28" font-family="Bricolage Grotesque, system-ui, 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', 'Noto Sans SC', sans-serif" font-size="16" font-weight="700" fill="#f0f0f0">Spermatozoi dopo una perdita di 16,5 kg in 8 settimane</text>
+<text x="16" y="48" font-family="Bricolage Grotesque, system-ui, 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', 'Noto Sans SC', sans-serif" font-size="12" fill="#a0a0a0">Variazione rispetto all&#x27;inizio · IC 95%</text>
+<g font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#a0a0a0">
+<line x1="200.0" y1="64" x2="200.0" y2="170" stroke="#262626"/>
+<text x="200.0" y="186" text-anchor="middle">0,8</text>
+<line x1="261.7" y1="64" x2="261.7" y2="170" stroke="#777" stroke-dasharray="4 3"/>
+<text x="261.7" y="186" text-anchor="middle">1,0</text>
+<line x1="323.3" y1="64" x2="323.3" y2="170" stroke="#262626"/>
+<text x="323.3" y="186" text-anchor="middle">1,2</text>
+<line x1="385.0" y1="64" x2="385.0" y2="170" stroke="#262626"/>
+<text x="385.0" y="186" text-anchor="middle">1,4</text>
+<line x1="446.7" y1="64" x2="446.7" y2="170" stroke="#262626"/>
+<text x="446.7" y="186" text-anchor="middle">1,6</text>
+<line x1="508.3" y1="64" x2="508.3" y2="170" stroke="#262626"/>
+<text x="508.3" y="186" text-anchor="middle">1,8</text>
+<line x1="570.0" y1="64" x2="570.0" y2="170" stroke="#262626"/>
+<text x="570.0" y="186" text-anchor="middle">2,0</text>
+<text x="265.7" y="76" font-size="10">prima della dieta = 1</text>
+</g>
+<g font-family="Bricolage Grotesque, system-ui, 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', 'Noto Sans SC', sans-serif" font-size="13" fill="#f0f0f0">
+<text x="16" y="109">Concentrazione</text>
+<line x1="317.2" y1="104" x2="533.0" y2="104" stroke="#d4af37" stroke-width="3" stroke-linecap="round"/>
+<circle cx="412.8" cy="104" r="7" fill="#d4af37"/>
+<text x="412.8" y="92" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12" fill="#f3e5ab">×1,49 (1,18–1,88)</text>
+<text x="16" y="153">Conta totale</text>
+<line x1="283.2" y1="148" x2="529.9" y2="148" stroke="#d4af37" stroke-width="3" stroke-linecap="round"/>
+<circle cx="388.1" cy="148" r="7" fill="#d4af37"/>
+<text x="388.1" y="136" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12" fill="#f3e5ab">×1,41 (1,07–1,87)</text>
+<text x="200" y="208" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#a0a0a0">volte rispetto all&#x27;inizio</text>
+</g></svg></div><figcaption class="cap">Fonte: Andersen et al., Hum Reprod 2022 (n = 56). Variazione dopo 8 settimane di dieta ipocalorica rispetto all&#x27;inizio, con intervallo di confidenza al 95%. Grafico Nurvan.</figcaption></figure>
+
+<p>In uomini con obesità grave, inoltre, dopo la chirurgia bariatrica la metilazione del DNA degli spermatozoi cambiava in modo marcato, anche in zone legate al controllo dell'appetito.</p>
+<p>Manca però un pezzo: nessuno studio sull'uomo ha ancora dimostrato che il dimagrimento del padre prima del concepimento migliori la salute metabolica del figlio. Sappiamo che il peso paterno si associa alla salute del figlio e che lo sperma risponde al dimagrimento; il collegamento diretto non è stato testato.</p><h2>E gli integratori per &quot;preparare&quot; lo sperma?</h2><p>Studi come questo vengono spesso usati per vendere integratori per la fertilità maschile. Il test più solido disponibile va nella direzione opposta.</p>
+<p>Nel trial FAZST (JAMA, 2020), 2.370 coppie in procinto di iniziare un percorso di procreazione assistita sono state divise a caso: gli uomini hanno preso per 6 mesi acido folico (5 mg) e zinco (30 mg) oppure un placebo. Le nascite sono state praticamente identiche, 34% contro 35%, e quasi tutti i parametri del seme non sono cambiati. La frammentazione del DNA degli spermatozoi era anzi un po' più alta con l'integratore (29,7% contro 27,2%).</p>
+<p>Il trial non misura la salute metabolica dei figli, ma il messaggio è chiaro: oggi nessun integratore sostituisce peso e stile di vita, e nessuno studio umano giustifica un protocollo "pre-concepimento" per l'uomo basato su questi dati.</p><h2>Cosa dice davvero la ricerca</h2><p>Lo spunto è un post di Marco Guercioni (@the___doc), che presenta lo studio con prudenza e ne elenca i limiti. Ecco le sue affermazioni principali confrontate con le fonti originali.</p><div class="verdict"><div class="v"><span class="pill ok">Confermato</span><p><strong>&quot;Studio di Tomar e colleghi su Nature, giugno 2024: sono gli spermatozoi già maturi a rispondere alla dieta, e il 30% dei figli maschi diventa intollerante al glucosio.&quot;</strong> Vale nel topo.</p></div><div class="v"><span class="pill no">Smentito dallo studio originale</span><p><strong>&quot;Con fecondazione in vitro, senza contributo materno.&quot;</strong> I figli valutati nascevano da accoppiamento naturale con femmine non esposte. La fecondazione in vitro serviva solo per analizzare embrioni di due cellule.</p></div><div class="v"><span class="pill nv">Non verificabile</span><p><strong>&quot;Un frammento aumenta di 3,8 volte e blocca l&#x27;mRNA dell&#x27;esochinasi 2; negli uomini con BMI sopra 30 è 2,3 volte più alto.&quot;</strong> Numeri presenti in una review del 2026, non nello studio, i cui autori scrivono che il passaggio dei frammenti all'embrione non è dimostrato.</p></div><div class="v"><span class="pill part">Da precisare</span><p><strong>&quot;In due coorti il BMI paterno pesa sulla salute metabolica del figlio, indipendentemente da quello materno.&quot;</strong> L'associazione c'è, ma è osservazionale e il padre spiega una quota minore della madre (6% contro 18%).</p></div><div class="v"><span class="pill ok">Confermato</span><p><strong>&quot;È intergenerazionale, non transgenerazionale; nel topo c&#x27;è una catena causale, nell&#x27;uomo un&#x27;associazione.&quot;</strong> E anche il dato su Heliyon (450 regioni, nessuna predisposizione duratura), che riguarda i topi.</p></div><div class="v"><span class="pill nv">Non verificabile</span><p><strong>&quot;Metà del fenomeno è l&#x27;ambiente condiviso dopo la nascita.&quot;</strong> L'ambiente di famiglia pesa di sicuro, ma nelle fonti consultate non abbiamo trovato una stima del 50%.</p></div><div class="v"><span class="pill ok">Confermato</span><p><strong>&quot;Nessun dato umano giustifica un protocollo di integratori.&quot;</strong> Il trial FAZST va nella stessa direzione.</p></div><div class="v"><span class="pill part">Da precisare</span><p><strong>&quot;Gli ultimi tre mesi sono la finestra.&quot;</strong> Gli spermatozoi si formano in circa 2 mesi: 3 mesi sono una finestra prudente.</p></div></div><h2>Come applicarlo</h2><p>Se stai pensando di avere un figlio, ecco come trasformare questi dati in passi concreti. Sono buone abitudini generali, non una terapia.</p>
+<ol class="steps">
+<li><strong>Parti 2–3 mesi prima.</strong> È il tempo in cui si forma la "nuova generazione" di spermatozoi, ma anche le ultime settimane contano.</li>
+<li><strong>Guarda peso e girovita.</strong> Se sei in sovrappeso, anche una perdita moderata e sostenibile va nella direzione giusta. Diete molto ipocaloriche, come quella da 800 kcal dello studio danese, solo sotto controllo medico.</li>
+<li><strong>Cura la qualità della dieta.</strong> Più alimenti poco processati, verdure, legumi e proteine magre; meno ultra-processati e bevande zuccherate.</li>
+<li><strong>Allenati con regolarità</strong>, combinando forza e attività aerobica. Nel trial danese l'esercizio è stato una delle strategie per mantenere il peso perso.</li>
+<li><strong>Fumo, alcol e sonno.</strong> Smettere di fumare, ridurre l'alcol e dormire abbastanza fanno parte della stessa preparazione.</li>
+<li><strong>Non comprare integratori "per lo sperma" sulla base di questi studi.</strong> Se hai dubbi sulla fertilità o provate da tempo, parlane con il medico o con un andrologo, che può prescrivere uno spermiogramma.</li>
+</ol>
+<p>Non è una colpa da attribuire a qualcuno: è una leva in più. Una review del 2025 dello stesso gruppo di Monaco propone infatti una preparazione al concepimento che coinvolga entrambi i genitori, non solo la madre.</p>
+<aside class="app"><div><h3>Prepara i prossimi tre mesi con dei numeri</h3><p>In Nurvan registri peso e misure, segui l'alimentazione nel diario e annoti ogni allenamento, così vedi se il percorso sta andando nella direzione giusta settimana dopo settimana. Se lavori con un coach, vede gli stessi dati e può assegnarti piano alimentare e scheda.</p></div><a class="cta" href="https://nurvan.app">Prova Nurvan</a></aside><h2>Domande frequenti</h2><details><summary>Ero in sovrappeso quando abbiamo concepito: mio figlio sarà obeso?</summary><p>No, non è un destino. I dati descrivono un rischio medio su molte famiglie, non un esito individuale. Contano molti fattori, a partire da come si mangia e ci si muove in casa, che si possono cambiare in qualsiasi momento.</p></details><details><summary>Quanto tempo prima del concepimento conta il peso del padre?</summary><p>Gli spermatozoi umani si formano in circa due mesi, quindi i 2–3 mesi prima sono la finestra più citata. Nel topo bastavano 2 settimane di dieta per l'effetto e 4 settimane di dieta normale per annullarlo. Nell'uomo i tempi esatti non sono stati misurati.</p></details><details><summary>Esistono integratori che &quot;ripuliscono&quot; lo sperma prima del concepimento?</summary><p>Non ci sono prove sull'uomo. Nel trial più grande, acido folico e zinco per 6 mesi non hanno aumentato le nascite né migliorato la qualità del seme. Se hai una carenza o un problema di fertilità, la valutazione spetta al medico.</p></details><details><summary>Vale anche per la madre?</summary><p>Sì, e di più: nei dati di Lipsia il peso della madre spiegava una quota maggiore delle differenze tra i figli. La novità non è che il padre conti più della madre, ma che conti anche lui.</p></details><h2>Fonti</h2><ol class="refs"><li>Tomar A, Gomez-Velazquez M, Gerlini R et al., 2024. Epigenetic inheritance of diet-induced and sperm-borne mitochondrial RNAs. <em>Nature</em> 630(8017):720–727. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/38839949/">PMID 38839949</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1038/s41586-024-07472-3">DOI 10.1038/s41586-024-07472-3</a></li><li>Tahiri I, Llana SR, Fos-Domènech J et al., 2024. Paternal obesity induces changes in sperm chromatin accessibility and has a mild effect on offspring metabolic health. <em>Heliyon</em> 10(14):e34043. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/39100496/">PMID 39100496</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1016/j.heliyon.2024.e34043">DOI 10.1016/j.heliyon.2024.e34043</a></li><li>Song S, Zhang B, Xiong F et al., 2026. Sperm tRNA-derived fragments: molecular mechanisms and clinical implications for paternal epigenetic inheritance. <em>Clin Epigenetics</em> 18(1). <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/42135772/">PMID 42135772</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1186/s13148-026-02155-4">DOI 10.1186/s13148-026-02155-4</a></li><li>Andersen E, Juhl CR, Kjøller ET et al., 2022. Sperm count is increased by diet-induced weight loss and maintained by exercise or GLP-1 analogue treatment: a randomized controlled trial. <em>Hum Reprod</em> 37(7):1414–1422. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/35580859/">PMID 35580859</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1093/humrep/deac096">DOI 10.1093/humrep/deac096</a></li><li>Donkin I, Versteyhe S, Ingerslev LR et al., 2016. Obesity and bariatric surgery drive epigenetic variation of spermatozoa in humans. <em>Cell Metab</em> 23(2):369–378. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/26669700/">PMID 26669700</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1016/j.cmet.2015.11.004">DOI 10.1016/j.cmet.2015.11.004</a></li><li>Misell LM, Holochwost D, Boban D et al., 2006. A stable isotope-mass spectrometric method for measuring human spermatogenesis kinetics in vivo. <em>J Urol</em> 175(1):242–246. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/16406920/">PMID 16406920</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1016/S0022-5347(05)00053-4">DOI 10.1016/S0022-5347(05)00053-4</a></li><li>Schisterman EF, Sjaarda LA, Clemons T et al., 2020. Effect of folic acid and zinc supplementation in men on semen quality and live birth among couples undergoing infertility treatment: a randomized clinical trial. <em>JAMA</em> 323(1):35–48. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/31910279/">PMID 31910279</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1001/jama.2019.18714">DOI 10.1001/jama.2019.18714</a></li><li>Skerrett-Byrne DA, Pepin AS, Laurent K et al., 2025. Dad's diet shapes the future: how paternal nutrition impacts placental development and childhood metabolic health. <em>Mol Nutr Food Res</em> 69(22):e70261. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/40913545/">PMID 40913545</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1002/mnfr.70261">DOI 10.1002/mnfr.70261</a></li></ol><p class="cap">Articolo ispirato a un post di <a href="https://www.instagram.com/p/DdokwJDiH92/">Marco Guercioni (@the___doc)</a>. Fonti consultate tramite PubMed.</p><p class="note">Nota: contenuto informativo, non sostituisce il parere di un medico o di un professionista qualificato.</p></main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

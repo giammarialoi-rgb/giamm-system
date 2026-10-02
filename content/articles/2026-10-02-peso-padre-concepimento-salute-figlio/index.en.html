@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Father&#x27;s weight at conception: what reaches the child | Nurvan</title>
+<meta name="description" content="Does a father&#x27;s weight before conception affect his child&#x27;s health? What the 2024 Nature study showed, what it didn&#x27;t, and what to do in the months before.">
+<link rel="alternate" hreflang="it" href="index.it.html">
+<link rel="alternate" hreflang="en" href="index.en.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>/* Layout: blog Nurvan — header sito, colonna di lettura 680px, grafici a tutta colonna, footer app. Look unico scuro (brand). */
+:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.hero{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:radial-gradient(120% 90% at 80% 10%,#2a220a 0%,#0c0c0c 55%);padding:28px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end;min-height:240px}
+.hero .yr{font-family:var(--display);font-weight:700;color:var(--gold);font-size:clamp(48px,11vw,96px);line-height:.9}
+.hero .lab{font-family:var(--mono);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.hero .arrow{grid-column:1/-1;height:2px;background:linear-gradient(90deg,var(--line),var(--gold))}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-left:1.1em} .box li{margin-block:.35em}
+.quote{border-left:3px solid var(--gold);padding-left:18px;font-size:22px;font-style:italic;margin-block:28px}
+figure{margin:36px 0}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+.chart h4{font-family:var(--display);margin:0 0 4px;font-size:17px}
+.chart p.sub{margin:0 0 10px;font-size:14px;color:var(--muted);font-family:var(--body)}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-left:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-left:1.2em} .refs li{margin-block:.7em}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+@media (max-width:560px){body{font-size:17px}.hero{grid-template-columns:1fr}.site nav{display:none}}
+html{background:var(--bg)}
+.wrap{overflow-wrap:break-word}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:3/2;object-fit:cover}
+.box h2{margin-top:0}
+.nv{background:#1d1d1d;color:var(--muted)}
+.tbl{overflow-x:auto;margin-block:20px;border:1px solid var(--line);border-radius:12px}
+.tbl table{border-collapse:collapse;width:100%;font-size:15px;min-width:460px}
+.tbl th,.tbl td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
+.tbl th{font-family:var(--display);font-weight:500;color:var(--gold);background:var(--surface)}
+.tbl td:last-child{font-family:var(--mono);white-space:nowrap}
+.tbl tr:last-child td{border-bottom:0;color:var(--muted)}
+aside.app{margin-block:32px}
+.app .cta{white-space:nowrap}
+.refs a{word-break:break-all}
+.no{background:#3a1010;color:#ff8a8a}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Nutrition</a><a href="#">Supplements</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Get the app</a></div></header>
+<main class="wrap" lang="en"><div class="crumb">Blog · Health · Fertility</div><h1>Father&#x27;s weight at conception: what actually reaches the child</h1><p class="lede">When people talk about health before pregnancy, they almost always mean the mother&#x27;s. A 2024 study in Nature put the spotlight on fathers too. Here is what it really showed, what got added along the way, and what makes sense to do in the months before trying for a baby.</p><div class="meta"><span>2 October 2026</span><span><b>11</b> min read</span><span><b>8</b> studies cited</span></div><figure class="cover"><img alt="" src="images/cover.jpg" width="1600" height="1086"/><figcaption class="cap">Photo by Mikael Stenberg on Unsplash (Unsplash License).</figcaption></figure><div class="box"><h2>Key takeaways</h2><ul>
+<li>In mice, two weeks of a very high-fat diet before mating made about 30% of male offspring glucose intolerant, without changing their body weight.</li>
+<li>The effect disappeared when fathers went back to a normal diet for 4 weeks before conceiving: in mice, the signal is reversible.</li>
+<li>In humans the data are associations: in two German cohorts, with a normal-weight mother, a father with overweight was linked to roughly double the odds of child obesity.</li>
+<li>Some numbers circulating on social media (a fragment "up 3.8-fold" that blocks the enzyme hexokinase 2) do not appear in the original study.</li>
+<li>In the months before conception, weight, diet and lifestyle matter. A folic acid and zinc supplement for men, tested in 2,370 couples, did not increase live births.</li>
+</ul></div><h2>What the Nature study actually did</h2><p>The study comes from Anika Tomar and colleagues at Helmholtz Munich, led by Raffaele Teperino, and was published in Nature in June 2024. The question was precise: if a father's diet changes something in his sperm, does it happen while sperm are being made in the testis, or later, while they mature in the epididymis?</p>
+<p>The epididymis is the coiled tube attached to the testis where sperm finish maturing. The researchers fed young male mice a diet with 60% of calories from fat for just 2 weeks. One group mated straight away with females never exposed to the diet. Another went back to normal chow for 4 weeks first, so their pups came from sperm that had never met the high-fat diet.</p>
+<ul>
+<li><strong>Offspring body weight did not change</strong>, but about 30% of males in the first group became glucose intolerant (they handled blood sugar worse) and less insulin sensitive.</li>
+<li><strong>Offspring of the second group were normal</strong>: the signal came from sperm exposed to the diet while maturing, and it vanished after a month of normal eating.</li>
+<li><strong>Sperm carried more small mitochondrial RNAs</strong>, mitochondrial transfer RNAs (mt-tRNAs) and their fragments (mt-tsRNAs). In two-cell embryos, the authors showed that paternal mt-tRNAs are passed to the embryo at fertilization.</li>
+</ul>
+<p>This is a route of transmission that does not go through DNA: not a mutation, but a signal tied to the father's metabolic state at that moment.</p><h2>What about humans?</h2><p>The same paper contains two kinds of human data. The first is about sperm: in 18 young Finnish volunteers, mt-tsRNAs were the only type of small RNA that rose with body mass index (BMI). The authors themselves call it a small sample.</p>
+<p>The second is about children. In two pediatric studies from Leipzig (the Leipzig Childhood Obesity Cohort and LIFE Child), the father's BMI was linked to the child's even after accounting for the mother's. In families with a normal-weight mother, having a father with overweight was linked to about twice the odds of child obesity, and a father with obesity to more than six times the odds.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 250" role="img" aria-label="Bar chart: odds ratio of child obesity 1 with a normal-weight father, 2.26 with an overweight father, 6.44 with an obese father, in families with a normal-weight mother (Tomar et al. 2024)">
+<rect width="600" height="250" fill="#0c0c0c"/>
+<text x="16" y="28" font-family="Bricolage Grotesque, system-ui, 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', 'Noto Sans SC', sans-serif" font-size="16" font-weight="700" fill="#f0f0f0">Child obesity risk by father&#x27;s weight</text>
+<text x="16" y="48" font-family="Bricolage Grotesque, system-ui, 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', 'Noto Sans SC', sans-serif" font-size="12" fill="#a0a0a0">Families with a normal-weight mother · odds ratio</text>
+<g font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#a0a0a0">
+<line x1="262.0" y1="64" x2="262.0" y2="200" stroke="#262626"/>
+<text x="262.0" y="216" text-anchor="middle">0</text>
+<line x1="304.6" y1="64" x2="304.6" y2="200" stroke="#555"/>
+<text x="304.6" y="216" text-anchor="middle">1</text>
+<line x1="347.1" y1="64" x2="347.1" y2="200" stroke="#262626"/>
+<text x="347.1" y="216" text-anchor="middle">2</text>
+<line x1="389.7" y1="64" x2="389.7" y2="200" stroke="#262626"/>
+<text x="389.7" y="216" text-anchor="middle">3</text>
+<line x1="432.3" y1="64" x2="432.3" y2="200" stroke="#262626"/>
+<text x="432.3" y="216" text-anchor="middle">4</text>
+<line x1="474.9" y1="64" x2="474.9" y2="200" stroke="#262626"/>
+<text x="474.9" y="216" text-anchor="middle">5</text>
+<line x1="517.4" y1="64" x2="517.4" y2="200" stroke="#262626"/>
+<text x="517.4" y="216" text-anchor="middle">6</text>
+<line x1="560.0" y1="64" x2="560.0" y2="200" stroke="#262626"/>
+<text x="560.0" y="216" text-anchor="middle">7</text>
+</g>
+<g font-family="Bricolage Grotesque, system-ui, 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', 'Noto Sans SC', sans-serif" font-size="13" fill="#f0f0f0">
+<text x="16" y="95">Normal-weight father (ref.)</text>
+<rect x="262" y="78" width="42.6" height="24" rx="3" fill="#aa8a2e" opacity="0.55"/>
+<text x="312.6" y="95" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12" fill="#a0a0a0">1 · reference</text>
+<text x="16" y="137">Father with overweight</text>
+<rect x="262" y="120" width="96.2" height="24" rx="3" fill="#d4af37" opacity="1"/>
+<text x="366.2" y="137" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12" fill="#f3e5ab">2.26</text>
+<text x="16" y="179">Father with obesity</text>
+<rect x="262" y="162" width="274.2" height="24" rx="3" fill="#d4af37" opacity="1"/>
+<text x="544.2" y="179" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12" fill="#f3e5ab">6.44</text>
+<text x="262" y="238" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#a0a0a0">odds ratio (normal-weight father = 1)</text>
+</g></svg></div><figcaption class="cap">Source: Tomar et al., Nature 2024, Leipzig cohorts. Odds ratios reported in the main text; normal-weight father = reference. Nurvan chart.</figcaption></figure>
+
+<p>For scale, the mother's weight explained 18% of the differences in children's BMI, the father's a further 6%. The authors adjusted for relatedness and estimated genetic risk, but an observational study cannot fully separate biology from family habits: a household that eats badly tends to do it together.</p><h2>Not every study points the same way</h2><p>Also in 2024, a group in Barcelona published a similar experiment in Heliyon, with one difference: the male mice became truly obese on a Western-style diet. Sperm from obese fathers showed 450 DNA regions with different accessibility (more or less "open" to being read). Yet the offspring, male and female, had only mild metabolic changes early in life that later faded. No lasting predisposition to obesity or diabetes.</p>
+<p>The authors talk about offspring resilience: a change measured in sperm does not automatically mean an effect on the child.</p>
+<p>Two words worth keeping apart: an <strong>intergenerational</strong> effect concerns the children (F1) conceived with exposed sperm; a <strong>transgenerational</strong> one reaches grandchildren and beyond (F2, F3) without new exposure. The Nature study is about children only.</p><h2>The numbers going around vs what&#x27;s in the paper</h2><p>On social media this study often comes with very precise details: an RNA fragment up 3.8-fold that enters the embryo and blocks the mRNA of hexokinase 2 (a key enzyme for using glucose), glucose-intolerant offspring produced by IVF, and fragments 2.3 times higher in men with a BMI over 30.</p>
+<p>These figures are not in the full text of the study on PubMed Central. They do appear, attributed to Tomar and colleagues, in a review published in Clinical Epigenetics in 2026. In the original study:</p>
+<ul>
+<li>the glucose-intolerant offspring came from <strong>natural mating</strong>; IVF was only used to produce two-cell embryos for analysis;</li>
+<li>the authors write that their data show transfer of whole mt-tRNAs, <strong>not</strong> of the fragments, which they consider likely but unproven;</li>
+<li>the human sperm analysis treats BMI as a continuous variable in 18 young men, with no comparison above and below 30.</li>
+</ul>
+<p>So the mechanism told with such confidence is, for now, a plausible hypothesis.</p><h2>A father&#x27;s weight can change, and sperm respond</h2><p>A human sperm cell takes about two months to form and reach the ejaculate: in a labeled-water study of 11 men, the first "new" sperm appeared after 64 days on average (range 42 to 76). Hence the often-quoted 2–3 month window before conception. In mice, though, it was mostly the last weeks of maturation that mattered.</p>
+<p>And semen improves when a man with obesity loses weight. In a Danish randomized trial, 56 men with a BMI of 32 to 43 followed an 800 kcal/day diet for 8 weeks under medical supervision and lost 16.5 kg on average. Sperm concentration and count rose by roughly one and a half times. The gain held at one year in men who kept the weight off, not in those who regained it.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 220" role="img" aria-label="Dot chart: after an 8-week low-calorie diet and 16.5 kg lost, sperm concentration 1.49-fold (95% CI 1.18–1.88) and total sperm count 1.41-fold (95% CI 1.07–1.87) versus baseline (Andersen et al. 2022)">
+<rect width="600" height="220" fill="#0c0c0c"/>
+<text x="16" y="28" font-family="Bricolage Grotesque, system-ui, 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', 'Noto Sans SC', sans-serif" font-size="16" font-weight="700" fill="#f0f0f0">Sperm after losing 16.5 kg in 8 weeks</text>
+<text x="16" y="48" font-family="Bricolage Grotesque, system-ui, 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', 'Noto Sans SC', sans-serif" font-size="12" fill="#a0a0a0">Change from baseline · 95% CI</text>
+<g font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#a0a0a0">
+<line x1="200.0" y1="64" x2="200.0" y2="170" stroke="#262626"/>
+<text x="200.0" y="186" text-anchor="middle">0.8</text>
+<line x1="261.7" y1="64" x2="261.7" y2="170" stroke="#777" stroke-dasharray="4 3"/>
+<text x="261.7" y="186" text-anchor="middle">1.0</text>
+<line x1="323.3" y1="64" x2="323.3" y2="170" stroke="#262626"/>
+<text x="323.3" y="186" text-anchor="middle">1.2</text>
+<line x1="385.0" y1="64" x2="385.0" y2="170" stroke="#262626"/>
+<text x="385.0" y="186" text-anchor="middle">1.4</text>
+<line x1="446.7" y1="64" x2="446.7" y2="170" stroke="#262626"/>
+<text x="446.7" y="186" text-anchor="middle">1.6</text>
+<line x1="508.3" y1="64" x2="508.3" y2="170" stroke="#262626"/>
+<text x="508.3" y="186" text-anchor="middle">1.8</text>
+<line x1="570.0" y1="64" x2="570.0" y2="170" stroke="#262626"/>
+<text x="570.0" y="186" text-anchor="middle">2.0</text>
+<text x="265.7" y="76" font-size="10">before the diet = 1</text>
+</g>
+<g font-family="Bricolage Grotesque, system-ui, 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', 'Noto Sans SC', sans-serif" font-size="13" fill="#f0f0f0">
+<text x="16" y="109">Concentration</text>
+<line x1="317.2" y1="104" x2="533.0" y2="104" stroke="#d4af37" stroke-width="3" stroke-linecap="round"/>
+<circle cx="412.8" cy="104" r="7" fill="#d4af37"/>
+<text x="412.8" y="92" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12" fill="#f3e5ab">×1.49 (1.18–1.88)</text>
+<text x="16" y="153">Total count</text>
+<line x1="283.2" y1="148" x2="529.9" y2="148" stroke="#d4af37" stroke-width="3" stroke-linecap="round"/>
+<circle cx="388.1" cy="148" r="7" fill="#d4af37"/>
+<text x="388.1" y="136" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12" fill="#f3e5ab">×1.41 (1.07–1.87)</text>
+<text x="200" y="208" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#a0a0a0">fold change from baseline</text>
+</g></svg></div><figcaption class="cap">Source: Andersen et al., Hum Reprod 2022 (n = 56). Change after an 8-week low-calorie diet versus baseline, with 95% confidence intervals. Nurvan chart.</figcaption></figure>
+
+<p>In men with severe obesity, sperm DNA methylation also changed markedly after bariatric surgery, including at sites linked to appetite control.</p>
+<p>One piece is still missing: no human study has yet shown that a father losing weight before conception improves his child's metabolic health. We know that paternal weight is linked to child health and that sperm respond to weight loss; the direct link has not been tested.</p><h2>What about supplements to &quot;prepare&quot; sperm?</h2><p>Studies like this are often used to sell male fertility supplements. The strongest test available points the other way.</p>
+<p>In the FAZST trial (JAMA, 2020), 2,370 couples about to start fertility treatment were randomized: the men took folic acid (5 mg) and zinc (30 mg) or a placebo for 6 months. Live births were practically identical, 34% versus 35%, and almost all semen measures were unchanged. Sperm DNA fragmentation was actually slightly higher with the supplement (29.7% versus 27.2%).</p>
+<p>The trial did not measure children's metabolic health, but the message is clear: no supplement currently replaces weight and lifestyle, and no human study supports a "pre-conception" supplement protocol for men based on these data.</p><h2>What the research actually says</h2><p>This article was inspired by a post from Marco Guercioni (@the___doc), who presents the study cautiously and lists its limits. Here are its main claims checked against the original sources.</p><div class="verdict"><div class="v"><span class="pill ok">Confirmed</span><p><strong>&quot;Tomar and colleagues, Nature, June 2024: mature sperm respond to diet, and 30% of male offspring become glucose intolerant.&quot;</strong> True in mice.</p></div><div class="v"><span class="pill no">Contradicted by the original study</span><p><strong>&quot;Via IVF, with no maternal contribution.&quot;</strong> The offspring tested were born from natural mating with unexposed females. IVF was only used to analyze two-cell embryos.</p></div><div class="v"><span class="pill nv">Not verifiable</span><p><strong>&quot;One fragment rises 3.8-fold and blocks hexokinase 2 mRNA; in men with BMI over 30 it is 2.3 times higher.&quot;</strong> These numbers appear in a 2026 review, not in the study, whose authors write that transfer of the fragments to the embryo is not demonstrated.</p></div><div class="v"><span class="pill part">Needs nuance</span><p><strong>&quot;In two cohorts, paternal BMI affects the child&#x27;s metabolic health independently of the mother&#x27;s.&quot;</strong> The association is real, but observational, and the father explains a smaller share than the mother (6% versus 18%).</p></div><div class="v"><span class="pill ok">Confirmed</span><p><strong>&quot;It is intergenerational, not transgenerational; in mice there is a causal chain, in humans an association.&quot;</strong> So is the Heliyon finding (450 regions, no lasting predisposition), which comes from mice.</p></div><div class="v"><span class="pill nv">Not verifiable</span><p><strong>&quot;Half of the effect is the shared environment after birth.&quot;</strong> Family environment clearly matters, but we found no 50% estimate in the sources reviewed.</p></div><div class="v"><span class="pill ok">Confirmed</span><p><strong>&quot;No human data justify a supplement protocol.&quot;</strong> The FAZST trial points the same way.</p></div><div class="v"><span class="pill part">Needs nuance</span><p><strong>&quot;The last three months are the window.&quot;</strong> Sperm take about 2 months to form: 3 months is a cautious window.</p></div></div><h2>How to apply it</h2><p>If you are thinking about having a baby, here is how to turn these data into concrete steps. They are good general habits, not a treatment.</p>
+<ol class="steps">
+<li><strong>Start 2–3 months ahead.</strong> That is how long a "new generation" of sperm takes, but the last weeks count too.</li>
+<li><strong>Watch weight and waist.</strong> If you carry extra weight, even a moderate, sustainable loss points the right way. Very low-calorie diets, like the 800 kcal one in the Danish study, only under medical supervision.</li>
+<li><strong>Improve diet quality.</strong> More minimally processed foods, vegetables, legumes and lean protein; fewer ultra-processed foods and sugary drinks.</li>
+<li><strong>Train regularly</strong>, combining strength and aerobic work. In the Danish trial, exercise was one of the strategies used to keep the weight off.</li>
+<li><strong>Smoking, alcohol and sleep.</strong> Quitting smoking, cutting back on alcohol and sleeping enough are part of the same preparation.</li>
+<li><strong>Don't buy "sperm" supplements on the strength of these studies.</strong> If you have fertility concerns or have been trying for a while, talk to your doctor or a urologist, who can order a semen analysis.</li>
+</ol>
+<p>This is not about blame: it's one more lever. A 2025 review from the same Munich group argues for preconception care that involves both parents, not just the mother.</p>
+<aside class="app"><div><h3>Plan the next three months with numbers</h3><p>In Nurvan you log weight and body measurements, track meals in the food diary and record every workout, so you can see week by week whether you're heading the right way. If you work with a coach, they see the same data and can assign your nutrition plan and training program.</p></div><a class="cta" href="https://nurvan.app">Try Nurvan</a></aside><h2>FAQ</h2><details><summary>I was overweight when we conceived. Will my child be obese?</summary><p>No, it is not destiny. The data describe average risk across many families, not an individual outcome. Many factors matter, starting with how the family eats and moves, and those can change at any time.</p></details><details><summary>How long before conception does a father&#x27;s weight matter?</summary><p>Human sperm take about two months to form, so the 2–3 months before are the most quoted window. In mice, 2 weeks of diet were enough to cause the effect and 4 weeks of normal eating to undo it. The exact timing in humans has not been measured.</p></details><details><summary>Are there supplements that &quot;clean up&quot; sperm before conception?</summary><p>There is no human evidence for that. In the largest trial, folic acid and zinc for 6 months did not increase births or improve semen quality. If you have a deficiency or a fertility problem, that is for your doctor to assess.</p></details><details><summary>Does this apply to mothers too?</summary><p>Yes, even more so: in the Leipzig data the mother's weight explained a larger share of the differences between children. The news is not that fathers matter more than mothers, but that they matter too.</p></details><h2>Sources</h2><ol class="refs"><li>Tomar A, Gomez-Velazquez M, Gerlini R et al., 2024. Epigenetic inheritance of diet-induced and sperm-borne mitochondrial RNAs. <em>Nature</em> 630(8017):720–727. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/38839949/">PMID 38839949</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1038/s41586-024-07472-3">DOI 10.1038/s41586-024-07472-3</a></li><li>Tahiri I, Llana SR, Fos-Domènech J et al., 2024. Paternal obesity induces changes in sperm chromatin accessibility and has a mild effect on offspring metabolic health. <em>Heliyon</em> 10(14):e34043. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/39100496/">PMID 39100496</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1016/j.heliyon.2024.e34043">DOI 10.1016/j.heliyon.2024.e34043</a></li><li>Song S, Zhang B, Xiong F et al., 2026. Sperm tRNA-derived fragments: molecular mechanisms and clinical implications for paternal epigenetic inheritance. <em>Clin Epigenetics</em> 18(1). <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/42135772/">PMID 42135772</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1186/s13148-026-02155-4">DOI 10.1186/s13148-026-02155-4</a></li><li>Andersen E, Juhl CR, Kjøller ET et al., 2022. Sperm count is increased by diet-induced weight loss and maintained by exercise or GLP-1 analogue treatment: a randomized controlled trial. <em>Hum Reprod</em> 37(7):1414–1422. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/35580859/">PMID 35580859</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1093/humrep/deac096">DOI 10.1093/humrep/deac096</a></li><li>Donkin I, Versteyhe S, Ingerslev LR et al., 2016. Obesity and bariatric surgery drive epigenetic variation of spermatozoa in humans. <em>Cell Metab</em> 23(2):369–378. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/26669700/">PMID 26669700</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1016/j.cmet.2015.11.004">DOI 10.1016/j.cmet.2015.11.004</a></li><li>Misell LM, Holochwost D, Boban D et al., 2006. A stable isotope-mass spectrometric method for measuring human spermatogenesis kinetics in vivo. <em>J Urol</em> 175(1):242–246. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/16406920/">PMID 16406920</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1016/S0022-5347(05)00053-4">DOI 10.1016/S0022-5347(05)00053-4</a></li><li>Schisterman EF, Sjaarda LA, Clemons T et al., 2020. Effect of folic acid and zinc supplementation in men on semen quality and live birth among couples undergoing infertility treatment: a randomized clinical trial. <em>JAMA</em> 323(1):35–48. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/31910279/">PMID 31910279</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1001/jama.2019.18714">DOI 10.1001/jama.2019.18714</a></li><li>Skerrett-Byrne DA, Pepin AS, Laurent K et al., 2025. Dad's diet shapes the future: how paternal nutrition impacts placental development and childhood metabolic health. <em>Mol Nutr Food Res</em> 69(22):e70261. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/40913545/">PMID 40913545</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1002/mnfr.70261">DOI 10.1002/mnfr.70261</a></li></ol><p class="cap">Inspired by a post from <a href="https://www.instagram.com/p/DdokwJDiH92/">Marco Guercioni (@the___doc)</a>. Sources accessed via PubMed.</p><p class="note">Note: this content is for information only and does not replace advice from a doctor or qualified professional.</p></main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>
