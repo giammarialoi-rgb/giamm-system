@@ -592,10 +592,94 @@
     return { name: sessionName, exercises: exercises };
   }
 
-  function buildTemplateSessions(params) {
-    return sessionNames(params.split, params.days).map(function (name, i) {
-      return buildSession(params, name, i);
+  /*
+   * Core work at least twice a week, in every program.
+   *
+   * Only the full body recipe had a core slot, and it was its last one, so
+   * the cap on session length cut it off: 86% of the catalogue had no
+   * abdominal work at all. It is added here, after the sessions are built,
+   * and it is always an addition - nothing is taken out to make room. It goes
+   * to the shortest sessions, apart from each other in the week.
+   */
+  var CORE_SESSIONS_PER_WEEK = 2;
+
+  function ensureCore(params, sessions) {
+    var isCore = {};
+    TAX.EXERCISES.forEach(function (e) { if (e.pattern === 'core') isCore[e.name] = true; });
+    // Movements only: these rows are written in repetitions, and a plank
+    // counted "10-15" means nothing.
+    var pool = TAX.poolFor(params.equipment, params.experience, 'core', null)
+      .filter(function (e) { return !/plank|hold/i.test(e.name); });
+    if (!pool.length) return sessions;
+    var seed = [params.days, params.split, params.goal, params.equipment, params.experience, params.audience, params.variant || 0].join('|');
+    // Counted only where it stays core in every block: a slot that rotates
+    // to a calf raise later on leaves those weeks without it.
+    var has = sessions.map(function (s) {
+      return s.exercises.some(function (e) {
+        return isCore[e.name] && (e.alts || []).every(function (a) { return isCore[a]; });
+      });
     });
+    var taken = {};
+    sessions.forEach(function (s) {
+      s.exercises.forEach(function (e) {
+        if (isCore[e.name]) taken[e.name] = true;
+        (e.alts || []).forEach(function (a) { if (isCore[a]) taken[a] = true; });
+      });
+    });
+    var want = Math.min(CORE_SESSIONS_PER_WEEK, sessions.length);
+    var count = has.filter(Boolean).length;
+
+    while (count < want) {
+      var best = -1;
+      var bestScore = Infinity;
+      for (var i = 0; i < sessions.length; i++) {
+        if (has[i]) continue;
+        var far = sessions.length;
+        for (var j = 0; j < sessions.length; j++) if (has[j]) far = Math.min(far, Math.abs(i - j));
+        var score = sessions[i].exercises.length * 10 - far;
+        if (score < bestScore) { bestScore = score; best = i; }
+      }
+      if (best < 0) break;
+      var inSession = {};
+      sessions[best].exercises.forEach(function (e) {
+        inSession[e.name] = true;
+        (e.alts || []).forEach(function (a) { inSession[a] = true; });
+      });
+      // A different exercise from the other core day, where there is one.
+      var free = pool.filter(function (e) { return !inSession[e.name] && !taken[e.name]; });
+      if (!free.length) free = pool.filter(function (e) { return !inSession[e.name]; });
+      has[best] = true;
+      count += 1;
+      if (!free.length) continue;
+      var list = preferred(free, params.equipment);
+      var chosen = list[hash(seed + '#core#' + best) % list.length];
+      taken[chosen.name] = true;
+      var rest = list.filter(function (e) { return e.name !== chosen.name && !taken[e.name]; });
+      var alts = [];
+      for (var k = 1; k <= 2 && rest.length; k++) {
+        var alt = rest.splice(hash(seed + '#core#' + best + '#alt' + k) % rest.length, 1)[0];
+        taken[alt.name] = true;
+        alts.push(alt.name);
+      }
+      var scheme = schemeFor(params.goal, params.experience, 'iso');
+      sessions[best].exercises.push({
+        name: chosen.name,
+        sets_count: scheme.sets,
+        reps_target: scheme.reps,
+        rir: scheme.rir,
+        rest_sec: scheme.rest,
+        tempo: scheme.tempo,
+        role: 'accessory',
+        alts: alts.length ? alts : undefined
+      });
+    }
+    return sessions;
+  }
+
+  function buildTemplateSessions(params) {
+    return ensureCore(params, sessionNames(params.split, params.days).map(function (name, i) {
+      return buildSession(params, name, i);
+    }));
   }
 
   root.NurvanProgramBuilder = {

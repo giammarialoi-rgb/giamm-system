@@ -490,7 +490,48 @@
   function weekSessions(week, r) {
     var out = [];
     for (var day = 0; day < r.days; day++) out.push(WRITERS[r.discipline.id](r, week, day));
-    return out;
+    return ensureCore(out, r, week);
+  }
+
+  /*
+   * Core work at least twice a week, whatever the discipline. Pilates is
+   * core work from start to finish; a short calisthenics session, a
+   * stretching session or a HIIT day made of two-station blocks could come
+   * out with none. It is added at the end of the sessions that lack it, the
+   * first and the last of them so they are apart: nothing is taken out.
+   */
+  var CORE_NAMES = {};
+  LADDERS.core.concat(LADDERS.core2).forEach(function (e) { if (e.muscle === 'ADDOME') CORE_NAMES[e.name] = true; });
+  ['Hanging knee raise', 'Leg raise'].forEach(function (n) { CORE_NAMES[n] = true; });
+  Object.keys(STATIONS).forEach(function (k) { STATIONS[k].core.forEach(function (n) { if (n !== 'Kettlebell halo') CORE_NAMES[n] = true; }); });
+  function sessionHasCore(s) {
+    return s.exercises.some(function (e) {
+      if (CORE_NAMES[e.name]) return true;
+      return !!(e.circuit && e.circuit.items.some(function (it) { return CORE_NAMES[it.name]; }));
+    });
+  }
+  function coreRow(r, week, turn) {
+    if (r.discipline.id === 'calisthenics') {
+      var sets = r.level.n === 0 ? 3 : 4;
+      var row = calisRow(turn ? 'core2' : 'core', r, week, sets);
+      return CORE_NAMES[row.name] ? row : calisRow('core', r, week, sets);
+    }
+    var plank = LADDERS.core[0];
+    var deadBug = LADDERS.core2[0];
+    if (r.discipline.id === 'hiit' || turn) return timeRow(plank.name, 3, plank.sec + r.level.n * 10, '30s', plank.cue, plank.muscle);
+    return repsRow(deadBug.name, 2, deadBug.reps, '30s', deadBug.cue, deadBug.muscle);
+  }
+  function ensureCore(sessions, r, week) {
+    if (r.discipline.id === 'pilates') return sessions;
+    var count = sessions.filter(sessionHasCore).length;
+    for (var turn = 0; count < Math.min(2, sessions.length); turn++) {
+      var lacking = sessions.filter(function (s) { return !sessionHasCore(s); });
+      if (!lacking.length) break;
+      var s = turn ? lacking[lacking.length - 1] : lacking[0];
+      s.exercises.push(coreRow(r, week, turn));
+      count += 1;
+    }
+    return sessions;
   }
   function weekLabel(week, r) {
     if (isDeload(week, r.weeks)) return 'Settimana ' + week + ' · Scarico';

@@ -306,7 +306,28 @@
     if (opts.days >= 6) out.push(sessionEngine(phase, opts, k));
     // Strength and running alternate through the week.
     var order = opts.days >= 5 ? [0, 1, 4, 2, 3, 5] : [0, 1, 2, 3];
-    return order.filter(function (i) { return i < out.length; }).map(function (i) { return out[i]; });
+    return ensureCore(order.filter(function (i) { return i < out.length; }).map(function (i) { return out[i]; }));
+  }
+
+  // Core work twice a week, every week. Strength A always closes on a plank;
+  // the second one is added to the other strength day, or after a run when
+  // there is none - never to a simulation, and nothing is taken out for it.
+  var CORE_NAMES = ['Plank', 'Side plank'];
+  function hasCore(session) {
+    return session.exercises.some(function (e) { return CORE_NAMES.indexOf(e.name) !== -1; });
+  }
+  function ensureCore(sessions) {
+    var count = sessions.filter(hasCore).length;
+    // The other strength day is named after the first one (… A, … B).
+    [sessions[0].name.replace(/A$/, 'B'), 'Corsa facile', 'Corsa a intervalli'].forEach(function (name) {
+      if (count >= 2) return;
+      var s = null;
+      sessions.forEach(function (x) { if (!s && x.name === name && !hasCore(x)) s = x; });
+      if (!s) return;
+      s.exercises.push(timed('Side plank', 3, 30, '60s', 'Per lato.'));
+      count += 1;
+    });
+    return sessions;
   }
 
   // Whole weeks between today and the race, within what a program can hold.

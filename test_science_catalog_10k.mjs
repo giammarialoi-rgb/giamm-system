@@ -88,7 +88,8 @@ ok(idx.science_v2.count === catalog.total() && catalog.total() === 810000,
                   sessions += 1;
                   const names = s.exercises.map((e) => e.name);
                   assert(new Set(names).size === names.length, 'a session repeats an exercise in ' + where + ' / ' + s.name);
-                  assert(names.length >= 4 && names.length <= 7, 'session length ' + names.length + ' in ' + where + ' / ' + s.name);
+                  // 8, not 7: the core exercise is added on top, never swapped in.
+                  assert(names.length >= 4 && names.length <= 8, 'session length ' + names.length + ' in ' + where + ' / ' + s.name);
                   minEx = Math.min(minEx, names.length); maxEx = Math.max(maxEx, names.length);
                   if (s.exercises[0].role !== 'compound') firstNotCompound += 1;
                   assert(s.exercises.some((e) => e.progressed), 'no lift to progress on in ' + where + ' / ' + s.name);

@@ -44167,8 +44167,410 @@ const NUTRITION_MEAL_COMBO_VARIANTS = [
   }
 ];
 
-function nutritionComboTemplates(comboIndex, trainingDay) {
-  const list = NUTRITION_MEAL_COMBO_VARIANTS;
+/*
+ * Vegetarian and vegan plans. Not the omnivore layouts with the meat taken
+ * out - that leaves a plate of rice and salad - but their own seven layouts
+ * each, where the protein of every main meal comes from legumes, soy, seitan
+ * and (vegetarian only) eggs and dairy. Legumes and cereals are dry weights,
+ * like the rice and the pasta of the other layouts.
+ */
+const NUTRITION_MEAL_COMBO_VEGETARIAN = [
+  {
+    Colazione: [
+      { name: 'Avena', quantity: 60, unit: 'g', kcal: 230, protein: 8, carbs: 40, fat: 4 },
+      { name: 'Yogurt greco 0%', quantity: 150, unit: 'g', kcal: 90, protein: 15, carbs: 6, fat: 0 },
+      { name: 'Frutti di bosco', quantity: 100, unit: 'g', kcal: 50, protein: 1, carbs: 12, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Uova', quantity: 3, unit: 'pz', kcal: 210, protein: 18, carbs: 1, fat: 15 },
+      { name: 'Riso basmati', quantity: 90, unit: 'g', kcal: 315, protein: 7, carbs: 70, fat: 1 },
+      { name: 'Insalata mista', quantity: 150, unit: 'g', kcal: 30, protein: 2, carbs: 5, fat: 0 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ],
+    Spuntino: [
+      { name: 'Banana', quantity: 1, unit: 'pz', kcal: 90, protein: 1, carbs: 23, fat: 0 },
+      { name: 'Mandorle', quantity: 20, unit: 'g', kcal: 120, protein: 4, carbs: 4, fat: 10 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Whey protein', quantity: 25, unit: 'g', kcal: 100, protein: 20, carbs: 2, fat: 1 },
+      { name: 'Mela', quantity: 1, unit: 'pz', kcal: 80, protein: 0, carbs: 20, fat: 0 }
+    ],
+    Cena: [
+      { name: 'Lenticchie secche', quantity: 80, unit: 'g', kcal: 270, protein: 20, carbs: 40, fat: 1 },
+      { name: 'Patate', quantity: 200, unit: 'g', kcal: 160, protein: 4, carbs: 36, fat: 0 },
+      { name: 'Verdure al vapore', quantity: 200, unit: 'g', kcal: 50, protein: 3, carbs: 8, fat: 0 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Uova', quantity: 2, unit: 'pz', kcal: 140, protein: 12, carbs: 1, fat: 10 },
+      { name: 'Pane integrale', quantity: 50, unit: 'g', kcal: 120, protein: 5, carbs: 22, fat: 2 },
+      { name: 'Avocado', quantity: 50, unit: 'g', kcal: 80, protein: 1, carbs: 4, fat: 7 }
+    ],
+    Pranzo: [
+      { name: 'Ceci secchi', quantity: 80, unit: 'g', kcal: 290, protein: 15, carbs: 37, fat: 5 },
+      { name: 'Quinoa', quantity: 70, unit: 'g', kcal: 250, protein: 9, carbs: 45, fat: 4 },
+      { name: 'Verdure grigliate', quantity: 200, unit: 'g', kcal: 60, protein: 3, carbs: 10, fat: 2 }
+    ],
+    Spuntino: [
+      { name: 'Yogurt greco 0%', quantity: 125, unit: 'g', kcal: 75, protein: 13, carbs: 5, fat: 0 },
+      { name: 'Noci', quantity: 15, unit: 'g', kcal: 100, protein: 2, carbs: 2, fat: 10 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Proteine caseine', quantity: 25, unit: 'g', kcal: 95, protein: 20, carbs: 2, fat: 1 }
+    ],
+    Cena: [
+      { name: 'Mozzarella light', quantity: 125, unit: 'g', kcal: 206, protein: 25, carbs: 1, fat: 11 },
+      { name: 'Verdure miste', quantity: 250, unit: 'g', kcal: 55, protein: 4, carbs: 10, fat: 0 },
+      { name: 'Pane di segale', quantity: 60, unit: 'g', kcal: 135, protein: 5, carbs: 24, fat: 1 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Pancake proteici', quantity: 120, unit: 'g', kcal: 220, protein: 20, carbs: 22, fat: 5 },
+      { name: 'Mirtilli', quantity: 80, unit: 'g', kcal: 45, protein: 0, carbs: 11, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Tofu', quantity: 180, unit: 'g', kcal: 235, protein: 25, carbs: 3, fat: 14 },
+      { name: 'Patate dolci', quantity: 200, unit: 'g', kcal: 180, protein: 3, carbs: 41, fat: 0 },
+      { name: 'Insalata', quantity: 150, unit: 'g', kcal: 25, protein: 2, carbs: 4, fat: 0 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ],
+    Spuntino: [
+      { name: 'Skyr', quantity: 150, unit: 'g', kcal: 90, protein: 16, carbs: 5, fat: 0 },
+      { name: 'Noci', quantity: 15, unit: 'g', kcal: 100, protein: 2, carbs: 2, fat: 10 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Fiocchi di latte', quantity: 150, unit: 'g', kcal: 110, protein: 18, carbs: 5, fat: 2 }
+    ],
+    Cena: [
+      { name: 'Fagioli borlotti secchi', quantity: 80, unit: 'g', kcal: 268, protein: 18, carbs: 38, fat: 1 },
+      { name: 'Riso integrale', quantity: 80, unit: 'g', kcal: 280, protein: 6, carbs: 58, fat: 2 },
+      { name: 'Zucchine', quantity: 200, unit: 'g', kcal: 35, protein: 2, carbs: 6, fat: 0 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Toast integrale', quantity: 2, unit: 'pz', kcal: 160, protein: 6, carbs: 28, fat: 2 },
+      { name: 'Uovo strapazzato', quantity: 2, unit: 'pz', kcal: 140, protein: 12, carbs: 1, fat: 10 },
+      { name: 'Kiwi', quantity: 1, unit: 'pz', kcal: 45, protein: 1, carbs: 10, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Pasta integrale', quantity: 90, unit: 'g', kcal: 310, protein: 12, carbs: 60, fat: 2 },
+      { name: 'Ricotta light', quantity: 120, unit: 'g', kcal: 132, protein: 14, carbs: 5, fat: 6 },
+      { name: 'Pomodoro', quantity: 150, unit: 'g', kcal: 30, protein: 1, carbs: 6, fat: 0 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ],
+    Spuntino: [
+      { name: 'Banana', quantity: 1, unit: 'pz', kcal: 90, protein: 1, carbs: 23, fat: 0 },
+      { name: 'Burro di arachidi', quantity: 15, unit: 'g', kcal: 90, protein: 4, carbs: 3, fat: 8 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Whey protein', quantity: 30, unit: 'g', kcal: 115, protein: 24, carbs: 2, fat: 1 }
+    ],
+    Cena: [
+      { name: 'Burger di soia', quantity: 150, unit: 'g', kcal: 270, protein: 26, carbs: 12, fat: 12 },
+      { name: 'Cous cous', quantity: 70, unit: 'g', kcal: 245, protein: 8, carbs: 48, fat: 2 },
+      { name: 'Verdure miste', quantity: 200, unit: 'g', kcal: 50, protein: 3, carbs: 8, fat: 0 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Yogurt greco 0%', quantity: 200, unit: 'g', kcal: 120, protein: 20, carbs: 8, fat: 0 },
+      { name: 'Granola', quantity: 40, unit: 'g', kcal: 180, protein: 5, carbs: 28, fat: 6 },
+      { name: 'Fragole', quantity: 100, unit: 'g', kcal: 35, protein: 1, carbs: 8, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Farro', quantity: 80, unit: 'g', kcal: 280, protein: 10, carbs: 55, fat: 2 },
+      { name: 'Lenticchie secche', quantity: 60, unit: 'g', kcal: 200, protein: 15, carbs: 30, fat: 1 },
+      { name: 'Insalata', quantity: 150, unit: 'g', kcal: 25, protein: 2, carbs: 4, fat: 0 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ],
+    Spuntino: [
+      { name: 'Ricotta light', quantity: 100, unit: 'g', kcal: 110, protein: 12, carbs: 4, fat: 5 },
+      { name: 'Miele', quantity: 10, unit: 'g', kcal: 30, protein: 0, carbs: 8, fat: 0 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Pera', quantity: 1, unit: 'pz', kcal: 80, protein: 0, carbs: 20, fat: 0 }
+    ],
+    Cena: [
+      { name: 'Uova', quantity: 2, unit: 'pz', kcal: 140, protein: 12, carbs: 1, fat: 10 },
+      { name: 'Albume', quantity: 150, unit: 'g', kcal: 80, protein: 16, carbs: 1, fat: 0 },
+      { name: 'Patate al forno', quantity: 220, unit: 'g', kcal: 180, protein: 4, carbs: 40, fat: 0 },
+      { name: 'Broccoli', quantity: 200, unit: 'g', kcal: 55, protein: 5, carbs: 8, fat: 0 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Porridge di avena', quantity: 70, unit: 'g', kcal: 260, protein: 9, carbs: 45, fat: 5 },
+      { name: 'Albume', quantity: 150, unit: 'g', kcal: 80, protein: 16, carbs: 1, fat: 0 },
+      { name: 'Cannella', quantity: 1, unit: 'g', kcal: 3, protein: 0, carbs: 1, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Tempeh', quantity: 130, unit: 'g', kcal: 250, protein: 26, carbs: 10, fat: 14 },
+      { name: 'Orzo', quantity: 80, unit: 'g', kcal: 280, protein: 8, carbs: 56, fat: 2 },
+      { name: 'Peperoni', quantity: 150, unit: 'g', kcal: 40, protein: 1, carbs: 8, fat: 0 },
+      { name: 'Olio EVO', quantity: 5, unit: 'g', kcal: 45, protein: 0, carbs: 0, fat: 5 }
+    ],
+    Spuntino: [
+      { name: 'Frutta secca mista', quantity: 25, unit: 'g', kcal: 140, protein: 4, carbs: 8, fat: 11 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Yogurt proteico', quantity: 150, unit: 'g', kcal: 100, protein: 15, carbs: 6, fat: 1 }
+    ],
+    Cena: [
+      { name: 'Seitan', quantity: 130, unit: 'g', kcal: 170, protein: 32, carbs: 5, fat: 2 },
+      { name: 'Verdure al forno', quantity: 250, unit: 'g', kcal: 70, protein: 3, carbs: 12, fat: 1 },
+      { name: 'Pane di segale', quantity: 40, unit: 'g', kcal: 90, protein: 3, carbs: 16, fat: 1 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Smoothie proteico', quantity: 300, unit: 'ml', kcal: 220, protein: 28, carbs: 18, fat: 3 },
+      { name: 'Fiocchi d’avena', quantity: 30, unit: 'g', kcal: 110, protein: 4, carbs: 18, fat: 2 }
+    ],
+    Pranzo: [
+      { name: 'Riso basmati', quantity: 85, unit: 'g', kcal: 295, protein: 6, carbs: 65, fat: 1 },
+      { name: 'Ceci secchi', quantity: 90, unit: 'g', kcal: 327, protein: 17, carbs: 41, fat: 5 },
+      { name: 'Fagiolini', quantity: 180, unit: 'g', kcal: 45, protein: 3, carbs: 8, fat: 0 },
+      { name: 'Olio EVO', quantity: 10, unit: 'g', kcal: 90, protein: 0, carbs: 0, fat: 10 }
+    ],
+    Spuntino: [
+      { name: 'Crackers integrali', quantity: 30, unit: 'g', kcal: 120, protein: 3, carbs: 20, fat: 3 },
+      { name: 'Fiocchi di latte', quantity: 100, unit: 'g', kcal: 73, protein: 12, carbs: 3, fat: 1 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Arancia', quantity: 1, unit: 'pz', kcal: 60, protein: 1, carbs: 14, fat: 0 }
+    ],
+    Cena: [
+      { name: 'Mozzarella light', quantity: 100, unit: 'g', kcal: 165, protein: 20, carbs: 1, fat: 9 },
+      { name: 'Uova', quantity: 1, unit: 'pz', kcal: 70, protein: 6, carbs: 0, fat: 5 },
+      { name: 'Rucola e pomodorini', quantity: 150, unit: 'g', kcal: 35, protein: 2, carbs: 5, fat: 0 },
+      { name: 'Pane integrale', quantity: 50, unit: 'g', kcal: 120, protein: 5, carbs: 22, fat: 2 }
+    ]
+  }
+];
+
+const NUTRITION_MEAL_COMBO_VEGAN = [
+  {
+    Colazione: [
+      { name: 'Avena', quantity: 60, unit: 'g', kcal: 230, protein: 8, carbs: 40, fat: 4 },
+      { name: 'Yogurt di soia', quantity: 150, unit: 'g', kcal: 75, protein: 6, carbs: 3, fat: 3 },
+      { name: 'Frutti di bosco', quantity: 100, unit: 'g', kcal: 50, protein: 1, carbs: 12, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Tofu', quantity: 180, unit: 'g', kcal: 235, protein: 25, carbs: 3, fat: 14 },
+      { name: 'Riso basmati', quantity: 90, unit: 'g', kcal: 315, protein: 7, carbs: 70, fat: 1 },
+      { name: 'Insalata mista', quantity: 150, unit: 'g', kcal: 30, protein: 2, carbs: 5, fat: 0 },
+      { name: 'Olio EVO', quantity: 5, unit: 'g', kcal: 45, protein: 0, carbs: 0, fat: 5 }
+    ],
+    Spuntino: [
+      { name: 'Banana', quantity: 1, unit: 'pz', kcal: 90, protein: 1, carbs: 23, fat: 0 },
+      { name: 'Mandorle', quantity: 20, unit: 'g', kcal: 120, protein: 4, carbs: 4, fat: 10 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Proteine di pisello', quantity: 25, unit: 'g', kcal: 100, protein: 20, carbs: 1, fat: 2 },
+      { name: 'Mela', quantity: 1, unit: 'pz', kcal: 80, protein: 0, carbs: 20, fat: 0 }
+    ],
+    Cena: [
+      { name: 'Lenticchie secche', quantity: 80, unit: 'g', kcal: 270, protein: 20, carbs: 40, fat: 1 },
+      { name: 'Patate', quantity: 200, unit: 'g', kcal: 160, protein: 4, carbs: 36, fat: 0 },
+      { name: 'Verdure al vapore', quantity: 200, unit: 'g', kcal: 50, protein: 3, carbs: 8, fat: 0 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Pane integrale', quantity: 60, unit: 'g', kcal: 145, protein: 6, carbs: 26, fat: 2 },
+      { name: 'Hummus', quantity: 50, unit: 'g', kcal: 125, protein: 4, carbs: 6, fat: 9 },
+      { name: 'Avocado', quantity: 50, unit: 'g', kcal: 80, protein: 1, carbs: 4, fat: 7 }
+    ],
+    Pranzo: [
+      { name: 'Ceci secchi', quantity: 80, unit: 'g', kcal: 290, protein: 15, carbs: 37, fat: 5 },
+      { name: 'Quinoa', quantity: 70, unit: 'g', kcal: 250, protein: 9, carbs: 45, fat: 4 },
+      { name: 'Verdure grigliate', quantity: 200, unit: 'g', kcal: 60, protein: 3, carbs: 10, fat: 2 }
+    ],
+    Spuntino: [
+      { name: 'Yogurt di soia', quantity: 125, unit: 'g', kcal: 63, protein: 5, carbs: 3, fat: 3 },
+      { name: 'Noci', quantity: 15, unit: 'g', kcal: 100, protein: 2, carbs: 2, fat: 10 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Proteine di pisello', quantity: 25, unit: 'g', kcal: 100, protein: 20, carbs: 1, fat: 2 }
+    ],
+    Cena: [
+      { name: 'Tempeh', quantity: 130, unit: 'g', kcal: 250, protein: 26, carbs: 10, fat: 14 },
+      { name: 'Verdure miste', quantity: 250, unit: 'g', kcal: 55, protein: 4, carbs: 10, fat: 0 },
+      { name: 'Pane di segale', quantity: 40, unit: 'g', kcal: 90, protein: 3, carbs: 16, fat: 1 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Porridge di avena', quantity: 70, unit: 'g', kcal: 260, protein: 9, carbs: 45, fat: 5 },
+      { name: 'Bevanda di soia', quantity: 200, unit: 'ml', kcal: 75, protein: 7, carbs: 2, fat: 4 },
+      { name: 'Mirtilli', quantity: 80, unit: 'g', kcal: 45, protein: 0, carbs: 11, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Seitan', quantity: 130, unit: 'g', kcal: 170, protein: 32, carbs: 5, fat: 2 },
+      { name: 'Patate dolci', quantity: 200, unit: 'g', kcal: 180, protein: 3, carbs: 41, fat: 0 },
+      { name: 'Insalata', quantity: 150, unit: 'g', kcal: 25, protein: 2, carbs: 4, fat: 0 },
+      { name: 'Olio EVO', quantity: 10, unit: 'g', kcal: 90, protein: 0, carbs: 0, fat: 10 }
+    ],
+    Spuntino: [
+      { name: 'Edamame', quantity: 100, unit: 'g', kcal: 120, protein: 11, carbs: 9, fat: 5 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Banana', quantity: 1, unit: 'pz', kcal: 90, protein: 1, carbs: 23, fat: 0 }
+    ],
+    Cena: [
+      { name: 'Fagioli borlotti secchi', quantity: 80, unit: 'g', kcal: 268, protein: 18, carbs: 38, fat: 1 },
+      { name: 'Riso integrale', quantity: 80, unit: 'g', kcal: 280, protein: 6, carbs: 58, fat: 2 },
+      { name: 'Zucchine', quantity: 200, unit: 'g', kcal: 35, protein: 2, carbs: 6, fat: 0 },
+      { name: 'Olio EVO', quantity: 5, unit: 'g', kcal: 45, protein: 0, carbs: 0, fat: 5 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Toast integrale', quantity: 2, unit: 'pz', kcal: 160, protein: 6, carbs: 28, fat: 2 },
+      { name: 'Burro di arachidi', quantity: 20, unit: 'g', kcal: 120, protein: 5, carbs: 4, fat: 10 },
+      { name: 'Kiwi', quantity: 1, unit: 'pz', kcal: 45, protein: 1, carbs: 10, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Pasta integrale', quantity: 90, unit: 'g', kcal: 310, protein: 12, carbs: 60, fat: 2 },
+      { name: 'Lenticchie rosse secche', quantity: 60, unit: 'g', kcal: 205, protein: 14, carbs: 30, fat: 1 },
+      { name: 'Pomodoro', quantity: 150, unit: 'g', kcal: 30, protein: 1, carbs: 6, fat: 0 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ],
+    Spuntino: [
+      { name: 'Banana', quantity: 1, unit: 'pz', kcal: 90, protein: 1, carbs: 23, fat: 0 },
+      { name: 'Mandorle', quantity: 15, unit: 'g', kcal: 90, protein: 3, carbs: 3, fat: 8 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Proteine di pisello', quantity: 30, unit: 'g', kcal: 120, protein: 24, carbs: 1, fat: 2 }
+    ],
+    Cena: [
+      { name: 'Burger di soia', quantity: 150, unit: 'g', kcal: 270, protein: 26, carbs: 12, fat: 12 },
+      { name: 'Cous cous', quantity: 70, unit: 'g', kcal: 245, protein: 8, carbs: 48, fat: 2 },
+      { name: 'Verdure miste', quantity: 200, unit: 'g', kcal: 50, protein: 3, carbs: 8, fat: 0 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Yogurt di soia', quantity: 200, unit: 'g', kcal: 100, protein: 8, carbs: 4, fat: 5 },
+      { name: 'Fiocchi d’avena', quantity: 40, unit: 'g', kcal: 147, protein: 5, carbs: 24, fat: 3 },
+      { name: 'Fragole', quantity: 100, unit: 'g', kcal: 35, protein: 1, carbs: 8, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Farro', quantity: 80, unit: 'g', kcal: 280, protein: 10, carbs: 55, fat: 2 },
+      { name: 'Ceci secchi', quantity: 80, unit: 'g', kcal: 290, protein: 15, carbs: 37, fat: 5 },
+      { name: 'Insalata', quantity: 150, unit: 'g', kcal: 25, protein: 2, carbs: 4, fat: 0 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ],
+    Spuntino: [
+      { name: 'Hummus', quantity: 50, unit: 'g', kcal: 125, protein: 4, carbs: 6, fat: 9 },
+      { name: 'Crackers integrali', quantity: 30, unit: 'g', kcal: 120, protein: 3, carbs: 20, fat: 3 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Pera', quantity: 1, unit: 'pz', kcal: 80, protein: 0, carbs: 20, fat: 0 }
+    ],
+    Cena: [
+      { name: 'Tofu', quantity: 200, unit: 'g', kcal: 260, protein: 28, carbs: 4, fat: 16 },
+      { name: 'Patate al forno', quantity: 220, unit: 'g', kcal: 180, protein: 4, carbs: 40, fat: 0 },
+      { name: 'Broccoli', quantity: 200, unit: 'g', kcal: 55, protein: 5, carbs: 8, fat: 0 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Porridge di avena', quantity: 70, unit: 'g', kcal: 260, protein: 9, carbs: 45, fat: 5 },
+      { name: 'Proteine di pisello', quantity: 20, unit: 'g', kcal: 80, protein: 16, carbs: 1, fat: 2 },
+      { name: 'Cannella', quantity: 1, unit: 'g', kcal: 3, protein: 0, carbs: 1, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Tempeh', quantity: 130, unit: 'g', kcal: 250, protein: 26, carbs: 10, fat: 14 },
+      { name: 'Orzo', quantity: 80, unit: 'g', kcal: 280, protein: 8, carbs: 56, fat: 2 },
+      { name: 'Peperoni', quantity: 150, unit: 'g', kcal: 40, protein: 1, carbs: 8, fat: 0 },
+      { name: 'Olio EVO', quantity: 5, unit: 'g', kcal: 45, protein: 0, carbs: 0, fat: 5 }
+    ],
+    Spuntino: [
+      { name: 'Frutta secca mista', quantity: 25, unit: 'g', kcal: 140, protein: 4, carbs: 8, fat: 11 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Yogurt di soia', quantity: 150, unit: 'g', kcal: 75, protein: 6, carbs: 3, fat: 3 }
+    ],
+    Cena: [
+      { name: 'Fagioli cannellini secchi', quantity: 100, unit: 'g', kcal: 333, protein: 23, carbs: 45, fat: 1 },
+      { name: 'Verdure al forno', quantity: 250, unit: 'g', kcal: 70, protein: 3, carbs: 12, fat: 1 },
+      { name: 'Pane di segale', quantity: 40, unit: 'g', kcal: 90, protein: 3, carbs: 16, fat: 1 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ]
+  },
+  {
+    Colazione: [
+      { name: 'Bevanda di soia', quantity: 250, unit: 'ml', kcal: 95, protein: 8, carbs: 2, fat: 5 },
+      { name: 'Fiocchi d’avena', quantity: 50, unit: 'g', kcal: 185, protein: 6, carbs: 30, fat: 4 },
+      { name: 'Banana', quantity: 1, unit: 'pz', kcal: 90, protein: 1, carbs: 23, fat: 0 }
+    ],
+    Pranzo: [
+      { name: 'Riso basmati', quantity: 85, unit: 'g', kcal: 295, protein: 6, carbs: 65, fat: 1 },
+      { name: 'Tofu', quantity: 150, unit: 'g', kcal: 195, protein: 21, carbs: 3, fat: 12 },
+      { name: 'Fagiolini', quantity: 180, unit: 'g', kcal: 45, protein: 3, carbs: 8, fat: 0 },
+      { name: 'Olio EVO', quantity: 5, unit: 'g', kcal: 45, protein: 0, carbs: 0, fat: 5 }
+    ],
+    Spuntino: [
+      { name: 'Crackers integrali', quantity: 30, unit: 'g', kcal: 120, protein: 3, carbs: 20, fat: 3 },
+      { name: 'Hummus', quantity: 40, unit: 'g', kcal: 100, protein: 3, carbs: 5, fat: 7 }
+    ],
+    'Spuntino mattina': [
+      { name: 'Arancia', quantity: 1, unit: 'pz', kcal: 60, protein: 1, carbs: 14, fat: 0 }
+    ],
+    Cena: [
+      { name: 'Seitan', quantity: 130, unit: 'g', kcal: 170, protein: 32, carbs: 5, fat: 2 },
+      { name: 'Quinoa', quantity: 60, unit: 'g', kcal: 215, protein: 8, carbs: 39, fat: 3 },
+      { name: 'Rucola e pomodorini', quantity: 150, unit: 'g', kcal: 35, protein: 2, carbs: 5, fat: 0 },
+      { name: 'Olio EVO', quantity: 8, unit: 'g', kcal: 72, protein: 0, carbs: 0, fat: 8 }
+    ]
+  }
+];
+
+const NUTRITION_DIETS = ['onnivora', 'vegetariana', 'vegana'];
+function normalizeNutritionDiet(diet) {
+  const d = String(diet || '').toLowerCase();
+  return NUTRITION_DIETS.indexOf(d) >= 0 ? d : 'onnivora';
+}
+function nutritionDietLabel(diet) {
+  const d = normalizeNutritionDiet(diet);
+  return d === 'vegana' ? 'Vegana' : (d === 'vegetariana' ? 'Vegetariana' : 'Onnivora');
+}
+// Whether a food belongs in the diet, by its name. Used on what the allergy
+// filter puts in place of an excluded food: its substitute for soy can be
+// chicken, and a vegan plan must not get it back that way.
+const DIET_PLANT_NAMES = /yogurt di soia|bevanda di soia|latte di (soia|mandorla|avena|riso|cocco)|burro di (arachidi|mandorle)|burger di soia|proteine di (pisello|soia|riso)/g;
+const DIET_MEAT_FISH = /pollo|tacchino|manzo|maiale|lonza|bresaola|fesa|prosciutto|hamburger|carne|vitello|agnello|coniglio|salmone|tonno|merluzzo|orata|branzino|sgombro|gamber|pesce|acciug|salame|speck|wurstel|pancetta|mortadella/;
+const DIET_EGG_DAIRY = /uov|albume|yogurt|skyr|latte|ricotta|mozzarella|formagg|whey|casein|miele|burro|parmigiano|grana|feta|pancake|smoothie proteico|panna|gelato/;
+function dietAllowsFood(name, diet) {
+  const d = normalizeNutritionDiet(diet);
+  if (d === 'onnivora') return true;
+  const text = foldAllergenText(name).replace(DIET_PLANT_NAMES, ' ');
+  if (DIET_MEAT_FISH.test(text)) return false;
+  if (d === 'vegana' && DIET_EGG_DAIRY.test(text)) return false;
+  return true;
+}
+function filterMealTemplateForDiet(templates, diet) {
+  if (normalizeNutritionDiet(diet) === 'onnivora' || !templates) return templates;
+  const out = {};
+  Object.keys(templates).forEach(function (mealName) {
+    const all = templates[mealName] || [];
+    const foods = all.filter(function (f) { return f.unit === 'pasto' || dietAllowsFood(f.name, diet); });
+    out[mealName] = foods.length ? foods : all;
+  });
+  return out;
+}
+
+function nutritionComboTemplates(comboIndex, trainingDay, diet) {
+  const d = normalizeNutritionDiet(diet);
+  const list = d === 'vegana' ? NUTRITION_MEAL_COMBO_VEGAN : (d === 'vegetariana' ? NUTRITION_MEAL_COMBO_VEGETARIAN : NUTRITION_MEAL_COMBO_VARIANTS);
   const idx = Math.abs(Number(comboIndex) || 0) % Math.max(1, list.length);
   if (list[idx]) return list[idx];
   return trainingDay === false ? NUTRITION_MEAL_TEMPLATES_OFF : NUTRITION_MEAL_TEMPLATES_ON;
@@ -44178,9 +44580,9 @@ function fillNutritionDayWithMeals(dayLabel, targets, opts) {
   opts = opts || {};
   const isOn = opts.trainingDay !== false;
   const mealCount = opts.mealCount || 4;
-  let templates = opts.templates || nutritionComboTemplates(opts.comboIndex, isOn);
+  let templates = opts.templates || nutritionComboTemplates(opts.comboIndex, isOn, opts.diet);
   if (opts.restrictions && opts.restrictions.length) {
-    templates = filterMealTemplateForRestrictions(templates, opts.restrictions);
+    templates = filterMealTemplateForDiet(filterMealTemplateForRestrictions(templates, opts.restrictions), opts.diet);
   }
   const kcalTarget = isOn ? targets.tdee : Math.round(targets.tdee * 0.88);
   const mealNames = mealCount === 2 ? ['Colazione', 'Cena']
@@ -44219,12 +44621,19 @@ function buildWeeklyNutritionPlan(overrides, weekOpts) {
   while (pattern.length < dayCount) pattern.push(true);
   const mealCount = weekOpts.mealCount || 4;
   const restrictions = Array.isArray(weekOpts.restrictions) ? weekOpts.restrictions : [];
+  const diet = normalizeNutritionDiet(weekOpts.diet);
+  // B12 is the one nutrient a vegan diet cannot supply (Academy of Nutrition
+  // and Dietetics, position paper 2016): said in the plan, not left out.
+  const dietNote = diet === 'vegana'
+    ? 'Dieta vegana: la vitamina B12 va integrata, parlane con il medico.'
+    : (diet === 'vegetariana' ? 'Dieta vegetariana: senza carne e pesce.' : '');
   const days = WEEKDAY_IT.slice(0, dayCount).map(function (label, i) {
     return fillNutritionDayWithMeals(label, targets, {
       trainingDay: pattern[i],
       mealCount: mealCount,
       comboIndex: i % comboCount,
-      restrictions: restrictions
+      restrictions: restrictions,
+      diet: diet
     });
   });
   const pctNote = (targets.proteinPct != null)
@@ -44242,8 +44651,10 @@ function buildWeeklyNutritionPlan(overrides, weekOpts) {
     daily_fats_target: targets.fat,
     notes: 'Piano organizzativo evidence-informed (proteine ~1.6–2.2 g/kg; non è diagnosi o terapia).' + pctNote + restrNote,
     restrictions: restrictions.slice(),
+    diet: diet,
     days: days
   };
+  if (dietNote) plan.notes += ' ' + dietNote;
   if (Array.isArray(weekOpts.freeDays) && weekOpts.freeDays.length) {
     const slot = normalizeFreeMealSlot(weekOpts.freeMealSlot || 'Cena');
     plan = applyFreeMealsToNutritionPlan(plan, weekOpts.freeDays, slot);
@@ -53703,7 +54114,8 @@ async function openGenerateNutritionPlanWizard() {
     freeCount: 1,
     freeDays: [],
     freeMealSlot: 'Cena',
-    restrictions: profileRestr
+    restrictions: profileRestr,
+    diet: normalizeNutritionDiet(DATA && DATA.nutrition && DATA.nutrition.diet)
   };
   const overlay = document.createElement('div');
   overlay.id = 'gen-nutrition-plan-modal';
@@ -53729,6 +54141,11 @@ async function openGenerateNutritionPlanWizard() {
     '</div>' +
     '<div id="gen-nutr-macro-preview" style="font-size:11px;color:var(--gold);margin-bottom:4px;">40% / 40% / 20%</div>' +
     '<div id="gen-nutr-gram-preview" style="font-size:10px;color:#888;"></div></div>' +
+    '<div id="gen-nutr-diet-box" style="margin-bottom:12px;"><div style="font-size:10px;color:#ccc;margin-bottom:4px;">Tipo di dieta</div>' +
+    '<div style="display:flex;gap:6px;">' + NUTRITION_DIETS.map(function (d) {
+      return '<button type="button" data-gen-diet="' + d + '" class="btn ' + (window.__genNutrPlan.diet === d ? 'btn-primary' : 'btn-outline') + '" style="flex:1;font-size:11px;" onclick="setGenNutritionDiet(\'' + d + '\')">' + nutritionDietLabel(d).toUpperCase() + '</button>';
+    }).join('') + '</div>' +
+    '<div id="gen-nutr-diet-note" style="font-size:10px;color:#888;margin-top:6px;line-height:1.4;">' + genNutritionDietNote(window.__genNutrPlan.diet) + '</div></div>' +
     '<div id="gen-nutr-daycount-box" style="margin-bottom:10px;"><label style="font-size:10px;color:#ccc;">Applica per quanti giorni (1–7)</label>' +
     '<select id="gen-nutr-days" onchange="window.__genNutrPlan.dayCount=parseInt(this.value,10);refreshGenNutritionPreview();refreshGenNutritionFreeDays()" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     [1,2,3,4,5,6,7].map(function (n) { return '<option value="' + n + '"' + (n === 7 ? ' selected' : '') + '>' + n + (n === 1 ? ' giorno' : ' giorni') + '</option>'; }).join('') +
@@ -53767,6 +54184,23 @@ async function openGenerateNutritionPlanWizard() {
   refreshGenNutritionPreview();
 }
 
+function genNutritionDietNote(diet) {
+  const d = normalizeNutritionDiet(diet);
+  if (d === 'vegana') return 'Solo alimenti vegetali: legumi, tofu, tempeh, seitan. La vitamina B12 va integrata.';
+  if (d === 'vegetariana') return 'Senza carne e pesce: legumi, uova, latticini, tofu.';
+  return 'Carne, pesce, uova, latticini e vegetali.';
+}
+
+function setGenNutritionDiet(diet) {
+  const st = window.__genNutrPlan = window.__genNutrPlan || {};
+  st.diet = normalizeNutritionDiet(diet);
+  document.querySelectorAll('#gen-nutr-diet-box button[data-gen-diet]').forEach(function (b) {
+    b.className = 'btn ' + (b.getAttribute('data-gen-diet') === st.diet ? 'btn-primary' : 'btn-outline');
+  });
+  const note = document.getElementById('gen-nutr-diet-note');
+  if (note) note.textContent = genNutritionDietNote(st.diet);
+}
+
 function setGenNutritionMode(mode) {
   window.__genNutrPlan = window.__genNutrPlan || { p: 40, c: 40, f: 20 };
   window.__genNutrPlan.mode = mode === 'precise' ? 'precise' : (mode === 'budget' ? 'budget' : 'auto');
@@ -53778,7 +54212,7 @@ function setGenNutritionMode(mode) {
   const budgetNote = document.getElementById('gen-nutr-budget-note');
   // Day count / meal combos / free meals only make sense when the plan
   // actually prescribes foods - a budget-only plan has no days at all.
-  ['gen-nutr-daycount-box', 'gen-nutr-combo-box', 'gen-nutr-mealcount-box', 'gen-nutr-freewrap-box'].forEach(function (id) {
+  ['gen-nutr-diet-box', 'gen-nutr-daycount-box', 'gen-nutr-combo-box', 'gen-nutr-mealcount-box', 'gen-nutr-freewrap-box'].forEach(function (id) {
     const el = document.getElementById(id);
     if (el) el.style.display = m === 'budget' ? 'none' : '';
   });
@@ -53876,9 +54310,10 @@ function confirmGenerateNutritionPlan() {
     onCount: onCount,
     offCount: Math.max(0, dayCount - onCount),
     restrictions: restrictions,
+    diet: st.diet,
     freeDays: freeDays,
     freeMealSlot: freeMealSlot,
-    planName: (st.mode === 'precise' ? 'Piano preciso' : 'Piano automatico') + ' · ' + dayCount + ' gg · ' + comboCount + ' comb.'
+    planName: (st.mode === 'precise' ? 'Piano preciso' : 'Piano automatico') + (normalizeNutritionDiet(st.diet) === 'onnivora' ? '' : ' · ' + nutritionDietLabel(st.diet)) + ' · ' + dayCount + ' gg · ' + comboCount + ' comb.'
   });
   if (!DATA) window.DATA = {};
   DATA.nutrition = userReplacesNutrition(plan);
