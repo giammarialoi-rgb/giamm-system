@@ -205,6 +205,8 @@ const isolationHarness = new Function(
   extractFn(base, "emptyClientTrainingSnapshot") + "\n" +
   extractFn(base, "emptyClientTrainingState") + "\n" +
   extractFn(base, "clientStoreKeyForUser") + "\n" +
+  extractFn(base, "nurvanClientUrlToken") + "\n" +
+  extractFn(base, "clientPendingStoreKey") + "\n" +
   "var GS_STORE_CLIENT_PENDING_KEY = 'GS_STORE_CLIENT';\n" +
   "var personalLoads = { w3_d2_e0_s1_load: 45, w3_d2_e1_s1_load: 30 };\n" +
   "var DATA = { title: 'Programma personalizzato 16 settimane', id: 'personal_16w_giammaria', weeks: new Array(16).fill({ sessions: [] }) };\n" +

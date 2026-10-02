@@ -35,7 +35,7 @@ assert.ok(html.includes("history.replaceState") && html.includes("/c/"), "cold s
 const apiPractice = fs.readFileSync(path.join(root, "coach-practice.mjs"), "utf8");
 assert.ok(apiPractice.includes("/c/:token/manifest.webmanifest") && apiPractice.includes("start_url"), "server serves per-token PWA manifest");
 assert.ok(apiPractice.includes("function injectClientPwaHtml") && apiPractice.includes("__NURVAN_CLIENT_BOOT"), "server injects per-token manifest into /c/:token HTML");
-assert.ok(apiPractice.includes('res.redirect(302, "/c/"') || apiPractice.includes("res.redirect(302, \"/c/\""), "GET / with client cookies redirects to /c/token");
+assert.ok(!apiPractice.includes('res.redirect(302, "/c/"'), "GET / with client cookies is no longer redirected to /c/token (the address decides)");
 const sw = fs.readFileSync(path.join(root, "web/sw.js"), "utf8");
 assert.ok(!sw.includes("'./manifest.webmanifest'"), "SW does not precache the root manifest");
 assert.ok(sw.includes("isClientDoc") && sw.includes(".webmanifest"), "SW keeps /c/* and manifests on the network");

@@ -913,16 +913,11 @@ export function mountCoachPractice(app, deps) {
   };
 
   const indexHtml = path.join(webDir, "index.html");
-  app.get(["/", "/index.html"], (req, res, next) => {
-    const cookies = parseCookieHeader(req.headers.cookie);
-    const ctx = String(cookies.nurvan_client_ctx || "").trim();
-    const mode = String(cookies.nurvan_app_mode || "").trim();
-    if (mode === "client" && isSafeInviteToken(ctx)) {
-      res.setHeader("Cache-Control", "no-store");
-      return res.redirect(302, "/c/" + encodeURIComponent(ctx));
-    }
-    return next();
-  });
+  // The root is the normal app, whatever a client link opened earlier in this
+  // browser left in the cookies: it used to be redirected to that link, so
+  // one visit to /c/... took the normal app away from the browser for a year.
+  // An installed client app opens at its own link (its manifest's start_url);
+  // an older install that opens at the root is sent there by the page itself.
   app.get("/c/:token", (req, res, next) => {
     const tok = String(req.params.token || "");
     if (/\.(png|jpe?g|gif|webp|svg|ico|js|css|json|map|webmanifest|html|txt|woff2?)$/i.test(tok)) {

@@ -10,6 +10,13 @@
 // l'ultimo piano noto, salvato in localStorage; il logout lo cancella.
 
 var PLAN_ENTITLEMENT_KEY = 'nurvan.entitlement.v1';
+// A client link remembers its own plan: the one cache used to be shared, so a
+// client session overwrote the plan of the personal account on this browser
+// and cleared it on logout.
+function planEntitlementKey() {
+  try { if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return 'nurvan.entitlement.client.v1'; } catch (_) {}
+  return PLAN_ENTITLEMENT_KEY;
+}
 
 function planLib() {
   return (typeof self !== 'undefined' && self.NurvanEntitlements) || null;
@@ -22,7 +29,7 @@ function planFeatures() {
 function currentAccountEntitlement() {
   if (window.__nurvanEntitlement) return window.__nurvanEntitlement;
   try {
-    const raw = localStorage.getItem(PLAN_ENTITLEMENT_KEY);
+    const raw = localStorage.getItem(planEntitlementKey());
     if (raw) window.__nurvanEntitlement = JSON.parse(raw);
   } catch (_) {}
   return window.__nurvanEntitlement || { plan: 'free' };
@@ -42,7 +49,7 @@ function onEntitlementReceived(ent) {
   };
   const before = JSON.stringify(window.__nurvanEntitlement || null);
   window.__nurvanEntitlement = keep;
-  try { localStorage.setItem(PLAN_ENTITLEMENT_KEY, JSON.stringify(keep)); } catch (_) {}
+  try { localStorage.setItem(planEntitlementKey(), JSON.stringify(keep)); } catch (_) {}
   if (before !== JSON.stringify(keep) && typeof render === 'function') {
     try { render(); } catch (_) {}
   }
@@ -51,7 +58,7 @@ window.onEntitlementReceived = onEntitlementReceived;
 
 function clearAccountEntitlement() {
   window.__nurvanEntitlement = null;
-  try { localStorage.removeItem(PLAN_ENTITLEMENT_KEY); } catch (_) {}
+  try { localStorage.removeItem(planEntitlementKey()); } catch (_) {}
 }
 
 function currentPlanEffective() {

@@ -148,7 +148,9 @@ function presenceLabel(online, lastSeen, liveWorkout) {
 }
 
 function gatePracticeView(v) {
-  if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+  // A client link is a client's from the moment it is opened, logged in or not.
+  const clientLink = !!(store && store.clientShell && typeof isClientStorageContext === 'function' && isClientStorageContext() && !store.coachSessionActive);
+  if ((typeof isAthleteRole === 'function' && isAthleteRole()) || clientLink) {
     const blocked = {
       community: 1, pricing: 1, coachHub: 1, coachClient: 1,
       generate: 1, catalog: 1, library: 1, db: 1, programs: 1, unlock: 1,
@@ -2294,6 +2296,8 @@ function isClientTutorialDone() {
 
 function markClientTutorialDone() {
   store.clientTutorialDone = true;
+  // The welcome guide has told the home: its own page tutorial does not follow it.
+  try { if (typeof tutorialsSeen === 'function') tutorialsSeen().home = Date.now(); } catch (_) {}
   try { localStorage.setItem(tutorialStorageKey(), '1'); } catch (_) {}
   if (typeof persist === 'function') persist();
 }
@@ -6341,7 +6345,9 @@ async function bootCoachPractice() {
     if (shell && shell.locked && shell.inviteToken) {
       if (urlToken && shell.inviteToken !== urlToken) {
         clearClientShellLock();
-      } else if (!urlToken) {
+      } else if (!urlToken && typeof clientShellMayResume === 'function' && clientShellMayResume()) {
+        // Only an installed client app opened at the root: in a normal tab the
+        // address decides, and this is not a client link.
         store.clientShell = true;
         store.inviteToken = store.inviteToken || shell.inviteToken;
         try {
@@ -6352,7 +6358,12 @@ async function bootCoachPractice() {
       }
     }
   } catch (_) {}
-  const token = urlToken || store.inviteToken || detectInviteToken();
+  const mayResume = typeof clientShellMayResume !== 'function' || clientShellMayResume();
+  const token = urlToken || (mayResume ? store.inviteToken : '') || detectInviteToken();
+  if (!token && !mayResume && store.clientShell && !(typeof isAthleteRole === 'function' && isAthleteRole())) {
+    store.clientShell = false;
+    store.inviteToken = '';
+  }
   if (token) {
     store.inviteToken = token;
     store.clientShell = true;
@@ -6385,6 +6396,8 @@ async function bootCoachPractice() {
   // Coach master opening /c/... — confirm before entering client shell
   if (urlToken && store.coachSessionActive && !(typeof isAthleteRole === 'function' && isAthleteRole())) {
     if (!confirm('Questo è un link cliente. Entrare come atleta su questo dispositivo? I tuoi allenamenti personali restano salvati a parte e non vengono toccati.')) {
+      // Back to the normal app as a page of its own, not by changing this one.
+      try { location.replace('/'); return; } catch (_) {}
       try { history.replaceState(null, '', '/'); } catch (_) {}
       store.inviteToken = null;
       store.clientShell = false;
@@ -6638,6 +6651,8 @@ function wrapPracticeHooks() {
         renderPracticeView();
         ensureAssignBanner();
         applyClientChrome();
+        // The coach's screens explain themselves the first time, like the others.
+        try { if (typeof schedulePageTutorial === 'function') schedulePageTutorial(); } catch (_) {}
         return;
       }
       _nav(v, e);
@@ -6650,6 +6665,13 @@ function wrapPracticeHooks() {
   if (typeof render === 'function' && !render.__cpWrapped) {
     const _render = render;
     render = function () {
+      // A client never gets a coach screen drawn, however the view was set.
+      try {
+        if (typeof isClientStorageContext === 'function' && isClientStorageContext()) {
+          const allowed = gatePracticeView(currentView);
+          if (allowed && allowed !== currentView) currentView = allowed;
+        }
+      } catch (_) {}
       if (renderPracticeView()) return;
       _render();
       try {
@@ -6887,8 +6909,23 @@ function bufFromB64(b64) {
   return out.buffer;
 }
 
+// The chat key belongs to one account: a coach and a client using the same
+// browser used to share a single private key. The key that was already here
+// goes to the first account that asks; any other gets its own.
+function e2eKeyStorageName() {
+  const id = (store && store.accountUser && (store.accountUser.id || store.accountUser.email)) || '';
+  if (!id) return 'NURVAN_E2E_KEYPAIR';
+  const name = 'NURVAN_E2E_KEYPAIR__' + String(id).replace(/[^a-zA-Z0-9._@-]/g, '_').slice(0, 80);
+  try {
+    if (!localStorage.getItem(name) && localStorage.getItem('NURVAN_E2E_KEYPAIR') && !localStorage.getItem('NURVAN_E2E_KEYPAIR_OWNER')) {
+      localStorage.setItem(name, localStorage.getItem('NURVAN_E2E_KEYPAIR'));
+      localStorage.setItem('NURVAN_E2E_KEYPAIR_OWNER', String(id));
+    }
+  } catch (_) {}
+  return name;
+}
 async function getOrCreateE2EKeyPair() {
-  const raw = localStorage.getItem('NURVAN_E2E_KEYPAIR');
+  const raw = localStorage.getItem(e2eKeyStorageName());
   if (raw) {
     try {
       const j = JSON.parse(raw);
@@ -6900,7 +6937,7 @@ async function getOrCreateE2EKeyPair() {
   const pair = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
   const publicJwk = await crypto.subtle.exportKey('jwk', pair.publicKey);
   const privateJwk = await crypto.subtle.exportKey('jwk', pair.privateKey);
-  localStorage.setItem('NURVAN_E2E_KEYPAIR', JSON.stringify({ publicKey: publicJwk, privateKey: privateJwk }));
+  localStorage.setItem(e2eKeyStorageName(), JSON.stringify({ publicKey: publicJwk, privateKey: privateJwk }));
   return { privateKey: pair.privateKey, publicKey: pair.publicKey, publicJwk: publicJwk };
 }
 

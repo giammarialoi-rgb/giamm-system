@@ -1682,6 +1682,10 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">🧪</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="exams">Esami Lab</span>
       </button>
+      <button class="btn btn-outline" data-hub="tutorial" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openTutorialIndex()">
+        <span style="font-size:20px;">🎓</span>
+        <span style="font-size:11px;font-weight:800;">Tutorial</span>
+      </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('calendar')">
         <span style="font-size:20px;">📅</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="calendar">Calendario</span>
@@ -3057,8 +3061,15 @@ function personalDbNameFor(user) {
 // Points the local database at the active account before anything reads it.
 function applyPersonalStorageNamespace(user) {
   try {
-    if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
     if (typeof GiammariaPersistence === 'undefined' || !GiammariaPersistence.setDatabaseName) return;
+    if (typeof isClientStorageContext === 'function' && isClientStorageContext()) {
+      // A client link has a local database of its own: it used to stay on
+      // the default one, which is the personal database of the account that
+      // first used this browser.
+      const tok = nurvanClientUrlToken() || (store && store.inviteToken) || 'link';
+      GiammariaPersistence.setDatabaseName(NURVAN_PERSONAL_DB_NAME + '__client_' + String(tok).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 60));
+      return;
+    }
     GiammariaPersistence.setDatabaseName(personalDbNameFor(user || readActiveAccount()));
   } catch (err) {
     console.warn('[SPACE] database namespace', err);
@@ -3076,12 +3087,51 @@ function detectClientBootContext() {
   return false;
 }
 
+/*
+ * A coach's client and the normal app are two things on one address, and what
+ * tells them apart is the address alone: /c/<invite> is the client's space,
+ * everything else is the normal app. Nothing a session of one kind leaves in
+ * this browser - a cookie, a saved flag - turns a page of the other kind
+ * into it. The one exception is a client app installed on the phone before
+ * its start address was its own link: it opens at the root, and there the
+ * leftover says where it belongs.
+ */
+function nurvanClientUrlToken() {
+  try {
+    const pathName = (typeof location !== 'undefined' && location.pathname) || '';
+    const m = String(pathName).match(/^\/c\/([^/?#]+)/);
+    if (m && m[1]) { try { return decodeURIComponent(m[1]); } catch (_) { return m[1]; } }
+    if (typeof window !== 'undefined' && window.__NURVAN_CLIENT_BOOT && window.__NURVAN_CLIENT_BOOT.token) return String(window.__NURVAN_CLIENT_BOOT.token || '');
+    const q = (typeof location !== 'undefined' && location.search) ? new URLSearchParams(location.search).get('c') : '';
+    return q || '';
+  } catch (_) { return ''; }
+}
+function nurvanRunsStandalone() {
+  try {
+    return !!(window.navigator && window.navigator.standalone === true) ||
+      !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  } catch (_) { return false; }
+}
+// Whether a client session may be picked up from what is saved here.
+function clientShellMayResume() {
+  return detectClientBootContext() || nurvanRunsStandalone();
+}
+window.nurvanClientUrlToken = nurvanClientUrlToken;
+window.nurvanRunsStandalone = nurvanRunsStandalone;
+window.clientShellMayResume = clientShellMayResume;
+
+// Before the client logs in, what the link keeps is its own: another invite
+// opened in this browser does not find it.
+function clientPendingStoreKey() {
+  const tok = nurvanClientUrlToken();
+  return tok ? GS_STORE_CLIENT_PENDING_KEY + '_t_' + String(tok).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 60) : GS_STORE_CLIENT_PENDING_KEY;
+}
 function clientStoreKeyForUser(user) {
   const uid = user && (user.id || user.email || user.username);
   if (uid) {
     return 'GS_STORE_CLIENT_' + String(uid).replace(/[^a-zA-Z0-9._@-]/g, '_').slice(0, 80);
   }
-  return GS_STORE_CLIENT_PENDING_KEY;
+  return clientPendingStoreKey();
 }
 
 function isClientStorageContext() {
@@ -3260,7 +3310,7 @@ function loadStore(){
           }
         } catch (_) {}
       }
-      if (!clientRaw) clientRaw = localStorage.getItem(GS_STORE_CLIENT_PENDING_KEY);
+      if (!clientRaw) clientRaw = localStorage.getItem(clientPendingStoreKey());
       const merged = parseStoredStore(clientRaw);
       merged.clientShell = true;
       merged.__cpClientScoped = true;
@@ -3452,6 +3502,18 @@ function persistNurvanAppMode(mode, token) {
 }
 function restoreClientShellSync() {
   try {
+    // The address decides (see clientShellMayResume): in a normal tab outside
+    // a client link, a cookie or a flag left by a client session is ignored,
+    // and a personal store that was marked as a client shell by one is put right.
+    if (!clientShellMayResume()) {
+      const athlete = !!(store && store.accountUser && (store.accountUser.role === 'athlete' || store.accountUser.provider === 'coach_client'));
+      if (store && !athlete && (store.clientShell || store.__cpClientScoped)) {
+        store.clientShell = false;
+        store.inviteToken = '';
+        store.__cpClientScoped = false;
+      }
+      return '';
+    }
     const pathName = (typeof location !== 'undefined' && location.pathname) || '';
     const m = String(pathName).match(/^\/c\/([^/?#]+)/);
     let urlTok = '';
@@ -5041,8 +5103,28 @@ function applyLoginGate() {
     try { openAccount(); } catch (_) {}
     const status = $('account-status');
     if (status && !status.textContent) status.textContent = 'Accedi o crea un account per usare Nurvan.';
+    try { showClientLinkHint(); } catch (_) {}
   }
   return locked;
+}
+// A client who lands on the normal app's login (their space is at their own
+// link, and this address no longer takes them there by itself) is shown the
+// way: a link, not a redirect.
+function showClientLinkHint() {
+  if (document.getElementById('client-link-hint')) return;
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return;
+  const m = document.cookie.match(/(?:^|; )nurvan_client_ctx=([^;]*)/);
+  let tok = '';
+  try { tok = m ? decodeURIComponent(m[1]) : ''; } catch (_) { tok = ''; }
+  if (!tok || !/^[A-Za-z0-9._~-]{1,160}$/.test(tok)) return;
+  const status = $('account-status');
+  if (!status || !status.parentNode) return;
+  const el = document.createElement('div');
+  el.id = 'client-link-hint';
+  el.style.cssText = 'margin-top:12px;padding:10px 12px;border:1px dashed #555;border-radius:10px;font-size:12px;color:#ccc;line-height:1.45;';
+  el.innerHTML = '<span>' + esc(trText('Sei seguito da un coach? Il tuo spazio è al link che ti ha mandato.')) + '</span> ' +
+    '<a href="/c/' + encodeURIComponent(tok) + '" style="color:var(--gold);font-weight:800;">' + esc(trText('Apri il tuo spazio')) + '</a>';
+  status.parentNode.insertBefore(el, status.nextSibling);
 }
 window.applyLoginGate = applyLoginGate;
 window.enterAccountSession = enterAccountSession;
@@ -5058,24 +5140,19 @@ function logoutAccount(){
   store.accountToken = null; store.accountUser = null;
   try { clearAccountEntitlement(); } catch (_) {}
   if (wasClient) {
-    try { persist(); } catch (_) {}
-    try { if (typeof clearClientShellLock === 'function') clearClientShellLock(); } catch (_) {}
+    // Logging out of a client link leaves a client link, logged out. It used
+    // to turn this same page into the normal app and load into it the
+    // personal account of whoever else uses this browser.
+    const tok = (typeof nurvanClientUrlToken === 'function' && nurvanClientUrlToken()) || store.inviteToken || '';
     try {
-      store.clientShell = false;
       store.role = null;
-      store.inviteToken = '';
       store.clientProfile = null;
-      store.__cpClientScoped = false;
+      store.inviteTokenBound = null;
     } catch (_) {}
-    try {
-      if (typeof persistNurvanAppMode === 'function') persistNurvanAppMode('master');
-      else document.cookie = 'nurvan_app_mode=master; Path=/; Max-Age=31536000; SameSite=Lax';
-    } catch (_) {}
-    try { history.replaceState(null, '', '/'); } catch (_) {}
-    restorePersonalStoreFromNamespace();
-    try { if (typeof applyClientChrome === 'function') applyClientChrome(); } catch (_) {}
-    try { updateAccountButton(); } catch (_) {}
-    try { if (typeof navigate === 'function') navigate('home'); } catch (_) { try { render(); } catch (__) {} }
+    try { persist(); } catch (_) {}
+    try { localStorage.removeItem('GS_CLIENT_ACTIVE'); } catch (_) {}
+    try { sessionStorage.removeItem('GS_SESSION_AUTH'); } catch (_) {}
+    try { location.replace(tok ? '/c/' + encodeURIComponent(tok) : '/'); } catch (_) {}
     return;
   }
   persist();
@@ -15380,12 +15457,393 @@ function navigate(v, e){
     }
   }
   currentView = v;
+  try { if (window.__pageTut && window.__pageTut.view !== pageTutorialKey(v) && !window.__pageTut.replay) { closePageTutorialElement(); window.__pageTut = null; } } catch (_) {}
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   const a = $(`nav-${v}`); if(a) a.classList.add('active');
   updatePersonalBackButton();
   render();
   try { syncWorkoutScreenAwake(); } catch (_) {}
+  schedulePageTutorial();
 }
+
+/*
+ * A tutorial for every page.
+ *
+ * The first time a page is opened it explains itself: a few cards, one thing
+ * each, that can be read through, gone back on, or skipped. A page seen is
+ * not explained again (store.prefs.tutorialsSeen, which travels with the
+ * account), and every tutorial can be opened again from Menu → Tutorial.
+ *
+ * `who` says which kind of user a page's tutorial is for when it differs:
+ * an athlete following a coach does not get told how to generate a program
+ * the coach is writing for them.
+ */
+var PAGE_TUTORIALS = {
+  home: { label: 'Home', icon: '🏠', steps: [
+    { t: 'La tua giornata in una schermata', d: 'In alto trovi la prossima seduta del programma attivo: un tocco su INIZIA WORKOUT e sei dentro l’allenamento di oggi.' },
+    { t: 'Recupero e Coach', d: 'La stima di recupero usa quello che hai registrato (allenamenti, passi, sonno se collegato): è un’indicazione, non una misura clinica. Sotto, il Coach AI ti dice cosa guardare oggi.' },
+    { t: 'Tutto il resto parte da qui', d: 'Dai moduli apri alimentazione, integrazione, terapia, esami, calendario, HYROX, allenamenti a casa e l’import di una scheda. Le stesse voci sono nel MENU in alto a destra.' },
+    { t: 'La barra in basso', d: 'Home, Workout, Stats e Coach sono sempre a portata di pollice. MENU apre tutte le sezioni, compresi questi tutorial.' }
+  ] },
+  training: { label: 'Allenamento', icon: '🏋️', steps: [
+    { t: 'La seduta di oggi', d: 'Ogni esercizio ha le sue serie. Scrivi carico e ripetizioni e tocca la spunta: la serie è fatta e parte il timer di recupero.' },
+    { t: 'Il recupero', d: 'Il timer conta il recupero scritto in scheda; con +10 e −10 lo allunghi o lo accorci per oggi. Alla fine senti tre toni e una vibrazione. Lo schermo resta acceso finché ti alleni.' },
+    { t: 'Quanto caricare', d: 'Sotto ogni esercizio vedi cosa hai fatto la volta scorsa e un carico consigliato per oggi. RIR indica quante ripetizioni ti restano: 2 vuol dire fermarsi con due ancora possibili.' },
+    { t: 'Cambiare un esercizio', d: 'Dal menu dell’esercizio puoi sostituirlo (solo per questa seduta o per il resto del programma), saltarlo, aggiungere una serie o un esercizio extra. Con ANNULLA torni indietro di un passo.' },
+    { t: 'Immagine, esecuzione e video', d: 'Tocca il nome dell’esercizio: trovi l’immagine, come si esegue, gli errori comuni e il video.' },
+    { t: 'Chiudere la seduta', d: 'A fine allenamento tocca FINALIZZA: la seduta entra nello storico con volume e durata, e l’app passa al giorno successivo.' },
+    { t: 'Più programmi attivi', d: 'Con un piano a pagamento puoi tenere attivi fino a 3 programmi: in cima alla pagina passi dall’uno all’altro, e ognuno conserva i suoi carichi.' }
+  ] },
+  programs: { label: 'Programmi', icon: '📚', who: 'self', steps: [
+    { t: 'Da dove nasce un programma', d: 'Qui scegli come allenarti: scrivi una scheda da zero, la fai generare dall’app, la prendi dal database di schede pronte o la importi da un file.' },
+    { t: 'Crea e genera', d: 'CREA UNA SCHEDA DA ZERO è il costruttore: giorni, esercizi, serie e modello di progressione. GENERA PROGRAMMA fa le stesse scelte al posto tuo, partendo da giorni, attrezzatura e obiettivo.' },
+    { t: 'HYROX e allenarsi a casa', d: 'SCHEDA HYROX prepara una gara sulla sua data. ALLENARSI A CASA ha Pilates, mobilità, calisthenics e HIIT, da seguire anche come lezione a tempo.' },
+    { t: 'Programmi creati', d: 'Tutto quello che salvi finisce qui, diviso per tipo. Da ogni riga lo attivi, lo condividi o lo elimini. SALVA SENZA ATTIVARE mette da parte una scheda senza toccare quella in uso.' },
+    { t: 'Condividi con un codice', d: 'CONDIVIDI crea un codice da dare a un amico; in CONDIVIDI PROGRAMMA scrivi quello che hai ricevuto. Viaggia solo la scheda, mai i tuoi carichi.' },
+    { t: 'Database schede', d: 'Centinaia di migliaia di combinazioni già pronte: filtra per giorni, obiettivo, attrezzatura e livello, guarda l’anteprima e attiva.' }
+  ] },
+  nutrition: { label: 'Alimentazione', icon: '🥗', steps: [
+    { t: 'Piano e diario', d: 'In alto due schede: PIANO ALIMENTARE è quello che dovresti mangiare, DIARIO ALIMENTARE è quello che hai mangiato davvero.' },
+    { t: 'Come nasce il piano', d: 'Puoi scriverlo a mano, importarlo dal file del nutrizionista (Excel, PDF, foto), farlo generare dall’app anche vegetariano o vegano, oppure tenere solo un obiettivo di calorie e macro.' },
+    { t: 'Aggiungere un alimento', d: 'Cerca per nome, scansiona il codice a barre, leggi l’etichetta o fotografa il piatto: l’app propone alimenti e grammi, tu correggi e confermi.' },
+    { t: 'Il diario', d: 'Il calendario mostra le calorie di ogni giorno: verde se sei vicino all’obiettivo. Per ogni data confermi il piano in un tocco o registri da zero. Sotto trovi acqua e passi.' },
+    { t: 'Sostituzioni, ricette e spesa', d: 'Tocca un alimento per sostituirlo con uno equivalente. Il ricettario ha 150 ricette con valori e costo, e la lista della spesa si costruisce da sola dalla settimana del piano.' },
+    { t: 'Obiettivo di calorie e macro', d: 'Lo imposti tu, lo propone l’app dal tuo profilo o lo prescrive il coach. Ogni pasto e ogni giorno sono messi a confronto con l’obiettivo.' }
+  ] },
+  supplements: { label: 'Integrazione', icon: '💊', steps: [
+    { t: 'I tuoi integratori', d: 'Ogni integratore ha nome, dose, orario e frequenza. Lo aggiungi cercandolo nel catalogo o dal codice a barre.' },
+    { t: 'Promemoria', d: 'Attiva AVVISO APP e scegli l’ora: ricevi una notifica ogni giorno a quell’ora.' },
+    { t: 'Da dove arriva il protocollo', d: 'Lo scrivi tu, lo importi da un file, lo fai generare dall’app in base ai tuoi obiettivi o lo ricevi dal coach.' },
+    { t: 'Le prove', d: 'Dove disponibile, la scheda di un integratore riassume a cosa serve, il dosaggio e le avvertenze. Non sostituisce il parere del medico.' }
+  ] },
+  therapy: { label: 'Terapia', icon: '🩺', steps: [
+    { t: 'I farmaci che prendi', d: 'Per ognuno: nome, principio attivo, dose, orari e giorni. Puoi importare lo schema da un file invece di riscriverlo.' },
+    { t: 'Promemoria', d: 'Ogni farmaco può avere il suo avviso all’ora che scegli.' },
+    { t: 'Chi vede questi dati', d: 'Sono dati tuoi. Decidi tu se il coach li vede e se il Coach AI può usarli (di base no). Non entrano mai in classifiche o condivisioni. Nurvan non sostituisce il medico.' }
+  ] },
+  exams: { label: 'Esami', icon: '🧪', steps: [
+    { t: 'I tuoi esami', d: 'Registra ogni valore con unità, intervallo di riferimento e data, oppure carica il referto: lo alleghi così com’è o lo fai trascrivere valore per valore.' },
+    { t: 'Capire un valore', d: 'Su ogni parametro puoi chiedere una spiegazione al Coach AI. È una spiegazione generale: l’interpretazione resta al medico.' },
+    { t: 'Promemoria e richieste', d: 'Segna il prossimo controllo e ricevi un avviso il giorno prima. Se il coach ti chiede degli esami, li trovi qui con la scadenza.' },
+    { t: 'Riservatezza', d: 'Come per la terapia: decidi tu se il coach li vede e se il Coach AI può usarli.' }
+  ] },
+  stats: { label: 'Statistiche', icon: '📊', steps: [
+    { t: 'Cosa hai fatto', d: 'Volume, intensità, durata e calorie stimate delle sedute, sul periodo che scegli: settimana, 4 o 12 settimane, sempre.' },
+    { t: 'I muscoli', d: 'La figura mostra quanto hai lavorato ogni distretto. Tocca un muscolo per vedere solo quello.' },
+    { t: 'Un esercizio alla volta', d: 'Filtra per gruppo o per esercizio: vedi la progressione di carico e volume, per settimana di scheda o per data.' },
+    { t: 'Check fisici ed esportazione', d: 'Nei check fisici salvi foto, peso e note per confrontarti nel tempo. ESPORTA crea il file dei tuoi dati.' }
+  ] },
+  progress: { label: 'Progressi', icon: '📈', steps: [
+    { t: 'Il quadro generale', d: 'Quanti allenamenti hai fatto, l’ultimo, il peso recente e lo stato di salute del programma, su settimana, 4 o 12 settimane, sempre.' },
+    { t: 'Per approfondire', d: 'APRI STATISTICHE porta ai grafici completi, esercizio per esercizio.' }
+  ] },
+  calendar: { label: 'Calendario', icon: '📅', steps: [
+    { t: 'Il mese', d: 'Ogni giorno mostra quello che c’è in programma e quello che hai registrato. Tocca una data per vederne il dettaglio.' },
+    { t: 'Aggiungere un evento', d: 'Per la data scelta puoi segnare una nota, una pesata, un check-in, un giorno di riposo, uno scarico o un allenamento fuori scheda.' }
+  ] },
+  ai: { label: 'Coach AI', icon: '🤖', steps: [
+    { t: 'Chiedi al Coach', d: 'Scrivi o detta una domanda: il Coach AI risponde tenendo conto del tuo programma e di quello che hai registrato.' },
+    { t: 'Modifiche alla scheda', d: 'Puoi chiedergli di cambiare il programma. Ogni modifica ti viene proposta prima: la applichi solo se confermi.' },
+    { t: 'Analisi di un file', d: 'Con ANALIZZA carichi una scheda in PDF, Excel, Word o foto: il Coach la legge e ti dice cosa migliorerebbe.' },
+    { t: 'Studi scientifici', d: 'Il riquadro PubMed cerca nella letteratura: scrivi l’argomento e leggi cosa dicono gli studi.' },
+    { t: 'Chat e archivio', d: 'NUOVA DOMANDA apre una conversazione nuova e mette la precedente in archivio. AZZERA CHAT cancella quella aperta, AZZERA ARCHIVIO quelle salvate.' }
+  ] },
+  knowledge: { label: 'Enciclopedia', icon: '📖', steps: [
+    { t: 'Gli esercizi', d: 'Tutti gli esercizi divisi per muscolo, con immagine, esecuzione, errori comuni e video. Puoi aggiungerne di tuoi.' },
+    { t: 'Capire il metodo', d: 'Le altre schede spiegano riscaldamento, tecniche di intensità, RIR e RPE, modelli di progressione, split e il glossario dei termini.' }
+  ] },
+  db: { label: 'Database', icon: '🗂️', steps: [
+    { t: 'I tuoi documenti', d: 'Carica PDF, Word o Excel: restano in archivio e puoi farli analizzare dal Coach AI.' },
+    { t: 'Esercizi di sistema', d: 'L’elenco degli esercizi che l’app conosce, con il muscolo allenato. Con AGGIUNGI ne inserisci uno nella seduta.' }
+  ] },
+  import: { label: 'Importa scheda', icon: '📥', steps: [
+    { t: 'Dal file all’allenamento', d: 'Carica la scheda del coach in PDF, Excel, Word o foto, oppure incolla il testo: l’app la legge e la trasforma in un programma da seguire.' },
+    { t: 'Cosa importare', d: 'Scegli se il file contiene allenamento, alimentazione, integrazione, terapia, esami o un documento completo.' },
+    { t: 'Controlla prima di attivare', d: 'Dopo la lettura vedi l’anteprima, settimana per settimana: correggi quello che non torna e solo allora attivi.' }
+  ] },
+  profile: { label: 'Profilo', icon: '👤', steps: [
+    { t: 'I tuoi dati', d: 'Peso, altezza, età, massimali e obiettivo servono a generare schede e obiettivi di calorie adatti a te.' },
+    { t: 'Priorità e attrezzatura', d: 'Scegli le parti del corpo su cui concentrarti, i giorni a settimana e l’attrezzatura che hai: il generatore parte da qui.' },
+    { t: 'Backup e account', d: 'Da qui esporti un backup o lo storico in CSV, gestisci l’accesso e apri le altre impostazioni.' }
+  ] },
+  settings: { label: 'Impostazioni', icon: '⚙️', steps: [
+    { t: 'Allenamento', d: 'Unità dei pesi, suono e vibrazione del timer, tempo di preparazione, riscaldamento e passaggio automatico alla serie successiva.' },
+    { t: 'Quanto può fare l’AI', d: 'Per ogni area scegli tra solo manuale, AI che suggerisce, AI con conferma o AI automatica.' },
+    { t: 'Lingua, piano e privacy', d: 'Cambi lingua, vedi il tuo piano, gestisci i consensi, esporti o elimini i tuoi dati.' }
+  ] },
+  pricing: { label: 'Piani', icon: '💳', steps: [
+    { t: 'Cosa comprende ogni piano', d: 'Ogni piano elenca le sue funzioni; quello attivo è segnato come IL TUO PIANO. Le funzioni chiuse restano visibili nell’app con l’indicazione del piano che le apre.' }
+  ] },
+  hyrox: { label: 'HYROX', icon: '🏁', steps: [
+    { t: 'Scegli la gara', d: 'Il calendario elenca le gare in Italia, in Europa e nel mondo. Scelta la gara, la preparazione viene scritta fino a quella data.' },
+    { t: 'Su misura', d: 'Indica categoria, livello, giorni a settimana e dove ti alleni: le stazioni che non hai vengono sostituite con l’esercizio più vicino.' },
+    { t: 'Come è fatta', d: 'Quattro fasi: base, costruzione, picco con le simulazioni e scarico. Ogni scelta è legata a uno studio, che puoi aprire.' }
+  ] },
+  disciplines: { label: 'A casa', icon: '🧘', steps: [
+    { t: 'Quattro discipline', d: 'Pilates sul tappetino, mobilità e stretching, calisthenics e HIIT: scegli giorni, livello e durata della seduta.' },
+    { t: 'Lezione a tempo', d: 'Ogni seduta si può seguire come una lezione: un esercizio alla volta, come farlo, il conto alla rovescia e il recupero.' }
+  ] }
+  ,
+  // --- the athlete following a coach -----------------------------------------
+  clientChat: { label: 'Chat con il coach', icon: '💬', who: 'athlete', noNav: true, steps: [
+    { t: 'Scrivi al tuo coach', d: 'Qui parli direttamente con il coach: testo, dettatura, foto e file. Se il coach l’ha attivata, puoi anche fare una videochiamata.' },
+    { t: 'Richieste al coach', d: 'Da qui chiedi il recupero della password o la fine della collaborazione: il coach riceve la richiesta e risponde.' }
+  ] },
+  // --- the coach area ----------------------------------------------------------
+  coachHub: { label: 'Hub coach · clienti', icon: '👥', who: 'coach', steps: [
+    { t: 'I tuoi clienti', d: 'L’elenco di chi segui. Cerca per nome e, per ognuno, apri la scheda cliente, la chat o segui l’allenamento in diretta.' },
+    { t: 'Aggiungere un cliente', d: 'AGGIUNGI CLIENTE crea il suo accesso e un link univoco. Il cliente non usa l’app normale: entra da quel link, in uno spazio suo e separato dal tuo.' },
+    { t: 'Link e accessi', d: 'LINK copia di nuovo l’invito. REVOCA sospende l’accesso, RIMUOVI chiude il rapporto. Se un cliente è oltre i posti del tuo piano, resta in attesa finché se ne libera uno.' },
+    { t: 'Presenza e videochiamate', d: 'In alto decidi se mostrare ai clienti quando sei online e se consentire le videochiamate dalla chat.' },
+    { t: 'I tuoi dati restano tuoi', d: 'Quando guardi i dati di un cliente, i tuoi allenamenti personali restano salvati a parte e non vengono toccati. ESCI DALL’HUB ti riporta alla tua app.' }
+  ] },
+  coachClient: { label: 'Scheda cliente', icon: '🧑', who: 'coach', noNav: true, steps: [
+    { t: 'Tutto di un cliente', d: 'Anagrafica, allenamenti, richieste da approvare, programma e dati: una pagina sola per ogni cliente.' },
+    { t: 'Assegnare una scheda', d: 'ASSEGNA SCHEDA apre uno spazio di lavoro del cliente: importi un file, scrivi la scheda da zero, la generi, la prendi dal tuo database o da quello di Nurvan. Con INVIA AL CLIENTE scegli la scadenza e confermi.' },
+    { t: 'Quanto è libero il cliente', d: 'Due interruttori: «Consenti massima libertà» lascia modificare e generare da sé (tu ricevi un avviso); senza, ogni modifica ti arriva da approvare. «Consenti Nurvan AI» apre al cliente il Coach AI.' },
+    { t: 'Vedere i suoi dati', d: 'Da «Vedi dati del cliente» apri allenamento, statistiche, alimentazione, integrazione, terapia, esami e profilo così come li vede lui. Terapia ed esami richiedono il piano Coach Pro e il consenso del cliente.' },
+    { t: 'Check e richieste', d: 'RICHIEDI CHECK e RICHIEDI ESAMI mandano la richiesta al cliente. Nei check-in programmati imposti cadenza, giorno e domande, e li ricevi da soli.' },
+    { t: 'Accesso del cliente', d: 'COPIA LINK + CREDENZIALI, REIMPOSTA PASSWORD e RIGENERA LINK UNIVOCO servono quando il cliente cambia telefono o perde l’accesso.' }
+  ] },
+  coachToday: { label: 'Coach · Oggi', icon: '☀️', who: 'coach', steps: [
+    { t: 'La tua giornata da coach', d: 'Quanti clienti hai, quanti sono attivi, i messaggi non letti e chi si sta allenando adesso.' },
+    { t: 'Chi richiede attenzione', d: 'L’elenco dei clienti da aprire per primi, le sessioni di oggi e l’attività recente.' },
+    { t: 'I tuoi task', d: 'Aggiungi cose da fare, completale, posticipale di un giorno o riordinale.' }
+  ] },
+  coachInbox: { label: 'Coach · Chat', icon: '📨', who: 'coach', steps: [
+    { t: 'Tutte le conversazioni', d: 'Le chat con i clienti in un elenco: cerca, apri una conversazione, fissa in alto quelle importanti.' }
+  ] },
+  coachChat: { label: 'Chat con il cliente', icon: '💬', who: 'coach', noNav: true, steps: [
+    { t: 'Parlare con il cliente', d: 'Testo, dettatura e allegati. La videochiamata compare se l’hai consentita dall’hub.' },
+    { t: 'Pulire la chat', d: 'AZZERA (PER ME) svuota la conversazione solo dal tuo lato; NUOVA CHAT ne apre una nuova.' }
+  ] },
+  coachCheckIns: { label: 'Coach · Verifiche', icon: '✅', who: 'coach', steps: [
+    { t: 'Le verifiche dei clienti', d: 'Quattro code: richieste, ricevute, da revisionare e revisionate.' },
+    { t: 'Chiedere e rispondere', d: '«Richiedi verifica» manda la richiesta a un cliente; quando arriva la apri, scrivi la revisione e rispondi.' }
+  ] },
+  coachCalendar: { label: 'Coach · Calendario', icon: '🗓️', who: 'coach', steps: [
+    { t: 'Le tue sessioni', d: 'Vista per giorno, settimana o mese. Crei una nuova sessione, la sposti o la annulli, e segni le tue disponibilità.' }
+  ] },
+  coachLibrary: { label: 'Il mio database schede', icon: '🗄️', who: 'coach', steps: [
+    { t: 'Le schede del tuo metodo', d: 'Qui tieni le tue schede: le crei da zero, le generi o le importi. Non toccano né la tua scheda attiva né quella di un cliente.' },
+    { t: 'Usarle con i clienti', d: 'Quando assegni una scheda a un cliente scegli «Dal mio database» e parti da una di queste.' }
+  ] },
+  coachPrograms: { label: 'Coach · Programmi', icon: '📑', who: 'coach', steps: [
+    { t: 'Programmi del coach', d: 'Importi un programma da file, ne crei uno nuovo o lavori sul tuo database: assegna, duplica, esporta, archivia.' }
+  ] },
+  coachNutrition: { label: 'Coach · Alimentazione', icon: '🍽️', who: 'coach', steps: [
+    { t: 'Stima di un pasto', d: 'Inserisci cliente e macro: l’app stima il pasto e, se confermi, lo registra nel diario del cliente.' }
+  ] },
+  coachFormReview: { label: 'Coach · Revisione tecnica', icon: '🎯', who: 'coach', steps: [
+    { t: 'Correggere l’esecuzione', d: 'Per un esercizio di un cliente segni i punti da correggere e scrivi il tuo commento.' }
+  ] },
+  coachAnalytics: { label: 'Coach · Analisi', icon: '📊', who: 'coach', steps: [
+    { t: 'L’andamento dei clienti', d: 'Scegli il periodo e leggi i numeri principali; in fondo, i clienti che conviene aprire.' }
+  ] },
+  coachAgent: { label: 'Agente Nurvan', icon: '🧠', who: 'coach', steps: [
+    { t: 'Chiedi all’agente', d: 'Scrivi cosa vuoi fare sui tuoi clienti: l’agente prepara l’azione e ti mostra l’anteprima. Parte solo se confermi.' }
+  ] },
+  coachBusiness: { label: 'Coach · Attività', icon: '💼', who: 'coach', steps: [
+    { t: 'I numeri della tua attività', d: 'Un registro tenuto a mano di clienti e incassi. In questa versione non c’è un pagamento collegato.' }
+  ] },
+  coachCrm: { label: 'Coach · Pipeline', icon: '📇', who: 'coach', steps: [
+    { t: 'L’elenco dei contatti', d: 'I tuoi clienti in un unico elenco, per vedere a che punto è ognuno.' }
+  ] },
+  coachAutomations: { label: 'Coach · Automazioni', icon: '⚙️', who: 'coach', steps: [
+    { t: 'Regole automatiche', d: 'Crei una regola, la provi a secco per vedere cosa farebbe e poi la esegui.' }
+  ] }
+};
+window.PAGE_TUTORIALS = PAGE_TUTORIALS;
+// What an athlete following a coach is told on the pages that differ for them.
+var PAGE_TUTORIALS_ATHLETE = {
+  home: [
+    { t: 'Il tuo spazio con il coach', d: 'Questo è il tuo spazio, aperto dal link che ti ha mandato il coach. Qui trovi la scheda che ti assegna e tutto quello che registri.' },
+    { t: 'La scheda', d: 'Finché non c’è una scheda puoi chiederla con CHIEDI LA SCHEDA o scrivere al coach. Quando arriva, la trovi qui con la seduta di oggi. AGGIORNA scarica le ultime novità.' },
+    { t: 'Check-in', d: 'Quando il coach aspetta un check-in compare una scheda: COMPILA, rispondi, aggiungi le foto se vuoi e INVIA AL COACH. Una volta inviato non si modifica.' },
+    { t: 'Le altre sezioni', d: 'Da «Altro» apri notifiche, chat con il coach, alimentazione, integrazione, terapia, esami, calendario, HYROX e allenamenti a casa.' },
+    { t: 'Cosa puoi cambiare da solo', d: 'Dipende da quanto ti ha lasciato libero il coach: con la massima libertà modifichi tu e lui viene avvisato; altrimenti la modifica gli arriva da approvare.' }
+  ]
+};
+function pageTutorialKey(view) { return view === 'athlete' ? 'profile' : view; }
+function pageTutorialSteps(view) {
+  const tut = PAGE_TUTORIALS[view];
+  if (!tut) return [];
+  if (PAGE_TUTORIALS_ATHLETE[view] && typeof isAthleteRole === 'function' && isAthleteRole()) return PAGE_TUTORIALS_ATHLETE[view];
+  return tut.steps;
+}
+
+function tutorialsSeen() {
+  if (!store.prefs) store.prefs = {};
+  if (!store.prefs.tutorialsSeen || typeof store.prefs.tutorialsSeen !== 'object') store.prefs.tutorialsSeen = {};
+  return store.prefs.tutorialsSeen;
+}
+function pageTutorialApplies(view) {
+  const tut = PAGE_TUTORIALS[view];
+  if (!tut) return false;
+  // Pages about writing one's own program are not for an athlete a coach writes for.
+  const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+  if (tut.who === 'self' && athlete) return false;
+  if (tut.who === 'athlete' && !athlete) return false;
+  // The coach area: for who has it, never inside a client link.
+  if (tut.who === 'coach' && (athlete || !(store && (store.coachUnlocked || store.coachSessionActive)) || (typeof isClientStorageContext === 'function' && isClientStorageContext()))) return false;
+  return true;
+}
+// Anything else on top of the page: a tutorial never opens over it.
+function anyOverlayOpen() {
+  try {
+    if (document.body && document.body.classList.contains('nurvan-locked')) return true;
+    const nodes = document.querySelectorAll('.modal, [id$="-modal"], .cp-overlay, #timer-overlay, #splash, #busy-overlay, #lesson-overlay, #program-slot-choice');
+    for (let i = 0; i < nodes.length; i++) {
+      const el = nodes[i];
+      if (el.id === 'page-tutorial') continue;
+      const cs = window.getComputedStyle(el);
+      if (cs.display !== 'none' && cs.visibility !== 'hidden' && el.offsetWidth > 0 && el.offsetHeight > 0) return true;
+    }
+  } catch (_) {}
+  return false;
+}
+function maybeShowPageTutorial(view) {
+  try {
+    view = pageTutorialKey(view);
+    if (!store || !store.prefs || store.prefs.tutorialsOff === true) return false;
+    if (!pageTutorialApplies(view)) return false;
+    if (tutorialsSeen()[view]) return false;
+    // A coach looking at an athlete's data is not the one being taught the page.
+    if (store.coachViewingClient || store.coachAssigning) return false;
+    // Nobody is in yet: the first screens are the login's.
+    if (!store.accountToken && !(typeof isClientStorageContext === 'function' && isClientStorageContext())) return false;
+    if (document.getElementById('page-tutorial') || anyOverlayOpen()) return false;
+    openPageTutorial(view, false);
+    return true;
+  } catch (_) { return false; }
+}
+function schedulePageTutorial() {
+  try {
+    clearTimeout(window.__pageTutTimer);
+    const view = currentView;
+    if (!PAGE_TUTORIALS[pageTutorialKey(view)]) return;
+    window.__pageTutTimer = setTimeout(function () { if (currentView === view) maybeShowPageTutorial(view); }, 700);
+  } catch (_) {}
+}
+function openPageTutorial(view, replay) {
+  if (!PAGE_TUTORIALS[view]) return;
+  closePageTutorialElement();
+  window.__pageTut = { view: view, step: 0, replay: !!replay };
+  const el = document.createElement('div');
+  el.id = 'page-tutorial';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.style.cssText = 'display:flex;position:fixed;inset:0;z-index:10150;background:rgba(0,0,0,.82);align-items:flex-end;justify-content:center;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom, 0px));box-sizing:border-box;';
+  el.innerHTML = '<div class="card" id="page-tutorial-card" style="max-width:460px;width:100%;border:1px solid var(--gold);padding:16px;box-sizing:border-box;margin:0;"></div>';
+  document.body.appendChild(el);
+  drawPageTutorial();
+}
+window.openPageTutorial = openPageTutorial;
+function drawPageTutorial() {
+  const st = window.__pageTut;
+  const card = document.getElementById('page-tutorial-card');
+  if (!st || !card) return;
+  const tut = PAGE_TUTORIALS[st.view];
+  const steps = pageTutorialSteps(st.view);
+  const n = steps.length;
+  st.step = Math.max(0, Math.min(n - 1, st.step));
+  const step = steps[st.step];
+  const last = st.step === n - 1;
+  card.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">' + esc(String(trText('TUTORIAL')) + ' · ' + String(trText(tut.label)).toUpperCase() + ' · ' + (st.step + 1) + '/' + n) + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 10px;flex-shrink:0;" onclick="closePageTutorial()">' + esc(trText('SALTA')) + '</button></div>' +
+    '<div style="font-size:17px;font-weight:900;color:#fff;margin-bottom:8px;line-height:1.25;">' + esc(trText(step.t)) + '</div>' +
+    '<div style="font-size:13px;color:#ccc;line-height:1.55;margin-bottom:14px;">' + esc(trText(step.d)) + '</div>' +
+    '<div style="display:flex;justify-content:center;gap:5px;margin-bottom:12px;">' +
+    steps.map(function (_, i) { return '<span style="width:' + (i === st.step ? 16 : 6) + 'px;height:6px;border-radius:3px;background:' + (i === st.step ? 'var(--gold)' : '#444') + ';"></span>'; }).join('') + '</div>' +
+    '<div style="display:flex;gap:8px;">' +
+    (st.step > 0 ? '<button type="button" class="btn btn-outline" style="flex:1;" onclick="stepPageTutorial(-1)">' + esc(trText('INDIETRO')) + '</button>' : '') +
+    '<button type="button" class="btn btn-primary" style="flex:2;" onclick="' + (last ? 'closePageTutorial()' : 'stepPageTutorial(1)') + '">' + esc(trText(last ? 'HO CAPITO' : 'AVANTI')) + '</button></div>' +
+    (st.replay ? '' : '<div style="text-align:center;margin-top:10px;"><a href="#" onclick="disablePageTutorials();return false;" style="font-size:10px;color:#888;text-decoration:underline;">' + esc(trText('Non mostrarmi più i tutorial')) + '</a>' +
+      '<span style="font-size:10px;color:#666;"> · ' + esc(trText('li ritrovi in Menu → Tutorial')) + '</span></div>');
+}
+function stepPageTutorial(delta) {
+  if (!window.__pageTut) return;
+  window.__pageTut.step += Number(delta) || 0;
+  drawPageTutorial();
+}
+window.stepPageTutorial = stepPageTutorial;
+function closePageTutorialElement() {
+  const el = document.getElementById('page-tutorial');
+  if (el) el.remove();
+}
+// Read to the end or skipped: either way this page has been explained.
+function closePageTutorial() {
+  const st = window.__pageTut;
+  closePageTutorialElement();
+  window.__pageTut = null;
+  if (st && st.view) {
+    tutorialsSeen()[st.view] = Date.now();
+    try { persist(); } catch (_) {}
+  }
+}
+window.closePageTutorial = closePageTutorial;
+function disablePageTutorials() {
+  store.prefs.tutorialsOff = true;
+  closePageTutorial();
+  if (typeof showToast === 'function') showToast('Tutorial disattivati: li ritrovi in Menu → Tutorial', 'info');
+}
+window.disablePageTutorials = disablePageTutorials;
+
+// Menu → Tutorial: every page's tutorial, to open again.
+function openTutorialIndex() {
+  const old = document.getElementById('tutorial-index-modal');
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'tutorial-index-modal';
+  el.style.cssText = 'display:flex;position:fixed;inset:0;z-index:10140;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  el.onclick = function (ev) { if (ev.target === el) el.remove(); };
+  const seen = tutorialsSeen();
+  const views = Object.keys(PAGE_TUTORIALS).filter(pageTutorialApplies);
+  el.innerHTML = '<div class="card" style="max-width:460px;width:100%;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--gold);padding:16px;box-sizing:border-box;margin:0;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><h2 style="font-size:16px;color:var(--gold);margin:0;">' + esc(trText('TUTORIAL')) + '</h2>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'tutorial-index-modal\').remove()">' + esc(trText('CHIUDI')) + '</button></div>' +
+    '<div style="font-size:11px;color:#888;line-height:1.5;margin-bottom:12px;">' + esc(trText('Ogni pagina si spiega da sola la prima volta che la apri. Da qui rivedi la spiegazione di quella che vuoi.')) + '</div>' +
+    '<div style="display:grid;gap:6px;">' +
+    views.map(function (v) {
+      const tut = PAGE_TUTORIALS[v];
+      return '<button type="button" class="btn btn-outline" style="display:flex;align-items:center;gap:10px;text-align:left;padding:10px 12px;" onclick="replayPageTutorial(\'' + v + '\')">' +
+        '<span style="font-size:18px;">' + tut.icon + '</span><span style="flex:1;font-size:12px;font-weight:800;color:#eee;">' + esc(trText(tut.label)) + '</span>' +
+        '<span style="font-size:10px;color:' + (seen[v] ? '#666' : 'var(--gold)') + ';">' + esc(trText(seen[v] ? 'visto' : 'nuovo')) + ' · ' + pageTutorialSteps(v).length + '</span></button>';
+    }).join('') + '</div>' +
+    '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#ccc;margin-top:14px;">' +
+    '<input type="checkbox" style="width:18px;height:18px;" ' + (store.prefs.tutorialsOff === true ? '' : 'checked') + ' onchange="setPageTutorialsEnabled(this.checked)"> ' + esc(trText('Mostra il tutorial la prima volta che apro una pagina')) + '</label>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:10px;font-size:11px;" onclick="resetPageTutorials()">' + esc(trText('RIVEDILI TUTTI DA CAPO')) + '</button>' +
+    '</div>';
+  document.body.appendChild(el);
+}
+window.openTutorialIndex = openTutorialIndex;
+function replayPageTutorial(view) {
+  const idx = document.getElementById('tutorial-index-modal');
+  if (idx) idx.remove();
+  // On the page it talks about, when that page can be opened from here.
+  try { if (currentView !== view && typeof navigate === 'function' && !PAGE_TUTORIALS[view].noNav && !(view === 'profile' && currentView === 'athlete')) navigate(view); } catch (_) {}
+  clearTimeout(window.__pageTutTimer);
+  setTimeout(function () { openPageTutorial(view, true); }, 250);
+}
+window.replayPageTutorial = replayPageTutorial;
+window.schedulePageTutorial = schedulePageTutorial;
+function setPageTutorialsEnabled(on) {
+  store.prefs.tutorialsOff = !on;
+  try { persist(); } catch (_) {}
+}
+window.setPageTutorialsEnabled = setPageTutorialsEnabled;
+function resetPageTutorials() {
+  store.prefs.tutorialsSeen = {};
+  store.prefs.tutorialsOff = false;
+  try { persist(); } catch (_) {}
+  const idx = document.getElementById('tutorial-index-modal');
+  if (idx) idx.remove();
+  if (typeof showToast === 'function') showToast('Fatto: ogni pagina si spiegherà di nuovo alla prossima apertura', 'ok');
+  schedulePageTutorial();
+}
+window.resetPageTutorials = resetPageTutorials;
 
 function personalNavBack() {
   const inCoach = !!(store && store.coachSessionActive) ||
@@ -15729,7 +16187,18 @@ window.keepScrollDuring = keepScrollDuring;
 
 // Re-rendering the screen you are already on keeps your place; arriving on a
 // new one does not.
+// What a client may open is decided where the page is drawn: asking for a
+// page through navigate() was the only place it was checked.
+function gateViewForClient() {
+  try {
+    if (typeof gatePracticeView === 'function' && typeof isClientStorageContext === 'function' && isClientStorageContext()) {
+      var allowedView = gatePracticeView(currentView);
+      if (allowedView && allowedView !== currentView) currentView = allowedView;
+    }
+  } catch (_) {}
+}
 function render() {
+  gateViewForClient();
   var sameScreen = (window.__lastRenderedView === currentView);
   window.__lastRenderedView = currentView;
   var draw = function () {
@@ -15822,6 +16291,7 @@ function renderCurrentView() {
   else renderHome(c);
   if (currentView !== 'nutrition') window.__nutritionLastView = currentView;
   applyChromeI18n();
+  try { if (!tutorialsSeen()[pageTutorialKey(currentView)]) schedulePageTutorial(); } catch (_) {}
   try {
     if (typeof isClientTutorialVisible === 'function' && isClientTutorialVisible() && typeof drawClientTutorial === 'function') {
       drawClientTutorial();

@@ -321,7 +321,8 @@ try {
     headers: { cookie: "nurvan_client_ctx=demo-token; nurvan_app_mode=client" }
   });
   const loc = String(rootClient.headers.get("location") || "");
-  assert(rootClient.status === 302 && loc.includes("/c/demo-token"), "GET / with client cookies redirects to /c/token");
+  // The address decides: a client link opened earlier does not take the root away.
+  assert(rootClient.status !== 302 && !loc.includes("/c/"), "GET / with client cookies is still the normal app, not a redirect to /c/token");
   const rootMaster = await fetch("http://127.0.0.1:" + port + "/", {
     redirect: "manual",
     headers: { cookie: "nurvan_client_ctx=demo-token; nurvan_app_mode=master" }

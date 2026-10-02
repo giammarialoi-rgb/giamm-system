@@ -85,7 +85,7 @@ console.log('--- 3. l\'atleta con "Resta connesso" non viene disconnesso a ogni 
   ok('3b. all\'avvio del link riapre il suo spazio, solo se il link e\' lo stesso invito',
     /const active = JSON\.parse\(localStorage\.getItem\('GS_CLIENT_ACTIVE'\) \|\| 'null'\);/.test(boot) &&
     /\(!urlToken \|\| !active\.inviteToken \|\| urlToken === active\.inviteToken\)/.test(boot) &&
-    boot.indexOf("GS_CLIENT_ACTIVE") < boot.indexOf('clientRaw = localStorage.getItem(GS_STORE_CLIENT_PENDING_KEY)'));
+    boot.indexOf("GS_CLIENT_ACTIVE") < boot.indexOf('clientRaw = localStorage.getItem(clientPendingStoreKey())'));
   ok('3c. uscendo, il dispositivo lo dimentica', /try \{ localStorage\.removeItem\('GS_CLIENT_ACTIVE'\); \} catch \(_\) \{\}/.test(UI));
 }
 
