@@ -128,6 +128,7 @@
   // The week-1 template, built on the spot. The weeks after it come from
   // expandScienceProgramWeeks, as before.
   function bodyFor(id) {
+    if (typeof id === 'string' && id.indexOf('hyx-') === 0) return hyrox() ? hyrox().catalogBody(id) : null;
     var p = typeof id === 'string' ? parseId(id) : id;
     if (!p) return null;
     var aud = audienceById(p.audience);
@@ -168,8 +169,15 @@
     return all.indexOf(want) >= 0 ? [want] : all;
   }
 
+  // The race preparations are a grid of their own (web/hyrox.js).
+  function hyrox() { return root.NurvanHyrox && root.NurvanHyrox.catalogSearch ? root.NurvanHyrox : null; }
+  function isHyrox(filters) { return !!(filters && filters.goal === 'hyrox' && hyrox()); }
+
   function total(filters) {
-    return ['days', 'split', 'goal', 'equipment', 'experience', 'audience', 'duration', 'progression', 'variant']
+    if (isHyrox(filters)) return hyrox().catalogTotal(filters);
+    // With no goal chosen the count is everything there is.
+    var extra = (hyrox() && !(filters && filters.goal)) ? hyrox().catalogTotal({}) : 0;
+    return extra + ['days', 'split', 'goal', 'equipment', 'experience', 'audience', 'duration', 'progression', 'variant']
       .reduce(function (n, dim) { return n * valuesFor(dim, filters).length; }, 1);
   }
 
@@ -177,6 +185,7 @@
   // soon as it has enough rows for the screen. Nothing else is ever built.
   function search(filters, limit) {
     var f = filters || {};
+    if (isHyrox(f)) return hyrox().catalogSearch(f, limit || 150);
     var cap = limit || 150;
     var rows = [];
     var dims = {
@@ -215,6 +224,7 @@
   }
 
   function rowById(id) {
+    if (String(id || '').indexOf('hyx-') === 0) return hyrox() ? hyrox().catalogRow(id) : null;
     var p = parseId(id);
     return p ? rowFor(p) : null;
   }

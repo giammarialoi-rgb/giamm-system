@@ -1558,6 +1558,7 @@ export function mountCoachPractice(app, deps) {
         raceName: text(hx.raceName, 80),
         raceDate: /^\d{4}-\d{2}-\d{2}$/.test(String(hx.raceDate || "")) ? String(hx.raceDate) : "",
         division: text(hx.division, 20),
+        profile: text(hx.profile, 20),
         level: text(hx.level, 20),
         days: Math.min(6, Math.max(3, Math.round(Number(hx.days)) || 4)),
         weeks: Math.min(20, Math.max(4, Math.round(Number(hx.weeks)) || 12)),

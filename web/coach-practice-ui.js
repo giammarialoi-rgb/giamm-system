@@ -4481,7 +4481,10 @@ function prefillHyroxFromRequest(clientId) {
   if (api.LEVELS.some(function (l) { return l.id === hx.level; })) h.level = hx.level;
   if (api.DAYS.indexOf(Number(hx.days)) !== -1) h.days = Number(hx.days);
   if (Number(hx.weeks) >= 4) h.weeks = Number(hx.weeks);
-  if (Array.isArray(hx.gear)) h.gear = api.GEAR.map(function (g) { return g.id; }).filter(function (g) { return hx.gear.indexOf(g) !== -1; });
+  if (Array.isArray(hx.gear)) {
+    h.gear = api.GEAR.map(function (g) { return g.id; }).filter(function (g) { return hx.gear.indexOf(g) !== -1; });
+    h.profile = api.profileById && api.profileById(hx.profile) ? hx.profile : '';
+  }
 }
 
 function openAssignChooser(clientId, name) {

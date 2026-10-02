@@ -25,27 +25,34 @@
   var STATIONS = [
     { id: 'skierg', top: { m: '3:48', w: '4:23' }, name: 'Ski erg', amount: '1000 m', gear: 'skierg', unit: 'cardio', minutes: 5,
       cue: 'Braccia lunghe, spinta dalle anche: il lavoro lo fanno busto e dorsali, non le spalle. Ritmo costante, niente partenza a razzo.',
-      alt: { name: 'Slam ball', unit: 'reps', reps: '20', note: 'Al posto dello ski erg: stessa catena, anche e dorsali.' } },
+      alt: { name: 'Slam ball', unit: 'reps', reps: '20', note: 'Al posto dello ski erg: stessa catena, anche e dorsali.' },
+      home: { name: 'Burpees', unit: 'reps', reps: '15', note: 'Al posto dello ski erg: tutto il corpo, ritmo costante.' } },
     { id: 'sled_push', top: { m: '2:26', w: '2:47' }, name: 'Sled push', amount: '50 m', gear: 'sled', unit: 'cardio', minutes: 3,
       cue: 'Braccia tese o gomiti vicini al busto, schiena piatta, passi corti e continui. Fermarsi costa più che rallentare.',
-      alt: { name: 'Affondi camminati', unit: 'reps', reps: '20', note: 'Al posto della slitta: carico pesante, passi corti, busto inclinato in avanti.' } },
+      alt: { name: 'Affondi camminati', unit: 'reps', reps: '20', note: 'Al posto della slitta: carico pesante, passi corti, busto inclinato in avanti.' },
+      bw: { name: 'Affondi camminati', unit: 'reps', reps: '30', note: 'Al posto della slitta: passi corti e continui, senza fermarti.' } },
     { id: 'sled_pull', top: { m: '3:27', w: '3:58' }, name: 'Sled pull', amount: '50 m', gear: 'sled', unit: 'cardio', minutes: 3,
       cue: 'Siediti indietro sulle anche e tira a braccia alternate camminando all’indietro nella corsia. Corda sempre ordinata accanto a te.',
-      alt: { name: 'Rematore manubrio', unit: 'reps', reps: '15', note: 'Al posto della slitta: tirate pesanti e veloci, poco recupero.' } },
+      alt: { name: 'Rematore manubrio', unit: 'reps', reps: '15', note: 'Al posto della slitta: tirate pesanti e veloci, poco recupero.' },
+      bw: { name: 'Glute bridge', unit: 'reps', reps: '25', note: 'Al posto della slitta da tirare: catena posteriore, senza attrezzi.' } },
     { id: 'burpee_broad_jump', top: { m: '2:44', w: '3:27' }, name: 'Burpee broad jump', amount: '80 m', gear: null, unit: 'reps', reps: '10',
       cue: 'Petto a terra, piedi vicino alle mani, salto in lungo. Salti regolari e respirazione prima della distanza: è la stazione che alza di più i battiti.' },
     { id: 'row', top: { m: '3:56', w: '4:30' }, name: 'Vogatore', amount: '1000 m', gear: 'rower', unit: 'cardio', minutes: 5,
       cue: 'Gambe, busto, braccia; ritorno al contrario. Colpi lunghi a ritmo basso: qui si recuperano le gambe per i carry.',
-      alt: { name: 'Air bike', unit: 'cardio', minutes: 5, note: 'Al posto del vogatore: stesso tempo, sforzo costante.' } },
+      alt: { name: 'Air bike', unit: 'cardio', minutes: 5, note: 'Al posto del vogatore: stesso tempo, sforzo costante.' },
+      home: { name: 'Mountain climber', unit: 'time', seconds: 60, note: 'Al posto del vogatore: ritmo costante, senza macchine.' } },
     { id: 'farmers_carry', top: { m: '1:25', w: '1:44' }, name: 'Farmer walk', amount: '200 m', gear: 'kettlebells', unit: 'time', seconds: 60,
       cue: 'Spalle basse, presa piena, passi rapidi. Appoggia solo se la presa sta per cedere: ogni appoggio sono secondi persi.',
-      alt: { name: 'Farmer walk', unit: 'time', seconds: 60, note: 'Con manubri o un bilanciere per mano: conta la presa, non l’attrezzo.' } },
+      alt: { name: 'Farmer walk', unit: 'time', seconds: 60, note: 'Con manubri o un bilanciere per mano: conta la presa, non l’attrezzo.' },
+      bw: { name: 'Plank', unit: 'time', seconds: 60, note: 'Al posto del farmer walk: tenuta del busto. La presa si allena solo con un carico in mano.' } },
     { id: 'sandbag_lunges', top: { m: '3:07', w: '3:26' }, name: 'Affondi camminati con sandbag', amount: '100 m', gear: 'sandbag', unit: 'reps', reps: '20',
       cue: 'Sandbag sulle spalle, ginocchio dietro che tocca terra a ogni passo, busto alto. Passi lunghi: meno ripetizioni per la stessa distanza.',
-      alt: { name: 'Affondi camminati', unit: 'reps', reps: '20', note: 'Con manubri o bilanciere sulle spalle al posto del sandbag.' } },
+      alt: { name: 'Affondi camminati', unit: 'reps', reps: '20', note: 'Con manubri o bilanciere sulle spalle al posto del sandbag.' },
+      bw: { name: 'Affondi camminati', unit: 'reps', reps: '30', note: 'Senza carico: ginocchio a terra a ogni passo, più ripetizioni.' } },
     { id: 'wall_balls', top: { m: '3:55', w: '3:59' }, name: 'Wall ball', amount: '100 rip', gear: 'wallball', unit: 'reps', reps: '25',
       cue: 'Squat completo sotto il parallelo, palla al bersaglio. Blocchi decisi prima di partire (es. 25-25-25-25) con pause brevi e contate.',
-      alt: { name: 'Thruster', unit: 'reps', reps: '20', note: 'Al posto dei wall ball: carico leggero, squat completo, spinta sopra la testa.' } }
+      alt: { name: 'Thruster', unit: 'reps', reps: '20', note: 'Al posto dei wall ball: carico leggero, squat completo, spinta sopra la testa.' },
+      bw: { name: 'Squat jump', unit: 'reps', reps: '25', note: 'Al posto dei wall ball: squat completo e spinta verso l’alto.' } }
   ];
 
   // Loads per division (kg). Sled loads include the sled.
@@ -67,6 +74,29 @@
     { id: 'wallball', label: 'Wall ball e bersaglio' }
   ];
   var ALL_GEAR = GEAR.map(function (g) { return g.id; });
+
+  // Where people actually train. Not everybody has a sled and a ski erg: a
+  // profile says which race equipment is there (`gear`) and what the strength
+  // work is done with (`kit`: a full gym, dumbbells or kettlebells, nothing).
+  var PROFILES = [
+    { id: 'full', label: 'Palestra HYROX completa', note: 'Slitta, ski erg, vogatore, sandbag e wall ball', gear: ALL_GEAR.slice(), kit: 'gym' },
+    { id: 'box', label: 'Box senza slitta', note: 'Ski erg, vogatore, kettlebell, sandbag e wall ball', gear: ['skierg', 'rower', 'kettlebells', 'sandbag', 'wallball'], kit: 'gym' },
+    { id: 'gym', label: 'Palestra classica', note: 'Vogatore, bilanciere, manubri o kettlebell', gear: ['rower', 'kettlebells'], kit: 'gym' },
+    { id: 'home', label: 'Casa con manubri o kettlebell', note: 'Nessuna macchina: manubri o kettlebell e un posto dove correre', gear: ['kettlebells'], kit: 'dumbbells' },
+    { id: 'bodyweight', label: 'Corpo libero', note: 'Solo corsa e corpo libero', gear: [], kit: 'bodyweight' }
+  ];
+  function profileById(id) {
+    for (var i = 0; i < PROFILES.length; i++) if (PROFILES[i].id === id) return PROFILES[i];
+    return null;
+  }
+  // The profile a list of equipment is, when it is exactly one of them.
+  function profileOfGear(gear, kit) {
+    var key = (gear || []).slice().sort().join(',');
+    for (var i = 0; i < PROFILES.length; i++) {
+      if (PROFILES[i].gear.slice().sort().join(',') === key && (!kit || kit === PROFILES[i].kit)) return PROFILES[i];
+    }
+    return null;
+  }
 
   var LEVELS = [
     { id: 'beginner', label: 'Prima gara', volume: 0.8 },
@@ -121,7 +151,12 @@
   // done in each set (0.25 = a quarter), sets: how many times.
   function stationRow(station, opts, sets, share, rest) {
     var has = !station.gear || opts.gear.indexOf(station.gear) !== -1;
-    var src = has ? station : (station.alt || station);
+    // Without the equipment: what the place allows. At home there is no
+    // slam ball or air bike; with no weights at all, not even a dumbbell.
+    var kit = opts.kit || 'gym';
+    var swap = kit === 'bodyweight' ? (station.bw || station.home || station.alt)
+      : (kit === 'dumbbells' ? (station.home || station.alt) : station.alt);
+    var src = has ? station : (swap || station);
     var name = has ? station.name : src.name;
     var notes = [];
     if (has) {
@@ -156,12 +191,25 @@
   /* ---------------------------- sessions ---------------------------- */
 
   // phase: base | build | peak | taper; k: volume factor of the athlete.
-  function sessionStrength(variant, phase, k) {
+  function sessionStrength(variant, phase, k, kit) {
     var sets = phase === 'taper' ? 2 : clamp(Math.round(3 * k), 2, 4);
     var reps = phase === 'base' ? '8-10' : (phase === 'build' ? '6-8' : '5');
-    var rows = variant === 'A'
-      ? [strength('Squat bilanciere', sets, reps, '2 min'), strength('Stacco rumeno', sets, '8-10', '2 min'), strength('Panca piana manubri', sets, '8-10', '90s'), strength('Rematore manubrio', sets, '10-12', '90s'), timed('Plank', 3, 45, '60s')]
-      : [strength('Affondi camminati', sets, '12-16', '2 min'), strength('Hip thrust', sets, '8-10', '2 min'), strength('Military press', sets, reps, '90s'), strength('Lat machine', sets, '10-12', '90s'), timed('Farmer walk', 3, 45, '60s', 'Presa: è quello che cede per primo negli ultimi chilometri.')];
+    var grip = 'Presa: è quello che cede per primo negli ultimi chilometri.';
+    var rows;
+    if (kit === 'bodyweight') {
+      // No load to add: more repetitions, the same movements.
+      rows = variant === 'A'
+        ? [strength('Squat a corpo libero', sets, '20-25', '90s'), strength('Glute bridge', sets, '15-20', '90s'), strength('Push-up', sets, '10-15', '90s'), strength('Affondi camminati', sets, '16-20', '90s'), timed('Plank', 3, 45, '60s')]
+        : [strength('Affondi camminati', sets, '20-24', '90s'), strength('Squat jump', sets, '12-15', '90s'), strength('Pike push-up', sets, '8-12', '90s'), strength('Burpees', sets, '10-12', '90s'), timed('Side plank', 3, 30, '60s')];
+    } else if (kit === 'dumbbells') {
+      rows = variant === 'A'
+        ? [strength('Squat goblet', sets, phase === 'base' ? '10-12' : '8-10', '2 min'), strength('Stacco rumeno', sets, '10-12', '2 min'), strength('Floor press', sets, '8-10', '90s'), strength('Rematore manubrio', sets, '10-12', '90s'), timed('Plank', 3, 45, '60s')]
+        : [strength('Affondi camminati', sets, '12-16', '2 min'), strength('Hip thrust KB', sets, '10-12', '2 min'), strength('Shoulder press manubri', sets, '8-10', '90s'), strength('Thruster', sets, '10-12', '90s'), timed('Farmer walk', 3, 45, '60s', grip)];
+    } else {
+      rows = variant === 'A'
+        ? [strength('Squat bilanciere', sets, reps, '2 min'), strength('Stacco rumeno', sets, '8-10', '2 min'), strength('Panca piana manubri', sets, '8-10', '90s'), strength('Rematore manubrio', sets, '10-12', '90s'), timed('Plank', 3, 45, '60s')]
+        : [strength('Affondi camminati', sets, '12-16', '2 min'), strength('Hip thrust', sets, '8-10', '2 min'), strength('Military press', sets, reps, '90s'), strength('Lat machine avanti', sets, '10-12', '90s'), timed('Farmer walk', 3, 45, '60s', grip)];
+    }
     return { name: 'Forza ' + variant, title: 'Forza ' + variant, exercises: rows };
   }
   function sessionRunEasy(phase, k, week) {
@@ -209,6 +257,15 @@
   function sessionEngine(phase, opts, k) {
     var sets = phase === 'taper' ? 3 : clamp(Math.round(5 * k), 4, 8);
     var hasRow = opts.gear.indexOf('rower') !== -1, hasSki = opts.gear.indexOf('skierg') !== -1;
+    // Outside a gym there is no air bike and no battle rope: the engine is built running.
+    if (opts.kit && opts.kit !== 'gym' && !hasRow && !hasSki) {
+      return { name: 'Motore', title: 'Motore', exercises: [
+        run(8, 1, '2 min', 'Riscaldamento'),
+        run(2, sets, '60s', '400 m forti, recupero breve'),
+        strength('Burpees', 3, '12', '90s', 3),
+        strength('Burpee broad jump', 3, '10', '90s', 3)
+      ] };
+    }
     var rows = [
       cardio(hasRow ? 'Vogatore' : 'Air bike', sets, 2, '60s', '500 m forti, recupero breve'),
       cardio(hasSki ? 'Ski erg' : 'Battle rope', sets, 2, '60s', hasSki ? '500 m forti, recupero breve' : 'Al posto dello ski erg'),
@@ -237,7 +294,7 @@
     var k = opts.level.volume;
     var out = [];
     // The three that every week has: strength, running, and the two together.
-    out.push(sessionStrength('A', phase, k));
+    out.push(sessionStrength('A', phase, k, opts.kit));
     out.push(sessionIntervals(phase, k, week));
     // A first race gets one full simulation, in the last week of the peak;
     // the others one every second week of it.
@@ -245,7 +302,7 @@
     else if (phase === 'taper') out.push(sessionCompromised(phase, opts, k, week));
     else out.push(week % 2 ? sessionStations((week >> 1) % 2, phase, opts, k) : sessionCompromised(phase, opts, k, week));
     if (opts.days >= 4) out.push(sessionRunEasy(phase, k, week));
-    if (opts.days >= 5) out.push(sessionStrength('B', phase, k));
+    if (opts.days >= 5) out.push(sessionStrength('B', phase, k, opts.kit));
     if (opts.days >= 6) out.push(sessionEngine(phase, opts, k));
     // Strength and running alternate through the week.
     var order = opts.days >= 5 ? [0, 1, 4, 2, 3, 5] : [0, 1, 2, 3];
@@ -263,6 +320,9 @@
   function resolve(input) {
     input = input || {};
     var gear = Array.isArray(input.gear) ? input.gear.filter(function (g) { return ALL_GEAR.indexOf(g) !== -1; }) : ALL_GEAR.slice();
+    var profile = profileById(input.profile);
+    var kit = (input.kit === 'dumbbells' || input.kit === 'bodyweight') ? input.kit : 'gym';
+    if (profile) { gear = profile.gear.slice(); kit = profile.kit; }
     var weeks = Number(input.weeks) || 0;
     if (input.raceDate) {
       var left = weeksUntil(input.raceDate, input.today);
@@ -274,6 +334,8 @@
       level: byId(LEVELS, input.level || 'intermediate'),
       division: byId(DIVISIONS, input.division || 'open_m'),
       gear: gear,
+      kit: kit,
+      profile: profile ? profile.id : '',
       raceDate: input.raceDate || '',
       raceName: String(input.raceName || '').trim()
     };
@@ -300,12 +362,13 @@
       split: 'hyrox',
       goals: ['hyrox'],
       purpose: 'hyrox',
-      equipment: missing.length ? 'palestra' : 'hyrox',
+      equipment: r.kit === 'bodyweight' ? 'bodyweight' : (r.kit === 'dumbbells' ? 'casa' : (missing.length ? 'palestra' : 'hyrox')),
+      hyrox_profile: r.profile,
       experience: r.level.id,
       author: 'Generata da Nurvan',
       source: 'hyrox_v1',
       race: { name: r.raceName, date: r.raceDate, division: r.division.id },
-      source_summary: 'Preparazione HYROX · ' + r.division.label + ' · ' + r.days + ' giorni a settimana' + (missing.length ? ' · senza: ' + missing.join(', ') : ''),
+      source_summary: 'Preparazione HYROX · ' + r.division.label + ' · ' + r.days + ' giorni a settimana' + (r.profile ? ' · ' + profileById(r.profile).label : (missing.length ? ' · senza: ' + missing.join(', ') : '')),
       meta: { generatedAt: new Date().toISOString(), method: 'hyrox_phases', missing_gear: missing, evidence: EVIDENCE.map(function (e) { return e.url; }).filter(function (u, i, a) { return a.indexOf(u) === i; }) }
     };
   }
@@ -389,6 +452,108 @@
       url: 'https://doi.org/10.3389/fspor.2026.1937574' }
   ];
 
+  /* ---------------------------- database ---------------------------- */
+
+  // The ready-made preparations, as a grid instead of a list: days x level x
+  // weeks x category x where one trains. Like the rest of the catalogue
+  // (web/program-catalog.js) nothing is stored: the id says which program it
+  // is - hyx-4-intermediate-12-open_m-gym - and it is written when opened.
+  var CAT_DIVISIONS = ['open_m', 'open_w', 'pro_m', 'pro_w', 'doubles', 'relay'];
+  var CAT_LEVEL_OF = { principiante: 'beginner', intermedio: 'intermediate', avanzato: 'advanced' };
+  var CAT_EXPERIENCE_OF = { beginner: 'principiante', intermediate: 'intermedio', advanced: 'avanzato' };
+  var CAT_PROFILE_OF = { hyrox: 'full', palestra: 'gym', casa: 'home', minimal: 'home', kettlebell: 'home', bodyweight: 'bodyweight' };
+  function catalogAudience(division) { return /_w$/.test(division) ? 'female' : (/_m$/.test(division) ? 'male' : 'unisex'); }
+
+  function catalogId(p) { return ['hyx', p.days, p.level, p.weeks, p.division, p.profile].join('-'); }
+  function parseCatalogId(id) {
+    var s = String(id || '').split('-');
+    if (s.length !== 6 || s[0] !== 'hyx') return null;
+    var p = { days: Number(s[1]), level: s[2], weeks: Number(s[3]), division: s[4], profile: s[5] };
+    if (DAYS.indexOf(p.days) < 0 || WEEKS.indexOf(p.weeks) < 0 || CAT_DIVISIONS.indexOf(p.division) < 0) return null;
+    if (!CAT_EXPERIENCE_OF[p.level] || !profileById(p.profile)) return null;
+    return p;
+  }
+  function catalogInput(p) { return { days: p.days, level: p.level, weeks: p.weeks, division: p.division, profile: p.profile }; }
+  function catalogTitle(p) {
+    return ['HYROX', byId(DIVISIONS, p.division).label, p.days + ' gg', p.weeks + ' sett', byId(LEVELS, p.level).label, profileById(p.profile).label].join(' · ');
+  }
+  function catalogRow(p) {
+    var r = resolve(catalogInput(p));
+    var sessions = weekSessions(1, r.weeks, r);
+    var exercises = 0, sets = 0;
+    sessions.forEach(function (s) { exercises += s.exercises.length; s.exercises.forEach(function (e) { sets += e.setCount; }); });
+    return {
+      id: catalogId(p), title: catalogTitle(p),
+      days_per_week: p.days, duration_weeks: p.weeks, split: 'hyrox', goals: ['hyrox'], purpose: 'hyrox',
+      equipment: profileById(p.profile).label, hyrox_profile: p.profile, hyrox_division: p.division,
+      sessions: p.days, exercises: exercises, sets: sets,
+      source: 'hyrox_v1', source_ext: '.hyrox', experience: CAT_EXPERIENCE_OF[p.level],
+      progression_model: 'hyrox_phases', audience: catalogAudience(p.division)
+    };
+  }
+  // The whole preparation, every week of it.
+  function catalogBody(id) {
+    var p = typeof id === 'string' ? parseCatalogId(id) : id;
+    if (!p) return null;
+    var prog = plan(catalogInput(p));
+    prog.id = catalogId(p);
+    prog.title = catalogTitle(p);
+    prog.audience = catalogAudience(p.division);
+    prog.notes = EVIDENCE.slice(0, 3).map(function (e) { return e.fact + ' (' + e.source + ')'; });
+    return prog;
+  }
+  function catalogValues(filters) {
+    var f = filters || {};
+    var one = function (all, want) { return (want !== undefined && want !== null && want !== '' && all.indexOf(want) >= 0) ? [want] : all; };
+    var profiles = PROFILES.map(function (x) { return x.id; });
+    var divisions = CAT_DIVISIONS;
+    if (f.audience === 'female') divisions = ['open_w', 'pro_w'];
+    else if (f.audience === 'male') divisions = ['open_m', 'pro_m'];
+    else if (f.audience === 'unisex') divisions = ['doubles', 'relay'];
+    // A filter the grid has no value for (2 days, 4 weeks) has no program.
+    var strict = function (all, want) { return (want === undefined || want === null || want === '') ? all : (all.indexOf(want) >= 0 ? [want] : []); };
+    return {
+      days: strict(DAYS, f.days === '' || f.days == null ? '' : Number(f.days)),
+      level: f.experience ? strict(['beginner', 'intermediate', 'advanced'], CAT_LEVEL_OF[f.experience] || f.experience) : ['beginner', 'intermediate', 'advanced'],
+      weeks: strict(WEEKS, f.duration === '' || f.duration == null ? '' : Number(f.duration)),
+      division: one(divisions, f.division),
+      profile: f.equipment ? strict(profiles, profileById(f.equipment) ? f.equipment : (CAT_PROFILE_OF[f.equipment] || f.equipment)) : profiles
+    };
+  }
+  function catalogTotal(filters) {
+    var v = catalogValues(filters);
+    return v.days.length * v.level.length * v.weeks.length * v.division.length * v.profile.length;
+  }
+  // Rows for the screen: where one trains first, so the first screen already
+  // shows every kind of equipment, then category, level, days and length.
+  function catalogSearch(filters, limit) {
+    var v = catalogValues(filters);
+    var cap = limit || 150;
+    var rows = [];
+    var weeks = v.weeks.slice().sort(function (a, b) { return Math.abs(a - 12) - Math.abs(b - 12); });
+    outer:
+    for (var d = 0; d < v.division.length; d++) {
+      for (var l = 0; l < v.level.length; l++) {
+        for (var n = 0; n < v.days.length; n++) {
+          for (var w = 0; w < weeks.length; w++) {
+            for (var q = 0; q < v.profile.length; q++) {
+              rows.push(catalogRow({ days: v.days[n], level: v.level[l], weeks: weeks[w], division: v.division[d], profile: v.profile[q] }));
+              if (rows.length >= cap) break outer;
+            }
+          }
+        }
+      }
+    }
+    return { rows: rows, total: catalogTotal(filters) };
+  }
+  // One week to start a hand-written program from: the first week of the
+  // build phase, the one that looks most like "a normal week".
+  function sampleWeek(input) {
+    var r = resolve(input);
+    for (var w = 1; w <= r.weeks; w++) if (phaseOf(w, r.weeks) === 'build') return weekSessions(w, r.weeks, r);
+    return weekSessions(1, r.weeks, r);
+  }
+
   // "HYROX" written as a goal, in an intake, a profile or a request.
   function wantsHyrox(text) { return /hyrox/i.test(String(text == null ? '' : text)); }
 
@@ -401,6 +566,16 @@
     WEEKS: WEEKS,
     PHASE_LABELS: PHASE_LABELS,
     EVIDENCE: EVIDENCE,
+    PROFILES: PROFILES,
+    profileById: profileById,
+    profileOfGear: profileOfGear,
+    sampleWeek: sampleWeek,
+    catalogId: catalogId,
+    parseCatalogId: parseCatalogId,
+    catalogRow: function (id) { var p = parseCatalogId(id); return p ? catalogRow(p) : null; },
+    catalogBody: catalogBody,
+    catalogSearch: catalogSearch,
+    catalogTotal: catalogTotal,
     wantsHyrox: wantsHyrox,
     taperWeeks: taperWeeks,
     DISCLAIMER: 'HYROX® è un marchio registrato del suo titolare. Nurvan non è affiliata né sponsorizzata da HYROX: questo è materiale di allenamento indipendente.',

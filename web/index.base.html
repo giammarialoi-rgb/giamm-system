@@ -21332,7 +21332,7 @@ function catalogGoalLabel(g) {
   const fallback = {
     ipertrofia: 'Ipertrofia', forza: 'Forza', glutei_lower: 'Glutei/Lower', dimagrimento: 'Dimagrimento',
     casa_corpo_libero: 'Casa', prep_gara: 'Prep gara', spalle: 'Spalle', petto_panca: 'Petto/Panca',
-    core: 'Core', powerbuilding: 'Powerbuilding', recomp: 'Ricomposizione', cut: 'Dimagrimento',
+    core: 'Core', powerbuilding: 'Powerbuilding', recomp: 'Ricomposizione', cut: 'Dimagrimento', hyrox: 'HYROX',
     glutei: 'Glutei', petto: 'Petto', dorso: 'Dorso', braccia: 'Braccia', gambe: 'Gambe'
   };
   return map[g] || fallback[g] || g;
@@ -21341,7 +21341,7 @@ function catalogSplitLabel(s) {
   const map = (typeof SPLIT_LABELS !== 'undefined' && SPLIT_LABELS) ? SPLIT_LABELS : {};
   const fallback = {
     fullbody: 'Full body', full_body: 'Full body', monofrequency: 'Monofrequenza', upper_lower: 'Upper/Lower',
-    push_pull: 'Push/Pull', body_part: 'Distrettuale'
+    push_pull: 'Push/Pull', body_part: 'Distrettuale', hyrox: 'HYROX'
   };
   return map[s] || fallback[s] || s;
 }
@@ -21357,6 +21357,9 @@ function filterProgramCatalog(list) {
     ['days', 'split', 'goal', 'equipment', 'experience', 'duration', 'progression', 'audience'].forEach((k) => {
       merged[k] = f[k] || parsed[k] || '';
     });
+    // "hyrox" typed in the search is the goal; the place it is trained in
+    // may be typed too ("hyrox casa", "hyrox corpo libero").
+    if (/hyrox/i.test(f.q || '')) { merged.goal = 'hyrox'; merged.split = ''; merged.progression = ''; }
     return gen.search(merged, 150).rows;
   }
   let ranked = [];
@@ -21497,7 +21500,8 @@ async function activateCatalogProgramInner(programId) {
       audience: (meta && meta.audience) || raw.audience,
       notes: (meta && meta.preview && meta.preview.notes) || raw.notes || []
     });
-    const weeks = (typeof expandScienceProgramWeeks === 'function' && (entry.source === 'science_v2' || entry.progression))
+    // A race preparation comes whole, every week already written.
+    const weeks = (entry.source !== 'hyrox_v1' && typeof expandScienceProgramWeeks === 'function' && (entry.source === 'science_v2' || entry.progression))
       ? expandScienceProgramWeeks(entry)
       : entry.weeks;
     const prog = normalizeProgram({
@@ -21508,11 +21512,16 @@ async function activateCatalogProgramInner(programId) {
       depersonalized: true,
       loads_stripped: true,
       catalog: entry.catalog || null,
-      author: 'Nurvan Science',
+      author: entry.source === 'hyrox_v1' ? 'Generata da Nurvan' : 'Nurvan Science',
       notes: entry.notes || [],
-      source_summary: entry.source === 'science_v2'
+      split: entry.source === 'hyrox_v1' ? 'hyrox' : undefined,
+      goals: entry.source === 'hyrox_v1' ? ['hyrox'] : undefined,
+      purpose: entry.source === 'hyrox_v1' ? 'hyrox' : undefined,
+      race: entry.source === 'hyrox_v1' ? raw.race : undefined,
+      source: entry.source === 'hyrox_v1' ? 'hyrox_v1' : undefined,
+      source_summary: entry.source === 'hyrox_v1' ? raw.source_summary : (entry.source === 'science_v2'
         ? ('Evidence-based · ' + (entry.progression && entry.progression.model || '') + ' · volume/RIR/tempo periodizzati · ACSM 2026 / Schoenfeld')
-        : 'Provenienza: archivio palestra · scheda depersonalizzata · senza kg personali'
+        : 'Provenienza: archivio palestra · scheda depersonalizzata · senza kg personali')
     });
     const newId = prog.id || ('catalog_' + Date.now());
     if (isCoachClientSandbox()) {
@@ -21595,6 +21604,8 @@ function updateCatalogFiltersFromUi() {
   const allCat = (window.__programCatalogIndex && window.__programCatalogIndex.programs) || [];
   const ranked = filterProgramCatalog(allCat);
   const filtered = ranked.slice(0, 150);
+  // Switching to or from HYROX changes what the equipment filter offers.
+  if ((window.__catalogFilters.goal === 'hyrox') !== !!window.__catalogHyroxShown && currentView === 'programs') { window.__catalogOpen = true; render(); return; }
   const totalCat = catalogTotalCount();
   if (countEl) countEl.textContent = filtered.length + (totalCat > filtered.length ? '+' : '') + ' / ' + totalCat.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'));
   if (!listEl) {
@@ -21619,7 +21630,7 @@ function catalogCardHtml(p) {
       <div style="min-width:0;flex:1;">
         <div style="font-size:13px;font-weight:800;color:#eee;">${esc(p.title || p.name || 'Scheda')}</div>
         <div style="font-size:10px;color:#777;margin-top:3px;">${esc(catalogAudienceLabel(aud))} · ${esc(catalogGoalLabel(p.purpose || (p.goals||[])[0] || ''))} · ${p.days_per_week} gg · ${p.duration_weeks} sett · ${esc(catalogSplitLabel(p.split))} · ${esc(p.equipment || '')} · ${esc(p.experience || '')}</div>
-        <div style="font-size:9px;color:var(--gold);margin-top:4px;opacity:0.85;">Science · ${esc(progL)} · volume/RIR/tempo</div>
+        <div style="font-size:9px;color:var(--gold);margin-top:4px;opacity:0.85;">${p.source === 'hyrox_v1' ? 'HYROX · base, costruzione, picco e scarico · ' + p.exercises + ' esercizi nella prima settimana' : 'Science · ' + esc(progL) + ' · volume/RIR/tempo'}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;">
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;white-space:nowrap;" onclick="window.openCatalogPreview('${p.id}')">PREVIEW</button>
@@ -21665,7 +21676,7 @@ async function openCatalogPreview(programId) {
     const week1 = (raw.weeks && raw.weeks[0]) || {};
     const sessions = (week1.sessions || []).map((s) => ({
       name: s.name,
-      exercises: (s.exercises || []).map((e) => (e.name || '') + ' · ' + (e.sets_count || 3) + '×' + (e.reps_target || '8-10'))
+      exercises: (s.exercises || []).map((e) => (e.name || '') + ' · ' + (e.sets_count || e.setCount || 3) + '×' + (e.reps_target || e.repsTarget || '8-10'))
     }));
     const aud = meta.audience || (meta.sex_focus === 'female_glute' ? 'female' : (meta.sex_focus === 'male_upper' ? 'male' : 'unisex'));
     const progL = (typeof PROGRESSION_LABELS !== 'undefined' && PROGRESSION_LABELS[meta.progression_model]) ? PROGRESSION_LABELS[meta.progression_model] : (meta.progression_model || '');
@@ -21682,7 +21693,7 @@ async function openCatalogPreview(programId) {
             </ul>
           </div>`).join('') : '<div style="color:#666;font-size:12px;">Dettaglio sedute non disponibile.</div>'}
         <div style="font-size:12px;color:var(--gold);font-weight:800;margin:12px 0 6px;">PROGRESSIONE</div>
-        <p style="margin:0 0 10px;font-size:12px;color:#ccc;">${esc(progL)}: volume, RIR, tempo e riposi cambiano settimana per settimana; deload ogni 4ª.</p>
+        <p style="margin:0 0 10px;font-size:12px;color:#ccc;">${meta.source === 'hyrox_v1' ? 'Quattro fasi fino alla gara: base, costruzione, picco con le simulazioni e scarico. Le stazioni crescono da un quarto della distanza a quella di gara.' : esc(progL) + ': volume, RIR, tempo e riposi cambiano settimana per settimana; deload ogni 4ª.'}</p>
         ${notes.length ? `<div style="font-size:11px;color:#888;">${notes.map((n) => `<div style="margin-bottom:4px;">• ${esc(n)}</div>`).join('')}</div>` : ''}
       `;
     }
@@ -21725,7 +21736,14 @@ function renderPrograms(c){
   const suggestedIds = Array.from(new Set(store.prefs.suggestedProgramIds || []));
   const suggested = suggestedIds.map((id) => catalogRowById(id)).filter(Boolean).slice(0, 6);
   const splits = ['fullbody', 'monofrequency', 'upper_lower'];
-  const goals = ['ipertrofia', 'forza', 'powerbuilding', 'recomp', 'cut', 'glutei', 'petto', 'dorso', 'spalle', 'braccia', 'gambe'];
+  const goals = ['ipertrofia', 'forza', 'powerbuilding', 'recomp', 'cut', 'glutei', 'petto', 'dorso', 'spalle', 'braccia', 'gambe'].concat(hyroxApi() ? ['hyrox'] : []);
+  const hyroxCat = f.goal === 'hyrox' && !!hyroxApi();
+  window.__catalogHyroxShown = hyroxCat;
+  const catalogOpen = !!window.__catalogOpen;
+  window.__catalogOpen = false;
+  const eqOptions = hyroxCat
+    ? hyroxApi().PROFILES.map((pr) => ({ id: pr.id, label: pr.label }))
+    : ['palestra', 'casa', 'minimal', 'kettlebell', 'bodyweight'].map((x) => ({ id: x, label: x }));
   const audiences = [
     { id: 'female', label: 'Donna / Glutei' },
     { id: 'male', label: 'Uomo / Upper' },
@@ -21831,6 +21849,23 @@ function renderPrograms(c){
     </div>
     `, false)}
 
+    ${hyroxApi() ? homeCollapsibleCard('SCHEDA HYROX', `
+    <div class="card" id="program-create-hyrox" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
+      <p style="font-size:11px;color:#888;margin:0 0 10px;line-height:1.5;">Corsa, stazioni e forza per la gara. La scrivi a mano partendo da una settimana già impostata, la fai scrivere all'app fino alla data di gara, oppure la scegli tra quelle pronte.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <button class="btn btn-primary" style="flex:1;min-width:150px;font-size:11px;" onclick="openHyroxBuilder()">SCRIVILA A MANO</button>
+        <button class="btn btn-outline" style="flex:1;min-width:150px;font-size:11px;" onclick="openHyroxGenerator('active')">GENERALA PER LA GARA</button>
+      </div>
+      <div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:6px;">SCHEDE PRONTE · ${hyroxApi().catalogTotal({}).toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'))}</div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px;">Scegli dove ti alleni: le stazioni che non hai sono già sostituite.</div>
+      <div style="display:grid;gap:6px;">
+        ${hyroxApi().PROFILES.map((pr) => `<button class="btn btn-outline" style="text-align:left;padding:10px 12px;" onclick="showHyroxCatalog('${pr.id}')">
+          <div style="font-size:12px;font-weight:800;color:#fff;">${esc(pr.label)}</div>
+          <div style="font-size:10px;color:#888;margin-top:2px;">${esc(pr.note)} · ${hyroxApi().catalogTotal({ equipment: pr.id })} schede</div></button>`).join('')}
+      </div>
+    </div>
+    `, false) : ''}
+
     ${homeCollapsibleCard('PROGRAMMI CREATI', builtProgramsHtml(), false)}
 
     ${homeCollapsibleCard('DATABASE SCHEDE', `
@@ -21861,17 +21896,17 @@ function renderPrograms(c){
           <select id="catalog-goal" onchange="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()"><option value="">Obiettivo</option>${goals.map((g)=>`<option value="${esc(g)}" ${f.goal===g?'selected':''}>${esc(catalogGoalLabel(g))}</option>`).join('')}</select>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;">
-          <select id="catalog-eq" onchange="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()"><option value="">Attrezzi</option>${['palestra','casa','minimal','kettlebell','bodyweight'].map((x)=>`<option value="${x}" ${f.equipment===x?'selected':''}>${x}</option>`).join('')}</select>
+          <select id="catalog-eq" onchange="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()"><option value="">Attrezzi</option>${eqOptions.map((x)=>`<option value="${esc(x.id)}" ${f.equipment===x.id?'selected':''}>${esc(x.label)}</option>`).join('')}</select>
           <select id="catalog-exp" onchange="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()"><option value="">Livello</option>${['principiante','intermedio','avanzato'].map((x)=>`<option value="${x}" ${f.experience===x?'selected':''}>${x}</option>`).join('')}</select>
           <select id="catalog-dur" onchange="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()"><option value="">Durata</option>${[4,6,8,10,12,16].map((x)=>`<option value="${x}" ${String(f.duration)===String(x)?'selected':''}>${x} sett</option>`).join('')}</select>
           <select id="catalog-prog" onchange="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()"><option value="">Progressione</option>${['linear','double','volume_wave','dup','block'].map((x)=>`<option value="${x}" ${f.progression===x?'selected':''}>${esc((typeof PROGRESSION_LABELS!=='undefined'&&PROGRESSION_LABELS[x])?PROGRESSION_LABELS[x]:x)}</option>`).join('')}</select>
         </div>
       </div>
       <div id="catalog-list" style="display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow-y:auto;">
-        ${!catalogReady ? '<div style="padding:20px;text-align:center;color:#888;font-size:12px;">Caricamento indice schede…</div>' : (filtered.length ? filtered.map((p) => catalogCardHtml(p)).join('') : '<div style="padding:16px;text-align:center;color:#666;font-size:12px;">Nessuna scheda. Prova “3 giorni full body”.</div>')}
+        ${!catalogReady ? '<div style="padding:20px;text-align:center;color:#888;font-size:12px;">Caricamento indice schede…</div>' : (filtered.length ? filtered.map((p) => catalogCardHtml(p)).join('') : '<div style="padding:16px;text-align:center;color:#666;font-size:12px;">' + (hyroxCat ? 'Nessuna scheda HYROX con questi filtri: le preparazioni vanno da 3 a 6 giorni e da 6 a 16 settimane.' : 'Nessuna scheda. Prova “3 giorni full body”.') + '</div>')}
       </div>
     </div>
-    `, false)}
+    `, catalogOpen)}
 
     ${homeCollapsibleCard('IMPORT SALVATI', `
     <div class="card">
@@ -23649,6 +23684,11 @@ function hyroxState() {
   if (!h.days) h.days = 4;
   if (!h.weeks) h.weeks = 12;
   if (!Array.isArray(h.gear)) h.gear = (hyroxApi() ? hyroxApi().GEAR.map(function (g) { return g.id; }) : []);
+  // Where one trains: one of the places the app knows, or a list ticked by hand.
+  if (!h.profile && hyroxApi() && hyroxApi().profileOfGear) {
+    const known = hyroxApi().profileOfGear(h.gear, 'gym');
+    h.profile = known ? known.id : 'custom';
+  }
   return h;
 }
 // The calendar: the server's copy (newer than the one shipped in the app), then the app's own.
@@ -23686,7 +23726,16 @@ function hyroxEventById(id) {
 function hyroxRefresh() {
   try { persist(); } catch (_) {}
   if (document.getElementById('program-generator-sheet') && typeof renderProgramGenerator === 'function') { renderProgramGenerator(); return; }
+  if (document.getElementById('program-builder-sheet') && typeof renderProgramBuilder === 'function') { renderProgramBuilder(); return; }
   render();
+}
+function hyroxSetProfile(id) {
+  const h = hyroxState();
+  const known = hyroxApi().profileById(id);
+  h.profile = known ? known.id : 'custom';
+  if (known) h.gear = known.gear.slice();
+  h.gearAsked = true;
+  hyroxRefresh();
 }
 function hyroxSet(field, value) {
   const h = hyroxState();
@@ -23697,6 +23746,7 @@ function hyroxToggleGear(id) {
   const h = hyroxState();
   const i = h.gear.indexOf(id);
   if (i === -1) h.gear.push(id); else h.gear.splice(i, 1);
+  h.profile = 'custom';
   hyroxRefresh();
 }
 function hyroxFullGear(yes) {
@@ -23715,7 +23765,7 @@ function hyroxChooseRace(id) {
 function hyroxPlanInput() {
   const h = hyroxState();
   const ev = hyroxEventById(h.raceId);
-  return { weeks: h.weeks, days: h.days, level: h.level, division: h.division, gear: h.gear.slice(), raceDate: ev && ev.start ? ev.start : '', raceName: ev ? ev.city : '' };
+  return { weeks: h.weeks, days: h.days, level: h.level, division: h.division, gear: h.gear.slice(), profile: h.profile !== 'custom' ? h.profile : '', raceDate: ev && ev.start ? ev.start : '', raceName: ev ? ev.city : '' };
 }
 // An athlete followed by a coach does not write the program: they ask for it.
 function hyroxMustAsk() {
@@ -23728,7 +23778,7 @@ function hyroxRequestCoach() {
   const ev = hyroxEventById(h.raceId);
   requestProgramFromCoach({ hyrox: {
     raceId: h.raceId || '', raceName: ev ? ev.city : '', raceDate: ev && ev.start ? ev.start : '',
-    division: h.division, level: h.level, days: h.days, weeks: h.weeks, gear: h.gear.slice()
+    division: h.division, level: h.level, days: h.days, weeks: h.weeks, gear: h.gear.slice(), profile: h.profile || ''
   } });
 }
 // The questions of a preparation: the same on the HYROX screen and in the
@@ -23752,12 +23802,27 @@ function hyroxFieldsHtml() {
     lab('Giorni a settimana', sel('days', api.DAYS.map(function (d) { return { id: d, label: d + ' giorni' }; }), h.days)) +
     lab('Livello', sel('level', api.LEVELS, h.level)) +
     lab('Categoria', sel('division', api.DIVISIONS, h.division)) +
-    lab('Hai tutta l’attrezzatura HYROX in palestra?', '<select style="' + st + '" onchange="hyroxFullGear(this.value === \'yes\')"><option value="yes"' + (fullGear ? ' selected' : '') + '>Sì, c’è tutto</option><option value="no"' + (fullGear ? '' : ' selected') + '>No, manca qualcosa</option></select>') +
-    (fullGear ? '' : '<div style="margin-top:10px;font-size:11px;color:#aaa;">Spunta quello che hai: per il resto la scheda usa un esercizio che allena lo stesso sforzo.</div>' +
-      '<div style="display:grid;gap:6px;margin-top:8px;">' + api.GEAR.map(function (g) {
-        const on = h.gear.indexOf(g.id) !== -1;
-        return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#ddd;"><input type="checkbox"' + (on ? ' checked' : '') + ' onchange="hyroxToggleGear(\'' + g.id + '\')"> ' + esc(g.label) + '</label>';
-      }).join('') + '</div>');
+    hyroxPlaceHtml();
+}
+// Where one trains: not everybody has a sled and a ski erg. A place the app
+// knows, or the equipment ticked one by one.
+function hyroxPlaceHtml() {
+  const api = hyroxApi();
+  const h = hyroxState();
+  const st = 'width:100%;margin-top:3px;background:#141414;color:#fff;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;';
+  const known = api.profileById(h.profile);
+  const items = api.PROFILES.map(function (pr) { return { id: pr.id, label: pr.label }; }).concat([{ id: 'custom', label: 'Scelgo io l’attrezzatura' }]);
+  return '<label style="display:block;font-size:10px;color:#aaa;font-weight:800;margin-top:10px;">Dove ti alleni' +
+    '<select style="' + st + '" onchange="hyroxSetProfile(this.value)">' + items.map(function (it) {
+      return '<option value="' + esc(it.id) + '"' + (it.id === (known ? known.id : 'custom') ? ' selected' : '') + '>' + esc(it.label) + '</option>';
+    }).join('') + '</select></label>' +
+    (known
+      ? '<div style="margin-top:6px;font-size:11px;color:#888;line-height:1.5;">' + esc(known.note) + (known.gear.length === api.GEAR.length ? '' : '. Per le stazioni che mancano la scheda usa un esercizio che allena lo stesso sforzo.') + '</div>'
+      : '<div style="margin-top:10px;font-size:11px;color:#aaa;">Spunta quello che hai: per il resto la scheda usa un esercizio che allena lo stesso sforzo.</div>' +
+        '<div style="display:grid;gap:6px;margin-top:8px;">' + api.GEAR.map(function (g) {
+          const on = h.gear.indexOf(g.id) !== -1;
+          return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#ddd;"><input type="checkbox"' + (on ? ' checked' : '') + ' onchange="hyroxToggleGear(\'' + g.id + '\')"> ' + esc(g.label) + '</label>';
+        }).join('') + '</div>');
 }
 // Why the preparation is laid out this way: what was measured, what the plan
 // does about it, and the study, one tap away.
@@ -23921,6 +23986,7 @@ window.hyroxChooseRace = hyroxChooseRace;
 window.hyroxCreateProgram = hyroxCreateProgram;
 window.hyroxEstimate = hyroxEstimate;
 window.hyroxRequestCoach = hyroxRequestCoach;
+window.hyroxSetProfile = hyroxSetProfile;
 
 function homeDomainModulesHtml() {
   const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
@@ -38010,6 +38076,100 @@ function builderSpaceLineHtml() {
     '</div>';
 }
 
+/*
+ * A HYROX program written by hand. The builder starts empty; a race week is
+ * not something to type from nothing (which stations, how much of each, the
+ * runs in between), so the builder can be filled with one: the week the
+ * generator would write for that place and that many days. From there it is
+ * a draft like any other - every row can be changed, moved or removed.
+ */
+function builderHyroxStartHtml(d, inputStyle) {
+  var hx = (typeof hyroxApi === 'function') ? hyroxApi() : null;
+  if (!hx || !hx.sampleWeek) return '';
+  var h = hyroxState();
+  var known = hx.profileById(h.profile);
+  var open = !!d.hyrox || !programDraftExerciseCount(d);
+  return '<details class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(212,175,55,0.35);"' + (open ? ' open' : '') + '>' +
+    '<summary style="list-style:none;cursor:pointer;font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">SCHEDA HYROX ▾</summary>' +
+    '<div style="font-size:11px;color:#888;line-height:1.45;margin:8px 0 2px;">Riempie il costruttore con una settimana HYROX (corsa, stazioni, forza) per il posto in cui ti alleni. Poi la cambi come vuoi.</div>' +
+    hyroxPlaceHtml() +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">' +
+    '<label style="font-size:9px;color:#888;">Giorni<select onchange="hyroxSet(\'days\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '">' +
+    hx.DAYS.map(function (n) { return '<option value="' + n + '"' + (Number(h.days) === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label>' +
+    '<label style="font-size:9px;color:#888;">Categoria<select onchange="hyroxSet(\'division\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '">' +
+    hx.DIVISIONS.map(function (dv) { return '<option value="' + esc(dv.id) + '"' + (h.division === dv.id ? ' selected' : '') + '>' + esc(dv.label) + '</option>'; }).join('') + '</select></label>' +
+    '</div>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;padding:10px;margin-top:12px;" onclick="startHyroxDraft()">' +
+    (programDraftExerciseCount(d) ? 'SOSTITUISCI CON UNA SETTIMANA HYROX' : 'CARICA UNA SETTIMANA HYROX') + '</button>' +
+    '</details>';
+}
+
+function hyroxDraftExercise(e) {
+  var unit = (e.unit === 'time' || e.unit === 'cardio') ? e.unit : 'reps';
+  var first = (e.sets && e.sets[0]) || {};
+  var out = {
+    name: e.name,
+    muscle: (e.muscle_groups && e.muscle_groups[0]) || '',
+    unit: unit,
+    sets: e.setCount || (e.sets || []).length || 1,
+    reps: unit === 'cardio' ? String(first.minutes || parseInt(e.repsTarget, 10) || 5)
+      : (unit === 'time' ? String(first.seconds || parseInt(e.repsTarget, 10) || 30) : String(e.repsTarget || '10')),
+    rest: e.rest || '90s'
+  };
+  if (e.notes) out.notes = e.notes;
+  if (e.hyrox_station) out.hyrox_station = e.hyrox_station;
+  return out;
+}
+
+function startHyroxDraft() {
+  var hx = hyroxApi();
+  if (!hx) return;
+  var d = programDraft();
+  if (programDraftExerciseCount(d) && !confirm('Nel costruttore c’è già una bozza: la sostituisco con una settimana HYROX?')) return;
+  var input = hyroxPlanInput();
+  var r = hx.resolve(input);
+  var known = hx.profileById(r.profile);
+  store.programDraft = {
+    title: 'Scheda HYROX' + (known ? ' · ' + known.label : ''),
+    weeks: r.weeks,
+    target: d.target || 'active',
+    modelId: 'none',
+    hyrox: true,
+    days: hx.sampleWeek(input).map(function (s) {
+      return { name: s.name, exercises: s.exercises.map(hyroxDraftExercise) };
+    })
+  };
+  try { persist(); } catch (_) {}
+  renderProgramBuilder();
+  if (typeof showToast === 'function') showToast('Settimana HYROX caricata: modificala come vuoi.', 'ok');
+}
+window.startHyroxDraft = startHyroxDraft;
+
+// Straight to a HYROX program from the Programs screen: by hand, or generated.
+function openHyroxBuilder(target) {
+  openProgramBuilder(target);
+  var d = programDraft();
+  if (!programDraftExerciseCount(d)) { d.hyrox = true; renderProgramBuilder(); }
+}
+window.openHyroxBuilder = openHyroxBuilder;
+function openHyroxGenerator(target) {
+  var g = generatorDraft();
+  g.goal = 'hyrox';
+  openProgramGenerator(target || 'active');
+}
+window.openHyroxGenerator = openHyroxGenerator;
+// The ready-made HYROX programs of the database, already filtered.
+function showHyroxCatalog(profile) {
+  window.__catalogFilters = { q: '', days: '', split: '', goal: 'hyrox', equipment: profile || '', experience: '', duration: '', progression: '', audience: '' };
+  window.__catalogOpen = true;
+  render();
+  setTimeout(function () {
+    var el = document.getElementById('catalog-list');
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 150);
+}
+window.showHyroxCatalog = showHyroxCatalog;
+
 // Where the finished program goes: the athlete's own active program, the
 // coach's personal library, or the client sandbox that ASSEGNA opens. The
 // builder is the same in all three; only the last step differs.
@@ -38056,7 +38216,8 @@ function renderProgramBuilderInner() {
       return '<div style="padding:8px;border:1px solid #262626;border-radius:8px;margin-bottom:6px;background:#0d0d0d;">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">' +
         '<div style="font-size:12px;font-weight:800;color:#fff;min-width:0;">' + esc(ex.name) +
-        (ex.muscle ? '<span style="font-size:9px;color:var(--gold);margin-left:6px;">' + esc(ex.muscle) + '</span>' : '') + '</div>' +
+        (ex.muscle ? '<span style="font-size:9px;color:var(--gold);margin-left:6px;">' + esc(ex.muscle) + '</span>' : '') +
+        (ex.notes ? '<div style="font-size:10px;color:#888;font-weight:400;margin-top:3px;line-height:1.4;">' + esc(ex.notes) + '</div>' : '') + '</div>' +
         '<div style="display:flex;gap:4px;flex:0 0 auto;">' +
         '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 7px;" ' + (ei === 0 ? 'disabled' : '') + ' onclick="moveProgramDraftExercise(' + di + ',' + ei + ',-1)">↑</button>' +
         '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 7px;" ' + (ei === day.exercises.length - 1 ? 'disabled' : '') + ' onclick="moveProgramDraftExercise(' + di + ',' + ei + ',1)">↓</button>' +
@@ -38112,6 +38273,7 @@ function renderProgramBuilderInner() {
     '<label style="font-size:9px;color:#888;display:block;margin-bottom:12px;">Nome della scheda<input type="text" value="' + esc(d.title || '') + '" placeholder="Es. Upper/Lower autunno" oninput="updateProgramDraftField(\'title\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
     '<p style="font-size:11px;color:#888;margin:0 0 10px;line-height:1.45;">Scrivi una settimana di allenamento. Sotto decidi quanto dura la scheda e come deve progredire.</p>' +
     builderSpaceLineHtml() +
+    builderHyroxStartHtml(d, inputStyle) +
     daysHtml +
     '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;padding:10px;margin-bottom:14px;" onclick="addProgramDraftDay()">+ AGGIUNGI GIORNO</button>' +
     programDraftProgressionHtml(d, inputStyle) +
@@ -38761,6 +38923,8 @@ function programExerciseRow(ex) {
     rest: String(ex.rest || (unit === 'cardio' ? '2 min' : '90s')).trim() || '90s'
   };
   if (ex.technique) row.technique = ex.technique;
+  if (ex.notes) row.notes = String(ex.notes);
+  if (ex.hyrox_station) row.hyrox_station = ex.hyrox_station;
   if (ex.tempo) {
     row.tempo = String(ex.tempo).trim();
     var says = tempoExplanation(row.tempo);

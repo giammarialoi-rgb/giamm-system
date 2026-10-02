@@ -119,6 +119,28 @@ ok('9m. anche il solo obiettivo HYROX del questionario la propone', /Obiettivo d
 cctx.api.prefillHyroxFromRequest('7');
 ok('9n. le risposte del cliente sono già compilate quando il coach apre la preparazione', cctx.store.hyrox.raceId === 'milano' && cctx.store.hyrox.division === 'open_w' && cctx.store.hyrox.days === 3 && cctx.store.hyrox.gear.join() === 'rower');
 
+// 10. Where one trains, the database of ready-made programs, the builder.
+vm.runInContext(fs.readFileSync('web/program-builder.js', 'utf8'), ctx);
+vm.runInContext(fs.readFileSync('web/program-catalog.js', 'utf8'), ctx);
+const C = ctx.NurvanProgramCatalog;
+const names = (prog) => [...new Set(rows(prog).map((r) => r.name))];
+const library = fs.readFileSync('web/exercise-catalog-extra.js', 'utf8') + fs.readFileSync('web/cardio-library.js', 'utf8');
+ok('10a. cinque posti in cui ci si allena, dal completo al corpo libero', H.PROFILES.map((x) => x.id).join() === 'full,box,gym,home,bodyweight');
+ok('10b. a casa niente macchine né bilanciere', (() => { const n = names(H.plan({ weeks: 8, days: 6, profile: 'home' })); return !n.some((x) => /Ski erg|Vogatore|Sled|Air bike|Battle rope|Slam ball|bilanciere|Lat machine|Wall ball/.test(x)) && n.includes('Squat goblet') && n.includes('Farmer walk'); })());
+ok('10c. a corpo libero nessun carico', (() => { const n = names(H.plan({ weeks: 8, days: 6, profile: 'bodyweight' })); return !n.some((x) => /manubri|Farmer|Thruster|goblet|Hip thrust|Rematore|Stacco|Sled|Ski erg|Vogatore/i.test(x)) && n.includes('Squat a corpo libero'); })());
+// The stations that exist only in the race are not in the library yet (no demo, no image).
+const raceOnly = ['Wall ball', 'Burpee broad jump', 'Affondi camminati con sandbag', 'Slam ball'];
+ok('10d. ogni esercizio scritto è nella libreria dell’app (tranne le stazioni proprie della gara)', H.PROFILES.every((pr) => names(H.plan({ weeks: 12, days: 6, profile: pr.id })).every((n) => raceOnly.includes(n) || library.includes('"' + n + '"') || library.includes("'" + n + "'"))));
+ok('10e. il database ha 1.800 preparazioni, 360 per ogni posto', H.catalogTotal({}) === 1800 && H.PROFILES.every((pr) => H.catalogTotal({ equipment: pr.id }) === 360));
+ok('10f. il database programmi le trova con obiettivo HYROX e le conta nel totale', C.search({ goal: 'hyrox' }, 150).rows.length === 150 && C.total({ goal: 'hyrox' }) === 1800 && C.total({}) === C.total({ goal: 'ipertrofia' }) * 5 + 1800);
+ok('10g. filtri: attrezzatura, pubblico, giorni, livello, durata', (() => { const r = C.search({ goal: 'hyrox', equipment: 'casa', audience: 'female', days: 3, experience: 'principiante', duration: 8 }, 50).rows; return r.length === 2 && r.every((x) => x.hyrox_profile === 'home' && /_w$/.test(x.hyrox_division) && x.days_per_week === 3 && x.duration_weeks === 8); })());
+ok('10h. un filtro che HYROX non ha (2 giorni) non inventa schede', C.search({ goal: 'hyrox', days: 2 }, 50).rows.length === 0);
+ok('10i. dall’id si riscrive la stessa scheda, intera', (() => { const row = C.search({ goal: 'hyrox', equipment: 'box' }, 1).rows[0]; const b = C.bodyFor(row.id); return C.rowById(row.id).title === row.title && b.weeks.length === row.duration_weeks && b.weeks[0].sessions.length === row.days_per_week && b.source === 'hyrox_v1' && b.notes.length === 3; })());
+ok('10j. gli id sono tutti diversi', (() => { const ids = C.search({ goal: 'hyrox' }, 2000).rows.map((x) => x.id); return ids.length === 1800 && new Set(ids).size === 1800; })());
+ok('10k. una settimana per il costruttore, nel posto scelto', H.sampleWeek({ profile: 'gym', days: 4 }).length === 4 && H.sampleWeek({ profile: 'bodyweight', days: 3 }).every((s) => s.exercises.length > 0));
+ok('10l. il costruttore parte da una settimana HYROX e la schermata Programmi lo offre', /function startHyroxDraft\(\)/.test(html) && /builderHyroxStartHtml\(d, inputStyle\) \+/.test(html) && /homeCollapsibleCard\('SCHEDA HYROX'/.test(html) && /onclick="openHyroxBuilder\(\)"/.test(html));
+ok('10m. una scheda HYROX del database si attiva intera, senza essere riscritta come le altre', /entry\.source !== 'hyrox_v1' && typeof expandScienceProgramWeeks/.test(html));
+
 console.log('');
 if (failed) { console.log(failed + ' controlli HYROX falliti.'); process.exit(1); }
 console.log('Tutti i controlli HYROX passano.');
