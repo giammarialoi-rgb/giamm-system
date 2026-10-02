@@ -26,6 +26,9 @@ var CLIENT_INTAKE_FIELDS = [
   { key: 'rmSquat', label: '1RM Squats (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '40 kg', '60 kg', '80 kg', '100 kg', '120 kg', '140 kg', '160 kg', '180 kg', '200 kg', '220+ kg'] },
   { key: 'rmBench', label: '1RM Panca (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '20 kg', '40 kg', '60 kg', '80 kg', '100 kg', '120 kg', '140 kg', '160 kg', '180+ kg'] },
   { key: 'rmDeadlift', label: '1RM Stacco (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '40 kg', '60 kg', '80 kg', '100 kg', '120 kg', '140 kg', '160 kg', '180 kg', '200 kg', '220 kg', '240+ kg'] },
+  { key: 'skillPullups', label: 'Trazioni alla sbarra: quante ne fai?', type: 'select', required: false, options: ['Mai provate', 'Da 0 a 5', 'Da 5 a 10', 'Più di 10', 'Preferisco evitarle'] },
+  { key: 'skillDips', label: 'Dip alle parallele: quante ne fai?', type: 'select', required: false, options: ['Mai provate', 'Da 0 a 5', 'Da 5 a 10', 'Più di 10', 'Preferisco evitarle'] },
+  { key: 'skillOlympic', label: 'Slancio e strappo: come va la tecnica?', type: 'select', required: false, options: ['Mai provati', 'Li sto imparando', 'Ho una buona tecnica', 'Preferisco evitarli'] },
   { key: 'rmMilitary', label: '1RM Military press (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '20 kg', '30 kg', '40 kg', '50 kg', '60 kg', '70 kg', '80 kg', '90 kg', '100+ kg'] }
 ];
 

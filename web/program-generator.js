@@ -354,7 +354,7 @@
     var built = BUILDER.buildTemplateSessions({
       days: r.days, split: r.split, goal: r.goal, equipment: r.equipment,
       experience: r.experience, audience: r.audience, variant: r.variant,
-      focus: r.focus
+      focus: r.focus, skills: r.skills || null
     });
     var sessions = built.map(function (s) {
       return {

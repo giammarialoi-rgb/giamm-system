@@ -57554,6 +57554,56 @@ function profileNutritionFieldsHtml(profile) {
       : 'Per il target si usa il peso qui sopra; con un check fisico si usa quello, più recente.') + '</div>';
 }
 
+/*
+ * Pull-ups, dips and the Olympic lifts: asked, not assumed from the level.
+ * An advanced lifter who is heavy may do three pull-ups and be better off
+ * with a lat machine; a clean needs technique whatever the years of training.
+ * The answers are the athlete's (profile) or, for a coach's client, the ones
+ * in the questionnaire; the program builder reads them through
+ * window.nurvanAthleteSkills and keeps those lifts out when they do not fit.
+ */
+var ATHLETE_SKILL_REPS = [['', '—'], ['never', 'Mai provate'], ['0-5', 'Da 0 a 5'], ['5-10', 'Da 5 a 10'], ['10+', 'Più di 10'], ['avoid', 'Preferisco evitarle']];
+var ATHLETE_SKILL_TECH = [['', '—'], ['never', 'Mai provati'], ['learning', 'Li sto imparando'], ['good', 'Ho una buona tecnica'], ['avoid', 'Preferisco evitarli']];
+function athleteSkillsFieldsHtml(profile) {
+  const sk = (profile && profile.skills) || {};
+  const sel = function (id, label, list, value) {
+    return '<div style="grid-column:1/-1;"><label style="font-size:10px;color:#666;font-weight:800;">' + esc(trText(label)) + '</label>' +
+      '<select id="' + id + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">' +
+      list.map(function (o) { return '<option value="' + o[0] + '"' + (String(value || '') === o[0] ? ' selected' : '') + '>' + esc(trText(o[1])) + '</option>'; }).join('') +
+      '</select></div>';
+  };
+  return '<div style="grid-column:1/-1;font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-top:6px;">' + esc(trText('ESERCIZI A CORPO LIBERO E TECNICI')) + '</div>' +
+    sel('profile-skill-pullups', 'Trazioni alla sbarra: quante ne fai?', ATHLETE_SKILL_REPS, sk.pullups) +
+    sel('profile-skill-dips', 'Dip alle parallele: quante ne fai?', ATHLETE_SKILL_REPS, sk.dips) +
+    sel('profile-skill-olympic', 'Slancio e strappo: come va la tecnica?', ATHLETE_SKILL_TECH, sk.olympic) +
+    '<p style="grid-column:1/-1;font-size:10px;color:#777;margin:0;">' + esc(trText('Servono a scegliere gli esercizi: se ne fai meno di 5, o preferisci evitarle, la scheda usa un esercizio equivalente (per esempio la lat machine al posto delle trazioni).')) + '</p>';
+}
+// The answers a questionnaire holds as words, as the codes the builder reads.
+function athleteSkillsFromIntake(intake) {
+  const it = intake || {};
+  const code = function (list, label) {
+    const hit = list.filter(function (o) { return o[1] === String(label || ''); })[0];
+    return hit ? hit[0] : '';
+  };
+  const out = { pullups: code(ATHLETE_SKILL_REPS, it.skillPullups), dips: code(ATHLETE_SKILL_REPS, it.skillDips), olympic: code(ATHLETE_SKILL_TECH, it.skillOlympic) };
+  return (out.pullups || out.dips || out.olympic) ? out : null;
+}
+// Whose program is being written: the client the coach is assigning to, or the person using the app.
+function currentAthleteSkills() {
+  try {
+    if (store && (store.coachAssigning || store.coachViewingClient)) {
+      const ws = store.coachWorkspace || {};
+      return athleteSkillsFromIntake(ws.intake || (ws.clientProfile && ws.clientProfile.intake) || (store.__cpClientViewProfile && store.__cpClientViewProfile.intake));
+    }
+    const own = store && store.profile && store.profile.skills;
+    if (own && (own.pullups || own.dips || own.olympic)) return own;
+    if (store && store.clientProfile && store.clientProfile.intake) return athleteSkillsFromIntake(store.clientProfile.intake);
+  } catch (_) {}
+  return null;
+}
+window.nurvanAthleteSkills = currentAthleteSkills;
+window.athleteSkillsFromIntake = athleteSkillsFromIntake;
+
 function saveAthleteProfile() {
   const prev = store.profile || (DATA && DATA.profile) || {};
   const hasSquat = !!$('profile-squat');
@@ -57579,6 +57629,11 @@ function saveAthleteProfile() {
     equipment: $('profile-equipment')
       ? ($('profile-equipment').value || null)
       : (prev.equipment || null),
+    // Trazioni, dip, alzate olimpiche: cosa riesce a fare. Un campo assente
+    // dalla schermata non le cancella.
+    skills: $('profile-skill-pullups')
+      ? { pullups: $('profile-skill-pullups').value || '', dips: ($('profile-skill-dips') && $('profile-skill-dips').value) || '', olympic: ($('profile-skill-olympic') && $('profile-skill-olympic').value) || '' }
+      : (prev.skills || null),
     // Per il target proposto. Un campo assente dalla schermata non lo cancella.
     nutritionActivity: $('profile-nutr-activity') ? (parseInt($('profile-nutr-activity').value, 10) || null) : (prev.nutritionActivity || null),
     nutritionGoal: $('profile-nutr-goal') ? ($('profile-nutr-goal').value || null) : (prev.nutritionGoal || null),
@@ -67403,6 +67458,7 @@ function renderAthleteProfile(container) {
     }).join('') +
     '<p style="font-size:10px;color:#777;margin:8px 0 0;width:100%;">Chi scegli prende un esercizio in più per seduta, gli altri uno in meno.</p>' +
     '</div></div>' +
+    athleteSkillsFieldsHtml(profile) +
     // Le altre due risposte delle tre domande del primo avvio. Stanno qui
     // perché è qui che si cambiano, e da qui il generatore le rilegge.
     '<div><label style="font-size:10px;color:#666;font-weight:800;">Giorni a settimana</label>' +
@@ -79203,6 +79259,9 @@ var CLIENT_INTAKE_FIELDS = [
   { key: 'rmSquat', label: '1RM Squats (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '40 kg', '60 kg', '80 kg', '100 kg', '120 kg', '140 kg', '160 kg', '180 kg', '200 kg', '220+ kg'] },
   { key: 'rmBench', label: '1RM Panca (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '20 kg', '40 kg', '60 kg', '80 kg', '100 kg', '120 kg', '140 kg', '160 kg', '180+ kg'] },
   { key: 'rmDeadlift', label: '1RM Stacco (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '40 kg', '60 kg', '80 kg', '100 kg', '120 kg', '140 kg', '160 kg', '180 kg', '200 kg', '220 kg', '240+ kg'] },
+  { key: 'skillPullups', label: 'Trazioni alla sbarra: quante ne fai?', type: 'select', required: false, options: ['Mai provate', 'Da 0 a 5', 'Da 5 a 10', 'Più di 10', 'Preferisco evitarle'] },
+  { key: 'skillDips', label: 'Dip alle parallele: quante ne fai?', type: 'select', required: false, options: ['Mai provate', 'Da 0 a 5', 'Da 5 a 10', 'Più di 10', 'Preferisco evitarle'] },
+  { key: 'skillOlympic', label: 'Slancio e strappo: come va la tecnica?', type: 'select', required: false, options: ['Mai provati', 'Li sto imparando', 'Ho una buona tecnica', 'Preferisco evitarli'] },
   { key: 'rmMilitary', label: '1RM Military press (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '20 kg', '30 kg', '40 kg', '50 kg', '60 kg', '70 kg', '80 kg', '90 kg', '100+ kg'] }
 ];
 

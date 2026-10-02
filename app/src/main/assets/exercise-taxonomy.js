@@ -366,7 +366,41 @@
     });
   }
 
+  /*
+   * Lifts that being "advanced" does not settle: pull-ups and dips depend on
+   * how many one can do with one's own bodyweight (a heavy, strong lifter may
+   * be better served by a lat machine), and the Olympic lifts on technique.
+   * The athlete says where they stand (profile, or the coach's questionnaire)
+   * and a program is written with what they can actually do.
+   *
+   * skills: { pullups, dips: '' | 'never' | '0-5' | '5-10' | '10+' | 'avoid',
+   *           olympic:       '' | 'never' | 'learning' | 'good' | 'avoid' }
+   * An empty answer changes nothing.
+   */
+  var SKILL_EXERCISES = {
+    pullups: ['Trazioni presa prona', 'Trazioni presa supina', 'Trazioni presa neutra', 'Muscle-up'],
+    dips: ['Dips parallele'],
+    olympic: ['Clean', 'Snatch']
+  };
+  function skillGroupOf(name) {
+    for (var g in SKILL_EXERCISES) if (SKILL_EXERCISES[g].indexOf(name) >= 0) return g;
+    return '';
+  }
+  function skillAllows(name, skills) {
+    if (!skills) return true;
+    var group = skillGroupOf(name);
+    if (!group) return true;
+    var v = String(skills[group] || '');
+    if (!v) return true;
+    if (group === 'olympic') return v === 'good';
+    // A set of 6-10 needs more than five clean repetitions to begin with.
+    if (name === 'Muscle-up') return v === '10+';
+    return v === '5-10' || v === '10+';
+  }
+
   root.NURVAN_EXERCISE_TAXONOMY = {
+    SKILL_EXERCISES: SKILL_EXERCISES,
+    skillAllows: skillAllows,
     EXERCISES: EXERCISES,
     SAME_AS: SAME_AS,
     EQUIPMENT_SETS: EQUIPMENT_SETS,

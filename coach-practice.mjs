@@ -143,7 +143,10 @@ const INTAKE_KEYS = [
   "trainingAge", "level", "goal", "sessionsPerWeek", "sessionMinutes",
   "equipment", "splitPref", "injuryPrimary", "injurySecondary", "medicalLimit",
   "jobType", "sleepHours", "stress",
-  "rmSquat", "rmBench", "rmDeadlift", "rmMilitary"
+  "rmSquat", "rmBench", "rmDeadlift", "rmMilitary",
+  // Pull-ups, dips, Olympic lifts: what the athlete can do, so the program
+  // is written with it.
+  "skillPullups", "skillDips", "skillOlympic"
 ];
 
 const INTAKE_REQUIRED = [

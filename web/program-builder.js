@@ -446,7 +446,16 @@
   // role, and only if the person's equipment has none of it at all, the
   // nearest movements. Without the order a biceps slot could be filled with a
   // row and a shoulder press slot with a chest press.
-  function candidateGroups(s, equipment, experience) {
+  // What the athlete said about pull-ups, dips and the Olympic lifts: given
+  // with the request, or asked of the app (root.nurvanAthleteSkills), so the
+  // ready-made programs follow it too.
+  function skillsOf(params) {
+    if (params && params.skills) return params.skills;
+    try { if (typeof root.nurvanAthleteSkills === 'function') return root.nurvanAthleteSkills() || null; } catch (_) {}
+    return null;
+  }
+
+  function candidateGroups(s, equipment, experience, skills) {
     var roleOrder = s.role === 'main'
       ? [['main'], ['secondary']]
       : (s.role === 'secondary' ? [['secondary'], ['main'], ['iso']] : [['iso'], ['secondary']]);
@@ -470,6 +479,15 @@
       });
     });
     if (fallback.length) add(fallback);
+    // Lifts the athlete cannot do, or would rather not, go to the back: the
+    // slot takes another exercise of the same movement (a lat machine for a
+    // pull-up), then the nearest movement, and only with nothing else at all
+    // the lift itself.
+    if (skills && TAX.skillAllows) {
+      var can = groups.map(function (g) { return g.filter(function (e) { return TAX.skillAllows(e.name, skills); }); })
+        .filter(function (g) { return g.length; });
+      groups = can.concat(groups);
+    }
     return groups;
   }
 
@@ -495,9 +513,10 @@
     var seed = [params.days, params.split, params.goal, params.equipment, params.experience, params.audience, params.variant || 0].join('|');
     var used = {};
     var exercises = [];
+    var skills = skillsOf(params);
 
     slots.forEach(function (s, slotIndex) {
-      var groups = candidateGroups(s, params.equipment, params.experience);
+      var groups = candidateGroups(s, params.equipment, params.experience, skills);
       var free = [];
       for (var gi = 0; gi < groups.length && !free.length; gi++) {
         free = groups[gi].filter(function (e) { return !used[e.name]; });
@@ -572,6 +591,10 @@
           return acc.concat(TAX.poolFor(params.equipment, params.experience, p, null));
         }, [])
         .filter(function (e) { return !used[e.name]; });
+      if (skills && TAX.skillAllows) {
+        var canFill = filler.filter(function (e) { return TAX.skillAllows(e.name, skills); });
+        if (canFill.length) filler = canFill;
+      }
       for (var f = 0; f < filler.length && exercises.length < minExercises; f++) {
         var extra = filler[hash(seed + '#' + sessionIndex + '#fill' + f) % filler.length];
         if (!extra || used[extra.name]) continue;
