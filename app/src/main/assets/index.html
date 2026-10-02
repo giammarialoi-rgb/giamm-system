@@ -47558,6 +47558,61 @@ async function releaseTimerWakeLock() {
     }
   } catch (_) { timerWakeLock = null; }
 }
+/*
+ * The screen stays on while a workout is under way.
+ *
+ * A phone that dims in the middle of a set, or of a held stretch, has to be
+ * unlocked with sweaty hands to see what comes next. So while the session
+ * clock is running on the training screen, or a timed lesson or a circuit
+ * is open, the screen is kept awake: by the web Wake Lock where the browser
+ * has it, by the Android shell (NativeConfig.keepScreenOn) and by the iOS
+ * plugin (KeepAwake) inside the apps. It is let go as soon as the workout is
+ * paused, stopped, finalized or left - and a clock forgotten running does
+ * not keep the phone awake all night.
+ */
+let workoutWakeLock = null;
+let workoutAwake = false;
+const WORKOUT_AWAKE_MAX_MS = 4 * 3600 * 1000;
+function workoutWantsScreenOn() {
+  try {
+    if (typeof document !== 'undefined' && document.visibilityState && document.visibilityState !== 'visible') return false;
+    if (window.__lesson || window.__circuitPlayer) return true;
+    if (typeof currentView === 'undefined' || currentView !== 'training') return false;
+    if (!store || !store.sessionStartedAt || store.sessionClockRunning === false) return false;
+    return (Date.now() - Number(store.sessionStartedAt)) < WORKOUT_AWAKE_MAX_MS;
+  } catch (_) { return false; }
+}
+function syncWorkoutScreenAwake() {
+  const want = workoutWantsScreenOn();
+  const hasWeb = typeof navigator !== 'undefined' && navigator.wakeLock && navigator.wakeLock.request;
+  // The web lock is dropped by the browser whenever the page is hidden: when
+  // it is wanted and gone, it is asked for again.
+  if (want === workoutAwake && (!want || !hasWeb || workoutWakeLock)) return;
+  workoutAwake = want;
+  try { if (typeof NativeConfig !== 'undefined' && NativeConfig.keepScreenOn) NativeConfig.keepScreenOn(want); } catch (_) {}
+  try {
+    const ka = (typeof capacitorPlugin === 'function') ? capacitorPlugin('KeepAwake') : null;
+    if (ka) { if (want) ka.keepAwake(); else ka.allowSleep(); }
+  } catch (_) {}
+  if (!hasWeb) return;
+  if (want) {
+    if (workoutWakeLock) return;
+    navigator.wakeLock.request('screen').then(function (lock) {
+      // Asked for and no longer wanted by the time it arrives.
+      if (!workoutAwake) { try { lock.release(); } catch (_) {} return; }
+      workoutWakeLock = lock;
+      lock.addEventListener('release', function () { if (workoutWakeLock === lock) workoutWakeLock = null; });
+    }).catch(function () {});
+  } else if (workoutWakeLock) {
+    const lock = workoutWakeLock;
+    workoutWakeLock = null;
+    try { lock.release(); } catch (_) {}
+  }
+}
+if (typeof window !== 'undefined') window.syncWorkoutScreenAwake = syncWorkoutScreenAwake;
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('visibilitychange', function () { try { syncWorkoutScreenAwake(); } catch (_) {} });
+}
 function nativeVibrate(ms) {
   try {
     if (store.prefs && store.prefs.timerVibrate === false) return;
@@ -48119,6 +48174,7 @@ function closeCircuitPlayer() {
   window.__circuitPlayer = null;
   var el = document.getElementById('circuit-player');
   if (el) el.remove();
+  try { syncWorkoutScreenAwake(); } catch (_) {}
 }
 window.closeCircuitPlayer = closeCircuitPlayer;
 
@@ -48139,6 +48195,7 @@ function openCircuitPlayer(exIdx) {
   document.body.appendChild(sheet);
   paintCircuitPlayer();
   window.__circuitPlayer.iv = setInterval(tickCircuitPlayer, 200);
+  try { syncWorkoutScreenAwake(); } catch (_) {}
 }
 window.openCircuitPlayer = openCircuitPlayer;
 
@@ -50380,6 +50437,7 @@ function navigate(v, e){
   const a = $(`nav-${v}`); if(a) a.classList.add('active');
   updatePersonalBackButton();
   render();
+  try { syncWorkoutScreenAwake(); } catch (_) {}
 }
 
 function personalNavBack() {
@@ -59874,6 +59932,7 @@ function closeLesson() {
   window.__lesson = null;
   const el = document.getElementById('lesson-player');
   if (el) el.remove();
+  try { syncWorkoutScreenAwake(); } catch (_) {}
   if (typeof render === 'function') render();
 }
 function openLesson() {
@@ -59892,6 +59951,7 @@ function openLesson() {
   }
   paintLesson();
   window.__lesson.iv = setInterval(tickLesson, 200);
+  try { syncWorkoutScreenAwake(); } catch (_) {}
 }
 // What was done goes in the log as if the set had been ticked by hand.
 function lessonCloseStep(st, step) {
@@ -64602,6 +64662,7 @@ function saveFinalizedWorkoutEdits() {
   // Ticking a set while editing starts the session clock; the edit is not a
   // session, and the clock must not run on into the next one.
   store.sessionStartedAt = null;
+  try { syncWorkoutScreenAwake(); } catch (_) {}
   store.sessionPausedMs = 0;
   store.sessionPausedAt = null;
   store.sessionClockRunning = false;
@@ -64697,6 +64758,7 @@ function finalizeWorkout(){
     }
   } catch (_) {}
   store.sessionStartedAt = null;
+  try { syncWorkoutScreenAwake(); } catch (_) {}
   store.sessionPausedMs = 0;
   store.sessionPausedAt = null;
   store.sessionClockRunning = false;
@@ -67580,6 +67642,7 @@ function markSessionClockIfNeeded() {
     store.sessionClockRunning = true;
   }
   ensureWorkoutSessionTimerTick();
+  try { syncWorkoutScreenAwake(); } catch (_) {}
 }
 
 function sessionElapsedMs() {
@@ -67666,6 +67729,7 @@ function pauseWorkoutSessionTimer() {
   store.sessionPausedAt = Date.now();
   store.sessionClockRunning = false;
   persist();
+  try { syncWorkoutScreenAwake(); } catch (_) {}
   if (typeof render === 'function' && currentView === 'training') render();
 }
 function resumeWorkoutSessionTimer() {
@@ -67682,6 +67746,7 @@ function resumeWorkoutSessionTimer() {
 function stopWorkoutSessionTimer() {
   if (!confirm('Stoppare il timer allenamento? Il recupero serie non viene toccato.')) return;
   store.sessionStartedAt = null;
+  try { syncWorkoutScreenAwake(); } catch (_) {}
   store.sessionPausedMs = 0;
   store.sessionPausedAt = null;
   store.sessionClockRunning = false;
@@ -67692,11 +67757,14 @@ function stopWorkoutSessionTimer() {
     window.__workoutSessionTimerIv = null;
   }
   persist();
+  try { syncWorkoutScreenAwake(); } catch (_) {}
   if (typeof render === 'function' && currentView === 'training') render();
 }
 function ensureWorkoutSessionTimerTick() {
+  try { syncWorkoutScreenAwake(); } catch (_) {}
   if (window.__workoutSessionTimerIv) return;
   window.__workoutSessionTimerIv = setInterval(function () {
+    try { syncWorkoutScreenAwake(); } catch (_) {}
     const el = document.getElementById('workout-session-clock');
     if (!el) return;
     if (!store.sessionStartedAt || store.sessionClockRunning === false) return;

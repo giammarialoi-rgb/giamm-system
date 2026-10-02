@@ -486,6 +486,18 @@ public class MainActivity extends Activity {
             });
         }
 
+        // The screen stays on while a workout is under way (the page says
+        // when: syncWorkoutScreenAwake), and is let go when it ends.
+        @JavascriptInterface
+        public void keepScreenOn(final boolean on) {
+            runOnUiThread(() -> {
+                try {
+                    if (on) getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    else getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                } catch (Exception ignored) {}
+            });
+        }
+
         @JavascriptInterface
         public void vibrate(int ms) {
             try {
