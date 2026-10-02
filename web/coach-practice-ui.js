@@ -210,21 +210,92 @@ function inviteShortCode(token) {
   return String(token || '').slice(-6).toUpperCase();
 }
 
+/*
+ * The invite a coach sends: their own words. The text is a template with the
+ * client's details in place of {nome}, {link}, {utente}, {password} and
+ * {codice}; it is kept with the coach's preferences and edited from the hub
+ * (TESTO DELL'INVITO). The server's wording is no longer used.
+ */
+var DEFAULT_INVITE_TEMPLATE = 'Ciao {nome},\n' +
+  'benvenuto nel mio servizio coaching, clicka sul link qui sotto ed inserisci i dati richiesti che trovi in basso nel messaggio, compila il form se richiesto, preparati a prenderti cura del tuo corpo.\n' +
+  '\n' +
+  'Link: {link}\n' +
+  'Utente: {utente}\n' +
+  'Password: {password}\n' +
+  'Codice invito: {codice}';
+function inviteTemplate() {
+  const own = store && store.prefs && typeof store.prefs.inviteTemplate === 'string' ? store.prefs.inviteTemplate : '';
+  return own.trim() ? own : DEFAULT_INVITE_TEMPLATE;
+}
 function formatInviteShareText(opts) {
   opts = opts || {};
   const name = String(opts.name || opts.displayName || '').trim() || 'atleta';
   const code = opts.inviteCode || inviteShortCode(opts.token || opts.inviteUrl);
-  const lines = [
-    'Ciao ' + name + ',',
-    'benvenuto nel mio servizio coaching, clicka sul link qui sotto ed inserisci i dati richiesti che trovi in basso nel messaggio, compila il form se richiesto, preparati a prenderti cura del tuo corpo sotto ogni aspetto 💪🏻🏋️‍♂️🍎💊🧬',
-    '',
-    'Link: ' + (opts.inviteUrl || ''),
-    'Utente: ' + (opts.username || ''),
-    'Password: ' + (opts.password || '')
-  ];
-  if (code) lines.push('Codice invito: ' + code);
-  return lines.join('\n');
+  const values = {
+    nome: name,
+    link: opts.inviteUrl || '',
+    utente: opts.username || '',
+    // Not sent again unless it was just set: it is stored in a form nobody can read back.
+    password: opts.password || 'quella che hai già',
+    codice: code || ''
+  };
+  let text = inviteTemplate().replace(/\{(nome|link|utente|password|codice)\}/g, function (_, k) { return values[k]; });
+  // A text without the link is not an invite: it is added at the end.
+  if (values.link && text.indexOf(values.link) < 0) text += '\nLink: ' + values.link;
+  return text;
 }
+function openInviteTemplateEditor() {
+  const old = document.getElementById('cp-invite-template');
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'cp-invite-template';
+  el.style.cssText = 'display:flex;position:fixed;inset:0;z-index:100020;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  el.onclick = function (ev) { if (ev.target === el) el.remove(); };
+  el.innerHTML = '<div class="card" style="max-width:480px;width:100%;max-height:100%;overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;margin:0;">' +
+    '<div style="font-size:14px;font-weight:900;color:var(--gold);margin-bottom:6px;">Testo dell’invito</div>' +
+    '<div style="font-size:11px;color:#aaa;line-height:1.5;margin-bottom:10px;">È il messaggio che mandi a ogni nuovo cliente. Dove scrivi queste parole tra parentesi graffe, l’app mette i suoi dati:</div>' +
+    '<div style="font-size:11px;color:#ccc;line-height:1.7;margin-bottom:10px;"><b style="color:var(--gold);">{nome}</b> · <b style="color:var(--gold);">{link}</b> · <b style="color:var(--gold);">{utente}</b> · <b style="color:var(--gold);">{password}</b> · <b style="color:var(--gold);">{codice}</b></div>' +
+    '<textarea id="cp-invite-template-text" rows="11" style="width:100%;box-sizing:border-box;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:14px;line-height:1.45;font-family:inherit;">' + esc(inviteTemplate()) + '</textarea>' +
+    '<div id="cp-invite-template-preview" style="display:none;white-space:pre-wrap;word-break:break-word;font-size:12px;color:#bbb;background:#0d0d0d;border:1px dashed #444;border-radius:8px;padding:10px;margin-top:10px;"></div>' +
+    '<div style="display:grid;gap:8px;margin-top:12px;">' +
+    '<button type="button" class="btn btn-primary" onclick="saveInviteTemplate()">SALVA</button>' +
+    '<button type="button" class="btn btn-outline" onclick="previewInviteTemplate()">ANTEPRIMA</button>' +
+    '<button type="button" class="btn btn-outline" onclick="resetInviteTemplate()">RIPRISTINA IL TESTO ORIGINALE</button>' +
+    '<button type="button" class="btn btn-outline" onclick="document.getElementById(\'cp-invite-template\').remove()">CHIUDI</button>' +
+    '</div></div>';
+  document.body.appendChild(el);
+}
+function previewInviteTemplate() {
+  const box = document.getElementById('cp-invite-template-preview');
+  const area = document.getElementById('cp-invite-template-text');
+  if (!box || !area) return;
+  const keep = store.prefs.inviteTemplate;
+  store.prefs.inviteTemplate = area.value;
+  box.textContent = formatInviteShareText({ name: 'Mario Rossi', inviteUrl: (store.__cpOrigin || 'https://app.nurvan.app') + '/c/esempio', inviteCode: 'ABC123', username: 'mario.rossi', password: 'esempio1234' });
+  store.prefs.inviteTemplate = keep;
+  box.style.display = 'block';
+}
+function saveInviteTemplate() {
+  const area = document.getElementById('cp-invite-template-text');
+  if (!area) return;
+  const text = String(area.value || '').slice(0, 2000);
+  if (!store.prefs) store.prefs = {};
+  store.prefs.inviteTemplate = (text.trim() && text.trim() !== DEFAULT_INVITE_TEMPLATE.trim()) ? text : '';
+  if (typeof persist === 'function') persist();
+  const el = document.getElementById('cp-invite-template');
+  if (el) el.remove();
+  practiceToast('Testo dell’invito salvato', 'success');
+}
+function resetInviteTemplate() {
+  const area = document.getElementById('cp-invite-template-text');
+  if (area) area.value = DEFAULT_INVITE_TEMPLATE;
+  const box = document.getElementById('cp-invite-template-preview');
+  if (box) box.style.display = 'none';
+}
+window.openInviteTemplateEditor = openInviteTemplateEditor;
+window.previewInviteTemplate = previewInviteTemplate;
+window.saveInviteTemplate = saveInviteTemplate;
+window.resetInviteTemplate = resetInviteTemplate;
 
 function applyClientChrome() {
   try {
@@ -2990,9 +3061,9 @@ function renderCoachUnlockCardHtml() {
       '<button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="enterCoachSession()">APRI COACH</button></div>';
   }
   return '<div class="card" style="border:1px solid var(--gold);margin-bottom:14px;padding:12px;">' +
-    '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Diventa Coach</div>' +
-    '<p style="font-size:11px;color:#aaa;margin:0 0 10px;">Sblocca l’hub per seguire i clienti. Per ora il pagamento è demo.</p>' +
-    '<button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="showDemoUnlock()">SBLOCCA MODALITÀ COACH</button></div>';
+    '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Modalità coach</div>' +
+    '<p style="font-size:11px;color:#aaa;margin:0 0 10px;">Attiva l’hub per seguire i tuoi clienti. Per ora il pagamento è demo.</p>' +
+    '<button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="showDemoUnlock()">ATTIVA MODALITÀ COACH</button></div>';
 }
 
 function injectCoachUnlockInto(container) {
@@ -3125,7 +3196,8 @@ function renderCoachHub(c) {
     '<input type="checkbox" ' + ((store.coachAllowVideocall !== false) ? 'checked' : '') + ' onchange="toggleCoachVideocall(this.checked)" style="margin-top:2px;flex-shrink:0;width:18px;height:18px;">' +
     '<span style="flex:1;min-width:0;color:#eee !important;-webkit-text-fill-color:#eee !important;line-height:1.35;">Consenti videocall interne con i clienti</span></label>' +
     '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
-    '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button></div>' +
+    '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="openInviteTemplateEditor()">TESTO DELL’INVITO</button></div>' +
     '<div id="cp-checkin-counter"></div>' +
     '<div id="cp-seats-summary"></div>' +
     '<div id="cp-client-list"><div class="cp-help">Caricamento…</div></div>';
@@ -3383,7 +3455,7 @@ async function submitAddClient() {
     const pass = (payload.credentials && payload.credentials.password) || password;
     const display = (payload.credentials && payload.credentials.displayName) ||
       ((firstName + ' ' + lastName).trim()) || 'atleta';
-    const msg = payload.inviteText || formatInviteShareText({
+    const msg = formatInviteShareText({
       name: display,
       inviteUrl: url,
       inviteCode: payload.inviteCode || inviteShortCode(url),
@@ -3399,29 +3471,86 @@ async function submitAddClient() {
   }
 }
 
+/*
+ * Sending the invite again. The client's password cannot be read back (it is
+ * kept in a form that only checks it), so the coach is asked first: set a new
+ * one, which is then written in the invite, or send link and username and
+ * leave the password as it is. Nothing is changed before the answer.
+ */
 async function copyClientInvite(id, token) {
-  let text = '';
+  let info = null;
   try {
     const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 20000);
-    text = snap.inviteText || formatInviteShareText({
+    const url = snap.inviteUrl || ((store.__cpOrigin && token) ? store.__cpOrigin + '/c/' + token : '');
+    info = {
+      id: id,
       name: snap.client && snap.client.displayName,
-      inviteUrl: snap.inviteUrl || ((store.__cpOrigin && token) ? store.__cpOrigin + '/c/' + token : ''),
-      inviteCode: snap.inviteCode || inviteShortCode(token || (snap.inviteUrl || '').split('/').pop()),
-      username: snap.credentials && snap.credentials.username,
-      password: snap.credentials && snap.credentials.password
-    });
+      inviteUrl: url,
+      inviteCode: snap.inviteCode || inviteShortCode(token || String(url).split('/').pop()),
+      username: (snap.credentials && snap.credentials.username) || (snap.client && snap.client.username) || ''
+    };
   } catch (_) {
-    if (store.__cpOrigin && token) {
-      text = formatInviteShareText({
-        inviteUrl: store.__cpOrigin + '/c/' + token,
-        inviteCode: inviteShortCode(token),
-        token: token
-      });
-    }
+    if (store.__cpOrigin && token) info = { id: id, inviteUrl: store.__cpOrigin + '/c/' + token, inviteCode: inviteShortCode(token), username: '' };
   }
-  if (!text) { practiceToast('Link non disponibile', 'warning'); return; }
-  showInviteSheet('Invito univoco pronto', text);
+  if (!info || !info.inviteUrl) { practiceToast('Link non disponibile', 'warning'); return; }
+  openResendInviteDialog(info);
 }
+function suggestClientPassword() {
+  const words = ['forza', 'squat', 'panca', 'corsa', 'gamba', 'ferro', 'salto', 'fiato'];
+  let n = 0;
+  try { const a = new Uint32Array(2); crypto.getRandomValues(a); n = a[0]; return words[a[1] % words.length] + String(1000 + (n % 9000)); } catch (_) {}
+  return words[Math.floor(Math.random() * words.length)] + String(1000 + Math.floor(Math.random() * 9000));
+}
+function openResendInviteDialog(info) {
+  const old = document.getElementById('cp-resend-invite');
+  if (old) old.remove();
+  window.__cpResendInvite = info;
+  const el = document.createElement('div');
+  el.id = 'cp-resend-invite';
+  el.style.cssText = 'display:flex;position:fixed;inset:0;z-index:100020;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  el.onclick = function (ev) { if (ev.target === el) el.remove(); };
+  el.innerHTML = '<div class="card" style="max-width:440px;width:100%;max-height:100%;overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;margin:0;">' +
+    '<div style="font-size:14px;font-weight:900;color:var(--gold);margin-bottom:8px;">Invia di nuovo l’invito</div>' +
+    (info.username ? '<div style="font-size:12px;color:#eee;margin-bottom:8px;">Utente: <b>' + esc(info.username) + '</b></div>' : '') +
+    '<div style="font-size:12px;color:#bbb;line-height:1.5;margin-bottom:12px;">La password del cliente non si può rileggere: è salvata in modo che nessuno possa vederla. Per scriverla nell’invito va impostata di nuovo.</div>' +
+    '<label style="font-size:10px;color:#ccc;font-weight:800;display:block;">Nuova password (minimo 4 caratteri)' +
+    '<input id="cp-resend-password" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(suggestClientPassword()) + '" style="width:100%;box-sizing:border-box;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:16px;"></label>' +
+    '<div style="font-size:10px;color:#888;line-height:1.45;margin:6px 0 12px;">Con una nuova password il cliente viene scollegato dai suoi dispositivi e rientra con questa.</div>' +
+    '<div id="cp-resend-error" style="font-size:12px;color:#ff8a80;min-height:14px;"></div>' +
+    '<div style="display:grid;gap:8px;">' +
+    '<button type="button" class="btn btn-primary" id="cp-resend-reset" onclick="confirmResendInvite(true)">IMPOSTA LA PASSWORD E MOSTRA L’INVITO</button>' +
+    '<button type="button" class="btn btn-outline" onclick="confirmResendInvite(false)">LASCIA LA PASSWORD COM’È</button>' +
+    '<button type="button" class="btn btn-outline" onclick="document.getElementById(\'cp-resend-invite\').remove()">ANNULLA</button>' +
+    '</div></div>';
+  document.body.appendChild(el);
+}
+async function confirmResendInvite(reset) {
+  const info = window.__cpResendInvite;
+  if (!info) return;
+  const close = function () { const el = document.getElementById('cp-resend-invite'); if (el) el.remove(); };
+  if (!reset) {
+    close();
+    showInviteSheet('Invito univoco pronto', formatInviteShareText(info), 'La password non è cambiata: nell’invito non è scritta.');
+    return;
+  }
+  const input = document.getElementById('cp-resend-password');
+  const err = document.getElementById('cp-resend-error');
+  const password = String((input && input.value) || '').trim();
+  if (password.length < 4) { if (err) err.textContent = 'La password deve avere almeno 4 caratteri.'; return; }
+  const btn = document.getElementById('cp-resend-reset');
+  if (btn) btn.disabled = true;
+  try {
+    const res = await practiceFetch('/api/coach/clients/' + encodeURIComponent(info.id) + '/reset-password', {
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ password: password })
+    }, 15000);
+    close();
+    showInviteSheet('Invito univoco pronto', formatInviteShareText(Object.assign({}, info, { username: (res.credentials && res.credentials.username) || info.username, password: password })), 'Password nuova: il cliente rientra con questa.');
+  } catch (e) {
+    if (err) err.textContent = (e && e.message) || 'Password non aggiornata. Riprova.';
+    if (btn) btn.disabled = false;
+  }
+}
+window.confirmResendInvite = confirmResendInvite;
 
 async function rotateClientInvite(id) {
   if (!confirm('Rigenerare il link? Il vecchio smette di funzionare.')) return;
@@ -3429,7 +3558,8 @@ async function rotateClientInvite(id) {
     const res = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/rotate-invite', {
       method: 'POST', headers: practiceHeaders(true), body: '{}'
     }, 20000);
-    const text = res.inviteText || formatInviteShareText({
+    const text = formatInviteShareText({
+      name: res.client && res.client.displayName,
       inviteUrl: res.inviteUrl,
       inviteCode: res.inviteCode,
       username: res.credentials && res.credentials.username,
@@ -6723,7 +6853,8 @@ function wrapPracticeHooks() {
         try { if (typeof schedulePageTutorial === 'function') schedulePageTutorial(); } catch (_) {}
         return;
       }
-      _nav(v, e);
+      window.__cpNavRender = true;
+      try { _nav(v, e); } finally { window.__cpNavRender = false; }
       applyClientChrome();
       ensureAssignBanner();
       ensureClientViewBanner();
@@ -6739,6 +6870,16 @@ function wrapPracticeHooks() {
           const allowed = gatePracticeView(currentView);
           if (allowed && allowed !== currentView) currentView = allowed;
         }
+      } catch (_) {}
+      // The coach's own screens (Oggi, Chat, Calendario, Verifiche...) load
+      // from the server each time they are drawn. A redraw that nobody asked
+      // of them - the account synced, the plan was read again - used to make
+      // them go blank and load again; they are redrawn when they are opened
+      // or when they ask for it themselves.
+      try {
+        const osView = !!(window.CoachOS && window.CoachOS.views && typeof window.CoachOS.views[currentView] === 'function');
+        if (osView && !window.__cpNavRender && window.__cpDrawnOsView === currentView && document.querySelector('#view-container .coach-os-page')) return;
+        window.__cpDrawnOsView = osView ? currentView : '';
       } catch (_) {}
       if (renderPracticeView()) return;
       _render();

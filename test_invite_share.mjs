@@ -15,10 +15,11 @@ const ui = fs.readFileSync('web/coach-practice-ui.js', 'utf8').replace(/\r\n/g, 
 const cut = (a, b) => { const i = ui.indexOf(a); const j = ui.indexOf(b, i); if (i < 0 || j < 0) throw new Error('block not found: ' + a); return ui.slice(i, j); };
 const fn = (name) => cut('async function ' + name + '(', '\n}\n');
 
-const callers = ['copyClientInvite', 'rotateClientInvite', 'resetClientPassword'];
+// Sending the invite again first asks about the password (confirmResendInvite shows the sheet).
+const callers = ['confirmResendInvite', 'rotateClientInvite', 'resetClientPassword'];
 ok('1a. copia link, rigenera link e nuova password mostrano l’invito nella pagina', callers.every((n) => /showInviteSheet\(/.test(fn(n))));
 ok('1b. e non aprono più da soli né la condivisione né un avviso di sistema', callers.every((n) => !/copyOrShare\(|navigator\.share|alert\(/.test(fn(n))));
-const create = cut("const msg = payload.inviteText || formatInviteShareText({", "if (currentView === 'coachHub') loadCoachClientList();");
+const create = cut("const msg = formatInviteShareText({", "if (currentView === 'coachHub') loadCoachClientList();");
 ok('1c. lo stesso alla creazione di un cliente', /showInviteSheet\('Invito pronto', msg/.test(create) && !/alert\(|copyOrShare\(/.test(create));
 ok('1d. in tutta l’area coach nessun avviso di sistema accanto a una condivisione', !/copyOrShare\([^)]*\);\s*(?:practiceToast\([^)]*\);\s*)?try \{ alert\(/.test(ui) && !/navigator\.share\([\s\S]{0,200}alert\(/.test(ui));
 

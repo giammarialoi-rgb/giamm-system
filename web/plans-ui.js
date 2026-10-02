@@ -47,10 +47,14 @@ function onEntitlementReceived(ent) {
     coachLink: ent.coachLink || null,
     at: ent.at || new Date().toISOString()
   };
-  const before = JSON.stringify(window.__nurvanEntitlement || null);
+  // Compared without `at`: the server stamps every answer with the time, and
+  // that alone used to count as a change of plan and redraw the page each
+  // time the account was read.
+  const same = function (e) { return JSON.stringify(Object.assign({}, e || {}, { at: null })); };
+  const before = same(window.__nurvanEntitlement);
   window.__nurvanEntitlement = keep;
   try { localStorage.setItem(planEntitlementKey(), JSON.stringify(keep)); } catch (_) {}
-  if (before !== JSON.stringify(keep) && typeof render === 'function') {
+  if (before !== same(keep) && typeof render === 'function') {
     try { render(); } catch (_) {}
   }
 }

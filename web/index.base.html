@@ -1634,7 +1634,7 @@ body.focus-mode [data-rewards-only] {
 </div>
 
 <header>
-  <div class="logo-container"><img src="nurvan_logo.png" alt="Nurvan" onerror="this.onerror=null;this.src='icon-192.png'"></div>
+  <div class="logo-container" role="button" tabindex="0" aria-label="Home" style="cursor:pointer;" onclick="goHomeFromLogo()" onkeydown="if(event.key==='Enter')goHomeFromLogo()"><img src="nurvan_logo.png" alt="Nurvan" onerror="this.onerror=null;this.src='icon-192.png'"></div>
   <div class="header-actions">
   <button type="button" class="btn btn-outline" id="personal-back-button" style="display:none;margin-left:0;" onclick="personalNavBack()">INDIETRO</button>
   <button type="button" class="btn btn-outline" id="profile-button" onclick="openProfileHub()">PROFILO</button>
@@ -1654,17 +1654,9 @@ body.focus-mode [data-rewards-only] {
       <button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="closeMenuHub()" data-i18n="close">CHIUDI</button>
     </div>
     <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));gap:10px;">
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('home')">
-        <span style="font-size:20px;">🏠</span>
-        <span style="font-size:11px;font-weight:800;" data-i18n="navHome">Home</span>
-      </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('training')">
         <span style="font-size:20px;">🏋️</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="training">Allenamento</span>
-      </button>
-      <button class="btn btn-outline" data-hub="programs" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('programs')">
-        <span style="font-size:20px;">📚</span>
-        <span style="font-size:11px;font-weight:800;" data-i18n="programsLibrary">Programmi</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('nutrition')">
         <span style="font-size:20px;">🥗</span>
@@ -1682,61 +1674,61 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">🧪</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="exams">Esami Lab</span>
       </button>
-      <button class="btn btn-outline" data-hub="tutorial" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openTutorialIndex()">
-        <span style="font-size:20px;">🎓</span>
-        <span style="font-size:11px;font-weight:800;">Tutorial</span>
-      </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('calendar')">
         <span style="font-size:20px;">📅</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="calendar">Calendario</span>
-      </button>
-      <button class="btn btn-outline" data-hub="personal-ai" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('ai')">
-        <span style="font-size:20px;">🤖</span>
-        <span style="font-size:11px;font-weight:800;" data-i18n="coachAI">Coach AI</span>
-      </button>
-      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('import')">
-        <span style="font-size:20px;">📥</span>
-        <span style="font-size:11px;font-weight:800;" data-i18n="importProgram">Importa Scheda</span>
-      </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('knowledge')">
-        <span style="font-size:20px;">📖</span>
-        <span style="font-size:11px;font-weight:800;">Info training</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('stats')">
         <span style="font-size:20px;">📊</span>
         <span style="font-size:11px;font-weight:800;">Statistiche</span>
       </button>
-      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openHealthConnect()">
-        <span style="font-size:20px;">❤️</span>
-        <span style="font-size:11px;font-weight:800;">Salute</span>
+      <button class="btn btn-outline" data-hub="programs" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('programs')">
+        <span style="font-size:20px;">📚</span>
+        <span style="font-size:11px;font-weight:800;text-align:center;line-height:1.15;">Libreria programmi e import</span>
+      </button>
+      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('knowledge')">
+        <span style="font-size:20px;">📖</span>
+        <span style="font-size:11px;font-weight:800;">Libreria esercizi</span>
+      </button>
+      <button class="btn btn-outline" data-hub="personal-ai" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('ai')">
+        <span style="font-size:20px;">🤖</span>
+        <span style="font-size:11px;font-weight:800;" data-i18n="coachAI">Coach AI</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openAthleteProfile()">
         <span style="font-size:20px;">🏅</span>
         <span style="font-size:11px;font-weight:800;">Profilo Atleta</span>
       </button>
-      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('pricing')">
-        <span style="font-size:20px;">💎</span>
-        <span style="font-size:11px;font-weight:800;" data-i18n="pricing">Piani & Pro</span>
+      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openMyGym()">
+        <span style="font-size:20px;">📍</span>
+        <span style="font-size:11px;font-weight:800;">Dove mi alleno</span>
       </button>
-      <button class="btn btn-outline" id="hub-tile-coach" data-hub="coach" style="display:none;height:70px;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openCoachOrUnlock()">
-        <span style="font-size:20px;">👔</span>
-        <span style="font-size:11px;font-weight:800;" id="hub-tile-coach-label">Sblocca Coach</span>
-      </button>
-      <button class="btn btn-outline" id="hub-tile-guide" data-hub="athlete" style="display:none;height:70px;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();showClientTutorial(true)">
-        <span style="font-size:20px;">🧭</span>
-        <span style="font-size:11px;font-weight:800;">Guida</span>
+      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openHealthConnect()">
+        <span style="font-size:20px;">❤️</span>
+        <span style="font-size:11px;font-weight:800;">Salute</span>
       </button>
       <button class="btn btn-outline" id="hub-tile-notify" data-hub="athlete" style="display:none;height:70px;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;" onclick="closeMenuHub();openNotificationsCenter()">
         <span style="font-size:20px;">🔔</span>
         <span style="font-size:11px;font-weight:800;">Notifiche</span>
       </button>
-      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openMyGym()">
-        <span style="font-size:20px;">📍</span>
-        <span style="font-size:11px;font-weight:800;">Dove mi alleno</span>
+      <button class="btn btn-outline" id="hub-tile-coach" data-hub="coach" style="display:none;height:70px;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openCoachOrUnlock()">
+        <span style="font-size:20px;">👔</span>
+        <span style="font-size:11px;font-weight:800;" id="hub-tile-coach-label">Modalità coach</span>
+      </button>
+      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('pricing')">
+        <span style="font-size:20px;">💎</span>
+        <span style="font-size:11px;font-weight:800;" data-i18n="pricing">Piani & Pro</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('settings')">
         <span style="font-size:20px;">⚙️</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="settings">Impostazioni</span>
+      </button>
+      <button class="btn btn-outline" id="hub-tile-guide" data-hub="athlete" style="display:none;height:70px;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();showClientTutorial(true)">
+        <span style="font-size:20px;">🧭</span>
+        <span style="font-size:11px;font-weight:800;">Guida</span>
+      </button>
+      <button class="btn btn-outline" data-hub="tutorial" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openTutorialIndex()">
+        <span style="font-size:20px;">🎓</span>
+        <span style="font-size:11px;font-weight:800;">Tutorial</span>
       </button>
     </div>
   </div>
@@ -15622,7 +15614,7 @@ var PAGE_TUTORIALS = {
     { t: 'Chiedere e rispondere', d: '«Richiedi verifica» manda la richiesta a un cliente; quando arriva la apri, scrivi la revisione e rispondi.' }
   ] },
   coachCalendar: { label: 'Coach · Calendario', icon: '🗓️', who: 'coach', steps: [
-    { t: 'Le tue sessioni', d: 'Vista per giorno, settimana o mese. Crei una nuova sessione, la sposti o la annulli, e segni le tue disponibilità.' }
+    { t: 'Le tue sessioni', d: 'Vedi oggi, i prossimi 7 o 31 giorni. Con NUOVA SESSIONE scegli cliente, tipo, giorno, ora e durata; poi la puoi spostare, segnare come fatta o annullare.' }
   ] },
   coachLibrary: { label: 'Il mio database schede', icon: '🗄️', who: 'coach', steps: [
     { t: 'Le schede del tuo metodo', d: 'Qui tieni le tue schede: le crei da zero, le generi o le importi. Non toccano né la tua scheda attiva né quella di un cliente.' },
@@ -22371,6 +22363,20 @@ function exportStatsCsv() {
 // ====================================================
 // TASK 20: NAVIGATION HUB CONTROLLER
 // ====================================================
+// The N at the top left: home, from wherever one is. In the coach area it is
+// the coach's own home (the hub), for a client their own.
+function goHomeFromLogo() {
+  try { closeMenuHub(); } catch (_) {}
+  if (typeof loginGateRequired === 'function' && loginGateRequired()) return;
+  if (store && store.coachSessionActive && !(typeof isAthleteRole === 'function' && isAthleteRole()) && !store.coachAssigning && !store.coachViewingClient) {
+    navigate('coachHub');
+    return;
+  }
+  navigate('home');
+}
+window.goHomeFromLogo = goHomeFromLogo;
+window.coachEndpoint = coachEndpoint;
+
 function openMenuHub() {
   const modal = $('menu-hub-modal');
   if (!modal) return;
