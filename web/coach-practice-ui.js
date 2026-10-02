@@ -12,7 +12,7 @@ var CLIENT_INTAKE_FIELDS = [
   { key: 'weightBand', label: 'Peso', type: 'select', required: true, options: ['45-49 kg', '50-54 kg', '55-59 kg', '60-64 kg', '65-69 kg', '70-74 kg', '75-79 kg', '80-84 kg', '85-89 kg', '90-94 kg', '95-99 kg', '100-109 kg', '110-119 kg', '120-129 kg', '130-139 kg', '140+ kg'] },
   { key: 'trainingAge', label: 'Anzianità di allenamento', type: 'select', required: true, options: ['Mai allenato', 'Meno di 6 mesi', '6-12 mesi', '1-2 anni', '2-5 anni', 'Più di 5 anni'] },
   { key: 'level', label: 'Livello', type: 'select', required: true, options: ['Principiante', 'Intermedio', 'Avanzato', 'Agonista'] },
-  { key: 'goal', label: 'Obiettivo', type: 'select', required: true, options: ['Ipertrofia', 'Forza', 'Dimagrimento', 'Ricomposizione', 'Performance sportiva', 'Salute e postura', 'Preparazione gara'] },
+  { key: 'goal', label: 'Obiettivo', type: 'select', required: true, options: ['Ipertrofia', 'Forza', 'Dimagrimento', 'Ricomposizione', 'Performance sportiva', 'Salute e postura', 'Preparazione gara', 'HYROX'] },
   { key: 'sessionsPerWeek', label: 'Sessioni a settimana', type: 'select', required: true, options: ['2', '3', '4', '5', '6 o più'] },
   { key: 'sessionMinutes', label: 'Tempo a sessione', type: 'select', required: true, options: ['30 minuti', '45 minuti', '60 minuti', '75 minuti', '90 minuti o più'] },
   { key: 'equipment', label: 'Attrezzatura', type: 'select', required: true, options: ['Palestra completa', 'Pesi liberi + panca', 'Solo macchine', 'Casa (manubri/bande)', 'Corpo libero'] },
@@ -1058,7 +1058,7 @@ async function sendOutboxItem(it) {
   if (it.type === 'request-program') {
     return practiceFetch('/api/client/request-program', {
       method: 'POST', headers: practiceHeaders(true),
-      body: JSON.stringify({ note: it.note || '', operationId: operationId })
+      body: JSON.stringify({ note: it.note || '', hyrox: it.hyrox || null, operationId: operationId })
     });
   }
   if (it.type === 'ask-coach') {
@@ -1270,7 +1270,14 @@ function coachEventLabel(kind, name, payload) {
   if (kind === 'leave_request') return { title: 'Fine collaborazione', body: n + ' ha chiesto di chiudere', view: 'coachClient' };
   if (kind === 'change_request') return { title: 'Modifica da approvare', body: n + ' vuole cambiare il programma', view: 'coachClient' };
   if (kind === 'change_notice') return { title: 'Atleta ha modificato', body: n + ' ha cambiato il programma', view: 'coachClient' };
-  if (kind === 'request_program') return { title: 'Richiesta scheda', body: n + ' chiede la scheda', view: 'coachClient' };
+  if (kind === 'request_program') {
+    // A race preparation asked for by name: the coach reads which race.
+    if (p.hyrox && typeof p.hyrox === 'object') {
+      return { title: 'Richiesta HYROX', body: n + ' chiede la preparazione HYROX' + (p.hyrox.raceName ? ' · ' + String(p.hyrox.raceName).slice(0, 80) : ''), view: 'coachClient' };
+    }
+    const reqNote = String(p.note || '').trim();
+    return { title: 'Richiesta scheda', body: n + ' chiede la scheda' + (reqNote ? ': ' + reqNote.slice(0, 240) : ''), view: 'coachClient' };
+  }
   if (kind === 'intake_update_pending') return { title: 'Anagrafica da approvare', body: n + ' ha aggiornato i suoi dati', view: 'coachClient' };
   if (kind === 'intake_completed') return { title: 'Questionario ricevuto', body: n + ' ha compilato l’anagrafica', view: 'coachClient' };
   if (kind === 'unlock_approved') return { title: 'Sblocco approvato', body: 'Hai approvato una richiesta di ' + n, view: 'coachClient' };
@@ -2952,6 +2959,7 @@ function athleteHomeModulesHtml() {
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'exams\')"><span style="font-size:18px;">🧪</span><span style="font-size:11px;font-weight:800;">Esami</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="startDomainImport(\'nutrition\')"><span style="font-size:18px;">📥</span><span style="font-size:11px;font-weight:800;">Importa file</span></button>' +
     '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'calendar\')"><span style="font-size:18px;">📅</span><span style="font-size:11px;font-weight:800;">Calendario</span></button>' +
+    '<button class="btn btn-outline" style="height:65px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="navigate(\'hyrox\')"><span style="font-size:18px;">🏁</span><span style="font-size:11px;font-weight:800;">HYROX</span></button>' +
     '</div></div>';
 }
 
@@ -2984,9 +2992,32 @@ async function reloadClientHome() {
   }
 }
 
-async function requestProgramFromCoach() {
+// "Chiedi la scheda": which one. A race preparation is asked for from the
+// HYROX screen, where the race is chosen, so the coach knows what to write.
+function requestProgramFromCoach(extra) {
+  if (extra && typeof extra === 'object') return sendProgramRequest(extra);
+  const hasHyrox = typeof window !== 'undefined' && !!window.NurvanHyrox;
+  if (!hasHyrox) return sendProgramRequest({});
+  openCpModal(
+    '<h2>Che scheda ti serve?</h2>' +
+    '<p class="cp-help">Il coach riceve la richiesta e ti assegna la scheda.</p>' +
+    '<textarea id="cp-reqprog-note" rows="2" maxlength="400" placeholder="Messaggio per il coach (facoltativo)" style="width:100%;margin-bottom:10px;padding:10px;background:#141414;border:1px solid #333;color:#fff;border-radius:8px;box-sizing:border-box;"></textarea>' +
+    '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="confirmProgramRequest()">SCHEDA DI ALLENAMENTO</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="closeCpModal();navigate(\'hyrox\')">PREPARAZIONE HYROX</button>' +
+    '<button class="btn btn-outline" style="width:100%;" onclick="closeCpModal()">ANNULLA</button>'
+  );
+}
+function confirmProgramRequest() {
+  const el = document.getElementById('cp-reqprog-note');
+  const note = el ? String(el.value || '').trim() : '';
+  closeCpModal();
+  return sendProgramRequest({ note: note });
+}
+window.confirmProgramRequest = confirmProgramRequest;
+
+async function sendProgramRequest(extra) {
   try {
-    enqueueClientOutbox({ type: 'request-program' });
+    enqueueClientOutbox(Object.assign({ type: 'request-program' }, extra || {}));
     const result = await flushClientOutbox();
     if (result && result.remaining > 0) {
       practiceToast('Richiesta salvata: partirà quando sei online.', 'warning');
@@ -3860,7 +3891,9 @@ async function renderCoachWorkspace(c) {
           (it.when ? '<small>' + esc(it.when) + '</small>' : '') + '</button>';
       }).join('');
       window.__cpClientSheetNotifies = clientNotifyItems;
+      window.__cpHyroxRequest = latestHyroxRequest(ev.events || [], id);
     } catch (_) {}
+    const hyroxReqHtml = clientHyroxCardHtml(id, cl.displayName || '', intake);
     if (!store.__cpWsCollapse || typeof store.__cpWsCollapse !== 'object') {
       store.__cpWsCollapse = { intake: false, events: false };
     }
@@ -3934,6 +3967,7 @@ async function renderCoachWorkspace(c) {
           '<button class="btn btn-primary" style="width:100%;margin-top:6px;" onclick="approveUnlockRequest(\'' + esc(id) + '\',\'' + esc(feat) + '\')">APPROVA SBLOCCO</button>' +
           '<button class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="rejectUnlockRequest(\'' + esc(id) + '\',\'' + esc(feat) + '\')">NEGA (con messaggio)</button></div>';
       })() : '') +
+      hyroxReqHtml +
       '<div class="card" style="padding:12px;margin-bottom:12px;"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;">Programma cliente</div>' +
       '<div style="font-size:12px;color:#ccc;">' + esc(prog.title || 'Nessuna scheda assegnata') + (weeks ? ' · ' + weeks + ' settimane' : '') + '</div>' +
       '<div style="font-size:11px;color:#aaa;margin-top:8px;">Scade: <b style="color:#fff;">' + esc(fmtDay(cl.programExpiresAt)) + '</b> · Prossimo check: <b style="color:#fff;">' + esc(fmtDay(cl.nextCheckAt)) + '</b></div>' +
@@ -4383,18 +4417,90 @@ function collapseAssignBannerForOverlay() {
   }
 }
 
+// The last race preparation the client asked for that no program has
+// answered yet: { clientId, hyrox, at } or null.
+function latestHyroxRequest(events, clientId) {
+  let req = null;
+  let assignedId = 0;
+  (events || []).forEach(function (e) {
+    if (!e) return;
+    const eid = Number(e.id || 0);
+    if (e.kind === 'program_assigned') { assignedId = Math.max(assignedId, eid); return; }
+    if (e.kind !== 'request_program') return;
+    const p = parseCoachEventPayload(e.payload);
+    if (!p.hyrox || typeof p.hyrox !== 'object') return;
+    if (!req || eid > req.id) req = { id: eid, clientId: String(clientId), hyrox: p.hyrox, at: e.created_at || '' };
+  });
+  return (req && req.id > assignedId) ? req : null;
+}
+function hyroxRequestFor(clientId) {
+  const req = (typeof window !== 'undefined') ? window.__cpHyroxRequest : null;
+  return (req && String(req.clientId) === String(clientId)) ? req.hyrox : null;
+}
+function clientWantsHyrox(clientId, intake) {
+  if (hyroxRequestFor(clientId)) return true;
+  const ws = store.coachWorkspace || {};
+  const data = intake || (String(ws.clientId || '') === String(clientId) ? ws.intake : null) || {};
+  return /hyrox/i.test(String(data.goal || ''));
+}
+// What the client asked for, in words the coach reads at a glance.
+function hyroxRequestSummary(hx) {
+  const api = (typeof window !== 'undefined' && window.NurvanHyrox) || null;
+  const bits = [];
+  if (hx.raceName) bits.push(String(hx.raceName) + (hx.raceDate ? ' · ' + fmtDay(hx.raceDate) : ''));
+  if (api) {
+    const div = api.DIVISIONS.filter(function (d) { return d.id === hx.division; })[0];
+    const lev = api.LEVELS.filter(function (l) { return l.id === hx.level; })[0];
+    if (div) bits.push(div.label);
+    if (lev) bits.push(lev.label);
+  }
+  if (hx.days) bits.push(hx.days + ' giorni');
+  return bits;
+}
+function clientHyroxCardHtml(clientId, name, intake) {
+  if (typeof window === 'undefined' || !window.NurvanHyrox) return '';
+  const hx = hyroxRequestFor(clientId);
+  if (!hx && !clientWantsHyrox(clientId, intake)) return '';
+  const rows = hx ? hyroxRequestSummary(hx) : [];
+  return '<div class="card" style="padding:12px;margin-bottom:12px;border-color:var(--gold);">' +
+    '<div style="font-weight:900;color:var(--gold);">' + (hx ? 'Richiesta: preparazione HYROX' : 'Obiettivo del cliente: HYROX') + '</div>' +
+    (rows.length ? rows.map(function (t) { return '<div style="font-size:12px;color:#ddd;margin-top:4px;">' + esc(t) + '</div>'; }).join('')
+      : '<p class="cp-help" style="margin:6px 0 0;">Scegli la gara e scrivi la preparazione: diventa la bozza del cliente.</p>') +
+    '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'hyrox\')">SCRIVI LA PREPARAZIONE HYROX</button></div>';
+}
+// The answers the HYROX screen starts from, when the client has given them.
+function prefillHyroxFromRequest(clientId) {
+  const hx = hyroxRequestFor(clientId);
+  const api = (typeof window !== 'undefined' && window.NurvanHyrox) || null;
+  if (!hx || !api) return;
+  // The coach's own answers come back when the client's draft is closed.
+  if (!window.__cpHyroxOwn) window.__cpHyroxOwn = JSON.parse(JSON.stringify(store.hyrox || {}));
+  const h = (store.hyrox && typeof store.hyrox === 'object') ? store.hyrox : (store.hyrox = {});
+  h.raceId = String(hx.raceId || '');
+  if (api.DIVISIONS.some(function (d) { return d.id === hx.division; })) h.division = hx.division;
+  if (api.LEVELS.some(function (l) { return l.id === hx.level; })) h.level = hx.level;
+  if (api.DAYS.indexOf(Number(hx.days)) !== -1) h.days = Number(hx.days);
+  if (Number(hx.weeks) >= 4) h.weeks = Number(hx.weeks);
+  if (Array.isArray(hx.gear)) h.gear = api.GEAR.map(function (g) { return g.id; }).filter(function (g) { return hx.gear.indexOf(g) !== -1; });
+}
+
 function openAssignChooser(clientId, name) {
   ensurePracticeStyle();
   ensurePracticeOverlays();
   const p = document.getElementById('cp-assign-panel');
   if (!p) return;
+  const hyroxFirst = clientWantsHyrox(clientId);
+  const hyroxBtn = function (cls) {
+    return '<button class="btn ' + cls + '" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'hyrox\')">PREPARAZIONE HYROX</button>';
+  };
   p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">ASSEGNA SCHEDA</div>' +
     '<h2>Cosa vuoi assegnare a ' + esc(name || 'cliente') + '?</h2>' +
     '<p class="cp-help">Si apre uno <b style="color:#fff;">spazio cliente separato</b> dal tuo allenamento. Importa o scegli, modifica, poi INVIA. Solo «usa scheda attiva» parte dalla tua come base.</p>' +
-    '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'import\')">IMPORTA PDF / EXCEL / WORD</button>' +
+    (hyroxFirst ? '<p class="cp-help" style="color:var(--gold);">Il cliente ha chiesto una preparazione HYROX.</p>' + hyroxBtn('btn-primary') : '') +
+    '<button class="btn ' + (hyroxFirst ? 'btn-outline' : 'btn-primary') + '" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'import\')">IMPORTA PDF / EXCEL / WORD</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'build\')">SCRIVI UNA SCHEDA DA ZERO</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'generate\')">GENERA UNA SCHEDA</button>' +
-    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="showOverlay(\'cp-assign\', false);beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'hyrox\')">PREPARAZIONE HYROX</button>' +
+    (hyroxFirst ? '' : hyroxBtn('btn-outline')) +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'mylib\')">DAL MIO DATABASE</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'programs\')">DATABASE PROGRAMMI (NURVAN)</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="beginAssignSandbox(\'' + esc(clientId) + '\',\'' + esc(name || '') + '\',\'copy\')">USA SCHEDA ATTIVA COME BASE</button>' +
@@ -4447,7 +4553,8 @@ function beginAssignSandbox(clientId, name, mode) {
   } else if (mode === 'hyrox') {
     // The race preparation, written for this client: gara, livello and
     // attrezzatura are the client's, the draft is then edited and sent like
-    // any other.
+    // any other. What the client asked for is already filled in.
+    try { prefillHyroxFromRequest(clientId); } catch (_) {}
     navigate('hyrox');
     practiceToast('Spazio cliente: scegli la gara e l\'attrezzatura del cliente. La preparazione diventa la bozza da inviare.', 'success');
   } else if (mode === 'mylib') {
@@ -5845,7 +5952,10 @@ async function pollPracticeInbox() {
         else if (e.kind === 'leave_request') notifyUser('Fine collaborazione', (e.display_name || 'Atleta') + ' ha chiesto di chiudere', route);
         else if (e.kind === 'change_request') notifyUser('Modifica da approvare', (e.display_name || 'Atleta') + ' vuole cambiare il programma', route);
         else if (e.kind === 'change_notice') notifyUser('Atleta ha modificato', (e.display_name || 'Atleta') + ' ha cambiato il programma', route);
-        else if (e.kind === 'request_program') notifyUser('Richiesta scheda', (e.display_name || 'Atleta') + ' chiede la scheda', route);
+        else if (e.kind === 'request_program') {
+          const reqLab = coachEventLabel('request_program', e.display_name || 'Atleta', e.payload);
+          notifyUser(reqLab.title, reqLab.body, route);
+        }
         else if (e.kind === 'workout_started') notifyUser('In allenamento', (e.display_name || 'Atleta') + ' ha iniziato il workout', route);
         else if (e.kind === 'workout_done') notifyUser('Workout finito', (e.display_name || 'Atleta') + ' ha finalizzato', Object.assign({}, route, { view: 'workout_done' }));
       });

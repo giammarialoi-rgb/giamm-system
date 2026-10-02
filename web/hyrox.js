@@ -19,29 +19,31 @@
   'use strict';
 
   // The eight stations, in race order. `gear` is the equipment the station
-  // needs; `alt` what trains the same effort without it.
+  // needs; `alt` what trains the same effort without it; `top` the time the
+  // best 100 Pro athletes of season 2024/25 took on it (men, women), from the
+  // official results analysed in Rappelt et al. 2026.
   var STATIONS = [
-    { id: 'skierg', name: 'Ski erg', amount: '1000 m', gear: 'skierg', unit: 'cardio', minutes: 5,
+    { id: 'skierg', top: { m: '3:48', w: '4:23' }, name: 'Ski erg', amount: '1000 m', gear: 'skierg', unit: 'cardio', minutes: 5,
       cue: 'Braccia lunghe, spinta dalle anche: il lavoro lo fanno busto e dorsali, non le spalle. Ritmo costante, niente partenza a razzo.',
       alt: { name: 'Slam ball', unit: 'reps', reps: '20', note: 'Al posto dello ski erg: stessa catena, anche e dorsali.' } },
-    { id: 'sled_push', name: 'Sled push', amount: '50 m', gear: 'sled', unit: 'cardio', minutes: 3,
+    { id: 'sled_push', top: { m: '2:26', w: '2:47' }, name: 'Sled push', amount: '50 m', gear: 'sled', unit: 'cardio', minutes: 3,
       cue: 'Braccia tese o gomiti vicini al busto, schiena piatta, passi corti e continui. Fermarsi costa più che rallentare.',
       alt: { name: 'Affondi camminati', unit: 'reps', reps: '20', note: 'Al posto della slitta: carico pesante, passi corti, busto inclinato in avanti.' } },
-    { id: 'sled_pull', name: 'Sled pull', amount: '50 m', gear: 'sled', unit: 'cardio', minutes: 3,
+    { id: 'sled_pull', top: { m: '3:27', w: '3:58' }, name: 'Sled pull', amount: '50 m', gear: 'sled', unit: 'cardio', minutes: 3,
       cue: 'Siediti indietro sulle anche e tira a braccia alternate camminando all’indietro nella corsia. Corda sempre ordinata accanto a te.',
       alt: { name: 'Rematore manubrio', unit: 'reps', reps: '15', note: 'Al posto della slitta: tirate pesanti e veloci, poco recupero.' } },
-    { id: 'burpee_broad_jump', name: 'Burpee broad jump', amount: '80 m', gear: null, unit: 'reps', reps: '10',
+    { id: 'burpee_broad_jump', top: { m: '2:44', w: '3:27' }, name: 'Burpee broad jump', amount: '80 m', gear: null, unit: 'reps', reps: '10',
       cue: 'Petto a terra, piedi vicino alle mani, salto in lungo. Salti regolari e respirazione prima della distanza: è la stazione che alza di più i battiti.' },
-    { id: 'row', name: 'Vogatore', amount: '1000 m', gear: 'rower', unit: 'cardio', minutes: 5,
+    { id: 'row', top: { m: '3:56', w: '4:30' }, name: 'Vogatore', amount: '1000 m', gear: 'rower', unit: 'cardio', minutes: 5,
       cue: 'Gambe, busto, braccia; ritorno al contrario. Colpi lunghi a ritmo basso: qui si recuperano le gambe per i carry.',
       alt: { name: 'Air bike', unit: 'cardio', minutes: 5, note: 'Al posto del vogatore: stesso tempo, sforzo costante.' } },
-    { id: 'farmers_carry', name: 'Farmer walk', amount: '200 m', gear: 'kettlebells', unit: 'time', seconds: 60,
+    { id: 'farmers_carry', top: { m: '1:25', w: '1:44' }, name: 'Farmer walk', amount: '200 m', gear: 'kettlebells', unit: 'time', seconds: 60,
       cue: 'Spalle basse, presa piena, passi rapidi. Appoggia solo se la presa sta per cedere: ogni appoggio sono secondi persi.',
       alt: { name: 'Farmer walk', unit: 'time', seconds: 60, note: 'Con manubri o un bilanciere per mano: conta la presa, non l’attrezzo.' } },
-    { id: 'sandbag_lunges', name: 'Affondi camminati con sandbag', amount: '100 m', gear: 'sandbag', unit: 'reps', reps: '20',
+    { id: 'sandbag_lunges', top: { m: '3:07', w: '3:26' }, name: 'Affondi camminati con sandbag', amount: '100 m', gear: 'sandbag', unit: 'reps', reps: '20',
       cue: 'Sandbag sulle spalle, ginocchio dietro che tocca terra a ogni passo, busto alto. Passi lunghi: meno ripetizioni per la stessa distanza.',
       alt: { name: 'Affondi camminati', unit: 'reps', reps: '20', note: 'Con manubri o bilanciere sulle spalle al posto del sandbag.' } },
-    { id: 'wall_balls', name: 'Wall ball', amount: '100 rip', gear: 'wallball', unit: 'reps', reps: '25',
+    { id: 'wall_balls', top: { m: '3:55', w: '3:59' }, name: 'Wall ball', amount: '100 rip', gear: 'wallball', unit: 'reps', reps: '25',
       cue: 'Squat completo sotto il parallelo, palla al bersaglio. Blocchi decisi prima di partire (es. 25-25-25-25) con pause brevi e contate.',
       alt: { name: 'Thruster', unit: 'reps', reps: '20', note: 'Al posto dei wall ball: carico leggero, squat completo, spinta sopra la testa.' } }
   ];
@@ -215,9 +217,13 @@
     return { name: 'Motore', title: 'Motore', exercises: rows };
   }
 
+  // The taper that pays most lasts about two weeks (Bosquet et al. 2007): a
+  // preparation of ten weeks or more gives it two, a shorter one keeps one.
+  function taperWeeks(weeks) { return weeks >= 10 ? 2 : 1; }
   function phaseOf(week, weeks) {
-    if (week === weeks) return 'taper';
-    var left = weeks - 1;
+    var taper = taperWeeks(weeks);
+    if (week > weeks - taper) return 'taper';
+    var left = weeks - taper;
     var base = Math.max(1, Math.round(left * 0.4));
     var build = Math.max(1, Math.round(left * 0.35));
     if (week <= base) return 'base';
@@ -233,7 +239,9 @@
     // The three that every week has: strength, running, and the two together.
     out.push(sessionStrength('A', phase, k));
     out.push(sessionIntervals(phase, k, week));
-    if (phase === 'peak' && week % 2 === 0) out.push(sessionSimulation(week === weeks - 1 || opts.level.id !== 'beginner', opts));
+    // A first race gets one full simulation, in the last week of the peak;
+    // the others one every second week of it.
+    if (phase === 'peak' && (week % 2 === 0 || phaseOf(week + 1, weeks) === 'taper')) out.push(sessionSimulation(phaseOf(week + 1, weeks) === 'taper' || opts.level.id !== 'beginner', opts));
     else if (phase === 'taper') out.push(sessionCompromised(phase, opts, k, week));
     else out.push(week % 2 ? sessionStations((week >> 1) % 2, phase, opts, k) : sessionCompromised(phase, opts, k, week));
     if (opts.days >= 4) out.push(sessionRunEasy(phase, k, week));
@@ -298,7 +306,7 @@
       source: 'hyrox_v1',
       race: { name: r.raceName, date: r.raceDate, division: r.division.id },
       source_summary: 'Preparazione HYROX · ' + r.division.label + ' · ' + r.days + ' giorni a settimana' + (missing.length ? ' · senza: ' + missing.join(', ') : ''),
-      meta: { generatedAt: new Date().toISOString(), method: 'hyrox_phases', missing_gear: missing }
+      meta: { generatedAt: new Date().toISOString(), method: 'hyrox_phases', missing_gear: missing, evidence: EVIDENCE.map(function (e) { return e.url; }).filter(function (u, i, a) { return a.indexOf(u) === i; }) }
     };
   }
 
@@ -333,6 +341,57 @@
     return { low: Math.round(total * 0.95), high: Math.round(total * 1.08) };
   }
 
+  /* ---------------------------- evidence ---------------------------- */
+
+  // Why the preparation is laid out this way: what was measured on people
+  // who raced, and what the plan does about it. Every line has its study;
+  // numbers are the ones the papers report, not rounded to look better.
+  var EVIDENCE = [
+    { id: 'running',
+      fact: 'La corsa vale circa metà del tempo di gara: nei migliori 100 Pro della stagione 2024/25, 27:38 su 56:56 per gli uomini e 30:17 su 1:03:11 per le donne.',
+      plan: 'Ogni settimana ha almeno tante sedute di corsa quante di forza, e la corsa cresce per prima quando aggiungi giorni.',
+      source: 'Rappelt et al., Frontiers in Physiology 2026 · 39.696 risultati di gara',
+      url: 'https://doi.org/10.3389/fphys.2026.1847569' },
+    { id: 'vo2max',
+      fact: 'Chi ha un VO2max più alto e fa più ore di resistenza a settimana finisce prima: le correlazioni con il tempo finale sono −0,71 e −0,68. Forza della presa e ore di pesi non lo spostano.',
+      plan: 'Intervalli a passo gara e corsa facile sono la base; la forza resta in ogni settimana ma non prende il loro posto.',
+      source: 'Brandt et al., Frontiers in Physiology 2025 · 11 amatori, gara simulata',
+      url: 'https://doi.org/10.3389/fphys.2025.1519240' },
+    { id: 'intensity',
+      fact: 'In gara si passa circa l’80% del tempo tra il 90 e il 100% della frequenza cardiaca massima; battiti, lattato e fatica toccano il picco ai wall ball, l’ultima stazione.',
+      plan: 'Le sedute “Corsa + stazioni” e le simulazioni abituano a quell’intensità, e i wall ball si allenano da stanchi, a fine seduta.',
+      source: 'Brandt et al., Frontiers in Physiology 2025',
+      url: 'https://doi.org/10.3389/fphys.2025.1519240' },
+    { id: 'fade',
+      fact: 'La velocità di corsa cala dal primo all’ultimo chilometro: da 16,1 a 13,6 km/h in 24 atleti Pro misurati in gara.',
+      plan: 'Si corre subito dopo ogni stazione, a gambe stanche: è il chilometro che la gara chiede davvero.',
+      source: 'Gutiérrez-Hellín et al., Int J Sports Physiol Perform 2026',
+      url: 'https://doi.org/10.1123/ijspp.2026-0098' },
+    { id: 'stations',
+      fact: 'Le stazioni di forza costano in proporzione più tempo a chi è più lento, e la slitta da spingere è quella che rimescola di più la classifica.',
+      plan: 'Le stazioni si provano dalla prima settimana con i carichi della tua categoria, prima a pezzi e poi alla distanza di gara.',
+      source: 'Rappelt et al., Frontiers in Physiology 2026',
+      url: 'https://doi.org/10.3389/fphys.2026.1847569' },
+    { id: 'economy',
+      fact: 'Allenare la forza due o tre volte a settimana migliora l’economia di corsa dal 2 all’8%, senza peggiorare il VO2max.',
+      plan: 'Squat, stacchi e affondi restano in programma fino allo scarico, in sedute separate dalla corsa dura.',
+      source: 'Blagrove et al., Sports Medicine 2018 · 24 studi',
+      url: 'https://doi.org/10.1007/s40279-017-0835-7' },
+    { id: 'taper',
+      fact: 'Lo scarico che rende di più dura circa due settimane e taglia il volume del 41–60% lasciando invariata l’intensità.',
+      plan: 'Le ultime settimane riducono serie e minuti ma tengono il passo gara.',
+      source: 'Bosquet et al., Med Sci Sports Exerc 2007 · 27 studi',
+      url: 'https://doi.org/10.1249/mss.0b013e31806010e0' },
+    { id: 'injury',
+      fact: 'In 12 settimane di preparazione gli infortuni sono stati 14,4 ogni 1.000 ore, per il 73% da sovraccarico, soprattutto a ginocchio e gamba.',
+      plan: 'I minuti di corsa salgono poco per volta e una parte del lavoro aerobico si fa su vogatore e ski erg.',
+      source: 'Chittenden et al., Frontiers in Sports and Active Living 2026 · 89 atleti',
+      url: 'https://doi.org/10.3389/fspor.2026.1937574' }
+  ];
+
+  // "HYROX" written as a goal, in an intake, a profile or a request.
+  function wantsHyrox(text) { return /hyrox/i.test(String(text == null ? '' : text)); }
+
   root.NurvanHyrox = {
     STATIONS: STATIONS,
     DIVISIONS: DIVISIONS,
@@ -341,6 +400,9 @@
     DAYS: DAYS,
     WEEKS: WEEKS,
     PHASE_LABELS: PHASE_LABELS,
+    EVIDENCE: EVIDENCE,
+    wantsHyrox: wantsHyrox,
+    taperWeeks: taperWeeks,
     DISCLAIMER: 'HYROX® è un marchio registrato del suo titolare. Nurvan non è affiliata né sponsorizzata da HYROX: questo è materiale di allenamento indipendente.',
     resolve: resolve,
     plan: plan,

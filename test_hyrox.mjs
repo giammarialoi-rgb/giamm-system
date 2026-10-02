@@ -69,11 +69,55 @@ const html = fs.readFileSync('web/index.base.html', 'utf8');
 ok('7a. la schermata è nell’app e si apre dalla Home', /currentView === 'hyrox'\) renderHyrox\(c\)/.test(html) && /navigate\(\\'hyrox\\'\)/.test(html) && /<script src="hyrox\.js"><\/script>/.test(html));
 ok('7b. la scheda passa dall’anteprima prima di essere attivata; per un cliente diventa la sua bozza', /openGeneratedReview\(prog, hyroxForClient\(\) \? 'assign' : 'active', null\)/.test(html));
 const coachUi = fs.readFileSync('web/coach-practice-ui.js', 'utf8');
-ok('7b2. il coach la assegna dal menu di assegnazione del cliente', (coachUi.match(/\\'hyrox\\'\)">PREPARAZIONE HYROX/g) || []).length === 2 && /mode === 'hyrox'/.test(coachUi) && /navigate\('hyrox'\)/.test(coachUi));
+ok('7b2. il coach la assegna dal menu di assegnazione del cliente', (coachUi.match(/,\\'hyrox\\'\)">PREPARAZIONE HYROX/g) || []).length === 2 && /mode === 'hyrox'/.test(coachUi) && /navigate\('hyrox'\)/.test(coachUi));
 const sync = fs.readFileSync('sync_web_assets.mjs', 'utf8');
 ok('7c. motore e calendario copiati nelle app', /'hyrox\.js'/.test(sync) && /'hyrox-events\.json'/.test(sync));
 const api = fs.readFileSync('coach-api.mjs', 'utf8');
 ok('7d. il sito ha il calendario e una pagina per gara', /mountHyrox\(app/.test(api) && /app\.get\(base \+ "\/hyrox\/:id", one\)/.test(fs.readFileSync('server/site/hyrox.mjs', 'utf8')));
+
+// 8. The evidence the preparation is built on.
+ok('8a. ogni dato ha il suo studio (testo, cosa fa il piano, fonte, DOI)', H.EVIDENCE.length >= 6 && H.EVIDENCE.every((e) => e.fact && e.plan && e.source && /^https:\/\/doi\.org\/10\./.test(e.url)));
+ok('8b. i numeri sono quelli degli studi (corsa 27:38 su 56:56, correlazione −0,71, scarico 41–60%)', /27:38 su 56:56/.test(H.EVIDENCE[0].fact) && H.EVIDENCE.some((e) => /−0,71/.test(e.fact)) && H.EVIDENCE.some((e) => /41–60%/.test(e.fact)));
+ok('8c. ogni stazione ha il tempo dei migliori 100 Pro', H.STATIONS.every((s) => s.top && /^\d:\d\d$/.test(s.top.m) && /^\d:\d\d$/.test(s.top.w)));
+ok('8d. scarico di due settimane da 10 settimane in su, una sotto', p.weeks[10].phase === 'taper' && p.weeks[9].phase === 'peak' && H.plan({ weeks: 8, days: 4, gear: all }).weeks.filter((w) => w.phase === 'taper').length === 1);
+ok('8e. le sedute di corsa non sono mai meno di quelle di sola forza', [3, 4, 5, 6].every((d) => {
+  const s = H.plan({ weeks: 12, days: d, gear: all }).weeks[0].sessions.map((x) => x.name);
+  return s.filter((n) => /^Corsa/.test(n)).length >= s.filter((n) => /^Forza/.test(n)).length;
+}));
+ok('8f. anche alla prima gara c’è una simulazione completa prima dello scarico', H.plan({ weeks: 12, days: 3, level: 'beginner', gear: all }).weeks.some((w) => w.phase === 'peak' && w.sessions.some((s) => s.name === 'Simulazione di gara')));
+ok('8g. la scheda porta con sé le fonti', p.meta.evidence.length >= 5 && p.meta.evidence.every((u) => /doi\.org/.test(u)));
+
+// 9. HYROX as a goal: in the generator, in the profile, in what a client asks for.
+ok('9a. riconosce l’obiettivo scritto a mano', H.wantsHyrox('Preparare una Hyrox a Milano') && H.wantsHyrox('HYROX') && !H.wantsHyrox('Ipertrofia') && !H.wantsHyrox(null));
+ok('9b. il generatore di schede ha l’obiettivo HYROX e scrive la preparazione', /items\.push\(\{ id: 'hyrox', label: 'HYROX · preparazione gara' \}\)/.test(html) && /if \(generatorIsHyrox\(g\)\) \{ renderGeneratorHyroxSheet\(g, api, sheet, inputStyle\); return; \}/.test(html) && /race = hx\.plan\(input\);/.test(html));
+ok('9c. le domande sono le stesse nella schermata HYROX e nel generatore', (html.match(/hyroxFieldsHtml\(\)/g) || []).length >= 3);
+ok('9d. profilo con obiettivo HYROX: si apre la preparazione', /wantsHyrox\(profile\.goal\)/.test(html));
+ok('9e. un atleta seguito non la scrive: la chiede al coach', /if \(hyroxMustAsk\(\)\) \{ hyroxRequestCoach\(\); return; \}/.test(html) && /CHIEDI AL COACH QUESTA PREPARAZIONE/.test(html));
+ok('9f. il questionario del cliente ha l’obiettivo HYROX', /'Preparazione gara', 'HYROX'\]/.test(coachUi));
+ok('9g. il Coach AI conosce la sezione e i dati', /HYROX_KNOWLEDGE/.test(api) && (api.match(/\$\{HYROX_KNOWLEDGE\}/g) || []).length === 2);
+const practice = fs.readFileSync('coach-practice.mjs', 'utf8');
+ok('9h. la richiesta arriva al coach con gara, categoria e giorni', /payload\.hyrox = \{/.test(practice) && /hyrox: it\.hyrox \|\| null/.test(coachUi));
+
+// The coach's side of a request, run for real.
+const from = coachUi.indexOf('function latestHyroxRequest');
+const to = coachUi.indexOf('function openAssignChooser');
+const labelFrom = coachUi.indexOf('function parseCoachEventPayload');
+const labelTo = coachUi.indexOf('function coachEventNotifyRoute') > labelFrom ? coachUi.indexOf('function coachEventNotifyRoute') : coachUi.indexOf('\nfunction ', coachUi.indexOf('function coachEventLabel') + 10);
+const cctx = { store: { coachWorkspace: {}, hyrox: {} }, esc: (s) => String(s), fmtDay: (s) => String(s), eventNotifyCopy: () => null, JSON };
+cctx.window = cctx;
+cctx.NurvanHyrox = H;
+vm.createContext(cctx);
+vm.runInContext(coachUi.slice(labelFrom, labelTo) + '\n' + coachUi.slice(from, to) + '\nthis.api = { latestHyroxRequest, hyroxRequestFor, clientWantsHyrox, clientHyroxCardHtml, prefillHyroxFromRequest, coachEventLabel };', cctx);
+const hxReq = { raceId: 'milano', raceName: 'Milano', raceDate: '2026-12-04', division: 'open_w', level: 'beginner', days: 3, weeks: 9, gear: ['rower'] };
+const events = [{ id: 3, kind: 'program_assigned' }, { id: 5, kind: 'request_program', payload: JSON.stringify({ hyrox: hxReq }) }];
+ok('9i. la richiesta più recente senza risposta è quella che il coach vede', cctx.api.latestHyroxRequest(events, '7').hyrox.raceName === 'Milano');
+ok('9j. una scheda assegnata dopo la richiesta la chiude', cctx.api.latestHyroxRequest(events.concat([{ id: 9, kind: 'program_assigned' }]), '7') === null);
+ok('9k. la notifica dice quale gara; una richiesta normale porta il messaggio', /HYROX · Milano/.test(cctx.api.coachEventLabel('request_program', 'Anna', { hyrox: hxReq }).body) && /chiede la scheda: 4 giorni/.test(cctx.api.coachEventLabel('request_program', 'Anna', { note: '4 giorni' }).body));
+cctx.__cpHyroxRequest = cctx.api.latestHyroxRequest(events, '7');
+ok('9l. la scheda del cliente mostra la richiesta e il pulsante per scriverla', /Richiesta: preparazione HYROX/.test(cctx.api.clientHyroxCardHtml('7', 'Anna', {})) && /Open donne/.test(cctx.api.clientHyroxCardHtml('7', 'Anna', {})) && cctx.api.clientHyroxCardHtml('8', 'Altro', {}) === '');
+ok('9m. anche il solo obiettivo HYROX del questionario la propone', /Obiettivo del cliente: HYROX/.test(cctx.api.clientHyroxCardHtml('8', 'Altro', { goal: 'HYROX' })));
+cctx.api.prefillHyroxFromRequest('7');
+ok('9n. le risposte del cliente sono già compilate quando il coach apre la preparazione', cctx.store.hyrox.raceId === 'milano' && cctx.store.hyrox.division === 'open_w' && cctx.store.hyrox.days === 3 && cctx.store.hyrox.gear.join() === 'rower');
 
 console.log('');
 if (failed) { console.log(failed + ' controlli HYROX falliti.'); process.exit(1); }

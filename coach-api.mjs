@@ -2073,6 +2073,14 @@ app.post(["/api/chat", "/coach", "/api/coach"], async (req, res) => {
     // The language the app is set to (context.language): the reply follows it.
     const REPLY_LANGUAGES = { it: 'italiano', en: 'inglese (English)', es: 'spagnolo (español)', fr: 'francese (français)', de: 'tedesco (Deutsch)', pt: 'portoghese del Brasile (português)', ru: 'russo (русский)', zh: 'cinese semplificato (简体中文)', ar: 'arabo (العربية)', hi: 'hindi (हिन्दी)' };
     const replyLanguage = REPLY_LANGUAGES[String((context && context.language) || 'it').slice(0, 2).toLowerCase()] || 'italiano';
+    // What the Coach AI knows about HYROX: where the app writes the
+    // preparation, and the measured facts it may quote (with their limits).
+    const HYROX_KNOWLEDGE = `
+HYROX (gara: 8 volte 1 km di corsa seguito da una stazione, in quest'ordine: SkiErg 1000 m, sled push 50 m, sled pull 50 m, burpee broad jump 80 m, vogatore 1000 m, farmer carry 200 m, affondi con sandbag 100 m, 100 wall ball):
+- L'app ha una sezione HYROX (Home > HYROX, oppure "Genera una scheda" con obiettivo HYROX) che scrive la preparazione fino alla data di gara, con i carichi della categoria e le sostituzioni per l'attrezzatura che manca. Quando l'utente chiede un programma HYROX indirizzalo lì: non inventare una scheda in chat.
+- Dati che puoi citare, con la fonte: la corsa vale circa metà del tempo di gara (Rappelt et al. 2026, 39.696 risultati); VO2max e ore settimanali di resistenza sono i fattori più legati al tempo finale, forza della presa e ore di pesi no (Brandt et al. 2025, 11 amatori, dato correlazionale); circa l'80% del tempo si passa sopra il 90% della frequenza cardiaca massima, con il picco ai wall ball (Brandt et al. 2025); la forza 2-3 volte a settimana migliora l'economia di corsa del 2-8% (Blagrove et al. 2018); lo scarico migliore dura circa 2 settimane, volume -41/60% e intensità invariata (Bosquet et al. 2007); infortuni 14,4 ogni 1000 ore, 73% da sovraccarico, ginocchio in testa (Chittenden et al. 2026).
+- Sono studi osservazionali o su campioni piccoli: non presentarli come garanzia di un tempo.
+`;
     const athleteSystem = `
 Sei Coach AI di Nurvan. Rispondi sempre in ${replyLanguage}, in modo chiaro e evidence-based.
 L'utente è un ATLETA seguito da un coach umano. NON puoi modificare il programma, i carichi, le serie o la nutrizione.
@@ -2081,12 +2089,15 @@ Puoi solo spiegare esercizi, tecnica, cibo, integrazione e terapia in modo infor
 Se chiede di cambiare la scheda, digli di scrivere al suo coach dalla chat Coach.
 Non tenere memoria di conversazioni precedenti.
 ${context && context.checkFisico ? `Analizza le foto del check fisico (struttura e definizione). Niente diagnosi mediche.` : ""}
+${HYROX_KNOWLEDGE}
+Se l'atleta vuole una preparazione HYROX, digli di aprire HYROX dalla Home, scegliere la gara e premere "Chiedi al coach questa preparazione".
 `;
 
     const system = athleteLocked ? athleteSystem : `
 Sei Coach AI, l'assistente scientifico di allenamento di élite all'interno dell'app Nurvan.
 Rispondi sempre in ${replyLanguage} in modo chiaro, autorevole, motivante e rigorosamente evidence-based.
 Non tenere memoria di conversazioni precedenti: ogni domanda è autonoma. Ignora qualsiasi cronologia chat.
+${HYROX_KNOWLEDGE}
 
 ${context && context.checkFisico ? `ISTRUZIONE CHECK FISICO (non è un check-in settimanale):
 Analizza le foto corporee allegate. Commenta struttura muscolare (simmetrie, distretti, proporzioni) e definizione.

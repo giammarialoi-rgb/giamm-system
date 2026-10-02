@@ -44,6 +44,10 @@ export function mountHyrox(app, { webDir, siteDir, shell }) {
   const everyLang = (tail) => Object.fromEntries(SITE_LANGS.map((l) => [l, langPrefix(l) + tail]));
   const note = '<p class="legal-note">HYROX® è un marchio registrato del suo titolare. Nurvan non è affiliata né sponsorizzata da HYROX: date, luoghi e iscrizioni vanno sempre verificati sulla pagina ufficiale della gara.</p>';
 
+  // What was measured on people who raced, each line with its study: the
+  // same evidence the app's preparation is laid out on (web/hyrox.js).
+  const evidence = '<h2>Cosa dicono i dati</h2><p>Numeri misurati su chi ha gareggiato: dicono dove si guadagna tempo, non garantiscono un risultato.</p><ul><li><span>La corsa vale circa metà del tempo di gara: nei migliori 100 Pro della stagione 2024/25, 27:38 su 56:56 per gli uomini e 30:17 su 1:03:11 per le donne.</span> <a href="https://doi.org/10.3389/fphys.2026.1847569" target="_blank" rel="noopener nofollow" data-notr>Rappelt et al., Front Physiol 2026</a><!--/notr--></li><li><span>Chi ha un VO2max più alto e fa più ore di resistenza a settimana finisce prima; forza della presa e ore di pesi non spostano il tempo finale.</span> <a href="https://doi.org/10.3389/fphys.2025.1519240" target="_blank" rel="noopener nofollow" data-notr>Brandt et al., Front Physiol 2025</a><!--/notr--></li><li><span>In gara si passa circa l’80% del tempo tra il 90 e il 100% della frequenza cardiaca massima, con il picco ai wall ball, l’ultima stazione.</span> <a href="https://doi.org/10.3389/fphys.2025.1519240" target="_blank" rel="noopener nofollow" data-notr>Brandt et al., Front Physiol 2025</a><!--/notr--></li><li><span>Allenare la forza due o tre volte a settimana migliora l’economia di corsa dal 2 all’8%.</span> <a href="https://doi.org/10.1007/s40279-017-0835-7" target="_blank" rel="noopener nofollow" data-notr>Blagrove et al., Sports Med 2018</a><!--/notr--></li><li><span>Lo scarico che rende di più dura circa due settimane e taglia il volume del 41–60% lasciando invariata l’intensità.</span> <a href="https://doi.org/10.1249/mss.0b013e31806010e0" target="_blank" rel="noopener nofollow" data-notr>Bosquet et al., Med Sci Sports Exerc 2007</a><!--/notr--></li></ul><p>La preparazione di Nurvan è scritta su questi dati: più corsa che sola forza, corsa a gambe stanche dopo ogni stazione, due settimane di scarico prima della gara.</p>';
+
   const raceCard = (ev, lang, dict) =>
     `<a class="race" href="${langPrefix(lang)}/hyrox/${esc(ev.id)}"><span data-notr><strong>${esc(ev.city)}</strong><small>${esc(ev.countryName)}</small></span><!--/notr-->` +
     `<span class="when" data-notr>${esc(ev.start ? dateText(ev, lang) : st(dict, "Data da annunciare"))}</span><!--/notr--></a>`;
@@ -60,6 +64,7 @@ export function mountHyrox(app, { webDir, siteDir, shell }) {
       group("Europa", all.filter((e) => regionOf(e) === "europe")) +
       group("Resto del mondo", all.filter((e) => regionOf(e) === "world")) +
       (all.length ? "" : '<p class="lead">Nessuna gara in calendario al momento.</p>') +
+      `<div class="prose">${evidence}</div>` +
       `<div class="post-cta"><strong>Prepara la tua gara con Nurvan.</strong><a class="btn primary" href="{{APP_URL}}">Apri l'app</a></div>` + note +
       "</div></section>";
     return send(req, res, { lang, alternates: everyLang("/hyrox"), title: "Calendario gare HYROX — Nurvan", description: "Le prossime gare HYROX in Italia, in Europa e nel mondo, con date e link ufficiali, e la preparazione su misura nell’app Nurvan.", main });
@@ -84,7 +89,8 @@ export function mountHyrox(app, { webDir, siteDir, shell }) {
       `<p>Il formato è lo stesso in ogni città: otto volte un chilometro di corsa, ogni volta seguito da una stazione, sempre nello stesso ordine.</p>` +
       `<ol><li>Ski erg, 1000 m</li><li>Sled push, 50 m</li><li>Sled pull, 50 m</li><li>Burpee broad jump, 80 m</li><li>Vogatore, 1000 m</li><li>Farmer carry, 200 m</li><li>Affondi con sandbag, 100 m</li><li>Wall ball, 100 ripetizioni</li></ol>` +
       `<h2>Quanto tempo serve per prepararla</h2>` +
-      `<p>Con una base di corsa e di pesi bastano 8 settimane; partendo da zero è meglio contarne 12-16. Le ultime sono le più importanti: simulazioni di gara e una settimana di scarico prima della partenza.</p>` +
+      `<p>Con una base di corsa e di pesi bastano 8 settimane; partendo da zero è meglio contarne 12-16. Le ultime sono le più importanti: simulazioni di gara e lo scarico prima della partenza.</p>` +
+      evidence +
       `<h2>Iscrizioni e orari</h2>` +
       `<p>Categorie, prezzi, orari di partenza e disponibilità dei posti sono sulla pagina ufficiale della gara.</p>` +
       `<p><a href="${esc(ev.url)}" target="_blank" rel="noopener nofollow">Pagina ufficiale della gara →</a></p>` +

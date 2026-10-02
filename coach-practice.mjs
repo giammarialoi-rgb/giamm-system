@@ -1547,9 +1547,26 @@ export function mountCoachPractice(app, deps) {
   app.post("/api/client/request-program", async (req, res) => {
     const ctx = await requireAthlete(req, res);
     if (!ctx) return;
+    const payload = { note: String(req.body?.note || "").slice(0, 500) };
+    // A race preparation asked for from the HYROX screen: which race, which
+    // category, how many days. Only these fields, each one cut to size.
+    const hx = req.body?.hyrox;
+    if (hx && typeof hx === "object") {
+      const text = (v, n) => String(v == null ? "" : v).slice(0, n);
+      payload.hyrox = {
+        raceId: text(hx.raceId, 80),
+        raceName: text(hx.raceName, 80),
+        raceDate: /^\d{4}-\d{2}-\d{2}$/.test(String(hx.raceDate || "")) ? String(hx.raceDate) : "",
+        division: text(hx.division, 20),
+        level: text(hx.level, 20),
+        days: Math.min(6, Math.max(3, Math.round(Number(hx.days)) || 4)),
+        weeks: Math.min(20, Math.max(4, Math.round(Number(hx.weeks)) || 12)),
+        gear: Array.isArray(hx.gear) ? hx.gear.slice(0, 10).map((g) => text(g, 20)) : []
+      };
+    }
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'request_program',$2)",
-      [ctx.client.id, JSON.stringify({ note: String(req.body?.note || "").slice(0, 500) })]
+      [ctx.client.id, JSON.stringify(payload)]
     );
     await pool.query("UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1", [ctx.client.id]);
     return res.json({ ok: true });

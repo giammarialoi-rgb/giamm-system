@@ -10907,7 +10907,7 @@ function applyOperationsToProgram(program, operations) {
     }
     if (type === 'navigate' || type === 'set_view') {
       const view = changes.view || changes.tab || op.view;
-      const allowedViews = new Set(['home','training','stats','ai','programs','nutrition','supplements','therapy','exams','menu','athlete','settings']);
+      const allowedViews = new Set(['home','training','stats','ai','programs','nutrition','supplements','therapy','exams','menu','athlete','settings','hyrox']);
       if (view && allowedViews.has(String(view))) {
         currentView = String(view);
         appliedCount++;
@@ -11547,7 +11547,7 @@ function chooseProgramAdaptation(kind, desired){
   return false;
 }
 function openGoalDialog(kind, desired){
-  const goals = [['IPERTROFIA / MASSA','Volume e crescita muscolare'],['FORZA','Prestazione sui fondamentali'],['POTENZA / ESPLOSIVITÀ','Velocità e qualità della forza'],['RESISTENZA MUSCOLARE','Capacità di sostenere serie e densità'],['METABOLICO / CONDITIONING','Capacità di lavoro e conditioning'],['RICOMPOSIZIONE / FITNESS GENERALE','Equilibrio tra forza, massa e fitness'],['PERSONALIZZATO','Obiettivo definito dall’utente']];
+  const goals = [['IPERTROFIA / MASSA','Volume e crescita muscolare'],['FORZA','Prestazione sui fondamentali'],['POTENZA / ESPLOSIVITÀ','Velocità e qualità della forza'],['RESISTENZA MUSCOLARE','Capacità di sostenere serie e densità'],['METABOLICO / CONDITIONING','Capacità di lavoro e conditioning'],['RICOMPOSIZIONE / FITNESS GENERALE','Equilibrio tra forza, massa e fitness'],['HYROX / GARA IBRIDA','Corsa, stazioni e forza per la gara'],['PERSONALIZZATO','Obiettivo definito dall’utente']];
   const overlay = document.createElement('div'); overlay.className = 'modal'; overlay.style.display = 'flex'; overlay.style.zIndex = '2650';
   overlay.innerHTML = `<div class="modal-content"><h2 style="color:var(--gold);margin-top:0;">Qual è l'obiettivo principale?</h2><select id="goal-primary" style="margin-bottom:8px;">${goals.map(g=>`<option value="${esc(g[0])}">${esc(g[0])} — ${esc(g[1])}</option>`).join('')}</select><select id="goal-secondary"><option value="">Nessun obiettivo secondario</option>${goals.map(g=>`<option value="${esc(g[0])}">${esc(g[0])}</option>`).join('')}</select><input id="goal-constraints" placeholder="Vincoli opzionali (attrezzatura, giorni, infortuni)" style="margin-top:8px;"><div style="display:flex;gap:8px;margin-top:16px;"><button class="btn btn-outline" id="goal-cancel" style="flex:1;">ANNULLA</button><button class="btn btn-primary" id="goal-confirm" style="flex:1;">ANALIZZA</button></div><div id="goal-status" style="font-size:11px;color:#aaa;margin-top:10px;"></div></div>`;
   document.body.appendChild(overlay);
@@ -20979,6 +20979,14 @@ function saveAthleteProfile() {
   if (typeof showToast === 'function') showToast('Profilo salvato', 'ok');
   else alert('Profilo salvato');
   maybeOfferNutritionFromProfile();
+  // Goal HYROX: the catalogue has no race preparation; the HYROX screen
+  // writes one (or, for an athlete with a coach, asks the coach for it).
+  if (typeof hyroxApi === 'function' && hyroxApi() && hyroxApi().wantsHyrox(profile.goal) &&
+      !(store.coachViewingClient || store.coachAssigning) && (!DATA || !(DATA.weeks || []).length)) {
+    if (typeof showToast === 'function') showToast('Obiettivo HYROX: scegli la gara e prepara la scheda.', 'info');
+    navigate('hyrox');
+    return;
+  }
   loadProgramCatalogIndex().then(() => {
     const tips = suggestProgramsForProfile(profile).slice(0, 5);
     store.prefs.suggestedProgramIds = tips.map((p) => p.id);
@@ -23631,6 +23639,8 @@ function hyroxApi() { return (typeof window !== 'undefined' && window.NurvanHyro
 // The client the coach is writing for (ASSEGNA), or null.
 function hyroxForClient() { return (store && store.coachAssigning && store.coachAssigning.clientId) ? store.coachAssigning : null; }
 function hyroxState() {
+  // The coach's own answers, set aside while a client's request was on screen.
+  if (window.__cpHyroxOwn && !hyroxForClient()) { store.hyrox = window.__cpHyroxOwn; window.__cpHyroxOwn = null; }
   if (!store.hyrox || typeof store.hyrox !== 'object') store.hyrox = {};
   const h = store.hyrox;
   if (!h.region) h.region = 'italy';
@@ -23650,7 +23660,12 @@ function loadHyroxEvents() {
   window.__hyroxEventsLoading = (remote ? read(remote).catch(function () { return read('hyrox-events.json'); }) : read('hyrox-events.json'))
     .then(function (data) { window.__hyroxEvents = (data && Array.isArray(data.events)) ? data : { events: [] }; return window.__hyroxEvents; })
     .catch(function () { window.__hyroxEvents = { events: [], failed: true }; return window.__hyroxEvents; })
-    .then(function (data) { window.__hyroxEventsLoading = null; if (currentView === 'hyrox') render(); return data; });
+    .then(function (data) {
+      window.__hyroxEventsLoading = null;
+      if (document.getElementById('program-generator-sheet') && typeof renderProgramGenerator === 'function') renderProgramGenerator();
+      else if (currentView === 'hyrox') render();
+      return data;
+    });
   return window.__hyroxEventsLoading;
 }
 function hyroxDateText(ev) {
@@ -23666,41 +23681,104 @@ function hyroxEventById(id) {
   for (let i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
   return null;
 }
+// An answer changed: the screen is redrawn - or the generator's sheet, when
+// the answers are being given there.
+function hyroxRefresh() {
+  try { persist(); } catch (_) {}
+  if (document.getElementById('program-generator-sheet') && typeof renderProgramGenerator === 'function') { renderProgramGenerator(); return; }
+  render();
+}
 function hyroxSet(field, value) {
   const h = hyroxState();
   h[field] = (field === 'days' || field === 'weeks') ? Number(value) : value;
-  try { persist(); } catch (_) {}
-  render();
+  hyroxRefresh();
 }
 function hyroxToggleGear(id) {
   const h = hyroxState();
   const i = h.gear.indexOf(id);
   if (i === -1) h.gear.push(id); else h.gear.splice(i, 1);
-  try { persist(); } catch (_) {}
-  render();
+  hyroxRefresh();
 }
 function hyroxFullGear(yes) {
   const h = hyroxState();
   h.gear = yes ? hyroxApi().GEAR.map(function (g) { return g.id; }) : [];
   h.gearAsked = true;
-  try { persist(); } catch (_) {}
-  render();
+  hyroxRefresh();
 }
 function hyroxChooseRace(id) {
   const h = hyroxState();
   h.raceId = id || '';
-  try { persist(); } catch (_) {}
-  render();
-  if (id) { const el = document.getElementById('hyrox-create'); if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  hyroxRefresh();
+  if (id && currentView === 'hyrox') { const el = document.getElementById('hyrox-create'); if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+}
+// What the preparation is written from: the answers, and the race chosen.
+function hyroxPlanInput() {
+  const h = hyroxState();
+  const ev = hyroxEventById(h.raceId);
+  return { weeks: h.weeks, days: h.days, level: h.level, division: h.division, gear: h.gear.slice(), raceDate: ev && ev.start ? ev.start : '', raceName: ev ? ev.city : '' };
+}
+// An athlete followed by a coach does not write the program: they ask for it.
+function hyroxMustAsk() {
+  return typeof isAthleteRole === 'function' && isAthleteRole() && !(store.clientProfile && store.clientProfile.allowMaxFreedom);
+}
+// The request the coach receives: the race, the category, the days.
+function hyroxRequestCoach() {
+  if (typeof requestProgramFromCoach !== 'function') return;
+  const h = hyroxState();
+  const ev = hyroxEventById(h.raceId);
+  requestProgramFromCoach({ hyrox: {
+    raceId: h.raceId || '', raceName: ev ? ev.city : '', raceDate: ev && ev.start ? ev.start : '',
+    division: h.division, level: h.level, days: h.days, weeks: h.weeks, gear: h.gear.slice()
+  } });
+}
+// The questions of a preparation: the same on the HYROX screen and in the
+// generator's sheet when the goal is HYROX.
+function hyroxFieldsHtml() {
+  const api = hyroxApi();
+  const h = hyroxState();
+  const events = (window.__hyroxEvents && window.__hyroxEvents.events) || [];
+  const race = hyroxEventById(h.raceId);
+  const st = 'width:100%;margin-top:3px;background:#141414;color:#fff;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;';
+  const lab = function (text, inner) { return '<label style="display:block;font-size:10px;color:#aaa;font-weight:800;margin-top:10px;">' + text + inner + '</label>'; };
+  const sel = function (field, items, cur) {
+    return '<select style="' + st + '" onchange="hyroxSet(\'' + field + '\', this.value)">' + items.map(function (it) {
+      return '<option value="' + esc(it.id) + '"' + (String(it.id) === String(cur) ? ' selected' : '') + '>' + esc(it.label) + '</option>';
+    }).join('') + '</select>';
+  };
+  const fullGear = h.gear.length === api.GEAR.length;
+  const raceItems = [{ id: '', label: 'Nessuna gara: scelgo io la durata' }].concat(api.upcoming(events, 'all').map(function (ev) { return { id: ev.id, label: ev.city + ' · ' + hyroxDateText(ev) }; }));
+  return lab('Gara', '<select style="' + st + '" onchange="hyroxChooseRace(this.value)">' + raceItems.map(function (it) { return '<option value="' + esc(it.id) + '"' + (it.id === (h.raceId || '') ? ' selected' : '') + '>' + esc(it.label) + '</option>'; }).join('') + '</select>') +
+    (race && race.start ? '' : lab('Durata', sel('weeks', api.WEEKS.map(function (w) { return { id: w, label: w + ' settimane' }; }), h.weeks))) +
+    lab('Giorni a settimana', sel('days', api.DAYS.map(function (d) { return { id: d, label: d + ' giorni' }; }), h.days)) +
+    lab('Livello', sel('level', api.LEVELS, h.level)) +
+    lab('Categoria', sel('division', api.DIVISIONS, h.division)) +
+    lab('Hai tutta l’attrezzatura HYROX in palestra?', '<select style="' + st + '" onchange="hyroxFullGear(this.value === \'yes\')"><option value="yes"' + (fullGear ? ' selected' : '') + '>Sì, c’è tutto</option><option value="no"' + (fullGear ? '' : ' selected') + '>No, manca qualcosa</option></select>') +
+    (fullGear ? '' : '<div style="margin-top:10px;font-size:11px;color:#aaa;">Spunta quello che hai: per il resto la scheda usa un esercizio che allena lo stesso sforzo.</div>' +
+      '<div style="display:grid;gap:6px;margin-top:8px;">' + api.GEAR.map(function (g) {
+        const on = h.gear.indexOf(g.id) !== -1;
+        return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#ddd;"><input type="checkbox"' + (on ? ' checked' : '') + ' onchange="hyroxToggleGear(\'' + g.id + '\')"> ' + esc(g.label) + '</label>';
+      }).join('') + '</div>');
+}
+// Why the preparation is laid out this way: what was measured, what the plan
+// does about it, and the study, one tap away.
+function hyroxEvidenceHtml(limit) {
+  const list = (hyroxApi().EVIDENCE || []).slice(0, limit || 99);
+  return list.map(function (e) {
+    return '<div style="border-top:1px solid #222;padding:10px 0;">' +
+      '<div style="font-size:12px;color:#eee;line-height:1.5;">' + esc(e.fact) + '</div>' +
+      '<div style="font-size:12px;color:var(--gold);line-height:1.5;margin-top:4px;">' + esc(e.plan) + '</div>' +
+      '<a href="' + esc(e.url) + '" target="_blank" rel="noopener" style="display:block;font-size:10px;color:#888;margin-top:4px;text-decoration:underline;">' + esc(e.source) + '</a></div>';
+  }).join('');
 }
 async function hyroxCreateProgram(preset) {
   const api = hyroxApi();
   if (!api) { if (typeof showToast === 'function') showToast('Sezione HYROX non caricata', 'error'); return; }
   const h = hyroxState();
   const ev = hyroxEventById(h.raceId);
+  if (hyroxMustAsk()) { hyroxRequestCoach(); return; }
   const input = preset
     ? { weeks: preset.weeks, days: preset.days, level: preset.level, division: h.division, gear: api.GEAR.map(function (g) { return g.id; }) }
-    : { weeks: h.weeks, days: h.days, level: h.level, division: h.division, gear: h.gear.slice(), raceDate: ev && ev.start ? ev.start : '', raceName: ev ? ev.city : '' };
+    : hyroxPlanInput();
   if (!preset && ev && ev.start) {
     const left = api.weeksUntil(ev.start);
     if (left != null && left < 4 && !confirm('Mancano meno di 4 settimane alla gara: la preparazione sarà di 4 settimane, più lunga del tempo che resta. Vuoi crearla lo stesso?')) return;
@@ -23754,21 +23832,13 @@ function renderHyrox(c) {
     raceHtml = '<div style="font-size:12px;color:#aaa;line-height:1.5;">Scegli la tua gara dal calendario qui sotto: la preparazione viene scritta per arrivare pronto a quella data. Se non hai ancora una gara, scegli tu la durata.</div>';
   }
 
-  const raceItems = [{ id: '', label: 'Nessuna gara: scelgo io la durata' }].concat(api.upcoming(events, 'all').map(function (ev) { return { id: ev.id, label: ev.city + ' · ' + hyroxDateText(ev) }; }));
-  const createHtml =
-    lab('Gara', '<select style="' + st + '" onchange="hyroxChooseRace(this.value)">' + raceItems.map(function (it) { return '<option value="' + esc(it.id) + '"' + (it.id === (h.raceId || '') ? ' selected' : '') + '>' + esc(it.label) + '</option>'; }).join('') + '</select>') +
-    (race && race.start ? '' : lab('Durata', sel('weeks', api.WEEKS.map(function (w) { return { id: w, label: w + ' settimane' }; }), h.weeks))) +
-    lab('Giorni a settimana', sel('days', api.DAYS.map(function (d) { return { id: d, label: d + ' giorni' }; }), h.days)) +
-    lab('Livello', sel('level', api.LEVELS, h.level)) +
-    lab('Categoria', sel('division', api.DIVISIONS, h.division)) +
-    lab('Hai tutta l’attrezzatura HYROX in palestra?', '<select style="' + st + '" onchange="hyroxFullGear(this.value === \'yes\')"><option value="yes"' + (fullGear ? ' selected' : '') + '>Sì, c’è tutto</option><option value="no"' + (fullGear ? '' : ' selected') + '>No, manca qualcosa</option></select>') +
-    (fullGear ? '' : '<div style="margin-top:10px;font-size:11px;color:#aaa;">Spunta quello che hai: per il resto la scheda usa un esercizio che allena lo stesso sforzo.</div>' +
-      '<div style="display:grid;gap:6px;margin-top:8px;">' + api.GEAR.map(function (g) {
-        const on = h.gear.indexOf(g.id) !== -1;
-        return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#ddd;"><input type="checkbox"' + (on ? ' checked' : '') + ' onchange="hyroxToggleGear(\'' + g.id + '\')"> ' + esc(g.label) + '</label>';
-      }).join('') + '</div>') +
-    '<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;min-height:48px;font-weight:900;" onclick="hyroxCreateProgram()">VEDI L’ANTEPRIMA</button>' +
-    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="navigate(\'import\')">IMPORTA UN PROGRAMMA HYROX</button>';
+  const mustAsk = hyroxMustAsk();
+  const createHtml = hyroxFieldsHtml() +
+    (mustAsk
+      ? '<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;min-height:48px;font-weight:900;" onclick="hyroxRequestCoach()">CHIEDI AL COACH QUESTA PREPARAZIONE</button>' +
+        '<div style="font-size:11px;color:#888;line-height:1.5;margin-top:8px;">Il coach riceve gara, categoria e giorni che hai scelto, e ti assegna la preparazione.</div>'
+      : '<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;min-height:48px;font-weight:900;" onclick="hyroxCreateProgram()">VEDI L’ANTEPRIMA</button>' +
+        '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="navigate(\'import\')">IMPORTA UN PROGRAMMA HYROX</button>');
 
   const presets = [
     { weeks: 8, days: 3, level: 'beginner', title: 'Prima gara', text: '8 settimane · 3 giorni' },
@@ -23800,6 +23870,7 @@ function renderHyrox(c) {
         '<span style="font-size:11px;color:#aaa;white-space:nowrap;">' + esc(s.amount) + (load ? ' · ' + esc(load) : '') + '</span></summary>' +
         '<p style="font-size:12px;color:#ccc;line-height:1.5;margin:8px 0 0;">' + esc(s.cue) + '</p>' +
         (s.alt && s.gear ? '<p style="font-size:11px;color:#888;line-height:1.5;margin:6px 0 0;">Senza attrezzo: ' + esc(s.alt.name) + '</p>' : '') +
+        (s.top ? '<p style="font-size:11px;color:#888;line-height:1.5;margin:6px 0 0;">Migliori 100 Pro, stagione 2024/25: ' + esc(s.top.m) + ' uomini · ' + esc(s.top.w) + ' donne</p>' : '') +
         '</details>';
     }).join('');
 
@@ -23830,8 +23901,9 @@ function renderHyrox(c) {
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="navigate(\'home\')">CHIUDI</button></div>' +
     (hyroxForClient() ? '<div class="card" style="padding:12px 16px;margin-bottom:12px;border:1px solid var(--gold);"><div style="font-size:12px;color:#fff;font-weight:800;">Preparazione per ' + esc(hyroxForClient().name || 'il cliente') + '</div><div style="font-size:11px;color:#aaa;margin-top:2px;">Diventa la bozza del cliente: la rivedi e la invii.</div></div>' : '') +
     card(hyroxForClient() ? 'LA GARA DEL CLIENTE' : 'LA TUA GARA', raceHtml) +
-    card('CREA LA PREPARAZIONE', createHtml, 'hyrox-create') +
-    card('PROGRAMMI PRONTI', '<div style="font-size:11px;color:#888;margin-bottom:8px;">Con tutta l’attrezzatura, per la categoria scelta sopra. Li leggi e li modifichi prima di attivarli.</div>' + presetsHtml) +
+    card(mustAsk ? 'CHIEDI LA PREPARAZIONE' : 'CREA LA PREPARAZIONE', createHtml, 'hyrox-create') +
+    (mustAsk ? '' : card('PROGRAMMI PRONTI', '<div style="font-size:11px;color:#888;margin-bottom:8px;">Con tutta l’attrezzatura, per la categoria scelta sopra. Li leggi e li modifichi prima di attivarli.</div>' + presetsHtml)) +
+    card('PERCHÉ È FATTA COSÌ', '<div style="font-size:11px;color:#888;margin-bottom:2px;line-height:1.5;">Cosa è stato misurato su chi ha gareggiato, e cosa fa la preparazione di conseguenza. Sono studi su campioni reali, non una promessa sul tuo tempo.</div>' + hyroxEvidenceHtml()) +
     card('PROSSIME GARE', eventsHtml) +
     card('LE 8 STAZIONI', stationsHtml) +
     card('STIMA DEL TEMPO', '<div style="font-size:11px;color:#888;margin-bottom:8px;">Dal tuo tempo sui 5 km e dal livello scelto. È una forchetta per orientarti, non una promessa.</div>' +
@@ -23848,6 +23920,7 @@ window.hyroxFullGear = hyroxFullGear;
 window.hyroxChooseRace = hyroxChooseRace;
 window.hyroxCreateProgram = hyroxCreateProgram;
 window.hyroxEstimate = hyroxEstimate;
+window.hyroxRequestCoach = hyroxRequestCoach;
 
 function homeDomainModulesHtml() {
   const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
@@ -30100,7 +30173,7 @@ function renderAthleteProfile(container) {
     '<div><label style="font-size:10px;color:#666;font-weight:800;">1RM Stacco (' + wUnit() + ')</label>' +
     '<input id="profile-deadlift" type="number" step="0.5" value="' + esc(String(kgToDisp(profile.deadliftMax || ''))) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div style="grid-column:1/-1;"><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelGoal') + '</label>' +
-    '<input id="profile-goal" type="text" value="' + esc(profile.goal || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
+    '<input id="profile-goal" type="text" placeholder="Ipertrofia, forza, dimagrimento, HYROX…" value="' + esc(profile.goal || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div style="grid-column:1/-1;"><label style="font-size:10px;color:#666;font-weight:800;">Su quali parti vuoi concentrarti?</label>' +
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">' +
     MACRO_MUSCLE_GROUPS.map(function (g) {
@@ -39304,6 +39377,85 @@ function generatorSelect(field, items, current, inputStyle) {
     }).join('') + '</select>';
 }
 
+// The goals the sheet offers: the generator's own, and the race preparation.
+function generatorGoalItems(api) {
+  var items = api.GOALS.slice();
+  if (typeof hyroxApi === 'function' && hyroxApi()) items.push({ id: 'hyrox', label: 'HYROX · preparazione gara' });
+  return items;
+}
+function generatorIsHyrox(g) {
+  return !!g && g.goal === 'hyrox' && typeof hyroxApi === 'function' && !!hyroxApi();
+}
+
+function generatorFootHtml(g) {
+  return '<div class="nurvan-sheet-foot">' +
+    (g.target === 'active'
+      ? '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;padding:12px;" onclick="createGeneratedProgram(\'save\')">SALVA SENZA ATTIVARE</button>' +
+        '<button type="button" class="btn btn-primary" style="flex:1;font-size:11px;padding:12px;" onclick="createGeneratedProgram(\'active\')">GENERA E ATTIVA</button>'
+      : '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="createGeneratedProgram(\'' + g.target + '\')">' +
+        (g.target === 'library' ? 'GENERA E SALVA NEL DATABASE' : 'GENERA PER IL CLIENTE') + '</button>') +
+    '</div>';
+}
+
+/*
+ * Goal HYROX. A race preparation is not a split with a progression model: it
+ * is running, stations and strength laid out towards a date, and web/hyrox.js
+ * writes it. So with this goal the sheet asks the race's questions (which
+ * race, how many days, level, category, equipment) instead of split, model
+ * and techniques, shows the first week and the phases, and says on what
+ * evidence the weeks are laid out that way.
+ */
+function renderGeneratorHyroxSheet(g, api, sheet, inputStyle) {
+  var hx = hyroxApi();
+  if (!window.__hyroxEvents) loadHyroxEvents();
+  var input = hyroxPlanInput();
+  var preview;
+  try {
+    var prog = hx.plan(input);
+    var counts = {};
+    prog.weeks.forEach(function (w) { counts[w.phase] = (counts[w.phase] || 0) + 1; });
+    var phases = ['base', 'build', 'peak', 'taper'].filter(function (ph) { return counts[ph]; });
+    preview = '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(212,175,55,0.35);">' +
+      '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:8px;">ANTEPRIMA · SETTIMANA 1</div>' +
+      '<div style="font-size:11px;color:#aaa;line-height:1.5;margin-bottom:6px;">' + esc(prog.source_summary) + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">' + phases.map(function (ph) {
+        return '<span style="font-size:10px;color:#ddd;border:1px solid #333;border-radius:6px;padding:4px 8px;">' + esc(hx.PHASE_LABELS[ph]) + ': ' + counts[ph] + ' settimane</span>';
+      }).join('') + '</div>' +
+      prog.weeks[0].sessions.map(function (s) {
+        return '<div style="margin-bottom:8px;">' +
+          '<div style="font-size:11px;font-weight:800;color:#fff;margin-bottom:4px;">' + esc(s.name) + '</div>' +
+          s.exercises.map(function (e) {
+            return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;color:#bbb;padding:2px 0;">' +
+              '<span style="min-width:0;">' + esc(e.name) + '</span>' +
+              '<span style="flex:0 0 auto;color:#888;">' + esc((e.sets || []).length + ' × ' + e.repsTarget) + '</span></div>';
+          }).join('') + '</div>';
+      }).join('') + '</div>';
+  } catch (e) {
+    preview = '<div style="font-size:11px;color:#c66;">Anteprima non riuscita: ' + esc(e.message || String(e)) + '</div>';
+  }
+  var cardOpen = '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid #333;">';
+  var cardTitle = function (text) { return '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:10px;">' + text + '</div>'; };
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">GENERA UNA SCHEDA</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeProgramGenerator()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<label style="font-size:9px;color:#888;display:block;margin-bottom:12px;">Nome della scheda (facoltativo)' +
+    '<input type="text" value="' + esc(g.title || '') + '" placeholder="Lo scrive lui se lo lasci vuoto" ' +
+    'onchange="setGeneratorField(\'title\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    cardOpen + cardTitle('STRUTTURA') +
+    '<label style="font-size:9px;color:#888;display:block;">Obiettivo' + generatorSelect('goal', generatorGoalItems(api), g.goal, inputStyle) + '</label>' +
+    '<div style="font-size:10px;color:#777;margin-top:8px;line-height:1.5;">Corsa, stazioni e forza nella stessa settimana, in quattro fasi fino alla gara: base, costruzione, picco e scarico.</div></div>' +
+    cardOpen + cardTitle('LA GARA') + hyroxFieldsHtml() + '</div>' +
+    preview +
+    cardOpen + cardTitle('PERCHÉ È FATTA COSÌ') + hyroxEvidenceHtml(3) +
+    '<div style="margin-top:8px;"><span style="font-size:10px;color:var(--gold);cursor:pointer;text-decoration:underline;" onclick="closeProgramGenerator();navigate(\'hyrox\')">tutti i dati, le stazioni e il calendario</span></div></div>' +
+    '</div>' + generatorFootHtml(g) + '</div>';
+  document.body.appendChild(sheet);
+}
+
 // What the generator is about to write, before it writes it: the first week,
 // exercise by exercise, so a wrong answer upstream is visible here and not
 // three taps later inside an activated program.
@@ -39367,6 +39519,7 @@ function renderProgramGeneratorInner() {
   sheet.id = 'program-generator-sheet';
   sheet.className = 'nurvan-sheet is-open';
   sheet.style.zIndex = '10240';
+  if (generatorIsHyrox(g)) { renderGeneratorHyroxSheet(g, api, sheet, inputStyle); return; }
 
   var spaces = trainingSpaces();
   var splitItems = api.splitsFor(g.days).map(function (s) { return { id: s.id, label: s.label }; });
@@ -39388,7 +39541,7 @@ function renderProgramGeneratorInner() {
     generatorChips('days', api.DAYS, g.days) +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">' +
     '<label style="font-size:9px;color:#888;">Split' + generatorSelect('split', splitItems, g.split, inputStyle) + '</label>' +
-    '<label style="font-size:9px;color:#888;">Obiettivo' + generatorSelect('goal', api.GOALS, g.goal, inputStyle) + '</label>' +
+    '<label style="font-size:9px;color:#888;">Obiettivo' + generatorSelect('goal', generatorGoalItems(api), g.goal, inputStyle) + '</label>' +
     '<label style="font-size:9px;color:#888;">Esperienza' + generatorSelect('experience', api.EXPERIENCE, g.experience, inputStyle) + '</label>' +
     '<label style="font-size:9px;color:#888;">Focus' + generatorSelect('audience', api.AUDIENCE, g.audience, inputStyle) + '</label>' +
     '</div></div>';
@@ -39501,13 +39654,7 @@ function renderProgramGeneratorInner() {
     'onchange="setGeneratorField(\'title\',this.value)" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
     structure + place + duration + extras + generatorPreviewHtml(g) +
     '</div>' +
-    '<div class="nurvan-sheet-foot">' +
-    (g.target === 'active'
-      ? '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;padding:12px;" onclick="createGeneratedProgram(\'save\')">SALVA SENZA ATTIVARE</button>' +
-        '<button type="button" class="btn btn-primary" style="flex:1;font-size:11px;padding:12px;" onclick="createGeneratedProgram(\'active\')">GENERA E ATTIVA</button>'
-      : '<button type="button" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="createGeneratedProgram(\'' + g.target + '\')">' +
-        (g.target === 'library' ? 'GENERA E SALVA NEL DATABASE' : 'GENERA PER IL CLIENTE') + '</button>') +
-    '</div></div>';
+    generatorFootHtml(g) + '</div>';
   document.body.appendChild(sheet);
 }
 window.renderProgramGenerator = renderProgramGenerator;
@@ -39517,6 +39664,28 @@ async function createGeneratedProgram(target) {
   var api = generatorApi();
   if (!api) {
     if (typeof showToast === 'function') showToast('Motore di generazione non caricato', 'error');
+    return;
+  }
+  if (generatorIsHyrox(g)) {
+    var hx = hyroxApi();
+    var input = hyroxPlanInput();
+    if (input.raceDate) {
+      var left = hx.weeksUntil(input.raceDate);
+      if (left != null && left < 4 && !confirm('Mancano meno di 4 settimane alla gara: la preparazione sarà di 4 settimane, più lunga del tempo che resta. Vuoi crearla lo stesso?')) return;
+    }
+    try {
+      var race = null;
+      await withBusy(function () {
+        race = hx.plan(input);
+        if (g.title) race.title = g.title;
+        race = normalizeProgram(race);
+        return Promise.resolve();
+      }, 'Scrivo la preparazione…', { immediate: true, maxMs: 60000 });
+      openGeneratedReview(race, target, null);
+    } catch (e) {
+      console.error('[HYROX]', e);
+      if (typeof showToast === 'function') showToast('Generazione non riuscita: ' + (e && e.message || e), 'error');
+    }
     return;
   }
   var opts = generatorOptions(g);
