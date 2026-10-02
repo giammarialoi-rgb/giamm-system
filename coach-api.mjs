@@ -2028,6 +2028,12 @@ function slimCoachContext(context) {
 
 app.post(["/api/chat", "/coach", "/api/coach"], async (req, res) => {
   try {
+    // A coach's client is followed by the coach, not by the AI assistant
+    // (decided 03-10-2026). Refused here, whatever the app shows.
+    const who = req.aiAccount || {};
+    if (who.role === "athlete" || who.provider === "coach_client") {
+      return res.status(403).json({ error: "L’assistente AI non è disponibile per i clienti del coaching: scrivi al tuo coach.", code: "AI_NOT_FOR_CLIENTS" });
+    }
     if (!process.env.GEMINI_API_KEY) {
       return res.status(503).json({
         error: "Coach AI non è configurato sul server.",

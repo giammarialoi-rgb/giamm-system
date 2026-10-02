@@ -9,6 +9,13 @@ export const SESSION_TYPES = Object.freeze([
 
 const APPOINTMENT_STATUSES = new Set(["scheduled", "completed", "cancelled"]);
 
+// Where a session takes place: in person or at a distance. Anything else is
+// "not said".
+export function normalizeSessionMode(value) {
+  const v = String(value || "").toLowerCase();
+  return v === "presence" || v === "remote" ? v : null;
+}
+
 function clean(value, max = 200) {
   return String(value || "").trim().slice(0, max);
 }
@@ -37,6 +44,7 @@ export function appointmentRow(row) {
     endsAt: row.ends_at,
     timeZone: row.timezone,
     status: row.status,
+    mode: normalizeSessionMode(row.mode),
     notes: row.notes || "",
     createdBy: row.created_by,
     createdAt: row.created_at
@@ -152,8 +160,8 @@ async function insertAppointment(pool, coachId, input = {}) {
   if (clash.rows[0]) throw new Error("Appointment collides with an existing session.");
   const result = await pool.query(
     `INSERT INTO coach_appointments(
-       coach_user_id, client_id, type, title, starts_at, ends_at, timezone, notes, created_by
-     ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       coach_user_id, client_id, type, title, starts_at, ends_at, timezone, notes, created_by, mode
+     ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
      RETURNING *`,
     [
       coachId,
@@ -164,7 +172,8 @@ async function insertAppointment(pool, coachId, input = {}) {
       endsAt.toISOString(),
       clean(input.timeZone || "UTC", 80),
       clean(input.notes, 800) || null,
-      clean(input.createdBy || "coach", 40)
+      clean(input.createdBy || "coach", 40),
+      normalizeSessionMode(input.mode)
     ]
   );
   await pool.query(
@@ -198,6 +207,7 @@ export async function updateAppointment(pool, coachId, id, input = {}) {
          ends_at = COALESCE($5, ends_at),
          status = COALESCE($6, status),
          notes = COALESCE($7, notes),
+         mode = COALESCE($8, mode),
          cancelled_at = CASE WHEN $6 = 'cancelled' THEN NOW() ELSE cancelled_at END,
          updated_at = NOW()
      WHERE id = $1 AND coach_user_id = $2
@@ -209,10 +219,34 @@ export async function updateAppointment(pool, coachId, id, input = {}) {
       startsAt && startsAt.toISOString(),
       endsAt && endsAt.toISOString(),
       status,
-      input.notes == null ? null : clean(input.notes, 800)
+      input.notes == null ? null : clean(input.notes, 800),
+      normalizeSessionMode(input.mode)
     ]
   );
   return result.rows[0] ? appointmentRow(result.rows[0]) : null;
+}
+
+// Sessions that took place, per client and per month, in person and at a
+// distance: what a coach who charges differently for the two needs to see.
+export async function sessionsReport(pool, coachId, { months = 12, now = Date.now() } = {}) {
+  const from = new Date(now - Math.max(1, Math.min(36, Number(months) || 12)) * 31 * 86400000).toISOString();
+  const result = await pool.query(
+    `SELECT a.client_id, c.display_name AS client_name, to_char(a.starts_at, 'YYYY-MM') AS month,
+            COALESCE(a.mode, '') AS mode, COUNT(*)::int AS n
+     FROM coach_appointments a
+     LEFT JOIN coach_clients c ON c.id = a.client_id
+     WHERE a.coach_user_id = $1 AND a.status = 'completed' AND a.starts_at >= $2
+     GROUP BY a.client_id, c.display_name, to_char(a.starts_at, 'YYYY-MM'), COALESCE(a.mode, '')
+     ORDER BY month DESC`,
+    [coachId, from]
+  );
+  return (result.rows || []).map((r) => ({
+    clientId: r.client_id == null ? null : String(r.client_id),
+    clientName: r.client_name || null,
+    month: r.month,
+    mode: normalizeSessionMode(r.mode),
+    count: Number(r.n) || 0
+  }));
 }
 
 export function toIcs(appointments, coachName = "Nurvan Coach") {

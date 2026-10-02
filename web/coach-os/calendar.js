@@ -25,6 +25,13 @@
     ['Custom Session', 'Altro']
   ];
   const DURATIONS = [15, 30, 45, 60, 90, 120];
+  // Where it takes place. A client followed both ways gets it said session by
+  // session, so the ones done in person can be counted.
+  const MODES = [['presence', 'In presenza'], ['remote', 'A distanza']];
+  function modeLabel(mode) {
+    const hit = MODES.filter(function (m) { return m[0] === mode; })[0];
+    return hit ? T(hit[1]) : '';
+  }
   const REPEATS = [[1, 'Non si ripete'], [2, 'Ogni settimana, per 2 settimane'], [4, 'Ogni settimana, per 4 settimane'], [8, 'Ogni settimana, per 8 settimane'], [12, 'Ogni settimana, per 12 settimane']];
   const state = { appointments: [], clients: [], range: 'week', failed: false };
 
@@ -97,7 +104,7 @@
               const id = escText(a.id);
               return '<div class="coach-os-row" style="flex-wrap:wrap;gap:8px;' + (done ? 'opacity:.55;' : '') + '"><span class="coach-os-row-main"><strong>' +
                 escText(clock(start) + '–' + clock(end)) + ' · ' + escText(a.title) + '</strong><span>' +
-                escText(typeLabel(a.type)) + (a.clientName ? ' · ' + escText(a.clientName) : '') + (done ? ' · ' + escText(T('fatta')) : '') +
+                escText(typeLabel(a.type)) + (a.clientName ? ' · ' + escText(a.clientName) : '') + (a.mode ? ' · ' + escText(modeLabel(a.mode)) : '') + (done ? ' · ' + escText(T('fatta')) : '') +
                 (a.notes ? ' · ' + escText(a.notes) : '') + '</span></span>' +
                 (done ? '' :
                   '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.completeAppointment(\'' + id + '\')">' + escText(T('FATTA')) + '</button>' +
@@ -122,7 +129,7 @@
   async function loadClients() {
     try {
       const payload = await window.practiceFetch('/api/coach/clients?limit=200&offset=0&q=', { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
-      state.clients = (payload.clients || []).map(function (c) { return { id: String(c.id), name: c.displayName || c.display_name || c.username || ('Cliente ' + c.id) }; });
+      state.clients = (payload.clients || []).map(function (c) { return { id: String(c.id), name: c.displayName || c.display_name || c.username || ('Cliente ' + c.id), mode: c.coachingMode || 'remote' }; });
     } catch (_) { /* the form still works, without a client */ }
   }
   function redraw() {
@@ -180,6 +187,8 @@
           label('Che cosa') + '<select id="cal-type" style="' + field + '" onchange="CoachOS.suggestAppointmentTitle()">' +
           TYPES.map(function (t) { return '<option value="' + escText(t[0]) + '">' + escText(T(t[1])) + '</option>'; }).join('') + '</select></label>' +
           label('Titolo') + '<input id="cal-title" type="text" maxlength="120" style="' + field + '"></label>') +
+      label('Dove') + '<select id="cal-mode" style="' + field + '">' +
+      MODES.map(function (m) { return '<option value="' + m[0] + '"' + ((existing && existing.mode === m[0]) ? ' selected' : '') + '>' + escText(T(m[1])) + '</option>'; }).join('') + '</select></label>' +
       label('Giorno') + '<input id="cal-date" type="date" value="' + dayKey(start) + '" style="' + field + '"></label>' +
       label('Ora') + '<input id="cal-time" type="time" step="300" value="' + clock(start) + '" style="' + field + '"></label>' +
       label('Durata') + '<select id="cal-duration" style="' + field + '">' +
@@ -206,6 +215,13 @@
     const type = document.getElementById('cal-type');
     const client = document.getElementById('cal-client');
     const name = client && client.value ? client.options[client.selectedIndex].text : '';
+    // The place follows how that client is followed, until the coach changes it.
+    const modeEl = document.getElementById('cal-mode');
+    if (modeEl && modeEl.getAttribute('data-own') !== '1') {
+      const cl = state.clients.filter(function (c) { return client && c.id === client.value; })[0];
+      modeEl.value = cl && cl.mode === 'remote' ? 'remote' : 'presence';
+      modeEl.onchange = function () { modeEl.setAttribute('data-own', '1'); };
+    }
     title.value = typeLabel(type ? type.value : '') + (name ? ' · ' + name : '');
     title.oninput = function () { title.setAttribute('data-own', '1'); };
   };
@@ -225,7 +241,7 @@
       if (id) {
         await window.practiceFetch('/api/coach/appointments/' + encodeURIComponent(id), {
           method: 'PATCH', headers: window.practiceHeaders(true),
-          body: JSON.stringify({ startsAt: start.toISOString(), endsAt: end.toISOString() })
+          body: JSON.stringify({ startsAt: start.toISOString(), endsAt: end.toISOString(), mode: val('cal-mode') || null })
         });
         toast('Sessione spostata', 'success');
       } else {
@@ -236,7 +252,7 @@
           body: JSON.stringify({
             title: title, type: val('cal-type') || 'Custom Session', clientId: val('cal-client') || null,
             startsAt: start.toISOString(), endsAt: end.toISOString(),
-            recurrenceWeeks: Number(val('cal-repeat')) || 1, notes: val('cal-notes'), timeZone: timeZone()
+            recurrenceWeeks: Number(val('cal-repeat')) || 1, notes: val('cal-notes'), timeZone: timeZone(), mode: val('cal-mode') || null
           })
         });
         toast('Sessione salvata', 'success');

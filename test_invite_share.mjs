@@ -20,7 +20,7 @@ const callers = ['confirmResendInvite', 'rotateClientInvite', 'resetClientPasswo
 ok('1a. copia link, rigenera link e nuova password mostrano l’invito nella pagina', callers.every((n) => /showInviteSheet\(/.test(fn(n))));
 ok('1b. e non aprono più da soli né la condivisione né un avviso di sistema', callers.every((n) => !/copyOrShare\(|navigator\.share|alert\(/.test(fn(n))));
 const create = cut("const msg = formatInviteShareText({", "if (currentView === 'coachHub') loadCoachClientList();");
-ok('1c. lo stesso alla creazione di un cliente', /showInviteSheet\('Invito pronto', msg/.test(create) && !/alert\(|copyOrShare\(/.test(create));
+ok('1c. lo stesso alla creazione di un cliente', /showInviteSheet\([^;]*'Invito pronto', msg/.test(create) && !/alert\(|copyOrShare\(/.test(create));
 ok('1d. in tutta l’area coach nessun avviso di sistema accanto a una condivisione', !/copyOrShare\([^)]*\);\s*(?:practiceToast\([^)]*\);\s*)?try \{ alert\(/.test(ui) && !/navigator\.share\([\s\S]{0,200}alert\(/.test(ui));
 
 function world(withShare) {

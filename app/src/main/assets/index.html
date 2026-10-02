@@ -3094,7 +3094,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MEAL-PHOTO-V1",
-        schemaTarget: "0022",
+        schemaTarget: "0023",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -36469,7 +36469,7 @@ const I18nService = {
     it: {
       coHome: "Oggi", coClients: "Clienti", coInbox: "Chat", coPrograms: "Programmi", coCalendar: "Calendario",
       coCheckIns: "Verifiche", coNutrition: "Alimentazione", coFormReview: "Revisione tecnica",
-      coAnalytics: "Analisi", coAgent: "Agente", coAgentAudit: "Registro agente", coAutomations: "Automazioni", coBusiness: "Attività", coCrm: "Pipeline",
+      coAnalytics: "Analisi", coAgent: "Agente", coAgentAudit: "Registro agente", coAutomations: "Automazioni", coBusiness: "Incassi", coCrm: "Pipeline",
       coMore: "Altro", coProfileSettings: "Profilo e impostazioni", coHelp: "Guida", coExitCoach: "Esci da Coach",
       coToday: "Oggi", coNeedsAttention: "Richiede attenzione", coMyTasks: "I miei task",
       coRecentActivity: "Attività recente", coPortfolio: "Portfolio", coSessionsToday: "Sessioni di oggi",
@@ -51099,7 +51099,7 @@ var PAGE_TUTORIALS = {
     { t: 'Il mese', d: 'Ogni giorno mostra quello che c’è in programma e quello che hai registrato. Tocca una data per vederne il dettaglio.' },
     { t: 'Aggiungere un evento', d: 'Per la data scelta puoi segnare una nota, una pesata, un check-in, un giorno di riposo, uno scarico o un allenamento fuori scheda.' }
   ] },
-  ai: { label: 'Coach AI', icon: '🤖', steps: [
+  ai: { label: 'Coach AI', icon: '🤖', who: 'self', steps: [
     { t: 'Chiedi al Coach', d: 'Scrivi o detta una domanda: il Coach AI risponde tenendo conto del tuo programma e di quello che hai registrato.' },
     { t: 'Modifiche alla scheda', d: 'Puoi chiedergli di cambiare il programma. Ogni modifica ti viene proposta prima: la applichi solo se confermi.' },
     { t: 'Analisi di un file', d: 'Con ANALIZZA carichi una scheda in PDF, Excel, Word o foto: il Coach la legge e ti dice cosa migliorerebbe.' },
@@ -51158,7 +51158,8 @@ var PAGE_TUTORIALS = {
   coachClient: { label: 'Scheda cliente', icon: '🧑', who: 'coach', noNav: true, steps: [
     { t: 'Tutto di un cliente', d: 'Anagrafica, allenamenti, richieste da approvare, programma e dati: una pagina sola per ogni cliente.' },
     { t: 'Assegnare una scheda', d: 'ASSEGNA SCHEDA apre uno spazio di lavoro del cliente: importi un file, scrivi la scheda da zero, la generi, la prendi dal tuo database o da quello di Nurvan. Con INVIA AL CLIENTE scegli la scadenza e confermi.' },
-    { t: 'Quanto è libero il cliente', d: 'Due interruttori: «Consenti massima libertà» lascia modificare e generare da sé (tu ricevi un avviso); senza, ogni modifica ti arriva da approvare. «Consenti Nurvan AI» apre al cliente il Coach AI.' },
+    { t: 'Quanto è libero il cliente', d: '«Consenti massima libertà» lascia modificare e generare da sé (tu ricevi un avviso); senza, ogni modifica ti arriva da approvare. I tuoi clienti non hanno l’assistente AI: per i dubbi scrivono a te.' },
+    { t: 'In presenza o a distanza', d: 'In «Come lo segui» scegli se lavora dalla web app, se lo alleni di persona o entrambe le cose. A un cliente in presenza puoi anche non mandare il link e segnare tu carichi ed esercizi.' },
     { t: 'Vedere i suoi dati', d: 'Da «Vedi dati del cliente» apri allenamento, statistiche, alimentazione, integrazione, terapia, esami e profilo così come li vede lui. Terapia ed esami richiedono il piano Coach Pro e il consenso del cliente.' },
     { t: 'Check e richieste', d: 'RICHIEDI CHECK e RICHIEDI ESAMI mandano la richiesta al cliente. Nei check-in programmati imposti cadenza, giorno e domande, e li ricevi da soli.' },
     { t: 'Accesso del cliente', d: 'COPIA LINK + CREDENZIALI, REIMPOSTA PASSWORD e RIGENERA LINK UNIVOCO servono quando il cliente cambia telefono o perde l’accesso.' }
@@ -51201,8 +51202,9 @@ var PAGE_TUTORIALS = {
   coachAgent: { label: 'Agente Nurvan', icon: '🧠', who: 'coach', steps: [
     { t: 'Chiedi all’agente', d: 'Scrivi cosa vuoi fare sui tuoi clienti: l’agente prepara l’azione e ti mostra l’anteprima. Parte solo se confermi.' }
   ] },
-  coachBusiness: { label: 'Coach · Attività', icon: '💼', who: 'coach', steps: [
-    { t: 'I numeri della tua attività', d: 'Un registro tenuto a mano di clienti e incassi. In questa versione non c’è un pagamento collegato.' }
+  coachBusiness: { label: 'Coach · Incassi', icon: '💼', who: 'coach', steps: [
+    { t: 'Il tuo registro degli incassi', d: 'Con REGISTRA INCASSO scrivi chi ti ha pagato, quanto (la cifra è facoltativa), quando, per cosa e come. Dall’app non passa nessun pagamento: è la tua contabilità.' },
+    { t: 'Totali e resoconti', d: 'In alto il totale incassato, quest’anno, questo mese e negli ultimi 30 giorni; sotto, il dettaglio per cliente e mese per mese. Le sedute fatte sono contate in presenza e a distanza. Esporti tutto in CSV.' }
   ] },
   coachCrm: { label: 'Coach · Pipeline', icon: '📇', who: 'coach', steps: [
     { t: 'L’elenco dei contatti', d: 'I tuoi clienti in un unico elenco, per vedere a che punto è ognuno.' }
@@ -79275,7 +79277,6 @@ var CLIENT_TUTORIAL_STEPS = [
   { t: 'La scheda arriva dal coach', d: 'Non importi PDF da solo: il tuo coach ti assegna il programma. Se non vedi nulla, chiedila dalla Home.' },
   { t: 'Allena e finalizza', d: 'Apri Allenati, registra le serie e tocca Finalizza. Così il coach vede che hai lavorato.' },
   { t: 'Chat umana', d: 'Dal tab Coach parli con la persona che ti segue, non con l’AI.' },
-  { t: 'AI solo spiegazioni', d: 'Coach AI può spiegare un esercizio, un cibo o un integratore. Non può cambiare la scheda.' },
   { t: 'Check e pagamenti', d: 'Dal Menu fai il check fisico quando te lo chiede. Se un pagamento è in sospeso, lo vedi in Home.' },
   { t: 'Modifiche al programma', d: 'Puoi proporre cambiamenti. Se il coach non ha dato la massima libertà, aspetta la sua approvazione. Con massima libertà modifichi subito e il coach riceve un avviso.' }
 ];
@@ -79402,7 +79403,7 @@ function gatePracticeView(v) {
       coachCrm: 1, coachActionCenter: 1, coachFormReview: 1,
       coachMealAi: 1, coachAgentAudit: 1
     };
-    if (v === 'ai' && !(store.clientProfile && store.clientProfile.allowNurvanAi)) return 'home';
+    if (v === 'ai') return 'home';
     if (blocked[v]) return 'home';
     return v;
   }
@@ -79423,8 +79424,10 @@ function gatePracticeView(v) {
   return v;
 }
 
+// The AI assistant is not offered to a coach's clients (decided 03-10-2026):
+// they are followed by the coach. The server refuses it as well.
 function athleteCanUseNurvanAi() {
-  return !!(typeof isAthleteRole === 'function' && isAthleteRole() && store && store.clientProfile && store.clientProfile.allowNurvanAi);
+  return false;
 }
 
 function clearClientShellLock() {
@@ -82654,6 +82657,8 @@ function drawAddClientWizard() {
     '<div class="cp-field"><label>Nome *</label><input id="cp-add-first" type="text"></div>' +
     '<div class="cp-field"><label>Cognome *</label><input id="cp-add-last" type="text"></div>' +
     '<div class="cp-field"><label>Password di accesso (min. 4) *</label><input id="cp-add-pass" type="text" autocomplete="off"></div>' +
+    '<div class="cp-field"><label>Come lo segui</label><select id="cp-add-coaching-mode" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
+    COACHING_MODE_LABELS.map(function (m) { return '<option value="' + m[0] + '">' + esc(m[1]) + '</option>'; }).join('') + '</select></div>' +
     (isNew ? '' : '<div id="cp-add-intake">' + intakeFormHtml('cpa', {}, { skipName: true }) + '</div>') +
     '<div id="cp-add-status" class="cp-help"></div>' +
     '<button class="btn btn-primary" style="width:100%;" onclick="submitAddClient()">CREA E GENERA LINK</button>' +
@@ -82666,6 +82671,8 @@ async function submitAddClient() {
   const lastName = (document.getElementById('cp-add-last') && document.getElementById('cp-add-last').value || '').trim();
   const password = (document.getElementById('cp-add-pass') && document.getElementById('cp-add-pass').value) || '';
   const intakeMode = window.__cpAddMode === 'transition' ? 'transition' : 'new';
+  const modeEl = document.getElementById('cp-add-coaching-mode');
+  const coachingMode = (modeEl && modeEl.value) || 'remote';
   const intake = intakeMode === 'transition' ? Object.assign(readIntakeForm('cpa'), { firstName: firstName, lastName: lastName }) : { firstName: firstName, lastName: lastName };
   if (firstName.length < 2 || lastName.length < 2 || password.length < 4) {
     if (status) status.textContent = 'Nome, cognome e password sono obbligatori.';
@@ -82683,7 +82690,7 @@ async function submitAddClient() {
     const payload = await practiceFetch('/api/coach/clients', {
       method: 'POST',
       headers: practiceHeaders(true),
-      body: JSON.stringify({ firstName: firstName, lastName: lastName, password: password, intakeMode: intakeMode, intake: intake })
+      body: JSON.stringify({ firstName: firstName, lastName: lastName, password: password, intakeMode: intakeMode, intake: intake, coachingMode: coachingMode })
       // 25s was below the 20-30s this host can take to wake from idle, so the
       // first client created after a quiet spell timed out almost by rule.
     }, 45000);
@@ -82702,7 +82709,10 @@ async function submitAddClient() {
       password: pass
     });
     practiceToast('Creato ' + firstName + '. Utente ' + user, 'success');
-    showInviteSheet('Invito pronto', msg, intakeMode === 'new' ? 'Al primo accesso compilerà il questionario.' : 'Transizione: entra senza questionario.');
+    showInviteSheet(coachingMode === 'presence' ? 'Cliente creato' : 'Invito pronto', msg,
+      coachingMode === 'presence'
+        ? 'Cliente in presenza: mandargli il link è facoltativo. Allenamenti e carichi li puoi segnare tu da «Vedi dati del cliente».'
+        : (intakeMode === 'new' ? 'Al primo accesso compilerà il questionario.' : 'Transizione: entra senza questionario.'));
     if (currentView === 'coachHub') loadCoachClientList();
     else navigate('coachHub');
   } catch (err) {
@@ -83419,10 +83429,8 @@ async function renderCoachWorkspace(c) {
       '<input id="cp-max-freedom" type="checkbox"' + (cl.allowMaxFreedom ? ' checked' : '') + ' onchange="toggleMaxFreedom(\'' + esc(id) + '\', this.checked)" style="margin-top:3px;flex-shrink:0;width:18px;height:18px;">' +
       '<span style="display:block;color:#eee !important;-webkit-text-fill-color:#eee !important;"><b style="color:#fff !important;-webkit-text-fill-color:#fff !important;">Consenti massima libertà</b><br>' +
       '<span style="color:#bbb !important;-webkit-text-fill-color:#bbb !important;font-size:11px;">L\'atleta puo modificare da solo. Ti arriva comunque un avviso. Senza spunta, ogni modifica richiede la tua approvazione.</span></span></label>' +
-      '<label style="display:flex;gap:10px;align-items:flex-start;margin:12px 0 0;padding:0;background:transparent;border:0;font-size:12px;line-height:1.4;color:#eee !important;-webkit-text-fill-color:#eee !important;">' +
-      '<input id="cp-nurvan-ai" type="checkbox"' + (cl.allowNurvanAi ? ' checked' : '') + ' onchange="toggleNurvanAi(\'' + esc(id) + '\', this.checked)" style="margin-top:3px;flex-shrink:0;width:18px;height:18px;">' +
-      '<span style="display:block;color:#eee !important;-webkit-text-fill-color:#eee !important;"><b style="color:#fff !important;-webkit-text-fill-color:#fff !important;">Consenti Nurvan AI</b><br>' +
-      '<span style="color:#bbb !important;-webkit-text-fill-color:#bbb !important;font-size:11px;">Se attivo, il cliente vede Coach AI nell\'app. Di default e nascosta.</span></span></label></div>' +
+      '</div>' +
+      coachingModeFieldHtml(id, cl.coachingMode) +
       '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="openAssignChooser(\'' + esc(id) + '\',\'' + esc(cl.displayName || '') + '\')">ASSEGNA SCHEDA</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="enterCoachClientView(\'training\')">VISUALIZZA ALLENAMENTO</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestCheckFromClient(\'' + esc(id) + '\')">RICHIEDI CHECK</button>' +
@@ -84654,6 +84662,40 @@ async function toggleMaxFreedom(id, allow) {
     if (el) el.checked = !allow;
   }
 }
+
+// How a client is followed: at a distance (the web app is where they work),
+// in person (the coach may never send the link and logs for them from
+// "Vedi dati del cliente"), or both.
+var COACHING_MODE_LABELS = [['remote', 'A distanza'], ['presence', 'In presenza'], ['both', 'In presenza e a distanza']];
+function coachingModeLabel(mode) {
+  const hit = COACHING_MODE_LABELS.filter(function (m) { return m[0] === mode; })[0];
+  return hit ? hit[1] : COACHING_MODE_LABELS[0][1];
+}
+function coachingModeFieldHtml(id, mode) {
+  const cur = mode || 'remote';
+  const help = cur === 'presence'
+    ? 'Lo alleni di persona: il link è facoltativo, e carichi ed esercizi li puoi segnare tu da «Vedi dati del cliente».'
+    : (cur === 'both'
+      ? 'Usa la web app e lo vedi anche di persona: nel calendario indichi, seduta per seduta, se è in presenza.'
+      : 'Lavora dalla web app, con il link che gli mandi.');
+  return '<div style="margin-top:10px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
+    '<label style="font-size:10px;color:#ccc;font-weight:800;display:block;">Come lo segui' +
+    '<select id="cp-coaching-mode" onchange="setCoachingMode(\'' + esc(id) + '\', this.value)" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:14px;">' +
+    COACHING_MODE_LABELS.map(function (m) { return '<option value="' + m[0] + '"' + (m[0] === cur ? ' selected' : '') + '>' + esc(m[1]) + '</option>'; }).join('') +
+    '</select></label><div style="font-size:11px;color:#bbb;line-height:1.4;margin-top:6px;">' + esc(help) + '</div></div>';
+}
+async function setCoachingMode(id, mode) {
+  try {
+    const res = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/coaching-mode', {
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ mode: mode })
+    }, 15000);
+    if (store.coachWorkspace && store.coachWorkspace.client) store.coachWorkspace.client.coachingMode = res.coachingMode || mode;
+    practiceToast('Modalità aggiornata: ' + coachingModeLabel(res.coachingMode || mode), 'success');
+    if (currentView === 'coachClient') renderPracticeView();
+  } catch (err) { practiceToast((err && err.message) || 'Modalità non aggiornata', 'danger'); }
+}
+window.setCoachingMode = setCoachingMode;
+window.coachingModeLabel = coachingModeLabel;
 
 async function toggleNurvanAi(id, allow) {
   try {
@@ -90073,6 +90115,13 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
     ['Custom Session', 'Altro']
   ];
   const DURATIONS = [15, 30, 45, 60, 90, 120];
+  // Where it takes place. A client followed both ways gets it said session by
+  // session, so the ones done in person can be counted.
+  const MODES = [['presence', 'In presenza'], ['remote', 'A distanza']];
+  function modeLabel(mode) {
+    const hit = MODES.filter(function (m) { return m[0] === mode; })[0];
+    return hit ? T(hit[1]) : '';
+  }
   const REPEATS = [[1, 'Non si ripete'], [2, 'Ogni settimana, per 2 settimane'], [4, 'Ogni settimana, per 4 settimane'], [8, 'Ogni settimana, per 8 settimane'], [12, 'Ogni settimana, per 12 settimane']];
   const state = { appointments: [], clients: [], range: 'week', failed: false };
 
@@ -90145,7 +90194,7 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
               const id = escText(a.id);
               return '<div class="coach-os-row" style="flex-wrap:wrap;gap:8px;' + (done ? 'opacity:.55;' : '') + '"><span class="coach-os-row-main"><strong>' +
                 escText(clock(start) + '–' + clock(end)) + ' · ' + escText(a.title) + '</strong><span>' +
-                escText(typeLabel(a.type)) + (a.clientName ? ' · ' + escText(a.clientName) : '') + (done ? ' · ' + escText(T('fatta')) : '') +
+                escText(typeLabel(a.type)) + (a.clientName ? ' · ' + escText(a.clientName) : '') + (a.mode ? ' · ' + escText(modeLabel(a.mode)) : '') + (done ? ' · ' + escText(T('fatta')) : '') +
                 (a.notes ? ' · ' + escText(a.notes) : '') + '</span></span>' +
                 (done ? '' :
                   '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.completeAppointment(\'' + id + '\')">' + escText(T('FATTA')) + '</button>' +
@@ -90170,7 +90219,7 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
   async function loadClients() {
     try {
       const payload = await window.practiceFetch('/api/coach/clients?limit=200&offset=0&q=', { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
-      state.clients = (payload.clients || []).map(function (c) { return { id: String(c.id), name: c.displayName || c.display_name || c.username || ('Cliente ' + c.id) }; });
+      state.clients = (payload.clients || []).map(function (c) { return { id: String(c.id), name: c.displayName || c.display_name || c.username || ('Cliente ' + c.id), mode: c.coachingMode || 'remote' }; });
     } catch (_) { /* the form still works, without a client */ }
   }
   function redraw() {
@@ -90228,6 +90277,8 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
           label('Che cosa') + '<select id="cal-type" style="' + field + '" onchange="CoachOS.suggestAppointmentTitle()">' +
           TYPES.map(function (t) { return '<option value="' + escText(t[0]) + '">' + escText(T(t[1])) + '</option>'; }).join('') + '</select></label>' +
           label('Titolo') + '<input id="cal-title" type="text" maxlength="120" style="' + field + '"></label>') +
+      label('Dove') + '<select id="cal-mode" style="' + field + '">' +
+      MODES.map(function (m) { return '<option value="' + m[0] + '"' + ((existing && existing.mode === m[0]) ? ' selected' : '') + '>' + escText(T(m[1])) + '</option>'; }).join('') + '</select></label>' +
       label('Giorno') + '<input id="cal-date" type="date" value="' + dayKey(start) + '" style="' + field + '"></label>' +
       label('Ora') + '<input id="cal-time" type="time" step="300" value="' + clock(start) + '" style="' + field + '"></label>' +
       label('Durata') + '<select id="cal-duration" style="' + field + '">' +
@@ -90254,6 +90305,13 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
     const type = document.getElementById('cal-type');
     const client = document.getElementById('cal-client');
     const name = client && client.value ? client.options[client.selectedIndex].text : '';
+    // The place follows how that client is followed, until the coach changes it.
+    const modeEl = document.getElementById('cal-mode');
+    if (modeEl && modeEl.getAttribute('data-own') !== '1') {
+      const cl = state.clients.filter(function (c) { return client && c.id === client.value; })[0];
+      modeEl.value = cl && cl.mode === 'remote' ? 'remote' : 'presence';
+      modeEl.onchange = function () { modeEl.setAttribute('data-own', '1'); };
+    }
     title.value = typeLabel(type ? type.value : '') + (name ? ' · ' + name : '');
     title.oninput = function () { title.setAttribute('data-own', '1'); };
   };
@@ -90273,7 +90331,7 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
       if (id) {
         await window.practiceFetch('/api/coach/appointments/' + encodeURIComponent(id), {
           method: 'PATCH', headers: window.practiceHeaders(true),
-          body: JSON.stringify({ startsAt: start.toISOString(), endsAt: end.toISOString() })
+          body: JSON.stringify({ startsAt: start.toISOString(), endsAt: end.toISOString(), mode: val('cal-mode') || null })
         });
         toast('Sessione spostata', 'success');
       } else {
@@ -90284,7 +90342,7 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
           body: JSON.stringify({
             title: title, type: val('cal-type') || 'Custom Session', clientId: val('cal-client') || null,
             startsAt: start.toISOString(), endsAt: end.toISOString(),
-            recurrenceWeeks: Number(val('cal-repeat')) || 1, notes: val('cal-notes'), timeZone: timeZone()
+            recurrenceWeeks: Number(val('cal-repeat')) || 1, notes: val('cal-notes'), timeZone: timeZone(), mode: val('cal-mode') || null
           })
         });
         toast('Sessione salvata', 'success');
@@ -90438,29 +90496,209 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
     return '€' + (Number(cents || 0) / 100).toFixed(0);
   }
 
+  /*
+   * Incassi: the coach's own record of what clients paid. No money moves
+   * through the app - it is a ledger kept by hand, with the figure optional:
+   * a payment written without one is listed and left out of the totals.
+   * Totals: everything, this year, this month, the last 30 days, month by
+   * month and client by client; and the sessions done in person and at a
+   * distance, for who charges them differently.
+   */
+  const METHODS = [['cash', 'Contanti'], ['transfer', 'Bonifico'], ['card', 'Carta'], ['other', 'Altro']];
+  const LABELS = ['Mensile coaching', 'Pacchetto di sedute', 'Seduta in presenza', 'Programma', 'Altro'];
+  const ledger = { events: [], totals: null, sessions: [], clients: [], failed: false };
+  function T(text) { return typeof window.tr === 'function' ? window.tr(text) : text; }
+  function locale() { try { return (document.documentElement && document.documentElement.lang) || 'it-IT'; } catch (_) { return 'it-IT'; } }
+  function money(cents) {
+    try { return new Intl.NumberFormat(locale(), { style: 'currency', currency: 'EUR' }).format((Number(cents) || 0) / 100); }
+    catch (_) { return '€ ' + ((Number(cents) || 0) / 100).toFixed(2); }
+  }
+  function methodLabel(id) {
+    const hit = METHODS.filter(function (m) { return m[0] === id; })[0];
+    return hit ? T(hit[1]) : '';
+  }
+  function monthLabel(key) {
+    try { return new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric' }).format(new Date(key + '-15T12:00:00')); } catch (_) { return key; }
+  }
+  function dayLabel(iso) {
+    try { return new Intl.DateTimeFormat(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(iso)); } catch (_) { return String(iso).slice(0, 10); }
+  }
+  // "12,50" / "12.5" / "1.250,00" -> cents; '' -> null (no figure given).
+  function parseAmount(text) {
+    const raw = String(text == null ? '' : text).trim().replace(/\s|€/g, '');
+    if (!raw) return null;
+    const norm = raw.indexOf(',') >= 0 ? raw.replace(/\./g, '').replace(',', '.') : raw;
+    const n = Number(norm);
+    if (!isFinite(n) || n < 0) return NaN;
+    return Math.round(n * 100);
+  }
+
+  function renderLedger(container) {
+    const t = ledger.totals || { allCents: 0, yearCents: 0, monthCents: 0, last30Cents: 0, count: 0, withoutAmount: 0, byMonth: [], byClient: [] };
+    const paid = ledger.events.filter(function (e) { return e.kind === 'paid'; });
+    const byMonth = {};
+    paid.forEach(function (e) { const d = new Date(e.occurredAt); const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); (byMonth[k] = byMonth[k] || []).push(e); });
+    const monthTotal = {};
+    (t.byMonth || []).forEach(function (m) { monthTotal[m.month] = m; });
+    // Sessions that took place, per client: in person / at a distance.
+    const perClient = {};
+    (ledger.sessions || []).forEach(function (s) {
+      const k = s.clientId || '-';
+      const row = perClient[k] = perClient[k] || { name: s.clientName || T('Senza cliente'), presence: 0, remote: 0, unknown: 0 };
+      if (s.mode === 'presence') row.presence += s.count; else if (s.mode === 'remote') row.remote += s.count; else row.unknown += s.count;
+    });
+    const sessionRows = Object.keys(perClient).map(function (k) { return perClient[k]; }).sort(function (x, y) { return (y.presence + y.remote + y.unknown) - (x.presence + x.remote + x.unknown); });
+    container.innerHTML =
+      '<div class="coach-os-page" id="coach-ledger-page">' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(T('Coach')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(T('Incassi')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(T('Il tuo registro di quello che i clienti ti pagano. Lo tieni tu: dall’app non passa nessun pagamento.')) + '</p></div>' +
+      '<button class="btn btn-primary" onclick="CoachOS.openPaymentForm()">' + escText(T('REGISTRA INCASSO')) + '</button></div>' +
+      (ledger.failed ? '<div class="coach-os-empty">' + escText(T('Registro non disponibile adesso. Riprova tra poco.')) + '</div>' : '') +
+      '<div class="coach-os-card coach-os-kpis">' +
+      [[T('Totale incassato'), money(t.allCents)], [T('Quest’anno'), money(t.yearCents)], [T('Questo mese'), money(t.monthCents)], [T('Ultimi 30 giorni'), money(t.last30Cents)]]
+        .map(function (row) { return '<div class="coach-os-kpi"><strong>' + escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></div>'; }).join('') + '</div>' +
+      '<p class="coach-os-subtitle" style="margin:8px 0 0;">' + escText(t.count + ' ' + T(t.count === 1 ? 'incasso registrato' : 'incassi registrati')) +
+      (t.withoutAmount ? ' · ' + escText(t.withoutAmount + ' ' + T('senza cifra, non contati nei totali')) : '') + '</p>' +
+      '<div class="coach-os-quick-actions"><button class="coach-os-action" onclick="CoachOS.exportLedgerCsv()">' + escText(T('Esporta in CSV')) + '</button></div>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Per cliente')) + '</h2></div>' +
+      ((t.byClient || []).length
+        ? '<div class="coach-os-list">' + t.byClient.map(function (c) {
+          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(c.clientName || T('Cliente')) + '</strong><span>' + escText(c.count + ' ' + T(c.count === 1 ? 'incasso' : 'incassi')) + '</span></span><strong>' + escText(money(c.cents)) + '</strong></div>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">' + escText(T('Ancora nessun incasso. Con REGISTRA INCASSO scrivi il primo.')) + '</div>') + '</section>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Sedute fatte negli ultimi 12 mesi')) + '</h2></div>' +
+      (sessionRows.length
+        ? '<div class="coach-os-list">' + sessionRows.map(function (r) {
+          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(r.name) + '</strong><span>' +
+            escText(T('in presenza') + ': ' + r.presence + ' · ' + T('a distanza') + ': ' + r.remote + (r.unknown ? ' · ' + T('non indicato') + ': ' + r.unknown : '')) + '</span></span></div>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">' + escText(T('Compaiono qui le sessioni del calendario segnate come fatte.')) + '</div>') + '</section>' +
+      Object.keys(byMonth).sort().reverse().map(function (k) {
+        const mt = monthTotal[k] || { cents: 0 };
+        return '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(monthLabel(k)) + ' · ' + escText(money(mt.cents)) + '</h2></div>' +
+          '<div class="coach-os-list">' + byMonth[k].map(function (e) {
+            const bits = [dayLabel(e.occurredAt), e.label ? T(e.label) : '', methodLabel(e.method), e.note].filter(Boolean);
+            return '<div class="coach-os-row" style="flex-wrap:wrap;gap:8px;"><span class="coach-os-row-main"><strong>' + escText(e.clientName || T('Cliente')) + '</strong><span>' + escText(bits.join(' · ')) + '</span></span>' +
+              '<strong>' + escText(e.hasAmount === false ? T('senza cifra') : money(e.amountCents)) + '</strong>' +
+              '<button class="btn btn-outline" style="font-size:9px;color:#c66;border-color:#c66;" onclick="CoachOS.deletePayment(\'' + escText(e.id) + '\')">' + escText(T('ELIMINA')) + '</button></div>';
+          }).join('') + '</div></section>';
+      }).join('') +
+      '</div>';
+  }
+
+  async function loadLedger() {
+    const data = await window.practiceFetch('/api/coach/business', { headers: window.practiceHeaders() });
+    ledger.events = data.events || [];
+    ledger.totals = data.totals || null;
+    ledger.sessions = data.sessions || [];
+    ledger.failed = false;
+  }
+  async function refreshLedger() {
+    try { await loadLedger(); } catch (_) { ledger.failed = true; }
+    const page = document.getElementById('coach-ledger-page');
+    if (page && page.parentNode) renderLedger(page.parentNode);
+  }
+
   CoachOS.views.coachBusiness = async function (container) {
     // Billing clients belongs to the Coach plan (web/features.json).
     if (typeof planCan === 'function' && !planCan('client_billing')) {
       container.innerHTML = '<div class="coach-os-page">' + planLockedHtml('client_billing') + '</div>';
       return;
     }
-    container.innerHTML = '<div class="coach-os-skeleton">' + escText(tx('coLoadingLedger')) + '</div>';
-    let summary = {};
-    try {
-      const data = await window.practiceFetch('/api/coach/business', { headers: window.practiceHeaders() });
-      summary = data.summary || {};
-    } catch (_) {
-      summary = { activeClients: 0, revenue30dCents: 0, mrrCents: 0, overdue: 0 };
-    }
-    container.innerHTML =
-      '<div class="coach-os-page"><div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(tx('coManualLedger')) + '</div>' +
-      '<h1 class="coach-os-title">' + escText(tx('coBusiness')) + '</h1><p class="coach-os-subtitle">' + escText(tx('coBusinessSubtitle')) + '</p></div></div>' +
-      '<div class="coach-os-card coach-os-kpis">' +
-      [[tx('coActive'), summary.activeClients || 0], [tx('coRevenue30d'), euros(summary.revenue30dCents)], ['MRR', euros(summary.mrrCents)], [tx('coOverdue'), summary.overdue || 0]]
-        .map(function (row) {
-          return '<div class="coach-os-kpi"><strong>' + escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></div>';
-        }).join('') + '</div></div>';
+    if (ledger.totals || ledger.failed) renderLedger(container);
+    else container.innerHTML = '<div class="coach-os-skeleton">' + escText(T('Carico il registro…')) + '</div>';
+    try { await loadLedger(); } catch (_) { ledger.failed = true; }
+    if (typeof currentView === 'undefined' || currentView === 'coachBusiness') renderLedger(container);
   };
+
+  function closePaymentForm() { const el = document.getElementById('coach-payment-form'); if (el) el.remove(); }
+  CoachOS.closePaymentForm = closePaymentForm;
+  CoachOS.openPaymentForm = async function () {
+    closePaymentForm();
+    if (!ledger.clients.length) {
+      try {
+        const payload = await window.practiceFetch('/api/coach/clients?limit=200&offset=0&q=', { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
+        ledger.clients = (payload.clients || []).map(function (c) { return { id: String(c.id), name: c.displayName || c.username || ('Cliente ' + c.id) }; });
+      } catch (_) {}
+    }
+    const today = new Date();
+    const iso = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    const field = 'width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:16px;box-sizing:border-box;';
+    const label = function (text) { return '<label style="font-size:10px;color:#ccc;font-weight:800;display:block;margin-top:10px;">' + escText(T(text)); };
+    const preset = store.coachWorkspace && store.coachWorkspace.clientId ? String(store.coachWorkspace.clientId) : '';
+    const el = document.createElement('div');
+    el.id = 'coach-payment-form';
+    el.style.cssText = 'display:flex;position:fixed;inset:0;z-index:100015;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+    el.onclick = function (ev) { if (ev.target === el) closePaymentForm(); };
+    el.innerHTML = '<div class="card" style="max-width:440px;width:100%;max-height:100%;overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;margin:0;">' +
+      '<div style="font-size:14px;font-weight:900;color:var(--gold);">' + escText(T('Registra un incasso')) + '</div>' +
+      label('Cliente') + '<select id="pay-client" style="' + field + '">' +
+      (ledger.clients.length ? '' : '<option value="">' + escText(T('Nessun cliente')) + '</option>') +
+      ledger.clients.map(function (c) { return '<option value="' + escText(c.id) + '"' + (c.id === preset ? ' selected' : '') + '>' + escText(c.name) + '</option>'; }).join('') + '</select></label>' +
+      label('Importo in euro (facoltativo)') + '<input id="pay-amount" type="text" inputmode="decimal" placeholder="0,00" style="' + field + '"></label>' +
+      label('Data') + '<input id="pay-date" type="date" value="' + iso + '" style="' + field + '"></label>' +
+      label('Per cosa') + '<select id="pay-label" style="' + field + '">' + LABELS.map(function (l) { return '<option value="' + escText(l) + '">' + escText(T(l)) + '</option>'; }).join('') + '</select></label>' +
+      label('Come') + '<select id="pay-method" style="' + field + '">' + METHODS.map(function (m) { return '<option value="' + m[0] + '">' + escText(T(m[1])) + '</option>'; }).join('') + '</select></label>' +
+      label('Nota (facoltativa)') + '<input id="pay-note" type="text" maxlength="200" style="' + field + '"></label>' +
+      '<div id="pay-error" style="font-size:12px;color:#ff8a80;min-height:16px;margin-top:10px;"></div>' +
+      '<div style="display:grid;gap:8px;margin-top:6px;">' +
+      '<button type="button" class="btn btn-primary" id="pay-save" onclick="CoachOS.savePaymentForm()">' + escText(T('SALVA')) + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="CoachOS.closePaymentForm()">' + escText(T('CHIUDI')) + '</button>' +
+      '</div></div>';
+    document.body.appendChild(el);
+  };
+  CoachOS.savePaymentForm = async function () {
+    const val = function (x) { const el = document.getElementById(x); return el ? String(el.value || '').trim() : ''; };
+    const err = document.getElementById('pay-error');
+    const say = function (m) { if (err) err.textContent = T(m); };
+    const clientId = val('pay-client');
+    if (!clientId) { say('Scegli il cliente.'); return; }
+    const cents = parseAmount(val('pay-amount'));
+    if (cents !== null && isNaN(cents)) { say('Importo non valido: scrivi una cifra, per esempio 80 o 80,50.'); return; }
+    const date = val('pay-date');
+    const btn = document.getElementById('pay-save');
+    if (btn) btn.disabled = true;
+    try {
+      await window.practiceFetch('/api/coach/business/payments', {
+        method: 'POST', headers: window.practiceHeaders(true),
+        body: JSON.stringify({
+          clientId: clientId, kind: 'paid', amountCents: cents,
+          // Noon, so the day does not slip with the time zone.
+          occurredAt: date ? new Date(date + 'T12:00:00').toISOString() : null,
+          method: val('pay-method'), label: val('pay-label'), note: val('pay-note')
+        })
+      });
+      closePaymentForm();
+      if (typeof window.practiceToast === 'function') window.practiceToast(T('Incasso registrato'), 'success');
+      await refreshLedger();
+    } catch (error) {
+      say((error && error.message) || 'Incasso non salvato. Riprova.');
+      if (btn) btn.disabled = false;
+    }
+  };
+  CoachOS.deletePayment = async function (id) {
+    if (!window.confirm(T('Eliminare questo incasso dal registro?'))) return;
+    try {
+      await window.practiceFetch('/api/coach/business/payments/' + encodeURIComponent(id), { method: 'DELETE', headers: window.practiceHeaders(false) });
+      await refreshLedger();
+    } catch (error) {
+      if (typeof window.practiceToast === 'function') window.practiceToast((error && error.message) || T('Incasso non eliminato.'), 'danger');
+    }
+  };
+  CoachOS.exportLedgerCsv = function () {
+    const cell = function (v) { const s = String(v == null ? '' : v); return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const rows = [['data', 'cliente', 'per cosa', 'come', 'importo', 'nota'].join(';')].concat(
+      ledger.events.filter(function (e) { return e.kind === 'paid'; }).map(function (e) {
+        return [String(e.occurredAt).slice(0, 10), e.clientName || '', e.label || '', methodLabel(e.method), e.hasAmount === false ? '' : ((Number(e.amountCents) || 0) / 100).toFixed(2).replace('.', ','), e.note || ''].map(cell).join(';');
+      }));
+    const blob = new Blob(['﻿' + rows.join('\n') + '\n'], { type: 'text/csv;charset=utf-8' });
+    if (typeof window.downloadBlobHelper === 'function') { window.downloadBlobHelper(blob, 'nurvan-incassi.csv'); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'nurvan-incassi.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+  CoachOS.ledgerTestHooks = { parseAmount: parseAmount, ledger: ledger, METHODS: METHODS, LABELS: LABELS };
 
   CoachOS.views.coachCrm = async function (container) {
     let rows = [];

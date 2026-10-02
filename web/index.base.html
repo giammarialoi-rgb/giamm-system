@@ -15533,7 +15533,7 @@ var PAGE_TUTORIALS = {
     { t: 'Il mese', d: 'Ogni giorno mostra quello che c’è in programma e quello che hai registrato. Tocca una data per vederne il dettaglio.' },
     { t: 'Aggiungere un evento', d: 'Per la data scelta puoi segnare una nota, una pesata, un check-in, un giorno di riposo, uno scarico o un allenamento fuori scheda.' }
   ] },
-  ai: { label: 'Coach AI', icon: '🤖', steps: [
+  ai: { label: 'Coach AI', icon: '🤖', who: 'self', steps: [
     { t: 'Chiedi al Coach', d: 'Scrivi o detta una domanda: il Coach AI risponde tenendo conto del tuo programma e di quello che hai registrato.' },
     { t: 'Modifiche alla scheda', d: 'Puoi chiedergli di cambiare il programma. Ogni modifica ti viene proposta prima: la applichi solo se confermi.' },
     { t: 'Analisi di un file', d: 'Con ANALIZZA carichi una scheda in PDF, Excel, Word o foto: il Coach la legge e ti dice cosa migliorerebbe.' },
@@ -15592,7 +15592,8 @@ var PAGE_TUTORIALS = {
   coachClient: { label: 'Scheda cliente', icon: '🧑', who: 'coach', noNav: true, steps: [
     { t: 'Tutto di un cliente', d: 'Anagrafica, allenamenti, richieste da approvare, programma e dati: una pagina sola per ogni cliente.' },
     { t: 'Assegnare una scheda', d: 'ASSEGNA SCHEDA apre uno spazio di lavoro del cliente: importi un file, scrivi la scheda da zero, la generi, la prendi dal tuo database o da quello di Nurvan. Con INVIA AL CLIENTE scegli la scadenza e confermi.' },
-    { t: 'Quanto è libero il cliente', d: 'Due interruttori: «Consenti massima libertà» lascia modificare e generare da sé (tu ricevi un avviso); senza, ogni modifica ti arriva da approvare. «Consenti Nurvan AI» apre al cliente il Coach AI.' },
+    { t: 'Quanto è libero il cliente', d: '«Consenti massima libertà» lascia modificare e generare da sé (tu ricevi un avviso); senza, ogni modifica ti arriva da approvare. I tuoi clienti non hanno l’assistente AI: per i dubbi scrivono a te.' },
+    { t: 'In presenza o a distanza', d: 'In «Come lo segui» scegli se lavora dalla web app, se lo alleni di persona o entrambe le cose. A un cliente in presenza puoi anche non mandare il link e segnare tu carichi ed esercizi.' },
     { t: 'Vedere i suoi dati', d: 'Da «Vedi dati del cliente» apri allenamento, statistiche, alimentazione, integrazione, terapia, esami e profilo così come li vede lui. Terapia ed esami richiedono il piano Coach Pro e il consenso del cliente.' },
     { t: 'Check e richieste', d: 'RICHIEDI CHECK e RICHIEDI ESAMI mandano la richiesta al cliente. Nei check-in programmati imposti cadenza, giorno e domande, e li ricevi da soli.' },
     { t: 'Accesso del cliente', d: 'COPIA LINK + CREDENZIALI, REIMPOSTA PASSWORD e RIGENERA LINK UNIVOCO servono quando il cliente cambia telefono o perde l’accesso.' }
@@ -15635,8 +15636,9 @@ var PAGE_TUTORIALS = {
   coachAgent: { label: 'Agente Nurvan', icon: '🧠', who: 'coach', steps: [
     { t: 'Chiedi all’agente', d: 'Scrivi cosa vuoi fare sui tuoi clienti: l’agente prepara l’azione e ti mostra l’anteprima. Parte solo se confermi.' }
   ] },
-  coachBusiness: { label: 'Coach · Attività', icon: '💼', who: 'coach', steps: [
-    { t: 'I numeri della tua attività', d: 'Un registro tenuto a mano di clienti e incassi. In questa versione non c’è un pagamento collegato.' }
+  coachBusiness: { label: 'Coach · Incassi', icon: '💼', who: 'coach', steps: [
+    { t: 'Il tuo registro degli incassi', d: 'Con REGISTRA INCASSO scrivi chi ti ha pagato, quanto (la cifra è facoltativa), quando, per cosa e come. Dall’app non passa nessun pagamento: è la tua contabilità.' },
+    { t: 'Totali e resoconti', d: 'In alto il totale incassato, quest’anno, questo mese e negli ultimi 30 giorni; sotto, il dettaglio per cliente e mese per mese. Le sedute fatte sono contate in presenza e a distanza. Esporti tutto in CSV.' }
   ] },
   coachCrm: { label: 'Coach · Pipeline', icon: '📇', who: 'coach', steps: [
     { t: 'L’elenco dei contatti', d: 'I tuoi clienti in un unico elenco, per vedere a che punto è ognuno.' }

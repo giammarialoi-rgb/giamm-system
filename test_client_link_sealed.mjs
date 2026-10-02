@@ -89,7 +89,7 @@ ok('3c. il link cliente ha il suo database locale, non quello personale', /NURVA
   const coachViews = ['coachHub', 'coachClient', 'coachToday', 'coachInbox', 'coachChat', 'coachPrograms', 'coachImport', 'coachCalendar', 'coachLibrary', 'coachCheckIns', 'coachNutrition', 'coachAnalytics', 'coachAgent', 'coachAutomations', 'coachBusiness', 'coachCrm', 'coachActionCenter', 'coachFormReview', 'coachMealAi', 'coachAgentAudit', 'pricing', 'programs', 'db'];
   ok('4a. un cliente non apre nessuna schermata del coach', coachViews.every((v) => c.gate(v) === 'home'));
   ok('4b. le sue pagine restano sue', ['home', 'training', 'nutrition', 'supplements', 'therapy', 'exams', 'stats', 'calendar', 'clientChat'].every((v) => c.gate(v) === v));
-  ok('4c. Coach AI solo se il coach lo ha concesso', c.gate('ai') === 'home' && (c.store.clientProfile = { allowNurvanAi: true }, c.gate('ai') === 'ai'));
+  ok('4c. Coach AI mai, nemmeno con un vecchio permesso rimasto', c.gate('ai') === 'home' && (c.store.clientProfile = { allowNurvanAi: true }, c.gate('ai') === 'home'));
   c.isAthleteRole = () => false;
   ok('4d. vale già dal link aperto, prima dell’accesso', c.gate('coachHub') === 'home');
 }

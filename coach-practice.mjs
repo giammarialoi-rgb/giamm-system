@@ -72,6 +72,7 @@ import {
   listAvailability,
   saveAvailabilityRule,
   SESSION_TYPES,
+  sessionsReport,
   toIcs,
   updateAppointment
 } from "./server/coach-os/scheduling.mjs";
@@ -86,6 +87,8 @@ import {
   runAutomationDry,
   setAutomationEnabled,
   summarizeBusiness,
+  ledgerTotals,
+  deletePaymentEvent,
   updateCrmStage,
   upsertClientPlan
 } from "./server/coach-os/business.mjs";
@@ -250,6 +253,9 @@ function isWorkoutLive(r) {
   return true;
 }
 
+// How a coach follows a client: at a distance (the web app), in person, or both.
+const COACHING_MODES = ["remote", "presence", "both"];
+
 function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
   if (!r) return null;
   const row = {
@@ -278,7 +284,10 @@ function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
     leaveRequested: !!r.leave_requested_at,
     chatThread: Number(r.chat_thread || 1),
     allowMaxFreedom: !!r.allow_max_freedom,
-    allowNurvanAi: !!r.allow_nurvan_ai,
+    // The AI assistant is not offered to a coach's clients (decided
+    // 03-10-2026): whatever the old column says, it is off.
+    allowNurvanAi: false,
+    coachingMode: COACHING_MODES.includes(r.coaching_mode) ? r.coaching_mode : "remote",
     hasPendingChange: !!(r.pending_change && (r.pending_change.summary || r.pending_change.data)),
     hasPendingUnlock: !!(r.pending_unlock && r.pending_unlock.feature),
     hasPendingIntake: !!(r.pending_intake && r.pending_intake.intake),
@@ -2061,6 +2070,7 @@ export function mountCoachPractice(app, deps) {
     const coach = await requireCoach(req, res);
     if (!coach) return;
     const intakeMode = String(req.body?.intakeMode || req.body?.mode || "new") === "transition" ? "transition" : "new";
+    const coachingMode = COACHING_MODES.includes(String(req.body?.coachingMode || "")) ? String(req.body.coachingMode) : "remote";
     const intake = sanitizeIntake(req.body?.intake || {});
     const firstName = String(req.body?.firstName || intake.firstName || "").trim();
     const lastName = String(req.body?.lastName || intake.lastName || "").trim();
@@ -2110,10 +2120,10 @@ export function mountCoachPractice(app, deps) {
       const cli = await db.query(
         `INSERT INTO coach_clients(
            coach_user_id, athlete_user_id, display_name, username, status, paid, next_due_at, invite_token,
-           intake_mode, intake, intake_completed_at, invite_password, credentials_issued_at
-         ) VALUES($1,$2,$3,$4,'active',TRUE,$5,$6,$7,$8,$9,NULL,NOW())
+           intake_mode, intake, intake_completed_at, invite_password, credentials_issued_at, coaching_mode
+         ) VALUES($1,$2,$3,$4,'active',TRUE,$5,$6,$7,$8,$9,NULL,NOW(),$10)
          RETURNING *`,
-        [coach.id, athlete.id, displayName, username, due, inviteToken, intakeMode, JSON.stringify(intake), completedAt]
+        [coach.id, athlete.id, displayName, username, due, inviteToken, intakeMode, JSON.stringify(intake), completedAt, coachingMode]
       );
       if (intakeMode === "transition") {
         const profile = profileFromIntake(intake);
@@ -2505,17 +2515,30 @@ export function mountCoachPractice(app, deps) {
     return res.json({ ok: true, allowMaxFreedom: on });
   });
 
+  // The AI assistant is not offered to a coach's clients: the switch that
+  // used to turn it on answers that, and turns nothing on.
   app.post("/api/coach/clients/:id/nurvan-ai", async (req, res) => {
     const coach = await requireCoach(req, res);
     if (!coach) return;
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
-    const on = !!req.body?.allow;
     await pool.query(
-      "UPDATE coach_clients SET allow_nurvan_ai = $2, pending_unlock = CASE WHEN $2 AND (pending_unlock->>'feature') = 'nurvan_ai' THEN NULL ELSE pending_unlock END WHERE id = $1",
-      [row.id, on]
+      "UPDATE coach_clients SET allow_nurvan_ai = FALSE, pending_unlock = CASE WHEN (pending_unlock->>'feature') = 'nurvan_ai' THEN NULL ELSE pending_unlock END WHERE id = $1",
+      [row.id]
     );
-    return res.json({ ok: true, allowNurvanAi: on });
+    return res.status(403).json({ error: "L’assistente AI non è disponibile per i clienti del coaching.", allowNurvanAi: false });
+  });
+
+  // How this client is followed: at a distance, in person, or both.
+  app.post("/api/coach/clients/:id/coaching-mode", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const mode = String(req.body?.mode || "");
+    if (!COACHING_MODES.includes(mode)) return res.status(400).json({ error: "Modalità non valida." });
+    await pool.query("UPDATE coach_clients SET coaching_mode = $2 WHERE id = $1", [row.id, mode]);
+    return res.json({ ok: true, coachingMode: mode });
   });
 
   function unlockFeatureLabel(feature) {
@@ -2534,7 +2557,8 @@ export function mountCoachPractice(app, deps) {
       return res.status(400).json({ error: "Nessuna richiesta di sblocco in attesa per questa funzione." });
     }
     if (feature === "nurvan_ai") {
-      await pool.query("UPDATE coach_clients SET allow_nurvan_ai = TRUE, pending_unlock = NULL WHERE id = $1", [row.id]);
+      // Not granted any more: the request is closed without turning it on.
+      await pool.query("UPDATE coach_clients SET allow_nurvan_ai = FALSE, pending_unlock = NULL WHERE id = $1", [row.id]);
     } else {
       await pool.query("UPDATE coach_clients SET allow_max_freedom = TRUE, pending_unlock = NULL WHERE id = $1", [row.id]);
     }
@@ -3650,12 +3674,24 @@ export function mountCoachPractice(app, deps) {
     if (!coach) return;
     const plans = await listClientPlans(pool, coach.id);
     const events = await listPaymentEvents(pool, coach.id);
+    let sessions = [];
+    try { sessions = await sessionsReport(pool, coach.id); } catch (err) { console.warn("COACH_SESSIONS_REPORT", err && err.message); }
     return res.json({
       ok: true,
       plans,
       events,
+      totals: ledgerTotals(events),
+      sessions,
       summary: summarizeBusiness(plans, events)
     });
+  });
+
+  app.delete("/api/coach/business/payments/:id", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const done = await deletePaymentEvent(pool, coach.id, req.params.id);
+    if (!done) return res.status(404).json({ error: "Incasso non trovato." });
+    return res.json({ ok: true });
   });
 
   app.post("/api/coach/business/plans", async (req, res) => {
@@ -3672,8 +3708,12 @@ export function mountCoachPractice(app, deps) {
     if (!coach) return;
     const owned = await loadOwnedClient(coach, req.body?.clientId, res);
     if (!owned) return;
-    const event = await recordPaymentEvent(pool, coach.id, req.body || {});
-    return res.status(201).json({ ok: true, event });
+    try {
+      const event = await recordPaymentEvent(pool, coach.id, req.body || {});
+      return res.status(201).json({ ok: true, event });
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
   });
 
   app.get("/api/coach/crm", async (req, res) => {

@@ -74,20 +74,44 @@ export async function upsertClientPlan(pool, coachId, input = {}) {
   return planRow(result.rows[0]);
 }
 
+export const PAYMENT_METHODS = Object.freeze(["cash", "transfer", "card", "other"]);
+
+// The figure is optional: a payment can be noted without one, and then it is
+// not counted in any total (it is not a payment of zero).
+export function paymentAmount(input = {}) {
+  const raw = input.amountCents;
+  if (raw === null || raw === undefined || raw === "") return { cents: 0, has: false };
+  const n = Math.round(Number(raw));
+  if (!Number.isFinite(n) || n < 0 || n > 100000000) throw new Error("Importo non valido.");
+  return { cents: n, has: true };
+}
+
 export async function recordPaymentEvent(pool, coachId, input = {}) {
+  const amount = paymentAmount(input);
+  let occurredAt = null;
+  if (input.occurredAt) {
+    const d = new Date(input.occurredAt);
+    if (Number.isNaN(d.getTime())) throw new Error("Data non valida.");
+    occurredAt = d.toISOString();
+  }
+  const method = PAYMENT_METHODS.includes(String(input.method || "")) ? String(input.method) : null;
   const result = await pool.query(
     `INSERT INTO coach_payment_events(
-       coach_user_id, client_id, plan_id, kind, amount_cents, currency, note
-     ) VALUES($1,$2,$3,$4,$5,$6,$7)
+       coach_user_id, client_id, plan_id, kind, amount_cents, currency, note, occurred_at, method, label, has_amount
+     ) VALUES($1,$2,$3,$4,$5,$6,$7,COALESCE($8::timestamptz, NOW()),$9,$10,$11)
      RETURNING *`,
     [
       coachId,
       input.clientId,
       input.planId || null,
       clean(input.kind || "paid", 20),
-      money(input.amountCents),
+      amount.cents,
       clean(input.currency || "EUR", 8),
-      clean(input.note, 240) || null
+      clean(input.note, 240) || null,
+      occurredAt,
+      method,
+      clean(input.label, 80) || null,
+      amount.has
     ]
   );
   if (input.kind === "paid" && input.clientId) {
@@ -99,15 +123,59 @@ export async function recordPaymentEvent(pool, coachId, input = {}) {
   return eventRow(result.rows[0]);
 }
 
-export async function listPaymentEvents(pool, coachId) {
+export async function listPaymentEvents(pool, coachId, { limit = 2000 } = {}) {
   const result = await pool.query(
-    `SELECT * FROM coach_payment_events
-     WHERE coach_user_id = $1
-     ORDER BY occurred_at DESC
-     LIMIT 80`,
-    [coachId]
+    `SELECT e.*, c.display_name AS client_name
+     FROM coach_payment_events e
+     LEFT JOIN coach_clients c ON c.id = e.client_id
+     WHERE e.coach_user_id = $1
+     ORDER BY e.occurred_at DESC
+     LIMIT $2`,
+    [coachId, Math.min(5000, Math.max(1, Number(limit) || 2000))]
   );
   return (result.rows || []).map(eventRow);
+}
+
+// A payment written by mistake: only the coach who wrote it removes it.
+export async function deletePaymentEvent(pool, coachId, id) {
+  const result = await pool.query(
+    "DELETE FROM coach_payment_events WHERE id = $1 AND coach_user_id = $2 RETURNING id",
+    [id, coachId]
+  );
+  return !!result.rows[0];
+}
+
+// The totals of the ledger: everything, this year, this month, the last 30
+// days, by month and by client. Payments without a figure are counted apart.
+export function ledgerTotals(events, now = Date.now()) {
+  const today = new Date(now);
+  const yearKey = String(today.getFullYear());
+  const monthKey = yearKey + "-" + String(today.getMonth() + 1).padStart(2, "0");
+  const out = { allCents: 0, yearCents: 0, monthCents: 0, last30Cents: 0, count: 0, withoutAmount: 0, byMonth: [], byClient: [] };
+  const months = new Map();
+  const clients = new Map();
+  for (const e of events || []) {
+    if (!e || e.kind !== "paid") continue;
+    out.count += 1;
+    const when = new Date(e.occurredAt);
+    const key = when.getFullYear() + "-" + String(when.getMonth() + 1).padStart(2, "0");
+    const m = months.get(key) || { month: key, cents: 0, count: 0 };
+    const c = clients.get(e.clientId) || { clientId: e.clientId, clientName: e.clientName || null, cents: 0, count: 0 };
+    m.count += 1; c.count += 1;
+    if (e.hasAmount === false) out.withoutAmount += 1;
+    else {
+      const cents = money(e.amountCents);
+      out.allCents += cents;
+      if (String(when.getFullYear()) === yearKey) out.yearCents += cents;
+      if (key === monthKey) out.monthCents += cents;
+      if (when.getTime() >= now - 30 * 86400000) out.last30Cents += cents;
+      m.cents += cents; c.cents += cents;
+    }
+    months.set(key, m); clients.set(e.clientId, c);
+  }
+  out.byMonth = [...months.values()].sort((a, b) => (a.month < b.month ? 1 : -1));
+  out.byClient = [...clients.values()].sort((a, b) => b.cents - a.cents);
+  return out;
 }
 
 export async function updateCrmStage(pool, coachId, clientId, input = {}) {
@@ -252,10 +320,14 @@ function eventRow(row) {
     id: String(row.id),
     clientId: String(row.client_id),
     planId: row.plan_id == null ? null : String(row.plan_id),
+    clientName: row.client_name || null,
     kind: row.kind,
     amountCents: money(row.amount_cents),
+    hasAmount: row.has_amount !== false,
     currency: row.currency,
     occurredAt: row.occurred_at,
+    method: row.method || null,
+    label: row.label || "",
     note: row.note || ""
   };
 }
@@ -271,4 +343,4 @@ function automationRow(row) {
   };
 }
 
-export const BusinessTestHelpers = Object.freeze({ money, summarizeBusiness });
+export const BusinessTestHelpers = Object.freeze({ money, summarizeBusiness, ledgerTotals, paymentAmount });

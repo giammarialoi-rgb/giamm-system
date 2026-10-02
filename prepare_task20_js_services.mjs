@@ -656,7 +656,7 @@ const I18nService = {
     it: {
       coHome: "Oggi", coClients: "Clienti", coInbox: "Chat", coPrograms: "Programmi", coCalendar: "Calendario",
       coCheckIns: "Verifiche", coNutrition: "Alimentazione", coFormReview: "Revisione tecnica",
-      coAnalytics: "Analisi", coAgent: "Agente", coAgentAudit: "Registro agente", coAutomations: "Automazioni", coBusiness: "Attività", coCrm: "Pipeline",
+      coAnalytics: "Analisi", coAgent: "Agente", coAgentAudit: "Registro agente", coAutomations: "Automazioni", coBusiness: "Incassi", coCrm: "Pipeline",
       coMore: "Altro", coProfileSettings: "Profilo e impostazioni", coHelp: "Guida", coExitCoach: "Esci da Coach",
       coToday: "Oggi", coNeedsAttention: "Richiede attenzione", coMyTasks: "I miei task",
       coRecentActivity: "Attività recente", coPortfolio: "Portfolio", coSessionsToday: "Sessioni di oggi",

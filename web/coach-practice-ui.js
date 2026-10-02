@@ -36,7 +36,6 @@ var CLIENT_TUTORIAL_STEPS = [
   { t: 'La scheda arriva dal coach', d: 'Non importi PDF da solo: il tuo coach ti assegna il programma. Se non vedi nulla, chiedila dalla Home.' },
   { t: 'Allena e finalizza', d: 'Apri Allenati, registra le serie e tocca Finalizza. Così il coach vede che hai lavorato.' },
   { t: 'Chat umana', d: 'Dal tab Coach parli con la persona che ti segue, non con l’AI.' },
-  { t: 'AI solo spiegazioni', d: 'Coach AI può spiegare un esercizio, un cibo o un integratore. Non può cambiare la scheda.' },
   { t: 'Check e pagamenti', d: 'Dal Menu fai il check fisico quando te lo chiede. Se un pagamento è in sospeso, lo vedi in Home.' },
   { t: 'Modifiche al programma', d: 'Puoi proporre cambiamenti. Se il coach non ha dato la massima libertà, aspetta la sua approvazione. Con massima libertà modifichi subito e il coach riceve un avviso.' }
 ];
@@ -163,7 +162,7 @@ function gatePracticeView(v) {
       coachCrm: 1, coachActionCenter: 1, coachFormReview: 1,
       coachMealAi: 1, coachAgentAudit: 1
     };
-    if (v === 'ai' && !(store.clientProfile && store.clientProfile.allowNurvanAi)) return 'home';
+    if (v === 'ai') return 'home';
     if (blocked[v]) return 'home';
     return v;
   }
@@ -184,8 +183,10 @@ function gatePracticeView(v) {
   return v;
 }
 
+// The AI assistant is not offered to a coach's clients (decided 03-10-2026):
+// they are followed by the coach. The server refuses it as well.
 function athleteCanUseNurvanAi() {
-  return !!(typeof isAthleteRole === 'function' && isAthleteRole() && store && store.clientProfile && store.clientProfile.allowNurvanAi);
+  return false;
 }
 
 function clearClientShellLock() {
@@ -3415,6 +3416,8 @@ function drawAddClientWizard() {
     '<div class="cp-field"><label>Nome *</label><input id="cp-add-first" type="text"></div>' +
     '<div class="cp-field"><label>Cognome *</label><input id="cp-add-last" type="text"></div>' +
     '<div class="cp-field"><label>Password di accesso (min. 4) *</label><input id="cp-add-pass" type="text" autocomplete="off"></div>' +
+    '<div class="cp-field"><label>Come lo segui</label><select id="cp-add-coaching-mode" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
+    COACHING_MODE_LABELS.map(function (m) { return '<option value="' + m[0] + '">' + esc(m[1]) + '</option>'; }).join('') + '</select></div>' +
     (isNew ? '' : '<div id="cp-add-intake">' + intakeFormHtml('cpa', {}, { skipName: true }) + '</div>') +
     '<div id="cp-add-status" class="cp-help"></div>' +
     '<button class="btn btn-primary" style="width:100%;" onclick="submitAddClient()">CREA E GENERA LINK</button>' +
@@ -3427,6 +3430,8 @@ async function submitAddClient() {
   const lastName = (document.getElementById('cp-add-last') && document.getElementById('cp-add-last').value || '').trim();
   const password = (document.getElementById('cp-add-pass') && document.getElementById('cp-add-pass').value) || '';
   const intakeMode = window.__cpAddMode === 'transition' ? 'transition' : 'new';
+  const modeEl = document.getElementById('cp-add-coaching-mode');
+  const coachingMode = (modeEl && modeEl.value) || 'remote';
   const intake = intakeMode === 'transition' ? Object.assign(readIntakeForm('cpa'), { firstName: firstName, lastName: lastName }) : { firstName: firstName, lastName: lastName };
   if (firstName.length < 2 || lastName.length < 2 || password.length < 4) {
     if (status) status.textContent = 'Nome, cognome e password sono obbligatori.';
@@ -3444,7 +3449,7 @@ async function submitAddClient() {
     const payload = await practiceFetch('/api/coach/clients', {
       method: 'POST',
       headers: practiceHeaders(true),
-      body: JSON.stringify({ firstName: firstName, lastName: lastName, password: password, intakeMode: intakeMode, intake: intake })
+      body: JSON.stringify({ firstName: firstName, lastName: lastName, password: password, intakeMode: intakeMode, intake: intake, coachingMode: coachingMode })
       // 25s was below the 20-30s this host can take to wake from idle, so the
       // first client created after a quiet spell timed out almost by rule.
     }, 45000);
@@ -3463,7 +3468,10 @@ async function submitAddClient() {
       password: pass
     });
     practiceToast('Creato ' + firstName + '. Utente ' + user, 'success');
-    showInviteSheet('Invito pronto', msg, intakeMode === 'new' ? 'Al primo accesso compilerà il questionario.' : 'Transizione: entra senza questionario.');
+    showInviteSheet(coachingMode === 'presence' ? 'Cliente creato' : 'Invito pronto', msg,
+      coachingMode === 'presence'
+        ? 'Cliente in presenza: mandargli il link è facoltativo. Allenamenti e carichi li puoi segnare tu da «Vedi dati del cliente».'
+        : (intakeMode === 'new' ? 'Al primo accesso compilerà il questionario.' : 'Transizione: entra senza questionario.'));
     if (currentView === 'coachHub') loadCoachClientList();
     else navigate('coachHub');
   } catch (err) {
@@ -4180,10 +4188,8 @@ async function renderCoachWorkspace(c) {
       '<input id="cp-max-freedom" type="checkbox"' + (cl.allowMaxFreedom ? ' checked' : '') + ' onchange="toggleMaxFreedom(\'' + esc(id) + '\', this.checked)" style="margin-top:3px;flex-shrink:0;width:18px;height:18px;">' +
       '<span style="display:block;color:#eee !important;-webkit-text-fill-color:#eee !important;"><b style="color:#fff !important;-webkit-text-fill-color:#fff !important;">Consenti massima libertà</b><br>' +
       '<span style="color:#bbb !important;-webkit-text-fill-color:#bbb !important;font-size:11px;">L\'atleta puo modificare da solo. Ti arriva comunque un avviso. Senza spunta, ogni modifica richiede la tua approvazione.</span></span></label>' +
-      '<label style="display:flex;gap:10px;align-items:flex-start;margin:12px 0 0;padding:0;background:transparent;border:0;font-size:12px;line-height:1.4;color:#eee !important;-webkit-text-fill-color:#eee !important;">' +
-      '<input id="cp-nurvan-ai" type="checkbox"' + (cl.allowNurvanAi ? ' checked' : '') + ' onchange="toggleNurvanAi(\'' + esc(id) + '\', this.checked)" style="margin-top:3px;flex-shrink:0;width:18px;height:18px;">' +
-      '<span style="display:block;color:#eee !important;-webkit-text-fill-color:#eee !important;"><b style="color:#fff !important;-webkit-text-fill-color:#fff !important;">Consenti Nurvan AI</b><br>' +
-      '<span style="color:#bbb !important;-webkit-text-fill-color:#bbb !important;font-size:11px;">Se attivo, il cliente vede Coach AI nell\'app. Di default e nascosta.</span></span></label></div>' +
+      '</div>' +
+      coachingModeFieldHtml(id, cl.coachingMode) +
       '<button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:11px;" onclick="openAssignChooser(\'' + esc(id) + '\',\'' + esc(cl.displayName || '') + '\')">ASSEGNA SCHEDA</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="enterCoachClientView(\'training\')">VISUALIZZA ALLENAMENTO</button>' +
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="requestCheckFromClient(\'' + esc(id) + '\')">RICHIEDI CHECK</button>' +
@@ -5415,6 +5421,40 @@ async function toggleMaxFreedom(id, allow) {
     if (el) el.checked = !allow;
   }
 }
+
+// How a client is followed: at a distance (the web app is where they work),
+// in person (the coach may never send the link and logs for them from
+// "Vedi dati del cliente"), or both.
+var COACHING_MODE_LABELS = [['remote', 'A distanza'], ['presence', 'In presenza'], ['both', 'In presenza e a distanza']];
+function coachingModeLabel(mode) {
+  const hit = COACHING_MODE_LABELS.filter(function (m) { return m[0] === mode; })[0];
+  return hit ? hit[1] : COACHING_MODE_LABELS[0][1];
+}
+function coachingModeFieldHtml(id, mode) {
+  const cur = mode || 'remote';
+  const help = cur === 'presence'
+    ? 'Lo alleni di persona: il link è facoltativo, e carichi ed esercizi li puoi segnare tu da «Vedi dati del cliente».'
+    : (cur === 'both'
+      ? 'Usa la web app e lo vedi anche di persona: nel calendario indichi, seduta per seduta, se è in presenza.'
+      : 'Lavora dalla web app, con il link che gli mandi.');
+  return '<div style="margin-top:10px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
+    '<label style="font-size:10px;color:#ccc;font-weight:800;display:block;">Come lo segui' +
+    '<select id="cp-coaching-mode" onchange="setCoachingMode(\'' + esc(id) + '\', this.value)" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:14px;">' +
+    COACHING_MODE_LABELS.map(function (m) { return '<option value="' + m[0] + '"' + (m[0] === cur ? ' selected' : '') + '>' + esc(m[1]) + '</option>'; }).join('') +
+    '</select></label><div style="font-size:11px;color:#bbb;line-height:1.4;margin-top:6px;">' + esc(help) + '</div></div>';
+}
+async function setCoachingMode(id, mode) {
+  try {
+    const res = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/coaching-mode', {
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ mode: mode })
+    }, 15000);
+    if (store.coachWorkspace && store.coachWorkspace.client) store.coachWorkspace.client.coachingMode = res.coachingMode || mode;
+    practiceToast('Modalità aggiornata: ' + coachingModeLabel(res.coachingMode || mode), 'success');
+    if (currentView === 'coachClient') renderPracticeView();
+  } catch (err) { practiceToast((err && err.message) || 'Modalità non aggiornata', 'danger'); }
+}
+window.setCoachingMode = setCoachingMode;
+window.coachingModeLabel = coachingModeLabel;
 
 async function toggleNurvanAi(id, allow) {
   try {
