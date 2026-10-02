@@ -1159,6 +1159,26 @@ self.EXERCISE_YOUTUBE_LINKS = [
  },
  {
   "type": "exercise",
+  "youtube_query": "Wall Ball exercise how to",
+  "name": "Wall ball"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Burpee Broad Jump exercise how to",
+  "name": "Burpee broad jump"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Sandbag Walking Lunge exercise how to",
+  "name": "Affondi camminati con sandbag"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Ball Slam exercise how to",
+  "name": "Slam ball"
+ },
+ {
+  "type": "exercise",
   "youtube_query": "Dead Bug exercise how to",
   "name": "Dead bug",
   "demo": {
