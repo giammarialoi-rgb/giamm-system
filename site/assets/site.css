@@ -189,3 +189,11 @@ footer a:hover { color: var(--text); }
 /* Before the launch: the buttons that open the app */
 .btn.soon { cursor: default; opacity: .8; }
 .btn.soon:hover { transform: none; }
+
+/* HYROX and training at home: text beside a screen of the app */
+.shot.solo { max-width: 270px; margin: 0 auto; width: 100%; }
+.shot.solo img { display: block; height: auto; }
+.split.top { align-items: start; }
+.cards.two { grid-template-columns: 1fr 1fr; }
+@media (max-width: 600px) { .cards.two { grid-template-columns: 1fr; } }
+#hyrox .legal-note { margin-top: 16px; }
