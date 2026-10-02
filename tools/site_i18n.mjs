@@ -20,7 +20,7 @@ for (const f of ['shell.html', 'home.html']) pageTexts(read(f)).forEach((t) => k
 JSON.parse(read('shots.json')).forEach((s) => { if (s.title) keys.add(s.title); if (s.text) keys.add(s.text); });
 JSON.parse(read('i18n/_server.json')).forEach((t) => keys.add(t));
 // Names and marks that are the same everywhere.
-const SAME = /^(Nurvan|Blog|Free|Standard|Coach|Coach Pro|Coach AI|Alfa Gym|AG|Powered by Nurvan|Shoulder press|Dashboard|RIR 2|Train · Fuel · Recover · Track · Evolve|© |[\d\s€.,×–-]+)$/;
+const SAME = /^(Nurvan|Blog|Free|Standard|Coach|Coach Pro|Coach AI|X Gym|XG|Powered by Nurvan|Shoulder press|Dashboard|RIR 2|Train · Fuel · Recover · Track · Evolve|© |[\d\s€.,×–-]+)$/;
 const list = [...keys].filter((k) => !SAME.test(k) && !/^\{\{/.test(k)).sort((a, b) => a.localeCompare(b, 'it'));
 fs.writeFileSync(path.join(SITE, 'i18n', '_strings.json'), JSON.stringify(list, null, 0).replace(/","/g, '",\n"') + '\n');
 console.log(list.length + ' texts');
