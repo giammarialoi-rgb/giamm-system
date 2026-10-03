@@ -59,7 +59,11 @@ const server = http.createServer(app);
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const base = 'http://127.0.0.1:' + server.address().port;
 const articles = await loadArticles({ contentDir: 'content/articles', siteDir: 'site/blog' }, new Date(), 'it');
-const slugs = new Set(articles.map((a) => a.slug));
+// Only articles that are in the repository count: a link to a file that exists on this disk but is not committed is a 404 on the site.
+import { execSync } from 'node:child_process';
+const tracked = execSync('git ls-files content/articles', { encoding: 'utf8' }).split('\n').filter((f) => /article\.it\.md$/.test(f));
+const slugs = new Set(tracked.map((f) => (/^slug:\s*(\S+)/m.exec(fs.readFileSync(f, 'utf8')) || [])[1]).filter(Boolean));
+slugs.add('migliori-software-app-personal-trainer-italia');
 const html = {};
 try {
   for (const p of ALL_PATHS) {

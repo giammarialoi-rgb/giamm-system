@@ -214,8 +214,8 @@ export const PAGES = {
       { h2: "Quanto tempo serve", html:
         "<p>Con una base di corsa e di pesi bastano 8 settimane; partendo da zero è meglio contarne 12-16. Le ultime settimane sono le più importanti, perché contengono simulazioni e scarico. Il calendario delle gare in Italia, in Europa e nel resto del mondo è nella pagina <a href=\"/hyrox\">calendario gare HYROX</a>, con i link alle pagine ufficiali per date, categorie e iscrizioni.</p>" },
       { h2: "Una preparazione, non una promessa", html:
-        "<p>Nessun programma garantisce un tempo. Nurvan scrive la settimana, tu la fai: ciò che puoi aspettarti è un percorso ordinato verso una data, che si adatta a ciò che hai. Per l’alimentazione di chi si allena tanto, due letture utili sono " +
-        '<a href="' + ARTICLE.proteine.href + '">' + ARTICLE.proteine.text + '</a> e <a href="' + ARTICLE.riso.href + '">' + ARTICLE.riso.text + "</a>. HYROX è un marchio registrato del suo titolare: Nurvan non è affiliata né approvata da HYROX, e questo è materiale di allenamento indipendente per chi si iscrive alla gara.</p>" }
+        "<p>Nessun programma garantisce un tempo. Nurvan scrive la settimana, tu la fai: ciò che puoi aspettarti è un percorso ordinato verso una data, che si adatta a ciò che hai. Per alimentazione e integratori di chi si allena tanto, due letture utili sono " +
+        '<a href="' + ARTICLE.proteine.href + '">' + ARTICLE.proteine.text + '</a> e <a href="' + ARTICLE.creatina.href + '">' + ARTICLE.creatina.text + "</a>. HYROX è un marchio registrato del suo titolare: Nurvan non è affiliata né approvata da HYROX, e questo è materiale di allenamento indipendente per chi si iscrive alla gara.</p>" }
     ],
     faq: [
       { q: "Come si prepara una gara HYROX?", a: "Con una base di corsa e di forza resistente, poi lavoro specifico sulle stazioni, simulazioni di gara e uno scarico finale. Nurvan scrive queste fasi a partire dalla data della tua gara." },
@@ -281,7 +281,7 @@ export const PAGES = {
         "<p>Se prepari una gara, ci sono due percorsi dedicati: il programma sulla data per <a href=\"/app-allenamento-hyrox\">HYROX</a> e i modelli di progressione per il <a href=\"/app-powerlifting\">powerlifting</a>. Per ipertrofia e forza di base ci sono modelli come la doppia progressione, l’onda di volume 3:1 e l’ondulata giornaliera. Se vuoi mettere a posto i numeri prima di iniziare, usa gratis il <a href=\"/strumenti/calcolatore-1rm\">calcolatore 1RM</a> e il <a href=\"/strumenti/calcolatore-macro\">calcolatore macro</a>.</p>" },
       { h2: "Alimentazione e integrazione, se vuoi", html:
         "<p>Nurvan tiene insieme anche il piano alimentare, il diario a calendario, 150 ricette con macro e costo e gli integratori con dose e orario. Sono funzioni opzionali: puoi usare l’app solo per allenarti. Per le basi scientifiche leggi " +
-        '<a href="' + ARTICLE.proteine.href + '">' + ARTICLE.proteine.text + '</a> e <a href="' + ARTICLE.creatinaOver45.href + '">' + ARTICLE.creatinaOver45.text + "</a>.</p>" },
+        '<a href="' + ARTICLE.proteine.href + '">' + ARTICLE.proteine.text + '</a> e <a href="' + ARTICLE.creatina.href + '">' + ARTICLE.creatina.text + "</a>.</p>" },
       { h2: "Come scegliere un’app per allenarti", html:
         "<p>Prima di installarne una, controlla tre cose. Primo: quanto ci metti a registrare una serie, perché se serve più di un tocco la smetterai presto. Secondo: se puoi portare dentro le schede che hai già, invece di ricominciare da zero. Terzo: se ti dice come ti stai muovendo davvero, con un dato che capisci, e non solo un grafico. Nurvan è pensata attorno a queste tre cose, ma finché non esce il consiglio è di provare qualunque app con una settimana di allenamenti veri prima di giudicarla.</p>" },
       { h2: "A casa e in palestra", html:

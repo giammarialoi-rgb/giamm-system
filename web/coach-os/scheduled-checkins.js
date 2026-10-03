@@ -557,7 +557,10 @@ function drawCoachScheduledCheckIns() {
   if (!box || !st || !K) return;
   if (st.editing) { box.innerHTML = coachCheckInEditorHtml(st.editing); return; }
   const t = st.template ? K.normalizeTemplate(st.template) : null;
-  const list = K.statuses({ template: t, checkIns: st.checkIns, now: Date.now() }).slice(0, 12);
+  const every = K.statuses({ template: t, checkIns: st.checkIns, now: Date.now() });
+  // The last few that matter; the ones skipped (a dozen "saltato" rows were 800px of nothing) sit behind one button.
+  const skippedCount = every.filter(function (x) { return x.status === 'skipped'; }).length;
+  const list = st.showSkipped ? every.slice(0, 24) : every.filter(function (x) { return x.status !== 'skipped'; }).slice(0, 4);
   const statusLabel = function (x) {
     if (x.status === 'received') return x.checkIn && x.checkIn.status === 'received' ? 'ricevuto · da leggere' : 'ricevuto';
     if (x.status === 'pending') return 'in attesa' + (x.lateDays > 0 ? ' · ' + x.lateDays + (x.lateDays === 1 ? ' giorno' : ' giorni') + ' di ritardo' : '');
@@ -571,7 +574,7 @@ function drawCoachScheduledCheckIns() {
     return open
       ? '<button type="button" class="cp-notify-item sched-ci-row" data-status="' + x.status + '" style="margin-bottom:6px;" onclick="openScheduledCheckInDetail(\'' + esc(String(x.checkIn.id)) + '\')">' + inner + '</button>'
       : '<div class="cp-notify-item sched-ci-row" data-status="' + x.status + '" style="margin-bottom:6px;opacity:.75;">' + inner + '</div>';
-  }).join('') : '<div class="cp-help" style="margin:6px 0 0;">Nessun check-in ancora.</div>';
+  }).join('') + (skippedCount ? '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;margin-top:4px;" onclick="window.__cpSchedCI.showSkipped=' + (st.showSkipped ? 'false' : 'true') + ';drawCoachScheduledCheckIns()">' + (st.showSkipped ? 'NASCONDI I SALTATI' : 'MOSTRA ANCHE I SALTATI (' + skippedCount + ')') + '</button>' : '') : '<div class="cp-help" style="margin:6px 0 0;">Nessun check-in ancora.</div>';
   box.innerHTML = '<div class="card" style="padding:12px;margin-bottom:12px;border-color:rgba(212,175,55,.35);">' +
     '<div style="font-weight:900;color:var(--gold);">Check-in programmati</div>' +
     (t

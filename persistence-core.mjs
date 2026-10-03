@@ -8,6 +8,7 @@
 export const DB_NAME = 'GIAMMARIA_SYSTEM_DB';
 export const DB_VERSION = 7;
 export const NUTRITION_BACKUP_MAX = 8;
+const NutritionBackupSeq = { n: 0 };
 
 export const STORES = {
   PROGRAMS: 'programs',             // Canonical programs (active + versions)
@@ -768,7 +769,9 @@ export class GiammariaPersistenceEngine {
       const hasContent = (Array.isArray(plan.days) && plan.days.length)
         || (Array.isArray(plan.customFoods) && plan.customFoods.length);
       if (!hasContent) return { success: false, reason: 'empty' };
-      const id = 'nutrition_backup_' + Date.now();
+      // Two backups in the same millisecond got the same id and the second replaced the first (and the order of ids is the order of backups).
+      NutritionBackupSeq.n = (NutritionBackupSeq.n + 1) % 10000;
+      const id = 'nutrition_backup_' + Date.now() + '_' + String(NutritionBackupSeq.n).padStart(4, '0');
       await this.dbPut(STORES.NUTRITION, { id, plan, updatedAt: new Date().toISOString() });
       const all = await this.dbGetAll(STORES.NUTRITION);
       const backups = (all || [])
