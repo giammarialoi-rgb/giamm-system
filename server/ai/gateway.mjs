@@ -31,6 +31,7 @@ function createVertexGateway(env, configuredModel) {
     provider: "vertex", model: configuredModel, configured: true,
     models: {
       async generateContent({ model = configuredModel, contents, config = {} }) {
+        const { tools, ...generationConfig } = config;
         const client = await auth.getClient();
         const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(project)}/locations/${encodeURIComponent(location)}/publishers/google/models/${encodeURIComponent(model)}:generateContent`;
         const response = await client.request({
@@ -38,13 +39,16 @@ function createVertexGateway(env, configuredModel) {
           method: "POST",
           data: {
             contents,
-            generationConfig: config,
+            ...(tools ? { tools } : {}),
+            generationConfig,
           }
         });
         const data = response.data || {};
         const text = (data.candidates || []).flatMap((candidate) => candidate.content?.parts || [])
           .map((part) => part.text || "").join("");
-        return { ...data, text };
+        const calls = (data.candidates || []).flatMap((candidate) => candidate.content?.parts || [])
+          .filter((part) => part.functionCall).map((part) => part.functionCall);
+        return { ...data, text, functionCalls: calls.length ? calls : undefined };
       }
     }
   };

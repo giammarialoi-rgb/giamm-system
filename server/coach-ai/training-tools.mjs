@@ -7,7 +7,7 @@
 //
 // Pure functions, no network, no database: tested in test_coach_training_tools.mjs.
 
-const MAX_SESSIONS = 400;
+const MAX_SESSIONS = 150;
 const MAX_LINES = 40;
 const MAX_SETS = 30;
 

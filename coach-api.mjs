@@ -55,6 +55,7 @@ import {
 } from "./server/security.mjs";
 import { createAiGateway, aiPublicStatus } from "./server/ai/gateway.mjs";
 import { cleanTrainingData, trainingDigest, trainingTools } from "./server/coach-ai/training-tools.mjs";
+import { createAiLimiter } from "./server/ai/limiter.mjs";
 import { normalizeHealthEvent, verifyWebhookSignature } from "./server/integrations/health.mjs";
 import { calendarPublicConfig } from "./server/integrations/calendar.mjs";
 
@@ -738,6 +739,15 @@ function classifyGeminiError(err) {
   return null;
 }
 
+// Every call to the provider goes through one line for the whole server:
+// at most AI_MAX_CONCURRENT at once, the rest wait their turn (a little under a
+// minute at most), so a crowd is served in order instead of all being refused.
+const aiLimiter = createAiLimiter({
+  max: Number(process.env.AI_MAX_CONCURRENT || 20),
+  maxQueue: Number(process.env.AI_QUEUE_MAX || 300),
+  waitMs: Number(process.env.AI_QUEUE_WAIT_MS || 45000)
+});
+
 async function generateContentWithRetry(ai, { model, partsAttempts, label, config, contents }) {
   const delaysMs = [0, 700, 1800];
   let lastErr;
@@ -749,9 +759,13 @@ async function generateContentWithRetry(ai, { model, partsAttempts, label, confi
     try {
       const request = { model, contents: contents || [{ role: "user", parts }] };
       if (config) request.config = config;
-      return await ai.models.generateContent(request);
+      return await aiLimiter.run(() => ai.models.generateContent(request));
     } catch (err) {
       lastErr = err;
+      if (err && err.aiQueue) {
+        console.warn(`${label} not sent: line ${err.aiQueue}`, JSON.stringify(aiLimiter.stats()));
+        break; // waiting again would only lengthen the line
+      }
       console.warn(`${label} attempt ${attempt + 1}/${delaysMs.length} failed`, err?.message || err);
       if (!isRetryableGeminiError(err)) break;
     }

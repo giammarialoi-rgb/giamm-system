@@ -15434,7 +15434,8 @@ try {
 function buildTrainingDataForCoach() {
   try {
     const dayKey = function (iso) { return String(iso || '').slice(0, 10); };
-    const logs = Array.isArray(store.logs) ? store.logs.slice(-300) : [];
+    // The last 120 sessions (about six months at four a week): enough to see any trend, light on a phone's connection.
+    const logs = Array.isArray(store.logs) ? store.logs.slice(-120) : [];
     const sessions = logs.map(function (l) {
       const lines = (Array.isArray(l.exerciseLines) ? l.exerciseLines : []).map(function (e) {
         if (!e || !e.name) return null;
