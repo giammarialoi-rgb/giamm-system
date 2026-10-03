@@ -51006,6 +51006,49 @@ try {
   }
 } catch (_) {}
 
+// The history the Coach AI reads, like the Statistics page does: every
+// finalized session with the load and repetitions of each set, the muscles it
+// worked and the body weight. Compact (a session is a few hundred bytes) and
+// sent with the question; the server hands it to the model through tools.
+// Loads are always kg here, as they are stored. Counts, loads, dates: never
+// photos, notes, or anything health-related beyond body weight.
+function buildTrainingDataForCoach() {
+  try {
+    const dayKey = function (iso) { return String(iso || '').slice(0, 10); };
+    const logs = Array.isArray(store.logs) ? store.logs.slice(-300) : [];
+    const sessions = logs.map(function (l) {
+      const lines = (Array.isArray(l.exerciseLines) ? l.exerciseLines : []).map(function (e) {
+        if (!e || !e.name) return null;
+        if (e.cardio) return { n: e.name, c: Number(e.minutes) || 0 };
+        const work = [], warm = [];
+        (e.sets || []).forEach(function (st) { (st.warmup ? warm : work).push([Number(st.load) || 0, Number(st.reps) || 0]); });
+        return { n: e.name, s: work, wu: warm };
+      }).filter(Boolean);
+      return {
+        d: dayKey(l.finalizedAt || l.at), w: l.week, day: l.day, n: l.sessionName || '',
+        min: Math.round((Number(l.durationSec) || 0) / 60), t: Number(l.tonnage) || 0, s: Number(l.sets) || 0,
+        m: l.muscles || {}, l: lines
+      };
+    }).filter(function (x) { return /^\d{4}-\d{2}-\d{2}$/.test(x.d); });
+    const bodyWeight = (store.bodyChecks || []).filter(function (c) { return Number(c.weight) > 0 && c.at; })
+      .map(function (c) { return { d: dayKey(c.at), kg: Number(c.weight) }; });
+    let today = null;
+    try {
+      const open = sessionExerciseDetailsFor(currentWeek || 1, currentDay || 0);
+      if (open && open.length) {
+        today = { n: sessionNameFor(currentWeek || 1, currentDay || 0), l: open.map(function (e) {
+          if (e.cardio) return { n: e.name, c: e.minutes };
+          const work = [], warm = [];
+          (e.sets || []).forEach(function (st) { (st.warmup ? warm : work).push([st.load, st.reps]); });
+          return { n: e.name, s: work, wu: warm };
+        }) };
+      }
+    } catch (_) {}
+    return { unit: 'kg', date: new Date().toISOString().slice(0, 10), sessions: sessions, bodyWeight: bodyWeight, today: today };
+  } catch (_) { return null; }
+}
+window.buildTrainingDataForCoach = buildTrainingDataForCoach;
+
 function buildPerformanceSummaryForCoach() {
   if (CoachAnalyticsService != null && typeof CoachAnalyticsService.buildPerformanceSummary === 'function') {
     return CoachAnalyticsService.buildPerformanceSummary(store, DATA);
@@ -51070,7 +51113,8 @@ async function openCoachInsightModal(promptText) {
           currentDay: typeof currentDay !== 'undefined' ? currentDay : 0,
           profile: store.profile || {},
           performanceSummary: performanceSummary,
-          prefs: store.prefs || {}
+          prefs: store.prefs || {},
+          trainingData: buildTrainingDataForCoach()
         },
         history: []
       })
@@ -51918,9 +51962,22 @@ function render() {
     try { makeLongSectionsFoldable(); } catch (_) {}
     return out;
   };
-  if (!sameScreen) return draw();
+  if (!sameScreen) {
+    // A different screen starts from its top, not from where the last one was scrolled to.
+    var shown = draw();
+    scrollAppToTop();
+    return shown;
+  }
   return keepScrollDuring(draw);
 }
+
+function scrollAppToTop() {
+  [document.scrollingElement, document.documentElement, document.body, document.getElementById('view-container'), document.querySelector('main'), document.getElementById('app'), document.getElementById('content')].forEach(function (el) {
+    if (el && el.scrollTop) { try { el.scrollTop = 0; } catch (_) {} }
+  });
+  try { window.scrollTo(0, 0); } catch (_) {}
+}
+window.scrollAppToTop = scrollAppToTop;
 
 function renderCurrentView() {
   ensureStoreIntegrity();
@@ -74080,7 +74137,8 @@ async function askAIInner(q0, opts){
         performanceSummary: isSessionReview ? (window.__sessionCoachFallback && window.__sessionCoachFallback.logEntry) : performanceSummary,
         health: (store.prefs && store.prefs.shareMedicalWithCoach) ? healthCtx : {},
         checkFisico: !!opts.checkFisico,
-        photosOnly: !!opts.photosOnly
+        photosOnly: !!opts.photosOnly,
+        trainingData: (opts.checkFisico && opts.photosOnly) ? null : buildTrainingDataForCoach()
       },
       history: [],
       images: (opts.images || []).map(function (img) {

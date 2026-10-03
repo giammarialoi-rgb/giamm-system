@@ -54,6 +54,7 @@ import {
   resolveJwtSecret
 } from "./server/security.mjs";
 import { createAiGateway, aiPublicStatus } from "./server/ai/gateway.mjs";
+import { cleanTrainingData, trainingDigest, trainingTools } from "./server/coach-ai/training-tools.mjs";
 import { normalizeHealthEvent, verifyWebhookSignature } from "./server/integrations/health.mjs";
 import { calendarPublicConfig } from "./server/integrations/calendar.mjs";
 
@@ -737,7 +738,7 @@ function classifyGeminiError(err) {
   return null;
 }
 
-async function generateContentWithRetry(ai, { model, partsAttempts, label, config }) {
+async function generateContentWithRetry(ai, { model, partsAttempts, label, config, contents }) {
   const delaysMs = [0, 700, 1800];
   let lastErr;
   for (let attempt = 0; attempt < delaysMs.length; attempt++) {
@@ -746,7 +747,7 @@ async function generateContentWithRetry(ai, { model, partsAttempts, label, confi
     }
     const parts = partsAttempts[Math.min(attempt, partsAttempts.length - 1)];
     try {
-      const request = { model, contents: [{ role: "user", parts }] };
+      const request = { model, contents: contents || [{ role: "user", parts }] };
       if (config) request.config = config;
       return await ai.models.generateContent(request);
     } catch (err) {
@@ -756,6 +757,26 @@ async function generateContentWithRetry(ai, { model, partsAttempts, label, confi
     }
   }
   throw lastErr;
+}
+
+// The model asks for the training data it needs (sessions, loads, volume,
+// records) and gets it; a few rounds at most, then it must answer.
+async function generateWithTrainingTools(ai, { model, parts, tools, label }) {
+  const contents = [{ role: "user", parts }];
+  const config = { tools: [{ functionDeclarations: tools.declarations }] };
+  for (let round = 0; round < 6; round++) {
+    const response = await generateContentWithRetry(ai, { model, partsAttempts: [parts], label, config, contents });
+    const calls = Array.isArray(response.functionCalls) ? response.functionCalls : [];
+    if (!calls.length) return response;
+    const modelTurn = response.candidates && response.candidates[0] && response.candidates[0].content;
+    contents.push(modelTurn || { role: "model", parts: calls.map((c) => ({ functionCall: { name: c.name, args: c.args || {} } })) });
+    contents.push({
+      role: "user",
+      parts: calls.map((c) => ({ functionResponse: { name: c.name, response: { result: tools.call(c.name, c.args || {}) } } }))
+    });
+  }
+  contents.push({ role: "user", parts: [{ text: "Rispondi ora con i dati che hai raccolto, senza altre richieste." }] });
+  return generateContentWithRetry(ai, { model, partsAttempts: [parts], label, contents });
 }
 
 function cloneWeekWithUniqueIds(templateWeek, newWeekNum) {
@@ -1987,6 +2008,7 @@ app.post("/api/ingest/document", upload.single("file"), async (req, res) => {
 function slimCoachContext(context) {
   if (!context || typeof context !== "object") return {};
   const out = { ...context };
+  delete out.trainingData; // read through the tools, not pasted into the prompt
   if (out.programSummary && typeof out.programSummary === "object") {
     const weeks = Array.isArray(out.programSummary.weeks) ? out.programSummary.weeks.slice(0, 4) : [];
     out.programSummary = {
@@ -2063,6 +2085,8 @@ app.post(["/api/chat", "/coach", "/api/coach"], async (req, res) => {
     }
 
     let context = slimCoachContext(req.body?.context ?? {});
+    const trainingData = cleanTrainingData(req.body?.context && req.body.context.trainingData);
+    const trainingTooling = trainingData ? trainingTools(trainingData) : null;
     const imageParts = imagePartsFromRequest(req.body?.images);
 
     const authUser = await accountFromBearer(req.headers.authorization);
@@ -2131,6 +2155,13 @@ Niente diagnosi mediche. Non modificare il programma se non richiesto esplicitam
 ${context.photosOnly ? "Analizza SOLO le foto, senza contestualizzare allenamento/integrazione/terapia." : "Se nel contesto ci sono allenamento, integrazione o terapia, usali per contestualizzare il commento."}
 ` : ""}
 
+${trainingData ? `ACCESSO AI DATI DI ALLENAMENTO (come la pagina Statistiche dell'app):
+Hai accesso ai LOG degli allenamenti finalizzati con i CARICHI e le RIPETIZIONI di ogni serie, ai volumi per gruppo muscolare, ai record e al peso corporeo, attraverso gli strumenti get_sessions, get_exercise_history, get_personal_records, get_muscle_volume, get_stats_summary, get_bodyweight.
+Quando la domanda riguarda progressi, carichi, stalli, volume, frequenza o come sta andando l'allenamento, CHIAMA gli strumenti e rispondi con i numeri veri (date, carichi, ripetizioni), mai a memoria. Puoi chiamarne più di uno.
+NON DIRE MAI che non vedi i carichi o lo storico: se uno strumento non restituisce dati, di' che nello storico dell'app non risultano sedute registrate e cosa serve (finalizzare gli allenamenti).
+Riepilogo rapido dello storico:
+${trainingDigest(trainingData)}
+` : ""}
 ACCESSO AL PROGRAMMA ATTIVO:
 Hai PIENO ACCESSO di lettura e modifica al programma attivo dell'atleta attraverso le API e i tool del sistema.
 NON DIRE MAI: "Non ho accesso al database" o "Non posso modificare il file interno". Tu puoi analizzare la programmazione attiva e proporre modifiche strutturate istantanee!
@@ -2229,7 +2260,9 @@ Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico
     // attempts so a transient 429/503 from Gemini gets a real gap before
     // hammering it again.
     const partsAttempts = imageParts.length ? [[textPart, ...imageParts], [textPart]] : [[textPart]];
-    const response = await generateContentWithRetry(ai, { model: MODEL, partsAttempts, label: "Gemini chat" });
+    const response = trainingTooling && !athleteLocked
+      ? await generateWithTrainingTools(ai, { model: MODEL, parts: partsAttempts[0], tools: trainingTooling, label: "Gemini chat (training tools)" })
+      : await generateContentWithRetry(ai, { model: MODEL, partsAttempts, label: "Gemini chat" });
 
     let replyText = response.text || "";
     let proposedAction = null;
