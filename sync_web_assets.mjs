@@ -36,6 +36,7 @@ export const ANDROID_STATIC_ASSETS = [
   'program-builder.js',
   'program-catalog.js',
   'progression-models.js',
+  'progression-advisor.js',
   'food-search.js',
   'nutrition-targets.js',
   'nutrition-plan.js',

@@ -70,6 +70,7 @@
 <script src="program-builder.js"></script>
 <script src="program-catalog.js"></script>
 <script src="progression-models.js"></script>
+<script src="progression-advisor.js"></script>
 <script src="food-search.js"></script>
 <script src="nutrition-targets.js"></script>
 <script src="nutrition-plan.js"></script>
@@ -66856,7 +66857,8 @@ function closeWorkoutCompleteOverlay(goto) {
   // is waiting on those numbers.
   setTimeout(function () {
     if (typeof maybeAskTestResults === 'function' && maybeAskTestResults()) return;
-    if (typeof maybeSuggestDeloadWeek === 'function') maybeSuggestDeloadWeek();
+    if (typeof maybeSuggestDeloadWeek === 'function' && maybeSuggestDeloadWeek()) return;
+    if (typeof maybeSuggestProgressionChange === 'function') maybeSuggestProgressionChange(false);
   }, 400);
 }
 
@@ -69321,6 +69323,7 @@ function renderStats(c){
     <div style="font-size:10px; color:#777; margin-bottom:15px; font-weight:700; letter-spacing:1px;">${store && store.coachViewingClient ? 'VISTA MASTER · DATI CLIENTE' : 'ATTIVITÀ · CRONOLOGIA · FATICA'}</div>
     ${store && store.coachViewingClient ? '' : '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:12px;font-size:11px;" onclick="showProgressCenter()">📈 PROGRESS CENTER — SETTIMANA, 4, 12, SEMPRE</button>'}
     ${store && store.coachViewingClient ? '' : renderAdaptiveDeloadCardHtml()}
+    ${store && store.coachViewingClient ? '' : renderProgressionAdviceCardHtml()}
     ${last ? `<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid rgba(212,175,55,0.35);">
       <div role="button" tabindex="0" onclick="openLoggedSessionReview(${Number(last.week)||1},${Number(last.day)||0},${lastIdAttr})" style="cursor:pointer;">
       <div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:6px;">ULTIMA SESSIONE FINALIZZATA</div>
@@ -77870,6 +77873,7 @@ function maybeSuggestDeloadWeek() {
     store.prefs.deloadPromptWeek = currentWeek;
     try { persist(); } catch (_) {}
     openDeloadSuggestionSheet(report);
+    return true;
   } catch (err) {
     console.warn('[DELOAD SUGGEST]', err);
   }
@@ -78029,6 +78033,350 @@ function insertDeloadWeek(kind) {
   if (typeof render === 'function') render();
 }
 window.insertDeloadWeek = insertDeloadWeek;
+
+/* ---------- when the way the program progresses has stopped working ---------- */
+//
+// Loads that no longer move, effort that keeps running past what was asked, or
+// numbers going backwards: the progression the program was written with has
+// done what it could. Measured over the closed sessions, and then the athlete
+// is asked - never told - whether to change the progression from the next
+// week on, with the one that is likeliest to start the improvements again.
+// What is already trained is history and is never touched; only the weeks that
+// have not been started are written again.
+
+var PROGRESSION_ADVICE_REASK_WEEKS = 2;
+
+function progressionIsDeloadWeek(week) {
+  if (!week) return false;
+  return week.phase === 'deload' || week.phase === 'test' || !!week.deload || !!week.test_week || /scarico|deload/i.test(String(week.label || ''));
+}
+
+// The program as it stands: where a new progression would start and from what.
+function progressionAdviceContext() {
+  if (typeof DATA === 'undefined' || !DATA || !Array.isArray(DATA.weeks) || DATA.weeks.length < 4) return null;
+  if (!store || store.coachViewingClient || store.coachAssigning || store.clientShell) return null;
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) return null; // a coach's program is the coach's to change
+  if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return null;
+  if (/^(hyrox_v1|discipline_v1)$/.test(String(DATA.source || ''))) return null;
+  var engine = window.NurvanProgressions;
+  var advisor = window.NurvanProgressionAdvisor;
+  if (!engine || !advisor) return null;
+  var current = String((DATA.progression && DATA.progression.model) || DATA.progression_model || 'none');
+  var model = engine.get(current);
+  var changes = Array.isArray(DATA.progression_changes) ? DATA.progression_changes : [];
+  var lastChange = changes.length ? Number(changes[changes.length - 1].week) || 0 : 0;
+  var logs = logsOfActiveProgram().filter(function (l) { return l && l.week != null && l.day != null; });
+  var lastLogged = 0;
+  logs.forEach(function (l) { lastLogged = Math.max(lastLogged, Number(l.week) || 0); });
+  var startAfter = Math.max(Number(currentWeek) || 1, lastLogged);
+  var template = startAfter;
+  while (template > 1 && progressionIsDeloadWeek(DATA.weeks[template - 1])) template -= 1;
+  return {
+    programKey: activeProgramKey(),
+    current: model.id,
+    family: model.family === 'powerlifting' ? 'powerlifting' : 'bodybuilding',
+    lastChange: lastChange,
+    startAfter: startAfter,
+    templateWeek: template,
+    remainingWeeks: DATA.weeks.length - startAfter,
+    logs: logs
+  };
+}
+
+// The closed sessions since the last change, as the advisor reads them: the
+// working sets only, with what was done in each.
+function progressionHistoryForAdvice(ctx) {
+  var seen = {};
+  var closed = [];
+  ctx.logs.forEach(function (l) {
+    var week = Number(l.week);
+    var day = Number(l.day);
+    if (week <= ctx.lastChange) return;
+    var id = week + '_' + day;
+    if (seen[id]) return;
+    seen[id] = true;
+    closed.push({ week: week, day: day });
+  });
+  closed.sort(function (a, b) { return (a.week - b.week) || (a.day - b.day); });
+  var out = [];
+  closed.forEach(function (c) {
+    var list = sessionExercisesFor(c.week, c.day);
+    if (!list) return;
+    var rows = [];
+    list.forEach(function (row, ei) {
+      if (row.unit && row.unit !== 'reps') return;
+      var eK = 'w' + c.week + '_d' + c.day + '_e' + ei;
+      if (store.subs && store.subs[eK]) return; // another exercise was done there: not comparable
+      var planned = Array.isArray(row.sets) && row.sets.length ? row.sets : [null, null, null];
+      var scale = (store.exIntensity && store.exIntensity[eK]) || (store.prefs && store.prefs.intensityType) || 'RIR';
+      var sets = [];
+      for (var s = 1; s <= planned.length; s++) {
+        if (isWarmupSet(planned[s - 1])) continue;
+        var raw = store.data[eK + '_s' + s + '_rir'];
+        var rir = null;
+        if (raw !== undefined && raw !== null && raw !== '') {
+          var n = Number(raw);
+          if (isFinite(n)) rir = String(scale).toUpperCase() === 'RPE' ? Math.max(0, 10 - n) : n;
+        }
+        sets.push({
+          load: store.data[eK + '_s' + s + '_load'],
+          reps: store.data[eK + '_s' + s + '_reps'],
+          rir: rir,
+          done: !!store.data[eK + '_s' + s + '_done']
+        });
+      }
+      var name = programRowName(row);
+      if (!name || !sets.length) return;
+      var first = String(row.repsTarget || (planned[0] && planned[0].reps) || '');
+      var low = first.match(/^\s*(\d+)/);
+      rows.push({
+        key: name.toLowerCase(), name: name,
+        repsLow: low ? parseInt(low[1], 10) : 0,
+        targetRir: prescribedRirFor(row, planned[0]),
+        planned: sets.length, sets: sets
+      });
+    });
+    if (rows.length) out.push({ week: c.week, day: c.day, rows: rows });
+  });
+  return out;
+}
+
+function progressionAdviceFor(ctx) {
+  var advisor = window.NurvanProgressionAdvisor;
+  var analysis = advisor.analyze(progressionHistoryForAdvice(ctx));
+  return advisor.advise(analysis, { current: ctx.current, family: ctx.family, remainingWeeks: ctx.remainingWeeks });
+}
+
+// Asked at most once every two weeks of the program, and only when the numbers
+// say so. force: the athlete asked (the card on the stats page).
+function maybeSuggestProgressionChange(force) {
+  try {
+    var ctx = progressionAdviceContext();
+    if (!ctx) {
+      if (force && typeof showToast === 'function') showToast('La progressione si può cambiare solo su un programma tuo.', 'info');
+      return false;
+    }
+    if (!store.prefs) store.prefs = {};
+    var asked = store.prefs.progressionAdvice || {};
+    if (!force && asked.programKey === ctx.programKey && Number(asked.week) > 0 && ctx.startAfter < Number(asked.week) + PROGRESSION_ADVICE_REASK_WEEKS) return false;
+    var advice = progressionAdviceFor(ctx);
+    if (!advice) {
+      if (force && typeof showToast === 'function') showToast('Per ora la progressione sta funzionando: non c\'è niente da cambiare.', 'ok');
+      return false;
+    }
+    store.prefs.progressionAdvice = { programKey: ctx.programKey, week: ctx.startAfter, state: advice.state };
+    try { persist(); } catch (_) {}
+    openProgressionAdviceSheet(advice, ctx);
+    return true;
+  } catch (err) {
+    console.warn('[PROGRESSION ADVICE]', err);
+    return false;
+  }
+}
+window.maybeSuggestProgressionChange = maybeSuggestProgressionChange;
+
+function closeProgressionAdvice() {
+  var el = document.getElementById('progression-advice-sheet');
+  if (el) el.remove();
+}
+window.closeProgressionAdvice = closeProgressionAdvice;
+
+var PROGRESSION_WHY = {
+  volume_ramp: 'Ti sei fermato ma stai recuperando bene: serve più stimolo. Questa aggiunge serie un po\' alla volta finché il recupero regge, poi scarica.',
+  dup: 'Ogni seduta della settimana ha un carattere diverso (pesante, ipertrofia, metabolica): uno stimolo nuovo senza aumentare il lavoro totale.',
+  block_hyp_strength: 'Dopo un periodo di volume, passa a carichi alti e serie più corte: usa quello che hai costruito.',
+  technique_intensifier: 'Stesso volume, ma negli ultimi giri gli accessori chiudono con tecniche di intensità: più stimolo senza più serie.',
+  volume_wave: 'Tre settimane di lavoro crescente e una di scarico: la fatica rientra prima che ti blocchi del tutto.',
+  linear_rir: 'Volume stabile e fatica sotto controllo: cambi una cosa sola alla volta e ti avvicini al limite con calma.',
+  rpe_autoreg: 'Non hai percentuali fisse: il carico lo decidi in giornata sullo sforzo. Nelle giornate storte non ti obbliga a forzare.',
+  wave_531: 'Cicli di quattro settimane con una di scarico e carichi sotto il massimo: stimolo regolare con meno stress.',
+  texas_method: 'Una seduta di volume, una leggera e una di intensità ogni settimana: lo stimolo cambia e il recupero ha il suo spazio.',
+  block_pl: 'Tre fasi nette (accumulo, lavoro più duro, pochi carichi molto pesanti): un obiettivo diverso per volta.'
+};
+
+function progressionAdviceHeading(advice) {
+  if (advice.state === 'regressing') return 'I CARICHI STANNO CALANDO';
+  if (advice.state === 'stalled') return 'LA PROGRESSIONE SI È FERMATA';
+  return 'LA FATICA STA SALENDO';
+}
+
+function progressionEvidenceHtml(advice) {
+  var lines = [];
+  advice.exercises.forEach(function (ex) {
+    if (ex.state === 'regressing') lines.push('<b>' + esc(ex.name) + '</b>: ' + ex.dropPct + '% sotto il tuo meglio nelle ultime due sedute');
+    else lines.push('<b>' + esc(ex.name) + '</b>: nessun miglioramento nelle ultime tre sedute (' + (ex.gainPct >= 0 ? '+' : '') + ex.gainPct + '%)');
+  });
+  if (advice.deficit != null && advice.deficit >= 0.7) lines.push('Chiudi le serie in media ' + advice.deficit + ' ripetizioni più vicino al cedimento di quanto previsto');
+  if (advice.shortfallPct >= 20) lines.push(advice.shortfallPct + '% delle serie sotto le ripetizioni previste');
+  if (advice.incompletePct >= 10) lines.push(advice.incompletePct + '% delle serie non completate');
+  if (!lines.length) return '';
+  return '<ul style="margin:0 0 12px;padding-left:18px;font-size:12px;color:#ccc;line-height:1.6;">' +
+    lines.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul>';
+}
+
+function openProgressionAdviceSheet(advice, ctx) {
+  var engine = window.NurvanProgressions;
+  closeProgressionAdvice();
+  var model = engine.get(advice.modelId);
+  var first = ctx.startAfter + 1;
+  var sheet = document.createElement('div');
+  sheet.id = 'progression-advice-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10260';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeProgressionAdvice(); };
+  var others = advice.alternatives.map(function (id) {
+    var m = engine.get(id);
+    return '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:6px;padding:10px;text-align:left;" onclick="applyProgressionChange(\'' + id + '\')">' +
+      '<b>' + esc(m.label) + '</b><div style="font-size:11px;color:#999;font-weight:400;margin-top:3px;">' + esc(m.summary) + '</div></button>';
+  }).join('');
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:#e0b040;font-weight:800;letter-spacing:1px;">' + progressionAdviceHeading(advice) + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;flex:0 0 auto;" onclick="closeProgressionAdvice()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<p style="font-size:13px;color:#eee;line-height:1.5;margin:4px 0 8px;">Nelle ultime ' + advice.sessions + ' sedute (' + advice.weeks + ' settimane) i numeri dicono che questa progressione ha dato quello che poteva:</p>' +
+    progressionEvidenceHtml(advice) +
+    '<div style="border:1px solid #6a5420;border-radius:12px;padding:12px;margin:0 0 12px;background:#14110a;">' +
+    '<div style="font-size:10px;color:#e0b040;font-weight:800;letter-spacing:1px;margin-bottom:4px;">TI CONSIGLIO</div>' +
+    '<div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:4px;">' + esc(model.label) + '</div>' +
+    '<div style="font-size:12px;color:#ddd;line-height:1.5;margin-bottom:8px;">' + esc(PROGRESSION_WHY[model.id] || model.summary) + '</div>' +
+    '<div style="font-size:11px;color:#999;line-height:1.45;">' + esc(model.summary) + '</div>' +
+    '</div>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:6px;padding:12px;" onclick="applyProgressionChange(\'' + model.id + '\')">PASSA A QUESTA DALLA SETTIMANA ' + first + '</button>' +
+    '<p style="font-size:11px;color:#888;margin:0 0 14px;line-height:1.45;">Le settimane fino alla ' + ctx.startAfter + ' restano com\'erano, con i tuoi dati. Le ' + ctx.remainingWeeks + ' successive vengono riscritte partendo dalla settimana ' + ctx.templateWeek + ' com\'è adesso. Se cambi idea puoi annullare finché non le hai iniziate.</p>' +
+    (others ? '<div style="font-size:11px;color:#aaa;font-weight:800;margin:0 0 6px;">ALTRE OPZIONI</div>' + others : '') +
+    '<button type="button" class="btn btn-outline" style="width:100%;padding:10px;margin-top:6px;" onclick="closeProgressionAdvice()">NO, CONTINUO COSÌ</button>' +
+    '</div></div>';
+  document.body.appendChild(sheet);
+}
+
+// Rewrites the weeks that have not been started, from the week the athlete is
+// on, with another progression. The weeks replaced are kept so the change can
+// be undone.
+function applyProgressionChange(modelId) {
+  var ctx = progressionAdviceContext();
+  var engine = window.NurvanProgressions;
+  var model = engine ? engine.get(modelId) : null;
+  if (!ctx || !model || model.id !== modelId || ctx.remainingWeeks < 1) {
+    if (typeof showToast === 'function') showToast('Non posso cambiare la progressione di questo programma.', 'error');
+    return;
+  }
+  var source = DATA.weeks[ctx.templateWeek - 1];
+  var sessions = (source && (source.sessions || source.days)) || [];
+  var warm = {};
+  var template = sessions.map(function (session, si) {
+    return {
+      name: session.name, title: session.title || session.name,
+      exercises: (session.exercises || session.rows || []).map(function (row, ei) {
+        var copy = JSON.parse(JSON.stringify(row));
+        var all = Array.isArray(copy.sets) ? copy.sets : [];
+        var warmups = all.filter(isWarmupSet);
+        if (warmups.length) warm[si + '_' + ei] = warmups;
+        copy.sets = all.filter(function (s) { return !isWarmupSet(s); });
+        if (copy.sets.length) copy.setCount = copy.sets.length;
+        return copy;
+      })
+    };
+  });
+  var prog = DATA.progression || {};
+  var span = ctx.remainingWeeks;
+  var gen = engine.weeksFromTemplate(template, {
+    weeks: span + 1,
+    modelId: model.id,
+    loadDisplay: prog.load_display || 'percent',
+    maxes: prog.maxes || {},
+    bodyweight: currentBodyweightKg(),
+    techniques: 'model'
+  });
+  var backup = JSON.parse(JSON.stringify(DATA.weeks.slice(ctx.startAfter)));
+  // gen[0] is the written week itself, the start of the new block: the athlete is already past it.
+  for (var i = 1; i <= span; i++) {
+    var week = gen[i];
+    var number = ctx.startAfter + i;
+    week.week = number; week.weekNumber = number; week.week_number = number;
+    week.label = String(week.label || '').replace(/^Settimana\s+\d+/, 'Settimana ' + number);
+    (week.sessions || []).forEach(function (session, si) {
+      (session.exercises || []).forEach(function (row, ei) {
+        var saved = warm[si + '_' + ei];
+        if (!saved) return;
+        if (engine.applyWarmupRamp) engine.applyWarmupRamp(row);
+        if (!(row.sets || []).some(isWarmupSet)) row.sets = saved.concat(row.sets || []);
+      });
+    });
+    DATA.weeks[number - 1] = week;
+  }
+  var changes = Array.isArray(DATA.progression_changes) ? DATA.progression_changes : [];
+  changes.push({ at: new Date().toISOString(), week: ctx.startAfter, from: ctx.current, to: model.id });
+  DATA.progression_changes = changes;
+  DATA.progression = Object.assign({}, DATA.progression || {}, { model: model.id });
+  DATA.progression_model = model.id;
+  store.progressionBackup = { programKey: ctx.programKey, startAfter: ctx.startAfter, from: ctx.current, to: model.id, weeks: backup };
+  persistActiveProgramStructure();
+  closeProgressionAdvice();
+  openProgressionAppliedSheet(model, ctx);
+  if (typeof render === 'function') render();
+}
+window.applyProgressionChange = applyProgressionChange;
+
+function openProgressionAppliedSheet(model, ctx) {
+  var sheet = document.createElement('div');
+  sheet.id = 'progression-advice-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10260';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeProgressionAdvice(); };
+  sheet.innerHTML =
+    '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head"><div style="font-size:10px;color:#7ed492;font-weight:800;letter-spacing:1px;">PROGRESSIONE CAMBIATA</div></div>' +
+    '<div class="nurvan-sheet-body">' +
+    '<p style="font-size:13px;color:#eee;line-height:1.5;margin:4px 0 10px;">Dalla settimana ' + (ctx.startAfter + 1) + ' il programma segue <b>' + esc(model.label) + '</b>. Le settimane fino alla ' + ctx.startAfter + ' sono rimaste come le avevi fatte.</p>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;padding:12px;" onclick="closeProgressionAdvice()">OK</button>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;padding:10px;" onclick="undoProgressionChange()">ANNULLA, TORNA COME PRIMA</button>' +
+    '</div></div>';
+  document.body.appendChild(sheet);
+}
+
+function undoProgressionChange() {
+  var backup = store && store.progressionBackup;
+  if (!backup || backup.programKey !== activeProgramKey() || !DATA || !Array.isArray(DATA.weeks)) {
+    if (typeof showToast === 'function') showToast('Non c\'è più niente da annullare.', 'info');
+    closeProgressionAdvice();
+    return;
+  }
+  var started = logsOfActiveProgram().some(function (l) { return l && Number(l.week) > backup.startAfter; });
+  if (started) {
+    if (typeof showToast === 'function') showToast('Hai già fatto sedute con la nuova progressione: non posso tornare indietro.', 'error');
+    closeProgressionAdvice();
+    return;
+  }
+  DATA.weeks.splice(backup.startAfter, backup.weeks.length);
+  backup.weeks.forEach(function (w, i) { DATA.weeks.splice(backup.startAfter + i, 0, w); });
+  if (Array.isArray(DATA.progression_changes)) DATA.progression_changes.pop();
+  DATA.progression = Object.assign({}, DATA.progression || {}, { model: backup.from });
+  DATA.progression_model = backup.from;
+  store.progressionBackup = null;
+  persistActiveProgramStructure();
+  closeProgressionAdvice();
+  if (typeof showToast === 'function') showToast('Progressione di prima ripristinata.', 'ok');
+  if (typeof render === 'function') render();
+}
+window.undoProgressionChange = undoProgressionChange;
+
+// A card on the stats page when the numbers already say so.
+function renderProgressionAdviceCardHtml() {
+  try {
+    var ctx = progressionAdviceContext();
+    if (!ctx) return '';
+    var advice = progressionAdviceFor(ctx);
+    if (!advice) return '';
+    return '<div class="card" style="margin-bottom:14px;border:1px solid #6a5420;">' +
+      '<div style="font-size:12px;font-weight:900;color:var(--gold);margin-bottom:6px;">' + progressionAdviceHeading(advice) + '</div>' +
+      '<div style="font-size:11px;color:#aaa;margin-bottom:10px;">Ti propongo di cambiare la progressione da qui in avanti.</div>' +
+      '<button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="maybeSuggestProgressionChange(true)">VEDI LA PROPOSTA</button>' +
+      '</div>';
+  } catch (_) { return ''; }
+}
 
 /* ---------- a test inside the program, and what follows from it ---------- */
 //
