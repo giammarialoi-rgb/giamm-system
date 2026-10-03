@@ -23,9 +23,13 @@
       '<p class="coach-os-subtitle">' + escText(tx('coAnalyticsSubtitle')) + '</p></div></div>' +
       '<div class="coach-os-quick-actions">' +
       ['7', '28', '90'].map(function (days) {
-        return '<button class="coach-os-action" onclick="CoachOS.setAnalyticsRange(\'' + days + '\')">' + days + tx('coDaysShort') + '</button>';
-      }).join('') +
-      '<button class="coach-os-action" onclick="CoachOS.filterAnalyticsClient()">' + escText(tx('coClientFallback')) + '</button></div>' +
+        return '<button class="coach-os-action' + (state.range === days ? ' active' : '') + '" onclick="CoachOS.setAnalyticsRange(\'' + days + '\')">' + days + tx('coDaysShort') + '</button>';
+      }).join('') + '</div>' +
+      // The client is chosen from a list (it asked for a numeric id typed by hand before).
+      ((window.store && window.store.__cpClientList || []).length
+        ? '<select aria-label="' + escText(tx('coClientFallback')) + '" style="margin:0 0 12px;" onchange="CoachOS.setAnalyticsClient(this.value)"><option value="">' + escText(tx('coAllClients')) + '</option>' +
+          window.store.__cpClientList.map(function (c) { return '<option value="' + escText(c.id) + '"' + (String(c.id) === String(state.clientId) ? ' selected' : '') + '>' + escText(c.displayName || c.username || c.id) + '</option>'; }).join('') + '</select>'
+        : '') +
       '<div class="coach-os-card coach-os-kpis">' +
       [[tx('coAdherence'), kpi.adherence && kpi.adherence.average != null ? kpi.adherence.average + '%' : '—'],
         [tx('coAtRisk'), kpi.adherence && kpi.adherence.atRisk || 0],
@@ -49,6 +53,12 @@
 
   CoachOS.views.coachAnalytics = async function (container) {
     container.innerHTML = '<div class="coach-os-skeleton">' + escText(tx('coLoadingAnalytics')) + '</div>';
+    if (window.store && !(window.store.__cpClientList || []).length) {
+      try {
+        const list = await window.practiceFetch('/api/coach/clients', { headers: window.practiceHeaders() });
+        window.store.__cpClientList = (list && list.clients) || [];
+      } catch (_) { /* the filter just stays hidden */ }
+    }
     try {
       const query = '?range=' + encodeURIComponent(state.range) +
         (state.clientId ? '&clientId=' + encodeURIComponent(state.clientId) : '');
@@ -78,10 +88,9 @@
     CoachOS.navigate('coachAnalytics');
   };
 
-  CoachOS.filterAnalyticsClient = function () {
-    const id = window.prompt(tx('coFilterClient'), state.clientId || '');
-    if (id == null) return;
-    state.clientId = String(id).trim();
+  CoachOS.setAnalyticsClient = function (id) {
+    state.clientId = String(id || '').trim();
     CoachOS.navigate('coachAnalytics');
   };
+  CoachOS.filterAnalyticsClient = function () { CoachOS.navigate('coachAnalytics'); };
 })();

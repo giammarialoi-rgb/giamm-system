@@ -415,6 +415,9 @@ function applyClientChrome() {
     }
     ensureCoachHeaderControls(coachSession);
     ensureNotifyButton();
+    // The coach looks at the client's plans: the athlete's own tools (workout timer, barcode and meal photo, steps, "ask the coach") are not for him.
+    hideAthleteToolsForCoach();
+    watchAthleteToolsForCoach();
     if (typeof updatePersonalBackButton === 'function') updatePersonalBackButton();
     if (athlete) {
       document.querySelectorAll('button').forEach(function (btn) {
@@ -3054,6 +3057,28 @@ async function confirmDemoUnlock() {
   }
 }
 
+function hideAthleteToolsForCoach() {
+  if (!(store && store.coachViewingClient)) return;
+  document.querySelectorAll('#view-container button, #view-container .card').forEach(function (el) {
+    const text = String(el.textContent || '').trim();
+    if (el.tagName === 'BUTTON' && /^(ASK COACH|CHIEDI A COACH AI|CHIEDI AL COACH)/i.test(text)) el.style.display = 'none';
+    else if (el.classList.contains('card') && /^(TIMER ALLENAMENTO|BARCODE \/ OPEN FOOD FACTS|FOTO PASTO AI|Passi di oggi)/i.test(text)) el.style.display = 'none';
+  });
+}
+// The views draw themselves after this runs, so the page is watched while a coach is looking at a client.
+function watchAthleteToolsForCoach() {
+  if (window.__cpToolsWatch || typeof MutationObserver !== 'function') return;
+  const box = document.getElementById('view-container');
+  if (!box) return;
+  let timer = 0;
+  window.__cpToolsWatch = new MutationObserver(function () {
+    if (!(store && store.coachViewingClient)) return;
+    clearTimeout(timer);
+    timer = setTimeout(hideAthleteToolsForCoach, 80);
+  });
+  window.__cpToolsWatch.observe(box, { childList: true, subtree: true });
+}
+
 function renderCoachUnlockCardHtml() {
   if (typeof isAthleteRole === 'function' && isAthleteRole()) return '';
   if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) {
@@ -3076,7 +3101,9 @@ function injectCoachUnlockInto(container) {
   hold.setAttribute('data-cp-unlock', '1');
   hold.innerHTML = html;
   const cards = container.querySelectorAll('.card');
-  if (cards.length >= 2) cards[1].insertAdjacentElement('afterend', hold);
+  // On the plans page it went between two plans and read as a plan of its own: there it closes the page.
+  if (typeof currentView !== 'undefined' && currentView === 'pricing') container.appendChild(hold);
+  else if (cards.length >= 2) cards[1].insertAdjacentElement('afterend', hold);
   else container.insertBefore(hold, container.firstChild);
 }
 
