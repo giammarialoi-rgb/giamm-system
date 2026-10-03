@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import express from 'express';
-import { mountWaitlist, waitlistPath, WAITLIST_CONSENT_TEXT, MAX_PER_HOUR, listWaitlist, waitlistCsv, listCoachApplications, coachApplicationsCsv } from './server/site/waitlist.mjs';
+import { mountWaitlist, notifyRecipients, waitlistPath, WAITLIST_CONSENT_TEXT, MAX_PER_HOUR, listWaitlist, waitlistCsv, listCoachApplications, coachApplicationsCsv } from './server/site/waitlist.mjs';
 import { translateHtml, siteDict, SITE_LANGS } from './server/site/i18n.mjs';
 
 let failed = 0;
@@ -45,16 +45,17 @@ function fakePool() {
 
 async function world(maxPerHour = 1000) {
   const pool = fakePool();
+  const mails = [];
   const pages = [];
   const app = express();
   app.use(express.json());
   const shell = async (req, page) => { pages.push(page); return '<html><head><title>' + page.title + '</title><meta name="description" content="' + page.description + '"></head><body>' + translateHtml(page.main, await siteDict('site', page.lang)) + '</body></html>'; };
-  mountWaitlist(app, { siteDir: 'site', shell, pool, initDb: async () => {}, maxPerHour });
+  mountWaitlist(app, { siteDir: 'site', shell, pool, initDb: async () => {}, maxPerHour, env: { WAITLIST_NOTIFY_EMAIL: 'titolare@example.com' }, sendEmail: async (to, subject, text, html) => { mails.push({ to, subject, text, html }); return { sent: true }; } });
   const server = http.createServer(app);
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + server.address().port;
   const post = (route, body) => fetch(base + route, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  return { pool, pages, base, post, close: () => new Promise((r) => server.close(r)) };
+  return { pool, mails, pages, base, post, close: () => new Promise((r) => server.close(r)) };
 }
 
 const coachBody = (extra = {}) => Object.assign({ name: 'Luca Rossi', email: 'Luca@Example.com', social: '@lucacoach', athletes: '6-20', qualification: 'ISSA Personal Trainer', notes: '', consent: true, lang: 'it' }, extra);
@@ -103,6 +104,15 @@ try {
     (await w.post('/api/site/coach-application', coachBody({ email: 'd3@example.com', qualification: '' }))).status === 400 &&
     (await w.post('/api/site/coach-application', coachBody({ email: 'd4@example.com', notes: undefined }))).status === 200);
   ok('3e. i testi lunghissimi vengono tagliati', (await w.post('/api/site/coach-application', coachBody({ email: 'e@example.com', notes: 'x'.repeat(5000), name: 'n'.repeat(500) }))).status === 200 && w.pool.coaches.find((r) => r.email === 'e@example.com').notes.length === 1000 && w.pool.coaches.find((r) => r.email === 'e@example.com').name.length === 100);
+
+  // --- the owner is told ---------------------------------------------------
+  await new Promise((r) => setTimeout(r, 50));
+  const nl = w.mails.filter((m) => /lista d'attesa/.test(m.subject));
+  const nc = w.mails.filter((m) => /candidatura coach/.test(m.subject));
+  ok('7a. ogni iscrizione riuscita avvisa il titolare, con indirizzo e lingua', nl.length === 2 && nl.every((m) => m.to === 'titolare@example.com') && /mario@example.com/.test(nl[0].text) && /Lingua: en/.test(nl[1].text));
+  ok('7b. ogni candidatura avvisa con tutti i campi', nc.length >= 1 && /Luca Rossi/.test(nc[0].text) && /@lucacoach/.test(nc[0].text) && /6-20/.test(nc[0].text) && /ISSA/.test(nc[0].text));
+  ok('7c. un invio rifiutato non manda nessun avviso', !w.mails.some((m) => /bot@example|b@example/.test(m.text)));
+  ok('7d. i destinatari: WAITLIST_NOTIFY_EMAIL, altrimenti gli admin', notifyRecipients({ WAITLIST_NOTIFY_EMAIL: 'a@x.it' }).join() === 'a@x.it' && notifyRecipients({ ADMIN_EMAILS: 'A@x.it, b@x.it' }).join() === 'a@x.it,b@x.it' && notifyRecipients({}).length === 0);
 
   // --- the files for the owner ---------------------------------------------
   const csv = waitlistCsv(await listWaitlist(w.pool));

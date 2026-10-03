@@ -2515,7 +2515,7 @@ mountHyrox(app, { webDir: path.join(__dirname, "web"), siteDir: SITE_DIR, shell:
 // Example workouts: /allenamenti, one page each, the PDF sent by email.
 mountSamples(app, { siteDir: SITE_DIR, pool, initDb, sendEmail, shell: (req, page) => siteShell(req, Object.assign({ samples: true }, page)) });
 // The waiting list and the founding coaches' application: /lista-attesa.
-mountWaitlist(app, { siteDir: SITE_DIR, pool, initDb, shell: (req, page) => siteShell(req, page) });
+mountWaitlist(app, { siteDir: SITE_DIR, pool, initDb, sendEmail, shell: (req, page) => siteShell(req, page) });
 // The app's screens shown on the home page: site/shots.json lists them
 // ([{ "file": "allenamento.png", "title": "...", "text": "..." }]), the images
 // are in site/assets/shots/.

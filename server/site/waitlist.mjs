@@ -13,7 +13,7 @@
 // network. The privacy box is required and its words and time are saved.
 import { SITE_LANGS, langPrefix, langOfPath, siteDict, st } from "./i18n.mjs";
 import { SERVER_LANGS } from "../i18n.mjs";
-import { normalizeEmail, validEmail } from "../account/email-auth.mjs";
+import { normalizeEmail, validEmail, composeEmail } from "../account/email-auth.mjs";
 
 export const WAITLIST_CONSENT_TEXT = "Acconsento a essere ricontattato via email per il lancio di Nurvan e l'accesso anticipato. Ho letto l'informativa sulla privacy.";
 export const ATHLETE_BANDS = ["1-5", "6-20", "21-50", "oltre 50"];
@@ -175,7 +175,29 @@ export function waitlistMain(lang, dict) {
     `</div></section>` + SCRIPT;
 }
 
-export function mountWaitlist(app, { siteDir, shell, pool, initDb, maxPerHour = MAX_PER_HOUR }) {
+// Who is told when someone signs up: WAITLIST_NOTIFY_EMAIL, else the admins.
+export function notifyRecipients(env = process.env) {
+  const list = String(env.WAITLIST_NOTIFY_EMAIL || env.ADMIN_EMAILS || "").split(/[\s,;]+/).map((e) => e.trim().toLowerCase()).filter(Boolean);
+  return [...new Set(list)];
+}
+export function signupEmail(kind, body) {
+  const line = (k, v) => (v ? k + ": " + v : "");
+  const coach = kind === "coach";
+  const intro = coach
+    ? [line("Nome", body.name), line("Email", body.email), line("Instagram o sito", body.social), line("Atleti", body.athletes), line("Qualifica", body.qualification), line("Note", body.notes), line("Lingua", body.lang)]
+    : [line("Email", body.email), line("Lingua", body.lang)];
+  return Object.assign({ subject: coach ? "NURVAN — nuova candidatura coach: " + (body.name || body.email) : "NURVAN — nuova iscrizione alla lista d'attesa: " + body.email },
+    composeEmail({ title: coach ? "Nuova candidatura coach fondatore" : "Nuova iscrizione alla lista d'attesa", intro: intro.filter(Boolean).join("\n") }, "it"));
+}
+
+export function mountWaitlist(app, { siteDir, shell, pool, initDb, sendEmail, env = process.env, maxPerHour = MAX_PER_HOUR }) {
+  // The owner hears of every signup. A failed email never fails the signup.
+  const notify = (kind, body) => {
+    const to = notifyRecipients(env);
+    if (!sendEmail || !to.length) return;
+    const mail = signupEmail(kind, body);
+    for (const addr of to) Promise.resolve().then(() => sendEmail(addr, mail.subject, mail.text, mail.html)).catch((e) => console.error("SITE_WAITLIST_NOTIFY", e && e.message));
+  };
   const everyLang = () => Object.fromEntries(SITE_LANGS.map((l) => [l, waitlistPath(l)]));
   const hits = new Map();
   const tooMany = (ip, max = maxPerHour, windowMs = 3600000) => {
@@ -218,9 +240,9 @@ export function mountWaitlist(app, { siteDir, shell, pool, initDb, maxPerHour = 
     }
   };
 
-  app.post("/api/site/waitlist", handle((body, lang) => joinWaitlist(pool, { email: body.email, lang, consent: body.consent === true }),
+  app.post("/api/site/waitlist", handle(async (body, lang) => { const r = await joinWaitlist(pool, { email: body.email, lang, consent: body.consent === true }); notify("waitlist", { email: r.email, lang }); },
     "Sei nella lista d'attesa. Ti scriviamo solo quando c'è qualcosa di concreto."));
-  app.post("/api/site/coach-application", handle((body, lang) => applyAsCoach(pool, Object.assign({}, body, { lang })),
+  app.post("/api/site/coach-application", handle(async (body, lang) => { const full = Object.assign({}, body, { lang }); const r = await applyAsCoach(pool, full); notify("coach", { name: String(full.name || "").trim().slice(0, 100), email: r.email, social: String(full.social || "").slice(0, 200), athletes: full.athletes, qualification: String(full.qualification || "").slice(0, 300), notes: String(full.notes || "").slice(0, 1000), lang }); },
     "Candidatura ricevuta. La leggiamo e ti rispondiamo per email."));
 
   app.get("/lista-attesa", page);
