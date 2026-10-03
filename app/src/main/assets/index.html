@@ -50659,8 +50659,28 @@ function persist() {
     if (sanitized && typeof sanitized === 'object') {
       sanitized.__cpClientScoped = !!isClientStorageContext();
     }
+    // What a coach has open of a client (the client's whole record, megabytes of
+    // it) is fetched again from the server whenever the client is opened, and a
+    // session never survives a restart: it has no place in the local blob. This
+    // is what filled the iOS quota - about 5 MB per app, whatever the phone's space.
+    if (sanitized && typeof sanitized === 'object' && sanitized.coachWorkspace && typeof sanitized.coachWorkspace === 'object') {
+      const ws = sanitized.coachWorkspace;
+      delete ws.data;
+      delete ws.clientProfile;
+    }
     window.__lastPersistBlob = sanitized;
-    localStorage.setItem(persistKey, JSON.stringify(sanitized));
+    let serialized = JSON.stringify(sanitized);
+    // Safety margin well under the smallest quota seen (iOS, ~2.5 M characters):
+    // past it, the parts that live elsewhere and rebuild themselves go first.
+    if (serialized.length > 1800000 && sanitized && typeof sanitized === 'object') {
+      ['coachWorkspace', 'intelligence', 'mapSyncBase'].forEach(function (k) {
+        if (serialized.length > 1800000 && sanitized[k] != null) {
+          sanitized[k] = null;
+          serialized = JSON.stringify(sanitized);
+        }
+      });
+    }
+    localStorage.setItem(persistKey, serialized);
     window.__lastPersistBlob = null;
   } catch (quotaErr) {
     console.warn('[PERSIST_WARNING] localStorage quota exceeded, performing deep sanitize:', quotaErr);
@@ -50672,7 +50692,8 @@ function persist() {
       let detail = '';
       try { detail = localStorageUsageReport(window.__lastPersistBlob); } catch (_) {}
       window.__lsQuotaReport = detail;
-      showToast('Spazio interno dell’app pieno (non quello del telefono): i dati restano salvati e nel cloud. Dettaglio: ' + detail, 'error');
+      console.warn('[PERSIST_WARNING] ' + detail);
+      showToast('Memoria locale al limite: i tuoi dati sono al sicuro e sincronizzati. Se il messaggio si ripete, scrivici da Impostazioni.', 'info');
     }
     try {
       // Everything below reads the domain through `store`, which follows the
