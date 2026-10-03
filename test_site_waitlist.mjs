@@ -68,7 +68,7 @@ try {
   const page = w.pages[0];
   ok('1a. /lista-attesa risponde 200 e il contenuto è nell’HTML', res.status === 200 && /<h1[^>]*>Nurvan sta arrivando\. Entra nella lista\.<\/h1>/.test(html));
   ok('1b. title ≤ 60 caratteri, description tra 140 e 160', page.title.length <= 60 && page.description.length >= 140 && page.description.length <= 160);
-  ok('1c. c’è il modulo email, la casella privacy non preselezionata, il link all’informativa e il campo trappola', /id="waitlist-form"/.test(html) && /type="email"/.test(html) && /<input type="checkbox" name="consent" required>/.test(html) && !/name="consent"[^>]*checked/.test(html) && /privacy\?lang=it/.test(html) && /name="website"/.test(html));
+  ok('1c. c’è il modulo email, la casella privacy non preselezionata, il link all’informativa e il campo trappola', /id="waitlist-form"/.test(html) && /type="email"/.test(html) && /<input type="checkbox" name="consent" required>/.test(html) && !/name="consent"[^>]*checked/.test(html) && /href="\{\{PRIVACY\}\}"/.test(html) && /name="website"/.test(html));
   ok('1d. cinque punti sulle funzioni', (html.match(/<article class="card">/g) || []).length === 5);
   ok('1e. la sezione coach: 10 fondatori, Coach Pro gratis per 12 mesi, il suo modulo con tutti i campi', /id="coach"/.test(html) && /Cerchiamo 10 coach fondatori\./.test(html) && /Coach Pro gratuito per 12 mesi \(valore 390 €\)/.test(html) &&
     ['name', 'email', 'social', 'athletes', 'qualification', 'notes'].every((n) => new RegExp('id="coach-form"[\\s\\S]*name="' + n + '"').test(html)) && ['1-5', '6-20', '21-50', 'Oltre 50'].every((b) => html.includes('>' + b + '<')));

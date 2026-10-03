@@ -258,3 +258,29 @@ form.done .field, form.done .check, form.done button { display: none; }
 .coach-apply .sample-form-card { margin-top: 0; }
 .coach-apply .sample-form-card h3 { margin-top: 0; }
 .post-wait { margin: 14px 0 0; text-align: center; font-size: 14px; }
+
+/* Who writes: byline, author box and page, company details, legal pages */
+.byline { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+.byline a { color: var(--gold); font-weight: 700; text-decoration: underline; }
+.author-box { display: flex; gap: 16px; align-items: center; margin: 34px 0; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: #111; }
+.author-box img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; flex: none; margin: 0; border: 1px solid var(--line); }
+.author-box p { margin: 4px 0 0; font-size: 14px; color: #cfcfcf; line-height: 1.5; }
+.author-box a { color: var(--gold); text-decoration: underline; }
+.prose .author-box img { width: 72px; background: none; border: 1px solid var(--line); }
+.author-hero { display: grid; grid-template-columns: 180px 1fr; gap: 28px; align-items: center; margin-bottom: 28px; }
+.author-hero img { width: 180px; height: 180px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+.author-hero .blog-title { margin-bottom: 6px; }
+@media (max-width: 600px) { .author-hero { grid-template-columns: 1fr; justify-items: start; } .author-hero img { width: 120px; height: 120px; } }
+.author-articles { margin: 40px 0 16px; }
+.company { margin: 8px 0 0; display: grid; gap: 10px; }
+.company-row { display: grid; grid-template-columns: 140px 1fr; gap: 12px; }
+.company dt { color: var(--muted); font-size: 13px; font-weight: 700; }
+.company dd { margin: 0; }
+.missing { color: #ffb74d; border-bottom: 1px dashed #ffb74d; }
+.contact h2, .about h2 { margin-top: 28px; }
+.legal-doc .prose .card { background: #111; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+.legal-doc .prose .muted { color: var(--muted); font-size: 14px; }
+.legal-doc .prose .draft { background: #3a2d06; color: #ffe08a; border-radius: 10px; padding: 12px 14px; margin: 14px 0; }
+.legal-doc .prose .draft[hidden] { display: none; }
+.legal-doc .prose nav.legal-links { margin-top: 36px; display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; }
+.legal-doc .prose .missing { color: #ffb74d; }

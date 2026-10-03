@@ -20,8 +20,8 @@ export const ATHLETE_BANDS = ["1-5", "6-20", "21-50", "oltre 50"];
 export const MAX_PER_HOUR = 6;
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const httpError = (statusCode, message) => Object.assign(new Error(message), { statusCode });
-const clean = (v, max) => String(v == null ? "" : v).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+export const httpError = (statusCode, message) => Object.assign(new Error(message), { statusCode });
+export const clean = (v, max) => String(v == null ? "" : v).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 
 // Italian keeps its own word; the other languages share "waitlist".
 export const waitlistPath = (lang) => (!lang || lang === "it" ? "/lista-attesa" : "/" + lang + "/waitlist");
@@ -92,7 +92,7 @@ export function coachApplicationsCsv(rows) {
 
 /* ------------------------------- the page ----------------------------- */
 
-const SCRIPT = `<script>
+export const FORM_SCRIPT = `<script>
 (function(){
   document.querySelectorAll('form.wl-form').forEach(function(form){
     var msg=form.querySelector('.form-msg');
@@ -132,7 +132,7 @@ function formHtml({ id, endpoint, lang, dict, fields, button, legal }) {
     `<label class="check"><input type="checkbox" name="consent" required><span>${esc(WAITLIST_CONSENT_TEXT)}</span></label>` +
     `<button type="submit" class="btn primary">${button}</button>` +
     `<p class="form-msg" role="status"></p>` +
-    `<p class="form-legal"><a href="{{APP_URL}}privacy?lang=${esc(lang)}">Informativa sulla privacy</a></p>` +
+    `<p class="form-legal"><a href="{{PRIVACY}}">Informativa sulla privacy</a></p>` +
     `</form>`;
 }
 const field = (label, input) => `<label class="field"><span>${label}</span>${input}</label>`;
@@ -172,7 +172,7 @@ export function waitlistMain(lang, dict) {
     `<li>Che lo usi davvero con i tuoi atleti</li>` +
     `<li>Che ci dia il tuo parere, con franchezza</li></ul>` +
     `</div><div class="card sample-form-card"><h3>Candidati</h3>${coachForm}</div></div>` +
-    `</div></section>` + SCRIPT;
+    `</div></section>` + FORM_SCRIPT;
 }
 
 // Who is told when someone signs up: WAITLIST_NOTIFY_EMAIL, else the admins.

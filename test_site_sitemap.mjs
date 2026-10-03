@@ -47,7 +47,7 @@ ok('1h. un articolo ha nei suoi hreflang le versioni vere, e la data è quella d
   const b = blocks.find((x) => x.includes('<loc>' + ORIGIN + '/blog/genetica-high-low-responder</loc>'));
   return !!a && !!b && b.includes('<lastmod>' + a.date + '</lastmod>') && b.includes('hreflang="en" href="' + ORIGIN + '/en/blog/genetics-high-low-responders"') && b.includes('hreflang="x-default" href="' + ORIGIN + '/blog/genetica-high-low-responder"');
 })());
-ok('1i. nessuna pagina legale né dell’app, nessuna pagina d’errore', !/privacy|termini|app\.nurvan|elimina-account|verifica-email/.test(xml));
+ok('1i. le pagine legali ci sono solo sul dominio del sito; nessuna dell’app e nessuna pagina d’errore', xml.includes('<loc>' + ORIGIN + '/privacy</loc>') && xml.includes('<loc>' + ORIGIN + '/en/termini</loc>') && !/app\.nurvan|elimina-account|verifica-email|reimposta-password/.test(xml));
 ok('1j. gli indirizzi non hanno doppi slash né spazi, e non si ripetono', (() => { const locs = blocks.map((b) => /<loc>([^<]+)</.exec(b)[1]); return locs.every((l) => !/\s|\/\/(?!nurvan)/.test(l.replace('https://', ''))) && new Set(locs).size === locs.length; })());
 
 // --- a new article gets in with nothing else to do -----------------------------

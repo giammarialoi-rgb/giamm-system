@@ -66,7 +66,7 @@ function walkTexts(html, replace) {
     return raw.replace(/^(\s*)[\s\S]*?(\s*)$/, (_, a, b) => a + safe + b);
   };
   src = src.replace(/<[^>]+>/g, (tag) => tag.replace(ATTR_RE, (all, name, value) => {
-    if (name === "content" && !/\b(name|property)="(description|og:title|og:description)"/.test(tag)) return all;
+    if (name === "content" && !/\b(name|property)="(description|og:title|og:description|og:image:alt|twitter:title|twitter:description|twitter:image:alt)"/.test(tag)) return all;
     return name + '="' + one(value, true) + '"';
   }));
   src = src.replace(/>([^<>]+)</g, (all, text) => ">" + one(text) + "<");

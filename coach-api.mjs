@@ -30,6 +30,8 @@ import { mountSamples, sampleCardsHtml } from "./server/site/samples.mjs";
 import { mountWaitlist, waitlistPath } from "./server/site/waitlist.mjs";
 import { mountSitemap } from "./server/site/sitemap.mjs";
 import { canonicalUrls } from "./server/site/urls.mjs";
+import { mountTrust, authorLoader, aboutPath, contactPath, legalPath } from "./server/site/trust.mjs";
+import { metaTags, jsonLdScripts, absUrl, organizationLd, websiteLd, softwareLd, faqLd, faqFromDetails } from "./server/site/seo.mjs";
 import { mountProgramShare } from "./server/program/share.mjs";
 import { reqLang, SERVER_LANGS } from "./server/i18n.mjs";
 import { SITE_LANGS, SITE_LANG_NAMES, isSiteLang, langPrefix, langOfPath, siteDict, translateHtml } from "./server/site/i18n.mjs";
@@ -2465,6 +2467,9 @@ async function siteShell(req, page) {
   const homeOf = (l) => (root + langPrefix(l)) || "/";
   const alternates = page.alternates || null;
   const origin = "https://" + (SITE_HOSTS[0] || "nurvan.app");
+  const ogIn = Object.assign({}, page.og || {});
+  if (typeof ogIn.author === "function") ogIn.author = ogIn.author(origin);
+  if (page.ogImage && !ogIn.image) ogIn.image = page.ogImage;
   const altHtml = alternates
     ? Object.keys(alternates).map((l) => '<link rel="alternate" hreflang="' + l + '" href="' + siteEsc(origin + alternates[l]) + '">').join("\n") +
       (alternates.it ? '\n<link rel="alternate" hreflang="x-default" href="' + siteEsc(origin + alternates.it) + '">' : "") +
@@ -2479,7 +2484,6 @@ async function siteShell(req, page) {
   const text = {
     TITLE: siteEsc(page.title || "Nurvan"),
     DESCRIPTION: siteEsc(page.description || ""),
-    OG_IMAGE: siteEsc(page.ogImage || "/nurvan_wordmark.png"),
     LANG: lang,
     DIR: lang === "ar" ? "rtl" : "ltr",
     ALTERNATES: altHtml,
@@ -2492,6 +2496,14 @@ async function siteShell(req, page) {
     SAMPLES: langPrefix(lang) + "/allenamenti",
     SAMPLES_ON: page.samples ? ' class="on"' : "",
     WAITLIST: waitlistPath(lang),
+    ABOUT: aboutPath(lang),
+    CONTACT: contactPath(lang),
+    PRIVACY: legalPath(lang, "privacy"),
+    TERMS: legalPath(lang, "termini"),
+    META: metaTags({
+      origin, lang, title: page.title || "Nurvan", description: page.description || "", alternates,
+      url: origin + ((alternates && alternates[lang]) || req.path.replace(/^\/sito(?=\/|$)/, "") || "/"), og: ogIn
+    }),
     V: SITE_STARTED,
     APP_URL: siteEsc(appUrl),
     CONTACT_EMAIL: siteEsc(mail)
@@ -2508,9 +2520,17 @@ async function siteShell(req, page) {
     });
   }
   for (const k of Object.keys(text)) html = html.split("{{" + k + "}}").join(text[k]);
-  return translateHtml(html, await siteDict(SITE_DIR, lang));
+  const out = translateHtml(html, await siteDict(SITE_DIR, lang));
+  // Structured data says what the page shows: the home's FAQ is read from the
+  // questions written in it (in the page's own language).
+  const ld = [];
+  if (page.home) ld.push(organizationLd(origin), websiteLd(origin, lang), softwareLd(origin, page.description), faqLd(faqFromDetails(out)));
+  if (typeof page.ld === "function") ld.push(...page.ld(origin));
+  return out.split("{{JSONLD}}").join(jsonLdScripts(ld));
 }
+const getAuthor = authorLoader(__dirname);
 const siteBlog = mountBlog(app, {
+  getAuthor,
   contentDir: path.join(__dirname, "content", "articles"),
   staticFiles: (dir) => express.static(dir, { maxAge: "1h" }),
   siteDir: SITE_DIR,
@@ -2522,6 +2542,8 @@ const siteHyrox = mountHyrox(app, { webDir: path.join(__dirname, "web"), siteDir
 mountSamples(app, { siteDir: SITE_DIR, pool, initDb, sendEmail, shell: (req, page) => siteShell(req, Object.assign({ samples: true }, page)) });
 // robots.txt and sitemap.xml, built from the same data as the pages.
 mountSitemap(app, { articles: siteBlog.articles, calendar: siteHyrox.calendar, siteDir: SITE_DIR, webDir: path.join(__dirname, "web"), isSiteHost, origin: "https://" + (SITE_HOSTS[0] || "nurvan.app") });
+// Who writes: the author's page, who we are, contacts, privacy and terms under the site's domain.
+mountTrust(app, { getAuthor, webDir: path.join(__dirname, "web"), siteDir: SITE_DIR, shell: (req, page) => siteShell(req, page), sendEmail, articles: siteBlog.articles, cardHtml: siteBlog.cardHtml, isSiteHost });
 // The waiting list and the founding coaches' application: /lista-attesa.
 mountWaitlist(app, { siteDir: SITE_DIR, pool, initDb, sendEmail, shell: (req, page) => siteShell(req, page) });
 // The app's screens shown on the home page: site/shots.json lists them

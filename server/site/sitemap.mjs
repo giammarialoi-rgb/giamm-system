@@ -11,9 +11,11 @@
 // language (/sitemap-<lang>.xml).
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { SITE_LANGS, langPrefix } from "./i18n.mjs";
 import { SAMPLES } from "./samples.mjs";
 import { waitlistPath } from "./waitlist.mjs";
+import { authorPath, aboutPath, contactPath, legalPath } from "./trust.mjs";
 
 export const MAX_URLS = 1000;
 
@@ -53,6 +55,13 @@ export async function collectEntries({ articles, events = [], siteDir, webDir, n
   const today = day(now);
   for (const ev of events) if (ev && ev.id && (!ev.start || (ev.end || ev.start) >= today)) entries.push(fixed("/hyrox/" + ev.id, eventsDate));
   entries.push({ urls: Object.fromEntries(SITE_LANGS.map((l) => [l, waitlistPath(l)])), lastmod: await mtime(new URL("./waitlist.mjs", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")) });
+
+  // Who writes, and the legal pages (now under the site's own domain).
+  const own = async (fn, file) => ({ urls: Object.fromEntries(SITE_LANGS.map((l) => [l, fn(l)])), lastmod: await mtime(file) });
+  const here = (name) => fileURLToPath(new URL("./" + name, import.meta.url));
+  entries.push(await own(aboutPath, here("trust.mjs")), await own(contactPath, here("trust.mjs")));
+  entries.push(await own(authorPath, path.join(path.dirname(path.dirname(path.dirname(here("trust.mjs")))), "content", "author.md")));
+  entries.push(await own((l) => legalPath(l, "privacy"), path.join(webDir, "privacy.html")), await own((l) => legalPath(l, "termini"), path.join(webDir, "termini.html")));
 
   // One entry per article: its folder is what ties the languages together.
   const byDir = new Map();

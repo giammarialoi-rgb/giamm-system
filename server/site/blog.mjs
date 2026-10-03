@@ -18,6 +18,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { SITE_LANGS, SITE_LOCALES, langPrefix, langOfPath, siteDict, st } from "./i18n.mjs";
 import { waitlistPath } from "./waitlist.mjs";
+import { authorPath, authorBoxHtml, bylineHtml } from "./trust.mjs";
+import { absUrl, imageSize, blogPostingLd, breadcrumbLd, faqLd, faqFromArticle } from "./seo.mjs";
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -136,6 +138,8 @@ const capital = (s) => { const t = String(s || "").trim(); return t ? t.charAt(0
 const dirDate = (name) => (/^(\d{4}-\d{2}-\d{2})-/.exec(name) || [])[1] || "";
 const dirSlug = (name) => slugify(String(name).replace(/^\d{4}-\d{2}-\d{2}-/, "").replace(/\.md$/i, ""));
 
+const ISO_DAY = new RegExp("^" + String.fromCharCode(92) + "d{4}-" + String.fromCharCode(92) + "d{2}-" + String.fromCharCode(92) + "d{2}");
+
 function article(fields) {
   const category = capital(fields.category || "Generale");
   const plain = String(fields.plain || "").replace(/\s+/g, " ").trim();
@@ -143,6 +147,7 @@ function article(fields) {
     slug: fields.slug,
     title: fields.title || fields.slug,
     date: /^\d{4}-\d{2}-\d{2}/.test(fields.date || "") ? fields.date.slice(0, 10) : "",
+    reviewed: ISO_DAY.test(fields.reviewed || "") ? fields.reviewed.slice(0, 10) : "",
     updated: /^\d{4}-\d{2}-\d{2}/.test(fields.updated || "") ? fields.updated.slice(0, 10) : "",
     category,
     categorySlug: slugify(category),
@@ -167,6 +172,7 @@ export function parseArticle(name, text, media = "") {
     slug: slugify(meta.slug || "") || dirSlug(name),
     title,
     date: meta.date || dirDate(name),
+    reviewed: meta.reviewed || "",
     updated: meta.updated || meta.aggiornato || meta.revised || "",
     category: meta.category || meta.categoria,
     excerpt: meta.description || meta.excerpt || meta.riassunto || "",
@@ -263,7 +269,7 @@ function dateText(iso, lang) {
 
 function cardHtml(a, lang = "it", dict = null) {
   return `<a class="post-card" href="${langPrefix(lang)}/blog/${esc(a.slug)}">` +
-    (a.cover ? `<img src="${esc(a.cover)}" alt="" loading="lazy">` : `<div class="post-cover-empty" aria-hidden="true">${esc(a.category)}</div>`) +
+    (a.cover ? `<img src="${esc(a.cover)}" alt="${esc(a.title)}" loading="lazy">` : `<div class="post-cover-empty" aria-hidden="true">${esc(a.category)}</div>`) +
     `<div class="post-card-body" data-notr><div class="eyebrow">${esc(a.category)}</div><h3>${esc(a.title)}</h3><p>${esc(a.excerpt)}</p>` +
     `<div class="post-meta">${esc(dateText(a.date, lang))}${a.date ? " · " : ""}${esc(st(dict, "{0} min di lettura", a.minutes))}</div></div><!--/notr--></a>`;
 }
@@ -281,7 +287,7 @@ function categoriesHtml(articles, active, lang, dict) {
 // mountBlog(app, { contentDir, siteDir, shell, staticFiles })
 // shell(req, { title, description, main, ogImage }) returns the full page;
 // staticFiles(dir) is express.static, passed in so this file needs no import of it.
-export function mountBlog(app, { contentDir, siteDir, shell, staticFiles }) {
+export function mountBlog(app, { contentDir, siteDir, shell, staticFiles, getAuthor }) {
   const cache = new Map(); // lang -> { at, list }
   async function articles(lang = "it") {
     const hit = cache.get(lang);
@@ -342,20 +348,48 @@ export function mountBlog(app, { contentDir, siteDir, shell, staticFiles }) {
     }
     const base = langPrefix(lang) + "/blog";
     const more = all.filter((x) => x.slug !== a.slug).sort((x, y) => (y.categorySlug === a.categorySlug) - (x.categorySlug === a.categorySlug)).slice(0, 3);
+    const author = getAuthor ? await getAuthor() : null;
+    const reviewed = a.reviewed || "";
+    const byline = author ? bylineHtml({ author, lang, dict, date: a.date, dateLabel: dateText(a.date, lang), reviewed, reviewedLabel: dateText(reviewed, lang) }) : "";
+    // The author's two lines go before the sources (the last section when it is a list), else at the end.
+    const withAuthorBox = (html) => {
+      if (!author) return html;
+      const box = authorBoxHtml(author, lang, dict);
+      const i = html.lastIndexOf("<h2");
+      const tail = i >= 0 ? html.slice(i) : "";
+      return i >= 0 && /<ol/.test(tail) && !/<h3/.test(tail) ? html.slice(0, i) + box + tail : html + box;
+    };
+    const url = (origin) => origin + (alternates[lang] || langPrefix(lang) + "/blog/" + a.slug);
+    const coverFile = a.cover && a.dir && a.cover.startsWith("/blog-media/") ? path.join(contentDir, a.dir, decodeURIComponent(a.cover.split("/").slice(3).join("/"))) : "";
+    const size = coverFile ? await fs.readFile(coverFile).then(imageSize, () => null) : null;
     const main = (a.style ? `<style>${a.style}</style>` : "") +
       `<article class="post"><div class="wrap narrow">` +
       `<a class="back" href="${base}">← Tutti gli articoli</a>` +
       `<a class="eyebrow" href="${base}/categoria/${encodeURIComponent(a.categorySlug)}" data-notr>${esc(a.category)}</a><!--/notr-->` +
       `<div data-notr><h1 class="blog-title">${esc(a.title)}</h1>` +
       (a.excerpt ? `<p class="lead">${esc(a.excerpt)}</p>` : "") +
-      `<div class="post-meta">${esc(dateText(a.date, lang))}${a.date ? " · " : ""}${esc(st(dict, "{0} min di lettura", a.minutes))}</div>` +
-      (a.cover ? `<figure class="post-cover"><img src="${esc(a.cover)}" alt="">${a.coverCredit ? `<figcaption>${esc(st(dict, "Foto: {0}", a.coverCredit.replace(/\s*\(https?:[^)]*\)/g, "")))}</figcaption>` : ""}</figure>` : "") +
-      `<div class="prose">${a.html}</div></div><!--/notr-->` +
+      `<div class="post-meta">${esc(st(dict, "{0} min di lettura", a.minutes))}</div>` +
+      `</div><!--/notr-->` + byline + `<div data-notr>` +
+      (a.cover ? `<figure class="post-cover"><img src="${esc(a.cover)}" alt="${esc(a.title)}">${a.coverCredit ? `<figcaption>${esc(st(dict, "Foto: {0}", a.coverCredit.replace(/\s*\(https?:[^)]*\)/g, "")))}</figcaption>` : ""}</figure>` : "") +
+      `<div class="prose">${withAuthorBox(a.html)}</div></div><!--/notr-->` +
       `<div class="post-cta"><strong>Mettilo in pratica con Nurvan.</strong><a class="btn primary" href="{{APP_URL}}">Apri l'app</a></div>` +
       `<p class="post-wait"><a href="${waitlistPath(lang)}">Entra nella lista d'attesa di Nurvan →</a></p>` +
       `</div></article>` +
       (more.length ? `<section class="blog"><div class="wrap"><div class="head"><h2>Continua a leggere</h2></div><div class="posts">${more.map((x) => cardHtml(x, lang, dict)).join("")}</div></div></section>` : "");
-    return send(req, res, { lang, alternates, menu, title: `${a.title} — Nurvan`, ownTitle: true, description: a.excerpt, main, ogImage: a.cover });
+    const faq = faqFromArticle(a.html);
+    return send(req, res, {
+      lang, alternates, menu, title: `${a.title} — Nurvan`, ownTitle: true, description: a.excerpt, main,
+      og: {
+        type: "article", image: a.cover, imageAlt: a.title, imageWidth: size && size.width, imageHeight: size && size.height,
+        published: a.date, modified: reviewed || a.updated || a.date, section: a.category,
+        author: (origin) => origin + authorPath(lang)
+      },
+      ld: (origin) => [
+        blogPostingLd({ origin, lang, url: url(origin), headline: a.title, description: a.excerpt, image: a.cover ? absUrl(origin, a.cover) : "", authorUrl: origin + authorPath(lang), authorName: author ? author.name : "Nurvan", published: a.date, modified: reviewed || a.updated || a.date }),
+        breadcrumbLd([{ name: "Nurvan", url: origin + (langPrefix(lang) || "/") }, { name: "Blog", url: origin + base }, { name: a.title, url: url(origin) }]),
+        faqLd(faq)
+      ]
+    });
   };
   for (const base of SITE_LANGS.map(langPrefix)) {
     app.get(base + "/blog", index);

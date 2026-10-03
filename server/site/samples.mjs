@@ -17,6 +17,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { SITE_LANGS, langPrefix, langOfPath, siteDict, st } from "./i18n.mjs";
 import { serverTr, SERVER_LANGS } from "../i18n.mjs";
+import { breadcrumbLd } from "./seo.mjs";
 import { composeEmail, normalizeEmail, validEmail, linkTokenHash } from "../account/email-auth.mjs";
 
 export const LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -258,12 +259,13 @@ export function mountSamples(app, { siteDir, shell, pool, initDb, sendEmail, env
       `<label class="check"><input type="checkbox" name="consent"${required ? " required" : ""}><span>${esc(CONSENT_TEXT)}</span></label>` +
       `<button type="submit" class="btn primary">Mandami il PDF</button>` +
       `<p id="sample-msg" class="form-msg" role="status"></p>` +
-      `<p class="form-legal"><span>Usiamo l'indirizzo per mandarti il link.</span> <a href="{{APP_URL}}privacy?lang=${lang}">Informativa sulla privacy</a></p>` +
+      `<p class="form-legal"><span>Usiamo l'indirizzo per mandarti il link.</span> <a href="{{PRIVACY}}">Informativa sulla privacy</a></p>` +
       `</form></div>` +
       `</div><div class="sample-phone-col">` + phoneHtml(sample) + `<p class="phone-caption">Così nell'app: tocca un giorno per vedere la seduta.</p></div></div>` +
       `<div class="post-cta"><strong>Nell'app la scheda si adatta ai tuoi giorni e alla tua attrezzatura.</strong><a class="btn primary" href="{{APP_URL}}">Apri l'app</a></div>` + note +
       `</div></article>` + SCRIPT;
-    return send(req, res, { lang, alternates: everyLang("/allenamenti/" + meta.slug), title: st(dict, meta.title) + " — Nurvan", ownTitle: true, description: st(dict, meta.sub), main });
+    return send(req, res, { lang, alternates: everyLang("/allenamenti/" + meta.slug), title: st(dict, meta.title) + " — Nurvan", ownTitle: true, description: st(dict, meta.sub), main,
+      ld: (origin) => [breadcrumbLd([{ name: "Nurvan", url: origin + (langPrefix(lang) || "/") }, { name: st(dict, "Allenamenti"), url: origin + langPrefix(lang) + "/allenamenti" }, { name: st(dict, meta.title), url: origin + langPrefix(lang) + "/allenamenti/" + meta.slug }])] });
   };
 
   const message = (req, res, lang, title, text, status = 200) => send(req, res, {

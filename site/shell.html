@@ -6,16 +6,14 @@
 <title>{{TITLE}}</title>
 <meta name="description" content="{{DESCRIPTION}}">
 <meta name="theme-color" content="#0a0a0a">
-<meta property="og:title" content="{{TITLE}}">
-<meta property="og:description" content="{{DESCRIPTION}}">
-<meta property="og:image" content="{{OG_IMAGE}}">
-<meta property="og:type" content="website">
+{{META}}
 {{ALTERNATES}}
 <link rel="icon" href="/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/site-assets/site.css?v={{V}}">
+{{JSONLD}}
 
 </head>
 <body>
@@ -48,8 +46,10 @@
       <a href="{{HYROX}}">Gare HYROX</a>
       <a href="{{BLOG}}">Blog</a>
       <a href="{{WAITLIST}}">Lista d'attesa</a>
-      <a href="{{APP_URL}}privacy?lang={{LANG}}">Privacy</a>
-      <a href="{{APP_URL}}termini?lang={{LANG}}">Termini</a>
+      <a href="{{ABOUT}}">Chi siamo</a>
+      <a href="{{CONTACT}}">Contatti</a>
+      <a href="{{PRIVACY}}">Privacy</a>
+      <a href="{{TERMS}}">Termini</a>
       <a href="mailto:{{CONTACT_EMAIL}}">{{CONTACT_EMAIL}}</a>
     </nav>
   </div>
