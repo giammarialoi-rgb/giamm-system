@@ -83,12 +83,17 @@ function planDisplayName(plan) {
   return E ? E.planName(plan) : String(plan || '');
 }
 
+// "1 programmi" reads as a mistake: the singular for the units the plans count.
+function planUnitFor(n, unit) {
+  const one = { programmi: 'programma', atleti: 'atleta', 'import al mese': 'import al mese' };
+  return Number(n) === 1 && one[unit] ? one[unit] : unit;
+}
 // The sentence the athlete or coach reads when something is closed.
 function planLockMessage(why) {
   if (!why || why.allowed) return '';
   if (why.reason === 'limit') {
     const unit = ((planFeatures() || {}).features || {})[why.feature || ''] || {};
-    return 'Hai raggiunto il limite del piano ' + planDisplayName(why.plan) + ' (' + why.limit + (unit.unit ? ' ' + unit.unit : '') + ')' +
+    return 'Hai raggiunto il limite del piano ' + planDisplayName(why.plan) + ' (' + why.limit + (unit.unit ? ' ' + planUnitFor(why.limit, unit.unit) : '') + ')' +
       (why.minPlan ? '. Con ' + planDisplayName(why.minPlan) + ' puoi andare oltre.' : '.');
   }
   return (why.label ? why.label + ': disponibile' : 'Disponibile') + ' con il piano ' + planDisplayName(why.minPlan) + '.';
@@ -202,7 +207,7 @@ function renderPlansPricing(c) {
     return Object.keys(reg.features).filter(function (k) { return reg.features[k].min === planId; }).map(function (k) {
       const f = reg.features[k];
       let label = f.label;
-      if (f.limit && f.limit[planId] != null) label += ': ' + f.limit[planId] + (f.unit ? ' ' + f.unit : '');
+      if (f.limit && f.limit[planId] != null) label += ': ' + f.limit[planId] + (f.unit ? ' ' + planUnitFor(f.limit[planId], f.unit) : '');
       return label;
     });
   };

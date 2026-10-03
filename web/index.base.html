@@ -344,11 +344,15 @@ header .logo-container {
   #cp-notify-btn,
   #coach-unlock-button,
   #personal-back-button {
-    font-size: 9px;
-    padding: 6px 8px;
-    letter-spacing: 0.2px;
+    font-size: 11px;
+    padding: 8px 9px;
+    min-height: 34px;
+    letter-spacing: 0;
   }
+  /* The back button is an arrow: the word took 68px of a row that has five buttons. */
+  #personal-back-button { padding: 0; width: 36px; min-width: 36px; justify-content: center; align-items: center; }
 }
+#personal-back-button svg { width: 20px; height: 20px; fill: currentColor; display: block; }
 
 /* At 375px the five of them still came to 328px against 319px of room, and
    the last one - MENU - was sliced by the edge. Nine pixels; taken from the
@@ -358,9 +362,8 @@ header .logo-container {
   #menu-hub-button,
   #profile-button,
   #cp-notify-btn,
-  #coach-unlock-button,
-  #personal-back-button {
-    padding: 6px 6px;
+  #coach-unlock-button {
+    padding: 8px 8px;
     letter-spacing: 0;
   }
 }
@@ -773,7 +776,7 @@ input[type="checkbox"], input[type="radio"] {
   border-radius: 10px;
   padding: 12px;
 }
-.stats-kpi .k { font-size: 9px; color: #888; font-weight: 800; letter-spacing: 0.6px; }
+.stats-kpi .k { font-size: 11px; color: #888; font-weight: 800; letter-spacing: 0.6px; }
 .stats-kpi .v { font-size: 18px; font-weight: 900; color: var(--gold); margin-top: 4px; }
 .stats-kpi .d { font-size: 10px; margin-top: 4px; color: #777; }
 .stats-volbar {
@@ -817,6 +820,48 @@ input[type="checkbox"], input[type="radio"] {
    go. It stays where a session is being logged. */
 .fab-save { display: none; }
 body[data-view="training"] .fab-save { display: flex; }
+/* ...and even there it sat on top of MASSIMALE, 1RM and the delete column at
+   the top of the session. It appears once the page has been scrolled past
+   the first screen (see the fab-on script after the button). */
+body:not(.fab-on) .fab-save { display: none !important; }
+
+/* Interface audit 03-10-2026.
+   A card made without a header or an inner wrapper put its title on the
+   border and its text against the left edge. Those get room of their own;
+   cards that already carry padding, modals (max-width) and cards with a
+   header (whose body brings its own padding) are left alone. */
+.card:not(.collapsible-body > .card):not(:has(> .card-header)):not([style*="padding"]):not([style*="max-width"]):not([data-pad="none"]) { padding: 14px; }
+/* Buttons and chips of 9-10px are under what a thumb can hit and what an eye
+   can read; there are hundreds of them written inline, so the floor is set here. */
+.btn[style*="font-size:9px"], .btn[style*="font-size: 9px"],
+.btn[style*="font-size:10px"], .btn[style*="font-size: 10px"] { font-size: 11px !important; min-height: 34px; }
+button[style*="font-size:9px"]:not(.btn), button[style*="font-size:10px"]:not(.btn) { font-size: 11px !important; }
+div[style*="font-size:9px"], span[style*="font-size:9px"], p[style*="font-size:9px"], label[style*="font-size:9px"] { font-size: 10.5px !important; }
+div[style*="font-size:10px"], span[style*="font-size:10px"], p[style*="font-size:10px"], label[style*="font-size:10px"], small[style*="font-size:10px"] { font-size: 11px !important; }
+.calendar-badges-row span, .cp-notify-count { font-size: inherit; }
+/* Coach AI: the message field needs room for its placeholder, and the title must not be squeezed to a broken word. */
+.ai-composer #ai-input { min-width: 0; }
+.ai-composer .btn { flex: 0 0 auto; }
+.coach-chat-head { flex-wrap: wrap; gap: 8px; }
+.coach-chat-head h2 { white-space: nowrap; }
+.coach-chat-actions { flex-wrap: wrap; }
+@media (max-width: 420px) {
+  .ai-composer { flex-wrap: wrap; }
+  .ai-composer #ai-input { flex: 1 1 100% !important; order: -1; padding: 6px 4px; }
+  .ai-composer .btn-primary { margin-left: auto; }
+}
+.cal-nav-btn { width: 40px; height: 40px; padding: 0 !important; display: inline-flex; align-items: center; justify-content: center; }
+.cal-nav-btn svg { width: 22px; height: 22px; fill: currentColor; }
+/* Buttons and fields inherit the page's typeface; left alone a <button> is set in the system's Arial/Roboto. */
+button, input, select, textarea { font-family: inherit; }
+/* Checkboxes and radios: dark when off, gold when on - the native white square read as the "on" state. */
+input[type="checkbox"], input[type="radio"] { accent-color: var(--gold); -webkit-appearance: none; appearance: none; background: #111; border: 1.5px solid #666; cursor: pointer; position: relative; }
+input[type="checkbox"] { border-radius: 5px; }
+input[type="radio"] { border-radius: 50%; }
+input[type="checkbox"]:checked, input[type="radio"]:checked { background: var(--gold); border-color: var(--gold); }
+input[type="checkbox"]:checked::after { content: ''; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid #000; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+input[type="radio"]:checked::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: #000; }
+input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 /* Nothing should be able to push text out of its box: a flex child that
    refuses to shrink is how a label ends up sliced, and a long word with
@@ -901,7 +946,7 @@ body[data-view="training"] .fab-save { display: flex; }
 }
 .stats-body-frame img { display:block; width:100%; height:auto; pointer-events:none; user-select:none; }
 .stats-body-viewlabel {
-  margin-top:6px; font-size:9px; font-weight:800; letter-spacing:1.2px;
+  margin-top:6px; font-size:11px; font-weight:800; letter-spacing:1.2px;
   text-transform:uppercase; color:#666;
 }
 .stats-hotspot {
@@ -976,7 +1021,7 @@ body[data-view="training"] .fab-save { display: flex; }
   width:138px; flex-shrink:0; max-height:70vh; overflow-y:auto;
   border:1px solid #222; border-radius:12px; padding:8px; background:#0c0c0c;
 }
-.coach-archive-rail h3 { margin:0 0 8px; font-size:9px; letter-spacing:1px; color:#888; }
+.coach-archive-rail h3 { margin:0 0 8px; font-size:11px; letter-spacing:1px; color:#888; }
 .coach-archive-item {
   display:block; width:100%; text-align:left; background:#151515; border:1px solid #2a2a2a;
   color:#ddd; border-radius:8px; padding:8px; margin-bottom:6px; cursor:pointer; font-family:inherit;
@@ -1004,7 +1049,7 @@ body[data-view="training"] .fab-save { display: flex; }
 
 .load-toggle {
   background: #111; border: 1px solid #333; color: #777;
-  padding: 4px 8px; border-radius: 6px; font-size: 9px; font-weight: 800;
+  padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 800;
   cursor: pointer; text-transform: uppercase;
 }
 .load-toggle.active { color: var(--gold); border-color: var(--gold); }
@@ -1640,7 +1685,7 @@ body.focus-mode [data-rewards-only] {
 <header>
   <div class="logo-container" role="button" tabindex="0" aria-label="Home" style="cursor:pointer;" onclick="goHomeFromLogo()" onkeydown="if(event.key==='Enter')goHomeFromLogo()"><img src="nurvan_logo.png" alt="Nurvan" onerror="this.onerror=null;this.src='icon-192.png'"></div>
   <div class="header-actions">
-  <button type="button" class="btn btn-outline" id="personal-back-button" style="display:none;margin-left:0;" onclick="personalNavBack()">INDIETRO</button>
+  <button type="button" class="btn btn-outline" id="personal-back-button" style="display:none;margin-left:0;" onclick="personalNavBack()" aria-label="Indietro" title="Indietro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z"/></svg></button>
   <button type="button" class="btn btn-outline" id="profile-button" onclick="openProfileHub()">PROFILO</button>
   <button type="button" class="btn btn-primary" id="coach-unlock-button" onclick="openCoachOrUnlock()">COACH</button>
   <button type="button" class="btn btn-outline" id="menu-hub-button" onclick="openMenuHub()">MENU</button>
@@ -2446,6 +2491,17 @@ body.focus-mode [data-rewards-only] {
 <button class="fab-save" onclick="saveAll()">
   <svg viewBox="0 0 24 24"><path d="M17,3H5C3.89,3 3,3.9 3,5V19C3,20.1 3.89,21 5,21H19C20.1,21 21,20.1 21,19V7L17,3M12,19C10.34,19 9,17.66 9,16C9,14.34 10.34,13 12,13C13.66,13 15,14.34 15,16C15,17.66 13.66,19 12,19M15,9H5V5H15V9Z"/></svg>
 </button>
+<script>
+/* The save button shows once the session has been scrolled past its first screen. */
+(function () {
+  function update() {
+    var vc = document.getElementById('view-container');
+    if (document.body) document.body.classList.toggle('fab-on', !!vc && vc.scrollTop > 320);
+  }
+  if (typeof document.addEventListener === 'function') document.addEventListener('scroll', update, true);
+  if (typeof window.addEventListener === 'function') window.addEventListener('resize', update);
+})();
+</script>
 
 <nav class="bottom-nav">
   <a href="#" class="nav-item active" id="nav-home" onclick="navigate('home', event)">
@@ -15929,7 +15985,7 @@ function closeDomainQuickSwitch() {
 function domainTitleTapHtml(eyebrow, title) {
   return '<div role="button" tabindex="0" onclick="openDomainQuickSwitch()" style="cursor:pointer;-webkit-tap-highlight-color:transparent;">' +
     '<span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">' + eyebrow + '</span>' +
-    '<h1 style="color:#fff;margin:2px 0 0;font-size:20px;">' + title + ' <span style="font-size:11px;color:#666;font-weight:700;">▾</span></h1>' +
+    '<h1 style="color:#fff;margin:2px 0 0;font-size:20px;">' + title + ' <svg viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px;vertical-align:-3px;fill:#777;"><path d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z"/></svg></h1>' +
     '</div>';
 }
 
@@ -17382,7 +17438,7 @@ function renderNutritionPlanView(c) {
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        ${domainTitleTapHtml('NUTRITION', t('nutrition'))}
+        ${domainTitleTapHtml('PIANO E DIARIO', t('nutrition'))}
         ${DATA.nutrition.mode === 'budget' ? '<span style="font-size:9px;font-weight:800;color:#0a0a0a;background:var(--gold);padding:3px 7px;border-radius:6px;" title="Solo target kcal/macro: inserisci tu cosa mangi">BUDGET</span>' : ''}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -20034,7 +20090,7 @@ function renderSupplements(c) {
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
       <div>
-        ${domainTitleTapHtml('SUPPLEMENTATION', t('supplementation'))}
+        ${domainTitleTapHtml('PIANO E PROMEMORIA', t('supplementation'))}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         ${suppDirty ? '<button class="btn btn-primary" style="font-size:10px;padding:6px 10px;" onclick="saveSupplementationEdits()">SALVA</button>' : ''}
@@ -20871,9 +20927,9 @@ function renderTherapy(c) {
   });
 
   let html = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div style="display:flex;flex-direction:column;align-items:stretch;gap:10px;margin-bottom:12px;">
       <div>
-        ${domainTitleTapHtml('MEDICAL THERAPY', t('therapy'))}
+        ${domainTitleTapHtml('SALUTE', t('therapy'))}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:var(--gold);color:var(--gold);" onclick="${(typeof isAthleteRole === 'function' && isAthleteRole()) ? "askRealCoachForDomain('therapy')" : "askCoachAiForDomain('therapy')"}">${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'CHIEDI AL COACH' : 'CHIEDI A COACH AI'}</button>
@@ -21208,7 +21264,7 @@ function renderExams(c) {
 
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
-      ${domainTitleTapHtml('CLINICAL LAB', 'Esami Ematochimici')}
+      ${domainTitleTapHtml('SALUTE', 'Esami Ematochimici')}
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="openExamReminderModal()">📅 PROMEMORIA</button>
         <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="openExamImportChooser()">IMPORTA REFERTO</button>
@@ -21521,6 +21577,15 @@ let calendarSelectedDate = isoDateOnly(new Date());
 let calendarCurrentMonth = new Date().getMonth();
 let calendarCurrentYear = new Date().getFullYear();
 
+// "2026-10-03" as a person says it: "sabato 3 ottobre", in the language of the app.
+function calDayLabel(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+  if (!m) return String(iso || '');
+  try {
+    const loc = (window.NurvanI18n && window.NurvanI18n.locale && window.NurvanI18n.locale()) || 'it-IT';
+    return new Intl.DateTimeFormat(loc, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  } catch (_) { return String(iso); }
+}
 function renderCalendar(c) {
   if (typeof CalendarService !== 'undefined' && CalendarService.loadCustomEvents && !CalendarService._customCache) {
     CalendarService.loadCustomEvents().then(function () { if (currentView === 'calendar') render(); }).catch(function () {});
@@ -21549,8 +21614,8 @@ function renderCalendar(c) {
         <h1 style="color:#fff;margin:2px 0 0;font-size:20px;">${monthNames[calendarCurrentMonth]} ${calendarCurrentYear}</h1>
       </div>
       <div style="display:flex;gap:6px;">
-        <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="changeCalendarMonth(-1)">◀</button>
-        <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="changeCalendarMonth(1)">▶</button>
+        <button class="btn btn-outline cal-nav-btn" aria-label="Mese precedente" onclick="changeCalendarMonth(-1)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z"/></svg></button>
+        <button class="btn btn-outline cal-nav-btn" aria-label="Mese successivo" onclick="changeCalendarMonth(1)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg></button>
       </div>
     </div>
     ${(typeof isAthleteRole === 'function' && isAthleteRole()) ? `
@@ -21583,7 +21648,7 @@ function renderCalendar(c) {
     </div>
     <div class="card" style="border:1px solid var(--border);margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid #222;padding-bottom:6px;">
-        <span style="font-size:12px;font-weight:900;color:var(--gold);">PROGRAMMA DEL GIORNO: ${calendarSelectedDate}</span>
+        <span style="font-size:12px;font-weight:900;color:var(--gold);">PROGRAMMA DEL GIORNO: ${calDayLabel(calendarSelectedDate)}</span>
       </div>
       ${events.length ? events.map(function (ev) {
         return '<div class="timeline-item" style="cursor:pointer;" ' + (ev.action ? 'onclick="' + ev.action + '"' : '') + '>' +
@@ -21597,7 +21662,7 @@ function renderCalendar(c) {
       }).join('') : '<div style="font-size:11px;color:#666;padding:16px;text-align:center;">Nessun evento. Aggiungi un check-in, pesata o riposo sotto.</div>'}
     </div>
     <div class="card" style="border:1px solid rgba(212,175,55,0.35);">
-      <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:8px;">AGGIUNGI EVENTO · ${calendarSelectedDate}</div>
+      <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:8px;">AGGIUNGI EVENTO · ${calDayLabel(calendarSelectedDate)}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
         <select id="cal-ev-type" style="padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
           <option value="note">Nota</option>
@@ -21883,7 +21948,6 @@ function renderSettings(c) {
 
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
       <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">Esperienza</div>
-      <button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="navigate('profile')">Profilo</button>
       ${medicalAiAvailable() ? `
       <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin:10px 0 6px;gap:10px;">Coach AI può usare terapia ed esami <input type="checkbox" ${store.prefs.shareMedicalWithCoach?'checked':''} onchange="setMedicalAiShare(this.checked)"></label>
       <div style="font-size:10px;color:#666;line-height:1.4;">Privacy: terapia ed esami non entrano mai in ranking, XP o share card. A Coach AI solo con questa opzione attiva, o con la tua conferma per il singolo valore.${(typeof isAthleteRole === 'function' && isAthleteRole()) ? ' Cosa vede il tuo coach si sceglie in Terapia ed Esami › Privacy.' : ''}</div>
@@ -21894,7 +21958,7 @@ function renderSettings(c) {
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div style="font-size:13px;font-weight:900;color:var(--gold);">AI Control Center</div>
-        <button class="btn btn-outline" style="font-size:9px;padding:4px 8px;" onclick="undoLastAction()">UNDO ULTIMA AZIONE</button>
+        <button class="btn btn-outline" style="font-size:9px;padding:4px 8px;" onclick="undoLastAction()">ANNULLA ULTIMA AZIONE</button>
       </div>
       <p style="font-size:11px;color:#aaa;margin:0 0 10px;line-height:1.4;">AI e manuale usano lo stesso motore di azioni. Scegli quanto potere dare a ogni modulo.</p>
       ${renderAiControlCenterHtml()}
@@ -21906,10 +21970,10 @@ function renderSettings(c) {
     <!-- Language Switcher Card -->
     <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
       <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">🌍 ${t('selectLanguage')}</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(90px, 1fr));gap:6px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));gap:8px;">
         ${languages.map(l => `
-          <button class="pill-tab ${l.code === currentLang ? 'active' : ''}" style="text-align:center;padding:8px 4px;" onclick="changeAppLanguage('${l.code}')">
-            ${l.flag} ${l.name}
+          <button class="pill-tab ${l.code === currentLang ? 'active' : ''}" style="text-align:center;padding:10px 6px;font-size:12px;" onclick="changeAppLanguage('${l.code}')">
+            ${l.name}
           </button>
         `).join('')}
       </div>
@@ -22300,13 +22364,13 @@ function computeHomeReadinessHtml() {
     }, { highVolume: snap.sets > 20, setsCompleted: snap.sets });
     return `<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid #333;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-        <div>
-          <div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">RECOVERY ESTIMATE</div>
+        <div style="min-width:0;">
+          <div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">STIMA DEL RECUPERO</div>
           <div style="font-size:14px;font-weight:800;margin-top:4px;">${esc(r.label)}</div>
           <div style="font-size:11px;color:#888;margin-top:4px;">${esc(r.advice)}</div>
           <div style="font-size:9px;color:#555;margin-top:6px;">Non è una misura clinica · confidenza ${Math.round((r.confidence || 0) * 100)}%</div>
         </div>
-        <button class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="openHealthConnect()">SYNC</button>
+        <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;white-space:nowrap;flex:0 0 auto;" onclick="openHealthConnect()">SYNC</button>
       </div>
     </div>`;
   } catch (_) { return ''; }
@@ -23322,8 +23386,10 @@ function renderImport(c){
       <div class="card-header">
         <h3 style="font-size:13px; color:var(--gold); font-weight:800;">OPPURE INCOLLA TESTO SCHEDA</h3>
       </div>
-      <textarea id="import-raw-text" class="input" style="height:120px; font-family:monospace; font-size:11px; resize:vertical;" placeholder="Incolla qui la scheda di allenamento (o altro dominio selezionato)..."></textarea>
-      <button class="btn btn-outline" style="width:100%; margin-top:8px; font-size:11px; padding:8px;" onclick="handleImportTextSubmit()">ANALIZZA TESTO</button>
+      <div style="padding:12px;">
+      <textarea id="import-raw-text" class="input" style="display:block; width:100%; box-sizing:border-box; height:140px; font-family:monospace; font-size:12px; resize:vertical; padding:10px; background:#111; border:1px solid #333; color:#fff; border-radius:8px;" placeholder="Incolla qui la scheda di allenamento (o altro dominio selezionato)..."></textarea>
+      <button class="btn btn-outline" style="width:100%; margin-top:10px; font-size:12px; padding:10px;" onclick="handleImportTextSubmit()">ANALIZZA TESTO</button>
+      </div>
     </div>
   `;
 }
@@ -25162,7 +25228,7 @@ function renderHyrox(c) {
   ];
   const presetsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">' + presets.map(function (p, i) {
     return '<button type="button" class="btn btn-outline" style="min-height:64px;text-align:left;padding:10px 12px;" onclick="hyroxCreateProgram(window.__hyroxPresets[' + i + '])">' +
-      '<div style="font-size:12px;font-weight:900;color:#fff;">' + p.title + '</div><div style="font-size:10px;color:#aaa;margin-top:2px;">' + p.text + '</div></button>';
+      '<div style="font-size:12px;font-weight:900;color:#fff;">' + p.title + '</div><div style="font-size:10px;color:#aaa;margin-top:2px;">' + String(p.text).split(' · ').join('<br>') + '</div></button>';
   }).join('') + '</div>';
   window.__hyroxPresets = presets;
 
@@ -27373,7 +27439,7 @@ function renderTraining(c){
     }
 
     let h = ssttCard || percentMaxesCardHtml();
-    h += `<div style="margin-bottom:10px;">${domainTitleTapHtml('WORKOUT', t('training') || 'Allenamento')}</div>`;
+    h += `<div style="margin-bottom:10px;">${domainTitleTapHtml('SEDUTA', t('training') || 'Allenamento')}</div>`;
     h += workoutSessionTimerHtml();
     try { h += lessonButtonHtml(); } catch (_) {}
     try { h += sessionSummaryCardHtml(); } catch (_) {}
@@ -32520,20 +32586,20 @@ function renderProgressCenter(container) {
   if (!c) return;
   c.innerHTML =
     '<div style="margin-bottom:12px;"><span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">DATI</span>' +
-    '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">Progress Center</h1></div>' +
+    '<h1 style="color:#fff;margin:2px 0 0;font-size:22px;">Centro progressi</h1></div>' +
     '<div class="coach-os-quick-actions" style="margin-bottom:12px;">' +
-    [['week', 'THIS WEEK'], ['4w', '4 WEEKS'], ['12w', '12 WEEKS'], ['all', 'ALL TIME']].map(function (row) {
-      return '<button type="button" class="btn btn-outline" style="font-size:10px;" onclick="window.__progressRange=\'' + row[0] + '\';renderProgressCenter()">' + row[1] + '</button>';
+    [['week', 'Questa settimana'], ['4w', '4 settimane'], ['12w', '12 settimane'], ['all', 'Sempre']].map(function (row) {
+      return '<button type="button" class="btn ' + (row[0] === range ? 'btn-primary' : 'btn-outline') + '" style="font-size:11px;" aria-pressed="' + (row[0] === range) + '" onclick="window.__progressRange=\'' + row[0] + '\';renderProgressCenter()">' + row[1] + '</button>';
     }).join('') + '</div>' +
-    '<div class="card" style="margin-bottom:12px;"><div style="font-size:12px;font-weight:900;color:var(--gold);margin-bottom:8px;">Program health</div>' +
-    '<div style="font-size:13px;color:#ddd;">' + esc(health.status) + ' · volume ' + health.volume + ' · freq ' + health.frequency + '</div></div>' +
+    '<div class="card" style="margin-bottom:12px;"><div style="font-size:12px;font-weight:900;color:var(--gold);margin-bottom:8px;">Salute del programma</div>' +
+    '<div style="font-size:13px;color:#ddd;">' + esc({ 'GOOD': 'Buona', 'ATTENTION': 'Da controllare', 'INSUFFICIENT DATA': 'Dati insufficienti' }[health.status] || health.status) + ' · volume ' + health.volume + ' · frequenza ' + health.frequency + '</div></div>' +
     '<div class="card" style="margin-bottom:12px;"><div style="font-size:12px;font-weight:900;color:var(--gold);margin-bottom:8px;">Dati</div>' +
-    '<div style="font-size:13px;color:#ddd;line-height:1.6;">Allenamenti: <b>' + logs.length + '</b><br>Ultimo WO: ' +
+    '<div style="font-size:13px;color:#ddd;line-height:1.6;">Allenamenti: <b>' + logs.length + '</b><br>Ultimo allenamento: ' +
     esc(snap.lastWorkoutAt ? String(snap.lastWorkoutAt).slice(0, 16) : '—') +
     '<br>Peso recente: ' + esc(lastBw ? (bwToDisp(lastBw.kg) + ' ' + wUnit()) : '—') + '</div></div>' +
     '<div class="card" style="margin-bottom:12px;"><div style="font-size:12px;font-weight:900;color:var(--gold);margin-bottom:8px;">Nota</div>' +
     '<p style="font-size:12px;color:#aaa;margin:0;line-height:1.4;">Questi numeri arrivano dal diario locale. Non sono una diagnosi. Il confronto coach è nella vista Progress del cliente.</p></div>' +
-    '<button class="btn btn-outline" style="width:100%;" onclick="navigate(\'stats\')">Apri statistiche</button>';
+    '<button class="btn btn-outline" style="width:100%;" onclick="navigate(\'stats\')">APRI STATISTICHE</button>';
 }
 
 // AI CREATE: the main choices from menus (the generator's own lists), then
@@ -34115,7 +34181,7 @@ function renderStats(c){
   c.innerHTML = `
     <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">PERFORMANCE LAB</h1>
     <div style="font-size:10px; color:#777; margin-bottom:15px; font-weight:700; letter-spacing:1px;">${store && store.coachViewingClient ? 'VISTA MASTER · DATI CLIENTE' : 'ATTIVITÀ · CRONOLOGIA · FATICA'}</div>
-    ${store && store.coachViewingClient ? '' : '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:12px;font-size:11px;" onclick="showProgressCenter()">📈 PROGRESS CENTER — SETTIMANA, 4, 12, SEMPRE</button>'}
+    ${store && store.coachViewingClient ? '' : '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:12px;font-size:11px;" onclick="showProgressCenter()">CENTRO PROGRESSI</button>'}
     ${store && store.coachViewingClient ? '' : renderAdaptiveDeloadCardHtml()}
     ${store && store.coachViewingClient ? '' : renderProgressionAdviceCardHtml()}
     ${last ? `<div class="card" style="margin-bottom:12px;padding:12px;border:1px solid rgba(212,175,55,0.35);">
@@ -35838,7 +35904,11 @@ function renderTerminalChart(canvasId, analytics, metric) {
   const labels = analytics.charts.labels || [];
   const series = (analytics.charts[metric] || analytics.charts.volume || []).map(function (v) { return Number(v) || 0; });
   const n = series.length;
-  if (!n) return;
+  if (!n) {
+    ctx.fillStyle = '#777'; ctx.font = '13px Montserrat, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(typeof trText === 'function' ? trText('Nessun dato nel periodo scelto') : 'Nessun dato nel periodo scelto', w / 2, h / 2);
+    return;
+  }
   const valid = series.filter(function (v) { return v > 0; });
   const maxVal = (valid.length ? Math.max.apply(null, valid) : 100) * 1.18;
   const valRange = maxVal || 1;
@@ -36290,9 +36360,9 @@ function renderAI(c){
       }).join('') : '<div style="font-size:10px;color:#555;">Nessuna chat salvata.</div>'}
     </aside>
     <div class="card" style="flex:1;min-width:0;">
-      <div class="card-header">
+      <div class="card-header coach-chat-head">
         <h2>${t('coachAI')}</h2>
-        <div style="display:flex;gap:6px;">
+        <div class="coach-chat-actions" style="display:flex;gap:6px;">
           <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;" onclick="newCoachQuestion()">${t('newQuestion')}</button>
           <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="openResetSession()">AZZERA CHAT</button>
           <button class="btn btn-outline" style="font-size:9px;padding:6px 9px;border-color:var(--accent-red);color:var(--accent-red);" onclick="resetCoachHistory()">AZZERA ARCHIVIO</button>
@@ -36300,9 +36370,9 @@ function renderAI(c){
       </div>
       <div style="padding:12px;">
         <div id="chat-history">${history || '<div class="msg ai">' + (t('coachWelcome') || 'Ciao! Sono Nurvan AI, il tuo coach di allenamento. Dimmi pure come posso aiutarti.') + '</div>'}</div>
-        <div style="display:flex;gap:10px;background:var(--surface-light);padding:10px;border-radius:12px;margin-top:10px;">
+        <div class="ai-composer" style="display:flex;gap:10px;background:var(--surface-light);padding:10px;border-radius:12px;margin-top:10px;">
           <button class="btn btn-outline" title="${t('analyzeCoachFile')}" style="padding:10px 12px; border-color:var(--gold); color:var(--gold);" onclick="triggerCoachFileSelect()">📎</button>
-          <input type="text" id="ai-input" placeholder="${t('chatPlaceholder')}" style="flex:1;border:none;background:transparent;" onkeydown="if(event.key==='Enter') askAI()">
+          <input type="text" id="ai-input" placeholder="${t('chatPlaceholder')}" style="flex:1;min-width:0;border:none;background:transparent;" onkeydown="if(event.key==='Enter') askAI()">
           <button class="btn btn-outline" onclick="startVoiceInput()" style="padding:10px 12px;">🎙</button>
           <button class="btn btn-primary" onclick="askAI()" style="padding:10px 15px;">${t('send')}</button>
         </div>
@@ -38621,7 +38691,7 @@ function searchDbNow(q){
       h += '<div style="margin-bottom:8px;padding:8px;background:#111;border-radius:6px;border:1px solid #222;display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
         '<div><b style="color:#fff;font-size:12px;">' + esc(name) + '</b>' +
         '<span style="font-size:10px;color:var(--gold);margin-left:8px;">' + esc(muscle) + '</span></div>' +
-        '<button class="btn btn-primary" style="font-size:9px;padding:4px 8px;white-space:nowrap;" onclick="addExerciseFromDb(\'' + safeName + '\',\'' + encodeURIComponent(muscle) + '\')">AGGIUNGI</button></div>';
+        '<button class="btn btn-primary" style="font-size:9px;padding:6px 12px;white-space:nowrap;flex:0 0 auto;" onclick="addExerciseFromDb(\'' + safeName + '\',\'' + encodeURIComponent(muscle) + '\')">AGGIUNGI</button></div>';
     });
   } else {
     const muscleKeys = Object.keys(exerciseDb || {});
@@ -38632,7 +38702,7 @@ function searchDbNow(q){
         f.forEach(function (e) {
           h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #222;">' +
             '<span style="font-size:12px;color:#ccc;">' + esc(e) + '</span>' +
-            '<button class="btn btn-outline" style="font-size:9px;padding:3px 8px;" onclick="addExerciseFromDb(\'' + encodeURIComponent(e) + '\',\'' + encodeURIComponent(m) + '\')">AGGIUNGI</button></div>';
+            '<button class="btn btn-outline" style="font-size:9px;padding:6px 12px;white-space:nowrap;flex:0 0 auto;" onclick="addExerciseFromDb(\'' + encodeURIComponent(e) + '\',\'' + encodeURIComponent(m) + '\')">AGGIUNGI</button></div>';
         });
         h += '</div>';
       }
@@ -43663,7 +43733,7 @@ function activeProgramsSwitcherHtml(opts) {
   const chip = function (label, sub, on, action, removeId) {
     return '<div style="display:flex;align-items:stretch;flex:1 1 140px;min-width:0;border:1px solid ' + (on ? 'var(--gold)' : '#333') + ';border-radius:10px;background:' + (on ? 'rgba(212,175,55,0.12)' : '#111') + ';overflow:hidden;">' +
       '<button type="button" ' + (action ? 'onclick="' + action + '"' : 'disabled') + ' style="flex:1;min-width:0;text-align:left;background:none;border:0;color:inherit;padding:8px 10px;cursor:' + (action ? 'pointer' : 'default') + ';font:inherit;">' +
-      '<div style="font-size:12px;font-weight:800;color:' + (on ? 'var(--gold)' : '#eee') + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(label) + '</div>' +
+      '<div style="font-size:12px;font-weight:800;color:' + (on ? 'var(--gold)' : '#eee') + ';display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;">' + esc(label) + '</div>' +
       '<div style="font-size:10px;color:#888;">' + esc(sub) + '</div></button>' +
       (removeId ? '<button type="button" aria-label="' + esc(trText('Togli dai programmi attivi')) + '" onclick="removeParkedProgram(' + esc(JSON.stringify(removeId)) + ')" style="background:none;border:0;border-left:1px solid #333;color:#888;padding:0 10px;cursor:pointer;font-size:14px;">×</button>' : '') +
       '</div>';
