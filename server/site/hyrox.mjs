@@ -97,7 +97,7 @@ export function mountHyrox(app, { webDir, siteDir, shell }) {
       `</div>` +
       `<div class="post-cta"><strong>Prepara questa gara con Nurvan.</strong><a class="btn primary" href="{{APP_URL}}">Apri l'app</a></div>` + note +
       `</div></article>`;
-    return send(req, res, { lang, alternates: everyLang("/hyrox/" + ev.id), ownTitle: true, title: `HYROX ${ev.city} ${ev.start ? ev.start.slice(0, 4) : ""} — Nurvan`, description: st(dict, "HYROX {0}: date, formato della gara e preparazione su misura con Nurvan.", ev.city), main });
+    return send(req, res, { lang, alternates: everyLang("/hyrox/" + ev.id), ownTitle: true, title: `HYROX ${ev.city} ${ev.start ? ev.start.slice(0, 4) : ""} — Nurvan`, description: st(dict, "HYROX {0}: date, formato della gara (8 km di corsa e 8 stazioni di forza e resistenza), iscrizioni e preparazione su misura con Nurvan.", ev.city), main });
   };
 
   for (const base of SITE_LANGS.map(langPrefix)) {

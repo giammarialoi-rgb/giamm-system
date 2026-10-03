@@ -311,7 +311,7 @@ export function mountBlog(app, { contentDir, siteDir, shell, staticFiles }) {
     const lang = langOf(req);
     const dict = await siteDict(siteDir, lang);
     const all = await articles(lang);
-    return send(req, res, { lang, alternates: everyLang("/blog"), title: "Blog — Nurvan", description: "Allenamento, alimentazione e recupero: gli articoli di Nurvan.", main: listPage(all, all, "", "Idee per allenarti meglio", "Allenamento, alimentazione, recupero e gare: articoli da mettere in pratica, con le fonti.", lang, dict) });
+    return send(req, res, { lang, alternates: everyLang("/blog"), title: "Blog — Nurvan", description: "Il blog di Nurvan: articoli su allenamento, alimentazione, integratori e recupero, scritti con le fonti e pensati da mettere in pratica.", main: listPage(all, all, "", "Idee per allenarti meglio", "Allenamento, alimentazione, recupero e gare: articoli da mettere in pratica, con le fonti.", lang, dict) });
   };
   const category = async (req, res) => {
     const lang = langOf(req);
@@ -320,7 +320,7 @@ export function mountBlog(app, { contentDir, siteDir, shell, staticFiles }) {
     const slug = slugify(req.params.cat);
     const list = all.filter((a) => a.categorySlug === slug);
     if (!list.length) return send(req, res, { lang, title: "Categoria non trovata — Nurvan", description: "", main: listPage([], all, slug, "Categoria non trovata", "Torna a tutti gli articoli.", lang, dict) }, 404);
-    return send(req, res, { lang, ownTitle: true, title: st(dict, "{0} — Blog Nurvan", list[0].category), description: st(dict, "Articoli su {0}.", list[0].category), main: listPage(list, all, slug, list[0].category, st(dict, "Tutti gli articoli su {0}.", list[0].category.toLowerCase()), lang, dict, true) });
+    return send(req, res, { lang, alternates: { [lang]: langPrefix(lang) + "/blog/categoria/" + encodeURIComponent(slug) }, ownTitle: true, title: st(dict, "{0} — Blog Nurvan", list[0].category), description: st(dict, "Gli articoli del blog Nurvan su {0}: spiegazioni chiare, con le fonti, da mettere in pratica nei tuoi allenamenti e nella tua alimentazione.", list[0].category), main: listPage(list, all, slug, list[0].category, st(dict, "Tutti gli articoli su {0}.", list[0].category.toLowerCase()), lang, dict, true) });
   };
   const one = async (req, res) => {
     const lang = langOf(req);
