@@ -98,7 +98,7 @@ const base = 'http://127.0.0.1:' + srv.address().port;
 async function call(route, { method = 'GET', body, cookie, headers = {} } = {}) {
   const res = await fetch(base + route, {
     method,
-    headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}), ...headers },
+    headers: { 'Content-Type': 'application/json', 'X-Nurvan-Admin-Link': 'admin', ...(cookie ? { Cookie: cookie } : {}), ...headers },
     body: body ? JSON.stringify(body) : undefined
   });
   const text = await res.text();
@@ -116,7 +116,7 @@ try {
     eq(guess.status, 401, 'email not in ADMIN_EMAILS: login refused');
 
     const srvNoMail = await makeServer(noMail);
-    const r = await fetch('http://127.0.0.1:' + srvNoMail.address().port + '/api/admin/login/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@example.com' }) });
+    const r = await fetch('http://127.0.0.1:' + srvNoMail.address().port + '/api/admin/login/start', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Nurvan-Admin-Link': 'admin' }, body: JSON.stringify({ email: 'owner@example.com' }) });
     eq(r.status, 503, 'no email channel configured: said plainly, for every address');
     srvNoMail.close();
 
@@ -256,15 +256,15 @@ try {
 
 /* ---------------- separate from the app ---------------- */
 {
-  const js = read('admin/admin.js');
+  const js = fs.readdirSync(path.join(root, 'admin')).filter((f) => f.endsWith('.js')).map((f) => read('admin/' + f)).join('\n');
   const html = read('admin/index.html');
   ok('the dashboard imports nothing from the app', !/from ['"][^'"]*web\//.test(js) && !/src="[^"]*web\//.test(html) && !/index\.base/.test(js));
   ok('the app does not know the dashboard', !read('web/index.base.html').includes('/admin/') && !read('web/sw.js').includes('admin'));
   ok('data enter the page as text only', !/innerHTML/.test(js));
   ok('no inline handlers (the policy would block them)', !/ on[a-z]+="/.test(html));
-  ok('375 px: the page never scrolls sideways, tables scroll in their box', /body \{ overflow-x: hidden; \}/.test(html) && /\.tbl \{ overflow-x: auto; max-width: 100%;/.test(html) && /table \{[^}]*min-width: 640px/.test(html));
+  ok('375 px: the page never scrolls sideways, tables scroll in their box', /body \{ overflow-x: hidden; \}/.test(html) && /\.tbl \{ overflow-x: auto; max-width: 100%;/.test(html) && /table \{[^}]*min-width: 560px/.test(html));
   const api = read('coach-api.mjs');
-  ok('one email channel: reset codes and admin codes', /async function sendEmail\(to, subject, text, html\)/.test(api) && /return sendEmail\(\s*email,/.test(api) && api.includes('mountAdminDashboard(app, { pool, initDb, sendEmail, secret: JWT_SECRET });'));
+  ok('one email channel: reset codes and admin codes', /async function sendEmail\(to, subject, text, html\)/.test(api) && /return sendEmail\(\s*email,/.test(api) && api.includes('mountAdminDashboard(app, { pool, initDb, sendEmail, secret: JWT_SECRET, analytics, siteHosts: SITE_HOSTS });'));
   ok('last access stamped by the server on account read/sync, client/me, coach status', (api.match(/touchLastSeen\(pool, auth\.id\)/g) || []).length === 2 && read('coach-practice.mjs').includes('touchLastSeen(pool, ctx.auth.id)') && read('coach-practice.mjs').includes('touchLastSeen(pool, auth.id)'));
   ok('failures recorded: sync, check-in send, document import', /recordEvent\(pool, "sync_failed"/.test(api) && /recordEvent\(pool, "import_failed"/.test(api) && read('coach-practice.mjs').includes('recordEvent(pool, "checkin_failed"'));
   const mig = read('server/db/migrations/0016_admin_dashboard.sql');

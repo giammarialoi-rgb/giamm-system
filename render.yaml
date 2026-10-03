@@ -60,6 +60,31 @@ services:
         sync: false
       - key: VAPID_SUBJECT
         value: mailto:noreply@nurvan.app
+      # Administration dashboard (docs/ADMIN.md). The page lives at /<ADMIN_PATH>,
+      # a secret of 16-80 letters, digits, - or _; without it the dashboard is off.
+      - key: ADMIN_PATH
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: NURVAN_ADMIN_TOKEN
+        sync: false
+      # Numbers fetched by themselves: each connection starts when its variables exist.
+      - key: IG_ACCESS_TOKEN
+        sync: false
+      - key: ASC_KEY_ID
+        sync: false
+      - key: ASC_ISSUER_ID
+        sync: false
+      - key: ASC_PRIVATE_KEY
+        sync: false
+      - key: ASC_VENDOR_NUMBER
+        sync: false
+      - key: PLAY_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: PLAY_BUCKET
+        sync: false
+      - key: PLAY_PACKAGE
+        value: com.nurvan.app
 databases:
   - name: coach-db
     databaseName: coach

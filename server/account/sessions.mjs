@@ -35,8 +35,8 @@ export function createSessionGate({ getPool, enabled = () => true, ttlMs = 30_00
     const key = String(userId);
     const hit = cache.get(key);
     if (hit && now() - hit.at < ttlMs) return hit;
-    const res = await getPool().query("SELECT tokens_valid_after FROM app_users WHERE id = $1", [userId]);
-    const entry = { at: now(), exists: res.rows.length > 0, validAfter: res.rows[0] ? res.rows[0].tokens_valid_after : null };
+    const res = await getPool().query("SELECT tokens_valid_after, disabled_at FROM app_users WHERE id = $1", [userId]);
+    const entry = { at: now(), exists: res.rows.length > 0, validAfter: res.rows[0] ? res.rows[0].tokens_valid_after : null, disabled: !!(res.rows[0] && res.rows[0].disabled_at) };
     cache.set(key, entry);
     if (cache.size > 20_000) cache.clear();
     return entry;
@@ -50,7 +50,7 @@ export function createSessionGate({ getPool, enabled = () => true, ttlMs = 30_00
       if (!enabled()) return true;
       try {
         const entry = await lookup(payload.sub);
-        if (!entry.exists) return false;
+        if (!entry.exists || entry.disabled) return false;
         return tokenStillValid(payload.iat, entry.validAfter);
       } catch (err) {
         if (!warned) { warned = true; console.warn("SESSION_GATE_UNAVAILABLE", err && err.message); }

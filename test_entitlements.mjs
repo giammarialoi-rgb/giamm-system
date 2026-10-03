@@ -321,7 +321,7 @@ function pageContext(entitlement, extra = {}) {
   ok('offline and Android: both files cached and copied', ['./features.js', './entitlements.js'].every((f) => read('web/sw.js').includes("'" + f + "'")) && ['features.js', 'entitlements.js'].every((f) => read('sync_web_assets.mjs').includes("'" + f + "'")));
   const mig = read('server/db/migrations/0015_plans_entitlements.sql');
   ok('migration: plan fields on the account, history table, existing coaches kept', ['plan TEXT', 'plan_source TEXT', 'plan_until TIMESTAMPTZ', 'seats INTEGER', 'trial_until TIMESTAMPTZ', 'trial_used_at TIMESTAMPTZ'].every((c) => mig.includes('ADD COLUMN IF NOT EXISTS ' + c)) && mig.includes('CREATE TABLE IF NOT EXISTS app_plan_history') && /SET plan = 'coach'/.test(mig));
-  ok('trial route here, admin routes in the dashboard module (test_admin_dashboard.mjs)', read('server/account/plans.mjs').includes('app.post("/api/account/trial"') && ['app.get("/api/admin/accounts"', 'app.post("/api/admin/accounts/:id/plan"', 'app.get("/api/admin/accounts/:id/history"'].every((r) => read('server/admin/index.mjs').includes(r)) && read('coach-api.mjs').includes('mountPlanRoutes(app, { pool, initDb, accountFromBearer });'));
+  ok('trial route here, admin routes in the dashboard module (test_admin_dashboard.mjs)', read('server/account/plans.mjs').includes('app.post("/api/account/trial"') && ['route("get", "/api/admin/accounts"', 'route("post", "/api/admin/accounts/:id/plan"', 'route("get", "/api/admin/accounts/:id/history"'].every((r) => read('server/admin/index.mjs').includes(r)) && read('coach-api.mjs').includes('mountPlanRoutes(app, { pool, initDb, accountFromBearer });'));
 }
 
 if (failed) {

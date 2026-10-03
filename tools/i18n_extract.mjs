@@ -307,7 +307,7 @@ function run() {
   })(path.join(ROOT, 'server'));
   serverFiles.forEach((f) => {
     const full = path.join(ROOT, f);
-    if (!fs.existsSync(full) || /server\/site\//.test(f)) return;
+    if (!fs.existsSync(full) || /server\/(site|admin)\//.test(f)) return;
     let ast;
     try { ast = acorn.parse(fs.readFileSync(full, 'utf8'), { ecmaVersion: 'latest', sourceType: 'module' }); } catch (e) { console.warn('[i18n] not parsed: ' + f + ' — ' + e.message); return; }
     (function visit(node) {

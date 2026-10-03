@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
 <title>Nurvan Admin</title>
 <style>
   :root {
     --bg: #f6f6f4; --panel: #fff; --text: #1d1d1b; --muted: #6b6b66; --line: #e2e1dc;
-    --accent: #8a6d1d; --accent-bg: #f4ecd6; --bad: #a33b2b; --ok: #2f6b3a;
+    --accent: #8a6d1d; --accent-bg: #f4ecd6; --bad: #a33b2b; --ok: #2f6b3a; --blue: #2b5d8a;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -16,39 +17,88 @@
   header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
   header h1 { font-size: 16px; margin: 0; }
   header .who { font-size: 12px; color: var(--muted); }
-  nav { display: flex; gap: 4px; flex-wrap: wrap; padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
-  nav button { background: none; border: 1px solid transparent; border-radius: 6px; padding: 6px 10px; font: inherit; cursor: pointer; color: var(--text); }
+  nav { display: flex; gap: 4px; padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--line); overflow-x: auto; position: sticky; top: 0; z-index: 5; }
+  nav button { background: none; border: 1px solid transparent; border-radius: 6px; padding: 6px 11px; font: inherit; cursor: pointer; color: var(--text); white-space: nowrap; }
   nav button[aria-current="page"] { background: var(--accent-bg); border-color: #e0cf9c; color: var(--accent); font-weight: 600; }
-  main { padding: 16px; max-width: 1280px; margin: 0 auto; }
+  main { padding: 16px; max-width: 1320px; margin: 0 auto; }
   h2 { font-size: 17px; margin: 0 0 12px; }
-  h3 { font-size: 14px; margin: 18px 0 8px; }
+  h3 { font-size: 14px; margin: 20px 0 8px; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 14px; }
-  .tbl { overflow-x: auto; max-width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
-  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 13px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
+  .tbl { overflow-x: auto; max-width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); margin-bottom: 14px; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13px; }
   th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--line); vertical-align: top; white-space: nowrap; }
   th { background: #fafaf8; font-weight: 600; color: var(--muted); position: sticky; top: 0; }
+  th.sortable { cursor: pointer; }
   td.wrap { white-space: normal; min-width: 180px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.click { cursor: pointer; }
+  tr.click:hover td { background: #fbf8ee; }
   tr.sub td { background: #fcfbf7; white-space: normal; }
-  input, select, button.btn { font: inherit; padding: 6px 8px; border: 1px solid #cfcdc5; border-radius: 6px; background: #fff; color: var(--text); }
-  input[type=number] { width: 80px; }
+  input, select, textarea, button.btn { font: inherit; padding: 6px 8px; border: 1px solid #cfcdc5; border-radius: 6px; background: #fff; color: var(--text); }
+  textarea { width: 100%; min-height: 70px; }
+  input[type=number] { width: 90px; }
   button.btn { cursor: pointer; background: #fff; }
   button.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.btn.danger { color: var(--bad); border-color: #dcb3ab; }
+  button.btn.small { padding: 3px 7px; font-size: 12px; }
   button.btn:disabled { opacity: .5; cursor: default; }
   .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .row.nowrap { flex-wrap: nowrap; }
+  .row.end { justify-content: flex-end; }
   .muted { color: var(--muted); font-size: 12px; }
   .msg { padding: 8px 10px; border-radius: 6px; margin: 8px 0; font-size: 13px; }
   .msg.bad { background: #f8e7e3; color: var(--bad); }
   .msg.ok { background: #e6f0e6; color: var(--ok); }
   .msg.warn { background: var(--accent-bg); color: var(--accent); }
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .msg.info { background: #e8eff6; color: var(--blue); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 14px; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .card.click { cursor: pointer; }
+  .card.click:hover { border-color: #d6c27c; }
   .card .n { font-size: 22px; font-weight: 700; }
   .card .l { font-size: 12px; color: var(--muted); }
+  .card .d { font-size: 12px; font-weight: 600; }
+  .d.up { color: var(--ok); } .d.down { color: var(--bad); }
+  .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; background: #eee; color: #555; margin-right: 4px; }
+  .badge.ok { background: #e6f0e6; color: var(--ok); } .badge.bad { background: #f8e7e3; color: var(--bad); }
+  .badge.warn { background: var(--accent-bg); color: var(--accent); } .badge.blue { background: #e8eff6; color: var(--blue); }
+  .subtabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 0 0 12px; }
+  .subtabs button { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 4px 11px; font: inherit; cursor: pointer; }
+  .subtabs button.on { background: var(--accent-bg); border-color: #e0cf9c; color: var(--accent); font-weight: 600; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+  .field input, .field select, .field textarea { color: var(--text); font-size: 14px; }
+  .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; }
+  .chart { margin-bottom: 14px; }
+  .chart-title { font-weight: 600; margin-bottom: 4px; }
+  .chart-box { position: relative; }
+  .svgchart { width: 100%; height: auto; max-height: 190px; display: block; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+  .chart-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .tip { position: absolute; top: 4px; background: #1d1d1b; color: #fff; border-radius: 5px; padding: 3px 7px; font-size: 12px; pointer-events: none; white-space: nowrap; }
+  .legend { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; } .dot.g { background: #2f6b3a; } .dot.r { background: #a33b2b; }
+  .shares { display: grid; gap: 5px; }
+  .share { display: grid; grid-template-columns: minmax(80px, 160px) 1fr 70px; gap: 8px; align-items: center; font-size: 13px; }
+  .share-l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .share-bar { background: #eeeee9; border-radius: 4px; height: 10px; }
+  .share-bar div { background: var(--accent); height: 10px; border-radius: 4px; }
+  .share-v { text-align: right; font-variant-numeric: tabular-nums; }
+  .alerts .msg { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+  .shade { position: fixed; inset: 0; background: rgba(20,20,18,.45); z-index: 20; display: flex; justify-content: flex-end; }
+  .drawer { background: var(--bg); width: min(720px, 100%); height: 100%; display: flex; flex-direction: column; box-shadow: -6px 0 24px rgba(0,0,0,.2); }
+  .drawer-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .drawer-head h2 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .drawer-body { padding: 14px 16px 40px; overflow-y: auto; flex: 1; }
+  .kv { display: grid; grid-template-columns: minmax(120px, 190px) 1fr; gap: 4px 12px; font-size: 13px; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; word-break: break-word; }
+  .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); padding: 9px 14px; border-radius: 8px; z-index: 40; background: #1d1d1b; color: #fff; font-size: 13px; }
+  .toast.bad { background: var(--bad); } .toast.ok { background: var(--ok); }
   .login { max-width: 360px; margin: 48px auto; }
   .login label { display: block; margin: 10px 0 4px; font-size: 13px; }
   .login input { width: 100%; }
   [hidden] { display: none !important; }
+  @media (max-width: 600px) { main { padding: 10px; } .grid2 { grid-template-columns: 1fr; } .share { grid-template-columns: 90px 1fr 56px; } }
 </style>
 </head>
 <body>
@@ -74,16 +124,18 @@
       <div class="row"><span class="who" id="who"></span><button class="btn" id="logout" type="button">Esci</button></div>
     </header>
     <nav id="tabs">
-      <button type="button" data-tab="accounts">Account</button>
+      <button type="button" data-tab="overview">Panoramica</button>
+      <button type="button" data-tab="profiles">Profili</button>
+      <button type="button" data-tab="economy">Economia</button>
+      <button type="button" data-tab="stats">Statistiche</button>
       <button type="button" data-tab="coaches">Coach</button>
-      <button type="button" data-tab="metrics">Numeri</button>
+      <button type="button" data-tab="operations">Operazioni</button>
       <button type="button" data-tab="catalog">Catalogo</button>
-      <button type="button" data-tab="errors">Errori</button>
-      <button type="button" data-tab="planlog">Log piani</button>
+      <button type="button" data-tab="settings">Impostazioni</button>
     </nav>
     <main id="view"></main>
   </div>
 
-  <script type="module" src="/admin/admin.js"></script>
+  <script type="module" src="__BASE__/admin.js"></script>
 </body>
 </html>

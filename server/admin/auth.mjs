@@ -149,7 +149,7 @@ function auditDetail(req) {
   if (req.query && req.query.q) detail.q = String(req.query.q).slice(0, 100);
   if (req.method !== "GET" && req.body && typeof req.body === "object") {
     const body = {};
-    for (const k of ["plan", "seats", "until", "source", "note", "kcal", "pro", "carb", "fat"]) {
+    for (const k of ["plan", "seats", "until", "source", "note", "kcal", "pro", "carb", "fat", "amount", "kind", "category", "suspended", "days", "metric", "value", "day", "period", "price", "comp", "tag"]) {
       if (req.body[k] !== undefined) body[k] = typeof req.body[k] === "string" ? req.body[k].slice(0, 300) : req.body[k];
     }
     detail.body = body;

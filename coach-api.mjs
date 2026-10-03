@@ -41,6 +41,9 @@ import { SITE_LANGS, SITE_LANG_NAMES, isSiteLang, langPrefix, langOfPath, siteDi
 import { mountGoogleAppAuth } from "./server/account/google-app.mjs";
 import { loadLegal, validMainConsent, recordMainConsent, readConsentRow, aiConsentWithdrawn, mountConsentRoutes } from "./server/account/consent.mjs";
 import { mountAdminDashboard } from "./server/admin/index.mjs";
+import { createAnalytics } from "./server/admin/analytics.mjs";
+import { adminSlug } from "./server/admin/link.mjs";
+import { startIntegrationsJob } from "./server/admin/integrations.mjs";
 import { touchLastSeen, recordEvent, fileFormat } from "./server/admin/activity.mjs";
 import { runMigrations } from "./server/db/migrate.mjs";
 import {
@@ -2294,7 +2297,6 @@ appleCallbackTarget.handle = appleAuth.callbackHandler;
 mountAccountDeletion(app, { pool, initDb, accountFromBearer, onDeleted: (gone) => appleAuth.revokeIdentities(gone.identities) });
 mountConsentRoutes(app, { pool, initDb, accountFromBearer, featuresPath: FEATURES_PATH });
 
-mountAdminDashboard(app, { pool, initDb, sendEmail, secret: JWT_SECRET });
 // Programs shared with a code: anyone sends, a paid plan receives.
 mountProgramShare(app, { pool, initDb, accountFromBearer });
 
@@ -2459,6 +2461,13 @@ const SITE_APP_OPEN = process.env.SITE_APP_OPEN === "1";
 app.use((req, res, next) => { if (!SITE_APP_OPEN && !isSiteHost(req)) res.setHeader("X-Robots-Tag", "noindex, nofollow"); next(); });
 // "/it/blog" and "/blog/" are the same page as "/blog": a permanent redirect.
 app.use(canonicalUrls(isSiteHost));
+// Visits to the site and the app, counted without cookies or identifiers (server/admin/analytics.mjs).
+const APP_HOST = (() => { try { return new URL(String(process.env.APP_PUBLIC_URL || "https://app.nurvan.app/")).hostname.toLowerCase(); } catch (_) { return "app.nurvan.app"; } })();
+const analytics = createAnalytics({ pool, initDb, secret: JWT_SECRET, siteHosts: SITE_HOSTS, appHosts: [APP_HOST], hiddenPrefixes: [adminSlug(process.env)] });
+app.use(analytics.middleware);
+app.post("/api/app/ping", analytics.appPing);
+mountAdminDashboard(app, { pool, initDb, sendEmail, secret: JWT_SECRET, analytics, siteHosts: SITE_HOSTS });
+if (isProduction(process.env)) startIntegrationsJob({ pool, initDb, env: process.env, secret: JWT_SECRET });
 const siteEsc = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 async function siteShell(req, page) {
   const shell = await fs.readFile(path.join(SITE_DIR, "shell.html"), "utf8");
@@ -2667,6 +2676,7 @@ async function gracefulShutdown(signal) {
   shuttingDown = true;
   console.log(`${signal} received: draining HTTP connections.`);
   server.close(async () => {
+    await analytics.stop().catch(() => {});
     await poolHolder.current.end().catch(() => {});
     process.exit(0);
   });

@@ -3181,7 +3181,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MEAL-PHOTO-V1",
-        schemaTarget: "0025",
+        schemaTarget: "0026",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -40664,6 +40664,22 @@ function accountRequest(path, options={}){
   }
   return apiFetch(coachEndpoint(path),{...options, headers:{'Content-Type':'application/json', Authorization:`Bearer ${store.accountToken}`, ...(options.headers||{})}});
 }
+// Once a day the app says which platform it runs on, and once ever that it was opened for the first time.
+// No identifier, no account, no content: the server counts different devices by a daily hash it forgets in two days.
+function reportAppUse() {
+  try {
+    const platform = (window.Capacitor && typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'ios') ? 'ios'
+      : ((window.Android || window.NativeConfig) ? 'android'
+      : (((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone) ? 'pwa' : 'web'));
+    const today = new Date().toISOString().slice(0, 10);
+    let last = ''; let seenBefore = '';
+    try { last = localStorage.getItem('nurvan_ping_day') || ''; seenBefore = localStorage.getItem('nurvan_ping_first') || ''; } catch (_) {}
+    if (last === today) return;
+    try { localStorage.setItem('nurvan_ping_day', today); if (!seenBefore) localStorage.setItem('nurvan_ping_first', '1'); } catch (_) {}
+    fetch(coachEndpoint('/api/app/ping'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platform: platform, first: !seenBefore }), keepalive: true }).catch(function () {});
+  } catch (_) {}
+}
+window.reportAppUse = reportAppUse;
 function openAccount(){
   updateAccountButton();
   const splash = $('splash');
@@ -50596,6 +50612,7 @@ function finishInit() {
         });
       }
 
+      reportAppUse();
       if (typeof bootCoachPractice === 'function') {
         Promise.race([
           Promise.resolve(bootCoachPractice()),
