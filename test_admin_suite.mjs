@@ -230,5 +230,40 @@ function eq(actual, expected, message) {
   ok('render.yaml lists the dashboard\'s variables', /ADMIN_PATH/.test(read('render.yaml')) && /ADMIN_EMAILS/.test(read('render.yaml')) && /IG_ACCESS_TOKEN/.test(read('render.yaml')));
 }
 
+// ---- Instagram: a new token on the server wins over the renewed copy kept in the database, and a new profile clears the old numbers
+{
+  const db = { row: null, deleted: 0 };
+  const pool = { async query(sql, params) {
+    if (/SELECT state/.test(sql)) return { rows: db.row ? [{ state: db.row.state, last_run_at: null, last_ok_at: null, last_error: null }] : [] };
+    if (/INSERT INTO admin_integrations/.test(sql)) { db.row = { state: JSON.parse(params[1]) }; return { rows: [] }; }
+    if (/DELETE FROM admin_metrics WHERE source = 'instagram'/.test(sql)) { db.deleted++; return { rows: [] }; }
+    return { rows: [] };
+  } };
+  const seen = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    seen.push(u);
+    const tok = decodeURIComponent((u.match(/access_token=([^&]+)/) || [])[1] || '');
+    if (u.includes('refresh_access_token')) return { ok: false, status: 400, json: async () => ({}) };
+    const profile = tok === 'TOKEN_NURVAN' ? { user_id: '222', username: 'nurvan.app', followers_count: 7 } : { user_id: '111', username: 'personale', followers_count: 900 };
+    if (u.includes('/me?')) return { ok: true, status: 200, json: async () => profile };
+    return { ok: true, status: 200, json: async () => ({ data: [] }) };
+  };
+  try {
+    const secret = 'x'.repeat(32);
+    await fetchInstagram(pool, { env: { IG_ACCESS_TOKEN: 'TOKEN_PERSONALE' }, secret });
+    ok('Instagram: the first token is used', seen.some((u) => u.includes('access_token=TOKEN_PERSONALE')) && db.row.state.username === 'personale');
+    db.row.state.tokenSealed = seal('TOKEN_PERSONALE', secret);
+    seen.length = 0;
+    await fetchInstagram(pool, { env: { IG_ACCESS_TOKEN: 'TOKEN_NURVAN' }, secret });
+    ok('Instagram: a new token on the server replaces the one kept in the database', seen.filter((u) => u.includes('/me?')).every((u) => u.includes('access_token=TOKEN_NURVAN')) && db.row.state.username === 'nurvan.app');
+    ok('Instagram: a new profile clears the old numbers and posts', db.deleted >= 1 && db.row.state.accountId === '222' && Array.isArray(db.row.state.recentMedia));
+    const before = db.deleted;
+    await fetchInstagram(pool, { env: { IG_ACCESS_TOKEN: 'TOKEN_NURVAN' }, secret });
+    ok('Instagram: the same token and profile keep the numbers', db.deleted === before);
+  } finally { globalThis.fetch = realFetch; }
+}
+
 if (failed) { console.log('\n' + failed + ' FAIL'); process.exit(1); }
 console.log('\nSuite di amministrazione: tutto verde');
