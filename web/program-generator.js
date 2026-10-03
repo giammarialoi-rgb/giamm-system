@@ -44,7 +44,11 @@
   var SPLITS = [
     { id: 'fullbody', label: 'Full body', minDays: 1, maxDays: 4, note: 'Tutto il corpo a ogni seduta' },
     { id: 'upper_lower', label: 'Upper / Lower', minDays: 2, maxDays: 6, note: 'Alto e basso alternati' },
-    { id: 'monofrequency', label: 'Monofrequenza / PPL', minDays: 2, maxDays: 6, note: 'Un distretto per seduta' }
+    { id: 'monofrequency', label: 'Monofrequenza', minDays: 2, maxDays: 6, note: 'Un distretto per seduta' },
+    { id: 'ppl', label: 'Push / Pull / Legs', minDays: 3, maxDays: 6, note: 'Spinta, trazione e gambe' },
+    { id: 'antagonist', label: 'Antagonisti', minDays: 3, maxDays: 6, note: 'Petto e dorso insieme, gambe, spalle e braccia' },
+    { id: 'torso_limbs', label: 'Torso / Arti', minDays: 3, maxDays: 6, note: "Busto un giorno, gambe e braccia l'altro" },
+    { id: 'hybrid', label: 'Ibrido', minDays: 3, maxDays: 6, note: 'Full body e upper/lower insieme' }
   ];
 
   var GOALS = [
@@ -106,6 +110,11 @@
   function normalizeSplit(split, days) {
     var allowed = splitsFor(days);
     for (var i = 0; i < allowed.length; i++) if (allowed[i].id === split) return split;
+    // Not asked for, or not available over these days: the established default, as before there were more splits.
+    var prefer = ['monofrequency', 'upper_lower', 'fullbody'];
+    for (var j = 0; j < prefer.length; j++) {
+      for (var k = 0; k < allowed.length; k++) if (allowed[k].id === prefer[j]) return prefer[j];
+    }
     return allowed[allowed.length - 1].id;
   }
 

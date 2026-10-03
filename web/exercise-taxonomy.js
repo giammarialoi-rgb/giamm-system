@@ -268,7 +268,21 @@
     ['Sled push', 'conditioning', 'secondary', 'sled', 1],
     ['Sled pull', 'conditioning', 'secondary', 'sled', 1],
     ['Battle rope', 'conditioning', 'secondary', 'rope', 1],
-    ['Neck curl', 'neck', 'iso', 'machine', 1]
+    ['Neck curl', 'neck', 'iso', 'machine', 1],
+
+    // --- floor and elastic work: what a person with no gym can start with ------------
+    ['Push-up inclinato', 'pushH', 'main', 'bodyweight', 0],
+    ['Dip su sedia', 'triceps', 'iso', 'bodyweight', 0],
+    ['Reverse snow angel', 'deltRear', 'iso', 'bodyweight', 0],
+    ['Calf raise a corpo libero', 'calf', 'iso', 'bodyweight', 0],
+    ['Affondi a corpo libero', 'lunge', 'secondary', 'bodyweight', 0],
+    ['Trazioni negative', 'pullV', 'secondary', 'bar', 1],
+    ['Handstand push-up al muro', 'pushV', 'main', 'bodyweight', 2],
+    ['Squat con elastico', 'squat', 'main', 'band', 0],
+    ['Chest press elastico', 'pushH', 'main', 'band', 0],
+    ['Pull-apart elastico', 'deltRear', 'iso', 'band', 0],
+    ['Superman', 'pullIso', 'iso', 'bodyweight', 0],
+    ['Inverted row facilitato', 'pullH', 'secondary', 'bodyweight', 0]
   ];
 
   // Names in the library that mean the same exercise as one above. They are

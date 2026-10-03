@@ -5,14 +5,18 @@
  * (progressive overload, RIR 2–3, failure non obbligatorio).
  */
 
-export const SPLIT_IDS = ['fullbody', 'monofrequency', 'upper_lower'];
+export const SPLIT_IDS = ['fullbody', 'upper_lower', 'monofrequency', 'ppl', 'antagonist', 'torso_limbs', 'hybrid'];
 
 export const SPLIT_LABELS = {
   fullbody: 'Full body',
   full_body: 'Full body',
   monofrequency: 'Monofrequenza',
   upper_lower: 'Upper/Lower',
-  push_pull: 'Push/Pull'
+  push_pull: 'Push/Pull',
+  ppl: 'Push/Pull/Legs',
+  antagonist: 'Antagonisti',
+  torso_limbs: 'Torso/Arti',
+  hybrid: 'Ibrido'
 };
 
 export const GOAL_LABELS = {
@@ -198,6 +202,7 @@ export function parseCatalogQuery(raw) {
     experience: null,
     duration: null,
     progression: null,
+    focus: [],
     audience: null,
     tokens: []
   };
@@ -205,19 +210,24 @@ export function parseCatalogQuery(raw) {
   const dayHit = q.match(/\b(due|tre|quattro|cinque|sei|[2-6])\s*(gg|giorni|giorno|days?|d\/sett)?\b/);
   if (dayHit) out.days = IT_DAYS[dayHit[1]] || parseInt(dayHit[1], 10);
   if (/full\s*body|tutto il corpo|\bfb\b|fullbody/.test(q)) out.split = 'fullbody';
-  else if (/mono\s*freq|monofrequenza|distrettuale|\bbro\b|\bppl\b|push\s*pull\s*legs/.test(q)) out.split = 'monofrequency';
+  else if (/\bppl\b|push\s*\/?\s*pull\s*\/?\s*legs/.test(q)) out.split = 'ppl';
+  else if (/antagonist|agonista|petto\s*\+\s*dorso/.test(q)) out.split = 'antagonist';
+  else if (/torso\s*\/?\s*arti|torso\s*\/?\s*gambe|torso.limbs/.test(q)) out.split = 'torso_limbs';
+  else if (/ibrid|hybrid/.test(q)) out.split = 'hybrid';
+  else if (/mono\s*freq|monofrequenza|distrettuale|\bbro\b/.test(q)) out.split = 'monofrequency';
   else if (/upper\s*\/?\s*lower|upper.lower|\bul\b|alto\s*basso/.test(q)) out.split = 'upper_lower';
   if (/ipertrof|massa|volume|hypertroph/.test(q)) out.goal = 'ipertrofia';
   else if (/\bforza\b|strength|1rm/.test(q)) out.goal = 'forza';
   else if (/powerbuild/.test(q)) out.goal = 'powerbuilding';
   else if (/recomp|ricompos/.test(q)) out.goal = 'recomp';
   else if (/cut|dimagr|deficit|defin/.test(q)) out.goal = 'cut';
-  else if (/glute/.test(q)) out.goal = 'glutei';
-  else if (/petto|panca|chest/.test(q)) out.goal = 'petto';
-  else if (/dorso|schiena|back/.test(q)) out.goal = 'dorso';
-  else if (/spall/.test(q)) out.goal = 'spalle';
-  else if (/braccia|bicep|tricep/.test(q)) out.goal = 'braccia';
-  else if (/gambe|quad|femor/.test(q)) out.goal = 'gambe';
+  // A muscle named is a focus, not a goal: up to three of them.
+  const muscleWords = [
+    ['petto', /petto|panca|chest/], ['dorso', /dorso|schiena|\bback\b/], ['spalle', /spall|delto/],
+    ['braccia', /braccia|bicip|tricip|bicep|tricep/], ['gambe', /gambe|quadricip|femoral|\blegs?\b/],
+    ['glutei', /glute|gluteo/], ['addome', /addome|addominal|\bcore\b|\babs\b/]
+  ];
+  muscleWords.forEach(([id, re]) => { if (re.test(q) && out.focus.length < 3) out.focus.push(id); });
   if (/palestra|gym|bilanciere/.test(q)) out.equipment = 'palestra';
   else if (/kettlebell|\bkb\b/.test(q)) out.equipment = 'kettlebell';
   else if (/corpo\s*libero|calisthen|bodyweight/.test(q)) out.equipment = 'bodyweight';
@@ -232,9 +242,6 @@ export function parseCatalogQuery(raw) {
   else if (/\bdup\b/.test(q)) out.progression = 'dup';
   else if (/blocco|block/.test(q)) out.progression = 'block';
   else if (/lineare|linear/.test(q)) out.progression = 'linear';
-  if (/donn|femminil|female|glute\s*focus|per lei/.test(q)) out.audience = 'female';
-  else if (/\buomo\b|maschil|male\s*upper|per lui/.test(q)) out.audience = 'male';
-  else if (/unisex/.test(q)) out.audience = 'unisex';
   out.tokens = q.split(/[\s,.;+/·_-]+/).filter((t) => t.length >= 2);
   return out;
 }
@@ -242,7 +249,7 @@ export function parseCatalogQuery(raw) {
 function hayOf(p) {
   return [
     p.title, p.purpose, p.search_text, p.split, SPLIT_LABELS[p.split],
-    p.equipment, p.experience, p.progression_model, p.sex_focus,
+    p.equipment, p.experience, p.progression_model, p.focus,
     ...(p.keywords || []), ...(p.goals || []),
     String(p.days_per_week) + 'gg',
     String(p.days_per_week) + ' giorni',
@@ -259,7 +266,11 @@ export function rankCatalogPrograms(list, filters = {}) {
   const experience = filters.experience || parsed.experience;
   const duration = filters.duration || parsed.duration;
   const progression = filters.progression || parsed.progression;
-  const audience = filters.audience || parsed.audience;
+  const focusWanted = (() => {
+    const f = filters.focus;
+    const list = Array.isArray(f) ? f : String(f || '').split(/[^a-z]+/).filter(Boolean);
+    return (list.length ? list : parsed.focus).filter((m) => m !== 'bil');
+  })();
   const tokens = parsed.tokens || [];
 
   const scored = [];
@@ -274,10 +285,7 @@ export function rankCatalogPrograms(list, filters = {}) {
     if (experience && p.experience !== experience) return;
     if (duration && Number(p.duration_weeks) !== Number(duration)) return;
     if (progression && p.progression_model !== progression) return;
-    if (audience) {
-      const a = p.audience || (p.sex_focus === 'female_glute' ? 'female' : (p.sex_focus === 'male_upper' ? 'male' : 'unisex'));
-      if (a !== audience) return;
-    }
+    if (focusWanted.length && !focusWanted.every((m) => (p.goals || []).includes(m))) return;
 
     let score = 1;
     const hay = hayOf(p);

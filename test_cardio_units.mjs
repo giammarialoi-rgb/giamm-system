@@ -158,8 +158,14 @@ vm.runInContext(slice('function exerciseLogUnit(row, name)', 'function completeS
   ok(/<div>MINUTI<\/div><div>DATI<\/div>/.test(html), '5c. cardio shows minutes and a way to add the rest');
   ok(/onclick="toggleSetTimer\(/.test(html), '5d. the timer is wired to the set it belongs to');
   ok(/onclick="toggleCardioExtras\(/.test(html), '5e. and the extra fields open on request');
-  ok(html.includes("if (exLogUnit !== 'cardio')"),
-    '5f. an intensity technique is not offered for ten minutes on a bike');
+  ok(/if \(exLogUnit === 'reps'\) \{\s+const restActual/.test(html),
+    '5f. an intensity technique is not offered for ten minutes on a bike, nor for a hold');
+  // Running is not lifting: no load per side, no RIR/RPE, no cadence, no 1RM, no analysis of kilos.
+  ok(html.includes("${exLogUnit === 'reps' ? `<span class=\"load-toggle ${exIntens==='RIR'")
+    && html.includes("${exLogUnit === 'reps' ? exerciseIntelPanelHtml(fIdx) : ''}")
+    && html.includes("${(exLogUnit === 'reps' || exLogUnit === 'time') ? `<div style=\"display:flex; gap:10px; margin-bottom:10px; align-items:center;\">"),
+    '5f1. cardio and circuits get no RIR/RPE, no load per side, no cadence, no 1RM and no kilo analysis');
+  ok(/<div>MINUTI<\/div><div>DATI<\/div><div>ZONA<\/div>/.test(html), '5f2. cardio is rated by effort zone, not by repetitions in reserve');
   ok(/store\.data\[key \+ '_sec'\] = held/.test(html),
     '5g. stopping the timer early records what was actually held, not what was asked for');
   ok(built.includes('NurvanCardio') && built.includes('cardio-library.js'),

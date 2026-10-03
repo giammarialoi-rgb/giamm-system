@@ -72,7 +72,7 @@ console.log('\n--- 2. il censimento del database: nessun isolamento dentro ---')
   const ISOLATION = /(croci|fly|apertur|alzat|pullover|kickback|curl|estension|extension|crunch|french|skull|manubri|dumbbell|kettlebell|macchina|machine|smith|cavo|cable|corpo libero|scapular|goblet|hack|sissy|pistol|jump)/i;
   eq(recognised.filter((n) => ISOLATION.test(n)), [], '2a. nessun nome da isolamento, macchina o manubri fra i riconosciuti');
   const catalog = census.find((s) => s.label === 'catalogo web');
-  eq(catalog.total, 298, '2b. il catalogo ha 298 voci');
+  eq(catalog.total, 300, '2b. il catalogo ha 300 voci');
   // Prima del cambio queste sette erano lette come l'alzata di gara.
   const wrongBefore = ['Croci panca piana', 'Scapular pull-up', 'Squat a corpo libero', 'Kettlebell deadlift', 'Stacco gambe tese', 'Tempo squat', 'Safety bar squat'];
   eq(wrongBefore.filter((n) => P.competitionLiftFor(n) !== null), [], '2c. le sette letture sbagliate di prima non ci sono piu\'');

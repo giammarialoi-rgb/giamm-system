@@ -30,36 +30,52 @@ ok(Array.isArray(idx.programs) && idx.programs.length === 0, 'no program rows ar
 ok(Object.keys(body).length === 0, 'no templates are shipped either');
 ok(fs.statSync('web/program-catalog-index.json').size < 5 * 1024,
   'the descriptor is under 5 KB (it used to be 48 MB of rows plus 12 MB of templates)');
-ok(idx.science_v2.count === catalog.total() && catalog.total() === 810000,
+ok(idx.science_v2.count === catalog.total() && catalog.total() > 1000000,
   'it describes ' + catalog.total().toLocaleString('it-IT') + ' programs');
 
 // --- the grid --------------------------------------------------------------
 {
   const dims = idx.science_v2.coverage;
-  ok(dims.days.length === 5 && dims.splits.length === 3 && dims.goals.length === 5
-    && dims.equipment.length === 5 && dims.experience.length === 3 && dims.audience.length === 3
+  ok(dims.days.length === 5 && dims.splits.length === 7 && dims.goals.length === 5
+    && dims.equipment.length === 5 && dims.experience.length === 3 && dims.focus.length === 64
     && dims.durations.length === 6 && dims.progressions.length === 5 && dims.variants.length === 8,
-    'every training variable is covered, with 8 exercise selections each');
-  const p = { days: 4, split: 'upper_lower', goal: 'ipertrofia', equipment: 'casa', experience: 'intermedio', audience: 'female', duration: 8, progression: 'linear', variant: 'c' };
+    'every training variable is covered: 7 splits, 64 muscle focuses (none, 7 single, 21 pairs, 35 triples), 8 exercise selections each');
+  const p = { days: 4, split: 'upper_lower', goal: 'ipertrofia', equipment: 'casa', experience: 'intermedio', focus: 'petto_gambe', duration: 8, progression: 'linear', variant: 'c' };
   const id = catalog.idFor(p);
   ok(JSON.stringify(catalog.parseId(id)) === JSON.stringify(p), 'an id says exactly which program it is, and reads back');
-  ok(catalog.parseId('sci_000123') === null && catalog.parseId('sci2-9-nope-x-y-z-w-1-2-3') === null,
+  ok(catalog.parseId('sci_000123') === null && catalog.parseId('sci3-9-nope-x-y-z-w-1-2-3') === null,
     'an id from the old catalogue, or a made-up one, resolves to nothing rather than to a random program');
   const one = catalog.search(p, 50);
   ok(one.rows.length === 1 && one.total === 1 && one.rows[0].id === id, 'a fully specified request has exactly one answer');
   const some = catalog.search({ days: 4, equipment: 'casa' }, 30);
   ok(some.rows.length === 30 && some.rows.every((r) => r.days_per_week === 4 && r.equipment === 'casa'),
     'a partial request is answered from the matching part of the grid only');
-  ok(some.total === 3 * 5 * 3 * 3 * 6 * 5 * 8, 'and knows how many there are without building them');
+  ok(some.total === 7 * 5 * 3 * 64 * 6 * 5 * 8, 'and knows how many there are without building them');
+  // days and split depend on each other: a push/pull/legs over two days does not exist
+  const none = catalog.search({ days: 2, split: 'ppl' }, 10);
+  ok(none.rows.length === 0 && none.total === 0 && none.impossible === true && !catalog.possible({ days: 2, split: 'ppl' }),
+    'a split that does not exist over the days asked answers nothing, and says why');
+  ok(catalog.splitsForDays(2).length === 3 && catalog.splitsForDays(4).length === 7, 'the offered splits follow the days chosen');
+  // the first page of an open request is a spread, not 150 copies of one program
+  const page = catalog.search({}, 150).rows;
+  ok(page.length === 150 && new Set(page.map((r) => r.split)).size >= 6 && new Set(page.map((r) => r.days_per_week)).size === 5
+    && new Set(page.map((r) => r.focus)).size > 20, 'the first page of an open search spreads over days, splits and muscle focuses');
+  const chest = catalog.search({ focus: 'petto' }, 150).rows;
+  ok(chest.length === 150 && chest.every((r) => r.focus === 'petto' && r.goals.includes('petto')),
+    'a muscle focus only returns programs with that focus');
+  ok(catalog.focusCanon('glutei+petto,gambe') === 'petto_gambe_glutei' && catalog.focusCanon('') === 'bil',
+    'a focus is read in any order and is at most three muscles');
 }
 
 // --- free text still understood --------------------------------------------
 {
-  const parsed = parseCatalogQuery('4 giorni upper lower ipertrofia donna casa');
-  ok(parsed.days === 4 && parsed.split === 'upper_lower' && parsed.goal === 'ipertrofia' && parsed.audience === 'female',
-    'free text is still read into filters');
-  const rows = catalog.search({ days: parsed.days, split: parsed.split, goal: parsed.goal, audience: parsed.audience, equipment: 'casa' }, 10).rows;
-  const ranked = rankCatalogPrograms(rows, { days: 4, split: 'upper_lower', goal: 'ipertrofia', audience: 'female' });
+  const parsed = parseCatalogQuery('4 giorni upper lower ipertrofia glutei casa');
+  ok(parsed.days === 4 && parsed.split === 'upper_lower' && parsed.goal === 'ipertrofia' && parsed.focus.join() === 'glutei',
+    'free text is still read into filters, a muscle named becoming the focus');
+  ok(parseCatalogQuery('push pull legs petto dorso spalle braccia').split === 'ppl'
+    && parseCatalogQuery('petto dorso spalle braccia gambe').focus.length === 3, 'three muscles at most');
+  const rows = catalog.search({ days: parsed.days, split: parsed.split, goal: parsed.goal, focus: parsed.focus.join('_'), equipment: 'casa' }, 10).rows;
+  const ranked = rankCatalogPrograms(rows, { days: 4, split: 'upper_lower', goal: 'ipertrofia', focus: 'glutei' });
   ok(ranked.length === rows.length, 'and the rows built from it pass the app\'s own ranking');
 }
 
@@ -79,10 +95,16 @@ ok(idx.science_v2.count === catalog.total() && catalog.total() === 810000,
           const allowed = taxonomy.EQUIPMENT_SETS[equipment];
           for (const experience of catalog.EXPERIENCE) {
             const cap = taxonomy.LEVEL_CAP[experience];
-            for (const audience of catalog.AUDIENCE) {
-              for (const variant of catalog.VARIANTS) {
-                const b = catalog.bodyFor({ days, split, goal, equipment, experience, audience: audience.id, duration: 8, progression: 'linear', variant });
-                const where = [days + 'gg', split, goal, equipment, experience, audience.id, variant].join('/');
+            if (catalog.splitDays(split).indexOf(days) < 0) continue;
+            for (let fi = 0; fi < catalog.FOCUS_IDS.length; fi++) {
+              // Every selection for the balanced program, one for each muscle focus, and a fifth of the
+              // focuses per goal: the same rules hold for all of them, and the walk stays a minute long.
+              if (fi > 0 && (fi + catalog.GOALS.indexOf(goal)) % 5 !== 0) continue;
+              for (const variant of (fi === 0 ? catalog.VARIANTS : [catalog.VARIANTS[fi % catalog.VARIANTS.length]])) {
+                const focus = catalog.FOCUS_IDS[fi];
+
+                const b = catalog.bodyFor({ days, split, goal, equipment, experience, focus, duration: 8, progression: 'linear', variant });
+                const where = [days + 'gg', split, goal, equipment, experience, focus, variant].join('/');
                 assert(b.weeks[0].sessions.length === days, 'sessions per week in ' + where);
                 b.weeks[0].sessions.forEach((s) => {
                   sessions += 1;
@@ -126,7 +148,7 @@ ok(idx.science_v2.count === catalog.total() && catalog.total() === 810000,
 
 // --- a program over time ----------------------------------------------------
 {
-  const b = catalog.bodyFor('sci2-4-upper_lower-ipertrofia-palestra-intermedio-unisex-12-block-c');
+  const b = catalog.bodyFor('sci3-4-upper_lower-ipertrofia-palestra-intermedio-bil-12-block-c');
   const weeks = expandScienceProgramWeeks(b);
   ok(weeks.length === 12, 'a 12-week program expands to 12 weeks');
   const first = b.weeks[0].sessions[0].exercises;

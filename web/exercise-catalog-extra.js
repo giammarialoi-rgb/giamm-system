@@ -299,6 +299,8 @@ self.WEB_EXERCISE_CATALOG = [
   { name: "Pistol squat assistito", en: "Assisted Pistol Squat", muscle: "QUADRICIPITI", eq: "corpo libero" },
   { name: "L-sit raccolto", en: "Tuck L-Sit", muscle: "ADDOME", eq: "corpo libero" },
   { name: "Arch hold", en: "Superman Arch Hold", muscle: "SCHIENA", eq: "corpo libero" },
+  { name: "Superman", en: "Superman", muscle: "SCHIENA", eq: "corpo libero", aliases: ["superman a terra", "estensioni lombari a terra"] },
+  { name: "Inverted row facilitato", en: "Easier Inverted Row", muscle: "DORSALI", eq: "corpo libero", aliases: ["rematore inverso facilitato", "inverted row ginocchia piegate"] },
   { name: "Wall sit", en: "Wall Sit", muscle: "QUADRICIPITI", eq: "corpo libero" },
   { name: "Calf raise a corpo libero", en: "Bodyweight Calf Raise", muscle: "POLPACCI", eq: "corpo libero" },
   { name: "Affondi saltati", en: "Jumping Lunge", muscle: "CARDIO", eq: "corpo libero" },

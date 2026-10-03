@@ -4952,11 +4952,8 @@ function seedAssignSandboxFromClient(clientId) {
 
 function mapIntakeToCatalogFilters(intake) {
   intake = intake || {};
-  const filters = { q: '', days: '', split: '', goal: '', equipment: '', experience: '', duration: '', progression: '', audience: '' };
-  const sex = String(intake.sex || '').toLowerCase();
-  if (/femmin/.test(sex)) filters.audience = 'female';
-  else if (/masch|uomo/.test(sex)) filters.audience = 'male';
-  else if (sex) filters.audience = 'unisex';
+  // Sex no longer picks a program: there is no women's or men's program, there is a muscle focus the coach chooses.
+  const filters = { q: '', days: '', split: '', goal: '', equipment: '', experience: '', duration: '', progression: '', focus: '' };
 
   const goal = String(intake.goal || '');
   if (/ipertrof/i.test(goal)) filters.goal = 'ipertrofia';
@@ -4988,14 +4985,15 @@ function mapIntakeToCatalogFilters(intake) {
   if (/full\s*body/i.test(split)) filters.split = 'fullbody';
   else if (/upper|lower/i.test(split)) filters.split = 'upper_lower';
   else if (/distretto|mono/i.test(split)) filters.split = 'monofrequency';
-  else if (/push|pull|ppl/i.test(split)) filters.split = 'upper_lower';
+  else if (/push|pull|ppl/i.test(split)) filters.split = 'ppl';
+  else if (/antagonist/i.test(split)) filters.split = 'antagonist';
+  else if (/torso|arti/i.test(split)) filters.split = 'torso_limbs';
+  else if (/ibrid/i.test(split)) filters.split = 'hybrid';
 
   const bits = [];
   if (filters.days) bits.push(filters.days + ' giorni');
   if (filters.split) bits.push(filters.split.replace('_', ' '));
   if (filters.goal) bits.push(filters.goal);
-  if (filters.audience === 'female') bits.push('donna');
-  if (filters.audience === 'male') bits.push('uomo');
   if (filters.equipment) bits.push(filters.equipment);
   if (filters.experience) bits.push(filters.experience);
   filters.q = bits.join(' ');
@@ -5010,7 +5008,6 @@ function intakeFilterSummary(filters, intake) {
   if (filters.days) parts.push(filters.days + ' gg');
   if (filters.equipment) parts.push(filters.equipment);
   if (filters.experience) parts.push(filters.experience);
-  if (filters.audience) parts.push(filters.audience);
   if (filters.split) parts.push(filters.split);
   return parts.filter(Boolean).join(' · ') || 'anagrafica cliente';
 }
@@ -5066,7 +5063,7 @@ function applyCatalogFromIntake(useIt) {
     practiceToast('Database filtrato sull\'anagrafica di ' + (pending.name || 'cliente'), 'success');
   } else {
     window.__cpCatalogFromIntake = null;
-    window.__catalogFilters = { q: '', days: '', split: '', goal: '', equipment: '', experience: '', duration: '', progression: '', audience: '' };
+    window.__catalogFilters = { q: '', days: '', split: '', goal: '', equipment: '', experience: '', duration: '', progression: '', focus: '' };
     practiceToast('Database aperto senza filtri anagrafica', 'info');
   }
   navigate('programs');

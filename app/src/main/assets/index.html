@@ -29477,14 +29477,18 @@ if (typeof window !== 'undefined') {
  * (progressive overload, RIR 2–3, failure non obbligatorio).
  */
 
-var SPLIT_IDS = ['fullbody', 'monofrequency', 'upper_lower'];
+var SPLIT_IDS = ['fullbody', 'upper_lower', 'monofrequency', 'ppl', 'antagonist', 'torso_limbs', 'hybrid'];
 
 var SPLIT_LABELS = {
   fullbody: 'Full body',
   full_body: 'Full body',
   monofrequency: 'Monofrequenza',
   upper_lower: 'Upper/Lower',
-  push_pull: 'Push/Pull'
+  push_pull: 'Push/Pull',
+  ppl: 'Push/Pull/Legs',
+  antagonist: 'Antagonisti',
+  torso_limbs: 'Torso/Arti',
+  hybrid: 'Ibrido'
 };
 
 var GOAL_LABELS = {
@@ -29670,6 +29674,7 @@ function parseCatalogQuery(raw) {
     experience: null,
     duration: null,
     progression: null,
+    focus: [],
     audience: null,
     tokens: []
   };
@@ -29677,19 +29682,24 @@ function parseCatalogQuery(raw) {
   const dayHit = q.match(/\b(due|tre|quattro|cinque|sei|[2-6])\s*(gg|giorni|giorno|days?|d\/sett)?\b/);
   if (dayHit) out.days = IT_DAYS[dayHit[1]] || parseInt(dayHit[1], 10);
   if (/full\s*body|tutto il corpo|\bfb\b|fullbody/.test(q)) out.split = 'fullbody';
-  else if (/mono\s*freq|monofrequenza|distrettuale|\bbro\b|\bppl\b|push\s*pull\s*legs/.test(q)) out.split = 'monofrequency';
+  else if (/\bppl\b|push\s*\/?\s*pull\s*\/?\s*legs/.test(q)) out.split = 'ppl';
+  else if (/antagonist|agonista|petto\s*\+\s*dorso/.test(q)) out.split = 'antagonist';
+  else if (/torso\s*\/?\s*arti|torso\s*\/?\s*gambe|torso.limbs/.test(q)) out.split = 'torso_limbs';
+  else if (/ibrid|hybrid/.test(q)) out.split = 'hybrid';
+  else if (/mono\s*freq|monofrequenza|distrettuale|\bbro\b/.test(q)) out.split = 'monofrequency';
   else if (/upper\s*\/?\s*lower|upper.lower|\bul\b|alto\s*basso/.test(q)) out.split = 'upper_lower';
   if (/ipertrof|massa|volume|hypertroph/.test(q)) out.goal = 'ipertrofia';
   else if (/\bforza\b|strength|1rm/.test(q)) out.goal = 'forza';
   else if (/powerbuild/.test(q)) out.goal = 'powerbuilding';
   else if (/recomp|ricompos/.test(q)) out.goal = 'recomp';
   else if (/cut|dimagr|deficit|defin/.test(q)) out.goal = 'cut';
-  else if (/glute/.test(q)) out.goal = 'glutei';
-  else if (/petto|panca|chest/.test(q)) out.goal = 'petto';
-  else if (/dorso|schiena|back/.test(q)) out.goal = 'dorso';
-  else if (/spall/.test(q)) out.goal = 'spalle';
-  else if (/braccia|bicep|tricep/.test(q)) out.goal = 'braccia';
-  else if (/gambe|quad|femor/.test(q)) out.goal = 'gambe';
+  // A muscle named is a focus, not a goal: up to three of them.
+  const muscleWords = [
+    ['petto', /petto|panca|chest/], ['dorso', /dorso|schiena|\bback\b/], ['spalle', /spall|delto/],
+    ['braccia', /braccia|bicip|tricip|bicep|tricep/], ['gambe', /gambe|quadricip|femoral|\blegs?\b/],
+    ['glutei', /glute|gluteo/], ['addome', /addome|addominal|\bcore\b|\babs\b/]
+  ];
+  muscleWords.forEach(([id, re]) => { if (re.test(q) && out.focus.length < 3) out.focus.push(id); });
   if (/palestra|gym|bilanciere/.test(q)) out.equipment = 'palestra';
   else if (/kettlebell|\bkb\b/.test(q)) out.equipment = 'kettlebell';
   else if (/corpo\s*libero|calisthen|bodyweight/.test(q)) out.equipment = 'bodyweight';
@@ -29704,9 +29714,6 @@ function parseCatalogQuery(raw) {
   else if (/\bdup\b/.test(q)) out.progression = 'dup';
   else if (/blocco|block/.test(q)) out.progression = 'block';
   else if (/lineare|linear/.test(q)) out.progression = 'linear';
-  if (/donn|femminil|female|glute\s*focus|per lei/.test(q)) out.audience = 'female';
-  else if (/\buomo\b|maschil|male\s*upper|per lui/.test(q)) out.audience = 'male';
-  else if (/unisex/.test(q)) out.audience = 'unisex';
   out.tokens = q.split(/[\s,.;+/·_-]+/).filter((t) => t.length >= 2);
   return out;
 }
@@ -29714,7 +29721,7 @@ function parseCatalogQuery(raw) {
 function hayOf(p) {
   return [
     p.title, p.purpose, p.search_text, p.split, SPLIT_LABELS[p.split],
-    p.equipment, p.experience, p.progression_model, p.sex_focus,
+    p.equipment, p.experience, p.progression_model, p.focus,
     ...(p.keywords || []), ...(p.goals || []),
     String(p.days_per_week) + 'gg',
     String(p.days_per_week) + ' giorni',
@@ -29731,7 +29738,11 @@ function rankCatalogPrograms(list, filters = {}) {
   const experience = filters.experience || parsed.experience;
   const duration = filters.duration || parsed.duration;
   const progression = filters.progression || parsed.progression;
-  const audience = filters.audience || parsed.audience;
+  const focusWanted = (() => {
+    const f = filters.focus;
+    const list = Array.isArray(f) ? f : String(f || '').split(/[^a-z]+/).filter(Boolean);
+    return (list.length ? list : parsed.focus).filter((m) => m !== 'bil');
+  })();
   const tokens = parsed.tokens || [];
 
   const scored = [];
@@ -29746,10 +29757,7 @@ function rankCatalogPrograms(list, filters = {}) {
     if (experience && p.experience !== experience) return;
     if (duration && Number(p.duration_weeks) !== Number(duration)) return;
     if (progression && p.progression_model !== progression) return;
-    if (audience) {
-      const a = p.audience || (p.sex_focus === 'female_glute' ? 'female' : (p.sex_focus === 'male_upper' ? 'male' : 'unisex'));
-      if (a !== audience) return;
-    }
+    if (focusWanted.length && !focusWanted.every((m) => (p.goals || []).includes(m))) return;
 
     let score = 1;
     const hay = hayOf(p);
@@ -58206,17 +58214,22 @@ function filterProgramCatalog(list) {
     // screen shows.
     const parsed = (typeof parseCatalogQuery === 'function') ? parseCatalogQuery(f.q || '') : {};
     const merged = {};
-    ['days', 'split', 'goal', 'equipment', 'experience', 'duration', 'progression', 'audience'].forEach((k) => {
+    ['days', 'split', 'goal', 'equipment', 'experience', 'duration', 'progression'].forEach((k) => {
       merged[k] = f[k] || parsed[k] || '';
     });
+    // The muscles named in the box count as the focus when none is ticked.
+    merged.focus = f.focus || ((parsed.focus || []).join('_')) || '';
     // "hyrox" typed in the search is the goal; the place it is trained in
     // may be typed too ("hyrox casa", "hyrox corpo libero").
     if (/hyrox/i.test(f.q || '')) { merged.goal = 'hyrox'; merged.split = ''; merged.progression = ''; }
     // The same for the home disciplines.
     const typed = /pilates/i.test(f.q || '') ? 'pilates' : (/mobilit|stretch|allungament/i.test(f.q || '') ? 'mobilita' : (/calisthen/i.test(f.q || '') ? 'calisthenics' : (/hiit|tabata/i.test(f.q || '') ? 'hiit' : '')));
     if (typed && !f.goal) merged.goal = typed;
-    if (catalogWhole(merged.goal)) { merged.split = ''; merged.progression = ''; merged.audience = ''; }
-    return gen.search(merged, 150).rows;
+    if (catalogWhole(merged.goal)) { merged.split = ''; merged.progression = ''; merged.focus = ''; }
+    const found = gen.search(merged, 150);
+    window.__catalogMatchTotal = found.total;
+    window.__catalogImpossible = !!found.impossible;
+    return found.rows;
   }
   let ranked = [];
   if (typeof rankCatalogPrograms === 'function') {
@@ -58233,7 +58246,7 @@ function filterProgramCatalog(list) {
       ranked = rankCatalogPrograms(list, softer);
     }
     if (!ranked.length) {
-      const softest = { q: '', days: f.days || '', goal: f.goal || '', audience: f.audience || '', split: '', equipment: '', experience: '', duration: '', progression: '' };
+      const softest = { q: '', days: f.days || '', goal: f.goal || '', focus: f.focus || '', split: '', equipment: '', experience: '', duration: '', progression: '' };
       ranked = rankCatalogPrograms(list, softest);
     }
   }
@@ -58444,6 +58457,25 @@ async function activateCatalogProgramInner(programId) {
   }
 }
 
+// Ticks or unticks one muscle of the focus; three at most.
+function toggleCatalogFocus(id) {
+  const gen = catalogGenerator();
+  const f = window.__catalogFilters || {};
+  const cur = String(f.focus || '').split('_').filter(Boolean);
+  let next;
+  if (cur.indexOf(id) >= 0) next = cur.filter((x) => x !== id);
+  else if (cur.length >= ((gen && gen.FOCUS_MAX) || 3)) {
+    if (typeof showToast === 'function') showToast('Al massimo tre gruppi muscolari', 'info');
+    return;
+  } else next = cur.concat(id);
+  window.__catalogFilters = Object.assign({ q: '', days: '', split: '', goal: '', equipment: '', experience: '', duration: '', progression: '' }, f, {
+    focus: next.length ? (gen ? gen.focusCanon(next) : next.join('_')) : ''
+  });
+  window.__catalogOpen = true;
+  render();
+}
+window.toggleCatalogFocus = toggleCatalogFocus;
+
 function updateCatalogFiltersFromUi() {
   window.__catalogFilters = {
     q: ($('catalog-q') && $('catalog-q').value) || '',
@@ -58454,8 +58486,19 @@ function updateCatalogFiltersFromUi() {
     experience: ($('catalog-exp') && $('catalog-exp').value) || '',
     duration: ($('catalog-dur') && $('catalog-dur').value) || '',
     progression: ($('catalog-prog') && $('catalog-prog').value) || '',
-    audience: ($('catalog-audience') && $('catalog-audience').value) || ''
+    // The muscles are chips, not a field: what is ticked is kept in the filters.
+    focus: (window.__catalogFilters && window.__catalogFilters.focus) || ''
   };
+  // A split exists over some numbers of days only: the two lists are offered
+  // against each other, so when one changes the other is drawn again.
+  const compatKey = window.__catalogFilters.days + '|' + window.__catalogFilters.split;
+  if (window.__catalogCompatKey !== undefined && window.__catalogCompatKey !== compatKey && currentView === 'programs') {
+    window.__catalogCompatKey = compatKey;
+    window.__catalogOpen = true;
+    render();
+    return;
+  }
+  window.__catalogCompatKey = compatKey;
   const listEl = $('catalog-list');
   const countEl = $('catalog-count');
   const allCat = (window.__programCatalogIndex && window.__programCatalogIndex.programs) || [];
@@ -58463,7 +58506,7 @@ function updateCatalogFiltersFromUi() {
   const filtered = ranked.slice(0, 150);
   // Switching to or from HYROX changes what the equipment filter offers.
   if ((catalogWhole(window.__catalogFilters.goal) ? window.__catalogFilters.goal : '') !== (window.__catalogHyroxShown || '') && currentView === 'programs') { window.__catalogFilters.equipment = ''; window.__catalogOpen = true; render(); return; }
-  const totalCat = catalogTotalCount();
+  const totalCat = (window.__catalogMatchTotal != null) ? window.__catalogMatchTotal : catalogTotalCount();
   if (countEl) countEl.textContent = filtered.length + (totalCat > filtered.length ? '+' : '') + ' / ' + totalCat.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'));
   if (!listEl) {
     if (currentView === 'programs') render();
@@ -58472,10 +58515,11 @@ function updateCatalogFiltersFromUi() {
   listEl.innerHTML = filtered.length ? filtered.map((p) => catalogCardHtml(p)).join('') : '<div style="padding:16px;text-align:center;color:#666;font-size:12px;">Nessuna scheda. Prova “4 giorni upper lower ipertrofia donna” o togli un filtro.</div>';
 }
 
-function catalogAudienceLabel(a) {
-  if (a === 'female' || a === 'female_glute') return 'Donna';
-  if (a === 'male' || a === 'male_upper') return 'Uomo';
-  return 'Unisex';
+// "Focus Petto + Dorso · " in front of a card's line; nothing for programs that have no muscle focus.
+function catalogFocusPrefix(p) {
+  const gen = catalogGenerator();
+  if (!p || !p.focus || !gen) return '';
+  return esc(gen.focusLabel(p.focus)) + ' · ';
 }
 
 function catalogCardHtml(p) {
@@ -58486,7 +58530,7 @@ function catalogCardHtml(p) {
     <div style="padding:10px;background:rgba(255,255,255,0.02);border:1px solid #222;border-radius:8px;display:flex;justify-content:space-between;gap:10px;align-items:center;">
       <div style="min-width:0;flex:1;">
         <div style="font-size:13px;font-weight:800;color:#eee;">${esc(p.title || p.name || 'Scheda')}</div>
-        <div style="font-size:10px;color:#777;margin-top:3px;">${esc(catalogAudienceLabel(aud))} · ${esc(catalogGoalLabel(p.purpose || (p.goals||[])[0] || ''))} · ${p.days_per_week} gg · ${p.duration_weeks} sett · ${esc(catalogSplitLabel(p.split))} · ${esc(p.equipment || '')} · ${esc(p.experience || '')}</div>
+        <div style="font-size:10px;color:#777;margin-top:3px;">${catalogFocusPrefix(p)}${esc(catalogGoalLabel(p.purpose || (p.goals||[])[0] || ''))} · ${p.days_per_week} gg · ${p.duration_weeks} sett · ${esc(catalogSplitLabel(p.split))} · ${esc(p.equipment || '')} · ${esc(p.experience || '')}</div>
         <div style="font-size:9px;color:var(--gold);margin-top:4px;opacity:0.85;">${p.source === 'hyrox_v1' ? 'HYROX · base, costruzione, picco e scarico · ' + p.exercises + ' esercizi nella prima settimana' : (p.source === 'discipline_v1' ? p.minutes + ' minuti a seduta · ' + p.exercises + ' esercizi nella prima settimana' : 'Science · ' + esc(progL) + ' · volume/RIR/tempo')}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;">
@@ -58540,7 +58584,7 @@ async function openCatalogPreview(programId) {
     const notes = (raw.notes || []).slice(0, 3);
     if (bodyEl) {
       bodyEl.innerHTML = `
-        <div style="font-size:11px;color:#888;margin-bottom:10px;">${esc(catalogAudienceLabel(aud))} · ${meta.days_per_week} gg · ${meta.duration_weeks} sett · ${esc(catalogSplitLabel(meta.split))} · ${esc(meta.equipment || '')} · ${esc(meta.experience || '')}</div>
+        <div style="font-size:11px;color:#888;margin-bottom:10px;">${catalogFocusPrefix(meta)}${meta.days_per_week} gg · ${meta.duration_weeks} sett · ${esc(catalogSplitLabel(meta.split))} · ${esc(meta.equipment || '')} · ${esc(meta.experience || '')}</div>
         <div style="font-size:12px;color:var(--gold);font-weight:800;margin-bottom:8px;">COMPOSIZIONE (settimana tipo)</div>
         ${sessions.length ? sessions.map((s) => `
           <div style="margin-bottom:10px;padding:10px;background:#111;border:1px solid #292929;border-radius:8px;">
@@ -58592,8 +58636,13 @@ function renderPrograms(c){
   const totalCat = catalogTotalCount();
   const suggestedIds = Array.from(new Set(store.prefs.suggestedProgramIds || []));
   const suggested = suggestedIds.map((id) => catalogRowById(id)).filter(Boolean).slice(0, 6);
-  const splits = ['fullbody', 'monofrequency', 'upper_lower'];
-  const goals = ['ipertrofia', 'forza', 'powerbuilding', 'recomp', 'cut', 'glutei', 'petto', 'dorso', 'spalle', 'braccia', 'gambe'].concat(hyroxApi() ? ['hyrox'] : []).concat(disciplinesApi() ? disciplinesApi().DISCIPLINES.map((x) => x.id) : []);
+  // Offered against each other: a split exists over some numbers of days only.
+  const catGen = catalogGenerator();
+  const splits = (catGen && f.days) ? catGen.splitsForDays(f.days) : (catGen ? catGen.SPLITS : ['fullbody', 'upper_lower', 'monofrequency']);
+  const dayChoices = (catGen && f.split && catGen.splitDays(f.split)) || [2, 3, 4, 5, 6];
+  window.__catalogCompatKey = (f.days || '') + '|' + (f.split || '');
+  const focusOn = String(f.focus || '').split('_').filter(Boolean);
+  const goals = ['ipertrofia', 'forza', 'powerbuilding', 'recomp', 'cut'].concat(hyroxApi() ? ['hyrox'] : []).concat(disciplinesApi() ? disciplinesApi().DISCIPLINES.map((x) => x.id) : []);
   const hyroxCat = f.goal === 'hyrox' && !!hyroxApi();
   const disciplineCat = (f.goal !== 'hyrox' && catalogWhole(f.goal)) ? disciplinesApi().discipline(f.goal) : null;
   window.__catalogHyroxShown = catalogWhole(f.goal) ? f.goal : '';
@@ -58603,11 +58652,8 @@ function renderPrograms(c){
     ? hyroxApi().PROFILES.map((pr) => ({ id: pr.id, label: pr.label }))
     : disciplineCat ? disciplineCat.kits.map((k) => ({ id: k.id, label: k.label }))
     : ['palestra', 'casa', 'minimal', 'kettlebell', 'bodyweight'].map((x) => ({ id: x, label: x }));
-  const audiences = [
-    { id: 'female', label: 'Donna / Glutei' },
-    { id: 'male', label: 'Uomo / Upper' },
-    { id: 'unisex', label: 'Unisex' }
-  ];
+  const focusMuscles = (catGen && catGen.FOCUS_MUSCLES) || [];
+  const matchTotal = (window.__catalogMatchTotal != null) ? window.__catalogMatchTotal : totalCat;
 
   c.innerHTML = `
     <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -58771,13 +58817,16 @@ function renderPrograms(c){
     </div>` : ''}
     <div class="card" style="margin-bottom:16px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span id="catalog-count" style="font-size:10px; color:#666;">${filtered.length}${catalogReady ? ' / ' + totalCat.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT')) : ''}</span>
+        <span id="catalog-count" style="font-size:10px; color:#666;">${filtered.length}${catalogReady ? ' / ' + matchTotal.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT')) : ''}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px;">
-        <input id="catalog-q" type="search" placeholder="Es. 4 giorni upper lower ipertrofia donna casa doppia progressione" value="${esc(f.q || '')}" oninput="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()" style="padding:10px;font-size:13px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;">
-          <select id="catalog-audience" onchange="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()"><option value="">Pubblico</option>${audiences.map((a)=>`<option value="${esc(a.id)}" ${f.audience===a.id?'selected':''}>${esc(a.label)}</option>`).join('')}</select>
-          <select id="catalog-days" onchange="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()"><option value="">Giorni</option>${[2,3,4,5,6].map((d)=>`<option value="${d}" ${String(f.days)===String(d)?'selected':''}>${d} gg</option>`).join('')}</select>
+        <input id="catalog-q" type="search" placeholder="Es. 4 giorni push pull legs ipertrofia petto casa" value="${esc(f.q || '')}" oninput="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()" style="padding:10px;font-size:13px;">
+        ${(catGen && !catalogWhole(f.goal)) ? `<div style="margin-bottom:2px;">
+          <div style="font-size:10px;color:#888;margin-bottom:6px;">Focus muscolare · fino a 3 gruppi${focusOn.length ? '' : ' (nessuno: scheda equilibrata)'}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">${focusMuscles.map((m) => `<button type="button" class="btn ${focusOn.indexOf(m.id) >= 0 ? 'btn-primary' : 'btn-outline'}" style="font-size:11px;padding:6px 10px;" onclick="toggleCatalogFocus('${m.id}')">${esc(m.label)}</button>`).join('')}</div>
+        </div>` : ''}
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+          <select id="catalog-days" onchange="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()"><option value="">Giorni</option>${dayChoices.map((d)=>`<option value="${d}" ${String(f.days)===String(d)?'selected':''}>${d} gg</option>`).join('')}</select>
           <select id="catalog-split" onchange="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()"><option value="">Tipologia</option>${splits.map((s)=>`<option value="${esc(s)}" ${f.split===s?'selected':''}>${esc(catalogSplitLabel(s))}</option>`).join('')}</select>
           <select id="catalog-goal" onchange="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()"><option value="">Obiettivo</option>${goals.map((g)=>`<option value="${esc(g)}" ${f.goal===g?'selected':''}>${esc(catalogGoalLabel(g))}</option>`).join('')}</select>
         </div>
@@ -63193,24 +63242,24 @@ function renderTraining(c){
           <div style="display:flex; gap:8px; align-items:center;">
             ${ssPick}
             ${row.superset_id && !window.__ssSelect ? `<button type="button" class="btn btn-outline" style="font-size:8px;padding:2px 6px;" onclick="unlinkSuperset('${String(row.superset_id).replace(/'/g, '')}')">SCOLLEGA</button>` : ''}
-            <span class="load-toggle ${exIntens==='RIR'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RIR')">RIR</span>
-            <span class="load-toggle ${exIntens==='RPE'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RPE')">RPE</span>
+            ${exLogUnit === 'reps' ? `<span class="load-toggle ${exIntens==='RIR'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RIR')">RIR</span>
+            <span class="load-toggle ${exIntens==='RPE'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RPE')">RPE</span>` : ''}
             ${!skipReason ? `<span class="skip-btn" onclick="openSkipModal(${fIdx})">SALTA</span>` : `<span style="color:var(--gold); font-size:9px; font-weight:800;">SALTATO</span>`}
           </div>
         </div>
         <div class="exercise-name-heading"><span class="ex-mark" aria-hidden="true">▸</span><span>${esc(curEx)}</span></div>
-        ${exerciseIntelPanelHtml(fIdx)}
-        <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px;">${esc(schemeInfo.scheme)} <span style="font-size:10px;font-weight:600;color:#aaa;">${schemeInfo.setCount} serie · ${esc(schemeInfo.reps)} rip${schemeInfo.warmups && showWarmupSets() ? ' · ' + schemeInfo.warmups + ' risc.' : ''}</span></div>
+        ${exLogUnit === 'reps' ? exerciseIntelPanelHtml(fIdx) : ''}
+        <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px;">${esc(schemeInfo.scheme)} <span style="font-size:10px;font-weight:600;color:#aaa;">${exLogUnit === 'reps' ? (schemeInfo.setCount + ' serie · ' + esc(schemeInfo.reps) + ' rip' + (schemeInfo.warmups && showWarmupSets() ? ' · ' + schemeInfo.warmups + ' risc.' : '')) : (schemeInfo.setCount > 1 ? schemeInfo.setCount + ' serie' : '')}</span></div>
         ${formatLastSessionChip(fIdx, row)}
-        ${formatMaxTestChip(fIdx, curEx)}
+        ${exLogUnit === 'reps' ? formatMaxTestChip(fIdx, curEx) : ''}
         ${skipReason ? `<div class="skip-reason">Causa: ${skipReason}</div>` : ''}
 
-        <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+        ${(exLogUnit === 'reps' || exLogUnit === 'time') ? `<div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
           <button class="load-toggle ${isTotal?'active':''}" onclick="toggleLoadType(${fIdx}, 'total')">Totale</button>
           <button class="load-toggle ${!isTotal?'active':''}" onclick="toggleLoadType(${fIdx}, 'part')">Per parte</button>
-          <input type="text" placeholder="Tempo (es. 3-0-1)" value="${esc(tempo)}" onchange="updateTempo(${fIdx}, this.value)" style="flex:1; font-size:10px; padding:4px 8px; height:26px;">
-          <button class="btn btn-outline" type="button" title="Pianifica test massimale" style="font-size:9px;padding:4px 6px;height:26px;" onclick="openMaxTestPlannerModal(${fIdx})">1RM</button>
-        </div>`;
+          ${exLogUnit === 'reps' ? `<input type="text" placeholder="Cadenza (es. 3-0-1)" value="${esc(tempo)}" onchange="updateTempo(${fIdx}, this.value)" style="flex:1; font-size:10px; padding:4px 8px; height:26px;">
+          <button class="btn btn-outline" type="button" title="Pianifica test massimale" style="font-size:9px;padding:4px 6px;height:26px;" onclick="openMaxTestPlannerModal(${fIdx})">1RM</button>` : ''}
+        </div>` : ''}`;
 
       if (!skipReason && exLogUnit === 'circuit') {
         h += circuitBlockHtml(fIdx, row);
@@ -63226,15 +63275,15 @@ function renderTraining(c){
         if (exCeiling) {
           h += `<div style="font-size:10px;color:#e0b040;margin-bottom:8px;">${esc((DATA.space && DATA.space.name) || 'Qui')}: ${esc(String(exCeiling.label).toLowerCase())} ${wFmt(exCeiling.kg)}</div>`;
         }
-        h += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;background:#151515;padding:8px;border-radius:8px;border:1px solid #222;">
+        h += `<div style="display:grid;grid-template-columns:repeat(${exLogUnit === 'reps' ? 3 : 2},1fr);gap:4px;margin-bottom:8px;background:#151515;padding:8px;border-radius:8px;border:1px solid #222;">
           <div style="font-size:10px;color:#aaa;">Schema: <b style="color:#fff;">${esc(schemeInfo.scheme)}</b></div>
-          <div style="font-size:10px;color:#aaa;">${esc(rowIntensityLabel(row, exIntens))}: <b style="color:#fff;">${esc(rowIntensityText(row))}</b></div>
-          <div style="font-size:10px;color:#aaa; cursor:pointer;" onclick="startTimer('${esc(row.rest || '90s')}', '${exKeyRest}');">Rest: <b style="color:var(--gold); text-decoration:underline;">${esc(row.rest || '90s')}</b>${restDelta ? ` <span style="color:#ddd;">· in seduta ${formatRestClock(restPrescribedSec + restDelta)}</span>` : ''}</div>
+          ${exLogUnit === 'reps' ? `<div style="font-size:10px;color:#aaa;">${esc(rowIntensityLabel(row, exIntens))}: <b style="color:#fff;">${esc(rowIntensityText(row))}</b></div>` : ''}
+          ${(exLogUnit === 'reps' || totalSets > 1) ? `<div style="font-size:10px;color:#aaa; cursor:pointer;" onclick="startTimer('${esc(row.rest || '90s')}', '${exKeyRest}');">Rest: <b style="color:var(--gold); text-decoration:underline;">${esc(row.rest || '90s')}</b>${restDelta ? ` <span style="color:#ddd;">· in seduta ${formatRestClock(restPrescribedSec + restDelta)}</span>` : ''}</div>` : ''}
         </div>
         ${coachRestNote ? `<div style="font-size:10px;color:#aaa;margin:-4px 0 8px;">⏱ ${esc(coachRestNote.label)} <span style="color:#666;">· ${coachRestNote.offSets}/${coachRestNote.sets} serie oltre ±${REST_DEVIATION_THRESHOLD_SEC} s</span></div>` : ''}
         <div style="display:grid;grid-template-columns:28px 1fr 1fr 1fr 34px 26px;gap:6px;align-items:center;margin-bottom:6px;font-size:9px;color:#666;text-align:center;font-weight:800;">
           ${exLogUnit === 'cardio'
-            ? '<div>#</div><div>MINUTI</div><div>DATI</div><div>' + exIntens + '</div><div>OK</div><div>&#10005;</div>'
+            ? '<div>#</div><div>MINUTI</div><div>DATI</div><div>ZONA</div><div>OK</div><div>&#10005;</div>'
             : (exLogUnit === 'time'
               ? '<div>#</div><div>' + wUnit().toUpperCase() + '</div><div>SECONDI</div><div>TIMER</div><div>OK</div><div>&#10005;</div>'
               : '<div>#</div><div>' + wUnit().toUpperCase() + '</div><div>REPS</div><div>' + exIntens + '</div><div>OK</div><div>&#10005;</div>')}
@@ -63293,7 +63342,7 @@ function renderTraining(c){
             <div style="font-size:13px;font-weight:bold;color:var(--gold);text-align:center;">${s}</div>
             <input type="number" id="${k}_min" step="1" min="0" placeholder="${prescribedMinutesFor(row, setObj)}" value="${shownMin}" oninput="updateData('${k}_min',this.value)" style="padding:8px 4px;font-size:14px;text-align:center;border-left:3px solid var(--gold);background:#1a1a1a;">
             <button type="button" id="${k}_extrabtn" class="btn btn-outline" style="font-size:10px;padding:8px 2px;" onclick="toggleCardioExtras('${k}')">+ DATI</button>
-            <select id="${k}_rir" onchange="updateSetIntensityValue(${fIdx},${s},this.value)" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[...Array(11)].map((_,i)=>`<option value="${i}" ${sameIntensityOption(shownRir, i)?'selected':''}>${i}</option>`).join('')}</select>
+            <select id="${k}_zone" onchange="updateData('${k}_zone',this.value)" title="Zona di sforzo: 1 molto facile, 2 facile (si parla), 3 medio, 4 duro, 5 massimo" style="padding:8px 2px;font-size:14px;border-left:3px solid var(--accent-red);background:#1a1a1a;"><option value="">-</option>${[1,2,3,4,5].map((z)=>`<option value="${z}" ${String(store.data[k + '_zone'] || '')===String(z)?'selected':''}>Z${z}</option>`).join('')}</select>
             <button class="set-done-btn ${isDone?'active':''}" title="Segna fatto" onclick="completeSetQuick(${fIdx}, ${s}, '${restForSet}')">${isDone?'✓':'○'}</button>
             <button class="set-del-btn" onclick="removeSetFromExercise(${fIdx}, ${s})">✕</button>
           </div>` + cardioExtrasHtml(k, curEx);
@@ -63321,7 +63370,7 @@ function renderTraining(c){
           }
           // An intensity technique is a way of taking a set of repetitions
           // further; it has nothing to say about ten minutes on a bike.
-          if (exLogUnit !== 'cardio') {
+          if (exLogUnit === 'reps') {
             const restActual = store.data[k + '_rest_actual'];
             const restActualChip = (restActual != null && restActual !== '' && isFinite(Number(restActual)))
               ? `<span title="Recupero passato davvero prima di questa serie" style="flex:0 0 auto;font-size:10px;color:#999;border:1px solid #2a2a2a;border-radius:6px;padding:4px 7px;white-space:nowrap;">⏱ ${formatRestClock(restActual)}</span>`
@@ -73083,7 +73132,9 @@ function renderKnowledgeCard(item) {
   // the buttons inside the card keep their own job.
   const open = item.cat === 'esercizi'
     ? ' data-q="' + encodeURIComponent(item.title || '') + '" onclick="if(!event.target.closest(\'button,a\'))openExerciseInfoSheet(-1, decodeURIComponent(this.getAttribute(\'data-q\')||\'\'))" role="button" style="padding:12px;margin-bottom:10px;border:1px solid #222;cursor:pointer;"'
-    : ' style="padding:12px;margin-bottom:10px;border:1px solid #222;"';
+    : (item.cat === 'warmup' && mediaId && warmupLibraryExercise(mediaId)
+      ? ' onclick="if(!event.target.closest(\'button,a\'))openWarmupExerciseInfo(\'' + esc(mediaId) + '\')" role="button" style="padding:12px;margin-bottom:10px;border:1px solid #222;cursor:pointer;"'
+      : ' style="padding:12px;margin-bottom:10px;border:1px solid #222;"');
   return '<div class="card"' + open + '>' +
     (media ? '<div style="display:flex;gap:10px;align-items:flex-start;">' + media + '<div style="flex:1;min-width:0;">' + headHtml + '</div></div>' : headHtml) +
     '<p style="font-size:12px;color:#ccc;line-height:1.45;margin:0 0 8px;">' + esc(how) + '</p>' +
@@ -77573,7 +77624,6 @@ function renderProgramGeneratorInner() {
     '<label style="font-size:9px;color:#888;">Split' + generatorSelect('split', splitItems, g.split, inputStyle) + '</label>' +
     '<label style="font-size:9px;color:#888;">Obiettivo' + generatorSelect('goal', generatorGoalItems(api), g.goal, inputStyle) + '</label>' +
     '<label style="font-size:9px;color:#888;">Esperienza' + generatorSelect('experience', api.EXPERIENCE, g.experience, inputStyle) + '</label>' +
-    '<label style="font-size:9px;color:#888;">Focus' + generatorSelect('audience', api.AUDIENCE, g.audience, inputStyle) + '</label>' +
     '</div></div>';
 
   var place = '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid #333;">' +
@@ -85079,11 +85129,8 @@ function seedAssignSandboxFromClient(clientId) {
 
 function mapIntakeToCatalogFilters(intake) {
   intake = intake || {};
-  const filters = { q: '', days: '', split: '', goal: '', equipment: '', experience: '', duration: '', progression: '', audience: '' };
-  const sex = String(intake.sex || '').toLowerCase();
-  if (/femmin/.test(sex)) filters.audience = 'female';
-  else if (/masch|uomo/.test(sex)) filters.audience = 'male';
-  else if (sex) filters.audience = 'unisex';
+  // Sex no longer picks a program: there is no women's or men's program, there is a muscle focus the coach chooses.
+  const filters = { q: '', days: '', split: '', goal: '', equipment: '', experience: '', duration: '', progression: '', focus: '' };
 
   const goal = String(intake.goal || '');
   if (/ipertrof/i.test(goal)) filters.goal = 'ipertrofia';
@@ -85115,14 +85162,15 @@ function mapIntakeToCatalogFilters(intake) {
   if (/full\s*body/i.test(split)) filters.split = 'fullbody';
   else if (/upper|lower/i.test(split)) filters.split = 'upper_lower';
   else if (/distretto|mono/i.test(split)) filters.split = 'monofrequency';
-  else if (/push|pull|ppl/i.test(split)) filters.split = 'upper_lower';
+  else if (/push|pull|ppl/i.test(split)) filters.split = 'ppl';
+  else if (/antagonist/i.test(split)) filters.split = 'antagonist';
+  else if (/torso|arti/i.test(split)) filters.split = 'torso_limbs';
+  else if (/ibrid/i.test(split)) filters.split = 'hybrid';
 
   const bits = [];
   if (filters.days) bits.push(filters.days + ' giorni');
   if (filters.split) bits.push(filters.split.replace('_', ' '));
   if (filters.goal) bits.push(filters.goal);
-  if (filters.audience === 'female') bits.push('donna');
-  if (filters.audience === 'male') bits.push('uomo');
   if (filters.equipment) bits.push(filters.equipment);
   if (filters.experience) bits.push(filters.experience);
   filters.q = bits.join(' ');
@@ -85137,7 +85185,6 @@ function intakeFilterSummary(filters, intake) {
   if (filters.days) parts.push(filters.days + ' gg');
   if (filters.equipment) parts.push(filters.equipment);
   if (filters.experience) parts.push(filters.experience);
-  if (filters.audience) parts.push(filters.audience);
   if (filters.split) parts.push(filters.split);
   return parts.filter(Boolean).join(' · ') || 'anagrafica cliente';
 }
@@ -85193,7 +85240,7 @@ function applyCatalogFromIntake(useIt) {
     practiceToast('Database filtrato sull\'anagrafica di ' + (pending.name || 'cliente'), 'success');
   } else {
     window.__cpCatalogFromIntake = null;
-    window.__catalogFilters = { q: '', days: '', split: '', goal: '', equipment: '', experience: '', duration: '', progression: '', audience: '' };
+    window.__catalogFilters = { q: '', days: '', split: '', goal: '', equipment: '', experience: '', duration: '', progression: '', focus: '' };
     practiceToast('Database aperto senza filtri anagrafica', 'info');
   }
   navigate('programs');

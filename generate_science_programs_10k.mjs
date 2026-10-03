@@ -64,7 +64,7 @@ function main() {
         goals: catalog.GOALS,
         equipment: catalog.EQUIPMENT,
         experience: catalog.EXPERIENCE,
-        audience: catalog.AUDIENCE.map((a) => a.id),
+        focus: catalog.FOCUS_IDS,
         durations: catalog.DURATIONS,
         progressions: catalog.PROGRESSIONS,
         variants: catalog.VARIANTS
@@ -97,10 +97,17 @@ function main() {
       for (const goal of catalog.GOALS) {
         for (const equipment of catalog.EQUIPMENT) {
           for (const experience of catalog.EXPERIENCE) {
-            for (const audience of catalog.AUDIENCE) {
-              for (const variant of catalog.VARIANTS) {
+            // Not every split exists over every number of days; every muscle
+            // focus is built, each with a different exercise selection.
+            if (catalog.splitDays(split).indexOf(days) < 0) continue;
+            for (let fi = 0; fi < catalog.FOCUS_IDS.length; fi++) {
+              // Every selection for the balanced program, one for each muscle focus, and a fifth of the
+              // focuses per goal: the same rules hold for all of them, and the walk stays a minute long.
+              if (fi > 0 && (fi + catalog.GOALS.indexOf(goal)) % 5 !== 0) continue;
+              for (const variant of (fi === 0 ? catalog.VARIANTS : [catalog.VARIANTS[fi % catalog.VARIANTS.length]])) {
+
                 const body = catalog.bodyFor({
-                  days, split, goal, equipment, experience, audience: audience.id,
+                  days, split, goal, equipment, experience, focus: catalog.FOCUS_IDS[fi],
                   duration: 8, progression: 'linear', variant
                 });
                 templates += 1;
@@ -130,7 +137,7 @@ function main() {
 
   const sample = catalog.bodyFor({
     days: 4, split: 'upper_lower', goal: 'ipertrofia', equipment: 'palestra',
-    experience: 'intermedio', audience: 'unisex', duration: 12, progression: 'block', variant: 'c'
+    experience: 'intermedio', focus: 'bil', duration: 12, progression: 'block', variant: 'c'
   });
   const expanded = expandScienceProgramWeeks(sample);
   if (expanded.length !== 12) throw new Error('expand length ' + expanded.length);

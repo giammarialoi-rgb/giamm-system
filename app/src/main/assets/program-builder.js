@@ -35,11 +35,44 @@
     return h >>> 0;
   }
 
-  var SPLIT_LABEL = { fullbody: 'Full body', monofrequency: 'Monofrequenza', upper_lower: 'Upper/Lower' };
+  var SPLIT_LABEL = {
+    fullbody: 'Full body', monofrequency: 'Monofrequenza', upper_lower: 'Upper/Lower',
+    ppl: 'Push/Pull/Legs', antagonist: 'Antagonisti', torso_limbs: 'Torso/Arti', hybrid: 'Ibrido'
+  };
+  // The days each split can be written over without inventing a copy of one
+  // of its own sessions (a push/pull/legs over two days is not one).
+  var SPLIT_DAYS = {
+    fullbody: [2, 3, 4, 5, 6], monofrequency: [2, 3, 4, 5, 6], upper_lower: [2, 3, 4, 5, 6],
+    ppl: [3, 4, 5, 6], antagonist: [3, 4, 5, 6], torso_limbs: [3, 4, 5, 6], hybrid: [3, 4, 5, 6]
+  };
 
   function sessionNames(split, days) {
     if (split === 'fullbody') {
       return Array.from({ length: days }, function (_, i) { return 'Full Body ' + String.fromCharCode(65 + i); });
+    }
+    if (split === 'ppl') {
+      if (days <= 3) return ['Push', 'Pull', 'Legs'];
+      if (days === 4) return ['Push', 'Pull', 'Legs', 'Upper'];
+      if (days === 5) return ['Push', 'Pull', 'Legs', 'Upper', 'Lower'];
+      return ['Push A', 'Pull A', 'Legs A', 'Push B', 'Pull B', 'Legs B'];
+    }
+    if (split === 'antagonist') {
+      if (days <= 3) return ['Petto + Dorso', 'Gambe', 'Spalle + Braccia'];
+      if (days === 4) return ['Petto + Dorso A', 'Gambe', 'Spalle + Braccia', 'Petto + Dorso B'];
+      if (days === 5) return ['Petto + Dorso A', 'Gambe A', 'Spalle + Braccia', 'Petto + Dorso B', 'Gambe B'];
+      return ['Petto + Dorso A', 'Gambe A', 'Spalle + Braccia A', 'Petto + Dorso B', 'Gambe B', 'Spalle + Braccia B'];
+    }
+    if (split === 'torso_limbs') {
+      if (days <= 3) return ['Torso A', 'Gambe + Braccia', 'Torso B'];
+      if (days === 4) return ['Torso A', 'Gambe + Braccia A', 'Torso B', 'Gambe + Braccia B'];
+      if (days === 5) return ['Torso A', 'Gambe + Braccia A', 'Torso B', 'Gambe + Braccia B', 'Torso C'];
+      return ['Torso A', 'Gambe + Braccia A', 'Torso B', 'Gambe + Braccia B', 'Torso C', 'Gambe + Braccia C'];
+    }
+    if (split === 'hybrid') {
+      if (days <= 3) return ['Full Body', 'Upper', 'Lower'];
+      if (days === 4) return ['Upper', 'Lower', 'Full Body A', 'Full Body B'];
+      if (days === 5) return ['Upper A', 'Lower A', 'Full Body', 'Upper B', 'Lower B'];
+      return ['Upper A', 'Lower A', 'Full Body A', 'Upper B', 'Lower B', 'Full Body B'];
     }
     if (split === 'upper_lower') {
       if (days === 2) return ['Upper', 'Lower'];
@@ -108,7 +141,7 @@
     var male = audience === 'male';
     var out = [];
 
-    if (split === 'fullbody') {
+    if (split === 'fullbody' || /full body/.test(n)) {
       out.push(slot('squat', 'main'));
       out.push(slot('pushH', 'main'));
       out.push(slot('pullH', 'main'));
@@ -184,6 +217,13 @@
       return out;
     }
 
+    // Chest and back on the same day: the two muscles that work against each other.
+    if (/petto \+ dorso/.test(n)) {
+      return [
+        slot('pushH', 'main'), slot('pullH', 'main'), slot('pushH', 'secondary'),
+        slot('pullV', 'main'), slot('chestIso', 'iso'), slot(['pullIso', 'deltRear'], 'iso')
+      ];
+    }
     if (/petto/.test(n)) {
       return [
         slot('pushH', 'main'), slot('pushH', 'main', { second: true }), slot(['pushH', 'chestIso'], 'secondary'),
@@ -256,17 +296,20 @@
     SPALLE: ['pushV', 'deltLat', 'deltRear', 'deltFront', 'rotator'],
     BRACCIA: ['biceps', 'triceps', 'forearm'],
     GAMBE: ['squat', 'hinge', 'glute', 'lunge', 'quadIso', 'hamIso', 'calf', 'adductor'],
+    GLUTEI: ['glute', 'hinge', 'lunge'],
     ADDOME: ['core', 'carry']
   };
 
   var FOCUS_EXTRA_SLOT = {
-    PETTO: ['chestIso'],
-    DORSO: ['pullIso', 'traps'],
-    SPALLE: ['deltLat', 'deltRear'],
+    PETTO: ['chestIso', 'pushH'],
+    DORSO: ['pullIso', 'pullH', 'traps'],
+    SPALLE: ['deltLat', 'deltRear', 'pushV'],
     BRACCIA: ['biceps', 'triceps'],
-    GAMBE: ['quadIso', 'hamIso', 'glute'],
+    GAMBE: ['quadIso', 'hamIso', 'lunge', 'calf'],
+    GLUTEI: ['glute', 'hinge', 'lunge'],
     ADDOME: ['core']
   };
+  var FOCUS_IDS = ['PETTO', 'DORSO', 'SPALLE', 'BRACCIA', 'GAMBE', 'GLUTEI', 'ADDOME'];
 
   function focusList(focus) {
     if (!Array.isArray(focus)) return [];
@@ -276,6 +319,17 @@
       if (FOCUS_TRAINED_BY[id] && out.indexOf(id) < 0) out.push(id);
     });
     return out;
+  }
+
+  // Which half of the body a muscle belongs to. A session takes a focus when it already trains
+  // some muscle of the same half: a full body or an upper day can host more arms, a leg day cannot.
+  var HALF = { PETTO: 'upper', DORSO: 'upper', SPALLE: 'upper', BRACCIA: 'upper', GAMBE: 'lower', GLUTEI: 'lower' };
+  function sessionTrainsHalf(slots, group) {
+    var half = HALF[group];
+    if (!half) return true;
+    return Object.keys(HALF).some(function (g) {
+      return HALF[g] === half && slots.some(function (s) { return slotTrains(s, g); });
+    });
   }
 
   function slotTrains(s, group) {
@@ -305,12 +359,17 @@
     // the picked muscles gets that one slot rotates from session to session,
     // so three priorities over three days get one each instead of the first
     // one taking all of them.
-    var grown = false;
+    //
+    // A single priority is a specialisation and gets two: one muscle chosen
+    // alone should visibly change the week, two or three share the one slot.
+    var maxGrow = focus.length === 1 ? 2 : 1;
+    var grown = 0;
     var order = focus.slice();
     if (order.length > 1) {
       var turn = hash(seed) % order.length;
       order = order.slice(turn).concat(order.slice(0, turn));
     }
+    if (focus.length === 1) order = order.concat(order);
 
     order.forEach(function (group, fi) {
       // Only where the session already trains it - except the core, which is
@@ -318,18 +377,23 @@
       // Without this exception "Addominali" would do nothing at all on an
       // Upper/Lower or a PPL split, whose recipes have no core slot: the
       // person ticks a chip and the program comes out identical.
-      if (group !== 'ADDOME' && !out.some(function (s) { return slotTrains(s, group); })) return;
-      var patterns = FOCUS_EXTRA_SLOT[group] || [];
+      if (group !== 'ADDOME' && !sessionTrainsHalf(out, group)) return;
+      var patterns = (FOCUS_EXTRA_SLOT[group] || []).filter(function (p) {
+        // Only a movement this person's equipment has an exercise for, or the slot would be filled with the nearest other muscle's.
+        return TAX.poolFor(params.equipment, params.experience, p, null).length > 0;
+      });
       if (!patterns.length) return;
       var at = hash(seed + '#focus#' + group + '#' + fi) % patterns.length;
-      var extra = slot(patterns[at], 'iso', { focus: group });
+      // A compound pattern is asked for as a secondary lift, a single-joint one as isolation work.
+      var extraRole = /^(hinge|lunge|pushH|pullH|pushV)$/.test(patterns[at]) ? 'secondary' : 'iso';
+      var extra = slot(patterns[at], extraRole, { focus: group });
 
       // What can give up a slot: single-joint work for a muscle nobody asked
       // for. Taken from the end, where the least important work sits.
       for (var i = out.length - 1; i >= 0; i--) {
         var s = out[i];
         if (s.role !== 'iso') continue;
-        if (focus.some(function (g) { return slotTrains(s, g); })) continue;
+        if (!s.prehab && focus.some(function (g) { return slotTrains(s, g); })) continue;
         out[i] = extra;
         return;
       }
@@ -338,9 +402,9 @@
       // day is compounds from start to finish. Here the slot is added rather
       // than swapped, because the alternative is a chip that does nothing.
       // Never onto a session that is already over its own length.
-      if (!grown && out.length <= maxSlots) {
+      if (grown < maxGrow && out.length < Math.min(maxSlots + maxGrow, group === 'ADDOME' ? 8 : 7)) {
         out.push(extra);
-        grown = true;
+        grown += 1;
       }
     });
     return out;
@@ -371,7 +435,7 @@
   function addForProfile(slots, sessionName, params, maxSlots) {
     var n = String(sessionName).toLowerCase();
     var isLower = /lower|gambe|legs|quad|posteriore|catena/.test(n);
-    var isFullBody = params.split === 'fullbody';
+    var isFullBody = params.split === 'fullbody' || /full body/.test(n);
     var out = slots.slice();
     // One session of the week, not every one, so the week keeps its shape.
     var pick = hash([params.days, params.split, params.goal, params.equipment, params.experience, params.audience, params.variant].join('|'));
@@ -383,7 +447,7 @@
     if (params.goal === 'cut') {
       out.push(slot('conditioning', 'secondary'));
     } else if (params.experience === 'avanzato' && (pick % 3 === 0 || /spalle|braccia|upper|full body/.test(n))) {
-      out.push(slot(prehabFor(sessionName, isFullBody), 'iso'));
+      out.push(slot(prehabFor(sessionName, isFullBody), 'iso', { prehab: true }));
     }
     if (out.length > maxSlots + 1) out.length = maxSlots + 1;
     return out;
@@ -710,6 +774,8 @@
     buildTemplateSessions: buildTemplateSessions,
     schemeFor: schemeFor,
     SPLIT_LABEL: SPLIT_LABEL,
+    SPLIT_DAYS: SPLIT_DAYS,
+    FOCUS_IDS: FOCUS_IDS,
     hash: hash
   };
 })(typeof self !== 'undefined' ? self : this);

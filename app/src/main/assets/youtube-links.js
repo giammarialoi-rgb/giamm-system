@@ -2681,5 +2681,15 @@ self.EXERCISE_YOUTUBE_LINKS = [
   "type": "exercise",
   "youtube_query": "Band Pull-Apart exercise how to",
   "name": "Pull-apart elastico"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Superman exercise how to",
+  "name": "Superman"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Bent knee inverted row exercise how to",
+  "name": "Inverted row facilitato"
  }
 ];
