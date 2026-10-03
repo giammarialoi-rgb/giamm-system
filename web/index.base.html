@@ -2388,9 +2388,9 @@ body.focus-mode [data-rewards-only] {
     </label>
     <div id="replace-manual-fields" style="display:none;margin-bottom:12px;padding:10px;border:1px solid #333;border-radius:8px;background:#111;">
       <label style="font-size:10px;color:var(--gold);font-weight:800;">NOME ESERCIZIO</label>
-      <input id="replace-manual-name" type="text" placeholder="Es. Curl manubri inclinato" style="width:100%;margin:4px 0 10px;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;">
+      <input id="replace-manual-name" type="text" placeholder="Es. Curl manubri inclinato" oninput="refreshReplaceReps()" style="width:100%;margin:4px 0 10px;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;">
       <label style="font-size:10px;color:var(--gold);font-weight:800;">GRUPPO MUSCOLARE</label>
-      <select id="replace-manual-muscle" style="width:100%;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;margin-bottom:8px;">
+      <select id="replace-manual-muscle" onchange="refreshReplaceReps()" style="width:100%;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;margin-bottom:8px;">
         <option value="PETTO">Petto</option>
         <option value="GAMBE">Gambe</option>
         <option value="ADDOME">Addome</option>
@@ -2416,6 +2416,12 @@ body.focus-mode [data-rewards-only] {
         #replace-options .replace-group-body{padding:8px;}
       </style>
       <div id="replace-options" style="margin-top:12px;"></div>
+    </div>
+    <div id="replace-reps-block" style="display:none;margin-top:16px;padding:10px;border:1px solid #333;border-radius:8px;background:#111;">
+      <label for="replace-reps" style="font-size:10px;color:var(--gold);font-weight:800;">RIPETIZIONI</label>
+      <input id="replace-reps" type="text" autocomplete="off" oninput="window.__replaceRepsTouched = true" style="width:100%;margin:4px 0 8px;padding:8px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:6px;">
+      <div id="replace-reps-help"></div>
+      <div style="font-size:10px;color:#777;margin-top:-6px;">Lascia vuoto per tenere quelle di prima.</div>
     </div>
     <div style="font-size:11px;color:#ccc;margin-top:18px;">Per quanto vale la sostituzione?</div>
     <div style="display:grid;gap:8px;margin-top:8px;">
@@ -30533,6 +30539,57 @@ function toggleReplaceManual(checked){
   if (manual) manual.style.display = checked ? 'block' : 'none';
   if (library) library.style.display = checked ? 'none' : 'block';
   if (replacementDraft) replacementDraft.manual = !!checked;
+  refreshReplaceReps();
+}
+// The repetitions for the exercise being swapped in: suggested for what it is,
+// written by the person if they like. Only for exercises counted in reps.
+function replaceChosen() {
+  if (!replacementDraft) return { name: '', muscle: '' };
+  if (replacementDraft.manual) {
+    return { name: (($('replace-manual-name') && $('replace-manual-name').value) || '').trim(), muscle: ($('replace-manual-muscle') && $('replace-manual-muscle').value) || '' };
+  }
+  return { name: replacementDraft.selected || '', muscle: '' };
+}
+function refreshReplaceReps() {
+  const block = $('replace-reps-block');
+  if (!block) return;
+  if (!replacementDraft) { block.style.display = 'none'; return; }
+  const chosen = replaceChosen();
+  if (!chosen.name) { block.style.display = 'none'; return; }
+  const idx = replacementDraft.idx;
+  const row = currentSessionExercises()[idx] || {};
+  let unit = 'reps';
+  try { if (typeof exerciseLogUnit === 'function') unit = exerciseLogUnit(row, chosen.name) || 'reps'; } catch (_) {}
+  if (unit !== 'reps') { block.style.display = 'none'; return; }
+  const sugg = suggestedReps(chosen.name, chosen.muscle);
+  block.style.display = 'block';
+  const input = $('replace-reps');
+  if (!window.__replaceRepsTouched || replacementDraft.repsFor !== chosen.name) {
+    input.value = sugg.reps;
+    window.__replaceRepsTouched = false;
+  }
+  replacementDraft.repsFor = chosen.name;
+  $('replace-reps-help').innerHTML = repsQuickPicksHtml('replace-reps', sugg.reps, sugg.why);
+}
+window.refreshReplaceReps = refreshReplaceReps;
+// Writes the chosen repetitions on the slot being swapped: this week, or
+// from this week to the end of the program, as the swap itself is.
+function applyReplacementReps(idx, scope) {
+  const input = $('replace-reps');
+  const block = $('replace-reps-block');
+  const reps = (block && block.style.display !== 'none' && input) ? String(input.value || '').trim() : '';
+  if (!reps || !DATA || !Array.isArray(DATA.weeks)) return;
+  const lastWeek = scope === 'once' ? currentWeek : DATA.weeks.length;
+  for (let w = currentWeek; w <= lastWeek; w++) {
+    const sess = (DATA.weeks[w - 1] && (DATA.weeks[w - 1].sessions || DATA.weeks[w - 1].days) || [])[currentDay];
+    const row = sess && (sess.exercises || sess.rows) && (sess.exercises || sess.rows)[idx];
+    if (!row) continue;
+    row.repsTarget = reps;
+    row.reps_target = reps;
+    (row.sets || []).forEach(function (set) { if (set && typeof set === 'object' && !set.warmup) { set.reps = reps; if (set.target_reps != null) set.target_reps = reps; } });
+    if (row.prescription) { row.prescription.reps = reps; }
+  }
+  persistActiveProgramStructure();
 }
 let replacementDraft = null;
 function openReplacementModal(idx, encodedCurrent){
@@ -30546,8 +30603,10 @@ function openReplacementModal(idx, encodedCurrent){
     if (DATA && (!DATA.exerciseDb || !Object.keys(DATA.exerciseDb).length)) DATA.exerciseDb = buildExerciseDbFromDictionary();
     const current = decodeURIComponent(encodedCurrent || '');
     replacementDraft = { idx, current, selected: '', manual: false };
+    window.__replaceRepsTouched = false;
+    if ($('replace-reps-block')) $('replace-reps-block').style.display = 'none';
     const curEl = $('replace-current');
-    if (curEl) curEl.innerHTML = `Esercizio attuale: <b style="color:var(--gold);">${esc(current)}</b><br><span style="font-size:10px;color:#777;">Serie e schema restano; i carichi seguono lo storico del nuovo esercizio, non dello slot precedente.</span>`;
+    if (curEl) curEl.innerHTML = `Esercizio attuale: <b style="color:var(--gold);">${esc(current)}</b><br><span style="font-size:10px;color:#777;">Le serie restano; le ripetizioni le proponiamo per il nuovo esercizio e le cambi tu. I carichi seguono lo storico del nuovo esercizio, non dello slot precedente.</span>`;
     const manualToggle = $('replace-manual-toggle');
     if (manualToggle) manualToggle.checked = false;
     toggleReplaceManual(false);
@@ -30603,6 +30662,7 @@ function selectReplacement(nameOrEncoded){
   let name = String(nameOrEncoded || '');
   try { if (/%[0-9A-Fa-f]{2}/.test(name)) name = decodeURIComponent(name); } catch (_) {}
   replacementDraft.selected = name;
+  refreshReplaceReps();
   renderReplacementOptions(($('replace-search') && $('replace-search').value) || '');
 }
 function confirmReplacement(scope){
@@ -30613,6 +30673,7 @@ function confirmReplacement(scope){
     const name = ($('replace-manual-name') && $('replace-manual-name').value || '').trim();
     const muscle = normalizeMacroMuscleGroup(($('replace-manual-muscle') && $('replace-manual-muscle').value) || 'PETTO');
     if (!name) { alert('Inserisci il nome dell\'esercizio.'); return; }
+    applyReplacementReps(replacementDraft.idx, scope);
     substituteEx(replacementDraft.idx, name, muscle, scope);
     if ($('replace-save-library') && $('replace-save-library').checked) {
       addExerciseToLibrary(name, muscle, 'replace');
@@ -30624,6 +30685,7 @@ function confirmReplacement(scope){
     return;
   }
   if(!replacementDraft.selected){ alert('Seleziona prima un esercizio alternativo.'); return; }
+  applyReplacementReps(replacementDraft.idx, scope);
   substituteEx(replacementDraft.idx, replacementDraft.selected, undefined, scope);
   replacementDraft = null;
   const m = $('replace-modal');
@@ -38889,6 +38951,12 @@ function addExerciseFromDb(encodedName, encodedMuscle) {
     const w = weeks[Math.max(0, (currentWeek || 1) - 1)] || weeks[0];
     const sess = w && (w.sessions || w.days) && (w.sessions || w.days)[currentDay || 0];
     if (sess) {
+      // Serie, ripetizioni consigliate (da cambiare) e dove metterlo: la stessa scheda di "Aggiungi alla scheda".
+      if (typeof openAddToProgramConfig === 'function') {
+        try { persist(); } catch (_) {}
+        openAddToProgramConfig(name, muscle, { scope: 'week' });
+        return;
+      }
       const op = {
         action_type: 'ADD_EXERCISE',
         week: currentWeek || 1,
@@ -41047,7 +41115,7 @@ function addProgramDraftExercise(dayIdx) {
         ? { name: name, muscle: muscle || 'CARDIO', unit: 'cardio', sets: 1, reps: String((entry && entry.minutes) || 20), rest: '2 min' }
         : (unit === 'time'
           ? { name: name, muscle: muscle, unit: 'time', sets: 3, reps: '30', rest: '60s' }
-          : { name: name, muscle: muscle, unit: 'reps', sets: 3, reps: '8-10', rest: '90s' }));
+          : { name: name, muscle: muscle, unit: 'reps', sets: 3, reps: suggestedReps(name, muscle).reps, rest: '90s' }));
       try { persist(); } catch (_) {}
       renderProgramBuilder();
     }
@@ -42478,6 +42546,13 @@ function replaceReviewExercise(si, ei) {
     onPick: function (name) {
       var everywhere = confirm('Mettere "' + name + '" in tutte le settimane?\n\nOK = tutte\nAnnulla = solo la settimana ' + week);
       updateReviewExercise(si, ei, 'name', name, everywhere);
+      // The new exercise starts with the repetitions that suit it; the reps box on the row stays editable.
+      var sg = suggestedReps(name, '');
+      reviewEachOccurrence(si, ei, everywhere, function (row) {
+        if (row.unit && row.unit !== 'reps') return;
+        updateReviewExercise(si, ei, 'reps', sg.reps, everywhere);
+      });
+      renderGeneratedReview();
     }
   });
 }
@@ -42660,7 +42735,45 @@ function closeAddToProgramConfig() {
 }
 window.closeAddToProgramConfig = closeAddToProgramConfig;
 
-function openAddToProgramConfig(name, muscle) {
+// The repetitions an exercise starts with when it is added or swapped in: a
+// number or a range that fits what the exercise is, never fixed for all. The
+// person always edits it.
+function suggestedReps(name, muscle) {
+  var api = window.NURVAN_EXERCISE_TAXONOMY;
+  var s = (api && api.suggestPrescription) ? api.suggestPrescription(name, muscle) : null;
+  return s && s.reps ? s : { reps: '8-10', why: '' };
+}
+window.suggestedReps = suggestedReps;
+
+var REPS_QUICK_PICKS = ['5', '6-8', '8-10', '10-12', '12-15', '15-20'];
+function repsQuickPicksHtml(inputId, current, why) {
+  var chips = REPS_QUICK_PICKS.map(function (r) {
+    var on = r === current;
+    return '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:11px;padding:5px 10px;' +
+      (on ? 'border-color:var(--gold);color:var(--gold);' : '') + '" onclick="setRepsField(\'' + inputId + '\',\'' + r + '\')" data-reps-chip>' + r + '</button>';
+  }).join('');
+  return '<div style="font-size:11px;color:#888;margin:-6px 0 6px;"><span>Consigliato:</span> <b style="color:var(--gold);">' + esc(current) + '</b>' +
+    (why ? ' · <span>' + esc(why) + '</span>' : '') + '</div>' +
+    '<div style="font-size:11px;color:#888;margin:0 0 6px;">Cambia come vuoi: un numero (10) o un intervallo (8-12).</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">' + chips + '</div>';
+}
+function setRepsField(inputId, value) {
+  var el = document.getElementById(inputId);
+  if (!el) return;
+  el.value = value;
+  try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+  var box = el.closest ? el.closest('.nurvan-sheet, .modal-content') : null;
+  (box || document).querySelectorAll('[data-reps-chip]').forEach(function (b) {
+    var on = b.textContent === String(value);
+    b.style.borderColor = on ? 'var(--gold)' : '';
+    b.style.color = on ? 'var(--gold)' : '';
+  });
+}
+window.setRepsField = setRepsField;
+
+function openAddToProgramConfig(name, muscle, opts) {
+  opts = opts || {};
+  var sugg = suggestedReps(name, muscle);
   closeAddToProgramConfig();
   var weeksTotal = (DATA.weeks || []).length;
   var dayName = '';
@@ -42687,16 +42800,17 @@ function openAddToProgramConfig(name, muscle) {
     '<input type="hidden" id="atp-name" value="' + esc(name) + '"><input type="hidden" id="atp-muscle" value="' + esc(muscle || '') + '">' +
     '<div style="display:grid;grid-template-columns:1fr 1.2fr 1.2fr;gap:8px;margin-bottom:14px;">' +
     '<label style="font-size:9px;color:#888;">Serie<input id="atp-sets" type="number" min="1" max="10" value="3" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
-    '<label style="font-size:9px;color:#888;">Reps<input id="atp-reps" type="text" value="8-10" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
+    '<label style="font-size:9px;color:#888;">Reps<input id="atp-reps" type="text" inputmode="text" autocomplete="off" value="' + esc(sugg.reps) + '" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
     '<label style="font-size:9px;color:#888;">Recupero<input id="atp-rest" type="text" value="90s" style="width:100%;margin-top:2px;' + inputStyle + '"></label>' +
     '</div>' +
+    repsQuickPicksHtml('atp-reps', sugg.reps, sugg.why) +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;margin-bottom:6px;">DOVE LO METTO</div>' +
     '<label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid #333;border-radius:8px;margin-bottom:8px;cursor:pointer;">' +
-    '<input type="radio" name="atp-scope" value="all" checked style="margin-top:2px;">' +
+    '<input type="radio" name="atp-scope" value="all"' + (opts.scope === 'week' ? '' : ' checked') + ' style="margin-top:2px;">' +
     '<span><b style="color:#fff;font-size:12px;">In tutte le ' + weeksTotal + ' settimane</b>' +
     '<br><span style="font-size:11px;color:#888;">Entra nello stesso giorno di ogni settimana: fa parte della scheda.</span></span></label>' +
     '<label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid #333;border-radius:8px;cursor:pointer;">' +
-    '<input type="radio" name="atp-scope" value="week" style="margin-top:2px;">' +
+    '<input type="radio" name="atp-scope" value="week"' + (opts.scope === 'week' ? ' checked' : '') + ' style="margin-top:2px;">' +
     '<span><b style="color:#fff;font-size:12px;">Solo nella settimana ' + currentWeek + '</b>' +
     '<br><span style="font-size:11px;color:#888;">Resta nella scheda, ma solo in questa settimana.</span></span></label>' +
     '<p style="font-size:11px;color:#777;line-height:1.45;margin:12px 0 0;">Entra in fondo al giorno. Con le frecce ↑↓ sulla scheda lo sposti dove vuoi: i carichi seguono sempre il loro esercizio.</p>' +

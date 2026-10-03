@@ -412,7 +412,64 @@
     return v === '5-10' || v === '10+';
   }
 
+  /*
+   * A number or a range of repetitions to start from when an exercise is added
+   * or swapped in. It is only a suggestion: the person always writes their own.
+   * Known exercises are placed by their row above (movement and role), the rest
+   * by what the name and the muscle say; nothing is ever left without one.
+   *
+   * Returns { reps: '6-8', why: 'what the suggestion rests on' }.
+   */
+  var BY_NAME = {};
+  EXERCISES.forEach(function (e) { BY_NAME[e.name.toLowerCase()] = e; });
+
+  function lookupExercise(name) {
+    var k = String(name || '').trim().toLowerCase();
+    if (!k) return null;
+    if (BY_NAME[k]) return BY_NAME[k];
+    for (var alias in SAME_AS) {
+      if (alias.toLowerCase() === k && BY_NAME[SAME_AS[alias].toLowerCase()]) return BY_NAME[SAME_AS[alias].toLowerCase()];
+    }
+    return null;
+  }
+
+  function suggestFromRow(e) {
+    var p = e.pattern;
+    if (e.role === 'main') {
+      if ((p === 'squat' || p === 'hinge') && (e.equip === 'machine' || e.equip === 'smith' || e.equip === 'sled')) return { reps: '8-12', why: 'multiarticolare, carico medio' };
+      if (p === 'squat' || p === 'hinge') return { reps: '5-8', why: 'multiarticolare pesante' };
+      if (p === 'glute' || p === 'lunge') return { reps: '8-12', why: 'multiarticolare, carico medio' };
+      if (p === 'power') return { reps: '3-5', why: 'esplosivo: poche ripetizioni, veloci' };
+      return { reps: '6-10', why: 'multiarticolare' };
+    }
+    if (e.role === 'secondary') return { reps: '8-12', why: 'multiarticolare di supporto' };
+    if (p === 'calf') return { reps: '12-15', why: 'polpacci: ripetizioni più alte' };
+    if (p === 'core') return { reps: '12-20', why: 'addome: ripetizioni più alte' };
+    if (p === 'forearm' || p === 'neck' || p === 'tibialis' || p === 'adductor') return { reps: '15-20', why: 'muscolo piccolo: ripetizioni alte' };
+    if (p === 'deltLat' || p === 'deltRear' || p === 'chestIso' || p === 'pullIso' || p === 'traps') return { reps: '12-15', why: 'isolamento' };
+    if (p === 'power') return { reps: '3-5', why: 'esplosivo: poche ripetizioni, veloci' };
+    return { reps: '10-15', why: 'isolamento' };
+  }
+
+  function suggestPrescription(name, muscle) {
+    var known = lookupExercise(name);
+    if (known) return suggestFromRow(known);
+    var n = String(name || '').toLowerCase();
+    var m = String(muscle || '').toUpperCase();
+    if (/plank|hollow|dead ?bug|crunch|addominal|sit-?up|russian|leg raise|sollevamento gambe|ab wheel|mountain/.test(n)) return { reps: '12-20', why: 'addome: ripetizioni più alte' };
+    if (/polpacc|calf|calves/.test(n)) return { reps: '12-15', why: 'polpacci: ripetizioni più alte' };
+    if (/\bsquat|stacco|deadlift/.test(n)) return { reps: '5-8', why: 'multiarticolare pesante' };
+    if (/hip thrust|ponte glutei|affond|lunge|step-?up|leg press|pressa/.test(n)) return { reps: '8-12', why: 'multiarticolare, carico medio' };
+    if (/panca|bench|military|overhead|shoulder press|lento|rematore|\brow\b|trazion|pull-?up|chin-?up|\bdip|lat machine|pulldown|push-?up|piegament/.test(n)) return { reps: '6-10', why: 'multiarticolare' };
+    if (/curl|extension|estension|alzate|croci|\bfly\b|kickback|pushdown|french|face pull|abduz|adduz/.test(n)) return { reps: '10-15', why: 'isolamento' };
+    if (m === 'ADDOME' || m === 'CORE') return { reps: '12-20', why: 'addome: ripetizioni più alte' };
+    if (m === 'BRACCIA' || m === 'SPALLE') return { reps: '10-15', why: 'muscolo piccolo' };
+    if (m === 'GAMBE' || m === 'GLUTEI') return { reps: '8-12', why: 'gruppo grande' };
+    return { reps: '8-12', why: 'valore medio' };
+  }
+
   root.NURVAN_EXERCISE_TAXONOMY = {
+    suggestPrescription: suggestPrescription,
     SKILL_EXERCISES: SKILL_EXERCISES,
     skillAllows: skillAllows,
     EXERCISES: EXERCISES,
