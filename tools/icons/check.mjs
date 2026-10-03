@@ -6,7 +6,31 @@ import { ICONS, GRIDS } from './manifest.mjs';
 
 const dir = process.argv[2] || 'web/icons';
 const ALLOWED = new Set(['path', 'circle', 'ellipse', 'rect', 'line', 'polyline', 'polygon']);
-const FORBIDDEN_ATTR = /\b(class|id|style|transform|clip-path|mask|filter|opacity|fill-opacity|stroke-opacity|width|height)\s*=/;
+// width/height are fine on a <rect>; they are forbidden only on the root (checked below).
+const FORBIDDEN_ATTR = /\s(class|id|style|transform|clip-path|mask|filter|opacity|fill-opacity|stroke-opacity)\s*=/;
+
+// Absolute end points of a path (relative commands resolved), to check they sit inside the grid.
+function pathPoints(d) {
+  const pts = []; let x = 0, y = 0, sx = 0, sy = 0;
+  const tokens = d.match(/[a-zA-Z]|-?(?:\d+\.?\d*|\.\d+)(?:e-?\d+)?/g) || [];
+  let i = 0; let cmd = '';
+  const num = () => Number(tokens[i++]);
+  const counts = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7, Z: 0 };
+  while (i < tokens.length) {
+    if (/[a-zA-Z]/.test(tokens[i])) cmd = tokens[i++];
+    const up = cmd.toUpperCase(); const rel = cmd !== up;
+    if (up === 'Z') { x = sx; y = sy; continue; }
+    const n = counts[up]; if (n === undefined) { i++; continue; }
+    const a = []; for (let k = 0; k < n; k++) a.push(num());
+    if (a.some((v) => Number.isNaN(v))) break;
+    if (up === 'H') x = rel ? x + a[0] : a[0];
+    else if (up === 'V') y = rel ? y + a[0] : a[0];
+    else { const ex = a[n - 2], ey = a[n - 1]; x = rel ? x + ex : ex; y = rel ? y + ey : ey; }
+    if (up === 'M') { sx = x; sy = y; if (!rel) cmd = 'L'; else cmd = 'l'; }
+    pts.push([x, y]);
+  }
+  return pts;
+}
 const problems = []; const ok = [];
 const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.svg')) : [];
 const byId = new Map(ICONS.map((i) => [i.id, i]));
@@ -49,7 +73,10 @@ for (const f of files) {
   if (Buffer.byteLength(src) > limit) bad.push('file di ' + Buffer.byteLength(src) + ' byte, massimo ' + limit);
   // every number of a path must sit inside the grid
   const size = Number(grid.viewBox.split(' ')[2]);
-  for (const m of body.matchAll(/\b(?:d|points|cx|cy|x|y|x1|x2|y1|y2)="([^"]*)"/g)) {
+  for (const m of body.matchAll(/\sd="([^"]*)"/g)) {
+    for (const [px, py] of pathPoints(m[1])) if (px < -0.01 || py < -0.01 || px > size + 0.01 || py > size + 0.01) { bad.push('punto fuori dalla griglia (' + Math.round(px * 100) / 100 + ', ' + Math.round(py * 100) / 100 + ')'); break; }
+  }
+  for (const m of body.matchAll(/\s(?:points|cx|cy|x|y|x1|x2|y1|y2)="([^"]*)"/g)) {
     for (const n of (m[1].match(/-?\d*\.?\d+/g) || []).map(Number)) if (n < -0.01 || n > size + 0.01) { bad.push('coordinata fuori dalla griglia (' + n + ')'); break; }
   }
   if ((src.match(/\d+\.\d{3,}/g) || []).length) bad.push('troppi decimali (massimo 2)');

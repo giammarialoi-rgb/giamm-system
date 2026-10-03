@@ -133,12 +133,30 @@
       '</div>';
   }
 
+  // The icon of each coach tab (set in web/icons): the personal app's icons stay in data-orig-icon to come back.
+  const NAV_ICONS = { coachToday: 'coach-today', coachHub: 'coach-clients', coachInbox: 'coach-inbox', coachPrograms: 'coach-programs', coachCalendar: 'module-calendar' };
+  function setNavIcon(element, name) {
+    const current = element.querySelector('svg');
+    if (!current || !window.NurvanIcons || !window.NurvanIcons.has(name)) return;
+    if (!element.hasAttribute('data-orig-icon')) element.setAttribute('data-orig-icon', current.outerHTML);
+    current.outerHTML = window.NurvanIcons.svg(name);
+  }
+  function restoreNavIcons() {
+    ['nav-home', 'nav-training', 'nav-stats', 'nav-ai', 'nav-db'].forEach(function (id) {
+      const element = document.getElementById(id);
+      const orig = element && element.getAttribute('data-orig-icon');
+      const current = element && element.querySelector('svg');
+      if (orig && current) { current.outerHTML = orig; element.removeAttribute('data-orig-icon'); }
+    });
+  }
+
   function mapBottomNav() {
     const ids = ['nav-home', 'nav-training', 'nav-stats', 'nav-ai', 'nav-db'];
     primaryLinks().forEach(function (row, index) {
       const element = document.getElementById(ids[index]);
       if (!element) return;
       element.style.display = '';
+      setNavIcon(element, NAV_ICONS[row.view]);
       const label = element.querySelector('span');
       if (label) label.textContent = row.label.toUpperCase();
       element.onclick = function (event) { return navTo(row.view, event); };
@@ -155,6 +173,7 @@
     if (!useShell) {
       if (sidebar && sidebar.parentNode) sidebar.parentNode.removeChild(sidebar);
       if (brand && brand.parentNode) brand.parentNode.removeChild(brand);
+      restoreNavIcons();
       return;
     }
     ensureBrand();
