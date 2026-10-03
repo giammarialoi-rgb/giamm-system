@@ -47,7 +47,16 @@ ok(fs.existsSync(path.join(root, 'private/personal-recovery-16w.json')),
   const sync = fs.readFileSync(path.join(root, 'sync_web_assets.mjs'), 'utf8');
   ok(!/personal-recovery/.test(sync), 'and it is not copied into the app package');
   const served = fs.readdirSync(path.join(root, 'web')).filter((f) => /\.json$/.test(f));
-  const leaking = served.filter((f) => /giammaria/i.test(fs.readFileSync(path.join(root, 'web', f), 'utf8')));
+  // The one allowed mention: the data controller named in the privacy notice (features.json "legal"),
+  // which the owner chose to publish. Everything else in the file is still checked.
+  const text = (f) => {
+    const raw = fs.readFileSync(path.join(root, 'web', f), 'utf8');
+    if (f !== 'features.json') return raw;
+    const data = JSON.parse(raw);
+    for (const k of ['controllerName', 'controllerAddress', 'controllerVat']) if (data.legal) delete data.legal[k];
+    return JSON.stringify(data);
+  };
+  const leaking = served.filter((f) => /giammaria/i.test(text(f)));
   ok(leaking.length === 0, 'no data file served with the app carries the owner\'s name (' + (leaking.join(', ') || 'none') + ')');
 }
 {

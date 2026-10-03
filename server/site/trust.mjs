@@ -195,7 +195,7 @@ export function mountTrust(app, { getAuthor, webDir, siteDir, shell, sendEmail, 
       `<h2>Chi siamo, per legge</h2><dl class="company">` +
       row("Ragione sociale", legal.controllerName, "[ragione sociale da definire]") +
       row("Sede", legal.controllerAddress, "[sede da definire]") +
-      row("Partita IVA", legal.controllerVat, "[partita IVA da definire]") + `</dl>` +
+      row("Partita IVA / codice fiscale", legal.controllerVat, "[partita IVA da definire]") + `</dl>` +
       `</div><div class="card sample-form-card"><h2>Scrivici un messaggio</h2>${form}</div></div>` +
       `</div></section>` + FORM_SCRIPT;
     return send(req, res, {

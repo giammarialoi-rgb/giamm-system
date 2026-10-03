@@ -21,6 +21,9 @@ function ok(message, value) {
 // Internal names: storage, the Android package and link scheme, the id of
 // the owner's own backup (served only to that account). Never on screen.
 const ALLOWED = [
+  // The data controller of the privacy notice (web/features.json "legal"): the
+  // owner chose to publish it. Not the profile: only the name in that field.
+  /"controllerName":\s*"Giammaria Loi"/g,
   /GiammariaPersistence/g,
   /GIAMMARIA_SYSTEM_DB/g,
   /GiammariaWebView/g,

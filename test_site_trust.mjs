@@ -21,7 +21,7 @@ function ok(message, value) {
 }
 const ORIGIN = 'https://nurvan.app';
 
-async function world({ contentDir = 'content/articles', siteHost = true, env = { SITE_CONTACT_EMAIL: 'info@nurvan.app', WAITLIST_NOTIFY_EMAIL: 'titolare@example.com' }, maxPerHour = 1000 } = {}) {
+async function world({ webDir = 'web', contentDir = 'content/articles', siteHost = true, env = { SITE_CONTACT_EMAIL: 'info@nurvan.app', WAITLIST_NOTIFY_EMAIL: 'titolare@example.com' }, maxPerHour = 1000 } = {}) {
   const app = express();
   app.use(express.json());
   const pages = [];
@@ -30,7 +30,7 @@ async function world({ contentDir = 'content/articles', siteHost = true, env = {
   const getAuthor = authorLoader('.');
   const blog = mountBlog(app, { contentDir, siteDir: 'site', shell, getAuthor });
   const sendEmail = async (to, subject, text, html) => { mails.push({ to, subject, text, html }); return { sent: true }; };
-  mountTrust(app, { getAuthor, webDir: 'web', siteDir: 'site', shell, sendEmail, articles: blog.articles, cardHtml: blog.cardHtml, isSiteHost: () => siteHost, env, maxPerHour });
+  mountTrust(app, { getAuthor, webDir, siteDir: 'site', shell, sendEmail, articles: blog.articles, cardHtml: blog.cardHtml, isSiteHost: () => siteHost, env, maxPerHour });
   const server = http.createServer(app);
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + server.address().port;
@@ -62,9 +62,24 @@ try {
   const about = await (await fetch(w.base + '/chi-siamo')).text();
   ok('2a. /chi-siamo: cos’è Nurvan, chi c’è dietro con link all’autore, “Come scegliamo le fonti” con PMID/DOI, confermate / da precisare / smentite, non è un parere medico', /Cosa fa Nurvan/.test(about) && about.includes('href="/autore/giammaria-loi"') && /Come scegliamo le fonti/.test(about) && /PMID o DOI/.test(about) && /confermate, da precisare o smentite/.test(about) && /non sostituiscono il parere di un medico/.test(about));
   const contact = await (await fetch(w.base + '/contatti')).text();
-  ok('2b. /contatti: email, dati dell’azienda come segnaposto visibile (non inventati), form con consenso e campo trappola', /mailto:info@nurvan\.app/.test(contact) && /class="missing">\[ragione sociale da definire\]/.test(contact) && /\[partita IVA da definire\]/.test(contact) && /\[sede da definire\]/.test(contact) && /id="contact-form"/.test(contact) && contact.includes(CONTACT_CONSENT_TEXT.replace(/'/g, '&#39;')) && /name="website"/.test(contact) && /<input type="checkbox" name="consent" required>/.test(contact));
+  ok('2b. /contatti: email, dati dell’azienda dal file (non scritti nel codice), form con consenso e campo trappola', (/mailto:info@nurvan\.app/.test(contact) && contact.includes('Giammaria Loi') && contact.includes('Via Taloro 16, 08022 Dorgali') && contact.includes('LOIGMR89H10F979X') && !/class="missing"/.test(contact) && /id="contact-form"/.test(contact) && contact.includes(CONTACT_CONSENT_TEXT.replace(/'/g, '&#39;')) && /name="website"/.test(contact) && /<input type="checkbox" name="consent" required>/.test(contact)));
   ok('2c. tutte e tre in ogni lingua, con hreflang', (await Promise.all(SITE_LANGS.flatMap((l) => [aboutPath(l), contactPath(l)]).map(async (p) => (await fetch(w.base + p)).status))).every((s) => s === 200));
-  ok('2d. nessuna ragione sociale o P.IVA di fantasia nei file', !/P\.? ?IVA:? ?\d{11}/.test(about + contact + html) && JSON.parse(fs.readFileSync('web/features.json', 'utf8')).legal.controllerVat === '');
+  ok('2d. i dati aziendali sono in web/features.json, e quella pagina non ne inventa: senza il file mostra segnaposto', JSON.parse(fs.readFileSync('web/features.json', 'utf8')).legal.controllerName === 'Giammaria Loi' && !/P\.? ?IVA:? ?\d{11}/.test(about));
+
+  {
+    // Without the details (a file with the fields empty) the pages show visible placeholders, never invented values.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'web-'));
+    try {
+      fs.cpSync('web/privacy.html', path.join(tmp, 'privacy.html'));
+      fs.writeFileSync(path.join(tmp, 'features.json'), JSON.stringify({ contactEmail: 'info@nurvan.app', legal: { minAge: 16, controllerName: '', controllerAddress: '', controllerVat: '', privacyEmail: '' } }));
+      const e = await world({ webDir: tmp });
+      try {
+        const c = await (await fetch(e.base + '/contatti')).text();
+        const p = await (await fetch(e.base + '/privacy')).text();
+        ok('2e. senza i dati: segnaposto visibili su contatti e informativa, avviso di bozza acceso', /class="missing">\[ragione sociale da definire\]/.test(c) && /class="missing">\[nome o ragione sociale del titolare\]/.test(p) && /<div id="legal-draft" class="draft">/.test(p));
+      } finally { await e.close(); }
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  }
 
   // --- the contact form -------------------------------------------------------
   const good = { name: 'Anna Rossi', email: 'Anna@Example.com', message: 'Ciao, vorrei una collaborazione.', consent: true, lang: 'it' };
@@ -93,7 +108,7 @@ finally { await w.close(); }
     const priv = await fetch(s.base + '/privacy');
     const ph = await priv.text();
     ok('4a. /privacy è sul dominio del sito, con l’informativa e senza l’intestazione dell’app', priv.status === 200 && /Informativa sul trattamento dei dati personali/.test(ph) && !/class="brand"/.test(ph) && /class="blog-title">Informativa/.test(ph));
-    ok('4b. i dati del titolare ancora vuoti: segnaposto visibili e avviso di bozza acceso (non nascosto)', /class="missing">\[nome o ragione sociale del titolare\]/.test(ph) && /<div id="legal-draft" class="draft">/.test(ph));
+    ok('4b. i dati del titolare nell’informativa sono quelli del file e l’avviso di bozza è nascosto', ph.includes('Giammaria Loi') && ph.includes('Via Taloro 16, 08022 Dorgali') && ph.includes('LOIGMR89H10F979X') && /<div id="legal-draft" class="draft" hidden>/.test(ph) && !/class="missing">\[nome o ragione/.test(ph));
     ok('4c. /termini, e in inglese /en/privacy con la sua traduzione e il link all’italiano sul dominio', (await fetch(s.base + '/termini')).status === 200 && /Notice on the processing of personal data/.test(await (await fetch(s.base + '/en/privacy')).text()) && /href="\/privacy"/.test(await (await fetch(s.base + '/en/privacy')).text()));
     ok('4d. nessun link rimasto verso un altro host per privacy e termini nel piè di pagina e nei moduli', !/app\.nurvan\.app\/privacy|APP_URL\}\}privacy|APP_URL\}\}termini/.test(fs.readFileSync('site/shell.html', 'utf8') + fs.readFileSync('server/site/waitlist.mjs', 'utf8') + fs.readFileSync('server/site/samples.mjs', 'utf8') + fs.readFileSync('server/site/trust.mjs', 'utf8')));
     ok('4e. l’indirizzo dell’account da eliminare resta quello dell’app', /href="\/elimina-account"/.test(ph));
