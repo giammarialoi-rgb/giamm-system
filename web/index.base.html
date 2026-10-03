@@ -34321,12 +34321,35 @@ function bodyHex(hex) {
 function bodyGroupLevels(muscles, selected) {
   const levels = {};
   const hasSel = selected && selected !== 'GENERALE' && selected !== 'TOTAL';
+  const counts = {};
+  let top = 0;
   MACRO_MUSCLE_GROUPS.forEach(function (g) {
-    const n = statsMuscleVolume(muscles || {}, g.id);
+    counts[g.id] = statsMuscleVolume(muscles || {}, g.id);
+    top = Math.max(top, counts[g.id]);
+  });
+  MACRO_MUSCLE_GROUPS.forEach(function (g) {
+    const n = counts[g.id];
+    // Worked groups are lit in proportion to the most worked one, so a whole period
+    // (hundreds of sets) reads as well as a single session.
+    const rel = n >= 1 && top > 0 ? 0.45 + 0.5 * (n / top) : 0;
     if (hasSel) levels[g.id] = g.id === selected ? 1 : (n >= 1 ? 0.2 : 0);
-    else levels[g.id] = n >= 8 ? 0.95 : (n >= 1 ? 0.7 : 0);
+    else levels[g.id] = rel;
   });
   return levels;
+}
+// "Generale" lights every group worked in the period (all the finalized sessions of the active program), the same
+// span as the volume written under the figure. With no session finalized yet it falls back on the one in progress.
+function periodMusclesForMap(fallback) {
+  try {
+    const key = (typeof activeProgramKey === 'function') ? activeProgramKey() : null;
+    const total = {};
+    (Array.isArray(store.logs) ? store.logs : []).forEach(function (l) {
+      if (!l || !l.muscles) return;
+      if (key && l.programId && l.programId !== key) return;
+      Object.keys(l.muscles).forEach(function (m) { total[m] = (total[m] || 0) + (Number(l.muscles[m]) || 0); });
+    });
+    return Object.keys(total).length ? total : (fallback || {});
+  } catch (_) { return fallback || {}; }
 }
 // The figure at its own size with the lit muscles on it.
 function paintBodyHighlight(assets, muscles, selected) {
@@ -34562,7 +34585,7 @@ function renderStats(c){
       <button type="button" class="btn btn-outline" style="width:100%;margin-top:10px;font-size:11px;" onclick="openSessionCardForLog(${lastIdAttr})">CARD DELLA SEDUTA</button>
       ${logIsOfActiveProgram(last) ? `<button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px;" onclick="startEditFinalizedWorkout(${Number(last.week)||1},${Number(last.day)||0})">MODIFICA ALLENAMENTO FINALIZZATO</button>` : ''}
     </div>` : ''}
-    ${renderMuscleMap(snap.muscles, { cardioMinutes: last ? (Number(last.cardioMinutes) || 0) : (live.cardioMinutes || 0) })}
+    ${renderMuscleMap(periodMusclesForMap(snap.muscles), { cardioMinutes: last ? (Number(last.cardioMinutes) || 0) : (live.cardioMinutes || 0) })}
     ${renderCheckFisicoCardHtml()}
     ${(hist || histHiddenNote) ? '<div class="card" style="margin-bottom:12px;padding:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:11px;font-weight:800;color:var(--gold);">CRONOLOGIA SESSIONI <span style="color:#666;font-weight:600;">· ' + histAll.length + '</span></div><div style="display:flex;gap:6px;align-items:center;">' + (hist ? '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;white-space:nowrap;" onclick="copyStatsPeriodText()">Copia periodo</button>' : '') + '<button type="button" class="btn btn-outline" style="min-width:36px;padding:4px 8px;" onclick="toggleStatsHistory()">' + (store.prefs && store.prefs.statsHistoryOpen === false ? '▸' : '✕') + '</button></div></div>' + ((store.prefs && store.prefs.statsHistoryOpen === false) ? '' : (hist + histHiddenNote + (histAll.length > 12 ? '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:10px;" onclick="toggleStatsHistoryAll()">' + (showAllHist ? 'MOSTRA SOLO LE ULTIME 12' : 'MOSTRA TUTTE LE ' + histAll.length + ' SEDUTE') + '</button>' : ''))) + '</div>' : ''}
     <div class="card" style="margin-bottom:12px;">
