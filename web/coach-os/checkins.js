@@ -118,7 +118,8 @@
       ((row.media || []).length ? '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">' + escText(tx('coPrivateMedia')) + '</div>' +
         '<div class="coach-os-quick-actions">' + row.media.map(function (media) {
           return '<button class="coach-os-action" onclick="CoachOS.openCheckInMedia(\'' + escText(media.id) + '\')">' +
-            escText(media.kind || tx('coPrivateMedia')) + '<br><span class="coach-os-muted">' + Math.round(Number(media.byteSize || 0) / 1024) + ' KB</span></button>';
+            escText({ front: 'Foto frontale', side: 'Foto laterale', back: 'Foto posteriore' }[media.kind] || media.kind || tx('coPrivateMedia')) +
+            '<br><span class="coach-os-muted">Apri · ' + Math.round(Number(media.byteSize || 0) / 1024) + ' KB</span></button>';
         }).join('') + '</div>' : '') +
       '<label style="display:block;margin-top:14px;font-size:10px;color:var(--co-muted);">' + escText(tx('coCoachResponse')) + '</label>' +
       '<textarea id="coach-checkin-response" rows="4" style="width:100%;margin-top:6px;" placeholder="' + escText(tx('coResponsePlaceholder')) + '">' +

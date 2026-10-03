@@ -27002,7 +27002,9 @@ function openWarmupOverview(week, day) {
       '</div>' +
       (lib && lib.description ? '<div style="font-size:11px;color:#aaa;line-height:1.4;margin-top:4px;">' + esc(lib.description) + '</div>' : '') +
       '</div>' +
-      youtubeButtonHtml({ warmup: true, warmupId: it.exerciseId, name: it.name }, { compact: true }) +
+      '<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;">' +
+      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;border-color:var(--gold);color:var(--gold);" onclick="openWarmupExerciseInfo(\'' + esc(it.exerciseId) + '\')">INFO</button>' +
+      youtubeButtonHtml({ warmup: true, warmupId: it.exerciseId, name: it.name }, { compact: true }) + '</div>' +
       '</div>';
   }).join('');
   var overlay = document.createElement('div');
@@ -27028,6 +27030,48 @@ function closeWarmupOverview() {
   var el = document.getElementById('warmup-overview-modal');
   if (el) el.remove();
 }
+
+// The same sheet the workout opens with CHIEDI INFO, for a warm-up exercise: from the overview, the editor and the library picker.
+function openWarmupExerciseInfo(exerciseId) {
+  var ex = warmupLibraryExercise(exerciseId);
+  if (!ex) return;
+  var old = document.getElementById('warmup-info-sheet');
+  if (old) old.remove();
+  var sheet = document.createElement('div');
+  sheet.id = 'warmup-info-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10300';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeWarmupExerciseInfo(); };
+  var scheme = warmupSchemeText({ sets: ex.default_sets, reps: ex.default_reps, durationSeconds: ex.default_duration });
+  sheet.innerHTML = '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">INFO ESERCIZIO · ' + esc(WARMUP_CATEGORY_LABELS[ex.category] || ex.category || '') + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 10px;flex:0 0 auto;" onclick="closeWarmupExerciseInfo()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    ((window.NurvanMediaUI && window.NurvanMediaUI.mediaPanel) ? window.NurvanMediaUI.mediaPanel(null, ex.name) : '') +
+    '<h2 style="color:#fff;font-size:18px;margin:6px 0 8px;">' + esc(ex.name) + '</h2>' +
+    '<p style="font-size:13px;color:#ccc;line-height:1.45;">' + esc(ex.description || '') + '</p>' +
+    (ex.instructions ? '<div style="font-size:12px;color:#ccc;line-height:1.6;background:#111;padding:12px;border-radius:10px;margin-bottom:10px;">' + esc(ex.instructions) + '</div>' : '') +
+    (ex.cautions ? '<div style="font-size:11px;color:#e0b040;background:rgba(224,176,64,0.1);padding:8px 10px;border-radius:8px;margin-bottom:10px;">⚠ ' + esc(ex.cautions) + '</div>' : '') +
+    (scheme ? '<div style="font-size:14px;font-weight:800;color:var(--gold);margin-bottom:10px;">' + esc(scheme) + '</div>' : '') +
+    youtubeButtonHtml({ warmup: true, warmupId: ex.id, name: ex.name }) +
+    '</div></div>';
+  document.body.appendChild(sheet);
+  if (window.NurvanMediaUI && window.NurvanMediaUI.loadMedia) {
+    window.NurvanMediaUI.loadMedia('warmup', ex.id, ex.name).then(function (manifest) {
+      if (!manifest || !manifest.hasMedia) return;
+      var slot = document.querySelector('#warmup-info-sheet [data-nurvan-media-slot]');
+      if (slot) slot.outerHTML = window.NurvanMediaUI.mediaPanel(manifest, ex.name);
+    });
+  }
+}
+function closeWarmupExerciseInfo() {
+  var el = document.getElementById('warmup-info-sheet');
+  if (el) el.remove();
+}
+window.openWarmupExerciseInfo = openWarmupExerciseInfo;
+window.closeWarmupExerciseInfo = closeWarmupExerciseInfo;
 window.closeWarmupOverview = closeWarmupOverview;
 
 function skipWarmup(week, day) {
@@ -27100,6 +27144,7 @@ function renderWarmupEditorModal() {
       '<div><div style="font-size:12px;font-weight:800;color:#fff;">' + esc(it.name) + '</div>' +
       '<div style="font-size:9px;color:#888;">' + esc(WARMUP_CATEGORY_LABELS[it.category] || it.category) + '</div></div>' +
       '<div style="display:flex;gap:4px;">' +
+      '<button class="btn btn-outline" type="button" style="font-size:9px;padding:4px 7px;border-color:var(--gold);color:var(--gold);" onclick="openWarmupExerciseInfo(\'' + esc(it.exerciseId) + '\')">INFO</button>' +
       '<button class="btn btn-outline" type="button" style="font-size:10px;padding:4px 7px;" ' + (idx === 0 ? 'disabled' : '') + ' onclick="moveWarmupItem(' + idx + ',-1)">↑</button>' +
       '<button class="btn btn-outline" type="button" style="font-size:10px;padding:4px 7px;" ' + (idx === warmup.items.length - 1 ? 'disabled' : '') + ' onclick="moveWarmupItem(' + idx + ',1)">↓</button>' +
       '<button class="btn btn-outline" type="button" style="font-size:10px;padding:4px 7px;color:#c66;border-color:#c66;" onclick="removeWarmupItem(' + idx + ')">✕</button>' +
@@ -27174,9 +27219,10 @@ function openWarmupExercisePicker() {
   var listHtml = Object.keys(byCat).map(function (cat) {
     return '<div style="font-size:10px;font-weight:800;color:var(--gold);margin:10px 0 6px;">' + esc(WARMUP_CATEGORY_LABELS[cat] || cat) + '</div>' +
       byCat[cat].map(function (e) {
-        return '<div class="card" style="padding:8px 10px;margin-bottom:6px;cursor:pointer;" onclick="addWarmupLibraryExercise(\'' + e.id + '\')">' +
-          '<div style="font-size:12px;font-weight:700;color:#fff;">' + esc(e.name) + '</div>' +
-          '<div style="font-size:10px;color:#888;">' + esc(e.description) + '</div></div>';
+        return '<div class="card" style="padding:8px 10px;margin-bottom:6px;cursor:pointer;display:flex;gap:8px;align-items:center;" onclick="addWarmupLibraryExercise(\'' + e.id + '\')">' +
+          '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:#fff;">' + esc(e.name) + '</div>' +
+          '<div style="font-size:10px;color:#888;">' + esc(e.description) + '</div></div>' +
+          '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;flex:0 0 auto;border-color:var(--gold);color:var(--gold);" onclick="event.stopPropagation();openWarmupExerciseInfo(\'' + e.id + '\')">INFO</button></div>';
       }).join('');
   }).join('');
   overlay.innerHTML =

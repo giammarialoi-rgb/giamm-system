@@ -74,7 +74,7 @@ export async function loadCoachInbox(pool, coachId, options = {}) {
     ...(checkIns.rows || []).map((row) => inboxItem("check_in", {
       ...row,
       title: "Check-in · " + (row.client_name || ""),
-      preview: row.status + (row.notes ? " · " + row.notes : ""),
+      preview: ({ requested: "richiesto", received: "da leggere" }[row.status] || row.status) + (row.notes ? " · " + row.notes : ""),
       created_at: row.received_at || row.requested_at,
       href: { view: "coachCheckIns", checkInId: row.id }
     })),

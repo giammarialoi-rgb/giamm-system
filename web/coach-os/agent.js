@@ -14,6 +14,22 @@
     return CoachOS.t ? CoachOS.t(key) : key;
   }
 
+  // The server speaks in codes and raw data; the coach reads sentences.
+  const TOOL_LABELS = { 'clients.message_inactive': 'Messaggio di richiamo ai clienti inattivi' };
+  const SOURCE_LABELS = { workout_logs: 'registro allenamenti', check_ins: 'check-in', payments: 'incassi' };
+  function evidenceText(evidence) {
+    const e = evidence || {};
+    const parts = [];
+    if (e.source) parts.push('Fonte: ' + (SOURCE_LABELS[e.source] || String(e.source).replace(/_/g, ' ')));
+    if (typeof e.clients === 'number') parts.push(e.clients + (e.clients === 1 ? ' cliente' : ' clienti'));
+    return parts.join(' · ');
+  }
+  function resultText(result) {
+    const r = result || {};
+    if (typeof r.sent === 'number') return r.sent === 1 ? '1 messaggio inviato' : (r.sent + ' messaggi inviati');
+    return 'Operazione completata';
+  }
+
   function whyHtml(why) {
     const reasons = (why && why.reasons) || [];
     if (!reasons.length) return '';
@@ -21,7 +37,7 @@
       reasons.map(function (reason) {
         return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' +
           escText(reason.statement || '') + '</strong><span>' +
-          escText(JSON.stringify(reason.evidence || {})) + '</span></span>' +
+          escText(evidenceText(reason.evidence)) + '</span></span>' +
           (why.viewData ? '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.openAgentViewData()">' + escText(tx('coViewData')) + '</button>' : '') +
           '</div>';
       }).join('') + '</div>';
@@ -49,7 +65,7 @@
         ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coPreview')) + '</h2></div>' +
           proposals.map(function (proposal, index) {
             return '<div class="coach-os-card" style="margin-bottom:10px;"><div class="coach-os-card-kicker">' +
-              escText(proposal.toolId) + '</div><div class="coach-os-card-title">' + escText(proposal.summary) +
+              escText(TOOL_LABELS[proposal.toolId] || 'Azione proposta') + '</div><div class="coach-os-card-title">' + escText(proposal.summary) +
               '</div>' + whyHtml(proposal.why) +
               '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
               '<button class="coach-os-action" onclick="CoachOS.confirmAgentProposal(' + index + ')">' + escText(tx('coConfirm')) + '</button>' +
@@ -60,7 +76,7 @@
         : '<div class="coach-os-empty">' + escText(tx('coAgentEmpty')) + '</div>') +
       (state.result
         ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coResult')) + '</h2></div>' +
-          '<div class="coach-os-card">' + escText(JSON.stringify(state.result)) + '</div></section>'
+          '<div class="coach-os-card">' + escText(resultText(state.result)) + '</div></section>'
         : '') +
       (state.stale
         ? '<div class="coach-os-error">' + escText(tx('coStaleProposal')) + '</div>'

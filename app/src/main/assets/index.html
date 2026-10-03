@@ -62576,7 +62576,9 @@ function openWarmupOverview(week, day) {
       '</div>' +
       (lib && lib.description ? '<div style="font-size:11px;color:#aaa;line-height:1.4;margin-top:4px;">' + esc(lib.description) + '</div>' : '') +
       '</div>' +
-      youtubeButtonHtml({ warmup: true, warmupId: it.exerciseId, name: it.name }, { compact: true }) +
+      '<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;">' +
+      '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;border-color:var(--gold);color:var(--gold);" onclick="openWarmupExerciseInfo(\'' + esc(it.exerciseId) + '\')">INFO</button>' +
+      youtubeButtonHtml({ warmup: true, warmupId: it.exerciseId, name: it.name }, { compact: true }) + '</div>' +
       '</div>';
   }).join('');
   var overlay = document.createElement('div');
@@ -62602,6 +62604,48 @@ function closeWarmupOverview() {
   var el = document.getElementById('warmup-overview-modal');
   if (el) el.remove();
 }
+
+// The same sheet the workout opens with CHIEDI INFO, for a warm-up exercise: from the overview, the editor and the library picker.
+function openWarmupExerciseInfo(exerciseId) {
+  var ex = warmupLibraryExercise(exerciseId);
+  if (!ex) return;
+  var old = document.getElementById('warmup-info-sheet');
+  if (old) old.remove();
+  var sheet = document.createElement('div');
+  sheet.id = 'warmup-info-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10300';
+  sheet.onclick = function (ev) { if (ev.target === sheet) closeWarmupExerciseInfo(); };
+  var scheme = warmupSchemeText({ sets: ex.default_sets, reps: ex.default_reps, durationSeconds: ex.default_duration });
+  sheet.innerHTML = '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()">' +
+    '<div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;">INFO ESERCIZIO · ' + esc(WARMUP_CATEGORY_LABELS[ex.category] || ex.category || '') + '</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 10px;flex:0 0 auto;" onclick="closeWarmupExerciseInfo()">CHIUDI</button>' +
+    '</div>' +
+    '<div class="nurvan-sheet-body">' +
+    ((window.NurvanMediaUI && window.NurvanMediaUI.mediaPanel) ? window.NurvanMediaUI.mediaPanel(null, ex.name) : '') +
+    '<h2 style="color:#fff;font-size:18px;margin:6px 0 8px;">' + esc(ex.name) + '</h2>' +
+    '<p style="font-size:13px;color:#ccc;line-height:1.45;">' + esc(ex.description || '') + '</p>' +
+    (ex.instructions ? '<div style="font-size:12px;color:#ccc;line-height:1.6;background:#111;padding:12px;border-radius:10px;margin-bottom:10px;">' + esc(ex.instructions) + '</div>' : '') +
+    (ex.cautions ? '<div style="font-size:11px;color:#e0b040;background:rgba(224,176,64,0.1);padding:8px 10px;border-radius:8px;margin-bottom:10px;">⚠ ' + esc(ex.cautions) + '</div>' : '') +
+    (scheme ? '<div style="font-size:14px;font-weight:800;color:var(--gold);margin-bottom:10px;">' + esc(scheme) + '</div>' : '') +
+    youtubeButtonHtml({ warmup: true, warmupId: ex.id, name: ex.name }) +
+    '</div></div>';
+  document.body.appendChild(sheet);
+  if (window.NurvanMediaUI && window.NurvanMediaUI.loadMedia) {
+    window.NurvanMediaUI.loadMedia('warmup', ex.id, ex.name).then(function (manifest) {
+      if (!manifest || !manifest.hasMedia) return;
+      var slot = document.querySelector('#warmup-info-sheet [data-nurvan-media-slot]');
+      if (slot) slot.outerHTML = window.NurvanMediaUI.mediaPanel(manifest, ex.name);
+    });
+  }
+}
+function closeWarmupExerciseInfo() {
+  var el = document.getElementById('warmup-info-sheet');
+  if (el) el.remove();
+}
+window.openWarmupExerciseInfo = openWarmupExerciseInfo;
+window.closeWarmupExerciseInfo = closeWarmupExerciseInfo;
 window.closeWarmupOverview = closeWarmupOverview;
 
 function skipWarmup(week, day) {
@@ -62674,6 +62718,7 @@ function renderWarmupEditorModal() {
       '<div><div style="font-size:12px;font-weight:800;color:#fff;">' + esc(it.name) + '</div>' +
       '<div style="font-size:9px;color:#888;">' + esc(WARMUP_CATEGORY_LABELS[it.category] || it.category) + '</div></div>' +
       '<div style="display:flex;gap:4px;">' +
+      '<button class="btn btn-outline" type="button" style="font-size:9px;padding:4px 7px;border-color:var(--gold);color:var(--gold);" onclick="openWarmupExerciseInfo(\'' + esc(it.exerciseId) + '\')">INFO</button>' +
       '<button class="btn btn-outline" type="button" style="font-size:10px;padding:4px 7px;" ' + (idx === 0 ? 'disabled' : '') + ' onclick="moveWarmupItem(' + idx + ',-1)">↑</button>' +
       '<button class="btn btn-outline" type="button" style="font-size:10px;padding:4px 7px;" ' + (idx === warmup.items.length - 1 ? 'disabled' : '') + ' onclick="moveWarmupItem(' + idx + ',1)">↓</button>' +
       '<button class="btn btn-outline" type="button" style="font-size:10px;padding:4px 7px;color:#c66;border-color:#c66;" onclick="removeWarmupItem(' + idx + ')">✕</button>' +
@@ -62748,9 +62793,10 @@ function openWarmupExercisePicker() {
   var listHtml = Object.keys(byCat).map(function (cat) {
     return '<div style="font-size:10px;font-weight:800;color:var(--gold);margin:10px 0 6px;">' + esc(WARMUP_CATEGORY_LABELS[cat] || cat) + '</div>' +
       byCat[cat].map(function (e) {
-        return '<div class="card" style="padding:8px 10px;margin-bottom:6px;cursor:pointer;" onclick="addWarmupLibraryExercise(\'' + e.id + '\')">' +
-          '<div style="font-size:12px;font-weight:700;color:#fff;">' + esc(e.name) + '</div>' +
-          '<div style="font-size:10px;color:#888;">' + esc(e.description) + '</div></div>';
+        return '<div class="card" style="padding:8px 10px;margin-bottom:6px;cursor:pointer;display:flex;gap:8px;align-items:center;" onclick="addWarmupLibraryExercise(\'' + e.id + '\')">' +
+          '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:#fff;">' + esc(e.name) + '</div>' +
+          '<div style="font-size:10px;color:#888;">' + esc(e.description) + '</div></div>' +
+          '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;flex:0 0 auto;border-color:var(--gold);color:var(--gold);" onclick="event.stopPropagation();openWarmupExerciseInfo(\'' + e.id + '\')">INFO</button></div>';
       }).join('');
   }).join('');
   overlay.innerHTML =
@@ -80913,7 +80959,7 @@ function ensurePracticeStyle() {
     '.cp-file-ico{width:28px;height:28px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;color:var(--gold);}',
     '.cp-file-ico svg{width:24px !important;height:24px !important;display:block;}',
     '.cp-icon-btn.cp-dictate-on{border-color:#2ecc71 !important;color:#2ecc71 !important;-webkit-text-fill-color:#2ecc71 !important;background:rgba(46,204,113,.12);}',
-    '.cp-icon-btn.cp-dictate-off{border-color:#e74c3c !important;color:#e74c3c !important;-webkit-text-fill-color:#e74c3c !important;}',
+    '.cp-icon-btn.cp-dictate-off{opacity:.9;}',
     '.cp-chat-input{flex:1;min-width:0;padding:10px 12px !important;border-radius:20px !important;border:1px solid #333 !important;background:#151515 !important;color:#fff !important;-webkit-text-fill-color:#fff !important;width:auto !important;}',
     '.cp-client-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}',
     '.cp-client-actions .btn{font-size:11px;padding:9px 12px;min-height:36px;flex:0 0 auto;}',
@@ -81437,7 +81483,7 @@ function fmtNotifyWhen(iso) {
     const mi = String(d.getMinutes()).padStart(2, '0');
     return dd + '/' + mm + ' · ' + hh + ':' + mi;
   }
-  return raw.replace('T', ' ').slice(0, 16);
+  return fmtShortDate(raw);
 }
 
 function coachInboxShouldIgnore(e) {
@@ -83486,6 +83532,7 @@ async function clearCoachClientDomain(domain) {
 }
 
 function openAddClientWizard() {
+  window.__cpAddStepIdx = 0;
   ensurePracticeStyle();
   ensurePracticeOverlays();
   window.__cpAddMode = window.__cpAddMode || 'new';
@@ -83502,6 +83549,7 @@ function openAddClientWizard() {
 
 function setAddClientMode(mode) {
   window.__cpAddMode = mode === 'transition' ? 'transition' : 'new';
+  window.__cpAddStepIdx = 0;
   drawAddClientWizard();
   if (window.__cpAddMode === 'transition') {
     try {
@@ -83526,18 +83574,60 @@ function drawAddClientWizard() {
     (isNew
       ? '<p class="cp-help"><b style="color:#fff;">Nuovo:</b> al primo login si apre il questionario di acquisizione (nome/cognome + menu a tendina: anzianità, obiettivo, problemi fisici, tempo a disposizione).</p>'
       : '<p class="cp-help"><b style="color:#fff;">Transizione:</b> lo conosci già. Compili tu il questionario ora: al login entra in app senza form.</p>') +
+    '<div id="cp-add-base">' +
     '<div class="cp-field"><label>Nome *</label><input id="cp-add-first" type="text"></div>' +
     '<div class="cp-field"><label>Cognome *</label><input id="cp-add-last" type="text"></div>' +
     '<div class="cp-field"><label>Password di accesso (min. 4) *</label><input id="cp-add-pass" type="text" autocomplete="off"></div>' +
     '<div class="cp-field"><label>Come lo segui</label><select id="cp-add-coaching-mode" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
-    COACHING_MODE_LABELS.map(function (m) { return '<option value="' + m[0] + '">' + esc(m[1]) + '</option>'; }).join('') + '</select></div>' +
+    COACHING_MODE_LABELS.map(function (m) { return '<option value="' + m[0] + '">' + esc(m[1]) + '</option>'; }).join('') + '</select></div></div>' +
     (isNew ? '' : '<div id="cp-add-intake">' + intakeFormHtml('cpa', {}, { skipName: true }) + '</div>') +
     // The form of a transition client is 27 fields long: the buttons stay in view at the bottom of the sheet.
     '<div style="position:sticky;bottom:-1px;background:#121212;padding:10px 0 4px;margin-top:8px;border-top:1px solid #2a2a2a;">' +
     '<div id="cp-add-status" class="cp-help"></div>' +
-    '<button class="btn btn-primary" style="width:100%;" onclick="submitAddClient()">CREA E GENERA LINK</button>' +
+    (isNew ? '' : '<div id="cp-add-nav" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+      '<button type="button" id="cp-add-prev" class="btn btn-outline" style="flex:1;" onclick="addClientStep(-1)">INDIETRO</button>' +
+      '<span id="cp-add-stepno" class="cp-help" style="flex:1;text-align:center;margin:0;"></span>' +
+      '<button type="button" id="cp-add-next" class="btn btn-primary" style="flex:1;" onclick="addClientStep(1)">AVANTI</button></div>') +
+    '<button id="cp-add-submit" class="btn btn-primary" style="width:100%;" onclick="submitAddClient()">CREA E GENERA LINK</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="showOverlay(\'cp-add\', false)">ANNULLA</button></div>';
+  if (!isNew) setupAddClientSteps();
 }
+
+// A transition client's form is 27 fields: shown a handful at a time, in the same DOM the submit reads.
+function setupAddClientSteps() {
+  const base = document.getElementById('cp-add-base');
+  const intake = document.getElementById('cp-add-intake');
+  if (!base || !intake) return;
+  const steps = [[base]];
+  const blocks = Array.prototype.slice.call(intake.children);
+  const plain = blocks.filter(function (b) { return b.className === 'cp-field' && !b.id; });
+  const special = blocks.filter(function (b) { return plain.indexOf(b) < 0; });
+  for (let i = 0; i < plain.length; i += 6) steps.push(plain.slice(i, i + 6));
+  if (special.length) steps.push(special);
+  window.__cpAddSteps = steps;
+  window.__cpAddStepIdx = Math.min(window.__cpAddStepIdx || 0, steps.length - 1);
+  showAddClientStep();
+}
+function showAddClientStep() {
+  const steps = window.__cpAddSteps || [];
+  const idx = window.__cpAddStepIdx || 0;
+  steps.forEach(function (els, i) { els.forEach(function (el) { el.style.display = i === idx ? '' : 'none'; }); });
+  const last = idx >= steps.length - 1;
+  const set = function (id, show) { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
+  set('cp-add-prev', idx > 0);
+  set('cp-add-next', !last);
+  set('cp-add-submit', last);
+  const no = document.getElementById('cp-add-stepno');
+  if (no) no.textContent = 'Passo ' + (idx + 1) + ' di ' + steps.length;
+  const p = document.getElementById('cp-add-panel');
+  if (p) p.scrollTop = 0;
+}
+function addClientStep(dir) {
+  const steps = window.__cpAddSteps || [];
+  window.__cpAddStepIdx = Math.max(0, Math.min(steps.length - 1, (window.__cpAddStepIdx || 0) + dir));
+  showAddClientStep();
+}
+window.addClientStep = addClientStep;
 
 async function submitAddClient() {
   const status = document.getElementById('cp-add-status');
@@ -83840,7 +83930,7 @@ function renderMessageHtml(m, mine) {
   const text = m._plain != null ? m._plain : (m.body || '');
   const showText = text && text !== '[allegato]';
   return '<div class="cp-msg ' + (mine ? 'me' : 'them') + '">' + (showText ? esc(text) + lock : '') + extra +
-    '<div style="font-size:9px;color:#888;margin-top:4px;">' + esc(String(m.created_at || '').replace('T', ' ').slice(0, 16)) + ticks + '</div></div>';
+    '<div style="font-size:9px;color:#888;margin-top:4px;">' + esc(m.created_at ? fmtShortDate(m.created_at) : '') + ticks + '</div></div>';
 }
 
 function openChatLightbox(src) {
@@ -84170,9 +84260,9 @@ async function renderCoachWorkspace(c) {
     const lastLog = logs.length ? logs[logs.length - 1] : null;
     const lastWoLabel = lastLog
       ? ('Ultimo allenamento: W' + (lastLog.week || '?') + ' · seduta ' + ((Number(lastLog.day) || 0) + 1) +
-        (lastLog.at ? (' · ' + String(lastLog.at).replace('T', ' ').slice(0, 16)) : '') +
+        (lastLog.at ? (' · ' + fmtShortDate(lastLog.at)) : '') +
         ' · ' + logs.length + ' sessioni sync')
-      : (cl.lastWorkoutAt ? ('Ultimo ping workout: ' + String(cl.lastWorkoutAt).replace('T', ' ').slice(0, 16)) : 'Nessun allenamento finalizzato sync');
+      : (cl.lastWorkoutAt ? ('Ultimo ping workout: ' + fmtShortDate(cl.lastWorkoutAt)) : 'Nessun allenamento finalizzato sync');
     const intake = store.coachWorkspace.intake || {};
     const clientProfile = store.__cpClientViewProfile || (store.coachWorkspace && store.coachWorkspace.clientProfile) || {};
     const allergyTxt = intakeAllergyLabels(intake.allergies || clientProfile.allergies);
@@ -84256,7 +84346,7 @@ async function renderCoachWorkspace(c) {
       (logs.length ? ('<div style="margin-top:8px;">' + logs.slice().reverse().slice(0, 6).map(function (row, i) {
         const realIdx = logs.length - 1 - i;
         return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #222;font-size:11px;">' +
-          '<span style="color:#ccc;">W' + (row.week || '?') + ' · S' + ((row.day || 0) + 1) + ' · ' + esc(String(row.at || '').replace('T', ' ').slice(0, 16)) +
+          '<span style="color:#ccc;">W' + (row.week || '?') + ' · S' + ((row.day || 0) + 1) + ' · ' + esc(fmtShortDate(row.at)) +
           '<br><span style="color:#888;">' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg · ' + (row.kcal || 0) + ' kcal</span></span>' +
           '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="openClientWorkoutReport(' + realIdx + ')">VEDI REPORT</button></div>';
       }).join('') + '</div>') : '') +
@@ -84278,7 +84368,7 @@ async function renderCoachWorkspace(c) {
         if (inc.ageBand) bits.push(inc.ageBand);
         return '<div class="card" style="padding:12px;margin-bottom:12px;border-color:var(--gold);"><div style="font-weight:900;color:var(--gold);">Aggiornamento anagrafica da approvare</div>' +
           '<p class="cp-help">' + esc(pi.summary || 'Il cliente ha aggiornato i suoi dati.') +
-          (pi.at ? (' · ' + esc(String(pi.at).replace('T', ' ').slice(0, 16))) : '') + '</p>' +
+          (pi.at ? (' · ' + esc(fmtShortDate(pi.at))) : '') + '</p>' +
           (bits.length ? ('<div style="font-size:12px;color:#ddd;margin:6px 0 8px;">' + esc(bits.join(' · ')) + '</div>') : '') +
           '<button class="btn btn-primary" style="width:100%;margin-top:6px;" onclick="approvePendingIntake(\'' + esc(id) + '\')">APPROVA ANAGRAFICA</button>' +
           '<button class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="rejectPendingIntake(\'' + esc(id) + '\')">NEGA (con messaggio)</button></div>';
@@ -86180,7 +86270,7 @@ function openClientWorkoutReport(logIndex) {
   }).join('') || '<div class="cp-help">Nessun dettaglio muscolare.</div>';
   box.innerHTML = '<div class="cp-panel">' +
     '<h2>Report allenamento</h2>' +
-    '<div class="cp-help">W' + esc(String(row.week || '?')) + ' · seduta ' + ((row.day || 0) + 1) + ' · ' + esc(String(row.at || '').replace('T', ' ').slice(0, 16)) + '</div>' +
+    '<div class="cp-help">W' + esc(String(row.week || '?')) + ' · seduta ' + ((row.day || 0) + 1) + ' · ' + esc(fmtShortDate(row.at)) + '</div>' +
     '<div class="cp-row"><span>Durata</span><span>' + mins + ' min</span></div>' +
     '<div class="cp-row"><span>Serie</span><span>' + (row.sets || 0) + '</span></div>' +
     '<div class="cp-row"><span>Esercizi</span><span>' + (row.exercises || 0) + '</span></div>' +
@@ -86415,7 +86505,7 @@ function renderCoachLibrary(c) {
           '<div style="flex:1;min-width:0;overflow-wrap:anywhere;"><div style="font-size:14px;font-weight:800;color:#fff;">' + esc(e.title || 'Scheda') + '</div>' +
           '<div style="font-size:10px;color:#888;margin-top:4px;">' + esc(e.source || '') +
           (meta.weeks ? (' · ' + meta.weeks + ' sett.') : '') +
-          (e.savedAt ? (' · ' + esc(String(e.savedAt).replace('T', ' ').slice(0, 16))) : '') +
+          (e.savedAt ? (' · ' + esc(fmtShortDate(e.savedAt))) : '') +
           '</div></div>' +
           '<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;">' +
           '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="deleteCoachLibraryEntry(\'' + esc(e.id) + '\')">ELIMINA</button>' +
@@ -89621,7 +89711,8 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       ((row.media || []).length ? '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">' + escText(tx('coPrivateMedia')) + '</div>' +
         '<div class="coach-os-quick-actions">' + row.media.map(function (media) {
           return '<button class="coach-os-action" onclick="CoachOS.openCheckInMedia(\'' + escText(media.id) + '\')">' +
-            escText(media.kind || tx('coPrivateMedia')) + '<br><span class="coach-os-muted">' + Math.round(Number(media.byteSize || 0) / 1024) + ' KB</span></button>';
+            escText({ front: 'Foto frontale', side: 'Foto laterale', back: 'Foto posteriore' }[media.kind] || media.kind || tx('coPrivateMedia')) +
+            '<br><span class="coach-os-muted">Apri · ' + Math.round(Number(media.byteSize || 0) / 1024) + ' KB</span></button>';
         }).join('') + '</div>' : '') +
       '<label style="display:block;margin-top:14px;font-size:10px;color:var(--co-muted);">' + escText(tx('coCoachResponse')) + '</label>' +
       '<textarea id="coach-checkin-response" rows="4" style="width:100%;margin-top:6px;" placeholder="' + escText(tx('coResponsePlaceholder')) + '">' +
@@ -90864,6 +90955,22 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
     return CoachOS.t ? CoachOS.t(key) : key;
   }
 
+  // The server speaks in codes and raw data; the coach reads sentences.
+  const TOOL_LABELS = { 'clients.message_inactive': 'Messaggio di richiamo ai clienti inattivi' };
+  const SOURCE_LABELS = { workout_logs: 'registro allenamenti', check_ins: 'check-in', payments: 'incassi' };
+  function evidenceText(evidence) {
+    const e = evidence || {};
+    const parts = [];
+    if (e.source) parts.push('Fonte: ' + (SOURCE_LABELS[e.source] || String(e.source).replace(/_/g, ' ')));
+    if (typeof e.clients === 'number') parts.push(e.clients + (e.clients === 1 ? ' cliente' : ' clienti'));
+    return parts.join(' · ');
+  }
+  function resultText(result) {
+    const r = result || {};
+    if (typeof r.sent === 'number') return r.sent === 1 ? '1 messaggio inviato' : (r.sent + ' messaggi inviati');
+    return 'Operazione completata';
+  }
+
   function whyHtml(why) {
     const reasons = (why && why.reasons) || [];
     if (!reasons.length) return '';
@@ -90871,7 +90978,7 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
       reasons.map(function (reason) {
         return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' +
           escText(reason.statement || '') + '</strong><span>' +
-          escText(JSON.stringify(reason.evidence || {})) + '</span></span>' +
+          escText(evidenceText(reason.evidence)) + '</span></span>' +
           (why.viewData ? '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.openAgentViewData()">' + escText(tx('coViewData')) + '</button>' : '') +
           '</div>';
       }).join('') + '</div>';
@@ -90899,7 +91006,7 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
         ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coPreview')) + '</h2></div>' +
           proposals.map(function (proposal, index) {
             return '<div class="coach-os-card" style="margin-bottom:10px;"><div class="coach-os-card-kicker">' +
-              escText(proposal.toolId) + '</div><div class="coach-os-card-title">' + escText(proposal.summary) +
+              escText(TOOL_LABELS[proposal.toolId] || 'Azione proposta') + '</div><div class="coach-os-card-title">' + escText(proposal.summary) +
               '</div>' + whyHtml(proposal.why) +
               '<div class="coach-os-quick-actions" style="margin-top:10px;">' +
               '<button class="coach-os-action" onclick="CoachOS.confirmAgentProposal(' + index + ')">' + escText(tx('coConfirm')) + '</button>' +
@@ -90910,7 +91017,7 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
         : '<div class="coach-os-empty">' + escText(tx('coAgentEmpty')) + '</div>') +
       (state.result
         ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coResult')) + '</h2></div>' +
-          '<div class="coach-os-card">' + escText(JSON.stringify(state.result)) + '</div></section>'
+          '<div class="coach-os-card">' + escText(resultText(state.result)) + '</div></section>'
         : '') +
       (state.stale
         ? '<div class="coach-os-error">' + escText(tx('coStaleProposal')) + '</div>'

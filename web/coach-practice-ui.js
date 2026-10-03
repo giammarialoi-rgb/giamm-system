@@ -832,7 +832,7 @@ function ensurePracticeStyle() {
     '.cp-file-ico{width:28px;height:28px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;color:var(--gold);}',
     '.cp-file-ico svg{width:24px !important;height:24px !important;display:block;}',
     '.cp-icon-btn.cp-dictate-on{border-color:#2ecc71 !important;color:#2ecc71 !important;-webkit-text-fill-color:#2ecc71 !important;background:rgba(46,204,113,.12);}',
-    '.cp-icon-btn.cp-dictate-off{border-color:#e74c3c !important;color:#e74c3c !important;-webkit-text-fill-color:#e74c3c !important;}',
+    '.cp-icon-btn.cp-dictate-off{opacity:.9;}',
     '.cp-chat-input{flex:1;min-width:0;padding:10px 12px !important;border-radius:20px !important;border:1px solid #333 !important;background:#151515 !important;color:#fff !important;-webkit-text-fill-color:#fff !important;width:auto !important;}',
     '.cp-client-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}',
     '.cp-client-actions .btn{font-size:11px;padding:9px 12px;min-height:36px;flex:0 0 auto;}',
@@ -1356,7 +1356,7 @@ function fmtNotifyWhen(iso) {
     const mi = String(d.getMinutes()).padStart(2, '0');
     return dd + '/' + mm + ' · ' + hh + ':' + mi;
   }
-  return raw.replace('T', ' ').slice(0, 16);
+  return fmtShortDate(raw);
 }
 
 function coachInboxShouldIgnore(e) {
@@ -3405,6 +3405,7 @@ async function clearCoachClientDomain(domain) {
 }
 
 function openAddClientWizard() {
+  window.__cpAddStepIdx = 0;
   ensurePracticeStyle();
   ensurePracticeOverlays();
   window.__cpAddMode = window.__cpAddMode || 'new';
@@ -3421,6 +3422,7 @@ function openAddClientWizard() {
 
 function setAddClientMode(mode) {
   window.__cpAddMode = mode === 'transition' ? 'transition' : 'new';
+  window.__cpAddStepIdx = 0;
   drawAddClientWizard();
   if (window.__cpAddMode === 'transition') {
     try {
@@ -3445,18 +3447,60 @@ function drawAddClientWizard() {
     (isNew
       ? '<p class="cp-help"><b style="color:#fff;">Nuovo:</b> al primo login si apre il questionario di acquisizione (nome/cognome + menu a tendina: anzianità, obiettivo, problemi fisici, tempo a disposizione).</p>'
       : '<p class="cp-help"><b style="color:#fff;">Transizione:</b> lo conosci già. Compili tu il questionario ora: al login entra in app senza form.</p>') +
+    '<div id="cp-add-base">' +
     '<div class="cp-field"><label>Nome *</label><input id="cp-add-first" type="text"></div>' +
     '<div class="cp-field"><label>Cognome *</label><input id="cp-add-last" type="text"></div>' +
     '<div class="cp-field"><label>Password di accesso (min. 4) *</label><input id="cp-add-pass" type="text" autocomplete="off"></div>' +
     '<div class="cp-field"><label>Come lo segui</label><select id="cp-add-coaching-mode" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
-    COACHING_MODE_LABELS.map(function (m) { return '<option value="' + m[0] + '">' + esc(m[1]) + '</option>'; }).join('') + '</select></div>' +
+    COACHING_MODE_LABELS.map(function (m) { return '<option value="' + m[0] + '">' + esc(m[1]) + '</option>'; }).join('') + '</select></div></div>' +
     (isNew ? '' : '<div id="cp-add-intake">' + intakeFormHtml('cpa', {}, { skipName: true }) + '</div>') +
     // The form of a transition client is 27 fields long: the buttons stay in view at the bottom of the sheet.
     '<div style="position:sticky;bottom:-1px;background:#121212;padding:10px 0 4px;margin-top:8px;border-top:1px solid #2a2a2a;">' +
     '<div id="cp-add-status" class="cp-help"></div>' +
-    '<button class="btn btn-primary" style="width:100%;" onclick="submitAddClient()">CREA E GENERA LINK</button>' +
+    (isNew ? '' : '<div id="cp-add-nav" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+      '<button type="button" id="cp-add-prev" class="btn btn-outline" style="flex:1;" onclick="addClientStep(-1)">INDIETRO</button>' +
+      '<span id="cp-add-stepno" class="cp-help" style="flex:1;text-align:center;margin:0;"></span>' +
+      '<button type="button" id="cp-add-next" class="btn btn-primary" style="flex:1;" onclick="addClientStep(1)">AVANTI</button></div>') +
+    '<button id="cp-add-submit" class="btn btn-primary" style="width:100%;" onclick="submitAddClient()">CREA E GENERA LINK</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="showOverlay(\'cp-add\', false)">ANNULLA</button></div>';
+  if (!isNew) setupAddClientSteps();
 }
+
+// A transition client's form is 27 fields: shown a handful at a time, in the same DOM the submit reads.
+function setupAddClientSteps() {
+  const base = document.getElementById('cp-add-base');
+  const intake = document.getElementById('cp-add-intake');
+  if (!base || !intake) return;
+  const steps = [[base]];
+  const blocks = Array.prototype.slice.call(intake.children);
+  const plain = blocks.filter(function (b) { return b.className === 'cp-field' && !b.id; });
+  const special = blocks.filter(function (b) { return plain.indexOf(b) < 0; });
+  for (let i = 0; i < plain.length; i += 6) steps.push(plain.slice(i, i + 6));
+  if (special.length) steps.push(special);
+  window.__cpAddSteps = steps;
+  window.__cpAddStepIdx = Math.min(window.__cpAddStepIdx || 0, steps.length - 1);
+  showAddClientStep();
+}
+function showAddClientStep() {
+  const steps = window.__cpAddSteps || [];
+  const idx = window.__cpAddStepIdx || 0;
+  steps.forEach(function (els, i) { els.forEach(function (el) { el.style.display = i === idx ? '' : 'none'; }); });
+  const last = idx >= steps.length - 1;
+  const set = function (id, show) { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
+  set('cp-add-prev', idx > 0);
+  set('cp-add-next', !last);
+  set('cp-add-submit', last);
+  const no = document.getElementById('cp-add-stepno');
+  if (no) no.textContent = 'Passo ' + (idx + 1) + ' di ' + steps.length;
+  const p = document.getElementById('cp-add-panel');
+  if (p) p.scrollTop = 0;
+}
+function addClientStep(dir) {
+  const steps = window.__cpAddSteps || [];
+  window.__cpAddStepIdx = Math.max(0, Math.min(steps.length - 1, (window.__cpAddStepIdx || 0) + dir));
+  showAddClientStep();
+}
+window.addClientStep = addClientStep;
 
 async function submitAddClient() {
   const status = document.getElementById('cp-add-status');
@@ -3759,7 +3803,7 @@ function renderMessageHtml(m, mine) {
   const text = m._plain != null ? m._plain : (m.body || '');
   const showText = text && text !== '[allegato]';
   return '<div class="cp-msg ' + (mine ? 'me' : 'them') + '">' + (showText ? esc(text) + lock : '') + extra +
-    '<div style="font-size:9px;color:#888;margin-top:4px;">' + esc(String(m.created_at || '').replace('T', ' ').slice(0, 16)) + ticks + '</div></div>';
+    '<div style="font-size:9px;color:#888;margin-top:4px;">' + esc(m.created_at ? fmtShortDate(m.created_at) : '') + ticks + '</div></div>';
 }
 
 function openChatLightbox(src) {
@@ -4089,9 +4133,9 @@ async function renderCoachWorkspace(c) {
     const lastLog = logs.length ? logs[logs.length - 1] : null;
     const lastWoLabel = lastLog
       ? ('Ultimo allenamento: W' + (lastLog.week || '?') + ' · seduta ' + ((Number(lastLog.day) || 0) + 1) +
-        (lastLog.at ? (' · ' + String(lastLog.at).replace('T', ' ').slice(0, 16)) : '') +
+        (lastLog.at ? (' · ' + fmtShortDate(lastLog.at)) : '') +
         ' · ' + logs.length + ' sessioni sync')
-      : (cl.lastWorkoutAt ? ('Ultimo ping workout: ' + String(cl.lastWorkoutAt).replace('T', ' ').slice(0, 16)) : 'Nessun allenamento finalizzato sync');
+      : (cl.lastWorkoutAt ? ('Ultimo ping workout: ' + fmtShortDate(cl.lastWorkoutAt)) : 'Nessun allenamento finalizzato sync');
     const intake = store.coachWorkspace.intake || {};
     const clientProfile = store.__cpClientViewProfile || (store.coachWorkspace && store.coachWorkspace.clientProfile) || {};
     const allergyTxt = intakeAllergyLabels(intake.allergies || clientProfile.allergies);
@@ -4175,7 +4219,7 @@ async function renderCoachWorkspace(c) {
       (logs.length ? ('<div style="margin-top:8px;">' + logs.slice().reverse().slice(0, 6).map(function (row, i) {
         const realIdx = logs.length - 1 - i;
         return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #222;font-size:11px;">' +
-          '<span style="color:#ccc;">W' + (row.week || '?') + ' · S' + ((row.day || 0) + 1) + ' · ' + esc(String(row.at || '').replace('T', ' ').slice(0, 16)) +
+          '<span style="color:#ccc;">W' + (row.week || '?') + ' · S' + ((row.day || 0) + 1) + ' · ' + esc(fmtShortDate(row.at)) +
           '<br><span style="color:#888;">' + (row.sets || 0) + ' serie · ' + (row.tonnage || 0) + ' kg · ' + (row.kcal || 0) + ' kcal</span></span>' +
           '<button type="button" class="btn btn-outline" style="font-size:9px;padding:6px 8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="openClientWorkoutReport(' + realIdx + ')">VEDI REPORT</button></div>';
       }).join('') + '</div>') : '') +
@@ -4197,7 +4241,7 @@ async function renderCoachWorkspace(c) {
         if (inc.ageBand) bits.push(inc.ageBand);
         return '<div class="card" style="padding:12px;margin-bottom:12px;border-color:var(--gold);"><div style="font-weight:900;color:var(--gold);">Aggiornamento anagrafica da approvare</div>' +
           '<p class="cp-help">' + esc(pi.summary || 'Il cliente ha aggiornato i suoi dati.') +
-          (pi.at ? (' · ' + esc(String(pi.at).replace('T', ' ').slice(0, 16))) : '') + '</p>' +
+          (pi.at ? (' · ' + esc(fmtShortDate(pi.at))) : '') + '</p>' +
           (bits.length ? ('<div style="font-size:12px;color:#ddd;margin:6px 0 8px;">' + esc(bits.join(' · ')) + '</div>') : '') +
           '<button class="btn btn-primary" style="width:100%;margin-top:6px;" onclick="approvePendingIntake(\'' + esc(id) + '\')">APPROVA ANAGRAFICA</button>' +
           '<button class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="rejectPendingIntake(\'' + esc(id) + '\')">NEGA (con messaggio)</button></div>';
@@ -6099,7 +6143,7 @@ function openClientWorkoutReport(logIndex) {
   }).join('') || '<div class="cp-help">Nessun dettaglio muscolare.</div>';
   box.innerHTML = '<div class="cp-panel">' +
     '<h2>Report allenamento</h2>' +
-    '<div class="cp-help">W' + esc(String(row.week || '?')) + ' · seduta ' + ((row.day || 0) + 1) + ' · ' + esc(String(row.at || '').replace('T', ' ').slice(0, 16)) + '</div>' +
+    '<div class="cp-help">W' + esc(String(row.week || '?')) + ' · seduta ' + ((row.day || 0) + 1) + ' · ' + esc(fmtShortDate(row.at)) + '</div>' +
     '<div class="cp-row"><span>Durata</span><span>' + mins + ' min</span></div>' +
     '<div class="cp-row"><span>Serie</span><span>' + (row.sets || 0) + '</span></div>' +
     '<div class="cp-row"><span>Esercizi</span><span>' + (row.exercises || 0) + '</span></div>' +
@@ -6334,7 +6378,7 @@ function renderCoachLibrary(c) {
           '<div style="flex:1;min-width:0;overflow-wrap:anywhere;"><div style="font-size:14px;font-weight:800;color:#fff;">' + esc(e.title || 'Scheda') + '</div>' +
           '<div style="font-size:10px;color:#888;margin-top:4px;">' + esc(e.source || '') +
           (meta.weeks ? (' · ' + meta.weeks + ' sett.') : '') +
-          (e.savedAt ? (' · ' + esc(String(e.savedAt).replace('T', ' ').slice(0, 16))) : '') +
+          (e.savedAt ? (' · ' + esc(fmtShortDate(e.savedAt))) : '') +
           '</div></div>' +
           '<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;">' +
           '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="deleteCoachLibraryEntry(\'' + esc(e.id) + '\')">ELIMINA</button>' +
