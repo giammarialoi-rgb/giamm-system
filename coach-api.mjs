@@ -31,6 +31,7 @@ import { mountWaitlist, waitlistPath } from "./server/site/waitlist.mjs";
 import { mountSitemap } from "./server/site/sitemap.mjs";
 import { mountIndexNowKey, startIndexNowJob, keyOf as indexNowKey } from "./server/site/indexnow.mjs";
 import { canonicalUrls } from "./server/site/urls.mjs";
+import { mountWellbeing, wellbeingPath } from "./server/site/wellbeing.mjs";
 import { mountTrust, authorLoader, aboutPath, contactPath, legalPath } from "./server/site/trust.mjs";
 import { metaTags, jsonLdScripts, absUrl, organizationLd, websiteLd, softwareLd, faqLd, faqFromDetails } from "./server/site/seo.mjs";
 import { mountProgramShare } from "./server/program/share.mjs";
@@ -2498,6 +2499,7 @@ async function siteShell(req, page) {
     SAMPLES_ON: page.samples ? ' class="on"' : "",
     WAITLIST: waitlistPath(lang),
     ABOUT: aboutPath(lang),
+    HEALTH: wellbeingPath("hub", lang),
     CONTACT: contactPath(lang),
     PRIVACY: legalPath(lang, "privacy"),
     TERMS: legalPath(lang, "termini"),
@@ -2543,6 +2545,8 @@ const siteHyrox = mountHyrox(app, { webDir: path.join(__dirname, "web"), siteDir
 mountSamples(app, { siteDir: SITE_DIR, pool, initDb, sendEmail, shell: (req, page) => siteShell(req, Object.assign({ samples: true }, page)) });
 // robots.txt and sitemap.xml, built from the same data as the pages.
 const siteMap = mountSitemap(app, { articles: siteBlog.articles, calendar: siteHyrox.calendar, siteDir: SITE_DIR, webDir: path.join(__dirname, "web"), isSiteHost, origin: "https://" + (SITE_HOSTS[0] || "nurvan.app") });
+// Salute e recupero: the hub and the pages on posture, labour and the months after a birth, from the same data as the app.
+mountWellbeing(app, { root: __dirname, siteDir: SITE_DIR, shell: (req, page) => siteShell(req, page) });
 // IndexNow: the key file, and an hourly pass that tells Bing and the other engines about new pages.
 mountIndexNowKey(app, { isSiteHost, key: indexNowKey() });
 if (isProduction(process.env) && process.env.INDEXNOW !== "0") {

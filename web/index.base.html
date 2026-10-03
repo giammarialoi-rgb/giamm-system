@@ -81,6 +81,9 @@
 <script src="program-generator.js"></script>
 <script src="hyrox.js"></script>
 <script src="disciplines.js"></script>
+<script src="wellbeing.js"></script>
+<script src="wellbeing-care.js"></script>
+<script src="wellbeing-refs.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -1686,6 +1689,10 @@ body.focus-mode [data-rewards-only] {
       <button class="btn btn-outline" data-hub="programs" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('programs')">
         <span style="font-size:20px;">📚</span>
         <span style="font-size:11px;font-weight:800;text-align:center;line-height:1.15;">Libreria programmi e import</span>
+      </button>
+      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('wellbeing')">
+        <span style="font-size:20px;">🩺</span>
+        <span style="font-size:11px;font-weight:800;text-align:center;line-height:1.15;">Salute e recupero</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('knowledge')">
         <span style="font-size:20px;">📖</span>
@@ -11452,7 +11459,7 @@ function applyOperationsToProgram(program, operations) {
     }
     if (type === 'navigate' || type === 'set_view') {
       const view = changes.view || changes.tab || op.view;
-      const allowedViews = new Set(['home','training','stats','ai','programs','nutrition','supplements','therapy','exams','menu','athlete','settings','hyrox','disciplines']);
+      const allowedViews = new Set(['home','training','stats','ai','programs','nutrition','supplements','therapy','exams','menu','athlete','settings','hyrox','disciplines','wellbeing']);
       if (view && allowedViews.has(String(view))) {
         currentView = String(view);
         appliedCount++;
@@ -15572,6 +15579,11 @@ var PAGE_TUTORIALS = {
     { t: 'Su misura', d: 'Indica categoria, livello, giorni a settimana e dove ti alleni: le stazioni che non hai vengono sostituite con l’esercizio più vicino.' },
     { t: 'Come è fatta', d: 'Quattro fasi: base, costruzione, picco con le simulazioni e scarico. Ogni scelta è legata a uno studio, che puoi aprire.' }
   ] },
+  wellbeing: { label: 'Salute e recupero', icon: '🩺', steps: [
+    { t: 'Prima l’avvertenza', d: 'Qui trovi informazioni generali, con le fonti: non sostituiscono il parere del tuo medico, fisioterapista od ostetrica. Si entra dopo aver letto e capito l’avvertenza.' },
+    { t: 'Tre aree', d: 'Postura e dolori, travaglio e parto, dopo il parto. Ognuna parte dai segni per cui prima serve un professionista, e dice anche cosa gli studi non hanno dimostrato.' },
+    { t: 'Il programma', d: 'Dove è adatto, scrivi un programma: lo vedi per intero prima di iniziarlo, e porta l’avvertenza con sé.' }
+  ] },
   disciplines: { label: 'A casa', icon: '🧘', steps: [
     { t: 'Quattro discipline', d: 'Pilates sul tappetino, mobilità e stretching, calisthenics e HIIT: scegli giorni, livello e durata della seduta.' },
     { t: 'Lezione a tempo', d: 'Ogni seduta si può seguire come una lezione: un esercizio alla volta, come farlo, il conto alla rovescia e il recupero.' }
@@ -16283,6 +16295,7 @@ function renderCurrentView() {
   else if (currentView === 'knowledge') renderTrainingKnowledge(c);
   else if (currentView === 'hyrox') renderHyrox(c);
   else if (currentView === 'disciplines') renderDisciplines(c);
+  else if (currentView === 'wellbeing') renderWellbeing(c);
   else renderHome(c);
   if (currentView !== 'nutrition') window.__nutritionLastView = currentView;
   applyChromeI18n();
@@ -22493,7 +22506,7 @@ function catalogWhole(goal) {
   if (goal === 'hyrox') return !!hyroxApi();
   return typeof disciplinesApi === 'function' && !!disciplinesApi() && disciplinesApi().isDiscipline(goal);
 }
-function catalogWholeSource(src) { return src === 'hyrox_v1' || src === 'discipline_v1'; }
+function catalogWholeSource(src) { return src === 'hyrox_v1' || src === 'discipline_v1' || src === 'wellbeing_v1'; }
 
 function filterProgramCatalog(list) {
   const f = window.__catalogFilters || {};
@@ -23021,6 +23034,13 @@ function renderPrograms(c){
           <div style="font-size:12px;font-weight:800;color:#fff;">${esc(pr.label)}</div>
           <div style="font-size:10px;color:#888;margin-top:2px;">${esc(pr.note)} · ${hyroxApi().catalogTotal({ equipment: pr.id })} schede</div></button>`).join('')}
       </div>
+    </div>
+    `, false) : ''}
+
+    ${wbApi() ? homeCollapsibleCard('SALUTE E RECUPERO', `
+    <div class="card" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
+      <p style="font-size:11px;color:#888;margin:0 0 10px;line-height:1.5;">Esercizi per un problema fisico o posturale, per le ultime settimane di gravidanza e per il ritorno all'allenamento dopo il parto. Con le fonti, e con l'avvertenza: non sostituisce il parere di un professionista.</p>
+      <button class="btn btn-primary" style="width:100%;font-size:11px;padding:10px;" onclick="navigate('wellbeing')">APRI</button>
     </div>
     `, false) : ''}
 
@@ -25395,6 +25415,345 @@ window.disciplineRequestCoach = disciplineRequestCoach;
 window.showDisciplineCatalog = showDisciplineCatalog;
 
 /*
+ * Salute e recupero: exercise for a physical problem, for the weeks before a
+ * birth and for the months after one (web/wellbeing.js and
+ * web/wellbeing-care.js write the programs and hold the studies). One screen
+ * with three areas. Nothing opens before the notice has been read and
+ * acknowledged; every area starts from the signs that mean "a professional
+ * first"; every claim shows the studies it rests on, and what is not proven.
+ */
+function wbApi() { return (typeof window !== 'undefined' && window.NurvanWellbeing) || null; }
+function wbRefs() { return (typeof window !== 'undefined' && window.NURVAN_WELLBEING_REFS) || {}; }
+function wbState() {
+  if (!store.wellbeing || typeof store.wellbeing !== 'object') store.wellbeing = {};
+  const s = store.wellbeing;
+  const api = wbApi();
+  if (!api) return s;
+  if (!api.AREAS.some(function (a) { return a.id === s.area; })) s.area = 'posture';
+  s.posture = Object.assign({ topic: api.POSTURE[0].id, days: 3, weeks: 8, minutes: 30, level: 'principiante', flags: {} }, s.posture || {});
+  if (!api.topic(s.posture.topic)) s.posture.topic = api.POSTURE[0].id;
+  if (!s.posture.flags || typeof s.posture.flags !== 'object') s.posture.flags = {};
+  s.postpartum = Object.assign({ delivery: 'vaginale', weeks: 8, trained: 'nessuno', breastfeeding: false, checkDone: false, cleared: false, blockWeeks: 4, pelvic: {}, urgent: {}, tests: {} }, s.postpartum || {});
+  s.labour = Object.assign({ profile: 'nessuno', weeksPregnant: 34, epidural: false, risks: {} }, s.labour || {});
+  return s;
+}
+function wbAcknowledged() {
+  const api = wbApi();
+  const ack = store.wellbeing && store.wellbeing.ack;
+  return !!(api && ack && ack.version === api.DISCLAIMER_VERSION);
+}
+function wbRefresh() { try { persist(); } catch (_) {} render(); }
+function wbAck() {
+  const api = wbApi();
+  if (!api) return;
+  wbState().ack = { version: api.DISCLAIMER_VERSION, at: new Date().toISOString() };
+  wbRefresh();
+}
+function wbArea(id) { wbState().area = id; wbRefresh(); }
+function wbPosture(field, value) {
+  const p = wbState().posture;
+  p[field] = (field === 'days' || field === 'weeks' || field === 'minutes') ? Number(value) : value;
+  wbRefresh();
+}
+function wbFlag(i, on) {
+  const p = wbState().posture;
+  if (!p.flags[p.topic]) p.flags[p.topic] = {};
+  p.flags[p.topic][i] = !!on;
+  wbRefresh();
+}
+function wbPP(field, value) {
+  const p = wbState().postpartum;
+  p[field] = (field === 'weeks' || field === 'blockWeeks') ? Number(value) : value;
+  wbRefresh();
+}
+function wbPPToggle(field, on) { wbState().postpartum[field] = !!on; wbRefresh(); }
+function wbPPList(group, i, on) { wbState().postpartum[group][i] = !!on; wbRefresh(); }
+function wbLabour(field, value) {
+  const l = wbState().labour;
+  l[field] = field === 'weeksPregnant' ? Number(value) : value;
+  wbRefresh();
+}
+function wbLabourToggle(field, on) { wbState().labour[field] = !!on; wbRefresh(); }
+function wbLabourRisk(i, on) { wbState().labour.risks[i] = !!on; wbRefresh(); }
+
+function wbList(obj, count) {
+  const out = [];
+  for (let i = 0; i < count; i++) out.push(!!(obj && obj[i]));
+  return out;
+}
+function wbPostpartumInput() {
+  const api = wbApi();
+  const p = wbState().postpartum;
+  const urgent = wbList(p.urgent, api.URGENT.length).some(Boolean);
+  const pelvic = wbList(p.pelvic, api.PELVIC.length).some(Boolean);
+  const tests = api.LOAD_TESTS.length + api.STRENGTH_TESTS.length;
+  const passed = wbList(p.tests, tests).every(Boolean);
+  return { area: 'postpartum', delivery: p.delivery, weeks: p.weeks, trained: p.trained, breastfeeding: p.breastfeeding, checkDone: p.checkDone, cleared: p.cleared, pelvicSymptoms: pelvic, urgent: urgent, testsPassed: passed, blockWeeks: p.blockWeeks };
+}
+
+function wbCheck(label, checked, handler) {
+  return '<label style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;font-size:12px;color:#ddd;line-height:1.45;cursor:pointer;">' +
+    '<input type="checkbox" ' + (checked ? 'checked ' : '') + 'onchange="' + handler + '" style="margin-top:2px;flex:0 0 auto;width:18px;height:18px;">' +
+    '<span>' + esc(label) + '</span></label>';
+}
+function wbSelect(value, options, handler) {
+  return '<select onchange="' + handler + '" style="width:100%;padding:10px;background:#111;color:#fff;border:1px solid #333;border-radius:8px;font-size:13px;">' +
+    options.map(function (o) { return '<option value="' + esc(String(o.value)) + '"' + (String(o.value) === String(value) ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>';
+}
+function wbField(label, control) {
+  return '<div style="margin-bottom:10px;"><div style="font-size:10px;font-weight:800;color:#999;letter-spacing:.5px;margin-bottom:4px;">' + esc(label) + '</div>' + control + '</div>';
+}
+function wbCard(title, body, tone) {
+  return '<div class="card" style="padding:16px;margin-bottom:12px;' + (tone === 'warn' ? 'border:1px solid #c66;' : (tone === 'accent' ? 'border:1px solid rgba(212,175,55,.5);' : '')) + '">' +
+    (title ? '<div style="font-size:10px;font-weight:900;color:' + (tone === 'warn' ? '#e88' : 'var(--gold)') + ';letter-spacing:1px;margin-bottom:8px;">' + esc(title) + '</div>' : '') + body + '</div>';
+}
+function wbBullets(list) {
+  return '<ul style="margin:0;padding-left:18px;font-size:12px;color:#ccc;line-height:1.55;">' + list.map(function (t) { return '<li style="margin-bottom:4px;">' + esc(t) + '</li>'; }).join('') + '</ul>';
+}
+// The studies a claim stands on: the citation as published and where to read it.
+function wbRefsHtml(ids) {
+  const refs = wbRefs();
+  const seen = {};
+  const items = [];
+  ids.forEach(function (id) {
+    if (seen[id] || !refs[id]) return;
+    seen[id] = true;
+    items.push('<li style="margin-bottom:5px;">' + esc(refs[id].cite) + (refs[id].pmid ? ' · PMID ' + esc(refs[id].pmid) : '') +
+      ' · <a href="' + esc(refs[id].url) + '" target="_blank" rel="noopener noreferrer" style="color:var(--gold);">apri</a></li>');
+  });
+  if (!items.length) return '';
+  return '<ul style="margin:6px 0 0;padding-left:16px;font-size:10px;color:#888;line-height:1.5;">' + items.join('') + '</ul>';
+}
+function wbSourcesHtml(sources) {
+  const all = [];
+  const claims = sources.map(function (s) {
+    s.r.forEach(function (r) { all.push(r); });
+    return '<li style="margin-bottom:8px;">' + esc(s.t) + '</li>';
+  }).join('');
+  return '<ul style="margin:0 0 4px;padding-left:18px;font-size:12px;color:#ccc;line-height:1.55;">' + claims + '</ul>' +
+    '<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:11px;color:var(--gold);font-weight:800;">LE FONTI (' + new Set(all).size + ')</summary>' + wbRefsHtml(all) + '</details>';
+}
+function wbDisclaimerHtml(full) {
+  const api = wbApi();
+  const list = full ? api.DISCLAIMER : api.DISCLAIMER.slice(0, 1);
+  return list.map(function (t) { return '<p style="font-size:' + (full ? 13 : 11) + 'px;color:#eee;line-height:1.55;margin:0 0 10px;">' + esc(t) + '</p>'; }).join('');
+}
+function wbOpenDisclaimer() {
+  const api = wbApi();
+  if (!api) return;
+  const old = document.getElementById('wellbeing-disclaimer-sheet');
+  if (old) old.remove();
+  const sheet = document.createElement('div');
+  sheet.id = 'wellbeing-disclaimer-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.style.zIndex = '10260';
+  sheet.onclick = function (ev) { if (ev.target === sheet) sheet.remove(); };
+  sheet.innerHTML = '<div class="nurvan-sheet-panel" onclick="event.stopPropagation()"><div class="nurvan-sheet-head">' +
+    '<div style="font-size:10px;color:#e0b040;font-weight:800;letter-spacing:1px;">AVVERTENZA</div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="document.getElementById(\'wellbeing-disclaimer-sheet\').remove()">CHIUDI</button></div>' +
+    '<div class="nurvan-sheet-body">' + wbDisclaimerHtml(true) + '</div></div>';
+  document.body.appendChild(sheet);
+}
+
+function wbPostureHtml(s, api) {
+  const p = s.posture;
+  const t = api.topic(p.topic);
+  const flags = p.flags[p.topic] || {};
+  const flagged = t.red.map(function (_, i) { return !!flags[i]; });
+  const screen = api.screenPosture(t.id, flagged);
+  const chooser = wbField('Quale problema', wbSelect(t.id, api.POSTURE.map(function (x) { return { value: x.id, label: x.label }; }), "wbPosture('topic',this.value)")) +
+    '<div style="font-size:11px;color:#aaa;line-height:1.5;margin:-4px 0 12px;">' + esc(t.short) + '</div>';
+  const redHtml = t.red.map(function (r, i) { return wbCheck(r, !!flags[i], 'wbFlag(' + i + ',this.checked)'); }).join('');
+  let create;
+  if (!screen.ok) {
+    create = '<div style="font-size:12px;color:#fcc;line-height:1.55;">Con questo segno parla prima con il tuo medico o con il tuo fisioterapista: non ti propongo un programma. ' + esc(screen.reasons.join(' · ')) + '</div>';
+  } else if (hyroxMustAsk()) {
+    create = '<div style="font-size:12px;color:#ccc;line-height:1.55;">Il tuo programma lo gestisce il tuo coach: mostragli questa pagina e parlatene.</div>';
+  } else {
+    const days = [2, 3].map(function (d) { return { value: d, label: d + ' giorni a settimana' }; });
+    const weeks = [4, 6, 8, 12].map(function (w) { return { value: w, label: w + ' settimane' }; });
+    const mins = [20, 30, 45].map(function (m) { return { value: m, label: m + ' minuti' }; });
+    const lv = api.LEVELS.map(function (l) { return { value: l.id, label: l.label }; });
+    let preview = '';
+    try {
+      const prog = api.plan(Object.assign({ area: 'posture' }, p));
+      const sess = prog.weeks[Math.max(0, Math.floor(prog.weeks.length / 2) - 1)].sessions[0];
+      preview = '<div style="font-size:11px;color:#888;margin:10px 0 4px;">UNA SEDUTA, A METÀ PROGRAMMA</div>' +
+        sess.exercises.map(function (e) { return '<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid #222;font-size:12px;color:#ddd;"><span>' + esc(e.name) + '</span><span style="color:#999;white-space:nowrap;">' + esc(e.unit === 'cardio' ? e.repsTarget : e.setCount + ' × ' + e.repsTarget) + '</span></div>'; }).join('');
+    } catch (_) { preview = ''; }
+    create = (t.framing ? '<div style="font-size:12px;color:#e0b040;line-height:1.5;margin-bottom:10px;">' + esc(t.framing) + '</div>' : '') +
+      wbField('Quanto spesso', wbSelect(p.days, days, "wbPosture('days',this.value)")) +
+      wbField('Quanto dura', wbSelect(p.weeks, weeks, "wbPosture('weeks',this.value)")) +
+      wbField('Tempo per seduta', wbSelect(p.minutes, mins, "wbPosture('minutes',this.value)")) +
+      wbField('Livello', wbSelect(p.level, lv, "wbPosture('level',this.value)")) +
+      preview +
+      '<div style="font-size:11px;color:#999;line-height:1.5;margin:10px 0;">' + esc(api.PAIN_RULE) + '</div>' +
+      '<button type="button" class="btn btn-primary" style="width:100%;min-height:48px;font-weight:900;" onclick="wbCreate()">VEDI TUTTO IL PROGRAMMA</button>';
+  }
+  return chooser +
+    wbCard(t.label.toUpperCase(), '<p style="font-size:13px;color:#eee;line-height:1.55;margin:0;">' + esc(t.what) + '</p>', 'accent') +
+    wbCard('PRIMA DI INIZIARE: HAI UNO DI QUESTI SEGNI?', redHtml + '<div style="font-size:11px;color:#999;margin-top:6px;">Se ne spunti uno, serve prima il parere di un professionista.</div>', screen.ok ? '' : 'warn') +
+    wbCard(screen.ok ? 'IL PROGRAMMA' : 'PRIMA IL MEDICO', create) +
+    wbCard('COSA DICONO LE FONTI', wbSourcesHtml(t.sources)) +
+    wbCard('COSA NON È DIMOSTRATO', wbBullets(t.notProven)) +
+    wbCard('MUSCOLI E DOSAGGIO', '<p style="font-size:12px;color:#ccc;line-height:1.55;margin:0 0 8px;"><b>Muscoli.</b> ' + esc(t.muscles) + '</p><p style="font-size:12px;color:#ccc;line-height:1.55;margin:0;"><b>Dosaggio.</b> ' + esc(t.dose) + '</p>') +
+    wbCard('GLI ESERCIZI', t.exercises.map(function (id) {
+      const e = api.EX[id];
+      return '<details style="border-top:1px solid #222;padding:9px 0;"><summary style="cursor:pointer;font-size:13px;font-weight:800;color:#fff;">' + esc(e.name) + '</summary><p style="font-size:12px;color:#ccc;line-height:1.5;margin:8px 0 0;">' + esc(e.cue) + '</p></details>';
+    }).join(''));
+}
+
+function wbPostpartumHtml(s, api) {
+  const p = s.postpartum;
+  const input = wbPostpartumInput();
+  const stage = api.postpartumStage(input);
+  const delivery = api.DELIVERIES.filter(function (d) { return d.id === p.delivery; })[0] || api.DELIVERIES[0];
+  const phase = api.PHASES[stage.phase];
+  const months = Math.round((p.weeks / 4.345) * 10) / 10;
+  const form =
+    wbField('Com\'è stato il parto', wbSelect(p.delivery, api.DELIVERIES.map(function (d) { return { value: d.id, label: d.label }; }), "wbPP('delivery',this.value)")) +
+    '<div style="font-size:11px;color:#aaa;line-height:1.5;margin:-4px 0 10px;">' + esc(delivery.note) + '</div>' +
+    wbField('Settimane dal parto (circa ' + months + ' mesi)', '<input type="number" min="0" max="156" step="1" value="' + esc(String(p.weeks)) + '" onchange="wbPP(\'weeks\',this.value)" style="width:100%;padding:10px;background:#111;color:#fff;border:1px solid #333;border-radius:8px;font-size:14px;">') +
+    wbField('Prima della gravidanza ti allenavi?', wbSelect(p.trained, [{ value: 'nessuno', label: 'No, ero sedentaria' }, { value: 'amatoriale', label: 'Ogni tanto' }, { value: 'regolare', label: 'Con regolarità, anche da atleta' }], "wbPP('trained',this.value)")) +
+    wbCheck('Allatto o tiro il latte', p.breastfeeding, "wbPPToggle('breastfeeding',this.checked)") +
+    wbCheck('Ho fatto il controllo post-parto con il mio medico o la mia ostetrica', p.checkDone, "wbPPToggle('checkDone',this.checked)") +
+    ((p.delivery === 'oasis' || p.delivery === 'cesareo_urg') ? wbCheck('Chi mi segue mi ha detto che posso aumentare l\'attività', p.cleared, "wbPPToggle('cleared',this.checked)") : '');
+  const urgentCard = wbCard('SEGNI PER CUI NON SI FA ESERCIZIO: SI CHIAMA', api.URGENT.map(function (u, i) { return wbCheck(u, !!p.urgent[i], 'wbPPList(\'urgent\',' + i + ',this.checked)'); }).join(''), stage.urgent ? 'warn' : '');
+  const pelvicCard = wbCard('SINTOMI DA FAR VEDERE A UN FISIOTERAPISTA DEL PAVIMENTO PELVICO', api.PELVIC.map(function (u, i) { return wbCheck(u, !!p.pelvic[i], 'wbPPList(\'pelvic\',' + i + ',this.checked)'); }).join(''));
+  const testsCard = p.weeks >= 12
+    ? wbCard('PRIMA DELLA CORSA: I TEST (consenso di esperti, non risultati di studi)', '<div style="font-size:11px;color:#aaa;line-height:1.5;margin-bottom:6px;">Falli senza dolore, pesantezza, trascinamento o perdite.</div>' +
+      api.LOAD_TESTS.concat(api.STRENGTH_TESTS).map(function (u, i) { return wbCheck(u, !!p.tests[i], 'wbPPList(\'tests\',' + i + ',this.checked)'); }).join(''))
+    : '';
+  let stageHtml;
+  if (stage.urgent) {
+    stageHtml = wbCard('NIENTE ESERCIZIO', stage.messages.map(function (m) { return '<p style="font-size:13px;color:#fcc;line-height:1.55;margin:0 0 8px;">' + esc(m) + '</p>'; }).join(''), 'warn');
+  } else {
+    const notes = stage.reasons.concat(stage.messages);
+    let create;
+    if (hyroxMustAsk()) create = '<div style="font-size:12px;color:#ccc;">Il tuo programma lo gestisce il tuo coach: mostragli questa pagina e parlatene.</div>';
+    else create = wbField('Quanto dura il blocco', wbSelect(p.blockWeeks, [4, 6, 8].map(function (w) { return { value: w, label: w + ' settimane' }; }), "wbPP('blockWeeks',this.value)")) +
+      '<button type="button" class="btn btn-primary" style="width:100%;min-height:48px;font-weight:900;" onclick="wbCreate()">VEDI IL PROGRAMMA DI QUESTA FASE</button>';
+    stageHtml = wbCard('LA TUA FASE: ' + phase.label.toUpperCase() + ' (' + phase.range + ')',
+      '<p style="font-size:13px;color:#eee;line-height:1.55;margin:0 0 8px;">' + esc(phase.summary) + '</p>' +
+      (notes.length ? '<div style="margin:8px 0;">' + notes.map(function (m) { return '<p style="font-size:12px;color:#e0b040;line-height:1.5;margin:0 0 6px;">' + esc(m) + '</p>'; }).join('') + '</div>' : '') +
+      (stage.referrals.length ? '<p style="font-size:12px;color:#fcc;line-height:1.5;margin:0 0 8px;">Ti consiglio di sentire: ' + esc(stage.referrals.join(', ')) + '.</p>' : '') + create, 'accent');
+  }
+  return wbCard('PER INIZIARE', form) + urgentCard + pelvicCard + testsCard + stageHtml +
+    wbCard('COSA DICONO LE FONTI', wbSourcesHtml(api.POSTPARTUM_SOURCES)) +
+    wbCard('COSA NON È DIMOSTRATO', wbBullets(api.POSTPARTUM_NOT_PROVEN));
+}
+
+function wbLabourHtml(s, api) {
+  const l = s.labour;
+  const risks = wbList(l.risks, api.LABOUR_RISKS.length);
+  const screen = api.screenLabour(risks);
+  const gate = wbCard('PRIMA DI TUTTO: LA TUA SITUAZIONE', '<div style="font-size:11px;color:#aaa;line-height:1.5;margin-bottom:6px;">Se una di queste cose è vera, posizioni, movimento e preparazione le decide chi ti segue: qui trovi solo informazioni.</div>' +
+    api.LABOUR_RISKS.map(function (r, i) { return wbCheck(r, !!l.risks[i], 'wbLabourRisk(' + i + ',this.checked)'); }).join(''), screen.ok ? '' : 'warn');
+  const alarms = wbCard('QUANDO CHIAMARE SUBITO IL PUNTO NASCITA O IL 112', wbBullets(api.LABOUR_ALARMS) +
+    '<div style="font-size:10px;color:#888;margin-top:8px;line-height:1.45;">Elenco di segnali di uso comune nelle informazioni ostetriche: non l\'abbiamo verificato frase per frase su una singola fonte. Chiedi alla tua ostetrica il suo elenco.</div>', 'warn');
+  if (!screen.ok) {
+    return gate + wbCard('DECIDE IL TEAM', '<p style="font-size:13px;color:#fcc;line-height:1.55;margin:0 0 8px;">Hai indicato: ' + esc(screen.reasons.join(' · ')) + '.</p><p style="font-size:12px;color:#ccc;line-height:1.55;margin:0;">Non ti propongo posizioni né esercizi: chiedi alla tua ostetrica o al tuo ginecologo cosa puoi fare, e segui solo le loro indicazioni.</p>', 'warn') + alarms;
+  }
+  const profile = api.LABOUR_PROFILES.filter(function (x) { return x.id === l.profile; })[0] || api.LABOUR_PROFILES[0];
+  // With the epidural or an induction the positions are the team's: only what still applies is shown.
+  const shown = l.epidural ? ['epidurale', 'spinta', 'respiro'] : null;
+  const guide = api.LABOUR_GUIDE.filter(function (g) { return !shown || shown.indexOf(g.id) >= 0; }).map(function (g) {
+    return '<details style="border-top:1px solid #222;padding:10px 0;"' + ((g.id === 'primo' || (shown && g.id === 'epidurale')) ? ' open' : '') + '><summary style="cursor:pointer;font-size:13px;font-weight:800;color:#fff;">' + esc(g.title) +
+      '<span style="display:block;font-size:10px;color:#888;font-weight:400;margin-top:2px;">' + esc(g.when) + '</span></summary>' +
+      '<p style="font-size:13px;color:#eee;line-height:1.55;margin:8px 0;">' + esc(g.t) + '</p>' +
+      '<p style="font-size:11px;color:#999;line-height:1.55;margin:0;"><b>Cosa dicono gli studi.</b> ' + esc(g.e) + '</p>' + wbRefsHtml(g.r) + '</details>';
+  }).join('');
+  const training = api.LABOUR_TRAINING;
+  const trainingCard = wbCard(training.title.toUpperCase(), '<p style="font-size:13px;color:#eee;line-height:1.55;margin:0 0 10px;">' + esc(training.t) + '</p>' + wbSourcesHtml(training.facts));
+  const prep = '<div style="font-size:11px;color:#aaa;line-height:1.5;margin-bottom:8px;">' + esc(profile.message) + '</div>' +
+    wbField('Prima della gravidanza ti allenavi?', wbSelect(l.profile, api.LABOUR_PROFILES.map(function (x) { return { value: x.id, label: x.label }; }), "wbLabour('profile',this.value)")) +
+    wbField('Settimana di gravidanza', '<input type="number" min="24" max="40" step="1" value="' + esc(String(l.weeksPregnant)) + '" onchange="wbLabour(\'weeksPregnant\',this.value)" style="width:100%;padding:10px;background:#111;color:#fff;border:1px solid #333;border-radius:8px;font-size:14px;">') +
+    '<div style="font-size:11px;color:#999;line-height:1.5;margin:0 0 10px;">Camminata, pavimento pelvico, posizioni comode e respiro, fino alla 40ª settimana. Niente esercizi da supina.</div>' +
+    (hyroxMustAsk() ? '<div style="font-size:12px;color:#ccc;">Il tuo programma lo gestisce il tuo coach: mostragli questa pagina e parlatene.</div>' :
+      '<button type="button" class="btn btn-primary" style="width:100%;min-height:48px;font-weight:900;" onclick="wbCreate()">VEDI IL PROGRAMMA DI PREPARAZIONE</button>');
+  return gate +
+    wbCard('IN TRAVAGLIO: COSA DICONO LE PROVE', wbCheck('Avrò (o ho) l\'epidurale o l\'induzione', l.epidural, "wbLabourToggle('epidural',this.checked)") +
+      (l.epidural ? '<p style="font-size:12px;color:#fcc;line-height:1.55;margin:6px 0 10px;">Con l\'epidurale o l\'induzione le posizioni le decide il team: non ci sono esercizi guidati. Spesso stare sul fianco aiuta.</p>' + guide : guide)) +
+    trainingCard + alarms +
+    wbCard('PREPARAZIONE DELLE ULTIME SETTIMANE', prep, 'accent');
+}
+
+function renderWellbeing(c) {
+  const api = wbApi();
+  if (!api) { c.innerHTML = '<div class="card" style="padding:16px;">Sezione non caricata.</div>'; return; }
+  const s = wbState();
+  const head = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:1px;">SALUTE E RECUPERO</div>' +
+    '<div style="font-size:11px;color:#888;">Postura e dolori, travaglio e parto, dopo il parto</div></div>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="navigate(\'home\')">CHIUDI</button></div>';
+  if (!wbAcknowledged()) {
+    c.innerHTML = '<div style="max-width:720px;margin:0 auto;">' + head +
+      wbCard('PRIMA DI ENTRARE: LEGGI QUESTA AVVERTENZA', wbDisclaimerHtml(true) +
+        '<button type="button" class="btn btn-primary" style="width:100%;min-height:48px;font-weight:900;margin-top:6px;" onclick="wbAck()">HO LETTO E CAPITO</button>', 'warn') +
+      '</div><div style="height:80px;"></div>';
+    return;
+  }
+  const chooser = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:12px;">' + api.AREAS.map(function (a) {
+    const on = a.id === s.area;
+    return '<button type="button" class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" style="min-height:74px;text-align:left;padding:10px 12px;" onclick="wbArea(\'' + a.id + '\')">' +
+      '<div style="font-size:12px;font-weight:900;">' + esc(a.label) + '</div>' +
+      '<div style="font-size:11px;margin-top:4px;opacity:.8;line-height:1.35;font-weight:400;text-transform:none;letter-spacing:0;">' + esc(a.note) + '</div></button>';
+  }).join('') + '</div>';
+  const notice = '<div style="padding:10px 12px;margin-bottom:12px;border:1px solid #6a5420;border-radius:10px;background:#14110a;">' + wbDisclaimerHtml(false) +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:5px 10px;" onclick="wbOpenDisclaimer()">LEGGI TUTTA L\'AVVERTENZA</button></div>';
+  const body = s.area === 'labour' ? wbLabourHtml(s, api) : (s.area === 'postpartum' ? wbPostpartumHtml(s, api) : wbPostureHtml(s, api));
+  c.innerHTML = '<div style="max-width:720px;margin:0 auto;">' + head + notice + chooser + body + '</div><div style="height:80px;"></div>';
+}
+window.renderWellbeing = renderWellbeing;
+
+async function wbCreate() {
+  const api = wbApi();
+  if (!api) { if (typeof showToast === 'function') showToast('Sezione non caricata', 'error'); return; }
+  if (hyroxMustAsk()) { if (typeof showToast === 'function') showToast('Il tuo programma lo gestisce il tuo coach.', 'info'); return; }
+  const s = wbState();
+  let input;
+  if (s.area === 'posture') {
+    const t = api.topic(s.posture.topic);
+    const flags = s.posture.flags[s.posture.topic] || {};
+    if (!api.screenPosture(t.id, t.red.map(function (_, i) { return !!flags[i]; })).ok) { if (typeof showToast === 'function') showToast('Prima parla con il tuo medico o fisioterapista.', 'error'); return; }
+    input = Object.assign({ area: 'posture' }, s.posture);
+  } else if (s.area === 'postpartum') {
+    input = wbPostpartumInput();
+    if (input.urgent) { if (typeof showToast === 'function') showToast('Con questi segni non si fa esercizio: chiama la tua ostetrica o il tuo medico.', 'error'); return; }
+  } else {
+    if (!api.screenLabour(wbList(s.labour.risks, api.LABOUR_RISKS.length)).ok) { if (typeof showToast === 'function') showToast('In questa situazione decide chi ti segue.', 'error'); return; }
+    input = { area: 'labour', profile: s.labour.profile, weeksPregnant: s.labour.weeksPregnant };
+  }
+  try {
+    let prog = null;
+    await withBusy(function () { prog = normalizeProgram(api.plan(input)); return Promise.resolve(); }, 'Scrivo il programma…', { immediate: true, maxMs: 60000 });
+    openGeneratedReview(prog, 'active', null);
+  } catch (e) {
+    console.error('[WELLBEING]', e);
+    if (typeof showToast === 'function') showToast('Generazione non riuscita: ' + (e && e.message || e), 'error');
+  }
+}
+window.wbAck = wbAck;
+window.wbArea = wbArea;
+window.wbPosture = wbPosture;
+window.wbFlag = wbFlag;
+window.wbPP = wbPP;
+window.wbPPToggle = wbPPToggle;
+window.wbPPList = wbPPList;
+window.wbLabour = wbLabour;
+window.wbLabourToggle = wbLabourToggle;
+window.wbLabourRisk = wbLabourRisk;
+window.wbOpenDisclaimer = wbOpenDisclaimer;
+window.wbCreate = wbCreate;
+window.wellbeingBannerHtml = wellbeingBannerHtml;
+// A program from this section carries the notice with it, at the top of the workout.
+function wellbeingBannerHtml() {
+  if (typeof DATA === 'undefined' || !DATA || DATA.source !== 'wellbeing_v1') return '';
+  const api = wbApi();
+  return '<div style="padding:10px 12px;margin-bottom:12px;border:1px solid #6a5420;border-radius:10px;background:#14110a;font-size:11px;color:#e8d9a8;line-height:1.5;">' +
+    esc(api ? api.DISCLAIMER_SHORT : 'Programma informativo: non sostituisce il parere del tuo medico, fisioterapista od ostetrica.') + '</div>';
+}
+
+/*
  * A session followed as a timed lesson.
  *
  * A Pilates sequence or twenty minutes of mobility are not trained by
@@ -25459,7 +25818,7 @@ function lessonSteps(week, day) {
 function lessonWorthOffering() {
   const list = sessionExercisesFor(currentWeek, currentDay) || [];
   if (!list.length) return false;
-  if (DATA && DATA.source === 'discipline_v1') return true;
+  if (DATA && (DATA.source === 'discipline_v1' || DATA.source === 'wellbeing_v1')) return true;
   if (list.some(function (row) { return row && row.cue && !row.hyrox_station; })) return true;
   let timed = 0;
   list.forEach(function (row) {
@@ -25470,9 +25829,10 @@ function lessonWorthOffering() {
 }
 function lessonButtonHtml() {
   if (!lessonWorthOffering()) return '';
+  const banner = (typeof wellbeingBannerHtml === 'function') ? wellbeingBannerHtml() : '';
   const left = lessonSteps(currentWeek, currentDay).length;
-  if (!left) return '';
-  return '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:12px;min-height:48px;font-weight:900;" onclick="openLesson()">SEGUI COME LEZIONE A TEMPO</button>';
+  if (!left) return banner;
+  return banner + '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:12px;min-height:48px;font-weight:900;" onclick="openLesson()">SEGUI COME LEZIONE A TEMPO</button>';
 }
 function lessonBeep(high) {
   try {
@@ -42491,7 +42851,7 @@ function progressionAdviceContext() {
   if (!store || store.coachViewingClient || store.coachAssigning || store.clientShell) return null;
   if (typeof isAthleteRole === 'function' && isAthleteRole()) return null; // a coach's program is the coach's to change
   if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return null;
-  if (/^(hyrox_v1|discipline_v1)$/.test(String(DATA.source || ''))) return null;
+  if (/^(hyrox_v1|discipline_v1|wellbeing_v1)$/.test(String(DATA.source || ''))) return null;
   var engine = window.NurvanProgressions;
   var advisor = window.NurvanProgressionAdvisor;
   if (!engine || !advisor) return null;

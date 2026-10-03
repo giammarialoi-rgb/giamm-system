@@ -17,7 +17,7 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace
 const PH = '\u0001';   // a value
 const CUT = '\u0002';  // markup: the text stops here
 
-const SKIP_FILES = /(\.min\.js|youtube-links\.js|features\.js|sw\.js|i18n-runtime\.js)$/;
+const SKIP_FILES = /(\.min\.js|youtube-links\.js|features\.js|sw\.js|i18n-runtime\.js|wellbeing-refs\.js)$/;
 
 // Calls whose text arguments are never shown.
 const SKIP_CALLS = new Set(['getElementById', '$', 'querySelector', 'querySelectorAll', 'addEventListener', 'removeEventListener',

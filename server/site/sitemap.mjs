@@ -16,6 +16,7 @@ import { SITE_LANGS, langPrefix } from "./i18n.mjs";
 import { SAMPLES } from "./samples.mjs";
 import { waitlistPath } from "./waitlist.mjs";
 import { authorPath, aboutPath, contactPath, legalPath } from "./trust.mjs";
+import { wellbeingPath } from "./wellbeing.mjs";
 
 export const MAX_URLS = 1000;
 
@@ -60,6 +61,7 @@ export async function collectEntries({ articles, events = [], siteDir, webDir, n
   const own = async (fn, file) => ({ urls: Object.fromEntries(SITE_LANGS.map((l) => [l, fn(l)])), lastmod: await mtime(file) });
   const here = (name) => fileURLToPath(new URL("./" + name, import.meta.url));
   entries.push(await own(aboutPath, here("trust.mjs")), await own(contactPath, here("trust.mjs")));
+  for (const key of ["hub", "posture", "postpartum", "labour"]) entries.push(await own((l) => wellbeingPath(key, l), path.join(path.dirname(path.dirname(path.dirname(here("trust.mjs")))), "web", "wellbeing-care.js")));
   entries.push(await own(authorPath, path.join(path.dirname(path.dirname(path.dirname(here("trust.mjs")))), "content", "author.md")));
   entries.push(await own((l) => legalPath(l, "privacy"), path.join(webDir, "privacy.html")), await own((l) => legalPath(l, "termini"), path.join(webDir, "termini.html")));
 
