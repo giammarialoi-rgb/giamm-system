@@ -17,6 +17,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { SITE_LANGS, SITE_LOCALES, langPrefix, langOfPath, siteDict, st } from "./i18n.mjs";
+import { waitlistPath } from "./waitlist.mjs";
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -349,6 +350,7 @@ export function mountBlog(app, { contentDir, siteDir, shell, staticFiles }) {
       (a.cover ? `<figure class="post-cover"><img src="${esc(a.cover)}" alt="">${a.coverCredit ? `<figcaption>${esc(st(dict, "Foto: {0}", a.coverCredit.replace(/\s*\(https?:[^)]*\)/g, "")))}</figcaption>` : ""}</figure>` : "") +
       `<div class="prose">${a.html}</div></div><!--/notr-->` +
       `<div class="post-cta"><strong>Mettilo in pratica con Nurvan.</strong><a class="btn primary" href="{{APP_URL}}">Apri l'app</a></div>` +
+      `<p class="post-wait"><a href="${waitlistPath(lang)}">Entra nella lista d'attesa di Nurvan →</a></p>` +
       `</div></article>` +
       (more.length ? `<section class="blog"><div class="wrap"><div class="head"><h2>Continua a leggere</h2></div><div class="posts">${more.map((x) => cardHtml(x, lang, dict)).join("")}</div></div></section>` : "");
     return send(req, res, { lang, alternates, menu, title: `${a.title} — Nurvan`, ownTitle: true, description: a.excerpt, main, ogImage: a.cover });

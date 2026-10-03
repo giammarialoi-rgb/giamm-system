@@ -2,6 +2,7 @@
 // route /api/admin/*. Nessun codice condiviso con l'app utenti, nessun accesso
 // diretto al database dalla pagina: tutto passa da qui, dietro adminGuard.
 import { listLeads, leadsCsv } from "../site/samples.mjs";
+import { listWaitlist, waitlistCsv, listCoachApplications, coachApplicationsCsv } from "../site/waitlist.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -148,6 +149,22 @@ export function mountAdminDashboard(app, { pool, initDb, sendEmail, secret, env 
       return res.send("\ufeff" + leadsCsv(await listLeads(pool)));
     } catch (e) { return fail(res, e); }
   });
+
+  // The waiting list and the founding coaches' applications, as files.
+  for (const [route, file, load, toCsv] of [
+    ["/api/admin/waitlist.csv", "nurvan-lista-attesa.csv", listWaitlist, waitlistCsv],
+    ["/api/admin/coach-applications.csv", "nurvan-candidature-coach.csv", listCoachApplications, coachApplicationsCsv]
+  ]) {
+    app.get(route, async (req, res) => {
+      if (!(await guard(req, res))) return;
+      try {
+        res.setHeader("Cache-Control", "no-store");
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
+        res.setHeader("Content-Disposition", 'attachment; filename="' + file + '"');
+        return res.send("﻿" + toCsv(await load(pool)));
+      } catch (e) { return fail(res, e); }
+    });
+  }
 
   /* ---------------- catalog ---------------- */
   app.get("/api/admin/catalog", async (req, res) => {

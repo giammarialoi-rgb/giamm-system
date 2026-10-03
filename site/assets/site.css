@@ -212,6 +212,10 @@ footer a:hover { color: var(--text); }
 .sample-form-card form { display: grid; gap: 12px; margin-top: 14px; }
 .field span { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
 .field input { width: 100%; min-height: 50px; border-radius: 12px; border: 1px solid #3a3a3a; background: #0d0d0d; color: var(--text); padding: 0 14px; font: inherit; font-size: 16px; }
+.field select, .field textarea { width: 100%; border-radius: 12px; border: 1px solid #3a3a3a; background: #0d0d0d; color: var(--text); font: inherit; font-size: 16px; }
+.field select { min-height: 50px; padding: 0 12px; }
+.field textarea { padding: 12px 14px; resize: vertical; }
+.field select:focus, .field textarea:focus { outline: 2px solid var(--gold-soft); outline-offset: 1px; border-color: var(--gold); }
 .field input:focus { outline: 2px solid var(--gold-soft); outline-offset: 1px; border-color: var(--gold); }
 .check { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; font-size: 13px; color: #ccc; line-height: 1.45; cursor: pointer; }
 .check input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--gold); }
@@ -238,3 +242,19 @@ form.done .field, form.done .check, form.done button { display: none; }
 .app-ex-meta b { color: var(--gold); font-size: 13px; }
 .app-ex-note { font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.4; }
 @media (max-width: 900px) { .sample-split { grid-template-columns: 1fr; } .sample-phone-col { position: static; } }
+
+/* Waiting list: the form, the coach section, the honeypot nobody sees */
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.wl .sample-form-card { margin-top: 24px; }
+.wl .sample-form-card h2, .wl .sample-form-card h3 { margin: 0; }
+.wl-coach-link { margin: 22px 0 0; font-weight: 800; }
+.wl-coach-link a, .post-wait a { color: var(--gold); text-decoration: underline; }
+.wl-features { padding-top: 24px; }
+.coach-apply { padding: 56px 0 24px; scroll-margin-top: 80px; }
+.coach-apply .narrow { max-width: 980px; }
+.coach-apply .wl-sub { color: var(--gold); margin-top: 6px; }
+.coach-apply .split { align-items: start; gap: 36px; }
+.coach-apply h3 { margin: 18px 0 6px; }
+.coach-apply .sample-form-card { margin-top: 0; }
+.coach-apply .sample-form-card h3 { margin-top: 0; }
+.post-wait { margin: 14px 0 0; text-align: center; font-size: 14px; }

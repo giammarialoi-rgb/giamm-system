@@ -27,6 +27,7 @@ import { appleCallbackRoute, appleConfig, mountAppleAuth, consumeLoginTicket } f
 import { mountBlog } from "./server/site/blog.mjs";
 import { mountHyrox } from "./server/site/hyrox.mjs";
 import { mountSamples, sampleCardsHtml } from "./server/site/samples.mjs";
+import { mountWaitlist, waitlistPath } from "./server/site/waitlist.mjs";
 import { mountProgramShare } from "./server/program/share.mjs";
 import { reqLang, SERVER_LANGS } from "./server/i18n.mjs";
 import { SITE_LANGS, SITE_LANG_NAMES, isSiteLang, langPrefix, langOfPath, siteDict, translateHtml } from "./server/site/i18n.mjs";
@@ -2484,6 +2485,7 @@ async function siteShell(req, page) {
     HYROX_ON: page.hyrox ? ' class="on"' : "",
     SAMPLES: langPrefix(lang) + "/allenamenti",
     SAMPLES_ON: page.samples ? ' class="on"' : "",
+    WAITLIST: waitlistPath(lang),
     V: SITE_STARTED,
     APP_URL: siteEsc(appUrl),
     CONTACT_EMAIL: siteEsc(mail)
@@ -2512,6 +2514,8 @@ const siteBlog = mountBlog(app, {
 mountHyrox(app, { webDir: path.join(__dirname, "web"), siteDir: SITE_DIR, shell: (req, page) => siteShell(req, Object.assign({ hyrox: true }, page)) });
 // Example workouts: /allenamenti, one page each, the PDF sent by email.
 mountSamples(app, { siteDir: SITE_DIR, pool, initDb, sendEmail, shell: (req, page) => siteShell(req, Object.assign({ samples: true }, page)) });
+// The waiting list and the founding coaches' application: /lista-attesa.
+mountWaitlist(app, { siteDir: SITE_DIR, pool, initDb, shell: (req, page) => siteShell(req, page) });
 // The app's screens shown on the home page: site/shots.json lists them
 // ([{ "file": "allenamento.png", "title": "...", "text": "..." }]), the images
 // are in site/assets/shots/.
