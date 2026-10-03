@@ -17465,7 +17465,7 @@ function renderNutritionPlanView(c) {
         ${days.some(function (d) { return d && !d.date && (d.meals || []).some(function (m) { return (m.foods || m.items || []).length; }); }) ? '<button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openShoppingList()">🛒 Lista della spesa</button>' : ''}
         <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openRecipes()">📖 Ricette${nutritionRecipes().length ? ' (' + nutritionRecipes().length + ')' : ''}</button>
         ${days.length ? '<button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="exportNutritionPdf()">📄 Esporta Alimentazione</button>' : ''}
-        <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openNutritionBackupsModal()" title="Ripristina una versione precedente dell'alimentazione">🕐 Backup</button>
+        <button class="btn btn-outline" style="font-size:10px;padding:6px 12px;" onclick="openNutritionBackupsModal()" title="Ripristina una versione precedente dell'alimentazione">💾 Backup</button>
         ${days.length ? personalNutritionClearButtonHtml({ compact: true }) : ''}
       </div>
     </div>
@@ -30199,7 +30199,7 @@ async function openNutritionBackupsModal() {
   }
   modal.innerHTML = '<div style="background:#181818;border:1px solid #333;border-radius:12px;padding:20px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
-    '<div style="font-size:15px;font-weight:800;color:#fff;">🕐 Backup alimentazione</div>' +
+    '<div style="font-size:15px;font-weight:800;color:#fff;">💾 Backup alimentazione</div>' +
     '<button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="closeNutritionBackupsModal()">✕</button>' +
     '</div>' +
     '<div style="font-size:11px;color:#999;margin-bottom:12px;">Copie salvate automaticamente prima di qualsiasi sincronizzazione che avrebbe potuto sostituire l\'alimentazione. Ripristinane una se qualcosa è andato perso.</div>' +
