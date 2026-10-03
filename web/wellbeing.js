@@ -30,20 +30,21 @@
 
   var W = root.NurvanWellbeing = root.NurvanWellbeing || {};
 
-  var DISCLAIMER_VERSION = '2026-10-03';
+  var DISCLAIMER_VERSION = '2026-10-03.2';
 
   // The notice every area opens with. It is shown whole and has to be
   // acknowledged before anything else, and its first lines travel with every
   // program written from this section.
   var DISCLAIMER = [
     "Queste informazioni sono generali e non sostituiscono il parere, la diagnosi o la cura di un medico, di un fisioterapista, di un'ostetrica o di un altro professionista sanitario. Nurvan non fa diagnosi.",
+    "Per qualsiasi dubbio o insicurezza, prima di cominciare chiedi al tuo medico curante se questi esercizi vanno bene per te, per la tua situazione e per il tuo momento: solo chi ti conosce e ti ha visitato può dirlo.",
     "Gli esercizi che trovi qui sono quelli che gli studi e le linee guida citati considerano utili in generale: non sono una prescrizione per te. Falli solo se te li ha consigliati chi ti segue, oppure dopo averne parlato con lui o con lei.",
     "Se hai dolore che peggiora, formicolii, perdita di forza, capogiri, mancanza di fiato, sanguinamento o qualsiasi cosa ti preoccupa, fermati e chiama il tuo medico, la tua ostetrica o il tuo fisioterapista. In caso di emergenza chiama il 112.",
     "Dove una cosa è opinione di esperti e non risultato di studi, lo scriviamo. Dove gli studi dicono che un esercizio non cambia ciò che molti credono (per esempio la postura), lo scriviamo ugualmente.",
     "Usando questa sezione ti prendi la responsabilità di ascoltare il tuo corpo e di fermarti quando serve."
   ];
   // The short form that goes into a program's own summary.
-  var DISCLAIMER_SHORT = "Programma informativo: non sostituisce il parere del tuo medico, fisioterapista od ostetrica. Fallo solo se te lo hanno consigliato; se i sintomi peggiorano, fermati e chiamali.";
+  var DISCLAIMER_SHORT = "Programma informativo: non sostituisce il parere del tuo medico, fisioterapista od ostetrica. Fallo solo se te lo hanno consigliato; per qualsiasi dubbio chiedi prima al tuo medico curante se vanno bene per te, e se i sintomi peggiorano, fermati e chiamali.";
 
   var AREAS = [
     { id: "posture", label: "Postura e dolori", note: "Esercizi per spalle, schiena, collo, ginocchio, piede e anca, con ciò che le fonti dicono davvero." },

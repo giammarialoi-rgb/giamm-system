@@ -25535,7 +25535,7 @@ function wbSourcesHtml(sources) {
 }
 function wbDisclaimerHtml(full) {
   const api = wbApi();
-  const list = full ? api.DISCLAIMER : api.DISCLAIMER.slice(0, 1);
+  const list = full ? api.DISCLAIMER : api.DISCLAIMER.slice(0, 2);
   return list.map(function (t) { return '<p style="font-size:' + (full ? 13 : 11) + 'px;color:#eee;line-height:1.55;margin:0 0 10px;">' + esc(t) + '</p>'; }).join('');
 }
 function wbOpenDisclaimer() {

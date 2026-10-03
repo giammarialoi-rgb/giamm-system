@@ -40,8 +40,8 @@ ok(Object.keys(REFS).every((id) => cited.has(id)), '2c. nel file non ci sono rif
 ok(W.POSTURE.every((t) => t.sources.every((s) => s.t.length > 40 && s.r.length >= 1)), '2d. ogni affermazione delle fonti porta almeno un riferimento');
 
 // --- the notice -----------------------------------------------------------------------------
-ok(W.DISCLAIMER.length >= 5 && /non sostituiscono il parere/.test(W.DISCLAIMER[0]) && /112/.test(W.DISCLAIMER[2]) && /Nurvan non fa diagnosi/.test(W.DISCLAIMER[0]), '3a. l’avvertenza dice che non sostituisce medico, fisioterapista e ostetrica, che Nurvan non fa diagnosi e quando chiamare il 112');
-ok(/non sostituisce il parere/.test(W.DISCLAIMER_SHORT) && /fallo solo se te lo hanno consigliato/i.test(W.DISCLAIMER_SHORT) && /^\d{4}-\d{2}-\d{2}$/.test(W.DISCLAIMER_VERSION), '3b. la forma breve e la versione dell’avvertenza');
+ok(W.DISCLAIMER.length >= 6 && /non sostituiscono il parere/.test(W.DISCLAIMER[0]) && /112/.test(W.DISCLAIMER[3]) && /chiedi al tuo medico curante se questi esercizi vanno bene per te/.test(W.DISCLAIMER[1]) && /Nurvan non fa diagnosi/.test(W.DISCLAIMER[0]), '3a. l’avvertenza dice che non sostituisce medico, fisioterapista e ostetrica, che Nurvan non fa diagnosi e quando chiamare il 112');
+ok(/non sostituisce il parere/.test(W.DISCLAIMER_SHORT) && /fallo solo se te lo hanno consigliato/i.test(W.DISCLAIMER_SHORT) && /chiedi prima al tuo medico curante/.test(W.DISCLAIMER_SHORT) && /^\d{4}-\d{2}-\d{2}(\.\d+)?$/.test(W.DISCLAIMER_VERSION), '3b. la forma breve e la versione dell’avvertenza');
 
 // --- the programs ---------------------------------------------------------------------------------
 const isCore = (e) => /Dead bug|Plank|Bird dog|Side plank|Respirazione diaframmatica|Contrazione del pavimento/.test(e.name);
