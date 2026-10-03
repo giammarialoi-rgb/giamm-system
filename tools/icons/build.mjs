@@ -13,7 +13,7 @@ const OUT = 'web/icons.js';
 // in the middle of a sentence they are punctuation or an arrow with a meaning of its own.
 const EDGE_ONLY = new Set(['✕', '✓', '✎', '▾', '▸', '▶', '◀', 'ⓘ', '⚠', '⚙', '✅', '➕']);
 // Emoji whose icon is not good enough yet (to be redrawn): they stay as they are until the file is replaced.
-const HOLD = new Set(['module-nutrition', 'module-home-workout']);
+const HOLD = new Set([]);
 // Symbols that are used as plain arrows in the text of the app: never replaced.
 const NEVER = new Set(['→', '↑', '↓']);
 
@@ -135,6 +135,8 @@ if (process.argv.includes('--check')) {
   if (have !== code) { console.log('web/icons.js is not up to date: run node tools/icons/build.mjs'); process.exit(1); }
   console.log('web/icons.js is up to date (' + Object.keys(data).length + ' icons, ' + Object.keys(glyphs).length + ' glyphs).');
 } else {
-  fs.writeFileSync(OUT, code);
+  // A temporary file and a rename: Windows now and then refuses a direct write while the preview server reads the file.
+  fs.writeFileSync(OUT + '.tmp', code);
+  fs.renameSync(OUT + '.tmp', OUT);
   console.log('written ' + OUT + ': ' + Object.keys(data).length + ' icons, ' + Object.keys(glyphs).length + ' glyphs mapped.');
 }

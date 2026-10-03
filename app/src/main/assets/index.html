@@ -51574,6 +51574,12 @@ function closeDomainQuickSwitch() {
   popUiOverlay('domain-quick-switch');
 }
 
+// An icon of the set at a given size, or '' when it is not there.
+function iconHtml(name, px) {
+  return (window.NurvanIcons && window.NurvanIcons.has(name)) ? window.NurvanIcons.svg(name, px || 24) : '';
+}
+window.iconHtml = iconHtml;
+
 // The drawing of an empty screen (web/icons "empty-*"): in the gold of the app, quiet.
 function emptyArtHtml(name) {
   return (window.NurvanIcons && window.NurvanIcons.has(name)) ? '<div class="nv-art" aria-hidden="true">' + window.NurvanIcons.svg(name, 72) + '</div>' : '';
@@ -60845,7 +60851,7 @@ function renderHyrox(c) {
     api.STATIONS.map(function (s, i) {
       const load = loadOf(s);
       return '<details style="border-top:1px solid #222;padding:10px 0;"><summary style="list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:center;">' +
-        '<span style="font-size:13px;font-weight:800;color:#fff;"><span style="color:var(--gold);">' + (i + 1) + '</span> · ' + esc(s.name) + '</span>' +
+        '<span style="font-size:13px;font-weight:800;color:#fff;display:flex;align-items:center;gap:8px;">' + iconHtml({ skierg: 'hyrox-skierg', sled_push: 'hyrox-sled-push', sled_pull: 'hyrox-sled-pull', burpee_broad_jump: 'hyrox-burpee-broad-jump', row: 'hyrox-row', farmers_carry: 'hyrox-farmers-carry', sandbag_lunges: 'hyrox-sandbag-lunges', wall_balls: 'hyrox-wall-ball' }[s.id], 26) + '<span><span style="color:var(--gold);">' + (i + 1) + '</span> · ' + esc(s.name) + '</span></span>' +
         '<span style="font-size:11px;color:#aaa;white-space:nowrap;">' + esc(s.amount) + (load ? ' · ' + esc(load) : '') + '</span></summary>' +
         '<p style="font-size:12px;color:#ccc;line-height:1.5;margin:8px 0 0;">' + esc(s.cue) + '</p>' +
         (s.alt && s.gear ? '<p style="font-size:11px;color:#888;line-height:1.5;margin:6px 0 0;">Senza attrezzo: ' + esc(s.alt.name) + '</p>' : '') +
@@ -61038,6 +61044,7 @@ function renderDisciplines(c) {
   const chooser = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px;">' + api.DISCIPLINES.map(function (x) {
     const on = x.id === d.id;
     return '<button type="button" class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" style="min-height:74px;text-align:left;padding:10px 12px;" onclick="disciplineChoose(\'' + x.id + '\')">' +
+      '<div style="line-height:0;margin-bottom:6px;">' + iconHtml({ pilates: 'discipline-pilates', mobilita: 'discipline-mobility', calisthenics: 'discipline-calisthenics', hiit: 'discipline-hiit' }[x.id], 28) + '</div>' +
       '<div style="font-size:12px;font-weight:900;">' + esc(x.label) + '</div>' +
       '<div style="font-size:11px;margin-top:4px;opacity:.8;line-height:1.35;font-weight:400;text-transform:none;letter-spacing:0;">' + esc(x.note) + '</div></button>';
   }).join('') + '</div>';
@@ -61360,6 +61367,7 @@ function renderWellbeing(c) {
   const chooser = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:12px;">' + api.AREAS.map(function (a) {
     const on = a.id === s.area;
     return '<button type="button" class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" style="min-height:74px;text-align:left;padding:10px 12px;" onclick="wbArea(\'' + a.id + '\')">' +
+      '<div style="line-height:0;margin-bottom:6px;">' + iconHtml('wellbeing-' + a.id, 28) + '</div>' +
       '<div style="font-size:12px;font-weight:900;">' + esc(a.label) + '</div>' +
       '<div style="font-size:11px;margin-top:4px;opacity:.8;line-height:1.35;font-weight:400;text-transform:none;letter-spacing:0;">' + esc(a.note) + '</div></button>';
   }).join('') + '</div>';
