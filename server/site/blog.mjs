@@ -154,6 +154,7 @@ function article(fields) {
     excerpt: fields.excerpt || plain.slice(0, 180) + (plain.length > 180 ? "…" : ""),
     cover: fields.cover || "",
     coverCredit: fields.coverCredit || "",
+    italianOnly: !!fields.italianOnly,
     minutes: Math.max(1, Math.round(plain.split(" ").length / 200)),
     html: fields.html || "",
     style: fields.style || "",
@@ -178,6 +179,8 @@ export function parseArticle(name, text, media = "") {
     excerpt: meta.description || meta.excerpt || meta.riassunto || "",
     cover,
     coverCredit: meta.cover_credit || "",
+    // "only: it" in the header: an article about the Italian market, not shown in other languages.
+    italianOnly: String(meta.only || "").toLowerCase() === "it",
     plain: text2.replace(/<[^>]+>/g, " ").replace(/[#>*_`\[\]()!|-]/g, " "),
     html: renderMarkdown(text2, { html: true, media })
   });
@@ -230,7 +233,7 @@ export async function loadArticles({ contentDir, siteDir }, now = new Date(), la
   const today = now.toISOString().slice(0, 10);
   const list = [];
   // written: the language the text is really in (the visitor's, or the one it fell back to).
-  const add = (a, dir, written) => { if (a && a.slug && (!a.date || a.date <= today) && !list.some((x) => x.slug === a.slug)) { a.dir = dir || a.slug; a.lang = written || "it"; list.push(a); } };
+  const add = (a, dir, written) => { if (a && a.italianOnly && lang !== "it") return; if (a && a.slug && (!a.date || a.date <= today) && !list.some((x) => x.slug === a.slug)) { a.dir = dir || a.slug; a.lang = written || "it"; list.push(a); } };
   const order = [...new Set([lang, lang === "it" ? "it" : "en", "it"])];
   const first = async (dir, stem, ext) => {
     for (const l of order) { const t = await read(path.join(dir, stem + "." + l + "." + ext)); if (t) return { text: t, lang: l }; }
@@ -274,6 +277,21 @@ function cardHtml(a, lang = "it", dict = null) {
     `<div class="post-meta">${esc(dateText(a.date, lang))}${a.date ? " · " : ""}${esc(st(dict, "{0} min di lettura", a.minutes))}</div></div><!--/notr--></a>`;
 }
 
+// Italian only: links from the articles to the landing pages and tools that go with them (brief W4).
+const linksBlock = (items) => '<aside class="related-links"><h2>Strumenti e guide collegati</h2><ul>' + items.map(([href, text]) => '<li><a href="' + href + '">' + text + "</a></li>").join("") + "</ul></aside>";
+function relatedLinks(a) {
+  const text = (a.title + " " + a.plain).toLowerCase();
+  const out = [];
+  if (/hyrox/.test(text)) out.push(["/app-allenamento-hyrox", "App di allenamento per HYROX: un programma sulla data della gara"]);
+  if (/powerlifting|massimale|1rm/.test(text)) out.push(["/app-powerlifting", "App per powerlifting: programmi per squat, panca e stacco"], ["/strumenti/calcolatore-1rm", "Calcolatore 1RM gratuito"]);
+  if (a.categorySlug === "allenamento") out.push(["/app-allenamento-palestra", "App per l’allenamento in palestra: schede, carichi e progressi"], ["/strumenti/calcolatore-1rm", "Calcolatore 1RM gratuito"]);
+  if (/nutrizione|integrazione|salute/.test(a.categorySlug)) out.push(["/strumenti/calcolatore-macro", "Calcolatore macro e calorie gratuito"], ["/app-allenamento-palestra", "App per l’allenamento in palestra"]);
+  if (a.categorySlug === "coaching") out.push(["/software-schede-allenamento", "Software per schede di allenamento"]);
+  out.push(["/app-per-personal-trainer", "App per personal trainer e coach"]);
+  const seen = new Set();
+  return out.filter(([h]) => (seen.has(h) ? false : seen.add(h))).slice(0, 4);
+}
+
 function categoriesHtml(articles, active, lang, dict) {
   const seen = new Map();
   articles.forEach((a) => { if (!seen.has(a.categorySlug)) seen.set(a.categorySlug, a.category); });
@@ -311,6 +329,7 @@ export function mountBlog(app, { contentDir, siteDir, shell, staticFiles, getAut
     `<section class="blog"><div class="wrap"><div class="head"><div class="eyebrow">Blog</div><h1 class="blog-title"${ownText ? " data-notr" : ""}>${esc(heading)}</h1>${ownText ? "<!--/notr-->" : ""}<p class="lead">${esc(lead)}</p></div>` +
     categoriesHtml(all, active, lang, dict) +
     (list.length ? `<div class="posts">${list.map((a) => cardHtml(a, lang, dict)).join("")}</div>` : '<p class="lead">Ancora nessun articolo in questa sezione.</p>') +
+    (lang === "it" ? linksBlock([["/app-per-personal-trainer", "Per i coach: app per personal trainer"], ["/app-allenamento-palestra", "Per gli atleti: app per l’allenamento in palestra"], ["/strumenti", "Strumenti gratuiti: 1RM, Wilks e macro"]]) : "") +
     "</div></section>";
 
   const index = async (req, res) => {
@@ -372,6 +391,7 @@ export function mountBlog(app, { contentDir, siteDir, shell, staticFiles, getAut
       `</div><!--/notr-->` + byline + `<div data-notr>` +
       (a.cover ? `<figure class="post-cover"><img src="${esc(a.cover)}" alt="${esc(a.title)}">${a.coverCredit ? `<figcaption>${esc(st(dict, "Foto: {0}", a.coverCredit.replace(/\s*\(https?:[^)]*\)/g, "")))}</figcaption>` : ""}</figure>` : "") +
       `<div class="prose">${withAuthorBox(a.html)}</div></div><!--/notr-->` +
+      (lang === "it" ? linksBlock(relatedLinks(a)) : "") +
       `<div class="post-cta"><strong>Mettilo in pratica con Nurvan.</strong><a class="btn primary" href="{{APP_URL}}">Apri l'app</a></div>` +
       `<p class="post-wait"><a href="${waitlistPath(lang)}">Entra nella lista d'attesa di Nurvan →</a></p>` +
       `</div></article>` +

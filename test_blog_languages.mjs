@@ -24,6 +24,8 @@ for (const lang of SITE_LANGS) {
   const problems = [];
   for (const f of folders) {
     const a = mine.find((x) => x.dir === f);
+    // "only: it" in the header: an article about the Italian market, not published in other languages.
+    if (!a && lang !== 'it' && /^only:\s*it\s*$/m.test(fs.readFileSync(path.join(DIR, f, 'article.it.md'), 'utf8'))) continue;
     if (!a) { problems.push(f + ': non caricato'); continue; }
     if (a.lang !== lang) problems.push(f + ': scritto in ' + a.lang);
     if (!a.title || !a.slug || !a.categorySlug) problems.push(f + ': titolo, indirizzo o categoria mancante');

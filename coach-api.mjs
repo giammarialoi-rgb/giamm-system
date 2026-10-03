@@ -32,6 +32,7 @@ import { mountSitemap } from "./server/site/sitemap.mjs";
 import { mountIndexNowKey, startIndexNowJob, keyOf as indexNowKey } from "./server/site/indexnow.mjs";
 import { canonicalUrls } from "./server/site/urls.mjs";
 import { mountWellbeing, wellbeingPath } from "./server/site/wellbeing.mjs";
+import { mountLandings } from "./server/site/landings.mjs";
 import { mountTrust, authorLoader, aboutPath, contactPath, legalPath } from "./server/site/trust.mjs";
 import { metaTags, jsonLdScripts, absUrl, organizationLd, websiteLd, softwareLd, faqLd, faqFromDetails } from "./server/site/seo.mjs";
 import { mountProgramShare } from "./server/program/share.mjs";
@@ -2500,6 +2501,9 @@ async function siteShell(req, page) {
     WAITLIST: waitlistPath(lang),
     ABOUT: aboutPath(lang),
     HEALTH: wellbeingPath("hub", lang),
+    // Italian only: the landing pages, the comparisons and the tools have no translations.
+    NAV_EXTRA: lang === "it" ? '<a href="/app-per-personal-trainer">Per i coach</a><a href="/app-allenamento-palestra">Per gli atleti</a><a href="/strumenti">Strumenti</a>' : "",
+    FOOT_EXTRA: lang === "it" ? '<a href="/app-per-personal-trainer">Per i coach</a><a href="/app-allenamento-palestra">Per gli atleti</a><a href="/strumenti">Strumenti</a>' : "",
     CONTACT: contactPath(lang),
     PRIVACY: legalPath(lang, "privacy"),
     TERMS: legalPath(lang, "termini"),
@@ -2547,6 +2551,8 @@ mountSamples(app, { siteDir: SITE_DIR, pool, initDb, sendEmail, shell: (req, pag
 const siteMap = mountSitemap(app, { articles: siteBlog.articles, calendar: siteHyrox.calendar, siteDir: SITE_DIR, webDir: path.join(__dirname, "web"), isSiteHost, origin: "https://" + (SITE_HOSTS[0] || "nurvan.app") });
 // Salute e recupero: the hub and the pages on posture, labour and the months after a birth, from the same data as the app.
 mountWellbeing(app, { root: __dirname, siteDir: SITE_DIR, shell: (req, page) => siteShell(req, page) });
+// Landing pages for coaches and athletes, comparisons and free tools (Italian only).
+mountLandings(app, { siteDir: SITE_DIR, shell: (req, page) => siteShell(req, page) });
 // IndexNow: the key file, and an hourly pass that tells Bing and the other engines about new pages.
 mountIndexNowKey(app, { isSiteHost, key: indexNowKey() });
 if (isProduction(process.env) && process.env.INDEXNOW !== "0") {
@@ -2567,6 +2573,9 @@ async function siteShotsHtml() {
     shots.map((sh) => '<figure class="shot"><img src="/site-assets/shots/' + siteEsc(sh.file) + '" alt="' + siteEsc(sh.title) + '" loading="lazy"><figcaption><strong>' + siteEsc(sh.title) + "</strong>" + siteEsc(sh.text || "") + "</figcaption></figure>").join("") +
     "</div></div></section>";
 }
+// Italian home only (brief W4): what Nurvan is, in the words people search for, and the two doors.
+const HOME_LEAD_IT = '<p class="lead">Nurvan è un’<strong>app di allenamento</strong> per chi si allena con metodo e un’<strong>app per personal trainer e coach</strong> che seguono i propri atleti. Non è ancora uscita: puoi entrare nella lista d’attesa.</p>';
+const HOME_AUDIENCE_IT = '<section id="per-chi"><div class="wrap"><div class="head"><div class="eyebrow">Per chi è Nurvan</div><h2>Due modi di usarla.</h2></div><div class="cards"><article class="card"><h3>Per i coach</h3><p>Schede da creare o importare, check-in, chat e area coach per seguire i tuoi atleti in un posto solo.</p><p><a href="/app-per-personal-trainer">App per personal trainer →</a></p></article><article class="card"><h3>Per gli atleti</h3><p>Schede, carichi e progressi in palestra e a casa, con programmi per HYROX e powerlifting.</p><p><a href="/app-allenamento-palestra">App per l’allenamento in palestra →</a></p></article></div></div></section>';
 async function sitePage(req, res) {
   try {
     const lang = langOfPath(req.path);
@@ -2576,14 +2585,15 @@ async function sitePage(req, res) {
     const latestHtml = latest.length
       ? '<section id="blog"><div class="wrap"><div class="head"><div class="eyebrow">Blog</div><h2>Dal blog</h2></div><div class="posts home-posts">' + latest.map((a) => siteBlog.cardHtml(a, lang, dict)).join("") + '</div><a class="more-link" href="' + langPrefix(lang) + '/blog">Tutti gli articoli →</a></div></section>'
       : "";
-    const main = home.split("{{SHOTS}}").join(await siteShotsHtml()).split("{{LATEST}}").join(latestHtml).split("{{SAMPLE_CARDS}}").join(sampleCardsHtml(lang));
+    const it = lang === "it";
+    const main = home.split("{{HOME_LEAD}}").join(it ? HOME_LEAD_IT : "").split("{{AUDIENCE}}").join(it ? HOME_AUDIENCE_IT : "").split("{{SHOTS}}").join(await siteShotsHtml()).split("{{LATEST}}").join(latestHtml).split("{{SAMPLE_CARDS}}").join(sampleCardsHtml(lang));
     res.setHeader("Cache-Control", "public, max-age=300");
     return res.type("html").send(await siteShell(req, {
       lang,
       home: true,
       alternates: Object.fromEntries(SITE_LANGS.map((l) => [l, langPrefix(l) || "/"])),
-      title: "Nurvan — Allenamento, alimentazione e coaching in un’unica app",
-      description: "Nurvan è l’app per allenarti con metodo: schede, carichi e progressi, piano alimentare e diario, ricettario, Coach AI e area coach per seguire i tuoi atleti.",
+      title: it ? "Nurvan – App di allenamento, nutrizione e coaching" : "Nurvan — Allenamento, alimentazione e coaching in un’unica app",
+      description: it ? "Nurvan: l’app per allenarsi con metodo e per i coach che gestiscono i propri atleti. In arrivo: iscriviti alla lista d’attesa e provala tra i primi." : "Nurvan è l’app per allenarti con metodo: schede, carichi e progressi, piano alimentare e diario, ricettario, Coach AI e area coach per seguire i tuoi atleti.",
       main
     }));
   } catch (err) {

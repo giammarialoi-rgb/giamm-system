@@ -297,3 +297,29 @@ form.done .field, form.done .check, form.done button { display: none; }
 .wb-refs summary { cursor: pointer; color: var(--gold); font-weight: 700; }
 .wb-refs ul { margin: 6px 0 0; padding-left: 18px; }
 .wb .cards { margin: 8px 0 26px; }
+
+/* Landing pages, comparisons and free tools (Italian only) */
+.crumbs { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+.crumbs a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+.crumbs span { color: var(--text); }
+.landing .landing-shot { float: right; margin: 6px 0 18px 26px; width: 230px; }
+@media (max-width: 700px) { .landing .landing-shot { float: none; margin: 8px auto 18px; } }
+.landing .prose { clear: both; }
+.table-wrap { overflow-x: auto; margin: 0 0 18px; -webkit-overflow-scrolling: touch; }
+.table-wrap table { min-width: 560px; }
+.table-wrap td:first-child { font-weight: 600; white-space: nowrap; }
+.faq details { margin-bottom: 0; }
+.related-links { margin-top: 30px; border-top: 1px solid var(--line); padding-top: 16px; }
+.related-links h2 { font-size: 16px; margin: 0 0 8px; }
+.related-links ul { margin: 0; padding-left: 20px; font-size: 15px; }
+.related-links a { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
+.tool { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 20px; margin: 20px 0 8px; }
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+.tf { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.tf input, .tf select { min-height: 44px; border-radius: 10px; border: 1px solid #333; background: #0d0d0d; color: var(--text); padding: 0 12px; font: inherit; font-size: 16px; }
+.tool-out { margin-top: 18px; font-size: 16px; }
+.tool-out p { margin: 0 0 10px; }
+.tool-out strong { color: var(--gold); }
+.tool-wait { margin-top: 18px; font-size: 14px; color: var(--muted); }
+.tool-wait a { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 1100px) { .nav nav { gap: 14px; } }

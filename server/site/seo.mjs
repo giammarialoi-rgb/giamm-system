@@ -98,7 +98,8 @@ export const softwareLd = (origin, description) => ({
   "@context": "https://schema.org", "@type": "SoftwareApplication", name: "Nurvan", url: origin + "/",
   applicationCategory: "HealthApplication", operatingSystem: "Web, iOS, Android", description,
   image: origin + "/icon-512.png",
-  offers: { "@type": "Offer", name: "Free", price: "0", priceCurrency: "EUR" }
+  // Not released yet: a pre-order offer, no rating and no counters.
+  offers: { "@type": "Offer", name: "Free", price: "0", priceCurrency: "EUR", availability: "https://schema.org/PreOrder" }
 });
 export const faqLd = (items) => (items && items.length >= 1 ? {
   "@context": "https://schema.org", "@type": "FAQPage",

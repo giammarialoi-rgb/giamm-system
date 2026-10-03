@@ -17,6 +17,7 @@ import { SAMPLES } from "./samples.mjs";
 import { waitlistPath } from "./waitlist.mjs";
 import { authorPath, aboutPath, contactPath, legalPath } from "./trust.mjs";
 import { wellbeingPath } from "./wellbeing.mjs";
+import { LANDING_PATHS, ALL_PATHS, LANDING_LASTMOD } from "./landings.mjs";
 
 export const MAX_URLS = 1000;
 
@@ -64,6 +65,9 @@ export async function collectEntries({ articles, events = [], siteDir, webDir, n
   for (const key of ["hub", "posture", "postpartum", "labour"]) entries.push(await own((l) => wellbeingPath(key, l), path.join(path.dirname(path.dirname(path.dirname(here("trust.mjs")))), "web", "wellbeing-care.js")));
   entries.push(await own(authorPath, path.join(path.dirname(path.dirname(path.dirname(here("trust.mjs")))), "content", "author.md")));
   entries.push(await own((l) => legalPath(l, "privacy"), path.join(webDir, "privacy.html")), await own((l) => legalPath(l, "termini"), path.join(webDir, "termini.html")));
+
+  // The landing pages, comparisons and free tools: Italian only.
+  for (const p of ALL_PATHS) entries.push({ urls: { it: p }, lastmod: LANDING_LASTMOD });
 
   // One entry per article: its folder is what ties the languages together.
   const byDir = new Map();

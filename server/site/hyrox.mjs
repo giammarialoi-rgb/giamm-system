@@ -65,6 +65,7 @@ export function mountHyrox(app, { webDir, siteDir, shell }) {
       group("Resto del mondo", all.filter((e) => regionOf(e) === "world")) +
       (all.length ? "" : '<p class="lead">Nessuna gara in calendario al momento.</p>') +
       `<div class="prose">${evidence}</div>` +
+      (lang === "it" ? '<p class="lead">Come ti prepara Nurvan: <a href="/app-allenamento-hyrox">app di allenamento per HYROX</a>, con un programma scritto sulla data della gara.</p>' : "") +
       `<div class="post-cta"><strong>Prepara la tua gara con Nurvan.</strong><a class="btn primary" href="{{APP_URL}}">Apri l'app</a></div>` + note +
       "</div></section>";
     return send(req, res, { lang, alternates: everyLang("/hyrox"), title: "Calendario gare HYROX — Nurvan", description: "Le prossime gare HYROX in Italia, in Europa e nel mondo, con date e link ufficiali, e la preparazione su misura nell’app Nurvan.", main });
