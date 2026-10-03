@@ -28,6 +28,8 @@ import { mountBlog } from "./server/site/blog.mjs";
 import { mountHyrox } from "./server/site/hyrox.mjs";
 import { mountSamples, sampleCardsHtml } from "./server/site/samples.mjs";
 import { mountWaitlist, waitlistPath } from "./server/site/waitlist.mjs";
+import { mountSitemap } from "./server/site/sitemap.mjs";
+import { canonicalUrls } from "./server/site/urls.mjs";
 import { mountProgramShare } from "./server/program/share.mjs";
 import { reqLang, SERVER_LANGS } from "./server/i18n.mjs";
 import { SITE_LANGS, SITE_LANG_NAMES, isSiteLang, langPrefix, langOfPath, siteDict, translateHtml } from "./server/site/i18n.mjs";
@@ -61,6 +63,8 @@ const port = process.env.PORT || 3000;
 // header from the client, 3 with one. req.ip is then the address Cloudflare
 // saw; with 1, it was Cloudflare's own, shared by many users.
 app.set("trust proxy", Math.max(0, Number(process.env.TRUST_PROXY_HOPS || 2)));
+// Nobody needs to be told which framework answers.
+app.disable("x-powered-by");
 // Apple posts its answer from appleid.apple.com (form_post), so the route sits
 // before the CORS allowlist, like the webhook below. What makes it safe is the
 // state it carries back, signed by this server (server/account/apple.mjs).
@@ -2448,6 +2452,8 @@ const isSiteHost = (req) => SITE_HOSTS.includes(String(req.hostname || "").toLow
 const SITE_APP_OPEN = process.env.SITE_APP_OPEN === "1";
 // Until then search engines are asked to leave the app's own address alone.
 app.use((req, res, next) => { if (!SITE_APP_OPEN && !isSiteHost(req)) res.setHeader("X-Robots-Tag", "noindex, nofollow"); next(); });
+// "/it/blog" and "/blog/" are the same page as "/blog": a permanent redirect.
+app.use(canonicalUrls(isSiteHost));
 const siteEsc = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 async function siteShell(req, page) {
   const shell = await fs.readFile(path.join(SITE_DIR, "shell.html"), "utf8");
@@ -2511,9 +2517,11 @@ const siteBlog = mountBlog(app, {
   shell: (req, page) => siteShell(req, Object.assign({ blog: true }, page))
 });
 // The HYROX race calendar: /hyrox and one page per race, from web/hyrox-events.json.
-mountHyrox(app, { webDir: path.join(__dirname, "web"), siteDir: SITE_DIR, shell: (req, page) => siteShell(req, Object.assign({ hyrox: true }, page)) });
+const siteHyrox = mountHyrox(app, { webDir: path.join(__dirname, "web"), siteDir: SITE_DIR, shell: (req, page) => siteShell(req, Object.assign({ hyrox: true }, page)) });
 // Example workouts: /allenamenti, one page each, the PDF sent by email.
 mountSamples(app, { siteDir: SITE_DIR, pool, initDb, sendEmail, shell: (req, page) => siteShell(req, Object.assign({ samples: true }, page)) });
+// robots.txt and sitemap.xml, built from the same data as the pages.
+mountSitemap(app, { articles: siteBlog.articles, calendar: siteHyrox.calendar, siteDir: SITE_DIR, webDir: path.join(__dirname, "web"), isSiteHost, origin: "https://" + (SITE_HOSTS[0] || "nurvan.app") });
 // The waiting list and the founding coaches' application: /lista-attesa.
 mountWaitlist(app, { siteDir: SITE_DIR, pool, initDb, sendEmail, shell: (req, page) => siteShell(req, page) });
 // The app's screens shown on the home page: site/shots.json lists them
