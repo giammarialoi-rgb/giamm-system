@@ -101,8 +101,16 @@ function publicState(name, state) {
 const IG = "https://graph.instagram.com/v21.0";
 
 async function igToken(pool, env, secret, state) {
+  // The copy kept here is only for renewing a token; the one on the server
+  // wins as soon as it changes (a new token means a new account, perhaps).
+  const envToken = String(env.IG_ACCESS_TOKEN || "").trim();
+  const fp = crypto.createHash("sha256").update(envToken).digest("hex").slice(0, 16);
+  if (state.envFp !== fp) {
+    state.tokenSealed = null; state.tokenRefreshedAt = null; state.tokenExpiresAt = null;
+    state.envFp = fp; state.tokenChanged = true;
+  }
   let token = state.tokenSealed ? unseal(state.tokenSealed, secret) : null;
-  if (!token) token = String(env.IG_ACCESS_TOKEN || "").trim();
+  if (!token) token = envToken;
   // The long-lived token is good for 60 days and can be renewed after the first
   // day: once a month, keeping the new one here.
   const age = state.tokenRefreshedAt ? Date.now() - Date.parse(state.tokenRefreshedAt) : Infinity;
@@ -133,8 +141,16 @@ export async function fetchInstagram(pool, { env, secret, now = Date.now() }) {
   const row = await loadRow(pool, "instagram");
   const state = row.state;
   const token = await igToken(pool, env, secret, state);
-  const me = await igGet("/me?fields=username,followers_count,follows_count,media_count", token);
+  const me = await igGet("/me?fields=user_id,username,followers_count,follows_count,media_count", token);
   const today = dayOf(now);
+  // Another profile than before: the numbers and posts of the old one go away.
+  const who = String(me.user_id || me.id || me.username || "");
+  if (state.tokenChanged || (state.accountId && who && state.accountId !== who)) {
+    await pool.query("DELETE FROM admin_metrics WHERE source = 'instagram' AND origin <> 'manual'");
+    state.recentMedia = [];
+  }
+  delete state.tokenChanged;
+  if (who) state.accountId = who;
   state.username = me.username || null;
   for (const [metric, value] of [["followers", me.followers_count], ["follows", me.follows_count], ["media_count", me.media_count]]) {
     if (Number.isFinite(Number(value))) await putMetric(pool, { day: today, source: "instagram", metric, value: Number(value) }, "api");

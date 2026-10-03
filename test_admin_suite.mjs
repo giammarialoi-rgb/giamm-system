@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { adminSlug, makeLinkGate } from './server/admin/link.mjs';
 import { sourceOf, pagePath, deviceOf, dayOf, cleanMetric, createAnalytics, METRIC_SOURCES } from './server/admin/analytics.mjs';
 import { priceBook, monthlyCents, parseAmountCents, cleanLedgerEntry, ledgerCsv, sanitizePrices, sanitizeCosts } from './server/admin/economy.mjs';
-import { seal, unseal, parseAscSales, parsePlayInstalls, missing, configured } from './server/admin/integrations.mjs';
+import { seal, unseal, parseAscSales, parsePlayInstalls, missing, configured, fetchInstagram } from './server/admin/integrations.mjs';
 import { dateOnly } from './server/admin/dates.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
