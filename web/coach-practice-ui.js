@@ -847,9 +847,9 @@ function ensurePracticeStyle() {
     '.cp-attach-sheet.active{display:flex;}',
     '.cp-attach-sheet .cp-sheet{width:100%;max-width:420px;background:#121212;border:1px solid #333;border-radius:16px 16px 12px 12px;padding:14px;color:#eee;}',
     '.cp-attach-sheet button{width:100%;margin-top:8px;}',
-    '.cp-inapp-notify{position:fixed;left:10px;right:10px;top:calc(var(--header-height) + 8px + var(--cp-session-bar, 0px));z-index:10160;background:#151515;border:1px solid var(--gold);border-radius:12px;padding:10px 12px;color:#eee;box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;}',
-    '.cp-inapp-notify b{color:var(--gold);display:block;font-size:12px;margin-bottom:2px;}',
-    '.cp-inapp-notify span{font-size:11px;color:#ccc;}',
+    '.cp-inapp-notify{position:fixed;right:10px;max-width:min(76vw,300px);top:calc(var(--header-height) + 8px + var(--cp-session-bar, 0px));z-index:10160;background:#151515;border:1px solid var(--gold);border-radius:12px;padding:8px 12px;color:#eee;box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;}',
+    '.cp-inapp-notify b{color:var(--gold);display:block;font-size:12px;margin-bottom:1px;}',
+    '.cp-inapp-notify span{font-size:12px;color:#ccc;}',
     '#cp-notify-btn{position:relative;font-size:9px;padding:6px 8px;margin-left:0;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;flex-shrink:0;white-space:nowrap;}',
     '#cp-notify-btn .cp-notify-count{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#c66;color:#fff !important;-webkit-text-fill-color:#fff !important;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;}',
     '#cp-notify-center{position:fixed;inset:0;z-index:10170;background:rgba(0,0,0,.88);display:none;align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;}',
@@ -3244,7 +3244,7 @@ async function loadCoachClientList() {
     }
     ensureCoachHeaderControls(!!(store && store.coachSessionActive));
     if (!rows.length) {
-      box.innerHTML = '<div class="cp-help">Nessun cliente. Aggiungine uno: nuovo (compilerà il questionario) o transizione (compili tu le info).</div>';
+      box.innerHTML = '<div style="text-align:center;padding:12px 0;">' + (window.emptyArtHtml ? window.emptyArtHtml('empty-clients') : '') + '<div class="cp-help">Nessun cliente. Aggiungine uno: nuovo (compilerà il questionario) o transizione (compili tu le info).</div></div>';
       return;
     }
     box.innerHTML = rows.map(function (cl) {
@@ -5996,7 +5996,7 @@ function showInAppNotify(title, body, route) {
   clearTimeout(window.__cpInappNotifyTimer);
   window.__cpInappNotifyTimer = setTimeout(function () {
     if (el) el.style.display = 'none';
-  }, 8000);
+  }, 5000);
 }
 
 function handleNotifyRoute(route) {

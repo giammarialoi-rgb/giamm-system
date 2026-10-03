@@ -86,7 +86,16 @@ export const ICONS = [
   ui('bolt', 'sections', 20, 'a lightning bolt', 'automations', ''),
   ui('home', 'sections', 24, 'a house with a pitched roof and a door', 'Home tab, back to home', '🏠'),
   ui('menu', 'sections', 24, 'three horizontal lines', 'Menu', ''),
-  ui('coach', 'sections', 24, 'a whistle on a short cord (round chamber, mouthpiece on the left)', 'Coach button in the top bar, Coach hub', ''),
+  ui('coach', 'sections', 24, 'a whistle on a short cord (round chamber, mouthpiece on the left)', 'Coach button in the top bar, Coach hub, "Modalità coach"', '👔'),
+  ui('map-pin', 'sections', 20, 'a map pin: a rounded drop shape pointing down with a small circle inside', 'Dove mi alleno (gym locations)', '📍'),
+  ui('diamond', 'sections', 20, 'a faceted gem seen from the front: a flat top, two slanted sides meeting at a point below, one line across the top part', 'Abbonamento e piani', '💎'),
+  ui('graduation-cap', 'sections', 20, 'a graduation cap: a flat diamond-shaped board on top of a rounded cap, with a small tassel hanging at the right', 'Tutorial', '🎓'),
+  ui('lightbulb', 'sections', 20, 'a light bulb: round glass, a short neck with two lines, and three small rays on top', 'tips and hints', '💡'),
+  ui('puzzle', 'sections', 20, 'a single jigsaw piece with one round knob on top and one on the right', 'integrations and extras', '🧩'),
+  ui('compass', 'sections', 20, 'a circle with a diamond-shaped needle at 45 degrees (north-east), a small dot at the centre', 'explore, guides', '🧭'),
+  ui('document', 'sections', 20, 'a sheet of paper with a folded top-right corner and two short text lines', 'reports, PDF and documents', '📄'),
+  ui('microscope', 'sections', 20, 'a microscope in side view: a slanted tube on top, an arm on the right, a round base and a small stage', 'clinical lab, research', '🔬'),
+  ui('sun', 'sections', 20, 'a circle with eight short rays around it', 'light theme, daytime', '☀'),
 
   // --- 4. Training and body
   ui('dumbbell', 'training', 24, 'a dumbbell seen from the side: two plates on each side and a short handle, slightly tilted', 'Workout tab (replaces the crossed arrows), strength', '🏋'),
@@ -97,7 +106,7 @@ export const ICONS = [
   ui('medal', 'training', 20, 'a medal on a ribbon (circle with a star, two ribbon tails)', 'personal records (PR)', '🏅'),
   ui('flame', 'training', 20, 'a flame with a smaller flame inside', 'streak, calories', ''),
   ui('heart-pulse', 'training', 20, 'a heart whose outline is crossed by a heartbeat line', 'recovery estimate, heart rate', '❤'),
-  ui('moon', 'training', 20, 'a crescent moon', 'sleep', ''),
+  ui('moon', 'training', 20, 'a crescent moon', 'sleep, recovery (Salute e recupero tile)', '🌙'),
   ui('scale', 'training', 20, 'a bathroom scale seen from above: rounded square with a small dial arc on top', 'body weight', '⚖'),
   ui('ruler', 'training', 20, 'a diagonal ruler with evenly spaced tick marks', 'body measurements', '📏 📐'),
   ui('footsteps', 'training', 20, 'two footprints, one behind the other, offset left and right', 'steps', '👣'),
@@ -152,5 +161,29 @@ export const ICONS = [
   art('empty-clients', 'empty-states', 64, 'a dashed circle head and shoulders outline (placeholder person) with a small plus', 'Coach hub with no clients', ''),
   art('empty-calendar', 'empty-states', 64, 'a calendar page with binder rings and an empty grid, a small clock at the bottom right', 'Calendar with no events', '')
 ];
+
+// A colour for every icon that names a thing (the small actions - close, plus, arrows... - take the colour of the text).
+// Bright enough for the dark background, spread over the wheel so neighbours differ, gold kept for the brand (Nurvan AI, coach).
+export const COLORS = {
+  'module-nutrition': '#6FCF97', 'module-supplements': '#F2994A', 'module-therapy': '#56CCF2', 'module-exams': '#BB6BD9',
+  'module-calendar': '#F2C94C', 'module-hyrox': '#EB5757', 'module-home-workout': '#2DD4BF', 'module-import': '#9AA7B8',
+  user: '#A5B4FC', users: '#818CF8', chat: '#56CCF2', 'video-call': '#38BDF8', globe: '#38BDF8', shield: '#34D399', backup: '#94A3B8',
+  'ai-spark': '#D4AF37', book: '#F59E0B', library: '#FBBF24', clipboard: '#60A5FA', 'clipboard-check': '#34D399',
+  'chart-line': '#4ADE80', 'chart-bar': '#22C55E', table: '#94A3B8', folder: '#FBBF24', tag: '#F472B6', wallet: '#34D399',
+  'funnel-pipeline': '#A78BFA', bolt: '#FACC15', coach: '#D4AF37',
+  dumbbell: '#FF7A59', barbell: '#FB7185', kettlebell: '#F97316', running: '#4ADE80', target: '#F87171', medal: '#FACC15', flame: '#FB923C',
+  'heart-pulse': '#F87171', moon: '#A5B4FC', scale: '#94A3B8', ruler: '#2DD4BF', footsteps: '#4ADE80', 'water-drop': '#38BDF8',
+  cart: '#F472B6', apple: '#EF4444', sandwich: '#FBBF24',
+  'muscle-chest': '#F87171', 'muscle-back': '#60A5FA', 'muscle-shoulders': '#FB923C', 'muscle-arms': '#A78BFA', 'muscle-legs': '#34D399', 'muscle-core': '#FBBF24', 'muscle-fullbody': '#D4AF37',
+  'discipline-pilates': '#F472B6', 'discipline-mobility': '#2DD4BF', 'discipline-calisthenics': '#FB923C', 'discipline-hiit': '#F87171',
+  'hyrox-run': '#4ADE80', 'hyrox-skierg': '#38BDF8', 'hyrox-sled-push': '#F97316', 'hyrox-sled-pull': '#FB7185', 'hyrox-burpee-broad-jump': '#FACC15',
+  'hyrox-row': '#2DD4BF', 'hyrox-farmers-carry': '#A78BFA', 'hyrox-sandbag-lunges': '#F59E0B', 'hyrox-wall-ball': '#60A5FA',
+  'wellbeing-posture': '#60A5FA', 'wellbeing-labour': '#F472B6', 'wellbeing-postpartum': '#FB7185',
+  'coach-today': '#FACC15', 'coach-clients': '#A5B4FC', 'coach-inbox': '#56CCF2', 'coach-programs': '#60A5FA', 'coach-analytics': '#4ADE80',
+  'map-pin': '#F87171', diamond: '#67E8F9', 'graduation-cap': '#A78BFA', lightbulb: '#FDE047', puzzle: '#FB923C', compass: '#38BDF8',
+  document: '#94A3B8', microscope: '#BB6BD9', sun: '#FACC15',
+  'empty-program': '#60A5FA', 'empty-supplements': '#F2994A', 'empty-therapy': '#56CCF2', 'empty-exams': '#BB6BD9',
+  'empty-chart': '#4ADE80', 'empty-chat': '#56CCF2', 'empty-clients': '#A5B4FC', 'empty-calendar': '#F2C94C'
+};
 
 export const GROUPS = [...new Set(ICONS.map((i) => i.group))];

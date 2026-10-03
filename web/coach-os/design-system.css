@@ -294,6 +294,8 @@ body.coach-os-v2 main {
   min-width: 0;
   flex: 1;
 }
+/* A wrapping row whose text column has no basis lets the buttons squeeze it to a few pixels (words one letter per line): the text asks for room first. */
+.coach-os-row[style*="flex-wrap:wrap"] > .coach-os-row-main { flex: 1 1 150px; }
 
 .coach-os-row-main strong,
 .coach-os-row-main span {

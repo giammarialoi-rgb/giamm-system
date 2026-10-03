@@ -160,9 +160,9 @@ export function ledgerTotals(events, now = Date.now()) {
     const when = new Date(e.occurredAt);
     const key = when.getFullYear() + "-" + String(when.getMonth() + 1).padStart(2, "0");
     const m = months.get(key) || { month: key, cents: 0, count: 0 };
-    const c = clients.get(e.clientId) || { clientId: e.clientId, clientName: e.clientName || null, cents: 0, count: 0 };
+    const c = clients.get(e.clientId) || { clientId: e.clientId, clientName: e.clientName || null, cents: 0, count: 0, noAmount: 0 };
     m.count += 1; c.count += 1;
-    if (e.hasAmount === false) out.withoutAmount += 1;
+    if (e.hasAmount === false) { out.withoutAmount += 1; c.noAmount += 1; }
     else {
       const cents = money(e.amountCents);
       out.allCents += cents;

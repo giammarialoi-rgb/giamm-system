@@ -108,7 +108,7 @@
       (row.weight ? Number(row.weight) + ' kg' : '—') + '</div></div>' +
       '<div class="coach-os-card" style="margin:0;"><div class="coach-os-card-kicker">' + escText(tx('coReceived')) + '</div><div class="coach-os-card-title" style="font-size:12px;">' +
       escText(formatDate(row.receivedAt || row.requestedAt)) + '</div></div></div>' +
-      '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coCoachFeedback')) + '</div><div class="coach-os-muted" style="color:#ddd;margin-top:8px;">' +
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coAthleteNotes')) + '</div><div class="coach-os-muted" style="color:#ddd;margin-top:8px;">' +
       escText(row.notes || tx('coNoNotes')) + '</div></div>' +
       '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">' + escText(tx('coSignals')) + '</div>' +
       signalRows(row.deterministicSummary) +

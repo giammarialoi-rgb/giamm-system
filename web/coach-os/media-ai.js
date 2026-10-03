@@ -18,30 +18,47 @@
       '<p class="coach-os-subtitle">' + escText(subtitle) + '</p></div></div>' + body + '</div>';
   }
 
+  // The coach picks the client from a list: typing a numeric id by hand was the only way before.
+  async function clientOptions() {
+    let list = (window.store && window.store.__cpClientList) || [];
+    if (!list.length && typeof window.practiceFetch === 'function') {
+      try {
+        const payload = await window.practiceFetch('/api/coach/clients', { headers: window.practiceHeaders(false) });
+        list = (payload && payload.clients) || [];
+      } catch (_) { list = []; }
+    }
+    return '<option value="">' + escText(tx('coChooseClient')) + '</option>' + list.map(function (c) {
+      return '<option value="' + escText(c.id) + '">' + escText(c.displayName || c.username || c.id) + '</option>';
+    }).join('');
+  }
+  const selectStyle = 'width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;';
+
   CoachOS.views.coachNutrition = async function (container) {
+    const options = await clientOptions();
     container.innerHTML = page(
       tx('coNutrition'),
       tx('coMealSubtitle'),
       '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coMealEstimate')) + '</div>' +
-      '<input id="coach-os-meal-client" placeholder="' + escText(tx('coClientId')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<select id="coach-os-meal-client" style="' + selectStyle + '">' + options + '</select>' +
       '<input id="coach-os-meal-p" placeholder="' + escText(tx('coProteinG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
       '<input id="coach-os-meal-c" placeholder="' + escText(tx('coCarbsG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
       '<input id="coach-os-meal-f" placeholder="' + escText(tx('coFatsG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.estimateMeal()">' + escText(tx('coEstimate')) + '</button>' +
+      '<button class="btn btn-primary" style="margin-top:8px;width:100%;" onclick="CoachOS.estimateMeal()">' + escText(tx('coEstimate')) + '</button>' +
       '<div id="coach-os-meal-result" class="coach-os-muted" style="margin-top:10px;"></div></div>'
     );
   };
 
   CoachOS.views.coachFormReview = async function (container) {
+    const options = await clientOptions();
     container.innerHTML = page(
       tx('coVideoForm'),
       tx('coFormSubtitle'),
       '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coFormReview')) + '</div>' +
-      '<input id="coach-os-form-client" placeholder="' + escText(tx('coClientId')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<select id="coach-os-form-client" style="' + selectStyle + '">' + options + '</select>' +
       '<input id="coach-os-form-exercise" placeholder="' + escText(tx('coExercise')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
       '<input id="coach-os-form-markers" placeholder="' + escText(tx('coMarkersHint')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
       '<textarea id="coach-os-form-feedback" placeholder="' + escText(tx('coCoachFeedback')) + '" style="width:100%;min-height:88px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:10px 12px;"></textarea>' +
-      '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.saveFormReview()">' + escText(tx('coSaveMarkers')) + '</button>' +
+      '<button class="btn btn-primary" style="margin-top:8px;width:100%;" onclick="CoachOS.saveFormReview()">' + escText(tx('coSaveMarkers')) + '</button>' +
       '<div id="coach-os-form-result" class="coach-os-muted" style="margin-top:10px;"></div></div>'
     );
   };

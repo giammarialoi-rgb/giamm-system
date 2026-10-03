@@ -28,6 +28,8 @@
   const LABELS = ['Mensile coaching', 'Pacchetto di sedute', 'Seduta in presenza', 'Programma', 'Altro'];
   const ledger = { events: [], totals: null, sessions: [], clients: [], failed: false };
   function T(text) { return typeof window.tr === 'function' ? window.tr(text) : text; }
+  // The stages of the pipeline as the coach reads them (the keys are the server's ids).
+  const CRM_STAGE_LABEL = { LEAD: 'Contatto', TRIAL: 'In prova', ACTIVE: 'Attivo', PAUSED: 'In pausa', CHURN_RISK: 'A rischio', CHURNED: 'Perso' };
   function locale() { try { return (document.documentElement && document.documentElement.lang) || 'it-IT'; } catch (_) { return 'it-IT'; } }
   function money(cents) {
     try { return new Intl.NumberFormat(locale(), { style: 'currency', currency: 'EUR' }).format((Number(cents) || 0) / 100); }
@@ -84,7 +86,7 @@
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Per cliente')) + '</h2></div>' +
       ((t.byClient || []).length
         ? '<div class="coach-os-list">' + t.byClient.map(function (c) {
-          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(c.clientName || T('Cliente')) + '</strong><span>' + escText(c.count + ' ' + T(c.count === 1 ? 'incasso' : 'incassi')) + '</span></span><strong>' + escText(money(c.cents)) + '</strong></div>';
+          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(c.clientName || T('Cliente')) + '</strong><span>' + escText(c.count + ' ' + T(c.count === 1 ? 'incasso' : 'incassi')) + '</span></span><strong>' + escText(c.noAmount && c.noAmount === c.count ? T('senza cifra') : money(c.cents)) + '</strong></div>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">' + escText(T('Ancora nessun incasso. Con REGISTRA INCASSO scrivi il primo.')) + '</div>') + '</section>' +
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Sedute fatte negli ultimi 12 mesi')) + '</h2></div>' +
@@ -233,9 +235,10 @@
       '<h1 class="coach-os-title">' + escText(tx('coCrm')) + '</h1></div></div>' +
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (row) {
-          return '<button class="coach-os-row" onclick="openCoachClient(\'' + escText(row.id) + '\')"><span class="coach-os-row-main"><strong>' +
-            escText(row.name) + '</strong><span>' + escText(({ LEAD: 'Contatto', TRIAL: 'In prova', ACTIVE: 'Attivo', PAUSED: 'In pausa', CHURN_RISK: 'A rischio', CHURNED: 'Perso' })[row.stage] || row.stage) + (row.nextAction ? ' · ' + escText(row.nextAction) : '') +
-            '</span></span></button>';
+          return '<div class="coach-os-row" style="cursor:default;flex-wrap:wrap;"><button type="button" class="coach-os-row-main" style="border:0;background:transparent;text-align:left;color:inherit;cursor:pointer;" onclick="openCoachClient(\'' + escText(row.id) + '\')"><strong>' +
+            escText(row.name) + '</strong><span>' + (row.nextAction ? escText(row.nextAction) : escText(tx('coCrm'))) + '</span></button>' +
+            '<select aria-label="Fase" style="width:auto;min-width:120px;padding:8px 10px;font-size:12px;" onchange="CoachOS.setCrmStage(\'' + escText(row.id) + '\', this.value)">' +
+            Object.keys(CRM_STAGE_LABEL).map(function (s) { return '<option value="' + s + '"' + (s === row.stage ? ' selected' : '') + '>' + escText(CRM_STAGE_LABEL[s]) + '</option>'; }).join('') + '</select></div>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">' + escText(tx('coCrmEmpty')) + '</div>') + '</div>';
   };
@@ -254,14 +257,33 @@
       '<button class="btn btn-outline" onclick="CoachOS.createAutomationPrompt()">' + escText(tx('coNewRule')) + '</button></div>' +
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (row) {
-          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(row.name) +
-            '</strong><span>' + escText(({ check_in_received: 'Check-in ricevuto', check_in_overdue: 'Check-in in ritardo', client_inactive: 'Cliente inattivo', payment_due: 'Pagamento in scadenza', new_client: 'Nuovo cliente' })[row.trigger] || String(row.trigger || '').replace(/_/g, ' ')) + ' → ' + escText(({ create_task: 'crea un task', send_message: 'invia un messaggio', notify: 'avvisa il coach' })[row.action] || String(row.action || '').replace(/_/g, ' ')) + (row.enabled === false ? ' · disattivata' : '') + '</span></span>' +
+          return '<div class="coach-os-row" style="flex-wrap:wrap;gap:8px;cursor:default;"><span class="coach-os-row-main" style="flex:1 1 100%;"><strong>' + escText(row.name) +
+            '</strong><span>' + escText(({ check_in_received: 'Check-in ricevuto', check_in_overdue: 'Check-in in ritardo', client_inactive: 'Cliente inattivo', inactive_7d: 'Cliente inattivo da 7 giorni', program_expiring: 'Programma in scadenza', payment_due: 'Pagamento in scadenza', new_client: 'Nuovo cliente' })[row.trigger] || String(row.trigger || '').replace(/_/g, ' ')) + ' → ' + escText(({ create_task: 'crea un task', send_message: 'invia un messaggio', notify: 'avvisa il coach' })[row.action] || String(row.action || '').replace(/_/g, ' ')) + (row.enabled === false ? ' · disattivata' : '') + '</span></span>' +
+            '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--co-muted);"><input type="checkbox" ' + (row.enabled === false ? '' : 'checked ') + 'onchange="CoachOS.toggleAutomation(\'' + escText(row.id) + '\', this.checked)"> ' + escText(T('Attiva')) + '</label>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.dryRunAutomation(\'' +
             escText(row.id) + '\')">' + escText(tx('coDryRun')) + '</button>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.runAutomationNow(\'' +
             escText(row.id) + '\')">' + escText(tx('coRun')) + '</button></div>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">' + escText(tx('coNoAutomations')) + '</div>') + '</div>';
+  };
+
+  CoachOS.toggleAutomation = async function (id, on) {
+    try {
+      await window.practiceFetch('/api/coach/automations/' + encodeURIComponent(id) + '/enable', { method: 'POST', headers: window.practiceHeaders(true), body: JSON.stringify({ enabled: !!on }) });
+    } catch (err) {
+      if (typeof practiceToast === 'function') practiceToast(String((err && err.message) || err), 'error');
+    }
+    CoachOS.navigate('coachAutomations');
+  };
+
+  CoachOS.setCrmStage = async function (id, stage) {
+    try {
+      await window.practiceFetch('/api/coach/crm/' + encodeURIComponent(id), { method: 'POST', headers: window.practiceHeaders(true), body: JSON.stringify({ stage: stage }) });
+    } catch (err) {
+      if (typeof practiceToast === 'function') practiceToast(String((err && err.message) || err), 'error');
+    }
+    CoachOS.navigate('coachCrm');
   };
 
   CoachOS.createAutomationPrompt = async function () {

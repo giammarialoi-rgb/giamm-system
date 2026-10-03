@@ -868,8 +868,10 @@ button, input, select, textarea { font-family: inherit; }
 .nv-gl { display: inline-block; line-height: 0; vertical-align: -0.2em; }
 .nv-gl .nv-ic { width: 1.2em; height: 1.2em; }
 .nav-item svg.nv-ic { fill: none; stroke: #666; width: 24px; height: 24px; }
-span[style*="font-size:20px"] > .nv-gl .nv-ic, span[style*="font-size:18px"] > .nv-gl .nv-ic { width: 1.4em; height: 1.4em; }
+span[style*="font-size:20px"] > .nv-gl .nv-ic, span[style*="font-size:18px"] > .nv-gl .nv-ic { width: 1.5em; height: 1.5em; }
 .nav-item.active svg.nv-ic { fill: none; stroke: var(--gold); }
+.nv-art { color: var(--gold); opacity: .75; margin: 0 auto 10px; line-height: 0; }
+.nv-art .nv-ic { width: 72px; height: 72px; }
 /* Checkboxes and radios: dark when off, gold when on - the native white square read as the "on" state. */
 input[type="checkbox"], input[type="radio"] { accent-color: var(--gold); -webkit-appearance: none; appearance: none; background: #111; border: 1.5px solid #666; cursor: pointer; position: relative; }
 input[type="checkbox"] { border-radius: 5px; }
@@ -1748,11 +1750,11 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:11px;font-weight:800;">Statistiche</span>
       </button>
       <button class="btn btn-outline" data-hub="programs" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('programs')">
-        <span style="font-size:20px;">📚</span>
+        <span style="font-size:20px;">📑</span>
         <span style="font-size:11px;font-weight:800;text-align:center;line-height:1.15;">Libreria programmi e import</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('wellbeing')">
-        <span style="font-size:20px;">🩺</span>
+        <span style="font-size:20px;">🌙</span>
         <span style="font-size:11px;font-weight:800;text-align:center;line-height:1.15;">Salute e recupero</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('knowledge')">
@@ -1764,7 +1766,7 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:11px;font-weight:800;" data-i18n="coachAI">Coach AI</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openAthleteProfile()">
-        <span style="font-size:20px;">🏅</span>
+        <span style="font-size:20px;">👤</span>
         <span style="font-size:11px;font-weight:800;">Profilo Atleta</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openMyGym()">
@@ -2880,6 +2882,8 @@ body.coach-os-v2 main {
   min-width: 0;
   flex: 1;
 }
+/* A wrapping row whose text column has no basis lets the buttons squeeze it to a few pixels (words one letter per line): the text asks for room first. */
+.coach-os-row[style*="flex-wrap:wrap"] > .coach-os-row-main { flex: 1 1 150px; }
 
 .coach-os-row-main strong,
 .coach-os-row-main span {
@@ -36690,7 +36694,7 @@ const I18nService = {
       coClientId: "ID cliente", coProteinG: "Proteine g",
       coCarbsG: "Carboidrati g", coFatsG: "Grassi g", coExercise: "Esercizio",
       coMarkersHint: "Marker (es. 0:12 ginocchio in valgo; 0:28 profondità)",
-      coCoachFeedback: "Feedback coach", coEstimatePrefix: "Stima",
+      coCoachFeedback: "Feedback coach", coAthleteNotes: "Note dell'atleta", coEstimatePrefix: "Stima",
       coKcal: "kcal", coConfidence: "affidabilità",
       coReviewSaved: "Revisione salvata",
       coAgentPlaceholder: "Es. mostra i clienti inattivi, proponi un deload, crea un task…",
@@ -36865,7 +36869,7 @@ const I18nService = {
       coClientId: "Client ID", coProteinG: "Protein g",
       coCarbsG: "Carbs g", coFatsG: "Fats g", coExercise: "Exercise",
       coMarkersHint: "Markers (e.g. 0:12 knee valgus; 0:28 depth)",
-      coCoachFeedback: "Coach feedback", coEstimatePrefix: "Estimate",
+      coCoachFeedback: "Coach feedback", coAthleteNotes: "Athlete's notes", coEstimatePrefix: "Estimate",
       coKcal: "kcal", coConfidence: "confidence",
       coReviewSaved: "Review saved",
       coAgentPlaceholder: "E.g. show inactive clients, propose a deload, create a task…",
@@ -51570,6 +51574,12 @@ function closeDomainQuickSwitch() {
   popUiOverlay('domain-quick-switch');
 }
 
+// The drawing of an empty screen (web/icons "empty-*"): in the gold of the app, quiet.
+function emptyArtHtml(name) {
+  return (window.NurvanIcons && window.NurvanIcons.has(name)) ? '<div class="nv-art" aria-hidden="true">' + window.NurvanIcons.svg(name, 72) + '</div>' : '';
+}
+window.emptyArtHtml = emptyArtHtml;
+
 function domainTitleTapHtml(eyebrow, title) {
   return '<div role="button" tabindex="0" onclick="openDomainQuickSwitch()" style="cursor:pointer;-webkit-tap-highlight-color:transparent;">' +
     '<span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">' + eyebrow + '</span>' +
@@ -55705,7 +55715,7 @@ function renderSupplements(c) {
   if (!visibleSupps.length) {
     html += `
       <div class="card" style="text-align:center;padding:30px 15px;color:#888;">
-        <div style="font-size:24px;margin-bottom:8px;">🧴</div>
+        ${emptyArtHtml('empty-supplements')}
         <p style="margin:0;font-size:12px;">Nessun integratore importato o aggiunto.</p>
         <p style="margin:8px 0 0;font-size:11px;color:#666;">${athleteCanSelfGeneratePlans()
           ? 'Importa una scheda, chiedi a Coach AI, oppure genera un protocollo dal profilo.'
@@ -56609,7 +56619,7 @@ function renderTherapy(c) {
   } else {
     html += `
       <div class="card" style="text-align:center;padding:30px 15px;color:#888;">
-        <div style="font-size:24px;margin-bottom:8px;">🩺</div>
+        ${emptyArtHtml('empty-therapy')}
         <p style="margin:0;font-size:12px;">Nessuna prescrizione registrata.</p>
         <p style="margin:8px 0 0;font-size:11px;color:#666;">Aggiungi a mano (cerca principio attivo e categoria), importa una scheda, o chiedi a Coach AI.</p>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
@@ -56891,6 +56901,7 @@ function renderExams(c) {
   if (!records.length) {
     html += `
       <div class="card" style="text-align:center;padding:30px 15px;color:#888;">
+        ${emptyArtHtml('empty-exams')}
         <p style="margin:0;font-size:13px;color:#ccc;">Nessun referto trascritto. Aggiungi un esame o importa un file.</p>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
           <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="openAddExamModal()">+ AGGIUNGI REFERTO</button>
@@ -57247,7 +57258,7 @@ function renderCalendar(c) {
           '</div>' +
           (ev.persistent && ev.id ? '<button class="btn btn-outline" style="font-size:9px;padding:4px 6px;color:var(--accent-red);border-color:var(--accent-red);" onclick="event.stopPropagation();removeCalendarEvent(\'' + esc(ev.id) + '\')">✕</button>' : '') +
           '</div>';
-      }).join('') : '<div style="font-size:11px;color:#666;padding:16px;text-align:center;">Nessun evento. Aggiungi un check-in, pesata o riposo sotto.</div>'}
+      }).join('') : '<div style="font-size:11px;color:#666;padding:16px;text-align:center;">' + emptyArtHtml('empty-calendar') + 'Nessun evento. Aggiungi un check-in, pesata o riposo sotto.</div>'}
     </div>
     <div class="card" style="border:1px solid rgba(212,175,55,0.35);">
       <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:8px;">AGGIUNGI EVENTO · ${calDayLabel(calendarSelectedDate)}</div>
@@ -80888,9 +80899,9 @@ function ensurePracticeStyle() {
     '.cp-attach-sheet.active{display:flex;}',
     '.cp-attach-sheet .cp-sheet{width:100%;max-width:420px;background:#121212;border:1px solid #333;border-radius:16px 16px 12px 12px;padding:14px;color:#eee;}',
     '.cp-attach-sheet button{width:100%;margin-top:8px;}',
-    '.cp-inapp-notify{position:fixed;left:10px;right:10px;top:calc(var(--header-height) + 8px + var(--cp-session-bar, 0px));z-index:10160;background:#151515;border:1px solid var(--gold);border-radius:12px;padding:10px 12px;color:#eee;box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;}',
-    '.cp-inapp-notify b{color:var(--gold);display:block;font-size:12px;margin-bottom:2px;}',
-    '.cp-inapp-notify span{font-size:11px;color:#ccc;}',
+    '.cp-inapp-notify{position:fixed;right:10px;max-width:min(76vw,300px);top:calc(var(--header-height) + 8px + var(--cp-session-bar, 0px));z-index:10160;background:#151515;border:1px solid var(--gold);border-radius:12px;padding:8px 12px;color:#eee;box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;}',
+    '.cp-inapp-notify b{color:var(--gold);display:block;font-size:12px;margin-bottom:1px;}',
+    '.cp-inapp-notify span{font-size:12px;color:#ccc;}',
     '#cp-notify-btn{position:relative;font-size:9px;padding:6px 8px;margin-left:0;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;flex-shrink:0;white-space:nowrap;}',
     '#cp-notify-btn .cp-notify-count{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#c66;color:#fff !important;-webkit-text-fill-color:#fff !important;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;}',
     '#cp-notify-center{position:fixed;inset:0;z-index:10170;background:rgba(0,0,0,.88);display:none;align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;}',
@@ -83285,7 +83296,7 @@ async function loadCoachClientList() {
     }
     ensureCoachHeaderControls(!!(store && store.coachSessionActive));
     if (!rows.length) {
-      box.innerHTML = '<div class="cp-help">Nessun cliente. Aggiungine uno: nuovo (compilerà il questionario) o transizione (compili tu le info).</div>';
+      box.innerHTML = '<div style="text-align:center;padding:12px 0;">' + (window.emptyArtHtml ? window.emptyArtHtml('empty-clients') : '') + '<div class="cp-help">Nessun cliente. Aggiungine uno: nuovo (compilerà il questionario) o transizione (compili tu le info).</div></div>';
       return;
     }
     box.innerHTML = rows.map(function (cl) {
@@ -86037,7 +86048,7 @@ function showInAppNotify(title, body, route) {
   clearTimeout(window.__cpInappNotifyTimer);
   window.__cpInappNotifyTimer = setTimeout(function () {
     if (el) el.style.display = 'none';
-  }, 8000);
+  }, 5000);
 }
 
 function handleNotifyRoute(route) {
@@ -89544,7 +89555,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       (row.weight ? Number(row.weight) + ' kg' : '—') + '</div></div>' +
       '<div class="coach-os-card" style="margin:0;"><div class="coach-os-card-kicker">' + escText(tx('coReceived')) + '</div><div class="coach-os-card-title" style="font-size:12px;">' +
       escText(formatDate(row.receivedAt || row.requestedAt)) + '</div></div></div>' +
-      '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coCoachFeedback')) + '</div><div class="coach-os-muted" style="color:#ddd;margin-top:8px;">' +
+      '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coAthleteNotes')) + '</div><div class="coach-os-muted" style="color:#ddd;margin-top:8px;">' +
       escText(row.notes || tx('coNoNotes')) + '</div></div>' +
       '<div class="coach-os-card-kicker" style="margin:14px 0 8px;">' + escText(tx('coSignals')) + '</div>' +
       signalRows(row.deterministicSummary) +
@@ -91357,6 +91368,8 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
   const LABELS = ['Mensile coaching', 'Pacchetto di sedute', 'Seduta in presenza', 'Programma', 'Altro'];
   const ledger = { events: [], totals: null, sessions: [], clients: [], failed: false };
   function T(text) { return typeof window.tr === 'function' ? window.tr(text) : text; }
+  // The stages of the pipeline as the coach reads them (the keys are the server's ids).
+  const CRM_STAGE_LABEL = { LEAD: 'Contatto', TRIAL: 'In prova', ACTIVE: 'Attivo', PAUSED: 'In pausa', CHURN_RISK: 'A rischio', CHURNED: 'Perso' };
   function locale() { try { return (document.documentElement && document.documentElement.lang) || 'it-IT'; } catch (_) { return 'it-IT'; } }
   function money(cents) {
     try { return new Intl.NumberFormat(locale(), { style: 'currency', currency: 'EUR' }).format((Number(cents) || 0) / 100); }
@@ -91413,7 +91426,7 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Per cliente')) + '</h2></div>' +
       ((t.byClient || []).length
         ? '<div class="coach-os-list">' + t.byClient.map(function (c) {
-          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(c.clientName || T('Cliente')) + '</strong><span>' + escText(c.count + ' ' + T(c.count === 1 ? 'incasso' : 'incassi')) + '</span></span><strong>' + escText(money(c.cents)) + '</strong></div>';
+          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(c.clientName || T('Cliente')) + '</strong><span>' + escText(c.count + ' ' + T(c.count === 1 ? 'incasso' : 'incassi')) + '</span></span><strong>' + escText(c.noAmount && c.noAmount === c.count ? T('senza cifra') : money(c.cents)) + '</strong></div>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">' + escText(T('Ancora nessun incasso. Con REGISTRA INCASSO scrivi il primo.')) + '</div>') + '</section>' +
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Sedute fatte negli ultimi 12 mesi')) + '</h2></div>' +
@@ -91562,9 +91575,10 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
       '<h1 class="coach-os-title">' + escText(tx('coCrm')) + '</h1></div></div>' +
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (row) {
-          return '<button class="coach-os-row" onclick="openCoachClient(\'' + escText(row.id) + '\')"><span class="coach-os-row-main"><strong>' +
-            escText(row.name) + '</strong><span>' + escText(({ LEAD: 'Contatto', TRIAL: 'In prova', ACTIVE: 'Attivo', PAUSED: 'In pausa', CHURN_RISK: 'A rischio', CHURNED: 'Perso' })[row.stage] || row.stage) + (row.nextAction ? ' · ' + escText(row.nextAction) : '') +
-            '</span></span></button>';
+          return '<div class="coach-os-row" style="cursor:default;flex-wrap:wrap;"><button type="button" class="coach-os-row-main" style="border:0;background:transparent;text-align:left;color:inherit;cursor:pointer;" onclick="openCoachClient(\'' + escText(row.id) + '\')"><strong>' +
+            escText(row.name) + '</strong><span>' + (row.nextAction ? escText(row.nextAction) : escText(tx('coCrm'))) + '</span></button>' +
+            '<select aria-label="Fase" style="width:auto;min-width:120px;padding:8px 10px;font-size:12px;" onchange="CoachOS.setCrmStage(\'' + escText(row.id) + '\', this.value)">' +
+            Object.keys(CRM_STAGE_LABEL).map(function (s) { return '<option value="' + s + '"' + (s === row.stage ? ' selected' : '') + '>' + escText(CRM_STAGE_LABEL[s]) + '</option>'; }).join('') + '</select></div>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">' + escText(tx('coCrmEmpty')) + '</div>') + '</div>';
   };
@@ -91583,14 +91597,33 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
       '<button class="btn btn-outline" onclick="CoachOS.createAutomationPrompt()">' + escText(tx('coNewRule')) + '</button></div>' +
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (row) {
-          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(row.name) +
-            '</strong><span>' + escText(({ check_in_received: 'Check-in ricevuto', check_in_overdue: 'Check-in in ritardo', client_inactive: 'Cliente inattivo', payment_due: 'Pagamento in scadenza', new_client: 'Nuovo cliente' })[row.trigger] || String(row.trigger || '').replace(/_/g, ' ')) + ' → ' + escText(({ create_task: 'crea un task', send_message: 'invia un messaggio', notify: 'avvisa il coach' })[row.action] || String(row.action || '').replace(/_/g, ' ')) + (row.enabled === false ? ' · disattivata' : '') + '</span></span>' +
+          return '<div class="coach-os-row" style="flex-wrap:wrap;gap:8px;cursor:default;"><span class="coach-os-row-main" style="flex:1 1 100%;"><strong>' + escText(row.name) +
+            '</strong><span>' + escText(({ check_in_received: 'Check-in ricevuto', check_in_overdue: 'Check-in in ritardo', client_inactive: 'Cliente inattivo', inactive_7d: 'Cliente inattivo da 7 giorni', program_expiring: 'Programma in scadenza', payment_due: 'Pagamento in scadenza', new_client: 'Nuovo cliente' })[row.trigger] || String(row.trigger || '').replace(/_/g, ' ')) + ' → ' + escText(({ create_task: 'crea un task', send_message: 'invia un messaggio', notify: 'avvisa il coach' })[row.action] || String(row.action || '').replace(/_/g, ' ')) + (row.enabled === false ? ' · disattivata' : '') + '</span></span>' +
+            '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--co-muted);"><input type="checkbox" ' + (row.enabled === false ? '' : 'checked ') + 'onchange="CoachOS.toggleAutomation(\'' + escText(row.id) + '\', this.checked)"> ' + escText(T('Attiva')) + '</label>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.dryRunAutomation(\'' +
             escText(row.id) + '\')">' + escText(tx('coDryRun')) + '</button>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.runAutomationNow(\'' +
             escText(row.id) + '\')">' + escText(tx('coRun')) + '</button></div>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">' + escText(tx('coNoAutomations')) + '</div>') + '</div>';
+  };
+
+  CoachOS.toggleAutomation = async function (id, on) {
+    try {
+      await window.practiceFetch('/api/coach/automations/' + encodeURIComponent(id) + '/enable', { method: 'POST', headers: window.practiceHeaders(true), body: JSON.stringify({ enabled: !!on }) });
+    } catch (err) {
+      if (typeof practiceToast === 'function') practiceToast(String((err && err.message) || err), 'error');
+    }
+    CoachOS.navigate('coachAutomations');
+  };
+
+  CoachOS.setCrmStage = async function (id, stage) {
+    try {
+      await window.practiceFetch('/api/coach/crm/' + encodeURIComponent(id), { method: 'POST', headers: window.practiceHeaders(true), body: JSON.stringify({ stage: stage }) });
+    } catch (err) {
+      if (typeof practiceToast === 'function') practiceToast(String((err && err.message) || err), 'error');
+    }
+    CoachOS.navigate('coachCrm');
   };
 
   CoachOS.createAutomationPrompt = async function () {
@@ -91779,30 +91812,47 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
       '<p class="coach-os-subtitle">' + escText(subtitle) + '</p></div></div>' + body + '</div>';
   }
 
+  // The coach picks the client from a list: typing a numeric id by hand was the only way before.
+  async function clientOptions() {
+    let list = (window.store && window.store.__cpClientList) || [];
+    if (!list.length && typeof window.practiceFetch === 'function') {
+      try {
+        const payload = await window.practiceFetch('/api/coach/clients', { headers: window.practiceHeaders(false) });
+        list = (payload && payload.clients) || [];
+      } catch (_) { list = []; }
+    }
+    return '<option value="">' + escText(tx('coChooseClient')) + '</option>' + list.map(function (c) {
+      return '<option value="' + escText(c.id) + '">' + escText(c.displayName || c.username || c.id) + '</option>';
+    }).join('');
+  }
+  const selectStyle = 'width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;';
+
   CoachOS.views.coachNutrition = async function (container) {
+    const options = await clientOptions();
     container.innerHTML = page(
       tx('coNutrition'),
       tx('coMealSubtitle'),
       '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coMealEstimate')) + '</div>' +
-      '<input id="coach-os-meal-client" placeholder="' + escText(tx('coClientId')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<select id="coach-os-meal-client" style="' + selectStyle + '">' + options + '</select>' +
       '<input id="coach-os-meal-p" placeholder="' + escText(tx('coProteinG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
       '<input id="coach-os-meal-c" placeholder="' + escText(tx('coCarbsG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
       '<input id="coach-os-meal-f" placeholder="' + escText(tx('coFatsG')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
-      '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.estimateMeal()">' + escText(tx('coEstimate')) + '</button>' +
+      '<button class="btn btn-primary" style="margin-top:8px;width:100%;" onclick="CoachOS.estimateMeal()">' + escText(tx('coEstimate')) + '</button>' +
       '<div id="coach-os-meal-result" class="coach-os-muted" style="margin-top:10px;"></div></div>'
     );
   };
 
   CoachOS.views.coachFormReview = async function (container) {
+    const options = await clientOptions();
     container.innerHTML = page(
       tx('coVideoForm'),
       tx('coFormSubtitle'),
       '<div class="coach-os-card"><div class="coach-os-card-kicker">' + escText(tx('coFormReview')) + '</div>' +
-      '<input id="coach-os-form-client" placeholder="' + escText(tx('coClientId')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
+      '<select id="coach-os-form-client" style="' + selectStyle + '">' + options + '</select>' +
       '<input id="coach-os-form-exercise" placeholder="' + escText(tx('coExercise')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
       '<input id="coach-os-form-markers" placeholder="' + escText(tx('coMarkersHint')) + '" style="width:100%;min-height:44px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:0 12px;">' +
       '<textarea id="coach-os-form-feedback" placeholder="' + escText(tx('coCoachFeedback')) + '" style="width:100%;min-height:88px;margin:6px 0;background:#0b0b0b;border:1px solid var(--co-border);color:#fff;border-radius:12px;padding:10px 12px;"></textarea>' +
-      '<button class="btn" style="margin-top:8px;background:#111;color:#fff;" onclick="CoachOS.saveFormReview()">' + escText(tx('coSaveMarkers')) + '</button>' +
+      '<button class="btn btn-primary" style="margin-top:8px;width:100%;" onclick="CoachOS.saveFormReview()">' + escText(tx('coSaveMarkers')) + '</button>' +
       '<div id="coach-os-form-result" class="coach-os-muted" style="margin-top:10px;"></div></div>'
     );
   };

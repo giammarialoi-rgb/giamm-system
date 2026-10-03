@@ -32,6 +32,26 @@ discipline-calisthenics.svg - a pull-up bar: a horizontal line between two short
 Return the files only, as before. Add "Doubts:" only for icons you are not sure about.
 ```
 
+## Icone nuove (ancora mancanti: nel menu compaiono ancora come emoji)
+
+Servono per non avere più nessuna emoji nell'app (Dove mi alleno, Abbonamento, Tutorial, suggerimenti, ecc.). Stesso prompt di sopra, nella stessa chat, **in aggiunta alle ridisegnate**: nel frattempo queste emoji usano un'icona simile (target, portafoglio, libro...) e passano alla nuova appena il file esiste in `web/icons/`.
+
+```
+Draw these NEW icons with the same rules, grid and stroke as the rest of the set (ui: viewBox 0 0 24 24, stroke-width 1.75, outline only, round caps and joins, currentColor, maximum 8 shapes). Flat pictograms, bold clear silhouette filling about 80% of the live area, recognisable at 20 px:
+
+map-pin.svg (shown at 20px) - draw: a map pin: a rounded drop shape pointing down with a small circle inside.
+diamond.svg (shown at 20px) - draw: a faceted gem seen from the front: a flat top, two slanted sides meeting at a point below, one line across the top part.
+graduation-cap.svg (shown at 20px) - draw: a graduation cap: a flat diamond-shaped board on top of a rounded cap, with a small tassel hanging at the right.
+lightbulb.svg (shown at 20px) - draw: a light bulb: round glass, a short neck with two lines, and three small rays on top.
+puzzle.svg (shown at 20px) - draw: a single jigsaw piece with one round knob on top and one on the right.
+compass.svg (shown at 20px) - draw: a circle with a diamond-shaped needle at 45 degrees (north-east), a small dot at the centre.
+document.svg (shown at 20px) - draw: a sheet of paper with a folded top-right corner and two short text lines.
+microscope.svg (shown at 20px) - draw: a microscope in side view: a slanted tube on top, an arm on the right, a round base and a small stage.
+sun.svg (shown at 20px) - draw: a circle with eight short rays around it.
+
+Return the files only, as before.
+```
+
 ## Facoltative (se ti piacciono poco)
 
 `muscle-arms`, `muscle-shoulders`, `muscle-chest`: leggibili ma poco distinguibili tra loro a 24 px. Se li vuoi più netti, chiedi a ChatGPT di disegnare solo la **zona** del muscolo evidenziata su una sagoma di torso uguale per tutti e sei (stessa sagoma, cambia solo la zona).

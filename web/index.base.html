@@ -868,8 +868,10 @@ button, input, select, textarea { font-family: inherit; }
 .nv-gl { display: inline-block; line-height: 0; vertical-align: -0.2em; }
 .nv-gl .nv-ic { width: 1.2em; height: 1.2em; }
 .nav-item svg.nv-ic { fill: none; stroke: #666; width: 24px; height: 24px; }
-span[style*="font-size:20px"] > .nv-gl .nv-ic, span[style*="font-size:18px"] > .nv-gl .nv-ic { width: 1.4em; height: 1.4em; }
+span[style*="font-size:20px"] > .nv-gl .nv-ic, span[style*="font-size:18px"] > .nv-gl .nv-ic { width: 1.5em; height: 1.5em; }
 .nav-item.active svg.nv-ic { fill: none; stroke: var(--gold); }
+.nv-art { color: var(--gold); opacity: .75; margin: 0 auto 10px; line-height: 0; }
+.nv-art .nv-ic { width: 72px; height: 72px; }
 /* Checkboxes and radios: dark when off, gold when on - the native white square read as the "on" state. */
 input[type="checkbox"], input[type="radio"] { accent-color: var(--gold); -webkit-appearance: none; appearance: none; background: #111; border: 1.5px solid #666; cursor: pointer; position: relative; }
 input[type="checkbox"] { border-radius: 5px; }
@@ -1748,11 +1750,11 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:11px;font-weight:800;">Statistiche</span>
       </button>
       <button class="btn btn-outline" data-hub="programs" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('programs')">
-        <span style="font-size:20px;">📚</span>
+        <span style="font-size:20px;">📑</span>
         <span style="font-size:11px;font-weight:800;text-align:center;line-height:1.15;">Libreria programmi e import</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('wellbeing')">
-        <span style="font-size:20px;">🩺</span>
+        <span style="font-size:20px;">🌙</span>
         <span style="font-size:11px;font-weight:800;text-align:center;line-height:1.15;">Salute e recupero</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('knowledge')">
@@ -1764,7 +1766,7 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:11px;font-weight:800;" data-i18n="coachAI">Coach AI</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openAthleteProfile()">
-        <span style="font-size:20px;">🏅</span>
+        <span style="font-size:20px;">👤</span>
         <span style="font-size:11px;font-weight:800;">Profilo Atleta</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openMyGym()">
@@ -15998,6 +16000,12 @@ function closeDomainQuickSwitch() {
   popUiOverlay('domain-quick-switch');
 }
 
+// The drawing of an empty screen (web/icons "empty-*"): in the gold of the app, quiet.
+function emptyArtHtml(name) {
+  return (window.NurvanIcons && window.NurvanIcons.has(name)) ? '<div class="nv-art" aria-hidden="true">' + window.NurvanIcons.svg(name, 72) + '</div>' : '';
+}
+window.emptyArtHtml = emptyArtHtml;
+
 function domainTitleTapHtml(eyebrow, title) {
   return '<div role="button" tabindex="0" onclick="openDomainQuickSwitch()" style="cursor:pointer;-webkit-tap-highlight-color:transparent;">' +
     '<span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">' + eyebrow + '</span>' +
@@ -20133,7 +20141,7 @@ function renderSupplements(c) {
   if (!visibleSupps.length) {
     html += `
       <div class="card" style="text-align:center;padding:30px 15px;color:#888;">
-        <div style="font-size:24px;margin-bottom:8px;">🧴</div>
+        ${emptyArtHtml('empty-supplements')}
         <p style="margin:0;font-size:12px;">Nessun integratore importato o aggiunto.</p>
         <p style="margin:8px 0 0;font-size:11px;color:#666;">${athleteCanSelfGeneratePlans()
           ? 'Importa una scheda, chiedi a Coach AI, oppure genera un protocollo dal profilo.'
@@ -21037,7 +21045,7 @@ function renderTherapy(c) {
   } else {
     html += `
       <div class="card" style="text-align:center;padding:30px 15px;color:#888;">
-        <div style="font-size:24px;margin-bottom:8px;">🩺</div>
+        ${emptyArtHtml('empty-therapy')}
         <p style="margin:0;font-size:12px;">Nessuna prescrizione registrata.</p>
         <p style="margin:8px 0 0;font-size:11px;color:#666;">Aggiungi a mano (cerca principio attivo e categoria), importa una scheda, o chiedi a Coach AI.</p>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
@@ -21319,6 +21327,7 @@ function renderExams(c) {
   if (!records.length) {
     html += `
       <div class="card" style="text-align:center;padding:30px 15px;color:#888;">
+        ${emptyArtHtml('empty-exams')}
         <p style="margin:0;font-size:13px;color:#ccc;">Nessun referto trascritto. Aggiungi un esame o importa un file.</p>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
           <button class="btn btn-primary" style="font-size:11px;padding:8px 14px;" onclick="openAddExamModal()">+ AGGIUNGI REFERTO</button>
@@ -21675,7 +21684,7 @@ function renderCalendar(c) {
           '</div>' +
           (ev.persistent && ev.id ? '<button class="btn btn-outline" style="font-size:9px;padding:4px 6px;color:var(--accent-red);border-color:var(--accent-red);" onclick="event.stopPropagation();removeCalendarEvent(\'' + esc(ev.id) + '\')">✕</button>' : '') +
           '</div>';
-      }).join('') : '<div style="font-size:11px;color:#666;padding:16px;text-align:center;">Nessun evento. Aggiungi un check-in, pesata o riposo sotto.</div>'}
+      }).join('') : '<div style="font-size:11px;color:#666;padding:16px;text-align:center;">' + emptyArtHtml('empty-calendar') + 'Nessun evento. Aggiungi un check-in, pesata o riposo sotto.</div>'}
     </div>
     <div class="card" style="border:1px solid rgba(212,175,55,0.35);">
       <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:8px;">AGGIUNGI EVENTO · ${calDayLabel(calendarSelectedDate)}</div>

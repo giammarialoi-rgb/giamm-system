@@ -1,6 +1,6 @@
 # Icone di Nurvan: prompt per ChatGPT
 
-Generato da `tools/icons/make_prompt.mjs` (elenco in `tools/icons/manifest.mjs`: 121 icone). Non modificare a mano questo file: cambia il manifest e rigenera.
+Generato da `tools/icons/make_prompt.mjs` (elenco in `tools/icons/manifest.mjs`: 130 icone). Non modificare a mano questo file: cambia il manifest e rigenera.
 
 ## Come si usa
 
@@ -58,7 +58,7 @@ Reply "Ready" and wait for the first batch.
 ## PROMPT 1 - Moduli della Home (8 icone)
 
 ```
-Batch 1/14 - Moduli della Home - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Batch 1/15 - Moduli della Home - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 module-nutrition.svg (shown at 28px) - draw: a plate seen from above with a fork on the left and a leaf on the right.
@@ -74,7 +74,7 @@ module-import.svg (shown at 28px) - draw: a document page with a downward arrow 
 ## PROMPT 2 - Azioni piccole (14 icone)
 
 ```
-Batch 2/14 - Azioni piccole - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Batch 2/15 - Azioni piccole - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 close.svg (shown at 18px) - draw: a cross made of two diagonal lines.
@@ -96,7 +96,7 @@ search.svg (shown at 20px) - draw: a magnifying glass.
 ## PROMPT 3 - Azioni piccole (14 icone)
 
 ```
-Batch 3/14 - Azioni piccole - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Batch 3/15 - Azioni piccole - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 filter.svg (shown at 20px) - draw: a funnel.
@@ -118,7 +118,7 @@ stop.svg (shown at 18px) - draw: a rounded square.
 ## PROMPT 4 - Azioni piccole (10 icone)
 
 ```
-Batch 4/14 - Azioni piccole - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Batch 4/15 - Azioni piccole - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 timer.svg (shown at 20px) - draw: a stopwatch: circle, small button on top, one hand.
@@ -136,7 +136,7 @@ eye.svg (shown at 18px) - draw: an open eye.
 ## PROMPT 5 - Sezioni e persone (14 icone)
 
 ```
-Batch 5/14 - Sezioni e persone - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Batch 5/15 - Sezioni e persone - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 user.svg (shown at 20px) - draw: a head (circle) over shoulders (an open arc).
@@ -155,10 +155,10 @@ chart-line.svg (shown at 20px) - draw: axes (an L shape) with a rising zig-zag l
 chart-bar.svg (shown at 20px) - draw: axes with three vertical bars of rising height.
 ```
 
-## PROMPT 6 - Sezioni e persone (9 icone)
+## PROMPT 6 - Sezioni e persone (14 icone)
 
 ```
-Batch 6/14 - Sezioni e persone - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Batch 6/15 - Sezioni e persone - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 table.svg (shown at 20px) - draw: a grid of 3 rows and 3 columns with a header row.
@@ -170,12 +170,29 @@ bolt.svg (shown at 20px) - draw: a lightning bolt.
 home.svg (shown at 24px) - draw: a house with a pitched roof and a door.
 menu.svg (shown at 24px) - draw: three horizontal lines.
 coach.svg (shown at 24px) - draw: a whistle on a short cord (round chamber, mouthpiece on the left).
+map-pin.svg (shown at 20px) - draw: a map pin: a rounded drop shape pointing down with a small circle inside.
+diamond.svg (shown at 20px) - draw: a faceted gem seen from the front: a flat top, two slanted sides meeting at a point below, one line across the top part.
+graduation-cap.svg (shown at 20px) - draw: a graduation cap: a flat diamond-shaped board on top of a rounded cap, with a small tassel hanging at the right.
+lightbulb.svg (shown at 20px) - draw: a light bulb: round glass, a short neck with two lines, and three small rays on top.
+puzzle.svg (shown at 20px) - draw: a single jigsaw piece with one round knob on top and one on the right.
 ```
 
-## PROMPT 7 - Allenamento e corpo (14 icone)
+## PROMPT 7 - Sezioni e persone (4 icone)
 
 ```
-Batch 7/14 - Allenamento e corpo - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Batch 7/15 - Sezioni e persone - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Same rules and style as before. Return one SVG per icon, file names exactly as written:
+
+compass.svg (shown at 20px) - draw: a circle with a diamond-shaped needle at 45 degrees (north-east), a small dot at the centre.
+document.svg (shown at 20px) - draw: a sheet of paper with a folded top-right corner and two short text lines.
+microscope.svg (shown at 20px) - draw: a microscope in side view: a slanted tube on top, an arm on the right, a round base and a small stage.
+sun.svg (shown at 20px) - draw: a circle with eight short rays around it.
+```
+
+## PROMPT 8 - Allenamento e corpo (14 icone)
+
+```
+Batch 8/15 - Allenamento e corpo - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 dumbbell.svg (shown at 24px) - draw: a dumbbell seen from the side: two plates on each side and a short handle, slightly tilted.
@@ -194,20 +211,20 @@ water-drop.svg (shown at 20px) - draw: a single water drop.
 cart.svg (shown at 20px) - draw: a shopping cart with two wheels and a handle.
 ```
 
-## PROMPT 8 - Allenamento e corpo (2 icone)
+## PROMPT 9 - Allenamento e corpo (2 icone)
 
 ```
-Batch 8/14 - Allenamento e corpo - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Batch 9/15 - Allenamento e corpo - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 apple.svg (shown at 20px) - draw: an apple with a leaf and a small stem.
 sandwich.svg (shown at 20px) - draw: a sandwich: two slices of bread with a wavy filling between them.
 ```
 
-## PROMPT 9 - Gruppi muscolari (7 icone)
+## PROMPT 10 - Gruppi muscolari (7 icone)
 
 ```
-Batch 9/14 - Gruppi muscolari - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Batch 10/15 - Gruppi muscolari - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 muscle-chest.svg (shown at 24px) - draw: front torso silhouette (no head) with the chest area drawn as two rounded plates and a centre line.
@@ -219,10 +236,10 @@ muscle-core.svg (shown at 24px) - draw: a torso with a 2x3 grid of rounded recta
 muscle-fullbody.svg (shown at 24px) - draw: a standing figure with arms slightly open, head as a circle.
 ```
 
-## PROMPT 10 - Discipline a casa (4 icone)
+## PROMPT 11 - Discipline a casa (4 icone)
 
 ```
-Batch 10/14 - Discipline a casa - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Batch 11/15 - Discipline a casa - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 discipline-pilates.svg (shown at 28px) - draw: a person sitting on a mat in a "teaser" V-shape: legs raised straight, arms reaching forward, a thin mat line underneath.
@@ -231,10 +248,10 @@ discipline-calisthenics.svg (shown at 28px) - draw: a pull-up bar (a horizontal 
 discipline-hiit.svg (shown at 28px) - draw: a stopwatch with a lightning bolt inside the dial.
 ```
 
-## PROMPT 11 - Stazioni HYROX (9 icone)
+## PROMPT 12 - Stazioni HYROX (9 icone)
 
 ```
-Batch 11/14 - Stazioni HYROX - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Batch 12/15 - Stazioni HYROX - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 hyrox-run.svg (shown at 24px) - draw: a runner in side view in mid-stride.
@@ -248,10 +265,10 @@ hyrox-sandbag-lunges.svg (shown at 24px) - draw: a figure in a lunge with a sand
 hyrox-wall-ball.svg (shown at 24px) - draw: a figure throwing a ball up toward a target square on a wall, with a dotted arc.
 ```
 
-## PROMPT 12 - Salute e recupero (3 icone)
+## PROMPT 13 - Salute e recupero (3 icone)
 
 ```
-Batch 12/14 - Salute e recupero - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Batch 13/15 - Salute e recupero - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 wellbeing-posture.svg (shown at 28px) - draw: a side view of a spine drawn as a gently S-curved column of small rounded segments, with a plumb line beside it.
@@ -259,10 +276,10 @@ wellbeing-labour.svg (shown at 28px) - draw: a pregnant belly in side view (one 
 wellbeing-postpartum.svg (shown at 28px) - draw: a mother's torso in side view holding a small baby bundle (a circle head and a rounded blanket).
 ```
 
-## PROMPT 13 - Area coach (5 icone)
+## PROMPT 14 - Area coach (5 icone)
 
 ```
-Batch 13/14 - Area coach - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
+Batch 14/15 - Area coach - grid "ui" (viewBox 0 0 24 24, stroke-width 1.75).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 coach-today.svg (shown at 24px) - draw: a sun rising over a horizon line.
@@ -272,10 +289,10 @@ coach-programs.svg (shown at 24px) - draw: a clipboard with a list of three line
 coach-analytics.svg (shown at 24px) - draw: a bar chart with a trend arrow above it.
 ```
 
-## PROMPT 14 - Stati vuoti (illustrazioni) (8 icone)
+## PROMPT 15 - Stati vuoti (illustrazioni) (8 icone)
 
 ```
-Batch 14/14 - Stati vuoti (illustrazioni) - grid "art" (viewBox 0 0 64 64, stroke-width 2.5).
+Batch 15/15 - Stati vuoti (illustrazioni) - grid "art" (viewBox 0 0 64 64, stroke-width 2.5).
 Same rules and style as before. Return one SVG per icon, file names exactly as written:
 
 empty-program.svg (shown at 64px) - draw: an empty clipboard with a clip and a dashed outline, a small plus sign to its right.
@@ -360,7 +377,16 @@ empty-calendar.svg (shown at 64px) - draw: a calendar page with binder rings and
 | `bolt` | automations | 20 px | - |
 | `home` | Home tab, back to home | 24 px | 🏠 |
 | `menu` | Menu | 24 px | - |
-| `coach` | Coach button in the top bar, Coach hub | 24 px | - |
+| `coach` | Coach button in the top bar, Coach hub, "Modalità coach" | 24 px | 👔 |
+| `map-pin` | Dove mi alleno (gym locations) | 20 px | 📍 |
+| `diamond` | Abbonamento e piani | 20 px | 💎 |
+| `graduation-cap` | Tutorial | 20 px | 🎓 |
+| `lightbulb` | tips and hints | 20 px | 💡 |
+| `puzzle` | integrations and extras | 20 px | 🧩 |
+| `compass` | explore, guides | 20 px | 🧭 |
+| `document` | reports, PDF and documents | 20 px | 📄 |
+| `microscope` | clinical lab, research | 20 px | 🔬 |
+| `sun` | light theme, daytime | 20 px | ☀ |
 | `dumbbell` | Workout tab (replaces the crossed arrows), strength | 24 px | 🏋 |
 | `barbell` | powerlifting, programmes | 24 px | - |
 | `kettlebell` | kettlebell exercises and equipment | 24 px | - |
@@ -369,7 +395,7 @@ empty-calendar.svg (shown at 64px) - draw: a calendar page with binder rings and
 | `medal` | personal records (PR) | 20 px | 🏅 |
 | `flame` | streak, calories | 20 px | - |
 | `heart-pulse` | recovery estimate, heart rate | 20 px | ❤ |
-| `moon` | sleep | 20 px | - |
+| `moon` | sleep, recovery (Salute e recupero tile) | 20 px | 🌙 |
 | `scale` | body weight | 20 px | ⚖ |
 | `ruler` | body measurements | 20 px | 📏 📐 |
 | `footsteps` | steps | 20 px | 👣 |
