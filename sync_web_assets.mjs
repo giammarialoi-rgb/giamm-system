@@ -60,10 +60,14 @@ export const ANDROID_STATIC_ASSETS = [
   'icon-512.png',
   'icon-512-maskable.png',
   'favicon.png',
-  'muscle-male-front.png',
-  'muscle-male-back.png',
-  'muscle-female-front.png',
-  'muscle-female-back.png'
+  'body-m-front.png',
+  'body-m-front-map.png',
+  'body-m-back.png',
+  'body-m-back-map.png',
+  'body-f-front.png',
+  'body-f-front-map.png',
+  'body-f-back.png',
+  'body-f-back-map.png'
 ];
 
 function sha256(filePath) {

@@ -957,23 +957,16 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outlin
 .stats-body-col { width:118px; text-align:center; }
 .stats-body-frame {
   position:relative; width:118px; border-radius:16px; overflow:hidden;
-  background:#070a12; border:1px solid #1c1c1c;
+  background:#121316; border:1px solid #23252a;
 }
 @media (max-width: 360px) {
   .stats-body-col, .stats-body-frame { width:104px; }
 }
-.stats-body-frame img { display:block; width:100%; height:auto; pointer-events:none; user-select:none; }
+.stats-body-canvas { display:block; width:100%; height:auto; aspect-ratio:1 / 2; user-select:none; -webkit-tap-highlight-color:transparent; }
 .stats-body-viewlabel {
   margin-top:6px; font-size:11px; font-weight:800; letter-spacing:1.2px;
   text-transform:uppercase; color:#666;
 }
-.stats-hotspot {
-  position:absolute; border:0; padding:0; background:transparent; cursor:pointer; border-radius:9px;
-}
-.stats-hotspot:hover { background:rgba(212,175,55,0.14); }
-.stats-hotspot.is-on { box-shadow:inset 0 0 0 2px var(--gold); background:rgba(212,175,55,0.2); }
-.stats-hotspot.is-fat { background:rgba(255,77,77,0.18); }
-.stats-hotspot.is-work { background:rgba(212,175,55,0.12); }
 .stats-muscle-chips {
   display:flex; flex-wrap:wrap; justify-content:center; gap:6px;
   padding:8px 12px 10px;
@@ -31836,16 +31829,13 @@ function lastSessionHomeCardHtml() {
 // Le due figure della mappa, come nelle statistiche ma senza bottoni: qui
 // non c'e' niente da selezionare.
 function sessionMuscleFigureHtml(view, muscles) {
-  const spots = statsHotspots(view).map(function (h) {
-    const n = statsMuscleVolume(muscles, h.id);
-    const cls = 'stats-hotspot' + (n >= 8 ? ' is-fat' : (n >= 1 ? ' is-work' : ''));
-    // Sulla figura in grigio i muscoli allenati devono vedersi: tinta piena e bordo.
-    const lit = n >= 1 ? ('background:' + (n >= 8 ? 'rgba(255,77,77,0.45)' : 'rgba(212,175,55,0.42)') + ';box-shadow:inset 0 0 0 2px ' + (n >= 8 ? 'rgba(255,77,77,0.9)' : 'rgba(212,175,55,0.9)') + ';') : '';
-    return '<span class="' + cls + '" style="top:' + h.top + ';left:' + h.left + ';width:' + h.width + ';height:' + h.height + ';pointer-events:none;' + lit + '"></span>';
-  }).join('');
+  window.__bodyStaticMuscles = muscles;
+  setTimeout(paintStatsBodies, 0);
+  setTimeout(paintStatsBodies, 250);
+  const label = view === 'back' ? 'Retro' : 'Fronte';
   return '<div class="stats-body-col"><div class="stats-body-frame">' +
-    '<img src="' + statsBodySrc(view) + '" alt="" style="filter:grayscale(1) brightness(0.75);">' + spots + '</div>' +
-    '<div class="stats-body-viewlabel">' + (view === 'back' ? 'Retro' : 'Fronte') + '</div></div>';
+    '<canvas class="stats-body-canvas" data-static="1" data-view="' + view + '" width="224" height="448" style="pointer-events:none;" role="img" aria-label="' + label + '"></canvas></div>' +
+    '<div class="stats-body-viewlabel">' + label + '</div></div>';
 }
 
 function sessionCardOverlayHtml(card, mode) {
@@ -32089,46 +32079,11 @@ function fitCardText(ctx, text, maxWidth, maxLines, weight, startSize, minSize) 
 // colorata per intero accendeva tutto.
 function drawNeutralFigure(ctx, img, view, muscles, x, y, fw, fh) {
   if (!img || !img.naturalWidth) return;
-  const off = document.createElement('canvas');
-  off.width = Math.max(1, Math.round(fw));
-  off.height = Math.max(1, Math.round(fh));
-  const o = off.getContext('2d');
-  o.drawImage(img, 0, 0, off.width, off.height);
-  try {
-    const px = o.getImageData(0, 0, off.width, off.height);
-    const d = px.data;
-    for (let i = 0; i < d.length; i += 4) {
-      const g = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
-      const v = Math.round(40 + g * 0.55);
-      d[i] = v; d[i + 1] = v; d[i + 2] = v;
-    }
-    o.putImageData(px, 0, 0);
-  } catch (_) {}
-  ctx.drawImage(off, x, y, fw, fh);
-  // I muscoli allenati: l'illustrazione originale, ritagliata sulle zone.
-  const spots = statsHotspots(view).filter(function (h) { return statsMuscleVolume(muscles, h.id) >= 1; });
-  if (!spots.length) return;
-  function rectOf(h) {
-    return [x + parseFloat(h.left) / 100 * fw, y + parseFloat(h.top) / 100 * fh, parseFloat(h.width) / 100 * fw, parseFloat(h.height) / 100 * fh];
-  }
-  ctx.save();
-  ctx.beginPath();
-  spots.forEach(function (h) {
-    const r = rectOf(h);
-    if (ctx.roundRect) ctx.roundRect(r[0], r[1], r[2], r[3], 18); else ctx.rect(r[0], r[1], r[2], r[3]);
-  });
-  ctx.clip();
-  ctx.drawImage(img, x, y, fw, fh);
-  ctx.restore();
-  spots.forEach(function (h) {
-    const n = statsMuscleVolume(muscles, h.id);
-    const r = rectOf(h);
-    ctx.strokeStyle = n >= 8 ? 'rgba(255,77,77,0.85)' : 'rgba(212,175,55,0.85)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(r[0], r[1], r[2], r[3], 18); else ctx.rect(r[0], r[1], r[2], r[3]);
-    ctx.stroke();
-  });
+  const assets = __bodyAssetsSync[statsBodySrc(view)];
+  const lit = assets ? paintBodyHighlight(assets, muscles, null) : null;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(lit || img, x, y, fw, fh);
 }
 
 // L'immagine: 1080×1920, formato storia. Le sezioni si accodano una sotto
@@ -32145,7 +32100,9 @@ async function drawSessionCard(canvas, card, style) {
   const imgs = await Promise.all([
     loadCardImage('nurvan_logo.png', 6000),
     wantFigures ? loadCardImage(statsBodySrc('front'), 8000) : Promise.resolve(null),
-    wantFigures ? loadCardImage(statsBodySrc('back'), 8000) : Promise.resolve(null)
+    wantFigures ? loadCardImage(statsBodySrc('back'), 8000) : Promise.resolve(null),
+    wantFigures ? loadBodyAssets('front') : Promise.resolve(null),
+    wantFigures ? loadBodyAssets('back') : Promise.resolve(null)
   ]);
   const logo = imgs[0], frontImg = imgs[1], backImg = imgs[2];
   const W = 1080, H = 1920, PAD = 84;
@@ -34238,41 +34195,167 @@ function statsMuscleVolume(muscles, groupId) {
   if (id === 'PETTO') return (m.PETTO || 0) + (m.CHEST || 0);
   return m[id] || m[groupId] || 0;
 }
+// The figure is neutral grey; only the muscles that are being talked about are
+// lit, each in its group's colour, exactly along the muscle (the map file says
+// which muscle every pixel is). tools/build_body_maps.mjs makes the files.
+var BODY_MUSCLE_GROUP = { 1: 'PETTO', 2: 'SPALLE', 3: 'BRACCIA', 4: 'BRACCIA', 5: 'ADDOME', 6: 'ADDOME', 7: 'GAMBE', 8: 'GAMBE', 9: 'GAMBE', 10: 'DORSO', 12: 'BRACCIA', 13: 'DORSO', 14: 'DORSO', 15: 'GAMBE', 16: 'GAMBE' };
+var __bodyAssets = {};
+var __bodyAssetsSync = {};
 function statsBodySrc(view) {
-  const sex = athleteSexCode();
-  if (view === 'back') return sex === 'f' ? 'muscle-female-back.png' : 'muscle-male-back.png';
-  return sex === 'f' ? 'muscle-female-front.png' : 'muscle-male-front.png';
+  return ['body', athleteSexCode(), view === 'back' ? 'back' : 'front'].join('-') + '.png';
 }
-function statsHotspots(view) {
-  if (view === 'back') {
-    return [
-      { id: 'DORSO', top: '11%', left: '34%', width: '32%', height: '12%' },
-      { id: 'SPALLE', top: '13%', left: '18%', width: '18%', height: '11%' },
-      { id: 'SPALLE', top: '13%', left: '64%', width: '18%', height: '11%' },
-      { id: 'DORSO', top: '22%', left: '26%', width: '48%', height: '18%' },
-      { id: 'SPALLE', top: '24%', left: '10%', width: '16%', height: '16%' },
-      { id: 'SPALLE', top: '24%', left: '74%', width: '16%', height: '16%' },
-      { id: 'DORSO', top: '38%', left: '38%', width: '24%', height: '8%' },
-      { id: 'GAMBE', top: '45%', left: '30%', width: '40%', height: '12%' },
-      { id: 'GAMBE', top: '56%', left: '28%', width: '44%', height: '16%' },
-      { id: 'GAMBE', top: '72%', left: '32%', width: '36%', height: '14%' }
-    ];
+function statsBodyMapSrc(view) {
+  return statsBodySrc(view).replace('.png', '-map.png');
+}
+function loadBodyAssets(view) {
+  const base = statsBodySrc(view);
+  if (__bodyAssets[base]) return __bodyAssets[base];
+  const load = function (src) {
+    return new Promise(function (resolve) {
+      const im = new Image();
+      im.onload = function () { resolve(im); };
+      im.onerror = function () { resolve(null); };
+      im.src = src;
+    });
+  };
+  __bodyAssets[base] = Promise.all([load(base), load(statsBodyMapSrc(view))]).then(function (r) {
+    const out = { img: r[0], labels: null, w: r[0] ? r[0].naturalWidth : 0, h: r[0] ? r[0].naturalHeight : 0 };
+    if (r[0] && r[1]) {
+      try {
+        const c = document.createElement('canvas');
+        c.width = r[1].naturalWidth; c.height = r[1].naturalHeight;
+        const x = c.getContext('2d');
+        x.drawImage(r[1], 0, 0);
+        const d = x.getImageData(0, 0, c.width, c.height).data;
+        const labels = new Uint8Array(c.width * c.height);
+        for (let i = 0; i < labels.length; i++) labels[i] = d[i * 4];
+        out.labels = labels;
+      } catch (_) { out.labels = null; }
+    }
+    if (!out.img) delete __bodyAssets[base];
+    else __bodyAssetsSync[base] = out;
+    return out;
+  });
+  return __bodyAssets[base];
+}
+function bodyHex(hex) {
+  const n = parseInt(String(hex).replace('#', ''), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+// How strongly each group is lit: the chosen one fully, the others that were
+// worked softly; with nothing chosen, everything that was worked, more where
+// there was more.
+function bodyGroupLevels(muscles, selected) {
+  const levels = {};
+  const hasSel = selected && selected !== 'GENERALE' && selected !== 'TOTAL';
+  MACRO_MUSCLE_GROUPS.forEach(function (g) {
+    const n = statsMuscleVolume(muscles || {}, g.id);
+    if (hasSel) levels[g.id] = g.id === selected ? 1 : (n >= 1 ? 0.2 : 0);
+    else levels[g.id] = n >= 8 ? 0.95 : (n >= 1 ? 0.7 : 0);
+  });
+  return levels;
+}
+// The figure at its own size with the lit muscles on it.
+function paintBodyHighlight(assets, muscles, selected) {
+  const w = assets.w, h = assets.h;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(assets.img, 0, 0);
+  if (!assets.labels) return c;
+  let id;
+  try { id = ctx.getImageData(0, 0, w, h); } catch (_) { return c; }
+  const d = id.data, L = assets.labels, n = w * h;
+  const levels = bodyGroupLevels(muscles, selected);
+  const rgb = {};
+  Object.keys(levels).forEach(function (g) { rgb[g] = bodyHex(statsMuscleChipColor(g)); });
+  const A = new Float32Array(n), R = new Float32Array(n), G = new Float32Array(n), B = new Float32Array(n);
+  let any = false;
+  for (let i = 0; i < n; i++) {
+    const g = BODY_MUSCLE_GROUP[L[i]];
+    const a = g ? levels[g] : 0;
+    if (!a) continue;
+    any = true;
+    A[i] = a; R[i] = a * rgb[g][0]; G[i] = a * rgb[g][1]; B[i] = a * rgb[g][2];
   }
-  return [
-    { id: 'PETTO', top: '16%', left: '32%', width: '36%', height: '12%' },
-    { id: 'SPALLE', top: '13%', left: '16%', width: '18%', height: '11%' },
-    { id: 'SPALLE', top: '13%', left: '66%', width: '18%', height: '11%' },
-    { id: 'BRACCIA', top: '23%', left: '10%', width: '16%', height: '16%' },
-    { id: 'BRACCIA', top: '23%', left: '74%', width: '16%', height: '16%' },
-    { id: 'ADDOME', top: '27%', left: '36%', width: '28%', height: '14%' },
-    { id: 'ADDOME', top: '28%', left: '24%', width: '14%', height: '13%' },
-    { id: 'ADDOME', top: '28%', left: '62%', width: '14%', height: '13%' },
-    { id: 'GAMBE', top: '44%', left: '28%', width: '20%', height: '20%' },
-    { id: 'GAMBE', top: '44%', left: '52%', width: '20%', height: '20%' },
-    { id: 'GAMBE', top: '66%', left: '30%', width: '16%', height: '16%' },
-    { id: 'GAMBE', top: '66%', left: '54%', width: '16%', height: '16%' }
-  ];
+  if (!any) return c;
+  // A soft edge, so the light follows the muscle without a hard cut-out line.
+  function blur(src) {
+    const out = new Float32Array(n);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let s = 0, k = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const yy = y + dy; if (yy < 0 || yy >= h) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx; if (xx < 0 || xx >= w) continue;
+          s += src[yy * w + xx]; k++;
+        }
+      }
+      out[y * w + x] = s / 9;
+    }
+    return out;
+  }
+  const a2 = blur(A), r2 = blur(R), g2 = blur(G), b2 = blur(B);
+  for (let i = 0; i < n; i++) {
+    const a = a2[i];
+    if (a < 0.02) continue;
+    const lum = d[i * 4] / 255;
+    const shade = 0.32 + 0.95 * lum;
+    const tr = Math.min(255, (r2[i] / a) * shade), tg = Math.min(255, (g2[i] / a) * shade), tb = Math.min(255, (b2[i] / a) * shade);
+    d[i * 4] = d[i * 4] * (1 - a) + tr * a;
+    d[i * 4 + 1] = d[i * 4 + 1] * (1 - a) + tg * a;
+    d[i * 4 + 2] = d[i * 4 + 2] * (1 - a) + tb * a;
+  }
+  ctx.putImageData(id, 0, 0);
+  return c;
 }
+// Every figure on the page: the statistics ones follow the chosen muscle, the
+// ones in a session card only show what that session worked.
+function paintStatsBodies() {
+  document.querySelectorAll('canvas.stats-body-canvas').forEach(function (cv) {
+    const view = cv.getAttribute('data-view') === 'back' ? 'back' : 'front';
+    const isStatic = cv.getAttribute('data-static') === '1';
+    loadBodyAssets(view).then(function (assets) {
+      if (!assets || !assets.img || !cv.isConnected) return;
+      const muscles = isStatic ? (window.__bodyStaticMuscles || {}) : (window.__statsBodyMuscles || {});
+      const selected = isStatic ? null : ((store.prefs && store.prefs.statsMuscle) || 'GENERALE');
+      const out = paintBodyHighlight(assets, muscles, selected);
+      cv.width = assets.w; cv.height = assets.h;
+      cv.getContext('2d').drawImage(out, 0, 0);
+    });
+  });
+}
+function statsBodyMuscleAt(ev, view) {
+  const cv = ev.currentTarget || ev.target;
+  const assets = __bodyAssetsSync[statsBodySrc(view)];
+  if (!cv || !assets || !assets.labels) return '';
+  const r = cv.getBoundingClientRect();
+  const x = Math.round((ev.clientX - r.left) / r.width * assets.w), y = Math.round((ev.clientY - r.top) / r.height * assets.h);
+  // A finger is wider than a muscle's edge: look a few pixels around.
+  for (let rad = 0; rad <= 5; rad++) {
+    for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== rad) continue;
+      const xx = x + dx, yy = y + dy;
+      if (xx < 0 || yy < 0 || xx >= assets.w || yy >= assets.h) continue;
+      const g = BODY_MUSCLE_GROUP[assets.labels[yy * assets.w + xx]];
+      if (g) return g;
+    }
+  }
+  return '';
+}
+function statsBodyTap(ev, view) {
+  const g = statsBodyMuscleAt(ev, view);
+  if (g) selectStatsMuscle(g);
+}
+function statsBodyHover(ev, view) {
+  const cv = ev.currentTarget || ev.target;
+  if (cv && cv.style) cv.style.cursor = statsBodyMuscleAt(ev, view) ? 'pointer' : 'default';
+}
+window.statsBodyTap = statsBodyTap;
+window.statsBodyHover = statsBodyHover;
+window.paintStatsBodies = paintStatsBodies;
+window.loadBodyAssets = loadBodyAssets;
+window.paintBodyHighlight = paintBodyHighlight;
 function statsMuscleChipColor(id) {
   if (id === 'GENERALE') return '#d4af37';
   if (id === 'PETTO') return '#e53935';
@@ -34283,29 +34366,20 @@ function statsMuscleChipColor(id) {
   if (id === 'GAMBE' || id === 'GAMBE_POLPACCI' || id === 'GLUTEI') return '#7e57c2';
   return '#78909c';
 }
-function hotspotClass(groupId, muscles) {
-  const n = statsMuscleVolume(muscles, groupId);
-  const on = store.prefs && store.prefs.statsMuscle === groupId && groupId !== 'GENERALE';
-  let cls = 'stats-hotspot';
-  if (n >= 8) cls += ' is-fat';
-  else if (n >= 1) cls += ' is-work';
-  if (on) cls += ' is-on';
-  return cls;
-}
 function renderMuscleFigure(view, muscles) {
-  const spots = statsHotspots(view).map(function (h) {
-    return '<button type="button" class="' + hotspotClass(h.id, muscles) + '" style="top:' + h.top + ';left:' + h.left + ';width:' + h.width + ';height:' + h.height + ';" onclick="selectStatsMuscle(\'' + h.id + '\')" aria-label="' + h.id + '"></button>';
-  }).join('');
+  window.__statsBodyMuscles = muscles;
   const label = view === 'back' ? 'Retro' : 'Fronte';
-  return '<div class="stats-body-col">' +
-    '<div class="stats-body-frame">' +
-    '<img src="' + statsBodySrc(view) + '" alt="' + label + '">' +
-    spots +
-    '</div>' +
-    '<div class="stats-body-viewlabel">' + label + '</div>' +
-    '</div>';
+  return `<div class="stats-body-col">
+    <div class="stats-body-frame">
+    <canvas class="stats-body-canvas" data-view="${view}" width="224" height="448" role="img" aria-label="${label}" onclick="statsBodyTap(event, '${view}')" onmousemove="statsBodyHover(event, '${view}')"></canvas>
+    </div>
+    <div class="stats-body-viewlabel">${label}</div>
+    </div>`;
 }
+
 function renderMuscleMap(muscles, extras) {
+  setTimeout(paintStatsBodies, 0);
+  setTimeout(paintStatsBodies, 250);
   const selected = (store.prefs && store.prefs.statsMuscle) || 'GENERALE';
   const selectedLabel = (STATS_MUSCLE_CHIPS.find(function (g) { return g.id === selected; }) || {}).label || 'Generale';
   const chips = STATS_MUSCLE_CHIPS.map(function (g) {
@@ -34342,15 +34416,14 @@ function selectStatsMuscle(groupId) {
   const lab = (STATS_MUSCLE_CHIPS.find(function (g) { return g.id === id; }) || {}).label || id;
   const hint = $('stats-selected-muscle');
   if (hint) hint.textContent = lab;
-  document.querySelectorAll('.stats-hotspot').forEach(function (el) {
-    el.classList.toggle('is-on', el.getAttribute('aria-label') === id);
-  });
+  paintStatsBodies();
   document.querySelectorAll('.stats-chip').forEach(function (el) {
     el.classList.toggle('is-on', el.getAttribute('data-group') === id);
   });
   drillStatsMuscle(id);
 }
 window.setStatsBodyView = setStatsBodyView;
+window.renderMuscleMap = renderMuscleMap;
 window.selectStatsMuscle = selectStatsMuscle;
 
 function renderStats(c){
