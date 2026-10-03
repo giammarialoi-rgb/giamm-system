@@ -8264,7 +8264,8 @@ function computeNutritionTargetsFromProfile(overrides) {
   const age = parseInt(overrides.age != null ? overrides.age : prof.age, 10) || 30;
   const sex = String(overrides.sex != null ? overrides.sex : (prof.sex || 'm')).toLowerCase();
   const goal = String(overrides.goal != null ? overrides.goal : (prof.goal || prof.primary_goal || '')).toLowerCase();
-  let bmr = (10 * weight) + (6.25 * height) - (5 * age) + (sex.indexOf('f') === 0 ? -161 : 5);
+  // Man +5, woman -161; non-binary or unsaid: the middle of the two.
+  let bmr = (10 * weight) + (6.25 * height) - (5 * age) + (sex.indexOf('f') === 0 ? -161 : (/^(n|a|x)/.test(sex) ? -78 : 5));
   let tdee = Math.round(bmr * 1.55);
   if (/dimagr|cut|defin/.test(goal)) tdee = Math.round(tdee * 0.85);
   else if (/massa|ipertrof|bulk/.test(goal)) tdee = Math.round(tdee * 1.1);
@@ -32537,8 +32538,9 @@ function renderAthleteProfile(container) {
     '<input id="profile-name" type="text" value="' + esc(profile.name || '') + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div><label style="font-size:10px;color:#666;font-weight:800;">Sesso</label>' +
     '<select id="profile-sex" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">' +
-    '<option value="m"' + (String(profile.sex||'m').toLowerCase().indexOf('f')===0?'':' selected') + '>Maschio</option>' +
-    '<option value="f"' + (String(profile.sex||'').toLowerCase().indexOf('f')===0?' selected':'') + '>Femmina</option></select></div>' +
+    '<option value="m"' + (/^(f|n|a|x)/.test(String(profile.sex||'m').toLowerCase())?'':' selected') + '>Maschio</option>' +
+    '<option value="f"' + (String(profile.sex||'').toLowerCase().indexOf('f')===0?' selected':'') + '>Femmina</option>' +
+    '<option value="n"' + (/^(n|a|x)/.test(String(profile.sex||'').toLowerCase())?' selected':'') + '>Non binario</option></select></div>' +
     '<div><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelAge') + '</label>' +
     '<input id="profile-age" type="number" value="' + esc(String(profile.age || '')) + '" style="width:100%;margin-top:4px;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;" /></div>' +
     '<div><label style="font-size:10px;color:#666;font-weight:800;">' + t('labelWeight').replace(/\s*\((?:kg|кг|كغ)\)/i, '') + ' (' + wUnit() + ')</label>' +
@@ -34231,11 +34233,24 @@ function athleteSexCode() {
       raw = String(intake.sex || cl.sex || (store.coachWorkspace.data && store.coachWorkspace.data.profile && store.coachWorkspace.data.profile.sex) || '');
     }
   } catch (_) {}
+  const viewingClient = !!(store && store.coachViewingClient);
   if (!raw) raw = String((store.profile && store.profile.sex) || (DATA && DATA.profile && DATA.profile.sex) || '');
   raw = raw.toLowerCase();
+  // The figure is a drawing, not a statement about the person: anyone can pick
+  // the one they want to see, and without a pick it follows the profile
+  // (non-binary and unsaid start from the male one, one tap away from the other).
+  const pick = !viewingClient && store.prefs && store.prefs.bodyFigure;
+  if (pick === 'm' || pick === 'f') return pick;
   if (/^(f|fem|female|donna|woman)/.test(raw)) return 'f';
   return 'm';
 }
+function setBodyFigure(which) {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.bodyFigure = which === 'f' ? 'f' : 'm';
+  persist();
+  if (typeof render === 'function') render();
+}
+window.setBodyFigure = setBodyFigure;
 function statsMuscleVolume(muscles, groupId) {
   const m = muscles || {};
   if (groupId === 'GENERALE' || groupId === 'TOTAL') {
@@ -34450,6 +34465,10 @@ function renderMuscleMap(muscles, extras) {
   return '<div class="card stats-anatomy">' +
     '<div class="stats-anatomy-head"><h2>Muscoli</h2><div class="stats-anatomy-hint" id="stats-selected-muscle">' + esc(selectedLabel) + '</div></div>' +
     '<div class="stats-body-duo">' + renderMuscleFigure('front', muscles) + renderMuscleFigure('back', muscles) + '</div>' +
+    '<div class="stats-muscle-chips" style="padding-top:0;">' +
+    ['m', 'f'].map(function (k) {
+      return '<button type="button" class="stats-chip' + (athleteSexCode() === k ? ' is-on' : '') + '" onclick="setBodyFigure(\'' + k + '\')">' + (k === 'f' ? 'Figura femminile' : 'Figura maschile') + '</button>';
+    }).join('') + '</div>' +
     '<div class="stats-muscle-chips">' + chips +
     ((extras && Number(extras.cardioMinutes) > 0)
       ? '<span class="stats-chip" style="cursor:default;" title="Minuti di cardio: fuori dai chilogrammi e dalla mappa">Cardio · ' + Math.round(Number(extras.cardioMinutes)) + ' min</span>'

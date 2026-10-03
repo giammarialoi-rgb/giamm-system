@@ -58,13 +58,25 @@
     return g[pace === 'slow' ? 'slow' : 'moderate'];
   }
 
+  // The formula has one constant for men (+5) and one for women (-161). A
+  // person who is non-binary, or who prefers not to say, gets the middle of the
+  // two (-78): neither is assumed, and the target can be corrected by hand.
+  var SEX_CONSTANT = { m: 5, f: -161, n: -78 };
+  function sexKey(v) {
+    var c = String(v || '').toLowerCase().charAt(0);
+    if (c === 'm' || c === 'f') return c;
+    // non binario, altro, preferisco non dirlo, x
+    if (c === 'n' || c === 'a' || c === 'x' || c === 'p' || c === 'o') return 'n';
+    return '';
+  }
+
   // Mifflin-St Jeor, kcal/day at rest.
   function mifflin(p) {
     var w = num(p.weight), h = num(p.height), a = num(p.age);
     if (!(w > 0 && h > 0 && a > 0)) return null;
-    var sex = String(p.sex || '').toLowerCase();
-    if (sex !== 'm' && sex !== 'f') return null;
-    return 10 * w + 6.25 * h - 5 * a + (sex === 'f' ? -161 : 5);
+    var sex = sexKey(p.sex);
+    if (!sex) return null;
+    return 10 * w + 6.25 * h - 5 * a + SEX_CONSTANT[sex];
   }
 
   /**
@@ -78,8 +90,7 @@
     if (!(num(p.weight) > 0)) missing.push('peso');
     if (!(num(p.height) > 0)) missing.push('altezza');
     if (!(num(p.age) > 0)) missing.push('eta');
-    var sex = String(p.sex || '').toLowerCase();
-    if (sex !== 'm' && sex !== 'f') missing.push('sesso');
+    if (!sexKey(p.sex)) missing.push('sesso');
     var factor = activityFactor(p.activity);
     if (!factor) missing.push('attivita');
     var goal = GOALS[p.goal] ? p.goal : null;

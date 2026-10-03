@@ -170,10 +170,10 @@ function widgetHtml(key) {
   if (key === "calcolatore-1rm") {
     form = num("w", "Peso sollevato (kg)", 'min="1" value="100"') + num("r", "Ripetizioni (1–12)", 'min="1" max="12" step="1" value="5"');
   } else if (key === "calcolatore-wilks-ipf-gl") {
-    form = sel("sex", "Sesso", [["m", "Uomo"], ["f", "Donna"]]) + num("bw", "Peso corporeo (kg)", 'min="35" value="83"') + num("tot", "Totale o panca (kg)", 'min="1" value="500"') +
+    form = sel("sex", "Categoria di confronto", [["m", "Maschile"], ["f", "Femminile"]]) + num("bw", "Peso corporeo (kg)", 'min="35" value="83"') + num("tot", "Totale o panca (kg)", 'min="1" value="500"') +
       sel("eq", "Attrezzatura (IPF GL)", [["raw", "Classic (raw)"], ["single", "Equipaggiato (singolo strato)"]]) + sel("ev", "Gara (IPF GL)", [["sbd", "Totale (squat, panca, stacco)"], ["bench", "Solo panca"]]);
   } else {
-    form = sel("sex", "Sesso", [["m", "Uomo"], ["f", "Donna"]]) + num("age", "Età (anni)", 'min="18" max="90" value="30"') + num("h", "Altezza (cm)", 'min="120" max="230" value="175"') + num("w", "Peso (kg)", 'min="30" max="300" value="75"') +
+    form = sel("sex", "Sesso", [["m", "Uomo"], ["f", "Donna"], ["n", "Non binario"]]) + num("age", "Età (anni)", 'min="18" max="90" value="30"') + num("h", "Altezza (cm)", 'min="120" max="230" value="175"') + num("w", "Peso (kg)", 'min="30" max="300" value="75"') +
       sel("act", "Attività", [["sedentary", "Sedentario (ufficio, poco movimento)"], ["light", "Leggera (1-3 allenamenti a settimana)"], ["moderate", "Moderata (3-5 allenamenti)"], ["high", "Alta (6-7 allenamenti)"], ["extreme", "Molto alta (lavoro fisico e allenamenti)"]]) +
       sel("goal", "Obiettivo", [["cut", "Dimagrire"], ["maintain", "Mantenere"], ["bulk", "Aumentare"]]);
   }

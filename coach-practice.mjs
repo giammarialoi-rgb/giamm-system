@@ -214,7 +214,8 @@ function profileFromIntake(intake) {
     : [];
   return {
     name,
-    sex: intake.sex === "Femmina" ? "f" : (intake.sex === "Maschio" ? "m" : ""),
+    // Non binario / Altro: "n", the middle of the two formulas in the targets.
+    sex: intake.sex === "Femmina" ? "f" : (intake.sex === "Maschio" ? "m" : (intake.sex === "Non binario" || intake.sex === "Altro" ? "n" : "")),
     age: bandMid(intake.ageBand),
     height: bandMid(intake.heightBand),
     weight: bandMid(intake.weightBand),

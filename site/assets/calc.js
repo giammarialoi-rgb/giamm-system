@@ -50,11 +50,12 @@
 
   const ACTIVITY = { sedentary: 1.2, light: 1.375, moderate: 1.55, high: 1.725, extreme: 1.9 };
   const GOALS = { cut: -0.15, maintain: 0, bulk: 0.1 };
-  function bmr(sex, weight, height, age) { return 10 * weight + 6.25 * height - 5 * age + (sex === 'm' ? 5 : -161); }
+  // +5 for men, -161 for women; 'n' (non-binary, or unsaid) takes the middle of the two.
+  function bmr(sex, weight, height, age) { return 10 * weight + 6.25 * height - 5 * age + (sex === 'm' ? 5 : (sex === 'n' ? -78 : -161)); }
   function macros(o) {
     const w = Number(o.weight); const h = Number(o.height); const a = Number(o.age);
     if (!(w >= 30 && w <= 300) || !(h >= 120 && h <= 230) || !(a >= 18 && a <= 90)) return null;
-    if (!ACTIVITY[o.activity] || !(o.goal in GOALS) || (o.sex !== 'm' && o.sex !== 'f')) return null;
+    if (!ACTIVITY[o.activity] || !(o.goal in GOALS) || (o.sex !== 'm' && o.sex !== 'f' && o.sex !== 'n')) return null;
     const base = bmr(o.sex, w, h, a);
     const tdee = base * ACTIVITY[o.activity];
     const kcal = Math.round(tdee * (1 + GOALS[o.goal]) / 10) * 10;
