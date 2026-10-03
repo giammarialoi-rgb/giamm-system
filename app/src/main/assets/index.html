@@ -568,9 +568,17 @@ nav.bottom-nav {
 }
 .coach-os-header-controls .coach-os-client-select {
   flex: 1 1 auto;
-  min-width: 0;
+  min-width: 56px;
   max-width: 160px;
   flex-shrink: 1;
+}
+/* At 360px the coach's initials button was sliced by the edge of the screen. */
+@media (max-width: 380px) {
+  .coach-os-header-controls { gap: 4px; }
+  .coach-os-header-controls select,
+  .coach-os-header-controls > button { padding: 0 7px; font-size: 11px; }
+  .coach-os-header-controls .coach-os-client-select { max-width: 92px; }
+  .coach-os-header-controls .coach-os-icon-btn { width: 32px; }
 }
 
 .btn:active, .nav-item:active, button:active:not(.pw-toggle),
@@ -2629,7 +2637,7 @@ body.coach-os-v2 header .logo-container {
 
 .coach-os-brand small {
   color: var(--co-muted);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: .12em;
   text-transform: uppercase;
   margin-top: 3px;
@@ -2717,6 +2725,7 @@ body.coach-os-v2 main {
 }
 
 .coach-os-card {
+  color: var(--co-text); /* a card that is a <button> would otherwise inherit the button's black */
   background: linear-gradient(145deg, rgba(22,22,22,.98), rgba(12,12,12,.98));
   border: 1px solid var(--co-border);
   border-radius: var(--co-radius-md);
@@ -2738,7 +2747,7 @@ body.coach-os-v2 main {
 
 .coach-os-card-kicker {
   color: var(--co-accent);
-  font-size: 9px;
+  font-size: 10.5px;
   font-weight: 900;
   letter-spacing: .14em;
   text-transform: uppercase;
@@ -2789,7 +2798,7 @@ body.coach-os-v2 main {
 .coach-os-kpi span {
   display: block;
   color: var(--co-muted);
-  font-size: 8px;
+  font-size: 10.5px;
   font-weight: 800;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -2877,7 +2886,7 @@ body.coach-os-v2 main {
 }
 
 .coach-os-row-main span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--co-muted);
   margin-top: 4px;
 }
@@ -2898,10 +2907,12 @@ body.coach-os-v2 main {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--co-space-2);
+  margin-bottom: 12px;
 }
 
+.coach-os-action.active { border-color: var(--co-accent); color: var(--co-accent); background: rgba(212,175,55,.1); }
 .coach-os-action {
-  min-height: 72px;
+  min-height: 52px;
   padding: 12px;
   border: 1px solid var(--co-border);
   border-radius: var(--co-radius-sm);
@@ -80477,7 +80488,8 @@ function applyClientChrome() {
     if (window.CoachOS && typeof window.CoachOS.applyShell === 'function') {
       window.CoachOS.applyShell(coachSession, athlete);
     }
-    if (coachSession && !athlete) {
+    // In Coach OS the fourth tab is Programmi: this block turned it into "AI" and the tab was lost.
+    if (coachSession && !athlete && !(document.body && document.body.classList.contains('coach-os-v2'))) {
       const aiBtn = document.getElementById('nav-ai');
       if (aiBtn) {
         aiBtn.style.display = '';
@@ -86316,12 +86328,12 @@ function renderCoachLibrary(c) {
         const meta = e.meta || {};
         return '<div class="card" style="padding:12px;margin-bottom:8px;">' +
           '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">' +
-          '<div><div style="font-size:14px;font-weight:800;color:#fff;">' + esc(e.title || 'Scheda') + '</div>' +
+          '<div style="flex:1;min-width:0;overflow-wrap:anywhere;"><div style="font-size:14px;font-weight:800;color:#fff;">' + esc(e.title || 'Scheda') + '</div>' +
           '<div style="font-size:10px;color:#888;margin-top:4px;">' + esc(e.source || '') +
           (meta.weeks ? (' · ' + meta.weeks + ' sett.') : '') +
           (e.savedAt ? (' · ' + esc(String(e.savedAt).replace('T', ' ').slice(0, 16))) : '') +
           '</div></div>' +
-          '<div style="display:flex;flex-direction:column;gap:6px;">' +
+          '<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;">' +
           '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="deleteCoachLibraryEntry(\'' + esc(e.id) + '\')">ELIMINA</button>' +
           '</div></div></div>';
       }).join('')
@@ -88145,7 +88157,12 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       { view: 'coachBusiness', label: tx('coBusiness'), flag: 'businessV1' },
       { view: 'coachCrm', label: tx('coCrm'), flag: 'businessV1' }
     ];
-    return rows.filter(function (row) { return !row.flag || enabled(row.flag); });
+    // Meal AI and the agent log have no screen of their own yet: opened, they showed the athlete's dashboard.
+    const unfinished = { coachMealAi: 1, coachAgentAudit: 1 };
+    return rows.filter(function (row) {
+      if (unfinished[row.view] && !(CoachOS.views && CoachOS.views[row.view])) return false;
+      return !row.flag || enabled(row.flag);
+    });
   }
 
   function linkHtml(row, active) {
@@ -88321,6 +88338,16 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     return CoachOS.t ? CoachOS.t(key) : key;
   }
 
+  // A session's start as a person reads it: "09:00", not 2026-10-03T07:00:00.000Z.
+  function sessionWhen(value) {
+    const raw = String(value || '');
+    if (!/^\d{4}-\d{2}-\d{2}T/.test(raw)) return raw;
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return raw;
+    const loc = (window.NurvanI18n && window.NurvanI18n.locale && window.NurvanI18n.locale()) || 'it-IT';
+    return new Intl.DateTimeFormat(loc, { hour: '2-digit', minute: '2-digit' }).format(d);
+  }
+
   function loc() {
     return CoachOS.locale ? CoachOS.locale() : 'it-IT';
   }
@@ -88433,7 +88460,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
         ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionsToday')) + '</h2></div>' +
           '<div class="coach-os-list">' + sessions.map(function (session) {
             return '<button type="button" class="coach-os-row" onclick="CoachOS.navigate(\'coachCalendar\')"><span class="coach-os-row-main"><strong>' + escText(session.title) +
-              '</strong><span>' + escText(session.time || session.clientName || '') + '</span></span><span aria-hidden="true" style="color:var(--co-muted);">›</span></button>';
+              '</strong><span>' + escText(sessionWhen(session.time) + (session.clientName ? (session.time ? ' · ' : '') + session.clientName : '')) + '</span></span><span aria-hidden="true" style="color:var(--co-muted);">›</span></button>';
           }).join('') + '</div></section>'
         : '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionsToday')) + '</h2></div>' +
           '<div class="coach-os-empty"><strong>' + escText(tx('coNoSessions')) + '</strong><div>' +
@@ -88798,7 +88825,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
             return '<button type="button" class="coach-os-row" onclick="CoachOS.assignProgramToClient(\'' +
               escText(entryId) + '\',\'' + escText(client.id) + '\')"><span class="coach-os-row-main"><strong>' +
               escText(client.displayName || client.username || tx('coClientFallback')) + '</strong><span>' +
-              escText(client.status || tx('coFilterActive')) + '</span></span><span>›</span></button>';
+              escText(({ active: 'Attivo', paused: 'In pausa', archived: 'Archiviato', pending: 'In attesa' })[client.status] || client.status || tx('coFilterActive')) + '</span></span><span>›</span></button>';
           }).join('') + '</div>'
           : '<div class="coach-os-empty">' + escText(tx('coAddClientFirst')) + '</div>') +
         '<button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coCancel')) + '</button>';
@@ -89401,7 +89428,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
     return '<button type="button" class="coach-os-row" onclick="CoachOS.openCheckIn(' + index + ')">' +
       '<span class="coach-os-status-dot ' + (row.status === 'received' ? 'high' : (row.status === 'requested' ? 'medium' : 'low')) + '"></span>' +
       '<span class="coach-os-row-main"><strong>' + escText(row.clientName || tx('coClientFallback')) + '</strong>' +
-      '<span>' + escText(row.status.replace(/_/g, ' ')) + ' · ' + escText(formatDate(date)) +
+      '<span>' + escText(({ received: 'Ricevuto', requested: 'Richiesto', reviewed: 'Letto', skipped: 'Saltato', missed: 'Saltato', pending: 'In attesa' })[row.status] || row.status.replace(/_/g, ' ')) + ' · ' + escText(formatDate(date)) +
       (row.weight ? ' · ' + Number(row.weight) + ' kg' : '') + '</span></span><span>›</span></button>';
   }
 
@@ -90975,7 +91002,7 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
               const start = new Date(a.startsAt); const end = new Date(a.endsAt);
               const done = a.status === 'completed';
               const id = escText(a.id);
-              return '<div class="coach-os-row" style="flex-wrap:wrap;gap:8px;' + (done ? 'opacity:.55;' : '') + '"><span class="coach-os-row-main"><strong>' +
+              return '<div class="coach-os-row" style="flex-wrap:wrap;gap:8px;' + (done ? 'opacity:.55;' : '') + '"><span class="coach-os-row-main" style="flex:1 1 100%;"><strong>' +
                 escText(clock(start) + '–' + clock(end)) + ' · ' + escText(a.title) + '</strong><span>' +
                 escText(typeLabel(a.type)) + (a.clientName ? ' · ' + escText(a.clientName) : '') + (a.mode ? ' · ' + escText(modeLabel(a.mode)) : '') + (done ? ' · ' + escText(T('fatta')) : '') +
                 (a.notes ? ' · ' + escText(a.notes) : '') + '</span></span>' +
@@ -91497,7 +91524,7 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (row) {
           return '<button class="coach-os-row" onclick="openCoachClient(\'' + escText(row.id) + '\')"><span class="coach-os-row-main"><strong>' +
-            escText(row.name) + '</strong><span>' + escText(row.stage) + (row.nextAction ? ' · ' + escText(row.nextAction) : '') +
+            escText(row.name) + '</strong><span>' + escText(({ LEAD: 'Contatto', TRIAL: 'In prova', ACTIVE: 'Attivo', PAUSED: 'In pausa', CHURN_RISK: 'A rischio', CHURNED: 'Perso' })[row.stage] || row.stage) + (row.nextAction ? ' · ' + escText(row.nextAction) : '') +
             '</span></span></button>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">' + escText(tx('coCrmEmpty')) + '</div>') + '</div>';
@@ -91518,7 +91545,7 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (row) {
           return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(row.name) +
-            '</strong><span>' + escText(row.trigger) + ' → ' + escText(row.action) + '</span></span>' +
+            '</strong><span>' + escText(({ check_in_received: 'Check-in ricevuto', check_in_overdue: 'Check-in in ritardo', client_inactive: 'Cliente inattivo', payment_due: 'Pagamento in scadenza', new_client: 'Nuovo cliente' })[row.trigger] || String(row.trigger || '').replace(/_/g, ' ')) + ' → ' + escText(({ create_task: 'crea un task', send_message: 'invia un messaggio', notify: 'avvisa il coach' })[row.action] || String(row.action || '').replace(/_/g, ' ')) + (row.enabled === false ? ' · disattivata' : '') + '</span></span>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.dryRunAutomation(\'' +
             escText(row.id) + '\')">' + escText(tx('coDryRun')) + '</button>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.runAutomationNow(\'' +
@@ -91610,7 +91637,7 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
         ? '<div class="coach-os-list" style="margin-top:12px;">' + state.items.map(function (item, index) {
           return '<div class="coach-os-row"><button class="coach-os-row-main" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.openInboxItem(' + index + ')">' +
             '<strong>' + escText(item.title) + (item.pinned ? ' · ' + escText(tx('coPinned')) : '') + '</strong><span>' +
-            escText(item.kind) + (item.preview ? ' · ' + escText(item.preview) : '') +
+            escText(({ message: 'Messaggio', ask_coach: 'Domanda al coach', check_in: 'Check-in', attention: 'Da vedere' })[item.kind] || item.kind) + (item.preview ? ' · ' + escText(item.preview) : '') +
             (item.reaction ? ' · ' + escText(item.reaction) : '') + '</span></button>' +
             (item.kind === 'message'
               ? '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.pinInboxItem(\'' + escText(item.id) + '\',' + (item.pinned ? 'false' : 'true') + ')">' +

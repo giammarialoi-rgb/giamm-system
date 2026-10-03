@@ -234,7 +234,7 @@
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (row) {
           return '<button class="coach-os-row" onclick="openCoachClient(\'' + escText(row.id) + '\')"><span class="coach-os-row-main"><strong>' +
-            escText(row.name) + '</strong><span>' + escText(row.stage) + (row.nextAction ? ' · ' + escText(row.nextAction) : '') +
+            escText(row.name) + '</strong><span>' + escText(({ LEAD: 'Contatto', TRIAL: 'In prova', ACTIVE: 'Attivo', PAUSED: 'In pausa', CHURN_RISK: 'A rischio', CHURNED: 'Perso' })[row.stage] || row.stage) + (row.nextAction ? ' · ' + escText(row.nextAction) : '') +
             '</span></span></button>';
         }).join('') + '</div>'
         : '<div class="coach-os-empty">' + escText(tx('coCrmEmpty')) + '</div>') + '</div>';
@@ -255,7 +255,7 @@
       (rows.length
         ? '<div class="coach-os-list">' + rows.map(function (row) {
           return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(row.name) +
-            '</strong><span>' + escText(row.trigger) + ' → ' + escText(row.action) + '</span></span>' +
+            '</strong><span>' + escText(({ check_in_received: 'Check-in ricevuto', check_in_overdue: 'Check-in in ritardo', client_inactive: 'Cliente inattivo', payment_due: 'Pagamento in scadenza', new_client: 'Nuovo cliente' })[row.trigger] || String(row.trigger || '').replace(/_/g, ' ')) + ' → ' + escText(({ create_task: 'crea un task', send_message: 'invia un messaggio', notify: 'avvisa il coach' })[row.action] || String(row.action || '').replace(/_/g, ' ')) + (row.enabled === false ? ' · disattivata' : '') + '</span></span>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.dryRunAutomation(\'' +
             escText(row.id) + '\')">' + escText(tx('coDryRun')) + '</button>' +
             '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.runAutomationNow(\'' +

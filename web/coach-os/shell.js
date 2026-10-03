@@ -95,7 +95,12 @@
       { view: 'coachBusiness', label: tx('coBusiness'), flag: 'businessV1' },
       { view: 'coachCrm', label: tx('coCrm'), flag: 'businessV1' }
     ];
-    return rows.filter(function (row) { return !row.flag || enabled(row.flag); });
+    // Meal AI and the agent log have no screen of their own yet: opened, they showed the athlete's dashboard.
+    const unfinished = { coachMealAi: 1, coachAgentAudit: 1 };
+    return rows.filter(function (row) {
+      if (unfinished[row.view] && !(CoachOS.views && CoachOS.views[row.view])) return false;
+      return !row.flag || enabled(row.flag);
+    });
   }
 
   function linkHtml(row, active) {

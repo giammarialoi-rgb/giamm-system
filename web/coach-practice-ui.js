@@ -458,7 +458,8 @@ function applyClientChrome() {
     if (window.CoachOS && typeof window.CoachOS.applyShell === 'function') {
       window.CoachOS.applyShell(coachSession, athlete);
     }
-    if (coachSession && !athlete) {
+    // In Coach OS the fourth tab is Programmi: this block turned it into "AI" and the tab was lost.
+    if (coachSession && !athlete && !(document.body && document.body.classList.contains('coach-os-v2'))) {
       const aiBtn = document.getElementById('nav-ai');
       if (aiBtn) {
         aiBtn.style.display = '';
@@ -6297,12 +6298,12 @@ function renderCoachLibrary(c) {
         const meta = e.meta || {};
         return '<div class="card" style="padding:12px;margin-bottom:8px;">' +
           '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">' +
-          '<div><div style="font-size:14px;font-weight:800;color:#fff;">' + esc(e.title || 'Scheda') + '</div>' +
+          '<div style="flex:1;min-width:0;overflow-wrap:anywhere;"><div style="font-size:14px;font-weight:800;color:#fff;">' + esc(e.title || 'Scheda') + '</div>' +
           '<div style="font-size:10px;color:#888;margin-top:4px;">' + esc(e.source || '') +
           (meta.weeks ? (' · ' + meta.weeks + ' sett.') : '') +
           (e.savedAt ? (' · ' + esc(String(e.savedAt).replace('T', ' ').slice(0, 16))) : '') +
           '</div></div>' +
-          '<div style="display:flex;flex-direction:column;gap:6px;">' +
+          '<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;">' +
           '<button class="btn btn-outline" style="font-size:10px;padding:6px 8px;" onclick="deleteCoachLibraryEntry(\'' + esc(e.id) + '\')">ELIMINA</button>' +
           '</div></div></div>';
       }).join('')

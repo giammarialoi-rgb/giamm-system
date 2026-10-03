@@ -12,6 +12,16 @@
     return CoachOS.t ? CoachOS.t(key) : key;
   }
 
+  // A session's start as a person reads it: "09:00", not 2026-10-03T07:00:00.000Z.
+  function sessionWhen(value) {
+    const raw = String(value || '');
+    if (!/^\d{4}-\d{2}-\d{2}T/.test(raw)) return raw;
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return raw;
+    const loc = (window.NurvanI18n && window.NurvanI18n.locale && window.NurvanI18n.locale()) || 'it-IT';
+    return new Intl.DateTimeFormat(loc, { hour: '2-digit', minute: '2-digit' }).format(d);
+  }
+
   function loc() {
     return CoachOS.locale ? CoachOS.locale() : 'it-IT';
   }
@@ -124,7 +134,7 @@
         ? '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionsToday')) + '</h2></div>' +
           '<div class="coach-os-list">' + sessions.map(function (session) {
             return '<button type="button" class="coach-os-row" onclick="CoachOS.navigate(\'coachCalendar\')"><span class="coach-os-row-main"><strong>' + escText(session.title) +
-              '</strong><span>' + escText(session.time || session.clientName || '') + '</span></span><span aria-hidden="true" style="color:var(--co-muted);">›</span></button>';
+              '</strong><span>' + escText(sessionWhen(session.time) + (session.clientName ? (session.time ? ' · ' : '') + session.clientName : '')) + '</span></span><span aria-hidden="true" style="color:var(--co-muted);">›</span></button>';
           }).join('') + '</div></section>'
         : '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(tx('coSessionsToday')) + '</h2></div>' +
           '<div class="coach-os-empty"><strong>' + escText(tx('coNoSessions')) + '</strong><div>' +

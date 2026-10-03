@@ -568,9 +568,17 @@ nav.bottom-nav {
 }
 .coach-os-header-controls .coach-os-client-select {
   flex: 1 1 auto;
-  min-width: 0;
+  min-width: 56px;
   max-width: 160px;
   flex-shrink: 1;
+}
+/* At 360px the coach's initials button was sliced by the edge of the screen. */
+@media (max-width: 380px) {
+  .coach-os-header-controls { gap: 4px; }
+  .coach-os-header-controls select,
+  .coach-os-header-controls > button { padding: 0 7px; font-size: 11px; }
+  .coach-os-header-controls .coach-os-client-select { max-width: 92px; }
+  .coach-os-header-controls .coach-os-icon-btn { width: 32px; }
 }
 
 .btn:active, .nav-item:active, button:active:not(.pw-toggle),

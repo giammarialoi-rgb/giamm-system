@@ -48,7 +48,7 @@
         ? '<div class="coach-os-list" style="margin-top:12px;">' + state.items.map(function (item, index) {
           return '<div class="coach-os-row"><button class="coach-os-row-main" style="border:0;background:transparent;text-align:left;" onclick="CoachOS.openInboxItem(' + index + ')">' +
             '<strong>' + escText(item.title) + (item.pinned ? ' · ' + escText(tx('coPinned')) : '') + '</strong><span>' +
-            escText(item.kind) + (item.preview ? ' · ' + escText(item.preview) : '') +
+            escText(({ message: 'Messaggio', ask_coach: 'Domanda al coach', check_in: 'Check-in', attention: 'Da vedere' })[item.kind] || item.kind) + (item.preview ? ' · ' + escText(item.preview) : '') +
             (item.reaction ? ' · ' + escText(item.reaction) : '') + '</span></button>' +
             (item.kind === 'message'
               ? '<button class="btn btn-outline" style="font-size:9px;" onclick="CoachOS.pinInboxItem(\'' + escText(item.id) + '\',' + (item.pinned ? 'false' : 'true') + ')">' +

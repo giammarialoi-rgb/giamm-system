@@ -102,7 +102,7 @@
               const start = new Date(a.startsAt); const end = new Date(a.endsAt);
               const done = a.status === 'completed';
               const id = escText(a.id);
-              return '<div class="coach-os-row" style="flex-wrap:wrap;gap:8px;' + (done ? 'opacity:.55;' : '') + '"><span class="coach-os-row-main"><strong>' +
+              return '<div class="coach-os-row" style="flex-wrap:wrap;gap:8px;' + (done ? 'opacity:.55;' : '') + '"><span class="coach-os-row-main" style="flex:1 1 100%;"><strong>' +
                 escText(clock(start) + '–' + clock(end)) + ' · ' + escText(a.title) + '</strong><span>' +
                 escText(typeLabel(a.type)) + (a.clientName ? ' · ' + escText(a.clientName) : '') + (a.mode ? ' · ' + escText(modeLabel(a.mode)) : '') + (done ? ' · ' + escText(T('fatta')) : '') +
                 (a.notes ? ' · ' + escText(a.notes) : '') + '</span></span>' +

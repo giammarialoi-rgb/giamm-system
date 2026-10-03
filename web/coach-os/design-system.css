@@ -59,7 +59,7 @@ body.coach-os-v2 header .logo-container {
 
 .coach-os-brand small {
   color: var(--co-muted);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: .12em;
   text-transform: uppercase;
   margin-top: 3px;
@@ -147,6 +147,7 @@ body.coach-os-v2 main {
 }
 
 .coach-os-card {
+  color: var(--co-text); /* a card that is a <button> would otherwise inherit the button's black */
   background: linear-gradient(145deg, rgba(22,22,22,.98), rgba(12,12,12,.98));
   border: 1px solid var(--co-border);
   border-radius: var(--co-radius-md);
@@ -168,7 +169,7 @@ body.coach-os-v2 main {
 
 .coach-os-card-kicker {
   color: var(--co-accent);
-  font-size: 9px;
+  font-size: 10.5px;
   font-weight: 900;
   letter-spacing: .14em;
   text-transform: uppercase;
@@ -219,7 +220,7 @@ body.coach-os-v2 main {
 .coach-os-kpi span {
   display: block;
   color: var(--co-muted);
-  font-size: 8px;
+  font-size: 10.5px;
   font-weight: 800;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -307,7 +308,7 @@ body.coach-os-v2 main {
 }
 
 .coach-os-row-main span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--co-muted);
   margin-top: 4px;
 }
@@ -328,10 +329,12 @@ body.coach-os-v2 main {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--co-space-2);
+  margin-bottom: 12px;
 }
 
+.coach-os-action.active { border-color: var(--co-accent); color: var(--co-accent); background: rgba(212,175,55,.1); }
 .coach-os-action {
-  min-height: 72px;
+  min-height: 52px;
   padding: 12px;
   border: 1px solid var(--co-border);
   border-radius: var(--co-radius-sm);

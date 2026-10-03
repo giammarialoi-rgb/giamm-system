@@ -122,7 +122,7 @@
             return '<button type="button" class="coach-os-row" onclick="CoachOS.assignProgramToClient(\'' +
               escText(entryId) + '\',\'' + escText(client.id) + '\')"><span class="coach-os-row-main"><strong>' +
               escText(client.displayName || client.username || tx('coClientFallback')) + '</strong><span>' +
-              escText(client.status || tx('coFilterActive')) + '</span></span><span>›</span></button>';
+              escText(({ active: 'Attivo', paused: 'In pausa', archived: 'Archiviato', pending: 'In attesa' })[client.status] || client.status || tx('coFilterActive')) + '</span></span><span>›</span></button>';
           }).join('') + '</div>'
           : '<div class="coach-os-empty">' + escText(tx('coAddClientFirst')) + '</div>') +
         '<button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="showOverlay(\'cp-assign\',false)">' + escText(tx('coCancel')) + '</button>';

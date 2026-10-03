@@ -28,7 +28,7 @@
     return '<button type="button" class="coach-os-row" onclick="CoachOS.openCheckIn(' + index + ')">' +
       '<span class="coach-os-status-dot ' + (row.status === 'received' ? 'high' : (row.status === 'requested' ? 'medium' : 'low')) + '"></span>' +
       '<span class="coach-os-row-main"><strong>' + escText(row.clientName || tx('coClientFallback')) + '</strong>' +
-      '<span>' + escText(row.status.replace(/_/g, ' ')) + ' · ' + escText(formatDate(date)) +
+      '<span>' + escText(({ received: 'Ricevuto', requested: 'Richiesto', reviewed: 'Letto', skipped: 'Saltato', missed: 'Saltato', pending: 'In attesa' })[row.status] || row.status.replace(/_/g, ' ')) + ' · ' + escText(formatDate(date)) +
       (row.weight ? ' · ' + Number(row.weight) + ' kg' : '') + '</span></span><span>›</span></button>';
   }
 
