@@ -71,7 +71,7 @@ export async function collectEntries({ articles, events = [], siteDir, webDir, n
     e.urls[l] = langPrefix(l) + "/blog/" + a.slug;
     e.lastmod = newest(e.lastmod, a.updated, a.date);
   }
-  for (const e of byDir.values()) entries.push({ urls: e.urls, lastmod: e.lastmod || today });
+  for (const e of byDir.values()) entries.push({ urls: e.urls, lastmod: e.lastmod || today, dated: true });
 
   // The category pages, tied across languages through the articles they
   // list. When a group has two categories in one language (a category named
@@ -93,7 +93,7 @@ export async function collectEntries({ articles, events = [], siteDir, webDir, n
   for (const members of groups.values()) {
     const tied = new Set(members.map((n) => n.lang)).size === members.length;
     const sets = tied ? [members] : members.map((n) => [n]);
-    for (const set of sets) entries.push({ urls: Object.fromEntries(set.map((n) => [n.lang, pathOf(n)])), lastmod: newest(...set.map((n) => n.lastmod)) || today });
+    for (const set of sets) entries.push({ urls: Object.fromEntries(set.map((n) => [n.lang, pathOf(n)])), lastmod: newest(...set.map((n) => n.lastmod)) || today, dated: true });
   }
   return entries;
 }
@@ -149,6 +149,7 @@ export function mountSitemap(app, { articles, calendar, siteDir, webDir, isSiteH
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.type("application/xml").send(countUrls(list) > maxUrls ? renderIndex(list, origin) : renderUrlset(list, origin));
   }));
+  const result = { entries };
   app.get("/sitemap-:lang.xml", guard(async (req, res) => {
     const lang = String(req.params.lang || "");
     const list = await entries();
@@ -156,4 +157,5 @@ export function mountSitemap(app, { articles, calendar, siteDir, webDir, isSiteH
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.type("application/xml").send(renderUrlset(list, origin, lang));
   }));
+  return result;
 }

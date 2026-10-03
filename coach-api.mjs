@@ -29,6 +29,7 @@ import { mountHyrox } from "./server/site/hyrox.mjs";
 import { mountSamples, sampleCardsHtml } from "./server/site/samples.mjs";
 import { mountWaitlist, waitlistPath } from "./server/site/waitlist.mjs";
 import { mountSitemap } from "./server/site/sitemap.mjs";
+import { mountIndexNowKey, startIndexNowJob, keyOf as indexNowKey } from "./server/site/indexnow.mjs";
 import { canonicalUrls } from "./server/site/urls.mjs";
 import { mountTrust, authorLoader, aboutPath, contactPath, legalPath } from "./server/site/trust.mjs";
 import { metaTags, jsonLdScripts, absUrl, organizationLd, websiteLd, softwareLd, faqLd, faqFromDetails } from "./server/site/seo.mjs";
@@ -2541,7 +2542,12 @@ const siteHyrox = mountHyrox(app, { webDir: path.join(__dirname, "web"), siteDir
 // Example workouts: /allenamenti, one page each, the PDF sent by email.
 mountSamples(app, { siteDir: SITE_DIR, pool, initDb, sendEmail, shell: (req, page) => siteShell(req, Object.assign({ samples: true }, page)) });
 // robots.txt and sitemap.xml, built from the same data as the pages.
-mountSitemap(app, { articles: siteBlog.articles, calendar: siteHyrox.calendar, siteDir: SITE_DIR, webDir: path.join(__dirname, "web"), isSiteHost, origin: "https://" + (SITE_HOSTS[0] || "nurvan.app") });
+const siteMap = mountSitemap(app, { articles: siteBlog.articles, calendar: siteHyrox.calendar, siteDir: SITE_DIR, webDir: path.join(__dirname, "web"), isSiteHost, origin: "https://" + (SITE_HOSTS[0] || "nurvan.app") });
+// IndexNow: the key file, and an hourly pass that tells Bing and the other engines about new pages.
+mountIndexNowKey(app, { isSiteHost, key: indexNowKey() });
+if (isProduction(process.env) && process.env.INDEXNOW !== "0") {
+  startIndexNowJob({ pool, initDb, entries: siteMap.entries, origin: "https://" + (SITE_HOSTS[0] || "nurvan.app"), key: indexNowKey() });
+}
 // Who writes: the author's page, who we are, contacts, privacy and terms under the site's domain.
 mountTrust(app, { getAuthor, webDir: path.join(__dirname, "web"), siteDir: SITE_DIR, shell: (req, page) => siteShell(req, page), sendEmail, articles: siteBlog.articles, cardHtml: siteBlog.cardHtml, isSiteHost });
 // The waiting list and the founding coaches' application: /lista-attesa.
