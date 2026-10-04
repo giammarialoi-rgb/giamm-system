@@ -65,11 +65,11 @@ const keyOf = (back) => { const d = new Date(); d.setDate(d.getDate() - back); r
 let toast = null, athlete = false, native = false;
 const ctx = vm.createContext({
   store, window: { Capacitor: undefined }, document: { getElementById: () => null }, nutritionTodayKey: () => keyOf(0),
-  isAthleteRole: () => athlete, persist() {}, render() {}, showToast: (m) => { toast = m; },
-  get NativeConfig() { if (native) return {}; throw new ReferenceError('NativeConfig is not defined'); }
+  isAthleteRole: () => athlete, persist() {}, render() {}, showToast: (m) => { toast = m; }
 });
+const setNative = (on) => { native = on; if (on) ctx.NativeConfig = {}; else delete ctx.NativeConfig; };
 vm.runInContext(src, ctx);
-ok('a coach\'s client on the web app has no Salute; on the phone app they do', (() => { athlete = true; native = false; const w = vm.runInContext('healthTileAvailable()', ctx); native = true; const p = vm.runInContext('healthTileAvailable()', ctx); athlete = false; native = false; return w === false && p === true; })());
+ok('a coach\'s client on the web app has no Salute; on the phone app they do', (() => { athlete = true; setNative(false); const w = vm.runInContext('healthTileAvailable()', ctx); setNative(true); const p = vm.runInContext('healthTileAvailable()', ctx); athlete = false; setNative(false); return w === false && p === true; })());
 ok('anyone else has it on the web app too', vm.runInContext('healthTileAvailable()', ctx) === true);
 ok('with nothing written the estimate reads nothing', Object.keys(vm.runInContext('manualHealthSample()', ctx)).length === 0);
 // two weeks of a normal resting heart rate, then a higher one today
