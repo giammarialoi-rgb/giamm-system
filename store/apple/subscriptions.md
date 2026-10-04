@@ -32,16 +32,16 @@ Per ogni prodotto compila:
 - **ID prodotto**: dalla tabella
 - **Localizzazioni** (IT e EN) — nome visibile e descrizione:
 
-| ID | Nome IT | Descrizione IT | Nome EN | Descrizione EN |
+| ID | Nome IT (≤30) | Descrizione IT (≤45) | Nome EN | Descrizione EN |
 |---|---|---|---|---|
-| `nurvan.standard.year` | Standard annuale | Più funzioni per allenarti, per un anno. | Standard yearly | More features for your training, for one year. |
-| `nurvan.coach.month` | Coach mensile | Modalità coach per seguire i tuoi clienti. | Coach monthly | Coach mode to follow your clients. |
-| `nurvan.coach.year` | Coach annuale | Modalità coach per seguire i tuoi clienti, per un anno. | Coach yearly | Coach mode to follow your clients, for one year. |
-| `nurvan.coach_pro.month` | Coach Pro mensile | Tutte le funzioni coach, con più clienti. | Coach Pro monthly | All coach features, with more clients. |
-| `nurvan.coach_pro.year` | Coach Pro annuale | Tutte le funzioni coach, con più clienti, per un anno. | Coach Pro yearly | All coach features, with more clients, for one year. |
+| `nurvan.standard.year` | Standard annuale | Più funzioni per allenarti, per un anno | Standard yearly | More features for your training, 1 year |
+| `nurvan.coach.month` | Coach mensile | Modalità coach per seguire i tuoi clienti | Coach monthly | Coach mode to follow your clients |
+| `nurvan.coach.year` | Coach annuale | Modalità coach per i tuoi clienti, 1 anno | Coach yearly | Coach mode for your clients, 1 year |
+| `nurvan.coach_pro.month` | Coach Pro mensile | Tutte le funzioni coach, senza limiti | Coach Pro monthly | All coach features, no client limit |
+| `nurvan.coach_pro.year` | Coach Pro annuale | Funzioni coach complete, clienti illimitati | Coach Pro yearly | Full coach features, unlimited clients |
 
   (I limiti di clienti per piano sono quelli della tabella sopra: se li scrivi nella descrizione, tienili uguali.)
-- **Screenshot per la revisione** (uno per prodotto, obbligatorio): usa `screenshots/iphone-6.9/` — meglio una schermata dei Piani (crea quella reale dall'app su TestFlight: Menu › Piani & Pro).
+- **Screenshot per la revisione** (uno per prodotto, obbligatorio): `subscription-review-screenshot.png` in questa cartella (la schermata dei Piani come appare su iPhone con i prezzi dello store); lo stesso file va bene per tutti e 5. Quando hai la build su TestFlight puoi sostituirlo con uno schermo reale.
 - **Note di revisione** del prodotto: `Abbonamento che sblocca il piano indicato nell'app. Si acquista da MENU › Piani & Pro.`
 - **Offerte introduttive**: nessuna (la prova gratuita di 14 giorni della modalità Coach è gestita dall'app, una sola volta per account, senza passare dallo store). Non aggiungere un secondo periodo di prova negli store finché non lo decidi.
 

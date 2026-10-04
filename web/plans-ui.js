@@ -207,6 +207,7 @@ function planIsAndroidApp() {
 // The person in RevenueCat is the Nurvan account (its id), so the same plan follows the account to any
 // device, and a plan bought on the website (Stripe) is the same plan.
 var __billing = { state: 'idle', packs: [], adapter: null, cfg: null, busy: false };
+window.__billing = __billing; // read by the store-screenshot tool (tools/store/make_screenshots.mjs)
 
 function billingPlatform() {
   try { if (typeof isIosApp === 'function' && isIosApp()) return 'ios'; } catch (_) {}
