@@ -70,7 +70,7 @@ const id = (days, split, goal, equipment, experience, audience, variant, weeks, 
   };
   const hyrox = check(ctx.NurvanHyrox, 'hyrox');
   ok('3a. HYROX: ' + hyrox.n + ' preparazioni, core due volte in ogni settimana', hyrox.n === 1800 && hyrox.short === 0);
-  for (const d of ['pilates', 'mobilita', 'calisthenics', 'hiit']) {
+  for (const d of ['pilates', 'mobilita', 'calisthenics', 'hiit', 'gag']) {
     const r = check(ctx.NurvanDisciplines, d);
     ok('3b. ' + d + ': ' + r.n + ' programmi, core due volte in ogni settimana', r.n > 100 && r.short === 0);
   }

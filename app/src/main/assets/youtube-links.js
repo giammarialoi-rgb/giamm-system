@@ -2691,5 +2691,185 @@ self.EXERCISE_YOUTUBE_LINKS = [
   "type": "exercise",
   "youtube_query": "Bent knee inverted row exercise how to",
   "name": "Inverted row facilitato"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Dumbbell Hip Thrust exercise how to",
+  "name": "Hip thrust manubrio"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Feet-Elevated Hip Thrust exercise how to",
+  "name": "Hip thrust piedi rialzati"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "B-Stance Hip Thrust exercise how to",
+  "name": "B-stance hip thrust"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Banded Hip Thrust exercise how to",
+  "name": "Hip thrust con elastico"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Banded Glute Bridge exercise how to",
+  "name": "Glute bridge con elastico"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Barbell Glute Bridge exercise how to",
+  "name": "Glute bridge bilanciere"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Dumbbell Glute Bridge exercise how to",
+  "name": "Glute bridge manubrio"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Feet-Elevated Glute Bridge exercise how to",
+  "name": "Glute bridge piedi rialzati"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Reverse Hyperextension exercise how to",
+  "name": "Reverse hyper"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Bench Reverse Hyperextension exercise how to",
+  "name": "Reverse hyper su panca"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Glute-Focus 45° Back Extension exercise how to",
+  "name": "Iperestensione 45° glutei"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Kneeling Cable Glute Kickback exercise how to",
+  "name": "Kickback cavo in ginocchio"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Donkey Kick exercise how to",
+  "name": "Donkey kick"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Fire Hydrant exercise how to",
+  "name": "Fire hydrant"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Side-Lying Clam exercise how to",
+  "name": "Clam shell"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Side-Lying Hip Abduction exercise how to",
+  "name": "Abduzione sdraiata sul fianco"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Standing Band Hip Abduction exercise how to",
+  "name": "Abduzione in piedi con elastico"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Standing Cable Hip Abduction exercise how to",
+  "name": "Abduzione ai cavi in piedi"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Seated Band Hip Abduction exercise how to",
+  "name": "Abduzione seduta con elastico"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Lateral Band Walk exercise how to",
+  "name": "Lateral band walk"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Monster Walk exercise how to",
+  "name": "Monster walk"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Hip Hike exercise how to",
+  "name": "Hip hike"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Dumbbell Sumo Squat exercise how to",
+  "name": "Sumo squat"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Dumbbell Front Squat exercise how to",
+  "name": "Front squat manubri"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Curtsy Lunge exercise how to",
+  "name": "Curtsy lunge"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Lateral Lunge exercise how to",
+  "name": "Lateral lunge"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Barbell Lunge exercise how to",
+  "name": "Affondi bilanciere"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "High Step-Up exercise how to",
+  "name": "High step-up"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Skater Squat exercise how to",
+  "name": "Skater squat"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Single-Leg Box Squat exercise how to",
+  "name": "Single-leg box squat"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Dumbbell Romanian Deadlift exercise how to",
+  "name": "Stacco rumeno manubri"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "B-Stance Romanian Deadlift exercise how to",
+  "name": "B-stance RDL"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Slider Leg Curl exercise how to",
+  "name": "Leg curl con slider"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Stability Ball Leg Curl exercise how to",
+  "name": "Leg curl con fitball"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "Dumbbell Lying Leg Curl exercise how to",
+  "name": "Leg curl manubrio"
+ },
+ {
+  "type": "exercise",
+  "youtube_query": "RKC Plank exercise how to",
+  "name": "RKC plank"
  }
 ];

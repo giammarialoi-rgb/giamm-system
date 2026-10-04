@@ -127,6 +127,7 @@ export const ICONS = [
   ui('discipline-mobility', 'disciplines', 28, 'a figure in a deep lunge with arms raised, an arc drawn over the body to suggest range of movement', 'Allenarsi a casa: Mobilità e stretching', ''),
   ui('discipline-calisthenics', 'disciplines', 28, 'a pull-up bar (a horizontal line with two short posts) with a figure hanging from it, chin above the bar', 'Allenarsi a casa: Calisthenics', ''),
   ui('discipline-hiit', 'disciplines', 28, 'a stopwatch with a lightning bolt inside the dial', 'Allenarsi a casa: HIIT e Tabata', ''),
+  ui('discipline-gag', 'disciplines', 28, 'a figure in a glute bridge seen from the side: head on a mat line, hips lifted, knees bent, feet on the floor', 'Allenarsi a casa: GAG, gambe addome glutei', ''),
 
   // --- 6. The HYROX stations, in race order (list rows, 24px)
   ui('hyrox-run', 'hyrox', 24, 'a runner in side view in mid-stride', 'HYROX: the 1 km run between stations', ''),
@@ -175,7 +176,7 @@ export const COLORS = {
   'heart-pulse': '#F87171', moon: '#A5B4FC', scale: '#94A3B8', ruler: '#2DD4BF', footsteps: '#4ADE80', 'water-drop': '#38BDF8',
   cart: '#F472B6', apple: '#EF4444', sandwich: '#FBBF24',
   'muscle-chest': '#F87171', 'muscle-back': '#60A5FA', 'muscle-shoulders': '#FB923C', 'muscle-arms': '#A78BFA', 'muscle-legs': '#34D399', 'muscle-core': '#FBBF24', 'muscle-fullbody': '#D4AF37',
-  'discipline-pilates': '#F472B6', 'discipline-mobility': '#2DD4BF', 'discipline-calisthenics': '#FB923C', 'discipline-hiit': '#F87171',
+  'discipline-pilates': '#F472B6', 'discipline-mobility': '#2DD4BF', 'discipline-calisthenics': '#FB923C', 'discipline-hiit': '#F87171', 'discipline-gag': '#E879F9',
   'hyrox-run': '#4ADE80', 'hyrox-skierg': '#38BDF8', 'hyrox-sled-push': '#F97316', 'hyrox-sled-pull': '#FB7185', 'hyrox-burpee-broad-jump': '#FACC15',
   'hyrox-row': '#2DD4BF', 'hyrox-farmers-carry': '#A78BFA', 'hyrox-sandbag-lunges': '#F59E0B', 'hyrox-wall-ball': '#60A5FA',
   'wellbeing-posture': '#60A5FA', 'wellbeing-labour': '#F472B6', 'wellbeing-postpartum': '#FB7185',

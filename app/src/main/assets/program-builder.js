@@ -135,9 +135,12 @@
     bodyweight: ['bodyweight', 'bar']
   };
 
-  function recipeFor(sessionName, split, days, audience, goal) {
+  // glutes: the person chose Glutei as a priority (muscle focus). The lower-body days then open on a glute
+  // lift and carry a second glute exercise, and the full body day gains one, without giving up its back work.
+  function recipeFor(sessionName, split, days, audience, goal, glutes) {
     var n = String(sessionName).toLowerCase();
     var female = audience === 'female';
+    var gl = female || !!glutes;
     var male = audience === 'male';
     var out = [];
 
@@ -148,6 +151,7 @@
       out.push(slot(['hinge', 'glute'], 'main'));
       out.push(slot('pushV', 'secondary'));
       out.push(female ? slot('glute', 'secondary') : slot('pullV', 'main'));
+      if (glutes && !female) out.push(slot('glute', 'secondary'));
       if (female) out.push(slot('lunge', 'secondary'));
       if (male) out.push(slot(['chestIso', 'deltLat'], 'iso'));
       out.push(slot(CORE_ISO, 'iso'));
@@ -185,11 +189,12 @@
     }
     if (/^lower/.test(n)) {
       out.push(slot('squat', 'main'));
-      out.push(slot(female ? 'glute' : 'hinge', 'main'));
-      out.push(slot(female ? 'hinge' : 'lunge', 'secondary'));
+      out.push(slot(gl ? 'glute' : 'hinge', 'main'));
+      // With glutes as a priority the second lift is a hinge or a second glute movement (a thrust variation, a reverse hyper).
+      out.push(slot(glutes ? ['hinge', 'glute'] : (female ? 'hinge' : 'lunge'), 'secondary'));
       out.push(slot('quadIso', 'iso'));
       out.push(slot('hamIso', 'iso'));
-      if (female) out.push(slot('glute', 'iso'));
+      if (gl) out.push(slot('glute', 'iso'));
       out.push(slot('calf', 'iso'));
       return out;
     }
@@ -209,10 +214,10 @@
     if (/legs|^gambe/.test(n)) {
       out.push(slot('squat', 'main'));
       out.push(slot(['hinge', 'glute'], 'main'));
-      out.push(slot('lunge', 'secondary'));
+      out.push(slot(glutes ? ['lunge', 'glute'] : 'lunge', 'secondary'));
       out.push(slot('quadIso', 'iso'));
       out.push(slot('hamIso', 'iso'));
-      if (female) out.push(slot('glute', 'iso'));
+      if (gl) out.push(slot('glute', 'iso'));
       out.push(slot('calf', 'iso'));
       return out;
     }
@@ -265,7 +270,7 @@
       out.push(slot('glute', 'main'));
       out.push(slot('hamIso', 'secondary'));
       out.push(slot('lunge', 'secondary'));
-      if (female) out.push(slot('glute', 'iso'));
+      if (gl) out.push(slot('glute', 'iso'));
       out.push(slot(['calf', 'core'], 'iso'));
       return out;
     }
@@ -570,7 +575,7 @@
 
   function buildSession(params, sessionName, sessionIndex) {
     var base = trimForGoal(
-      recipeFor(sessionName, params.split, params.days, params.audience, params.goal),
+      recipeFor(sessionName, params.split, params.days, params.audience, params.goal, focusList(params.focus).indexOf('GLUTEI') >= 0),
       params.goal, params.days, params.split, params.experience
     );
     var slots = applyFocus(addForProfile(base, sessionName, params, base.length), sessionName, params, base.length);

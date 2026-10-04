@@ -99,7 +99,9 @@ ok(idx.science_v2.count === catalog.total() && catalog.total() > 1000000,
             for (let fi = 0; fi < catalog.FOCUS_IDS.length; fi++) {
               // Every selection for the balanced program, one for each muscle focus, and a fifth of the
               // focuses per goal: the same rules hold for all of them, and the walk stays a minute long.
-              if (fi > 0 && (fi + catalog.GOALS.indexOf(goal)) % 5 !== 0) continue;
+              // A focus on glutes is walked at half the goals: it has the richest pool of exercises and the recipes of its own.
+              const glutes = catalog.FOCUS_IDS[fi].split('_').includes('glutei');
+              if (fi > 0 && (fi + catalog.GOALS.indexOf(goal)) % (glutes ? 2 : 5) !== 0) continue;
               for (const variant of (fi === 0 ? catalog.VARIANTS : [catalog.VARIANTS[fi % catalog.VARIANTS.length]])) {
                 const focus = catalog.FOCUS_IDS[fi];
 

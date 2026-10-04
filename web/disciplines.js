@@ -1,6 +1,6 @@
 /*
  * Training at home, without a gym: Pilates on the mat, mobility and
- * stretching, calisthenics, HIIT.
+ * stretching, calisthenics, HIIT, and GAG (legs, abs, glutes).
  *
  * Each discipline has its own way of being trained - Pilates is a sequence
  * done in a fixed order, mobility is positions held for a time, calisthenics
@@ -57,6 +57,15 @@
         { id: 'bodyweight', label: 'Corpo libero' },
         { id: 'bands', label: 'Con elastici' },
         { id: 'kettlebell', label: 'Con kettlebell' }
+      ] },
+    { id: 'gag', label: 'GAG: gambe, addome, glutei', short: 'GAG',
+      note: 'Gambe, addome e glutei in sedute brevi: il classico del corso, da fare a casa.',
+      needs: 'Un tappetino; elastici o manubri se li hai.',
+      days: [2, 3, 4, 5],
+      kits: [
+        { id: 'floor', label: 'Corpo libero' },
+        { id: 'bands', label: 'Con elastici' },
+        { id: 'weights', label: 'Con manubri' }
       ] }
   ];
 
@@ -470,9 +479,193 @@
     return { name: name, title: name, exercises: rows };
   }
 
+  /* -------------------------------- GAG -------------------------------- */
+
+  // Gambe, addome, glutei: the classic class, written as ladders like calisthenics. Every slot is a
+  // movement and has four rungs, from the easiest to the hardest, for each kit; the level of the person
+  // sets the rung to start from and the next one comes at half of the program. The rungs are movements of the
+  // library (some added from the Booty By Bret exercise list), written in the same plain words as the rest.
+  var GAG_LADDERS = {
+    floor: {
+      bridge: [
+        { name: 'Glute bridge', reps: '15-20', muscle: 'GLUTEI', cue: 'Spingi sui talloni e porta il bacino in alto: una pausa di un secondo, glutei contratti.' },
+        { name: 'Glute bridge piedi rialzati', reps: '12-15', muscle: 'GLUTEI', cue: 'Piedi su un rialzo stabile: il bacino sale più in alto e i glutei lavorano di più.' },
+        { name: 'Single-leg bridge', reps: '10-12', muscle: 'GLUTEI', cue: 'Una gamba sola, bacino in linea. Per lato.' },
+        { name: 'Single-leg bridge', reps: '8-10', muscle: 'GLUTEI', cue: 'Una gamba sola, piede su un rialzo e pausa di 2 secondi in alto. Per lato.' }
+      ],
+      squat: [
+        { name: 'Squat a corpo libero', reps: '15-20', muscle: 'QUADRICIPITI', cue: 'Anche sotto le ginocchia, talloni a terra, ginocchia in linea con i piedi.' },
+        { name: 'Sumo squat', reps: '15-20', muscle: 'QUADRICIPITI', cue: 'Piedi larghi, punte in fuori, scendi dritto. Senza peso o con uno zaino.' },
+        { name: 'Jump squat', reps: '10-12', muscle: 'QUADRICIPITI', cue: 'Scendi in squat ed esplodi verso l’alto, atterra morbido.' },
+        { name: 'Skater squat', reps: '6-8', muscle: 'QUADRICIPITI', cue: 'Su una gamba, l’altra indietro: scendi piano e risali. Per lato.' }
+      ],
+      lunge: [
+        { name: 'Affondi a corpo libero', reps: '10-12', muscle: 'QUADRICIPITI', cue: 'Passo indietro, ginocchio che sfiora terra. Per lato.' },
+        { name: 'Lateral lunge', reps: '10-12', muscle: 'GLUTEI', cue: 'Un passo di lato, bacino indietro, l’altra gamba tesa. Per lato.' },
+        { name: 'Curtsy lunge', reps: '10-12', muscle: 'GLUTEI', cue: 'Una gamba si incrocia dietro l’altra, come un inchino. Per lato.' },
+        { name: 'Cossack squat', reps: '6-8', muscle: 'QUADRICIPITI', cue: 'Da gambe larghe, scendi su un lato tenendo l’altra gamba tesa. Per lato.' }
+      ],
+      hinge: [
+        { name: 'Hip hinge', reps: '12-15', muscle: 'FEMORALI', cue: 'Bacino indietro con la schiena lunga, ginocchia appena piegate, poi spingi i fianchi in avanti.' },
+        { name: 'Superman', reps: '12-15', muscle: 'SCHIENA', cue: 'A pancia in giù: braccia e gambe si staccano da terra insieme, glutei contratti.' },
+        { name: 'Leg curl con slider', reps: '8-10', muscle: 'FEMORALI', cue: 'Sdraiato, talloni su un asciugamano su pavimento liscio: bacino alto, porta i talloni verso i glutei e torna piano.' },
+        { name: 'Leg curl con slider', reps: '10-12', muscle: 'FEMORALI', cue: 'Come prima, ma tornando in 4 secondi.' }
+      ],
+      abd: [
+        { name: 'Clam shell', reps: '15-20', muscle: 'GLUTEI', cue: 'Sul fianco, ginocchia piegate e piedi uniti: apri il ginocchio alto senza ruotare il bacino. Per lato.' },
+        { name: 'Fire hydrant', reps: '12-15', muscle: 'GLUTEI', cue: 'In quadrupedia, il ginocchio sale di lato come un cane vicino a un idrante. Per lato.' },
+        { name: 'Abduzione sdraiata sul fianco', reps: '12-15', muscle: 'GLUTEI', cue: 'Gamba alta tesa che sale di lato, punta in avanti, busto fermo. Per lato.' },
+        { name: 'Side kick series', reps: '10-12', muscle: 'GLUTEI', cue: 'Sul fianco: gamba avanti e indietro, busto fermo come un muro. Per lato.' }
+      ],
+      kick: [
+        { name: 'Donkey kick', reps: '12-15', muscle: 'GLUTEI', cue: 'In quadrupedia, il tallone sale verso il soffitto: schiena ferma, glutei contratti. Per lato.' },
+        { name: 'Frog pump', reps: '20-30', muscle: 'GLUTEI', cue: 'Sdraiato, piante dei piedi unite e ginocchia aperte: spingi il bacino in alto con ritmo.' },
+        { name: 'Kneeling side kick', reps: '8-10', muscle: 'GLUTEI', cue: 'Su un ginocchio e una mano: la gamba va avanti e indietro all’altezza dell’anca. Per lato.' },
+        { name: 'Pelvic curl', reps: '10-12', muscle: 'GLUTEI', cue: 'Il bacino si arrotola, una vertebra alla volta, su e giù.' }
+      ],
+      core: [
+        { name: 'Dead bug', reps: '8-10', muscle: 'ADDOME', cue: 'Braccio e gamba opposti si allungano, schiena a terra. Per lato.' },
+        { name: 'Criss cross', reps: '10-12', muscle: 'ADDOME', cue: 'Come pedalare: il gomito va verso il ginocchio opposto, ruota il busto. Per lato.' },
+        { name: 'Reverse crunch', reps: '10-15', muscle: 'ADDOME', cue: 'Porta le ginocchia al petto staccando il bacino da terra, senza slancio.' },
+        { name: 'Hollow hold', sec: 25, muscle: 'ADDOME', cue: 'Zona lombare incollata a terra, braccia e gambe lunghe.' }
+      ],
+      core2: [
+        { name: 'Plank', sec: 30, muscle: 'ADDOME', cue: 'Glutei e addome contratti, bacino in linea.' },
+        { name: 'Side plank', sec: 25, muscle: 'ADDOME', cue: 'Sul fianco, bacino alto. Per lato.' },
+        { name: 'Lower lift', reps: '8-12', muscle: 'ADDOME', cue: 'Gambe tese che scendono solo finché la schiena resta a terra.' },
+        { name: 'RKC plank', sec: 20, muscle: 'ADDOME', cue: 'Plank con tutto il corpo contratto: gomiti sotto le spalle, glutei e cosce in tensione.' }
+      ]
+    }
+  };
+  // The band kit and the weights kit change the slots where a load makes sense; the rest is the floor kit.
+  GAG_LADDERS.bands = {
+    bridge: [
+      { name: 'Glute bridge con elastico', reps: '15-20', muscle: 'GLUTEI', cue: 'Elastico sopra le ginocchia: spingi le ginocchia in fuori mentre il bacino sale.' },
+      { name: 'Glute bridge con elastico', reps: '12-15', muscle: 'GLUTEI', cue: 'Piedi su un rialzo e pausa di 2 secondi in alto, ginocchia aperte.' },
+      { name: 'Single-leg bridge', reps: '10-12', muscle: 'GLUTEI', cue: 'Una gamba sola, bacino in linea. Per lato.' },
+      { name: 'Single-leg bridge', reps: '8-10', muscle: 'GLUTEI', cue: 'Una gamba sola, piede su un rialzo e pausa di 2 secondi in alto. Per lato.' }
+    ],
+    squat: [
+      { name: 'Squat con elastico', reps: '15-20', muscle: 'QUADRICIPITI', cue: 'Elastico sopra le ginocchia: le ginocchia restano aperte per tutta la discesa.' },
+      { name: 'Sumo squat', reps: '15-20', muscle: 'QUADRICIPITI', cue: 'Piedi larghi, punte in fuori, elastico sopra le ginocchia.' },
+      { name: 'Jump squat', reps: '10-12', muscle: 'QUADRICIPITI', cue: 'Scendi in squat ed esplodi verso l’alto, atterra morbido.' },
+      { name: 'Skater squat', reps: '6-8', muscle: 'QUADRICIPITI', cue: 'Su una gamba, l’altra indietro: scendi piano e risali. Per lato.' }
+    ],
+    hinge: [
+      { name: 'Good morning elastico', reps: '12-15', muscle: 'FEMORALI', cue: 'Elastico sotto i piedi e dietro il collo: bacino indietro, schiena lunga.' },
+      { name: 'Good morning elastico', reps: '15-20', muscle: 'FEMORALI', cue: 'Stessa cosa con un elastico più duro, discesa lenta.' },
+      { name: 'Leg curl con slider', reps: '8-10', muscle: 'FEMORALI', cue: 'Sdraiato, talloni su un asciugamano su pavimento liscio: bacino alto, porta i talloni verso i glutei e torna piano.' },
+      { name: 'Leg curl con slider', reps: '10-12', muscle: 'FEMORALI', cue: 'Come prima, ma tornando in 4 secondi.' }
+    ],
+    abd: [
+      { name: 'Abduzione seduta con elastico', reps: '15-20', muscle: 'GLUTEI', cue: 'Seduto, elastico sopra le ginocchia: aprile con il busto leggermente in avanti.' },
+      { name: 'Lateral band walk', reps: '12-15', muscle: 'GLUTEI', cue: 'Mezzo squat, elastico sopra le ginocchia: passi laterali senza rialzarti. Passi per lato.' },
+      { name: 'Monster walk', reps: '12-15', muscle: 'GLUTEI', cue: 'Mezzo squat, passi in diagonale in avanti con le ginocchia aperte. Passi per lato.' },
+      { name: 'Abduzione in piedi con elastico', reps: '12-15', muscle: 'GLUTEI', cue: 'In piedi, elastico alle caviglie: la gamba si apre di lato senza piegare il busto. Per lato.' }
+    ],
+    kick: [
+      { name: 'Donkey kick', reps: '12-15', muscle: 'GLUTEI', cue: 'In quadrupedia con l’elastico sopra il piede: il tallone sale, schiena ferma. Per lato.' },
+      { name: 'Fire hydrant', reps: '12-15', muscle: 'GLUTEI', cue: 'In quadrupedia, elastico sopra le ginocchia: il ginocchio sale di lato. Per lato.' },
+      { name: 'Clam shell', reps: '15-20', muscle: 'GLUTEI', cue: 'Sul fianco, elastico sopra le ginocchia: apri il ginocchio alto senza ruotare il bacino. Per lato.' },
+      { name: 'Frog pump', reps: '20-30', muscle: 'GLUTEI', cue: 'Sdraiato, piante dei piedi unite e ginocchia aperte: spingi il bacino in alto con ritmo.' }
+    ]
+  };
+  GAG_LADDERS.weights = {
+    bridge: [
+      { name: 'Glute bridge manubrio', reps: '12-15', muscle: 'GLUTEI', cue: 'Un manubrio sul bacino: spingi sui talloni e fermati in alto un secondo.' },
+      { name: 'Hip thrust manubrio', reps: '10-12', muscle: 'GLUTEI', cue: 'Schiena alta su un divano o una panca, manubrio sul bacino: bacino in alto, mento al petto.' },
+      { name: 'B-stance hip thrust', reps: '8-12', muscle: 'GLUTEI', cue: 'Un piede avanti che spinge, l’altro dietro appoggiato solo sulla punta. Per lato.' },
+      { name: 'Single-leg bridge', reps: '8-10', muscle: 'GLUTEI', cue: 'Una gamba sola, un manubrio sul bacino, pausa di 2 secondi in alto. Per lato.' }
+    ],
+    squat: [
+      { name: 'Squat goblet', reps: '12-15', muscle: 'QUADRICIPITI', cue: 'Il manubrio al petto, gomiti dentro le ginocchia in fondo.' },
+      { name: 'Sumo squat', reps: '12-15', muscle: 'QUADRICIPITI', cue: 'Piedi larghi, punte in fuori, un manubrio tra le mani davanti al corpo.' },
+      { name: 'Front squat manubri', reps: '8-12', muscle: 'QUADRICIPITI', cue: 'Due manubri sulle spalle, gomiti alti, busto dritto.' },
+      { name: 'Pistol squat assistito', reps: '5-8', muscle: 'QUADRICIPITI', cue: 'Su una gamba, una mano a un appoggio. Per lato.' }
+    ],
+    lunge: [
+      { name: 'Affondi', reps: '10-12', muscle: 'QUADRICIPITI', cue: 'Un manubrio per mano: passo indietro, ginocchio che sfiora terra. Per lato.' },
+      { name: 'Curtsy lunge', reps: '10-12', muscle: 'GLUTEI', cue: 'Un manubrio al petto: una gamba si incrocia dietro l’altra. Per lato.' },
+      { name: 'High step-up', reps: '8-12', muscle: 'GLUTEI', cue: 'Su un rialzo alto (ginocchio sopra l’anca): sali spingendo solo con la gamba sopra. Per lato.' },
+      { name: 'Affondo bulgaro', reps: '8-10', muscle: 'QUADRICIPITI', cue: 'Piede dietro su un rialzo, busto leggermente avanti. Per lato.' }
+    ],
+    hinge: [
+      { name: 'Stacco rumeno manubri', reps: '10-15', muscle: 'FEMORALI', cue: 'Manubri lungo le cosce: bacino indietro, schiena lunga, senti i femorali.' },
+      { name: 'B-stance RDL', reps: '10-12', muscle: 'FEMORALI', cue: 'Un piede avanti che lavora, l’altro dietro come appoggio. Per lato.' },
+      { name: 'Single-leg RDL', reps: '8-12', muscle: 'FEMORALI', cue: 'Su una gamba, il busto si inclina e l’altra sale dietro. Per lato.' },
+      { name: 'Single-leg RDL', reps: '8-10', muscle: 'FEMORALI', cue: 'Come prima, con un manubrio più pesante e discesa in 3 secondi. Per lato.' }
+    ]
+  };
+  // What a slot does not change between kits is read from the floor kit.
+  function gagLadder(kit, slot) { return (GAG_LADDERS[kit] && GAG_LADDERS[kit][slot]) || GAG_LADDERS.floor[slot]; }
+
+  // The three kinds of session and the movements each one is made of, in order. A short session keeps the first
+  // ones, so glutes and abs are always among them.
+  var GAG_SESSIONS = [
+    { name: 'Glutei e gambe', slots: ['bridge', 'squat', 'core', 'abd', 'hinge', 'lunge', 'kick'] },
+    { name: 'Glutei e addome', slots: ['bridge', 'core', 'kick', 'abd', 'core2', 'hinge', 'squat'] },
+    { name: 'Gambe e addome', slots: ['squat', 'bridge', 'core', 'lunge', 'abd', 'core2', 'hinge'] }
+  ];
+
+  function gagRow(slot, r, week, day, sets) {
+    var ladder = gagLadder(r.kit, slot);
+    var p = progressOf(week, r.weeks);
+    // Half-way through the program the next rung; a lighter day (every second one) takes the rung before.
+    var step = clamp(r.level.n + (p >= 0.5 ? 1 : 0) - (day % 2 === 1 && r.level.n > 0 ? 1 : 0), 0, ladder.length - 1);
+    var e = ladder[step];
+    var n = isDeload(week, r.weeks) ? Math.max(2, sets - 1) : sets;
+    // "Per lato" goes first in the note, like the other disciplines write it.
+    var cue = / Per lato.$/.test(e.cue) ? 'Per lato. ' + e.cue.replace(/ Per lato.$/, '') : e.cue;
+    if (e.sec) {
+      var half = p >= 0.5 ? p - 0.5 : p;
+      return timeRow(e.name, n, e.sec + Math.round(half * 20 / 5) * 5, '45s', cue, e.muscle);
+    }
+    return repsRow(e.name, n, e.reps, slot === 'core' || slot === 'core2' || slot === 'kick' || slot === 'abd' ? '45s' : '60s', cue, e.muscle);
+  }
+
+  // About how long a row takes: the work of a set (four seconds a repetition, both sides when it is per side) plus its rest.
+  function gagSeconds(row) {
+    var rest = /min/.test(row.rest) ? parseInt(row.rest, 10) * 60 : parseInt(row.rest, 10);
+    var per = row.unit === 'time' ? row.sets[0].seconds : (row.unit === 'cardio' ? row.sets[0].minutes * 60 : parseInt(row.repsTarget, 10) * 4);
+    return row.setCount * (per * (/^Per lato/.test(row.notes || '') ? 2 : 1) + rest);
+  }
+
+  function gagSession(r, week, day) {
+    var kind = GAG_SESSIONS[day % GAG_SESSIONS.length];
+    var budget = r.minutes * 60;
+    var warm = r.minutes >= 30 ? cardioRow('Jumping jack', 3, 'Riscaldamento: ritmo facile, poi qualche ponte e qualche squat.') : null;
+    // The session lasts what was asked for: the movements go in order while they fit, and the number of sets
+    // is what makes up the difference (fewer in a short session, more in a long one).
+    var build = function (sets) {
+      var rows = warm ? [warm] : [];
+      var used = warm ? gagSeconds(warm) : 0;
+      var seen = {};
+      if (warm) seen[warm.name] = true;
+      var count = 0;
+      kind.slots.forEach(function (slot) {
+        var row = gagRow(slot, r, week, day, sets);
+        if (seen[row.name]) return;
+        var cost = gagSeconds(row);
+        if (count >= 3 && used + cost > budget * 1.1) return;
+        seen[row.name] = true;
+        rows.push(row);
+        used += cost;
+        count += 1;
+      });
+      return { rows: rows, used: used, count: count };
+    };
+    var sets = r.level.n === 0 ? 3 : 4;
+    var built = build(sets);
+    while ((built.count < 5 || built.used > budget * 1.2) && sets > 2) { sets--; built = build(sets); }
+    while (built.used < budget * 0.78 && sets < 5) { sets++; built = build(sets); }
+    var rows = built.rows;
+    var name = kind.name + (day >= GAG_SESSIONS.length ? ' ' + (Math.floor(day / GAG_SESSIONS.length) + 1) : '');
+    return { name: name, title: name, exercises: rows };
+  }
+
   /* ------------------------------ program ---------------------------- */
 
-  var WRITERS = { pilates: pilatesSession, mobilita: mobilitySession, calisthenics: calisthenicsSession, hiit: hiitSession };
+  var WRITERS = { pilates: pilatesSession, mobilita: mobilitySession, calisthenics: calisthenicsSession, hiit: hiitSession, gag: gagSession };
 
   function resolve(input) {
     input = input || {};
@@ -503,6 +696,7 @@
   var CORE_NAMES = {};
   LADDERS.core.concat(LADDERS.core2).forEach(function (e) { if (e.muscle === 'ADDOME') CORE_NAMES[e.name] = true; });
   ['Hanging knee raise', 'Leg raise'].forEach(function (n) { CORE_NAMES[n] = true; });
+  ['floor'].forEach(function (k) { ['core', 'core2'].forEach(function (slot) { GAG_LADDERS[k][slot].forEach(function (e) { CORE_NAMES[e.name] = true; }); }); });
   Object.keys(STATIONS).forEach(function (k) { STATIONS[k].core.forEach(function (n) { if (n !== 'Kettlebell halo') CORE_NAMES[n] = true; }); });
   function sessionHasCore(s) {
     return s.exercises.some(function (e) {
@@ -555,7 +749,7 @@
       split: r.discipline.id,
       goals: [r.discipline.id],
       purpose: r.discipline.id,
-      equipment: r.discipline.id === 'hiit' && r.kit === 'kettlebell' ? 'kettlebell' : (r.discipline.id === 'hiit' && r.kit === 'bands' ? 'minimal' : 'bodyweight'),
+      equipment: r.discipline.id === 'hiit' && r.kit === 'kettlebell' ? 'kettlebell' : ((r.discipline.id === 'hiit' && r.kit === 'bands') || (r.discipline.id === 'gag' && r.kit !== 'floor') ? 'minimal' : 'bodyweight'),
       experience: r.level.id,
       author: 'Generata da Nurvan',
       source: 'discipline_v1',
@@ -607,6 +801,20 @@
       { fact: 'Allenarsi solo a corpo libero non aumenta la mobilità articolare, a differenza dei pesi usati a escursione completa.',
         plan: 'Se ti serve mobilità, affianca una seduta di Mobilità e stretching.',
         source: 'Alizadeh et al., Sports Medicine 2023 · 55 studi', url: 'https://doi.org/10.1007/s40279-022-01804-x' }
+    ],
+    gag: [
+      { fact: 'In 34 persone allenate per 9 settimane, hip thrust e squat hanno fatto crescere i glutei allo stesso modo (risonanza magnetica); lo squat ha fatto crescere di più le cosce.',
+        plan: 'In ogni seduta ci sono sia un ponte o hip thrust sia uno squat o un affondo: non si sceglie l’uno o l’altro.',
+        source: 'Plotkin et al., Frontiers in Physiology 2023 · 34 persone non allenate', url: 'https://doi.org/10.3389/fphys.2023.1279170' },
+      { fact: 'In 14 calciatrici, tra otto esercizi per l’anca la forza più alta sui glutei l’hanno data lo split squat con carico, lo stacco a una gamba con carico e l’hip thrust a una gamba; per il gluteo medio il plank laterale.',
+        plan: 'Gli esercizi a una gamba (ponte, stacco, affondi) e il plank laterale tornano in ogni livello, e salgono di difficoltà a metà programma.',
+        source: 'Collings et al., Medicine & Science in Sports & Exercise 2023 · 14 atlete', url: 'https://doi.org/10.1249/MSS.0000000000003091' },
+      { fact: 'L’hip thrust attiva di più glutei e femorali nella parte alta del movimento, lo split squat in basso: gli autori consigliano di usarli insieme.',
+        plan: 'Ponti con pausa in alto e affondi o squat in basso stanno nella stessa seduta.',
+        source: 'McCurdy et al., Journal of Strength and Conditioning Research 2021 · 20 donne allenate', url: 'https://doi.org/10.1519/JSC.0000000000004035' },
+      { fact: 'Per il gluteo medio l’abduzione dell’anca contro resistenza da prona ha dato più attività dei passi laterali con elastico e del plank laterale (24 persone).',
+        plan: 'Ogni seduta ha un movimento di apertura dell’anca (clam, hydrant, abduzione, passi con elastico), che con l’elastico diventa più duro.',
+        source: 'Goller et al., European Journal of Applied Physiology 2024 · 24 persone', url: 'https://doi.org/10.1007/s00421-023-05400-3' }
     ],
     hiit: [
       { fact: 'L’HIIT aumenta il VO2max di 5,5 ml/kg/min rispetto a non allenarsi, e di circa 1,2 in più dell’allenamento continuo.',
@@ -668,6 +876,7 @@
   }
   var KIT_OF = {
     hiit: { bodyweight: 'bodyweight', minimal: 'bands', casa: 'bands', kettlebell: 'kettlebell' },
+    gag: { bodyweight: 'floor', minimal: 'bands', casa: 'weights', kettlebell: 'weights', palestra: 'weights' },
     calisthenics: { bodyweight: 'floor', casa: 'bar', minimal: 'bar', palestra: 'bar_dips' }
   };
   function catalogValues(filters) {
@@ -751,6 +960,16 @@
   function exercisesOf(id) {
     if (id === 'pilates') return PILATES.map(function (e) { return { name: e.name, cue: e.cue, level: e.lvl, amount: e.sec ? e.sec + 's' : String(e.reps) + (e.side ? ' per lato' : '') }; });
     if (id === 'mobilita') return MOBILITY.map(function (e) { return { name: e.name, cue: e.cue, level: 0, amount: e.sec ? e.sec + 's' : String(e.reps) }; });
+    if (id === 'gag') {
+      var list = [];
+      var got = {};
+      ['floor', 'bands', 'weights'].forEach(function (kit) {
+        Object.keys(GAG_LADDERS.floor).forEach(function (slot) {
+          gagLadder(kit, slot).forEach(function (e, i) { if (!got[e.name]) { got[e.name] = true; list.push({ name: e.name, cue: e.cue, level: Math.min(2, i), amount: e.sec ? e.sec + 's' : e.reps }); } });
+        });
+      });
+      return list;
+    }
     if (id === 'calisthenics') {
       var out = [];
       var seen = {};

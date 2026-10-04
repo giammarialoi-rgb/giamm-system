@@ -47,6 +47,8 @@
     ['Squat goblet', 'squat', 'main', 'dumbbell', 0, ['kettlebell']],
     ['Squat a corpo libero', 'squat', 'main', 'bodyweight', 0],
     ['Sissy squat', 'quadIso', 'iso', 'bodyweight', 2],
+    ['Sumo squat', 'squat', 'secondary', 'dumbbell', 0, ['kettlebell']],
+    ['Front squat manubri', 'squat', 'main', 'dumbbell', 1],
 
     // --- hinge ------------------------------------------------------------
     ['Stacco da terra', 'hinge', 'main', 'barbell', 1],
@@ -65,6 +67,8 @@
     ['Hip hinge', 'hinge', 'secondary', 'bodyweight', 0],
     ['Good morning elastico', 'hinge', 'secondary', 'band', 0],
     ['Hyperextension', 'hinge', 'iso', 'bench', 0],
+    ['Stacco rumeno manubri', 'hinge', 'main', 'dumbbell', 0],
+    ['B-stance RDL', 'hinge', 'secondary', 'dumbbell', 1],
 
     // --- single leg -------------------------------------------------------
     ['Affondi', 'lunge', 'secondary', 'dumbbell', 0],
@@ -77,6 +81,12 @@
     ['Cossack squat', 'lunge', 'secondary', 'bodyweight', 1],
     ['Pistol squat', 'lunge', 'secondary', 'bodyweight', 2],
     ['Pistol squat assistito', 'lunge', 'secondary', 'bodyweight', 1],
+    ['Curtsy lunge', 'lunge', 'secondary', 'dumbbell', 1, ['bodyweight']],
+    ['Lateral lunge', 'lunge', 'secondary', 'dumbbell', 0, ['bodyweight']],
+    ['Affondi bilanciere', 'lunge', 'secondary', 'barbell', 1],
+    ['High step-up', 'lunge', 'secondary', 'dumbbell', 1],
+    ['Skater squat', 'lunge', 'secondary', 'bodyweight', 2],
+    ['Single-leg box squat', 'lunge', 'secondary', 'bodyweight', 1],
 
     // --- glutes -----------------------------------------------------------
     ['Hip thrust', 'glute', 'main', 'barbell', 0],
@@ -92,6 +102,28 @@
     ['Pull-through', 'glute', 'secondary', 'cable', 0],
     ['Abductor machine', 'glute', 'iso', 'machine', 0],
     ['Adductor machine', 'adductor', 'iso', 'machine', 0],
+    ['Hip thrust manubrio', 'glute', 'secondary', 'dumbbell', 0],
+    ['Hip thrust piedi rialzati', 'glute', 'secondary', 'barbell', 1],
+    ['B-stance hip thrust', 'glute', 'secondary', 'dumbbell', 1],
+    ['Hip thrust con elastico', 'glute', 'secondary', 'barbell', 1],
+    ['Glute bridge con elastico', 'glute', 'secondary', 'band', 0],
+    ['Glute bridge bilanciere', 'glute', 'secondary', 'barbell', 0],
+    ['Glute bridge manubrio', 'glute', 'secondary', 'dumbbell', 0],
+    ['Glute bridge piedi rialzati', 'glute', 'secondary', 'bodyweight', 1],
+    ['Reverse hyper', 'glute', 'secondary', 'machine', 1],
+    ['Reverse hyper su panca', 'glute', 'secondary', 'bench', 1],
+    ['Iperestensione 45° glutei', 'glute', 'secondary', 'bench', 0],
+    ['Kickback cavo in ginocchio', 'glute', 'iso', 'cable', 0],
+    ['Donkey kick', 'glute', 'iso', 'bodyweight', 0, ['band']],
+    ['Fire hydrant', 'glute', 'iso', 'bodyweight', 0, ['band']],
+    ['Clam shell', 'glute', 'iso', 'bodyweight', 0, ['band']],
+    ['Abduzione sdraiata sul fianco', 'glute', 'iso', 'bodyweight', 0, ['band']],
+    ['Abduzione in piedi con elastico', 'glute', 'iso', 'band', 0],
+    ['Abduzione ai cavi in piedi', 'glute', 'iso', 'cable', 0],
+    ['Abduzione seduta con elastico', 'glute', 'iso', 'band', 0],
+    ['Lateral band walk', 'glute', 'iso', 'band', 0],
+    ['Monster walk', 'glute', 'iso', 'band', 0],
+    ['Hip hike', 'glute', 'iso', 'bodyweight', 1],
 
     // --- legs, single joint ------------------------------------------------
     ['Leg extension', 'quadIso', 'iso', 'machine', 0],
@@ -100,6 +132,9 @@
     ['Leg curl seduto', 'hamIso', 'iso', 'machine', 0],
     ['Leg Curl Unilaterale', 'hamIso', 'iso', 'machine', 0],
     ['Glute ham raise', 'hamIso', 'secondary', 'machine', 2],
+    ['Leg curl con slider', 'hamIso', 'secondary', 'bodyweight', 1],
+    ['Leg curl con fitball', 'hamIso', 'secondary', 'tool', 1],
+    ['Leg curl manubrio', 'hamIso', 'iso', 'dumbbell', 1],
     ['Nordic curl', 'hamIso', 'secondary', 'bodyweight', 2],
     ['Nordic curl assistito', 'hamIso', 'secondary', 'bodyweight', 1],
     ['Calf raise in piedi', 'calf', 'iso', 'machine', 0],
@@ -239,6 +274,7 @@
     // --- core, carries, conditioning ---------------------------------------------
     ['Plank', 'core', 'iso', 'bodyweight', 0],
     ['Side plank', 'core', 'iso', 'bodyweight', 0],
+    ['RKC plank', 'core', 'iso', 'bodyweight', 1],
     ['Hollow hold', 'core', 'iso', 'bodyweight', 1],
     ['Hollow rock', 'core', 'iso', 'bodyweight', 1],
     ['Dead bug', 'core', 'iso', 'bodyweight', 0],

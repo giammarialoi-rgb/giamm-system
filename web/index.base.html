@@ -15688,7 +15688,7 @@ var PAGE_TUTORIALS = {
   programs: { label: 'Programmi', icon: '📚', who: 'self', steps: [
     { t: 'Da dove nasce un programma', d: 'Qui scegli come allenarti: scrivi una scheda da zero, la fai generare dall’app, la prendi dal database di schede pronte o la importi da un file.' },
     { t: 'Crea e genera', d: 'CREA UNA SCHEDA DA ZERO è il costruttore: giorni, esercizi, serie e modello di progressione. GENERA PROGRAMMA fa le stesse scelte al posto tuo, partendo da giorni, attrezzatura e obiettivo.' },
-    { t: 'HYROX e allenarsi a casa', d: 'SCHEDA HYROX prepara una gara sulla sua data. ALLENARSI A CASA ha Pilates, mobilità, calisthenics e HIIT, da seguire anche come lezione a tempo.' },
+    { t: 'HYROX e allenarsi a casa', d: 'SCHEDA HYROX prepara una gara sulla sua data. ALLENARSI A CASA ha Pilates, mobilità, calisthenics, HIIT e GAG, da seguire anche come lezione a tempo.' },
     { t: 'Programmi creati', d: 'Tutto quello che salvi finisce qui, diviso per tipo. Da ogni riga lo attivi, lo condividi o lo elimini. SALVA SENZA ATTIVARE mette da parte una scheda senza toccare quella in uso.' },
     { t: 'Condividi con un codice', d: 'CONDIVIDI crea un codice da dare a un amico; in CONDIVIDI PROGRAMMA scrivi quello che hai ricevuto. Viaggia solo la scheda, mai i tuoi carichi.' },
     { t: 'Database schede', d: 'Centinaia di migliaia di combinazioni già pronte: filtra per giorni, obiettivo, attrezzatura e livello, guarda l’anteprima e attiva.' }
@@ -15781,7 +15781,7 @@ var PAGE_TUTORIALS = {
     { t: 'Il programma', d: 'Dove è adatto, scrivi un programma: lo vedi per intero prima di iniziarlo, e porta l’avvertenza con sé.' }
   ] },
   disciplines: { label: 'A casa', icon: '🧘', steps: [
-    { t: 'Quattro discipline', d: 'Pilates sul tappetino, mobilità e stretching, calisthenics e HIIT: scegli giorni, livello e durata della seduta.' },
+    { t: 'Cinque discipline', d: 'Pilates sul tappetino, mobilità e stretching, calisthenics, HIIT e GAG (gambe, addome, glutei): scegli giorni, livello e durata della seduta.' },
     { t: 'Lezione a tempo', d: 'Ogni seduta si può seguire come una lezione: un esercizio alla volta, come farlo, il conto alla rovescia e il recupero.' }
   ] }
   ,
@@ -22353,7 +22353,7 @@ function saveAthleteProfile() {
   }
   if (typeof disciplinesApi === 'function' && disciplinesApi() && !(store.coachViewingClient || store.coachAssigning) && (!DATA || !(DATA.weeks || []).length)) {
     const goalText = String(profile.goal || '');
-    const wanted = /pilates/i.test(goalText) ? 'pilates' : (/mobilit|stretch/i.test(goalText) ? 'mobilita' : (/calisthen/i.test(goalText) ? 'calisthenics' : (/hiit|tabata/i.test(goalText) ? 'hiit' : '')));
+    const wanted = /pilates/i.test(goalText) ? 'pilates' : (/mobilit|stretch/i.test(goalText) ? 'mobilita' : (/calisthen/i.test(goalText) ? 'calisthenics' : (/hiit|tabata/i.test(goalText) ? 'hiit' : (/\bgag\b/i.test(goalText) ? 'gag' : ''))));
     if (wanted) { disciplineState().id = wanted; navigate('disciplines'); return; }
   }
   loadProgramCatalogIndex().then(() => {
@@ -22908,7 +22908,7 @@ function catalogGoalLabel(g) {
     ipertrofia: 'Ipertrofia', forza: 'Forza', glutei_lower: 'Glutei/Lower', dimagrimento: 'Dimagrimento',
     casa_corpo_libero: 'Casa', prep_gara: 'Prep gara', spalle: 'Spalle', petto_panca: 'Petto/Panca',
     core: 'Core', powerbuilding: 'Powerbuilding', recomp: 'Ricomposizione', cut: 'Dimagrimento', hyrox: 'HYROX',
-    pilates: 'Pilates', mobilita: 'Mobilità', calisthenics: 'Calisthenics', hiit: 'HIIT',
+    pilates: 'Pilates', mobilita: 'Mobilità', calisthenics: 'Calisthenics', hiit: 'HIIT', gag: 'GAG',
     glutei: 'Glutei', petto: 'Petto', dorso: 'Dorso', braccia: 'Braccia', gambe: 'Gambe'
   };
   return map[g] || fallback[g] || g;
@@ -22918,7 +22918,7 @@ function catalogSplitLabel(s) {
   const fallback = {
     fullbody: 'Full body', full_body: 'Full body', monofrequency: 'Monofrequenza', upper_lower: 'Upper/Lower',
     push_pull: 'Push/Pull', body_part: 'Distrettuale', hyrox: 'HYROX',
-    pilates: 'Pilates', mobilita: 'Mobilità', calisthenics: 'Calisthenics', hiit: 'HIIT'
+    pilates: 'Pilates', mobilita: 'Mobilità', calisthenics: 'Calisthenics', hiit: 'HIIT', gag: 'GAG'
   };
   return map[s] || fallback[s] || s;
 }
@@ -22948,7 +22948,7 @@ function filterProgramCatalog(list) {
     // may be typed too ("hyrox casa", "hyrox corpo libero").
     if (/hyrox/i.test(f.q || '')) { merged.goal = 'hyrox'; merged.split = ''; merged.progression = ''; }
     // The same for the home disciplines.
-    const typed = /pilates/i.test(f.q || '') ? 'pilates' : (/mobilit|stretch|allungament/i.test(f.q || '') ? 'mobilita' : (/calisthen/i.test(f.q || '') ? 'calisthenics' : (/hiit|tabata/i.test(f.q || '') ? 'hiit' : '')));
+    const typed = /pilates/i.test(f.q || '') ? 'pilates' : (/mobilit|stretch|allungament/i.test(f.q || '') ? 'mobilita' : (/calisthen/i.test(f.q || '') ? 'calisthenics' : (/hiit|tabata/i.test(f.q || '') ? 'hiit' : (/\bgag\b/i.test(f.q || '') ? 'gag' : ''))));
     if (typed && !f.goal) merged.goal = typed;
     if (catalogWhole(merged.goal)) { merged.split = ''; merged.progression = ''; merged.focus = ''; }
     const found = gen.search(merged, 150);
@@ -23507,7 +23507,7 @@ function renderPrograms(c){
 
     ${disciplinesApi() ? homeCollapsibleCard('ALLENARSI A CASA', `
     <div class="card" id="program-create-home" style="margin-bottom:16px;border:1px solid rgba(212,175,55,0.4);">
-      <p style="font-size:11px;color:#888;margin:0 0 10px;line-height:1.5;">Pilates sul tappetino, mobilità e stretching, calisthenics, HIIT: senza palestra. Ogni scheda si può seguire anche come lezione a tempo.</p>
+      <p style="font-size:11px;color:#888;margin:0 0 10px;line-height:1.5;">Pilates sul tappetino, mobilità e stretching, calisthenics, HIIT, GAG: senza palestra. Ogni scheda si può seguire anche come lezione a tempo.</p>
       <div style="display:grid;gap:8px;">
         ${disciplinesApi().DISCIPLINES.map((x) => `<div style="padding:10px 12px;background:#111;border:1px solid #292929;border-radius:8px;">
           <div style="font-size:12px;font-weight:800;color:#fff;">${esc(x.label)}</div>
@@ -25293,6 +25293,7 @@ const PROGRAM_KINDS = [
   { id: 'mobilita', label: 'Mobilità e stretching' },
   { id: 'calisthenics', label: 'Calisthenics' },
   { id: 'hiit', label: 'HIIT e Tabata' },
+  { id: 'gag', label: 'GAG' },
   { id: 'importati', label: 'Importati' }
 ];
 // What kind of training a program is: from the program itself when it is at
@@ -25305,13 +25306,14 @@ function programKindOf(model, data) {
   const id = String(m.id || (d && d.id) || '');
   const text = (String(m.name || '') + ' ' + String((d && d.title) || '')).toLowerCase();
   const disc = (d && d.discipline && d.discipline.id) || (/^dsc[-_]([a-z]+)/.exec(id) || [])[1] || '';
-  if (['pilates', 'mobilita', 'calisthenics', 'hiit'].indexOf(disc) >= 0) return disc;
+  if (['pilates', 'mobilita', 'calisthenics', 'hiit', 'gag'].indexOf(disc) >= 0) return disc;
   if ((d && (/^hyrox/.test(String(d.source || '')) || d.split === 'hyrox' || d.hyrox)) || /^(hyrox_|hyx-)/.test(id) || /hyrox/.test(text)) return 'hyrox';
   if (d && Array.isArray(d.weeks) && d.weeks.some(function (w) { return (w.sessions || w.days || []).some(function (s) { return (s.exercises || s.rows || []).some(function (e) { return e && e.hyrox_station; }); }); })) return 'hyrox';
   if (/pilates|matwork/.test(text)) return 'pilates';
   if (/mobilit|stretching/.test(text)) return 'mobilita';
   if (/calisthenics/.test(text)) return 'calisthenics';
   if (/\bhiit\b|tabata/.test(text)) return 'hiit';
+  if (/\bgag\b/.test(text)) return 'gag';
   if (known) return known;
   if (m.sourceDocument || /^program-/.test(id) || /^originale:/.test(text) || (d && (d.source_document || d.sourceDocument))) return 'importati';
   return 'pesi';
@@ -25839,7 +25841,7 @@ function renderDisciplines(c) {
   const chooser = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px;">' + api.DISCIPLINES.map(function (x) {
     const on = x.id === d.id;
     return '<button type="button" class="btn ' + (on ? 'btn-primary' : 'btn-outline') + '" style="min-height:74px;text-align:left;padding:10px 12px;" onclick="disciplineChoose(\'' + x.id + '\')">' +
-      '<div style="line-height:0;margin-bottom:6px;">' + iconHtml({ pilates: 'discipline-pilates', mobilita: 'discipline-mobility', calisthenics: 'discipline-calisthenics', hiit: 'discipline-hiit' }[x.id], 28) + '</div>' +
+      '<div style="line-height:0;margin-bottom:6px;">' + iconHtml({ pilates: 'discipline-pilates', mobilita: 'discipline-mobility', calisthenics: 'discipline-calisthenics', hiit: 'discipline-hiit', gag: 'discipline-gag' }[x.id], 28) + '</div>' +
       '<div style="font-size:12px;font-weight:900;">' + esc(x.label) + '</div>' +
       '<div style="font-size:11px;margin-top:4px;opacity:.8;line-height:1.35;font-weight:400;text-transform:none;letter-spacing:0;">' + esc(x.note) + '</div></button>';
   }).join('') + '</div>';
@@ -25857,7 +25859,7 @@ function renderDisciplines(c) {
   const levelName = ['Base', 'Intermedio', 'Avanzato'];
   c.innerHTML = '<div style="max-width:720px;margin:0 auto;">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:1px;">ALLENARSI A CASA</div>' +
-    '<div style="font-size:11px;color:#888;">Pilates, mobilità, calisthenics e HIIT, senza palestra</div></div>' +
+    '<div style="font-size:11px;color:#888;">Pilates, mobilità, calisthenics, HIIT e GAG, senza palestra</div></div>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="navigate(\'home\')">CHIUDI</button></div>' +
     (client ? '<div class="card" style="padding:12px 16px;margin-bottom:12px;border:1px solid var(--gold);"><div style="font-size:12px;color:#fff;font-weight:800;">Programma per ' + esc(client.name || 'il cliente') + '</div><div style="font-size:11px;color:#aaa;margin-top:2px;">Diventa la bozza del cliente: la rivedi e la invii.</div></div>' : '') +
     chooser +
@@ -25869,7 +25871,7 @@ function renderDisciplines(c) {
     card(d.id === 'hiit' ? 'I FORMATI' : 'GLI ESERCIZI', exercises.map(function (e) {
       return '<details style="border-top:1px solid #222;padding:10px 0;"><summary style="list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:center;">' +
         '<span style="font-size:13px;font-weight:800;color:#fff;">' + esc(e.name) + '</span>' +
-        '<span style="font-size:11px;color:#aaa;white-space:nowrap;">' + esc(e.amount) + (d.id === 'pilates' || d.id === 'calisthenics' ? ' · ' + levelName[e.level] : '') + '</span></summary>' +
+        '<span style="font-size:11px;color:#aaa;white-space:nowrap;">' + esc(e.amount) + (d.id === 'pilates' || d.id === 'calisthenics' || d.id === 'gag' ? ' · ' + levelName[e.level] : '') + '</span></summary>' +
         '<p style="font-size:12px;color:#ccc;line-height:1.5;margin:8px 0 0;">' + esc(e.cue) + '</p></details>';
     }).join('')) +
     '</div><div style="height:80px;"></div>';

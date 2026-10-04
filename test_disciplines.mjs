@@ -24,7 +24,7 @@ for (const d of D.DISCIPLINES) for (const k of d.kits) for (const l of D.LEVELS)
 }
 
 // 1. The disciplines.
-ok('1a. quattro discipline: Pilates, mobilità, calisthenics, HIIT', D.DISCIPLINES.map((d) => d.id).join() === 'pilates,mobilita,calisthenics,hiit');
+ok('1a. cinque discipline: Pilates, mobilità, calisthenics, HIIT, GAG', D.DISCIPLINES.map((d) => d.id).join() === 'pilates,mobilita,calisthenics,hiit,gag');
 ok('1b. ognuna dice cosa serve e in quanti giorni si allena', D.DISCIPLINES.every((d) => d.needs && d.note && d.days.length >= 3 && d.kits.length >= 1));
 
 // 2. The programs.
@@ -80,12 +80,12 @@ ok('7a. ogni disciplina ha almeno tre risultati, ognuno con il suo studio e il D
 ok('7b. i numeri sono quelli degli studi', /118 studi con 9\.710 persone/.test(D.EVIDENCE.pilates[0].fact) && /189 studi, 6\.654 adulti/.test(D.EVIDENCE.mobilita[0].fact) && /5,5 ml\/kg\/min/.test(D.EVIDENCE.hiit[0].fact));
 
 // 8. The database.
-ok('8a. 1.224 schede pronte: 144 Pilates, 432 mobilità, 324 calisthenics, 324 HIIT', D.catalogTotal({}) === 1224 && D.catalogTotal({ goal: 'pilates' }) === 144 && D.catalogTotal({ goal: 'mobilita' }) === 432 && D.catalogTotal({ goal: 'calisthenics' }) === 324 && D.catalogTotal({ goal: 'hiit' }) === 324);
-ok('8b. il database programmi le trova per obiettivo e le conta nel totale', C.search({ goal: 'pilates' }, 500).rows.length === 144 && C.total({}) === C.total({ goal: 'ipertrofia' }) * 5 + 1800 + 1224);
+ok('8a. 1.656 schede pronte: 144 Pilates, 432 mobilità, 324 calisthenics, 324 HIIT, 432 GAG', D.catalogTotal({}) === 1656 && D.catalogTotal({ goal: 'pilates' }) === 144 && D.catalogTotal({ goal: 'mobilita' }) === 432 && D.catalogTotal({ goal: 'calisthenics' }) === 324 && D.catalogTotal({ goal: 'hiit' }) === 324 && D.catalogTotal({ goal: 'gag' }) === 432);
+ok('8b. il database programmi le trova per obiettivo e le conta nel totale', C.search({ goal: 'pilates' }, 500).rows.length === 144 && C.total({}) === C.total({ goal: 'ipertrofia' }) * 5 + 1800 + 1656);
 ok('8c. filtri: giorni, livello, durata, attrezzi', (() => { const r = C.search({ goal: 'hiit', equipment: 'kettlebell', days: 3, experience: 'avanzato', duration: 8 }, 50).rows; return r.length === 3 && r.every((x) => x.discipline_kit === 'kettlebell' && x.days_per_week === 3 && x.duration_weeks === 8 && x.experience === 'avanzato'); })());
 ok('8d. un filtro che la disciplina non ha (Pilates 6 giorni) non inventa schede', C.search({ goal: 'pilates', days: 6 }, 50).rows.length === 0);
 ok('8e. dall’id si riscrive la stessa scheda, intera', (() => { const row = C.search({ goal: 'calisthenics', equipment: 'bar' }, 1).rows[0]; const b = C.bodyFor(row.id); return C.rowById(row.id).title === row.title && b.weeks.length === row.duration_weeks && b.weeks[0].sessions.length === row.days_per_week && b.source === 'discipline_v1' && b.notes.length === 3; })());
-ok('8f. gli id sono tutti diversi', (() => { const ids = D.DISCIPLINES.flatMap((d) => C.search({ goal: d.id }, 2000).rows.map((x) => x.id)); return ids.length === 1224 && new Set(ids).size === 1224; })());
+ok('8f. gli id sono tutti diversi', (() => { const ids = D.DISCIPLINES.flatMap((d) => C.search({ goal: d.id }, 2000).rows.map((x) => x.id)); return ids.length === 1656 && new Set(ids).size === 1656; })());
 
 // 9. Wired into the app.
 const html = fs.readFileSync('web/index.base.html', 'utf8');
@@ -94,7 +94,7 @@ ok('9a. la schermata è nell’app, si apre dalla Home e dal programma del clien
 ok('9b. il generatore ha le quattro discipline come obiettivo', /disciplinesApi\(\)\.DISCIPLINES\.forEach\(function \(d\) \{ items\.push\(\{ id: d\.id, label: d\.label \}\); \}\)/.test(html) && /if \(generatorIsDiscipline\(g\)\) \{ renderGeneratorDisciplineSheet/.test(html));
 ok('9c. il costruttore parte da una settimana della disciplina', /builderDisciplineStartHtml\(d, inputStyle\) \+/.test(html) && /function startDisciplineDraft\(\)/.test(html));
 ok('9d. un atleta seguito la chiede al coach', /if \(hyroxMustAsk\(\)\) \{ disciplineRequestCoach\(\); return; \}/.test(html));
-ok('9e. il coach la assegna e il questionario ha gli obiettivi', /\\'discipline\\'\)">PILATES, MOBILITÀ, CALISTHENICS, HIIT/.test(coachUi) && /mode === 'discipline'/.test(coachUi) && /'HYROX', 'Pilates', 'Mobilità e stretching', 'Calisthenics', 'HIIT'\]/.test(coachUi));
+ok('9e. il coach la assegna e il questionario ha gli obiettivi', /\\'discipline\\'\)">PILATES, MOBILITÀ, CALISTHENICS, HIIT, GAG/.test(coachUi) && /mode === 'discipline'/.test(coachUi) && /'HYROX', 'Pilates', 'Mobilità e stretching', 'Calisthenics', 'HIIT', 'GAG'\]/.test(coachUi));
 ok('9f. file copiato nelle app e messo in cache', /'disciplines\.js'/.test(fs.readFileSync('sync_web_assets.mjs', 'utf8')) && /'\.\/disciplines\.js'/.test(fs.readFileSync('web/sw.js', 'utf8')));
 ok('9g. il Coach AI conosce la sezione', /ALLENARSI A CASA \(Pilates matwork/.test(fs.readFileSync('coach-api.mjs', 'utf8')));
 
@@ -128,6 +128,21 @@ const firstCircuit = hiitSession.exercises[1].circuit;
 ok('10d. un circuito diventa i suoi round, stazione per stazione', hs.filter((s) => s.circuit && s.exIdx === 1).length === firstCircuit.rounds * firstCircuit.items.length && hs.filter((s) => s.circuit && s.exIdx === 1 && s.closes).length === 1);
 ok('10e. quello che si fa nella lezione finisce nel diario come una serie spuntata', /store\.data\[k \+ '_done'\] = true;\s+store\.data\[k \+ '_done_at'\] = Date\.now\(\);/.test(html) && /else if \(step\.kind === 'time'\) store\.data\[k \+ '_sec'\] = step\.seconds;/.test(html));
 ok('10f. il pulsante è nella schermata di allenamento', /try \{ h \+= lessonButtonHtml\(\); \} catch \(_\) \{\}/.test(html));
+
+// 11. GAG (gambe, addome, glutei).
+const gagPlans = everyPlan.filter((x) => x.d.id === 'gag');
+ok('11a. GAG: 3 attrezzature × 3 livelli × 3 durate × 4 frequenze scritte per intero', gagPlans.length === 108 && D.discipline('gag').kits.map((k) => k.id).join() === 'floor,bands,weights');
+ok('11b. ogni seduta allena i glutei e l’addome', gagPlans.every((x) => x.prog.weeks.every((w) => w.sessions.every((s) => s.exercises.some((e) => (e.muscle_groups || []).includes('GLUTEI')) && s.exercises.some((e) => (e.muscle_groups || []).includes('ADDOME'))))));
+ok('11c. a corpo libero nessun elastico e nessun manubrio; con gli elastici e i manubri li si usa', !gagPlans.filter((x) => x.k.id === 'floor').some((x) => rows(x.prog).some((r) => /elastico|manubri|goblet|bilanciere/i.test(r.name)))
+  && gagPlans.filter((x) => x.k.id === 'bands').some((x) => rows(x.prog).some((r) => /elastico|band walk|Monster walk/i.test(r.name)))
+  && gagPlans.filter((x) => x.k.id === 'weights').some((x) => rows(x.prog).some((r) => /manubri|manubrio|goblet|B-stance/i.test(r.name))));
+ok('11d. il livello e metà programma alzano la difficoltà (un gradino della scala)', (() => {
+  const first = (level, week) => D.plan({ discipline: 'gag', kit: 'floor', level, minutes: 30, days: 3, weeks: 8 }).weeks[week - 1].sessions[0].exercises.filter((e) => e.unit !== 'cardio').map((e) => e.name).join();
+  return first('principiante', 1) !== first('avanzato', 1) && first('principiante', 1) !== first('principiante', 6);
+})());
+ok('11e. gli studi citati hanno il loro numero e il loro DOI', D.EVIDENCE.gag.length === 4 && /34 persone/.test(D.EVIDENCE.gag[0].fact) && /14 calciatrici/.test(D.EVIDENCE.gag[1].fact) && D.EVIDENCE.gag.every((e) => e.url.startsWith('https://doi.org/10.')));
+ok('11f. il database ha le schede GAG e i suoi esercizi sono tutti elencati', C.search({ goal: 'gag' }, 500).rows.length === 432 && D.exercisesOf('gag').length >= 30 && D.exercisesOf('gag').every((e) => e.cue && e.amount));
+ok('11g. «GAG» è riconosciuto come tipo di programma e ha la sua icona', html.includes("{ id: 'gag', label: 'GAG' }") && /gag: 'discipline-gag'/.test(html) && fs.existsSync('web/icons/discipline-gag.svg'));
 
 console.log('');
 if (failed) { console.log(failed + ' controlli delle discipline falliti.'); process.exit(1); }
