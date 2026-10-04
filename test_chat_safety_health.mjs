@@ -93,7 +93,7 @@ const privacy = read('web/privacy.html');
 ok('the notice describes the reports and the blocks', /Segnalazioni e blocchi nella chat/.test(privacy) && /decifrati dal tuo telefono/.test(privacy));
 ok('it says how long they are kept', /altri 12 mesi/.test(privacy));
 ok('it says what is typed in Salute and who sees it', /sezione Salute/.test(privacy) && /Non vengono inviati al Coach AI/.test(privacy));
-ok('the version changed, so everyone is asked again', /"version": "2026-10-04b"/.test(read('web/features.json')));
+ok('the version changed, so everyone is asked again', /"version": "2026-10-05"/.test(read('web/features.json')));
 
 if (failed) { console.log('\n' + failed + ' FAIL'); process.exit(1); }
 console.log('\nChat sicura e Salute: tutto verde');

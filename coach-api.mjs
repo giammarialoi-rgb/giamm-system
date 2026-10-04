@@ -131,7 +131,8 @@ app.post("/api/webhooks/google-health", express.raw({ type: "application/json", 
     return res.status(inserted.rowCount ? 202 : 200).json({ ok: true, id: event.id, duplicate: !inserted.rowCount });
   } catch (_) { return res.status(400).json({ error: "Invalid health event." }); }
 });
-app.use(express.json({ limit: "50mb" }));
+// The Stripe webhook is signed over the exact bytes of its body: keep them next to the parsed object.
+app.use(express.json({ limit: "50mb", verify: (req, _res, buf) => { if (req.originalUrl && req.originalUrl.startsWith("/api/billing/stripe/webhook")) req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 const distributedRateLimiter = (options) => createPostgresFixedWindowRateLimiter({ ...options, getPool: () => pool });
 app.use("/api/auth", distributedRateLimiter({

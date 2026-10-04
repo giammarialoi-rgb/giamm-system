@@ -3214,7 +3214,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MEAL-PHOTO-V1",
-        schemaTarget: "0027",
+        schemaTarget: "0028",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -91781,12 +91781,133 @@ function billingFooterHtml() {
     '</div>';
 }
 
+/* ------------------------------ buying on the website ------------------------------ */
+//
+// In a browser (not in the apps) the plans are bought with Stripe: the button asks the server for a Checkout
+// session and goes to Stripe's page; Stripe tells the server, which changes the plan (server/billing/stripe.mjs).
+// The free month is announced only here, never in the apps (the stores' rules). Until Stripe is set up on the
+// server the page keeps "Contattaci".
+var __stripe = { cfg: null, status: null, loading: false, busy: false };
+
+async function webStripeLoad(force) {
+  if (billingIsNative() || __stripe.loading) return;
+  if (!force && __stripe.cfg) return;
+  if (typeof practiceFetch !== 'function') return;
+  __stripe.loading = true;
+  try {
+    const cfg = await practiceFetch('/api/billing/config', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+    __stripe.cfg = { enabled: !!(cfg && cfg.stripe) };
+    if (__stripe.cfg.enabled && store && store.accountToken) {
+      __stripe.status = await practiceFetch('/api/billing/stripe/status', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+    }
+  } catch (_) {
+    __stripe.cfg = __stripe.cfg || { enabled: false };
+  } finally {
+    __stripe.loading = false;
+  }
+  billingRedraw();
+}
+function webStripeOn() { return !!(__stripe.cfg && __stripe.cfg.enabled); }
+
+async function webStripeBuy(productId) {
+  if (__stripe.busy) return;
+  if (!store.accountToken) { if (typeof openAccount === 'function') openAccount(); return; }
+  __stripe.busy = true;
+  billingRedraw();
+  try {
+    const out = await practiceFetch('/api/billing/stripe/checkout', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ productId: productId }) }, 25000);
+    if (!out || !out.url) throw new Error('Pagamento non disponibile ora.');
+    window.location.href = out.url;
+    return;
+  } catch (err) {
+    if (typeof showToast === 'function') showToast((err && err.message) || 'Pagamento non avviato', 'error');
+  }
+  __stripe.busy = false;
+  billingRedraw();
+}
+window.webStripeBuy = webStripeBuy;
+
+async function webStripePortal() {
+  if (__stripe.busy) return;
+  if (!store.accountToken) { if (typeof openAccount === 'function') openAccount(); return; }
+  __stripe.busy = true;
+  billingRedraw();
+  try {
+    const out = await practiceFetch('/api/billing/stripe/portal', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 25000);
+    if (!out || !out.url) throw new Error('Portale non disponibile ora.');
+    window.location.href = out.url;
+    return;
+  } catch (err) {
+    if (typeof showToast === 'function') showToast((err && err.message) || 'Portale non aperto', 'error');
+  }
+  __stripe.busy = false;
+  billingRedraw();
+}
+window.webStripePortal = webStripePortal;
+
+// The buttons of one plan in a browser: a price per period, each to Stripe's page.
+function webStripeButtonsHtml(plan) {
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) return '';
+  if (!store || !store.accountToken) return '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;" onclick="openAccount()">ACCEDI PER ABBONARTI</button>';
+  const off = __stripe.busy ? ' disabled' : '';
+  const trial = __stripe.status && __stripe.status.trialEligible;
+  const lines = (plan.prices || []).map(function (x, i) {
+    const productId = ['nurvan', plan.id, x.period].join('.');
+    return '<button type="button" class="btn ' + (i === 0 ? 'btn-primary' : 'btn-outline') + '" style="width:100%;font-size:11px;margin-top:' + (i ? 6 : 0) + 'px;"' + off +
+      ' onclick="webStripeBuy(\'' + esc(productId) + '\')"><span>ABBONATI</span> · ' + esc(String(x.amount)) + ' € / <span>' + esc(BILLING_PERIOD_LABEL[x.period] || x.period) + '</span></button>';
+  }).join('');
+  return lines + (trial && lines ? '<div style="font-size:10px;color:var(--gold);margin-top:6px;font-weight:800;"><span>Il primo mese è gratis</span></div>' : '');
+}
+
+// Back from Stripe's page: say so, and read the plan again (the webhook can be a moment late).
+async function webStripeReturn(result) {
+  if (result !== 'success') { if (typeof showToast === 'function') showToast('Pagamento annullato: non ti è stato addebitato nulla.', 'info'); return; }
+  if (typeof navigate === 'function') navigate('pricing');
+  try { await practiceFetch('/api/billing/stripe/sync', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 25000); } catch (_) {}
+  try {
+    const payload = await practiceFetch('/api/account/plan', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+    if (payload && payload.entitlement) onEntitlementReceived(payload.entitlement);
+  } catch (_) {}
+  if (typeof showToast === 'function') showToast('Abbonamento attivo. Grazie!', 'ok');
+  billingRedraw();
+}
+(function webStripeBoot() {
+  try {
+    if (typeof window === 'undefined' || !window.location || typeof URLSearchParams === 'undefined') return;
+    const q = new URLSearchParams(window.location.search || '');
+    const r = q.get('checkout');
+    if (r !== 'success' && r !== 'cancel') return;
+    try { q.delete('checkout'); history.replaceState(null, '', window.location.pathname + (q.toString() ? '?' + q.toString() : '') + (window.location.hash || '')); } catch (_) {}
+    let tries = 0;
+    const wait = setInterval(function () {
+      tries++;
+      if ((typeof store !== 'undefined' && store && store.accountToken) || tries > 40) { clearInterval(wait); if (tries <= 40) webStripeReturn(r); }
+    }, 500);
+  } catch (_) {}
+})();
+
+function webStripeFooterHtml(on) {
+  if (!on) return '';
+  const reg = planFeatures() || {};
+  const lg = (typeof legalLinkHtml === 'function') ? legalLinkHtml : function (k, l) { return esc(l); };
+  const mine = currentAccountEntitlement() || {};
+  const manage = ((__stripe.status && __stripe.status.hasCustomer) || mine.planSource === 'stripe')
+    ? '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;margin-top:10px;" onclick="webStripePortal()">GESTISCI ABBONAMENTO</button>' : '';
+  return '<div class="card plan-billing-footer" style="padding:12px;margin-top:4px;border:1px solid #333;">' +
+    '<div style="font-size:11px;color:#aaa;line-height:1.5;"><span>L’abbonamento si rinnova automaticamente alla fine di ogni periodo, finché non lo annulli. Puoi annullarlo o cambiare piano in qualsiasi momento dal portale: resta attivo fino alla fine del periodo pagato.</span> <span>Il pagamento è gestito da Stripe: Nurvan non vede mai i dati della tua carta.</span></div>' +
+    manage +
+    '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;margin-top:10px;">' + lg('privacy', 'Informativa privacy') + lg('termini', 'Termini di servizio') + '</div>' +
+    (reg.contactEmail ? '<div style="font-size:10px;color:#777;margin-top:8px;"><span>Assistenza:</span> ' + esc(reg.contactEmail) + '</div>' : '') +
+    '</div>';
+}
+
 function renderPlansPricing(c) {
   const reg = planFeatures();
   if (!reg) { c.innerHTML = '<div class="cp-help">Piani non disponibili.</div>'; return; }
   const eff = currentPlanEffective();
   const native = billingIsNative();
-  if (native) billingLoad();
+  if (native) billingLoad(); else webStripeLoad();
+  const webPay = !native && webStripeOn();
   const period = { month: 'mese', year: 'anno' };
   const featuresOf = function (planId) {
     return Object.keys(reg.features).filter(function (k) { return reg.features[k].min === planId; }).map(function (k) {
@@ -91815,7 +91936,7 @@ function renderPlansPricing(c) {
       // In the apps: the store's own purchase. In a browser there is no store: contact.
       action = native
         ? billingButtonsHtml(p.id)
-        : '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;" onclick="contactAboutPlan(\'' + p.id + '\')">CONTATTACI</button>';
+        : (webPay ? webStripeButtonsHtml(p) : '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;" onclick="contactAboutPlan(\'' + p.id + '\')">CONTATTACI</button>');
     }
     const trial = p.id === 'coach' && !current && canStartCoachTrial()
       ? '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;margin-top:6px;" onclick="startCoachTrialFromApp()">PROVA COACH ' + (reg.trialDays || 14) + ' GIORNI</button>'
@@ -91837,8 +91958,10 @@ function renderPlansPricing(c) {
     '<h1 style="color:#fff;margin:2px 0 4px;font-size:22px;">Piani Nurvan</h1>' +
     (native
       ? '<p style="font-size:11px;color:#aaa;margin:0;">Gli abbonamenti si acquistano e si gestiscono dallo store del tuo telefono.</p></div>'
-      : '<p style="font-size:11px;color:#aaa;margin:0;">Per attivare un piano scrivici: lo attiviamo noi su richiesta.</p></div>') +
-    planNoticesHtml() + cards + billingFooterHtml();
+      : (webPay
+        ? '<p style="font-size:11px;color:#aaa;margin:0;">Paghi con carta su una pagina sicura di Stripe e annulli quando vuoi.</p></div>'
+        : '<p style="font-size:11px;color:#aaa;margin:0;">Per attivare un piano scrivici: lo attiviamo noi su richiesta.</p></div>')) +
+    planNoticesHtml() + cards + billingFooterHtml() + webStripeFooterHtml(webPay);
 }
 window.renderPlansPricing = renderPlansPricing;
 

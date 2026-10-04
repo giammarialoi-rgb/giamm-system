@@ -30,6 +30,13 @@ services:
         sync: false
       - key: REVENUECAT_WEBHOOK_AUTH
         sync: false
+      # Subscriptions bought on the website with Stripe (docs/store/PAGAMENTI_STRIPE.md).
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_TRIAL_DAYS
+        value: "30"
       - key: RATE_LIMIT_STORE
         value: memory
       - key: CORS_ORIGINS

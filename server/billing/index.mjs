@@ -16,6 +16,7 @@
 // Pure functions are exported for the tests: productPlan, planFromSubscriber, decideEvent.
 import crypto from "node:crypto";
 import { FEATURES, loadAccount, setAccountPlan } from "../account/plans.mjs";
+import { mountStripe } from "./stripe.mjs";
 
 const PLAN_IDS = FEATURES.plans.map((p) => p.id);
 const rank = (plan) => Math.max(0, PLAN_IDS.indexOf(plan));
@@ -217,7 +218,7 @@ export function mountBilling(app, { pool, initDb, accountFromBearer, env = proce
   app.get("/api/billing/config", async (req, res) => {
     const apple = String(env.REVENUECAT_APPLE_KEY || "").trim();
     const google = String(env.REVENUECAT_GOOGLE_KEY || "").trim();
-    return res.json({ ok: true, enabled: !!(apple || google), appleKey: apple || null, googleKey: google || null, products: (FEATURES.billing && FEATURES.billing.products) || {} });
+    return res.json({ ok: true, enabled: !!(apple || google), stripe: !!String(env.STRIPE_SECRET_KEY || "").trim(), appleKey: apple || null, googleKey: google || null, products: (FEATURES.billing && FEATURES.billing.products) || {} });
   });
 
   app.post("/api/billing/revenuecat/webhook", async (req, res) => {
@@ -248,6 +249,9 @@ export function mountBilling(app, { pool, initDb, accountFromBearer, env = proce
       return res.status(502).json({ ok: false, error: "Non riesco a leggere gli abbonamenti ora. Riprova tra poco." });
     }
   });
+
+  // The website: Stripe (server/billing/stripe.mjs), the same plans and the same history.
+  mountStripe(app, { pool, initDb, accountFromBearer, billing, env });
 
   return billing;
 }
