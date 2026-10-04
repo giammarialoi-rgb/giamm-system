@@ -16,7 +16,7 @@ android {
         // The Play Store id, the same as iOS. The Java package stays com.giammaria.system.
         applicationId "com.nurvan.app"
         minSdk 26
-        targetSdk 35
+        targetSdk 36
         // CI passes -PversionCode (it must grow at every Play upload).
         versionCode ((project.findProperty("versionCode") ?: releaseMeta.androidVersionCode) as Integer)
         versionName (releaseMeta.versionName as String)

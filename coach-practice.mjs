@@ -528,6 +528,25 @@ export async function ensureCoachPracticeTables(client) {
     ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS thread_id INT NOT NULL DEFAULT 1;
     ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS hidden_for TEXT[] NOT NULL DEFAULT '{}';
     ALTER TABLE coach_events ADD COLUMN IF NOT EXISTS dismissed_for TEXT[] NOT NULL DEFAULT '{}';
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS chat_blocked_by TEXT;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS chat_blocked_at TIMESTAMPTZ;
+    CREATE TABLE IF NOT EXISTS chat_reports (
+      id BIGSERIAL PRIMARY KEY,
+      client_id BIGINT,
+      reporter_role TEXT NOT NULL,
+      reporter_user_id BIGINT,
+      reported_user_id BIGINT,
+      message_id BIGINT,
+      reason TEXT NOT NULL,
+      details TEXT,
+      excerpt JSONB,
+      status TEXT NOT NULL DEFAULT 'open',
+      handled_at TIMESTAMPTZ,
+      handled_note TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_chat_reports_status ON chat_reports (status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_chat_reports_reporter ON chat_reports (reporter_user_id, created_at DESC);
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS e2e_pubkey_coach TEXT;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS e2e_pubkey_athlete TEXT;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS push_subscription JSONB;
@@ -746,6 +765,8 @@ export function mountCoachPractice(app, deps) {
     if (Date.now() - lastMediaPurgeAt < 60 * 60_000) return;
     lastMediaPurgeAt = Date.now();
     try { await purgeExpiredPrivateMedia(pool); } catch (_) {}
+    // Reports of the chat are kept 12 months after they were handled, then they go (the privacy notice says so).
+    try { await pool.query("DELETE FROM chat_reports WHERE status = 'handled' AND handled_at < NOW() - INTERVAL '12 months'"); } catch (_) {}
   }
 
   async function loadAuthorizedMedia(auth, mediaId) {
@@ -850,6 +871,8 @@ export function mountCoachPractice(app, deps) {
   }
 
   async function insertMessage(clientId, fromRole, body, attachment) {
+    const blocked = await pool.query("SELECT chat_blocked_by FROM coach_clients WHERE id = $1", [clientId]);
+    if (blocked.rows[0] && blocked.rows[0].chat_blocked_by) return { blocked: true, blockedBy: blocked.rows[0].chat_blocked_by };
     const att = sanitizeAttachment(attachment);
     const text = String(body || "").trim().slice(0, 12000);
     if (!text && !att) return null;
@@ -862,6 +885,82 @@ export function mountCoachPractice(app, deps) {
     );
     return ins.rows[0];
   }
+
+  // Block and report, for both sides of a coach-athlete chat. The chat is end-to-end encrypted, so the server cannot
+  // read it: a report carries what the reporter chooses to send (the last messages, decrypted on their phone).
+  const REPORT_REASONS = ["harassment", "spam", "inappropriate", "payment", "other"];
+  function cleanExcerpt(raw) {
+    if (!Array.isArray(raw)) return null;
+    const out = raw.slice(-12).map((m) => (m && typeof m === "object" ? {
+      from: m.from === "coach" ? "coach" : "athlete",
+      at: String(m.at || "").slice(0, 40),
+      text: String(m.text || "").slice(0, 1000)
+    } : null)).filter((m) => m && m.text);
+    return out.length ? out : null;
+  }
+  async function setChatBlock(clientId, role, on) {
+    if (on) {
+      await pool.query("UPDATE coach_clients SET chat_blocked_by = $2, chat_blocked_at = NOW() WHERE id = $1 AND chat_blocked_by IS NULL", [clientId, role]);
+    } else {
+      // Only the one who blocked can lift it.
+      await pool.query("UPDATE coach_clients SET chat_blocked_by = NULL, chat_blocked_at = NULL WHERE id = $1 AND chat_blocked_by = $2", [clientId, role]);
+    }
+    const q = await pool.query("SELECT chat_blocked_by FROM coach_clients WHERE id = $1", [clientId]);
+    return q.rows[0] ? q.rows[0].chat_blocked_by || null : null;
+  }
+  async function fileChatReport({ client, reporterRole, reporterId, reportedId, body }) {
+    const b = body && typeof body === "object" ? body : {};
+    const reason = REPORT_REASONS.includes(b.reason) ? b.reason : "other";
+    const today = await pool.query("SELECT COUNT(*)::int AS n FROM chat_reports WHERE reporter_user_id = $1 AND created_at > NOW() - INTERVAL '1 day'", [reporterId]);
+    if (today.rows[0].n >= 10) {
+      const err = new Error("Hai già inviato molte segnalazioni oggi. Le stiamo esaminando.");
+      err.statusCode = 429;
+      throw err;
+    }
+    const ins = await pool.query(
+      `INSERT INTO chat_reports(client_id, reporter_role, reporter_user_id, reported_user_id, message_id, reason, details, excerpt)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb) RETURNING id, created_at`,
+      [client.id, reporterRole, reporterId, reportedId || null, Number(b.messageId) > 0 ? Number(b.messageId) : null, reason,
+        String(b.details || "").trim().slice(0, 2000) || null, cleanExcerpt(b.excerpt) ? JSON.stringify(cleanExcerpt(b.excerpt)) : null]
+    );
+    let blockedBy = client.chat_blocked_by || null;
+    if (b.alsoBlock) blockedBy = await setChatBlock(client.id, reporterRole, true);
+    return { id: ins.rows[0].id, createdAt: ins.rows[0].created_at, blockedBy };
+  }
+  const sendChatSafetyError = (res, err) => res.status(err && err.statusCode ? err.statusCode : 500).json({ error: (err && err.statusCode ? err.message : "Operazione non riuscita.") });
+
+  app.post("/api/client/chat/report", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    try {
+      const out = await fileChatReport({ client: ctx.client, reporterRole: "athlete", reporterId: ctx.auth.id, reportedId: ctx.client.coach_user_id, body: req.body });
+      return res.json({ ok: true, reportId: out.id, blockedBy: out.blockedBy });
+    } catch (err) { return sendChatSafetyError(res, err); }
+  });
+  app.post("/api/client/chat/block", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    try { return res.json({ ok: true, blockedBy: await setChatBlock(ctx.client.id, "athlete", req.body && req.body.block !== false) }); }
+    catch (err) { return sendChatSafetyError(res, err); }
+  });
+  app.post("/api/coach/clients/:id/chat/report", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    try {
+      const out = await fileChatReport({ client: row, reporterRole: "coach", reporterId: coach.id, reportedId: row.athlete_user_id, body: req.body });
+      return res.json({ ok: true, reportId: out.id, blockedBy: out.blockedBy });
+    } catch (err) { return sendChatSafetyError(res, err); }
+  });
+  app.post("/api/coach/clients/:id/chat/block", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    try { return res.json({ ok: true, blockedBy: await setChatBlock(row.id, "coach", req.body && req.body.block !== false) }); }
+    catch (err) { return sendChatSafetyError(res, err); }
+  });
 
   async function listMessages(clientId, hiddenRole) {
     const rows = await pool.query(
@@ -1295,6 +1394,7 @@ export function mountCoachPractice(app, deps) {
       ok: true,
       messages,
       threadId: thread,
+      chat: { blockedBy: ctx.client.chat_blocked_by || null },
       e2e: { coach: ctx.client.e2e_pubkey_coach || null, athlete: ctx.client.e2e_pubkey_athlete || null }
     });
   });
@@ -1303,6 +1403,7 @@ export function mountCoachPractice(app, deps) {
     const ctx = await requireAthlete(req, res);
     if (!ctx) return;
     const message = await insertMessage(ctx.client.id, "athlete", req.body?.body, req.body?.attachment);
+    if (message && message.blocked) return res.status(403).json({ error: "Chat bloccata: non puoi inviare messaggi.", code: "CHAT_BLOCKED", blockedBy: message.blockedBy });
     if (!message) return res.status(400).json({ error: "Messaggio vuoto." });
     await pool.query("UPDATE coach_clients SET unread_count = unread_count + 1 WHERE id = $1", [ctx.client.id]);
     await pool.query(
@@ -3031,6 +3132,7 @@ export function mountCoachPractice(app, deps) {
       ok: true,
       messages,
       threadId: thread,
+      chat: { blockedBy: row.chat_blocked_by || null },
       e2e: { coach: row.e2e_pubkey_coach || null, athlete: row.e2e_pubkey_athlete || null }
     });
   });
@@ -3041,6 +3143,7 @@ export function mountCoachPractice(app, deps) {
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
     const message = await insertMessage(row.id, "coach", req.body?.body, req.body?.attachment);
+    if (message && message.blocked) return res.status(403).json({ error: "Chat bloccata: non puoi inviare messaggi.", code: "CHAT_BLOCKED", blockedBy: message.blockedBy });
     if (!message) return res.status(400).json({ error: "Messaggio vuoto." });
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'message',$2)",

@@ -9,7 +9,7 @@ queste risposte, `web/privacy.html` e la `legal.version` in `web/features.json`.
 
 | Cosa | Dove | Stato |
 |---|---|---|
-| Nome/ragione sociale, indirizzo, P. IVA/C.F. del titolare | `web/features.json` → `legal.controllerName`, `controllerAddress`, `controllerVat` | da compilare |
+| Nome/ragione sociale, indirizzo, P. IVA/C.F. del titolare (compilati il 02-03/10/2026: persona fisica, ricontrollare se si apre una partita IVA o una società) | `web/features.json` → `legal.controllerName`, `controllerAddress`, `controllerVat` | da compilare |
 | Email per le richieste privacy (altrimenti si usa `contactEmail`) | `legal.privacyEmail` | da compilare |
 | Regione dei server Render (es. Frankfurt, Oregon) | `legal.hostingRegion` | da verificare sulla dashboard Render |
 | Chiave Gemini a pagamento (con il livello gratuito Google può usare i contenuti per migliorare i modelli: incompatibile con quanto scritto nell'informativa) | variabile `GEMINI_API_KEY` su Render | da verificare |
@@ -90,6 +90,15 @@ Tracciamento: **No** (nessun dato usato per tracciare, nessun SDK di terze parti
 | Diagnostica | Altri dati diagnostici (eventi di errore) |
 
 Non raccolti: posizione, contatti, dati finanziari, cronologia, acquisti (finché non ci sono acquisti in app), dati sensibili oltre alla salute.
+
+**Messaggi tra utenti (linea guida 1.2) — aggiunto il 04/10/2026**
+- Segnalare: nella chat coach-atleta, pulsante «SEGNALA · BLOCCA» con motivo, testo libero e scelta di allegare gli ultimi 10 messaggi (la chat è cifrata end-to-end: Nurvan non la può leggere, i messaggi arrivano decifrati dal telefono solo se si sceglie di allegarli). Le segnalazioni stanno nella dashboard admin (Operazioni › Segnalazioni chat), con un avviso in Panoramica; l'obiettivo è rispondere entro 24 ore.
+- Bloccare: ferma i messaggi in entrambe le direzioni (anche quelli automatici del coach); solo chi blocca può sbloccare.
+- Contatto pubblicato: info@nurvan.app (nel foglio di segnalazione e nella pagina Privacy e dati).
+- Conservazione: segnalazioni cancellate 12 mesi dopo l'esame. Limite: 10 segnalazioni per persona al giorno.
+- Cosa dire ai revisori: la chat è tra un coach e i suoi atleti invitati (non c'è un feed né una ricerca di sconosciuti), con segnala e blocca, e un contatto per gli abusi.
+
+**Salute scritta a mano (04/10/2026)**: la sezione Salute raccoglie solo quello che la persona scrive (sonno, frequenza a riposo, HRV, passi). Nessun permesso di sistema, nessun HealthKit, nessun Health Connect. Stanno nell'account come gli altri dati sanitari; il coach li vede solo se la persona attiva la condivisione; non vanno al Coach AI.
 
 **Linee guida App Review da rispettare (già coperte dal codice)**
 - 4.8 *Login Services*: c'è Accesso con Google, quindi serve Accedi con Apple. ✔

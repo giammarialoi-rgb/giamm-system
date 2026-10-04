@@ -17,7 +17,7 @@ export async function pageOverview(days) {
   if (o.alerts.length) {
     sections.push(el('div', { class: 'alerts' }, o.alerts.map((a) => el('div', { class: 'msg ' + (a.level === 'bad' ? 'bad' : a.level === 'info' ? 'info' : 'warn') }, [
       el('span', null, a.text),
-      el('button', { class: 'btn small', type: 'button', onclick: () => open(a.tab) }, 'Apri')
+      el('button', { class: 'btn small', type: 'button', onclick: () => { if (a.sub) window.__adminSub = a.sub; open(a.tab); } }, 'Apri')
     ]))));
   } else {
     sections.push(msg('ok', 'Niente che richieda attenzione.'));

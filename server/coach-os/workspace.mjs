@@ -481,6 +481,14 @@ export function coachVisibleAccountData(accountData) {
   }
   if (prog) out.activeProgram = prog;
   if (hidden.therapy || hidden.exams) out.medicalHidden = hidden;
+  // Sleep, resting heart rate and HRV written in Salute stay with the person unless they share them.
+  const prefs = d.prefs && typeof d.prefs === "object" ? d.prefs : {};
+  if (prefs.healthShareCoach !== true && d.nutritionDaily && typeof d.nutritionDaily === "object") {
+    out.nutritionDaily = {};
+    for (const [day, rec] of Object.entries(d.nutritionDaily)) {
+      if (rec && typeof rec === "object" && rec.vitals) { const { vitals, ...rest } = rec; out.nutritionDaily[day] = rest; } else out.nutritionDaily[day] = rec;
+    }
+  }
   return out;
 }
 

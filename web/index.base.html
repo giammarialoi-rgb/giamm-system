@@ -1766,7 +1766,7 @@ body.focus-mode [data-rewards-only] {
         <span style="font-size:20px;">📍</span>
         <span style="font-size:11px;font-weight:800;">Dove mi alleno</span>
       </button>
-      <button class="btn btn-outline" data-hub="full" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openHealthConnect()">
+      <button class="btn btn-outline" data-hub="health" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('health')">
         <span style="font-size:20px;">❤️</span>
         <span style="font-size:11px;font-weight:800;">Salute</span>
       </button>
@@ -15678,6 +15678,11 @@ var PAGE_TUTORIALS = {
     { t: 'Promemoria', d: 'Ogni farmaco può avere il suo avviso all’ora che scegli.' },
     { t: 'Chi vede questi dati', d: 'Sono dati tuoi. Decidi tu se il coach li vede e se il Coach AI può usarli (di base no). Non entrano mai in classifiche o condivisioni. Nurvan non sostituisce il medico.' }
   ] },
+  health: { label: 'Salute', icon: '❤️', steps: [
+    { t: 'Come stai, in numeri', d: 'Scrivi sonno, frequenza a riposo, HRV e passi del giorno: bastano pochi secondi, anche con un solo valore.' },
+    { t: 'La stima del recupero', d: 'Nurvan confronta i valori con quelli che hai di solito e con gli allenamenti recenti. È una stima, non una misura clinica.' },
+    { t: 'I tuoi dati restano tuoi', d: 'Il coach vede questi valori solo se lo scegli tu, il Coach AI non li riceve e puoi cancellarli quando vuoi.' }
+  ] },
   exams: { label: 'Esami', icon: '🧪', steps: [
     { t: 'I tuoi esami', d: 'Registra ogni valore con unità, intervallo di riferimento e data, oppure carica il referto: lo alleghi così com’è o lo fai trascrivere valore per valore.' },
     { t: 'Capire un valore', d: 'Su ogni parametro puoi chiedere una spiegazione al Coach AI. È una spiegazione generale: l’interpretazione resta al medico.' },
@@ -16478,6 +16483,7 @@ function renderCurrentView() {
   else if (currentView === 'hyrox') renderHyrox(c);
   else if (currentView === 'disciplines') renderDisciplines(c);
   else if (currentView === 'wellbeing') renderWellbeing(c);
+  else if (currentView === 'health') renderHealth(c);
   else renderHome(c);
   if (currentView !== 'nutrition') window.__nutritionLastView = currentView;
   applyChromeI18n();
@@ -22448,12 +22454,201 @@ function shareAthleteCard() {
   else if (navigator.clipboard) navigator.clipboard.writeText(text);
   if (typeof showToast === 'function') showToast('Scheda atleta pronta da condividere', 'ok');
 }
-// Nurvan does not read Health Connect or other apps: the recovery figures are
-// a local estimate from what is logged here. The name stays for the buttons
-// that call it.
-function openHealthConnect() {
-  syncHealthSamplesAndRefresh().catch(function () {});
+// ====================================================
+// SALUTE: what the person tells the app, and the recovery estimate it makes
+// ====================================================
+// No reading from Apple Salute or Health Connect (decided: not yet): the numbers
+// are typed here. Steps use the field the nutrition screen already has; sleep,
+// resting heart rate and HRV live next to it in store.nutritionDaily[day].vitals,
+// the per-day record that is already synced and kept out of the coach's reach
+// (the server drops "vitals" from what a coach sees unless the person shares).
+function isNativeApp() {
+  try { if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return true; } catch (_) {}
+  return typeof NativeConfig !== 'undefined';
 }
+// A coach's client who only has the web app has nothing to put here: no phone data, no app around them.
+function healthTileAvailable() {
+  const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+  return !(athlete && !isNativeApp());
+}
+window.healthTileAvailable = healthTileAvailable;
+
+var HEALTH_RANGES = { sleepHours: [1, 16], restingHr: [25, 140], hrvMs: [5, 250], steps: [0, 100000] };
+
+function healthDays(count) {
+  const out = [];
+  const today = new Date();
+  for (let i = 0; i < count; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const rec = (store.nutritionDaily && store.nutritionDaily[key]) || null;
+    const v = (rec && rec.vitals) || {};
+    const entry = { key: key, ago: i, steps: rec && rec.steps ? Number(rec.steps) : null, sleepHours: v.sleepHours != null ? Number(v.sleepHours) : null, restingHr: v.restingHr != null ? Number(v.restingHr) : null, hrvMs: v.hrvMs != null ? Number(v.hrvMs) : null };
+    entry.any = entry.steps != null || entry.sleepHours != null || entry.restingHr != null || entry.hrvMs != null;
+    out.push(entry);
+  }
+  return out;
+}
+function healthMedian(list) {
+  const a = list.filter(function (n) { return Number.isFinite(n); }).sort(function (x, y) { return x - y; });
+  if (a.length < 3) return null;
+  const m = Math.floor(a.length / 2);
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+}
+// What the recovery estimate reads: the latest day typed in the last three days, against the person's own usual values.
+function manualHealthSample() {
+  try {
+    const days = healthDays(35);
+    const latest = days.find(function (d) { return d.ago <= 3 && (d.sleepHours != null || d.restingHr != null || d.hrvMs != null || d.steps != null); });
+    if (!latest) return {};
+    const before = days.filter(function (d) { return d.ago > latest.ago; });
+    const out = {};
+    if (latest.sleepHours != null) out.sleepHours = latest.sleepHours;
+    if (latest.restingHr != null) { out.restingHr = latest.restingHr; out.baselineRhr = healthMedian(before.map(function (d) { return d.restingHr; })) || undefined; }
+    if (latest.hrvMs != null) { out.hrvMs = latest.hrvMs; out.baselineHrv = healthMedian(before.map(function (d) { return d.hrvMs; })) || undefined; }
+    if (latest.steps != null && latest.ago === 0) out.steps = latest.steps;
+    return out;
+  } catch (_) { return {}; }
+}
+window.manualHealthSample = manualHealthSample;
+
+function healthPersist() {
+  if (typeof persist === 'function') persist();
+  try { if (store.accountToken && typeof uploadAccountDataFast === 'function') uploadAccountDataFast().catch(function () {}); } catch (_) {}
+}
+
+function saveHealthVitals() {
+  const read = function (id) { const el = document.getElementById(id); return el && el.value !== '' ? Number(String(el.value).replace(',', '.')) : null; };
+  const dayEl = document.getElementById('health-day');
+  const key = (dayEl && dayEl.value) || nutritionTodayKey();
+  const vals = { sleepHours: read('health-sleep'), restingHr: read('health-rhr'), hrvMs: read('health-hrv'), steps: read('health-steps') };
+  const names = { sleepHours: 'Il sonno', restingHr: 'La frequenza a riposo', hrvMs: 'L’HRV', steps: 'I passi' };
+  const given = Object.keys(vals).filter(function (k) { return vals[k] != null; });
+  if (!given.length) { showToast('Scrivi almeno un valore', 'error'); return; }
+  for (let i = 0; i < given.length; i++) {
+    const k = given[i], r = HEALTH_RANGES[k];
+    if (!Number.isFinite(vals[k]) || vals[k] < r[0] || vals[k] > r[1]) { showToast(names[k] + ' deve stare tra ' + r[0] + ' e ' + r[1], 'error'); return; }
+  }
+  if (!store.nutritionDaily) store.nutritionDaily = {};
+  const rec = Object.assign({}, store.nutritionDaily[key]);
+  const vit = Object.assign({}, rec.vitals);
+  ['sleepHours', 'restingHr', 'hrvMs'].forEach(function (k) { if (vals[k] != null) vit[k] = Math.round(vals[k] * 10) / 10; });
+  vit.at = new Date().toISOString();
+  rec.vitals = vit;
+  if (vals.steps != null) {
+    rec.steps = Math.round(vals.steps);
+    rec.stepsAt = vit.at;
+    if (key === nutritionTodayKey()) { store.health = store.health || {}; store.health.steps = rec.steps; store.health.stepsAt = vit.at; store.health.stepsSource = 'manual'; }
+  }
+  store.nutritionDaily[key] = rec;
+  healthPersist();
+  showToast('Salvato', 'ok');
+  render();
+}
+window.saveHealthVitals = saveHealthVitals;
+
+function deleteHealthDay(key) {
+  const rec = store.nutritionDaily && store.nutritionDaily[key];
+  if (!rec) return;
+  const next = Object.assign({}, rec);
+  delete next.vitals; delete next.steps; delete next.stepsAt;
+  if (Object.keys(next).length) store.nutritionDaily[key] = next; else delete store.nutritionDaily[key];
+  if (key === nutritionTodayKey() && store.health && store.health.stepsSource === 'manual') { delete store.health.steps; delete store.health.stepsAt; delete store.health.stepsSource; }
+  healthPersist();
+  render();
+}
+window.deleteHealthDay = deleteHealthDay;
+
+function clearAllHealthVitals() {
+  if (!confirm('Cancellare tutti i valori di sonno, frequenza a riposo, HRV e passi che hai scritto? Non si può annullare.')) return;
+  Object.keys(store.nutritionDaily || {}).forEach(function (key) {
+    const next = Object.assign({}, store.nutritionDaily[key]);
+    delete next.vitals; delete next.steps; delete next.stepsAt;
+    if (Object.keys(next).length) store.nutritionDaily[key] = next; else delete store.nutritionDaily[key];
+  });
+  if (store.health) { delete store.health.steps; delete store.health.stepsAt; delete store.health.stepsSource; }
+  healthPersist();
+  showToast('Valori cancellati', 'ok');
+  render();
+}
+window.clearAllHealthVitals = clearAllHealthVitals;
+
+function setHealthShareCoach(on) {
+  if (!store.prefs) store.prefs = {};
+  store.prefs.healthShareCoach = !!on;
+  healthPersist();
+  showToast(on ? 'Il coach vede sonno, frequenza a riposo e HRV' : 'Il coach non vede più questi valori', 'ok');
+  render();
+}
+window.setHealthShareCoach = setHealthShareCoach;
+
+function openHealthConnect() { navigate('health'); }
+
+function renderHealth(c) {
+  if (!healthTileAvailable()) {
+    c.innerHTML = '<h1 class="text-gold" style="font-size:22px;font-weight:900;margin-bottom:8px;">Salute</h1>' +
+      '<div class="card" style="padding:14px;"><div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Non disponibile sulla web app</div>' +
+      '<p style="font-size:12px;color:#aaa;margin:0;line-height:1.45;">Questa sezione è nell’app Nurvan per iPhone e Android.</p></div>';
+    return;
+  }
+  const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+  const today = nutritionTodayKey();
+  const days = healthDays(14);
+  const filled = days.filter(function (d) { return d.any; });
+  const avg = function (k) { const v = days.slice(0, 7).map(function (d) { return d[k]; }).filter(function (n) { return n != null; }); return v.length ? Math.round((v.reduce(function (a, b) { return a + b; }, 0) / v.length) * 10) / 10 : null; };
+  const inputStyle = 'width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;box-sizing:border-box;font-size:14px;';
+  const field = function (id, label, ph) { return '<label style="font-size:10px;color:#888;font-weight:800;">' + label + '<input id="' + id + '" type="number" inputmode="decimal" step="any" placeholder="' + ph + '" style="' + inputStyle + '"></label>'; };
+  const lastLogs = (Array.isArray(store.logs) ? store.logs : []).filter(function (l) { return l && Date.now() - Date.parse(l.finalizedAt || l.at || 0) <= 7 * 86400000; });
+  const weekSets = lastLogs.reduce(function (a, l) { return a + (Number(l.sets) || 0); }, 0);
+  const weekKg = lastLogs.reduce(function (a, l) { return a + (Number(l.tonnage) || 0); }, 0);
+  const checks = (store.bodyChecks || []).filter(function (x) { return Number(x.weight) > 0; });
+  const lastW = checks.length ? checks[checks.length - 1] : null;
+  const prevW = checks.length > 1 ? checks[checks.length - 2] : null;
+  const shared = !!(store.prefs && store.prefs.healthShareCoach === true);
+  const rows = filled.map(function (d) {
+    return '<tr><td style="padding:6px 4px;">' + esc(d.key.slice(8) + '/' + d.key.slice(5, 7)) + '</td>' +
+      '<td style="text-align:right;">' + (d.sleepHours != null ? d.sleepHours + ' h' : '—') + '</td>' +
+      '<td style="text-align:right;">' + (d.restingHr != null ? d.restingHr : '—') + '</td>' +
+      '<td style="text-align:right;">' + (d.hrvMs != null ? d.hrvMs : '—') + '</td>' +
+      '<td style="text-align:right;">' + (d.steps != null ? d.steps : '—') + '</td>' +
+      '<td style="text-align:right;"><button type="button" class="btn btn-outline" style="font-size:9px;padding:3px 7px;" onclick="deleteHealthDay(\'' + d.key + '\')">×</button></td></tr>';
+  }).join('');
+  const readiness = (typeof computeHomeReadinessHtml === 'function') ? computeHomeReadinessHtml({ noButton: true }) : '';
+  c.innerHTML =
+    '<h1 class="text-gold" style="font-size:22px;font-weight:900;margin-bottom:4px;">Salute</h1>' +
+    '<p style="font-size:12px;color:#888;margin:0 0 12px;line-height:1.45;">Scrivi qui come stai: Nurvan li usa per stimare il tuo recupero. Sono numeri tuoi, non misure cliniche.</p>' +
+    readiness +
+    '<div class="card" style="padding:14px;margin-bottom:12px;">' +
+    '<div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:8px;">SCRIVI I VALORI</div>' +
+    '<label style="font-size:10px;color:#888;font-weight:800;">Giorno<select id="health-day" style="' + inputStyle + '"><option value="' + today + '">Oggi</option>' +
+    '<option value="' + days[1].key + '">Ieri</option></select></label>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">' +
+    field('health-sleep', 'Sonno (ore)', 'es. 7,5') + field('health-rhr', 'Frequenza a riposo (bpm)', 'es. 58') +
+    field('health-hrv', 'HRV (ms), se la conosci', 'es. 62') + field('health-steps', 'Passi', 'es. 9000') + '</div>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="saveHealthVitals()">SALVA</button>' +
+    '<div style="font-size:10px;color:#777;margin-top:8px;line-height:1.4;">Basta un valore. La frequenza a riposo si legge al mattino, da fermo, prima di alzarti; molti orologi la mostrano da soli.</div>' +
+    '</div>' +
+    '<div class="card" style="padding:14px;margin-bottom:12px;">' +
+    '<div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:8px;">ULTIMI 14 GIORNI</div>' +
+    (filled.length
+      ? '<div style="overflow-x:auto;"><table style="width:100%;font-size:12px;border-collapse:collapse;"><thead><tr style="color:#888;font-size:10px;"><th style="text-align:left;">Giorno</th><th style="text-align:right;">Sonno</th><th style="text-align:right;">Riposo</th><th style="text-align:right;">HRV</th><th style="text-align:right;">Passi</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        '<div style="font-size:11px;color:#aaa;margin-top:8px;">Media 7 giorni · sonno ' + (avg('sleepHours') != null ? avg('sleepHours') + ' h' : '—') + ' · riposo ' + (avg('restingHr') != null ? avg('restingHr') + ' bpm' : '—') + ' · passi ' + (avg('steps') != null ? Math.round(avg('steps')) : '—') + '</div>'
+      : '<div style="font-size:12px;color:#888;">Ancora nessun valore. Inizia da quelli di oggi.</div>') +
+    '</div>' +
+    '<div class="card" style="padding:14px;margin-bottom:12px;">' +
+    '<div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:8px;">DAI TUOI ALLENAMENTI</div>' +
+    '<div style="font-size:12px;color:#ccc;line-height:1.6;">Ultimi 7 giorni: ' + lastLogs.length + (lastLogs.length === 1 ? ' seduta' : ' sedute') + ' · ' + weekSets + ' serie · ' + formatStatsKg(weekKg) + ' ' + wUnit() + '<br>' +
+    (lastW ? 'Peso dell’ultimo check fisico: ' + lastW.weight + ' kg' + (prevW ? ' (' + (lastW.weight - prevW.weight >= 0 ? '+' : '') + (Math.round((lastW.weight - prevW.weight) * 10) / 10) + ' kg dal precedente)' : '') : 'Nessun peso nei check fisici.') + '</div></div>' +
+    '<div class="card" style="padding:14px;margin-bottom:12px;border:1px solid #333;">' +
+    '<div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:8px;">I TUOI DATI</div>' +
+    '<div style="font-size:11px;color:#aaa;line-height:1.5;">Questi valori sono dati sulla salute. Stanno nel tuo account come gli altri dati dell’app, non sono usati per pubblicità né inviati al Coach AI, e li cancelli quando vuoi. Nurvan non legge Apple Salute né Health Connect: per ora li scrivi tu.</div>' +
+    (athlete
+      ? '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#ddd;margin-top:10px;"><input type="checkbox" ' + (shared ? 'checked ' : '') + 'onchange="setHealthShareCoach(this.checked)" style="margin-top:2px;"><span>Condividi sonno, frequenza a riposo e HRV con il mio coach (spento di base)</span></label>'
+      : '') +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:10px;font-size:11px;border-color:#442222;color:var(--accent-red);" onclick="clearAllHealthVitals()">CANCELLA TUTTI I VALORI</button>' +
+    '</div>';
+}
+window.renderHealth = renderHealth;
 
 async function syncHealthSamplesAndRefresh() {
   let sample = null;
@@ -22472,12 +22667,15 @@ async function syncHealthSamplesAndRefresh() {
   return sample;
 }
 
-function computeHomeReadinessHtml() {
+function computeHomeReadinessHtml(opts) {
+  opts = opts || {};
   try {
     let health = (store && store.health) || {};
     if (typeof NativeConfig !== 'undefined' && NativeConfig.getHealthTotals) {
       try { health = Object.assign({}, health, JSON.parse(NativeConfig.getHealthTotals() || '{}')); } catch (_) {}
     }
+    // What the person wrote in Salute counts too, against their own usual values.
+    try { health = Object.assign({}, health, (typeof manualHealthSample === 'function') ? manualHealthSample() : {}); } catch (_) {}
     if (typeof ReadinessService === 'undefined') return '';
     const snap = typeof collectSessionStats === 'function' ? collectSessionStats() : { sets: 0 };
     const r = ReadinessService.assess({
@@ -22497,7 +22695,7 @@ function computeHomeReadinessHtml() {
           <div style="font-size:11px;color:#888;margin-top:4px;">${esc(r.advice)}</div>
           <div style="font-size:9px;color:#555;margin-top:6px;">Non è una misura clinica · confidenza ${Math.round((r.confidence || 0) * 100)}%</div>
         </div>
-        <button class="btn btn-outline" style="font-size:11px;padding:8px 14px;white-space:nowrap;flex:0 0 auto;" onclick="openHealthConnect()">SYNC</button>
+        ${(opts.noButton || !healthTileAvailable()) ? '' : '<button class="btn btn-outline" style="font-size:11px;padding:8px 14px;white-space:nowrap;flex:0 0 auto;" onclick="openHealthConnect()">DATI</button>'}
       </div>
     </div>`;
   } catch (_) { return ''; }

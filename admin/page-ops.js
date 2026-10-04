@@ -7,10 +7,29 @@ let tab = 'errors';
 
 export async function pageOperations(which) {
   if (typeof which === 'string') tab = which;
+  else if (window.__adminSub) { tab = window.__adminSub; }
+  window.__adminSub = null;
   loading();
-  const bar = tabs([['errors', 'Errori'], ['planlog', 'Log piani'], ['audit', 'Registro accessi'], ['sessions', 'Sessioni admin'], ['lists', 'Liste del sito'], ['storage', 'Spazio']], tab, (t) => pageOperations(t));
-  const body = await ({ errors: errorsBlock, planlog: planLogBlock, audit: auditTab, sessions: sessionsTab, lists: listsTab, storage: storageTab }[tab] || errorsBlock)();
+  const bar = tabs([['errors', 'Errori'], ['planlog', 'Log piani'], ['reports', 'Segnalazioni chat'], ['audit', 'Registro accessi'], ['sessions', 'Sessioni admin'], ['lists', 'Liste del sito'], ['storage', 'Spazio']], tab, (t) => pageOperations(t));
+  const body = await ({ errors: errorsBlock, planlog: planLogBlock, reports: reportsTab, audit: auditTab, sessions: sessionsTab, lists: listsTab, storage: storageTab }[tab] || errorsBlock)();
   view([el('h2', null, 'Operazioni'), bar].concat(body));
+}
+
+async function reportsTab() {
+  const out = await api('/api/admin/chat-reports?status=all');
+  const rows = out.reports.map((r) => el('tr', null, [
+    el('td', null, [badge(r.status === 'open' ? 'da gestire' : 'gestita', r.status === 'open' ? 'bad' : 'ok'), ' ' + dateTime(r.at)]),
+    el('td', { class: 'wrap' }, [r.reasonLabel, r.details ? el('div', { class: 'muted' }, r.details) : null,
+      r.excerpt.length ? el('details', null, [el('summary', { class: 'muted' }, 'Messaggi allegati (' + r.excerpt.length + ')'), el('div', { class: 'muted', style: 'white-space:pre-wrap' }, r.excerpt.map((m) => (m.from === 'coach' ? 'Coach' : 'Atleta') + ': ' + m.text).join('\n'))]) : null,
+      r.handledNote ? el('div', { class: 'muted' }, 'Nota: ' + r.handledNote) : null]),
+    el('td', null, (r.reporterRole === 'coach' ? 'Coach ' : 'Atleta ') + (r.reporter || '—')),
+    el('td', null, (r.reported || '—') + (r.blockedBy ? ' · chat bloccata' : '')),
+    el('td', null, r.status === 'open'
+      ? el('button', { class: 'btn small primary', type: 'button', onclick: async () => { const note = prompt('Nota su come l\'hai gestita (facoltativa):', ''); if (note === null) return; await api('/api/admin/chat-reports/' + r.id, { method: 'POST', body: { note } }); toast('Segnalazione chiusa', 'ok'); pageOperations('reports'); } }, 'Gestita')
+      : el('button', { class: 'btn small', type: 'button', onclick: async () => { await api('/api/admin/chat-reports/' + r.id, { method: 'POST', body: { reopen: true } }); pageOperations('reports'); } }, 'Riapri'))
+  ]));
+  return [el('p', { class: 'muted' }, 'Segnalazioni fatte da coach e atleti nella chat. La chat è cifrata: qui vedi solo i messaggi che chi segnala ha scelto di allegare. Gli store chiedono di rispondere in tempi brevi (entro 24 ore è l\'obiettivo).'),
+    out.reports.length ? table(['Quando', 'Motivo', 'Chi segnala', 'Segnalato', ''], rows) : el('p', { class: 'muted' }, 'Nessuna segnalazione.')];
 }
 
 async function auditTab() {

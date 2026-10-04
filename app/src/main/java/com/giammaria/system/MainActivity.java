@@ -82,6 +82,11 @@ public class MainActivity extends Activity {
     @SuppressLint("SetJavaScriptEnabled")
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        // Targeting Android 16 (API 36) the system no longer calls onBackPressed(): the back gesture reaches the
+        // app through a callback registered here (Android 13 and later). Older versions still use onBackPressed().
+        if (Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::handleBack);
+        }
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
         web = new WebView(this);
         web.setWebViewClient(new WebViewClient() {
@@ -1427,6 +1432,10 @@ public class MainActivity extends Activity {
     @SuppressWarnings("deprecation")
     @Override
     public void onBackPressed() {
+        handleBack();
+    }
+
+    private void handleBack() {
         if (web != null) {
             web.evaluateJavascript(
                 "(function(){try{return (window.handleNativeBack&&window.handleNativeBack())?'1':'0';}catch(e){return '0';}})();",

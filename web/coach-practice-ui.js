@@ -396,6 +396,9 @@ function applyClientChrome() {
     document.querySelectorAll('[data-hub="full"]').forEach(function (el) {
       el.style.display = (athlete || coachSession) ? 'none' : 'flex';
     });
+    document.querySelectorAll('[data-hub="health"]').forEach(function (el) {
+      el.style.display = (coachSession || (typeof healthTileAvailable === 'function' && !healthTileAvailable())) ? 'none' : 'flex';
+    });
     document.querySelectorAll('[data-hub="personal-ai"]').forEach(function (el) {
       el.style.display = athlete ? 'none' : 'flex';
     });
@@ -3756,8 +3759,90 @@ function chatToolsHtml(inputId, sendCall, clearCall, newCall, opts) {
     '<div class="cp-chat-tools">' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:8px 10px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="' + clearCall + '">AZZERA (PER ME)</button>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:8px 10px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="' + newCall + '">NUOVA CHAT</button>' +
+    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:8px 10px;" onclick="openChatSafety()">SEGNALA · BLOCCA</button>' +
     '</div>';
 }
+
+// Report and block. The chat is end-to-end encrypted: Nurvan cannot read it, so a report carries the last messages
+// only if the person chooses to attach them (they are decrypted here, on the phone, and sent with the report).
+var CHAT_REPORT_REASONS = [
+  ['harassment', 'Molestie o linguaggio offensivo'],
+  ['inappropriate', 'Contenuto inappropriato'],
+  ['spam', 'Spam o pubblicità'],
+  ['payment', 'Richiesta di pagamento fuori luogo'],
+  ['other', 'Altro']
+];
+function chatSafetyPaths(role, clientId) {
+  const base = role === 'athlete' ? '/api/client/chat' : '/api/coach/clients/' + encodeURIComponent(clientId) + '/chat';
+  return { report: base + '/report', block: base + '/block' };
+}
+function closeChatSafety() {
+  const box = document.getElementById('cp-safety');
+  if (box) box.remove();
+}
+function openChatSafety() {
+  ensurePracticeStyle();
+  closeChatSafety();
+  const role = window.__cpChatRole || 'coach';
+  const blockedBy = window.__cpChatBlockedBy || null;
+  const mineBlock = blockedBy === role;
+  const box = document.createElement('div');
+  box.id = 'cp-safety';
+  box.className = 'cp-lightbox active';
+  box.onclick = function (ev) { if (ev.target === box) closeChatSafety(); };
+  box.innerHTML = '<div style="background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;padding:16px;width:100%;max-width:380px;max-height:88vh;overflow:auto;text-align:left;">' +
+    '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">SICUREZZA DELLA CHAT</div>' +
+    '<h3 style="margin:6px 0 10px;color:#fff;font-size:17px;">Segnala o blocca</h3>' +
+    '<label style="font-size:11px;color:#aaa;">Motivo</label>' +
+    '<select id="cp-safety-reason" class="cp-chat-input" style="width:100%;margin:4px 0 10px;">' +
+    CHAT_REPORT_REASONS.map(function (r) { return '<option value="' + r[0] + '">' + esc(r[1]) + '</option>'; }).join('') + '</select>' +
+    '<label style="font-size:11px;color:#aaa;">Cosa è successo (facoltativo)</label>' +
+    '<textarea id="cp-safety-details" rows="3" maxlength="2000" class="cp-chat-input" style="width:100%;margin:4px 0 10px;"></textarea>' +
+    '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#ddd;margin-bottom:6px;"><input id="cp-safety-excerpt" type="checkbox" checked style="margin-top:2px;"><span>Allega gli ultimi messaggi della chat alla segnalazione</span></label>' +
+    '<div class="cp-help" style="margin:0 0 10px 24px;">La chat è cifrata: Nurvan non può leggerla. Se allegati, gli ultimi 10 messaggi vengono inviati a Nurvan solo per valutare la segnalazione.</div>' +
+    '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#ddd;margin-bottom:12px;"><input id="cp-safety-block" type="checkbox" style="margin-top:2px;"><span>Blocca anche questa chat</span></label>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="submitChatReport()">INVIA SEGNALAZIONE</button>' +
+    (blockedBy && !mineBlock
+      ? '<div class="cp-help" style="margin:0 0 8px;">La chat è stata bloccata dall’altra persona.</div>'
+      : '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="toggleChatBlock(' + (mineBlock ? 'false' : 'true') + ')">' + (mineBlock ? 'SBLOCCA LA CHAT' : 'BLOCCA LA CHAT') + '</button>') +
+    '<div class="cp-help" style="margin:0 0 10px;">Esaminiamo le segnalazioni, di norma entro 24 ore. Per urgenze scrivi a info@nurvan.app. Bloccare ferma i messaggi in entrambe le direzioni; solo chi blocca può sbloccare.</div>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;" onclick="closeChatSafety()">CHIUDI</button></div>';
+  document.body.appendChild(box);
+}
+async function submitChatReport() {
+  const role = window.__cpChatRole || 'coach';
+  const paths = chatSafetyPaths(role, window.__cpChatClientId);
+  const reason = (document.getElementById('cp-safety-reason') || {}).value || 'other';
+  const details = (document.getElementById('cp-safety-details') || {}).value || '';
+  const withExcerpt = !!(document.getElementById('cp-safety-excerpt') || {}).checked;
+  const alsoBlock = !!(document.getElementById('cp-safety-block') || {}).checked;
+  const excerpt = withExcerpt ? (window.__cpChatLast || []).slice(-10).map(function (m) {
+    return { from: m.from_role, at: m.created_at, text: m._plain != null ? m._plain : '' };
+  }) : null;
+  try {
+    const out = await practiceFetch(paths.report, { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ reason: reason, details: details, excerpt: excerpt, alsoBlock: alsoBlock }) }, 20000);
+    window.__cpChatBlockedBy = out.blockedBy || null;
+    closeChatSafety();
+    practiceToast('Segnalazione inviata. La esamineremo al più presto.', 'success');
+    loadHumanMessages(window.__cpChatClientId, role === 'athlete' ? 'cp-client-chat' : 'cp-ws-chat', role);
+  } catch (err) { practiceToast((err && err.message) || 'Segnalazione non inviata', 'danger'); }
+}
+async function toggleChatBlock(block) {
+  const role = window.__cpChatRole || 'coach';
+  const paths = chatSafetyPaths(role, window.__cpChatClientId);
+  if (block && !confirm('Bloccare la chat? Nessun messaggio arriverà né partirà finché non la sblocchi.')) return;
+  try {
+    const out = await practiceFetch(paths.block, { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ block: !!block }) }, 15000);
+    window.__cpChatBlockedBy = out.blockedBy || null;
+    closeChatSafety();
+    practiceToast(block ? 'Chat bloccata' : 'Chat sbloccata', 'success');
+    loadHumanMessages(window.__cpChatClientId, role === 'athlete' ? 'cp-client-chat' : 'cp-ws-chat', role);
+  } catch (err) { practiceToast((err && err.message) || 'Operazione non riuscita', 'danger'); }
+}
+window.openChatSafety = openChatSafety;
+window.closeChatSafety = closeChatSafety;
+window.submitChatReport = submitChatReport;
+window.toggleChatBlock = toggleChatBlock;
 
 function pulseChatSendBtn() {
   const btn = document.getElementById('cp-chat-send-btn');
@@ -5663,6 +5748,11 @@ async function loadHumanMessages(clientId, boxId, role, silent) {
     const path = role === 'athlete' ? '/api/client/messages' : '/api/coach/clients/' + encodeURIComponent(clientId) + '/messages';
     const payload = await practiceFetch(path, { method: 'GET', headers: practiceHeaders(false) }, 20000);
     if (payload.e2e) store.__cpE2EPeer = payload.e2e;
+    window.__cpChatBlockedBy = (payload.chat && payload.chat.blockedBy) || null;
+    const blockedBanner = window.__cpChatBlockedBy
+      ? '<div class="cp-help" style="border:1px solid #a33b2b;border-radius:8px;padding:8px;margin-bottom:8px;color:#e57373;">' +
+        (window.__cpChatBlockedBy === role ? 'Hai bloccato questa chat: non arrivano né partono messaggi. Puoi sbloccarla da SEGNALA · BLOCCA.' : 'Questa chat è stata bloccata dall’altra persona: non puoi inviare messaggi.') + '</div>'
+      : '';
     const msgs = payload.messages || [];
     const nearBottom = (box.scrollHeight - box.scrollTop - box.clientHeight) < 80;
     // The poll runs every 2.5 s: rebuilding an unchanged thread re-lays out
@@ -5670,7 +5760,7 @@ async function loadHumanMessages(clientId, boxId, role, silent) {
     const sig = msgs.length + '|' + msgs.map(function (m) { return (m.id || m.created_at || '') + ':' + (m.read_at ? 1 : 0); }).join(',');
     if (silent && box.__cpSig === sig) return;
     box.__cpSig = sig;
-    if (!msgs.length) { box.innerHTML = '<div class="cp-help">Nessun messaggio. Chat cifrata end-to-end.</div>'; return; }
+    if (!msgs.length) { box.innerHTML = blockedBanner + '<div class="cp-help">Nessun messaggio. Chat cifrata end-to-end.</div>'; return; }
     const decrypted = [];
     for (let i = 0; i < msgs.length; i++) {
       const m = Object.assign({}, msgs[i]);
@@ -5685,7 +5775,8 @@ async function loadHumanMessages(clientId, boxId, role, silent) {
       }
       decrypted.push(m);
     }
-    box.innerHTML = decrypted.map(function (m) {
+    window.__cpChatLast = decrypted;
+    box.innerHTML = blockedBanner + decrypted.map(function (m) {
       const mine = (role === 'athlete' && m.from_role === 'athlete') || (role === 'coach' && m.from_role === 'coach');
       return renderMessageHtml(m, mine);
     }).join('');
