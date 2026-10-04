@@ -749,10 +749,14 @@ const aiLimiter = createAiLimiter({
 });
 
 // "patient" is for the chat: a provider that answers "overloaded" is given more time between tries (a few seconds,
-// not a fraction of one), and, if AI_FALLBACK_MODEL is set, the last try goes to that model.
-const CHAT_RETRY = { patient: true, fallbackModel: process.env.AI_FALLBACK_MODEL || undefined };
+// not a fraction of one). AI_FALLBACK_MODEL, if set, is one model or several separated by commas (a different model has
+// its own quota and its own load): the last tries go to them, in order.
+const CHAT_RETRY = {
+  patient: true,
+  fallbackModels: String(process.env.AI_FALLBACK_MODEL || "").split(",").map((m) => m.trim()).filter(Boolean)
+};
 
-async function generateContentWithRetry(ai, { model, partsAttempts, label, config, contents, patient, fallbackModel }) {
+async function generateContentWithRetry(ai, { model, partsAttempts, label, config, contents, patient, fallbackModels }) {
   const delaysMs = patient ? [0, 1500, 4000, 9000] : [0, 700, 1800];
   let lastErr;
   for (let attempt = 0; attempt < delaysMs.length; attempt++) {
@@ -760,7 +764,9 @@ async function generateContentWithRetry(ai, { model, partsAttempts, label, confi
       await sleep(delaysMs[attempt] + Math.floor(Math.random() * 400));
     }
     const parts = partsAttempts[Math.min(attempt, partsAttempts.length - 1)];
-    const useModel = (fallbackModel && attempt === delaysMs.length - 1 && fallbackModel !== model) ? fallbackModel : model;
+    const fallbacks = (fallbackModels || []).filter((m) => m !== model).slice(0, delaysMs.length - 1);
+    const firstFallbackAt = delaysMs.length - fallbacks.length;
+    const useModel = (fallbacks.length && attempt >= firstFallbackAt) ? fallbacks[attempt - firstFallbackAt] : model;
     try {
       const request = { model: useModel, contents: contents || [{ role: "user", parts }] };
       if (config) request.config = config;

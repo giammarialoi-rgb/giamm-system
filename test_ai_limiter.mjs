@@ -1,5 +1,6 @@
 // A hundred people asking the Coach AI at once: how the server holds up.
 import fs from 'node:fs';
+import vm from 'node:vm';
 import { createAiLimiter } from './server/ai/limiter.mjs';
 import { cleanTrainingData, trainingTools } from './server/coach-ai/training-tools.mjs';
 
@@ -89,9 +90,39 @@ ok('the Vertex path passes the tools on and returns the model\'s tool requests',
 
 // ---- when the provider answers "overloaded"
 ok('the chat waits seconds, not fractions of a second, between tries', /const delaysMs = patient \? \[0, 1500, 4000, 9000\] : \[0, 700, 1800\];/.test(api));
-ok('the last try can go to a fallback model chosen on the server', /AI_FALLBACK_MODEL/.test(api) && /attempt === delaysMs\.length - 1 && fallbackModel !== model/.test(api));
+ok('the last tries can go to fallback models chosen on the server, one or several', /AI_FALLBACK_MODEL/.test(api) && /split\(","\)/.test(api) && /attempt >= firstFallbackAt/.test(api));
 ok('all three chat calls use it', (api.match(/\.\.\.CHAT_RETRY/g) || []).length === 3);
 ok('a failure says which model and which status, to read in the logs', /failed \(\$\{useModel\}, status/.test(api));
+
+// the models actually used, try by try (the real function, with the provider stubbed)
+{
+  const start = api.indexOf('async function generateContentWithRetry(');
+  const src = api.slice(start, api.indexOf('\n}\n', start) + 3);
+  const run = async (fallbacks, failFirst) => {
+    const used = [];
+    const ctx = vm.createContext({
+      console: { warn() {} }, sleep: () => Promise.resolve(), aiLimiter: { run: (fn) => fn() },
+      isRetryableGeminiError: () => true, geminiErrorStatus: () => 503, Math, Promise
+    });
+    vm.runInContext(src, ctx);
+    ctx.__ai = { models: { generateContent: async (req) => { used.push(req.model); if (used.length <= failFirst) { const e = new Error('overloaded'); e.status = 503; throw e; } return { text: 'ok from ' + req.model }; } } };
+    let out = null, err = null;
+    try { out = await vm.runInContext("generateContentWithRetry(__ai, { model: 'A', partsAttempts: [[{ text: 'x' }]], label: 't', patient: true, fallbackModels: " + JSON.stringify(fallbacks) + " })", ctx); } catch (e) { err = e; }
+    return { used, out, err };
+  };
+  const two = await run(['B', 'C'], 99);
+  ok('two fallbacks: the first two tries stay on the main model, then B, then C', two.used.join() === 'A,A,B,C' && two.err);
+  const one = await run(['B'], 99);
+  ok('one fallback: it takes the last try', one.used.join() === 'A,A,A,B');
+  const none = await run([], 99);
+  ok('no fallback: four tries on the main model, patiently', none.used.join() === 'A,A,A,A');
+  const same = await run(['A'], 99);
+  ok('a fallback equal to the main model is ignored', same.used.join() === 'A,A,A,A');
+  const rescued = await run(['B', 'C'], 2);
+  ok('if a fallback answers, that answer is used and the rest is not tried', rescued.used.join() === 'A,A,B' && rescued.out && rescued.out.text === 'ok from B');
+  const quick = await run(['B'], 0);
+  ok('when the main model answers, nothing else is called', quick.used.join() === 'A' && quick.out.text === 'ok from A');
+}
 
 if (failed) { console.log('\n' + failed + ' FAIL'); process.exit(1); }
 console.log('\nCoach AI sotto carico: tutto verde');
