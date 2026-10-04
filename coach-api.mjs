@@ -748,16 +748,21 @@ const aiLimiter = createAiLimiter({
   waitMs: Number(process.env.AI_QUEUE_WAIT_MS || 45000)
 });
 
-async function generateContentWithRetry(ai, { model, partsAttempts, label, config, contents }) {
-  const delaysMs = [0, 700, 1800];
+// "patient" is for the chat: a provider that answers "overloaded" is given more time between tries (a few seconds,
+// not a fraction of one), and, if AI_FALLBACK_MODEL is set, the last try goes to that model.
+const CHAT_RETRY = { patient: true, fallbackModel: process.env.AI_FALLBACK_MODEL || undefined };
+
+async function generateContentWithRetry(ai, { model, partsAttempts, label, config, contents, patient, fallbackModel }) {
+  const delaysMs = patient ? [0, 1500, 4000, 9000] : [0, 700, 1800];
   let lastErr;
   for (let attempt = 0; attempt < delaysMs.length; attempt++) {
     if (delaysMs[attempt] > 0) {
-      await sleep(delaysMs[attempt] + Math.floor(Math.random() * 300));
+      await sleep(delaysMs[attempt] + Math.floor(Math.random() * 400));
     }
     const parts = partsAttempts[Math.min(attempt, partsAttempts.length - 1)];
+    const useModel = (fallbackModel && attempt === delaysMs.length - 1 && fallbackModel !== model) ? fallbackModel : model;
     try {
-      const request = { model, contents: contents || [{ role: "user", parts }] };
+      const request = { model: useModel, contents: contents || [{ role: "user", parts }] };
       if (config) request.config = config;
       return await aiLimiter.run(() => ai.models.generateContent(request));
     } catch (err) {
@@ -766,7 +771,7 @@ async function generateContentWithRetry(ai, { model, partsAttempts, label, confi
         console.warn(`${label} not sent: line ${err.aiQueue}`, JSON.stringify(aiLimiter.stats()));
         break; // waiting again would only lengthen the line
       }
-      console.warn(`${label} attempt ${attempt + 1}/${delaysMs.length} failed`, err?.message || err);
+      console.warn(`${label} attempt ${attempt + 1}/${delaysMs.length} failed (${useModel}, status ${geminiErrorStatus(err) || "?"})`, err?.message || err);
       if (!isRetryableGeminiError(err)) break;
     }
   }
@@ -779,7 +784,7 @@ async function generateWithTrainingTools(ai, { model, parts, tools, label }) {
   const contents = [{ role: "user", parts }];
   const config = { tools: [{ functionDeclarations: tools.declarations }] };
   for (let round = 0; round < 6; round++) {
-    const response = await generateContentWithRetry(ai, { model, partsAttempts: [parts], label, config, contents });
+    const response = await generateContentWithRetry(ai, { model, partsAttempts: [parts], label, config, contents, ...CHAT_RETRY });
     const calls = Array.isArray(response.functionCalls) ? response.functionCalls : [];
     if (!calls.length) return response;
     const modelTurn = response.candidates && response.candidates[0] && response.candidates[0].content;
@@ -790,7 +795,7 @@ async function generateWithTrainingTools(ai, { model, parts, tools, label }) {
     });
   }
   contents.push({ role: "user", parts: [{ text: "Rispondi ora con i dati che hai raccolto, senza altre richieste." }] });
-  return generateContentWithRetry(ai, { model, partsAttempts: [parts], label, contents });
+  return generateContentWithRetry(ai, { model, partsAttempts: [parts], label, contents, ...CHAT_RETRY });
 }
 
 function cloneWeekWithUniqueIds(templateWeek, newWeekNum) {
@@ -2276,7 +2281,7 @@ Se l'atleta lamenta dolore acuto o infortunio, consiglia di consultare un medico
     const partsAttempts = imageParts.length ? [[textPart, ...imageParts], [textPart]] : [[textPart]];
     const response = trainingTooling && !athleteLocked
       ? await generateWithTrainingTools(ai, { model: MODEL, parts: partsAttempts[0], tools: trainingTooling, label: "Gemini chat (training tools)" })
-      : await generateContentWithRetry(ai, { model: MODEL, partsAttempts, label: "Gemini chat" });
+      : await generateContentWithRetry(ai, { model: MODEL, partsAttempts, label: "Gemini chat", ...CHAT_RETRY });
 
     let replyText = response.text || "";
     let proposedAction = null;

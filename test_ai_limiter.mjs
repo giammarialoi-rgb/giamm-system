@@ -87,5 +87,11 @@ ok('the line can be tuned from the environment', /AI_MAX_CONCURRENT/.test(api) &
 const gw = fs.readFileSync('server/ai/gateway.mjs', 'utf8');
 ok('the Vertex path passes the tools on and returns the model\'s tool requests', /const \{ tools, \.\.\.generationConfig \} = config;/.test(gw) && /functionCalls: calls\.length \? calls : undefined/.test(gw));
 
+// ---- when the provider answers "overloaded"
+ok('the chat waits seconds, not fractions of a second, between tries', /const delaysMs = patient \? \[0, 1500, 4000, 9000\] : \[0, 700, 1800\];/.test(api));
+ok('the last try can go to a fallback model chosen on the server', /AI_FALLBACK_MODEL/.test(api) && /attempt === delaysMs\.length - 1 && fallbackModel !== model/.test(api));
+ok('all three chat calls use it', (api.match(/\.\.\.CHAT_RETRY/g) || []).length === 3);
+ok('a failure says which model and which status, to read in the logs', /failed \(\$\{useModel\}, status/.test(api));
+
 if (failed) { console.log('\n' + failed + ' FAIL'); process.exit(1); }
 console.log('\nCoach AI sotto carico: tutto verde');

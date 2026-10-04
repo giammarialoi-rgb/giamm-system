@@ -1263,6 +1263,40 @@ body.nurvan-locked { background: var(--bg, #000); }
   color: #ddd;
 }
 
+/* The Coach AI conversation reads like a chat: what you write on the right, in gold; what Nurvan answers on the left. */
+#chat-history { display: flex; flex-direction: column; gap: 12px; }
+#chat-history .msg { margin: 0; max-width: 88%; overflow-wrap: anywhere; box-sizing: border-box; }
+#chat-history .msg.user {
+  align-self: flex-end;
+  background: linear-gradient(180deg, #e2bf4a, #c9a22e);
+  border: 0;
+  color: #15120a;
+  font-weight: 600;
+  border-radius: 18px 18px 4px 18px;
+  padding: 10px 14px;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.18);
+}
+#chat-history .msg.ai {
+  align-self: flex-start;
+  background: #1b1b1d;
+  border: 1px solid #2d2d30;
+  border-left: 3px solid var(--gold);
+  color: #e8e8e8;
+  border-radius: 18px 18px 18px 4px;
+  padding: 12px 14px 8px;
+}
+#chat-history .msg.ai::before {
+  content: 'NURVAN AI';
+  display: block;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+#chat-history .msg.ai.markdown p:last-child { margin-bottom: 4px; }
+#chat-history .card { align-self: stretch; max-width: 100%; }
+
 .markdown p { margin: 0 0 10px; line-height: 1.55; }
 .markdown h2, .markdown h3, .markdown h4 { color: var(--gold); margin: 14px 0 8px; }
 .markdown ul, .markdown ol { margin: 6px 0 12px 20px; padding: 0; line-height: 1.55; }

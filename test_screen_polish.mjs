@@ -85,5 +85,10 @@ ok('the post-workout cards keep their own session, not the period', /window\.__b
   ok('without the analytics it falls back on what it is given', vm.runInContext('periodMusclesForMap({ GAMBE: 5 })', sctx).GAMBE === 5);
 }
 
+// ---- the Coach AI conversation reads like a chat
+ok('what you write is on the right, in gold; the answers are on the left, with the name', /#chat-history \.msg\.user \{\n  align-self: flex-end;/.test(app) && /#chat-history \.msg\.ai \{\n  align-self: flex-start;/.test(app) && /content: 'NURVAN AI'/.test(app));
+ok('the bubbles do not stretch the whole width, so the two sides are told apart', /#chat-history \.msg \{ margin: 0; max-width: 88%;/.test(app) && /#chat-history \{ display: flex; flex-direction: column;/.test(app));
+ok('the proposal cards keep the full width', /#chat-history \.card \{ align-self: stretch;/.test(app));
+
 if (failed) { console.log('\n' + failed + ' FAIL'); process.exit(1); }
 console.log('\nSchermate: tutto verde');
