@@ -33,6 +33,7 @@ export const SAMPLES = [
     tag: "Palestra",
     title: "Ipertrofia in 3 giorni",
     sub: "Full body in palestra, tre sedute a settimana per 8 settimane.",
+    desc: "Programma di ipertrofia in 3 giorni a settimana: full body in palestra per 8 settimane, con doppia progressione. Da vedere come nell’app e da scaricare in PDF.",
     facts: ["3 giorni a settimana", "8 settimane", "Livello intermedio", "Palestra completa"],
     points: [
       "Ogni seduta allena tutto il corpo: i muscoli lavorano tre volte a settimana.",
@@ -45,6 +46,7 @@ export const SAMPLES = [
     tag: "HYROX",
     title: "Preparazione HYROX in 8 settimane",
     sub: "Corsa, stazioni e forza nella stessa settimana, fino al giorno della gara.",
+    desc: "Preparazione HYROX in 8 settimane, 4 giorni a settimana: corsa, stazioni e forza in quattro fasi fino alla gara. Da vedere come nell’app e da scaricare in PDF.",
     facts: ["4 giorni a settimana", "8 settimane", "Categoria Open", "Palestra classica"],
     points: [
       "Quattro fasi: base, costruzione, picco con le simulazioni, scarico.",
@@ -57,6 +59,7 @@ export const SAMPLES = [
     tag: "A casa",
     title: "A casa a corpo libero",
     sub: "Calisthenics senza attrezzi: tre sedute da 30 minuti per 8 settimane.",
+    desc: "Allenamento a corpo libero a casa: tre sedute da 30 minuti a settimana per 8 settimane, senza attrezzi. Da vedere come nell’app e da scaricare in PDF.",
     facts: ["3 giorni a settimana", "30 minuti", "Senza attrezzi", "Livello intermedio"],
     points: [
       "Serve solo il pavimento: spinta, tirata, gambe e addome in ogni seduta.",
@@ -264,7 +267,7 @@ export function mountSamples(app, { siteDir, shell, pool, initDb, sendEmail, env
       `</div><div class="sample-phone-col">` + phoneHtml(sample) + `<p class="phone-caption">Così nell'app: tocca un giorno per vedere la seduta.</p></div></div>` +
       `<div class="post-cta"><strong>Nell'app la scheda si adatta ai tuoi giorni e alla tua attrezzatura.</strong><a class="btn primary" href="{{APP_URL}}">Apri l'app</a></div>` + note +
       `</div></article>` + SCRIPT;
-    return send(req, res, { lang, alternates: everyLang("/allenamenti/" + meta.slug), title: st(dict, meta.title) + " — Nurvan", ownTitle: true, description: st(dict, meta.sub), main,
+    return send(req, res, { lang, alternates: everyLang("/allenamenti/" + meta.slug), title: st(dict, meta.title) + " — Nurvan", ownTitle: true, description: st(dict, meta.desc), main,
       ld: (origin) => [breadcrumbLd([{ name: "Nurvan", url: origin + (langPrefix(lang) || "/") }, { name: st(dict, "Allenamenti"), url: origin + langPrefix(lang) + "/allenamenti" }, { name: st(dict, meta.title), url: origin + langPrefix(lang) + "/allenamenti/" + meta.slug }])] });
   };
 

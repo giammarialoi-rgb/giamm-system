@@ -2641,7 +2641,7 @@ async function siteShotsHtml() {
   try { shots = JSON.parse(await fs.readFile(path.join(SITE_DIR, "shots.json"), "utf8")); } catch (_) { return ""; }
   if (!Array.isArray(shots) || !shots.length) return "";
   return '<section id="schermate"><div class="wrap"><div class="head"><div class="eyebrow">L’app</div><h2>Guardala da vicino.</h2></div><div class="shots">' +
-    shots.map((sh) => '<figure class="shot"><img src="/site-assets/shots/' + siteEsc(sh.file) + '" alt="' + siteEsc(sh.title) + '" loading="lazy"><figcaption><strong>' + siteEsc(sh.title) + "</strong>" + siteEsc(sh.text || "") + "</figcaption></figure>").join("") +
+    shots.map((sh) => '<figure class="shot"><img src="/site-assets/shots/' + siteEsc(sh.file) + '" alt="' + siteEsc(sh.title) + '" width="600" height="1299" loading="lazy"><figcaption><strong>' + siteEsc(sh.title) + "</strong>" + siteEsc(sh.text || "") + "</figcaption></figure>").join("") +
     "</div></div></section>";
 }
 // Italian home only (brief W4): what Nurvan is, in the words people search for, and the two doors.

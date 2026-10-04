@@ -200,7 +200,7 @@ export function mountTrust(app, { getAuthor, webDir, siteDir, shell, sendEmail, 
       `</div></section>` + FORM_SCRIPT;
     return send(req, res, {
       lang, alternates: everyLang(contactPath), title: "Contatti — Nurvan",
-      description: "Scrivi a Nurvan per domande, collaborazioni o segnalazioni: email, dati dell’azienda e modulo di contatto.",
+      description: "Scrivi a Nurvan per domande, collaborazioni o segnalazioni: indirizzo email, dati dell’azienda e modulo di contatto per scriverci direttamente dal sito.",
       main
     });
   };
