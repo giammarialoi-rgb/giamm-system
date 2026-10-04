@@ -103,11 +103,11 @@ CBL-514 ist nicht käuflich, nicht zugelassen und betrifft keine Entscheidung, d
 
 2. **Übertreib es nicht mit dem Defizit.** Eine Metaregression zu Krafttraining unter Energierestriktion schätzte, dass ein Defizit von rund 500 kcal pro Tag die Schwelle ist, ab der du trotz Training keine Magermasse mehr aufbaust. Wer Muskeln aufbauen will, sollte lange Defizite meiden; wer nur erhalten will, bleibt darunter.
 
-3. **Halte das Protein hoch.** Das ist der am besten belegte Ernährungshebel, wenn die Kalorien sinken: ausführlich im Artikel zu [Protein in der Diät](/blog/protein-in-der-diaet).
+3. **Halte das Protein hoch.** Das ist der am besten belegte Ernährungshebel, wenn die Kalorien sinken: ausführlich im Artikel zu [Protein in der Diät](/de/blog/protein-in-der-diaet).
 
 4. **Miss, schätze nicht.** Gewicht, Umfänge und die bewegten Lasten über die Zeit zeigen, ob du Fett verlierst oder auch Muskeln. Im Spiegel verschwimmt beides.
 
-5. **Lokales Fett lässt sich nicht aussuchen.** Keine Übung verbrennt das Fett über dem Muskel, den sie trainiert. Wo du zuerst abnimmst, hängt stark von Genetik und Hormonen ab — ein Thema aus unserem Artikel über [High und Low Responder](/blog/genetik-high-low-responder).
+5. **Lokales Fett lässt sich nicht aussuchen.** Keine Übung verbrennt das Fett über dem Muskel, den sie trainiert. Wo du zuerst abnimmst, hängt stark von Genetik und Hormonen ab — ein Thema aus unserem Artikel über [High und Low Responder](/de/blog/genetik-high-low-responder).
 
 Die Zahlen oben sind Spannen und Mittelwerte aus Studien, keine Verordnung. Wenn du Vorerkrankungen hast, Medikamente nimmst oder eine Diät auf ärztliche Anweisung befolgst, sprich vor Änderungen mit deiner Ärztin oder deinem Arzt.
 
@@ -136,9 +136,9 @@ Dafür gibt es keine Daten. Die Studien decken ein Körperareal über wenige Woc
 
 ## Lies auch
 
-- [Protein in der Diät: Wie viel du wirklich brauchst](/blog/protein-in-der-diaet) — die Spanne, die Magermasse schützt, wenn du Kalorien kürzt.
-- [Abgekühlter Reis: wie viel resistente Stärke bringt](/blog/abgekuehlter-reis-resistente-staerke) — die echten Zahlen hinter einem viralen Trick.
-- [Low Responder: Wie viel Genetik steckt im Muskelaufbau?](/blog/genetik-high-low-responder) — warum dasselbe Programm bei verschiedenen Menschen unterschiedlich wirkt.
+- [Protein in der Diät: Wie viel du wirklich brauchst](/de/blog/protein-in-der-diaet) — die Spanne, die Magermasse schützt, wenn du Kalorien kürzt.
+- [Abgekühlter Reis: wie viel resistente Stärke bringt](/de/blog/abgekuehlter-reis-resistente-staerke) — die echten Zahlen hinter einem viralen Trick.
+- [Low Responder: Wie viel Genetik steckt im Muskelaufbau?](/de/blog/genetik-high-low-responder) — warum dasselbe Programm bei verschiedenen Menschen unterschiedlich wirkt.
 
 ## Quellen
 

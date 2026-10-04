@@ -103,11 +103,11 @@ O CBL-514 não se compra, não está aprovado e não interfere em nenhuma decis�
 
 2. **Não exageres no défice.** Uma meta-regressão sobre treino de força em restrição energética estimou que um défice de cerca de 500 kcal por dia é o ponto a partir do qual deixas de ganhar massa magra mesmo a treinar. Quem quer construir músculo deve evitar défices prolongados; quem só quer preservá-lo deve ficar abaixo dessa linha.
 
-3. **Mantém a proteína alta.** É a alavanca nutricional com mais suporte quando as calorias descem: tratámos o tema em detalhe no artigo sobre [proteína na definição](/blog/proteina-na-definicao).
+3. **Mantém a proteína alta.** É a alavanca nutricional com mais suporte quando as calorias descem: tratámos o tema em detalhe no artigo sobre [proteína na definição](/pt/blog/proteina-na-definicao).
 
 4. **Mede, não calcules a olho.** O peso, os perímetros e as cargas levantadas ao longo do tempo dizem se estás a perder gordura ou também músculo. Ao espelho as duas coisas confundem-se.
 
-5. **A gordura localizada não se escolhe.** Nenhum exercício queima a gordura da zona que treina. Onde perdes primeiro depende em grande parte da genética e das hormonas — um tema que abordámos ao falar de [high e low responders](/blog/genetica-high-low-responder).
+5. **A gordura localizada não se escolhe.** Nenhum exercício queima a gordura da zona que treina. Onde perdes primeiro depende em grande parte da genética e das hormonas — um tema que abordámos ao falar de [high e low responders](/pt/blog/genetica-high-low-responder).
 
 Os números acima são intervalos e médias observados em estudos, não uma prescrição. Se tens patologias, tomas medicação ou segues uma dieta por indicação médica, fala com o teu médico antes de mudar seja o que for.
 
@@ -136,9 +136,9 @@ Nenhum dado o sugere. Os ensaios cobrem uma zona do corpo e poucas semanas, enqu
 
 ## Lê também
 
-- [Proteína na definição: quanto você realmente precisa](/blog/proteina-na-definicao) — o intervalo que protege a massa magra quando cortas calorias.
-- [Arroz arrefecido: quanto vale o amido resistente](/blog/arroz-arrefecido-amido-resistente) — os números reais por trás de um truque viral.
-- [Low responder: quanto a genética pesa nos músculos](/blog/genetica-high-low-responder) — porque o mesmo programa dá resultados diferentes a pessoas diferentes.
+- [Proteína na definição: quanto você realmente precisa](/pt/blog/proteina-na-definicao) — o intervalo que protege a massa magra quando cortas calorias.
+- [Arroz arrefecido: quanto vale o amido resistente](/pt/blog/arroz-arrefecido-amido-resistente) — os números reais por trás de um truque viral.
+- [Low responder: quanto a genética pesa nos músculos](/pt/blog/genetica-high-low-responder) — porque o mesmo programa dá resultados diferentes a pessoas diferentes.
 
 ## Fontes
 

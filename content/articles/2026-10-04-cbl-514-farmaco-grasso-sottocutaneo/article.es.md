@@ -103,11 +103,11 @@ El CBL-514 no se puede comprar, no está aprobado y no afecta a ninguna decisió
 
 2. **No te pases con el déficit.** Una metarregresión sobre entrenamiento de fuerza en restricción calórica estimó que un déficit de unas 500 kcal al día es el punto a partir del cual dejas de ganar masa magra aunque entrenes. Si quieres construir músculo, evita déficits prolongados; si solo quieres conservarlo, quédate por debajo de esa línea.
 
-3. **Mantén alta la proteína.** Es la palanca nutricional con más respaldo cuando bajan las calorías: lo tratamos en detalle en el artículo sobre [proteínas en definición](/blog/proteinas-en-definicion).
+3. **Mantén alta la proteína.** Es la palanca nutricional con más respaldo cuando bajan las calorías: lo tratamos en detalle en el artículo sobre [proteínas en definición](/es/blog/proteinas-en-definicion).
 
 4. **Mide, no calcules a ojo.** El peso, los perímetros y las cargas que levantas a lo largo del tiempo te dicen si estás perdiendo grasa o también músculo. En el espejo las dos cosas se confunden.
 
-5. **La grasa localizada no se elige.** Ningún ejercicio quema la grasa de la zona que entrena. Dónde pierdes antes depende en gran parte de la genética y las hormonas, un tema que tratamos al hablar de [high y low responders](/blog/genetica-high-low-responders).
+5. **La grasa localizada no se elige.** Ningún ejercicio quema la grasa de la zona que entrena. Dónde pierdes antes depende en gran parte de la genética y las hormonas, un tema que tratamos al hablar de [high y low responders](/es/blog/genetica-high-low-responders).
 
 Las cifras anteriores son rangos y medias observados en estudios, no una prescripción. Si tienes alguna patología, tomas medicación o sigues una dieta por indicación médica, habla con tu médico antes de cambiar nada.
 
@@ -136,9 +136,9 @@ Ningún dato lo sugiere. Los ensayos cubren una zona del cuerpo y unas pocas sem
 
 ## Lee también
 
-- [Proteínas en definición: cuántas necesitas de verdad](/blog/proteinas-en-definicion) — el rango que protege la masa magra cuando bajas las calorías.
-- [Arroz enfriado: cuánto importa el almidón resistente](/blog/arroz-enfriado-almidon-resistente) — los números reales detrás de un truco viral.
-- [Low responder: cuánto pesa la genética en tus músculos](/blog/genetica-high-low-responders) — por qué el mismo programa da resultados distintos a personas distintas.
+- [Proteínas en definición: cuántas necesitas de verdad](/es/blog/proteinas-en-definicion) — el rango que protege la masa magra cuando bajas las calorías.
+- [Arroz enfriado: cuánto importa el almidón resistente](/es/blog/arroz-enfriado-almidon-resistente) — los números reales detrás de un truco viral.
+- [Low responder: cuánto pesa la genética en tus músculos](/es/blog/genetica-high-low-responders) — por qué el mismo programa da resultados distintos a personas distintas.
 
 ## Fuentes
 

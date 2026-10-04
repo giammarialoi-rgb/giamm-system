@@ -103,11 +103,11 @@ Le CBL-514 n'est pas en vente, n'est pas approuvé et ne concerne aucune décisi
 
 2. **N'exagère pas le déficit.** Une méta-régression sur l'entraînement en restriction énergétique a estimé qu'un déficit d'environ 500 kcal par jour est le seuil au-delà duquel tu cesses de gagner de la masse maigre, même en soulevant. Si tu veux construire du muscle, évite les déficits prolongés ; si tu veux seulement le conserver, reste sous cette limite.
 
-3. **Garde les protéines hautes.** C'est le levier nutritionnel le mieux étayé quand les calories baissent : on en a parlé en détail dans l'article sur les [protéines en sèche](/blog/proteines-en-seche).
+3. **Garde les protéines hautes.** C'est le levier nutritionnel le mieux étayé quand les calories baissent : on en a parlé en détail dans l'article sur les [protéines en sèche](/fr/blog/proteines-en-seche).
 
 4. **Mesure, n'estime pas à l'œil.** Le poids, les circonférences et les charges soulevées dans le temps disent si tu perds de la graisse ou aussi du muscle. Dans le miroir, les deux se confondent.
 
-5. **La graisse localisée ne se choisit pas.** Aucun exercice ne brûle la graisse de la zone qu'il travaille. Là où tu perds d'abord dépend largement de la génétique et des hormones — un sujet abordé dans notre article sur les [faibles et forts répondeurs](/blog/genetique-faibles-repondeurs).
+5. **La graisse localisée ne se choisit pas.** Aucun exercice ne brûle la graisse de la zone qu'il travaille. Là où tu perds d'abord dépend largement de la génétique et des hormones — un sujet abordé dans notre article sur les [faibles et forts répondeurs](/fr/blog/genetique-faibles-repondeurs).
 
 Les chiffres ci-dessus sont des intervalles et des moyennes observés dans les études, pas une prescription. Si tu as une pathologie, prends un traitement ou suis un régime sur avis médical, parles-en à ton médecin avant de changer quoi que ce soit.
 
@@ -136,9 +136,9 @@ Aucune donnée ne le suggère. Les essais couvrent une zone du corps sur quelque
 
 ## À lire aussi
 
-- [Protéines en sèche : combien en faut-il vraiment](/blog/proteines-en-seche) — l'intervalle qui protège la masse maigre quand tu coupes les calories.
-- [Riz refroidi : ce que vaut vraiment l'amidon résistant](/blog/riz-refroidi-amidon-resistant) — les vrais chiffres derrière une astuce devenue virale.
-- [Faible répondeur : le poids de la génétique dans le muscle](/blog/genetique-faibles-repondeurs) — pourquoi le même programme donne des résultats différents selon les personnes.
+- [Protéines en sèche : combien en faut-il vraiment](/fr/blog/proteines-en-seche) — l'intervalle qui protège la masse maigre quand tu coupes les calories.
+- [Riz refroidi : ce que vaut vraiment l'amidon résistant](/fr/blog/riz-refroidi-amidon-resistant) — les vrais chiffres derrière une astuce devenue virale.
+- [Faible répondeur : le poids de la génétique dans le muscle](/fr/blog/genetique-faibles-repondeurs) — pourquoi le même programme donne des résultats différents selon les personnes.
 
 ## Sources
 

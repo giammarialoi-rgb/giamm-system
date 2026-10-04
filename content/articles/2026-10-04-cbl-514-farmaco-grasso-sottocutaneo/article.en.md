@@ -103,11 +103,11 @@ CBL-514 is not on sale, not approved, and not part of any decision you can make 
 
 2. **Do not overshoot the deficit.** A meta-regression of resistance training under energy restriction estimated that a deficit of around 500 kcal per day is the point beyond which you stop gaining lean mass even while lifting. If you are building, avoid prolonged deficits; if you are only preserving, stay under that line.
 
-3. **Keep protein high.** It is the nutrition lever with the most support when calories drop — covered in detail in our article on [protein intake while cutting](/blog/protein-intake-cutting).
+3. **Keep protein high.** It is the nutrition lever with the most support when calories drop — covered in detail in our article on [protein intake while cutting](/en/blog/protein-intake-cutting).
 
 4. **Measure, do not eyeball.** Weight, girths and the loads you lift over time tell you whether you are losing fat or muscle too. In the mirror the two blur together.
 
-5. **You do not get to choose where the fat goes.** No exercise burns the fat over the muscle it trains. Where you lose first is largely genetics and hormones — a theme we covered in [high and low responders](/blog/genetics-high-low-responders).
+5. **You do not get to choose where the fat goes.** No exercise burns the fat over the muscle it trains. Where you lose first is largely genetics and hormones — a theme we covered in [high and low responders](/en/blog/genetics-high-low-responders).
 
 The figures above are ranges and averages observed in studies, not a prescription. If you have a medical condition, take medication or follow a diet on medical advice, talk to your doctor before changing anything.
 
@@ -136,9 +136,9 @@ No data suggests so. The trials cover one area of the body over a few weeks, whi
 
 ## Read next
 
-- [Protein intake while cutting: how much you actually need](/blog/protein-intake-cutting) — the range that protects lean mass when calories drop.
-- [Cooled rice and resistant starch: how much it really saves](/blog/cooled-rice-resistant-starch) — the real numbers behind a viral trick.
-- [High and low responders: how much genetics decides](/blog/genetics-high-low-responders) — why the same programme gives different people different results.
+- [Protein intake while cutting: how much you actually need](/en/blog/protein-intake-cutting) — the range that protects lean mass when calories drop.
+- [Cooled rice and resistant starch: how much it really saves](/en/blog/cooled-rice-resistant-starch) — the real numbers behind a viral trick.
+- [High and low responders: how much genetics decides](/en/blog/genetics-high-low-responders) — why the same programme gives different people different results.
 
 ## Sources
 
