@@ -28,11 +28,22 @@ const STORE_SOURCES = ["apple", "play", "stripe"];
 export function productPlan(productId) {
   const id = String(productId || "").split(":")[0].trim();
   if (!id) return null;
-  const products = (FEATURES.billing && FEATURES.billing.products) || {};
+  const products = storeProducts();
   for (const plan of Object.keys(products)) {
     if ((products[plan] || []).includes(id)) return plan;
   }
   return null;
+}
+
+// The products the stores can sell: the ones of features.json plus the aliases, ids that exist in a store under
+// another spelling (the Coach Pro ones were made in the App Store as nurvan.coach.pro.*). The apps get this list.
+export function storeProducts() {
+  const base = (FEATURES.billing && FEATURES.billing.products) || {};
+  const aliases = (FEATURES.billing && FEATURES.billing.aliases) || {};
+  const out = {};
+  Object.keys(base).forEach((plan) => { out[plan] = base[plan].slice(); });
+  Object.keys(aliases).forEach((id) => { const plan = aliases[id]; if (out[plan] && !out[plan].includes(id)) out[plan].push(id); });
+  return out;
 }
 
 export function sourceOfStore(store) {
@@ -218,7 +229,7 @@ export function mountBilling(app, { pool, initDb, accountFromBearer, env = proce
   app.get("/api/billing/config", async (req, res) => {
     const apple = String(env.REVENUECAT_APPLE_KEY || "").trim();
     const google = String(env.REVENUECAT_GOOGLE_KEY || "").trim();
-    return res.json({ ok: true, enabled: !!(apple || google), stripe: !!String(env.STRIPE_SECRET_KEY || "").trim(), appleKey: apple || null, googleKey: google || null, products: (FEATURES.billing && FEATURES.billing.products) || {} });
+    return res.json({ ok: true, enabled: !!(apple || google), stripe: !!String(env.STRIPE_SECRET_KEY || "").trim(), appleKey: apple || null, googleKey: google || null, products: storeProducts() });
   });
 
   app.post("/api/billing/revenuecat/webhook", async (req, res) => {

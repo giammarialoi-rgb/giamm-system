@@ -14,6 +14,8 @@ Stato al 04/10/2026: il codice è scritto e provato (server su PostgreSQL reale,
 | `coach` | `nurvan.coach.month`, `nurvan.coach.year` |
 | `coach_pro` | `nurvan.coach_pro.month`, `nurvan.coach_pro.year` |
 
+**Nota (05/10):** su App Store i prodotti Coach Pro sono stati creati come `nurvan.coach.pro.month` e `nurvan.coach.pro.year` (con il punto, non il trattino basso). Il server li riconosce come alias (`billing.aliases` in `web/features.json`), quindi vanno bene entrambe le grafie; su Google Play usa le stesse dell'App Store per tenerli uguali. Gli ID degli altri prodotti non cambiano.
+
 ## 1. Account RevenueCat (gratuito fino a 2.500 $ di ricavi mensili)
 1. https://www.revenuecat.com › crea l'account › **Project** `Nurvan`.
 2. **Apps** › aggiungi **App Store** (bundle ID `com.nurvan.app`) e **Play Store** (package `com.nurvan.app`).

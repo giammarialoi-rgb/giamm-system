@@ -3,7 +3,7 @@
 // RevenueCat) is not reachable from here: it is stood in for, with the answers it really gives.
 import fs from 'node:fs';
 import vm from 'node:vm';
-import { productPlan, sourceOfStore, planFromSubscriber, eventUserId, decideEvent, createBilling } from './server/billing/index.mjs';
+import { storeProducts, productPlan, sourceOfStore, planFromSubscriber, eventUserId, decideEvent, createBilling } from './server/billing/index.mjs';
 
 let failed = 0;
 function ok(message, value) {
@@ -17,6 +17,7 @@ const DAY = 86400000;
 // ---- the products
 ok('a product id names its plan', productPlan('nurvan.standard.year') === 'standard' && productPlan('nurvan.coach.month') === 'coach' && productPlan('nurvan.coach_pro.year') === 'coach_pro');
 ok('a Google subscription arrives as "product:baseplan": only the product counts', productPlan('nurvan.coach.month:monthly') === 'coach');
+ok('the Coach Pro products made in the App Store as nurvan.coach.pro.* are the same plan', productPlan('nurvan.coach.pro.month') === 'coach_pro' && productPlan('nurvan.coach.pro.year') === 'coach_pro' && storeProducts().coach_pro.includes('nurvan.coach.pro.year'));
 ok('an unknown product is no plan', productPlan('other.thing') === null && productPlan('') === null);
 ok('the store names map to a source', sourceOfStore('APP_STORE') === 'apple' && sourceOfStore('PLAY_STORE') === 'play' && sourceOfStore('STRIPE') === 'stripe' && sourceOfStore('X') === null);
 const features = JSON.parse(read('web/features.json'));

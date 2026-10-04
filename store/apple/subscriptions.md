@@ -12,6 +12,8 @@ Livelli nel gruppo, dal più alto al più basso (l'ordine decide cosa è upgrade
 2. Coach (`nurvan.coach.*`)
 3. Standard (`nurvan.standard.year`)
 
+> I due Coach Pro sono stati creati su App Store come `nurvan.coach.pro.month` / `nurvan.coach.pro.year`: il server li accetta (alias). Su Google Play usa le stesse grafie.
+
 ## Prodotti — ID ESATTI (devono essere identici in Play e in `web/features.json`)
 
 | ID prodotto | Durata | Piano che sblocca | Prezzo del piano oggi (`features.json`) |
