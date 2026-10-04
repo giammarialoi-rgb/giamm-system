@@ -251,7 +251,11 @@ function billingAdapter() {
     return '';
   };
   if (platform === 'ios') {
-    const P = (window.Capacitor && typeof window.Capacitor.registerPlugin === 'function') ? window.Capacitor.registerPlugin('Purchases') : null;
+    // The plugin as the native bridge hands it over (Capacitor.Plugins, like the other iOS plugins of the page),
+    // or registered by name when the bridge offers registerPlugin.
+    let P = null;
+    try { P = (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases) || null; } catch (_) { P = null; }
+    if (!P) { try { P = (window.Capacitor && typeof window.Capacitor.registerPlugin === 'function') ? window.Capacitor.registerPlugin('Purchases') : null; } catch (_) { P = null; } }
     if (!P) return null;
     const pkgs = {};
     let configured = false, lastUser = null;
@@ -320,7 +324,9 @@ async function billingLoad(force) {
     const cfg = await billingConfig();
     const key = billingPlatform() === 'ios' ? cfg.appleKey : cfg.googleKey;
     const adapter = billingAdapter();
-    if (!cfg.enabled || !key || !adapter) throw new Error('acquisti non configurati');
+    if (!cfg.enabled) throw new Error('acquisti non configurati sul server');
+    if (!key) throw new Error('chiave dello store mancante');
+    if (!adapter) throw new Error('componente acquisti non trovato nell’app');
     await adapter.configure(key, user);
     __billing.packs = await adapter.offerings(cfg.products || {});
     __billing.state = __billing.packs.length ? 'ready' : 'unavailable';
